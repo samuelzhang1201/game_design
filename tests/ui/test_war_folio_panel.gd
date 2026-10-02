@@ -69,10 +69,10 @@ func _own_code() -> String:
 	return String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
 
 
-func test_all_six_sections_are_laid_in_columns_of_the_balance_key() -> void:
+func test_all_six_sections_are_laid_in_the_panels_columns() -> void:
 	panel.open_for(code)
 	var cols := panel.get_node("%Right").get_children()
-	assert_eq(cols.size(), int(Game.data.bal("war_folio_columns")))
+	assert_eq(cols.size(), panel.columns)
 	var keys: Array = []
 	for col in cols:
 		assert_gt(col.get_child_count(), 0, "no empty column")
@@ -85,7 +85,7 @@ func test_a_long_label_keeps_its_fixed_width_and_is_present() -> void:
 	panel.open_for(code)
 	await wait_process_frames(2)
 	var found := false
-	var w := Game.data.bal("war_folio_label_w_px")
+	var w := panel.label_w_px
 	for sec in panel.section_nodes():
 		for line in sec.get_node("Rows").get_children():
 			var l := line.get_child(0) as Label

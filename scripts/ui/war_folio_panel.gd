@@ -12,6 +12,22 @@ extends Control
 
 signal closed
 
+## The folio's look is scenes/war_room/war_folio.tscn (owner 2026-10-02: the
+## look lives in the editor): the leather book (folio_book.tres), its vellum
+## pages (folio_page.tres), the gutter, the figure's and the formation's room,
+## the ×. The rows made here wear the theme's FolioHeader / FolioLabel /
+## FolioValue kinds and the tabs FolioTab; their spacing is below.
+
+## Columns the right page lays its sections in, balanced by weight — the
+## owner's "dense" ask: all six show without scrolling at 1512x982.
+@export var columns := 2
+## The label column's fixed width; a longer label wraps.
+@export var label_w_px := 88.0
+## The gaps: between rows, between sections, and a row's label and value.
+@export var row_sep := 1
+@export var section_sep := 6
+@export var label_gap := 6
+
 var _code := ""
 var _shown: Array = []   # the sections last laid, so a refresh that changes nothing rebuilds nothing
 var _arm := ""           # the arm the figure shows
@@ -23,22 +39,7 @@ var _fly: Tween
 
 func _ready() -> void:
 	visible = false
-	(%Dim as ColorRect).color = UiPalette.DIM_OVERLAY
-	var margin := _px("war_folio_book_margin_px")
-	var book: PanelContainer = %Book
-	book.custom_minimum_size = Vector2(_px("war_folio_book_w_px"), _px("war_folio_book_h_px"))
-	book.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, int(margin), "window"))
-	(%Pages as HBoxContainer).add_theme_constant_override("separation", int(_px("war_folio_pages_sep_px")))
-	(%RightPage as Control).size_flags_stretch_ratio = _px("war_folio_right_ratio")
-	(%Left as VBoxContainer).add_theme_constant_override("separation", int(_px("war_folio_left_sep_px")))
-	(%Figure as Control).custom_minimum_size = Vector2(_px("war_figure_w_px"), _px("war_figure_h_px"))
-	(%Formation as Control).custom_minimum_size = Vector2(_px("war_formation_w_px"), _px("war_formation_h_px"))
-	(%Right as HBoxContainer).add_theme_constant_override("separation", int(_px("war_folio_col_sep_px")))
-	_dress_pages()
-	_dress_close(book)
 	%Close.pressed.connect(close)
-	_ink_tab(%TakeApart)
 	(%TakeApart as Button).pressed.connect(toggle_take_apart)
 	(%Figure as WarInkFigure).label_font = UiPalette.role_font("body_italic")
 	(%Dim as ColorRect).gui_input.connect(func(e: InputEvent) -> void:
@@ -105,35 +106,6 @@ static func _px(key: String) -> float:
 	return Game.data.bal(key)
 
 
-## The two leaves: vellum under ink, set into the leather book.
-func _dress_pages() -> void:
-	var paper: Color = Game.data.war_palette["paper"]
-	for page: Control in [%LeftPage, %RightPage]:
-		var look := StyleBoxFlat.new()
-		look.bg_color = paper
-		look.set_border_width_all(int(_px("war_folio_page_border_px")))
-		look.border_color = Game.data.war_palette["paper_age"]
-		look.set_content_margin_all(_px("war_folio_page_margin_px"))
-		(page as PanelContainer).add_theme_stylebox_override("panel", look)
-
-
-## The × stands in the leather margin's top-right corner, off both pages.
-func _dress_close(book: Control) -> void:
-	var side := _px("war_folio_close_px")
-	var close_btn: Button = %Close
-	close_btn.focus_mode = Control.FOCUS_NONE
-	close_btn.custom_minimum_size = Vector2(side, side)
-	close_btn.offset_right = book.custom_minimum_size.x * 0.5 - 2.0
-	close_btn.offset_left = close_btn.offset_right - side
-	close_btn.offset_top = -book.custom_minimum_size.y * 0.5 + 2.0
-	close_btn.offset_bottom = close_btn.offset_top + side
-	close_btn.add_theme_font_size_override("font_size", int(_px("war_folio_header_px")))
-	close_btn.add_theme_color_override("font_color", UiPalette.GOLD)
-	close_btn.add_theme_color_override("font_hover_color", UiPalette.TEXT_SOFT)
-	for state: String in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
-		close_btn.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-
-
 ## Rebuild the right page; false when it would be the page already shown.
 func _fill_right() -> bool:
 	var secs := WarFolio.sections(Game.data, Game.state, _code)
@@ -144,14 +116,14 @@ func _fill_right() -> bool:
 	for c in right.get_children():
 		right.remove_child(c)
 		c.queue_free()
-	var cols := maxi(1, int(_px("war_folio_columns")))
+	var cols := maxi(1, columns)
 	var boxes: Array[Control] = []
 	for s: Dictionary in secs:
 		boxes.append(_section_box(s))
 	for group: Array in _split(secs, cols):
 		var col := VBoxContainer.new()
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		col.add_theme_constant_override("separation", int(_px("war_folio_section_sep_px")))
+		col.add_theme_constant_override("separation", section_sep)
 		for i: int in group:
 			col.add_child(boxes[i])
 		right.add_child(col)
@@ -186,43 +158,37 @@ static func _split(secs: Array, cols: int) -> Array:
 
 
 func _section_box(s: Dictionary) -> VBoxContainer:
-	var rubric: Color = Game.data.war_palette["rubric"]
-	var ink: Color = Game.data.war_palette["ink"]
-	var body := int(_px("war_folio_body_px"))
 	var box := VBoxContainer.new()
 	box.name = String(s["key"])
 	box.add_theme_constant_override("separation", 0)
 	var h := Label.new()
 	h.name = "Header"
 	h.text = String(s["label"]).to_upper()
-	UiPalette.style_header(h, int(_px("war_folio_header_px")), rubric)
+	h.theme_type_variation = &"FolioHeader"
 	box.add_child(h)
 	var rows := GridContainer.new()
 	rows.name = "Rows"
 	rows.columns = 1
-	rows.add_theme_constant_override("v_separation", int(_px("war_folio_row_sep_px")))
+	rows.add_theme_constant_override("v_separation", row_sep)
 	for row: Dictionary in s["rows"]:
 		var line := HBoxContainer.new()
 		line.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # a grid column takes only what its expanders ask for
-		line.add_theme_constant_override("separation", int(_px("war_folio_label_gap_px")))
+		line.add_theme_constant_override("separation", label_gap)
 		var l := Label.new()
 		l.text = String(row["label"])
-		l.custom_minimum_size.x = _px("war_folio_label_w_px")
+		l.custom_minimum_size.x = label_w_px
 		l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		l.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.add_theme_font_override("font", UiPalette.role_font("body_italic"))
-		l.add_theme_font_size_override("font_size", body)
-		l.add_theme_color_override("font_color", Color(ink, _px("war_folio_label_alpha")))
+		l.theme_type_variation = &"FolioLabel"
 		var v := Label.new()
 		v.text = String(row["text"])
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		v.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		v.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_theme_font_size_override("font_size", body)
-		v.add_theme_color_override("font_color", ink)
+		v.theme_type_variation = &"FolioValue"
 		line.add_child(l)
 		line.add_child(v)
 		rows.add_child(line)
@@ -277,9 +243,8 @@ func _fill_arms() -> void:
 		b.set_meta("arm", arm)
 		b.text = "%s %s" % [String((Game.data.resource_icons.get(arm, {}) as Dictionary)
 			.get("label", arm.capitalize())), UiPalette.format_int(int(a["heads"]))]
-		_ink_tab(b)
+		b.theme_type_variation = &"FolioTab"
 		b.icon = _ink_icon(arm)
-		b.add_theme_constant_override("icon_max_width", int(_px("war_arm_icon_px")))
 		b.pressed.connect(func() -> void:
 			_show_arm(arm)
 			for t: Button in arms.get_children():
@@ -310,7 +275,7 @@ func _show_arm(arm: String) -> void:
 		b.toggle_mode = true
 		b.text = String(d["label"])
 		b.set_meta("clip", clip)
-		_ink_tab(b)
+		b.theme_type_variation = &"FolioTab"
 		b.pressed.connect(func() -> void:
 			fig.play(clip)
 			_light_tab(clip))
@@ -369,16 +334,3 @@ func _ink_icon(arm: String) -> Texture2D:
 		_inked[arm] = WarInkIcon.inked(ResourceIconSet.texture_of(arm),
 			Game.data.war_palette["ink"], _px("war_ink_icon_light_keep"))
 	return _inked[arm]
-
-
-## A tab on the vellum: ink words, the lit one red rubric under a rubric rule
-## (UiPalette.flat_tab's gold is for the leather).
-func _ink_tab(b: Button) -> void:
-	UiPalette.flat_tab(b, int(_px("war_folio_tab_px")), _px("war_folio_tab_pad_px"))
-	var ink: Color = Game.data.war_palette["ink"]
-	var rubric: Color = Game.data.war_palette["rubric"]
-	b.add_theme_color_override("font_color", Color(ink, _px("war_folio_label_alpha")))
-	for state: String in ["font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
-		b.add_theme_color_override(state, rubric)
-	for state: String in ["hover", "pressed", "hover_pressed"]:
-		(b.get_theme_stylebox(state) as StyleBoxFlat).border_color = rubric

@@ -1,10 +1,22 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://d0fhma2vbrkdx"]
 
-[ext_resource type="Script" path="res://scripts/ui/war_folio_panel.gd" id="1_folio"]
-[ext_resource type="Script" path="res://scripts/war_room/war_ink_figure.gd" id="2_figure"]
-[ext_resource type="Script" path="res://scripts/ui/war_formation_dots.gd" id="3_dots"]
+[ext_resource type="Script" uid="uid://dvs3gfy60cuwq" path="res://scripts/ui/war_folio_panel.gd" id="1_folio"]
+[ext_resource type="Script" uid="uid://c4hwft7o3c535" path="res://scripts/war_room/war_ink_figure.gd" id="2_figure"]
+[ext_resource type="StyleBox" uid="uid://dednlxjm5dfsp" path="res://assets/2D/ui/panels/styles/folio_book.tres" id="2_huv1c"]
+[ext_resource type="Script" uid="uid://cwq3y8n3u0nmo" path="res://scripts/ui/war_formation_dots.gd" id="3_dots"]
+[ext_resource type="StyleBox" uid="uid://llar7yyxc7o7" path="res://assets/2D/ui/war_table/styles/folio_page.tres" id="3_p0lqx"]
 
-[node name="WarFolioPanel" type="Control"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_whoqo"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hp0os"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ikgvj"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_jt5gt"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_01qlq"]
+
+[node name="WarFolioPanel" type="Control" unique_id=1229062163]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -13,7 +25,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_folio")
 
-[node name="Dim" type="ColorRect" parent="."]
+[node name="Dim" type="ColorRect" parent="." unique_id=860979598]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -21,10 +33,11 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
+color = Color(0.02, 0.015, 0.01, 0.62)
 
-[node name="Book" type="PanelContainer" parent="."]
+[node name="Book" type="PanelContainer" parent="." unique_id=2139218606]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(960, 650)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -33,40 +46,45 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = ExtResource("2_huv1c")
 
-[node name="Pages" type="HBoxContainer" parent="Book"]
+[node name="Pages" type="HBoxContainer" parent="Book" unique_id=1957152105]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_constants/separation = 20
 
-[node name="LeftPage" type="PanelContainer" parent="Book/Pages"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Left" type="VBoxContainer" parent="Book/Pages/LeftPage"]
+[node name="LeftPage" type="PanelContainer" parent="Book/Pages" unique_id=1175494193]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_styles/panel = ExtResource("3_p0lqx")
 
-[node name="Figure" type="Control" parent="Book/Pages/LeftPage/Left"]
+[node name="Left" type="VBoxContainer" parent="Book/Pages/LeftPage" unique_id=528166969]
 unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="Figure" type="Control" parent="Book/Pages/LeftPage/Left" unique_id=791394159]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 290)
 clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("2_figure")
 
-[node name="FigViewport" type="SubViewport" parent="Book/Pages/LeftPage/Left/Figure"]
+[node name="FigViewport" type="SubViewport" parent="Book/Pages/LeftPage/Left/Figure" unique_id=546283106]
 unique_name_in_owner = true
 own_world_3d = true
 transparent_bg = true
 render_target_update_mode = 0
 
-[node name="FigCamera" type="Camera3D" parent="Book/Pages/LeftPage/Left/Figure/FigViewport"]
+[node name="FigCamera" type="Camera3D" parent="Book/Pages/LeftPage/Left/Figure/FigViewport" unique_id=1173305433]
 unique_name_in_owner = true
 current = true
 fov = 30.0
 
-[node name="FigDisplay" type="TextureRect" parent="Book/Pages/LeftPage/Left/Figure"]
+[node name="FigDisplay" type="TextureRect" parent="Book/Pages/LeftPage/Left/Figure" unique_id=1164676051]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -77,7 +95,7 @@ grow_vertical = 2
 mouse_filter = 2
 expand_mode = 1
 
-[node name="FigGlyph" type="TextureRect" parent="Book/Pages/LeftPage/Left/Figure"]
+[node name="FigGlyph" type="TextureRect" parent="Book/Pages/LeftPage/Left/Figure" unique_id=839647586]
 unique_name_in_owner = true
 visible = false
 texture_filter = 2
@@ -93,53 +111,72 @@ mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Drills" type="HFlowContainer" parent="Book/Pages/LeftPage/Left"]
+[node name="Drills" type="HFlowContainer" parent="Book/Pages/LeftPage/Left" unique_id=1230160452]
 unique_name_in_owner = true
 layout_mode = 2
 alignment = 1
 
-[node name="Arms" type="HFlowContainer" parent="Book/Pages/LeftPage/Left"]
+[node name="Arms" type="HFlowContainer" parent="Book/Pages/LeftPage/Left" unique_id=721734531]
 unique_name_in_owner = true
 layout_mode = 2
 alignment = 1
 
-[node name="Formation" type="Control" parent="Book/Pages/LeftPage/Left"]
+[node name="Formation" type="Control" parent="Book/Pages/LeftPage/Left" unique_id=1465219556]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 96)
 layout_mode = 2
 script = ExtResource("3_dots")
 
-[node name="TakeApart" type="Button" parent="Book/Pages/LeftPage/Left"]
+[node name="TakeApart" type="Button" parent="Book/Pages/LeftPage/Left" unique_id=614059812]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
+theme_type_variation = &"FolioTab"
 text = "Take apart"
 flat = true
 
-[node name="RightPage" type="PanelContainer" parent="Book/Pages"]
+[node name="RightPage" type="PanelContainer" parent="Book/Pages" unique_id=1638939891]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.8
+theme_override_styles/panel = ExtResource("3_p0lqx")
 
-[node name="RightScroll" type="ScrollContainer" parent="Book/Pages/RightPage"]
+[node name="RightScroll" type="ScrollContainer" parent="Book/Pages/RightPage" unique_id=983122243]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 horizontal_scroll_mode = 0
 
-[node name="Right" type="HBoxContainer" parent="Book/Pages/RightPage/RightScroll"]
+[node name="Right" type="HBoxContainer" parent="Book/Pages/RightPage/RightScroll" unique_id=94436694]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 18
 
-[node name="Close" type="Button" parent="."]
+[node name="Close" type="Button" parent="." unique_id=611825362]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(18, 18)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
+offset_left = 460.0
+offset_top = -323.0
+offset_right = 478.0
+offset_bottom = -305.0
 grow_horizontal = 2
 grow_vertical = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_colors/font_hover_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxEmpty_whoqo")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_hp0os")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_ikgvj")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_jt5gt")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_01qlq")
 text = "×"
 flat = true

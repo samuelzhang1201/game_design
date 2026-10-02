@@ -88,6 +88,49 @@ bg_color = Color(0, 0, 0, 0)
 border_width_bottom = 1
 border_color = Color(0.65882355, 0.5411765, 0.29803923, 0.35)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_w4gje"]
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_3jvuq"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fwt2g"]
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 1
+border_color = Color(0.60784316, 0.17254902, 0.12156863, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_iiijn"]
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 2
+border_color = Color(0.60784316, 0.17254902, 0.12156863, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5ubk5"]
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b4e43"]
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 2
+border_color = Color(0.60784316, 0.17254902, 0.12156863, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3rsyk"]
 bg_color = Color(0.65882355, 0.5411765, 0.29803923, 0.55)
 corner_radius_top_left = 3
@@ -405,6 +448,31 @@ DashTitle/base_type = &"Label"
 DashTitle/colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 DashTitle/font_sizes/font_size = 16
 DashTitle/fonts/font = ExtResource("1_on7wr")
+FolioHeader/base_type = &"Label"
+FolioHeader/colors/font_color = Color(0.60784316, 0.17254902, 0.12156863, 1)
+FolioHeader/font_sizes/font_size = 14
+FolioHeader/fonts/font = ExtResource("1_on7wr")
+FolioLabel/base_type = &"Label"
+FolioLabel/colors/font_color = Color(0.16862746, 0.12941177, 0.09411765, 0.7)
+FolioLabel/font_sizes/font_size = 12
+FolioLabel/fonts/font = ExtResource("3_8x4xl")
+FolioTab/base_type = &"Button"
+FolioTab/colors/font_color = Color(0.16862746, 0.12941177, 0.09411765, 0.7)
+FolioTab/colors/font_hover_color = Color(0.60784316, 0.17254902, 0.12156863, 1)
+FolioTab/colors/font_hover_pressed_color = Color(0.60784316, 0.17254902, 0.12156863, 1)
+FolioTab/colors/font_pressed_color = Color(0.60784316, 0.17254902, 0.12156863, 1)
+FolioTab/constants/icon_max_width = 22
+FolioTab/font_sizes/font_size = 13
+FolioTab/fonts/font = ExtResource("1_el5ut")
+FolioTab/styles/disabled = SubResource("StyleBoxFlat_w4gje")
+FolioTab/styles/focus = SubResource("StyleBoxEmpty_3jvuq")
+FolioTab/styles/hover = SubResource("StyleBoxFlat_fwt2g")
+FolioTab/styles/hover_pressed = SubResource("StyleBoxFlat_iiijn")
+FolioTab/styles/normal = SubResource("StyleBoxFlat_5ubk5")
+FolioTab/styles/pressed = SubResource("StyleBoxFlat_b4e43")
+FolioValue/base_type = &"Label"
+FolioValue/colors/font_color = Color(0.16862746, 0.12941177, 0.09411765, 1)
+FolioValue/font_sizes/font_size = 12
 HScrollBar/styles/grabber = SubResource("StyleBoxFlat_3rsyk")
 HScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_3rsyk")
 HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_3rsyk")

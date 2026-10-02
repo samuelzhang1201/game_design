@@ -13,7 +13,8 @@ const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversa
 	"res://scripts/ui/news_ticker.gd", "res://scripts/ui/map_detail_panel.gd",
 	"res://scripts/ui/realm_dashboard.gd", "res://scripts/ui/country_panel.gd",
 	"res://scripts/ui/military_panel.gd", "res://scripts/ui/manor_master_panel.gd",
-	"res://scripts/ui/ledger_screen.gd", "res://scripts/ui/war_room_screen.gd"]
+	"res://scripts/ui/ledger_screen.gd", "res://scripts/ui/war_room_screen.gd",
+	"res://scripts/ui/war_folio_panel.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
