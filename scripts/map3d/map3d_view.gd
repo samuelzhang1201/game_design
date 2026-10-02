@@ -258,7 +258,7 @@ func _load() -> void:
 	_ctx.camera_moved.connect(func() -> void: Map3DEnvironment.follow_camera(_repo, _env, _sun, _ctx))
 	_clouds.build(_ctx, _weather)
 	_lines.bind(_ctx)
-	_roads.bind(_ctx, _lines, _viewport)
+	_roads.bind(_ctx, _lines, world())  # the bridges stand under the world's own Bridges
 	Map3DLayerBake.build_layers(_ctx, _scene_path, _rivers, _roads)  # baked, or built now
 	_borders.bind(_ctx, _lines)
 	_themes.bind(_ctx, _lines)

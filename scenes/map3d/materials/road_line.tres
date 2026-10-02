@@ -7,6 +7,19 @@
 [resource]
 render_priority = 1
 shader = ExtResource("1_6o33f")
+shader_parameter/colour = Color(0.6117647, 0.5019608, 0.34509805, 1)
 shader_parameter/surface = ExtResource("2_nswfu")
 shader_parameter/surface_nrm = ExtResource("3_thhdt")
 shader_parameter/has_surface = true
+shader_parameter/surface_tint = Vector3(1.0223529, 0.96627456, 0.88862747)
+shader_parameter/width_px = 7.0
+shader_parameter/width_m = 7.0
+shader_parameter/lift_px = 2.5
+shader_parameter/edge_soft = 0.8
+shader_parameter/fray = 0.35
+shader_parameter/tile_m = 60.0
+shader_parameter/near_mpp = 2.5
+shader_parameter/far_mpp = 7.0
+shader_parameter/hide_from_m = 1000000000.0
+shader_parameter/hide_to_m = 2000000000.0
+shader_parameter/px_per_dist = 0.001

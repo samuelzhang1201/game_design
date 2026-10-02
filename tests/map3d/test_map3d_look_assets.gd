@@ -10,6 +10,7 @@ const RunDir := preload("res://tests/run_dir.gd")
 const MATERIALS := {
 	"border_line": "res://scripts/map3d/border_line.gdshader",
 	"road_line": "res://scripts/map3d/road_line.gdshader",
+	"trail_line": "res://scripts/map3d/road_line.gdshader",
 	"water_river": "res://scripts/map3d/water_river.gdshader",
 	"water_sea": "res://scripts/map3d/water_sea.gdshader",
 	"cloud_deck": "res://scripts/map3d/cloud_deck.gdshader",
@@ -47,7 +48,7 @@ func test_the_previews_are_committed_and_small() -> void:
 
 ## The materials whose tuned numbers live in the .tres (owner 2026-10-02):
 ## test_map3d_editor_owned_look.gd holds them; the others are not yet converted.
-const EDITOR_OWNED := ["water_sea", "water_river"]
+const EDITOR_OWNED := ["water_sea", "water_river", "road_line", "trail_line"]
 
 
 func test_an_unconverted_material_carries_no_tuned_number() -> void:
@@ -113,7 +114,7 @@ func test_a_views_materials_are_its_own_copies() -> void:
 	assert_ne(a.sea_material(), b.sea_material())
 	assert_eq(a.sea_material().shader, b.sea_material().shader, "one compiled shader")
 	var road := a.line_mesh("Roads").surface_get_material(0) as ShaderMaterial
-	assert_eq(road.get_shader_parameter("tile_m"), Game.data.bal("map3d_road_tile_m"))
+	assert_eq(road.get_shader_parameter("tile_m"), Map3DLayerRoads.ROAD_MAT.get_shader_parameter("tile_m"))
 	assert_not_null(road.get_shader_parameter("surface"), "a texture always: full or preview")
 
 

@@ -1,0 +1,25 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://0x0t3ttl53os"]
+
+[ext_resource type="Shader" uid="uid://bi1d1n2agaect" path="res://scripts/map3d/road_line.gdshader" id="1_aov46"]
+[ext_resource type="Texture2D" uid="uid://dgtw7yvgyp2r7" path="res://assets/3D/terrain/textures_preview/rocky_trail_02_alb_ht.png" id="2_1f06p"]
+[ext_resource type="Texture2D" uid="uid://ox113onk6ddf" path="res://assets/3D/terrain/textures_preview/rocky_trail_02_nrm_rgh.png" id="3_wy1u2"]
+
+[resource]
+render_priority = 1
+shader = ExtResource("1_aov46")
+shader_parameter/colour = Color(0.68235296, 0.5882353, 0.4392157, 0.6)
+shader_parameter/surface = ExtResource("2_1f06p")
+shader_parameter/surface_nrm = ExtResource("3_wy1u2")
+shader_parameter/has_surface = true
+shader_parameter/surface_tint = Vector3(1.0223529, 0.96627456, 0.88862747)
+shader_parameter/width_px = 4.5
+shader_parameter/width_m = 7.0
+shader_parameter/lift_px = 2.5
+shader_parameter/edge_soft = 0.8
+shader_parameter/fray = 0.35
+shader_parameter/tile_m = 60.0
+shader_parameter/near_mpp = 2.5
+shader_parameter/far_mpp = 7.0
+shader_parameter/hide_from_m = 12000.0
+shader_parameter/hide_to_m = 22000.0
+shader_parameter/px_per_dist = 0.001

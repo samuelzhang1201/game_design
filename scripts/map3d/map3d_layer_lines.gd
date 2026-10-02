@@ -144,14 +144,7 @@ func _scale_material(mat: ShaderMaterial) -> void:
 		return
 	var s := ctx.viewport_px_scale()
 	mat.set_shader_parameter("px_per_dist", ctx.px_per_dist())
-	if mat.has_meta("base_px"):  # a line's look: its design px, scaled
-		var base: Dictionary = mat.get_meta("base_px")
-		for k: String in base:
-			mat.set_shader_parameter(k, float(base[k]) * s)
-		return
-	mat.set_shader_parameter("lift_px", ctx.repo.bal("map3d_line_lift_px") * s)
-	mat.set_shader_parameter("width_px", ctx.repo.bal(String(mat.get_meta("width_key"))) * s)
-	var dash_key := String(mat.get_meta("dash_key", ""))
-	mat.set_shader_parameter("dash_px", ctx.repo.bal(dash_key) * s if dash_key != "" else 0.0)
-	var gap_key := String(mat.get_meta("gap_key", ""))
-	mat.set_shader_parameter("gap_px", ctx.repo.bal(gap_key) * s if gap_key != "" else 0.0)
+	# a line's look gives its px in design px (set_lines, the roads' own)
+	var base: Dictionary = mat.get_meta("base_px", {})
+	for k: String in base:
+		mat.set_shader_parameter(k, float(base[k]) * s)

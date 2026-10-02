@@ -20,8 +20,6 @@ lake,#9DD3F2,freshwater: between the two
 coast_line,#1E4257,"the shore stroke, and the ink of the map's kingdom lettering and paper grain: deepened with sea scheme C so the coast holds against the darker water"
 river,#7FB8DD,"river water: the sea's own family (owner 2026-09-17: ""太蓝了"" — a river and the mouth it runs into must read as one water), one step deeper than sea_far so a tapered ribbon still shows over the pale land. #1E6FB5 was the deep blue"
 road,#C2A981,"roads: a worn sand track (owner 2026-09-17, after the reference painting) — pale warm earth with a soft shoulder (map_road_soft_ratio), not the slate line #4B5563 ruled across the sheet"
-map3d_road,#9C8058,"3D MAP roads (owner 2026-09-18): a darker, warmer sand than the 2D road — the 2D colour vanished on the 3D map's sunlit green"
-map3d_trail,#AE9670,3D MAP trails: the same track a shade lighter
 trail,#D0BC99,"land trails: the same track, lighter and thinner"
 contour,#8A6A46,the HEIGHTS view's iso-lines
 scale_bar,#334155,the scale bar in the bottom-right corner
@@ -32,8 +30,6 @@ heat_3,#F0C04E,upland yellow
 heat_4,#E08A45,hill orange
 heat_5,#B55A3C,mountain
 heat_6,#FFFFFF,"the summit, snow"
-map3d_road_surface,#EDE0CE,"3D MAP roads (2026-09-19): the multiplier on the road texture (Poly Haven rocky_trail_02) up close, so the lit earth reads warm like the fields around it, not grey"
-map3d_bridge,#E0CBA8,"3D MAP bridges (2026-09-19): the multiplier on the bridges' stone (Poly Haven medieval_blocks_03) — the lit stone read near-white against the fields; also the flat colour when the texture is missing"
 house_roof_thatch,#9A8459,"3D MAP houses (spec 2026-09-20 §2, widened 2026-09-21 for the mesh remake): weathered thatch. At 17-35 px (400 m closest zoom) the roof colour is most of what a house says, so it is data"
 house_roof_thatch_fresh,#B99A5E,"3D MAP houses (2026-09-21): fresh thatch, lighter and warmer than the weathered kind — a second thatch tone so a village's cottages don't read as one repeated roof"
 house_roof_tile,#8C5A45,3D MAP houses: fired clay tile

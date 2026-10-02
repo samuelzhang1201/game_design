@@ -278,15 +278,7 @@ map3d_army_badge_min_px,18,"3D MAP MILITARY (owner 2026-09-19: '注意兵棋大�
 map3d_army_chip_px,15,"3D MAP MILITARY (2026-09-27 critic: the chip outranked the soldier): the headcount chip that hangs over a 3D PIECE is at most this tall, design px — the piece is the counter, the chip only its tag; a flat counter (far out, a fleet) keeps map3d_army_badge_min_px..max_px"
 map3d_army_badge_max_px,30,"3D MAP MILITARY: the largest a counter gets close in, design px, so the counters never swamp the ground"
 map3d_line_lift_px,2.5,"3D MAP borders: every line is lifted this many screen px off the ground at its distance, so it clears the relief between its samples"
-map3d_road_width_px,7.0,"3D MAP roads (owner 2026-09-18): a road's width in screen px — the pack's roads draped on the relief in terrain_palette road, solid with a soft shoulder"
-map3d_trail_width_px,4.5,3D MAP roads: a trail's width in screen px (terrain_palette trail; 2.5 until the owner's 道路太细了，请加宽一点 of 2026-10-01)
-map3d_road_alpha,1.0,3D MAP roads: a road's opacity at its centre
 map3d_trail_alpha,0.6,"3D MAP march trails: the trodden grass's strength over the turf at its freshest, on its lanes"
-map3d_trail_hide_from_m,12000,"3D MAP far-zoom denoise (owner 2026-09-25: 进行远景降噪): trails start fading out this far from the camera — the road web at the opening zoom was the critics' commonest complaint"
-map3d_trail_hide_to_m,22000,3D MAP far-zoom denoise: trails are gone this far from the camera
-map3d_road_hide_from_m,1000000000,3D MAP far-zoom denoise: the roads never fade (the realm's main roads stay the far view's network)
-map3d_road_hide_to_m,2000000000,3D MAP far-zoom denoise: see map3d_road_hide_from_m
-map3d_road_edge_soft,0.8,"3D MAP roads: share of the half-width over which a road fades out to its sides — a worn track, not a ruled line (taste: read by width and fade)"
 map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its ring — only while it is shown, see map3d_ring_fade_start) picks it; otherwise the province under the click"
 map3d_selected_ring_scale,1.5,"3D MAP: the clicked settlement's ring is this much larger (fix round 1, owner 2026-09-18: was 1.4x diameter AND 1.5x line — a fat smear over the tier ring rather than a second crisp ring; now diameter only, the line stays the base stroke width), in political_palette map3d_selection gold"
 map3d_compass_needle_reach,0.62,"3D MAP compass (owner 2026-09-18): the north needle's half-length as a share of the compass radius — the needle turns with the view, gold tip to north"
@@ -339,10 +331,6 @@ map_ruler_label_outline_px,7.0,MEASUREMENT ruler: the halo outline round the rea
 map3d_road_step_m,25.0,"3D MAP roads (owner 2026-09-19: a textured road): roads and trails are resampled to a point every this many metres — a road is now drawn at its real width up close, and at the borders' 150 m it cut into the relief between its samples"
 map3d_road_width_m,25.0,"3D MAP roads: a road's width in metres (14 until 2026-10-01, owner: 道路太细了，请加宽一点 — bracketed x1.4 and x1.8, the wider chosen), drawn wider than life as the rivers are (a 7 m road was 2-3 px at the closest zoom, ~3 m a px; bracketed 16 / 24 / 32; the critic: 24 read wider than the rivers, a highway); the ribbon is this wide, or map3d_road_width_px on screen when that is wider (far away)"
 map3d_trail_width_m,16.0,3D MAP roads: a trail's width in metres (wider than life like the roads'; 9 until 2026-10-01)
-map3d_road_tile_m,60.0,"3D MAP roads: metres per repeat of the road texture (Poly Haven rocky_trail_02, packed earth and stones) — deliberately huge: at the closest zoom a screen px is ~3 m, and at 20 m a repeat was 7 px and the stones averaged away to a flat colour (bracketed 40 / 70 / 110 at 24 m wide, scaled with the width)"
-map3d_road_near_mpp,2.5,3D MAP roads: at this many metres per screen px and closer the road shows its texture in full
-map3d_road_far_mpp,7.0,3D MAP roads: at this many metres per screen px and further the road is the flat palette colour (map3d_road / map3d_trail): the stones are smaller than a pixel
-map3d_road_fray,0.35,"3D MAP roads: how far the texture's own height frays the road's sides up close (taste: read by width and fade, never a ruled line)"
 map3d_bridge_abut_m,12.0,3D MAP bridges (owner 2026-09-19: a road crossing a river is a bridge): the span runs this far onto each bank past the water
 map3d_bridge_clear_m,5.0,3D MAP bridges: the crown stands at least this high over the water...
 map3d_bridge_clear_per_width,0.05,"3D MAP bridges: ...plus this share of the river's width, so a wide river gets a higher bridge"
@@ -357,9 +345,7 @@ map3d_bridge_parapet_w_m,0.6,3D MAP bridges: the parapet's thickness
 map3d_bridge_arch_max_m,18.0,3D MAP bridges: no arch is wider than this; a long bridge stands on piers between several
 map3d_bridge_pier_m,3.0,3D MAP bridges: a pier's length along the bridge
 map3d_bridge_tile_m,10.0,3D MAP bridges: metres per repeat of the stone texture (Poly Haven medieval_blocks_03)
-map3d_road_texture_gain,1.1,"3D MAP roads: the road texture's brightness multiplier up close, so the lit stones sit at the palette road's tone"
 map3d_bridge_end_over_water_m,0.5,"3D MAP bridges: a deck end stands at least this far over the drawn water line, even where the carved bank lies lower"
-map3d_bridge_max_view_m,3500.0,"3D MAP bridges: a bridge fades out beyond this camera distance (over its last fifth) — further away it was a grey tick, and the road already runs on across the water"
 elevation_sea_level,20,"height (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §1): the Azgaar cell height of the waterline. Elevation.metres_of_cell and tools/map3d/bake_world.py both read it — one measure for the ground and the engine"
 elevation_m_per_unit,30,height: metres per Azgaar height unit above the waterline (100 -> 2400 m). Read by Elevation and bake_world.py
 army_height_bonus_permille_per_100m,40,"height in war (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §2): per mille a side gains for every 100 m it stands above the other in a fight, and the lower side loses; ArmySystem.height_factor"

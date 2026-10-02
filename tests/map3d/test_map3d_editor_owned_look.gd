@@ -28,7 +28,10 @@ const RIVER_FROM_SEA := {"mouth_water": "sea_near", "sky": "sky", "nat_mouth": "
 const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3d_sea_",
 	"map_sea_band_", "map3d_sky", "map3d_border_band", "map3d_border_halo", "map3d_border_width",
 	"map3d_seam", "map3d_hover_border", "map3d_selection_width", "map3d_selection_seam",
-	"map_manor_line_"]
+	"map_manor_line_", "map3d_road_width_px", "map3d_trail_width_px", "map3d_road_alpha",
+	"map3d_road_edge_soft", "map3d_road_tile_m", "map3d_road_near_mpp", "map3d_road_far_mpp",
+	"map3d_road_fray", "map3d_road_texture_gain", "map3d_road_hide_", "map3d_trail_hide_",
+	"map3d_bridge_max_view_m"]
 
 
 func before_all() -> void:
@@ -63,6 +66,28 @@ func test_the_waters_draw_what_their_tres_say() -> void:
 		for k: String in RIVER_FROM_SEA:
 			assert_eq(river.get_shader_parameter(k), sea.get_shader_parameter(RIVER_FROM_SEA[k]),
 				"the river's %s is the sea's %s: one water" % [k, RIVER_FROM_SEA[k]])
+
+
+## The roads and trails wear their look but for their drawn width in metres
+## (the geometry's), their packed textures and their px scaled; the bridges
+## stand under the world's own Bridges node in their stone.
+func test_the_roads_and_bridges_draw_what_their_tres_say() -> void:
+	var v := _view()
+	for pair: Array in [["Roads", Map3DLayerRoads.ROAD_MAT], ["Trails", Map3DLayerRoads.TRAIL_MAT]]:
+		var mesh := v.line_mesh(String(pair[0]))
+		if mesh == null:
+			continue
+		var live := mesh.surface_get_material(0) as ShaderMaterial
+		var look := pair[1] as ShaderMaterial
+		for u: Dictionary in look.shader.get_shader_uniform_list():
+			var name := String(u["name"])
+			if name in ["width_m", "width_px", "lift_px", "px_per_dist", "surface", "surface_nrm"] \
+					or look.get_shader_parameter(name) == null:
+				continue
+			assert_eq(live.get_shader_parameter(name), look.get_shader_parameter(name), "%s.%s" % [pair[0], name])
+	var bridges := v.world().get_node("Bridges") as MeshInstance3D
+	assert_not_null(bridges, "the world's own Bridges node")
+	assert_eq(bridges.get_parent(), v.world(), "never a node made beside it")
 
 
 ## Every line's live material is its look .tres but for what the code owns:

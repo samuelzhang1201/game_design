@@ -6,14 +6,20 @@ extends RefCounted
 ## its REAL width in the rocky_trail_02 texture up close, fading to the
 ## worn-sand palette colour far away (road_line.gdshader); and wherever one
 ## crosses a river it runs over a stone BRIDGE (Map3DBridges), built here as
-## ONE mesh under Viewport/Bridges in the medieval_blocks_03 stone. Routes
+## ONE mesh under the world's Bridges node in the medieval_blocks_03 stone. Routes
 ## never move, so they are built once, after the rivers — the risk this task
 ## guards (bridges read the river courses).
 
-## The roads' and the bridges' looks (spec 2026-09-20 §2): shader, render
-## priority and the committed 512 px previews of their textures
-## (tools/map3d/make_previews.gd); every tuned number is bound below.
+## The roads', the trails' and the bridges' LOOKS (owner 2026-10-02: edited
+## in the inspector) — the colour, the screen-px floor and lift, the soft and
+## frayed edge, the texture's tile, tint and fade by metres per px, a
+## trail's fade far out; the stone's colour and its fade far away — with the
+## committed 512 px previews of their textures (tools/map3d/make_previews.gd).
+## What the code sets is the drawn width in metres (the geometry's: the bake
+## and the bridges' decks read it), the full-resolution textures when
+## packed, and the px scaled to the SubViewport (Map3DLayerLines).
 const ROAD_MAT := preload("res://scenes/map3d/materials/road_line.tres")
+const TRAIL_MAT := preload("res://scenes/map3d/materials/trail_line.tres")
 const BRIDGE_MAT := preload("res://scenes/map3d/materials/bridge_stone.tres")
 ## The road surface and the bridges' stone at full resolution (Poly Haven,
 ## packed by tools/map3d/pack_textures.py into the git-ignored textures
@@ -23,15 +29,16 @@ const BRIDGE_TEXTURE := "res://assets/3D/terrain/textures/medieval_blocks_03"
 
 var ctx: Map3DContext
 var lines: Map3DLayerLines
-var viewport: SubViewport
+## The node the Bridges mesh stands under (the world; null: no bridges).
+var host: Node
 ## Every bridge built (Map3DBridges.plan's, each with its deck_w).
 var _bridges: Array = []
 
 
-func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_viewport: SubViewport) -> void:
+func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_host: Node) -> void:
 	ctx = p_ctx
 	lines = p_lines
-	viewport = p_viewport
+	host = p_host
 
 
 ## Roads and trails (each its own ribbon layer, Lines/Roads and Lines/Trails)
@@ -102,31 +109,19 @@ static func texture_pair(base: String) -> Array:
 	return [load(base + "_alb_ht.png"), load(base + "_nrm_rgh.png")]
 
 
-## The road_line.gdshader material of Lines/Roads or Lines/Trails.
+## Lines/Roads' or Lines/Trails' own copy of its look.
 static func road_material(p_ctx: Map3DContext, line_name: String) -> ShaderMaterial:
 	var key := "road" if line_name == "Roads" else "trail"
-	var colour := MapTerrain.palette_color(p_ctx.repo, "map3d_" + key, MapTerrain.FALLBACK)
-	colour.a = p_ctx.repo.bal("map3d_%s_alpha" % key)
-	var mat := (ROAD_MAT as ShaderMaterial).duplicate() as ShaderMaterial
+	var look := (ROAD_MAT if line_name == "Roads" else TRAIL_MAT) as ShaderMaterial
+	var mat := look.duplicate() as ShaderMaterial
 	mat.render_priority = Map3DPriority.ROADS
-	mat.set_shader_parameter("colour", colour)
 	mat.set_shader_parameter("width_m", p_ctx.repo.bal("map3d_%s_width_m" % key))
-	mat.set_shader_parameter("edge_soft", p_ctx.repo.bal("map3d_road_edge_soft"))
-	mat.set_shader_parameter("fray", p_ctx.repo.bal("map3d_road_fray"))
-	mat.set_shader_parameter("tile_m", p_ctx.repo.bal("map3d_road_tile_m"))
-	mat.set_shader_parameter("near_mpp", p_ctx.repo.bal("map3d_road_near_mpp"))
-	mat.set_shader_parameter("far_mpp", p_ctx.repo.bal("map3d_road_far_mpp"))
-	# far-zoom denoise (owner 2026-09-25): trails fade out far from the camera
-	mat.set_shader_parameter("hide_from_m", p_ctx.repo.bal("map3d_%s_hide_from_m" % key))
-	mat.set_shader_parameter("hide_to_m", p_ctx.repo.bal("map3d_%s_hide_to_m" % key))
-	var gain := p_ctx.repo.bal("map3d_road_texture_gain")
-	var tint := MapTerrain.palette_color(p_ctx.repo, "map3d_road_surface", Color.WHITE)
-	mat.set_shader_parameter("surface_tint", Vector3(tint.r, tint.g, tint.b) * gain)
 	var pair := texture_pair(ROAD_TEXTURE)
 	if not pair.is_empty():
 		mat.set_shader_parameter("surface", pair[0])
 		mat.set_shader_parameter("surface_nrm", pair[1])
-	mat.set_meta("width_key", "map3d_%s_width_px" % key)
+	mat.set_meta("base_px", {"width_px": float(look.get_shader_parameter("width_px")),
+		"lift_px": float(look.get_shader_parameter("lift_px"))})
 	return mat
 
 
@@ -153,18 +148,10 @@ static func bridge_mesh(p_ctx: Map3DContext, list: Array) -> ArrayMesh:
 
 ## The bridges' stone: medieval_blocks_03, lit and casting shadows like the ground.
 func bridge_material() -> StandardMaterial3D:
-	# The .tres: double-sided, roughness, the preview textures, anisotropic
-	# filtering. Its fade is set here with its distances: the fade mode alone,
-	# at Godot's default distances, would blank the editor's preview sphere.
+	# Its colour and its fade far away are the .tres's: per pixel (the mesh
+	# spans the world, so a visibility range, measured to its centre, would
+	# hide every bridge), a min distance past the max inverting the fade.
 	var mat := (BRIDGE_MAT as StandardMaterial3D).duplicate() as StandardMaterial3D
-	mat.albedo_color = MapTerrain.palette_color(ctx.repo, "map3d_bridge", Color("#8A7F70"))
-	# Fade out far away, per pixel (the mesh spans the world, so a
-	# visibility range, measured to its centre, would hide every bridge):
-	# a min distance past the max inverts Godot's distance fade.
-	var far := ctx.repo.bal("map3d_bridge_max_view_m")
-	mat.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
-	mat.distance_fade_min_distance = far
-	mat.distance_fade_max_distance = far * 0.8
 	var pair := texture_pair(BRIDGE_TEXTURE)
 	if not pair.is_empty():
 		mat.albedo_texture = pair[0]
@@ -172,24 +159,24 @@ func bridge_material() -> StandardMaterial3D:
 	return mat
 
 
-## `mesh` under Viewport/Bridges in the stone (as its override: a baked mesh
-## is shared), replacing any before; cleared when it has no surface.
+## `mesh` under the world's Bridges in the stone (as its override: a baked
+## mesh is shared), replacing any before; cleared when it has no surface.
 func _place_bridges(mesh: ArrayMesh) -> void:
 	_bridges = mesh.get_meta("bridges", []) if mesh != null else []
-	# The authored scene's Viewport/Bridges is filled in place (its mesh null
-	# when there are none); a bare viewport gets a node made for it.
-	var mi := viewport.get_node_or_null("Bridges") as MeshInstance3D if viewport != null else null
+	# The authored world's Bridges is filled in place (its mesh null when there
+	# are none); a bare host gets a node made for it.
+	var mi := host.get_node_or_null("Bridges") as MeshInstance3D if host != null else null
 	if mi != null:
 		mi.mesh = null
 		# The scene's own shared .tres must not stay on this view's node: it is
 		# one resource for every view, so nothing may edit it (the stone below
 		# is always a duplicate).
 		mi.material_override = null
-	if mesh == null or mesh.get_surface_count() == 0 or viewport == null:
+	if mesh == null or mesh.get_surface_count() == 0 or host == null:
 		return
 	if mi == null:
 		mi = MeshInstance3D.new()
 		mi.name = "Bridges"
-		viewport.add_child(mi)
+		host.add_child(mi)
 	mi.mesh = mesh
 	mi.material_override = bridge_material()
