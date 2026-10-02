@@ -103,7 +103,7 @@ func _ready() -> void:
 	# The rest of the facts column (owner ruling 2026-09-10): the host while
 	# the military layer is on, and the card of whatever was clicked.
 	_military = MilitaryPanel.attach(%MinisterPanel.get_node("MVBox"))
-	_detail = MapDetailPanel.new()
+	_detail = MapDetailPanel.create()
 	_detail.name = "DetailPanel"
 	%MinisterPanel.get_node("MVBox").add_child(_detail)
 	_detail.ask_enabled = true

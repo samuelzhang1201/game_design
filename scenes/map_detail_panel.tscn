@@ -1,0 +1,155 @@
+[gd_scene format=3 uid="uid://m1p7rvaxolu5"]
+
+[ext_resource type="Script" uid="uid://cegwhyw8u4c8v" path="res://scripts/ui/map_detail_panel.gd" id="1_tsidn"]
+[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="2_2ohk3"]
+[ext_resource type="Script" uid="uid://dcy6xj2djyw7o" path="res://scripts/ui/terrain_preview.gd" id="3_gxh7d"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7vcyj"]
+
+[node name="DetailPanel" type="PanelContainer" unique_id=2009617589]
+texture_filter = 1
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_7vcyj")
+script = ExtResource("1_tsidn")
+
+[node name="Col" type="VBoxContainer" parent="." unique_id=1951784246]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Painting" type="Control" parent="Col" unique_id=2039289208]
+visible = false
+clip_contents = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="PaintingImage" type="TextureRect" parent="Col/Painting" unique_id=33415160]
+texture_filter = 4
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="PaintingFade" type="Control" parent="Col/Painting" unique_id=604255037]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CardScroll" type="ScrollContainer" parent="Col" unique_id=314852554]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ScrollFade" type="Control" parent="Col/CardScroll" unique_id=1458005813]
+top_level = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="CardBody" type="VBoxContainer" parent="Col/CardScroll" unique_id=239823908]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Head" type="HBoxContainer" parent="Col/CardScroll/CardBody" unique_id=911869478]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Shield" type="Control" parent="Col/CardScroll/CardBody/Head" unique_id=567787952]
+custom_minimum_size = Vector2(44, 52)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("2_2ohk3")
+
+[node name="Titles" type="VBoxContainer" parent="Col/CardScroll/CardBody/Head" unique_id=281803130]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Col/CardScroll/CardBody/Head/Titles" unique_id=481286127]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+autowrap_mode = 3
+
+[node name="Subtitle" type="Label" parent="Col/CardScroll/CardBody/Head/Titles" unique_id=1365402578]
+layout_mode = 2
+theme_type_variation = &"CardLabel"
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="Col/CardScroll/CardBody" unique_id=1080751945]
+layout_mode = 2
+
+[node name="Fields" type="GridContainer" parent="Col/CardScroll/CardBody" unique_id=962294552]
+layout_mode = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 2
+columns = 2
+
+[node name="Stats" type="GridContainer" parent="Col/CardScroll/CardBody" unique_id=1345047933]
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 4
+columns = 4
+
+[node name="Rates" type="VBoxContainer" parent="Col/CardScroll/CardBody" unique_id=1444420773]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Slots" type="HBoxContainer" parent="Col/CardScroll/CardBody" unique_id=554687001]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Features" type="HBoxContainer" parent="Col/CardScroll/CardBody" unique_id=496300637]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Production" type="VBoxContainer" parent="Col/CardScroll/CardBody" unique_id=635173676]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Money" type="VBoxContainer" parent="Col/CardScroll/CardBody" unique_id=27189789]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Actions" type="VBoxContainer" parent="Col/CardScroll/CardBody" unique_id=1451869971]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Rows" type="VBoxContainer" parent="Col/CardScroll/CardBody" unique_id=517518283]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Hint" type="Label" parent="Col/CardScroll/CardBody" unique_id=1573311651]
+layout_mode = 2
+theme_type_variation = &"CardHint"
+autowrap_mode = 3
+
+[node name="Preview" type="Control" parent="Col/CardScroll/CardBody" unique_id=427117865]
+custom_minimum_size = Vector2(0, 118)
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+mouse_filter = 2
+script = ExtResource("3_gxh7d")
+
+[node name="DetailAsk" type="Button" parent="Col" unique_id=303853499]
+visible = false
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"CardCommand"
+text = "Ask the Council"
+
+[node name="DetailClose" type="Button" parent="Col" unique_id=1308504493]
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"CardCommand"
+text = "Close"

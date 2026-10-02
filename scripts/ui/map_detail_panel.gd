@@ -77,9 +77,10 @@ var _slots: HBoxContainer
 var _shown_manor := -1
 ## A slot box's side, design px.
 const SLOT_PX := 34.0
-## A reported fact's source tag ("spy · Spring 5, Year 1"), design px, under
-## its estimate at the fields' 14 px (spec 2026-09-28 §2: "a small tag").
-const INTEL_TAG_FONT_SIZE := 11
+## A slot's box, and a work in progress's see-through box (its dashes are
+## drawn over it, _draw_dashed_edge) — edited in the inspector.
+const SLOT_STYLE := preload("res://assets/2D/ui/panels/styles/card_slot.tres")
+const SLOT_WORK_STYLE := preload("res://assets/2D/ui/panels/styles/card_slot_work.tres")
 var _hint: Label
 var _ask: Button
 var _close: Button
@@ -90,169 +91,63 @@ var _shown_province := ""
 var _open := false
 
 
+## The card's frame is scenes/map_detail_panel.tscn (owner 2026-10-02: the
+## look lives in the editor): the painting band, the scrolling body and its
+## sections, the map window, ASK and CLOSE. Its rows are made here as cards
+## are shown, each a theme kind (CardText, CardLabel, CardStatName,
+## CardFigure, …) that game_theme.tres writes in the leather's ink and the
+## paper column's paper_theme.tres in the paper's — so the same card reads
+## on leather and on paper with no colour set in code.
 func _ready() -> void:
-	if name == "":
-		name = "DetailPanel"
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# It is a child of the column's box now, so it has to ask for the room:
-	# without this the scrolling body collapses to nothing.
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
-	add_child(col)
-	# The painted estate stands over the scrolling body, so it stays in view
-	# while the facts below it scroll; the picture is cover-cropped into a
-	# box a third of the card's height (_fit_painting).
-	_painting_box = Control.new()
-	_painting_box.name = "Painting"
-	_painting_box.clip_contents = true
-	_painting_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_painting_box.visible = false
-	col.add_child(_painting_box)
-	_painting = TextureRect.new()
-	_painting.name = "PaintingImage"
-	_painting.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_painting.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	_painting.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	_painting.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_painting.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_painting_box.add_child(_painting)
+	_painting_box = $Col/Painting
+	_painting = $Col/Painting/PaintingImage
+	var fade: Control = $Col/Painting/PaintingFade
 	# Its paper edges fade into the card (owner 2026-09-28, second critique:
 	# a cream rectangle on dark leather was a hard-edged tray).
-	var fade := Control.new()
-	fade.name = "PaintingFade"
-	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	fade.draw.connect(func() -> void: _draw_painting_fade(fade))
 	fade.resized.connect(fade.queue_redraw)
-	_painting_box.add_child(fade)
 	resized.connect(_fit_painting)
-	# The column is 120 design px wide and no taller than the screen, so a
-	# full town card does not fit: the body scrolls and ASK / CLOSE stay
-	# pinned at the bottom where the player can always reach them.
-	var scroll := ScrollContainer.new()
-	scroll.name = "CardScroll"
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(scroll)
-	_scroll = scroll
+	# The column is narrow and no taller than the screen, so a full town card
+	# does not fit: the body scrolls and ASK / CLOSE stay pinned at the bottom.
+	_scroll = $Col/CardScroll
 	# More lies below: the last row fades into the card instead of being cut
-	# through its middle (critic 2026-09-28). Top level, so the scroll does not
-	# lay it out as content; placed each frame over the scroll's foot.
-	_scroll_fade = Control.new()
-	_scroll_fade.name = "ScrollFade"
-	_scroll_fade.top_level = true
-	_scroll_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# through its middle (critic 2026-09-28); top level, placed each frame over
+	# the scroll's foot.
+	_scroll_fade = $Col/CardScroll/ScrollFade
 	_scroll_fade.draw.connect(func() -> void:
 		var r := Rect2(Vector2.ZERO, _scroll_fade.size)
 		var solid := UiPalette.card_ground(self)
 		_scroll_fade.draw_polygon(PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end,
 			Vector2(r.position.x, r.end.y)]), PackedColorArray([Color(solid, 0.0), Color(solid, 0.0), solid, solid])))
-	scroll.add_child(_scroll_fade)
-	var body := VBoxContainer.new()
-	body.name = "CardBody"
-	body.add_theme_constant_override("separation", 8)
-	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(body)
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 10)
-	body.add_child(head)
-	_shield = HeraldicShield.new()
-	_shield.name = "Shield"
-	head.add_child(_shield)
-	var titles := VBoxContainer.new()
-	titles.add_theme_constant_override("separation", 2)
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(titles)
-	_title = Label.new()
-	_title.name = "Title"
-	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiPalette.style_header(_title, 16)
-	titles.add_child(_title)
-	_subtitle = Label.new()
-	_subtitle.name = "Subtitle"
-	_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_subtitle.add_theme_font_size_override("font_size", 14)
-	_subtitle.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	titles.add_child(_subtitle)
-	body.add_child(HSeparator.new())
-	_fields = GridContainer.new()
-	_fields.name = "Fields"
-	_fields.columns = 2
-	_fields.add_theme_constant_override("h_separation", 12)
-	_fields.add_theme_constant_override("v_separation", 2)
-	body.add_child(_fields)
-	_stats = GridContainer.new()
-	_stats.name = "Stats"
-	_stats.columns = DEFAULT_STAT_COLUMNS
-	_stats.add_theme_constant_override("h_separation", 6)
-	_stats.add_theme_constant_override("v_separation", 4)
-	body.add_child(_stats)
-	_rates = VBoxContainer.new()
-	_rates.name = "Rates"
-	_rates.add_theme_constant_override("separation", 2)
-	body.add_child(_rates)
-	_slots = HBoxContainer.new()
-	_slots.name = "Slots"
-	_slots.add_theme_constant_override("separation", 6)
-	body.add_child(_slots)
-	_features = HBoxContainer.new()
-	_features.name = "Features"
-	_features.add_theme_constant_override("separation", 8)
-	body.add_child(_features)
-	_production = VBoxContainer.new()
-	_production.name = "Production"
-	_production.add_theme_constant_override("separation", 2)
-	body.add_child(_production)
-	_money = VBoxContainer.new()
-	_money.name = "Money"
-	_money.add_theme_constant_override("separation", 2)
-	body.add_child(_money)
-	_actions = VBoxContainer.new()
-	_actions.name = "Actions"
-	_actions.add_theme_constant_override("separation", 4)
-	body.add_child(_actions)
-	_lines = VBoxContainer.new()
-	_lines.name = "Rows"
-	_lines.add_theme_constant_override("separation", 2)
-	body.add_child(_lines)
-	_hint = Label.new()
-	_hint.name = "Hint"
-	_hint.add_theme_font_size_override("font_size", 14)
-	_hint.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
-	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.add_child(_hint)
-	_preview = TerrainPreview.new()
-	_preview.name = "Preview"
-	# Only its HEIGHT is fixed (2026-09-14): a fixed 208 px width plus the
-	# scroll bar a taller card grows pushed the fixed-width column over the
-	# map (CLAUDE.md invariant 10), so the window fills whatever width it has.
-	_preview.custom_minimum_size = Vector2(0.0, PREVIEW_SIZE.y)
-	_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_preview.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	body.add_child(_preview)
-	_ask = Button.new()
-	_ask.name = "DetailAsk"
-	_ask.text = "ASK THE COUNCIL"
-	_ask.focus_mode = Control.FOCUS_NONE
-	UiPalette.command_button(_ask, 14)
+	var body := $Col/CardScroll/CardBody
+	_shield = body.get_node("Head/Shield")
+	_title = body.get_node("Head/Titles/Title")
+	_subtitle = body.get_node("Head/Titles/Subtitle")
+	_fields = body.get_node("Fields")
+	_stats = body.get_node("Stats")
+	_rates = body.get_node("Rates")
+	_slots = body.get_node("Slots")
+	_features = body.get_node("Features")
+	_production = body.get_node("Production")
+	_money = body.get_node("Money")
+	_actions = body.get_node("Actions")
+	_lines = body.get_node("Rows")
+	_hint = body.get_node("Hint")
+	_preview = body.get_node("Preview")
+	_ask = $Col/DetailAsk
 	_ask.pressed.connect(func() -> void: ask_requested.emit(_ask_text))
-	_ask.visible = false
-	col.add_child(_ask)
-	_close = Button.new()
-	_close.name = "DetailClose"
-	_close.text = "CLOSE"
-	_close.focus_mode = Control.FOCUS_NONE
-	UiPalette.command_button(_close, 14)
+	_close = $Col/DetailClose
 	_close.pressed.connect(func() -> void:
 		_close_panel()
 		closed.emit())
-	col.add_child(_close)
 	# Nothing is selected when a screen opens: the card is closed and the
 	# column shows its own content (user ruling 2026-09-09).
 	_close_panel()
+
+
+## The card as the game makes it: its scene.
+static func create() -> MapDetailPanel:
+	return (load("res://scenes/map_detail_panel.tscn") as PackedScene).instantiate()
 
 
 ## Whether a card is open. The screen's left column asks this rather than
@@ -321,7 +216,7 @@ func show_entry(entry: Dictionary) -> void:
 	_title.text = String(entry.get("title", ""))
 	_subtitle.visible = false
 	for line in entry.get("lines", []):
-		_lines.add_child(_line(String(line), UiPalette.TEXT_SOFT))
+		_lines.add_child(_line(String(line), &"CardText"))
 	_set_ask(String(entry.get("ask", "")))
 	_open_panel()
 
@@ -343,7 +238,7 @@ func show_list(title: String, rows: Array) -> void:
 		b.clip_text = true
 		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		b.set_meta("ledger_id", String(row["id"]))
-		b.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		b.theme_type_variation = &"CardRow"
 		var id := String(row["id"])
 		b.pressed.connect(func() -> void: list_row_chosen.emit(id))
 		_lines.add_child(b)
@@ -414,8 +309,8 @@ func show_card(card: Dictionary) -> void:
 	var stats: Array = card.get("stats", [])
 	if stats.is_empty():
 		for f in card.get("fields", []):
-			_fields.add_child(_line(String(f[0]), UiPalette.TEXT_MUTED))
-			_fields.add_child(_line(String(f[1]), UiPalette.TEXT_SOFT))
+			_fields.add_child(_line(String(f[0]), &"CardLabel"))
+			_fields.add_child(_line(String(f[1]), &"CardText"))
 	elif _as_rows(card):
 		_fill_stat_rows(stats, card.get("rates", []))
 	else:
@@ -433,23 +328,23 @@ func show_card(card: Dictionary) -> void:
 	# tag under every row carried nothing new (the colour still marks each).
 	var last_tag := ""
 	for row: Dictionary in card.get("intel", []):
-		var label := _line(String(row["label"]), UiPalette.TEXT_MUTED)
+		var label := _line(String(row["label"]), &"CardLabel")
 		label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		label.size_flags_horizontal = Control.SIZE_FILL
 		_fields.add_child(label)
-		var value := _line(String(row["text"]), UiPalette.TEXT_SOFT)
+		var value := _line(String(row["text"]), &"CardText")
 		if String(row["tag"]) == "":
 			_fields.add_child(value)
 			last_tag = ""
 			continue
 		var colour := MapPalette.named(Game.data, "intel_" + String(row["column"]))
-		value.add_theme_color_override("font_color", colour)
+		value.add_theme_color_override("font_color", colour)  # the report's column, data
 		if String(row["tag"]) == last_tag:
 			_fields.add_child(value)
 			continue
 		last_tag = String(row["tag"])
-		var tag := _line(last_tag, colour)
-		tag.add_theme_font_size_override("font_size", INTEL_TAG_FONT_SIZE)
+		var tag := _line(last_tag, &"CardTag")
+		tag.add_theme_color_override("font_color", colour)  # the report's column, data
 		var cell := VBoxContainer.new()
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cell.add_theme_constant_override("separation", 0)
@@ -465,7 +360,7 @@ func show_card(card: Dictionary) -> void:
 		host.name = "TheHost"
 		host.text = "The Host — all regiments"
 		host.focus_mode = Control.FOCUS_NONE
-		UiPalette.command_button(host, 12)
+		host.theme_type_variation = &"CardCommandSmall"
 		host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		host.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		host.pressed.connect(func() -> void: host_requested.emit())
@@ -475,20 +370,19 @@ func show_card(card: Dictionary) -> void:
 	elif not basic:
 		var features: Array = card.get("features", [])
 		if not features.is_empty():
-			_features.add_child(_line("Features", UiPalette.TEXT_MUTED))
+			_features.add_child(_line("Features", &"CardLabel"))
 			for key in features:
 				_features.add_child(ResourceIcon.create(String(key)))
 		var production: Array = card.get("production", [])
 		if not production.is_empty():
-			_production.add_child(_line("Production", UiPalette.TEXT_MUTED))
+			_production.add_child(_line("Production", &"CardLabel"))
 			for i in mini(production.size(), int(Game.data.bal("province_card_max_goods"))):
 				var p: Dictionary = production[i]
 				var row := HBoxContainer.new()
 				row.add_theme_constant_override("separation", 8)
 				if String(p.get("tag", "")) != "":
 					row.add_child(ResourceIcon.create(String(p["tag"])))
-				row.add_child(_line("%s %s" % [String(p["label"]), _num(float(p["units"]))],
-					UiPalette.TEXT_SOFT))
+				row.add_child(_line("%s %s" % [String(p["label"]), _num(float(p["units"]))]))
 				_production.add_child(row)
 		# One row per sum, never two labels squeezed into one line (user report
 		# 2026-09-09: they wrapped letter by letter).
@@ -498,7 +392,7 @@ func show_card(card: Dictionary) -> void:
 			cell.add_child(ResourceIcon.create(String(spec[0])))
 			var text := _line("%s %s" % [
 				String((Game.data.resource_icons.get(String(spec[0]), {}) as Dictionary).get("label", spec[1])),
-				_num(float(card.get(String(spec[1]), 0.0)))], UiPalette.TEXT_SOFT)
+				_num(float(card.get(String(spec[1]), 0.0)))])
 			text.autowrap_mode = TextServer.AUTOWRAP_OFF
 			cell.add_child(text)
 			_money.add_child(cell)
@@ -525,7 +419,7 @@ func show_card(card: Dictionary) -> void:
 			(a["params"] as Dictionary).get("focus", "")))
 		button.text = String(a["label"])
 		button.focus_mode = Control.FOCUS_NONE
-		button.add_theme_font_size_override("font_size", 12)
+		button.theme_type_variation = &"CardCommandSmall"
 		button.disabled = String(a.get("error", "")) != ""
 		button.tooltip_text = String(a.get("error", ""))
 		if String(a["action_code"]) == "MANOR_BUY":
@@ -537,7 +431,7 @@ func show_card(card: Dictionary) -> void:
 			button.text = String(a["label"]).get_slice(" from ", 0)
 			if not button.disabled:
 				button.tooltip_text = String(a["label"])
-		UiPalette.command_button(button)
+		button.text = UiPalette.command_label(button.text)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		# The column's width is fixed (CLAUDE.md invariant 10): a long
 		# order wraps rather than pushing the column over the map.
@@ -600,12 +494,7 @@ func _fill_slots(card: Dictionary) -> void:
 		column.add_theme_constant_override("separation", 2)
 		var box := PanelContainer.new()
 		box.custom_minimum_size = Vector2(SLOT_PX, SLOT_PX)
-		var style := UiPalette.chip_style()
-		style.content_margin_left = 4.0
-		style.content_margin_right = 4.0
-		style.content_margin_top = 4.0
-		style.content_margin_bottom = 4.0
-		box.add_theme_stylebox_override("panel", style)
+		box.add_theme_stylebox_override("panel", SLOT_STYLE)
 		if i < filled.size():
 			var entry: Dictionary = filled[i]
 			var code := String(entry["building"])
@@ -621,14 +510,13 @@ func _fill_slots(card: Dictionary) -> void:
 				# A work in progress is a GHOST of the building (owner
 				# 2026-09-14): a see-through box with a dashed edge and the
 				# building's art faint inside it, until the days are up.
-				box.add_theme_stylebox_override("panel", _work_style())
+				box.add_theme_stylebox_override("panel", SLOT_WORK_STYLE)
 				box.draw.connect(_draw_dashed_edge.bind(box))
 				icon.modulate.a = Game.data.bal("ui_slot_work_alpha")
 				var days := Label.new()
 				days.name = "Days"
 				days.text = "%dd" % int(entry["days_left"])
-				days.add_theme_font_size_override("font_size", 11)
-				days.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+				days.theme_type_variation = &"CardSmall"
 				days.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 				column.add_child(box)
 				column.add_child(days)
@@ -644,8 +532,7 @@ func _fill_slots(card: Dictionary) -> void:
 				var word := Label.new()
 				word.name = "Idle"
 				word.text = "idle"
-				word.add_theme_font_size_override("font_size", 11)
-				word.add_theme_color_override("font_color", UiPalette.bad_color())
+				word.theme_type_variation = &"CardWarn"
 				word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 				word.tooltip_text = why
 				word.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -661,7 +548,7 @@ func _fill_slots(card: Dictionary) -> void:
 				cross.name = "DEMOLISH_" + code
 				cross.text = "x"
 				cross.focus_mode = Control.FOCUS_NONE
-				cross.add_theme_font_size_override("font_size", 11)
+				cross.theme_type_variation = &"CardCross"
 				cross.custom_minimum_size = Vector2(SLOT_PX, 0)
 				cross.tooltip_text = String(a["label"]) if String(a.get("error", "")) == "" else String(a["error"])
 				cross.disabled = String(a.get("error", "")) != ""
@@ -672,8 +559,7 @@ func _fill_slots(card: Dictionary) -> void:
 			box.name = "Slot_empty_%d" % i
 			var plus := Label.new()
 			plus.text = "+"
-			plus.add_theme_font_size_override("font_size", 16)
-			plus.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+			plus.theme_type_variation = &"CardPlus"
 			plus.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			plus.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			box.add_child(plus)
@@ -692,10 +578,8 @@ func _add_build_menu(builds: Array) -> void:
 	var menu := OptionButton.new()
 	menu.name = "BuildMenu"
 	menu.focus_mode = Control.FOCUS_NONE
-	menu.add_theme_font_size_override("font_size", 12)
-	menu.add_theme_constant_override("icon_max_width", int(STAT_ICON_PX))
-	menu.get_popup().add_theme_constant_override("icon_max_width", int(STAT_ICON_PX))
-	menu.get_popup().add_theme_font_size_override("font_size", 13)
+	menu.theme_type_variation = &"CardMenu"
+	menu.get_popup().theme_type_variation = &"CardMenuPopup"
 	menu.clip_text = true
 	# An OptionButton is as wide as its longest entry unless told otherwise,
 	# and "Stonecutter — 150 civil, 40d" pushed the fixed column over the map
@@ -722,7 +606,8 @@ func _add_build_menu(builds: Array) -> void:
 	go.name = "BuildButton"
 	go.text = "BUILD"
 	go.focus_mode = Control.FOCUS_NONE
-	UiPalette.command_button(go, 12)
+	go.theme_type_variation = &"CardCommandSmall"
+	go.text = UiPalette.command_label(go.text)
 	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sync := func(index: int) -> void:
 		var chosen: Dictionary = menu.get_item_metadata(index) if index >= 0 else {}
@@ -779,16 +664,6 @@ static func building_tooltip(code: String) -> String:
 	if not needs.is_empty():
 		text += " (needs %s)" % ", ".join(needs)
 	return text
-
-
-## A work in progress's box: see-through, no solid edge — the dashes are
-## drawn over it (_draw_dashed_edge).
-func _work_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(1.0, 1.0, 1.0, 0.08)  # a breath of light on the dark card (was 0.18 on white)
-	style.set_corner_radius_all(UiPalette.CHIP_RADIUS)
-	style.set_content_margin_all(4.0)
-	return style
 
 
 ## The dashed edge of a work's ghost box, in the accent at three quarters.
@@ -911,8 +786,7 @@ func _fill_stats(stats: Array) -> void:
 		var value := Label.new()
 		value.name = "Stat_" + key
 		value.text = String(st["text"])
-		value.add_theme_font_size_override("font_size", 13)
-		value.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		value.theme_type_variation = &"CardValue"
 		value.clip_text = true
 		value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -973,7 +847,7 @@ func _fill_stat_rows(stats: Array, rates: Array) -> void:
 		head.name = "Section_" + String(sec["section"])
 		head.text = String(sec["label"])
 		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		UiPalette.style_section(head, 12)
+		head.theme_type_variation = &"CardSection"
 		_stats.add_child(head)
 		var per_month: bool = sec.get("per_month", false)
 		for st: Dictionary in mine:
@@ -1011,8 +885,7 @@ func _stat_row(st: Dictionary, per_month := false) -> HBoxContainer:
 	name_l.text = String((Game.data.resource_icons.get(key, {}) as Dictionary).get("label", key))
 	if key.begins_with("weather_"):
 		name_l.text = "Weather"
-	name_l.add_theme_font_size_override("font_size", 13)
-	name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+	name_l.theme_type_variation = &"CardStatName"
 	name_l.custom_minimum_size = Vector2(Game.data.bal("ui_manor_row_label_px"), 0)
 	name_l.mouse_filter = Control.MOUSE_FILTER_PASS
 	name_l.tooltip_text = tip
@@ -1020,9 +893,7 @@ func _stat_row(st: Dictionary, per_month := false) -> HBoxContainer:
 	var value := Label.new()
 	value.name = "Stat_" + key
 	value.text = String(st["text"]).trim_suffix("/mo") if per_month else String(st["text"])
-	value.add_theme_font_override("font", UiPalette.figures_font())
-	value.add_theme_font_size_override("font_size", 13)
-	value.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+	value.theme_type_variation = &"CardFigure"
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	value.clip_text = true
 	value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -1045,7 +916,7 @@ func _fill_rates(rates: Array, into: VBoxContainer = null, headed := true, per_m
 		return
 	var target := into if into != null else _rates
 	if headed:
-		target.add_child(_line("Output a month", UiPalette.TEXT_MUTED))
+		target.add_child(_line("Output a month", &"CardLabel"))
 	for r: Dictionary in rates:
 		var good := String(r["good"])
 		var tip := "%s — %d units a month, worth %d gold to the %s goods" % [
@@ -1079,10 +950,9 @@ func _fill_rates(rates: Array, into: VBoxContainer = null, headed := true, per_m
 			row.add_child(glyph)
 		var name_l := Label.new()
 		name_l.text = String(r["label"])
-		name_l.add_theme_font_size_override("font_size", 13)
 		# Under a per-month heading the good is one more named row: the rows'
 		# muted name and their art's size, so the column lines up.
-		name_l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED if per_month else UiPalette.TEXT_SOFT)
+		name_l.theme_type_variation = &"CardStatName" if per_month else &"CardValue"
 		name_l.clip_text = true
 		name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1093,12 +963,10 @@ func _fill_rates(rates: Array, into: VBoxContainer = null, headed := true, per_m
 		rate_l.name = "Rate"
 		if per_month:
 			rate_l.text = UiPalette.format_int(int(r["units"]))
-			rate_l.add_theme_font_override("font", UiPalette.figures_font())
-			rate_l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+			rate_l.theme_type_variation = &"CardFigure"
 		else:
 			rate_l.text = "+%d / mo" % int(r["units"])
-			rate_l.add_theme_color_override("font_color", UiPalette.good_color())
-		rate_l.add_theme_font_size_override("font_size", 13)
+			rate_l.theme_type_variation = &"CardGood"
 		rate_l.mouse_filter = Control.MOUSE_FILTER_PASS
 		rate_l.tooltip_text = tip
 		row.add_child(rate_l)
@@ -1110,11 +978,12 @@ func _set_ask(ask: String) -> void:
 	_ask.visible = ask_enabled and ask != ""
 
 
-func _line(text: String, color: Color) -> Label:
+## One line of the card in a theme kind (CardText the body, CardLabel a
+## label), written in whichever ink the column's theme gives it.
+func _line(text: String, kind: StringName = &"CardText") -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 14)
-	l.add_theme_color_override("font_color", color)
+	l.theme_type_variation = kind
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return l
@@ -1226,45 +1095,3 @@ func shown_manor() -> int:
 
 func shown_province() -> String:
 	return _shown_province
-
-
-## The card's map window: the terrain mesh and the shores, scaled so
-## `span` native px cover the rect (cover fit, like the old atlas) and
-## centred on the place. Reads Game.data only.
-class TerrainPreview extends Control:
-	var mesh: ArrayMesh
-	var span: Vector2 = MapDetailPanel.PREVIEW_SPAN
-	var _center := Vector2.ZERO
-
-	func _init() -> void:
-		clip_contents = true
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func show_place(center: Vector2) -> void:
-		mesh = MapTerrain.shared_mesh(Game.data)
-		_center = center
-		visible = mesh != null
-		queue_redraw()
-
-	func _draw() -> void:
-		if mesh == null:
-			return
-		var k := maxf(size.x / span.x, size.y / span.y)
-		var origin := size / 2.0 - _center * k
-		draw_rect(Rect2(Vector2.ZERO, size),
-			MapTerrain.palette_color(Game.data, "sea_deep", MapTerrain.FALLBACK))
-		draw_mesh(mesh, null, Transform2D(0.0, Vector2(k, k), 0.0, origin))
-		var coast := MapTerrain.palette_color(Game.data, "coast_line", MapTerrain.FALLBACK)
-		var coast_width: float = Game.data.bal("map_coast_width")
-		var frame := Rect2(Vector2.ZERO, size).grow(4.0)
-		for row: Dictionary in Game.data.coasts:
-			var b: Rect2 = row["bbox"]
-			if not frame.intersects(Rect2(origin + b.position * k, b.size * k)):
-				continue
-			var loop: PackedVector2Array = row["polyline"]
-			var pts := PackedVector2Array()
-			pts.resize(loop.size() + 1)
-			for i in loop.size():
-				pts[i] = origin + loop[i] * k
-			pts[loop.size()] = pts[0]
-			draw_polyline(pts, coast, coast_width, true)

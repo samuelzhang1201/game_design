@@ -459,6 +459,13 @@ static func command_button(button: Button, size: int = 0) -> void:
 		button.add_theme_font_override("font", font)
 	button.text = command_text(button.text)
 
+## A command's words as the command style writes them (a scene's button
+## already wears its face; this is only the text).
+static func command_label(text: String) -> String:
+	if data() != null and data().bal("ui_command_style") <= 0.0:
+		return text
+	return command_text(text)
+
 ## "ASK THE COUNCIL" / "ask the council" -> "Ask the Council"; "BUY — 3508
 ## gold" -> "Buy — 3,508 Gold"; a word with a figure in it ("20g", "5d") is
 ## left as written but for its grouping.

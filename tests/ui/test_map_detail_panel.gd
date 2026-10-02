@@ -5,7 +5,7 @@ extends GutTest
 ## provinces; lines for everything else and only the basics abroad.
 
 func _panel() -> MapDetailPanel:
-	var p := MapDetailPanel.new()
+	var p := MapDetailPanel.create()
 	add_child_autofree(p)
 	p.ask_enabled = true
 	return p

@@ -60,6 +60,8 @@ func _refit_if_ready() -> void:
 
 ## Who waits: this month's speakers, until the council is entered for them.
 func refresh() -> void:
+	if _waiting_line == null:
+		return  # the scene's tag is not there (an editor mid-swap)
 	_waiting = []
 	if not Engine.is_editor_hint() and Game != null and Game.state != null and Game.current_report != null \
 			and heard_tick != Game.state.tick:

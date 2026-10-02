@@ -52,6 +52,8 @@ func _ready() -> void:
 	var roll: PanelContainer = %CardRoll
 	if UiPalette.war_table():
 		roll.add_theme_stylebox_override("panel", WarTable.report_style())
+		# the paper's own theme: the card's kinds write in the paper's ink
+		roll.theme = load("res://assets/2D/ui/theme/paper_theme.tres")
 		WarTable.ink_column(roll)
 		# the card's scroll fades into this paper, as it does in the column
 		roll.set_meta("paper_ground", UiPalette.table_color("paper_ground", UiPalette.PANEL_BG))

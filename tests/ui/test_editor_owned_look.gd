@@ -10,7 +10,7 @@ extends GutTest
 
 const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversation_scene.gd",
 	"res://scripts/ui/top_bar.gd", "res://scripts/ui/main_menu.gd", "res://scripts/ui/bottom_bar.gd",
-	"res://scripts/ui/news_ticker.gd"]
+	"res://scripts/ui/news_ticker.gd", "res://scripts/ui/map_detail_panel.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -51,6 +51,15 @@ const CODE_OWNED := {
 	# the slip lies in the band between the bookmark groups (place_on_table)
 	"NewsTicker/": ["anchor_left", "anchor_top", "anchor_right", "anchor_bottom", "offset_left",
 		"offset_top", "offset_right", "offset_bottom"],
+	# the card's painting band and its fade are fitted to the card
+	# (_fit_painting), the scroll's foot fade placed over the scroll each frame,
+	# the stat grid's spacing by its kind of card, the shield the holder's
+	"Detail/Col/Painting": ["custom_minimum_size"],
+	"Detail/Col/Painting/PaintingImage": ["texture", "anchor_left", "anchor_top", "anchor_right",
+		"anchor_bottom", "offset_left", "offset_top", "offset_right", "offset_bottom"],
+	"Detail/Col/CardScroll/ScrollFade": ["offset_left", "offset_top", "offset_right", "offset_bottom"],
+	"Detail/Col/CardScroll/CardBody/Stats": ["theme_override_constants/v_separation"],
+	"Detail/Col/CardScroll/CardBody/Head/Shield": ["texture", "color"],
 	# the title's arms are the preview reign's crown's
 	"TitleColumn/Col/TitleArms": ["texture", "color"],
 }
@@ -78,6 +87,11 @@ func test_the_court_keeps_its_scenes_look() -> void:
 	_assert_scene_holds(r.bottom_bar(), "res://scenes/bottom_bar.tscn", "BottomBar/")
 	_assert_scene_holds(r.current_screen.get_node("%CouncilHandle"), "res://scenes/war_table/council_seal.tscn", "Seal/", 8)
 	_assert_scene_holds(r.news_ticker(), "res://scenes/news_ticker.tscn", "NewsTicker/")
+	var detail: MapDetailPanel = r.current_screen.detail_panel()
+	detail.show_manor(int(MapManors.manors_of_province(Game.data,
+		MapManors.home_province(Game.data, Game.state), Game.state)[0]))
+	await wait_process_frames(2)
+	_assert_scene_holds(detail, "res://scenes/map_detail_panel.tscn", "Detail/")
 	# the scene's layout, moved in the editor, still starts the columns under the bar
 	var bar: TopBar = r.current_screen.get_node("%TopBar")
 	for n in ["%LogPanel", "%MapPanel", "%SidePanel"]:

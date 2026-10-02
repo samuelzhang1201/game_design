@@ -2,6 +2,7 @@
 
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="1_el5ut"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/header.tres" id="1_on7wr"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/figures.tres" id="2_8x4xl"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_bold.tres" id="2_el5ut"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="3_8x4xl"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body.tres" id="4_66g1x"]
@@ -72,6 +73,13 @@ corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66g1x"]
+content_margin_top = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0, 0, 0, 0)
+border_width_bottom = 1
+border_color = Color(0.65882355, 0.5411765, 0.29803923, 0.35)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3rsyk"]
 bg_color = Color(0.65882355, 0.5411765, 0.29803923, 0.55)
@@ -187,6 +195,71 @@ Button/styles/disabled = SubResource("StyleBoxFlat_oj8e7")
 Button/styles/hover = SubResource("StyleBoxFlat_qexmn")
 Button/styles/normal = SubResource("StyleBoxFlat_o41bo")
 Button/styles/pressed = SubResource("StyleBoxFlat_e4xyk")
+CardButtonSmall/base_type = &"Button"
+CardButtonSmall/font_sizes/font_size = 12
+CardCommand/base_type = &"Button"
+CardCommand/font_sizes/font_size = 14
+CardCommand/fonts/font = ExtResource("1_el5ut")
+CardCommandSmall/base_type = &"Button"
+CardCommandSmall/font_sizes/font_size = 12
+CardCommandSmall/fonts/font = ExtResource("1_el5ut")
+CardCross/base_type = &"Button"
+CardCross/font_sizes/font_size = 11
+CardFigure/base_type = &"Label"
+CardFigure/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+CardFigure/font_sizes/font_size = 13
+CardFigure/fonts/font = ExtResource("2_8x4xl")
+CardFigureGood/base_type = &"Label"
+CardFigureGood/colors/font_color = Color(0.6156863, 0.6901961, 0.47843137, 1)
+CardFigureGood/font_sizes/font_size = 13
+CardFigureGood/fonts/font = ExtResource("2_8x4xl")
+CardGood/base_type = &"Label"
+CardGood/colors/font_color = Color(0.6156863, 0.6901961, 0.47843137, 1)
+CardGood/font_sizes/font_size = 13
+CardHint/base_type = &"Label"
+CardHint/colors/font_color = Color(0.5411765, 0.49019608, 0.40784314, 1)
+CardHint/font_sizes/font_size = 14
+CardLabel/base_type = &"Label"
+CardLabel/colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+CardLabel/font_sizes/font_size = 14
+CardMenu/base_type = &"OptionButton"
+CardMenu/constants/icon_max_width = 20
+CardMenu/font_sizes/font_size = 12
+CardMenuPopup/base_type = &"PopupMenu"
+CardMenuPopup/constants/icon_max_width = 20
+CardMenuPopup/font_sizes/font_size = 13
+CardPlus/base_type = &"Label"
+CardPlus/colors/font_color = Color(0.5411765, 0.49019608, 0.40784314, 1)
+CardPlus/font_sizes/font_size = 16
+CardRow/base_type = &"Button"
+CardRow/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+CardSection/base_type = &"SectionLabel"
+CardSection/colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+CardSection/font_sizes/font_size = 12
+CardSection/fonts/font = ExtResource("1_on7wr")
+CardSection/styles/normal = SubResource("StyleBoxFlat_66g1x")
+CardSmall/base_type = &"Label"
+CardSmall/colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+CardSmall/font_sizes/font_size = 11
+CardStatName/base_type = &"Label"
+CardStatName/colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+CardStatName/font_sizes/font_size = 13
+CardTag/base_type = &"Label"
+CardTag/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+CardTag/font_sizes/font_size = 11
+CardText/base_type = &"Label"
+CardText/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+CardText/font_sizes/font_size = 14
+CardTitle/base_type = &"Label"
+CardTitle/colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+CardTitle/font_sizes/font_size = 16
+CardTitle/fonts/font = ExtResource("1_on7wr")
+CardValue/base_type = &"Label"
+CardValue/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+CardValue/font_sizes/font_size = 13
+CardWarn/base_type = &"Label"
+CardWarn/colors/font_color = Color(0.7529412, 0.47843137, 0.4, 1)
+CardWarn/font_sizes/font_size = 11
 HScrollBar/styles/grabber = SubResource("StyleBoxFlat_3rsyk")
 HScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_3rsyk")
 HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_3rsyk")

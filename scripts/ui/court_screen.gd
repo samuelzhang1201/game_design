@@ -78,7 +78,7 @@ func _ready() -> void:
 	_manor_master.manor_activated.connect(func(cell: int) -> void:
 		_detail.show_manor(cell)
 		_map3d.select_object({"kind": "manor", "cell": cell}))
-	_detail = MapDetailPanel.new()
+	_detail = MapDetailPanel.create()
 	_detail.name = "DetailPanel"
 	%LogPanel.get_node("LVBox").add_child(_detail)
 	_detail.ask_enabled = true
