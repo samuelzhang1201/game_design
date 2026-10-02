@@ -223,12 +223,14 @@ func lay_sheet(index: int) -> void:
 	var bake := WarBake.of(_repo)
 	var raw := bake.heights(_rect, _nx, _nz) if bake != null \
 		else (WarRoomTable.raw_heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else WarRoomTable.flat(_nx, _nz))
-	raw = WarRoomTable.taper_collar(raw, _nx, _nz, _rect, all[index].get("cell", _rect))
-	_heights = WarRoomTable.clamp_sea(raw)
+	# the relief stands on the tapered field (the collar lies flat); the contours
+	# and the shore keep the true one
+	_heights = WarRoomTable.clamp_sea(WarRoomTable.taper_collar(raw, _nx, _nz, _rect, all[index].get("cell", _rect)))
 	_y_scale = WarRoomTable.table_y(_repo, _rect, _table_w, 1.0)
 	var shore := WarRoomTable.shore_share(_repo, raw, _nx, _nz, _table_w, _depth)
-	_table.mesh = WarRoomTable.build_mesh(_heights, _nx, _nz, _table_w, _depth, _y_scale, raw, shore)
+	_table.mesh = WarRoomTable.build_mesh(WarRoomTable.clamp_sea(raw), _nx, _nz, _table_w, _depth, _y_scale, raw, shore, _heights)
 	var mat := _table.get_active_material(0) as ShaderMaterial
+	mat.set_shader_parameter("intel_tex", null)   # no sheet wears another's intelligence (final review I2)
 	WarRoomMaterial.bind(mat, _repo, all[index], _table_w, _depth)
 	_rig.bounds = Rect2(-_table_w * 0.5, -_depth * 0.5, _table_w, _depth)
 	_rig.target = Vector3.ZERO
@@ -252,8 +254,8 @@ func lay_sheet(index: int) -> void:
 ## sheet laid yet, or the room not drawing, it is laid at once; a roll in
 ## progress is not interrupted.
 func swap_to(index: int) -> void:
-	if index == _sheet or index < 0 or _swap.active():
-		return
+	if index == _sheet or index < 0 or _swap.active() or tossing():
+		return   # a toss in flight decides the next sheet (final review I1)
 	if _sheet < 0 or not is_processing():
 		lay_sheet(index)
 		return
@@ -457,11 +459,15 @@ func _finish_swap() -> void:
 ## The laid sheet's intelligence layer onto the table's material (redrawn only
 ## when its key turns: WarRoomInk.intel_for). Never two draws at once.
 var _intel_busy := false
+var _intel_again := false   # a repaint asked for while one was in flight
 var _ink_busy := 0   # sheet ink draws in flight: the intel layer waits (one ink viewport, one draw at a time)
 
 
 func _paint_intel(mat: ShaderMaterial) -> void:
-	if _intel_busy or _ink_busy > 0 or mat == null or _sheet < 0:
+	if mat == null or _sheet < 0:
+		return
+	if _intel_busy or _ink_busy > 0:
+		_intel_again = true   # run again once the draw in flight is done
 		return
 	_intel_busy = true
 	var sheet := _sheet
@@ -470,6 +476,9 @@ func _paint_intel(mat: ShaderMaterial) -> void:
 	_intel_busy = false
 	if tex != null and sheet == _sheet:
 		mat.set_shader_parameter("intel_tex", tex)
+	if _intel_again:
+		_intel_again = false
+		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
 
 
 ## The sheet's ink onto the table's material (WarRoomInk draws and keeps it).
@@ -481,6 +490,9 @@ func _paint_ink(mat: ShaderMaterial) -> void:
 	_ink_busy -= 1
 	if tex != null:
 		mat.set_shader_parameter("ink_tex", tex)
+	if _intel_again and _ink_busy == 0:
+		_intel_again = false
+		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
 
 
 func _apply_camera() -> void:

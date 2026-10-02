@@ -11,7 +11,8 @@ extends RefCounted
 
 static func cache_key(state: GameState, sheet_index: int) -> int:
 	var couriers: Array = state.couriers.map(func(c: Dictionary) -> Array: return [c["id"], c["x_m"], c["y_m"]])
-	return hash([sheet_index, state.absolute_day(), couriers, state.missives.size(), state.regiments.hash()])
+	return hash([sheet_index, state.absolute_day(), couriers, state.next_missive_id, state.regiments.hash(),
+		state.manor_owner.hash(), state.manor_province.hash()])
 
 
 static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int) -> Dictionary:
@@ -68,7 +69,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 				spread = float(int(f["hi"]) - int(f["lo"])) / maxf(float(f["hi"]), 1.0)
 				text = "%s ≈ %s–%s" % [String(f["label"]), WarRoom.group(int(f["lo"])), WarRoom.group(int(f["hi"]))]
 				break
-		text += " · " + CourierCard.date_of(int(m["day"]))
+		text += " · " + String(m["column"]).capitalize() + " · " + CourierCard.date_of(int(m["day"]))
 		(out["spies"] as Array).append({"at": (at - r.position) * k,
 			"radius": repo.bal("war_intel_spy_ring_px") * (1.0 + spread * repo.bal("war_intel_spy_spread_k")), "text": text})
 	return out

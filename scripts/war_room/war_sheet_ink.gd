@@ -60,8 +60,9 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 			(out["rivers"] as Array).append({"poly": _to_tex(r, k, poly), "w0": base_w, "w1": maxf(mouth, base_w),
 				"label": String(row.get("label", ""))})
 	var river_polys: Array = (out["rivers"] as Array).map(func(rv: Dictionary) -> PackedVector2Array: return rv["poly"])
-	out["bridges"] = crossings(out["roads"], river_polys)
-	out["fords"] = crossings(out["trails"], river_polys)
+	var tex_rect := Rect2(Vector2.ZERO, r.size * k).grow(r.size.x * k * 0.02)
+	out["bridges"] = crossings(out["roads"], river_polys, tex_rect)
+	out["fords"] = crossings(out["trails"], river_polys, tex_rect)
 	for row: Dictionary in repo.coasts:
 		var poly: PackedVector2Array = row["polyline"]
 		if _touches(r, poly):
@@ -180,15 +181,26 @@ static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, 
 ## Where any of `lines` crosses any of `rivers` (both lists of polylines in one
 ## space): the point and the LINE's direction there. Segment against segment;
 ## a sheet's few hundred segments keep the plain double loop cheap enough.
-static func crossings(lines: Array, rivers: Array) -> Array:
+static func crossings(lines: Array, rivers: Array, clip := Rect2()) -> Array:
 	var out: Array = []
+	var clipped := clip.size != Vector2.ZERO
+	# the rivers' segments that reach the clip, with their boxes, once
+	var segs: Array = []
+	for rv: PackedVector2Array in rivers:
+		for j in rv.size() - 1:
+			var box := Rect2(rv[j], Vector2.ZERO).expand(rv[j + 1])
+			if not clipped or box.intersects(clip, true):
+				segs.append([rv[j], rv[j + 1], box])
 	for line: PackedVector2Array in lines:
 		for i in line.size() - 1:
 			var a := line[i]
 			var b := line[i + 1]
-			for rv: PackedVector2Array in rivers:
-				for j in rv.size() - 1:
-					var hit: Variant = Geometry2D.segment_intersects_segment(a, b, rv[j], rv[j + 1])
+			var lbox := Rect2(a, Vector2.ZERO).expand(b)
+			if clipped and not lbox.intersects(clip, true):
+				continue
+			for sg: Array in segs:
+				if lbox.intersects(sg[2] as Rect2, true):
+					var hit: Variant = Geometry2D.segment_intersects_segment(a, b, sg[0], sg[1])
 					if hit != null:
 						out.append({"at": hit as Vector2, "dir": (b - a).normalized()})
 	return out

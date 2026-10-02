@@ -740,3 +740,31 @@ func test_a_chart_pick_tosses_then_lays_and_a_second_pick_mid_toss_is_ignored() 
 	var size := (chart.mesh as QuadMesh).size
 	var uv := Vector2(local.x / size.x + 0.5, 0.5 - local.y / size.y)
 	assert_true(WarIndexChart.uv_of_cell(repo, WarSheets.series(repo)[other]).has_point(uv), "the marker stands on the chosen cell")
+
+
+func test_a_lay_by_another_route_mid_toss_waits_for_the_toss() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	assert_gte(WarSheets.series(repo).size(), 3)
+	view.sheet_requested.connect(view.swap_to)   # as the screen wires it
+	var flight := float(WarToss.plan(Vector3.ZERO, Vector3.ONE, 1, WarToss.rules(repo))["duration"])
+	view.toss_to(1)
+	await wait_seconds(flight - 0.15)
+	view.swap_to(2)   # an edge arrow or a margin row just before the marker lands
+	await wait_seconds(0.3 + repo.bal("war_sheet_swap_s") * 2.0 + 0.3)
+	assert_eq(view.sheet_index(), 1, "the tossed sheet is laid, not one clicked mid-flight")
+	var chart := view.get_node("%IndexChart") as MeshInstance3D
+	var marker := view.get_node("%Marker") as Node3D
+	var local := chart.global_transform.affine_inverse() * marker.global_position
+	var size := (chart.mesh as QuadMesh).size
+	assert_true(WarIndexChart.uv_of_cell(repo, WarSheets.series(repo)[1]).has_point(
+		Vector2(local.x / size.x + 0.5, 0.5 - local.y / size.y)), "the marker stands on the laid sheet")
+
+
+func test_a_new_lay_lets_go_of_the_last_sheets_intelligence() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	mat.set_shader_parameter("intel_tex", ImageTexture.create_from_image(Image.create(2, 2, false, Image.FORMAT_RGBA8)))
+	view.lay_sheet(1)
+	assert_null(mat.get_shader_parameter("intel_tex"), "no sheet wears another's supply roads")

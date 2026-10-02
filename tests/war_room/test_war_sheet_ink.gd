@@ -145,8 +145,13 @@ func test_roads_over_rivers_are_bridges_and_trails_fords() -> void:
 	var s := _richest_sheet()
 	var ink := WarSheetInk.strokes(repo, state, s, 1024)
 	var rivers: Array = (ink["rivers"] as Array).map(func(rv: Dictionary) -> PackedVector2Array: return rv["poly"])
-	assert_eq((ink["bridges"] as Array).size(), WarSheetInk.crossings(ink["roads"], rivers).size())
-	assert_eq((ink["fords"] as Array).size(), WarSheetInk.crossings(ink["trails"], rivers).size())
+	var r: Rect2 = s["rect"]
+	var area := Rect2(Vector2.ZERO, r.size * 1024.0 / r.size.x)
+	var on_sheet := func(hits: Array) -> int:
+		return hits.filter(func(h: Dictionary) -> bool: return area.has_point(h["at"])).size()
+	# every crossing on the sheet is found, and none far off it is looked for
+	assert_eq(on_sheet.call(ink["bridges"]), on_sheet.call(WarSheetInk.crossings(ink["roads"], rivers)))
+	assert_eq(on_sheet.call(ink["fords"]), on_sheet.call(WarSheetInk.crossings(ink["trails"], rivers)))
 
 
 func test_no_manor_name_lies_over_a_towns_ring_or_name() -> void:
@@ -156,3 +161,10 @@ func test_no_manor_name_lies_over_a_towns_ring_or_name() -> void:
 		var mb := WarSheetInk.manor_label_box(repo, m)
 		for t: Dictionary in ink["towns"]:
 			assert_false(mb.intersects(WarSheetInk.town_label_box(repo, t)), "%s over %s" % [m["label"], t["label"]])
+
+
+func test_crossings_outside_the_clip_are_not_looked_for() -> void:
+	var road := PackedVector2Array([Vector2(0, 0), Vector2(10, 0)])
+	var river := PackedVector2Array([Vector2(4, -5), Vector2(4, 5)])
+	assert_eq(WarSheetInk.crossings([road], [river], Rect2(0, -6, 10, 12)).size(), 1)
+	assert_eq(WarSheetInk.crossings([road], [river], Rect2(100, 100, 10, 10)).size(), 0)

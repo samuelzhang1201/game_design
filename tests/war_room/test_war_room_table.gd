@@ -124,3 +124,12 @@ func test_the_relief_tapers_to_flat_across_the_collar() -> void:
 	assert_almost_eq(mid, 0.0, 0.0001)
 	var half := WarRoomTable.taper_collar(h, nx, nz, Rect2(0, 0, 120, 100), Rect2(20, 0, 80, 100))[5 * nx + 1]   # x = 10, half way across a 20 px collar
 	assert_almost_eq(half, 50.0, 0.0001, "smoothstep(0.5) = 0.5")
+
+
+func test_the_mesh_takes_its_shape_from_one_field_and_its_contours_from_another() -> void:
+	var metres := PackedFloat32Array([100.0, 100.0, 100.0, 100.0])
+	var shape := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
+	var mesh := WarRoomTable.build_mesh(metres, 2, 2, 1.0, 1.0, 0.001, metres, PackedFloat32Array(), shape)
+	var arr := mesh.surface_get_arrays(0)
+	assert_almost_eq((arr[Mesh.ARRAY_VERTEX] as PackedVector3Array)[0].y, 0.0, 0.00001, "the collar lies flat")
+	assert_almost_eq((arr[Mesh.ARRAY_TEX_UV2] as PackedVector2Array)[0].x, 100.0, 0.00001, "its contours keep the true metres")

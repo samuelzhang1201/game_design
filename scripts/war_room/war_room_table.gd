@@ -170,7 +170,13 @@ static func ray_hit(origin: Vector3, dir: Vector3, y_at: Callable) -> Vector3:
 ## from the grid's own gradient so the vertex order stays the contract.
 static func build_mesh(heights_m: PackedFloat32Array, nx: int, nz: int, table_w: float, depth: float,
 		y_scale: float, raw_m: PackedFloat32Array = PackedFloat32Array(),
-		shore_t: PackedFloat32Array = PackedFloat32Array()) -> ArrayMesh:
+		shore_t: PackedFloat32Array = PackedFloat32Array(),
+		shape_m: PackedFloat32Array = PackedFloat32Array()) -> ArrayMesh:
+	# `shape_m` (when given) raises the vertices and turns the normals — the
+	# collar tapered flat — while `heights_m` / `raw_m` still carry the TRUE
+	# metres for the contours and the shore (final review M1: tapered metres
+	# drew false rings and a phantom coast in the collar)
+	var form := shape_m if not shape_m.is_empty() else heights_m
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
@@ -184,14 +190,14 @@ static func build_mesh(heights_m: PackedFloat32Array, nx: int, nz: int, table_w:
 			var u := float(i) / float(nx - 1)
 			var v := float(j) / float(nz - 1)
 			var m := heights_m[j * nx + i]
-			verts.append(Vector3((u - 0.5) * table_w, m * y_scale, (v - 0.5) * depth))
+			verts.append(Vector3((u - 0.5) * table_w, form[j * nx + i] * y_scale, (v - 0.5) * depth))
 			uvs.append(Vector2(u, v))
 			uv2s.append(Vector2(m, raw_m[j * nx + i] if not raw_m.is_empty() else m))
 			colors.append(Color(shore_t[j * nx + i] if not shore_t.is_empty() else 0.0, 0.0, 0.0, 1.0))
-			var west := heights_m[j * nx + maxi(i - 1, 0)]
-			var east := heights_m[j * nx + mini(i + 1, nx - 1)]
-			var north := heights_m[maxi(j - 1, 0) * nx + i]
-			var south := heights_m[mini(j + 1, nz - 1) * nx + i]
+			var west := form[j * nx + maxi(i - 1, 0)]
+			var east := form[j * nx + mini(i + 1, nx - 1)]
+			var north := form[maxi(j - 1, 0) * nx + i]
+			var south := form[mini(j + 1, nz - 1) * nx + i]
 			var sx := (east - west) * y_scale / (dx * float(mini(i + 1, nx - 1) - maxi(i - 1, 0)))
 			var sz := (south - north) * y_scale / (dz * float(mini(j + 1, nz - 1) - maxi(j - 1, 0)))
 			normals.append(Vector3(-sx, 1.0, -sz).normalized())

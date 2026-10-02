@@ -58,3 +58,21 @@ func test_the_key_turns_with_the_day() -> void:
 	var a := WarIntelInk.cache_key(state, 0)
 	state.day += 1
 	assert_ne(WarIntelInk.cache_key(state, 0), a)
+
+
+func test_the_key_turns_with_land_and_letters_too() -> void:
+	var a := WarIntelInk.cache_key(state, 0)
+	state.manor_owner["1"] = "someone"
+	var b := WarIntelInk.cache_key(state, 0)
+	assert_ne(b, a, "a manor changing hands can move a supply road")
+	state.next_missive_id += 1
+	assert_ne(WarIntelInk.cache_key(state, 0), b, "a letter replaced at the column's cap")
+
+
+func test_a_spy_ring_names_its_source() -> void:
+	var s := _sheet_of_first_regiment()
+	var at: Vector2 = (s["cell"] as Rect2).get_center()
+	MissiveLog.add(repo, state, MissiveLog.make("spy", "rumour", state.absolute_day(),
+		MissiveLog.subject("point", "", -1, at), "A report", [MissiveLog.span("people", "People", 2800, 3200)]))
+	var ink := WarIntelInk.strokes(repo, state, s, 1024)
+	assert_string_contains(String(ink["spies"][0]["text"]).to_lower(), "rumour")
