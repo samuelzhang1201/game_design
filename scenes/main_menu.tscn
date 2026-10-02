@@ -1,10 +1,164 @@
 [gd_scene format=3 uid="uid://c5ekxrn7q3266"]
 
 [ext_resource type="Script" uid="uid://dag6kihdif3hf" path="res://scripts/ui/main_menu.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://clscgnol1f43q" path="res://assets/2D/portraits/cast/full/map_example.jpeg" id="2_8ln24"]
+[ext_resource type="Script" uid="uid://nyp5bijocq8u" path="res://scripts/ui/war_table/title_shade.gd" id="3_rtw2f"]
+[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="4_oa1go"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="5_tbmy8"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jk1qb"]
+atlas = ExtResource("2_8ln24")
+region = Rect2(34, 34, 1516, 604)
 
 [node name="MainMenu" type="Control" unique_id=2024837821]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1")
+
+[node name="Backdrop" type="TextureRect" parent="." unique_id=1504743577]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = SubResource("AtlasTexture_jk1qb")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Shade" type="Control" parent="." unique_id=1063852684]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("3_rtw2f")
+
+[node name="TitleColumn" type="MarginContainer" parent="." unique_id=833028538]
+layout_mode = 0
+anchor_bottom = 1.0
+offset_left = 120.0
+offset_right = 640.0
+
+[node name="Col" type="VBoxContainer" parent="TitleColumn" unique_id=402820989]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="TitleArms" type="Control" parent="TitleColumn/Col" unique_id=1496909237]
+custom_minimum_size = Vector2(54, 64)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+script = ExtResource("4_oa1go")
+
+[node name="Pad_Crown" type="MarginContainer" parent="TitleColumn/Col" unique_id=237442581]
+layout_mode = 2
+theme_override_constants/margin_left = 0
+
+[node name="Title_Crown" type="Label" parent="TitleColumn/Col/Pad_Crown" unique_id=169265013]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 77
+text = "Crown"
+
+[node name="Pad_andCouncil" type="MarginContainer" parent="TitleColumn/Col" unique_id=1303503046]
+layout_mode = 2
+theme_override_constants/margin_left = 34
+
+[node name="Title_andCouncil" type="Label" parent="TitleColumn/Col/Pad_andCouncil" unique_id=119444568]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 77
+text = "and Council"
+
+[node name="Rule" type="ColorRect" parent="TitleColumn/Col" unique_id=1131074508]
+custom_minimum_size = Vector2(250, 1)
+layout_mode = 2
+size_flags_horizontal = 0
+color = Color(0.8784314, 0.73333335, 0.41568628, 0.45)
+
+[node name="Tagline" type="Label" parent="TitleColumn/Col" unique_id=574159722]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 0.62)
+theme_override_font_sizes/font_size = 13
+text = "Sixty years · one crown · five seats at the table"
+
+[node name="Hook" type="Label" parent="TitleColumn/Col" unique_id=1000179717]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 0.62)
+theme_override_fonts/font = ExtResource("5_tbmy8")
+theme_override_font_sizes/font_size = 15
+text = "“The realm your father left you is intact, solvent and quietly rotten.”"
+autowrap_mode = 3
+
+[node name="Gap" type="Control" parent="TitleColumn/Col" unique_id=2016949228]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+
+[node name="MenuCol" type="VBoxContainer" parent="TitleColumn/Col" unique_id=2123263563]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="StartGame" type="Button" parent="TitleColumn/Col/MenuCol" unique_id=540311565]
+layout_mode = 2
+size_flags_horizontal = 0
+tooltip_text = "Or press Space to take the throne"
+focus_mode = 0
+theme_type_variation = &"TitleWordPrimary"
+text = "Take the Throne"
+alignment = 0
+
+[node name="LoadGame" type="Button" parent="TitleColumn/Col/MenuCol" unique_id=1218681931]
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+theme_type_variation = &"TitleWord"
+text = "Continue the Chronicle"
+alignment = 0
+
+[node name="Status" type="Label" parent="TitleColumn/Col/MenuCol" unique_id=1462626077]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 0.62)
+theme_override_font_sizes/font_size = 15
+
+[node name="Caption" type="VBoxContainer" parent="." unique_id=2009890568]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -56.0
+offset_bottom = -40.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+alignment = 2
+
+[node name="Place" type="Label" parent="Caption" unique_id=1813445032]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
+theme_override_font_sizes/font_size = 13
+text = "Walbover, seat of House Valorin"
+horizontal_alignment = 2
+
+[node name="When" type="Label" parent="Caption" unique_id=458146123]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 0.62)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
+theme_override_fonts/font = ExtResource("5_tbmy8")
+theme_override_font_sizes/font_size = 14
+text = "Spring, the first year of the reign"
+horizontal_alignment = 2

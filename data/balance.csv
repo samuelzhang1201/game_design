@@ -811,8 +811,6 @@ ui_title_drift_deg_per_s,0.8,TITLE: degrees a second the camera drifts round the
 ui_title_day_share,0.62,"TITLE: the share of the day the title opens on (0.25 noon in the south, past 0.5 the north's dusk): a low warm sun"
 ui_title_day_per_s,0.004,"TITLE: how fast the title's sun turns, day shares a second (a slow sweep, not the game's clock)"
 ui_title_sweep_s,1.8,TITLE: seconds the camera sweeps from the title's height down to the game's opening view when the reign begins
-ui_title_shade,0.92,"TITLE: the darkness of the reading side (left) at its darkest, 0..1"
-ui_title_shade_reach,0.62,"TITLE: how far across the screen the reading side's shade reaches, a share of its width"
 map_compass_size_px_table,0,"WAR TABLE (owner 2026-10-01): the compass lies on the table (TableCompass), so the map draws none and its corner takes no click"
 ui_table_compass_px,104,"WAR TABLE: design px across the compass lying on the table below the report's drawn foot, at most — smaller only as far as the free band there demands (owner 2026-10-01: 指南针被盖住了，往下挪，露出来; it had lain under the report, which now fills its column)"
 ui_table_compass_inset_px,18,WAR TABLE: design px from the table's left edge to the compass

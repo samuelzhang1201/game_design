@@ -9,7 +9,7 @@ extends GutTest
 ##    screen's _ready, but for the CODE-OWNED ones listed below with why.
 
 const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversation_scene.gd",
-	"res://scripts/ui/top_bar.gd"]
+	"res://scripts/ui/top_bar.gd", "res://scripts/ui/main_menu.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -44,6 +44,8 @@ const CODE_OWNED := {
 	# the crown's arms and the house's colour are the live house's
 	"TopBar/Bar/Row/DateArms": ["texture"],
 	"TopBar/Bar/Row/TallyBoard/Purses/HouseNameBox/LordCrest": ["texture", "color"],
+	# the title's arms are the preview reign's crown's
+	"TitleColumn/Col/TitleArms": ["texture", "color"],
 }
 
 func test_a_converted_ready_sets_no_look() -> void:
@@ -78,6 +80,16 @@ func test_the_conversation_keeps_its_scenes_look() -> void:
 	r._switch_to(GameRoot.State.CONVERSATION)
 	await wait_process_frames(3)
 	_assert_scene_holds(r.current_screen, "res://scenes/conversation.tscn")
+
+func test_the_title_keeps_its_scenes_look() -> void:
+	var r := _root()
+	await wait_process_frames(2)
+	assert_true(r.current_screen is MainMenu)
+	_assert_scene_holds(r.current_screen, "res://scenes/main_menu.tscn")
+	# the rows GameRoot hands in wear the scene's word look, not the pause menu's
+	var dev := (r.current_screen as MainMenu).menu_column().get_node("DevMode") as Button
+	assert_eq(dev.theme_type_variation, &"TitleWordSmall")
+	assert_false(dev.has_theme_font_override("font"), "the theme kind's face, not command_button's")
 
 ## The council column opening moves only the map's right edge, to the gap
 ## the scene gives short of the column, and closing puts it back.
