@@ -198,6 +198,12 @@ var _ledger_select := ""
 var _war_deploy := ""
 var _war_leave := ""
 var _war_room := false
+## --war-room-at F (with --war-room): the frame the WAR ROOM tab is clicked
+## (default 30), so a run with --speed can open the room mid-march. Every run
+## prints `war sync`: each regiment's spot by the engine, where the 3D map
+## DRAWS it and where the room's piece stands, all in pack px (owner
+## 2026-10-02: the room's pieces stand where the map shows them).
+var _war_room_at := 30
 var _war_focus := ""
 var _war_commit := false
 var _war_sheet := -1
@@ -306,6 +312,8 @@ func _ready() -> void:
 			_ledger_search = args[i + 1]
 		elif args[i] == "--ledger-select":
 			_ledger_select = args[i + 1]
+		elif args[i] == "--war-room-at":
+			_war_room_at = int(args[i + 1])
 		elif args[i] == "--war-sheet":
 			_war_sheet = int(args[i + 1])
 		elif args[i] == "--war-piece":
@@ -859,7 +867,8 @@ func _war_room_step() -> void:
 	var screen := _root.war_room_screen()
 	var view := screen.view()
 	if _war_phase == 0:
-		if _frames == 30:
+		if _frames == _war_room_at:
+			_war_sync("map")
 			var tab := _root.bottom_bar().button("WAR ROOM")
 			_real_click(tab, tab.size * 0.5)
 			print("war: open=%s sheet=%d" % [screen.visible, view.sheet_index()])
@@ -893,7 +902,7 @@ func _war_room_step() -> void:
 				var focus := Vector2(-1, -1)
 				var on := _war_focus if _war_focus != "" else _war_piece
 				if on != "":
-					focus = WarRoom.believed_position(Game.data, Game.state, ArmySystem.regiment(Game.data, on))
+					focus = view.position_of(on)
 				view.lean_to(_war_zoom, focus)
 				print("war: leant to %.2f m" % view.camera_rig().distance)
 			if _war_turn != 0.0:
@@ -912,8 +921,7 @@ func _war_room_step() -> void:
 			_real_click(view, at)
 			print("war: board click at %s mode=%s" % [at, view.board_mode()])
 		if _war_piece != "":
-			var p := ArmySystem.regiment(Game.data, _war_piece)
-			var at: Variant = view.screen_pos_of_px(WarRoom.believed_position(Game.data, Game.state, p))
+			var at: Variant = view.screen_pos_of_px(view.position_of(_war_piece))
 			if at == null:
 				push_error("war: piece %s not in view" % _war_piece)
 			elif _war_drag.x >= 0.0:
@@ -970,6 +978,7 @@ func _war_room_step() -> void:
 		_war_to(10 if _war_deploy != "" or _war_leave != "" else 5)
 	elif _war_phase == 5 and _frames - _war_at >= 40 + (ceili(Game.data.bal("war_explode_s") * 120.0)   # a 120 Hz display's frames
 			if _war_folio == "explode" else 0):
+		_war_sync("room")
 		_moment("war")
 		_war_to(6)
 	elif _war_phase == 10 and _frames - _war_at >= 12:
@@ -998,6 +1007,24 @@ func _war_room_step() -> void:
 		elif _war_deploy == "sent" and not scroll.sealing() and _frames - _war_at >= 30:
 			print("war: sent — drafts=%s couriers=%d" % [WarDrafts.codes(Game.state), Game.state.couriers.size()])
 			_war_to(5)
+
+
+## Each regiment's place three ways, in pack px: the engine's, the 3D map's
+## drawn piece and the room's piece (when laid), with the day and its share.
+func _war_sync(when: String) -> void:
+	var mv: Map3DView = _root.current_screen.map3d_view() if _root.current_screen.has_method("map3d_view") else null
+	var drawn: Dictionary = mv.unit_pack_positions() if mv != null else {}
+	var room := _root.war_room_screen().view().piece_pack_positions()
+	print("war sync (%s): day=%d share=%.3f clock=%d held=%s" % [when, Game.state.absolute_day(),
+		Game.day_progress, Game.clock_speed, Game.clock_held])
+	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		var code := String(reg["regiment_code"])
+		var eng := ArmySystem.position_of(Game.data, Game.state, reg)
+		var d: Variant = drawn.get(code)
+		var r: Variant = room.get(code)
+		print("  %s engine=%s map=%s room=%s map-engine=%.2f px room-map=%s" % [code, eng, d, r,
+			(d as Vector2).distance_to(eng) if d != null else -1.0,
+			"%.3f px" % (r as Vector2).distance_to(d) if r != null and d != null else "-"])
 
 
 func _war_to(phase: int) -> void:

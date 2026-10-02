@@ -163,3 +163,37 @@ func test_a_regiment_in_a_sheets_collar_is_on_that_sheet_and_off_no_other_twice(
 	var home := WarSheets.sheet_of(repo, pt)
 	var off: Array = WarRoom.off_sheet(repo, state, home).map(func(p: Dictionary) -> String: return String(p["code"]))
 	assert_false(code in off, "never listed as off its own home sheet")
+
+
+
+## Owner 2026-10-02: war room的军队单位位置一定要和大地图一致 — a spot the 3D map
+## draws wins over the engine's; a regiment it does not name keeps the engine's.
+func test_a_drawn_spot_is_where_the_piece_stands() -> void:
+	var code := _land_code()
+	var reg := ArmySystem.regiment(repo, code)
+	var engine := ArmySystem.position_of(repo, state, reg)
+	var drawn := {code: engine + Vector2(3.0, 2.0)}
+	assert_eq(WarRoom.believed_position(repo, state, reg, drawn), engine + Vector2(3.0, 2.0))
+	assert_eq(WarRoom.believed_position(repo, state, reg, {"someone_else": Vector2.ZERO}), engine)
+	for p: Dictionary in WarRoom.pieces(repo, state, drawn):
+		if String(p["code"]) == code:
+			assert_eq(p["at"], engine + Vector2(3.0, 2.0))
+			assert_eq(int(p["sheet"]), WarSheets.sheet_of(repo, engine + Vector2(3.0, 2.0)))
+
+
+## A drawn spot on another sheet moves the piece to that sheet's side.
+func test_the_sheets_split_by_the_drawn_spot() -> void:
+	var code := _land_code()
+	var reg := ArmySystem.regiment(repo, code)
+	var home := WarSheets.sheet_of(repo, ArmySystem.position_of(repo, state, reg))
+	var far := Vector2.ZERO
+	for s: Dictionary in WarSheets.series(repo):
+		if not (s["rect"] as Rect2).intersects(WarSheets.series(repo)[home]["rect"]):
+			far = (s["cell"] as Rect2).get_center()
+			break
+	var drawn := {code: far}
+	var on: Array = WarRoom.on_sheet(repo, state, home, drawn).map(func(p: Dictionary) -> String: return String(p["code"]))
+	assert_false(code in on, "drawn far away, it is off its old sheet")
+	var there: Array = WarRoom.on_sheet(repo, state, WarSheets.sheet_of(repo, far), drawn).map(
+		func(p: Dictionary) -> String: return String(p["code"]))
+	assert_true(code in there, "and on the sheet the map draws it on")

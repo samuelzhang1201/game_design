@@ -20,6 +20,15 @@ func test_world_to_pack_inverts_pack_to_world() -> void:
 	assert_almost_eq(back.y, px.y, 0.001)
 
 
+## The WAR ROOM reads the map's drawn pieces through this (owner 2026-10-02):
+## (-59000, -13220) m is (100, 200) px, keyed as given.
+func test_world_to_pack_all_keeps_the_keys() -> void:
+	var out := Map3DGeometry.world_to_pack_all(WORLD, {"a": Vector2(-59000.0, -13220.0), "b": Vector2(-64000.0, -23220.0)})
+	assert_almost_eq((out["a"] as Vector2).distance_to(Vector2(100, 200)), 0.0, 0.001)
+	assert_almost_eq((out["b"] as Vector2).distance_to(Vector2.ZERO), 0.0, 0.001)
+	assert_eq(Map3DGeometry.world_to_pack_all(WORLD, {}), {})
+
+
 func test_bounds_span_the_whole_pack() -> void:
 	var r := Map3DGeometry.world_bounds(WORLD)
 	assert_almost_eq(r.position.x, -64000.0, 0.001)

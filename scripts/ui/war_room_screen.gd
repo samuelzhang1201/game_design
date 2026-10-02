@@ -19,6 +19,14 @@ var _roll_tween: Tween
 var _board_vp: SubViewport
 var _board_screen: MissiveScreen
 var _margin_sig: Array = []   # [sheet, the off-sheet (code, sheet) pairs, none on this sheet] last filled
+## Where the 3D map DRAWS each regiment, pack px (Map3DView.unit_pack_positions):
+## the room's pieces stand there (owner 2026-10-02: war room的军队单位位置一定要
+## 和大地图一致). Read on open and after each state change; the clock is held
+## while the room is open, so no day moves it in between.
+var _drawn: Dictionary = {}
+## Where `_drawn` comes from: the map under the room (_map_drawn); a test hands
+## in its own (the suite has no 3D map).
+var drawn_source := Callable()
 
 @onready var _view: WarRoomView = %View
 @onready var _orders: ArmyOrderMenu = %Orders
@@ -62,6 +70,33 @@ func view() -> WarRoomView:
 	return _view
 
 
+## Freed while open (the game quits, a test ends): the clock is let go, never
+## left held for whatever comes next.
+func _exit_tree() -> void:
+	if visible:
+		Game.hold_clock(false, "war_room")
+
+
+func _read_drawn() -> Dictionary:
+	return (drawn_source.call() if drawn_source.is_valid() else _map_drawn()) as Dictionary
+
+
+## Where the 3D map under the room draws each regiment, pack px; {} when there
+## is no map (none built, the suite): the pieces then stand at the engine's spot.
+func _map_drawn() -> Dictionary:
+	var root := get_parent() as GameRoot
+	var screen: Node = root.current_screen if root != null else null
+	if screen == null or not screen.has_method("map3d_view"):
+		return {}
+	var map: Map3DView = screen.map3d_view()
+	return map.unit_pack_positions() if map != null else {}
+
+
+## Test seam: the drawn places the room reads.
+func drawn() -> Dictionary:
+	return _drawn
+
+
 func orders() -> ArmyOrderMenu:
 	return _orders
 
@@ -70,7 +105,7 @@ func open(detail: MapDetailPanel) -> void:
 	if not _bound:
 		_bound = true
 		_view.bind(Game.data, func() -> GameState: return Game.state,
-			func() -> bool: return Game.clock_speed <= 0)
+			func() -> bool: return Game.clock_speed <= 0, func() -> Dictionary: return _drawn)
 		_view.set_font(UiPalette.role_font("body_italic"))
 		_build_board()
 		_orders.follow(_view)
@@ -82,6 +117,10 @@ func open(detail: MapDetailPanel) -> void:
 	if detail != _detail:
 		_card_mine = false
 	_detail = detail
+	# the clock stops and nothing starts it while the room is open (owner
+	# 2026-10-02: 进入war room时间也一直是暂停的，无法继续，直到下达命令并退出)
+	Game.hold_clock(true, "war_room")
+	_drawn = _read_drawn()
 	visible = true
 	_view.set_active(true)
 	if _view.sheet_index() < 0:
@@ -223,9 +262,10 @@ func _dress_leather() -> void:
 func _fill_margin() -> void:
 	var series := WarSheets.series(Game.data)
 	var sheet := _view.sheet_index()
-	var off := WarRoom.off_sheet(Game.data, Game.state, sheet)
+	var split := WarRoom.partition(Game.data, Game.state, sheet, _drawn)
+	var off: Array = split["off"]
 	var sig: Array = [sheet, off.map(func(p: Dictionary) -> String: return "%s@%d" % [p["code"], int(p["sheet"])]),
-		WarRoom.on_sheet(Game.data, Game.state, sheet).is_empty()]
+		(split["on"] as Array).is_empty()]
 	if sig == _margin_sig:
 		return   # the same list: its buttons stand (a click mid-refresh is not lost)
 	_margin_sig = sig
@@ -349,6 +389,8 @@ func close(animate := true) -> void:
 		_roll_tween.kill()
 	%CardRoll.visible = false
 	_give_back()   # the room is gone at once: the column has its card back now
+	# let go, but not restarted: the player starts the clock again (owner 2026-10-02)
+	Game.hold_clock(false, "war_room")
 	closed.emit()
 	if animate and get_parent() != null:
 		WarScrollReveal.play(get_parent(), rect, picture, false,
@@ -363,9 +405,10 @@ func refresh() -> void:
 func _process(_delta: float) -> void:
 	if _dirty and visible:
 		_dirty = false
+		_drawn = _read_drawn()
 		_view.refresh()
 		_fill_margin()
-		_folio.refresh()   # the clock runs under an open folio
+		_folio.refresh()   # an order changes what the folio reads
 		(%Deploy as WarDeployScroll).refresh()
 		refresh_board()
 	if _board_vp != null:

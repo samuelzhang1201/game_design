@@ -62,7 +62,7 @@ func _ready() -> void:
 ## left held for whatever comes next.
 func _exit_tree() -> void:
 	if visible:
-		Game.hold_clock(false)
+		Game.hold_clock(false, "ledger")
 
 
 func view() -> LedgerView3D:
@@ -94,7 +94,7 @@ func open(detail: MapDetailPanel) -> void:
 		_card_mine = false  # a new screen's column holds nothing of the LEDGER's
 	_detail = detail
 	# the clock stops and nothing starts it while the LEDGER is open
-	Game.hold_clock(true)
+	Game.hold_clock(true, "ledger")
 	visible = true
 	_dirty = false
 	_view.set_active(true)
@@ -114,7 +114,7 @@ func close() -> void:
 	_clear_card()
 	# let go, but not restarted: the player starts the clock again (owner
 	# 2026-10-01)
-	Game.hold_clock(false)
+	Game.hold_clock(false, "ledger")
 	closed.emit()
 
 

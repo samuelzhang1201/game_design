@@ -36,7 +36,7 @@ func setup(repo: DataRepository, view: WarRoomView) -> void:
 func rebuild(state: GameState, force := false) -> void:
 	var rect: Rect2 = WarSheets.series(_repo)[_view.sheet_index()]["rect"] if _view.sheet_index() >= 0 else Rect2()
 	var want: Array = []
-	for p: Dictionary in WarRoom.pieces(_repo, state):
+	for p: Dictionary in WarRoom.pieces(_repo, state, _view.drawn()):
 		var code := String(p["code"])
 		var pen := WarRoom.pennant_of(_repo, state, code)
 		var draft := WarDrafts.of(state, code)
