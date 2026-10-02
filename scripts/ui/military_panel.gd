@@ -24,83 +24,29 @@ var _officers: Label
 
 ## Put the panel in a screen's left column, hidden until the tab lights it.
 static func attach(column: BoxContainer) -> MilitaryPanel:
-	var p := MilitaryPanel.new()
-	p.visible = false
+	var p: MilitaryPanel = create()
 	column.add_child(p)
 	return p
 
-func _init() -> void:
-	name = "MilitaryPanel"
-	add_theme_constant_override("separation", 6)
-	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_title = Label.new()
-	_title.name = "Title"
-	_title.text = "THE HOST"
-	UiPalette.style_header(_title, 16)
-	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var head := HBoxContainer.new()
-	head.add_child(_title)
-	var close := Button.new()
-	close.name = "Close"
-	close.text = "×"
-	close.focus_mode = Control.FOCUS_NONE
-	close.tooltip_text = "Close"
-	close.pressed.connect(func() -> void: closed.emit())
-	head.add_child(close)
-	add_child(head)
-	add_child(HSeparator.new())
-	_summary = Label.new()
-	_summary.name = "Summary"
-	_summary.add_theme_font_size_override("font_size", 14)
-	_summary.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
-	_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(_summary)
-	# Short headings, and every one of them wraps: the left column is a fixed
-	# 120 design px (ScreenLayout.LEFT_WIDTH) and a label that cannot wrap
-	# sets a minimum width, which would push the column over the map.
-	_arms = _section("BY ARM", "Arms")
-	_regiments = _section("REGIMENTS", "Regiments")
-	_neighbours = _text_section("NEIGHBOURS, AS REPORTED", "Neighbours")
-	_officers = Label.new()
-	_officers.name = "Officers"
-	_officers.add_theme_font_size_override("font_size", 14)
-	_officers.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	_officers.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(_officers)
+## The host as the game makes it: scenes/military_panel.tscn (owner
+## 2026-10-02: the look lives in the editor), its lines theme kinds the
+## column's theme inks; hidden until the host is asked for.
+static func create() -> MilitaryPanel:
+	return (load("res://scenes/military_panel.tscn") as PackedScene).instantiate()
 
 func _ready() -> void:
+	_title = $Head/Title
+	($Head/Close as Button).pressed.connect(func() -> void: closed.emit())
+	_summary = $Summary
+	_arms = $Arms
+	_regiments = $Regiments
+	_neighbours = $Neighbours
+	_officers = $Officers
 	# The MILITARY table it replaced refreshed live while it was up; so does
 	# this, so a battle or a muster shows in the column as it happens.
 	Game.state_changed.connect(func() -> void:
 		if visible:
 			refresh())
-
-func _section(heading: String, chart_name: String) -> BarChart:
-	var h := Label.new()
-	h.text = heading
-	UiPalette.style_section(h, 14)
-	h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(h)
-	var chart := BarChart.new()
-	chart.name = chart_name
-	chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_child(chart)
-	return chart
-
-## A heading over a plain box of text rows, for a block whose values are
-## words (an Intel estimate), not numbers a bar chart could draw.
-func _text_section(heading: String, box_name: String) -> VBoxContainer:
-	var h := Label.new()
-	h.text = heading
-	UiPalette.style_section(h, 14)
-	h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(h)
-	var box := VBoxContainer.new()
-	box.name = box_name
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_child(box)
-	return box
 
 func refresh() -> void:
 	if Game.state == null:
@@ -186,8 +132,7 @@ func _regiments_of(kingdom_code: String) -> Array:
 func _row(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", 14)
-	l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+	l.theme_type_variation = &"CardText"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 

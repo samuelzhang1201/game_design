@@ -64,7 +64,7 @@ func _tree_texts(tree: Tree, columns: int) -> Array:
 
 
 func test_the_neighbours_are_not_counted_for_you() -> void:
-	var p := MilitaryPanel.new()
+	var p := MilitaryPanel.create()
 	add_child_autofree(p)
 	p.refresh()
 	await wait_process_frames(1)
@@ -122,7 +122,7 @@ func test_a_spy_sighting_is_listed_beneath_its_kingdom_not_as_its_strength() -> 
 	MissiveLog.add(repo, state, MissiveLog.make("spy", "credible", 40,
 		MissiveLog.subject("manor", MapManors.code_of(repo, cell), cell, at), "Spy report",
 		[MissiveLog.span("troops_foreign", "Foreign troops nearby", 1200, 1600)]))
-	var p := MilitaryPanel.new()
+	var p := MilitaryPanel.create()
 	add_child_autofree(p)
 	p.refresh()
 	await wait_process_frames(1)

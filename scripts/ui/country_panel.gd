@@ -29,54 +29,28 @@ var _shown_code := ""
 var _shown_version := -1
 
 
-func _init() -> void:
-	name = "CountryPanel"
-	add_theme_constant_override("separation", 6)
-	visible = false
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	add_child(head)
-	_swatch = ColorRect.new()
-	_swatch.custom_minimum_size = Vector2(SWATCH, SWATCH)
-	_swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	head.add_child(_swatch)
-	_title = Label.new()
-	_title.name = "Title"
-	UiPalette.style_header(_title, 16)
-	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(_title)
-	add_child(HSeparator.new())
-	# The realm's temper, on the player's own country's card (owner
-	# 2026-09-14: everything but the purses left the top bar for here). Two
-	# icon-and-value pairs a line, so the fixed column never has to widen.
-	_realm_grid = GridContainer.new()
-	_realm_grid.name = "RealmTemper"
-	_realm_grid.columns = 4
-	_realm_grid.add_theme_constant_override("h_separation", 6)
-	_realm_grid.add_theme_constant_override("v_separation", 4)
-	_realm_grid.visible = false
-	add_child(_realm_grid)
+## The card is scenes/country_panel.tscn (owner 2026-10-02: the look lives in
+## the editor), its lines theme kinds the column's theme inks.
+func _ready() -> void:
+	_swatch = $Head/Swatch
+	_title = $Head/Title
+	_realm_grid = $RealmTemper
 	for key: String in REALM_METRICS:
-		var icon := ResourceIcon.create(key)
-		icon.name = "Icon_" + key
-		_realm_grid.add_child(icon)
-		var value := Label.new()
-		value.name = "Value_" + key
-		value.add_theme_font_size_override("font_size", 14)
-		value.custom_minimum_size = Vector2(36, 0)
-		_realm_grid.add_child(value)
-		_realm_values[key] = value
-	_rows = VBoxContainer.new()
-	_rows.name = "Rows"
-	_rows.add_theme_constant_override("separation", 2)
-	add_child(_rows)
+		_realm_values[key] = _realm_grid.get_node("Value_" + key)
+	_rows = $Rows
+	Game.state_changed.connect(func() -> void:
+		if is_inside_tree() and visible:
+			_refresh_realm())
+
+
+## The card as the game makes it: its scene.
+static func create() -> CountryPanel:
+	return (load("res://scenes/country_panel.tscn") as PackedScene).instantiate()
 
 
 ## Put the panel in `column`; Map3DView.attach has it follow the map's hover.
 static func attach(column: BoxContainer) -> CountryPanel:
-	var panel := CountryPanel.new()
+	var panel: CountryPanel = create()
 	column.add_child(panel)
 	return panel
 
@@ -111,8 +85,7 @@ func show_country(kingdom_code: String) -> void:
 	for line: String in entry["lines"]:
 		var l := Label.new()
 		l.text = line
-		l.add_theme_font_size_override("font_size", 14)
-		l.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
+		l.theme_type_variation = &"CardText"
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_rows.add_child(l)
 	visible = true
@@ -128,11 +101,6 @@ func _refresh_realm() -> void:
 	for key: String in _realm_values:
 		(_realm_values[key] as Label).text = str(int(Game.state.metrics.get(key, 0.0)))
 
-
-func _ready() -> void:
-	Game.state_changed.connect(func() -> void:
-		if is_inside_tree() and visible:
-			_refresh_realm())
 
 
 ## Test seam: the temper grid's value for a metric ("" when hidden).

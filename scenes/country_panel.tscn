@@ -1,0 +1,92 @@
+[gd_scene format=3 uid="uid://boyexencoxml5"]
+
+[ext_resource type="Script" uid="uid://cs1oqjxiflrt2" path="res://scripts/ui/country_panel.gd" id="1_6i661"]
+[ext_resource type="Script" uid="uid://xdngnt6rq1do" path="res://scripts/ui/resource_icon.gd" id="2_3alma"]
+
+[node name="CountryPanel" type="VBoxContainer" unique_id=1314118442]
+visible = false
+mouse_filter = 2
+theme_override_constants/separation = 6
+script = ExtResource("1_6i661")
+
+[node name="Head" type="HBoxContainer" parent="." unique_id=569536063]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Swatch" type="ColorRect" parent="Head" unique_id=1719853507]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Title" type="Label" parent="Head" unique_id=40196099]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardTitle"
+text = "Kelvarn"
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="." unique_id=314140627]
+layout_mode = 2
+
+[node name="RealmTemper" type="GridContainer" parent="." unique_id=605549154]
+visible = false
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 4
+columns = 4
+
+[node name="Icon_unrest" type="Control" parent="RealmTemper" unique_id=1652174851]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 1
+script = ExtResource("2_3alma")
+key = "unrest"
+
+[node name="Value_unrest" type="Label" parent="RealmTemper" unique_id=2067604586]
+custom_minimum_size = Vector2(36, 0)
+layout_mode = 2
+theme_type_variation = &"CardText"
+
+[node name="Icon_legitimacy" type="Control" parent="RealmTemper" unique_id=1374580486]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 1
+script = ExtResource("2_3alma")
+key = "legitimacy"
+
+[node name="Value_legitimacy" type="Label" parent="RealmTemper" unique_id=76504483]
+custom_minimum_size = Vector2(36, 0)
+layout_mode = 2
+theme_type_variation = &"CardText"
+
+[node name="Icon_army_quality" type="Control" parent="RealmTemper" unique_id=1790643187]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 1
+script = ExtResource("2_3alma")
+key = "army_quality"
+
+[node name="Value_army_quality" type="Label" parent="RealmTemper" unique_id=1815667214]
+custom_minimum_size = Vector2(36, 0)
+layout_mode = 2
+theme_type_variation = &"CardText"
+
+[node name="Icon_church_opinion" type="Control" parent="RealmTemper" unique_id=833193251]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 1
+script = ExtResource("2_3alma")
+key = "church_opinion"
+
+[node name="Value_church_opinion" type="Label" parent="RealmTemper" unique_id=1662389139]
+custom_minimum_size = Vector2(36, 0)
+layout_mode = 2
+theme_type_variation = &"CardText"
+
+[node name="Rows" type="VBoxContainer" parent="." unique_id=1921665975]
+layout_mode = 2
+theme_override_constants/separation = 2

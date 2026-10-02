@@ -5,7 +5,7 @@ extends GutTest
 
 func test_the_players_own_card_carries_the_realms_temper() -> void:
 	Game.start_campaign(42)
-	var panel := CountryPanel.new()
+	var panel := CountryPanel.create()
 	add_child_autofree(panel)
 	await wait_process_frames(1)
 	var mine := Game.data.resolve_realm("player_realm")

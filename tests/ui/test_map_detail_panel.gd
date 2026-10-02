@@ -575,7 +575,7 @@ func test_the_longest_fogged_and_reported_fact_labels_never_widen_the_left_colum
 
 	# the kingdom card (CountryPanel), a foreign kingdom with the longest
 	# words the fog ever shows ("many thousands", stance, court)
-	var country := CountryPanel.new()
+	var country := CountryPanel.create()
 	add_child_autofree(country)
 	var foreign_kingdom := ""
 	var kingdom_codes := Game.data.kingdoms.keys()
