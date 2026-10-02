@@ -628,3 +628,19 @@ add it here as a principle with its why — not as a changelog entry.
   beyond, where matched shots showed no difference, the high tier draws SMAA
   and no SSAO. A finishing effect that cannot be seen at a zoom is not paid
   for at that zoom.
+- **The council seal is a mark, not a medallion** (owner: 右上方的印记太大了，缩小它，
+  再往右上方角落移动点). On the war table it sits small (64 px) and tucked into
+  the map sheet's top-right corner; the map is the subject, the seal an order.
+- **A screen arrives the way its object would** (owner: 点击war room的进入动画太突兀，
+  做成一个从上往下的卷轴拉下来即可). The WAR ROOM comes down like a hanging scroll
+  on a turned roller over what it covers — not a panel that widens while another
+  rolls away.
+- **The plotting map is a flat tactical chart on parchment** (owner: war room的地图
+  改成纯2d平面图，战术地图，羊皮纸风格，不要3d; 战术地图加上经纬度的格子). Ground is
+  told by contours on a flat sheet, never a raised relief; the sheet is mottled,
+  foxed, rim-darkened parchment, not white vellum; a graticule with a chequered
+  degree border and its figures marks it as a military map. Only the sheet went
+  flat: the room, its table and the tin pieces stay 3D (owner's choice).
+- **An index chart shows the land it indexes** (owner: 选择地图的格子那个纸也换成羊皮
+  纸，然后画上整个大陆地图的形状). The sheet index is parchment with the continent's
+  inked coast and water lines, not a grid of dots.

@@ -112,6 +112,38 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 					float(absi(hash([at.x, at.y, 2])) % 200) - 100.0) / 100.0 * step * repo.bal("war_ink_wood_jitter")
 				(out["woods"] as Array).append({"at": (at + jitter - r.position) * k, "conifer": float(w["conifer"]) > 0.5})
 	_manors(repo, state, r, k, out)
+	out["graticule"] = graticule(repo, sheet, k)
+	return out
+
+
+## The graticule's figures (owner 2026-10-02: 战术地图加上经纬度的格子): each
+## meridian's longitude along the top and bottom of the neat line, each
+## parallel's latitude down both sides, every war_grid_deg, just inside the
+## chequered degree band — `at` the line's foot on the band's inner edge in
+## ink px, `side` which edge (n s w e), `text` the figure ("24°N", "51°E").
+static func graticule(repo: DataRepository, sheet: Dictionary, k: float) -> Array:
+	var r: Rect2 = sheet["rect"]
+	var cell: Rect2 = sheet.get("cell", r)
+	var step := MapCoords.px_per_deg(repo) * repo.bal("war_grid_deg")
+	var pad := repo.bal("war_grid_label_pad_px")
+	var size := int(repo.bal("war_grid_label_px"))
+	var out: Array = []
+	var x0 := ceili(cell.position.x / step.x + 0.001)
+	var x1 := floori(cell.end.x / step.x - 0.001)
+	for i in range(x0, x1 + 1):
+		var x := (float(i) * step.x - r.position.x) * k
+		var lon := MapCoords.lon_lat(repo, Vector2(float(i) * step.x, 0.0)).x
+		var text := "%d°%s" % [absi(roundi(lon)), "W" if roundi(lon) < 0 else "E"]
+		out.append({"at": Vector2(x, (cell.position.y - r.position.y) * k + pad), "side": "n", "text": text, "size": size})
+		out.append({"at": Vector2(x, (cell.end.y - r.position.y) * k - pad), "side": "s", "text": text, "size": size})
+	var y0 := ceili(cell.position.y / step.y + 0.001)
+	var y1 := floori(cell.end.y / step.y - 0.001)
+	for j in range(y0, y1 + 1):
+		var y := (float(j) * step.y - r.position.y) * k
+		var lat := MapCoords.lon_lat(repo, Vector2(0.0, float(j) * step.y)).y
+		var text := "%d°%s" % [absi(roundi(lat)), "S" if roundi(lat) < 0 else "N"]
+		out.append({"at": Vector2((cell.position.x - r.position.x) * k + pad, y), "side": "w", "text": text, "size": size})
+		out.append({"at": Vector2((cell.end.x - r.position.x) * k - pad, y), "side": "e", "text": text, "size": size})
 	return out
 
 

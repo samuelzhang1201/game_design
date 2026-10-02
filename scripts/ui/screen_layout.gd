@@ -109,7 +109,8 @@ static func place_handle(handle: Control, top: float) -> void:
 		var h := handle.get_combined_minimum_size().y
 		handle.anchor_left = 1.0
 		handle.anchor_right = 1.0
-		var inset := HANDLE_INSET + (WarTable._num("ui_sheet_margin_px", 13.0) if UiPalette.war_table() else 0.0)
+		var inset := (WarTable._num("ui_seal_inset_px", HANDLE_INSET) + WarTable._num("ui_sheet_margin_px", 13.0)) \
+			if UiPalette.war_table() else HANDLE_INSET
 		handle.offset_right = -margin() - inset
 		handle.offset_left = handle.offset_right - w
 		handle.offset_top = top + inset

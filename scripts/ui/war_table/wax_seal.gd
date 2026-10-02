@@ -34,16 +34,16 @@ func _init(order: String = "ENTER THE COUNCIL") -> void:
 	_tag.name = "Tag"
 	_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var paper := WarTable.slip_style(0.0, WarTable.SEED_TAG)
-	paper.content_margin_left = 14
-	paper.content_margin_right = 14
-	paper.content_margin_top = 5
-	paper.content_margin_bottom = 6
+	paper.content_margin_left = 10
+	paper.content_margin_right = 10
+	paper.content_margin_top = 3
+	paper.content_margin_bottom = 4
 	_tag.add_theme_stylebox_override("panel", paper)
 	_word = Label.new()
 	_word.name = "Order"
 	_word.text = UiPalette.readable_title(order) if order == order.to_upper() else order
 	_word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(_word, 15, UiPalette.table_color("ink", Color("2b1f15")))
+	UiPalette.style_header(_word, int(WarTable._num("ui_seal_tag_font_px", 15.0)), UiPalette.table_color("ink", Color("2b1f15")))
 	_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var words := VBoxContainer.new()
 	words.add_theme_constant_override("separation", -2)
@@ -56,7 +56,7 @@ func _init(order: String = "ENTER THE COUNCIL") -> void:
 	var italic := UiPalette.role_font("body_italic")
 	if italic != null:
 		_waiting_line.add_theme_font_override("font", italic)
-	_waiting_line.add_theme_font_size_override("font_size", 13)
+	_waiting_line.add_theme_font_size_override("font_size", int(WarTable._num("ui_seal_waiting_font_px", 13.0)))
 	_waiting_line.add_theme_color_override("font_color", UiPalette.table_color("ink_muted", Color("5a4632")))
 	words.add_child(_waiting_line)
 	_tag.add_child(words)
@@ -109,19 +109,21 @@ func _refit() -> void:
 	var mini_px := WarTable._num("ui_seal_mini_px", 40.0)
 	var minis := _minis()
 	var row := (mini_px * minis + 6.0 * maxf(minis - 1, 0) + 10.0) if minis > 0 else 0.0
-	custom_minimum_size = Vector2(maxf(seal + 8.0, tag_min.x), seal + tag_min.y - 6.0 + row)
+	custom_minimum_size = Vector2(maxf(seal + 8.0, tag_min.x), seal + tag_min.y - 4.0 + row)
 	_place_tag()
 
 func _place_tag() -> void:
 	var tm := _tag.get_combined_minimum_size()
 	_tag.size = tm
-	_tag.position = Vector2((size.x - tm.x) * 0.5, WarTable._num("ui_seal_px", 100.0) - 6.0)
+	# right-aligned: the seal and its tag tucked into the map's corner (owner
+	# 2026-10-02: 再往右上方角落移动点)
+	_tag.position = Vector2(size.x - tm.x, WarTable._num("ui_seal_px", 100.0) - 4.0)
 
 func _draw() -> void:
 	var seal := WarTable._num("ui_seal_px", 100.0)
 	var r := seal * 0.5
 	var sunk := 1.5 if button_pressed or is_pressed() else 0.0
-	var c := Vector2(size.x * 0.5, r + sunk)
+	var c := Vector2(size.x - r - 4.0, r + sunk)   # the seal in the corner, over its tag's right end
 	var light := UiPalette.table_color("wax_light", Color("a63a2f"))
 	var mid := UiPalette.table_color("wax_mid", Color("7a1c17"))
 	var dark := UiPalette.table_color("wax_dark", Color("5a1410"))
@@ -181,7 +183,7 @@ func _draw_minis() -> void:
 		UiPalette.table_color("brass_mid", Color("b08a3e")),
 		UiPalette.table_color("brass_dark", Color("6b4e1c"))]
 	for i in n:
-		var c := Vector2(size.x * 0.5, y + float(i) * (px + 6.0))
+		var c := Vector2(_tag.position.x + _tag.size.x * 0.5, y + float(i) * (px + 6.0))
 		BrassStyle.draw_brass(get_canvas_item(), c, r, brass, WarTable._num("ui_table_shadow_alpha", 0.34), false)
 		var tex := CharacterPortrait.texture_for(_waiting[i])
 		if tex == null:

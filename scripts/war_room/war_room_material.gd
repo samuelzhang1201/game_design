@@ -26,6 +26,10 @@ const SHADER_KEYS := {
 	"paper_roughness": "war_paper_roughness", "crease_alpha": "war_crease_alpha", "crease_px": "war_crease_px",
 	"collar_ink": "war_collar_ink", "collar_shade": "war_collar_shade", "neat_px": "war_neat_px",
 	"neat_gap_px": "war_neat_gap_px",
+	"parchment_mottle": "war_parchment_mottle", "parchment_blotch_m": "war_parchment_blotch_m",
+	"parchment_grain": "war_parchment_grain", "parchment_fox": "war_parchment_fox",
+	"parchment_rim": "war_parchment_rim", "sea_wash": "war_sea_wash", "grid_deg": "war_grid_deg",
+	"neat_band_alpha": "war_neat_band_alpha",
 }
 
 
@@ -37,7 +41,11 @@ static func bind(mat: ShaderMaterial, repo: DataRepository, sheet: Dictionary, t
 		(c.position.y - sheet_rect.position.y) / sheet_rect.size.y,
 		(c.end.x - sheet_rect.position.x) / sheet_rect.size.x, (c.end.y - sheet_rect.position.y) / sheet_rect.size.y))
 	var pal: Dictionary = repo.war_palette
-	for key in ["paper", "paper_age", "ink", "sea_ink"]:
+	# the sheet is PARCHMENT (owner 2026-10-02), the folio's pages stay vellum
+	mat.set_shader_parameter("paper", pal.get("parchment", pal["paper"]))
+	mat.set_shader_parameter("paper_age", pal.get("parchment_age", pal["paper_age"]))
+	mat.set_shader_parameter("grid_ink", pal.get("rubric", pal["ink"]))
+	for key in ["ink", "sea_ink"]:
 		mat.set_shader_parameter(key, pal[key])
 	for uniform: String in SHADER_KEYS:
 		mat.set_shader_parameter(uniform, repo.bal(String(SHADER_KEYS[uniform])))

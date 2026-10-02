@@ -26,7 +26,6 @@ var _pause_menu: Control
 var _pause_status: Label
 var _ledger_screen: LedgerScreen
 var _war_room_screen: WarRoomScreen
-var _war_room_tween: Tween
 var _missive_screen: MissiveScreen
 var _report_popup: MissiveReportPopup
 ## Spy report ids waiting to open, oldest first (a new letter's id is always
@@ -591,10 +590,10 @@ func toggle_war_room() -> void:
 	var map: Control = current_screen.map_panel()
 	if not map.item_rect_changed.is_connected(_fit_war_room):
 		map.item_rect_changed.connect(_fit_war_room)
-	var capture := _capture_column()
 	var wide := war_room_rect()
-	var map_rect := Rect2(map.global_position, map.size)
 	var map_view: Map3DView = current_screen.map3d_view() if current_screen.has_method("map3d_view") else null
+	# the screen as it lies now: the scroll covers it as it comes down
+	var cover := WarScrollReveal.capture(get_viewport(), wide)
 	if map_view != null:
 		map_view.deactivate()
 	# An aim armed on the map's own menu (piece, MARCH…) must not survive into
@@ -602,32 +601,16 @@ func toggle_war_room() -> void:
 	var map_orders := current_screen.find_child("ArmyOrders", true, false) as ArmyOrderMenu
 	if map_orders != null:
 		map_orders.withdraw_aim()
-	# The room opens over the map and widens over the left column while the
-	# steward's report rolls up (spec 2026-10-02-war-room-v2 §1.2).
-	var secs := Game.data.bal("war_report_roll_s")
-	if _war_room_tween != null:
-		_war_room_tween.kill()
-	_war_room_screen.position = map_rect.position
-	_war_room_screen.size = map_rect.size
+	# The room is laid over the map and the left column at once and comes down
+	# over them like a hanging scroll (owner 2026-10-02: 从上往下的卷轴拉下来).
+	_war_room_screen.position = wide.position
+	_war_room_screen.size = wide.size
 	_war_room_screen.open(current_screen.detail_panel())
-	if current_screen.has_method("left_column"):
-		var col: Control = current_screen.left_column()
-		var col_rect := Rect2(col.global_position, col.size)
-		WarReportRoll.play(self, col_rect, capture, true, secs, Game.data.bal("war_report_roller_px"), UiPalette.war_table())
-		_war_room_screen.set_report_capture(capture, col_rect)
-	_war_room_screen.view().hold_size(true)
-	_war_room_tween = create_tween()
-	_war_room_tween.tween_property(_war_room_screen, "position", wide.position, secs)
-	_war_room_tween.parallel().tween_property(_war_room_screen, "size", wide.size, secs)
-	_war_room_tween.finished.connect(func() -> void:
-		_war_room_screen.view().hold_size(false)
-		_fit_war_room())
+	WarScrollReveal.play(self, wide, cover, true, Game.data.bal("war_unroll_s"), Game.data.bal("war_unroll_roller_px"))
 
 func _fit_war_room() -> void:
 	if current_screen == null or not current_screen.has_method("map_panel"):
 		return
-	if _war_room_tween != null and _war_room_tween.is_running():
-		return   # the widening animation owns the rect until it ends
 	var r := war_room_rect()
 	_war_room_screen.position = r.position
 	_war_room_screen.size = r.size
@@ -643,22 +626,6 @@ func war_room_rect() -> Rect2:
 		r = Rect2(Vector2(col.global_position.x, map.global_position.y),
 			Vector2(map.global_position.x + map.size.x - col.global_position.x, map.size.y))
 	return r
-
-## The left column as it is drawn now, for the report's roll (null headless,
-## where nothing renders).
-func _capture_column() -> Texture2D:
-	if DisplayServer.get_name() == "headless" or not current_screen.has_method("left_column"):
-		return null
-	var col: Control = current_screen.left_column()
-	var img := get_viewport().get_texture().get_image()
-	if img == null or img.is_empty():
-		return null
-	var k := get_viewport().get_final_transform().get_scale().x
-	var px := Rect2i(Vector2i(col.global_position * k), Vector2i(col.size * k)).intersection(
-		Rect2i(Vector2i.ZERO, img.get_size()))
-	if px.size.x <= 0 or px.size.y <= 0:
-		return null
-	return ImageTexture.create_from_image(img.get_region(px))
 
 func war_room_screen() -> WarRoomScreen:
 	return _war_room_screen
@@ -805,7 +772,7 @@ func _on_missive_show(subject: Dictionary) -> void:
 		leave_war_room(_on_missive_show.bind(subject))
 		return
 	if _war_room_screen != null and _war_room_screen.visible:
-		_war_room_screen.close()   # the board opened over the room: the place is on the map, not under the room
+		_war_room_screen.close(false)   # the board opened over the room: the place is on the map, not under the room (and the last frame is the board, not the room: no scroll)
 		_sync_map_view()
 	var view: Map3DView = current_screen.map3d_view() if current_screen != null and current_screen.has_method("map3d_view") else null
 	if view == null:

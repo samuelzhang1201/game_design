@@ -13,13 +13,11 @@ var _detail: MapDetailPanel
 var _bound := false
 var _dirty := false
 var _card_mine := false
-var _capture: Texture2D
 var _home: Node                # the column the card was borrowed from
 var _home_index := -1
 var _roll_tween: Tween
 var _board_vp: SubViewport
 var _board_screen: MissiveScreen
-var _column_rect := Rect2()
 var _margin_sig: Array = []   # [sheet, the off-sheet (code, sheet) pairs, none on this sheet] last filled
 
 @onready var _view: WarRoomView = %View
@@ -61,7 +59,7 @@ func _ready() -> void:
 		roll.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
 	roll.draw.connect(func() -> void:
 		var px := Game.data.bal("war_report_roller_px")
-		WarReportRoll.draw_roller(roll, Rect2(0.0, roll.size.y - px, roll.size.x, px)))
+		WarScrollReveal.draw_roller(roll, Rect2(0.0, roll.size.y - px, roll.size.x, px)))
 
 
 func view() -> WarRoomView:
@@ -96,13 +94,6 @@ func open(detail: MapDetailPanel) -> void:
 		_view.refresh()
 		_fill_margin()   # the regiments moved while the room was shut
 	(%Deploy as WarDeployScroll).refresh()   # kept drafts light it at once
-
-
-## The report as it lay when the room opened, and where (GameRoot): closing
-## unrolls it over the column again (spec 2026-10-02-war-room-v2 §1.2).
-func set_report_capture(capture: Texture2D, rect: Rect2) -> void:
-	_capture = capture
-	_column_rect = rect
 
 
 ## Facing the easel, the margin's slips would lie over the board: they make
@@ -345,6 +336,11 @@ func _on_sealed(_result: Dictionary) -> void:
 func close(animate := true) -> void:
 	if not visible:
 		return
+	# the room as it hangs now: it rolls back up off the screen beneath (owner
+	# 2026-10-02, the hanging scroll); none when the screen beneath is being
+	# replaced (final review I3: nothing is drawn over the new screen)
+	var picture := WarScrollReveal.capture(get_viewport(), get_global_rect()) if animate else null
+	var rect := get_global_rect()
 	(%LeavePrompt as WarLeavePrompt).visible = false   # a forced close answers no question
 	_leave_then = Callable()
 	(%Deploy as WarDeployScroll).cancel()   # an unrolled scroll is put away, a seal in hand given up: nothing rides behind the player's back
@@ -362,11 +358,9 @@ func close(animate := true) -> void:
 	%CardRoll.visible = false
 	_give_back()   # the room is gone at once: the column has its card back now
 	closed.emit()
-	if animate and _column_rect.size.x > 0.0 and get_parent() != null:
-		WarReportRoll.play(get_parent(), _column_rect, _capture, false,
-			Game.data.bal("war_report_roll_s"), Game.data.bal("war_report_roller_px"), UiPalette.war_table())
-	_capture = null
-	_column_rect = Rect2()
+	if animate and get_parent() != null:
+		WarScrollReveal.play(get_parent(), rect, picture, false,
+			Game.data.bal("war_unroll_s"), Game.data.bal("war_unroll_roller_px"))
 
 
 func refresh() -> void:

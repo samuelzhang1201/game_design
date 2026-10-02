@@ -244,20 +244,20 @@ func _draw_rolled() -> void:
 		var o := sh * float(i + 1)
 		b.draw_rect(Rect2(body.position + Vector2(o, o) * 0.6, body.size + Vector2(roller * 0.4, 0)),
 			Color(0, 0, 0, [0.18, 0.10, 0.05][i]))
-	var edge := WarReportRoll.ROLLER_WOOD.darkened(0.45)
+	var edge := WarScrollReveal.ROLLER_WOOD.darkened(0.45)
 	b.draw_rect(body, UiPalette.table_color("paper", Color("e9dcc0")).lightened(lift))
 	b.draw_rect(Rect2(body.position + Vector2(0, body.size.y * 0.72), Vector2(body.size.x, body.size.y * 0.28)),
 		Color(0.40, 0.31, 0.18, 0.30))
 	b.draw_rect(body, edge, false, 1.0, true)
 	for x: float in [body.position.x - roller * 0.5, body.end.x - roller * 0.5]:
 		var c := Rect2(Vector2(x, r.position.y + r.size.y * 0.12), Vector2(roller, r.size.y * 0.74))
-		var shades: Array[Color] = [WarReportRoll.ROLLER_WOOD.lightened(0.22), WarReportRoll.ROLLER_WOOD,
-			WarReportRoll.ROLLER_WOOD.darkened(0.3)]
+		var shades: Array[Color] = [WarScrollReveal.ROLLER_WOOD.lightened(0.22), WarScrollReveal.ROLLER_WOOD,
+			WarScrollReveal.ROLLER_WOOD.darkened(0.3)]
 		for j: int in 3:   # three bands, lit to dark across: a round roller
 			b.draw_rect(Rect2(c.position + Vector2(c.size.x * j / 3.0, 0), Vector2(c.size.x / 3.0 + 0.5, c.size.y)),
 				shades[j].lightened(lift))
-		b.draw_rect(Rect2(c.position, Vector2(c.size.x, c.size.y * 0.14)), WarReportRoll.ROLLER_CAP)
-		b.draw_rect(Rect2(c.position + Vector2(0, c.size.y * 0.86), Vector2(c.size.x, c.size.y * 0.14)), WarReportRoll.ROLLER_CAP)
+		b.draw_rect(Rect2(c.position, Vector2(c.size.x, c.size.y * 0.14)), WarScrollReveal.ROLLER_CAP)
+		b.draw_rect(Rect2(c.position + Vector2(0, c.size.y * 0.86), Vector2(c.size.x, c.size.y * 0.14)), WarScrollReveal.ROLLER_CAP)
 		b.draw_rect(c, edge, false, 1.0, true)
 	# Nothing pencilled: only the ribbon and the seal grey (taste: never wash
 	# the whole object, never grey it by alpha).

@@ -45,6 +45,20 @@ uniform float collar_ink = 0.35;   // ink and contours beyond the neat line, as 
 uniform float collar_shade = 0.12; // the collar's paper a touch darker
 uniform float neat_px = 1.6;       // the neat line's rule, screen px
 uniform float neat_gap_px = 4.0;   // its inner hairline, screen px inside it
+// parchment (owner 2026-10-02: 羊皮纸风格): blotches of the aged colour, a
+// fine grain, a few foxing spots and a darker, burnt rim — all procedural in
+// the sheet's own table metres, so every sheet wears the same skin
+uniform float parchment_mottle = 0.45;     // the blotches' pull toward paper_age
+uniform float parchment_blotch_m = 0.22;   // a blotch's size, table metres
+uniform float parchment_grain = 0.05;      // the fibre grain's strength
+uniform float parchment_fox = 0.25;        // the foxing spots' strength
+uniform float parchment_rim = 0.35;        // the burnt rim's darkening at the very edge
+uniform float sea_wash = 0.12;             // the sea washed this share toward sea_ink
+// the graticule (owner 2026-10-02: 战术地图加上经纬度的格子): grid_cells counts
+// grid_deg squares; the neat line's band is chequered a degree at a time
+uniform float grid_deg = 2.0;
+uniform vec4 grid_ink : source_color = vec4(0.608, 0.173, 0.122, 1.0); // faded rubric: apart from the seams' sepia
+uniform float neat_band_alpha = 0.85;
 // the intelligence layer (v2 B Task 9): premultiplied sRGB bytes, as ink_tex
 uniform sampler2D intel_tex : filter_linear_mipmap_anisotropic, hint_default_transparent;
 
@@ -66,6 +80,31 @@ float line_at(float v, float width_px) {
 	return (1.0 - clamp(d - width_px * 0.5 + 0.5, 0.0, 1.0)) * crowd;
 }
 
+float hash21(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+
+float vnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash21(i), hash21(i + vec2(1.0, 0.0)), u.x),
+		mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+float fbm(vec2 p) {
+	float a = 0.5;
+	float v = 0.0;
+	for (int i = 0; i < 5; i++) {
+		v += a * vnoise(p);
+		p = p * 2.03 + vec2(17.1, 9.7);
+		a *= 0.5;
+	}
+	return v;
+}
+
 vec3 srgb_to_linear(vec3 c) {
 	return mix(pow((c + 0.055) * (1.0 / 1.055), vec3(2.4)), c * (1.0 / 12.92), lessThan(c, vec3(0.04045)));
 }
@@ -73,7 +112,18 @@ vec3 srgb_to_linear(vec3 c) {
 void fragment() {
 	vec3 col = paper.rgb;
 	float edge = max(abs(UV.x - 0.5), abs(UV.y - 0.5)) * 2.0;
+	// parchment: the blotches and grain in table metres (a sheet's skin does
+	// not stretch with its ratio), the foxing, the rim
+	vec2 tm = UV * table_m;
+	float blotch = smoothstep(0.35, 0.8, fbm(tm / max(parchment_blotch_m, 1e-3)));
+	col = mix(col, paper_age.rgb, blotch * parchment_mottle);
+	float grain = vnoise(tm * vec2(900.0, 260.0)) - 0.5;
+	col *= 1.0 + grain * parchment_grain;
+	float fox = smoothstep(0.82, 0.95, vnoise(tm * 38.0 + 3.1) * vnoise(tm * 11.0 + 7.7) * 1.6);
+	col = mix(col, paper_age.rgb * 0.75, fox * parchment_fox * smoothstep(0.35, 0.95, edge));
 	col = mix(col, paper_age.rgb, smoothstep(paper_age_from, 1.0, edge) * paper_age_mix);
+	float rim = smoothstep(0.93, 1.0, edge + (fbm(tm * 9.0) - 0.5) * 0.05);
+	col *= 1.0 - rim * parchment_rim;
 
 	// beyond the neat line: the collar — the neighbouring ground, faint (spec §2.2)
 	vec2 inside2 = step(neat_uv.xy, UV) * step(UV, neat_uv.zw);
@@ -85,6 +135,7 @@ void fragment() {
 	// land or sea, with a soft shore from the interpolated unclamped metres
 	float shore = max(fwidth(raw_metres), 1e-3);
 	float land = smoothstep(-shore, shore, raw_metres);
+	col = mix(col, sea_ink.rgb, (1.0 - land) * sea_wash);
 
 	float c = line_at(metres / contour_m, contour_px);
 	float idx = line_at(metres / (contour_m * index_every), contour_index_px);
@@ -98,7 +149,7 @@ void fragment() {
 
 	vec2 g = UV * grid_cells + grid_phase;
 	float grid = max(line_at(g.x, grid_px), line_at(g.y, grid_px));
-	col = mix(col, ink.rgb, grid * grid_alpha);
+	col = mix(col, grid_ink.rgb, grid * grid_alpha);
 
 	// the sheet's two fold creases, at its vertical and horizontal middle
 	float crease = max(line_at(UV.x + 0.5, crease_px), line_at(UV.y + 0.5, crease_px));
@@ -119,6 +170,13 @@ void fragment() {
 	vec2 d1 = abs(d0 - neat_gap_px);
 	float hair = max((1.0 - clamp(d1.x - 0.4, 0.0, 1.0)) * inb.y, (1.0 - clamp(d1.y - 0.4, 0.0, 1.0)) * inb.x) * inside;
 	col = mix(col, ink.rgb, max(rule, hair * 0.6));
+	// between the rule and the hairline: a band chequered a degree at a time,
+	// along the top and bottom by longitude, down the sides by latitude
+	vec2 deg = (UV * grid_cells + grid_phase) * grid_deg;
+	vec2 par = mod(floor(deg), 2.0);
+	vec2 in_band = step(vec2(neat_px * 0.5), d0) * step(d0, vec2(neat_gap_px)) * inb.yx * inside;
+	float band = max(in_band.y * par.x, in_band.x * par.y);
+	col = mix(col, ink.rgb, band * neat_band_alpha);
 
 	vec4 intel = texture(intel_tex, vec2(UV.x, UV.y * tex_aspect));
 	vec3 intel_straight = srgb_to_linear(intel.rgb / max(intel.a, 1e-4));

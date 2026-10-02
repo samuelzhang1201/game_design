@@ -22,7 +22,7 @@ func test_war_room_is_no_longer_a_placeholder() -> void:
 func test_the_tab_lays_the_home_provinces_sheet_over_the_map() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.1)   # the room widens over that time
+	await wait_seconds(Game.data.bal("war_unroll_s") + 0.1)   # the room comes down over that time
 	var screen := r.war_room_screen()
 	assert_true(screen.visible)
 	var map: Control = r.current_screen.map_panel()
@@ -535,10 +535,10 @@ func test_show_on_map_from_the_board_over_the_room_leaves_the_room() -> void:
 func test_a_screen_switch_under_the_room_unrolls_no_stale_report() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.2)
+	await wait_seconds(Game.data.bal("war_unroll_s") + 0.2)
 	r._switch_to(GameRoot.State.COURT)
 	await wait_process_frames(1)
-	var rolls := r.get_children().filter(func(n: Node) -> bool: return n is WarReportRoll and not n.is_queued_for_deletion())
+	var rolls := r.get_children().filter(func(n: Node) -> bool: return n is WarScrollReveal and not n.is_queued_for_deletion())
 	assert_eq(rolls.size(), 0, "the old column's picture is not drawn over the new screen")
 
 

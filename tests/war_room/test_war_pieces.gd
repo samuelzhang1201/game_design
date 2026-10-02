@@ -205,6 +205,9 @@ func test_a_piece_sits_level_on_the_highest_relief_under_its_base() -> void:
 
 
 func test_a_piece_moved_onto_a_slope_rests_on_its_highest_corner() -> void:
+	# the sheet lies flat since 2026-10-02 (war_relief_exaggeration 0): the
+	# seating rule still holds for any relief, so this test raises one
+	repo.balance["war_relief_exaggeration"] = 5.0
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")

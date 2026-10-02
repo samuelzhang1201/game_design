@@ -123,6 +123,35 @@ func _draw() -> void:
 		draw_string(font, at + Vector2(hw + s * float(px["label_gap_ratio"]), drop), "%d m" % int(p["metres"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(float(px["label"]) * float(px["peak_label_ratio"])), c_ink)
 	_draw_hollows(c_ink)
+	_draw_graticule(c_ink)
+
+
+## The meridians' and parallels' figures inside the neat line: a meridian's
+## beside its line (the line never runs through the figure), a parallel's
+## just above its line, each set in from its own edge.
+func _draw_graticule(_c_ink: Color) -> void:
+	var c_fig: Color = pal.get("rubric", _c_ink)
+	var ground: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
+	ground.a = 0.6
+	for g: Dictionary in ink.get("graticule", []):
+		var fs := int(g["size"])
+		var text := String(g["text"])
+		var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var at: Vector2 = g["at"]
+		var gap := float(fs) * 0.25
+		var pos := at
+		match String(g["side"]):
+			"n":
+				pos = at + Vector2(gap, float(fs) * 0.85)
+			"s":
+				pos = at + Vector2(gap, -float(fs) * 0.2)
+			"w":
+				pos = at + Vector2(0.0, -gap)
+			"e":
+				pos = at + Vector2(-tw, -gap)
+		# a parchment knock-out, so no line runs through the figure
+		draw_rect(Rect2(pos + Vector2(-gap * 0.4, -float(fs) * 0.78), Vector2(tw + gap * 0.8, float(fs) * 0.98)), ground)
+		draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c_fig)
 
 
 ## What we know (WarIntelInk), in the intel ink: supply roads dashed and
