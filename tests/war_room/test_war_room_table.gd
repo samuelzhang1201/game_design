@@ -107,3 +107,20 @@ func test_the_mesh_carries_the_shore_fade_in_color_r() -> void:
 	var cols: PackedColorArray = WarRoomTable.build_mesh(h, 2, 2, 1.0, 1.0, 0.001, h, PackedFloat32Array([0.0, 0.5, 1.0, 1.0])).surface_get_arrays(0)[Mesh.ARRAY_COLOR]
 	assert_almost_eq(cols[1].r, 0.5, 0.01)
 	assert_almost_eq(cols[2].r, 1.0, 0.01)
+
+
+func test_the_relief_tapers_to_flat_across_the_collar() -> void:
+	var rect := Rect2(0, 0, 120, 100)
+	var cell := rect.grow(-10.0)
+	var nx := 13
+	var nz := 11
+	var h := PackedFloat32Array()
+	h.resize(nx * nz)
+	h.fill(100.0)
+	var t := WarRoomTable.taper_collar(h, nx, nz, rect, cell)
+	assert_almost_eq(t[0], 0.0, 0.0001, "the sheet's own corner, a whole collar out, lies flat")
+	assert_almost_eq(t[5 * nx + 6], 100.0, 0.0001, "inside the neat line the relief stands whole")
+	var mid := t[5 * nx + 0]   # x = 0: the collar's outer edge, mid-height
+	assert_almost_eq(mid, 0.0, 0.0001)
+	var half := WarRoomTable.taper_collar(h, nx, nz, Rect2(0, 0, 120, 100), Rect2(20, 0, 80, 100))[5 * nx + 1]   # x = 10, half way across a 20 px collar
+	assert_almost_eq(half, 50.0, 0.0001, "smoothstep(0.5) = 0.5")

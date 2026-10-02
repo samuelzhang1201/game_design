@@ -60,6 +60,26 @@ static func _sample(repo: DataRepository, relief: Image, sheet_rect: Rect2, nx: 
 	return out
 
 
+## The relief tapered to flat across the collar (v2 B: exaggerated, the
+## collar's ground reared up over the index chart): whole inside the neat line
+## `cell`, smoothstepped to nothing at the sheet's own edge. Only land is
+## lowered — a sea vertex keeps its depth, so the shore stays where it is.
+static func taper_collar(raw: PackedFloat32Array, nx: int, nz: int, rect: Rect2, cell: Rect2) -> PackedFloat32Array:
+	var out := raw.duplicate()
+	var cw := maxf((rect.size.x - cell.size.x) * 0.5, 0.0001)
+	var ch := maxf((rect.size.y - cell.size.y) * 0.5, 0.0001)
+	for j in nz:
+		for i in nx:
+			var p := rect.position + rect.size * Vector2(float(i) / float(maxi(nx - 1, 1)), float(j) / float(maxi(nz - 1, 1)))
+			var dx := maxf(maxf(cell.position.x - p.x, p.x - cell.end.x), 0.0) / cw
+			var dy := maxf(maxf(cell.position.y - p.y, p.y - cell.end.y), 0.0) / ch
+			var t := clampf(maxf(dx, dy), 0.0, 1.0)
+			var k := j * nx + i
+			if out[k] > 0.0:
+				out[k] *= 1.0 - smoothstep(0.0, 1.0, t)
+	return out
+
+
 ## Raw metres held at the sea line (the relief and the contours stand on land).
 static func clamp_sea(raw: PackedFloat32Array) -> PackedFloat32Array:
 	var out := raw.duplicate()

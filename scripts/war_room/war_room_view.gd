@@ -223,6 +223,7 @@ func lay_sheet(index: int) -> void:
 	var bake := WarBake.of(_repo)
 	var raw := bake.heights(_rect, _nx, _nz) if bake != null \
 		else (WarRoomTable.raw_heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else WarRoomTable.flat(_nx, _nz))
+	raw = WarRoomTable.taper_collar(raw, _nx, _nz, _rect, all[index].get("cell", _rect))
 	_heights = WarRoomTable.clamp_sea(raw)
 	_y_scale = WarRoomTable.table_y(_repo, _rect, _table_w, 1.0)
 	var shore := WarRoomTable.shore_share(_repo, raw, _nx, _nz, _table_w, _depth)

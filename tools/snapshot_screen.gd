@@ -186,7 +186,9 @@ var _ledger_select := ""
 ## REAL right drag (after any --war-zoom); --war-board clicks the easel's
 ## board (the camera flies to it); --war-board-click fx,fy (implies
 ## --war-board) then clicks that share of the view — a note there opens the
-## full Missive board over the room.
+## full Missive board over the room. v2 B: --war-cell ID (a sheet id such as
+## D4) clicks that cell of the index chart for real — the war marker is
+## tossed, then the sheet is laid — and the later steps wait for both.
 var _war_room := false
 var _war_focus := ""
 var _war_commit := false
@@ -196,6 +198,7 @@ var _war_folio := ""
 var _war_drag := Vector2(-1, -1)
 var _war_zoom := -1.0
 var _war_turn := 0.0
+var _war_cell := ""
 var _war_board := false
 var _war_board_click := Vector2(-1, -1)
 var _war_phase := 0
@@ -302,6 +305,8 @@ func _ready() -> void:
 			_war_focus = args[i + 1]
 		elif args[i] == "--war-zoom":
 			_war_zoom = float(args[i + 1])
+		elif args[i] == "--war-cell":
+			_war_cell = args[i + 1].to_upper()
 		elif args[i] == "--war-turn":
 			_war_turn = float(args[i + 1])
 		elif args[i] == "--war-board-click":
@@ -851,14 +856,26 @@ func _war_room_step() -> void:
 	elif _war_phase == 1:
 		# the room is open and a sheet is laid and not rolling: ask for the other
 		if screen.visible and view.sheet_index() >= 0 and not view.rolling():
-			if _war_sheet >= 0 and view.sheet_index() != _war_sheet:
+			if _war_cell != "":
+				for s: Dictionary in WarSheets.series(Game.data):
+					if String(s["id"]) == _war_cell:
+						var cam := view.get_node("%Camera") as Camera3D
+						var chart := view.get_node("%IndexChart") as MeshInstance3D
+						var p := WarRoomWall.chart_point(chart, WarIndexChart.uv_of_cell(Game.data, s).get_center())
+						var at := cam.unproject_position(p) / view.window_scale()
+						_real_click(view, at)
+						_war_sheet = int(s["index"])
+						print("war: chart click on %s at %s tossing=%s" % [_war_cell, at, view.tossing()])
+				if _war_sheet < 0:
+					print("war: no sheet %s" % _war_cell)
+			elif _war_sheet >= 0 and view.sheet_index() != _war_sheet:
 				view.swap_to(_war_sheet)
 				print("war: swapping to sheet %d" % _war_sheet)
 			_war_to(2)
 	elif _war_phase == 2:
 		# the requested sheet is laid, the roll is over; let its ink settle
 		var laid := _war_sheet < 0 or view.sheet_index() == _war_sheet
-		if laid and not view.rolling() and _frames - _war_at >= 12:
+		if laid and not view.rolling() and not view.tossing() and _frames - _war_at >= 12:
 			if _war_zoom > 0.0:
 				var focus := Vector2(-1, -1)
 				var on := _war_focus if _war_focus != "" else _war_piece

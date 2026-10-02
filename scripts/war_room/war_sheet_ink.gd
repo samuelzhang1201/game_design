@@ -107,15 +107,37 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 			# a sheet always draws the same woods
 			var roll := float(absi(hash(Vector2i(roundi(at.x * 100.0), roundi(at.y * 100.0)))) % 1000) / 1000.0
 			if float(w["cover"]) >= min_cover and roll < float(w["cover"]):
-				var jitter := Vector2(float(absi(hash([at.x, 1])) % 100) - 50.0, float(absi(hash([at.y, 2])) % 100) - 50.0) / 100.0 * step
+				var jitter := Vector2(float(absi(hash([at.x, at.y, 1])) % 200) - 100.0,
+					float(absi(hash([at.x, at.y, 2])) % 200) - 100.0) / 100.0 * step * repo.bal("war_ink_wood_jitter")
 				(out["woods"] as Array).append({"at": (at + jitter - r.position) * k, "conifer": float(w["conifer"]) > 0.5})
 	_manors(repo, state, r, k, out)
 	return out
 
 
+## A town's ring and name as one box, ink px (the painter's own layout: the
+## ring at `at`, the name to its right), for keeping other names off it.
+static func town_label_box(repo: DataRepository, t: Dictionary) -> Rect2:
+	var town := repo.bal("war_ink_town_px")
+	var r := town * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
+	var label := repo.bal("war_ink_label_px")
+	var w := r + town * repo.bal("war_ink_label_gap_ratio") + float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
+	var h := maxf(r, label * 0.6)
+	var at: Vector2 = t["at"]
+	return Rect2(at.x - r, at.y - h, r + w, h * 2.0)
+
+
+## A manor's name as a box, ink px, centred where the painter sets it.
+static func manor_label_box(repo: DataRepository, m: Dictionary) -> Rect2:
+	var px := repo.bal("war_ink_manor_label_px")
+	var w := float(String(m["label"]).length()) * px * repo.bal("war_ink_char_w")
+	var at: Vector2 = m["at"]
+	return Rect2(at.x - w * 0.5, at.y - px * 0.5, w, px)
+
+
 ## The manors' own edges — a cell edge between two land cells of ONE province
 ## (a province seam or the coast is drawn already) — and each manor's name at
-## its centre unless a town stands within war_ink_manor_clear_px of it.
+## its centre unless its box would touch a town's ring or name (a town's name
+## wins; war_ink_manor_clear_px of air kept round it).
 static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, out: Dictionary) -> void:
 	var first: Dictionary = {}   # edge key -> the cell that met it first
 	var ids: Array = repo.cells.keys()
@@ -144,14 +166,15 @@ static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, 
 			else:
 				first[key] = id
 		if r.has_point(centre):
-			var at := (centre - r.position) * k
-			var near_town := false
+			var m := {"at": (centre - r.position) * k, "label": MapManors.label_of(repo, id)}
+			var box := manor_label_box(repo, m).grow(clear)
+			var clash := false
 			for t: Dictionary in out["towns"]:
-				if (t["at"] as Vector2).distance_to(at) < clear:
-					near_town = true
+				if box.intersects(town_label_box(repo, t)):
+					clash = true
 					break
-			if not near_town:
-				(out["manors"] as Array).append({"at": at, "label": MapManors.label_of(repo, id)})
+			if not clash:
+				(out["manors"] as Array).append(m)
 
 
 ## Where any of `lines` crosses any of `rivers` (both lists of polylines in one

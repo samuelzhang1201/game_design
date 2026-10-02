@@ -27,13 +27,13 @@ static func image(repo: DataRepository, px: int) -> Image:
 			if not land_cells.has(Vector2i(col, row)):
 				var r := MapCoords.cell_rect(repo, Vector2i(col, row), deg)
 				img.fill_rect(Rect2i(Vector2i(r.position * k), Vector2i(r.size * k) + Vector2i.ONE).intersection(whole), sea)
-	var ink: Color = repo.war_palette["ink"]
+	var ink: Color = repo.war_palette["ink_faint"]   # a wash of dots, lighter than the laid sheet (the critic)
 	for id: int in repo.cells:
 		var cell: Dictionary = repo.cells[id]
 		if MapTerrain.is_water(cell) or (cell["vertex_ids"] as PackedInt32Array).size() < 3:
 			continue
 		var c := MapTerrain.cell_center(repo, cell) * k
-		img.fill_rect(Rect2i(int(c.x), int(c.y), 2, 2).intersection(whole), ink)
+		img.fill_rect(Rect2i(int(c.x), int(c.y), 1, 1).intersection(whole), ink)
 	var faint: Color = repo.war_palette["ink_faint"]
 	for col in g.x + 1:
 		var x := clampi(int(MapCoords.cell_rect(repo, Vector2i(col, 0), deg).position.x * k), 0, px - 1)

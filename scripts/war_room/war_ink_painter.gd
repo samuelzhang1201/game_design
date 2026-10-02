@@ -68,8 +68,9 @@ func _draw() -> void:
 		for d: PackedVector2Array in WarSheetInk.dashed(e, float(px["manor_dash"]), float(px["manor_gap"])):
 			draw_polyline(d, c_faint, float(px["manor"]), true)
 	for mn: Dictionary in ink.get("manors", []):
-		draw_string(font, (mn["at"] as Vector2) + Vector2(0, float(px["manor_label"]) * 0.35), String(mn["label"]),
-			HORIZONTAL_ALIGNMENT_CENTER, -1, int(px["manor_label"]), c_faint)
+		var mw := float(String(mn["label"]).length()) * float(px["manor_label"]) * float(px["char_w"])
+		draw_string(font, (mn["at"] as Vector2) + Vector2(-mw * 0.5, float(px["manor_label"]) * 0.35), String(mn["label"]),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["manor_label"]), c_faint)
 	for poly: PackedVector2Array in ink["trails"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(poly, float(px["dash"]), float(px["gap"])):
 			draw_polyline(d, c_ink, float(px["trail"]), true)

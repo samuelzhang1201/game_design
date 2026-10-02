@@ -147,3 +147,12 @@ func test_roads_over_rivers_are_bridges_and_trails_fords() -> void:
 	var rivers: Array = (ink["rivers"] as Array).map(func(rv: Dictionary) -> PackedVector2Array: return rv["poly"])
 	assert_eq((ink["bridges"] as Array).size(), WarSheetInk.crossings(ink["roads"], rivers).size())
 	assert_eq((ink["fords"] as Array).size(), WarSheetInk.crossings(ink["trails"], rivers).size())
+
+
+func test_no_manor_name_lies_over_a_towns_ring_or_name() -> void:
+	var s := _richest_sheet()
+	var ink := WarSheetInk.strokes(repo, state, s, 4096)
+	for m: Dictionary in ink["manors"]:
+		var mb := WarSheetInk.manor_label_box(repo, m)
+		for t: Dictionary in ink["towns"]:
+			assert_false(mb.intersects(WarSheetInk.town_label_box(repo, t)), "%s over %s" % [m["label"], t["label"]])
