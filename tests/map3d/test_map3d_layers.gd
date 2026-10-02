@@ -172,7 +172,7 @@ func test_the_borders_rebuild_only_when_ownership_moves() -> void:
 	assert_true(borders.refresh(), "a conquest rebuilds")
 	var band := v.line_mesh("KingdomBand").surface_get_material(0) as ShaderMaterial
 	assert_eq(band.render_priority, Map3DPriority.KINGDOM_BAND)
-	assert_eq(band.get_shader_parameter("fade_power"), Game.data.bal("map3d_border_band_fade_power"))
+	assert_eq(band.get_shader_parameter("fade_power"), Map3DLayerLines.KINGDOM_BAND.get_shader_parameter("fade_power"))
 	borders.draw_hover(mine)
 	assert_eq(borders.hovered(), mine)
 	assert_not_null(v.line_mesh("Hover"))

@@ -148,13 +148,9 @@ func redraw() -> void:
 				pts.append(Map3DGeometry.pack_to_world(ctx.meta, p))
 			pts.append(pts[0])
 			ls.append(Map3DGeometry.resample(pts, ctx.line_step()))
-	var style := Map3DLineStyle.solid(MapPalette.named(repo, "map3d_selection"),
-		"map3d_selection_width_px", Map3DPriority.SELECTION)
-	if manor < 0:
-		var seam := MapPalette.named(repo, "map3d_seam")
-		style = Map3DLineStyle.dashed(seam, Color(seam, 0.0), "map3d_selection_seam_width_px",
-			"map3d_seam_dash_px", "map3d_seam_gap_px", Map3DPriority.SELECTION)
-	lines.set_lines("Selection", ls, style)
+	# a clicked manor in gold, a clicked province by its own seam emphasised
+	lines.set_lines("Selection", ls, Map3DLayerLines.SELECTION_MANOR if manor >= 0
+		else Map3DLayerLines.SELECTION_PROVINCE, Map3DPriority.SELECTION)
 
 
 func _set_province(code: String) -> void:

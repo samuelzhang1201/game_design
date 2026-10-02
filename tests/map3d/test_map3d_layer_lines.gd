@@ -31,56 +31,48 @@ func _line() -> PackedVector2Array:
 
 func test_an_empty_line_leaves_no_mesh() -> void:
 	var lines := _lines()
-	lines.set_lines("Kingdoms", [], Map3DLineStyle.solid(Color.BLACK,
-		"map3d_border_width_px", Map3DPriority.KINGDOMS))
+	lines.set_lines("Kingdoms", [], Map3DLayerLines.KINGDOM_INK, Map3DPriority.KINGDOMS)
 	assert_null(lines.line_mesh("Kingdoms"))
 	assert_null(lines.get_node_or_null("Kingdoms"))
 
 
-func test_a_dashed_line_is_one_mesh_at_its_priority() -> void:
+## A line wears its look .tres (owner 2026-10-02: edited in the inspector):
+## its colours and soft edge as authored, its px widths scaled to the
+## SubViewport, at the priority the code orders.
+func test_a_dashed_line_wears_its_look_at_its_priority() -> void:
 	var lines := _lines()
-	var seam := Color(0.2, 0.2, 0.2, 0.5)
-	var gap := Color(seam, 0.0)
-	var style := Map3DLineStyle.dashed(seam, gap,
-		"map3d_seam_width_px", "map3d_seam_dash_px", "map3d_seam_gap_px", Map3DPriority.SEAMS)
-	style.edge_soft = 0.35
-	lines.set_lines("Seams", [_line()], style)
+	lines.set_lines("Seams", [_line()], Map3DLayerLines.SEAM, Map3DPriority.SEAMS)
 	var mesh := lines.line_mesh("Seams")
 	assert_not_null(mesh)
 	var mat := mesh.surface_get_material(0) as ShaderMaterial
+	var look := Map3DLayerLines.SEAM as ShaderMaterial
+	assert_ne(mat, look, "the line's own copy")
 	assert_eq(mat.render_priority, Map3DPriority.SEAMS)
-	assert_eq(mat.get_shader_parameter("colour_a"), seam)
-	assert_eq(mat.get_shader_parameter("colour_b"), gap)
-	assert_almost_eq(float(mat.get_shader_parameter("edge_soft")), 0.35, 0.0001)
-	assert_almost_eq(float(mat.get_shader_parameter("width_px")), Game.data.bal("map3d_seam_width_px"), 0.0001)
-	assert_almost_eq(float(mat.get_shader_parameter("dash_px")), Game.data.bal("map3d_seam_dash_px"), 0.0001)
-	assert_almost_eq(float(mat.get_shader_parameter("gap_px")), Game.data.bal("map3d_seam_gap_px"), 0.0001)
+	assert_eq(mat.get_shader_parameter("colour_a"), look.get_shader_parameter("colour_a"))
+	assert_eq(mat.get_shader_parameter("colour_b"), look.get_shader_parameter("colour_b"))
+	var s := lines.ctx.viewport_px_scale()
+	for k: String in Map3DLayerLines.PX_PARAMS:
+		assert_almost_eq(float(mat.get_shader_parameter(k)), float(look.get_shader_parameter(k)) * s, 0.0001, k)
+	assert_gt(float(look.get_shader_parameter("dash_px")), 0.0, "the seam is dashed")
 
 
-func test_the_band_style_reaches_the_shader() -> void:
+func test_the_band_draws_one_sided_in_its_realms_colours() -> void:
 	var lines := _lines()
-	var style := Map3DLineStyle.solid(Color(1, 1, 1, 0.55), "map3d_border_band_px",
-		Map3DPriority.KINGDOM_BAND)
-	style.one_sided = true
-	style.colours = [Color.RED]
-	style.fade_across = 1.0
-	style.fade_power_key = "map3d_border_band_fade_power"
-	lines.set_lines("KingdomBand", [_line()], style)
+	lines.set_lines("KingdomBand", [_line()], Map3DLayerLines.KINGDOM_BAND, Map3DPriority.KINGDOM_BAND,
+		[Color.RED])
 	var mat := lines.line_mesh("KingdomBand").surface_get_material(0) as ShaderMaterial
 	assert_eq(mat.get_shader_parameter("one_sided"), 1.0)
 	assert_eq(mat.get_shader_parameter("use_vertex_colour"), 1.0)
 	assert_eq(mat.get_shader_parameter("fade_across"), 1.0)
-	assert_eq(mat.get_shader_parameter("fade_power"), Game.data.bal("map3d_border_band_fade_power"))
 
 
 func test_setting_a_line_again_replaces_it() -> void:
 	var lines := _lines()
-	var style := Map3DLineStyle.solid(Color.BLACK, "map3d_border_width_px", Map3DPriority.KINGDOMS)
-	lines.set_lines("Kingdoms", [_line()], style)
+	lines.set_lines("Kingdoms", [_line()], Map3DLayerLines.KINGDOM_INK, Map3DPriority.KINGDOMS)
 	var first := lines.line_mesh("Kingdoms")
-	lines.set_lines("Kingdoms", [_line(), _line()], style)
+	lines.set_lines("Kingdoms", [_line(), _line()], Map3DLayerLines.KINGDOM_INK, Map3DPriority.KINGDOMS)
 	assert_ne(lines.line_mesh("Kingdoms"), first)
-	lines.set_lines("Kingdoms", [], style)
+	lines.set_lines("Kingdoms", [], Map3DLayerLines.KINGDOM_INK, Map3DPriority.KINGDOMS)
 	assert_null(lines.line_mesh("Kingdoms"), "an emptied line leaves nothing behind")
 
 

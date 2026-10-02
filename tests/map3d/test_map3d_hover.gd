@@ -112,9 +112,8 @@ func test_the_hovered_kingdom_is_outlined_from_its_live_outline() -> void:
 	assert_eq(hover.surface_get_array_len(0), expected.size())
 	var mat := hover.surface_get_material(0) as ShaderMaterial
 	assert_eq(mat.render_priority, Map3DView.PRIORITY_HOVER)
-	assert_eq(String(mat.get_meta("width_key")), "map3d_hover_border_width_px")
-	assert_gt(Game.data.bal("map3d_hover_border_width_px"), Game.data.bal("map3d_border_width_px"),
-		"bolder than the border it follows")
+	assert_gt(float(Map3DLayerLines.HOVER.get_shader_parameter("width_px")),
+		float(Map3DLayerLines.KINGDOM_INK.get_shader_parameter("width_px")), "bolder than the border it follows")
 	v.hover_pick({}, Vector2.ZERO)
 	assert_null(v.line_mesh("Hover"), "gone with the hover")
 

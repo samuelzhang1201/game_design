@@ -68,8 +68,6 @@ news_build_milestone_2,0.7,news bar: and again when it passes this one; completi
 knowledge_sure_threshold,75,"credibility at/above which a persona sheet says ""You know"" (review finding 2026-09-01)"
 knowledge_doubt_threshold,50,credibility below which a persona sheet says the character doubts what they heard
 map_manor_alpha,0.92,"economy view: opacity of the manor wash — every land cell (a manor) in its holder's colour, over the terrain (owner request 2026-09-13, after docs/references/economyView.png)"
-map_manor_line_alpha,0.4,economy view: opacity of the manor edges
-map_manor_line_width,1.0,economy view: width of the manor edges in screen px
 map_manor_badge_px,26,"economy view: diameter of a working manor's produce badge in screen px (fixed at any zoom, a counter like the pins; which manors get one follows the town LOD rule)"
 map_manor_ring_px,2,economy view: width of the badge's ring in the produce's category colour (data/goods_palette.csv) in screen px
 map_manor_icon_frac,0.82,economy view: the produce icon's height as a fraction of the badge
@@ -265,14 +263,6 @@ map3d_key_pan_screens_per_s,0.7,3D MAP: WASD / arrow keys pan this many view-hei
 map3d_near_m,20.0,3D MAP: the camera's near clip plane
 map3d_far_m,400000.0,3D MAP: the camera's far clip plane — past the sea plane's edge
 map3d_line_step_m,150.0,"3D MAP borders: borders and seams are resampled to a point every this many metres so they drape over the relief (a Terrain3D vertex is 20 m, a pack px 50 m)"
-map3d_border_width_px,1.8,"3D MAP borders: the kingdom border's ink line in screen px (political_palette map3d_border, warm dark brown) — over a pale halo and the realm band (owner 2026-09-19: 'the one solid black line is ugly', spec 2026-09-19-map3d-border-look; was a 1.5 px solid black line of 2026-09-18, itself replacing the 2D chequered ribbon)"
-map3d_border_band_px,6,"3D MAP borders (implementer's recommendation 2026-09-19 after the owner ruled the thin black line ugly, pending the owner's confirmation; spec 2026-09-19-map3d-border-look): the realm band inside each kingdom's outline, screen px — the kingdom's own colour (MapPalette.color_of), fading inward; where two kingdoms meet each lays its band on its own side — Phase 0 2026-09-24: was 9 — under Forward+ the band glowed and out-shouted the land"
-map3d_border_band_alpha,0.3,"3D MAP borders: the realm band's opacity at the line (bracketed 0.40 / 0.55 / 0.75 at far, mid and near, 2026-09-19: 0.40 left the far view's kingdoms faint, 0.55 let the sky-blue crown band read as water beside a river up close, 0.75 painted a stripe) — Phase 0 2026-09-24: was 0.5"
-map3d_border_band_fade_power,1.0,3D MAP borders: the realm band's fade from the line inward — alpha × (1 − t^power) across the band (1 linear; above 1 holds the colour longer before it fades)
-map3d_border_halo_px,3.6,"3D MAP borders: the pale halo under the ink line, screen px (political_palette map3d_border_halo) — so the ink reads on dark forest and bright snow alike"
-map3d_border_halo_alpha,0,3D MAP borders: the halo's opacity — Phase 0 2026-09-24: was 0.7 — linear blending made the pale halo a glowing tray
-map3d_border_halo_soft,0.6,"3D MAP borders: the halo's soft edge (border_line.gdshader edge_soft, a share of its half-width)"
-map3d_hover_border_width_px,3.5,"3D MAP hover (owner 2026-09-18): the hovered kingdom's live outline, in the border's own ink (political_palette map3d_border) at this width in screen px — the 2D map's wider hover ribbon; the plain border is map3d_border_width_px"
 map3d_manor_tint,0.6,"3D MAP MANORS (owner 2026-09-19; ECONOMY folded into it): how far the ground's albedo mixes toward its manor's ManorPalette colour under a theme (Map3DGroundTint, the patched Terrain3D shader) — the colour is lit by the relief and the sun like the ground; 0 without a theme"
 map_manor_saturation,0.75,"MANORS: every house colour's saturation is scaled by this before it washes the ground (ManorPalette.house_color; owner 2026-09-28, second critique: the pastel pink / lemon / cyan read as highlighter over the photographic ground); 1 is the colours as the palette gives them"
 map_manor_value,0.8,"MANORS: every house colour's value (brightness) is scaled by this after map_manor_saturation — a tincture is deeper than a pastel; 1 is the palette's own"
@@ -297,12 +287,6 @@ map3d_trail_hide_to_m,22000,3D MAP far-zoom denoise: trails are gone this far fr
 map3d_road_hide_from_m,1000000000,3D MAP far-zoom denoise: the roads never fade (the realm's main roads stay the far view's network)
 map3d_road_hide_to_m,2000000000,3D MAP far-zoom denoise: see map3d_road_hide_from_m
 map3d_road_edge_soft,0.8,"3D MAP roads: share of the half-width over which a road fades out to its sides — a worn track, not a ruled line (taste: read by width and fade)"
-map3d_seam_width_px,1.4,3D MAP borders: province seams width in screen px (political_palette map3d_seam) — a dashed line (owner 2026-09-18)
-map3d_seam_dash_px,6.0,3D MAP borders: seam dash length in screen px
-map3d_seam_gap_px,5.0,3D MAP borders: seam gap length in screen px
-map3d_seam_alpha,0.65,3D MAP borders: seam opacity — dark dashes under the solid black kingdom border (owner 2026-09-18; bracketed 0.4/0.5/0.6 by the critic sheet) — Phase 0 2026-09-24: was 0.5 — linear blending thins a dark dash
-map3d_selection_width_px,2.4,"3D MAP: the clicked MANOR's outline (under a theme), solid, in political_palette map3d_selection (critic 2026-09-28: at 4.0 the loudest line on the map; was 4.0)"
-map3d_selection_seam_width_px,3.2,"3D MAP (owner 2026-09-27: highlight the black dashed seam itself, not a gold solid line): the clicked province's outline — the seam's own dashes (map3d_seam_dash_px / _gap_px) in its ink at full opacity, this wide in screen px (the plain seam is map3d_seam_width_px 1.4 at map3d_seam_alpha)"
 map3d_pick_px,14.0,"3D MAP: a click within this many screen px of a settlement (or on its ring — only while it is shown, see map3d_ring_fade_start) picks it; otherwise the province under the click"
 map3d_selected_ring_scale,1.5,"3D MAP: the clicked settlement's ring is this much larger (fix round 1, owner 2026-09-18: was 1.4x diameter AND 1.5x line — a fat smear over the tier ring rather than a second crisp ring; now diameter only, the line stays the base stroke width), in political_palette map3d_selection gold"
 map3d_compass_needle_reach,0.62,"3D MAP compass (owner 2026-09-18): the north needle's half-length as a share of the compass radius — the needle turns with the view, gold tip to north"

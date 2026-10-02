@@ -122,7 +122,8 @@ func test_a_lower_render_scale_renders_fewer_pixels() -> void:
 	assert_almost_eq(v.context().viewport_px_scale(), 0.67, 0.0001)
 	var ink := v.line_mesh("Kingdoms").surface_get_material(0) as ShaderMaterial
 	assert_almost_eq(float(ink.get_shader_parameter("width_px")),
-		Game.data.bal("map3d_border_width_px") * 0.67, 0.0001, "screen widths follow the pixels")
+		float(Map3DLayerLines.KINGDOM_INK.get_shader_parameter("width_px")) * 0.67, 0.0001,
+		"screen widths follow the pixels")
 
 
 func test_picks_round_trip_at_any_render_scale() -> void:

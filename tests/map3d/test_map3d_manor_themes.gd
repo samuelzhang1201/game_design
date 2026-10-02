@@ -97,7 +97,7 @@ func test_the_edges_are_ruled_only_under_a_theme() -> void:
 	assert_true(edges.visible)
 	var mat := edges.mesh.surface_get_material(0) as ShaderMaterial
 	assert_eq(mat.render_priority, Map3DView.PRIORITY_MANOR_EDGES)
-	assert_eq(String(mat.get_meta("width_key")), "map_manor_line_width")
+	assert_eq(mat.get_shader_parameter("colour_a"), Map3DLayerLines.MANOR_EDGE.get_shader_parameter("colour_a"))
 	v.set_manor_theme("")
 	assert_false(edges.visible)
 

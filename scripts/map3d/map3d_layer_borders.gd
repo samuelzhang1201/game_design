@@ -68,26 +68,14 @@ func _build(st: GameState) -> void:
 				kept_colours.append(band_colours[bi])
 		bands = kept_bands
 		band_colours = kept_colours
-	var band := Color(1, 1, 1, repo.bal("map3d_border_band_alpha"))
-	var band_style := Map3DLineStyle.solid(band, "map3d_border_band_px", Map3DPriority.KINGDOM_BAND)
-	band_style.one_sided = true
-	band_style.colours = band_colours
-	band_style.fade_across = 1.0
-	band_style.fade_power_key = "map3d_border_band_fade_power"
-	lines.set_lines("KingdomBand", bands, band_style)
-	var halo := MapPalette.named(repo, "map3d_border_halo")
-	halo.a = repo.bal("map3d_border_halo_alpha")
-	var halo_style := Map3DLineStyle.solid(halo, "map3d_border_halo_px", Map3DPriority.KINGDOM_HALO)
-	halo_style.edge_soft = repo.bal("map3d_border_halo_soft")
-	lines.set_lines("KingdomHalo", rings, halo_style)
-	var ink := MapPalette.named(repo, "map3d_border")
-	lines.set_lines("Kingdoms", rings,
-		Map3DLineStyle.solid(ink, "map3d_border_width_px", Map3DPriority.KINGDOMS))
-	var seam := MapPalette.named(repo, "map3d_seam")
-	seam.a = repo.bal("map3d_seam_alpha")
+	# the looks are Map3DLayerLines' line .tres (owner 2026-10-02: the
+	# inspector's); each kingdom's band wears its realm's colour per vertex
+	lines.set_lines("KingdomBand", bands, Map3DLayerLines.KINGDOM_BAND, Map3DPriority.KINGDOM_BAND,
+		band_colours)
+	lines.set_lines("KingdomHalo", rings, Map3DLayerLines.KINGDOM_HALO, Map3DPriority.KINGDOM_HALO)
+	lines.set_lines("Kingdoms", rings, Map3DLayerLines.KINGDOM_INK, Map3DPriority.KINGDOMS)
 	lines.set_lines("Seams", Map3DBorders.seam_lines(repo, st, ctx.meta, step),
-		Map3DLineStyle.dashed(seam, Color(seam, 0.0), "map3d_seam_width_px",
-			"map3d_seam_dash_px", "map3d_seam_gap_px", Map3DPriority.SEAMS))
+		Map3DLayerLines.SEAM, Map3DPriority.SEAMS)
 
 
 ## The hovered kingdom's live outline in the border's own ink, wider — the
@@ -100,9 +88,7 @@ func draw_hover(kingdom: String) -> void:
 			_hover_lines[kingdom] = Map3DBorders.kingdom_lines(ctx.repo, ctx.state(), ctx.meta,
 				kingdom, ctx.line_step())
 		outline = _hover_lines[kingdom]
-	var ink := MapPalette.named(ctx.repo, "map3d_border")
-	lines.set_lines("Hover", outline,
-		Map3DLineStyle.solid(ink, "map3d_hover_border_width_px", Map3DPriority.HOVER))
+	lines.set_lines("Hover", outline, Map3DLayerLines.HOVER, Map3DPriority.HOVER)
 
 
 func hovered() -> String:

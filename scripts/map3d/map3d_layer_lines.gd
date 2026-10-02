@@ -9,6 +9,19 @@ extends Node3D
 
 ## The ribbons' look (shader, render priority 0 until a style binds its own).
 const BORDER_MAT := preload("res://scenes/map3d/materials/border_line.tres")
+## Each line's LOOK (owner 2026-10-02: edited in the inspector): its colours,
+## its widths, dash and gap in design px, its lift, its soft edge, and the
+## band's one-sided fade — border_line.gdshader in a .tres per kind.
+const KINGDOM_BAND := preload("res://scenes/map3d/materials/lines/kingdom_band.tres")
+const KINGDOM_HALO := preload("res://scenes/map3d/materials/lines/kingdom_halo.tres")
+const KINGDOM_INK := preload("res://scenes/map3d/materials/lines/kingdom_ink.tres")
+const SEAM := preload("res://scenes/map3d/materials/lines/seam.tres")
+const HOVER := preload("res://scenes/map3d/materials/lines/hover.tres")
+const SELECTION_MANOR := preload("res://scenes/map3d/materials/lines/selection_manor.tres")
+const SELECTION_PROVINCE := preload("res://scenes/map3d/materials/lines/selection_province.tres")
+const MANOR_EDGE := preload("res://scenes/map3d/materials/lines/manor_edge.tres")
+## The px values a line's look gives in DESIGN px, scaled to the SubViewport.
+const PX_PARAMS := ["width_px", "dash_px", "gap_px", "lift_px"]
 
 ## Editor preview (Task 22): the borders, the seams and the pack's roads,
 ## drawn from the data alone. Nothing it makes is ever saved (no owner).
@@ -53,23 +66,19 @@ func preview_build(p_ctx: Map3DContext) -> void:
 	apply_scale()
 
 
-## One ribbon layer in border_line.gdshader, replacing any before.
-func set_lines(line_name: String, lines: Array, style: Map3DLineStyle) -> void:
-	var arrays := Map3DBorders.ribbon_arrays(lines, ctx.height_at, [], style.one_sided,
-		style.colours)
-	var mat := (BORDER_MAT as ShaderMaterial).duplicate() as ShaderMaterial
-	mat.render_priority = style.priority
-	mat.set_shader_parameter("colour_a", style.a)
-	mat.set_shader_parameter("colour_b", style.b)
-	mat.set_shader_parameter("edge_soft", style.edge_soft)
-	mat.set_shader_parameter("one_sided", 1.0 if style.one_sided else 0.0)
-	mat.set_shader_parameter("use_vertex_colour", 1.0 if not style.colours.is_empty() else 0.0)
-	mat.set_shader_parameter("fade_across", style.fade_across)
-	mat.set_shader_parameter("fade_power",
-		ctx.repo.bal(style.fade_power_key) if style.fade_power_key != "" else 1.0)
-	mat.set_meta("width_key", style.width_key)
-	mat.set_meta("dash_key", style.dash_key)
-	mat.set_meta("gap_key", style.gap_key)
+## One ribbon layer wearing `look` (one of the line .tres above), drawn in
+## `priority`'s row, a colour per line from `colours` when the look takes
+## vertex colours (the realm band); replacing any before.
+func set_lines(line_name: String, lines: Array, look: ShaderMaterial, priority: int,
+		colours: Array = []) -> void:
+	var one_sided := float(look.get_shader_parameter("one_sided")) > 0.5
+	var arrays := Map3DBorders.ribbon_arrays(lines, ctx.height_at, [], one_sided, colours)
+	var mat := look.duplicate() as ShaderMaterial
+	mat.render_priority = priority
+	var base := {}
+	for k: String in PX_PARAMS:
+		base[k] = float(look.get_shader_parameter(k))
+	mat.set_meta("base_px", base)
 	put_mesh(line_name, arrays, mat)
 
 
@@ -135,6 +144,11 @@ func _scale_material(mat: ShaderMaterial) -> void:
 		return
 	var s := ctx.viewport_px_scale()
 	mat.set_shader_parameter("px_per_dist", ctx.px_per_dist())
+	if mat.has_meta("base_px"):  # a line's look: its design px, scaled
+		var base: Dictionary = mat.get_meta("base_px")
+		for k: String in base:
+			mat.set_shader_parameter(k, float(base[k]) * s)
+		return
 	mat.set_shader_parameter("lift_px", ctx.repo.bal("map3d_line_lift_px") * s)
 	mat.set_shader_parameter("width_px", ctx.repo.bal(String(mat.get_meta("width_key"))) * s)
 	var dash_key := String(mat.get_meta("dash_key", ""))

@@ -26,7 +26,9 @@ const RIVER_FROM_SEA := {"mouth_water": "sea_near", "sky": "sky", "nat_mouth": "
 	"lod_near_m": "ripple_lod_near_m", "lod_far_m": "ripple_lod_far_m"}
 ## Key prefixes that left balance.csv / terrain_palette.csv for the editor.
 const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3d_sea_",
-	"map_sea_band_", "map3d_sky"]
+	"map_sea_band_", "map3d_sky", "map3d_border_band", "map3d_border_halo", "map3d_border_width",
+	"map3d_seam", "map3d_hover_border", "map3d_selection_width", "map3d_selection_seam",
+	"map_manor_line_"]
 
 
 func before_all() -> void:
@@ -61,6 +63,28 @@ func test_the_waters_draw_what_their_tres_say() -> void:
 		for k: String in RIVER_FROM_SEA:
 			assert_eq(river.get_shader_parameter(k), sea.get_shader_parameter(RIVER_FROM_SEA[k]),
 				"the river's %s is the sea's %s: one water" % [k, RIVER_FROM_SEA[k]])
+
+
+## Every line's live material is its look .tres but for what the code owns:
+## its px values scaled to the SubViewport, its render order.
+func test_the_lines_draw_what_their_tres_say() -> void:
+	var v := _view()
+	for pair: Array in [["Kingdoms", Map3DLayerLines.KINGDOM_INK], ["KingdomHalo", Map3DLayerLines.KINGDOM_HALO],
+			["KingdomBand", Map3DLayerLines.KINGDOM_BAND], ["Seams", Map3DLayerLines.SEAM]]:
+		var mesh := v.line_mesh(String(pair[0]))
+		if mesh == null:
+			continue
+		var live := mesh.surface_get_material(0) as ShaderMaterial
+		var look := pair[1] as ShaderMaterial
+		for u: Dictionary in look.shader.get_shader_uniform_list():
+			var name := String(u["name"])
+			if name in Map3DLayerLines.PX_PARAMS or name == "px_per_dist" or look.get_shader_parameter(name) == null:
+				continue
+			assert_eq(live.get_shader_parameter(name), look.get_shader_parameter(name), "%s.%s" % [pair[0], name])
+		var s := v.context().viewport_px_scale()
+		for k: String in Map3DLayerLines.PX_PARAMS:
+			assert_almost_eq(float(live.get_shader_parameter(k)), float(look.get_shader_parameter(k)) * s, 0.0001,
+				"%s.%s, scaled" % [pair[0], k])
 
 
 func test_no_script_reads_a_key_that_went_to_the_editor() -> void:

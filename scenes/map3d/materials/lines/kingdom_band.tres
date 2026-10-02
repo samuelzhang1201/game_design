@@ -1,0 +1,19 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://drdet1fwcx25k"]
+
+[ext_resource type="Shader" uid="uid://d2kn3d1hcq2ba" path="res://scripts/map3d/border_line.gdshader" id="1_ad30v"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_ad30v")
+shader_parameter/colour_a = Color(1, 1, 1, 0.3)
+shader_parameter/colour_b = Color(1, 1, 1, 0.3)
+shader_parameter/width_px = 6.0
+shader_parameter/lift_px = 2.5
+shader_parameter/dash_px = 0.0
+shader_parameter/gap_px = 0.0
+shader_parameter/edge_soft = 0.0
+shader_parameter/one_sided = 1.0
+shader_parameter/fade_across = 1.0
+shader_parameter/fade_power = 1.0
+shader_parameter/use_vertex_colour = 1.0
+shader_parameter/px_per_dist = 0.001

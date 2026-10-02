@@ -202,10 +202,7 @@ func _build_manor_edges() -> void:
 		var seg := PackedVector2Array([Map3DGeometry.pack_to_world(ctx.meta, pairs[i]),
 			Map3DGeometry.pack_to_world(ctx.meta, pairs[i + 1])])
 		pairs_lines.append(Map3DGeometry.resample(seg, step))
-	var ink := MapPalette.named(repo, "manor_line")
-	ink.a = repo.bal("map_manor_line_alpha")
-	lines.set_lines("ManorEdges", pairs_lines,
-		Map3DLineStyle.solid(ink, "map_manor_line_width", Map3DPriority.MANOR_EDGES))
+	lines.set_lines("ManorEdges", pairs_lines, Map3DLayerLines.MANOR_EDGE, Map3DPriority.MANOR_EDGES)
 
 
 ## The terrain material carrying the patch (null without a Terrain3D, or when
