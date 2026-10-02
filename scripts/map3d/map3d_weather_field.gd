@@ -52,7 +52,7 @@ static func _cell_index(repo: DataRepository) -> Image:
 	var tex := load(repo.cell_texture_path) as Texture2D if ResourceLoader.exists(repo.cell_texture_path) else null
 	if tex != null:
 		return tex.get_image()
-	var path := ProjectSettings.globalize_path(repo.cell_texture_path)
+	var path := repo.cell_texture_path  # res://: exported, the res:// tree is the pack
 	return Image.load_from_file(path) if FileAccess.file_exists(path) else null
 
 

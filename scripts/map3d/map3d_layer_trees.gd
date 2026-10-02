@@ -34,7 +34,8 @@ func build(p_ctx: Map3DContext) -> void:
 	var repo := ctx.repo
 	if repo.bal("map3d_tree_on") <= 0.0:
 		return
-	var path := ProjectSettings.globalize_path(repo.map3d_dir() + "/bake/trees.bin")
+	# by its res:// path: exported, the res:// tree is the pack (Map3DLayerThemes.load_field_map)
+	var path := repo.map3d_dir() + "/bake/trees.bin"
 	if not FileAccess.file_exists(path):
 		Map3DWorldLoader.warn_once("trees:" + path,
 			"Map3DView: no bake/trees.bin — no woods (tools/map3d/bake_trees.py)")
