@@ -31,14 +31,20 @@ func test_paper_takes_dark_ink_that_reads_on_it() -> void:
 	assert_gt(paper.get_luminance() - ink.get_luminance(), 0.45, "dark ink on pale paper")
 	assert_eq(UiPalette.ink("rubric"), UiPalette.table_color("rubric"))
 
-func test_every_tab_has_a_bookmark_colour_in_the_data() -> void:
+func test_every_tab_hangs_a_bookmark_in_its_groups_colour() -> void:
+	var bar: BottomBar = load("res://scenes/bottom_bar.tscn").instantiate()
+	add_child_autofree(bar)
+	var colour := func(tab: String) -> Color:
+		var style := bar.button(tab).get_theme_stylebox("normal")
+		assert_true(style is RibbonStyle, tab + " wears a ribbon")
+		return (style as RibbonStyle).color
 	for tab: String in BottomBar.TABS:
-		assert_true(Game.data.ui_bookmarks.has(tab), "ui_bookmarks.csv colours " + tab)
+		colour.call(tab)
 	# the lenses share one colour, and it is not a screen's
-	var lens := UiPalette.bookmark_color("HEIGHTS")
+	var lens: Color = colour.call("HEIGHTS")
 	for tab: String in BottomBar.MAP_TABS:
-		assert_eq(UiPalette.bookmark_color(tab), lens)
-	assert_ne(UiPalette.bookmark_color("REALM"), lens)
+		assert_eq(colour.call(tab), lens)
+	assert_ne(colour.call("REALM"), lens)
 
 func test_the_report_ends_above_the_bookmarks_and_scrolls() -> void:
 	var r := _root()

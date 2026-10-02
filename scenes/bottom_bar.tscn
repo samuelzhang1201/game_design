@@ -1,0 +1,195 @@
+[gd_scene format=3 uid="uid://cf06jck8071mf"]
+
+[ext_resource type="Script" uid="uid://bs20pdn3xowne" path="res://scripts/ui/bottom_bar.gd" id="1_be36t"]
+[ext_resource type="StyleBox" uid="uid://c4x6inr24cb5u" path="res://assets/2D/ui/war_table/styles/ribbons/lens_normal.tres" id="2_lttpb"]
+[ext_resource type="StyleBox" uid="uid://bamo1rkyshpsk" path="res://assets/2D/ui/war_table/styles/ribbons/lens_pressed.tres" id="3_7aqqm"]
+[ext_resource type="StyleBox" uid="uid://d3i3novogwlsd" path="res://assets/2D/ui/war_table/styles/ribbons/lens_hover.tres" id="4_d4n5a"]
+[ext_resource type="StyleBox" uid="uid://dyoyujv5jxmll" path="res://assets/2D/ui/war_table/styles/ribbons/lens_hover_pressed.tres" id="5_jdg6e"]
+[ext_resource type="Texture2D" uid="uid://lf3exvb2xq22" path="res://assets/2D/ui/war_table/ruler_icon.png" id="6_jb8vk"]
+[ext_resource type="StyleBox" uid="uid://ct5423dcl842d" path="res://assets/2D/ui/war_table/styles/ribbons/realm_normal.tres" id="7_dfk37"]
+[ext_resource type="StyleBox" uid="uid://b7o3tseivv8gq" path="res://assets/2D/ui/war_table/styles/ribbons/realm_pressed.tres" id="8_yrfqr"]
+[ext_resource type="StyleBox" uid="uid://dfvsggasobirj" path="res://assets/2D/ui/war_table/styles/ribbons/realm_hover.tres" id="9_lkry8"]
+[ext_resource type="StyleBox" uid="uid://bfns4vidk43qf" path="res://assets/2D/ui/war_table/styles/ribbons/realm_hover_pressed.tres" id="10_0koqx"]
+[ext_resource type="StyleBox" uid="uid://bvngr2hhjwcki" path="res://assets/2D/ui/war_table/styles/ribbons/people_normal.tres" id="11_t0hhh"]
+[ext_resource type="StyleBox" uid="uid://b884klsgwf0xs" path="res://assets/2D/ui/war_table/styles/ribbons/people_pressed.tres" id="12_vejap"]
+[ext_resource type="StyleBox" uid="uid://bswu831b6xysk" path="res://assets/2D/ui/war_table/styles/ribbons/people_hover.tres" id="13_xpix5"]
+[ext_resource type="StyleBox" uid="uid://dk4xtpo53agsm" path="res://assets/2D/ui/war_table/styles/ribbons/people_hover_pressed.tres" id="14_5feev"]
+[ext_resource type="StyleBox" uid="uid://cn5n5vhcrbk8m" path="res://assets/2D/ui/war_table/styles/ribbons/church_normal.tres" id="15_wwmwn"]
+[ext_resource type="StyleBox" uid="uid://c5jqvm1n3222n" path="res://assets/2D/ui/war_table/styles/ribbons/church_pressed.tres" id="16_38222"]
+[ext_resource type="StyleBox" uid="uid://c427ws6o1ihma" path="res://assets/2D/ui/war_table/styles/ribbons/church_hover.tres" id="17_6y1ml"]
+[ext_resource type="StyleBox" uid="uid://hhode8vfs3ps" path="res://assets/2D/ui/war_table/styles/ribbons/church_hover_pressed.tres" id="18_0283x"]
+[ext_resource type="StyleBox" uid="uid://dn87cm1rxl7av" path="res://assets/2D/ui/war_table/styles/ribbons/books_normal.tres" id="19_2r3t1"]
+[ext_resource type="StyleBox" uid="uid://dva86wrtas5vx" path="res://assets/2D/ui/war_table/styles/ribbons/books_pressed.tres" id="20_22qmq"]
+[ext_resource type="StyleBox" uid="uid://vivt0q407qpp" path="res://assets/2D/ui/war_table/styles/ribbons/books_hover.tres" id="21_u1eo7"]
+[ext_resource type="StyleBox" uid="uid://ccm87kjeqss4w" path="res://assets/2D/ui/war_table/styles/ribbons/books_hover_pressed.tres" id="22_e8vsb"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0nl1o"]
+content_margin_left = 286.0
+content_margin_right = 30.0
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_j28sp"]
+color = Color(0.65882355, 0.5411765, 0.29803923, 0.3)
+grow_begin = -14.0
+grow_end = -14.0
+vertical = true
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_ahnsp"]
+color = Color(0.65882355, 0.5411765, 0.29803923, 0.6)
+grow_begin = -8.0
+grow_end = -8.0
+vertical = true
+
+[node name="BottomBar" type="Control" unique_id=1293568600]
+z_index = -1
+layout_mode = 3
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -56.0
+script = ExtResource("1_be36t")
+
+[node name="Bar" type="PanelContainer" parent="." unique_id=913885446]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("StyleBoxEmpty_0nl1o")
+
+[node name="Row" type="HBoxContainer" parent="Bar" unique_id=1221483813]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Heights" type="Button" parent="Bar/Row" unique_id=1296594534]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_styles/normal = ExtResource("2_lttpb")
+theme_override_styles/pressed = ExtResource("3_7aqqm")
+theme_override_styles/hover = ExtResource("4_d4n5a")
+theme_override_styles/hover_pressed = ExtResource("5_jdg6e")
+toggle_mode = true
+text = "HEIGHTS"
+
+[node name="Manors" type="Button" parent="Bar/Row" unique_id=1969546531]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_styles/normal = ExtResource("2_lttpb")
+theme_override_styles/pressed = ExtResource("3_7aqqm")
+theme_override_styles/hover = ExtResource("4_d4n5a")
+theme_override_styles/hover_pressed = ExtResource("5_jdg6e")
+toggle_mode = true
+text = "MANORS"
+
+[node name="ToolRule" type="VSeparator" parent="Bar/Row" unique_id=428781038]
+visible = false
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxLine_j28sp")
+
+[node name="Measurement" type="Button" parent="Bar/Row" unique_id=62273392]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_constants/h_separation = 8
+theme_override_constants/icon_max_width = 22
+theme_override_styles/normal = ExtResource("2_lttpb")
+theme_override_styles/pressed = ExtResource("3_7aqqm")
+theme_override_styles/hover = ExtResource("4_d4n5a")
+theme_override_styles/hover_pressed = ExtResource("5_jdg6e")
+toggle_mode = true
+text = "MEASUREMENT"
+icon = ExtResource("6_jb8vk")
+
+[node name="Gap" type="Control" parent="Bar/Row" unique_id=47448480]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Rule" type="VSeparator" parent="Bar/Row" unique_id=1348900760]
+visible = false
+layout_mode = 2
+theme_override_styles/separator = SubResource("StyleBoxLine_ahnsp")
+
+[node name="Gap2" type="Control" parent="Bar/Row" unique_id=1438149977]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Realm" type="Button" parent="Bar/Row" unique_id=840924918]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_styles/normal = ExtResource("7_dfk37")
+theme_override_styles/pressed = ExtResource("8_yrfqr")
+theme_override_styles/hover = ExtResource("9_lkry8")
+theme_override_styles/hover_pressed = ExtResource("10_0koqx")
+text = "REALM"
+
+[node name="War Room" type="Button" parent="Bar/Row" unique_id=758746461]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_styles/normal = ExtResource("7_dfk37")
+theme_override_styles/pressed = ExtResource("8_yrfqr")
+theme_override_styles/hover = ExtResource("9_lkry8")
+theme_override_styles/hover_pressed = ExtResource("10_0koqx")
+text = "WAR ROOM"
+
+[node name="Families" type="Button" parent="Bar/Row" unique_id=2041910288]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_styles/normal = ExtResource("11_t0hhh")
+theme_override_styles/pressed = ExtResource("12_vejap")
+theme_override_styles/hover = ExtResource("13_xpix5")
+theme_override_styles/hover_pressed = ExtResource("14_5feev")
+text = "FAMILIES"
+
+[node name="Laws" type="Button" parent="Bar/Row" unique_id=1987334369]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_styles/normal = ExtResource("11_t0hhh")
+theme_override_styles/pressed = ExtResource("12_vejap")
+theme_override_styles/hover = ExtResource("13_xpix5")
+theme_override_styles/hover_pressed = ExtResource("14_5feev")
+text = "LAWS"
+
+[node name="Religion" type="Button" parent="Bar/Row" unique_id=1238922073]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_styles/normal = ExtResource("15_wwmwn")
+theme_override_styles/pressed = ExtResource("16_38222")
+theme_override_styles/hover = ExtResource("17_6y1ml")
+theme_override_styles/hover_pressed = ExtResource("18_0283x")
+text = "RELIGION"
+
+[node name="Ledger" type="Button" parent="Bar/Row" unique_id=1940816160]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_styles/normal = ExtResource("19_2r3t1")
+theme_override_styles/pressed = ExtResource("20_22qmq")
+theme_override_styles/hover = ExtResource("21_u1eo7")
+theme_override_styles/hover_pressed = ExtResource("22_e8vsb")
+text = "LEDGER"
+
+[node name="Missive" type="Button" parent="Bar/Row" unique_id=1141053688]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+theme_type_variation = &"Bookmark"
+theme_override_styles/normal = ExtResource("19_2r3t1")
+theme_override_styles/pressed = ExtResource("20_22qmq")
+theme_override_styles/hover = ExtResource("21_u1eo7")
+theme_override_styles/hover_pressed = ExtResource("22_e8vsb")
+text = "MISSIVE"

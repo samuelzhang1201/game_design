@@ -538,8 +538,6 @@ ui_seal_px,64,"WAR TABLE: design px across the council's wax seal (owner 2026-10
 ui_seal_inset_px,0,"WAR TABLE: design px from the map's top-right corner to the council seal, inside the sheet's margin (owner 2026-10-02: 再往右上方角落移动点 — 14 until then)"
 ui_seal_tag_font_px,12,"WAR TABLE: the order's lettering on the seal's paper tag, design px (15 until 2026-10-02)"
 ui_seal_waiting_font_px,11,"WAR TABLE: the tag's second line (who waits to be heard), design px (13 until 2026-10-02)"
-ui_bookmark_tail_px,8,WAR TABLE: design px of a bookmark's swallow-tail notch
-ui_bookmark_drop_px,14,WAR TABLE: design px a bookmark hangs below its label (the silk past the words)
 ui_tally_per_mark,10,WAR TABLE: points of a temper gauge one tally mark stands for (gated in fives)
 ui_slip_width_px,420,WAR TABLE: design px wide the news slip lies between the two bookmark groups (at most the gap between them)
 ui_slip_height_px,32,WAR TABLE: design px tall the news slip

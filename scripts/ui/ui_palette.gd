@@ -117,14 +117,6 @@ static func table_color(key: String, fallback := Color.MAGENTA) -> Color:
 			return Color(hex)
 	return fallback
 
-## A bottom-bar tab's bookmark colour (data/ui_bookmarks.csv).
-static func bookmark_color(tab: String) -> Color:
-	if data() != null:
-		var hex := String(data().ui_bookmarks.get(tab, ""))
-		if hex != "":
-			return Color(hex)
-	return BORDER_GOLD
-
 ## The INK a left-column card writes in, by role: on the war table the column
 ## is paper, so dark ink (ui_table_palette.csv); otherwise the leather's light
 ## ink. Roles: soft (body), muted (labels), dim (hints), accent (names, the

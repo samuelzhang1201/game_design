@@ -47,109 +47,74 @@ var _bar: PanelContainer
 ## (global rect) whenever the row lays out, so the news slip can lie in it.
 signal slip_moved(rect: Rect2)
 
+## The strip is the scene's (owner 2026-10-02: the look lives in the editor —
+## scenes/bottom_bar.tscn): every tab a silk bookmark of
+## assets/2D/ui/war_table/styles/ribbons/ in its group's colour, MEASUREMENT
+## wearing its ruler, the gap between the groups where the news slip lies
+## (slip_band). _ready only finds the tabs and wires them; the leather strip of
+## `ui_war_table` 0 is still dressed in code.
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	offset_top = -BAR_HEIGHT
-	var bar := PanelContainer.new()
-	bar.name = "Bar"
-	bar.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "column"))
-	bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(bar)
-	_bar = bar
-	var row := HBoxContainer.new()
-	row.name = "Row"
+	_bar = $Bar
+	var row: HBoxContainer = $Bar/Row
+	for tab: String in TABS:
+		var btn: Button = row.get_node(tab.capitalize())
+		btn.pressed.connect(func() -> void: tab_selected.emit(tab))
+		_buttons[tab] = btn
+	if not UiPalette.war_table():
+		_dress_leather(row)
+	else:
+		row.sort_children.connect(_emit_slip)
+		resized.connect(_emit_slip)
+
+## The leather strip (`ui_war_table` 0): the bar's panel and its rules, the
+## tabs as flat words (or chips, ungrouped — `ui_nav_grouped` 0 puts the
+## tabs back in TABS order and drops the rules), placeholders left out by
+## `ui_show_placeholder_tabs` 0.
+func _dress_leather(row: HBoxContainer) -> void:
+	z_index = 0
+	_bar.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "column"))
 	row.add_theme_constant_override("separation", 8)
-	bar.add_child(row)
 	var grouped := Game.data != null and float(Game.data.balance.get("ui_nav_grouped", 0.0)) > 0.0
 	var show_placeholders := Game.data == null \
 		or float(Game.data.balance.get("ui_show_placeholder_tabs", 1.0)) > 0.0
-	var order: Array = TABS
-	if grouped:
-		order = MAP_TABS.duplicate()
-		for tab: String in TABS:
-			if not tab in MAP_TABS:
-				order.append(tab)
-	for tab: String in order:
-		if tab in PLACEHOLDER_TABS and not show_placeholders:
+	for node_name in ["Rule", "ToolRule", "Gap", "Gap2"]:
+		var n := row.get_node_or_null(node_name) as Control
+		if n == null:
 			continue
-		if grouped and tab == order[MAP_TABS.size()]:
-			# The rule stands in the MIDDLE of the gap between the groups, so
-			# it divides them rather than hugging one.
-			row.add_child(_gap("Gap"))
-			row.add_child(_rule("Rule", 0.6, 8.0))
-			row.add_child(_gap("Gap2"))
-		elif grouped and tab == "MEASUREMENT":
-			# The ruler is laid over whichever lens is lit, not one of them.
-			row.add_child(_rule("ToolRule", 0.3, 14.0))
-		var btn := Button.new()
-		btn.name = tab.capitalize()
-		btn.text = tab
-		btn.focus_mode = Control.FOCUS_NONE
-		btn.toggle_mode = tab in TOGGLES
+		if grouped:
+			n.visible = true
+		else:
+			row.remove_child(n)
+			n.free()
+	if not grouped:
+		for i in TABS.size():
+			row.move_child(_buttons[TABS[i]], i)
+	for tab: String in TABS:
+		var btn: Button = _buttons[tab]
+		btn.theme_type_variation = &""
+		for state in ["normal", "hover", "pressed", "hover_pressed"]:
+			btn.remove_theme_stylebox_override(state)
+		if tab in PLACEHOLDER_TABS and not show_placeholders:
+			btn.visible = false
 		if grouped:
 			UiPalette.flat_tab(btn, 16, 12.0)
 			# Centred, so the lit underline stands clear of the bar's own rule.
 			btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		else:
-			# Tabs read in the tab face (data/ui_fonts.csv); capitals run wide, so
-			# the chips pad tighter to keep every tab inside the 1280 px row.
+			# Capitals run wide, so the chips pad tighter to keep every tab
+			# inside the 1280 px row.
 			UiPalette.style_tab(btn, 16, 10.0)
-		if grouped and tab == "MEASUREMENT":
-			# A tool, not a lens (owner 2026-09-28, second critique): it wears
-			# a ruler before its word, in the word's own ink.
-			btn.icon = ruler_icon()
-			btn.add_theme_constant_override("h_separation", 8)
-			btn.add_theme_constant_override("icon_max_width", 22)
-			var inks := {"icon_normal_color": "font_color", "icon_hover_color": "font_hover_color",
-				"icon_pressed_color": "font_pressed_color", "icon_hover_pressed_color": "font_hover_pressed_color",
-				"icon_focus_color": "font_color"}
-			for state: String in inks:
-				btn.add_theme_color_override(state, btn.get_theme_color(String(inks[state])))
-		btn.pressed.connect(func() -> void: tab_selected.emit(tab))
-		row.add_child(btn)
-		_buttons[tab] = btn
-	if UiPalette.war_table():
-		_dress_war_table(row)
-
-## THE WAR TABLE (owner 2026-10-01): no bar — every tab a silk bookmark hanging
-## from under the sheet in its group's colour (data/ui_bookmarks.csv), the
-## lit one a little longer; the rules go (the colours divide the groups), and
-## the gap between the groups — MEASUREMENT to REALM — is where the news slip
-## lies (slip_band).
-func _dress_war_table(row: HBoxContainer) -> void:
-	# drawn under the screen's papers (z -1 above the table's -2), so the map
-	# sheet's lower edge lies across the bookmarks' tops
-	z_index = -1
-	var clear := StyleBoxEmpty.new()
-	# every bookmark hangs from under the map sheet; the report's foot of table
-	# holds the compass
-	clear.content_margin_left = ScreenLayout.margin() + ScreenLayout.LEFT_WIDTH + ScreenLayout.gap() + 18.0
-	clear.content_margin_right = ScreenLayout.margin() + 18.0
-	_bar.add_theme_stylebox_override("panel", clear)
-	row.add_theme_constant_override("separation", 6)
-	for rule_name in ["Rule", "ToolRule"]:
-		var rule := row.get_node_or_null(rule_name)
-		if rule != null:
-			rule.visible = false
-	var ink := Color("f6ebd2")
-	for tab: String in _buttons:
-		var btn: Button = _buttons[tab]
-		var c := UiPalette.bookmark_color(tab)
-		btn.add_theme_stylebox_override("normal", RibbonStyle.make(c, false, false))
-		btn.add_theme_stylebox_override("hover", RibbonStyle.make(c, false, true))
-		btn.add_theme_stylebox_override("pressed", RibbonStyle.make(c, true, false))
-		btn.add_theme_stylebox_override("hover_pressed", RibbonStyle.make(c, true, true))
-		btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-		btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		UiPalette.style_tab(btn, 11, -1.0)
-		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
-			btn.add_theme_color_override(state, ink)
-		for state in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_hover_pressed_color", "icon_focus_color"]:
-			btn.add_theme_color_override(state, ink)
-		btn.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.35))
-	row.sort_children.connect(_emit_slip)
-	resized.connect(_emit_slip)
+			btn.size_flags_vertical = Control.SIZE_FILL
+		if tab == "MEASUREMENT":
+			if not grouped:
+				btn.icon = null
+			else:
+				# A tool, not a lens: its ruler in the word's own ink.
+				var inks := {"icon_normal_color": "font_color", "icon_hover_color": "font_hover_color",
+					"icon_pressed_color": "font_pressed_color", "icon_hover_pressed_color": "font_hover_pressed_color",
+					"icon_focus_color": "font_color"}
+				for state: String in inks:
+					btn.add_theme_color_override(state, btn.get_theme_color(String(inks[state])))
 
 func _emit_slip() -> void:
 	slip_moved.emit(slip_band())
@@ -174,46 +139,6 @@ func slip_band() -> Rect2:
 	var x0 := left.get_global_rect().end.x + pad
 	var x1 := right.get_global_rect().position.x - pad
 	return Rect2(Vector2(x0, global_position.y), Vector2(maxf(x1 - x0, 0.0), BAR_HEIGHT))
-
-## A drawn ruler, white so the button's icon colours tint it: a bar with
-## ticks standing on one side, the long ones every fifth (MapRuler's own
-## reading of a ruler). Built once at 4x its 11 design px height.
-static var _ruler_icon: ImageTexture
-
-static func ruler_icon() -> ImageTexture:
-	if _ruler_icon != null:
-		return _ruler_icon
-	var w := 88
-	var h := 44
-	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
-	img.fill(Color(1, 1, 1, 0))
-	var ink := Color(1, 1, 1, 1)
-	img.fill_rect(Rect2i(0, h - 8, w, 6), ink)
-	for i in 11:
-		var x := mini(i * 8 + 2, w - 5)
-		var tall := 26 if i % 5 == 0 else 14
-		img.fill_rect(Rect2i(x, h - 8 - tall, 4, tall), ink)
-	img.generate_mipmaps()
-	_ruler_icon = ImageTexture.create_from_image(img)
-	return _ruler_icon
-
-func _gap(gap_name: String) -> Control:
-	var gap := Control.new()
-	gap.name = gap_name
-	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	return gap
-
-func _rule(rule_name: String, alpha: float, inset: float) -> VSeparator:
-	var rule := VSeparator.new()
-	rule.name = rule_name
-	var line := StyleBoxLine.new()
-	line.vertical = true
-	line.color = Color(UiPalette.BORDER_GOLD, alpha)
-	line.thickness = 1
-	line.grow_begin = -inset
-	line.grow_end = -inset
-	rule.add_theme_stylebox_override("separator", line)
-	return rule
 
 ## What the strip's buttons actually need, once their font size, their chip
 ## padding and the panel's own margins are counted. BAR_HEIGHT must be at

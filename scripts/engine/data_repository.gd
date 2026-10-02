@@ -39,9 +39,6 @@ var chart_palette: Dictionary = {}
 ## data/ui_table_palette.csv: key -> "#rrggbb[aa]" for the WAR TABLE chrome
 ## (paper ink, brass, wax, the tally board, the table's light; owner 2026-10-01).
 var ui_table_palette: Dictionary = {}
-## data/ui_bookmarks.csv: bottom-bar tab -> "#rrggbb", the colour of its silk
-## bookmark under the war table (lenses green, screens by group).
-var ui_bookmarks: Dictionary = {}
 ## data/ui_fonts.csv: role -> the row (size_scale, title_case); the faces
 ## themselves are assets/fonts/roles/<role>.tres (owner 2026-10-02).
 var ui_fonts: Dictionary = {}
@@ -456,9 +453,6 @@ func _load_look_tables(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/ui_table_palette.csv", ["key", "color"],
 			func(r): ui_table_palette[r["key"]] = r["color"]):
-		return false
-	if not _load_if_present(dir + "/ui_bookmarks.csv", ["tab", "color"],
-			func(r): ui_bookmarks[r["tab"]] = r["color"]):
 		return false
 	if not _load_if_present(dir + "/ui_fonts.csv", ["role", "size_scale", "title_case"],
 			func(r): ui_fonts[r["role"]] = r):

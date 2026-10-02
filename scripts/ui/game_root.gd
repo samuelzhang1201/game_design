@@ -111,7 +111,7 @@ func _ready() -> void:
 	_info_screen = InfoScreen.new()
 	_info_screen.name = "InfoScreen"
 	add_child(_info_screen)
-	_bottom_bar = BottomBar.new()
+	_bottom_bar = load("res://scenes/bottom_bar.tscn").instantiate()
 	_bottom_bar.name = "BottomBar"
 	_bottom_bar.visible = false
 	_bottom_bar.tab_selected.connect(_on_bottom_tab)

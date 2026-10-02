@@ -1,34 +1,49 @@
+@tool
 class_name RibbonStyle
 extends StyleBox
 ## THE WAR TABLE's bookmark (owner 2026-10-01, C1's silk bookmarks on B3): a
 ## silk ribbon hanging from under the map sheet's lower edge, its foot cut in
 ## a swallow-tail, a sheen across it, its shadow on the table. Its colour is
-## the tab's group (data/ui_bookmarks.csv). The LIT ribbon — the lens or
+## the tab's group. The LIT ribbon — the lens or
 ## screen that is open — hangs a little longer and brighter; a hovered one
-## warms.
+## warms. Each colour and state is a .tres in
+## assets/2D/ui/war_table/styles/ribbons/, edited in the inspector (owner
+## 2026-10-02), worn by scenes/bottom_bar.tscn's tabs.
 
-var color := Color("35583e")
-var lit := false
-var hover := false
-var tail := 8.0
-var drop := 14.0
-var shadow_offset := Vector2(4, 6)
-var shadow_alpha := 0.34
-
-static func make(p_color: Color, p_lit: bool, p_hover: bool) -> RibbonStyle:
-	var s := RibbonStyle.new()
-	s.color = p_color
-	s.lit = p_lit
-	s.hover = p_hover
-	s.tail = WarTable._num("ui_bookmark_tail_px", 8.0)
-	s.drop = WarTable._num("ui_bookmark_drop_px", 14.0)
-	s.shadow_offset = Vector2(WarTable._num("ui_table_shadow_dx", 6.0), WarTable._num("ui_table_shadow_dy", 10.0)) * 0.55
-	s.shadow_alpha = WarTable._num("ui_table_shadow_alpha", 0.34)
-	s.content_margin_left = 9
-	s.content_margin_right = 9
-	s.content_margin_top = 9
-	s.content_margin_bottom = s.drop
-	return s
+## The silk's colour (the tab's group: vert the lenses, gules realm and war,
+## azure people and law, purpure the church, or the books and letters).
+@export var color := Color("35583e"):
+	set(v):
+		color = v
+		emit_changed()
+## Lit: the open lens or screen — longer and brighter.
+@export var lit := false:
+	set(v):
+		lit = v
+		emit_changed()
+## Under the pointer: a touch warmer.
+@export var hover := false:
+	set(v):
+		hover = v
+		emit_changed()
+## The swallow-tail notch, and how far the silk hangs below its label, px.
+@export var tail := 8.0:
+	set(v):
+		tail = v
+		emit_changed()
+@export var drop := 14.0:
+	set(v):
+		drop = v
+		emit_changed()
+## Its shadow on the table (the light is upper left).
+@export var shadow_offset := Vector2(3.3, 5.5):
+	set(v):
+		shadow_offset = v
+		emit_changed()
+@export var shadow_alpha := 0.34:
+	set(v):
+		shadow_alpha = v
+		emit_changed()
 
 ## The ribbon's outline in `rect`, the lit one reaching `extra` further down.
 func outline(rect: Rect2, extra: float) -> PackedVector2Array:

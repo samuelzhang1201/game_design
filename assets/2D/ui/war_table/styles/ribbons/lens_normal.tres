@@ -1,0 +1,14 @@
+[gd_resource type="StyleBox" script_class="RibbonStyle" format=3 uid="uid://c4x6inr24cb5u"]
+
+[ext_resource type="Script" uid="uid://cc5wkn604acb5" path="res://scripts/ui/war_table/ribbon_style.gd" id="1_j5mq3"]
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 9.0
+content_margin_top = 9.0
+content_margin_right = 9.0
+content_margin_bottom = 14.0
+script = ExtResource("1_j5mq3")
+color = Color(0.2901961, 0.41960785, 0.30980393, 1)
+shadow_offset = Vector2(3.3000002, 5.5)

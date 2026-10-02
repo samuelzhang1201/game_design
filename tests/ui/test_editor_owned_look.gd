@@ -9,7 +9,7 @@ extends GutTest
 ##    screen's _ready, but for the CODE-OWNED ones listed below with why.
 
 const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversation_scene.gd",
-	"res://scripts/ui/top_bar.gd", "res://scripts/ui/main_menu.gd"]
+	"res://scripts/ui/top_bar.gd", "res://scripts/ui/main_menu.gd", "res://scripts/ui/bottom_bar.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -68,6 +68,7 @@ func test_the_court_keeps_its_scenes_look() -> void:
 	await wait_process_frames(3)
 	_assert_scene_holds(r.current_screen, "res://scenes/court.tscn")
 	_assert_scene_holds(r.current_screen.get_node("%TopBar"), "res://scenes/top_bar.tscn", "TopBar/")
+	_assert_scene_holds(r.bottom_bar(), "res://scenes/bottom_bar.tscn", "BottomBar/")
 	# the scene's layout, moved in the editor, still starts the columns under the bar
 	var bar: TopBar = r.current_screen.get_node("%TopBar")
 	for n in ["%LogPanel", "%MapPanel", "%SidePanel"]:

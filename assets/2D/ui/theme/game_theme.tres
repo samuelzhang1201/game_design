@@ -1,10 +1,13 @@
 [gd_resource type="Theme" format=3 uid="uid://b4xbt0npqul2u"]
 
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="1_el5ut"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/header.tres" id="1_on7wr"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_bold.tres" id="2_el5ut"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="3_8x4xl"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body.tres" id="4_66g1x"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/title.tres" id="5_yfb1m"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_8x4xl"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oj8e7"]
 content_margin_left = 16.0
@@ -161,6 +164,21 @@ corner_radius_bottom_left = 3
 [resource]
 default_font = ExtResource("4_66g1x")
 default_font_size = 20
+Bookmark/base_type = &"Button"
+Bookmark/colors/font_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/colors/font_focus_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/colors/font_hover_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/colors/font_hover_pressed_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/colors/font_outline_color = Color(0, 0, 0, 0.35)
+Bookmark/colors/font_pressed_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/colors/icon_focus_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/colors/icon_hover_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/colors/icon_hover_pressed_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/colors/icon_normal_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/colors/icon_pressed_color = Color(0.9647059, 0.92156863, 0.8235294, 1)
+Bookmark/font_sizes/font_size = 11
+Bookmark/fonts/font = ExtResource("1_el5ut")
+Bookmark/styles/focus = SubResource("StyleBoxEmpty_8x4xl")
 Button/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
 Button/colors/font_disabled_color = Color(0.5411765, 0.49019608, 0.40784314, 1)
 Button/colors/font_hover_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
