@@ -2,9 +2,11 @@ class_name WarBake
 extends RefCounted
 ## The 3D build's own bake for the WAR ROOM's table (spec 2026-10-02-war-room-v2
 ## §2.4; plan B: the heights Terrain3D was built from, read here directly so the
-## room needs no 3D map loaded and runs headless): bake/height.r32 — float32
-## metres, row-major over the PADDED grid of `vertex_m` vertices — of which only
-## the rows a sheet needs are read, and bake/woods.png — R the canopy's share,
+## room needs no 3D map loaded and runs headless): bake/height_war.r16 — half
+## floats over the pack's own `vertex_m` vertices, the file the repository
+## carries (2026-10-02: the padded float32 bake/height.r32 is 128 MB, past a git
+## host's limit; it is read instead when only it is there) — of which only the
+## rows a sheet needs are read, and bake/woods.png — R the canopy's share,
 ## G the conifers', one texel per two vertices from the pack's corner. Reads
 ## only. Null when the bake is not built (a fresh clone).
 
@@ -19,11 +21,14 @@ var _fh := 0
 var _px0 := 0
 var _pz0 := 0
 var _woods: Image
+var _file := "height.r32"
+var _bytes := 4   # a sample's size: 4 (float32) or 2 (float16)
 
 
 static func open(dir: String) -> WarBake:
 	var path := dir + "/world.json"
-	if not FileAccess.file_exists(path) or not FileAccess.file_exists(dir + "/height.r32"):
+	var half := FileAccess.file_exists(dir + "/height_war.r16")
+	if not FileAccess.file_exists(path) or not (half or FileAccess.file_exists(dir + "/height.r32")):
 		return null
 	var world: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not world is Dictionary:
@@ -37,6 +42,13 @@ static func open(dir: String) -> WarBake:
 	b._fh = int(world["padded"][1])
 	b._px0 = roundi((float(world["pack_origin"][0]) - float(world["import_corner"][0])) / b._vm)
 	b._pz0 = roundi((float(world["pack_origin"][1]) - float(world["import_corner"][1])) / b._vm)
+	if half:   # the pack's own vertices: no padding round them
+		b._file = "height_war.r16"
+		b._bytes = 2
+		b._fw = int(world["vertices"][0])
+		b._fh = int(world["vertices"][1])
+		b._px0 = 0
+		b._pz0 = 0
 	return b
 
 
@@ -70,16 +82,18 @@ func heights(rect: Rect2, nx: int, nz: int) -> PackedFloat32Array:
 	var hi_z := clampi(ceili(maxf(a.y, b.y)) + 1, 0, _fh - 1)
 	var cols := hi_x - lo_x + 1
 	var rows := hi_z - lo_z + 1
-	var f := FileAccess.open(_dir + "/height.r32", FileAccess.READ)
+	var f := FileAccess.open(_dir + "/" + _file, FileAccess.READ)
 	if f == null:
 		return out
 	var block := PackedFloat32Array()
 	block.resize(cols * rows)
 	for r in rows:
-		f.seek(((lo_z + r) * _fw + lo_x) * 4)
-		var row := f.get_buffer(cols * 4).to_float32_array()
-		for c in mini(row.size(), cols):
-			block[r * cols + c] = row[c]
+		f.seek(((lo_z + r) * _fw + lo_x) * _bytes)
+		var raw := f.get_buffer(cols * _bytes)
+		@warning_ignore("integer_division")
+		var n := mini(raw.size() / _bytes, cols)
+		for c in n:
+			block[r * cols + c] = raw.decode_half(c * 2) if _bytes == 2 else raw.decode_float(c * 4)
 	f.close()
 	for j in nz:
 		for i in nx:

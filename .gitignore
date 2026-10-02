@@ -17,11 +17,16 @@ assets/3D/**/model_wip/**
 !assets/3D/**/model_wip/**/
 !assets/3D/**/model_wip/.gdignore
 !assets/3D/terrain/model_wip/aerial/**
-# The 3D map's Terrain3D builds and packed ground textures are rebuilt by
-# tools/map3d/ (see tools/map3d/README.md); impostor trees likewise.
-assets/3D/terrain/*
-!assets/3D/terrain/model_wip/
-!assets/3D/terrain/textures_preview/
+# The 3D map's Terrain3D build and its packed ground textures ARE committed
+# (owner 2026-10-02: a developer on another machine pulls and runs the game
+# with no Blender, ComfyUI or Python build) — tools/map3d/build_pack.sh still
+# rebuilds them. Only the bake's raw intermediates stay local: build_world.gd
+# imports them into the committed Terrain3D regions, and each is 128 MB, past
+# a git host's limit for one file (the WAR ROOM reads the committed
+# bake/height_war.r16 instead of height.r32).
+assets/3D/terrain/*/bake/height.r32
+assets/3D/terrain/*/bake/control.r32
+assets/3D/terrain/*/bake/color.rgba8
 # purchased audio pack, not yet used by the game
 assets/audio/Sound FX Starter Pack Vol. 1/
 # Godot's glTF importer EXTRACTED each mesh's embedded textures to loose files

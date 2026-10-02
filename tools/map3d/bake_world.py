@@ -3,6 +3,8 @@
 
 Writes <map3d_dir>/bake/ (data/maps.csv map3d_dir, default assets/3D/terrain/<map>):
   height.r32    float32 metres, row-major, padded onto whole regions
+  height_war.r16  float16 metres over the pack's own vertices (no padding):
+                the WAR ROOM's heights (WarBake), small enough to commit
   control.r32   float32 carrying Terrain3D control bits (base/overlay/blend)
   color.rgba8   Terrain3D colour map: sRGB multiplier on the ground + roughness
   world.json    sizes, vertex spacing, world origin of pack px (0,0)
@@ -1400,6 +1402,10 @@ def main(argv=None):
     colp[..., 3] = 128
     colp[oy:oy + vh, ox:ox + vw] = rgba
     hp.tofile(os.path.join(OUT, "height.r32"))
+    # the WAR ROOM reads the heights directly (WarBake): the pack's own vertices
+    # as half floats (~1 m at these heights, its contours are 100 m) — the
+    # padded float32 grid is 128 MB, past what a git host takes in one file
+    height.astype(np.float16).tofile(os.path.join(OUT, "height_war.r16"))
     cp.view(np.float32).tofile(os.path.join(OUT, "control.r32"))
     colp.tofile(os.path.join(OUT, "color.rgba8"))
     Image.fromarray(rgba[::6, ::6, :3]).save(os.path.join(OUT, "color_preview.png"))

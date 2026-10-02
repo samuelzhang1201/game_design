@@ -17,12 +17,12 @@ Compatibility (see the traps below).
 | `tools/map3d/` | the pipeline scripts (this folder) | yes |
 | `assets/3D/terrain/model_wip/polyhaven/` | Poly Haven 4K `.blend` texture sets and `models/` (CC0) | no — local download, `.gdignore` |
 | `assets/3D/terrain/model_wip/ambientcg/` | ambientCG Rock023 cliff (CC0), `asset_licenses.txt` | no — local download |
-| `assets/3D/terrain/textures/` | packed Terrain3D texture pairs (`*_alb_ht`, `*_nrm_rgh`, 2048 px) | no — `pack_textures.py` |
+| `assets/3D/terrain/textures/` | packed Terrain3D texture pairs (`*_alb_ht`, `*_nrm_rgh`, 2048 px) | **yes** (owner 2026-10-02: a pull runs the game) — `pack_textures.py` |
 | `assets/3D/terrain/trees/` | tree impostor cards + `trees.json` | no — `render_impostors.py` |
-| `assets/3D/buildings/` | the settlement house meshes (`<type>/<type>.glb`, each type's references in its `model_wip/`) + `houses.json` | **yes** — `make_houses.py`; committed like `assets/3D/terrain/textures_preview/`'s stand-ins, since the terrain build is git-ignored and a fresh clone should still see settlements |
-| `assets/3D/terrain/<map>/bake/` | `height.r32`, `control.r32`, `color.rgba8`, `world.json`, `manor_land.csv`, `fields.png`, `houses.csv`, previews | no — `export_manor_land.gd`, `bake_world.py` |
-| `assets/3D/terrain/<map>/world.tscn`, `terrain_assets.tres`, `terrain/`, `rivers.json` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level, format version), its assets, region data and river courses — DATA only: sun, sky and sea are `scenes/map3d/world_map_3d.tscn`'s | no — `bake_world.py`, `build_world.gd` |
-| `assets/3D/terrain/<map>/manifest.json` | what built it (below) | no — `build_world.gd` |
+| `assets/3D/buildings/` | the settlement house meshes (`<type>/<type>.glb`, each type's references in its `model_wip/`) + `houses.json` | **yes** — `make_houses.py`; committed like the terrain build itself, so a fresh clone sees settlements |
+| `assets/3D/terrain/<map>/bake/` | `height.r32`, `control.r32`, `color.rgba8` (the build's raw inputs), `height_war.r16` (the WAR ROOM's half-float heights), `world.json`, `manor_land.csv`, `fields.png`, `woods.png`, `trees.bin`, `houses.csv`, previews | **yes** but the three raw inputs (git-ignored: `build_world.gd` reads them once) — `export_manor_land.gd`, `bake_world.py` |
+| `assets/3D/terrain/<map>/world.tscn`, `terrain_assets.tres`, `terrain/`, `rivers.json` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level, format version), its assets, region data and river courses — DATA only: sun, sky and sea are `scenes/map3d/world_map_3d.tscn`'s | **yes** — `bake_world.py`, `build_world.gd` |
+| `assets/3D/terrain/<map>/manifest.json` | what built it (below) | **yes** — `build_world.gd` |
 
 `assets/3D/terrain/<map>/` is the default; a pack can keep its build elsewhere
 (`map3d_dir`, below).
@@ -37,7 +37,7 @@ script per layer under `scenes/map3d/world_map_3d.tscn` and a rig, input,
 picker, selection and HUD piece beside them: lazy load, the SubViewport
 rendering only while shown, settlements placed from live data by
 `data/map3d_settlements.csv`. Tests are in `tests/map3d/` and use a fixture
-scene, never the git-ignored build. Camera values are `balance.csv`
+scene, never the built pack (which a test may not assume is current). Camera values are `balance.csv`
 `map3d_*`; the look assets are `scenes/map3d/materials/*.tres`.
 
 ## Rebuilding from a clean checkout
