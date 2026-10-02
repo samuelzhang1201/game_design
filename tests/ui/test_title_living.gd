@@ -17,7 +17,7 @@ func test_the_title_is_the_living_realm_layout() -> void:
 	assert_not_null(menu.find_child("Title_Crown", true, false))
 	assert_not_null(menu.find_child("TitleArms", true, false), "the crown's arms over the name")
 	var col := menu.menu_column()
-	for row in ["StartGame", "LoadGame", "MusicToggle", "GraphicsQuality", "DevMode", "Quit"]:
+	for row in ["StartGame", "LoadGame", "MusicToggle", "GraphicsQuality", "FrameCap", "DevMode", "Quit"]:
 		assert_not_null(col.get_node_or_null(row), "the menu keeps the row " + row)
 	assert_ne((col.get_node("StartGame") as Button).text, "", "the first row is worded")
 	var place: Label = menu.find_child("Place", true, false)

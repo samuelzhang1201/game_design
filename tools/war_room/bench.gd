@@ -48,6 +48,7 @@ func _ready() -> void:
 	var qi := args.find("--quality")
 	_tier = args[qi + 1] if qi >= 0 and qi + 1 < args.size() else "high"
 	Map3DQuality.forced = _tier   # before the view binds, so the room wears the whole tier
+	FrameCap.forced = 0  # a bench row reads the frame's own cost, never the player's cap
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(size)
 	get_window().size = size

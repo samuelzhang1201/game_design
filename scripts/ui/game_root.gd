@@ -45,7 +45,7 @@ var _bgm: AudioStreamPlayer
 static var settings_path := "user://settings.cfg"
 var _music_on := true
 ## Every live settings button — Music, Graphics (the 3D map's Map3DQuality
-## tier, cycled in place), Dev mode — of BOTH menus, the title screen's and
+## tier, cycled in place), Frame rate (FrameCap), Dev mode — of BOTH menus, the title screen's and
 ## the pause menu (owner 2026-09-30: 游戏开始的UI和游戏内的menu功能要一致):
 ## [{button, kind}], each relabelled whenever a setting turns.
 var _setting_buttons: Array = []
@@ -388,7 +388,18 @@ func _cycle_quality() -> void:
 	if _war_room_screen != null:
 		_war_room_screen.set_tier(Map3DQuality.resolve_here(settings_path))
 
+## The frame-rate cap (FrameCap), remembered in settings_path.
+func frame_cap_setting() -> int:
+	return FrameCap.setting(settings_path, Game.data.balance)
+
+func _cycle_frame_cap() -> void:
+	var fps := FrameCap.next_setting(frame_cap_setting(), Game.data.balance)
+	FrameCap.save_setting(settings_path, fps)
+	FrameCap.apply(FrameCap.resolve(settings_path, Game.data.balance))
+	_refresh_settings()
+
 func _load_settings() -> void:
+	FrameCap.apply(FrameCap.resolve(settings_path, Game.data.balance))
 	var cfg := ConfigFile.new()
 	if cfg.load(settings_path) == OK:
 		_music_on = bool(cfg.get_value("audio", "music", true))
@@ -431,14 +442,15 @@ func fps_counter() -> FpsCounter:
 func bgm_player() -> AudioStreamPlayer:
 	return _bgm
 
-## A fresh set of the settings rows — Music, Graphics, Dev mode — for a menu
+## A fresh set of the settings rows — Music, Graphics, Frame rate, Dev mode — for a menu
 ## (the pause menu here, the title screen through MainMenu.add_settings); every
 ## one is relabelled whenever its setting turns, in whichever menu it stands.
 func settings_buttons() -> Array[Button]:
 	var out: Array[Button] = []
-	for kind: String in ["music", "quality", "dev"]:
+	for kind: String in ["music", "quality", "frame_cap", "dev"]:
 		var b := _menu_button(_setting_label(kind), _setting_action(kind))
-		b.name = {"music": "MusicToggle", "quality": "GraphicsQuality", "dev": "DevMode"}[kind]
+		b.name = {"music": "MusicToggle", "quality": "GraphicsQuality", "frame_cap": "FrameCap",
+				"dev": "DevMode"}[kind]
 		_setting_buttons.append({"button": b, "kind": kind})
 		out.append(b)
 	return out
@@ -455,6 +467,8 @@ func _setting_label(kind: String) -> String:
 			return _music_label()
 		"quality":
 			return _quality_label()
+		"frame_cap":
+			return FrameCap.label(frame_cap_setting())
 	return _dev_label()
 
 func _setting_action(kind: String) -> Callable:
@@ -463,6 +477,8 @@ func _setting_action(kind: String) -> Callable:
 			return func() -> void: set_music_on(not _music_on)
 		"quality":
 			return _cycle_quality
+		"frame_cap":
+			return _cycle_frame_cap
 	return func() -> void: set_dev_mode(not _dev_mode)
 
 func _refresh_settings() -> void:
