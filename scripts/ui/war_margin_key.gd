@@ -23,6 +23,8 @@ const LEGEND := [
 	{"key": "wood", "label": "Woods"}, {"key": "manor", "label": "Manor"},
 	{"key": "walls", "label": "Walled town"}, {"key": "port", "label": "Port"},
 	{"key": "bridge", "label": "Bridge"}, {"key": "ford", "label": "Ford"},
+	{"key": "supply", "label": "Supply road"}, {"key": "courier", "label": "Courier"},
+	{"key": "weather", "label": "Foul weather"}, {"key": "spy", "label": "Spy report"},
 ]
 
 var _repo: DataRepository
@@ -225,6 +227,34 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 			draw_line(a, b, pal["river_ink"], line * 1.3, true)
 			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([c + Vector2(0, -s), c + Vector2(0, s)]), s * 0.35, s * 0.3):
 				draw_polyline(d, ink, line, true)
+		"supply":
+			var intel: Color = pal.get("intel_ink", ink)
+			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([a, b]), dash * 0.3, dash * 0.6):
+				draw_polyline(d, intel, line, true)
+		"courier":
+			var intel: Color = pal.get("intel_ink", ink)
+			var c := r.get_center()
+			var s := r.size.y * 0.4
+			draw_circle(c + Vector2(0, s * 0.4), s * 0.4, intel)
+			draw_line(c + Vector2(0, s * 0.4), c + Vector2(0, -s), intel, line, true)
+			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -s), c + Vector2(s * 0.7, -s * 0.8), c + Vector2(0, -s * 0.6)]), intel)
+		"weather":
+			var intel: Color = pal.get("intel_ink", ink)
+			var c := r.get_center()
+			var s := r.size.y * 0.45
+			draw_arc(c + Vector2(-s * 0.3, 0), s * 0.45, PI, TAU, 10, intel, line, true)
+			draw_arc(c + Vector2(s * 0.3, -s * 0.1), s * 0.55, PI, TAU, 10, intel, line, true)
+			for i in 3:
+				var x := -s * 0.4 + float(i) * s * 0.4
+				draw_line(c + Vector2(x, s * 0.2), c + Vector2(x - s * 0.15, s * 0.7), intel, line * 0.8, true)
+		"spy":
+			var c := r.get_center()
+			var rr := r.size.y * 0.42
+			var ring := PackedVector2Array()
+			for i in 25:
+				ring.append(c + Vector2.from_angle(TAU * float(i) / 24.0) * rr)
+			for d: PackedVector2Array in WarSheetInk.dashed(ring, rr * 0.4, rr * 0.3):
+				draw_polyline(d, pal["rubric"], line, true)
 		"contour":
 			var faint := Color(ink, ink.a * _repo.bal("war_contour_alpha"))
 			draw_arc(Vector2(r.get_center().x, r.end.y + r.size.y * 0.6), r.size.x * 0.55, PI * 1.15, PI * 1.85,
