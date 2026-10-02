@@ -1,0 +1,82 @@
+[gd_scene format=3 uid="uid://cukegilawsjvr"]
+
+[ext_resource type="StyleBox" uid="uid://ddqos4gr6foy0" path="res://assets/2D/ui/panels/styles/leather_menu.tres" id="1_n87rw"]
+
+[node name="PauseMenu" type="Control" unique_id=1616033294]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Dim" type="ColorRect" parent="." unique_id=1790479404]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.02, 0.015, 0.01, 0.62)
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=209690912]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -169.0
+offset_top = -182.5
+offset_right = 169.0
+offset_bottom = 182.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = ExtResource("1_n87rw")
+
+[node name="Col" type="VBoxContainer" parent="Panel" unique_id=1888879223]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Panel/Col" unique_id=114335120]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_font_sizes/font_size = 38
+text = "Council in Recess"
+horizontal_alignment = 1
+
+[node name="Rule" type="HSeparator" parent="Panel/Col" unique_id=1960295567]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Resume" type="Button" parent="Panel/Col" unique_id=129029407]
+layout_mode = 2
+tooltip_text = "Or press Esc"
+focus_mode = 0
+theme_type_variation = &"Primary"
+theme_override_font_sizes/font_size = 18
+text = "Resume"
+
+[node name="SaveGame" type="Button" parent="Panel/Col" unique_id=1142802030]
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+text = "Save Game"
+
+[node name="LoadGame" type="Button" parent="Panel/Col" unique_id=930855416]
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+text = "Load Game"
+
+[node name="Restart" type="Button" parent="Panel/Col" unique_id=283010763]
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+text = "Restart"
+
+[node name="Status" type="Label" parent="Panel/Col" unique_id=304344355]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1

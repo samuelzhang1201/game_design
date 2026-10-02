@@ -15,7 +15,7 @@ const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversa
 	"res://scripts/ui/military_panel.gd", "res://scripts/ui/manor_master_panel.gd",
 	"res://scripts/ui/ledger_screen.gd", "res://scripts/ui/war_room_screen.gd",
 	"res://scripts/ui/war_folio_panel.gd", "res://scripts/ui/war_deploy_scroll.gd",
-	"res://scripts/ui/war_leave_prompt.gd"]
+	"res://scripts/ui/war_leave_prompt.gd", "res://scripts/ui/info_screen.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",

@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://4sdkttbynn5u"]
+
+[ext_resource type="Script" uid="uid://cla50xu0uu6ax" path="res://scripts/ui/info_screen.gd" id="1_lhx8x"]
+[ext_resource type="StyleBox" uid="uid://v3vusure1mms" path="res://assets/2D/ui/panels/styles/leather_info.tres" id="2_k7laa"]
+
+[node name="InfoScreen" type="Control" unique_id=217798782]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_lhx8x")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=2103990642]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.02, 0.015, 0.01, 0.62)
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=570358329]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -68.5
+offset_top = -80.0
+offset_right = 68.5
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = ExtResource("2_k7laa")
+
+[node name="Col" type="VBoxContainer" parent="Panel" unique_id=607259658]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Panel/Col" unique_id=2048372173]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+
+[node name="Rule" type="HSeparator" parent="Panel/Col" unique_id=1295375581]
+layout_mode = 2
+
+[node name="Table" type="GridContainer" parent="Panel/Col" unique_id=793878516]
+layout_mode = 2
+theme_override_constants/h_separation = 32
+theme_override_constants/v_separation = 4
+columns = 2
+
+[node name="Rule2" type="HSeparator" parent="Panel/Col" unique_id=511973965]
+layout_mode = 2
+
+[node name="CloseButton" type="Button" parent="Panel/Col" unique_id=573966518]
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+text = "Close"

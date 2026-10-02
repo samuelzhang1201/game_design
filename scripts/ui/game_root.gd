@@ -108,7 +108,7 @@ func _ready() -> void:
 	_report_popup.visible = false
 	_report_popup.sealed.connect(_on_report_sealed)
 	add_child(_report_popup)
-	_info_screen = InfoScreen.new()
+	_info_screen = load("res://scenes/info_screen.tscn").instantiate()
 	_info_screen.name = "InfoScreen"
 	add_child(_info_screen)
 	_bottom_bar = load("res://scenes/bottom_bar.tscn").instantiate()
@@ -273,56 +273,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_pause_menu()
 
 ## The pause menu lives above every screen (built last, kept as a sibling
-## that survives _switch_to's screen swaps).
+## that survives _switch_to's screen swaps). Its look is scenes/pause_menu.tscn
+## (owner 2026-10-02): the same window as the title's leather menu — the
+## window leather, the width, the primary first row (owner 2026-09-30:
+## 游戏开始的UI和游戏内的menu功能要一致); the settings rows and Quit, made here
+## for both menus, stand before its status line.
 func _build_pause_menu() -> void:
-	_pause_menu = Control.new()
-	_pause_menu.name = "PauseMenu"
-	_pause_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_pause_menu.visible = false
-	_pause_menu.mouse_filter = Control.MOUSE_FILTER_STOP  # swallow clicks under it
-	var dim := ColorRect.new()
-	dim.color = UiPalette.DIM_OVERLAY
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_pause_menu.add_child(dim)
-	# The same window as the title screen's menu (MainMenu._build_menu): the
-	# window leather and ornament, the width, the primary first row, the same
-	# settings rows and the same Quit (owner 2026-09-30: 游戏开始的UI和游戏内的
-	# menu功能要一致).
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 32, "window"))
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.custom_minimum_size = Vector2(MainMenu.MENU_WIDTH, 0)
-	_pause_menu.add_child(panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	panel.add_child(col)
-	var title := Label.new()
-	title.text = "Council in Recess"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_title(title, 32)
-	col.add_child(title)
-	var rule := HSeparator.new()
-	rule.add_theme_constant_override("separation", 10)
-	col.add_child(rule)
-	var resume := _menu_button("Resume", toggle_pause_menu)
-	UiPalette.primary_button(resume, 18)
-	resume.tooltip_text = "Or press Esc"
-	col.add_child(resume)
-	col.add_child(_menu_button("Save Game", _on_menu_save))
-	col.add_child(_menu_button("Load Game", _on_menu_load))
-	col.add_child(_menu_button("Restart", _on_menu_restart))
-	for b: Button in settings_buttons():
+	_pause_menu = load("res://scenes/pause_menu.tscn").instantiate()
+	var col := _pause_menu.get_node("Panel/Col")
+	(col.get_node("Resume") as Button).pressed.connect(toggle_pause_menu)
+	(col.get_node("SaveGame") as Button).pressed.connect(_on_menu_save)
+	(col.get_node("LoadGame") as Button).pressed.connect(_on_menu_load)
+	(col.get_node("Restart") as Button).pressed.connect(_on_menu_restart)
+	_pause_status = col.get_node("Status")
+	for b: Button in settings_buttons() + [quit_button()]:
 		col.add_child(b)
-	col.add_child(quit_button())
-	_pause_status = Label.new()
-	_pause_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_pause_status.add_theme_font_size_override("font_size", 18)
-	_pause_status.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
-	col.add_child(_pause_status)
+		col.move_child(b, _pause_status.get_index())
 	add_child(_pause_menu)
 
 ## Background music from app start, looping across every screen (GameRoot

@@ -11,45 +11,12 @@ var _title: Label
 var _grid: GridContainer
 var _current_tab := ""
 
+## Its look is scenes/info_screen.tscn (owner 2026-10-02: the look lives in
+## the editor); its rows wear the theme's InfoHead / InfoLabel kinds.
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = UiPalette.DIM_OVERLAY
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(dim)
-	var panel := PanelContainer.new()
-	panel.name = "Panel"
-	panel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.GOLD, 2, 24))
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.custom_minimum_size = Vector2(400, 0)
-	add_child(panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
-	panel.add_child(col)
-	_title = Label.new()
-	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_title(_title, 18)
-	col.add_child(_title)
-	col.add_child(HSeparator.new())
-	_grid = GridContainer.new()
-	_grid.name = "Table"
-	_grid.columns = 2
-	_grid.add_theme_constant_override("h_separation", 32)
-	_grid.add_theme_constant_override("v_separation", 4)
-	col.add_child(_grid)
-	col.add_child(HSeparator.new())
-	var close := Button.new()
-	close.name = "CloseButton"
-	close.text = "CLOSE"
-	UiPalette.command_button(close)
-	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(func() -> void: hide())
-	col.add_child(close)
+	_title = $Panel/Col/Title
+	_grid = $Panel/Col/Table
+	($Panel/Col/CloseButton as Button).pressed.connect(func() -> void: hide())
 	Game.state_changed.connect(func() -> void:
 		if visible and _current_tab != "":
 			_render())
@@ -75,7 +42,7 @@ func _render() -> void:
 		for h: String in headers:
 			var label := Label.new()
 			label.text = h
-			label.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+			label.theme_type_variation = &"InfoHead"
 			_grid.add_child(label)
 	for row in _rows_for(_current_tab):
 		_add_row_cells(row)
@@ -85,7 +52,7 @@ func _add_row_cells(row: Array) -> void:
 		var l := Label.new()
 		l.text = String(row[i])
 		if i == 0:
-			l.add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+			l.theme_type_variation = &"InfoLabel"
 		_grid.add_child(l)
 
 ## Column headings for tabs that are wider than name/value; [] for the rest.
