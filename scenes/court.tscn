@@ -13,9 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://bd7f6xayv2ffr" path="res://assets/2D/ui/compass/compass.png" id="9_lc033"]
 [ext_resource type="StyleBox" uid="uid://cvlyoynpedxif" path="res://assets/2D/ui/panels/styles/leather_column.tres" id="10_revm4"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="11_rnrgf"]
-[ext_resource type="Script" uid="uid://ce7myfubis2yw" path="res://scripts/ui/war_table/wax_seal.gd" id="13_cn0p0"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_i5cvy"]
+[ext_resource type="PackedScene" uid="uid://rkch67nhd00f" path="res://scenes/war_table/council_seal.tscn" id="14_rnrgf"]
 
 [node name="CourtScreen" type="Control" unique_id=626180433]
 editor_description = "Under balance ui_war_table 0 the screen strips the table, compass and seal and lays out the 2026-09-28 leather in code (_dress_leather)."
@@ -169,7 +167,7 @@ script = ExtResource("3_i1kge")
 unique_name_in_owner = true
 script = ExtResource("4_sy0rd")
 
-[node name="CouncilHandle" type="Button" parent="." unique_id=1962685662]
+[node name="CouncilHandle" parent="." unique_id=1423902817 instance=ExtResource("14_rnrgf")]
 unique_name_in_owner = true
 editor_description = "Grows leftward and downward with its tag: who waits to be heard (WaxSeal.refresh) and their miniatures are set at runtime. Hidden while the council column is open."
 custom_minimum_size = Vector2(137, 96)
@@ -181,19 +179,3 @@ offset_top = 80.0
 offset_right = -25.0
 offset_bottom = 176.0
 grow_horizontal = 0
-tooltip_text = "Go before your council"
-focus_mode = 0
-theme_override_colors/font_color = Color(0, 0, 0, 0)
-theme_override_colors/font_focus_color = Color(0, 0, 0, 0)
-theme_override_colors/font_pressed_color = Color(0, 0, 0, 0)
-theme_override_colors/font_hover_color = Color(0, 0, 0, 0)
-theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 0)
-theme_override_styles/normal = SubResource("StyleBoxEmpty_i5cvy")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_i5cvy")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_i5cvy")
-theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_i5cvy")
-theme_override_styles/disabled = SubResource("StyleBoxEmpty_i5cvy")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_i5cvy")
-text = "ENTER THE COUNCIL"
-flat = true
-script = ExtResource("13_cn0p0")

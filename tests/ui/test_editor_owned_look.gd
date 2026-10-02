@@ -29,9 +29,12 @@ const LOOK_NAMES := ["theme", "theme_type_variation", "texture", "art", "color",
 
 ## Code-owned, by scene path from the screen's root, and why.
 const CODE_OWNED := {
-	# WaxSeal builds itself in code (its tag, its overrides, its size) until
-	# it is converted; the scene places it.
-	"CouncilHandle": ["*"],
+	# the seal grows with who waits to be heard (WaxSeal._refit), leftward
+	# and downward from the corner the screen puts it in
+	"CouncilHandle": ["custom_minimum_size", "offset_left", "offset_bottom"],
+	"Seal/": ["custom_minimum_size"],
+	# the tag sits under the seal at its own size (WaxSeal._place_tag)
+	"Seal/Tag": ["offset_left", "offset_top", "offset_right", "offset_bottom"],
 	# the top bar: the figures' change ink is good / bad by the month
 	"TopBar/Bar/Row/TallyBoard/Purses/Cell_treasury/Change": ["theme_override_colors/font_color"],
 	"TopBar/Bar/Row/TallyBoard/Purses/Cell_strategic/Change": ["theme_override_colors/font_color"],
@@ -73,6 +76,7 @@ func test_the_court_keeps_its_scenes_look() -> void:
 	_assert_scene_holds(r.current_screen, "res://scenes/court.tscn")
 	_assert_scene_holds(r.current_screen.get_node("%TopBar"), "res://scenes/top_bar.tscn", "TopBar/")
 	_assert_scene_holds(r.bottom_bar(), "res://scenes/bottom_bar.tscn", "BottomBar/")
+	_assert_scene_holds(r.current_screen.get_node("%CouncilHandle"), "res://scenes/war_table/council_seal.tscn", "Seal/", 8)
 	_assert_scene_holds(r.news_ticker(), "res://scenes/news_ticker.tscn", "NewsTicker/")
 	# the scene's layout, moved in the editor, still starts the columns under the bar
 	var bar: TopBar = r.current_screen.get_node("%TopBar")
@@ -140,7 +144,7 @@ func _start(_r: GameRoot) -> void:
 
 ## Every look property `scene_path` declares, compared with the live `screen`.
 ## `prefix` is where the scene stands in CODE_OWNED's paths.
-func _assert_scene_holds(screen: Node, scene_path: String, prefix := "") -> void:
+func _assert_scene_holds(screen: Node, scene_path: String, prefix := "", at_least := 20) -> void:
 	var state := (load(scene_path) as PackedScene).get_state()
 	var checked := 0
 	for i in state.get_node_count():
@@ -160,7 +164,7 @@ func _assert_scene_holds(screen: Node, scene_path: String, prefix := "") -> void
 			checked += 1
 			assert_true(_same(want, got), "%s %s: the scene says %s, the game drew %s — set in code?" % [
 				scene_path.get_file(), (prefix + rel if rel != "" else "(root)") + "." + prop, want, got])
-	assert_gt(checked, 20, scene_path + ": the guard compared the scene's look")
+	assert_gt(checked, at_least, scene_path + ": the guard compared the scene's look")
 
 func _is_look(prop: String) -> bool:
 	if LOOK_NAMES.has(prop):

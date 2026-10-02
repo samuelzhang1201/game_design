@@ -3,78 +3,60 @@ class_name WaxSeal
 extends Button
 ## THE WAR TABLE's council seal (owner 2026-10-01): ENTER THE COUNCIL, the
 ## screen's one primary action, as a red wax seal pressed with the crown
-## (ui_table_palette.csv wax_*), a paper tag under it naming the order. The
+## (its wax_* exports), a paper tag under it naming the order. The
 ## whole of it is the button; hover warms the wax, a press sinks it. Its text
 ## stays the order (tests and tooltips read it) and is written on the tag.
 
-const ART_PATH := "res://assets/2D/ui/war_table/council_seal.png"
+## Its look is scenes/war_table/council_seal.tscn (owner 2026-10-02: the look
+## lives in the editor): the tag's paper and words are the scene's nodes, and
+## the seal's own drawing reads the exports below.
 
-var _tag: PanelContainer
-var _word: Label
-var _waiting_line: Label
+## The seal's size, design px (owner 2026-10-02: 右上方的印记太大了).
+@export var seal_px := 64.0:
+	set(v):
+		seal_px = v
+		_refit_if_ready()
+## The photographed seal (library U-60); without it the wax is drawn.
+@export var art: Texture2D:
+	set(v):
+		art = v
+		queue_redraw()
+## The drawn wax: its lit side, body and shadowed rim.
+@export var wax_light := Color("a63a2f")
+@export var wax_mid := Color("7a1c17")
+@export var wax_dark := Color("5a1410")
+## The miniatures' brass rings: lit side, body, rim.
+@export var brass: Array[Color] = [Color("f4db9a"), Color("b08a3e"), Color("6b4e1c")]
+## At most this many waiting ministers stand under the tag, each this many
+## design px across.
+@export var minis_max := 3
+@export var mini_px := 30.0
+## Its shadow on the table (the light is upper left).
+@export var shadow_alpha := 0.34
+@export var shadow_offset := Vector2(3, 5)
+
+@onready var _tag: PanelContainer = $Tag
+@onready var _word: Label = $Tag/Words/Order
+@onready var _waiting_line: Label = $Tag/Words/Waiting
 ## The ministers this month's report would have speak (ConversationBeats.waiting);
 ## once the council is entered for that report they have been heard.
 var _waiting: Array[String] = []
-var _art: Texture2D = null
 ## The tick whose council the player last entered: its ministers are heard.
 static var heard_tick := -1
 
-func _init(order: String = "ENTER THE COUNCIL") -> void:
-	name = "CouncilHandle"
-	text = order
-	tooltip_text = "Go before your council"
-	focus_mode = Control.FOCUS_NONE
-	flat = true
-	var clear := StyleBoxEmpty.new()
-	for state in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
-		add_theme_stylebox_override(state, clear)
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
-		add_theme_color_override(state, Color(0, 0, 0, 0))
-	var seal := WarTable._num("ui_seal_px", 100.0)
-	_tag = PanelContainer.new()
-	_tag.name = "Tag"
-	_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var paper := WarTable.slip_style(0.0, WarTable.SEED_TAG)
-	paper.content_margin_left = 10
-	paper.content_margin_right = 10
-	paper.content_margin_top = 3
-	paper.content_margin_bottom = 4
-	_tag.add_theme_stylebox_override("panel", paper)
-	_word = Label.new()
-	_word.name = "Order"
-	_word.text = UiPalette.readable_title(order) if order == order.to_upper() else order
-	_word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.style_header(_word, int(WarTable._num("ui_seal_tag_font_px", 15.0)), UiPalette.table_color("ink", Color("2b1f15")))
-	_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var words := VBoxContainer.new()
-	words.add_theme_constant_override("separation", -2)
-	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	words.add_child(_word)
-	_waiting_line = Label.new()
-	_waiting_line.name = "Waiting"
-	_waiting_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_waiting_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var italic := UiPalette.role_font("body_italic")
-	if italic != null:
-		_waiting_line.add_theme_font_override("font", italic)
-	_waiting_line.add_theme_font_size_override("font_size", int(WarTable._num("ui_seal_waiting_font_px", 13.0)))
-	_waiting_line.add_theme_color_override("font_color", UiPalette.table_color("ink_muted", Color("5a4632")))
-	words.add_child(_waiting_line)
-	_tag.add_child(words)
-	add_child(_tag)
-	if ResourceLoader.exists(ART_PATH):
-		_art = load(ART_PATH)
+func _ready() -> void:
 	resized.connect(_place_tag)
 	pressed.connect(func() -> void:
 		if not Engine.is_editor_hint() and Game != null and Game.state != null:
 			heard_tick = Game.state.tick)
-	_refit()
-
-func _ready() -> void:
 	if not Engine.is_editor_hint() and Game != null:
 		Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
 		Game.state_changed.connect(refresh)
 	refresh()
+
+func _refit_if_ready() -> void:
+	if is_node_ready():
+		_refit()
 
 ## Who waits: this month's speakers, until the council is entered for them.
 func refresh() -> void:
@@ -102,12 +84,11 @@ func waiting_ids() -> Array[String]:
 	return _waiting
 
 func _minis() -> int:
-	return mini(_waiting.size(), int(WarTable._num("ui_seal_minis", 3.0)))
+	return mini(_waiting.size(), minis_max)
 
 func _refit() -> void:
-	var seal := WarTable._num("ui_seal_px", 100.0)
+	var seal := seal_px
 	var tag_min := _tag.get_combined_minimum_size()
-	var mini_px := WarTable._num("ui_seal_mini_px", 40.0)
 	var minis := _minis()
 	var row := (mini_px * minis + 6.0 * maxf(minis - 1, 0) + 10.0) if minis > 0 else 0.0
 	custom_minimum_size = Vector2(maxf(seal + 8.0, tag_min.x), seal + tag_min.y - 4.0 + row)
@@ -118,28 +99,30 @@ func _place_tag() -> void:
 	_tag.size = tm
 	# right-aligned: the seal and its tag tucked into the map's corner (owner
 	# 2026-10-02: 再往右上方角落移动点)
-	_tag.position = Vector2(size.x - tm.x, WarTable._num("ui_seal_px", 100.0) - 4.0)
+	_tag.position = Vector2(size.x - tm.x, seal_px - 4.0)
 
 func _draw() -> void:
-	var seal := WarTable._num("ui_seal_px", 100.0)
+	if _tag == null:
+		return
+	var seal := seal_px
 	var r := seal * 0.5
 	var sunk := 1.5 if button_pressed or is_pressed() else 0.0
 	var c := Vector2(size.x - r - 4.0, r + sunk)   # the seal in the corner, over its tag's right end
-	var light := UiPalette.table_color("wax_light", Color("a63a2f"))
-	var mid := UiPalette.table_color("wax_mid", Color("7a1c17"))
-	var dark := UiPalette.table_color("wax_dark", Color("5a1410"))
+	var light := wax_light
+	var mid := wax_mid
+	var dark := wax_dark
 	if is_hovered():
 		light = light.lightened(0.08)
 		mid = mid.lightened(0.06)
-	var shadow_a := WarTable._num("ui_table_shadow_alpha", 0.34)
-	var off := Vector2(WarTable._num("ui_table_shadow_dx", 6.0), WarTable._num("ui_table_shadow_dy", 10.0)) * 0.5
+	var shadow_a := shadow_alpha
+	var off := shadow_offset
 	_draw_minis()
-	if _art != null:
+	if art != null:
 		# the photographed seal (library U-60), its own shadow baked soft
 		for i in 3:
 			draw_circle(c + off, r * (0.98 + 0.06 * float(i)), Color(0, 0, 0, shadow_a * [0.4, 0.25, 0.12][i]))
 		var tint := Color(1.08, 1.04, 1.04) if is_hovered() else Color.WHITE
-		draw_texture_rect(_art, Rect2(c - Vector2(r, r), Vector2(seal, seal)), false, tint)
+		draw_texture_rect(art, Rect2(c - Vector2(r, r), Vector2(seal, seal)), false, tint)
 		return
 	for i in 3:
 		draw_colored_polygon(_blob(c + off, r * (1.0 + 0.07 * float(i)), 7, -0.4), Color(0, 0, 0, shadow_a * [0.5, 0.3, 0.18][i]))
@@ -177,15 +160,12 @@ func _draw_minis() -> void:
 	var n := _minis()
 	if n == 0:
 		return
-	var px := WarTable._num("ui_seal_mini_px", 40.0)
+	var px := mini_px
 	var r := px * 0.5
 	var y := _tag.position.y + _tag.size.y + 10.0 + r
-	var brass := [UiPalette.table_color("brass_light", Color("f4db9a")),
-		UiPalette.table_color("brass_mid", Color("b08a3e")),
-		UiPalette.table_color("brass_dark", Color("6b4e1c"))]
 	for i in n:
 		var c := Vector2(_tag.position.x + _tag.size.x * 0.5, y + float(i) * (px + 6.0))
-		BrassStyle.draw_brass(get_canvas_item(), c, r, brass, WarTable._num("ui_table_shadow_alpha", 0.34), false)
+		BrassStyle.draw_brass(get_canvas_item(), c, r, brass, shadow_alpha, false)
 		var tex := CharacterPortrait.texture_for(_waiting[i])
 		if tex == null:
 			continue

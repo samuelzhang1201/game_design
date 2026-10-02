@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://x10wk6i843n2"]
 
 [ext_resource type="Script" uid="uid://bjfj0a5io4f7y" path="res://scripts/ui/conversation_scene.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/top_bar.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://cbqhq1qgdyef8" path="res://scenes/top_bar.tscn" id="2"]
 [ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_re25w"]
 [ext_resource type="Script" uid="uid://dgo56mr5okaon" path="res://scripts/ui/audience_backdrop.gd" id="3"]
 [ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_mcr13"]
@@ -20,7 +20,7 @@
 [ext_resource type="StyleBox" uid="uid://x16loajcjew1" path="res://assets/2D/ui/panels/styles/leather_council.tres" id="16_ta68s"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="17_p0mqs"]
 [ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="18_ypg0k"]
-[ext_resource type="Script" uid="uid://ce7myfubis2yw" path="res://scripts/ui/war_table/wax_seal.gd" id="21_c3dut"]
+[ext_resource type="PackedScene" uid="uid://rkch67nhd00f" path="res://scenes/war_table/council_seal.tscn" id="21_re25w"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bwxhs"]
 content_margin_left = 14.0
@@ -86,8 +86,6 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_mmkcl"]
-
 [node name="ConversationScene" type="Control" unique_id=1715265354]
 editor_description = "Under balance ui_war_table 0 the screen strips the table, compass and seal and lays out the 2026-09-28 leather in code (_dress_leather)."
 layout_mode = 3
@@ -134,6 +132,7 @@ theme_override_styles/panel = ExtResource("4_qiomc")
 
 [node name="TopBar" parent="." unique_id=1742348619 instance=ExtResource("2")]
 unique_name_in_owner = true
+layout_mode = 1
 
 [node name="MinisterPanel" type="PanelContainer" parent="." unique_id=1501378524]
 unique_name_in_owner = true
@@ -622,7 +621,7 @@ script = ExtResource("4_jcdsd")
 unique_name_in_owner = true
 script = ExtResource("5_spy01")
 
-[node name="CouncilHandle" type="Button" parent="." unique_id=1006859578]
+[node name="CouncilHandle" parent="." unique_id=1423902817 instance=ExtResource("21_re25w")]
 unique_name_in_owner = true
 editor_description = "Grows leftward and downward with its tag: who waits to be heard (WaxSeal.refresh) and their miniatures are set at runtime. Hidden while the council column is open."
 custom_minimum_size = Vector2(137, 96)
@@ -634,19 +633,3 @@ offset_top = 80.0
 offset_right = -25.0
 offset_bottom = 176.0
 grow_horizontal = 0
-tooltip_text = "Go before your council"
-focus_mode = 0
-theme_override_colors/font_color = Color(0, 0, 0, 0)
-theme_override_colors/font_focus_color = Color(0, 0, 0, 0)
-theme_override_colors/font_pressed_color = Color(0, 0, 0, 0)
-theme_override_colors/font_hover_color = Color(0, 0, 0, 0)
-theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 0)
-theme_override_styles/normal = SubResource("StyleBoxEmpty_mmkcl")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_mmkcl")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_mmkcl")
-theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_mmkcl")
-theme_override_styles/disabled = SubResource("StyleBoxEmpty_mmkcl")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_mmkcl")
-text = "ENTER THE COUNCIL"
-flat = true
-script = ExtResource("21_c3dut")

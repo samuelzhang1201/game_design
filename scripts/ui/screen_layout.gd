@@ -91,8 +91,11 @@ static func open_right(map: Control, closed_right: float, panel: Control, gap: f
 ## running upward, shown only while the right slot is empty.
 static func make_handle(text: String) -> Button:
 	if UiPalette.war_table() and _handle_is_button():
-		# THE WAR TABLE (owner 2026-10-01): the order as the council's wax seal.
-		return WaxSeal.new(text)
+		# THE WAR TABLE (owner 2026-10-01): the order as the council's wax seal
+		# (its look scenes/war_table/council_seal.tscn).
+		var seal: Button = (load("res://scenes/war_table/council_seal.tscn") as PackedScene).instantiate()
+		seal.text = text
+		return seal
 	var b := Button.new()
 	b.name = "CouncilHandle"
 	b.text = text
