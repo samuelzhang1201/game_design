@@ -1,8 +1,10 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://6mgact71qw5u"]
 
-[ext_resource type="Script" path="res://scripts/ui/war_deploy_scroll.gd" id="1_scroll"]
+[ext_resource type="Script" uid="uid://doj7xjptnexl3" path="res://scripts/ui/war_deploy_scroll.gd" id="1_scroll"]
+[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="2_inph3"]
+[ext_resource type="StyleBox" uid="uid://cs8b56sdr03gb" path="res://assets/2D/ui/war_table/styles/resolutions_paper.tres" id="3_5v2nk"]
 
-[node name="WarDeployScroll" type="Control"]
+[node name="WarDeployScroll" type="Control" unique_id=994132060]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -12,7 +14,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_scroll")
 
-[node name="ScrollButton" type="Button" parent="."]
+[node name="ScrollButton" type="Button" parent="." unique_id=361009402]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 3
@@ -20,16 +22,17 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -108.0
-offset_top = -74.0
+offset_left = -133.2
+offset_top = -90.0
 offset_right = -18.0
 offset_bottom = -18.0
 grow_horizontal = 0
 grow_vertical = 0
 tooltip_text = "Resolutions of the Council"
+focus_mode = 0
 flat = true
 
-[node name="Dim" type="ColorRect" parent="."]
+[node name="Dim" type="ColorRect" parent="." unique_id=880361498]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -38,11 +41,12 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.4)
+color = Color(0.02, 0.015, 0.01, 0.62)
 
-[node name="Review" type="PanelContainer" parent="."]
+[node name="Review" type="PanelContainer" parent="." unique_id=671924812]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(520, 0)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -51,47 +55,56 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_inph3")
+theme_override_styles/panel = ExtResource("3_5v2nk")
 
-[node name="Col" type="VBoxContainer" parent="Review"]
+[node name="Col" type="VBoxContainer" parent="Review" unique_id=1560029646]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="Review/Col"]
+[node name="Title" type="Label" parent="Review/Col" unique_id=52095632]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"ResolutionTitle"
 text = "Resolutions of the Council"
 horizontal_alignment = 1
 
-[node name="Lines" type="VBoxContainer" parent="Review/Col"]
+[node name="Lines" type="VBoxContainer" parent="Review/Col" unique_id=1454130533]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="Total" type="Label" parent="Review/Col"]
+[node name="Total" type="Label" parent="Review/Col" unique_id=387843669]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"DeployText"
 horizontal_alignment = 2
 
-[node name="Gap" type="Control" parent="Review/Col"]
+[node name="Gap" type="Control" parent="Review/Col" unique_id=339297906]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 
-[node name="Row" type="HBoxContainer" parent="Review/Col"]
+[node name="Row" type="HBoxContainer" parent="Review/Col" unique_id=1813091273]
 layout_mode = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="Seal" type="Button" parent="Review/Col/Row"]
+[node name="Seal" type="Button" parent="Review/Col/Row" unique_id=577466857]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"Primary"
+theme_override_font_sizes/font_size = 16
 text = "Seal and send"
 
-[node name="NotYet" type="Button" parent="Review/Col/Row"]
+[node name="NotYet" type="Button" parent="Review/Col/Row" unique_id=711791996]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Not yet"
+theme_type_variation = &"Command"
+theme_override_colors/font_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+theme_override_font_sizes/font_size = 16
+text = "Not Yet"
 
-[node name="SealLayer" type="Control" parent="Review"]
+[node name="SealLayer" type="Control" parent="Review" unique_id=1301513149]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2

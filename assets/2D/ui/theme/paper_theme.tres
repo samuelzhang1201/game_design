@@ -3,6 +3,7 @@
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/figures.tres" id="1_fuys7"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/header.tres" id="2_pd6rl"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="3_pd6rl"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/title.tres" id="4_3tuu4"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="4_aqemf"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aqemf"]
@@ -169,6 +170,10 @@ DashTitle/base_type = &"Label"
 DashTitle/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 DashTitle/font_sizes/font_size = 24
 DashTitle/fonts/font = ExtResource("2_pd6rl")
+DeployBad/base_type = &"Label"
+DeployBad/colors/font_color = Color(0.65882355, 0.19607843, 0.11764706, 1)
+DeployText/base_type = &"Label"
+DeployText/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 Label/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 LinkButton/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 ManorTable/base_type = &"Tree"
@@ -188,6 +193,10 @@ ManorTable/styles/selected_focus = SubResource("StyleBoxFlat_ln2nj")
 ManorTable/styles/title_button_hover = SubResource("StyleBoxFlat_6i8mq")
 ManorTable/styles/title_button_normal = SubResource("StyleBoxFlat_6i8mq")
 ManorTable/styles/title_button_pressed = SubResource("StyleBoxFlat_6i8mq")
+ResolutionTitle/base_type = &"Label"
+ResolutionTitle/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+ResolutionTitle/font_sizes/font_size = 24
+ResolutionTitle/fonts/font = ExtResource("4_3tuu4")
 RichTextLabel/colors/default_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 TooltipLabel/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
 WarMarginNone/base_type = &"Label"

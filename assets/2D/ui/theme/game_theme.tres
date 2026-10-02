@@ -246,6 +246,62 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_oj8e7"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3jvuq"]
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+bg_color = Color(0.40392157, 0.30588236, 0.15294118, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9529412, 0.8509804, 0.6039216, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_w4q3o"]
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+bg_color = Color(0.32941177, 0.2509804, 0.12156863, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ql11d"]
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+bg_color = Color(0.4509804, 0.34509805, 0.1882353, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9529412, 0.8509804, 0.6039216, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 6
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_37awe"]
 content_margin_top = 3.0
 content_margin_bottom = 3.0
@@ -448,6 +504,10 @@ DashTitle/base_type = &"Label"
 DashTitle/colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 DashTitle/font_sizes/font_size = 16
 DashTitle/fonts/font = ExtResource("1_on7wr")
+DeployBad/base_type = &"Label"
+DeployBad/colors/font_color = Color(0.7529412, 0.47843137, 0.4, 1)
+DeployText/base_type = &"Label"
+DeployText/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
 FolioHeader/base_type = &"Label"
 FolioHeader/colors/font_color = Color(0.60784316, 0.17254902, 0.12156863, 1)
 FolioHeader/font_sizes/font_size = 14
@@ -545,6 +605,20 @@ MissivePlaque/base_type = &"Label"
 MissivePlaque/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
 MissivePlaque/font_sizes/font_size = 14
 MissivePlaque/fonts/font = ExtResource("1_on7wr")
+Primary/base_type = &"Button"
+Primary/colors/font_color = Color(0.9529412, 0.8509804, 0.6039216, 1)
+Primary/colors/font_hover_color = Color(1, 0.9411765, 0.78431374, 1)
+Primary/colors/font_pressed_color = Color(0.9529412, 0.8509804, 0.6039216, 1)
+Primary/font_sizes/font_size = 15
+Primary/fonts/font = ExtResource("1_el5ut")
+Primary/styles/focus = SubResource("StyleBoxEmpty_oj8e7")
+Primary/styles/hover = SubResource("StyleBoxFlat_3jvuq")
+Primary/styles/normal = SubResource("StyleBoxFlat_w4q3o")
+Primary/styles/pressed = SubResource("StyleBoxFlat_ql11d")
+ResolutionTitle/base_type = &"Label"
+ResolutionTitle/colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+ResolutionTitle/font_sizes/font_size = 24
+ResolutionTitle/fonts/font = ExtResource("5_yfb1m")
 RichTextLabel/colors/default_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
 RichTextLabel/font_sizes/bold_font_size = 20
 RichTextLabel/font_sizes/italics_font_size = 20

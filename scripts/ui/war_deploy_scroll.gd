@@ -19,44 +19,43 @@ var _t := 0.0
 var _seal_tex: Texture2D   # the crown's own arms, pressed into the wax (read at seal: the room is built before any reign)
 var _sealing_state: GameState = null   # the reign whose drafts this seal will send
 var _flight: EnvelopeFlight = null
-var _wax_tex: Texture2D    # the photographed wax seal (library U-60), the wax itself
+## Its look is scenes/war_room/war_deploy_scroll.tscn (owner 2026-10-02: the
+## look lives in the editor): the rolled scroll's corner, the resolutions'
+## paper (resolutions_paper.tres, under the paper theme so its lines write in
+## the paper's ink — the DeployText / DeployBad kinds), the title, Seal and
+## send (Primary) and Not yet; what it draws itself reads the exports below.
+
+## The photographed wax seal (library U-60), the wax itself.
+@export var wax: Texture2D = preload("res://assets/2D/ui/war_table/council_seal.png")
+## The rolled scroll greyed while nothing is pencilled: its saturation and value.
+@export var idle_sat := 0.3
+@export var idle_value := 0.7
+## The rolled scroll's soft shadow, the first of three steps down-right, px.
+@export var shadow_px := 4.0
+## The seal's wax radius, how far above the resolutions' foot it is pressed,
+## and how dark the crown's arms are pressed into it.
+@export var wax_px := 32.0
+@export var wax_y_px := 78.0
+@export var arms_ink := 0.45
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var b := button()
-	b.flat = true
-	b.focus_mode = Control.FOCUS_NONE
-	var px := Game.data.bal("war_deploy_button_px")
-	var margin := Game.data.bal("war_deploy_margin_px")
-	b.offset_left = -px * 1.6 - margin
-	b.offset_top = -px - margin
-	b.offset_right = -margin
-	b.offset_bottom = -margin
 	b.draw.connect(_draw_rolled)
 	b.pressed.connect(unroll)
-	(%Dim as ColorRect).color = UiPalette.DIM_OVERLAY
 	(%Dim as ColorRect).gui_input.connect(func(e: InputEvent) -> void:
 		var m := e as InputEventMouseButton
 		if m != null and m.pressed:
 			withdraw())
-	var review: PanelContainer = %Review
-	review.custom_minimum_size.x = Game.data.bal("war_deploy_review_w_px")
-	if UiPalette.war_table():
-		var paper := PaperStyle.make("paper", Game.data.bal("war_deploy_margin_px") + 10.0, 7)
-		paper.uv_inset = Vector2(0.12, 0.08)   # only the paper's middle: the art's ruled rim read as a frame (taste)
-		review.add_theme_stylebox_override("panel", paper)
-	else:
+	if not UiPalette.war_table():
+		# the leather (ui_war_table 0): a dark window in the game's own ink
+		var review: PanelContainer = %Review
 		review.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "window"))
-	UiPalette.style_title(%Title, 20, UiPalette.ink("rubric"))
-	(%Total as Label).add_theme_color_override("font_color", UiPalette.ink("soft"))
-	UiPalette.primary_button(%Seal, 16)   # one size for both: the primary is told by its plate, not its size
-	UiPalette.command_button(%NotYet, 16)
-	(%NotYet as Button).add_theme_color_override("font_color", UiPalette.TEXT_MUTED)
+		review.theme = null
 	(%Seal as Button).pressed.connect(seal)
 	(%NotYet as Button).pressed.connect(withdraw)
 	(%SealLayer as Control).draw.connect(_draw_seal)
-	_wax_tex = UiPalette.load_art("res://assets/2D/ui/war_table/council_seal.png")
 	refresh()
 
 
@@ -102,12 +101,12 @@ func unroll() -> void:
 			else "%s halts where it stands" % l["label"]
 		if String(l["refusal"]) != "":
 			lab.text += "\n" + String(l["refusal"])   # no price: it cannot run
-			lab.add_theme_color_override("font_color", UiPalette.ink("bad"))
+			lab.theme_type_variation = &"DeployBad"
 		else:
 			fig.text = ("%d day%s · " % [days, "" if days == 1 else "s"] if days > 0 else "") \
 				+ "%s gold" % WarRoom.group(int(l["gold"]))
-			lab.add_theme_color_override("font_color", UiPalette.ink("soft"))
-		fig.add_theme_color_override("font_color", UiPalette.ink("soft"))
+			lab.theme_type_variation = &"DeployText"
+		fig.theme_type_variation = &"DeployText"
 		row.add_child(lab)
 		row.add_child(fig)
 		lines.add_child(row)
@@ -239,7 +238,7 @@ func _draw_rolled() -> void:
 	var roller := r.size.y * 0.24
 	var body := Rect2(r.position + Vector2(roller * 0.6, r.size.y * 0.2),
 		Vector2(r.size.x - roller * 1.2, r.size.y * 0.58))
-	var sh := Game.data.bal("war_deploy_shadow_px")
+	var sh := shadow_px
 	for i: int in 3:   # a soft shadow down-right, the war table's one light
 		var o := sh * float(i + 1)
 		b.draw_rect(Rect2(body.position + Vector2(o, o) * 0.6, body.size + Vector2(roller * 0.4, 0)),
@@ -262,14 +261,14 @@ func _draw_rolled() -> void:
 	# Nothing pencilled: only the ribbon and the seal grey (taste: never wash
 	# the whole object, never grey it by alpha).
 	var grey := func(c: Color) -> Color:
-		return Color.from_hsv(c.h, c.s * Game.data.bal("war_deploy_idle_sat"),
-			c.v * Game.data.bal("war_deploy_idle_value"), c.a) if idle else c
+		return Color.from_hsv(c.h, c.s * idle_sat,
+			c.v * idle_value, c.a) if idle else c
 	var mid := body.get_center()
 	b.draw_rect(Rect2(Vector2(mid.x - 3.0, body.position.y), Vector2(6.0, body.size.y)),
 		grey.call(UiPalette.table_color("wax_mid", Color("7a1c17"))))
 	var seal_r := body.size.y * 0.42
-	if _wax_tex != null:
-		b.draw_texture_rect(_wax_tex, Rect2(mid - Vector2(seal_r, seal_r), Vector2(seal_r, seal_r) * 2.0), false,
+	if wax != null:
+		b.draw_texture_rect(wax, Rect2(mid - Vector2(seal_r, seal_r), Vector2(seal_r, seal_r) * 2.0), false,
 			grey.call(Color.WHITE) if not idle else Color(0.62, 0.6, 0.6))
 	else:
 		b.draw_circle(mid, seal_r, grey.call(UiPalette.table_color("wax_light", Color("a63a2f"))), true, -1.0, true)
@@ -283,11 +282,11 @@ func _draw_seal() -> void:
 	var layer: Control = %SealLayer
 	var need := Game.data.bal("war_deploy_%s_s" % _phase)
 	var k := clampf(_t / maxf(need, 0.001), 0.0, 1.0) if _phase != "roll" else 1.0
-	var at := Vector2(layer.size.x * 0.5, layer.size.y - Game.data.bal("war_deploy_wax_y_px"))
-	var r := Game.data.bal("war_deploy_wax_px") * (k if _phase == "wax" else 1.0)
+	var at := Vector2(layer.size.x * 0.5, layer.size.y - wax_y_px)
+	var r := wax_px * (k if _phase == "wax" else 1.0)
 	var box := Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0)
-	if _wax_tex != null:   # the photographed wax (U-60), its own edge and shadow
-		layer.draw_texture_rect(_wax_tex, box, false)
+	if wax != null:   # the photographed wax (U-60), its own edge and shadow
+		layer.draw_texture_rect(wax, box, false)
 	else:
 		layer.draw_circle(at, r, UiPalette.table_color("wax_mid", Color("7a1c17")), true, -1.0, true)
 	if _phase == "wax" or _seal_tex == null:
@@ -295,7 +294,7 @@ func _draw_seal() -> void:
 	# The crown's arms pressed INTO the wax: the wax red multiplied darker
 	# where the arms are, growing in as the matrix comes down.
 	var press := k if _phase == "press" else 1.0
-	var s := Game.data.bal("war_deploy_wax_px") * 1.05 * lerpf(1.3, 1.0, press)
-	var ink := Game.data.bal("war_deploy_arms_ink")
+	var s := wax_px * 1.05 * lerpf(1.3, 1.0, press)
+	var ink := arms_ink
 	var tint := Color(0.42, 0.10, 0.08, press * ink)
 	layer.draw_texture_rect(_seal_tex, Rect2(at - Vector2(s, s) * 0.5, Vector2(s, s)), false, tint)

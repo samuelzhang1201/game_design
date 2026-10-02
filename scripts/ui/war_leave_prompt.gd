@@ -12,26 +12,15 @@ signal chosen(choice: String)
 
 func _ready() -> void:
 	visible = false
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	(%LeaveDim as ColorRect).color = UiPalette.DIM_OVERLAY
+	# its look is the room's scene (owner 2026-10-02): the veil, the leather
+	# window (leather_window_24.tres), the question, Deploy… a Primary, the
+	# rest Commands, Discard's word in gules
 	(%LeaveDim as ColorRect).gui_input.connect(func(e: InputEvent) -> void:
 		var b := e as InputEventMouseButton
 		if b != null and b.pressed:
 			_choose("stay"))
-	(%LeaveWindow as PanelContainer).add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "window"))
-	(%LeaveQuestion as Label).add_theme_font_size_override("font_size", 22)
-	(%LeaveQuestion as Label).add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 	for pair: Array in [[%LeaveDeploy, "deploy"], [%LeaveDiscard, "discard"], [%LeaveKeep, "keep"], [%LeaveStay, "stay"]]:
-		var b := pair[0] as Button
-		if pair[1] == "deploy":
-			UiPalette.primary_button(b, 15)
-		else:
-			UiPalette.command_button(b)
-		b.pressed.connect(_choose.bind(String(pair[1])))
-	# the destructive one: the same chip, its word in gules lightened to read on leather
-	(%LeaveDiscard as Button).add_theme_color_override("font_color", UiPalette.bad_color().lightened(0.4))
-	(%LeaveDiscard as Button).add_theme_color_override("font_hover_color", UiPalette.bad_color().lightened(0.55))
+		(pair[0] as Button).pressed.connect(_choose.bind(String(pair[1])))
 
 
 func open() -> void:

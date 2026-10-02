@@ -4,13 +4,14 @@
 [ext_resource type="StyleBox" uid="uid://dmgtj5dq4d8hu" path="res://assets/2D/ui/panels/styles/ledger_frame.tres" id="2_3s70a"]
 [ext_resource type="PackedScene" path="res://scenes/war_room/war_room.tscn" id="2_view"]
 [ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="3_menu"]
-[ext_resource type="PackedScene" path="res://scenes/war_room/war_folio.tscn" id="4_folio"]
+[ext_resource type="PackedScene" uid="uid://d0fhma2vbrkdx" path="res://scenes/war_room/war_folio.tscn" id="4_folio"]
 [ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="4_i1y7d"]
 [ext_resource type="StyleBox" uid="uid://c4rntxxfax7n8" path="res://assets/2D/ui/war_table/styles/war_slip.tres" id="5_2odns"]
 [ext_resource type="Script" uid="uid://4r7bjqgxwvn5" path="res://scripts/ui/war_margin_key.gd" id="5_key"]
 [ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="6_0wshm"]
 [ext_resource type="Script" uid="uid://buo18m7j8xhkt" path="res://scripts/ui/war_leave_prompt.gd" id="6_leave"]
-[ext_resource type="PackedScene" path="res://scenes/war_room/war_deploy_scroll.tscn" id="7_deploy"]
+[ext_resource type="PackedScene" uid="uid://6mgact71qw5u" path="res://scenes/war_room/war_deploy_scroll.tscn" id="7_deploy"]
+[ext_resource type="StyleBox" uid="uid://cb2lbhrj618ti" path="res://assets/2D/ui/panels/styles/leather_window_24.tres" id="12_i1y7d"]
 
 [node name="WarRoomScreen" type="Control" unique_id=166001307]
 layout_mode = 3
@@ -150,7 +151,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.4)
+color = Color(0.02, 0.015, 0.01, 0.62)
 
 [node name="LeaveWindow" type="PanelContainer" parent="LeavePrompt" unique_id=1486653153]
 unique_name_in_owner = true
@@ -166,6 +167,7 @@ offset_right = 240.0
 offset_bottom = 80.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = ExtResource("12_i1y7d")
 
 [node name="Col" type="VBoxContainer" parent="LeavePrompt/LeaveWindow" unique_id=2001794386]
 layout_mode = 2
@@ -175,6 +177,8 @@ theme_override_constants/separation = 14
 unique_name_in_owner = true
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+theme_override_font_sizes/font_size = 22
 text = "Orders are still pencilled on the table."
 horizontal_alignment = 1
 autowrap_mode = 3
@@ -187,19 +191,25 @@ alignment = 1
 [node name="LeaveDeploy" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row" unique_id=155375642]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"Primary"
 text = "Deploy…"
 
 [node name="LeaveDiscard" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row" unique_id=1111704665]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"Command"
+theme_override_colors/font_color = Color(0.85176474, 0.6870588, 0.64, 1)
+theme_override_colors/font_hover_color = Color(0.8888235, 0.76529413, 0.73, 1)
 text = "Discard"
 
 [node name="LeaveKeep" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row" unique_id=529610785]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"Command"
 text = "Keep"
 
 [node name="LeaveStay" type="Button" parent="LeavePrompt/LeaveWindow/Col/Row" unique_id=1077314722]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"Command"
 text = "Stay"
