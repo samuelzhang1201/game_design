@@ -93,9 +93,11 @@ func prepare(scene_path: String) -> void:
 
 
 ## The bake's field map beside a built scene (bake/fields.png — the bake dir
-## is .gdignored, so it is read as a file, not imported), or null.
+## is .gdignored, so it is read as a file, not imported), or null. Read by its
+## res:// path, never a globalized one: in an exported game the res:// tree is
+## the pack, and a path on disk beside the executable holds nothing.
 static func load_field_map(scene_path: String) -> Texture2D:
-	var path := ProjectSettings.globalize_path(scene_path.get_base_dir().path_join("bake/fields.png"))
+	var path := scene_path.get_base_dir().path_join("bake/fields.png")
 	if not FileAccess.file_exists(path):
 		return null
 	var img := Image.load_from_file(path)
@@ -106,7 +108,7 @@ static func load_field_map(scene_path: String) -> Texture2D:
 ## off without the file or while map3d_tree_on is 0.
 func _apply_woods(scene_path: String) -> void:
 	var repo := ctx.repo
-	var path := ProjectSettings.globalize_path(scene_path.get_base_dir().path_join("bake/woods.png"))
+	var path := scene_path.get_base_dir().path_join("bake/woods.png")  # res://, as load_field_map
 	if repo.bal("map3d_tree_on") <= 0.0 or not FileAccess.file_exists(path):
 		_tint_mat.call("set_shader_param", "wood_on", 0.0)
 		return
