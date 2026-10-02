@@ -120,3 +120,30 @@ func test_the_bake_plants_woods_on_a_wooded_sheet() -> void:
 		if most > 0:
 			break
 	assert_gt(most, 0, "some sheet has woods")
+
+
+func test_a_crossing_is_where_a_line_meets_a_river() -> void:
+	var road := PackedVector2Array([Vector2(0, 0), Vector2(10, 0)])
+	var river := PackedVector2Array([Vector2(4, -5), Vector2(4, 5)])
+	var hits := WarSheetInk.crossings([road], [river])
+	assert_eq(hits.size(), 1)
+	assert_almost_eq((hits[0]["at"] as Vector2).distance_to(Vector2(4, 0)), 0.0, 0.0001)
+	assert_almost_eq((hits[0]["dir"] as Vector2).dot(Vector2.RIGHT), 1.0, 0.0001)
+	assert_eq(WarSheetInk.crossings([road], [PackedVector2Array([Vector2(20, -5), Vector2(20, 5)])]).size(), 0)
+
+
+func test_rivers_widen_toward_the_mouth_and_carry_their_names() -> void:
+	var s := _richest_sheet()
+	var ink := WarSheetInk.strokes(repo, state, s, 1024)
+	assert_gt((ink["rivers"] as Array).size(), 0)
+	for rv: Dictionary in ink["rivers"]:
+		assert_gte(float(rv["w1"]), float(rv["w0"]), "a river is never narrower at its mouth")
+		assert_true(rv.has("label"))
+
+
+func test_roads_over_rivers_are_bridges_and_trails_fords() -> void:
+	var s := _richest_sheet()
+	var ink := WarSheetInk.strokes(repo, state, s, 1024)
+	var rivers: Array = (ink["rivers"] as Array).map(func(rv: Dictionary) -> PackedVector2Array: return rv["poly"])
+	assert_eq((ink["bridges"] as Array).size(), WarSheetInk.crossings(ink["roads"], rivers).size())
+	assert_eq((ink["fords"] as Array).size(), WarSheetInk.crossings(ink["trails"], rivers).size())

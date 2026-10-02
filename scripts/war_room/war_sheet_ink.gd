@@ -49,10 +49,19 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 			(out[group] as Array).append(_to_tex(r, k, poly))
 	var river_codes: Array = repo.rivers.keys()
 	river_codes.sort()
+	# a river widens from its source to its mouth by its discharge, and is named
+	var base_w := repo.bal("war_ink_river_px")
 	for code: String in river_codes:
-		var poly: PackedVector2Array = repo.rivers[code]["polyline"]
+		var row: Dictionary = repo.rivers[code]
+		var poly: PackedVector2Array = row["polyline"]
 		if _touches(r, poly):
-			(out["rivers"] as Array).append(_to_tex(r, k, poly))
+			var mouth := minf(base_w * (1.0 + repo.bal("war_ink_river_discharge_k") * sqrt(maxf(float(row.get("discharge", "0")), 0.0))),
+				repo.bal("war_ink_river_max_px"))
+			(out["rivers"] as Array).append({"poly": _to_tex(r, k, poly), "w0": base_w, "w1": maxf(mouth, base_w),
+				"label": String(row.get("label", ""))})
+	var river_polys: Array = (out["rivers"] as Array).map(func(rv: Dictionary) -> PackedVector2Array: return rv["poly"])
+	out["bridges"] = crossings(out["roads"], river_polys)
+	out["fords"] = crossings(out["trails"], river_polys)
 	for row: Dictionary in repo.coasts:
 		var poly: PackedVector2Array = row["polyline"]
 		if _touches(r, poly):
@@ -143,6 +152,23 @@ static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, 
 					break
 			if not near_town:
 				(out["manors"] as Array).append({"at": at, "label": MapManors.label_of(repo, id)})
+
+
+## Where any of `lines` crosses any of `rivers` (both lists of polylines in one
+## space): the point and the LINE's direction there. Segment against segment;
+## a sheet's few hundred segments keep the plain double loop cheap enough.
+static func crossings(lines: Array, rivers: Array) -> Array:
+	var out: Array = []
+	for line: PackedVector2Array in lines:
+		for i in line.size() - 1:
+			var a := line[i]
+			var b := line[i + 1]
+			for rv: PackedVector2Array in rivers:
+				for j in rv.size() - 1:
+					var hit: Variant = Geometry2D.segment_intersects_segment(a, b, rv[j], rv[j + 1])
+					if hit != null:
+						out.append({"at": hit as Vector2, "dir": (b - a).normalized()})
+	return out
 
 
 ## The line cut into dashes: `on` px drawn, `off` px left, along its whole

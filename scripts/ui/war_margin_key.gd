@@ -22,6 +22,7 @@ const LEGEND := [
 	{"key": "peak", "label": "Peak"}, {"key": "contour", "label": "Contour"},
 	{"key": "wood", "label": "Woods"}, {"key": "manor", "label": "Manor"},
 	{"key": "walls", "label": "Walled town"}, {"key": "port", "label": "Port"},
+	{"key": "bridge", "label": "Bridge"}, {"key": "ford", "label": "Ford"},
 ]
 
 var _repo: DataRepository
@@ -212,6 +213,18 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 			draw_line(c + Vector2(0, -s), c + Vector2(0, s), ink, line, true)
 			draw_line(c + Vector2(-s * 0.45, -s * 0.55), c + Vector2(s * 0.45, -s * 0.55), ink, line, true)
 			draw_arc(c + Vector2(0, s * 0.2), s * 0.75, 0.15 * PI, 0.85 * PI, 10, ink, line, true)
+		"bridge":
+			var c := r.get_center()
+			var s := r.size.y * 0.4
+			draw_line(a, b, pal["river_ink"], line * 1.3, true)
+			for side in [-1.0, 1.0]:
+				draw_line(c + Vector2(-s * 0.8, s * 0.55 * side), c + Vector2(s * 0.8, s * 0.55 * side), ink, line, true)
+		"ford":
+			var c := r.get_center()
+			var s := r.size.y * 0.42
+			draw_line(a, b, pal["river_ink"], line * 1.3, true)
+			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([c + Vector2(0, -s), c + Vector2(0, s)]), s * 0.35, s * 0.3):
+				draw_polyline(d, ink, line, true)
 		"contour":
 			var faint := Color(ink, ink.a * _repo.bal("war_contour_alpha"))
 			draw_arc(Vector2(r.get_center().x, r.end.y + r.size.y * 0.6), r.size.x * 0.55, PI * 1.15, PI * 1.85,

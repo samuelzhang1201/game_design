@@ -30,8 +30,17 @@ func _draw() -> void:
 			draw_polyline(_closed(loop), band, float(px["band"]), true)
 	for poly: PackedVector2Array in ink["coasts"]:
 		draw_polyline(poly, pal["sea_ink"], float(px["coast"]), true)
-	for poly: PackedVector2Array in ink["rivers"]:
-		draw_polyline(poly, pal["river_ink"], float(px["river"]), true)
+	for rv: Dictionary in ink["rivers"]:   # widening from source to mouth, and named
+		var poly: PackedVector2Array = rv["poly"]
+		var n := poly.size()
+		for i in n - 1:
+			var w := lerpf(float(rv["w0"]), float(rv["w1"]), float(i) / float(maxi(n - 2, 1)))
+			draw_line(poly[i], poly[i + 1], pal["river_ink"], w, true)
+		if String(rv["label"]) != "" and n >= 2:
+			@warning_ignore("integer_division")
+			var mid := poly[n / 2]
+			draw_string(font, mid + Vector2(float(px["river_label"]) * 0.4, -float(px["river_label"]) * 0.3), String(rv["label"]),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["river_label"]), pal["river_ink"])
 	for poly: PackedVector2Array in ink["seams"]:  # fine work: a hairline (the segments arrive two points apiece)
 		draw_polyline(poly, c_faint, float(px["seam"]), true)
 	for b: Dictionary in ink["borders"]:
@@ -61,6 +70,19 @@ func _draw() -> void:
 			draw_polyline(d, c_ink, float(px["trail"]), true)
 	for poly: PackedVector2Array in ink["roads"]:
 		draw_polyline(poly, c_ink, float(px["road"]), true)
+	for br: Dictionary in ink.get("bridges", []):   # two parapets across the river
+		var at: Vector2 = br["at"]
+		var along: Vector2 = br["dir"]
+		var across := along.orthogonal()
+		var bs := float(px["bridge"])
+		for side in [-1.0, 1.0]:
+			draw_line(at + across * bs * 0.5 * side - along * bs, at + across * bs * 0.5 * side + along * bs, c_ink, maxf(bs * 0.25, 1.0), true)
+	for fd: Dictionary in ink.get("fords", []):   # a dashed bar across the water
+		var at: Vector2 = fd["at"]
+		var across := (fd["dir"] as Vector2).orthogonal()
+		var bs := float(px["bridge"])
+		for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([at - across * bs, at + across * bs]), bs * 0.35, bs * 0.3):
+			draw_polyline(d, c_ink, maxf(bs * 0.2, 1.0), true)
 	for t: Dictionary in ink["towns"]:
 		var r := float(px["town"]) * (1.0 + float(px["town_tier_growth"]) * float(int(t["tier"])))
 		draw_arc(t["at"], r, 0.0, TAU, 32, c_ink, float(px["town"]) * float(px["town_ring_ratio"]), true)
