@@ -213,9 +213,13 @@ func lay_sheet(index: int) -> void:
 	_depth = WarRoomTable.depth_m(_rect, _table_w)
 	_nx = int(_repo.bal("war_relief_grid"))
 	_nz = WarRoomTable.rows_for(_rect, _nx)
-	_heights = WarRoomTable.heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else WarRoomTable.flat(_nx, _nz)
+	# the build's own heights (WarBake: what Terrain3D was built from), else the
+	# pack's relief bitmap, else flat (spec 2026-10-02-war-room-v2 §2.4)
+	var bake := WarBake.of(_repo)
+	var raw := bake.heights(_rect, _nx, _nz) if bake != null \
+		else (WarRoomTable.raw_heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else WarRoomTable.flat(_nx, _nz))
+	_heights = WarRoomTable.clamp_sea(raw)
 	_y_scale = WarRoomTable.table_y(_repo, _rect, _table_w, 1.0)
-	var raw := WarRoomTable.raw_heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else _heights
 	var shore := WarRoomTable.shore_share(_repo, raw, _nx, _nz, _table_w, _depth)
 	_table.mesh = WarRoomTable.build_mesh(_heights, _nx, _nz, _table_w, _depth, _y_scale, raw, shore)
 	var mat := _table.get_active_material(0) as ShaderMaterial

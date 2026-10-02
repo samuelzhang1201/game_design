@@ -60,6 +60,14 @@ static func _sample(repo: DataRepository, relief: Image, sheet_rect: Rect2, nx: 
 	return out
 
 
+## Raw metres held at the sea line (the relief and the contours stand on land).
+static func clamp_sea(raw: PackedFloat32Array) -> PackedFloat32Array:
+	var out := raw.duplicate()
+	for i in out.size():
+		out[i] = maxf(out[i], 0.0)
+	return out
+
+
 ## Table metres up for `metres` of real height: the table's true scale times
 ## war_relief_exaggeration.
 static func table_y(repo: DataRepository, sheet_rect: Rect2, table_w: float, metres: float) -> float:

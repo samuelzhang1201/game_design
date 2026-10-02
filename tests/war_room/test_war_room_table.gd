@@ -42,8 +42,9 @@ func test_heights_sample_the_relief_image() -> void:
 
 
 func test_true_scale_and_exaggeration() -> void:
-	# 1 px = 1000 m; table 1.4 m / 670 px; x12: 2400 m -> 2.4 px -> 0.005015 m -> 0.06018 m
-	assert_almost_eq(WarRoomTable.table_y(repo, R, 1.4, 2400.0), 2.4 * 1.4 / 670.0 * 12.0, 0.00001)
+	# 1 px = 1000 m; table 1.4 m / 670 px; 2400 m -> 2.4 px -> 0.005015 m, times the exaggeration
+	assert_almost_eq(WarRoomTable.table_y(repo, R, 1.4, 2400.0),
+		2.4 * 1.4 / 670.0 * repo.bal("war_relief_exaggeration"), 0.00001)
 
 
 func test_a_ray_finds_the_relief_not_the_flat_table() -> void:
