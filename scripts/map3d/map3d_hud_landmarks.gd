@@ -1,7 +1,17 @@
 class_name Map3DHudLandmarks
 extends Map3DHudPiece
 ## HEIGHTS' high and low points on the 3D map's HUD (owner 2026-09-19, spec
-## 2026-09-19-map3d-heights §4), over the kingdom names.
+## 2026-09-19-map3d-heights §4), over the kingdom names. Its look is edited
+## on the node (owner 2026-10-02).
+
+## At/above this camera distance only lod-0 landmarks are marked; at/above
+## `lod_mid_view_m` lod 2 is left off.
+@export var lod_far_view_m := 60000.0
+@export var lod_mid_view_m := 20000.0
+## A mark's triangle height and the metres beside it, design px (constant on
+## screen).
+@export var mark_px := 11.0
+@export var font_px := 14
 
 ## marks()' cut and the pose it was cut for (see there).
 var _cache: Array = []
@@ -34,14 +44,13 @@ func _cut() -> Array:
 	var repo := ctx.repo
 	var camera := ctx.camera
 	var max_lod := 2
-	if ctx.distance >= repo.bal("map3d_landmark_lod_far_view_m"):
+	if ctx.distance >= lod_far_view_m:
 		max_lod = 0
-	elif ctx.distance >= repo.bal("map3d_landmark_lod_mid_view_m"):
+	elif ctx.distance >= lod_mid_view_m:
 		max_lod = 1
 	var s := ctx.viewport_px_scale()
-	var px := repo.bal("map3d_landmark_px")
+	var px := mark_px
 	var font := UiPalette.display_font()
-	var font_px := int(repo.bal("map3d_landmark_font_px"))
 	var frame := Rect2(Vector2.ZERO, ctx.view_size)
 	var taken: Array = ctx.settlement_rects()
 	var armies := sibling("Armies") as Map3DHudArmies
@@ -91,10 +100,9 @@ func _draw() -> void:
 	if list.is_empty():
 		return
 	var repo := ctx.repo
-	var px := repo.bal("map3d_landmark_px")
+	var px := mark_px
 	var font := UiPalette.display_font()
-	var font_px := int(repo.bal("map3d_landmark_font_px"))
-	var halo := MapTerrain.palette_color(repo, "map3d_hud_halo", MapTerrain.FALLBACK)
+	var halo := Color((get_parent() as Map3DHud).halo_color, 1.0)
 	var text_ink := MapPalette.named(repo, "landmark_text")
 	var high_ink := MapPalette.named(repo, "landmark_high")
 	var low_ink := MapPalette.named(repo, "landmark_low")

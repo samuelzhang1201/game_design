@@ -23,7 +23,6 @@ road,#C2A981,"roads: a worn sand track (owner 2026-09-17, after the reference pa
 trail,#D0BC99,"land trails: the same track, lighter and thinner"
 contour,#8A6A46,the HEIGHTS view's iso-lines
 scale_bar,#334155,the scale bar in the bottom-right corner
-map3d_hud_halo,#F3EEDF,"3D MAP (owner 2026-09-18): the pale halo under the 3D map's scale bar and compass needle, so they read on snow and sea alike"
 house_roof_thatch,#9A8459,"3D MAP houses (spec 2026-09-20 §2, widened 2026-09-21 for the mesh remake): weathered thatch. At 17-35 px (400 m closest zoom) the roof colour is most of what a house says, so it is data"
 house_roof_thatch_fresh,#B99A5E,"3D MAP houses (2026-09-21): fresh thatch, lighter and warmer than the weathered kind — a second thatch tone so a village's cottages don't read as one repeated roof"
 house_roof_tile,#8C5A45,3D MAP houses: fired clay tile

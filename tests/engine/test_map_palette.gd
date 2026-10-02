@@ -35,7 +35,7 @@ func test_unbound_kingdoms_take_other_colours_in_state_order() -> void:
 	assert_gt(n, 0, "some kingdom is unbound")
 
 func test_line_colours_are_named() -> void:
-	for key in ["map3d_selection", "manor_line"]:
+	for key in ["manor_line"]:
 		assert_ne(MapPalette.named(data, key), MapPalette.FALLBACK, key)
 	assert_eq(MapPalette.named(data, "no_such_key"), MapPalette.FALLBACK)
 	assert_eq(MapPalette.color_of(data, "no_such_kingdom"), MapPalette.FALLBACK)

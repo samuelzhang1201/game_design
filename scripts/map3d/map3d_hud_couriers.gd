@@ -6,7 +6,14 @@ extends Map3DHudPiece
 ## the column to where it will go, an envelope in its end ring; and, past the
 ## counter scale, each courier as a small square counter with a letter. A
 ## courier who has delivered draws no road and no pending order, and his
-## counter fades with his rider (Map3DLayerCouriers, `gone` / `alpha`).
+## counter fades with his rider (Map3DLayerCouriers, `gone` / `alpha`). Its
+## look is edited on the node (owner 2026-10-02).
+
+## His road ahead, design px wide — finer than a march's.
+@export var route_px := 1.2
+## An order still on the road: its route dotted at this share of the realm
+## colour's opacity, an envelope in its end ring.
+@export var pending_alpha := 0.55
 
 
 func _draw() -> void:
@@ -14,7 +21,7 @@ func _draw() -> void:
 		return
 	var repo := ctx.repo
 	var ink := MapPalette.color_of(repo, repo.resolve_realm("player_realm"))
-	var w := repo.bal("map3d_courier_route_px")
+	var w := route_px
 	var rects: Dictionary = view.courier_rects()
 	for c: Dictionary in ctx.couriers():
 		var r: Dictionary = rects.get(int(c["id"]), {})
@@ -55,9 +62,9 @@ func _draw_pending(c: Dictionary, ink: Color, w: float) -> void:
 	if ends.is_empty():
 		return
 	var to: Vector2 = ends["to"]
-	var faint := Color(ink, ink.a * ctx.repo.bal("map3d_courier_pending_alpha"))
+	var faint := Color(ink, ink.a * pending_alpha)
 	draw_dashed_line(ends["from"], to, faint, w, w)  # dotted: a dash as long as the line is wide
-	var r := ring_px(ctx.repo)
+	var r := ring_px()
 	draw_arc(to, r, 0.0, TAU, 24, faint, w, true)
 	ResourceIcon.draw_glyph(self, "letter", to, r * 1.4, faint)
 
@@ -78,8 +85,10 @@ func _pending_ends(c: Dictionary) -> Dictionary:
 	return {"from": from, "to": to}
 
 
-static func ring_px(repo: DataRepository) -> float:
-	return repo.bal("map3d_unit_route_px") * 4.0
+## An end ring's radius, design px: a march's (the Armies piece's route_px × 4).
+func ring_px() -> float:
+	var armies := sibling("Armies") as Map3DHudArmies
+	return (armies.route_px if armies != null else 2.0) * 4.0
 
 
 ## Each pending order's envelope ring, as a box in design px (the weather
@@ -88,7 +97,7 @@ func pending_rects() -> Array:
 	var out: Array = []
 	if not bound() or ctx.state() == null:
 		return out
-	var r := ring_px(ctx.repo) + ctx.repo.bal("map3d_courier_route_px")
+	var r := ring_px() + route_px
 	for c: Dictionary in ctx.couriers():
 		var ends := _pending_ends(c)
 		if not ends.is_empty():

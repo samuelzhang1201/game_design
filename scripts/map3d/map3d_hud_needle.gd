@@ -5,7 +5,15 @@ extends Node2D
 ## its earlier siblings at the same z_index, and a negative z_index on the
 ## wheel instead would sink it below the view's own TextureRect (a sibling of
 ## Hud, not a child of it) and hide it entirely. It turns with the view,
-## under a drop shadow and a small rotating "N" (fix round 1).
+## under a drop shadow and a small rotating "N" (fix round 1). Its gold is the
+## selection ring's (selection_ring.tres); the rest is edited on the node.
+
+## The needle's half-length and half-width, shares of the compass radius.
+@export var reach := 0.62
+@export var width := 0.12
+## Its own drop shadow's opacity, offset (1.5, 2) px, so it sits over the
+## wheel rather than pasted flat on it.
+@export var shadow_alpha := 0.3
 
 var hud: Map3DHud
 
@@ -18,17 +26,16 @@ func _draw() -> void:
 	if r.size.x <= 0.0:
 		return
 	var c := r.get_center()
-	var reach := r.size.x * 0.5 * repo.bal("map3d_compass_needle_reach")
-	var w := r.size.x * 0.5 * repo.bal("map3d_compass_needle_width")
-	var gold := MapPalette.named(repo, "map3d_selection")
+	var reach_px := r.size.x * 0.5 * reach
+	var w := r.size.x * 0.5 * width
+	var gold := Map3DLayerSettlements.selection_gold()
 	var ink := MapTerrain.palette_color(repo, "coast_line", MapTerrain.FALLBACK)
-	var halo := Map3DHud.halo(repo)
+	var halo := hud.halo()
 	if not hud.has_compass_art():
 		draw_arc(c, r.size.x * 0.5 - 2.0, 0.0, TAU, 48, ink, 2.0, true)
 	draw_set_transform(c, Map3DHud.needle_angle(hud.ctx.yaw), Vector2.ONE)
-	var north := PackedVector2Array([Vector2(0, -reach), Vector2(w, 0), Vector2(-w, 0)])
-	var south := PackedVector2Array([Vector2(0, reach), Vector2(w, 0), Vector2(-w, 0)])
-	var shadow_alpha := repo.bal("map3d_compass_needle_shadow_alpha")
+	var north := PackedVector2Array([Vector2(0, -reach_px), Vector2(w, 0), Vector2(-w, 0)])
+	var south := PackedVector2Array([Vector2(0, reach_px), Vector2(w, 0), Vector2(-w, 0)])
 	if shadow_alpha > 0.0:
 		var shadow := Color(0.0, 0.0, 0.0, shadow_alpha)
 		var by := Vector2(1.5, 2.0)
@@ -36,22 +43,22 @@ func _draw() -> void:
 		draw_colored_polygon(_offset_poly(north, by), shadow)
 	draw_colored_polygon(south, Color(ink, 0.85))
 	draw_colored_polygon(north, gold)
-	draw_polyline(PackedVector2Array([Vector2(0, -reach), Vector2(w, 0), Vector2(0, reach),
-		Vector2(-w, 0), Vector2(0, -reach)]), ink, 1.5, true)
-	_draw_north_label(gold, halo, reach)
+	draw_polyline(PackedVector2Array([Vector2(0, -reach_px), Vector2(w, 0), Vector2(0, reach_px),
+		Vector2(-w, 0), Vector2(0, -reach_px)]), ink, 1.5, true)
+	_draw_north_label(gold, halo, reach_px)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## A small "N" just beyond the north tip, in the same rotated frame as the
 ## needle so it turns with it.
-func _draw_north_label(gold: Color, halo: Color, reach: float) -> void:
+func _draw_north_label(gold: Color, halo: Color, reach_px: float) -> void:
 	var font := UiPalette.display_font()
 	if font == null:
 		return
 	var font_px := 10
 	var text := "N"
 	var text_w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x
-	var pos := Vector2(-text_w * 0.5, -reach - 4.0)
+	var pos := Vector2(-text_w * 0.5, -reach_px - 4.0)
 	if halo.a > 0.0:
 		draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, 3, halo)
 	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, gold)

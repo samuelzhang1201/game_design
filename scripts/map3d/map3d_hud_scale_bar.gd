@@ -9,4 +9,4 @@ func _draw() -> void:
 	if not bound():
 		return
 	ScaleBar.draw(self, Map3DHud.scale_bar_for(ctx.metres_per_pixel() * view.map_units_per_metre(),
-		ctx.repo.bal("map_scale_bar_max_px"), view.map_unit()), size, Map3DHud.halo(ctx.repo))
+		ctx.repo.bal("map_scale_bar_max_px"), view.map_unit()), size, (get_parent() as Map3DHud).halo())

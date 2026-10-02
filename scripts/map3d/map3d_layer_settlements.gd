@@ -113,7 +113,7 @@ func build() -> void:
 		add_child(mmi)
 	var sel := QuadMesh.new()
 	sel.size = Vector2.ONE
-	sel.material = _ring_material(MapPalette.named(ctx.repo, "map3d_selection"), 0.0, 0.0,
+	sel.material = _ring_material(selection_gold(), 0.0, 0.0,
 		SELECTED_RING_ALWAYS_M, Map3DPriority.RING_BASE + groups.size(), 0.0, SELECTION_RING_MAT)
 	var smm := MultiMesh.new()
 	smm.transform_format = MultiMesh.TRANSFORM_3D
@@ -215,6 +215,12 @@ func apply_scale() -> void:
 		mat.set_shader_parameter("inner_px", float(mat.get_meta("inner_px", 0.0)) * s)
 		if bool(mat.get_meta("dynamic_min", false)):
 			mat.set_shader_parameter("min_view_m", min_view_m)
+
+
+## The gold of whatever the player clicked: the selection ring's .tres (the
+## compass needle's north wears it too).
+static func selection_gold() -> Color:
+	return SELECTION_RING_MAT.get_shader_parameter("colour") as Color
 
 
 ## Where a ring begins to fade, a share of its tier's max_view_m: the

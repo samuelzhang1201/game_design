@@ -33,7 +33,6 @@ army_bar_ready,#A8483E,"military layer (owner 2026-09-27: 红色是健康度): t
 army_bar_supply,#C4A050,"military layer (owner 2026-09-27: 黄色是战略补给数): the lower bar, its supplies in hand over army_speed_supply_full_months"
 army_bar_track,#17120E,military layer: the dark track the two bars run in (what is missing reads as this)
 manor_mark,#C4CBD2,"manors view: the ink of the farmsteads and chief-good marks every manor carries (data/manor_decor.csv) — one dark ink, since the manors wear their houses' colours"
-map3d_selection,#E8C35A,"3D MAP: the clicked MANOR's solid outline (a clicked province wears its own seam emphasised since 2026-09-27, balance map3d_selection_seam_width_px) — the gold of the UI trim, so it reads as a selection, not a border"
 ruler_ink,#141414,"MEASUREMENT ruler (owner 2026-09-18): the dashed line, ticks, anchors and reading, on both maps"
 ruler_halo,#F3EEDF,"MEASUREMENT ruler: the pale halo under every stroke and the reading, so the ruler reads over snow, sea and grass"
 landmark_high,#2B1D14,"3D MAP HEIGHTS (owner 2026-09-19, spec 2026-09-19-map3d-heights §4): a high point's triangle — dark brown-black"

@@ -2,16 +2,26 @@ class_name Map3DHudHeatLegend
 extends Map3DHudPiece
 ## The HEIGHTS legend, bottom-left of the 3D map's HUD (owner 2026-09-19):
 ## the heat ramp (the ground look's heat_ramp) bottom to top, the tier lines
-## ticked and named with their metres; faint (map3d_heat_legend_yield_alpha)
-## while a MEASUREMENT ruler crosses it.
+## ticked and named with their metres; faint (`yield_alpha`) while a
+## MEASUREMENT ruler crosses it. Its look is edited on the node (owner
+## 2026-10-02).
+
+## The ramp's width and height, design px (bottom-left).
+@export var ramp_w_px := 14.0
+@export var ramp_h_px := 160.0
+## The tier names' size, design px (the landmarks' own).
+@export var font_px := 14
+## Its opacity while a ruler runs through it, so the ruler's reading is never
+## printed over a tier's name (Task 7 look pass, 2026-09-20).
+@export var yield_alpha := 0.25
 
 
 ## The legend's box, bottom-left, in design px (Rect2() off HEIGHTS).
 func rect() -> Rect2:
 	if ctx == null or view == null or not view.heat_on():
 		return Rect2()
-	var w := ctx.repo.bal("map3d_heat_legend_w_px")
-	var h := ctx.repo.bal("map3d_heat_legend_h_px")
+	var w := ramp_w_px
+	var h := ramp_h_px
 	var margin := ctx.repo.bal("map_compass_margin_px")
 	return Rect2(Vector2(margin, ctx.view_size.y - margin - h), Vector2(w, h))
 
@@ -42,7 +52,6 @@ func _area() -> Rect2:
 	if box.size.y <= 0.0:
 		return Rect2()
 	var font := UiPalette.display_font()
-	var font_px := int(ctx.repo.bal("map3d_landmark_font_px"))
 	var w := 0.0
 	for t: Dictionary in ticks():
 		w = maxf(w, font.get_string_size(String(t["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1,
@@ -88,7 +97,7 @@ func _draw() -> void:
 	if box.size.y <= 0.0:
 		return
 	var repo := ctx.repo
-	var fade := Color(1, 1, 1, repo.bal("map3d_heat_legend_yield_alpha")) \
+	var fade := Color(1, 1, 1, yield_alpha) \
 		if yields() else Color.WHITE
 	var x0 := box.position.x
 	var x1 := box.end.x
@@ -101,9 +110,8 @@ func _draw() -> void:
 		draw_polygon(PackedVector2Array([Vector2(x0, y0), Vector2(x1, y0),
 			Vector2(x1, y1), Vector2(x0, y1)]), PackedColorArray([c0, c0, c1, c1]))
 	var font := UiPalette.display_font()
-	var font_px := int(repo.bal("map3d_landmark_font_px"))
 	var ink := MapPalette.named(repo, "landmark_text") * fade
-	var halo := MapTerrain.palette_color(repo, "map3d_hud_halo", MapTerrain.FALLBACK) * fade
+	var halo := Color((get_parent() as Map3DHud).halo_color, 1.0) * fade
 	for t: Dictionary in ticks():
 		var y := float(t["y"])
 		draw_line(Vector2(x0, y), Vector2(x1 + 4.0, y), ink, 1.5)

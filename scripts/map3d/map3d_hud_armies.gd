@@ -1,7 +1,20 @@
 class_name Map3DHudArmies
 extends Map3DHudPiece
 ## MILITARY's counters on the 3D map's HUD (owner 2026-09-19, the 2D map's —
-## ArmyCounters), over the badges and the names.
+## ArmyCounters), over the badges and the names. Its sizes are edited on the
+## node (owner 2026-10-02).
+
+## A counter's height, design px, held between these (owner 2026-09-19:
+## 注意兵棋大小) — it reads far out and never swamps the ground close in.
+@export var badge_min_px := 18.0
+@export var badge_max_px := 30.0
+## The headcount chip over a 3D piece is at most this tall (2026-09-27
+## critic: the chip outranked the soldier — the piece is the counter, the
+## chip only its tag).
+@export var chip_px := 15.0
+## The dashed road a marching regiment still has ahead, design px wide (in
+## the realm's own colour); its end ring is four times it.
+@export var route_px := 2.0
 
 var _drawn := 0
 ## markers()' cut and the pose it was cut for (see there).
@@ -13,14 +26,14 @@ var _bars: Dictionary = {}
 
 ## A counter's height in design px: map_army_badge_native_px of the map at
 ## the scale the target is seen at (as the 2D counter grows with the zoom),
-## held between map3d_army_badge_min_px and map3d_army_badge_max_px so it
+## held between `badge_min_px` and `badge_max_px` so it
 ## reads far out and never swamps the ground close in (owner: 注意兵棋大小).
 func badge_height() -> float:
 	if ctx == null:
 		return 0.0
 	var seen := float(ctx.meta.get("m_per_px", 50.0)) / maxf(ctx.metres_per_pixel(), 0.0001)
 	return clampf(ctx.repo.bal("map_army_badge_native_px") * seen,
-		ctx.repo.bal("map3d_army_badge_min_px"), ctx.repo.bal("map3d_army_badge_max_px"))
+		badge_min_px, badge_max_px)
 
 
 ## The counters of the player's regiments before the camera, in design px,
@@ -55,7 +68,7 @@ func _cut() -> Array:
 	# Where the 3D pieces have their heads: a regiment with a piece hangs its
 	# headcount just over it instead of standing a second counter on its boots.
 	var tops := view.unit_tops()
-	var chip := minf(h, repo.bal("map3d_army_chip_px"))
+	var chip := minf(h, chip_px)
 	var lift := chip * 0.5 + repo.bal("map_army_stack_gap_px")
 	for r: Dictionary in ctx.regiments():
 		var code := String(r["regiment_code"])
@@ -120,7 +133,7 @@ func _draw_routes() -> void:
 	if st == null:
 		return
 	var s := ctx.viewport_px_scale()
-	var w := repo.bal("map3d_unit_route_px")
+	var w := route_px
 	var shown := view.unit_positions()
 	for r: Dictionary in ctx.regiments():
 		var code := String(r["regiment_code"])

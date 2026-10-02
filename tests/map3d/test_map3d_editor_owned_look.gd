@@ -28,7 +28,7 @@ const CODE_OWNED := {
 	"tree_card": ["wind_time", "wind_dir", "sway_m", "sway_hz"],
 	# a ring's colour, sizes and view range are its group's
 	# (map3d_settlements.csv, which the picker reads too); its px are scaled
-	# to the window; the selection's gold is the HUD's selection colour
+	# to the window; the selection ring's gold is its own (the needle's too)
 	"settlement_ring": ["colour", "dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
 		"max_view_m", "min_view_m"],
 	# the clock, the camera and the bake's field map; lift_px scaled
@@ -39,7 +39,7 @@ const CODE_OWNED := {
 		"sway_m_s", "strength", "fall_now", "fall_next", "blend", "pack_origin", "m_per_px", "step_px"],
 	"precip_drop_rain": ["kind", "length_m", "width_m"],
 	"precip_drop_snow": ["kind", "length_m", "width_m"],
-	"selection_ring": ["colour", "dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
+	"selection_ring": ["dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
 		"max_view_m", "min_view_m"],
 }
 ## The river's water that IS the sea's: river parameter -> sea parameter.
@@ -71,7 +71,11 @@ const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3
 	"map3d_weather_dim", "map3d_weather_flat", "map3d_weather_wet_", "map3d_weather_mud_",
 	"map3d_weather_snow_", "map3d_weather_haze", "map3d_weather_roof_snow", "weather_snow\"",
 	"weather_mud\"", "weather_wet\"", "weather_haze\"", "map3d_manor_tint", "map3d_heat_tint",
-	"map3d_furrow_", "map3d_strip_", "map3d_field_fade", "map3d_wood_", "heat_%d"]
+	"map3d_furrow_", "map3d_strip_", "map3d_field_fade", "map3d_wood_", "heat_%d",
+	"map3d_army_badge_", "map3d_army_chip_px", "map3d_compass_needle_", "map3d_hud_halo",
+	"map3d_compass_backdrop", "map3d_landmark_", "map3d_heat_legend_", "map3d_courier_counter_px",
+	"map3d_courier_route_px", "map3d_courier_pending", "map3d_unit_route_px", "map3d_weather_view_m",
+	"map3d_weather_icon_px", "map3d_selection\""]
 
 
 func before_all() -> void:

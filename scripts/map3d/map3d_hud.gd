@@ -9,13 +9,13 @@ extends Control
 ## view. Mouse-transparent; Map3DView routes a click on compass_rect() to
 ## its turn-north. Redrawn on every camera move (Map3DContext.camera_moved).
 ##
-## Fix round 1 (owner 2026-09-18): a pale halo (terrain_palette
-## map3d_hud_halo) under the scale bar's strokes/label and the needle's
+## Fix round 1 (owner 2026-09-18): a pale halo (`halo_color`) under the scale bar's strokes/label and the needle's
 ## shadow/N, so both read over bright ground (snow, sea) that the 2D map
 ## never had to contend with; a soft dark vignette behind the wheel so map
 ## symbols at a busy zoom (24 km) don't tangle with its spokes; a drop
 ## shadow and a small rotating "N" so the needle reads as sitting over the
-## wheel rather than pasted flat on it.
+## wheel rather than pasted flat on it. The HUD's look is edited on its
+## nodes in the inspector (owner 2026-10-02).
 
 ## One child per job (spec 2026-09-20 §1), in PAINT ORDER — a CanvasItem
 ## child draws over its earlier siblings (Ruling 17): the kingdom names, then
@@ -25,6 +25,11 @@ extends Control
 ## binds — never the Game autoload — and draws nothing until bound.
 const PIECES := ["Labels", "Landmarks", "Weather", "HeatLegend", "Badges", "Armies",
 	"Couriers", "Backdrop", "ScaleBar", "Ruler"]
+
+## The pale halo under the scale bar, the needle's shadow, the landmarks and
+## the legend, so they read on snow and sea alike (#F3EEDF); its alpha is the
+## scale bar's and the needle's (0 turns their halo off).
+@export var halo_color := Color(0.9529412, 0.93333334, 0.8745098, 0.7)
 
 var ctx: Map3DContext
 var view: Map3DView
@@ -191,10 +196,6 @@ func compass_rect() -> Rect2:
 	return Rect2(Vector2(m, m), Vector2(d, d)) if d > 0.0 else Rect2()
 
 
-## terrain_palette's pale halo, at map3d_hud_halo_alpha — {} (alpha 0) turns
-## every halo off, including the 2D map's ScaleBar.draw call, which never
-## passes one and so is untouched by this fix.
-static func halo(repo: DataRepository) -> Color:
-	var c := MapTerrain.palette_color(repo, "map3d_hud_halo", MapTerrain.FALLBACK)
-	c.a = repo.bal("map3d_hud_halo_alpha")
-	return c
+## The halo the scale bar and the needle draw under (alpha 0 turns it off).
+func halo() -> Color:
+	return halo_color

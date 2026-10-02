@@ -29,6 +29,10 @@ static func clip_or_fallback(anim: AnimationPlayer, action: String) -> String:
 	return clip
 
 
+## His square counter past the counter scale, and its click box, design px
+## (edited on the node, owner 2026-10-02).
+@export var counter_px := 16.0
+
 var ctx: Map3DContext
 var _pieces: Dictionary = {}
 var _shown_xz: Dictionary = {}
@@ -202,7 +206,7 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 		if _pieces.has(id):
 			(_pieces[id]["node"] as Node3D).visible = false
 		var at: Vector2 = ctx.camera.unproject_position(centre) / s_px
-		var half := repo.bal("map3d_courier_counter_px") * 0.5
+		var half := counter_px * 0.5
 		_rects[id] = {"rect": Rect2(at - Vector2(half, half), Vector2(half, half) * 2.0), "counter": true,
 			"lead": _lead(id, xz), "waiting": _waiting(c, xz), "gone": alpha < 1.0, "alpha": alpha}
 		return

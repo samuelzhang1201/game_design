@@ -106,7 +106,7 @@ func test_far_out_only_the_big_ones_show() -> void:
 	var v := _view()
 	v.set_manor_theme("heights")
 	var top: Dictionary = Elevation.landmarks(Game.data)[0]
-	_frame_on(v, top, Game.data.bal("map3d_landmark_lod_far_view_m") * 1.5)
+	_frame_on(v, top, (v.get_node("Hud/Landmarks") as Map3DHudLandmarks).lod_far_view_m * 1.5)
 	var marks := v.landmark_marks()
 	assert_gt(marks.size(), 0)
 	for mk: Dictionary in marks:
@@ -181,8 +181,9 @@ func test_the_legend_names_the_tier_lines_under_heights() -> void:
 	v.set_manor_theme("heights")
 	var box := v.heat_legend_rect()
 	var m := Game.data.bal("map_compass_margin_px")
-	var h := Game.data.bal("map3d_heat_legend_h_px")
-	assert_eq(box, Rect2(Vector2(m, v.size.y - m - h), Vector2(Game.data.bal("map3d_heat_legend_w_px"), h)),
+	var legend := v.get_node("Hud/HeatLegend") as Map3DHudHeatLegend
+	var h := legend.ramp_h_px
+	assert_eq(box, Rect2(Vector2(m, v.size.y - m - h), Vector2(legend.ramp_w_px, h)),
 		"bottom-left, inside the compass margin")
 	# every supply tier above the sea line (plains is below it), bottom up, named
 	# with its metres at their share of the ramp (0..the land's whole height)

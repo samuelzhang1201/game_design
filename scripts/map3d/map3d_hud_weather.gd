@@ -2,10 +2,15 @@ class_name Map3DHudWeather
 extends Map3DHudPiece
 ## The weather marks (spec 2026-09-27-courier-core §2): each province whose
 ## weather is not clear today shows its weather's icon at its centre — only
-## within map3d_weather_view_m of the camera, inside the view, off the
+## within `view_m` of the camera, inside the view, off the
 ## settlement dots, the regiments' counters and the couriers, and clear of
 ## one another (the first in province order keeps its place). The icon is
 ## resource_icons.csv's art once installed (sub-project D), its glyph till then.
+
+## The marks show only while the camera is nearer than this (world metres).
+@export var view_m := 60000.0
+## A mark's size, design px.
+@export var icon_px := 13.0
 
 ## The settlement dots' rects, cut once per camera pose (~1.5 ms a call).
 var _dots: Array = []
@@ -20,9 +25,9 @@ var _screen_key: Array = []
 
 
 func _draw() -> void:
-	if not bound() or ctx.state() == null or ctx.distance > ctx.repo.bal("map3d_weather_view_m"):
+	if not bound() or ctx.state() == null or ctx.distance > view_m:
 		return
-	var px := ctx.repo.bal("map3d_weather_icon_px")
+	var px := icon_px
 	# Whole inside the view, never cut by its edge (critic 2026-09-28).
 	var inside := Rect2(Vector2.ZERO, size).grow(-px)
 	for m: Dictionary in thin(screen_marks(), px * 1.5, inside, taken(), px):
@@ -92,7 +97,8 @@ func taken() -> Array:
 	if armies != null:
 		for a: Dictionary in armies.markers():
 			out.append(a["rect"])
-		var ring := Map3DHudCouriers.ring_px(ctx.repo) + ctx.repo.bal("map3d_unit_route_px")
+		var couriers := sibling("Couriers") as Map3DHudCouriers
+		var ring := (couriers.ring_px() if couriers != null else 8.0) + armies.route_px
 		for e: Dictionary in armies.route_ends():
 			out.append(Rect2((e["pos"] as Vector2) - Vector2(ring, ring), Vector2(ring, ring) * 2.0))
 	for r: Rect2 in (view.unit_rects() as Dictionary).values():

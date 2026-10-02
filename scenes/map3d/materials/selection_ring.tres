@@ -5,7 +5,7 @@
 [resource]
 render_priority = 10
 shader = ExtResource("1_58680")
-shader_parameter/colour = Color(1, 1, 1, 1)
+shader_parameter/colour = Color(0.9098039, 0.7647059, 0.3529412, 1)
 shader_parameter/keyline = Color(0.08, 0.08, 0.08, 0.95)
 shader_parameter/dot_px = 0.0
 shader_parameter/inner_px = 0.0

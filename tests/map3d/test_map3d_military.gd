@@ -2,7 +2,7 @@ extends GutTest
 ## MILITARY on the 3D map (owner 2026-09-19: "迁移军事地图。注意兵棋大小" /
 ## "点击兵棋可以看到该部队信息"): the player's regiments as the 2D map's
 ## counters (ArmyCounters) on the 3D HUD, sized by the view but held between
-## map3d_army_badge_min_px and map3d_army_badge_max_px so they read at every
+## the Armies piece's badge_min_px and badge_max_px so they read at every
 ## zoom and never swamp the map; a click on one opens the regiment's card.
 
 const RunDir := preload("res://tests/run_dir.gd")
@@ -79,8 +79,9 @@ func test_the_players_regiments_stand_as_counters() -> void:
 func test_a_counters_size_is_held_between_its_bounds() -> void:
 	var v := _view()
 	v.set_military(true)
-	var lo := Game.data.bal("map3d_army_badge_min_px")
-	var hi := Game.data.bal("map3d_army_badge_max_px")
+	var armies := v.get_node("Hud/Armies") as Map3DHudArmies
+	var lo := armies.badge_min_px
+	var hi := armies.badge_max_px
 	for at_m: float in [Game.data.bal("map3d_zoom_min_m"), 20000.0, Game.data.bal("map3d_zoom_max_m")]:
 		_look_at_regiment(v, _first_regiment(), at_m)
 		var h := v.army_badge_height()
