@@ -1,0 +1,22 @@
+[gd_resource type="StyleBox" script_class="PaperStyle" format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/war_table/paper_style.gd" id="1_qmidi"]
+[ext_resource type="Texture2D" path="res://assets/2D/ui/missive_board/letter_aged.png" id="2_18rho"]
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 13.0
+content_margin_top = 13.0
+content_margin_right = 13.0
+content_margin_bottom = 13.0
+script = ExtResource("1_qmidi")
+texture = ExtResource("2_18rho")
+tint = Color(0.8666667, 0.79607844, 0.63529414, 1)
+deckle_px = 4.0
+seed = 11
+shadow_offset = Vector2(2.4, 4)
+shadow_soft = 3.5
+rules = 2
+uv_inset = Vector2(0.075, 0.05)
+lift = Color(0.95686275, 0.91764706, 0.83137256, 0.2509804)

@@ -1,3 +1,4 @@
+@tool
 class_name WaxSeal
 extends Button
 ## THE WAR TABLE's council seal (owner 2026-10-01): ENTER THE COUNCIL, the
@@ -65,12 +66,12 @@ func _init(order: String = "ENTER THE COUNCIL") -> void:
 		_art = load(ART_PATH)
 	resized.connect(_place_tag)
 	pressed.connect(func() -> void:
-		if Game != null and Game.state != null:
+		if not Engine.is_editor_hint() and Game != null and Game.state != null:
 			heard_tick = Game.state.tick)
 	_refit()
 
 func _ready() -> void:
-	if Game != null:
+	if not Engine.is_editor_hint() and Game != null:
 		Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
 		Game.state_changed.connect(refresh)
 	refresh()
@@ -78,7 +79,7 @@ func _ready() -> void:
 ## Who waits: this month's speakers, until the council is entered for them.
 func refresh() -> void:
 	_waiting = []
-	if Game != null and Game.state != null and Game.current_report != null \
+	if not Engine.is_editor_hint() and Game != null and Game.state != null and Game.current_report != null \
 			and heard_tick != Game.state.tick:
 		_waiting = ConversationBeats.waiting(Game.current_report, Game.state, Game.data)
 	var n := _waiting.size()

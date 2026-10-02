@@ -1,19 +1,31 @@
+@tool
 class_name ResourceIcon
 extends Control
 ## A small icon for a resource, a dimension of the realm or a unit type
 ## (user request 2026-09-09: icons instead of words, with a floating
-## tooltip). Since 2026-09-13 (owner) the icon is GAME ART where
-## data/resource_icons.csv names a texture — library I-40 and I-47..I-61,
-## one still-life per dimension, rendered through assets/flux and installed
-## by install_map_art.py ui into assets/2D/icons/resources/ — and the art keeps its
-## colour: it is looked at, not tinted. A key without art falls back to the
-## drawn glyph, simple strokes in the UI's gold. Which art or glyph, and
-## what the tooltip says, are all data in that CSV.
+## tooltip). The icon is GAME ART where the key has some — library I-40 and
+## I-47..I-61, one still-life per dimension, installed by install_map_art.py
+## ui into assets/2D/icons/resources/ — picked per key in the editor in
+## assets/2D/icons/resource_icons.tres (ResourceIconSet; owner 2026-10-02),
+## and the art keeps its colour: it is looked at, not tinted. A key without
+## art falls back to the drawn glyph, simple strokes in the UI's gold. The
+## glyph's name and the tooltip's words are data/resource_icons.csv.
 
 const SIDE := 24.0
 
-var key := ""
-var color: Color = UiPalette.GOLD
+## The resource-icon key: its art from ResourceIconSet (assets/2D/icons/
+## resource_icons.tres), its words from data/resource_icons.csv.
+@export var key := "":
+	set(v):
+		key = v
+		if is_inside_tree():
+			tooltip_text = tooltip_of(key)
+		queue_redraw()
+## The glyph's ink, for a key with no art.
+@export var color: Color = UiPalette.GOLD:
+	set(v):
+		color = v
+		queue_redraw()
 
 static func create(resource_key: String, tint: Color = UiPalette.GOLD) -> ResourceIcon:
 	var icon := ResourceIcon.new()
@@ -21,10 +33,15 @@ static func create(resource_key: String, tint: Color = UiPalette.GOLD) -> Resour
 	icon.color = tint
 	return icon
 
+## The defaults of an icon made in code; a scene's node keeps what the scene
+## says (its properties are set before its script, so _init runs after them).
 func _init() -> void:
-	custom_minimum_size = Vector2(SIDE, SIDE)
-	size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	mouse_filter = Control.MOUSE_FILTER_PASS
+	if custom_minimum_size == Vector2.ZERO:
+		custom_minimum_size = Vector2(SIDE, SIDE)
+	if size_flags_vertical == Control.SIZE_FILL:
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if mouse_filter == Control.MOUSE_FILTER_STOP:
+		mouse_filter = Control.MOUSE_FILTER_PASS
 
 func _ready() -> void:
 	tooltip_text = tooltip_of(key)
@@ -32,19 +49,23 @@ func _ready() -> void:
 
 ## The tooltip a key carries: "Label — what it means", or "" for no row.
 static func tooltip_of(resource_key: String) -> String:
-	var row: Dictionary = Game.data.resource_icons.get(resource_key, {})
+	var row := _row(resource_key)
 	if row.is_empty():
 		return ""
 	return "%s — %s" % [String(row["label"]), String(row["tooltip"])]
 
-## The key's art, or null when the CSV names none (or it is not on disk).
+## The key's art (ResourceIconSet), or null when it has none.
 static func texture_of(resource_key: String) -> Texture2D:
-	var path := String((Game.data.resource_icons.get(resource_key, {}) as Dictionary).get("texture", ""))
-	return UiPalette.load_art(path) if path != "" else null
+	return ResourceIconSet.texture_of(resource_key)
+
+## The key's row of data/resource_icons.csv, or {} (always {} in the editor).
+static func _row(resource_key: String) -> Dictionary:
+	var repo := UiPalette.data()
+	return repo.resource_icons.get(resource_key, {}) if repo != null else {}
 
 ## The glyph name this key draws (data), or the key itself.
 func glyph() -> String:
-	return String((Game.data.resource_icons.get(key, {}) as Dictionary).get("icon", key))
+	return String(_row(key).get("icon", key))
 
 func _draw() -> void:
 	var s := minf(size.x, size.y)
@@ -60,7 +81,7 @@ static func draw_icon(ci: CanvasItem, icon_key: String, c: Vector2, s: float, ti
 	if tex != null:
 		draw_icon_texture(ci, tex, c, s)
 		return
-	var row: Dictionary = Game.data.resource_icons.get(icon_key, {})
+	var row := _row(icon_key)
 	draw_glyph(ci, String(row.get("icon", icon_key)), c, s, tint)
 
 ## The art fitted inside an s x s box centred on c, keeping its aspect.

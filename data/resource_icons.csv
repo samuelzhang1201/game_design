@@ -1,105 +1,105 @@
-key,label,icon,tooltip,texture
-treasury,Crown gold,coin,"Gold in the CROWN's treasury — the realm's, not your house's. The crown's share of the realm's taxes fills it; salaries, the court and your orders empty it; it alone buys land across the border.",res://assets/2D/icons/resources/treasury.png
-grain,Civil goods,grain,"Civil goods, in gold: food, timber, cloth and wares. The harvest and your provinces fill them each month; the court eats from them and building spends them.",res://assets/2D/icons/resources/grain.png
-strategic,Strategic goods,swords,"Strategic goods, in gold: iron, horses, arms and ships. Your provinces fill them each month; the levy and the campaign spend them — the army goes as far as they stretch.",res://assets/2D/icons/resources/manor_strategic.png
-lord_gold,Your gold,coin,"Gold in your OWN house's purse, apart from the crown's treasury. Your own provinces' manors fill it each month; it buys and builds manors inside the realm.",res://assets/2D/icons/resources/treasury.png
-lord_strategic,Your strategic goods,swords,"Strategic goods your own provinces make, yours to spend as their lord.",res://assets/2D/icons/resources/manor_strategic.png
-lord_civil,Your civil goods,grain,"Civil goods your own provinces make — timber, cloth and food for building on your own manors.",res://assets/2D/icons/resources/grain.png
-population,People,people,Everyone in the realm's towns and countryside. Levies are drawn from them.,res://assets/2D/icons/resources/population.png
-army,Host,swords,"The realm's soldiers under arms, by regiment.",res://assets/2D/icons/resources/army.png
-army_quality,Army,swords,How well drilled the levies are. Drills lapse without fresh levies.,res://assets/2D/icons/resources/army_quality.png
-unrest,Unrest,flame,How close the villages are to rioting. Tax pressure and famine raise it.,res://assets/2D/icons/resources/unrest.png
-legitimacy,Legitimacy,crown,How firmly the court believes the crown is yours by right.,res://assets/2D/icons/resources/legitimacy.png
-peasant_contentment,Contentment,sun,The mood of the common folk.,res://assets/2D/icons/resources/peasant_contentment.png
-church_opinion,Church,cross,How the pulpits regard the crown.,res://assets/2D/icons/resources/church_opinion.png
-infantry,Infantry,shield,Foot soldiers: the bulk of any host.,res://assets/2D/icons/resources/infantry.png
-archers,Archers,bow,Bowmen who thin a charge before it lands.,res://assets/2D/icons/resources/archers.png
-cavalry,Cavalry,horseshoe,"Mounted troops: costly, and decisive on open ground.",res://assets/2D/icons/resources/cavalry.png
-artillery,Artillery,cannon,"Siege engines and guns; slow, but walls fear them.",res://assets/2D/icons/resources/artillery.png
-fleet,Fleet,sail,Warships crewed from the coast towns.,res://assets/2D/icons/resources/fleet.png
-walls,Walls,wall,"A walled town: harder to take, and its market is taxed at the gate.",res://assets/2D/icons/resources/manor_defence.png
-citadel,Citadel,tower,A citadel commands the town; a garrison can hold it.,res://assets/2D/icons/resources/citadel.png
-temple,Temple,cross,A temple: the church has a house here.,res://assets/2D/icons/resources/temple.png
-plaza,Market,market,A market square: goods change hands and the town grows.,res://assets/2D/icons/resources/plaza.png
-shanty,Shanty town,huts,A shanty town outside the walls: the poor crowd in.,res://assets/2D/icons/resources/shanty.png
-port,Port,anchor,A harbour: ships and sea trade come and go.,res://assets/2D/icons/resources/port.png
-tag_food,Food,grain,Food goods.,res://assets/2D/icons/resources/tag_food.png
-tag_ore,Ore,pick,Ores and metals.,res://assets/2D/icons/resources/tag_ore.png
-tag_mineral,Mineral,pick,Quarried and mined minerals.,res://assets/2D/icons/resources/tag_mineral.png
-tag_construction,Building,wall,Building materials.,res://assets/2D/icons/resources/tag_construction.png
-tag_luxury,Luxury,gem,Luxuries the wealthy pay for.,res://assets/2D/icons/resources/tag_luxury.png
-tag_military,Arms,swords,Goods of war.,res://assets/2D/icons/resources/tag_military.png
-tag_naval,Naval,sail,Goods for ships.,res://assets/2D/icons/resources/tag_naval.png
-tag_clothing,Cloth,cloth,Cloth and clothing.,res://assets/2D/icons/resources/tag_clothing.png
-tag_fuel,Fuel,flame,Fuel.,res://assets/2D/icons/resources/tag_fuel.png
-tag_currency,Coin,coin,Coin.,res://assets/2D/icons/resources/tag_currency.png
-tag_supply,Supply,horseshoe,Beasts and supplies.,res://assets/2D/icons/resources/tag_supply.png
-tag_preservative,Preserving,market,Salt and what keeps food from spoiling.,res://assets/2D/icons/resources/tag_preservative.png
-tag_ritual,Ritual,cross,Goods for the church and its rites.,res://assets/2D/icons/resources/tag_ritual.png
-tag_storage,Storage,wall,Barrels and what goods are kept in.,res://assets/2D/icons/resources/tag_storage.png
-tag_aquatic,Fishing,anchor,What the waters give.,res://assets/2D/icons/resources/tag_aquatic.png
-tag_educational,Learning,tower,Books and the tools of learning.,res://assets/2D/icons/resources/tag_educational.png
-wealth,Wealth,coin,What the town produces in a season.,res://assets/2D/icons/resources/manor_value.png
-town_treasury,Treasury,coin,Coin in the town's own chest.,res://assets/2D/icons/resources/treasury.png
-crown,The crown,crown,The crown's own — the realm's treasury and stores.,res://assets/2D/icons/resources/legitimacy.png
-clock_pause,Pause,crown,Stop the days.,res://assets/2D/icons/resources/clock_pause.png
-clock_play,Play,sun,Let the days run.,res://assets/2D/icons/resources/clock_play.png
-clock_fast,Faster,horseshoe,Days pass faster.,res://assets/2D/icons/resources/clock_fast.png
-clock_faster,Fastest,horseshoe,Days pass fastest.,res://assets/2D/icons/resources/clock_faster.png
-menu,Menu,crown,"Save, load, restart or quit.",res://assets/2D/icons/resources/menu.png
-towns,Towns,huts,The realm's townsfolk: everyone living inside a burg's walls or streets.,res://assets/2D/icons/resources/towns.png
-country,Country,grain,"The realm's country folk: everyone on the land, in villages and on farms.",res://assets/2D/icons/resources/country.png
-bld_manor_house,Manor house,tower,"A stone hall for the steward: rents in full, a yard that can be held, a lord in residence.",res://assets/2D/icons/buildings/bld_manor_house.png
-bld_mill,Mill,grain,A mill: the manor grinds its own grain and sends flour to the royal granaries.,res://assets/2D/icons/buildings/bld_mill.png
-bld_granary,Granary,huts,A stone granary: the harvest keeps.,res://assets/2D/icons/buildings/bld_granary.png
-bld_chapel,Chapel,cross,A chapel with its own priest: the pulpit speaks well of the crown.,res://assets/2D/icons/buildings/bld_chapel.png
-bld_palisade,Palisade,wall,"A ditch and timber wall: a raid has to work for it, and the villages sleep easier.",res://assets/2D/icons/buildings/bld_palisade.png
-bld_market,Market,market,"A weekly market by charter: tolls, stall rents, and cloth changing hands.",res://assets/2D/icons/buildings/bld_market.png
-manor_owner,Held by,crown,The house that holds the manor.,res://assets/2D/icons/resources/manor_owner.png
-manor_province,Province,tower,The province the manor lies in.,res://assets/2D/icons/resources/manor_province.png
-manor_seat,Seat,huts,The town that stands in the manor.,res://assets/2D/icons/resources/towns.png
-manor_terrain,Terrain,sun,The land the manor stands on.,res://assets/2D/icons/resources/manor_terrain.png
-manor_land,Land,grain,How kindly the ground is to farming.,res://assets/2D/icons/resources/country.png
-manor_area,Area,cloth,How much land the manor covers.,res://assets/2D/icons/resources/manor_area.png
-manor_people,People,people,"Everyone living on the manor, its town included.",res://assets/2D/icons/resources/population.png
-manor_tax,Tax,coin,"The gold the manor pays a month, its town's tariff included.",res://assets/2D/icons/resources/treasury.png
-manor_strategic,Strategic goods,swords,What the manor's strategic goods are worth a month.,res://assets/2D/icons/resources/manor_strategic.png
-manor_civil,Civil goods,grain,What the manor's civil goods are worth a month.,res://assets/2D/icons/resources/grain.png
-manor_focus,Chief good,pick,The good the manor works at.,res://assets/2D/icons/resources/manor_focus.png
-manor_estate,Estate,huts,The size of the estate for its industry.,res://assets/2D/icons/resources/manor_estate.png
-manor_defence,Defence,wall,How hard the manor is to take.,res://assets/2D/icons/resources/manor_defence.png
-manor_slots,Building slots,market,Room for buildings: taken of the whole.,res://assets/2D/icons/resources/manor_slots.png
-manor_value,Value,gem,What the manor is worth before anyone's feelings.,res://assets/2D/icons/resources/manor_value.png
-manor_price,Price,coin,"What the manor would cost to buy, or bring to sell.",res://assets/2D/icons/resources/manor_price.png
-bld_fishing_quay,Fishing quay,anchor,a jetty and boats: only on the coast,res://assets/2D/icons/buildings/bld_fishing_quay.png
-bld_saltworks,Saltworks,market,pans and a boiling house: on the coast or the dry salt flats,res://assets/2D/icons/buildings/bld_saltworks.png
-bld_sawmill,Sawmill,huts,a saw-pit and timber sheds: only where there is forest to cut,res://assets/2D/icons/buildings/bld_sawmill.png
-bld_stonecutter,Stonecutter,pick,a masons' lodge and a crane: on high ground or at a quarry,res://assets/2D/icons/buildings/bld_stonecutter.png
-bld_mine_shaft,Mine shaft,pick,a timbered adit and headframe: in the hills or where iron is already worked,res://assets/2D/icons/buildings/bld_mine_shaft.png
-bld_apiary,Apiary,sun,a bee yard among flowers and orchards,res://assets/2D/icons/buildings/bld_apiary.png
-bld_winepress,Winepress,market,a press house and cellar: only where vines grow,res://assets/2D/icons/buildings/bld_winepress.png
-bld_tannery,Tannery,cloth,hides into leather: only where herds or trappers bring the hides,res://assets/2D/icons/buildings/bld_tannery.png
-bld_loom,Loom house,cloth,"weavers at their looms: where the sheep are, or in a town",res://assets/2D/icons/buildings/bld_loom.png
-bld_smithy,Smithy,flame,a forge by the mine: iron into tools,res://assets/2D/icons/buildings/bld_smithy.png
-bld_brewery,Brewery,huts,malt from the mill into ale: the villages are merrier,res://assets/2D/icons/buildings/bld_brewery.png
-bld_shipwright,Shipwright,sail,a slipway beside the quay: boats and small ships,res://assets/2D/icons/buildings/bld_shipwright.png
-bld_abbey,Abbey,cross,"monks and a scriptorium where the chapel stood: the church warms, and books are copied",res://assets/2D/icons/buildings/bld_abbey.png
-bld_castle,Castle,tower,"a stone keep behind the palisade, the lord's hall within: very hard to take, and the land is quiet",res://assets/2D/icons/buildings/bld_castle.png
-bld_harbour,Harbour,anchor,a stone quay where the market meets the boats: harbour dues and a larger catch,res://assets/2D/icons/buildings/bld_harbour.png
-bld_armoury,Armoury,swords,"a store of arms beside the smithy: weapons for the levy, and a harder yard",res://assets/2D/icons/buildings/bld_armoury.png
-army_terrain,Terrain,tower,"The ground the regiment is quartered on, and whether walls shelter it.",
-army_height,Height,tower,"The height the regiment stands at and how much faster it uses supplies there; in a fight the higher side gains (owner 2026-09-19).",
-army_morale,Morale,flame,"The regiment's spirit, 0 to 100.",
-army_wounded,Wound recovery,cross,The wounded who return to the ranks each month.,
-army_supply,Supplies,grain,The supplies the regiment holds and what it uses each month.,
-army_training,Training,shield,"How well drilled the regiment is.",
-army_strength,Strength,swords,"How the regiment measures against the realm's others of its kind.",
-army_march,March,horseshoe,"How far the regiment marches in a day: its slowest arm's pace, slowed by short supplies, low morale and little training (owner 2026-09-19).",
-weather_clear,Clear,sun,"Clear weather: roads at their pace",
-weather_rain,Rain,drop,"Rain: marches and couriers slowed (data/weather.csv)",
-weather_mud,Mud,cloud,"Mud: the roads of spring and autumn, slow going",
-weather_snow,Snow,flake,"Snow: slow going on every road",
-weather_blizzard,Blizzard,flake,"Blizzard: little moves",
-army_weather,Weather,cloud,"The weather where the regiment stands today: it slows the march (data/weather.csv), and the base pace beside it is the clear-weather pace (spec 2026-09-27-courier-core).",
-army_supply_line,Supply line,tower,"The road the regiment's supplies travel from the capital and the share they lose on the way; a garrison in the crown's own province draws on its town (spec 2026-09-30-ledger-supply-design).",
-bld_war_workshop,War workshop,flame,"Turns the lord's civil goods into strategic goods each month, as its rate allows.",
+key,label,icon,tooltip
+treasury,Crown gold,coin,"Gold in the CROWN's treasury — the realm's, not your house's. The crown's share of the realm's taxes fills it; salaries, the court and your orders empty it; it alone buys land across the border."
+grain,Civil goods,grain,"Civil goods, in gold: food, timber, cloth and wares. The harvest and your provinces fill them each month; the court eats from them and building spends them."
+strategic,Strategic goods,swords,"Strategic goods, in gold: iron, horses, arms and ships. Your provinces fill them each month; the levy and the campaign spend them — the army goes as far as they stretch."
+lord_gold,Your gold,coin,"Gold in your OWN house's purse, apart from the crown's treasury. Your own provinces' manors fill it each month; it buys and builds manors inside the realm."
+lord_strategic,Your strategic goods,swords,"Strategic goods your own provinces make, yours to spend as their lord."
+lord_civil,Your civil goods,grain,"Civil goods your own provinces make — timber, cloth and food for building on your own manors."
+population,People,people,Everyone in the realm's towns and countryside. Levies are drawn from them.
+army,Host,swords,"The realm's soldiers under arms, by regiment."
+army_quality,Army,swords,How well drilled the levies are. Drills lapse without fresh levies.
+unrest,Unrest,flame,How close the villages are to rioting. Tax pressure and famine raise it.
+legitimacy,Legitimacy,crown,How firmly the court believes the crown is yours by right.
+peasant_contentment,Contentment,sun,The mood of the common folk.
+church_opinion,Church,cross,How the pulpits regard the crown.
+infantry,Infantry,shield,Foot soldiers: the bulk of any host.
+archers,Archers,bow,Bowmen who thin a charge before it lands.
+cavalry,Cavalry,horseshoe,"Mounted troops: costly, and decisive on open ground."
+artillery,Artillery,cannon,"Siege engines and guns; slow, but walls fear them."
+fleet,Fleet,sail,Warships crewed from the coast towns.
+walls,Walls,wall,"A walled town: harder to take, and its market is taxed at the gate."
+citadel,Citadel,tower,A citadel commands the town; a garrison can hold it.
+temple,Temple,cross,A temple: the church has a house here.
+plaza,Market,market,A market square: goods change hands and the town grows.
+shanty,Shanty town,huts,A shanty town outside the walls: the poor crowd in.
+port,Port,anchor,A harbour: ships and sea trade come and go.
+tag_food,Food,grain,Food goods.
+tag_ore,Ore,pick,Ores and metals.
+tag_mineral,Mineral,pick,Quarried and mined minerals.
+tag_construction,Building,wall,Building materials.
+tag_luxury,Luxury,gem,Luxuries the wealthy pay for.
+tag_military,Arms,swords,Goods of war.
+tag_naval,Naval,sail,Goods for ships.
+tag_clothing,Cloth,cloth,Cloth and clothing.
+tag_fuel,Fuel,flame,Fuel.
+tag_currency,Coin,coin,Coin.
+tag_supply,Supply,horseshoe,Beasts and supplies.
+tag_preservative,Preserving,market,Salt and what keeps food from spoiling.
+tag_ritual,Ritual,cross,Goods for the church and its rites.
+tag_storage,Storage,wall,Barrels and what goods are kept in.
+tag_aquatic,Fishing,anchor,What the waters give.
+tag_educational,Learning,tower,Books and the tools of learning.
+wealth,Wealth,coin,What the town produces in a season.
+town_treasury,Treasury,coin,Coin in the town's own chest.
+crown,The crown,crown,The crown's own — the realm's treasury and stores.
+clock_pause,Pause,crown,Stop the days.
+clock_play,Play,sun,Let the days run.
+clock_fast,Faster,horseshoe,Days pass faster.
+clock_faster,Fastest,horseshoe,Days pass fastest.
+menu,Menu,crown,"Save, load, restart or quit."
+towns,Towns,huts,The realm's townsfolk: everyone living inside a burg's walls or streets.
+country,Country,grain,"The realm's country folk: everyone on the land, in villages and on farms."
+bld_manor_house,Manor house,tower,"A stone hall for the steward: rents in full, a yard that can be held, a lord in residence."
+bld_mill,Mill,grain,A mill: the manor grinds its own grain and sends flour to the royal granaries.
+bld_granary,Granary,huts,A stone granary: the harvest keeps.
+bld_chapel,Chapel,cross,A chapel with its own priest: the pulpit speaks well of the crown.
+bld_palisade,Palisade,wall,"A ditch and timber wall: a raid has to work for it, and the villages sleep easier."
+bld_market,Market,market,"A weekly market by charter: tolls, stall rents, and cloth changing hands."
+manor_owner,Held by,crown,The house that holds the manor.
+manor_province,Province,tower,The province the manor lies in.
+manor_seat,Seat,huts,The town that stands in the manor.
+manor_terrain,Terrain,sun,The land the manor stands on.
+manor_land,Land,grain,How kindly the ground is to farming.
+manor_area,Area,cloth,How much land the manor covers.
+manor_people,People,people,"Everyone living on the manor, its town included."
+manor_tax,Tax,coin,"The gold the manor pays a month, its town's tariff included."
+manor_strategic,Strategic goods,swords,What the manor's strategic goods are worth a month.
+manor_civil,Civil goods,grain,What the manor's civil goods are worth a month.
+manor_focus,Chief good,pick,The good the manor works at.
+manor_estate,Estate,huts,The size of the estate for its industry.
+manor_defence,Defence,wall,How hard the manor is to take.
+manor_slots,Building slots,market,Room for buildings: taken of the whole.
+manor_value,Value,gem,What the manor is worth before anyone's feelings.
+manor_price,Price,coin,"What the manor would cost to buy, or bring to sell."
+bld_fishing_quay,Fishing quay,anchor,a jetty and boats: only on the coast
+bld_saltworks,Saltworks,market,pans and a boiling house: on the coast or the dry salt flats
+bld_sawmill,Sawmill,huts,a saw-pit and timber sheds: only where there is forest to cut
+bld_stonecutter,Stonecutter,pick,a masons' lodge and a crane: on high ground or at a quarry
+bld_mine_shaft,Mine shaft,pick,a timbered adit and headframe: in the hills or where iron is already worked
+bld_apiary,Apiary,sun,a bee yard among flowers and orchards
+bld_winepress,Winepress,market,a press house and cellar: only where vines grow
+bld_tannery,Tannery,cloth,hides into leather: only where herds or trappers bring the hides
+bld_loom,Loom house,cloth,"weavers at their looms: where the sheep are, or in a town"
+bld_smithy,Smithy,flame,a forge by the mine: iron into tools
+bld_brewery,Brewery,huts,malt from the mill into ale: the villages are merrier
+bld_shipwright,Shipwright,sail,a slipway beside the quay: boats and small ships
+bld_abbey,Abbey,cross,"monks and a scriptorium where the chapel stood: the church warms, and books are copied"
+bld_castle,Castle,tower,"a stone keep behind the palisade, the lord's hall within: very hard to take, and the land is quiet"
+bld_harbour,Harbour,anchor,a stone quay where the market meets the boats: harbour dues and a larger catch
+bld_armoury,Armoury,swords,"a store of arms beside the smithy: weapons for the levy, and a harder yard"
+army_terrain,Terrain,tower,"The ground the regiment is quartered on, and whether walls shelter it."
+army_height,Height,tower,The height the regiment stands at and how much faster it uses supplies there; in a fight the higher side gains (owner 2026-09-19).
+army_morale,Morale,flame,"The regiment's spirit, 0 to 100."
+army_wounded,Wound recovery,cross,The wounded who return to the ranks each month.
+army_supply,Supplies,grain,The supplies the regiment holds and what it uses each month.
+army_training,Training,shield,How well drilled the regiment is.
+army_strength,Strength,swords,How the regiment measures against the realm's others of its kind.
+army_march,March,horseshoe,"How far the regiment marches in a day: its slowest arm's pace, slowed by short supplies, low morale and little training (owner 2026-09-19)."
+weather_clear,Clear,sun,Clear weather: roads at their pace
+weather_rain,Rain,drop,Rain: marches and couriers slowed (data/weather.csv)
+weather_mud,Mud,cloud,"Mud: the roads of spring and autumn, slow going"
+weather_snow,Snow,flake,Snow: slow going on every road
+weather_blizzard,Blizzard,flake,Blizzard: little moves
+army_weather,Weather,cloud,"The weather where the regiment stands today: it slows the march (data/weather.csv), and the base pace beside it is the clear-weather pace (spec 2026-09-27-courier-core)."
+army_supply_line,Supply line,tower,The road the regiment's supplies travel from the capital and the share they lose on the way; a garrison in the crown's own province draws on its town (spec 2026-09-30-ledger-supply-design).
+bld_war_workshop,War workshop,flame,"Turns the lord's civil goods into strategic goods each month, as its rate allows."

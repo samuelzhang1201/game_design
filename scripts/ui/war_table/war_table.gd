@@ -163,6 +163,7 @@ static func paper_theme() -> Theme:
 	return t
 
 static func _num(key: String, fallback: float) -> float:
-	if Game != null and Game.data != null and Game.data.balance.has(key):
-		return Game.data.bal(key)
+	var repo := UiPalette.data()
+	if repo != null and repo.balance.has(key):
+		return repo.bal(key)
 	return fallback

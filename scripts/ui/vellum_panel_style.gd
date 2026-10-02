@@ -1,3 +1,4 @@
+@tool
 class_name VellumPanelStyle
 extends StyleBox
 ## A nine-slice whose SOURCE inset and DRAWN inset are separate numbers.
@@ -15,35 +16,35 @@ extends StyleBox
 ## px, downsampled, crisp — and the hand-drawn ornament survives, which is
 ## what drawing the border in code would have cost.
 
-var texture: Texture2D = null
+@export var texture: Texture2D = null
 ## How much of the plate is corner, in TEXTURE px.
-var source_inset := 75.0
+@export var source_inset := 75.0
 ## How much of the drawn box is corner, in DESIGN px.
-var draw_inset := 20.0
+@export var draw_inset := 20.0
 ## Drawn first, under the plate (owner 2026-09-14): the bright card, when the
 ## plate is the ornament alone — its rules and corner flourishes on a clear
 ## ground — rather than the whole vellum sheet. null draws the plate only.
-var base: StyleBox = null
+@export var base: StyleBox = null
 ## The plate's ink (owner 2026-09-15): the ornament is dark lines on clear,
 ## which disappear on the dark theme's card, so it is drawn multiplied by this.
 ## White draws the art as it is.
-var tint := Color.WHITE
+@export var tint := Color.WHITE
 ## The card's material (owner 2026-09-28, after the UI critique: the flat
 ## card read cheap): a seamless grain tiled over the body at `grain_px` design
 ## px a texel and `grain_alpha`, a light-to-dark shade from top to bottom, and
 ## an inner hairline `inner_inset` in from the edge. All zero draws nothing.
-var grain: Texture2D = null
+@export var grain: Texture2D = null
 ## The grain's dark half (UiPalette.panel_grain), drawn the same way.
-var grain_dark: Texture2D = null
-var grain_px := 1.0
-var grain_alpha := 0.0
-var shade_top := 0.0
-var shade_bottom := 0.0
-var inner_rule := Color(0, 0, 0, 0)
+@export var grain_dark: Texture2D = null
+@export var grain_px := 1.0
+@export var grain_alpha := 0.0
+@export var shade_top := 0.0
+@export var shade_bottom := 0.0
+@export var inner_rule := Color(0, 0, 0, 0)
 ## The light that the grain's bright half and the top shade are laid in: warm
 ## parchment, so the leather stays brown (white laid over it greyed it).
-var light := Color(1.0, 0.88, 0.68)
-var inner_inset := 4.0
+@export var light := Color(1.0, 0.88, 0.68)
+@export var inner_inset := 4.0
 
 
 func _draw(to_canvas_item: RID, rect: Rect2) -> void:

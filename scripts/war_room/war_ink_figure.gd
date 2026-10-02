@@ -126,10 +126,10 @@ func _drop_model() -> void:
 
 
 func _show_glyph(repo: DataRepository, arm: String) -> void:
-	var path := String((repo.resource_icons.get(arm, {}) as Dictionary).get("texture", ""))
+	var art := ResourceIconSet.texture_of(arm)
 	var tex: Texture2D = null
-	if path != "" and ResourceLoader.exists(path):
-		tex = WarInkIcon.inked(load(path) as Texture2D, repo.war_palette["ink"], repo.bal("war_ink_icon_light_keep"))
+	if art != null:
+		tex = WarInkIcon.inked(art, repo.war_palette["ink"], repo.bal("war_ink_icon_light_keep"))
 	_glyph.custom_minimum_size = Vector2.ONE * repo.bal("war_figure_glyph_px")
 	_glyph.texture = tex
 	_glyph.visible = tex != null

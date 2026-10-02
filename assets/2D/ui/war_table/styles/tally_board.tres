@@ -1,0 +1,16 @@
+[gd_resource type="StyleBox" script_class="BoardStyle" format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/war_table/board_style.gd" id="1_3l7qs"]
+[ext_resource type="Texture2D" path="res://assets/2D/ui/war_table/table_oak.jpg" id="2_a331u"]
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 26.0
+content_margin_top = 6.0
+content_margin_right = 26.0
+content_margin_bottom = 6.0
+script = ExtResource("1_3l7qs")
+texture = ExtResource("2_a331u")
+shadow_offset = Vector2(3.6000001, 6)
+nail_px = 9.0

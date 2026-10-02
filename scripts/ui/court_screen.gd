@@ -47,17 +47,19 @@ var _map3d: Map3DView
 var _map3d_theme := ""
 var _map3d_military := false
 
-## Static structure and layout live in scenes/court.tscn (editable in the
-## editor); _ready fetches nodes, paints them from UiPalette, and wires
-## signals; log lines and suggestion buttons are spawned at runtime below.
-## The TopBar instance wires itself to Game's signals.
+## The screen's look lives in scenes/court.tscn and is edited in the editor
+## (owner 2026-10-02): THE WAR TABLE's oak (%Table), the map's vellum sheet,
+## the steward's report, the compass on the table, the council's wax seal,
+## the council column's leather. _ready fetches the nodes and wires signals;
+## log lines and suggestion buttons are spawned at runtime below. Under
+## balance ui_war_table 0 it puts the 2026-09-28 leather on instead
+## (_dress_leather). The TopBar instance wires itself to Game's signals.
 func _ready() -> void:
-	%Bg.color = UiPalette.BG_SCREEN
-	%MapPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "map"))
-	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
+	if UiPalette.war_table():
+		_handle = %CouncilHandle
+	else:
+		_dress_leather()
 	_handle.pressed.connect(enter_council)
-	add_child(_handle)
 	UiPalette.command_button(%LeaveButton, 14)
 	%LeaveButton.pressed.connect(leave_council)
 	# Hovering a country swaps the left column to its card and back again
@@ -96,15 +98,12 @@ func _ready() -> void:
 		_detail.show_card({})
 		set_military_view(true))
 	_military.closed.connect(func() -> void: set_military_view(false))
-	%LogPanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
-	%SidePanel.add_theme_stylebox_override("panel",
-		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
-	# THE WAR TABLE (owner 2026-10-01): oak behind, the map a vellum sheet,
-	# the left column the steward's report; nothing when balance ui_war_table is 0.
-	if WarTable.dress_screen(self, %Bg, %MapPanel, %LogPanel):
+	if UiPalette.war_table():
+		# the report writes in paper ink and is drawn only as tall as the
+		# realm's card; the compass turns the map north
+		WarTable.ink_column(%LogPanel)
 		WarTable.fit_report(%LogPanel, _dashboard)
-		WarTable.place_compass(self, %LogPanel, _map3d)
+		%TableCompass.view = _map3d
 	UiPalette.style_header(%LogHeader, 14)
 	UiPalette.style_header(%SideHeader, 14)
 	_log_scroll = %LogScroll
@@ -115,6 +114,24 @@ func _ready() -> void:
 	free_text.text_submitted.connect(_on_free_text_submitted)
 	_set_right("")
 	_refresh_left()
+
+## The leather chrome (balance ui_war_table 0): no table, no compass, no seal;
+## the map, the column and the council in the 2026-09-28 dark leather, and
+## ENTER THE COUNCIL the screen's primary button.
+func _dress_leather() -> void:
+	%Bg.color = UiPalette.BG_SCREEN
+	%Bg.z_index = 0
+	%Table.queue_free()
+	%TableCompass.queue_free()
+	%CouncilHandle.queue_free()
+	%MapPanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "map"))
+	%LogPanel.add_theme_stylebox_override("panel",
+		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
+	%LogPanel.theme = null
+	%LogPanel.remove_meta("paper_ground")
+	_handle = ScreenLayout.make_handle("ENTER THE COUNCIL")
+	add_child(_handle)
 
 ## What holds the right slot: "" (nothing) or "council". The detail card
 ## lives in the left column, so it never competes for this (owner ruling

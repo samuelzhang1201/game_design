@@ -31,9 +31,6 @@ const MONTHLY := {
 	"lord_gold": ["lord", "tax"], "lord_strategic": ["lord", "strategic"],
 	"lord_civil": ["lord", "civil"],
 }
-const VALUE_PX := 15
-const CHANGE_PX := 12
-const ICON_PX := 20.0
 ## The clock's and MENU's height: one purse row, never the whole strip.
 const BUTTON_H := 26.0
 
@@ -45,146 +42,69 @@ var _cells: Dictionary = {}
 var _monthly: Dictionary = {}
 ## speed -> its clock button (0 pause, 1 play, 2x, 4x).
 var _clock_buttons: Dictionary = {}
-var _crown_mark: Control
-var _lord_crest: HeraldicShield
-var _date_arms: HeraldicShield
-## The lord's row's name (the crown's family), when the rows are named.
-var _house_name: Label
-## THE WAR TABLE's brass date dial (null on leather).
-var _dial: BrassDial
 
+## The bar is laid out in scenes/top_bar.tscn (owner 2026-10-02: the look is
+## edited in the editor) — the brass dial, the four studs, the tally board
+## with its two named rows of pools, Menu — dressed for THE WAR TABLE. This
+## only finds its nodes, wires them and fills them; under ui_war_table 0 it
+## puts the 2026-09-28 leather on them instead (_dress_leather).
 func _ready() -> void:
-	%Bar.add_theme_stylebox_override("panel",
-		UiPalette.clear_ornament(UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 8, "column")))
-	UiPalette.style_header(%DateLabel, 16)
-	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
-	UiPalette.style_header(%EventChip, 14)
-	UiPalette.compact_button(%MenuButton, BUTTON_H, 14, 10.0)
-	UiPalette.command_button(%MenuButton)
-	_art_button(%MenuButton, "menu", true)
-	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
-	# The clock (owner 2026-09-13): pause, play, 2x, 4x beside the date.
-	# The bar is one of several (each screen has its own), so the buttons
-	# only ask Game and follow its answer.
-	var clock := HBoxContainer.new()
-	clock.name = "Clock"
-	clock.add_theme_constant_override("separation", 3)
-	clock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var speeds := [["||", 0, "Pause", "clock_pause"],
-		[">", 1, "Play: a day every %.1f s" % Game.data.bal("time_day_seconds"), "clock_play"],
-		["%dx" % int(Game.data.bal("time_speed_fast")), int(Game.data.bal("time_speed_fast")), "Faster", "clock_fast"],
-		["%dx" % int(Game.data.bal("time_speed_faster")), int(Game.data.bal("time_speed_faster")), "Fastest", "clock_faster"]]
-	for spec: Array in speeds:
-		var b := Button.new()
-		b.name = "Clock_%d" % int(spec[1])
-		b.text = String(spec[0])
-		b.tooltip_text = String(spec[2])
-		b.toggle_mode = true
-		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(32, 0)
-		UiPalette.compact_button(b, BUTTON_H, 13)
-		# Painted art when installed (owner 2026-09-15: no code-drawn marks
-		# in the bar), the glyph text otherwise.
-		_art_button(b, String(spec[3]))
-		var speed: int = spec[1]
-		b.pressed.connect(func() -> void: Game.set_clock_speed(speed))
-		clock.add_child(b)
+	for m: String in ORDER + LORD:
+		var cell := %Purses.get_node("Cell_" + m) as HBoxContainer
+		_cells[m] = cell
+		_icons[m] = cell.get_node("Icon_" + m)
+		_value_labels[m] = cell.get_node("Value")
+		_delta_labels[m] = cell.get_node("Change")
+	for b: Button in %Clock.get_children():
+		var speed := int(String(b.name).trim_prefix("Clock_"))
 		_clock_buttons[speed] = b
-	%DateLabel.add_sibling(clock)
+		b.pressed.connect(func() -> void: Game.set_clock_speed(speed))
+	%MenuButton.pressed.connect(func() -> void: Game.menu_requested.emit())
+	(_clock_buttons[1] as Button).tooltip_text = "Play: a day every %.1f s" % Game.data.bal("time_day_seconds")
+	if not UiPalette.war_table():
+		_dress_leather()
 	Game.clock_changed.connect(func(_s: int) -> void: _refresh_clock())
 	Game.clock_held_changed.connect(func(_h: bool) -> void: _refresh_clock())
 	_refresh_clock()
-	_date_arms = HeraldicShield.new()
-	_date_arms.name = "DateArms"
-	_date_arms.custom_minimum_size = Vector2(ICON_PX * 0.85, ICON_PX)
-	_date_arms.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	%DateLabel.add_sibling(_date_arms)
-	%DateLabel.get_parent().move_child(_date_arms, %DateLabel.get_index())
-	# The purses: one grid, the crown's row over the lord's.
-	# The crown's mark is the painted crown (resource_icons.csv `crown`), the
-	# gold glyph only while the art is missing.
-	_crown_mark = ResourceIcon.create("crown")
-	_crown_mark.name = "CrownMark"
-	_crown_mark.custom_minimum_size = Vector2(ICON_PX, ICON_PX)
-	%Purses.add_child(_crown_mark)
-	_crown_mark.tooltip_text = "The crown's — the realm's treasury and stores, which pay the court and buy land across the border"
-	_wrap_mark(_crown_mark, "CrownName", "Crown", _crown_mark.tooltip_text)
-	for m: String in ORDER:
-		%Purses.add_child(_cell(m))
-	_lord_crest = HeraldicShield.new()
-	_lord_crest.name = "LordCrest"
-	_lord_crest.custom_minimum_size = Vector2(ICON_PX * 0.85, ICON_PX)
-	_lord_crest.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_lord_crest.mouse_filter = Control.MOUSE_FILTER_PASS
-	_lord_crest.tooltip_text = "Your house's own — what your provinces pay you as their lord, yours to spend: it buys and builds manors inside the realm"
-	%Purses.add_child(_lord_crest)
-	_house_name = _wrap_mark(_lord_crest, "HouseName", "", _lord_crest.tooltip_text)
-	for m: String in LORD:
-		var lord_cell := _cell(m)
-		# The pools' art once, over each column (owner 2026-09-28, second
-		# critique): the house's row keeps the room, so its figures stay
-		# under the crown's, and its tooltips.
-		if Game.data.bal("ui_purse_icons_once") > 0.0:
-			(_icons[m] as Control).modulate.a = 0.0
-		%Purses.add_child(lord_cell)
 	Game.state_changed.connect(refresh)
 	Game.report_ready.connect(func(_r: TickReport) -> void: refresh())
-	if UiPalette.war_table():
-		_dress_war_table()
 	refresh()
 	# The bar is exactly as tall as its content, so the columns below can
 	# start under it instead of guessing (user report 2026-09-09: the left
 	# column overlapped the header).
 	offset_bottom = bar_height()
 
-## THE WAR TABLE (owner 2026-10-01): no bar — the date a brass dial with the
-## season and year written beside it on the wood, the clock four brass studs,
-## the purses on a dark oak tally board, Menu plain words on the table.
-func _dress_war_table() -> void:
-	var clear := StyleBoxEmpty.new()
-	clear.content_margin_left = 12
-	clear.content_margin_right = 12
-	clear.content_margin_top = 6
-	clear.content_margin_bottom = 4
-	%Bar.add_theme_stylebox_override("panel", clear)
-	var ink := UiPalette.table_color("table_ink", UiPalette.TEXT_SOFT)
-	_dial = BrassDial.new()
-	%DateLabel.add_sibling(_dial)
-	%DateLabel.get_parent().move_child(_dial, %DateLabel.get_index())
-	_date_arms.visible = false
-	UiPalette.style_header(%DateLabel, 18, ink)
-	%DateLabel.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
-	%DateLabel.add_theme_constant_override("shadow_offset_y", 1)
-	var stud := WarTable._num("ui_stud_px", 20.0)
-	for b: Button in _clock_buttons.values():
-		b.add_theme_stylebox_override("normal", BrassStyle.make(false, false))
-		b.add_theme_stylebox_override("hover", BrassStyle.make(false, true))
-		b.add_theme_stylebox_override("pressed", BrassStyle.make(true, false))
-		b.add_theme_stylebox_override("hover_pressed", BrassStyle.make(true, true))
-		b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-		b.custom_minimum_size = Vector2(stud + 6.0, stud + 6.0)
-		# an engraved mark reads at 20 px where the painted art did not
-		b.icon = null
-		b.text = String({0: "||", 1: "›", 2: "»", 4: "»»"}.get(_clock_buttons.find_key(b), b.text))
-		b.add_theme_font_size_override("font_size", 13)
-		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
-			b.add_theme_color_override(state, UiPalette.table_color("ink", Color("2b1f15")))
-	var board := PanelContainer.new()
-	board.name = "TallyBoard"
-	board.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	board.add_theme_stylebox_override("panel", BoardStyle.make(26.0, 6.0))
-	var purses: Control = %Purses
-	var row := purses.get_parent()
-	var at := purses.get_index()
-	row.add_child(board)
-	row.move_child(board, at)
-	purses.reparent(board)
-	purses.owner = self  # %Purses stays reachable by its unique name
-	var flat := StyleBoxEmpty.new()
-	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
-		%MenuButton.add_theme_stylebox_override(state, flat)
-	%MenuButton.add_theme_color_override("font_color", ink)
-	%MenuButton.add_theme_color_override("font_hover_color", UiPalette.table_color("brass_light", ink))
+## The leather chrome (balance ui_war_table 0): the 2026-09-28 bar — a leather
+## strip, the arms beside the date, the clock and Menu as dark chips wearing
+## their painted art, the purses with no board under them.
+func _dress_leather() -> void:
+	%Bar.add_theme_stylebox_override("panel", load("res://assets/2D/ui/panels/styles/leather_bar.tres"))
+	%DateDial.visible = false
+	for key in ["font_color", "font_shadow_color"]:
+		%DateLabel.remove_theme_color_override(key)
+	%DateLabel.remove_theme_constant_override("shadow_offset_y")
+	%DateLabel.add_theme_font_size_override("font_size", 16)
+	%EventChip.add_theme_stylebox_override("normal", UiPalette.chip_style())
+	var arts := {0: ["||", "clock_pause"], 1: [">", "clock_play"],
+		2: ["%dx" % int(Game.data.bal("time_speed_fast")), "clock_fast"],
+		4: ["%dx" % int(Game.data.bal("time_speed_faster")), "clock_faster"]}
+	for speed: int in _clock_buttons:
+		var b: Button = _clock_buttons[speed]
+		for key in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+			b.remove_theme_color_override(key)
+		b.custom_minimum_size = Vector2(32, 0)
+		b.text = String(arts[speed][0])
+		UiPalette.compact_button(b, BUTTON_H, 13)
+		_art_button(b, String(arts[speed][1]))
+	%TallyBoard.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	var menu: Button = %MenuButton
+	for key in ["font_color", "font_hover_color"]:
+		menu.remove_theme_color_override(key)
+	menu.icon = null
+	menu.text = "MENU"
+	UiPalette.compact_button(menu, BUTTON_H, 14, 10.0)
+	UiPalette.command_button(menu)
+	_art_button(menu, "menu", true)
 
 ## A button that shows its key's painted art in place of its text, when the
 ## art is installed; the text stays as the fallback and the tooltip.
@@ -203,58 +123,6 @@ func _art_button(b: Button, key: String, keep_text := false) -> void:
 	b.text = ""
 	b.custom_minimum_size = Vector2(BUTTON_H + 6.0, BUTTON_H)
 
-## Name a purse row (owner 2026-09-28, after the UI critique: the two rows
-## were told apart only by a 20 px crown and a 17 px shield): the mark moves
-## into a box beside a small-capitals word — "Crown", or the house's name —
-## that keeps its place in the grid. balance ui_purse_labels 0 leaves the mark
-## alone. Returns the word's label, or null.
-func _wrap_mark(mark: Control, label_name: String, text: String, tip: String) -> Label:
-	if Game.data.bal("ui_purse_labels") <= 0.0:
-		return null
-	var box := HBoxContainer.new()
-	box.name = label_name + "Box"
-	box.add_theme_constant_override("separation", 5)
-	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var at := mark.get_index()
-	%Purses.remove_child(mark)
-	box.add_child(mark)
-	var word := Label.new()
-	word.name = label_name
-	word.text = text
-	word.tooltip_text = tip
-	word.mouse_filter = Control.MOUSE_FILTER_PASS
-	word.custom_minimum_size = Vector2(Game.data.bal("ui_purse_label_w_px"), 0)
-	UiPalette.style_header(word, 12, UiPalette.TEXT_MUTED)
-	box.add_child(word)
-	%Purses.add_child(box)
-	%Purses.move_child(box, at)
-	return word
-
-## One pool: its icon, the stock, and its one change.
-func _cell(m: String) -> HBoxContainer:
-	var cell := HBoxContainer.new()
-	cell.name = "Cell_" + m
-	cell.add_theme_constant_override("separation", 4)
-	var icon := ResourceIcon.create(m)
-	icon.name = "Icon_" + m
-	icon.custom_minimum_size = Vector2(ICON_PX, ICON_PX)
-	cell.add_child(icon)
-	_icons[m] = icon
-	var value_l := Label.new()
-	value_l.name = "Value"
-	value_l.add_theme_font_size_override("font_size", VALUE_PX)
-	value_l.mouse_filter = Control.MOUSE_FILTER_PASS
-	cell.add_child(value_l)
-	_value_labels[m] = value_l
-	var delta_l := Label.new()
-	delta_l.name = "Change"
-	delta_l.add_theme_font_size_override("font_size", CHANGE_PX)
-	delta_l.mouse_filter = Control.MOUSE_FILTER_PASS
-	cell.add_child(delta_l)
-	_delta_labels[m] = delta_l
-	_cells[m] = cell
-	return cell
-
 ## The strip's real height: its panel's minimum, never less than the scene's.
 func bar_height() -> float:
 	return maxf(offset_bottom, %Bar.get_combined_minimum_size().y)
@@ -263,9 +131,9 @@ func refresh() -> void:
 	if Game.state == null:
 		return
 	%DateLabel.text = Calendar.date_string(Game.state.tick, Game.state.day)
-	if _dial != null:
+	if %DateDial.visible:
 		# the day on the brass, the season and year on the wood
-		_dial.set_day(Game.state.day, %DateLabel.text)
+		%DateDial.set_day(Game.state.day, %DateLabel.text)
 		%DateLabel.text = "%s · Year %d" % [Calendar.season_name(Game.state.tick),
 			Calendar.year_of(Game.state.tick)]
 	# The crown's arms (owner 2026-09-15) fly beside the date and mark the
@@ -273,14 +141,13 @@ func refresh() -> void:
 	# house's initial.
 	var family := MapManors.crown(Game.state)
 	var arms := HouseArms.texture_of_house(Game.data, Game.state, family)
-	_date_arms.visible = arms != null and _dial == null
-	_date_arms.set_texture(arms)
-	_lord_crest.set_arms(MapPalette.color_of(Game.data, Game.data.resolve_realm("player_realm")),
+	%DateArms.visible = arms != null and not %DateDial.visible
+	%DateArms.set_texture(arms)
+	%LordCrest.set_arms(MapPalette.color_of(Game.data, Game.data.resolve_realm("player_realm")),
 		family.substr(0, 1).to_upper())
-	_lord_crest.set_texture(arms)
-	if _house_name != null:
-		# "House Valorin", not a bare surname that could be anyone's (2026-09-28).
-		_house_name.text = "House " + family
+	%LordCrest.set_texture(arms)
+	# "House Valorin", not a bare surname that could be anyone's (2026-09-28).
+	%HouseName.text = "House " + family
 	var deltas := {}
 	var settled := Game.current_report != null
 	if settled:
@@ -288,7 +155,7 @@ func refresh() -> void:
 			var metric := String(d["metric"])
 			deltas[metric] = float(deltas.get(metric, 0.0)) + float(d["delta"])
 	# The change is a month's (owner 2026-09-28: "+1597" said nothing of when).
-	var per_month := "/mo" if Game.data.bal("ui_purse_labels") > 0.0 else ""
+	var per_month := "/mo"
 	for m: String in _value_labels:
 		_value_labels[m].text = UiPalette.format_int(int(Game.state.metrics.get(m, 0.0)))
 		var delta := int(deltas.get(m, 0.0))
@@ -374,13 +241,13 @@ func icon_for(metric: String) -> ResourceIcon:
 
 ## Test seams: the marks that tell the two purses apart.
 func crown_mark() -> Control:
-	return _crown_mark
+	return %CrownMark
 
 func lord_crest() -> HeraldicShield:
-	return _lord_crest
+	return %LordCrest
 
 func date_arms() -> HeraldicShield:
-	return _date_arms
+	return %DateArms
 
 ## Test seams: a pool's value label, its whole cell, and the purse grid.
 func value_label(metric: String) -> Label:

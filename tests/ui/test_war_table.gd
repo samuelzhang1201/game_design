@@ -59,7 +59,7 @@ func test_the_map_is_a_sheet_and_the_column_a_report() -> void:
 	var report := court.get_node("%LogPanel").get_theme_stylebox("panel") as PaperStyle
 	assert_not_null(report, "the left column is paper")
 	assert_true(report.pin, "pinned at its head")
-	assert_not_null(court.find_child("WarTable", false, false), "the oak table lies under the panels")
+	assert_true(court.get_node_or_null("%Table") is WarTableBackdrop, "the oak table lies under the panels (scenes/court.tscn)")
 
 func test_the_council_is_a_wax_seal_and_still_the_order() -> void:
 	var r := _root()

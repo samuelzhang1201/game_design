@@ -1,3 +1,4 @@
+@tool
 class_name HeraldicShield
 extends Control
 ## A house's or a kingdom's coat of arms (owner 2026-09-15): the generated
@@ -6,13 +7,29 @@ extends Control
 ## family with no seat still shows (user request 2026-09-09, after Azgaar's
 ## burg editor).
 
-var color: Color = UiPalette.GOLD
-var initial := ""
-var texture: Texture2D = null
+## The fallback shield's colour and letter, and the arms when there are any
+## (the running game sets all three from the crown's house).
+@export var color: Color = UiPalette.GOLD:
+	set(v):
+		color = v
+		queue_redraw()
+@export var initial := "":
+	set(v):
+		initial = v
+		queue_redraw()
+@export var texture: Texture2D = null:
+	set(v):
+		texture = v
+		queue_redraw()
 
+## The defaults of a shield made in code. A scene's node keeps what the scene
+## says: the scene's properties are set before its script, so _init runs
+## after them and must not overwrite them.
 func _init() -> void:
-	custom_minimum_size = Vector2(44, 52)
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if custom_minimum_size == Vector2.ZERO:
+		custom_minimum_size = Vector2(44, 52)
+	if mouse_filter == Control.MOUSE_FILTER_STOP:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func set_arms(kingdom_color: Color, letter: String) -> void:
 	color = kingdom_color

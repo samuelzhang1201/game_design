@@ -101,7 +101,8 @@ static func make_handle(text: String) -> Button:
 	return b
 
 static func _handle_is_button() -> bool:
-	return Game != null and Game.data != null and float(Game.data.balance.get("ui_council_button", 0.0)) > 0.0
+	var repo := UiPalette.data()
+	return repo != null and float(repo.balance.get("ui_council_button", 0.0)) > 0.0
 
 static func place_handle(handle: Control, top: float) -> void:
 	if _handle_is_button():

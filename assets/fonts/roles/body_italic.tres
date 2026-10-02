@@ -1,0 +1,10 @@
+[gd_resource type="FontVariation" format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/CrimsonPro.ttf" id="1_wjg3h"]
+
+[resource]
+base_font = ExtResource("1_wjg3h")
+variation_opentype = {
+2003265652: 400
+}
+variation_transform = Transform2D(1, 0, 0.2, 1, 0, 0)

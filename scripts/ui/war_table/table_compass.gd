@@ -1,3 +1,4 @@
+@tool
 class_name TableCompass
 extends Control
 ## THE WAR TABLE's compass (owner 2026-10-01): the map's compass art (library
@@ -14,13 +15,21 @@ extends Control
 ## wheel is drawn, and pressed, in wheel_rect().
 
 var view: Map3DView
-var column: Control   # the report it lies under (WarTable.place_compass)
-var _art: Texture2D = null
+## The report it lies under (scenes/court.tscn, or WarTable.place_compass).
+@export var column: Control
+## The wheel's art (library I-73).
+@export var art: Texture2D = null:
+	set(v):
+		art = v
+		queue_redraw()
 var _wheel := 0.0
 
 func _ready() -> void:
 	name = "TableCompass"
-	_art = UiPalette.load_art(CompassLayer.ART_PATH)
+	if art == null:
+		art = UiPalette.load_art(CompassLayer.ART_PATH)
+	if Engine.is_editor_hint():
+		return
 	# the column's strip of table, top to the screen's foot (less
 	# ui_table_compass_bottom_px); the wheel is drawn in the band below the
 	# report's drawn foot (wheel_rect)
@@ -33,6 +42,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 func _process(delta: float) -> void:
+	if Engine.is_editor_hint():
+		return
 	if Game.clock_speed > 0:
 		_wheel = fposmod(_wheel + deg_to_rad(Game.data.bal("map_compass_turn_deg_per_s"))
 			* float(Game.clock_speed) * delta, TAU)
@@ -58,6 +69,11 @@ static func fit(foot: float, bottom: float, width: float) -> Rect2:
 ## The report's drawn foot (global y): its paper as tall as it is drawn
 ## (PaperStyle.fit_height); the strip's top with no report.
 func paper_bottom() -> float:
+	if Engine.is_editor_hint():
+		# the report is drawn its full height in the editor: lay the wheel
+		# at the strip's foot
+		var px := WarTable._num("ui_table_compass_px", 104.0) + WarTable._num("ui_table_compass_clear_px", 8.0)
+		return global_position.y + size.y - px
 	if column == null or not is_instance_valid(column) or not column.is_visible_in_tree():
 		return global_position.y
 	var r := column.get_global_rect()
@@ -98,14 +114,14 @@ func _draw() -> void:
 	var wsize := wr.size
 	var shadow_a := WarTable._num("ui_table_shadow_alpha", 0.34)
 	var off := Vector2(WarTable._num("ui_table_shadow_dx", 6.0), WarTable._num("ui_table_shadow_dy", 10.0)) * 0.45
-	if _art != null:
+	if art != null:
 		# the shadow is the wheel's own shape (a disc would show through the
 		# spokes as a base plate): the art in black, offset, in soft layers
 		for i in 3:
 			draw_set_transform(c + off * (0.7 + 0.3 * float(i)), _wheel, Vector2.ONE * (1.0 + 0.02 * float(i)))
-			draw_texture_rect(_art, Rect2(-wsize * 0.5, wsize), false, Color(0, 0, 0, shadow_a * [0.5, 0.3, 0.15][i]))
+			draw_texture_rect(art, Rect2(-wsize * 0.5, wsize), false, Color(0, 0, 0, shadow_a * [0.5, 0.3, 0.15][i]))
 		draw_set_transform(c, _wheel, Vector2.ONE)
-		draw_texture_rect(_art, Rect2(-wsize * 0.5, wsize), false)
+		draw_texture_rect(art, Rect2(-wsize * 0.5, wsize), false)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	else:
 		draw_circle(c + off, r, Color(0, 0, 0, shadow_a))

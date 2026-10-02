@@ -1,3 +1,4 @@
+@tool
 class_name BrassStyle
 extends StyleBox
 ## THE WAR TABLE's brass (owner 2026-10-01): a round brass stud, the clock's
@@ -5,10 +6,10 @@ extends StyleBox
 ## on it. `lit` is the speed that runs now (brighter, ringed); `hover` a touch
 ## warmer. draw_brass is shared by the board's nails and the report's pin.
 
-var lit := false
-var hover := false
-var brass := [Color("f4db9a"), Color("b08a3e"), Color("6b4e1c")]
-var shadow_alpha := 0.34
+@export var lit := false
+@export var hover := false
+@export var brass: Array[Color] = [Color("f4db9a"), Color("b08a3e"), Color("6b4e1c")]
+@export var shadow_alpha := 0.34
 
 static func make(p_lit: bool, p_hover: bool) -> BrassStyle:
 	var s := BrassStyle.new()

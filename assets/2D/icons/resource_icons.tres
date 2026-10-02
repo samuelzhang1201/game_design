@@ -1,0 +1,171 @@
+[gd_resource type="Resource" script_class="ResourceIconSet" format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/resource_icon_set.gd" id="1_sap2h"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/treasury.png" id="2_j2gc2"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/grain.png" id="3_1d1v0"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_strategic.png" id="4_30oix"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/population.png" id="5_uoybv"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/army.png" id="6_mmcf5"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/army_quality.png" id="7_poper"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/unrest.png" id="8_kijr0"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/legitimacy.png" id="9_xy1ne"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/peasant_contentment.png" id="10_mgc3y"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/church_opinion.png" id="11_pb3jq"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/infantry.png" id="12_a1ey1"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/archers.png" id="13_0so4y"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/cavalry.png" id="14_bn0pf"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/artillery.png" id="15_gdq5a"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/fleet.png" id="16_nr0ro"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_defence.png" id="17_nmdnx"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/citadel.png" id="18_x1ltw"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/temple.png" id="19_p803c"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/plaza.png" id="20_itvuf"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/shanty.png" id="21_5hnds"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/port.png" id="22_5fwhi"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_food.png" id="23_ofrms"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_ore.png" id="24_mqnid"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_mineral.png" id="25_yi0cw"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_construction.png" id="26_pjf42"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_luxury.png" id="27_l8abl"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_military.png" id="28_j4jp3"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_naval.png" id="29_fucx0"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_clothing.png" id="30_p4vje"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_fuel.png" id="31_qwur5"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_currency.png" id="32_waeve"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_supply.png" id="33_ivbsk"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_preservative.png" id="34_atri6"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_ritual.png" id="35_3mekk"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_storage.png" id="36_caklt"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_aquatic.png" id="37_uvm3f"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/tag_educational.png" id="38_k2iuu"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_value.png" id="39_vn5tr"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/clock_pause.png" id="40_f4orr"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/clock_play.png" id="41_lb601"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/clock_fast.png" id="42_0g7fh"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/clock_faster.png" id="43_o3o3l"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/menu.png" id="44_kbuvh"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/towns.png" id="45_xaruo"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/country.png" id="46_kjyh8"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_manor_house.png" id="47_ass75"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_mill.png" id="48_vupbs"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_granary.png" id="49_mj438"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_chapel.png" id="50_jnsfv"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_palisade.png" id="51_de8v1"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_market.png" id="52_6ymr1"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_owner.png" id="53_fhuap"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_province.png" id="54_ywhc2"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_terrain.png" id="55_w74ol"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_area.png" id="56_pwtrh"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_focus.png" id="57_do7we"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_estate.png" id="58_rdbyk"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_slots.png" id="59_rfiqh"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/resources/manor_price.png" id="60_fs1d3"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_fishing_quay.png" id="61_clwvu"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_saltworks.png" id="62_j6px2"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_sawmill.png" id="63_aigfj"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_stonecutter.png" id="64_4ybtr"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_mine_shaft.png" id="65_hua08"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_apiary.png" id="66_1ci1g"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_winepress.png" id="67_hfs3c"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_tannery.png" id="68_jrmhd"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_loom.png" id="69_d55cw"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_smithy.png" id="70_v2n71"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_brewery.png" id="71_gkurh"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_shipwright.png" id="72_bdlb5"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_abbey.png" id="73_65ytt"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_castle.png" id="74_tis7m"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_harbour.png" id="75_j4oxf"]
+[ext_resource type="Texture2D" path="res://assets/2D/icons/buildings/bld_armoury.png" id="76_ckbty"]
+
+[resource]
+script = ExtResource("1_sap2h")
+textures = Dictionary[String, Texture2D]({
+"archers": ExtResource("13_0so4y"),
+"army": ExtResource("6_mmcf5"),
+"army_quality": ExtResource("7_poper"),
+"artillery": ExtResource("15_gdq5a"),
+"bld_abbey": ExtResource("73_65ytt"),
+"bld_apiary": ExtResource("66_1ci1g"),
+"bld_armoury": ExtResource("76_ckbty"),
+"bld_brewery": ExtResource("71_gkurh"),
+"bld_castle": ExtResource("74_tis7m"),
+"bld_chapel": ExtResource("50_jnsfv"),
+"bld_fishing_quay": ExtResource("61_clwvu"),
+"bld_granary": ExtResource("49_mj438"),
+"bld_harbour": ExtResource("75_j4oxf"),
+"bld_loom": ExtResource("69_d55cw"),
+"bld_manor_house": ExtResource("47_ass75"),
+"bld_market": ExtResource("52_6ymr1"),
+"bld_mill": ExtResource("48_vupbs"),
+"bld_mine_shaft": ExtResource("65_hua08"),
+"bld_palisade": ExtResource("51_de8v1"),
+"bld_saltworks": ExtResource("62_j6px2"),
+"bld_sawmill": ExtResource("63_aigfj"),
+"bld_shipwright": ExtResource("72_bdlb5"),
+"bld_smithy": ExtResource("70_v2n71"),
+"bld_stonecutter": ExtResource("64_4ybtr"),
+"bld_tannery": ExtResource("68_jrmhd"),
+"bld_winepress": ExtResource("67_hfs3c"),
+"cavalry": ExtResource("14_bn0pf"),
+"church_opinion": ExtResource("11_pb3jq"),
+"citadel": ExtResource("18_x1ltw"),
+"clock_fast": ExtResource("42_0g7fh"),
+"clock_faster": ExtResource("43_o3o3l"),
+"clock_pause": ExtResource("40_f4orr"),
+"clock_play": ExtResource("41_lb601"),
+"country": ExtResource("46_kjyh8"),
+"crown": ExtResource("9_xy1ne"),
+"fleet": ExtResource("16_nr0ro"),
+"grain": ExtResource("3_1d1v0"),
+"infantry": ExtResource("12_a1ey1"),
+"legitimacy": ExtResource("9_xy1ne"),
+"lord_civil": ExtResource("3_1d1v0"),
+"lord_gold": ExtResource("2_j2gc2"),
+"lord_strategic": ExtResource("4_30oix"),
+"manor_area": ExtResource("56_pwtrh"),
+"manor_civil": ExtResource("3_1d1v0"),
+"manor_defence": ExtResource("17_nmdnx"),
+"manor_estate": ExtResource("58_rdbyk"),
+"manor_focus": ExtResource("57_do7we"),
+"manor_land": ExtResource("46_kjyh8"),
+"manor_owner": ExtResource("53_fhuap"),
+"manor_people": ExtResource("5_uoybv"),
+"manor_price": ExtResource("60_fs1d3"),
+"manor_province": ExtResource("54_ywhc2"),
+"manor_seat": ExtResource("45_xaruo"),
+"manor_slots": ExtResource("59_rfiqh"),
+"manor_strategic": ExtResource("4_30oix"),
+"manor_tax": ExtResource("2_j2gc2"),
+"manor_terrain": ExtResource("55_w74ol"),
+"manor_value": ExtResource("39_vn5tr"),
+"menu": ExtResource("44_kbuvh"),
+"peasant_contentment": ExtResource("10_mgc3y"),
+"plaza": ExtResource("20_itvuf"),
+"population": ExtResource("5_uoybv"),
+"port": ExtResource("22_5fwhi"),
+"shanty": ExtResource("21_5hnds"),
+"strategic": ExtResource("4_30oix"),
+"tag_aquatic": ExtResource("37_uvm3f"),
+"tag_clothing": ExtResource("30_p4vje"),
+"tag_construction": ExtResource("26_pjf42"),
+"tag_currency": ExtResource("32_waeve"),
+"tag_educational": ExtResource("38_k2iuu"),
+"tag_food": ExtResource("23_ofrms"),
+"tag_fuel": ExtResource("31_qwur5"),
+"tag_luxury": ExtResource("27_l8abl"),
+"tag_military": ExtResource("28_j4jp3"),
+"tag_mineral": ExtResource("25_yi0cw"),
+"tag_naval": ExtResource("29_fucx0"),
+"tag_ore": ExtResource("24_mqnid"),
+"tag_preservative": ExtResource("34_atri6"),
+"tag_ritual": ExtResource("35_3mekk"),
+"tag_storage": ExtResource("36_caklt"),
+"tag_supply": ExtResource("33_ivbsk"),
+"temple": ExtResource("19_p803c"),
+"town_treasury": ExtResource("2_j2gc2"),
+"towns": ExtResource("45_xaruo"),
+"treasury": ExtResource("2_j2gc2"),
+"unrest": ExtResource("8_kijr0"),
+"walls": ExtResource("17_nmdnx"),
+"wealth": ExtResource("39_vn5tr")
+})

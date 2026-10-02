@@ -42,8 +42,8 @@ var ui_table_palette: Dictionary = {}
 ## data/ui_bookmarks.csv: bottom-bar tab -> "#rrggbb", the colour of its silk
 ## bookmark under the war table (lenses green, screens by group).
 var ui_bookmarks: Dictionary = {}
-## data/ui_fonts.csv: "<scheme>:<role>" -> the row (path, weight, embolden,
-## slant, spacing, size_scale, title_case); balance ui_font_scheme picks one.
+## data/ui_fonts.csv: role -> the row (size_scale, title_case); the faces
+## themselves are assets/fonts/roles/<role>.tres (owner 2026-10-02).
 var ui_fonts: Dictionary = {}
 ## data/manor_card_sections.csv: the manor card's named sections in order,
 ## each {section, label, keys (Array), rates (bool), per_month (bool),
@@ -435,6 +435,42 @@ static func parse_csv(path: String, required_cols: Array) -> Array[Dictionary]:
 		out.append(row)
 	return out
 
+## Only what the interface's LOOK reads — balance, the palettes, the font
+## roles' sizes, the resource icons' words — for the editor, where the Game
+## autoload is a placeholder and the @tool look classes (the war table's
+## paper, brass and seal, the icons) still draw their scenes. Null on failure.
+static func load_look(dir: String) -> DataRepository:
+	var repo := DataRepository.new()
+	var bal_rows := DataRepository.parse_csv(dir + "/balance.csv", ["key", "value"])
+	if bal_rows.is_empty():
+		return null
+	for r in bal_rows:
+		repo.balance[r["key"]] = float(r["value"])
+	if not repo._load_look_tables(dir):
+		return null
+	return repo
+
+func _load_look_tables(dir: String) -> bool:
+	if not _load_if_present(dir + "/political_palette.csv", ["key", "color"],
+			func(r): palette[r["key"]] = r["color"]):
+		return false
+	if not _load_if_present(dir + "/chart_palette.csv", ["key", "color"],
+			func(r): chart_palette[r["key"]] = r["color"]):
+		return false
+	if not _load_if_present(dir + "/ui_table_palette.csv", ["key", "color"],
+			func(r): ui_table_palette[r["key"]] = r["color"]):
+		return false
+	if not _load_if_present(dir + "/ui_bookmarks.csv", ["tab", "color"],
+			func(r): ui_bookmarks[r["tab"]] = r["color"]):
+		return false
+	if not _load_if_present(dir + "/ui_fonts.csv", ["role", "size_scale", "title_case"],
+			func(r): ui_fonts[r["role"]] = r):
+		return false
+	if not _load_if_present(dir + "/resource_icons.csv", ["key", "label", "icon", "tooltip"],
+			func(r): resource_icons[r["key"]] = r):
+		return false
+	return true
+
 static func load_all(dir: String) -> DataRepository:
 	var repo := DataRepository.new()
 	if not repo._load(dir):
@@ -551,17 +587,7 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/order_costs.csv", ["action_code", "cost", "always"],
 			func(r): order_costs[r["action_code"]] = r):
 		return false
-	if not _load_if_present(dir + "/political_palette.csv", ["key", "color"],
-			func(r): palette[r["key"]] = r["color"]):
-		return false
-	if not _load_if_present(dir + "/chart_palette.csv", ["key", "color"],
-			func(r): chart_palette[r["key"]] = r["color"]):
-		return false
-	if not _load_if_present(dir + "/ui_table_palette.csv", ["key", "color"],
-			func(r): ui_table_palette[r["key"]] = r["color"]):
-		return false
-	if not _load_if_present(dir + "/ui_bookmarks.csv", ["tab", "color"],
-			func(r): ui_bookmarks[r["tab"]] = r["color"]):
+	if not _load_look_tables(dir):
 		return false
 	if not _load_if_present(dir + "/manor_card_sections.csv", ["section", "label", "keys", "rates"],
 			func(r): manor_card_sections.append({"section": String(r["section"]),
@@ -569,12 +595,6 @@ func _load(dir: String) -> bool:
 				"rates": int(float(r["rates"])) == 1,
 				"per_month": int(float(r.get("per_month", "0"))) == 1,
 				"drop_if_rates": String(r.get("drop_if_rates", "")).split("|", false)})):
-		return false
-	if not _load_if_present(dir + "/ui_fonts.csv", ["scheme", "role", "path"],
-			func(r): ui_fonts["%d:%s" % [int(float(r["scheme"])), r["role"]]] = r):
-		return false
-	if not _load_if_present(dir + "/resource_icons.csv", ["key", "label", "icon", "tooltip"],
-			func(r): resource_icons[r["key"]] = r):
 		return false
 	if not _load_if_present("res://data/goods_palette.csv", ["tag", "color"],
 			func(r): goods_palette[String(r["tag"])] = String(r["color"])):

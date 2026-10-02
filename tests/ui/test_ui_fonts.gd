@@ -1,27 +1,27 @@
 extends GutTest
-## The faces are data (data/ui_fonts.csv, picked by balance ui_font_scheme;
-## owner 2026-09-28, after the UI critique): every scheme names every role,
-## every file it names ships, and the chosen scheme resolves to real fonts.
+## The faces are resources (owner 2026-10-02): one FontVariation per role in
+## assets/fonts/roles/, edited in the editor; data/ui_fonts.csv keeps each
+## role's size_scale and title_case.
 
 const ROLES := ["title", "header", "body", "body_bold", "body_italic", "tab", "display", "figures"]
 
-func test_every_scheme_names_every_role_and_its_file_ships() -> void:
-	var schemes := {}
-	for key: String in Game.data.ui_fonts:
-		schemes[key.split(":")[0]] = true
-	assert_true(schemes.has("0"), "scheme 0 restates the fallback set")
-	for scheme: String in schemes:
-		for role: String in ROLES:
-			var row: Dictionary = Game.data.ui_fonts.get("%s:%s" % [scheme, role], {})
-			assert_false(row.is_empty(), "scheme %s names a %s face" % [scheme, role])
-			if not row.is_empty():
-				assert_true(FileAccess.file_exists(UiPalette.FONT_DIR + String(row["path"])),
-					"scheme %s %s: %s ships" % [scheme, role, row["path"]])
-
-func test_the_chosen_scheme_resolves_every_role() -> void:
-	assert_true(Game.data.balance.has("ui_font_scheme"))
+func test_every_role_has_its_face_and_its_row() -> void:
 	for role: String in ROLES:
+		var path := UiPalette.ROLE_FONT_DIR + role + ".tres"
+		assert_true(ResourceLoader.exists(path), "%s's face ships: %s" % [role, path])
+		assert_true(load(path) is FontVariation, role + " is a FontVariation")
+		assert_false(Game.data.ui_fonts.get(role, {}).is_empty(), role + " has a ui_fonts.csv row")
 		assert_not_null(UiPalette.role_font(role), "%s resolves to a font" % role)
+
+## The theme the game and the editor share names the body face as its default.
+func test_the_theme_is_the_saved_one() -> void:
+	var theme := UiPalette.build_theme()
+	assert_eq(theme.resource_path, UiPalette.THEME_PATH)
+	assert_eq(theme.default_font, UiPalette.role_font("body"))
+	assert_eq(ProjectSettings.get_setting("gui/theme/custom", ""), UiPalette.THEME_PATH,
+		"the project theme, so the editor draws scenes in it")
+	for kind: String in ["HeaderLabel", "TitleLabel", "SectionLabel"]:
+		assert_true(theme.is_type_variation(kind, "Label"), kind)
 
 ## Blackletter reads a size small and its capitals in a row cannot be read, so
 ## a title set in it is scaled up and set in title case.

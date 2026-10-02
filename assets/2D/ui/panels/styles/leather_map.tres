@@ -1,0 +1,39 @@
+[gd_resource type="StyleBox" script_class="VellumPanelStyle" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/2D/ui/panels/leather_grain_light.png" id="1_o276c"]
+[ext_resource type="Texture2D" path="res://assets/2D/ui/panels/leather_grain_dark.png" id="2_gyskj"]
+[ext_resource type="Script" path="res://scripts/ui/vellum_panel_style.gd" id="3_ac7kq"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_airtp"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.12156863, 0.101960786, 0.08235294, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.65882355, 0.5411765, 0.29803923, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 8
+shadow_offset = Vector2(0, 3)
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+script = ExtResource("3_ac7kq")
+base = SubResource("StyleBoxFlat_airtp")
+grain = ExtResource("1_o276c")
+grain_dark = ExtResource("2_gyskj")
+grain_alpha = 0.1
+shade_top = 0.05
+shade_bottom = 0.14

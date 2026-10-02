@@ -1,0 +1,10 @@
+[gd_resource type="FontVariation" format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/AlegreyaSC-Regular.ttf" id="1_x0vrb"]
+
+[resource]
+base_font = ExtResource("1_x0vrb")
+opentype_features = {
+1819178349: 1
+}
+spacing_glyph = 1

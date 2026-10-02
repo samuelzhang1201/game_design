@@ -104,14 +104,11 @@ func test_the_cards_dimensions_are_icons_with_tooltips() -> void:
 ## draws it (a missing file would silently fall back to the glyph).
 func test_every_dimension_has_its_art() -> void:
 	Game.start_campaign(42)
-	for key: String in Game.data.resource_icons:
-		var path := String(Game.data.resource_icons[key].get("texture", ""))
-		if path == "":
-			continue
-		assert_true(ResourceLoader.exists(path), "%s's art exists: %s" % [key, path])
+	for key: String in ResourceIconSet.shared().textures:
+		assert_true(Game.data.resource_icons.has(key), "%s's art has a resource_icons.csv row" % key)
 		assert_not_null(ResourceIcon.texture_of(key), key)
 	for key: String in RealmDashboard.RESOURCES + RealmDashboard.TEMPER + ["towns", "country"]:
-		assert_ne(String(Game.data.resource_icons[key].get("texture", "")), "", key + " names its art")
+		assert_true(ResourceIconSet.has_art(key), key + " has its art (assets/2D/icons/resource_icons.tres)")
 
 ## Every good the manor card can list has its colour icon installed
 ## (goods_art.csv `icon`, owner 2026-09-14: every icon on the card is game art).

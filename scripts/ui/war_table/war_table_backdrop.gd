@@ -1,3 +1,4 @@
+@tool
 class_name WarTableBackdrop
 extends Control
 ## THE WAR TABLE's table (owner 2026-10-01, B3 + C1's bookmarks): pale oak
@@ -9,7 +10,40 @@ extends Control
 
 const ART_PATH := "res://assets/2D/ui/war_table/table_oak.jpg"
 
-var _tex: Texture2D = null
+## The look, edited on the node (scenes/court.tscn) or, for a screen not yet
+## converted, set from the tables by install().
+@export var texture: Texture2D = null:
+	set(v):
+		texture = v
+		queue_redraw()
+@export var tile_px := 560.0:
+	set(v):
+		tile_px = v
+		queue_redraw()
+@export var tone := Color(0, 0, 0, 0.2):
+	set(v):
+		tone = v
+		queue_redraw()
+@export var light := Color(1, 1, 1, 0.1):
+	set(v):
+		light = v
+		queue_redraw()
+@export var light_angle_deg := 28.0:
+	set(v):
+		light_angle_deg = v
+		queue_redraw()
+@export var light_width := 0.3:
+	set(v):
+		light_width = v
+		queue_redraw()
+@export var light_center := 0.5:
+	set(v):
+		light_center = v
+		queue_redraw()
+@export var vignette := Color(0, 0, 0, 0.3):
+	set(v):
+		vignette = v
+		queue_redraw()
 
 ## Put a table under `screen`'s panels in place of its flat background colour
 ## (`bg`, the screen's full-rect ColorRect), or leave the screen as it is when
@@ -21,38 +55,50 @@ static func install(screen: Control, bg: ColorRect) -> WarTableBackdrop:
 	t.name = "WarTable"
 	t.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if ResourceLoader.exists(ART_PATH):
+		t.texture = load(ART_PATH)
+	t.tile_px = _num("ui_table_tile_px", 560.0)
+	t.tone = UiPalette.table_color("table_tone", Color(0, 0, 0, 0.2))
+	t.light = UiPalette.table_color("light", Color(1, 1, 1, 0.1))
+	t.light_angle_deg = _num("ui_table_light_angle_deg", 28.0)
+	t.light_width = _num("ui_table_light_width", 0.3)
+	t.light_center = _num("ui_table_light_center", 0.5)
+	t.vignette = UiPalette.table_color("vignette", Color(0, 0, 0, 0.3))
 	screen.add_child(t)
 	screen.move_child(t, bg.get_index() + 1)
 	bg.color = UiPalette.table_color("board", bg.color)
 	return t
 
 func _ready() -> void:
-	if ResourceLoader.exists(ART_PATH):
-		_tex = load(ART_PATH)
 	resized.connect(queue_redraw)
 
 func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
-	var tile := _num("ui_table_tile_px", 560.0)
-	if _tex != null and tile > 1.0:
+	var tile := tile_px
+	if texture != null and tile > 1.0:
 		var y := 0.0
 		while y < r.size.y:
 			var x := 0.0
 			while x < r.size.x:
-				draw_texture_rect(_tex, Rect2(x, y, tile, tile), false)
+				# the last row and column cut to the rect (the editor shows the
+				# node's own bounds; the game's spans the screen)
+				var w := minf(tile, r.size.x - x)
+				var h := minf(tile, r.size.y - y)
+				var px := Vector2(texture.get_size()) / tile
+				draw_texture_rect_region(texture, Rect2(x, y, w, h), Rect2(Vector2.ZERO, Vector2(w, h) * px))
 				x += tile
 			y += tile
-	draw_rect(r, UiPalette.table_color("table_tone", Color(0, 0, 0, 0.2)))
+	draw_rect(r, tone)
 	_draw_light(r)
 	_draw_vignette(r)
 
 ## One soft shaft: a band slanted from vertical, full in its middle and gone at
 ## its sides (a quad strip whose outer vertices carry no alpha).
 func _draw_light(r: Rect2) -> void:
-	var c := UiPalette.table_color("light", Color(1, 1, 1, 0.1))
-	var slant := tan(deg_to_rad(_num("ui_table_light_angle_deg", 28.0))) * r.size.y
-	var half := _num("ui_table_light_width", 0.3) * r.size.x * 0.5
-	var mid := _num("ui_table_light_center", 0.5) * r.size.x
+	var c := light
+	var slant := tan(deg_to_rad(light_angle_deg)) * r.size.y
+	var half := light_width * r.size.x * 0.5
+	var mid := light_center * r.size.x
 	var clear := Color(c.r, c.g, c.b, 0.0)
 	# top edge shifted left by half the slant, bottom edge right: light from the upper left
 	var top := mid - slant * 0.5
@@ -65,7 +111,7 @@ func _draw_light(r: Rect2) -> void:
 
 ## The corners darken toward the edge in four gradient bands.
 func _draw_vignette(r: Rect2) -> void:
-	var c := UiPalette.table_color("vignette", Color(0, 0, 0, 0.3))
+	var c := vignette
 	var clear := Color(c.r, c.g, c.b, 0.0)
 	var band := minf(r.size.x, r.size.y) * 0.28
 	draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(r.size.x, 0), Vector2(r.size.x, band), Vector2(0, band)]),
@@ -78,6 +124,7 @@ func _draw_vignette(r: Rect2) -> void:
 		PackedColorArray([clear, c, c, clear]))
 
 static func _num(key: String, fallback: float) -> float:
-	if Game != null and Game.data != null and Game.data.balance.has(key):
-		return Game.data.bal(key)
+	var repo := UiPalette.data()
+	if repo != null and repo.balance.has(key):
+		return repo.bal(key)
 	return fallback

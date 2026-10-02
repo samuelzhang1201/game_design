@@ -60,6 +60,21 @@ const SKILL_SHORT := {
 }
 const SKILL_MAX := 20.0  # CharacterFactory clamps skills to 0..20
 
+## The game's tables, or null before the game has loaded them. In the EDITOR,
+## where the Game autoload is a placeholder, the look's own tables alone
+## (DataRepository.load_look), so the @tool look classes draw their scenes
+## there as the game draws them.
+static func data() -> DataRepository:
+	if Engine.is_editor_hint():
+		if _editor_data == null:
+			_editor_data = DataRepository.load_look("res://data")
+		return _editor_data
+	if Game == null:
+		return null
+	return Game.data
+
+static var _editor_data: DataRepository = null
+
 ## A gain, a rising opinion (chart_palette.csv positive; POSITIVE the fallback).
 static func good_color() -> Color:
 	return _chart_or("positive", POSITIVE)
@@ -69,8 +84,8 @@ static func bad_color() -> Color:
 	return _chart_or("negative", NEGATIVE)
 
 static func _chart_or(key: String, fallback: Color) -> Color:
-	if Game != null and Game.data != null:
-		var hex := String(Game.data.chart_palette.get(key, ""))
+	if data() != null:
+		var hex := String(data().chart_palette.get(key, ""))
 		if hex != "":
 			return Color(hex)
 	return fallback
@@ -80,8 +95,8 @@ static func _chart_or(key: String, fallback: Color) -> Color:
 ## laid out as objects on an oak table by daylight. balance ui_war_table 1 is
 ## on; 0 keeps the dark leather chrome.
 static func war_table() -> bool:
-	return Game != null and Game.data != null \
-		and Game.data.balance.has("ui_war_table") and Game.data.bal("ui_war_table") > 0.0
+	return data() != null \
+		and data().balance.has("ui_war_table") and data().bal("ui_war_table") > 0.0
 
 ## The ground a card is drawn on: the war table's paper when an ancestor is a
 ## paper column (meta "paper_ground"), else the leather (PANEL_BG) — for fades
@@ -96,16 +111,16 @@ static func card_ground(n: Node) -> Color:
 
 ## A WAR TABLE colour from data/ui_table_palette.csv (#rrggbb or #rrggbbaa).
 static func table_color(key: String, fallback := Color.MAGENTA) -> Color:
-	if Game != null and Game.data != null:
-		var hex := String(Game.data.ui_table_palette.get(key, ""))
+	if data() != null:
+		var hex := String(data().ui_table_palette.get(key, ""))
 		if hex != "":
 			return Color(hex)
 	return fallback
 
 ## A bottom-bar tab's bookmark colour (data/ui_bookmarks.csv).
 static func bookmark_color(tab: String) -> Color:
-	if Game != null and Game.data != null:
-		var hex := String(Game.data.ui_bookmarks.get(tab, ""))
+	if data() != null:
+		var hex := String(data().ui_bookmarks.get(tab, ""))
 		if hex != "":
 			return Color(hex)
 	return BORDER_GOLD
@@ -130,8 +145,8 @@ static func ink(role: String) -> Color:
 		"muted": return TEXT_MUTED
 		"dim": return TEXT_DIM
 		"accent", "rubric": return GOLD
-		"track": return chart_color("track") if Game != null and Game.data != null and Game.data.chart_palette.has("track") else TROUGH
-		"fill": return chart_color("sequential") if Game != null and Game.data != null and Game.data.chart_palette.has("sequential") else GOLD
+		"track": return chart_color("track") if data() != null and data().chart_palette.has("track") else TROUGH
+		"fill": return chart_color("sequential") if data() != null and data().chart_palette.has("sequential") else GOLD
 		"good": return good_color()
 		"bad": return bad_color()
 	return TEXT_SOFT
@@ -223,9 +238,9 @@ const CHIP_RADIUS := 3
 ## look turns on this one value in balance.csv and no screen has to change
 ## either way.
 static func panel_art_enabled() -> bool:
-	if Game == null or Game.data == null:
+	if data() == null:
 		return false
-	return Game.data.bal("ui_panel_art") > 0.0
+	return data().bal("ui_panel_art") > 0.0
 
 ## The plate as a nine-slice: border and corner ornaments hold their size
 ## while the middle stretches. null when the art is missing, so a build
@@ -252,9 +267,9 @@ static func panel_art_style(margin: int) -> VellumPanelStyle:
 const PANEL_ORNAMENT_PATH := "res://assets/2D/ui/panels/panel_ornament.png"
 
 static func panel_ornament_enabled() -> bool:
-	if Game == null or Game.data == null or not Game.data.balance.has("ui_panel_ornament"):
+	if data() == null or not data().balance.has("ui_panel_ornament"):
 		return false
-	return Game.data.bal("ui_panel_ornament") > 0.0
+	return data().bal("ui_panel_ornament") > 0.0
 
 ## A card: dark leather body, a thin trim in `border`, cut corners and a deep
 ## drop shadow — framed by the gold ornament when ui_panel_ornament is on and
@@ -315,9 +330,9 @@ static func _dress(style: VellumPanelStyle) -> void:
 	style.shade_bottom = _bal_or("ui_panel_shade_bottom", 0.0)
 
 static func _bal_or(key: String, fallback: float) -> float:
-	if Game == null or Game.data == null or not Game.data.balance.has(key):
+	if data() == null or not data().balance.has(key):
 		return fallback
-	return Game.data.bal(key)
+	return data().bal(key)
 
 ## A seamless leather grain, made once: a low mottle and a fine tooth mixed
 ## (balance ui_panel_grain_freq, ui_panel_grain_tooth the tooth's frequency
@@ -443,7 +458,7 @@ static func primary_button(button: Button, size: int) -> void:
 ## whatever case it was written in. `size` 0 keeps the button's size.
 ## ui_command_style 0 leaves every button as it was written.
 static func command_button(button: Button, size: int = 0) -> void:
-	if Game != null and Game.data != null and Game.data.bal("ui_command_style") <= 0.0:
+	if data() != null and data().bal("ui_command_style") <= 0.0:
 		return
 	if size > 0:
 		button.add_theme_font_size_override("font_size", size)
@@ -600,69 +615,39 @@ static func backdrop() -> Texture2D:
 	_art_cache[key] = tex
 	return tex
 
-## The faces are data (owner 2026-09-28, after the UI critique): balance
-## ui_font_scheme picks a scheme of data/ui_fonts.csv, one row per role —
+## The faces are RESOURCES (owner 2026-10-02, after 2026-09-28's data
+## table): one FontVariation per role in assets/fonts/roles/<role>.tres —
 ## title (the game's name, window and screen titles, the map's kingdom names),
 ## header (section headers, names, the date), body (the theme default and the
 ## transcript) with its bold and italic, tab, display (the scale bar, ruler,
-## landmark metres, shield letters). The constants above are the fallback when
-## no table is loaded (scheme 0 restates them).
+## landmark metres, shield letters), figures — opened and changed in the
+## editor (its base font, weight, slant, tracking, OpenType features). What
+## stays in data/ui_fonts.csv is a role's size_scale and title_case. The
+## constants above are the fallback when a role file is missing.
 const FONT_DIR := "res://assets/fonts/"
+const ROLE_FONT_DIR := "res://assets/fonts/roles/"
 const _FALLBACK_FONTS := {
 	"title": TITLE_FONT_PATH, "header": TITLE_FONT_PATH, "body": CONTENT_FONT_PATH,
 	"body_bold": CONTENT_FONT_PATH, "body_italic": CONTENT_FONT_PATH,
 	"tab": TAB_FONT_PATH, "display": MAP_FONT_PATH,
 }
 
-## The ui_fonts.csv row for a role under the current scheme, or {}.
+## The ui_fonts.csv row for a role, or {}.
 static func font_row(role: String) -> Dictionary:
-	if Game == null or Game.data == null or Game.data.ui_fonts.is_empty():
+	var repo := data()
+	if repo == null:
 		return {}
-	var scheme := 0
-	if Game.data.balance.has("ui_font_scheme"):
-		scheme = int(Game.data.bal("ui_font_scheme"))
-	return Game.data.ui_fonts.get("%d:%s" % [scheme, role], {})
+	return repo.ui_fonts.get(role, {})
 
-## The face for a role: the file, with its weight, embolden, slant and
-## tracking applied as a FontVariation when the row asks for any.
+## The face for a role: its saved FontVariation.
 static func role_font(role: String) -> Font:
-	var row := font_row(role)
-	if row.is_empty():
-		if role == "body_bold":
-			return _varied(_load_font(CONTENT_FONT_PATH), "fb:bold", 0, 0.7, 0.0, 0)
-		if role == "body_italic":
-			return _varied(_load_font(CONTENT_FONT_PATH), "fb:italic", 0, 0.0, 0.2, 0)
-		return _load_font(String(_FALLBACK_FONTS.get(role, CONTENT_FONT_PATH)))
-	var path := FONT_DIR + String(row["path"])
-	var weight := int(float(row.get("weight", "0")))
-	var embolden := float(row.get("embolden", "0"))
-	var slant := float(row.get("slant", "0"))
-	var spacing := int(float(row.get("spacing", "0")))
-	var features := String(row.get("features", ""))
-	var key := "%s|%d|%s|%s|%d|%s" % [path, weight, embolden, slant, spacing, features]
-	return _varied(_load_font(path), key, weight, embolden, slant, spacing, features)
-
-## `features` is OpenType feature tags joined by | turned on (lnum: lining
-## figures, so a 0 in a column of numbers never reads as an o).
-static func _varied(base: Font, key: String, weight: int, embolden: float,
-		slant: float, spacing: int, features: String = "") -> Font:
-	if base == null or (weight == 0 and embolden == 0.0 and slant == 0.0
-			and spacing == 0 and features == ""):
-		return base
+	var key := "role:" + role
 	if _art_cache.has(key):
 		return _art_cache[key]
-	var font := FontVariation.new()
-	font.base_font = base
-	if weight > 0:
-		font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
-	font.variation_embolden = embolden
-	if slant != 0.0:
-		font.variation_transform = Transform2D(Vector2(1.0, 0.0), Vector2(slant, 1.0), Vector2.ZERO)
-	font.spacing_glyph = spacing
-	var tags := {}
-	for tag in features.split("|", false):
-		tags[TextServerManager.get_primary_interface().name_to_tag(tag)] = 1
-	font.opentype_features = tags
+	var path := ROLE_FONT_DIR + role + ".tres"
+	var font: Font = load(path) as Font if ResourceLoader.exists(path) else null
+	if font == null:
+		font = _load_font(String(_FALLBACK_FONTS.get(role, CONTENT_FONT_PATH)))
 	_art_cache[key] = font
 	return font
 
@@ -735,12 +720,12 @@ static func _load_font(path: String) -> Font:
 ## A chart colour by key (data/chart_palette.csv); cat_N falls back to the
 ## last categorical step rather than a made-up hue.
 static func chart_color(key: String) -> Color:
-	var hex := String(Game.data.chart_palette.get(key, ""))
+	var hex := String(data().chart_palette.get(key, ""))
 	if hex == "" and key.begins_with("cat_"):
 		var n := 1
-		while Game.data.chart_palette.has("cat_%d" % (n + 1)):
+		while data().chart_palette.has("cat_%d" % (n + 1)):
 			n += 1
-		hex = String(Game.data.chart_palette.get("cat_%d" % n, ""))
+		hex = String(data().chart_palette.get("cat_%d" % n, ""))
 	return Color(hex) if hex != "" else TEXT_MUTED
 
 ## A whole number with its thousands grouped ("13,272"; owner 2026-09-28:
@@ -844,58 +829,15 @@ static func style_tab(button: Button, size: int, pad: float = -1.0) -> void:
 		box.content_margin_right = pad
 		button.add_theme_stylebox_override(state, box)
 
-## Game-wide Theme, applied once at GameRoot and inherited by every screen:
-## the content face in light ink at a compact size, dark cut buttons and
-## sunk inputs.
+## The game's Theme (owner 2026-10-02): assets/2D/ui/theme/game_theme.tres,
+## the project's own theme (project.godot gui/theme/custom), so the editor
+## draws every scene in it too. Edit it in the editor's theme editor: the
+## content face in light ink, dark cut buttons, sunk inputs, dark tooltips,
+## and the label kinds the scenes name by theme_type_variation (HeaderLabel,
+## TitleLabel, SectionLabel). An empty Theme when the file is missing.
+const THEME_PATH := "res://assets/2D/ui/theme/game_theme.tres"
+
 static func build_theme() -> Theme:
-	var theme := Theme.new()
-	theme.set_color("font_color", "Label", TEXT_SOFT)
-	theme.set_color("font_color", "Button", TEXT_SOFT)
-	theme.set_color("font_hover_color", "Button", GOLD)
-	theme.set_color("font_pressed_color", "Button", GOLD)
-	var looks := button_looks()
-	for state: String in looks:
-		theme.set_stylebox(state, "Button", looks[state])
-	theme.set_color("font_disabled_color", "Button", TEXT_DIM)
-	theme.set_stylebox("normal", "LineEdit", chip_style(INPUT_BG))
-	theme.set_stylebox("focus", "LineEdit", chip_style(INPUT_BG, GOLD))
-	theme.set_color("font_color", "LineEdit", TEXT_SOFT)
-	theme.set_color("font_placeholder_color", "LineEdit", TEXT_DIM)
-	theme.set_color("caret_color", "LineEdit", GOLD)
-	theme.set_constant("line_spacing", "Label", LINE_SPACING)
-	# The transcript is a RichTextLabel, whose ink is NOT the Label colour:
-	# left unset it was Godot's default white (owner report 2026-09-13).
-	theme.set_color("default_color", "RichTextLabel", TEXT_SOFT)
-	var body_px := int(round(DIALOGUE_FONT_SIZE * role_scale("body")))
-	theme.set_font_size("normal_font_size", "RichTextLabel", body_px)
-	theme.set_font_size("bold_font_size", "RichTextLabel", body_px)
-	theme.set_font_size("italics_font_size", "RichTextLabel", body_px)
-	# Floating tooltips (user request 2026-09-09: icons explain themselves on
-	# hover) in the same chip chrome as everything else.
-	theme.set_stylebox("panel", "TooltipPanel", chip_style(PANEL_BG, BORDER_GOLD))
-	theme.set_color("font_color", "TooltipLabel", TEXT_SOFT)
-	theme.set_font_size("font_size", "TooltipLabel", 16)
-	# Separators and scroll bars were Godot's light grey, drawn for a light card.
-	var sep := StyleBoxLine.new()
-	sep.color = EDGE
-	sep.thickness = 1
-	theme.set_stylebox("separator", "HSeparator", sep)
-	var grabber := StyleBoxFlat.new()
-	grabber.bg_color = Color(BORDER_GOLD, 0.55)
-	grabber.set_corner_radius_all(3)
-	var track := StyleBoxFlat.new()
-	track.bg_color = TROUGH
-	track.set_corner_radius_all(3)
-	for bar in ["VScrollBar", "HScrollBar"]:
-		theme.set_stylebox("scroll", bar, track)
-		theme.set_stylebox("grabber", bar, grabber)
-		theme.set_stylebox("grabber_highlight", bar, grabber)
-		theme.set_stylebox("grabber_pressed", bar, grabber)
-	var body := content_font()
-	if body != null:
-		theme.default_font = body
-		theme.set_font("normal_font", "RichTextLabel", body)
-		theme.set_font("bold_font", "RichTextLabel", content_bold_font())
-		theme.set_font("italics_font", "RichTextLabel", content_italic_font())
-	theme.default_font_size = int(round(BODY_FONT_SIZE * role_scale("body")))
-	return theme
+	if ResourceLoader.exists(THEME_PATH):
+		return load(THEME_PATH) as Theme
+	return Theme.new()

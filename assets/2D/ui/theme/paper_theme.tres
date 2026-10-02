@@ -1,0 +1,7 @@
+[gd_resource type="Theme" format=3]
+
+[resource]
+Label/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
+LinkButton/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+RichTextLabel/colors/default_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
+TooltipLabel/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)

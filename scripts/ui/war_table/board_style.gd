@@ -1,3 +1,4 @@
+@tool
 class_name BoardStyle
 extends StyleBox
 ## THE WAR TABLE's tally board (owner 2026-10-01): a plank of darkened oak
@@ -5,13 +6,13 @@ extends StyleBox
 ## darker (ui_table_palette.csv `board`), a lit top edge, a brass nail at each
 ## end, and the table's one shadow thrown down-right.
 
-var texture: Texture2D = null
-var tile := 360.0
-var tint := Color("2a1c12")
-var shadow_offset := Vector2(6, 10)
-var shadow_alpha := 0.34
-var nail_px := 7.0
-var brass := [Color("f4db9a"), Color("b08a3e"), Color("6b4e1c")]
+@export var texture: Texture2D = null
+@export var tile := 360.0
+@export var tint := Color("2a1c12")
+@export var shadow_offset := Vector2(6, 10)
+@export var shadow_alpha := 0.34
+@export var nail_px := 7.0
+@export var brass: Array[Color] = [Color("f4db9a"), Color("b08a3e"), Color("6b4e1c")]
 
 static func make(margin_h: float, margin_v: float) -> BoardStyle:
 	var s := BoardStyle.new()

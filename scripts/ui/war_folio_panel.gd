@@ -366,8 +366,7 @@ func _light_tab(clip: String) -> void:
 ## The arm's resource icon redrawn as sepia ink (WarInkIcon), once.
 func _ink_icon(arm: String) -> Texture2D:
 	if not _inked.has(arm):
-		var path := String((Game.data.resource_icons.get(arm, {}) as Dictionary).get("texture", ""))
-		_inked[arm] = WarInkIcon.inked(UiPalette.load_art(path) if path != "" else null,
+		_inked[arm] = WarInkIcon.inked(ResourceIconSet.texture_of(arm),
 			Game.data.war_palette["ink"], _px("war_ink_icon_light_keep"))
 	return _inked[arm]
 

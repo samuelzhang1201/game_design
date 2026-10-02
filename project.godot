@@ -35,6 +35,10 @@ window/size/mode.debug=0
 
 enabled=PackedStringArray("res://addons/gdai-mcp-plugin-godot/plugin.cfg", "res://addons/gut/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
 
+[gui]
+
+theme/custom="res://assets/2D/ui/theme/game_theme.tres"
+
 [importer_defaults]
 
 texture={

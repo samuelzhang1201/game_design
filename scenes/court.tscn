@@ -2,31 +2,61 @@
 
 [ext_resource type="Script" uid="uid://bkm0g1bago8lo" path="res://scripts/ui/court_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/top_bar.tscn" id="2"]
+[ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_2768l"]
 [ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="3_i1kge"]
+[ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_rnrgf"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_i5cvy"]
 [ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="4_sy0rd"]
+[ext_resource type="Theme" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_c6ra0"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_d0d5a"]
+[ext_resource type="Script" uid="uid://bbrp2ldvjuip0" path="res://scripts/ui/war_table/table_compass.gd" id="8_4enwl"]
+[ext_resource type="Texture2D" uid="uid://bd7f6xayv2ffr" path="res://assets/2D/ui/compass/compass.png" id="9_lc033"]
+[ext_resource type="StyleBox" uid="uid://cvlyoynpedxif" path="res://assets/2D/ui/panels/styles/leather_column.tres" id="10_revm4"]
+[ext_resource type="Script" uid="uid://ce7myfubis2yw" path="res://scripts/ui/war_table/wax_seal.gd" id="13_cn0p0"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_b3dk5"]
 
 [node name="CourtScreen" type="Control" unique_id=626180433]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1")
 
 [node name="Bg" type="ColorRect" parent="." unique_id=1308777378]
 unique_name_in_owner = true
+z_index = -2
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.16470589, 0.10980392, 0.07058824, 1)
+
+[node name="Table" type="Control" parent="." unique_id=2126445725]
+unique_name_in_owner = true
+z_index = -2
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("2_2768l")
+texture = ExtResource("3_rnrgf")
+tone = Color(0.627451, 0.4392157, 0.22745098, 0.13333334)
+light = Color(1, 0.9490196, 0.8156863, 0.14117648)
+vignette = Color(0, 0, 0, 0.17254902)
 
 [node name="MapPanel" type="PanelContainer" parent="." unique_id=1468847440]
 unique_name_in_owner = true
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 128.0
-offset_top = 30.0
-offset_right = -4.0
-offset_bottom = -40.0
+offset_left = 268.0
+offset_top = 67.0
+offset_right = -12.0
+offset_bottom = -48.0
+theme_override_styles/panel = ExtResource("4_i5cvy")
 
 [node name="TopBar" parent="." unique_id=1122720887 instance=ExtResource("2")]
 unique_name_in_owner = true
@@ -36,14 +66,29 @@ anchors_preset = 0
 unique_name_in_owner = true
 layout_mode = 0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 30.0
-offset_right = 124.0
-offset_bottom = -40.0
+offset_left = 12.0
+offset_top = 67.0
+offset_right = 252.0
+offset_bottom = -56.0
+theme = ExtResource("6_c6ra0")
+theme_override_styles/panel = ExtResource("7_d0d5a")
+metadata/paper_ground = Color(0.8235294, 0.7411765, 0.5647059, 1)
 
 [node name="LVBox" type="VBoxContainer" parent="LogPanel" unique_id=2007783036]
 layout_mode = 2
 theme_override_constants/separation = 5
+
+[node name="TableCompass" type="Control" parent="." unique_id=1743797370 node_paths=PackedStringArray("column")]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_right = 252.0
+offset_bottom = -4.0
+tooltip_text = "The compass — press to turn the map north"
+script = ExtResource("8_4enwl")
+column = NodePath("../LogPanel")
+art = ExtResource("9_lc033")
 
 [node name="SidePanel" type="PanelContainer" parent="." unique_id=1631763932]
 unique_name_in_owner = true
@@ -52,10 +97,11 @@ layout_mode = 0
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -154.0
-offset_top = 30.0
-offset_right = -4.0
-offset_bottom = -40.0
+offset_left = -412.0
+offset_top = 67.0
+offset_right = -12.0
+offset_bottom = -56.0
+theme_override_styles/panel = ExtResource("10_revm4")
 
 [node name="SVBox" type="VBoxContainer" parent="SidePanel" unique_id=1136924669]
 layout_mode = 2
@@ -110,3 +156,30 @@ script = ExtResource("3_i1kge")
 [node name="SpyOrders" type="PopupMenu" parent="." unique_id=695425565]
 unique_name_in_owner = true
 script = ExtResource("4_sy0rd")
+
+[node name="CouncilHandle" type="Button" parent="." unique_id=1962685662]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(137, 96)
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -184.0
+offset_top = 80.0
+offset_right = -25.0
+offset_bottom = 176.0
+tooltip_text = "Go before your council"
+focus_mode = 0
+theme_override_colors/font_color = Color(0, 0, 0, 0)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 0)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 0)
+theme_override_styles/normal = SubResource("StyleBoxEmpty_b3dk5")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_b3dk5")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_b3dk5")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_b3dk5")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_b3dk5")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_b3dk5")
+text = "ENTER THE COUNCIL"
+flat = true
+script = ExtResource("13_cn0p0")

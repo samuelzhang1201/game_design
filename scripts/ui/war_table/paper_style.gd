@@ -1,3 +1,4 @@
+@tool
 class_name PaperStyle
 extends StyleBox
 ## A sheet of paper lying on THE WAR TABLE (owner 2026-10-01): the map's
@@ -13,35 +14,35 @@ extends StyleBox
 
 const PAPER_PATH := "res://assets/2D/ui/missive_board/letter_aged.png"
 
-var texture: Texture2D = null
-var tint := Color.WHITE
-var deckle_px := 2.5
-var deckle_step := 11.0
-var seed := 7
-var tilt_deg := 0.0
-var shadow_offset := Vector2(6, 10)
-var shadow_alpha := 0.34
-var shadow_soft := 7.0
-var shadow_color := Color.BLACK
+@export var texture: Texture2D = null
+@export var tint := Color.WHITE
+@export var deckle_px := 2.5
+@export var deckle_step := 11.0
+@export var seed := 7
+@export var tilt_deg := 0.0
+@export var shadow_offset := Vector2(6, 10)
+@export var shadow_alpha := 0.34
+@export var shadow_soft := 7.0
+@export var shadow_color := Color.BLACK
 ## Ink rules round the content rect: count, width, the gap between them and how
 ## far outside the content the first sits.
-var rules := 0
-var rule_width := 1.5
-var rule_gap := 4.0
-var rule_out := 3.0
-var rule_color := Color("3b2a1b")
-var pin := false
+@export var rules := 0
+@export var rule_width := 1.5
+@export var rule_gap := 4.0
+@export var rule_out := 3.0
+@export var rule_color := Color("3b2a1b")
+@export var pin := false
 ## The share of the texture cut from each side before it is laid on the paper
 ## (the letter art's own ruled border and burnt rim: the map sheet draws its
 ## own rules, so it takes only the paper's middle).
-var uv_inset := Vector2.ZERO
+@export var uv_inset := Vector2.ZERO
 ## A pale wash laid over the texture (paler paper than the art's own ochre).
-var lift := Color(1, 1, 1, 0)
+@export var lift := Color(1, 1, 1, 0)
 ## When > 0, the paper is drawn only this tall from the top of its rect (a
 ## report sized to its content; the table shows below it).
 var fit_height := 0.0
-var pin_px := 12.0
-var brass := [Color("f4db9a"), Color("b08a3e"), Color("6b4e1c")]
+@export var pin_px := 12.0
+@export var brass: Array[Color] = [Color("f4db9a"), Color("b08a3e"), Color("6b4e1c")]
 
 ## A paper style dressed from the tables: `tint_key` a ui_table_palette.csv
 ## colour ("paper" or "sheet"), `margin` the content margin in design px.
@@ -159,6 +160,7 @@ func _draw_pin(ci: RID, at: Vector2) -> void:
 	BrassStyle.draw_brass(ci, at, r, brass, shadow_alpha)
 
 static func _num(key: String, fallback: float) -> float:
-	if Game != null and Game.data != null and Game.data.balance.has(key):
-		return Game.data.bal(key)
+	var repo := UiPalette.data()
+	if repo != null and repo.balance.has(key):
+		return repo.bal(key)
 	return fallback
