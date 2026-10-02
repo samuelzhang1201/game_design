@@ -1,0 +1,23 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://sxxom40gvclr"]
+
+[ext_resource type="Shader" uid="uid://b23lupg7bvm68" path="res://scripts/map3d/tree_card.gdshader" id="1_v5o84"]
+[ext_resource type="Texture2D" uid="uid://cg1cvgow65olw" path="res://assets/3D/vegetation/crowns/crowns_atlas.png" id="2_x1dic"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_v5o84")
+shader_parameter/atlas = ExtResource("2_x1dic")
+shader_parameter/atlas_cols = 4
+shader_parameter/atlas_rows = 4
+shader_parameter/alpha_cut = 0.5
+shader_parameter/sphere = 0.6
+shader_parameter/lift = 0.15
+shader_parameter/saturation = 1.15
+shader_parameter/value_gain = 0.6
+shader_parameter/tint_k = 0.5
+shader_parameter/alpha_far_gain = 0.6
+shader_parameter/far_value = 0.65
+shader_parameter/wind_time = 0.0
+shader_parameter/wind_dir = Vector2(1, 0)
+shader_parameter/sway_m = 0.6
+shader_parameter/sway_hz = 0.25

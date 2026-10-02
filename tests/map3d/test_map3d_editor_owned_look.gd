@@ -23,6 +23,9 @@ const CODE_OWNED := {
 	# the deck's shape is generated from the Clouds node's own seed
 	"cloud_deck": ["shape"],
 	"cloud_shadow": ["shape"],
+	# the wind's uniforms are Map3DLayerWind's, every frame
+	"tree_sway": ["wind_time", "wind_dir", "sway_m", "sway_height_m", "sway_hz", "flutter"],
+	"tree_card": ["wind_time", "wind_dir", "sway_m", "sway_hz"],
 }
 ## The river's water that IS the sea's: river parameter -> sea parameter.
 const RIVER_FROM_SEA := {"mouth_water": "sea_near", "sky": "sky", "nat_mouth": "nat_shallow",
@@ -38,7 +41,10 @@ const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3
 	"map3d_cloud_size_", "map3d_cloud_speed_m_s", "map3d_cloud_interval_s", "map3d_cloud_fade_s",
 	"map3d_cloud_alpha", "map3d_cloud_near_", "map3d_cloud_shadow_", "map3d_cloud_emission_share",
 	"map3d_cloud_depth_ratio", "map3d_cloud_min_gap_m", "map3d_cloud_candidates", "map3d_weather_cloud_",
-	"weather_storm_cloud"]
+	"weather_storm_cloud", "map3d_tree_leaf_", "map3d_tree_hue_", "map3d_tree_saturation",
+	"map3d_tree_value", "map3d_tree_roughness", "map3d_tree_specular", "map3d_tree_card_alpha",
+	"map3d_tree_card_sphere", "map3d_tree_card_lift", "map3d_tree_card_saturation",
+	"map3d_tree_card_value", "map3d_tree_card_tint", "map3d_tree_card_far_value"]
 
 
 func before_all() -> void:
@@ -69,6 +75,15 @@ func test_the_clouds_draw_what_their_tres_say() -> void:
 	_assert_material_holds(deck.material_override as ShaderMaterial, "cloud_deck", 6)
 	_assert_material_holds((deck.get_node("Shadows") as GeometryInstance3D).material_override as ShaderMaterial,
 		"cloud_shadow", 1)
+
+
+## The woods wear their .tres but for the wind's uniforms.
+func test_the_woods_draw_what_their_tres_say() -> void:
+	var t := Map3DLayerTrees.new()
+	add_child_autofree(t)
+	_assert_material_holds(t._material(), "tree_sway", 9)
+	_assert_material_holds(t._card_material(), "tree_card", 9)
+	assert_ne(t.material, Map3DLayerTrees.CARD_MAT, "a copy: the wind never writes the .tres")
 
 
 func test_the_waters_draw_what_their_tres_say() -> void:

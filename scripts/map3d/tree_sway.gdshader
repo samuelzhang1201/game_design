@@ -13,7 +13,7 @@ shader_type spatial;
 // takes its own hue, held WARM — olive to yellow-green (hue_bias, hue_spread):
 // a teal crown on the golden grass read as a second picture pasted on — and the
 // whole wood is held to a natural saturation (saturation); no specular.
-// Map3DLayerTrees binds the look from balance.csv map3d_tree_*.
+// The look is scenes/map3d/materials/tree_sway.tres (edited in the inspector).
 
 uniform float wind_time = 0.0;
 uniform vec2 wind_dir = vec2(1.0, 0.0);

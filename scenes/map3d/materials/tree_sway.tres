@@ -1,0 +1,22 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://ciefg00r7g0g5"]
+
+[ext_resource type="Shader" uid="uid://pnqh0go6yqs4" path="res://scripts/map3d/tree_sway.gdshader" id="1_mo8qq"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_mo8qq")
+shader_parameter/wind_time = 0.0
+shader_parameter/wind_dir = Vector2(1, 0)
+shader_parameter/sway_m = 0.6
+shader_parameter/sway_height_m = 30.0
+shader_parameter/sway_hz = 0.25
+shader_parameter/flutter = 0.35
+shader_parameter/roughness_value = 1.0
+shader_parameter/specular_value = 0.0
+shader_parameter/leaf_m = 2.4
+shader_parameter/leaf_contrast = 0.45
+shader_parameter/leaf_bump = 0.55
+shader_parameter/hue_spread = 0.04
+shader_parameter/hue_bias = -0.03
+shader_parameter/saturation = 0.8
+shader_parameter/value_gain = 1.0

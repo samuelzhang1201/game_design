@@ -11,8 +11,6 @@ extends Node3D
 ## frame. Takes everything from Map3DContext — never the Game autoload.
 
 const VARIANTS := 2
-const SWAY_SHADER := preload("res://scripts/map3d/tree_sway.gdshader")
-const CARD_SHADER := preload("res://scripts/map3d/tree_card.gdshader")
 ## The crown atlas the photo cards wear (tools/map3d/build_tree_atlas.py).
 const CROWN_ATLAS := "res://assets/3D/vegetation/crowns/crowns_atlas.png"
 const ROW := 6
@@ -66,8 +64,7 @@ func build(p_ctx: Map3DContext) -> void:
 	# The clumps are kept between views (Map3DAssetCache's rule: ~0.5 s a
 	# screen swap), by every input they are made of; the nodes are this view's.
 	var look: Array = [path, FileAccess.get_modified_time(path), density, cards, repo.map3d_tree_crowns]
-	for k: String in ["map3d_tree_chunk_m", "map3d_tree_scale", "map3d_tree_size_spread"] \
-			+ LOOK.keys() + CARD_LOOK.keys():
+	for k: String in ["map3d_tree_chunk_m", "map3d_tree_scale", "map3d_tree_size_spread"]:
 		look.append(repo.bal(k))
 	var key := var_to_str(look).md5_text()
 	if key != _kept_key:
@@ -169,54 +166,24 @@ func _plan(data: PackedFloat32Array, density: float, cards: bool) -> Dictionary:
 	return {"material": mat, "count": count, "chunks": chunks}
 
 
-## The one material every clump shares: tree_sway.gdshader (the wind's sway;
-## Map3DLayerWind sets its uniforms each frame).
+## The one material every clump shares: a copy of SWAY_MAT or CARD_MAT
+## (Map3DLayerWind sets the wind's uniforms on it each frame).
 var material: ShaderMaterial
+
+## The foliage's look (owner 2026-10-01: below a 20 km scale the woods read
+## fake — leaf clumps, a hue per crown, a natural saturation, no sheen),
+## edited in the inspector (owner 2026-10-02); the wind's uniforms are
+## Map3DLayerWind's.
+const SWAY_MAT := preload("res://scenes/map3d/materials/tree_sway.tres")
+## The photo cards' look over the crown atlas, edited in the inspector.
+const CARD_MAT := preload("res://scenes/map3d/materials/tree_card.tres")
 
 
 func _material() -> ShaderMaterial:
-	material = ShaderMaterial.new()
-	material.shader = SWAY_SHADER
-	# the foliage's look (owner 2026-10-01: below a 20 km scale the woods read
-	# fake): leaf clumps, a hue per crown, a natural saturation, no sheen
-	for key: String in LOOK:
-		material.set_shader_parameter(LOOK[key], ctx.repo.bal(key))
+	material = SWAY_MAT.duplicate() as ShaderMaterial
 	return material
 
 
-## balance.csv key -> tree_sway.gdshader uniform
-const LOOK := {
-	"map3d_tree_leaf_m": "leaf_m",
-	"map3d_tree_leaf_contrast": "leaf_contrast",
-	"map3d_tree_leaf_bump": "leaf_bump",
-	"map3d_tree_hue_spread": "hue_spread",
-	"map3d_tree_hue_bias": "hue_bias",
-	"map3d_tree_saturation": "saturation",
-	"map3d_tree_value": "value_gain",
-	"map3d_tree_roughness": "roughness_value",
-	"map3d_tree_specular": "specular_value",
-}
-
-
-## The photo cards' material: tree_card.gdshader over the crown atlas, the
-## look bound from balance.csv map3d_tree_card_* (Map3DLayerWind sets the
-## wind's uniforms on `material` each frame, as for the 3D crowns).
 func _card_material() -> ShaderMaterial:
-	material = ShaderMaterial.new()
-	material.shader = CARD_SHADER
-	material.set_shader_parameter("atlas", load(CROWN_ATLAS))
-	for key: String in CARD_LOOK:
-		material.set_shader_parameter(CARD_LOOK[key], ctx.repo.bal(key))
+	material = CARD_MAT.duplicate() as ShaderMaterial
 	return material
-
-
-const CARD_LOOK := {
-	"map3d_tree_card_alpha_cut": "alpha_cut",
-	"map3d_tree_card_sphere": "sphere",
-	"map3d_tree_card_lift": "lift",
-	"map3d_tree_card_saturation": "saturation",
-	"map3d_tree_card_value": "value_gain",
-	"map3d_tree_card_tint": "tint_k",
-	"map3d_tree_card_alpha_far": "alpha_far_gain",
-	"map3d_tree_card_far_value": "far_value",
-}
