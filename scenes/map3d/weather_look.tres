@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="Map3DWeatherLook" format=3 uid="uid://58ympj3nutbq"]
+
+[ext_resource type="Script" uid="uid://cd8rdt2r53u2w" path="res://scripts/map3d/map3d_weather_look.gd" id="1_83kwl"]
+
+[resource]
+script = ExtResource("1_83kwl")

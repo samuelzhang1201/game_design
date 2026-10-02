@@ -66,7 +66,11 @@ const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3
 	"map3d_march_trail", "map3d_weather_rain_", "map3d_weather_snow_count", "map3d_weather_snow_life",
 	"map3d_weather_snow_length", "map3d_weather_snow_width", "map3d_weather_snow_opacity",
 	"map3d_weather_snow_slant", "map3d_weather_snow_sway", "map3d_weather_snow_gain", "map3d_weather_fall_",
-	"map3d_weather_gust_", "weather_rain", "weather_flake", "map3d_wind_", "map3d_cloud_wind_deg"]
+	"map3d_weather_gust_", "weather_rain", "weather_flake", "map3d_wind_", "map3d_cloud_wind_deg",
+	"map3d_weather_field_", "map3d_weather_blend_days", "map3d_weather_warp_", "map3d_weather_cell_",
+	"map3d_weather_dim", "map3d_weather_flat", "map3d_weather_wet_", "map3d_weather_mud_",
+	"map3d_weather_snow_", "map3d_weather_haze", "map3d_weather_roof_snow", "weather_snow\"",
+	"weather_mud\"", "weather_wet\"", "weather_haze\""]
 
 
 func before_all() -> void:

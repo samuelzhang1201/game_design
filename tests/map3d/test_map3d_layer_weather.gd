@@ -40,9 +40,11 @@ func test_a_step_puts_the_field_on_the_ground() -> void:
 	assert_eq(mat.params.get("weather_on"), 1.0)
 	assert_true(mat.params.get("weather_now") is ImageTexture, "this spell's field")
 	assert_true(mat.params.get("weather_next") is ImageTexture, "and the next's")
-	assert_eq(mat.params.get("weather_step_px"), repo.bal("map3d_weather_field_step_px"))
-	assert_eq(mat.params.get("weather_snow_detail"), repo.bal("map3d_weather_snow_detail"),
-		"every tuning value comes from balance.csv")
+	var look := Map3DWeatherLook.shared()
+	assert_eq(mat.params.get("weather_step_px"), float(look.field_step_px))
+	assert_eq(mat.params.get("weather_snow_detail"), look.snow_detail,
+		"every look value comes from weather_look.tres")
+	assert_eq(mat.params.get("weather_haze_color"), look.haze_color)
 	assert_eq(mat.params.get("weather_blend"), 0.0, "the first day of a spell is wholly its own")
 
 

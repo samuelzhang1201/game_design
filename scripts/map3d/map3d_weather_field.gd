@@ -1,17 +1,19 @@
 class_name Map3DWeatherField
 extends RefCounted
 ## The weather as the 3D map draws it (spec 2026-09-29-weather-visuals): a
-## low-resolution FIELD over the pack, one texel per map3d_weather_field_step_px
+## low-resolution FIELD over the pack, one texel per `field_step_px`
 ## pack px, each land texel the look of its cell's province's weather that
 ## spell (data/weather.csv's overcast, wet, mud, snow, rainfall, snowfall),
-## blurred over land only (map3d_weather_field_blur_halvings halvings) — the sea
+## blurred over land only (`field_blur_halvings` halvings) — the sea
 ## by a coast takes the coast's weather — so a front, not a province outline,
 ## is what the ground shows. Pure and look-only: Weather.of is read, nothing is written.
 ##
 ## `ground` is RGBA8 (wet, mud, snow, overcast), `fall` RGB8 (rainfall,
 ## snowfall, gust — the wind that drives a blizzard's snow sideways); a texel (i, j) covers pack px [i, i + 1) × step, sampled at its
-## centre.
+## centre. How it is drawn — the texel, the blur, the cells — is the map's
+## Map3DWeatherLook (scenes/map3d/weather_look.tres, edited in the inspector).
 
+var look: Map3DWeatherLook
 var step_px := 16
 var size := Vector2i.ONE
 ## Texel → cell id (-1 water), row-major; cut once per pack.
@@ -24,8 +26,9 @@ var _prov_codes: Array = []
 var _prov_key := -1
 
 
-func _init(repo: DataRepository) -> void:
-	step_px = maxi(1, int(repo.bal("map3d_weather_field_step_px")))
+func _init(repo: DataRepository, p_look: Map3DWeatherLook = null) -> void:
+	look = p_look if p_look != null else Map3DWeatherLook.shared()
+	step_px = maxi(1, look.field_step_px)
 	var img := _cell_index(repo)
 	if img == null:
 		return
@@ -75,13 +78,15 @@ static func first_day_of(repo: DataRepository, spell: int) -> int:
 
 
 ## {spell, t}: the spell a moment falls in and how far its field has turned to
-## the NEXT spell's — 0 until the last map3d_weather_blend_days of the spell,
+## the NEXT spell's — 0 until the last `blend_days` of the spell (`p_look`'s,
+## else the map's),
 ## then eased to 1 at its end (a front arriving, not a switch).
-static func blend_of(repo: DataRepository, abs_day: int, day_share: float) -> Dictionary:
+static func blend_of(repo: DataRepository, abs_day: int, day_share: float,
+		p_look: Map3DWeatherLook = null) -> Dictionary:
 	var days := maxi(1, int(repo.bal("weather_spell_days")))
 	var spell := Weather.spell_of(repo, abs_day)
 	var pos := float(maxi(abs_day, 1) - 1 - spell * days) + clampf(day_share, 0.0, 1.0)
-	var span := clampf(repo.bal("map3d_weather_blend_days"), 0.0, float(days))
+	var span := clampf((p_look if p_look != null else Map3DWeatherLook.shared()).blend_days, 0.0, float(days))
 	var t := 0.0 if span <= 0.0 else smoothstep(float(days) - span, float(days), pos)
 	return {"spell": spell, "t": t}
 
@@ -138,7 +143,7 @@ func build_kinds(repo: DataRepository, kinds: Dictionary) -> Dictionary:
 		fb[t * 4 + 3] = 255
 	var ground := Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGBA8, g)
 	var falls := Image.create_from_data(size.x, size.y, false, Image.FORMAT_RGBA8, fb)
-	var halvings := int(repo.bal("map3d_weather_field_blur_halvings"))
+	var halvings := look.field_blur_halvings
 	_blur(ground, halvings)
 	_blur(falls, halvings)
 	# un-premultiply; a texel's look fades with the land in its reach, so the
@@ -191,9 +196,9 @@ func _index_provinces(repo: DataRepository, state: GameState) -> void:
 
 ## A province's weather is a CELL round its centre, not a blanket over it
 ## (owner 2026-09-29: 天气效果不用铺满整个省份，再小一点): whole out to
-## map3d_weather_cell_core of the province's own radius (its area's), gone by
-## map3d_weather_cell_edge (the core never under map3d_weather_cell_min_px, or
-## the blur ate a small province's weather), the rim wobbled by map3d_weather_cell_wobble with
+## `cell_core` of the province's own radius (its area's), gone by
+## `cell_edge` (the core never under `cell_min_px`, or
+## the blur ate a small province's weather), the rim wobbled by `cell_wobble` with
 ## the angle so no cell is a circle — well inside the province, clear of its
 ## neighbours. The whole province still slows a march: the look is smaller
 ## than the rule, and the HUD mark at the centre names it.
@@ -211,10 +216,10 @@ func _cut_cells(repo: DataRepository) -> void:
 		centre.append(Vector2(float(row.get("center_x", 0.0)), float(row.get("center_y", 0.0))))
 		radius.append(sqrt(float(count[p]) * step_px * step_px / PI))
 		phase.append(float(posmod(String(_prov_codes[p]).hash(), 6283)) / 1000.0)
-	var core := repo.bal("map3d_weather_cell_core")
-	var edge := maxf(repo.bal("map3d_weather_cell_edge"), core + 0.01)
-	var wobble := repo.bal("map3d_weather_cell_wobble")
-	var min_px := repo.bal("map3d_weather_cell_min_px")
+	var core := look.cell_core
+	var edge := maxf(look.cell_edge, core + 0.01)
+	var wobble := look.cell_wobble
+	var min_px := look.cell_min_px
 	_texel_cell = PackedFloat32Array()
 	_texel_cell.resize(_texel_prov.size())
 	for j in size.y:

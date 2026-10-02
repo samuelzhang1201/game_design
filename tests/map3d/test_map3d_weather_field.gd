@@ -56,7 +56,7 @@ func test_each_kind_names_its_look_in_weather_csv() -> void:
 
 
 func test_the_field_covers_the_pack_at_its_step() -> void:
-	assert_eq(field.step_px, int(repo.bal("map3d_weather_field_step_px")))
+	assert_eq(field.step_px, Map3DWeatherLook.shared().field_step_px)
 	assert_gt(field.size.x, 1)
 	assert_gt(field.size.y, 1)
 
@@ -69,7 +69,7 @@ func test_a_snowbound_land_is_white_under_the_field_and_the_open_sea_is_clear() 
 	assert_almost_eq(inland.b, 1.0, 0.02, "snow over the province's seat")
 	assert_almost_eq(inland.a, 0.6, 0.02, "under snow's overcast")
 	assert_gt(field.sample(ground, _seat_px(_a_province())).b, 0.6,
-		"even a five-cell province keeps its weather at its seat (map3d_weather_cell_min_px)")
+		"even a five-cell province keeps its weather at its seat (the look's cell_min_px)")
 	assert_almost_eq(field.sample(ground, Vector2.ZERO).b, 0.0, 0.02, "the far sea corner stays clear")
 
 
@@ -111,13 +111,14 @@ func test_the_same_spell_builds_the_same_field() -> void:
 
 func test_a_spell_turns_to_the_next_only_at_its_end() -> void:
 	repo.balance["weather_spell_days"] = 3.0
-	repo.balance["map3d_weather_blend_days"] = 0.75
-	assert_eq(Map3DWeatherField.blend_of(repo, 1, 0.0), {"spell": 0, "t": 0.0})
-	assert_eq(Map3DWeatherField.blend_of(repo, 3, 0.2)["t"], 0.0, "not before the last 0.75 day")
-	assert_almost_eq(float(Map3DWeatherField.blend_of(repo, 3, 1.0)["t"]), 1.0, 0.001, "wholly the next at the end")
-	var mid := float(Map3DWeatherField.blend_of(repo, 3, 0.625)["t"])
+	var look := Map3DWeatherLook.new()
+	look.blend_days = 0.75
+	assert_eq(Map3DWeatherField.blend_of(repo, 1, 0.0, look), {"spell": 0, "t": 0.0})
+	assert_eq(Map3DWeatherField.blend_of(repo, 3, 0.2, look)["t"], 0.0, "not before the last 0.75 day")
+	assert_almost_eq(float(Map3DWeatherField.blend_of(repo, 3, 1.0, look)["t"]), 1.0, 0.001, "wholly the next at the end")
+	var mid := float(Map3DWeatherField.blend_of(repo, 3, 0.625, look)["t"])
 	assert_almost_eq(mid, 0.5, 0.001, "half way through the blend")
-	assert_eq(Map3DWeatherField.blend_of(repo, 4, 0.0), {"spell": 1, "t": 0.0}, "the next spell begins clear of blend")
+	assert_eq(Map3DWeatherField.blend_of(repo, 4, 0.0, look), {"spell": 1, "t": 0.0}, "the next spell begins clear of blend")
 	assert_eq(Map3DWeatherField.first_day_of(repo, 1), 4)
 
 

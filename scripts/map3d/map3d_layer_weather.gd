@@ -3,12 +3,15 @@ extends RefCounted
 ## The weather's LOOK on the 3D map (spec 2026-09-29-weather-visuals): the
 ## Map3DWeatherField of this spell and the next handed to the patched Terrain3D
 ## shader (Map3DGroundTint's weather_* uniforms) and turned from one to the
-## other over the spell's last map3d_weather_blend_days by the day's progress,
+## other over the spell's last `blend_days` by the day's progress,
 ## like the sun. Presentation only: it reads Weather, never writes a thing.
 ## The clouds and the falling rain and snow read the same field from here.
 
 var ctx: Map3DContext
 var field: Map3DWeatherField
+## How the weather is drawn (scenes/map3d/weather_look.tres, edited in the
+## inspector).
+var look := Map3DWeatherLook.shared()
 ## The terrain material carrying the patch (null without one: the fixture).
 var _mat: Resource
 ## A tool's forced sky ("" = the real weather): every province wears it, or
@@ -40,7 +43,7 @@ func bind(p_ctx: Map3DContext, tint_material: Resource, p_precip: Map3DLayerPrec
 	precip = p_precip
 	houses = p_houses
 	if on():
-		field = Map3DWeatherField.new(ctx.repo)
+		field = Map3DWeatherField.new(ctx.repo, look)
 	if precip != null:
 		precip.build(ctx, self)
 
@@ -57,19 +60,15 @@ func apply_quality(row: Dictionary) -> void:
 func _apply_uniforms() -> void:
 	if _mat == null or _tex.is_empty():
 		return
-	var repo := ctx.repo
 	_mat.call("set_shader_param", "weather_step_px", float(field.step_px))
-	for key in ["warp_m", "warp_scale_m", "dim", "flat", "wet_dark", "wet_rough", "mud_mix",
-			"snow_slope", "snow_patch_m", "snow_rough", "snow_detail", "snow_steep", "snow_soft", "mud_dark",
-			"wet_cool", "haze"]:
-		_mat.call("set_shader_param", "weather_" + key, repo.bal("map3d_weather_" + key))
+	var floats := look.ground_floats()
+	for key: String in floats:
+		_mat.call("set_shader_param", "weather_" + key, floats[key])
 	# raw sRGB, turned linear in the shader (the heat stops' way)
-	_mat.call("set_shader_param", "weather_mud_color",
-		MapTerrain.palette_color(repo, "weather_mud", Color("#6E5536")))
-	_mat.call("set_shader_param", "weather_snow_color",
-		MapTerrain.palette_color(repo, "weather_snow", Color("#E9EDEF")))
-	_mat.call("set_shader_param", "weather_wet_color", MapTerrain.palette_color(repo, "weather_wet", Color("#737F8C")))
-	_mat.call("set_shader_param", "weather_haze_color", MapTerrain.palette_color(repo, "weather_haze", Color("#B8BEC4")))
+	_mat.call("set_shader_param", "weather_mud_color", look.mud_color)
+	_mat.call("set_shader_param", "weather_snow_color", look.snow_color)
+	_mat.call("set_shader_param", "weather_wet_color", look.wet_color)
+	_mat.call("set_shader_param", "weather_haze_color", look.haze_color)
 	_mat.call("set_shader_param", "weather_now", _tex["ground_now"])
 	_mat.call("set_shader_param", "weather_next", _tex["ground_next"])
 	_mat.call("set_shader_param", "weather_on", 1.0)
@@ -94,7 +93,7 @@ func step() -> void:
 	var st := ctx.state()
 	if st == null:
 		return
-	var b := Map3DWeatherField.blend_of(ctx.repo, st.absolute_day(), ctx.day_share())
+	var b := Map3DWeatherField.blend_of(ctx.repo, st.absolute_day(), ctx.day_share(), look)
 	var now_spell := int(b["spell"])
 	var key := [ctx.repo.map_id, st.rng.seed_value() if st.rng != null else 0, override,
 		st.manor_province.hash()]
@@ -193,9 +192,8 @@ func _house_weather() -> Dictionary:
 	return {"weather_now": _tex["ground_now"], "weather_next": _tex["ground_next"], "weather_on": 1.0,
 		"weather_blend": _blend, "weather_origin": Vector2(float(origin[0]), float(origin[1])),
 		"weather_m_per_px": float(ctx.meta.get("m_per_px", 50.0)), "weather_step_px": float(field.step_px),
-		"weather_snow_color": MapTerrain.palette_color(ctx.repo, "weather_snow", Color("#E9EDEF")),
-		"weather_roof_snow": ctx.repo.bal("map3d_weather_roof_snow"),
-		"weather_wet_dark": ctx.repo.bal("map3d_weather_wet_dark")}
+		"weather_snow_color": look.snow_color, "weather_roof_snow": look.roof_snow,
+		"weather_wet_dark": look.wet_dark}
 
 
 func _upload() -> void:

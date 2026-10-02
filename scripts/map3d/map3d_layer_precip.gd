@@ -33,7 +33,6 @@ var _strength := 0.0
 func build(p_ctx: Map3DContext, p_weather: Map3DLayerWeather) -> void:
 	ctx = p_ctx
 	weather = p_weather
-	var repo := ctx.repo
 	var origin: Array = ctx.meta.get("pack_origin", [0.0, 0.0])
 	for kind: String in KINDS:
 		var node := get_node(kind.capitalize()) as Map3DPrecipKind
@@ -48,7 +47,7 @@ func build(p_ctx: Map3DContext, p_weather: Map3DLayerWeather) -> void:
 		fall.set_shader_parameter("kind", float(node.kind))
 		fall.set_shader_parameter("pack_origin", Vector2(float(origin[0]), float(origin[1])))
 		fall.set_shader_parameter("m_per_px", float(ctx.meta.get("m_per_px", 50.0)))
-		fall.set_shader_parameter("step_px", repo.bal("map3d_weather_field_step_px"))
+		fall.set_shader_parameter("step_px", float(weather.look.field_step_px))
 		drop.set_shader_parameter("kind", float(node.kind))
 		_parts[kind] = {"node": node, "fall": fall, "drop": drop}
 
