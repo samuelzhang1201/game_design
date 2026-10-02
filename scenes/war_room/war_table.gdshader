@@ -37,6 +37,7 @@ uniform float paper_roughness = 0.9;
 uniform float crease_alpha = 0.12;
 uniform float crease_px = 1.5;
 uniform vec2 grid_cells = vec2(16.75, 12.125); // sheet size / grid square
+uniform vec2 grid_phase = vec2(0.0);           // the grid stays on whole degrees whatever the collar
 uniform float tex_aspect = 1.0;                // the share of the ink texture's height the sheet fills
 uniform vec2 table_m = vec2(1.4, 1.0);         // the sheet's width and depth in table metres
 
@@ -81,7 +82,7 @@ void fragment() {
 	float shallow = 1.0 - clamp(shore_t, 0.0, 1.0);
 	col = mix(col, sea_ink.rgb, hatch * shallow * sea_hatch_alpha * (1.0 - land));
 
-	vec2 g = UV * grid_cells;
+	vec2 g = UV * grid_cells + grid_phase;
 	float grid = max(line_at(g.x, grid_px), line_at(g.y, grid_px));
 	col = mix(col, ink.rgb, grid * grid_alpha);
 

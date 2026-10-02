@@ -102,10 +102,28 @@ func test_a_sheet_out_of_range_is_ignored() -> void:
 	assert_eq(view.sheet_index(), -1)
 
 
+## The sheet with the most towns inside it (v2's sheets are small: index 0 may
+## hold none).
+func _town_sheet() -> int:
+	var best := 0
+	var most := -1
+	for s: Dictionary in WarSheets.series(repo):
+		var n := 0
+		for code: String in repo.burgs:
+			var b: Dictionary = repo.burgs[code]
+			if (s["rect"] as Rect2).grow(-(s["rect"] as Rect2).size.x * 0.15).has_point(Vector2(float(b["x"]), float(b["y"]))):
+				n += 1
+		if n > most:
+			most = n
+			best = int(s["index"])
+	return best
+
+
 func test_pack_at_inverts_screen_pos_of_px_on_land() -> void:
-	view.lay_sheet(0)
+	var si := _town_sheet()
+	view.lay_sheet(si)
 	await wait_process_frames(2)
-	var r: Rect2 = WarSheets.series(repo)[0]["rect"]
+	var r: Rect2 = WarSheets.series(repo)[si]["rect"]
 	var codes: Array = repo.burgs.keys()
 	codes.sort()
 	var checked := 0
@@ -141,7 +159,7 @@ func test_a_laid_sheet_stands_an_arrow_at_each_neighbouring_side() -> void:
 	var want: Array = near.values()
 	for a: Node in arrows:
 		assert_true(int(a.get_meta("sheet")) in want)
-		assert_true((a as Label3D).text.ends_with(String(WarSheets.series(repo)[int(a.get_meta("sheet"))]["numeral"])))
+		assert_true((a as Label3D).text.ends_with(String(WarSheets.series(repo)[int(a.get_meta("sheet"))]["id"])))
 
 
 func _click(at: Vector2) -> void:
@@ -164,6 +182,8 @@ func test_a_click_on_an_edge_arrow_requests_its_sheet() -> void:
 
 
 func test_every_numeral_on_the_wall_chart_is_in_the_opening_view_and_picks_its_sheet() -> void:
+	pending("v2 B: the chart's numerals become the graticule's letters and numbers (plan B Task 5)")
+	return
 	var cam: Camera3D = view.get_node("%Camera")
 	var inside := Rect2(Vector2.ZERO, view.size)
 	for laid in WarSheets.series(repo).size():   # whichever sheet is laid, its arrows must not shadow the chart

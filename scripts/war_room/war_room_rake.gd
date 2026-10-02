@@ -97,12 +97,15 @@ func on_left(mb: InputEventMouseButton) -> void:
 	var radius := _repo.bal("war_pick_px")
 	var pennant := "" if _view.rolling() else WarRoomPicks.nearest(_pennants.screen_hits(_camera, scale), mb.position, radius)
 	var piece := _view.piece_under(mb.position)
-	if i >= 0:
-		_view.sheet_requested.emit(i)
-	elif pennant != "":
+	# what stands ON the sheet (a pennant, a piece) is picked before the flat
+	# chart its top may be drawn over (v2 B: a piece at a sheet's north edge
+	# throws its pennant's head over the index chart)
+	if pennant != "":
 		_view.route_clicked.emit(pennant, mb.position)
 	elif piece != "":
 		_view.select(piece)
+	elif i >= 0:
+		_view.sheet_requested.emit(i)
 	elif _view.aiming and _view.pack_at(mb.position).x >= 0.0:
 		_view.ground_clicked.emit(_view.pack_at(mb.position), mb.position)
 	elif _view.selected_army() != "":

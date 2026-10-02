@@ -28,7 +28,7 @@ static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font)
 	for s: Dictionary in WarSheets.series(repo):
 		var c: Vector2 = (s["rect"] as Rect2).get_center()
 		var at := Vector3((c.x / w - 0.5) * size.x, (0.5 - c.y / h) * size.y, repo.bal("war_chart_numeral_lift_m"))
-		chart.add_child(_label(String(s["numeral"]), font, repo.war_palette["rubric"], at,
+		chart.add_child(_label(String(s["id"]), font, repo.war_palette["rubric"], at,
 			int(repo.bal("war_chart_numeral_font_px")), repo.bal("war_chart_numeral_pixel_m"), false))
 
 
@@ -61,7 +61,7 @@ static func lay_arrows(parent: Node3D, repo: DataRepository, sheet: int, table_w
 	var near := WarSheets.neighbours(repo, sheet)
 	for side: String in near:
 		var to := int(near[side])
-		var a := _label("%s %s" % [SIDES[side], series[to]["numeral"]], font, repo.war_palette["ink"],
+		var a := _label("%s %s" % [SIDES[side], series[to]["id"]], font, repo.war_palette["ink"],
 			places[side], int(repo.bal("war_arrow_font_px")), repo.bal("war_arrow_pixel_m"), true)
 		a.set_meta("sheet", to)
 		parent.add_child(a)

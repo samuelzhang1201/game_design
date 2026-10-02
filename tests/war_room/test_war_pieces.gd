@@ -253,17 +253,23 @@ func test_a_click_on_the_figures_top_picks_the_piece_and_the_nearer_one_wins() -
 
 
 func test_a_fleet_stands_as_a_flat_tin_token() -> void:
-	view.lay_sheet(_home_sheet())
+	var fleet_sheet := -1
+	for p: Dictionary in WarRoom.pieces(repo, state):
+		if bool(p["naval"]):
+			fleet_sheet = int(p["sheet"])
+			break
+	assert_gte(fleet_sheet, 0, "the crown has a fleet")
+	view.lay_sheet(fleet_sheet)
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var seen := 0
-	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+	for p: Dictionary in WarRoom.on_sheet(repo, state, fleet_sheet):
 		if bool(p["naval"]):
 			var token := pieces.piece(String(p["code"])).get_node("Figures/Token") as MeshInstance3D
 			assert_not_null(token)
 			assert_true(token.material_override is ShaderMaterial, "under the tin shader")
 			seen += 1
-	assert_gt(seen, 0, "the home sheet holds a fleet")
+	assert_gt(seen, 0, "the fleet's sheet holds it")
 
 
 func test_a_regiment_leaving_the_sheet_loses_its_piece() -> void:

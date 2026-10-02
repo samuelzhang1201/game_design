@@ -206,7 +206,7 @@ func lay_sheet(index: int) -> void:
 ## the margin of the regiments standing on the others.
 func _on_laid(index: int) -> void:
 	var s: Dictionary = WarSheets.series(Game.data)[index]
-	%Title.text = "Sheet %s · %s" % [s["numeral"], s["name"]]
+	%Title.text = "Sheet %s · %s" % [s["id"], s["name"]] if String(s["name"]) != "" else "Sheet %s" % s["id"]
 	_fill_margin()
 	%Key.queue_redraw()   # a new sheet, a new scale
 
@@ -244,7 +244,7 @@ func _fill_margin() -> void:
 		b.flat = true
 		b.focus_mode = Control.FOCUS_NONE
 		var reg := ArmySystem.regiment(Game.data, String(p["code"]))
-		b.text = "%s → %s" % [reg.get("label", p["code"]), series[to]["numeral"]]
+		b.text = "%s → %s" % [reg.get("label", p["code"]), series[to]["id"]]
 		UiPalette.flat_tab(b, 12, 3.0)
 		for state: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
 			var look := b.get_theme_stylebox(state) as StyleBoxFlat

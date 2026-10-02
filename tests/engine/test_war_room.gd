@@ -141,3 +141,25 @@ func test_a_riding_pennant_carries_the_day_its_courier_left() -> void:
 	assert_eq(int(WarRoom.pennant_of(repo, state, code)["issued"]), int(c["issued"]))
 	var h := CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
 	assert_eq(int(WarRoom.pennant_of(repo, state, code)["issued"]), int(h["issued"]), "a countermand is dated by its own courier")
+
+
+func test_a_regiment_in_a_sheets_collar_is_on_that_sheet_and_off_no_other_twice() -> void:
+	var code := _land_code()
+	var collar := repo.bal("war_sheet_collar_km") * 0.5 * WarSheets.px_per_unit(repo)
+	var sheet := -1
+	var pt := Vector2.ZERO
+	for s: Dictionary in WarSheets.series(repo):
+		var p: Vector2 = (s["cell"] as Rect2).position + Vector2(-collar, (s["cell"] as Rect2).size.y * 0.5)
+		if p.x > 0.0:
+			sheet = int(s["index"])
+			pt = p
+			break
+	assert_gte(sheet, 0)
+	var m := ArmySystem.pack_to_metres(repo, pt)
+	state.regiments[code]["x_m"] = m.x
+	state.regiments[code]["y_m"] = m.y
+	var on: Array = WarRoom.on_sheet(repo, state, sheet).map(func(p: Dictionary) -> String: return String(p["code"]))
+	assert_true(code in on, "drawn on the sheet whose collar holds it")
+	var home := WarSheets.sheet_of(repo, pt)
+	var off: Array = WarRoom.off_sheet(repo, state, home).map(func(p: Dictionary) -> String: return String(p["code"]))
+	assert_false(code in off, "never listed as off its own home sheet")

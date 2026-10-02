@@ -34,8 +34,9 @@ static func bind(mat: ShaderMaterial, repo: DataRepository, sheet_rect: Rect2, t
 	for uniform: String in SHADER_KEYS:
 		mat.set_shader_parameter(uniform, repo.bal(String(SHADER_KEYS[uniform])))
 	mat.set_shader_parameter("table_m", Vector2(table_w, depth))
-	var grid := repo.bal("war_grid_km") * WarSheets.px_per_unit(repo)
-	mat.set_shader_parameter("grid_cells", sheet_rect.size / grid)
+	var g := MapCoords.px_per_deg(repo) * repo.bal("war_grid_deg")
+	mat.set_shader_parameter("grid_cells", sheet_rect.size / g)
+	mat.set_shader_parameter("grid_phase", Vector2(fposmod(sheet_rect.position.x, g.x), fposmod(sheet_rect.position.y, g.y)) / g)
 	mat.set_shader_parameter("tex_aspect", WarRoomInk.used_share(repo, sheet_rect))
 
 

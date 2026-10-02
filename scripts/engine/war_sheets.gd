@@ -1,11 +1,14 @@
 class_name WarSheets
 extends RefCounted
-## The WAR ROOM's numbered map series (owner 2026-10-01, spec
-## 2026-10-01-war-room-design §2): the pack cut into equal sheets at ONE
-## scale, neighbours overlapping, numbered in Roman numerals row by row from
-## the north-west, each named after the kingdom with the most land on it by
-## the STARTING border, and a place written "III · C7". Generated from the
-## pack alone; no pack is named. Pure and cached per repository.
+## The WAR ROOM's map series (owner 2026-10-01; v2 2026-10-02, spec
+## 2026-10-02-war-room-v2 §2.2): the pack cut by its own graticule
+## (MapCoords) into war_sheet_deg cells, a sheet for every cell with land,
+## named "D4" — the column letter and row number from the north-west — and
+## after the kingdom with the most land on it by the STARTING border. A
+## sheet's `cell` is its neat line; its `rect`, what the table shows, is the
+## cell grown by a war_sheet_collar_km collar of the neighbouring ground. A
+## place is written "D4 · c7 · 24°N 51°E". Generated from the pack alone; no
+## pack is named. Pure and cached per repository.
 
 static var _cache: Dictionary = {}
 
@@ -20,68 +23,42 @@ static func px_per_unit(repo: DataRepository) -> float:
 	return 1.0 / maxf(float(repo.map_info.get("distance_scale", "1")), 0.0001)
 
 
-## Every sheet rect of the full grid, row-major: a stride of the size less the
-## overlap, as many as cover the map, the last of each run held to the edge so
-## no sheet runs off it. A map smaller than a sheet is one sheet at the origin.
-static func layout(width: float, height: float, w: float, h: float, overlap: float) -> Array[Rect2]:
-	var xs := _starts(width, w, overlap)
-	var ys := _starts(height, h, overlap)
-	var out: Array[Rect2] = []
-	for y in ys:
-		for x in xs:
-			out.append(Rect2(x, y, w, h))
-	return out
+static func id_of(col: int, row: int) -> String:
+	return "%s%d" % [char(65 + col), row + 1]
 
 
-static func _starts(span: float, size: float, overlap: float) -> Array[float]:
-	if span <= size:
-		return [0.0]
-	var stride := maxf(size - overlap, 1.0)
-	var n := int(ceil((span - overlap) / stride))
-	var out: Array[float] = []
-	for i in n:
-		out.append(minf(float(i) * stride, span - size))
-	return out
-
-
-## The series: sheets with land, in order, numbered and named. "Most land"
-## counts land-cell CENTRES inside the sheet (not area), by the starting
-## border. `col` / `row` are the sheet's place in the FULL layout grid, which
-## a skipped sea sheet leaves a hole in.
 static func series(repo: DataRepository) -> Array:
 	var key := repo.get_instance_id()
 	if _cache.has(key):
 		return _cache[key]
-	var k := px_per_unit(repo)
-	var width := float(repo.map_info.get("width", "0"))
-	var rects := layout(width, float(repo.map_info.get("height", "0")),
-		repo.bal("war_sheet_w_km") * k, repo.bal("war_sheet_h_km") * k, repo.bal("war_sheet_overlap_km") * k)
-	var cols := _starts(width, repo.bal("war_sheet_w_km") * k, repo.bal("war_sheet_overlap_km") * k).size()
-	var centres := _land_centres(repo)
+	var deg := repo.bal("war_sheet_deg")
+	var collar := repo.bal("war_sheet_collar_km") * px_per_unit(repo)
+	var tallies: Dictionary = {}   # Vector2i cell -> {kingdom: count}
+	for c: Dictionary in _land_centres(repo):
+		var at := MapCoords.cell_of(repo, c["at"], deg)
+		if not tallies.has(at):
+			tallies[at] = {}
+		var t: Dictionary = tallies[at]
+		if String(c["kingdom"]) != "":
+			t[c["kingdom"]] = int(t.get(c["kingdom"], 0)) + 1
+	var keys: Array = tallies.keys()
+	keys.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.y < b.y or (a.y == b.y and a.x < b.x))
 	var out: Array = []
-	for n in rects.size():
-		var r: Rect2 = rects[n]
-		var tally: Dictionary = {}
-		for c: Dictionary in centres:
-			if r.has_point(c["at"]):
-				tally[c["kingdom"]] = int(tally.get(c["kingdom"], 0)) + 1
-		if tally.is_empty():
-			continue
+	for at: Vector2i in keys:
+		var tally: Dictionary = tallies[at]
 		var best := ""
 		for kd: String in tally:
 			if best == "" or int(tally[kd]) > int(tally[best]) or (int(tally[kd]) == int(tally[best]) and kd < best):
 				best = kd
-		var i := out.size()
-		@warning_ignore("integer_division")
-		var row := n / cols
-		out.append({"index": i, "numeral": roman(i + 1), "kingdom": best,
-			"name": String((repo.kingdoms.get(best, {}) as Dictionary).get("label", best)), "rect": r,
-			"col": n % cols, "row": row})
+		var cell := MapCoords.cell_rect(repo, at, deg)
+		out.append({"index": out.size(), "id": id_of(at.x, at.y), "kingdom": best,
+			"name": String((repo.kingdoms.get(best, {}) as Dictionary).get("label", best)),
+			"cell": cell, "rect": cell.grow(collar), "col": at.x, "row": at.y})
 	_cache[key] = out
 	return out
 
 
-## Each land cell's centre and its province's starting kingdom.
+## Each land cell's centre and its province's starting kingdom ("" unclaimed).
 static func _land_centres(repo: DataRepository) -> Array:
 	var out: Array = []
 	var ids: Array = repo.cells.keys()
@@ -92,26 +69,15 @@ static func _land_centres(repo: DataRepository) -> Array:
 			continue
 		var prov := String((repo.manors.get(id, {}) as Dictionary).get("province_code", ""))
 		var kd := String((repo.provinces.get(prov, {}) as Dictionary).get("kingdom_code", ""))
-		if kd == "":
-			continue
+		# unclaimed land is land too (v2: a sheet for every cell with land); it
+		# names no kingdom, so it only counts toward having a sheet
 		out.append({"at": MapTerrain.cell_center(repo, cell), "kingdom": kd})
 	return out
 
 
-static func roman(n: int) -> String:
-	var vals := [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
-	var syms := ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
-	var out := ""
-	var left := n
-	for i in vals.size():
-		while left >= int(vals[i]):
-			out += String(syms[i])
-			left -= int(vals[i])
-	return out
-
-
-## The sheet holding `px` whose centre is nearest (in the overlap both hold
-## it); a point on no sheet goes to the sheet whose rect is nearest.
+## The sheet holding `px` whose centre is nearest (in a collar two sheets'
+## rects hold it, and the cell it lies in is the nearer); a point on no sheet
+## goes to the sheet whose rect is nearest.
 static func sheet_of(repo: DataRepository, px: Vector2) -> int:
 	var best := -1
 	var best_d := INF
@@ -132,14 +98,15 @@ static func _rect_gap(r: Rect2, p: Vector2) -> float:
 	return 1.0e12 + p.distance_squared_to(q)  # always behind any sheet that holds it
 
 
-## "III · C7": the sheet's numeral, the column letter (A from the west edge)
-## and row number (1 from the north edge) of war_grid_km squares.
+## "D4 · c7 · 24°N 51°E": the sheet's id, the war_grid_deg square inside its
+## neat line (a lower-case column letter from the west, a row number from the
+## north) and the place's own whole degrees.
 static func grid_ref(repo: DataRepository, sheet: Dictionary, px: Vector2) -> String:
-	var r: Rect2 = sheet["rect"]
-	var g := repo.bal("war_grid_km") * px_per_unit(repo)
-	var col := clampi(int(floor((px.x - r.position.x) / g)), 0, 25)
-	var row := maxi(int(floor((px.y - r.position.y) / g)), 0) + 1
-	return "%s · %s%d" % [sheet["numeral"], char(65 + col), row]
+	var c: Rect2 = sheet.get("cell", sheet["rect"])
+	var g := MapCoords.px_per_deg(repo) * repo.bal("war_grid_deg")
+	var col := clampi(floori((px.x - c.position.x) / g.x), 0, 25)
+	var row := maxi(floori((px.y - c.position.y) / g.y), 0) + 1
+	return "%s · %s%d · %s" % [sheet["id"], char(97 + col), row, MapCoords.format(MapCoords.lon_lat(repo, px))]
 
 
 ## The sheets beside `index` by GRID position only: the kept sheet at

@@ -11,7 +11,7 @@ func before_all() -> void:
 
 
 func test_every_balance_key_the_room_reads_is_there() -> void:
-	for key in ["war_sheet_w_km", "war_sheet_h_km", "war_sheet_overlap_km", "war_grid_km",
+	for key in ["war_sheet_deg", "war_sheet_collar_km", "war_grid_deg",
 			"war_table_w_m", "war_relief_grid", "war_relief_exaggeration", "war_contour_m",
 			"war_contour_index_every", "war_sheet_texture_px", "war_sheet_swap_s",
 			"war_cam_distance_m", "war_cam_min_m", "war_cam_max_m", "war_cam_pitch_near_deg",
