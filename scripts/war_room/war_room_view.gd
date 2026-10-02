@@ -160,6 +160,8 @@ func set_active(on: bool) -> void:
 	set_process(on)
 	if not on:
 		_finish_swap()
+		_viewport.size = Vector2i(2, 2)  # its render targets freed while shut (perf 2026-10-02)
+		_inks.trim(1)  # and only the laid sheet's ink kept
 	if on:
 		_fit_viewport()
 

@@ -88,5 +88,11 @@ func _touch(sheet: int) -> void:
 		return
 	_order.erase(sheet)
 	_order.append(sheet)
-	while _order.size() > KEEP:
+	trim(KEEP)
+
+
+## Keeps only the `count` most recently laid sheets' ink (the room shut keeps
+## the laid one alone, perf 2026-10-02: each is ~62 MB of video memory).
+func trim(count: int) -> void:
+	while _order.size() > count:
 		cache.erase(_order.pop_front())
