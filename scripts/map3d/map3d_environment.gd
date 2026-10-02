@@ -99,35 +99,7 @@ static func follow_camera(repo: DataRepository, env: Environment, sun: Direction
 		ctx: Map3DContext) -> void:
 	fog_for_distance(repo, env, ctx.distance)
 	shadow_for_distance(repo, sun, ctx.distance, Map3DQuality.num(ctx.quality, "shadow_max_m", 0.0))
-	effects_for_distance(repo, ctx.viewport, env, ctx.quality, ctx.distance)
-
-
-## The finishing effects are spent up close (owner 2026-10-02, 按缩放切换):
-## within map3d_close_effects_m a tier wears its msaa / screen_aa / ssao,
-## farther out its far_* values (blank: the same) — the opening view showed
-## no difference and MSAA 4x with SSAO cost it ~9 ms. Only a value that
-## changes is set, so a camera move costs nothing and only a crossing
-## reallocates MSAA's targets.
-static func effects_for_distance(repo: DataRepository, vp: SubViewport, env: Environment,
-		row: Dictionary, distance_m: float) -> void:
-	var far := distance_m > repo.bal("map3d_close_effects_m")
-	var pick := func(key: String) -> float:
-		var near_v := Map3DQuality.num(row, key, 0.0)
-		return Map3DQuality.num(row, "far_" + key, near_v) if far else near_v
-	if vp != null:
-		var msaa: Viewport.MSAA = {2: Viewport.MSAA_2X, 4: Viewport.MSAA_4X, 8: Viewport.MSAA_8X}.get(
-			int(pick.call("msaa")), Viewport.MSAA_DISABLED)
-		if vp.msaa_3d != msaa:
-			vp.msaa_3d = msaa
-		var aa: Viewport.ScreenSpaceAA = {1: Viewport.SCREEN_SPACE_AA_FXAA, 2: Viewport.SCREEN_SPACE_AA_SMAA}.get(
-			int(pick.call("screen_aa")), Viewport.SCREEN_SPACE_AA_DISABLED)
-		if vp.screen_space_aa != aa:
-			vp.screen_space_aa = aa
-	if env != null:
-		var ao := repo.bal("map3d_env_ssao") > 0.0 and Map3DQuality.num(row, "ssao", 1.0) > 0.0 \
-			and (not far or Map3DQuality.num(row, "far_ssao", 1.0) > 0.0)
-		if env.ssao_enabled != ao:
-			env.ssao_enabled = ao
+	Map3DCloseEffects.apply(repo, ctx.viewport, env, ctx.quality, ctx.distance)
 
 
 ## The sun's shadow reach follows the zoom too (owner 2026-09-25: house
@@ -281,10 +253,8 @@ static func apply_terrain_quality(terrain: Node, row: Dictionary) -> void:
 			terrain.set(String(pair[0]), v)
 
 
-## A tier's SubViewport: MSAA (0 / 2 / 4 / 8), the screen-space edge filter
-## (screen_aa: 0 none, 1 FXAA, 2 SMAA — perf 2026-10-02: on Apple's GPUs MSAA
-## at window size cost ~7 ms at the opening view, SMAA under 1) and
-## anisotropic filtering (1 / 2 / 4 / 8 / 16x, anisotropic_filtering_level 0..4).
+## A tier's SubViewport: MSAA (0 / 2 / 4 / 8), screen_aa (0 / 1 FXAA / 2 SMAA;
+## by zoom, Map3DCloseEffects) and anisotropic filtering (1..16x, level 0..4).
 static func apply_viewport_quality(vp: SubViewport, row: Dictionary) -> void:
 	var msaa := int(Map3DQuality.num(row, "msaa", 0.0))
 	vp.msaa_3d = {2: Viewport.MSAA_2X, 4: Viewport.MSAA_4X, 8: Viewport.MSAA_8X}.get(
