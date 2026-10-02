@@ -72,6 +72,25 @@ func _dashed(a: Vector2, b: Vector2, color: Color, width: float, dash := -1.0) -
 		at += dash * 2.0
 
 
+## A draft's pencil stroke from the piece to its pennant: solid graphite, not
+## the map's dashes (taste: a tool never borrows the map's line language),
+## ending in a small open arrowhead; dashed only if war_draft_pencil_dash_px > 0.
+func _pencilled(a: Vector2, b: Vector2) -> void:
+	var width := _repo.bal("war_draft_pencil_px")
+	var dash := _repo.bal("war_draft_pencil_dash_px")
+	if dash > 0.0:
+		_dashed(a, b, _pencil, width, dash)
+	else:
+		draw_line(a, b, _pencil, width, true)
+	var head := _repo.bal("war_draft_head_px")
+	if a.distance_to(b) <= head * 2.0:
+		return
+	var dir := (b - a).normalized()
+	var side := Vector2(-dir.y, dir.x)
+	var tail := b - dir * head
+	draw_polyline(PackedVector2Array([tail + side * head * 0.55, b, tail - side * head * 0.55]), _pencil, width, true)
+
+
 func _draw() -> void:
 	if _repo == null:
 		return
@@ -80,7 +99,7 @@ func _draw() -> void:
 	for r: Array in _routes:
 		_dashed(r[0], r[1], _ink, _repo.bal("war_hud_arrow_px"))
 	for r: Array in _drafts:
-		_dashed(r[0], r[1], _pencil, _repo.bal("war_draft_pencil_px"), _repo.bal("war_draft_pencil_dash_px"))
+		_pencilled(r[0], r[1])
 	if not _has_arrow():
 		return
 	var dir := (_to - _from).normalized()

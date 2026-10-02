@@ -20,7 +20,7 @@ func _ready() -> void:
 			_choose("stay"))
 	(%LeaveWindow as PanelContainer).add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "window"))
-	(%LeaveQuestion as Label).add_theme_font_size_override("font_size", 18)
+	(%LeaveQuestion as Label).add_theme_font_size_override("font_size", 22)
 	(%LeaveQuestion as Label).add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
 	for pair: Array in [[%LeaveDeploy, "deploy"], [%LeaveDiscard, "discard"], [%LeaveKeep, "keep"], [%LeaveStay, "stay"]]:
 		var b := pair[0] as Button
@@ -29,6 +29,9 @@ func _ready() -> void:
 		else:
 			UiPalette.command_button(b)
 		b.pressed.connect(_choose.bind(String(pair[1])))
+	# the destructive one: the same chip, its word in gules lightened to read on leather
+	(%LeaveDiscard as Button).add_theme_color_override("font_color", UiPalette.bad_color().lightened(0.4))
+	(%LeaveDiscard as Button).add_theme_color_override("font_hover_color", UiPalette.bad_color().lightened(0.55))
 
 
 func open() -> void:

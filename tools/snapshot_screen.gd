@@ -189,6 +189,14 @@ var _ledger_select := ""
 ## full Missive board over the room. v2 B: --war-cell ID (a sheet id such as
 ## D4) clicks that cell of the index chart for real — the war marker is
 ## tossed, then the sheet is laid — and the later steps wait for both.
+## v2 C (spec §3): a --war-commit now PENCILS a draft. --war-deploy MODE then
+## clicks the room's resolutions scroll for real: `review` shoots it unrolled,
+## `seal` clicks Seal and send and shoots the crown's arms pressing into the
+## wax, `sent` waits for the seal to be sent (the news, the riding pennants).
+## --war-leave TAB clicks that bottom tab with drafts standing and shoots the
+## leave prompt.
+var _war_deploy := ""
+var _war_leave := ""
 var _war_room := false
 var _war_focus := ""
 var _war_commit := false
@@ -305,6 +313,10 @@ func _ready() -> void:
 			_war_focus = args[i + 1]
 		elif args[i] == "--war-zoom":
 			_war_zoom = float(args[i + 1])
+		elif args[i] == "--war-deploy":
+			_war_deploy = args[i + 1].to_lower()
+		elif args[i] == "--war-leave":
+			_war_leave = args[i + 1].to_upper()
 		elif args[i] == "--war-cell":
 			_war_cell = args[i + 1].to_upper()
 		elif args[i] == "--war-turn":
@@ -923,8 +935,8 @@ func _war_room_step() -> void:
 			var menu := screen.orders()
 			menu.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
 			menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
-			print("war: committed order=%s pennant=%s" % [ArmySystem.order_of(Game.data, Game.state, _war_piece),
-				WarRoom.pennant_of(Game.data, Game.state, _war_piece)])
+			print("war: committed order=%s pennant=%s draft=%s" % [ArmySystem.order_of(Game.data, Game.state, _war_piece),
+				WarRoom.pennant_of(Game.data, Game.state, _war_piece), WarDrafts.of(Game.state, _war_piece)])
 		if _war_folio != "":
 			var folio := screen.get_node_or_null("%Folio")
 			if folio == null:
@@ -954,11 +966,37 @@ func _war_room_step() -> void:
 							hit = true
 				if not hit:
 					print("war: no drill tab '%s' yet" % _war_folio)
-		_war_to(5)
+		_war_to(10 if _war_deploy != "" or _war_leave != "" else 5)
 	elif _war_phase == 5 and _frames - _war_at >= 40 + (ceili(Game.data.bal("war_explode_s") * 120.0)   # a 120 Hz display's frames
 			if _war_folio == "explode" else 0):
 		_moment("war")
 		_war_to(6)
+	elif _war_phase == 10 and _frames - _war_at >= 12:
+		var scroll := screen.get_node("%Deploy") as WarDeployScroll
+		if _war_leave != "":
+			var tab := _root.bottom_bar().button(_war_leave)
+			_real_click(tab, tab.size * 0.5)
+			print("war: leave by %s — asked=%s drafts=%s" % [_war_leave, screen.asking_leave(),
+				WarDrafts.codes(Game.state)])
+			_war_to(5)
+		else:
+			_real_click(scroll.button(), scroll.button().size * 0.5)
+			print("war: scroll disabled=%s review=%s lines=%d" % [scroll.button().disabled, scroll.review_open(),
+				scroll.line_labels().size()])
+			_war_to(11 if _war_deploy != "review" else 5)
+	elif _war_phase == 11 and _frames - _war_at >= 20:
+		var seal := (screen.get_node("%Deploy") as WarDeployScroll).get_node("%Seal") as Button
+		_real_click(seal, seal.size * 0.5)
+		_war_to(12)
+	elif _war_phase == 12:
+		var scroll := screen.get_node("%Deploy") as WarDeployScroll
+		if _war_deploy == "seal" and scroll._phase == "press" \
+				and scroll._t >= Game.data.bal("war_deploy_press_s") * 0.7:
+			_moment("war")
+			_war_to(6)
+		elif _war_deploy == "sent" and not scroll.sealing() and _frames - _war_at >= 30:
+			print("war: sent — drafts=%s couriers=%d" % [WarDrafts.codes(Game.state), Game.state.couriers.size()])
+			_war_to(5)
 
 
 func _war_to(phase: int) -> void:

@@ -825,3 +825,23 @@ func test_a_draft_is_drawn_as_a_pencil_line_from_its_piece() -> void:
 	var hud := view.get_node("%Hud") as WarHud
 	assert_eq(hud.draft_lines().size(), 1)
 	assert_true(hud.drawing())
+
+
+func test_a_resized_view_redraws_its_lines_where_the_pennants_now_stand() -> void:
+	var p: Dictionary = {}
+	for q: Dictionary in WarRoom.pieces(repo, state):
+		if not bool(q["naval"]):
+			p = q
+			break
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	var rect: Rect2 = WarSheets.series(repo)[int(p["sheet"])]["rect"]
+	var to: Vector2 = (p["at"] as Vector2).move_toward(rect.get_center(), 10.0)
+	WarDrafts.plant(repo, state, String(p["code"]), "march", to)
+	view.refresh()
+	await wait_process_frames(2)
+	view.size = Vector2(1300, 600)   # the room widens over the column
+	await wait_process_frames(2)
+	var hud := view.get_node("%Hud") as WarHud
+	var end: Vector2 = hud.draft_lines()[0][1]
+	assert_almost_eq(end.distance_to(view.screen_pos_of_px(to)), 0.0, 1.0, "the line follows the view's new projection")

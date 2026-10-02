@@ -23,7 +23,7 @@ func test_every_balance_key_the_room_reads_is_there() -> void:
 			"war_ink_coast_px", "war_ink_border_px", "war_ink_band_px", "war_ink_seam_px",
 			"war_ink_town_px", "war_ink_label_px", "war_ink_dash_px", "war_ink_gap_px",
 			"war_draft_alpha", "war_draft_pencil_px", "war_draft_pencil_dash_px",
-			"war_deploy_button_px", "war_deploy_margin_px", "war_deploy_idle_alpha", "war_deploy_review_w_px",
+			"war_deploy_button_px", "war_deploy_margin_px", "war_deploy_idle_sat", "war_deploy_idle_value", "war_deploy_shadow_px", "war_deploy_arms_ink", "war_draft_head_px", "war_deploy_review_w_px",
 			"war_deploy_wax_px", "war_deploy_wax_y_px", "war_deploy_wax_s", "war_deploy_press_s",
 			"war_deploy_roll_s", "war_deploy_rolled_share"]:
 		assert_true(repo.balance.has(key), key)

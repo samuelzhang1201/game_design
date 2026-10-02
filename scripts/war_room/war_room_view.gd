@@ -196,6 +196,8 @@ func _fit_viewport() -> void:
 		return
 	var s := window_scale()
 	_viewport.size = Vector2i(maxi(1, int(size.x * s)), maxi(1, int(size.y * s)))
+	if _repo != null:
+		_rake.redraw()   # the HUD's lines are screen px: a new size moves every one of them
 
 
 func set_active(on: bool) -> void:
