@@ -72,3 +72,14 @@ func _is_comment_or_blank(line: PackedStringArray) -> bool:
 	if first == "" and line.size() == 1:
 		return true  # a trailing blank line at EOF, not a data row
 	return first.begins_with("#")
+
+
+## The art a key wears is an ArtTable .tres picked in the inspector, never a
+## res:// path in a CSV (owner 2026-10-02: 为什么把所有素材的对应关系写在csv里).
+## maps.csv alone names files: a pack's own bitmaps and directories, data.
+func test_no_top_level_csv_names_a_res_path_but_the_packs() -> void:
+	for f: String in DirAccess.get_files_at("res://data"):
+		if not f.ends_with(".csv") or f == "maps.csv":
+			continue
+		assert_false(FileAccess.get_file_as_string("res://data/" + f).contains("res://"),
+			"%s names a res:// path: put the art in an ArtTable (GameArt)" % f)
