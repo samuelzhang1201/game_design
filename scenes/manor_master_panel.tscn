@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://b253qcapjim23"]
+
+[ext_resource type="Script" uid="uid://cvw6g6j84tndl" path="res://scripts/ui/manor_master_panel.gd" id="1_kkty6"]
+
+[node name="ManorMasterPanel" type="VBoxContainer" unique_id=665750110]
+visible = false
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+script = ExtResource("1_kkty6")
+
+[node name="Title" type="Label" parent="." unique_id=1301443861]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "THE MANORS"
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="." unique_id=1821971290]
+layout_mode = 2
+
+[node name="Summary" type="Label" parent="." unique_id=1472403674]
+layout_mode = 2
+theme_type_variation = &"CardText"
+autowrap_mode = 3
+
+[node name="Filters" type="VBoxContainer" parent="." unique_id=1520044246]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Scope" type="Button" parent="Filters" unique_id=430812113]
+layout_mode = 2
+tooltip_text = "The crown's realm, or every realm on the map"
+focus_mode = 0
+theme_type_variation = &"CardFilterCommand"
+toggle_mode = true
+text = "The Realm"
+
+[node name="House" type="OptionButton" parent="Filters" unique_id=135401558]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_type_variation = &"CardFilter"
+clip_text = true
+fit_to_longest_item = false
+
+[node name="Table" type="Tree" parent="." unique_id=1319905915]
+custom_minimum_size = Vector2(0, 330)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_type_variation = &"ManorTable"
+columns = 3
+column_titles_visible = true
+hide_root = true
+select_mode = 1

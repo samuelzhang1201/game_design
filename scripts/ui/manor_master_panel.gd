@@ -31,71 +31,30 @@ var _rows: Array = []
 var _left_out := 0
 
 static func attach(column: BoxContainer) -> ManorMasterPanel:
-	var p := ManorMasterPanel.new()
-	p.visible = false
+	var p: ManorMasterPanel = create()
 	column.add_child(p)
 	return p
 
-func _init() -> void:
-	name = "ManorMasterPanel"
-	add_theme_constant_override("separation", 6)
-	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_title = Label.new()
-	_title.name = "Title"
-	_title.text = "THE MANORS"
-	UiPalette.style_header(_title, 16)
-	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(_title)
-	add_child(HSeparator.new())
-	_summary = Label.new()
-	_summary.name = "Summary"
-	_summary.add_theme_font_size_override("font_size", 14)
-	_summary.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
-	_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	add_child(_summary)
-	# One filter to a row: side by side the house list read "Every h".
-	var filters := VBoxContainer.new()
-	filters.name = "Filters"
-	filters.add_theme_constant_override("separation", 6)
-	add_child(filters)
-	_scope = Button.new()
-	_scope.name = "Scope"
-	_scope.toggle_mode = true
-	_scope.focus_mode = Control.FOCUS_NONE
-	_scope.add_theme_font_size_override("font_size", 13)
-	_scope.tooltip_text = "The crown's realm, or every realm on the map"
+## The table as the game makes it: scenes/manor_master_panel.tscn (owner
+## 2026-10-02: the look lives in the editor) — the table wears the theme's
+## ManorTable kind, written in the column's ink — hidden until MANORS is lit.
+static func create() -> ManorMasterPanel:
+	return (load("res://scenes/manor_master_panel.tscn") as PackedScene).instantiate()
+
+func _ready() -> void:
+	_title = $Title
+	_summary = $Summary
+	_scope = $Filters/Scope
 	_scope.toggled.connect(func(on: bool) -> void: set_scope(on))
-	filters.add_child(_scope)
-	_house = OptionButton.new()
-	_house.name = "House"
-	_house.focus_mode = Control.FOCUS_NONE
-	_house.add_theme_font_size_override("font_size", 13)
-	_house.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# The column is a fixed width: the longest house name must not set the
-	# button's minimum, or it pushes the column over the map.
-	_house.fit_to_longest_item = false
-	_house.clip_text = true
-	_house.custom_minimum_size = Vector2(90, 0)
+	_house = $Filters/House
 	_house.item_selected.connect(func(index: int) -> void:
 		set_house(String(_house.get_item_metadata(index))))
-	filters.add_child(_house)
-	_tree = Tree.new()
-	_tree.name = "Table"
-	_tree.columns = COLUMNS.size()
-	_tree.column_titles_visible = true
-	_tree.hide_root = true
-	_tree.select_mode = Tree.SELECT_ROW
-	_tree.focus_mode = Control.FOCUS_NONE
-	_tree.custom_minimum_size = Vector2(0, TABLE_HEIGHT)
-	_tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_tree.add_theme_font_size_override("font_size", 13)
-	_tree.add_theme_font_size_override("title_button_font_size", 12)
+	_tree = $Table
 	for i in COLUMNS.size():
 		_tree.set_column_title(i, COLUMNS[i])
 		_tree.set_column_expand(i, i != 2)
 		_tree.set_column_clip_content(i, true)
 	_tree.set_column_custom_minimum_width(2, 52)
-	_style_tree()
 	_tree.column_title_clicked.connect(func(column: int, _mouse: int) -> void: sort_by(column))
 	_tree.item_selected.connect(func() -> void:
 		var item := _tree.get_selected()
@@ -105,45 +64,14 @@ func _init() -> void:
 		var item := _tree.get_selected()
 		if item != null:
 			manor_activated.emit(int(item.get_metadata(0))))
-	add_child(_tree)
 	_scope_text()
-
-## The Tree wears the UI palette, not Godot's dark default: a light track
-## for its body, muted headers, ink text, the accent for the chosen row.
-func _style_tree() -> void:
-	_tree.add_theme_stylebox_override("panel", UiPalette.bar_bg())
-	_tree.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	var head := StyleBoxFlat.new()
-	head.bg_color = UiPalette.CHIP_BG
-	head.border_color = UiPalette.EDGE
-	head.set_border_width_all(1)
-	head.set_content_margin_all(3)
-	for state in ["title_button_normal", "title_button_pressed", "title_button_hover"]:
-		_tree.add_theme_stylebox_override(state, head)
-	var chosen := StyleBoxFlat.new()
-	chosen.bg_color = Color(UiPalette.GOLD, 0.18)
-	chosen.set_corner_radius_all(3)
-	_tree.add_theme_stylebox_override("selected", chosen)
-	_tree.add_theme_stylebox_override("selected_focus", chosen)
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(UiPalette.GOLD, 0.08)
-	_tree.add_theme_stylebox_override("hovered", hover)
-	_tree.add_theme_color_override("font_color", UiPalette.TEXT_SOFT)
-	_tree.add_theme_color_override("font_selected_color", UiPalette.TEXT_SOFT)
-	_tree.add_theme_color_override("title_button_color", UiPalette.TEXT_MUTED)
-	_tree.add_theme_color_override("guide_color", UiPalette.EDGE)
-	_tree.add_theme_constant_override("v_separation", 2)
-	_tree.add_theme_constant_override("draw_guides", 1)
-
-func _ready() -> void:
 	Game.report_ready.connect(func(_r: TickReport) -> void: _settled_frame = Engine.get_process_frames())
 	Game.state_changed.connect(func() -> void:
 		if visible:
 			refresh())
 
 func _scope_text() -> void:
-	_scope.text = "ALL REALMS" if _all else "THE REALM"
-	UiPalette.command_button(_scope)
+	_scope.text = UiPalette.command_label("ALL REALMS" if _all else "THE REALM")
 
 ## The realm's manors or the map's.
 func set_scope(all_realms: bool) -> void:

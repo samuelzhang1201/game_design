@@ -18,6 +18,42 @@ bg_color = Color(0, 0, 0, 0)
 border_width_bottom = 1
 border_color = Color(0.3529412, 0.27450982, 0.19607843, 0.45)
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_pd6rl"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yfb1m"]
+bg_color = Color(0.8784314, 0.73333335, 0.41568628, 0.08)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0rb6f"]
+bg_color = Color(0.078431375, 0.06666667, 0.050980393, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ln2nj"]
+bg_color = Color(0.8784314, 0.73333335, 0.41568628, 0.18)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6i8mq"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0.1764706, 0.14509805, 0.11372549, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+
 [resource]
 CardFigure/base_type = &"Label"
 CardFigure/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
@@ -91,5 +127,22 @@ DashTitle/font_sizes/font_size = 24
 DashTitle/fonts/font = ExtResource("2_pd6rl")
 Label/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 LinkButton/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
+ManorTable/base_type = &"Tree"
+ManorTable/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
+ManorTable/colors/font_selected_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
+ManorTable/colors/guide_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+ManorTable/colors/title_button_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
+ManorTable/constants/draw_guides = 1
+ManorTable/constants/v_separation = 2
+ManorTable/font_sizes/font_size = 13
+ManorTable/font_sizes/title_button_font_size = 12
+ManorTable/styles/focus = SubResource("StyleBoxEmpty_pd6rl")
+ManorTable/styles/hovered = SubResource("StyleBoxFlat_yfb1m")
+ManorTable/styles/panel = SubResource("StyleBoxFlat_0rb6f")
+ManorTable/styles/selected = SubResource("StyleBoxFlat_ln2nj")
+ManorTable/styles/selected_focus = SubResource("StyleBoxFlat_ln2nj")
+ManorTable/styles/title_button_hover = SubResource("StyleBoxFlat_6i8mq")
+ManorTable/styles/title_button_normal = SubResource("StyleBoxFlat_6i8mq")
+ManorTable/styles/title_button_pressed = SubResource("StyleBoxFlat_6i8mq")
 RichTextLabel/colors/default_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 TooltipLabel/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)

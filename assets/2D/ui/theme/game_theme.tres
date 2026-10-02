@@ -137,6 +137,42 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_66g1x"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yfb1m"]
+bg_color = Color(0.8784314, 0.73333335, 0.41568628, 0.08)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sqgyy"]
+bg_color = Color(0.078431375, 0.06666667, 0.050980393, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ln2nj"]
+bg_color = Color(0.8784314, 0.73333335, 0.41568628, 0.18)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6i8mq"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0.1764706, 0.14509805, 0.11372549, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_37awe"]
 content_margin_top = 3.0
 content_margin_bottom = 3.0
@@ -220,6 +256,11 @@ CardFigureGood/base_type = &"Label"
 CardFigureGood/colors/font_color = Color(0.6156863, 0.6901961, 0.47843137, 1)
 CardFigureGood/font_sizes/font_size = 13
 CardFigureGood/fonts/font = ExtResource("2_8x4xl")
+CardFilter/base_type = &"Button"
+CardFilter/font_sizes/font_size = 13
+CardFilterCommand/base_type = &"Button"
+CardFilterCommand/font_sizes/font_size = 13
+CardFilterCommand/fonts/font = ExtResource("1_el5ut")
 CardGood/base_type = &"Label"
 CardGood/colors/font_color = Color(0.6156863, 0.6901961, 0.47843137, 1)
 CardGood/font_sizes/font_size = 13
@@ -310,6 +351,23 @@ LogEmpty/font_sizes/font_size = 14
 LogEntry/base_type = &"Label"
 LogEntry/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
 LogEntry/font_sizes/font_size = 14
+ManorTable/base_type = &"Tree"
+ManorTable/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+ManorTable/colors/font_selected_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+ManorTable/colors/guide_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+ManorTable/colors/title_button_color = Color(0.7490196, 0.68235296, 0.56078434, 1)
+ManorTable/constants/draw_guides = 1
+ManorTable/constants/v_separation = 2
+ManorTable/font_sizes/font_size = 13
+ManorTable/font_sizes/title_button_font_size = 12
+ManorTable/styles/focus = SubResource("StyleBoxEmpty_66g1x")
+ManorTable/styles/hovered = SubResource("StyleBoxFlat_yfb1m")
+ManorTable/styles/panel = SubResource("StyleBoxFlat_sqgyy")
+ManorTable/styles/selected = SubResource("StyleBoxFlat_ln2nj")
+ManorTable/styles/selected_focus = SubResource("StyleBoxFlat_ln2nj")
+ManorTable/styles/title_button_hover = SubResource("StyleBoxFlat_6i8mq")
+ManorTable/styles/title_button_normal = SubResource("StyleBoxFlat_6i8mq")
+ManorTable/styles/title_button_pressed = SubResource("StyleBoxFlat_6i8mq")
 RichTextLabel/colors/default_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
 RichTextLabel/font_sizes/bold_font_size = 20
 RichTextLabel/font_sizes/italics_font_size = 20

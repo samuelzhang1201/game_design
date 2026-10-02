@@ -12,7 +12,7 @@ const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversa
 	"res://scripts/ui/top_bar.gd", "res://scripts/ui/main_menu.gd", "res://scripts/ui/bottom_bar.gd",
 	"res://scripts/ui/news_ticker.gd", "res://scripts/ui/map_detail_panel.gd",
 	"res://scripts/ui/realm_dashboard.gd", "res://scripts/ui/country_panel.gd",
-	"res://scripts/ui/military_panel.gd"]
+	"res://scripts/ui/military_panel.gd", "res://scripts/ui/manor_master_panel.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -97,6 +97,8 @@ func test_the_court_keeps_its_scenes_look() -> void:
 		"res://scenes/country_panel.tscn", "Country/", 8)
 	_assert_scene_holds(r.current_screen.find_child("MilitaryPanel", true, false),
 		"res://scenes/military_panel.tscn", "Host/", 5)
+	_assert_scene_holds(r.current_screen.find_child("ManorMasterPanel", true, false),
+		"res://scenes/manor_master_panel.tscn", "Manors/", 5)
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
 	detail.show_manor(int(MapManors.manors_of_province(Game.data,
 		MapManors.home_province(Game.data, Game.state), Game.state)[0]))

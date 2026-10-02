@@ -80,7 +80,7 @@ func test_the_neighbours_are_not_counted_for_you() -> void:
 
 
 func test_the_manor_master_shows_no_foreign_figures() -> void:
-	var p := ManorMasterPanel.new()
+	var p := ManorMasterPanel.create()
 	add_child_autofree(p)
 	p.set_scope(true)
 	p.refresh()
