@@ -1108,6 +1108,13 @@ func _run() -> int:
 	out += _csv_line(["distance_unit", String(settings.get("distanceUnit", "km"))])
 	out += _csv_line(["distance_scale", _num2(float(settings.get("distanceScale", 1)))])
 	out += _csv_line(["population_rate", _num2(rate)])
+	# mapCoordinates (spec 2026-10-02-war-room-v2 §2.1): the latitudes and
+	# longitudes the map's edges stand at — the WAR ROOM's graticule
+	var coords: Dictionary = world.get("mapCoordinates", {})
+	out += _csv_line(["lat_n", _num2(float(coords.get("latN", 90)))])
+	out += _csv_line(["lat_s", _num2(float(coords.get("latS", -90)))])
+	out += _csv_line(["lon_w", _num2(float(coords.get("lonW", -180)))])
+	out += _csv_line(["lon_e", _num2(float(coords.get("lonE", 180)))])
 	if not _write_text(out_data + "/map_info.csv", out):
 		return 1
 

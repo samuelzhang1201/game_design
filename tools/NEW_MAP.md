@@ -63,8 +63,10 @@ fix the `.import` — do not "fix" the test.
   three: pick kingdoms that fit, or the prose will read wrong.
 - `house_bindings.csv` — each court family's provinces (the crown's is the
   capital's province alone).
-- `map_info.csv` comes from the import; `manor_name_overrides.csv` and
-  `arms_bindings.csv` are optional.
+- `map_info.csv` comes from the import (its `lat_n` / `lat_s` / `lon_w` /
+  `lon_e` from the export's `mapCoordinates` — the WAR ROOM's graticule,
+  `MapCoords`; an older import without them spans the globe and warns);
+  `manor_name_overrides.csv` and `arms_bindings.csv` are optional.
 
 ## 3. Coats of arms — usually nothing to do
 
