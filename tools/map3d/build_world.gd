@@ -10,6 +10,10 @@ extends SceneTree
 ## (format version, meta, build time, the bake tables' fingerprint), which
 ## Map3DWorldLoader.status reads to tell a current build from a stale one.
 ## The whole chain for one pack is tools/map3d/build_pack.sh.
+## --material-only re-applies BuildTerrain.apply_material to the built
+## world.tscn and BuildTerrain.apply_tiles to its terrain_assets.tres and
+## saves both, leaving the regions, the textures and the manifest alone — a change to the ground's shader parameters without the bake's raw
+## inputs (height.r32 / control.r32 / color.rgba8 are git-ignored).
 
 const BuildTerrain := preload("res://tools/map3d/build_terrain.gd")
 
@@ -23,6 +27,9 @@ func _run() -> void:
 	for i in range(args.size() - 1):
 		if args[i] == "--map":
 			BuildTerrain.map_id = args[i + 1]
+	if args.has("--material-only"):
+		await _material_only()
+		return
 	print(BuildTerrain.build_scene())
 	var path := BuildTerrain.root() + "/world.tscn"
 	var scene: Node = (load(path) as PackedScene).instantiate()
@@ -47,6 +54,45 @@ func _run() -> void:
 	camera.queue_free()
 	await process_frame
 	quit(0 if err == OK else 1)
+
+
+## The built scene's material brought up to apply_material, nothing else.
+func _material_only() -> void:
+	var path := BuildTerrain.root() + "/world.tscn"
+	if not ResourceLoader.exists(path):
+		print("no built world at %s" % path)
+		quit(1)
+		return
+	# The tiles first, on the resource as saved: a Terrain3D in a headless
+	# tree drops its texture list (the VRAM textures do not load there), and
+	# saving the assets it holds wrote an empty list (found 2026-10-04). A save
+	# from this script mode drops the uid= lines (harmless: world.tscn names
+	# the assets by path; restore them from git to keep the diff small).
+	var apath := BuildTerrain.root() + "/terrain_assets.tres"
+	var assets := load(apath) as Terrain3DAssets
+	var err_assets := ERR_INVALID_DATA
+	if assets != null and assets.texture_list.size() == BuildTerrain.TEXTURES.size():
+		BuildTerrain.apply_tiles(assets.texture_list)
+		err_assets = ResourceSaver.save(assets, apath)
+	print("tiles re-applied, saved %s err=%d" % [apath, err_assets])
+	var scene: Node = (load(path) as PackedScene).instantiate()
+	var camera := Camera3D.new()
+	root.add_child(camera)
+	camera.make_current()
+	root.add_child(scene)
+	var terrain := scene.get_node("Terrain3D") as Terrain3D
+	terrain.set_camera(camera)
+	await process_frame
+	BuildTerrain.apply_material(terrain.material)
+	var packed := PackedScene.new()
+	var err := packed.pack(scene)
+	if err == OK:
+		err = ResourceSaver.save(packed, path)
+	print("material re-applied, saved %s err=%d" % [path, err])
+	scene.queue_free()
+	camera.queue_free()
+	await process_frame
+	quit(0 if err == OK and err_assets == OK else 1)
 
 
 ## manifest.json beside world.tscn: what Map3DWorldLoader.status checks.

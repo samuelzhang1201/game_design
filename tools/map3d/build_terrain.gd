@@ -21,7 +21,12 @@ static var map_id := ""
 # texture ids. No per-texture tint: bake_world.py's colour map carries every
 # colour, so the far view and the near view agree.
 const TEXTURES := [
-	["aerial_cliff", 160.0, 0.1],   # look route 2026-09-30: the escarpments, tools/map3d/pack_aerial.py
+	# the escarpments (look route 2026-09-30, tools/map3d/pack_aerial.py) at
+	# 160 m / 0.3: the size the owner approved them at, which was the shader's
+	# DEFAULT dual scaling (texture 0 at 0.3x) until the 2026-10-04 fix moved
+	# dual scaling to the grass — the critic ruled the true 160 m a busier,
+	# finer mosaic out of scale with the grass and scree beside it
+	["aerial_cliff", 160.0 / 0.3, 0.1],
 	["aerial_meadow", 120.0, 0.16],   # look route 2026-09-30: aerial pictures, tools/map3d/pack_aerial.py
 	["dry_decay_leaves", 160.0, 0.2],
 	["dirt_floor", 180.0, 0.16],
@@ -89,6 +94,30 @@ static func pack_to_world(world: Dictionary, px: Vector2) -> Vector2:
 	return Vector2(o[0], o[1]) + px * float(world["m_per_px"])
 
 
+## The build's Terrain3D material: no auto shader, dual scaling, every
+## SHADER_PARAMS value. dual_scaling goes on FIRST (2026-10-04): its uniforms
+## exist only once the shader carries the dual-scale code, and a parameter
+## written before that is kept as null — every build from 43d7782 on saved
+## dual_scale_* and tri_scale_reduction as null, so the shader ran its own
+## defaults (texture 0, the CLIFF, at 0.3x from 100-170 m: always, since the
+## camera never comes nearer than 400 m) and the grass was never dual-scaled.
+## The uniforms' hint_range (dual_scale_far 0..1000) is the inspector's only:
+## 4000 reaches the renderer as written.
+static func apply_material(mat: Terrain3DMaterial) -> void:
+	mat.auto_shader = false
+	mat.dual_scaling = true
+	for key: String in SHADER_PARAMS:
+		mat.set_shader_param(key, SHADER_PARAMS[key])
+
+
+## Each texture asset's tile and detiling from TEXTURES (by id).
+static func apply_tiles(textures: Array) -> void:
+	for t in mini(textures.size(), TEXTURES.size()):
+		var ta: Terrain3DTextureAsset = textures[t]
+		ta.uv_scale = 1.0 / float(TEXTURES[t][1])
+		ta.detiling_rotation = TEXTURES[t][2]
+
+
 ## Step 2, on the Terrain3D node of a scene IN THE TREE (its data only
 ## exists there): assets and the baked maps; saves the regions. Settlements
 ## are not baked — Map3DView places them from live data at runtime.
@@ -109,17 +138,13 @@ static func import_into(terrain: Terrain3D) -> String:
 		ta.normal_texture = load("%s/%s_nrm_rgh.png" % [TEX, spec[0]])
 		ta.normal_depth = 1.0
 		ta.ao_strength = 1.5
-		ta.uv_scale = 1.0 / float(spec[1])
-		ta.detiling_rotation = spec[2]
 		tex_list.append(ta)
+	apply_tiles(tex_list)
 	var assets := Terrain3DAssets.new()
 	assets.texture_list = tex_list
 	ResourceSaver.save(assets, root() + "/terrain_assets.tres")
 	terrain.assets = load(root() + "/terrain_assets.tres")
-	terrain.material.auto_shader = false
-	for key: String in SHADER_PARAMS:
-		terrain.material.set_shader_param(key, SHADER_PARAMS[key])
-	terrain.material.dual_scaling = true
+	apply_material(terrain.material)
 
 	var images: Array[Image] = []
 	images.resize(Terrain3DRegion.TYPE_MAX)
