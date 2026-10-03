@@ -200,14 +200,41 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 	}
 	vec4 tint = vec4(0.0);
 	if (tint_mix > 0.0) {
-		ivec2 tint_px = ivec2(floor((v_vertex.xz - pack_origin) / m_per_px));
+		// The manor under the point, its edge SMOOTH (owner 2026-10-04: 拉近尽头
+		// manor交界处会有很明显的锯齿形): the four index texels round the point,
+		// each id's bilinear weight summed, the heaviest id's colour against the
+		// next one's, the line where their weights meet anti-aliased over one
+		// screen px — the index's 50 m staircase becomes the curve it stands for.
+		vec2 mt_p = (v_vertex.xz - pack_origin) / m_per_px - 0.5;
+		ivec2 mt_b = ivec2(floor(mt_p));
+		vec2 mt_f = fract(mt_p);
 		ivec2 index_size = textureSize(cell_index, 0);
-		if (tint_px.x >= 0 && tint_px.y >= 0 && tint_px.x < index_size.x && tint_px.y < index_size.y) {
-			vec3 c = texelFetch(cell_index, tint_px, 0).rgb;
-			int id = int(round(c.r * 255.0)) + int(round(c.g * 255.0)) * 256;
-			if (id < lut_size.x * lut_size.y) {
-				tint = texelFetch(cell_lut, ivec2(id % lut_size.x, id / lut_size.x), 0);
+		if (mt_b.x >= -1 && mt_b.y >= -1 && mt_b.x < index_size.x && mt_b.y < index_size.y) {
+			int mt_id[4];
+			float mt_w[4];
+			for (int i = 0; i < 4; i++) {
+				ivec2 o = ivec2(i & 1, i >> 1);
+				ivec2 q = clamp(mt_b + o, ivec2(0), index_size - ivec2(1));
+				vec3 c = texelFetch(cell_index, q, 0).rgb;
+				mt_id[i] = int(round(c.r * 255.0)) + int(round(c.g * 255.0)) * 256;
+				mt_w[i] = (o.x == 1 ? mt_f.x : 1.0 - mt_f.x) * (o.y == 1 ? mt_f.y : 1.0 - mt_f.y);
 			}
+			float best = -1.0, second = -1.0;
+			int best_id = -1, second_id = -1;
+			for (int i = 0; i < 4; i++) {
+				if (mt_id[i] == best_id || mt_id[i] == second_id) { continue; }
+				float w = 0.0;
+				for (int j = 0; j < 4; j++) { w += mt_id[j] == mt_id[i] ? mt_w[j] : 0.0; }
+				if (w > best) { second = best; second_id = best_id; best = w; best_id = mt_id[i]; }
+				else if (w > second) { second = w; second_id = mt_id[i]; }
+			}
+			int lut_n = lut_size.x * lut_size.y;
+			vec4 t_best = best_id < lut_n ? texelFetch(cell_lut, ivec2(best_id % lut_size.x, best_id / lut_size.x), 0) : vec4(0.0);
+			vec4 t_second = second_id < 0 ? t_best : (second_id < lut_n
+				? texelFetch(cell_lut, ivec2(second_id % lut_size.x, second_id / lut_size.x), 0) : vec4(0.0));
+			float d = best - max(second, 0.0);
+			float k = clamp(0.5 + 0.5 * d / max(fwidth(d), 1e-4), 0.5, 1.0);
+			tint = mix(t_second, t_best, k);
 		}
 	}
 	// The LUT holds the palette's sRGB bytes, read raw by texelFetch; the

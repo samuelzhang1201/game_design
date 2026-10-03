@@ -29,6 +29,15 @@ func test_the_patch_mixes_the_albedo_toward_the_cells_colour() -> void:
 
 ## The field map (owner 2026-09-19): furrows along each estate's strips up
 ## close, the crops' colour eased back far out.
+## Owner 2026-10-04 (拉近尽头manor交界处会有很明显的锯齿形): a manor's edge is
+## not the index's 50 m staircase — four texels weighed, the meeting line
+## anti-aliased over a screen px.
+func test_the_manor_edge_is_smoothed_not_stepped() -> void:
+	var out := Map3DGroundTint.patch(SAMPLE)
+	assert_string_contains(out, "mt_w[i] = ")
+	assert_string_contains(out, "fwidth(d)")
+	assert_false(out.contains("ivec2 tint_px = ivec2(floor("), "no single nearest texel any more")
+
 func test_the_patch_reads_the_field_map() -> void:
 	var out := Map3DGroundTint.patch(SAMPLE)
 	for u: String in ["uniform highp sampler2D field_map", "uniform float furrow_m",

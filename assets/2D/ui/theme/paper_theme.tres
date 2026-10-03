@@ -26,12 +26,12 @@ border_color = Color(0.3529412, 0.27450982, 0.19607843, 0.45)
 bg_color = Color(0.8784314, 0.73333335, 0.41568628, 0.08)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0rb6f"]
-bg_color = Color(0.078431375, 0.06666667, 0.050980393, 1)
+bg_color = Color(0.16862746, 0.12156863, 0.08235294, 0.05)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+border_color = Color(0.16862746, 0.12156863, 0.08235294, 0.35)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -49,12 +49,9 @@ content_margin_left = 3.0
 content_margin_top = 3.0
 content_margin_right = 3.0
 content_margin_bottom = 3.0
-bg_color = Color(0.1764706, 0.14509805, 0.11372549, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
+bg_color = Color(0.16862746, 0.12156863, 0.08235294, 0.1)
 border_width_bottom = 1
-border_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+border_color = Color(0.16862746, 0.12156863, 0.08235294, 0.45)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j3ky5"]
 content_margin_left = 3.0
@@ -179,7 +176,7 @@ LinkButton/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 ManorTable/base_type = &"Tree"
 ManorTable/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 ManorTable/colors/font_selected_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
-ManorTable/colors/guide_color = Color(0.29411766, 0.24313726, 0.1882353, 1)
+ManorTable/colors/guide_color = Color(0.16862746, 0.12156863, 0.08235294, 0.18)
 ManorTable/colors/title_button_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
 ManorTable/constants/draw_guides = 1
 ManorTable/constants/v_separation = 2
