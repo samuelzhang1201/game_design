@@ -68,15 +68,20 @@ func test_campaign_opens_with_nameless_background_narration() -> void:
 	assert_lt(btn_bottom, viewport_h, "button bottom on screen")
 	btn.pressed.emit()
 	await wait_process_frames(2)
-	assert_ne(String(scene.current_beat()["kind"]), "narration")
-	# The reign opens on the prologue's first council, not on whatever the
-	# random roll happened to pick (chapter 0, 2026-09-21): the narration is
-	# pushed in front of the tick's own event beat, and that beat is the
-	# chapter opener GameState.new_campaign scheduled for tick 1.
-	var beat := scene.current_beat()
+	# The narration hands over to the table, not to the story (owner
+	# 2026-10-02: 背景介绍之后，不要立即开始剧情): the prologue's first council —
+	# the chapter opener GameState.new_campaign scheduled for tick 1, not
+	# whatever the random roll picked (chapter 0, 2026-09-21) — waits as the
+	# Chancellor's matter until the player clicks him.
+	assert_true(r.current_screen is CourtScreen, "the table, not the event")
+	assert_eq(String(Game.state.pending_event.get("event_id", "")), "c0_01")
+	r.audience_with(ConversationBeats.event_presenter(Game.state, Game.data))
+	await wait_process_frames(2)
+	var stage: ConversationScene = r.current_screen
+	var beat := stage.current_beat()
 	assert_eq(String(beat["kind"]), "event")
 	assert_eq(String(beat["event"]["event_id"]), "c0_01")
-	assert_string_contains(scene.speech_text(), "older than the kingdom",
+	assert_string_contains(stage.speech_text(), "older than the kingdom",
 		"the authored scene is shown verbatim")
 
 ## The widest the audience window can get: a chapter beat with four choices

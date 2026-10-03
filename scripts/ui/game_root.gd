@@ -138,8 +138,8 @@ func _ready() -> void:
 
 ## The clock (owner 2026-09-13): at Game.clock_speed, a day passes every
 ## time_day_seconds / speed. Works finish, the thirtieth day runs the tick,
-## and an event that the tick rolls stops the clock and takes the player to
-## the council, the only stage that renders a choice. Real time lives here
+## and an event that the tick rolls waits as its presenter's matter by the
+## seal while time runs on (owner 2026-10-02: 玩家不点开的话，游戏照样继续). Real time lives here
 ## and nowhere lower: the engine only ever sees advance_day.
 ## PLAY IS THE ONLY SWITCH (owner 2026-09-14): the clock runs on the council
 ## stage as well as the court, so nobody has to wave the ministers on before
@@ -148,16 +148,6 @@ func _process(delta: float) -> void:
 	if not state in [State.COURT, State.CONVERSATION] or Game.state == null or Game.clock_speed <= 0:
 		return
 	if _pause_menu != null and _pause_menu.visible:
-		return
-	if not Game.state.pending_event.is_empty():
-		# Play pressed with a matter unheard: the clock will not run past it,
-		# so it stops again and the news says who waits.
-		Game.set_clock_speed(0)
-		_announce_waiting_matter()
-		if current_screen != null and current_screen.has_method("council_handle"):
-			var seal := current_screen.council_handle() as WaxSeal
-			if seal != null:
-				seal.nudge()
 		return
 	# A spy's report open or waiting (a sealed one may still be flying to the
 	# tab): no time banks behind it, or the days it held back would all run
@@ -210,14 +200,17 @@ func _process(delta: float) -> void:
 			_pending_report = Game.current_report
 			announce_month(_pending_report)
 			if not Game.state.pending_event.is_empty():
-				# The event stops the clock and WAITS on the table as its
-				# presenter's matter (owner 2026-10-02: 统一改成由大臣头像提示):
-				# the screen stays, the presenter's miniature is marked and a
-				# bubble rises under it; a click on them brings it on.
-				Game.set_clock_speed(0)
-				_clock_acc = 0.0
-				Game.day_progress = 0.0
-				return
+				# The event WAITS on the table as its presenter's matter (owner
+				# 2026-10-02: 统一改成由大臣头像提示): the screen stays, the
+				# presenter's miniature is marked and the bubble rises under it;
+				# a click on them brings it on. Time runs on — an unheard matter
+				# never stops the clock (owner the same day: 玩家不点开的话，
+				# 游戏照样继续); the engine holds it, and any chapter beat behind
+				# it, until it is heard.
+				if current_screen != null and current_screen.has_method("council_handle"):
+					var seal := current_screen.council_handle() as WaxSeal
+					if seal != null:
+						seal.nudge()
 
 	Game.day_progress = clampf(_clock_acc / per_day, 0.0, 1.0)
 
@@ -1051,8 +1044,7 @@ func _on_start_requested() -> void:
 	_land_on_table()
 
 ## The news bar names who waits with the event on the table (owner
-## 2026-10-02): the clock stands still until it is heard. Once per event, so
-## pressing play again does not repeat it.
+## 2026-10-02), once a month while it waits.
 var _announced_event := ""
 func _announce_waiting_matter() -> void:
 	if Game.state == null or Game.state.pending_event.is_empty():

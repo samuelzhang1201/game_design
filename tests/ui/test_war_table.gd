@@ -200,11 +200,11 @@ func test_the_first_event_waits_with_its_presenter() -> void:
 	stage = r.current_screen as ConversationScene
 	assert_eq(String(stage.current_beat().get("kind", "")), "event", "the event stands in the window")
 
-## Owner 2026-10-02 (统一改成由大臣头像提示): an event at the month's end no
-## longer takes the screen — the clock stops, the table stays and the event's
-## presenter (event_presenters.csv by id, then category) is marked; play will
-## not run past it.
-func test_a_months_event_waits_on_the_table() -> void:
+## Owner 2026-10-02 (统一改成由大臣头像提示): an event no longer takes the
+## screen — the table stays and the event's presenter (event_presenters.csv by
+## id, then category) is marked; and an unheard matter never stops time (the
+## same day: 玩家不点开的话，游戏照样继续) — days pass and the matter still waits.
+func test_a_months_event_waits_on_the_table_while_time_runs() -> void:
 	var r := _root()
 	var court := _court(r)
 	await wait_process_frames(2)
@@ -212,9 +212,13 @@ func test_a_months_event_waits_on_the_table() -> void:
 	assert_false(Game.state.pending_event.is_empty())
 	assert_eq(ConversationBeats.event_presenter(Game.state, Game.data),
 		String(Game.state.council["chaplain"]), "a church event is the Chaplain's")
+	var day := Game.state.absolute_day()
 	Game.set_clock_speed(1)
-	r._process(0.01)
-	assert_eq(Game.clock_speed, 0, "play will not run past an unheard event")
+	r._process(Game.data.bal("time_day_seconds") * 1.01)
+	assert_eq(Game.clock_speed, 1, "the clock runs on")
+	assert_gt(Game.state.absolute_day(), day, "a day passed with the matter unheard")
+	assert_false(Game.state.pending_event.is_empty(), "the matter still waits")
+	Game.set_clock_speed(0)
 	assert_true(r.current_screen is CourtScreen, "the table stays")
 	var seal := court.council_handle() as WaxSeal
 	seal.refresh()
