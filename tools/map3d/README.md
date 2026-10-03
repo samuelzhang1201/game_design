@@ -98,6 +98,10 @@ shared by every pack and built once. The steps one by one:
    (~2 s, no editor; every tool defaults to `data/maps.csv`'s `is_default` pack). Nothing visual is baked into the scene beyond the
    terrain: headless, a MultiMesh saves without its transforms, which is one
    reason settlements are placed at runtime.
+   `-- --material-only` re-applies `build_terrain.gd`'s material (`apply_material`:
+   dual scaling FIRST, then `SHADER_PARAMS`) and texture tiles (`apply_tiles`) to
+   the committed `world.tscn` / `terrain_assets.tres` without the raw inputs (2026-10-04;
+   a save from script mode drops the `.tres`'s `uid=` lines — restore them from git).
 6. **Look / measure** — `Godot --path . -s tools/map3d/shoot.gd -- --camera CameraMid --out /tmp/x.png`;
    the acceptance bench drives the real view —
    `GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size WxH` —

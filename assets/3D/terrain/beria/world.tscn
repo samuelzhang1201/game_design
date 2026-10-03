@@ -2,11 +2,11 @@
 
 [ext_resource type="Terrain3DAssets" path="res://assets/3D/terrain/beria/terrain_assets.tres" id="1_qpu2y"]
 
-[sub_resource type="Gradient" id="Gradient_t6v47"]
+[sub_resource type="Gradient" id="Gradient_qpu2y"]
 offsets = PackedFloat32Array(0.2, 1)
 colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
 
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_wxxfl"]
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_t6v47"]
 noise_type = 2
 frequency = 0.03
 cellular_jitter = 3.0
@@ -18,9 +18,9 @@ domain_warp_fractal_type = 2
 domain_warp_fractal_lacunarity = 1.5
 domain_warp_fractal_gain = 1.0
 
-[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_6j06a"]
-noise = SubResource("FastNoiseLite_wxxfl")
-color_ramp = SubResource("Gradient_t6v47")
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_wxxfl"]
+noise = SubResource("FastNoiseLite_t6v47")
+color_ramp = SubResource("Gradient_qpu2y")
 seamless = true
 
 [sub_resource type="Terrain3DMaterial" id="Terrain3DMaterial_72a2i"]
@@ -28,10 +28,10 @@ _shader_parameters = {
 &"bias_distance": 512.0,
 &"blend_sharpness": 0.85,
 &"depth_blur": 0.0,
-&"dual_scale_far": null,
-&"dual_scale_near": null,
-&"dual_scale_reduction": null,
-&"dual_scale_texture": null,
+&"dual_scale_far": 4000.0,
+&"dual_scale_near": 1200.0,
+&"dual_scale_reduction": 0.3,
+&"dual_scale_texture": 1,
 &"enable_macro_variation": true,
 &"enable_projection": true,
 &"flat_terrain_normals": false,
@@ -43,9 +43,9 @@ _shader_parameters = {
 &"noise1_offset": Vector2(0.5, 0.5),
 &"noise1_scale": 0.0004,
 &"noise2_scale": 0.00076,
-&"noise_texture": SubResource("NoiseTexture2D_6j06a"),
+&"noise_texture": SubResource("NoiseTexture2D_wxxfl"),
 &"projection_threshold": 0.87,
-&"tri_scale_reduction": null
+&"tri_scale_reduction": 0.3
 }
 world_background = 0
 dual_scaling = true
