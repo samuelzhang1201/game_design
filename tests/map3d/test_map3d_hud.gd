@@ -53,7 +53,7 @@ func test_the_hud_is_one_child_per_job_in_paint_order() -> void:
 	for c: Node in v.get_node("Hud").get_children():
 		names.append(String(c.name))
 	# the paint ORDER of the pieces there are today; a new piece may come in anywhere
-	var order := ["Labels", "Landmarks", "Weather", "HeatLegend", "Badges", "Armies",
+	var order := ["Labels", "Landmarks", "HeatLegend", "ManorBars", "Badges", "Armies",
 		"Couriers", "Backdrop", "ScaleBar", "Ruler", "Compass", "Needle"]
 	var at := -1
 	for piece: String in order:

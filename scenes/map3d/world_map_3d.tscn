@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://b8ikn50ruc80b"]
 
+[ext_resource type="Script" path="res://scripts/map3d/map3d_hud_manor_bars.gd" id="41_hbars"]
 [ext_resource type="Script" uid="uid://bbxuiv7nornlk" path="res://scripts/map3d/map3d_view.gd" id="1_ck3bs"]
 [ext_resource type="PackedScene" uid="uid://bq8iccp67dqf8" path="res://scenes/map3d/map3d_world.tscn" id="2_nceau"]
 [ext_resource type="Script" uid="uid://be5qi7kf6i0fy" path="res://scripts/map3d/map3d_hud.gd" id="7_3vvdf"]
@@ -14,7 +15,6 @@
 [ext_resource type="Script" uid="uid://kumuxikla7vf" path="res://scripts/ui/compass_layer.gd" id="16_nceau"]
 [ext_resource type="Script" uid="uid://bula280a44q8l" path="res://scripts/map3d/map3d_hud_needle.gd" id="17_geqxk"]
 [ext_resource type="StyleBox" uid="uid://btdf8fw324b5o" path="res://scenes/map3d/tooltip_chip.tres" id="19_rbqyb"]
-[ext_resource type="Script" uid="uid://bwgll11we2hh3" path="res://scripts/map3d/map3d_hud_weather.gd" id="41_hwea"]
 [ext_resource type="Script" uid="uid://cttpjgjyaek8" path="res://scripts/map3d/map3d_hud_couriers.gd" id="42_hcou"]
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_au2na"]
@@ -94,16 +94,6 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("9_h26ti")
 
-[node name="Weather" type="Control" parent="Hud" unique_id=314159265]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("41_hwea")
-
 [node name="HeatLegend" type="Control" parent="Hud" unique_id=1080052685]
 layout_mode = 1
 anchors_preset = 15
@@ -113,6 +103,16 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("10_kdwdj")
+
+[node name="ManorBars" type="Control" parent="Hud"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("41_hbars")
 
 [node name="Badges" type="Control" parent="Hud" unique_id=947103583]
 layout_mode = 1

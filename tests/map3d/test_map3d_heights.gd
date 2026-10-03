@@ -71,6 +71,30 @@ func _click(v: Map3DView, at: Vector2) -> void:
 	up.pressed = false
 	v._gui_input(up)
 
+## Owner 2026-10-04: neither MANORS nor HEIGHTS shows the trees (the land's
+## colour is the theme's message); the plain map does.
+func test_a_theme_puts_the_woods_away() -> void:
+	var v := _view()
+	var trees := v.get_node("Viewport/World/Trees") as Node3D
+	assert_true(trees.visible, "the plain map has its woods")
+	for theme_name in ["manors", "heights"]:
+		v.set_manor_theme(theme_name)
+		assert_false(trees.visible, "no trees under " + theme_name)
+	v.set_manor_theme("")
+	assert_true(trees.visible, "back off a theme, the woods return")
+
+## The MANORS bars (owner 2026-10-04) stand only under MANORS.
+func test_the_manor_bars_show_only_under_manors() -> void:
+	var v := _view()
+	var bars := (v.get_node("Hud") as Map3DHud).piece("ManorBars") as Map3DHudManorBars
+	assert_not_null(bars)
+	v.look_at_home(20000.0)
+	assert_eq(bars.bars(), [], "no bars off MANORS")
+	v.set_manor_theme("manors")
+	assert_gt(bars.bars().size(), 0, "the crown's manors stand in bars")
+	v.set_manor_theme("heights")
+	assert_eq(bars.bars(), [])
+
 func test_under_heights_land_still_means_its_province() -> void:
 	var v := _view()
 	var spot := _open_land()

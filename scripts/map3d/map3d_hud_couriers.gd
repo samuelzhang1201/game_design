@@ -89,8 +89,7 @@ func ring_px() -> float:
 	return (armies.route_px if armies != null else 2.0) * 4.0
 
 
-## Each pending order's envelope ring, as a box in design px (the weather
-## marks keep off them).
+## Each pending order's envelope ring, as a box in design px.
 func pending_rects() -> Array:
 	var out: Array = []
 	if not bound() or ctx.state() == null:

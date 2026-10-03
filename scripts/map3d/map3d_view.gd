@@ -328,6 +328,10 @@ func set_manor_theme(theme_name: String) -> void:
 	_themes.set_theme(theme_name)
 	if theme_name != "manors":
 		_selection.forget_manor()
+	# A theme reads the ground's colour; the woods would hide it (owner
+	# 2026-10-04: MANORS 和 HEIGHTS 都不要显示树木).
+	if _trees != null:
+		_trees.visible = theme_name == ""
 	_refresh_theme()
 
 func manor_theme() -> String: return _themes.theme()

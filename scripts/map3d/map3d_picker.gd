@@ -207,6 +207,11 @@ func hover_pick(picked: Dictionary, pos: Vector2) -> void:
 	if obj != _hover_obj:
 		_hover_obj = obj
 		var label := MapObjects.label_of(repo, obj, state)
+		# under MANORS a manor's hover reads its bars too (owner 2026-10-04)
+		if String(obj.get("kind", "")) == "manor" and label != "":
+			var bars := ManorBars.words_of(ManorBars.row_of(repo, state, int(obj["cell"])))
+			if bars != "":
+				label += "\n" + bars
 		tooltip.text = label
 		tooltip.visible = label != ""
 	if tooltip.visible:

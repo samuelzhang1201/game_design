@@ -23,7 +23,7 @@ extends Control
 ## wheel's backdrop, the scale bar, the MARCH aim's ruler, the wheel
 ## (CompassLayer) and last its needle. Every piece reads the context the view
 ## binds — never the Game autoload — and draws nothing until bound.
-const PIECES := ["Labels", "Landmarks", "Weather", "HeatLegend", "Badges", "Armies",
+const PIECES := ["Labels", "Landmarks", "HeatLegend", "ManorBars", "Badges", "Armies",
 	"Couriers", "Backdrop", "ScaleBar", "Ruler"]
 
 ## The pale halo under the scale bar, the needle's shadow, the landmarks and
@@ -83,10 +83,10 @@ static func _make_piece(piece_name: String) -> Map3DHudPiece:
 			return Map3DHudLabels.new()
 		"Landmarks":
 			return Map3DHudLandmarks.new()
-		"Weather":
-			return Map3DHudWeather.new()
 		"HeatLegend":
 			return Map3DHudHeatLegend.new()
+		"ManorBars":
+			return Map3DHudManorBars.new()
 		"Badges":
 			return Map3DHudBadges.new()
 		"Armies":

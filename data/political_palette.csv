@@ -38,9 +38,6 @@ ruler_halo,#F3EEDF,"MEASUREMENT ruler: the pale halo under every stroke and the 
 landmark_high,#2B1D14,"3D MAP HEIGHTS (owner 2026-09-19, spec 2026-09-19-map3d-heights §4): a high point's triangle — dark brown-black"
 landmark_low,#1E4257,"3D MAP HEIGHTS: a low point's triangle — the coast line's deep blue"
 landmark_text,#1A1410,"3D MAP HEIGHTS: the height beside a landmark and the legend's tier names"
-weather_mark_bg,#2A221A,"3D HUD (2026-09-27): the disc behind a weather glyph until its art is installed — dark leather like the map's other chips (owner 2026-09-28, second critique: the black disc and white glyph were the last web-bright marks on the map; was #1A1D22)"
-weather_mark_edge,#A88A4C,"3D HUD: the weather disc's gold hairline, the badges' own (manor_label_ink)"
-weather_mark_glyph,#C8B48C,"3D HUD: the weather glyph — parchment dimmed a step, so a mark of the day's weather never outshines the towns and the pieces (owner 2026-09-28; was army_glyph #EDE0C4)"
 intel_truth,#D8C27A,"Missive board (spec 2026-09-28): ground truth — the column plaque and a card's intel tag"
 intel_credible,#7FB069,highly credible
 intel_consult,#6FA3C8,worth consulting (sub-project C)

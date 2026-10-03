@@ -12,7 +12,7 @@ const TREE := ["Viewport", "Viewport/World/WorldSlot", "Viewport/World/CameraRig
 	"Viewport/World/CameraRig/RigCamera", "Viewport/World/Sea", "Viewport/World/Rivers", "Viewport/World/Bridges",
 	"Viewport/World/Lines", "Viewport/World/Clouds", "Viewport/World/Clouds/Shadows", "Viewport/World/Markers",
 	"Viewport/World/Houses", "Viewport/World/Couriers",
-	"Display", "Notice", "Hud", "Hud/Labels", "Hud/Landmarks", "Hud/Weather", "Hud/HeatLegend",
+	"Display", "Notice", "Hud", "Hud/Labels", "Hud/Landmarks", "Hud/HeatLegend", "Hud/ManorBars",
 	"Hud/Badges", "Hud/Armies", "Hud/Couriers", "Hud/Backdrop", "Hud/ScaleBar", "Hud/Ruler",
 	"Hud/Compass", "Hud/Needle", "Tooltip"]
 ## What the layers build under the view at load (+ refresh_borders).

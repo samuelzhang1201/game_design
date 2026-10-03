@@ -106,6 +106,10 @@ static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, 
 				var tp := estimate(repo, int(float((repo.burgs[town] as Dictionary).get("population", 0))),
 					q, bias, _round_to(repo, "town_people"))
 				facts.append(MissiveLog.span("town_people", _label(repo, "town_people"), int(tp[0]), int(tp[1])))
+		# Its worth a month, tax and goods in gold — the MANORS bars read it
+		# for land the crown does not hold (owner 2026-10-04).
+		var wl := estimate(repo, ManorBars.worth_of(line), q, bias, _round_to(repo, "worth"))
+		facts.append(MissiveLog.span("worth", _label(repo, "worth"), int(wl[0]), int(wl[1])))
 		# The chief good by name and ITS units a month (final review M2).
 		var made := chief_output(repo, state, cell, int(line["people"]), int(line.get("units", 0)))
 		var units := estimate(repo, int(made["units"]), q, bias, _round_to(repo, "output"))
