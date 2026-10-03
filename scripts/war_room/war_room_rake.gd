@@ -56,7 +56,9 @@ func drop() -> void:
 
 
 ## "<distance> <unit> · ~<days> day(s)" from the regiment to a pack point, in
-## the pack's own measure; "cannot march" for a banner with no one to march.
+## the pack's own measure, the days ONE arrival figure — the courier's ride and
+## the march after it (owner 2026-10-02); "cannot march" for a banner with no
+## one to march.
 func reading(regiment: String, to_px: Vector2) -> String:
 	var state := _view.state()
 	var from := _view.position_of(regiment)
@@ -65,7 +67,7 @@ func reading(regiment: String, to_px: Vector2) -> String:
 	var text := "%s %s" % [WarRoom.group(int(round(dist))), unit if unit != "" else "km"]
 	if ArmySystem.day_march_m(_repo, state, regiment) <= 0:
 		return text + " · cannot march"
-	var days := ArmySystem.march_days(_repo, state, regiment, from.distance_to(to_px) * float(ArmySystem.metres_per_pack_px(_repo)))
+	var days := CourierSystem.arrival_days(_repo, state, regiment, to_px, from)
 	return text + " · ~%d day%s" % [days, "" if days == 1 else "s"]
 
 

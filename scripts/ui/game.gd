@@ -209,9 +209,7 @@ func review_drafts() -> Dictionary:
 		if req.action_code == "ARMY_MARCH":
 			var dest := WarDrafts.dest_px(data, d)
 			to = Intel.place_label(data, state, dest)
-			var from := ArmySystem.position_of(data, state, reg)
-			days = ArmySystem.march_days(data, state, code,
-				from.distance_to(dest) * float(ArmySystem.metres_per_pack_px(data)))
+			days = CourierSystem.arrival_days(data, state, code, dest)   # ride + march
 		lines.append({"code": code, "label": String(reg.get("label", code)), "order": String(d["order"]),
 			"to": to, "days": days, "gold": gold, "refusal": refusal})
 	return {"lines": lines, "total": total}

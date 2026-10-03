@@ -375,14 +375,18 @@ func test_a_refused_rake_lets_go_and_the_rest_of_the_drag_does_nothing() -> void
 	assert_signal_not_emitted(view, "piece_selected")
 
 
-func test_the_arrow_reads_the_distance_in_the_packs_measure_and_the_days() -> void:
+func test_the_arrow_reads_the_distance_in_the_packs_measure_and_the_arrival_day() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var code := String(p["code"])
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(10.0, 0.0)
 	var dist := 10.0 * float(repo.map_info.get("distance_scale", "1"))
-	var days := ArmySystem.march_days(repo, state, code, 10.0 * float(ArmySystem.metres_per_pack_px(repo)))
+	# ONE arrival day: the courier's ride, then the march (owner 2026-10-02)
+	var days := CourierSystem.arrival_days(repo, state, code, to, p["at"] as Vector2)
+	assert_eq(days, (CourierSystem.eta_days(repo, state, CourierSystem.ORDINARY, code)
+		if CourierSystem.carries_orders(ArmySystem.regiment(repo, code)) else 0)
+		+ ArmySystem.march_days(repo, state, code, 10.0 * float(ArmySystem.metres_per_pack_px(repo))))
 	assert_eq(view.rake_reading(code, to), "%s %s · ~%d day%s" % [WarRoom.group(int(round(dist))),
 		String(repo.map_info.get("distance_unit", "km")), days, "" if days == 1 else "s"])
 

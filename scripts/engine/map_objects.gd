@@ -978,11 +978,14 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		stats.append(_stat("army_strength", might, "Strength — %s against the realm's others of its kind" % might))
 		var km := ArmySystem.speed_km_per_day(repo, state, code)
 		var marching := ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH
+		var riding := CourierSystem.pending_for(state, code)
+		if String((riding.get("order", {}) as Dictionary).get("action_code", "")) == "ARMY_MARCH":
+			marching = true   # its march order is on the road: the arrival counts the courier too
 		if marching:
-			var days := ArmySystem.days_out(repo, state, code)
+			var days := CourierSystem.days_to_arrival(repo, state, code)
 			stats.append(_stat("army_march", "%d day%s out" % [days, "" if days == 1 else "s"],
-				"On the march — %.1f km a day in clear weather; %d day%s to go in today's weather" % [
-					km, days, "" if days == 1 else "s"]))
+				"Arrives in %d day%s in today's weather, any courier still riding with its orders included — %.1f km a day in clear weather" % [
+					days, "" if days == 1 else "s", km]))
 		else:
 			stats.append(_stat("army_march", "%.1f km/day" % km,
 				"March — %.1f km a day: its slowest arm's pace, slowed by short supplies, low morale and little training" % km))

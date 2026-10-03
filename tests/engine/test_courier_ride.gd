@@ -326,3 +326,29 @@ func test_the_shown_days_are_day_ends_through_the_tick_engine() -> void:
 	assert_eq(ArmySystem.position_of(repo, s, reg), home, "the column has not marched on its delivery day")
 	engine.advance_day(s)
 	assert_ne(ArmySystem.position_of(repo, s, reg), home, "it marches from the next day")
+
+
+## Owner 2026-10-02 (显示一个总的到达日): ONE arrival figure — the courier's
+## ride, then the march at today's pace — wherever days are shown.
+func test_the_arrival_day_is_the_ride_and_then_the_march() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var code := _marcher()
+	var reg := ArmySystem.regiment(repo, code)
+	var here := ArmySystem.position_of(repo, s, reg)
+	var dest := here + Vector2(40.0, 0.0)
+	var ride := CourierSystem.eta_days(repo, s, CourierSystem.ORDINARY, code)
+	var march := ArmySystem.march_days(repo, s, code, 40.0 * float(ArmySystem.metres_per_pack_px(repo)))
+	assert_gt(march, 0)
+	assert_eq(CourierSystem.arrival_days(repo, s, code, dest),
+		(ride if CourierSystem.carries_orders(reg) else 0) + march)
+	# a march order on the road: his days left, then the march
+	var m := ArmySystem.pack_to_metres(repo, dest)
+	var c := _courier(s, 1, code, [[0, 0, "road"], [160000 * 2 + 5, 0, "road"]],
+		{"action_code": "ARMY_MARCH", "dest_x_m": m.x, "dest_y_m": m.y})
+	var left := CourierSystem.days_left(repo, s, c)
+	assert_eq(CourierSystem.days_to_arrival(repo, s, code), left + march,
+		"the card counts the courier still riding")
+	# a halt riding: bound nowhere
+	c["order"] = {"action_code": "ARMY_GARRISON"}
+	assert_eq(CourierSystem.days_to_arrival(repo, s, code), 0)
+

@@ -227,6 +227,37 @@ static func eta_days(repo: DataRepository, state: GameState, kind: String, code:
 		path, _ride_day_of(state)))
 
 
+## Days until `code` stands at `dest_px` if a march there were ordered now —
+## ONE figure, the courier's ride and the march after it (owner 2026-10-02:
+## 显示一个总的到达日): his days (none for a regiment that takes its orders
+## directly), then the march from where it stands at today's pace, each counted
+## in day-ends. 0 for a regiment that cannot march.
+static func arrival_days(repo: DataRepository, state: GameState, code: String, dest_px: Vector2,
+		from_px := Vector2(-1, -1), ride := -1) -> int:
+	var reg := ArmySystem.regiment(repo, code)
+	if reg.is_empty() or ArmySystem.day_march_m(repo, state, code) <= 0:
+		return 0
+	if ride < 0:
+		ride = eta_days(repo, state, ORDINARY, code) if carries_orders(reg) else 0
+	var from := from_px if from_px.x >= 0.0 else ArmySystem.position_of(repo, state, reg)
+	return ride + ArmySystem.march_days(repo, state, code,
+		from.distance_to(dest_px) * float(ArmySystem.metres_per_pack_px(repo)))
+
+
+## Days until `code` arrives where it was last ordered: a march order still
+## riding with its courier counts his days left and then the march; a column on
+## the march its days out; 0 when it is bound nowhere.
+static func days_to_arrival(repo: DataRepository, state: GameState, code: String) -> int:
+	var c := pending_for(state, code)
+	var order: Dictionary = c.get("order", {}) if not c.is_empty() else {}
+	if String(order.get("action_code", "")) == "ARMY_MARCH":
+		var dest := ArmySystem.metres_to_pack(repo, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))
+		return arrival_days(repo, state, code, dest, Vector2(-1, -1), days_left(repo, state, c))
+	if not c.is_empty():
+		return 0   # a halt is riding: the column stops where it is
+	return ArmySystem.days_out(repo, state, code)
+
+
 ## One DAY on the road for every courier, in id order (TickEngine, at the
 ## day's END, after the regiments march: an order delivered today is marched
 ## on from tomorrow). Returns the day's events for the news bar; his setting

@@ -302,7 +302,8 @@ func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
 	assert_eq(String(march.get("text", "")), "%d day%s out" % [days, "" if days == 1 else "s"])
 	var tip := String(march.get("tooltip", ""))
 	assert_string_contains(tip, "clear weather")
-	assert_true(tip.ends_with("in today's weather"), "a whole sentence: " + tip)
+	assert_string_contains(tip, "in today's weather")
+	assert_true(tip.ends_with("clear weather"), "a whole sentence: " + tip)
 	assert_eq(String(weather.get("text", "")), "%s ×%.2f" % [Weather.label_of(repo, "rain"), float(rain) / 1000.0],
 		"the weather is its own line")
 	assert_true(repo.resource_icons.has("army_weather"), "with its icon row")

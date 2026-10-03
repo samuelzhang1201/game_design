@@ -77,12 +77,12 @@ func _draw_aim() -> void:
 				ticks.append(t)
 	var metres := from.distance_to(ctx.to_pack(Vector2(b3.x, b3.z))) \
 		* float(ArmySystem.metres_per_pack_px(repo))
-	var days := ArmySystem.march_days(repo, ctx.state(), code, metres)
+	# ONE arrival day: the courier's ride, then the march (owner 2026-10-02)
+	var days := 0
+	if ArmySystem.day_march_m(repo, ctx.state(), code) > 0:
+		days = _courier_eta(code) + ArmySystem.march_days(repo, ctx.state(), code, metres)
 	var text := MapRuler.reading(total, view.map_unit())
 	if days > 0:
 		text += " · %d day%s" % [days, "" if days == 1 else "s"]
-	var eta := _courier_eta(code)
-	if eta > 0:
-		text += " · courier ≈%d day%s" % [eta, "" if eta == 1 else "s"]
 	MapRuler.draw(self, a_px, b_px, ticks, text, 1.0,
 		MapPalette.color_of(repo, String(reg.get("kingdom_code", ""))), true, path)

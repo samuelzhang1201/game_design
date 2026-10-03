@@ -254,7 +254,7 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 		var si := WarSheets.sheet_of(repo, dest)
 		if si >= 0:
 			rows.append(_row("Bound for", WarSheets.grid_ref(repo, WarSheets.series(repo)[si], dest)))
-		var days := ArmySystem.days_out(repo, state, code)
+		var days := CourierSystem.days_to_arrival(repo, state, code)
 		rows.append(_row("Arrives", "in %d day%s" % [days, "" if days == 1 else "s"]))
 	return rows
 
