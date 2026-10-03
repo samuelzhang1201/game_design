@@ -87,6 +87,13 @@ terrain.material.dual_scaling = true
 
 **历史**：这个顺序问题从地形构建提交进仓库那一次（`43d7782`）就存在，主人在画面上**从来没见过**双尺度生效后的样子。
 
+**状态（2026-10-04）：已修复，`93aab60`。**
+- 新增 `build_terrain.gd` 的 `apply_material`：先开双尺度，再写参数；新增 `apply_tiles`。
+- 新增 `build_world.gd --material-only`：不需要本机原始烘焙文件，直接把材质和平铺尺度重新写进已提交的构建。
+- `world.tscn` 里的 5 个参数已填成设计值。草地在 1.2–4 km 之间渐变为 0.3 倍。
+- 悬崖的平铺尺度从 160 m 改为 160 / 0.3 ≈ 533 m，保持主人认可时的大小。当时悬崖实际上一直按默认的 0.3 倍双尺度绘制：相机最近 400 m，最近可见的地面约 210 m，已超出默认的 170 m 远端。
+- 新增测试 `tests/map3d/test_map3d_build_material.gd`，守住参数顺序、已提交构建里没有 null 参数，以及平铺尺度与 `TEXTURES` 表一致。
+
 ---
 
 ## 4. 发现二：高度混合已正确开启
@@ -118,11 +125,11 @@ terrain.material.dual_scaling = true
 
 | # | 做什么 | 规模 | 需要什么 |
 |---|---|---|---|
-| 1 | **修复双尺度**：把 `build_terrain.gd` 里的 `dual_scaling = true` 移到参数循环之前；把 `world.tscn` 里 5 个 `null` 填成设计值（效果等同重建，因为重建需要只在本机的原始烘焙文件 `height.r32` / `control.r32` / `color.rgba8`） | 小 | 在编辑器里确认 `dual_scale_far` 4000 不被 hint_range 截断；按视觉审查流程在中景截图对比 |
+| 1 | ✅ 已完成（`93aab60`）**修复双尺度**：把 `build_terrain.gd` 里的 `dual_scaling = true` 移到参数循环之前；把 `world.tscn` 里 5 个 `null` 填成设计值（效果等同重建，因为重建需要只在本机的原始烘焙文件 `height.r32` / `control.r32` / `color.rgba8`） | 小 | 在编辑器里确认 `dual_scale_far` 4000 不被 hint_range 截断；按视觉审查流程在中景截图对比 |
 | 2 | **每顶点 UV 噪声**：在 `bake_world.py` 写控制图时，用低频噪声填 uv angle 和 uv scale 位，参数放进 `map3d_bake.csv` | 中 | 本机跑 `tools/map3d/build_pack.sh` 重建，截图对比 |
 | 3 | **可手画的宏观色调覆盖层**（CK3 颜色图的做法）：一张覆盖整个地图包的低分辨率 PNG，由美术或 AI 按区域画冷暖、干湿，在烘焙时乘进 `color.rgba8` | 中到大 | 主人定方向：画什么、谁来画 |
 | 4 | **树篱、灌木**：沿田埂（`sow_patchwork` 里的田块边界）和林缘撒照片卡片，按距离淡出 | 大 | 主人拍板（属于新加内容），再生成卡片素材 |
 
 不做：3D 草丛（理由见 §6）；光照与后期（已经调过很多轮，不是瓶颈）。
 
-**建议先做 #1。**改动最小，而且是让原本的设计真正生效。改完需要在本机用 `tools/snapshot_screen.gd --resolution WxH --zoom3d ...` 拍中景（1–10 km）前后对比，按 `.claude/skills/visual-review/` 的流程定夺。
+#1 已完成，下一步建议做 #2（每顶点 UV 噪声），它需要在本机重建地形。
