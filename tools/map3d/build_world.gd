@@ -1,17 +1,18 @@
 extends SceneTree
-## Build assets/3D/terrain/<map>/world.tscn headless — no editor step.
+## Build scenes/map3d/worlds/<map>.tscn and its data (assets/3D/terrain/<map>/)
+## headless — no editor step.
 ##   python3 tools/map3d/bake_world.py
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd [-- --map ID]
 ## (default: data/maps.csv's is_default pack)
 ## build_terrain.gd does the work: build_scene() packs the scene around an
 ## empty Terrain3D; its data only initialises inside a tree, so the scene is
 ## instanced under root, import_into() fills and saves the regions, and the
-## filled scene is packed over the first one. Beside it goes manifest.json
+## filled scene is packed over the first one. Into the data dir goes manifest.json
 ## (format version, meta, build time, the bake tables' fingerprint), which
 ## Map3DWorldLoader.status reads to tell a current build from a stale one.
 ## The whole chain for one pack is tools/map3d/build_pack.sh.
 ## --material-only re-applies BuildTerrain.apply_material to the built
-## world.tscn and BuildTerrain.apply_tiles to its terrain_assets.tres and
+## world scene and BuildTerrain.apply_tiles to its terrain_assets.tres and
 ## saves both, leaving the regions, the textures and the manifest alone — a change to the ground's shader parameters without the bake's raw
 ## inputs (height.r32 / control.r32 / color.rgba8 are git-ignored).
 
@@ -31,7 +32,7 @@ func _run() -> void:
 		await _material_only()
 		return
 	print(BuildTerrain.build_scene())
-	var path := BuildTerrain.root() + "/world.tscn"
+	var path := BuildTerrain.scene_path()
 	var scene: Node = (load(path) as PackedScene).instantiate()
 	# Terrain3D stops its physics process without an active camera; the build
 	# has none of its own, so one stands beside the scene and is never packed.
@@ -58,7 +59,7 @@ func _run() -> void:
 
 ## The built scene's material brought up to apply_material, nothing else.
 func _material_only() -> void:
-	var path := BuildTerrain.root() + "/world.tscn"
+	var path := BuildTerrain.scene_path()
 	if not ResourceLoader.exists(path):
 		print("no built world at %s" % path)
 		quit(1)
@@ -66,7 +67,7 @@ func _material_only() -> void:
 	# The tiles first, on the resource as saved: a Terrain3D in a headless
 	# tree drops its texture list (the VRAM textures do not load there), and
 	# saving the assets it holds wrote an empty list (found 2026-10-04). A save
-	# from this script mode drops the uid= lines (harmless: world.tscn names
+	# from this script mode drops the uid= lines (harmless: the world scene names
 	# the assets by path; restore them from git to keep the diff small).
 	var apath := BuildTerrain.root() + "/terrain_assets.tres"
 	var assets := load(apath) as Terrain3DAssets
@@ -95,7 +96,7 @@ func _material_only() -> void:
 	quit(0 if err == OK and err_assets == OK else 1)
 
 
-## manifest.json beside world.tscn: what Map3DWorldLoader.status checks.
+## manifest.json in the build's data dir: what Map3DWorldLoader.status checks.
 ## (Time is fine here: a tool, not simulation code.)
 func _write_manifest(scene: Node) -> Error:
 	var mpath := BuildTerrain.root() + "/manifest.json"

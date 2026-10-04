@@ -73,4 +73,4 @@ func _map_id() -> String:
 
 
 func _scene_path(map_id: String) -> String:
-	return DataRepository.map3d_dir_of(map_id).path_join("world.tscn")
+	return DataRepository.map3d_scene_of(map_id)

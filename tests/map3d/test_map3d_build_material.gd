@@ -29,12 +29,12 @@ func test_apply_material_keeps_the_dual_scale_values() -> void:
 ## Every committed build: no shader parameter saved as null (a null falls
 ## back to the shader's own default without a word).
 func test_no_committed_build_saves_a_null_shader_parameter() -> void:
-	var base := "res://assets/3D/terrain"
+	var base := DataRepository.MAP3D_WORLDS
 	var checked := 0
-	for dir in DirAccess.get_directories_at(base):
-		var path := "%s/%s/world.tscn" % [base, dir]
-		if not FileAccess.file_exists(path):
+	for file in DirAccess.get_files_at(base):
+		if not file.ends_with(".tscn"):
 			continue
+		var path := base.path_join(file)
 		checked += 1
 		for line in FileAccess.get_file_as_string(path).split("\n"):
 			assert_false(line.begins_with("&\"") and line.strip_edges().trim_suffix(",").ends_with(": null"),

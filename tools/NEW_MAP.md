@@ -40,7 +40,7 @@ committed files byte for byte (checked 2026-09-18).
    weights at a different scale; run `bake_relief.gd` last.
 7. 3D map: `tools/map3d/build_pack.sh --map <id>` — manor land, bake,
    scene and `manifest.json` in one command, into the pack's `maps.csv`
-   `map3d_dir` (empty: `assets/3D/terrain/<id>`; tools/map3d/README.md).
+   `map3d_dir` (empty: `assets/3D/terrain/<id>`; its world scene is always `scenes/map3d/worlds/<id>.tscn`; tools/map3d/README.md).
 
 **A pack's `world_*.png` are DATA, never pictures** — ids, distances, a
 height field, blend weights, read as an `Image` or sampled for their exact

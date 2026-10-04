@@ -53,7 +53,7 @@ func preview_build(p_ctx: Map3DContext) -> void:
 		Map3DPreview.show_placeholder(self, RIVER_MAT)
 		return
 	var twin := Map3DPreview.proxy(self, get_script(), "RiversPreview") as Map3DLayerRivers
-	twin.build(p_ctx, p_ctx.repo.map3d_dir().path_join("world.tscn"))
+	twin.build(p_ctx, p_ctx.repo.map3d_scene())
 	twin.apply_scale()
 
 
@@ -76,7 +76,7 @@ static func arrays_for(p_ctx: Map3DContext, scene_dir: String) -> Dictionary:
 
 func build(p_ctx: Map3DContext, scene_path: String) -> void:
 	ctx = p_ctx
-	var got := arrays_for(ctx, scene_path.get_base_dir())
+	var got := arrays_for(ctx, Map3DWorldLoader.data_dir(scene_path))
 	_courses = got["courses"]
 	var arrays: Array = got["arrays"]
 	if arrays.is_empty():

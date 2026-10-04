@@ -1,22 +1,23 @@
 extends GutTest
 ## assets/ holds ART, never a scene (owner 2026-10-04: 把所有场景都要放到场景
 ## folder中去，按照类别归类，assets下面只存放美术资产，不要放场景): a model's
-## .glb stays in assets/, its scene is in scenes/models/. The one exception is
-## the Terrain3D build's generated world.tscn, which build_pack.sh writes into
-## the pack's map3d_dir.
-
-const GENERATED := "res://assets/3D/terrain/%s/world.tscn"
+## .glb stays in assets/, its scene is in scenes/models/; the Terrain3D build's
+## world scene is scenes/map3d/worlds/<map>.tscn while its data stays in the
+## pack's map3d_dir; the tools' scenes are scenes/tools/.
 
 
 func test_no_scene_lies_under_assets() -> void:
 	var found: Array[String] = []
 	_walk("res://assets", found)
-	var stray: Array[String] = []
-	for path in found:
-		var pack := path.trim_prefix("res://assets/3D/terrain/").get_slice("/", 0)
-		if path != GENERATED % pack:
-			stray.append(path)
-	assert_eq(stray, [] as Array[String], "scenes belong in scenes/, by kind, not in assets/")
+	assert_eq(found, [] as Array[String], "scenes belong in scenes/, by kind, not in assets/")
+
+
+func test_every_packs_built_world_scene_is_under_scenes() -> void:
+	for file in DirAccess.get_files_at(DataRepository.MAP3D_WORLDS):
+		if file.ends_with(".tscn"):
+			var id := file.get_basename()
+			assert_true(DirAccess.dir_exists_absolute(DataRepository.map3d_dir_of(id)),
+				file + "'s data is in its pack's map3d_dir")
 
 
 func _walk(dir: String, out: Array[String]) -> void:

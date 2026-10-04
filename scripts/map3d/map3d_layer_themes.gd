@@ -82,7 +82,7 @@ func prepare(scene_path: String) -> void:
 	var fields := load_field_map(scene_path)
 	if fields == null:
 		Map3DWorldLoader.warn_once("fields:" + scene_path,
-			"Map3DView: no bake/fields.png beside %s — no furrows (rebuild: tools/map3d/build_pack.sh)" % scene_path)
+			"Map3DView: no bake/fields.png in the build of %s — no furrows (rebuild: tools/map3d/build_pack.sh)" % scene_path)
 	else:
 		mat.call("set_shader_param", "field_map", fields)
 		mat.call("set_shader_param", "field_m_per_texel", FIELD_MAP_M_PER_TEXEL)
@@ -96,7 +96,7 @@ func prepare(scene_path: String) -> void:
 ## res:// path, never a globalized one: in an exported game the res:// tree is
 ## the pack, and a path on disk beside the executable holds nothing.
 static func load_field_map(scene_path: String) -> Texture2D:
-	var path := scene_path.get_base_dir().path_join("bake/fields.png")
+	var path := Map3DWorldLoader.data_dir(scene_path).path_join("bake/fields.png")
 	if not FileAccess.file_exists(path):
 		return null
 	var img := Image.load_from_file(path)
@@ -107,7 +107,7 @@ static func load_field_map(scene_path: String) -> Texture2D:
 ## off without the file or while map3d_tree_on is 0.
 func _apply_woods(scene_path: String) -> void:
 	var repo := ctx.repo
-	var path := scene_path.get_base_dir().path_join("bake/woods.png")  # res://, as load_field_map
+	var path := Map3DWorldLoader.data_dir(scene_path).path_join("bake/woods.png")  # res://, as load_field_map
 	if repo.bal("map3d_tree_on") <= 0.0 or not FileAccess.file_exists(path):
 		_tint_mat.call("set_shader_param", "wood_on", 0.0)
 		return

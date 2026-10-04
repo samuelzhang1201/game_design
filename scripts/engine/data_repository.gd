@@ -386,6 +386,21 @@ func map3d_dir(id: String = "") -> String:
 	var d := String(row.get("map3d_dir", ""))
 	return d if d != "" else "res://assets/3D/terrain/%s" % key
 
+## Where a pack's built 3D WORLD SCENE lives (owner 2026-10-04: every scene is
+## under scenes/, assets/ holds art): scenes/map3d/worlds/<id>.tscn. The build
+## writes it there; its data — the Terrain3D regions, textures, bake, layers,
+## rivers and manifest — stays in map3d_dir (Map3DWorldLoader.data_dir).
+const MAP3D_WORLDS := "res://scenes/map3d/worlds"
+
+
+func map3d_scene(id: String = "") -> String:
+	return map3d_scene_of(id if id != "" else map_id)
+
+
+static func map3d_scene_of(pack_id: String) -> String:
+	return MAP3D_WORLDS.path_join(pack_id + ".tscn")
+
+
 ## map3d_dir straight from data/maps.csv, for tools that run before any
 ## repository loads.
 static func map3d_dir_of(pack_id: String, maps_csv: String = "res://data/maps.csv") -> String:

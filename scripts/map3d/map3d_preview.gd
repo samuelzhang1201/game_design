@@ -39,13 +39,13 @@ static func repo(pack_id: String) -> DataRepository:
 
 ## A build's `map3d_world` metadata: its manifest's copy (no scene to open),
 ## else the built scene's own root meta, else {} — a pack with no build.
-static func meta_for(scene_dir: String) -> Dictionary:
-	var manifest := scene_dir.path_join("manifest.json")
+## `scene` is the world scene (its data dir: Map3DWorldLoader.data_dir).
+static func meta_for(scene: String) -> Dictionary:
+	var manifest := Map3DWorldLoader.data_dir(scene).path_join("manifest.json")
 	if FileAccess.file_exists(manifest):
 		var m: Variant = JSON.parse_string(FileAccess.get_file_as_string(manifest))
 		if m is Dictionary and (m as Dictionary).get("meta", null) is Dictionary:
 			return (m as Dictionary)["meta"]
-	var scene := scene_dir.path_join("world.tscn")
 	return Map3DWorldLoader.scene_meta(scene) if ResourceLoader.exists(scene) else {}
 
 
@@ -56,9 +56,9 @@ static func meta_for(scene_dir: String) -> Dictionary:
 ## world per pack, shared by every preview of it.
 static func context(pack_id: String, with_terrain: bool = false) -> Map3DContext:
 	var r: DataRepository = repo(pack_id)
-	var dir: String = r.map3d_dir()
-	var meta := meta_for(dir)
-	var world: Node3D = world_of(dir) if with_terrain else null
+	var scene: String = r.map3d_scene()
+	var meta := meta_for(scene)
+	var world: Node3D = world_of(scene) if with_terrain else null
 	var ctx := Map3DContext.new(r, meta, world)
 	var blank := GameState.new()
 	ctx.state_fn = func() -> GameState: return blank
@@ -68,10 +68,9 @@ static func context(pack_id: String, with_terrain: bool = false) -> Map3DContext
 	return ctx
 
 
-## `scene_dir`'s built world, instanced once and kept (a second preview of
+## The built world at `path`, instanced once and kept (a second preview of
 ## the same pack must not load a second terrain); null without a build.
-static func world_of(scene_dir: String) -> Node3D:
-	var path := scene_dir.path_join("world.tscn")
+static func world_of(path: String) -> Node3D:
 	# is_instance_valid FIRST: a scene reload frees the world under it, and
 	# `is` on a freed instance is itself an error.
 	var kept: Variant = _worlds.get(path)

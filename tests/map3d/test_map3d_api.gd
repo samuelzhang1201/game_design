@@ -97,7 +97,7 @@ func test_an_empty_line_has_no_mesh() -> void:
 func test_create_takes_a_fixture_path() -> void:
 	var v := _view()
 	assert_true(v.is_loaded(), "a bare Node3D with map3d_world meta is a world")
-	assert_eq(Map3DView.scene_path_for("no_such_pack"), "res://assets/3D/terrain/no_such_pack/world.tscn")
+	assert_eq(Map3DView.scene_path_for("no_such_pack"), "res://scenes/map3d/worlds/no_such_pack.tscn")
 
 
 ## The kept world (Map3DWorldCache) must not leak into the next file.

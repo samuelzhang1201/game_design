@@ -21,10 +21,11 @@ func _run() -> void:
 		push_error("bake_layers: no pack " + args[at + 1])
 		quit(1)
 		return
-	var dir := repo.map3d_dir()
-	var world := Map3DWorldLoader.instance(dir.path_join("world.tscn"))
+	var scene: String = repo.map3d_scene()
+	var dir: String = repo.map3d_dir()
+	var world := Map3DWorldLoader.instance(scene)
 	if world == null:
-		push_error("bake_layers: no world at " + dir)
+		push_error("bake_layers: no world at " + scene)
 		quit(1)
 		return
 	# Terrain3D looks for a camera once it is in a tree; one it can find

@@ -7,7 +7,12 @@ extends RefCounted
 ## its own Sun, Environment, Sea and cameras: they are removed on load, so a
 ## world never holds two suns or two skies.
 ##
-## Since Task 15 a build also writes `manifest.json` beside world.tscn (its
+## The world SCENE lives in scenes/map3d/worlds/<map>.tscn and its DATA in
+## the pack's map3d_dir (owner 2026-10-04: assets/ holds no scene) — `data_dir`
+## is the one place that joins them; a world anywhere else (a test fixture)
+## keeps its data beside it.
+##
+## Since Task 15 a build also writes `manifest.json` into its data dir (its
 ## format version, meta, build time and the bake tables' fingerprint), and
 ## `status` says honestly why there is no 3D map — missing, stale (built by an
 ## older pipeline, or the manifest describes another world), bad (damaged) —
@@ -34,7 +39,7 @@ static var _warned: Dictionary = {}
 static func status(scene_path: String) -> Dictionary:
 	if not ResourceLoader.exists(scene_path):
 		return {"state": "missing", "why": scene_path + " is not built", "manifest": {}}
-	var mpath := scene_path.get_base_dir().path_join("manifest.json")
+	var mpath := data_dir(scene_path).path_join("manifest.json")
 	if not FileAccess.file_exists(mpath):
 		warn_once("legacy:" + scene_path,
 			"Map3DWorldLoader: %s has no manifest.json (a build from before 2026-09-20)" % scene_path)
@@ -58,6 +63,15 @@ static func status(scene_path: String) -> Dictionary:
 		warn_once("steps:" + scene_path,
 			"Map3DWorldLoader: the bake tables changed since %s was built — rebuild to see them" % scene_path)
 	return {"state": "ok", "why": "", "manifest": m}
+
+
+## Where the world at `scene_path` keeps its data (manifest, rivers, bake,
+## layers, Terrain3D regions): a pack's world in scenes/map3d/worlds/<id>.tscn
+## keeps it in that pack's map3d_dir; any other world beside itself.
+static func data_dir(scene_path: String) -> String:
+	if scene_path.get_base_dir() == DataRepository.MAP3D_WORLDS:
+		return DataRepository.map3d_dir_of(scene_path.get_file().get_basename())
+	return scene_path.get_base_dir()
 
 
 ## The root's map3d_world meta, read from the packed scene without instancing

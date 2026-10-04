@@ -13,7 +13,7 @@ func test_a_preview_context_needs_no_game() -> void:
 
 
 func test_no_build_means_no_meta_and_a_placeholder() -> void:
-	assert_eq(Map3DPreview.meta_for("user://no_such_build"), {})
+	assert_eq(Map3DPreview.meta_for("user://no_such_build/world.tscn"), {})
 	var mesh := Map3DPreview.placeholder(StandardMaterial3D.new())
 	assert_not_null(mesh)
 

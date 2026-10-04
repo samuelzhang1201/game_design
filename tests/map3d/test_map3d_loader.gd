@@ -1,8 +1,8 @@
 extends GutTest
 ## Swapping map data (spec 2026-09-20 §3): the build holds data plus a
 ## manifest; the game says honestly why there is no 3D map — missing, stale
-## (rebuild), bad — and a pack can keep its 3D build anywhere (maps.csv
-## map3d_dir).
+## (rebuild), bad — and a pack can keep its 3D build's DATA anywhere (maps.csv
+## map3d_dir) while its world scene is scenes/map3d/worlds/<id>.tscn.
 
 const RunDir := preload("res://tests/run_dir.gd")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
@@ -95,14 +95,14 @@ func test_a_stale_build_shows_its_notice_and_does_not_load() -> void:
 	assert_string_contains(v.notice().text, "older")
 
 
-func test_a_pack_can_keep_its_3d_build_elsewhere() -> void:
+func test_a_packs_world_scene_is_under_scenes_and_its_data_in_its_map3d_dir() -> void:
 	var id := Game.data.map_id
-	var row: Dictionary = Game.data.maps[id]
-	var before := String(row.get("map3d_dir", ""))
-	row["map3d_dir"] = "res://elsewhere/" + id
-	assert_eq(Map3DView.scene_path_for(id), "res://elsewhere/%s/world.tscn" % id)
-	row["map3d_dir"] = before
-	assert_eq(Map3DView.scene_path_for(id), "res://assets/3D/terrain/%s/world.tscn" % id)
+	var scene := Map3DView.scene_path_for(id)
+	assert_eq(scene, "res://scenes/map3d/worlds/%s.tscn" % id, "every scene is under scenes/ (owner 2026-10-04)")
+	assert_eq(Map3DWorldLoader.data_dir(scene), DataRepository.map3d_dir_of(id),
+		"its regions, bake, layers, rivers and manifest stay in the pack's map3d_dir")
+	assert_eq(Map3DWorldLoader.data_dir("user://somewhere/world.tscn"), "user://somewhere",
+		"a world anywhere else (a test fixture) keeps its data beside it")
 
 
 func test_the_house_table_is_in_the_steps_hash() -> void:

@@ -24,7 +24,7 @@ const GEOMETRY_SOURCES := ["res://scripts/map3d/map3d_layer_rivers.gd",
 	"res://scripts/map3d/map3d_geometry.gd", "res://scripts/map3d/map3d_context.gd",
 	"res://scripts/engine/map_geometry.gd"]
 ## The md5 of GEOMETRY_SOURCES' text, concatenated in list order.
-const GEOMETRY_MD5 := "cdc7e17934b27b27755603ac245ae9aa"
+const GEOMETRY_MD5 := "7fbaad56b8bcdac020a7f95bd9b16ab0"
 const LAYERS := ["rivers", "roads", "trails", "bridges"]
 const KEYS := ["map3d_road_step_m", "map3d_river_mesh_step_m", "map3d_river_split_rise_m",
 	"map3d_river_terrain_clear_m", "map3d_river_end_fade_m", "map3d_road_width_m",
@@ -115,7 +115,7 @@ static func mesh_of(arrays: Array) -> ArrayMesh:
 ## True when the bake was used. The roads must be bound to their lines.
 static func build_layers(ctx: Map3DContext, scene_path: String, rivers: Map3DLayerRivers,
 		roads: Map3DLayerRoads) -> bool:
-	var dir := scene_path.get_base_dir()
+	var dir := Map3DWorldLoader.data_dir(scene_path)
 	var row := ctx.q()
 	if complete(dir, row, key(ctx.repo, dir, row)):
 		var m := load_all(dir, row)

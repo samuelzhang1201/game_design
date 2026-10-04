@@ -21,11 +21,14 @@ Compatibility (see the traps below).
 | `assets/3D/terrain/trees/` | tree impostor cards + `trees.json` | no — `render_impostors.py` |
 | `assets/3D/buildings/` | the settlement house meshes (`<type>/<type>.glb`, each type's references in its `model_wip/`) + `houses.json` | **yes** — `make_houses.py`; committed like the terrain build itself, so a fresh clone sees settlements |
 | `assets/3D/terrain/<map>/bake/` | `height.r32`, `control.r32`, `color.rgba8` (the build's raw inputs), `height_war.r16` (the WAR ROOM's half-float heights), `world.json`, `manor_land.csv`, `fields.png`, `woods.png`, `trees.bin`, `houses.csv`, previews | **yes** but the three raw inputs (git-ignored: `build_world.gd` reads them once) — `export_manor_land.gd`, `bake_world.py` |
-| `assets/3D/terrain/<map>/world.tscn`, `terrain_assets.tres`, `terrain/`, `rivers.json` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level, format version), its assets, region data and river courses — DATA only: sun, sky and sea are `scenes/map3d/world_map_3d.tscn`'s | **yes** — `bake_world.py`, `build_world.gd` |
+| `scenes/map3d/worlds/<map>.tscn` (owner 2026-10-04: every scene is under `scenes/`, `assets/` holds none) + `assets/3D/terrain/<map>/terrain_assets.tres`, `terrain/`, `rivers.json` | the Terrain3D scene (root metadata `map3d_world`: scale, origin, canvas, sea level, format version), its assets, region data and river courses — DATA only: sun, sky and sea are `scenes/map3d/world_map_3d.tscn`'s | **yes** — `bake_world.py`, `build_world.gd` |
 | `assets/3D/terrain/<map>/manifest.json` | what built it (below) | **yes** — `build_world.gd` |
 
-`assets/3D/terrain/<map>/` is the default; a pack can keep its build elsewhere
-(`map3d_dir`, below).
+`assets/3D/terrain/<map>/` is the default for the build's DATA; a pack can keep it
+elsewhere (`map3d_dir`, below). The world SCENE is always
+`scenes/map3d/worlds/<map>.tscn` (`DataRepository.map3d_scene_of`), and
+`Map3DWorldLoader.data_dir(scene)` is the one place that finds its data from it
+(a world anywhere else, a test fixture, keeps its data beside it).
 
 Runtime game code is `scripts/map3d/` — `Map3DGeometry` (pure: pack px ↔
 metres, the camera rig's pose, zoom, tilt, pan, ray to ground),
@@ -100,7 +103,7 @@ shared by every pack and built once. The steps one by one:
    reason settlements are placed at runtime.
    `-- --material-only` re-applies `build_terrain.gd`'s material (`apply_material`:
    dual scaling FIRST, then `SHADER_PARAMS`) and texture tiles (`apply_tiles`) to
-   the committed `world.tscn` / `terrain_assets.tres` without the raw inputs (2026-10-04;
+   the committed `scenes/map3d/worlds/<map>.tscn` / `terrain_assets.tres` without the raw inputs (2026-10-04;
    a save from script mode drops the `.tres`'s `uid=` lines — restore them from git).
 6. **Look / measure** — `Godot --path . -s tools/map3d/shoot.gd -- --camera CameraMid --out /tmp/x.png`;
    the acceptance bench drives the real view —
@@ -175,7 +178,7 @@ scene's materials as long as its surfaces keep their order.
 
 ## The manifest
 
-`build_world.gd` writes `manifest.json` beside `world.tscn` once the scene
+`build_world.gd` writes `manifest.json` into the data dir once the scene
 has saved: `format_version` (`Map3DWorldLoader.FORMAT_VERSION`, 2 = data
 only), `meta` (the root's `map3d_world`), `built_at` (UTC) and `steps_hash`
 (`Map3DWorldLoader.steps_hash()`, the md5 of `data/map3d_bake.csv` +
@@ -189,7 +192,7 @@ there is no 3D map and what to run:
 |---|---|---|
 | `ok` | the manifest's version is the game's and its meta matches the scene's root | loads (a changed `steps_hash` only warns once: rebuild to see the new tables) |
 | `legacy` | no `manifest.json` (a build before 2026-09-20; every test fixture) | loads, warns once |
-| `missing` | no `world.tscn` | "has not been built" + `build_pack.sh --map ID` |
+| `missing` | no `scenes/map3d/worlds/<map>.tscn` | "has not been built" + `build_pack.sh --map ID` |
 | `stale` | another `format_version`, or a manifest meta that is not the scene's | "built by an older pipeline" + rebuild |
 | `bad` | a manifest that is not a JSON object, a scene root without `map3d_world`, or a scene that will not instance | "damaged" + rebuild |
 
@@ -226,7 +229,7 @@ to any script in `Map3DLayerBake.GEOMETRY_SOURCES` fails
 
 ## `map3d_dir`
 
-`data/maps.csv`'s `map3d_dir` column says where a pack's 3D build lives (a
+`data/maps.csv`'s `map3d_dir` column says where a pack's 3D build DATA lives (a
 `res://` path; empty means `res://assets/3D/terrain/<id>`). The game reads it
 through `DataRepository.map3d_dir(id)` (`Map3DView.scene_path_for`), the
 GDScript tools through the static `DataRepository.map3d_dir_of(id)`

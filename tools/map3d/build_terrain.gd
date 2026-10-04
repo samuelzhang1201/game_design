@@ -74,10 +74,16 @@ static func map() -> String:
 	return map_id if map_id != "" else DataRepository.default_pack_id()
 
 
-## Where the built scene, its assets and region data go: the pack's
-## maps.csv map3d_dir, default res://assets/3D/terrain/<map>.
+## Where the build's DATA goes — its assets, region data, rivers, bake and
+## manifest: the pack's maps.csv map3d_dir, default res://assets/3D/terrain/<map>.
 static func root() -> String:
 	return DataRepository.map3d_dir_of(map())
+
+
+## Where the built world SCENE goes: scenes/map3d/worlds/<map>.tscn (owner
+## 2026-10-04: every scene is under scenes/, assets/ holds no scene).
+static func scene_path() -> String:
+	return DataRepository.map3d_scene_of(map())
 
 
 static func bake() -> String:
@@ -238,6 +244,7 @@ static func build_scene() -> String:
 
 	var packed := PackedScene.new()
 	packed.pack(scene_root)
-	var err := ResourceSaver.save(packed, root() + "/world.tscn")
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(scene_path().get_base_dir()))
+	var err := ResourceSaver.save(packed, scene_path())
 	scene_root.free()
 	return "scene err=%d" % err

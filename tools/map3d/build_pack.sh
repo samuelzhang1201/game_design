@@ -2,7 +2,8 @@
 # Build one pack's 3D map, the whole chain (spec 2026-09-20 §3):
 #   tools/map3d/build_pack.sh [--map ID]      (default: data/maps.csv is_default)
 # export_manor_land -> bake_world.py -> bake_trees.py -> build_world.gd -> bake_layers.gd, into
-# the pack's maps.csv map3d_dir (default assets/3D/terrain/<id>): manifest.json
+# the pack's maps.csv map3d_dir (default assets/3D/terrain/<id>) and the world
+# scene into scenes/map3d/worlds/<id>.tscn: manifest.json
 # once the scene saves, then the static layers baked against it (layers/).
 # The textures (pack_textures.py, Blender) are shared by every pack and built
 # once — see README.
