@@ -68,8 +68,12 @@ func test_result_always_carries_a_reason() -> void:
 
 func test_trusting_listener_inflates_the_same_claim() -> void:
 	# char_lady_ysolde (trusting) and char_lord_edgar (no belief traits) both
-	# have no relationship edge with "you", so both trust at the default 50:
-	# 80 * 0.5 = 40.0. Trusting adds +10 -> 50.0; the neutral listener stays 40.0.
+	# trust "you" at the default 50 once Ysolde's kin edge to the king is
+	# lifted (only the trait is under test here): 80 * 0.5 = 40.0. Trusting
+	# adds +10 -> 50.0; the neutral listener stays 40.0.
+	state.relationships = state.relationships.filter(func(e: Dictionary) -> bool:
+		return not (String(e["from"]) == "char_lady_ysolde" and String(e["to"]) == "you"))
+	state.source_trust.erase(SourceTrust.key("you", "char_lady_ysolde"))
 	var c := _claim("grain", "eastmarch", "The eastmarch granaries are full", 400.0, true)
 	var trusting := Belief.score(data, state, "char_lady_ysolde", "you", c, 80.0)
 	var neutral := Belief.score(data, state, "char_lord_edgar", "you", c, 80.0)

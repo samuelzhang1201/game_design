@@ -48,3 +48,8 @@ char_guildmaster_tessa,char_steward,ally,45,the one courtier who reads a ledger 
 char_guildmaster_tessa,char_queen,rival,-20,the Weighhouse squeezes guilds that will not kneel
 char_bard_corvin,char_lady_ysolde,admires,50,composes ballads for her salons
 char_lady_ysolde,char_bard_corvin,patron,45,keeps him fashionable at court
+you,char_lady_ysolde,kin,30,"his cousin, the one Valorin the crowds love"
+char_lady_ysolde,you,kin,35,a royal cousin who has never asked what she does with her dowry
+char_duke_tomas,char_chancellor,ally,30,partner in the valley's grain and the river road north
+char_chancellor,char_duke_tomas,ally,25,the Warden's keys open the granaries; his seal lets the barges pass
+char_lady_ysolde,char_prophet_cassian,patron,30,her dowry has paid for the millers' grain he speaks for
