@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft v2.0 — MVP redefined as a complete Chapter 1 (supersedes v1.1's "first playable"). Owner 2026-09-18: the MVP is a **complete first chapter with every feature, all of its art and all of its gameplay** — nothing placeholder, nothing "for later" inside Chapter 1 |
+| **Status** | Draft v2.0 — MVP redefined as a complete Chapter 1 (supersedes v1.1's "first playable"). Owner 2026-09-18: the MVP is a **complete first chapter with every feature, all of its art and all of its gameplay** — nothing placeholder, nothing "for later" inside Chapter 1. **Owner 2026-10-04: that one chapter is the prologue** (`docs/design/CHAPTER_0.md`, built), expanded so the three arcs of §7 play inside it — there is no separate Chapter 1 in the MVP (§7) |
 | **Date** | 2026-09-04 (statuses and facts re-aligned with the code and `CLAUDE.md` on 2026-09-18) |
 | **Author** | Yumeng Zhang |
 | **Scope** | Chapter 1, fully functional and fully illustrated: base loop + Council System through faction stage 6 (Tomas only) + chapter framework + raid defense + all chapter-1 art |
@@ -173,6 +173,8 @@ Full design in `RANDOM_EVENTS.md`.
 ## 7. Chapter 1 — "The Crown Unsettled" (working title)
 
 Chapter 1 is the authored opening situation of `game_story/chapter_0/game_start.md`, played to resolution. It opens at coronation and closes when all three arcs resolve (or the crown falls).
+
+**Owner ruling 2026-10-04 — the arcs go into the prologue.** The MVP's one chapter is the prologue, *The Bond of the Louthton* (`docs/design/CHAPTER_0.md`, 21 beats over the first year, built). The three arcs below are written INTO it, not into a chapter after it; the Louthton story stays its spine. Open design work, owed a spec: how the prologue's calendar stretches to carry the arcs, and whether its four endings become states the arcs read mid-chapter or move to the chapter's close. Wherever this section says "Chapter 1", read the expanded prologue.
 
 ### 7.1 The three arcs
 
