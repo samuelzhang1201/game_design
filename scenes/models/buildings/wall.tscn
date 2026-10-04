@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://doxv6h1whx5py"]
 
-[ext_resource type="PackedScene" path="res://assets/3D/buildings/wall/wall.glb" id="1_5y7op"]
-[ext_resource type="Texture2D" path="res://assets/3D/buildings/wall/wall_wall_atlas.jpg" id="3_tlbxi"]
-[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="4_h81o3"]
+[ext_resource type="PackedScene" uid="uid://d1ajahjcuy83r" path="res://assets/3D/buildings/wall/wall.glb" id="1_5y7op"]
+[ext_resource type="Texture2D" uid="uid://l7348msov3ma" path="res://assets/3D/buildings/wall/wall_wall_atlas.jpg" id="3_tlbxi"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="4_h81o3"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_tlbxi"]
 resource_name = "hh_slate_wall"

@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://dhw4t6qllhi3h"]
 
-[ext_resource type="PackedScene" path="res://assets/3D/buildings/pier_cliff/pier_cliff.glb" id="1_glb"]
-[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="2_253ek"]
-[ext_resource type="Texture2D" path="res://assets/3D/buildings/pier_cliff/pier_cliff_pier_cliff_atlas.jpg" id="3_lelhh"]
+[ext_resource type="PackedScene" uid="uid://2at4ejtg8hu7" path="res://assets/3D/buildings/pier_cliff/pier_cliff.glb" id="1_glb"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="2_253ek"]
+[ext_resource type="Texture2D" uid="uid://dm5yrwqua06a3" path="res://assets/3D/buildings/pier_cliff/pier_cliff_pier_cliff_atlas.jpg" id="3_lelhh"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_253ek"]
 resource_name = "hh_pier_pier_cliff"

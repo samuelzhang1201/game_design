@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://dhv4gy3oh58mj"]
 
-[ext_resource type="PackedScene" path="res://assets/3D/ships/carrack/carrack.glb" id="1_glb"]
-[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="2_tpov0"]
-[ext_resource type="Texture2D" path="res://assets/3D/ships/carrack/carrack_carrack_atlas.jpg" id="3_m3xkr"]
+[ext_resource type="PackedScene" uid="uid://bxyynyurd7h24" path="res://assets/3D/ships/carrack/carrack.glb" id="1_glb"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="2_tpov0"]
+[ext_resource type="Texture2D" uid="uid://dx24uy11wj7ni" path="res://assets/3D/ships/carrack/carrack_carrack_atlas.jpg" id="3_m3xkr"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_tpov0"]
 resource_name = "hh_ship_carrack"

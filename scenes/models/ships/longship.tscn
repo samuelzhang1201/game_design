@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://dase58nntp0n3"]
 
-[ext_resource type="PackedScene" path="res://assets/3D/ships/longship/longship.glb" id="1_glb"]
-[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="2_hkxr5"]
-[ext_resource type="Texture2D" path="res://assets/3D/ships/longship/longship_longship_atlas.jpg" id="3_7l15s"]
+[ext_resource type="PackedScene" uid="uid://ctprsfnhpwuxk" path="res://assets/3D/ships/longship/longship.glb" id="1_glb"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="2_hkxr5"]
+[ext_resource type="Texture2D" uid="uid://dua7vi3iyk88l" path="res://assets/3D/ships/longship/longship_longship_atlas.jpg" id="3_7l15s"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hkxr5"]
 resource_name = "hh_ship_longship"

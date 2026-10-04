@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://bb32al00po7f6"]
 
-[ext_resource type="PackedScene" path="res://assets/3D/ships/fishing_boat/fishing_boat.glb" id="1_glb"]
-[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="2_4m7nd"]
-[ext_resource type="Texture2D" path="res://assets/3D/ships/fishing_boat/fishing_boat_fishing_boat_atlas.jpg" id="3_4hjm1"]
+[ext_resource type="PackedScene" uid="uid://corjcexb34ic8" path="res://assets/3D/ships/fishing_boat/fishing_boat.glb" id="1_glb"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="2_4m7nd"]
+[ext_resource type="Texture2D" uid="uid://c7s7u1e380dse" path="res://assets/3D/ships/fishing_boat/fishing_boat_fishing_boat_atlas.jpg" id="3_4hjm1"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_4m7nd"]
 resource_name = "hh_ship_fishing_boat"

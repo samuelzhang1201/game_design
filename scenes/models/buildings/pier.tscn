@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://bl06nx6sj3oea"]
 
-[ext_resource type="PackedScene" path="res://assets/3D/buildings/pier/pier.glb" id="1_lb5yh"]
-[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="3_k2g2e"]
-[ext_resource type="Texture2D" path="res://assets/3D/buildings/pier/pier_pier_atlas.jpg" id="3_pj71c"]
+[ext_resource type="PackedScene" uid="uid://dhjrwxfr2634q" path="res://assets/3D/buildings/pier/pier.glb" id="1_lb5yh"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="3_k2g2e"]
+[ext_resource type="Texture2D" uid="uid://cmk4e003fyuki" path="res://assets/3D/buildings/pier/pier_pier_atlas.jpg" id="3_pj71c"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_pj71c"]
 resource_name = "hh_pier_pier"

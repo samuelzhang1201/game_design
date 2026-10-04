@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://0esfn7lp4q53"]
 
-[ext_resource type="PackedScene" path="res://assets/3D/buildings/wall_gate/wall_gate.glb" id="1_5tmwe"]
-[ext_resource type="Texture2D" path="res://assets/3D/buildings/wall_gate/wall_gate_wall_gate_atlas.jpg" id="3_byc8j"]
-[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="6_dt3xw"]
+[ext_resource type="PackedScene" uid="uid://c207esgd5bryl" path="res://assets/3D/buildings/wall_gate/wall_gate.glb" id="1_5tmwe"]
+[ext_resource type="Texture2D" uid="uid://cse6g7uxngsds" path="res://assets/3D/buildings/wall_gate/wall_gate_wall_gate_atlas.jpg" id="3_byc8j"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="6_dt3xw"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_byc8j"]
 resource_name = "hh_slate_wall_gate"

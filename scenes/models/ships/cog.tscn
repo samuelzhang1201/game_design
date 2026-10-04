@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://cfw2hhk3lsclk"]
 
-[ext_resource type="PackedScene" path="res://assets/3D/ships/cog/cog.glb" id="1_glb"]
-[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="2_pm4em"]
-[ext_resource type="Texture2D" path="res://assets/3D/ships/cog/cog_cog_atlas.jpg" id="3_bf3am"]
+[ext_resource type="PackedScene" uid="uid://dwideq8qkavhx" path="res://assets/3D/ships/cog/cog.glb" id="1_glb"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="2_pm4em"]
+[ext_resource type="Texture2D" uid="uid://dvsaxtdtcpkmv" path="res://assets/3D/ships/cog/cog_cog_atlas.jpg" id="3_bf3am"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_pm4em"]
 resource_name = "hh_ship_cog"
