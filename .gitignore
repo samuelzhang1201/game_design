@@ -35,13 +35,11 @@ assets/audio/Sound FX Starter Pack Vol. 1/
 # whose surface materials reference the textures Godot's glTF importer EXTRACTS
 # beside the .glb (gltf/embedded_image_handling=1), each imported as Basis
 # Universal (compress/mode=4) like the embedded ones of 2026-10-02 — the game
-# loads them. The WAR ROOM's static parts models (<arm>_parts.glb) still EMBED
-# theirs, so what an old import extracted beside them is a leftover.
+# loads them. The same holds for the WAR ROOM's props (the pennant extracts its
+# atlas and ORM); its room and table EMBED theirs (gltf/embedded_image_handling=2)
+# and extract nothing. The units' static parts models (<arm>_parts.glb) still
+# EMBED theirs, so what an old import extracted beside them is a leftover.
 assets/3D/units/*/*_parts_*.jpg
 assets/3D/units/*/*_parts_*.jpg.import
-assets/3D/war_room/*/*.jpg
-assets/3D/war_room/*/*.jpg.import
-assets/3D/war_room/*/*.png
-assets/3D/war_room/*/*.png.import
 # the unit tools' contact sheets
 assets/3D/units/shots/
