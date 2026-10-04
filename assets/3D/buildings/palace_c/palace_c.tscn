@@ -1,0 +1,89 @@
+[gd_scene format=3 uid="uid://fqmtbhyeesil"]
+
+[ext_resource type="Texture2D" uid="uid://bigi6whv0yoqh" path="res://assets/3D/buildings/palace_c/palace_c_palace_c_slate.jpg" id="1_tfmxt"]
+[ext_resource type="PackedScene" uid="uid://dw8eo3invj047" path="res://assets/3D/buildings/palace_c/palace_c.glb" id="1_wb52d"]
+[ext_resource type="Texture2D" uid="uid://bd6ydkf7ihowc" path="res://assets/3D/buildings/palace_c/palace_c_palace_c_colour.jpg" id="2_wb52d"]
+[ext_resource type="Texture2D" uid="uid://daqfle1ji8hai" path="res://assets/3D/buildings/palace_c/palace_c_palace_c_normal.jpg" id="3_jkcj2"]
+[ext_resource type="Texture2D" uid="uid://bf1x2gutngn55" path="res://assets/3D/buildings/palace_c/palace_c_wall_ashlar.jpg" id="4_w18ub"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="5_ajdpc"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_jkcj2"]
+resource_name = "hh_slate_palace_c"
+render_priority = 0
+shader = ExtResource("5_ajdpc")
+shader_parameter/albedo_tex = ExtResource("1_tfmxt")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.7
+shader_parameter/use_vertex_color = false
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 0
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_w18ub"]
+resource_name = "hh_stone_palace_c"
+render_priority = 0
+shader = ExtResource("5_ajdpc")
+shader_parameter/albedo_tex = ExtResource("2_wb52d")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = true
+shader_parameter/normal_tex = ExtResource("3_jkcj2")
+shader_parameter/use_normal = true
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 0
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ajdpc"]
+resource_name = "hh_stone_palace_c_foot"
+render_priority = 0
+shader = ExtResource("5_ajdpc")
+shader_parameter/albedo_tex = ExtResource("4_w18ub")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.95
+shader_parameter/use_vertex_color = true
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 0
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[node name="Palace_Remake" unique_id=1749788384 instance=ExtResource("1_wb52d")]
+editor_description = "One house type of the 3D map. Map3DLayerHouses draws every house of this type as ONE MultiMesh of this mesh with these surface materials (house_surface.gdshader, edited here: texture, roughness, role 1 wall / 2 tile roof / 0 untinted). The Houses node adds its colour variants and the weather to its own copies at run time; its sizes are data/map3d_houses.csv."
+
+[node name="palace_c_export" parent="." index="0" unique_id=1406342466]
+surface_material_override/0 = SubResource("ShaderMaterial_jkcj2")
+surface_material_override/1 = SubResource("ShaderMaterial_w18ub")
+surface_material_override/2 = SubResource("ShaderMaterial_ajdpc")

@@ -29,15 +29,11 @@ assets/3D/terrain/*/bake/control.r32
 assets/3D/terrain/*/bake/color.rgba8
 # purchased audio pack, not yet used by the game
 assets/audio/Sound FX Starter Pack Vol. 1/
-# Godot's glTF importer EXTRACTED each mesh's embedded textures to loose files
-# beside the .glb (gltf/embedded_image_handling=1). Since 2026-10-02 the houses
-# and the units EMBED them as Basis Universal (=2: GPU-compressed, ~320 MB less
-# video memory) and no longer read these files; the patterns stay for old
-# checkouts' leftovers and for any .glb still set to extract.
-assets/3D/buildings/*/*.jpg
-assets/3D/buildings/*/*.jpg.import
-assets/3D/buildings/*/*.png
-assets/3D/buildings/*/*.png.import
+# The houses' textures are NOT ignored: since 2026-10-04 each house type is a
+# scene (<type>.tscn inheriting its .glb) whose surface materials reference the
+# textures Godot's glTF importer EXTRACTS beside the .glb
+# (gltf/embedded_image_handling=1), each imported as Basis Universal
+# (compress/mode=4) like the embedded ones of 2026-10-02 — the game loads them.
 assets/3D/units/*/*.jpg
 assets/3D/units/*/*.jpg.import
 assets/3D/units/*/*.png

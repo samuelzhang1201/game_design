@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://0hylimk4088p"]
+
+[ext_resource type="Texture2D" uid="uid://dpwpcehlngeey" path="res://assets/3D/buildings/church_b/church_b_church_b_atlas.jpg" id="1_a3lwg"]
+[ext_resource type="PackedScene" uid="uid://px6g84bemq" path="res://assets/3D/buildings/church_b/church_b.glb" id="1_hd2us"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="2_hd2us"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nx6hv"]
+resource_name = "hh_roof_church_b"
+render_priority = 0
+shader = ExtResource("2_hd2us")
+shader_parameter/albedo_tex = ExtResource("1_a3lwg")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = false
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 2
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sifuk"]
+resource_name = "hh_wall_church_b"
+render_priority = 0
+shader = ExtResource("2_hd2us")
+shader_parameter/albedo_tex = ExtResource("1_a3lwg")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = true
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 1
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[node name="Tripo_Houses" unique_id=2055080847 instance=ExtResource("1_hd2us")]
+editor_description = "One house type of the 3D map. Map3DLayerHouses draws every house of this type as ONE MultiMesh of this mesh with these surface materials (house_surface.gdshader, edited here: texture, roughness, role 1 wall / 2 tile roof / 0 untinted). The Houses node adds its colour variants and the weather to its own copies at run time; its sizes are data/map3d_houses.csv."
+
+[node name="church_b_export" parent="." index="0" unique_id=996009941]
+surface_material_override/0 = SubResource("ShaderMaterial_nx6hv")
+surface_material_override/1 = SubResource("ShaderMaterial_sifuk")

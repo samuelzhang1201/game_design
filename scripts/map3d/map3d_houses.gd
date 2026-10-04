@@ -254,12 +254,13 @@ static func transform_of(h: Dictionary, height: float) -> Transform3D:
 	return Transform3D(turn, Vector3(at.x, height, at.y))
 
 
-## The first mesh in a house .glb's scene (Map3DLayerHouses._mesh_of).
-static func first_mesh(node: Node) -> Mesh:
+## The first MeshInstance3D with a mesh in a house type's scene
+## (Map3DAssetCache.house_model).
+static func first_mesh_instance(node: Node) -> MeshInstance3D:
 	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
-		return (node as MeshInstance3D).mesh
+		return node
 	for c in node.get_children():
-		var m := first_mesh(c)
+		var m := first_mesh_instance(c)
 		if m != null:
 			return m
 	return null
