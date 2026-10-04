@@ -5,7 +5,7 @@ extends Node
 ##
 ## Runs as a scene so the autoloads (Game) exist; needs the real renderer, so
 ## a window opens for a moment:
-##   /Applications/Godot.app/Contents/MacOS/Godot --path . res://tools/snapshot_screen.tscn \
+##   /Applications/Godot.app/Contents/MacOS/Godot --path . res://scenes/tools/snapshot_screen.tscn \
 ##     -- --out /tmp/court.png [--screen court] [--seed 42]
 
 ## The game's design viewport. --scale reproduces what a window that many

@@ -12,7 +12,7 @@ extends Node
 ## A last row, `pushed`, stands at the opening distance with one land piece
 ## moved a little every measured frame — as the plotter's rake moves it — so a
 ## candle's shadow is dirty each frame and re-rendered (the still rows reuse it).
-##   Godot --path . res://tools/war_room/bench.tscn -- --size 3024x1964 --quality high
+##   Godot --path . res://scenes/tools/war_room/bench.tscn -- --size 3024x1964 --quality high
 ##
 ## Flags: --size WxH, --quality TIER (default high), --out FILE (append rows to
 ## a CSV; it must land under tools/map3d/baselines/ — which carries a

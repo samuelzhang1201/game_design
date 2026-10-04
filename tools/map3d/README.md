@@ -104,7 +104,7 @@ shared by every pack and built once. The steps one by one:
    a save from script mode drops the `.tres`'s `uid=` lines — restore them from git).
 6. **Look / measure** — `Godot --path . -s tools/map3d/shoot.gd -- --camera CameraMid --out /tmp/x.png`;
    the acceptance bench drives the real view —
-   `GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size WxH` —
+   `GDAI_MCP_SERVER_PORT=3999 Godot --path . res://scenes/tools/map3d/bench.tscn -- --size WxH` —
    median/mean/p95 frame time per zoom against an 8 ms budget (60 fps; exits
    3 over it).
 7. Trees (optional, owner: no trees) — `render_impostors.py` in Blender, then
@@ -281,7 +281,7 @@ the choice to `user://settings.cfg`.
 The bench (`tools/map3d/bench.gd`) gates each tier against its own row:
 
 ```
-GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- \
+GDAI_MCP_SERVER_PORT=3999 Godot --path . res://scenes/tools/map3d/bench.tscn -- \
     --size 3024x1964 --quality high --out tools/map3d/baselines/bench_runs.csv
 ```
 
@@ -404,7 +404,7 @@ by the same margin.
   same GPU** (open on `world_map_3d.tscn` for part of the session), so they
   were flagged as likely pessimistic.
   **Re-measured 2026-09-20 with no editor resident** (`GDAI_MCP_SERVER_PORT=3999
-  /Applications/Godot.app/Contents/MacOS/Godot --path . res://tools/map3d/bench.tscn
+  /Applications/Godot.app/Contents/MacOS/Godot --path . res://scenes/tools/map3d/bench.tscn
   -- --size 3024x1964 --quality high --layer houses [--pan]`, after a full
   `build_pack.sh` rebuild so the world matched the house-table changes): the
   editor-closed number is **not** better — `--pan` gave a worst frame of

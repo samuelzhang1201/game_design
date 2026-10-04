@@ -29,7 +29,7 @@ extends Node
 ## floor means "holds the refresh", not a cost. "cpu" is the CPU's share
 ## (scripts + the render thread's setup and viewports), which is what a
 ## pan regression shows up in.
-##   GDAI_MCP_SERVER_PORT=3999 Godot --path . res://tools/map3d/bench.tscn -- --size 3024x1964
+##   GDAI_MCP_SERVER_PORT=3999 Godot --path . res://scenes/tools/map3d/bench.tscn -- --size 3024x1964
 ##
 ## Flags:
 ##   --size WxH          the window to measure at; pass the tier's own

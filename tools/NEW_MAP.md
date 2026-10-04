@@ -85,7 +85,7 @@ install_map_art.py arms`.
 
 - `./run_tests.sh` — fixtures derive their kingdoms, capitals and roads from
   the pack; a failure here is a real difference in the new map.
-- Look at it: `Godot --path . res://tools/snapshot_screen.tscn -- --out /tmp/x.png`
+- Look at it: `Godot --path . res://scenes/tools/snapshot_screen.tscn -- --out /tmp/x.png`
   (`--screen root --layer "3d map"` for the 3D map), `tools/snapshot_map.gd`.
 - Numbers tuned on beria that may want retuning: the high-ground bands
   (`map_biome_hill/mountain/peak_height`), the 3D scale (50 m per pack px —

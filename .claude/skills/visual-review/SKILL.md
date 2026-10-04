@@ -18,7 +18,7 @@ compared, and critiqued by someone who did not make it**.
    principles this change touches. This is the standard; "better" means
    better *by these principles*, not by preference.
 2. **Shoot the before**, through the real path, at a fractional window:
-   - screen/UI: `Godot --path . res://tools/snapshot_screen.tscn -- --out B.png --resolution 2560x1600 [--screen …] [--layer …] [--manor …]`
+   - screen/UI: `Godot --path . res://scenes/tools/snapshot_screen.tscn -- --out B.png --resolution 2560x1600 [--screen …] [--layer …] [--manor …]`
    - map: `res://tools/snapshot_map.tscn -- --out B.png --size 2560 --zoom 1` and `--zoom 3`
    - 3D map: `--layer "3d map" --zoom3d M` at near and far
    Output goes in the scratchpad or `assets/flux/out/` (git-ignored).

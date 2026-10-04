@@ -45,4 +45,4 @@ A SCREEN of its own (the bottom bar's WAR ROOM tab): a physical operations room 
 
 ## Shots and bench
 
-`tools/snapshot_screen.gd --screen root --quiet --war-room …` drives it by REAL input (`--war-sheet`, `--war-zoom`, `--war-focus`, `--war-piece`, `--war-drag`, `--war-commit`, `--war-folio`, `--war-turn`, `--war-board`, `--war-board-click`, `--war-cell`, `--war-deploy`, `--war-leave`, `--war-room-at`); use `--resolution WxH`, never headless. Every war run prints `war sync` (engine, map and room spot per regiment). Bench: `tools/war_room/bench.tscn --size WxH --quality TIER`.
+`tools/snapshot_screen.gd --screen root --quiet --war-room …` drives it by REAL input (`--war-sheet`, `--war-zoom`, `--war-focus`, `--war-piece`, `--war-drag`, `--war-commit`, `--war-folio`, `--war-turn`, `--war-board`, `--war-board-click`, `--war-cell`, `--war-deploy`, `--war-leave`, `--war-room-at`); use `--resolution WxH`, never headless. Every war run prints `war sync` (engine, map and room spot per regiment). Bench: `scenes/tools/war_room/bench.tscn --size WxH --quality TIER`.
