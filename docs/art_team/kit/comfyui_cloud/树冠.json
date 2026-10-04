@@ -1,0 +1,204 @@
+{
+ "1": {
+  "class_type": "UNETLoader",
+  "_meta": {
+   "title": "Z-Image Turbo bf16"
+  },
+  "inputs": {
+   "unet_name": "z_image_turbo_bf16.safetensors",
+   "weight_dtype": "default"
+  }
+ },
+ "2": {
+  "class_type": "CLIPLoader",
+  "_meta": {
+   "title": "Qwen3 4B text encoder"
+  },
+  "inputs": {
+   "clip_name": "qwen_3_4b.safetensors",
+   "type": "lumina2",
+   "device": "default"
+  }
+ },
+ "3": {
+  "class_type": "VAELoader",
+  "_meta": {
+   "title": "Z-Image VAE (ae.safetensors, the FLUX.1 autoencoder Z-Image ships with)"
+  },
+  "inputs": {
+   "vae_name": "ae.safetensors"
+  }
+ },
+ "4": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "正面提示词（由上面三格拼成）"
+  },
+  "inputs": {
+   "text": [
+    "111",
+    0
+   ],
+   "clip": [
+    "2",
+    0
+   ]
+  }
+ },
+ "5": {
+  "class_type": "ConditioningZeroOut",
+  "_meta": {
+   "title": "No negative (distilled, CFG 1)"
+  },
+  "inputs": {
+   "conditioning": [
+    "4",
+    0
+   ]
+  }
+ },
+ "6": {
+  "class_type": "ModelSamplingAuraFlow",
+  "_meta": {
+   "title": "Shift 3 (ComfyUI template)"
+  },
+  "inputs": {
+   "shift": 3,
+   "model": [
+    "1",
+    0
+   ]
+  }
+ },
+ "7": {
+  "class_type": "EmptySD3LatentImage",
+  "_meta": {
+   "title": "尺寸（锁定）"
+  },
+  "inputs": {
+   "width": 1024,
+   "height": 1024,
+   "batch_size": 1
+  }
+ },
+ "8": {
+  "class_type": "KSampler",
+  "_meta": {
+   "title": "采样（锁定；种子每次 +1）"
+  },
+  "inputs": {
+   "seed": 954159497,
+   "steps": 8,
+   "cfg": 1.0,
+   "sampler_name": "res_multistep",
+   "scheduler": "simple",
+   "denoise": 1.0,
+   "model": [
+    "6",
+    0
+   ],
+   "positive": [
+    "4",
+    0
+   ],
+   "negative": [
+    "5",
+    0
+   ],
+   "latent_image": [
+    "7",
+    0
+   ]
+  }
+ },
+ "9": {
+  "class_type": "VAEDecode",
+  "_meta": {
+   "title": "Decode"
+  },
+  "inputs": {
+   "samples": [
+    "8",
+    0
+   ],
+   "vae": [
+    "3",
+    0
+   ]
+  }
+ },
+ "10": {
+  "class_type": "SaveImage",
+  "_meta": {
+   "title": "④ 文件名（把「编号」改成需求卡编号）"
+  },
+  "inputs": {
+   "filename_prefix": "CrownCouncil/编号_zimage_s%KSampler.seed%",
+   "images": [
+    "9",
+    0
+   ]
+  }
+ },
+ "100": {
+  "class_type": "PrimitiveStringMultiline",
+  "inputs": {
+   "value": "high resolution photograph of one single real tree taken from a drone high above at a fifty degree downward angle in midsummer, the whole crown and a little of the trunk in view, natural muted greens, soft daylight from the upper left, crisp leaf detail, photographic realism, isolated on a plain pure white background"
+  },
+  "_meta": {
+   "title": "① 风格（锁定，不要改）"
+  }
+ },
+ "101": {
+  "class_type": "PrimitiveStringMultiline",
+  "inputs": {
+   "value": "a mature English oak with a broad irregular lumpy crown of dark olive green leaves, open gaps of shadow between its big leaf masses"
+  },
+  "_meta": {
+   "title": "② 主体（只改这里）"
+  }
+ },
+ "102": {
+  "class_type": "PrimitiveStringMultiline",
+  "inputs": {
+   "value": "single isolated object, orthographic three-quarter overhead view, no background, no scene, no ground plane, centred, generous margin, 1:1 square"
+  },
+  "_meta": {
+   "title": "③ 画幅（锁定，不要改）"
+  }
+ },
+ "110": {
+  "class_type": "StringConcatenate",
+  "inputs": {
+   "string_a": [
+    "100",
+    0
+   ],
+   "string_b": [
+    "101",
+    0
+   ],
+   "delimiter": ", "
+  },
+  "_meta": {
+   "title": "拼接（不要动）"
+  }
+ },
+ "111": {
+  "class_type": "StringConcatenate",
+  "inputs": {
+   "string_a": [
+    "110",
+    0
+   ],
+   "string_b": [
+    "102",
+    0
+   ],
+   "delimiter": ", "
+  },
+  "_meta": {
+   "title": "拼接（不要动）"
+  }
+ }
+}

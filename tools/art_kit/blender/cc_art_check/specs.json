@@ -1,0 +1,2215 @@
+{
+ "version": 1,
+ "footing_m": 18.0,
+ "hole_max_m": 1.0,
+ "fps": 30,
+ "metallic_max": 0.25,
+ "roughness_min": 0.55,
+ "unit_atlas_px": 2048,
+ "houses": {
+  "cottage_a": {
+   "role": "house",
+   "footprint_m": 17.0,
+   "width_m": 17.0,
+   "depth_m": 13.06,
+   "height_m": 14.85,
+   "notes": "a one-room tiled stone cottage; the commonest building anywhere",
+   "tris": 1300,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_roof_cottage_a",
+    "hh_wall_cottage_a"
+   ],
+   "hd": false,
+   "object": "cottage_a_export",
+   "images": [
+    "cottage_a_atlas"
+   ]
+  },
+  "cottage_b": {
+   "role": "house",
+   "footprint_m": 18.0,
+   "width_m": 18.0,
+   "depth_m": 14.07,
+   "height_m": 16.63,
+   "notes": "a tiled cottage with a lean-to",
+   "tris": 1300,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_roof_cottage_b",
+    "hh_wall_cottage_b"
+   ],
+   "hd": false,
+   "object": "cottage_b_export",
+   "images": [
+    "cottage_b_atlas"
+   ]
+  },
+  "cottage_c": {
+   "role": "house",
+   "footprint_m": 16.0,
+   "width_m": 14.86,
+   "depth_m": 16.0,
+   "height_m": 17.12,
+   "notes": "the smallest cottage",
+   "tris": 1300,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_roof_cottage_c",
+    "hh_wall_cottage_c"
+   ],
+   "hd": false,
+   "object": "cottage_c_export",
+   "images": [
+    "cottage_c_atlas"
+   ]
+  },
+  "townhouse_a": {
+   "role": "house",
+   "footprint_m": 18.0,
+   "width_m": 16.8,
+   "depth_m": 18.0,
+   "height_m": 28.75,
+   "notes": "a two-storey tiled house with a crow-stepped street gable; only from a town upward",
+   "tris": 2200,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_roof_townhouse_a",
+    "hh_wall_townhouse_a"
+   ],
+   "hd": false,
+   "object": "townhouse_a_export",
+   "images": [
+    "townhouse_a_atlas"
+   ]
+  },
+  "townhouse_b": {
+   "role": "house",
+   "footprint_m": 19.0,
+   "width_m": 17.59,
+   "depth_m": 19.0,
+   "height_m": 23.04,
+   "notes": "a tiled house with a jettied upper floor and an outside stair",
+   "tris": 2200,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_roof_townhouse_b",
+    "hh_wall_townhouse_b"
+   ],
+   "hd": false,
+   "object": "townhouse_b_export",
+   "images": [
+    "townhouse_b_atlas"
+   ]
+  },
+  "townhouse_c": {
+   "role": "house",
+   "footprint_m": 15.0,
+   "width_m": 15.0,
+   "depth_m": 11.18,
+   "height_m": 17.46,
+   "notes": "a tall merchant's house",
+   "tris": 2200,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_slate_townhouse_c",
+    "hh_wall_townhouse_c"
+   ],
+   "hd": false,
+   "object": "townhouse_c_export",
+   "images": [
+    "townhouse_c_atlas"
+   ]
+  },
+  "longhouse": {
+   "role": "house",
+   "footprint_m": 20.0,
+   "width_m": 20.0,
+   "depth_m": 10.58,
+   "height_m": 8.88,
+   "notes": "a long hall with byre",
+   "tris": 1300,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_roof_longhouse",
+    "hh_wall_longhouse"
+   ],
+   "hd": false,
+   "object": "longhouse_export",
+   "images": [
+    "longhouse_atlas"
+   ]
+  },
+  "workshop": {
+   "role": "house",
+   "footprint_m": 19.0,
+   "width_m": 19.0,
+   "depth_m": 14.19,
+   "height_m": 16.41,
+   "notes": "a workshop with an open front",
+   "tris": 1300,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_roof_workshop",
+    "hh_wall_workshop"
+   ],
+   "hd": false,
+   "object": "workshop_export",
+   "images": [
+    "workshop_atlas"
+   ]
+  },
+  "barn": {
+   "role": "barn",
+   "footprint_m": 20.0,
+   "width_m": 17.98,
+   "depth_m": 20.0,
+   "height_m": 15.94,
+   "notes": "the outlying kind: barns and byres sit in the thinning ring",
+   "tris": 1300,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_roof_barn",
+    "hh_wall_barn"
+   ],
+   "hd": false,
+   "object": "barn_export",
+   "images": [
+    "barn_atlas"
+   ]
+  },
+  "byre": {
+   "role": "barn",
+   "footprint_m": 17.0,
+   "width_m": 17.0,
+   "depth_m": 12.09,
+   "height_m": 9.46,
+   "notes": "an open-fronted byre",
+   "tris": 1300,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_slate_byre",
+    "hh_wall_byre"
+   ],
+   "hd": false,
+   "object": "byre_export",
+   "images": [
+    "byre_atlas"
+   ]
+  },
+  "chapel": {
+   "role": "landmark",
+   "footprint_m": 24.0,
+   "width_m": 14.51,
+   "depth_m": 24.0,
+   "height_m": 22.69,
+   "notes": "a village's centre",
+   "tris": 3300,
+   "atlas_px": 1024,
+   "materials": [
+    "hh_slate_chapel",
+    "hh_wall_chapel"
+   ],
+   "hd": false,
+   "object": "chapel_export",
+   "images": [
+    "chapel_atlas"
+   ]
+  },
+  "church": {
+   "role": "landmark",
+   "footprint_m": 36.0,
+   "width_m": 24.31,
+   "depth_m": 36.0,
+   "height_m": 29.3,
+   "notes": "a town's and a fort's centre; min_group is fort, not town, because a fort ranks BELOW a town and the landmark is now the highest its group allows (2026-09-22)",
+   "tris": 5000,
+   "atlas_px": 2048,
+   "materials": [
+    "hh_roof_church",
+    "hh_wall_church"
+   ],
+   "hd": false,
+   "object": "church_export",
+   "images": [
+    "church_atlas"
+   ]
+  },
+  "church_b": {
+   "role": "landmark",
+   "footprint_m": 36.0,
+   "width_m": 22.88,
+   "depth_m": 36.0,
+   "height_m": 32.94,
+   "notes": "a VARIANT of church (owner 2026-09-30: every Tripo version kept for variety): the same rank; bake_houses._pick_landmark picks one per settlement by weight",
+   "tris": 5000,
+   "atlas_px": 2048,
+   "materials": [
+    "hh_roof_church_b",
+    "hh_wall_church_b"
+   ],
+   "hd": false,
+   "object": "church_b_export",
+   "images": [
+    "church_b_atlas"
+   ]
+  },
+  "church_tower": {
+   "role": "landmark",
+   "footprint_m": 44.0,
+   "width_m": 24.0,
+   "depth_m": 44.0,
+   "height_m": 46.29,
+   "notes": "a city's centre: the tower is the silhouette that reads at 9 px",
+   "tris": 6000,
+   "atlas_px": 2048,
+   "materials": [
+    "hh_slate_church_tower",
+    "hh_wall_church_tower"
+   ],
+   "hd": false,
+   "object": "church_tower_export",
+   "images": [
+    "church_tower_atlas"
+   ]
+  },
+  "palace": {
+   "role": "landmark",
+   "footprint_m": 68.0,
+   "width_m": 68.0,
+   "depth_m": 64.75,
+   "height_m": 59.59,
+   "notes": "a capital's centre",
+   "tris": 61000,
+   "atlas_px": 2048,
+   "materials": [
+    "hh_slate_palace",
+    "hh_stone_palace",
+    "hh_stone_palace_foot"
+   ],
+   "hd": true,
+   "object": "palace_export",
+   "images": [
+    "palace_slate",
+    "palace_normal",
+    "palace_colour",
+    "wall_ashlar"
+   ]
+  },
+  "palace_b": {
+   "role": "landmark",
+   "footprint_m": 68.0,
+   "width_m": 67.78,
+   "depth_m": 68.0,
+   "height_m": 51.85,
+   "notes": "a VARIANT of palace (owner 2026-09-30): the same rank, picked per capital by weight",
+   "tris": 61000,
+   "atlas_px": 2048,
+   "materials": [
+    "hh_slate_palace_b",
+    "hh_stone_palace_b",
+    "hh_stone_palace_b_foot"
+   ],
+   "hd": true,
+   "object": "palace_b_export",
+   "images": [
+    "palace_b_slate",
+    "palace_b_normal",
+    "palace_b_colour",
+    "wall_ashlar"
+   ]
+  },
+  "palace_c": {
+   "role": "landmark",
+   "footprint_m": 68.0,
+   "width_m": 67.67,
+   "depth_m": 68.0,
+   "height_m": 58.14,
+   "notes": "a VARIANT of palace (owner 2026-09-30): the same rank, picked per capital by weight",
+   "tris": 61000,
+   "atlas_px": 2048,
+   "materials": [
+    "hh_slate_palace_c",
+    "hh_stone_palace_c",
+    "hh_stone_palace_c_foot"
+   ],
+   "hd": true,
+   "object": "palace_c_export",
+   "images": [
+    "palace_c_slate",
+    "palace_c_normal",
+    "palace_c_colour",
+    "wall_ashlar"
+   ]
+  }
+ },
+ "units": {
+  "infantry": {
+   "label": "步兵",
+   "clips": [
+    "MARCH",
+    "STANDBY",
+    "GARRISON"
+   ],
+   "optional": [
+    "ATTACK"
+   ],
+   "loops": [
+    "MARCH",
+    "STANDBY",
+    "GARRISON"
+   ],
+   "weapon": "spear",
+   "tris": 20000,
+   "bones": [
+    {
+     "name": "hips",
+     "parent": "",
+     "head": [
+      -0.0,
+      -0.03,
+      0.92
+     ],
+     "tail": [
+      -0.0,
+      -0.03,
+      1.0
+     ],
+     "roll": 3.1416
+    },
+    {
+     "name": "spine",
+     "parent": "hips",
+     "head": [
+      -0.0,
+      -0.03,
+      1.0
+     ],
+     "tail": [
+      -0.0,
+      -0.02,
+      1.18
+     ],
+     "roll": 3.1416
+    },
+    {
+     "name": "chest",
+     "parent": "spine",
+     "head": [
+      -0.0,
+      -0.02,
+      1.18
+     ],
+     "tail": [
+      -0.0,
+      -0.02,
+      1.4417
+     ],
+     "roll": 3.1416
+    },
+    {
+     "name": "clavicle.L",
+     "parent": "chest",
+     "head": [
+      -0.03,
+      -0.02,
+      1.44
+     ],
+     "tail": [
+      -0.19,
+      -0.02,
+      1.38
+     ],
+     "roll": -0.7175
+    },
+    {
+     "name": "upperarm.L",
+     "parent": "clavicle.L",
+     "head": [
+      -0.19,
+      -0.02,
+      1.38
+     ],
+     "tail": [
+      -0.312,
+      -0.03,
+      1.16
+     ],
+     "roll": -2.1289
+    },
+    {
+     "name": "forearm.L",
+     "parent": "upperarm.L",
+     "head": [
+      -0.312,
+      -0.03,
+      1.16
+     ],
+     "tail": [
+      -0.332,
+      0.03,
+      1.04
+     ],
+     "roll": -2.8113
+    },
+    {
+     "name": "hand.L",
+     "parent": "forearm.L",
+     "head": [
+      -0.332,
+      0.03,
+      1.04
+     ],
+     "tail": [
+      -0.3182,
+      0.0587,
+      0.9081
+     ],
+     "roll": 2.9337
+    },
+    {
+     "name": "shield",
+     "parent": "forearm.L",
+     "head": [
+      -0.313,
+      0.0853,
+      0.8964
+     ],
+     "tail": [
+      -0.3266,
+      0.0953,
+      1.031
+     ],
+     "roll": 2.9403
+    },
+    {
+     "name": "clavicle.R",
+     "parent": "chest",
+     "head": [
+      0.03,
+      -0.02,
+      1.44
+     ],
+     "tail": [
+      0.19,
+      -0.02,
+      1.38
+     ],
+     "roll": 0.7175
+    },
+    {
+     "name": "upperarm.R",
+     "parent": "clavicle.R",
+     "head": [
+      0.19,
+      -0.02,
+      1.38
+     ],
+     "tail": [
+      0.315,
+      -0.025,
+      1.17
+     ],
+     "roll": 2.0678
+    },
+    {
+     "name": "forearm.R",
+     "parent": "upperarm.R",
+     "head": [
+      0.315,
+      -0.025,
+      1.17
+     ],
+     "tail": [
+      0.368,
+      0.16,
+      1.12
+     ],
+     "roll": 1.5126
+    },
+    {
+     "name": "hand.R",
+     "parent": "forearm.R",
+     "head": [
+      0.368,
+      0.16,
+      1.12
+     ],
+     "tail": [
+      0.3815,
+      0.2478,
+      1.1166
+     ],
+     "roll": 0.4899
+    },
+    {
+     "name": "spear",
+     "parent": "hand.R",
+     "head": [
+      0.38,
+      0.248,
+      1.116
+     ],
+     "tail": [
+      0.3797,
+      0.2467,
+      1.2049
+     ],
+     "roll": 3.1382
+    },
+    {
+     "name": "cloak.C.1",
+     "parent": "chest",
+     "head": [
+      -0.0,
+      -0.2716,
+      1.44
+     ],
+     "tail": [
+      -0.0,
+      -0.2098,
+      1.1
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "cloak.C.2",
+     "parent": "cloak.C.1",
+     "head": [
+      -0.0,
+      -0.2098,
+      1.1
+     ],
+     "tail": [
+      -0.0,
+      -0.2543,
+      0.75
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "cloak.C.3",
+     "parent": "cloak.C.2",
+     "head": [
+      -0.0,
+      -0.2543,
+      0.75
+     ],
+     "tail": [
+      -0.0,
+      -0.2809,
+      0.3982
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "cloak.L.1",
+     "parent": "chest",
+     "head": [
+      -0.13,
+      -0.2245,
+      1.44
+     ],
+     "tail": [
+      -0.13,
+      -0.2185,
+      1.1
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "cloak.L.2",
+     "parent": "cloak.L.1",
+     "head": [
+      -0.13,
+      -0.2185,
+      1.1
+     ],
+     "tail": [
+      -0.13,
+      -0.2526,
+      0.75
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "cloak.L.3",
+     "parent": "cloak.L.2",
+     "head": [
+      -0.13,
+      -0.2526,
+      0.75
+     ],
+     "tail": [
+      -0.13,
+      -0.306,
+      0.4024
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "cloak.R.1",
+     "parent": "chest",
+     "head": [
+      0.13,
+      -0.2003,
+      1.44
+     ],
+     "tail": [
+      0.13,
+      -0.2153,
+      1.1
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "cloak.R.2",
+     "parent": "cloak.R.1",
+     "head": [
+      0.13,
+      -0.2153,
+      1.1
+     ],
+     "tail": [
+      0.13,
+      -0.2609,
+      0.75
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "cloak.R.3",
+     "parent": "cloak.R.2",
+     "head": [
+      0.13,
+      -0.2609,
+      0.75
+     ],
+     "tail": [
+      0.13,
+      -0.3115,
+      0.4007
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "neck",
+     "parent": "chest",
+     "head": [
+      -0.0,
+      -0.02,
+      1.46
+     ],
+     "tail": [
+      -0.0,
+      -0.03,
+      1.56
+     ],
+     "roll": 3.1416
+    },
+    {
+     "name": "head",
+     "parent": "neck",
+     "head": [
+      -0.0,
+      -0.03,
+      1.56
+     ],
+     "tail": [
+      -0.0,
+      -0.03,
+      1.6605
+     ],
+     "roll": 3.1416
+    },
+    {
+     "name": "thigh.L",
+     "parent": "hips",
+     "head": [
+      -0.1,
+      -0.03,
+      0.92
+     ],
+     "tail": [
+      -0.145,
+      -0.035,
+      0.49
+     ],
+     "roll": -2.9331
+    },
+    {
+     "name": "shin.L",
+     "parent": "thigh.L",
+     "head": [
+      -0.145,
+      -0.035,
+      0.49
+     ],
+     "tail": [
+      -0.165,
+      -0.06,
+      0.12
+     ],
+     "roll": -3.0336
+    },
+    {
+     "name": "foot.L",
+     "parent": "shin.L",
+     "head": [
+      -0.165,
+      -0.06,
+      0.12
+     ],
+     "tail": [
+      -0.2752,
+      0.2602,
+      -0.0324
+     ],
+     "roll": -1.8896
+    },
+    {
+     "name": "thigh.R",
+     "parent": "hips",
+     "head": [
+      0.1,
+      -0.03,
+      0.92
+     ],
+     "tail": [
+      0.145,
+      -0.035,
+      0.49
+     ],
+     "roll": 2.9331
+    },
+    {
+     "name": "shin.R",
+     "parent": "thigh.R",
+     "head": [
+      0.145,
+      -0.035,
+      0.49
+     ],
+     "tail": [
+      0.165,
+      -0.06,
+      0.12
+     ],
+     "roll": 3.0336
+    },
+    {
+     "name": "foot.R",
+     "parent": "shin.R",
+     "head": [
+      0.165,
+      -0.06,
+      0.12
+     ],
+     "tail": [
+      0.3133,
+      0.2445,
+      -0.0324
+     ],
+     "roll": 1.5983
+    }
+   ],
+   "shipped_clips": [
+    "GARRISON",
+    "MARCH",
+    "STANDBY"
+   ],
+   "shipped_tris": 19560,
+   "shipped_height_m": 2.697,
+   "rig": "inf_rig",
+   "mesh": "infantry",
+   "images": {
+    "base": "infantry_atlas",
+    "normal": "infantry_atlas_n",
+    "mr": "infantry_atlas_mr"
+   }
+  },
+  "cavalry": {
+   "label": "骑兵",
+   "clips": [
+    "MARCH",
+    "STANDBY",
+    "GARRISON",
+    "ATTACK"
+   ],
+   "optional": [],
+   "loops": [
+    "MARCH",
+    "STANDBY",
+    "GARRISON"
+   ],
+   "weapon": "lance",
+   "tris": 20000,
+   "bones": [
+    {
+     "name": "root",
+     "parent": "",
+     "head": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "tail": [
+      0.0,
+      1.3581,
+      0.0
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "horse_body",
+     "parent": "root",
+     "head": [
+      0.0,
+      -0.55,
+      1.2418
+     ],
+     "tail": [
+      0.0,
+      -0.2299,
+      1.3157
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "fore_upper_l",
+     "parent": "horse_body",
+     "head": [
+      -0.1953,
+      0.3702,
+      1.4358
+     ],
+     "tail": [
+      -0.1789,
+      0.3932,
+      0.5277
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "fore_lower_l",
+     "parent": "fore_upper_l",
+     "head": [
+      -0.1789,
+      0.3932,
+      0.5277
+     ],
+     "tail": [
+      -0.1738,
+      0.3723,
+      0.2073
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "fore_hoof_l",
+     "parent": "fore_lower_l",
+     "head": [
+      -0.1738,
+      0.3723,
+      0.2073
+     ],
+     "tail": [
+      -0.1801,
+      0.4725,
+      -0.0977
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "fore_upper_r",
+     "parent": "horse_body",
+     "head": [
+      0.1355,
+      0.4156,
+      1.4358
+     ],
+     "tail": [
+      0.1298,
+      0.456,
+      0.5277
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "fore_lower_r",
+     "parent": "fore_upper_r",
+     "head": [
+      0.1298,
+      0.456,
+      0.5277
+     ],
+     "tail": [
+      0.1102,
+      0.4352,
+      0.2073
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "fore_hoof_r",
+     "parent": "fore_lower_r",
+     "head": [
+      0.1102,
+      0.4352,
+      0.2073
+     ],
+     "tail": [
+      0.1026,
+      0.5427,
+      -0.0958
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hind_upper_l",
+     "parent": "horse_body",
+     "head": [
+      -0.1579,
+      -0.9486,
+      1.2797
+     ],
+     "tail": [
+      -0.1579,
+      -0.8486,
+      0.8292
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "hind_gaskin_l",
+     "parent": "hind_upper_l",
+     "head": [
+      -0.1579,
+      -0.8486,
+      0.8292
+     ],
+     "tail": [
+      -0.1614,
+      -0.9399,
+      0.49
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hind_lower_l",
+     "parent": "hind_gaskin_l",
+     "head": [
+      -0.1614,
+      -0.9399,
+      0.49
+     ],
+     "tail": [
+      -0.18,
+      -0.904,
+      0.2073
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hind_hoof_l",
+     "parent": "hind_lower_l",
+     "head": [
+      -0.18,
+      -0.904,
+      0.2073
+     ],
+     "tail": [
+      -0.1848,
+      -0.8085,
+      -0.0618
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hind_upper_r",
+     "parent": "horse_body",
+     "head": [
+      0.1627,
+      -0.8328,
+      1.2797
+     ],
+     "tail": [
+      0.1627,
+      -0.7328,
+      0.8292
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "hind_gaskin_r",
+     "parent": "hind_upper_r",
+     "head": [
+      0.1627,
+      -0.7328,
+      0.8292
+     ],
+     "tail": [
+      0.1029,
+      -0.7522,
+      0.49
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hind_lower_r",
+     "parent": "hind_gaskin_r",
+     "head": [
+      0.1029,
+      -0.7522,
+      0.49
+     ],
+     "tail": [
+      0.1118,
+      -0.6744,
+      0.2073
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "hind_hoof_r",
+     "parent": "hind_lower_r",
+     "head": [
+      0.1118,
+      -0.6744,
+      0.2073
+     ],
+     "tail": [
+      0.126,
+      -0.5821,
+      -0.0708
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "hips",
+     "parent": "horse_body",
+     "head": [
+      0.0,
+      -0.1819,
+      1.622
+     ],
+     "tail": [
+      0.0,
+      -0.1188,
+      1.6598
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "spine",
+     "parent": "hips",
+     "head": [
+      0.0,
+      -0.0152,
+      1.722
+     ],
+     "tail": [
+      0.0,
+      -0.0771,
+      1.8944
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "chest",
+     "parent": "spine",
+     "head": [
+      0.0,
+      -0.0771,
+      1.8944
+     ],
+     "tail": [
+      0.0,
+      -0.0888,
+      2.0336
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "clavicle_l",
+     "parent": "chest",
+     "head": [
+      -0.03,
+      -0.0914,
+      2.0301
+     ],
+     "tail": [
+      -0.1989,
+      -0.1223,
+      2.0301
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "upperarm_l",
+     "parent": "clavicle_l",
+     "head": [
+      -0.1989,
+      -0.1223,
+      2.0301
+     ],
+     "tail": [
+      -0.2925,
+      0.013,
+      1.7371
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "forearm_l",
+     "parent": "upperarm_l",
+     "head": [
+      -0.2925,
+      0.013,
+      1.7371
+     ],
+     "tail": [
+      -0.2076,
+      0.1757,
+      1.7771
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hand_l",
+     "parent": "forearm_l",
+     "head": [
+      -0.2076,
+      0.1757,
+      1.7771
+     ],
+     "tail": [
+      -0.1081,
+      0.2362,
+      1.6297
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "clavicle_r",
+     "parent": "chest",
+     "head": [
+      0.03,
+      -0.0914,
+      2.0309
+     ],
+     "tail": [
+      0.145,
+      -0.0956,
+      2.0309
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "upperarm_r",
+     "parent": "clavicle_r",
+     "head": [
+      0.145,
+      -0.0956,
+      2.0309
+     ],
+     "tail": [
+      0.2852,
+      0.0248,
+      1.78
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "forearm_r",
+     "parent": "upperarm_r",
+     "head": [
+      0.2852,
+      0.0248,
+      1.78
+     ],
+     "tail": [
+      0.1939,
+      0.0639,
+      1.8904
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hand_r",
+     "parent": "forearm_r",
+     "head": [
+      0.1939,
+      0.0639,
+      1.8904
+     ],
+     "tail": [
+      0.1688,
+      0.2573,
+      1.871
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "lance",
+     "parent": "hand_r",
+     "head": [
+      0.1688,
+      0.2573,
+      1.871
+     ],
+     "tail": [
+      0.1446,
+      0.2788,
+      2.0643
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "neck",
+     "parent": "chest",
+     "head": [
+      0.0,
+      -0.0914,
+      2.0652
+     ],
+     "tail": [
+      0.0,
+      -0.0562,
+      2.1652
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "head",
+     "parent": "neck",
+     "head": [
+      0.0,
+      -0.0562,
+      2.1652
+     ],
+     "tail": [
+      0.0,
+      -0.0562,
+      2.2712
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "shield",
+     "parent": "chest",
+     "head": [
+      0.0,
+      -0.4009,
+      1.7754
+     ],
+     "tail": [
+      0.0,
+      -0.3671,
+      1.911
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "thigh_l",
+     "parent": "hips",
+     "head": [
+      -0.1263,
+      -0.1922,
+      1.5752
+     ],
+     "tail": [
+      -0.3419,
+      0.1469,
+      1.3419
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "shin_l",
+     "parent": "thigh_l",
+     "head": [
+      -0.3419,
+      0.1469,
+      1.3419
+     ],
+     "tail": [
+      -0.4076,
+      0.2307,
+      0.9234
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "foot_l",
+     "parent": "shin_l",
+     "head": [
+      -0.4076,
+      0.2307,
+      0.9234
+     ],
+     "tail": [
+      -0.551,
+      0.6075,
+      0.7689
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "thigh_r",
+     "parent": "hips",
+     "head": [
+      0.0559,
+      -0.1716,
+      1.6687
+     ],
+     "tail": [
+      0.294,
+      0.1765,
+      1.3233
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "shin_r",
+     "parent": "thigh_r",
+     "head": [
+      0.294,
+      0.1765,
+      1.3233
+     ],
+     "tail": [
+      0.3454,
+      0.2429,
+      0.9944
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "foot_r",
+     "parent": "shin_r",
+     "head": [
+      0.3454,
+      0.2429,
+      0.9944
+     ],
+     "tail": [
+      0.4702,
+      0.4903,
+      0.7983
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "neck_1",
+     "parent": "horse_body",
+     "head": [
+      0.0,
+      0.5,
+      1.5783
+     ],
+     "tail": [
+      0.0,
+      0.7839,
+      1.6973
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "neck_2",
+     "parent": "neck_1",
+     "head": [
+      0.0,
+      0.7839,
+      1.6973
+     ],
+     "tail": [
+      0.0,
+      1.0079,
+      1.7162
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "head_h",
+     "parent": "neck_2",
+     "head": [
+      0.0,
+      1.0079,
+      1.7162
+     ],
+     "tail": [
+      0.0,
+      1.132,
+      1.5289
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "tail_1",
+     "parent": "horse_body",
+     "head": [
+      -0.0188,
+      -0.9808,
+      1.436
+     ],
+     "tail": [
+      -0.0366,
+      -1.0579,
+      1.0379
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "tail_2",
+     "parent": "tail_1",
+     "head": [
+      -0.0366,
+      -1.0579,
+      1.0379
+     ],
+     "tail": [
+      -0.0544,
+      -1.135,
+      0.6399
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "tail_3",
+     "parent": "tail_2",
+     "head": [
+      -0.0544,
+      -1.135,
+      0.6399
+     ],
+     "tail": [
+      -0.0722,
+      -1.212,
+      0.2419
+     ],
+     "roll": -0.0
+    }
+   ],
+   "shipped_clips": [
+    "ATTACK",
+    "GARRISON",
+    "MARCH",
+    "STANDBY"
+   ],
+   "shipped_tris": 19127,
+   "shipped_height_m": 4.329,
+   "rig": "cavalry_rig",
+   "mesh": "cavalry",
+   "images": {
+    "base": "cavalry_atlas",
+    "normal": "cavalry_atlas_n",
+    "mr": "cavalry_atlas_mr"
+   }
+  },
+  "courier": {
+   "label": "信使",
+   "clips": [
+    "GALLOP",
+    "IDLE"
+   ],
+   "optional": [],
+   "loops": [
+    "GALLOP",
+    "IDLE"
+   ],
+   "weapon": "",
+   "tris": 20000,
+   "bones": [
+    {
+     "name": "root",
+     "parent": "",
+     "head": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "tail": [
+      0.0,
+      1.1265,
+      0.0
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "horse_body",
+     "parent": "root",
+     "head": [
+      0.0,
+      -0.55,
+      0.9831
+     ],
+     "tail": [
+      0.0,
+      -0.3263,
+      1.0387
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "case",
+     "parent": "horse_body",
+     "head": [
+      -0.2542,
+      0.0069,
+      1.4433
+     ],
+     "tail": [
+      -0.2542,
+      0.0069,
+      1.2128
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "fore_upper_l",
+     "parent": "horse_body",
+     "head": [
+      -0.1917,
+      0.4096,
+      1.2407
+     ],
+     "tail": [
+      -0.1873,
+      0.9,
+      0.6608
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "fore_lower_l",
+     "parent": "fore_upper_l",
+     "head": [
+      -0.1873,
+      0.9,
+      0.6608
+     ],
+     "tail": [
+      -0.1615,
+      0.7957,
+      0.3332
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "fore_hoof_l",
+     "parent": "fore_lower_l",
+     "head": [
+      -0.1615,
+      0.7957,
+      0.3332
+     ],
+     "tail": [
+      -0.1075,
+      0.6174,
+      0.0429
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "fore_upper_r",
+     "parent": "horse_body",
+     "head": [
+      0.1045,
+      0.4096,
+      1.2407
+     ],
+     "tail": [
+      0.0352,
+      0.485,
+      0.5277
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "fore_lower_r",
+     "parent": "fore_upper_r",
+     "head": [
+      0.0352,
+      0.485,
+      0.5277
+     ],
+     "tail": [
+      0.0208,
+      0.4552,
+      0.2073
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "fore_hoof_r",
+     "parent": "fore_lower_r",
+     "head": [
+      0.0208,
+      0.4552,
+      0.2073
+     ],
+     "tail": [
+      -0.0034,
+      0.5864,
+      -0.0859
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "hind_upper_l",
+     "parent": "horse_body",
+     "head": [
+      -0.0561,
+      -0.758,
+      1.0649
+     ],
+     "tail": [
+      -0.0561,
+      -0.658,
+      0.8292
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "hind_gaskin_l",
+     "parent": "hind_upper_l",
+     "head": [
+      -0.0561,
+      -0.658,
+      0.8292
+     ],
+     "tail": [
+      -0.0611,
+      -0.7457,
+      0.49
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hind_lower_l",
+     "parent": "hind_gaskin_l",
+     "head": [
+      -0.0611,
+      -0.7457,
+      0.49
+     ],
+     "tail": [
+      -0.0398,
+      -0.816,
+      0.2073
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "hind_hoof_l",
+     "parent": "hind_lower_l",
+     "head": [
+      -0.0398,
+      -0.816,
+      0.2073
+     ],
+     "tail": [
+      -0.0487,
+      -0.7065,
+      -0.0633
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hind_upper_r",
+     "parent": "horse_body",
+     "head": [
+      0.0961,
+      -0.2815,
+      1.0649
+     ],
+     "tail": [
+      0.0961,
+      -0.1815,
+      0.8292
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "hind_gaskin_r",
+     "parent": "hind_upper_r",
+     "head": [
+      0.0961,
+      -0.1815,
+      0.8292
+     ],
+     "tail": [
+      0.0162,
+      -0.1211,
+      0.49
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hind_lower_r",
+     "parent": "hind_gaskin_r",
+     "head": [
+      0.0162,
+      -0.1211,
+      0.49
+     ],
+     "tail": [
+      0.0162,
+      -0.1211,
+      0.2073
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hind_hoof_r",
+     "parent": "hind_lower_r",
+     "head": [
+      0.0162,
+      -0.1211,
+      0.2073
+     ],
+     "tail": [
+      0.0049,
+      -0.0288,
+      -0.0597
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hips",
+     "parent": "horse_body",
+     "head": [
+      0.0,
+      0.0292,
+      1.3156
+     ],
+     "tail": [
+      0.0,
+      0.1086,
+      1.3808
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "spine",
+     "parent": "hips",
+     "head": [
+      0.0,
+      0.151,
+      1.4156
+     ],
+     "tail": [
+      0.0,
+      0.1129,
+      1.567
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "chest",
+     "parent": "spine",
+     "head": [
+      0.0,
+      0.113,
+      1.567
+     ],
+     "tail": [
+      0.0,
+      0.1314,
+      1.6781
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "clavicle_l",
+     "parent": "chest",
+     "head": [
+      -0.03,
+      0.1403,
+      1.6721
+     ],
+     "tail": [
+      -0.2213,
+      0.1085,
+      1.6721
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "upperarm_l",
+     "parent": "clavicle_l",
+     "head": [
+      -0.2213,
+      0.1085,
+      1.6721
+     ],
+     "tail": [
+      -0.2223,
+      0.1687,
+      1.4526
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "forearm_l",
+     "parent": "upperarm_l",
+     "head": [
+      -0.2223,
+      0.1687,
+      1.4526
+     ],
+     "tail": [
+      -0.1124,
+      0.3756,
+      1.4955
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hand_l",
+     "parent": "forearm_l",
+     "head": [
+      -0.1124,
+      0.3756,
+      1.4955
+     ],
+     "tail": [
+      -0.0024,
+      0.5826,
+      1.5384
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "clavicle_r",
+     "parent": "chest",
+     "head": [
+      0.03,
+      0.1403,
+      1.6721
+     ],
+     "tail": [
+      0.1868,
+      0.1308,
+      1.6721
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "upperarm_r",
+     "parent": "clavicle_r",
+     "head": [
+      0.1868,
+      0.1308,
+      1.6721
+     ],
+     "tail": [
+      0.1722,
+      0.1948,
+      1.4905
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "forearm_r",
+     "parent": "upperarm_r",
+     "head": [
+      0.1722,
+      0.1948,
+      1.4905
+     ],
+     "tail": [
+      0.0432,
+      0.4062,
+      1.5796
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "hand_r",
+     "parent": "forearm_r",
+     "head": [
+      0.0432,
+      0.4062,
+      1.5796
+     ],
+     "tail": [
+      0.0264,
+      0.4338,
+      1.5913
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "pole",
+     "parent": "hand_r",
+     "head": [
+      0.0402,
+      0.413,
+      1.6132
+     ],
+     "tail": [
+      0.0214,
+      0.5232,
+      2.2474
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "pennon_1",
+     "parent": "pole",
+     "head": [
+      0.0214,
+      0.5232,
+      2.2474
+     ],
+     "tail": [
+      0.0293,
+      0.599,
+      2.2345
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "pennon_2",
+     "parent": "pennon_1",
+     "head": [
+      0.0293,
+      0.599,
+      2.2345
+     ],
+     "tail": [
+      0.0373,
+      0.6748,
+      2.2215
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "neck",
+     "parent": "chest",
+     "head": [
+      0.0,
+      0.1403,
+      1.7321
+     ],
+     "tail": [
+      0.0,
+      0.1146,
+      1.9881
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "head",
+     "parent": "neck",
+     "head": [
+      -0.0,
+      0.1146,
+      1.9881
+     ],
+     "tail": [
+      -0.069,
+      0.1367,
+      2.2351
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "thigh_l",
+     "parent": "hips",
+     "head": [
+      -0.1684,
+      0.0511,
+      1.3028
+     ],
+     "tail": [
+      -0.3305,
+      0.3703,
+      1.1548
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "shin_l",
+     "parent": "thigh_l",
+     "head": [
+      -0.3305,
+      0.3703,
+      1.1548
+     ],
+     "tail": [
+      -0.335,
+      0.2742,
+      0.8644
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "foot_l",
+     "parent": "shin_l",
+     "head": [
+      -0.335,
+      0.2742,
+      0.8644
+     ],
+     "tail": [
+      -0.4474,
+      0.5346,
+      0.7499
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "thigh_r",
+     "parent": "hips",
+     "head": [
+      0.0995,
+      0.0073,
+      1.3285
+     ],
+     "tail": [
+      0.2781,
+      0.3816,
+      1.1621
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "shin_r",
+     "parent": "thigh_r",
+     "head": [
+      0.2781,
+      0.3816,
+      1.1621
+     ],
+     "tail": [
+      0.2878,
+      0.2899,
+      0.8651
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "foot_r",
+     "parent": "shin_r",
+     "head": [
+      0.2878,
+      0.2899,
+      0.8651
+     ],
+     "tail": [
+      0.3916,
+      0.5588,
+      0.7483
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "neck_1",
+     "parent": "horse_body",
+     "head": [
+      0.0,
+      0.5,
+      1.3609
+     ],
+     "tail": [
+      0.0,
+      0.7836,
+      1.5806
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "neck_2",
+     "parent": "neck_1",
+     "head": [
+      0.0,
+      0.7836,
+      1.5806
+     ],
+     "tail": [
+      0.0,
+      1.0072,
+      1.7003
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "head_h",
+     "parent": "neck_2",
+     "head": [
+      0.0,
+      1.0072,
+      1.7003
+     ],
+     "tail": [
+      0.0,
+      1.0848,
+      1.4589
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "tail_1",
+     "parent": "horse_body",
+     "head": [
+      0.0565,
+      -0.611,
+      1.2384
+     ],
+     "tail": [
+      0.048,
+      -0.8003,
+      0.9763
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "tail_2",
+     "parent": "tail_1",
+     "head": [
+      0.048,
+      -0.8003,
+      0.9763
+     ],
+     "tail": [
+      0.0395,
+      -0.9897,
+      0.7142
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "tail_3",
+     "parent": "tail_2",
+     "head": [
+      0.0395,
+      -0.9897,
+      0.7142
+     ],
+     "tail": [
+      0.0309,
+      -1.1791,
+      0.4521
+     ],
+     "roll": 0.0
+    }
+   ],
+   "shipped_clips": [
+    "GALLOP",
+    "IDLE"
+   ],
+   "shipped_tris": 19426,
+   "shipped_height_m": 3.26,
+   "rig": "courier_rig",
+   "mesh": "courier",
+   "images": {
+    "base": "courier_atlas",
+    "normal": "courier_atlas_n",
+    "mr": "courier_atlas_mr"
+   }
+  }
+ }
+}

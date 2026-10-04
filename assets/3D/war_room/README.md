@@ -28,8 +28,11 @@ extracted beside the `.glb` and imported lossless like the units' (~22 MB
 each) — ~170 MB of VRAM down to ~40 MB. The extracted-image route could not be
 VRAM-compressed in a committed `.import`: the glTF importer leaves a
 hand-edited image `.import` alone and then never writes the image itself, so a
-fresh clone would have none. The candlestick, rake and pennant still extract
-theirs (small).
+fresh clone would have none. The candlestick and rake carry no images; the
+pennant extracts its small atlas and ORM beside its `.glb`
+(`gltf/embedded_image_handling=1`), and both files are COMMITTED with their
+`.import` set to Basis Universal (`compress/mode=4`), as the houses' are — the
+image itself in git is what a fresh clone loads.
 
 All three are CC0 (public domain); no attribution is required, it is given here
 as a record. The leaded glass and the pennant's atlas were painted in Blender.

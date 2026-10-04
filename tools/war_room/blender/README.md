@@ -41,7 +41,9 @@ every Blender step in the owner's instance, never headless). They are plain
    table's `.import` carry `gltf/embedded_image_handling=2` (their textures stay
    INSIDE the imported scene as Basis Universal, VRAM-compressed — see
    `assets/3D/war_room/README.md`); the small props extract theirs beside the
-   `.glb` (git-ignored build output) as the units do.
+   `.glb` as the houses do — commit each extracted image with its `.import`
+   set to `compress/mode=4` (Basis Universal), or a fresh clone cannot load
+   the model.
 
 ## The 1k re-export (Ruling 24)
 

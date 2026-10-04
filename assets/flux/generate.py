@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bulk Flux generation for the art prompt library, through a local ComfyUI.
+"""Bulk image generation for the art prompt library, through a local ComfyUI.
 
     python3 assets/flux/generate.py --build-csv           # re-parse the library into prompts.csv
     python3 assets/flux/generate.py --ids C-01,T-01,I-04  # generate a few entries
@@ -8,8 +8,10 @@
 
 Every prompt is assembled as  STYLE_CORE + subject + CANVAS  from the files
 beside this script, never typed by hand (prompt library §0.1 / §10.8). The
-ComfyUI graph is flux_template.json; this script only fills its slots and
-talks to the server's HTTP API (queue, history, view). Outputs are copied to
+ComfyUI graph is the chosen model's template (qwen2512_template.json or
+zimage_turbo_template.json); this script only fills its slots and talks to
+the server's HTTP API (queue, history, view). No Flux model is used (owner
+2026-10-01: 我们不用flux模型) — the folder keeps its old name only. Outputs are copied to
 assets/flux/out/<chapter dir>/<ID>_<slug>_<model>_s<seed>.png.
 
 Stdlib only (json, csv, urllib); no ComfyUI SDK needed.
@@ -58,7 +60,7 @@ CHAPTER_DIR = {
 TABLE_CANVAS = {"T": "C-TILE", "I": "C-ICON", "D": "C-MAPMARK", "G": "C-MAPMARK",
                 "B": "C-ESTATE", "H": "C-ICON", "W": "C-SYMBOL",
                 "U": "C-UIPIECE", "E": "", "P": ""}
-# Prompt library §10.7 target sizes per canvas, generated at Flux's native
+# Prompt library §10.7 target sizes per canvas, generated at the models' native
 # 1024-class resolution (icons and tiles are downscaled afterwards).
 CANVAS_SIZE = {
     "C-PORTRAIT": (1024, 1024), "C-BUST": (1024, 1024), "C-FULL": (1024, 1536),
@@ -70,24 +72,18 @@ CANVAS_SIZE = {
     "C-TILEWIDE": (1024, 1024),
     "C-TOWNFLAT": (1024, 1024),
 }
-# One preset per model: which template graph to fill and the sampler values
-# the prompt library recommends (§1.5). schnell is a 4-step distilled Flux.1
-# that ignores guidance (Apache 2.0). klein is Flux.2 [klein] 4B base
-# (Apache 2.0): undistilled, so CFG and NEGATIVE.txt apply. Flux.1 dev is
-# non-commercial and is deliberately NOT listed.
-# Added 2026-09-24 (docs: claude/t2i-model-evaluation-2026-09.md in the Claude
-# project): zimage = Z-Image Turbo (Apache 2.0, 6B, 8 steps, CFG 1, no
-# negative path); qwen2512 = Qwen-Image-2512 Q6_K GGUF (Apache 2.0, 20B; needs
-# the ComfyUI-GGUF node) at full quality, qwen2512fast = the same with the
-# Lightning 8-step LoRA (Apache 2.0). Models: assets/flux/download_models.sh.
-# NOT listed on purpose: FLUX.2 [dev] / klein 9B (FLUX non-commercial),
-# Ideogram 4 open weights (non-commercial), HunyuanImage (licence excludes
-# EU/UK/KR), Qwen-Image-2.1 (research licence), Krea 2 open / SD3.5 (revenue cap).
+# One preset per model: which template graph to fill and its sampler values.
+# Only two models make the game's 2D art (owner 2026-10-01: no Flux at all —
+# klein and schnell, and their templates, are gone): zimage = Z-Image Turbo
+# (Apache 2.0, 6B, 8 steps, CFG 1, no negative path); qwen2512 =
+# Qwen-Image-2512 Q6_K GGUF (Apache 2.0, 20B; needs the ComfyUI-GGUF node) at
+# full quality, qwen2512fast = the same with the Lightning 8-step LoRA
+# (Apache 2.0), the owner's pick for the game's art since 2026-09-30.
+# Models: assets/flux/download_models.sh.
+# NOT listed on purpose: every Flux model, Ideogram 4 open weights
+# (non-commercial), HunyuanImage (licence excludes EU/UK/KR), Qwen-Image-2.1
+# (research licence), Krea 2 open / SD3.5 (revenue cap).
 MODEL_PRESETS = {
-    "schnell": {"template": "flux_template.json", "unet": "flux1-schnell.safetensors",
-                "steps": 4, "guidance": 3.0, "cfg": 1.0},
-    "klein": {"template": "flux2_klein_template.json", "unet": "flux-2-klein-base-4b.safetensors",
-              "steps": 20, "guidance": 3.0, "cfg": 4.0},
     "zimage": {"template": "zimage_turbo_template.json", "unet": "z_image_turbo_bf16.safetensors",
                "steps": 8, "guidance": 0.0, "cfg": 1.0},
     "qwen2512": {"template": "qwen2512_template.json", "unet": "qwen-image-2512-Q6_K.gguf",
@@ -270,10 +266,9 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=0, help="stop after N entries")
     ap.add_argument("--variants", type=int, default=1, help="seeds per entry (tiles want 4-6)")
     ap.add_argument("--seed", type=int, default=954159497, help="base seed; variant i uses seed + i")
-    ap.add_argument("--model", choices=MODEL_PRESETS, default="klein")
+    ap.add_argument("--model", choices=MODEL_PRESETS, default="qwen2512fast")
     ap.add_argument("--steps", type=int, default=0, help="override the preset's steps")
-    ap.add_argument("--guidance", type=float, default=0.0, help="override the preset's guidance (Flux.1)")
-    ap.add_argument("--cfg", type=float, default=0.0, help="override the preset's CFG (klein)")
+    ap.add_argument("--cfg", type=float, default=0.0, help="override the preset's CFG")
     ap.add_argument("--small", action="store_true", help="icons: add the §6 small-tier suffix")
     ap.add_argument("--canvas", default="", help="override the canvas fragment, e.g. C-FULL or C-BUST for characters")
     ap.add_argument("--pose", default="", help="P-xx pose fragment appended to the subject (full-body tier)")
@@ -343,8 +338,6 @@ def main() -> int:
     preset = dict(MODEL_PRESETS[args.model])
     if args.steps:
         preset["steps"] = args.steps
-    if args.guidance:
-        preset["guidance"] = args.guidance
     if args.cfg:
         preset["cfg"] = args.cfg
     template = json.loads((HERE / preset["template"]).read_text(encoding="utf-8"))

@@ -1,0 +1,219 @@
+{
+ "1": {
+  "class_type": "UNETLoader",
+  "_meta": {
+   "title": "Qwen-Image-2512 bf16（Comfy Cloud）"
+  },
+  "inputs": {
+   "unet_name": "qwen_image_2512_bf16.safetensors",
+   "weight_dtype": "default"
+  }
+ },
+ "2": {
+  "class_type": "CLIPLoader",
+  "_meta": {
+   "title": "Qwen2.5-VL 7B text encoder"
+  },
+  "inputs": {
+   "clip_name": "qwen_2.5_vl_7b.safetensors",
+   "type": "qwen_image",
+   "device": "default"
+  }
+ },
+ "3": {
+  "class_type": "VAELoader",
+  "_meta": {
+   "title": "Qwen-Image VAE"
+  },
+  "inputs": {
+   "vae_name": "qwen_image_vae.safetensors"
+  }
+ },
+ "4": {
+  "class_type": "LoraLoaderModelOnly",
+  "_meta": {
+   "title": "Lightning 8-step LoRA (strength 0 = off)"
+  },
+  "inputs": {
+   "lora_name": "Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors",
+   "strength_model": 1.0,
+   "model": [
+    "1",
+    0
+   ]
+  }
+ },
+ "5": {
+  "class_type": "ModelSamplingAuraFlow",
+  "_meta": {
+   "title": "Shift 3 (ComfyUI template)"
+  },
+  "inputs": {
+   "shift": 3,
+   "model": [
+    "4",
+    0
+   ]
+  }
+ },
+ "6": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "正面提示词（由上面三格拼成）"
+  },
+  "inputs": {
+   "text": [
+    "111",
+    0
+   ],
+   "clip": [
+    "2",
+    0
+   ]
+  }
+ },
+ "7": {
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "负面词（锁定）"
+  },
+  "inputs": {
+   "text": "text, letters, writing, words, numbers, inscription, monogram, signature, watermark, logo, person, people, hands, fingers, face, coin, envelope, paper, document, ribbon, string, candle, multiple objects, illustration, drawing, painting, cartoon, anime, 3d render, plastic, toy, glossy CGI, perspective, tilted view, cluttered background, wood grain background",
+   "clip": [
+    "2",
+    0
+   ]
+  }
+ },
+ "8": {
+  "class_type": "EmptySD3LatentImage",
+  "_meta": {
+   "title": "尺寸（锁定）"
+  },
+  "inputs": {
+   "width": 1024,
+   "height": 1024,
+   "batch_size": 1
+  }
+ },
+ "9": {
+  "class_type": "KSampler",
+  "_meta": {
+   "title": "采样（锁定；种子每次 +1）"
+  },
+  "inputs": {
+   "seed": 954159497,
+   "steps": 8,
+   "cfg": 1.0,
+   "sampler_name": "euler",
+   "scheduler": "simple",
+   "denoise": 1.0,
+   "model": [
+    "5",
+    0
+   ],
+   "positive": [
+    "6",
+    0
+   ],
+   "negative": [
+    "7",
+    0
+   ],
+   "latent_image": [
+    "8",
+    0
+   ]
+  }
+ },
+ "10": {
+  "class_type": "VAEDecode",
+  "_meta": {
+   "title": "Decode"
+  },
+  "inputs": {
+   "samples": [
+    "9",
+    0
+   ],
+   "vae": [
+    "3",
+    0
+   ]
+  }
+ },
+ "11": {
+  "class_type": "SaveImage",
+  "_meta": {
+   "title": "④ 文件名（把「编号」改成需求卡编号）"
+  },
+  "inputs": {
+   "filename_prefix": "CrownCouncil/编号_qwen2512fast_s%KSampler.seed%",
+   "images": [
+    "10",
+    0
+   ]
+  }
+ },
+ "100": {
+  "class_type": "PrimitiveStringMultiline",
+  "inputs": {
+   "value": "a photograph of one real handmade object lying on a table, seen from directly overhead, soft natural daylight falling from the upper left, true material and true colour, crisp focus, realistic surface texture and small imperfections, no props, no hands"
+  },
+  "_meta": {
+   "title": "① 风格（锁定，不要改）"
+  }
+ },
+ "101": {
+  "class_type": "PrimitiveStringMultiline",
+  "inputs": {
+   "value": "a single round blob of deep crimson sealing wax, poured and pressed flat, its rim thick and irregular where the molten wax spread and cooled in soft lobes, the middle pressed down by a brass seal matrix leaving a sunken round impression of a simple royal crown with three points, the wax semi-matte with a faint waxy sheen on the raised rim, small air pits and a slight darker edge, about seven centimetres across, nothing written anywhere"
+  },
+  "_meta": {
+   "title": "② 主体（只改这里）"
+  }
+ },
+ "102": {
+  "class_type": "PrimitiveStringMultiline",
+  "inputs": {
+   "value": "a single user interface piece drawn flat and face-on with no perspective, filling the frame edge to edge with only a thin even margin all round, straight true horizontal and vertical edges, standing on a plain flat neutral grey ground clearly separated from the piece itself, no scene, no props, no cast shadow, 1:1 square"
+  },
+  "_meta": {
+   "title": "③ 画幅（锁定，不要改）"
+  }
+ },
+ "110": {
+  "class_type": "StringConcatenate",
+  "inputs": {
+   "string_a": [
+    "100",
+    0
+   ],
+   "string_b": [
+    "101",
+    0
+   ],
+   "delimiter": ", "
+  },
+  "_meta": {
+   "title": "拼接（不要动）"
+  }
+ },
+ "111": {
+  "class_type": "StringConcatenate",
+  "inputs": {
+   "string_a": [
+    "110",
+    0
+   ],
+   "string_b": [
+    "102",
+    0
+   ],
+   "delimiter": ", "
+  },
+  "_meta": {
+   "title": "拼接（不要动）"
+  }
+ }
+}

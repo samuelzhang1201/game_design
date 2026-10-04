@@ -23,10 +23,12 @@ This file holds only what holds EVERYWHERE. Each subsystem's rules live in a `CL
 - `docs/design/PRD.md` — scope of the first playable build; the build order lives here (§6) — follow it.
 - `docs/design/COUNCIL_SYSTEM.md` — the council design; source of truth for mechanics and formulas.
 - `docs/design/MANOR_SYSTEM.md` — the manor system (manors, houses, purses, focus, buildings).
+- `docs/design/DATA_ARCHITECTURE.md` — the data as a whole: the layers (raw → Defs → State → derived → output), the schema of `data/` and `GameState`, the lineage, and what to re-run after each kind of change.
 - `docs/design/CHAPTER_0.md` + `game_story/chapter_0/chapter_0_events.md` — the prologue, which is the tutorial.
 - `RANDOM_EVENTS.md` (repo root) — the random-events system. **Loaded at runtime**: `StorySource` parses each `### EV-NN` entry's `**Scene:**` prose and the game shows it verbatim, so keep the heading and `**Scene:**` labels intact (a test asserts all ids resolve). The "Your event seeds" section at the top is the owner's inbox: expand each new seed into a fully spec'd event (trigger, weight, choices with signatures, chain) in the pool below. **No event is ever model-written** — `Voicer.voice_event` has no path to the API; if an event needs different words, write them there.
 - `.claude/skills/visual-review/` — the loop for EVERY visual change (shoot, compare variants, crop, independent critic) and `taste.md`, the owner's art rulings as principles; add each new ruling there.
-- `tools/NEW_MAP.md` (bringing in a new map pack), `tools/map3d/README.md` (the Terrain3D pipeline), `assets/flux/README.md` (the Flux art pipeline).
+- `tools/NEW_MAP.md` (bringing in a new map pack), `tools/map3d/README.md` (the Terrain3D pipeline), `assets/flux/README.md` (the 2D art pipeline: Z-Image and Qwen-Image-2512 only, no Flux model — the folder keeps its old name).
+- `docs/art_team/README.md` — the art collaboration: the artist's locked ComfyUI workflows (a Comfy Cloud copy beside them) and the `cc_art_check` Blender add-on (`docs/art_team/kit/`), rebuilt by `tools/art_kit/build_kit.py`; the artist's handbook is the owner's Confluence page.
 - `docs/superpowers/specs/` and `plans/` — one spec and plan per feature; the history and the owner's words behind every rule.
 
 ## Stack
