@@ -23,6 +23,7 @@ This file holds only what holds EVERYWHERE. Each subsystem's rules live in a `CL
 - `docs/design/PRD.md` — scope of the first playable build; the build order lives here (§6) — follow it.
 - `docs/design/COUNCIL_SYSTEM.md` — the council design; source of truth for mechanics and formulas.
 - `docs/design/MANOR_SYSTEM.md` — the manor system (manors, houses, purses, focus, buildings).
+- `docs/design/DATA_ARCHITECTURE.md` — the data as a whole: the layers (raw → Defs → State → derived → output), the schema of `data/` and `GameState`, the lineage, and what to re-run after each kind of change.
 - `docs/design/CHAPTER_0.md` + `game_story/chapter_0/chapter_0_events.md` — the prologue, which is the tutorial.
 - `RANDOM_EVENTS.md` (repo root) — the random-events system. **Loaded at runtime**: `StorySource` parses each `### EV-NN` entry's `**Scene:**` prose and the game shows it verbatim, so keep the heading and `**Scene:**` labels intact (a test asserts all ids resolve). The "Your event seeds" section at the top is the owner's inbox: expand each new seed into a fully spec'd event (trigger, weight, choices with signatures, chain) in the pool below. **No event is ever model-written** — `Voicer.voice_event` has no path to the API; if an event needs different words, write them there.
 - `.claude/skills/visual-review/` — the loop for EVERY visual change (shoot, compare variants, crop, independent critic) and `taste.md`, the owner's art rulings as principles; add each new ruling there.
