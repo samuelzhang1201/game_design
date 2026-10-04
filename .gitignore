@@ -16,6 +16,7 @@ assets/__MACOSX/
 assets/3D/**/model_wip/**
 !assets/3D/**/model_wip/**/
 !assets/3D/**/model_wip/.gdignore
+!assets/3D/model_wip/tripo_inbox/README.md
 !assets/3D/terrain/model_wip/aerial/**
 # The 3D map's Terrain3D build and its packed ground textures ARE committed
 # (owner 2026-10-02: a developer on another machine pulls and runs the game
