@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://rmuf74x250a6"]
+
+[ext_resource type="Texture2D" uid="uid://dfh3v67e87f5a" path="res://assets/3D/buildings/townhouse_c/townhouse_c_townhouse_c_atlas.jpg" id="1_7lyld"]
+[ext_resource type="PackedScene" uid="uid://chspotwrk6ij" path="res://assets/3D/buildings/townhouse_c/townhouse_c.glb" id="1_wypoc"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="2_wypoc"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bxu86"]
+resource_name = "hh_slate_townhouse_c"
+render_priority = 0
+shader = ExtResource("2_wypoc")
+shader_parameter/albedo_tex = ExtResource("1_7lyld")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = false
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 0
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vvhdd"]
+resource_name = "hh_wall_townhouse_c"
+render_priority = 0
+shader = ExtResource("2_wypoc")
+shader_parameter/albedo_tex = ExtResource("1_7lyld")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = true
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 1
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[node name="Tripo_Houses" unique_id=1526093210 instance=ExtResource("1_wypoc")]
+editor_description = "One house type of the 3D map. Map3DLayerHouses draws every house of this type as ONE MultiMesh of this mesh with these surface materials (house_surface.gdshader, edited here: texture, roughness, role 1 wall / 2 tile roof / 0 untinted). The Houses node adds its colour variants and the weather to its own copies at run time; its sizes are data/map3d_houses.csv."
+
+[node name="townhouse_c_export" parent="." index="0" unique_id=1347209150]
+surface_material_override/0 = SubResource("ShaderMaterial_bxu86")
+surface_material_override/1 = SubResource("ShaderMaterial_vvhdd")

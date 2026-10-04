@@ -12,7 +12,7 @@ extends RefCounted
 ## views never share a material the other one writes.
 
 static var _scenes: Dictionary = {}   # path -> PackedScene, null when missing
-static var _meshes: Dictionary = {}   # path -> the first Mesh of its scene
+static var _models: Dictionary = {}   # path -> a house scene's {mesh, materials}
 static var _houses_key := ""
 static var _houses_pristine: Dictionary = {}
 static var _houses_world := 0
@@ -26,17 +26,25 @@ static func scene(path: String) -> PackedScene:
 	return _scenes[path]
 
 
-## The first Mesh of the scene at `path` (a house type's .glb), loaded once.
-static func mesh(path: String) -> Mesh:
-	if not _meshes.has(path):
+## A house type's scene at `path` (its <type>.tscn, which inherits the .glb),
+## loaded once: {mesh, materials} — its first MeshInstance3D's mesh and the
+## material each surface wears in the scene (its override, edited there, else
+## the mesh's own); {} when there is none.
+static func house_model(path: String) -> Dictionary:
+	if not _models.has(path):
 		var packed := scene(path)
-		var out: Mesh = null
+		var out: Dictionary = {}
 		if packed != null:
 			var node := packed.instantiate()
-			out = Map3DHouses.first_mesh(node)
+			var mi := Map3DHouses.first_mesh_instance(node)
+			if mi != null:
+				var mats: Array[Material] = []
+				for i in mi.mesh.get_surface_count():
+					mats.append(mi.get_active_material(i))
+				out = {"mesh": mi.mesh, "materials": mats}
 			node.free()
-		_meshes[path] = out
-	return _meshes[path]
+		_models[path] = out
+	return _models[path]
 
 
 ## The bake's houses at `csv_path` (Map3DHouses.load_csv), parsed once per
@@ -60,7 +68,7 @@ static func houses(csv_path: String, world: Node3D) -> Dictionary:
 ## Forget everything (a test that rebuilds an asset in place).
 static func clear() -> void:
 	_scenes.clear()
-	_meshes.clear()
+	_models.clear()
 	_houses_key = ""
 	_houses_pristine = {}
 	_houses_world = 0

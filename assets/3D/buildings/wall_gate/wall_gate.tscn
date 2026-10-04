@@ -1,0 +1,139 @@
+[gd_scene format=3 uid="uid://0esfn7lp4q53"]
+
+[ext_resource type="PackedScene" uid="uid://c207esgd5bryl" path="res://assets/3D/buildings/wall_gate/wall_gate.glb" id="1_5tmwe"]
+[ext_resource type="Texture2D" uid="uid://bupxxvvumf318" path="res://assets/3D/buildings/wall_gate/wall_gate_window.jpg" id="1_b55um"]
+[ext_resource type="Texture2D" uid="uid://cxn8g4yiqr24q" path="res://assets/3D/buildings/wall_gate/wall_gate_wall_rubble.jpg" id="2_5tmwe"]
+[ext_resource type="Texture2D" uid="uid://dk34degiyadgt" path="res://assets/3D/buildings/wall_gate/wall_gate_wall_ashlar.jpg" id="3_6dmmr"]
+[ext_resource type="Texture2D" uid="uid://cbvyox6kinen5" path="res://assets/3D/buildings/wall_gate/wall_gate_timber.jpg" id="4_yky5n"]
+[ext_resource type="Texture2D" uid="uid://chm71m72wq674" path="res://assets/3D/buildings/wall_gate/wall_gate_roof_slate.jpg" id="5_qvu0e"]
+[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="6_dt3xw"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6dmmr"]
+resource_name = "hh_void"
+render_priority = 0
+shader = ExtResource("6_dt3xw")
+shader_parameter/albedo_tex = ExtResource("1_b55um")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = false
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 0
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_yky5n"]
+resource_name = "hh_wall_rubble"
+render_priority = 0
+shader = ExtResource("6_dt3xw")
+shader_parameter/albedo_tex = ExtResource("2_5tmwe")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = true
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 1
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_qvu0e"]
+resource_name = "hh_wall_ashlar"
+render_priority = 0
+shader = ExtResource("6_dt3xw")
+shader_parameter/albedo_tex = ExtResource("3_6dmmr")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = true
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 1
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dt3xw"]
+resource_name = "hh_timber"
+render_priority = 0
+shader = ExtResource("6_dt3xw")
+shader_parameter/albedo_tex = ExtResource("4_yky5n")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = true
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 0
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_yppxn"]
+resource_name = "hh_roof_slate"
+render_priority = 0
+shader = ExtResource("6_dt3xw")
+shader_parameter/albedo_tex = ExtResource("5_qvu0e")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.7
+shader_parameter/use_vertex_color = true
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 0
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+
+[node name="Fortifications" unique_id=498507384 instance=ExtResource("1_5tmwe")]
+editor_description = "One house type of the 3D map. Map3DLayerHouses draws every house of this type as ONE MultiMesh of this mesh with these surface materials (house_surface.gdshader, edited here: texture, roughness, role 1 wall / 2 tile roof / 0 untinted). The Houses node adds its colour variants and the weather to its own copies at run time; its sizes are data/map3d_houses.csv."
+
+[node name="wall_gate_export" parent="." index="0" unique_id=896669255]
+surface_material_override/0 = SubResource("ShaderMaterial_6dmmr")
+surface_material_override/1 = SubResource("ShaderMaterial_yky5n")
+surface_material_override/2 = SubResource("ShaderMaterial_qvu0e")
+surface_material_override/3 = SubResource("ShaderMaterial_dt3xw")
+surface_material_override/4 = SubResource("ShaderMaterial_yppxn")

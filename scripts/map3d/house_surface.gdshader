@@ -1,10 +1,11 @@
 // One surface of a settlement house (owner 2026-09-25: "房屋墙壁和房顶的颜色
-// 可以多样化一点，主色调不变，但可以有不同variant"). It draws exactly what the
-// .glb's own imported material drew — its albedo texture, its roughness, the
-// grime baked into its vertex colour, double-sided — and multiplies a WALL or
-// ROOF surface by one of Map3DLayerHouses' tints (edited on the node), picked per
-// house (Map3DHouses.variant_of) and handed over as the MultiMesh instance's
-// custom data: r the wall variant, g the roof's. Map3DLayerHouses binds it.
+// 可以多样化一点，主色调不变，但可以有不同variant"). Each surface's material is
+// set in its house type's scene (assets/3D/buildings/<type>/<type>.tscn, edited
+// in the editor): its albedo texture, its roughness, the grime baked into its
+// vertex colour, its role; double-sided. Map3DLayerHouses draws a copy that
+// multiplies a WALL or ROOF surface by one of its tints (edited on the node),
+// picked per house (Map3DHouses.variant_of) and handed over as the MultiMesh
+// instance's custom data: r the wall variant, g the roof's.
 shader_type spatial;
 render_mode cull_disabled;
 
@@ -20,11 +21,13 @@ uniform bool use_normal = false;
 uniform float normal_depth = 1.0;
 // 0 takes no tint (a recess, timber, slate), 1 a wall's, 2 a roof's
 uniform int role = 0;
-// linear multipliers, already raised from the table's sRGB hexes
+// linear multipliers, already raised from the table's sRGB hexes; the layer
+// sets them on its own copy of each surface's material. A count of 0 (the
+// house's own scene, opened in the editor) draws the surface as built.
 uniform vec3 wall_tints[8];
 uniform vec3 roof_tints[8];
-uniform int wall_count = 1;
-uniform int roof_count = 1;
+uniform int wall_count = 0;
+uniform int roof_count = 0;
 
 varying flat vec3 tint;
 // The weather (spec 2026-09-29-weather-visuals, Map3DLayerWeather): the
@@ -47,9 +50,9 @@ void vertex() {
 	w_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	w_up = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	tint = vec3(1.0);
-	if (role == 1) {
+	if (role == 1 && wall_count > 0) {
 		tint = wall_tints[clamp(int(INSTANCE_CUSTOM.r + 0.5), 0, wall_count - 1)];
-	} else if (role == 2) {
+	} else if (role == 2 && roof_count > 0) {
 		tint = roof_tints[clamp(int(INSTANCE_CUSTOM.g + 0.5), 0, roof_count - 1)];
 	}
 }

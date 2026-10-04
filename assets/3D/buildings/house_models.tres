@@ -1,50 +1,50 @@
 [gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://cvwk0bv6aet4o"]
 
-[ext_resource type="PackedScene" uid="uid://6b7m8fj51blj" path="res://assets/3D/buildings/cottage_a/cottage_a.glb" id="1_0igmy"]
-[ext_resource type="PackedScene" uid="uid://cmw6nvanwdw45" path="res://assets/3D/buildings/cottage_b/cottage_b.glb" id="2_jdkuk"]
-[ext_resource type="PackedScene" uid="uid://c5b536xwb42dj" path="res://assets/3D/buildings/cottage_c/cottage_c.glb" id="3_dvmel"]
-[ext_resource type="PackedScene" uid="uid://b7py0qvqxs06i" path="res://assets/3D/buildings/townhouse_a/townhouse_a.glb" id="4_13o7r"]
-[ext_resource type="PackedScene" uid="uid://dy62v70e4b5c2" path="res://assets/3D/buildings/townhouse_b/townhouse_b.glb" id="5_yb8vq"]
-[ext_resource type="PackedScene" uid="uid://chspotwrk6ij" path="res://assets/3D/buildings/townhouse_c/townhouse_c.glb" id="6_4bnxs"]
-[ext_resource type="PackedScene" uid="uid://cp1h736hghqa6" path="res://assets/3D/buildings/longhouse/longhouse.glb" id="7_y8vrd"]
-[ext_resource type="PackedScene" uid="uid://dfoouf63mphfg" path="res://assets/3D/buildings/workshop/workshop.glb" id="8_acitm"]
-[ext_resource type="PackedScene" uid="uid://d1te1fbgprj3w" path="res://assets/3D/buildings/barn/barn.glb" id="9_xct51"]
-[ext_resource type="PackedScene" uid="uid://pwko3sry257j" path="res://assets/3D/buildings/byre/byre.glb" id="10_fvx6t"]
-[ext_resource type="PackedScene" uid="uid://rnhfn34gqpsj" path="res://assets/3D/buildings/chapel/chapel.glb" id="11_ha4a1"]
-[ext_resource type="PackedScene" uid="uid://4oseqxi83163" path="res://assets/3D/buildings/church/church.glb" id="12_3rkox"]
-[ext_resource type="PackedScene" uid="uid://px6g84bemq" path="res://assets/3D/buildings/church_b/church_b.glb" id="13_oq3am"]
-[ext_resource type="PackedScene" uid="uid://ynnt536xhg6r" path="res://assets/3D/buildings/church_tower/church_tower.glb" id="14_r4qon"]
-[ext_resource type="PackedScene" uid="uid://bps3rpdfv1tma" path="res://assets/3D/buildings/palace/palace.glb" id="15_8mcu5"]
-[ext_resource type="PackedScene" uid="uid://bhpm3i70f08s5" path="res://assets/3D/buildings/palace_b/palace_b.glb" id="16_eiuq2"]
-[ext_resource type="PackedScene" uid="uid://dw8eo3invj047" path="res://assets/3D/buildings/palace_c/palace_c.glb" id="17_q2n5j"]
-[ext_resource type="PackedScene" uid="uid://d1ajahjcuy83r" path="res://assets/3D/buildings/wall/wall.glb" id="18_038to"]
-[ext_resource type="PackedScene" uid="uid://d3yvpuiwugw44" path="res://assets/3D/buildings/wall_tower/wall_tower.glb" id="19_4b737"]
-[ext_resource type="PackedScene" uid="uid://c207esgd5bryl" path="res://assets/3D/buildings/wall_gate/wall_gate.glb" id="20_nb0uw"]
-[ext_resource type="PackedScene" uid="uid://dhjrwxfr2634q" path="res://assets/3D/buildings/pier/pier.glb" id="21_raoie"]
+[ext_resource type="PackedScene" uid="uid://bit5wrjwoeo71" path="res://assets/3D/buildings/barn/barn.tscn" id="1_0igmy"]
+[ext_resource type="PackedScene" uid="uid://xsaenv6ralj8" path="res://assets/3D/buildings/byre/byre.tscn" id="2_jdkuk"]
+[ext_resource type="PackedScene" uid="uid://cngpvocwr2bcr" path="res://assets/3D/buildings/chapel/chapel.tscn" id="3_dvmel"]
+[ext_resource type="PackedScene" uid="uid://bm71pr5xrryug" path="res://assets/3D/buildings/church/church.tscn" id="4_13o7r"]
+[ext_resource type="PackedScene" uid="uid://0hylimk4088p" path="res://assets/3D/buildings/church_b/church_b.tscn" id="5_yb8vq"]
+[ext_resource type="PackedScene" uid="uid://dfflr4gxb4vu3" path="res://assets/3D/buildings/church_tower/church_tower.tscn" id="6_4bnxs"]
+[ext_resource type="PackedScene" uid="uid://c00v7vxhr06pa" path="res://assets/3D/buildings/cottage_a/cottage_a.tscn" id="7_y8vrd"]
+[ext_resource type="PackedScene" uid="uid://c6pyml73kmoip" path="res://assets/3D/buildings/cottage_b/cottage_b.tscn" id="8_acitm"]
+[ext_resource type="PackedScene" uid="uid://dchbjp5bhl172" path="res://assets/3D/buildings/cottage_c/cottage_c.tscn" id="9_xct51"]
+[ext_resource type="PackedScene" uid="uid://ctyqvrnuvd3fv" path="res://assets/3D/buildings/longhouse/longhouse.tscn" id="10_fvx6t"]
+[ext_resource type="PackedScene" uid="uid://c4ijsd6pr0xoa" path="res://assets/3D/buildings/palace/palace.tscn" id="11_ha4a1"]
+[ext_resource type="PackedScene" uid="uid://14q18tw4phap" path="res://assets/3D/buildings/palace_b/palace_b.tscn" id="12_3rkox"]
+[ext_resource type="PackedScene" uid="uid://fqmtbhyeesil" path="res://assets/3D/buildings/palace_c/palace_c.tscn" id="13_oq3am"]
+[ext_resource type="PackedScene" uid="uid://bl06nx6sj3oea" path="res://assets/3D/buildings/pier/pier.tscn" id="14_r4qon"]
+[ext_resource type="PackedScene" uid="uid://147a2n2cn3pb" path="res://assets/3D/buildings/townhouse_a/townhouse_a.tscn" id="15_8mcu5"]
+[ext_resource type="PackedScene" uid="uid://gnrqv25jj45" path="res://assets/3D/buildings/townhouse_b/townhouse_b.tscn" id="16_eiuq2"]
+[ext_resource type="PackedScene" uid="uid://rmuf74x250a6" path="res://assets/3D/buildings/townhouse_c/townhouse_c.tscn" id="17_q2n5j"]
+[ext_resource type="PackedScene" uid="uid://doxv6h1whx5py" path="res://assets/3D/buildings/wall/wall.tscn" id="18_038to"]
+[ext_resource type="PackedScene" uid="uid://0esfn7lp4q53" path="res://assets/3D/buildings/wall_gate/wall_gate.tscn" id="19_4b737"]
+[ext_resource type="PackedScene" uid="uid://2figiocpfp1k" path="res://assets/3D/buildings/wall_tower/wall_tower.tscn" id="20_nb0uw"]
+[ext_resource type="PackedScene" uid="uid://dkspaw73ejyjq" path="res://assets/3D/buildings/workshop/workshop.tscn" id="21_raoie"]
 [ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="22_b01ki"]
 
 [resource]
 script = ExtResource("22_b01ki")
 art = Dictionary[String, Resource]({
-"barn": ExtResource("9_xct51"),
-"byre": ExtResource("10_fvx6t"),
-"chapel": ExtResource("11_ha4a1"),
-"church": ExtResource("12_3rkox"),
-"church_b": ExtResource("13_oq3am"),
-"church_tower": ExtResource("14_r4qon"),
-"cottage_a": ExtResource("1_0igmy"),
-"cottage_b": ExtResource("2_jdkuk"),
-"cottage_c": ExtResource("3_dvmel"),
-"longhouse": ExtResource("7_y8vrd"),
-"palace": ExtResource("15_8mcu5"),
-"palace_b": ExtResource("16_eiuq2"),
-"palace_c": ExtResource("17_q2n5j"),
-"pier": ExtResource("21_raoie"),
-"townhouse_a": ExtResource("4_13o7r"),
-"townhouse_b": ExtResource("5_yb8vq"),
-"townhouse_c": ExtResource("6_4bnxs"),
+"barn": ExtResource("1_0igmy"),
+"byre": ExtResource("2_jdkuk"),
+"chapel": ExtResource("3_dvmel"),
+"church": ExtResource("4_13o7r"),
+"church_b": ExtResource("5_yb8vq"),
+"church_tower": ExtResource("6_4bnxs"),
+"cottage_a": ExtResource("7_y8vrd"),
+"cottage_b": ExtResource("8_acitm"),
+"cottage_c": ExtResource("9_xct51"),
+"longhouse": ExtResource("10_fvx6t"),
+"palace": ExtResource("11_ha4a1"),
+"palace_b": ExtResource("12_3rkox"),
+"palace_c": ExtResource("13_oq3am"),
+"pier": ExtResource("14_r4qon"),
+"townhouse_a": ExtResource("15_8mcu5"),
+"townhouse_b": ExtResource("16_eiuq2"),
+"townhouse_c": ExtResource("17_q2n5j"),
 "wall": ExtResource("18_038to"),
-"wall_gate": ExtResource("20_nb0uw"),
-"wall_tower": ExtResource("19_4b737"),
-"workshop": ExtResource("8_acitm")
+"wall_gate": ExtResource("19_4b737"),
+"wall_tower": ExtResource("20_nb0uw"),
+"workshop": ExtResource("21_raoie")
 })

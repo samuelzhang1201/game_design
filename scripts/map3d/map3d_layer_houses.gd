@@ -10,11 +10,14 @@ extends Node3D
 ## this only instances them. Takes everything from Map3DContext — never the
 ## Game autoload.
 ##
-## Each type's .glb carries its own surfaces (a recess, walls, a roof,
-## timber), each with its own texture. A shared material_override would
-## flatten them to one colour, so every surface keeps its OWN texture, drawn
-## by house_surface.gdshader, which also multiplies a wall or a roof by one
-## of this node's `wall_tints` / `roof_tints`, picked per house
+## Each type is a SCENE, assets/3D/buildings/<type>/<type>.tscn (GameArt's
+## HOUSE_MODELS; owner 2026-10-04: 每个房屋的模型为什么不是一个场景), which
+## inherits its .glb and gives every surface (a recess, walls, a roof, timber)
+## its own house_surface.gdshader material in the editor — texture, roughness,
+## role. Opened there it is the house as the map draws it. This layer draws
+## the scene's mesh and a copy of those materials as one MultiMesh per type,
+## multiplying a wall or a roof by one of this node's `wall_tints` /
+## `roof_tints`, picked per house
 ## (Map3DHouses.variant_of) and handed over as instance custom data (owner
 ## 2026-09-25: 颜色可以多样化一点，主色调不变，但可以有不同variant).
 ##
@@ -146,10 +149,12 @@ func build() -> void:
 	_roof_tints = Map3DHouses.tints_of(roof_tints)
 	_far.clear()
 	for type: String in ctx.repo.map3d_houses:
-		var mesh := _mesh_of(type)
-		if mesh == null:
+		var model := _model_of(type)
+		if model.is_empty():
 			continue
-		var drawn := Map3DHouseMaterials.tinted(mesh, _wall_tints, _roof_tints, weather, surface_mats)
+		var mesh: Mesh = model["mesh"]
+		var drawn := Map3DHouseMaterials.tinted(mesh, model["materials"], _wall_tints, _roof_tints,
+			weather, surface_mats)
 		# Task 6 override 4: the type itself, not type.capitalize() — capitalize()
 		# turns an underscore into a space ("cottage_a" -> "Cottage A"), which is
 		# neither a legible node name nor round-trippable back to the CSV's type.
@@ -283,10 +288,12 @@ func _budget() -> int:
 	return int(Map3DQuality.num(ctx.q(), "house_budget"))
 
 
-func _mesh_of(type: String) -> Mesh:
+## `type`'s scene's {mesh, materials} (Map3DAssetCache.house_model), {} when
+## it has none.
+func _model_of(type: String) -> Dictionary:
 	var path := GameArt.path(GameArt.HOUSE_MODELS, type)
 	if not ResourceLoader.exists(path):
-		Map3DWorldLoader.warn_once("houses:" + path, "map3d houses: no mesh at " + path)
-		return null
-	return Map3DAssetCache.mesh(path)  # loaded once, kept between views
+		Map3DWorldLoader.warn_once("houses:" + path, "map3d houses: no house scene at " + path)
+		return {}
+	return Map3DAssetCache.house_model(path)  # loaded once, kept between views
 
