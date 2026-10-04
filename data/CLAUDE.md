@@ -1,0 +1,12 @@
+# Game data (`data/`)
+
+- **Design values live here, never hardcoded in scripts.** Add columns or rows rather than embedding a constant. `balance.csv` holds every tuning number; the other tables include `council_seats`, `character_traits`, `faction_escalation`, `policy_actions_court_additions`, `action_signatures`, `events`, `event_choices`, `world_rules`, `claim_types`, `facts`, `world_schema`, `metric_polarity`, `order_costs`, the palettes, `graphics_quality`, the `map3d_*`, `army_*`, `ledger_*` and `war_*` tables.
+- **The exception is the LOOK**: art references and styling are resources and scenes edited in the Godot editor — never a `res://` path column here (a key → art table is an `ArtTable` `.tres`; the CSV keeps only the key's numbers and words).
+- `data/` carries a `.gdignore` at its root so Godot does not import the tables as translations; `FileAccess` reads them regardless. `game_story/` carries one for the same reason. A future export preset must include `data/**` AND `game_story/**` explicitly.
+
+## Map packs
+
+- `data/maps.csv` has one row per pack (its bitmaps, its data dir, `is_default`, `map3d_dir`); no code, tool or test names a pack (`DataRepository.default_pack_id()`, `DataRepository.map3d_dir`, `tools/packs.py`). Bringing in a new pack: `tools/NEW_MAP.md`.
+- `data/maps/<id>/` at its root: `map_info.csv` (incl. `distance_scale` / `distance_unit` and the graticule `lat_n` / `lat_s` / `lon_w` / `lon_e`) and the HAND-MAINTAINED bindings, never written by the importer — `realm_bindings.csv` (authored realm slots → kingdoms), `house_bindings.csv` (the court's families → provinces of the player's realm; unbound provinces are held by a house named after their seat), and the optional `manor_name_overrides.csv`, `arms_bindings.csv`, `landmark_name_overrides.csv`.
+- Imported by domain: `geography/` (`biomes`, `cells`, `vertices`, `coasts`, `rivers`, `markers`, `routes`), `political/` (`kingdoms`, `provinces`, `burgs`, `manors`, `borders`, `province_borders`, `diplomacy`, `campaigns`), `economy/` (`kingdoms`, `provinces`, `burgs`, `goods`, `markets`, `market_goods`, `production`, `deals` — the export's trade flows, loaded as `DataRepository.deals` and read by `MarketSystem`), `military/` (`kingdoms`, `regiments`, `unit_types`), `society/` (`cultures`, `religions`, `zones`).
+- The pack's bitmaps are in `assets/maps/<id>/` and are DATA (root `CLAUDE.md`); `tests/map3d/test_map3d_look_assets.gd` fails if one loses `compress/mode=0` or the detect-3D flag.
