@@ -4,7 +4,7 @@ extends Control
 ## THE WAR TABLE's date dial (owner 2026-10-01): a brass disc on the table
 ## with the day of the month engraved on it; the season and year are written
 ## beside it on the wood (the top bar's date label). Its tooltip is the full
-## date. Its look is edited on the node (scenes/top_bar.tscn).
+## date. Its look is edited on the node (scenes/hud/top_bar.tscn).
 
 @export var day := 1:
 	set(v):

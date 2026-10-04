@@ -3,7 +3,7 @@ extends GutTest
 var _finished := false
 
 func _scene_with(beats: Array, report: TickReport) -> ConversationScene:
-	var c: ConversationScene = load("res://scenes/conversation.tscn").instantiate()
+	var c: ConversationScene = load("res://scenes/screens/conversation.tscn").instantiate()
 	add_child_autofree(c)
 	_finished = false
 	c.finished.connect(func(): _finished = true)

@@ -51,7 +51,7 @@ var _map3d: Map3DView
 var _map3d_theme := ""
 var _map3d_military := false
 
-## The screen's look lives in scenes/court.tscn and is edited in the editor
+## The screen's look lives in scenes/screens/court.tscn and is edited in the editor
 ## (owner 2026-10-02): THE WAR TABLE's oak (%Table), the map's vellum sheet,
 ## the steward's report, the compass on the table, the council's wax seal,
 ## the council column's leather. _ready fetches the nodes and wires signals;

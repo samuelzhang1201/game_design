@@ -10,9 +10,9 @@ extends Control
 ## time runs on the clock in COURT and CONVERSATION, and nothing led there.
 enum State {MENU, CONVERSATION, COURT}
 
-const MENU_SCENE := preload("res://scenes/main_menu.tscn")
-const CONVERSATION_SCENE := preload("res://scenes/conversation.tscn")
-const COURT_SCENE := preload("res://scenes/court.tscn")
+const MENU_SCENE := preload("res://scenes/screens/main_menu.tscn")
+const CONVERSATION_SCENE := preload("res://scenes/screens/conversation.tscn")
+const COURT_SCENE := preload("res://scenes/screens/court.tscn")
 
 const BGM_PATH := "res://assets/audio/BGM.mp3"
 const BGM_VOLUME_DB := -12.0
@@ -90,44 +90,44 @@ func _ready() -> void:
 	# One game-wide Theme, inherited by every screen (see UiPalette).
 	theme = UiPalette.build_theme()
 	Game.menu_requested.connect(toggle_pause_menu)
-	_ledger_screen = load("res://scenes/ledger_screen.tscn").instantiate()
+	_ledger_screen = load("res://scenes/screens/ledger_screen.tscn").instantiate()
 	_ledger_screen.name = "LedgerScreen"
 	_ledger_screen.show_requested.connect(_on_ledger_show)
 	_ledger_screen.closed.connect(_sync_map_view)
 	add_child(_ledger_screen)
 	get_viewport().size_changed.connect(_fit_ledger)
-	_war_room_screen = load("res://scenes/war_room_screen.tscn").instantiate()
+	_war_room_screen = load("res://scenes/screens/war_room_screen.tscn").instantiate()
 	_war_room_screen.name = "WarRoomScreen"
 	_war_room_screen.closed.connect(_sync_map_view)
 	add_child(_war_room_screen)
 	get_viewport().size_changed.connect(_fit_war_room)
-	_missive_screen = load("res://scenes/missive_screen.tscn").instantiate()
+	_missive_screen = load("res://scenes/screens/missive_screen.tscn").instantiate()
 	_missive_screen.name = "MissiveScreen"
 	_missive_screen.visible = false
 	_missive_screen.show_requested.connect(_on_missive_show)
 	add_child(_missive_screen)
-	_report_popup = load("res://scenes/missive_report_popup.tscn").instantiate()
+	_report_popup = load("res://scenes/panels/missive_report_popup.tscn").instantiate()
 	_report_popup.name = "MissiveReportPopup"
 	_report_popup.visible = false
 	_report_popup.sealed.connect(_on_report_sealed)
 	add_child(_report_popup)
-	_info_screen = load("res://scenes/info_screen.tscn").instantiate()
+	_info_screen = load("res://scenes/screens/info_screen.tscn").instantiate()
 	_info_screen.name = "InfoScreen"
 	add_child(_info_screen)
-	_bottom_bar = load("res://scenes/bottom_bar.tscn").instantiate()
+	_bottom_bar = load("res://scenes/hud/bottom_bar.tscn").instantiate()
 	_bottom_bar.name = "BottomBar"
 	_bottom_bar.visible = false
 	_bottom_bar.tab_selected.connect(_on_bottom_tab)
 	add_child(_bottom_bar)
 	# The persistent transparent news strip (user request 2026-08-31): pinned
 	# just above the bottom tab bar on every gameplay screen.
-	_news_ticker = load("res://scenes/news_ticker.tscn").instantiate()
+	_news_ticker = load("res://scenes/hud/news_ticker.tscn").instantiate()
 	_news_ticker.name = "NewsTicker"
 	_news_ticker.visible = false
 	add_child(_news_ticker)
 	# THE WAR TABLE: the news slip lies between the bookmark groups.
 	_bottom_bar.slip_moved.connect(_news_ticker.place_on_table)
-	_fps_counter = load("res://scenes/fps_counter.tscn").instantiate()
+	_fps_counter = load("res://scenes/hud/fps_counter.tscn").instantiate()
 	add_child(_fps_counter)
 	_load_settings()
 	Intel.dev_all = _dev_mode
@@ -287,13 +287,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_pause_menu()
 
 ## The pause menu lives above every screen (built last, kept as a sibling
-## that survives _switch_to's screen swaps). Its look is scenes/pause_menu.tscn
+## that survives _switch_to's screen swaps). Its look is scenes/screens/pause_menu.tscn
 ## (owner 2026-10-02): the same window as the title's leather menu — the
 ## window leather, the width, the primary first row (owner 2026-09-30:
 ## 游戏开始的UI和游戏内的menu功能要一致); the settings rows and Quit, made here
 ## for both menus, stand before its status line.
 func _build_pause_menu() -> void:
-	_pause_menu = load("res://scenes/pause_menu.tscn").instantiate()
+	_pause_menu = load("res://scenes/screens/pause_menu.tscn").instantiate()
 	var col := _pause_menu.get_node("Panel/Col")
 	(col.get_node("Resume") as Button).pressed.connect(toggle_pause_menu)
 	(col.get_node("SaveGame") as Button).pressed.connect(_on_menu_save)

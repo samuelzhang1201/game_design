@@ -43,7 +43,7 @@ var _monthly: Dictionary = {}
 ## speed -> its clock button (0 pause, 1 play, 2x, 4x).
 var _clock_buttons: Dictionary = {}
 
-## The bar is laid out in scenes/top_bar.tscn (owner 2026-10-02: the look is
+## The bar is laid out in scenes/hud/top_bar.tscn (owner 2026-10-02: the look is
 ## edited in the editor) — the brass dial, the four studs, the tally board
 ## with its two named rows of pools, Menu — dressed for THE WAR TABLE. This
 ## only finds its nodes, wires them and fills them; under ui_war_table 0 it

@@ -28,11 +28,11 @@ static func attach(column: BoxContainer) -> MilitaryPanel:
 	column.add_child(p)
 	return p
 
-## The host as the game makes it: scenes/military_panel.tscn (owner
+## The host as the game makes it: scenes/panels/military_panel.tscn (owner
 ## 2026-10-02: the look lives in the editor), its lines theme kinds the
 ## column's theme inks; hidden until the host is asked for.
 static func create() -> MilitaryPanel:
-	return (load("res://scenes/military_panel.tscn") as PackedScene).instantiate()
+	return (load("res://scenes/panels/military_panel.tscn") as PackedScene).instantiate()
 
 func _ready() -> void:
 	_title = $Head/Title

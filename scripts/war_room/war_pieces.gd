@@ -315,7 +315,8 @@ func _fill_figures(state: GameState, code: String, reg: Dictionary, into: Node3D
 	into.add_child(form)
 	for m: MeshInstance3D in Map3DUnits.meshes(form):
 		for i in m.mesh.get_surface_count():
-			m.set_surface_override_material(i, _tin_of(m.mesh.surface_get_material(i) as BaseMaterial3D))
+			# the material the figure's scene gives it (scenes/models/units/<arm>.tscn)
+			m.set_surface_override_material(i, _tin_of(m.get_active_material(i) as BaseMaterial3D))
 
 
 ## The tin paint over a source material's own albedo: one ShaderMaterial per

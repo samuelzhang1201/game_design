@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://dhns8u5vx7c1o"]
+
+[ext_resource type="PackedScene" uid="uid://l4or76m7axlc" path="res://assets/3D/units/infantry/infantry.glb" id="1_hawag"]
+[ext_resource type="Texture2D" uid="uid://4xtjdfekefsx" path="res://assets/3D/units/infantry/infantry_infantry_atlas.jpg" id="2_x605r"]
+[ext_resource type="Texture2D" uid="uid://uayfxy64n1ly" path="res://assets/3D/units/infantry/infantry_infantry_atlas_mr.jpg" id="3_wdkys"]
+[ext_resource type="Texture2D" uid="uid://dua3jk44emoyu" path="res://assets/3D/units/infantry/infantry_infantry_atlas_n.jpg" id="4_ds8af"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1jqoj"]
+resource_name = "infantry_atlas_mat.003"
+cull_mode = 2
+albedo_texture = ExtResource("2_x605r")
+metallic = 1.0
+metallic_texture = ExtResource("3_wdkys")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("3_wdkys")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("4_ds8af")
+metadata/_gltf_primary_texture_coord = 0
+
+[node name="Tripo_Infantry" unique_id=1574473530 instance=ExtResource("1_hawag")]
+editor_description = "The man-at-arms, one FIGURE of a regiment's piece. The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/army_art.csv."
+
+[node name="infantry" parent="inf_rig/Skeleton3D" parent_id_path=PackedInt32Array(745646878) index="0" unique_id=1269306440]
+surface_material_override/0 = SubResource("StandardMaterial3D_1jqoj")

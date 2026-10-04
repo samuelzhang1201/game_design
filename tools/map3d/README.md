@@ -164,7 +164,7 @@ the game keeps loading the previous `.scn` and you will shoot the old mesh.
 Godot's glTF importer EXTRACTS each embedded texture to a loose file beside
 the `.glb` (`gltf/embedded_image_handling=1`, each imported as Basis Universal,
 `compress/mode=4`) and they are COMMITTED: each house type is a scene,
-`<type>/<type>.tscn`, inheriting its `.glb`, whose surfaces wear
+`scenes/models/buildings/<type>.tscn`, inheriting its `.glb`, whose surfaces wear
 `house_surface.gdshader` materials referencing those files (owner 2026-10-04;
 `house_models.tres` names the scenes). A new house type therefore needs its
 scene made in the editor (New Inherited Scene from the `.glb`, a

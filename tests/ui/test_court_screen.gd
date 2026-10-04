@@ -15,7 +15,7 @@ func _report_after_resolving_pending_event() -> TickReport:
 	return report
 
 func _screen() -> CourtScreen:
-	var screen: CourtScreen = load("res://scenes/court.tscn").instantiate()
+	var screen: CourtScreen = load("res://scenes/screens/court.tscn").instantiate()
 	add_child_autofree(screen)
 	return screen
 

@@ -37,7 +37,7 @@ var _search_pick := 0           # the listed match Enter picks
 
 
 func _ready() -> void:
-	# its look is scenes/ledger_screen.tscn (owner 2026-10-02): the frame
+	# its look is scenes/screens/ledger_screen.tscn (owner 2026-10-02): the frame
 	# (ledger_frame.tres), the title, the search list (ledger_search.tres)
 	visible = false
 	%Close.pressed.connect(close)

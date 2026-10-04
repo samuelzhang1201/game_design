@@ -8,7 +8,7 @@ extends StyleBox
 ## screen that is open — hangs a little longer and brighter; a hovered one
 ## warms. Each colour and state is a .tres in
 ## assets/2D/ui/war_table/styles/ribbons/, edited in the inspector (owner
-## 2026-10-02), worn by scenes/bottom_bar.tscn's tabs.
+## 2026-10-02), worn by scenes/hud/bottom_bar.tscn's tabs.
 
 ## The silk's colour (the tab's group: vert the lenses, gules realm and war,
 ## azure people and law, purpure the church, or the books and letters).

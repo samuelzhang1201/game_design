@@ -32,7 +32,7 @@ var _body: VBoxContainer
 ## sizes the report's paper to it).
 signal content_resized
 
-## The card is scenes/realm_dashboard.tscn (owner 2026-10-02: the look lives
+## The card is scenes/panels/realm_dashboard.tscn (owner 2026-10-02: the look lives
 ## in the editor): its lines name Dash* theme kinds, which the report's paper
 ## theme writes in the paper's ink and size and game_theme.tres in the
 ## leather's — so the same card is the steward's report on the war table and
@@ -40,7 +40,7 @@ signal content_resized
 ## sentences for the pie and the host's bars, the ¶ before a heading, the
 ## tally marks) is set here by mode.
 static func attach(column: BoxContainer) -> RealmDashboard:
-	var d: RealmDashboard = (load("res://scenes/realm_dashboard.tscn") as PackedScene).instantiate()
+	var d: RealmDashboard = (load("res://scenes/panels/realm_dashboard.tscn") as PackedScene).instantiate()
 	column.add_child(d)
 	column.move_child(d, 0)
 	return d

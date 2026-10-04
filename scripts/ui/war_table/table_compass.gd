@@ -25,7 +25,7 @@ var view: Map3DView
 var _wheel := 0.0
 
 ## Its place — the column's strip of table, top to the screen's foot — is
-## the scene's (scenes/court.tscn, conversation.tscn); the wheel is drawn in
+## the scene's (scenes/screens/court.tscn, conversation.tscn); the wheel is drawn in
 ## the band below the report's drawn foot (wheel_rect).
 func _ready() -> void:
 	if art == null:

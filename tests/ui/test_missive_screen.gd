@@ -249,8 +249,8 @@ func test_reading_a_letter_goes_through_game() -> void:
 ## is simply empty (owner 2026-09-30).
 func test_the_board_and_the_report_wear_mains_window_look() -> void:
 	Game.start_campaign(42)
-	var ms: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
-	var rp: MissiveReportPopup = load("res://scenes/missive_report_popup.tscn").instantiate()
+	var ms: MissiveScreen = load("res://scenes/screens/missive_screen.tscn").instantiate()
+	var rp: MissiveReportPopup = load("res://scenes/panels/missive_report_popup.tscn").instantiate()
 	add_child_autofree(ms)
 	add_child_autofree(rp)
 	await wait_process_frames(1)
@@ -270,7 +270,7 @@ func test_the_board_and_the_report_wear_mains_window_look() -> void:
 func test_the_desk_and_the_notes_write_in_the_letters_ink() -> void:
 	Game.start_campaign(42)
 	var id := _letter("credible")
-	var ms: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	var ms: MissiveScreen = load("res://scenes/screens/missive_screen.tscn").instantiate()
 	add_child_autofree(ms)
 	ms.select(id)
 	var ink := MapPalette.named(Game.data, "missive_ink")

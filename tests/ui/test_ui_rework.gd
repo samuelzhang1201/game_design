@@ -13,7 +13,7 @@ func _root() -> GameRoot:
 ## The conversation stage alone, themed as GameRoot themes it: a test that
 ## only needs the scene does not build the whole root to switch to it.
 func _stage() -> ConversationScene:
-	var c: ConversationScene = load("res://scenes/conversation.tscn").instantiate()
+	var c: ConversationScene = load("res://scenes/screens/conversation.tscn").instantiate()
 	c.theme = UiPalette.build_theme()
 	add_child_autofree(c)
 	return c

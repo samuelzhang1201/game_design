@@ -7,7 +7,7 @@ func test_board_only_hides_the_desk_and_reports_a_note() -> void:
 	Game.start_campaign(44)
 	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
 		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
-	var s: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	var s: MissiveScreen = load("res://scenes/screens/missive_screen.tscn").instantiate()
 	add_child_autofree(s)
 	s.set_board_only(true)
 	s.visible = true
@@ -27,7 +27,7 @@ func test_the_full_board_still_reads_a_note() -> void:
 	Game.start_campaign(44)
 	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", 3,
 		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "A letter", []))
-	var s: MissiveScreen = load("res://scenes/missive_screen.tscn").instantiate()
+	var s: MissiveScreen = load("res://scenes/screens/missive_screen.tscn").instantiate()
 	add_child_autofree(s)
 	s.refresh()
 	await wait_process_frames(1)

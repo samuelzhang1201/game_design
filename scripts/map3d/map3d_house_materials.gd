@@ -2,7 +2,7 @@ class_name Map3DHouseMaterials
 extends RefCounted
 ## The house meshes' surfaces as Map3DLayerHouses draws them (moved out of the
 ## layer, perf 2026-10-02, to keep it small). Every surface's material is
-## AUTHORED in its house type's scene (assets/3D/buildings/<type>/<type>.tscn,
+## AUTHORED in its house type's scene (scenes/models/buildings/<type>.tscn,
 ## owner 2026-10-04: each house model is a scene, edited in the editor) —
 ## house_surface.gdshader with its texture, roughness and role; the layer
 ## draws its own COPY of each, to which it adds only what is not the house's:

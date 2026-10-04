@@ -91,7 +91,7 @@ var _shown_province := ""
 var _open := false
 
 
-## The card's frame is scenes/map_detail_panel.tscn (owner 2026-10-02: the
+## The card's frame is scenes/panels/map_detail_panel.tscn (owner 2026-10-02: the
 ## look lives in the editor): the painting band, the scrolling body and its
 ## sections, the map window, ASK and CLOSE. Its rows are made here as cards
 ## are shown, each a theme kind (CardText, CardLabel, CardStatName,
@@ -147,7 +147,7 @@ func _ready() -> void:
 
 ## The card as the game makes it: its scene.
 static func create() -> MapDetailPanel:
-	return (load("res://scenes/map_detail_panel.tscn") as PackedScene).instantiate()
+	return (load("res://scenes/panels/map_detail_panel.tscn") as PackedScene).instantiate()
 
 
 ## Whether a card is open. The screen's left column asks this rather than

@@ -19,9 +19,9 @@ const WIDTH := 1280
 const HEIGHT := 720
 
 const SCENES := {
-	"court": "res://scenes/court.tscn",
-	"conversation": "res://scenes/conversation.tscn",
-	"main_menu": "res://scenes/main_menu.tscn",
+	"court": "res://scenes/screens/court.tscn",
+	"conversation": "res://scenes/screens/conversation.tscn",
+	"main_menu": "res://scenes/screens/main_menu.tscn",
 	# The whole game: GameRoot owns the top bar, the bottom tab strip and the
 	# ticker, so anything outside a screen's own frame only shows here.
 	"root": "res://scenes/game_root.tscn",

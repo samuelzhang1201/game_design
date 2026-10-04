@@ -36,7 +36,7 @@ var _starting := false
 static var landing_frame: Texture2D
 
 ## The living title is the scene's (owner 2026-10-02: the look lives in the
-## editor — scenes/main_menu.tscn); _ready fills its words and wires it. The
+## editor — scenes/screens/main_menu.tscn); _ready fills its words and wires it. The
 ## leather page of `ui_war_table` 0 is still dressed in code.
 func _ready() -> void:
 	if not UiPalette.war_table():

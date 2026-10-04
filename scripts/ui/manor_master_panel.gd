@@ -35,11 +35,11 @@ static func attach(column: BoxContainer) -> ManorMasterPanel:
 	column.add_child(p)
 	return p
 
-## The table as the game makes it: scenes/manor_master_panel.tscn (owner
+## The table as the game makes it: scenes/panels/manor_master_panel.tscn (owner
 ## 2026-10-02: the look lives in the editor) — the table wears the theme's
 ## ManorTable kind, written in the column's ink — hidden until MANORS is lit.
 static func create() -> ManorMasterPanel:
-	return (load("res://scenes/manor_master_panel.tscn") as PackedScene).instantiate()
+	return (load("res://scenes/panels/manor_master_panel.tscn") as PackedScene).instantiate()
 
 func _ready() -> void:
 	_title = $Title

@@ -1,6 +1,6 @@
 // One surface of a settlement house (owner 2026-09-25: "房屋墙壁和房顶的颜色
 // 可以多样化一点，主色调不变，但可以有不同variant"). Each surface's material is
-// set in its house type's scene (assets/3D/buildings/<type>/<type>.tscn, edited
+// set in its house type's scene (scenes/models/buildings/<type>.tscn, edited
 // in the editor): its albedo texture, its roughness, the grime baked into its
 // vertex colour, its role; double-sided. Map3DLayerHouses draws a copy that
 // multiplies a WALL or ROOF surface by one of its tints (edited on the node),

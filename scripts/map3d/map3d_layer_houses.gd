@@ -10,7 +10,7 @@ extends Node3D
 ## this only instances them. Takes everything from Map3DContext — never the
 ## Game autoload.
 ##
-## Each type is a SCENE, assets/3D/buildings/<type>/<type>.tscn (GameArt's
+## Each type is a SCENE, scenes/models/buildings/<type>.tscn (GameArt's
 ## HOUSE_MODELS; owner 2026-10-04: 每个房屋的模型为什么不是一个场景), which
 ## inherits its .glb and gives every surface (a recess, walls, a roof, timber)
 ## its own house_surface.gdshader material in the editor — texture, roughness,

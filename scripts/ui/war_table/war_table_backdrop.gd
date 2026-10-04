@@ -10,7 +10,7 @@ extends Control
 
 const ART_PATH := "res://assets/2D/ui/war_table/table_oak.jpg"
 
-## The look, edited on the node (scenes/court.tscn, conversation.tscn).
+## The look, edited on the node (scenes/screens/court.tscn, conversation.tscn).
 @export var texture: Texture2D = null:
 	set(v):
 		texture = v

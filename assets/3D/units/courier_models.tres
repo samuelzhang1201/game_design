@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://dwvoeysvq2pob"]
 
-[ext_resource type="PackedScene" uid="uid://bi7gk6hjtkxvm" path="res://assets/3D/units/courier/courier.glb" id="1_yonvo"]
-[ext_resource type="PackedScene" uid="uid://dhnqk36nm38fi" path="res://assets/3D/units/cavalry/cavalry.glb" id="2_dmovn"]
+[ext_resource type="PackedScene" uid="uid://cg1tl0kqfsvyj" path="res://scenes/models/units/courier.tscn" id="1_yonvo"]
+[ext_resource type="PackedScene" uid="uid://baiytx1l41c33" path="res://scenes/models/units/cavalry.tscn" id="2_dmovn"]
 [ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="3_ei111"]
 
 [resource]

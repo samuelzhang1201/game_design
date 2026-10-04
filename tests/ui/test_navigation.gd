@@ -24,7 +24,7 @@ func after_each() -> void:
 
 func test_the_bottom_bar_groups_lenses_left_and_screens_right() -> void:
 	Game.data.balance["ui_nav_grouped"] = 1.0
-	var bar: BottomBar = load("res://scenes/bottom_bar.tscn").instantiate()
+	var bar: BottomBar = load("res://scenes/hud/bottom_bar.tscn").instantiate()
 	bar.theme = UiPalette.build_theme()
 	add_child_autofree(bar)
 	await wait_process_frames(1)
@@ -50,7 +50,7 @@ func test_the_bottom_bar_groups_lenses_left_and_screens_right() -> void:
 ## keeps the row inside the design viewport.
 func test_the_missive_tab_is_a_screen_and_its_badge_fits() -> void:
 	Game.data.balance["ui_nav_grouped"] = 1.0
-	var bar: BottomBar = load("res://scenes/bottom_bar.tscn").instantiate()
+	var bar: BottomBar = load("res://scenes/hud/bottom_bar.tscn").instantiate()
 	bar.theme = UiPalette.build_theme()
 	add_child_autofree(bar)
 	await wait_process_frames(1)

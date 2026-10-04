@@ -46,9 +46,10 @@ static func half_extent(offs: PackedVector2Array, extent: Vector2) -> Vector2:
 
 
 ## A Node3D holding one instance of `scene` per offset (x, z), all facing the
-## parent's way, each casting its shadow (owner 2026-09-27: 兵人需要增加阴影).
-## `first` is an already-made figure for the first slot (the caller measured
-## it); none is saved (no owner).
+## parent's way. Each casts its shadow (owner 2026-09-27: 兵人需要增加阴影)
+## because the figure's scene says so (scenes/models/units/<arm>.tscn,
+## edited in the editor). `first` is an already-made figure for the first slot
+## (the caller measured it); none is saved (no owner).
 static func build(scene: PackedScene, offs: PackedVector2Array, first: Node3D) -> Node3D:
 	var root := Node3D.new()
 	for i in offs.size():
@@ -58,8 +59,6 @@ static func build(scene: PackedScene, offs: PackedVector2Array, first: Node3D) -
 		fig.name = "Figure%d" % i
 		fig.position = Vector3(offs[i].x, 0.0, offs[i].y)
 		root.add_child(fig)
-		for m: MeshInstance3D in Map3DUnits.meshes(fig):
-			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	return root
 
 

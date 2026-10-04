@@ -29,7 +29,7 @@ var _history_list: VBoxContainer
 var _quiet: Label
 
 ## The slip is the scene's (owner 2026-10-02: the look lives in the editor —
-## scenes/news_ticker.tscn: the paper slip news_slip.tres, the rubric LOG, the
+## scenes/hud/news_ticker.tscn: the paper slip news_slip.tres, the rubric LOG, the
 ## crawl and the quiet line in the paper's ink, the log window
 ## leather_news_log.tres). _ready finds and wires it; the glass bar of
 ## `ui_war_table` 0 is still dressed in code.

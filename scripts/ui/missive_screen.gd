@@ -55,7 +55,7 @@ var _board_only := false
 	"truth": %TruthNotes, "credible": %CredibleNotes, "consult": %ConsultNotes, "rumour": %RumourNotes}
 
 
-## The board's look is scenes/missive_screen.tscn (owner 2026-10-02: the look
+## The board's look is scenes/screens/missive_screen.tscn (owner 2026-10-02: the look
 ## lives in the editor): the carved frame over the wood (frame.tres, its fill
 ## board_wood.tres), the plaques, the desk's parchment casting its shadow
 ## (desk.tres), the letter's ink (the MissiveLetter* kinds); the notes made

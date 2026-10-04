@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://cg1tl0kqfsvyj"]
+
+[ext_resource type="PackedScene" uid="uid://bi7gk6hjtkxvm" path="res://assets/3D/units/courier/courier.glb" id="1_jyeeh"]
+[ext_resource type="Texture2D" uid="uid://bkn0po1k8pleq" path="res://assets/3D/units/courier/courier_courier_atlas.jpg" id="2_70o2b"]
+[ext_resource type="Texture2D" uid="uid://cm1vsqk37qq8e" path="res://assets/3D/units/courier/courier_courier_atlas_mr.jpg" id="3_p0poy"]
+[ext_resource type="Texture2D" uid="uid://bjx1i0n81xx0y" path="res://assets/3D/units/courier/courier_courier_atlas_n.jpg" id="4_871vu"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_y0cpm"]
+resource_name = "courier_atlas"
+albedo_texture = ExtResource("2_70o2b")
+metallic = 1.0
+metallic_texture = ExtResource("3_p0poy")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("3_p0poy")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("4_871vu")
+metadata/_gltf_primary_texture_coord = 0
+
+[node name="courier2" unique_id=1604919865 instance=ExtResource("1_jyeeh")]
+editor_description = "The courier on the 3D map (Map3DLayerCouriers): one instance per courier riding, GALLOP / IDLE by its ride. Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/courier_art.csv."
+
+[node name="courier" parent="courier_rig/Skeleton3D" parent_id_path=PackedInt32Array(646570049) index="0" unique_id=364255404]
+surface_material_override/0 = SubResource("StandardMaterial3D_y0cpm")

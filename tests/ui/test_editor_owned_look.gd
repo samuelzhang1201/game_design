@@ -90,24 +90,24 @@ func test_the_court_keeps_its_scenes_look() -> void:
 	r._switch_to(GameRoot.State.COURT)
 	r.current_screen.enter_court(null)
 	await wait_process_frames(3)
-	_assert_scene_holds(r.current_screen, "res://scenes/court.tscn")
-	_assert_scene_holds(r.current_screen.get_node("%TopBar"), "res://scenes/top_bar.tscn", "TopBar/")
-	_assert_scene_holds(r.bottom_bar(), "res://scenes/bottom_bar.tscn", "BottomBar/")
+	_assert_scene_holds(r.current_screen, "res://scenes/screens/court.tscn")
+	_assert_scene_holds(r.current_screen.get_node("%TopBar"), "res://scenes/hud/top_bar.tscn", "TopBar/")
+	_assert_scene_holds(r.bottom_bar(), "res://scenes/hud/bottom_bar.tscn", "BottomBar/")
 	_assert_scene_holds(r.current_screen.get_node("%CouncilHandle"), "res://scenes/war_table/council_seal.tscn", "Seal/", 8)
-	_assert_scene_holds(r.news_ticker(), "res://scenes/news_ticker.tscn", "NewsTicker/")
+	_assert_scene_holds(r.news_ticker(), "res://scenes/hud/news_ticker.tscn", "NewsTicker/")
 	_assert_scene_holds(r.current_screen.find_child("RealmDashboard", true, false),
-		"res://scenes/realm_dashboard.tscn", "Dashboard/")
+		"res://scenes/panels/realm_dashboard.tscn", "Dashboard/")
 	_assert_scene_holds(r.current_screen.find_child("CountryPanel", true, false),
-		"res://scenes/country_panel.tscn", "Country/", 8)
+		"res://scenes/panels/country_panel.tscn", "Country/", 8)
 	_assert_scene_holds(r.current_screen.find_child("MilitaryPanel", true, false),
-		"res://scenes/military_panel.tscn", "Host/", 5)
+		"res://scenes/panels/military_panel.tscn", "Host/", 5)
 	_assert_scene_holds(r.current_screen.find_child("ManorMasterPanel", true, false),
-		"res://scenes/manor_master_panel.tscn", "Manors/", 5)
+		"res://scenes/panels/manor_master_panel.tscn", "Manors/", 5)
 	var detail: MapDetailPanel = r.current_screen.detail_panel()
 	detail.show_manor(int(MapManors.manors_of_province(Game.data,
 		MapManors.home_province(Game.data, Game.state), Game.state)[0]))
 	await wait_process_frames(2)
-	_assert_scene_holds(detail, "res://scenes/map_detail_panel.tscn", "Detail/")
+	_assert_scene_holds(detail, "res://scenes/panels/map_detail_panel.tscn", "Detail/")
 	# the scene's layout, moved in the editor, still starts the columns under the bar
 	var bar: TopBar = r.current_screen.get_node("%TopBar")
 	for n in ["%LogPanel", "%MapPanel", "%SidePanel"]:
@@ -119,13 +119,13 @@ func test_the_conversation_keeps_its_scenes_look() -> void:
 	_start(r)
 	r._switch_to(GameRoot.State.CONVERSATION)
 	await wait_process_frames(3)
-	_assert_scene_holds(r.current_screen, "res://scenes/conversation.tscn")
+	_assert_scene_holds(r.current_screen, "res://scenes/screens/conversation.tscn")
 
 func test_the_title_keeps_its_scenes_look() -> void:
 	var r := _root()
 	await wait_process_frames(2)
 	assert_true(r.current_screen is MainMenu)
-	_assert_scene_holds(r.current_screen, "res://scenes/main_menu.tscn")
+	_assert_scene_holds(r.current_screen, "res://scenes/screens/main_menu.tscn")
 	# the rows GameRoot hands in wear the scene's word look, not the pause menu's
 	var dev := (r.current_screen as MainMenu).menu_column().get_node("DevMode") as Button
 	assert_eq(dev.theme_type_variation, &"TitleWordSmall")
@@ -155,7 +155,7 @@ func test_each_screen_has_its_own_report_paper() -> void:
 	_start(r)
 	r._switch_to(GameRoot.State.COURT)
 	var a := (r.current_screen.get_node("%LogPanel") as Control).get_theme_stylebox("panel")
-	var b: Control = load("res://scenes/conversation.tscn").instantiate()
+	var b: Control = load("res://scenes/screens/conversation.tscn").instantiate()
 	add_child_autofree(b)
 	var c := (b.get_node("%MinisterPanel") as Control).get_theme_stylebox("panel")
 	assert_true(a is PaperStyle and c is PaperStyle)

@@ -80,7 +80,7 @@ const AUDIENCE_MARGIN := 16.0
 const PORTRAIT_TOP := 0.03
 const PORTRAIT_HEIGHT := 0.56
 
-## The screen's look lives in scenes/conversation.tscn and is edited in the
+## The screen's look lives in scenes/screens/conversation.tscn and is edited in the
 ## editor (owner 2026-10-02): THE WAR TABLE's oak, sheet, report, compass and
 ## seal as on the court, the audience window's leather, banner, gilt portrait
 ## frame and name plate, the label kinds, the council column. _ready fetches
@@ -169,7 +169,7 @@ func _ready() -> void:
 ## The leather chrome (balance ui_war_table 0): no table, no compass, no seal;
 ## the map and the facts column in the 2026-09-28 dark leather, and ENTER THE
 ## COUNCIL the screen's primary button. The audience window, the popup and
-## the council column are leather either way (scenes/conversation.tscn).
+## the council column are leather either way (scenes/screens/conversation.tscn).
 func _dress_leather() -> void:
 	_leather = true
 	%Bg.color = UiPalette.BG_SCREEN

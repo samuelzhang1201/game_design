@@ -11,7 +11,7 @@ var _title: Label
 var _grid: GridContainer
 var _current_tab := ""
 
-## Its look is scenes/info_screen.tscn (owner 2026-10-02: the look lives in
+## Its look is scenes/screens/info_screen.tscn (owner 2026-10-02: the look lives in
 ## the editor); its rows wear the theme's InfoHead / InfoLabel kinds.
 func _ready() -> void:
 	_title = $Panel/Col/Title

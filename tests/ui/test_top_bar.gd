@@ -4,7 +4,7 @@ extends GutTest
 ## kingdom-card coverage (values mode, changes mode) onto the strip.
 
 func _bar() -> TopBar:
-	var t: TopBar = load("res://scenes/top_bar.tscn").instantiate()
+	var t: TopBar = load("res://scenes/hud/top_bar.tscn").instantiate()
 	add_child_autofree(t)
 	return t
 

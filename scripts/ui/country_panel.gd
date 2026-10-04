@@ -29,7 +29,7 @@ var _shown_code := ""
 var _shown_version := -1
 
 
-## The card is scenes/country_panel.tscn (owner 2026-10-02: the look lives in
+## The card is scenes/panels/country_panel.tscn (owner 2026-10-02: the look lives in
 ## the editor), its lines theme kinds the column's theme inks.
 func _ready() -> void:
 	_swatch = $Head/Swatch
@@ -45,7 +45,7 @@ func _ready() -> void:
 
 ## The card as the game makes it: its scene.
 static func create() -> CountryPanel:
-	return (load("res://scenes/country_panel.tscn") as PackedScene).instantiate()
+	return (load("res://scenes/panels/country_panel.tscn") as PackedScene).instantiate()
 
 
 ## Put the panel in `column`; Map3DView.attach has it follow the map's hover.

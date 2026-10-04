@@ -4,7 +4,7 @@ extends Control
 ## THE LIVING REALM's reading side (owner 2026-10-01, title plan A): the left
 ## of the title darkened over the live map so its words read, fading out
 ## `reach` across the screen, and the top and foot a touch darker. Its look is
-## edited on the node (scenes/main_menu.tscn's Shade; owner 2026-10-02).
+## edited on the node (scenes/screens/main_menu.tscn's Shade; owner 2026-10-02).
 
 ## The darkness at the left edge, 0..1.
 @export_range(0.0, 1.0, 0.01) var shade := 0.92:

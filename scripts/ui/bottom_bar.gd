@@ -49,7 +49,7 @@ var _bar: PanelContainer
 signal slip_moved(rect: Rect2)
 
 ## The strip is the scene's (owner 2026-10-02: the look lives in the editor —
-## scenes/bottom_bar.tscn): every tab a silk bookmark of
+## scenes/hud/bottom_bar.tscn): every tab a silk bookmark of
 ## assets/2D/ui/war_table/styles/ribbons/ in its group's colour (lens green;
 ## FAMILIES and LAWS blue; RELIGION and MISSIVE purple; WAR ROOM and LEDGER
 ## red), the gap between the groups where the news slip lies

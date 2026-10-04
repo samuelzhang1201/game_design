@@ -3,7 +3,7 @@ extends RefCounted
 ## THE WAR TABLE (owner 2026-10-01, B3 + C1's bookmarks; spec
 ## docs/superpowers/specs/2026-10-01-war-table-ui-design.md): the oak, the
 ## map's vellum sheet, the steward's pinned report. Since 2026-10-02 the
-## screens carry them in their scenes (scenes/court.tscn, conversation.tscn);
+## screens carry them in their scenes (scenes/screens/court.tscn, conversation.tscn);
 ## what is left here is the paper column's live work (ink_column, fit_report)
 ## and the paper styles the unconverted pieces still make in code.
 

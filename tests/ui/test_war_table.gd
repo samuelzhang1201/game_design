@@ -32,7 +32,7 @@ func test_paper_takes_dark_ink_that_reads_on_it() -> void:
 	assert_eq(UiPalette.ink("rubric"), UiPalette.table_color("rubric"))
 
 func test_every_tab_hangs_a_bookmark_in_its_groups_colour() -> void:
-	var bar: BottomBar = load("res://scenes/bottom_bar.tscn").instantiate()
+	var bar: BottomBar = load("res://scenes/hud/bottom_bar.tscn").instantiate()
 	add_child_autofree(bar)
 	var colour := func(tab: String) -> Color:
 		var style := bar.button(tab).get_theme_stylebox("normal")
@@ -75,7 +75,7 @@ func test_the_map_is_a_sheet_and_the_column_a_report() -> void:
 	var report := court.get_node("%LogPanel").get_theme_stylebox("panel") as PaperStyle
 	assert_not_null(report, "the left column is paper")
 	assert_true(report.pin, "pinned at its head")
-	assert_true(court.get_node_or_null("%Table") is WarTableBackdrop, "the oak table lies under the panels (scenes/court.tscn)")
+	assert_true(court.get_node_or_null("%Table") is WarTableBackdrop, "the oak table lies under the panels (scenes/screens/court.tscn)")
 
 func test_the_council_is_a_wax_seal_and_still_the_order() -> void:
 	var r := _root()

@@ -7,7 +7,7 @@ extends Control
 signal sealed(from: Rect2)
 
 
-## The dialog's look is scenes/missive_report_popup.tscn (the letter's
+## The dialog's look is scenes/panels/missive_report_popup.tscn (the letter's
 ## parchment, report_letter.tres; the title face; Seal a Command).
 func _ready() -> void:
 	%Seal.pressed.connect(func() -> void:

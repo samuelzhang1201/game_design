@@ -1,6 +1,6 @@
 extends GutTest
 ## Every house type is a SCENE (owner 2026-10-04: 每个房屋的模型为什么不是一个
-## 场景): assets/3D/buildings/<type>/<type>.tscn inherits its .glb and gives
+## 场景): scenes/models/buildings/<type>.tscn inherits its .glb and gives
 ## each surface its house_surface.gdshader material in the editor, and the map
 ## draws exactly those materials, adding only the Houses node's tints and the
 ## weather to its own copies.
@@ -22,8 +22,9 @@ func test_every_type_names_a_scene_that_inherits_its_glb() -> void:
 		if not FileAccess.file_exists(path):
 			fail_test(type + " has no scene at " + path)
 			continue
+		assert_true(path.begins_with("res://scenes/models/buildings/"), type + "'s scene is a scene, so it lives under scenes/: " + path)
 		var text := FileAccess.get_file_as_string(path)
-		var glb := path.get_basename() + ".glb"
+		var glb := "res://assets/3D/buildings/%s/%s.glb" % [type, type]
 		assert_true(text.contains('path="%s"' % glb) and text.contains("instance=ExtResource("),
 			type + "'s scene inherits " + glb + " (New Inherited Scene), so a re-export carries over")
 

@@ -34,7 +34,7 @@ var drawn_source := Callable()
 
 
 func _ready() -> void:
-	# its look is scenes/war_room_screen.tscn (owner 2026-10-02): the frame,
+	# its look is scenes/screens/war_room_screen.tscn (owner 2026-10-02): the frame,
 	# the title, the paper slips (war_slip.tres) and the card's roll, each
 	# under the paper's theme so their words write in its ink; the leather of
 	# ui_war_table 0 is put on in code (_dress_leather)
@@ -158,7 +158,7 @@ func _build_board() -> void:
 	_board_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	_board_vp.gui_embed_subwindows = true
 	add_child(_board_vp)
-	_board_screen = load("res://scenes/missive_screen.tscn").instantiate()
+	_board_screen = load("res://scenes/screens/missive_screen.tscn").instantiate()
 	_board_screen.theme = UiPalette.build_theme()
 	_board_vp.add_child(_board_screen)
 	_board_screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

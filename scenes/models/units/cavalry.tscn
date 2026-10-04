@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://baiytx1l41c33"]
+
+[ext_resource type="PackedScene" uid="uid://dhnqk36nm38fi" path="res://assets/3D/units/cavalry/cavalry.glb" id="1_daio0"]
+[ext_resource type="Texture2D" uid="uid://bh1sy7morpm48" path="res://assets/3D/units/cavalry/cavalry_cavalry_atlas.jpg" id="2_by0yy"]
+[ext_resource type="Texture2D" uid="uid://b8k2nw88er6fj" path="res://assets/3D/units/cavalry/cavalry_cavalry_atlas_mr.jpg" id="3_n2v6j"]
+[ext_resource type="Texture2D" uid="uid://cuur6160upxuk" path="res://assets/3D/units/cavalry/cavalry_cavalry_atlas_n.jpg" id="4_wemma"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_j82kq"]
+resource_name = "cavalry_atlas"
+albedo_texture = ExtResource("2_by0yy")
+metallic = 1.0
+metallic_texture = ExtResource("3_n2v6j")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("3_n2v6j")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("4_wemma")
+metadata/_gltf_primary_texture_coord = 0
+
+[node name="Tripo_Cavalry" unique_id=2134445081 instance=ExtResource("1_daio0")]
+editor_description = "The knight, one FIGURE of a regiment's piece. The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/army_art.csv."
+
+[node name="cavalry" parent="cavalry_rig/Skeleton3D" parent_id_path=PackedInt32Array(523577044) index="0" unique_id=225431238]
+surface_material_override/0 = SubResource("StandardMaterial3D_j82kq")
