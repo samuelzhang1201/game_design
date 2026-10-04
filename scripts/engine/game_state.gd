@@ -4,7 +4,7 @@ extends RefCounted
 var tick: int = 0
 ## The day within the tick, 1..Calendar.DAYS_PER_TICK (owner 2026-09-13:
 ## the smallest unit of time is a day; the clock advances it, and the
-## fifteenth day's end is the tick). Saved; an old save loads at day 1.
+## thirtieth day's end is the tick). Saved; an old save loads at day 1.
 var day: int = 1
 var rng: Rng
 var metrics: Dictionary = {}

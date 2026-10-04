@@ -13,7 +13,7 @@ func _init(d: DataRepository) -> void:
 	events = EventSystem.new(d)
 
 ## One day (owner 2026-09-13: the smallest unit of time). Works in
-## progress step; the fifteenth day's end is a tick, which the caller
+## progress step; the thirtieth day's end is a tick, which the caller
 ## (Game.advance_day) runs through advance(). Returns the works finished
 ## today, [{cell, building}].
 func advance_day(state: GameState) -> Array:
