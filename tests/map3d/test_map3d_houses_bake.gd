@@ -51,7 +51,10 @@ func test_no_house_stands_in_the_sea() -> void:
 	var wet := 0
 	var worst := ""
 	for r: Dictionary in _rows:
-		if ["pier", "ship"].has(_role(r)):
+		# a pier and a ship stand on the water; a town wall closes along its
+		# shore (owner 2026-10-05: 有城墙必须要合拢), its foot at the waterline,
+		# which the game's 50 m cells read as sea
+		if ["pier", "ship", "wall"].has(_role(r)):
 			continue
 		var pack := Map3DGeometry.world_to_pack(_meta,
 			Vector2(float(r["x_m"]), float(r["z_m"])))

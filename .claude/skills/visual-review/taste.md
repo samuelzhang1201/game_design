@@ -661,8 +661,13 @@ add it here as a principle with its why — not as a changelog entry.
   and stands on no house footing (城墙不应该有那些类似房屋才有的地基): its own masonry runs
   into the ground. Towers are punctuation — at sharp turns, gates and the wall's ends —
   never a tower every few modules (加入了过多的城塔楼).
-- **A harbour belongs to its town** (港口的结构应当和城市融为一体). No field of empty
-  grass between the quay and the houses: the pier stands on the shore nearest the
-  houses, and a cliff harbour grows until its stair reaches the town's own level.
+- **A harbour belongs to its town** (港口的结构应当和城市融为一体). The pier stands on the
+  shore nearest the houses.
+- **A harbour keeps its own proportions** (owner 2026-10-05: 这岩堡大小太不合理了). A castle
+  grown to meet a town on a plateau stood three houses tall: never scale a model to
+  bridge the terrain — a road links a town on its height to the harbour below.
+- **A wall closes** (owner 2026-10-05: 有城墙必须要合拢). No gap where the sea, a river or a
+  harbour meets it: the line runs along the shore and the cliff top, crosses a river by a
+  water gate, and opens on its pier by a quay gate.
 - **A moored ship lies alongside its quay, square to it** (船要规整的贴着码头停留). Not
   anchored off the pier's head, not a ship-length away.

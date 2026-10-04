@@ -157,6 +157,7 @@ wall_min_r_m,60,walls: no wall ring smaller than this radius
 wall_len_m,24,walls: a wall module's length when data/map3d_houses.csv has no `wall` row (it does: its footprint_m)
 wall_tower_turn_deg,45,walls: a tower stands at every joint the line turns by this much or more (owner 2026-10-04: 加入了过多的城塔楼 — was 24)
 wall_tower_every,12,walls: and at every this-many-th joint regardless (was 4: a tower every 96 m read as a sawtooth)
+wall_tower_gap_m,60,"walls: no tower within this far of another tower or a gate (a line pulled back along a shore turns often, and its towers bunched three to a corner, 2026-10-05)"
 wall_min_houses,8,walls: a walled settlement with fewer buildings than this gets no wall
 pier_len_m,60,"3D bake PIERS (owner 2026-10-01: 码头延伸到海里): a pier's length, metres — data/map3d_houses.csv pier footprint_m; this much water must lie beyond the shore on its bearing"
 pier_root_m,6,piers: the pier's landward end this far inland of the shore (its deck meets the bank)
@@ -164,16 +165,17 @@ pier_search_m,700,piers: how far from a port's centre its shore is looked for
 pier_step_m,10,piers: the march step along a bearing
 pier_bearing_step_deg,5,piers: the bearings tried
 pier_max_shore_m,6,piers: the shore's ground at most this far over the sea (a pier never runs off a cliff)
-wall_shore_m,30,"3D bake WALLS: a wall module stands only where every vertex within this far is land (the bake's 20 m mask against the game's 50 m cell index: at the bare point a module on the shore's last vertex read as in the sea)"
+wall_shore_m,10,"3D bake WALLS: the wall's line keeps back from the sea until every vertex within this far is land (bake_houses.wall_ring) — less than a house's house_shore_min_m, so a wall closes along the shore OUTSIDE the houses that come down to it (owner 2026-10-05: 有城墙必须要合拢)"
+wall_river_pull_m,40,"walls (owner 2026-10-05: 有城墙必须要合拢): a wall's line is pulled back to a river's near bank when that is no more than this far in; a river further in runs through the town and the wall crosses it with a water gate"
+wall_max_slope,0.9,"walls: the wall's line keeps back from ground steeper than this (rise over run) — a cliff's edge, where a module sheared over the drop stood as a stretched screen (bineterston's waterfall, 2026-10-05)"
 pier_cliff_min_shore_m,20,"3D bake CLIFF HARBOURS (owner 2026-10-01: 适合那种我的首都建在悬崖边上的那种风格): a port's shore whose ground stands this many metres or more over the sea is a cliff, and takes pier_cliff (data/map3d_houses.csv) — the rock, its stair and castle, the quay at its foot"
 pier_cliff_root_m,-25,"cliff harbours: the model's centre this far inland of the shore — NEGATIVE, out to sea: its rock's seaward face, gate and stair stand proud of the shore, its back against the terrain's own cliff (at +10 inland the real cliff buried rock and stair, horsfield 2026-10-04)"
 pier_cliff_capital_first,1,"cliff harbours: 1 = a capital with a cliff shore takes the cliff harbour even where it also has a low one (the owner's capital on its cliff); any other port only when it has no low shore"
-pier_cliff_back_m,70,"cliff harbours: how far the model's rock reaches behind its centre, metres at scale 1 (tools/map3d/tripo_harbour)"
-pier_cliff_overlap_m,25,"cliff harbours (owner 2026-10-04: 首都的那个港口…和城市脱节的太远了 … 你把港口模型放大到和城市融合到一起): the harbour is grown until its rock reaches this far past the nearest house; what it covers goes (bake_houses.clear_under)"
-pier_cliff_scale_max,2.0,cliff harbours: the most it is grown
-pier_cliff_height_scale,0.85,"cliff harbours: the least its height is stretched against its spread (on a low cliff a grown rock stays under its town)"
-pier_cliff_height_scale_max,1.8,cliff harbours: the most its height is stretched against its spread
-pier_cliff_crest_m,10,"cliff harbours: its castle stands this far over the highest ground its rock backs onto (owner 2026-10-04: 港口的结构应当和城市融为一体 — the capital stands on a 172 m plateau)"
+pier_cliff_scale,1.0,"cliff harbours: its scale — its own proportions, its castle's towers a house or so tall (owner 2026-10-05: 这岩堡大小太不合理了 — grown 2x and stretched to a 172 m plateau it stood three houses tall)"
+pier_cliff_height_scale,1.0,cliff harbours: its height against its spread (1: never stretched)
+pier_cliff_root_max_m,-65,"cliff harbours: the furthest out to sea its centre is walked (pier_cliff_root_m, then by pier_cliff_root_step_m) to stand clear of a cliff taller than its rock — at most this, or the shore is passed over"
+pier_cliff_root_step_m,10,cliff harbours: the step of that walk
+pier_gate_reach_m,100,"walls (owner 2026-10-05: 有城墙必须要合拢): the wall module nearest a walled port's pier, within this far of its landward end, is its quay gate (bake_houses.clear_under)"
 ship_count_village,1,"3D bake SHIPS (owner 2026-10-04: 港口城市停留在港口的船舶装饰 … 每个不同港口根据其城市大小放置不同的船舶，根据大小1-2艘即可): ships moored at a village's port — the largest type its group allows (map3d_houses.csv role ship, min_group), then others by weight"
 ship_count_fort,1,ships: at a fort's port
 ship_count_town,1,ships: at a town's port

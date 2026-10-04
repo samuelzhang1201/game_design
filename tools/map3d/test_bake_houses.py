@@ -913,7 +913,7 @@ def test_the_world_bake_hands_the_landmark_height_scale_through():
 # -- walls and piers (owner 2026-10-01) ------------------------------------------------
 WALL_RULES = dict(RULES, wall_bins=64, wall_dilate_bins=2, wall_smooth_passes=4, wall_margin_m=18,
                   wall_min_r_m=60, wall_len_m=24, wall_tower_turn_deg=24, wall_tower_every=4,
-                  wall_min_houses=8, wall_shore_m=30, pier_len_m=60, pier_root_m=6, pier_search_m=700,
+                  wall_min_houses=8, wall_shore_m=30, wall_river_pull_m=40, pier_len_m=60, pier_root_m=6, pier_search_m=700,
                   pier_step_m=10, pier_bearing_step_deg=5, pier_max_shore_m=6)
 WALL_TYPES = dict(TYPES,
                   wall={"role": "wall", "weight": 1.0, "footprint_m": 24.0, "width_m": 24.0, "depth_m": 5.0, "min_group": "village"},
@@ -956,19 +956,56 @@ def test_a_walled_town_is_ringed_outside_its_houses_with_a_gate_on_its_road():
     assert ranks == list(range(len(rows), len(rows) + len(out))), "ranks run on densely after the houses"
 
 
-def test_a_town_without_walls_gets_none_and_a_wall_stops_at_the_sea():
+def _circuit_closes(out, gap=3.0):
+    """Every wall module's two ends touch another module (or a gate): the
+    circuit is whole (owner 2026-10-05: 有城墙必须要合拢)."""
+    segs = []
+    for r in out:
+        if r["type"] not in ("wall", "wall_gate"):
+            continue
+        half = 0.5 * WALL_TYPES[r["type"]]["width_m"]
+        yaw = math.radians(r["yaw_deg"])
+        a = (r["x_m"] - half * math.cos(yaw), r["z_m"] + half * math.sin(yaw))
+        b = (r["x_m"] + half * math.cos(yaw), r["z_m"] - half * math.sin(yaw))
+        segs.append((a, b))
+
+    def dist(p, s):
+        (ax, az), (bx, bz) = s
+        vx, vz = bx - ax, bz - az
+        t = max(0.0, min(1.0, ((p[0] - ax) * vx + (p[1] - az) * vz) / max(vx * vx + vz * vz, 1e-9)))
+        return math.hypot(p[0] - ax - t * vx, p[1] - az - t * vz)
+    return all(any(j != i and dist(e, t) < gap for j, t in enumerate(segs)) for i, s in enumerate(segs) for e in s)
+
+
+def test_a_town_without_walls_gets_none_and_a_walled_shore_town_closes_its_wall_on_the_bank():
     _, land, _ = flat_world()
     rows = _toy_town()
     assert bake_houses.fortify(burg(), rows, WALL_RULES, WALL_TYPES, land, None, K, VW, VH, []) == []
     sea = land.copy()
-    sea[:, : CENTRE_COL - 3] = 0.0                # the sea comes to 60 m west of the centre
+    sea[:, : CENTRE_COL - 6] = 0.0                # the sea comes to 120 m west of the centre
     b = dict(burg(), features="walls")
     out = bake_houses.fortify(b, rows, WALL_RULES, WALL_TYPES, sea, None, K, VW, VH, [])
-    assert out, "the land side is still walled"
+    assert out and _circuit_closes(out), "the wall closes, along the shore"
     for r in out:
         vx = CENTRE + r["x_m"] / bake_houses.VERTEX_M
-        assert vx >= CENTRE_COL - 3 - 0.5, f"{r['type']} stands in the sea"
+        assert vx >= CENTRE_COL - 6, f"{r['type']} stands on the land"
     assert any(r["type"] == "wall_gate" for r in out), "a wall with no road still has a gate"
+    assert _circuit_closes(bake_houses.fortify(b, rows, WALL_RULES, WALL_TYPES, land, None, K, VW, VH, [])), \
+        "an inland wall closes too"
+
+
+def test_a_river_through_a_walled_town_takes_a_water_gate():
+    """A river through the town: the wall crosses it, once each side, by a
+    gate standing on its channel."""
+    _, land, _ = flat_world()
+    wet = np.zeros_like(land)
+    wet[CENTRE_COL - 1: CENTRE_COL + 2, :] = 1.0  # a 60 m river running east-west through the centre
+    rows = [r for r in _toy_town() if abs(r["z_m"]) > 35.0 or r["rank"] == 0]
+    out = bake_houses.fortify(dict(burg(), features="walls"), rows, WALL_RULES, WALL_TYPES, land, wet,
+                              K, VW, VH, [])
+    assert _circuit_closes(out)
+    on_river = [r for r in out if r["type"] == "wall_gate" and abs(r["z_m"]) < 30.0]
+    assert len(on_river) == 2, "a water gate where the wall crosses the river, each side of the town"
 
 
 def test_a_port_runs_its_pier_from_the_shore_out_to_sea():
@@ -992,9 +1029,9 @@ def test_a_port_runs_its_pier_from_the_shore_out_to_sea():
 
 # -- cliff harbours and ships (owner 2026-10-04) ----------------------------------------
 SHIP_RULES = dict(WALL_RULES, pier_cliff_min_shore_m=20, pier_cliff_root_m=-25,
-                  pier_cliff_capital_first=1, pier_cliff_back_m=70, pier_cliff_overlap_m=25,
-                  pier_cliff_scale_max=2.0, pier_cliff_height_scale=0.85, pier_cliff_height_scale_max=1.8,
-                  pier_cliff_crest_m=10, ship_count_village=1, ship_count_fort=1, ship_count_town=1,
+                  pier_cliff_capital_first=1, pier_cliff_scale=1.0, pier_cliff_height_scale=1.0,
+                  pier_cliff_root_max_m=-65, pier_cliff_root_step_m=10, pier_gate_reach_m=100,
+                  ship_count_village=1, ship_count_fort=1, ship_count_town=1,
                   ship_count_city=2, ship_count_capital=2, ship_gap_m=1.5, ship_step_m=8, ship_tries=4,
                   ship_anchor_m=30, ship_margin_m=3)
 SHIP_TYPES = dict(WALL_TYPES,
@@ -1115,33 +1152,54 @@ def test_a_pier_takes_the_shore_nearest_the_houses():
     assert out[0]["type"] == "pier" and math.sin(yaw) > 0.7, "the pier runs out north, from beside the houses"
 
 
-def test_a_cliff_harbour_grows_into_the_town_and_takes_what_it_covers():
-    """Owner 2026-10-04 (港口的结构应当和城市融为一体 … 你把港口模型放大到和城市融合到
-    一起): grown until its rock reaches past the nearest house, and the houses
-    under it cleared, the ranks still dense from the landmark."""
-    sea, height = _west_sea(shore_h=40.0)
-    rows = _toy_town()
-    laid = bake_houses.harbour(burg(port=1, group="town"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
-                               types=SHIP_TYPES)
-    p = laid[0]
-    assert p["type"] == "pier_cliff" and p["scale"] > 1.0, "the harbour grows toward the town"
-    assert p["height_scale"] == 0.85, "on a 40 m cliff a grown rock keeps its least height"
-    yaw = math.radians(p["yaw_deg"])
-    d = (math.cos(yaw), -math.sin(yaw))
-    back = (p["x_m"] - d[0] * 70.0 * p["scale"], p["z_m"] - d[1] * 70.0 * p["scale"])
-    nearest = min(math.hypot(h["x_m"] - back[0], h["z_m"] - back[1]) for h in rows)
-    assert nearest < 60.0, "its rock reaches the houses"
-    merged = bake_houses.clear_under(rows, laid, SHIP_TYPES)
-    assert merged[0]["type"] == "chapel" and [r["rank"] for r in merged] == list(range(len(merged)))
-    assert len(merged) <= len(rows) + len(laid)
-
-
-def test_a_cliff_harbour_climbs_to_its_town_on_a_high_plateau():
-    """Owner 2026-10-04 (walbover: 港口的结构应当和城市融为一体): the town stands
-    on a 170 m plateau; the harbour's castle tops out pier_cliff_crest_m over it."""
+def test_a_cliff_harbour_keeps_its_proportions_clear_of_a_taller_cliff():
+    """Owner 2026-10-05 (这岩堡大小太不合理了): on a 170 m plateau the harbour is
+    never grown or stretched to the top — it keeps scale 1 and stands out
+    from the cliff, walked out to sea until no ground rises over its castle's
+    lowest course."""
     sea, height = _west_sea(shore_h=170.0)
     rows = _toy_town()
     p = bake_houses.harbour(burg(port=1, group="capital"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
                             types=SHIP_TYPES)[0]
-    top = 62.4 * p["scale"] * p["height_scale"] + 5.0
-    assert p["type"] == "pier_cliff" and abs(top - 180.0) < 1.0, f"its castle tops out at {top:.0f} m"
+    assert p["type"] == "pier_cliff" and p["scale"] == 1.0 and p["height_scale"] == 1.0
+    d = bake_houses._frame(p)
+    for x, z in bake_houses._castle_corners((p["x_m"], p["z_m"]), d, 1.0):
+        vx, vy = int(round(CENTRE + x / bake_houses.VERTEX_M)), int(round(CENTRE + z / bake_houses.VERTEX_M))
+        assert height[vy, vx] <= 5.0 + bake_houses._CASTLE[4], "no cliff buries its castle"
+    assert p["x_m"] < -160.0 - 50.0, "walked out past its first root, off the 170 m cliff"
+    # on a 40 m cliff its castle clears at once: it stands at its first root
+    sea, height = _west_sea(shore_h=40.0)
+    q = bake_houses.harbour(burg(port=1, group="town"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                            types=SHIP_TYPES)[0]
+    assert -160.0 - 70.0 < q["x_m"] < -160.0, "just off the low cliff, its rock against it"
+    assert q["x_m"] > p["x_m"] + 20.0, "further out off the taller cliff"
+
+
+def test_a_walled_capital_closes_its_wall_with_its_cliff_harbour_below():
+    """Owner 2026-10-05 (有城墙必须要合拢): the capital's wall closes round its
+    houses; its cliff harbour stands below on the shore, outside it, and the
+    ranks stay dense from the landmark."""
+    sea, height = _west_sea(shore_h=40.0)
+    rows = _toy_town()
+    b = dict(burg(port=1, group="capital"), features="walls")
+    laid = bake_houses.harbour(b, rows, SHIP_RULES, sea, height, K, VW, VH, 5.0, types=SHIP_TYPES)
+    walls = bake_houses.fortify(b, rows, SHIP_RULES, SHIP_TYPES, sea, None, K, VW, VH, [])
+    merged = bake_houses.clear_under(rows + walls, laid, SHIP_TYPES, SHIP_RULES)
+    assert laid[0]["type"] == "pier_cliff"
+    assert merged[0]["type"] == "chapel" and [r["rank"] for r in merged] == list(range(len(merged)))
+    assert _circuit_closes([r for r in merged if SHIP_TYPES[r["type"]]["role"] == "wall"])
+    assert len([r for r in merged if r["type"] in ("wall", "wall_gate")]) == \
+        len([r for r in walls if r["type"] in ("wall", "wall_gate")]), "the harbour cuts no module"
+
+
+def test_a_walled_port_opens_a_quay_gate_on_its_pier():
+    sea, height = _west_sea()
+    rows = _toy_town()
+    b = dict(burg(port=1), features="walls")
+    laid = bake_houses.harbour(b, rows, SHIP_RULES, sea, height, K, VW, VH, 5.0, types=SHIP_TYPES)
+    walls = bake_houses.fortify(b, rows, SHIP_RULES, SHIP_TYPES, sea, None, K, VW, VH, [])
+    merged = bake_houses.clear_under(rows + walls, laid, SHIP_TYPES, SHIP_RULES)
+    root = bake_houses._pier_root(laid[0], SHIP_TYPES)
+    gate = min((r for r in merged if r["type"] in ("wall", "wall_gate")),
+               key=lambda r: math.hypot(r["x_m"] - root[0], r["z_m"] - root[1]))
+    assert gate["type"] == "wall_gate", "the module nearest the pier is its quay gate"

@@ -992,22 +992,27 @@ def _on_land(land, wet, vx, vy, vw, vh):
     return wet is None or wet[iy, ix] < 0.5
 
 
-def wall_ring(rows, types, rules, centre):
+def wall_ring(rows, types, rules, centre, dry_at=None, river_at=None):
     """The wall's line round a settlement's houses: for each of wall_bins
-    bearings from `centre` the farthest corner of any building, spread over
-    wall_dilate_bins either way and smoothed (a circular [1, 2, 1] pass,
-    wall_smooth_passes times) — never pulled back inside that spread, so never
-    inside a building — plus wall_margin_m,
-    never under wall_min_r_m. Returns the ring's points, offsets in metres."""
+    bearings from `centre` the farthest corner of any building, spread over wall_dilate_bins either way and smoothed (a circular
+    [1, 2, 1] pass, wall_smooth_passes times) — never pulled back inside that
+    spread, so never inside a building — plus wall_margin_m, never under
+    wall_min_r_m. Then each bearing's line is pulled back to the last point
+    walking out that `dry_at` ((x, z) -> bool: the coast's land with its shore
+    buffer) holds, from its own buildings out — and, when that is no more than
+    wall_river_pull_m back, short of where `river_at` (a river's channel)
+    begins, past the spread — so the wall runs along the shore and a river's
+    near bank, crosses a river that runs through the town (fortify's water
+    gate), and CLOSES (owner 2026-10-05: 有城墙必须要合拢), never inside a
+    building's own corner; the pulled-back line is eased, only inwards.
+    Returns the ring's points, offsets in metres."""
     n = max(int(rules["wall_bins"]), 8)
     raw = np.zeros(n)
     cx, cz = centre
-    for r in rows:
-        t = types.get(r["type"])
-        if t is None:
-            continue
-        dx, dz = r["x_m"] - cx, r["z_m"] - cz
-        reach = math.hypot(dx, dz) + _half_reach(t)
+    pts = [(r["x_m"], r["z_m"], _half_reach(types[r["type"]])) for r in rows if r["type"] in types]
+    for x, z, half in pts:
+        dx, dz = x - cx, z - cz
+        reach = math.hypot(dx, dz) + half
         b = int(round(math.atan2(dz, dx) / (2 * math.pi) * n)) % n
         raw[b] = max(raw[b], reach)
     k = int(rules["wall_dilate_bins"])
@@ -1017,27 +1022,71 @@ def wall_ring(rows, types, rules, centre):
         r = 0.25 * np.roll(r, 1) + 0.5 * r + 0.25 * np.roll(r, -1)
     r = np.maximum(r, env)   # never pulled back inside a building's spread bearings
     r = np.maximum(r + float(rules["wall_margin_m"]), float(rules["wall_min_r_m"]))
+    step = 0.25 * VERTEX_M
+    floor = np.max(np.stack([np.roll(raw, i) for i in range(-2, 3)]), axis=0) + step
+
+    def walk(i, d, ok):
+        ca, sa = math.cos(2 * math.pi * i / n), math.sin(2 * math.pi * i / n)
+        while d + step <= r[i] and ok(cx + (d + step) * ca, cz + (d + step) * sa):
+            d += step
+        return d
+    for i in range(n):
+        lim = r[i]
+        if dry_at is not None:
+            lim = min(lim, walk(i, floor[i], dry_at))
+        if river_at is not None:
+            bank = walk(i, env[i] + step, lambda x, z: not river_at(x, z))
+            if bank >= r[i] - float(rules["wall_river_pull_m"]):
+                lim = min(lim, bank)
+        r[i] = max(lim, floor[i])
+    for _ in range(int(rules["wall_smooth_passes"])):
+        # the pulled-back line eased, only ever further in (never out over
+        # the water it was pulled back from), never inside a building
+        r = np.maximum(np.minimum(r, 0.25 * np.roll(r, 1) + 0.5 * r + 0.25 * np.roll(r, -1)), floor)
     return [(cx + r[i] * math.cos(2 * math.pi * i / n), cz + r[i] * math.sin(2 * math.pi * i / n))
             for i in range(n)]
 
 
-def fortify(burg, rows, rules, types, land, wet, k, vw, vh, roads):
+def fortify(burg, rows, rules, types, land, wet, k, vw, vh, roads, height=None):
     """A walled settlement's wall as house rows: its modules round wall_ring,
-    each `wall` module wall_len_m along the line (the ring cut into whole
-    modules, so they meet), a `wall_gate` where a drawn road crosses the line
-    (at least one, on the side facing the nearest road), a `wall_tower` at
-    every joint the line turns by wall_tower_turn_deg or more, every
-    wall_tower_every modules, and at each end of a run the water cuts — a
-    module whose middle or ends stand in the sea or a river is left out, so a
-    harbour town's wall stops at the shore. Every row faces OUT (yaw puts the
-    module's front, +Z, along its outward normal). `roads` are polylines of
-    offsets in metres from the burg's point. [] for a settlement without
-    walls or with too few houses to ring."""
+    each `wall` module wall_len_m along
+    the line (the ring cut into whole modules, so they meet), a `wall_gate`
+    where a drawn road crosses the line (at least one, on the side facing the
+    nearest road) and one where it crosses a river (a water gate), a `wall_tower`
+    at every joint the line turns by wall_tower_turn_deg or more and every
+    wall_tower_every modules, never within wall_tower_gap_m of another tower
+    or a gate. The line keeps wall_shore_m back from the sea,
+    off a river's water and, given `height`, back from ground steeper than
+    wall_max_slope — a cliff's edge, where a module sheared over the drop
+    stood as a stretched screen (wall_ring) — so the circuit is whole: no
+    module is ever left out. Every row faces OUT
+    (yaw puts the module's front, +Z, along its outward normal). `roads` are
+    polylines of offsets in metres from the burg's point. [] for a settlement
+    without walls or with too few houses to ring."""
     feats = str(burg.get("features", "")).split("|")
     if "walls" not in feats or len(rows) < int(rules["wall_min_houses"]):
         return []
     centre = (rows[0]["x_m"], rows[0]["z_m"])
-    ring = wall_ring(rows, types, rules, centre)
+    bx, bz = float(burg["x"]) * k, float(burg["y"]) * k
+    shore = float(rules["wall_shore_m"])
+
+    def river(p, edge=0.5):
+        # `wet` is 1 in a river's drawn channel and fades out over its bank
+        if wet is None:
+            return False
+        ix, iy = int(round(bx + p[0] / VERTEX_M)), int(round(bz + p[1] / VERTEX_M))
+        return 0 <= ix < vw and 0 <= iy < vh and wet[iy, ix] >= edge
+
+    def dry(x, z):
+        # the coast's land with a shore buffer, as a house's own test (_dry):
+        # at the bare point a module on the shore's last vertex stood in a
+        # cell the game counts as sea (the cell index is 50 m a pixel, the
+        # bake 20)
+        vx, vy = bx + x / VERTEX_M, bz + z / VERTEX_M
+        return _on_land(land, None, vx, vy, vw, vh) and _dry(land, vx, vy, vw, vh, shore) and \
+            (height is None or _slope(height, vx, vy, vw, vh) <= float(rules["wall_max_slope"]))
+    ring = wall_ring(rows, types, rules, centre, dry,
+                     None if wet is None else (lambda x, z: river((x, z), 0.95)))
     seg_len = float(types["wall"]["footprint_m"]) if "wall" in types else float(rules["wall_len_m"])
     per = [math.hypot(ring[(i + 1) % len(ring)][0] - ring[i][0], ring[(i + 1) % len(ring)][1] - ring[i][1])
            for i in range(len(ring))]
@@ -1054,16 +1103,6 @@ def fortify(burg, rows, rules, types, land, wet, k, vw, vh, roads):
             s -= L
         return ring[0]
     joints = [at(total * j / m) for j in range(m)]
-    bx, bz = float(burg["x"]) * k, float(burg["y"]) * k
-
-    shore = float(rules["wall_shore_m"])
-
-    def dry(p):
-        # land with a shore buffer, as a house's own test (_dry): at the bare
-        # point a module on the shore's last vertex stood in a cell the game
-        # counts as sea (the cell index is 50 m a pixel, the bake 20)
-        vx, vy = bx + p[0] / VERTEX_M, bz + p[1] / VERTEX_M
-        return _on_land(land, wet, vx, vy, vw, vh) and _dry(land, vx, vy, vw, vh, shore)
     segs = []
     for j in range(m):
         a, b = joints[j], joints[(j + 1) % m]
@@ -1073,28 +1112,29 @@ def fortify(burg, rows, rules, types, land, wet, k, vw, vh, roads):
         ox, oz = tz / tl, -tx / tl
         if (mid[0] - centre[0]) * ox + (mid[1] - centre[1]) * oz < 0:
             ox, oz = -ox, -oz
-        segs.append({"a": a, "b": b, "mid": mid, "out": (ox, oz),
-                     "ok": dry(mid) and dry(a) and dry(b), "gate": False})
+        segs.append({"a": a, "b": b, "mid": mid, "out": (ox, oz), "wet": river(mid, 0.95), "gate": False})
+    # a water gate in the middle of each run the line crosses a river's channel by
+    for j, sg in enumerate(segs):
+        if sg["wet"] and not segs[j - 1]["wet"]:
+            run = 1
+            while run < m and segs[(j + run) % m]["wet"]:
+                run += 1
+            segs[(j + run // 2) % m]["gate"] = True
     # gates where a drawn road crosses the line
     for line in roads:
         for p, q in zip(line, line[1:]):
             for s in segs:
-                if s["ok"] and _seg_cross(p, q, s["a"], s["b"]) is not None:
+                if _seg_cross(p, q, s["a"], s["b"]) is not None:
                     s["gate"] = True
-    if not any(s["gate"] for s in segs if s["ok"]):
+    if not any(s["gate"] for s in segs):
         best, bd = None, None
         for line in roads:
             for p in line:
                 for s in segs:
-                    if not s["ok"]:
-                        continue
                     d = math.hypot(p[0] - s["mid"][0], p[1] - s["mid"][1])
                     if bd is None or d < bd:
                         best, bd = s, d
-        if best is None:
-            best = next((s for s in segs if s["ok"]), None)
-        if best is not None:
-            best["gate"] = True
+        (best or segs[0])["gate"] = True
     out = []
     rank = max((int(r["rank"]) for r in rows), default=0) + 1
     code = str(burg["burg_code"])
@@ -1107,23 +1147,23 @@ def fortify(burg, rows, rules, types, land, wet, k, vw, vh, roads):
                     "type": kind, "scale": 1.0, "height_scale": 1.0})
         rank += 1
     for s in segs:
-        if s["ok"]:
-            add("wall_gate" if s["gate"] else "wall", s["mid"], s["out"])
+        add("wall_gate" if s["gate"] else "wall", s["mid"], s["out"])
     turn_min = math.radians(float(rules["wall_tower_turn_deg"]))
     every = max(int(rules["wall_tower_every"]), 1)
+    gap_min = float(rules.get("wall_tower_gap_m", 0.0))
     for j in range(m):
         prev, nxt = segs[j - 1], segs[j]
-        if not (prev["ok"] or nxt["ok"]):
-            continue
         if prev["gate"] or nxt["gate"]:
             continue
-        end_of_run = prev["ok"] != nxt["ok"]
         t0 = math.atan2(prev["b"][1] - prev["a"][1], prev["b"][0] - prev["a"][0])
         t1 = math.atan2(nxt["b"][1] - nxt["a"][1], nxt["b"][0] - nxt["a"][0])
         turn = abs((t1 - t0 + math.pi) % (2 * math.pi) - math.pi)
-        if end_of_run or turn >= turn_min or j % every == 0:
+        if turn >= turn_min or j % every == 0:
+            p = joints[j]
+            if any(r["type"] != "wall" and math.hypot(r["x_m"] - p[0], r["z_m"] - p[1]) < gap_min for r in out):
+                continue
             o = ((prev["out"][0] + nxt["out"][0]) / 2, (prev["out"][1] + nxt["out"][1]) / 2)
-            add("wall_tower", joints[j], o)
+            add("wall_tower", p, o)
     return out
 
 
@@ -1132,10 +1172,11 @@ def fortify(burg, rows, rules, types, land, wet, k, vw, vh, roads):
 # in every port (港口城市停留在港口的船舶装饰 … 每个不同港口根据其城市大小放置不同的船舶，
 # 根据大小1-2艘即可), rows of role `ship` the runtime floats and rocks on the sea.
 # Then, on seeing them (港口和城市脱节的太远了 … 港口的结构应当和城市融为一体 … 船要规整的
-# 贴着码头停留): a pier stands on the shore NEAREST THE HOUSES, a cliff harbour is
-# grown until its rock meets them (and clears what it covers, clear_under), and
-# a ship lies alongside its pier. Every number is data/map3d_bake.csv's pier_*,
-# pier_cliff_* / ship_*.
+# 贴着码头停留): a pier stands on the shore NEAREST THE HOUSES and a ship lies
+# alongside it. A cliff harbour keeps its own proportions (2026-10-05: 这岩堡大小
+# 太不合理了) and a walled town's wall closes round its houses (有城墙必须要合拢:
+# fortify), a pier's quay gate in it (clear_under). Every number is
+# data/map3d_bake.csv's pier_*, pier_cliff_* / ship_*.
 
 # A ship's berths in its pier's own frame — the model's Blender metres at
 # scale 1, +X out to sea, +Y the model's left: (point on the quay's face,
@@ -1233,6 +1274,19 @@ def _houses_of(rows, types):
             if types.get(r["type"], {}).get("role") in ("house", "barn", "landmark")]
 
 
+# The cliff harbour's castle — its masonry on top of the rock, the stair's
+# head — in the model's own frame (Blender metres at scale 1, as _BERTHS):
+# x0, x1, y0, y1 and the height its lowest course stands at. Measured off the
+# model (tripo_harbour); re-measure them if it changes.
+_CASTLE = (-50.0, 15.0, -45.0, 45.0, 38.0)
+
+
+def _castle_corners(at, d, sc):
+    x0, x1, y0, y1 = (v * sc for v in _CASTLE[:4])
+    return [(at[0] + o[0], at[1] + o[1]) for o in
+            (_local(d, x, y) for x in (x0, 0.5 * (x0 + x1), x1) for y in (y0, 0.0, y1))]
+
+
 def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types=None):
     """A port's pier and its moored ships as house rows. From the
     settlement's centre every bearing (pier_bearing_step_deg) is walked to
@@ -1242,19 +1296,19 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
     pier_cliff_min_shore_m or more over the sea — takes `pier_cliff` (when
     `types` has it and the group allows it): a capital takes the cliff when it
     has one (pier_cliff_capital_first), any other port only when it has no low
-    shore. Of each kind the shore NEAREST THE SETTLEMENT'S HOUSES wins (the
-    nearest shore without `types`). A cliff harbour stands its centre
-    pier_cliff_root_m inland of the shore at scale s (negative: out to sea),
-    s grown from 1 until its rock (pier_cliff_back_m behind its centre)
-    reaches pier_cliff_overlap_m past the nearest house, at most
-    pier_cliff_scale_max, its height stretched (height_scale, between
-    pier_cliff_height_scale and _max) until its castle stands
-    pier_cliff_crest_m over the highest ground its rock backs onto; the water
-    must run clear to its quay's end. Then 1-2 ships (_moor) alongside
-    the pier or, for a port that found none, off its nearest open shore.
-    `water`, when given, is where BOTH the coastline and the game's cell index
-    say water; without it, water is wherever `land` is not. [] for a
-    settlement that is not a port."""
+    shore. A cliff harbour keeps its own proportions (pier_cliff_scale,
+    pier_cliff_height_scale — owner 2026-10-05: 这岩堡大小太不合理了, a castle
+    grown to the plateau stood three houses tall): its rock stands out from
+    the shore, its centre pier_cliff_root_m inland (negative: out to sea),
+    walked further out by pier_cliff_root_step_m (at most pier_cliff_root_max_m)
+    until no ground behind it rises over its castle's lowest course (the
+    terrain's own cliff would bury it). Of each kind the one NEAREST THE
+    SETTLEMENT'S HOUSES wins — a pier by its shore, a cliff harbour by its
+    castle (the nearest shore without `types`). Then 1-2 ships (_moor) alongside the pier
+    or, for a port that found none, off its nearest open shore. `water`, when
+    given, is where BOTH the coastline and the game's cell index say water;
+    without it, water is wherever `land` is not. [] for a settlement that is
+    not a port."""
     if not int(burg.get("is_port", 0) or 0) or not rows:
         return []
     types = types or {}
@@ -1267,9 +1321,13 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
     group = str(burg.get("group", "village"))
     cliff_ok = "pier_cliff" in types and _group_allows(group, types["pier_cliff"]["min_group"])
     cliff_min = float(rules.get("pier_cliff_min_shore_m", 1e9))
-    root_c = float(rules.get("pier_cliff_root_m", 0.0))
-    back_c = float(rules.get("pier_cliff_back_m", 70.0))
+    sc = float(rules.get("pier_cliff_scale", 1.0))
+    hs = float(rules.get("pier_cliff_height_scale", 1.0))
+    roots = np.arange(float(rules.get("pier_cliff_root_m", 0.0)),
+                      float(rules.get("pier_cliff_root_max_m", rules.get("pier_cliff_root_m", 0.0))) - 1e-6,
+                      -abs(float(rules.get("pier_cliff_root_step_m", 10.0))))
     front_c = 0.5 * float(types.get("pier_cliff", {}).get("width_m") or 140.0)
+    foot = sea_y + _CASTLE[4] * sc * hs
     open_reach = float(rules.get("ship_anchor_m", 0.0)) + 2.0 * float(rules.get("ship_step_m", 0.0))
     homes = _houses_of(rows, types)
 
@@ -1294,6 +1352,14 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
 
     def near_houses(x, z):
         return min((math.hypot(x - hx, z - hz) for hx, hz in homes), default=0.0)
+
+    def castle_clear(at, d):
+        # no ground under the castle's footprint over its lowest course
+        for x, z in _castle_corners(at, d, sc):
+            v = land_at(x, z)
+            if v is None or v[1] > foot:
+                return False
+        return True
     low = cliff = anywhere = None
     deg = 0.0
     while deg < 360.0:
@@ -1315,71 +1381,84 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
             rise = last_h - sea_y
             gap = near_houses(cx + dx * shore, cz + dz * shore) if types else shore
             if rise <= max_shore and (low is None or (gap, shore) < low[0]) and clear(dx, dz, shore, plen):
-                low = ((gap, shore), shore, dx, dz, 1.0)
+                low = ((gap, shore), shore - float(rules["pier_root_m"]) + plen / 2, dx, dz)
             if cliff_ok and rise >= cliff_min:
-                sc = min(max((gap + float(rules.get("pier_cliff_overlap_m", 0.0))) / max(back_c + root_c, 1.0), 1.0),
-                         float(rules.get("pier_cliff_scale_max", 1.0)))
-                if (cliff is None or (gap, shore) < cliff[0]) and clear(dx, dz, shore, (front_c - root_c) * sc):
-                    cliff = ((gap, shore), shore, dx, dz, sc)
+                for root in roots:
+                    mid = shore - root * sc
+                    at = (cx + dx * mid, cz + dz * mid)
+                    if castle_clear(at, (dx, dz)) and clear(dx, dz, shore, (front_c - root) * sc):
+                        mx = 0.5 * (_CASTLE[0] + _CASTLE[1]) * sc
+                        cg = near_houses(at[0] + dx * mx, at[1] + dz * mx)
+                        if cliff is None or (cg, shore) < cliff[0]:
+                            cliff = ((cg, shore), mid, dx, dz)
+                        break
             if (anywhere is None or shore < anywhere[1]) and clear(dx, dz, shore, open_reach):
-                anywhere = ((gap, shore), shore, dx, dz, 1.0)
+                anywhere = ((gap, shore), shore, dx, dz)
         deg += float(rules["pier_bearing_step_deg"])
     pick = None
     if cliff is not None and (low is None or (group == "capital" and int(rules.get("pier_cliff_capital_first", 0)))):
-        pick = ("pier_cliff",) + cliff[1:]
+        pick = ("pier_cliff", sc, hs) + cliff[1:]
     elif low is not None:
-        pick = ("pier",) + low[1:]
+        pick = ("pier", 1.0, 1.0) + low[1:]
     rank = max((int(r["rank"]) for r in rows), default=0) + 1
     out = []
     if pick is not None:
-        kind, shore, dx, dz, sc = pick
-        mid = shore - float(rules["pier_root_m"]) + plen / 2 if kind == "pier" else shore - root_c * sc
+        kind, s, h, mid, dx, dz = pick
         at = (cx + dx * mid, cz + dz * mid)
-        hs = 1.0
-        if kind == "pier_cliff":
-            # its castle stands pier_cliff_crest_m over the highest ground its rock
-            # backs onto, so the stair climbs to the town's own level (walbover: a
-            # 2x rock topped out at 106 m under a 172 m plateau, and the cliff face
-            # between read as a field)
-            top = max((v[1] for t in np.arange(0.0, back_c * sc + 1.0, step)
-                       for v in [land_at(at[0] - dx * t, at[1] - dz * t)] if v is not None), default=sea_y)
-            want = (top + float(rules.get("pier_cliff_crest_m", 0.0)) - sea_y) / \
-                max(float(types["pier_cliff"].get("height_m") or 62.0) * sc, 1.0)
-            hs = min(max(want, float(rules.get("pier_cliff_height_scale", 1.0))),
-                     float(rules.get("pier_cliff_height_scale_max", 1.0)))
         out.append({"burg_code": str(burg["burg_code"]), "rank": rank,
                     "x_m": float(round(at[0], 2)), "z_m": float(round(at[1], 2)),
                     # the pier runs along the mesh's +X: yaw turns +X onto (dx, dz)
                     "yaw_deg": float(round(_yaw_onto((dx, dz)), 2)),
-                    "type": kind, "scale": float(round(sc, 3)), "height_scale": float(round(hs, 3))})
-        out += _moor(burg, types, rules, rank + 1, water_at, at, (dx, dz), kind, sc)
+                    "type": kind, "scale": float(round(s, 3)), "height_scale": float(round(h, 3))})
+        out += _moor(burg, types, rules, rank + 1, water_at, at, (dx, dz), kind, s)
     elif anywhere is not None:
         shore, dx, dz = anywhere[1:4]
         out += _moor(burg, types, rules, rank, water_at, (cx + dx * shore, cz + dz * shore), (dx, dz), None, 1.0)
     return out
 
 
-def clear_under(rows, laid, types):
+def _frame(p):
+    """A laid row's mesh +X as a world (x, z) unit bearing."""
+    yaw = math.radians(float(p["yaw_deg"]))
+    return (math.cos(yaw), -math.sin(yaw))
+
+
+def _pier_root(p, types):
+    """A timber pier's landward end, world (x, z) offsets."""
+    d = _frame(p)
+    half = 0.5 * float(types[p["type"]]["width_m"] or types[p["type"]]["footprint_m"]) * float(p["scale"])
+    return (p["x_m"] - d[0] * half, p["z_m"] - d[1] * half)
+
+
+def clear_under(rows, laid, types, rules=None):
     """`rows` less every building and wall module whose centre stands under a
-    laid pier's own rectangle (its table width x depth at its scale) — a cliff harbour grown into the town takes the houses and wall it
-    covers (its own castle walls close the circuit) — never the landmark —
-    a tower set where the wall it cut now ends; then the ranks renumbered
-    densely, `laid` after them."""
+    laid pier — a timber pier's own rectangle (its table width x depth at its
+    scale), a cliff harbour's castle (_CASTLE; its rock stands against the
+    land's own cliff) — never the landmark; a tower set where the wall it cut now ends; the wall module
+    nearest a timber pier's landward end made a gate (the quay gate, within
+    pier_gate_reach_m); then the
+    ranks renumbered densely, `laid` after them."""
     keep = []
     piers = [r for r in laid if types.get(r["type"], {}).get("role") == "pier"]
+
+    def box(p):
+        sc = float(p["scale"])
+        if p["type"] == "pier_cliff":
+            return tuple(v * sc for v in _CASTLE[:4])
+        t = types[p["type"]]
+        hw = 0.5 * float(t["width_m"] or t["footprint_m"]) * sc
+        hd = 0.5 * float(t["depth_m"] or t["footprint_m"]) * sc
+        return (-hw, hw, -hd, hd)
     for r in rows:
         under = False
         if int(r["rank"]) != 0:
             for p in piers:
-                t = types[p["type"]]
-                yaw = math.radians(float(p["yaw_deg"]))
-                d = (math.cos(yaw), -math.sin(yaw))
+                d = _frame(p)
                 ox, oz = r["x_m"] - p["x_m"], r["z_m"] - p["z_m"]
                 u = ox * d[0] + oz * d[1]
                 v = ox * d[1] - oz * d[0]
-                hw = 0.5 * float(t["width_m"] or t["footprint_m"]) * float(p["scale"])
-                hd = 0.5 * float(t["depth_m"] or t["footprint_m"]) * float(p["scale"])
-                if abs(u) <= hw and abs(v) <= hd:
+                x0, x1, y0, y1 = box(p)
+                if x0 <= u <= x1 and y0 <= v <= y1:
                     under = True
                     break
         if not under:
@@ -1397,6 +1476,16 @@ def clear_under(rows, laid, types):
             if any(math.hypot(c["x_m"] - e[0], c["z_m"] - e[1]) < half + 2.0 for c in cut):
                 ends.append(dict(r, type="wall_tower", x_m=float(round(e[0], 2)), z_m=float(round(e[1], 2))))
     keep += ends
+    # the quay gate: the wall module nearest each timber pier's landward end,
+    # within pier_gate_reach_m of it
+    for p in piers:
+        walls = [r for r in keep if r["type"] in ("wall", "wall_gate")]
+        if p["type"] == "pier_cliff" or not walls:
+            continue
+        a = _pier_root(p, types)
+        w = min(walls, key=lambda r: math.hypot(r["x_m"] - a[0], r["z_m"] - a[1]))
+        if math.hypot(w["x_m"] - a[0], w["z_m"] - a[1]) <= float((rules or {}).get("pier_gate_reach_m", 0.0)):
+            w["type"] = "wall_gate"
     out = sorted(keep, key=lambda r: int(r["rank"])) + sorted(laid, key=lambda r: int(r["rank"]))
     for i, r in enumerate(out):
         r["rank"] = i

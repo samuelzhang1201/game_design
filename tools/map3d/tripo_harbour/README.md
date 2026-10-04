@@ -58,8 +58,9 @@ A new type's `.glb.import` needs `meshes/force_disable_compression=true` and its
 * **The cliff harbour keeps its rock** (owner 2026-10-04): cut away, the zigzag stair and
   the walls built onto it would hang in the air or sink into a real cliff they do not
   match. Its rock is turned to the land (-X) and its quay out to sea (+X); z0 9.5, not the
-  gate platform's 12, or its sloping walkway drowned to a line of post tops. The bake grows
-  it into the town (`pier_cliff_*`). Its berths and the pier's are measured off the models
-  into `bake_houses._BERTHS` — re-measure them if a model changes.
+  gate platform's 12, or its sloping walkway drowned to a line of post tops. The bake keeps
+  it at its own proportions (owner 2026-10-05) and walks it out to sea until no taller
+  cliff buries its castle (`pier_cliff_*`). Its berths and the pier's are measured off the models
+  into `bake_houses._BERTHS`, its castle into `_CASTLE` — re-measure them if a model changes.
 * **A ship rocks** in `house_surface.gdshader` (`bob_on` and the roll / pitch / heave /
   period set per ship in its scene), its phase hashed from where it is moored.
