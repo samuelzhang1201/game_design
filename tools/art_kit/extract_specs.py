@@ -12,7 +12,11 @@ number it needs is copied here from the repository's own sources:
   the numbers of the art handbook's spec table);
 * units  — each shipped assets/3D/units/<code>/<code>.glb: its skeleton (bone
   names, rest head / tail / roll / parent, so the add-on can lay the same
-  skeleton out as a template), its clips, its triangles and its rest height.
+  skeleton out as a template), its clips, its triangles and its rest height;
+* names  — the node and image names of each shipped .glb (glb_names.py), which
+  the game's model scene depends on: the add-on's export writes them and
+  checks the file it wrote, so a new delivery overwrites the .glb as it is
+  (owner 2026-10-04).
 
 Rerun it after a house row or a unit's skeleton changes, then
 tools/art_kit/build_kit.py to rebuild the zip.
@@ -20,10 +24,15 @@ tools/art_kit/build_kit.py to rebuild the zip.
 import csv
 import json
 import os
+import sys
 
 import bpy
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import glb_names  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BUILDINGS = os.path.join(ROOT, "assets", "3D", "buildings")
 OUT = os.path.join(ROOT, "tools", "art_kit", "blender", "cc_art_check", "specs.json")
 
 # Triangle ceilings per house type: the Tripo budgets of
@@ -66,7 +75,29 @@ def houses():
                       "height_m": float(r["height_m"]), "notes": r["notes"],
                       "tris": HOUSE_BUDGET.get(t, 2200), "atlas_px": HOUSE_ATLAS.get(t, 1024),
                       "materials": mats, "hd": t in HD}
+            out[t].update(house_names(t))
     return out
+
+
+def house_names(t):
+    """The mesh node and image names of the shipped house; a type with no
+    model yet gets the names every house has (<type>_export, <type>_atlas)."""
+    path = os.path.join(BUILDINGS, t, t + ".glb")
+    if not os.path.exists(path):
+        return {"object": t + "_export", "images": [t + "_atlas"]}
+    n = glb_names.read(path)
+    return {"object": n["meshes"][0], "images": n["images"]}
+
+
+def unit_names(code):
+    """The rig and mesh node names of the shipped regiment, and its three
+    images by role (<x>_n the normal map, <x>_mr metallic / roughness)."""
+    n = glb_names.read(os.path.join(ROOT, "assets", "3D", "units", code, code + ".glb"))
+    imgs = n["images"]
+    role = lambda suffix: next((i for i in imgs if i.endswith(suffix)), "")
+    base = next((i for i in imgs if not i.endswith(("_n", "_mr"))), "")
+    return {"rig": n["roots"][0], "mesh": n["meshes"][0],
+            "images": {"base": base, "normal": role("_n"), "mr": role("_mr")}}
 
 
 def unit(code, spec):
@@ -94,7 +125,7 @@ def unit(code, spec):
         dg.to_mesh_clear()
     clips = sorted(a.name for a in bpy.data.actions)
     return dict(spec, bones=bones, shipped_clips=clips, shipped_tris=tris,
-                shipped_height_m=round(max(zs) - min(zs), 3))
+                shipped_height_m=round(max(zs) - min(zs), 3), **unit_names(code))
 
 
 def main():

@@ -10,6 +10,14 @@ game's own (tests/map3d/test_map3d_houses_meshes.gd's hole census, the
 runtime's `head` bone and clip names, tools/map3d/blender_houses/kit.py's
 export).
 
+Each house and regiment is a SCENE in the game (scenes/models/...) inheriting
+the .glb: it finds the mesh by its node name, hangs its materials on the
+surfaces in order and points at the textures Godot extracts, named after the
+glTF images. So the export writes the names the shipped model has (specs.json
+"object" / "rig" / "mesh" / "images", from tools/art_kit/glb_names.py) and
+reads the written file back to check them: a delivery then overwrites the
+.glb as it is (owner 2026-10-04). The artist's own names are never touched.
+
 Every message the artist reads is Chinese; the code is English like the rest
 of the repository. Built into a zip by tools/art_kit/build_kit.py.
 """
@@ -17,7 +25,7 @@ of the repository. Built into a zip by tools/art_kit/build_kit.py.
 bl_info = {
     "name": "Crown and Council · 美术自检",
     "author": "Crown and Council",
-    "version": (1, 0, 0),
+    "version": (1, 1, 0),
     "blender": (4, 2, 0),
     "location": "3D 视图 › 侧栏（N）› 王冠与议会",
     "description": "检查并导出《王冠与议会》的房屋和兵种模型",
@@ -27,6 +35,7 @@ bl_info = {
 import json
 import math
 import os
+import struct
 
 import bmesh
 import bpy
@@ -82,7 +91,8 @@ def _house_spec(props):
     if props.house_type != NEW:
         return t, SPECS["houses"][t]
     return t, {"role": "house", "footprint_m": props.new_footprint, "tris": props.new_tris,
-               "atlas_px": 1024, "materials": ["hh_roof_" + t, "hh_wall_" + t], "hd": False}
+               "atlas_px": 1024, "materials": ["hh_roof_" + t, "hh_wall_" + t], "hd": False,
+               "object": t + "_export", "images": [t + "_atlas"]}
 
 
 def _tris(ob):
@@ -115,6 +125,114 @@ def _images(materials):
                 if n.type == "TEX_IMAGE" and n.image and n.image not in imgs:
                     imgs.append(n.image)
     return imgs
+
+
+def _upstream_images(sock):
+    """The image nodes feeding `sock`, through any nodes between."""
+    found, seen, todo = [], set(), [sock]
+    while todo:
+        s = todo.pop()
+        for link in s.links:
+            n = link.from_node
+            if n.name in seen:
+                continue
+            seen.add(n.name)
+            if n.type == "TEX_IMAGE" and n.image:
+                found.append(n.image)
+            todo += [i for i in n.inputs if i.is_linked]
+    return found
+
+
+def _unit_image_roles(mats, want):
+    """{image: wanted name} for a regiment's material: the colour texture,
+    the normal map and the metallic / roughness texture, found by what they
+    feed. Returns (pairs, problems)."""
+    pairs, problems = {}, []
+    for m in mats:
+        p = _principled(m)
+        if not p:
+            continue
+        roles = (("base", ("Base Color",)), ("normal", ("Normal",)), ("mr", ("Metallic", "Roughness")))
+        for role, inputs in roles:
+            if not want.get(role):
+                continue
+            imgs = []
+            for name in inputs:
+                sock = p.inputs.get(name)
+                if sock is not None:
+                    imgs += [i for i in _upstream_images(sock) if i not in imgs]
+            if len(imgs) > 1:
+                problems.append("%s 用了 %d 张贴图（%s）：每种只能一张" % (
+                    {"base": "颜色", "normal": "法线", "mr": "金属度/粗糙度"}[role], len(imgs),
+                    "、".join(i.name for i in imgs)))
+            for img in imgs[:1]:
+                if img in pairs and pairs[img] != want[role]:
+                    problems.append("贴图 %s 同时用作两种用途" % img.name)
+                pairs[img] = want[role]
+    return pairs, problems
+
+
+def _rename(items):
+    """Give each datablock in {block: name} its name for the export; returns
+    what restores every name, the artist's and any it had to move aside."""
+    undo = []
+    for block, name in items.items():
+        if block.name == name:
+            continue
+        coll = bpy.data.images if isinstance(block, bpy.types.Image) else bpy.data.objects
+        other = coll.get(name)
+        if other is not None and other is not block:
+            undo.append((other, other.name))
+            other.name = name + "__src"
+        undo.append((block, block.name))
+        block.name = name
+    return undo
+
+
+def _restore(undo):
+    for block, name in reversed(undo):
+        block.name = name
+
+
+def _glb_names(path):
+    """tools/art_kit/glb_names.py read(): the names in the file written."""
+    with open(path, "rb") as f:
+        blob = f.read()
+    size = struct.unpack_from("<I", blob, 12)[0]
+    gltf = json.loads(blob[20:20 + size])
+    nodes = gltf.get("nodes", [])
+    return {
+        "roots": [nodes[i].get("name", "") for s in gltf.get("scenes", []) for i in s.get("nodes", [])],
+        "meshes": [n.get("name", "") for n in nodes if "mesh" in n],
+        "images": [i.get("name", "") for i in gltf.get("images", [])],
+    }
+
+
+def _verify(path, roots, meshes, images):
+    """Read the written file back: the names the game's scene needs. On a
+    miss the file is renamed so it cannot be handed in by mistake."""
+    got = _glb_names(path)
+    rows = []
+    for label, want, have in (("物体", roots, got["roots"]), ("网格", meshes, got["meshes"]),
+                              ("贴图", images, got["images"])):
+        miss = [w for w in want if w not in have]
+        rows.append((ERR if miss else OK, "%s名 %s" % (label, "、".join(want)) if not miss else
+                     "%s名不对：游戏要 %s，文件里是 %s" % (label, "、".join(want), "、".join(have) or "没有")))
+    extra = [i for i in got["images"] if i not in images]
+    if extra:
+        rows.append((WARN, "多出来的贴图 %s：游戏场景不会用它，交付时在说明里写一句" % "、".join(extra)))
+    if any(lvl == ERR for lvl, _ in rows):
+        bad = path[:-4] + "_名字不对.glb"
+        if os.path.exists(bad):
+            os.remove(bad)
+        os.rename(path, bad)
+        rows.append((ERR, "这个文件不能直接交：已改名为 %s，请把它和自检报告发给开发" % os.path.basename(bad)))
+        path = bad
+    return path, rows
+
+
+def _rows_text(rows):
+    return "\n".join("%s %s" % (MARKS[lvl], text) for lvl, text in rows) + "\n"
 
 
 def _principled(m):
@@ -261,6 +379,15 @@ def check_house(props):
         w, h = imgs[0].size
         px = spec["atlas_px"]
         out.append((OK if (w, h) == (px, px) else WARN, "贴图 %d×%d（要求 %d×%d）" % (w, h, px, px)))
+    if spec.get("hd"):
+        have = sorted(os.path.splitext(i.name)[0] for i in imgs)
+        if have != sorted(spec["images"]):
+            out.append((WARN, "游戏里这栋的贴图叫 %s，你的是 %s：图像名要和游戏里一致（改 Blender 里图像的名字）"
+                        % ("、".join(spec["images"]), "、".join(have) or "没有")))
+        out.append((INFO, "导出时物体命名为 %s（游戏场景按这个名字找）" % spec["object"]))
+    else:
+        out.append((INFO, "导出时物体命名为 %s、贴图命名为 %s（游戏场景按这些名字找，自动处理）"
+                    % (spec["object"], spec["images"][0])))
 
     bm = _world_mesh(ob)
     zs = [v.co.z for v in bm.verts]
@@ -315,6 +442,9 @@ def check_unit(props):
 
     tris = sum(_tris(o) for o in meshes)
     out.append((OK if tris <= spec["tris"] else ERR, "面数 %d / 上限 %d" % (tris, spec["tris"])))
+    if len(meshes) > 1:
+        out.append((WARN, "有 %d 个网格物体：游戏场景只认一个（%s），多出来的要开发另接；最好全选后 Ctrl+J 合并"
+                    % (len(meshes), spec["mesh"])))
 
     names = [b.name for b in arm.data.bones]
     out.append((OK if any(n.lower() == "head" for n in names) else ERR,
@@ -376,6 +506,12 @@ def check_unit(props):
         mats += [s.material for s in o.material_slots if s.material and s.material not in mats]
     out.append((OK if len(mats) == 1 else ERR, "一个材质（%s）" % mats[0].name if len(mats) == 1 else
                 "必须只有一个材质；现在有 %d 个" % len(mats)))
+    pairs, problems = _unit_image_roles(mats, spec["images"])
+    out += [(ERR, p) for p in problems]
+    if not any(v == spec["images"]["base"] for v in pairs.values()):
+        out.append((ERR, "找不到接在 Base Color 上的颜色贴图"))
+    out.append((INFO, "导出时骨架命名为 %s、网格 %s、贴图 %s（游戏场景按这些名字找，自动处理）" % (
+        spec["rig"], spec["mesh"], "、".join(v for v in spec["images"].values() if v))))
     imgs = _images(mats)
     px = SPECS["unit_atlas_px"]
     big = [i for i in imgs if tuple(i.size) != (px, px)]
@@ -441,9 +577,12 @@ def export_house(props, info, report):
     s = info["scale"]
     # the kit.export rule: the FLOOR stays at z = 0, centred on its footprint
     me.transform(Matrix.Diagonal((s, s, s, 1)) @ Matrix.Translation((-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, 0.0)))
-    held = _free_name(t)
-    exp = bpy.data.objects.new(t, me)
+    obj = spec["object"]
+    held = _free_name(obj)
+    exp = bpy.data.objects.new(obj, me)
     bpy.context.scene.collection.objects.link(exp)
+    imgs = _images([s.material for s in ob.material_slots])
+    undo = [] if spec.get("hd") or len(imgs) != 1 else _rename({imgs[0]: spec["images"][0]})
     try:
         bpy.ops.object.select_all(action="DESELECT")
         exp.select_set(True)
@@ -458,11 +597,14 @@ def export_house(props, info, report):
         report += "\n导出：%s\n尺寸 宽 %.2f m × 深 %.2f m × 高 %.2f m，地基 %.2f m，%d 面\n" % (
             path, w, dpt, info["height_m"], info["footing_m"], info["tris"])
     finally:
+        _restore(undo)
         bpy.data.objects.remove(exp)
         bpy.data.meshes.remove(me)
         if held is not None:
-            held.name = t
-    return path, report
+            held.name = obj
+    path, rows = _verify(path, [obj], [obj], spec["images"])
+    report += "\n导出文件里的名字：\n" + _rows_text(rows)
+    return path, report, not any(lvl == ERR for lvl, _ in rows)
 
 
 def _free_name(name):
@@ -492,10 +634,15 @@ def export_unit(props, report):
     renamed = [(o, o.name) for o in [arm] + meshes]
     for o, n in renamed:
         o.name = n + "__src"
+    mats = []
+    for o in meshes:
+        mats += [s.material for s in o.material_slots if s.material and s.material not in mats]
+    pairs, _problems = _unit_image_roles(mats, spec["images"])
+    undo = _rename(pairs)
     copies = []
     try:
         arm2 = arm.copy()
-        arm2.name = renamed[0][1]
+        undo += _rename({arm2: spec["rig"]})
         sc.collection.objects.link(arm2)
         copies.append(arm2)
         arm2.animation_data_clear()
@@ -513,7 +660,7 @@ def export_unit(props, report):
             tr.mute = True
         for o, (_src, n) in zip(meshes, renamed[1:]):
             m2 = o.copy()
-            m2.name = n
+            undo += _rename({m2: spec["mesh"] if len(meshes) == 1 else n})
             sc.collection.objects.link(m2)
             copies.append(m2)
             if m2.parent == arm:
@@ -533,13 +680,16 @@ def export_unit(props, report):
                                   export_frame_range=False, export_optimize_animation_size=False,
                                   export_anim_single_armature=True)
     finally:
+        _restore(undo)          # before the copies go: their names are in it
         for o in copies:
             bpy.data.objects.remove(o)
         for o, n in renamed:
             o.name = n
     report += "\n导出：%s\n动作：%s\n%s 一个循环走 %.3f m（填进 data/army_art.csv 的 stride_m）\n" % (
         path, "、".join(a.name for a in acts), walk.name if walk else "行军", stride)
-    return path, report
+    path, rows = _verify(path, [spec["rig"]], [spec["mesh"]], [v for v in spec["images"].values() if v])
+    report += "\n导出文件里的名字：\n" + _rows_text(rows)
+    return path, report, not any(lvl == ERR for lvl, _ in rows)
 
 
 # ------------------------------------------------------------------ templates
@@ -632,7 +782,7 @@ def template_unit(props):
     face.empty_display_size = 1.0
     face.rotation_euler = (math.radians(-90), 0, 0)    # its +Z arrow turned to point down +Y
     _camera(col, (0, 0, spec["shipped_height_m"] * 0.5), spec["shipped_height_m"] * 4.0, yaw_deg=150.0)
-    name = code + "_rig"
+    name = spec["rig"]
     have = [o.name for o in _exported(sc) if o.type == "ARMATURE"]
     if have:
         return "场景里已经有骨架「%s」，只补了参考线和相机，没有再建骨架" % "、".join(have)
@@ -761,13 +911,16 @@ class CC_OT_export(bpy.types.Operator):
         if errs:
             self.report({"ERROR"}, "%d 项不合格，没有导出：看「自检报告」" % errs)
             return {"CANCELLED"}
-        path, rep = export_house(props, info, rep) if props.kind == "HOUSE" else export_unit(props, rep)
+        path, rep, good = export_house(props, info, rep) if props.kind == "HOUSE" else export_unit(props, rep)
         name = _house_type(props) if props.kind == "HOUSE" else props.unit
         with open(os.path.join(os.path.dirname(path), name + "_自检.txt"), "w", encoding="utf-8") as f:
             f.write(rep)
         txt = bpy.data.texts.get(REPORT)
         txt.clear()
         txt.write(rep)
+        if not good:
+            self.report({"ERROR"}, "导出的文件名字和游戏里的不一致，不能直接交：看「自检报告」")
+            return {"CANCELLED"}
         self.report({"INFO"}, "已导出 %s" % path)
         return {"FINISHED"}
 
