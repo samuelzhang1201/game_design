@@ -988,3 +988,88 @@ def test_a_port_runs_its_pier_from_the_shore_out_to_sea():
     root_vx = CENTRE + (p["x_m"] - along[0] * 30.0) / bake_houses.VERTEX_M
     assert head_vx < CENTRE_COL - 8, "its head is over the water"
     assert root_vx >= CENTRE_COL - 8 - 0.5, "its landward end meets the bank"
+
+
+# -- cliff harbours and ships (owner 2026-10-04) ----------------------------------------
+SHIP_RULES = dict(WALL_RULES, pier_cliff_min_shore_m=20, pier_cliff_reach_m=110, pier_cliff_root_m=-25,
+                  pier_cliff_capital_first=1, ship_count_village=1, ship_count_fort=1, ship_count_town=1,
+                  ship_count_city=2, ship_count_capital=2, ship_gap_m=3, ship_step_m=12, ship_tries=4,
+                  ship_anchor_m=30, ship_margin_m=25)
+SHIP_TYPES = dict(WALL_TYPES,
+                  pier={"role": "pier", "weight": 1.0, "footprint_m": 60.0, "width_m": 60.0, "depth_m": 15.4, "min_group": "village"},
+                  pier_cliff={"role": "pier", "weight": 1.0, "footprint_m": 140.0, "width_m": 140.0, "depth_m": 130.0, "min_group": "town"},
+                  fishing_boat={"role": "ship", "weight": 1.0, "footprint_m": 16.0, "width_m": 16.0, "depth_m": 7.5, "min_group": "village"},
+                  cog={"role": "ship", "weight": 1.0, "footprint_m": 36.0, "width_m": 36.0, "depth_m": 21.5, "min_group": "town"},
+                  longship={"role": "ship", "weight": 0.6, "footprint_m": 40.0, "width_m": 40.0, "depth_m": 21.4, "min_group": "town"},
+                  carrack={"role": "ship", "weight": 1.0, "footprint_m": 56.0, "width_m": 56.0, "depth_m": 30.7, "min_group": "city"})
+
+
+def _west_sea(shore_h=6.0):
+    _, land, height = flat_world()
+    height[:] = shore_h
+    sea = land.copy()
+    sea[:, : CENTRE_COL - 8] = 0.0                # the shore 160 m west of the centre
+    height[:, : CENTRE_COL - 8] = 0.0
+    return sea, height
+
+
+def _hull_on_water(r, sea):
+    t = SHIP_TYPES[r["type"]]
+    yaw = math.radians(r["yaw_deg"])
+    along, across = (math.cos(yaw), -math.sin(yaw)), (math.sin(yaw), math.cos(yaw))
+    for a in (-1, 0, 1):
+        for b in (-1, 0, 1):
+            x = r["x_m"] + along[0] * a * t["width_m"] / 2 + across[0] * b * t["depth_m"] / 2
+            z = r["z_m"] + along[1] * a * t["width_m"] / 2 + across[1] * b * t["depth_m"] / 2
+            vx, vy = int(round(CENTRE + x / bake_houses.VERTEX_M)), int(round(CENTRE + z / bake_houses.VERTEX_M))
+            if sea[vy, vx] >= 0.5:
+                return False
+    return True
+
+
+def test_a_port_moors_ships_by_its_size_on_the_water():
+    sea, height = _west_sea()
+    rows = _toy_town()
+    for group, n, first in (("village", 1, "fishing_boat"), ("town", 1, "cog"), ("city", 2, "carrack"),
+                            ("capital", 2, "carrack")):
+        out = bake_houses.harbour(burg(port=1, group=group), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                                  types=SHIP_TYPES)
+        assert out[0]["type"] == "pier", group + "'s low shore takes the timber pier"
+        ships = [r for r in out if SHIP_TYPES[r["type"]]["role"] == "ship"]
+        assert len(ships) == n, f"a {group} moors {n} ship(s)"
+        assert ships[0]["type"] == first, f"a {group}'s first ship is the grandest it allows"
+        for s in ships:
+            assert bake_houses._group_allows(group, SHIP_TYPES[s["type"]]["min_group"])
+            assert _hull_on_water(s, sea), f"{s['type']} at a {group} floats, its whole hull on water"
+        assert [r["rank"] for r in out] == list(range(len(rows), len(rows) + len(out)))
+
+
+def test_a_cliff_shore_takes_the_cliff_harbour_with_its_rock_to_the_land():
+    sea, height = _west_sea(shore_h=40.0)
+    rows = _toy_town()
+    out = bake_houses.harbour(burg(port=1, group="town"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                              types=SHIP_TYPES)
+    assert out[0]["type"] == "pier_cliff", "a 35 m cliff takes the cliff harbour, never the timber pier"
+    yaw = math.radians(out[0]["yaw_deg"])
+    assert math.cos(yaw) < -0.9, "its quay (+X) runs west, out to the sea; its rock to the land"
+    assert all(_hull_on_water(s, sea) for s in out[1:]), "its ship rides on the water"
+    # a village may not raise a cliff harbour: its boat rides off the open shore
+    out = bake_houses.harbour(burg(port=1, group="village"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                              types=SHIP_TYPES)
+    assert [r["type"] for r in out] == ["fishing_boat"]
+    assert _hull_on_water(out[0], sea)
+
+
+def test_a_capital_takes_its_cliff_over_a_nearer_low_shore():
+    sea, height = _west_sea()                    # a low shore 160 m west ...
+    sea[: CENTRE_COL - 12, :] = 0.0              # ... and a sea 240 m north
+    height[: CENTRE_COL - 12, :] = 0.0
+    height[CENTRE_COL - 12: CENTRE_COL - 8, CENTRE_COL - 4:] = 40.0   # under a cliff (the north shore only)
+    rows = _toy_town()
+    town = bake_houses.harbour(burg(port=1, group="town"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                               types=SHIP_TYPES)
+    assert town[0]["type"] == "pier", "a town takes its nearer low shore"
+    cap = bake_houses.harbour(burg(port=1, group="capital"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                              types=SHIP_TYPES)
+    assert cap[0]["type"] == "pier_cliff", "the capital takes its cliff (pier_cliff_capital_first)"
+    assert math.sin(math.radians(cap[0]["yaw_deg"])) > 0.9, "out to the north sea (+X onto -z)"

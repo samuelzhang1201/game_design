@@ -245,18 +245,17 @@ func _chunk(code: String, type: String, all_rows: Array) -> Dictionary:
 
 
 ## Where a house stands, (lowest, seat) — sampled ONCE and kept on its row:
-## the ground never moves, and re-sampling a 5x5 grid under every visible
-## house on each rebuild cost ~40 ms a pan step at the high tier's 5000
-## houses (measured 2026-09-24). A pier's deck lies on the SEA (owner
-## 2026-10-01: 码头延伸到海里), not on the bank or the sea floor under it.
+## re-sampling a 5x5 grid under every house each rebuild cost ~40 ms a pan
+## (2026-09-24). A pier's deck and a ship's waterline lie on the SEA (码头延伸到海里).
 func _seat(h: Dictionary, type: String) -> Vector2:
 	if not h.has("_seat"):
 		var r := ctx.repo
 		var sea_y := float(ctx.meta.get("sea_y", 0.0))
-		h["_seat"] = Vector2(sea_y, sea_y + r.bal("map3d_pier_deck_m")) \
-			if String((r.map3d_houses.get(type, {}) as Dictionary).get("role", "")) == "pier" \
-			else Map3DHouses.seat(Map3DHouses.ground_under(h, _aabbs[type], r.bal("map3d_house_ground_inset"),
-				int(r.bal("map3d_house_ground_samples")), ctx.height_at), r.bal("map3d_house_seat_clear_m"))
+		var role := String((r.map3d_houses.get(type, {}) as Dictionary).get("role", ""))
+		h["_seat"] = Vector2(sea_y, sea_y + (r.bal("map3d_pier_deck_m") if role == "pier" else 0.0)) \
+			if role in ["pier", "ship"] else Map3DHouses.seat(Map3DHouses.ground_under(h, _aabbs[type],
+				r.bal("map3d_house_ground_inset"), int(r.bal("map3d_house_ground_samples")), ctx.height_at),
+				r.bal("map3d_house_seat_clear_m"))
 	return h["_seat"]
 
 

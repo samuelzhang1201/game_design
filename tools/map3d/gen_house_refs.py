@@ -2,19 +2,23 @@
 ComfyUI from assets/flux/house_ref_prompts.csv, one picture per type per
 model, into assets/3D/buildings/<type>/model_wip/<type>_ref_<model>.png.
 
-  python3 tools/map3d/gen_house_refs.py [--model zimage,qwen2512fast] [--only a,b] [--seed N] [--variants N] [--force] [--front]
+  python3 tools/map3d/gen_house_refs.py [--set houses|ships] [--model zimage,qwen2512fast] [--only a,b] [--seed N] [--variants N] [--tag T] [--force] [--front]
 
 The models are Z-Image Turbo and Qwen-Image-2512 (owner 2026-09-30: no Flux
 any more; both side by side for the owner to pick), filled from
 assets/flux/generate.py's MODEL_PRESETS and templates with the SAME prompt
 every model gets. Z-Image has no negative path, so NEGATIVE reaches Qwen
-only. The old Flux.2 klein pictures stay as <type>_ref.png, the record the
+only (with a row's own `negative` column added). The old Flux.2 klein pictures stay as <type>_ref.png, the record the
 shipped meshes were modelled against. Every job is queued first and
 collected after; it waits its turn in ComfyUI's one shared queue unless
 --front puts it ahead (the last model listed is queued first, so with
 --front the first model listed runs first). --variants N renders N seeds
 (seed, seed+1, ...) as <type>_ref_<model>_v1.png .. _vN.png beside the one
-picture.
+picture. --tag T names them <type>_ref_<model>_T[_vN].png, so a re-render
+with a changed prompt keeps the pictures already picked from. --set ships
+renders the harbours' SHIPS (owner 2026-10-02: 3-4 种中世纪的船) from
+assets/flux/ship_ref_prompts.csv into assets/3D/ships/<type>/model_wip/,
+worded as a ship, not a building.
 
 A file already there is kept unless --force. The pictures are what the
 hand-modelled houses (tools/map3d/blender_houses/) are modelled against.
@@ -47,6 +51,15 @@ PROMPT = ("a single {subject}, one building only, {features}, isolated on a "
 NEGATIVE = ("landscape, terrain, grass, trees, sky, multiple buildings, "
             "village, map, top-down, text, watermark, signature, cropped, "
             "out of frame, blurry, clutter, flags, banners, cartoon, toy")
+SHIP_PROMPTS = os.path.join(ROOT, "assets", "flux", "ship_ref_prompts.csv")
+SHIP_PROMPT = ("a single {subject}, one ship only, {features}, the whole hull "
+               "out of the water, isolated on a plain pure white background, "
+               "centered, three-quarter side view, slightly elevated camera, "
+               "game asset concept art, clean crisp silhouette, soft even "
+               "studio lighting, no water, no sea, no ground plane, no cast "
+               "shadow, no people, no text")
+SETS = {"houses": (PROMPTS, BUILDINGS, PROMPT),
+        "ships": (SHIP_PROMPTS, os.path.join(ROOT, "assets", "3D", "ships"), SHIP_PROMPT)}
 SEED = 20260923
 MODELS = ["zimage", "qwen2512fast"]
 FLUX_DIR = os.path.join(ROOT, "assets", "flux")
@@ -59,8 +72,8 @@ def _generate_module():
     return mod
 
 
-def rows(only):
-    with open(PROMPTS, newline="") as f:
+def rows(only, path=PROMPTS):
+    with open(path, newline="") as f:
         out = [r for r in csv.DictReader(f)]
     return [r for r in out if not only or r["type"] in only]
 
@@ -90,14 +103,14 @@ def wait(pid, timeout_s):
     raise TimeoutError(pid)
 
 
-def image_graph(gen, model, row, seed):
+def image_graph(gen, model, row, seed, prompt=PROMPT):
     preset = gen.MODEL_PRESETS[model]
     with open(os.path.join(FLUX_DIR, preset["template"])) as f:
         template = json.load(f)
     values = {"unet": preset["unet"], "steps": preset["steps"], "cfg": preset["cfg"],
               "guidance": preset["guidance"], "width": 1024, "height": 1024, "seed": seed,
-              "prompt": PROMPT.format(subject=row["subject"], features=row["features"]),
-              "negative": NEGATIVE, "prefix": "house_ref/%s_%s" % (row["type"], model)}
+              "prompt": prompt.format(subject=row["subject"], features=row["features"]),
+              "negative": ", ".join(x for x in (NEGATIVE, row.get("negative", "")) if x), "prefix": "house_ref/%s_%s" % (row["type"], model)}
     if "lora_strength" in preset:
         values["lora_strength"] = preset["lora_strength"]
     return gen.make_graph(template, values)
@@ -121,19 +134,23 @@ def main():
             sys.exit("not a model for the house references: %s" % m)
     variants = int(args[args.index("--variants") + 1]) if "--variants" in args else 1
     front = "--front" in args
+    tag = "_" + args[args.index("--tag") + 1] if "--tag" in args else ""
+    prompts, out_root, prompt = SETS[args[args.index("--set") + 1] if "--set" in args else "houses"]
     jobs = []
     for model in (list(reversed(models)) if front else models):
-        for row in rows(only):
+        for row in rows(only, prompts):
             t = row["type"]
-            wip = os.path.join(BUILDINGS, t, "model_wip")
+            wip = os.path.join(out_root, t, "model_wip")
             os.makedirs(wip, exist_ok=True)
+            if not os.path.exists(os.path.join(wip, ".gdignore")):
+                open(os.path.join(wip, ".gdignore"), "w").close()
             for v in range(variants):
-                name = "%s_ref_%s%s.png" % (t, model, "_v%d" % (v + 1) if variants > 1 else "")
+                name = "%s_ref_%s%s%s.png" % (t, model, tag, "_v%d" % (v + 1) if variants > 1 else "")
                 ref = os.path.join(wip, name)
                 if os.path.exists(ref) and "--force" not in args:
                     print("keep", ref)
                     continue
-                pid = post("/prompt", {"prompt": image_graph(gen, model, row, seed + v),
+                pid = post("/prompt", {"prompt": image_graph(gen, model, row, seed + v, prompt),
                                        "client_id": str(uuid.uuid4()), "front": front})["prompt_id"]
                 jobs.append((pid, ref))
                 print("queued", model, t, v + 1, pid, flush=True)

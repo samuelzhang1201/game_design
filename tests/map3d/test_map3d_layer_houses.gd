@@ -253,3 +253,28 @@ func _home() -> Vector2:
 	codes.sort()
 	var b: Dictionary = Game.data.burgs[String(codes[0])]
 	return Map3DGeometry.pack_to_world(WORLD, Vector2(float(b["x"]), float(b["y"])))
+
+
+## Owner 2026-10-01 / 2026-10-04: a pier's deck lies map3d_pier_deck_m over
+## the SEA and a moored ship's origin — its waterline — on it, whatever the
+## ground under them says (the fixture's ground stands at HEIGHT).
+func test_a_pier_and_a_ship_are_seated_on_the_sea_not_the_ground() -> void:
+	var codes: Array = Game.data.burgs.keys()
+	codes.sort()
+	var a := String(codes[0])
+	var b: Dictionary = Game.data.burgs[a]
+	var at := Map3DGeometry.pack_to_world(WORLD, Vector2(float(b["x"]), float(b["y"])))
+	var f := FileAccess.open(_csv, FileAccess.WRITE)
+	f.store_line("burg_code,rank,x_m,z_m,yaw_deg,type,scale,height_scale")
+	f.store_line("%s,0,%f,%f,0,chapel,1.0,1.0" % [a, at.x, at.y])
+	f.store_line("%s,1,%f,%f,0,pier,1.0,1.0" % [a, at.x + 200.0, at.y])
+	f.store_line("%s,2,%f,%f,0,cog,1.0,1.0" % [a, at.x + 200.0, at.y + 30.0])
+	f.close()
+	_layer.houses_override = Map3DHouses.load_csv(_csv)
+	_layer.build()
+	_layer.refresh(_home())
+	var sea := float(WORLD["sea_y"])
+	assert_almost_eq((_layer.transforms_of("pier")[0] as Transform3D).origin.y,
+		sea + Game.data.bal("map3d_pier_deck_m"), 0.001, "the pier's deck stands over the sea")
+	assert_almost_eq((_layer.transforms_of("cog")[0] as Transform3D).origin.y, sea, 0.001,
+		"the ship's waterline is the sea's level")

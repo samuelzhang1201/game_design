@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://dhw4t6qllhi3h"]
+
+[ext_resource type="PackedScene" path="res://assets/3D/buildings/pier_cliff/pier_cliff.glb" id="1_glb"]
+[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="2_253ek"]
+[ext_resource type="Texture2D" path="res://assets/3D/buildings/pier_cliff/pier_cliff_pier_cliff_atlas.jpg" id="3_lelhh"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_253ek"]
+resource_name = "hh_pier_pier_cliff"
+render_priority = 0
+shader = ExtResource("2_253ek")
+shader_parameter/albedo_tex = ExtResource("3_lelhh")
+shader_parameter/albedo_color = Color(1.16, 1.04, 0.86, 1)
+shader_parameter/roughness = 0.9
+shader_parameter/use_vertex_color = false
+shader_parameter/use_normal = false
+shader_parameter/normal_depth = 1.0
+shader_parameter/role = 0
+shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/wall_count = 0
+shader_parameter/roof_count = 0
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22
+shader_parameter/bob_on = 0.0
+shader_parameter/bob_roll_deg = 2.5
+shader_parameter/bob_pitch_deg = 1.0
+shader_parameter/bob_heave_m = 0.3
+shader_parameter/bob_period_s = 7.0
+
+[node name="PierCliff" unique_id=973816095 instance=ExtResource("1_glb")]
+editor_description = "One house type of the 3D map. Map3DLayerHouses draws every house of this type as ONE MultiMesh of this mesh with these surface materials (house_surface.gdshader, edited here: texture, roughness, role 1 wall / 2 tile roof / 0 untinted). The Houses node adds its colour variants and the weather to its own copies at run time; its sizes are data/map3d_houses.csv."
+
+[node name="pier_cliff_export" parent="." index="0" unique_id=104656472]
+surface_material_override/0 = SubResource("ShaderMaterial_253ek")

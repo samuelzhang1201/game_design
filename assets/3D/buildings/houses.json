@@ -13,6 +13,13 @@
   "source": "tripo",
   "tris": 1252
  },
+ "carrack": {
+  "footing_m": 3.567,
+  "footprint_m": 40.0,
+  "height_m": 30.638,
+  "source": "tripo",
+  "tris": 9751
+ },
  "chapel": {
   "footing_m": 17.883,
   "footprint_m": 24.0,
@@ -41,6 +48,13 @@
   "source": "tripo",
   "tris": 5996
  },
+ "cog": {
+  "footing_m": 1.844,
+  "footprint_m": 27.0,
+  "height_m": 21.95,
+  "source": "tripo",
+  "tris": 2528
+ },
  "cottage_a": {
   "footing_m": 18.134,
   "footprint_m": 17.0,
@@ -62,12 +76,26 @@
   "source": "tripo",
   "tris": 1272
  },
+ "fishing_boat": {
+  "footing_m": 0.595,
+  "footprint_m": 12.0,
+  "height_m": 7.554,
+  "source": "tripo",
+  "tris": 1238
+ },
  "longhouse": {
   "footing_m": 18.029,
   "footprint_m": 20.0,
   "height_m": 8.881,
   "source": "tripo",
   "tris": 1276
+ },
+ "longship": {
+  "footing_m": 1.36,
+  "footprint_m": 30.0,
+  "height_m": 19.702,
+  "source": "tripo",
+  "tris": 2974
  },
  "palace": {
   "footing_m": 17.934,
@@ -91,11 +119,18 @@
   "tris": 60569
  },
  "pier": {
-  "footing_m": 17.686,
+  "footing_m": 5.89,
   "footprint_m": 60.0,
-  "height_m": 9.193,
-  "source": "blender-mcp",
-  "tris": 888
+  "height_m": 13.167,
+  "source": "tripo",
+  "tris": 2948
+ },
+ "pier_cliff": {
+  "footing_m": 9.524,
+  "footprint_m": 140.0,
+  "height_m": 62.356,
+  "source": "tripo",
+  "tris": 11715
  },
  "townhouse_a": {
   "footing_m": 18.061,
@@ -119,25 +154,25 @@
   "tris": 2122
  },
  "wall": {
-  "footing_m": 17.778,
+  "footing_m": 17.78,
   "footprint_m": 24.0,
-  "height_m": 13.728,
-  "source": "blender-mcp",
-  "tris": 944
+  "height_m": 12.423,
+  "source": "tripo",
+  "tris": 1510
  },
  "wall_gate": {
-  "footing_m": 17.914,
+  "footing_m": 18.106,
   "footprint_m": 23.0,
-  "height_m": 23.776,
-  "source": "blender-mcp",
-  "tris": 2012
+  "height_m": 23.17,
+  "source": "tripo",
+  "tris": 4233
  },
  "wall_tower": {
-  "footing_m": 17.615,
-  "footprint_m": 14.0,
-  "height_m": 27.369,
-  "source": "blender-mcp",
-  "tris": 974
+  "footing_m": 17.904,
+  "footprint_m": 18.0,
+  "height_m": 27.854,
+  "source": "tripo",
+  "tris": 2566
  },
  "workshop": {
   "footing_m": 17.886,

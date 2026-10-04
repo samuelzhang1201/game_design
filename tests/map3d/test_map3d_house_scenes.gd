@@ -1,6 +1,7 @@
 extends GutTest
 ## Every house type is a SCENE (owner 2026-10-04: 每个房屋的模型为什么不是一个
-## 场景): scenes/models/buildings/<type>.tscn inherits its .glb and gives
+## 场景): scenes/models/buildings/<type>.tscn (a moored ship's
+## scenes/models/ships/<type>.tscn) inherits its .glb and gives
 ## each surface its house_surface.gdshader material in the editor, and the map
 ## draws exactly those materials, adding only the Houses node's tints and the
 ## weather to its own copies.
@@ -22,9 +23,11 @@ func test_every_type_names_a_scene_that_inherits_its_glb() -> void:
 		if not FileAccess.file_exists(path):
 			fail_test(type + " has no scene at " + path)
 			continue
-		assert_true(path.begins_with("res://scenes/models/buildings/"), type + "'s scene is a scene, so it lives under scenes/: " + path)
+		# a building's scene under buildings/, a moored ship's under ships/ (role ship)
+		var kind := "ships" if String(repo.map3d_houses[type]["role"]) == "ship" else "buildings"
+		assert_true(path.begins_with("res://scenes/models/%s/" % kind), type + "'s scene is a scene, so it lives under scenes/: " + path)
 		var text := FileAccess.get_file_as_string(path)
-		var glb := "res://assets/3D/buildings/%s/%s.glb" % [type, type]
+		var glb := "res://assets/3D/%s/%s/%s.glb" % [kind, type, type]
 		assert_true(text.contains('path="%s"' % glb) and text.contains("instance=ExtResource("),
 			type + "'s scene inherits " + glb + " (New Inherited Scene), so a re-export carries over")
 
@@ -93,3 +96,18 @@ func test_the_map_draws_a_copy_of_the_scenes_materials_with_the_tints() -> void:
 		assert_eq(int(mat.get_shader_parameter("wall_count")), 2, "the Houses node's wall tints")
 		assert_eq(float(mat.get_shader_parameter("weather_on")), 1.0, "the weather is laid on the copy")
 		assert_eq(int(scene_mat.get_shader_parameter("wall_count")), 0, "the scene's material is untouched")
+
+
+## A moored ship rocks on the swell (owner 2026-10-04: 要有在海上停泊时随海浪飘荡的感觉):
+## every surface of a ship's scene turns its bob on, and nothing else does.
+func test_a_ship_and_only_a_ship_rides_the_swell() -> void:
+	var ships := 0
+	for type: String in repo.map3d_houses:
+		var model := Map3DAssetCache.house_model(GameArt.path(GameArt.HOUSE_MODELS, type))
+		var is_ship := String(repo.map3d_houses[type]["role"]) == "ship"
+		ships += int(is_ship)
+		for mat: Variant in model.get("materials", []):
+			var raw: Variant = (mat as ShaderMaterial).get_shader_parameter("bob_on") if mat is ShaderMaterial else null
+			var bob := float(raw) if raw != null else 0.0   # a scene made before the bob never wrote it
+			assert_eq(bob > 0.0, is_ship, type + (" rocks on the swell" if is_ship else " stands still"))
+	assert_gt(ships, 0, "the table has ships")

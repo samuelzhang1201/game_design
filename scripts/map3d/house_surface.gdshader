@@ -1,7 +1,8 @@
 // One surface of a settlement house (owner 2026-09-25: "房屋墙壁和房顶的颜色
 // 可以多样化一点，主色调不变，但可以有不同variant"). Each surface's material is
-// set in its house type's scene (scenes/models/buildings/<type>.tscn, edited
-// in the editor): its albedo texture, its roughness, the grime baked into its
+// set in its house type's scene (scenes/models/buildings/<type>.tscn, a
+// ship's scenes/models/ships/<type>.tscn, edited in the editor): its albedo
+// texture, its roughness, the grime baked into its
 // vertex colour, its role; double-sided. Map3DLayerHouses draws a copy that
 // multiplies a WALL or ROOF surface by one of its tints (edited on the node),
 // picked per house (Map3DHouses.variant_of) and handed over as the MultiMesh
@@ -45,8 +46,29 @@ uniform float weather_roof_snow = 0.85;
 uniform float weather_wet_dark = 0.22;
 varying vec3 w_pos;
 varying vec3 w_up;
+// A MOORED SHIP rides the swell (owner 2026-10-04: 要有在海上停泊时随海浪飘荡的感觉).
+// A ship's scene sets bob_on; every vertex is then turned about the origin —
+// the waterline, which the layer floats on the sea — by a slow roll about the
+// hull's long axis (X) and a smaller pitch about its beam (Z), and lifted by a
+// heave, each wave's phase hashed from the instance's own place so no two ships
+// in a harbour rock together. Every other surface keeps bob_on 0 and is untouched.
+uniform float bob_on = 0.0;
+uniform float bob_roll_deg = 2.5;
+uniform float bob_pitch_deg = 1.0;
+uniform float bob_heave_m = 0.3;
+uniform float bob_period_s = 7.0;
 
 void vertex() {
+	if (bob_on > 0.0) {
+		vec2 at = MODEL_MATRIX[3].xz;
+		float t = TIME * 6.2831853 / bob_period_s + fract(sin(dot(at, vec2(12.9898, 78.233))) * 43758.5453) * 6.2831853;
+		float roll = radians(bob_roll_deg) * sin(t) * bob_on;
+		float pitch = radians(bob_pitch_deg) * sin(t * 0.71 + 1.7) * bob_on;
+		mat3 rx = mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, cos(roll), sin(roll)), vec3(0.0, -sin(roll), cos(roll)));
+		mat3 rz = mat3(vec3(cos(pitch), sin(pitch), 0.0), vec3(-sin(pitch), cos(pitch), 0.0), vec3(0.0, 0.0, 1.0));
+		VERTEX = rx * rz * VERTEX + vec3(0.0, bob_heave_m * bob_on * sin(t * 1.23 + 0.4), 0.0);
+		NORMAL = rx * rz * NORMAL;
+	}
 	w_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	w_up = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	tint = vec3(1.0);

@@ -1,4 +1,8 @@
-"""A town's WALLS and a port's PIER, built in the owner's Blender with the
+"""SUPERSEDED (2026-10-04): the shipped walls and piers are Tripo generations,
+tools/map3d/tripo_harbour/. Kept as the hand-built fallback the owner ruled too
+plain (2026-10-01: 城墙和码头都太丑太简陋了).
+
+A town's WALLS and a port's PIER, built in the owner's Blender with the
 houses' own kit (owner 2026-10-01: 城镇里的feature如果有城墙我希望城镇的外围能增加城墙；
 城镇的feature里如果有码头，我希望城镇能够延伸出去一个码头到海里 — modelled by hand as
 MODULES, owner's pick over Tripo parts). Run after kit.py and buildings.py:

@@ -1,45 +1,55 @@
 [gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://cvwk0bv6aet4o"]
 
-[ext_resource type="PackedScene" uid="uid://bit5wrjwoeo71" path="res://scenes/models/buildings/barn.tscn" id="1_0igmy"]
-[ext_resource type="PackedScene" uid="uid://xsaenv6ralj8" path="res://scenes/models/buildings/byre.tscn" id="2_jdkuk"]
-[ext_resource type="PackedScene" uid="uid://cngpvocwr2bcr" path="res://scenes/models/buildings/chapel.tscn" id="3_dvmel"]
-[ext_resource type="PackedScene" uid="uid://bm71pr5xrryug" path="res://scenes/models/buildings/church.tscn" id="4_13o7r"]
-[ext_resource type="PackedScene" uid="uid://0hylimk4088p" path="res://scenes/models/buildings/church_b.tscn" id="5_yb8vq"]
-[ext_resource type="PackedScene" uid="uid://dfflr4gxb4vu3" path="res://scenes/models/buildings/church_tower.tscn" id="6_4bnxs"]
-[ext_resource type="PackedScene" uid="uid://c00v7vxhr06pa" path="res://scenes/models/buildings/cottage_a.tscn" id="7_y8vrd"]
-[ext_resource type="PackedScene" uid="uid://c6pyml73kmoip" path="res://scenes/models/buildings/cottage_b.tscn" id="8_acitm"]
-[ext_resource type="PackedScene" uid="uid://dchbjp5bhl172" path="res://scenes/models/buildings/cottage_c.tscn" id="9_xct51"]
-[ext_resource type="PackedScene" uid="uid://ctyqvrnuvd3fv" path="res://scenes/models/buildings/longhouse.tscn" id="10_fvx6t"]
-[ext_resource type="PackedScene" uid="uid://c4ijsd6pr0xoa" path="res://scenes/models/buildings/palace.tscn" id="11_ha4a1"]
-[ext_resource type="PackedScene" uid="uid://14q18tw4phap" path="res://scenes/models/buildings/palace_b.tscn" id="12_3rkox"]
-[ext_resource type="PackedScene" uid="uid://fqmtbhyeesil" path="res://scenes/models/buildings/palace_c.tscn" id="13_oq3am"]
-[ext_resource type="PackedScene" uid="uid://bl06nx6sj3oea" path="res://scenes/models/buildings/pier.tscn" id="14_r4qon"]
-[ext_resource type="PackedScene" uid="uid://147a2n2cn3pb" path="res://scenes/models/buildings/townhouse_a.tscn" id="15_8mcu5"]
-[ext_resource type="PackedScene" uid="uid://gnrqv25jj45" path="res://scenes/models/buildings/townhouse_b.tscn" id="16_eiuq2"]
-[ext_resource type="PackedScene" uid="uid://rmuf74x250a6" path="res://scenes/models/buildings/townhouse_c.tscn" id="17_q2n5j"]
-[ext_resource type="PackedScene" uid="uid://doxv6h1whx5py" path="res://scenes/models/buildings/wall.tscn" id="18_038to"]
-[ext_resource type="PackedScene" uid="uid://0esfn7lp4q53" path="res://scenes/models/buildings/wall_gate.tscn" id="19_4b737"]
-[ext_resource type="PackedScene" uid="uid://2figiocpfp1k" path="res://scenes/models/buildings/wall_tower.tscn" id="20_nb0uw"]
-[ext_resource type="PackedScene" uid="uid://dkspaw73ejyjq" path="res://scenes/models/buildings/workshop.tscn" id="21_raoie"]
-[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="22_b01ki"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/barn.tscn" id="1_0igmy"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/byre.tscn" id="2_jdkuk"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/chapel.tscn" id="3_dvmel"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/church.tscn" id="4_13o7r"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/church_b.tscn" id="5_yb8vq"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/church_tower.tscn" id="6_4bnxs"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/cottage_a.tscn" id="7_y8vrd"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/cottage_b.tscn" id="8_acitm"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/cottage_c.tscn" id="9_xct51"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/longhouse.tscn" id="10_fvx6t"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/palace.tscn" id="11_ha4a1"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/palace_b.tscn" id="12_3rkox"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/palace_c.tscn" id="13_oq3am"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/pier.tscn" id="14_r4qon"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/townhouse_a.tscn" id="15_8mcu5"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/townhouse_b.tscn" id="16_eiuq2"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/townhouse_c.tscn" id="17_q2n5j"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/wall.tscn" id="18_038to"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/wall_gate.tscn" id="19_4b737"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/wall_tower.tscn" id="20_nb0uw"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/workshop.tscn" id="21_raoie"]
+[ext_resource type="PackedScene" path="res://scenes/models/buildings/pier_cliff.tscn" id="22_4bnxs"]
+[ext_resource type="Script" path="res://scripts/engine/art_table.gd" id="22_b01ki"]
+[ext_resource type="PackedScene" path="res://scenes/models/ships/fishing_boat.tscn" id="23_y8vrd"]
+[ext_resource type="PackedScene" path="res://scenes/models/ships/cog.tscn" id="24_acitm"]
+[ext_resource type="PackedScene" path="res://scenes/models/ships/longship.tscn" id="25_xct51"]
+[ext_resource type="PackedScene" path="res://scenes/models/ships/carrack.tscn" id="26_fvx6t"]
 
 [resource]
 script = ExtResource("22_b01ki")
 art = Dictionary[String, Resource]({
 "barn": ExtResource("1_0igmy"),
 "byre": ExtResource("2_jdkuk"),
+"carrack": ExtResource("26_fvx6t"),
 "chapel": ExtResource("3_dvmel"),
 "church": ExtResource("4_13o7r"),
 "church_b": ExtResource("5_yb8vq"),
 "church_tower": ExtResource("6_4bnxs"),
+"cog": ExtResource("24_acitm"),
 "cottage_a": ExtResource("7_y8vrd"),
 "cottage_b": ExtResource("8_acitm"),
 "cottage_c": ExtResource("9_xct51"),
+"fishing_boat": ExtResource("23_y8vrd"),
 "longhouse": ExtResource("10_fvx6t"),
+"longship": ExtResource("25_xct51"),
 "palace": ExtResource("11_ha4a1"),
 "palace_b": ExtResource("12_3rkox"),
 "palace_c": ExtResource("13_oq3am"),
 "pier": ExtResource("14_r4qon"),
+"pier_cliff": ExtResource("22_4bnxs"),
 "townhouse_a": ExtResource("15_8mcu5"),
 "townhouse_b": ExtResource("16_eiuq2"),
 "townhouse_c": ExtResource("17_q2n5j"),

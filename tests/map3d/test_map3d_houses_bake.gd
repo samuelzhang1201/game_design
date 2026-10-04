@@ -26,12 +26,16 @@ func before_all() -> void:
 	_picker.ctx = ctx
 
 
-## A town's wall and a port's pier (owner 2026-10-01) are laid by their own
-## rules, not by the house passes: the cluster and the sea tests below take
-## houses only, and these two kinds have their own tests at the end.
+## A town's wall, a port's pier (owner 2026-10-01) and its moored ships
+## (2026-10-04) are laid by their own rules, not by the house passes: the
+## cluster and the sea tests below take houses only, and these kinds have
+## their own tests at the end.
 func _laid(r: Dictionary) -> bool:
-	var row: Dictionary = Game.data.map3d_houses.get(String(r["type"]), {})
-	return ["wall", "pier"].has(String(row.get("role", "")))
+	return ["wall", "pier", "ship"].has(_role(r))
+
+
+func _role(r: Dictionary) -> String:
+	return String((Game.data.map3d_houses.get(String(r["type"]), {}) as Dictionary).get("role", ""))
 
 
 func _skip() -> bool:
@@ -47,7 +51,7 @@ func test_no_house_stands_in_the_sea() -> void:
 	var wet := 0
 	var worst := ""
 	for r: Dictionary in _rows:
-		if String(r["type"]) == "pier":
+		if ["pier", "ship"].has(_role(r)):
 			continue
 		var pack := Map3DGeometry.world_to_pack(_meta,
 			Vector2(float(r["x_m"]), float(r["z_m"])))
@@ -168,3 +172,49 @@ func test_a_pier_runs_from_the_shore_out_to_sea() -> void:
 		var head := Map3DGeometry.world_to_pack(_meta, at + along * (half - 2.0))
 		assert_lt(_picker.cell_at(head), 0, code + "'s pier head is over the water")
 	assert_gt(piers, 20, "the pack's ports have piers")
+
+
+## Owner 2026-10-04 (港口城市停留在港口的船舶装饰 … 根据大小1-2艘): every ship rides
+## on the water — its centre and its bow and stern — at a port, one or two to
+## a port by its size, each a type its group allows.
+func test_ships_ride_on_the_water_at_ports_one_or_two_by_size() -> void:
+	if _skip():
+		return
+	var per_port: Dictionary = {}
+	for r: Dictionary in _rows:
+		if _role(r) != "ship":
+			continue
+		var code := String(r["burg_code"])
+		var b: Dictionary = Game.data.burgs[code]
+		assert_eq(int(b.get("is_port", 0)), 1, code + " moors a ship because it is a port")
+		var t: Dictionary = Game.data.map3d_houses[String(r["type"])]
+		var group := String(b.get("group", "village"))
+		var order := ["village", "fort", "town", "city", "capital"]
+		assert_gte(order.find(group), order.find(String(t["min_group"])), code + "'s " + String(r["type"]) + " is one its " + group + " allows")
+		per_port[code] = int(per_port.get(code, 0)) + 1
+		var at := Vector2(float(r["x_m"]), float(r["z_m"]))
+		var yaw := deg_to_rad(float(r["yaw_deg"]))
+		var along := Vector2(cos(yaw), -sin(yaw))
+		for f: float in [-0.45, 0.0, 0.45]:
+			var p := Map3DGeometry.world_to_pack(_meta, at + along * float(t["width_m"]) * f)
+			assert_lt(_picker.cell_at(p), 0, "%s's %s floats on the water (at %.2f of its length)" % [code, r["type"], f])
+	for code: String in per_port:
+		var n := int(per_port[code])
+		assert_true(n >= 1 and n <= 2, code + " moors one or two ships, not %d" % n)
+	assert_gt(per_port.size(), 50, "the pack's ports moor ships")
+
+
+## Owner 2026-10-01 / 2026-10-04 (我的首都建在悬崖边上): a cliff harbour stands
+## at a port, its timber quay (+X) out over the water.
+func test_a_cliff_harbour_runs_its_quay_out_over_the_water() -> void:
+	if _skip():
+		return
+	for r: Dictionary in _rows:
+		if String(r["type"]) != "pier_cliff":
+			continue
+		var code := String(r["burg_code"])
+		assert_eq(int(Game.data.burgs[code].get("is_port", 0)), 1, code + " has a cliff harbour because it is a port")
+		var yaw := deg_to_rad(float(r["yaw_deg"]))
+		var along := Vector2(cos(yaw), -sin(yaw))
+		var head := Map3DGeometry.world_to_pack(_meta, Vector2(float(r["x_m"]), float(r["z_m"])) + along * 60.0)
+		assert_lt(_picker.cell_at(head), 0, code + "'s cliff harbour quay reaches the water")

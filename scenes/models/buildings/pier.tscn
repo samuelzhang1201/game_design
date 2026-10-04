@@ -1,15 +1,14 @@
 [gd_scene format=3 uid="uid://bl06nx6sj3oea"]
 
-[ext_resource type="Texture2D" uid="uid://cqja5goglq1oo" path="res://assets/3D/buildings/pier/pier_planks.jpg" id="1_1mf7n"]
-[ext_resource type="PackedScene" uid="uid://dhjrwxfr2634q" path="res://assets/3D/buildings/pier/pier.glb" id="1_lb5yh"]
-[ext_resource type="Texture2D" uid="uid://nt74gsktxvpb" path="res://assets/3D/buildings/pier/pier_timber.jpg" id="2_lb5yh"]
-[ext_resource type="Shader" uid="uid://df10qlt7iekp8" path="res://scripts/map3d/house_surface.gdshader" id="3_k2g2e"]
+[ext_resource type="PackedScene" path="res://assets/3D/buildings/pier/pier.glb" id="1_lb5yh"]
+[ext_resource type="Shader" path="res://scripts/map3d/house_surface.gdshader" id="3_k2g2e"]
+[ext_resource type="Texture2D" path="res://assets/3D/buildings/pier/pier_pier_atlas.jpg" id="3_pj71c"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_k2g2e"]
-resource_name = "hh_planks"
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_pj71c"]
+resource_name = "hh_pier_pier"
 render_priority = 0
 shader = ExtResource("3_k2g2e")
-shader_parameter/albedo_tex = ExtResource("1_1mf7n")
+shader_parameter/albedo_tex = ExtResource("3_pj71c")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
 shader_parameter/roughness = 0.9
 shader_parameter/use_vertex_color = false
@@ -28,34 +27,14 @@ shader_parameter/weather_step_px = 8.0
 shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
 shader_parameter/weather_roof_snow = 0.85
 shader_parameter/weather_wet_dark = 0.22
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_lkyk3"]
-resource_name = "hh_timber"
-render_priority = 0
-shader = ExtResource("3_k2g2e")
-shader_parameter/albedo_tex = ExtResource("2_lb5yh")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/roughness = 0.9
-shader_parameter/use_vertex_color = true
-shader_parameter/use_normal = false
-shader_parameter/normal_depth = 1.0
-shader_parameter/role = 0
-shader_parameter/wall_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-shader_parameter/roof_tints = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-shader_parameter/wall_count = 0
-shader_parameter/roof_count = 0
-shader_parameter/weather_on = 0.0
-shader_parameter/weather_blend = 0.0
-shader_parameter/weather_origin = Vector2(0, 0)
-shader_parameter/weather_m_per_px = 50.0
-shader_parameter/weather_step_px = 8.0
-shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
-shader_parameter/weather_roof_snow = 0.85
-shader_parameter/weather_wet_dark = 0.22
+shader_parameter/bob_on = 0.0
+shader_parameter/bob_roll_deg = 2.5
+shader_parameter/bob_pitch_deg = 1.0
+shader_parameter/bob_heave_m = 0.3
+shader_parameter/bob_period_s = 7.0
 
 [node name="Fortifications" unique_id=799387572 instance=ExtResource("1_lb5yh")]
 editor_description = "One house type of the 3D map. Map3DLayerHouses draws every house of this type as ONE MultiMesh of this mesh with these surface materials (house_surface.gdshader, edited here: texture, roughness, role 1 wall / 2 tile roof / 0 untinted). The Houses node adds its colour variants and the weather to its own copies at run time; its sizes are data/map3d_houses.csv."
 
-[node name="pier_export" parent="." index="0" unique_id=1479848165]
-surface_material_override/0 = SubResource("ShaderMaterial_k2g2e")
-surface_material_override/1 = SubResource("ShaderMaterial_lkyk3")
+[node name="pier_export" parent="." index="0" unique_id=805622909]
+surface_material_override/0 = SubResource("ShaderMaterial_pj71c")

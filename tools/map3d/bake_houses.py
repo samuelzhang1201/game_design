@@ -1127,24 +1127,115 @@ def fortify(burg, rows, rules, types, land, wet, k, vw, vh, roads):
     return out
 
 
-def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None):
-    """A port's pier as one house row: from the settlement's centre the
-    bearing (every pier_bearing_step_deg) whose shore is nearest, within
-    pier_search_m, where the next pier_len_m out is all water and the
-    shore's ground stands no more than pier_max_shore_m over the sea; the
-    pier's landward end pier_root_m inland of the shore, its head out to
-    sea. `water`, when given, is where BOTH the coastline and the game's cell
-    index say water (a pier head over coastline sea inside a game cell read
-    as standing on land); without it, water is wherever `land` is not.
-    [] for a settlement that is not a port or finds no such shore."""
+# Owner 2026-10-04: a cliff harbour (pier_cliff) where a port's shore is a
+# cliff — the capital's first (适合那种我的首都建在悬崖边上的那种风格) — and SHIPS moored
+# in every port (港口城市停留在港口的船舶装饰 … 每个不同港口根据其城市大小放置不同的船舶，
+# 根据大小1-2艘即可), rows of role `ship` the runtime floats and rocks on the sea.
+# Every number is data/map3d_bake.csv's pier_cliff_* / ship_*.
+
+# A ship's moorings in its pier's own frame (+X out to sea, metres from the
+# pier's centre): beside a plain pier's deck, off a cliff harbour's quay head,
+# and — for a port with no pier — off the open shore (from the shore point).
+_MOORINGS = {"pier": [(12.0, -1.0), (12.0, 1.0)], "pier_cliff": [(105.0, -1.0), (105.0, 1.0)],
+             None: [(0.0, -1.0), (0.0, 1.0)]}
+
+
+def _ship_types(types, group):
+    """The ship types a group allows, the grandest first: the highest
+    min_group, then the heaviest weight (a town's merchant cog before its
+    longship)."""
+    def rank(t):
+        g = types[t]["min_group"]
+        return GROUP_ORDER.index(g) if g in GROUP_ORDER else -1
+    return sorted((t for t, r in types.items() if r["role"] == "ship" and _group_allows(group, r["min_group"])),
+                  key=lambda t: (-rank(t), -float(types[t]["weight"]), t))
+
+
+def _moor(burg, types, rules, rank, water_at, origin, d, kind, pier_half_w):
+    """1-2 ship rows (ship_count_<group>) moored round `origin` along the unit
+    bearing `d`: the grandest type the group allows first, then one of its
+    allowed types by weight; each set off `kind`'s mooring by its own half
+    beam plus ship_gap_m, and walked further out to sea by ship_step_m (at
+    most ship_tries times) until its whole hull — a 5 x 3 grid over its
+    rectangle, bow, stern and both sides — stands on water (the corners alone
+    let a bow between them reach a game cell of land). A ship that finds no
+    water is left out."""
+    group = str(burg.get("group", "village"))
+    allowed = _ship_types(types, group)
+    n = int(rules.get("ship_count_" + group, 0))
+    if not allowed or n <= 0:
+        return []
+    rng = np.random.default_rng(_seed(str(burg["burg_code"]) + ":ships"))
+    picks = [allowed[0]]
+    while len(picks) < n:
+        w = np.array([float(types[t]["weight"]) for t in allowed])
+        picks.append(allowed[int(rng.choice(len(allowed), p=w / w.sum()))])
+    nx, nz = -d[1], d[0]                       # the bearing's left hand
+    out = []
+    for i, t in enumerate(picks):
+        along, side = _MOORINGS[kind][i % len(_MOORINGS[kind])]
+        half_l = 0.5 * float(types[t]["width_m"] or types[t]["footprint_m"])
+        half_b = 0.5 * float(types[t]["depth_m"] or types[t]["footprint_m"])
+        off = pier_half_w + float(rules["ship_gap_m"]) + half_b
+        # the hull is TESTED ship_margin_m wider all round: water here is a 20 m
+        # vertex, the game's is a 50 m cell, and a bow between two wet vertices
+        # still reached a cell of land (hatledonton, tetfordbury)
+        test_l = half_l + float(rules.get("ship_margin_m", 0.0))
+        test_b = half_b + float(rules.get("ship_margin_m", 0.0))
+        flip = 180.0 if rng.random() < 0.5 else 0.0
+        for step in range(int(rules["ship_tries"]) + 1):
+            out_m = step * float(rules["ship_step_m"])
+            if kind is None:   # off the open shore, side by side
+                a_m = float(rules["ship_anchor_m"]) + half_l + out_m
+                o = side * (half_b + float(rules["ship_gap_m"]))
+            else:              # beside the pier (or off its head), sliding out to sea
+                a_m = along + out_m
+                o = side * off
+            cx = origin[0] + d[0] * a_m + nx * o
+            cz = origin[1] + d[1] * a_m + nz * o
+            hull = [(cx + d[0] * a * test_l + nx * b * test_b, cz + d[1] * a * test_l + nz * b * test_b)
+                    for a in (-1.0, -0.5, 0.0, 0.5, 1.0) for b in (-1.0, 0.0, 1.0)]
+            if all(water_at(x, z) for x, z in hull):
+                out.append({"burg_code": str(burg["burg_code"]), "rank": rank + len(out),
+                            "x_m": float(round(cx, 2)), "z_m": float(round(cz, 2)),
+                            # the hull lies along the bearing, like its pier: +X onto d
+                            "yaw_deg": float(round((math.degrees(math.atan2(-d[1], d[0])) + flip + 180.0) % 360.0 - 180.0, 2)),
+                            "type": t, "scale": 1.0, "height_scale": 1.0})
+                break
+    return out
+
+
+def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types=None):
+    """A port's pier and its moored ships as house rows. From the
+    settlement's centre every bearing (pier_bearing_step_deg) is walked to
+    its shore within pier_search_m. A LOW shore — its ground no more than
+    pier_max_shore_m over the sea, the next pier_len_m out all water — takes
+    the timber `pier`, its landward end pier_root_m inland. A CLIFF shore —
+    pier_cliff_min_shore_m or more over the sea, the next pier_cliff_reach_m
+    out all water — takes `pier_cliff` (when `types` has it and the group
+    allows it), its rock to the land, its centre pier_cliff_root_m inland (negative: out to sea): a
+    capital takes the cliff when it has one (pier_cliff_capital_first), any
+    other port only when it has no low shore. The nearest shore of the kind
+    wins. Then 1-2 ships (_moor) by the group's size, beside the pier or, for
+    a port that found none, off its nearest open shore. `water`, when given,
+    is where BOTH the coastline and the game's cell index say water (a pier
+    head over coastline sea inside a game cell read as standing on land);
+    without it, water is wherever `land` is not. [] for a settlement that is
+    not a port."""
     if not int(burg.get("is_port", 0) or 0) or not rows:
         return []
+    types = types or {}
     cx, cz = rows[0]["x_m"], rows[0]["z_m"]
     bx, bz = float(burg["x"]) * k, float(burg["y"]) * k
     step = float(rules["pier_step_m"])
     plen = float(rules["pier_len_m"])
     reach = float(rules["pier_search_m"])
     max_shore = float(rules["pier_max_shore_m"])
+    group = str(burg.get("group", "village"))
+    cliff_ok = "pier_cliff" in types and _group_allows(group, types["pier_cliff"]["min_group"])
+    cliff_min = float(rules.get("pier_cliff_min_shore_m", 1e9))
+    cliff_reach = float(rules.get("pier_cliff_reach_m", plen))
+    open_reach = float(rules.get("ship_anchor_m", 0.0)) + 2.0 * float(rules.get("ship_step_m", 0.0))
 
     def land_at(x, z):
         ix, iy = int(round(bx + x / VERTEX_M)), int(round(bz + z / VERTEX_M))
@@ -1152,7 +1243,19 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None):
             return None
         is_land = (not water[iy, ix]) if water is not None else land[iy, ix] >= 0.5
         return is_land, float(height[iy, ix])
-    best = None
+
+    def water_at(x, z):
+        v = land_at(x, z)
+        return v is not None and not v[0]
+
+    def clear(dx, dz, shore, length):
+        s = shore
+        while s <= shore + length:
+            if not water_at(cx + dx * s, cz + dz * s):
+                return False
+            s += step
+        return True
+    low = cliff = anywhere = None
     deg = 0.0
     while deg < 360.0:
         a = math.radians(deg)
@@ -1169,25 +1272,39 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None):
                 break
             last_h = v[1]
             d += step
-        if shore is not None and last_h is not None and last_h - sea_y <= max_shore:
-            clear = True
-            s = shore
-            while s <= shore + plen:
-                v = land_at(cx + dx * s, cz + dz * s)
-                if v is None or v[0]:
-                    clear = False
-                    break
-                s += step
-            if clear and (best is None or shore < best[0]):
-                best = (shore, dx, dz)
+        if shore is not None and last_h is not None:
+            rise = last_h - sea_y
+            if rise <= max_shore and (low is None or shore < low[0]) and clear(dx, dz, shore, plen):
+                low = (shore, dx, dz)
+            if cliff_ok and rise >= cliff_min and (cliff is None or shore < cliff[0]) \
+                    and clear(dx, dz, shore, cliff_reach):
+                cliff = (shore, dx, dz)
+            if (anywhere is None or shore < anywhere[0]) and clear(dx, dz, shore, open_reach):
+                anywhere = (shore, dx, dz)
         deg += float(rules["pier_bearing_step_deg"])
-    if best is None:
-        return []
-    shore, dx, dz = best
-    mid = shore - float(rules["pier_root_m"]) + plen / 2
+    pick = None
+    if cliff is not None and (low is None or (group == "capital" and int(rules.get("pier_cliff_capital_first", 0)))):
+        pick = ("pier_cliff",) + cliff
+    elif low is not None:
+        pick = ("pier",) + low
     rank = max((int(r["rank"]) for r in rows), default=0) + 1
-    return [{"burg_code": str(burg["burg_code"]), "rank": rank,
-             "x_m": float(round(cx + dx * mid, 2)), "z_m": float(round(cz + dz * mid, 2)),
-             # the pier runs along the mesh's +X: yaw turns +X onto (dx, dz)
-             "yaw_deg": float(round(math.degrees(math.atan2(-dz, dx)), 2)),
-             "type": "pier", "scale": 1.0, "height_scale": 1.0}]
+    out = []
+    if pick is not None:
+        kind, shore, dx, dz = pick
+        if kind == "pier":
+            mid = shore - float(rules["pier_root_m"]) + plen / 2
+        else:
+            mid = shore - float(rules["pier_cliff_root_m"])
+        out.append({"burg_code": str(burg["burg_code"]), "rank": rank,
+                    "x_m": float(round(cx + dx * mid, 2)), "z_m": float(round(cz + dz * mid, 2)),
+                    # the pier runs along the mesh's +X: yaw turns +X onto (dx, dz)
+                    "yaw_deg": float(round(math.degrees(math.atan2(-dz, dx)), 2)),
+                    "type": kind, "scale": 1.0, "height_scale": 1.0})
+        # a ship clears the pier's deck; off the cliff harbour's quay head it rides
+        # clear of the quay's own width (its timber runs ~25 m either side of the axis)
+        half_w = 0.5 * float(types.get(kind, {}).get("depth_m") or 0.0) if kind == "pier" else 25.0
+        out += _moor(burg, types, rules, rank + 1, water_at, (cx + dx * mid, cz + dz * mid), (dx, dz), kind, half_w)
+    elif anywhere is not None:
+        shore, dx, dz = anywhere
+        out += _moor(burg, types, rules, rank, water_at, (cx + dx * shore, cz + dz * shore), (dx, dz), None, 0.0)
+    return out

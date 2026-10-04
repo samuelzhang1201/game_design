@@ -45,10 +45,10 @@ import bmesh
 import bpy
 from mathutils import Matrix, Vector, kdtree
 
-ROOT = "/Users/samuelzhang/game_design"
+ROOT = globals().get("CC_ROOT", "/Users/samuelzhang/game_design")   # a worktree passes its own
 HOUSES = ROOT + "/assets/3D/buildings/"
 SCENE = "Tripo_Houses"
-K = {}
+K = {"CC_ROOT": ROOT}
 exec(open(ROOT + "/tools/map3d/blender_houses/kit.py").read(), K)
 
 # type: (source, yaw degrees turning its door to -Y, triangle budget, atlas px, roof tinted)

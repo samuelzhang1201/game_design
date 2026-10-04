@@ -165,3 +165,17 @@ pier_step_m,10,piers: the march step along a bearing
 pier_bearing_step_deg,5,piers: the bearings tried
 pier_max_shore_m,6,piers: the shore's ground at most this far over the sea (a pier never runs off a cliff)
 wall_shore_m,30,"3D bake WALLS: a wall module stands only where every vertex within this far is land (the bake's 20 m mask against the game's 50 m cell index: at the bare point a module on the shore's last vertex read as in the sea)"
+pier_cliff_min_shore_m,20,"3D bake CLIFF HARBOURS (owner 2026-10-01: 适合那种我的首都建在悬崖边上的那种风格): a port's shore whose ground stands this many metres or more over the sea is a cliff, and takes pier_cliff (data/map3d_houses.csv) — the rock, its stair and castle, the quay at its foot"
+pier_cliff_reach_m,110,cliff harbours: the water must run clear this far out from the cliff's foot (the quay reaches ~70 m past the model's centre)
+pier_cliff_root_m,-25,"cliff harbours: the model's centre this far inland of the shore — NEGATIVE, out to sea: its rock's seaward face, gate and stair stand proud of the shore, its back against the terrain's own cliff (at +10 inland the real cliff buried rock and stair, horsfield 2026-10-04)"
+pier_cliff_capital_first,1,"cliff harbours: 1 = a capital with a cliff shore takes the cliff harbour even where it also has a low one (the owner's capital on its cliff); any other port only when it has no low shore"
+ship_count_village,1,"3D bake SHIPS (owner 2026-10-04: 港口城市停留在港口的船舶装饰 … 每个不同港口根据其城市大小放置不同的船舶，根据大小1-2艘即可): ships moored at a village's port — the largest type its group allows (map3d_houses.csv role ship, min_group), then others by weight"
+ship_count_fort,1,ships: at a fort's port
+ship_count_town,1,ships: at a town's port
+ship_count_city,2,ships: at a city's port
+ship_count_capital,2,ships: at a capital's port
+ship_gap_m,3,ships: water between a moored hull and its pier's deck
+ship_step_m,12,ships: how far a ship is walked further out when its mooring is not all water
+ship_tries,4,ships: at most this many steps out before a ship is left out
+ship_anchor_m,30,ships: at a port with no pier the ships ride this far off its nearest open shore
+ship_margin_m,25,"ships: a hull's water is tested this much wider all round — the bake's water is a 20 m vertex, the game's a 50 m cell, and a bow between two wet vertices still reached a cell of land"

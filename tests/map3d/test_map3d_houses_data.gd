@@ -5,9 +5,9 @@ extends GutTest
 
 const ROLES := ["landmark", "house", "barn"]
 ## Roles the bake lays by their own rules, never drawn for a plot: a town's
-## walls (bake_houses.fortify) and a port's pier (bake_houses.harbour) —
-## owner 2026-10-01.
-const LAID_ROLES := ["wall", "pier"]
+## walls (bake_houses.fortify), a port's pier (bake_houses.harbour) —
+## owner 2026-10-01 — and the ships moored at it (2026-10-04).
+const LAID_ROLES := ["wall", "pier", "ship"]
 const GROUPS := ["capital", "city", "fort", "town", "village"]
 ## Redesign owner 2026-09-20 (lanes, not a jittered grid): the density/edge/
 ## spacing/road-align/per-population keys are gone, replaced by the

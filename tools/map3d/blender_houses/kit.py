@@ -37,7 +37,7 @@ import bmesh
 import bpy
 from mathutils import Matrix, Vector
 
-ROOT = "/Users/samuelzhang/game_design"
+ROOT = globals().get("CC_ROOT", "/Users/samuelzhang/game_design")   # a worktree passes its own
 TEX = ROOT + "/assets/3D/buildings/model_wip/polyhaven/"
 HOUSES = ROOT + "/assets/3D/buildings/"
 

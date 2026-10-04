@@ -851,7 +851,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
                      if any(abs(x - ox) < near and abs(z - oz) < near for x, z in line)]
             rows = rows + bake_houses.fortify(b, rows, rules, types, land_gate, wet, k, vw, vh, roads)
             rows = rows + bake_houses.harbour(b, rows, rules, land_gate, height, k, vw, vh, rules["sea_y_m"],
-                                              water=open_water)
+                                              water=open_water, types=types)
         for r in rows:
             r["x_m"] = ORIGIN_X + float(b["x"]) * M_PER_PX + r["x_m"]
             r["z_m"] = ORIGIN_Y + float(b["y"]) * M_PER_PX + r["z_m"]
