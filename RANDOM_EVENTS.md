@@ -60,8 +60,8 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 **Choices:** ① Accept with thanks — peasant contentment +2, `humble`/`compassionate` ministers +2 *(approves: humility)*. ② Feast the court on them tonight — small gold cost, court opinion +2, `vain` ministers delighted. ③ Decline curtly — peasant contentment −2, legitimacy −1.
 
 ### EV-02 · The Steward's New Cloak — `court · mini · chain-starter`
-**Trigger:** Steward seated ≥ 24 ticks, weight 3 (×3 if Steward has `venal`). **Scene:** Your Steward arrives at council in a fur-lined cloak worth half a village's yearly tax. He says it was a bargain.
-**Choices:** ① Have him investigated (`CHARACTER_INVESTIGATE`, free this once) — if `venal`: skimming exposed, recover gold, his opinion −20 *(resents: accused)*; if `honest`: it was his mother's inheritance — opinion −10, `integrity`-heavy ministers −4 *(disapproves: baseless accusation)*. ② Say nothing — if `venal`, treasury leak worsens quietly (chain: EV-02b "The Missing Tithe" in ~24 ticks). ③ Compliment it publicly — his opinion +8, but if `venal` the skimming grows bolder.
+**Trigger:** Steward seated ≥ 24 ticks, weight 3 (×3 if Steward has `venal`). **Scene:** Your Steward arrives at council in a fur-lined cloak worth half a village's yearly tax, and calls it a bargain.
+**Choices:** ① Have the Steward investigated (`CHARACTER_INVESTIGATE`, free this once) — if `venal`: skimming exposed, recover gold, the Steward's opinion −20 *(resents: accused)*; if `honest`: it was a mother's inheritance — opinion −10, `integrity`-heavy ministers −4 *(disapproves: baseless accusation)*. ② Say nothing — if `venal`, treasury leak worsens quietly (chain: EV-02b "The Missing Tithe" in ~24 ticks). ③ Compliment it publicly — the Steward's opinion +8, but if `venal` the skimming grows bolder.
 
 ### EV-03 · Duel at Dawn — `court · mini`
 **Trigger:** two courtiers with `temper` > 60 or trait `wrathful`, weight 3. **Scene:** An insult over seating precedence, gloves thrown; a duel is set for dawn and half the court has money on it.
@@ -92,7 +92,7 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 **Choices:** ① Full inquiry — someone at court skimmed the works budget (deterministic pick: `venal` trait holder if present); exposure + recovery, their faction affinity +. ② Rebuild quietly, ask nothing — gold cost, court relieved, the skimmer emboldened (chain: next build 20% over cost). ③ Make the builder eat the cost — cheap, unjust; builders' guild remembers (future build costs +10%), `integrity` ministers −3.
 
 ### EV-10 · The Wandering Prophet — `church · mini · chain-starter`
-**Trigger:** unrest > 40 or peasant contentment < 40, weight 3. **Scene:** A barefoot preacher is drawing crowds in the market towns. His sermon is simple: God made the harvest, so who exactly does the crown think it's taxing? The Chaplain demands his arrest. The crowds grow either way.
+**Trigger:** unrest > 40 or peasant contentment < 40, weight 3. The preacher is `char_prophet_cassian`, the man the opening narration and the prologue already name, so the choices move his opinion. **Scene:** Cassian the Barefoot — the preacher the Louthton calls by name — is drawing crowds in the market towns. His sermon is simple: God made the harvest, so who exactly does the crown think it's taxing? The Chaplain demands his arrest. The crowds grow either way.
 **Choices:** ① Arrest him — unrest spike now, crowds disperse over ~8 ticks; risk of martyr chain if contentment stays low. ② Ignore him — he becomes a standing grievance-feeder (faction formation pressure +) until conditions improve. ③ Debate him yourself, in public — set-piece; outcome deterministic on your legitimacy + Chaplain's `sk_diplomacy`: win = legitimacy +3 and the crowd's respect, lose = he quotes you for a decade. `flagship` voice — this is a moment that matters.
 
 ### EV-11 · The Unclaimed Cargo — `windfall · mini`

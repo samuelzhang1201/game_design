@@ -8,3 +8,5 @@ fact_malvern_dying,secret,char_lord_malvern,event_report,Lord Malvern's health i
 fact_food_shortage,public,realm,grain,The realm's granaries are running short.,true,85,you|char_chancellor|char_steward|char_chaplain|char_prophet_cassian|char_guildmaster_tessa,Unrest is beginning.
 fact_raider_muster,secret,raider_realm,army_size,{raider_realm} is massing for a raid eastward.,true,60,char_spymaster|char_marshal,Quill's scouts brought word.
 fact_neighbor_puppet,public,char_emperor,intent,Queen Isabeau rules the Emperor as a puppet.,true,75,you|char_chancellor|char_envoy_petra,Widely known at court.
+fact_louthton_smuggling,secret,char_chancellor,loyalty,"For three years the Louthton's harvest has been under-reported, and the difference sold north to {neighbor_realm}.",true,60,char_chancellor|char_duke_tomas,"The prologue's ledger (C0-05, C0-12): the Chancellor's hand, the Warden's keys."
+fact_ysolde_dowry,secret,char_lady_ysolde,event_report,Lady Ysolde has been paying for the Louthton millers' grain out of her own dowry.,true,70,char_lady_ysolde|char_prophet_cassian,The margin notes in the prologue's ledger (C0-05).

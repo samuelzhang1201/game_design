@@ -105,15 +105,18 @@ func test_effect_op_arity_and_colon_safety() -> void:
 ## Ruling 2: target resolution. Every opinion:/promise: op's target (part 1)
 ## must resolve the same way EventEffects._resolve resolves it at runtime:
 ## a founding seat code (state.council key) or an existing character id
-## (state.characters key). Both are exactly founding_council.csv's seat/id
-## columns for the current campaign, so we validate against that file
-## directly rather than duplicating engine internals.
+## (state.characters key): founding_council.csv's seat/id columns, or a
+## roles.csv id (the cast outside the council — Cassian, Ysolde, the Duke),
+## so we validate against those files directly rather than duplicating
+## engine internals.
 func test_opinion_and_promise_targets_resolve() -> void:
 	var founding_ids := {}
 	var founding_seats := {}
 	for f in data.founding:
 		founding_ids[String(f["id"])] = true
 		founding_seats[String(f["seat"])] = true
+	for r in data.roles:
+		founding_ids[String(r["id"])] = true
 	for c in data.event_choices:
 		for raw in String(c["effects"]).split(";", false):
 			var op := raw.strip_edges()
