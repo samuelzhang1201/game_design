@@ -251,7 +251,37 @@ static func transform_of(h: Dictionary, height: float) -> Transform3D:
 	var height_scale: float = float(h["height_scale"])
 	var turn := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
 	turn = turn.scaled(Vector3(s, s * height_scale, s))
+	# a wall module SHEARED along its length onto the ground's slope (seat_of
+	# "slope"): its verticals stay plumb, its foot and crest follow the hill
+	turn.x += Vector3(0.0, float(h.get("_rise", 0.0)) * s, 0.0)
 	return Transform3D(turn, Vector3(at.x, height, at.y))
+
+
+## Where a row of a type stands, Vector2(lowest, seat), by its table's `seat`
+## (data/map3d_houses.csv): "sea" a pier's deck `deck_m` over the sea, "water"
+## a moored ship's waterline on it, "ground" its centre's ground (a wall
+## tower or gate, whose own masonry runs on down into the hill), "slope" the
+## same and the row's `_rise` set to the ground's slope between its two ends
+## (a wall module: owner 2026-10-04, 城墙…应当就是连续的根据地形铺在地面上 — each
+## module seated on its highest ground stepped the wall into a sawtooth), and
+## anything else its highest ground (seat()). `box` is the mesh's AABB.
+static func seat_of(h: Dictionary, row: Dictionary, box: AABB, sea_y: float, deck_m: float,
+		inset: float, samples: int, clear: float, height_at: Callable) -> Vector2:
+	match String(row.get("seat", "")):
+		"sea":
+			return Vector2(sea_y, sea_y + deck_m)
+		"water":
+			return Vector2(sea_y, sea_y)
+		"ground", "slope":
+			var at: Vector2 = h["at"]
+			var y := float(height_at.call(at))
+			if String(row["seat"]) == "slope":
+				var half := box.size.x * 0.5 * float(h["scale"])
+				var yaw := deg_to_rad(float(h["yaw_deg"]))
+				var along := Vector2(cos(yaw), -sin(yaw)) * half
+				h["_rise"] = (float(height_at.call(at + along)) - float(height_at.call(at - along))) / (2.0 * half)
+			return Vector2(y, y)
+	return seat(ground_under(h, box, inset, samples, height_at), clear)
 
 
 ## The first MeshInstance3D with a mesh in a house type's scene

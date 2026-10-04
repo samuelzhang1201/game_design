@@ -249,6 +249,19 @@ def _scrub(ob, rounds=6):
 
 
 SPECK_M = 1.2   # a loose piece smaller than this across is dropped
+BASE_M = 8.0    # a fortification's own foot runs this far below z = 0
+
+
+def _sink_base(ob, depth):
+    """Every vertex at the floor (z under 0.05) moved `depth` down: the wall's
+    lowest course stretched into the ground. Returns how many moved."""
+    n = 0
+    for v in ob.data.vertices:
+        if v.co.z < 0.05:
+            v.co.z = -depth
+            n += 1
+    ob.data.update()
+    return n
 
 
 def _drop_specks(ob):
@@ -327,7 +340,10 @@ def build(t):
     T["_bake"](low, high, img, extrusion=max(0.1, 0.012 * (hi - lo).length))
     loops = 0
     if j["kind"] == "fort":
-        loops, _ = T["_footing"](low)
+        # no house footing (owner 2026-10-04: 城墙不应该有那些类似房屋才有的地基): the
+        # masonry's own foot runs on BASE_M down, so a module sheared onto the
+        # slope, or a tower on its centre's ground, never shows a gap under it
+        loops = _sink_base(low, BASE_M)
         T["_grime"](low)
     bpy.data.objects.remove(high, do_unlink=True)
     T["_shade_by_angle"](low, T["HD_SHARP_DEG"])

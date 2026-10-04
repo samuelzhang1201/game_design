@@ -41,8 +41,9 @@ A new type's `.glb.import` needs `meshes/force_disable_compression=true` and its
 
 ## What it does, and the traps that shaped it
 
-* **z = 0 is where the runtime seats it.** A wall's foot (it then gets the houses' 18 m
-  footing); a pier's DECK (`map3d_pier_deck_m` over the sea); a ship's WATERLINE (read off
+* **z = 0 is where the runtime seats it.** A wall's foot — no house footing (owner
+  2026-10-04: 城墙不应该有那些类似房屋才有的地基): its lowest course runs `BASE_M` (8 m) down
+  into the ground, and the runtime shears a module onto the slope; a pier's DECK (`map3d_pier_deck_m` over the sea); a ship's WATERLINE (read off
   the side views: fishing boat 0.8 m over the keel, cog 2.5, longship 1.8, carrack 5.0).
 * **The wall module** is the middle 24 m of Tripo's 48 m curtain (its ends were towers),
   cut flat at both ends so modules meet, its thickness squeezed to 0.7.
@@ -56,6 +57,9 @@ A new type's `.glb.import` needs `meshes/force_disable_compression=true` and its
   crumpled like paper.
 * **The cliff harbour keeps its rock** (owner 2026-10-04): cut away, the zigzag stair and
   the walls built onto it would hang in the air or sink into a real cliff they do not
-  match. Its rock is turned to the land (-X) and its quay out to sea (+X).
+  match. Its rock is turned to the land (-X) and its quay out to sea (+X); z0 9.5, not the
+  gate platform's 12, or its sloping walkway drowned to a line of post tops. The bake grows
+  it into the town (`pier_cliff_*`). Its berths and the pier's are measured off the models
+  into `bake_houses._BERTHS` — re-measure them if a model changes.
 * **A ship rocks** in `house_surface.gdshader` (`bob_on` and the roll / pitch / heave /
   period set per ship in its scene), its phase hashed from where it is moored.

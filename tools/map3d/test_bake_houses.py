@@ -991,13 +991,16 @@ def test_a_port_runs_its_pier_from_the_shore_out_to_sea():
 
 
 # -- cliff harbours and ships (owner 2026-10-04) ----------------------------------------
-SHIP_RULES = dict(WALL_RULES, pier_cliff_min_shore_m=20, pier_cliff_reach_m=110, pier_cliff_root_m=-25,
-                  pier_cliff_capital_first=1, ship_count_village=1, ship_count_fort=1, ship_count_town=1,
-                  ship_count_city=2, ship_count_capital=2, ship_gap_m=3, ship_step_m=12, ship_tries=4,
-                  ship_anchor_m=30, ship_margin_m=25)
+SHIP_RULES = dict(WALL_RULES, pier_cliff_min_shore_m=20, pier_cliff_root_m=-25,
+                  pier_cliff_capital_first=1, pier_cliff_back_m=70, pier_cliff_overlap_m=25,
+                  pier_cliff_scale_max=2.0, pier_cliff_height_scale=0.85, pier_cliff_height_scale_max=1.8,
+                  pier_cliff_crest_m=10, ship_count_village=1, ship_count_fort=1, ship_count_town=1,
+                  ship_count_city=2, ship_count_capital=2, ship_gap_m=1.5, ship_step_m=8, ship_tries=4,
+                  ship_anchor_m=30, ship_margin_m=3)
 SHIP_TYPES = dict(WALL_TYPES,
                   pier={"role": "pier", "weight": 1.0, "footprint_m": 60.0, "width_m": 60.0, "depth_m": 15.4, "min_group": "village"},
-                  pier_cliff={"role": "pier", "weight": 1.0, "footprint_m": 140.0, "width_m": 140.0, "depth_m": 130.0, "min_group": "town"},
+                  pier_cliff={"role": "pier", "weight": 1.0, "footprint_m": 140.0, "width_m": 140.0, "depth_m": 130.0, "min_group": "town",
+                              "height_m": 62.4},
                   fishing_boat={"role": "ship", "weight": 1.0, "footprint_m": 16.0, "width_m": 16.0, "depth_m": 7.5, "min_group": "village"},
                   cog={"role": "ship", "weight": 1.0, "footprint_m": 36.0, "width_m": 36.0, "depth_m": 21.5, "min_group": "town"},
                   longship={"role": "ship", "weight": 0.6, "footprint_m": 40.0, "width_m": 40.0, "depth_m": 21.4, "min_group": "town"},
@@ -1073,3 +1076,72 @@ def test_a_capital_takes_its_cliff_over_a_nearer_low_shore():
                               types=SHIP_TYPES)
     assert cap[0]["type"] == "pier_cliff", "the capital takes its cliff (pier_cliff_capital_first)"
     assert math.sin(math.radians(cap[0]["yaw_deg"])) > 0.9, "out to the north sea (+X onto -z)"
+
+
+def test_a_ship_lies_alongside_its_pier():
+    """Owner 2026-10-04 (船要规整的贴着码头停留。不要离的太远): parallel to the pier,
+    its hull ship_gap_m off the deck's side."""
+    sea, height = _west_sea()
+    rows = _toy_town()
+    out = bake_houses.harbour(burg(port=1, group="city"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                              types=SHIP_TYPES)
+    pier = out[0]
+    yaw = math.radians(pier["yaw_deg"])
+    d = (math.cos(yaw), -math.sin(yaw))
+    for s in out[1:]:
+        sy = math.radians(s["yaw_deg"])
+        assert abs(math.cos(sy) * d[0] - math.sin(sy) * d[1]) > 0.99, f"{s['type']} lies parallel to the pier"
+        off = abs((s["x_m"] - pier["x_m"]) * d[1] - (s["z_m"] - pier["z_m"]) * d[0])
+        want = 6.2 + 1.5 + SHIP_TYPES[s["type"]]["depth_m"] / 2
+        assert abs(off - want) < 0.5, f"{s['type']} is moored {off:.1f} m off the pier's axis, not {want:.1f}"
+        along = (s["x_m"] - pier["x_m"]) * d[0] + (s["z_m"] - pier["z_m"]) * d[1]
+        assert abs(along) < 30.0 + 8.0 * 4, f"{s['type']} stays beside the pier, not off its head"
+
+
+def test_a_pier_takes_the_shore_nearest_the_houses():
+    """Owner 2026-10-04 (普通城市的小港口也离主城太远了，要融为一体): the town lies
+    to the north, by a north sea; the west sea is nearer its centre, but the
+    pier goes north, to the houses."""
+    _, land, height = flat_world()
+    height[:] = 6.0
+    sea = land.copy()
+    sea[:, : CENTRE_COL - 8] = 0.0                # 160 m west of the centre ...
+    sea[: CENTRE_COL - 14, :] = 0.0               # ... and 280 m north
+    height[sea < 0.5] = 0.0
+    rows = [dict(r, z_m=r["z_m"] - 150.0) if r["rank"] else r for r in _toy_town(r=60.0)]
+    out = bake_houses.harbour(burg(port=1, group="town"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                              types=SHIP_TYPES)
+    yaw = math.radians(out[0]["yaw_deg"])
+    assert out[0]["type"] == "pier" and math.sin(yaw) > 0.7, "the pier runs out north, from beside the houses"
+
+
+def test_a_cliff_harbour_grows_into_the_town_and_takes_what_it_covers():
+    """Owner 2026-10-04 (港口的结构应当和城市融为一体 … 你把港口模型放大到和城市融合到
+    一起): grown until its rock reaches past the nearest house, and the houses
+    under it cleared, the ranks still dense from the landmark."""
+    sea, height = _west_sea(shore_h=40.0)
+    rows = _toy_town()
+    laid = bake_houses.harbour(burg(port=1, group="town"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                               types=SHIP_TYPES)
+    p = laid[0]
+    assert p["type"] == "pier_cliff" and p["scale"] > 1.0, "the harbour grows toward the town"
+    assert p["height_scale"] == 0.85, "on a 40 m cliff a grown rock keeps its least height"
+    yaw = math.radians(p["yaw_deg"])
+    d = (math.cos(yaw), -math.sin(yaw))
+    back = (p["x_m"] - d[0] * 70.0 * p["scale"], p["z_m"] - d[1] * 70.0 * p["scale"])
+    nearest = min(math.hypot(h["x_m"] - back[0], h["z_m"] - back[1]) for h in rows)
+    assert nearest < 60.0, "its rock reaches the houses"
+    merged = bake_houses.clear_under(rows, laid, SHIP_TYPES)
+    assert merged[0]["type"] == "chapel" and [r["rank"] for r in merged] == list(range(len(merged)))
+    assert len(merged) <= len(rows) + len(laid)
+
+
+def test_a_cliff_harbour_climbs_to_its_town_on_a_high_plateau():
+    """Owner 2026-10-04 (walbover: 港口的结构应当和城市融为一体): the town stands
+    on a 170 m plateau; the harbour's castle tops out pier_cliff_crest_m over it."""
+    sea, height = _west_sea(shore_h=170.0)
+    rows = _toy_town()
+    p = bake_houses.harbour(burg(port=1, group="capital"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                            types=SHIP_TYPES)[0]
+    top = 62.4 * p["scale"] * p["height_scale"] + 5.0
+    assert p["type"] == "pier_cliff" and abs(top - 180.0) < 1.0, f"its castle tops out at {top:.0f} m"

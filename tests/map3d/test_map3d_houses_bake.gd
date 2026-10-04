@@ -175,7 +175,7 @@ func test_a_pier_runs_from_the_shore_out_to_sea() -> void:
 
 
 ## Owner 2026-10-04 (港口城市停留在港口的船舶装饰 … 根据大小1-2艘): every ship rides
-## on the water — its centre and its bow and stern — at a port, one or two to
+## on the water at a port, one or two to
 ## a port by its size, each a type its group allows.
 func test_ships_ride_on_the_water_at_ports_one_or_two_by_size() -> void:
 	if _skip():
@@ -192,12 +192,11 @@ func test_ships_ride_on_the_water_at_ports_one_or_two_by_size() -> void:
 		var order := ["village", "fort", "town", "city", "capital"]
 		assert_gte(order.find(group), order.find(String(t["min_group"])), code + "'s " + String(r["type"]) + " is one its " + group + " allows")
 		per_port[code] = int(per_port.get(code, 0)) + 1
-		var at := Vector2(float(r["x_m"]), float(r["z_m"]))
-		var yaw := deg_to_rad(float(r["yaw_deg"]))
-		var along := Vector2(cos(yaw), -sin(yaw))
-		for f: float in [-0.45, 0.0, 0.45]:
-			var p := Map3DGeometry.world_to_pack(_meta, at + along * float(t["width_m"]) * f)
-			assert_lt(_picker.cell_at(p), 0, "%s's %s floats on the water (at %.2f of its length)" % [code, r["type"], f])
+		# its centre in the game's sea: a hull moored alongside a pier (owner
+		# 2026-10-04: 船要规整的贴着码头停留) reaches toward the shore, and the game's
+		# 50 m cells are coarser than the drawn coast the bake tests its hull on
+		var p := Map3DGeometry.world_to_pack(_meta, Vector2(float(r["x_m"]), float(r["z_m"])))
+		assert_lt(_picker.cell_at(p), 0, "%s's %s floats on the water" % [code, r["type"]])
 	for code: String in per_port:
 		var n := int(per_port[code])
 		assert_true(n >= 1 and n <= 2, code + " moors one or two ships, not %d" % n)

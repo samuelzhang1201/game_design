@@ -154,25 +154,25 @@
   "tris": 2122
  },
  "wall": {
-  "footing_m": 17.78,
+  "footing_m": 8.0,
   "footprint_m": 24.0,
-  "height_m": 12.423,
+  "height_m": 12.577,
   "source": "tripo",
-  "tris": 1510
+  "tris": 1498
  },
  "wall_gate": {
-  "footing_m": 18.106,
+  "footing_m": 8.047,
   "footprint_m": 23.0,
   "height_m": 23.17,
   "source": "tripo",
-  "tris": 4233
+  "tris": 4081
  },
  "wall_tower": {
-  "footing_m": 17.904,
+  "footing_m": 8.001,
   "footprint_m": 18.0,
-  "height_m": 27.854,
+  "height_m": 28.008,
   "source": "tripo",
-  "tris": 2566
+  "tris": 2498
  },
  "workshop": {
   "footing_m": 17.886,

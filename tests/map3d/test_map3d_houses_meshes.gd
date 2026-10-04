@@ -60,11 +60,16 @@ func test_every_mesh_stands_on_its_origin_at_the_claimed_size() -> void:
 			# walls (owner 2026-09-25), deep enough for the bake's tallest fall
 			# (map3d_bake.csv house_max_drop_m) at the smallest a house is drawn
 			var footing := -aabb.position.y
-			# a pier and a ship are seated on the SEA, never on a slope: what hangs
-			# below their origin is piles, rock or a hull under the water
-			if not ["pier", "ship"].has(String(row["role"])):
-				assert_gt(footing * MIN_DRAWN_SCALE, Game.data.map3d_bake["house_max_drop_m"],
-					type + "'s footing reaches the bottom of the steepest plot")
+			# by its seat (Map3DHouses.seat_of): a house on its highest ground needs
+			# a footing down the steepest plot; a wall tower, gate or module stands on
+			# its centre's ground with its own masonry running on down (no house
+			# footing, owner 2026-10-04); a pier or a ship floats on the sea
+			match String(row.get("seat", "highest")):
+				"highest":
+					assert_gt(footing * MIN_DRAWN_SCALE, Game.data.map3d_bake["house_max_drop_m"],
+						type + "'s footing reaches the bottom of the steepest plot")
+				"ground", "slope":
+					assert_gt(footing, 6.0, type + "'s own masonry runs on into the hill")
 			assert_almost_eq(aabb.end.y, float(row["height_m"]), 0.6,
 				type + " is as tall as its row claims")
 			assert_lt(maxf(aabb.size.x, aabb.size.z), float(row["footprint_m"]) + 0.6,

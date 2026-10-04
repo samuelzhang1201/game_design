@@ -681,6 +681,7 @@ def house_types(path=None):
                                 "width_m": float(r.get("width_m") or 0.0),
                                 "depth_m": float(r.get("depth_m") or 0.0),
                                 "min_group": r["min_group"],
+                                "height_m": float(r.get("height_m") or 0.0),
                                 "landmark_height_scale": r.get("landmark_height_scale", "") or ""}
     return types
 
@@ -850,8 +851,9 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
             roads = [[(x - ox, z - oz) for x, z in line] for line in road_lines
                      if any(abs(x - ox) < near and abs(z - oz) < near for x, z in line)]
             rows = rows + bake_houses.fortify(b, rows, rules, types, land_gate, wet, k, vw, vh, roads)
-            rows = rows + bake_houses.harbour(b, rows, rules, land_gate, height, k, vw, vh, rules["sea_y_m"],
-                                              water=open_water, types=types)
+            rows = bake_houses.clear_under(rows, bake_houses.harbour(b, rows, rules, land_gate, height, k, vw, vh,
+                                                                     rules["sea_y_m"], water=open_water,
+                                                                     types=types), types)
         for r in rows:
             r["x_m"] = ORIGIN_X + float(b["x"]) * M_PER_PX + r["x_m"]
             r["z_m"] = ORIGIN_Y + float(b["y"]) * M_PER_PX + r["z_m"]

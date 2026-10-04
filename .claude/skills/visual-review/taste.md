@@ -653,3 +653,16 @@ add it here as a principle with its why — not as a changelog entry.
 - **An order the eye already knows needs no caption** (owner 2026-10-02: 移除蜡封下面的
   enter the council的字，改为tooltip). The seal says what it does on hover; words
   under it were a label on a label.
+
+## Walls and harbours (owner 2026-10-04)
+
+- **A town wall is ONE continuous line laid on the ground** (城墙…应当就是连续的根据地形铺在
+  地面上). It rises and falls with the hill, never steps module by module into a sawtooth,
+  and stands on no house footing (城墙不应该有那些类似房屋才有的地基): its own masonry runs
+  into the ground. Towers are punctuation — at sharp turns, gates and the wall's ends —
+  never a tower every few modules (加入了过多的城塔楼).
+- **A harbour belongs to its town** (港口的结构应当和城市融为一体). No field of empty
+  grass between the quay and the houses: the pier stands on the shore nearest the
+  houses, and a cliff harbour grows until its stair reaches the town's own level.
+- **A moored ship lies alongside its quay, square to it** (船要规整的贴着码头停留). Not
+  anchored off the pier's head, not a ship-length away.
