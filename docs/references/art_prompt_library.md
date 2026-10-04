@@ -155,14 +155,8 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | **Qwen-Image-2512**（主力，`qwen2512fast`） | GGUF Q6_K + Lightning 8 步 LoRA（强度 1），8 步，CFG 1，euler / simple | 人物、事件插图、庄园与军队彩绘、图标、纹章、桌面道具、房屋参考图 |
 | **Qwen-Image-2512**（精修，`qwen2512`） | 不加 LoRA，50 步，CFG 4，负面词生效 | 选定后需要更高质量时重出 |
 | **Z-Image Turbo**（`zimage`） | 8 步，CFG 1，res_multistep / simple，无负面词通路 | 航拍地面、树冠、兵种参考图 |
-| **通用** | **固定 seed 做变体**：同一角色的表情差分务必锁 seed，只改表情词；默认 seed 954159497 |
-
----|---|
-| **Flux.1 dev / Flux 2**（推荐主力） | guidance 2.5–3.5（高了会变"数字感"）；steps 28–35；分辨率先出 1024，再用放大 |
-| **Qwen-Image** | CFG 3.5–4.5；适合需要画面里有多个人物的事件插图 |
-| **Midjourney** | `--style raw --stylize 150 --chaos 5`；`--sref` 锁风格参考图；不要用默认 stylize（会加重数字感） |
-| **通用** | **固定 seed 做变体**：同一角色的表情差分务必锁 seed，只改表情词 |
-| **放大** | 用保留笔触的放大器（如 SUPIR / 4x-UltraSharp），**不要**用会抹平颗粒的通用超分 |
+| **通用** | **固定 seed 做变体**：同一角色的表情差分务必锁 seed，只改表情词；默认 seed 954159497 | 全部 |
+| **放大** | 用保留笔触的放大器（如 SUPIR / 4x-UltraSharp），**不要**用会抹平颗粒的通用超分 | 需要放大时 |
 
 ---
 
