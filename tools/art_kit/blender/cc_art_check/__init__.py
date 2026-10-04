@@ -590,6 +590,7 @@ def export_house(props, info, report):
         d = _out_dir(props)
         path = os.path.join(d, t + ".glb")
         bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True,
+                                  use_active_scene=True,
                                   export_image_format="JPEG", export_jpeg_quality=88, export_yup=True,
                                   export_apply=True, export_cameras=False, export_lights=False,
                                   export_vertex_color="ACTIVE")
