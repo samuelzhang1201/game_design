@@ -209,3 +209,5 @@ terrace_gully_wave_m,700,3D bake terraces: that noise's wavelength
 terrace_soften,1.0,"3D bake terraces: how far, where a slow noise is high, a face eases from a scarp (terrace_face) toward a plain slope, so the rim breaks into stretches (0: every face a scarp)"
 terrace_soften_wave_m,3500,3D bake terraces: that noise's wavelength
 blend_floor,0.1,"3D bake (visual review 2026-10-06, perf): a vertex whose overlay share (the blend byte) is under this draws its base texture alone — each faint overlay made Terrain3D sample a second texture at four vertices for a trace no one sees (0: keep all)"
+rock_break,0.85,"3D bake (visual review 2026-10-06: an even grey scree band below every scarp read as a pasted strip): how much of the scree a patchy noise takes back to grass where it is low (0: an even band)"
+rock_break_wave_m,500,3D bake: that noise's wavelength (with an octave at a third of it)

@@ -1368,6 +1368,13 @@ def main(argv=None):
     # blotches that read as mould on the grass
     up = np.clip((height - SEA_Y - rules["rock_from_m"]) / max(rules["rock_full_m"] - rules["rock_from_m"], 1.0), 0, 1)
     t_rock *= rules["rock_low_share"] + (1.0 - rules["rock_low_share"]) * up
+    # the scree broken by tongues of grass (visual review 2026-10-06: an even
+    # grey band below every scarp read as a pasted strip); its own stream
+    if rules.get("rock_break", 0.0) > 0.0:
+        rb = value_noise(np.random.default_rng(SEED + 51), vw, vh, rules["rock_break_wave_m"] / VERTEX_M) * 0.6 \
+            + value_noise(np.random.default_rng(SEED + 52), vw, vh, rules["rock_break_wave_m"] * 0.35 / VERTEX_M) * 0.4
+        t_rock *= 1.0 - rules["rock_break"] * np.clip((0.55 - rb) / 0.2, 0, 1)
+        del rb
     del up
     hn = np.clip(height / max(float(height.max()), 1.0), 0, 1)
     keep = 1.0 - 0.85 * t_rock
