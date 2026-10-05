@@ -6,3 +6,5 @@
 script = ExtResource("1_83kwl")
 flat = 0.12
 wet_cool = 0.08
+snow_detail = 0.7
+snow_soft = 0.2
