@@ -88,6 +88,10 @@ uniform float fall_width = 0.55;
 uniform float fall_opacity = 0.8;
 // how far toward the foam a full fall turns (the river's own water shows through)
 uniform float fall_foam_mix = 0.7;
+// The wet bank: its share of the half-width from each edge, colour and strength.
+uniform float bank_share = 0.35;
+uniform vec4 bank_color : source_color = vec4(0.2, 0.17, 0.11, 1.0);
+uniform float bank_mix = 0.0;
 
 // One water at the mouth (owner 2026-10-05: 把入海口附近的河水颜色渐变成海水颜色).
 // Tinting the river toward the sea's near colour (mouth_water / nat_mouth)
@@ -238,6 +242,11 @@ void fragment() {
 	float wobble = texture(ripples, v_xz / (bank_wobble_m * 8.0)).x * 2.0 - 1.0;
 	across += wobble * bank_wobble_amp * near_w;
 	float edge = smoothstep(0.0, edge_soft * v_soft_scale + bank_wobble_amp * near_w, across);
+	// a wet earthen bank inside each edge, so the water sits IN the land and
+	// is not a stroke laid on it (gone where the river has become the sea)
+	float bank = (1.0 - smoothstep(0.0, bank_share, across)) * bank_mix * (1.0 - to_sea);
+	ALBEDO = mix(ALBEDO, bank_color.rgb, bank);
+	EMISSION *= 1.0 - bank;
 	float sea_takes = sea_shore_alpha(ripples, v_xz, d, sea_shore_fade_px, sea_shore_warp_px, sea_shore_warp_m);
 	ALPHA = mix(mix(opacity, mouth_opacity, to_sea), fall_opacity, fall) * edge * v_fade
 		* (1.0 - sea_takes * to_sea);
