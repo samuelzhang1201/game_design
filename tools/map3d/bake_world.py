@@ -931,7 +931,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     # each field's distance (m) to its own edge, at the vertices: the shader
     # draws the balks and hedges along it, smooth where the ground's own
     # texture change can only step from vertex to vertex
-    edge_m = np.full((vh, vw), 255, dtype=np.uint8)
+    edge_in = np.full((vh, vw), -1.0, dtype=np.float32)   # metres to a field's edge inside it, -1 outside
     # THE OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实). Each
     # vertex belongs to its NEAREST settlement (a Voronoi of their centres,
     # cut at a coarse step and read back), and lies in one of its zones:
@@ -1060,7 +1060,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         pasture = ~croft & ~arable & ~meadow
         reach[y0:y1] = within * land[y0:y1]
         drawn = (sown | croft) & (m > 0)
-        edge_m[y0:y1] = np.where(drawn, np.clip(np.round(edge * EDGE_MAP_PER_M), 0, 254), 255).astype(np.uint8)
+        edge_in[y0:y1] = np.where(drawn, edge, -1.0)
         settled[y0:y1] = reach[y0:y1] * np.where(pasture, rules["pasture_open"], 1.0)
         # a hedge round each croft close; a grass balk between furlongs
         hedge = np.where(croft, 1.0 - rules["croft_hedge_depth"] * np.clip(1.0 - edge / rules["croft_hedge_m"], 0, 1) ** 2, 1.0)
@@ -1112,10 +1112,24 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     tint = tint * (1.0 - foot[..., None]) + blocks * foot[..., None]
     print("bake_world: patchwork %.1f%% of the land sown, %.2f%% built" % (
         100.0 * float(farm[land].mean()), 100.0 * float(foot[land].mean())))
-    return tint, field_map(ftint, fangle), house_rows, settled_map(settled), edge_m
+    return tint, field_map(ftint, fangle), house_rows, settled_map(settled), edge_map(edge_in)
 
 
-EDGE_MAP_PER_M = 4.0   # bake/field_edges.png: bytes per metre (255 = no field)
+EDGE_MAP_ZERO = 128    # bake/field_edges.png: the byte of a field's edge...
+EDGE_MAP_PER_M = 2.0   # ...and bytes per metre: inside a field above it, outside below
+
+
+def edge_map(edge_in):
+    """bake/field_edges.png from each vertex's metres to its field's edge
+    (-1 outside every field): a SIGNED distance — outside, minus the metres
+    to the nearest field — so a bilinear sample runs smooth across a field's
+    rim (an unsigned map with a "no field" byte drew the balk along the
+    20 m grid, visual review 2026-10-06)."""
+    from scipy import ndimage
+    inside = edge_in >= 0.0
+    out_m = (ndimage.distance_transform_edt(~inside) - 0.5) * VERTEX_M
+    d = np.where(inside, edge_in, -np.maximum(out_m, 0.0))
+    return np.clip(np.round(EDGE_MAP_ZERO + d * EDGE_MAP_PER_M), 0, 255).astype(np.uint8)
 
 
 def settled_map(settled, step=FIELD_MAP_STEP):

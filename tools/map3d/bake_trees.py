@@ -209,7 +209,8 @@ def main(argv=None):
         hzi = np.clip((hz / vm).astype(int), 0, vh - 1)
         eb = em[hzi, hxi]
         runs = value_noise(np.random.default_rng(SEED + 32), vw, vh, rules["hedge_run_m"] / vm)[hzi, hxi]
-        take = (eb < 255) & (eb / 4.0 < rules["hedge_band_m"]) & ~bad[hzi, hxi] \
+        dm = (eb - 128.0) / 2.0   # bake_world EDGE_MAP_ZERO / _PER_M: metres inside a field's edge
+        take = (dm >= 0.0) & (dm < rules["hedge_band_m"]) & ~bad[hzi, hxi] \
             & (hrng.random(hx.shape) < rules["hedge_chance"] * np.clip((runs - 0.35) / 0.3, 0, 1))
         X, Z = np.concatenate([X, hx[take]]), np.concatenate([Z, hz[take]])
         xi, zi = np.concatenate([xi, hxi[take]]), np.concatenate([zi, hzi[take]])
