@@ -90,7 +90,7 @@ func prepare(scene_path: String) -> void:
 		mat.call("set_shader_param", "field_map", fields)
 		mat.call("set_shader_param", "field_m_per_texel", FIELD_MAP_M_PER_TEXEL)
 		for key: String in ["furrow_m", "furrow_depth", "furrow_sharp", "strip_m", "strip_shade", "strip_far_m",
-				"strip_far_shade", "field_fade",
+				"strip_far_shade", "field_fade", "field_far_value",
 				"field_fade_near_m", "field_fade_far_m"]:
 			mat.call("set_shader_param", key, float(look.get(key)))
 

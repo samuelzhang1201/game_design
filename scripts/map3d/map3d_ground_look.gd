@@ -47,6 +47,9 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 @export var field_fade := 0.35
 @export var field_fade_near_m := 5000.0
 @export var field_fade_far_m := 22000.0
+## Far out (with field_fade) the sown ground's value is pulled by this (1: none):
+## the crop layer's pale straw drew a camouflage patchwork at 24 km.
+@export var field_far_value := 1.0
 
 ## The grounds' edges per pixel (Map3DGroundEdge): how far (metres) a field's,
 ## a wood's or a beach's edge wanders off Terrain3D's 20 m vertex steps, the
