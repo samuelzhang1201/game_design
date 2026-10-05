@@ -1296,7 +1296,7 @@ def main(argv=None):
         widths = river_widths(len(pts), w_mouth, gamma, rules["river_source_w_m"])
         n_mouth = max(int(rules["river_mouth_m"] / VERTEX_M), 1)
         mouth = river_mouth(len(pts), n_mouth, bool(c[-1] < 0.5))
-        widths = widths * (1.0 + mouth)
+        widths = widths * (1.0 + rules.get("river_mouth_widen", 1.0) * mouth)
         # open sea (cov 0) is never dug: the water line still reaches it
         cut = c > 0.0
         carve(height, wet, pts[cut], bed[cut], widths[cut] / VERTEX_M, rules)
