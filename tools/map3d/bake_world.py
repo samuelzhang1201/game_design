@@ -1468,6 +1468,10 @@ def main(argv=None):
         w1 = np.take_along_axis(s, b1[..., None], 2)[..., 0]
         w2 = np.take_along_axis(s, b2[..., None], 2)[..., 0]
         blend = blend_byte(w1, w2, rng.uniform(-rules["blend_dither"], rules["blend_dither"], w1.shape))
+        # a faint overlay is cut (visual review 2026-10-06, perf): each one makes
+        # Terrain3D sample a second texture at four vertices for a trace no
+        # one sees — a fifth of the land blended, half of it under 8%
+        blend = np.where(blend < int(round(255 * rules["blend_floor"])), 0, blend).astype(np.uint32)
         control[y0:y0 + 256] = (b1.astype(np.uint32) << 27) | (b2.astype(np.uint32) << 22) | (blend << 14)
 
     # --- colour map ----------------------------------------------------------------------
