@@ -111,8 +111,9 @@ const SEA_WATER := ["sea_near", "sea_nearer", "sea_far", "sea_deep", "band_near"
 	"drift_m_s", "ripple_emission_gain", "emission_share", "emission_share_near", "emission_gamma",
 	"roughness", "specular", "fresnel_sky_mix", "nat_shallow", "nat_mid", "nat_deep",
 	"nat_shallow_px", "nat_mid_px", "nat_deep_px", "nat_warp_px", "nat_emission_share",
-	"nat_roughness", "nat_specular", "nat_fresnel_sky_mix", "shore_fade_px", "shore_warp_px",
-	"shore_warp_m"]
+	"nat_roughness", "nat_specular", "nat_fresnel_sky_mix", "smooth_px", "nat_ripple_gain",
+	"nat_sheen", "nat_sheen_m", "nat_sheen_far_m",
+	"nat_shelf", "nat_shelf_px", "nat_shelf_mix", "nat_shelf_far_m"]
 
 
 ## The river's own look is water_river.tres (owner 2026-10-02: edited in

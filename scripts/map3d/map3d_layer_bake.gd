@@ -24,7 +24,7 @@ const GEOMETRY_SOURCES := ["res://scripts/map3d/map3d_layer_rivers.gd",
 	"res://scripts/map3d/map3d_geometry.gd", "res://scripts/map3d/map3d_context.gd",
 	"res://scripts/engine/map_geometry.gd"]
 ## The md5 of GEOMETRY_SOURCES' text, concatenated in list order.
-const GEOMETRY_MD5 := "0492eabb7f9d5b377e01a7b9d714d4c8"
+const GEOMETRY_MD5 := "7217aa7b13fa48d22b601e5371c6bdd0"
 const LAYERS := ["rivers", "roads", "trails", "bridges"]
 const KEYS := ["map3d_road_step_m", "map3d_river_mesh_step_m", "map3d_river_split_rise_m",
 	"map3d_river_terrain_clear_m", "map3d_river_end_fade_m", "map3d_river_mouth_extend_w",

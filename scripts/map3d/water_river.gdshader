@@ -106,15 +106,14 @@ uniform float bank_mix = 0.0;
 // uniform is the sea's, copied from water_sea.tres by Map3DLayerRivers;
 // only mouth_sea_from and mouth_opacity are the river's (from 0.2: the
 // critic's pick of 0.2 / 0.5 / 0.8 — 0.8 left a lighter band at the shore).
-// The river's water ends where the sea's begins: over the turn it takes
-// the complement of the sea's own shore fade (sea_shore_alpha), so it
-// covers the sand up to the waterline, wholly opaque, and hands over to the
-// sea there rather than fading short of it in a pale slab.
+// It runs on into the sea as the sea's own water and needs no handover at
+// the waterline: giving way to the sea there (by the sea's shore fade, then
+// only where the sea was opaque and over sunk ground) showed the sea's own
+// speckled shore band across the mouth, and before the river wore the sea's
+// swell and shelf, a flat tongue past it (critic 2026-10-06). The run-out's
+// own fade (Map3DRivers) ends it, out over the water.
 uniform float mouth_sea_from = 0.2;
 uniform float mouth_opacity = 1.0;
-uniform float sea_shore_fade_px = 0.8;
-uniform float sea_shore_warp_px = 0.5;
-uniform float sea_shore_warp_m = 160.0;
 uniform sampler2D sea_distance : filter_linear, repeat_disable;
 uniform vec2 sea_pack_origin = vec2(0.0);
 uniform vec2 sea_pack_px = vec2(2560.0, 929.0);
@@ -150,6 +149,15 @@ uniform float sea_nat_emission_share = 0.35;
 uniform float sea_nat_roughness = 0.18;
 uniform float sea_nat_specular = 0.5;
 uniform float sea_nat_fresnel_sky_mix = 0.45;
+uniform float sea_smooth_px = 0.0;
+uniform float sea_nat_ripple_gain = 0.0;
+uniform float sea_nat_sheen = 0.0;
+uniform float sea_nat_sheen_m = 2400.0;
+uniform float sea_nat_sheen_far_m = 4000.0;
+uniform vec4 sea_nat_shelf : source_color = vec4(0.3, 0.46, 0.4, 1.0);
+uniform float sea_nat_shelf_px = 6.0;
+uniform float sea_nat_shelf_mix = 0.0;
+uniform float sea_nat_shelf_far_m = 9000.0;
 
 varying float v_across;
 varying float v_along;
@@ -212,19 +220,23 @@ void fragment() {
 	float d = sea_shore_px(sea_distance, v_xz, sea_pack_origin, sea_pack_px, sea_m_per_px);
 	vec3 sea_n = sea_ripple_normal(ripples, v_xz, TIME, sea_ripple_m, sea_ripple_near_m, sea_drift_m_s, near_w);
 	float sea_fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 5.0);
-	vec3 band = sea_bands(d, sea_near.rgb, sea_nearer.rgb, sea_far.rgb, sea_deep.rgb, sky.rgb,
+	float ds = sea_colour_px(sea_distance, v_xz, sea_pack_origin, sea_pack_px, sea_m_per_px, d, sea_smooth_px);
+	vec3 band = sea_bands(ds, sea_near.rgb, sea_nearer.rgb, sea_far.rgb, sea_deep.rgb, sky.rgb,
 		vec4(sea_band_near, sea_band_nearer, sea_band_far, sea_soft),
 		vec2(sea_horizon_fade_start_px, sea_horizon_fade_end_px));
 	band = mix(band, sky.rgb, sea_fres * sea_fresnel_sky_mix);
-	vec3 cn = sea_natural(ripples, v_xz, d, sea_nat_shallow.rgb, sea_nat_mid.rgb, sea_nat_deep.rgb,
+	vec3 cn = sea_natural(ripples, v_xz, ds, sea_nat_shallow.rgb, sea_nat_mid.rgb, sea_nat_deep.rgb,
 		vec4(sea_nat_shallow_px, sea_nat_mid_px, sea_nat_deep_px, sea_nat_warp_px));
 	cn = mix(cn, sky.rgb, sea_fres * sea_nat_fresnel_sky_mix);
+	cn = sea_near_shore(cn, sky.rgb, v_xz, ds, length(VERTEX), TIME, sea_nat_shelf.rgb,
+		vec3(sea_nat_shelf_px, sea_nat_shelf_mix, sea_nat_shelf_far_m),
+		vec3(sea_nat_sheen, sea_nat_sheen_m, sea_nat_sheen_far_m), vec2(sea_nat_shallow_px, sea_nat_mid_px));
 	vec3 sea_albedo;
 	vec3 sea_emission;
 	float sea_rough;
 	float sea_spec;
 	sea_light(band, cn, natural, near_w, clamp((sea_n.x - sea_n.y) * 2.0, -1.0, 1.0),
-		sea_emission_gamma, sea_ripple_emission_gain,
+		sea_emission_gamma, sea_ripple_emission_gain, sea_nat_ripple_gain,
 		vec3(sea_emission_share, sea_emission_share_near, sea_nat_emission_share),
 		vec4(sea_roughness, sea_nat_roughness, sea_specular, sea_nat_specular),
 		sea_albedo, sea_emission, sea_rough, sea_spec);
@@ -251,8 +263,6 @@ void fragment() {
 	// a fall's water in streaks running down it, white where it breaks
 	float streak = texture(ripples, vec2(v_across * fall_streaks / 8.0, v_along / 30.0 - TIME * 0.35)).x;
 	ALBEDO = mix(ALBEDO, fall_foam.rgb, fall * smoothstep(0.45, 0.75, streak) * 0.6);
-	float sea_takes = sea_shore_alpha(ripples, v_xz, d, sea_shore_fade_px, sea_shore_warp_px, sea_shore_warp_m);
 	ALPHA = mix(mix(opacity, mouth_opacity, to_sea), fall_opacity, fall) * edge * v_fade
-		* mix(1.0, 0.35 + 0.9 * streak, fall)
-		* (1.0 - sea_takes * to_sea);
+		* mix(1.0, 0.35 + 0.9 * streak, fall);
 }
