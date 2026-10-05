@@ -94,9 +94,12 @@ script = ExtResource("17_w2qt7")
 fog_depth_begin = 0.9
 fog_depth_end = 3.0
 fog_depth_density = 0.45
+fog_near_share = 0.4
+fog_near_full_m = 7000.0
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=2026147674 node_paths=PackedStringArray("fill")]
 transform = Transform3D(0.7071067, 0.4055798, -0.579228, 0, 0.81915206, 0.57357645, 0.7071067, -0.4055798, 0.579228, 0, 0, 0)
+light_color = Color(1, 0.94, 0.84, 1)
 light_energy = 1.4
 light_specular = 0.5
 shadow_enabled = true
@@ -105,6 +108,7 @@ shadow_opacity = 0.45
 shadow_blur = 2.0
 directional_shadow_max_distance = 60000.0
 script = ExtResource("18_07fot")
+day_shadow_opacity = 0.72
 fill = NodePath("../FillLight")
 
 [node name="FillLight" type="DirectionalLight3D" parent="." unique_id=1733042906]

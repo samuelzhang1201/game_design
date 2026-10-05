@@ -5,6 +5,16 @@
 [resource]
 script = ExtResource("1_sj1ad")
 heat_ramp = PackedColorArray(0.42745098, 0.74509805, 0.41568628, 1, 0.76862746, 0.827451, 0.36862746, 1, 0.9411765, 0.7529412, 0.30588236, 1, 0.8784314, 0.5411765, 0.27058825, 1, 0.70980394, 0.3529412, 0.23529412, 1, 1, 1, 1, 1)
+furrow_m = 14.0
+furrow_depth = 0.15
+furrow_sharp = 3.0
+strip_shade = 0.2
+field_fade_near_m = 9000.0
+field_fade_far_m = 30000.0
+edge_warp_m = 8.0
+edge_warp_wave_m = 90.0
+edge_warp_far_m = 25000.0
+edge_fray_m = 14.0
 wood_broadleaf = Color(0.18, 0.24, 0.11, 1)
 relief_ao = 1.0
 relief_ao_gamma = 2.5

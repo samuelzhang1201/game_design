@@ -4,3 +4,5 @@
 
 [resource]
 script = ExtResource("1_83kwl")
+flat = 0.12
+wet_cool = 0.08
