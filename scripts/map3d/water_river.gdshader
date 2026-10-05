@@ -93,6 +93,7 @@ uniform float fall_streaks = 6.0;  // streaks across a fall's width
 uniform float bank_share = 0.35;
 uniform vec4 bank_color : source_color = vec4(0.2, 0.17, 0.11, 1.0);
 uniform float bank_mix = 0.0;
+uniform float depth_mix = 0.0;  // how much darker the channel's middle is
 
 // One water at the mouth (owner 2026-10-05: 把入海口附近的河水颜色渐变成海水颜色).
 // Tinting the river toward the sea's near colour (mouth_water / nat_mouth)
@@ -255,6 +256,11 @@ void fragment() {
 	float wobble = texture(ripples, v_xz / (bank_wobble_m * 8.0)).x * 2.0 - 1.0;
 	across += wobble * bank_wobble_amp * near_w;
 	float edge = smoothstep(0.0, edge_soft * v_soft_scale + bank_wobble_amp * near_w, across);
+	// deeper mid-stream: the channel darkens toward its centre, shallow and
+	// a touch greener at the sides (gone where the river has become the sea)
+	float deep = smoothstep(0.15, 0.9, across) * depth_mix * (1.0 - to_sea);
+	ALBEDO *= 1.0 - 0.5 * deep;
+	EMISSION *= 1.0 - deep;
 	// a wet earthen bank inside each edge, so the water sits IN the land and
 	// is not a stroke laid on it (gone where the river has become the sea)
 	float bank = (1.0 - smoothstep(0.0, bank_share, across)) * bank_mix * (1.0 - to_sea);
