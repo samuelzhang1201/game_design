@@ -55,9 +55,9 @@ footprint_edge_noise,0.5,3D bake village footprints: how far (as a share of its 
 field_edge_soft_m,1,"3D bake fields: over this many metres before a furlong's edge its crop gives way to the ground under it. Under a vertex (20 m) on purpose (visual review 2026-10-05): a wider balk caught only some vertices on each edge and drew the furlongs' seams as black dashes at the opening zoom; the furlongs part by their own colour and strips"
 field_warp_m,50,"3D bake fields (critic round 1): how far, in metres, the field layout is displaced by noise, so the hedges wander instead of ruling straight Voronoi edges; 100 drew lobed, amoeba fields once the woods round them were cleared (visual review 2026-10-05)"
 field_warp_wave_m,420,3D bake fields: the wavelength of that displacement
-field_shade,0.06,"3D bake fields: each field its own brightness, +- this share"
-field_grain,0.05,"3D bake fields: a fine grain of light and dark inside every field, +- this share"
-field_grain_m,70,3D bake fields: the wavelength of that grain
+field_shade,0.11,"3D bake fields: each field its own brightness, +- this share"
+field_grain,0.1,"3D bake fields: a fine grain of light and dark inside every field, +- this share"
+field_grain_m,140,3D bake fields: the wavelength of that grain
 footprint_fade,0.7,3D bake village footprints (critic round 1: a dark disc with a halo): the share of its radius over which the built ground thins out
 river_bank_rock_hold,2.5,"3D bake (2026-09-19): how strongly the band beside a river (the carve's wet, 0..1) holds the cliff and scree textures off its banks — a carved bank is steep by construction, and the cliff texture drew a pixelated scar at the capital's river mouth"
 low_rock_free_m,60,"3D bake (2026-09-19): below this many metres over the sea no ground wears cliff or scree (fading out over the 30 m above): on this map a low steep bank is a carved river mouth meeting the shore ramp, and the cliff texture drew a pixelated blue-grey scar there"
