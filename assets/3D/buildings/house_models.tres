@@ -27,6 +27,7 @@
 [ext_resource type="PackedScene" uid="uid://cfw2hhk3lsclk" path="res://scenes/models/ships/cog.tscn" id="24_acitm"]
 [ext_resource type="PackedScene" uid="uid://dase58nntp0n3" path="res://scenes/models/ships/longship.tscn" id="25_xct51"]
 [ext_resource type="PackedScene" uid="uid://dhv4gy3oh58mj" path="res://scenes/models/ships/carrack.tscn" id="26_fvx6t"]
+[ext_resource type="PackedScene" uid="uid://cnlnm4vxh7553" path="res://scenes/models/buildings/pier_stair.tscn" id="27_pstr1"]
 
 [resource]
 script = ExtResource("22_b01ki")
@@ -50,6 +51,7 @@ art = Dictionary[String, Resource]({
 "palace_c": ExtResource("13_oq3am"),
 "pier": ExtResource("14_r4qon"),
 "pier_cliff": ExtResource("22_4bnxs"),
+"pier_stair": ExtResource("27_pstr1"),
 "townhouse_a": ExtResource("15_8mcu5"),
 "townhouse_b": ExtResource("16_eiuq2"),
 "townhouse_c": ExtResource("17_q2n5j"),

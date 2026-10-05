@@ -132,6 +132,13 @@
   "source": "tripo",
   "tris": 11715
  },
+ "pier_stair": {
+  "footing_m": 7.139,
+  "footprint_m": 60.0,
+  "height_m": 32.762,
+  "source": "tripo",
+  "tris": 5977
+ },
  "townhouse_a": {
   "footing_m": 18.061,
   "footprint_m": 18.0,

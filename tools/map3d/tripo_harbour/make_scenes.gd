@@ -9,8 +9,9 @@ extends SceneTree
 ## and saved back by the engine. Registers each scene in
 ## GameArt.HOUSE_MODELS. Run after a fresh import of the .glb files:
 ##
-##   Godot --headless --path . -s res://tools/map3d/tripo_harbour/make_scenes.gd
+##   Godot --path . -s res://tools/map3d/tripo_harbour/make_scenes.gd [-- --only a,b]
 ##
+## NOT --headless: the dummy renderer leaves the shader's uniform defaults null.
 ## A scene already there keeps its UID (the art table's reference). Every
 ## value set here is a starting point for the editor: the bob of a ship, a
 ## surface's roughness, are tuned in its scene afterwards.
@@ -26,6 +27,7 @@ const TYPES := {
 	"wall_gate": ["buildings", "fort"],
 	"pier": ["buildings", "pier"],
 	"pier_cliff": ["buildings", "pier"],
+	"pier_stair": ["buildings", "pier"],
 	"fishing_boat": ["ships", "ship", [4.0, 1.6, 0.25, 5.0]],
 	"cog": ["ships", "ship", [2.5, 1.0, 0.3, 7.0]],
 	"longship": ["ships", "ship", [3.0, 1.2, 0.3, 6.0]],
@@ -36,13 +38,21 @@ const TYPES := {
 ## The warm lift of a type's stone or rock, multiplied into its colour.
 const WARM := {
 	"wall": Color(1.1, 1.02, 0.88), "wall_tower": Color(1.1, 1.02, 0.88), "wall_gate": Color(1.1, 1.02, 0.88),
-	"pier_cliff": Color(1.16, 1.04, 0.86),
+	"pier_cliff": Color(1.16, 1.04, 0.86), "pier_stair": Color(1.16, 1.04, 0.86),
 }
 
 
 func _init() -> void:
 	var table: ArtTable = load(GameArt.HOUSE_MODELS)
+	# `-- --only a,b` dresses just those types (a re-save of the others churns them)
+	var only := PackedStringArray()
+	var args := OS.get_cmdline_user_args()
+	var at := args.find("--only")
+	if at >= 0 and at + 1 < args.size():
+		only = args[at + 1].split(",")
 	for type: String in TYPES:
+		if not only.is_empty() and not only.has(type):
+			continue
 		var spec: Array = TYPES[type]
 		var path := "res://scenes/models/%s/%s.tscn" % [spec[0], type]
 		var glb := "res://assets/3D/%s/%s/%s.glb" % [spec[0], type, type]

@@ -66,6 +66,11 @@ JOBS = {
     # end, and at 12 its outer half drowned to a line of post tops (2026-10-04)
     "pier_cliff": dict(cat="buildings", src="pier_cliff_tripo.glb", yaw=64, fit=140.0, z0=9.5,
                        budget=12000, px=2048, voxel=0.0, kind="pier"),
+    # a cliff-top town's landing (owner 2026-10-05, the pier_stair reference C): a jetty and
+    # a two-flight stair up its own rock to a gate on top. Tripo put the jetty at -X: yaw
+    # 180 turns it out to sea (+X); its deck stands 7.2 m over the fitted bottom
+    "pier_stair": dict(cat="buildings", src="pier_stair_tripo.glb", yaw=180, fit=60.0, z0=7.2,
+                       budget=6000, px=2048, voxel=0.0, kind="pier"),
     "fishing_boat": dict(cat="ships", src="fishing_boat_tripo.glb", yaw=0, fit=16.0, z0=0.8,
                          budget=1500, px=1024, voxel=0.04, kind="ship"),
     "cog": dict(cat="ships", src="cog_tripo.glb", yaw=90, fit=36.0, z0=2.5, budget=3000,
@@ -75,7 +80,7 @@ JOBS = {
     "carrack": dict(cat="ships", src="carrack_tripo.glb", yaw=90, fit=56.0, z0=5.0, budget=10000,
                     px=2048, voxel=0.0, kind="ship"),
 }
-LAYOUT = [["wall", "wall_gate", "wall_tower", "pier"], ["pier_cliff"],
+LAYOUT = [["wall", "wall_gate", "wall_tower", "pier"], ["pier_cliff", "pier_stair"],
           ["fishing_boat", "cog", "carrack", "longship"]]
 GAP = 30.0                                  # metres between models in the scene
 GAME_OFFSET = Vector((0.0, -340.0, 0.0))    # the game models: the same layout, south of the sources

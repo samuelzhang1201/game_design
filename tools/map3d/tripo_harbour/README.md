@@ -1,7 +1,8 @@
 # Walls, piers and harbour ships from Tripo 3D
 
 Since 2026-10-04 the town wall's three modules (`wall`, `wall_tower`, `wall_gate`), the
-timber `pier`, the capital's cliff harbour `pier_cliff` and the four moored ships
+timber `pier`, the capital's cliff harbour `pier_cliff`, the small cliff landing
+`pier_stair` (2026-10-05) and the four moored ships
 (`fishing_boat`, `cog`, `longship`, `carrack`) are Tripo 3D generations (owner: 我已经在
 tripo_inbox 中放入tripo 3d生成的3d模型，请操作blender修改并应用到游戏中去), replacing the
 hand-built kit modules of `tools/map3d/blender_houses/fortifications.py` (ruled too plain,
@@ -32,7 +33,7 @@ The git-ignored sources are read from the main checkout (`SRC_ROOT`). Then, in t
 
 ```sh
 Godot --headless --path . --import          # keep project.godot as it was afterwards
-Godot --path . -s res://tools/map3d/tripo_harbour/make_scenes.gd   # NOT headless: the dummy renderer has no shader defaults
+Godot --path . -s res://tools/map3d/tripo_harbour/make_scenes.gd -- --only <type>   # NOT headless (no shader defaults); restore house_models.tres UIDs after
 tools/map3d/build_pack.sh                   # the bake lays the walls, piers and ships
 ```
 
@@ -62,5 +63,9 @@ A new type's `.glb.import` needs `meshes/force_disable_compression=true` and its
   it at its own proportions (owner 2026-10-05) and walks it out to sea until no taller
   cliff buries its castle (`pier_cliff_*`). Its berths and the pier's are measured off the models
   into `bake_houses._BERTHS`, its castle into `_CASTLE` — re-measure them if a model changes.
+* **The small cliff landing** `pier_stair` (owner 2026-10-05, reference C): Tripo put its
+  jetty at -X, so yaw 180; its deck is 7.2 m over the fitted bottom. It is for a town on a
+  cliff top; its gate box is `bake_houses._HEADS["pier_stair"]`, its berths either side of
+  the jetty in `_BERTHS`.
 * **A ship rocks** in `house_surface.gdshader` (`bob_on` and the roll / pitch / heave /
   period set per ship in its scene), its phase hashed from where it is moored.
