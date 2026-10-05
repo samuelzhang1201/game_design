@@ -55,15 +55,12 @@ func _build(st: GameState) -> void:
 	# the coast is the shore's to draw (look route 2026-09-30): the ink, the
 	# halo and the band keep to the land borders
 	# (without a terrain — a fixture — every point would read as water)
-	if repo.bal("map3d_border_skip_coast") > 0.0 and ctx.terrain != null:
-		var sea_y := float(ctx.meta.get("sea_y", 0.0))
-		var wet := func(xz: Vector2) -> bool: return ctx.height_at(xz) < sea_y + 0.5
-		var probe := repo.bal("map3d_border_coast_probe_m")
-		rings = Map3DBorders.land_runs(rings, wet, probe)
+	if _skips_coast():
+		rings = _land_only(rings)
 		var kept_bands: Array = []
 		var kept_colours: Array = []
 		for bi in bands.size():
-			for run: PackedVector2Array in Map3DBorders.land_runs([bands[bi]], wet, probe):
+			for run: PackedVector2Array in _land_only([bands[bi]]):
 				kept_bands.append(run)
 				kept_colours.append(band_colours[bi])
 		bands = kept_bands
@@ -78,15 +75,31 @@ func _build(st: GameState) -> void:
 		Map3DLayerLines.SEAM, Map3DPriority.SEAMS)
 
 
+## Whether the coast is left to the shore (map3d_border_skip_coast; without a
+## terrain — a fixture — every point would read as water).
+func _skips_coast() -> bool:
+	return ctx.repo.bal("map3d_border_skip_coast") > 0.0 and ctx.terrain != null
+
+
+## The runs of `rings` over land (Map3DBorders.land_runs).
+func _land_only(rings: Array) -> Array:
+	var sea_y := float(ctx.meta.get("sea_y", 0.0))
+	var wet := func(xz: Vector2) -> bool: return ctx.height_at(xz) < sea_y + 0.5
+	return Map3DBorders.land_runs(rings, wet, ctx.repo.bal("map3d_border_coast_probe_m"))
+
+
 ## The hovered kingdom's live outline in the border's own ink, wider — the
-## 2D map's hover ribbon (map3d_hover_border_width_px); "" clears it.
+## 2D map's hover ribbon (map3d_hover_border_width_px); "" clears it. Like the
+## border it keeps to the land (visual review 2026-10-05: a hover inked the
+## whole coast, which is the shore's to draw).
 func draw_hover(kingdom: String) -> void:
 	_hover = kingdom
 	var outline: Array = []
 	if kingdom != "":
 		if not _hover_lines.has(kingdom):
-			_hover_lines[kingdom] = Map3DBorders.kingdom_lines(ctx.repo, ctx.state(), ctx.meta,
+			var own := Map3DBorders.kingdom_lines(ctx.repo, ctx.state(), ctx.meta,
 				kingdom, ctx.line_step())
+			_hover_lines[kingdom] = _land_only(own) if _skips_coast() else own
 		outline = _hover_lines[kingdom]
 	lines.set_lines("Hover", outline, Map3DLayerLines.HOVER, Map3DPriority.HOVER)
 

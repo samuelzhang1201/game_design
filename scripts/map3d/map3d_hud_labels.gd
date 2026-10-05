@@ -47,7 +47,11 @@ func _same_pose() -> bool:
 ## One entry {code, text, pos (design px), px} per kingdom whose LIVE label
 ## anchor (MapOwnership.label_anchor) is before the camera and whose word —
 ## map_label_scale_px pack px tall on the ground, seen from its own distance —
-## reaches map_label_min_px; capped at map_label_max_px.
+## reaches map_label_min_px; capped at map_label_max_px. A name is lettered
+## whole (visual review 2026-10-05: "gate" and half a "Kelvarn" were cut by
+## the sheet's edge): a word the view's edge would cut slides inside it —
+## never more than half its own size, since only a word that already
+## reaches into the view is shown — and stays over its own land.
 func entries() -> Array:
 	if not bound():
 		return []
@@ -60,6 +64,8 @@ func entries() -> Array:
 	var s := ctx.viewport_px_scale()
 	var height_m := repo.bal("map_label_scale_px") * float(ctx.meta.get("m_per_px", 0.0))
 	var eye := camera.global_position
+	var font := UiPalette.map_label_font()
+	var frame := Rect2(Vector2.ZERO, ctx.view_size)
 	for code: String in repo.kingdoms:
 		var ground: Vector3 = anchors[code]
 		if camera.is_position_behind(ground):
@@ -70,9 +76,30 @@ func entries() -> Array:
 			repo.bal("map_label_max_px"))
 		if px <= 0.0:
 			continue
-		out.append({"code": code, "text": String(repo.kingdoms[code]["label"]),
-			"pos": camera.unproject_position(ground) / s, "px": px})
+		var text := String(repo.kingdoms[code]["label"])
+		var pos := camera.unproject_position(ground) / s
+		if font != null:
+			var box := MapLettering.box_centred(repo, font, text, pos, px)
+			if not frame.intersects(box):
+				continue
+			pos += inward(box, frame, px * 0.5)
+		out.append({"code": code, "text": text, "pos": pos, "px": px})
 	_entries = out
+	return out
+
+
+## How far `box` must move to lie `margin` inside `frame` (ZERO when it
+## already does; a box wider than the frame is centred on it).
+static func inward(box: Rect2, frame: Rect2, margin: float) -> Vector2:
+	var inner := frame.grow(-margin)
+	var out := Vector2.ZERO
+	for axis: int in 2:
+		if box.size[axis] >= inner.size[axis]:
+			out[axis] = inner.get_center()[axis] - box.get_center()[axis]
+		elif box.position[axis] < inner.position[axis]:
+			out[axis] = inner.position[axis] - box.position[axis]
+		elif box.end[axis] > inner.end[axis]:
+			out[axis] = inner.end[axis] - box.end[axis]
 	return out
 
 

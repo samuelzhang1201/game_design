@@ -479,6 +479,14 @@ by the same margin.
   Past the far range the ground's canopy tint (`Map3DGroundTint`'s woods
   stage, `ground_look.tres` `wood_*`) carries the wood. Measured primitive cost on high:
   ~+2.5 M near, ~+1.9 M mid.
+- **Sky occlusion** (`bake_relief_ao.py`, visual review 2026-10-05): from
+  `bake/height_war.r16`, how much of the sky each 40 m texel sees (horizon
+  search along `data/map3d_bake.csv` `relief_ao_dirs` directions out to
+  `relief_ao_radii_m`, blurred by `relief_ao_blur_texels`), written to
+  `bake/relief_ao.png` on the woods grid. `Map3DGroundRelief`'s stage
+  darkens the ground by it (`ground_look.tres` `relief_ao`, 0 off): the
+  valleys and a terrace's foot read darker, with no direction, so the turning
+  sun is never contradicted. One texture fetch; `test_bake_relief_ao.py`.
 - **Aerial ground layers** (`aerial_meadow`, `aerial_canopy`,
   `aerial_upland`) replace `leafy_grass` and `rocky_trail` — see
   `assets/3D/terrain/model_wip/aerial/README.md`. `pack_aerial.py` makes a picture seamless

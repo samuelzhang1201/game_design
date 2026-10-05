@@ -81,6 +81,10 @@ const PATH := "res://scenes/map3d/weather_look.tres"
 @export var snow_rough := 0.7
 @export var snow_detail := 0.15
 @export var snow_soft := 0.35
+## How much of its snow a wood shows from above (visual review 2026-10-05: a
+## snowfall over a forest painted it out as a white blob): the crowns keep
+## their dark, snow lies only between them.
+@export var snow_wood := 0.25
 ## How far snow covers a roof (what faces up) — the red tiles show a little.
 @export var roof_snow := 0.85
 
@@ -95,6 +99,7 @@ func ground_floats() -> Dictionary:
 	var out := {}
 	for key: String in ["warp_m", "warp_scale_m", "dim", "flat", "wet_dark", "wet_rough", "mud_mix",
 			"snow_slope", "snow_patch_m", "snow_rough", "snow_detail", "snow_steep", "snow_soft",
+			"snow_wood",
 			"mud_dark", "wet_cool", "haze"]:
 		out[key] = float(get(key))
 	return out

@@ -82,6 +82,17 @@ var _hover3d := Vector2(-1, -1)
 var _bal: Dictionary = {}
 ## --pal key=#hex overrides one terrain_palette.csv colour for the shot (repeatable)
 var _pal: Dictionary = {}
+## --set TARGET:PROP=VALUE overrides one LOOK value for the shot (repeatable),
+## for bracketing an inspector value before it is set in the editor. TARGET is
+## a res:// resource (set before anything instances it: a .tres material or
+## the world's Environment) or the name of a node in the 3D world (set as the
+## camera is framed, so it needs --zoom3d); VALUE is parsed by str_to_var
+## ("0.5", "Color(0.2, 0.3, 0.4, 1)"). Material uniforms are
+## shader_parameter/NAME.
+var _sets: Array = []
+## The resources --set changed, held so the cache keeps the changed copy
+## (a resource nothing holds is freed, and the next load reads the file).
+var _held: Array[Resource] = []
 ## --zoom3d M (with --screen root) frames the capital M metres away.
 var _zoom3d := -1.0
 ## --at3d x,y (with --zoom3d) frames that pack pixel instead of the capital.
@@ -277,6 +288,15 @@ func _ready() -> void:
 			var pv := args[i + 1].split("=")
 			if pv.size() == 2:
 				_pal[pv[0]] = pv[1]
+		elif args[i] == "--set":
+			var sv := args[i + 1]
+			var colon := sv.rfind(":", sv.find("="))
+			var eq := sv.find("=")
+			if colon > 0 and eq > colon:
+				_sets.append([sv.substr(0, colon), sv.substr(colon + 1, eq - colon - 1),
+					str_to_var(sv.substr(eq + 1))])
+			else:
+				push_error("--set wants TARGET:PROP=VALUE, got %s" % sv)
 		elif args[i] == "--bal":
 			var kv := args[i + 1].split("=")
 			if kv.size() == 2:
@@ -387,6 +407,11 @@ func _ready() -> void:
 	_pause_menu = args.has("--pause-menu")
 	_title = args.has("--title")
 	_quiet = args.has("--quiet")
+	# --still: the window takes no input at all, so a pointer resting over the
+	# shot's window (the owner's own mouse) cannot hover a kingdom, show a
+	# town's name or zoom the map; never with a flag that clicks or hovers.
+	if args.has("--still"):
+		get_tree().root.gui_disable_input = true
 	_spy_menu_only = args.has("--spy-menu-only")
 	_show_on_map = args.has("--show-on-map")
 	if not SCENES.has(_screen):
@@ -401,6 +426,15 @@ func _ready() -> void:
 		Game.data.balance[key] = _bal[key]
 	for key: String in _pal:
 		Game.data.terrain_palette[key] = _pal[key]
+	for st: Array in _sets:
+		if String(st[0]).begins_with("res://"):
+			var r: Resource = load(String(st[0]))
+			if r == null:
+				push_error("--set: no resource %s" % st[0])
+			else:
+				r.set(String(st[1]), st[2])
+				_held.append(r)
+				print("set %s:%s = %s" % [st[0], st[1], r.get(String(st[1]))])
 	if _quiet:
 		Game.state.event_state["scheduled"] = []
 		Game.data.balance["event_base_chance"] = 0.0
@@ -655,6 +689,14 @@ func _process(_delta: float) -> void:
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
 		var v3: Map3DView = _root.current_screen.map3d_view()
+		for st: Array in _sets:
+			if not String(st[0]).begins_with("res://"):
+				var node := v3.find_child(String(st[0]), true, false)
+				if node == null:
+					push_error("--set: no node %s in the 3D view" % st[0])
+				else:
+					node.set(String(st[1]), st[2])
+					print("set %s:%s = %s" % [st[0], st[1], node.get(String(st[1]))])
 		if _dev:
 			v3.set_dev_mode(true)
 		if _weather != "":

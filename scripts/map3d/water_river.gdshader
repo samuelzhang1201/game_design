@@ -71,6 +71,19 @@ uniform float natural = 0.0;
 uniform vec4 nat_water : source_color = vec4(0.2, 0.37, 0.42, 1.0);
 uniform vec4 nat_mouth : source_color = vec4(0.27, 0.44, 0.43, 1.0);
 uniform float nat_emission_share = 0.15;
+// Falls (visual review 2026-10-05): where a river drops off a cliff its
+// ribbon lay down the cliff face as a wide translucent blue sheet, which
+// read as paint smeared over the bridge in front of it. Where the water
+// falls more than fall_grade_from (rise over run along the river), it turns
+// to white water and narrows to fall_width of its breadth by fall_grade_to —
+// up close only (the ripples' LOD), where a fall is big enough to read.
+uniform float fall_grade_from = 0.4;
+uniform float fall_grade_to = 0.9;
+uniform vec4 fall_foam : source_color = vec4(0.88, 0.91, 0.9, 1.0);
+uniform float fall_width = 0.55;
+uniform float fall_opacity = 0.8;
+// how far toward the foam a full fall turns (the river's own water shows through)
+uniform float fall_foam_mix = 0.7;
 
 varying float v_across;
 varying float v_along;
@@ -79,6 +92,7 @@ varying float v_mouth;
 varying float v_fade;
 varying float v_soft_scale;
 varying vec2 v_xz;
+varying float v_y;
 
 void vertex() {
 	vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -87,6 +101,7 @@ void vertex() {
 	VERTEX += NORMAL * drawn_half_w;
 	v_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 	VERTEX.y += lift_px * m_per_px;
+	v_y = world.y;
 	NORMAL = vec3(0.0, 1.0, 0.0);
 	v_across = UV.x;
 	v_along = UV.y;
@@ -114,6 +129,12 @@ void fragment() {
 	float slope = clamp((n.x - n.y) * 2.0, -1.0, 1.0);
 	lifted *= 1.0 + ripple_emission_gain * near_w * slope;
 	float share = mix(emission_share, nat_emission_share, natural);
+	// how steeply the water falls here: its height's change per metre of course
+	float run = length(vec2(dFdx(v_along), dFdy(v_along)));
+	float fall = smoothstep(fall_grade_from, fall_grade_to,
+		length(vec2(dFdx(v_y), dFdy(v_y))) / max(run, 0.0001)) * near_w;
+	tinted = mix(tinted, fall_foam.rgb, fall * fall_foam_mix);
+	lifted = mix(lifted, fall_foam.rgb, fall * fall_foam_mix);
 	ALBEDO = tinted * (1.0 - share);
 	EMISSION = lifted * share;
 	ROUGHNESS = roughness;
@@ -121,9 +142,11 @@ void fragment() {
 	// 0 at either bank, 1 on the centreline; the wobble pushes the bank in
 	// and out along the river by up to bank_wobble_amp of the half-width.
 	float across = 1.0 - abs(v_across * 2.0 - 1.0);
+	// a fall is narrower than its river: the bank fade moves in
+	across = (across - fall * (1.0 - fall_width)) / max(1.0 - fall * (1.0 - fall_width), 0.0001);
 	// The noise tile holds about eight bumps: one every bank_wobble_m.
 	float wobble = texture(ripples, v_xz / (bank_wobble_m * 8.0)).x * 2.0 - 1.0;
 	across += wobble * bank_wobble_amp * near_w;
 	float edge = smoothstep(0.0, edge_soft * v_soft_scale + bank_wobble_amp * near_w, across);
-	ALPHA = opacity * edge * v_fade;
+	ALPHA = mix(opacity, fall_opacity, fall) * edge * v_fade;
 }

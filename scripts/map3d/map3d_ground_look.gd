@@ -57,6 +57,19 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 @export var wood_broadleaf := Color("34461F")
 @export var wood_conifer := Color("2C3F26")
 
+@export_group("Relief")
+## How far the baked sky occlusion (bake/relief_ao.png) darkens the ground —
+## valleys, a terrace's foot, gorges — 0 off; and its gamma (above 1 keeps
+## open slopes light and deepens only the hollows).
+@export var relief_ao := 0.0
+@export var relief_ao_gamma := 1.0
+## The share of it kept up close (camera nearer than `relief_ao_near_m`),
+## rising to all of it by `relief_ao_far_m`: near, the sun and SSAO model the
+## slopes, and a 40 m texel's dark reads as a burn beside a house.
+@export var relief_ao_near := 0.35
+@export var relief_ao_near_m := 2500.0
+@export var relief_ao_far_m := 10000.0
+
 
 ## The map's ground look (the saved .tres).
 static func shared() -> Map3DGroundLook:

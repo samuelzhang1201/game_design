@@ -87,6 +87,7 @@ uniform float weather_snow_rough = 0.7;
 uniform float weather_snow_detail = 0.35;
 uniform float weather_snow_steep = 0.4;
 uniform float weather_snow_soft = 0.35;
+uniform float weather_snow_wood = 1.0;
 uniform float weather_mud_dark = 0.18;
 uniform float weather_wet_cool = 0.15;
 uniform vec4 weather_wet_color = vec4(0.45, 0.5, 0.55, 1.0);
@@ -139,6 +140,7 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 			base_albedo *= 1.0 + strip_shade * sown * saa * (sh - 0.5) * 2.0;
 		}
 	}
+	float canopy_k = 0.0;  // the wood's share here, for the snow below
 	if (wood_on > 0.0) {
 		vec2 wuv0 = (v_vertex.xz - pack_origin) / wood_m_per_texel / vec2(textureSize(wood_map, 0));
 		vec4 wd = texture(wood_map, wuv0);
@@ -149,8 +151,9 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 			* (1.0 + wood_mottle * (w_mott - 0.5) * 2.0);
 		float w_k = clamp(wd.r * mix(wood_floor, wood_far, w_far), 0.0, 1.0);
 		base_albedo = mix(base_albedo, canopy, w_k);
+		canopy_k = clamp(wd.r, 0.0, 1.0);
 	}
-	// @WIND (Map3DGroundWind.STAGE)
+	// @WIND (Map3DGroundWind.STAGE, then Map3DGroundRelief.STAGE)
 	// The weather under the themes: the ground's own look, which a theme's
 	// tint then mixes over, like the relief and the sun.
 	if (weather_on > 0.0) {
@@ -178,7 +181,8 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 			smoothstep(weather_snow_slope - 0.2, weather_snow_slope + 0.1, w_normal.y));
 		float patchy = wx_noise(v_vertex.xz / weather_snow_patch_m);
 		float edge = patchy * 0.6 + mat.albedo_height.a * 0.4;
-		float snow = smoothstep(edge - weather_snow_soft, edge + weather_snow_soft, wx.b * flat_k * 1.3);
+		float snow = smoothstep(edge - weather_snow_soft, edge + weather_snow_soft, wx.b * flat_k * 1.3)
+			* mix(1.0, weather_snow_wood, canopy_k);  // seen from above, a wood stays dark
 		// the ground's own light and dark show through the snow a little —
 		// fields, woods and tracks under it — so a snowbound land keeps its map
 		float under = clamp(lum / 0.12, 0.55, 1.25);
@@ -279,9 +283,10 @@ static func patch(code: String) -> String:
 			at = i
 	if at < 0:
 		return ""
-	lines.insert(at + 1, UNIFORMS + Map3DGroundWind.UNIFORMS)
-	return "\n".join(lines).replace(ALBEDO_LINE,
-		TINTED_ALBEDO.replace("\t// @WIND (Map3DGroundWind.STAGE)\n", Map3DGroundWind.STAGE))
+	lines.insert(at + 1, UNIFORMS + Map3DGroundWind.UNIFORMS + Map3DGroundRelief.UNIFORMS)
+	return "\n".join(lines).replace(ALBEDO_LINE, TINTED_ALBEDO.replace(
+		"\t// @WIND (Map3DGroundWind.STAGE, then Map3DGroundRelief.STAGE)\n",
+		Map3DGroundWind.STAGE + Map3DGroundRelief.STAGE))
 
 
 ## Whether `code` already carries the tint (a view loaded the world before).

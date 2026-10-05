@@ -186,3 +186,6 @@ ship_step_m,8,ships: how far a berth slides along its quay (or an anchored ship 
 ship_tries,4,ships: at most this many steps out before a ship is left out
 ship_anchor_m,30,ships: at a port with no pier the ships ride this far off its nearest open shore
 ship_margin_m,3,ships: a hull's water is tested this much wider all round (the bake's water is a 20 m vertex)
+relief_ao_dirs,12,"3D bake (visual review 2026-10-05, bake_relief_ao.py): the sky occlusion looks along this many directions round each 40 m texel"
+relief_ao_radii_m,40|80|160|320|640|1280|2560|5120,"3D bake: how far (metres) each direction looks for the horizon, near to far — the far steps let a valley kilometres wide darken, the near ones a terrace's foot"
+relief_ao_blur_texels,1.0,"3D bake: a Gaussian blur (in 40 m texels) over the occlusion, so the Azgaar cells' creases do not draw fine light seams"

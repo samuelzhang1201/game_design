@@ -111,3 +111,27 @@ func test_the_hud_letters_the_names() -> void:
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()
+
+
+# A name is lettered whole (visual review 2026-10-05: "gate" was cut by the
+# sheet's edge): a box hanging over an edge moves in by exactly its overhang
+# plus the margin, a box inside stays, a box wider than the frame centres.
+func test_a_name_over_the_left_edge_slides_in() -> void:
+	var shift := Map3DHudLabels.inward(Rect2(-30, 100, 120, 20), Rect2(0, 0, 800, 450), 10.0)
+	assert_eq(shift, Vector2(40, 0))
+
+
+func test_a_name_over_the_top_and_right_slides_in_on_both() -> void:
+	var shift := Map3DHudLabels.inward(Rect2(720, -5, 100, 20), Rect2(0, 0, 800, 450), 10.0)
+	assert_eq(shift, Vector2(-30, 15))
+
+
+func test_a_name_inside_stays() -> void:
+	assert_eq(Map3DHudLabels.inward(Rect2(100, 100, 120, 20), Rect2(0, 0, 800, 450), 10.0), Vector2.ZERO)
+
+
+func test_a_name_wider_than_the_view_is_centred() -> void:
+	var shift := Map3DHudLabels.inward(Rect2(-100, 100, 1000, 20), Rect2(0, 0, 800, 450), 10.0)
+	assert_eq(shift, Vector2(0, 0))
+	shift = Map3DHudLabels.inward(Rect2(0, 100, 1000, 20), Rect2(0, 0, 800, 450), 10.0)
+	assert_eq(shift, Vector2(-100, 0))
