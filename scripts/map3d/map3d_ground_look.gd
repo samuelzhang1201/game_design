@@ -36,6 +36,11 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 ## (metres), and how far a strip's own shade lifts or darkens it (0: none).
 @export var strip_m := 22.0
 @export var strip_shade := 0.25
+## Farther out, where those strips are under a few px: broader bands (metres)
+## of the furlong's strips and their shade, so a field keeps its grain at the
+## opening zoom (0: none).
+@export var strip_far_m := 80.0
+@export var strip_far_shade := 0.0
 ## How much of the fields' own colour is taken back far out (0.9 until
 ## 2026-10-01 washed the crops out), from `field_fade_near_m` to full at
 ## `field_fade_far_m` camera distance.

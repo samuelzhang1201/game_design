@@ -1,21 +1,14 @@
 class_name Map3DGroundTint
 extends RefCounted
-## The MANORS and HEIGHTS ground on the 3D map (owner 2026-09-19, specs
-## 2026-09-19-map3d-manor-themes-design and 2026-09-19-map3d-heights):
-## Compatibility has no decals, so both themes' colours go into Terrain3D's
-## OWN shader. Map3DView reads the code Terrain3D generates for the build's
-## settings and patch() rewrites its one ALBEDO line to mix the ground toward
-## the colour of the manor under it — the cell id from the pack's
-## world_cell_index.png (R + G * 256, white is water), its colour from a
-## small LUT texture (ManorPalette) — by tint_mix, or toward the terrain
-## heat ramp by the ground's world height — by heat_mix. The colour enters
-## the albedo, so the relief, the sun and the cloud shadows still light it.
-## Nothing is committed from the addon: an update that changes the line makes
-## patch() return "" (tested), and the ground stays plain.
+## The ground's own look and its themes, spliced into the shader Terrain3D
+## generates (specs 2026-09-19-map3d-manor-themes-design, -heights): patch()
+## rewrites its one ALBEDO line — fields, woods, wind, relief, weather, then
+## the MANORS tint (cell id from world_cell_index.png, colour from a LUT) or
+## the HEIGHTS ramp — so the relief, sun and cloud shadows still light it.
+## An addon update that changes the line makes patch() return "" (tested).
 
 const ALBEDO_LINE := "ALBEDO = mat.albedo_height.rgb * color_map.rgb * macrov;"
-## The LUT's width in texels: cell id → (id % 128, id / 128).
-const LUT_WIDTH := 128
+const LUT_WIDTH := 128  ## the LUT's width in texels: cell id → (id % 128, id / 128)
 
 const UNIFORMS := """
 // Map3DGroundTint: the MANORS manor colours (Map3DView sets these).
@@ -31,10 +24,12 @@ uniform highp sampler2D field_map : filter_linear, repeat_disable;
 uniform float field_m_per_texel = 40.0;
 uniform float furrow_m = 9.0;
 uniform float furrow_depth = 0.0;
-// The open fields' STRIPS (owner 2026-10-01): long, each a farmer's, its own shade.
+// The open fields' STRIPS (owner 2026-10-01), each its own shade; strip_far_* far out.
 uniform float furrow_sharp = 1.0;
 uniform float strip_m = 22.0;
 uniform float strip_shade = 0.0;
+uniform float strip_far_m = 80.0;
+uniform float strip_far_shade = 0.0;
 uniform float field_fade = 0.0;
 uniform float field_fade_near_m = 15000.0;
 uniform float field_fade_far_m = 60000.0;
@@ -138,6 +133,11 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 			float sh = wx_hash(vec2(floor(sp), floor(sa + wx_hash(vec2(floor(sp), 3.7)))));
 			float saa = 1.0 - smoothstep(0.15, 0.4, fwidth(sp));
 			base_albedo *= 1.0 + strip_shade * sown * saa * (sh - 0.5) * 2.0;
+			// farther out, broader bands of its strips carry the furlong's grain
+			float sp2 = sp * strip_m / strip_far_m;
+			float sh2 = wx_hash(vec2(floor(sp2), floor(sa * strip_m / strip_far_m + 7.3)));
+			base_albedo *= 1.0 + strip_far_shade * sown * (1.0 - smoothstep(0.2, 0.5, fwidth(sp2)))
+				* (1.0 - saa) * (sh2 - 0.5) * 2.0;
 		}
 	}
 	float canopy_k = 0.0;  // the wood's share here, for the snow below
