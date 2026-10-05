@@ -36,5 +36,5 @@ fog_aerial_perspective = 0.4
 fog_sky_affect = 0.0
 adjustment_enabled = true
 adjustment_contrast = 1.12
-adjustment_saturation = 1.05
+adjustment_saturation = 0.95
 adjustment_color_correction = SubResource("GradientTexture1D_5b4d1")
