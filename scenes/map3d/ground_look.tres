@@ -13,6 +13,7 @@ strip_far_shade = 0.22
 field_fade = 0.55
 field_fade_near_m = 9000.0
 field_fade_far_m = 30000.0
+field_far_value = 0.75
 edge_warp_m = 8.0
 edge_warp_wave_m = 90.0
 edge_warp_far_m = 25000.0
