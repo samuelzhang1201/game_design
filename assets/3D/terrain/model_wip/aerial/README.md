@@ -24,7 +24,7 @@ into Terrain3D's two maps before `build_pack.sh`:
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_meadow.png aerial_meadow --match-mean '#666A35' --normal-strength 0.25 --rough 0.95 --fill-spots 0.2
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_canopy.png aerial_canopy --height-gain 1.3 --rough 0.95
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_upland.png aerial_upland --height-gain 1.2 --lift-darks 0.7 --lift-radius 20 --match-mean '#706850'
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_cliff.png aerial_cliff --saturation 0.85 --lift-darks 0.6 --black 0.05 --warm 0.03 --height-gain 1.3
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_cliff.png aerial_cliff --saturation 0.85 --lift-darks 0.95 --lift-radius 20 --black 0.12 --contrast 0.85 --warm 0.03 --height-gain 1.3 --match-mean '#726D69'
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_snow.png aerial_snow --flatten-keep 0.0 --contrast 0.55 --saturation 0.3 --height-gain 0.8 --rough 0.75
 
 The cliff (owner 2026-09-30, "先做悬崖纹理"): the escarpments wore ambientCG
