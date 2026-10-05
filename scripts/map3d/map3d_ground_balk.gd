@@ -46,12 +46,20 @@ const RIM := """	vec2 rxz = v_vertex.xz + (uv - UV) * _vertex_spacing;
 		if (r_in && r_out) {
 			float rcov = smoothstep(-raa, raa, rd);
 			material rm = material(vec4(0.0), vec4(0.0), 0., 0., 0.);
+			vec4 rcm = vec4(0.0);  // the colour map (each field's tint) weighted alike
+			float rcw = 0.0;
 			for (int k = 0; k < 4; k++) {
-				accumulate_material(base_ddx, base_ddy, weights[k] * (rk[k] >= 0.0 ? rcov : 1.0 - rcov), index[k],
+				float wk = weights[k] * (rk[k] >= 0.0 ? rcov : 1.0 - rcov);
+				accumulate_material(base_ddx, base_ddy, wk, index[k],
 					control[k], t_weights[k], texture_ids[k], index_normal[k], h[k], rm);
+				rcm += (index[k].z > -1 ? texelFetch(_color_maps, index[k], 0) : COLOR_MAP_DEF) * wk;
+				rcw += wk;
 			}
 			if (rm.total_weight > 0.0) {
 				mat.albedo_height = mix(mat.albedo_height, rm.albedo_height / rm.total_weight, field_rim);
+			}
+			if (rcw > 0.0) {
+				color_map = mix(color_map, rcm / rcw, field_rim);
 			}
 		}
 	}

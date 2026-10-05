@@ -24,6 +24,7 @@ func test_the_balk_reads_the_warped_position() -> void:
 func test_the_rim_reaccumulates_before_the_tint() -> void:
 	var out := Map3DGroundTint.patch(SAMPLE)
 	assert_string_contains(out, "uniform float field_rim")
-	assert_string_contains(out, "accumulate_material(base_ddx, base_ddy, weights[k] * (rk[k] >= 0.0 ? rcov : 1.0 - rcov)")
+	assert_string_contains(out, "float wk = weights[k] * (rk[k] >= 0.0 ? rcov : 1.0 - rcov)")
+	assert_string_contains(out, "color_map = mix(color_map, rcm / rcw, field_rim)", "the field's tint weighted alike")
 	assert_lt(out.find("if (field_rim > 0.0 && bilerp)"), out.find("vec3 base_albedo ="), "before the tint reads mat")
 	assert_lt(out.find("fwidth(rd)"), out.find("if (field_rim > 0.0"), "derivatives outside every branch")
