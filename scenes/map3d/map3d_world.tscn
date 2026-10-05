@@ -27,6 +27,12 @@
 [ext_resource type="Script" uid="uid://d0j1615g26j72" path="res://scripts/map3d/map3d_precip_kind.gd" id="25_g52bs"]
 [ext_resource type="Material" uid="uid://hbcsw3occqy0" path="res://scenes/map3d/materials/precip_drop_snow.tres" id="26_4rkuw"]
 
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_cqqwl"]
+dof_blur_far_enabled = true
+dof_blur_far_distance = 9000.0
+dof_blur_far_transition = 9000.0
+dof_blur_amount = 0.12
+
 [sub_resource type="QuadMesh" id="QuadMesh_qhspj"]
 material = ExtResource("24_05tsl")
 
@@ -90,12 +96,15 @@ script = ExtResource("15_gbaj8")
 
 [node name="Environment" type="WorldEnvironment" parent="." unique_id=1880847201]
 environment = ExtResource("16_7kg3e")
+camera_attributes = SubResource("CameraAttributesPractical_cqqwl")
 script = ExtResource("17_w2qt7")
 fog_depth_begin = 0.9
 fog_depth_end = 3.0
 fog_depth_density = 0.45
 fog_near_share = 0.75
 fog_near_full_m = 7000.0
+dof_far_begin = 1.15
+dof_far_ramp = 1.2
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=2026147674 node_paths=PackedStringArray("fill")]
 transform = Transform3D(0.7071067, 0.4055798, -0.579228, 0, 0.81915206, 0.57357645, 0.7071067, -0.4055798, 0.579228, 0, 0, 0)
