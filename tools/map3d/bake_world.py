@@ -1345,6 +1345,13 @@ def main(argv=None):
     # The warp may carry it up to edge_warp_m: never onto a cliff, nor above
     # twice BEACH_MAX_M (that cap falls on the steep ground, where it hides).
     beach *= land * (1.0 - t_cliff) * np.clip((2.0 * BEACH_MAX_M - height) / rules["beach_fade_height_m"], 0, 1)
+    # beaches come and go along the shore (visual review 2026-10-05: an even
+    # sand rim outlined every coast): a slow noise of its own stream widens
+    # some reaches and leaves others grass to the water
+    if rules.get("beach_break", 0.0) > 0.0:
+        bn = value_noise(np.random.default_rng(SEED + 23), vw, vh, rules["beach_break_wave_m"] / VERTEX_M)
+        beach *= np.clip((bn - rules["beach_break"]) / 0.25, 0, 1.3)
+        beach = np.clip(beach, 0, 1)
     del dx, dy, flat
     # The shore is dirt_floor (lighter, warmer and grainier than sand_03,
     # whose own tone the colour map cannot lighten) with sand as its second

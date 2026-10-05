@@ -101,6 +101,7 @@ uniform float nat_ripple_gain = 0.0;
 // Wind lanes on the open water: how far they lift toward the sky, and their size.
 uniform float nat_sheen = 0.0;
 uniform float nat_sheen_m = 2400.0;
+uniform float nat_sheen_far_m = 4000.0;  // gone by this camera distance
 
 varying vec2 v_xz;
 
@@ -146,7 +147,7 @@ void fragment() {
 	vec2 sq = v_xz / nat_sheen_m + vec2(TIME * 0.0006, TIME * 0.0002);
 	float sheen = sea_value_noise(sq * vec2(1.0, 2.6)) * 0.65 + sea_value_noise(sq * 2.3 + vec2(5.2, 1.7)) * 0.35;
 	// up close only: farther out the lanes shrink into a mottle like cloud shadow
-	float near_k = 1.0 - smoothstep(ripple_lod_near_m, ripple_lod_far_m, length(VERTEX));
+	float near_k = 1.0 - smoothstep(nat_sheen_far_m * 0.4, nat_sheen_far_m, length(VERTEX));
 	cn = mix(cn, sky.rgb, nat_sheen * near_k * smoothstep(0.35, 0.8, sheen) * smoothstep(nat_shallow_px, nat_mid_px, ds));
 	// foam: a broken line along the shore, drifting with the ripples
 	float foam_noise = texture(ripples, v_xz / 220.0 + vec2(TIME * 0.004, 0.0)).x;
