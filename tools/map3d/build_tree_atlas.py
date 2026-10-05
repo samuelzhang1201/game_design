@@ -82,7 +82,32 @@ def flood(rgba, rounds=24):
     return out
 
 
+def settle_rim(rgba, solid=200, radius=6):
+    """Every texel short of `solid` alpha takes its solid neighbours' colour
+    (a box `radius` px each way, weighted by alpha), keeping its own alpha:
+    the white render ground left a pale grey between a pine's needles that
+    the far mips, raising the alpha, drew as frost (visual review
+    2026-10-06)."""
+    rgb = rgba[..., :3].astype(np.float32)
+    w = np.clip((rgba[..., 3].astype(np.float32) - 128.0) / 127.0, 0, 1)
+
+    def box(a):
+        k = np.ones(2 * radius + 1, np.float32)
+        a = np.apply_along_axis(lambda v: np.convolve(v, k, "same"), 0, a)
+        return np.apply_along_axis(lambda v: np.convolve(v, k, "same"), 1, a)
+    ws = box(w)
+    near = np.dstack([box(rgb[..., c] * w) for c in range(3)]) / np.maximum(ws, 1e-4)[..., None]
+    soft = (rgba[..., 3] < solid) & (ws > 0.5)
+    out = rgba.copy()
+    out[..., :3][soft] = np.clip(near[soft], 0, 255).astype(np.uint8)
+    return out
+
+
 def main():
+    if "--settle-rim" in sys.argv:   # the committed atlas, in place (its sources are not committed)
+        Image.fromarray(settle_rim(np.asarray(Image.open(OUT).convert("RGBA"))), "RGBA").save(OUT)
+        print("settled", OUT)
+        return
     with open(TABLE, newline="") as f:
         rows = list(csv.DictReader(f))
     atlas = np.zeros((ROWS * CELL, COLS * CELL, 4), dtype=np.uint8)
@@ -91,7 +116,7 @@ def main():
         src = os.path.join(ROOT, r["source"])
         if not os.path.exists(src):
             sys.exit("missing source for cell %d: %s" % (cell, src))
-        tile = flood(trim_fit(cut_out(src)))
+        tile = flood(settle_rim(trim_fit(cut_out(src))))
         y, x = (cell // COLS) * CELL, (cell % COLS) * CELL
         atlas[y:y + CELL, x:x + CELL] = tile
         print("cell %2d  kind %s  %s" % (cell, r["kind"], os.path.basename(src)))
