@@ -53,7 +53,7 @@ footprint_block_m,70,3D bake village footprints: the wavelength of the blocky li
 footprint_block_depth,0.32,3D bake village footprints: how far the blocks darken
 footprint_edge_noise,0.5,3D bake village footprints: how far (as a share of its radius) the edge frays
 field_edge_soft_m,1,"3D bake fields: over this many metres before a furlong's edge its crop gives way to the ground under it. Under a vertex (20 m) on purpose (visual review 2026-10-05): a wider balk caught only some vertices on each edge and drew the furlongs' seams as black dashes at the opening zoom; the furlongs part by their own colour and strips"
-field_warp_m,50,"3D bake fields (critic round 1): how far, in metres, the field layout is displaced by noise, so the hedges wander instead of ruling straight Voronoi edges; 100 drew lobed, amoeba fields once the woods round them were cleared (visual review 2026-10-05)"
+field_warp_m,12,"3D bake fields (critic round 1): how far, in metres, the field layout is displaced by noise, so the hedges wander instead of ruling straight Voronoi edges; 100 drew lobed, amoeba fields once the woods round them were cleared (visual review 2026-10-05), 50 still read as cut-out paper blobs (2026-10-06): 12 keeps a furlong's sides near straight, a slight wander only"
 field_warp_wave_m,420,3D bake fields: the wavelength of that displacement
 field_shade,0.11,"3D bake fields: each field its own brightness, +- this share"
 field_grain,0.1,"3D bake fields: a fine grain of light and dark inside every field, +- this share"
@@ -137,7 +137,7 @@ dry_from_m,60,3D bake moisture: dry ground starts turning golden this many metre
 dry_full_m,700,3D bake moisture: ...fully by here
 furlong_m,320,"3D bake OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实): the mean size of a FURLONG, a block of strips one crop and one strip direction (a jittered-grid Voronoi, decided at its seed so it is never cut in two); the strips themselves are the terrain shader's (map3d_strip_m)"
 furlong_waste_share,0.06,3D bake open fields: the share of the arable's furlongs left to grass (waste and odd corners)
-great_warp_m,250,"3D bake open fields: how far noise bends the edges between the great fields (two or three round each settlement, one in each state of the rotation)"
+great_warp_m,120,"3D bake open fields: how far noise bends the edges between the great fields (two or three round each settlement, one in each state of the rotation)"
 great_warp_wave_m,1500,3D bake open fields: the wavelength of that bending
 croft_close_m,90,"3D bake open fields: the size of a croft close — the small hedged plots and gardens behind the houses (data/map3d_farm_zones.csv croft_m is how far they reach); 70 was under four vertices and read as noise"
 croft_hedge_m,20,3D bake open fields: the width of the hedge round a croft close (12 was under a vertex and never showed)
