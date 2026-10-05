@@ -192,6 +192,29 @@ def main(argv=None):
     c = chance[zi, xi]
     keep = rng.random(c.shape) < c
     X, Z, xi, zi = X[keep], Z[keep], xi[keep], zi[keep]
+    # HEDGEROW trees (visual review 2026-10-06: the fields read as flat fills
+    # laid on the land): along the balks and croft hedges of bake_world's
+    # field_edges.png, in runs (a slow noise) — their own stream, so the woods
+    # above are unchanged
+    hedge = np.zeros(len(X), bool)
+    ep = os.path.join(OUT, "field_edges.png")
+    if rules.get("hedge_chance", 0.0) > 0.0 and os.path.exists(ep):
+        hrng = np.random.default_rng(SEED + 31)
+        em = np.asarray(Image.open(ep).convert("L"), dtype=np.float32)
+        hsp = rules["hedge_spacing_m"]
+        hx, hz = np.meshgrid(np.arange(hsp * 0.5, vw * vm, hsp), np.arange(hsp * 0.5, vh * vm, hsp))
+        hx = (hx + hrng.uniform(-0.5, 0.5, hx.shape) * hsp).ravel()
+        hz = (hz + hrng.uniform(-0.5, 0.5, hz.shape) * hsp).ravel()
+        hxi = np.clip((hx / vm).astype(int), 0, vw - 1)
+        hzi = np.clip((hz / vm).astype(int), 0, vh - 1)
+        eb = em[hzi, hxi]
+        runs = value_noise(np.random.default_rng(SEED + 32), vw, vh, rules["hedge_run_m"] / vm)[hzi, hxi]
+        take = (eb < 255) & (eb / 4.0 < rules["hedge_band_m"]) & ~bad[hzi, hxi] \
+            & (hrng.random(hx.shape) < rules["hedge_chance"] * np.clip((runs - 0.35) / 0.3, 0, 1))
+        X, Z = np.concatenate([X, hx[take]]), np.concatenate([Z, hz[take]])
+        xi, zi = np.concatenate([xi, hxi[take]]), np.concatenate([zi, hzi[take]])
+        hedge = np.concatenate([hedge, np.ones(int(take.sum()), bool)])
+        del em, hx, hz, hxi, hzi, eb, runs, take
     # the ground's height under the clump, bilinear
     fx, fz = X / vm, Z / vm
     x0 = np.clip(np.floor(fx).astype(int), 0, vw - 2)
@@ -205,13 +228,15 @@ def main(argv=None):
     kind = np.where(species[zi, xi] + edge < coni[zi, xi], KINDS["conifer"], KINDS["broadleaf"])
     del species
     kind = np.where(dens[zi, xi] < 0.05, KINDS["lone"], kind)
+    kind = np.where(hedge, KINDS["broadleaf"], kind)
     # the mask tested the vertex a clump fell in; its own spot, between four
     # vertices, can still dip under the water at a shore — the last word is
     # the ground under the clump itself
     dry = y >= sea_y + rules["min_above_sea_m"]
-    X, Z, y, kind, xi, zi = X[dry], Z[dry], y[dry], kind[dry], xi[dry], zi[dry]
+    X, Z, y, kind, xi, zi, hedge = X[dry], Z[dry], y[dry], kind[dry], xi[dry], zi[dry], hedge[dry]
     yaw = rng.uniform(0, 2 * np.pi, len(X))
     scale = rng.uniform(rules["scale_min"], rules["scale_max"], len(X))
+    scale = np.where(hedge, scale * rules["hedge_scale"], scale)
     rows = np.stack([X + ox, y, Z + oz, yaw, scale, kind.astype(np.float32)], axis=1).astype(np.float32)
     rows.tofile(os.path.join(OUT, "trees.bin"))
     # the woods' canopy for the ground shader (Map3DGroundTint): one texel per
