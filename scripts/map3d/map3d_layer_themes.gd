@@ -79,6 +79,7 @@ func prepare(scene_path: String) -> void:
 	_apply_woods(scene_path)
 	Map3DGroundRelief.apply(_tint_mat, scene_path, look)
 	Map3DGroundEdge.apply(_tint_mat, look)
+	Map3DGroundBalk.apply(_tint_mat, scene_path, look)
 	# the bake's field map (owner 2026-09-19): furrows up close, the crops'
 	# colour eased back far out; without it both stay off
 	var fields := load_field_map(scene_path)

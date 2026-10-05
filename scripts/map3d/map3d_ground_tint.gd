@@ -283,10 +283,10 @@ static func patch(code: String) -> String:
 			at = i
 	if at < 0:
 		return ""
-	lines.insert(at + 1, UNIFORMS + Map3DGroundWind.UNIFORMS + Map3DGroundRelief.UNIFORMS)
+	lines.insert(at + 1, UNIFORMS + Map3DGroundWind.UNIFORMS + Map3DGroundRelief.UNIFORMS + Map3DGroundBalk.UNIFORMS)
 	return "\n".join(lines).replace(ALBEDO_LINE, TINTED_ALBEDO.replace(
 		"\t// @WIND (Map3DGroundWind.STAGE, then Map3DGroundRelief.STAGE)\n",
-		Map3DGroundWind.STAGE + Map3DGroundRelief.STAGE))
+		Map3DGroundBalk.STAGE + Map3DGroundWind.STAGE + Map3DGroundRelief.STAGE))
 
 
 ## Whether `code` already carries the tint (a view loaded the world before).

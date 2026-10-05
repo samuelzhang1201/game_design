@@ -64,6 +64,14 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 @export var edge_fray_from_m := 2500.0
 @export var edge_fray_full_m := 6000.0
 
+## The balks between furlongs and hedges round crofts (Map3DGroundBalk): a
+## line `balk_m` wide inside each field's edge, mixed toward `balk_color` by
+## `balk` (0 off), gone by a camera `balk_far_m` away.
+@export var balk := 0.0
+@export var balk_m := 6.0
+@export var balk_color := Color("6B7340")
+@export var balk_far_m := 9000.0
+
 @export_group("Woods")
 ## How far the ground under the woods (bake/woods.png) goes toward the canopy
 ## colour where clumps are drawn — the dark floor between the crowns — and far

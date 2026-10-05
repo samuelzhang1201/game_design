@@ -42,7 +42,9 @@ const TEXTURES := [
 # fresh Terrain3DMaterial saved the rest as null and drew flat grey.
 const SHADER_PARAMS := {
 	"bias_distance": 512.0,
-	"blend_sharpness": 0.85,
+	# softer than the demo's 0.85 (visual review 2026-10-05): the texture change
+	# between two 20 m vertices stepped every field's rim into a crenellation
+	"blend_sharpness": 0.35,
 	"depth_blur": 0.0,
 	# dual scale: grass far away at 0.3x its tile, near/far past the rig's 800 m
 	"dual_scale_far": 4000.0,

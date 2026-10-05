@@ -881,6 +881,10 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     # and meadow open, the common pasture partly — bake_trees thins the woods by it
     settled = np.zeros((vh, vw), dtype=np.float32)
     reach = np.zeros((vh, vw), dtype=np.float32)    # within a village's reach at all
+    # each field's distance (m) to its own edge, at the vertices: the shader
+    # draws the balks and hedges along it, smooth where the ground's own
+    # texture change can only step from vertex to vertex
+    edge_m = np.full((vh, vw), 255, dtype=np.uint8)
     # THE OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实). Each
     # vertex belongs to its NEAREST settlement (a Voronoi of their centres,
     # cut at a coarse step and read back), and lies in one of its zones:
@@ -1006,6 +1010,8 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         m = ok * within * (weight > 0)
         pasture = ~croft & ~arable & ~meadow
         reach[y0:y1] = within * land[y0:y1]
+        drawn = (sown | croft) & (m > 0)
+        edge_m[y0:y1] = np.where(drawn, np.clip(np.round(edge * EDGE_MAP_PER_M), 0, 254), 255).astype(np.uint8)
         settled[y0:y1] = reach[y0:y1] * np.where(pasture, rules["pasture_open"], 1.0)
         # a hedge round each croft close; a grass balk between furlongs
         hedge = np.where(croft, 1.0 - rules["croft_hedge_depth"] * np.clip(1.0 - edge / rules["croft_hedge_m"], 0, 1) ** 2, 1.0)
@@ -1057,7 +1063,10 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     tint = tint * (1.0 - foot[..., None]) + blocks * foot[..., None]
     print("bake_world: patchwork %.1f%% of the land sown, %.2f%% built" % (
         100.0 * float(farm[land].mean()), 100.0 * float(foot[land].mean())))
-    return tint, field_map(ftint, fangle), house_rows, settled_map(settled)
+    return tint, field_map(ftint, fangle), house_rows, settled_map(settled), edge_m
+
+
+EDGE_MAP_PER_M = 4.0   # bake/field_edges.png: bytes per metre (255 = no field)
 
 
 def settled_map(settled, step=FIELD_MAP_STEP):
@@ -1346,13 +1355,14 @@ def main(argv=None):
     tw[..., DIRT] += 2.0 * beach * (1.0 - grain)
     tw[..., SAND] += 2.0 * beach * grain
     del grain
-    tint, fmap, house_rows, smap = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
+    tint, fmap, house_rows, smap, emap = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
                                t_rock, beach, wet, k, vw, vh, pw, ph, origin)
     # read by Map3DView for the patched terrain shader (Map3DGroundTint):
     # FIELD_MAP_STEP vertices to a texel, from the pack's own corner
     Image.fromarray(fmap, "RGBA").save(os.path.join(OUT, "fields.png"))
     Image.fromarray(smap, "L").save(os.path.join(OUT, "settled.png"))
-    del fmap, smap
+    Image.fromarray(emap, "L").save(os.path.join(OUT, "field_edges.png"))
+    del fmap, smap, emap
     del t_rock, t_cliff, keep, beach
     depth = np.clip(-height / 150.0, 0, 1)
     tw[~land] = 0.0
