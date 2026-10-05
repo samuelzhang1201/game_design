@@ -88,6 +88,7 @@ uniform float fall_width = 0.55;
 uniform float fall_opacity = 0.8;
 // how far toward the foam a full fall turns (the river's own water shows through)
 uniform float fall_foam_mix = 0.7;
+uniform float fall_streaks = 6.0;  // streaks across a fall's width
 // The wet bank: its share of the half-width from each edge, colour and strength.
 uniform float bank_share = 0.35;
 uniform vec4 bank_color : source_color = vec4(0.2, 0.17, 0.11, 1.0);
@@ -247,7 +248,11 @@ void fragment() {
 	float bank = (1.0 - smoothstep(0.0, bank_share, across)) * bank_mix * (1.0 - to_sea);
 	ALBEDO = mix(ALBEDO, bank_color.rgb, bank);
 	EMISSION *= 1.0 - bank;
+	// a fall's water in streaks running down it, white where it breaks
+	float streak = texture(ripples, vec2(v_across * fall_streaks / 8.0, v_along / 30.0 - TIME * 0.35)).x;
+	ALBEDO = mix(ALBEDO, fall_foam.rgb, fall * smoothstep(0.45, 0.75, streak) * 0.6);
 	float sea_takes = sea_shore_alpha(ripples, v_xz, d, sea_shore_fade_px, sea_shore_warp_px, sea_shore_warp_m);
 	ALPHA = mix(mix(opacity, mouth_opacity, to_sea), fall_opacity, fall) * edge * v_fade
+		* mix(1.0, 0.35 + 0.9 * streak, fall)
 		* (1.0 - sea_takes * to_sea);
 }

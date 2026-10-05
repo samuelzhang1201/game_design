@@ -89,7 +89,7 @@ static func bridge_rules_of(repo: DataRepository) -> Dictionary:
 	var rules: Dictionary = {}
 	for key: String in ["abut_m", "clear_m", "clear_per_width", "hump_m", "min_sin", "merge_m",
 			"deck_step_m", "deck_m", "parapet_h_m", "parapet_w_m", "arch_max_m", "pier_m",
-			"end_over_water_m"]:
+			"end_over_water_m", "max_drop_m"]:
 		rules[key] = repo.bal("map3d_bridge_" + key)
 	return rules
 

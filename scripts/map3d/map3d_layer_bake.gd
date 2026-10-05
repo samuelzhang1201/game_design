@@ -14,7 +14,7 @@ extends RefCounted
 ## THE ONE EXCEPTION (Task 22): an edit to those files that cannot reach the
 ## baked vertices — a `@tool` line, editor-only preview code, a comment —
 ## updates GEOMETRY_MD5 ALONE and leaves FORMAT and the bakes as they are.
-const FORMAT := 3
+const FORMAT := 4
 ## Every script the baked meshes' vertices come from: the layers' arrays_for /
 ## plan_for / bridge_mesh, the river, bridge and ribbon builders, the pack ->
 ## world maths and the route smoothing, and the context's heights and steps.
@@ -24,7 +24,7 @@ const GEOMETRY_SOURCES := ["res://scripts/map3d/map3d_layer_rivers.gd",
 	"res://scripts/map3d/map3d_geometry.gd", "res://scripts/map3d/map3d_context.gd",
 	"res://scripts/engine/map_geometry.gd"]
 ## The md5 of GEOMETRY_SOURCES' text, concatenated in list order.
-const GEOMETRY_MD5 := "67c73fbda43f4006d05ec0b238f71a9c"
+const GEOMETRY_MD5 := "4aae7b43740350078e49f3c1ea9cc7a3"
 const LAYERS := ["rivers", "roads", "trails", "bridges"]
 const KEYS := ["map3d_road_step_m", "map3d_river_mesh_step_m", "map3d_river_split_rise_m",
 	"map3d_river_terrain_clear_m", "map3d_river_end_fade_m", "map3d_river_mouth_extend_w",
@@ -33,7 +33,7 @@ const KEYS := ["map3d_road_step_m", "map3d_river_mesh_step_m", "map3d_river_spli
 	"map3d_bridge_min_sin", "map3d_bridge_merge_m", "map3d_bridge_deck_step_m",
 	"map3d_bridge_deck_m", "map3d_bridge_extra_w_m", "map3d_bridge_parapet_h_m",
 	"map3d_bridge_parapet_w_m", "map3d_bridge_arch_max_m", "map3d_bridge_pier_m",
-	"map3d_bridge_tile_m", "map3d_bridge_end_over_water_m"]
+	"map3d_bridge_tile_m", "map3d_bridge_end_over_water_m", "map3d_bridge_max_drop_m"]
 
 
 static func step_set(row: Dictionary) -> String:

@@ -165,6 +165,15 @@ static func _splice(line: PackedVector2Array, spans: Array, height_fn: Callable,
 		var gb := float(height_fn.call(b))
 		# a deck end never lies under the water it crosses (the drawn water
 		# line can stand over a carved bank)
+		# no bridge where its ends and the water lie that far apart (a gorge,
+		# the top of a fall): the deck stood on a curtain of masonry down the
+		# cliff; the road keeps to the ground there
+		if maxf(maxf(ga, gb), water) - minf(minf(ga, gb), water) > float(rules.get("max_drop_m", INF)):
+			while k < line.size() and arcs[k] <= float(s["to"]):
+				pts.append(line[k])
+				hs.append(NAN)
+				k += 1
+			continue
 		var ya := maxf(ga, water + float(rules["end_over_water_m"]))
 		var yb := maxf(gb, water + float(rules["end_over_water_m"]))
 		var clear := water + float(rules["clear_m"]) + float(rules["clear_per_width"]) * float(s["width"])
