@@ -204,3 +204,7 @@ river_meander_wave_m,1600,3D bake: the wavelength of that meander along the rive
 river_meander_end_m,400,"3D bake: the meander fades to nothing over this far from either end, so a source, a join and a mouth stay put"
 river_meander_town_m,1000,"3D bake: no meander within this far of a settlement, rising to all of it at twice this — its houses, walls and bridge were laid round the pack's line"
 river_mouth_grade,0.03,"3D bake (visual review 2026-10-06: a river fell off a cliff coast into the sea as a white curtain): a true mouth's bed never stands higher than this rise per metre back from its end over the sea, so it cuts its own valley down through a cliff (0: off)"
+terrace_gully_m,260,"3D bake terraces (visual review 2026-10-06: one unbroken scarp ringed the plateau like a crater wall): how far a finer noise pushes a step's edge — bays and spurs along the rim"
+terrace_gully_wave_m,700,3D bake terraces: that noise's wavelength
+terrace_soften,1.0,"3D bake terraces: how far, where a slow noise is high, a face eases from a scarp (terrace_face) toward a plain slope, so the rim breaks into stretches (0: every face a scarp)"
+terrace_soften_wave_m,3500,3D bake terraces: that noise's wavelength

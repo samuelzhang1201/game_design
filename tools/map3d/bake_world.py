@@ -189,11 +189,23 @@ def terrace(height, ramp, land, from_coast, rules, vw, vh, courses=()):
         mask *= river_fade(courses, vw, vh, rules["terrace_river_fade_m"] / VERTEX_M)
     level = (value_noise(trng, vw, vh, rules["terrace_level_wave_m"] / VERTEX_M) * 2.0 - 1.0) \
         * rules["terrace_level_jitter"] * step
+    # the rim broken (visual review 2026-10-06: one unbroken scarp ringed the
+    # plateau like a crater wall): a finer warp cuts bays and spurs into the
+    # edge, and in stretches the face eases into a slope (own stream: the
+    # terraces above stay as they were)
+    brng = np.random.default_rng(int(rules["terrace_seed"]) + 1)
+    if rules.get("terrace_gully_m", 0.0) > 0.0:
+        warp = warp + (value_noise(brng, vw, vh, rules["terrace_gully_wave_m"] / VERTEX_M) * 2.0 - 1.0) \
+            * rules["terrace_gully_m"]
+    soft = np.zeros_like(height)
+    if rules.get("terrace_soften", 0.0) > 0.0:
+        sn = value_noise(brng, vw, vh, rules["terrace_soften_wave_m"] / VERTEX_M)
+        soft = np.clip((sn - 0.45) / 0.25, 0, 1) * rules["terrace_soften"]
     hw = (height - base - level + warp) / step
     mask *= np.clip(rules["terrace_max_steps"] + 1.0 - hw, 0, 1)
     k = np.floor(hw)
     f = hw - k
-    w = rules["terrace_face"]
+    w = rules["terrace_face"] + (0.95 - rules["terrace_face"]) * soft
     u = np.clip((f - (1.0 - w)) / w, 0, 1)
     stepped = base + level + (k + u * u * (3 - 2 * u)) * step
     out = height + strength * mask * (stepped - height)
