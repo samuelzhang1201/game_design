@@ -118,7 +118,7 @@ terrace_step_wave_m,15000,3D bake terraces: that noise's wavelength
 terrace_min_steps,1,"3D bake terraces: only ground whose local top clears this many steps above terrace_from_m is terraced (a lone hilltop crossing one level read as a flat pill)"
 terrace_top_reach_m,1500,3D bake terraces: how far around a point its local top is looked for
 terrace_river_fade_m,600,"3D bake terraces: held off the rivers over this distance, like the ridges (a river carved through a face left a black slot)"
-far_color_cliff,#80766A,"3D bake (2026-09-24, look route Phase 2): what the cliff rock reads as from far away (sRGB) — warmed from the code's cool #7E7B77, which read blue-grey against the warm land (the colour map can only darken the texture's own mean, so a warmer target is reached by taking blue out)"
+far_color_cliff,#8A7A64,"3D bake (2026-09-24, look route Phase 2): what the cliff rock reads as from far away (sRGB) — warmed from the code's cool #7E7B77, which read blue-grey against the warm land (the colour map can only darken the texture's own mean, so a warmer target is reached by taking blue out)"
 terrace_level_jitter,0.5,"3D bake terraces (blind A/B round): each region's step levels drift by up to this many steps with a slow noise — every region stepping at the same levels read as contour lines"
 terrace_level_wave_m,12000,3D bake terraces: that noise's wavelength
 terrace_max_steps,2,"3D bake terraces: no slope takes more than this many steps above its region's first level; above them the ground is its own again (eased over a step)"
