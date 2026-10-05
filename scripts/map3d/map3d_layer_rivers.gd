@@ -70,7 +70,8 @@ static func arrays_for(p_ctx: Map3DContext, scene_dir: String) -> Dictionary:
 		p_ctx.repo.bal("map3d_river_split_rise_m"))
 	drawn = Map3DRivers.clear_terrain(drawn, p_ctx.height_at, p_ctx.repo.bal("map3d_river_terrain_clear_m"))
 	var arrays := Map3DRivers.ribbon_arrays(drawn, p_ctx.repo.bal("map3d_river_end_fade_m"),
-		p_ctx.river_step())
+		p_ctx.river_step(), p_ctx.repo.bal("map3d_river_mouth_extend_w"),
+		float(p_ctx.meta.get("sea_y", 0.0)))
 	return {"arrays": arrays, "courses": drawn}
 
 

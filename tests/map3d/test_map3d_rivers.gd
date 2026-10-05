@@ -298,3 +298,61 @@ func test_split_strips_still_share_their_cut_vertex_when_densified() -> void:
 	var a: PackedVector3Array = Map3DRivers.densify(courses[0], 12.0)["pos"]
 	var b: PackedVector3Array = Map3DRivers.densify(courses[1], 12.0)["pos"]
 	assert_eq(a[-1], b[0], "the cut vertex is shared")
+
+
+# --- the sea mouth's run-out (owner 2026-10-05: a square stub on the sand) -----
+
+## A true mouth is clipped to the land, so it stopped on the beach short of
+## the sea's water line. It runs on past its last sample along its final
+## direction by mouth_extend_w × its local width, down to the sea's water
+## height, fading from full to nothing over that run.
+func test_a_true_mouth_runs_on_into_the_sea_and_fades_out() -> void:
+	# Flows +X; the last sample sits at x 200, water 8, width 80.
+	var arrays := Map3DRivers.ribbon_arrays(Map3DRivers.parse(JSON_TEXT), 20.0, 0.0, 1.0, 5.0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2]
+	assert_eq(verts.size(), 8, "one more point pair past the mouth")
+	assert_eq((arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size(), 18, "three quads")
+	assert_almost_eq(colors[4].a, 1.0, 0.001, "full strength at the last sample")
+	assert_almost_eq(verts[6].x, 280.0, 0.001, "one local width on along the final direction")
+	assert_almost_eq(verts[6].z, 0.0, 0.001)
+	assert_almost_eq(verts[6].y, 5.0, 0.001, "at the sea's water height")
+	assert_almost_eq(colors[6].a, 0.0, 0.001, "gone at the end of the run-out")
+	assert_almost_eq(colors[7].a, 0.0, 0.001)
+	assert_almost_eq(uv[6].y, 280.0, 0.001, "metres along carry on")
+	assert_eq(uv2[6], Vector2(80, 1), "its width, and wholly the mouth's water")
+
+
+func test_the_run_out_follows_the_last_segments_direction() -> void:
+	var text := '{"rivers": [{"code": "d", "points": [[0, 0, 10, 10, 0], [30, 40, 6, 20, 1]]}]}'
+	var arrays := Map3DRivers.ribbon_arrays(Map3DRivers.parse(text), 20.0, 0.0, 0.5, 5.0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	# Direction (0.6, 0.8), half of a 20 m width = 10 m on.
+	assert_almost_eq(verts[4].x, 36.0, 0.001)
+	assert_almost_eq(verts[4].z, 48.0, 0.001)
+
+
+func test_only_a_true_mouth_runs_on() -> void:
+	var courses := Map3DRivers.parse(JOIN_TEXT)
+	var joined: Dictionary = courses[1]
+	var plain := Map3DRivers.ribbon_arrays([joined], 80.0)
+	var asked := Map3DRivers.ribbon_arrays([joined], 80.0, 0.0, 1.0, 5.0)
+	assert_eq((asked[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(),
+		(plain[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(), "a joined end is not extended")
+	var mouthless := Map3DRivers.ribbon_arrays(Map3DRivers.parse(JSON_TEXT), 20.0, 0.0, 0.0, 5.0)
+	assert_eq((mouthless[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(), 6, "0 = no run-out")
+
+
+func test_a_densified_mouth_runs_on_from_its_last_sample() -> void:
+	var arrays := Map3DRivers.ribbon_arrays(Map3DRivers.parse(BEND_TEXT), 20.0, 12.0, 1.0, 5.0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	assert_eq(verts.size(), 34, "the densified 16 points and one past the mouth")
+	assert_almost_eq(colors[-3].a, 1.0, 0.001, "the last sample keeps full strength")
+	assert_almost_eq(colors[-1].a, 0.0, 0.001)
+	assert_almost_eq(verts[-1].y, 5.0, 0.001)
+	# The final sample (100, 80) and the one before on the curve set the direction.
+	assert_almost_eq(verts[-1].z, 80.0 + 20.0 * (verts[-3].z - verts[-5].z) \
+		/ Vector2(verts[-3].x - verts[-5].x, verts[-3].z - verts[-5].z).length(), 0.01)

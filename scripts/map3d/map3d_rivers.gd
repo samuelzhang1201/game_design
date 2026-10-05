@@ -230,23 +230,36 @@ static func clear_terrain(courses: Array, height_fn: Callable, margin: float) ->
 ## Mesh arrays for every course, or [] when there is none. Every vertex
 ## carries its fade in COLOR.a: 0 at a cut (or the river's true source, which
 ## fades in the same way — a river starts from nothing) rising to 1 over
-## end_fade_m of arc length; the true mouth is the one end that never fades,
-## since it runs into the sea rather than being cut (a tributary's joined
-## end is neither — fix round 3 — so it fades the same as any other cut,
-## sliding under the river it joins instead of ending at full opacity).
+## end_fade_m of arc length; the true mouth is the one end that is not cut,
+## since it runs into the sea (a tributary's joined end is neither — fix
+## round 3 — so it fades the same as any other cut, sliding under the river
+## it joins instead of ending at full opacity).
 ## water_river.gdshader multiplies its ALPHA by this.
 ##
 ## `mesh_step_m` > 0 first densifies each course along a centripetal
 ## Catmull-Rom curve through its samples (densify), so up close the ribbon
 ## bends smoothly instead of running in ruled ~50 m segments; 0 keeps the
 ## samples as they are.
+##
+## The bake clips a true mouth to the land, so its last sample stops on the
+## beach short of where the sea meets the ground and the ribbon ended there
+## in a square stub (owner 2026-10-05). `mouth_extend_w` > 0 runs it on past
+## that sample along its final direction by that many local widths, down to
+## `sea_y` (the sea's water height), at full strength at the sample and
+## fading to nothing at the end of the run-out, so the river blends into the
+## sea; 0 stops it at the sample. A NAN sea_y keeps the sample's own height.
 static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M,
-		mesh_step_m: float = 0.0) -> Array:
+		mesh_step_m: float = 0.0, mouth_extend_w: float = 0.0, sea_y: float = NAN) -> Array:
 	if mesh_step_m > 0.0:
 		var dense: Array = []
 		for c: Dictionary in courses:
 			dense.append(densify(c, mesh_step_m))
 		courses = dense
+	if mouth_extend_w > 0.0:
+		var run_on: Array = []
+		for c: Dictionary in courses:
+			run_on.append(_run_out(c, mouth_extend_w, sea_y) if c.get("true_mouth", false) else c)
+		courses = run_on
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uv := PackedVector2Array()
@@ -261,6 +274,8 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 		var width: PackedFloat32Array = c["width"]
 		var mouth: PackedFloat32Array = c["mouth"]
 		var true_mouth: bool = bool(c.get("true_mouth", false))
+		# A run-out (_run_out) fades over its own length, from its last sample.
+		var run_out_m := float(c.get("run_out_m", 0.0))
 		var arcs := PackedFloat32Array()
 		arcs.resize(pos.size())
 		var total := 0.0
@@ -272,7 +287,9 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 			var side2d := _side_at(pos, i)
 			var side := Vector3(side2d.x, 0.0, side2d.y)
 			var start_fade := clampf(arcs[i] / fade_span, 0.0, 1.0)
-			var end_fade := 1.0 if true_mouth else clampf((total - arcs[i]) / tail_span, 0.0, 1.0)
+			var end_fade := clampf((total - arcs[i]) / tail_span, 0.0, 1.0)
+			if true_mouth:
+				end_fade = clampf((total - arcs[i]) / run_out_m, 0.0, 1.0) if run_out_m > 0.0 else 1.0
 			var fade := minf(start_fade, end_fade)
 			var base := verts.size()
 			for s: int in [0, 1]:
@@ -294,6 +311,33 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 	arrays[Mesh.ARRAY_COLOR] = colors
 	arrays[Mesh.ARRAY_INDEX] = index
 	return arrays
+
+
+## The course with one point added past its last sample: along the final
+## segment's ground-plane direction, `extend_w` × the last width on, at
+## `sea_y` (NAN: the last sample's height), the same width and wholly the
+## mouth's water; "run_out_m" records the run-out's length for the fade.
+static func _run_out(course: Dictionary, extend_w: float, sea_y: float) -> Dictionary:
+	var pos: PackedVector3Array = (course["pos"] as PackedVector3Array).duplicate()
+	var width: PackedFloat32Array = (course["width"] as PackedFloat32Array).duplicate()
+	var mouth: PackedFloat32Array = (course["mouth"] as PackedFloat32Array).duplicate()
+	var n := pos.size()
+	if n < 2:
+		return course
+	var dir := Vector2(pos[n - 1].x - pos[n - 2].x, pos[n - 1].z - pos[n - 2].z)
+	var run := width[n - 1] * extend_w
+	if dir.length_squared() < 0.0000001 or run <= 0.0:
+		return course
+	var tip := Vector2(pos[n - 1].x, pos[n - 1].z) + dir.normalized() * run
+	pos.append(Vector3(tip.x, pos[n - 1].y if is_nan(sea_y) else sea_y, tip.y))
+	width.append(width[n - 1])
+	mouth.append(1.0)
+	var out := course.duplicate()
+	out["pos"] = pos
+	out["width"] = width
+	out["mouth"] = mouth
+	out["run_out_m"] = run
+	return out
 
 
 ## A course with points added between its samples so no two consecutive
