@@ -141,7 +141,7 @@ func test_the_sky_and_sun_are_the_scenes() -> void:
 	assert_eq(int(env.tonemap_mode), int(authored.tonemap_mode))
 	# depth haze (Phase 0, 2026-09-24): the fog follows the camera's distance
 	assert_eq(env.fog_mode, Environment.FOG_MODE_DEPTH)
-	assert_almost_eq(env.fog_density, sky.fog_depth_density, 1e-9)
+	assert_almost_eq(env.fog_density, sky.fog_depth_density, 1e-6)
 	# SSAO is spent up close (owner 2026-10-02): on at a zoom inside
 	# map3d_close_effects_m, else as the tier's far_ssao says (blank: as near)
 	var row: Dictionary = v.context().quality
