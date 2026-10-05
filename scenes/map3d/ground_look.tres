@@ -17,7 +17,6 @@ field_far_value = 0.75
 edge_warp_m = 8.0
 edge_warp_wave_m = 90.0
 edge_warp_far_m = 25000.0
-edge_fray_m = 14.0
 balk = 0.6
 balk_color = Color(0.37, 0.41, 0.21, 1)
 field_rim = 1.0
