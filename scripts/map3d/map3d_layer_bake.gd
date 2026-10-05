@@ -14,7 +14,7 @@ extends RefCounted
 ## THE ONE EXCEPTION (Task 22): an edit to those files that cannot reach the
 ## baked vertices — a `@tool` line, editor-only preview code, a comment —
 ## updates GEOMETRY_MD5 ALONE and leaves FORMAT and the bakes as they are.
-const FORMAT := 4
+const FORMAT := 6
 ## Every script the baked meshes' vertices come from: the layers' arrays_for /
 ## plan_for / bridge_mesh, the river, bridge and ribbon builders, the pack ->
 ## world maths and the route smoothing, and the context's heights and steps.
@@ -24,7 +24,7 @@ const GEOMETRY_SOURCES := ["res://scripts/map3d/map3d_layer_rivers.gd",
 	"res://scripts/map3d/map3d_geometry.gd", "res://scripts/map3d/map3d_context.gd",
 	"res://scripts/engine/map_geometry.gd"]
 ## The md5 of GEOMETRY_SOURCES' text, concatenated in list order.
-const GEOMETRY_MD5 := "4aae7b43740350078e49f3c1ea9cc7a3"
+const GEOMETRY_MD5 := "0492eabb7f9d5b377e01a7b9d714d4c8"
 const LAYERS := ["rivers", "roads", "trails", "bridges"]
 const KEYS := ["map3d_road_step_m", "map3d_river_mesh_step_m", "map3d_river_split_rise_m",
 	"map3d_river_terrain_clear_m", "map3d_river_end_fade_m", "map3d_river_mouth_extend_w",

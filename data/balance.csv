@@ -305,7 +305,7 @@ map3d_bridge_arch_max_m,18.0,3D MAP bridges: no arch is wider than this; a long 
 map3d_bridge_pier_m,3.0,3D MAP bridges: a pier's length along the bridge
 map3d_bridge_tile_m,10.0,3D MAP bridges: metres per repeat of the stone texture (Poly Haven medieval_blocks_03)
 map3d_bridge_end_over_water_m,0.5,"3D MAP bridges: a deck end stands at least this far over the drawn water line, even where the carved bank lies lower"
-map3d_bridge_max_drop_m,15.0,"3D MAP bridges (visual review 2026-10-05): no bridge where its two ends and the water lie more than this far apart in height — a gorge or the top of a fall, where the deck stood on a curtain of masonry down the cliff; the road keeps to the ground"
+map3d_bridge_max_drop_m,15.0,"3D MAP bridges (visual review 2026-10-05): no bridge whose two ends lie more than this far apart in height — one on a cliff top, one at its foot, where the deck stood on a curtain of masonry down the cliff; the road keeps to the ground"
 elevation_sea_level,20,"height (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §1): the Azgaar cell height of the waterline. Elevation.metres_of_cell and tools/map3d/bake_world.py both read it — one measure for the ground and the engine"
 elevation_m_per_unit,30,height: metres per Azgaar height unit above the waterline (100 -> 2400 m). Read by Elevation and bake_world.py
 army_height_bonus_permille_per_100m,40,"height in war (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §2): per mille a side gains for every 100 m it stands above the other in a fight, and the lower side loses; ArmySystem.height_factor"

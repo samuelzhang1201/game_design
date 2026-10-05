@@ -1259,6 +1259,12 @@ def main(argv=None):
         # inland = past the shore's ramp (ramp 1), where land holds its height
         bed = river_bed(ground, rules["river_depth_m"], rules["river_min_drop_m"], floor,
                         restart=ramp[gi[:, 1], gi[:, 0]] >= 1.0)
+        if c[-1] < 0.5 and rules.get("river_mouth_grade", 0.0) > 0.0:
+            # a true mouth comes down to the sea on a gentle grade, cutting
+            # its own valley through a cliff coast — it never falls off one
+            # (visual review 2026-10-06: a white curtain into the sea)
+            to_end = (len(bed) - 1 - np.arange(len(bed))) * VERTEX_M
+            bed = np.minimum(bed, SEA_Y - rules["river_depth_m"] + rules["river_mouth_grade"] * to_end)
         w_mouth = float(np.clip(rules["river_k"] * np.sqrt(max(float(r["discharge"] or 0), 0.0)),
                                 rules["river_min_w_m"], rules["river_max_w_m"]))
         widths = river_widths(len(pts), w_mouth, gamma, rules["river_source_w_m"])

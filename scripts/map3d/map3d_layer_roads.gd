@@ -71,13 +71,59 @@ static func plan_for(p_ctx: Map3DContext, courses: Array) -> Dictionary:
 		var width_m := p_ctx.repo.bal("map3d_%s_width_m" % key)
 		var plan := Map3DBridges.plan(Map3DBorders.route_lines(p_ctx.repo, p_ctx.meta, group, step),
 			courses, p_ctx.height_at, rules)
-		out[group.capitalize()] = Map3DBorders.ribbon_arrays(plan["lines"], p_ctx.height_at,
-			plan["heights"])
+		var dry := dry_runs(plan["lines"], plan["heights"], sea_test(p_ctx))
+		out[group.capitalize()] = Map3DBorders.ribbon_arrays(dry["lines"], p_ctx.height_at, dry["heights"])
 		var deck_w := width_m + p_ctx.repo.bal("map3d_bridge_extra_w_m")
 		for b: Dictionary in plan["bridges"]:
 			b["deck_w"] = deck_w
 		(out["bridges"] as Array).append_array(plan["bridges"])
 	return out
+
+
+## Whether a world XZ lies out at sea, by the pack's sea-distance map (what
+## draws the sea; the seabed under a shallow bay can stand over the water
+## plane): more than a pack px from the shore. Without the map, never.
+static func sea_test(p_ctx: Map3DContext) -> Callable:
+	var tex: Texture2D = Map3DLayerSea.pack_params(p_ctx).get("sea_distance")
+	var img: Image = tex.get_image() if tex != null else null
+	if img == null:
+		return func(_xz: Vector2) -> bool: return false
+	if img.is_compressed():
+		img.decompress()
+	return func(xz: Vector2) -> bool:
+		var px := p_ctx.to_pack(xz)
+		var x := clampi(int(px.x), 0, img.get_width() - 1)
+		var y := clampi(int(px.y), 0, img.get_height() - 1)
+		return img.get_pixel(x, y).r * 255.0 > 1.0
+
+
+## `lines` (with their bridge `heights`, NAN on the ground) cut where they
+## run out over the sea (`at_sea`; visual review 2026-10-06: a road ran
+## straight across a bay, draped on the seabed): the runs on land, 2+ points.
+static func dry_runs(lines: Array, heights: Array, at_sea: Callable) -> Dictionary:
+	var out_l: Array = []
+	var out_h: Array = []
+	for i in lines.size():
+		var line: PackedVector2Array = lines[i]
+		var hs: PackedFloat32Array = heights[i] if i < heights.size() else PackedFloat32Array()
+		var run := PackedVector2Array()
+		var run_h := PackedFloat32Array()
+		for j in line.size():
+			var on_deck := j < hs.size() and not is_nan(hs[j])
+			if on_deck or not bool(at_sea.call(line[j])):
+				run.append(line[j])
+				if not hs.is_empty():
+					run_h.append(hs[j])
+				continue
+			if run.size() >= 2:
+				out_l.append(run)
+				out_h.append(run_h)
+			run = PackedVector2Array()
+			run_h = PackedFloat32Array()
+		if run.size() >= 2:
+			out_l.append(run)
+			out_h.append(run_h)
+	return {"lines": out_l, "heights": out_h}
 
 
 ## balance.csv map3d_bridge_* as Map3DBridges' rules.
