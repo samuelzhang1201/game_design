@@ -11,8 +11,10 @@ add it here as a principle with its why — not as a changelog entry.
   is the ground in right now?"
 - **Water is one water.** A river and the sea it runs into share a colour
   (2026-09-17). At its mouth a river BECOMES the sea's water — its colour,
-  light and ripple, not a tint toward it — and runs on until the sea takes
-  it at the waterline (owner 2026-10-05: 把入海口附近的河水颜色渐变成海水颜色):
+  light, ripple and shelf, not a tint toward it — and runs on over the
+  water as the sea's own water, with no seam at the waterline (owner
+  2026-10-05: 把入海口附近的河水颜色渐变成海水颜色; critic 2026-10-06: a
+  handover at the waterline drew a speckled seam across the mouth):
   a river tinted toward the sea's colour but lit and rippled its own way
   read as a grey plume laid on the sea.
 - **Nothing ends on a hard cut.** Built-up areas thin outward into fields;

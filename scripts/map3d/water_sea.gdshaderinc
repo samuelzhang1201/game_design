@@ -33,6 +33,46 @@ float sea_shore_px_smooth(sampler2D sea_distance, vec2 xz, vec2 pack_origin, vec
 	return d / w;
 }
 
+// The distance the colours read: the raw one at the waterline, eased into
+// its mean over a ring smooth_px out once past it (0: raw).
+float sea_colour_px(sampler2D sea_distance, vec2 xz, vec2 pack_origin, vec2 pack_px, float m_per_px,
+		float d, float smooth_px) {
+	return mix(d, sea_shore_px_smooth(sea_distance, xz, pack_origin, pack_px, m_per_px, smooth_px),
+		smoothstep(0.0, smooth_px * 2.0, d));
+}
+
+float sea_hash(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+
+// Value noise in 0..1, smooth between whole-number lattice points.
+float sea_value_noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(sea_hash(i), sea_hash(i + vec2(1.0, 0.0)), u.x),
+		mix(sea_hash(i + vec2(0.0, 1.0)), sea_hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+// The natural water's near-shore dress, up close only (cam_m: the camera's
+// distance): the shallows over the shelf lighter and greener — far out
+// this drew a pale ring round every coast — and wind lanes, broad slicks of
+// calmer, brighter water drifting over the open sea, the way it reads from
+// a height (two slow octaves; farther out they shrink into a mottle like
+// cloud shadow). shelf = (px, mix, far_m); sheen = (amount, m, far_m);
+// nat_px = (shallow, mid).
+vec3 sea_near_shore(vec3 cn, vec3 sky, vec2 xz, float ds, float cam_m, float time, vec3 shelf_col,
+		vec3 shelf, vec3 sheen, vec2 nat_px) {
+	float on_shelf = (1.0 - smoothstep(0.0, shelf.x, ds)) * (1.0 - smoothstep(shelf.z * 0.4, shelf.z, cam_m));
+	cn = mix(cn, shelf_col, on_shelf * shelf.y);
+	vec2 sq = xz / sheen.y + vec2(time * 0.0006, time * 0.0002);
+	float lane = sea_value_noise(sq * vec2(1.0, 2.6)) * 0.65 + sea_value_noise(sq * 2.3 + vec2(5.2, 1.7)) * 0.35;
+	float near_k = 1.0 - smoothstep(sheen.z * 0.4, sheen.z, cam_m);
+	return mix(cn, sky, sheen.x * near_k * smoothstep(0.35, 0.8, lane) * smoothstep(nat_px.x, nat_px.y, ds));
+}
+
 // The far zoom's four flat bands by distance from the shore, hazing to the
 // sky past the horizon fade. bands = (near, nearer, far, soft) in pack px;
 // horizon = (start, end) in pack px.
@@ -82,11 +122,13 @@ float sea_shore_alpha(sampler2D ripples, vec2 xz, float d, float fade_px, float 
 // fresnel (and the natural one foamed): the banded colour goes out mostly
 // through EMISSION with a gamma fitted to the Filmic tonemap (the palette
 // arrives RAW, and the tonemap lifts a flat emissive colour), the natural
-// water as itself, mostly lit. share = (emission_share, emission_share_near,
+// water as itself, mostly lit — and up close its light follows its ripples
+// by nat_ripple_gain (a lit share alone, under one even sky, left the sea a
+// flat plastic sheet). share = (emission_share, emission_share_near,
 // nat_emission_share); finish = (roughness, nat_roughness, specular,
 // nat_specular). Out: albedo, emission, roughness, specular.
 void sea_light(vec3 band, vec3 cn, float natural, float near_w, float slope, float emission_gamma,
-		float ripple_emission_gain, vec3 share, vec4 finish,
+		float ripple_emission_gain, float nat_ripple_gain, vec3 share, vec4 finish,
 		out vec3 albedo, out vec3 emission, out float rough, out float spec) {
 	vec3 lifted = pow(clamp(band, vec3(0.0001), vec3(1.0)), vec3(emission_gamma));
 	lifted = mix(lifted, cn, natural);
@@ -95,8 +137,9 @@ void sea_light(vec3 band, vec3 cn, float natural, float near_w, float slope, flo
 	// darkens the emitted colour a little, up close only.
 	lifted *= 1.0 + ripple_emission_gain * near_w * slope;
 	float s = mix(mix(share.x, share.y, near_w), share.z, natural);
-	albedo = band * (1.0 - s);
-	emission = lifted * s;
+	float rk = 1.0 + nat_ripple_gain * slope * natural * near_w;
+	albedo = band * (1.0 - s) * rk;
+	emission = lifted * s * rk;
 	rough = mix(finish.x, finish.y, natural);
 	spec = mix(finish.z, finish.w, natural);
 }

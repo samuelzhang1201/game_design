@@ -110,21 +110,6 @@ uniform float nat_shelf_far_m = 9000.0;
 
 varying vec2 v_xz;
 
-float sea_hash(vec2 p) {
-	p = fract(p * vec2(123.34, 456.21));
-	p += dot(p, p + 45.32);
-	return fract(p.x * p.y);
-}
-
-// Value noise in 0..1, smooth between whole-number lattice points.
-float sea_value_noise(vec2 p) {
-	vec2 i = floor(p);
-	vec2 f = fract(p);
-	vec2 u = f * f * (3.0 - 2.0 * f);
-	return mix(mix(sea_hash(i), sea_hash(i + vec2(1.0, 0.0)), u.x),
-		mix(sea_hash(i + vec2(0.0, 1.0)), sea_hash(i + vec2(1.0, 1.0)), u.x), u.y);
-}
-
 void vertex() {
 	v_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 }
@@ -133,8 +118,7 @@ void fragment() {
 	float d = sea_shore_px(sea_distance, v_xz, pack_origin, pack_px, m_per_px);
 	// the colours read a smoothed distance (no 50 m contour steps); the
 	// waterline keeps the sharp one, which the river's mouth shares
-	float ds = mix(d, sea_shore_px_smooth(sea_distance, v_xz, pack_origin, pack_px, m_per_px, smooth_px),
-		smoothstep(0.0, smooth_px * 2.0, d));
+	float ds = sea_colour_px(sea_distance, v_xz, pack_origin, pack_px, m_per_px, d, smooth_px);
 	vec3 c = sea_bands(ds, sea_near.rgb, sea_nearer.rgb, sea_far.rgb, sea_deep.rgb, sky.rgb,
 		vec4(band_near, band_nearer, band_far, soft), vec2(horizon_fade_start_px, horizon_fade_end_px));
 	float near_w = 1.0 - smoothstep(ripple_lod_near_m, ripple_lod_far_m, length(VERTEX));
@@ -147,18 +131,9 @@ void fragment() {
 	vec3 cn = sea_natural(ripples, v_xz, ds, nat_shallow.rgb, nat_mid.rgb, nat_deep.rgb,
 		vec4(nat_shallow_px, nat_mid_px, nat_deep_px, nat_warp_px));
 	cn = mix(cn, sky.rgb, fres * nat_fresnel_sky_mix);
-	// near only: the shallows over the shelf lighter and greener, the seabed
-	// under them — far out this drew a pale ring round every coast
-	float shelf = (1.0 - smoothstep(0.0, nat_shelf_px, ds))
-		* (1.0 - smoothstep(nat_shelf_far_m * 0.4, nat_shelf_far_m, length(VERTEX)));
-	cn = mix(cn, nat_shelf.rgb, shelf * nat_shelf_mix);
-	// wind lanes: broad slicks of calmer, brighter water drifting over the
-	// sea, the way open water reads from a height (two slow octaves)
-	vec2 sq = v_xz / nat_sheen_m + vec2(TIME * 0.0006, TIME * 0.0002);
-	float sheen = sea_value_noise(sq * vec2(1.0, 2.6)) * 0.65 + sea_value_noise(sq * 2.3 + vec2(5.2, 1.7)) * 0.35;
-	// up close only: farther out the lanes shrink into a mottle like cloud shadow
-	float near_k = 1.0 - smoothstep(nat_sheen_far_m * 0.4, nat_sheen_far_m, length(VERTEX));
-	cn = mix(cn, sky.rgb, nat_sheen * near_k * smoothstep(0.35, 0.8, sheen) * smoothstep(nat_shallow_px, nat_mid_px, ds));
+	cn = sea_near_shore(cn, sky.rgb, v_xz, ds, length(VERTEX), TIME, nat_shelf.rgb,
+		vec3(nat_shelf_px, nat_shelf_mix, nat_shelf_far_m), vec3(nat_sheen, nat_sheen_m, nat_sheen_far_m),
+		vec2(nat_shallow_px, nat_mid_px));
 	// foam: a broken line along the shore, drifting with the ripples
 	float foam_noise = texture(ripples, v_xz / 220.0 + vec2(TIME * 0.004, 0.0)).x;
 	float foam_break = texture(ripples, v_xz / 1800.0).y;
@@ -177,14 +152,11 @@ void fragment() {
 	vec3 emission;
 	float rough;
 	float spec;
-	sea_light(band, cn, natural, near_w, slope, emission_gamma, ripple_emission_gain,
+	sea_light(band, cn, natural, near_w, slope, emission_gamma, ripple_emission_gain, nat_ripple_gain,
 		vec3(emission_share, emission_share_near, nat_emission_share),
 		vec4(roughness, nat_roughness, specular, nat_specular), albedo, emission, rough, spec);
-	// up close the natural water's own light follows its ripples: a lit
-	// share alone, under one even sky, left the sea a flat plastic sheet
-	float rk = 1.0 + nat_ripple_gain * slope * natural * near_w;
-	ALBEDO = albedo * rk;
-	EMISSION = emission * rk;
+	ALBEDO = albedo;
+	EMISSION = emission;
 	ROUGHNESS = rough;
 	SPECULAR = spec;
 	ALPHA = sea_shore_alpha(ripples, v_xz, d, shore_fade_px, shore_warp_px, shore_warp_m);
