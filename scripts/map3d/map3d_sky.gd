@@ -28,6 +28,14 @@ extends WorldEnvironment
 @export var fog_near_share := 1.0
 @export var fog_near_full_m := 0.0
 
+@export_group("Far blur")
+## The far land softens like a lens's depth of field (the node's
+## camera_attributes, a CameraAttributesPractical with far blur on): sharp to
+## `dof_far_begin` camera distances, fully soft `dof_far_ramp` more beyond
+## (0 leaves the resource's own distances).
+@export var dof_far_begin := 0.0
+@export var dof_far_ramp := 2.0
+
 @export_group("Occlusion")
 ## 0 keeps the resource's fixed SSAO radius.
 @export var ssao_radius_per_view := 0.03
@@ -67,6 +75,10 @@ func follow(distance_m: float) -> void:
 		environment.fog_depth_end = fog_depth_end * distance_m
 		environment.fog_depth_curve = fog_depth_curve
 		environment.fog_density = fog_depth_density * near_share(distance_m)
+	var cam := camera_attributes as CameraAttributesPractical
+	if cam != null and dof_far_begin > 0.0:
+		cam.dof_blur_far_distance = dof_far_begin * distance_m
+		cam.dof_blur_far_transition = dof_far_ramp * distance_m
 	if ssao_radius_per_view > 0.0:
 		environment.ssao_radius = ssao_radius_per_view * distance_m
 
