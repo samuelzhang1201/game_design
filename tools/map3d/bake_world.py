@@ -1373,8 +1373,18 @@ def main(argv=None):
     if rules.get("rock_break", 0.0) > 0.0:
         rb = value_noise(np.random.default_rng(SEED + 51), vw, vh, rules["rock_break_wave_m"] / VERTEX_M) * 0.6 \
             + value_noise(np.random.default_rng(SEED + 52), vw, vh, rules["rock_break_wave_m"] * 0.35 / VERTEX_M) * 0.4
-        t_rock *= 1.0 - rules["rock_break"] * np.clip((0.55 - rb) / 0.2, 0, 1)
-        del rb
+        # read through a warp: thresholded, a value noise traces its square
+        # grid as straight edges (the critic: rectangles of rubble)
+        brng = np.random.default_rng(SEED + 53)
+        wv, wa = rules["rock_break_wave_m"] * 0.6 / VERTEX_M, rules["rock_break_wave_m"] * 0.3 / VERTEX_M
+        bdx = (value_noise(brng, vw, vh, wv) * 2.0 - 1.0) * wa
+        bdy = (value_noise(brng, vw, vh, wv) * 2.0 - 1.0) * wa
+        for y0 in range(0, vh, 512):
+            y1 = min(y0 + 512, vh)
+            ys, xs = np.mgrid[y0:y1, 0:vw].astype(np.float32)
+            t_rock[y0:y1] *= 1.0 - rules["rock_break"] * np.clip(
+                (0.55 - sample_bilinear(rb, xs + bdx[y0:y1], ys + bdy[y0:y1])) / 0.3, 0, 1)
+        del rb, bdx, bdy
     del up
     hn = np.clip(height / max(float(height.max()), 1.0), 0, 1)
     keep = 1.0 - 0.85 * t_rock
