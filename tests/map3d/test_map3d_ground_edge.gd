@@ -12,12 +12,12 @@ const SAMPLE := "shader_type spatial;\nrender_mode blend_mix;\n\nvoid fragment()
 func test_the_patch_bends_the_vertex_coordinates() -> void:
 	var out := Map3DGroundEdge.patch(Map3DGroundTint.patch(SAMPLE))
 	for u: String in ["uniform float edge_warp_m", "uniform float edge_warp_wave_m",
-			"uniform float edge_warp_fine", "uniform float edge_warp_far_m"]:
+			"uniform float edge_warp_fine", "uniform float edge_warp_far_m", "uniform float edge_fray_m"]:
 		assert_string_contains(out, u)
-	assert_string_contains(out, "uv += ew * ")
+	assert_string_contains(out, "uv += (ew * edge_warp_m + fw * fk)")
 	assert_lt(out.find("uniform float edge_warp_m"), out.find("float wx_noise("),
 		"its uniforms stand with the tint's, ahead of the code")
-	assert_lt(out.find("float wx_noise("), out.find("uv += ew"), "the noise it calls is declared first")
+	assert_lt(out.find("float wx_noise("), out.find("uv += (ew"), "the noise it calls is declared first")
 
 
 func test_the_patch_is_kept_once() -> void:
