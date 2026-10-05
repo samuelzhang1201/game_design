@@ -96,8 +96,8 @@ BIOME_MIX = {
     14: {GRASS: 0.3, ROCKY: 0.4, CLIFF: 0.3},
     15: {SNOW: 0.8, CLIFF: 0.2},
 }
-SLOPE_ROCKY = (0.82, 0.93)   # land slope percentiles
-SLOPE_CLIFF = (0.93, 0.99)
+SLOPE_ROCKY = (0.86, 0.96)   # land slope percentiles (visual review 2026-10-06: the scarps read as one grey ring; rock only on the steepest)
+SLOPE_CLIFF = (0.96, 0.995)
 
 # COLOUR MAP: what each texture should read as from far away (sRGB). Terrain3D
 # multiplies the ground by the map, so a target is reached by the ratio to the
