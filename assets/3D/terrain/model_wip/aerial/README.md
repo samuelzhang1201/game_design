@@ -75,3 +75,14 @@ no crop drawn on the grass layer could be gold:
 
 `--fill-spots 0.2` (visual review 2026-10-05) paints out the downland's bushes and
 white stones: tiled every 140 m they drew rows of dark ovals across every field.
+
+The crops, regenerated (visual review 2026-10-06, the owner's go-ahead for lever 3's
+field textures): `aerial_crop_field.png` is T-68 (seed 954159498, Z-Image,
+`STYLE_CORE_aerial_crop.txt` / `NEGATIVE_aerial_crop.txt` — a cornfield from a light
+aircraft, about 100 m across, no rows or tramlines). The downland it replaces carried
+the pasture's own grain, so the crops read as recoloured meadow at the opening zoom.
+Close-up prompts (T-65, T-66) drew single ears — sub-pixel on a 140 m tile; T-67 and
+the other T-68 seeds carry tramlines that would repeat across every field.
+
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_crop_field.png aerial_crop --saturation 0.25 --contrast 1.8 --flatten-keep 0.0 --fill-spots 0.12 --fill-dark-only --match-mean '#D4C89C' --normal-strength 0.6 --rough 0.95
+
