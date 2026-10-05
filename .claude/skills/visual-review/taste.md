@@ -671,3 +671,23 @@ add it here as a principle with its why — not as a changelog entry.
   water gate, and opens on its pier by a quay gate.
 - **A moored ship lies alongside its quay, square to it** (船要规整的贴着码头停留). Not
   anchored off the pier's head, not a ship-length away.
+
+## The map's light (owner 2026-10-05, choosing B3: "用 B3，底座 0.5")
+
+- **The sky models the land where the sun cannot.** With the sun held high, the
+  relief read flat at the opening view; a baked sky occlusion (valleys and a
+  terrace's foot darker, no direction) gives it form — full far out, about a
+  third up close, where a 40 m texel's dark read as a burn beside a house.
+- **Depth is blue air on the far third, never grey fog.** The depth haze takes
+  a blue light of its own, not the sky's grey; a stronger, greyer haze (C) was
+  rejected as fog.
+- **The grade only takes the acid out.** Saturation 1.15 → 1.05: the lime turns
+  golden olive while terracotta roofs and gold crops keep their warmth; muting
+  further (C) dulled the roofs to rose-brown and the stubble to khaki.
+- **Woods are darker than the grass, the sea deepens offshore, and a river wears
+  the sea's water.** A pale coastal shelf against a navy deep read as an outline
+  round every coast, and a dark deep in a bay as a stain: the steps between the
+  bands stay modest.
+- **A piece's base on the plotting table is a muted tincture, not the raw realm
+  colour** (`war_base_darken` 0.5): at 0.25 a light realm colour was a sky-blue
+  slab pasted on parchment, at 0.65 the hue was lost to black.

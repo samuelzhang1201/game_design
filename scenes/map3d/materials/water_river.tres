@@ -6,7 +6,7 @@
 [resource]
 render_priority = 0
 shader = ExtResource("1_ty26j")
-shader_parameter/water = Color(0.49803922, 0.72156864, 0.8666667, 1)
+shader_parameter/water = Color(0.33, 0.52, 0.56, 1)
 shader_parameter/mouth_water = Color(0.65882355, 0.76862746, 0.7058824, 1)
 shader_parameter/sky = Color(0.6627451, 0.7490196, 0.8, 1)
 shader_parameter/ripples = ExtResource("2_m8pol")
