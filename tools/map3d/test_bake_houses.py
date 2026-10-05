@@ -1031,6 +1031,8 @@ def test_a_port_runs_its_pier_from_the_shore_out_to_sea():
 SHIP_RULES = dict(WALL_RULES, pier_cliff_min_shore_m=20, pier_cliff_root_m=-25,
                   pier_cliff_capital_first=1, pier_cliff_scale=1.0, pier_cliff_height_scale=1.0,
                   pier_cliff_root_max_m=-65, pier_cliff_root_step_m=10, pier_gate_reach_m=100,
+                  pier_stair_town_rise_m=30, pier_stair_root_m=-10, pier_stair_root_max_m=-40,
+                  pier_stair_root_step_m=10,
                   ship_count_village=1, ship_count_fort=1, ship_count_town=1,
                   ship_count_city=2, ship_count_capital=2, ship_gap_m=1.5, ship_step_m=8, ship_tries=4,
                   ship_anchor_m=30, ship_margin_m=3)
@@ -1163,7 +1165,7 @@ def test_a_cliff_harbour_keeps_its_proportions_clear_of_a_taller_cliff():
                             types=SHIP_TYPES)[0]
     assert p["type"] == "pier_cliff" and p["scale"] == 1.0 and p["height_scale"] == 1.0
     d = bake_houses._frame(p)
-    for x, z in bake_houses._castle_corners((p["x_m"], p["z_m"]), d, 1.0):
+    for x, z in bake_houses._head_corners("pier_cliff", (p["x_m"], p["z_m"]), d, 1.0):
         vx, vy = int(round(CENTRE + x / bake_houses.VERTEX_M)), int(round(CENTRE + z / bake_houses.VERTEX_M))
         assert height[vy, vx] <= 5.0 + bake_houses._CASTLE[4], "no cliff buries its castle"
     assert p["x_m"] < -160.0 - 50.0, "walked out past its first root, off the 170 m cliff"
@@ -1203,3 +1205,48 @@ def test_a_walled_port_opens_a_quay_gate_on_its_pier():
     gate = min((r for r in merged if r["type"] in ("wall", "wall_gate")),
                key=lambda r: math.hypot(r["x_m"] - root[0], r["z_m"] - root[1]))
     assert gate["type"] == "wall_gate", "the module nearest the pier is its quay gate"
+
+
+# -- small cliff landings (owner 2026-10-05: 建在崖顶的小城…配一个更小的崖边码头) ---------
+STAIR_TYPES = dict(SHIP_TYPES, pier_stair={"role": "pier", "weight": 1.0, "footprint_m": 60.0, "width_m": 60.0,
+                                           "depth_m": 57.1, "min_group": "village", "height_m": 32.8})
+
+
+def test_a_cliff_top_town_takes_the_small_landing_its_gate_clear():
+    """A town on a 40 m cliff top takes pier_stair off its cliff, its quay out
+    to sea, no cliff burying its gate, its ship alongside on the water; the
+    capital still takes its cliff harbour."""
+    sea, height = _west_sea(shore_h=40.0)
+    rows = _toy_town()
+    out = bake_houses.harbour(burg(port=1, group="town"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                              types=STAIR_TYPES)
+    p = out[0]
+    assert p["type"] == "pier_stair" and p["scale"] == 1.0
+    d = bake_houses._frame(p)
+    assert d[0] < -0.9, "its jetty (+X) runs west, out to the sea"
+    for x, z in bake_houses._head_corners("pier_stair", (p["x_m"], p["z_m"]), d, 1.0):
+        vx, vy = int(round(CENTRE + x / bake_houses.VERTEX_M)), int(round(CENTRE + z / bake_houses.VERTEX_M))
+        assert height[vy, vx] <= 5.0 + bake_houses._HEADS["pier_stair"][4], "no cliff buries its gate"
+    ships = out[1:]
+    assert ships and all(_hull_on_water(s, sea) for s in ships)
+    cap = bake_houses.harbour(burg(port=1, group="capital"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                              types=STAIR_TYPES)
+    assert cap[0]["type"] == "pier_cliff"
+
+
+def test_a_low_town_keeps_its_timber_pier_and_a_walled_cliff_town_its_quay_gate():
+    sea, height = _west_sea()                       # a town 1 m over the sea
+    rows = _toy_town()
+    out = bake_houses.harbour(burg(port=1, group="town"), rows, SHIP_RULES, sea, height, K, VW, VH, 5.0,
+                              types=STAIR_TYPES)
+    assert out[0]["type"] == "pier", "a low town keeps its timber pier"
+    sea, height = _west_sea(shore_h=40.0)
+    b = dict(burg(port=1, group="town"), features="walls")
+    laid = bake_houses.harbour(b, rows, SHIP_RULES, sea, height, K, VW, VH, 5.0, types=STAIR_TYPES)
+    walls = bake_houses.fortify(b, rows, SHIP_RULES, STAIR_TYPES, sea, None, K, VW, VH, [])
+    merged = bake_houses.clear_under(rows + walls, laid, STAIR_TYPES, SHIP_RULES)
+    head = bake_houses._pier_root(laid[0], STAIR_TYPES)
+    gate = min((r for r in merged if r["type"] in ("wall", "wall_gate")),
+               key=lambda r: math.hypot(r["x_m"] - head[0], r["z_m"] - head[1]))
+    assert gate["type"] == "wall_gate", "the wall opens on the landing's stair head"
+    assert _circuit_closes([r for r in merged if STAIR_TYPES[r["type"]]["role"] == "wall"])

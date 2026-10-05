@@ -175,6 +175,10 @@ pier_cliff_scale,1.0,"cliff harbours: its scale — its own proportions, its cas
 pier_cliff_height_scale,1.0,cliff harbours: its height against its spread (1: never stretched)
 pier_cliff_root_max_m,-65,"cliff harbours: the furthest out to sea its centre is walked (pier_cliff_root_m, then by pier_cliff_root_step_m) to stand clear of a cliff taller than its rock — at most this, or the shore is passed over"
 pier_cliff_root_step_m,10,cliff harbours: the step of that walk
+pier_stair_town_rise_m,30,"3D bake SMALL CLIFF LANDINGS (owner 2026-10-05: 建在崖顶的小城…配一个更小的崖边码头): a port whose houses stand this many metres over the sea (their median) is a town on a cliff top, and takes pier_stair off its cliff rather than a timber pier below it"
+pier_stair_root_m,-10,"small cliff landings: its centre this far inland of the shore — negative, out to sea (its rock reaches 30 m behind its centre)"
+pier_stair_root_max_m,-40,small cliff landings: the furthest out to sea it is walked to stand clear of a cliff taller than its rock
+pier_stair_root_step_m,10,small cliff landings: the step of that walk
 pier_gate_reach_m,100,"walls (owner 2026-10-05: 有城墙必须要合拢): the wall module nearest a walled port's pier, within this far of its landward end, is its quay gate (bake_houses.clear_under)"
 ship_count_village,1,"3D bake SHIPS (owner 2026-10-04: 港口城市停留在港口的船舶装饰 … 每个不同港口根据其城市大小放置不同的船舶，根据大小1-2艘即可): ships moored at a village's port — the largest type its group allows (map3d_houses.csv role ship, min_group), then others by weight"
 ship_count_fort,1,ships: at a fort's port
