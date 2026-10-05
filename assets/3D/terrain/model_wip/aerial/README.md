@@ -23,7 +23,11 @@ into Terrain3D's two maps before `build_pack.sh`:
 
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_meadow.png aerial_meadow --match-mean '#666A35' --normal-strength 0.25 --rough 0.95 --fill-spots 0.2
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_canopy.png aerial_canopy --height-gain 1.3 --rough 0.95
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_upland.png aerial_upland --height-gain 1.2 --lift-darks 0.7 --lift-radius 20 --match-mean '#706850'
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_upland.png aerial_upland --height-gain 1.2 --lift-patches 1.0 --patch-radius 220 --patch-inner 16 --match-mean '#706850'
+
+`--lift-patches` (visual review 2026-10-06) raises the upland's dark heather
+blobs to their surroundings' light at low frequency, keeping the grain: tiled
+every 200 m they read as black pits all over the hills.
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_cliff.png aerial_cliff --saturation 0.85 --lift-darks 0.95 --lift-radius 20 --black 0.12 --contrast 0.85 --warm 0.03 --height-gain 1.3 --match-mean '#726D69'
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_snow.png aerial_snow --flatten-keep 0.0 --contrast 0.55 --saturation 0.3 --height-gain 0.8 --rough 0.75
 

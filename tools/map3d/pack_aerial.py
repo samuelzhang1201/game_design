@@ -80,13 +80,13 @@ def box(a, r):
     return pad
 
 
-def fill_spots(a, lum, threshold, radius=100, grow=6, dark_only=False):
+def fill_spots(a, lum, threshold, radius=100, grow=6, dark_only=False, inner=3):
     """`a` with every spot whose light (over 7 px) is more than `threshold`
     off its neighbourhood's (a box `radius` px each way) painted out from its edge
     inward (OpenCV's Telea inpainting), the spot grown by `grow` px first so
     no rim of it is left. The ground's own grain is far under the threshold."""
     import cv2
-    off = box(lum, 3) - box(lum, radius)
+    off = box(lum, inner) - box(lum, radius)
     spot = (-off if dark_only else np.abs(off)) > threshold
     spot = cv2.dilate(spot.astype(np.uint8), np.ones((2 * grow + 1, 2 * grow + 1), np.uint8))
     img = np.round(np.clip(a, 0, 1) * 255).astype(np.uint8)
@@ -164,6 +164,14 @@ def main():
     ap.add_argument("--fill-dark-only", action="store_true",
                     help="--fill-spots paints out only spots DARKER than their neighbourhood (an upland's heather, "
                          "not its stones)")
+    ap.add_argument("--fill-radius", type=int, default=100, help="--fill-spots: the neighbourhood (px) a spot is measured against")
+    ap.add_argument("--fill-inner", type=int, default=3, help="--fill-spots: the spot's own blur (px): larger finds broad patches")
+    ap.add_argument("--fill-grow", type=int, default=6, help="--fill-spots: px a found spot is grown by before painting")
+    ap.add_argument("--lift-patches", type=float, default=0.0,
+                    help="0..1: broad dark patches raised to their surroundings' light at low frequency, the grain kept "
+                         "(tiled, an upland's heather read as black pits on the hills)")
+    ap.add_argument("--patch-inner", type=int, default=12, help="--lift-patches: the patch's own blur (px)")
+    ap.add_argument("--patch-radius", type=int, default=120, help="--lift-patches: the surroundings' reach (px)")
     ap.add_argument("--black", type=float, default=0.0,
                     help="0..1: the black point lifted to this (a rock photo's baked-in shadow fights the scene's sun)")
     ap.add_argument("--warm", type=float, default=0.0,
@@ -182,8 +190,18 @@ def main():
     a = np.asarray(Image.fromarray(np.round(a * 255).astype(np.uint8)).resize((SIZE, SIZE), Image.LANCZOS),
                    dtype=np.float32) / 255.0
     lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    if args.lift_patches > 0.0:
+        # a broad dark patch (heather, a shadowed hollow) raised to its
+        # surroundings' light at low frequency only: the grain inside it stays
+        lo = np.dstack([box(a[..., c], args.patch_inner) for c in range(3)])
+        ref = np.dstack([box(a[..., c], args.patch_radius) for c in range(3)])
+        w = np.array([0.2126, 0.7152, 0.0722], np.float32)
+        dark = np.clip((ref @ w - lo @ w) / 0.04, 0, 1)[..., None]
+        a = np.clip(a + (ref - lo) * dark * args.lift_patches, 0, 1)
+        lum = a @ w
     if args.fill_spots > 0.0:
-        a = fill_spots(a, lum, args.fill_spots, dark_only=args.fill_dark_only)
+        a = fill_spots(a, lum, args.fill_spots, dark_only=args.fill_dark_only,
+                       radius=args.fill_radius, inner=args.fill_inner, grow=args.fill_grow)
         lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
     if args.lift_darks > 0.0:
         # a spot darker than its neighbourhood is lifted toward it: holes and
