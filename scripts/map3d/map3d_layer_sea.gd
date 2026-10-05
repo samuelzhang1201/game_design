@@ -65,20 +65,31 @@ func build(p_ctx: Map3DContext) -> void:
 	_mat = (SEA_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	_mat.render_priority = Map3DPriority.SEA
 	var tex_path := ctx.repo.sea_texture_path
-	if tex_path != "" and ResourceLoader.exists(tex_path):
-		_mat.set_shader_parameter("sea_distance", load(tex_path))
-	else:
+	if tex_path == "" or not ResourceLoader.exists(tex_path):
 		Map3DWorldLoader.warn_once("sea:" + tex_path,
 			"Map3DView: the pack's sea_texture (%s) is missing — the sea has no bands" % tex_path)
-	var o: Array = ctx.meta["pack_origin"]
-	_mat.set_shader_parameter("pack_origin", Vector2(float(o[0]), float(o[1])))
-	_mat.set_shader_parameter("pack_px", Vector2(float(p[0]), float(p[1])))
-	_mat.set_shader_parameter("m_per_px", float(ctx.meta["m_per_px"]))
+	var from_pack := pack_params(ctx)
+	for k: String in from_pack:
+		_mat.set_shader_parameter(k, from_pack[k])
 	_mat.set_shader_parameter("ripples", ctx.water_normals())
 	material_override = _mat
 	if not ctx.camera_moved.is_connected(_on_camera_moved):
 		ctx.camera_moved.connect(_on_camera_moved)
 	_on_camera_moved()
+
+
+## What the sea's shader takes from the pack rather than water_sea.tres —
+## its distance-from-shore map (absent: left unset), origin, size and scale —
+## by uniform name. The rivers' mouths read the same (Map3DLayerRivers).
+static func pack_params(p_ctx: Map3DContext) -> Dictionary:
+	var p: Array = p_ctx.meta["pack_px"]
+	var o: Array = p_ctx.meta["pack_origin"]
+	var out := {"pack_origin": Vector2(float(o[0]), float(o[1])),
+		"pack_px": Vector2(float(p[0]), float(p[1])), "m_per_px": float(p_ctx.meta["m_per_px"])}
+	var tex_path := p_ctx.repo.sea_texture_path
+	if tex_path != "" and ResourceLoader.exists(tex_path):
+		out["sea_distance"] = load(tex_path)
+	return out
 
 
 ## Natural water near, the bands far (owner 2026-09-24): the share of natural

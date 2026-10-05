@@ -304,8 +304,9 @@ func test_split_strips_still_share_their_cut_vertex_when_densified() -> void:
 
 ## A true mouth is clipped to the land, so it stopped on the beach short of
 ## the sea's water line. It runs on past its last sample along its final
-## direction by mouth_extend_w × its local width, down to the sea's water
-## height, fading from full to nothing over that run.
+## direction by mouth_extend_w × its local width, at the sea's water height:
+## whole to its halfway point (so it reaches the waterline whole, where the
+## shader hands it to the sea), then fading to nothing at its tip.
 func test_a_true_mouth_runs_on_into_the_sea_and_fades_out() -> void:
 	# Flows +X; the last sample sits at x 200, water 8, width 80.
 	var arrays := Map3DRivers.ribbon_arrays(Map3DRivers.parse(JSON_TEXT), 20.0, 0.0, 1.0, 5.0)
@@ -313,25 +314,28 @@ func test_a_true_mouth_runs_on_into_the_sea_and_fades_out() -> void:
 	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
 	var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
 	var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2]
-	assert_eq(verts.size(), 8, "one more point pair past the mouth")
-	assert_eq((arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size(), 18, "three quads")
+	assert_eq(verts.size(), 10, "two more point pairs past the mouth")
+	assert_eq((arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size(), 24, "four quads")
 	assert_almost_eq(colors[4].a, 1.0, 0.001, "full strength at the last sample")
-	assert_almost_eq(verts[6].x, 280.0, 0.001, "one local width on along the final direction")
-	assert_almost_eq(verts[6].z, 0.0, 0.001)
+	assert_almost_eq(verts[6].x, 240.0, 0.001, "halfway")
 	assert_almost_eq(verts[6].y, 5.0, 0.001, "at the sea's water height")
-	assert_almost_eq(colors[6].a, 0.0, 0.001, "gone at the end of the run-out")
-	assert_almost_eq(colors[7].a, 0.0, 0.001)
-	assert_almost_eq(uv[6].y, 280.0, 0.001, "metres along carry on")
-	assert_eq(uv2[6], Vector2(80, 1), "its width, and wholly the mouth's water")
+	assert_almost_eq(colors[6].a, 1.0, 0.001, "still whole halfway")
+	assert_almost_eq(verts[8].x, 280.0, 0.001, "one local width on along the final direction")
+	assert_almost_eq(verts[8].z, 0.0, 0.001)
+	assert_almost_eq(verts[8].y, 5.0, 0.001)
+	assert_almost_eq(colors[8].a, 0.0, 0.001, "gone at the tip")
+	assert_almost_eq(colors[9].a, 0.0, 0.001)
+	assert_almost_eq(uv[8].y, 280.0, 0.001, "metres along carry on")
+	assert_eq(uv2[8], Vector2(80, 1), "its width, and wholly the mouth's water")
 
 
 func test_the_run_out_follows_the_last_segments_direction() -> void:
 	var text := '{"rivers": [{"code": "d", "points": [[0, 0, 10, 10, 0], [30, 40, 6, 20, 1]]}]}'
 	var arrays := Map3DRivers.ribbon_arrays(Map3DRivers.parse(text), 20.0, 0.0, 0.5, 5.0)
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	# Direction (0.6, 0.8), half of a 20 m width = 10 m on.
-	assert_almost_eq(verts[4].x, 36.0, 0.001)
-	assert_almost_eq(verts[4].z, 48.0, 0.001)
+	# Direction (0.6, 0.8), half of a 20 m width = 10 m on to the tip.
+	assert_almost_eq(verts[6].x, 36.0, 0.001)
+	assert_almost_eq(verts[6].z, 48.0, 0.001)
 
 
 func test_only_a_true_mouth_runs_on() -> void:
@@ -349,10 +353,46 @@ func test_a_densified_mouth_runs_on_from_its_last_sample() -> void:
 	var arrays := Map3DRivers.ribbon_arrays(Map3DRivers.parse(BEND_TEXT), 20.0, 12.0, 1.0, 5.0)
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
-	assert_eq(verts.size(), 34, "the densified 16 points and one past the mouth")
-	assert_almost_eq(colors[-3].a, 1.0, 0.001, "the last sample keeps full strength")
+	assert_eq(verts.size(), 36, "the densified 16 points and two past the mouth")
+	assert_almost_eq(colors[-5].a, 1.0, 0.001, "the last sample keeps full strength")
+	assert_almost_eq(colors[-3].a, 1.0, 0.001, "and so does the halfway point")
 	assert_almost_eq(colors[-1].a, 0.0, 0.001)
 	assert_almost_eq(verts[-1].y, 5.0, 0.001)
 	# The final sample (100, 80) and the one before on the curve set the direction.
-	assert_almost_eq(verts[-1].z, 80.0 + 20.0 * (verts[-3].z - verts[-5].z) \
-		/ Vector2(verts[-3].x - verts[-5].x, verts[-3].z - verts[-5].z).length(), 0.01)
+	assert_almost_eq(verts[-1].z, 80.0 + 20.0 * (verts[-5].z - verts[-7].z) \
+		/ Vector2(verts[-5].x - verts[-7].x, verts[-5].z - verts[-7].z).length(), 0.01)
+
+
+## Godot draws a clockwise triangle as its front face. The ribbon was wound
+## the other way, so the camera above saw every triangle's back: on the
+## double-sided water Godot then flips the normal, and the river's lit share
+## was lit from below (owner 2026-10-05: dark where its mouth turns into the
+## mostly lit sea). Widened as the shader widens them, every triangle must
+## be clockwise seen from above — its winding normal points down.
+func test_the_ribbon_faces_up() -> void:
+	var arrays := Map3DRivers.ribbon_arrays(Map3DRivers.parse(BEND_TEXT), 20.0, 12.0, 0.5, 5.0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	for t in range(0, index.size(), 3):
+		var p: Array = []
+		for k in 3:
+			p.append(verts[index[t + k]] + normals[index[t + k]] * 5.0)
+		var wound: Vector3 = ((p[1] as Vector3) - (p[0] as Vector3)).cross((p[2] as Vector3) - (p[0] as Vector3))
+		assert_lt(wound.y, 0.0, "triangle %d is clockwise from above" % (t / 3))
+
+
+## The river's mouth turns into the sea's water by the sea's own uniforms,
+## copied by name (Map3DLayerRivers.SEA_WATER): a rename on either side
+## would silently leave the river's copy at its default.
+func test_every_sea_uniform_the_mouth_copies_exists_on_both_sides() -> void:
+	var sea_names: Array = []
+	for u: Dictionary in (load("res://scripts/map3d/water_sea.gdshader") as Shader).get_shader_uniform_list():
+		sea_names.append(u["name"])
+	var river_names: Array = []
+	for u: Dictionary in (load("res://scripts/map3d/water_river.gdshader") as Shader).get_shader_uniform_list():
+		river_names.append(u["name"])
+	var pack := ["pack_origin", "pack_px", "m_per_px", "sea_distance"]
+	for k: String in Map3DLayerRivers.SEA_WATER + pack:
+		assert_has(sea_names, k, "the sea has %s" % k)
+		assert_has(river_names, Map3DLayerRivers.river_name_of(k), "the river has its copy of %s" % k)

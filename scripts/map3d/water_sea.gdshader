@@ -24,6 +24,9 @@
 shader_type spatial;
 render_mode blend_mix, depth_draw_never, cull_back, shadows_disabled;
 
+// The water's maths, shared with the rivers' mouths.
+#include "res://scripts/map3d/water_sea.gdshaderinc"
+
 uniform sampler2D sea_distance : filter_linear, repeat_disable;
 uniform vec2 pack_origin = vec2(0.0);
 uniform vec2 pack_px = vec2(2560.0, 929.0);
@@ -99,37 +102,18 @@ void vertex() {
 }
 
 void fragment() {
-	vec2 uv = (v_xz - pack_origin) / m_per_px / pack_px;
-	vec2 uv_clamped = clamp(uv, vec2(0.0), vec2(1.0));
-	// How far uv sits outside [0,1] on each axis (0 inside the canvas),
-	// turned into pack px — added onto the sampled edge distance so `d`
-	// keeps climbing past the canvas boundary instead of snapping straight
-	// to the outside branch's flat cap, which read as a hard 1px seam.
-	vec2 overshoot_uv = max(vec2(0.0), -uv) + max(vec2(0.0), uv - vec2(1.0));
-	float beyond_px = length(overshoot_uv * pack_px);
-	float d = texture(sea_distance, uv_clamped).r * 255.0 + beyond_px;
-	vec3 c = mix(sea_near.rgb, sea_nearer.rgb, smoothstep(band_near - soft, band_near + soft, d));
-	c = mix(c, sea_far.rgb, smoothstep(band_nearer - soft, band_nearer + soft, d));
-	c = mix(c, sea_deep.rgb, smoothstep(band_far - soft, band_far + soft, d));
-	c = mix(c, sky.rgb, smoothstep(horizon_fade_start_px, horizon_fade_end_px, d));
+	float d = sea_shore_px(sea_distance, v_xz, pack_origin, pack_px, m_per_px);
+	vec3 c = sea_bands(d, sea_near.rgb, sea_nearer.rgb, sea_far.rgb, sea_deep.rgb, sky.rgb,
+		vec4(band_near, band_nearer, band_far, soft), vec2(horizon_fade_start_px, horizon_fade_end_px));
 	float near_w = 1.0 - smoothstep(ripple_lod_near_m, ripple_lod_far_m, length(VERTEX));
-	vec2 p = v_xz / ripple_m;
-	vec3 n1 = texture(ripples, p + vec2(TIME * drift_m_s / ripple_m, 0.0)).xyz;
-	vec3 n2 = texture(ripples, p * 0.61 + vec2(0.0, TIME * drift_m_s * 0.7 / ripple_m)).xyz;
-	vec3 far_n = normalize(n1 + n2 - 1.0);
-	vec2 q = v_xz / ripple_near_m;
-	vec3 m1 = texture(ripples, q + vec2(TIME * drift_m_s / ripple_near_m, 0.0)).xyz;
-	vec3 m2 = texture(ripples, q * 0.57 + vec2(0.0, -TIME * drift_m_s * 0.8 / ripple_near_m)).xyz;
-	vec3 near_n = normalize(m1 + m2 - 1.0);
-	vec3 n = normalize(mix(far_n, near_n, near_w));
+	vec3 n = sea_ripple_normal(ripples, v_xz, TIME, ripple_m, ripple_near_m, drift_m_s, near_w);
 	NORMAL_MAP = n * 0.5 + 0.5;
 	NORMAL_MAP_DEPTH = 0.4;
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 5.0);
 	vec3 band = mix(c, sky.rgb, fres * fresnel_sky_mix);
 	// natural water: a continuous gradient by distance from the shore
-	float dw = d + (texture(ripples, v_xz / 30000.0).x * 2.0 - 1.0) * nat_warp_px * step(nat_shallow_px, d);
-	vec3 cn = mix(nat_shallow.rgb, nat_mid.rgb, smoothstep(0.0, nat_mid_px, dw - nat_shallow_px));
-	cn = mix(cn, nat_deep.rgb, smoothstep(nat_mid_px, nat_deep_px, dw));
+	vec3 cn = sea_natural(ripples, v_xz, d, nat_shallow.rgb, nat_mid.rgb, nat_deep.rgb,
+		vec4(nat_shallow_px, nat_mid_px, nat_deep_px, nat_warp_px));
 	cn = mix(cn, sky.rgb, fres * nat_fresnel_sky_mix);
 	// foam: a broken line along the shore, drifting with the ripples
 	float foam_noise = texture(ripples, v_xz / 220.0 + vec2(TIME * 0.004, 0.0)).x;
@@ -140,25 +124,21 @@ void fragment() {
 	// The palette colours arrive RAW (a Color uniform set from GDScript
 	// passes straight through under GL Compatibility), and the environment's
 	// Filmic tonemap LIFTS a flat EMISSION colour (0.5 -> 162/255), more in
-	// the darker channels. A per-channel gamma (> 1 darkens the darker
-	// channels more) undoes that lift well enough to land back near the flat
-	// 2D hex (final review, owner 2026-09-18: fitted by sampling rendered
-	// bands against the palette at 24 km; the gamma is fitted to THIS
-	// tonemap — change the tonemap and refit it).
-	vec3 lifted = pow(clamp(band, vec3(0.0001), vec3(1.0)), vec3(emission_gamma));
-	// the natural water goes out as itself (no gamma: it is lit, not flat)
-	lifted = mix(lifted, cn, natural);
-	band = mix(band, cn, natural);
-	// A ripple's slope toward or away from the light, -1..1: lights and
-	// darkens the emitted colour a little, up close only.
+	// the darker channels. emission_gamma (> 1 darkens the darker channels
+	// more) undoes that lift well enough to land back near the flat 2D hex
+	// (final review, owner 2026-09-18: fitted by sampling rendered bands
+	// against the palette at 24 km; refit it if the tonemap changes).
 	float slope = clamp((n.x - n.y) * 2.0, -1.0, 1.0);
-	lifted *= 1.0 + ripple_emission_gain * near_w * slope;
-	float share = mix(mix(emission_share, emission_share_near, near_w), nat_emission_share, natural);
-	ALBEDO = band * (1.0 - share);
-	EMISSION = lifted * share;
-	ROUGHNESS = mix(roughness, nat_roughness, natural);
-	SPECULAR = mix(specular, nat_specular, natural);
-	// The noise tile holds about eight bumps: one every shore_warp_m.
-	float warp = texture(ripples, v_xz / (shore_warp_m * 8.0)).x * 2.0 - 1.0;
-	ALPHA = smoothstep(0.0, shore_fade_px, d + warp * shore_warp_px);
+	vec3 albedo;
+	vec3 emission;
+	float rough;
+	float spec;
+	sea_light(band, cn, natural, near_w, slope, emission_gamma, ripple_emission_gain,
+		vec3(emission_share, emission_share_near, nat_emission_share),
+		vec4(roughness, nat_roughness, specular, nat_specular), albedo, emission, rough, spec);
+	ALBEDO = albedo;
+	EMISSION = emission;
+	ROUGHNESS = rough;
+	SPECULAR = spec;
+	ALPHA = sea_shore_alpha(ripples, v_xz, d, shore_fade_px, shore_warp_px, shore_warp_m);
 }

@@ -103,12 +103,26 @@ func build_baked(p_ctx: Map3DContext, baked: ArrayMesh) -> void:
 	material_override = _mat
 
 
+## The sea's uniforms the river's mouth turns into (water_sea.gdshaderinc),
+## copied under the river's name for each: "sea_" + the sea's, or the
+## sea's own when it already starts with "sea_".
+const SEA_WATER := ["sea_near", "sea_nearer", "sea_far", "sea_deep", "band_near", "band_nearer",
+	"band_far", "soft", "horizon_fade_start_px", "horizon_fade_end_px", "ripple_m", "ripple_near_m",
+	"drift_m_s", "ripple_emission_gain", "emission_share", "emission_share_near", "emission_gamma",
+	"roughness", "specular", "fresnel_sky_mix", "nat_shallow", "nat_mid", "nat_deep",
+	"nat_shallow_px", "nat_mid_px", "nat_deep_px", "nat_warp_px", "nat_emission_share",
+	"nat_roughness", "nat_specular", "nat_fresnel_sky_mix", "shore_fade_px", "shore_warp_px",
+	"shore_warp_m"]
+
+
 ## The river's own look is water_river.tres (owner 2026-10-02: edited in
 ## the inspector); what it shares with the sea it READS from the sea's
 ## material, so a river and its mouth are one water at every zoom — the
 ## mouth's colour (the sea's nearest band), the sky it reflects, the natural
-## shallows its mouth turns to, the ripples' level of detail — and it turns
-## natural with the sea's own share (Map3DContext.sea_natural).
+## shallows its mouth turns to, the ripples' level of detail, and (owner
+## 2026-10-05) the sea's whole water, which the river becomes over its last
+## stretch — and it turns natural with the sea's own share
+## (Map3DContext.sea_natural).
 func _make_material() -> void:
 	_mat = (RIVER_MAT as ShaderMaterial).duplicate() as ShaderMaterial
 	_mat.render_priority = Map3DPriority.RIVERS
@@ -116,10 +130,20 @@ func _make_material() -> void:
 	for pair: Array in [["mouth_water", "sea_near"], ["sky", "sky"], ["nat_mouth", "nat_shallow"],
 			["lod_near_m", "ripple_lod_near_m"], ["lod_far_m", "ripple_lod_far_m"]]:
 		_mat.set_shader_parameter(String(pair[0]), sea.get_shader_parameter(String(pair[1])))
+	for k: String in SEA_WATER:
+		_mat.set_shader_parameter(river_name_of(k), sea.get_shader_parameter(k))
+	var from_pack := Map3DLayerSea.pack_params(ctx)
+	for k: String in from_pack:
+		_mat.set_shader_parameter(river_name_of(k), from_pack[k])
 	_mat.set_shader_parameter("ripples", ctx.water_normals())
 	if not ctx.camera_moved.is_connected(_on_camera_moved):
 		ctx.camera_moved.connect(_on_camera_moved)
 	_on_camera_moved()
+
+
+## A sea uniform's name in the river's shader.
+static func river_name_of(sea_uniform: String) -> String:
+	return sea_uniform if sea_uniform.begins_with("sea_") else "sea_" + sea_uniform
 
 
 func _on_camera_moved() -> void:

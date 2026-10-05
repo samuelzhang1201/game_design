@@ -245,8 +245,8 @@ static func clear_terrain(courses: Array, height_fn: Callable, margin: float) ->
 ## beach short of where the sea meets the ground and the ribbon ended there
 ## in a square stub (owner 2026-10-05). `mouth_extend_w` > 0 runs it on past
 ## that sample along its final direction by that many local widths, down to
-## `sea_y` (the sea's water height), at full strength at the sample and
-## fading to nothing at the end of the run-out, so the river blends into the
+## `sea_y` (the sea's water height), at full strength over its first half
+## and fading to nothing at its tip (_run_out), so the river reaches the
 ## sea; 0 stops it at the sample. A NAN sea_y keeps the sample's own height.
 static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M,
 		mesh_step_m: float = 0.0, mouth_extend_w: float = 0.0, sea_y: float = NAN) -> Array:
@@ -274,7 +274,7 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 		var width: PackedFloat32Array = c["width"]
 		var mouth: PackedFloat32Array = c["mouth"]
 		var true_mouth: bool = bool(c.get("true_mouth", false))
-		# A run-out (_run_out) fades over its own length, from its last sample.
+		# A run-out (_run_out) holds to its halfway point, then fades to its tip.
 		var run_out_m := float(c.get("run_out_m", 0.0))
 		var arcs := PackedFloat32Array()
 		arcs.resize(pos.size())
@@ -289,7 +289,7 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 			var start_fade := clampf(arcs[i] / fade_span, 0.0, 1.0)
 			var end_fade := clampf((total - arcs[i]) / tail_span, 0.0, 1.0)
 			if true_mouth:
-				end_fade = clampf((total - arcs[i]) / run_out_m, 0.0, 1.0) if run_out_m > 0.0 else 1.0
+				end_fade = clampf((total - arcs[i]) / (run_out_m * 0.5), 0.0, 1.0) if run_out_m > 0.0 else 1.0
 			var fade := minf(start_fade, end_fade)
 			var base := verts.size()
 			for s: int in [0, 1]:
@@ -298,8 +298,11 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 				uv.append(Vector2(float(s), arcs[i]))
 				uv2.append(Vector2(width[i], mouth[i]))
 				colors.append(Color(1.0, 1.0, 1.0, fade))
+			# Clockwise seen from above, Godot's front face: wound the other
+			# way the camera saw the ribbon's back, and the double-sided
+			# water was lit from below (owner 2026-10-05).
 			if i > 0:
-				index.append_array([base - 2, base - 1, base, base - 1, base + 1, base])
+				index.append_array([base - 2, base, base - 1, base - 1, base, base + 1])
 	if verts.is_empty():
 		return []
 	var arrays: Array = []
@@ -313,10 +316,15 @@ static func ribbon_arrays(courses: Array, end_fade_m: float = DEFAULT_END_FADE_M
 	return arrays
 
 
-## The course with one point added past its last sample: along the final
-## segment's ground-plane direction, `extend_w` × the last width on, at
-## `sea_y` (NAN: the last sample's height), the same width and wholly the
-## mouth's water; "run_out_m" records the run-out's length for the fade.
+## The course with two points added past its last sample, along the final
+## segment's ground-plane direction: halfway, at `sea_y` (NAN: the last
+## sample's height), and the tip, `extend_w` × the last width on, at the
+## same height — the same width, wholly the mouth's water. "run_out_m"
+## records the run-out's length: ribbon_arrays holds it at full strength to
+## the halfway point and fades it to the tip, so it reaches the waterline
+## whole and the river's shader hands it over to the sea there
+## (water_river.gdshader, the sea's shore fade); the tip's fade only ends a
+## run-out whose beach is wider than it.
 static func _run_out(course: Dictionary, extend_w: float, sea_y: float) -> Dictionary:
 	var pos: PackedVector3Array = (course["pos"] as PackedVector3Array).duplicate()
 	var width: PackedFloat32Array = (course["width"] as PackedFloat32Array).duplicate()
@@ -328,10 +336,12 @@ static func _run_out(course: Dictionary, extend_w: float, sea_y: float) -> Dicti
 	var run := width[n - 1] * extend_w
 	if dir.length_squared() < 0.0000001 or run <= 0.0:
 		return course
-	var tip := Vector2(pos[n - 1].x, pos[n - 1].z) + dir.normalized() * run
-	pos.append(Vector3(tip.x, pos[n - 1].y if is_nan(sea_y) else sea_y, tip.y))
-	width.append(width[n - 1])
-	mouth.append(1.0)
+	var y := pos[n - 1].y if is_nan(sea_y) else sea_y
+	for f: float in [0.5, 1.0]:
+		var at := Vector2(pos[n - 1].x, pos[n - 1].z) + dir.normalized() * run * f
+		pos.append(Vector3(at.x, y, at.y))
+		width.append(width[n - 1])
+		mouth.append(1.0)
 	var out := course.duplicate()
 	out["pos"] = pos
 	out["width"] = width
