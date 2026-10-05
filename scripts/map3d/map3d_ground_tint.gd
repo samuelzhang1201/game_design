@@ -284,7 +284,7 @@ static func patch(code: String) -> String:
 	if at < 0:
 		return ""
 	lines.insert(at + 1, UNIFORMS + Map3DGroundWind.UNIFORMS + Map3DGroundRelief.UNIFORMS + Map3DGroundBalk.UNIFORMS)
-	return "\n".join(lines).replace(ALBEDO_LINE, TINTED_ALBEDO.replace(
+	return "\n".join(lines).replace(ALBEDO_LINE, Map3DGroundBalk.RIM + TINTED_ALBEDO.replace(
 		"\t// @WIND (Map3DGroundWind.STAGE, then Map3DGroundRelief.STAGE)\n",
 		Map3DGroundBalk.STAGE + Map3DGroundWind.STAGE + Map3DGroundRelief.STAGE))
 

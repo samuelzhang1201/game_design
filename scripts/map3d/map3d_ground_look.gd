@@ -74,6 +74,9 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 @export var balk_m := 6.0
 @export var balk_color := Color("6B7340")
 @export var balk_far_m := 9000.0
+## How far a field's rim is drawn per pixel along its edge, not in 20 m steps
+## (Map3DGroundBalk.RIM; 0 off, 1 full).
+@export var field_rim := 0.0
 
 @export_group("Woods")
 ## How far the ground under the woods (bake/woods.png) goes toward the canopy
