@@ -56,3 +56,5 @@ shader_parameter/nat_ripple_gain = 0.25
 shader_parameter/nat_sheen = 0.14
 shader_parameter/nat_sheen_m = 600.0
 shader_parameter/nat_sheen_far_m = 4000.0
+shader_parameter/nat_shelf_mix = 0.8
+shader_parameter/nat_shelf_px = 9.0

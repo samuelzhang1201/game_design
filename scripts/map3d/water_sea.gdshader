@@ -102,6 +102,11 @@ uniform float nat_ripple_gain = 0.0;
 uniform float nat_sheen = 0.0;
 uniform float nat_sheen_m = 2400.0;
 uniform float nat_sheen_far_m = 4000.0;  // gone by this camera distance
+// The near shelf: its colour, how far out (pack px) and strongly, gone by a camera this far.
+uniform vec4 nat_shelf : source_color = vec4(0.3, 0.46, 0.4, 1.0);
+uniform float nat_shelf_px = 6.0;
+uniform float nat_shelf_mix = 0.0;
+uniform float nat_shelf_far_m = 9000.0;
 
 varying vec2 v_xz;
 
@@ -142,6 +147,11 @@ void fragment() {
 	vec3 cn = sea_natural(ripples, v_xz, ds, nat_shallow.rgb, nat_mid.rgb, nat_deep.rgb,
 		vec4(nat_shallow_px, nat_mid_px, nat_deep_px, nat_warp_px));
 	cn = mix(cn, sky.rgb, fres * nat_fresnel_sky_mix);
+	// near only: the shallows over the shelf lighter and greener, the seabed
+	// under them — far out this drew a pale ring round every coast
+	float shelf = (1.0 - smoothstep(0.0, nat_shelf_px, ds))
+		* (1.0 - smoothstep(nat_shelf_far_m * 0.4, nat_shelf_far_m, length(VERTEX)));
+	cn = mix(cn, nat_shelf.rgb, shelf * nat_shelf_mix);
 	// wind lanes: broad slicks of calmer, brighter water drifting over the
 	// sea, the way open water reads from a height (two slow octaves)
 	vec2 sq = v_xz / nat_sheen_m + vec2(TIME * 0.0006, TIME * 0.0002);
