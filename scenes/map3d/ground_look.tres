@@ -20,6 +20,7 @@ edge_warp_far_m = 25000.0
 edge_fray_m = 14.0
 balk = 0.6
 balk_color = Color(0.37, 0.41, 0.21, 1)
+field_rim = 1.0
 wood_broadleaf = Color(0.18, 0.24, 0.11, 1)
 relief_ao = 0.7
 relief_ao_gamma = 2.5
