@@ -21,6 +21,12 @@ extends WorldEnvironment
 @export var fog_depth_end := 4.0
 @export var fog_depth_curve := 1.0
 @export var fog_depth_density := 0.5
+## Up close there is little air between the eye and the far edge of the view:
+## the haze's density is `fog_near_share` of itself at the nearest zoom,
+## rising to all of it by a camera `fog_near_full_m` away (0: the same at
+## every zoom).
+@export var fog_near_share := 1.0
+@export var fog_near_full_m := 0.0
 
 @export_group("Occlusion")
 ## 0 keeps the resource's fixed SSAO radius.
@@ -60,6 +66,13 @@ func follow(distance_m: float) -> void:
 		environment.fog_depth_begin = fog_depth_begin * distance_m
 		environment.fog_depth_end = fog_depth_end * distance_m
 		environment.fog_depth_curve = fog_depth_curve
-		environment.fog_density = fog_depth_density
+		environment.fog_density = fog_depth_density * near_share(distance_m)
 	if ssao_radius_per_view > 0.0:
 		environment.ssao_radius = ssao_radius_per_view * distance_m
+
+
+## The share of the haze's density kept at a camera `distance_m` away.
+func near_share(distance_m: float) -> float:
+	if fog_near_full_m <= 0.0:
+		return 1.0
+	return lerpf(fog_near_share, 1.0, smoothstep(0.0, fog_near_full_m, distance_m))

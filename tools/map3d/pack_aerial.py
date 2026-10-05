@@ -80,13 +80,14 @@ def box(a, r):
     return pad
 
 
-def fill_spots(a, lum, threshold, radius=100, grow=6):
+def fill_spots(a, lum, threshold, radius=100, grow=6, dark_only=False):
     """`a` with every spot whose light (over 7 px) is more than `threshold`
     off its neighbourhood's (a box `radius` px each way) painted out from its edge
     inward (OpenCV's Telea inpainting), the spot grown by `grow` px first so
     no rim of it is left. The ground's own grain is far under the threshold."""
     import cv2
-    spot = np.abs(box(lum, 3) - box(lum, radius)) > threshold
+    off = box(lum, 3) - box(lum, radius)
+    spot = (-off if dark_only else np.abs(off)) > threshold
     spot = cv2.dilate(spot.astype(np.uint8), np.ones((2 * grow + 1, 2 * grow + 1), np.uint8))
     img = np.round(np.clip(a, 0, 1) * 255).astype(np.uint8)
     out = cv2.inpaint(img, spot, 6, cv2.INPAINT_TELEA)
@@ -160,6 +161,9 @@ def main():
     ap.add_argument("--fill-spots", type=float, default=0.0,
                     help="0..1: a spot this much lighter or darker than its neighbourhood (a bush, a white stone) is "
                          "painted out from its surroundings — on a layer tiled every 140 m it repeats as a row of dots")
+    ap.add_argument("--fill-dark-only", action="store_true",
+                    help="--fill-spots paints out only spots DARKER than their neighbourhood (an upland's heather, "
+                         "not its stones)")
     ap.add_argument("--black", type=float, default=0.0,
                     help="0..1: the black point lifted to this (a rock photo's baked-in shadow fights the scene's sun)")
     ap.add_argument("--warm", type=float, default=0.0,
@@ -179,7 +183,7 @@ def main():
                    dtype=np.float32) / 255.0
     lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
     if args.fill_spots > 0.0:
-        a = fill_spots(a, lum, args.fill_spots)
+        a = fill_spots(a, lum, args.fill_spots, dark_only=args.fill_dark_only)
         lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
     if args.lift_darks > 0.0:
         # a spot darker than its neighbourhood is lifted toward it: holes and

@@ -48,7 +48,7 @@ field_strength,2.2,3D bake fields: a field's texture weight against the natural 
 field_slope_max,0.35,"3D bake fields: the rock-slope share (0..1, the bake's own t_rock) above which no field is ploughed"
 manor_jitter_value,0.07,"3D bake (owner 2026-09-19): each manor cell's own brightness shift, +- this share — neighbouring estates read apart like a satellite map's patchwork"
 manor_jitter_hue,0.05,"3D bake: each manor cell's own green-yellow shift, +- this share"
-footprint_tint,#D6CBBE,"3D bake village footprints: the built ground's multiplier on the dirt and soil under it — roofs, yards and trodden earth"
+footprint_tint,#BCAE98,"3D bake village footprints: the built ground's multiplier on the dirt and soil under it — roofs, yards and trodden earth"
 footprint_block_m,70,3D bake village footprints: the wavelength of the blocky light and dark within it (houses and yards)
 footprint_block_depth,0.32,3D bake village footprints: how far the blocks darken
 footprint_edge_noise,0.5,3D bake village footprints: how far (as a share of its radius) the edge frays

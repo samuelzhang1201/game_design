@@ -18,6 +18,10 @@ uniform float edge_warp_m = 0.0;
 uniform float edge_warp_wave_m = 60.0;
 uniform float edge_warp_fine = 0.35;
 uniform float edge_warp_far_m = 9000.0;
+uniform float edge_fray_m = 0.0;
+uniform float edge_fray_wave_m = 36.0;
+uniform float edge_fray_from_m = 2500.0;
+uniform float edge_fray_full_m = 6000.0;
 """
 
 const WARPED_UV := """	vec2 uv = UV;
@@ -26,8 +30,13 @@ const WARPED_UV := """	vec2 uv = UV;
 		vec2 eq = v_vertex.xz / edge_warp_wave_m;
 		vec2 ew = vec2(wx_noise(eq), wx_noise(eq + vec2(17.3, 41.9))) - 0.5;
 		ew += (vec2(wx_noise(eq * 3.7 + vec2(5.1, 9.4)), wx_noise(eq * 3.7 + vec2(29.7, 3.3))) - 0.5) * edge_warp_fine;
-		float ek = 1.0 - smoothstep(edge_warp_far_m * 0.5, edge_warp_far_m, length(v_vertex - _camera_pos));
-		uv += ew * (2.0 * edge_warp_m * _vertex_density * ek);
+		float e_dist = length(v_vertex - _camera_pos);
+		float ek = 1.0 - smoothstep(edge_warp_far_m * 0.5, edge_warp_far_m, e_dist);
+		// farther out a 20 m step is a few px: a finer fray breaks it up there
+		vec2 fq = v_vertex.xz / edge_fray_wave_m;
+		vec2 fw = vec2(wx_noise(fq + vec2(3.1, 7.7)), wx_noise(fq + vec2(11.9, 23.5))) - 0.5;
+		float fk = smoothstep(edge_fray_from_m, edge_fray_full_m, e_dist) * edge_fray_m;
+		uv += (ew * edge_warp_m + fw * fk) * (2.0 * _vertex_density * ek);
 	}
 """
 
@@ -45,5 +54,6 @@ static func patch(code: String) -> String:
 
 ## Hand the ground `mat` the look's wander.
 static func apply(mat: Object, look: Map3DGroundLook) -> void:
-	for key: String in ["edge_warp_m", "edge_warp_wave_m", "edge_warp_fine", "edge_warp_far_m"]:
+	for key: String in ["edge_warp_m", "edge_warp_wave_m", "edge_warp_fine", "edge_warp_far_m", "edge_fray_m",
+			"edge_fray_wave_m", "edge_fray_from_m", "edge_fray_full_m"]:
 		mat.call("set_shader_param", key, float(look.get(key)))

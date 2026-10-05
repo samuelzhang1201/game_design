@@ -51,6 +51,13 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 @export var edge_warp_wave_m := 60.0
 @export var edge_warp_fine := 0.35
 @export var edge_warp_far_m := 9000.0
+## A finer fray (metres, wavelength) fading in from `edge_fray_from_m` to
+## `edge_fray_full_m` of camera distance: there a 20 m step is a few px and the
+## broad wander only bends the stair (0: none).
+@export var edge_fray_m := 0.0
+@export var edge_fray_wave_m := 36.0
+@export var edge_fray_from_m := 2500.0
+@export var edge_fray_full_m := 6000.0
 
 @export_group("Woods")
 ## How far the ground under the woods (bake/woods.png) goes toward the canopy

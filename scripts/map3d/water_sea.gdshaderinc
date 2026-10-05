@@ -18,6 +18,21 @@ float sea_shore_px(sampler2D sea_distance, vec2 xz, vec2 pack_origin, vec2 pack_
 	return texture(sea_distance, uv_clamped).r * 255.0 + beyond_px;
 }
 
+// The same distance smoothed over a ring of taps `r` pack px out: the map
+// holds whole px (50 m, 8 bits), so a gradient read straight off it draws
+// its contours as 50 m stair-steps; the ring's mean runs smooth between them.
+float sea_shore_px_smooth(sampler2D sea_distance, vec2 xz, vec2 pack_origin, vec2 pack_px, float m_per_px,
+		float r) {
+	float d = sea_shore_px(sea_distance, xz, pack_origin, pack_px, m_per_px) * 2.0;
+	float w = 2.0;
+	for (int i = 0; i < 8; i++) {
+		float a = float(i) * 0.7853982 + 0.39;
+		d += sea_shore_px(sea_distance, xz + vec2(cos(a), sin(a)) * r * m_per_px, pack_origin, pack_px, m_per_px);
+		w += 1.0;
+	}
+	return d / w;
+}
+
 // The far zoom's four flat bands by distance from the shore, hazing to the
 // sky past the horizon fade. bands = (near, nearer, far, soft) in pack px;
 // horizon = (start, end) in pack px.

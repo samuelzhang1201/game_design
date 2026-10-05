@@ -21,7 +21,7 @@ Committed (~11 MB) because a seeded generation is only reproducible on the
 same models and nodes; `assets/3D/terrain/` itself stays git-ignored. Pack each
 into Terrain3D's two maps before `build_pack.sh`:
 
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_meadow.png aerial_meadow --match-mean '#666A35' --normal-strength 0.25 --rough 0.95
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_meadow.png aerial_meadow --match-mean '#666A35' --normal-strength 0.25 --rough 0.95 --fill-spots 0.2
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_canopy.png aerial_canopy --height-gain 1.3 --rough 0.95
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_upland.png aerial_upland --height-gain 1.2
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_cliff.png aerial_cliff --saturation 0.85 --lift-darks 0.6 --black 0.05 --warm 0.03 --height-gain 1.3
