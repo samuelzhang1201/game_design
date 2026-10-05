@@ -373,6 +373,41 @@ def smooth_open(pts, steps):
     return np.vstack([out, p[-1:]])
 
 
+def meander(course, amp_v, wave_v, salt, end_v, hold=None, hold_v=0.0):
+    """`course` (vertex units) pushed sideways by a slow noise along its
+    length — two octaves, `wave_v` and a third of it — up to `amp_v`, tapered
+    to nothing over `end_v` at either end so a source, a join and a mouth stay
+    where they were (visual review 2026-10-06: rivers ran ruler-straight for
+    kilometres between the pack's sparse points)."""
+    pts = np.asarray(resample_line(course, 1.0), dtype=np.float64)
+    if len(pts) < 4 or amp_v <= 0.0:
+        return course
+    d = np.gradient(pts, axis=0)
+    d /= np.maximum(np.hypot(d[:, 0], d[:, 1]), 1e-9)[:, None]
+    nrm = np.stack([-d[:, 1], d[:, 0]], axis=1)
+    s = np.arange(len(pts), dtype=np.float64)
+    rng = np.random.default_rng(SEED + 41 + salt)
+
+    def noise1(wave):
+        n = int(len(pts) / wave) + 3
+        knots = rng.uniform(-1.0, 1.0, n)
+        x = s / wave
+        i = np.floor(x).astype(np.int64)
+        f = x - i
+        f = f * f * (3.0 - 2.0 * f)
+        return knots[i] * (1.0 - f) + knots[i + 1] * f
+    off = noise1(wave_v) * 0.75 + noise1(wave_v / 3.0) * 0.25
+    taper = np.clip(np.minimum(s, s[-1] - s) / max(end_v, 1.0), 0.0, 1.0)
+    if hold is not None and len(hold) and hold_v > 0.0:
+        # a settlement keeps its river where the pack drew it (its houses,
+        # walls and bridge were laid round that line)
+        from scipy.spatial import cKDTree
+        dist, _ = cKDTree(hold).query(pts)
+        taper *= np.clip(dist / hold_v - 1.0, 0.0, 1.0)
+    out = pts + nrm * (off * amp_v * taper)[:, None]
+    return [tuple(p) for p in out]
+
+
 def resample_line(pts, step):
     """Points every `step` (same units) along a polyline, ends kept."""
     pts = np.asarray(pts, dtype=np.float64)
@@ -1156,7 +1191,16 @@ def main(argv=None):
                    (tuple(map(float, p.split())) for p in r["points"].split("|") if p.strip())]
             if len(raw) >= 2:
                 raws.append((r, raw))
-    smooth = [smooth_open(raw, steps) for _, raw in raws]
+    with open(os.path.join(ROOT, "data", "maps", MAP, "political", "burgs.csv")) as f:
+        towns = np.array([(float(b["x"]) * k, float(b["y"]) * k) for b in csv.DictReader(f)])
+
+    def bend(course, n):
+        if rules.get("river_meander_m", 0.0) <= 0.0:
+            return course
+        return meander(course, rules["river_meander_m"] / VERTEX_M, rules["river_meander_wave_m"] / VERTEX_M,
+                       n, rules["river_meander_end_m"] / VERTEX_M, towns, rules["river_meander_town_m"] / VERTEX_M)
+    # joins are found on the bent courses: a tributary ends ON its river
+    smooth = [bend(smooth_open(raw, steps), n) for n, (_, raw) in enumerate(raws)]
     courses, joins, unjoined = [], {}, 0
     for n, (r, raw) in enumerate(raws):
         ex, ey = raw[-1]
@@ -1168,7 +1212,7 @@ def main(argv=None):
             else:
                 joins[r["river_code"]] = float(np.hypot(at[0] - ex, at[1] - ey))
                 raw = raw + [(float(at[0]), float(at[1]))]
-        courses.append((r, smooth_open(raw, steps)))
+        courses.append((r, bend(smooth_open(raw, steps), n)))
 
     # --- ridges -------------------------------------------------------------------
     ridge = np.zeros((vh, vw), dtype=np.float32)

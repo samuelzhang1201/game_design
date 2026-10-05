@@ -199,3 +199,7 @@ field_tint_gain,2.5,"3D bake open fields (visual review 2026-10-05): how fast a 
 beach_break,0.35,"3D bake (visual review 2026-10-05: an even sand rim outlined every coast): the slow noise's value under which a reach of shore has no beach; the beach comes in over the next 0.25 and widens a little past it (0: an even beach everywhere)"
 beach_break_wave_m,2200,3D bake: the wavelength of that noise along the shore
 meadow_fray,0.5,"3D bake open fields (visual review 2026-10-06): how far the crofts' edge noise pushes the meadow's edge in and out — without it the meadow ran as a straight smooth dark band either side of a river"
+river_meander_m,70,"3D bake (visual review 2026-10-06: rivers ran ruler-straight for kilometres between the pack's sparse points): how far, in metres, a slow noise pushes a river's course sideways — carve and drawn water alike (0: the pack's line)"
+river_meander_wave_m,900,3D bake: the wavelength of that meander along the river (with an octave at a third of it)
+river_meander_end_m,400,"3D bake: the meander fades to nothing over this far from either end, so a source, a join and a mouth stay put"
+river_meander_town_m,1000,"3D bake: no meander within this far of a settlement, rising to all of it at twice this — its houses, walls and bridge were laid round the pack's line"
