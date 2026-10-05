@@ -1015,7 +1015,11 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         soft = np.where(sown, np.clip(edge / rules["field_edge_soft_m"], 0, 1), 1.0)
         farm[y0:y1] = m * soft * weight
         crop[y0:y1] = tex
-        tint[y0:y1] = 1.0 + (tt - 1.0) * m[..., None]
+        # the crop's colour reaches its full tint well before its texture
+        # does (field_tint_gain): diluted with the share, a field's rim showed
+        # the crop layer's own pale straw as cream patches (visual review
+        # 2026-10-05)
+        tint[y0:y1] = 1.0 + (tt - 1.0) * np.clip(m * rules["field_tint_gain"], 0, 1)[..., None]
         # the field map: only the arable's colour (far-fade, furrows, strips)
         ftint[y0:y1] = np.where((sown & (m > 0))[..., None], tint[y0:y1], 1.0)
         # each furlong's strips run along or across the line to its village
