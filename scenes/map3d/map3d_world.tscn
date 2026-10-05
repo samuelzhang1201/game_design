@@ -94,7 +94,7 @@ script = ExtResource("17_w2qt7")
 fog_depth_begin = 0.9
 fog_depth_end = 3.0
 fog_depth_density = 0.45
-fog_near_share = 0.55
+fog_near_share = 0.25
 fog_near_full_m = 7000.0
 dof_far_ramp = 1.2
 
