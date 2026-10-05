@@ -11,8 +11,8 @@ max_height_share,0.62,woods: no clump above this share of the highest ground (ba
 road_clear_m,18,woods: a road or trail keeps this many metres clear each side
 river_clear_m,25,woods: a river keeps this many metres clear beyond its widest half-width
 house_clear_m,50,woods: no clump within this many metres of a house (the settlement and its yards)
-scale_min,0.8,woods: the smallest clump scale
-scale_max,1.25,woods: the largest
+scale_min,0.6,woods: the smallest clump scale
+scale_max,1.5,woods: the largest
 biome_3,0.06|0.0,"woods by biome id: density|conifer share — savanna, a few copses"
 biome_4,0.04|0.0,grassland: a few copses
 biome_5,0.5|0.0,tropical seasonal forest

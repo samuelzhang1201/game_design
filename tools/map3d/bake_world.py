@@ -967,7 +967,9 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         fh = hash01(fid ^ (bid << 48), 25)
         waste = hash01(fid ^ (bid << 48), 26) < rules["furlong_waste_share"]
         croft = (r_v <= croft_r) & ~arable
-        meadow = (meadow_n[y0:y1] > 0.35) & ~croft
+        # its edge frays with the crofts' noise: the blurred river drew it as a
+        # straight smooth band either side of the water
+        meadow = (meadow_n[y0:y1] + rules["meadow_fray"] * (fray2[y0:y1] - 0.5) > 0.35) & ~croft
         arable &= ~meadow & ~waste
         # croft closes: small hedged plots behind the houses
         cfid, cedge = field_cells(wxs, wys, croft_v, 1.3, hash01(bid, 27) * np.pi)

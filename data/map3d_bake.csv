@@ -198,3 +198,4 @@ settled_grass,0.9,"3D bake open fields (visual review 2026-10-05): the share of 
 field_tint_gain,2.5,"3D bake open fields (visual review 2026-10-05): how fast a field's colour comes in against its texture's share at the farmland's rim (1 = with it, which left the crop layer's own pale straw showing as cream patches on slopes, shores and beside villages)"
 beach_break,0.35,"3D bake (visual review 2026-10-05: an even sand rim outlined every coast): the slow noise's value under which a reach of shore has no beach; the beach comes in over the next 0.25 and widens a little past it (0: an even beach everywhere)"
 beach_break_wave_m,2200,3D bake: the wavelength of that noise along the shore
+meadow_fray,0.5,"3D bake open fields (visual review 2026-10-06): how far the crofts' edge noise pushes the meadow's edge in and out — without it the meadow ran as a straight smooth dark band either side of a river"
