@@ -17,6 +17,10 @@ add it here as a principle with its why — not as a changelog entry.
   handover at the waterline drew a speckled seam across the mouth):
   a river tinted toward the sea's colour but lit and rippled its own way
   read as a grey plume laid on the sea.
+- **A waterline follows the ground, not a raster** (owner 2026-10-06: 把入海口
+  两侧的方形草地边缘也修掉). The sea drawn off the 50 m coast map cut the land
+  beside a river's mouth into square blocks; the shore is where the ground
+  meets the water.
 - **Nothing ends on a hard cut.** Built-up areas thin outward into fields;
   cut-outs feather their rim; biome tiles cross-fade per pixel, never per
   Voronoi cell. A hard-edged tray, slab, disc or ring around an object is

@@ -3,7 +3,8 @@
 // world_sea_distance.png, every pixel its distance to land in pack px, 0 on
 // land — found by mapping world XZ back to pack px; slow drifting ripples;
 // the sky by fresnel; and a fade to clear at the shore so the smooth coast
-// shows through the shallows. One plane, one draw call, no depth texture.
+// shows through the shallows. One plane, one draw call; near the coast it
+// reads the depth buffer for the ground under it (shore_depth_m).
 //
 // Fix round 1: the first pass read as saturated tropical cyan against the
 // 2D map's muted scheme — a spatial material's ALBEDO is fully relit (sun +
@@ -71,6 +72,20 @@ uniform float emission_share_near = 0.6;
 // stopgap until a finer coast coverage map exists.
 uniform float shore_warp_px = 0.5;
 uniform float shore_warp_m = 160.0;
+// The finer coast (owner 2026-10-06: the square grass edges beside a river's
+// mouth): within shore_reach_px of the map's coast the sea is also drawn
+// wherever the real ground lies under its surface — read from the depth
+// buffer, whole by shore_depth_m of water — so the waterline follows the
+// terrain's own 20 m contour. Off the raster alone, the carved banks beside
+// a mouth sank under the sea's level where the map said land, and the land
+// showed cut in 50 m blocks: a right-angled notch and a dead-straight shore.
+// Near only, gone by a camera shore_depth_far_m away: far out Terrain3D
+// draws a coarser mesh whose ground dipped under the beaches and drowned
+// the pale shore ring the far view keeps.
+uniform float shore_reach_px = 3.0;
+uniform float shore_depth_m = 1.0;
+uniform float shore_depth_far_m = 12000.0;
+uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
 // NATURAL WATER NEAR, BANDS FAR (owner 2026-09-24, the look route's Phase 3,
 // spec 2026-09-24-map3d-humankind-look-gap §2.6): `natural` (0..1, set by
 // the layer from the camera's distance) crossfades the flat bands into
@@ -139,6 +154,9 @@ void fragment() {
 	float foam_break = texture(ripples, v_xz / 1800.0).y;
 	float foam_line = (1.0 - smoothstep(0.0, foam_px, d)) * smoothstep(0.45, 0.8, foam_noise)
 		* smoothstep(0.35, 0.65, foam_break);
+	// only where the map's own coast drew the sea: on the water the finer
+	// coast adds (shore_depth_m) the line lay on the ground the map calls land
+	foam_line *= sea_shore_alpha(ripples, v_xz, d, shore_fade_px, shore_warp_px, shore_warp_m);
 	cn = mix(cn, foam.rgb, clamp(foam_line * foam_strength, 0.0, 1.0));
 	// The palette colours arrive RAW (a Color uniform set from GDScript
 	// passes straight through under GL Compatibility), and the environment's
@@ -159,5 +177,13 @@ void fragment() {
 	EMISSION = emission;
 	ROUGHNESS = rough;
 	SPECULAR = spec;
-	ALPHA = sea_shore_alpha(ripples, v_xz, d, shore_fade_px, shore_warp_px, shore_warp_m);
+	// the ground under this pixel (the sea is drawn only where the plane is in
+	// front of it, so it lies at or under the surface), in world metres
+	vec4 under = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, texture(depth_texture, SCREEN_UV).x, 1.0);
+	float water_m = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).y - (INV_VIEW_MATRIX * vec4(under.xyz / under.w, 1.0)).y;
+	float near_coast = smoothstep(0.0, 0.25,
+		sea_shore_px_smooth(sea_distance, v_xz, pack_origin, pack_px, m_per_px, shore_reach_px))
+		* (1.0 - smoothstep(shore_depth_far_m * 0.4, shore_depth_far_m, length(VERTEX)));
+	ALPHA = max(sea_shore_alpha(ripples, v_xz, d, shore_fade_px, shore_warp_px, shore_warp_m),
+		near_coast * smoothstep(0.0, shore_depth_m, water_m));
 }
