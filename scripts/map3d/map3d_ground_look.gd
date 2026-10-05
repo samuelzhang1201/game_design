@@ -107,6 +107,13 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 @export var relief_ao_near := 0.35
 @export var relief_ao_near_m := 2500.0
 @export var relief_ao_far_m := 10000.0
+## The open grass's swards (Map3DGroundRelief): how far its lusher and drier
+## patches swing (0 off), their size (metres), the camera distance they are
+## gone by, and the dry sward's hue.
+@export var meadow_mottle := 0.0
+@export var meadow_mottle_m := 90.0
+@export var meadow_mottle_far_m := 6000.0
+@export var meadow_dry := Color("9E945C")
 
 
 ## The map's ground look (the saved .tres).
