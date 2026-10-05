@@ -135,6 +135,15 @@ def main(argv=None):
     sown_mask = np.zeros_like(bad)
     sown_mask[:sown_v.shape[0], :sown_v.shape[1]] = sown_v
     del fm, sown, sown_v
+    # the settled ground round each village (bake_world's settled.png): the
+    # woods give way to its crofts, fields and meadows, and thin on its pasture
+    settled = np.zeros(bad.shape, np.float32)
+    sp_path = os.path.join(OUT, "settled.png")
+    if os.path.exists(sp_path):
+        sm = np.asarray(Image.open(sp_path).convert("L"), dtype=np.float32) / 255.0
+        sv = np.repeat(np.repeat(sm, step, axis=0), step, axis=1)[:vh, :vw]
+        settled[:sv.shape[0], :sv.shape[1]] = sv
+        del sm, sv
     roads = []
     with open(os.path.join(ROOT, "data", "maps", MAP, "geography", "routes.csv")) as f:
         for r in csv.DictReader(f):
@@ -160,6 +169,9 @@ def main(argv=None):
     chance = dens * np.clip(1.0 + rules["grove_gain"] * (grove - 0.5) * 2.0, 0, 2)
     chance *= 1.0 + rules["fray_gain"] * (value_noise(np.random.default_rng(SEED + 11), vw, vh,
                                                      rules["fray_wave_m"] / vm) - 0.5) * 2.0
+    # the settled ground thins the woods BEFORE the edge squeeze, so what is
+    # left still gathers into woods with edges, never a scatter
+    chance *= 1.0 - rules["settled_clear"] * settled
     # a wood has an edge: squeeze the chance toward 0 or 1 round its middle
     e = rules["edge_sharp"]
     chance = np.clip((chance - 0.5) * e + 0.5, 0, 1) * (dens > 0.02)

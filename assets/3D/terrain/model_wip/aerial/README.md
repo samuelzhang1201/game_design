@@ -67,4 +67,7 @@ chalk downland, `STYLE_CORE_aerial_grass.txt`) packed into a PALE STRAW ground
 that each field's tint darkens to its crop — the colour map can only darken, so
 no crop drawn on the grass layer could be gold:
 
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_crop.png aerial_crop --saturation 0.25 --contrast 0.8 --lift-darks 0.9 --lift-radius 16 --match-mean '#D4C89C' --normal-strength 0.25 --rough 0.95
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_crop.png aerial_crop --saturation 0.25 --contrast 0.8 --lift-darks 0.9 --lift-radius 16 --match-mean '#D4C89C' --normal-strength 0.25 --rough 0.95 --fill-spots 0.2
+
+`--fill-spots 0.2` (visual review 2026-10-05) paints out the downland's bushes and
+white stones: tiled every 140 m they drew rows of dark ovals across every field.

@@ -80,6 +80,20 @@ def box(a, r):
     return pad
 
 
+def fill_spots(a, lum, threshold, radius=100, grow=6):
+    """`a` with every spot whose light (over 7 px) is more than `threshold`
+    off its neighbourhood's (a box `radius` px each way) painted out from its edge
+    inward (OpenCV's Telea inpainting), the spot grown by `grow` px first so
+    no rim of it is left. The ground's own grain is far under the threshold."""
+    import cv2
+    spot = np.abs(box(lum, 3) - box(lum, radius)) > threshold
+    spot = cv2.dilate(spot.astype(np.uint8), np.ones((2 * grow + 1, 2 * grow + 1), np.uint8))
+    img = np.round(np.clip(a, 0, 1) * 255).astype(np.uint8)
+    out = cv2.inpaint(img, spot, 6, cv2.INPAINT_TELEA)
+    print("pack_aerial: filled %.2f%% of the picture's spots" % (100.0 * float(spot.mean())))
+    return out.astype(np.float32) / 255.0
+
+
 IMPORT = """[remap]
 
 importer="texture"
@@ -143,6 +157,9 @@ def main():
                     help="0..1: how far the darkest spots (moss clumps, shadowed holes) rise toward their surroundings")
     ap.add_argument("--lift-radius", type=int, default=12,
                     help="px (at 2048) of the neighbourhood --lift-darks compares with: as big as the dark clumps")
+    ap.add_argument("--fill-spots", type=float, default=0.0,
+                    help="0..1: a spot this much lighter or darker than its neighbourhood (a bush, a white stone) is "
+                         "painted out from its surroundings — on a layer tiled every 140 m it repeats as a row of dots")
     ap.add_argument("--black", type=float, default=0.0,
                     help="0..1: the black point lifted to this (a rock photo's baked-in shadow fights the scene's sun)")
     ap.add_argument("--warm", type=float, default=0.0,
@@ -161,6 +178,9 @@ def main():
     a = np.asarray(Image.fromarray(np.round(a * 255).astype(np.uint8)).resize((SIZE, SIZE), Image.LANCZOS),
                    dtype=np.float32) / 255.0
     lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    if args.fill_spots > 0.0:
+        a = fill_spots(a, lum, args.fill_spots)
+        lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
     if args.lift_darks > 0.0:
         # a spot darker than its neighbourhood is lifted toward it: holes and
         # dark moss read as black pits on a rock face at map size

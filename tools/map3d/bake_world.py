@@ -876,6 +876,11 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     fangle = np.zeros((vh, vw), dtype=np.float16)
     farm = np.zeros((vh, vw), dtype=np.float32)
     crop = np.zeros((vh, vw), dtype=np.int8)
+    # the settled ground round each village (visual review 2026-10-05: the
+    # fields read scattered in the woods, not round the towns): crofts, arable
+    # and meadow open, the common pasture partly — bake_trees thins the woods by it
+    settled = np.zeros((vh, vw), dtype=np.float32)
+    reach = np.zeros((vh, vw), dtype=np.float32)    # within a village's reach at all
     # THE OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实). Each
     # vertex belongs to its NEAREST settlement (a Voronoi of their centres,
     # cut at a coarse step and read back), and lies in one of its zones:
@@ -999,6 +1004,9 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
                 tt[sel] = np.array([r_[2] for r_ in rows], dtype=np.float32)[ci]
                 weight[sel] = rules["zone_weight_" + zone]
         m = ok * within * (weight > 0)
+        pasture = ~croft & ~arable & ~meadow
+        reach[y0:y1] = within * land[y0:y1]
+        settled[y0:y1] = reach[y0:y1] * np.where(pasture, rules["pasture_open"], 1.0)
         # a hedge round each croft close; a grass balk between furlongs
         hedge = np.where(croft, 1.0 - rules["croft_hedge_depth"] * np.clip(1.0 - edge / rules["croft_hedge_m"], 0, 1) ** 2, 1.0)
         own = 1.0 + rules["field_shade"] * (2.0 * hash01(np.where(croft, cfid, fid) ^ (bid << 48), 7) - 1.0)
@@ -1027,6 +1035,14 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     tw *= (1.0 - 0.85 * farm)[..., None]
     for t in range(NT):
         tw[..., t] += rules["field_strength"] * farm * (crop == t)
+    # the settled ground's woods are thinned (bake_trees settled_clear): within
+    # a village's reach the forest floor gives way to grass, or cleared land
+    # would read as a dark wood with no trees on it (the woods left standing
+    # darken their own floor, woods.png)
+    for t in (FOREST, LEAVES):
+        moved = tw[..., t] * (rules["settled_grass"] * reach)
+        tw[..., t] -= moved
+        tw[..., GRASS] += moved
     # the built ground: trodden earth among the yards' grass (look route
     # 2026-09-30: all dirt under a light tint read as a brown pad)
     tw *= (1.0 - rules["footprint_ground_cut"] * foot)[..., None]
@@ -1037,7 +1053,16 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     tint = tint * (1.0 - foot[..., None]) + blocks * foot[..., None]
     print("bake_world: patchwork %.1f%% of the land sown, %.2f%% built" % (
         100.0 * float(farm[land].mean()), 100.0 * float(foot[land].mean())))
-    return tint, field_map(ftint, fangle), house_rows
+    return tint, field_map(ftint, fangle), house_rows, settled_map(settled)
+
+
+def settled_map(settled, step=FIELD_MAP_STEP):
+    """The settled ground (0..1 per vertex) as bake_trees reads it: L8 at
+    one texel per `step` vertices, averaged over the texel."""
+    h, w = settled.shape
+    hh, ww = h // step, w // step
+    a = settled[:hh * step, :ww * step].astype(np.float32).reshape(hh, step, ww, step).mean(axis=(1, 3))
+    return np.round(np.clip(a, 0, 1) * 255).astype(np.uint8)
 
 
 def main(argv=None):
@@ -1317,12 +1342,13 @@ def main(argv=None):
     tw[..., DIRT] += 2.0 * beach * (1.0 - grain)
     tw[..., SAND] += 2.0 * beach * grain
     del grain
-    tint, fmap, house_rows = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
+    tint, fmap, house_rows, smap = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
                                t_rock, beach, wet, k, vw, vh, pw, ph, origin)
     # read by Map3DView for the patched terrain shader (Map3DGroundTint):
     # FIELD_MAP_STEP vertices to a texel, from the pack's own corner
     Image.fromarray(fmap, "RGBA").save(os.path.join(OUT, "fields.png"))
-    del fmap
+    Image.fromarray(smap, "L").save(os.path.join(OUT, "settled.png"))
+    del fmap, smap
     del t_rock, t_cliff, keep, beach
     depth = np.clip(-height / 150.0, 0, 1)
     tw[~land] = 0.0

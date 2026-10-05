@@ -49,7 +49,7 @@ func prepare(scene_path: String) -> void:
 		return
 	mat.set("shader_override_enabled", true)
 	var shader: Shader = mat.get("shader_override")
-	var patched := "" if shader == null else Map3DGroundTint.patch(shader.code)
+	var patched := "" if shader == null else Map3DGroundEdge.patch(Map3DGroundTint.patch(shader.code))
 	if patched == "":
 		mat.set("shader_override_enabled", false)
 		push_warning("Map3DView: Terrain3D's shader has no line to tint — the themes leave the ground plain")
@@ -78,6 +78,7 @@ func prepare(scene_path: String) -> void:
 			look.heat_ramp[i] if i < look.heat_ramp.size() else MapTerrain.FALLBACK)
 	_apply_woods(scene_path)
 	Map3DGroundRelief.apply(_tint_mat, scene_path, look)
+	Map3DGroundEdge.apply(_tint_mat, look)
 	# the bake's field map (owner 2026-09-19): furrows up close, the crops'
 	# colour eased back far out; without it both stay off
 	var fields := load_field_map(scene_path)
@@ -87,7 +88,7 @@ func prepare(scene_path: String) -> void:
 	else:
 		mat.call("set_shader_param", "field_map", fields)
 		mat.call("set_shader_param", "field_m_per_texel", FIELD_MAP_M_PER_TEXEL)
-		for key: String in ["furrow_m", "furrow_depth", "strip_m", "strip_shade", "field_fade",
+		for key: String in ["furrow_m", "furrow_depth", "furrow_sharp", "strip_m", "strip_shade", "field_fade",
 				"field_fade_near_m", "field_fade_far_m"]:
 			mat.call("set_shader_param", key, float(look.get(key)))
 

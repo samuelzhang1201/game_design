@@ -30,3 +30,4 @@ sown_keep_chance,0.97,woods: a sown field is left clear unless the wood's chance
 species_edge_dither,0.3,"woods: how far each clump's own draw blurs the edge between a conifer patch and a broadleaf one (0 = a clean line)"
 fray_wave_m,260,"woods: the wavelength of a fine noise laid on the woodedness before the edge squeeze, so a wood's rim frays in tongues and outliers instead of following its cells' straight sides"
 fray_gain,0.35,woods: how far that noise swings the woodedness
+settled_clear,0.45,"woods (visual review 2026-10-05: the fields read scattered in the woods, not round the towns; 0.9 left the towns in bare country): how far the settled ground round each village (bake_world's settled.png — crofts, fields and meadow 1, the common pasture its pasture_open) takes the woods' chance down, before the edge squeeze"

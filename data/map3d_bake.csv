@@ -52,8 +52,8 @@ footprint_tint,#D6CBBE,"3D bake village footprints: the built ground's multiplie
 footprint_block_m,70,3D bake village footprints: the wavelength of the blocky light and dark within it (houses and yards)
 footprint_block_depth,0.32,3D bake village footprints: how far the blocks darken
 footprint_edge_noise,0.5,3D bake village footprints: how far (as a share of its radius) the edge frays
-field_edge_soft_m,12,"3D bake fields: over this many metres before a furlong's edge its crop gives way to the ground under it — the grass BALK between furlongs (90 until the open fields of 2026-10-01; 30 drew a dark line round every furlong, a tiled floor at 3 km)"
-field_warp_m,100,"3D bake fields (critic round 1): how far, in metres, the field layout is displaced by noise, so the hedges wander instead of ruling straight Voronoi edges"
+field_edge_soft_m,1,"3D bake fields: over this many metres before a furlong's edge its crop gives way to the ground under it. Under a vertex (20 m) on purpose (visual review 2026-10-05): a wider balk caught only some vertices on each edge and drew the furlongs' seams as black dashes at the opening zoom; the furlongs part by their own colour and strips"
+field_warp_m,50,"3D bake fields (critic round 1): how far, in metres, the field layout is displaced by noise, so the hedges wander instead of ruling straight Voronoi edges; 100 drew lobed, amoeba fields once the woods round them were cleared (visual review 2026-10-05)"
 field_warp_wave_m,420,3D bake fields: the wavelength of that displacement
 field_shade,0.06,"3D bake fields: each field its own brightness, +- this share"
 field_grain,0.05,"3D bake fields: a fine grain of light and dark inside every field, +- this share"
@@ -193,3 +193,5 @@ ship_margin_m,3,ships: a hull's water is tested this much wider all round (the b
 relief_ao_dirs,12,"3D bake (visual review 2026-10-05, bake_relief_ao.py): the sky occlusion looks along this many directions round each 40 m texel"
 relief_ao_radii_m,40|80|160|320|640|1280|2560|5120,"3D bake: how far (metres) each direction looks for the horizon, near to far — the far steps let a valley kilometres wide darken, the near ones a terrace's foot"
 relief_ao_blur_texels,1.0,"3D bake: a Gaussian blur (in 40 m texels) over the occlusion, so the Azgaar cells' creases do not draw fine light seams"
+pasture_open,0.25,"3D bake open fields (visual review 2026-10-05): how open the common pasture is in the settled ground bake_trees thins the woods by (crofts, arable and meadow are 1) — grazed land keeps some woods"
+settled_grass,0.9,"3D bake open fields (visual review 2026-10-05): the share of the forest floor (aerial_canopy, leaves) turned to grass within a village's reach, where data/map3d_trees.csv settled_clear thins the woods; the woods left there darken their own floor (woods.png)"

@@ -29,6 +29,9 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 ## darkens the field.
 @export var furrow_m := 9.0
 @export var furrow_depth := 0.14
+## How thin a furrow's dark line is (1: half the spacing, a soft wave; 4: a
+## fine line on light ground).
+@export var furrow_sharp := 1.0
 ## Each furlong's strips (owner 2026-10-01: 田地的布局要更合理真实): their width
 ## (metres), and how far a strip's own shade lifts or darkens it (0: none).
 @export var strip_m := 22.0
@@ -39,6 +42,15 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 @export var field_fade := 0.35
 @export var field_fade_near_m := 5000.0
 @export var field_fade_far_m := 22000.0
+
+## The grounds' edges per pixel (Map3DGroundEdge): how far (metres) a field's,
+## a wood's or a beach's edge wanders off Terrain3D's 20 m vertex steps, the
+## wander's wavelength, its fine octave's share, and the camera distance it is
+## gone by (0: the stairs).
+@export var edge_warp_m := 0.0
+@export var edge_warp_wave_m := 60.0
+@export var edge_warp_fine := 0.35
+@export var edge_warp_far_m := 9000.0
 
 @export_group("Woods")
 ## How far the ground under the woods (bake/woods.png) goes toward the canopy
