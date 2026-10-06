@@ -186,6 +186,11 @@ func _process(delta: float) -> void:
 			Game.publish_news("The %s at %s is complete." % [
 				String((Game.data.manor_buildings.get(String(w["building"]), {}) as Dictionary).get("label", w["building"])).to_lower(),
 				MapManors.label_of(Game.data, int(w["cell"]))])
+		# the columns march before the couriers ride (TickEngine), so their news first
+		for code: String in out.get("arrived", []):
+			var arrived := ArmySystem.arrival_headline(Game.data, Game.state, code)
+			if arrived != "":
+				Game.publish_news(arrived)
 		for e: Dictionary in out.get("couriers", []):
 			Game.publish_news(CourierSystem.headline(Game.data, e))
 		# A building that first stands idle for want of inputs (M5), once.
