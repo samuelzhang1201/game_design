@@ -194,3 +194,50 @@ func test_a_window_keeps_the_sheets_sizes_on_the_table() -> void:
 		assert_eq(int(g["size"]), int(round(repo.bal("war_grid_label_px") * mag)))
 	assert_almost_eq(WarSheetInk.town_label_box(repo, {"at": Vector2.ZERO, "tier": 0, "label": "Abc"}, mag).size.x,
 		WarSheetInk.town_label_box(repo, {"at": Vector2.ZERO, "tier": 0, "label": "Abc"}).size.x * mag, 0.01)
+
+
+func test_a_window_draws_the_sheets_own_woods() -> void:
+	var bake := WarBake.of(repo)
+	if bake == null:
+		pass_test("no bake in this checkout")
+		return
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	var matched := 0
+	for s: Dictionary in WarSheets.series(repo):
+		var r: Rect2 = s["rect"]
+		var whole := WarSheetInk.strokes(repo, state, s, tex, bake)
+		if (whole["woods"] as Array).size() < 20:
+			continue
+		var win := Rect2(r.position + r.size * Vector2(0.37, 0.41), r.size * 0.3)   # an arbitrary corner
+		var part := WarSheetInk.strokes(repo, state, s, tex, bake, win)
+		var k_whole := float(tex) / r.size.x
+		var k_part := float(tex) / win.size.x
+		var sheet_at: Array = (whole["woods"] as Array).map(func(w: Dictionary) -> Vector2: return (w["at"] as Vector2) / k_whole + r.position)
+		for w: Dictionary in part["woods"]:
+			var pack: Vector2 = (w["at"] as Vector2) / k_part + win.position
+			if not win.has_point(pack):
+				continue
+			var near := sheet_at.any(func(p: Vector2) -> bool: return p.distance_to(pack) < 0.01)
+			assert_true(near, "a patch tree at %s is not one of the sheet's" % pack)
+			matched += 1
+		if matched > 0:
+			return
+	fail_test("no sheet with woods to compare")
+
+
+func test_a_window_keeps_a_town_whose_name_reaches_into_it() -> void:
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	for s: Dictionary in WarSheets.series(repo):
+		var r: Rect2 = s["rect"]
+		for code: String in repo.burgs:
+			var b: Dictionary = repo.burgs[code]
+			var at := Vector2(float(b["x"]), float(b["y"]))
+			if not r.grow(-r.size.x * 0.2).has_point(at):
+				continue
+			# a window starting just right of the town: its ring is out, its name runs in
+			var win := Rect2(at + Vector2(0.3, -r.size.y * 0.1), r.size * 0.2)
+			var part := WarSheetInk.strokes(repo, state, s, tex, null, win)
+			var labels := (part["towns"] as Array).map(func(t: Dictionary) -> String: return String(t["label"]))
+			assert_true(labels.has(String(b["label"])), "%s's name is cut at the patch's edge" % b["label"])
+			return
+	fail_test("no town to test")

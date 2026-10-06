@@ -950,3 +950,60 @@ func test_the_near_zoom_patch_comes_on_close_and_goes_far() -> void:
 		"drawn once, then left alone")
 	view.set_active(false)
 	assert_eq((view.get_node("%DetailViewport") as SubViewport).size, Vector2i(2, 2), "given back when the room shuts")
+
+
+func _open_ground() -> Vector2:
+	var r: Rect2 = WarSheets.series(repo)[0]["cell"]
+	var at: Vector2 = view.screen_pos_of_px(r.get_center())
+	if view.piece_under(at) != "":
+		at += Vector2(40, 40)
+	return at
+
+
+func test_a_pointer_that_leaves_the_view_reads_nothing() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	_hover(_open_ground())
+	view.notification(Control.NOTIFICATION_MOUSE_EXIT)   # onto the folio, the margin, the bars
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_not_emitted(view, "ground_hovered")
+
+
+func test_a_camera_move_clears_the_slip_and_restarts_the_rest() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	_hover(_open_ground())
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_emit_count(view, "ground_hovered", 1)
+	view.lean_to(view.camera_rig().distance * 0.9)   # the wheel, a key pan, the north turn
+	assert_signal_emitted(view, "hover_cleared")
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_emit_count(view, "ground_hovered", 1, "no stale reading after the move")
+
+
+func test_no_reading_while_an_order_is_being_aimed() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	view.aiming = true   # the confirm menu is up beside the tip
+	_hover(_open_ground())
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_not_emitted(view, "ground_hovered")
+	view.aiming = false
+
+
+func test_closing_at_a_near_lean_unbinds_the_patch_and_reopening_redraws_it() -> void:
+	view._inks.frame_done = get_tree().process_frame
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	view.lean_to(repo.bal("war_cam_min_m"))
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 1.0)
+	view.set_active(false)
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 0.0, "no patch sampled from a given-back target")
+	assert_null(mat.get_shader_parameter("detail_tex"))
+	view.set_active(true)
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 1.0, "drawn again on reopening at the same lean")
+	assert_gt((view.get_node("%DetailViewport") as SubViewport).size.x, 2)

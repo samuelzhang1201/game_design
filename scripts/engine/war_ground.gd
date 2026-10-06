@@ -43,8 +43,9 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 static func _for_regiment(repo: DataRepository, state: GameState, at: Vector2, code: String, g: Dictionary) -> Dictionary:
 	var reg := ArmySystem.regiment(repo, code)
 	var naval := String(reg.get("is_naval", "0")) == "1"
-	var out := {"code": code, "label": String(reg.get("label", code)), "ashore": naval and not bool(g["sea"])}
-	if bool(out["ashore"]):
+	var out := {"code": code, "label": String(reg.get("label", code)), "ashore": naval and not bool(g["sea"]),
+		"afloat": not naval and bool(g["sea"])}   # ARMY_MARCH refuses the sea: no pace, no days
+	if bool(out["ashore"]) or bool(out["afloat"]):
 		return out
 	var works := String(g["works"]) if String(g["town"]) != "" and String(g["town_holder"]) == String(reg.get("kingdom_code", "")) else ""
 	out["defend"] = _factor(repo, state, code, "defend", String(g["terrain"]), works)
@@ -109,6 +110,9 @@ static func _regiment_lines(_repo: DataRepository, r: Dictionary, raking: bool, 
 	out.append({"text": "%s here" % g["label"], "kind": "rubric"})
 	if bool(g["ashore"]):
 		_add(out, "A fleet cannot go ashore")
+		return
+	if bool(g.get("afloat", false)):
+		_add(out, "It cannot march into the sea")
 		return
 	_add(out, "Defend ×%.2f · Attack ×%.2f" % [float(g["defend"]) / 1000.0, float(g["attack"]) / 1000.0])
 	var d := int(g["delta_m"])

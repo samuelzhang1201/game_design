@@ -86,12 +86,18 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		for seam: PackedVector2Array in MapOwnership.seams_of(repo, state, kd):
 			if _touches(r, seam):
 				(out["seams"] as Array).append(_to_tex(r, k, seam))
+	# a window keeps what reaches into it: a town's name runs a dozen letters
+	# past its ring, so a patch never cuts a name the sheet draws
+	var keep := r
+	if window.size.x > 0.0:
+		var sheet_k := repo.bal("war_sheet_texture_px") / (sheet["rect"] as Rect2).size.x
+		keep = r.grow(repo.bal("war_ink_label_px") * 16.0 * repo.bal("war_ink_char_w") / sheet_k)
 	var codes: Array = repo.burgs.keys()
 	codes.sort()
 	for code: String in codes:
 		var b: Dictionary = repo.burgs[code]
 		var at := Vector2(float(b["x"]), float(b["y"]))
-		if not r.has_point(at):
+		if not keep.has_point(at):
 			continue
 		var tier := 3 if String(b.get("is_capital", "0")) == "1" else int(TOWN_TIERS.get(String(b.get("group", "")), 0))
 		(out["towns"] as Array).append({"at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
@@ -100,17 +106,21 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if String(m["kind"]) != "high":
 			continue
 		var at: Vector2 = m["pos"]
-		if r.has_point(at):
+		if keep.has_point(at):
 			(out["peaks"] as Array).append({"at": (at - r.position) * k, "metres": int(m["metres"]), "lod": int(m["lod"])})
 	for m: Dictionary in Elevation.landmarks(repo):
-		if String(m["kind"]) == "low" and r.has_point(m["pos"]):
+		if String(m["kind"]) == "low" and keep.has_point(m["pos"]):
 			(out["hollows"] as Array).append({"at": ((m["pos"] as Vector2) - r.position) * k,
 				"metres": int(m["metres"]), "lod": int(m["lod"])})
 	if bake != null:
 		var step := repo.bal("war_ink_wood_step_km") * WarSheets.px_per_unit(repo)
 		var min_cover := repo.bal("war_ink_wood_min_cover")
-		for w: Dictionary in bake.woods(r, step):
-			var at: Vector2 = w["at"]
+		# sampled on the SHEET's grid (a window starts on it), each point taken
+		# back to its grid index, so a patch draws exactly the sheet's trees
+		var r0: Vector2 = (sheet["rect"] as Rect2).position
+		var start := r0 + ((keep.position - r0) / step).floor() * step
+		for w: Dictionary in bake.woods(Rect2(start, keep.end - start), step):
+			var at: Vector2 = r0 + (((w["at"] as Vector2) - r0) / step).round() * step
 			# a glyph where the canopy is thick enough, chosen by a fixed hash so
 			# a sheet always draws the same woods
 			var roll := float(absi(hash(Vector2i(roundi(at.x * 100.0), roundi(at.y * 100.0)))) % 1000) / 1000.0
@@ -118,7 +128,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 				var jitter := Vector2(float(absi(hash([at.x, at.y, 1])) % 200) - 100.0,
 					float(absi(hash([at.x, at.y, 2])) % 200) - 100.0) / 100.0 * step * repo.bal("war_ink_wood_jitter")
 				(out["woods"] as Array).append({"at": (at + jitter - r.position) * k, "conifer": float(w["conifer"]) > 0.5})
-	_manors(repo, state, r, k, out, px_k)
+	_manors(repo, state, r, k, out, px_k, keep)
 	var framed := sheet
 	if window.size.x > 0.0:
 		framed = sheet.duplicate()
@@ -182,12 +192,13 @@ static func manor_label_box(repo: DataRepository, m: Dictionary, px_k := 1.0) ->
 ## (a province seam or the coast is drawn already) — and each manor's name at
 ## its centre unless its box would touch a town's ring or name (a town's name
 ## wins; war_ink_manor_clear_px of air kept round it).
-static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, out: Dictionary, px_k := 1.0) -> void:
+static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, out: Dictionary, px_k := 1.0,
+		keep := Rect2()) -> void:
 	var first: Dictionary = {}   # edge key -> the cell that met it first
 	var ids: Array = repo.cells.keys()
 	ids.sort()
 	var clear := repo.bal("war_ink_manor_clear_px") * px_k
-	var reach := r.grow(r.size.x * 0.05)
+	var reach := (keep if keep.size.x > 0.0 else r).grow(r.size.x * 0.05)
 	for id: int in ids:
 		var cell: Dictionary = repo.cells[id]
 		if MapTerrain.is_water(cell):

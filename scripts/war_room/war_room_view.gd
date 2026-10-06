@@ -40,9 +40,12 @@ signal hover_cleared
 
 var aiming := false:
 	set(v):
+		var was := aiming
 		aiming = v
 		if not v:
 			_rake.to = Vector2(-1, -1)
+			if was:
+				hover_cleared.emit()   # the rake's destination slip goes with the aim
 		if _repo != null and is_inside_tree():
 			_rake.redraw()
 var aim_dest := Vector2(-1, -1)
@@ -103,8 +106,8 @@ var _toss_n := 0
 ## No slip while the camera or the sheet moves, in board mode, or while a
 ## popup or a text box has the input (spec §4.2).
 func hover_allowed() -> bool:
-	if _sheet < 0 or _board_mode != "table" or rolling() or tossing():
-		return false
+	if _sheet < 0 or _board_mode != "table" or rolling() or tossing() or aiming:
+		return false   # aiming: the order's confirm menu stands beside the tip
 	var owner := get_viewport().gui_get_focus_owner()
 	return not (owner is LineEdit or owner is TextEdit)
 
@@ -244,6 +247,10 @@ func set_active(on: bool) -> void:
 	if not on:
 		_detail_state = {}
 		(%DetailViewport as SubViewport).size = Vector2i(2, 2)   # the patch's render target given back
+		var table_mat := _table.get_active_material(0) as ShaderMaterial
+		if table_mat != null:   # and unbound, so a reopened room never samples the empty target
+			table_mat.set_shader_parameter("detail_on", 0.0)
+			table_mat.set_shader_parameter("detail_tex", null)
 		_dwell.clear()
 		hover_cleared.emit()
 		_finish_swap()
@@ -251,6 +258,8 @@ func set_active(on: bool) -> void:
 		_inks.trim(1)  # and only the laid sheet's ink kept
 	if on:
 		_fit_viewport()
+		if _sheet >= 0 and _repo != null:
+			_update_detail()   # reopened at a near lean: the patch is drawn again
 
 
 ## Lay sheet `index`: the relief, its ink, the camera framed on it.
@@ -558,6 +567,8 @@ func _paint_ink(mat: ShaderMaterial) -> void:
 
 func _apply_camera() -> void:
 	_camera.transform = _rig.transform()
+	if _dwell.clear():   # the ground under the pointer moved: the slip goes, the rest restarts
+		hover_cleared.emit()
 	if _repo != null:
 		_pieces.set_camera_distance(_rig.distance)
 		var mat := _table.get_active_material(0) as ShaderMaterial
@@ -770,6 +781,11 @@ func _ground_under(screen_px: Vector2) -> Vector3:
 	var at := pack_at(screen_px)
 	return table_point(at) if at.x >= 0.0 else _rig.target
 
+
+## The pointer left the view (onto the folio, the margin, a bar): no rest to read.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_MOUSE_EXIT and _dwell.clear():
+		hover_cleared.emit()
 
 func _gui_input(event: InputEvent) -> void:
 	if _sheet < 0:

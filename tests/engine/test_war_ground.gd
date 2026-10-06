@@ -126,3 +126,11 @@ func test_a_reading_stays_inside_its_budget() -> void:
 	WarGround.reading(repo, state, far, code)
 	var ms := float(Time.get_ticks_usec() - t0) / 1000.0
 	assert_lt(ms, repo.bal("war_hover_budget_ms"), "%.2f ms" % ms)
+
+
+func test_a_land_regiment_cannot_march_into_the_sea() -> void:
+	var r := WarGround.reading(repo, state, _sea_point(), _land_code())
+	assert_true(bool(r["regiment"]["afloat"]))
+	var texts := WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
+	assert_true(texts.has("It cannot march into the sea"))
+	assert_false(texts.any(func(t: String) -> bool: return t.contains("away") or t.contains("Defend")))

@@ -1020,3 +1020,21 @@ func test_a_dropped_rake_hides_the_slip() -> void:
 	await wait_process_frames(1)
 	view.rake_dropped.emit()
 	assert_false(slip.visible)
+
+
+func test_the_rakes_slip_goes_when_the_aim_ends() -> void:
+	var screen := await _open_room()
+	var view := screen.view()
+	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
+	var code := ""
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		if String(r.get("is_naval", "0")) != "1":
+			code = String(r["regiment_code"])
+			break
+	view.aiming = true
+	var at := Vector2(view.size) * 0.5
+	view.rake_aimed.emit(code, view.pack_at(at), at)
+	await wait_process_frames(1)
+	assert_true(slip.visible)
+	view.aiming = false   # COMMIT, a click away or Escape: ArmyOrderMenu._set_aim("")
+	assert_false(slip.visible)
