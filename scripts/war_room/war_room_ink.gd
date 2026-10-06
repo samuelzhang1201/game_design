@@ -17,13 +17,16 @@ const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_
 ## The intelligence layer's widths (war_intel_<k>_px) and ratios (war_intel_<k>).
 const INTEL_PX := ["supply", "supply_dash", "supply_gap", "courier", "weather", "label", "spy_ring"]
 const INTEL_RATIOS := ["supply_loss_fade"]
+## The fine print's widths (war_fine_<k>_px), by short key.
+const FINE_PX := ["note", "route", "mark", "figure"]
 ## How many sheets' ink are kept: the laid one and one more.
 const KEEP := 2
 ## The ink viewport's size at rest (the smallest a viewport takes).
 const REST := Vector2i(2, 2)
 
 var cache: Dictionary = {}   # sheet index -> {key, tex}
-var intel: Dictionary = {}   # the laid sheet's intelligence layer: {sheet, key, tex}
+var intel: Dictionary = {}
+var fine: Dictionary = {}    # sheet index -> {key, tex}: the fine print (WarFinePrint)   # the laid sheet's intelligence layer: {sheet, key, tex}
 var _order: Array[int] = []  # cached sheets, least recently laid first
 ## The frame the draw is read back after (a headless run never draws, so a
 ## test hands in the tree's process_frame).
@@ -101,6 +104,40 @@ func _touch(sheet: int) -> void:
 func trim(count: int) -> void:
 	while _order.size() > count:
 		cache.erase(_order.pop_front())
+	for s: int in fine.keys():
+		if not cache.has(s):
+			fine.erase(s)
+
+
+## The sheet's fine print as a texture, the ink's size, drawn when the same
+## key turns as the ink's; null headless or when a later draw took over.
+func fine_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubViewport,
+		painter: WarInkPainter, font: Font, still_wanted: Callable) -> Texture2D:
+	var key := WarSheetInk.cache_key(state, sheet)
+	var held: Dictionary = fine.get(sheet, {})
+	if held.get("key", -1) == key:
+		return held.get("tex") as Texture2D
+	var row: Dictionary = WarSheets.series(repo)[sheet]
+	var size := tex_size(repo, row["rect"])
+	_gen += 1
+	var gen := _gen
+	viewport.size = size
+	var widths := {}
+	for k: String in FINE_PX:
+		widths[k] = repo.bal("war_fine_%s_px" % k)
+	painter.paint(WarFinePrint.strokes(repo, state, row, size.x, WarBake.of(repo)), repo.war_palette, widths, font, false, true)
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	await frame_done
+	if gen != _gen:
+		return null
+	var img: Image = viewport.get_texture().get_image() if bool(still_wanted.call()) else null
+	if is_instance_valid(viewport):
+		viewport.size = REST
+	if img == null or img.is_empty():
+		return null
+	img.generate_mipmaps()
+	fine[sheet] = {"key": key, "tex": ImageTexture.create_from_image(img)}
+	return fine[sheet]["tex"]
 
 
 ## The laid sheet's intelligence layer (WarIntelInk), redrawn when its key

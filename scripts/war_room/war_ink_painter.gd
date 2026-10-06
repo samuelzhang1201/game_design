@@ -9,10 +9,12 @@ var pal: Dictionary = {}
 var px: Dictionary = {}   # the war_ink_* widths and ratios, by short key
 var font: Font
 var intel := false   # the intelligence layer (WarIntelInk), not the sheet's ink
+var fine := false    # the fine print (WarFinePrint), not the sheet's ink
 
 
-func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font, as_intel := false) -> void:
+func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font, as_intel := false, as_fine := false) -> void:
 	intel = as_intel
+	fine = as_fine
 	ink = p_ink
 	pal = p_pal
 	px = p_px
@@ -25,6 +27,9 @@ func _draw() -> void:
 		return
 	if intel:
 		_draw_intel()
+		return
+	if fine:
+		_draw_fine()
 		return
 	var c_ink: Color = pal["ink"]
 	var c_faint: Color = pal["ink_faint"]
@@ -196,6 +201,42 @@ func _draw_intel() -> void:
 			draw_polyline(d, pal["rubric"], float(px["supply"]), true)
 		draw_string(font, at + Vector2(float(sp["radius"]) + 4.0, 0), String(sp["text"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["intel_label"]), pal["rubric"])
+
+
+## The fine print (WarFinePrint): notes and route names in faint ink, minor
+## heights as small marks, contour figures in rubric, each turned to its angle.
+func _draw_fine() -> void:
+	var c_ink: Color = pal["ink"]
+	var c_faint: Color = pal["ink_faint"]
+	var c_fig: Color = pal["rubric"]
+	for n: Dictionary in ink["notes"]:
+		draw_string(font, n["at"], String(n["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["note"]), c_ink)
+	for r: Dictionary in ink["routes"]:
+		_turned_text(r["at"], float(r["angle"]), String(r["text"]), int(px["route"]), c_ink)
+	for m: Dictionary in ink["marks"]:
+		var at: Vector2 = m["at"]
+		var s := float(px["mark"])
+		var pts := PackedVector2Array([at + Vector2(0, -s), at + Vector2(s * 0.9, s * 0.6), at + Vector2(-s * 0.9, s * 0.6)])
+		if String(m["kind"]) == "high":
+			draw_colored_polygon(pts, c_faint)
+		else:
+			pts = PackedVector2Array([at + Vector2(-s * 0.9, -s * 0.6), at + Vector2(s * 0.9, -s * 0.6), at + Vector2(0, s), at + Vector2(-s * 0.9, -s * 0.6)])
+			draw_polyline(pts, c_faint, maxf(s * 0.2, 1.0), true)
+		draw_string(font, at + Vector2(s * 1.4, s * 0.5), "%d m" % int(m["metres"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["note"]), c_faint)
+	for f: Dictionary in ink["figures"]:
+		_turned_text(f["at"], float(f["angle"]), String(f["text"]), int(px["figure"]), c_fig)
+
+
+## Text centred on `at`, turned by `angle`, on a parchment knock-out so the
+## line under it does not run through the figure.
+func _turned_text(at: Vector2, angle: float, text: String, size: int, color: Color) -> void:
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	draw_set_transform(at, angle, Vector2.ONE)
+	var ground: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
+	ground.a = 0.6
+	draw_rect(Rect2(Vector2(-w * 0.5 - 2.0, -float(size) * 0.8), Vector2(w + 4.0, float(size))), ground)
+	draw_string(font, Vector2(-w * 0.5, float(size) * 0.1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## The hollows: a ▽ outlined, with its depth.

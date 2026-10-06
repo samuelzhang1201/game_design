@@ -61,6 +61,10 @@ uniform vec4 grid_ink : source_color = vec4(0.608, 0.173, 0.122, 1.0); // faded 
 uniform float neat_band_alpha = 0.85;
 // the intelligence layer (v2 B Task 9): premultiplied sRGB bytes, as ink_tex
 uniform sampler2D intel_tex : filter_linear_mipmap_anisotropic, hint_default_transparent;
+// the fine print (spec 2026-10-07-war-room-scale-hover §3): premultiplied sRGB
+// bytes as ink_tex, faded in by the camera's distance (WarNear.fine_alpha)
+uniform sampler2D fine_tex : filter_linear_mipmap_anisotropic, hint_default_transparent;
+uniform float fine_alpha = 0.0;
 
 varying float metres;
 varying float raw_metres;
@@ -159,6 +163,10 @@ void fragment() {
 	vec3 straight = srgb_to_linear(inked.rgb / max(inked.a, 1e-4));
 	float ink_a = inked.a * collar_k;
 	col = col * (1.0 - ink_a) + straight * ink_a;
+	vec4 fined = texture(fine_tex, vec2(UV.x, UV.y * tex_aspect));
+	vec3 fine_straight = srgb_to_linear(fined.rgb / max(fined.a, 1e-4));
+	float fine_a = fined.a * collar_k * fine_alpha;
+	col = col * (1.0 - fine_a) + fine_straight * fine_a;
 
 	// the neat line: a rule on the cell's edge and a hairline neat_gap_px inside
 	// it, in screen px by fwidth (computed outside any branch)

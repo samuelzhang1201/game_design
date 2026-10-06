@@ -254,6 +254,7 @@ func lay_sheet(index: int) -> void:
 	_table.mesh = WarRoomTable.build_mesh(WarRoomTable.clamp_sea(raw), _nx, _nz, _table_w, _depth, _y_scale, raw, shore, _heights)
 	var mat := _table.get_active_material(0) as ShaderMaterial
 	mat.set_shader_parameter("intel_tex", null)   # no sheet wears another's intelligence (final review I2)
+	mat.set_shader_parameter("fine_tex", null)
 	WarRoomMaterial.bind(mat, _repo, all[index], _table_w, _depth)
 	_rig.bounds = Rect2(-_table_w * 0.5, -_depth * 0.5, _table_w, _depth)
 	_rig.target = Vector3.ZERO
@@ -510,9 +511,13 @@ func _paint_ink(mat: ShaderMaterial) -> void:
 	_ink_busy += 1
 	var tex := await _inks.texture_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
 		func() -> bool: return is_inside_tree() and sheet == _sheet)
-	_ink_busy -= 1
 	if tex != null:
 		mat.set_shader_parameter("ink_tex", tex)
+	var fine := await _inks.fine_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
+		func() -> bool: return is_inside_tree() and sheet == _sheet)
+	_ink_busy -= 1
+	if fine != null and sheet == _sheet:
+		mat.set_shader_parameter("fine_tex", fine)
 	if _intel_again and _ink_busy == 0:
 		_intel_again = false
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
@@ -522,6 +527,10 @@ func _apply_camera() -> void:
 	_camera.transform = _rig.transform()
 	if _repo != null:
 		_pieces.set_camera_distance(_rig.distance)
+		var mat := _table.get_active_material(0) as ShaderMaterial
+		if mat != null:
+			mat.set_shader_parameter("contour_m", WarNear.contour_m(_repo, _rig.distance))
+			mat.set_shader_parameter("fine_alpha", WarNear.fine_alpha(_repo, _rig.distance))
 		_rake.redraw()
 	camera_moved.emit()
 

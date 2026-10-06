@@ -875,3 +875,15 @@ func test_a_refused_draft_says_why_on_its_slip() -> void:
 	await wait_process_frames(1)
 	var slip := (view.get_node("%Pennants") as WarPennants).pennant(code + "_draft").get_node("Slip") as Label3D
 	assert_string_contains(slip.text, "The chancery cannot pay")
+
+
+func test_leaning_in_writes_the_near_look_into_the_table() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	view.lean_to(repo.bal("war_cam_max_m"))
+	assert_eq(float(mat.get_shader_parameter("fine_alpha")), 0.0)
+	assert_eq(float(mat.get_shader_parameter("contour_m")), repo.bal("war_contour_m"))
+	view.lean_to(repo.bal("war_cam_min_m"))
+	assert_eq(float(mat.get_shader_parameter("fine_alpha")), 1.0)
+	assert_eq(float(mat.get_shader_parameter("contour_m")), WarNear.contour_m(repo, repo.bal("war_cam_min_m")))
