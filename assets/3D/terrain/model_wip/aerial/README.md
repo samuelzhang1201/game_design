@@ -12,7 +12,7 @@ they replace are ground-level photos of 1-2 m of ground, stretched to
 |---|---|---|---|---|
 | `aerial_meadow.png` | T-64 | 954159497 | GRASS | 120 m |
 | `aerial_canopy.png` | T-52 | 954159498 | FOREST | 170 m |
-| `aerial_upland.png` | T-54 | 954159497 | ROCKY | 200 m |
+| `aerial_upland.png` | T-74 | 954159499 | ROCKY | 350 m |
 | `aerial_cliff.png` | T-73 | 954159499 | CLIFF | 200 m |
 | `aerial_snow.png` | T-58 | 954159498 | SNOW | 180 m |
 | `aerial_crop.png` | T-62 | 954159497 | CROP | 140 m |
@@ -23,7 +23,7 @@ into Terrain3D's two maps before `build_pack.sh`:
 
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_meadow.png aerial_meadow --match-mean '#666A35' --normal-strength 0.25 --rough 0.95 --fill-spots 0.2
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_canopy.png aerial_canopy --height-gain 1.3 --rough 0.95
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_upland.png aerial_upland --height-gain 1.2 --lift-patches 1.0 --patch-radius 220 --patch-inner 16 --match-mean '#706850'
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_upland.png aerial_upland --height-gain 1.2 --lift-patches 1.0 --patch-radius 220 --patch-inner 16 --fill-spots 0.1 --fill-dark-only --fill-inner 8 --fill-grow 10 --saturation 0.75 --contrast 0.9 --grey-tint '#BCA888' --grey-tint-amount 0.9 --grey-lift 0.2 --match-mean '#6D654B'
 
 `--lift-patches` (visual review 2026-10-06) raises the upland's dark heather
 blobs to their surroundings' light at low frequency, keeping the grain: tiled
@@ -105,8 +105,17 @@ Known limits: the steepest faces still smear (Terrain3D projects a side view fro
 `projection_threshold` 0.87, the 45-degree snap of a top-down picture), and the
 rock's edge against the grass is the bake's blend.
 
-The upland was tried too (T-71 stony turf, the old T-54 with its white stones
-painted out, T-72 and T-73 seeds) and NOT changed: T-71 took away the stamped
-white stones but left a flat brown blanket with no structure, and the critics
-split on whether that is better. What it needs is new art — sparse warm-grey scree
-patches tens of metres across that do not repeat within a tile.
+The upland, regenerated (owner 2026-10-06: "ok" to new art for it): `aerial_upland.png`
+is T-74 (seed 954159499, Z-Image, `STYLE_CORE_aerial_ground.txt`: a rough upland
+from an aircraft at 600 m, dry golden grass with a few irregular scree patches tens
+of metres across). T-54's white stones repeated every 200 m tile (critics: stamped
+noise); T-71, with the stones painted out, was a flat brown blanket. Its scree was
+blue-grey, so `--grey-tint` turns the GREY pixels toward a tan stone at their own
+light and lifts them (a global `--warm` is undone by `--match-mean`), and
+`--fill-spots --fill-dark-only` paints out the heather's dark oval hollows (they
+read as ponds or burns). Tiled at 350 m (`build_terrain.gd`): at 200 m the patches
+read as specks and repeated. Critic: 4 -> 5.5/10. Rejected: T-75 (a straight path
+crosses every tile), T-76 (white boulders again), T-74's other seeds (patches
+crowded in one corner), every Qwen-2512 tile. Known limits: at 6 km the patches
+dissolve and the snow still meets brown ground with no scree band — that is the
+bake's snow margin, not this picture.

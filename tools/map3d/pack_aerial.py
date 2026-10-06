@@ -95,6 +95,19 @@ def fill_spots(a, lum, threshold, radius=100, grow=6, dark_only=False, inner=3):
     return out.astype(np.float32) / 255.0
 
 
+def tint_greys(a, hex_rgb, amount, lift=0.0):
+    """`a` with its grey pixels (chroma under ~0.12, fading out by then: the
+    stone, not the grass) turned toward `hex_rgb` at their own light, and
+    lightened by `lift` — the colour the rest of the picture keeps."""
+    t = np.array([int(hex_rgb[i:i + 2], 16) / 255.0 for i in (1, 3, 5)], np.float32)
+    w3 = np.array([0.2126, 0.7152, 0.0722], np.float32)
+    lum = a @ w3
+    chroma = a.max(axis=2) - a.min(axis=2)
+    grey = np.clip(1.0 - chroma / 0.12, 0.0, 1.0) * amount
+    toward = np.clip(t[None, None, :] * (lum / max(float(t @ w3), 1e-4))[..., None] * (1.0 + lift), 0, 1)
+    return a + (toward - a) * grey[..., None]
+
+
 IMPORT = """[remap]
 
 importer="texture"
@@ -172,6 +185,12 @@ def main():
                          "(tiled, an upland's heather read as black pits on the hills)")
     ap.add_argument("--patch-inner", type=int, default=12, help="--lift-patches: the patch's own blur (px)")
     ap.add_argument("--patch-radius", type=int, default=120, help="--lift-patches: the surroundings' reach (px)")
+    ap.add_argument("--grey-tint", default="",
+                    help="an sRGB #RRGGBB the picture's GREY pixels (stone, scree) are turned toward, keeping their "
+                         "light: a cool scree on golden grass reads as a second photograph pasted on")
+    ap.add_argument("--grey-tint-amount", type=float, default=0.0, help="--grey-tint: how far, 0..1")
+    ap.add_argument("--grey-lift", type=float, default=0.0,
+                    help="--grey-tint: the grey pixels lightened by this share, so scree reads as stone, not a stain")
     ap.add_argument("--black", type=float, default=0.0,
                     help="0..1: the black point lifted to this (a rock photo's baked-in shadow fights the scene's sun)")
     ap.add_argument("--warm", type=float, default=0.0,
@@ -219,6 +238,9 @@ def main():
         a = np.clip(lum[..., None] + (a - lum[..., None]) * args.saturation, 0, 1)
     if args.warm:
         a = np.clip(a * np.array([1.0 + args.warm, 1.0, 1.0 - args.warm], np.float32), 0, 1)
+    if args.grey_tint and args.grey_tint_amount > 0.0:
+        a = tint_greys(a, args.grey_tint, args.grey_tint_amount, args.grey_lift)
+        lum = a @ np.array([0.2126, 0.7152, 0.0722], np.float32)
     if args.black > 0.0:
         a = args.black + a * (1.0 - args.black)
     if args.match_mean:

@@ -29,7 +29,9 @@ const TEXTURES := [
 	["aerial_meadow", 120.0, 0.16],   # look route 2026-09-30: aerial pictures, tools/map3d/pack_aerial.py
 	["dry_decay_leaves", 160.0, 0.2],
 	["dirt_floor", 180.0, 0.16],
-	["aerial_upland", 200.0, 0.12],
+	# the upland (owner 2026-10-06: T-74, scree patches tens of metres across)
+	# at 350 m: at 200 m its patches read as specks and their repeat showed
+	["aerial_upland", 350.0, 0.12],
 	["excavated_soil_wall", 240.0, 0.1],
 	["sand_03", 120.0, 0.2],
 	["aerial_canopy", 170.0, 0.22],
