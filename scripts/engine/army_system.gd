@@ -299,6 +299,17 @@ static func held_town_of(repo: DataRepository, reg: Dictionary, state: GameState
 		return ""
 	return town
 
+## The town a land regiment is QUARTERED in: one of its own kingdom's
+## (held_town_of) while it is not on the march. The map draws such a regiment
+## as part of its town's garrison counter, not as a piece (owner 2026-10-06,
+## choice A); "" in the field, on the march, and for a fleet.
+static func quartered_in(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
+	if String(reg.get("is_naval", "0")) == "1":
+		return ""
+	if state != null and order_of(repo, state, String(reg.get("regiment_code", ""))) == ORDER_MARCH:
+		return ""
+	return held_town_of(repo, reg, state)
+
 ## The works a regiment fights from: "citadel", "walls" or "town" for the best
 ## its held town has (political/burgs.csv features), "" in the field.
 static func works_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:

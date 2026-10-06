@@ -412,3 +412,39 @@ func test_escape_lets_a_shown_maps_selection_go_but_a_hidden_map_keeps_it() -> v
 	m.visible = true
 	menu._unhandled_input(_escape())
 	assert_eq(m.picked, "", "a shown map lets go")
+
+
+## Owner 2026-10-06 (choice A): a town's garrison lists its regiments; the one
+## chosen is selected on the map and its own orders open where the list stood.
+class GarrisonMap extends Node:
+	signal army_menu_requested(code: String, at: Vector2)
+	signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
+	signal garrison_menu_requested(codes: Array, at: Vector2)
+	var aiming := false
+	var aim_dest := Vector2(-1, -1)
+	var selected := ""
+	func select_army(code: String) -> void:
+		selected = code
+
+
+func test_a_garrison_lists_its_regiments_and_the_chosen_one_takes_orders() -> void:
+	var menu := ArmyOrderMenu.new()
+	add_child_autofree(menu)
+	var map := GarrisonMap.new()
+	add_child_autofree(map)
+	menu.follow(map)
+	var codes := MapObjects.garrison_of(Game.data, Game.state,
+		MapObjects.royal_regiment(Game.data, Game.data.resolve_realm("player_realm")))
+	assert_gt(codes.size(), 1)
+	map.garrison_menu_requested.emit(codes, Vector2(40, 40))
+	assert_true(menu.visible, "the list is up")
+	assert_eq(menu.item_count, codes.size(), "a row a regiment")
+	var second := ArmySystem.regiment(Game.data, String(codes[1]))
+	assert_string_starts_with(menu.get_item_text(1), String(second["label"]))
+	# choose the second, as a click does: the menu hides, then names the row
+	menu.hide()
+	menu.id_pressed.emit(ArmyOrderMenu.GARRISON_ROW + 1)
+	await wait_process_frames(2)
+	assert_eq(map.selected, String(codes[1]), "the chosen regiment is selected on the map")
+	assert_true(menu.visible, "and its orders are open")
+	assert_eq(menu.item_count, Game.data.army_orders.size(), "the regiment's own order rows")

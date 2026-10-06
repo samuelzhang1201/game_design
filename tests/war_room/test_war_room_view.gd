@@ -381,13 +381,15 @@ func test_the_arrow_reads_the_distance_in_the_packs_measure_and_the_arrival_day(
 	var p := _first_land_piece()
 	var code := String(p["code"])
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(10.0, 0.0)
-	var dist := 10.0 * float(repo.map_info.get("distance_scale", "1"))
+	# the rake measures from where the regiment IS (a garrison's piece stands
+	# on its town's point, the regiment within the town's reach)
+	var dist := view.position_of(code).distance_to(to) * float(repo.map_info.get("distance_scale", "1"))
 	# ONE arrival day: the courier's ride, then the march (owner 2026-10-02)
-	var days := CourierSystem.arrival_days(repo, state, code, to, p["at"] as Vector2)
+	var days := CourierSystem.arrival_days(repo, state, code, to, view.position_of(code))
 	var ride := CourierSystem.eta_days(repo, state, CourierSystem.ORDINARY, code) \
 		if CourierSystem.carries_orders(ArmySystem.regiment(repo, code)) else 0
 	# the march walked over its ground from the day the courier reaches it
-	assert_eq(days, ride + ArmySystem.march_days_between(repo, state, code, p["at"] as Vector2, to,
+	assert_eq(days, ride + ArmySystem.march_days_between(repo, state, code, view.position_of(code), to,
 		state.absolute_day() + ride))
 	assert_eq(view.rake_reading(code, to), "%s %s · ~%d day%s" % [WarRoom.group(int(round(dist))),
 		String(repo.map_info.get("distance_unit", "km")), days, "" if days == 1 else "s"])
