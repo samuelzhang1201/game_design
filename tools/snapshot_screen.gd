@@ -199,7 +199,8 @@ var _ledger_select := ""
 ## metres (on --war-piece's place when given, or --war-focus CODE's, which
 ## centres on that piece without clicking it), --war-piece CODE
 ## clicks that regiment's piece (a chalk ring, its card) or, with
-## --war-drag fx,fy (a share of the view), RAKES it there: a real left press
+## --war-hover fx,fy rests the pointer at that share of the view (a real
+## motion) until the hover slip is up; --war-drag fx,fy (a share of the view), RAKES it there: a real left press
 ## on the piece, eight pushed motion events with the left button held, a real
 ## release (the arrow and its COMMIT / CANCEL menu show; --war-commit then
 ## chooses COMMIT the way PopupMenu.activate_item does, so the order's pennant
@@ -236,6 +237,7 @@ var _war_sheet := -1
 var _war_piece := ""
 var _war_folio := ""
 var _war_drag := Vector2(-1, -1)
+var _war_hover := Vector2(-1, -1)   # --war-hover fx,fy: rest the pointer there for the slip
 var _war_zoom := -1.0
 var _war_turn := 0.0
 var _war_cell := ""
@@ -372,6 +374,9 @@ func _ready() -> void:
 		elif args[i] == "--war-drag":
 			var dparts := args[i + 1].split(",")
 			_war_drag = Vector2(float(dparts[0]), float(dparts[1]))
+		elif args[i] == "--war-hover":
+			var hparts := args[i + 1].split(",")
+			_war_hover = Vector2(float(hparts[0]), float(hparts[1]))
 		elif args[i] == "--shot-on":
 			_shot_on = args[i + 1]
 		elif args[i] == "--shot-delay":
@@ -1037,8 +1042,13 @@ func _war_room_step() -> void:
 				_real_click(view, at)
 			print("war: piece=%s sheet=%d at=%s selected=%s aiming=%s" % [_war_piece, view.sheet_index(), at,
 				view.selected_army(), screen.orders().aiming()])
+		if _war_hover.x >= 0.0:
+			_real_move(view, Vector2(view.size) * _war_hover)
+			print("war: hover at %s" % (Vector2(view.size) * _war_hover))
 		_war_to(4)
 	elif _war_phase == 4:
+		if _war_hover.x >= 0.0 and _frames - _war_at < ceili(Game.data.bal("war_hover_delay_s") * 120.0) + 10:
+			return   # a 120 Hz display's frames: the slip has come up
 		if _frames - _war_at < 6:
 			return
 		if _war_board and _frames - _war_at < ceili(Game.data.bal("war_board_fly_s") * 120.0) + 10:

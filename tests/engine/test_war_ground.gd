@@ -116,3 +116,13 @@ func test_raking_leaves_the_days_out() -> void:
 	var r := WarGround.reading(repo, state, _land_point() + Vector2(3, 3), _land_code())
 	var texts := WarGround.lines(repo, r, true).map(func(l: Dictionary) -> String: return String(l["text"]))
 	assert_false(texts.any(func(t: String) -> bool: return t.contains("away")))
+
+
+func test_a_reading_stays_inside_its_budget() -> void:
+	var code := _land_code()
+	var far := _land_point() + Vector2(60, 40)   # a long march
+	WarGround.reading(repo, state, far, code)   # warm the grids
+	var t0 := Time.get_ticks_usec()
+	WarGround.reading(repo, state, far, code)
+	var ms := float(Time.get_ticks_usec() - t0) / 1000.0
+	assert_lt(ms, repo.bal("war_hover_budget_ms"), "%.2f ms" % ms)
