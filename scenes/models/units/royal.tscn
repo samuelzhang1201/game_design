@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://cw4ttyg7e6c3r"]
+
+[ext_resource type="PackedScene" uid="uid://b1uyrohtmw7y" path="res://assets/3D/units/royal/royal.glb" id="1_glb"]
+[ext_resource type="Texture2D" uid="uid://cnk37fe68oupb" path="res://assets/3D/units/royal/royal_royal_atlas.jpg" id="2_jfas6"]
+[ext_resource type="Texture2D" uid="uid://ye5nramj3cxq" path="res://assets/3D/units/royal/royal_royal_atlas_mr.jpg" id="3_4fdnr"]
+[ext_resource type="Texture2D" uid="uid://b35egoqjiau6f" path="res://assets/3D/units/royal/royal_royal_atlas_n.jpg" id="4_aftvi"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_46bpc"]
+resource_name = "royal_atlas"
+cull_mode = 2
+albedo_texture = ExtResource("2_jfas6")
+metallic = 1.0
+metallic_texture = ExtResource("3_4fdnr")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("3_4fdnr")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("4_aftvi")
+
+[node name="Royal" unique_id=1498440917 instance=ExtResource("1_glb")]
+editor_description = "The king on horseback, one FIGURE of the royal regiment's piece (MapObjects.royal_regiment). The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/army_art.csv."
+
+[node name="royal" parent="royal_rig/Skeleton3D" parent_id_path=PackedInt32Array(1075212185) index="0" unique_id=194251954]
+surface_material_override/0 = SubResource("StandardMaterial3D_46bpc")

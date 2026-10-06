@@ -79,5 +79,37 @@
   "stride_m": 1.207,
   "tris": 19480,
   "weights": "rigid parts + distance"
+ },
+ "royal": {
+  "actions": {
+   "ATTACK": [
+    0,
+    90
+   ],
+   "DEFEND": [
+    0,
+    80
+   ],
+   "GARRISON": [
+    0,
+    120
+   ],
+   "MARCH": [
+    0,
+    16
+   ],
+   "STANDBY": [
+    0,
+    120
+   ]
+  },
+  "bones": 59,
+  "fps": 30,
+  "height_m": 2.4,
+  "kind": "mounted",
+  "label": "King",
+  "source": "Tripo 3D (owner, paid plan) from royal/model_wip/tripo/REF_royal_qwenfast_s1.png; rigged and animated by the owner (knight_rig_anim.blend); tools/units3d/royal_install/",
+  "stride_m": 2.25,
+  "tris": 90506
  }
 }
