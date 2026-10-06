@@ -131,14 +131,15 @@ func hold_day_before_month_end(day_ceiling: int) -> bool:
 ## {ticked, finished: [{cell, building}], arrived, couriers} and, on the
 ## tick, idled: the buildings newly idle for want of inputs (M5).
 func advance_day() -> Dictionary:
+	var ended := state.absolute_day()
 	if state.day >= Calendar.DAYS_PER_TICK:
 		var r := next_tick()
 		return {"ticked": true, "finished": r.finished_works, "arrived": engine.day_arrivals,
-			"couriers": engine.day_couriers, "idled": engine.newly_idle}
+			"couriers": engine.day_couriers, "idled": engine.newly_idle, "ended": ended}
 	var finished := engine.advance_day(state)
 	state_changed.emit()
 	return {"ticked": false, "finished": finished, "arrived": engine.day_arrivals,
-		"couriers": engine.day_couriers}
+		"couriers": engine.day_couriers, "ended": ended}
 
 func next_tick() -> TickReport:
 	_prompts_this_tick = 0
@@ -252,6 +253,19 @@ func move_to(location_code: String) -> bool:
 
 ## Routes one headline to whatever is showing news (currently the bottom
 ## ticker). Presentation-only: no sim state is touched.
+## The absolute day a headline published now is dated (NewsTicker): the day
+## that just ENDED while GameRoot tells of its end (news_dated_to), else the
+## day now running (owner 2026-10-06: 顶栏日期滞后一天).
+var _news_day := -1
+
+func news_dated_to(abs_day: int) -> void:
+	_news_day = abs_day
+
+func news_day() -> int:
+	if _news_day > 0:
+		return _news_day
+	return state.absolute_day() if state != null else 0
+
 func publish_news(text: String) -> void:
 	if text.strip_edges() == "":
 		return

@@ -190,12 +190,10 @@ static func dispatch_spy(repo: DataRepository, state: GameState, to_px: Vector2)
 	return c
 
 
-## The absolute day a courier rides next: advance_day moves the calendar
-## before he rides (and a tick, day 30 -> day 1, is the next day as well), so
-## the day now running is ridden under the NEXT day's weather. The ETAs read it
-## so they agree with the ride.
+## The absolute day a courier rides next: the day now running, ridden as it
+## ends (TickEngine). The ETAs read it so they agree with the ride.
 static func _ride_day_of(state: GameState) -> int:
-	return state.absolute_day() + 1
+	return state.absolute_day()
 
 
 ## Days a courier still has to ride — the day now running the first, his last
