@@ -897,7 +897,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var label := String(r["label"])
 	var kingdom := String(r["kingdom_code"])
 	var naval := String(r.get("is_naval", "0")) == "1"
-	var province := String(r.get("province_code", ""))
+	var province := ArmySystem.province_of(repo, state, r)
 	var total := int(regiment_size(repo, r))
 	var piece := army_piece(repo, r)
 	var stats: Array = []

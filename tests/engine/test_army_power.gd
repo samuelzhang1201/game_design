@@ -120,3 +120,44 @@ func test_battle_odds_placeholder() -> void:
 	assert_between(odds, 0.0, 1.0)
 	s.regiments[codes[0]]["training"] = 100
 	assert_gt(ArmySystem.battle_odds(repo, s, codes[0], codes[1]), odds, "a better drilled attacker has better odds")
+
+## Power is read where the regiment stands NOW (owner 2026-10-06: 军事单位的
+## 地理位置数据跟随单位移动变动): a column marched behind walls fights with
+## them, exactly as a regiment the pack quartered there would.
+func test_power_reads_the_ground_the_regiment_stands_on_now() -> void:
+	var cells := MapEconomy.burg_cells(repo)
+	var walled := -1
+	var burgs := repo.burgs.keys()
+	burgs.sort()
+	for b: String in burgs:
+		var feats := String(repo.burgs[b].get("features", "")).split("|")
+		if ("walls" in feats or "citadel" in feats) and cells.has(b):
+			walled = int(cells[b])
+			break
+	assert_ne(walled, -1, "the pack has a walled town")
+	var code := ""
+	for c: String in _land_codes():
+		if not ArmySystem.is_fortified(repo, ArmySystem.regiment(repo, c)):
+			code = c
+			break
+	assert_ne(code, "", "a regiment quartered in the open")
+	var at := MapTerrain.cell_center(repo, repo.cells[walled])
+	var s := SuiteData.campaign(repo, 7)
+	var home := ArmySystem.power(repo, s, code, "defend")
+	var m := ArmySystem.pack_to_metres(repo, at)
+	var entry: Dictionary = s.regiments[code]
+	entry["x_m"] = m.x
+	entry["y_m"] = m.y
+	entry["dest_x_m"] = m.x
+	entry["dest_y_m"] = m.y
+	assert_true(ArmySystem.is_fortified(repo, ArmySystem.regiment(repo, code), s))
+	var moved := ArmySystem.power(repo, s, code, "defend")
+	# The same regiment quartered there by the pack, with the same state.
+	var other := SuiteData.repo()
+	var row: Dictionary = other.world_table("military", "regiments")[code]
+	row["x"] = str(at.x)
+	row["y"] = str(at.y)
+	var s2 := SuiteData.campaign(repo, 7)
+	(s2.regiments[code] as Dictionary).erase("x_m")
+	assert_eq(moved, ArmySystem.power(other, s2, code, "defend"))
+	assert_ne(moved, home, "walls change its power")

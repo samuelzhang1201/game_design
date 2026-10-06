@@ -247,6 +247,14 @@ static func terrain_label(repo: DataRepository, reg: Dictionary, state: GameStat
 	var text := terrain_of(repo, reg, state).capitalize()
 	return text + " (fortified)" if is_fortified(repo, reg, state) else text
 
+## The province a regiment is in NOW: the one holding the cell it stands on
+## (MapManors.province_of, so a manor that changed province carries it), the
+## pack's own row for a fleet at sea or a column off every land cell.
+static func province_of(repo: DataRepository, state: GameState, reg: Dictionary) -> String:
+	var id := _cell_of(repo, reg, state)
+	var here := MapManors.province_of(repo, id, state) if id >= 0 else ""
+	return here if here != "" else String(reg.get("province_code", ""))
+
 ## --- Height (spec 2026-09-19-map3d-heights §2) ---------------------------
 
 ## The cell under a regiment, -1 for a fleet or off the land.
@@ -312,8 +320,8 @@ static func power(repo: DataRepository, state: GameState, code: String, stance: 
 	var tick := 0 if state == null else state.tick
 	var training_f := int(repo.bal("army_training_base_permille")) + int(st["training"]) * int(repo.bal("army_training_step_permille"))
 	var morale_f := int(repo.bal("army_morale_base_permille")) + int(st["morale"]) * int(repo.bal("army_morale_step_permille"))
-	var terrain := terrain_of(repo, reg)
-	var walls := is_fortified(repo, reg)
+	var terrain := terrain_of(repo, reg, state)
+	var walls := is_fortified(repo, reg, state)
 	var total := 0
 	for arm: String in repo.world_table("military", "unit_types"):
 		var n := int(float(reg.get(arm, 0)))

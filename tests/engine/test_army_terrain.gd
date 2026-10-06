@@ -122,3 +122,37 @@ func test_the_modifier_table() -> void:
 	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "defend", true), jungle * walls / 1000)
 	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "attack", true), _row("jungle|infantry", "attack"),
 		"walls only help the defender")
+
+## The province a regiment is in follows it (owner 2026-10-06): read from the
+## cell it stands on, the pack's own row only for a fleet at sea.
+func test_a_regiment_is_in_the_province_it_marched_into() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var realm := repo.resolve_realm("player_realm")
+	var reg: Dictionary = {}
+	for r: Dictionary in MapObjects.regiments_of(repo, realm):
+		if String(r.get("is_naval", "0")) != "1":
+			reg = r
+			break
+	var code := String(reg["regiment_code"])
+	var home := String(reg["province_code"])
+	assert_eq(ArmySystem.province_of(repo, s, reg), home, "at its quarters, the pack's province")
+	var cell := _land_cell(func(c: Dictionary) -> bool:
+		var p := MapManors.province_of(repo, int(c["cell_id"]), s)
+		return p != "" and p != home)
+	assert_ne(cell, -1)
+	var there := MapManors.province_of(repo, cell, s)
+	var m := ArmySystem.pack_to_metres(repo, MapTerrain.cell_center(repo, repo.cells[cell]))
+	var entry: Dictionary = s.regiments[code]
+	entry["x_m"] = m.x
+	entry["y_m"] = m.y
+	assert_eq(ArmySystem.province_of(repo, s, reg), there)
+	var label := String(repo.provinces[there]["label"])
+	assert_has(MapObjects.army_card(repo, code, s)["fields"], ["Quartered in", label],
+		"the card names the province it is in now")
+
+func test_a_fleet_keeps_its_home_province() -> void:
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		if String(r.get("is_naval", "0")) == "1":
+			assert_eq(ArmySystem.province_of(repo, null, r), String(r["province_code"]))
+			return
+	pending("the realm has no fleet")
