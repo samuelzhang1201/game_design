@@ -210,7 +210,9 @@ static func _line_of(repo: DataRepository, state: GameState, code: String, ctx: 
 		route.append(ArmySystem.metres_to_pack(repo, Vector2i(int(p[0]), int(p[1]))))
 	if path.is_empty():
 		route.append(to)
-	var marks := mark_loss(repo, route)
+	# a fleet's line is no road the brigands or pirates can rob (spec §1.2)
+	var marks := {"permille": 0, "hazards": []} \
+		if String(ArmySystem.regiment(repo, code).get("is_naval", "0")) == "1" else mark_loss(repo, route)
 	return {"length_km": km, "loss_permille": total_loss(repo, km, int(marks["permille"])),
 		"garrison": false, "garrison_town": "", "stronghold": "", "hazards": marks["hazards"]}
 

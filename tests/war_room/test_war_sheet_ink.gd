@@ -275,3 +275,21 @@ func test_a_mark_on_a_town_stands_aside_of_its_ring() -> void:
 				assert_gte(d, ring + repo.bal("war_mark_px") * 0.7 - 0.01, "a mark touches %s" % t["label"])
 				checked += 1
 	assert_gt(checked, 0)
+
+
+func test_a_reach_ring_is_drawn_from_a_mark_just_outside_the_window() -> void:
+	var s: Dictionary = WarSheets.series(repo)[0]
+	var r: Rect2 = s["rect"]
+	var code: String = ""
+	for m: Dictionary in WarMarks.inked(repo, "sheet"):
+		if String(m["type"]) == "pirates":
+			code = String(m["code"])
+	var reach_px := float(repo.war_mark_hazards["pirates"]["reach_km"]) / WarMarks.km_per_px(repo)
+	var win := Rect2(r.position + r.size * 0.3, r.size * 0.2)
+	# the mark stands just past the window's right edge, its ring reaching in
+	var spot := Vector2(win.end.x + reach_px * 0.95, win.get_center().y)
+	repo.markers[code]["x"] = str(spot.x)
+	repo.markers[code]["y"] = str(spot.y)
+	var part := WarSheetInk.strokes(repo, state, s, 2048, null, win)
+	var rings := (part["places"] as Array).filter(func(p: Dictionary) -> bool: return float(p["hazard_r"]) > 0.0)
+	assert_eq(rings.size(), 1, "the ring that reaches into the window is drawn")

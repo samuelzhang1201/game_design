@@ -33,7 +33,7 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 		"road": "" if sea else ArmySystem.road_at(repo, at),
 		"town": town, "works": works, "town_holder": town_holder, "garrison": garrison,
 		"weather": Weather.at(repo, state, at, state.absolute_day()) if state != null else Weather.CLEAR,
-		"places": WarMarks.near(repo, at, repo.bal("war_mark_hover_km"), int(repo.bal("war_mark_hover_max"))),
+		"places": _places_near(repo, at),
 		"regiment": {},
 	}
 	if code != "":
@@ -107,6 +107,40 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 
 ## The marks near the pointer (spec 2026-10-07-war-room-p2 §1.3): one line
 ## each, nearest first, a hazard's toll on supply; the nearest one's legend.
+## The marks the slip names: within war_mark_hover_km, or within a hazard's
+## own reach (a pointer inside a brigands' dotted ring names them), nearest
+## first, at most war_mark_hover_max.
+static func _places_near(repo: DataRepository, at: Vector2) -> Array:
+	var hover := repo.bal("war_mark_hover_km")
+	var widest := hover
+	for t: String in repo.war_mark_hazards:
+		widest = maxf(widest, float(repo.war_mark_hazards[t]["reach_km"]))
+	var out: Array = []
+	for p: Dictionary in WarMarks.near(repo, at, widest, 1 << 20):
+		var hz: Dictionary = repo.war_mark_hazards.get(String(p["type"]), {})
+		var reach := float(hz["reach_km"]) if not hz.is_empty() else hover
+		if float(p["distance_km"]) <= maxf(hover, reach):
+			out.append(p)
+	return out.slice(0, int(repo.bal("war_mark_hover_max")))
+
+
+## A mark's legend as the slip shows it: the export's markup stripped, cut at
+## a word within war_mark_legend_chars with an ellipsis.
+static func legend_of(repo: DataRepository, text: String) -> String:
+	var plain := RegEx.create_from_string("<[^>]*>").sub(text, " ", true)
+	plain = RegEx.create_from_string("<.*$").sub(plain, "")   # a tag the cut left open
+	plain = RegEx.create_from_string("\\s+").sub(plain, " ", true).strip_edges()
+	var cap := int(repo.bal("war_mark_legend_chars"))
+	if plain.length() <= cap:
+		return plain
+	var cut := plain.substr(0, cap)
+	var space := cut.rfind(" ")
+	@warning_ignore("integer_division")  # half the cap, whole
+	if space > cap / 2:
+		cut = cut.substr(0, space)
+	return cut.rstrip(" ,;:—-") + "…"
+
+
 static func _place_lines(repo: DataRepository, r: Dictionary, out: Array) -> void:
 	var places: Array = r.get("places", [])
 	for p: Dictionary in places:
@@ -119,7 +153,7 @@ static func _place_lines(repo: DataRepository, r: Dictionary, out: Array) -> voi
 			@warning_ignore("integer_division")
 			_add(out, "Supply lines within %d\u00a0km lose %d%%" % [int(hz["reach_km"]), int(hz["permille"]) / 10])
 	if not places.is_empty():
-		var legend := String(places[0]["legend"]).substr(0, int(repo.bal("war_mark_legend_chars")))
+		var legend := legend_of(repo, String(places[0]["legend"]))
 		if legend != "":
 			out.append({"text": legend, "kind": "sub"})
 

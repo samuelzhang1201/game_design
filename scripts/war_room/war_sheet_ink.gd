@@ -116,9 +116,14 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	# brigand's or pirate's reach as a ring
 	out["places"] = []
 	var per_px := WarMarks.km_per_px(repo)
+	# a mark whose reach runs into the sheet or window is drawn, ring and all
+	var reach_px := 0.0
+	for t: String in repo.war_mark_hazards:
+		reach_px = maxf(reach_px, float(repo.war_mark_hazards[t]["reach_km"]) / per_px)
+	var reach_keep := keep.grow(reach_px)
 	for m: Dictionary in WarMarks.inked(repo, "sheet"):
 		var at: Vector2 = m["at"]
-		if not keep.has_point(at):
+		if not reach_keep.has_point(at):
 			continue
 		var hz: Dictionary = repo.war_mark_hazards.get(String(m["type"]), {})
 		var spot := (at - r.position) * k

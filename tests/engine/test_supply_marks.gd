@@ -88,3 +88,18 @@ func test_a_brigand_on_a_regiments_road_shows_in_its_line() -> void:
 	assert_true(labels.has(String(m["label"])))
 	assert_eq(int(line["loss_permille"]),
 		SupplySystem.total_loss(repo, int(line["length_km"]), int(repo.war_mark_hazards["brigands"]["permille"])))
+
+
+func test_a_fleet_pays_no_mark_toll() -> void:
+	var state := SuiteData.campaign(repo, 42)
+	for code: String in state.regiments:
+		var reg := ArmySystem.regiment(repo, code)
+		if String(reg.get("is_naval", "0")) != "1" or String(SupplySystem.line_of(repo, state, code)["stronghold"]) != "":
+			continue
+		var at := ArmySystem.position_of(repo, state, reg)
+		var m := _mark_of("pirates")
+		repo.markers[m["code"]]["x"] = str(at.x + 2.0)
+		repo.markers[m["code"]]["y"] = str(at.y)
+		assert_eq(SupplySystem.line_of(repo, state, code)["hazards"], [], code)
+		return
+	pass_test("no fleet")

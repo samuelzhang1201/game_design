@@ -174,3 +174,30 @@ func test_no_marks_far_from_everything() -> void:
 	assert_lte((r["places"] as Array).size(), int(repo.bal("war_mark_hover_max")))
 	for p: Dictionary in r["places"]:
 		assert_lte(float(p["distance_km"]), repo.bal("war_mark_hover_km"))
+
+
+func test_a_legend_is_plain_words_cut_at_a_word() -> void:
+	var cap := int(repo.bal("war_mark_legend_chars"))
+	for m: Dictionary in WarMarks.inked(repo, ""):
+		var shown := WarGround.legend_of(repo, String(m["legend"]))
+		assert_false(shown.contains("<") or shown.contains(">"), "%s: %s" % [m["code"], shown])
+		assert_lte(shown.length(), cap + 1, String(m["code"]))
+		if shown.ends_with("…"):
+			assert_false(shown.trim_suffix("…").ends_with(" "), "cut before a space, not inside a word")
+
+
+func test_a_pointer_inside_a_hazards_reach_names_it() -> void:
+	for m: Dictionary in WarMarks.inked(repo, "sheet"):
+		if String(m["type"]) != "brigands":
+			continue
+		var reach := float(repo.war_mark_hazards["brigands"]["reach_km"])
+		var hover := repo.bal("war_mark_hover_km")
+		if reach <= hover:
+			pass_test("the hover reach already covers it")
+			return
+		var off := (hover + reach) * 0.5 / WarMarks.km_per_px(repo)
+		var r := WarGround.reading(repo, state, (m["at"] as Vector2) + Vector2(off, 0.0), "")
+		var codes: Array = (r["places"] as Array).map(func(p: Dictionary) -> String: return String(p["code"]))
+		assert_true(codes.has(String(m["code"])), "inside the dotted ring, the brigands are named")
+		return
+	pass_test("no brigands on this pack")
