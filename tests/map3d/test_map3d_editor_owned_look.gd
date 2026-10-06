@@ -45,6 +45,11 @@ const CODE_OWNED := {
 ## The river's water that IS the sea's: river parameter -> sea parameter.
 const RIVER_FROM_SEA := {"mouth_water": "sea_near", "sky": "sky", "nat_mouth": "nat_shallow",
 	"lod_near_m": "ripple_lod_near_m", "lod_far_m": "ripple_lod_far_m"}
+## Uniforms set in code by prefix: a river's sea_* are the sea's own, copied
+## from water_sea.tres and the pack by Map3DLayerRivers (SEA_WATER,
+## Map3DLayerSea.pack_params) — the editor writes them into the river's .tres
+## with their defaults whenever it saves it.
+const CODE_OWNED_PREFIX := {"water_river": "sea_"}
 ## Key prefixes that left balance.csv / terrain_palette.csv for the editor.
 const GONE := ["map3d_sun_", "map3d_env_", "map3d_fog_", "map3d_ambient_", "map3d_sea_",
 	"map_sea_band_", "map3d_sky", "map3d_border_band", "map3d_border_halo", "map3d_border_width",
@@ -243,10 +248,11 @@ func _assert_material_holds(live: ShaderMaterial, key: String, at_least := 10) -
 	assert_not_null(live, key)
 	var authored := load("res://scenes/map3d/materials/%s.tres" % key) as ShaderMaterial
 	var owned: Array = CODE_OWNED[key]
+	var prefix := String(CODE_OWNED_PREFIX.get(key, ""))
 	var checked := 0
 	for u: Dictionary in authored.shader.get_shader_uniform_list():
 		var name := String(u["name"])
-		if name in owned:
+		if name in owned or (prefix != "" and name.begins_with(prefix)):
 			continue
 		var want: Variant = authored.get_shader_parameter(name)
 		if want == null:
