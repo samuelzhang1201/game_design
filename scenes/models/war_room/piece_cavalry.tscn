@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://x2kvcgsdhrgn"]
+
+[ext_resource type="PackedScene" path="res://assets/3D/war_room/piece_cavalry/piece_cavalry.glb" id="1_glb"]
+[ext_resource type="Material" path="res://scenes/war_room/materials/piece_cavalry.tres" id="2_gral6"]
+
+[node name="PieceCavalry" unique_id=1274413715 instance=ExtResource("1_glb")]
+editor_description = "A WAR ROOM wooden piece (spec 2026-10-06-war-room-wooden-pieces): its plinth's foot is 1 across at the origin, its front toward -Z. WarPieces scales it to war_piece_plinth_mm and paints the plinth's lacquer the realm's colour (the instance uniform `lacquer`)."
+
+[node name="piece_cavalry" parent="." index="0" unique_id=384607254]
+surface_material_override/0 = ExtResource("2_gral6")

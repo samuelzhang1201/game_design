@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://scenes/war_room/wood_piece.gdshader" id="1_pugvi"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_bombard/piece_bombard_albedo.png" id="2_w3snu"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_bombard/piece_bombard_lacquer.png" id="3_183b7"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_bombard/piece_bombard_normal.png" id="4_omnyw"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_bombard/piece_bombard_orm.png" id="5_3t1lu"]
+
+[resource]
+resource_name = "piece_bombard"
+render_priority = 0
+shader = ExtResource("1_pugvi")
+shader_parameter/albedo_tex = ExtResource("2_w3snu")
+shader_parameter/orm_tex = ExtResource("5_3t1lu")
+shader_parameter/normal_tex = ExtResource("4_omnyw")
+shader_parameter/lacquer_tex = ExtResource("3_183b7")
+shader_parameter/normal_depth = 1.0
+shader_parameter/lacquer_shade = 1.0
+shader_parameter/lacquer_roughness = 0.42
+shader_parameter/wood_roughness_min = 0.75

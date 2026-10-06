@@ -71,6 +71,7 @@ CANVAS_SIZE = {
     "C-COURIER": (1280, 1024),
     "C-TILEWIDE": (1024, 1024),
     "C-TOWNFLAT": (1024, 1024),
+    "C-WARPIECE": (1024, 1024),
 }
 # One preset per model: which template graph to fill and its sampler values.
 # Only two models make the game's 2D art (owner 2026-10-01: no Flux at all —
