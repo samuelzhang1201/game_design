@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://murh1637vv8w"]
 
 [ext_resource type="PackedScene" uid="uid://dhns8u5vx7c1o" path="res://scenes/models/units/infantry.tscn" id="1_33jbd"]
+[ext_resource type="PackedScene" uid="uid://0eb3lmxn52ny" path="res://scenes/models/units/archers.tscn" id="1_y4xoy"]
 [ext_resource type="PackedScene" uid="uid://baiytx1l41c33" path="res://scenes/models/units/cavalry.tscn" id="2_0vt4k"]
 [ext_resource type="PackedScene" uid="uid://cw4ttyg7e6c3r" path="res://scenes/models/units/royal.tscn" id="3_0vt4k"]
 [ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="3_y4xoy"]
@@ -8,7 +9,7 @@
 [resource]
 script = ExtResource("3_y4xoy")
 art = Dictionary[String, Resource]({
-"archers": ExtResource("1_33jbd"),
+"archers": ExtResource("1_y4xoy"),
 "artillery": ExtResource("1_33jbd"),
 "cavalry": ExtResource("2_0vt4k"),
 "infantry": ExtResource("1_33jbd"),

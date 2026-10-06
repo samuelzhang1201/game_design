@@ -1,4 +1,41 @@
 {
+ "archers": {
+  "actions": {
+   "MARCH": [
+    0,
+    22
+   ],
+   "GARRISON": [
+    0,
+    150
+   ],
+   "ATTACK": [
+    0,
+    48
+   ],
+   "DEFEND": [
+    0,
+    80
+   ],
+   "STANDBY": [
+    0,
+    150
+   ]
+  },
+  "bones": 27,
+  "fps": 30,
+  "height_m": 1.851,
+  "kind": "humanoid",
+  "label": "Archer",
+  "source": "Tripo 3D (owner, paid plan) from REF_archers_qwenfast_s2.png; tools/units3d/archer_rig/",
+  "stride_m": 1.5,
+  "tris": 18709,
+  "weights": {
+   "body": "heat",
+   "props": "rigid",
+   "bow": "graded"
+  }
+ },
  "cavalry": {
   "actions": {
    "ATTACK": [

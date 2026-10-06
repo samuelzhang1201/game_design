@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://0eb3lmxn52ny"]
+
+[ext_resource type="PackedScene" uid="uid://caymw68pj6ld" path="res://assets/3D/units/archers/archers.glb" id="1_glb"]
+[ext_resource type="Texture2D" uid="uid://24e8gv8twk20" path="res://assets/3D/units/archers/archers_archers_atlas.jpg" id="2_exjm6"]
+[ext_resource type="Texture2D" uid="uid://eyjhqp22dplg" path="res://assets/3D/units/archers/archers_archers_atlas_mr.jpg" id="3_va7rf"]
+[ext_resource type="Texture2D" uid="uid://13457xuv44g" path="res://assets/3D/units/archers/archers_archers_atlas_n.jpg" id="4_bwi4b"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_okvo1"]
+resource_name = "archers_atlas"
+cull_mode = 2
+albedo_texture = ExtResource("2_exjm6")
+metallic = 1.0
+metallic_texture = ExtResource("3_va7rf")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("3_va7rf")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("4_bwi4b")
+
+[node name="Archers" unique_id=479415852 instance=ExtResource("1_glb")]
+editor_description = "A longbowman, one FIGURE of an archers regiment's piece. The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/army_art.csv."
+
+[node name="archers" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(1492958641) index="0" unique_id=156626609]
+surface_material_override/0 = SubResource("StandardMaterial3D_okvo1")
