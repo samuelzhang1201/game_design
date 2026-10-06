@@ -110,16 +110,19 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 static func _place_lines(repo: DataRepository, r: Dictionary, out: Array) -> void:
 	var places: Array = r.get("places", [])
 	for p: Dictionary in places:
-		var text := "%s, %d km — %s" % [String(p["label"]), roundi(float(p["distance_km"])), String(p["note"])]
 		var hz: Dictionary = repo.war_mark_hazards.get(String(p["type"]), {})
+		# a hazard's own words are its toll, on a line of its own (its legend
+		# below says what it is); figures and units never broken apart
+		var what := "" if not hz.is_empty() and String(p["legend"]) != "" else " — " + String(p["note"])
+		_add(out, "%s, %d\u00a0km%s" % [String(p["label"]), roundi(float(p["distance_km"])), what])
 		if not hz.is_empty():
 			@warning_ignore("integer_division")
-			text += "; supply lines within %d km lose %d%%" % [int(hz["reach_km"]), int(hz["permille"]) / 10]
-		_add(out, text)
+			_add(out, "Supply lines within %d\u00a0km lose %d%%" % [int(hz["reach_km"]), int(hz["permille"]) / 10])
 	if not places.is_empty():
 		var legend := String(places[0]["legend"]).substr(0, int(repo.bal("war_mark_legend_chars")))
 		if legend != "":
 			out.append({"text": legend, "kind": "sub"})
+
 
 static func _regiment_lines(_repo: DataRepository, r: Dictionary, raking: bool, out: Array) -> void:
 	var g: Dictionary = r["regiment"]

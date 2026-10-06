@@ -1,18 +1,18 @@
-type,glyph,layer,note
-brigands,crossed_swords,sheet,"a gang of brigands on the roads (WAR ROOM P2, spec 2026-10-07-war-room-p2-tactical-layer §1.1)"
-pirates,sabre_wave,sheet,pirate ships in these waters
-mines,pick,sheet,a mine head
-battlefields,crossed_flags,sheet,an old battlefield
-lighthouses,tower_light,sheet,a lighthouse
-inns,tankard,fine,a roadside inn
-ruins,broken_column,fine,old ruins
-encounters,dot,fine,people on the road
-hot-springs,dot,fine,a bathhouse over a hot spring
-water-sources,dot,fine,a spring
-sacred-forests,dot,fine,a sacred grove
-sacred-pineries,dot,fine,a sacred grove
-statues,dot,fine,a wayside monument
-necropolises,dot,fine,a burial ground
-caves,dot,fine,a cave
-waterfalls,dot,fine,a waterfall
-fairs,dot,fine,a fair
+type,glyph,layer,note,notes
+brigands,crossed_swords,sheet,a gang of brigands on the roads,"WAR ROOM P2 (spec 2026-10-07-war-room-p2-tactical-layer §1.1): `note` is the slip's words for the type; `layer` sheet = inked with the ink, fine = fine print"
+pirates,galley,sheet,pirate ships in these waters,
+mines,pick,sheet,a mine head,
+battlefields,pennon,sheet,an old battlefield,
+lighthouses,tower_light,sheet,a lighthouse,
+inns,tankard,fine,a roadside inn,
+ruins,broken_column,fine,old ruins,
+encounters,dot,fine,people on the road,
+hot-springs,dot,fine,a bathhouse over a hot spring,
+water-sources,dot,fine,a spring,
+sacred-forests,dot,fine,a sacred grove,
+sacred-pineries,dot,fine,a sacred grove,
+statues,dot,fine,a wayside monument,
+necropolises,dot,fine,a burial ground,
+caves,dot,fine,a cave,
+waterfalls,dot,fine,a waterfall,
+fairs,dot,fine,a fair,

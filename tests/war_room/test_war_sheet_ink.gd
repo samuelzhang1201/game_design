@@ -254,10 +254,24 @@ func test_sheet_marks_are_inked_with_their_reach() -> void:
 			if not r.has_point(m["at"]):
 				continue
 			var hit := (ink["places"] as Array).filter(func(p: Dictionary) -> bool:
-				return (p["at"] as Vector2).distance_to(((m["at"] as Vector2) - r.position) * k) < 0.01)
+				return (p["ring_at"] as Vector2).distance_to(((m["at"] as Vector2) - r.position) * k) < 0.01)
 			assert_eq(hit.size(), 1, String(m["code"]))
 			var hz: Dictionary = repo.war_mark_hazards.get(String(m["type"]), {})
 			var want := 0.0 if hz.is_empty() else float(hz["reach_km"]) / WarMarks.km_per_px(repo) * k
 			assert_almost_eq(float(hit[0]["hazard_r"]), want, 0.01)
 			placed += 1
 	assert_gt(placed, 0, "some sheet holds a mark")
+
+
+func test_a_mark_on_a_town_stands_aside_of_its_ring() -> void:
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	var checked := 0
+	for s: Dictionary in WarSheets.series(repo):
+		var ink := WarSheetInk.strokes(repo, state, s, tex)
+		for p: Dictionary in ink["places"]:
+			for t: Dictionary in ink["towns"]:
+				var ring := float(repo.bal("war_ink_town_px")) * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
+				var d := (p["at"] as Vector2).distance_to(t["at"])
+				assert_gte(d, ring + repo.bal("war_mark_px") * 0.7 - 0.01, "a mark touches %s" % t["label"])
+				checked += 1
+	assert_gt(checked, 0)

@@ -167,7 +167,7 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 		var type := key.trim_prefix("mark_")
 		var row: Dictionary = _repo.war_marks.get(type, {})
 		WarMarkGlyph.draw(self, String(row.get("glyph", "dot")), r.get_center(), r.size.y * 0.9,
-			pal["rubric"] if _repo.war_mark_hazards.has(type) else ink)
+			pal.get("hazard_ink", pal["rubric"]) if _repo.war_mark_hazards.has(type) else ink)
 		return
 	match key:
 		"road":

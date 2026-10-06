@@ -160,8 +160,11 @@ func test_a_brigand_mark_states_its_toll() -> void:
 		var hz: Dictionary = repo.war_mark_hazards["brigands"]
 		var texts := WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
 		@warning_ignore("integer_division")
-		var toll := "supply lines within %d km lose %d%%" % [int(hz["reach_km"]), int(hz["permille"]) / 10]
-		assert_true(texts.any(func(t: String) -> bool: return t.contains(toll)), toll)
+		var toll := "Supply lines within %d\u00a0km lose %d%%" % [int(hz["reach_km"]), int(hz["permille"]) / 10]
+		assert_true(texts.has(toll), "the toll on a line of its own, its figure and unit unbroken: " + toll)
+		var head: Array = texts.filter(func(t: String) -> bool: return t.begins_with(String(m["label"]) + ","))
+		assert_eq(head.size(), 1)
+		assert_false(String(head[0]).contains(String(repo.war_marks["brigands"]["note"])), "no type words twice beside the legend")
 		return
 	pass_test("no brigands on this pack")
 

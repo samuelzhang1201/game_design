@@ -199,6 +199,7 @@ var _ledger_select := ""
 ## metres (on --war-piece's place when given, or --war-focus CODE's, which
 ## centres on that piece without clicking it), --war-piece CODE
 ## clicks that regiment's piece (a chalk ring, its card) or, with
+## --war-focus-px x,y leans in on that pack point instead of a piece;
 ## --war-hover fx,fy rests the pointer at that share of the view (a real
 ## motion) until the hover slip is up; --war-drag fx,fy (a share of the view), RAKES it there: a real left press
 ## on the piece, eight pushed motion events with the left button held, a real
@@ -237,6 +238,7 @@ var _war_sheet := -1
 var _war_piece := ""
 var _war_folio := ""
 var _war_drag := Vector2(-1, -1)
+var _war_focus_px := Vector2(-1, -1)   # --war-focus-px x,y: lean in on a pack point, not a piece
 var _war_hover := Vector2(-1, -1)   # --war-hover fx,fy: rest the pointer there for the slip
 var _war_zoom := -1.0
 var _war_turn := 0.0
@@ -354,6 +356,9 @@ func _ready() -> void:
 			_war_sheet = int(args[i + 1])
 		elif args[i] == "--war-piece":
 			_war_piece = args[i + 1]
+		elif args[i] == "--war-focus-px":
+			var fparts := args[i + 1].split(",")
+			_war_focus_px = Vector2(float(fparts[0]), float(fparts[1]))
 		elif args[i] == "--war-focus":
 			_war_focus = args[i + 1]
 		elif args[i] == "--war-zoom":
@@ -1015,6 +1020,8 @@ func _war_room_step() -> void:
 				var on := _war_focus if _war_focus != "" else _war_piece
 				if on != "":
 					focus = view.position_of(on)
+				elif _war_focus_px.x >= 0.0:
+					focus = _war_focus_px
 				view.lean_to(_war_zoom, focus)
 				print("war: leant to %.2f m" % view.camera_rig().distance)
 			if _war_turn != 0.0:

@@ -7,7 +7,7 @@ extends RefCounted
 
 ## Every glyph the WAR ROOM can draw (WarMarkGlyph); data/war_marks.csv may
 ## name no other.
-const GLYPHS := ["crossed_swords", "sabre_wave", "pick", "tankard", "crossed_flags", "broken_column",
+const GLYPHS := ["crossed_swords", "galley", "pick", "tankard", "pennon", "broken_column",
 	"tower_light", "dot"]
 
 

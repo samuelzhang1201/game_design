@@ -129,15 +129,16 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(float(px["label"]) * float(px["peak_label_ratio"])), c_ink)
 	for p: Dictionary in ink.get("places", []):   # the map's marks; a brigand's reach a dotted rubric ring
 		var hr := float(p["hazard_r"])
-		var glyph_c: Color = pal["rubric"] if hr > 0.0 else c_ink
+		var hazard_c: Color = pal.get("hazard_ink", pal["rubric"])
+		var glyph_c: Color = hazard_c if hr > 0.0 else c_ink
 		if hr > 0.0:
-			var ring_c: Color = pal["rubric"]
+			var ring_c: Color = hazard_c
 			ring_c.a = float(px["mark_reach_alpha"])
 			var ring := PackedVector2Array()
 			for i in 65:
-				ring.append((p["at"] as Vector2) + Vector2.from_angle(TAU * float(i) / 64.0) * hr)
+				ring.append((p.get("ring_at", p["at"]) as Vector2) + Vector2.from_angle(TAU * float(i) / 64.0) * hr)
 			for d: PackedVector2Array in WarSheetInk.dashed(ring, float(px["dash"]) * 0.3, float(px["gap"])):
-				draw_polyline(d, ring_c, float(px["seam"]), true)
+				draw_polyline(d, ring_c, float(px.get("mark_reach", px["seam"])), true)
 		WarMarkGlyph.draw(self, String(p["glyph"]), p["at"], float(px["mark"]), glyph_c)
 	_draw_hollows(c_ink)
 	_draw_graticule(c_ink)

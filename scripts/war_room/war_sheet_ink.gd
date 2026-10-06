@@ -121,7 +121,16 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if not keep.has_point(at):
 			continue
 		var hz: Dictionary = repo.war_mark_hazards.get(String(m["type"]), {})
-		(out["places"] as Array).append({"at": (at - r.position) * k, "glyph": String(m["glyph"]),
+		var spot := (at - r.position) * k
+		# a mark on a town stands aside, left of its ring (the name runs right):
+		# the reach ring keeps the true spot
+		var glyph_at := spot
+		var half := repo.bal("war_mark_px") * px_k * 0.5
+		for t: Dictionary in out["towns"]:
+			var ring := repo.bal("war_ink_town_px") * px_k * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
+			if glyph_at.distance_to(t["at"]) < ring + half * 1.4:
+				glyph_at = (t["at"] as Vector2) - Vector2(ring + half * 1.5, 0.0)   # a clear gap, never touching
+		(out["places"] as Array).append({"at": glyph_at, "ring_at": spot, "glyph": String(m["glyph"]),
 			"hazard_r": 0.0 if hz.is_empty() else float(hz["reach_km"]) / per_px * k})
 	if bake != null:
 		var step := repo.bal("war_ink_wood_step_km") * WarSheets.px_per_unit(repo)

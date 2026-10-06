@@ -53,3 +53,9 @@ func test_near_is_nearest_first_and_capped() -> void:
 	assert_lte(float(near[0]["distance_km"]), float(near[1]["distance_km"]))
 	assert_lte(float(near[1]["distance_km"]), float(near[2]["distance_km"]))
 	assert_eq(WarMarks.near(repo, at, 0.0001, 3).size(), 1, "only the one standing there")
+
+
+func test_the_slips_words_are_for_the_player_not_the_designer() -> void:
+	for type: String in repo.war_marks:
+		var note := String(repo.war_marks[type]["note"])
+		assert_false(note.contains("spec") or note.contains("WAR ROOM") or note.contains("("), "%s: %s" % [type, note])

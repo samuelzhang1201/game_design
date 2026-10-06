@@ -68,6 +68,7 @@ func texture_for(repo: DataRepository, state: GameState, sheet: int, viewport: S
 			widths[k] = repo.bal("war_ink_%s" % k)
 		widths["mark"] = repo.bal("war_mark_px")
 		widths["mark_reach_alpha"] = repo.bal("war_mark_reach_alpha")
+		widths["mark_reach"] = repo.bal("war_mark_reach_px")
 		painter.paint(WarSheetInk.strokes(repo, state, row, size.x, WarBake.of(repo)), repo.war_palette, widths, font)
 		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 		await frame_done
