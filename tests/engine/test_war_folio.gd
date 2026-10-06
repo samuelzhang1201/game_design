@@ -91,6 +91,14 @@ func test_drills_are_only_the_clips_the_model_has() -> void:
 	assert_eq(WarFolio.current_drill(drills, ArmySystem.ORDER_STANDBY), 0, "no STANDBY tab: the first")
 
 
+func test_a_defend_clip_gets_its_own_tab() -> void:
+	var clips := PackedStringArray(["Armature|MARCH", "Armature|DEFEND"])
+	var drills := WarFolio.drills_for(repo, "archers", clips)
+	var keys: Array = drills.map(func(d: Dictionary) -> String: return String(d["key"]))
+	assert_eq(keys, ["march", "defend"])
+	assert_eq(String(drills[1]["clip_name"]), "Armature|DEFEND")
+
+
 func test_figures_follow_the_strength_tiers() -> void:
 	assert_eq(WarFolio.figures(repo, state, code), 9)
 	ArmySystem.ensure(repo, state)

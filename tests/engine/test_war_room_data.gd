@@ -39,7 +39,7 @@ func test_every_drill_names_a_known_clip_and_real_arms() -> void:
 	var arms: Dictionary = repo.world_table("military", "unit_types")
 	assert_gt(repo.war_drills.size(), 0)
 	for row: Dictionary in repo.war_drills:
-		assert_true(String(row["clip"]) in ["MARCH", "STANDBY", "GARRISON", "ATTACK"], String(row["key"]))
+		assert_true(String(row["clip"]) in ["MARCH", "STANDBY", "GARRISON", "ATTACK", "DEFEND"], String(row["key"]))
 		for arm: String in row["arms"]:
 			assert_true(arms.has(arm), "%s names arm %s" % [row["key"], arm])
 

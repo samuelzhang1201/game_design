@@ -3,3 +3,4 @@ march,MARCH,On the march,infantry|archers|cavalry,"WAR ROOM (owner 2026-10-01, s
 standby,STANDBY,At ease,infantry|archers|cavalry,
 garrison,GARRISON,On guard,infantry|archers|cavalry,
 attack,ATTACK,Charge,infantry|archers|cavalry,"only the cavalry has ATTACK today; the infantry's tab appears by itself once Blender adds the clip"
+defend,DEFEND,Hold fast,infantry|archers|cavalry,"owner 2026-10-06: the archers raise the bow crosswise to ward; a tab only where the model has the clip"
