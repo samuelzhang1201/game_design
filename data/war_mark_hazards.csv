@@ -1,0 +1,3 @@
+type,reach_km,supply_loss_permille,notes
+brigands,8,40,"first draft (spec 2026-10-07-war-room-p2-tactical-layer §1.2): a supply line passing within reach_km of the mark loses this much more on the way, once per mark per line"
+pirates,12,60,"first draft: their marks stand at sea, so a road within reach runs along the coast they raid"
