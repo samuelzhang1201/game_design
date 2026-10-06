@@ -1,0 +1,48 @@
+part,name,role,sub,anchor
+0,horse rump and rear barrel,mount,,
+3,horse tail,mount,,
+4,horse right hind leg,mount,,
+5,horse left hind leg (lower),mount,,
+18,horse right haunch,mount,,
+7,horse left foreleg,mount,,
+9,horse right foreleg,mount,,
+29,horse left shoulder and chest,mount,,
+30,horse right shoulder and chest,mount,,
+6,horse neck and mane,mount,,
+14,horse throat and lower neck,mount,,
+8,horse head,mount,,
+31,horse muzzle,mount,,
+12,bridle headstall,prop,,Head
+10,breast collar and girth,prop,,Chest
+44,saddle cantle and pommel,prop,,Spine1
+25,saddle strap hanging right,prop,,Spine1
+33,saddle strap hanging left,prop,,Spine1
+28,left stirrup iron,prop,,Spine1
+34,right stirrup iron,prop,,Spine1
+46,right stirrup leather,prop,,Spine1
+1,saddle and saddle cloth WITH the rider's thighs,mixed,lower,Spine1
+41,rein front right,strap,,Head
+42,rein front left,strap,,Head
+36,rein to the hand left,strap,,Head
+38,rein to the hand right,strap,,Head
+2,surcoat and torso,rider,torso,
+17,right pauldron and upper arm,rider,arm,
+16,right forearm and vambrace,rider,arm,
+27,right fist on the sword grip,rider,arm,
+26,left pauldron and upper arm,rider,arm,
+11,left forearm and hand,rider,arm,
+23,head and face,rider,head,
+37,beard and chin,rider,head,
+43,face,rider,head,
+32,crown band,rider,head,
+39,crown top,rider,head,
+15,left knee and cuisse,rider,lower,
+19,right knee and cuisse,rider,lower,
+13,left greave,rider,lower,
+20,right greave,rider,lower,
+22,left sabaton,rider,lower,
+21,right sabaton,rider,lower,
+24,scabbard on the left hip,rprop,,R_Hips
+40,belt fitting left,rprop,,R_Hips
+45,belt fitting right,rprop,,R_Hips
+35,sword,rprop,,Sword
