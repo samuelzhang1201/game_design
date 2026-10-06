@@ -19,6 +19,16 @@ func before_each() -> void:
 	s.metrics["strategic"] = 1000000.0
 	for c in s.regiments.keys():
 		s.regiments[c]["supplies"] = 0
+	# the supply lines are the regiments' own now: the first two land
+	# regiments run one each (spec 2026-10-07-army-supply-lines)
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	var given := 0
+	for c in codes:
+		if given < 2 and String(ArmySystem.regiment(data, String(c)).get("is_naval", "0")) != "1":
+			s.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(data, s)[0], 1000, 1)
+			s.supply_lines[c]["state"] = SupplyLines.FLOWING
+			given += 1
 
 func after_each() -> void:
 	RealmEconomy.forget()
@@ -187,7 +197,7 @@ func test_a_snapshot_leaves_no_plan_memo_behind() -> void:
 	var code := String(SupplySystem.plan(data, s)[0]["code"])
 	var a := Ledger.snapshot(data, s, "war", {"id": "supply_line:" + code})
 	assert_false(LedgerResolvers.memo_active())
-	s.regiments[code]["supplies"] = 1000000
+	s.supply_lines[code]["rate"] = 1200   # the line's month moves with its rate
 	var b := Ledger.snapshot(data, s, "war", {"id": "supply_line:" + code})
 	assert_ne(int(_link(a, "supplies_out")["flow"]), int(_link(b, "supplies_out")["flow"]), "read afresh")
 
@@ -242,12 +252,12 @@ func test_an_audit_of_an_honest_man_drops_once_his_claim_moves() -> void:
 		assert_eq(out["accounts"].size(), 1, "one account at %d civil goods" % int(civil))
 		assert_false(String(out["accounts"][0]["source"]).contains("audit"), "the audit is dropped")
 
-## I2: an honest marshal's audit, then the regiment's stores move — one account.
+## I2: an honest marshal's audit, then the line's rate moves — one account.
 func test_an_audit_of_an_honest_marshal_drops_once_the_line_moves() -> void:
 	_marshal(["honest"])
 	var code := String(SupplySystem.plan(data, s)[0]["code"])
 	sys.execute(ActionRequest.make("LEDGER_AUDIT", {"flow": "supply_line"}), s)
-	s.regiments[code]["supplies"] = 400
+	s.supply_lines[code]["rate"] = 1200
 	var out := _link(Ledger.snapshot(data, s, "war", {"id": "regiment:" + code}), "supplies_out")
 	assert_eq(out["accounts"].size(), 1, "his word and the count, one account")
 	assert_false(String(out["accounts"][0]["source"]).contains("audit"))

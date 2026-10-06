@@ -161,3 +161,219 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 			else:
 				state.supply_lines.erase(code)
 	return ev
+
+
+## Draws up to `units` from `town` (spec §3.3): crown, lord, then the house's
+## stock BOUGHT at value × (1000 + supply_buy_markup_permille) / 1000 while
+## the treasury can pay, the price accrued in milligold on `acc["buy_milli"]`
+## (owed, not yet charged) and whole gold taken as it crosses — never past
+## what the treasury holds. {got, house, house_gold}.
+static func _draw(repo: DataRepository, state: GameState, town: String, units: int, acc: Dictionary) -> Dictionary:
+	var got := TownStores.take(state, town, "crown", units)
+	got += TownStores.take(state, town, "lord", units - got)
+	var want := units - got
+	var bought := 0
+	var paid := 0
+	if want > 0:
+		@warning_ignore("integer_division")  # whole milligold a unit
+		var milli_each := int(repo.bal("army_supply_gold_permille")) * (1000 + int(repo.bal("supply_buy_markup_permille"))) / 1000
+		var owed := int(acc.get("buy_milli", 0))
+		var purse := maxi(int(state.metrics.get("treasury", 0.0)) * 1000 - owed, 0)
+		@warning_ignore("integer_division")  # whole units the purse covers
+		var afford := purse / maxi(milli_each, 1)
+		bought = TownStores.take(state, town, "house", mini(want, afford))
+		var milli := owed + bought * milli_each
+		@warning_ignore("integer_division")  # whole gold, the rest carried
+		paid = milli / 1000
+		acc["buy_milli"] = milli % 1000
+		if paid > 0:
+			state.metrics["treasury"] = float(state.metrics["treasury"]) - float(paid)
+	return {"got": got + bought, "house": bought, "house_gold": paid}
+
+
+## The units a regiment may still take today: up to `target`, never past
+## army_supply_max_days after today's meal.
+static func _room(repo: DataRepository, supplies: int, use: int, day: int, target: int) -> int:
+	var bite := ArmySystem.day_bite(use, day)
+	return maxi(mini(target, ArmySystem.max_units(repo, use) + bite) - supplies, 0)
+
+
+## A land regiment standing in a realm town is topped up to its carried load
+## from that town, free of cartage and road (spec §3.2 step 4).
+static func _refill_in_town(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> void:
+	var held := ArmySystem.held_town_of(repo, reg, state)
+	if held == "" or not TownStores.is_realm_town(repo, state, held):
+		return
+	var entry: Dictionary = state.regiments[code]
+	var use := ArmySystem.supply_use(repo, reg, state)
+	@warning_ignore("integer_division")  # whole units
+	var target := use * ArmySystem.carry_of(repo, entry) / Calendar.DAYS_PER_TICK + ArmySystem.day_bite(use, state.day)
+	var room := _room(repo, int(entry["supplies"]), use, state.day, target)
+	if room <= 0:
+		return
+	var acc := {"buy_milli": int(entry.get("buy_milli", 0))}
+	var d := _draw(repo, state, held, room, acc)
+	entry["buy_milli"] = int(acc["buy_milli"])
+	entry["supplies"] = int(entry["supplies"]) + int(d["got"])
+
+
+## A flowing line's day (spec §3.2 step 3, §3.4): the day's quota at its
+## rate, drawn, thinned by the road and the marshal, its cartage charged.
+static func _deliver_line(repo: DataRepository, state: GameState, code: String, reg: Dictionary,
+		ln: Dictionary, km: int) -> void:
+	var entry: Dictionary = state.regiments[code]
+	var use := ArmySystem.supply_use(repo, reg, state)
+	@warning_ignore("integer_division")  # the rate's whole units
+	var quota := ArmySystem.day_bite(use * int(ln["rate"]) / 1000, state.day)
+	var send := mini(quota, _room(repo, int(entry["supplies"]), use, state.day,
+		ArmySystem.max_units(repo, use) + ArmySystem.day_bite(use, state.day)))
+	if send <= 0:
+		return
+	var d := _draw(repo, state, String(ln["town"]), send, ln)
+	var got := int(d["got"])
+	var g := Governance.factors(repo, state, "supply_line")
+	@warning_ignore("integer_division")  # whole units
+	var skimmed := got * int(g["skim"]) / 1000
+	var keep := 1000 - SupplySystem.loss_of(repo, km)
+	@warning_ignore("integer_division")  # whole units, the road then the marshal
+	var arrived := (got - skimmed) * keep / 1000 * int(g["efficiency"]) / 1000
+	@warning_ignore("integer_division")  # his word: as if nothing were skimmed
+	var claimed := got * keep / 1000 * int(g["efficiency"]) / 1000
+	entry["supplies"] = int(entry["supplies"]) + arrived
+	var milli := int(ln["fee_milli"]) + got * km * int(repo.bal("supply_cart_milligold_per_unit_km"))
+	@warning_ignore("integer_division")  # whole gold, the rest carried
+	var fee := milli / 1000
+	ln["fee_milli"] = milli % 1000
+	if fee > 0:
+		state.metrics["treasury"] = float(state.metrics["treasury"]) - float(fee)
+	ln["m_drawn"] = int(ln["m_drawn"]) + got
+	ln["m_arrived"] = int(ln["m_arrived"]) + arrived
+	ln["m_claimed"] = int(ln["m_claimed"]) + claimed
+	ln["m_skim"] = int(ln["m_skim"]) + skimmed
+	ln["m_fee"] = int(ln["m_fee"]) + fee
+	ln["m_buy"] = int(ln["m_buy"]) + int(d["house_gold"])
+	if int(d["house"]) > 0:
+		var house := MapManors.controller_of(repo, state, String(repo.burgs[String(ln["town"])]["province_code"]))
+		var bought: Dictionary = ln["m_bought"]
+		bought[house] = int(bought.get(house, 0)) + int(d["house"])
+
+
+## The order ids the couriers on the road carry now.
+static func _riding_orders(state: GameState) -> Dictionary:
+	var out: Dictionary = {}
+	for c: Dictionary in state.couriers:
+		out[int(c["id"])] = true
+	return out
+
+
+## The day's supply for every regiment of the realm, in code order
+## (TickEngine._end_day, after the couriers ride, before the host eats):
+## the town refills, then each line's state, interception and delivery.
+## An ORDERED line, or a `pending` point, whose courier no longer rides (lost
+## on the road) is dropped. Returns the day's events
+## {type, regiment, town, by?, at?} for the dispatches.
+static func day_step(repo: DataRepository, state: GameState) -> Array:
+	TownStores.reconcile(repo, state)
+	var events: Array = []
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var reg := ArmySystem.regiment(repo, code)
+		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		_refill_in_town(repo, state, code, reg)
+	var riding := _riding_orders(state)
+	var lines: Array = state.supply_lines.keys()
+	lines.sort()
+	for c in lines:
+		var code := String(c)
+		var ln: Dictionary = state.supply_lines[code]
+		var reg := ArmySystem.regiment(repo, code)
+		if reg.is_empty() or not state.regiments.has(code):
+			state.supply_lines.erase(code)
+			continue
+		var town := String(ln["town"])
+		if not TownStores.is_realm_town(repo, state, town) \
+				or (String(ln["state"]) == ORDERED and not riding.has(int(ln["order_id"]))):
+			state.supply_lines.erase(code)
+			events.append({"type": "cancelled", "regiment": code, "town": town})
+			continue
+		if ln.has("pending") and not riding.has(int((ln["pending"] as Dictionary)["order_id"])):
+			ln.erase("pending")
+		if String(ln["state"]) == ORDERED:
+			continue
+		if String(ln["state"]) == RIDING:
+			if state.absolute_day() < int(ln["ready_day"]):
+				continue
+			ln["state"] = FLOWING
+			events.append({"type": "opened", "regiment": code, "town": town})
+		var route := road_px(repo, state, code, town)
+		var cut := cut_point(repo, state, route)
+		if not cut.is_empty():
+			if String(ln["state"]) != CUT:
+				var at := ArmySystem.pack_to_metres(repo, cut["at"])
+				ln["cut_x_m"] = at.x
+				ln["cut_y_m"] = at.y
+				ln["cut_by"] = String(cut["by"])
+				events.append({"type": "cut", "regiment": code, "town": town, "by": String(cut["by"]),
+					"at": cut["at"]})
+			ln["state"] = CUT
+			continue
+		if String(ln["state"]) == CUT:
+			ln["state"] = FLOWING
+			ln["cut_x_m"] = -1
+			ln["cut_y_m"] = -1
+			ln["cut_by"] = ""
+			events.append({"type": "restored", "regiment": code, "town": town})
+		_deliver_line(repo, state, code, reg, ln, road_km(repo, route))
+	events.append_array(_warnings(repo, state))
+	TownStores.sync_metrics(repo, state)
+	return events
+
+
+## Low and empty regiments, and supply towns running short — each said once
+## until it recovers (the `supply_warn` mark on the regiment, `warned` on the line).
+static func _warnings(repo: DataRepository, state: GameState) -> Array:
+	var out: Array = []
+	var low := int(repo.bal("army_supply_low_days"))
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var reg := ArmySystem.regiment(repo, code)
+		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		var entry: Dictionary = state.regiments[code]
+		var days := ArmySystem.days_in_hand(int(entry["supplies"]), ArmySystem.supply_use(repo, reg, state))
+		var now := "empty" if int(entry["supplies"]) <= 0 else ("low" if days < low else "")
+		if now != String(entry.get("supply_warn", "")):
+			entry["supply_warn"] = now
+			if now != "":
+				out.append({"type": now, "regiment": code, "town": String(line(state, code).get("town", ""))})
+	var warn_days := int(repo.bal("supply_warn_town_days"))
+	var draw: Dictionary = {}
+	var keys: Array = state.supply_lines.keys()
+	keys.sort()
+	for code: String in keys:
+		var ln: Dictionary = state.supply_lines[code]
+		if String(ln["state"]) != FLOWING:
+			continue
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), state)
+		@warning_ignore("integer_division")  # the month's whole units
+		draw[String(ln["town"])] = int(draw.get(String(ln["town"]), 0)) + use * int(ln["rate"]) / 1000
+	var towns: Array = draw.keys()
+	towns.sort()
+	for t: String in towns:
+		var st := TownStores.stock_of(state, t)
+		@warning_ignore("integer_division")  # whole days
+		var holds := (int(st["crown"]) + int(st["lord"]) + int(st["house"])) * Calendar.DAYS_PER_TICK / maxi(int(draw[t]), 1)
+		for code: String in keys:
+			var ln: Dictionary = state.supply_lines[code]
+			if String(ln["town"]) != t:
+				continue
+			var short := holds < warn_days
+			if short and String(ln.get("warned", "")) != "town_low":
+				out.append({"type": "town_low", "regiment": code, "town": t, "days": holds})
+			ln["warned"] = "town_low" if short else ""
+	return out

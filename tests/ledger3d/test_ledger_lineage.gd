@@ -65,6 +65,15 @@ func test_the_hybrid_by_hand() -> void:
 ## ties and his house, and his ties' ties dimmer.
 func test_the_real_pack_anchors() -> void:
 	var s := SuiteData.campaign(repo, 42)
+	# the supply lines are the regiments' own now: the first land regiment
+	# runs one (spec 2026-10-07-army-supply-lines)
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		if String(ArmySystem.regiment(repo, String(c)).get("is_naval", "0")) != "1":
+			s.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(repo, s)[0], 1000, 1)
+			s.supply_lines[c]["state"] = SupplyLines.FLOWING
+			break
 	var eng := TickEngine.new(repo)
 	for i in 6:
 		eng.advance(s)

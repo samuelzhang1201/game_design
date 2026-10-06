@@ -1,0 +1,285 @@
+extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
+## The day's supply step (spec 2026-10-07-army-supply-lines §3.2–3.4).
+
+var repo: DataRepository
+var s: GameState
+var code := ""
+var town := ""
+
+func before_each() -> void:
+	repo = SuiteData.repo()
+	s = SuiteData.campaign(repo, 42)
+	RealmEconomy.forget()
+	code = ""   # GUT keeps one instance for the script's tests
+	town = ""
+	# an able, honest marshal: efficiency 1000, no skim, so the arithmetic is plain
+	var m: Character = s.characters[String(s.council["marshal"])]
+	m.skills["sk_admin"] = 16
+	m.opinion = 50
+	m.traits = []
+	m.attributes["integrity"] = 50
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var reg := ArmySystem.regiment(repo, String(c))
+		if String(reg.get("is_naval", "0")) != "1" and ArmySystem.held_town_of(repo, reg, s) == "":
+			code = String(c)
+			break
+	if code != "":
+		town = _eligible_town()
+	else:   # every regiment stands in a town: march one out into the open field
+		_march_one_out(codes)
+	assert_ne(town, "", "a regiment in the field with a town in reach")
+	s.supply_lines[code] = SupplyLines._new_record(town, 1000, 1)
+	s.supply_lines[code]["state"] = SupplyLines.FLOWING
+	# every OTHER regiment carries more than it may take (ruling R4), so no
+	# town refill draws on the stores or buys from a house today
+	for c in codes:
+		if String(c) == code:
+			continue
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, String(c)), s)
+		s.regiments[c]["supplies"] = ArmySystem.max_units(repo, use) + use
+
+func after_each() -> void:
+	RealmEconomy.forget()
+
+func _eligible_town() -> String:
+	var e := SupplyLines.eligibility(repo, s, code)
+	var towns: Array = e.keys()
+	towns.sort()
+	for t: String in towns:
+		if String(e[t]) == "":
+			return t
+	return ""
+
+## The first land regiment that, a step out of its town onto dry land, still
+## has a supply town in reach (a step may cross a bay and leave none).
+func _march_one_out(codes: Array) -> void:
+	for c in codes:
+		var reg := ArmySystem.regiment(repo, String(c))
+		if String(reg.get("is_naval", "0")) == "1":
+			continue
+		var home := ArmySystem.position_of(repo, s, reg)
+		for step: Vector2 in [Vector2(40.0, 0.0), Vector2(-40.0, 0.0), Vector2(0.0, 40.0), Vector2(0.0, -40.0)]:
+			var cell := MapEconomy.cell_at(repo, home + step)
+			if cell < 0 or MapTerrain.is_water(repo.cells[cell]):
+				continue
+			var mm := ArmySystem.pack_to_metres(repo, home + step)
+			s.regiments[c]["x_m"] = mm.x
+			s.regiments[c]["y_m"] = mm.y
+			code = String(c)
+			if ArmySystem.held_town_of(repo, reg, s) == "":
+				town = _eligible_town()
+				if town != "":
+					return
+			var back := ArmySystem.pack_to_metres(repo, home)
+			s.regiments[c]["x_m"] = back.x
+			s.regiments[c]["y_m"] = back.y
+	code = ""
+
+func _use() -> int:
+	return ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), s)
+
+## A town's stock set by hand, the two metrics synced to it so the day's
+## reconcile has nothing to absorb (ruling R4).
+func _stock(t: String, crown: int, lord: int, house: int) -> void:
+	s.town_stock[t] = {"crown": crown, "lord": lord, "house": house}
+	TownStores.sync_metrics(repo, s)
+
+func _has(ev: Array, type: String, reg: String) -> bool:
+	return ev.any(func(e: Dictionary) -> bool: return String(e["type"]) == type and String(e["regiment"]) == reg)
+
+func test_a_flowing_line_draws_from_its_town_and_delivers_less_the_road() -> void:
+	s.day = 5
+	s.regiments[code]["supplies"] = 0
+	_stock(town, 100000, 0, 0)
+	var send := ArmySystem.day_bite(_use(), 5)
+	var km := SupplyLines.road_km(repo, SupplyLines.road_px(repo, s, code, town))
+	var keep := 1000 - SupplySystem.loss_of(repo, km)
+	SupplyLines.day_step(repo, s)
+	assert_eq(int(TownStores.stock_of(s, town)["crown"]), 100000 - send)
+	@warning_ignore("integer_division")
+	assert_eq(int(s.regiments[code]["supplies"]), send * keep / 1000)
+
+func test_the_rate_scales_the_draw() -> void:
+	s.day = 5
+	s.regiments[code]["supplies"] = 0
+	_stock(town, 100000, 0, 0)
+	s.supply_lines[code]["rate"] = 1200
+	SupplyLines.day_step(repo, s)
+	@warning_ignore("integer_division")
+	assert_eq(100000 - int(TownStores.stock_of(s, town)["crown"]), ArmySystem.day_bite(_use() * 1200 / 1000, 5))
+
+func test_the_draw_stops_at_thirty_days() -> void:
+	s.regiments[code]["supplies"] = ArmySystem.max_units(repo, _use())
+	_stock(town, 100000, 0, 0)
+	SupplyLines.day_step(repo, s)
+	assert_true(int(s.regiments[code]["supplies"]) <= ArmySystem.max_units(repo, _use()) + ArmySystem.day_bite(_use(), s.day))
+
+func test_crown_then_lord_then_the_house_is_bought() -> void:
+	s.day = 5
+	s.regiments[code]["supplies"] = 0
+	var send := ArmySystem.day_bite(_use(), 5)
+	assert_gt(send, 2)
+	_stock(town, 1, 1, 100)
+	var gold := float(s.metrics["treasury"])
+	SupplyLines.day_step(repo, s)
+	var st := TownStores.stock_of(s, town)
+	assert_eq(int(st["crown"]), 0)
+	assert_eq(int(st["lord"]), 0)
+	assert_eq(int(st["house"]), 100 - (send - 2))
+	assert_true(float(s.metrics["treasury"]) <= gold, "the house's goods are paid for")
+
+func test_an_empty_treasury_buys_nothing_from_the_house() -> void:
+	s.day = 5
+	s.regiments[code]["supplies"] = 0
+	_stock(town, 0, 0, 100)
+	s.metrics["treasury"] = 0.0
+	SupplyLines.day_step(repo, s)
+	assert_eq(int(TownStores.stock_of(s, town)["house"]), 100)
+	assert_eq(float(s.metrics["treasury"]), 0.0, "never into debt")
+
+## The price owed but not yet charged in whole gold is part of what the
+## treasury must cover: a purchase never takes it below nothing.
+func test_a_purchase_never_overdraws_the_treasury() -> void:
+	_stock(town, 0, 0, 100000)
+	s.metrics["treasury"] = 1.0
+	for d in range(1, 31):
+		s.day = d
+		s.regiments[code]["supplies"] = 0
+		SupplyLines.day_step(repo, s)
+		assert_gte(float(s.metrics["treasury"]), 0.0, "day %d" % d)
+
+func test_cartage_is_charged_in_whole_gold_and_the_rest_carried() -> void:
+	s.day = 5
+	s.regiments[code]["supplies"] = 0
+	_stock(town, 100000, 0, 0)
+	var km := SupplyLines.road_km(repo, SupplyLines.road_px(repo, s, code, town))
+	var milli := ArmySystem.day_bite(_use(), 5) * km * int(repo.bal("supply_cart_milligold_per_unit_km"))
+	var gold := float(s.metrics["treasury"])
+	SupplyLines.day_step(repo, s)
+	@warning_ignore("integer_division")
+	assert_eq(int(gold - float(s.metrics["treasury"])), milli / 1000)
+	assert_eq(int(s.supply_lines[code]["fee_milli"]), milli % 1000)
+
+func test_a_riding_line_flows_on_its_ready_day() -> void:
+	s.supply_lines[code]["state"] = SupplyLines.RIDING
+	s.supply_lines[code]["ready_day"] = s.absolute_day() + 1
+	var ev := SupplyLines.day_step(repo, s)
+	assert_eq(String(s.supply_lines[code]["state"]), SupplyLines.RIDING)
+	s.day += 1
+	ev = SupplyLines.day_step(repo, s)
+	assert_eq(String(s.supply_lines[code]["state"]), SupplyLines.FLOWING)
+	assert_true(_has(ev, "opened", code))
+
+func test_a_line_whose_town_leaves_the_realm_is_cancelled() -> void:
+	var prov := String(repo.burgs[town]["province_code"])
+	var other := repo.resolve_realm("raider_realm")
+	MapOwnership.set_owner(repo, s, prov, other, "a test conquest")
+	var ev := SupplyLines.day_step(repo, s)
+	assert_true(SupplyLines.line(s, code).is_empty())
+	assert_true(_has(ev, "cancelled", code))
+
+func test_a_cut_line_draws_nothing_and_says_so() -> void:
+	s.regiments[code]["supplies"] = 0
+	_stock(town, 100000, 0, 0)
+	var route := SupplyLines.road_px(repo, s, code, town)
+	var realm := repo.resolve_realm("player_realm")
+	@warning_ignore("integer_division")
+	var mid := route[route.size() / 2]
+	for r: Dictionary in repo.world_table("military", "regiments").values():
+		if String(r["kingdom_code"]) != realm:
+			r["x"] = mid.x
+			r["y"] = mid.y
+			repo.world_table("political", "diplomacy")["%s>%s" % [realm, String(r["kingdom_code"])]] = {"stance": "Enemy"}
+			break
+	var ev := SupplyLines.day_step(repo, s)
+	assert_eq(String(s.supply_lines[code]["state"]), SupplyLines.CUT)
+	assert_eq(int(TownStores.stock_of(s, town)["crown"]), 100000)
+	assert_true(_has(ev, "cut", code))
+
+func test_a_regiment_in_a_realm_town_is_topped_up_free() -> void:
+	s.supply_lines.clear()
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var reg := ArmySystem.regiment(repo, String(c))
+		var held := ArmySystem.held_town_of(repo, reg, s)
+		if held == "" or String(c) == code or String(reg.get("is_naval", "0")) == "1":
+			continue
+		s.regiments[c]["supplies"] = 0
+		_stock(held, 100000, 0, 0)
+		var gold := float(s.metrics["treasury"])
+		SupplyLines.day_step(repo, s)
+		var use := ArmySystem.supply_use(repo, reg, s)
+		@warning_ignore("integer_division")
+		var want := use * ArmySystem.carry_of(repo, s.regiments[c]) / 30 + ArmySystem.day_bite(use, s.day)
+		assert_eq(int(s.regiments[c]["supplies"]), mini(want, ArmySystem.max_units(repo, use) + ArmySystem.day_bite(use, s.day)))
+		assert_eq(float(s.metrics["treasury"]), gold, "no cartage inside a town")
+		return
+	pending("no regiment stands in a realm town on this pack")
+
+func test_a_line_follows_a_marching_column() -> void:
+	var before := SupplyLines.road_km(repo, SupplyLines.road_px(repo, s, code, town))
+	var at := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)) + Vector2(60.0, 0.0)
+	var m := ArmySystem.pack_to_metres(repo, at)
+	s.regiments[code]["x_m"] = m.x
+	s.regiments[code]["y_m"] = m.y
+	SupplyLines.day_step(repo, s)
+	assert_false(SupplyLines.line(s, code).is_empty(), "out of range, the line still runs")
+	assert_ne(SupplyLines.road_km(repo, SupplyLines.road_px(repo, s, code, town)), before)
+
+## An ORDERED line waits on its courier; a courier lost on the road (or one
+## no longer riding at all) leaves nothing to wait for (Task 6's deferral).
+func _order_point() -> void:
+	s.supply_lines.erase(code)
+	s.metrics["treasury"] = 1000.0
+	var req := ActionRequest.make("SUPPLY_POINT_SET", {"regiment": code, "town": town, "rate": 1000})
+	var actions := ActionSystem.new(repo)
+	assert_eq(actions.validate(req, s), "")
+	actions.execute(req, s)
+
+func test_an_ordered_line_waits_while_its_courier_rides() -> void:
+	_order_point()
+	var ev := SupplyLines.day_step(repo, s)
+	assert_eq(String(SupplyLines.line(s, code).get("state", "")), SupplyLines.ORDERED)
+	assert_false(_has(ev, "cancelled", code))
+
+func test_an_ordered_line_whose_courier_is_lost_is_cancelled() -> void:
+	_order_point()
+	s.couriers.clear()
+	var ev := SupplyLines.day_step(repo, s)
+	assert_true(SupplyLines.line(s, code).is_empty())
+	assert_true(_has(ev, "cancelled", code))
+
+func test_a_pending_point_whose_courier_is_lost_is_dropped() -> void:
+	s.metrics["treasury"] = 1000.0
+	var req := ActionRequest.make("SUPPLY_POINT_SET", {"regiment": code, "town": town, "rate": 800})
+	var actions := ActionSystem.new(repo)
+	assert_eq(actions.validate(req, s), "")
+	actions.execute(req, s)
+	assert_true(SupplyLines.line(s, code).has("pending"))
+	SupplyLines.day_step(repo, s)
+	assert_true(SupplyLines.line(s, code).has("pending"), "kept while its courier rides")
+	s.couriers.clear()
+	SupplyLines.day_step(repo, s)
+	var ln := SupplyLines.line(s, code)
+	assert_false(ln.has("pending"))
+	assert_eq(String(ln["state"]), SupplyLines.FLOWING, "the running line runs on")
+
+func test_low_and_empty_are_said_once() -> void:
+	s.supply_lines.clear()
+	s.regiments[code]["supplies"] = 0
+	var ev := SupplyLines.day_step(repo, s)
+	assert_true(_has(ev, "empty", code))
+	ev = SupplyLines.day_step(repo, s)
+	assert_false(_has(ev, "empty", code), "said once until it recovers")
+
+func test_the_tick_engine_runs_the_day_and_keeps_its_events() -> void:
+	var engine := TickEngine.new(repo)
+	s.supply_lines[code]["state"] = SupplyLines.RIDING
+	s.supply_lines[code]["ready_day"] = s.absolute_day()
+	engine.advance_day(s)
+	assert_true(_has(engine.day_supply, "opened", code))
+	assert_eq(String(SupplyLines.line(s, code)["state"]), SupplyLines.FLOWING)

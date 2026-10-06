@@ -21,10 +21,18 @@ func _sheet_of_first_regiment() -> Dictionary:
 func test_only_our_own_supply_lines_are_inked() -> void:
 	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).map(
 		func(r: Dictionary) -> String: return String(r["regiment_code"]))
+	# every land regiment of ours runs a supply line (spec 2026-10-07-army-supply-lines)
+	for c in state.regiments.keys():
+		if String(ArmySystem.regiment(repo, String(c)).get("is_naval", "0")) != "1":
+			state.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(repo, state)[0], 1000, 1)
+			state.supply_lines[c]["state"] = SupplyLines.FLOWING
+	var inked := 0
 	for s: Dictionary in WarSheets.series(repo):
 		for line: Dictionary in WarIntelInk.strokes(repo, state, s, 1024)["supply"]:
 			assert_true(String(line["code"]) in ours, "a foreign regiment's supply line is not ours to know")
 			assert_gte((line["poly"] as PackedVector2Array).size(), 2)
+			inked += 1
+	assert_gt(inked, 0, "our lines are inked")
 
 
 func test_a_spy_still_riding_is_a_courier_and_files_no_report_yet() -> void:

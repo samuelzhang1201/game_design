@@ -145,7 +145,14 @@ func test_a_newly_idle_building_is_announced() -> void:
 			cell = c
 			break
 	assert_true(MapManors.build(Game.data, Game.state, cell, "smithy", "test: a forge"))
-	Game.state.metrics["lord_strategic"] = -1000000.0
+	# its iron needed past any purse, so it idles whatever the lord's pools
+	# hold (a negative pool no longer lasts the month: the day's supply step
+	# settles the pools into the towns every day)
+	var need: Array = []
+	for inp: Dictionary in Game.data.building_inputs["smithy"]:
+		need.append(int(inp["units"]))
+		inp["units"] = 1000000000
+	RealmEconomy.forget()
 	Game.state.day = Calendar.DAYS_PER_TICK
 	var tick := Game.state.tick
 	var got: Array = []
@@ -161,5 +168,8 @@ func test_a_newly_idle_building_is_announced() -> void:
 	Game.set_clock_speed(0)
 	Game.data.balance["time_day_seconds"] = 1.0
 	Game.news_published.disconnect(handler)
+	for i in need.size():
+		(Game.data.building_inputs["smithy"][i] as Dictionary)["units"] = int(need[i])
+	RealmEconomy.forget()
 	var joined := "\n".join(got)
 	assert_string_contains(joined, "The smithy at %s stands idle: no iron." % MapManors.label_of(Game.data, cell))

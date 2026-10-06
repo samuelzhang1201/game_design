@@ -16,6 +16,10 @@ func before_each() -> void:
 	cell = int(MapManors.manors_of_province(data, MapManors.home_province(data, s), s)[0])
 	MapManors.build(data, s, cell, WorkshopSystem.BUILDING, "a test workshop")
 	s.metrics["lord_civil"] = 100.0
+	# the supply lines are the regiments' own now: the first land regiment
+	# runs one (spec 2026-10-07-army-supply-lines)
+	s.supply_lines[_first_land()] = SupplyLines._new_record(TownStores.realm_towns(data, s)[0], 1000, 1)
+	s.supply_lines[_first_land()]["state"] = SupplyLines.FLOWING
 
 func after_each() -> void:
 	RealmEconomy.forget()
@@ -27,6 +31,23 @@ func _govern(seat: String, skill: String, value: int, traits: Array) -> Characte
 	c.traits = traits
 	c.attributes["integrity"] = 50
 	return c
+
+func _first_land() -> String:
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		if String(ArmySystem.regiment(data, String(c)).get("is_naval", "0")) != "1":
+			return String(c)
+	return ""
+
+## A day of `code`'s line with its town well stocked: the line's month counters.
+func _a_day_of_the_line(code: String) -> Dictionary:
+	var ln: Dictionary = s.supply_lines[code]
+	s.town_stock[String(ln["town"])] = {"crown": 100000, "lord": 0, "house": 0}
+	TownStores.sync_metrics(data, s)
+	s.regiments[code]["supplies"] = 0
+	SupplyLines.day_step(data, s)
+	return s.supply_lines[code]
 
 func _sum(rows: Array, key: String) -> int:
 	var total := 0
@@ -87,38 +108,43 @@ func test_an_ungoverned_workshop_runs_at_the_floor_and_skims_for_nobody() -> voi
 	WorkshopSystem.settle_month(data, s)
 	assert_false(s.skims.has(""))
 
-## Supply: skimmed = paid × 200 / 1000; the pools pay the full `paid`,
-## less reaches the ranks than he reports (the claim buys with all of it).
+## Supply: skimmed = the draw × 200 / 1000; the town gives the full draw,
+## less reaches the ranks than he reports (the claim as if nothing were skimmed).
 func test_a_venal_marshal_skims_the_supply_gold() -> void:
 	var m := _govern("marshal", "sk_admin", 16, ["venal"])
-	s.metrics["strategic"] = 1000000.0
-	for c in s.regiments.keys():
-		s.regiments[c]["supplies"] = 0
 	var rows := SupplySystem.plan(data, s)
 	var row: Dictionary = rows[0]
 	assert_gt(int(row["paid"]), 0)
 	assert_eq(String(row["governor"]), m.id)
 	@warning_ignore("integer_division")
-	assert_eq(int(row["skimmed"]), int(row["paid"]) * 200 / 1000)
-	assert_eq(int(row["claimed"]), int(row["need"]), "he reports the need met in full")
+	assert_eq(int(row["skimmed"]), TownStores.gold_of_units(data, int(row["need"]) * 200 / 1000))
+	@warning_ignore("integer_division")
+	assert_eq(int(row["claimed"]), int(row["need"]) * (1000 - int(row["loss_permille"])) / 1000,
+		"he reports the draw as if nothing were skimmed")
 	assert_lt(int(row["delivered"]), int(row["claimed"]), "less reaches the ranks than he reports")
-	var paid := _sum(rows, "paid")
-	var skimmed := _sum(rows, "skimmed")
-	var lines := SupplySystem.settle_month(data, s)
-	assert_eq(lines, [{"metric": "strategic", "delta": -paid, "reason": "supplies sent to the host"}],
-		"the pools pay in full")
-	assert_eq(s.skims[m.id], {"supply_line": skimmed})
-	assert_gt(skimmed, 0)
+	# a day's skim is whole units: the hungriest regiment's line, so a fifth
+	# of one day's draw is at least one
+	var big := _first_land()
+	for c in s.regiments.keys():
+		var use := ArmySystem.supply_use(data, ArmySystem.regiment(data, String(c)), s)
+		if use > ArmySystem.supply_use(data, ArmySystem.regiment(data, big), s):
+			big = String(c)
+	s.supply_lines[big] = (s.supply_lines[_first_land()] as Dictionary).duplicate(true)
+	var ln := _a_day_of_the_line(big)
+	assert_gt(int(ln["m_skim"]), 0)
+	@warning_ignore("integer_division")
+	assert_eq(int(ln["m_skim"]), int(ln["m_drawn"]) * 200 / 1000, "the day's draw, skimmed")
+	assert_lt(int(ln["m_arrived"]), int(ln["m_claimed"]))
 
 func test_an_honest_able_marshal_delivers_what_he_says() -> void:
 	var m := _govern("marshal", "sk_admin", 16, ["honest"])
-	s.metrics["strategic"] = 1000000.0
-	for c in s.regiments.keys():
-		s.regiments[c]["supplies"] = 0
 	for row: Dictionary in SupplySystem.plan(data, s):
 		assert_eq(int(row["skimmed"]), 0)
 		assert_eq(int(row["delivered"]), int(row["claimed"]))
-	SupplySystem.settle_month(data, s)
+	var ln := _a_day_of_the_line(_first_land())
+	assert_gt(int(ln["m_drawn"]), 0)
+	assert_eq(int(ln["m_skim"]), 0)
+	assert_eq(int(ln["m_arrived"]), int(ln["m_claimed"]))
 	assert_false(s.skims.has(m.id))
 
 ## A clumsy marshal (skill 4: 850 − 80 = 770‰) delivers less than the
@@ -149,40 +175,3 @@ func test_a_clumsy_venal_steward_skims_what_he_made() -> void:
 	assert_eq(int(row["claimed"]), 23)
 	WorkshopSystem.settle_month(data, s)
 	assert_eq(Governance.skimmed_on(s, st.id, "workshop"), 4)
-
-## A venal marshal on a SHORT pool: the pools pay less than the lines cost;
-## he skims a fifth of what was paid, buys with the rest, and reports what
-## the whole payment would have bought.
-func test_a_venal_marshal_skims_a_partly_paid_line() -> void:
-	var m := _govern("marshal", "sk_admin", 16, ["venal"])
-	for c in s.regiments.keys():
-		s.regiments[c]["supplies"] = 0
-	s.metrics["strategic"] = 1000000.0
-	s.metrics["lord_strategic"] = 0.0
-	var full: Dictionary = SupplySystem.plan(data, s)[0]
-	var cost := 0
-	for row: Dictionary in SupplySystem.plan(data, s):
-		cost += int(row["gold"])
-	@warning_ignore("integer_division")
-	s.metrics["strategic"] = float(cost / 2)
-	var rows := SupplySystem.plan(data, s)
-	var row: Dictionary = rows[0]
-	assert_eq(String(row["code"]), String(full["code"]))
-	assert_lt(int(row["paid"]), int(row["gold"]), "the line is only partly paid")
-	assert_gt(int(row["paid"]), 0)
-	var price := int(data.bal("army_supply_gold_permille"))
-	var keep := 1000 - int(row["loss_permille"])
-	@warning_ignore("integer_division")
-	assert_eq(int(row["skimmed"]), int(row["paid"]) * 200 / 1000)
-	@warning_ignore("integer_division")
-	var bought := (int(row["paid"]) - int(row["skimmed"])) * 1000 / price
-	@warning_ignore("integer_division")
-	var said := int(row["paid"]) * 1000 / price
-	@warning_ignore("integer_division")
-	assert_eq(int(row["delivered"]), mini(bought * keep * 1000 / 1000000, int(row["need"])))
-	@warning_ignore("integer_division")
-	assert_eq(int(row["claimed"]), mini(said * keep * 1000 / 1000000, int(row["need"])))
-	assert_lt(int(row["delivered"]), int(row["claimed"]))
-	var skimmed := _sum(rows, "skimmed")
-	SupplySystem.settle_month(data, s)
-	assert_eq(Governance.skimmed_on(s, m.id, "supply_line"), skimmed)

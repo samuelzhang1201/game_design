@@ -37,6 +37,9 @@ func _end_day(state: GameState) -> Array:
 	# courier arrives as the day ENDS): he reaches the column where its day
 	# left it, and the order he delivers is marched on from tomorrow.
 	day_couriers = CourierSystem.ride_day(data, state)
+	# The supply lines' day (spec 2026-10-07-army-supply-lines §3.2): the towns
+	# refill their garrisons, the wagons roll, before the host eats.
+	day_supply = SupplyLines.day_step(data, state)
 	# The host eats a day of its month (owner 2026-09-30).
 	ArmySystem.eat_day(data, state)
 	# A hungry host loses heart every day (spec 2026-10-07-army-supply-lines §3.7).
@@ -51,6 +54,10 @@ var day_arrivals: Array = []
 
 ## The couriers' events of the last day (CourierSystem.ride_day), for the news bar.
 var day_couriers: Array = []
+
+## The supply lines' events of the last day (SupplyLines.day_step), for the
+## marshal's dispatches.
+var day_supply: Array = []
 
 ## The buildings the last advance() left idle that were working the month
 ## before (M5), [{cell, building, missing}] in cell then code order — read
@@ -82,6 +89,7 @@ func advance(state: GameState) -> TickReport:
 	else:
 		day_arrivals = []
 		day_couriers = []
+		day_supply = []
 	# The month that just ended is settled BEFORE the tick moves: its lines
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
@@ -123,13 +131,6 @@ func advance(state: GameState) -> TickReport:
 	# every later settled month has already been incremented past it.
 	if state.tick > 0:
 		MissiveLog.add(data, state, MissiveWriter.monthly(data, state, state.tick))
-	# The supply lines (spec 2026-09-30-ledger-supply-design §3): the host is
-	# refilled before its month is spent.
-	for l: Dictionary in SupplySystem.settle_month(data, state):
-		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
-	# What the supply lines took from the pools is taken from the towns that
-	# hold them (the towns' sums stay the metrics).
-	TownStores.reconcile(data, state)
 	# The regiments' month (owner 2026-09-17; morale, spec 2026-09-30-ledger-
 	# supply-design §4): wounded return, morale drifts toward what the stores
 	# just refilled allow, training grows (the supplies are eaten daily).

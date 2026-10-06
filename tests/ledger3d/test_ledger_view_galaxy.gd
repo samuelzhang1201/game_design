@@ -14,6 +14,13 @@ func before_each() -> void:
 	repo = SuiteData.repo()
 	s = SuiteData.campaign(repo, 42)
 	RealmEconomy.forget()
+	# the supply lines are the regiments' own now: every land regiment runs
+	# one, so the galaxy holds the chain it held under the monthly refill
+	# (spec 2026-10-07-army-supply-lines)
+	for c in s.regiments.keys():
+		if String(ArmySystem.regiment(repo, String(c)).get("is_naval", "0")) != "1":
+			s.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(repo, s)[0], 1000, 1)
+			s.supply_lines[c]["state"] = SupplyLines.FLOWING
 	view = (load("res://scenes/ledger/ledger_view.tscn") as PackedScene).instantiate()
 	add_child_autofree(view)
 	view.set_anchors_preset(Control.PRESET_TOP_LEFT)  # set its own size, not the parent's

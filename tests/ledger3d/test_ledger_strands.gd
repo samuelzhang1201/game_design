@@ -24,6 +24,15 @@ func before_each() -> void:
 	m.opinion = 50
 	m.traits = ["venal"]
 	m.attributes["integrity"] = 50
+	# the supply lines are the regiments' own now: the first land regiment
+	# runs one (spec 2026-10-07-army-supply-lines)
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		if String(ArmySystem.regiment(repo, String(c)).get("is_naval", "0")) != "1":
+			state.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(repo, state)[0], 1000, 1)
+			state.supply_lines[c]["state"] = SupplyLines.FLOWING
+			break
 	code = String(SupplySystem.plan(repo, state)[0]["code"])
 	view = (load("res://scenes/ledger/ledger_view.tscn") as PackedScene).instantiate()
 	add_child_autofree(view)

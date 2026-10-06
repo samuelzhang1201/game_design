@@ -221,8 +221,6 @@ func test_a_halt_in_the_open_is_a_field_camp() -> void:
 	s.regiments[code]["y_m"] = m.y
 	ArmySystem.set_garrison(repo, s, code)
 	assert_eq(SupplySystem.garrisoned_in(repo, s, code), "", "no garrison in the open")
-	assert_eq(SupplySystem.stronghold_of(repo, s, code) != "", true,
-		"still supplied through the province's capital (the supply rule is unchanged)")
 	assert_false(bool(SupplySystem.line_of(repo, s, code)["garrison"]))
 	var rows: Array = []
 	for sec: Dictionary in WarFolio.sections(repo, s, code):
