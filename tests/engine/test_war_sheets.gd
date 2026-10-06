@@ -75,3 +75,15 @@ func test_the_place_names_sheet_square_and_degrees() -> void:
 func test_neighbours_are_the_grid_cells_beside_it() -> void:
 	var cells := {Vector2i(1, 1): 0, Vector2i(2, 1): 1, Vector2i(1, 0): 2}
 	assert_eq(WarSheets.grid_neighbours(cells, Vector2i(1, 1)), {"e": 1, "n": 2})
+
+
+func test_the_series_is_cut_at_ten_degrees_and_its_ids_are_unique() -> void:
+	assert_eq(repo.bal("war_sheet_deg"), 10.0)
+	var g := MapCoords.grid_size(repo, repo.bal("war_sheet_deg"))
+	var seen: Dictionary = {}
+	for s: Dictionary in WarSheets.series(repo):
+		assert_lt(int(s["col"]), g.x)
+		assert_lt(int(s["row"]), g.y)
+		assert_false(seen.has(s["id"]), "id %s is unique" % s["id"])
+		seen[s["id"]] = true
+	assert_gt(g.x, 26, "the series runs past Z")

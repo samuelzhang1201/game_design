@@ -945,11 +945,23 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 	var screen := r.war_room_screen()
 	var code := ""
 	var engine := Vector2.ZERO
-	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
-		if String(reg.get("is_naval", "0")) != "1":
+	# a land regiment whose sheet holds another of ours, so there is a second
+	# piece to compare (the series' scale decides which: derived, not named)
+	var mine := MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))
+	for reg: Dictionary in mine:
+		if String(reg.get("is_naval", "0")) == "1":
+			continue
+		var at := ArmySystem.position_of(Game.data, Game.state, reg)
+		var sheet := WarSheets.sheet_of(Game.data, at + Vector2(4.5, -1.25))
+		var rect: Rect2 = WarSheets.series(Game.data)[sheet]["rect"]
+		var shared := mine.any(func(o: Dictionary) -> bool:
+			return String(o["regiment_code"]) != String(reg["regiment_code"]) \
+				and rect.has_point(ArmySystem.position_of(Game.data, Game.state, o)))
+		if shared:
 			code = String(reg["regiment_code"])
-			engine = ArmySystem.position_of(Game.data, Game.state, reg)
+			engine = at
 			break
+	assert_ne(code, "", "some sheet holds two of our regiments")
 	# on the march: a regiment quartered in a town stands as its garrison's piece
 	ArmySystem.ensure(Game.data, Game.state)
 	ArmySystem.set_march(Game.data, Game.state, code, engine + Vector2(40.0, 0.0))
