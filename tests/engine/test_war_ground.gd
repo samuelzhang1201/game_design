@@ -134,3 +134,40 @@ func test_a_land_regiment_cannot_march_into_the_sea() -> void:
 	var texts := WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
 	assert_true(texts.has("It cannot march into the sea"))
 	assert_false(texts.any(func(t: String) -> bool: return t.contains("away") or t.contains("Defend")))
+
+
+func test_the_slip_names_the_marks_near_the_pointer_nearest_first() -> void:
+	var all := WarMarks.inked(repo, "")
+	var m: Dictionary = all[0]
+	var at: Vector2 = (m["at"] as Vector2) + Vector2(0.3, 0.0)
+	var r := WarGround.reading(repo, state, at, "")
+	var places: Array = r["places"]
+	assert_gt(places.size(), 0)
+	assert_lte(places.size(), int(repo.bal("war_mark_hover_max")))
+	assert_eq(String(places[0]["code"]), String(m["code"]))
+	var texts := WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
+	assert_true(texts.any(func(t: String) -> bool: return t.begins_with(String(m["label"]) + ",")))
+	var legend := String(m["legend"]).substr(0, int(repo.bal("war_mark_legend_chars")))
+	if legend != "":
+		assert_true(texts.has(legend))
+
+
+func test_a_brigand_mark_states_its_toll() -> void:
+	for m: Dictionary in WarMarks.inked(repo, "sheet"):
+		if String(m["type"]) != "brigands":
+			continue
+		var r := WarGround.reading(repo, state, m["at"], "")
+		var hz: Dictionary = repo.war_mark_hazards["brigands"]
+		var texts := WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
+		@warning_ignore("integer_division")
+		var toll := "supply lines within %d km lose %d%%" % [int(hz["reach_km"]), int(hz["permille"]) / 10]
+		assert_true(texts.any(func(t: String) -> bool: return t.contains(toll)), toll)
+		return
+	pass_test("no brigands on this pack")
+
+
+func test_no_marks_far_from_everything() -> void:
+	var r := WarGround.reading(repo, state, _sea_point(), "")
+	assert_lte((r["places"] as Array).size(), int(repo.bal("war_mark_hover_max")))
+	for p: Dictionary in r["places"]:
+		assert_lte(float(p["distance_km"]), repo.bal("war_mark_hover_km"))

@@ -33,6 +33,7 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 		"road": "" if sea else ArmySystem.road_at(repo, at),
 		"town": town, "works": works, "town_holder": town_holder, "garrison": garrison,
 		"weather": Weather.at(repo, state, at, state.absolute_day()) if state != null else Weather.CLEAR,
+		"places": WarMarks.near(repo, at, repo.bal("war_mark_hover_km"), int(repo.bal("war_mark_hover_max"))),
 		"regiment": {},
 	}
 	if code != "":
@@ -76,6 +77,7 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 	out.append({"text": String(r["place"]), "kind": "title"})
 	if bool(r["sea"]):
 		_add(out, "Weather: " + Weather.describe_kind(repo, String(r["weather"])))
+		_place_lines(repo, r, out)
 		_regiment_lines(repo, r, raking, out)
 		return out
 	if String(r["holder"]) != "":
@@ -98,9 +100,26 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 		if not (r["garrison"] as Array).is_empty():
 			_add(out, "Garrison: " + ", ".join(r["garrison"]))
 	_add(out, "Weather: " + Weather.describe_kind(repo, String(r["weather"])))
+	_place_lines(repo, r, out)
 	_regiment_lines(repo, r, raking, out)
 	return out
 
+
+## The marks near the pointer (spec 2026-10-07-war-room-p2 §1.3): one line
+## each, nearest first, a hazard's toll on supply; the nearest one's legend.
+static func _place_lines(repo: DataRepository, r: Dictionary, out: Array) -> void:
+	var places: Array = r.get("places", [])
+	for p: Dictionary in places:
+		var text := "%s, %d km — %s" % [String(p["label"]), roundi(float(p["distance_km"])), String(p["note"])]
+		var hz: Dictionary = repo.war_mark_hazards.get(String(p["type"]), {})
+		if not hz.is_empty():
+			@warning_ignore("integer_division")
+			text += "; supply lines within %d km lose %d%%" % [int(hz["reach_km"]), int(hz["permille"]) / 10]
+		_add(out, text)
+	if not places.is_empty():
+		var legend := String(places[0]["legend"]).substr(0, int(repo.bal("war_mark_legend_chars")))
+		if legend != "":
+			out.append({"text": legend, "kind": "sub"})
 
 static func _regiment_lines(_repo: DataRepository, r: Dictionary, raking: bool, out: Array) -> void:
 	var g: Dictionary = r["regiment"]
