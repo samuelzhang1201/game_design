@@ -177,6 +177,8 @@ func _process(delta: float) -> void:
 		var before := works_progress()
 		var missives_before := Game.state.next_missive_id
 		var out := Game.advance_day()
+		# what the day's end brings is dated the day that ended, not the one begun
+		Game.news_dated_to(int(out["ended"]))
 		# The news bar (owner 2026-09-14): a work's progress at each milestone,
 		# its completion, and the month's close.
 		announce_milestones(before, works_progress())
@@ -211,6 +213,7 @@ func _process(delta: float) -> void:
 					var seal := current_screen.council_handle() as WaxSeal
 					if seal != null:
 						seal.nudge()
+		Game.news_dated_to(-1)
 
 	Game.day_progress = clampf(_clock_acc / per_day, 0.0, 1.0)
 

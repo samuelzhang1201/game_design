@@ -75,6 +75,15 @@ func test_published_news_joins_the_crawl_and_moves_leftward() -> void:
 	# Every headline is kept, dated, and the LOG opens the history.
 	assert_eq(String(ticker.history()[0]["text"]), "Wolves were heard close to the north villages.")
 	assert_eq(String(ticker.history()[0]["date"]), Calendar.date_string(Game.state.tick, Game.state.day))
+	# What a day's END brings is dated the day that ended, not the day begun
+	# (owner 2026-10-06: 顶栏日期滞后一天); GameRoot dates it so as it tells it.
+	Game.news_dated_to(Game.state.absolute_day() + 2)   # any day other than today's
+	Game.publish_news("The column reached the ford.")
+	Game.news_dated_to(-1)
+	assert_eq(String(ticker.history()[0]["date"]), Calendar.date_of_day(Game.state.absolute_day() + 2))
+	Game.publish_news("A rider was seen on the road.")
+	assert_eq(String(ticker.history()[0]["date"]), Calendar.date_string(Game.state.tick, Game.state.day),
+		"anything else is dated the day now running")
 	ticker.show_history(true)
 	await wait_process_frames(2)
 	assert_true(ticker.history_panel().visible)

@@ -12,12 +12,21 @@ func _init(d: DataRepository) -> void:
 	suggestions = SuggestionGenerator.new(d, actions)
 	events = EventSystem.new(d)
 
-## One day (owner 2026-09-13: the smallest unit of time). Works in
-## progress step; the thirtieth day's end is a tick, which the caller
-## (Game.advance_day) runs through advance(). Returns the works finished
-## today, [{cell, building}].
+## One day (owner 2026-09-13: the smallest unit of time): the day now
+## running (`state.day`) ENDS, and the next one begins. The thirtieth day's
+## end is a tick, which the caller (Game.advance_day) runs through advance()
+## instead. Returns the works finished today, [{cell, building}].
 func advance_day(state: GameState) -> Array:
+	var done := _end_day(state)
 	state.day = mini(state.day + 1, Calendar.DAYS_PER_TICK)
+	return done
+
+
+## The day `state.day` ends (owner 2026-10-06: 顶栏日期滞后一天 — the date shown
+## is the day being played, and all of it happens as that day ends): works
+## step, the columns march, the couriers ride, the host eats. Returns the
+## works finished.
+func _end_day(state: GameState) -> Array:
 	var done := MapManors.advance_works(data, state)
 	# A day on the road for every regiment under a march order (owner
 	# 2026-09-22). The arrivals go on day_arrivals rather than into the
@@ -62,6 +71,15 @@ func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
 
 func advance(state: GameState) -> TickReport:
 	var r := TickReport.new()
+	# The month's last day ends first, as every day does (owner 2026-09-24:
+	# 行进速度必须和给定的速度相符 — the tick IS a day on the road too), so its
+	# march, its couriers and its works are the month's. The reign's OPENING
+	# tick (tick 0) closes no day: the first day is played, not skipped.
+	if state.tick > 0:
+		r.finished_works = _end_day(state)
+	else:
+		day_arrivals = []
+		day_couriers = []
 	# The month that just ended is settled BEFORE the tick moves: its lines
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
@@ -110,15 +128,6 @@ func advance(state: GameState) -> TickReport:
 	ArmySystem.settle_month(data, state)
 	state.tick += 1
 	state.day = 1
-	r.finished_works = MapManors.advance_works(data, state)
-	# The tick IS a day on the road too (owner 2026-09-24: 行进速度必须和给定
-	# 的速度相符): without this a regiment marched 29 days in every 30 and
-	# its piece stood still for one day each month.
-	day_arrivals = ArmySystem.march_day(data, state)
-	# ...and the couriers ride after it, as on every day (owner 2026-10-02).
-	day_couriers = CourierSystem.ride_day(data, state)
-	# ...and the first day of the new month is eaten like any other.
-	ArmySystem.eat_day(data, state)
 	r.tick = state.tick
 	r.season = state.season()
 	r.year = state.year()

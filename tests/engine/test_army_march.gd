@@ -154,8 +154,11 @@ func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 	# owner 2026-09-24 (行进速度必须和给定的速度相符): the thirtieth day's end
 	# runs the TICK rather than advance_day, and until then the regiments
 	# stood still on it — 29 days' march in every 30. Over a month boundary
-	# a column must cover exactly one day_step_m per day, the tick included.
+	# a column must cover one day's march per day, the tick included; the
+	# thirtieth day ends before the month settles (owner 2026-10-06), so the
+	# new month's first day is not marched until it ends.
 	var s := SuiteData.campaign(repo, 7)
+	s.tick = 1   # a month under way: tick 0 is the reign's opening, which ends no day
 	var engine := TickEngine.new(repo)
 	var r := _marcher()
 	var code := String(r["regiment_code"])
@@ -163,28 +166,20 @@ func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 	var step := float(ArmySystem.day_step_m(repo, s, code))
 	var k := float(ArmySystem.metres_per_pack_px(repo))
 	ArmySystem.set_march(repo, s, code, home + Vector2(step * 1000.0 / k, 0.0))
-	# The tick's ArmySystem.settle_month runs before this second day's march
-	# (TickEngine.advance), and morale now follows the stores there (spec
-	# 2026-09-30-ledger-supply-design §4) — so the second day is not paced
-	# like the first. Predict it from the same functions settle_month uses.
-	var use := ArmySystem.supply_use(repo, r)
-	var supplies_before := int(s.regiments[code]["supplies"])
-	var mark := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, supplies_before, use), false)
-	var morale2 := ArmySystem.drift_morale(int(s.regiments[code]["morale"]), mark,
-		int(repo.bal("army_morale_drift_per_month")))
-	var step2 := float(ArmySystem.pace_tenths(repo, ArmySystem.base_pace_km(repo, r),
-		ArmySystem.supply_score(repo, maxi(0, supplies_before - use), use), morale2,
-		int(s.regiments[code]["training"]))) * 100.0
-	# The march is even (owner 2026-10-06): the second day covers what is left
-	# over the whole days it takes at the drifted pace, not a full step2.
-	var left2 := step * 999.0
-	var even2 := ceilf(left2 / ceilf(left2 / step2))
 	s.day = Calendar.DAYS_PER_TICK - 1
-	engine.advance_day(s)   # day 30
-	engine.advance(s)       # the tick: day 1 of the next month
+	engine.advance_day(s)   # day 29 ends
+	assert_eq(s.day, Calendar.DAYS_PER_TICK, "day 30 runs")
+	var day1 := (ArmySystem.position_of(repo, s, r).x - home.x) * k
+	assert_almost_eq(day1, step, 1.0, "day 29 is one day's march")
+	# the second day is paced after day 29's bite is eaten; the march is even
+	# (owner 2026-10-06): what is left over the whole days it takes
+	var step2 := float(ArmySystem.day_step_m(repo, s, code))
+	var left2 := step * 1000.0 - day1
+	var even2 := ceilf(left2 / ceilf(left2 / step2))
+	engine.advance(s)       # day 30 ends, inside the tick
+	assert_eq([s.tick, s.day], [2, 1], "the new month's first day runs")
 	var gone := (ArmySystem.position_of(repo, s, r).x - home.x) * k
-	assert_almost_eq(gone, step + even2, 1.0,
-		"two days, the second at the tick's drifted morale (spec 2026-09-30-ledger-supply-design §4)")
+	assert_almost_eq(gone, day1 + even2, 1.0, "day 30 is a day on the road too")
 
 
 func test_the_same_orders_from_the_same_save_give_the_same_march() -> void:

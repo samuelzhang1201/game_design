@@ -21,7 +21,7 @@ The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, 
 
 ## Time
 
-- **Time runs in days**: `GameState.day` (1..30) under the tick; works step each day, the thirtieth day's end is the tick. The clock (`||` `>` `2x` `4x`, `time_day_seconds`, `time_speed_*`) is driven only by `GameRoot._process` on the court AND the council stage through `Game.advance_day`. No End Turn.
+- **Time runs in days**: `GameState.day` (1..30) under the tick is the day NOW RUNNING — the date the top bar shows. `TickEngine.advance_day` ENDS it (works step, columns march, couriers ride, the host eats) and then turns the calendar; the thirtieth day ends inside the tick (`advance`), before the month settles. The reign's opening tick ends no day, so day 1 is played. The clock (`||` `>` `2x` `4x`, `time_day_seconds`, `time_speed_*`) is driven only by `GameRoot._process` on the court AND the council stage through `Game.advance_day`. No End Turn.
 - `Game.hold_clock(on, who)` is a SET of named holders (`holds_clock`, `release_clock_holds` on a new reign or restart): while any holds it, Space and the play buttons start nothing. The LEDGER and the WAR ROOM hold it while open; closing starts nothing.
 - An order never starts the clock.
 
@@ -56,7 +56,7 @@ The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, 
 
 - An order to a land regiment DISPATCHES a courier (`CourierSystem`, `GameState.couriers`, saved) from the capital (else the most populous town of the first province the realm holds) along the road network (`RoadGraph`: roads and trails, vertices snapped by `courier_graph_snap_px`, Dijkstra). The order takes effect only when he reaches the column, re-aiming his last leg as it moves. Spec `2026-09-27-courier-core-design.md`.
 - **He arrives as the day ENDS**: an order on a paused clock moves nothing; once play runs he sets out (`CourierSystem.setting_out`) and rides EVENLY — each day `CourierSystem.day_pace`, what is still ahead over the whole days it takes (`days_for`, rounded up, never past `day_budget`) — so an N-day trip delivers exactly as the Nth day ends. `TickEngine` marches the columns BEFORE the couriers ride (in `advance_day` and the tick's day), so the order is marched on from the NEXT day.
-- **Every day count shown counts day-ends, the day now running the first** (`eta_days` / `days_left` / `spy_eta_days` read the weather of `absolute_day() + 1`). The arrival day shown for an order is ONE number, the courier's ride and then the march (`CourierSystem.arrival_days`; `days_to_arrival` counts a march order still riding). A higher courier id is a newer order; an older one arriving late is set aside.
+- **Every day count shown counts day-ends, the day now running the first** (`eta_days` / `days_left` / `spy_eta_days` read the weather of `absolute_day()`, the running day). The arrival day shown for an order is ONE number, the courier's ride and then the march (`CourierSystem.arrival_days`; `days_to_arrival` counts a march order still riding). A higher courier id is a newer order; an older one arriving late is set aside.
 - Pace: `courier_base_km_per_day` × `courier_kinds.csv` × the stretch's kind (`road_speed.csv`) × the height tier × the weather. His fee is a ledger line; fleets are exempt for now. `CourierSystem.ride_ahead` / `day_ahead_of` preview the next day on a copy for the map.
 
 ## Weather
