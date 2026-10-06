@@ -119,7 +119,12 @@ def build():
     nock = V(lm["nock"]); grip = V(lm["grip_hi"])
     draw = (nock - grip).normalized()                         # the draw: from the grip back past the string
     B("String", nock, nock + draw * 0.05, "Bow")
-    B("Arrow", nock, nock - draw * 0.76, "Bow")               # a 76 cm arrow, nock on the string, point past the grip
+    # the 76 cm arrow's REST lies along the string, inside the bow's own box: the runtime sizes and
+    # spaces a piece by its rest mesh's box, and an arrow resting out past the grip spread the
+    # formation (every clip poses Arrow outright, so its rest is only where it is bound)
+    chord = (V(lm["string_top"]) - V(lm["string_bottom"])).normalized()
+    a0 = nock - chord * 0.40
+    B("Arrow", a0, a0 + chord * 0.76, "Bow")
     bpy.ops.object.mode_set(mode="OBJECT")
     col = arm.collections.new("Archer")
     for b in arm.bones:

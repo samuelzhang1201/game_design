@@ -169,3 +169,32 @@ def build():
     vals[nv:] = ROLES.index("bow")
     lab.data.foreach_set("value", vals)
     return {"spots": sp, "added_verts": len(o.data.vertices) - nv, "tris": tris(o)}
+
+
+def rest_arrow_along_string():
+    """Migration for a rig built before armature.py laid the Arrow's rest along the string: the bone
+    moved there and the arrow's vertices (all on Arrow) moved with it, so every pose is unchanged."""
+    a, o = rig(), mesh()
+    B = a.data.bones
+    old = B["Arrow"].matrix_local.copy()
+    lm_top, lm_bot = B["BowLimb.U"].tail_local, B["BowLimb.D"].tail_local
+    cx, cy = eval(open(SRC + "string_fit.txt").read())
+    sline = lambda z: Vector((cx[0] * z + cx[1], cy[0] * z + cy[1], z))
+    chord = (sline(lm_top.z) - sline(lm_bot.z)).normalized()
+    nock = B["String"].head_local.copy()
+    a0 = nock - chord * 0.40
+    activate(a)
+    bpy.ops.object.mode_set(mode="EDIT")
+    eb = a.data.edit_bones["Arrow"]
+    eb.head = a0; eb.tail = a0 + chord * 0.76
+    eb.align_roll(Vector((0, -1, 0)))
+    bpy.ops.object.mode_set(mode="OBJECT")
+    new = a.data.bones["Arrow"].matrix_local.copy()
+    T = new @ old.inverted()
+    g = o.vertex_groups["Arrow"].index
+    moved = 0
+    for v in o.data.vertices:
+        if any(x.group == g and x.weight > 0.99 for x in v.groups):
+            v.co = T @ v.co; moved += 1
+    o.data.update()
+    return {"moved": moved, "head": [round(x, 3) for x in a0], "tail": [round(x, 3) for x in a0 + chord * 0.76]}
