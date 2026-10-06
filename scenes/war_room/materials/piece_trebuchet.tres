@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://scenes/war_room/wood_piece.gdshader" id="1_v5nml"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_trebuchet/piece_trebuchet_albedo.png" id="2_75gp2"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_trebuchet/piece_trebuchet_lacquer.png" id="3_s112v"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_trebuchet/piece_trebuchet_normal.png" id="4_u2pdw"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_trebuchet/piece_trebuchet_orm.png" id="5_038mw"]
+
+[resource]
+resource_name = "piece_trebuchet"
+render_priority = 0
+shader = ExtResource("1_v5nml")
+shader_parameter/albedo_tex = ExtResource("2_75gp2")
+shader_parameter/orm_tex = ExtResource("5_038mw")
+shader_parameter/normal_tex = ExtResource("4_u2pdw")
+shader_parameter/lacquer_tex = ExtResource("3_s112v")
+shader_parameter/normal_depth = 1.0
+shader_parameter/lacquer_shade = 1.0
+shader_parameter/lacquer_roughness = 0.42
+shader_parameter/wood_roughness_min = 0.75

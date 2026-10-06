@@ -658,6 +658,14 @@ add it here as a principle with its why — not as a changelog entry.
   foxed, rim-darkened parchment, not white vellum; a graticule with a chequered
   degree border and its figures marks it as a military map. Only the sheet went
   flat: the room, its table and the tin pieces stay 3D (owner's choice).
+- **The war table's regiments are carved wooden pieces** (owner 2026-10-06: 固态的军事单位棋子…
+  做旧，木头材质…木质底座下宽上窄，刷亮色木漆，外圈一圈金属环; 底座漆色按国家颜色; 一团一枚).
+  One aged dark-oak piece per regiment on a round tapered plinth with an iron band; the
+  lacquer is the realm's colour and is BRIGHT by the owner's word (not the muted base
+  tincture); strength lives on the tag, not in a count of figures. The wood stays satin
+  (`wood_roughness_min`): at Tripo's own gloss the oak read as polished bronze (critic
+  2026-10-06). A Tripo mesh is welded before it is collapsed, or its seams crack open and
+  the parchment shows through as white speckle.
 - **An index chart shows the land it indexes** (owner: 选择地图的格子那个纸也换成羊皮
   纸，然后画上整个大陆地图的形状). The sheet index is parchment with the continent's
   inked coast and water lines, not a grid of dots.

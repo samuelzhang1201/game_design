@@ -12,6 +12,7 @@ every Blender step in the owner's instance, never headless). They are plain
 | `wr_table.py` | the oak trestle table, top 1.8 × 1.7 m at y −0.045, iron clamps | `WR_table` |
 | `wr_candle.py` | the three-candle iron candlestick, origin at the base | `WR_candle` |
 | `wr_props.py` | the rake (origin at the head's bottom centre, shaft toward game +Z) and the 35 mm pennant (its atlas and ORM painted into `model_wip/textures/pennant_*.png`) | `WR_rake`, `WR_pennant` |
+| `wr_pieces.py` | the wooden unit pieces (spec `2026-10-06-war-room-wooden-pieces.md`): each Tripo source turned to face game −Z, its plinth's foot centred and 1 across, welded, collapsed to 15k triangles on Tripo's UVs, maps cut to 1024, the lacquer mask read off the blue; `export` writes `assets/3D/war_room/piece_<arm>/`, then `tools/war_room/make_piece_scenes.gd` (not headless) dresses the scenes. Its work file is `assets/3D/war_room/model_wip/pieces_wip.blend` | `WP_<arm>` |
 | `wr_assemble.py` | a preview only: instances of everything where the game puts them, stand-in sheet and chart, lights, the game's opening camera — never exported | `WR_assembly` |
 | `wr_view.py` | `wr_view(names, …)`: frames the viewport on some objects for a screenshot | — |
 

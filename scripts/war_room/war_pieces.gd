@@ -1,17 +1,21 @@
 class_name WarPieces
 extends Node3D
-## The crown's regiments as painted tin miniatures on bases (owner 2026-10-01,
-## spec 2026-10-01-war-room-design §3): 9 / 6 / 3 figures of the regiment's
-## chief arm frozen in its order's pose, a base painted the realm's colour with
-## a brass name plate and the house's arms, a paper tag on a pin. Each stands
-## where the 3D map draws it (WarRoomView.drawn, else WarRoom.believed_position;
-## owner 2026-10-02); when that moves, the plotter's rake
-## pushes it there over war_plot_push_s. Never reaches the Game autoload.
+## The crown's regiments on the table (spec 2026-10-01-war-room-design §3): a
+## land regiment is ONE solid wooden piece of its art key (MapObjects.army_piece:
+## its chief arm, the royal regiment the royal piece, artillery the trebuchet —
+## GameArt.WAR_PIECES), its round plinth war_piece_plinth_mm across with the
+## lacquer in the realm's colour, the whole piece turned to its heading (spec
+## 2026-10-06-war-room-wooden-pieces); a fleet is a flat tin token on a base
+## painted the realm's colour with a brass name plate and the house's arms.
+## Each wears a paper tag. Each stands where the 3D map draws it
+## (WarRoomView.drawn, else WarRoom.believed_position; owner 2026-10-02); when
+## that moves, the plotter's rake pushes it there over war_plot_push_s. Never
+## reaches the Game autoload.
 
 
 var _repo: DataRepository
 var _view: WarRoomView
-var _sig: Dictionary = {}     # code -> [pose, figures] it was built with
+var _sig: Dictionary = {}     # code -> what it was built with (_signature)
 var _push: Dictionary = {}    # code -> {from: Vector3, to: Vector3, left: float}
 var _scenes: Dictionary = {}  # model path -> PackedScene
 var _tins: Dictionary = {}    # source material -> its one tin ShaderMaterial
@@ -52,7 +56,8 @@ func piece(code: String) -> Node3D:
 func rebuild(state: GameState) -> void:
 	_clear()
 	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
-		_add(state, String(p["code"]), bool(p["naval"]), _seated(p["at"], bool(p["naval"])))
+		var code := String(p["code"])
+		_add(state, code, bool(p["naval"]), _seated(p["at"], _half(code, bool(p["naval"]))))
 
 
 ## A state change: a moved piece is pushed over war_plot_push_s, a new piece
@@ -62,7 +67,7 @@ func update(state: GameState) -> void:
 	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
 		var code := String(p["code"])
 		keep[code] = true
-		var want := _seated(p["at"], bool(p["naval"]))
+		var want := _seated(p["at"], _half(code, bool(p["naval"])))
 		var node := piece(code)
 		if node != null and _signature(state, code) != _sig.get(code, []):
 			var at := node.position
@@ -108,31 +113,29 @@ func _process(delta: float) -> void:
 			continue
 		var t := clampf(1.0 - float(j["left"]) / total, 0.0, 1.0)
 		var pos: Vector3 = (j["from"] as Vector3).lerp(j["to"], t)
-		pos.y = _seat_y(Vector2(pos.x, pos.z), bool(n.get_meta("naval", false)))
+		pos.y = _seat_y(Vector2(pos.x, pos.z), n.get_meta("half", Vector2.ZERO))
 		n.position = pos
 		if t >= 1.0:
 			_push.erase(code)
 	_view.redraw_marks()   # the chalk ring and the pennant's dashes follow a pushed piece, only while one moves
 
 
-## Every piece on the screen (the view's design px): its base centre `at`, the
-## `rect` its projected base box and figures' top cover (grown by nothing:
-## pick() grows it), and its `depth` from the camera.
+## Every piece on the screen (the view's design px): its foot's centre `at`,
+## the `rect` its projected box covers — its footprint (`half`) from the table
+## to its top (`top_m`), grown by nothing: pick() grows it — and its `depth`
+## from the camera.
 func screen_hits(camera: Camera3D, scale: float) -> Array:
 	var out: Array = []
-	var side := _repo.bal("war_piece_base_mm") / 1000.0
-	var base_h := _repo.bal("war_piece_base_h_mm") / 1000.0
 	for c: Node3D in get_children():
 		if camera.is_position_behind(c.global_position):
 			continue
-		var naval := bool(c.get_meta("naval", false))
-		var half := Vector2(side, side * (_repo.bal("war_base_naval_depth") if naval else 1.0)) * 0.5
-		var top := base_h + (_repo.bal("war_token_h_mm") if naval else _repo.bal("war_piece_figure_mm")) / 1000.0
+		var half: Vector2 = c.get_meta("half", Vector2.ZERO)
+		var top := float(c.get_meta("top_m", 0.0))
 		var at := camera.unproject_position(c.global_position) / scale
 		var rect := Rect2(at, Vector2.ZERO)
 		for dx in [-half.x, half.x]:
 			for dz in [-half.y, half.y]:
-				for dy in [0.0, base_h, top]:
+				for dy in [0.0, top * 0.5, top]:
 					var corner: Vector3 = c.global_position + Vector3(dx, dy, dz)
 					if not camera.is_position_behind(corner):
 						rect = rect.expand(camera.unproject_position(corner) / scale)
@@ -154,12 +157,11 @@ func pick(camera: Camera3D, scale: float, at: Vector2, radius: float) -> String:
 	return best
 
 
-## A base's resting height at table point `xz`: level on the HIGHEST relief
-## under its four corners (the base stays square to the table), so no corner
-## sinks into the ground. The piece's origin is the base's underside.
-func _seat_y(xz: Vector2, naval: bool) -> float:
-	var side := _repo.bal("war_piece_base_mm") / 1000.0
-	var half := Vector2(side, side * (_repo.bal("war_base_naval_depth") if naval else 1.0)) * 0.5
+## A piece's resting height at table point `xz`: level on the HIGHEST relief
+## under the four corners of its footprint (`half`: a base's, or the square
+## round a plinth), so no edge sinks into the ground. The piece's origin is its
+## underside.
+func _seat_y(xz: Vector2, half: Vector2) -> float:
 	var y := -INF
 	for dx in [-half.x, half.x]:
 		for dz in [-half.y, half.y]:
@@ -168,10 +170,26 @@ func _seat_y(xz: Vector2, naval: bool) -> float:
 
 
 ## Where a piece at pack point `pack_px` stands on the table, seated.
-func _seated(pack_px: Vector2, naval := false) -> Vector3:
+func _seated(pack_px: Vector2, half: Vector2) -> Vector3:
 	var p := _view.table_point(pack_px)
-	p.y = _seat_y(Vector2(p.x, p.z), naval)
+	p.y = _seat_y(Vector2(p.x, p.z), half)
 	return p
+
+
+## A piece's half footprint on the table: a wooden piece's plinth (the square
+## round it), else a base — a fleet's narrower front to back.
+func _half(code: String, naval: bool) -> Vector2:
+	if _wood_scene(code) != "":
+		return Vector2.ONE * _repo.bal("war_piece_plinth_mm") / 2000.0
+	var side := _repo.bal("war_piece_base_mm") / 1000.0
+	return Vector2(side, side * (_repo.bal("war_base_naval_depth") if naval else 1.0)) * 0.5
+
+
+## The wooden piece a regiment stands as (GameArt.WAR_PIECES by its art key),
+## or "" — a fleet, or an arm with no piece yet — for the base and figures.
+func _wood_scene(code: String) -> String:
+	var path := GameArt.path(GameArt.WAR_PIECES, MapObjects.army_piece(_repo, ArmySystem.regiment(_repo, code)))
+	return path if path != "" and ResourceLoader.exists(path) else ""
 
 
 func _clear() -> void:
@@ -187,7 +205,12 @@ func _remove(node: Node) -> void:
 	node.queue_free()
 
 
+## What a piece is built from: a wooden piece only its scene (it has no pose
+## and stays one piece at any strength), the figures their pose and count.
 func _signature(state: GameState, code: String) -> Array:
+	var wood := _wood_scene(code)
+	if wood != "":
+		return [wood]
 	return [WarRoom.pose_action(ArmySystem.order_of(_repo, state, code)), WarFolio.figures(_repo, state, code)]
 
 
@@ -202,14 +225,17 @@ func _add(state: GameState, code: String, naval: bool, at: Vector3) -> Node3D:
 	return node
 
 
-## The figures turn, the base stays square: a marching column faces its road,
-## a pushed piece the way it is pushed, a standing one the camera (the room's
-## south side), its arm's stand_deg off square.
+## The wooden piece turns whole (its plinth is round), a base's figures turn
+## on their square base: a marching column faces its road, a pushed piece the
+## way it is pushed, a standing one the camera (the room's south side), its art
+## key's stand_deg off square.
 func _face(node: Node3D, code: String, heading: Vector2) -> void:
-	var figures := node.get_node_or_null("Figures") as Node3D
+	var figures := node.get_node_or_null("Piece") as Node3D
+	if figures == null:
+		figures = node.get_node_or_null("Figures") as Node3D
 	if figures == null:
 		return
-	var art: Dictionary = _repo.army_art.get(MapObjects.regiment_arm(_repo, ArmySystem.regiment(_repo, code)), {})
+	var art: Dictionary = _repo.army_art.get(MapObjects.army_piece(_repo, ArmySystem.regiment(_repo, code)), {})
 	var at := Vector2(node.position.x, node.position.z)
 	figures.rotation.y = Map3DUnits.yaw_for(heading, at + Vector2(0.0, 1.0), at, float(art.get("stand_deg", "0")))
 
@@ -219,9 +245,18 @@ func _build(state: GameState, code: String, naval: bool) -> Node3D:
 	root.name = code
 	root.set_meta("code", code)
 	root.set_meta("naval", naval)
+	root.set_meta("half", _half(code, naval))
 	var reg := ArmySystem.regiment(_repo, code)
 	var side := _repo.bal("war_piece_base_mm") / 1000.0
 	var base_h := _repo.bal("war_piece_base_h_mm") / 1000.0
+	var wood := _wood_scene(code)
+	if wood != "":
+		var top := _fill_wood(reg, wood, root)
+		root.set_meta("top_m", top)
+		root.add_child(_tag(state, code, side, top, _repo.bal("war_piece_plinth_mm") / 1000.0))
+		_sig[code] = _signature(state, code)
+		return root
+	root.set_meta("top_m", base_h + (_repo.bal("war_token_h_mm") if naval else _repo.bal("war_piece_figure_mm")) / 1000.0)
 	var inset := _repo.bal("war_arms_inset_m")
 	var depth := side * (_repo.bal("war_base_naval_depth") if naval else 1.0)
 	var base := MeshInstance3D.new()
@@ -260,6 +295,15 @@ func _build(state: GameState, code: String, naval: bool) -> Node3D:
 		_fill_token(reg, figures)
 	else:
 		_fill_figures(state, code, reg, figures)
+	root.add_child(_tag(state, code, side, _repo.bal("war_piece_figure_mm") / 1000.0 + base_h, side))
+	_sig[code] = _signature(state, code)
+	return root
+
+
+## The paper tag, at height `top`, war_tag_offset × `across` (the piece's
+## base or plinth) to its right; its lettering is sized by the base's `side`,
+## so a tag reads the same on every piece.
+func _tag(state: GameState, code: String, side: float, top: float, across: float) -> Label3D:
 	var tag := Label3D.new()
 	tag.name = "Tag"
 	tag.text = WarRoom.tag_text(_repo, state, code)
@@ -270,10 +314,28 @@ func _build(state: GameState, code: String, naval: bool) -> Node3D:
 	tag.outline_modulate = _repo.war_palette["paper"]
 	tag.outline_size = int(_repo.bal("war_tag_outline_px"))
 	tag.visible = _tags_on
-	tag.position = Vector3(side * _repo.bal("war_tag_offset"), _repo.bal("war_piece_figure_mm") / 1000.0 + base_h, 0.0)
-	root.add_child(tag)
-	_sig[code] = _signature(state, code)
-	return root
+	tag.position = Vector3(across * _repo.bal("war_tag_offset"), top, 0.0)
+	return tag
+
+
+## A land regiment's wooden piece (its scene at `path`) as `Piece`, scaled so
+## the plinth is war_piece_plinth_mm across, the lacquer the realm's colour as
+## the old base was painted; returns its height on the table.
+func _fill_wood(reg: Dictionary, path: String, into: Node3D) -> float:
+	if not _scenes.has(path):
+		_scenes[path] = load(path)
+	var piece := (_scenes[path] as PackedScene).instantiate() as Node3D
+	piece.name = "Piece"
+	var k := _repo.bal("war_piece_plinth_mm") / 1000.0
+	piece.scale = Vector3.ONE * k
+	var lacquer := MapPalette.color_of(_repo, String(reg["kingdom_code"])).darkened(_repo.bal("war_base_darken"))
+	var top := 0.0
+	for m: MeshInstance3D in Map3DUnits.meshes(piece):
+		m.set_instance_shader_parameter("lacquer", lacquer)
+		if m.mesh != null:
+			top = maxf(top, (m.transform * m.mesh.get_aabb()).end.y * k)
+	into.add_child(piece)
+	return top
 
 
 func _fill_figures(state: GameState, code: String, reg: Dictionary, into: Node3D) -> void:

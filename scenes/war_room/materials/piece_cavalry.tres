@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://scenes/war_room/wood_piece.gdshader" id="1_tyyvp"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_cavalry/piece_cavalry_albedo.png" id="2_b63uu"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_cavalry/piece_cavalry_lacquer.png" id="3_xeyyj"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_cavalry/piece_cavalry_normal.png" id="4_ktxnp"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_cavalry/piece_cavalry_orm.png" id="5_2ix8o"]
+
+[resource]
+resource_name = "piece_cavalry"
+render_priority = 0
+shader = ExtResource("1_tyyvp")
+shader_parameter/albedo_tex = ExtResource("2_b63uu")
+shader_parameter/orm_tex = ExtResource("5_2ix8o")
+shader_parameter/normal_tex = ExtResource("4_ktxnp")
+shader_parameter/lacquer_tex = ExtResource("3_xeyyj")
+shader_parameter/normal_depth = 1.0
+shader_parameter/lacquer_shade = 1.0
+shader_parameter/lacquer_roughness = 0.42
+shader_parameter/wood_roughness_min = 0.75

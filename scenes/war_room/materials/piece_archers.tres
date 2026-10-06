@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://scenes/war_room/wood_piece.gdshader" id="1_btydi"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_archers/piece_archers_albedo.png" id="2_d4vqn"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_archers/piece_archers_lacquer.png" id="3_pc6hb"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_archers/piece_archers_normal.png" id="4_kt2mc"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_archers/piece_archers_orm.png" id="5_cqogy"]
+
+[resource]
+resource_name = "piece_archers"
+render_priority = 0
+shader = ExtResource("1_btydi")
+shader_parameter/albedo_tex = ExtResource("2_d4vqn")
+shader_parameter/orm_tex = ExtResource("5_cqogy")
+shader_parameter/normal_tex = ExtResource("4_kt2mc")
+shader_parameter/lacquer_tex = ExtResource("3_pc6hb")
+shader_parameter/normal_depth = 1.0
+shader_parameter/lacquer_shade = 1.0
+shader_parameter/lacquer_roughness = 0.42
+shader_parameter/wood_roughness_min = 0.75

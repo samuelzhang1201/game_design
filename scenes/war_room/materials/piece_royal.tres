@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://scenes/war_room/wood_piece.gdshader" id="1_14tiw"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_royal/piece_royal_albedo.png" id="2_usn66"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_royal/piece_royal_lacquer.png" id="3_m74q5"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_royal/piece_royal_normal.png" id="4_kg1er"]
+[ext_resource type="Texture2D" path="res://assets/3D/war_room/piece_royal/piece_royal_orm.png" id="5_f0hja"]
+
+[resource]
+resource_name = "piece_royal"
+render_priority = 0
+shader = ExtResource("1_14tiw")
+shader_parameter/albedo_tex = ExtResource("2_usn66")
+shader_parameter/orm_tex = ExtResource("5_f0hja")
+shader_parameter/normal_tex = ExtResource("4_kg1er")
+shader_parameter/lacquer_tex = ExtResource("3_m74q5")
+shader_parameter/normal_depth = 1.0
+shader_parameter/lacquer_shade = 1.0
+shader_parameter/lacquer_roughness = 0.42
+shader_parameter/wood_roughness_min = 0.75
