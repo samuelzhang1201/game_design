@@ -150,6 +150,25 @@ func test_a_march_is_even_and_ends_as_its_last_day_ends() -> void:
 	assert_almost_eq(ArmySystem.position_of(repo, s, r).x, dest.x, 0.0011)
 
 
+## Owner 2026-10-06 (加一条军队到达目的地的新闻): an arrival is told in the news,
+## naming the regiment and where it now stands; a foreign column's is not
+## the crown's to know.
+func test_an_arrival_has_its_headline() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var r := _marcher()
+	var code := String(r["regiment_code"])
+	var here: Vector2 = ArmySystem.position_of(repo, s, r)
+	assert_eq(ArmySystem.arrival_headline(repo, s, code),
+		"%s reaches %s." % [String(r["label"]), Intel.place_label(repo, s, here)])
+	var foreign := ""
+	for other: Dictionary in repo.world_table("military", "regiments").values():
+		if String(other["kingdom_code"]) != repo.resolve_realm("player_realm"):
+			foreign = String(other["regiment_code"])
+			break
+	assert_ne(foreign, "", "the pack has a foreign regiment")
+	assert_eq(ArmySystem.arrival_headline(repo, s, foreign), "", "a foreign arrival is not news")
+
+
 func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 	# owner 2026-09-24 (行进速度必须和给定的速度相符): the thirtieth day's end
 	# runs the TICK rather than advance_day, and until then the regiments

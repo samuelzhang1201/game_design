@@ -809,6 +809,17 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	return arrived
 
 
+## The news bar's line for a regiment that arrived today (owner 2026-10-06:
+## 加一条军队到达目的地的新闻): its name and where it now stands. "" for a
+## regiment not the player's realm's — a foreign column's march is not news.
+static func arrival_headline(repo: DataRepository, state: GameState, code: String) -> String:
+	var reg := regiment(repo, code)
+	if reg.is_empty() or String(reg.get("kingdom_code", "")) != repo.resolve_realm("player_realm"):
+		return ""
+	return "%s reaches %s." % [String(reg.get("label", code)),
+		Intel.place_label(repo, state, position_of(repo, state, reg))]
+
+
 ## Where the day now running's march leaves a regiment whose state row is `entry`
 ## (a copy — CourierSystem.day_ahead_of; a courier's order takes effect only
 ## as the day ends, owner 2026-10-02), in whole metres; the map draws the piece
