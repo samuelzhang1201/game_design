@@ -39,6 +39,8 @@ func _end_day(state: GameState) -> Array:
 	day_couriers = CourierSystem.ride_day(data, state)
 	# The host eats a day of its month (owner 2026-09-30).
 	ArmySystem.eat_day(data, state)
+	# A hungry host loses heart every day (spec 2026-10-07-army-supply-lines §3.7).
+	ArmySystem.hunger_day(data, state)
 	# The month's economy is computed a bucket a day (spec §11.2).
 	RealmEconomy.step_day(data, state)
 	return done

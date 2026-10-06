@@ -13,6 +13,10 @@ func before_each() -> void:
 ## RealmEconomy's sums for the month that just ended.
 func test_the_months_end_settles_the_three_pools() -> void:
 	var s := SuiteData.campaign(data, 42)
+	# The regiments stand fully supplied, so the month's refill draws on no
+	# stock and the pools move only by what is settled here.
+	for rc: String in s.regiments:
+		s.regiments[rc]["supplies"] = ArmySystem.supply_use(data, ArmySystem.regiment(data, rc)) * 6
 	# Two purses (owner 2026-09-14): the lord's own provinces in full, the
 	# crown's treasury its share of the rest (RealmEconomy.purses).
 	var p := RealmEconomy.purses(data, s)

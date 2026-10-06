@@ -31,12 +31,14 @@ static func fit_permille(repo: DataRepository, state: GameState, code: String) -
 	return (heads - wounded) * 1000 / heads
 
 ## What a regiment starts a campaign with.
+@warning_ignore("integer_division")  # whole supplies
 static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 	var home := pack_to_metres(repo, Vector2(float(reg.get("x", 0)), float(reg.get("y", 0))))
 	return {
 		"morale": int(repo.bal("army_start_morale")),
 		"wounded": 0,
-		"supplies": supply_use(repo, reg) * int(repo.bal("army_start_supply_months")),
+		"supplies": supply_use(repo, reg) * int(repo.bal("army_start_supply_days")) / Calendar.DAYS_PER_TICK,
+		"carry_days": int(repo.bal("army_carry_default_days")),
 		"training": int(repo.bal("army_start_training")),
 		"x_m": home.x,
 		"y_m": home.y,
@@ -63,6 +65,11 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 			entry["dest_x_m"] = home.x
 			entry["dest_y_m"] = home.y
 			entry["order"] = ORDER_STANDBY
+		# A save from before the carried load (spec 2026-10-07-army-supply-lines
+		# §6): the default load, and no more than the most a train can carry.
+		if not entry.has("carry_days"):
+			entry["carry_days"] = int(repo.bal("army_carry_default_days"))
+			entry["supplies"] = mini(int(entry["supplies"]), max_units(repo, supply_use(repo, reg, state)))
 
 ## A regiment's state for reading: the stored one, else what it would start
 ## with. Never writes. {} for a regiment that is not the player's.
@@ -158,17 +165,60 @@ static func eat_day(repo: DataRepository, state: GameState) -> void:
 		entry["supplies"] = maxi(0, int(entry["supplies"]) - day_bite(supply_use(repo, reg, state), state.day))
 
 
-## A regiment's stores per mille of a FULL train — army_supply_target_months
-## of its use, what the supply lines refill it to — capped at 1000: the map's
-## yellow bar, which therefore falls day by day as the month is eaten (the
-## supply SCORE, over army_speed_supply_full_months, stays full for the first
-## of those months and would not show it).
-static func stores_permille(repo: DataRepository, supplies: int, use_per_month: int) -> int:
+## Whole days a regiment's `supplies` last at `use` a month (spec
+## 2026-10-07-army-supply-lines §2.1): never saved, always read off the units.
+static func days_in_hand(supplies: int, use: int) -> int:
+	if use <= 0:
+		return 999
+	@warning_ignore("integer_division")  # whole days
+	return maxi(supplies, 0) * Calendar.DAYS_PER_TICK / use
+
+## The most units a regiment of `use` a month can carry: army_supply_max_days.
+static func max_units(repo: DataRepository, use: int) -> int:
+	@warning_ignore("integer_division")  # whole supplies
+	return use * int(repo.bal("army_supply_max_days")) / Calendar.DAYS_PER_TICK
+
+## A regiment entry's carried-load order, the default when it has none.
+static func carry_of(repo: DataRepository, entry: Dictionary) -> int:
+	return int(entry.get("carry_days", int(repo.bal("army_carry_default_days"))))
+
+## The march's per-mille under a carried load (data/army_carry_loads.csv):
+## the row with the most days not above `carry_days`; 1000 with no rows.
+static func load_permille(repo: DataRepository, carry_days: int) -> int:
+	var out := 1000
+	for row: Dictionary in repo.army_carry_loads:
+		if int(row["days"]) <= carry_days:
+			out = int(row["pace_permille"])
+	return out
+
+## The map's yellow bar: days in hand over the carried load, per mille,
+## capped at 1000 — it falls a little every day the column eats.
+static func stores_permille(repo: DataRepository, supplies: int, use_per_month: int, carry_days: int) -> int:
 	if use_per_month <= 0:
 		return 1000
-	var full := maxi(1, int(repo.bal("army_supply_target_months")))
-	@warning_ignore("integer_division")  # whole per-mille of a full train
-	return clampi(maxi(supplies, 0) * 1000 / (use_per_month * full), 0, 1000)
+	var full := maxi(1, carry_days)
+	@warning_ignore("integer_division")  # whole per-mille
+	return clampi(maxi(supplies, 0) * Calendar.DAYS_PER_TICK * 1000 / (use_per_month * full), 0, 1000)
+
+## A day of hunger for every land regiment of the player's realm, in code
+## order (spec §3.7): under army_supply_low_days days in hand morale falls
+## army_morale_hungry_day, at none army_morale_starving_day instead.
+static func hunger_day(repo: DataRepository, state: GameState) -> void:
+	var codes := state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var reg := regiment(repo, code)
+		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		var entry: Dictionary = state.regiments[code]
+		var supplies := int(entry["supplies"])
+		var loss := 0
+		if supplies <= 0:
+			loss = int(repo.bal("army_morale_starving_day"))
+		elif days_in_hand(supplies, supply_use(repo, reg, state)) < int(repo.bal("army_supply_low_days")):
+			loss = int(repo.bal("army_morale_hungry_day"))
+		entry["morale"] = maxi(0, int(entry["morale"]) - loss)
 
 
 ## Where a regiment's morale is heading (spec 2026-09-30-ledger-supply-design
@@ -500,15 +550,16 @@ static func base_pace_km(repo: DataRepository, reg: Dictionary) -> int:
 	return slowest
 
 
-## Supplies as a score, per mille: the months in hand over
-## army_speed_supply_full_months, capped at 1000. A banner that uses nothing
-## never runs short.
+## Supplies as a score, per mille (spec 2026-10-07-army-supply-lines §3.6):
+## full at army_supply_low_days days in hand or more, falling linearly to 0
+## at none — only a hungry column is slowed and loses heart. A banner that
+## uses nothing never runs short.
 static func supply_score(repo: DataRepository, supplies: int, use_per_month: int) -> int:
 	if use_per_month <= 0:
 		return 1000
-	var full := maxi(1, int(repo.bal("army_speed_supply_full_months")))
-	@warning_ignore("integer_division")  # whole per-mille of a full supply train
-	return clampi(maxi(supplies, 0) * 1000 / (use_per_month * full), 0, 1000)
+	var low := maxi(1, int(repo.bal("army_supply_low_days")))
+	@warning_ignore("integer_division")  # whole per-mille
+	return clampi(maxi(supplies, 0) * Calendar.DAYS_PER_TICK * 1000 / (use_per_month * low), 0, 1000)
 
 
 ## Readiness per mille: the weighted mean (balance army_speed_w_*) of the arm
@@ -529,7 +580,7 @@ static func readiness_permille(repo: DataRepository, supply_permille: int, moral
 
 ## The two bars over a regiment on the map (owner 2026-09-27: 红色是健康度 — 综合
 ## 战备, the readiness — 黄色是战略补给数), per mille: Vector2i(readiness,
-## stores against a full train, stores_permille — it falls every day). A
+## days in hand over the carried load, stores_permille — it falls every day). A
 ## regiment that is not the player's has no state, and reads as it would
 ## start (dev mode shows every realm's).
 static func bars_of(repo: DataRepository, state: GameState, code: String) -> Vector2i:
@@ -542,7 +593,7 @@ static func bars_of(repo: DataRepository, state: GameState, code: String) -> Vec
 	var use := supply_use(repo, reg, state)
 	var supply := supply_score(repo, int(st["supplies"]), use)
 	return Vector2i(readiness_permille(repo, supply, int(st["morale"]), int(st["training"])),
-		stores_permille(repo, int(st["supplies"]), use))
+		stores_permille(repo, int(st["supplies"]), use, carry_of(repo, st)))
 
 
 ## The march in TENTHS of a km a day: base_km x 10 x readiness / 1000.
@@ -564,6 +615,7 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 	return pace_tenths(repo, base_pace_km(repo, reg),
 		supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state)),
 		int(st["morale"]), int(st["training"])) / 10.0 \
+		* float(load_permille(repo, carry_of(repo, st))) / 1000.0 \
 		* float(ground_permille(repo, reg, position_of(repo, state, reg))) / 1000.0
 
 
@@ -727,7 +779,8 @@ static func heading_of(repo: DataRepository, state: GameState, code: String) -> 
 	return away.normalized() if away.length() > 0.0001 else Vector2.ZERO
 
 
-## Metres a regiment covers in one day: pace_tenths (tenths of a km) x 100.
+## Metres a regiment covers in one day: pace_tenths (tenths of a km) x 100,
+## under the carried load (load_permille: a heavier train marches slower).
 ## 0 for a banner with no one under arms, which is why an order to march is
 ## refused for one rather than leaving it crawling toward a place forever.
 static func day_step_m(repo: DataRepository, state: GameState, code: String) -> int:
@@ -735,9 +788,10 @@ static func day_step_m(repo: DataRepository, state: GameState, code: String) -> 
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0
+	@warning_ignore("integer_division")  # whole metres
 	return pace_tenths(repo, base_pace_km(repo, reg),
 		supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state)),
-		int(st["morale"]), int(st["training"])) * 100
+		int(st["morale"]), int(st["training"])) * 100 * load_permille(repo, carry_of(repo, st)) / 1000
 
 
 ## Metres a regiment covers TODAY (spec 2026-09-27-courier-core §1): its

@@ -202,7 +202,6 @@ build_rush_gold_per_day,3,ECONOMY (spec §5): gold that takes one day off a work
 manor_rush_days_per_click,5,ECONOMY: days one press of a manor card's HURRY button buys (MANOR_RUSH)
 army_start_morale,70,"regiments (owner 2026-09-17, spec 2026-09-17-regiment-state): morale a regiment starts with, 0..100; it does not change yet"
 army_start_training,10,regiments: the hidden training value a regiment starts with — militia
-army_start_supply_months,6,regiments: supplies a regiment starts with in months of its own use
 army_supply_per_head_permille,100,"regiments: supply units a head uses a month, per mille (5000 heads use 500 a month); refilled monthly by SupplySystem"
 army_supply_gold_permille,100,"LEDGER M1 (spec 2026-09-30-ledger-supply-design §3): gold per mille a supply unit costs; calibrated so refilling the realm's regiments costs about half the crown's and lord's monthly strategic intake (measured on the default pack: 202 gold a month against the crown's and the lord's strategic intake of 414, ratio 0.49, the regiments standing at home drawing through their town since the final review; test_supply_system)"
 army_supply_target_months,4,"LEDGER M1: months of its own use a regiment is refilled to each month — army_speed_supply_full_months plus the one month it is about to eat, so it holds a full supply score (and reads well fed) all month after the spend (final review); the steady monthly cost is one month of use either way — LEDGER M3: that full refill needs an ABLE marshal (data/ledger_governance.csv's supply_line row runs on sk_admin); on the default council (marshal sk_admin 3, Governance.factors 750‰) the stores converge to ~3.7 months refilled / ~2.7 after the spend instead (score ~890, still well fed) at ~34% more gold a month (270 vs 202) — reading sk_martial instead would give 1000‰ (the owner's call)"
@@ -225,10 +224,9 @@ army_morale_step_permille,5,regiments: the morale factor gained per point of mor
 army_strong_ratio_permille,1250,regiments: power over the mean of the player's regiments of the same kind at/above which a regiment reads Strong
 army_weak_ratio_permille,750,regiments: power over that mean at/below which a regiment reads Weak
 army_speed_w_arm,40,"regiments' march (owner 2026-09-19): the weight of the arm itself in a regiment's readiness — the base pace is its slowest arm's (data/army_speed.csv); this share of it is always kept, however hungry or beaten the regiment. readiness = (w_arm*1000 + w_supply*S + w_morale*M + w_training*T) / sum of weights, per mille"
-army_speed_w_supply,25,"regiments' march: the weight of supplies (S = months in hand over army_speed_supply_full_months, per mille, capped at 1000)"
+army_speed_w_supply,25,"regiments' march: the weight of supplies (S = the supply score: full at army_supply_low_days days in hand, falling linearly to 0, per mille)"
 army_speed_w_morale,20,regiments' march: the weight of morale (M = morale x 10)
 army_speed_w_training,15,regiments' march: the weight of training (T = training x 10)
-army_speed_supply_full_months,3,regiments' march: months of supplies in hand at/above which supplies no longer slow a regiment
 map_biome_hill_height,45,BIOMES LAYER (owner 2026-09-17): cell height at/above which a land pixel wears the HILL tile (biome id 13) — about the top 30% of beria's land. MapIndex.raise_high_ground; re-bake with tools/bake_relief.gd after changing
 map_biome_mountain_height,62,BIOMES LAYER: cell height at/above which a pixel wears the MOUNTAIN tile (id 14) — about the top 10% of the land
 map_biome_peak_height,72,BIOMES LAYER (owner 2026-09-17): cell height at/above which a pixel wears the PEAK tile (id 15). 80 left snow as scattered white specks; at 72 the peaks join into a range — 14322 px of snow became 34396. The MOUNTAIN line stays 62: dropping it to 56 with the snow line spread bare rock around the snow and read dirty

@@ -318,6 +318,8 @@ func test_the_days_out_are_the_days_it_takes() -> void:
 	var code := _player_land(s)
 	var reg := ArmySystem.regiment(repo, code)
 	var home := ArmySystem.position_of(repo, s, reg)
+	# a full train, so the stores stay above the low mark however the use moves with the ground
+	s.regiments[code]["supplies"] = ArmySystem.max_units(repo, ArmySystem.supply_use(repo, reg, s))
 	# a town of the realm some five days' clear march away
 	var want := 5.0 * float(ArmySystem.day_step_m(repo, s, code)) / float(ArmySystem.metres_per_pack_px(repo))
 	var dest := home

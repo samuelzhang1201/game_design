@@ -27,8 +27,10 @@ func test_a_new_campaign_seeds_only_the_players_regiments() -> void:
 	assert_eq(int(entry["morale"]), 70)
 	assert_eq(int(entry["training"]), 10)
 	assert_eq(int(entry["wounded"]), 0)
-	# heads x 100 / 1000 a month (scaled by the cell's height tier), times 6 months
-	assert_eq(int(entry["supplies"]), ArmySystem.supply_use(repo, r) * 6)
+	# heads x 100 / 1000 a month (scaled by the cell's height tier), times
+	# army_start_supply_days (20) of the 30 days of a month, in a 20-day load
+	assert_eq(int(entry["supplies"]), ArmySystem.supply_use(repo, r) * 20 / 30)
+	assert_eq(int(entry["carry_days"]), 20)
 	assert_false(s.regiments.has(_other_code()))
 
 func test_wound_recovery_is_a_share_with_a_floor_of_one() -> void:
@@ -90,9 +92,10 @@ func test_the_yellow_bar_falls_day_by_day() -> void:
 	var use := ArmySystem.supply_use(repo, r)
 	if use < Calendar.DAYS_PER_TICK:
 		return
-	s.regiments[code]["supplies"] = use * int(repo.bal("army_supply_target_months"))
+	# the carried days in whole units, rounded UP so the bar reads full
+	s.regiments[code]["supplies"] = (use * ArmySystem.carry_of(repo, s.regiments[code]) + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK
 	var bar := ArmySystem.bars_of(repo, s, code).y
-	assert_eq(bar, 1000, "a full train")
+	assert_eq(bar, 1000, "a full load")
 	s.day = 1
 	ArmySystem.eat_day(repo, s)
 	assert_lt(ArmySystem.bars_of(repo, s, code).y, bar, "one day later it has fallen")

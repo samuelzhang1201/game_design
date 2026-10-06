@@ -52,11 +52,12 @@ func test_a_day_of_marching_covers_the_regiments_own_pace() -> void:
 	var home: Vector2 = ArmySystem.position_of(repo, s, r)
 	var step := ArmySystem.day_step_m(repo, s, code)
 	assert_gt(step, 0, "a banner with arms marches")
-	# pace_tenths is TENTHS of a km a day, so the step is that times 100 m.
+	# pace_tenths is TENTHS of a km a day, so the step is that times 100 m, under the carried load.
 	assert_eq(step, ArmySystem.pace_tenths(repo, ArmySystem.base_pace_km(repo, r),
 		ArmySystem.supply_score(repo, int(s.regiments[code]["supplies"]),
 			ArmySystem.supply_use(repo, r)),
-		int(s.regiments[code]["morale"]), int(s.regiments[code]["training"])) * 100)
+		int(s.regiments[code]["morale"]), int(s.regiments[code]["training"])) * 100
+		* ArmySystem.load_permille(repo, ArmySystem.carry_of(repo, s.regiments[code])) / 1000)
 
 	# Send it due east, far enough that it cannot arrive in one day.
 	var far := home + Vector2(float(step) / float(ArmySystem.metres_per_pack_px(repo)) * 3.0, 0.0)
