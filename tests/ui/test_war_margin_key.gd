@@ -36,7 +36,8 @@ func _is_125(d: float) -> bool:
 
 func test_the_legend_lists_the_sheets_inks() -> void:
 	assert_eq(WarMarginKey.legend_keys(), PackedStringArray(
-		["road", "trail", "river", "border", "seam", "town", "peak", "contour", "wood", "manor", "walls", "port", "bridge", "ford", "supply", "courier", "weather", "spy"]))
+		["road", "trail", "river", "border", "seam", "town", "peak", "contour", "wood", "manor", "walls", "port", "bridge", "ford", "supply", "courier", "weather", "spy",
+		"mark_brigands", "mark_pirates", "mark_mines", "mark_battlefields", "mark_lighthouses"]))
 	for e: Dictionary in WarMarginKey.LEGEND:
 		assert_false(String(e["label"]).is_empty(), String(e["key"]))
 
@@ -86,3 +87,10 @@ func test_a_click_on_the_rose_asks_for_north_and_nowhere_else_is_taken() -> void
 	e.position = r.get_center()
 	key._gui_input(e)
 	assert_signal_emitted(key, "north_pressed")
+
+
+func test_the_key_lists_every_sheet_mark() -> void:
+	var keys := WarMarginKey.legend_keys()
+	for type: String in repo.war_marks:
+		if String(repo.war_marks[type]["layer"]) == "sheet":
+			assert_true(keys.has("mark_" + type), type)

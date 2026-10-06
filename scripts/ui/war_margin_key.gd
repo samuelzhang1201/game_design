@@ -25,6 +25,9 @@ const LEGEND := [
 	{"key": "bridge", "label": "Bridge"}, {"key": "ford", "label": "Ford"},
 	{"key": "supply", "label": "Supply road"}, {"key": "courier", "label": "Courier"},
 	{"key": "weather", "label": "Foul weather"}, {"key": "spy", "label": "Spy report"},
+	{"key": "mark_brigands", "label": "Brigands"}, {"key": "mark_pirates", "label": "Pirates"},
+	{"key": "mark_mines", "label": "Mine"}, {"key": "mark_battlefields", "label": "Battlefield"},
+	{"key": "mark_lighthouses", "label": "Lighthouse"},
 ]
 
 var _repo: DataRepository
@@ -160,6 +163,12 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 	var b := Vector2(r.end.x, r.get_center().y)
 	var line := _repo.bal("war_key_line_px")
 	var dash := _repo.bal("war_key_dash_px")
+	if key.begins_with("mark_"):   # the map's marks (spec 2026-10-07-war-room-p2 §1.3), a hazard in rubric
+		var type := key.trim_prefix("mark_")
+		var row: Dictionary = _repo.war_marks.get(type, {})
+		WarMarkGlyph.draw(self, String(row.get("glyph", "dot")), r.get_center(), r.size.y * 0.9,
+			pal["rubric"] if _repo.war_mark_hazards.has(type) else ink)
+		return
 	match key:
 		"road":
 			draw_line(a, b, ink, line * 1.6, true)
