@@ -73,7 +73,10 @@ func test_a_garrison_stands_in_its_town() -> void:
 	var code := String(SupplySystem.plan(data, s)[0]["code"])
 	var home := MapManors.home_province(data, s)
 	var p: Dictionary = data.provinces[home]
-	var m := ArmySystem.pack_to_metres(data, Vector2(float(p["center_x"]), float(p["center_y"])))
+	# IN the town: a garrison is one inside a town its kingdom holds (spec
+	# 2026-10-06-army-location-and-town-defence §4)
+	var b: Dictionary = data.burgs[String(p["capital_burg"])]
+	var m := ArmySystem.pack_to_metres(data, Vector2(float(b["x"]), float(b["y"])))
 	s.regiments[code]["x_m"] = m.x
 	s.regiments[code]["y_m"] = m.y
 	s.regiments[code]["order"] = ArmySystem.ORDER_GARRISON
@@ -171,7 +174,10 @@ func test_a_supply_lines_card_states_its_road() -> void:
 		int(line["loss_permille"]) / 10])
 	# standing at home, it draws through the town
 	var p: Dictionary = data.provinces[MapManors.home_province(data, s)]
-	var m := ArmySystem.pack_to_metres(data, Vector2(float(p["center_x"]), float(p["center_y"])))
+	# IN the town: a garrison is one inside a town its kingdom holds (spec
+	# 2026-10-06-army-location-and-town-defence §4)
+	var b: Dictionary = data.burgs[String(p["capital_burg"])]
+	var m := ArmySystem.pack_to_metres(data, Vector2(float(b["x"]), float(b["y"])))
 	s.regiments[code]["x_m"] = m.x
 	s.regiments[code]["y_m"] = m.y
 	s.regiments[code]["order"] = ArmySystem.ORDER_STANDBY

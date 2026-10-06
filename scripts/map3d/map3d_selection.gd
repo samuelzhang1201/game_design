@@ -35,6 +35,11 @@ func click(picked: Dictionary, pos: Vector2) -> void:
 	if String(picked.get("kind", "")) == "route":
 		view.route_clicked.emit(String(picked["code"]), pos)
 		return
+	if String(picked.get("kind", "")) == "garrison":
+		# a town's garrison: the town's card, and which of its regiments
+		select({"kind": "burg", "code": String(picked["town"])})
+		view.garrison_menu_requested.emit(picked["codes"], pos)
+		return
 	select(picked)
 	if String(picked.get("kind", "")) == "army":
 		view.army_menu_requested.emit(String(picked["code"]), pos)

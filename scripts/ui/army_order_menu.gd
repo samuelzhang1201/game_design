@@ -32,6 +32,9 @@ const CANCEL := 101
 const EDIT := 200
 const HALT := 201
 const STRIKE := 202
+## A garrison's rows (owner 2026-10-06, choice A): GARRISON_ROW + the
+## regiment's index in `_garrison`.
+const GARRISON_ROW := 300
 
 ## The WAR ROOM's menu (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1):
 ## every order given here is a DRAFT — COMMIT pencils a march, Cancel march
@@ -46,6 +49,9 @@ var _aiming := ""
 ## The aimed march's destination (pack px) while COMMIT / CANCEL is asked;
 ## Vector2(-1, -1) when none waits.
 var _pending := Vector2(-1, -1)
+## The regiments of the garrison whose list is open, and where it opened.
+var _garrison: Array = []
+var _garrison_at := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -62,6 +68,8 @@ func follow(map: Node) -> void:
 	map.connect("ground_clicked", _on_ground)
 	if map.has_signal("route_clicked"):
 		map.connect("route_clicked", _open_route)
+	if map.has_signal("garrison_menu_requested"):
+		map.connect("garrison_menu_requested", _open_garrison)
 	popup_hide.connect(func() -> void: _after_hide.call_deferred())
 
 
@@ -82,6 +90,23 @@ func _open_for(code: String, at: Vector2) -> void:
 		set_item_tooltip(i, why if why != "" else String(row["hint"]))
 	if item_count == 0:
 		return
+	_pop(at)
+
+
+## A town's garrison of several regiments was clicked: one row a regiment,
+## "6th (Walbover) Regiment — 1600"; the one chosen is selected and its
+## orders open where the list stood.
+func _open_garrison(codes: Array, at: Vector2) -> void:
+	if Game.state == null or codes.is_empty():
+		return
+	_set_aim("")
+	_garrison = codes.duplicate()
+	_garrison_at = at
+	clear()
+	for i in _garrison.size():
+		var reg := ArmySystem.regiment(Game.data, String(_garrison[i]))
+		add_item("%s — %d" % [String(reg.get("label", _garrison[i])), int(MapObjects.regiment_size(Game.data, reg))],
+			GARRISON_ROW + i)
 	_pop(at)
 
 
@@ -174,6 +199,14 @@ func _refusal(action_code: String, code: String) -> String:
 
 
 func _on_chosen(id: int) -> void:
+	if id >= GARRISON_ROW and id - GARRISON_ROW < _garrison.size():
+		# a regiment chosen from its garrison: selected as a click on it would,
+		# its orders opened where the list stood (deferred: this menu is hiding)
+		var code := String(_garrison[id - GARRISON_ROW])
+		if _map != null and _map.has_method("select_army"):
+			_map.call("select_army", code)
+		_open_for.call_deferred(code, _garrison_at)
+		return
 	match id:
 		COMMIT:
 			_commit()

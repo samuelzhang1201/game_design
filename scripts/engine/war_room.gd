@@ -30,12 +30,28 @@ static func believed_hosts(_repo: DataRepository, _state: GameState) -> Array:
 	return []
 
 
-## The crown's regiments as pieces: code, believed place, naval, home sheet.
+## The crown's regiments as pieces: code, believed place, naval, home sheet,
+## and `garrison` — the codes a piece stands for. A town's garrison is ONE
+## piece on the town, as the map draws it one counter (owner 2026-10-06,
+## choice A): coded by its first regiment (the royal one first).
 static func pieces(repo: DataRepository, state: GameState, drawn: Dictionary = {}) -> Array:
 	var out: Array = []
-	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	var regs := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
+	var quartered: Dictionary = {}
+	for g: Dictionary in MapObjects.garrisons(repo, state, regs):
+		var codes: Array = g["codes"]
+		for c in codes:
+			quartered[String(c)] = true
+		var town: Dictionary = repo.burgs[String(g["town"])]
+		var at := Vector2(float(town["x"]), float(town["y"]))
+		out.append({"code": String(codes[0]), "at": at, "naval": false,
+			"sheet": WarSheets.sheet_of(repo, at), "garrison": codes})
+	for reg: Dictionary in regs:
+		var code := String(reg["regiment_code"])
+		if quartered.has(code):
+			continue
 		var at := believed_position(repo, state, reg, drawn)
-		out.append({"code": String(reg["regiment_code"]), "at": at,
+		out.append({"code": code, "at": at, "garrison": [code],
 			"naval": String(reg.get("is_naval", "0")) == "1", "sheet": WarSheets.sheet_of(repo, at)})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a["code"]) < String(b["code"]))
 	return out
@@ -128,6 +144,12 @@ static func pennant_of(repo: DataRepository, state: GameState, code: String) -> 
 
 ## The slip pinned beside a piece: heads under arms and whole months of stores.
 static func tag_text(repo: DataRepository, state: GameState, code: String) -> String:
+	var held := MapObjects.garrison_of(repo, state, code)
+	if held.size() > 1:
+		var all := 0
+		for c in held:
+			all += ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c)))
+		return "%d regiments · %s" % [held.size(), group(all)]
 	var reg := ArmySystem.regiment(repo, code)
 	var heads := group(ArmySystem.headcount(repo, reg))
 	var st := ArmySystem.state_of(repo, state, code)

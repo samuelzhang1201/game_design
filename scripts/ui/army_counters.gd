@@ -12,7 +12,10 @@ extends RefCounted
 
 ## The counters for `points` ([{reg, pos, bars?}], pos in the map's screen px)
 ## at height `h`: {code, pos, size, text, font_px, rect, icon, count, bars,
-## glyph, piece, color, naval, royal}. `bars` is ArmySystem.bars_of's
+## glyph, piece, color, garrison, codes, naval, royal}. A point with a
+## `garrison` (a town code) is that town's garrison — `codes` its regiments,
+## the royal one first, `heads` their sum, "2100 (2)" — drawn under a tower (the crown when
+## the royal regiment is in it). `bars` is ArmySystem.bars_of's
 ## Vector2i (readiness, supply per mille): two thin bars, red over yellow,
 ## stand on the counter inside its `rect` (owner 2026-09-27). Sorted top to bottom; a counter meeting a
 ## settlement mark or an earlier counter drops to just under it, so no
@@ -38,6 +41,12 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var strength := MapObjects.regiment_size(repo, r)
 		var naval := String(r.get("is_naval", "0")) == "1"
 		var text := str(int(strength))
+		# a town's garrison (owner 2026-10-06, choice A): every regiment
+		# quartered there, its heads summed, "2100 (2)" for two regiments
+		var codes: Array = p.get("codes", [code])
+		if p.has("garrison"):
+			strength = float(p["heads"])
+			text = ("%d (%d)" % [int(strength), codes.size()]) if codes.size() > 1 else str(int(strength))
 		var solo := with_piece.has(code)
 		# a chip over a 3D piece is its tag, never bigger than the soldier
 		var ph: float = minf(h, float(p.get("h", h)))
@@ -56,9 +65,11 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 			"h": ph,
 			"rect": Rect2(sp - Vector2(w, ph) / 2.0 - Vector2(0.0, bars_h), Vector2(w, ph + bars_h)),
 			"bars": p.get("bars", Vector2i(-1, -1)),
-			"glyph": "waves" if naval else ("crown" if code == royal else "swords"),
+			"glyph": "waves" if naval else ("crown" if code == royal else \
+				("tower" if p.has("garrison") else "swords")),
 			"piece": piece,
 			"color": colors[kingdom],
+			"garrison": String(p.get("garrison", "")), "codes": codes,
 			"naval": naval, "royal": code == royal})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ay := (a["pos"] as Vector2).y
@@ -155,7 +166,7 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 			ci.draw_rect(count, token if table else m["color"])
 			ManorBadges.draw_centered_text(ci, font, count, String(m["text"]),
 				int(m["font_px"]), count_ink)
-			if String(m["code"]) == selected and selected != "":
+			if selected != "" and selected in (m.get("codes", [m["code"]]) as Array):
 				ci.draw_rect(rect.grow(line + 1.5), UiPalette.GOLD, false, 2.0)
 			continue
 		# the glyph square (the 2D counter art went 2026-09-29, Hunyuan's licence)
@@ -167,5 +178,5 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 		ResourceIcon.draw_glyph(ci, String(m["glyph"]), icon.get_center(),
 			icon.size.y * glyph_frac, glyph_ink)
 		ManorBadges.draw_centered_text(ci, font, count, String(m["text"]), int(m["font_px"]), count_ink)
-		if String(m["code"]) == selected and selected != "":
+		if selected != "" and selected in (m.get("codes", [m["code"]]) as Array):
 			ci.draw_rect(rect.grow(repo.bal("map_army_outline_px") + 1.5), UiPalette.GOLD, false, 2.0)

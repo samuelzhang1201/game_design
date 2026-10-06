@@ -24,6 +24,12 @@ func before_all() -> void:
 
 func before_each() -> void:
 	Game.start_campaign(42)
+	# the first regiment on the march: quartered in its town it would stand
+	# as that town's garrison counter (owner 2026-10-06, choice A)
+	var r := _first_regiment()
+	ArmySystem.ensure(Game.data, Game.state)
+	ArmySystem.set_march(Game.data, Game.state, String(r["regiment_code"]),
+		Vector2(float(r["x"]) + 40.0, float(r["y"])))
 
 
 func _view() -> Map3DView:
@@ -180,3 +186,66 @@ func test_counters_are_cut_once_per_pose() -> void:
 func after_all() -> void:
 	Map3DView.world_override = ""
 	Map3DWorldCache.clear()
+
+
+## Owner 2026-10-06 (choice A): regiments quartered in a town of their own
+## stand as ONE counter on it — a tower (the crown with the royal regiment),
+## "<heads> (2)" for two — and no piece of their own.
+func _capital_garrison() -> Array:
+	return MapObjects.garrison_of(Game.data, Game.state,
+		MapObjects.royal_regiment(Game.data, Game.data.resolve_realm("player_realm")))
+
+
+func _capital_xy() -> Vector2:
+	var b: Dictionary = Game.data.burgs[String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
+	return Vector2(float(b["x"]), float(b["y"]))
+
+
+func _garrison_marker(v: Map3DView, codes: Array) -> Dictionary:
+	for m: Dictionary in v.army_markers():
+		if m.get("codes", []) == codes:
+			return m
+	return {}
+
+
+func test_a_towns_garrison_is_one_counter_on_it() -> void:
+	var v := _view()
+	v.set_military(true)
+	var codes := _capital_garrison()
+	assert_gt(codes.size(), 1, "the capital holds more than one regiment")
+	v.look_at_pack(_capital_xy(), 20000.0)
+	var m := _garrison_marker(v, codes)
+	assert_false(m.is_empty(), "the garrison's counter")
+	var heads := 0
+	for c in codes:
+		heads += int(MapObjects.regiment_size(Game.data, ArmySystem.regiment(Game.data, String(c))))
+	assert_eq(String(m["text"]), "%d (%d)" % [heads, codes.size()])
+	assert_eq(String(m["glyph"]), "crown", "the royal regiment is in it")
+	for other: Dictionary in v.army_markers():
+		if other != m:
+			for c in codes:
+				assert_false(String(c) in (other.get("codes", [other["code"]]) as Array), "never drawn twice")
+
+
+func test_a_garrisoned_regiment_has_no_piece_until_it_marches() -> void:
+	var v := _view()
+	v.set_military(true)
+	var codes := _capital_garrison()
+	v.look_at_pack(_capital_xy(), 2500.0)
+	await wait_process_frames(2)
+	for c in codes:
+		assert_false(v.unit_rects().has(String(c)), "%s stands in no piece of its own" % c)
+
+
+func test_a_click_on_a_garrison_asks_which_regiment() -> void:
+	var v := _view()
+	v.set_military(true)
+	var codes := _capital_garrison()
+	v.look_at_pack(_capital_xy(), 20000.0)
+	var m := _garrison_marker(v, codes)
+	var at := (m["rect"] as Rect2).get_center()
+	assert_eq(v.pick_at(at), {"kind": "garrison", "town": String(m["garrison"]), "codes": codes})
+	watch_signals(v)
+	_click(v, at)
+	assert_signal_emitted_with_parameters(v, "garrison_menu_requested", [codes, at])
+	assert_signal_emitted(v, "object_selected", "the town's card opens with the list")

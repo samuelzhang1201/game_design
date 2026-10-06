@@ -140,6 +140,29 @@ road):
 - The card and the War Room folio show the pace with its ground ("road
   ×1.25", "forest ×0.75").
 
+## 6b. A garrison is the town's counter (owner 2026-10-06: "选A")
+
+The critic found a quartered regiment's figures burying the town's lanes
+(a cavalry piece is wider than any open ground inside a town) and the
+counters of one town stacked over it. The owner chose A:
+
+- A land regiment quartered in a town its kingdom holds and not on the
+  march (`ArmySystem.quartered_in`) draws NO piece on the map. The town
+  stands ONE garrison counter at its point (`MapObjects.garrisons`): a tower
+  (the crown when the royal regiment is in it), the heads summed, "2100 (2)"
+  for two regiments, the weakest regiment's bars; close in, where the
+  pieces stand, it is no bigger than a piece's headcount chip. Ordered out, a regiment's
+  piece walks out of the town.
+- A click on a garrison of one is a click on that regiment. On several it
+  opens the town's card and a list of them (`garrison_menu_requested` →
+  `ArmyOrderMenu`); the one chosen is selected and its orders open.
+- The WAR ROOM stands the garrison as ONE piece on the town's point
+  (`WarRoom.pieces`' `garrison`), coded by its first regiment, tagged
+  "N regiments · heads"; a click on several opens the same list, and a
+  drag takes the one chosen from it (`WarRoomView.order_code_of`). Its
+  regiments' rake readings measure from where each regiment IS, within the
+  town's reach.
+
 ## 7. Tests
 
 `tests/engine/test_army_towns.gd`, plus the march / speed / courier tests run

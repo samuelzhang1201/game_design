@@ -950,6 +950,9 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 			code = String(reg["regiment_code"])
 			engine = ArmySystem.position_of(Game.data, Game.state, reg)
 			break
+	# on the march: a regiment quartered in a town stands as its garrison's piece
+	ArmySystem.ensure(Game.data, Game.state)
+	ArmySystem.set_march(Game.data, Game.state, code, engine + Vector2(40.0, 0.0))
 	var drawn := engine + Vector2(4.5, -1.25)   # mid-day: part of a day's march ahead
 	screen.drawn_source = func() -> Dictionary: return {code: drawn}
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
@@ -965,6 +968,10 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 		var c := String(reg["regiment_code"])
 		if c != code and at.has(c):
 			other = c
-			assert_almost_eq((at[c] as Vector2).distance_to(ArmySystem.position_of(Game.data, Game.state, reg)),
+			# the engine's spot, or for a garrison its town's point (owner 2026-10-06, choice A)
+			var town := ArmySystem.quartered_in(Game.data, reg, Game.state)
+			var want := ArmySystem.position_of(Game.data, Game.state, reg) if town == "" \
+				else Vector2(float(Game.data.burgs[town]["x"]), float(Game.data.burgs[town]["y"]))
+			assert_almost_eq((at[c] as Vector2).distance_to(want),
 				0.0, 0.001, "a regiment the map does not name stands at the engine's spot")
 	assert_ne(other, "", "the sheet holds another piece to compare")
