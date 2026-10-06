@@ -949,8 +949,9 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 			var line := SupplySystem.line_of(repo, state, code)
 			var town := String((repo.burgs.get(String(line["stronghold"]), {}) as Dictionary).get("label", ""))
 			if bool(line["garrison"]):
+				var held := String((repo.burgs.get(String(line["garrison_town"]), {}) as Dictionary).get("label", ""))
 				stats.append(_stat("army_supply_line", "in garrison",
-					"In garrison at %s — supplied through the town, with no road to lose them on" % town))
+					"In garrison at %s — supplied through %s, with no road to lose them on" % [held, town]))
 			elif String(line["stronghold"]) != "":
 				stats.append(_stat("army_supply_line", "at home",
 					"Standing at home, supplied through %s — no road to lose them on" % town))
@@ -984,11 +985,12 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		if marching:
 			var days := CourierSystem.days_to_arrival(repo, state, code)
 			stats.append(_stat("army_march", "%d day%s out" % [days, "" if days == 1 else "s"],
-				"Arrives in %d day%s in today's weather, any courier still riding with its orders included — %.1f km a day in clear weather" % [
-					days, "" if days == 1 else "s", km]))
+				"Arrives in %d day%s over the ground and the weather on the way, any courier still riding with its orders included — %.1f km a day here (%s) in clear weather" % [
+					days, "" if days == 1 else "s", km, ArmySystem.ground_word(repo, state, r)]))
 		else:
 			stats.append(_stat("army_march", "%.1f km/day" % km,
-				"March — %.1f km a day: its slowest arm's pace, slowed by short supplies, low morale and little training" % km))
+				"March — %.1f km a day here (%s): its slowest arm's pace, slowed by short supplies, low morale and little training, faster on a road and slower over rough ground" % [
+					km, ArmySystem.ground_word(repo, state, r)]))
 		# the base pace above is weather-free; the weather is its own line
 		# (spec 2026-09-27-courier-core §1)
 		var wx := Weather.at(repo, state, ArmySystem.position_of(repo, state, r), state.absolute_day())

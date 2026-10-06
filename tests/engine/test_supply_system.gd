@@ -101,12 +101,25 @@ func test_the_road_length_sums_every_leg_from_the_depot() -> void:
 
 func test_a_garrison_in_the_crowns_province_draws_on_its_town() -> void:
 	var code: String = _land_codes()[0]
-	var home := MapManors.home_province(data, s)
-	var p: Dictionary = data.provinces[home]
-	_place(code, Vector2(float(p["center_x"]), float(p["center_y"])))
-	s.regiments[code]["order"] = ArmySystem.ORDER_GARRISON
+	var p := _stand_at_home(code, ArmySystem.ORDER_GARRISON)
 	var line := SupplySystem.line_of(data, s, code)
 	assert_true(line["garrison"])
+	assert_eq(String(line["garrison_town"]), String(p["capital_burg"]))
+	assert_eq(String(line["stronghold"]), String(p["capital_burg"]))
+	assert_eq(int(line["loss_permille"]), 0)
+
+## Halted in the province's open country it is a field camp — no garrison —
+## yet still supplied through the province's capital (the supply rule stands).
+func test_a_halt_in_the_open_is_supplied_but_not_a_garrison() -> void:
+	var code: String = _land_codes()[0]
+	var home := MapManors.home_province(data, s)
+	var p: Dictionary = data.provinces[home]
+	var centre := Vector2(float(p["center_x"]), float(p["center_y"]))
+	assert_eq(ArmySystem.town_at(data, centre), "", "the province's centre is open country")
+	_place(code, centre)
+	s.regiments[code]["order"] = ArmySystem.ORDER_GARRISON
+	var line := SupplySystem.line_of(data, s, code)
+	assert_false(line["garrison"])
 	assert_eq(String(line["stronghold"]), String(p["capital_burg"]))
 	assert_eq(int(line["loss_permille"]), 0)
 
@@ -228,10 +241,13 @@ func test_a_regiment_on_the_mountains_uses_more_than_at_home() -> void:
 ## Minor3 (controller ruling): a regiment STANDING in a province the crown
 ## controls draws through its capital town, loss-free; only a GARRISON
 ## order earns the garrison's morale.
+## Stands a regiment IN the crown's home province's capital town (a garrison
+## is only one inside a town, spec 2026-10-06-army-location-and-town-defence §4).
 func _stand_at_home(code: String, order: String) -> Dictionary:
 	var home := MapManors.home_province(data, s)
 	var p: Dictionary = data.provinces[home]
-	_place(code, Vector2(float(p["center_x"]), float(p["center_y"])))
+	var b: Dictionary = data.burgs[String(p["capital_burg"])]
+	_place(code, Vector2(float(b["x"]), float(b["y"])))
 	s.regiments[code]["order"] = order
 	return p
 

@@ -1,0 +1,13 @@
+works,arm,defend_permille,attack_permille,notes
+town,infantry,1100,1000,"owner 2026-10-06 (spec 2026-10-06-army-location-and-town-defence §3, first draft): the town's bonus to the side that HOLDS it, by the best works it has (citadel over walls over none), multiplied onto the terrain's factor for the defender. A town without walls still gives houses and lanes to hold"
+town,archers,1100,1000,
+town,cavalry,900,1000,"horse is worse in streets than in the open"
+town,artillery,1050,1000,
+walls,infantry,1300,1000,"behind walls"
+walls,archers,1250,1000,
+walls,cavalry,1000,1000,
+walls,artillery,1200,1000,
+citadel,infantry,1400,1000,"a citadel: walls and a keep"
+citadel,archers,1350,1000,
+citadel,cavalry,1000,1000,
+citadel,artillery,1300,1000,

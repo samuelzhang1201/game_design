@@ -227,9 +227,14 @@ func _real_press(view: WarRoomView, at: Vector2, pressed: bool) -> void:
 	view._gui_input(e)
 
 
+## The first land piece of the sheet a click on its own spot picks (regiments
+## quartered in one town stand within one base, and the nearer hides the other).
 func _land_piece(screen: WarRoomScreen) -> Dictionary:
 	for q: Dictionary in WarRoom.on_sheet(Game.data, Game.state, screen.view().sheet_index()):
-		if not bool(q["naval"]):
+		if bool(q["naval"]):
+			continue
+		var at: Variant = screen.view().screen_pos_of_px(q["at"])
+		if at != null and screen.view().piece_under(at) == String(q["code"]):
 			return q
 	return {}
 

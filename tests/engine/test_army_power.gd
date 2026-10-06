@@ -125,23 +125,25 @@ func test_battle_odds_placeholder() -> void:
 ## 地理位置数据跟随单位移动变动): a column marched behind walls fights with
 ## them, exactly as a regiment the pack quartered there would.
 func test_power_reads_the_ground_the_regiment_stands_on_now() -> void:
-	var cells := MapEconomy.burg_cells(repo)
-	var walled := -1
+	var realm := repo.resolve_realm("player_realm")
+	var code: String = _land_codes()[0]
+	var reg := ArmySystem.regiment(repo, code)
+	var home_works := ArmySystem.works_of(repo, reg)
+	# a town of the realm with other works than the regiment's quarters
+	var target := ""
 	var burgs := repo.burgs.keys()
 	burgs.sort()
 	for b: String in burgs:
-		var feats := String(repo.burgs[b].get("features", "")).split("|")
-		if ("walls" in feats or "citadel" in feats) and cells.has(b):
-			walled = int(cells[b])
+		var row: Dictionary = repo.burgs[b]
+		if String(row["kingdom_code"]) != realm:
+			continue
+		var feats := String(row.get("features", "")).split("|")
+		var works := "citadel" if "citadel" in feats else ("walls" if "walls" in feats else "town")
+		if works != home_works and works != "town":
+			target = b
 			break
-	assert_ne(walled, -1, "the pack has a walled town")
-	var code := ""
-	for c: String in _land_codes():
-		if not ArmySystem.is_fortified(repo, ArmySystem.regiment(repo, c)):
-			code = c
-			break
-	assert_ne(code, "", "a regiment quartered in the open")
-	var at := MapTerrain.cell_center(repo, repo.cells[walled])
+	assert_ne(target, "", "the realm has a walled town")
+	var at := Vector2(float(repo.burgs[target]["x"]), float(repo.burgs[target]["y"]))
 	var s := SuiteData.campaign(repo, 7)
 	var home := ArmySystem.power(repo, s, code, "defend")
 	var m := ArmySystem.pack_to_metres(repo, at)
@@ -150,14 +152,14 @@ func test_power_reads_the_ground_the_regiment_stands_on_now() -> void:
 	entry["y_m"] = m.y
 	entry["dest_x_m"] = m.x
 	entry["dest_y_m"] = m.y
-	assert_true(ArmySystem.is_fortified(repo, ArmySystem.regiment(repo, code), s))
+	assert_eq(ArmySystem.held_town_of(repo, reg, s), target)
 	var moved := ArmySystem.power(repo, s, code, "defend")
 	# The same regiment quartered there by the pack, with the same state.
 	var other := SuiteData.repo()
-	var row: Dictionary = other.world_table("military", "regiments")[code]
-	row["x"] = str(at.x)
-	row["y"] = str(at.y)
+	var row2: Dictionary = other.world_table("military", "regiments")[code]
+	row2["x"] = str(at.x)
+	row2["y"] = str(at.y)
 	var s2 := SuiteData.campaign(repo, 7)
 	(s2.regiments[code] as Dictionary).erase("x_m")
 	assert_eq(moved, ArmySystem.power(other, s2, code, "defend"))
-	assert_ne(moved, home, "walls change its power")
+	assert_ne(moved, home, "other works change its power")

@@ -205,7 +205,12 @@ static func morale_word(repo: DataRepository, score: int) -> String:
 static func terrain_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
 	if String(reg.get("is_naval", "0")) == "1":
 		return "sea"
-	var id := MapEconomy.cell_at(repo, position_of(repo, state, reg))
+	return terrain_at(repo, position_of(repo, state, reg))
+
+## The land's terrain at a pack point, as terrain_of reads it for a regiment
+## standing there: plains off every land cell.
+static func terrain_at(repo: DataRepository, at: Vector2) -> String:
+	var id := MapEconomy.cell_at(repo, at)
 	if id < 0:
 		return "plains"
 	var cell: Dictionary = repo.cells[id]
@@ -217,35 +222,120 @@ static func terrain_of(repo: DataRepository, reg: Dictionary, state: GameState =
 			return "hills"
 	return String(repo.army_terrain_biomes.get(int(cell["biome_id"]), "plains"))
 
-## Whether walls or a citadel stand in the regiment's cell.
-static func is_fortified(repo: DataRepository, reg: Dictionary, state: GameState = null) -> bool:
+## --- Towns (spec 2026-10-06-army-location-and-town-defence §2-3) -------
+
+static var _town_grid_cache: Dictionary = {}
+static var _road_grid_cache: Dictionary = {}
+
+## Forget the per-pack grids (DataRepository.load_map, like MapEconomy's).
+static func forget_grids() -> void:
+	_town_grid_cache.clear()
+	_road_grid_cache.clear()
+
+## A burg's reach in pack px: its group's km (data/army_town_reach.csv) on
+## the pack's own measure; 0 for a group with no row.
+static func town_reach_px(repo: DataRepository, burg: Dictionary) -> float:
+	var km := float(repo.army_town_reach.get(String(burg.get("group", "")), 0.0))
+	return km * 1000.0 / float(metres_per_pack_px(repo))
+
+## The burgs bucketed by a grid as wide as the widest reach, so a point's
+## towns are in its own bucket and the eight around it.
+static func _town_grid(repo: DataRepository) -> Dictionary:
+	var key := repo.get_instance_id()
+	if _town_grid_cache.has(key):
+		return _town_grid_cache[key]
+	var size := 1.0
+	for g: String in repo.army_town_reach:
+		size = maxf(size, float(repo.army_town_reach[g]) * 1000.0 / float(metres_per_pack_px(repo)))
+	var grid: Dictionary = {}
+	var codes := repo.burgs.keys()
+	codes.sort()
+	for code: String in codes:
+		var b: Dictionary = repo.burgs[code]
+		var cell := Vector2i((Vector2(float(b["x"]), float(b["y"])) / size).floor())
+		if not grid.has(cell):
+			grid[cell] = []
+		(grid[cell] as Array).append(code)
+	var out := {"size": size, "grid": grid}
+	_town_grid_cache[key] = out
+	return out
+
+## The town whose reach holds a pack point: the nearest (ties to the earlier
+## code); "" in the open.
+static func town_at(repo: DataRepository, at: Vector2) -> String:
+	var tg := _town_grid(repo)
+	var size: float = tg["size"]
+	var grid: Dictionary = tg["grid"]
+	var home := Vector2i((at / size).floor())
+	var best := ""
+	var best_d := INF
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			for code: String in grid.get(home + Vector2i(dx, dy), []):
+				var b: Dictionary = repo.burgs[code]
+				var d := at.distance_to(Vector2(float(b["x"]), float(b["y"])))
+				if d > town_reach_px(repo, b):
+					continue
+				if d < best_d or (d == best_d and code < best):
+					best_d = d
+					best = code
+	return best
+
+## The town a land regiment stands IN now (its live position inside the
+## town's reach, data/army_town_reach.csv); "" in the field and for a fleet.
+static func town_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
 	if String(reg.get("is_naval", "0")) == "1":
-		return false
-	var id := MapEconomy.cell_at(repo, position_of(repo, state, reg))
-	if id < 0:
-		return false
-	var cells := MapEconomy.burg_cells(repo)
-	for code: String in cells:
-		if int(cells[code]) != id:
-			continue
-		var feats := String((repo.burgs.get(code, {}) as Dictionary).get("features", "")).split("|")
-		if "walls" in feats or "citadel" in feats:
-			return true
-	return false
+		return ""
+	return town_at(repo, position_of(repo, state, reg))
+
+## town_of, but only a town the regiment's own kingdom holds (its province's
+## owner, MapOwnership.owner_of): a column in a foreign town is in the field.
+static func held_town_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
+	var town := town_of(repo, reg, state)
+	if town == "":
+		return ""
+	var b: Dictionary = repo.burgs[town]
+	if MapOwnership.owner_of(repo, state, String(b.get("province_code", ""))) != String(reg.get("kingdom_code", "")):
+		return ""
+	return town
+
+## The works a regiment fights from: "citadel", "walls" or "town" for the best
+## its held town has (political/burgs.csv features), "" in the field.
+static func works_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
+	var town := held_town_of(repo, reg, state)
+	if town == "":
+		return ""
+	var feats := String((repo.burgs[town] as Dictionary).get("features", "")).split("|")
+	if "citadel" in feats:
+		return "citadel"
+	if "walls" in feats:
+		return "walls"
+	return "town"
 
 ## An arm's modifier on a terrain, per mille (1000 when the table has no
-## row); walls multiply onto it for the defender only.
-static func terrain_factor(repo: DataRepository, terrain: String, arm: String, stance: String, fortified: bool) -> int:
+## row); the town's works (data/army_town_defence.csv) multiply onto it for
+## the defender only.
+static func terrain_factor(repo: DataRepository, terrain: String, arm: String, stance: String, works: String) -> int:
 	var f := int((repo.army_terrain.get("%s|%s" % [terrain, arm], {}) as Dictionary).get(stance, 1000))
-	if fortified and stance == "defend":
+	if works != "" and stance == "defend":
 		@warning_ignore("integer_division")  # whole per-mille factor
-		f = f * int((repo.army_terrain.get("fortified|%s" % arm, {}) as Dictionary).get("defend", 1000)) / 1000
+		f = f * int((repo.army_town_defence.get("%s|%s" % [works, arm], {}) as Dictionary).get("defend", 1000)) / 1000
 	return f
 
-## "Hills", or "Hills (fortified)".
+## "Hills", "Plains — in Garestedmin", "Hills — behind the walls of Walbover",
+## "Plains — in the citadel of Axbrigh".
 static func terrain_label(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
 	var text := terrain_of(repo, reg, state).capitalize()
-	return text + " (fortified)" if is_fortified(repo, reg, state) else text
+	var works := works_of(repo, reg, state)
+	if works == "":
+		return text
+	var town := String((repo.burgs[held_town_of(repo, reg, state)] as Dictionary).get("label", ""))
+	match works:
+		"citadel":
+			return "%s — in the citadel of %s" % [text, town]
+		"walls":
+			return "%s — behind the walls of %s" % [text, town]
+	return "%s — in %s" % [text, town]
 
 ## The province a regiment is in NOW: the one holding the cell it stands on
 ## (MapManors.province_of, so a manor that changed province carries it), the
@@ -321,7 +411,7 @@ static func power(repo: DataRepository, state: GameState, code: String, stance: 
 	var training_f := int(repo.bal("army_training_base_permille")) + int(st["training"]) * int(repo.bal("army_training_step_permille"))
 	var morale_f := int(repo.bal("army_morale_base_permille")) + int(st["morale"]) * int(repo.bal("army_morale_step_permille"))
 	var terrain := terrain_of(repo, reg, state)
-	var walls := is_fortified(repo, reg, state)
+	var works := works_of(repo, reg, state)
 	var total := 0
 	for arm: String in repo.world_table("military", "unit_types"):
 		var n := int(float(reg.get(arm, 0)))
@@ -347,7 +437,7 @@ static func power(repo: DataRepository, state: GameState, code: String, stance: 
 		@warning_ignore("integer_division")  # whole per-mille
 		p = p * morale_f / 1000
 		@warning_ignore("integer_division")  # whole per-mille
-		p = p * terrain_factor(repo, terrain, arm, stance, walls) / 1000
+		p = p * terrain_factor(repo, terrain, arm, stance, works) / 1000
 		@warning_ignore("integer_division")  # the ceiling of the milli-head digit
 		total += (p + 999) / 1000
 	return total
@@ -451,16 +541,97 @@ static func pace_tenths(repo: DataRepository, base_km: int, supply_permille: int
 	return base_km * 10 * readiness_permille(repo, supply_permille, morale, training) / 1000
 
 
-## A regiment's march in km a day, from its arms and its state; 0 for a
-## regiment that is not the player's (no state) or has no one under arms.
+## A regiment's march in km a day, from its arms, its state and the ground it
+## stands on (weather-free); 0 for a regiment that is not the player's (no
+## state) or has no one under arms.
 static func speed_km_per_day(repo: DataRepository, state: GameState, code: String) -> float:
 	var reg := regiment(repo, code)
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0.0
+	# the ground it stands on now (spec 2026-10-06 §6); the weather is its own line
 	return pace_tenths(repo, base_pace_km(repo, reg),
 		supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state)),
-		int(st["morale"]), int(st["training"])) / 10.0
+		int(st["morale"]), int(st["training"])) / 10.0 \
+		* float(ground_permille(repo, reg, position_of(repo, state, reg))) / 1000.0
+
+
+## --- The ground's pace (spec 2026-10-06-army-location-and-town-defence §6)
+
+## The roads' and trails' segments bucketed by a grid of the road reach, each
+## segment in every bucket its box (grown by the reach) touches.
+static func _road_grid(repo: DataRepository) -> Dictionary:
+	var key := repo.get_instance_id()
+	if _road_grid_cache.has(key):
+		return _road_grid_cache[key]
+	var reach := repo.bal("army_road_reach_m") / float(metres_per_pack_px(repo))
+	var size := maxf(reach * 4.0, 1.0)
+	var grid: Dictionary = {}
+	var codes := repo.routes.keys()
+	codes.sort()
+	for code in codes:
+		var r: Dictionary = repo.routes[code]
+		var group := String(r.get("group", ""))
+		if not RoadGraph.GROUPS.has(group):
+			continue
+		var kind := String(RoadGraph.GROUPS[group])
+		var pts: Array = r["polyline"]
+		for i in range(1, pts.size()):
+			var a: Vector2 = pts[i - 1]
+			var b: Vector2 = pts[i]
+			var lo := Vector2i(((Vector2(minf(a.x, b.x), minf(a.y, b.y)) - Vector2(reach, reach)) / size).floor())
+			var hi := Vector2i(((Vector2(maxf(a.x, b.x), maxf(a.y, b.y)) + Vector2(reach, reach)) / size).floor())
+			for gy in range(lo.y, hi.y + 1):
+				for gx in range(lo.x, hi.x + 1):
+					var cell := Vector2i(gx, gy)
+					if not grid.has(cell):
+						grid[cell] = []
+					(grid[cell] as Array).append([a, b, kind])
+	var out := {"size": size, "reach": reach, "grid": grid}
+	_road_grid_cache[key] = out
+	return out
+
+## "road" or "trail" when a pack point is within army_road_reach_m of one (a
+## road over a trail), "" off the network.
+static func road_at(repo: DataRepository, at: Vector2) -> String:
+	var rg := _road_grid(repo)
+	var reach: float = rg["reach"]
+	var found := ""
+	for seg: Array in (rg["grid"] as Dictionary).get(Vector2i((at / float(rg["size"])).floor()), []):
+		var a: Vector2 = seg[0]
+		var b: Vector2 = seg[1]
+		var near := Geometry2D.get_closest_point_to_segment(at, a, b)
+		if at.distance_to(near) > reach:
+			continue
+		if String(seg[2]) == "road":
+			return "road"
+		found = String(seg[2])
+	return found
+
+## A march's pace on the ground at a pack point, per mille of its base
+## (data/army_ground_speed.csv): on a road or trail, the road's row times its
+## height tier's; off it, the terrain's (terrain_at). 1000 for a fleet.
+static func ground_permille(repo: DataRepository, reg: Dictionary, at: Vector2) -> int:
+	if String(reg.get("is_naval", "0")) == "1":
+		return 1000
+	var road := road_at(repo, at)
+	if road != "":
+		var id := MapEconomy.cell_at(repo, at)
+		var tier := "plains"
+		if id >= 0:
+			tier = String(Elevation.tier_of(repo, float(repo.cells[id]["height"]))["tier"])
+		@warning_ignore("integer_division")  # whole per-mille
+		return maxi(1, int(repo.army_ground_speed.get(road, 1000))
+			* int(repo.army_ground_speed.get("tier_" + tier, 1000)) / 1000)
+	return maxi(1, int(repo.army_ground_speed.get(terrain_at(repo, at), 1000)))
+
+## The ground a regiment's pace reads now, in words: "road ×1.25",
+## "forest ×0.75" (the card and the folio).
+static func ground_word(repo: DataRepository, state: GameState, reg: Dictionary) -> String:
+	var at := position_of(repo, state, reg)
+	var road := road_at(repo, at)
+	var what := road if road != "" else terrain_at(repo, at)
+	return "%s ×%.2f" % [what, float(ground_permille(repo, reg, at)) / 1000.0]
 
 
 ## --- The march (owner 2026-09-22) ----------------------------------------
@@ -559,16 +730,28 @@ static func day_step_m(repo: DataRepository, state: GameState, code: String) -> 
 
 
 ## Metres a regiment covers TODAY (spec 2026-09-27-courier-core §1): its
-## day_step_m under the weather of the province it stands in — on `abs_day`
-## when given (the map's preview of the next day), else today.
+## day_step_m under the weather of the province it stands in and on the ground
+## under it — on `abs_day` when given (the map's preview of the next day),
+## else today.
 static func day_march_m(repo: DataRepository, state: GameState, code: String, abs_day: int = -1) -> int:
+	return day_march_at(repo, state, code, position_of(repo, state, regiment(repo, code)), abs_day)
+
+
+## day_march_m for a column standing at `at` (pack px): its day_step_m under
+## that place's weather on the day and on its ground (ground_permille, spec
+## 2026-10-06 §6) — a march reads where the column IS each day.
+static func day_march_at(repo: DataRepository, state: GameState, code: String, at: Vector2,
+		abs_day: int = -1) -> int:
 	var step := day_step_m(repo, state, code)
 	if step <= 0 or state == null:
 		return step
-	var kind := Weather.at(repo, state, position_of(repo, state, regiment(repo, code)),
-		state.absolute_day() if abs_day < 0 else abs_day)
+	var kind := Weather.at(repo, state, at, state.absolute_day() if abs_day < 0 else abs_day)
 	@warning_ignore("integer_division")  # whole metres
-	return step * Weather.speed_permille(repo, kind) / 1000
+	step = step * Weather.speed_permille(repo, kind) / 1000
+	if step <= 0:
+		return step
+	@warning_ignore("integer_division")  # whole metres
+	return maxi(1, step * ground_permille(repo, regiment(repo, code), at) / 1000)
 
 
 ## Send a regiment to `dest` (pack pixels). The engine's only writer of a
@@ -648,10 +831,10 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		abs_day: int) -> bool:
 	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code).is_empty():
 		return false
-	var full := day_march_m(repo, state, code, abs_day)
+	var here := Vector2(float(entry["x_m"]), float(entry["y_m"]))
+	var full := day_march_at(repo, state, code, metres_to_pack(repo, Vector2i(here)), abs_day)
 	if full <= 0:
 		return false
-	var here := Vector2(float(entry["x_m"]), float(entry["y_m"]))
 	var dest := Vector2(float(entry["dest_x_m"]), float(entry["dest_y_m"]))
 	var left := here.distance_to(dest)
 	var days := int(ceil(left / float(full)))
@@ -671,10 +854,31 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 static func days_out(repo: DataRepository, state: GameState, code: String) -> int:
 	if order_of(repo, state, code) != ORDER_MARCH:
 		return 0
-	var k := float(metres_per_pack_px(repo))
-	var left := position_of(repo, state, regiment(repo, code)) \
-		.distance_to(destination_of(repo, state, code)) * k
-	return march_days(repo, state, code, left)
+	return march_days_between(repo, state, code, position_of(repo, state, regiment(repo, code)),
+		destination_of(repo, state, code))
+
+
+## Whole days for a regiment to march from `from` to `to` (pack px) starting
+## on `start_day` (today when -1): the march walked day by day exactly as
+## march_day will walk it (_march_one), each day on the ground and in the
+## weather where the column then stands — the weather is a seeded function of
+## the day, so the figure is the day it will arrive. 0 for a regiment that
+## cannot move.
+static func march_days_between(repo: DataRepository, state: GameState, code: String, from: Vector2,
+		to: Vector2, start_day: int = -1) -> int:
+	if day_step_m(repo, state, code) <= 0:
+		return 0
+	var a := pack_to_metres(repo, from)
+	var b := pack_to_metres(repo, to)
+	if a == b:
+		return 0
+	var entry := {"x_m": a.x, "y_m": a.y, "dest_x_m": b.x, "dest_y_m": b.y, "order": ORDER_MARCH}
+	var day := (state.absolute_day() if state != null else 0) if start_day < 0 else start_day
+	var cap := int(repo.bal("army_march_days_cap"))
+	for n in range(1, cap + 1):
+		if _march_one(repo, state, code, entry, day + n - 1):
+			return n
+	return cap
 
 
 ## Whole days, rounded up, for a regiment to march `metres` at today's pace

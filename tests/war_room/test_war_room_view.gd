@@ -384,9 +384,11 @@ func test_the_arrow_reads_the_distance_in_the_packs_measure_and_the_arrival_day(
 	var dist := 10.0 * float(repo.map_info.get("distance_scale", "1"))
 	# ONE arrival day: the courier's ride, then the march (owner 2026-10-02)
 	var days := CourierSystem.arrival_days(repo, state, code, to, p["at"] as Vector2)
-	assert_eq(days, (CourierSystem.eta_days(repo, state, CourierSystem.ORDINARY, code)
-		if CourierSystem.carries_orders(ArmySystem.regiment(repo, code)) else 0)
-		+ ArmySystem.march_days(repo, state, code, 10.0 * float(ArmySystem.metres_per_pack_px(repo))))
+	var ride := CourierSystem.eta_days(repo, state, CourierSystem.ORDINARY, code) \
+		if CourierSystem.carries_orders(ArmySystem.regiment(repo, code)) else 0
+	# the march walked over its ground from the day the courier reaches it
+	assert_eq(days, ride + ArmySystem.march_days_between(repo, state, code, p["at"] as Vector2, to,
+		state.absolute_day() + ride))
 	assert_eq(view.rake_reading(code, to), "%s %s · ~%d day%s" % [WarRoom.group(int(round(dist))),
 		String(repo.map_info.get("distance_unit", "km")), days, "" if days == 1 else "s"])
 

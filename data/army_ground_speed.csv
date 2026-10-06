@@ -1,0 +1,16 @@
+key,permille,notes
+road,1250,"owner 2026-10-06 (spec 2026-10-06-army-location-and-town-defence §6, first draft): a march's pace by the ground it stands on that day, per mille of its base (data/army_speed.csv, quoted on open plain off the road). ON a road or trail (within army_road_reach_m of one) the road's row times the height tier's; OFF the road the terrain's row (ArmySystem.terrain_of), which already counts hills and mountains"
+trail,1100,"a trail: narrower and rougher"
+tier_plains,1000,"on a road: the height tier of its ground (Elevation.tier_of) still slows the climb"
+tier_hills,850,
+tier_mountains,650,"a pass"
+tier_peak,450,
+plains,1000,"off the road: the base pace"
+desert,850,
+tundra,850,
+forest,750,
+jungle,600,
+marsh,600,
+hills,700,
+mountains,450,
+sea,1000,"a fleet's own pace"
