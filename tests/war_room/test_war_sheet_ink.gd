@@ -241,3 +241,23 @@ func test_a_window_keeps_a_town_whose_name_reaches_into_it() -> void:
 			assert_true(labels.has(String(b["label"])), "%s's name is cut at the patch's edge" % b["label"])
 			return
 	fail_test("no town to test")
+
+
+func test_sheet_marks_are_inked_with_their_reach() -> void:
+	var placed := 0
+	for s: Dictionary in WarSheets.series(repo):
+		var r: Rect2 = s["rect"]
+		var tex := int(repo.bal("war_sheet_texture_px"))
+		var k := float(tex) / r.size.x
+		var ink := WarSheetInk.strokes(repo, state, s, tex)
+		for m: Dictionary in WarMarks.inked(repo, "sheet"):
+			if not r.has_point(m["at"]):
+				continue
+			var hit := (ink["places"] as Array).filter(func(p: Dictionary) -> bool:
+				return (p["at"] as Vector2).distance_to(((m["at"] as Vector2) - r.position) * k) < 0.01)
+			assert_eq(hit.size(), 1, String(m["code"]))
+			var hz: Dictionary = repo.war_mark_hazards.get(String(m["type"]), {})
+			var want := 0.0 if hz.is_empty() else float(hz["reach_km"]) / WarMarks.km_per_px(repo) * k
+			assert_almost_eq(float(hit[0]["hazard_r"]), want, 0.01)
+			placed += 1
+	assert_gt(placed, 0, "some sheet holds a mark")

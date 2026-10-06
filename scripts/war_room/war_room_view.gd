@@ -612,6 +612,8 @@ func _update_detail() -> void:
 		widths[k] = _repo.bal("war_ink_%s_px" % k) * scale
 	for k: String in WarRoomInk.INK_RATIOS:
 		widths[k] = _repo.bal("war_ink_%s" % k)
+	widths["mark"] = _repo.bal("war_mark_px") * scale
+	widths["mark_reach_alpha"] = _repo.bal("war_mark_reach_alpha")
 	var row: Dictionary = WarSheets.series(_repo)[_sheet]
 	(%DetailInk as WarInkPainter).paint(WarSheetInk.strokes(_repo, state(), row, w, WarBake.of(_repo), r),
 		_repo.war_palette, widths, lettering())

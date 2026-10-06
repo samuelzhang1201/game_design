@@ -127,6 +127,18 @@ func _draw() -> void:
 		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -s), at + Vector2(hw, drop), at + Vector2(-hw, drop)]), c_ink)
 		draw_string(font, at + Vector2(hw + s * float(px["label_gap_ratio"]), drop), "%d m" % int(p["metres"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(float(px["label"]) * float(px["peak_label_ratio"])), c_ink)
+	for p: Dictionary in ink.get("places", []):   # the map's marks; a brigand's reach a dotted rubric ring
+		var hr := float(p["hazard_r"])
+		var glyph_c: Color = pal["rubric"] if hr > 0.0 else c_ink
+		if hr > 0.0:
+			var ring_c: Color = pal["rubric"]
+			ring_c.a = float(px["mark_reach_alpha"])
+			var ring := PackedVector2Array()
+			for i in 65:
+				ring.append((p["at"] as Vector2) + Vector2.from_angle(TAU * float(i) / 64.0) * hr)
+			for d: PackedVector2Array in WarSheetInk.dashed(ring, float(px["dash"]) * 0.3, float(px["gap"])):
+				draw_polyline(d, ring_c, float(px["seam"]), true)
+		WarMarkGlyph.draw(self, String(p["glyph"]), p["at"], float(px["mark"]), glyph_c)
 	_draw_hollows(c_ink)
 	_draw_graticule(c_ink)
 
@@ -225,6 +237,10 @@ func _draw_fine() -> void:
 		draw_string(font, at + Vector2(s * 1.4, s * 0.5), "%d m" % int(m["metres"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["note"]), c_faint)
 	for f: Dictionary in ink["figures"]:
 		_turned_text(f["at"], float(f["angle"]), String(f["text"]), int(px["figure"]), c_fig)
+	for p: Dictionary in ink.get("places", []):
+		if String(p["glyph"]) != "":
+			WarMarkGlyph.draw(self, String(p["glyph"]), p["at"], float(px["mark"]), c_faint)
+		draw_string(font, p["label_at"], String(p["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["note"]), c_faint)
 
 
 ## Text centred on `at`, turned by `angle`, on a parchment knock-out so the

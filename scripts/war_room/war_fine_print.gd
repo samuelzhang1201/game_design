@@ -24,7 +24,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		taken.append(WarSheetInk.town_label_box(repo, t))
 	for m: Dictionary in ink.get("manors", []):
 		taken.append(WarSheetInk.manor_label_box(repo, m))
-	var out := {"notes": [], "routes": [], "marks": [], "figures": []}
+	var out := {"notes": [], "routes": [], "marks": [], "figures": [], "places": []}
 	var note_px := repo.bal("war_fine_note_px")
 	var char_w := repo.bal("war_ink_char_w")
 	var codes: Array = repo.burgs.keys()
@@ -85,6 +85,22 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if _clear(mb, taken):
 			taken.append(mb)
 			(out["marks"] as Array).append({"at": at, "kind": String(m["kind"]), "metres": int(m["metres"])})
+	# the map's marks as fine print: the fine layer's glyph and name, and a
+	# sheet-layer mark's name beside its glyph (spec 2026-10-07-war-room-p2 §1.3)
+	out["places"] = []
+	var place_px := repo.bal("war_fine_note_px")
+	for m: Dictionary in WarMarks.inked(repo, ""):
+		var at: Vector2 = m["at"]
+		if not r.has_point(at):
+			continue
+		var fine_layer := String(repo.war_marks[m["type"]]["layer"]) == "fine"
+		var pos := (at - r.position) * k + Vector2(repo.bal("war_mark_px") * 0.8, place_px * 0.35)
+		var label := String(m["label"])
+		var pb := Rect2(pos - Vector2(0, place_px), Vector2(float(label.length()) * place_px * char_w, place_px * 1.2))
+		if _clear(pb, taken):
+			taken.append(pb)
+			(out["places"] as Array).append({"at": (at - r.position) * k, "glyph": String(m["glyph"]) if fine_layer else "",
+				"label": label, "label_at": pos})
 	if bake != null:
 		var nx := int(repo.bal("war_fine_contour_grid"))
 		var nz := WarRoomTable.rows_for(r, nx)

@@ -66,6 +66,8 @@ func texture_for(repo: DataRepository, state: GameState, sheet: int, viewport: S
 			widths[k] = repo.bal("war_ink_%s_px" % k)
 		for k: String in INK_RATIOS:
 			widths[k] = repo.bal("war_ink_%s" % k)
+		widths["mark"] = repo.bal("war_mark_px")
+		widths["mark_reach_alpha"] = repo.bal("war_mark_reach_alpha")
 		painter.paint(WarSheetInk.strokes(repo, state, row, size.x, WarBake.of(repo)), repo.war_palette, widths, font)
 		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 		await frame_done
@@ -125,6 +127,7 @@ func fine_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubV
 	var widths := {}
 	for k: String in FINE_PX:
 		widths[k] = repo.bal("war_fine_%s_px" % k)
+	widths["mark"] = repo.bal("war_fine_mark_px")
 	painter.paint(WarFinePrint.strokes(repo, state, row, size.x, WarBake.of(repo)), repo.war_palette, widths, font, false, true)
 	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	await frame_done

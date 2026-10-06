@@ -108,3 +108,25 @@ func test_contour_figures_keep_off_the_roads_trails_and_rivers() -> void:
 					var near := Geometry2D.get_closest_point_to_segment(f["at"], poly[i], poly[i + 1])
 					assert_gt((f["at"] as Vector2).distance_to(near), clear, "a figure sits on a line on %s" % s["id"])
 	assert_gt(checked, 0, "some sheet has figures")
+
+
+func test_fine_marks_and_the_names_of_sheet_marks_are_fine_print() -> void:
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	var found_fine := false
+	var found_name := false
+	for s: Dictionary in WarSheets.series(repo):
+		var r: Rect2 = s["rect"]
+		var fine := WarFinePrint.strokes(repo, state, s, tex, null)
+		var labels: Array = (fine["places"] as Array).map(func(p: Dictionary) -> String: return String(p["label"]))
+		for m: Dictionary in WarMarks.inked(repo, ""):
+			if not r.grow(-r.size.x * 0.1).has_point(m["at"]):
+				continue
+			if labels.has(String(m["label"])):
+				if String(repo.war_marks[m["type"]]["layer"]) == "fine":
+					found_fine = true
+				else:
+					found_name = true
+		if found_fine and found_name:
+			break
+	assert_true(found_fine, "a fine-layer mark is inked as fine print")
+	assert_true(found_name, "a sheet mark's name is fine print")

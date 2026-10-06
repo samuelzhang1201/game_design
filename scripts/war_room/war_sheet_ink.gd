@@ -112,6 +112,17 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if String(m["kind"]) == "low" and keep.has_point(m["pos"]):
 			(out["hollows"] as Array).append({"at": ((m["pos"] as Vector2) - r.position) * k,
 				"metres": int(m["metres"]), "lod": int(m["lod"])})
+	# the map's marks (spec 2026-10-07-war-room-p2 §1.3): sheet-layer glyphs, a
+	# brigand's or pirate's reach as a ring
+	out["places"] = []
+	var per_px := WarMarks.km_per_px(repo)
+	for m: Dictionary in WarMarks.inked(repo, "sheet"):
+		var at: Vector2 = m["at"]
+		if not keep.has_point(at):
+			continue
+		var hz: Dictionary = repo.war_mark_hazards.get(String(m["type"]), {})
+		(out["places"] as Array).append({"at": (at - r.position) * k, "glyph": String(m["glyph"]),
+			"hazard_r": 0.0 if hz.is_empty() else float(hz["reach_km"]) / per_px * k})
 	if bake != null:
 		var step := repo.bal("war_ink_wood_step_km") * WarSheets.px_per_unit(repo)
 		var min_cover := repo.bal("war_ink_wood_min_cover")
