@@ -124,6 +124,8 @@ static func add(state: GameState, burg: String, pool: String, units: int) -> voi
 
 ## Takes up to `units` of `pool` from `burg`; returns what was taken.
 static func take(state: GameState, burg: String, pool: String, units: int) -> int:
+	if burg == "" or not state.town_stock.has(burg):
+		return 0  # a town with no entry holds nothing
 	var s := stock_of(state, burg)
 	var got := clampi(units, 0, int(s[pool]))
 	s[pool] = int(s[pool]) - got
@@ -171,11 +173,25 @@ static func sync_metrics(repo: DataRepository, state: GameState) -> void:
 
 ## Absorb what other writers did to the two metrics (spec §3.1, plan
 ## "Measures"): a rise lands in the depot, a fall is taken from the towns in
-## proportion to their stock. Then the metrics are re-synced.
+## proportion to their stock. Then the metrics are re-synced. A town the realm
+## has lost takes its stores with it (its entry is erased first, and the
+## metric follows the towns down). A realm with no town keeps no strategic
+## stores: a rise with no depot to land in is dropped.
 static func reconcile(repo: DataRepository, state: GameState) -> void:
 	var upg := units_per_gold(repo)
+	var before: Dictionary = {}
 	for pool: String in METRIC:
-		var want := maxi(int(state.metrics.get(METRIC[pool], 0.0)), 0)
+		before[pool] = gold_of_units(repo, total(state, pool))
+	var gone: Array = state.town_stock.keys()
+	gone.sort()
+	for b: String in gone:
+		if not is_realm_town(repo, state, b):
+			state.town_stock.erase(b)
+	for pool: String in METRIC:
+		# the metric less what the lost towns carried off: only what OTHER
+		# writers did to it is left to absorb
+		var lost: int = int(before[pool]) - gold_of_units(repo, total(state, pool))
+		var want := maxi(int(state.metrics.get(METRIC[pool], 0.0)) - lost, 0)
 		var have := gold_of_units(repo, total(state, pool))
 		var diff := want - have
 		if diff > 0:

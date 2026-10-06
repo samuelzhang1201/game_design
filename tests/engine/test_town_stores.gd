@@ -43,6 +43,77 @@ func test_every_realm_manor_feeds_the_nearest_town_of_its_province() -> void:
 		if best != "":
 			assert_eq(burg, best, "cell %d" % cell)
 
+func test_apportion_with_unequal_weights_and_a_small_total() -> void:
+	assert_eq(TownStores.apportion(10, {"a": 1, "b": 2}), {"a": 3, "b": 7})
+	assert_eq(TownStores.apportion(1, {"a": 1, "b": 1, "c": 1}), {"a": 1, "b": 0, "c": 0})
+
+func test_take_from_no_town_creates_nothing() -> void:
+	assert_eq(TownStores.take(s, "", "crown", 5), 0)
+	assert_eq(TownStores.take(s, "no_such_burg", "crown", 5), 0)
+	assert_false(s.town_stock.has(""))
+	assert_false(s.town_stock.has("no_such_burg"))
+
+func _other_kingdom() -> String:
+	var mine := repo.resolve_realm("player_realm")
+	var k := repo.resolve_realm("raider_realm")
+	if k != mine and repo.kingdoms.has(k):
+		return k
+	var codes: Array = repo.kingdoms.keys()
+	codes.sort()
+	for c: String in codes:
+		if c != mine:
+			return c
+	return ""
+
+func _town_in_other_province(towns: Array) -> String:
+	var first := String(repo.burgs[towns[0]]["province_code"])
+	for t: String in towns:
+		if String(repo.burgs[t]["province_code"]) != first:
+			return t
+	return ""
+
+func test_a_lost_town_takes_its_stores_with_it() -> void:
+	var towns: Array = TownStores.realm_towns(repo, s)
+	var keep: String = towns[0]
+	var lose := _town_in_other_province(towns)
+	assert_ne(lose, "", "the pack has realm towns in two provinces")
+	s.town_stock[keep] = {"crown": 3000, "lord": 0, "house": 0}
+	s.town_stock[lose] = {"crown": 1000, "lord": 0, "house": 0}
+	TownStores.sync_metrics(repo, s)
+	var was := int(s.metrics["strategic"])
+	assert_eq(was, TownStores.gold_of_units(repo, 4000))
+	var prov := String(repo.burgs[lose]["province_code"])
+	assert_true(MapOwnership.set_owner(repo, s, prov, _other_kingdom(), "test"))
+	s.metrics["strategic"] = float(was)
+	TownStores.reconcile(repo, s)
+	assert_false(s.town_stock.has(lose), "the lost town's entry is gone")
+	assert_eq(int(s.metrics["strategic"]), TownStores.gold_of_units(repo, 3000))
+	assert_eq(TownStores.total(s, "crown"), 3000)
+
+func test_the_catchment_follows_a_province_lost() -> void:
+	var towns: Array = TownStores.realm_towns(repo, s)
+	var lose := _town_in_other_province(towns)
+	var prov := String(repo.burgs[lose]["province_code"])
+	var lost_manors: Array = MapManors.manors_of_province(repo, prov, s)
+	assert_false(lost_manors.is_empty())
+	var c := TownStores.catchment(repo, s)
+	for cell: int in lost_manors:
+		assert_true(c.has(cell))
+	assert_true(MapOwnership.set_owner(repo, s, prov, _other_kingdom(), "test"))
+	c = TownStores.catchment(repo, s)
+	for cell: int in lost_manors:
+		assert_false(c.has(cell), "cell %d" % cell)
+
+func test_a_fall_is_taken_in_proportion_to_stock() -> void:
+	var towns: Array = TownStores.realm_towns(repo, s)
+	s.town_stock[towns[0]] = {"crown": 3000, "lord": 0, "house": 0}
+	s.town_stock[towns[1]] = {"crown": 1000, "lord": 0, "house": 0}
+	TownStores.sync_metrics(repo, s)
+	s.metrics["strategic"] = float(s.metrics["strategic"]) - 100.0
+	TownStores.reconcile(repo, s)
+	assert_eq(int(TownStores.stock_of(s, towns[0])["crown"]), 2250)
+	assert_eq(int(TownStores.stock_of(s, towns[1])["crown"]), 750)
+
 func test_take_never_goes_below_empty() -> void:
 	var b: String = TownStores.realm_towns(repo, s)[0]
 	s.town_stock[b] = {"crown": 5, "lord": 0, "house": 0}
