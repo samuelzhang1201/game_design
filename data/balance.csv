@@ -662,6 +662,7 @@ war_chart_tilt_deg,0,"WAR ROOM (Ruling 24): the index chart's lean from flat; 0 
 war_chart_z_m,-0.725,"WAR ROOM (Task 9 fix 1): the index chart's centre, table metres north (negative z) of the table's middle; its near edge clears the north edge arrow, its far edge stays inside the opening view"
 war_chart_y_m,0.0005,"WAR ROOM (Ruling 24): the index chart's height over the table plane, metres: on the oak top (the table.glb is set in the scene with its top at -0.001, the sheet's sea at 0), half a millimetre proud of it against z-fighting (was 0.018, ~6 cm over the stand-in)"
 war_chart_numeral_lift_m,0.002,"WAR ROOM (Task 9 fix 3): how far a sheet numeral floats above the chart's face, metres (against z-fighting)"
+war_chart_label_every,1,"WAR ROOM scale (spec 2026-10-07-war-room-scale-hover §1): the index chart letters a column and numbers a row every this many cells; 1 at 20° sheets, 2 once the series is 36 x 18"
 war_candle_key,3,"WAR ROOM (fix round 1 ruling): which candlestick (Candlestick1..4 in war_room.tscn: far-left, far-right, near-left, near-right) holds the KEY candle — the one raking, shadowed light that models the sheet's relief; the others are short warm accents. 3 = near-left, where the stand-in's single candle stood"
 war_candle_key_energy,1.6,"WAR ROOM (fix round 1): the key candle's light energy (the stand-in's single candle's)"
 war_candle_key_range_m,3.0,"WAR ROOM (fix round 1): the key candle's omni range, metres (the stand-in's)"

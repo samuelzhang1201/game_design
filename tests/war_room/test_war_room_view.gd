@@ -195,15 +195,19 @@ func test_a_click_on_an_edge_arrow_requests_its_sheet() -> void:
 	assert_signal_emitted_with_parameters(view, "sheet_requested", [int(arrow.get_meta("sheet"))])
 
 
-func test_the_chart_letters_its_columns_and_numbers_its_rows() -> void:
+func test_the_chart_letters_every_nth_column_and_numbers_every_nth_row() -> void:
 	view.lay_sheet(0)
 	await wait_process_frames(2)
 	var g := MapCoords.grid_size(repo, repo.bal("war_sheet_deg"))
+	var every := int(repo.bal("war_chart_label_every"))
 	var labels := view.get_node("%IndexChart").get_children()
-	assert_eq(labels.size(), g.x + g.y)
 	var cols := labels.filter(func(l: Node) -> bool: return String(l.get_meta("axis")) == "col")
-	assert_eq(cols.size(), g.x)
+	var rows := labels.filter(func(l: Node) -> bool: return String(l.get_meta("axis")) == "row")
+	assert_eq(cols.size(), ceili(float(g.x) / every))
+	assert_eq(rows.size(), ceili(float(g.y) / every))
 	assert_eq((cols[0] as Label3D).text, "A")
+	if cols.size() > 1:
+		assert_eq((cols[1] as Label3D).text, WarSheets.column_letters(every))
 
 
 func test_a_click_on_a_land_cell_of_the_chart_asks_for_its_sheet() -> void:

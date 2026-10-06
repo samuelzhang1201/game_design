@@ -30,6 +30,17 @@ func test_ids_are_column_letters_and_row_numbers_from_the_north_west() -> void:
 	assert_eq(WarSheets.id_of(17, 8), "R9")
 
 
+func test_columns_past_z_are_lettered_like_a_ledger() -> void:
+	assert_eq(WarSheets.column_letters(0), "A")
+	assert_eq(WarSheets.column_letters(25), "Z")
+	assert_eq(WarSheets.column_letters(26), "AA")
+	assert_eq(WarSheets.column_letters(35), "AJ")
+	assert_eq(WarSheets.column_letters(51), "AZ")
+	assert_eq(WarSheets.column_letters(52), "BA")
+	assert_eq(WarSheets.id_of(26, 0), "AA1")
+	assert_eq(WarSheets.id_of(35, 17), "AJ18")
+
+
 func test_only_cells_with_land_are_sheets_and_every_land_cell_is_on_one() -> void:
 	var all := WarSheets.series(repo)
 	var ids: Dictionary = {}
