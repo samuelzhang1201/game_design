@@ -268,8 +268,10 @@ static func deposit_month(repo: DataRepository, state: GameState) -> void:
 
 ## Spread the two pools as they stand over the towns by each town's share of
 ## a month's inflow (a new campaign; an old save), and fill each house stock
-## to its cap. The depot takes what no town draws.
-static func seed(repo: DataRepository, state: GameState) -> void:
+## to its cap. When every town's weight for a pool is 0 the pool is shared
+## evenly over the inflow towns; the depot takes it only when there are no
+## inflow towns at all.
+static func seed_from_pools(repo: DataRepository, state: GameState) -> void:
 	state.town_stock = {}
 	var upg := units_per_gold(repo)
 	var inflow := month_inflow(repo, state)
@@ -298,4 +300,4 @@ static func seed(repo: DataRepository, state: GameState) -> void:
 ## before the town stores).
 static func ensure(repo: DataRepository, state: GameState) -> void:
 	if state.town_stock.is_empty():
-		TownStores.seed(repo, state)
+		TownStores.seed_from_pools(repo, state)

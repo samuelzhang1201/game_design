@@ -86,7 +86,7 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	WorldLedger.seed_metrics(data, s)
 	ArmySystem.ensure(data, s)
 	# The pools as each town holds them (spec 2026-10-07-army-supply-lines §3.1).
-	TownStores.seed(data, s)
+	TownStores.seed_from_pools(data, s)
 	for id in s.characters:
 		if s.characters[id].seat != "":
 			s.council[s.characters[id].seat] = id
