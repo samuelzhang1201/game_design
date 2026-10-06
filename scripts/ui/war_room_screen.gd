@@ -114,6 +114,12 @@ func open(detail: MapDetailPanel) -> void:
 		_folio.set_tier(Game.data, Map3DQuality.resolve_here(GameRoot.settings_path))
 		_view.camera_moved.connect((%Key as WarMarginKey).queue_redraw)
 		(%Key as WarMarginKey).north_pressed.connect(_view.start_north)
+		var slip := %HoverSlip as WarHoverSlip
+		slip.setup(Game.data)
+		_view.ground_hovered.connect(_on_ground_hovered)
+		_view.rake_aimed.connect(_on_rake_aimed)
+		_view.hover_cleared.connect(slip.hide_slip)
+		_view.rake_dropped.connect(slip.hide_slip)
 	if detail != _detail:
 		_card_mine = false
 	_detail = detail
@@ -368,6 +374,7 @@ func _on_sealed(_result: Dictionary) -> void:
 func close(animate := true) -> void:
 	if not visible:
 		return
+	(%HoverSlip as WarHoverSlip).hide_slip()   # not rolled up with the room's picture
 	# the room as it hangs now: it rolls back up off the screen beneath (owner
 	# 2026-10-02, the hanging scroll); none when the screen beneath is being
 	# replaced (final review I3: nothing is drawn over the new screen)
@@ -417,7 +424,28 @@ func _process(_delta: float) -> void:
 			_board_vp.render_target_update_mode = want
 
 
+## The pointer rested on the table: read the ground for the chosen regiment
+## (spec 2026-10-07-war-room-scale-hover §4).
+func _on_ground_hovered(pack_px: Vector2, screen_px: Vector2) -> void:
+	var r := WarGround.reading(Game.data, Game.state, pack_px, _view.selected_army())
+	_show_slip(WarGround.lines(Game.data, r), screen_px)
+
+
+## A rake aimed: read its destination for the raked regiment, the days left to
+## the arrow's own reading.
+func _on_rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2) -> void:
+	var r := WarGround.reading(Game.data, Game.state, pack_px, code)
+	_show_slip(WarGround.lines(Game.data, r, true), screen_px)
+
+
+func _show_slip(lines: Array, view_px: Vector2) -> void:
+	var slip := %HoverSlip as WarHoverSlip
+	var origin := _view.get_global_rect().position - get_global_rect().position
+	slip.show_lines(lines, origin + view_px, Rect2(origin, _view.size))
+
+
 func _on_piece(code: String) -> void:
+	(%HoverSlip as WarHoverSlip).hide_slip()
 	if _detail == null or not is_instance_valid(_detail):
 		return
 	_detail.show_card(MapObjects.army_card(Game.data, code, Game.state))

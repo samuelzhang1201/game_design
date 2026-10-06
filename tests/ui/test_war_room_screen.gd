@@ -987,3 +987,36 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 			assert_almost_eq((at[c] as Vector2).distance_to(want),
 				0.0, 0.001, "a regiment the map does not name stands at the engine's spot")
 	assert_ne(other, "", "the sheet holds another piece to compare")
+
+
+func _open_room() -> WarRoomScreen:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(3)
+	return r.war_room_screen()
+
+
+func test_a_rest_on_the_table_shows_the_slip_and_a_move_hides_it() -> void:
+	var screen := await _open_room()
+	var view := screen.view()
+	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
+	var at := Vector2(view.size) * 0.5
+	var pk: Vector2 = view.pack_at(at)
+	view.ground_hovered.emit(pk, at)
+	await wait_process_frames(1)
+	assert_true(slip.visible)
+	var first := ((slip.get_node("%Lines") as Node).get_child(0) as Label).text
+	assert_eq(first, Intel.place_label(Game.data, Game.state, pk))
+	view.hover_cleared.emit()
+	assert_false(slip.visible)
+
+
+func test_a_dropped_rake_hides_the_slip() -> void:
+	var screen := await _open_room()
+	var view := screen.view()
+	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
+	var at := Vector2(view.size) * 0.5
+	view.ground_hovered.emit(view.pack_at(at), at)
+	await wait_process_frames(1)
+	view.rake_dropped.emit()
+	assert_false(slip.visible)

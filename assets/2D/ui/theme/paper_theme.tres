@@ -1,10 +1,11 @@
 [gd_resource type="Theme" format=3 uid="uid://clxhwl8aidiul"]
 
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/figures.tres" id="1_fuys7"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/header.tres" id="2_pd6rl"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="3_pd6rl"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/title.tres" id="4_3tuu4"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="4_aqemf"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/figures.tres" id="1_1hila"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/header.tres" id="2_urc0g"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="3_jte7e"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/title.tres" id="4_fqusy"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/body.tres" id="5_166tr"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="6_4dp6i"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_aqemf"]
 content_margin_top = 3.0
@@ -53,6 +54,11 @@ bg_color = Color(0.16862746, 0.12156863, 0.08235294, 0.1)
 border_width_bottom = 1
 border_color = Color(0.16862746, 0.12156863, 0.08235294, 0.45)
 
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_tv33k"]
+color = Color(0.60784316, 0.17254902, 0.12156863, 0.5)
+grow_begin = 0.0
+grow_end = 0.0
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j3ky5"]
 content_margin_left = 3.0
 content_margin_top = 1.0
@@ -100,11 +106,11 @@ border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 CardFigure/base_type = &"Label"
 CardFigure/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 CardFigure/font_sizes/font_size = 13
-CardFigure/fonts/font = ExtResource("1_fuys7")
+CardFigure/fonts/font = ExtResource("1_1hila")
 CardFigureGood/base_type = &"Label"
 CardFigureGood/colors/font_color = Color(0.6156863, 0.6901961, 0.47843137, 1)
 CardFigureGood/font_sizes/font_size = 13
-CardFigureGood/fonts/font = ExtResource("1_fuys7")
+CardFigureGood/fonts/font = ExtResource("1_1hila")
 CardGood/base_type = &"Label"
 CardGood/colors/font_color = Color(0.6156863, 0.6901961, 0.47843137, 1)
 CardGood/font_sizes/font_size = 13
@@ -120,7 +126,7 @@ CardPlus/font_sizes/font_size = 16
 CardSection/base_type = &"SectionLabel"
 CardSection/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 CardSection/font_sizes/font_size = 12
-CardSection/fonts/font = ExtResource("2_pd6rl")
+CardSection/fonts/font = ExtResource("2_urc0g")
 CardSection/styles/normal = SubResource("StyleBoxFlat_aqemf")
 CardSmall/base_type = &"Label"
 CardSmall/colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
@@ -137,7 +143,7 @@ CardText/font_sizes/font_size = 14
 CardTitle/base_type = &"Label"
 CardTitle/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 CardTitle/font_sizes/font_size = 16
-CardTitle/fonts/font = ExtResource("2_pd6rl")
+CardTitle/fonts/font = ExtResource("2_urc0g")
 CardValue/base_type = &"Label"
 CardValue/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 CardValue/font_sizes/font_size = 13
@@ -147,7 +153,7 @@ CardWarn/font_sizes/font_size = 11
 DashCaption/base_type = &"Label"
 DashCaption/colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
 DashCaption/font_sizes/font_size = 11
-DashCaption/fonts/font = ExtResource("3_pd6rl")
+DashCaption/fonts/font = ExtResource("3_jte7e")
 DashFigure/base_type = &"Label"
 DashFigure/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 DashFigure/font_sizes/font_size = 19
@@ -157,16 +163,16 @@ DashLine/font_sizes/font_size = 15
 DashSection/base_type = &"SectionLabel"
 DashSection/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 DashSection/font_sizes/font_size = 14
-DashSection/fonts/font = ExtResource("2_pd6rl")
+DashSection/fonts/font = ExtResource("2_urc0g")
 DashSection/styles/normal = SubResource("StyleBoxFlat_3tuu4")
 DashSub/base_type = &"Label"
 DashSub/colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
 DashSub/font_sizes/font_size = 14
-DashSub/fonts/font = ExtResource("3_pd6rl")
+DashSub/fonts/font = ExtResource("3_jte7e")
 DashTitle/base_type = &"Label"
 DashTitle/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 DashTitle/font_sizes/font_size = 24
-DashTitle/fonts/font = ExtResource("2_pd6rl")
+DashTitle/fonts/font = ExtResource("2_urc0g")
 DeployBad/base_type = &"Label"
 DeployBad/colors/font_color = Color(0.65882355, 0.19607843, 0.11764706, 1)
 DeployText/base_type = &"Label"
@@ -193,20 +199,43 @@ ManorTable/styles/title_button_pressed = SubResource("StyleBoxFlat_6i8mq")
 ResolutionTitle/base_type = &"Label"
 ResolutionTitle/colors/font_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 ResolutionTitle/font_sizes/font_size = 24
-ResolutionTitle/fonts/font = ExtResource("4_3tuu4")
+ResolutionTitle/fonts/font = ExtResource("4_fqusy")
 RichTextLabel/colors/default_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 TooltipLabel/colors/font_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+WarHoverLine/base_type = &"Label"
+WarHoverLine/colors/font_color = Color(0.16862746, 0.12941177, 0.09411765, 1)
+WarHoverLine/constants/line_spacing = -2
+WarHoverLine/font_sizes/font_size = 15
+WarHoverLine/fonts/font = ExtResource("5_166tr")
+WarHoverRubric/base_type = &"Label"
+WarHoverRubric/colors/font_color = Color(0.60784316, 0.17254902, 0.12156863, 1)
+WarHoverRubric/constants/line_spacing = -2
+WarHoverRubric/font_sizes/font_size = 14
+WarHoverRubric/fonts/font = ExtResource("2_urc0g")
+WarHoverRule/base_type = &"HSeparator"
+WarHoverRule/constants/separation = 8
+WarHoverRule/styles/separator = SubResource("StyleBoxLine_tv33k")
+WarHoverSub/base_type = &"Label"
+WarHoverSub/colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
+WarHoverSub/constants/line_spacing = -2
+WarHoverSub/font_sizes/font_size = 13
+WarHoverSub/fonts/font = ExtResource("3_jte7e")
+WarHoverTitle/base_type = &"Label"
+WarHoverTitle/colors/font_color = Color(0.16862746, 0.12941177, 0.09411765, 1)
+WarHoverTitle/constants/line_spacing = -2
+WarHoverTitle/font_sizes/font_size = 17
+WarHoverTitle/fonts/font = ExtResource("2_urc0g")
 WarMarginNone/base_type = &"Label"
 WarMarginNone/colors/font_color = Color(0.3529412, 0.27450982, 0.19607843, 1)
 WarMarginNone/font_sizes/font_size = 13
-WarMarginNone/fonts/font = ExtResource("2_pd6rl")
+WarMarginNone/fonts/font = ExtResource("2_urc0g")
 WarMarginRow/base_type = &"Button"
 WarMarginRow/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
 WarMarginRow/colors/font_hover_color = Color(0.47843137, 0.10980392, 0.09019608, 1)
 WarMarginRow/colors/font_hover_pressed_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 WarMarginRow/colors/font_pressed_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 WarMarginRow/font_sizes/font_size = 12
-WarMarginRow/fonts/font = ExtResource("4_aqemf")
+WarMarginRow/fonts/font = ExtResource("6_4dp6i")
 WarMarginRow/styles/disabled = SubResource("StyleBoxFlat_j3ky5")
 WarMarginRow/styles/focus = SubResource("StyleBoxEmpty_j6kgu")
 WarMarginRow/styles/hover = SubResource("StyleBoxFlat_32psp")
