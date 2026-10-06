@@ -120,6 +120,36 @@ func test_the_clock_marches_it_a_day_at_a_time() -> void:
 	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON)
 
 
+## Owner 2026-10-06 (军队是匀速移动的，如果他应该在第N天到达目的地，则应该是第N天
+## 结束的时候到达，而不是第N天刚开始到达): a march of N days is covered at ONE
+## pace over all N — not N-1 full days and a stub — so it ends exactly as the
+## Nth day ends, its days out falling by one each day.
+func test_a_march_is_even_and_ends_as_its_last_day_ends() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var engine := TickEngine.new(repo)
+	var r := _marcher()
+	var code := String(r["regiment_code"])
+	var home: Vector2 = ArmySystem.position_of(repo, s, r)
+	var step := float(ArmySystem.day_step_m(repo, s, code))
+	var k := float(ArmySystem.metres_per_pack_px(repo))
+	var dest := home + Vector2(step * 2.3 / k, 0.0)
+	ArmySystem.set_march(repo, s, code, dest)
+	var n := ArmySystem.days_out(repo, s, code)
+	assert_eq(n, 3, "2.3 days' road is three days out")
+	var even := step * 2.3 / 3.0
+	var was := home
+	for day in n:
+		engine.advance_day(s)
+		var now: Vector2 = ArmySystem.position_of(repo, s, r)
+		assert_almost_eq(now.distance_to(was) * k, even, 2.0, "day %d covers a third of the road" % (day + 1))
+		was = now
+		if day < n - 1:
+			assert_eq(engine.day_arrivals, [], "still on the road at the end of day %d" % (day + 1))
+			assert_eq(ArmySystem.days_out(repo, s, code), n - day - 1, "one day fewer each day")
+	assert_eq(engine.day_arrivals, [code], "it arrives as day %d ends" % n)
+	assert_almost_eq(ArmySystem.position_of(repo, s, r).x, dest.x, 0.0011)
+
+
 func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 	# owner 2026-09-24 (行进速度必须和给定的速度相符): the thirtieth day's end
 	# runs the TICK rather than advance_day, and until then the regiments
@@ -145,11 +175,15 @@ func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 	var step2 := float(ArmySystem.pace_tenths(repo, ArmySystem.base_pace_km(repo, r),
 		ArmySystem.supply_score(repo, maxi(0, supplies_before - use), use), morale2,
 		int(s.regiments[code]["training"]))) * 100.0
+	# The march is even (owner 2026-10-06): the second day covers what is left
+	# over the whole days it takes at the drifted pace, not a full step2.
+	var left2 := step * 999.0
+	var even2 := ceilf(left2 / ceilf(left2 / step2))
 	s.day = Calendar.DAYS_PER_TICK - 1
 	engine.advance_day(s)   # day 30
 	engine.advance(s)       # the tick: day 1 of the next month
 	var gone := (ArmySystem.position_of(repo, s, r).x - home.x) * k
-	assert_almost_eq(gone, step + step2, 1.0,
+	assert_almost_eq(gone, step + even2, 1.0,
 		"two days, the second at the tick's drifted morale (spec 2026-09-30-ledger-supply-design §4)")
 
 
