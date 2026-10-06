@@ -42,30 +42,34 @@
     0,
     75
    ],
+   "DEFEND": [
+    0,
+    80
+   ],
    "GARRISON": [
     0,
     120
    ],
    "MARCH": [
     0,
-    48
+    16
    ],
    "STANDBY": [
     0,
     120
    ]
   },
-  "bones": 43,
+  "bones": 53,
   "fps": 30,
   "height_m": 3.319,
   "kind": "mounted",
   "label": "Knight",
-  "source": "Tripo 3D (owner, paid plan) from tripo_kit/zimage_threequarter_s1.png; tools/units3d/cavalry_tripo/",
-  "stride_m": 1.546,
+  "source": "Tripo 3D (owner, paid plan) game mesh of tools/units3d/cavalry_tripo/, re-rigged and re-animated by the blender-auto-rig / blender-natural-animation phases in tools/units3d/cavalry_rig/ (installed by its install.py)",
+  "stride_m": 2.4,
   "tris": 19047,
   "weights": {
-   "horse": "heat",
-   "rider": "rigid"
+   "horse": "heat (welded)",
+   "rider": "rigid plates"
   }
  },
  "courier": {
@@ -145,8 +149,8 @@
   "height_m": 2.4,
   "kind": "mounted",
   "label": "King",
-  "source": "Tripo 3D (owner, paid plan) from royal/model_wip/tripo/REF_royal_qwenfast_s1.png; rigged and animated by the owner (knight_rig_anim.blend); tools/units3d/royal_install/",
+  "source": "Tripo 3D (owner, paid plan) from royal/model_wip/tripo/REF_royal_qwenfast_s1.png; rigged and animated by the owner (knight_rig_anim.blend); tools/units3d/royal_install/ decimate.py (90,506 -> 19,998 tris)",
   "stride_m": 2.25,
-  "tris": 90506
+  "tris": 19998
  }
 }

@@ -55,7 +55,7 @@ HOLE_MAX_M = 1.0     # tests/map3d/test_map3d_houses_meshes.gd HOLE_MAX_M
 UNITS = {
     "infantry": {"label": "步兵", "clips": ["MARCH", "STANDBY", "GARRISON"], "optional": ["ATTACK"],
                  "loops": ["MARCH", "STANDBY", "GARRISON"], "weapon": "spear", "tris": 20000},
-    "cavalry": {"label": "骑兵", "clips": ["MARCH", "STANDBY", "GARRISON", "ATTACK"], "optional": [],
+    "cavalry": {"label": "骑兵", "clips": ["MARCH", "STANDBY", "GARRISON", "ATTACK"], "optional": ["DEFEND"],
                 "loops": ["MARCH", "STANDBY", "GARRISON"], "weapon": "lance", "tris": 20000},
     "courier": {"label": "信使", "clips": ["GALLOP", "IDLE"], "optional": [],
                 "loops": ["GALLOP", "IDLE"], "weapon": "", "tris": 20000},
