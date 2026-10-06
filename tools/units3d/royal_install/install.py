@@ -2,8 +2,9 @@
 
     python3 tools/units3d/royal_install/install.py [SRC.glb]
 
-SRC defaults to assets/3D/units/royal/model_wip/tripo/knight_rigged.glb (the
-owner's delivery, rigged and animated in knight_rig_anim.blend beside it).
+SRC defaults to assets/3D/units/royal/model_wip/tripo/knight_rigged_20k.glb:
+decimate.py's export of the owner's delivery (knight_rig_anim.blend, rigged
+and animated by the owner) collapsed to the units' ~20k triangles.
 Writes assets/3D/units/royal/royal.glb: the same mesh, skin and five clips,
 turned half round to face the way every piece faces (glTF -Z), the two head
 bones renamed (BONES) and the rest named on the cavalry's pattern (royal_rig /
@@ -23,7 +24,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[3]
-SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "assets/3D/units/royal/model_wip/tripo/knight_rigged.glb"
+SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "assets/3D/units/royal/model_wip/tripo/knight_rigged_20k.glb"
 OUT = ROOT / "assets/3D/units/royal/royal.glb"
 SIZE = 2048
 QUALITY = 92
