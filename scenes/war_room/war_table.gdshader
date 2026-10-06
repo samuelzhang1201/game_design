@@ -63,6 +63,12 @@ uniform float neat_band_alpha = 0.85;
 uniform sampler2D intel_tex : filter_linear_mipmap_anisotropic, hint_default_transparent;
 // the fine print (spec 2026-10-07-war-room-scale-hover §3): premultiplied sRGB
 // bytes as ink_tex, faded in by the camera's distance (WarNear.fine_alpha)
+// the near-zoom detail patch (spec 2026-10-07-war-room-scale-hover §2): the ink
+// over detail_uv at the patch's resolution, cross-faded at its edge
+uniform sampler2D detail_tex : filter_linear_mipmap, hint_default_transparent;
+uniform vec4 detail_uv = vec4(0.0);
+uniform float detail_on = 0.0;
+uniform float detail_feather = 0.04;
 uniform sampler2D fine_tex : filter_linear_mipmap_anisotropic, hint_default_transparent;
 uniform float fine_alpha = 0.0;
 uniform float fine_texels_per_px = 1.6;   // fine print fades where a screen px spans more texels than this
@@ -160,10 +166,21 @@ void fragment() {
 	float crease = max(line_at(UV.x + 0.5, crease_px), line_at(UV.y + 0.5, crease_px));
 	col *= 1.0 - crease * crease_alpha;
 
+	// the near-zoom patch (spec 2026-10-07 §2) replaces the sheet's ink over
+	// detail_uv, cross-faded at its edge
+	vec2 du = (UV - detail_uv.xy) / max(detail_uv.zw - detail_uv.xy, vec2(1e-5));
+	vec2 dedge = min(du, 1.0 - du);
+	float dmix = detail_on * smoothstep(0.0, detail_feather, min(dedge.x, dedge.y));
 	vec4 inked = texture(ink_tex, vec2(UV.x, UV.y * tex_aspect));
 	vec3 straight = srgb_to_linear(inked.rgb / max(inked.a, 1e-4));
-	float ink_a = inked.a * collar_k;
+	float ink_a = inked.a * collar_k * (1.0 - dmix);
 	col = col * (1.0 - ink_a) + straight * ink_a;
+	if (detail_on > 0.0) {
+		vec4 dk = texture(detail_tex, clamp(du, vec2(0.0), vec2(1.0)));
+		vec3 dk_straight = srgb_to_linear(dk.rgb / max(dk.a, 1e-4));
+		float dk_a = dk.a * collar_k * dmix;
+		col = col * (1.0 - dk_a) + dk_straight * dk_a;
+	}
 	// a uniform branch: far off the fine print is not sampled at all
 	if (fine_alpha > 0.0) {
 		vec4 fined = texture(fine_tex, vec2(UV.x, UV.y * tex_aspect));

@@ -168,3 +168,29 @@ func test_crossings_outside_the_clip_are_not_looked_for() -> void:
 	var river := PackedVector2Array([Vector2(4, -5), Vector2(4, 5)])
 	assert_eq(WarSheetInk.crossings([road], [river], Rect2(0, -6, 10, 12)).size(), 1)
 	assert_eq(WarSheetInk.crossings([road], [river], Rect2(100, 100, 10, 10)).size(), 0)
+
+
+func test_a_window_keeps_only_its_strokes_in_its_own_px() -> void:
+	var s: Dictionary = WarSheets.series(repo)[0]
+	var r: Rect2 = s["rect"]
+	var win := Rect2(r.position + r.size * 0.25, r.size * 0.5)
+	var whole := WarSheetInk.strokes(repo, state, s, 4096)
+	var part := WarSheetInk.strokes(repo, state, s, 2048, null, win)
+	assert_lte((part["towns"] as Array).size(), (whole["towns"] as Array).size())
+	for t: Dictionary in part["towns"]:
+		assert_true(Rect2(Vector2.ZERO, win.size * (2048.0 / win.size.x)).has_point(t["at"]))
+
+
+func test_a_window_keeps_the_sheets_sizes_on_the_table() -> void:
+	var s: Dictionary = WarSheets.series(repo)[0]
+	var r: Rect2 = s["rect"]
+	var win := Rect2(r.position + r.size * 0.25, r.size * 0.25)   # a quarter of the width: x4 at 4096 / 4096
+	var sheet_px := int(repo.bal("war_sheet_texture_px"))
+	var part := WarSheetInk.strokes(repo, state, s, sheet_px, null, win)
+	var mag := (float(sheet_px) / win.size.x) / (float(sheet_px) / r.size.x)
+	for rv: Dictionary in part["rivers"]:
+		assert_almost_eq(float(rv["w0"]), repo.bal("war_ink_river_px") * mag, 0.001)
+	for g: Dictionary in part["graticule"]:
+		assert_eq(int(g["size"]), int(round(repo.bal("war_grid_label_px") * mag)))
+	assert_almost_eq(WarSheetInk.town_label_box(repo, {"at": Vector2.ZERO, "tier": 0, "label": "Abc"}, mag).size.x,
+		WarSheetInk.town_label_box(repo, {"at": Vector2.ZERO, "tier": 0, "label": "Abc"}).size.x * mag, 0.01)

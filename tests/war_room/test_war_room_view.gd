@@ -927,3 +927,19 @@ func test_the_fine_prints_legibility_limit_is_bound_from_data() -> void:
 	await wait_process_frames(2)
 	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
 	assert_eq(float(mat.get_shader_parameter("fine_texels_per_px")), repo.bal("war_fine_texels_per_px"))
+
+
+func test_the_near_zoom_patch_comes_on_close_and_goes_far() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	view.lean_to(repo.bal("war_cam_min_m"))
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 1.0)
+	var uv: Vector4 = mat.get_shader_parameter("detail_uv")
+	assert_true(uv.x >= -0.001 and uv.y >= -0.001 and uv.z <= 1.001 and uv.w <= 1.001, "the patch lies on the sheet: %s" % uv)
+	assert_lt(uv.z - uv.x, 0.5, "and is a small part of it")
+	assert_gt((view.get_node("%DetailViewport") as SubViewport).size.x, 2)
+	view.lean_to(repo.bal("war_cam_max_m"))
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 0.0)
+	view.set_active(false)
+	assert_eq((view.get_node("%DetailViewport") as SubViewport).size, Vector2i(2, 2), "given back when the room shuts")

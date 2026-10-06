@@ -32,9 +32,16 @@ static func _touches(r: Rect2, poly: PackedVector2Array) -> bool:
 	return false
 
 
-static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int, bake: WarBake = null) -> Dictionary:
-	var r: Rect2 = sheet["rect"]
+## `window` (pack px, empty for the whole sheet): only the strokes touching it,
+## in ITS texture's px, every px size scaled with it so a near-zoom patch (spec
+## 2026-10-07-war-room-scale-hover §2) keeps the sheet's sizes on the table.
+static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int, bake: WarBake = null,
+		window := Rect2()) -> Dictionary:
+	var r: Rect2 = sheet["rect"] if window.size.x <= 0.0 else window
 	var k := float(tex_px) / r.size.x
+	# px sizes grow with the window's magnification over the whole sheet's ink
+	var px_k := 1.0 if window.size.x <= 0.0 \
+		else k / (repo.bal("war_sheet_texture_px") / (sheet["rect"] as Rect2).size.x)
 	var out := {"roads": [], "trails": [], "rivers": [], "coasts": [], "borders": [], "seams": [],
 		"towns": [], "peaks": [], "hollows": [], "woods": [], "manor_edges": [], "manors": []}
 	var route_codes: Array = repo.routes.keys()
@@ -50,13 +57,13 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	var river_codes: Array = repo.rivers.keys()
 	river_codes.sort()
 	# a river widens from its source to its mouth by its discharge, and is named
-	var base_w := repo.bal("war_ink_river_px")
+	var base_w := repo.bal("war_ink_river_px") * px_k
 	for code: String in river_codes:
 		var row: Dictionary = repo.rivers[code]
 		var poly: PackedVector2Array = row["polyline"]
 		if _touches(r, poly):
 			var mouth := minf(base_w * (1.0 + repo.bal("war_ink_river_discharge_k") * sqrt(maxf(float(row.get("discharge", "0")), 0.0))),
-				repo.bal("war_ink_river_max_px"))
+				repo.bal("war_ink_river_max_px") * px_k)
 			(out["rivers"] as Array).append({"poly": _to_tex(r, k, poly), "w0": base_w, "w1": maxf(mouth, base_w),
 				"label": String(row.get("label", ""))})
 	var river_polys: Array = (out["rivers"] as Array).map(func(rv: Dictionary) -> PackedVector2Array: return rv["poly"])
@@ -111,8 +118,12 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 				var jitter := Vector2(float(absi(hash([at.x, at.y, 1])) % 200) - 100.0,
 					float(absi(hash([at.x, at.y, 2])) % 200) - 100.0) / 100.0 * step * repo.bal("war_ink_wood_jitter")
 				(out["woods"] as Array).append({"at": (at + jitter - r.position) * k, "conifer": float(w["conifer"]) > 0.5})
-	_manors(repo, state, r, k, out)
-	out["graticule"] = graticule(repo, sheet, k)
+	_manors(repo, state, r, k, out, px_k)
+	var framed := sheet
+	if window.size.x > 0.0:
+		framed = sheet.duplicate()
+		framed["rect"] = r
+	out["graticule"] = graticule(repo, framed, k, px_k)
 	return out
 
 
@@ -121,12 +132,12 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 ## parallel's latitude down both sides, every war_grid_deg, just inside the
 ## chequered degree band — `at` the line's foot on the band's inner edge in
 ## ink px, `side` which edge (n s w e), `text` the figure ("24°N", "51°E").
-static func graticule(repo: DataRepository, sheet: Dictionary, k: float) -> Array:
+static func graticule(repo: DataRepository, sheet: Dictionary, k: float, px_k := 1.0) -> Array:
 	var r: Rect2 = sheet["rect"]
 	var cell: Rect2 = sheet.get("cell", r)
 	var step := MapCoords.px_per_deg(repo) * repo.bal("war_grid_deg")
-	var pad := repo.bal("war_grid_label_pad_px")
-	var size := int(repo.bal("war_grid_label_px"))
+	var pad := repo.bal("war_grid_label_pad_px") * px_k
+	var size := int(round(repo.bal("war_grid_label_px") * px_k))
 	var out: Array = []
 	var x0 := ceili(cell.position.x / step.x + 0.001)
 	var x1 := floori(cell.end.x / step.x - 0.001)
@@ -149,10 +160,10 @@ static func graticule(repo: DataRepository, sheet: Dictionary, k: float) -> Arra
 
 ## A town's ring and name as one box, ink px (the painter's own layout: the
 ## ring at `at`, the name to its right), for keeping other names off it.
-static func town_label_box(repo: DataRepository, t: Dictionary) -> Rect2:
-	var town := repo.bal("war_ink_town_px")
+static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> Rect2:
+	var town := repo.bal("war_ink_town_px") * px_k
 	var r := town * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
-	var label := repo.bal("war_ink_label_px")
+	var label := repo.bal("war_ink_label_px") * px_k
 	var w := r + town * repo.bal("war_ink_label_gap_ratio") + float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
 	var h := maxf(r, label * 0.6)
 	var at: Vector2 = t["at"]
@@ -160,8 +171,8 @@ static func town_label_box(repo: DataRepository, t: Dictionary) -> Rect2:
 
 
 ## A manor's name as a box, ink px, centred where the painter sets it.
-static func manor_label_box(repo: DataRepository, m: Dictionary) -> Rect2:
-	var px := repo.bal("war_ink_manor_label_px")
+static func manor_label_box(repo: DataRepository, m: Dictionary, px_k := 1.0) -> Rect2:
+	var px := repo.bal("war_ink_manor_label_px") * px_k
 	var w := float(String(m["label"]).length()) * px * repo.bal("war_ink_char_w")
 	var at: Vector2 = m["at"]
 	return Rect2(at.x - w * 0.5, at.y - px * 0.5, w, px)
@@ -171,11 +182,11 @@ static func manor_label_box(repo: DataRepository, m: Dictionary) -> Rect2:
 ## (a province seam or the coast is drawn already) — and each manor's name at
 ## its centre unless its box would touch a town's ring or name (a town's name
 ## wins; war_ink_manor_clear_px of air kept round it).
-static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, out: Dictionary) -> void:
+static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, out: Dictionary, px_k := 1.0) -> void:
 	var first: Dictionary = {}   # edge key -> the cell that met it first
 	var ids: Array = repo.cells.keys()
 	ids.sort()
-	var clear := repo.bal("war_ink_manor_clear_px")
+	var clear := repo.bal("war_ink_manor_clear_px") * px_k
 	var reach := r.grow(r.size.x * 0.05)
 	for id: int in ids:
 		var cell: Dictionary = repo.cells[id]
@@ -200,10 +211,10 @@ static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, 
 				first[key] = id
 		if r.has_point(centre):
 			var m := {"at": (centre - r.position) * k, "label": MapManors.label_of(repo, id)}
-			var box := manor_label_box(repo, m).grow(clear)
+			var box := manor_label_box(repo, m, px_k).grow(clear)
 			var clash := false
 			for t: Dictionary in out["towns"]:
-				if box.intersects(town_label_box(repo, t)):
+				if box.intersects(town_label_box(repo, t, px_k)):
 					clash = true
 					break
 			if not clash:

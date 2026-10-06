@@ -77,6 +77,7 @@ var _y_scale := 0.0
 var _relief: Image
 var _inks := WarRoomInk.new()
 var _dwell := WarHoverDwell.new()
+var _detail_state: Dictionary = {}   # the near-zoom patch drawn now: {level, rect, key}
 var _render_scale := 1.0
 var _selected := ""
 var _font: Font
@@ -241,6 +242,8 @@ func set_active(on: bool) -> void:
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	set_process(on)
 	if not on:
+		_detail_state = {}
+		(%DetailViewport as SubViewport).size = Vector2i(2, 2)   # the patch's render target given back
 		_dwell.clear()
 		hover_cleared.emit()
 		_finish_swap()
@@ -274,6 +277,8 @@ func lay_sheet(index: int) -> void:
 	var mat := _table.get_active_material(0) as ShaderMaterial
 	mat.set_shader_parameter("intel_tex", null)   # no sheet wears another's intelligence (final review I2)
 	mat.set_shader_parameter("fine_tex", null)
+	mat.set_shader_parameter("detail_on", 0.0)
+	_detail_state = {}
 	WarRoomMaterial.bind(mat, _repo, all[index], _table_w, _depth)
 	_rig.bounds = Rect2(-_table_w * 0.5, -_depth * 0.5, _table_w, _depth)
 	_rig.target = Vector3.ZERO
@@ -559,8 +564,50 @@ func _apply_camera() -> void:
 		if mat != null:
 			mat.set_shader_parameter("contour_m", WarNear.contour_m(_repo, _rig.distance))
 			mat.set_shader_parameter("fine_alpha", WarNear.fine_alpha(_repo, _rig.distance))
+			_update_detail()
 		_rake.redraw()
 	camera_moved.emit()
+
+
+## The near-zoom detail patch (spec 2026-10-07-war-room-scale-hover §2): nearer
+## than war_detail_level_m, the ink round the view redrawn at the patch's
+## resolution into its own resident viewport (no read-back), only when its
+## level, rect or ownership key turns.
+func _update_detail() -> void:
+	var mat := _table.get_active_material(0) as ShaderMaterial
+	var lvl := WarDetailInk.level(_repo, _rig.distance)
+	if lvl == 0 or _sheet < 0:
+		mat.set_shader_parameter("detail_on", 0.0)
+		_detail_state = {}
+		return
+	# pack px the view spans (units_per_px is in the pack's own measure)
+	var view_px := Vector2(size) * units_per_px() / maxf(float(_repo.map_info.get("distance_scale", "1")), 0.0001)
+	var centre := WarRoomTable.from_table(_rect, _table_w, Vector2(_rig.target.x, _rig.target.z))
+	var now := {"level": lvl, "rect": WarDetailInk.patch_rect(_repo, _rect, centre, view_px),
+		"key": WarSheetInk.cache_key(state(), _sheet)}
+	if not WarDetailInk.needs_redraw(_detail_state, now):
+		return
+	_detail_state = now
+	var r: Rect2 = now["rect"]
+	var vp: SubViewport = %DetailViewport
+	var w := int(_repo.bal("war_detail_texture_px"))
+	vp.size = Vector2i(w, maxi(1, ceili(w * r.size.y / r.size.x)))
+	var scale := _rect.size.x / r.size.x * float(w) / float(WarRoomInk.tex_size(_repo, _rect).x)
+	var widths := {}
+	for k: String in WarRoomInk.INK_PX:
+		widths[k] = _repo.bal("war_ink_%s_px" % k) * scale
+	for k: String in WarRoomInk.INK_RATIOS:
+		widths[k] = _repo.bal("war_ink_%s" % k)
+	var row: Dictionary = WarSheets.series(_repo)[_sheet]
+	(%DetailInk as WarInkPainter).paint(WarSheetInk.strokes(_repo, state(), row, w, WarBake.of(_repo), r),
+		_repo.war_palette, widths, lettering())
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	mat.set_shader_parameter("detail_tex", vp.get_texture())
+	mat.set_shader_parameter("detail_uv", Vector4((r.position.x - _rect.position.x) / _rect.size.x,
+		(r.position.y - _rect.position.y) / _rect.size.y, (r.end.x - _rect.position.x) / _rect.size.x,
+		(r.end.y - _rect.position.y) / _rect.size.y))
+	mat.set_shader_parameter("detail_feather", _repo.bal("war_detail_feather"))
+	mat.set_shader_parameter("detail_on", 1.0)
 
 
 ## The pack's own measure (map_info distance_scale per pack px) one screen px
