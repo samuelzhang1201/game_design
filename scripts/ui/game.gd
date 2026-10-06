@@ -300,6 +300,7 @@ func load_campaign(path: String = "") -> bool:
 	# A save from before the wealth tiers were state computes them once, from
 	# the state it loaded (Ruling 15).
 	Intel.ensure_wealth_tiers(data, state)
+	TownStores.ensure(data, state)  # a save from before the town stores
 	state_changed.emit()
 	return true
 

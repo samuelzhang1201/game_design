@@ -102,6 +102,11 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 		took += int(row["take"])
 		reached += int(row["make"])
 	Governance.add_skims(state, rows, "workshop")
+	# Its goods are stored in the workshop's own town (spec 2026-10-07-army-
+	# supply-lines §3.1); the line below raises the lord's metric by the same.
+	for row: Dictionary in rows:
+		TownStores.add(state, TownStores.town_of_cell(repo, state, int(row["cell"])), "lord",
+			int(row["make"]) * TownStores.units_per_gold(repo))
 	if took == 0:
 		return []
 	return [{"metric": "lord_civil", "delta": -took, "reason": "the war workshops take civil goods"},

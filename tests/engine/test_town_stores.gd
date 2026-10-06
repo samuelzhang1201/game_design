@@ -8,6 +8,7 @@ var s: GameState
 func before_each() -> void:
 	repo = SuiteData.repo()
 	s = SuiteData.campaign(repo, 42)
+	s.town_stock = {}  # these tests lay the stores by hand
 	RealmEconomy.forget()
 
 func after_each() -> void:

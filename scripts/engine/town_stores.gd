@@ -204,3 +204,98 @@ static func reconcile(repo: DataRepository, state: GameState) -> void:
 			for b: String in cut:
 				take(state, b, pool, int(cut[b]))
 	sync_metrics(repo, state)
+
+
+## The month's strategic goods by town, in GOLD (spec §3.1): a manor of a
+## province the crown controls gives all of it to `lord`; any other realm
+## manor's goods are split between `crown` (crown_share_permille of the
+## realm's, apportioned over the towns by what reaches them, so the crown's
+## sum equals RealmEconomy.purses exactly) and `house` (the rest).
+## burg -> {lord, crown, house}.
+static func month_inflow(repo: DataRepository, state: GameState) -> Dictionary:
+	var catch := catchment(repo, state)
+	var home := depot(repo, state)
+	var lord: Dictionary = {}
+	var other: Dictionary = {}
+	var provs: Array = Array(MapOwnership.provinces_of(repo, state, repo.resolve_realm("player_realm")))
+	provs.sort()
+	for prov: String in provs:
+		var mine := MapManors.crown_controls(repo, state, prov)
+		var lines := RealmEconomy.lines_of_province(repo, state, prov)
+		var cells: Array = lines.keys()
+		cells.sort()
+		for cell: int in cells:
+			var town := String(catch.get(cell, home))
+			if town == "":
+				continue
+			var g := int((lines[cell] as Dictionary)["strategic"])
+			if mine:
+				lord[town] = int(lord.get(town, 0)) + g
+			else:
+				other[town] = int(other.get(town, 0)) + g
+	var crown_total := int(RealmEconomy.purses(repo, state)["realm_share"]["strategic"])
+	var crown: Dictionary = apportion(crown_total, other) if not other.is_empty() else {}
+	var towns: Array = lord.keys()
+	for t in other.keys():
+		if not towns.has(t):
+			towns.append(t)
+	towns.sort()
+	var out: Dictionary = {}
+	for t: String in towns:
+		var c := int(crown.get(t, 0))
+		out[t] = {"lord": int(lord.get(t, 0)), "crown": c, "house": maxi(int(other.get(t, 0)) - c, 0)}
+	return out
+
+
+## Settle the month's goods into the towns (TickEngine._settle_economy, beside
+## the purse lines that raise the two metrics by the same gold). A house keeps
+## at most `town_house_stock_months` of its own goods in a town.
+static func deposit_month(repo: DataRepository, state: GameState) -> void:
+	var upg := units_per_gold(repo)
+	var months := int(repo.bal("town_house_stock_months"))
+	var inflow := month_inflow(repo, state)
+	var towns: Array = inflow.keys()
+	towns.sort()
+	for t: String in towns:
+		var row: Dictionary = inflow[t]
+		add(state, t, "lord", int(row["lord"]) * upg)
+		add(state, t, "crown", int(row["crown"]) * upg)
+		var cap := int(row["house"]) * months * upg
+		var s := stock_of(state, t)
+		s["house"] = mini(int(s["house"]) + int(row["house"]) * upg, cap)
+		state.town_stock[t] = s
+
+
+## Spread the two pools as they stand over the towns by each town's share of
+## a month's inflow (a new campaign; an old save), and fill each house stock
+## to its cap. The depot takes what no town draws.
+static func seed(repo: DataRepository, state: GameState) -> void:
+	state.town_stock = {}
+	var upg := units_per_gold(repo)
+	var inflow := month_inflow(repo, state)
+	var months := int(repo.bal("town_house_stock_months"))
+	for pool: String in METRIC:
+		var units := maxi(int(state.metrics.get(METRIC[pool], 0.0)), 0) * upg
+		var weights: Dictionary = {}
+		for t: String in inflow:
+			weights[t] = int((inflow[t] as Dictionary)[pool])
+		if weights.is_empty():
+			add(state, depot(repo, state), pool, units)
+			continue
+		var split := apportion(units, weights)
+		var keys: Array = split.keys()
+		keys.sort()
+		for t: String in keys:
+			add(state, t, pool, int(split[t]))
+	var towns: Array = inflow.keys()
+	towns.sort()
+	for t: String in towns:
+		add(state, t, "house", int((inflow[t] as Dictionary)["house"]) * months * upg)
+	sync_metrics(repo, state)
+
+
+## Seed only a state that has no stores yet (Game.load_campaign: a save from
+## before the town stores).
+static func ensure(repo: DataRepository, state: GameState) -> void:
+	if state.town_stock.is_empty():
+		TownStores.seed(repo, state)

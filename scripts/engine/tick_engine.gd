@@ -113,6 +113,9 @@ func advance(state: GameState) -> TickReport:
 	# The provinces' wealth tiers are settled with the month (Ruling 15):
 	# state, so no reader's timing can decide what a spy's report says.
 	Intel.settle_wealth_tiers(data, state)
+	# Whatever else moved the strategic pools this month (the workshops'
+	# lines, the industry's inputs) is settled into the towns.
+	TownStores.reconcile(data, state)
 	# The steward's report on the month just settled (owner 2026-09-28): ground
 	# truth. The reign's OPENING tick (tick 0, the one GameRoot runs once at
 	# start before any day is played) settles no real month, so it files no
@@ -124,6 +127,9 @@ func advance(state: GameState) -> TickReport:
 	# refilled before its month is spent.
 	for l: Dictionary in SupplySystem.settle_month(data, state):
 		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
+	# What the supply lines took from the pools is taken from the towns that
+	# hold them (the towns' sums stay the metrics).
+	TownStores.reconcile(data, state)
 	# The regiments' month (owner 2026-09-17; morale, spec 2026-09-30-ledger-
 	# supply-design §4): wounded return, morale drifts toward what the stores
 	# just refilled allow, training grows (the supplies are eaten daily).
@@ -175,6 +181,9 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 	_apply(r, m, "strategic", float(int(crown_share["strategic"])),
 		"the crown's share of the realm's strategic goods")
 	_apply(r, m, "grain", float(int(crown_share["civil"])), "the crown's share of the realm's civil goods")
+	# ...and the same goods into the towns that hold them (spec 2026-10-07-army-
+	# supply-lines §3.1): the metrics just raised are the towns' sums.
+	TownStores.deposit_month(data, state)
 	_set_metric(r, m, "tax_income", float(int(lord["tax"]) + int(crown_share["tax"])), "taxes collected this month")
 	# The court is the crown's: its ministers and its table.
 	var salaries := 0
