@@ -78,6 +78,64 @@ def stamp_lines(mask, lines, radius_cells):
                 mask[max(yi - r, 0):min(yi + r + 1, h), max(xi - r, 0):min(xi + r + 1, w)] = True
 
 
+def stamp_course(mask, pts, radii):
+    """Mark every cell within each sample's own radius (cell units) of a
+    river's course: a river is narrow at its source and broad at its mouth,
+    and one radius for the whole course (its widest) cleared its whole
+    valley of trees."""
+    h, w = mask.shape
+    pts = np.asarray(pts, dtype=np.float32)
+    for a, b, ra, rb in zip(pts[:-1], pts[1:], radii[:-1], radii[1:]):
+        n = max(int(np.hypot(*(b - a)) / 0.5) + 1, 2)
+        for t in np.linspace(0, 1, n):
+            x, y = a + (b - a) * t
+            r = ra + (rb - ra) * t
+            ri = int(np.ceil(r))
+            xi, yi = int(round(x)), int(round(y))
+            y0, y1, x0, x1 = max(yi - ri, 0), min(yi + ri + 1, h), max(xi - ri, 0), min(xi + ri + 1, w)
+            if y0 >= y1 or x0 >= x1:
+                continue
+            yy, xx = np.mgrid[y0:y1, x0:x1]
+            mask[y0:y1, x0:x1] |= (xx - x) ** 2 + (yy - y) ** 2 <= r * r
+
+
+def riparian(courses, ok, run, rng, rules, vm):
+    """BANKSIDE trees (critic 2026-10-06: the rivers read as ribbons laid on
+    the land): a row of clumps along each bank, `riparian_gap_m` out from the
+    water's edge and scattered over `riparian_band_m`, offered every
+    `riparian_spacing_m` along the course and kept with `riparian_chance` in
+    runs (a slow noise, as the hedgerows) — the line of alders and willows
+    that shows a river from the air long before its water does. `courses`
+    is [(points in metres of the pack frame, widths)], `ok` the cells a
+    clump may stand on. Returns the clumps' (x, z) in metres."""
+    sp, gap, band = rules["riparian_spacing_m"], rules["riparian_gap_m"], rules["riparian_band_m"]
+    out = []
+    h, w = ok.shape
+    for pts, widths in courses:
+        pts = np.asarray(pts, np.float64)
+        seg = np.hypot(*np.diff(pts, axis=0).T)
+        s = np.concatenate([[0.0], np.cumsum(seg)])
+        if s[-1] <= sp:
+            continue
+        t = np.arange(sp * 0.5, s[-1], sp)
+        px, pz = np.interp(t, s, pts[:, 0]), np.interp(t, s, pts[:, 1])
+        wl = np.interp(t, s, widths)
+        dx, dz = np.gradient(px), np.gradient(pz)
+        ln = np.maximum(np.hypot(dx, dz), 1e-6)
+        nx, nz = -dz / ln, dx / ln
+        for side in (-1.0, 1.0):
+            off = wl * 0.5 + gap + rng.random(len(t)) * band
+            along = (rng.random(len(t)) - 0.5) * sp * 0.6
+            x = px + side * nx * off + dx / ln * along
+            z = pz + side * nz * off + dz / ln * along
+            xi = np.clip((x / vm).astype(int), 0, w - 1)
+            zi = np.clip((z / vm).astype(int), 0, h - 1)
+            keep = ok[zi, xi] & (rng.random(len(t)) < rules["riparian_chance"]
+                                 * np.clip((run[zi, xi] - 0.3) / 0.3, 0, 1))
+            out.append(np.stack([x[keep], z[keep]], axis=1))
+    return np.concatenate(out) if out else np.zeros((0, 2))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--map", default="")
@@ -152,16 +210,25 @@ def main(argv=None):
                               for a, b in (p.split() for p in r["points"].split("|") if p.strip())])
     stamp_lines(bad, roads, rules["road_clear_m"] / vm)
     rv = json.load(open(os.path.join(OUT, "rivers.json")))
+    courses = []
+    water = np.zeros_like(bad)   # the water itself and a hair beyond it
     for river in rv["rivers"]:
         pts = [((p[0] - ox) / vm, (p[1] - oz) / vm) for p in river["points"]]
-        wmax = max(p[3] for p in river["points"])
-        stamp_lines(bad, [pts], (wmax * 0.5 + rules["river_clear_m"]) / vm)
+        wd = np.array([p[3] for p in river["points"]], np.float64)
+        courses.append(([(x * vm, z * vm) for x, z in pts], wd))
+        stamp_course(water, pts, (wd * 0.5 + rules["riparian_gap_m"] * 0.5) / vm)
+    river_clear = np.zeros_like(bad)   # the woods' clearance; the bankside rows ignore it
+    for (pts_m, wd) in courses:
+        stamp_course(river_clear, [(x / vm, z / vm) for x, z in pts_m], (wd * 0.5 + rules["river_clear_m"]) / vm)
     with open(os.path.join(OUT, "houses.csv")) as f:
         near = rules["house_clear_m"] / vm
         for r in csv.DictReader(f):
             x, z = (float(r["x_m"]) - ox) / vm, (float(r["z_m"]) - oz) / vm
             xi, zi, rr = int(x), int(z), int(np.ceil(near))
             bad[max(zi - rr, 0):zi + rr + 1, max(xi - rr, 0):xi + rr + 1] = True
+    bank_ok = ~bad & ~water   # the bankside rows' ground: everything else's "never" holds
+    bad |= river_clear
+    del water, river_clear
 
     # groves: a slow noise swings the woodedness so woods gather and open up
     grove = value_noise(rng, vw, vh, rules["grove_wave_m"] / vm) * 0.65 \
@@ -197,6 +264,7 @@ def main(argv=None):
     # field_edges.png, in runs (a slow noise) — their own stream, so the woods
     # above are unchanged
     hedge = np.zeros(len(X), bool)
+    bank = np.zeros(len(X), bool)
     ep = os.path.join(OUT, "field_edges.png")
     if rules.get("hedge_chance", 0.0) > 0.0 and os.path.exists(ep):
         hrng = np.random.default_rng(SEED + 31)
@@ -215,7 +283,20 @@ def main(argv=None):
         X, Z = np.concatenate([X, hx[take]]), np.concatenate([Z, hz[take]])
         xi, zi = np.concatenate([xi, hxi[take]]), np.concatenate([zi, hzi[take]])
         hedge = np.concatenate([hedge, np.ones(int(take.sum()), bool)])
+        bank = np.concatenate([bank, np.zeros(int(take.sum()), bool)])
         del em, hx, hz, hxi, hzi, eb, runs, take
+    # BANKSIDE rows along every river (their own stream)
+    if rules.get("riparian_chance", 0.0) > 0.0:
+        rrun = value_noise(np.random.default_rng(SEED + 42), vw, vh, rules["riparian_run_m"] / vm)
+        rip = riparian(courses, bank_ok, rrun, np.random.default_rng(SEED + 41), rules, vm)
+        del rrun
+        rxi = np.clip((rip[:, 0] / vm).astype(int), 0, vw - 1)
+        rzi = np.clip((rip[:, 1] / vm).astype(int), 0, vh - 1)
+        X, Z = np.concatenate([X, rip[:, 0]]), np.concatenate([Z, rip[:, 1]])
+        xi, zi = np.concatenate([xi, rxi]), np.concatenate([zi, rzi])
+        hedge = np.concatenate([hedge, np.ones(len(rip), bool)])
+        bank = np.concatenate([bank, np.ones(len(rip), bool)])
+        print("bake_trees: %d bankside clumps" % len(rip))
     # the ground's height under the clump, bilinear
     fx, fz = X / vm, Z / vm
     x0 = np.clip(np.floor(fx).astype(int), 0, vw - 2)
@@ -234,10 +315,10 @@ def main(argv=None):
     # vertices, can still dip under the water at a shore — the last word is
     # the ground under the clump itself
     dry = y >= sea_y + rules["min_above_sea_m"]
-    X, Z, y, kind, xi, zi, hedge = X[dry], Z[dry], y[dry], kind[dry], xi[dry], zi[dry], hedge[dry]
+    X, Z, y, kind, xi, zi, hedge, bank = X[dry], Z[dry], y[dry], kind[dry], xi[dry], zi[dry], hedge[dry], bank[dry]
     yaw = rng.uniform(0, 2 * np.pi, len(X))
     scale = rng.uniform(rules["scale_min"], rules["scale_max"], len(X))
-    scale = np.where(hedge, scale * rules["hedge_scale"], scale)
+    scale = np.where(hedge, scale * np.where(bank, rules["riparian_scale"], rules["hedge_scale"]), scale)
     rows = np.stack([X + ox, y, Z + oz, yaw, scale, kind.astype(np.float32)], axis=1).astype(np.float32)
     rows.tofile(os.path.join(OUT, "trees.bin"))
     # the woods' canopy for the ground shader (Map3DGroundTint): one texel per

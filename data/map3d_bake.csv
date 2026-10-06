@@ -212,3 +212,9 @@ blend_floor,0.1,"3D bake (visual review 2026-10-06, perf): a vertex whose overla
 rock_break,0.85,"3D bake (visual review 2026-10-06: an even grey scree band below every scarp read as a pasted strip): how much of the scree a patchy noise takes back to grass where it is low (0: an even band)"
 rock_break_wave_m,500,3D bake: that noise's wavelength (with an octave at a third of it)
 river_mouth_widen,0.4,"3D bake (visual review 2026-10-06: a river's last stretch smeared over the bridge and wall of the town at its mouth): how much wider a river grows over its mouth (river_mouth_m) — 1.0 doubled it"
+river_estuary_m,2500,"3D bake (critic 2026-10-06: a river's last stretch read as a ribbon stopped abruptly by the sea): a true mouth opens into a funnel over this many metres from the sea (bake_world.estuary)"
+river_estuary_widen,1.5,3D bake: ...to this much wider at the sea (1.0 doubles it)
+river_estuary_power,2.0,"3D bake: ...opening as s^power down the stretch, so it widens mostly near the sea"
+river_estuary_town_m,400,"3D bake: within this far of a settlement the estuary does not open, fully by twice this — a port keeps the river its quays and houses were laid along (the full funnel displaced ~330 houses)"
+river_estuary_wobble,0.45,"3D bake (critic 2026-10-06: the funnel read as a ruler-straight wedge): the estuary's opening swings by up to this share with a slow noise along it, so its banks wander"
+river_estuary_wobble_m,400,3D bake: ...that noise's wavelength along the river

@@ -91,6 +91,20 @@ def test_river_bed_stops_at_its_floor():
     assert np.allclose(bed, [-1.0, -10.0, -10.0]), bed
 
 
+def test_town_hold_is_zero_by_a_town_and_one_at_twice_the_reach():
+    pts = np.array([[0.0, 0.0], [15.0, 0.0], [30.0, 0.0]])
+    h = bw.town_hold(pts, np.array([[0.0, 0.0]]), 10.0)
+    assert np.allclose(h, [0.0, 0.5, 1.0]), h
+    assert np.allclose(bw.town_hold(pts, np.zeros((0, 2)), 10.0), 1.0)
+
+
+def test_estuary_opens_toward_the_sea_only():
+    e = bw.estuary(6, 4, True, 1.0, 2.0)
+    # the last 4 steps: s = 0.25, 0.5, 0.75, 1 -> 1 + s^2
+    assert np.allclose(e, [1.0, 1.0, 1.0625, 1.25, 1.5625, 2.0]), e
+    assert np.allclose(bw.estuary(6, 4, False, 1.0, 2.0), 1.0)
+
+
 def test_river_widths_grow_from_source_to_mouth():
     w = bw.river_widths(5, 100.0, 1.4, 6.0)
     assert w[0] == 6.0 and abs(w[-1] - 100.0) < 1e-6

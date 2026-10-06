@@ -36,3 +36,9 @@ hedge_spacing_m,22,woods: the jittered grid hedgerow candidates are offered on
 hedge_band_m,9,woods: how near a field's edge (metres) a hedgerow clump stands
 hedge_run_m,500,"woods: the wavelength of the noise that makes hedgerows run in stretches, some full, some bare (under 0.35 none)"
 hedge_scale,0.7,woods: a hedgerow clump's scale against a wood's
+riparian_chance,0.7,"woods (critic 2026-10-06: the rivers read as ribbons laid on the land): BANKSIDE trees — the chance of a clump at each offer along a river's bank, times the run noise (bake_trees.riparian); 0 plants none"
+riparian_spacing_m,16,woods: how far apart along the river the bankside clumps are offered (each bank)
+riparian_gap_m,22,woods: how far out from the water's edge the bankside row begins
+riparian_band_m,30,woods: ...and how deep the row is scattered beyond that
+riparian_run_m,700,"woods: the wavelength of the noise that makes the bankside rows run in stretches, some full, some bare (under 0.3 none)"
+riparian_scale,0.8,woods: a bankside clump's scale against a wood's (a hedgerow's is hedge_scale)

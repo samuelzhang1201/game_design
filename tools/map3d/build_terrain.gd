@@ -21,12 +21,11 @@ static var map_id := ""
 # texture ids. No per-texture tint: bake_world.py's colour map carries every
 # colour, so the far view and the near view agree.
 const TEXTURES := [
-	# the escarpments (look route 2026-09-30, tools/map3d/pack_aerial.py) at
-	# 160 m / 0.3: the size the owner approved them at, which was the shader's
-	# DEFAULT dual scaling (texture 0 at 0.3x) until the 2026-10-04 fix moved
-	# dual scaling to the grass — the critic ruled the true 160 m a busier,
-	# finer mosaic out of scale with the grass and scree beside it
-	["aerial_cliff", 160.0 / 0.3, 0.1],
+	# the escarpments (owner 2026-10-06: a new top-down, warm rock; T-73,
+	# tools/map3d/pack_aerial.py) at 200 m: its blocks against the houses and
+	# fields — at 260 m the critic read them 2-3x too big, and the old crag's
+	# 533 m only suited that picture's own larger forms
+	["aerial_cliff", 200.0, 0.1],
 	["aerial_meadow", 120.0, 0.16],   # look route 2026-09-30: aerial pictures, tools/map3d/pack_aerial.py
 	["dry_decay_leaves", 160.0, 0.2],
 	["dirt_floor", 180.0, 0.16],

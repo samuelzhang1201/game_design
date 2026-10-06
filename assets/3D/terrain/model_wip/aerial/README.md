@@ -13,7 +13,7 @@ they replace are ground-level photos of 1-2 m of ground, stretched to
 | `aerial_meadow.png` | T-64 | 954159497 | GRASS | 120 m |
 | `aerial_canopy.png` | T-52 | 954159498 | FOREST | 170 m |
 | `aerial_upland.png` | T-54 | 954159497 | ROCKY | 200 m |
-| `aerial_cliff.png` | T-57 | 954159499 | CLIFF | 160 m |
+| `aerial_cliff.png` | T-73 | 954159499 | CLIFF | 200 m |
 | `aerial_snow.png` | T-58 | 954159498 | SNOW | 180 m |
 | `aerial_crop.png` | T-62 | 954159497 | CROP | 140 m |
 
@@ -28,7 +28,7 @@ into Terrain3D's two maps before `build_pack.sh`:
 `--lift-patches` (visual review 2026-10-06) raises the upland's dark heather
 blobs to their surroundings' light at low frequency, keeping the grain: tiled
 every 200 m they read as black pits all over the hills.
-    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_cliff.png aerial_cliff --saturation 0.85 --lift-darks 0.95 --lift-radius 20 --black 0.12 --contrast 0.85 --warm 0.03 --height-gain 1.3 --match-mean '#726D69'
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_cliff.png aerial_cliff --saturation 0.6 --contrast 0.9 --lift-darks 0.95 --lift-radius 24 --height-gain 1.3 --match-mean '#8A7A64'
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_snow.png aerial_snow --flatten-keep 0.0 --contrast 0.55 --saturation 0.3 --height-gain 0.8 --rough 0.75
 
 The cliff (owner 2026-09-30, "先做悬崖纹理"): the escarpments wore ambientCG
@@ -86,3 +86,27 @@ the other T-68 seeds carry tramlines that would repeat across every field.
 
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/aerial_crop_field.png aerial_crop --saturation 0.25 --contrast 1.8 --flatten-keep 0.0 --fill-spots 0.12 --fill-dark-only --match-mean '#D4C89C' --normal-strength 0.6 --rough 0.95
 
+
+The cliff, regenerated (owner 2026-10-06, approving a new top-down warm rock):
+`aerial_cliff.png` is T-73 (seed 954159499, Z-Image, `STYLE_CORE_aerial_ground.txt`:
+an eroded sandstone hillside from an aircraft at 800 m — buff and honey outcrops,
+talus fans, gravel and dry grass, no layers or stripes). T-57's crag, laid on the
+escarpments, read as a grey, vertically striped photograph. It is packed to the
+bake's own far colour (`far_color_cliff` #8A7A64), so the colour map's cliff
+multiplier is 1 after a rebake, with its dark pockets lifted (`--lift-darks 0.95`:
+at 0.6 they read as burns), and tiled at 200 m (`build_terrain.gd`): at 260 m its
+blocks read 2-3x house size, at T-57's 533 m a rubble of giants. The critics
+ranked it over T-70 (gritstone boulders: clear, but the blocks too big), T-72
+(an aircraft view of a mountainside: cold blue rock with a diagonal grain that
+streaked down the slopes) and T-69 (one boulder dome in the middle of the frame:
+it cannot tile). Every Qwen-2512 tile of T-69..T-73 drew a fish-eye close-up of
+tufts and stones, one of them a maze — Z-Image only, as for every aerial so far.
+Known limits: the steepest faces still smear (Terrain3D projects a side view from
+`projection_threshold` 0.87, the 45-degree snap of a top-down picture), and the
+rock's edge against the grass is the bake's blend.
+
+The upland was tried too (T-71 stony turf, the old T-54 with its white stones
+painted out, T-72 and T-73 seeds) and NOT changed: T-71 took away the stamped
+white stones but left a flat brown blanket with no structure, and the critics
+split on whether that is better. What it needs is new art — sparse warm-grey scree
+patches tens of metres across that do not repeat within a tile.

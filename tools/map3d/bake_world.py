@@ -527,6 +527,41 @@ def river_widths(n, w_mouth, gamma, w_source):
     return np.maximum(w_mouth * t ** gamma, w_source)
 
 
+def town_hold(pts, towns, hold_v):
+    """Per sample of a course (vertex units): 0 within hold_v of a settlement,
+    rising to 1 at twice that — near a town a river keeps the width its
+    houses, quays and bridge were laid against (the full estuary displaced
+    ~330 houses)."""
+    if hold_v <= 0.0 or towns is None or not len(towns):
+        return np.ones(len(pts))
+    from scipy.spatial import cKDTree
+    dist, _ = cKDTree(towns).query(np.asarray(pts, dtype=np.float64))
+    return np.clip(dist / hold_v - 1.0, 0.0, 1.0)
+
+
+def estuary(n, n_est, to_sea, widen, power, wobble=0.0, wave=1.0, salt=0):
+    """Each sample's width factor over a true mouth's last n_est samples: 1
+    upstream, opening as s^power to 1 + widen at the sea (s 0 -> 1 down the
+    stretch) — a funnel, where a river's last stretch read as a ribbon
+    stopped abruptly by the sea (critic 2026-10-06). `wobble` swings the
+    opening by up to that share with a slow noise every `wave` samples, so
+    the funnel's banks wander instead of ruling a wedge. An inland end
+    keeps 1."""
+    if not to_sea or n_est <= 0 or widen <= 0.0:
+        return np.ones(n)
+    s = np.clip((np.arange(n) - (n - 1 - n_est)) / float(n_est), 0.0, 1.0)
+    swing = np.ones(n)
+    if wobble > 0.0:
+        rng = np.random.default_rng(SEED + 59 + salt)
+        x = np.arange(n) / max(wave, 1.0)
+        knots = rng.uniform(-1.0, 1.0, int(x[-1]) + 3)
+        i = np.floor(x).astype(np.int64)
+        f = x - i
+        f = f * f * (3.0 - 2.0 * f)
+        swing = 1.0 + wobble * (knots[i] * (1.0 - f) + knots[i + 1] * f)
+    return 1.0 + widen * s ** power * swing
+
+
 def carve(height, wet, pts, bed, widths_v, rules):
     """Cut each sample's valley into `height` (vertex units, in place): a flat
     bed across the water, then banks easing out over the valley's width
@@ -1297,6 +1332,14 @@ def main(argv=None):
         n_mouth = max(int(rules["river_mouth_m"] / VERTEX_M), 1)
         mouth = river_mouth(len(pts), n_mouth, bool(c[-1] < 0.5))
         widths = widths * (1.0 + rules.get("river_mouth_widen", 1.0) * mouth)
+        # a port at the mouth keeps the river its quays were laid along
+        e_hold = town_hold(pts, towns, rules.get("river_estuary_town_m", 0.0) / VERTEX_M)
+        widths = widths * (1.0 + (estuary(len(pts), int(rules.get("river_estuary_m", 0.0) / VERTEX_M),
+                                          bool(c[-1] < 0.5), rules.get("river_estuary_widen", 0.0),
+                                          rules.get("river_estuary_power", 2.0),
+                                          rules.get("river_estuary_wobble", 0.0),
+                                          rules.get("river_estuary_wobble_m", 400.0) / VERTEX_M,
+                                          len(rivers_out)) - 1.0) * e_hold)
         # open sea (cov 0) is never dug: the water line still reaches it
         cut = c > 0.0
         carve(height, wet, pts[cut], bed[cut], widths[cut] / VERTEX_M, rules)

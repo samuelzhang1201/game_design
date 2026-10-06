@@ -33,7 +33,7 @@
 // fitted to the environment's Filmic tonemap, and only a small ALBEDO/SPECULAR
 // share is left to catch a highlight.
 shader_type spatial;
-render_mode blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
+render_mode blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
 
 // The sea's water, which a river turns into over its last stretch.
 #include "res://scripts/map3d/water_sea.gdshaderinc"
@@ -46,6 +46,19 @@ uniform float ripple_m = 60.0;
 uniform float flow_m_s = 0.8;
 uniform float px_per_dist = 0.001;
 uniform float min_px = 1.5;
+// The floor grows with the river (critic 2026-10-06: one-width ribbons — at
+// the opening zoom a screen px is ~25 m and most courses are narrower, so
+// every one drew at the same floor, source to mouth). A river of floor_ref_m
+// gets min_px; the floor scales as (width / floor_ref_m)^floor_gamma, held
+// within floor_lo..floor_hi of min_px, so a main river reads broad and its
+// upper course thin. Under one px the thread is drawn a px wide but fainter
+// by its coverage, never below thin_alpha_min: a small river thins, it does
+// not vanish.
+uniform float floor_ref_m = 60.0;
+uniform float floor_gamma = 0.0;
+uniform float floor_lo = 1.0;
+uniform float floor_hi = 1.0;
+uniform float thin_alpha_min = 1.0;
 uniform float lift_px = 1.0;
 uniform float edge_soft = 0.35;
 uniform float edge_soft_floor = 0.06;
@@ -168,11 +181,15 @@ varying float v_fade;
 varying float v_soft_scale;
 varying vec2 v_xz;
 varying float v_y;
+varying float v_thin;
 
 void vertex() {
 	vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	float m_per_px = length(world - CAMERA_POSITION_WORLD) * px_per_dist;
-	float drawn_half_w = max(0.5 * UV2.x, 0.5 * min_px * m_per_px);
+	float floor_px = min_px * clamp(pow(max(UV2.x, 0.01) / floor_ref_m, floor_gamma), floor_lo, floor_hi);
+	float true_px = max(UV2.x / max(m_per_px, 0.0001), floor_px);
+	v_thin = max(thin_alpha_min, clamp(true_px, 0.0, 1.0));
+	float drawn_half_w = max(0.5 * UV2.x, 0.5 * max(floor_px, 1.0) * m_per_px);
 	VERTEX += NORMAL * drawn_half_w;
 	v_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 	VERTEX.y += lift_px * m_per_px;
@@ -270,5 +287,5 @@ void fragment() {
 	float streak = texture(ripples, vec2(v_across * fall_streaks / 8.0, v_along / 30.0 - TIME * 0.35)).x;
 	ALBEDO = mix(ALBEDO, fall_foam.rgb, fall * smoothstep(0.45, 0.75, streak) * 0.6);
 	ALPHA = mix(mix(opacity, mouth_opacity, to_sea), fall_opacity, fall) * edge * v_fade
-		* mix(1.0, 0.35 + 0.9 * streak, fall);
+		* mix(1.0, 0.35 + 0.9 * streak, fall) * v_thin;
 }

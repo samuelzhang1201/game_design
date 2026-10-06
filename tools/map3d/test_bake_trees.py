@@ -53,3 +53,26 @@ def test_no_clump_stands_among_the_houses():
 def test_kinds_are_known():
     rows, _ = _load()
     assert set(np.unique(rows[:, 5]).astype(int)) <= set(bake_trees.KINDS.values())
+
+
+def test_bankside_rows_stand_off_the_water_on_both_banks():
+    # a straight river along x at z = 500 m, 40 m wide, every offer kept
+    rules = {"riparian_spacing_m": 20.0, "riparian_gap_m": 18.0, "riparian_band_m": 14.0,
+             "riparian_chance": 1.0}
+    ok = np.ones((60, 60), bool)
+    run = np.ones((60, 60), np.float32)
+    course = ([(100.0, 500.0), (1000.0, 500.0)], np.array([40.0, 40.0]))
+    xz = bake_trees.riparian([course], ok, run, np.random.default_rng(1), rules, 20.0)
+    off = np.abs(xz[:, 1] - 500.0)
+    assert len(xz) == 2 * 45, len(xz)                            # 900 m / 20 m, each bank
+    assert off.min() >= 20.0 + 18.0 - 1e-6 and off.max() <= 20.0 + 18.0 + 14.0 + 1e-6
+    assert (xz[:, 1] > 500.0).sum() == (xz[:, 1] < 500.0).sum()  # both banks alike
+
+
+def test_bankside_rows_skip_forbidden_ground():
+    rules = {"riparian_spacing_m": 20.0, "riparian_gap_m": 18.0, "riparian_band_m": 14.0,
+             "riparian_chance": 1.0}
+    ok = np.zeros((60, 60), bool)
+    run = np.ones((60, 60), np.float32)
+    course = ([(100.0, 500.0), (1000.0, 500.0)], np.array([40.0, 40.0]))
+    assert len(bake_trees.riparian([course], ok, run, np.random.default_rng(1), rules, 20.0)) == 0
