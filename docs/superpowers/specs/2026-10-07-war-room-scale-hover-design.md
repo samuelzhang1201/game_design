@@ -104,6 +104,16 @@ and the near contours (§3) carry the near view alone. Otherwise:
   ink and the fine print, cross-fading over `war_detail_feather` at its
   edge.
 
+**Gate result (2026-10-07): the patch is built.** Ink texels per screen px
+at the closest lean (0.12 m, 40° fov, a 4096 px sheet over 1.4 m): 0.23 on
+a 1920 × 1200 window, 0.18 on 2560 × 1600 — the ink magnified 4-6×; the
+ink first softens below ~0.6 m on a Retina window (0.88 there, 1.17 at
+1920 × 1200). Sizing from the same arithmetic: a 3072 px patch over 1.3 ×
+the view gives ~1 texel a px at 0.12 m (2048 over 1.8 × gave 0.49), so
+`war_detail_texture_px` 3072, `war_detail_cover` 1.3, `war_detail_level_m`
+0.6. The patch carries the ink; the fine print keeps its own texture (its
+lettering is larger than the ink's lines).
+
 ## 3. Fine print
 
 What a leaning officer reads that the overview never shows. Only PUBLIC,
