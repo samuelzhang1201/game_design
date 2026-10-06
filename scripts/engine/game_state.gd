@@ -306,6 +306,11 @@ var next_missive_id := 0
 ## (Intel.settle_wealth_tiers), so a card opened mid-month can never decide
 ## what a spy's saved report says. province_code -> int.
 var wealth_tiers: Dictionary = {}
+## Each realm town's strategic stores in SUPPLY UNITS (spec 2026-10-07-army-
+## supply-lines §2.1, TownStores): burg -> {crown, lord, house}. crown and
+## lord sum to metrics.strategic / lord_strategic; house is a house's stock
+## the crown may buy.
+var town_stock: Dictionary = {}
 
 const SAVE_VERSION := 5
 
@@ -354,6 +359,7 @@ func to_dict() -> Dictionary:
 		"missives": _encode_values(missives.duplicate(true)),
 		"next_missive_id": _encode_values(next_missive_id),
 		"wealth_tiers": _encode_values(wealth_tiers.duplicate()),
+		"town_stock": _encode_values(town_stock.duplicate(true)),
 	}
 
 ## `invalidate` false for a scratch copy of the live state (Game.review_drafts):
@@ -437,6 +443,9 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Saves from before the tiers were state carry none: Game.load_campaign
 	# computes them once from the loaded state (Intel.ensure_wealth_tiers).
 	s.wealth_tiers = _decode_values(d.get("wealth_tiers", {}))
+	# Saves from before the town stores carry none: TownStores.ensure seeds
+	# them from the pools on load (Game.load_campaign).
+	s.town_stock = _decode_values(d.get("town_stock", {}))
 	if invalidate:
 		MapOwnership.invalidate()
 	return s
