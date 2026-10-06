@@ -578,6 +578,9 @@ func _update_detail() -> void:
 	var lvl := WarDetailInk.level(_repo, _rig.distance)
 	if lvl == 0 or _sheet < 0:
 		mat.set_shader_parameter("detail_on", 0.0)
+		if not _detail_state.is_empty():   # leaning out: the patch's render target given back, unbound
+			mat.set_shader_parameter("detail_tex", null)
+			(%DetailViewport as SubViewport).size = Vector2i(2, 2)
 		_detail_state = {}
 		return
 	# pack px the view spans (units_per_px is in the pack's own measure)
@@ -602,6 +605,7 @@ func _update_detail() -> void:
 	(%DetailInk as WarInkPainter).paint(WarSheetInk.strokes(_repo, state(), row, w, WarBake.of(_repo), r),
 		_repo.war_palette, widths, lettering())
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_settle_detail(vp)
 	mat.set_shader_parameter("detail_tex", vp.get_texture())
 	mat.set_shader_parameter("detail_uv", Vector4((r.position.x - _rect.position.x) / _rect.size.x,
 		(r.position.y - _rect.position.y) / _rect.size.y, (r.end.x - _rect.position.x) / _rect.size.x,
@@ -609,6 +613,15 @@ func _update_detail() -> void:
 	mat.set_shader_parameter("detail_feather", _repo.bal("war_detail_feather"))
 	mat.set_shader_parameter("detail_on", 1.0)
 
+
+
+## After the frame that draws the patch, the viewport is set aside explicitly:
+## left at UPDATE_ONCE it kept costing every frame (bench 2026-10-07: the cpu
+## column 10 -> 45-168 ms after one lean in).
+func _settle_detail(vp: SubViewport) -> void:
+	await _inks.frame_done   # the frame that drew it (a headless test hands in the process frame)
+	if is_instance_valid(vp) and vp.render_target_update_mode == SubViewport.UPDATE_ONCE:
+		vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 ## The pack's own measure (map_info distance_scale per pack px) one screen px
 ## of this view spans at the camera's target: the margin's scale bar (spec §2).

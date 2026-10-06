@@ -930,6 +930,7 @@ func test_the_fine_prints_legibility_limit_is_bound_from_data() -> void:
 
 
 func test_the_near_zoom_patch_comes_on_close_and_goes_far() -> void:
+	view._inks.frame_done = get_tree().process_frame   # headless never posts a draw
 	view.lay_sheet(0)
 	await wait_process_frames(2)
 	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
@@ -941,5 +942,11 @@ func test_the_near_zoom_patch_comes_on_close_and_goes_far() -> void:
 	assert_gt((view.get_node("%DetailViewport") as SubViewport).size.x, 2)
 	view.lean_to(repo.bal("war_cam_max_m"))
 	assert_eq(float(mat.get_shader_parameter("detail_on")), 0.0)
+	assert_eq((view.get_node("%DetailViewport") as SubViewport).size, Vector2i(2, 2), "leaning out gives the patch's target back")
+	assert_null(mat.get_shader_parameter("detail_tex"), "and unbinds it")
+	view.lean_to(repo.bal("war_cam_min_m"))
+	await wait_process_frames(3)
+	assert_eq((view.get_node("%DetailViewport") as SubViewport).render_target_update_mode, SubViewport.UPDATE_DISABLED,
+		"drawn once, then left alone")
 	view.set_active(false)
 	assert_eq((view.get_node("%DetailViewport") as SubViewport).size, Vector2i(2, 2), "given back when the room shuts")
