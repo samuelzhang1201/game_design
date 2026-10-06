@@ -98,6 +98,14 @@ var army_orders: Array = []
 ## confirm menu (commit / cancel) and route menu (edit / halt), and the
 ## paused-only reason (owner 2026-09-27, ArmyOrderMenu).
 var army_route_orders: Dictionary = {}
+## data/army_carry_loads.csv: [{days, pace_permille, label}], days ascending
+## (spec 2026-10-07-army-supply-lines §3.6).
+var army_carry_loads: Array = []
+## data/army_supply_orders.csv: key -> {label, hint} — the supply rows of the
+## regiment's right-click menu (spec 2026-10-07-army-supply-lines §5.1).
+var army_supply_orders: Dictionary = {}
+## data/army_hostile_stances.csv: the stances whose regiments cut supply lines.
+var army_hostile_stances: Array[String] = []
 ## data/event_presenters.csv: an event id or an event category -> the council
 ## seat whose holder brings that event before the crown (owner 2026-10-02:
 ## every event waits on the table as a minister's matter); an id wins.
@@ -758,6 +766,18 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/army_route_orders.csv", ["key", "label", "hint"],
 			func(r): army_route_orders[String(r["key"])] = {"label": String(r["label"]),
 				"hint": String(r["hint"])}):
+		return false
+	if not _load_if_present(dir + "/army_carry_loads.csv", ["days", "pace_permille", "label"],
+			func(r): army_carry_loads.append({"days": int(r["days"]),
+				"pace_permille": int(r["pace_permille"]), "label": String(r["label"])})):
+		return false
+	army_carry_loads.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["days"]) < int(b["days"]))
+	if not _load_if_present(dir + "/army_supply_orders.csv", ["key", "label", "hint"],
+			func(r): army_supply_orders[String(r["key"])] = {"label": String(r["label"]),
+				"hint": String(r["hint"])}):
+		return false
+	if not _load_if_present(dir + "/army_hostile_stances.csv", ["stance"],
+			func(r): army_hostile_stances.append(String(r["stance"]))):
 		return false
 	if not _load_if_present(dir + "/army_formations.csv", ["figures", "min_fit_permille", "slots"],
 			func(r):

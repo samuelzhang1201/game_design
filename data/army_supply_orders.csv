@@ -1,0 +1,8 @@
+key,label,hint,notes
+add,Add supply point…,Then click a lit town to supply this regiment from,"spec 2026-10-07-army-supply-lines §5.1: the ellipsis says a click follows"
+change,Change supply point…,Then click a lit town to supply it from instead,
+withdraw,Withdraw supply point,Send a courier to the supply town to stop the wagons,
+carry,Carry,"How many days of supplies it keeps in hand; a heavier train marches slower",the submenu's title
+pick_far,,"{town}: the wagons need {days} days, the most is {max}",a greyed town's reason
+confirm,"{rate}× — {fee} gold a day","Supply from {town}: {km} km, {loss}% lost on the road, wagons {wagon_days} days, stores for {stock_days} days; the courier rides {courier_days} days",one row per rate
+cancel,Cancel,Choose no supply point,
