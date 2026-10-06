@@ -102,6 +102,16 @@ static func _new_record(town: String, rate: int, order_id: int) -> Dictionary:
 		"m_drawn": 0, "m_arrived": 0, "m_claimed": 0, "m_skim": 0, "m_fee": 0, "m_buy": 0, "m_bought": {}}
 
 
+## The record for a `pending` point replacing `old`: ORDERED, the month's
+## counters of the line it follows carried over so the marshal's report keeps them.
+static func _renewed(old: Dictionary, pending: Dictionary) -> Dictionary:
+	var rec := _new_record(String(pending["town"]), int(pending["rate"]), int(pending["order_id"]))
+	for k: String in ["m_drawn", "m_arrived", "m_claimed", "m_skim", "m_fee", "m_buy", "fee_milli", "buy_milli"]:
+		rec[k] = int(old.get(k, 0))
+	rec["m_bought"] = (old.get("m_bought", {}) as Dictionary).duplicate(true)
+	return rec
+
+
 ## ActionSystem's SUPPLY_POINT_SET: a new line waits ORDERED; a line already
 ## running keeps running and holds the new point as `pending`.
 static func order_set(state: GameState, code: String, town: String, rate: int, order_id: int) -> void:
@@ -118,7 +128,7 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 	var code := String(c["target"])
 	var order: Dictionary = c["order"]
 	var id := int(c["id"])
-	var ev := {"type": "delivered", "courier": id, "regiment": code, "weather": ""}
+	var ev := CourierSystem._event("delivered", c)
 	match String(order["action_code"]):
 		"SUPPLY_CARRY_SET":
 			var entry: Dictionary = state.regiments.get(code, {})
@@ -131,7 +141,7 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 			var ln := line(state, code)
 			var p: Dictionary = ln.get("pending", {}) if not ln.is_empty() else {}
 			if not p.is_empty() and int(p["order_id"]) == id:
-				ln = _new_record(String(p["town"]), int(p["rate"]), id)
+				ln = _renewed(ln, p)
 				state.supply_lines[code] = ln
 			elif ln.is_empty() or int(ln["order_id"]) != id:
 				ev["type"] = "stale"
@@ -144,5 +154,10 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 			if ln.is_empty() or int(ln["order_id"]) > id:
 				ev["type"] = "stale"
 				return ev
-			state.supply_lines.erase(code)
+			var held: Dictionary = ln.get("pending", {})
+			if not held.is_empty() and int(held["order_id"]) > id:
+				# a newer SET is still riding: the wagons stop, the new point waits
+				state.supply_lines[code] = _renewed(ln, held)
+			else:
+				state.supply_lines.erase(code)
 	return ev

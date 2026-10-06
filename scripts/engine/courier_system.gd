@@ -512,18 +512,28 @@ static func _at_capital(repo: DataRepository, c: Dictionary) -> bool:
 
 
 static func _event(type: String, c: Dictionary, weather: String = "") -> Dictionary:
-	return {"type": type, "courier": int(c["id"]), "regiment": String(c["target"]), "weather": weather}
+	return {"type": type, "courier": int(c["id"]), "regiment": String(c["target"]), "weather": weather,
+		"town": String((c.get("order", {}) as Dictionary).get("to_town", ""))}
 
 
-## The newest courier riding for a regiment, {} when none.
+## The newest MARCH / HALT courier riding for a regiment, {} when none. The
+## supply orders (SUPPLY_*) are not the march: they never move a column's
+## arrival day, so this reader (days_to_arrival, the regiment card, the war
+## folio) passes them by.
 static func pending_for(state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	if state == null:
 		return best
 	for c: Dictionary in state.couriers:
+		if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
+			continue
 		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c
 	return best
+
+
+static func _town_label(repo: DataRepository, town: String) -> String:
+	return String((repo.burgs.get(town, {}) as Dictionary).get("label", town))
 
 
 ## The news bar's line for a ride_day event.
@@ -535,12 +545,19 @@ static func headline(repo: DataRepository, e: Dictionary) -> String:
 				if int(e.get("capital", 0)) == 1:
 					return "A spy leaves the capital for %s." % String(e["place"])
 				return "A spy rides for %s." % String(e["place"])
+			if String(e.get("town", "")) != "":
+				var to := _town_label(repo, String(e["town"]))
+				if int(e.get("capital", 0)) == 1:
+					return "A courier leaves the capital for %s with supply orders for %s." % [to, label]
+				return "A courier rides for %s with supply orders for %s." % [to, label]
 			if int(e.get("capital", 0)) == 1:
 				return "A courier leaves the capital for %s." % label
 			return "A courier rides for %s." % label
 		"spy_report":
 			return "The spy at %s reports." % String(e.get("place", "the place"))
 		"delivered":
+			if String(e.get("town", "")) != "":
+				return "Supply orders for %s delivered at %s." % [label, _town_label(repo, String(e["town"]))]
 			return "Orders delivered to %s." % label
 		"stale":
 			return "Older orders to %s came after newer ones and were set aside." % label
