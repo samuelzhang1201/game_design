@@ -66,13 +66,15 @@ static func stronghold_of(repo: DataRepository, state: GameState, code: String) 
 	return String((repo.provinces.get(prov, {}) as Dictionary).get("capital_burg", ""))
 
 
-## The town a regiment is GARRISONED in: its stronghold, but only under an
-## explicit GARRISON order — what earns the garrison's morale and the
-## LEDGER's "garrisons in" thread. "" otherwise.
+## The town a regiment is GARRISONED in (spec 2026-10-06-army-location-and-
+## town-defence §4): under a GARRISON order, the town of its own kingdom it
+## stands IN (ArmySystem.held_town_of) — what earns the garrison's morale and
+## the LEDGER's "garrisons in" thread. "" otherwise: a column halted in the
+## open is a field camp. The supply's stronghold is a separate rule.
 static func garrisoned_in(repo: DataRepository, state: GameState, code: String) -> String:
 	if ArmySystem.order_of(repo, state, code) != ArmySystem.ORDER_GARRISON:
 		return ""
-	return stronghold_of(repo, state, code)
+	return ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, code), state)
 
 
 ## The depot's shortest-path tree (RoadGraph.shortest), built once and
@@ -137,8 +139,9 @@ static func line_of(repo: DataRepository, state: GameState, code: String) -> Dic
 static func _line_of(repo: DataRepository, state: GameState, code: String, ctx: Dictionary) -> Dictionary:
 	var town := stronghold_of(repo, state, code)
 	if town != "":
+		var held := garrisoned_in(repo, state, code)
 		return {"length_km": 0, "loss_permille": 0, "stronghold": town,
-			"garrison": ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_GARRISON}
+			"garrison": held != "", "garrison_town": held}
 	var to := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
 	var origin_m: Vector2i = ctx["a"]
 	var dest_m := ArmySystem.pack_to_metres(repo, to)
@@ -162,7 +165,8 @@ static func _line_of(repo: DataRepository, state: GameState, code: String, ctx: 
 		if here != Vector2(dest_m):
 			metres += here.distance_to(Vector2(dest_m))
 	var km := int(metres / 1000.0)
-	return {"length_km": km, "loss_permille": loss_of(repo, km), "garrison": false, "stronghold": ""}
+	return {"length_km": km, "loss_permille": loss_of(repo, km), "garrison": false, "garrison_town": "",
+		"stronghold": ""}
 
 
 static func _land_codes(repo: DataRepository, state: GameState) -> Array:

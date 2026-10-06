@@ -718,9 +718,9 @@ static func _skims(repo: DataRepository, state: GameState, id: String, to_t: Str
 	return out
 
 
-## A regiment under a GARRISON order in a province the crown controls
-## stands in that province's capital town (SupplySystem.garrisoned_in; one
-## merely standing by there draws through the town but is not garrisoned).
+## A regiment under a GARRISON order standing in a town its kingdom holds
+## garrisons that town (SupplySystem.garrisoned_in; one merely standing by
+## there, or halted in the open, is not garrisoned).
 static func _garrisons(repo: DataRepository, state: GameState, id: String) -> Array:
 	var codes: Array = state.regiments.keys()
 	codes.sort()

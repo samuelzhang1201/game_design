@@ -41,8 +41,8 @@ func _draw() -> void:
 ## A MARCH being aimed (owner 2026-09-24): the measuring ruler from the
 ## regiment's piece to the ground under the pointer, in the player's own
 ## realm colour and ending in an arrowhead, reading the distance and the days
-## it will take at the regiment's own pace under today's weather where it
-## stands (ArmySystem.march_days) — the card's "days out" figure.
+## it will take, walked over the ground and the weather on the way
+## (ArmySystem.march_days_between) — the card's "days out" figure.
 func _draw_aim() -> void:
 	var code: String = view.aim_code
 	if code == "":
@@ -75,12 +75,14 @@ func _draw_aim() -> void:
 			var t: Variant = on_ground(fxz.lerp(bxz, d / total))
 			if t != null:
 				ticks.append(t)
-	var metres := from.distance_to(ctx.to_pack(Vector2(b3.x, b3.z))) \
-		* float(ArmySystem.metres_per_pack_px(repo))
-	# ONE arrival day: the courier's ride, then the march (owner 2026-10-02)
+	# ONE arrival day: the courier's ride, then the march over the ground and
+	# the weather it will meet (owner 2026-10-02; spec 2026-10-06 §6)
 	var days := 0
-	if ArmySystem.day_march_m(repo, ctx.state(), code) > 0:
-		days = _courier_eta(code) + ArmySystem.march_days(repo, ctx.state(), code, metres)
+	var st := ctx.state()
+	if st != null and ArmySystem.day_march_m(repo, st, code) > 0:
+		var ride := _courier_eta(code)
+		days = ride + ArmySystem.march_days_between(repo, st, code, from,
+			ctx.to_pack(Vector2(b3.x, b3.z)), st.absolute_day() + ride)
 	var text := MapRuler.reading(total, view.map_unit())
 	if days > 0:
 		text += " · %d day%s" % [days, "" if days == 1 else "s"]

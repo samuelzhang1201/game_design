@@ -2,7 +2,10 @@
 
 Owner request 2026-10-06: "我希望军事单位的地理位置数据跟随单位移动变动，准确反映当前军事单位所处的位置，如果在城市里则获得相应的城市防御加成，野外，高地等不同地理位置都应当准确反映".
 
-**Status: DRAFT — awaiting the owner's ruling on §5.** Nothing here is built.
+**Status: APPROVED and built 2026-10-06.** Owner: "按设计说明的建议做，开局部队挪进城里
+1-3 按你说的做，4. 补给暂时不动，逻辑之后更新 5. 根据地形/有路没路区分快慢加成" — §5's
+questions 1–3 as recommended, supply unchanged for now, and the march paced by
+the ground (§6).
 
 Already done (same day, not part of this spec): `ArmySystem.power` reads the
 ground and walls at the regiment's CURRENT position (it read the pack's
@@ -81,31 +84,69 @@ A town with both walls and a citadel counts as `citadel`.
   the province capital.
 - A GARRISON order (or a march's arrival) in open country is a **field
   camp**: the column stands, with no garrison morale and no "garrisons in"
-  thread. The card says "Encamped in the field".
+  thread. The War Room folio's order reads "Encamped in the field".
 - Supply is unchanged: a column standing anywhere in a province the crown
   controls still draws through the province capital with no road loss
   (`SupplySystem.stronghold_of`) — that is the supply rule, not the defence
   rule. (§5 asks whether to tighten it too.)
 
-## 5. For the owner to rule
+## 5. The owner's rulings (2026-10-06)
 
-1. **Reach sizes** (§2): 3 / 2.5 / 2 / 1.5 / 1 km by group, or another
-   measure (e.g. by population)?
-2. **Defence numbers** (§3): the table above as the first draft?
-3. **Starting positions**: most pack regiments stand 7–13 km from their
-   namesake town (the 6th at Walbover 13 km), so under §2 they open the game
-   in the field. Move the player's land regiments onto their namesake towns
-   at the start? Then the crown's banner (`MapObjects.royal_regiment`, the
-   land regiment nearest the capital) would go to whichever stands IN the
-   capital — the 11th (Walbover) Archers stand 14 km out, so the 6th keeps
-   it only if it moves in and the 11th does not.
-4. **Supply** (§4): keep "anywhere in a controlled province draws through
-   its capital", or require standing in a held town?
-5. **March speed by ground** (raised in the same conversation, not asked
-   for): a march today runs at one pace over every ground, road or not.
-   A separate spec if wanted.
+1. **Reach sizes**: 3 / 2.5 / 2 / 1.5 / 1 km by group, as drafted.
+2. **Defence numbers**: the table in §3, as the first draft.
+3. **Starting positions**: every LAND regiment of every kingdom is quartered
+   in a town of its own province — the town its label names when that town
+   is in the province, else the province's town nearest its old quarters — on
+   land of the province BESIDE the town's point, never on it: the first in
+   the pack's order at half the town's reach, the rest at 0.8 of it, each on
+   the bearing farthest from those already there. Beside, so the town's dot
+   stays clickable and the first stands nearer the capital than the rest:
+   the crown's banner flies over the regiment the capital is named for (the
+   6th at Walbover, 1.5 km out; the 11th Archers 2.4 km). The drawn towns
+   (bake/houses.csv) spread past the reach — Walbover's houses to 6 km — so a
+   quartered piece stands among the houses, as a garrison does. On the map a
+   counter yields the click to a town's dot or badge nearer the pointer; the
+   War Room keeps every piece where the map draws it (owner 2026-10-02), so
+   two regiments in one town stand within one base there and the nearer
+   hides the other. Fleets keep their stations. A re-import of the pack must keep this (the importer does
+   not yet place regiments in towns).
+4. **Supply**: unchanged for now — anywhere in a controlled province draws
+   through its capital; to be revisited.
+5. **March speed by ground**: built, §6.
 
-## 6. Tests (when built)
+## 6. The ground's pace
+
+A march's day reads the ground where the column stands that day
+(`ArmySystem.ground_permille`, data `data/army_ground_speed.csv`, per mille
+of the base pace, which `data/army_speed.csv` quotes on open plain off the
+road):
+
+- **On a road or trail** — within `army_road_reach_m` (1.5 km) of one of the
+  pack's roads or trails (`ArmySystem.road_at`): the road's row (road 1250,
+  trail 1100) times the height tier's (`tier_plains` 1000, `tier_hills` 850,
+  `tier_mountains` 650, `tier_peak` 450): a road beats the forest and the
+  marsh, but still climbs.
+- **Off the road**: the terrain's row (`ArmySystem.terrain_at`: plains 1000,
+  desert and tundra 850, forest 750, hills 700, jungle and marsh 600,
+  mountains 450).
+- The day's metres are `day_step_m` × the weather × the ground
+  (`ArmySystem.day_march_at`). The march stays straight-line; it is not
+  routed onto the roads.
+- **Arrival figures walk the route**: `ArmySystem.march_days_between` runs
+  the march day by day exactly as `march_day` will (the weather is a seeded
+  function of the day), so days out, the aim ruler and the courier's arrival
+  day are the day it arrives — while its stores, which also set its pace,
+  hold.
+- The card and the War Room folio show the pace with its ground ("road
+  ×1.25", "forest ×0.75").
+
+## 7. Tests
+
+`tests/engine/test_army_towns.gd`, plus the march / speed / courier tests run
+on flat ground (`SuiteData.flat_ground`) so they keep testing their own
+mechanics.
+
+## 8. Tests planned at the draft
 
 - `town_of`: at a burg's point → that burg; just inside / just outside its
   reach; two reaches overlapping → the nearer; a marched position, not the

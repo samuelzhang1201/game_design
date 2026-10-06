@@ -77,6 +77,15 @@ var army_art: Dictionary = {}
 var army_terrain_biomes: Dictionary = {}
 ## data/army_terrain.csv: "terrain|arm" -> {defend, attack} per mille.
 var army_terrain: Dictionary = {}
+## data/army_town_reach.csv: burg group -> km (float) a regiment stands IN a
+## town of that group within (ArmySystem.town_of).
+var army_town_reach: Dictionary = {}
+## data/army_town_defence.csv: "works|arm" -> {defend, attack} per mille, works
+## town / walls / citadel (ArmySystem.works_of).
+var army_town_defence: Dictionary = {}
+## data/army_ground_speed.csv: key -> per mille of a march's pace (road, trail,
+## tier_<tier>, and each terrain of army_terrain_biomes).
+var army_ground_speed: Dictionary = {}
 ## data/army_matchups.csv: arm -> [{vs, attack, defense}] per mille, in file order.
 var army_matchups: Dictionary = {}
 ## data/army_training_grades.csv rows {above, label}, first match wins.
@@ -644,6 +653,16 @@ func _load(dir: String) -> bool:
 			func(r): army_terrain["%s|%s" % [r["terrain"], r["arm"]]] = {
 				"defend": int(r["defend_permille"]), "attack": int(r["attack_permille"])}):
 		return false
+	if not _load_if_present(dir + "/army_town_reach.csv", ["group", "reach_km"],
+			func(r): army_town_reach[String(r["group"])] = float(r["reach_km"])):
+		return false
+	if not _load_if_present(dir + "/army_town_defence.csv", ["works", "arm", "defend_permille", "attack_permille"],
+			func(r): army_town_defence["%s|%s" % [r["works"], r["arm"]]] = {
+				"defend": int(r["defend_permille"]), "attack": int(r["attack_permille"])}):
+		return false
+	if not _load_if_present(dir + "/army_ground_speed.csv", ["key", "permille"],
+			func(r): army_ground_speed[String(r["key"])] = int(r["permille"])):
+		return false
 	if not _load_if_present(dir + "/army_matchups.csv", ["arm", "vs_arm", "attack_permille", "defense_permille"],
 			_add_matchup):
 		return false
@@ -842,6 +861,7 @@ func load_map(id: String) -> bool:
 	Elevation.forget()
 	Weather.forget()
 	RoadGraph.forget()
+	ArmySystem.forget_grids()
 	WarSheets.forget()
 	routes.clear()
 	rivers.clear()

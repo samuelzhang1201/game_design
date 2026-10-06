@@ -17,7 +17,7 @@ func before_all() -> void:
 
 
 func before_each() -> void:
-	repo = SuiteData.repo()
+	repo = SuiteData.flat_ground(SuiteData.repo())
 	Weather.forget()
 	repo.road_speed = {"road": 1000, "trail": 800, "offroad": 500, "sea": 625,
 		"tier_plains": 1000, "tier_hills": 1000, "tier_mountains": 1000, "tier_peak": 1000}

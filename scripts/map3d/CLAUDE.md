@@ -22,7 +22,7 @@ The pack as a Terrain3D landscape at 50 m per pack px — the game's ONLY map. P
 
 ## Picking, hover, selection
 
-- **A click**: a settlement within `map3d_pick_px` (or on its ring) sends `object_selected`, anywhere else `province_selected` (the province index bitmap under the ray's ground hit, `Map3DGeometry.ground_hit`); `MapDetailPanel.follow` takes either. Under a theme a click on land picks the manor. `map3d_picker.gd`'s `pick_at` orders: a regiment piece first (`Map3DLayerUnits.screen_rects`), a settlement within reach beats a landmark mark, a mark's own box beats its grown rect; picking never depends on a dot being drawn.
+- **A click**: a settlement within `map3d_pick_px` (or on its ring) sends `object_selected`, anywhere else `province_selected` (the province bitmap under `Map3DGeometry.ground_hit`); `MapDetailPanel.follow` takes either. Under a theme a click on land picks the manor. `map3d_picker.gd`'s `pick_at` orders: a regiment piece first (`Map3DLayerUnits.screen_rects`), then its counter (a nearer town or badge wins), a settlement within reach beats a landmark mark, a mark's own box beats its grown rect; picking never depends on a dot being drawn.
 - **Only a clicked object is ringed**: hover names it (and swaps the left column via `country_hovered` → `CountryPanel.follow`) and draws the hovered kingdom's live outline wider in the border's ink (`lines/hover.tres`), on its land runs only, like the border; a clicked province is its own seam emphasised (`lines/selection_province.tres`), a clicked manor gold (`lines/selection_manor.tres`). A pointer move is picked once a frame (`hover_pick`); `Map3DView.kingdom_of_pick` names the holder NOW.
 
 ## Lines and water

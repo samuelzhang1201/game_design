@@ -27,6 +27,15 @@ static func repo() -> DataRepository:
 
 ## A new campaign of `data` on `seed_value`, exactly as
 ## GameState.new_campaign(data, seed_value) would make it.
+## Every ground at the base pace (data/army_ground_speed.csv all 1000), for
+## a test of the march's own mechanics — readiness, weather, the even step —
+## that must not depend on the road or the terrain the pack puts under it;
+## the ground's pace has its own tests (test_army_towns.gd). Returns `data`.
+static func flat_ground(data: DataRepository) -> DataRepository:
+	for k: String in data.army_ground_speed:
+		data.army_ground_speed[k] = 1000
+	return data
+
 static func campaign(data: DataRepository, seed_value: int) -> GameState:
 	var key := "%d:%d" % [content_hash(data), seed_value]
 	if not _campaigns.has(key):

@@ -15,7 +15,7 @@ var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = SuiteData.repo()
+	repo = SuiteData.flat_ground(SuiteData.repo())
 	# Fix the table and weights so the hand sums below hold whatever the
 	# design data is tuned to later.
 	repo.army_speed = {"infantry": 20, "archers": 22, "cavalry": 40, "artillery": 12, "fleet": 100}
@@ -74,7 +74,9 @@ func test_a_real_regiment_of_the_player_has_a_speed() -> void:
 	var expect := ArmySystem.pace_tenths(Game.data, ArmySystem.base_pace_km(Game.data, reg),
 		ArmySystem.supply_score(Game.data, int(st["supplies"]), ArmySystem.supply_use(Game.data, reg)),
 		int(st["morale"]), int(st["training"]))
-	assert_almost_eq(km, expect / 10.0, 0.0001)
+	# on the ground it stands on (spec 2026-10-06 §6)
+	var ground := ArmySystem.ground_permille(Game.data, reg, ArmySystem.position_of(Game.data, Game.state, reg))
+	assert_almost_eq(km, expect / 10.0 * float(ground) / 1000.0, 0.0001)
 
 
 func test_hunger_and_low_morale_slow_the_march() -> void:

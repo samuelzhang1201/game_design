@@ -8,7 +8,3 @@ hills,archers,1150,1050,"height lengthens a bow's reach"
 mountains,artillery,700,700,"guns cannot be hauled up"
 marsh,artillery,700,700,
 sea,fleet,1000,1000,
-fortified,infantry,1300,1000,"behind walls or a citadel"
-fortified,archers,1250,1000,
-fortified,artillery,1200,1000,
-fortified,cavalry,1000,1000,

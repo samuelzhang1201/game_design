@@ -1,0 +1,6 @@
+group,reach_km,notes
+capital,3,"owner 2026-10-06 (spec 2026-10-06-army-location-and-town-defence §2): a regiment is IN a town while it stands within this many km of the town's point (ArmySystem.town_of) — the walls and the suburbs, by the town's group in political/burgs.csv"
+city,2.5,
+town,2,
+fort,1.5,
+village,1,

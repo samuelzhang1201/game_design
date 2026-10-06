@@ -228,8 +228,9 @@ static func eta_days(repo: DataRepository, state: GameState, kind: String, code:
 ## Days until `code` stands at `dest_px` if a march there were ordered now —
 ## ONE figure, the courier's ride and the march after it (owner 2026-10-02:
 ## 显示一个总的到达日): his days (none for a regiment that takes its orders
-## directly), then the march from where it stands at today's pace, each counted
-## in day-ends. 0 for a regiment that cannot march.
+## directly), then the march from where it stands, walked over the ground and
+## the weather it will meet (ArmySystem.march_days_between), each counted in
+## day-ends. 0 for a regiment that cannot march.
 static func arrival_days(repo: DataRepository, state: GameState, code: String, dest_px: Vector2,
 		from_px := Vector2(-1, -1), ride := -1) -> int:
 	var reg := ArmySystem.regiment(repo, code)
@@ -238,8 +239,9 @@ static func arrival_days(repo: DataRepository, state: GameState, code: String, d
 	if ride < 0:
 		ride = eta_days(repo, state, ORDINARY, code) if carries_orders(reg) else 0
 	var from := from_px if from_px.x >= 0.0 else ArmySystem.position_of(repo, state, reg)
-	return ride + ArmySystem.march_days(repo, state, code,
-		from.distance_to(dest_px) * float(ArmySystem.metres_per_pack_px(repo)))
+	# the march walked over its own ground and weather, from the day it starts
+	return ride + ArmySystem.march_days_between(repo, state, code, from, dest_px,
+		state.absolute_day() + ride)
 
 
 ## Days until `code` arrives where it was last ordered: a march order still

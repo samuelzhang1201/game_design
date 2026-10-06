@@ -170,7 +170,8 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 		var line := SupplySystem.line_of(repo, state, code)
 		var town := String((repo.burgs.get(String(line["stronghold"]), {}) as Dictionary).get("label", ""))
 		if bool(line["garrison"]):
-			rows.append(_row("Line", "in garrison at %s, nothing lost" % town))
+			var held := String((repo.burgs.get(String(line["garrison_town"]), {}) as Dictionary).get("label", ""))
+			rows.append(_row("Line", "in garrison at %s, through %s, nothing lost" % [held, town]))
 		elif String(line["stronghold"]) != "":
 			rows.append(_row("Line", "at home, through %s, nothing lost" % town))
 		else:
@@ -239,6 +240,7 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 	# the four parts of readiness (ArmySystem.readiness_permille): the arm is
 	# always whole; training stays hidden, its grade word only (spec §4)
 	var rows: Array = [_row("Pace", "%.1f km a day" % ArmySystem.speed_km_per_day(repo, state, code)),
+		_row("Ground pace", ArmySystem.ground_word(repo, state, reg)),
 		_row("Readiness", "%d%%" % readiness),
 		_row("Readiness parts", "arm 100%%, supplies %d%%, morale %d%%, training %s" % [
 			supplies_pct, clampi(int(st["morale"]), 0, 100), grade]),
@@ -248,7 +250,11 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 		_row("Supplies score", "%d%%" % supplies_pct),
 		_row("Training", grade)]
 	var order := ArmySystem.order_of(repo, state, code)
-	rows.append(_row("Order", order_word(repo, order)))
+	# a GARRISON order in the open is a field camp (spec 2026-10-06 §4)
+	var shown := order
+	if order == ArmySystem.ORDER_GARRISON and SupplySystem.garrisoned_in(repo, state, code) == "":
+		shown = "camp"
+	rows.append(_row("Order", order_word(repo, shown)))
 	if order == ArmySystem.ORDER_MARCH:
 		var dest := ArmySystem.destination_of(repo, state, code)
 		var si := WarSheets.sheet_of(repo, dest)

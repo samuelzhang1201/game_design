@@ -8,7 +8,7 @@ var repo: DataRepository
 
 
 func before_all() -> void:
-	repo = SuiteData.repo()
+	repo = SuiteData.flat_ground(SuiteData.repo())
 	# Force clear skies so every hand-sum march still holds (task 7, owner 2026-09-27)
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
@@ -299,7 +299,7 @@ func test_the_weather_where_it_stands_scales_its_day() -> void:
 
 ## Final review I2 (spec §1): the card shows the base pace and a separate
 ## weather line, and its "days out" and the aim ruler's figure are one
-## function, ArmySystem.march_days, today's weather where it stands in.
+## function (ArmySystem.march_days_between: in steady rain, today's pace).
 func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := String(_marcher()["regiment_code"])
@@ -331,7 +331,7 @@ func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
 	assert_eq(String(march.get("text", "")), "%d day%s out" % [days, "" if days == 1 else "s"])
 	var tip := String(march.get("tooltip", ""))
 	assert_string_contains(tip, "clear weather")
-	assert_string_contains(tip, "in today's weather")
+	assert_string_contains(tip, "over the ground and the weather on the way")
 	assert_true(tip.ends_with("clear weather"), "a whole sentence: " + tip)
 	assert_eq(String(weather.get("text", "")), "%s ×%.2f" % [Weather.label_of(repo, "rain"), float(rain) / 1000.0],
 		"the weather is its own line")
