@@ -313,6 +313,10 @@ var wealth_tiers: Dictionary = {}
 ## lord sum to metrics.strategic / lord_strategic; house is a house's stock
 ## the crown may buy.
 var town_stock: Dictionary = {}
+## The supply lines (spec 2026-10-07-army-supply-lines §2.1, SupplyLines):
+## regiment code -> {town, rate, state, order_id, ready_day, cut_x_m, cut_y_m,
+## cut_by, fee_milli, buy_milli, pending, warned, m_*}. Whole numbers only.
+var supply_lines: Dictionary = {}
 
 const SAVE_VERSION := 5
 
@@ -362,6 +366,7 @@ func to_dict() -> Dictionary:
 		"next_missive_id": _encode_values(next_missive_id),
 		"wealth_tiers": _encode_values(wealth_tiers.duplicate()),
 		"town_stock": _encode_values(town_stock.duplicate(true)),
+		"supply_lines": _encode_values(supply_lines.duplicate(true)),
 	}
 
 ## `invalidate` false for a scratch copy of the live state (Game.review_drafts):
@@ -448,6 +453,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Saves from before the town stores carry none: TownStores.ensure seeds
 	# them from the pools on load (Game.load_campaign).
 	s.town_stock = _decode_values(d.get("town_stock", {}))
+	# Saves from before the supply lines carry none.
+	s.supply_lines = _decode_values(d.get("supply_lines", {}))
 	if invalidate:
 		MapOwnership.invalidate()
 	return s
