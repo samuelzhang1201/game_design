@@ -30,6 +30,13 @@ signal board_entered
 signal board_left
 signal board_clicked(uv: Vector2, event: InputEventMouseButton)
 signal board_hovered(uv: Vector2)
+## The pointer has rested on open table (spec 2026-10-07-war-room-scale-hover
+## §4.2): the screen reads the ground there.
+signal ground_hovered(pack_px: Vector2, screen_px: Vector2)
+## A rake is aimed at `pack_px`: the screen reads the destination for `code`.
+signal rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2)
+## The slip goes: the pointer moved, the rake ended, the room got busy.
+signal hover_cleared
 
 var aiming := false:
 	set(v):
@@ -69,6 +76,7 @@ var _nz := 2
 var _y_scale := 0.0
 var _relief: Image
 var _inks := WarRoomInk.new()
+var _dwell := WarHoverDwell.new()
 var _render_scale := 1.0
 var _selected := ""
 var _font: Font
@@ -89,6 +97,15 @@ var _toss: Dictionary = {}
 var _toss_t := 0.0
 var _toss_to := -1
 var _toss_n := 0
+
+
+## No slip while the camera or the sheet moves, in board mode, or while a
+## popup or a text box has the input (spec §4.2).
+func hover_allowed() -> bool:
+	if _sheet < 0 or _board_mode != "table" or rolling() or tossing():
+		return false
+	var owner := get_viewport().gui_get_focus_owner()
+	return not (owner is LineEdit or owner is TextEdit)
 
 
 func _ready() -> void:
@@ -224,6 +241,8 @@ func set_active(on: bool) -> void:
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	set_process(on)
 	if not on:
+		_dwell.clear()
+		hover_cleared.emit()
 		_finish_swap()
 		_viewport.size = Vector2i(2, 2)  # its render targets freed while shut (perf 2026-10-02)
 		_inks.trim(1)  # and only the laid sheet's ink kept
@@ -289,6 +308,15 @@ func swap_to(index: int) -> void:
 
 func _process(delta: float) -> void:
 	_step_toss(delta)
+	if not hover_allowed():
+		if _dwell.clear():
+			hover_cleared.emit()
+	elif _rake.code == "" and _dwell.step(delta, _repo.bal("war_hover_delay_s")):
+		var at := _dwell.at
+		var pk := pack_at(at)
+		var on_mark := piece_under(at) != "" or WarRoomPicks.nearest(_pennants.screen_hits(_camera, window_scale()), at, _repo.bal("war_pick_px")) != ""
+		if pk.x >= 0.0 and not on_mark:
+			ground_hovered.emit(pk, at)
 	var flying := _step_board(delta)
 	if not flying and (_rig.step(delta, _repo.bal("war_cam_north_s")) or key_pan(delta)):
 		_apply_camera()
@@ -700,6 +728,12 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion:
 		tooltip_text = "Study the board" if _board_uv((event as InputEventMouseMotion).position).x >= 0.0 else ""
+		var hm := event as InputEventMouseMotion
+		if hm.button_mask != 0:
+			if _dwell.clear():
+				hover_cleared.emit()
+		elif _dwell.moved(hm.position, _repo.bal("war_hover_still_px")):
+			hover_cleared.emit()
 	var mb := event as InputEventMouseButton
 	var mm := event as InputEventMouseMotion
 	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
@@ -708,6 +742,10 @@ func _gui_input(event: InputEvent) -> void:
 		pass   # an open-table drag: the gestures pan below
 	elif mm != null and not (mm.button_mask & (MOUSE_BUTTON_MASK_MIDDLE | MOUSE_BUTTON_MASK_RIGHT)):
 		_rake.on_motion(mm)
+		if _rake.code != "" and aiming and aim_dest.x < 0.0:
+			var pk := pack_at(mm.position)
+			if pk.x >= 0.0:
+				rake_aimed.emit(_rake.code, pk, mm.position)
 	var did := _gestures.handle(event, _rig, _repo, _ground_under, _rake.empty_press())
 	if did == WarRoomGestures.RIGHT_CLICK:
 		var code := piece_under(mb.position)

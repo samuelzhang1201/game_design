@@ -887,3 +887,36 @@ func test_leaning_in_writes_the_near_look_into_the_table() -> void:
 	view.lean_to(repo.bal("war_cam_min_m"))
 	assert_eq(float(mat.get_shader_parameter("fine_alpha")), 1.0)
 	assert_eq(float(mat.get_shader_parameter("contour_m")), WarNear.contour_m(repo, repo.bal("war_cam_min_m")))
+
+
+func _hover(at: Vector2) -> void:
+	var e := InputEventMouseMotion.new()
+	e.position = at
+	view._gui_input(e)
+
+
+func test_resting_on_open_table_reads_the_ground_once() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	var r: Rect2 = WarSheets.series(repo)[0]["cell"]
+	var at: Vector2 = view.screen_pos_of_px(r.get_center())
+	if view.piece_under(at) != "":
+		at += Vector2(40, 40)
+	_hover(at)
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_emit_count(view, "ground_hovered", 1)
+	view._process(1.0)
+	assert_signal_emit_count(view, "ground_hovered", 1, "once per rest")
+	_hover(at + Vector2(repo.bal("war_hover_still_px") * 4.0, 0))
+	assert_signal_emitted(view, "hover_cleared")
+
+
+func test_no_reading_off_the_table() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	_hover(Vector2(2, 2))   # the room's corner, past the table at the opening view
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	if view.pack_at(Vector2(2, 2)).x < 0.0:
+		assert_signal_not_emitted(view, "ground_hovered")
