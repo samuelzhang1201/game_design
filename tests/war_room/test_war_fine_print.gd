@@ -81,3 +81,30 @@ func test_fine_boxes_never_touch_a_town_name() -> void:
 			for box: Rect2 in towns:
 				assert_false(box.has_point(m["at"]), "a mark sits in a town's name box")
 		assert_gt(k, 0.0)
+
+
+func test_contour_figures_keep_off_the_roads_trails_and_rivers() -> void:
+	var bake := WarBake.of(repo)
+	if bake == null:
+		pass_test("no bake in this checkout")
+		return
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	# half a four-figure height's length along its contour, as the painter sets it
+	var clear := repo.bal("war_fine_figure_px") * repo.bal("war_ink_char_w") * 2.0 + repo.bal("war_fine_figure_px") * 0.5
+	var checked := 0
+	var sheets: Dictionary = {}
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		sheets[WarSheets.sheet_of(repo, ArmySystem.position_of(repo, state, r))] = true
+	for si: int in sheets:
+		var s: Dictionary = WarSheets.series(repo)[si]
+		var ink := WarSheetInk.strokes(repo, state, s, tex)
+		var lines: Array = (ink["roads"] as Array) + (ink["trails"] as Array)
+		for rv: Dictionary in ink["rivers"]:
+			lines.append(rv["poly"])
+		for f: Dictionary in WarFinePrint.strokes(repo, state, s, tex, bake)["figures"]:
+			checked += 1
+			for poly: PackedVector2Array in lines:
+				for i in poly.size() - 1:
+					var near := Geometry2D.get_closest_point_to_segment(f["at"], poly[i], poly[i + 1])
+					assert_gt((f["at"] as Vector2).distance_to(near), clear, "a figure sits on a line on %s" % s["id"])
+	assert_gt(checked, 0, "some sheet has figures")

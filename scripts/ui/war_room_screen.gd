@@ -435,13 +435,13 @@ func _on_ground_hovered(pack_px: Vector2, screen_px: Vector2) -> void:
 ## the arrow's own reading.
 func _on_rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2) -> void:
 	var r := WarGround.reading(Game.data, Game.state, pack_px, code)
-	_show_slip(WarGround.lines(Game.data, r, true), screen_px)
+	_show_slip(WarGround.lines(Game.data, r, true), screen_px, true)
 
 
-func _show_slip(lines: Array, view_px: Vector2) -> void:
+func _show_slip(lines: Array, view_px: Vector2, left := false) -> void:
 	var slip := %HoverSlip as WarHoverSlip
 	var origin := _view.get_global_rect().position - get_global_rect().position
-	slip.show_lines(lines, origin + view_px, Rect2(origin, _view.size))
+	slip.show_lines(lines, origin + view_px, Rect2(origin, _view.size), left)
 
 
 func _on_piece(code: String) -> void:

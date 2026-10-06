@@ -170,7 +170,7 @@ func _draw_intel() -> void:
 		for d: PackedVector2Array in WarSheetInk.dashed(s["poly"], float(px["supply_dash"]), float(px["supply_gap"])):
 			draw_polyline(d, col, float(px["supply"]), true)
 	for cr: Dictionary in ink["couriers"]:
-		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], 2.0, float(px["supply_gap"])):
+		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], float(px["supply_dash"]) / 1.5, float(px["supply_gap"])):
 			draw_polyline(d, c, float(px["supply"]) * 0.7, true)
 		var at: Vector2 = cr["at"]
 		var s := float(px["courier"])
@@ -208,7 +208,7 @@ func _draw_intel() -> void:
 func _draw_fine() -> void:
 	var c_ink: Color = pal["ink"]
 	var c_faint: Color = pal["ink_faint"]
-	var c_fig: Color = pal["rubric"]
+	var c_fig: Color = pal.get("contour_figure", pal["rubric"])
 	for n: Dictionary in ink["notes"]:
 		draw_string(font, n["at"], String(n["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["note"]), c_ink)
 	for r: Dictionary in ink["routes"]:

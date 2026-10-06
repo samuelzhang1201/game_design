@@ -24,3 +24,10 @@ func test_the_lines_become_labels_of_their_kinds() -> void:
 	assert_eq((kids[2] as Label).text, "Hills · 780 m")
 	slip.hide_slip()
 	assert_false(slip.visible)
+
+
+func test_a_raking_slip_stands_left_of_the_tip_so_the_order_menu_has_the_right() -> void:
+	var bounds := Rect2(0, 0, 1000, 600)
+	var size := Vector2(300, 200)
+	assert_eq(WarHoverSlip.place(Vector2(500, 100), size, bounds, 20.0, true), Vector2(180, 120))
+	assert_eq(WarHoverSlip.place(Vector2(100, 100), size, bounds, 20.0, true), Vector2(120, 120), "no room left: right")

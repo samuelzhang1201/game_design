@@ -90,12 +90,29 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		var nz := WarRoomTable.rows_for(r, nx)
 		var heights := bake.heights(r, nx, nz)
 		var spacing := repo.bal("war_fine_contour_label_km") * WarSheets.px_per_unit(repo) * k
-		for f: Dictionary in contour_figures(heights, nx, nz, r.size * k, repo.bal("war_fine_contour_level_m"), spacing):
+		# a figure keeps off the roads, trails and rivers it would sit on (the
+		# critic of 2026-10-07: a trail's dashes ran through a "1000"): half a
+		# four-figure height's length along its contour, and a little air
+		var fig_px := repo.bal("war_fine_figure_px")
+		var keep_off := fig_px * char_w * 2.0 + fig_px * 0.5
+		var lines: Array = (ink["roads"] as Array) + (ink["trails"] as Array)
+		for rv: Dictionary in ink["rivers"]:
+			lines.append(rv["poly"])
+		var off_lines := func(at: Vector2) -> bool: return not _near_line(at, lines, keep_off)
+		for f: Dictionary in contour_figures(heights, nx, nz, r.size * k, repo.bal("war_fine_contour_level_m"), spacing, off_lines):
 			var fb := Rect2((f["at"] as Vector2) - Vector2(note_px, note_px * 0.6), Vector2(note_px * 2.0, note_px * 1.2))
 			if _clear(fb, taken):
 				taken.append(fb)
 				(out["figures"] as Array).append({"at": f["at"], "angle": f["angle"], "text": str(int(f["metres"]))})
 	return out
+
+
+static func _near_line(at: Vector2, lines: Array, reach: float) -> bool:
+	for poly: PackedVector2Array in lines:
+		for i in poly.size() - 1:
+			if at.distance_to(Geometry2D.get_closest_point_to_segment(at, poly[i], poly[i + 1])) <= reach:
+				return true
+	return false
 
 
 static func _clear(box: Rect2, taken: Array) -> bool:
@@ -107,10 +124,10 @@ static func _clear(box: Rect2, taken: Array) -> bool:
 
 ## Where the `level_m` multiples cross the grid's edges, each with its
 ## contour's direction (normalised so the figure is never upside down), no
-## two of one height nearer than `spacing_px`. `heights` is nx x nz, row-major
+## two of one height nearer than `spacing_px`, none where `allowed` (a point) says no. `heights` is nx x nz, row-major
 ## z outer, spanning `size_px`. Pure.
 static func contour_figures(heights: PackedFloat32Array, nx: int, nz: int, size_px: Vector2,
-		level_m: float, spacing_px: float) -> Array:
+		level_m: float, spacing_px: float, allowed := Callable()) -> Array:
 	var out: Array = []
 	if nx < 2 or nz < 2 or level_m <= 0.0 or heights.size() < nx * nz:
 		return out
@@ -136,7 +153,7 @@ static func contour_figures(heights: PackedFloat32Array, nx: int, nz: int, size_
 				ang -= PI
 			elif ang < -PI * 0.5:
 				ang += PI
-			var ok := true
+			var ok := not allowed.is_valid() or bool(allowed.call(at))
 			for f: Dictionary in out:
 				if int(f["metres"]) == int(level) and (f["at"] as Vector2).distance_to(at) < spacing_px:
 					ok = false

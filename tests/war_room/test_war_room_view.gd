@@ -920,3 +920,10 @@ func test_no_reading_off_the_table() -> void:
 	view._process(repo.bal("war_hover_delay_s") + 0.01)
 	if view.pack_at(Vector2(2, 2)).x < 0.0:
 		assert_signal_not_emitted(view, "ground_hovered")
+
+
+func test_the_fine_prints_legibility_limit_is_bound_from_data() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	assert_eq(float(mat.get_shader_parameter("fine_texels_per_px")), repo.bal("war_fine_texels_per_px"))

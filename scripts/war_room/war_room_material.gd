@@ -29,7 +29,7 @@ const SHADER_KEYS := {
 	"parchment_mottle": "war_parchment_mottle", "parchment_blotch_m": "war_parchment_blotch_m",
 	"parchment_grain": "war_parchment_grain", "parchment_fox": "war_parchment_fox",
 	"parchment_rim": "war_parchment_rim", "sea_wash": "war_sea_wash", "grid_deg": "war_grid_deg",
-	"neat_band_alpha": "war_neat_band_alpha",
+	"neat_band_alpha": "war_neat_band_alpha", "fine_texels_per_px": "war_fine_texels_per_px",
 }
 
 

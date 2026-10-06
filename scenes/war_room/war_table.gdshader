@@ -65,6 +65,7 @@ uniform sampler2D intel_tex : filter_linear_mipmap_anisotropic, hint_default_tra
 // bytes as ink_tex, faded in by the camera's distance (WarNear.fine_alpha)
 uniform sampler2D fine_tex : filter_linear_mipmap_anisotropic, hint_default_transparent;
 uniform float fine_alpha = 0.0;
+uniform float fine_texels_per_px = 1.6;   // fine print fades where a screen px spans more texels than this
 
 varying float metres;
 varying float raw_metres;
@@ -165,7 +166,12 @@ void fragment() {
 	col = col * (1.0 - ink_a) + straight * ink_a;
 	vec4 fined = texture(fine_tex, vec2(UV.x, UV.y * tex_aspect));
 	vec3 fine_straight = srgb_to_linear(fined.rgb / max(fined.a, 1e-4));
-	float fine_a = fined.a * collar_k * fine_alpha;
+	// legible only where a screen px spans few of its texels: the far, foreshortened
+	// part of an oblique view drops it instead of drawing mush
+	vec2 fine_texel = vec2(UV.x, UV.y * tex_aspect) * vec2(textureSize(fine_tex, 0));
+	float minify = max(length(dFdx(fine_texel)), length(dFdy(fine_texel)));
+	float legible = 1.0 - smoothstep(fine_texels_per_px, fine_texels_per_px * 2.0, minify);
+	float fine_a = fined.a * collar_k * fine_alpha * legible;
 	col = col * (1.0 - fine_a) + fine_straight * fine_a;
 
 	// the neat line: a rule on the cell's edge and a hairline neat_gap_px inside
