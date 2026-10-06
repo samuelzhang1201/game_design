@@ -157,14 +157,22 @@ static func days_for(repo: DataRepository, kind: String, need: int) -> int:
 ## nothing: the fee is ActionSystem's ledger line.
 static func dispatch(repo: DataRepository, state: GameState, kind: String, code: String,
 		order: Dictionary) -> Dictionary:
+	return dispatch_to(repo, state, kind, code, order,
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)))
+
+
+## A courier for regiment `code` whose road ends at `to_px` — the regiment
+## itself (dispatch), or its supply TOWN (spec 2026-10-07-army-supply-lines
+## §4, `order.to_town`): such a courier is never re-aimed at the column.
+static func dispatch_to(repo: DataRepository, state: GameState, kind: String, code: String,
+		order: Dictionary, to_px: Vector2) -> Dictionary:
 	var from := origin(repo, state)
-	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
 	var home := ArmySystem.pack_to_metres(repo, from)
-	var aim := ArmySystem.pack_to_metres(repo, at)
+	var aim := ArmySystem.pack_to_metres(repo, to_px)
 	state.next_courier_id += 1
 	var c := {
 		"id": state.next_courier_id, "kind": kind, "x_m": home.x, "y_m": home.y,
-		"path": path_between(repo, from, at), "target": code, "order": order.duplicate(true),
+		"path": path_between(repo, from, to_px), "target": code, "order": order.duplicate(true),
 		"issued": state.absolute_day(), "aim_x_m": aim.x, "aim_y_m": aim.y,
 		"days": 0, "day_m": 0, "slow_spell": -1,
 	}
@@ -286,7 +294,7 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 	if int(c["days"]) > int(repo.bal("courier_max_days")):
 		events.append(_spy_placed(repo, state, c, _event("fuse", c)))
 		return false
-	if not _is_spy(c):
+	if not _fixed_point(c):
 		_reaim(repo, state, c, reg)
 	@warning_ignore("return_value_discarded")  # the budget left matters only to the preview
 	_advance(repo, state, c, today, events)
@@ -321,6 +329,12 @@ static func _is_spy(c: Dictionary) -> bool:
 	return String(c.get("kind", "")) == SPY
 
 
+## A courier bound for a fixed point, never re-aimed at a column: a spy, or
+## a supply order riding to its town.
+static func _fixed_point(c: Dictionary) -> bool:
+	return _is_spy(c) or String((c.get("order", {}) as Dictionary).get("to_town", "")) != ""
+
+
 ## Where a courier's NEXT day on the road takes him: the engine's own ride run
 ## on a copy, so the map draws him riding it as the day passes instead of a
 ## day behind (owner 2026-09-28: he stood still a whole day after play was
@@ -350,7 +364,7 @@ static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, be
 	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}
 	var copy: Dictionary = c.duplicate(true)
-	if not _is_spy(c):
+	if not _fixed_point(c):
 		_reaim(repo, state, copy, reg)
 	before.append_array((copy["path"] as Array).duplicate(true))
 	var day := _ride_day_of(state)
@@ -469,6 +483,8 @@ static func _spy_placed(repo: DataRepository, state: GameState, c: Dictionary, e
 ## higher courier id), in which case this one is set aside.
 static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
 	var code := String(c["target"])
+	if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
+		return SupplyLines.deliver(repo, state, c)
 	var entry: Dictionary = state.regiments.get(code, {})
 	if int(entry.get("order_id", 0)) > int(c["id"]):
 		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, true))

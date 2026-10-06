@@ -37,3 +37,6 @@ WORKSHOP_RATE,opinion:steward:-1:the workshop's reeve re-sets his fires,1,
 GOVERNOR_SET,gold:-2:the chancery's letters of appointment,1,the passed-over governor's goodwill is charged by the order itself
 LEDGER_AUDIT,gold:-15:the clerks' fees,1,the audited governor's goodwill is charged by the order itself
 TRADE_ROUTE_SET,gold:-2:the harbour-masters' letters,1,the guildmaster's goodwill is charged by the order itself
+SUPPLY_POINT_SET,gold:-1:the quartermaster's warrant to the town,1,spec 2026-10-07-army-supply-lines §4; the courier's fee is the courier_kinds ordinary row
+SUPPLY_POINT_CLEAR,gold:-1:the quartermaster's letter recalling the wagons,1,
+SUPPLY_CARRY_SET,gold:-1:the wagon-master's tally,1,

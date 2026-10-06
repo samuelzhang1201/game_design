@@ -79,6 +79,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			return _validate_manor(req, state, needs)
 		"ARMY_MARCH", "ARMY_GARRISON":
 			return _validate_army(req, state)
+		"SUPPLY_POINT_SET", "SUPPLY_POINT_CLEAR", "SUPPLY_CARRY_SET":
+			return _validate_supply(req, state)
 		"GOVERNOR_SET":
 			var flow := String(req.params.get("flow", ""))
 			if not data.ledger_governance.has(flow):
@@ -214,6 +216,39 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 		return "%s cannot march into the sea" % String(reg["label"])
 	if ArmySystem.position_of(data, state, reg).distance_to(dest) < 1.0:
 		return "%s is already there" % String(reg["label"])
+	return ""
+
+## The supply orders (spec 2026-10-07-army-supply-lines §4): a land regiment
+## of the realm, a courier the chest can pay, and a point / rate / load the
+## tables allow.
+func _validate_supply(req: ActionRequest, state: GameState) -> String:
+	var code := String(req.params.get("regiment", ""))
+	var reg := ArmySystem.regiment(data, code)
+	if reg.is_empty():
+		return "No such regiment: " + code
+	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
+		return "%s is not yours to command" % String(reg["label"])
+	if String(reg.get("is_naval", "0")) == "1":
+		return "%s is a fleet: it carries no supply train" % String(reg["label"])
+	if float(state.metrics["treasury"]) < OrderCosts.gold_of(data, req.action_code) \
+			+ float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
+		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
+	match req.action_code:
+		"SUPPLY_POINT_SET":
+			var rate := int(req.params.get("rate", 0))
+			if not rate in SupplyLines.RATES:
+				return "The wagons run at 0.8×, 1× or 1.2×"
+			var town := String(req.params.get("town", ""))
+			var why := String(SupplyLines.eligibility(data, state, code).get(town, "That is no town of the realm"))
+			if why != "":
+				return why
+		"SUPPLY_POINT_CLEAR":
+			if SupplyLines.line(state, code).is_empty():
+				return "%s has no supply point" % String(reg["label"])
+		"SUPPLY_CARRY_SET":
+			var days := int(req.params.get("days", 0))
+			if not data.army_carry_loads.any(func(r: Dictionary) -> bool: return int(r["days"]) == days):
+				return "A train carries 10, 15, 20, 25 or 30 days"
 	return ""
 
 ## The manor an order names: params.manor (a code, a label in any case, or
@@ -576,6 +611,26 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				effects.append({"metric": "army", "delta": 0.0,
 					"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
 						else "%s stands to its post") % String(reg["label"])})
+		"SUPPLY_POINT_SET":
+			var code := String(req.params["regiment"])
+			var town := String(req.params["town"])
+			var c := CourierSystem.dispatch_to(data, state, CourierSystem.ORDINARY, code,
+				{"action_code": "SUPPLY_POINT_SET", "to_town": town, "rate": int(req.params["rate"])},
+				Vector2(float(data.burgs[town]["x"]), float(data.burgs[town]["y"])))
+			SupplyLines.order_set(state, code, town, int(req.params["rate"]), int(c["id"]))
+			_courier_fee(state, effects, c, "to %s with a supply warrant" % String(data.burgs[town]["label"]))
+		"SUPPLY_POINT_CLEAR":
+			var code := String(req.params["regiment"])
+			var town := String(SupplyLines.line(state, code)["town"])
+			var c := CourierSystem.dispatch_to(data, state, CourierSystem.ORDINARY, code,
+				{"action_code": "SUPPLY_POINT_CLEAR", "to_town": town},
+				Vector2(float(data.burgs[town]["x"]), float(data.burgs[town]["y"])))
+			SupplyLines.line(state, code)["order_id"] = int(c["id"])
+			_courier_fee(state, effects, c, "to %s to stop the wagons" % String(data.burgs[town]["label"]))
+		"SUPPLY_CARRY_SET":
+			var code := String(req.params["regiment"])
+			_send_courier(state, effects, code, {"action_code": "SUPPLY_CARRY_SET",
+				"days": int(req.params["days"])}, "with orders to carry %d days" % int(req.params["days"]))
 		"SPY_SEND":
 			var to := Vector2(float(req.params["x"]), float(req.params["y"]))
 			var place := Intel.place_label(data, state, to)
@@ -757,6 +812,14 @@ func _send_courier(state: GameState, effects: Array, code: String, order: Dictio
 	var days := CourierSystem.days_left(data, state, c)
 	effects.append({"metric": "army", "delta": 0.0, "reason": "A courier rides for %s %s; about %d day%s" % [
 		label, what, days, "" if days == 1 else "s"]})
+
+## A supply courier's fee and the army line saying when he gets there.
+func _courier_fee(state: GameState, effects: Array, c: Dictionary, what: String) -> void:
+	_apply(state, effects, "treasury", -float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)),
+		"a courier rides " + what)
+	var days := CourierSystem.days_left(data, state, c)
+	effects.append({"metric": "army", "delta": 0.0, "reason": "A courier rides %s; about %d day%s" % [
+		what, days, "" if days == 1 else "s"]})
 
 func _set_metric(state: GameState, effects: Array, metric: String, value: float, reason: String) -> void:
 	var delta: float = value - state.metrics[metric]

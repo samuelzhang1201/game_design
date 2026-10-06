@@ -94,3 +94,55 @@ static func cut_point(repo: DataRepository, state: GameState, route: PackedVecto
 			if q.distance_to(p) <= reach:
 				return {"at": q, "by": String(h[1])}
 	return {}
+
+
+static func _new_record(town: String, rate: int, order_id: int) -> Dictionary:
+	return {"town": town, "rate": rate, "state": ORDERED, "order_id": order_id, "ready_day": 0,
+		"cut_x_m": -1, "cut_y_m": -1, "cut_by": "", "fee_milli": 0, "buy_milli": 0, "warned": "",
+		"m_drawn": 0, "m_arrived": 0, "m_claimed": 0, "m_skim": 0, "m_fee": 0, "m_buy": 0, "m_bought": {}}
+
+
+## ActionSystem's SUPPLY_POINT_SET: a new line waits ORDERED; a line already
+## running keeps running and holds the new point as `pending`.
+static func order_set(state: GameState, code: String, town: String, rate: int, order_id: int) -> void:
+	var ln := line(state, code)
+	if ln.is_empty():
+		state.supply_lines[code] = _new_record(town, rate, order_id)
+	else:
+		ln["pending"] = {"town": town, "rate": rate, "order_id": order_id}
+
+
+## A supply courier delivered (CourierSystem._deliver). An older order than
+## the line's newest is set aside.
+static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
+	var code := String(c["target"])
+	var order: Dictionary = c["order"]
+	var id := int(c["id"])
+	var ev := {"type": "delivered", "courier": id, "regiment": code, "weather": ""}
+	match String(order["action_code"]):
+		"SUPPLY_CARRY_SET":
+			var entry: Dictionary = state.regiments.get(code, {})
+			if entry.is_empty() or int(entry.get("carry_order_id", 0)) > id:
+				ev["type"] = "stale"
+				return ev
+			entry["carry_days"] = int(order["days"])
+			entry["carry_order_id"] = id
+		"SUPPLY_POINT_SET":
+			var ln := line(state, code)
+			var p: Dictionary = ln.get("pending", {}) if not ln.is_empty() else {}
+			if not p.is_empty() and int(p["order_id"]) == id:
+				ln = _new_record(String(p["town"]), int(p["rate"]), id)
+				state.supply_lines[code] = ln
+			elif ln.is_empty() or int(ln["order_id"]) != id:
+				ev["type"] = "stale"
+				return ev
+			ln["state"] = RIDING
+			var km := road_km(repo, road_px(repo, state, code, String(ln["town"])))
+			ln["ready_day"] = state.absolute_day() + wagon_days(repo, km)
+		"SUPPLY_POINT_CLEAR":
+			var ln := line(state, code)
+			if ln.is_empty() or int(ln["order_id"]) > id:
+				ev["type"] = "stale"
+				return ev
+			state.supply_lines.erase(code)
+	return ev
