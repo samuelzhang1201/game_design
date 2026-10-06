@@ -621,17 +621,24 @@ static func march_ahead(repo: DataRepository, state: GameState, code: String, en
 
 
 ## One regiment's day on the road, written to `entry`; true when it arrives.
+## It marches EVENLY, as a courier rides (owner 2026-10-06: 军队是匀速移动的，
+## 如果他应该在第N天到达目的地，则应该是第N天结束的时候到达): each day only its
+## share of what is left — the metres ahead over the whole days they take at
+## the day's pace (march_days), rounded up — so an N-day march is covered at
+## one pace over all N and ends exactly as the Nth day ends.
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		abs_day: int) -> bool:
 	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code).is_empty():
 		return false
-	var step := day_march_m(repo, state, code, abs_day)
-	if step <= 0:
+	var full := day_march_m(repo, state, code, abs_day)
+	if full <= 0:
 		return false
 	var here := Vector2(float(entry["x_m"]), float(entry["y_m"]))
 	var dest := Vector2(float(entry["dest_x_m"]), float(entry["dest_y_m"]))
 	var left := here.distance_to(dest)
-	if left <= float(step):
+	var days := int(ceil(left / float(full)))
+	var step := mini(full, int(ceil(left / float(maxi(days, 1)))))
+	if days <= 1:
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
 		entry["order"] = ORDER_GARRISON          # arrived: it holds the ground it was sent to
