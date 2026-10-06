@@ -226,3 +226,20 @@ func test_the_archers_kit_is_not_hidden_by_the_infantrys_names() -> void:
 	var inf: Array = WarFolio.kit_of(repo, "infantry").map(func(r: Dictionary) -> String: return String(r["label"]))
 	for r: Dictionary in WarFolio.kit_of(repo, "archers"):
 		assert_false(String(r["label"]) in inf, "archers' %s shares the infantry's name" % r["part"])
+
+
+func test_the_supply_row_names_a_brigand_on_the_road() -> void:
+	var route := SupplySystem.route_px(repo, state, code)
+	if route.size() < 2:
+		pass_test("this regiment is fed through a stronghold")
+		return
+	var mid := route[route.size() / 2]
+	var codes: Array = repo.markers.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(repo.markers[c]["type"]) == "brigands":
+			repo.markers[c]["x"] = str(mid.x)
+			repo.markers[c]["y"] = str(mid.y)
+			assert_string_contains(_rows("supply")["Line"], "to the %s" % repo.markers[c]["label"])
+			return
+	pass_test("no brigands on this pack")

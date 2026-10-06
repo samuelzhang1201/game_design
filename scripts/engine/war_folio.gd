@@ -177,7 +177,13 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 		else:
 			@warning_ignore("integer_division")
 			var lost := int(line["loss_permille"]) / 10
-			rows.append(_row("Line", "%d km from %s, %d%% lost" % [int(line["length_km"]), depot_name(repo, state), lost]))
+			var text := "%d km from %s, %d%% lost" % [int(line["length_km"]), depot_name(repo, state), lost]
+			var named: Array = (line.get("hazards", []) as Array).map(func(h: Dictionary) -> String:
+				@warning_ignore("integer_division")
+				return "%d%% to the %s" % [int(h["permille"]) / 10, String(h["label"])])
+			if not named.is_empty():
+				text += " (%s)" % ", ".join(named)
+			rows.append(_row("Line", text))
 	var f := Governance.factors(repo, state, "supply_line")
 	var gid := String(f["governor"])
 	if gid == "":
