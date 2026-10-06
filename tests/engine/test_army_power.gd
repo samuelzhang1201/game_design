@@ -163,3 +163,29 @@ func test_power_reads_the_ground_the_regiment_stands_on_now() -> void:
 	(s2.regiments[code] as Dictionary).erase("x_m")
 	assert_eq(moved, ArmySystem.power(other, s2, code, "defend"))
 	assert_ne(moved, home, "other works change its power")
+
+func test_power_is_power_on_its_own_ground() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	for code: String in _land_codes():
+		var reg := ArmySystem.regiment(repo, code)
+		for stance in ["defend", "attack"]:
+			assert_eq(ArmySystem.power(repo, s, code, stance),
+				ArmySystem.power_on(repo, s, code, stance, ArmySystem.terrain_of(repo, reg, s), ArmySystem.works_of(repo, reg, s)),
+				"%s %s" % [code, stance])
+
+func test_archers_alone_on_hills_by_the_terrain_table() -> void:
+	var r := SuiteData.repo()
+	var s := SuiteData.campaign(r, 7)
+	var code: String = _land_codes()[0]
+	var row: Dictionary = r.world_table("military", "regiments")[code]
+	for arm in ["infantry", "cavalry", "artillery", "fleet"]:
+		row[arm] = "0"
+	row["archers"] = "800"
+	var plains_d := ArmySystem.power_on(r, s, code, "defend", "plains", "")
+	var plains_a := ArmySystem.power_on(r, s, code, "attack", "plains", "")
+	# army_terrain.csv: hills,archers,1150,1050
+	assert_almost_eq(float(ArmySystem.power_on(r, s, code, "defend", "hills", "")) / plains_d, 1.15, 0.01)
+	assert_almost_eq(float(ArmySystem.power_on(r, s, code, "attack", "hills", "")) / plains_a, 1.05, 0.01)
+	# army_town_defence.csv: walls,archers defend 1250, attack untouched
+	assert_almost_eq(float(ArmySystem.power_on(r, s, code, "defend", "plains", "walls")) / plains_d, 1.25, 0.01)
+	assert_eq(ArmySystem.power_on(r, s, code, "attack", "plains", "walls"), plains_a)

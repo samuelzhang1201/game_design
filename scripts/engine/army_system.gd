@@ -411,6 +411,17 @@ static func _arm_base(repo: DataRepository, code: String, arm: String, tick: int
 ## without state.
 static func power(repo: DataRepository, state: GameState, code: String, stance: String) -> int:
 	var reg := regiment(repo, code)
+	if reg.is_empty():
+		return 0
+	return power_on(repo, state, code, stance, terrain_of(repo, reg, state), works_of(repo, reg, state))
+
+
+## power(), on a given ground: `terrain` (terrain_at's words) and `works`
+## ("citadel", "walls", "town" or ""). The WAR ROOM's slip reads a regiment
+## on ground it does not stand on (spec 2026-10-07-war-room-scale-hover §4.1).
+static func power_on(repo: DataRepository, state: GameState, code: String, stance: String,
+		terrain: String, works: String) -> int:
+	var reg := regiment(repo, code)
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0
@@ -421,8 +432,6 @@ static func power(repo: DataRepository, state: GameState, code: String, stance: 
 	var tick := 0 if state == null else state.tick
 	var training_f := int(repo.bal("army_training_base_permille")) + int(st["training"]) * int(repo.bal("army_training_step_permille"))
 	var morale_f := int(repo.bal("army_morale_base_permille")) + int(st["morale"]) * int(repo.bal("army_morale_step_permille"))
-	var terrain := terrain_of(repo, reg, state)
-	var works := works_of(repo, reg, state)
 	var total := 0
 	for arm: String in repo.world_table("military", "unit_types"):
 		var n := int(float(reg.get(arm, 0)))
