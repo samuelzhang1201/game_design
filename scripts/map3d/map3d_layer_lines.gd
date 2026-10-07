@@ -1,7 +1,7 @@
 @tool
 class_name Map3DLayerLines
 extends Node3D
-## The ribbon host (spec 2026-09-20 §1): Roads, Trails, ManorEdges, Seams, the supply lines,
+## The ribbon host (spec 2026-09-20 §1): Roads, Trails (the pack's paths), ManorEdges, Seams, the supply lines,
 ## KingdomBand, KingdomHalo, Kingdoms, Hover and Selection, each ONE
 ## MeshInstance3D named for its line, draped on the relief
 ## (Map3DBorders.ribbon_arrays) and kept a constant SCREEN width by its shader.

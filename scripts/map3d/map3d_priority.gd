@@ -10,8 +10,6 @@ extends RefCounted
 ## rings by tier from RING_BASE up, and the gold selection ring over all.
 const SEA := -1
 const RIVERS := 0
-## A regiment's trodden trail (Map3DLayerTrails): on the ground, under the roads.
-const MARCH_TRAILS := 0
 const ROADS := 1
 const MANOR_EDGES := 2
 ## A flowing supply line (Map3DSupplyLines): faint, over the roads, under the borders.

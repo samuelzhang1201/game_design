@@ -1,6 +1,6 @@
 [gd_resource type="ShaderMaterial" format=3 uid="uid://cfix1p5toarwy"]
 
-[ext_resource type="Shader" path="res://scripts/map3d/supply_flow.gdshader" id="1_c4mjx"]
+[ext_resource type="Shader" uid="uid://drg4f6majimyy" path="res://scripts/map3d/supply_flow.gdshader" id="1_c4mjx"]
 
 [resource]
 render_priority = 0
