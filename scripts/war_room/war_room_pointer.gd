@@ -263,6 +263,9 @@ func _handles(who: String) -> PackedVector2Array:
 func _press_bend(at: Vector2) -> bool:
 	if not _view.aiming or _view.aim_dest.x < 0.0 or _view.aim_code == "" or _view.rolling():
 		return false
+	for t: Dictionary in _supply_rings():
+		if bool(t["lit"]) and (t["at"] as Vector2).distance_to(at) <= _repo.bal("war_supply_lit_px"):
+			return false   # a lit town is chosen to supply the march, never a bend
 	var grab := _repo.bal("war_route_grab_px")
 	var wps := _view.aim_waypoints
 	for i in wps.size():

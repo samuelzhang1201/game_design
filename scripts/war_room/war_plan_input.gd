@@ -350,9 +350,7 @@ func _box(box: Rect2) -> void:
 			if at != null and box.has_point(at):
 				ids.append(String(h["id"]))
 	if not ids.is_empty():
-		select(side, ids, true)
-		if side == "blue":
-			_view.select(String(ids[0]), false, true)
+		select(side, ids, true)   # a box opens no book: the book is a click's
 
 
 ## The box being dragged (screen px), Rect2() when none.
@@ -536,6 +534,6 @@ func _pending_order(ink: Dictionary, mm: float) -> void:
 		if ctrl.size() < 2:
 			continue
 		var kind := "arrow" if code == _view.aim_code else "phase"
-		var s := {"kind": kind, "colour": "blue", "dashed": 0, "flip": 0, "name": ""}
+		var s := {"kind": kind, "colour": "blue", "dashed": 0, "flip": 0, "name": "", "width_mm": _repo.bal("war_order_feeder_mm")}
 		var k: Dictionary = _repo.war_plan_kinds[kind] if code == _view.aim_code else {"gesture": "path", "pen": false, "head": false, "teeth": false}
 		WarPlanInk.add(_repo, ink, s, k, ctrl, 0.0, mm)
