@@ -144,8 +144,8 @@ func _fill(rows: Array) -> void:
 				_carry = days)
 		var arrive := int(r["arrive"])
 		(row.get_node("Arrive") as Label).text = "%d day%s" % [arrive, "" if arrive == 1 else "s"]
-		(row.get_node("Stores") as Label).text = "%s supplies · %d days" % [UiPalette.format_int(int(r["units"])),
-			int(r["lasts"])]
+		# the load's days are its button; its supplies last them (MarchPlan's `lasts`)
+		(row.get_node("Stores") as Label).text = "%s supplies" % UiPalette.format_int(int(r["units"]))
 		var short := int(r["short"])
 		(row.get_node("Short") as Label).text = "runs %d day%s short" % [short, "" if short == 1 else "s"] \
 			if short > 0 else ""

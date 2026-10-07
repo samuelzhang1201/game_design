@@ -45,7 +45,7 @@ theme_type_variation = &"CardSmall"
 text = "Arrives in"
 
 [node name="Stores" type="Label" parent="Body/Head" unique_id=733958053]
-custom_minimum_size = Vector2(140, 0)
+custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_type_variation = &"CardSmall"
 text = "Supplies"
@@ -80,15 +80,16 @@ text = "9 days"
 vertical_alignment = 1
 
 [node name="Stores" type="Label" parent="Body/Rows/RowProto" unique_id=700352451]
-custom_minimum_size = Vector2(140, 0)
+custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 theme_type_variation = &"CardSmall"
-text = "240 supplies · 20 days"
+text = "240 supplies"
 vertical_alignment = 1
 
 [node name="Short" type="Label" parent="Body/Rows/RowProto" unique_id=1359705206]
 layout_mode = 2
 theme_type_variation = &"CardWarn"
+theme_override_font_sizes/font_size = 14
 text = "runs 3 days short"
 vertical_alignment = 1
 

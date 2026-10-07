@@ -135,6 +135,7 @@ func on_left(mb: InputEventMouseButton) -> void:
 		_view.toss_to(chart)                # a chart cell: the marker is tossed first
 	elif _view.aiming and _view.pack_at(mb.position).x >= 0.0:
 		_view.ground_clicked.emit(_view.pack_at(mb.position), mb.position)
+		redraw()   # the end is held now: the arrow is drawn to it, dashed
 	elif _view.selected_army() != "":
 		_view.clear_selection()
 	else:

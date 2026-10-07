@@ -200,6 +200,8 @@ func _open_confirm(at: Vector2) -> void:
 		commit, _add_waypoint_row(), _route_row("cancel"))
 	var origin := (_map as Control).get_global_rect().position if _map is Control else Vector2.ZERO
 	var map_rect := (_map as Control).get_global_rect() if _map is Control else Rect2()
+	if _map != null and _map.has_signal("hover_cleared"):
+		_map.emit_signal("hover_cleared")   # the WAR ROOM's slip at the tip goes: the confirm speaks now
 	p.place_near(origin + at, _route_rect(origin), map_rect)
 
 
