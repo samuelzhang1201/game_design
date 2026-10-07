@@ -18,7 +18,7 @@ The pack as a Terrain3D landscape at 50 m per pack px — the game's ONLY map. P
 - Zoom runs `map3d_zoom_min_m` to `map3d_zoom_max_m` (camera distance in world metres); the wheel and a trackpad pinch zoom about the POINTER; a two-finger drag pans. It opens on the middle of the province the player controls (`MapManors.home_province`) with the scale bar spanning `map3d_zoom_start_scale` of the pack's measure (`Map3DGeometry.distance_for_bar`) (the owner names zooms by it). Maths: `Map3DGeometry` (pure, tested).
 - **The camera never sinks into the ground**: `Map3DGeometry.clear_pitch` steepens the pitch until the whole sight line stands `map3d_camera_clear_m` over the ground.
 - **Every distance shown reads the pack's measure**: world metres back to pack px (`Map3DView.map_units_per_metre`) times `map_info.csv` `distance_scale` in `distance_unit`; the `map3d_*_m` camera values stay in built metres. The scale bar restates itself in the 1-2-5 ladder (`MapGeometry.nice_step`).
-- The compass (`CompassLayer`, `assets/2D/ui/compass/compass.png`) turns with the view, turns clockwise with the clock while time runs, redraws only itself, and eases back to north on a click; on the war table the table's compass does it and the map draws none.
+- The compass (`CompassLayer`, `assets/2D/ui/compass/compass.png`) turns with the view, turns clockwise with the clock while time runs, redraws only itself, and eases back to north on a click; it sits inside the map's top-left on both looks (`map_compass_size_px`, on the war table `map_compass_size_px_table`).
 
 ## Picking, hover, selection
 
