@@ -35,33 +35,33 @@ layout_mode = 2
 theme_override_constants/separation = 6
 
 [node name="Foot" type="Button" parent="Margin/Col/Arms" unique_id=1270002360]
-custom_minimum_size = Vector2(64, 0)
 layout_mode = 2
 theme_type_variation = &"CardCommandSmall"
+theme_override_constants/icon_max_width = 26
 toggle_mode = true
 button_group = SubResource("ButtonGroup_aji30")
 text = "Foot"
 
 [node name="Bows" type="Button" parent="Margin/Col/Arms" unique_id=1904481343]
-custom_minimum_size = Vector2(64, 0)
 layout_mode = 2
 theme_type_variation = &"CardCommandSmall"
+theme_override_constants/icon_max_width = 26
 toggle_mode = true
 button_group = SubResource("ButtonGroup_aji30")
 text = "Bows"
 
 [node name="Horse" type="Button" parent="Margin/Col/Arms" unique_id=608136767]
-custom_minimum_size = Vector2(64, 0)
 layout_mode = 2
 theme_type_variation = &"CardCommandSmall"
+theme_override_constants/icon_max_width = 26
 toggle_mode = true
 button_group = SubResource("ButtonGroup_aji30")
 text = "Horse"
 
 [node name="Guns" type="Button" parent="Margin/Col/Arms" unique_id=242189150]
-custom_minimum_size = Vector2(64, 0)
 layout_mode = 2
 theme_type_variation = &"CardCommandSmall"
+theme_override_constants/icon_max_width = 26
 toggle_mode = true
 button_group = SubResource("ButtonGroup_aji30")
 text = "Guns"
@@ -146,5 +146,5 @@ text = "Cancel"
 [node name="Place" type="Button" parent="Margin/Col/Buttons" unique_id=60770882]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"CardCommand"
+theme_type_variation = &"Primary"
 text = "Place"

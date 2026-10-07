@@ -1,7 +1,7 @@
 class_name WarPlanForm
 extends PanelContainer
 ## The Place form of a supposed enemy (spec 2026-10-07-war-room-annotations-
-## and-planning-pieces §1.5): the arm (four inked icons), the heads (a spin
+## and-planning-pieces §1.5): the arm (four icon buttons), the heads (a spin
 ## box stepped by war_plan_heads_step and quick counts), the side (the foreign
 ## kingdoms and Unknown), and the would-be piece's two figure lines read live;
 ## Place / Cancel, Escape cancels. Its look is the scene's; it fills the
@@ -35,8 +35,8 @@ func _ready() -> void:
 		b.pressed.connect(func() -> void: _heads.value = float(String(b.text).replace(",", "").to_int()))
 
 
-## The choices from the data: the arms' buttons in the pack's order (their
-## icons the folio's, inked), the heads' range and step, the sides by name.
+## The choices from the data: the arms' buttons in the pack's order (each
+## arm's resource icon), the heads' range and step, the sides by name.
 func setup(repo: DataRepository) -> void:
 	_repo = repo
 	_arms = WarPlans.arms(repo)
@@ -48,7 +48,7 @@ func setup(repo: DataRepository) -> void:
 			var arm := String(_arms[i])
 			b.set_meta("arm", arm)
 			b.text = WarGround.arm_word(repo, arm).capitalize()
-			b.icon = WarInkIcon.inked(ResourceIconSet.texture_of(arm), repo.war_palette["ink"], repo.bal("war_ink_icon_light_keep"))
+			b.icon = ResourceIconSet.texture_of(arm)
 			if not b.toggled.is_connected(_on_arm):
 				b.toggled.connect(_on_arm)
 	_heads.min_value = repo.bal("war_plan_heads_min")

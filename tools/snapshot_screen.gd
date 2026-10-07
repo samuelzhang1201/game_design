@@ -246,6 +246,10 @@ var _war_cell := ""
 var _war_board := false
 var _war_board_click := Vector2(-1, -1)
 var _war_phase := 0
+var _war_plan_menu := Vector2(-1, -1)   # --war-plan-menu fx,fy: a REAL right click on open table (the ground menu)
+var _war_plan_place := false            # --war-plan-place: then its Place row (the form)
+var _war_plan_draw: PackedStringArray = []   # --war-plan-draw kind,fx1,fy1,fx2,fy2: the roll's slot, then a real drag
+var _war_plan_hover := false            # --war-plan-hover: rest the pointer on the first supposed piece (the slip)
 var _war_plans_demo := false   # --war-plans-demo: a fixed set of plans laid near the first land piece before the room opens
 var _war_at := 0
 ## --shot-on report|flight|board|card|spymenu takes the shot --shot-delay N
@@ -362,6 +366,15 @@ func _ready() -> void:
 			_war_focus_px = Vector2(float(fparts[0]), float(fparts[1]))
 		elif args[i] == "--war-focus":
 			_war_focus = args[i + 1]
+		elif args[i] == "--war-plan-menu":
+			var mp := args[i + 1].split(",")
+			_war_plan_menu = Vector2(float(mp[0]), float(mp[1]))
+		elif args[i] == "--war-plan-place":
+			_war_plan_place = true
+		elif args[i] == "--war-plan-draw":
+			_war_plan_draw = args[i + 1].split(",")
+		elif args[i] == "--war-plan-hover":
+			_war_plan_hover = true
 		elif args[i] == "--war-plans-demo":
 			_war_plans_demo = true
 		elif args[i] == "--war-zoom":
@@ -1077,6 +1090,26 @@ func _war_room_step() -> void:
 				_real_click(view, at)
 			print("war: piece=%s sheet=%d at=%s selected=%s aiming=%s" % [_war_piece, view.sheet_index(), at,
 				view.selected_army(), screen.orders().aiming()])
+		if _war_plan_draw.size() == 5:
+			var roll := screen.get_node("%ToolRoll") as WarToolRoll
+			var slot := roll.slot(_war_plan_draw[0])
+			_real_click(slot, slot.size * 0.5)
+			var a := Vector2(view.size) * Vector2(float(_war_plan_draw[1]), float(_war_plan_draw[2]))
+			var b := Vector2(view.size) * Vector2(float(_war_plan_draw[3]), float(_war_plan_draw[4]))
+			_real_drag(view, a, b)
+			print("war plan: drew %s strokes=%d in hand=%s" % [_war_plan_draw[0], (Game.state.war_plans["strokes"] as Dictionary).size(),
+				view.plan_input().tool.in_hand()])
+		if _war_plan_menu.x >= 0.0:
+			var at := Vector2(view.size) * _war_plan_menu
+			_real_right_drag(view, at, at)
+			print("war plan: menu open=%s" % (screen.get_node("%GroundMenu") as PopupMenu).visible)
+		if _war_plan_hover:
+			for p: Dictionary in WarPlans.pieces_in(Game.data, Game.state, view.sheet_rect()):
+				var on: Variant = view.screen_pos_of_px(p["at"])
+				if on != null:
+					_real_move(view, on)
+					print("war plan: hover on %s at %s" % [p["id"], on])
+					break
 		if _war_hover.x >= 0.0:
 			_real_move(view, Vector2(view.size) * _war_hover)
 			print("war: hover at %s" % (Vector2(view.size) * _war_hover))
@@ -1085,7 +1118,7 @@ func _war_room_step() -> void:
 		if _war_plans_demo and _frames - _war_at == 1:
 			print("war plans on sheet: pieces=%d built=%d strokes=%d rev=%d" % [WarPlans.pieces_in(Game.data, Game.state, view.sheet_rect()).size(),
 				view.plan_pieces().get_child_count(), WarPlans.strokes_in(Game.data, Game.state, view.sheet_rect()).size(), int(Game.state.war_plans["rev"])])
-		if _war_hover.x >= 0.0 and _frames - _war_at < ceili(Game.data.bal("war_hover_delay_s") * 120.0) + 10:
+		if (_war_hover.x >= 0.0 or _war_plan_hover) and _frames - _war_at < ceili(Game.data.bal("war_hover_delay_s") * 120.0) + 10:
 			return   # a 120 Hz display's frames: the slip has come up
 		if _frames - _war_at < 6:
 			return
@@ -1095,6 +1128,11 @@ func _war_room_step() -> void:
 			_real_click(view, Vector2(view.size) * _war_board_click)
 			print("war: board mode=%s missive open=%s selected=%d" % [view.board_mode(),
 				_root.missive_screen().visible, _root.missive_screen().selected()])
+		if _war_plan_place:
+			var gm := screen.get_node("%GroundMenu") as PopupMenu
+			gm.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
+			gm.id_pressed.emit(WarPlanDesk.PLACE)
+			print("war plan: form open=%s" % (screen.get_node("%PlanForm") as Control).visible)
 		if _war_commit:
 			var menu := screen.orders()
 			menu.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
