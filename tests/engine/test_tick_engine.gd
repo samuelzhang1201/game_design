@@ -276,3 +276,18 @@ func test_the_running_day_is_the_day_shown_and_ends_at_advance_day() -> void:
 	engine.advance_day(s)
 	assert_eq(engine.day_arrivals, [code], "it arrives as day 1 ends")
 	assert_eq(s.day, 2, "and day 2 begins")
+
+
+func test_the_month_reports_its_hazard_news() -> void:
+	var state := SuiteData.campaign(data, 42)
+	var code := ""
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(ArmySystem.regiment(data, c).get("is_naval", "0")) != "1":
+			code = c
+			break
+	var cell := MapEconomy.cell_at(data, ArmySystem.position_of(data, state, ArmySystem.regiment(data, code)))
+	Hazards.add(state, "p", "Disease", "Test Plague", [cell], state.tick, -1, "test")
+	engine.advance(state)
+	assert_true(engine.month_hazard_news.any(func(n: String) -> bool: return n.contains("Test Plague")))

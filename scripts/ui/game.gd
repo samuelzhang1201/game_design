@@ -135,7 +135,8 @@ func advance_day() -> Dictionary:
 	if state.day >= Calendar.DAYS_PER_TICK:
 		var r := next_tick()
 		return {"ticked": true, "finished": r.finished_works, "arrived": engine.day_arrivals,
-			"couriers": engine.day_couriers, "idled": engine.newly_idle, "ended": ended}
+			"couriers": engine.day_couriers, "idled": engine.newly_idle, "ended": ended,
+			"hazards": engine.month_hazard_news}
 	var finished := engine.advance_day(state)
 	state_changed.emit()
 	return {"ticked": false, "finished": finished, "arrived": engine.day_arrivals,

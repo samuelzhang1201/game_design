@@ -55,6 +55,9 @@ var day_couriers: Array = []
 ## by Game for the news bar, ONCE per spell idle; never in the TickReport.
 var newly_idle: Array = []
 
+## The month's hazard news (Hazards: the toll, then the endings), for the news bar.
+var month_hazard_news: Array = []
+
 func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
 	var out: Array = []
 	var keys: Array = state.idle_buildings.keys()
@@ -126,8 +129,11 @@ func advance(state: GameState) -> TickReport:
 	# supply-design §4): wounded return, morale drifts toward what the stores
 	# just refilled allow, training grows (the supplies are eaten daily).
 	ArmySystem.settle_month(data, state)
+	# The hazards take their month's toll (spec 2026-10-07-war-room-p2 §2.3).
+	month_hazard_news = Hazards.settle_regiments(data, state)
 	state.tick += 1
 	state.day = 1
+	month_hazard_news.append_array(Hazards.settle_month(data, state))
 	r.tick = state.tick
 	r.season = state.season()
 	r.year = state.year()

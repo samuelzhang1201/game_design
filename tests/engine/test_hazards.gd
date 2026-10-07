@@ -123,3 +123,73 @@ func test_known_abroad_only_if_public() -> void:
 	assert_false(Hazards.known(repo, state, "r_abroad"))
 	assert_true(Hazards.known(repo, state, "p_abroad"))
 	assert_true(Hazards.known(repo, state, "r_home"))
+
+
+func _crown_land_code(state: GameState) -> String:
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for code: String in codes:
+		if String(ArmySystem.regiment(repo, code).get("is_naval", "0")) != "1":
+			return code
+	return ""
+
+
+func _cell_of(state: GameState, code: String) -> int:
+	return MapEconomy.cell_at(repo, ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)))
+
+
+func test_a_plague_wounds_a_regiment_standing_in_it_and_says_so() -> void:
+	var state := SuiteData.campaign(repo, 42)
+	for id: String in state.hazards.keys():
+		state.hazards.erase(id)   # a clean field
+	state.hazards_rev += 1
+	var code := _crown_land_code(state)
+	Hazards.add(state, "p", "Disease", "Test Plague", [_cell_of(state, code)], state.tick, -1, "test")
+	var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
+	var before := int(state.regiments[code]["wounded"])
+	var fit := heads - before
+	@warning_ignore("integer_division")
+	var lost := fit * int(Hazards.kind_of(repo, "Disease")["wounds_permille"]) / 1000
+	var news := Hazards.settle_regiments(repo, state)
+	assert_eq(int(state.regiments[code]["wounded"]), before + lost)
+	assert_true(news.any(func(n: String) -> bool: return n.contains("Test Plague") and n.contains(str(lost))))
+
+
+func test_two_hazards_both_take_their_toll_once() -> void:
+	var state := SuiteData.campaign(repo, 42)
+	for id: String in state.hazards.keys():
+		state.hazards.erase(id)
+	state.hazards_rev += 1
+	var code := _crown_land_code(state)
+	var cell := _cell_of(state, code)
+	Hazards.add(state, "p", "Disease", "Test Plague", [cell], state.tick, -1, "test")
+	Hazards.add(state, "r", "Rebels", "Test Rebels", [cell], state.tick, -1, "test")
+	var morale := int(state.regiments[code]["morale"])
+	var news := Hazards.settle_regiments(repo, state)
+	assert_eq(news.filter(func(n: String) -> bool: return n.contains("Test Plague")).size(), 1)
+	assert_eq(news.filter(func(n: String) -> bool: return n.contains("Test Rebels")).size(), 1)
+	assert_eq(int(state.regiments[code]["morale"]), clampi(morale + int(Hazards.kind_of(repo, "Rebels")["morale"]), 0, 100))
+
+
+func test_no_fit_men_no_toll_and_no_news() -> void:
+	var state := SuiteData.campaign(repo, 42)
+	for id: String in state.hazards.keys():
+		state.hazards.erase(id)
+	state.hazards_rev += 1
+	var code := _crown_land_code(state)
+	state.regiments[code]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
+	Hazards.add(state, "p", "Disease", "Test Plague", [_cell_of(state, code)], state.tick, -1, "test")
+	var news := Hazards.settle_regiments(repo, state)
+	assert_eq(int(state.regiments[code]["wounded"]), ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)))
+	assert_eq(news.filter(func(n: String) -> bool: return n.contains("Test Plague")), [])
+
+
+func test_the_month_is_deterministic() -> void:
+	var a := SuiteData.campaign(repo, 9)
+	var b := SuiteData.campaign(repo, 9)
+	for i in 24:
+		Hazards.settle_regiments(repo, a)
+		Hazards.settle_regiments(repo, b)
+		a.tick += 1
+		b.tick += 1
+	assert_eq(a.regiments, b.regiments)

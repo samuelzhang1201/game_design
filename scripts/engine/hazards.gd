@@ -128,3 +128,36 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array[String
 		if int(h["end"]) == state.tick and known(repo, state, id):
 			news.append("The %s is over." % String(h["label"]))
 	return news
+
+
+## The month's toll on the crown's land regiments standing in an active hazard
+## (spec §2.3): its kind's wounds_permille of the fit heads (whole, never past
+## the headcount) and its morale, each reported with its reason. Code order.
+static func settle_regiments(repo: DataRepository, state: GameState) -> Array[String]:
+	var news: Array[String] = []
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var reg := ArmySystem.regiment(repo, code)
+		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		var entry: Dictionary = state.regiments[code]
+		var heads := ArmySystem.headcount(repo, reg)
+		var name := String(reg.get("label", code))
+		for id: String in at_point(repo, state, ArmySystem.position_of(repo, state, reg)):
+			var h: Dictionary = state.hazards[id]
+			var k := kind_of(repo, String(h["kind"]))
+			var fit := heads - clampi(int(entry["wounded"]), 0, heads)
+			@warning_ignore("integer_division")  # whole heads
+			var lost := fit * int(k.get("wounds_permille", 0)) / 1000
+			if lost > 0:
+				entry["wounded"] = clampi(int(entry["wounded"]) + lost, 0, heads)
+				news.append("The %s loses %d to the %s." % [name, lost, String(h["label"])])
+			var m := int(k.get("morale", 0))
+			if m != 0:
+				var was := int(entry["morale"])
+				entry["morale"] = clampi(was + m, 0, 100)
+				if int(entry["morale"]) != was:
+					news.append("The %s's morale %s under the %s." % [name, "falls" if m < 0 else "rises", String(h["label"])])
+	return news
