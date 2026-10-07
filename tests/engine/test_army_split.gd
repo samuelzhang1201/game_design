@@ -181,6 +181,7 @@ func test_the_seat_goes_to_the_most_infantry() -> void:
 
 
 func test_deterministic_and_copied() -> void:
+	ArmySplit.forget()  # so _make runs again, not the cached split
 	var again := ArmySplit.split(repo)
 	assert_eq(JSON.stringify(again, "", true), JSON.stringify(split, "", true))
 	(again["roster"] as Dictionary).clear()
