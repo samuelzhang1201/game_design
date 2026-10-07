@@ -166,6 +166,8 @@ static func dispatch(repo: DataRepository, state: GameState, kind: String, code:
 ## §4, `order.to_town`): such a courier is never re-aimed at the column.
 static func dispatch_to(repo: DataRepository, state: GameState, kind: String, code: String,
 		order: Dictionary, to_px: Vector2) -> Dictionary:
+	if ArmySystem.is_foe(state, code):
+		return {}   # a foe is nobody's to command: ArmySystem.state_of reads it, the crown's couriers never ride to it
 	var from := origin(repo, state)
 	var home := ArmySystem.pack_to_metres(repo, from)
 	var aim := ArmySystem.pack_to_metres(repo, to_px)
@@ -296,7 +298,8 @@ static func ride_day(repo: DataRepository, state: GameState) -> Array:
 static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> bool:
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code)
-	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
+	if not _is_spy(c) and (reg.is_empty() or ArmySystem.is_foe(state, code)
+			or ArmySystem.state_of(repo, state, code).is_empty()):
 		events.append(_event("lost", c))
 		return false
 	c["days"] = int(c.get("days", 0)) + 1
@@ -370,7 +373,8 @@ static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, be
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code)
 	# a spy rides for a point, not a regiment: nothing to lose, nothing to re-aim
-	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
+	if not _is_spy(c) and (reg.is_empty() or ArmySystem.is_foe(state, code)
+			or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}
 	var copy: Dictionary = c.duplicate(true)
 	if not _fixed_point(c):

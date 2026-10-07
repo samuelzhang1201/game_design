@@ -187,7 +187,7 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 	var reg := ArmySystem.regiment(data, code)
 	if reg.is_empty():
 		return "No such regiment: " + code
-	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
+	if ArmySystem.is_foe(state, code) or String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
 		return "%s is not yours to command" % String(reg["label"])
 	# The order rides by courier (owner 2026-09-27): his fee is paid from the
 	# crown's chest ON TOP of the order's own always-charged cost (fix round 1:
@@ -226,7 +226,7 @@ func _validate_supply(req: ActionRequest, state: GameState) -> String:
 	var reg := ArmySystem.regiment(data, code)
 	if reg.is_empty():
 		return "No such regiment: " + code
-	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
+	if ArmySystem.is_foe(state, code) or String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
 		return "%s is not yours to command" % String(reg["label"])
 	if String(reg.get("is_naval", "0")) == "1":
 		return "%s is a fleet: it carries no supply train" % String(reg["label"])

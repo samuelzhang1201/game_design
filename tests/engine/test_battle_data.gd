@@ -51,11 +51,12 @@ func test_doctrines_cover_every_host_role() -> void:
 func test_balance_keys_present() -> void:
 	for k: String in ["battle_contact_km", "battle_max_rounds", "battle_max_units",
 			"battle_variance_permille", "battle_spoils_permille", "battle_defeat_treasury_permille",
-			"battle_defeat_morale", "ai_think_days", "ai_sight_km", "ai_target_reach_km",
+			"battle_defeat_morale", "battle_defeat_opinion", "ai_think_days", "ai_sight_km", "ai_target_reach_km",
 			"ai_target_overlap_permille", "ai_retreat_supply_days", "siege_rate", "siege_assault_days",
 			"siege_starve_bonus_permille", "raid_appear_day", "raid_rumour_lead_days",
 			"raid_plunder_permille"]:
 		assert_true(repo.balance.has(k), "balance key " + k)
+		assert_gt(repo.bal(k), 0.0, "balance key %s reads positive through bal()" % k)
 
 func test_raid_hosts_name_real_regiments() -> void:
 	var raiders := repo.resolve_realm("raider_realm")
