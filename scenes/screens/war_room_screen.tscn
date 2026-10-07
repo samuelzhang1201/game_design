@@ -1,22 +1,23 @@
 [gd_scene format=3 uid="uid://db584ltgxy5k2"]
 
-[ext_resource type="Script" uid="uid://ohlmo0ocqnm" path="res://scripts/ui/war_room_screen.gd" id="1_screen"]
-[ext_resource type="StyleBox" uid="uid://dmgtj5dq4d8hu" path="res://assets/2D/ui/panels/styles/ledger_frame.tres" id="2_3s70a"]
-[ext_resource type="PackedScene" path="res://scenes/war_room/war_room.tscn" id="2_view"]
-[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="3_menu"]
-[ext_resource type="PackedScene" uid="uid://d0fhma2vbrkdx" path="res://scenes/war_room/war_folio.tscn" id="4_folio"]
-[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="4_i1y7d"]
-[ext_resource type="StyleBox" uid="uid://c4rntxxfax7n8" path="res://assets/2D/ui/war_table/styles/war_slip.tres" id="5_2odns"]
-[ext_resource type="Script" uid="uid://4r7bjqgxwvn5" path="res://scripts/ui/war_margin_key.gd" id="5_key"]
-[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="6_0wshm"]
-[ext_resource type="Script" uid="uid://buo18m7j8xhkt" path="res://scripts/ui/war_leave_prompt.gd" id="6_leave"]
-[ext_resource type="PackedScene" uid="uid://6mgact71qw5u" path="res://scenes/war_room/war_deploy_scroll.tscn" id="7_deploy"]
-[ext_resource type="StyleBox" uid="uid://cb2lbhrj618ti" path="res://assets/2D/ui/panels/styles/leather_window_24.tres" id="12_i1y7d"]
+[ext_resource type="Script" uid="uid://ohlmo0ocqnm" path="res://scripts/ui/war_room_screen.gd" id="1_kq51n"]
+[ext_resource type="StyleBox" uid="uid://dmgtj5dq4d8hu" path="res://assets/2D/ui/panels/styles/ledger_frame.tres" id="2_06wvo"]
+[ext_resource type="PackedScene" path="res://scenes/war_room/war_room.tscn" id="3_8qfjp"]
+[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="4_mjjvv"]
+[ext_resource type="StyleBox" uid="uid://c4rntxxfax7n8" path="res://assets/2D/ui/war_table/styles/war_slip.tres" id="5_c0xm8"]
+[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="6_qjwf1"]
+[ext_resource type="Script" uid="uid://4r7bjqgxwvn5" path="res://scripts/ui/war_margin_key.gd" id="8_i8jnq"]
+[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="9_e6x4j"]
+[ext_resource type="PackedScene" path="res://scenes/war_room/war_hover_slip.tscn" id="10_softr"]
+[ext_resource type="PackedScene" uid="uid://d0fhma2vbrkdx" path="res://scenes/war_room/war_folio.tscn" id="11_p22xw"]
+[ext_resource type="PackedScene" uid="uid://6mgact71qw5u" path="res://scenes/war_room/war_deploy_scroll.tscn" id="12_7osk2"]
+[ext_resource type="Script" uid="uid://buo18m7j8xhkt" path="res://scripts/ui/war_leave_prompt.gd" id="13_2sciq"]
+[ext_resource type="StyleBox" uid="uid://cb2lbhrj618ti" path="res://assets/2D/ui/panels/styles/leather_window_24.tres" id="14_s2b7v"]
 
 [node name="WarRoomScreen" type="Control" unique_id=166001307]
 layout_mode = 3
 anchors_preset = 0
-script = ExtResource("1_screen")
+script = ExtResource("1_kq51n")
 
 [node name="Frame" type="PanelContainer" parent="." unique_id=1788661062]
 unique_name_in_owner = true
@@ -26,9 +27,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = ExtResource("2_3s70a")
+theme_override_styles/panel = ExtResource("2_06wvo")
 
-[node name="View" parent="Frame" unique_id=972336576 instance=ExtResource("2_view")]
+[node name="View" parent="Frame" unique_id=972336576 instance=ExtResource("3_8qfjp")]
 unique_name_in_owner = true
 layout_mode = 2
 
@@ -73,8 +74,8 @@ offset_top = 46.0
 offset_right = 252.0
 offset_bottom = 46.0
 mouse_filter = 2
-theme = ExtResource("4_i1y7d")
-theme_override_styles/panel = ExtResource("5_2odns")
+theme = ExtResource("4_mjjvv")
+theme_override_styles/panel = ExtResource("5_c0xm8")
 
 [node name="MarginScroll" type="ScrollContainer" parent="Slip" unique_id=1939202220]
 unique_name_in_owner = true
@@ -95,8 +96,8 @@ visible = false
 clip_contents = true
 layout_mode = 0
 offset_right = 240.0
-theme = ExtResource("4_i1y7d")
-theme_override_styles/panel = ExtResource("6_0wshm")
+theme = ExtResource("4_mjjvv")
+theme_override_styles/panel = ExtResource("6_qjwf1")
 metadata/paper_ground = Color(0.8235294, 0.7411765, 0.5647059, 1)
 
 [node name="KeySlip" type="PanelContainer" parent="." unique_id=503831731]
@@ -111,24 +112,28 @@ offset_right = -16.0
 offset_bottom = 46.0
 grow_horizontal = 0
 mouse_filter = 2
-theme = ExtResource("4_i1y7d")
-theme_override_styles/panel = ExtResource("5_2odns")
+theme = ExtResource("4_mjjvv")
+theme_override_styles/panel = ExtResource("5_c0xm8")
 
 [node name="Key" type="Control" parent="KeySlip" unique_id=673870640]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-script = ExtResource("5_key")
+script = ExtResource("8_i8jnq")
 
 [node name="Orders" type="PopupMenu" parent="." unique_id=528411805]
 unique_name_in_owner = true
-script = ExtResource("3_menu")
+script = ExtResource("9_e6x4j")
 
-[node name="Folio" parent="." unique_id=489917749 instance=ExtResource("4_folio")]
+[node name="HoverSlip" parent="." unique_id=813852285 instance=ExtResource("10_softr")]
+unique_name_in_owner = true
+layout_mode = 0
+
+[node name="Folio" parent="." unique_id=489917749 instance=ExtResource("11_p22xw")]
 unique_name_in_owner = true
 layout_mode = 1
 
-[node name="Deploy" parent="." unique_id=1733647706 instance=ExtResource("7_deploy")]
+[node name="Deploy" parent="." unique_id=1733647706 instance=ExtResource("12_7osk2")]
 unique_name_in_owner = true
 layout_mode = 1
 
@@ -141,7 +146,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("6_leave")
+script = ExtResource("13_2sciq")
 
 [node name="LeaveDim" type="ColorRect" parent="LeavePrompt" unique_id=2019624919]
 unique_name_in_owner = true
@@ -167,7 +172,7 @@ offset_right = 240.0
 offset_bottom = 80.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = ExtResource("12_i1y7d")
+theme_override_styles/panel = ExtResource("14_s2b7v")
 
 [node name="Col" type="VBoxContainer" parent="LeavePrompt/LeaveWindow" unique_id=2001794386]
 layout_mode = 2

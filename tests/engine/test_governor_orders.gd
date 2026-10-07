@@ -21,6 +21,21 @@ func after_each() -> void:
 func _steward() -> Character:
 	return s.characters[String(s.council["steward"])]
 
+## A month of the supply lines banked as the marshal's month banks it: the
+## first land regiment ran a line (spec 2026-10-07-army-supply-lines) that
+## skimmed some units, and SupplyLines.settle_month banks the gold to its
+## governor.
+func _bank_a_supply_month() -> void:
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		if String(ArmySystem.regiment(data, String(c)).get("is_naval", "0")) != "1":
+			s.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(data, s)[0], 1000, 1)
+			s.supply_lines[c]["state"] = SupplyLines.FLOWING
+			s.supply_lines[c]["m_skim"] = 100000
+			break
+	SupplyLines.settle_month(data, s)
+
 func test_giving_a_flow_to_another_councillor() -> void:
 	var other := String(s.council["chancellor"])
 	var was := _steward()
@@ -99,7 +114,7 @@ func test_an_audit_catches_a_skimmer_the_flow_was_taken_from() -> void:
 	s.metrics["strategic"] = 1000000.0
 	for c in s.regiments.keys():
 		s.regiments[c]["supplies"] = 0
-	SupplySystem.settle_month(data, s)
+	_bank_a_supply_month()
 	var skimmed := Governance.skimmed_on(s, ma.id, "supply_line")
 	assert_gt(skimmed, 0)
 	sys.execute(ActionRequest.make("GOVERNOR_SET", {"flow": "supply_line", "character": ch.id}), s)
@@ -134,7 +149,7 @@ func test_a_man_holding_two_flows_is_caught_per_flow() -> void:
 	for c in s.regiments.keys():
 		s.regiments[c]["supplies"] = 0
 	WorkshopSystem.settle_month(data, s)
-	SupplySystem.settle_month(data, s)
+	_bank_a_supply_month()
 	var goods := Governance.skimmed_on(s, st.id, "workshop")
 	var gold := Governance.skimmed_on(s, st.id, "supply_line")
 	assert_gt(goods, 0)

@@ -120,3 +120,72 @@ func test_battle_odds_placeholder() -> void:
 	assert_between(odds, 0.0, 1.0)
 	s.regiments[codes[0]]["training"] = 100
 	assert_gt(ArmySystem.battle_odds(repo, s, codes[0], codes[1]), odds, "a better drilled attacker has better odds")
+
+## Power is read where the regiment stands NOW (owner 2026-10-06: 军事单位的
+## 地理位置数据跟随单位移动变动): a column marched behind walls fights with
+## them, exactly as a regiment the pack quartered there would.
+func test_power_reads_the_ground_the_regiment_stands_on_now() -> void:
+	var realm := repo.resolve_realm("player_realm")
+	var code: String = _land_codes()[0]
+	var reg := ArmySystem.regiment(repo, code)
+	var home_works := ArmySystem.works_of(repo, reg)
+	# a town of the realm with other works than the regiment's quarters
+	var target := ""
+	var burgs := repo.burgs.keys()
+	burgs.sort()
+	for b: String in burgs:
+		var row: Dictionary = repo.burgs[b]
+		if String(row["kingdom_code"]) != realm:
+			continue
+		var feats := String(row.get("features", "")).split("|")
+		var works := "citadel" if "citadel" in feats else ("walls" if "walls" in feats else "town")
+		if works != home_works and works != "town":
+			target = b
+			break
+	assert_ne(target, "", "the realm has a walled town")
+	var at := Vector2(float(repo.burgs[target]["x"]), float(repo.burgs[target]["y"]))
+	var s := SuiteData.campaign(repo, 7)
+	var home := ArmySystem.power(repo, s, code, "defend")
+	var m := ArmySystem.pack_to_metres(repo, at)
+	var entry: Dictionary = s.regiments[code]
+	entry["x_m"] = m.x
+	entry["y_m"] = m.y
+	entry["dest_x_m"] = m.x
+	entry["dest_y_m"] = m.y
+	assert_eq(ArmySystem.held_town_of(repo, reg, s), target)
+	var moved := ArmySystem.power(repo, s, code, "defend")
+	# The same regiment quartered there by the pack, with the same state.
+	var other := SuiteData.repo()
+	var row2: Dictionary = other.world_table("military", "regiments")[code]
+	row2["x"] = str(at.x)
+	row2["y"] = str(at.y)
+	var s2 := SuiteData.campaign(repo, 7)
+	(s2.regiments[code] as Dictionary).erase("x_m")
+	assert_eq(moved, ArmySystem.power(other, s2, code, "defend"))
+	assert_ne(moved, home, "other works change its power")
+
+func test_power_is_power_on_its_own_ground() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	for code: String in _land_codes():
+		var reg := ArmySystem.regiment(repo, code)
+		for stance in ["defend", "attack"]:
+			assert_eq(ArmySystem.power(repo, s, code, stance),
+				ArmySystem.power_on(repo, s, code, stance, ArmySystem.terrain_of(repo, reg, s), ArmySystem.works_of(repo, reg, s)),
+				"%s %s" % [code, stance])
+
+func test_archers_alone_on_hills_by_the_terrain_table() -> void:
+	var r := SuiteData.repo()
+	var s := SuiteData.campaign(r, 7)
+	var code: String = _land_codes()[0]
+	var row: Dictionary = r.world_table("military", "regiments")[code]
+	for arm in ["infantry", "cavalry", "artillery", "fleet"]:
+		row[arm] = "0"
+	row["archers"] = "800"
+	var plains_d := ArmySystem.power_on(r, s, code, "defend", "plains", "")
+	var plains_a := ArmySystem.power_on(r, s, code, "attack", "plains", "")
+	# army_terrain.csv: hills,archers,1150,1050
+	assert_almost_eq(float(ArmySystem.power_on(r, s, code, "defend", "hills", "")) / plains_d, 1.15, 0.01)
+	assert_almost_eq(float(ArmySystem.power_on(r, s, code, "attack", "hills", "")) / plains_a, 1.05, 0.01)
+	# army_town_defence.csv: walls,archers defend 1250, attack untouched
+	assert_almost_eq(float(ArmySystem.power_on(r, s, code, "defend", "plains", "walls")) / plains_d, 1.25, 0.01)
+	assert_eq(ArmySystem.power_on(r, s, code, "attack", "plains", "walls"), plains_a)

@@ -8,7 +8,7 @@ var repo: DataRepository
 
 
 func before_all() -> void:
-	repo = SuiteData.repo()
+	repo = SuiteData.flat_ground(SuiteData.repo())
 	# Force clear skies so every hand-sum march still holds (task 7, owner 2026-09-27)
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
@@ -52,11 +52,12 @@ func test_a_day_of_marching_covers_the_regiments_own_pace() -> void:
 	var home: Vector2 = ArmySystem.position_of(repo, s, r)
 	var step := ArmySystem.day_step_m(repo, s, code)
 	assert_gt(step, 0, "a banner with arms marches")
-	# pace_tenths is TENTHS of a km a day, so the step is that times 100 m.
+	# pace_tenths is TENTHS of a km a day, so the step is that times 100 m, under the carried load.
 	assert_eq(step, ArmySystem.pace_tenths(repo, ArmySystem.base_pace_km(repo, r),
 		ArmySystem.supply_score(repo, int(s.regiments[code]["supplies"]),
 			ArmySystem.supply_use(repo, r)),
-		int(s.regiments[code]["morale"]), int(s.regiments[code]["training"])) * 100)
+		int(s.regiments[code]["morale"]), int(s.regiments[code]["training"])) * 100
+		* ArmySystem.load_permille(repo, ArmySystem.carry_of(repo, s.regiments[code])) / 1000)
 
 	# Send it due east, far enough that it cannot arrive in one day.
 	var far := home + Vector2(float(step) / float(ArmySystem.metres_per_pack_px(repo)) * 3.0, 0.0)
@@ -120,11 +121,11 @@ func test_the_clock_marches_it_a_day_at_a_time() -> void:
 	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_GARRISON)
 
 
-func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
-	# owner 2026-09-24 (行进速度必须和给定的速度相符): the thirtieth day's end
-	# runs the TICK rather than advance_day, and until then the regiments
-	# stood still on it — 29 days' march in every 30. Over a month boundary
-	# a column must cover exactly one day_step_m per day, the tick included.
+## Owner 2026-10-06 (军队是匀速移动的，如果他应该在第N天到达目的地，则应该是第N天
+## 结束的时候到达，而不是第N天刚开始到达): a march of N days is covered at ONE
+## pace over all N — not N-1 full days and a stub — so it ends exactly as the
+## Nth day ends, its days out falling by one each day.
+func test_a_march_is_even_and_ends_as_its_last_day_ends() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var engine := TickEngine.new(repo)
 	var r := _marcher()
@@ -132,25 +133,73 @@ func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 	var home: Vector2 = ArmySystem.position_of(repo, s, r)
 	var step := float(ArmySystem.day_step_m(repo, s, code))
 	var k := float(ArmySystem.metres_per_pack_px(repo))
+	var dest := home + Vector2(step * 2.3 / k, 0.0)
+	ArmySystem.set_march(repo, s, code, dest)
+	var n := ArmySystem.days_out(repo, s, code)
+	assert_eq(n, 3, "2.3 days' road is three days out")
+	var even := step * 2.3 / 3.0
+	var was := home
+	for day in n:
+		engine.advance_day(s)
+		var now: Vector2 = ArmySystem.position_of(repo, s, r)
+		assert_almost_eq(now.distance_to(was) * k, even, 2.0, "day %d covers a third of the road" % (day + 1))
+		was = now
+		if day < n - 1:
+			assert_eq(engine.day_arrivals, [], "still on the road at the end of day %d" % (day + 1))
+			assert_eq(ArmySystem.days_out(repo, s, code), n - day - 1, "one day fewer each day")
+	assert_eq(engine.day_arrivals, [code], "it arrives as day %d ends" % n)
+	assert_almost_eq(ArmySystem.position_of(repo, s, r).x, dest.x, 0.0011)
+
+
+## Owner 2026-10-06 (加一条军队到达目的地的新闻): an arrival is told in the news,
+## naming the regiment and where it now stands; a foreign column's is not
+## the crown's to know.
+func test_an_arrival_has_its_headline() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var r := _marcher()
+	var code := String(r["regiment_code"])
+	var here: Vector2 = ArmySystem.position_of(repo, s, r)
+	assert_eq(ArmySystem.arrival_headline(repo, s, code),
+		"%s reaches %s." % [String(r["label"]), Intel.place_label(repo, s, here)])
+	var foreign := ""
+	for other: Dictionary in repo.world_table("military", "regiments").values():
+		if String(other["kingdom_code"]) != repo.resolve_realm("player_realm"):
+			foreign = String(other["regiment_code"])
+			break
+	assert_ne(foreign, "", "the pack has a foreign regiment")
+	assert_eq(ArmySystem.arrival_headline(repo, s, foreign), "", "a foreign arrival is not news")
+
+
+func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
+	# owner 2026-09-24 (行进速度必须和给定的速度相符): the thirtieth day's end
+	# runs the TICK rather than advance_day, and until then the regiments
+	# stood still on it — 29 days' march in every 30. Over a month boundary
+	# a column must cover one day's march per day, the tick included; the
+	# thirtieth day ends before the month settles (owner 2026-10-06), so the
+	# new month's first day is not marched until it ends.
+	var s := SuiteData.campaign(repo, 7)
+	s.tick = 1   # a month under way: tick 0 is the reign's opening, which ends no day
+	var engine := TickEngine.new(repo)
+	var r := _marcher()
+	var code := String(r["regiment_code"])
+	var home: Vector2 = ArmySystem.position_of(repo, s, r)
+	var step := float(ArmySystem.day_step_m(repo, s, code))
+	var k := float(ArmySystem.metres_per_pack_px(repo))
 	ArmySystem.set_march(repo, s, code, home + Vector2(step * 1000.0 / k, 0.0))
-	# The tick's ArmySystem.settle_month runs before this second day's march
-	# (TickEngine.advance), and morale now follows the stores there (spec
-	# 2026-09-30-ledger-supply-design §4) — so the second day is not paced
-	# like the first. Predict it from the same functions settle_month uses.
-	var use := ArmySystem.supply_use(repo, r)
-	var supplies_before := int(s.regiments[code]["supplies"])
-	var mark := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, supplies_before, use), false)
-	var morale2 := ArmySystem.drift_morale(int(s.regiments[code]["morale"]), mark,
-		int(repo.bal("army_morale_drift_per_month")))
-	var step2 := float(ArmySystem.pace_tenths(repo, ArmySystem.base_pace_km(repo, r),
-		ArmySystem.supply_score(repo, maxi(0, supplies_before - use), use), morale2,
-		int(s.regiments[code]["training"]))) * 100.0
 	s.day = Calendar.DAYS_PER_TICK - 1
-	engine.advance_day(s)   # day 30
-	engine.advance(s)       # the tick: day 1 of the next month
+	engine.advance_day(s)   # day 29 ends
+	assert_eq(s.day, Calendar.DAYS_PER_TICK, "day 30 runs")
+	var day1 := (ArmySystem.position_of(repo, s, r).x - home.x) * k
+	assert_almost_eq(day1, step, 1.0, "day 29 is one day's march")
+	# the second day is paced after day 29's bite is eaten; the march is even
+	# (owner 2026-10-06): what is left over the whole days it takes
+	var step2 := float(ArmySystem.day_step_m(repo, s, code))
+	var left2 := step * 1000.0 - day1
+	var even2 := ceilf(left2 / ceilf(left2 / step2))
+	engine.advance(s)       # day 30 ends, inside the tick
+	assert_eq([s.tick, s.day], [2, 1], "the new month's first day runs")
 	var gone := (ArmySystem.position_of(repo, s, r).x - home.x) * k
-	assert_almost_eq(gone, step + step2, 1.0,
-		"two days, the second at the tick's drifted morale (spec 2026-09-30-ledger-supply-design §4)")
+	assert_almost_eq(gone, day1 + even2, 1.0, "day 30 is a day on the road too")
 
 
 func test_the_same_orders_from_the_same_save_give_the_same_march() -> void:
@@ -270,7 +319,7 @@ func test_the_weather_where_it_stands_scales_its_day() -> void:
 
 ## Final review I2 (spec §1): the card shows the base pace and a separate
 ## weather line, and its "days out" and the aim ruler's figure are one
-## function, ArmySystem.march_days, today's weather where it stands in.
+## function (ArmySystem.march_days_between: in steady rain, today's pace).
 func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := String(_marcher()["regiment_code"])
@@ -302,7 +351,7 @@ func test_in_rain_the_card_the_days_out_and_the_ruler_agree() -> void:
 	assert_eq(String(march.get("text", "")), "%d day%s out" % [days, "" if days == 1 else "s"])
 	var tip := String(march.get("tooltip", ""))
 	assert_string_contains(tip, "clear weather")
-	assert_string_contains(tip, "in today's weather")
+	assert_string_contains(tip, "over the ground and the weather on the way")
 	assert_true(tip.ends_with("clear weather"), "a whole sentence: " + tip)
 	assert_eq(String(weather.get("text", "")), "%s ×%.2f" % [Weather.label_of(repo, "rain"), float(rain) / 1000.0],
 		"the weather is its own line")

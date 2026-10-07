@@ -157,14 +157,22 @@ static func days_for(repo: DataRepository, kind: String, need: int) -> int:
 ## nothing: the fee is ActionSystem's ledger line.
 static func dispatch(repo: DataRepository, state: GameState, kind: String, code: String,
 		order: Dictionary) -> Dictionary:
+	return dispatch_to(repo, state, kind, code, order,
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)))
+
+
+## A courier for regiment `code` whose road ends at `to_px` — the regiment
+## itself (dispatch), or its supply TOWN (spec 2026-10-07-army-supply-lines
+## §4, `order.to_town`): such a courier is never re-aimed at the column.
+static func dispatch_to(repo: DataRepository, state: GameState, kind: String, code: String,
+		order: Dictionary, to_px: Vector2) -> Dictionary:
 	var from := origin(repo, state)
-	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
 	var home := ArmySystem.pack_to_metres(repo, from)
-	var aim := ArmySystem.pack_to_metres(repo, at)
+	var aim := ArmySystem.pack_to_metres(repo, to_px)
 	state.next_courier_id += 1
 	var c := {
 		"id": state.next_courier_id, "kind": kind, "x_m": home.x, "y_m": home.y,
-		"path": path_between(repo, from, at), "target": code, "order": order.duplicate(true),
+		"path": path_between(repo, from, to_px), "target": code, "order": order.duplicate(true),
 		"issued": state.absolute_day(), "aim_x_m": aim.x, "aim_y_m": aim.y,
 		"days": 0, "day_m": 0, "slow_spell": -1,
 	}
@@ -190,12 +198,10 @@ static func dispatch_spy(repo: DataRepository, state: GameState, to_px: Vector2)
 	return c
 
 
-## The absolute day a courier rides next: advance_day moves the calendar
-## before he rides (and a tick, day 30 -> day 1, is the next day as well), so
-## the day now running is ridden under the NEXT day's weather. The ETAs read it
-## so they agree with the ride.
+## The absolute day a courier rides next: the day now running, ridden as it
+## ends (TickEngine). The ETAs read it so they agree with the ride.
 static func _ride_day_of(state: GameState) -> int:
-	return state.absolute_day() + 1
+	return state.absolute_day()
 
 
 ## Days a courier still has to ride — the day now running the first, his last
@@ -227,11 +233,21 @@ static func eta_days(repo: DataRepository, state: GameState, kind: String, code:
 		path, _ride_day_of(state)))
 
 
+## Days for a courier sent now to reach `to_px` (a supply town: the supply
+## orders ride to the town, not the column) — eta_days to a place.
+static func eta_days_to(repo: DataRepository, state: GameState, kind: String, to_px: Vector2) -> int:
+	var from := origin(repo, state)
+	var path := path_between(repo, from, to_px)
+	return days_for(repo, kind, need_along(repo, state, ArmySystem.pack_to_metres(repo, from),
+		path, _ride_day_of(state)))
+
+
 ## Days until `code` stands at `dest_px` if a march there were ordered now —
 ## ONE figure, the courier's ride and the march after it (owner 2026-10-02:
 ## 显示一个总的到达日): his days (none for a regiment that takes its orders
-## directly), then the march from where it stands at today's pace, each counted
-## in day-ends. 0 for a regiment that cannot march.
+## directly), then the march from where it stands, walked over the ground and
+## the weather it will meet (ArmySystem.march_days_between), each counted in
+## day-ends. 0 for a regiment that cannot march.
 static func arrival_days(repo: DataRepository, state: GameState, code: String, dest_px: Vector2,
 		from_px := Vector2(-1, -1), ride := -1) -> int:
 	var reg := ArmySystem.regiment(repo, code)
@@ -240,8 +256,9 @@ static func arrival_days(repo: DataRepository, state: GameState, code: String, d
 	if ride < 0:
 		ride = eta_days(repo, state, ORDINARY, code) if carries_orders(reg) else 0
 	var from := from_px if from_px.x >= 0.0 else ArmySystem.position_of(repo, state, reg)
-	return ride + ArmySystem.march_days(repo, state, code,
-		from.distance_to(dest_px) * float(ArmySystem.metres_per_pack_px(repo)))
+	# the march walked over its own ground and weather, from the day it starts
+	return ride + ArmySystem.march_days_between(repo, state, code, from, dest_px,
+		state.absolute_day() + ride)
 
 
 ## Days until `code` arrives where it was last ordered: a march order still
@@ -286,7 +303,7 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 	if int(c["days"]) > int(repo.bal("courier_max_days")):
 		events.append(_spy_placed(repo, state, c, _event("fuse", c)))
 		return false
-	if not _is_spy(c):
+	if not _fixed_point(c):
 		_reaim(repo, state, c, reg)
 	@warning_ignore("return_value_discarded")  # the budget left matters only to the preview
 	_advance(repo, state, c, today, events)
@@ -321,6 +338,12 @@ static func _is_spy(c: Dictionary) -> bool:
 	return String(c.get("kind", "")) == SPY
 
 
+## A courier bound for a fixed point, never re-aimed at a column: a spy, or
+## a supply order riding to its town.
+static func _fixed_point(c: Dictionary) -> bool:
+	return _is_spy(c) or String((c.get("order", {}) as Dictionary).get("to_town", "")) != ""
+
+
 ## Where a courier's NEXT day on the road takes him: the engine's own ride run
 ## on a copy, so the map draws him riding it as the day passes instead of a
 ## day behind (owner 2026-09-28: he stood still a whole day after play was
@@ -350,7 +373,7 @@ static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, be
 	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}
 	var copy: Dictionary = c.duplicate(true)
-	if not _is_spy(c):
+	if not _fixed_point(c):
 		_reaim(repo, state, copy, reg)
 	before.append_array((copy["path"] as Array).duplicate(true))
 	var day := _ride_day_of(state)
@@ -469,6 +492,8 @@ static func _spy_placed(repo: DataRepository, state: GameState, c: Dictionary, e
 ## higher courier id), in which case this one is set aside.
 static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
 	var code := String(c["target"])
+	if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
+		return SupplyLines.deliver(repo, state, c)
 	var entry: Dictionary = state.regiments.get(code, {})
 	if int(entry.get("order_id", 0)) > int(c["id"]):
 		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, true))
@@ -496,18 +521,28 @@ static func _at_capital(repo: DataRepository, c: Dictionary) -> bool:
 
 
 static func _event(type: String, c: Dictionary, weather: String = "") -> Dictionary:
-	return {"type": type, "courier": int(c["id"]), "regiment": String(c["target"]), "weather": weather}
+	return {"type": type, "courier": int(c["id"]), "regiment": String(c["target"]), "weather": weather,
+		"town": String((c.get("order", {}) as Dictionary).get("to_town", ""))}
 
 
-## The newest courier riding for a regiment, {} when none.
+## The newest MARCH / HALT courier riding for a regiment, {} when none. The
+## supply orders (SUPPLY_*) are not the march: they never move a column's
+## arrival day, so this reader (days_to_arrival, the regiment card, the war
+## folio) passes them by.
 static func pending_for(state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	if state == null:
 		return best
 	for c: Dictionary in state.couriers:
+		if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
+			continue
 		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c
 	return best
+
+
+static func _town_label(repo: DataRepository, town: String) -> String:
+	return String((repo.burgs.get(town, {}) as Dictionary).get("label", town))
 
 
 ## The news bar's line for a ride_day event.
@@ -519,12 +554,19 @@ static func headline(repo: DataRepository, e: Dictionary) -> String:
 				if int(e.get("capital", 0)) == 1:
 					return "A spy leaves the capital for %s." % String(e["place"])
 				return "A spy rides for %s." % String(e["place"])
+			if String(e.get("town", "")) != "":
+				var to := _town_label(repo, String(e["town"]))
+				if int(e.get("capital", 0)) == 1:
+					return "A courier leaves the capital for %s with supply orders for %s." % [to, label]
+				return "A courier rides for %s with supply orders for %s." % [to, label]
 			if int(e.get("capital", 0)) == 1:
 				return "A courier leaves the capital for %s." % label
 			return "A courier rides for %s." % label
 		"spy_report":
 			return "The spy at %s reports." % String(e.get("place", "the place"))
 		"delivered":
+			if String(e.get("town", "")) != "":
+				return "Supply orders for %s delivered at %s." % [label, _town_label(repo, String(e["town"]))]
 			return "Orders delivered to %s." % label
 		"stale":
 			return "Older orders to %s came after newer ones and were set aside." % label

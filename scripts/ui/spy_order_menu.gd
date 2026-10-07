@@ -27,7 +27,7 @@ func follow(map: Node, army: ArmyOrderMenu = null) -> void:
 func _open_at(pack_px: Vector2, at: Vector2) -> void:
 	# A march being aimed: a right click on the ground gives the aim up, as
 	# Escape does, rather than offering a spy (final review M14).
-	if _army != null and _army.aiming() != "":
+	if _army != null and (_army.aiming() != "" or _army.supply_picking() != ""):
 		_army.withdraw_aim()
 		return
 	_target = pack_px

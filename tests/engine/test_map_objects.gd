@@ -223,7 +223,9 @@ func test_a_regiment_card_shows_its_state() -> void:
 	assert_eq(text["army_morale"], str(int(s.regiments[code]["morale"])))
 	assert_eq(text["army_wounded"], "+%d / mo" % ArmySystem.wound_recovery(Game.data, 120))
 	var use := ArmySystem.supply_use(Game.data, r)
-	assert_eq(text["army_supply"], "%d (−%d / mo)" % [int(s.regiments[code]["supplies"]), use])
+	var held := ArmySystem.days_in_hand(int(s.regiments[code]["supplies"]), use)
+	assert_eq(text["army_supply"], "%d / %d days" % [mini(held, 999),
+		ArmySystem.carry_of(Game.data, s.regiments[code])])
 	assert_eq(text["army_training"], ArmySystem.training_grade(Game.data, int(s.regiments[code]["training"])))
 	assert_true(text["army_strength"] in ["Strong", "Average", "Weak"])
 	assert_eq(text["army_terrain"], ArmySystem.terrain_label(Game.data, r))
@@ -398,3 +400,19 @@ func test_the_province_card_counts_its_manors_by_house() -> void:
 		fields[String(f[0])] = String(f[1])
 	assert_true(fields.has("Manors"))
 	assert_true(String(fields["Manors"]).begins_with(str(MapManors.manors_of_province(real, province).size())))
+
+
+func test_the_province_card_lists_only_active_known_hazards() -> void:
+	var state := _campaign()
+	var repo := real
+	# a province of the crown's whose card is the full one (the manors test's own pick)
+	var prov: String = MapOwnership.provinces_of(repo, state, repo.resolve_realm("player_realm"))[0]
+	var cell := int(MapManors.manors_of_province(repo, prov)[0])
+	state.tick = 5   # an ended hazard's end must not read as -1, "never ends"
+	Hazards.add(state, "on", "Flood", "Live Flood", [cell], state.tick, state.tick + 2, "test")
+	Hazards.add(state, "off", "Flood", "Old Flood", [cell], state.tick - 3, state.tick - 1, "test")
+	var card := MapObjects.province_card(repo, state, prov)
+	var lines: Array = (card["fields"] as Array).filter(func(f: Array) -> bool: return String(f[0]) == "Hazard").map(
+		func(f: Array) -> String: return String(f[1]))
+	assert_true(lines.any(func(t: String) -> bool: return t.begins_with("Live Flood") and t.contains("2 months left")))
+	assert_false(lines.any(func(t: String) -> bool: return t.contains("Old Flood")))

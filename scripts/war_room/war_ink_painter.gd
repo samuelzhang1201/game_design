@@ -9,10 +9,12 @@ var pal: Dictionary = {}
 var px: Dictionary = {}   # the war_ink_* widths and ratios, by short key
 var font: Font
 var intel := false   # the intelligence layer (WarIntelInk), not the sheet's ink
+var fine := false    # the fine print (WarFinePrint), not the sheet's ink
 
 
-func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font, as_intel := false) -> void:
+func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font, as_intel := false, as_fine := false) -> void:
 	intel = as_intel
+	fine = as_fine
 	ink = p_ink
 	pal = p_pal
 	px = p_px
@@ -25,6 +27,9 @@ func _draw() -> void:
 		return
 	if intel:
 		_draw_intel()
+		return
+	if fine:
+		_draw_fine()
 		return
 	var c_ink: Color = pal["ink"]
 	var c_faint: Color = pal["ink_faint"]
@@ -74,6 +79,13 @@ func _draw() -> void:
 	for poly: PackedVector2Array in ink["trails"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(poly, float(px["dash"]), float(px["gap"])):
 			draw_polyline(d, c_ink, float(px["trail"]), true)
+	for tr: Dictionary in ink.get("trade", []):   # a trade road weighs more, by tier (spec P3 §1.3); a trail stays dashed
+		if String(tr.get("kind", "road")) == "trail":   # a pale band under the trail's own dashes
+			var band := c_ink
+			band.a *= 0.35
+			draw_polyline(tr["poly"], band, float(px["trail"]) + float(px.get("trade", 0.0)) * float(int(tr["tier"])) * 1.5, true)
+		else:
+			draw_polyline(tr["poly"], c_ink, float(px["road"]) + float(px.get("trade", 0.0)) * float(int(tr["tier"])), true)
 	for poly: PackedVector2Array in ink["roads"]:
 		draw_polyline(poly, c_ink, float(px["road"]), true)
 	for br: Dictionary in ink.get("bridges", []):   # two parapets across the river
@@ -112,6 +124,15 @@ func _draw() -> void:
 		draw_string(font, (t["at"] as Vector2) + Vector2(r + float(px["town"]) * float(px["label_gap_ratio"]),
 			float(px["label"]) * float(px["label_drop_ratio"])), String(t["label"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["label"]), c_ink)
+		# a works' glyph above, a market's scales below, each on a parchment
+		# knock-out so a road leaving the town does not run through it
+		var ground: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
+		if String(t.get("works", "")) != "":
+			draw_circle(t["works_at"], float(px.get("works", px["town"])) * 0.6, ground)
+			WarMarkGlyph.draw(self, String(t["works"]), t["works_at"], float(px.get("works", px["town"])), c_ink)
+		if bool(t.get("market", false)):
+			draw_circle(t["market_at"], float(px.get("market", px["town"])) * 0.6, ground)
+			WarMarkGlyph.draw(self, "scales", t["market_at"], float(px.get("market", px["town"])), c_ink)
 	for p: Dictionary in ink["peaks"]:
 		if int(p.get("lod", 0)) != 0:  # thinned to the most prominent; the strokes list stays whole
 			continue
@@ -122,6 +143,19 @@ func _draw() -> void:
 		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -s), at + Vector2(hw, drop), at + Vector2(-hw, drop)]), c_ink)
 		draw_string(font, at + Vector2(hw + s * float(px["label_gap_ratio"]), drop), "%d m" % int(p["metres"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(float(px["label"]) * float(px["peak_label_ratio"])), c_ink)
+	for p: Dictionary in ink.get("places", []):   # the map's marks; a brigand's reach a dotted rubric ring
+		var hr := float(p["hazard_r"])
+		var hazard_c: Color = pal.get("hazard_ink", pal["rubric"])
+		var glyph_c: Color = hazard_c if hr > 0.0 else c_ink
+		if hr > 0.0:
+			var ring_c: Color = hazard_c
+			ring_c.a = float(px["mark_reach_alpha"])
+			var ring := PackedVector2Array()
+			for i in 65:
+				ring.append((p.get("ring_at", p["at"]) as Vector2) + Vector2.from_angle(TAU * float(i) / 64.0) * hr)
+			for d: PackedVector2Array in WarSheetInk.dashed(ring, float(px["dash"]) * 0.3, float(px["gap"])):
+				draw_polyline(d, ring_c, float(px.get("mark_reach", px["seam"])), true)
+		WarMarkGlyph.draw(self, String(p["glyph"]), p["at"], float(px["mark"]), glyph_c)
 	_draw_hollows(c_ink)
 	_draw_graticule(c_ink)
 
@@ -159,13 +193,33 @@ func _draw_graticule(_c_ink: Color) -> void:
 ## in rubric), weather marks, spy reports as dashed rings with their words.
 func _draw_intel() -> void:
 	var c: Color = pal["intel_ink"]
+	var hz_c: Color = pal["intel_ink"]
+	hz_c.a *= float(px.get("hazard_alpha", 0.5))
+	for h: Dictionary in ink.get("hazards", []):
+		var w := float(px.get("hazard", 3.0))
+		for l: PackedVector2Array in h["lines"]:
+			if String(h["ink"]) == "rock":
+				for d: PackedVector2Array in WarSheetInk.dashed(l, w * 4.0, w * 3.0):
+					draw_polyline(d, hz_c, w, true)
+			else:
+				draw_polyline(l, hz_c, w, true)
+		for p: Vector2 in h["dots"]:
+			draw_circle(p, w * 1.6, hz_c)
+		for e: PackedVector2Array in h["edges"]:
+			for d: PackedVector2Array in WarSheetInk.dashed(e, float(px["supply_dash"]), float(px["supply_gap"])):
+				draw_polyline(d, pal["intel_ink"], w, true)
+		var size := int(px.get("hazard_label", px["intel_label"]))
+		var at := (h["at"] as Vector2) - Vector2(font.get_string_size(String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, 0)
+		draw_string_outline(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, maxi(int(w * 3.0), 1),
+			pal.get("parchment", pal.get("paper", Color.WHITE)))
+		draw_string(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, pal["intel_ink"])
 	for s: Dictionary in ink["supply"]:
 		var col := c
 		col.a *= clampf(1.0 - float(s["loss_permille"]) / 1000.0 * float(px["supply_loss_fade"]), 0.25, 1.0)
 		for d: PackedVector2Array in WarSheetInk.dashed(s["poly"], float(px["supply_dash"]), float(px["supply_gap"])):
 			draw_polyline(d, col, float(px["supply"]), true)
 	for cr: Dictionary in ink["couriers"]:
-		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], 2.0, float(px["supply_gap"])):
+		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], float(px["supply_dash"]) / 1.5, float(px["supply_gap"])):
 			draw_polyline(d, c, float(px["supply"]) * 0.7, true)
 		var at: Vector2 = cr["at"]
 		var s := float(px["courier"])
@@ -196,6 +250,46 @@ func _draw_intel() -> void:
 			draw_polyline(d, pal["rubric"], float(px["supply"]), true)
 		draw_string(font, at + Vector2(float(sp["radius"]) + 4.0, 0), String(sp["text"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["intel_label"]), pal["rubric"])
+
+
+## The fine print (WarFinePrint): notes and route names in faint ink, minor
+## heights as small marks, contour figures in rubric, each turned to its angle.
+func _draw_fine() -> void:
+	var c_ink: Color = pal["ink"]
+	var c_faint: Color = pal["ink_faint"]
+	var c_fig: Color = pal.get("contour_figure", pal["rubric"])
+	for n: Dictionary in ink["notes"]:
+		draw_string(font, n["at"], String(n["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["note"]), c_ink)
+	for r: Dictionary in ink["routes"]:
+		_turned_text(r["at"], float(r["angle"]), String(r["text"]), int(px["route"]), c_ink)
+	for m: Dictionary in ink["marks"]:
+		var at: Vector2 = m["at"]
+		var s := float(px["mark"])
+		var pts := PackedVector2Array([at + Vector2(0, -s), at + Vector2(s * 0.9, s * 0.6), at + Vector2(-s * 0.9, s * 0.6)])
+		if String(m["kind"]) == "high":
+			draw_colored_polygon(pts, c_faint)
+		else:
+			pts = PackedVector2Array([at + Vector2(-s * 0.9, -s * 0.6), at + Vector2(s * 0.9, -s * 0.6), at + Vector2(0, s), at + Vector2(-s * 0.9, -s * 0.6)])
+			draw_polyline(pts, c_faint, maxf(s * 0.2, 1.0), true)
+		draw_string(font, at + Vector2(s * 1.4, s * 0.5), "%d m" % int(m["metres"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["note"]), c_faint)
+	for f: Dictionary in ink["figures"]:
+		_turned_text(f["at"], float(f["angle"]), String(f["text"]), int(px["figure"]), c_fig)
+	for p: Dictionary in ink.get("places", []):
+		if String(p["glyph"]) != "":
+			WarMarkGlyph.draw(self, String(p["glyph"]), p["at"], float(px["mark"]), c_faint)
+		draw_string(font, p["label_at"], String(p["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["note"]), c_faint)
+
+
+## Text centred on `at`, turned by `angle`, on a parchment knock-out so the
+## line under it does not run through the figure.
+func _turned_text(at: Vector2, angle: float, text: String, size: int, color: Color) -> void:
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	draw_set_transform(at, angle, Vector2.ONE)
+	var ground: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
+	ground.a = 0.6
+	draw_rect(Rect2(Vector2(-w * 0.5 - 2.0, -float(size) * 0.8), Vector2(w + 4.0, float(size))), ground)
+	draw_string(font, Vector2(-w * 0.5, float(size) * 0.1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## The hollows: a ▽ outlined, with its depth.

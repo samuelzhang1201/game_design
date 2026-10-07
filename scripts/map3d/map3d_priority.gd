@@ -14,6 +14,8 @@ const RIVERS := 0
 const MARCH_TRAILS := 0
 const ROADS := 1
 const MANOR_EDGES := 2
+## A flowing supply line (Map3DSupplyLines): faint, over the roads, under the borders.
+const SUPPLY_LINES := 2
 const KINGDOM_BAND := 3
 const SEAMS := 4
 const KINGDOM_HALO := 5

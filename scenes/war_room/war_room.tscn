@@ -1,16 +1,16 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene format=3 uid="uid://dtdpn5w4w3d0b"]
 
-[ext_resource type="Script" path="res://scripts/war_room/war_room_view.gd" id="1_view"]
-[ext_resource type="Script" path="res://scripts/war_room/war_ink_painter.gd" id="2_ink"]
-[ext_resource type="Material" path="res://scenes/war_room/materials/war_table.tres" id="3_table"]
-[ext_resource type="Script" path="res://scripts/war_room/war_pieces.gd" id="4_pieces"]
-[ext_resource type="Script" path="res://scripts/war_room/war_pennants.gd" id="5_pennants"]
-[ext_resource type="Script" path="res://scripts/war_room/war_hud.gd" id="6_hud"]
-[ext_resource type="PackedScene" uid="uid://bn505ar3wnw6v" path="res://assets/3D/war_room/room/room.glb" id="7_room"]
-[ext_resource type="PackedScene" uid="uid://h61e1pu42bvq" path="res://assets/3D/war_room/table/table.glb" id="8_table"]
-[ext_resource type="PackedScene" uid="uid://cw4xr6qb7ll1n" path="res://assets/3D/war_room/candlestick/candlestick.glb" id="9_candle"]
-[ext_resource type="PackedScene" uid="uid://bi50lh10t5vir" path="res://assets/3D/war_room/rake/rake.glb" id="10_rake"]
-[ext_resource type="PackedScene" uid="uid://crhxjpb0voenb" path="res://assets/3D/war_room/pennant/pennant.glb" id="11_pennant"]
+[ext_resource type="Script" uid="uid://d0ommxn1jrh5x" path="res://scripts/war_room/war_room_view.gd" id="1_ekiw7"]
+[ext_resource type="PackedScene" uid="uid://bn505ar3wnw6v" path="res://assets/3D/war_room/room/room.glb" id="2_22yi6"]
+[ext_resource type="PackedScene" uid="uid://h61e1pu42bvq" path="res://assets/3D/war_room/table/table.glb" id="3_sqtjg"]
+[ext_resource type="PackedScene" uid="uid://bi50lh10t5vir" path="res://assets/3D/war_room/rake/rake.glb" id="4_bwuxm"]
+[ext_resource type="PackedScene" uid="uid://cw4xr6qb7ll1n" path="res://assets/3D/war_room/candlestick/candlestick.glb" id="5_13ru6"]
+[ext_resource type="Material" path="res://scenes/war_room/materials/war_table.tres" id="6_ycnr8"]
+[ext_resource type="Script" uid="uid://cb5ix87vpi32" path="res://scripts/war_room/war_pieces.gd" id="7_qefqx"]
+[ext_resource type="Script" uid="uid://d4ak510hs1jur" path="res://scripts/war_room/war_pennants.gd" id="8_g585r"]
+[ext_resource type="PackedScene" uid="uid://crhxjpb0voenb" path="res://assets/3D/war_room/pennant/pennant.glb" id="9_mbbr6"]
+[ext_resource type="Script" uid="uid://cfv64budsa2t3" path="res://scripts/war_room/war_ink_painter.gd" id="10_bfe1t"]
+[ext_resource type="Script" uid="uid://b2lueju2wrv3g" path="res://scripts/war_room/war_hud.gd" id="11_8tgs3"]
 
 [sub_resource type="Environment" id="Environment_room"]
 background_mode = 1
@@ -20,39 +20,9 @@ ambient_light_color = Color(0.85, 0.72, 0.55, 1)
 ambient_light_energy = 0.35
 tonemap_mode = 4
 
-[sub_resource type="SphereMesh" id="Mesh_flame"]
-radius = 0.008
-height = 0.04
-radial_segments = 8
-rings = 4
-
-[sub_resource type="StandardMaterial3D" id="Mat_flame"]
-shading_mode = 0
-albedo_color = Color(1, 0.6, 0.2, 1)
-emission_enabled = true
-emission = Color(1, 0.5, 0.12, 1)
-emission_energy_multiplier = 6.0
-
-[sub_resource type="QuadMesh" id="Quad_chart"]
-size = Vector2(0.8, 0.29)
-
-[sub_resource type="StandardMaterial3D" id="Mat_chart"]
-albedo_color = Color(1, 1, 1, 1)
-roughness = 0.9
-
-[sub_resource type="QuadMesh" id="Quad_board"]
-size = Vector2(1.2, 0.8)
-
-[sub_resource type="StandardMaterial3D" id="Mat_board"]
-albedo_color = Color(1, 1, 1, 1)
-roughness = 0.85
-
-[sub_resource type="BoxMesh" id="Box_easel_leg"]
-size = Vector3(0.05, 1.5, 0.05)
-
-[sub_resource type="StandardMaterial3D" id="Mat_easel"]
-albedo_color = Color(0.36, 0.24, 0.14, 1)
-roughness = 0.8
+[sub_resource type="StandardMaterial3D" id="Mat_marker"]
+albedo_color = Color(0.608, 0.173, 0.122, 1)
+roughness = 0.55
 
 [sub_resource type="CylinderMesh" id="Marker_body"]
 top_radius = 0.006
@@ -64,11 +34,36 @@ top_radius = 0.01
 bottom_radius = 0.011
 height = 0.006
 
-[sub_resource type="StandardMaterial3D" id="Mat_marker"]
-albedo_color = Color(0.608, 0.173, 0.122, 1)
-roughness = 0.55
+[sub_resource type="StandardMaterial3D" id="Mat_easel"]
+albedo_color = Color(0.36, 0.24, 0.14, 1)
+roughness = 0.8
 
-[node name="WarRoomView" type="Control"]
+[sub_resource type="BoxMesh" id="Box_easel_leg"]
+size = Vector3(0.05, 1.5, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="Mat_board"]
+roughness = 0.85
+
+[sub_resource type="QuadMesh" id="Quad_board"]
+size = Vector2(1.2, 0.8)
+
+[sub_resource type="SphereMesh" id="Mesh_flame"]
+radius = 0.008
+height = 0.04
+radial_segments = 8
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="Mat_flame"]
+shading_mode = 0
+albedo_color = Color(1, 0.6, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_chart"]
+roughness = 0.9
+
+[sub_resource type="QuadMesh" id="Quad_chart"]
+size = Vector2(0.8, 0.29)
+
+[node name="WarRoomView" type="Control" unique_id=631495206]
 clip_contents = true
 layout_mode = 3
 anchors_preset = 15
@@ -76,204 +71,203 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_view")
+script = ExtResource("1_ekiw7")
 
-[node name="Viewport" type="SubViewport" parent="."]
+[node name="Viewport" type="SubViewport" parent="." unique_id=1910175952]
 unique_name_in_owner = true
 own_world_3d = true
 render_target_update_mode = 0
 
-[node name="Env" type="WorldEnvironment" parent="Viewport"]
+[node name="Env" type="WorldEnvironment" parent="Viewport" unique_id=870664975]
 unique_name_in_owner = true
 environment = SubResource("Environment_room")
 
-[node name="Window" type="DirectionalLight3D" parent="Viewport"]
+[node name="Window" type="DirectionalLight3D" parent="Viewport" unique_id=34029074]
 transform = Transform3D(0.819152, -0.469846, 0.32899, 0, 0.573576, 0.819152, -0.573576, -0.67101, 0.469846, 0, 2, 0)
 light_color = Color(0.749, 0.827, 1, 1)
 light_energy = 0.6
 shadow_enabled = true
 
-[node name="Camera" type="Camera3D" parent="Viewport"]
+[node name="Camera" type="Camera3D" parent="Viewport" unique_id=1901342266]
 unique_name_in_owner = true
 fov = 40.0
 near = 0.01
 far = 20.0
 
-[node name="Room" type="Node3D" parent="Viewport"]
+[node name="Room" type="Node3D" parent="Viewport" unique_id=1739254428]
 unique_name_in_owner = true
 
-[node name="Chamber" parent="Viewport/Room" instance=ExtResource("7_room")]
+[node name="Chamber" parent="Viewport/Room" unique_id=609828230 instance=ExtResource("2_22yi6")]
 
-[node name="room" parent="Viewport/Room/Chamber" index="0"]
+[node name="room" parent="Viewport/Room/Chamber" index="0" unique_id=1184762955]
 cast_shadow = 0
 
-[node name="OakTable" parent="Viewport/Room" instance=ExtResource("8_table")]
+[node name="OakTable" parent="Viewport/Room" unique_id=198636563 instance=ExtResource("3_sqtjg")]
 transform = Transform3D(1, 0, 0, 0, 1.05828, 0, 0, 0, 1, 0, 0.04662, 0)
 
-[node name="Rake" parent="Viewport/Room" instance=ExtResource("10_rake")]
+[node name="Rake" parent="Viewport/Room" unique_id=509298080 instance=ExtResource("4_bwuxm")]
 transform = Transform3D(0.99863, 0, 0.052336, 0, 1, 0, -0.052336, 0, 0.99863, 0.8, -0.001, -0.62)
 
-
-[node name="Marker" type="Node3D" parent="Viewport/Room"]
+[node name="Marker" type="Node3D" parent="Viewport/Room" unique_id=431442389]
 unique_name_in_owner = true
 visible = false
 
-[node name="Body" type="MeshInstance3D" parent="Viewport/Room/Marker"]
+[node name="Body" type="MeshInstance3D" parent="Viewport/Room/Marker" unique_id=1501939494]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.016, 0)
+material_override = SubResource("Mat_marker")
 mesh = SubResource("Marker_body")
-material_override = SubResource("Mat_marker")
 
-[node name="Base" type="MeshInstance3D" parent="Viewport/Room/Marker"]
+[node name="Base" type="MeshInstance3D" parent="Viewport/Room/Marker" unique_id=1079432693]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.003, 0)
-mesh = SubResource("Marker_base")
 material_override = SubResource("Mat_marker")
+mesh = SubResource("Marker_base")
 
-[node name="Easel" type="Node3D" parent="Viewport/Room"]
+[node name="Easel" type="Node3D" parent="Viewport/Room" unique_id=185669517]
 unique_name_in_owner = true
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -1.5, -0.8, -0.15)
 
-[node name="LegL" type="MeshInstance3D" parent="Viewport/Room/Easel"]
+[node name="LegL" type="MeshInstance3D" parent="Viewport/Room/Easel" unique_id=1220550194]
 transform = Transform3D(0.996, 0.087, 0, -0.087, 0.996, 0, 0, 0, 1, -0.5, 0.75, -0.05)
-mesh = SubResource("Box_easel_leg")
 material_override = SubResource("Mat_easel")
+mesh = SubResource("Box_easel_leg")
 
-[node name="LegR" type="MeshInstance3D" parent="Viewport/Room/Easel"]
+[node name="LegR" type="MeshInstance3D" parent="Viewport/Room/Easel" unique_id=157191522]
 transform = Transform3D(0.996, -0.087, 0, 0.087, 0.996, 0, 0, 0, 1, 0.5, 0.75, -0.05)
-mesh = SubResource("Box_easel_leg")
 material_override = SubResource("Mat_easel")
+mesh = SubResource("Box_easel_leg")
 
-[node name="BoardPanel" type="MeshInstance3D" parent="Viewport/Room/Easel"]
+[node name="BoardPanel" type="MeshInstance3D" parent="Viewport/Room/Easel" unique_id=509709145]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0.02)
-mesh = SubResource("Quad_board")
 material_override = SubResource("Mat_board")
+mesh = SubResource("Quad_board")
 
-[node name="Candlestick1" parent="Viewport/Room" instance=ExtResource("9_candle")]
+[node name="Candlestick1" parent="Viewport/Room" unique_id=796630572 instance=ExtResource("5_13ru6")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.8, -0.001, -0.9)
 
-[node name="candlestick" parent="Viewport/Room/Candlestick1" index="0"]
+[node name="candlestick" parent="Viewport/Room/Candlestick1" index="0" unique_id=1683789745]
 cast_shadow = 0
 
-[node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick1"]
+[node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick1" unique_id=2055452440]
 
-[node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.441, 0.0)
-cast_shadow = 0
-mesh = SubResource("Mesh_flame")
-surface_material_override/0 = SubResource("Mat_flame")
-
-[node name="FlameL" type="MeshInstance3D" parent="Viewport/Room/Candlestick1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.125, 0.385, 0.0)
+[node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick1" unique_id=946833995]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.441, 0)
 cast_shadow = 0
 mesh = SubResource("Mesh_flame")
 surface_material_override/0 = SubResource("Mat_flame")
 
-[node name="FlameR" type="MeshInstance3D" parent="Viewport/Room/Candlestick1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.125, 0.372, 0.0)
+[node name="FlameL" type="MeshInstance3D" parent="Viewport/Room/Candlestick1" unique_id=2125639558]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.125, 0.385, 0)
 cast_shadow = 0
 mesh = SubResource("Mesh_flame")
 surface_material_override/0 = SubResource("Mat_flame")
 
-[node name="Candlestick2" parent="Viewport/Room" instance=ExtResource("9_candle")]
+[node name="FlameR" type="MeshInstance3D" parent="Viewport/Room/Candlestick1" unique_id=1837337708]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.125, 0.372, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_flame")
+surface_material_override/0 = SubResource("Mat_flame")
+
+[node name="Candlestick2" parent="Viewport/Room" unique_id=1647908399 instance=ExtResource("5_13ru6")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.8, -0.001, -0.9)
 
-[node name="candlestick" parent="Viewport/Room/Candlestick2" index="0"]
+[node name="candlestick" parent="Viewport/Room/Candlestick2" index="0" unique_id=1683789745]
 cast_shadow = 0
 
-[node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick2"]
+[node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick2" unique_id=666956452]
 
-[node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.441, 0.0)
-cast_shadow = 0
-mesh = SubResource("Mesh_flame")
-surface_material_override/0 = SubResource("Mat_flame")
-
-[node name="FlameL" type="MeshInstance3D" parent="Viewport/Room/Candlestick2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.125, 0.385, 0.0)
+[node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick2" unique_id=1962739420]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.441, 0)
 cast_shadow = 0
 mesh = SubResource("Mesh_flame")
 surface_material_override/0 = SubResource("Mat_flame")
 
-[node name="FlameR" type="MeshInstance3D" parent="Viewport/Room/Candlestick2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.125, 0.372, 0.0)
+[node name="FlameL" type="MeshInstance3D" parent="Viewport/Room/Candlestick2" unique_id=1305701543]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.125, 0.385, 0)
 cast_shadow = 0
 mesh = SubResource("Mesh_flame")
 surface_material_override/0 = SubResource("Mat_flame")
 
-[node name="Candlestick3" parent="Viewport/Room" instance=ExtResource("9_candle")]
+[node name="FlameR" type="MeshInstance3D" parent="Viewport/Room/Candlestick2" unique_id=153694216]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.125, 0.372, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_flame")
+surface_material_override/0 = SubResource("Mat_flame")
+
+[node name="Candlestick3" parent="Viewport/Room" unique_id=472968941 instance=ExtResource("5_13ru6")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.8, -0.001, 0.6)
 
-[node name="candlestick" parent="Viewport/Room/Candlestick3" index="0"]
+[node name="candlestick" parent="Viewport/Room/Candlestick3" index="0" unique_id=1683789745]
 cast_shadow = 0
 
-[node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick3"]
+[node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick3" unique_id=318820909]
 
-[node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.441, 0.0)
-cast_shadow = 0
-mesh = SubResource("Mesh_flame")
-surface_material_override/0 = SubResource("Mat_flame")
-
-[node name="FlameL" type="MeshInstance3D" parent="Viewport/Room/Candlestick3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.125, 0.385, 0.0)
+[node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick3" unique_id=2105382818]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.441, 0)
 cast_shadow = 0
 mesh = SubResource("Mesh_flame")
 surface_material_override/0 = SubResource("Mat_flame")
 
-[node name="FlameR" type="MeshInstance3D" parent="Viewport/Room/Candlestick3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.125, 0.372, 0.0)
+[node name="FlameL" type="MeshInstance3D" parent="Viewport/Room/Candlestick3" unique_id=1028142886]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.125, 0.385, 0)
 cast_shadow = 0
 mesh = SubResource("Mesh_flame")
 surface_material_override/0 = SubResource("Mat_flame")
 
-[node name="Candlestick4" parent="Viewport/Room" instance=ExtResource("9_candle")]
+[node name="FlameR" type="MeshInstance3D" parent="Viewport/Room/Candlestick3" unique_id=381820180]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.125, 0.372, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_flame")
+surface_material_override/0 = SubResource("Mat_flame")
+
+[node name="Candlestick4" parent="Viewport/Room" unique_id=451277548 instance=ExtResource("5_13ru6")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.8, -0.001, 0.6)
 
-[node name="candlestick" parent="Viewport/Room/Candlestick4" index="0"]
+[node name="candlestick" parent="Viewport/Room/Candlestick4" index="0" unique_id=1683789745]
 cast_shadow = 0
 
-[node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick4"]
+[node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick4" unique_id=1437500661]
 
-[node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.441, 0.0)
-cast_shadow = 0
-mesh = SubResource("Mesh_flame")
-surface_material_override/0 = SubResource("Mat_flame")
-
-[node name="FlameL" type="MeshInstance3D" parent="Viewport/Room/Candlestick4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.125, 0.385, 0.0)
+[node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick4" unique_id=1954299193]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.441, 0)
 cast_shadow = 0
 mesh = SubResource("Mesh_flame")
 surface_material_override/0 = SubResource("Mat_flame")
 
-[node name="FlameR" type="MeshInstance3D" parent="Viewport/Room/Candlestick4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.125, 0.372, 0.0)
+[node name="FlameL" type="MeshInstance3D" parent="Viewport/Room/Candlestick4" unique_id=283420984]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.125, 0.385, 0)
 cast_shadow = 0
 mesh = SubResource("Mesh_flame")
 surface_material_override/0 = SubResource("Mat_flame")
 
-[node name="Table" type="MeshInstance3D" parent="Viewport"]
+[node name="FlameR" type="MeshInstance3D" parent="Viewport/Room/Candlestick4" unique_id=1732789404]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.125, 0.372, 0)
+cast_shadow = 0
+mesh = SubResource("Mesh_flame")
+surface_material_override/0 = SubResource("Mat_flame")
+
+[node name="IndexChart" type="MeshInstance3D" parent="Viewport/Room" unique_id=2135710280]
 unique_name_in_owner = true
-material_override = ExtResource("3_table")
-
-[node name="IndexChart" type="MeshInstance3D" parent="Viewport/Room"]
-unique_name_in_owner = true
-mesh = SubResource("Quad_chart")
 material_override = SubResource("Mat_chart")
+mesh = SubResource("Quad_chart")
 
-[node name="EdgeArrows" type="Node3D" parent="Viewport"]
+[node name="Table" type="MeshInstance3D" parent="Viewport" unique_id=423369737]
+unique_name_in_owner = true
+material_override = ExtResource("6_ycnr8")
+
+[node name="EdgeArrows" type="Node3D" parent="Viewport" unique_id=1025283806]
 unique_name_in_owner = true
 
-[node name="Pieces" type="Node3D" parent="Viewport"]
+[node name="Pieces" type="Node3D" parent="Viewport" unique_id=1468745768]
 unique_name_in_owner = true
-script = ExtResource("4_pieces")
+script = ExtResource("7_qefqx")
 
-[node name="Pennants" type="Node3D" parent="Viewport"]
+[node name="Pennants" type="Node3D" parent="Viewport" unique_id=1076665146]
 unique_name_in_owner = true
-script = ExtResource("5_pennants")
-model = ExtResource("11_pennant")
+script = ExtResource("8_g585r")
+model = ExtResource("9_mbbr6")
 
-[node name="Display" type="TextureRect" parent="."]
+[node name="Display" type="TextureRect" parent="." unique_id=131899261]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -284,17 +278,27 @@ grow_vertical = 2
 mouse_filter = 2
 expand_mode = 1
 
-[node name="InkViewport" type="SubViewport" parent="."]
+[node name="InkViewport" type="SubViewport" parent="." unique_id=105438240]
 unique_name_in_owner = true
 transparent_bg = true
-render_target_update_mode = 0
 size = Vector2i(2, 2)
+render_target_update_mode = 0
 
-[node name="Ink" type="Node2D" parent="InkViewport"]
+[node name="Ink" type="Node2D" parent="InkViewport" unique_id=1573158959]
 unique_name_in_owner = true
-script = ExtResource("2_ink")
+script = ExtResource("10_bfe1t")
 
-[node name="Hud" type="Control" parent="."]
+[node name="DetailViewport" type="SubViewport" parent="." unique_id=1239779536]
+unique_name_in_owner = true
+transparent_bg = true
+size = Vector2i(2, 2)
+render_target_update_mode = 0
+
+[node name="DetailInk" type="Node2D" parent="DetailViewport" unique_id=1532023032]
+unique_name_in_owner = true
+script = ExtResource("10_bfe1t")
+
+[node name="Hud" type="Control" parent="." unique_id=286485825]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -303,4 +307,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("6_hud")
+script = ExtResource("11_8tgs3")
+
+[editable path="Viewport/Room/Chamber"]
+[editable path="Viewport/Room/Candlestick1"]
+[editable path="Viewport/Room/Candlestick2"]
+[editable path="Viewport/Room/Candlestick3"]
+[editable path="Viewport/Room/Candlestick4"]

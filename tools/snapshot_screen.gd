@@ -112,6 +112,9 @@ var _weather := ""
 ## N frames before the shot (default 40), so a run with --speed can show the
 ## piece walking; without --speed the clock stays stopped and nothing moves.
 var _march3d := Vector2(-1, -1)
+## --march-at F: the frame the --march3d clicks begin (default 14) — later
+## when the world is still loading its pieces.
+var _march_at := 14
 var _march_confirm := false
 ## --march-commit (with --march-confirm): choose COMMIT on the confirm menu.
 var _march_commit := false
@@ -196,7 +199,9 @@ var _ledger_select := ""
 ## metres (on --war-piece's place when given, or --war-focus CODE's, which
 ## centres on that piece without clicking it), --war-piece CODE
 ## clicks that regiment's piece (a chalk ring, its card) or, with
-## --war-drag fx,fy (a share of the view), RAKES it there: a real left press
+## --war-focus-px x,y leans in on that pack point instead of a piece;
+## --war-hover fx,fy rests the pointer at that share of the view (a real
+## motion) until the hover slip is up; --war-drag fx,fy (a share of the view), RAKES it there: a real left press
 ## on the piece, eight pushed motion events with the left button held, a real
 ## release (the arrow and its COMMIT / CANCEL menu show; --war-commit then
 ## chooses COMMIT the way PopupMenu.activate_item does, so the order's pennant
@@ -233,6 +238,8 @@ var _war_sheet := -1
 var _war_piece := ""
 var _war_folio := ""
 var _war_drag := Vector2(-1, -1)
+var _war_focus_px := Vector2(-1, -1)   # --war-focus-px x,y: lean in on a pack point, not a piece
+var _war_hover := Vector2(-1, -1)   # --war-hover fx,fy: rest the pointer there for the slip
 var _war_zoom := -1.0
 var _war_turn := 0.0
 var _war_cell := ""
@@ -314,6 +321,8 @@ func _ready() -> void:
 		elif args[i] == "--march3d":
 			var mparts := args[i + 1].split(",")
 			_march3d = Vector2(float(mparts[0]), float(mparts[1]))
+		elif args[i] == "--march-at":
+			_march_at = int(args[i + 1])
 		elif args[i] == "--shot-frame":
 			_shot_frame = int(args[i + 1])
 		elif args[i] == "--look3d":
@@ -347,6 +356,9 @@ func _ready() -> void:
 			_war_sheet = int(args[i + 1])
 		elif args[i] == "--war-piece":
 			_war_piece = args[i + 1]
+		elif args[i] == "--war-focus-px":
+			var fparts := args[i + 1].split(",")
+			_war_focus_px = Vector2(float(fparts[0]), float(fparts[1]))
 		elif args[i] == "--war-focus":
 			_war_focus = args[i + 1]
 		elif args[i] == "--war-zoom":
@@ -367,6 +379,9 @@ func _ready() -> void:
 		elif args[i] == "--war-drag":
 			var dparts := args[i + 1].split(",")
 			_war_drag = Vector2(float(dparts[0]), float(dparts[1]))
+		elif args[i] == "--war-hover":
+			var hparts := args[i + 1].split(",")
+			_war_hover = Vector2(float(hparts[0]), float(hparts[1]))
 		elif args[i] == "--shot-on":
 			_shot_on = args[i + 1]
 		elif args[i] == "--shot-delay":
@@ -421,7 +436,8 @@ func _ready() -> void:
 		return
 	Game.start_campaign(_seed)
 	# the news bar's lines, so a run shows what the player was told
-	Game.news_published.connect(func(t: String) -> void: print("news: " + t))
+	Game.news_published.connect(func(t: String) -> void:
+		print("news [%s]: %s" % [Calendar.date_of_day(Game.news_day()) if Game.state != null else "", t]))
 	for key: String in _bal:
 		Game.data.balance[key] = _bal[key]
 	for key: String in _pal:
@@ -654,7 +670,7 @@ func _process(_delta: float) -> void:
 		# the clock starts only once the order is in, as the player's play would.
 		if _speed >= 0 and _march3d.x < 0.0 and _spy3d.is_empty():
 			_start_clock()
-	if _root != null and _frames == 24 and _speed >= 0 and _march3d.x >= 0.0 and _spy3d.is_empty():
+	if _root != null and _frames == _march_at + 10 and _speed >= 0 and _march3d.x >= 0.0 and _spy3d.is_empty():
 		_start_clock()
 	if _root != null and not _spy3d.is_empty():
 		_spy_step()
@@ -718,7 +734,7 @@ func _process(_delta: float) -> void:
 		var at := hv.size * _hover3d
 		hv.hover_pick(hv.pick_at(at), at)
 		print("hover3d: kingdom=%s name=%s" % [hv.hovered_kingdom(), hv.hover_tooltip()])
-	if _root != null and _march3d.x >= 0.0 and _frames in [14, 16, 18, 20, 22] \
+	if _root != null and _march3d.x >= 0.0 and _frames - _march_at in [0, 2, 4, 6, 8] \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
 		# REAL input all the way (2026-09-24: a shot that called the view's and
@@ -729,7 +745,7 @@ func _process(_delta: float) -> void:
 		var mv: Map3DView = _root.current_screen.map3d_view()
 		var menu := _root.current_screen.get_node("%ArmyOrders") as ArmyOrderMenu
 		var at := mv.size * _march3d
-		if _frames == 14:
+		if _frames - _march_at == 0:
 			# the first piece whose box is actually inside the view (a piece in
 			# front of the camera but off the panel has a box too)
 			var target := Vector2(-1, -1)
@@ -743,7 +759,7 @@ func _process(_delta: float) -> void:
 			else:
 				_real_click(mv, target)
 				print("march3d: menu open=%s selected=%s" % [menu.visible, mv.selected_army()])
-		elif _frames == 16:
+		elif _frames - _march_at == 2:
 			# The first row, MARCH…, chosen in the order PopupMenu.activate_item
 			# (not exposed to scripts) does it: the menu HIDES first, and only
 			# then emits id_pressed. That order is what threw every chosen
@@ -751,13 +767,13 @@ func _process(_delta: float) -> void:
 			menu.hide()
 			menu.id_pressed.emit(0)
 			print("march3d: aiming=%s" % menu.aiming())
-		elif _frames == 18:
+		elif _frames - _march_at == 4:
 			_real_move(mv, at)
-		elif _frames == 20 and _march_confirm:
+		elif _frames - _march_at == 6 and _march_confirm:
 			# the destination click only ASKS: COMMIT / CANCEL (owner 2026-09-27)
 			_real_click(mv, at)
 			print("march3d: confirm open=%s pending=%s" % [menu.visible, menu.pending()])
-		elif _frames == 22 and _march_confirm and _march_commit:
+		elif _frames - _march_at == 8 and _march_confirm and _march_commit:
 			var code := menu.aiming()
 			menu.hide()
 			menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
@@ -818,8 +834,8 @@ func _trace_courier_frame() -> void:
 	var drawn := v.courier_positions()
 	if Game.state.couriers.is_empty() and Game.clock_speed == 0:
 		return
-	var line := "trace f=%d day=%d share=%.3f clock=%d" % [_frames, Game.state.absolute_day(),
-		Game.day_progress, Game.clock_speed]
+	var line := "trace f=%d day=%d bar=\"%s\" share=%.3f clock=%d" % [_frames, Game.state.absolute_day(),
+		_bar_date(), Game.day_progress, Game.clock_speed]
 	for c: Dictionary in Game.state.couriers:
 		var id := int(c["id"])
 		var at: Vector2 = drawn.get(id, Vector2(-1, -1))
@@ -833,9 +849,17 @@ func _trace_courier_frame() -> void:
 		var targeted := Game.state.couriers.any(func(c: Dictionary) -> bool: return String(c["target"]) == code)
 		if String(e.get("order", "")) == ArmySystem.ORDER_MARCH or targeted:
 			var p: Vector2 = units[code]
-			line += " | %s %s engine=(%d,%d) drawn=(%.0f,%.0f)" % [code, String(e.get("order", "")),
-				int(e.get("x_m", -1)), int(e.get("y_m", -1)), p.x, p.y]
+			line += " | %s %s engine=(%d,%d) drawn=(%.0f,%.0f) days_left=%d" % [code, String(e.get("order", "")),
+				int(e.get("x_m", -1)), int(e.get("y_m", -1)), p.x, p.y,
+				CourierSystem.days_to_arrival(Game.data, Game.state, code)]
 	print(line)
+
+
+## The top bar's date as it is drawn: its dial's day, then its DateLabel.
+func _bar_date() -> String:
+	var dial := _root.find_child("DateDial", true, false)
+	var label := _root.find_child("DateLabel", true, false) as Label
+	return "%s %s" % [str(dial.get("day")) if dial != null else "?", label.text if label != null else ""]
 
 
 func _save_shot(path: String) -> int:
@@ -996,6 +1020,8 @@ func _war_room_step() -> void:
 				var on := _war_focus if _war_focus != "" else _war_piece
 				if on != "":
 					focus = view.position_of(on)
+				elif _war_focus_px.x >= 0.0:
+					focus = _war_focus_px
 				view.lean_to(_war_zoom, focus)
 				print("war: leant to %.2f m" % view.camera_rig().distance)
 			if _war_turn != 0.0:
@@ -1023,8 +1049,13 @@ func _war_room_step() -> void:
 				_real_click(view, at)
 			print("war: piece=%s sheet=%d at=%s selected=%s aiming=%s" % [_war_piece, view.sheet_index(), at,
 				view.selected_army(), screen.orders().aiming()])
+		if _war_hover.x >= 0.0:
+			_real_move(view, Vector2(view.size) * _war_hover)
+			print("war: hover at %s" % (Vector2(view.size) * _war_hover))
 		_war_to(4)
 	elif _war_phase == 4:
+		if _war_hover.x >= 0.0 and _frames - _war_at < ceili(Game.data.bal("war_hover_delay_s") * 120.0) + 10:
+			return   # a 120 Hz display's frames: the slip has come up
 		if _frames - _war_at < 6:
 			return
 		if _war_board and _frames - _war_at < ceili(Game.data.bal("war_board_fly_s") * 120.0) + 10:

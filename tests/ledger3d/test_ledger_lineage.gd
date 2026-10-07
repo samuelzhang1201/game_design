@@ -65,6 +65,15 @@ func test_the_hybrid_by_hand() -> void:
 ## ties and his house, and his ties' ties dimmer.
 func test_the_real_pack_anchors() -> void:
 	var s := SuiteData.campaign(repo, 42)
+	# the supply lines are the regiments' own now: the first land regiment
+	# runs one (spec 2026-10-07-army-supply-lines)
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		if String(ArmySystem.regiment(repo, String(c)).get("is_naval", "0")) != "1":
+			s.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(repo, s)[0], 1000, 1)
+			s.supply_lines[c]["state"] = SupplyLines.FLOWING
+			break
 	var eng := TickEngine.new(repo)
 	for i in 6:
 		eng.advance(s)
@@ -81,15 +90,15 @@ func test_the_real_pack_anchors() -> void:
 	var st: Dictionary = lin["stars"]
 	var line := "supply_line:" + reg.substr(9)
 	assert_eq(int(st.get(line, 0)), LedgerLineage.FULL, "its supply line")
-	assert_eq(int(st.get("type:strategic_goods", 0)), LedgerLineage.FULL, "the strategic goods it is fed from")
-	# whatever feeds the strategic goods is lit (markets, a province's manors)
-	var feeders := 0
+	# the town it is fed from folds into its province in the galaxy
+	var feeder := ""
 	for l: Dictionary in g["links"]:
-		if String(l["to"]) == "type:strategic_goods" and _look(l) == "flow" and String(l["status"]) == "live":
-			feeders += 1
-			assert_eq(int(st.get(String(l["from"]), 0)), LedgerLineage.FULL, String(l["from"]) + " feeds the chain")
-	assert_gt(feeders, 0)
-	assert_gt(st.size(), 6, "more than its neighbours: %d" % st.size())
+		if String(l["to"]) == line and _look(l) == "flow" and String(l["status"]) == "live":
+			feeder = String(l["from"])
+	assert_ne(feeder, "", "the line is fed from a town's star")
+	assert_eq(int(st.get(feeder, 0)), LedgerLineage.FULL, "the town it is fed from")
+	# the manors that stock a town fold into the same province: no link of their own in the galaxy
+	assert_gt(st.size(), 4, "more than its neighbours: %d" % st.size())
 	# the King: his own ties and his house full, the ties of his ties far
 	var king := LedgerLineage.of(g, "character:you", _look, 2)
 	var ks: Dictionary = king["stars"]

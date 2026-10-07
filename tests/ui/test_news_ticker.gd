@@ -75,6 +75,15 @@ func test_published_news_joins_the_crawl_and_moves_leftward() -> void:
 	# Every headline is kept, dated, and the LOG opens the history.
 	assert_eq(String(ticker.history()[0]["text"]), "Wolves were heard close to the north villages.")
 	assert_eq(String(ticker.history()[0]["date"]), Calendar.date_string(Game.state.tick, Game.state.day))
+	# What a day's END brings is dated the day that ended, not the day begun
+	# (owner 2026-10-06: 顶栏日期滞后一天); GameRoot dates it so as it tells it.
+	Game.news_dated_to(Game.state.absolute_day() + 2)   # any day other than today's
+	Game.publish_news("The column reached the ford.")
+	Game.news_dated_to(-1)
+	assert_eq(String(ticker.history()[0]["date"]), Calendar.date_of_day(Game.state.absolute_day() + 2))
+	Game.publish_news("A rider was seen on the road.")
+	assert_eq(String(ticker.history()[0]["date"]), Calendar.date_string(Game.state.tick, Game.state.day),
+		"anything else is dated the day now running")
 	ticker.show_history(true)
 	await wait_process_frames(2)
 	assert_true(ticker.history_panel().visible)
@@ -136,7 +145,14 @@ func test_a_newly_idle_building_is_announced() -> void:
 			cell = c
 			break
 	assert_true(MapManors.build(Game.data, Game.state, cell, "smithy", "test: a forge"))
-	Game.state.metrics["lord_strategic"] = -1000000.0
+	# its iron needed past any purse, so it idles whatever the lord's pools
+	# hold (a negative pool no longer lasts the month: the day's supply step
+	# settles the pools into the towns every day)
+	var need: Array = []
+	for inp: Dictionary in Game.data.building_inputs["smithy"]:
+		need.append(int(inp["units"]))
+		inp["units"] = 1000000000
+	RealmEconomy.forget()
 	Game.state.day = Calendar.DAYS_PER_TICK
 	var tick := Game.state.tick
 	var got: Array = []
@@ -152,5 +168,8 @@ func test_a_newly_idle_building_is_announced() -> void:
 	Game.set_clock_speed(0)
 	Game.data.balance["time_day_seconds"] = 1.0
 	Game.news_published.disconnect(handler)
+	for i in need.size():
+		(Game.data.building_inputs["smithy"][i] as Dictionary)["units"] = int(need[i])
+	RealmEconomy.forget()
 	var joined := "\n".join(got)
 	assert_string_contains(joined, "The smithy at %s stands idle: no iron." % MapManors.label_of(Game.data, cell))

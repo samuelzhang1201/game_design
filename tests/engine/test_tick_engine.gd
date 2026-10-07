@@ -13,6 +13,10 @@ func before_each() -> void:
 ## RealmEconomy's sums for the month that just ended.
 func test_the_months_end_settles_the_three_pools() -> void:
 	var s := SuiteData.campaign(data, 42)
+	# The regiments stand fully supplied, so the month's refill draws on no
+	# stock and the pools move only by what is settled here.
+	for rc: String in s.regiments:
+		s.regiments[rc]["supplies"] = ArmySystem.supply_use(data, ArmySystem.regiment(data, rc)) * 6
 	# Two purses (owner 2026-09-14): the lord's own provinces in full, the
 	# crown's treasury its share of the rest (RealmEconomy.purses).
 	var p := RealmEconomy.purses(data, s)
@@ -252,3 +256,42 @@ func test_the_crowns_buildings_pay_each_tick() -> void:
 			found = true
 			assert_almost_eq(float(d["delta"]), tolls, 0.001)
 	assert_true(found, "the tolls are a line of their own")
+
+
+## Owner 2026-10-06 (顶栏日期滞后一天): GameState.day is the day being PLAYED —
+## the date the top bar shows. The reign's opening tick ends no day, so day 1
+## is played; advance_day ends the running day (a column due that day arrives
+## then) and only then turns the calendar.
+func test_the_running_day_is_the_day_shown_and_ends_at_advance_day() -> void:
+	var s := SuiteData.campaign(data, 42)
+	var code := ""
+	for r: Dictionary in MapObjects.regiments_of(data, data.resolve_realm("player_realm")):
+		if ArmySystem.base_pace_km(data, r) > 0 and String(r.get("is_naval", "0")) != "1":
+			code = String(r["regiment_code"])
+			break
+	var reg := ArmySystem.regiment(data, code)
+	engine.advance(s)   # the reign's opening
+	assert_eq([s.tick, s.day], [1, 1], "the reign opens on its first day, still to be played")
+	var home: Vector2 = ArmySystem.position_of(data, s, reg)
+	var step := float(ArmySystem.day_march_m(data, s, code))
+	ArmySystem.set_march(data, s, code, home + Vector2(step * 0.5 / float(ArmySystem.metres_per_pack_px(data)), 0.0))
+	assert_eq(ArmySystem.days_out(data, s, code), 1, "due as the day now running ends")
+	assert_eq(ArmySystem.position_of(data, s, reg), home, "nothing moves before the day ends")
+	engine.advance_day(s)
+	assert_eq(engine.day_arrivals, [code], "it arrives as day 1 ends")
+	assert_eq(s.day, 2, "and day 2 begins")
+
+
+func test_the_month_reports_its_hazard_news() -> void:
+	var state := SuiteData.campaign(data, 42)
+	var code := ""
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(ArmySystem.regiment(data, c).get("is_naval", "0")) != "1":
+			code = c
+			break
+	var cell := MapEconomy.cell_at(data, ArmySystem.position_of(data, state, ArmySystem.regiment(data, code)))
+	Hazards.add(state, "p", "Disease", "Test Plague", [cell], state.tick, -1, "test")
+	engine.advance(state)
+	assert_true(engine.month_hazard_news.any(func(n: String) -> bool: return n.contains("Test Plague")))

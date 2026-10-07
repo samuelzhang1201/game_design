@@ -1,6 +1,8 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
-## The tin pieces (spec 2026-10-01-war-room-design §3).
+## The pieces (spec 2026-10-01-war-room-design §3): a land regiment is one
+## wooden piece on a lacquered plinth (spec 2026-10-06-war-room-wooden-pieces),
+## a fleet a flat tin token on its base.
 
 var repo: DataRepository
 var state: GameState
@@ -30,10 +32,13 @@ func _land_code() -> String:
 	return ""
 
 
-## The highest relief under a base's four corners, from the view's own heights.
+## The highest relief under a base's four corners (a plinth's square), from
+## the view's own heights.
 func _corner_ys(xz: Vector2, naval: bool) -> Array:
 	var side := repo.bal("war_piece_base_mm") / 1000.0
-	var half := Vector2(side, side * (repo.bal("war_base_naval_depth") if naval else 1.0)) * 0.5
+	var half := Vector2(side, side * repo.bal("war_base_naval_depth")) * 0.5
+	if not naval:
+		half = Vector2.ONE * repo.bal("war_piece_plinth_mm") / 2000.0
 	var out: Array = []
 	for dx in [-half.x, half.x]:
 		for dz in [-half.y, half.y]:
@@ -62,7 +67,7 @@ func test_every_regiment_on_the_sheet_stands_as_a_piece_where_we_know_it_is() ->
 		assert_almost_eq(node.position.z, want.z, 0.0001)
 
 
-func test_a_land_piece_carries_its_figures_plate_and_tag() -> void:
+func test_a_land_piece_is_its_arms_wooden_piece_with_its_tag() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
@@ -70,35 +75,68 @@ func test_a_land_piece_carries_its_figures_plate_and_tag() -> void:
 	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
 		if bool(p["naval"]):
 			continue
-		var node := pieces.piece(String(p["code"]))
-		assert_eq(node.get_node("Figures/Formation").get_child_count(),
-			WarFolio.figures(repo, state, String(p["code"])))
-		assert_eq((node.get_node("Tag") as Label3D).text, WarRoom.tag_text(repo, state, String(p["code"])))
-		assert_eq((node.get_node("Plate") as Label3D).text,
-			String(ArmySystem.regiment(repo, String(p["code"]))["label"]))
+		var code := String(p["code"])
+		var node := pieces.piece(code)
+		var key := MapObjects.army_piece(repo, ArmySystem.regiment(repo, code))
+		var piece := node.get_node("Piece") as Node3D
+		assert_eq(piece.scene_file_path, GameArt.path(GameArt.WAR_PIECES, key), "%s stands as its %s piece" % [code, key])
+		assert_null(node.get_node_or_null("Figures"), "no tin figures")
+		assert_null(node.get_node_or_null("Base"), "the plinth is the piece's own")
+		assert_eq((node.get_node("Tag") as Label3D).text, WarRoom.tag_text(repo, state, code))
 		seen += 1
 	assert_gt(seen, 0, "the home sheet holds a land regiment")
 
 
-func test_the_figures_wear_the_tin_shader_over_their_own_albedo() -> void:
+func test_the_war_pieces_table_draws_artillery_as_the_trebuchet_and_has_no_fleet() -> void:
+	assert_eq(GameArt.path(GameArt.WAR_PIECES, "artillery"), "res://scenes/models/war_room/piece_trebuchet.tscn")
+	for key: String in ["infantry", "archers", "cavalry", "royal"]:
+		assert_eq(GameArt.path(GameArt.WAR_PIECES, key), "res://scenes/models/war_room/piece_%s.tscn" % key)
+	assert_eq(GameArt.path(GameArt.WAR_PIECES, "fleet"), "", "a fleet keeps its tin token")
+
+
+func test_the_royal_regiment_stands_as_the_royal_piece() -> void:
+	var royal := MapObjects.royal_regiment(repo, repo.resolve_realm("player_realm"))
+	assert_ne(royal, "", "the crown has a royal regiment")
+	var sheet := -1
+	for p: Dictionary in WarRoom.pieces(repo, state):
+		if String(p["code"]) == royal:
+			sheet = int(p["sheet"])
+	assert_gte(sheet, 0, "the royal regiment is on a sheet")
+	view.lay_sheet(sheet)
+	await wait_process_frames(2)
+	var piece := (view.get_node("%Pieces") as WarPieces).piece(royal).get_node("Piece") as Node3D
+	assert_eq(piece.scene_file_path, "res://scenes/models/war_room/piece_royal.tscn")
+
+
+func test_the_plinth_wears_the_realms_colour_as_its_lacquer() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
+	var code := _land_code()
+	var want := MapPalette.color_of(repo, String(ArmySystem.regiment(repo, code)["kingdom_code"])) \
+		.darkened(repo.bal("war_base_darken"))
 	var checked := 0
-	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
-		if bool(p["naval"]):
-			continue
-		for m: MeshInstance3D in Map3DUnits.meshes(pieces.piece(String(p["code"])).get_node("Figures")):
-			for i in m.mesh.get_surface_count():
-				var mat := m.get_surface_override_material(i) as ShaderMaterial
-				assert_not_null(mat, "each surface is painted tin")
-				assert_true(bool(mat.get_shader_parameter("has_tex")), "the Tripo atlas is read")
-				assert_not_null(mat.get_shader_parameter("albedo_tex"))
-				for uniform: String in WarRoomMaterial.TIN_KEYS:   # every number bound from data
-					assert_almost_eq(float(mat.get_shader_parameter(uniform)),
-						repo.bal(String(WarRoomMaterial.TIN_KEYS[uniform])), 0.0001, uniform)
-				checked += 1
+	for m: MeshInstance3D in Map3DUnits.meshes(pieces.piece(code).get_node("Piece")):
+		assert_eq(m.get_instance_shader_parameter("lacquer"), want)
+		for i in m.mesh.get_surface_count():
+			var mat := m.get_active_material(i) as ShaderMaterial
+			assert_not_null(mat, "the piece wears the wood-piece shader")
+			assert_not_null(mat.get_shader_parameter("lacquer_tex"), "with its lacquer mask")
+		checked += 1
 	assert_gt(checked, 0)
+
+
+func test_the_plinth_is_war_piece_plinth_mm_across_and_the_pick_reaches_its_top() -> void:
+	view.lay_sheet(_home_sheet())
+	await wait_process_frames(2)
+	var node := (view.get_node("%Pieces") as WarPieces).piece(_land_code())
+	var piece := node.get_node("Piece") as Node3D
+	assert_almost_eq(piece.scale.x, repo.bal("war_piece_plinth_mm") / 1000.0, 0.00001, "the .glb's plinth is 1 across")
+	var tall := 0.0
+	for m: MeshInstance3D in Map3DUnits.meshes(piece):
+		tall = maxf(tall, (m.transform * m.mesh.get_aabb()).end.y * piece.scale.y)
+	assert_almost_eq(float(node.get_meta("top_m")), tall, 0.0001)
+	assert_gt(tall, repo.bal("war_piece_plinth_mm") / 1000.0, "a piece stands taller than its plinth is wide")
 
 
 func test_a_moved_regiment_is_pushed_to_its_new_place() -> void:
@@ -118,7 +156,7 @@ func test_a_moved_regiment_is_pushed_to_its_new_place() -> void:
 	assert_almost_eq(pieces.piece(code).position.x, view.table_point(to).x, 0.0001)
 
 
-func test_a_changed_order_rebuilds_the_piece_in_its_new_pose() -> void:
+func test_a_changed_order_keeps_the_wooden_piece() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
@@ -130,7 +168,7 @@ func test_a_changed_order_rebuilds_the_piece_in_its_new_pose() -> void:
 	state.regiments[code]["order"] = ArmySystem.ORDER_MARCH if now != ArmySystem.ORDER_MARCH else ArmySystem.ORDER_GARRISON
 	view.refresh()
 	await wait_process_frames(1)
-	assert_ne(pieces.piece(code), before, "a new pose is a new piece")
+	assert_eq(pieces.piece(code), before, "a solid piece has no pose to change")
 	assert_eq(pieces.get_child_count(), WarRoom.on_sheet(repo, state, _home_sheet()).size())
 
 
@@ -142,22 +180,6 @@ func test_screen_hits_name_each_piece() -> void:
 	assert_eq(hits.size(), pieces.get_child_count())
 	for h: Dictionary in hits:
 		assert_not_null(pieces.piece(String(h["code"])))
-
-
-func test_a_piece_is_frozen_in_its_orders_pose() -> void:
-	view.lay_sheet(_home_sheet())
-	await wait_process_frames(2)
-	var pieces: WarPieces = view.get_node("%Pieces")
-	var code := _land_code()
-	var action := WarRoom.pose_action(ArmySystem.order_of(repo, state, code))
-	var anims := Map3DFormation.anims_of(pieces.piece(code).get_node("Figures/Formation"))
-	assert_gt(anims.size(), 0)
-	for a: AnimationPlayer in anims:
-		var clip := Map3DUnits.clip_named(a, action)
-		assert_eq(String(a.assigned_animation), clip, "the order's clip is the one held")
-		assert_false(a.is_playing(), "frozen, not running")
-		assert_almost_eq(a.current_animation_position,
-			a.get_animation(clip).length * repo.bal("war_pose_frame_" + action.to_lower()), 0.02)
 
 
 func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() -> void:
@@ -233,7 +255,7 @@ func test_a_piece_moved_onto_a_slope_rests_on_its_highest_corner() -> void:
 	assert_gt(node.position.y, view.y_at(Vector2(node.position.x, node.position.z)), "above the centre's own height")
 
 
-func test_a_click_on_the_figures_top_picks_the_piece_and_the_nearer_one_wins() -> void:
+func test_a_click_on_the_pieces_top_picks_it_and_the_nearer_one_wins() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
@@ -241,11 +263,11 @@ func test_a_click_on_the_figures_top_picks_the_piece_and_the_nearer_one_wins() -
 	var sc: float = view.window_scale()
 	var code := _land_code()
 	var node := pieces.piece(code)
-	var top := node.global_position + Vector3(0.0, (repo.bal("war_piece_base_h_mm") + repo.bal("war_piece_figure_mm")) / 1000.0, 0.0)
+	var top := node.global_position + Vector3(0.0, float(node.get_meta("top_m")) * 0.95, 0.0)
 	var at := cam.unproject_position(top) / sc
 	var centre := cam.unproject_position(node.global_position) / sc
-	assert_gt(centre.distance_to(at), 1.0, "the figures' top is off the base's centre")
-	assert_eq(pieces.pick(cam, sc, at, 0.0), code, "a click on the figures picks the piece")
+	assert_gt(centre.distance_to(at), 1.0, "the piece's top is off the plinth's centre")
+	assert_eq(pieces.pick(cam, sc, at, 0.0), code, "a click on the piece's top picks it")
 	var near := Node3D.new()
 	near.set_meta("code", "zz_nearer")
 	pieces.add_child(near)
@@ -292,21 +314,18 @@ func test_a_regiment_leaving_the_sheet_loses_its_piece() -> void:
 	assert_eq(pieces.get_child_count(), n - 1)
 
 
-func test_a_regiment_that_loses_men_is_rebuilt_with_fewer_figures() -> void:
+func test_a_regiment_that_loses_men_keeps_its_piece_and_its_tag_says_so() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var code := _land_code()
-	assert_eq(pieces.piece(code).get_node("Figures/Formation").get_child_count(), 9)
 	var before := pieces.piece(code)
 	ArmySystem.ensure(repo, state)
 	@warning_ignore("integer_division")
 	state.regiments[code]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)) * 4 / 10
-	assert_eq(WarFolio.figures(repo, state, code), 6)
 	view.refresh()
-	assert_ne(pieces.piece(code), before)
-	assert_eq(pieces.piece(code).get_node("Figures/Formation").get_child_count(), 6)
-
+	assert_eq(pieces.piece(code), before, "one piece a regiment, whatever its strength")
+	assert_eq((before.get_node("Tag") as Label3D).text, WarRoom.tag_text(repo, state, code))
 
 func test_a_push_in_flight_to_the_same_place_is_not_restarted() -> void:
 	view.lay_sheet(_home_sheet())
@@ -328,17 +347,6 @@ func test_a_push_in_flight_to_the_same_place_is_not_restarted() -> void:
 	assert_almost_eq(pieces.piece(code).position.x, view.table_point(at + Vector2(5.0, 0.0)).x, 0.0001)
 
 
-func test_a_figure_is_measured_through_its_transforms_and_never_taller_than_the_target() -> void:
-	view.lay_sheet(_home_sheet())
-	await wait_process_frames(2)
-	var pieces: WarPieces = view.get_node("%Pieces")
-	var want := repo.bal("war_piece_figure_mm") / 1000.0
-	var form := pieces.piece(_land_code()).get_node("Figures/Formation") as Node3D
-	var tall := Map3DUnits.model_size(form.get_child(0) as Node3D).y * form.scale.y
-	assert_lte(tall, want + 0.0001, "a figure is never taller than the target")
-	assert_gt(tall, want * 0.5, "and not shrunk away")
-
-
 func test_the_tags_show_only_near_the_table() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
@@ -357,24 +365,6 @@ func test_the_tags_show_only_near_the_table() -> void:
 	view.lay_sheet(_home_sheet())
 	view.lean_to(repo.bal("war_tag_view_m") * 0.5)
 	assert_true((pieces.piece(code).get_node("Tag") as Label3D).visible, "a rebuilt piece wears the current setting")
-
-
-func test_the_nine_figures_stand_inside_the_base_and_are_centred_on_it() -> void:
-	view.lay_sheet(_home_sheet())
-	await wait_process_frames(2)
-	var pieces: WarPieces = view.get_node("%Pieces")
-	var node := pieces.piece(_land_code())
-	var form := node.get_node("Figures/Formation") as Node3D
-	var side := repo.bal("war_piece_base_mm") / 1000.0
-	var lo := Vector2(INF, INF)
-	var hi := Vector2(-INF, -INF)
-	for f: Node in form.get_children():
-		var at := (f as Node3D).position * form.scale.x + form.position
-		lo = Vector2(minf(lo.x, at.x), minf(lo.y, at.z))
-		hi = Vector2(maxf(hi.x, at.x), maxf(hi.y, at.z))
-	assert_almost_eq((lo.x + hi.x) * 0.5, 0.0, 0.0005, "centred side to side")
-	assert_almost_eq((lo.y + hi.y) * 0.5, 0.0, 0.0005, "centred front to back")
-	assert_lt(maxf(hi.x - lo.x, hi.y - lo.y), side, "the slots stand within the base")
 
 
 func test_the_chalk_ring_follows_a_pushed_piece() -> void:

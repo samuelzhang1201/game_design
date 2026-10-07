@@ -23,8 +23,20 @@ static func px_per_unit(repo: DataRepository) -> float:
 	return 1.0 / maxf(float(repo.map_info.get("distance_scale", "1")), 0.0001)
 
 
+## A column's letters, spreadsheet style: A..Z, then AA..AZ, BA.. (a 10°
+## series runs past Z: spec 2026-10-07-war-room-scale-hover §1).
+static func column_letters(col: int) -> String:
+	var out := ""
+	var n := col + 1
+	while n > 0:
+		out = char(65 + (n - 1) % 26) + out
+		@warning_ignore("integer_division")  # whole letters
+		n = (n - 1) / 26
+	return out
+
+
 static func id_of(col: int, row: int) -> String:
-	return "%s%d" % [char(65 + col), row + 1]
+	return "%s%d" % [column_letters(col), row + 1]
 
 
 static func series(repo: DataRepository) -> Array:

@@ -52,8 +52,6 @@ func pick_at(pos: Vector2) -> Dictionary:
 		return {}
 	var p := hit as Vector3
 	var xz := Vector2(p.x, p.z)
-	var best := ""
-	var best_d := INF
 	# A regiment is picked first, as on the 2D map. Its 3D PIECE comes before
 	# its counter: the piece is the big thing the player is aiming at, and
 	# under MILITARY the counter has shrunk to a headcount chip over its head.
@@ -61,13 +59,27 @@ func pick_at(pos: Vector2) -> Dictionary:
 		if (view.unit_rects()[code] as Rect2).has_point(pos):
 			return {"kind": "army", "code": code}
 	# ...anywhere on the counter, or within map_army_pick_px of its point.
+	# A regiment is quartered IN a town, beside its point, and its counter is
+	# wider than the town's whole reach at most zooms: where a town's dot is in
+	# reach too, the nearer of the two centres takes the click (spec
+	# 2026-10-06-army-location-and-town-defence §5.3); a town's output badge
+	# under the click counts as its dot.
+	var near := _settlement_at(pos)
+	var town := String(near[0])
+	var town_d := float(near[1])
+	for b: Dictionary in view.manor_badges():
+		var bd := (b["rect"] as Rect2).get_center().distance_to(pos)
+		if (b["rect"] as Rect2).has_point(pos) and bd < town_d:
+			town_d = bd
 	var armies := view.army_markers()
 	for i in range(armies.size() - 1, -1, -1):
-		if (armies[i]["rect"] as Rect2).has_point(pos):
-			return {"kind": "army", "code": String(armies[i]["code"])}
+		var box := armies[i]["rect"] as Rect2
+		if box.has_point(pos) and box.get_center().distance_to(pos) < town_d:
+			return _army_pick(armies[i])
 	for i in range(armies.size() - 1, -1, -1):
-		if (armies[i]["pos"] as Vector2).distance_to(pos) <= ctx.repo.bal("map_army_pick_px"):
-			return {"kind": "army", "code": String(armies[i]["code"])}
+		var d := (armies[i]["pos"] as Vector2).distance_to(pos)
+		if d <= ctx.repo.bal("map_army_pick_px") and d < town_d:
+			return _army_pick(armies[i])
 	# A committed march's end ring opens its route (owner 2026-09-27).
 	for e: Dictionary in view.route_ends():
 		if (e["pos"] as Vector2).distance_to(pos) <= ctx.repo.bal("map_army_pick_px"):
@@ -89,23 +101,13 @@ func pick_at(pos: Vector2) -> Dictionary:
 	for b: Dictionary in view.manor_badges():
 		if (b["rect"] as Rect2).has_point(pos):
 			return {"kind": "burg", "code": String(b["burg"])}
-	for e: Dictionary in ctx.projected_settlements():
-		if not bool(e["shown"]):
-			continue
-		var code := String(e["code"])
-		var dist_m := ctx.camera.global_position.distance_to(e["world"] as Vector3)
-		var reach := ctx.pick_reach_px(code, e["spec"], dist_m)
-		var d := (e["screen"] as Vector2).distance_to(pos)
-		if d <= reach and d < best_d:
-			best_d = d
-			best = code
 	# Under HEIGHTS a high or low point (spec 2026-09-19-map3d-heights), ranked
 	# against the settlements (Task 7; simplified owner 2026-09-20, change 3:
 	# pick_reach_px is now the settlement's ONE click geometry, no longer a
 	# tighter "exact dot" inside a looser "click floor" — a settlement within
 	# reach always beats a mark, a mark's own box beats its grown rect).
-	if best != "":
-		return {"kind": "burg", "code": best}
+	if town != "":
+		return {"kind": "burg", "code": town}
 	if waiting >= 0:
 		return {"kind": "courier", "id": waiting}
 	var marks := view.landmark_marks() if view.heat_on() else []
@@ -122,6 +124,34 @@ func pick_at(pos: Vector2) -> Dictionary:
 		return {"kind": "manor", "cell": cell} if cell >= 0 else {}
 	var province := province_at(ctx.to_pack(xz))
 	return {"kind": "province", "code": province} if province != "" else {}
+
+
+## What a counter names: its regiment; a town's garrison of more than one
+## regiment as {kind: garrison, town, codes} (owner 2026-10-06, choice A —
+## the click then asks which of them).
+static func _army_pick(m: Dictionary) -> Dictionary:
+	var codes: Array = m.get("codes", [])
+	if String(m.get("garrison", "")) != "" and codes.size() > 1:
+		return {"kind": "garrison", "town": String(m["garrison"]), "codes": codes}
+	return {"kind": "army", "code": String(m["code"])}
+
+
+## The shown settlement within its pick reach of a screen point, the nearest,
+## and its distance: [code, px], ["", INF] for none.
+func _settlement_at(pos: Vector2) -> Array:
+	var best := ""
+	var best_d := INF
+	for e: Dictionary in ctx.projected_settlements():
+		if not bool(e["shown"]):
+			continue
+		var code := String(e["code"])
+		var dist_m := ctx.camera.global_position.distance_to(e["world"] as Vector3)
+		var reach := ctx.pick_reach_px(code, e["spec"], dist_m)
+		var d := (e["screen"] as Vector2).distance_to(pos)
+		if d <= reach and d < best_d:
+			best_d = d
+			best = code
+	return [best, best_d]
 
 
 ## The province at a pack pixel (the province index bitmap), "" off the land.
@@ -168,6 +198,9 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 		"army":
 			var k := String(ArmySystem.regiment(repo, String(picked["code"])).get("kingdom_code", ""))
 			return k if repo.kingdoms.has(k) else ""
+		"garrison":
+			var g := String(ArmySystem.regiment(repo, String(picked["codes"][0])).get("kingdom_code", ""))
+			return g if repo.kingdoms.has(g) else ""
 	if province == "":
 		return ""
 	var holder := MapOwnership.owner_of(repo, state, province)
@@ -203,7 +236,7 @@ func hover_pick(picked: Dictionary, pos: Vector2) -> void:
 		return
 	var repo: DataRepository = ctx.repo if ctx != null else null
 	var state: GameState = ctx.state() if ctx != null else null
-	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army", "landmark"] else {}
+	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army", "garrison", "landmark"] else {}
 	if obj != _hover_obj:
 		_hover_obj = obj
 		var label := MapObjects.label_of(repo, obj, state)

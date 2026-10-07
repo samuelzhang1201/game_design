@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://c3s0yjcmu4nio"]
+
+[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="1_c0ft5"]
+[ext_resource type="StyleBox" uid="uid://c4rntxxfax7n8" path="res://assets/2D/ui/war_table/styles/war_slip.tres" id="2_rp4qj"]
+[ext_resource type="Script" path="res://scripts/ui/war_hover_slip.gd" id="3_hw8iv"]
+
+[node name="WarHoverSlip" type="PanelContainer" unique_id=813852285]
+visible = false
+mouse_filter = 2
+theme = ExtResource("1_c0ft5")
+theme_override_styles/panel = ExtResource("2_rp4qj")
+script = ExtResource("3_hw8iv")
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=546775930]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
+
+[node name="Lines" type="VBoxContainer" parent="Margin" unique_id=295398334]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2

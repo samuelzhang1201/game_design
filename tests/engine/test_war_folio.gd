@@ -151,7 +151,8 @@ func test_garrison_adds_its_morale_row() -> void:
 	var held := ""   # a land regiment standing in a town of a province the crown controls
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
 		var c := String(r["regiment_code"])
-		if String(r.get("is_naval", "0")) != "1" and SupplySystem.stronghold_of(repo, state, c) != "":
+		if String(r.get("is_naval", "0")) != "1" \
+				and ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, c), state) != "":
 			held = c
 			break
 	assert_ne(held, "", "the pack has a land regiment at a crown town")
@@ -168,7 +169,25 @@ func test_garrison_adds_its_morale_row() -> void:
 			supply = out
 	assert_true(morale.has("In garrison"))
 	assert_eq(morale["In garrison"], "+%d" % int(repo.bal("army_morale_garrison_bonus")))
-	assert_true(String(supply["Line"]).begins_with("in garrison at "))
+	assert_true(String(supply["Line"]).contains(" tops it up"), supply["Line"])
+
+
+## Final review 6: a regiment merely standing in its realm town (no garrison
+## order) is topped up by it, and the folio says so.
+func test_a_standing_regiment_reads_the_town_that_tops_it_up() -> void:
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		var c := String(r["regiment_code"])
+		var held := SupplyLines.home_town(repo, state, c)
+		if held == "" or ArmySystem.order_of(repo, state, c) == ArmySystem.ORDER_GARRISON:
+			continue
+		for sec: Dictionary in WarFolio.sections(repo, state, c):
+			if String(sec["key"]) != "supply":
+				continue
+			for row: Dictionary in sec["rows"]:
+				if String(row["label"]) == "Line":
+					assert_string_contains(String(row["text"]), "%s tops it up" % String(repo.burgs[held]["label"]))
+					return
+	fail_test("no standing regiment in a realm town, or no Line row")
 
 
 func test_matchups_are_named_per_arm() -> void:
@@ -207,22 +226,52 @@ func test_every_order_has_a_word() -> void:
 	assert_eq(WarFolio.order_word(repo, ArmySystem.ORDER_STANDBY), "Standing by")
 
 
-func test_the_line_names_the_depot_town() -> void:
-	var name := WarFolio.depot_name(repo, state)
-	assert_ne(name, "the depot", "the capital is a town")
-	var realm := repo.resolve_realm("player_realm")
-	var cap := String(repo.kingdoms[realm]["capital_burg"])
-	assert_eq(name, String(repo.burgs[cap]["label"]))
-	# a regiment out on the road reads its line from that town
-	var reg := ArmySystem.regiment(repo, code)
-	var from := ArmySystem.position_of(repo, state, reg)
-	ArmySystem.set_march(repo, state, code, from + Vector2(30, 0))
-	var line := String(_rows("supply").get("Line", ""))
-	if line.contains(" km from "):
-		assert_true(line.contains(name), line)
+func test_the_line_row_names_its_supply_point() -> void:
+	state.supply_lines.erase(code)
+	var none := String(_rows("supply")["Line"])
+	var refill := SupplyLines.refill_words(repo, state, code)
+	assert_eq(none, "no supply point" + ("" if refill == "" else "; " + refill))
+	var town: String = TownStores.realm_towns(repo, state)[0]
+	state.supply_lines[code] = SupplyLines._new_record(town, 1500, 1)
+	state.supply_lines[code]["state"] = SupplyLines.FLOWING
+	var line := String(_rows("supply")["Line"])
+	assert_true(line.begins_with("flowing from %s, 1.5×" % String(repo.burgs[town]["label"])), line)
+	assert_true(line.contains(" km, "), line)
+
+
+func test_in_hand_reads_days_of_the_carry() -> void:
+	var st := ArmySystem.state_of(repo, state, code)
+	var text := String(_rows("supply")["In hand"])
+	assert_true(text.ends_with(" days of %d)" % ArmySystem.carry_of(repo, st)), text)
 
 
 func test_the_archers_kit_is_not_hidden_by_the_infantrys_names() -> void:
 	var inf: Array = WarFolio.kit_of(repo, "infantry").map(func(r: Dictionary) -> String: return String(r["label"]))
 	for r: Dictionary in WarFolio.kit_of(repo, "archers"):
 		assert_false(String(r["label"]) in inf, "archers' %s shares the infantry's name" % r["part"])
+
+
+func test_the_supply_row_names_a_brigand_on_the_road() -> void:
+	# a flowing line from the first eligible realm town with a road to the column
+	var e := SupplyLines.eligibility(repo, state, code)
+	var towns: Array = e.keys()
+	towns.sort()
+	for t: String in towns:
+		if String(e[t]) == "" and SupplyLines.road_px(repo, state, code, t).size() >= 2:
+			state.supply_lines[code] = SupplyLines._new_record(t, 1000, 1)
+			state.supply_lines[code]["state"] = SupplyLines.FLOWING
+			break
+	var route := SupplySystem.route_px(repo, state, code)
+	if route.size() < 2:
+		pass_test("no realm town in reach of this regiment")
+		return
+	var mid := route[route.size() / 2]
+	var codes: Array = repo.markers.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(repo.markers[c]["type"]) == "brigands":
+			repo.markers[c]["x"] = str(mid.x)
+			repo.markers[c]["y"] = str(mid.y)
+			assert_string_contains(_rows("supply")["Line"], "to the %s" % repo.markers[c]["label"])
+			return
+	pass_test("no brigands on this pack")

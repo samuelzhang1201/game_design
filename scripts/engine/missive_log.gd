@@ -5,6 +5,9 @@ extends RefCounted
 ## letters; the oldest leaves when one more arrives. Whole numbers and strings only.
 
 const COLUMNS := ["truth", "credible", "consult", "rumour"]
+## The marshal's letters: capped apart (missive_keep_supply), so a campaign's
+## daily dispatches never push a spy's report or a receipt off a column.
+const SUPPLY_KINDS := ["supply", "supply_month"]
 
 
 static func subject(kind: String, code: String, cell: int, px: Vector2) -> Dictionary:
@@ -36,8 +39,12 @@ static func add(repo: DataRepository, state: GameState, m: Dictionary) -> int:
 	entry["id"] = state.next_missive_id
 	entry["read"] = false
 	state.missives.append(entry)
-	var keep := maxi(1, int(repo.bal("missive_keep_per_column")))
-	var mine := column(state, String(entry["column"]))
+	# The cap counts the new letter's own sort: supply letters against
+	# missive_keep_supply, every other kind against missive_keep_per_column.
+	var supply := String(entry["kind"]) in SUPPLY_KINDS
+	var keep := maxi(1, int(repo.bal("missive_keep_supply" if supply else "missive_keep_per_column")))
+	var mine := column(state, String(entry["column"])).filter(
+		func(m: Dictionary) -> bool: return (String(m["kind"]) in SUPPLY_KINDS) == supply)
 	for i in range(keep, mine.size()):
 		state.missives.erase(mine[i])
 	return state.next_missive_id

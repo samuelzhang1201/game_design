@@ -114,7 +114,9 @@ erDiagram
 | `idle_buildings` | cell → [building] | 本月缺原料停工的建筑，每月整体重写 | `IndustrySystem.settle_month` | 是 |
 | `workshop_rate`、`closed_routes` | — | 军工坊开工率、被关闭的贸易路线 | 命令 | 是 |
 | `governors`、`skims`、`caught`、`records` | — | 谁管哪条流、贪了多少（真相）、被审计抓到的记录、永久档案 | `Governance`、`LEDGER_AUDIT` | 是 |
-| `regiments` | code → {位置（整米）、目的地、命令、士气、伤员、补给、训练} | 玩家的部队 | `ArmySystem`、信使送达的命令 | 是 |
+| `regiments` | code → {位置（整米）、目的地、命令、士气、伤员、补给（整单位）、`carry_days`（携带天数命令）、训练} | 玩家的部队 | `ArmySystem`、信使送达的命令 | 是 |
+| `town_stock` | burg → {crown, lord, house}（整补给单位） | 各己方城镇自己的战略物资库存；`metrics.strategic` / `lord_strategic` 是 crown / lord 两项之和折成的金 | `TownStores`（月末存入、`reconcile`）、`SupplyLines`（每日扣减） | 是 |
+| `supply_lines` | regiment code → {town, rate, state, 月计数…} | 每支部队至多一条补给线（ordered / riding / flowing / cut） | `SupplyLines`、补给命令送达 | 是 |
 | `couriers` / `next_courier_id` | 数组 | 路上的信使（编号越大命令越新） | `CourierSystem` | 是 |
 | `missives` / `next_missive_id` | 数组 | 收到的信：回执、月报、密探报告、审计 | `MissiveLog` | 是 |
 | `wealth_tiers` | province → 0/1/2 | 各省贫富三档，每月结算后定格 | `Intel.settle_wealth_tiers` | 是 |
@@ -158,10 +160,11 @@ flowchart TD
 **每一天**（`TickEngine.advance_day`），按这个顺序：
 
 1. `MapManors.advance_works`：工程推进，完工的进 `manor_buildings`。
-2. `CourierSystem.ride_day`：信使先走，当天送到的命令当天生效。
-3. `ArmySystem.march_day`：部队行军，到达目的地自动驻防。
-4. `ArmySystem.eat_day`：部队吃掉一天的补给。
-5. `RealmEconomy.step_day`：把本月的经济计算分摊到当天的省份桶里。
+2. `ArmySystem.march_day`：部队行军，到达目的地自动驻防。
+3. `CourierSystem.ride_day`：信使在部队行军之后走，当天送到的命令从次日起执行。
+4. `SupplyLines.day_step`：城镇给驻扎的部队补满携带量；补给线的状态、截断、送达与运费。
+5. `ArmySystem.eat_day`：部队吃掉一天的补给；`hunger_day`：存粮不足 5 天则每天掉士气；`SupplyLines.warn_day`：低粮、断粮、城镇库存告急的警告。
+6. `RealmEconomy.step_day`：把本月的经济计算分摊到当天的省份桶里。当天的补给消息合成**一封**快报（`MissiveWriter.supply_dispatch`）。
 
 **月末**（`TickEngine.advance`），先结算刚结束的月，再翻月：
 
@@ -171,16 +174,16 @@ flowchart TD
   B --> C["WorkshopSystem.settle_month<br/>领主民用物资 → 战略物资"]
   C --> D["MarketSystem.settle_month<br/>贸易关税进国库"]
   D --> E["Intel.settle_wealth_tiers<br/>定格各省贫富档"]
-  E --> F["MissiveLog：管家月报"]
-  F --> G["SupplySystem.settle_month<br/>补给线给部队补满"]
-  G --> H["ArmySystem.settle_month<br/>伤员归队、士气向补给决定的目标漂移、训练"]
+  E --> F["TownStores.reconcile + MissiveLog：管家月报"]
+  F --> G["ArmySystem.settle_month<br/>伤员归队、士气向存粮天数决定的目标漂移、训练"]
+  G --> H["SupplyLines.settle_month<br/>元帅月报、克扣入账、月计数清零"]
   H --> I["tick += 1，day = 1<br/>新月第一天：工程、信使、行军、吃饭"]
   I --> J["_drift：正统等指标回归<br/>RelationshipGraph.drift<br/>ClaimLedger.resolve_due<br/>过期承诺 → 好感 -、记仇"]
   J --> K["ConcernScanner.scan → 大臣建议<br/>EventSystem.roll → 本月事件"]
   K --> R["TickReport 月报"]
 ```
 
-顺序本身就是规则：例如关税放在补给线之前，是为了"本月收入全部入账之后才开始花"；士气在补给补满**之后**、本月消耗**之前**读。
+顺序本身就是规则：例如关税放在工坊之后，是为了"本月收入全部入账之后才开始花"；士气的月度漂移读的是当月最后一天吃完后的存粮天数；每日的补给消耗与饥饿惩罚在 `advance_day` 里发生。
 
 ### 3.3 一个庄园的一个月：经济血缘
 
@@ -201,7 +204,7 @@ flowchart LR
   LINE --> PROV["RealmEconomy 省份合计<br/>（缓存，键 = province_key）"]
   PROV --> PURSE["RealmEconomy.purses<br/>受控省份 → 领主钱袋（全额）<br/>其他省份 → 王室（crown_share_permille 200‰）"]
   PURSE --> MET["metrics：lord_* / treasury / strategic / grain"]
-  MET --> DOWN["工坊 → 补给 → 士气 → 战备<br/>建筑、买地、命令费用"]
+  MET --> DOWN["城镇库存 → 补给线 → 存粮天数 → 士气 → 战备<br/>建筑、买地、命令费用"]
   MET --> UI2["顶栏钱袋、庄园卡、LEDGER 星图"]
 ```
 
@@ -275,7 +278,7 @@ LEDGER 星图（`Ledger.galaxy`）同样只画认知：官员报给你的数字�
 ### 例 3：玩家把一个庄园的产业从谷物改成铁矿（运行时状态）
 
 - **改了什么**：`MANOR_FOCUS` 写入 `manor_focus[cell] = {focus, since}`。
-- **怎么传导**：新产业按 `manor_focus.csv` 的 `transition_ticks` 逐月爬升；产出从民用池转到战略池（`goods_economy.csv` 决定归哪个池）。补给线每月把部队补到 `army_supply_target_months` 个月为止，所以战略物资变多只在**池子原本不够分**时起作用：那时部队拿到的补给变多 → 补给档 → 士气目标 → 战备（红条）上升 → 行军速度和战斗胜算上升；池子本来就够，多出来的只是存着。民用池变少 → 军工坊可转化的原料变少；民用池见底时宫廷口粮按规则核销。
+- **怎么传导**：新产业按 `manor_focus.csv` 的 `transition_ticks` 逐月爬升；产出从民用池转到战略池（`goods_economy.csv` 决定归哪个池）。月末产出按辖区归属存进各城镇的库存（`TownStores.deposit_month`，`town_stock`）；部队只从**玩家指定的补给点**（补给线）或所在的己方城镇取粮，补给线每天按速率从该城镇扣库存。所以战略物资变多只在**补给点所在城镇原本不够供**时起作用：那时部队每天拿到的补给变多 → 存粮天数 → 士气和行军拖累 → 战备（红条）上升 → 行军速度和战斗胜算上升；库存本来就够，多出来的只是存着。民用池变少 → 军工坊可转化的原料变少；民用池见底时宫廷口粮按规则核销。
 - **最后看到**：庄园卡产出、地图上该庄园的产出徽章、LEDGER 的物资流。
 - **不会变的**：地面的田地图案。它是构建期按开局默认产业烘焙的。
 
@@ -292,7 +295,7 @@ LEDGER 星图（`Ledger.galaxy`）同样只画认知：官员报给你的数字�
 ### 例 5：改 `balance.csv` 的一个数（定义层，纯数值）
 
 - **改了什么**：`army_supply_gold_permille` 100 → 150（补给每月的花费系数）。
-- **怎么传导**：`SupplySystem.plan` 的花费 × 1.5 → 战略池消耗更快（先扣王室的，再扣领主的，不够时按需求分摊）→ 池子见底时补给不满 → 士气下降。CLAUDE.md 记录的校准点（满补给每月约 202 金，对比约 414 的战略收入）会失效，需要重新校准。
+- **怎么传导**：一个补给单位的金价 × 1.5 → 战略指标（库存折金）、向房屋买粮的价格、元帅月报里的金额同步变化；补给线的运费按 `supply_cart_milligold_per_unit_km` 另算，不受影响。
 - **额外操作**：重启游戏即可，不用重建世界。相关的 GUT 测试如果写死了期望值，要更新。
 
 ### 例 6：改房屋表 `data/map3d_houses.csv`（定义层，3D 外观）

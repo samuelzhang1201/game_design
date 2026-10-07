@@ -5,7 +5,7 @@ const SuiteData := preload("res://tests/suite_data.gd")
 ## Whole numbers throughout: the pace is kept in TENTHS of a km.
 ##
 ##   base   = the slowest arm under the banner, data/army_speed.csv (km/day)
-##   S      = supplies in hand over army_speed_supply_full_months of use,
+##   S      = supplies in hand over army_supply_low_days days of use,
 ##            per mille, capped at 1000
 ##   M      = morale x 10, T = training x 10 (both 0..100 -> 0..1000)
 ##   ready  = (Wa*1000 + Ws*S + Wm*M + Wt*T) / (Wa + Ws + Wm + Wt)
@@ -15,7 +15,7 @@ var repo: DataRepository
 
 
 func before_each() -> void:
-	repo = SuiteData.repo()
+	repo = SuiteData.flat_ground(SuiteData.repo())
 	# Fix the table and weights so the hand sums below hold whatever the
 	# design data is tuned to later.
 	repo.army_speed = {"infantry": 20, "archers": 22, "cavalry": 40, "artillery": 12, "fleet": 100}
@@ -23,7 +23,6 @@ func before_each() -> void:
 	repo.balance["army_speed_w_supply"] = 25.0
 	repo.balance["army_speed_w_morale"] = 20.0
 	repo.balance["army_speed_w_training"] = 15.0
-	repo.balance["army_speed_supply_full_months"] = 3.0
 
 
 func test_every_arm_has_a_pace() -> void:
@@ -40,9 +39,9 @@ func test_readiness_is_the_weighted_mean_of_the_four_scores() -> void:
 	assert_eq(ArmySystem.readiness_permille(repo, 0, 0, 0), 400)
 
 
-func test_supplies_score_by_months_in_hand() -> void:
-	# 1.5 months of 3 -> 500; 6 of 3 -> capped 1000; none -> 0.
-	assert_eq(ArmySystem.supply_score(repo, 150, 100), 500)
+func test_supplies_score_by_days_in_hand() -> void:
+	# 8 units of 100 a month = 2.4 days of the 5-day low mark -> 480; 600 -> capped 1000; none -> 0.
+	assert_eq(ArmySystem.supply_score(repo, 8, 100), 480)
 	assert_eq(ArmySystem.supply_score(repo, 600, 100), 1000)
 	assert_eq(ArmySystem.supply_score(repo, 0, 100), 0)
 	assert_eq(ArmySystem.supply_score(repo, 10, 0), 1000, "a banner that eats nothing never runs short")
@@ -74,7 +73,10 @@ func test_a_real_regiment_of_the_player_has_a_speed() -> void:
 	var expect := ArmySystem.pace_tenths(Game.data, ArmySystem.base_pace_km(Game.data, reg),
 		ArmySystem.supply_score(Game.data, int(st["supplies"]), ArmySystem.supply_use(Game.data, reg)),
 		int(st["morale"]), int(st["training"]))
-	assert_almost_eq(km, expect / 10.0, 0.0001)
+	# on the ground it stands on (spec 2026-10-06 §6)
+	var ground := ArmySystem.ground_permille(Game.data, reg, ArmySystem.position_of(Game.data, Game.state, reg))
+	var carried := ArmySystem.load_permille(Game.data, ArmySystem.carry_of(Game.data, st))
+	assert_almost_eq(km, expect / 10.0 * float(carried) / 1000.0 * float(ground) / 1000.0, 0.0001)
 
 
 func test_hunger_and_low_morale_slow_the_march() -> void:
@@ -110,22 +112,27 @@ func test_the_bars_are_readiness_and_supply() -> void:
 	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))[0]
 	var code := String(reg["regiment_code"])
 	var use := ArmySystem.supply_use(repo, reg)
-	st.regiments[code] = {"morale": 50, "training": 20, "supplies": use, "wounded": 0}
-	# readiness scores one month of three: 333; (40*1000 + 25*333 + 20*500 + 15*200) / 100 = 613.
-	# The yellow bar is the stores against a full train (owner 2026-09-30: it falls
-	# every day): one month of army_supply_target_months 4 = 250.
-	assert_eq(ArmySystem.bars_of(repo, st, code), Vector2i(613, 250))
+	# three days in hand, a 20-day load: the supply score is 3 of the 5-day low mark = 600
+	# (use*3/30 units; use is a multiple of ten at this pack), readiness
+	# (40*1000 + 25*600 + 20*500 + 15*200) / 100 = 680; the yellow bar is
+	# three days of the 20 carried (owner 2026-09-30: it falls every day) = 150.
+	assert_eq(use % 10, 0, "the hand sums below need a whole number of units a day")
+	st.regiments[code] = {"morale": 50, "training": 20, "supplies": use * 3 / 30, "wounded": 0,
+		"carry_days": 20}
+	assert_eq(ArmySystem.bars_of(repo, st, code), Vector2i(680, 150))
 
 
 func test_a_foreign_regiment_reads_as_it_would_start() -> void:
 	repo.balance["army_start_morale"] = 70.0
 	repo.balance["army_start_training"] = 10.0
-	repo.balance["army_start_supply_months"] = 6.0
 	var mine := repo.resolve_realm("player_realm")
 	for reg: Dictionary in repo.world_table("military", "regiments").values():
 		if String(reg["kingdom_code"]) != mine:
-			# six months of three: 1000; readiness 805 (above)
-			assert_eq(ArmySystem.bars_of(repo, GameState.new(), String(reg["regiment_code"])),
-				Vector2i(805, 1000))
+			# twenty days of a 20-day load: the supply score full, readiness 805
+			# (above); the stores bar a whole unit or two short of 1000, the
+			# start being rounded down to whole units
+			var bars := ArmySystem.bars_of(repo, GameState.new(), String(reg["regiment_code"]))
+			assert_eq(bars.x, 805)
+			assert_between(bars.y, 990, 1000)
 			return
 	fail_test("the pack has no foreign regiment")

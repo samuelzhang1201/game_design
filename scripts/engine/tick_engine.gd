@@ -12,12 +12,21 @@ func _init(d: DataRepository) -> void:
 	suggestions = SuggestionGenerator.new(d, actions)
 	events = EventSystem.new(d)
 
-## One day (owner 2026-09-13: the smallest unit of time). Works in
-## progress step; the thirtieth day's end is a tick, which the caller
-## (Game.advance_day) runs through advance(). Returns the works finished
-## today, [{cell, building}].
+## One day (owner 2026-09-13: the smallest unit of time): the day now
+## running (`state.day`) ENDS, and the next one begins. The thirtieth day's
+## end is a tick, which the caller (Game.advance_day) runs through advance()
+## instead. Returns the works finished today, [{cell, building}].
 func advance_day(state: GameState) -> Array:
+	var done := _end_day(state)
 	state.day = mini(state.day + 1, Calendar.DAYS_PER_TICK)
+	return done
+
+
+## The day `state.day` ends (owner 2026-10-06: 顶栏日期滞后一天 — the date shown
+## is the day being played, and all of it happens as that day ends): works
+## step, the columns march, the couriers ride, the host eats. Returns the
+## works finished.
+func _end_day(state: GameState) -> Array:
 	var done := MapManors.advance_works(data, state)
 	# A day on the road for every regiment under a march order (owner
 	# 2026-09-22). The arrivals go on day_arrivals rather than into the
@@ -28,10 +37,21 @@ func advance_day(state: GameState) -> Array:
 	# courier arrives as the day ENDS): he reaches the column where its day
 	# left it, and the order he delivers is marched on from tomorrow.
 	day_couriers = CourierSystem.ride_day(data, state)
+	# The supply lines' day (spec 2026-10-07-army-supply-lines §3.2): the towns
+	# refill their garrisons, the wagons roll, before the host eats.
+	day_supply = SupplyLines.day_step(data, state)
 	# The host eats a day of its month (owner 2026-09-30).
 	ArmySystem.eat_day(data, state)
+	# A hungry host loses heart every day (spec 2026-10-07-army-supply-lines §3.7).
+	ArmySystem.hunger_day(data, state)
+	# The day's supply warnings, read off what the host has left after eating.
+	day_supply.append_array(SupplyLines.warn_day(data, state))
 	# The month's economy is computed a bucket a day (spec §11.2).
 	RealmEconomy.step_day(data, state)
+	# The day's supply news goes out as ONE letter, when there is any (spec
+	# 2026-10-07-army-supply-lines §5.5): day_supply holds all of the day now.
+	if not day_supply.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.supply_dispatch(data, state, day_supply))
 	return done
 
 ## The regiments that reached their destination in the last advance_day, in
@@ -41,10 +61,17 @@ var day_arrivals: Array = []
 ## The couriers' events of the last day (CourierSystem.ride_day), for the news bar.
 var day_couriers: Array = []
 
+## The supply lines' events of the last day (SupplyLines.day_step), for the
+## marshal's dispatches.
+var day_supply: Array = []
+
 ## The buildings the last advance() left idle that were working the month
 ## before (M5), [{cell, building, missing}] in cell then code order — read
 ## by Game for the news bar, ONCE per spell idle; never in the TickReport.
 var newly_idle: Array = []
+
+## The month's hazard news (Hazards: the toll, then the endings), for the news bar.
+var month_hazard_news: Array = []
 
 func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
 	var out: Array = []
@@ -62,6 +89,16 @@ func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
 
 func advance(state: GameState) -> TickReport:
 	var r := TickReport.new()
+	# The month's last day ends first, as every day does (owner 2026-09-24:
+	# 行进速度必须和给定的速度相符 — the tick IS a day on the road too), so its
+	# march, its couriers and its works are the month's. The reign's OPENING
+	# tick (tick 0) closes no day: the first day is played, not skipped.
+	if state.tick > 0:
+		r.finished_works = _end_day(state)
+	else:
+		day_arrivals = []
+		day_couriers = []
+		day_supply = []
 	# The month that just ended is settled BEFORE the tick moves: its lines
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.
@@ -93,6 +130,9 @@ func advance(state: GameState) -> TickReport:
 	# The provinces' wealth tiers are settled with the month (Ruling 15):
 	# state, so no reader's timing can decide what a spy's report says.
 	Intel.settle_wealth_tiers(data, state)
+	# Whatever else moved the strategic pools this month (the workshops'
+	# lines, the industry's inputs) is settled into the towns.
+	TownStores.reconcile(data, state)
 	# The steward's report on the month just settled (owner 2026-09-28): ground
 	# truth. The reign's OPENING tick (tick 0, the one GameRoot runs once at
 	# start before any day is played) settles no real month, so it files no
@@ -100,25 +140,20 @@ func advance(state: GameState) -> TickReport:
 	# every later settled month has already been incremented past it.
 	if state.tick > 0:
 		MissiveLog.add(data, state, MissiveWriter.monthly(data, state, state.tick))
-	# The supply lines (spec 2026-09-30-ledger-supply-design §3): the host is
-	# refilled before its month is spent.
-	for l: Dictionary in SupplySystem.settle_month(data, state):
-		_apply(r, state.metrics, String(l["metric"]), float(int(l["delta"])), String(l["reason"]))
 	# The regiments' month (owner 2026-09-17; morale, spec 2026-09-30-ledger-
 	# supply-design §4): wounded return, morale drifts toward what the stores
 	# just refilled allow, training grows (the supplies are eaten daily).
 	ArmySystem.settle_month(data, state)
+	# The marshal's month (spec 2026-10-07-army-supply-lines §5.5): his
+	# report, his skims banked, the lines' counters reset.
+	var supply_rows := SupplyLines.settle_month(data, state)
+	if state.tick > 0:
+		MissiveLog.add(data, state, MissiveWriter.marshal_report(data, state, state.tick, supply_rows))
+	# The hazards take their month's toll (spec 2026-10-07-war-room-p2 §2.3).
+	month_hazard_news = Hazards.settle_regiments(data, state)
 	state.tick += 1
 	state.day = 1
-	r.finished_works = MapManors.advance_works(data, state)
-	# The tick IS a day on the road too (owner 2026-09-24: 行进速度必须和给定
-	# 的速度相符): without this a regiment marched 29 days in every 30 and
-	# its piece stood still for one day each month.
-	day_arrivals = ArmySystem.march_day(data, state)
-	# ...and the couriers ride after it, as on every day (owner 2026-10-02).
-	day_couriers = CourierSystem.ride_day(data, state)
-	# ...and the first day of the new month is eaten like any other.
-	ArmySystem.eat_day(data, state)
+	month_hazard_news.append_array(Hazards.settle_month(data, state))
 	r.tick = state.tick
 	r.season = state.season()
 	r.year = state.year()
@@ -164,6 +199,9 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 	_apply(r, m, "strategic", float(int(crown_share["strategic"])),
 		"the crown's share of the realm's strategic goods")
 	_apply(r, m, "grain", float(int(crown_share["civil"])), "the crown's share of the realm's civil goods")
+	# ...and the same goods into the towns that hold them (spec 2026-10-07-army-
+	# supply-lines §3.1): the metrics just raised are the towns' sums.
+	TownStores.deposit_month(data, state)
 	_set_metric(r, m, "tax_income", float(int(lord["tax"]) + int(crown_share["tax"])), "taxes collected this month")
 	# The court is the crown's: its ministers and its table.
 	var salaries := 0

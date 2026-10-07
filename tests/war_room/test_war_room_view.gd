@@ -195,15 +195,19 @@ func test_a_click_on_an_edge_arrow_requests_its_sheet() -> void:
 	assert_signal_emitted_with_parameters(view, "sheet_requested", [int(arrow.get_meta("sheet"))])
 
 
-func test_the_chart_letters_its_columns_and_numbers_its_rows() -> void:
+func test_the_chart_letters_every_nth_column_and_numbers_every_nth_row() -> void:
 	view.lay_sheet(0)
 	await wait_process_frames(2)
 	var g := MapCoords.grid_size(repo, repo.bal("war_sheet_deg"))
+	var every := int(repo.bal("war_chart_label_every"))
 	var labels := view.get_node("%IndexChart").get_children()
-	assert_eq(labels.size(), g.x + g.y)
 	var cols := labels.filter(func(l: Node) -> bool: return String(l.get_meta("axis")) == "col")
-	assert_eq(cols.size(), g.x)
+	var rows := labels.filter(func(l: Node) -> bool: return String(l.get_meta("axis")) == "row")
+	assert_eq(cols.size(), ceili(float(g.x) / every))
+	assert_eq(rows.size(), ceili(float(g.y) / every))
 	assert_eq((cols[0] as Label3D).text, "A")
+	if cols.size() > 1:
+		assert_eq((cols[1] as Label3D).text, WarSheets.column_letters(every))
 
 
 func test_a_click_on_a_land_cell_of_the_chart_asks_for_its_sheet() -> void:
@@ -381,12 +385,16 @@ func test_the_arrow_reads_the_distance_in_the_packs_measure_and_the_arrival_day(
 	var p := _first_land_piece()
 	var code := String(p["code"])
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(10.0, 0.0)
-	var dist := 10.0 * float(repo.map_info.get("distance_scale", "1"))
+	# the rake measures from where the regiment IS (a garrison's piece stands
+	# on its town's point, the regiment within the town's reach)
+	var dist := view.position_of(code).distance_to(to) * float(repo.map_info.get("distance_scale", "1"))
 	# ONE arrival day: the courier's ride, then the march (owner 2026-10-02)
-	var days := CourierSystem.arrival_days(repo, state, code, to, p["at"] as Vector2)
-	assert_eq(days, (CourierSystem.eta_days(repo, state, CourierSystem.ORDINARY, code)
-		if CourierSystem.carries_orders(ArmySystem.regiment(repo, code)) else 0)
-		+ ArmySystem.march_days(repo, state, code, 10.0 * float(ArmySystem.metres_per_pack_px(repo))))
+	var days := CourierSystem.arrival_days(repo, state, code, to, view.position_of(code))
+	var ride := CourierSystem.eta_days(repo, state, CourierSystem.ORDINARY, code) \
+		if CourierSystem.carries_orders(ArmySystem.regiment(repo, code)) else 0
+	# the march walked over its ground from the day the courier reaches it
+	assert_eq(days, ride + ArmySystem.march_days_between(repo, state, code, view.position_of(code), to,
+		state.absolute_day() + ride))
 	assert_eq(view.rake_reading(code, to), "%s %s · ~%d day%s" % [WarRoom.group(int(round(dist))),
 		String(repo.map_info.get("distance_unit", "km")), days, "" if days == 1 else "s"])
 
@@ -867,3 +875,135 @@ func test_a_refused_draft_says_why_on_its_slip() -> void:
 	await wait_process_frames(1)
 	var slip := (view.get_node("%Pennants") as WarPennants).pennant(code + "_draft").get_node("Slip") as Label3D
 	assert_string_contains(slip.text, "The chancery cannot pay")
+
+
+func test_leaning_in_writes_the_near_look_into_the_table() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	view.lean_to(repo.bal("war_cam_max_m"))
+	assert_eq(float(mat.get_shader_parameter("fine_alpha")), 0.0)
+	assert_eq(float(mat.get_shader_parameter("contour_m")), repo.bal("war_contour_m"))
+	view.lean_to(repo.bal("war_cam_min_m"))
+	assert_eq(float(mat.get_shader_parameter("fine_alpha")), 1.0)
+	assert_eq(float(mat.get_shader_parameter("contour_m")), WarNear.contour_m(repo, repo.bal("war_cam_min_m")))
+
+
+func _hover(at: Vector2) -> void:
+	var e := InputEventMouseMotion.new()
+	e.position = at
+	view._gui_input(e)
+
+
+func test_resting_on_open_table_reads_the_ground_once() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	var r: Rect2 = WarSheets.series(repo)[0]["cell"]
+	var at: Vector2 = view.screen_pos_of_px(r.get_center())
+	if view.piece_under(at) != "":
+		at += Vector2(40, 40)
+	_hover(at)
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_emit_count(view, "ground_hovered", 1)
+	view._process(1.0)
+	assert_signal_emit_count(view, "ground_hovered", 1, "once per rest")
+	_hover(at + Vector2(repo.bal("war_hover_still_px") * 4.0, 0))
+	assert_signal_emitted(view, "hover_cleared")
+
+
+func test_no_reading_off_the_table() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	_hover(Vector2(2, 2))   # the room's corner, past the table at the opening view
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	if view.pack_at(Vector2(2, 2)).x < 0.0:
+		assert_signal_not_emitted(view, "ground_hovered")
+
+
+func test_the_fine_prints_legibility_limit_is_bound_from_data() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	assert_eq(float(mat.get_shader_parameter("fine_texels_per_px")), repo.bal("war_fine_texels_per_px"))
+
+
+func test_the_near_zoom_patch_comes_on_close_and_goes_far() -> void:
+	view._inks.frame_done = get_tree().process_frame   # headless never posts a draw
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	view.lean_to(repo.bal("war_cam_min_m"))
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 1.0)
+	var uv: Vector4 = mat.get_shader_parameter("detail_uv")
+	assert_true(uv.x >= -0.001 and uv.y >= -0.001 and uv.z <= 1.001 and uv.w <= 1.001, "the patch lies on the sheet: %s" % uv)
+	assert_lt(uv.z - uv.x, 0.5, "and is a small part of it")
+	assert_gt((view.get_node("%DetailViewport") as SubViewport).size.x, 2)
+	view.lean_to(repo.bal("war_cam_max_m"))
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 0.0)
+	assert_eq((view.get_node("%DetailViewport") as SubViewport).size, Vector2i(2, 2), "leaning out gives the patch's target back")
+	assert_null(mat.get_shader_parameter("detail_tex"), "and unbinds it")
+	view.lean_to(repo.bal("war_cam_min_m"))
+	await wait_process_frames(3)
+	assert_eq((view.get_node("%DetailViewport") as SubViewport).render_target_update_mode, SubViewport.UPDATE_DISABLED,
+		"drawn once, then left alone")
+	view.set_active(false)
+	assert_eq((view.get_node("%DetailViewport") as SubViewport).size, Vector2i(2, 2), "given back when the room shuts")
+
+
+func _open_ground() -> Vector2:
+	var r: Rect2 = WarSheets.series(repo)[0]["cell"]
+	var at: Vector2 = view.screen_pos_of_px(r.get_center())
+	if view.piece_under(at) != "":
+		at += Vector2(40, 40)
+	return at
+
+
+func test_a_pointer_that_leaves_the_view_reads_nothing() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	_hover(_open_ground())
+	view.notification(Control.NOTIFICATION_MOUSE_EXIT)   # onto the folio, the margin, the bars
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_not_emitted(view, "ground_hovered")
+
+
+func test_a_camera_move_clears_the_slip_and_restarts_the_rest() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	_hover(_open_ground())
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_emit_count(view, "ground_hovered", 1)
+	view.lean_to(view.camera_rig().distance * 0.9)   # the wheel, a key pan, the north turn
+	assert_signal_emitted(view, "hover_cleared")
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_emit_count(view, "ground_hovered", 1, "no stale reading after the move")
+
+
+func test_no_reading_while_an_order_is_being_aimed() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	watch_signals(view)
+	view.aiming = true   # the confirm menu is up beside the tip
+	_hover(_open_ground())
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_not_emitted(view, "ground_hovered")
+	view.aiming = false
+
+
+func test_closing_at_a_near_lean_unbinds_the_patch_and_reopening_redraws_it() -> void:
+	view._inks.frame_done = get_tree().process_frame
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var mat := (view.get_node("%Table") as MeshInstance3D).get_active_material(0) as ShaderMaterial
+	view.lean_to(repo.bal("war_cam_min_m"))
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 1.0)
+	view.set_active(false)
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 0.0, "no patch sampled from a given-back target")
+	assert_null(mat.get_shader_parameter("detail_tex"))
+	view.set_active(true)
+	assert_eq(float(mat.get_shader_parameter("detail_on")), 1.0, "drawn again on reopening at the same lean")
+	assert_gt((view.get_node("%DetailViewport") as SubViewport).size.x, 2)

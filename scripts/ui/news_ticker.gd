@@ -93,7 +93,7 @@ func place_on_table(band: Rect2) -> void:
 func add_item(text: String) -> void:
 	if text.strip_edges() == "":
 		return
-	var date := Calendar.date_string(Game.state.tick, Game.state.day) if Game.state != null else ""
+	var date := Calendar.date_of_day(Game.news_day()) if Game.state != null else ""
 	_items.append(text)
 	while _items.size() > MAX_ITEMS:
 		_items.pop_front()

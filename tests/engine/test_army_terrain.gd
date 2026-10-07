@@ -91,34 +91,53 @@ func test_a_fleet_is_at_sea() -> void:
 	var id := _land_cell(func(_c: Dictionary) -> bool: return true)
 	assert_eq(ArmySystem.terrain_of(repo, _at_cell(id, true)), "sea")
 
-func test_walls_in_the_cell_fortify() -> void:
-	var cells := MapEconomy.burg_cells(repo)
-	var walled := ""
-	var codes := repo.burgs.keys()
-	codes.sort()
-	for code: String in codes:
-		var feats := String(repo.burgs[code].get("features", "")).split("|")
-		if ("walls" in feats or "citadel" in feats) and cells.has(code):
-			walled = code
-			break
-	assert_ne(walled, "", "the pack has a walled town")
-	var reg := _at_cell(int(cells[walled]))
-	assert_true(ArmySystem.is_fortified(repo, reg))
-	assert_string_contains(ArmySystem.terrain_label(repo, reg), "(fortified)")
-
 func _row(key: String, stance: String) -> int:
 	return int((repo.army_terrain[key] as Dictionary)[stance])
 
 func test_the_modifier_table() -> void:
-	assert_eq(ArmySystem.terrain_factor(repo, "mountains", "cavalry", "defend", false), _row("mountains|cavalry", "defend"))
-	assert_eq(ArmySystem.terrain_factor(repo, "mountains", "cavalry", "attack", false), _row("mountains|cavalry", "attack"))
+	assert_eq(ArmySystem.terrain_factor(repo, "mountains", "cavalry", "defend", ""), _row("mountains|cavalry", "defend"))
+	assert_eq(ArmySystem.terrain_factor(repo, "mountains", "cavalry", "attack", ""), _row("mountains|cavalry", "attack"))
 	assert_false(repo.army_terrain.has("plains|cavalry"))
-	assert_eq(ArmySystem.terrain_factor(repo, "plains", "cavalry", "attack", false), 1000, "a missing row is 1000")
-	var walls := _row("fortified|infantry", "defend")
+	assert_eq(ArmySystem.terrain_factor(repo, "plains", "cavalry", "attack", ""), 1000, "a missing row is 1000")
+	var walls := int((repo.army_town_defence["walls|infantry"] as Dictionary)["defend"])
 	assert_gt(walls, 1000, "walls help")
-	assert_eq(ArmySystem.terrain_factor(repo, "plains", "infantry", "defend", true), walls, "walls on open ground")
+	assert_eq(ArmySystem.terrain_factor(repo, "plains", "infantry", "defend", "walls"), walls, "walls on open ground")
 	var jungle := _row("jungle|infantry", "defend")
 	@warning_ignore("integer_division")  # the formula's own whole per-mille
-	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "defend", true), jungle * walls / 1000)
-	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "attack", true), _row("jungle|infantry", "attack"),
+	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "defend", "walls"), jungle * walls / 1000)
+	assert_eq(ArmySystem.terrain_factor(repo, "jungle", "infantry", "attack", "walls"), _row("jungle|infantry", "attack"),
 		"walls only help the defender")
+
+## The province a regiment is in follows it (owner 2026-10-06): read from the
+## cell it stands on, the pack's own row only for a fleet at sea.
+func test_a_regiment_is_in_the_province_it_marched_into() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var realm := repo.resolve_realm("player_realm")
+	var reg: Dictionary = {}
+	for r: Dictionary in MapObjects.regiments_of(repo, realm):
+		if String(r.get("is_naval", "0")) != "1":
+			reg = r
+			break
+	var code := String(reg["regiment_code"])
+	var home := String(reg["province_code"])
+	assert_eq(ArmySystem.province_of(repo, s, reg), home, "at its quarters, the pack's province")
+	var cell := _land_cell(func(c: Dictionary) -> bool:
+		var p := MapManors.province_of(repo, int(c["cell_id"]), s)
+		return p != "" and p != home)
+	assert_ne(cell, -1)
+	var there := MapManors.province_of(repo, cell, s)
+	var m := ArmySystem.pack_to_metres(repo, MapTerrain.cell_center(repo, repo.cells[cell]))
+	var entry: Dictionary = s.regiments[code]
+	entry["x_m"] = m.x
+	entry["y_m"] = m.y
+	assert_eq(ArmySystem.province_of(repo, s, reg), there)
+	var label := String(repo.provinces[there]["label"])
+	assert_has(MapObjects.army_card(repo, code, s)["fields"], ["Quartered in", label],
+		"the card names the province it is in now")
+
+func test_a_fleet_keeps_its_home_province() -> void:
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		if String(r.get("is_naval", "0")) == "1":
+			assert_eq(ArmySystem.province_of(repo, null, r), String(r["province_code"]))
+			return
+	pending("the realm has no fleet")

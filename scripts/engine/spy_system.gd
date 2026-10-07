@@ -21,9 +21,9 @@ static func quality(repo: DataRepository, state: GameState, at: Vector2, roll: i
 	return clampi(q, 0, 999)
 
 
-## Whether walls or a citadel stand in this cell — mirrors ArmySystem.is_fortified's
-## own use of MapEconomy.burg_cells (burg_code -> cell_id, so the cell is
-## found by scanning for the burg whose cell matches, not looked up by cell).
+## Whether walls or a citadel stand in this cell, by MapEconomy.burg_cells
+## (burg_code -> cell_id, so the cell is found by scanning for the burg whose
+## cell matches, not looked up by cell).
 static func _walled(repo: DataRepository, cell: int) -> bool:
 	var cells := MapEconomy.burg_cells(repo)
 	for code: String in cells:

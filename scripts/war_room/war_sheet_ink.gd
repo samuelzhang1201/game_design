@@ -32,9 +32,16 @@ static func _touches(r: Rect2, poly: PackedVector2Array) -> bool:
 	return false
 
 
-static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int, bake: WarBake = null) -> Dictionary:
-	var r: Rect2 = sheet["rect"]
+## `window` (pack px, empty for the whole sheet): only the strokes touching it,
+## in ITS texture's px, every px size scaled with it so a near-zoom patch (spec
+## 2026-10-07-war-room-scale-hover §2) keeps the sheet's sizes on the table.
+static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int, bake: WarBake = null,
+		window := Rect2()) -> Dictionary:
+	var r: Rect2 = sheet["rect"] if window.size.x <= 0.0 else window
 	var k := float(tex_px) / r.size.x
+	# px sizes grow with the window's magnification over the whole sheet's ink
+	var px_k := 1.0 if window.size.x <= 0.0 \
+		else k / (repo.bal("war_sheet_texture_px") / (sheet["rect"] as Rect2).size.x)
 	var out := {"roads": [], "trails": [], "rivers": [], "coasts": [], "borders": [], "seams": [],
 		"towns": [], "peaks": [], "hollows": [], "woods": [], "manor_edges": [], "manors": []}
 	var route_codes: Array = repo.routes.keys()
@@ -50,19 +57,24 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	var river_codes: Array = repo.rivers.keys()
 	river_codes.sort()
 	# a river widens from its source to its mouth by its discharge, and is named
-	var base_w := repo.bal("war_ink_river_px")
+	var base_w := repo.bal("war_ink_river_px") * px_k
 	for code: String in river_codes:
 		var row: Dictionary = repo.rivers[code]
 		var poly: PackedVector2Array = row["polyline"]
 		if _touches(r, poly):
 			var mouth := minf(base_w * (1.0 + repo.bal("war_ink_river_discharge_k") * sqrt(maxf(float(row.get("discharge", "0")), 0.0))),
-				repo.bal("war_ink_river_max_px"))
+				repo.bal("war_ink_river_max_px") * px_k)
 			(out["rivers"] as Array).append({"poly": _to_tex(r, k, poly), "w0": base_w, "w1": maxf(mouth, base_w),
 				"label": String(row.get("label", ""))})
 	var river_polys: Array = (out["rivers"] as Array).map(func(rv: Dictionary) -> PackedVector2Array: return rv["poly"])
 	var tex_rect := Rect2(Vector2.ZERO, r.size * k).grow(r.size.x * k * 0.02)
 	out["bridges"] = crossings(out["roads"], river_polys, tex_rect)
 	out["fords"] = crossings(out["trails"], river_polys, tex_rect)
+	# the pack's trade on the roads (spec 2026-10-07-war-room-p3 §1.3): a busy
+	# road is drawn heavier, by tier
+	out["trade"] = []
+	for s: Dictionary in WarEconomy.trade_segments(repo, r.grow(r.size.x * 0.02)):
+		(out["trade"] as Array).append({"poly": _to_tex(r, k, s["poly"]), "tier": int(s["tier"]), "kind": String(s["kind"])})
 	for row: Dictionary in repo.coasts:
 		var poly: PackedVector2Array = row["polyline"]
 		if _touches(r, poly):
@@ -79,31 +91,75 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		for seam: PackedVector2Array in MapOwnership.seams_of(repo, state, kd):
 			if _touches(r, seam):
 				(out["seams"] as Array).append(_to_tex(r, k, seam))
+	# a window keeps what reaches into it: a town's name runs a dozen letters
+	# past its ring, so a patch never cuts a name the sheet draws
+	var keep := r
+	if window.size.x > 0.0:
+		var sheet_k := repo.bal("war_sheet_texture_px") / (sheet["rect"] as Rect2).size.x
+		keep = r.grow(repo.bal("war_ink_label_px") * 16.0 * repo.bal("war_ink_char_w") / sheet_k)
 	var codes: Array = repo.burgs.keys()
 	codes.sort()
 	for code: String in codes:
 		var b: Dictionary = repo.burgs[code]
 		var at := Vector2(float(b["x"]), float(b["y"]))
-		if not r.has_point(at):
+		if not keep.has_point(at):
 			continue
 		var tier := 3 if String(b.get("is_capital", "0")) == "1" else int(TOWN_TIERS.get(String(b.get("group", "")), 0))
-		(out["towns"] as Array).append({"at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
-			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"})
+		var t := {"code": code, "at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
+			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"}
+		t.merge(town_marks(repo, code))
+		# a works glyph stands above the ring, a market's scales below it — clear
+		# of a walled town's square and its corner towers
+		var ring := repo.bal("war_ink_town_px") * px_k * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
+		if bool(t["walls"]):
+			ring *= repo.bal("war_ink_wall_ratio") * 1.22
+		t["works_at"] = (t["at"] as Vector2) - Vector2(0.0, ring + repo.bal("war_ink_works_px") * px_k * 0.75)
+		t["market_at"] = (t["at"] as Vector2) + Vector2(0.0, ring + repo.bal("war_ink_market_px") * px_k * 0.75)
+		(out["towns"] as Array).append(t)
 	for m: Dictionary in Elevation.landmarks(repo):
 		if String(m["kind"]) != "high":
 			continue
 		var at: Vector2 = m["pos"]
-		if r.has_point(at):
+		if keep.has_point(at):
 			(out["peaks"] as Array).append({"at": (at - r.position) * k, "metres": int(m["metres"]), "lod": int(m["lod"])})
 	for m: Dictionary in Elevation.landmarks(repo):
-		if String(m["kind"]) == "low" and r.has_point(m["pos"]):
+		if String(m["kind"]) == "low" and keep.has_point(m["pos"]):
 			(out["hollows"] as Array).append({"at": ((m["pos"] as Vector2) - r.position) * k,
 				"metres": int(m["metres"]), "lod": int(m["lod"])})
+	# the map's marks (spec 2026-10-07-war-room-p2 §1.3): sheet-layer glyphs, a
+	# brigand's or pirate's reach as a ring
+	out["places"] = []
+	var per_px := WarMarks.km_per_px(repo)
+	# a mark whose reach runs into the sheet or window is drawn, ring and all
+	var reach_px := 0.0
+	for t: String in repo.war_mark_hazards:
+		reach_px = maxf(reach_px, float(repo.war_mark_hazards[t]["reach_km"]) / per_px)
+	var reach_keep := keep.grow(reach_px)
+	for m: Dictionary in WarMarks.inked(repo, "sheet"):
+		var at: Vector2 = m["at"]
+		if not reach_keep.has_point(at):
+			continue
+		var hz: Dictionary = repo.war_mark_hazards.get(String(m["type"]), {})
+		var spot := (at - r.position) * k
+		# a mark on a town stands aside, left of its ring (the name runs right):
+		# the reach ring keeps the true spot
+		var glyph_at := spot
+		var half := repo.bal("war_mark_px") * px_k * 0.5
+		for t: Dictionary in out["towns"]:
+			var ring := repo.bal("war_ink_town_px") * px_k * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
+			if glyph_at.distance_to(t["at"]) < ring + half * 1.4:
+				glyph_at = (t["at"] as Vector2) - Vector2(ring + half * 1.5, 0.0)   # a clear gap, never touching
+		(out["places"] as Array).append({"at": glyph_at, "ring_at": spot, "glyph": String(m["glyph"]),
+			"hazard_r": 0.0 if hz.is_empty() else float(hz["reach_km"]) / per_px * k})
 	if bake != null:
 		var step := repo.bal("war_ink_wood_step_km") * WarSheets.px_per_unit(repo)
 		var min_cover := repo.bal("war_ink_wood_min_cover")
-		for w: Dictionary in bake.woods(r, step):
-			var at: Vector2 = w["at"]
+		# sampled on the SHEET's grid (a window starts on it), each point taken
+		# back to its grid index, so a patch draws exactly the sheet's trees
+		var r0: Vector2 = (sheet["rect"] as Rect2).position
+		var start := r0 + ((keep.position - r0) / step).floor() * step
+		for w: Dictionary in bake.woods(Rect2(start, keep.end - start), step):
+			var at: Vector2 = r0 + (((w["at"] as Vector2) - r0) / step).round() * step
 			# a glyph where the canopy is thick enough, chosen by a fixed hash so
 			# a sheet always draws the same woods
 			var roll := float(absi(hash(Vector2i(roundi(at.x * 100.0), roundi(at.y * 100.0)))) % 1000) / 1000.0
@@ -111,8 +167,12 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 				var jitter := Vector2(float(absi(hash([at.x, at.y, 1])) % 200) - 100.0,
 					float(absi(hash([at.x, at.y, 2])) % 200) - 100.0) / 100.0 * step * repo.bal("war_ink_wood_jitter")
 				(out["woods"] as Array).append({"at": (at + jitter - r.position) * k, "conifer": float(w["conifer"]) > 0.5})
-	_manors(repo, state, r, k, out)
-	out["graticule"] = graticule(repo, sheet, k)
+	_manors(repo, state, r, k, out, px_k, keep)
+	var framed := sheet
+	if window.size.x > 0.0:
+		framed = sheet.duplicate()
+		framed["rect"] = r
+	out["graticule"] = graticule(repo, framed, k, px_k)
 	return out
 
 
@@ -121,12 +181,12 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 ## parallel's latitude down both sides, every war_grid_deg, just inside the
 ## chequered degree band — `at` the line's foot on the band's inner edge in
 ## ink px, `side` which edge (n s w e), `text` the figure ("24°N", "51°E").
-static func graticule(repo: DataRepository, sheet: Dictionary, k: float) -> Array:
+static func graticule(repo: DataRepository, sheet: Dictionary, k: float, px_k := 1.0) -> Array:
 	var r: Rect2 = sheet["rect"]
 	var cell: Rect2 = sheet.get("cell", r)
 	var step := MapCoords.px_per_deg(repo) * repo.bal("war_grid_deg")
-	var pad := repo.bal("war_grid_label_pad_px")
-	var size := int(repo.bal("war_grid_label_px"))
+	var pad := repo.bal("war_grid_label_pad_px") * px_k
+	var size := int(round(repo.bal("war_grid_label_px") * px_k))
 	var out: Array = []
 	var x0 := ceili(cell.position.x / step.x + 0.001)
 	var x1 := floori(cell.end.x / step.x - 0.001)
@@ -147,21 +207,35 @@ static func graticule(repo: DataRepository, sheet: Dictionary, k: float) -> Arra
 	return out
 
 
+## A town's economic marks (spec 2026-10-07-war-room-p3 §1.3): the glyph of
+## its works family ("" for none) and whether a market is centred on it.
+static func town_marks(repo: DataRepository, burg: String) -> Dictionary:
+	return {"works": String((WarEconomy.works(repo).get(burg, {}) as Dictionary).get("glyph", "")),
+		"market": WarEconomy.market_of_town(repo, burg) != ""}
+
+
 ## A town's ring and name as one box, ink px (the painter's own layout: the
 ## ring at `at`, the name to its right), for keeping other names off it.
-static func town_label_box(repo: DataRepository, t: Dictionary) -> Rect2:
-	var town := repo.bal("war_ink_town_px")
+static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> Rect2:
+	var town := repo.bal("war_ink_town_px") * px_k
 	var r := town * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
-	var label := repo.bal("war_ink_label_px")
+	var label := repo.bal("war_ink_label_px") * px_k
 	var w := r + town * repo.bal("war_ink_label_gap_ratio") + float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
 	var h := maxf(r, label * 0.6)
+	var up := h
+	var down := h
+	var clear := r * (repo.bal("war_ink_wall_ratio") * 1.22 if bool(t.get("walls", false)) else 1.0)
+	if String(t.get("works", "")) != "":
+		up = maxf(up, clear + repo.bal("war_ink_works_px") * px_k * 1.25)
+	if bool(t.get("market", false)):
+		down = maxf(down, clear + repo.bal("war_ink_market_px") * px_k * 1.25)
 	var at: Vector2 = t["at"]
-	return Rect2(at.x - r, at.y - h, r + w, h * 2.0)
+	return Rect2(at.x - r, at.y - up, r + w, up + down)
 
 
 ## A manor's name as a box, ink px, centred where the painter sets it.
-static func manor_label_box(repo: DataRepository, m: Dictionary) -> Rect2:
-	var px := repo.bal("war_ink_manor_label_px")
+static func manor_label_box(repo: DataRepository, m: Dictionary, px_k := 1.0) -> Rect2:
+	var px := repo.bal("war_ink_manor_label_px") * px_k
 	var w := float(String(m["label"]).length()) * px * repo.bal("war_ink_char_w")
 	var at: Vector2 = m["at"]
 	return Rect2(at.x - w * 0.5, at.y - px * 0.5, w, px)
@@ -171,12 +245,13 @@ static func manor_label_box(repo: DataRepository, m: Dictionary) -> Rect2:
 ## (a province seam or the coast is drawn already) — and each manor's name at
 ## its centre unless its box would touch a town's ring or name (a town's name
 ## wins; war_ink_manor_clear_px of air kept round it).
-static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, out: Dictionary) -> void:
+static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, out: Dictionary, px_k := 1.0,
+		keep := Rect2()) -> void:
 	var first: Dictionary = {}   # edge key -> the cell that met it first
 	var ids: Array = repo.cells.keys()
 	ids.sort()
-	var clear := repo.bal("war_ink_manor_clear_px")
-	var reach := r.grow(r.size.x * 0.05)
+	var clear := repo.bal("war_ink_manor_clear_px") * px_k
+	var reach := (keep if keep.size.x > 0.0 else r).grow(r.size.x * 0.05)
 	for id: int in ids:
 		var cell: Dictionary = repo.cells[id]
 		if MapTerrain.is_water(cell):
@@ -200,10 +275,10 @@ static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, 
 				first[key] = id
 		if r.has_point(centre):
 			var m := {"at": (centre - r.position) * k, "label": MapManors.label_of(repo, id)}
-			var box := manor_label_box(repo, m).grow(clear)
+			var box := manor_label_box(repo, m, px_k).grow(clear)
 			var clash := false
 			for t: Dictionary in out["towns"]:
-				if box.intersects(town_label_box(repo, t)):
+				if box.intersects(town_label_box(repo, t, px_k)):
 					clash = true
 					break
 			if not clash:

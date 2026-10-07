@@ -6,6 +6,11 @@ spec `docs/superpowers/specs/2026-09-28-courier-art-design.md` §2) — a herald
 horse, blue tabard with gold shoulder pieces, grey hat and feather, dispatch case, and a pennon on a
 staff — as the owner modelled it in **Tripo 3D** from that pick.
 
+**The shipped rig and clips are `tools/units3d/courier_rig/`'s** (2026-10-07, the cavalry's method: a
+measured 57-bone rig, welded heat weights, a solved four-beat gallop and an IDLE). This folder still
+builds the MODEL; its own rig and GALLOP / IDLE below are what `courier_rig` replaced — after a model
+rebuild, run `courier_rig` and its `install.py` (the build alone would ship the old rig again).
+
 ## Rebuild: one command
 
 ```

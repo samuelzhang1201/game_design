@@ -14,6 +14,13 @@ func before_each() -> void:
 	repo = SuiteData.repo()
 	s = SuiteData.campaign(repo, 42)
 	RealmEconomy.forget()
+	# the supply lines are the regiments' own now: every land regiment runs
+	# one, so the galaxy holds the chain it held under the monthly refill
+	# (spec 2026-10-07-army-supply-lines)
+	for c in s.regiments.keys():
+		if String(ArmySystem.regiment(repo, String(c)).get("is_naval", "0")) != "1":
+			s.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(repo, s)[0], 1000, 1)
+			s.supply_lines[c]["state"] = SupplyLines.FLOWING
 	view = (load("res://scenes/ledger/ledger_view.tscn") as PackedScene).instantiate()
 	add_child_autofree(view)
 	view.set_anchors_preset(Control.PRESET_TOP_LEFT)  # set its own size, not the parent's
@@ -103,8 +110,13 @@ func test_a_regiment_lights_and_frames_its_supply_chain() -> void:
 	assert_ne(reg, "")
 	view.frame_web(reg)
 	view.select(reg)
-	assert_eq(view.star_colour("type:strategic_goods").a, 1.0, "two hops up the chain, lit")
 	var stars: Dictionary = view.lineage(reg, false)["stars"]
+	var lit := 0
+	for id: String in stars:
+		if int(stars[id]) == LedgerLineage.FULL and id != reg:
+			lit += 1
+			assert_eq(view.star_colour(id).a, 1.0, "up the chain, lit: " + id)
+	assert_gt(lit, 1, "the line and the town it is fed from")
 	var framed: Array = view._frame_ids
 	for id: String in stars:
 		if int(stars[id]) == LedgerLineage.FULL:
@@ -653,12 +665,12 @@ func test_a_supply_line_is_drawn_short_and_is_no_hub() -> void:
 	var id := _first("supply_line:")
 	assert_ne(id, "")
 	var label := String(view._nodes[id]["label"])
-	assert_true(label.begins_with("Supply line to "), label)
+	assert_true(label.begins_with("Supply line from "), label)
 	var short := view.drawn_name(id)
 	assert_false(short.contains("Supply line"), short)
 	assert_false(short.ends_with("Regiment"), short)
-	assert_true(short.begins_with("Supplies for "), "a template sets the kept part: " + short)
-	assert_true(label.contains(short.trim_prefix("Supplies for ")))
+	assert_true(short.begins_with("Supplies from "), "a template sets the kept part: " + short)
+	assert_true(label.contains(short.trim_prefix("Supplies from ")))
 	var reg := _first("regiment:")
 	assert_ne(view.drawn_name(reg), String(view._nodes[reg]["label"]), "a regiment drops its type's word")
 	assert_false(view.drawn_name(reg).ends_with("Regiment"))

@@ -13,6 +13,9 @@ extends Control
 signal piece_selected(code: String)
 signal selection_cleared
 signal army_menu_requested(code: String, at: Vector2)
+## A garrison piece of several regiments clicked (owner 2026-10-06, choice A):
+## ArmyOrderMenu lists them, as on the map.
+signal garrison_menu_requested(codes: Array, at: Vector2)
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 signal route_clicked(code: String, at: Vector2)
 signal rake_started(code: String)
@@ -27,12 +30,22 @@ signal board_entered
 signal board_left
 signal board_clicked(uv: Vector2, event: InputEventMouseButton)
 signal board_hovered(uv: Vector2)
+## The pointer has rested on open table (spec 2026-10-07-war-room-scale-hover
+## §4.2): the screen reads the ground there.
+signal ground_hovered(pack_px: Vector2, screen_px: Vector2)
+## A rake is aimed at `pack_px`: the screen reads the destination for `code`.
+signal rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2)
+## The slip goes: the pointer moved, the rake ended, the room got busy.
+signal hover_cleared
 
 var aiming := false:
 	set(v):
+		var was := aiming
 		aiming = v
 		if not v:
 			_rake.to = Vector2(-1, -1)
+			if was:
+				hover_cleared.emit()   # the rake's destination slip goes with the aim
 		if _repo != null and is_inside_tree():
 			_rake.redraw()
 var aim_dest := Vector2(-1, -1)
@@ -66,6 +79,8 @@ var _nz := 2
 var _y_scale := 0.0
 var _relief: Image
 var _inks := WarRoomInk.new()
+var _dwell := WarHoverDwell.new()
+var _detail_state: Dictionary = {}   # the near-zoom patch drawn now: {level, rect, key}
 var _render_scale := 1.0
 var _selected := ""
 var _font: Font
@@ -86,6 +101,15 @@ var _toss: Dictionary = {}
 var _toss_t := 0.0
 var _toss_to := -1
 var _toss_n := 0
+
+
+## No slip while the camera or the sheet moves, in board mode, or while a
+## popup or a text box has the input (spec §4.2).
+func hover_allowed() -> bool:
+	if _sheet < 0 or _board_mode != "table" or rolling() or tossing() or aiming:
+		return false   # aiming: the order's confirm menu stands beside the tip
+	var owner := get_viewport().gui_get_focus_owner()
+	return not (owner is LineEdit or owner is TextEdit)
 
 
 func _ready() -> void:
@@ -221,11 +245,21 @@ func set_active(on: bool) -> void:
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	set_process(on)
 	if not on:
+		_detail_state = {}
+		(%DetailViewport as SubViewport).size = Vector2i(2, 2)   # the patch's render target given back
+		var table_mat := _table.get_active_material(0) as ShaderMaterial
+		if table_mat != null:   # and unbound, so a reopened room never samples the empty target
+			table_mat.set_shader_parameter("detail_on", 0.0)
+			table_mat.set_shader_parameter("detail_tex", null)
+		_dwell.clear()
+		hover_cleared.emit()
 		_finish_swap()
 		_viewport.size = Vector2i(2, 2)  # its render targets freed while shut (perf 2026-10-02)
 		_inks.trim(1)  # and only the laid sheet's ink kept
 	if on:
 		_fit_viewport()
+		if _sheet >= 0 and _repo != null:
+			_update_detail()   # reopened at a near lean: the patch is drawn again
 
 
 ## Lay sheet `index`: the relief, its ink, the camera framed on it.
@@ -251,6 +285,9 @@ func lay_sheet(index: int) -> void:
 	_table.mesh = WarRoomTable.build_mesh(WarRoomTable.clamp_sea(raw), _nx, _nz, _table_w, _depth, _y_scale, raw, shore, _heights)
 	var mat := _table.get_active_material(0) as ShaderMaterial
 	mat.set_shader_parameter("intel_tex", null)   # no sheet wears another's intelligence (final review I2)
+	mat.set_shader_parameter("fine_tex", null)
+	mat.set_shader_parameter("detail_on", 0.0)
+	_detail_state = {}
 	WarRoomMaterial.bind(mat, _repo, all[index], _table_w, _depth)
 	_rig.bounds = Rect2(-_table_w * 0.5, -_depth * 0.5, _table_w, _depth)
 	_rig.target = Vector3.ZERO
@@ -285,6 +322,15 @@ func swap_to(index: int) -> void:
 
 func _process(delta: float) -> void:
 	_step_toss(delta)
+	if not hover_allowed():
+		if _dwell.clear():
+			hover_cleared.emit()
+	elif _rake.code == "" and _dwell.step(delta, _repo.bal("war_hover_delay_s")):
+		var at := _dwell.at
+		var pk := pack_at(at)
+		var on_mark := piece_under(at) != "" or WarRoomPicks.nearest(_pennants.screen_hits(_camera, window_scale()), at, _repo.bal("war_pick_px")) != ""
+		if pk.x >= 0.0 and not on_mark:
+			ground_hovered.emit(pk, at)
 	var flying := _step_board(delta)
 	if not flying and (_rig.step(delta, _repo.bal("war_cam_north_s")) or key_pan(delta)):
 		_apply_camera()
@@ -507,9 +553,13 @@ func _paint_ink(mat: ShaderMaterial) -> void:
 	_ink_busy += 1
 	var tex := await _inks.texture_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
 		func() -> bool: return is_inside_tree() and sheet == _sheet)
-	_ink_busy -= 1
 	if tex != null:
 		mat.set_shader_parameter("ink_tex", tex)
+	var fine := await _inks.fine_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
+		func() -> bool: return is_inside_tree() and sheet == _sheet)
+	_ink_busy -= 1
+	if fine != null and sheet == _sheet:
+		mat.set_shader_parameter("fine_tex", fine)
 	if _intel_again and _ink_busy == 0:
 		_intel_again = false
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
@@ -517,11 +567,75 @@ func _paint_ink(mat: ShaderMaterial) -> void:
 
 func _apply_camera() -> void:
 	_camera.transform = _rig.transform()
+	if _dwell.clear():   # the ground under the pointer moved: the slip goes, the rest restarts
+		hover_cleared.emit()
 	if _repo != null:
 		_pieces.set_camera_distance(_rig.distance)
+		var mat := _table.get_active_material(0) as ShaderMaterial
+		if mat != null:
+			mat.set_shader_parameter("contour_m", WarNear.contour_m(_repo, _rig.distance))
+			mat.set_shader_parameter("fine_alpha", WarNear.fine_alpha(_repo, _rig.distance))
+			_update_detail()
 		_rake.redraw()
 	camera_moved.emit()
 
+
+## The near-zoom detail patch (spec 2026-10-07-war-room-scale-hover §2): nearer
+## than war_detail_level_m, the ink round the view redrawn at the patch's
+## resolution into its own resident viewport (no read-back), only when its
+## level, rect or ownership key turns.
+func _update_detail() -> void:
+	var mat := _table.get_active_material(0) as ShaderMaterial
+	var lvl := WarDetailInk.level(_repo, _rig.distance)
+	if lvl == 0 or _sheet < 0:
+		mat.set_shader_parameter("detail_on", 0.0)
+		if not _detail_state.is_empty():   # leaning out: the patch's render target given back, unbound
+			mat.set_shader_parameter("detail_tex", null)
+			(%DetailViewport as SubViewport).size = Vector2i(2, 2)
+		_detail_state = {}
+		return
+	# pack px the view spans (units_per_px is in the pack's own measure)
+	var view_px := Vector2(size) * units_per_px() / maxf(float(_repo.map_info.get("distance_scale", "1")), 0.0001)
+	var centre := WarRoomTable.from_table(_rect, _table_w, Vector2(_rig.target.x, _rig.target.z))
+	var now := {"level": lvl, "rect": WarDetailInk.patch_rect(_repo, _rect, centre, view_px),
+		"key": WarSheetInk.cache_key(state(), _sheet)}
+	if not WarDetailInk.needs_redraw(_detail_state, now):
+		return
+	_detail_state = now
+	var r: Rect2 = now["rect"]
+	var vp: SubViewport = %DetailViewport
+	var w := int(_repo.bal("war_detail_texture_px"))
+	vp.size = Vector2i(w, maxi(1, ceili(w * r.size.y / r.size.x)))
+	var scale := _rect.size.x / r.size.x * float(w) / float(WarRoomInk.tex_size(_repo, _rect).x)
+	var widths := {}
+	for k: String in WarRoomInk.INK_PX:
+		widths[k] = _repo.bal("war_ink_%s_px" % k) * scale
+	for k: String in WarRoomInk.INK_RATIOS:
+		widths[k] = _repo.bal("war_ink_%s" % k)
+	widths["mark"] = _repo.bal("war_mark_px") * scale
+	widths["mark_reach_alpha"] = _repo.bal("war_mark_reach_alpha")
+	widths["mark_reach"] = _repo.bal("war_mark_reach_px") * scale
+	var row: Dictionary = WarSheets.series(_repo)[_sheet]
+	(%DetailInk as WarInkPainter).paint(WarSheetInk.strokes(_repo, state(), row, w, WarBake.of(_repo), r),
+		_repo.war_palette, widths, lettering())
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_settle_detail(vp)
+	mat.set_shader_parameter("detail_tex", vp.get_texture())
+	mat.set_shader_parameter("detail_uv", Vector4((r.position.x - _rect.position.x) / _rect.size.x,
+		(r.position.y - _rect.position.y) / _rect.size.y, (r.end.x - _rect.position.x) / _rect.size.x,
+		(r.end.y - _rect.position.y) / _rect.size.y))
+	mat.set_shader_parameter("detail_feather", _repo.bal("war_detail_feather"))
+	mat.set_shader_parameter("detail_on", 1.0)
+
+
+
+## After the frame that draws the patch, the viewport is set aside explicitly:
+## left at UPDATE_ONCE it kept costing every frame (bench 2026-10-07: the cpu
+## column 10 -> 45-168 ms after one lean in).
+func _settle_detail(vp: SubViewport) -> void:
+	await _inks.frame_done   # the frame that drew it (a headless test hands in the process frame)
+	if is_instance_valid(vp) and vp.render_target_update_mode == SubViewport.UPDATE_ONCE:
+		vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 
 ## The pack's own measure (map_info distance_scale per pack px) one screen px
 ## of this view spans at the camera's target: the margin's scale bar (spec §2).
@@ -639,6 +753,25 @@ func select(code: String) -> void:
 	_rake.redraw()
 
 
+## ArmyOrderMenu's map contract: a regiment chosen from a garrison's list.
+func select_army(code: String) -> void:
+	select(code)
+
+
+## The regiments a piece stands for: a town's garrison, else the one.
+func garrison_of(code: String) -> Array:
+	var held := MapObjects.garrison_of(_repo, state(), code)
+	return held if not held.is_empty() else [code]
+
+
+## The regiment a press on `piece` takes in hand: the one chosen from its
+## garrison's list when that is selected, else the piece's own.
+func order_code_of(piece: String) -> String:
+	if piece != "" and _selected != "" and _selected in garrison_of(piece):
+		return _selected
+	return piece
+
+
 ## The code of the piece under a screen px, "" when none (and none while a
 ## sheet rolls: the pieces are put away).
 func piece_under(screen_px: Vector2) -> String:
@@ -651,6 +784,11 @@ func _ground_under(screen_px: Vector2) -> Vector3:
 	var at := pack_at(screen_px)
 	return table_point(at) if at.x >= 0.0 else _rig.target
 
+
+## The pointer left the view (onto the folio, the margin, a bar): no rest to read.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_MOUSE_EXIT and _dwell.clear():
+		hover_cleared.emit()
 
 func _gui_input(event: InputEvent) -> void:
 	if _sheet < 0:
@@ -669,6 +807,12 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion:
 		tooltip_text = "Study the board" if _board_uv((event as InputEventMouseMotion).position).x >= 0.0 else ""
+		var hm := event as InputEventMouseMotion
+		if hm.button_mask != 0:
+			if _dwell.clear():
+				hover_cleared.emit()
+		elif _dwell.moved(hm.position, _repo.bal("war_hover_still_px")):
+			hover_cleared.emit()
 	var mb := event as InputEventMouseButton
 	var mm := event as InputEventMouseMotion
 	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
@@ -677,10 +821,16 @@ func _gui_input(event: InputEvent) -> void:
 		pass   # an open-table drag: the gestures pan below
 	elif mm != null and not (mm.button_mask & (MOUSE_BUTTON_MASK_MIDDLE | MOUSE_BUTTON_MASK_RIGHT)):
 		_rake.on_motion(mm)
+		if _rake.code != "" and aiming and aim_dest.x < 0.0:
+			var pk := pack_at(mm.position)
+			if pk.x >= 0.0:
+				rake_aimed.emit(_rake.code, pk, mm.position)
 	var did := _gestures.handle(event, _rig, _repo, _ground_under, _rake.empty_press())
 	if did == WarRoomGestures.RIGHT_CLICK:
 		var code := piece_under(mb.position)
-		if code != "":
+		if code != "" and garrison_of(code).size() > 1:
+			garrison_menu_requested.emit(garrison_of(code), mb.position)
+		elif code != "":
 			army_menu_requested.emit(code, mb.position)
 		accept_event()
 	elif did == WarRoomGestures.MOVED:

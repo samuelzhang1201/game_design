@@ -30,7 +30,7 @@ army_icon_bg,#2A221A,military layer: the square behind a counter's glyph
 army_glyph,#EDE0C4,military layer: the glyph itself
 army_count_ink,#F3E8CF,military layer: the headcount in the realm-coloured box
 army_bar_ready,#A8483E,"military layer (owner 2026-09-27: 红色是健康度): the upper bar over a regiment, its READINESS (ArmySystem.readiness_permille — arm, supply, morale, training)"
-army_bar_supply,#C4A050,"military layer (owner 2026-09-27: 黄色是战略补给数): the lower bar, its supplies in hand over army_speed_supply_full_months"
+army_bar_supply,#C4A050,"military layer (owner 2026-09-27: 黄色是战略补给数): the lower bar, its days of supplies in hand over the carried load (ArmySystem.stores_permille)"
 army_bar_track,#17120E,military layer: the dark track the two bars run in (what is missing reads as this)
 manor_mark,#C4CBD2,"manors view: the ink of the farmsteads and chief-good marks every manor carries (data/manor_decor.csv) — one dark ink, since the manors wear their houses' colours"
 ruler_ink,#141414,"MEASUREMENT ruler (owner 2026-09-18): the dashed line, ticks, anchors and reading, on both maps"

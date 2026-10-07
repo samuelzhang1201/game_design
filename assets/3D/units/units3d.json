@@ -76,24 +76,24 @@
   "actions": {
    "GALLOP": [
     0,
-    24
+    14
    ],
    "IDLE": [
     0,
-    72
+    150
    ]
   },
-  "bones": 45,
-  "fps": 24,
+  "bones": 57,
+  "fps": 30,
   "height_m": 2.562,
   "kind": "mounted",
   "label": "Courier",
-  "source": "Tripo 3D (owner), from zimage_C4_s2, tools/units3d/courier_build.py",
-  "stride_m": 2.338,
+  "source": "Tripo 3D (owner), from zimage_C4_s2, modelled by tools/units3d/courier_build.py; re-rigged and re-animated by the blender-auto-rig / blender-natural-animation phases in tools/units3d/courier_rig/ (installed by its install.py)",
+  "stride_m": 2.8,
   "tris": 19346,
   "weights": {
-   "horse": "heat",
-   "rider": "heat"
+   "horse": "heat (welded)",
+   "rider": "heat per sub-group (cloth coat)"
   }
  },
  "infantry": {

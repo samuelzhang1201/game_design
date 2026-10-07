@@ -25,6 +25,9 @@ signal country_hovered(kingdom_code: String)
 ## A right CLICK (not a turn) on one of the player's regiments: ArmyOrderMenu
 ## opens over it. `at` is design px in this view.
 signal army_menu_requested(code: String, at: Vector2)
+## A click on a town's garrison of several regiments (owner 2026-10-06, choice
+## A): ArmyOrderMenu lists them; the one chosen is selected and given its orders.
+signal garrison_menu_requested(codes: Array, at: Vector2)
 ## Where on the pack a left click landed — an order being AIMED needs the
 ## ground, not the thing picked.
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
@@ -89,6 +92,7 @@ var _themes := Map3DLayerThemes.new()
 var _weather := Map3DLayerWeather.new()  # the weather's look (spec 2026-09-29-weather-visuals)
 var _picker := Map3DPicker.new()
 var _selection := Map3DSelection.new()
+var _supply := Map3DSupplyLines.new()  # the supply lines and the pick's rings (spec 2026-10-07)
 var _input := Map3DInput.new()
 var _meta: Dictionary = {}
 var _loaded := false
@@ -254,6 +258,7 @@ func _load() -> void:
 	_weather.bind(_ctx, _themes.tint_material(), $Viewport/World/Precip as Map3DLayerPrecip, _houses)
 	_picker.bind(_ctx, self, _tooltip, _borders)
 	_selection.bind(_ctx, _lines, _markers, self)
+	_supply.bind(_ctx, _lines, self, _units)
 	_loaded = true
 	_rig.place(_home(), _rig.start_distance(), 0.0)
 	_update_line_scale()
@@ -390,6 +395,7 @@ func _process(delta: float) -> void:
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
 		_trails.step()  # behind them, the ground they trod
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
+		_supply.step(delta)  # the flowing lines, to the pieces as drawn
 		_sun.sweep(Game.day_progress)  # a round a game day, the north half dusk
 	_picker.step()
 	if not _hovered:
@@ -462,6 +468,9 @@ func set_dev_mode(on: bool) -> void:
 
 func dev_mode() -> bool: return _dev
 func selected_army() -> String: return _selection.army
+## Select one regiment as a click on it does (its card, its gold outline) —
+## the regiment chosen from a garrison's list (ArmyOrderMenu).
+func select_army(code: String) -> void: if _loaded: _selection.select({"kind": "army", "code": code})
 
 # --- picking (Map3DPicker, Map3DSelection) --------------------------------------------
 func ground_at(pos: Vector2) -> Variant: return _ctx.ground_at(pos) if _ctx != null else null
@@ -482,6 +491,13 @@ var aim_code := "":
 		if _loaded: _hud.refresh()  # the aim's ruler goes, the committed route shows
 ## The aimed march's destination (pack px) while COMMIT / CANCEL is asked, else (-1, -1).
 var aim_dest := Vector2(-1, -1)
+## The supply point being picked (ArmyOrderMenu sets both, spec 2026-10-07-army-supply-lines
+## §5.2): town -> "" lit / why not, then the chosen town's road (pack px); {} / empty when not.
+var supply_pick: Dictionary = {}:
+	set(v): supply_pick = v; if _loaded: _redraw_supply()
+var supply_preview := PackedVector2Array():
+	set(v): supply_preview = v; if _loaded: _redraw_supply()
+func _redraw_supply() -> void: _supply.redraw_pick()
 
 ## True when a regiment was under it (its order menu opens) or the ground was
 ## hit (SpyOrderMenu's "Send a spy here" opens); false only over the sky.
@@ -489,6 +505,9 @@ func right_click(pos: Vector2) -> bool:
 	var picked := pick_at(pos)
 	if String(picked.get("kind", "")) == "army":
 		army_menu_requested.emit(String(picked["code"]), pos)
+		return true
+	if String(picked.get("kind", "")) == "garrison":
+		garrison_menu_requested.emit(picked["codes"], pos)
 		return true
 	var hit: Variant = ground_at(pos)
 	if hit == null:

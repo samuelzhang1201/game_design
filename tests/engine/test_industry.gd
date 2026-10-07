@@ -257,21 +257,35 @@ func test_the_card_says_a_building_is_idle() -> void:
 			buildings = String(f[1])
 	assert_string_contains(buildings, "Smithy (idle: no iron)")
 
+## The forge's iron need in this test's own repository: a need past any
+## purse idles it whatever the lord's pools hold (a negative pool no longer
+## lasts the month — the day's supply step settles the pools into the towns
+## every day, TownStores.reconcile).
+func _iron_need(units: int) -> void:
+	for inp: Dictionary in data.building_inputs["smithy"]:
+		if String(inp["good"]) == "iron":
+			inp["units"] = units
+	RealmEconomy.forget()
+
 func test_the_tick_names_a_newly_idle_building_once() -> void:
 	_smithy()
 	var tick := TickEngine.new(data)
-	s.metrics["lord_strategic"] = -1000000.0
+	var need := 0
+	for inp: Dictionary in data.building_inputs["smithy"]:
+		if String(inp["good"]) == "iron":
+			need = int(inp["units"])
+	_iron_need(1000000000)
 	tick.advance(s)
 	assert_eq(tick.newly_idle, [{"cell": cell, "building": "smithy", "missing": ["iron"]}],
 		"the month it first goes idle")
-	s.metrics["lord_strategic"] = -1000000.0
 	tick.advance(s)
 	assert_true(MapManors.is_idle(s, cell, "smithy"), "still idle")
 	assert_eq(tick.newly_idle, [], "said once, not every month")
+	_iron_need(need)
 	s.metrics["lord_strategic"] = 1000000.0
 	tick.advance(s)
 	assert_eq(tick.newly_idle, [], "paid: nothing new stands idle")
-	s.metrics["lord_strategic"] = -1000000.0
+	_iron_need(1000000000)
 	tick.advance(s)
 	assert_eq(tick.newly_idle.size(), 1, "idle again after working: news again")
 

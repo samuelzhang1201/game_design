@@ -1,0 +1,6 @@
+days,pace_permille,label,notes
+10,1000,10 days,"spec 2026-10-07-army-supply-lines §3.6: a light train marches at full pace"
+15,970,15 days,
+20,940,20 days,
+25,890,25 days,
+30,850,30 days,"owner 2026-10-07 (第5题 A): a full train is the slowest, about -15%"

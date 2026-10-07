@@ -34,7 +34,7 @@ func test_training_grades_run_from_elite_to_militia() -> void:
 	assert_eq(ArmySystem.training_grade(repo, 100), String(grades[0]["label"]))
 
 func test_balance_and_icons_are_present() -> void:
-	for key in ["army_start_morale", "army_start_training", "army_start_supply_months",
+	for key in ["army_start_morale", "army_start_training", "army_start_supply_days",
 			"army_supply_per_head_permille", "army_wound_recovery_permille", "army_training_per_month",
 			"army_float_permille", "army_training_base_permille", "army_training_step_permille",
 			"army_morale_base_permille", "army_morale_step_permille", "army_strong_ratio_permille",

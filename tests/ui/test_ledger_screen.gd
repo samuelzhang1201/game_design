@@ -175,6 +175,16 @@ func test_a_strand_opens_its_links_card() -> void:
 	Game.state.metrics["strategic"] = 1000000.0
 	for c in Game.state.regiments.keys():
 		Game.state.regiments[c]["supplies"] = 0
+	# the supply lines are the regiments' own now: the first land regiment
+	# runs one (spec 2026-10-07-army-supply-lines)
+	var codes: Array = Game.state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		if String(ArmySystem.regiment(Game.data, String(c)).get("is_naval", "0")) != "1":
+			Game.state.supply_lines[c] = SupplyLines._new_record(
+				TownStores.realm_towns(Game.data, Game.state)[0], 1000, 1)
+			Game.state.supply_lines[c]["state"] = SupplyLines.FLOWING
+			break
 	var screen := await _open(r)
 	var link: Dictionary = (screen.snapshot()["links"] as Array).filter(func(l: Dictionary) -> bool:
 		return String(l["type"]) == "supplies_out" and (l["accounts"] as Array).size() == 2)[0]

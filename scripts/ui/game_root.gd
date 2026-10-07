@@ -177,6 +177,8 @@ func _process(delta: float) -> void:
 		var before := works_progress()
 		var missives_before := Game.state.next_missive_id
 		var out := Game.advance_day()
+		# what the day's end brings is dated the day that ended, not the one begun
+		Game.news_dated_to(int(out["ended"]))
 		# The news bar (owner 2026-09-14): a work's progress at each milestone,
 		# its completion, and the month's close.
 		announce_milestones(before, works_progress())
@@ -184,6 +186,11 @@ func _process(delta: float) -> void:
 			Game.publish_news("The %s at %s is complete." % [
 				String((Game.data.manor_buildings.get(String(w["building"]), {}) as Dictionary).get("label", w["building"])).to_lower(),
 				MapManors.label_of(Game.data, int(w["cell"]))])
+		# the columns march before the couriers ride (TickEngine), so their news first
+		for code: String in out.get("arrived", []):
+			var arrived := ArmySystem.arrival_headline(Game.data, Game.state, code)
+			if arrived != "":
+				Game.publish_news(arrived)
 		for e: Dictionary in out.get("couriers", []):
 			Game.publish_news(CourierSystem.headline(Game.data, e))
 		# A building that first stands idle for want of inputs (M5), once.
@@ -192,6 +199,8 @@ func _process(delta: float) -> void:
 				String((Game.data.manor_buildings.get(String(w["building"]), {}) as Dictionary).get("label", w["building"])).to_lower(),
 				MapManors.label_of(Game.data, int(w["cell"])),
 				IndustrySystem.idle_words(w["missing"] as Array)])
+		for line: String in out.get("hazards", []):   # a plague's toll, a flood's end (spec 2026-10-07-war-room-p2 §2.3)
+			Game.publish_news(line)
 		var new_ids: Array = []
 		for id in range(missives_before + 1, Game.state.next_missive_id + 1):
 			new_ids.append(id)
@@ -211,6 +220,7 @@ func _process(delta: float) -> void:
 					var seal := current_screen.council_handle() as WaxSeal
 					if seal != null:
 						seal.nudge()
+		Game.news_dated_to(-1)
 
 	Game.day_progress = clampf(_clock_acc / per_day, 0.0, 1.0)
 

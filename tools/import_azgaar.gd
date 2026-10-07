@@ -882,8 +882,15 @@ func _run() -> int:
 			if kc != "" and not kings.has(kc):
 				kings.append(kc)
 		var n := maxi(zcells.size(), 1)
+		# the cells themselves, de-duplicated and ascending (spec 2026-10-07-war-room-p2
+		# §2.1: a hazard's extent is drawn and tested by its cells)
+		var ids: Array = []
+		for ci in zcells:
+			if not ids.has(int(ci)):
+				ids.append(int(ci))
+		ids.sort()
 		out += _csv_line([_take_slug(zone_slugs, String(z.get("name", ""))),
-			String(z.get("name", "")), String(z.get("type", "")), str(zcells.size()),
+			String(z.get("name", "")), String(z.get("type", "")), "|".join(ids.map(func(i: int) -> String: return str(i))),
 			_num2(sx / n), _num2(sy / n), "|".join(provs), "|".join(kings)])
 	if not _write_text(out_data + "/society/zones.csv", out):
 		return 1

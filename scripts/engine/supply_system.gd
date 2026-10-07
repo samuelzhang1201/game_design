@@ -1,20 +1,8 @@
 class_name SupplySystem
 extends RefCounted
-## Supply lines (spec 2026-09-30-ledger-supply-design §3): each land
-## regiment of the realm is refilled every month to army_supply_target_months
-## of its own use, shipped from the depot (CourierSystem.origin) over the
-## road network to where it stands NOW; the road loses
-## army_supply_loss_permille_per_100km per 100 km (capped). A regiment
-## STANDING (standby or garrison — anything but a march) in a province the
-## crown controls draws through that province's capital town: no road, no
-## loss (controller ruling, final review).
-## The crown's strategic goods pay first, then the lord's; a short pool is
-## shared by need. Whole numbers, code order. plan() is the one function
-## the tick, the regiment card and the LEDGER read. The lines run as their
-## governor (the marshal, Governance) runs them: his efficiency thins what
-## arrives, his skim takes gold before it buys, and he reports the line as
-## if nothing were skimmed (rows' `delivered` is the truth, `claimed` his
-## word).
+## The supply helpers the cards, the WAR ROOM and the LEDGER read (spec
+## 2026-10-07-army-supply-lines): the road's loss, the garrison test, and a
+## regiment's line as it stands. The daily step is SupplyLines.day_step.
 
 
 static func loss_of(repo: DataRepository, km: int) -> int:
@@ -23,13 +11,89 @@ static func loss_of(repo: DataRepository, km: int) -> int:
 	return mini(loss, int(repo.bal("army_supply_loss_cap_permille")))
 
 
-## Units to ship so that `short` arrive after a `loss` per mille.
-static func ship_for(short: int, loss: int) -> int:
-	if short <= 0:
-		return 0
-	var keep := 1000 - loss
-	@warning_ignore("integer_division")
-	return (short * 1000 + keep - 1) / keep
+## A line's whole loss: its length's (loss_of) and its marks' (mark_loss),
+## held to army_supply_loss_cap_permille.
+static func total_loss(repo: DataRepository, km: int, mark_permille: int) -> int:
+	return mini(loss_of(repo, km) + maxi(mark_permille, 0), int(repo.bal("army_supply_loss_cap_permille")))
+
+
+## What the brigands and pirates along a route take (spec
+## 2026-10-07-war-room-p2-tactical-layer §1.2): each hazard mark
+## (data/war_mark_hazards.csv) whose reach the route (pack px) passes through,
+## once per mark, in code order — {permille, hazards: [{code, label, permille}]}.
+## Pirates need no water test: their marks stand at sea, so a road within their
+## reach runs along the coast they raid.
+static func mark_loss(repo: DataRepository, route: PackedVector2Array) -> Dictionary:
+	var hazards: Array = []
+	var total := 0
+	if route.size() < 2:
+		return {"permille": 0, "hazards": hazards}
+	var per_px := WarMarks.km_per_px(repo)
+	var codes: Array = repo.markers.keys()
+	codes.sort()
+	for code: String in codes:
+		var m: Dictionary = repo.markers[code]
+		var hz: Dictionary = repo.war_mark_hazards.get(String(m.get("type", "")), {})
+		if hz.is_empty():
+			continue
+		var at := Vector2(float(m["x"]), float(m["y"]))
+		if _poly_distance(route, at) * per_px <= float(hz["reach_km"]):
+			total += int(hz["permille"])
+			hazards.append({"code": code, "label": String(m.get("label", code)), "permille": int(hz["permille"])})
+	return {"permille": total, "hazards": hazards}
+
+
+## What the active hazards a route crosses take (spec 2026-10-07-war-room-p2
+## §2.3): each hazard with a supply_loss_permille once, id order, sampled along
+## the route every war_hazard_sample_km; a hazard the crown does not know is
+## not named ("trouble on the road").
+static func hazard_loss(repo: DataRepository, state: GameState, route: PackedVector2Array) -> Dictionary:
+	var hazards: Array = []
+	var total := 0
+	if state == null or route.size() < 2:
+		return {"permille": 0, "hazards": hazards}
+	var step := repo.bal("war_hazard_sample_km") / WarMarks.km_per_px(repo)
+	var hit: Dictionary = {}
+	for i in route.size() - 1:
+		var a := route[i]
+		var b := route[i + 1]
+		var n := maxi(1, ceili(a.distance_to(b) / step))
+		for j in n + 1:
+			for id: String in Hazards.at_point(repo, state, a.lerp(b, float(j) / float(n))):
+				hit[id] = true
+	var ids: Array = hit.keys()
+	ids.sort()
+	for id: String in ids:
+		var h: Dictionary = state.hazards[id]
+		var p := int(Hazards.kind_of(repo, String(h["kind"])).get("supply_loss_permille", 0))
+		if p <= 0:
+			continue
+		total += p
+		hazards.append({"code": id, "permille": p,
+			"label": String(h["label"]) if Hazards.known(repo, state, id) else "trouble on the road"})
+	return {"permille": total, "hazards": hazards}
+
+
+## The nearest a polyline comes to a point, pack px.
+static func _poly_distance(poly: PackedVector2Array, at: Vector2) -> float:
+	var best := INF
+	for i in poly.size() - 1:
+		best = minf(best, at.distance_to(Geometry2D.get_closest_point_to_segment(at, poly[i], poly[i + 1])))
+	return best
+
+
+## What the brigands, the pirates and the active hazards along a land
+## regiment's road take (mark_loss + hazard_loss, once each), {permille,
+## hazards}; a fleet's road is no road they can rob (spec 2026-10-07-war-room-
+## p2 §1.2). `route` is the line's road (SupplyLines.road_px).
+static func road_loss(repo: DataRepository, state: GameState, code: String, route: PackedVector2Array) -> Dictionary:
+	if String(ArmySystem.regiment(repo, code).get("is_naval", "0")) == "1":
+		return {"permille": 0, "hazards": []}
+	var out := mark_loss(repo, route)
+	var through := hazard_loss(repo, state, route)
+	out["permille"] = int(out["permille"]) + int(through["permille"])
+	(out["hazards"] as Array).append_array(through["hazards"])
+	return out
 
 
 static func gold_for(repo: DataRepository, units: int) -> int:
@@ -37,132 +101,46 @@ static func gold_for(repo: DataRepository, units: int) -> int:
 	return (units * int(repo.bal("army_supply_gold_permille")) + 999) / 1000
 
 
-static func share(avail: int, golds: Array) -> Array:
-	var total := 0
-	for g: int in golds:
-		total += g
-	if total <= avail:
-		return golds.duplicate()
-	var out: Array = []
-	for g: int in golds:
-		@warning_ignore("integer_division")
-		out.append(maxi(avail, 0) * g / total)
-	return out
-
-
-## The town a standing regiment draws on: a regiment NOT on the march
-## (standby or garrison) standing in a province the crown controls draws on
-## that province's capital town, loss-free. "" when it marches, stands
-## outside the crown's provinces, or the province has no town.
-static func stronghold_of(repo: DataRepository, state: GameState, code: String) -> String:
-	if ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
-		return ""
-	var cell := MapEconomy.cell_at(repo, ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)))
-	if cell < 0:
-		return ""
-	var prov := MapManors.province_of(repo, cell, state)
-	if prov == "" or not MapManors.crown_controls(repo, state, prov):
-		return ""
-	return String((repo.provinces.get(prov, {}) as Dictionary).get("capital_burg", ""))
-
-
-## The town a regiment is GARRISONED in: its stronghold, but only under an
-## explicit GARRISON order — what earns the garrison's morale and the
-## LEDGER's "garrisons in" thread. "" otherwise.
+## The town a regiment is GARRISONED in (spec 2026-10-06-army-location-and-
+## town-defence §4): under a GARRISON order, the town of its own kingdom it
+## stands IN (ArmySystem.held_town_of) — what earns the garrison's morale and
+## the LEDGER's "garrisons in" thread. "" otherwise: a column halted in the
+## open is a field camp.
 static func garrisoned_in(repo: DataRepository, state: GameState, code: String) -> String:
 	if ArmySystem.order_of(repo, state, code) != ArmySystem.ORDER_GARRISON:
 		return ""
-	return stronghold_of(repo, state, code)
+	return ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, code), state)
 
 
-## The depot's shortest-path tree (RoadGraph.shortest), built once and
-## shared by every regiment's line — the depot is the same point for all of
-## them, so plan() need not run Dijkstra once per regiment. `line_of` builds
-## its own single-use context so it keeps working standalone.
-static func _road_context(repo: DataRepository, state: GameState) -> Dictionary:
-	var from := CourierSystem.origin(repo, state)
-	var a := ArmySystem.pack_to_metres(repo, from)
-	var g := RoadGraph.of_pack(repo)
-	var reach := float(repo.bal("courier_offroad_max_km")) * 1000.0
-	var start := g.nearest(a)
-	var ctx := {"a": a, "g": g, "start": start}
-	if start >= 0 and Vector2(a).distance_to(Vector2(g.nodes[start])) <= reach:
-		ctx["tree"] = g.shortest(start)
-	return ctx
-
-
-## The road from the depot to `to_px`, exactly as CourierSystem.path_between
-## computes it, but off a precomputed depot tree (_road_context) instead of
-## running Dijkstra again.
-static func _path_from_ctx(repo: DataRepository, ctx: Dictionary, to_px: Vector2) -> Array:
-	var a: Vector2i = ctx["a"]
-	var b := ArmySystem.pack_to_metres(repo, to_px)
-	if not ctx.has("tree"):
-		return [[b.x, b.y, CourierSystem._leg_kind(repo, a, b)]]
-	var g: RoadGraph = ctx["g"]
-	var start: int = ctx["start"]
-	var tree: Dictionary = ctx["tree"]
-	var goal := g.nearest(b, tree["dist"])
-	# a start ON the network (the capital is a road node) takes no leg to itself
-	var way: Array = [] if g.nodes[start] == a else \
-		[[g.nodes[start].x, g.nodes[start].y, CourierSystem._leg_kind(repo, a, g.nodes[start])]]
-	way.append_array(g.route(tree, goal))
-	way.append([b.x, b.y, CourierSystem._leg_kind(repo, g.nodes[goal], b)])
-	return way
-
-
-## The supply road a regiment is fed along, pack px from the depot to where it
-## stands (spec 2026-10-02-war-room-v2 §2.4, the WAR ROOM's intel ink) — the
-## road _line_of measures; empty for a regiment supplied through a stronghold
-## (no road) or at sea.
-static func route_px(repo: DataRepository, state: GameState, code: String) -> PackedVector2Array:
-	var out := PackedVector2Array()
-	var reg := ArmySystem.regiment(repo, code)
-	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1" or stronghold_of(repo, state, code) != "":
+## A regiment's line as it stands, for the cards: {town ("" with none),
+## state, rate, length_km, loss_permille (the road's and its robbers',
+## total_loss), hazards (road_loss's names), garrison, garrison_town}.
+static func line_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var held := garrisoned_in(repo, state, code)
+	var ln := SupplyLines.line(state, code)
+	var out := {"town": "", "state": "", "rate": 0, "length_km": 0, "loss_permille": 0,
+		"garrison": held != "", "garrison_town": held, "hazards": []}
+	if ln.is_empty():
 		return out
-	var ctx := _road_context(repo, state)
-	var to := ArmySystem.position_of(repo, state, reg)
-	out.append(ArmySystem.metres_to_pack(repo, ctx["a"]))
-	for p: Array in _path_from_ctx(repo, ctx, to):
-		out.append(ArmySystem.metres_to_pack(repo, Vector2i(int(p[0]), int(p[1]))))
-	if out[out.size() - 1].distance_to(to) > 0.001:
-		out.append(to)
+	var route := SupplyLines.road_px(repo, state, code, String(ln["town"]))
+	var km := SupplyLines.road_km(repo, route)
+	var robbed := road_loss(repo, state, code, route)
+	out["town"] = String(ln["town"])
+	out["state"] = String(ln["state"])
+	out["rate"] = int(ln["rate"])
+	out["length_km"] = km
+	out["loss_permille"] = total_loss(repo, km, int(robbed["permille"]))
+	out["hazards"] = robbed["hazards"]
 	return out
 
 
-static func line_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	return _line_of(repo, state, code, _road_context(repo, state))
-
-
-static func _line_of(repo: DataRepository, state: GameState, code: String, ctx: Dictionary) -> Dictionary:
-	var town := stronghold_of(repo, state, code)
-	if town != "":
-		return {"length_km": 0, "loss_permille": 0, "stronghold": town,
-			"garrison": ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_GARRISON}
-	var to := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code))
-	var origin_m: Vector2i = ctx["a"]
-	var dest_m := ArmySystem.pack_to_metres(repo, to)
-	var path := _path_from_ctx(repo, ctx, to)
-	var metres := 0.0
-	if path.is_empty():
-		metres = Vector2(origin_m).distance_to(Vector2(dest_m))
-	else:
-		# Walk it exactly as CourierSystem.need_along does: `here` starts at
-		# the depot, and each waypoint (path_between never includes the
-		# origin itself — RoadGraph.route()'s own doc: "the start node itself
-		# is not included") adds its own distance from `here`. The old code
-		# summed only the legs BETWEEN waypoints and dropped this first one.
-		var here := Vector2(origin_m)
-		for p: Array in path:
-			var wp := Vector2(float(p[0]), float(p[1]))
-			metres += here.distance_to(wp)
-			here = wp
-		# path_between's last entry is always the target itself, but guard it
-		# in case that ever changes.
-		if here != Vector2(dest_m):
-			metres += here.distance_to(Vector2(dest_m))
-	var km := int(metres / 1000.0)
-	return {"length_km": km, "loss_permille": loss_of(repo, km), "garrison": false, "stronghold": ""}
+## The supply road a regiment is fed along, pack px from its supply town to
+## where it stands (the WAR ROOM's ink, the 3D map's line); empty with none.
+static func route_px(repo: DataRepository, state: GameState, code: String) -> PackedVector2Array:
+	var ln := SupplyLines.line(state, code)
+	if ln.is_empty():
+		return PackedVector2Array()
+	return SupplyLines.road_px(repo, state, code, String(ln["town"]))
 
 
 static func _land_codes(repo: DataRepository, state: GameState) -> Array:
@@ -175,93 +153,49 @@ static func _land_codes(repo: DataRepository, state: GameState) -> Array:
 	return out
 
 
+## The month a line will run at today's rate, read by the LEDGER, the audit
+## and the WAR ROOM (spec 2026-10-07-army-supply-lines §2.3): one row per
+## line, code order. `delivered` is the truth after the road and the
+## marshal's efficiency and skim; `claimed` his word. Memoised by
+## LedgerResolvers as before.
 static func plan(repo: DataRepository, state: GameState) -> Array:
-	var ctx := _road_context(repo, state)
 	var rows: Array = []
-	var golds: Array = []
-	for code: String in _land_codes(repo, state):
-		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), state)
-		var target := use * int(repo.bal("army_supply_target_months"))
-		# against the stores the month's end will leave: the regiments eat a
-		# day at a time (ArmySystem.eat_day), and at the settlement nothing is
-		# left to eat, so this is the stores themselves
-		var at_end := maxi(int(state.regiments[code]["supplies"]) - ArmySystem.left_to_eat(use, state.day), 0)
-		var short := maxi(target - at_end, 0)
-		var line := _line_of(repo, state, code, ctx)
-		var loss := int(line["loss_permille"])
-		var ship := ship_for(short, loss)
-		var gold := gold_for(repo, ship)
-		golds.append(gold)
-		rows.append({"code": code, "need": short, "ship": ship, "gold": gold, "paid": 0, "delivered": 0,
-			"loss_permille": loss, "length_km": int(line["length_km"]), "garrison": bool(line["garrison"]),
-			"stronghold": String(line["stronghold"])})
-	var avail := maxi(int(state.metrics.get("strategic", 0.0)), 0) + maxi(int(state.metrics.get("lord_strategic", 0.0)), 0)
-	# The pool being shared is GOLD, and every unit costs the same
-	# (army_supply_gold_permille), so splitting it by gold need is exactly
-	# splitting the ship need in the same proportion.
-	var paid := share(avail, golds)
-	var price := maxi(int(repo.bal("army_supply_gold_permille")), 1)
-	# The lines run as their governor runs them (spec
-	# 2026-09-30-ledger-governors-design §3): the pools pay `paid` in full,
-	# he pockets `skimmed` of it and buys with the rest, and his efficiency
-	# thins what the road delivers. `delivered` is the truth; `claimed` is
-	# what he reports — the same line as if nothing were skimmed.
 	var g := Governance.factors(repo, state, "supply_line")
 	var eff := int(g["efficiency"])
 	var skim := int(g["skim"])
-	for i in rows.size():
-		var row: Dictionary = rows[i]
-		var gold_paid := int(paid[i])
-		row["paid"] = gold_paid
+	var codes: Array = state.supply_lines.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var reg := ArmySystem.regiment(repo, code)
+		if reg.is_empty():
+			continue
+		var ln: Dictionary = state.supply_lines[code]
+		var line := line_of(repo, state, code)
 		@warning_ignore("integer_division")
-		var skimmed := gold_paid * skim / 1000
-		var in_full := gold_paid >= int(row["gold"])
+		var need := ArmySystem.supply_use(repo, reg, state) * int(ln["rate"]) / 1000
+		var keep := 1000 - int(line["loss_permille"])
 		@warning_ignore("integer_division")
-		var bought := int(row["ship"]) if in_full and skimmed == 0 else (gold_paid - skimmed) * 1000 / price
+		var skimmed := need * skim / 1000
 		@warning_ignore("integer_division")
-		var said := int(row["ship"]) if in_full else gold_paid * 1000 / price
-		var keep := 1000 - int(row["loss_permille"])
+		var delivered := (need - skimmed) * keep / 1000 * eff / 1000
 		@warning_ignore("integer_division")
-		row["delivered"] = mini(bought * keep * eff / 1000000, int(row["need"]))
-		@warning_ignore("integer_division")
-		row["claimed"] = mini(said * keep * eff / 1000000, int(row["need"]))
-		row["skimmed"] = skimmed
-		row["efficiency"] = eff
-		row["skim"] = skim
-		row["governor"] = String(g["governor"])
+		var claimed := need * keep / 1000 * eff / 1000
+		rows.append({"code": code, "town": String(ln["town"]), "rate": int(ln["rate"]), "state": String(ln["state"]),
+			"length_km": int(line["length_km"]), "loss_permille": int(line["loss_permille"]),
+			"need": need, "paid": TownStores.gold_of_units(repo, need), "delivered": delivered,
+			"claimed": claimed, "skimmed": TownStores.gold_of_units(repo, skimmed),
+			"efficiency": eff, "skim": skim, "governor": String(g["governor"])})
 	return rows
 
 
-## The month's shipment: supplies land on each regiment now; the pool lines
-## are returned for the tick to apply with its report (crown first, then
-## the lord).
-static func settle_month(repo: DataRepository, state: GameState) -> Array:
-	var total := 0
-	var rows := plan(repo, state)
-	for row: Dictionary in rows:
-		total += int(row["paid"])
-		var entry: Dictionary = state.regiments[String(row["code"])]
-		entry["supplies"] = int(entry["supplies"]) + int(row["delivered"])
-	# the pools pay in full; what the marshal skimmed is his (GameState.skims)
-	Governance.add_skims(state, rows, "supply_line")
-	if total == 0:
-		return []
-	var crown := mini(maxi(int(state.metrics.get("strategic", 0.0)), 0), total)
-	var lines: Array = []
-	if crown > 0:
-		lines.append({"metric": "strategic", "delta": -crown, "reason": "supplies sent to the host"})
-	if total - crown > 0:
-		lines.append({"metric": "lord_strategic", "delta": -(total - crown), "reason": "supplies sent to the host"})
-	return lines
-
-
-## Any land regiment whose supply SCORE is under army_supply_warn_permille
-## (TriggerDsl host_hungry).
+## Any land regiment under army_supply_low_days days in hand (TriggerDsl
+## host_hungry; the line ArmySystem.hunger_day starts taking morale at).
 static func any_hungry(repo: DataRepository, state: GameState) -> bool:
+	var low := int(repo.bal("army_supply_low_days"))
 	for code: String in _land_codes(repo, state):
 		var reg := ArmySystem.regiment(repo, code)
-		var score := ArmySystem.supply_score(repo, int(state.regiments[code]["supplies"]),
-			ArmySystem.supply_use(repo, reg, state))
-		if score < int(repo.bal("army_supply_warn_permille")):
+		if ArmySystem.days_in_hand(int(state.regiments[code]["supplies"]),
+				ArmySystem.supply_use(repo, reg, state)) < low:
 			return true
 	return false

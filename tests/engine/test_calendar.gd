@@ -35,3 +35,9 @@ func test_month_label_is_unique_within_a_season() -> void:
 	assert_eq(Calendar.month_label(13), "Spring I")   # year 2, same month as tick 1
 
 
+
+
+func test_date_of_day_names_an_absolute_day() -> void:
+	assert_eq(Calendar.date_of_day(1), "Spring 1, Year 1")
+	assert_eq(Calendar.date_of_day(31), Calendar.date_string(2, 1))
+	assert_eq(Calendar.date_of_day(361), "Spring 1, Year 2")

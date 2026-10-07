@@ -91,6 +91,8 @@ static func label_of(repo: DataRepository, obj: Dictionary, state: GameState = n
 		"army":
 			return String(repo.world_table("military", "regiments")
 				.get(obj["code"], {}).get("label", ""))
+		"garrison":
+			return garrison_label(repo, String(obj.get("town", "")), obj.get("codes", []))
 		"manor":
 			return MapManors.label_of(repo, int(obj.get("cell", -1)))
 		"landmark":
@@ -312,6 +314,24 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 			["wealth", "Wealth", Intel.wealth_tier(repo, state, String(b["province_code"]))],
 			["stance", "Stance", Intel.stance_of(repo, owner)]]
 		card["intel"] = _intel_rows(repo, state, subj, facts)
+	if state != null and TownStores.is_realm_town(repo, state, code):
+		var held := TownStores.stock_of(state, code)
+		var lines := state.supply_lines.keys().filter(func(k: String) -> bool:
+			return String((state.supply_lines[k] as Dictionary)["town"]) == code)
+		@warning_ignore("integer_division")
+		var markup := int(repo.bal("supply_buy_markup_permille")) / 10
+		fields.append(["Strategic stores", "%d — crown %d, lord %d, house stock %d (bought at +%d%%)" % [
+			int(held["crown"]) + int(held["lord"]) + int(held["house"]),
+			int(held["crown"]), int(held["lord"]), int(held["house"]), markup]])
+		if not lines.is_empty():
+			fields.append(["Supply lines", "%d from here" % lines.size()])
+		var draw := 0
+		for row: Dictionary in SupplySystem.plan(repo, state):
+			if String(row["town"]) == code:
+				draw += int(row["need"])
+		if draw > 0:
+			var days := TownStores.days_of_stock(state, code, draw)
+			fields.append(["Stores last", "%d days at today's draw" % days])
 	if not card.has("actions"):
 		card["actions"] = []
 	(card["actions"] as Array).append(_spy_send_action(repo, state, center))
@@ -392,9 +412,14 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 			regs.append(String(row["label"]))
 	if not regs.is_empty():
 		fields.append(["Regiments", ", ".join(regs)])
-	for row: Dictionary in repo.world_table("society", "zones").values():
-		if code in String(row.get("province_codes", "")).split("|", false):
-			fields.append(["Hazard", "%s (%s)" % [row["label"], String(row["type"]).to_lower()]])
+	if state != null:   # the hazards in play there that the crown knows (spec 2026-10-07-war-room-p2 ruling 7)
+		for id: String in Hazards.active_ids(state):
+			if Hazards.known(repo, state, id) and Hazards.touches_province(repo, state, id, code):
+				var h: Dictionary = state.hazards[id]
+				var left := Hazards.months_left(state, id)
+				fields.append(["Hazard", "%s (%s, %s)" % [String(h["label"]),
+					String(Hazards.kind_of(repo, String(h["kind"])).get("label", h["kind"])),
+					"lasting" if left < 0 else "%d month%s left" % [left, "" if left == 1 else "s"]]])
 	if state != null:
 		for i in range(state.territory_log.size() - 1, -1, -1):
 			var t: Dictionary = state.territory_log[i]
@@ -834,6 +859,55 @@ static func regiments_of(repo: DataRepository, kingdom_code: String) -> Array:
 			out.append(r)
 	return out
 
+## The garrisons among `regs` (owner 2026-10-06, choice A: a regiment
+## quartered in a town is drawn as that town's garrison): one row per town,
+## [{town, kingdom, codes, heads}], the codes the royal regiment first and then
+## by code, the rows by town code. Only the regiments ArmySystem.quartered_in.
+static func garrisons(repo: DataRepository, state: GameState, regs: Array) -> Array:
+	var by: Dictionary = {}
+	for r: Dictionary in regs:
+		var town := ArmySystem.quartered_in(repo, r, state)
+		if town == "":
+			continue
+		var key := "%s|%s" % [town, String(r.get("kingdom_code", ""))]
+		if not by.has(key):
+			by[key] = {"town": town, "kingdom": String(r.get("kingdom_code", "")), "codes": [], "heads": 0}
+		(by[key]["codes"] as Array).append(String(r["regiment_code"]))
+		by[key]["heads"] = int(by[key]["heads"]) + int(regiment_size(repo, r))
+	var keys := by.keys()
+	keys.sort()
+	var out: Array = []
+	for key: String in keys:
+		var g: Dictionary = by[key]
+		var royal := royal_regiment(repo, String(g["kingdom"]))
+		var codes: Array = g["codes"]
+		codes.sort_custom(func(a: String, b: String) -> bool:
+			return a == royal if (a == royal) != (b == royal) else a < b)
+		out.append(g)
+	return out
+
+## The garrison `codes` stands in: [] for a regiment that is not quartered;
+## else every regiment of its kingdom quartered in the same town, the royal
+## regiment first.
+static func garrison_of(repo: DataRepository, state: GameState, code: String) -> Array:
+	var reg := ArmySystem.regiment(repo, code)
+	var town := ArmySystem.quartered_in(repo, reg, state) if not reg.is_empty() else ""
+	if town == "":
+		return []
+	for g: Dictionary in garrisons(repo, state, regiments_of(repo, String(reg["kingdom_code"]))):
+		if String(g["town"]) == town:
+			return g["codes"]
+	return []
+
+## "Garrison of Walbover — 2 regiments, 2100 men".
+static func garrison_label(repo: DataRepository, town: String, codes: Array) -> String:
+	var heads := 0
+	for c in codes:
+		heads += int(regiment_size(repo, ArmySystem.regiment(repo, String(c))))
+	var n := codes.size()
+	return "Garrison of %s — %d regiment%s, %d men" % [
+		String((repo.burgs.get(town, {}) as Dictionary).get("label", town)), n, "" if n == 1 else "s", heads]
+
 ## Heads under a regiment's banner: every arm in unit_types added up.
 static func regiment_size(repo: DataRepository, regiment: Dictionary) -> float:
 	var total := 0.0
@@ -897,7 +971,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var label := String(r["label"])
 	var kingdom := String(r["kingdom_code"])
 	var naval := String(r.get("is_naval", "0")) == "1"
-	var province := String(r.get("province_code", ""))
+	var province := ArmySystem.province_of(repo, state, r)
 	var total := int(regiment_size(repo, r))
 	var piece := army_piece(repo, r)
 	var stats: Array = []
@@ -947,19 +1021,32 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		var use := ArmySystem.supply_use(repo, r, state)
 		if state != null and state.regiments.has(code) and not naval:
 			var line := SupplySystem.line_of(repo, state, code)
-			var town := String((repo.burgs.get(String(line["stronghold"]), {}) as Dictionary).get("label", ""))
-			if bool(line["garrison"]):
-				stats.append(_stat("army_supply_line", "in garrison",
-					"In garrison at %s — supplied through the town, with no road to lose them on" % town))
-			elif String(line["stronghold"]) != "":
-				stats.append(_stat("army_supply_line", "at home",
-					"Standing at home, supplied through %s — no road to lose them on" % town))
-			else:
-				@warning_ignore("integer_division")  # whole percent from per-mille
-				stats.append(_stat("army_supply_line", "%d km · %d%% lost" % [int(line["length_km"]),
-					int(line["loss_permille"]) / 10],
-					"Supplied from the capital over %d km of road, which loses %d%% of every shipment"
-					% [int(line["length_km"]), int(line["loss_permille"]) / 10]))
+			var from := String((repo.burgs.get(String(line["town"]), {}) as Dictionary).get("label", ""))
+			var refill := SupplyLines.refill_words(repo, state, code)
+			var ln := SupplyLines.line(state, code)
+			var text := "none"
+			var tip := "No supply point — it eats what it carries%s" % ("" if refill == "" else "; " + refill)
+			match String(line["state"]):
+				SupplyLines.ORDERED:
+					text = "ordered"
+					tip = "A courier rides to %s with the supply warrant" % from
+				SupplyLines.RIDING:
+					var days := maxi(int(ln["ready_day"]) - state.absolute_day(), 0)
+					text = "wagons %dd" % days
+					tip = "The first wagons from %s arrive in %d day%s" % [from, days, "" if days == 1 else "s"]
+				SupplyLines.FLOWING:
+					var fee := SupplyLines.gold_words(SupplyLines.day_fee_milli(repo, state, code, String(line["town"]),
+						int(line["rate"]), int(line["length_km"])))
+					@warning_ignore("integer_division")
+					var lost := int(line["loss_permille"]) / 10
+					text = "%s %.1f×" % [from, float(int(line["rate"])) / 1000.0]
+					tip = "Supply point: %s · %.1f× · about %s gold a day · %d km, %d%% lost on the road" % [
+						from, float(int(line["rate"])) / 1000.0, fee, int(line["length_km"]), lost]
+				SupplyLines.CUT:
+					text = "cut"
+					tip = "The road from %s is cut by %s" % [from,
+						String((repo.kingdoms.get(String(ln["cut_by"]), {}) as Dictionary).get("label", ln["cut_by"]))]
+			stats.append(_stat("army_supply_line", text, tip))
 		if naval:
 			stats.append(_stat("army_morale", str(int(st["morale"])), "Morale — %d of 100" % int(st["morale"])))
 		else:
@@ -970,8 +1057,11 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		var back := ArmySystem.wound_recovery(repo, int(st["wounded"]))
 		stats.append(_stat("army_wounded", "+%d / mo" % back,
 			"%d wounded return to the ranks each month" % back))
-		stats.append(_stat("army_supply", "%d (−%d / mo)" % [int(st["supplies"]), use],
-			"Supplies — %d held, %d eaten each month, a share every day" % [int(st["supplies"]), use]))
+		var in_hand := mini(ArmySystem.days_in_hand(int(st["supplies"]), use), 999)
+		var carry := ArmySystem.carry_of(repo, st)
+		stats.append(_stat("army_supply", "%d / %d days" % [in_hand, carry],
+			"Supplies — %d days in hand; it carries %d days; under %d days morale falls every day" % [
+				in_hand, carry, int(repo.bal("army_supply_low_days"))]))
 		var drill := ArmySystem.training_grade(repo, int(st["training"]))
 		stats.append(_stat("army_training", drill, "Training — %s" % drill))
 		var might := ArmySystem.strength_grade(repo, state, code)
@@ -984,11 +1074,12 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		if marching:
 			var days := CourierSystem.days_to_arrival(repo, state, code)
 			stats.append(_stat("army_march", "%d day%s out" % [days, "" if days == 1 else "s"],
-				"Arrives in %d day%s in today's weather, any courier still riding with its orders included — %.1f km a day in clear weather" % [
-					days, "" if days == 1 else "s", km]))
+				"Arrives in %d day%s over the ground and the weather on the way, any courier still riding with its orders included — %.1f km a day here (%s) in clear weather" % [
+					days, "" if days == 1 else "s", km, ArmySystem.ground_word(repo, state, r)]))
 		else:
 			stats.append(_stat("army_march", "%.1f km/day" % km,
-				"March — %.1f km a day: its slowest arm's pace, slowed by short supplies, low morale and little training" % km))
+				"March — %.1f km a day here (%s): its slowest arm's pace, slowed by short supplies, low morale and little training, faster on a road and slower over rough ground" % [
+					km, ArmySystem.ground_word(repo, state, r)]))
 		# the base pace above is weather-free; the weather is its own line
 		# (spec 2026-09-27-courier-core §1)
 		var wx := Weather.at(repo, state, ArmySystem.position_of(repo, state, r), state.absolute_day())

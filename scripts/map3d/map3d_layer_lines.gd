@@ -1,7 +1,7 @@
 @tool
 class_name Map3DLayerLines
 extends Node3D
-## The ribbon host (spec 2026-09-20 §1): Roads, Trails, ManorEdges, Seams,
+## The ribbon host (spec 2026-09-20 §1): Roads, Trails, ManorEdges, Seams, the supply lines,
 ## KingdomBand, KingdomHalo, Kingdoms, Hover and Selection, each ONE
 ## MeshInstance3D named for its line, draped on the relief
 ## (Map3DBorders.ribbon_arrays) and kept a constant SCREEN width by its shader.
@@ -20,6 +20,12 @@ const HOVER := preload("res://scenes/map3d/materials/lines/hover.tres")
 const SELECTION_MANOR := preload("res://scenes/map3d/materials/lines/selection_manor.tres")
 const SELECTION_PROVINCE := preload("res://scenes/map3d/materials/lines/selection_province.tres")
 const MANOR_EDGE := preload("res://scenes/map3d/materials/lines/manor_edge.tres")
+## The supply lines (Map3DSupplyLines): a flowing line, the pick's lit and
+## greyed town rings, the chosen town's road.
+const SUPPLY_LINE := preload("res://scenes/map3d/materials/lines/supply_line.tres")
+const SUPPLY_PICK := preload("res://scenes/map3d/materials/lines/supply_pick.tres")
+const SUPPLY_PICK_OFF := preload("res://scenes/map3d/materials/lines/supply_pick_off.tres")
+const SUPPLY_PREVIEW := preload("res://scenes/map3d/materials/lines/supply_preview.tres")
 ## The px values a line's look gives in DESIGN px, scaled to the SubViewport.
 const PX_PARAMS := ["width_px", "dash_px", "gap_px", "lift_px"]
 

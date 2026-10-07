@@ -20,6 +20,16 @@ func _land_code() -> String:
 	return ""
 
 
+## A land regiment on the march: the map draws it where it walks, and it is
+## no town's garrison (a quartered one stands as its town's piece).
+func _marching_code() -> String:
+	var code := _land_code()
+	ArmySystem.ensure(repo, state)
+	var reg := ArmySystem.regiment(repo, code)
+	ArmySystem.set_march(repo, state, code, ArmySystem.position_of(repo, state, reg) + Vector2(40.0, 0.0))
+	return code
+
+
 func test_the_table_believes_the_truth_until_intel_p2() -> void:
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
 		assert_eq(WarRoom.believed_position(repo, state, r), ArmySystem.position_of(repo, state, r))
@@ -28,7 +38,11 @@ func test_the_table_believes_the_truth_until_intel_p2() -> void:
 
 func test_every_crown_regiment_is_a_piece_on_exactly_one_side_of_each_sheet() -> void:
 	var all := WarRoom.pieces(repo, state)
-	assert_eq(all.size(), MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).size())
+	var stood_for := 0
+	for p: Dictionary in all:
+		stood_for += (p["garrison"] as Array).size()
+	assert_eq(stood_for, MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).size(),
+		"every regiment is one piece's, a garrison's piece standing for all of it")
 	for s: Dictionary in WarSheets.series(repo):
 		var on := WarRoom.on_sheet(repo, state, int(s["index"]))
 		var off := WarRoom.off_sheet(repo, state, int(s["index"]))
@@ -169,7 +183,7 @@ func test_a_regiment_in_a_sheets_collar_is_on_that_sheet_and_off_no_other_twice(
 ## Owner 2026-10-02: war room的军队单位位置一定要和大地图一致 — a spot the 3D map
 ## draws wins over the engine's; a regiment it does not name keeps the engine's.
 func test_a_drawn_spot_is_where_the_piece_stands() -> void:
-	var code := _land_code()
+	var code := _marching_code()
 	var reg := ArmySystem.regiment(repo, code)
 	var engine := ArmySystem.position_of(repo, state, reg)
 	var drawn := {code: engine + Vector2(3.0, 2.0)}
@@ -183,7 +197,7 @@ func test_a_drawn_spot_is_where_the_piece_stands() -> void:
 
 ## A drawn spot on another sheet moves the piece to that sheet's side.
 func test_the_sheets_split_by_the_drawn_spot() -> void:
-	var code := _land_code()
+	var code := _marching_code()
 	var reg := ArmySystem.regiment(repo, code)
 	var home := WarSheets.sheet_of(repo, ArmySystem.position_of(repo, state, reg))
 	var far := Vector2.ZERO
@@ -197,3 +211,34 @@ func test_the_sheets_split_by_the_drawn_spot() -> void:
 	var there: Array = WarRoom.on_sheet(repo, state, WarSheets.sheet_of(repo, far), drawn).map(
 		func(p: Dictionary) -> String: return String(p["code"]))
 	assert_true(code in there, "and on the sheet the map draws it on")
+
+
+## Owner 2026-10-06 (choice A): a town's garrison is ONE piece on the town,
+## coded by its first regiment, the royal one first, its tag counting them.
+func test_a_garrison_is_one_piece_on_its_town() -> void:
+	var realm := repo.resolve_realm("player_realm")
+	var royal := MapObjects.royal_regiment(repo, realm)
+	var held := MapObjects.garrison_of(repo, state, royal)
+	assert_gt(held.size(), 1, "the capital holds more than one regiment")
+	assert_eq(String(held[0]), royal, "the royal regiment first")
+	var town := ArmySystem.quartered_in(repo, ArmySystem.regiment(repo, royal), state)
+	var b: Dictionary = repo.burgs[town]
+	var found := 0
+	for p: Dictionary in WarRoom.pieces(repo, state):
+		for c in held:
+			if String(p["code"]) == String(c):
+				found += 1
+				assert_eq(String(p["code"]), royal)
+				assert_eq(p["garrison"], held)
+				assert_eq(p["at"], Vector2(float(b["x"]), float(b["y"])), "on the town's point")
+	assert_eq(found, 1, "one piece for the whole garrison")
+	var heads := 0
+	for c in held:
+		heads += ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c)))
+	assert_eq(WarRoom.tag_text(repo, state, royal), "%d regiments · %s" % [held.size(), WarRoom.group(heads)])
+	# marching out, a regiment stands as its own piece again
+	var other := String(held[1])
+	ArmySystem.ensure(repo, state)
+	ArmySystem.set_march(repo, state, other, Vector2(float(b["x"]) + 40.0, float(b["y"])))
+	var codes := WarRoom.pieces(repo, state).map(func(p: Dictionary) -> String: return String(p["code"]))
+	assert_true(other in codes, "its own piece once it marches")

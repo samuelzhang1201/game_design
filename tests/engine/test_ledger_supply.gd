@@ -18,6 +18,15 @@ func before_each() -> void:
 	cell = int(MapManors.manors_of_province(data, MapManors.home_province(data, s), s)[0])
 	MapManors.build(data, s, cell, WorkshopSystem.BUILDING, "a test workshop")
 	s.metrics["lord_civil"] = 100.0
+	# the supply lines are the regiments' own now: the first land regiment
+	# runs one (spec 2026-10-07-army-supply-lines)
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		if String(ArmySystem.regiment(data, String(c)).get("is_naval", "0")) != "1":
+			s.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(data, s)[0], 1000, 1)
+			s.supply_lines[c]["state"] = SupplyLines.FLOWING
+			break
 
 func after_each() -> void:
 	Intel.dev_all = false
@@ -67,13 +76,16 @@ func test_a_regiments_supply_line_is_its_plan() -> void:
 	assert_eq(String(out["from"]), "supply_line:" + code)
 	assert_eq(out["flow"], int(row["delivered"]))
 	var line := Ledger.snapshot(data, s, "war", {"id": "supply_line:" + code})
-	assert_eq(_link(line, "supplies_in")["flow"], int(row["paid"]))
+	assert_eq(_link(line, "dispatches")["flow"], int(row["paid"]))
 
 func test_a_garrison_stands_in_its_town() -> void:
 	var code := String(SupplySystem.plan(data, s)[0]["code"])
 	var home := MapManors.home_province(data, s)
 	var p: Dictionary = data.provinces[home]
-	var m := ArmySystem.pack_to_metres(data, Vector2(float(p["center_x"]), float(p["center_y"])))
+	# IN the town: a garrison is one inside a town its kingdom holds (spec
+	# 2026-10-06-army-location-and-town-defence §4)
+	var b: Dictionary = data.burgs[String(p["capital_burg"])]
+	var m := ArmySystem.pack_to_metres(data, Vector2(float(b["x"]), float(b["y"])))
 	s.regiments[code]["x_m"] = m.x
 	s.regiments[code]["y_m"] = m.y
 	s.regiments[code]["order"] = ArmySystem.ORDER_GARRISON
@@ -99,7 +111,7 @@ func test_labels() -> void:
 	assert_string_contains(LedgerResolvers.label_of(data, s, "workshop:%d" % cell), "War workshop at")
 	assert_eq(LedgerResolvers.label_of(data, s, "workshop:999999999"), "")
 	var code := String(SupplySystem.plan(data, s)[0]["code"])
-	assert_string_contains(LedgerResolvers.label_of(data, s, "supply_line:" + code), "Supply line to")
+	assert_string_contains(LedgerResolvers.label_of(data, s, "supply_line:" + code), "Supply line from")
 
 func test_the_instances_are_the_plans_rows() -> void:
 	var ws := LedgerResolvers.instances("workshops", data, s)
@@ -166,18 +178,10 @@ func test_a_supply_lines_card_states_its_road() -> void:
 	var id := "supply_line:" + code
 	var line := SupplySystem.line_of(data, s, code)
 	var card := LedgerCards.entry(data, s, id, Ledger.snapshot(data, s, "war", {"id": id}))
+	var from := String(data.burgs[String(line["town"])]["label"])
 	@warning_ignore("integer_division")
-	assert_eq(String(card["lines"][0]), "%d km, %d%% lost on the way" % [int(line["length_km"]),
-		int(line["loss_permille"]) / 10])
-	# standing at home, it draws through the town
-	var p: Dictionary = data.provinces[MapManors.home_province(data, s)]
-	var m := ArmySystem.pack_to_metres(data, Vector2(float(p["center_x"]), float(p["center_y"])))
-	s.regiments[code]["x_m"] = m.x
-	s.regiments[code]["y_m"] = m.y
-	s.regiments[code]["order"] = ArmySystem.ORDER_STANDBY
-	card = LedgerCards.entry(data, s, id, Ledger.snapshot(data, s, "war", {"id": id}))
-	assert_eq(String(card["lines"][0]), "through %s, nothing lost"
-		% String(data.burgs[String(p["capital_burg"])]["label"]))
+	assert_eq(String(card["lines"][0]), "from %s, %d km, %d%% lost on the way — %s" % [from,
+		int(line["length_km"]), int(line["loss_permille"]) / 10, String(line["state"])])
 
 func test_a_workshops_card_names_its_rate() -> void:
 	var id := "workshop:%d" % cell

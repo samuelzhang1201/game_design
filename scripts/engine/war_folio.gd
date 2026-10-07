@@ -163,20 +163,27 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 	var use := ArmySystem.supply_use(repo, reg, state)
 	var supplies := int(st["supplies"])
 	var rows: Array = [
-		_row("In hand", "%s (%s months)" % [WarRoom.group(supplies),
-			("%.1f" % (float(supplies) / float(use))) if use > 0 else "-"]),
+		_row("In hand", "%s (%d days of %d)" % [WarRoom.group(supplies),
+			mini(ArmySystem.days_in_hand(supplies, use), 999), ArmySystem.carry_of(repo, st)]),
 		_row("Eaten today", WarRoom.group(ArmySystem.day_bite(use, state.day)))]
 	if state.regiments.has(code):
 		var line := SupplySystem.line_of(repo, state, code)
-		var town := String((repo.burgs.get(String(line["stronghold"]), {}) as Dictionary).get("label", ""))
-		if bool(line["garrison"]):
-			rows.append(_row("Line", "in garrison at %s, nothing lost" % town))
-		elif String(line["stronghold"]) != "":
-			rows.append(_row("Line", "at home, through %s, nothing lost" % town))
-		else:
+		var from := String((repo.burgs.get(String(line["town"]), {}) as Dictionary).get("label", ""))
+		var refill := SupplyLines.refill_words(repo, state, code)
+		var text := "no supply point"
+		if String(line["town"]) != "":
 			@warning_ignore("integer_division")
 			var lost := int(line["loss_permille"]) / 10
-			rows.append(_row("Line", "%d km from %s, %d%% lost" % [int(line["length_km"]), depot_name(repo, state), lost]))
+			text = "%s from %s, %.1f×, %d km, %d%% lost" % [String(line["state"]), from,
+				float(int(line["rate"])) / 1000.0, int(line["length_km"]), lost]
+			var named: Array = (line.get("hazards", []) as Array).map(func(h: Dictionary) -> String:
+				@warning_ignore("integer_division")
+				return "%d%% to the %s" % [int(h["permille"]) / 10, String(h["label"])])
+			if not named.is_empty():
+				text += " (%s)" % ", ".join(named)
+		if refill != "":
+			text += "; " + refill
+		rows.append(_row("Line", text))
 	var f := Governance.factors(repo, state, "supply_line")
 	var gid := String(f["governor"])
 	if gid == "":
@@ -187,19 +194,6 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 		rows.append(_row("Governed by", "%s — runs it at %d%%, skill %d" % [
 			(state.characters[gid] as Character).display_name, runs, int(f["skill"])]))
 	return rows
-
-
-## The town the supply line runs from (CourierSystem.origin: the capital while
-## the realm holds it, else its stand-in), "the depot" when no town stands there.
-static func depot_name(repo: DataRepository, state: GameState) -> String:
-	var at := CourierSystem.origin(repo, state)
-	var codes: Array = repo.burgs.keys()
-	codes.sort()
-	for b: String in codes:
-		var row: Dictionary = repo.burgs[b]
-		if Vector2(float(row["x"]), float(row["y"])) == at:
-			return String(row["label"])
-	return "the depot"
 
 
 static func _ground(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
@@ -239,6 +233,7 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 	# the four parts of readiness (ArmySystem.readiness_permille): the arm is
 	# always whole; training stays hidden, its grade word only (spec §4)
 	var rows: Array = [_row("Pace", "%.1f km a day" % ArmySystem.speed_km_per_day(repo, state, code)),
+		_row("Ground pace", ArmySystem.ground_word(repo, state, reg)),
 		_row("Readiness", "%d%%" % readiness),
 		_row("Readiness parts", "arm 100%%, supplies %d%%, morale %d%%, training %s" % [
 			supplies_pct, clampi(int(st["morale"]), 0, 100), grade]),
@@ -248,7 +243,11 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 		_row("Supplies score", "%d%%" % supplies_pct),
 		_row("Training", grade)]
 	var order := ArmySystem.order_of(repo, state, code)
-	rows.append(_row("Order", order_word(repo, order)))
+	# a GARRISON order in the open is a field camp (spec 2026-10-06 §4)
+	var shown := order
+	if order == ArmySystem.ORDER_GARRISON and SupplySystem.garrisoned_in(repo, state, code) == "":
+		shown = "camp"
+	rows.append(_row("Order", order_word(repo, shown)))
 	if order == ArmySystem.ORDER_MARCH:
 		var dest := ArmySystem.destination_of(repo, state, code)
 		var si := WarSheets.sheet_of(repo, dest)

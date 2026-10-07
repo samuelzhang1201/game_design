@@ -61,8 +61,7 @@ static func entry(repo: DataRepository, state: GameState, node_id: String, snap:
 
 
 ## The first line of a supply chain card (final review): a supply line's
-## road — "250 km, 15% lost on the way", or "through Walbover, nothing lost"
-## for a regiment standing in the crown's province — and a war workshop's
+## road — "from Walbover, 250 km, 15% lost on the way — flowing" — and a war workshop's
 ## rate ("Runs at half"). The crown's own depots: exact, like their threads.
 static func _head(repo: DataRepository, state: GameState, kind: String, rest: String) -> String:
 	match kind:
@@ -71,11 +70,12 @@ static func _head(repo: DataRepository, state: GameState, kind: String, rest: St
 					or String(ArmySystem.regiment(repo, rest).get("is_naval", "0")) == "1":
 				return ""  # a fleet has no supply line
 			var line := SupplySystem.line_of(repo, state, rest)
-			var town := String(line["stronghold"])
-			if town != "":
-				return "through %s, nothing lost" % String((repo.burgs.get(town, {}) as Dictionary).get("label", town))
+			if String(line["town"]) == "":
+				return ""
+			var from := String((repo.burgs.get(String(line["town"]), {}) as Dictionary).get("label", line["town"]))
 			@warning_ignore("integer_division")  # whole percent from per-mille
-			return "%d km, %d%% lost on the way" % [int(line["length_km"]), int(line["loss_permille"]) / 10]
+			return "from %s, %d km, %d%% lost on the way — %s" % [from, int(line["length_km"]),
+				int(line["loss_permille"]) / 10, String(line["state"])]
 		"workshop":
 			if not rest.is_valid_int():
 				return ""

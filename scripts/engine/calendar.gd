@@ -33,6 +33,12 @@ static func season_of_day(abs_day: int) -> String:
 static func day_of_season(tick: int, day_in_tick: int = DAYS_PER_TICK) -> int:
 	return ((absolute_day(tick, day_in_tick) - 1) % DAYS_PER_SEASON) + 1
 
+## date_string's words for an absolute day.
+static func date_of_day(abs_day: int) -> String:
+	var d := maxi(abs_day, 1) - 1
+	@warning_ignore("integer_division")  # whole months
+	return date_string(d / DAYS_PER_TICK + 1, d % DAYS_PER_TICK + 1)
+
 static func date_string(tick: int, day_in_tick: int = DAYS_PER_TICK) -> String:
 	return "%s %d, Year %d" % [
 		season_name(tick), day_of_season(tick, day_in_tick), year_of(tick)]

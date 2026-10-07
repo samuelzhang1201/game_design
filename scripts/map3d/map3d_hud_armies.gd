@@ -70,8 +70,36 @@ func _cut() -> Array:
 	var tops := view.unit_tops()
 	var chip := minf(h, chip_px)
 	var lift := chip * 0.5 + repo.bal("map_army_stack_gap_px")
-	for r: Dictionary in ctx.regiments():
+	# A town's garrison is ONE counter on the town (owner 2026-10-06, choice
+	# A): its regiments stand in no piece of their own while quartered there.
+	var regs := ctx.regiments()
+	var quartered: Dictionary = {}
+	# close in, where the pieces stand, a garrison is no bigger than a piece's
+	# chip: the town is the thing there, not its counter (critic 2026-10-06)
+	var garrison_h := h if Map3DUnits.as_counters(repo, ctx.meta, ctx.distance, ctx.view_size.y) else chip
+	for g: Dictionary in MapObjects.garrisons(repo, st, regs):
+		var codes: Array = g["codes"]
+		for c in codes:
+			quartered[String(c)] = true
+		var town: Dictionary = repo.burgs[String(g["town"])]
+		var xz := Map3DGeometry.pack_to_world(ctx.meta, Vector2(float(town["x"]), float(town["y"])))
+		var ground := Vector3(xz.x, ctx.height_at(xz), xz.y)
+		if camera.is_position_behind(ground):
+			continue
+		var gp := camera.unproject_position(ground) / s
+		if not frame.has_point(gp):
+			continue
+		# the weakest regiment's bars: the garrison is as ready as its worst
+		var bars := Vector2i(1000, 1000)
+		for c in codes:
+			var b := _bars_of(String(c))
+			bars = Vector2i(mini(bars.x, b.x), mini(bars.y, b.y))
+		points.append({"reg": ArmySystem.regiment(repo, String(codes[0])), "pos": gp, "h": garrison_h,
+			"bars": bars, "garrison": String(g["town"]), "codes": codes, "heads": int(g["heads"])})
+	for r: Dictionary in regs:
 		var code := String(r["regiment_code"])
+		if quartered.has(code):
+			continue
 		var sp := Vector2.ZERO
 		var ph := h
 		if tops.has(code):

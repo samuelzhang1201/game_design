@@ -53,6 +53,7 @@ func drop() -> void:
 	cancel()
 	if held:
 		_view.rake_dropped.emit()
+		_view.hover_cleared.emit()
 
 
 ## "<distance> <unit> · ~<days> day(s)" from the regiment to a pack point, in
@@ -75,7 +76,7 @@ func on_left(mb: InputEventMouseButton) -> void:
 	if mb.pressed:
 		_press_at = mb.position
 		_pressed = true
-		_press_code = _view.piece_under(mb.position)
+		_press_code = _view.order_code_of(_view.piece_under(mb.position))
 		return
 	if not _pressed:
 		return
@@ -105,6 +106,10 @@ func on_left(mb: InputEventMouseButton) -> void:
 	# throws its pennant's head over the index chart)
 	if pennant != "":
 		_view.route_clicked.emit(pennant, mb.position)
+	elif piece != "" and _view.garrison_of(piece).size() > 1:
+		# a town's garrison: which of its regiments (owner 2026-10-06, choice A)
+		_view.select(piece)
+		_view.garrison_menu_requested.emit(_view.garrison_of(piece), mb.position)
 	elif piece != "":
 		_view.select(piece)
 	elif arrow >= 0:

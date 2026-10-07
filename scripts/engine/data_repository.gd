@@ -77,6 +77,27 @@ var army_art: Dictionary = {}
 var army_terrain_biomes: Dictionary = {}
 ## data/army_terrain.csv: "terrain|arm" -> {defend, attack} per mille.
 var army_terrain: Dictionary = {}
+## data/army_town_reach.csv: burg group -> km (float) a regiment stands IN a
+## town of that group within (ArmySystem.town_of).
+var army_town_reach: Dictionary = {}
+## data/war_marks.csv: marker type -> {glyph, layer, note} — which marks the
+## WAR ROOM inks, how, and on which layer (spec 2026-10-07-war-room-p2 §1.1).
+var war_marks: Dictionary = {}
+## data/war_mark_hazards.csv: marker type -> {reach_km, permille} — the marks
+## that take a share of a supply line passing within their reach (§1.2).
+var war_mark_hazards: Dictionary = {}
+## data/war_works.csv: strategic good -> {family, glyph} — the goods that make
+## a town a war works on the WAR ROOM's sheet, by family (spec 2026-10-07-war-room-p3 §1.1).
+var war_works: Dictionary = {}
+## data/hazard_kinds.csv: zone kind -> {label, months, public, wounds_permille,
+## morale, supply_loss_permille, pace_permille, ink} (spec 2026-10-07-war-room-p2 §2.2).
+var hazard_kinds: Dictionary = {}
+## data/army_town_defence.csv: "works|arm" -> {defend, attack} per mille, works
+## town / walls / citadel (ArmySystem.works_of).
+var army_town_defence: Dictionary = {}
+## data/army_ground_speed.csv: key -> per mille of a march's pace (road, trail,
+## tier_<tier>, and each terrain of army_terrain_biomes).
+var army_ground_speed: Dictionary = {}
 ## data/army_matchups.csv: arm -> [{vs, attack, defense}] per mille, in file order.
 var army_matchups: Dictionary = {}
 ## data/army_training_grades.csv rows {above, label}, first match wins.
@@ -89,6 +110,14 @@ var army_orders: Array = []
 ## confirm menu (commit / cancel) and route menu (edit / halt), and the
 ## paused-only reason (owner 2026-09-27, ArmyOrderMenu).
 var army_route_orders: Dictionary = {}
+## data/army_carry_loads.csv: [{days, pace_permille, label}], days ascending
+## (spec 2026-10-07-army-supply-lines §3.6).
+var army_carry_loads: Array = []
+## data/army_supply_orders.csv: key -> {label, hint} — the supply rows of the
+## regiment's right-click menu (spec 2026-10-07-army-supply-lines §5.1).
+var army_supply_orders: Dictionary = {}
+## data/army_hostile_stances.csv: the stances whose regiments cut supply lines.
+var army_hostile_stances: Array[String] = []
 ## data/event_presenters.csv: an event id or an event category -> the council
 ## seat whose holder brings that event before the crown (owner 2026-10-02:
 ## every event waits on the table as a minister's matter); an id wins.
@@ -644,6 +673,34 @@ func _load(dir: String) -> bool:
 			func(r): army_terrain["%s|%s" % [r["terrain"], r["arm"]]] = {
 				"defend": int(r["defend_permille"]), "attack": int(r["attack_permille"])}):
 		return false
+	if not _load_if_present(dir + "/army_town_reach.csv", ["group", "reach_km"],
+			func(r): army_town_reach[String(r["group"])] = float(r["reach_km"])):
+		return false
+	if not _load_if_present(dir + "/war_marks.csv", ["type", "glyph", "layer", "note"],
+			func(r): war_marks[String(r["type"])] = {"glyph": String(r["glyph"]), "layer": String(r["layer"]),
+				"note": String(r["note"])}):
+		return false
+	if not _load_if_present(dir + "/war_mark_hazards.csv", ["type", "reach_km", "supply_loss_permille"],
+			func(r): war_mark_hazards[String(r["type"])] = {"reach_km": float(r["reach_km"]),
+				"permille": int(r["supply_loss_permille"])}):
+		return false
+	if not _load_if_present(dir + "/war_works.csv", ["good_code", "family", "glyph"],
+			func(r): war_works[String(r["good_code"])] = {"family": String(r["family"]), "glyph": String(r["glyph"])}):
+		return false
+	if not _load_if_present(dir + "/hazard_kinds.csv", ["kind", "label", "months", "public", "wounds_permille",
+			"morale", "supply_loss_permille", "pace_permille", "ink"],
+			func(r): hazard_kinds[String(r["kind"])] = {"label": String(r["label"]), "months": int(r["months"]),
+				"public": String(r["public"]) == "1", "wounds_permille": int(r["wounds_permille"]),
+				"morale": int(r["morale"]), "supply_loss_permille": int(r["supply_loss_permille"]),
+				"pace_permille": int(r["pace_permille"]), "ink": String(r["ink"])}):
+		return false
+	if not _load_if_present(dir + "/army_town_defence.csv", ["works", "arm", "defend_permille", "attack_permille"],
+			func(r): army_town_defence["%s|%s" % [r["works"], r["arm"]]] = {
+				"defend": int(r["defend_permille"]), "attack": int(r["attack_permille"])}):
+		return false
+	if not _load_if_present(dir + "/army_ground_speed.csv", ["key", "permille"],
+			func(r): army_ground_speed[String(r["key"])] = int(r["permille"])):
+		return false
 	if not _load_if_present(dir + "/army_matchups.csv", ["arm", "vs_arm", "attack_permille", "defense_permille"],
 			_add_matchup):
 		return false
@@ -739,6 +796,18 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/army_route_orders.csv", ["key", "label", "hint"],
 			func(r): army_route_orders[String(r["key"])] = {"label": String(r["label"]),
 				"hint": String(r["hint"])}):
+		return false
+	if not _load_if_present(dir + "/army_carry_loads.csv", ["days", "pace_permille", "label"],
+			func(r): army_carry_loads.append({"days": int(r["days"]),
+				"pace_permille": int(r["pace_permille"]), "label": String(r["label"])})):
+		return false
+	army_carry_loads.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["days"]) < int(b["days"]))
+	if not _load_if_present(dir + "/army_supply_orders.csv", ["key", "label", "hint"],
+			func(r): army_supply_orders[String(r["key"])] = {"label": String(r["label"]),
+				"hint": String(r["hint"])}):
+		return false
+	if not _load_if_present(dir + "/army_hostile_stances.csv", ["stance"],
+			func(r): army_hostile_stances.append(String(r["stance"]))):
 		return false
 	if not _load_if_present(dir + "/army_formations.csv", ["figures", "min_fit_permille", "slots"],
 			func(r):
@@ -842,6 +911,7 @@ func load_map(id: String) -> bool:
 	Elevation.forget()
 	Weather.forget()
 	RoadGraph.forget()
+	ArmySystem.forget_grids()
 	WarSheets.forget()
 	routes.clear()
 	rivers.clear()
