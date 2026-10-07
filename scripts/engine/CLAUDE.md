@@ -7,7 +7,8 @@ The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, 
 These topics' rules live in `guide/` beside this file, which Claude Code does NOT load on its own — open the guide when the task touches its topic:
 
 - `scripts/engine/guide/regiments.md` — regiments and their march (`ArmySystem`)
-- `scripts/engine/guide/battle_and_ai.md` — battles, stances and the enemy (`BattleSystem`, the foes, `ARMY_STANCE`, `EnemyAi`: the hosts' minds; `SiegeSystem`: sieges, assaults, the fall; `RaidSystem`: raids, plunder, the Raided hazard, spoils; the invasion's day order, rumour, scout facts and host news)
+- `scripts/engine/guide/battle_and_ai.md` — battles, stances and the enemy (`BattleSystem`, the foes, `ARMY_STANCE`, `EnemyAi`: the hosts' minds; `SiegeSystem`: sieges, assaults, the fall; the invasion's day order, rumour, scout facts and host news)
+- `scripts/engine/guide/raid_and_defeat.md` — raids and spoils (`RaidSystem`: the take, the raiders' food, the crown's ledger line, the Raided hazard, a stripped manor, spoils)
 - `scripts/engine/guide/supply_and_workshop.md` — supply, morale and the war workshop (`SupplySystem`, `SupplyLines`, `TownStores`, `WorkshopSystem`)
 - `scripts/engine/guide/ledger_model.md` — the LEDGER's model (`ledger.gd`, `ledger_resolvers.gd`, `ledger_cards.gd`)
 - `scripts/engine/guide/governors_and_audit.md` — governors, skimming and the audit (`Governance`, `AuditWriter`)

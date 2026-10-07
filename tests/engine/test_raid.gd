@@ -503,3 +503,90 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 	assert_gt(home_by, 33, "the invasion outlasts the hosts' own stores")
 	assert_true(home_by > 0 and home_by <= 60, "and every host has turned for home by day 60 (%d)" % home_by)
 	gut.p("raiding past day 33: %s; every host homeward from day %d" % [raiding_late, home_by])
+
+
+## --- a town target (Ruling 5: an open town is raided like a manor) ----------------
+
+## A town of the player's realm no regiment of his garrisons; "" for none.
+func _open_town(s: GameState) -> String:
+	var player := repo.resolve_realm("player_realm")
+	var codes: Array = repo.burgs.keys()
+	codes.sort()
+	for t: Variant in codes:
+		var b: Dictionary = repo.burgs[t]
+		if MapOwnership.owner_of(repo, s, String(b.get("province_code", ""))) != player:
+			continue
+		var cell := EnemyAi.target_cell(repo, s, "town", String(t))
+		if cell < 0 or not EnemyAi.garrison_of(repo, s, String(t)).is_empty() or _month(s, cell) < 100:
+			continue
+		return String(t)
+	return ""
+
+
+func test_a_town_is_raided_through_its_own_manor_from_inside_its_reach() -> void:
+	# battle_contact_km 0.5 so only the town's reach (army_town_reach.csv, at
+	# least 1 km) lets the column in: SiegeSystem.at_town is the branch tested
+	repo.balance["battle_contact_km"] = 0.5
+	repo.balance["raid_plunder_permille"] = 600.0
+	repo.balance["raid_supply_permille"] = 0.0
+	repo.balance["crown_share_permille"] = 200.0
+	var s := SuiteData.campaign(repo, 11)
+	var h := _host("raider")
+	var town := _open_town(s)
+	assert_ne(town, "", "the realm has an open town worth raiding")
+	var cell := EnemyAi.target_cell(repo, s, "town", town)
+	var reach_km := float(repo.army_town_reach.get(String((repo.burgs[town] as Dictionary).get("group", "")), 0.0))
+	assert_gt(reach_km, 0.5, "the town's reach is wider than the contact distance set here")
+	var at := EnemyAi.target_point_m(repo, "town", town) + Vector2i(int(reach_km * 1000.0) - 100, 0)
+	for c: String in EnemyAi.regiments_of(s, h):
+		_place(s, c, at, ArmySystem.ORDER_GARRISON)
+	var mind: Dictionary = s.ai_hosts[h]
+	mind["mode"] = "RAID"
+	mind["target_kind"] = "town"
+	mind["target_id"] = town
+	var month := _month(s, cell)
+	var treasury := float(s.metrics["treasury"])
+	var events := RaidSystem.settle_day(repo, s, [])
+	# by hand: day 1 = month x 600 / 30000, rounded down; no food, so all plunder
+	@warning_ignore("integer_division")
+	var t1 := month * 600 / 30000
+	assert_eq(int(mind["plunder"]), t1, "the town's manor's month %d x 600 / 30000" % month)
+	assert_eq(int((mind["raided"] as Dictionary)[str(cell)]["taken"]), t1, "kept on the town's MANOR cell")
+	assert_true(s.hazards.has(RaidSystem.hazard_id(cell)), "the town's manor is marked Raided")
+	assert_eq(_of(events, "raid_begin").size(), 1)
+	if not MapManors.crown_controls(repo, s, MapManors.province_of(repo, cell, s)):
+		@warning_ignore("integer_division")
+		assert_eq(float(s.metrics["treasury"]), treasury - float(t1 * 200 / 1000), "the crown's share of it")
+	# a column further out than the reach takes nothing
+	var s2 := SuiteData.campaign(repo, 11)
+	for c: String in EnemyAi.regiments_of(s2, h):
+		_place(s2, c, EnemyAi.target_point_m(repo, "town", town) + Vector2i(int(reach_km * 1000.0) + 500, 0),
+			ArmySystem.ORDER_GARRISON)
+	s2.ai_hosts[h]["mode"] = "RAID"
+	s2.ai_hosts[h]["target_kind"] = "town"
+	s2.ai_hosts[h]["target_id"] = town
+	assert_eq(RaidSystem.day_take(repo, s2, h), 0, "outside the town's reach: nothing")
+
+
+## --- two hosts on one manor ----------------------------------------------------------
+
+func test_two_hosts_on_one_manor_never_take_more_than_its_share() -> void:
+	repo.balance["raid_plunder_permille"] = 600.0
+	var s := SuiteData.campaign(repo, 11)
+	var a := _host("raider")
+	var b := _host("main")
+	var cell := _manor(s, false, 100)
+	_raid(s, a, cell)
+	_raid(s, b, cell)
+	var cap := RaidSystem.cap_of(_month(s, cell), 600)
+	var total := 0
+	var stripped_on := -1
+	for d in 40:
+		total += RaidSystem.day_take(repo, s, a)
+		total += RaidSystem.day_take(repo, s, b)
+		assert_lte(RaidSystem.taken_of(s, cell), cap, "day %d: never past the manor's share" % (d + 1))
+		if stripped_on < 0 and RaidSystem.stripped(repo, s, cell):
+			stripped_on = d + 1
+	assert_eq(total, cap, "together they take the share of the month exactly: %d" % cap)
+	assert_eq(RaidSystem.taken_of(s, cell), cap)
+	assert_between(stripped_on, 1, 29, "two running sums strip it faster than thirty days (%d)" % stripped_on)
