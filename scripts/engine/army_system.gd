@@ -441,15 +441,17 @@ static func float_factor(repo: DataRepository, code: String, vs_arm: String, tic
 	return 1000 - spread + posmod(("%s|%s|%d" % [code, vs_arm, tick]).hash(), spread * 2 + 1)
 
 ## An arm's base, per mille: the mean over its matchups of (attack +
-## defense) / 2, each scaled by the month's float.
+## defense) / 2, each scaled by the month's float — none (1000) for an empty
+## code, a host the crown cannot know the float of (a supposed one).
 static func _arm_base(repo: DataRepository, code: String, arm: String, tick: int) -> int:
 	var rows: Array = repo.army_matchups.get(arm, [])
 	if rows.is_empty():
 		return 1000
 	var sum := 0
 	for m: Dictionary in rows:
+		var f := 1000 if code == "" else float_factor(repo, code, String(m["vs"]), tick)
 		@warning_ignore("integer_division")  # whole per-mille: the arms' mean, then the float factor
-		sum += (int(m["attack"]) + int(m["defense"])) / 2 * float_factor(repo, code, String(m["vs"]), tick) / 1000
+		sum += (int(m["attack"]) + int(m["defense"])) / 2 * f / 1000
 	@warning_ignore("integer_division")  # the arms' whole mean
 	return sum / rows.size()
 
@@ -474,15 +476,28 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 	if reg.is_empty() or st.is_empty():
 		return 0
 	var heads := headcount(repo, reg)
+	var fit := heads - clampi(int(st["wounded"]), 0, heads)
+	return power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
+		code, 0 if state == null else state.tick)
+
+
+## The power of a host of `arms` (arm -> heads, a regiment's row will do) with
+## `fit` of its heads fit, at a training and a morale, on a ground — the body
+## of power_on, for a host with no state: the WAR ROOM's supposed enemy (spec
+## 2026-10-07-war-room-annotations-and-planning-pieces §1.2). `float_code`
+## names whose hidden monthly float to apply at `tick`; "" applies none.
+static func power_of_arms(repo: DataRepository, arms: Dictionary, fit: int, training: int, morale: int,
+		stance: String, terrain: String, works: String, float_code := "", tick := 0) -> int:
+	var heads := 0
+	for arm: String in repo.world_table("military", "unit_types"):
+		heads += int(float(arms.get(arm, 0)))
 	if heads <= 0:
 		return 0
-	var fit := heads - clampi(int(st["wounded"]), 0, heads)
-	var tick := 0 if state == null else state.tick
-	var training_f := int(repo.bal("army_training_base_permille")) + int(st["training"]) * int(repo.bal("army_training_step_permille"))
-	var morale_f := int(repo.bal("army_morale_base_permille")) + int(st["morale"]) * int(repo.bal("army_morale_step_permille"))
+	var training_f := int(repo.bal("army_training_base_permille")) + training * int(repo.bal("army_training_step_permille"))
+	var morale_f := int(repo.bal("army_morale_base_permille")) + morale * int(repo.bal("army_morale_step_permille"))
 	var total := 0
 	for arm: String in repo.world_table("military", "unit_types"):
-		var n := int(float(reg.get(arm, 0)))
+		var n := int(float(arms.get(arm, 0)))
 		if n <= 0:
 			continue
 		# Carry precision through the chain (owner 2026-09-17 review): the
@@ -499,7 +514,7 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 		@warning_ignore("integer_division")  # milli-heads, whole (see the note above)
 		var p := n * fit * 1000 / heads
 		@warning_ignore("integer_division")  # whole per-mille
-		p = p * _arm_base(repo, code, arm, tick) / 1000
+		p = p * _arm_base(repo, float_code, arm, tick) / 1000
 		@warning_ignore("integer_division")  # whole per-mille
 		p = p * training_f / 1000
 		@warning_ignore("integer_division")  # whole per-mille
