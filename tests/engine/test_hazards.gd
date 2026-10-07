@@ -167,7 +167,6 @@ func test_two_hazards_both_take_their_toll_once() -> void:
 	var morale := int(state.regiments[code]["morale"])
 	var news := Hazards.settle_regiments(repo, state)
 	assert_eq(news.filter(func(n: String) -> bool: return n.contains("Test Plague")).size(), 1)
-	assert_eq(news.filter(func(n: String) -> bool: return n.contains("Test Rebels")).size(), 1)
 	assert_eq(int(state.regiments[code]["morale"]), clampi(morale + int(Hazards.kind_of(repo, "Rebels")["morale"]), 0, 100))
 
 
@@ -209,3 +208,39 @@ func test_a_flood_slows_the_march_through_it() -> void:
 	@warning_ignore("integer_division")
 	assert_eq(ArmySystem.ground_permille(repo, reg, at, state), maxi(1, dry * pace / 1000))
 	assert_eq(ArmySystem.ground_permille(repo, reg, at), dry, "no state, no hazard")
+
+
+func test_a_morale_toll_is_held_not_announced_every_month() -> void:
+	# the drift toward the supply mark restores more than the toll takes, so the
+	# regiment sits that much lower; "falls" every month would be untrue
+	var state := SuiteData.campaign(repo, 42)
+	for id: String in state.hazards.keys():
+		state.hazards.erase(id)
+	state.hazards_rev += 1
+	var code := _crown_land_code(state)
+	Hazards.add(state, "r", "Rebels", "Test Rebels", [_cell_of(state, code)], state.tick, -1, "test")
+	var news := Hazards.settle_regiments(repo, state)
+	assert_eq(news.filter(func(n: String) -> bool: return n.contains("morale")), [])
+	assert_string_contains(WarGround.hazard_words(repo, "Rebels"), "morale held 3 lower")
+
+
+func test_a_toll_from_a_hazard_we_do_not_know_does_not_name_it() -> void:
+	var state := SuiteData.campaign(repo, 42)
+	for id: String in state.hazards.keys():
+		state.hazards.erase(id)
+	state.hazards_rev += 1
+	var code := _crown_land_code(state)
+	var cell := _cell_of(state, code)
+	(repo.hazard_kinds["Disease"] as Dictionary)["public"] = false
+	var prov := MapManors.province_of(repo, cell, state)
+	var other := ""
+	for k: String in repo.kingdoms:
+		if k != repo.resolve_realm("player_realm"):
+			other = k
+			break
+	MapOwnership.set_owner(repo, state, prov, other, "test: the ground is foreign")
+	Hazards.add(state, "p", "Disease", "Secret Plague", [cell], state.tick, -1, "test")
+	assert_false(Hazards.known(repo, state, "p"))
+	var news := Hazards.settle_regiments(repo, state)
+	assert_gt(news.size(), 0, "the loss is still felt")
+	assert_eq(news.filter(func(n: String) -> bool: return n.contains("Secret Plague")), [], "but the hazard is not named")

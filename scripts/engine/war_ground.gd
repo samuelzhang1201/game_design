@@ -126,7 +126,7 @@ static func hazard_words(repo: DataRepository, kind: String) -> String:
 	if int(k.get("wounds_permille", 0)) > 0:
 		parts.append("regiments here lose about %s%% a month" % String.num(float(k["wounds_permille"]) / 10.0, 1))
 	if int(k.get("morale", 0)) < 0:
-		parts.append("morale falls %d a month" % -int(k["morale"]))
+		parts.append("morale held %d lower here" % -int(k["morale"]))
 	if int(k.get("supply_loss_permille", 0)) > 0:
 		@warning_ignore("integer_division")
 		parts.append("supply lines through it lose %d%%" % (int(k["supply_loss_permille"]) / 10))

@@ -153,13 +153,12 @@ static func settle_regiments(repo: DataRepository, state: GameState) -> Array[St
 			var lost := fit * int(k.get("wounds_permille", 0)) / 1000
 			if lost > 0:
 				entry["wounded"] = clampi(int(entry["wounded"]) + lost, 0, heads)
-				news.append("The %s loses %d to the %s." % [name, lost, String(h["label"])])
-			var m := int(k.get("morale", 0))
-			if m != 0:
-				var was := int(entry["morale"])
-				entry["morale"] = clampi(was + m, 0, 100)
-				if int(entry["morale"]) != was:
-					news.append("The %s's morale %s under the %s." % [name, "falls" if m < 0 else "rises", String(h["label"])])
+				# ruling 6: a hazard we do not know is felt, never named
+				var what := "the " + String(h["label"]) if known(repo, state, id) else "trouble in the country"
+				news.append("The %s loses %d to %s." % [name, lost, what])
+			# the month's drift toward the supply mark gives back more than this
+			# takes, so the regiment is HELD lower while it stands here: no news
+			entry["morale"] = clampi(int(entry["morale"]) + int(k.get("morale", 0)), 0, 100)
 	return news
 
 
