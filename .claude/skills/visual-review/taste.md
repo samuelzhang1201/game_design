@@ -716,3 +716,10 @@ add it here as a principle with its why — not as a changelog entry.
 - **A piece's base on the plotting table is a muted tincture, not the raw realm
   colour** (`war_base_darken` 0.5): at 0.25 a light realm colour was a sky-blue
   slab pasted on parchment, at 0.65 the hue was lost to black.
+- **An animated figure holds only poses a human body can make, from every
+  view** (owner 2026-10-07, the archer's run: "呈一个C字形，人类不可能有这种形态…
+  大臂和小臂应该是一个类J字形"; earlier "左手手腕和小臂扭曲严重"). A prop's angle
+  never wins over the arm holding it: a wrist bent to its limit on a straight
+  arm, or an elbow pushed out by a shoulder turn, reads as a C; a forearm
+  twisted at one point reads as a wring. Judge the limb from the side, the
+  front AND behind, with the twist measured (`validate.limb_twist`).
