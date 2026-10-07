@@ -555,3 +555,38 @@ func test_a_bend_into_the_sea_is_put_back() -> void:
 	_map.aim_waypoints = PackedVector2Array([Vector2(-50, -50)])
 	_map.route_bent.emit(_map.aim_waypoints)
 	assert_eq(_map.aim_waypoints, PackedVector2Array(_menu.waypoints()), "off the map: put back")
+
+
+## Spec 2026-10-08-war-room-draw-orders rulings 13-15: the confirm asks where
+## to supply the march from; the towns are lit on the map, a click on a lit
+## one chooses it, and Confirm sends the supply point, then the march.
+func test_a_supply_town_chosen_on_the_confirm_rides_before_the_march() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var to := _land_near(here)
+	if to == Vector2.ZERO:
+		return
+	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_menu.hide()
+	_menu.id_pressed.emit(0)
+	_map.ground_clicked.emit(to)
+	assert_not_null(_menu.shown_confirm())
+	assert_eq(_menu.supply_choice(), "", "the current point (none) pressed")
+	var ok := SupplyLines.march_eligibility(Game.data, Game.state, code, to)
+	var town := ""
+	var towns: Array = ok.keys()
+	towns.sort()
+	for t: String in towns:
+		if String(ok[t]) == "":
+			town = t
+			break
+	assert_ne(town, "")
+	var b: Dictionary = Game.data.burgs[town]
+	_map.ground_clicked.emit(Vector2(float(b["x"]), float(b["y"])))   # a click on the lit town
+	assert_eq(_menu.supply_choice(), town, "the click chose it")
+	assert_eq(_menu.pending(), to, "and the march's end stayed")
+	_commit()
+	var kinds: Array = []
+	for c: Dictionary in Game.state.couriers:
+		kinds.append(String(c["order"]["action_code"]))
+	assert_eq(kinds, ["SUPPLY_POINT_SET", "ARMY_MARCH"], "the supply point rides first, its own courier")
