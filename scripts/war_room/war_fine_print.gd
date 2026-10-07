@@ -15,6 +15,14 @@ static func town_note(b: Dictionary) -> String:
 		Intel.num(int(float(b.get("population", "0")))), String(b.get("elevation_m", "0"))]
 
 
+## "works: artillery, coal, bronze" — a works town's three largest strategic
+## goods, the slip's own list (spec 2026-10-07-war-room-p3 §1.3).
+static func works_note(repo: DataRepository, w: Dictionary) -> String:
+	var names: Array[String] = []
+	for g: Dictionary in (w["goods"] as Array).slice(0, 3):
+		names.append(WarEconomy.good_label(repo, String(g["good"])).to_lower())
+	return "works: " + ", ".join(names)
+
 static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int, bake: WarBake) -> Dictionary:
 	var r: Rect2 = sheet["rect"]
 	var k := float(tex_px) / r.size.x
@@ -35,14 +43,23 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if not r.has_point(at):
 			continue
 		var tier := 3 if String(b.get("is_capital", "0")) == "1" else int(WarSheetInk.TOWN_TIERS.get(String(b.get("group", "")), 0))
-		var box := WarSheetInk.town_label_box(repo, {"at": (at - r.position) * k, "tier": tier, "label": String(b["label"])})
-		var text := town_note(b)
-		# under the name, left-aligned with it
-		var pos := Vector2(box.position.x + box.size.y, box.end.y + note_px * 0.9)
-		var nb := Rect2(pos - Vector2(0, note_px), Vector2(float(text.length()) * note_px * char_w, note_px * 1.2))
-		if _clear(nb, taken):
-			taken.append(nb)
-			(out["notes"] as Array).append({"at": pos, "text": text})
+		var t := {"at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
+			"walls": String(b.get("features", "")).split("|").has("walls")}
+		var plain := WarSheetInk.town_label_box(repo, t)
+		t.merge(WarSheetInk.town_marks(repo, code))
+		var box := WarSheetInk.town_label_box(repo, t)
+		# under the name (and under a market's scales), left-aligned with the name
+		var pos := Vector2(plain.position.x + plain.size.y, box.end.y + note_px * 0.9)
+		for text: String in [town_note(b), works_note(repo, WarEconomy.works(repo)[code]) if WarEconomy.works(repo).has(code) else ""]:
+			if text == "":
+				continue
+			# the line's own extent, from its cap height to its descenders — never the
+			# town's own box above it, which `taken` holds
+			var nb := Rect2(pos - Vector2(0, note_px * 0.8), Vector2(float(text.length()) * note_px * char_w, note_px))
+			if _clear(nb, taken):
+				taken.append(nb)
+				(out["notes"] as Array).append({"at": pos, "text": text})
+			pos.y += note_px * 1.25
 	var route_px := repo.bal("war_fine_route_px")
 	var tex_rect := Rect2(Vector2.ZERO, r.size * k)
 	var rcodes: Array = repo.routes.keys()

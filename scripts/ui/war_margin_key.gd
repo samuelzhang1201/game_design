@@ -30,6 +30,9 @@ const LEGEND := [
 	{"key": "mark_lighthouses", "label": "Lighthouse"},
 	{"key": "hazard_plague", "label": "Plague"}, {"key": "hazard_unrest", "label": "Unrest"},
 	{"key": "hazard_water", "label": "Flood"}, {"key": "hazard_rock", "label": "Rockfall"},
+	{"key": "works_arms", "label": "Arms works"}, {"key": "works_horses", "label": "Horse works"},
+	{"key": "works_ore", "label": "Ore works"}, {"key": "works_naval", "label": "Shipyard"},
+	{"key": "market", "label": "Market"}, {"key": "trade", "label": "Trade road"},
 ]
 
 var _repo: DataRepository
@@ -171,6 +174,20 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 		WarMarkGlyph.draw(self, String(row.get("glyph", "dot")), r.get_center(), r.size.y * 0.9,
 			pal.get("hazard_ink", pal["rubric"]) if _repo.war_mark_hazards.has(type) else ink)
 		return
+	if key.begins_with("works_"):   # a works' glyph by family (spec 2026-10-07-war-room-p3 §1.3)
+		var family := key.trim_prefix("works_")
+		var glyph := "dot"
+		var goods: Array = _repo.war_works.keys()
+		goods.sort()
+		for good: String in goods:
+			if String(_repo.war_works[good]["family"]) == family:
+				glyph = String(_repo.war_works[good]["glyph"])
+				break
+		WarMarkGlyph.draw(self, glyph, r.get_center(), r.size.y * 0.9, ink)
+		return
+	if key == "market":
+		WarMarkGlyph.draw(self, "scales", r.get_center(), r.size.y * 0.9, ink)
+		return
 	if key.begins_with("hazard_"):   # a hazard's hatch in the intel ink (spec 2026-10-07-war-room-p2 §2.4)
 		var hc: Color = pal.get("intel_ink", ink)
 		var fill := hc
@@ -192,6 +209,8 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 			draw_polyline(d, hc, line * 0.6, true)
 		return
 	match key:
+		"trade":
+			draw_line(a, b, ink, line * 2.2, true)
 		"road":
 			draw_line(a, b, ink, line * 1.6, true)
 		"trail":

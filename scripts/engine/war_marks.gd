@@ -8,7 +8,7 @@ extends RefCounted
 ## Every glyph the WAR ROOM can draw (WarMarkGlyph); data/war_marks.csv may
 ## name no other.
 const GLYPHS := ["crossed_swords", "galley", "pick", "tankard", "pennon", "broken_column",
-	"tower_light", "dot"]
+	"tower_light", "dot", "anvil", "horseshoe", "ingot", "keel", "scales"]
 
 
 static func km_per_px(repo: DataRepository) -> float:

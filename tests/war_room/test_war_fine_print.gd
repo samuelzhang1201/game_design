@@ -54,7 +54,7 @@ func test_a_town_note_says_size_works_souls_and_height() -> void:
 			expected.append(WarFinePrint.town_note(b))
 	var notes: Array = (fine["notes"] as Array).map(func(n: Dictionary) -> String: return String(n["text"]))
 	for t: String in notes:
-		assert_true(expected.has(t))
+		assert_true(expected.has(t) or t.begins_with("works: "), t)
 	assert_eq(WarFinePrint.town_note({"group": "city", "features": "walls|citadel", "population": "14061", "elevation_m": "961"}),
 		"city · citadel · 14,061 souls · 961 m")
 	assert_eq(WarFinePrint.town_note({"group": "village", "features": "", "population": "1644", "elevation_m": "729"}),
@@ -130,3 +130,36 @@ func test_fine_marks_and_the_names_of_sheet_marks_are_fine_print() -> void:
 			break
 	assert_true(found_fine, "a fine-layer mark is inked as fine print")
 	assert_true(found_name, "a sheet mark's name is fine print")
+
+
+func test_a_works_town_says_what_it_makes_under_its_note() -> void:
+	var works := WarEconomy.works(repo)
+	var code := ""
+	var keys: Array = works.keys()
+	keys.sort()
+	code = String(keys[0])
+	var w: Dictionary = works[code]
+	var names: Array[String] = []
+	for g: Dictionary in (w["goods"] as Array).slice(0, 3):
+		names.append(WarEconomy.good_label(repo, String(g["good"])).to_lower())
+	var expected := "works: " + ", ".join(names)   # the slip's own list (visual review 2026-10-07)
+	assert_eq(WarFinePrint.works_note(repo, w), expected)
+	var b: Dictionary = repo.burgs[code]
+	var sheet: Dictionary = WarSheets.series(repo)[WarSheets.sheet_of(repo, Vector2(float(b["x"]), float(b["y"])))]
+	var fine := WarFinePrint.strokes(repo, state, sheet, int(repo.bal("war_sheet_texture_px")), null)
+	var texts: Array = (fine["notes"] as Array).map(func(n: Dictionary) -> String: return String(n["text"]))
+	var works_here := 0
+	for c: String in works:
+		var wb: Dictionary = repo.burgs[c]
+		if (sheet["rect"] as Rect2).has_point(Vector2(float(wb["x"]), float(wb["y"]))):
+			works_here += 1
+	assert_gt(texts.filter(func(t: String) -> bool: return t.begins_with("works: ")).size(), 0, "of %d works here" % works_here)
+
+
+func test_town_notes_appear_under_their_names() -> void:
+	# the note sits below its town's own box, never counted against it
+	var shown := 0
+	for s: Dictionary in WarSheets.series(repo).slice(0, 200):
+		var fine := WarFinePrint.strokes(repo, state, s, int(repo.bal("war_sheet_texture_px")), null)
+		shown += (fine["notes"] as Array).filter(func(n: Dictionary) -> bool: return String(n["text"]).contains(" souls · ")).size()
+	assert_gt(shown, 0)
