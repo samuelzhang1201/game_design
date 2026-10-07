@@ -64,7 +64,7 @@ func _deliver_all() -> void:
 ## menu has no Garrison row — a march garrisons on arrival.
 func test_the_menu_offers_exactly_the_rows_in_the_table() -> void:
 	_map.army_menu_requested.emit(_marcher(), Vector2(10.0, 10.0))
-	assert_eq(_menu.item_count, Game.data.army_orders.size())
+	assert_gte(_menu.item_count, Game.data.army_orders.size(), "the supply rows follow")
 	for i in Game.data.army_orders.size():
 		assert_eq(_menu.get_item_text(i), String(Game.data.army_orders[i]["label"]))
 	for row: Dictionary in Game.data.army_orders:
@@ -162,14 +162,14 @@ func test_an_order_the_engine_would_refuse_is_greyed_out_with_its_reason() -> vo
 	var code := _marcher()
 	Game.state.metrics["treasury"] = 0.0
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
-	for i in _menu.item_count:
+	for i in Game.data.army_orders.size():
 		assert_true(_menu.is_item_disabled(i), _menu.get_item_text(i) + " cannot be paid for")
 		assert_string_contains(_menu.get_item_tooltip(i), "afford")
 
 
 func test_a_row_that_can_be_paid_for_is_live_and_says_what_it_does() -> void:
 	_map.army_menu_requested.emit(_marcher(), Vector2(10.0, 10.0))
-	for i in _menu.item_count:
+	for i in Game.data.army_orders.size():
 		assert_false(_menu.is_item_disabled(i), _menu.get_item_text(i))
 		assert_eq(_menu.get_item_tooltip(i), String(Game.data.army_orders[i]["hint"]))
 
@@ -447,4 +447,4 @@ func test_a_garrison_lists_its_regiments_and_the_chosen_one_takes_orders() -> vo
 	await wait_process_frames(2)
 	assert_eq(map.selected, String(codes[1]), "the chosen regiment is selected on the map")
 	assert_true(menu.visible, "and its orders are open")
-	assert_eq(menu.item_count, Game.data.army_orders.size(), "the regiment's own order rows")
+	assert_gte(menu.item_count, Game.data.army_orders.size(), "the regiment's own order rows")

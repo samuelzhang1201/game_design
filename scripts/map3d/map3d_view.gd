@@ -488,6 +488,13 @@ var aim_code := "":
 		if _loaded: _hud.refresh()  # the aim's ruler goes, the committed route shows
 ## The aimed march's destination (pack px) while COMMIT / CANCEL is asked, else (-1, -1).
 var aim_dest := Vector2(-1, -1)
+## The supply point being picked (ArmyOrderMenu sets both, spec 2026-10-07-army-supply-lines
+## §5.2): town -> "" lit / why not, then the chosen town's road (pack px); {} / empty when not.
+var supply_pick: Dictionary = {}:
+	set(v): supply_pick = v; if _loaded: _redraw_supply()
+var supply_preview := PackedVector2Array():
+	set(v): supply_preview = v; if _loaded: _redraw_supply()
+func _redraw_supply() -> void: pass  # Map3DSupplyLines draws it (Task 11)
 
 ## True when a regiment was under it (its order menu opens) or the ground was
 ## hit (SpyOrderMenu's "Send a spy here" opens); false only over the sky.

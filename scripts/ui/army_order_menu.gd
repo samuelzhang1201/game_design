@@ -35,6 +35,14 @@ const STRIKE := 202
 ## A garrison's rows (owner 2026-10-06, choice A): GARRISON_ROW + the
 ## regiment's index in `_garrison`.
 const GARRISON_ROW := 300
+## The supply rows (spec 2026-10-07-army-supply-lines §5.1): Add / Change
+## supply point…, Withdraw supply point, Carry N days (CARRY_BASE + the
+## row's index in data/army_carry_loads.csv), and the confirm's rates
+## (RATE_BASE + the index in SupplyLines.RATES).
+const SUPPLY_ADD := 400
+const SUPPLY_WITHDRAW := 401
+const CARRY_BASE := 410
+const RATE_BASE := 420
 
 ## The WAR ROOM's menu (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1):
 ## every order given here is a DRAFT — COMMIT pencils a march, Cancel march
@@ -52,6 +60,10 @@ var _pending := Vector2(-1, -1)
 ## The regiments of the garrison whose list is open, and where it opened.
 var _garrison: Array = []
 var _garrison_at := Vector2.ZERO
+## The regiment whose supply point is being picked, "" when none; and the
+## town clicked, whose rate the confirm asks.
+var _supply_for := ""
+var _supply_town := ""
 
 
 func _ready() -> void:
@@ -88,9 +100,37 @@ func _open_for(code: String, at: Vector2) -> void:
 		var why := _refusal(String(row["action_code"]), code)
 		set_item_disabled(i, why != "")
 		set_item_tooltip(i, why if why != "" else String(row["hint"]))
+	_add_supply_rows(code)
 	if item_count == 0:
 		return
 	_pop(at)
+
+
+func _supply_row(key: String, id: int, why: String) -> void:
+	var row: Dictionary = Game.data.army_supply_orders.get(key, {"label": key, "hint": ""})
+	add_item(String(row["label"]), id)
+	var i := get_item_index(id)
+	set_item_disabled(i, why != "")
+	set_item_tooltip(i, why if why != "" else String(row["hint"]))
+
+
+## The regiment's supply rows: offered only for a land regiment of the realm.
+func _add_supply_rows(code: String) -> void:
+	var reg := ArmySystem.regiment(Game.data, code)
+	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1" \
+			or String(reg["kingdom_code"]) != Game.data.resolve_realm("player_realm"):
+		return
+	add_separator()
+	var has_line := not SupplyLines.line(Game.state, code).is_empty()
+	_supply_row("change" if has_line else "add", SUPPLY_ADD, _paused_reason())
+	if has_line:
+		_supply_row("withdraw", SUPPLY_WITHDRAW, _refusal("SUPPLY_POINT_CLEAR", code))
+	var carry := ArmySystem.carry_of(Game.data, Game.state.regiments.get(code, {}))
+	var title := String((Game.data.army_supply_orders.get("carry", {}) as Dictionary).get("label", "Carry"))
+	for i in Game.data.army_carry_loads.size():
+		var row: Dictionary = Game.data.army_carry_loads[i]
+		add_check_item("%s %s" % [title, String(row["label"])], CARRY_BASE + i)
+		set_item_checked(get_item_index(CARRY_BASE + i), int(row["days"]) == carry)
 
 
 ## A town's garrison of several regiments was clicked: one row a regiment,
@@ -207,11 +247,31 @@ func _on_chosen(id: int) -> void:
 			_map.call("select_army", code)
 		_open_for.call_deferred(code, _garrison_at)
 		return
+	if id >= RATE_BASE and id < RATE_BASE + SupplyLines.RATES.size():
+		_send_supply(int(SupplyLines.RATES[id - RATE_BASE]))
+		return
+	if id >= CARRY_BASE and id < CARRY_BASE + Game.data.army_carry_loads.size():
+		if _code != "":
+			_run(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": _code,
+				"days": int(Game.data.army_carry_loads[id - CARRY_BASE]["days"])}))
+		return
+	if id == SUPPLY_ADD:
+		if _code != "" and _paused_reason() == "":
+			_start_supply_pick(_code)
+		return
+	if id == SUPPLY_WITHDRAW:
+		if _code != "":
+			_run(ActionRequest.make("SUPPLY_POINT_CLEAR", {"regiment": _code}))
+		return
 	match id:
 		COMMIT:
 			_commit()
 			return
 		CANCEL:
+			if _supply_for != "":
+				_end_supply_pick()
+				Game.publish_news("No supply point is chosen.")
+				return
 			_withdraw("The march is given up.")
 			return
 		EDIT:
@@ -247,6 +307,12 @@ func _on_chosen(id: int) -> void:
 ## the click's when the click was pushed rather than made — the snapshot
 ## harness's, which put the menu wherever the real cursor was (2026-09-30).
 func _on_ground(pack_px: Vector2, screen_px := Vector2(-1, -1)) -> void:
+	if _supply_for != "" and _supply_town == "":
+		var pick_at := screen_px
+		if pick_at.x < 0.0:
+			pick_at = (_map as Control).get_local_mouse_position() if _map is Control else Vector2.ZERO
+		_on_supply_ground(pack_px, pick_at)
+		return
 	if _aiming == "" or _pending.x >= 0.0:
 		return
 	_pending = pack_px
@@ -288,12 +354,20 @@ func _withdraw(news: String) -> void:
 ## The confirm closed without COMMIT (a click away from it): give it up.
 ## Deferred, because PopupMenu hides BEFORE it emits id_pressed.
 func _after_hide() -> void:
+	if _supply_town != "" and not visible:   # the rates, closed with no row chosen
+		_end_supply_pick()
+		Game.publish_news("No supply point is chosen.")
 	if _pending.x >= 0.0 and not visible:
 		_withdraw("The march is given up.")
 
 
 ## The clock started: no route is planned while time runs.
 func _process(_delta: float) -> void:
+	if _supply_for != "" and Game.clock_speed > 0:
+		if visible:
+			hide()
+		_end_supply_pick()
+		Game.publish_news("Time runs — the supply order is withdrawn.")
 	if _aiming != "" and Game.clock_speed > 0:
 		if visible:
 			hide()
@@ -315,7 +389,8 @@ func _run(req: ActionRequest) -> void:
 			Game.publish_news(String(e["reason"]))
 	# An order on a stopped clock waits for play (owner 2026-09-24) — and since
 	# 2026-09-27 it rides by courier, who waits in the capital with it.
-	if Game.clock_speed <= 0 and req.action_code in ["ARMY_MARCH", "ARMY_GARRISON"]:
+	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON"] \
+			or req.action_code.begins_with("SUPPLY_")):
 		var code := String(req.params["regiment"])
 		if CourierSystem.carries_orders(ArmySystem.regiment(Game.data, code)):
 			Game.publish_news("A courier will ride for %s when time runs." % _name_of(code))
@@ -360,6 +435,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_map.call("clear_selection")   # Escape lets the selected regiment go
 		get_viewport().set_input_as_handled()
 		return
+	if _supply_for != "" and event is InputEventKey and (event as InputEventKey).pressed \
+			and (event as InputEventKey).keycode == KEY_ESCAPE:
+		_end_supply_pick()
+		Game.publish_news("The supply order is withdrawn.")
+		get_viewport().set_input_as_handled()
+		return
 	if _aiming != "" and event is InputEventKey and (event as InputEventKey).pressed \
 			and (event as InputEventKey).keycode == KEY_ESCAPE:
 		_withdraw("The order is withdrawn.")
@@ -386,6 +467,98 @@ func aim_for(code: String) -> String:
 	_code = code
 	_set_aim(code)
 	return ""
+
+
+## The supply point pick (spec 2026-10-07-army-supply-lines §5.2): the map lights
+## the towns the regiment may draw from, the next click names one, its rate is asked.
+func _start_supply_pick(code: String) -> void:
+	_set_aim("")
+	_supply_for = code
+	_supply_town = ""
+	_map_set("supply_pick", SupplyLines.eligibility(Game.data, Game.state, code))
+	_map_set("supply_preview", PackedVector2Array())
+	if _map != null and "aiming" in _map:
+		_map.set("aiming", true)   # the next left click only says where it landed
+	Game.publish_news("%s — click a lit town to supply it from." % _name_of(code))
+
+
+func _end_supply_pick() -> void:
+	if _supply_for == "":
+		return
+	_supply_for = ""
+	_supply_town = ""
+	_map_set("supply_pick", {})
+	_map_set("supply_preview", PackedVector2Array())
+	if _map != null and "aiming" in _map:
+		_map.set("aiming", _aiming != "")
+
+
+func _map_set(prop: String, value: Variant) -> void:
+	if _map != null and prop in _map:
+		_map.set(prop, value)
+
+
+## A click while picking: the realm town under it (ArmySystem.town_at), lit
+## or greyed. A lit one asks its rate; a greyed one says why in the news bar.
+func _on_supply_ground(pack_px: Vector2, at: Vector2) -> void:
+	var town := ArmySystem.town_at(Game.data, pack_px)
+	var pick: Dictionary = _map.get("supply_pick") if _map != null and "supply_pick" in _map else {}
+	if town == "" or not pick.has(town):
+		Game.publish_news("Click a lit town of the realm.")
+		return
+	if String(pick[town]) != "":
+		Game.publish_news(String(pick[town]))
+		return
+	_supply_town = town
+	var route := SupplyLines.road_px(Game.data, Game.state, _supply_for, town)
+	_map_set("supply_preview", route)
+	_open_rates(town, route, at)
+
+
+## The rates of the chosen town, each row its gold a day and, on hover, what the
+## road costs and how long the stores last.
+func _open_rates(town: String, route: PackedVector2Array, at: Vector2) -> void:
+	clear()
+	var km := SupplyLines.road_km(Game.data, route)
+	var reg := ArmySystem.regiment(Game.data, _supply_for)
+	var use := ArmySystem.supply_use(Game.data, reg, Game.state)
+	var st := TownStores.stock_of(Game.state, town)
+	var row: Dictionary = Game.data.army_supply_orders["confirm"]
+	@warning_ignore("integer_division")
+	var loss_pct := SupplySystem.loss_of(Game.data, km) / 10
+	for i in SupplyLines.RATES.size():
+		var rate := int(SupplyLines.RATES[i])
+		@warning_ignore("integer_division")
+		var per_day := use * rate / 1000 / Calendar.DAYS_PER_TICK
+		@warning_ignore("integer_division")
+		var fee := per_day * km * int(Game.data.bal("supply_cart_milligold_per_unit_km")) / 1000
+		@warning_ignore("integer_division")
+		var stock_days := (int(st["crown"]) + int(st["lord"]) + int(st["house"])) / maxi(per_day, 1)
+		add_item(String(row["label"]).format({"rate": "%.1f" % (float(rate) / 1000.0), "fee": fee}), RATE_BASE + i)
+		set_item_tooltip(get_item_index(RATE_BASE + i), String(row["hint"]).format({
+			"town": String(Game.data.burgs[town]["label"]), "km": km, "loss": loss_pct,
+			"wagon_days": SupplyLines.wagon_days(Game.data, km), "stock_days": stock_days,
+			"courier_days": CourierSystem.eta_days(Game.data, Game.state, CourierSystem.ORDINARY, _supply_for)}))
+	_add_row("cancel", CANCEL, "")
+	_pop(at)
+
+
+func _send_supply(rate: int) -> void:
+	if _supply_for == "" or _supply_town == "":
+		return
+	var req := ActionRequest.make("SUPPLY_POINT_SET", {"regiment": _supply_for, "town": _supply_town, "rate": rate})
+	_end_supply_pick()
+	_run(req)
+
+
+## Test seam: the regiment whose supply point is being picked, "" when none.
+func supply_picking() -> String:
+	return _supply_for
+
+
+## Test seam: the town clicked while its rate is asked, "" when none.
+func supply_town() -> String:
+	return _supply_town
 
 
 ## Test seam: the regiment an order is being aimed for, "" when none is.
