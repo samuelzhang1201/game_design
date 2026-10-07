@@ -13,6 +13,14 @@ class FakeView extends Node:
 	var supply_preview := PackedVector2Array()
 
 
+## A units layer whose drawn spots the test sets.
+class FakeUnits extends Map3DLayerUnits:
+	var pos: Dictionary = {}
+
+	func shown_positions() -> Dictionary:
+		return pos
+
+
 var _repo: DataRepository
 var _s: GameState
 var _code := ""
@@ -106,8 +114,8 @@ func test_the_line_lies_on_the_drawn_road() -> void:
 	assert_almost_eq(near, 0.0, 0.001, "on a drawn road")
 
 
-func test_the_layer_draws_the_line_the_rings_and_the_preview() -> void:
-	_s.supply_lines[_code]["state"] = SupplyLines.FLOWING
+## The layer over a bare Lines host, the fake view's pick and `units`.
+func _layer(units: Map3DLayerUnits = null) -> Array:
 	var vp := SubViewport.new()
 	vp.size = Vector2i(800, 450)
 	add_child_autofree(vp)
@@ -118,11 +126,20 @@ func test_the_layer_draws_the_line_the_rings_and_the_preview() -> void:
 	lines.bind(ctx)
 	var view := FakeView.new()
 	autofree(view)
+	var layer := Map3DSupplyLines.new()
+	layer.bind(ctx, lines, view, units)
+	return [layer, lines, view]
+
+
+func test_the_layer_draws_the_line_the_rings_and_the_preview() -> void:
+	_s.supply_lines[_code]["state"] = SupplyLines.FLOWING
+	var got := _layer()
+	var layer: Map3DSupplyLines = got[0]
+	var lines: Map3DLayerLines = got[1]
+	var view: FakeView = got[2]
 	var towns := TownStores.realm_towns(_repo, _s)
 	view.supply_pick = {towns[0]: "", towns[1]: "too far"}
-	var layer := Map3DSupplyLines.new()
-	layer.bind(ctx, lines, view, null)
-	layer.step()
+	layer.redraw()
 	assert_not_null(lines.line_mesh("SupplyLines"))
 	assert_not_null(lines.line_mesh("SupplyPick"))
 	assert_not_null(lines.line_mesh("SupplyPickOff"))
@@ -130,9 +147,65 @@ func test_the_layer_draws_the_line_the_rings_and_the_preview() -> void:
 	assert_eq((lines.line_mesh("SupplyLines").surface_get_material(0) as ShaderMaterial).render_priority,
 		Map3DPriority.SUPPLY_LINES)
 	view.supply_preview = SupplySystem.route_px(_repo, _s, _code)
-	layer.redraw()
+	var draws := layer.draws
+	layer.redraw_pick()
 	assert_not_null(lines.line_mesh("SupplyPreview"), "the chosen town's road")
+	assert_eq(layer.draws, draws, "a pick change lays no line again")
+	view.supply_pick = {}
+	view.supply_preview = PackedVector2Array()
+	layer.redraw_pick()
+	assert_null(lines.line_mesh("SupplyPick"), "the pick ended: no lit ring")
+	assert_null(lines.line_mesh("SupplyPickOff"), "nor a greyed one")
+	assert_null(lines.line_mesh("SupplyPreview"), "nor the road")
 	_s.supply_lines[_code]["state"] = SupplyLines.CUT
-	layer.step()
+	layer.step(0.0)
 	assert_null(lines.line_mesh("SupplyLines"), "a cut line is not drawn")
 	await wait_process_frames(2)  # the replaced ribbons' queue_free
+
+
+## The lines are laid when a line's day or record moves, not every frame.
+func test_step_lays_the_lines_only_when_they_moved() -> void:
+	_s.supply_lines[_code]["state"] = SupplyLines.FLOWING
+	var layer: Map3DSupplyLines = _layer()[0]
+	layer.step(0.016)
+	assert_eq(layer.draws, 1)
+	for i in 5:
+		layer.step(0.016)
+	assert_eq(layer.draws, 1, "nothing moved")
+	_s.supply_lines[_code]["rate"] = 1200
+	layer.step(0.016)
+	assert_eq(layer.draws, 2, "the line's record moved")
+	_s.day += 1
+	layer.step(0.016)
+	assert_eq(layer.draws, 3, "the day turned")
+	layer.step(0.016)
+	assert_eq(layer.draws, 3)
+	await wait_process_frames(2)
+
+
+## Hidden regiments draw no line; a walking piece moves the end, at most once
+## every map3d_supply_follow_s.
+func test_the_lines_follow_the_units_layer() -> void:
+	_s.supply_lines[_code]["state"] = SupplyLines.FLOWING
+	var units := FakeUnits.new()
+	autofree(units)
+	var got := _layer(units)
+	var layer: Map3DSupplyLines = got[0]
+	var lines: Map3DLayerLines = got[1]
+	units.shown = false
+	layer.step(0.016)
+	assert_null(lines.line_mesh("SupplyLines"), "the regiments are hidden")
+	units.shown = true
+	layer.step(0.016)
+	assert_not_null(lines.line_mesh("SupplyLines"), "shown again, at once")
+	var drawn := layer.draws
+	var road: PackedVector2Array = Map3DSupplyLines.lines_world(_ctx())[0]
+	var end := road[road.size() - 1]
+	units.pos = {_code: end + Vector2(_repo.bal("map3d_line_step_m") * 3.0, 0)}
+	layer.step(0.01)
+	assert_eq(layer.draws, drawn, "within the throttle the end waits")
+	layer.step(_repo.bal("map3d_supply_follow_s"))
+	assert_eq(layer.draws, drawn + 1, "then it follows the piece")
+	layer.step(_repo.bal("map3d_supply_follow_s"))
+	assert_eq(layer.draws, drawn + 1, "a piece standing still lays nothing")
+	await wait_process_frames(2)

@@ -17,11 +17,19 @@ var lines: Map3DLayerLines
 var view: Object
 ## The drawn pieces (shown_positions); null draws the lines to the engine's spot.
 var units: Map3DLayerUnits
-var _sig := 0
-var _ends_sig := 0
-## code -> the flowing line's road in world XZ, as of _sig.
+## How many times the flowing lines were laid (a test seam).
+var draws := 0
+## code -> hash(day, its line record): the road below was searched for it.
+var _line_sigs: Dictionary = {}
+## code -> the flowing line's road in world XZ, searched once a day a line.
 var _roads: Dictionary = {}
-## The drawn roads' segments by grid cell, per pack (on_roads).
+var _ends_sig := 0
+var _shown_on := true
+## Seconds since the lines' ends were last laid (map3d_supply_follow_s).
+var _since := 0.0
+## The drawn roads' segments by grid cell (on_roads), keyed per repo
+## instance and map: built once and never refreshed, so it assumes
+## repo.routes does not change after the pack is loaded.
 static var _index: Dictionary = {}
 
 
@@ -30,7 +38,8 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_view: Object, p_units
 	lines = p_lines
 	view = p_view
 	units = p_units
-	_sig = 0
+	_line_sigs.clear()
+	_roads.clear()
 	_ends_sig = 0
 
 
@@ -103,15 +112,27 @@ static func roads_world(ctx: Map3DContext) -> Dictionary:
 	var st := ctx.state()
 	if st == null:
 		return out
-	var codes: Array = st.supply_lines.keys()
-	codes.sort()
-	for c in codes:
-		if String((st.supply_lines[c] as Dictionary).get("state", "")) != SupplyLines.FLOWING:
-			continue
-		var route := SupplySystem.route_px(ctx.repo, st, String(c))
-		if route.size() >= 2:
-			out[String(c)] = _world(ctx, route)
+	for code: String in _flowing(st):
+		var road := _road_of(ctx, st, code)
+		if road.size() >= 2:
+			out[code] = road
 	return out
+
+
+## The regiments whose line is FLOWING, code order.
+static func _flowing(st: GameState) -> Array:
+	var out: Array = []
+	for c in st.supply_lines.keys():
+		if String((st.supply_lines[c] as Dictionary).get("state", "")) == SupplyLines.FLOWING:
+			out.append(String(c))
+	out.sort()
+	return out
+
+
+## One line's road in world XZ (its route searched now), or empty.
+static func _road_of(ctx: Map3DContext, st: GameState, code: String) -> PackedVector2Array:
+	var route := SupplySystem.route_px(ctx.repo, st, code)
+	return _world(ctx, route) if route.size() >= 2 else PackedVector2Array()
 
 
 ## Every FLOWING line's road in world XZ, code order; with `shown` ({code:
@@ -176,20 +197,62 @@ func _shown() -> Dictionary:
 
 ## Lay the flowing lines from the roads in hand, each to its drawn piece.
 func _draw_lines() -> void:
+	draws += 1
 	var shown := _shown()
 	var out: Array = []
 	if units == null or units.shown:
-		for code: String in _roads:
+		var codes: Array = _roads.keys()
+		codes.sort()
+		for code: String in codes:
 			out.append(_to_piece(ctx, code, _roads[code], shown))
 	lines.set_lines("SupplyLines", out, Map3DLayerLines.SUPPLY_LINE, Map3DPriority.SUPPLY_LINES)
 
 
-## Everything again: the lines' roads, the pick's rings and its preview.
+## Search again each FLOWING line whose day or record moved since its road
+## was searched; forget the lines no longer flowing. True when any changed.
+func _refresh_roads(st: GameState) -> bool:
+	var day := st.absolute_day()
+	var live := {}
+	var changed := false
+	for code: String in _flowing(st):
+		live[code] = true
+		var sig := hash([day, (st.supply_lines[code] as Dictionary).hash()])
+		if _line_sigs.get(code, 0) == sig:
+			continue
+		_line_sigs[code] = sig
+		changed = true
+		var road := _road_of(ctx, st, code)
+		if road.size() >= 2:
+			_roads[code] = road
+		else:
+			_roads.erase(code)
+	for code: String in _line_sigs.keys():
+		if not live.has(code):
+			_line_sigs.erase(code)
+			_roads.erase(code)
+			changed = true
+	return changed
+
+
+## The lines again, every road searched anew, and the pick.
 func redraw() -> void:
 	if ctx == null or lines == null:
 		return
-	_roads = roads_world(ctx)
+	_line_sigs.clear()
+	_roads.clear()
+	var st := ctx.state()
+	if st != null:
+		_refresh_roads(st)
 	_draw_lines()
+	_ends_sig = _ends()
+	redraw_pick()
+
+
+## The pick's rings and its preview only (the view's supply_pick /
+## supply_preview setters): no line's road is searched.
+func redraw_pick() -> void:
+	if ctx == null or lines == null:
+		return
 	var pick: Dictionary = view.get("supply_pick") if view != null and "supply_pick" in view else {}
 	var lit: Array = []
 	var off: Array = []
@@ -206,26 +269,29 @@ func redraw() -> void:
 		Map3DLayerLines.SUPPLY_PREVIEW, Map3DPriority.SELECTION)
 
 
-## Per frame: everything again when the day turned or a line changed; only the
-## lines' ends when a piece with a line has walked a line step. Cheap otherwise.
-func step() -> void:
+## Per frame. A line's road is searched once a day (or when its record
+## moves) and the lines laid at once; a piece walking with a line re-lays
+## them from the roads in hand — no search — at most once every
+## map3d_supply_follow_s; hiding or showing the regiments, at once.
+func step(delta: float) -> void:
 	var st := ctx.state() if ctx != null else null
 	if st == null or lines == null:
 		return
-	var sig := hash([st.absolute_day(), st.supply_lines.hash()])
-	if sig != _sig:
-		_sig = sig
-		redraw()
-		_ends_sig = _ends()
-	elif _ends() != _ends_sig:
-		_ends_sig = _ends()
+	_since += delta
+	var fresh := _refresh_roads(st)
+	var ends := _ends()
+	var on := units == null or units.shown
+	if fresh or on != _shown_on or (ends != _ends_sig and _since >= ctx.repo.bal("map3d_supply_follow_s")):
+		_shown_on = on
+		_ends_sig = ends
+		_since = 0.0
 		_draw_lines()
 
 
-## Where the pieces with a line are drawn, to a line step, and whether shown.
+## Where the pieces with a line are drawn, to a line step.
 func _ends() -> int:
 	var shown := _shown()
-	var ends: Array = [units != null and units.shown]
+	var ends: Array = []
 	var q := maxf(ctx.line_step(), 1.0)
 	for code: String in _roads:
 		ends.append(Vector2i((shown.get(code, Vector2.ZERO) as Vector2) / q))

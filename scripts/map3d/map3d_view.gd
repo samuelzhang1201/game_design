@@ -395,7 +395,7 @@ func _process(delta: float) -> void:
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
 		_trails.step()  # behind them, the ground they trod
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
-		_supply.step()  # the flowing lines, to the pieces as drawn
+		_supply.step(delta)  # the flowing lines, to the pieces as drawn
 		_sun.sweep(Game.day_progress)  # a round a game day, the north half dusk
 	_picker.step()
 	if not _hovered:
@@ -497,7 +497,7 @@ var supply_pick: Dictionary = {}:
 	set(v): supply_pick = v; if _loaded: _redraw_supply()
 var supply_preview := PackedVector2Array():
 	set(v): supply_preview = v; if _loaded: _redraw_supply()
-func _redraw_supply() -> void: _supply.redraw()
+func _redraw_supply() -> void: _supply.redraw_pick()
 
 ## True when a regiment was under it (its order menu opens) or the ground was
 ## hit (SpyOrderMenu's "Send a spy here" opens); false only over the sky.
