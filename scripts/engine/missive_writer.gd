@@ -264,14 +264,19 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 
 ## One line of a fall's cost (DefeatSystem.on_town_lost): templates.csv
 ## `<kind>` (defeat_town_lost) with the town's name and the event's own
-## figures: the gold the treasury lost and the contentment's points.
+## figures: the gold the treasury lost and the contentment's points. A figure
+## of 0 has no clause: `_gold` (only gold lost), `_people` (only contentment),
+## `_bare` (neither).
 static func _defeat_fact(repo: DataRepository, e: Dictionary, pick: int) -> Dictionary:
 	var kind := String(e["kind"])
+	var gold := int(e.get("gold", 0)) > 0
+	var people := int(e.get("morale", 0)) > 0
+	var key := kind if gold and people else kind + ("_gold" if gold else ("_people" if people else "_bare"))
 	var town := String(e["town"])
 	var vars := {"town": String((repo.burgs.get(town, {}) as Dictionary).get("label", town)),
 		"gold": int(e.get("gold", 0)), "morale": int(e.get("morale", 0))}
 	return MissiveLog.words("%s@%s.%d" % [kind, town, int(e.get("day", 0))], "The cost",
-		battle_words(repo, kind, vars, pick))
+		battle_words(repo, key, vars, pick))
 
 
 ## One line of siege news: templates.csv `<kind>` (siege_begin, siege_starving,

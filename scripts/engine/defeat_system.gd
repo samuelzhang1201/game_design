@@ -9,9 +9,9 @@ extends RefCounted
 ##     (WorldLedger.apply, source "defeat", reason "lost <town> to <host>");
 ##     an empty or indebted treasury loses nothing more, and a share of a
 ##     positive one never makes it negative;
-##  2. the people: battle_defeat_morale points of metrics.peasant_contentment
-##     (WorldLedger, clamped by the schema, reason "−N: lost <town> to the
-##     raiders");
+##  2. the people: battle_defeat_morale points of metrics.peasant_contentment,
+##     as far as the schema's floor lets it fall (WorldLedger, reason "−N: lost
+##     <town> to the raiders", N what actually falls); none left to fall, no line;
 ##  3. the council: each seat's opinion moves by
 ##     −round(battle_defeat_opinion x (1 + OpinionDrift.weight(BATTLE_LOST, seat)))
 ##     — the existing drift weight (ideology alignment x policy_sensitivity x
@@ -27,6 +27,12 @@ extends RefCounted
 ## nothing is refunded. Whole numbers but the drift weight, no random number.
 
 const EVENT_ID := "war_01"
+## Every beat the engine fires off the war; EventSystem.roll lets a due chain
+## beat take the month before one of these.
+const BEAT_PREFIX := "war_"
+## The war beats this system schedules (a test holds chapter_events' war_*
+## rows to this list: no dead war beat).
+const BEATS := [EVENT_ID]
 const SIGNATURE := "BATTLE_LOST"
 const SOURCE := "defeat"
 
@@ -76,12 +82,26 @@ static func _treasury(repo: DataRepository, state: GameState, label: String, hos
 
 
 static func _morale(repo: DataRepository, state: GameState, label: String) -> int:
-	var points := int(repo.bal("battle_defeat_morale"))
-	if points <= 0:
+	var path := "metrics.peasant_contentment"
+	var points := float(int(repo.bal("battle_defeat_morale")))
+	var now: Variant = WorldLedger.value_of(repo, state, path)
+	var row := WorldLedger.schema_for(repo, path)
+	if now == null or row.is_empty():
 		return 0
-	var out := WorldLedger.apply(repo, state, "metrics.peasant_contentment", -float(points),
-		"−%d: lost %s to the raiders" % [points, label], SOURCE)
-	return 0 if out.has("error") else -int(float(out["delta"]))
+	# what the schema's floor lets fall: the reason names THAT, and nothing
+	# that cannot fall writes a line
+	var floor_at := float(row["min"]) if String(row.get("min", "")) != "" else -INF
+	var lose := minf(points, float(now) - floor_at)
+	if lose <= 0.0:
+		return 0
+	var out := WorldLedger.apply(repo, state, path, -lose,
+		"−%s: lost %s to the raiders" % [_points(lose), label], SOURCE)
+	return 0 if out.has("error") else roundi(-float(out["delta"]))
+
+
+## A figure in a reason: whole as a whole number ("8"), else two places.
+static func _points(v: float) -> String:
+	return str(int(v)) if v == floorf(v) else String.num(v, 2)
 
 
 static func _council(repo: DataRepository, state: GameState, label: String) -> Array:

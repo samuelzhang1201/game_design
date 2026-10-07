@@ -4,7 +4,7 @@ Status: Built — the entry below is live (`data/chapter_events.csv`, `data/chap
 
 **This file is loaded at runtime.** `StorySource` reads each `### W-NN` heading (id `war_NN`) — the title after the `·` and the prose after the `**Scene:**` label on the Trigger line — and the game shows both verbatim. Keep the headings and the labels intact. The `**Choices:**` line is design description only; the implemented choices are the CSV's.
 
-These are chapter beats like the prologue's (`chapter_0_events.md`): fixed authored prose, never model-written, never sampled by the random roll (`trigger` `never`). They differ in one thing: no choice of the chain schedules them — the ENGINE does, when the war calls for it. `DefeatSystem.on_town_lost` (a siege took a town, `SiegeSystem.capture`) puts `war_01` on the event queue for the next month's roll, one at a time. Nothing here names a kingdom: `{raider_realm}` and `{player_realm}` are filled at load.
+These are chapter beats like the prologue's (`chapter_0_events.md`): fixed authored prose, never model-written, never sampled by the random roll (`trigger` `never`). They differ in one thing: no choice of the chain schedules them — the ENGINE does, when the war calls for it. `DefeatSystem.on_town_lost` (a siege took a town, `SiegeSystem.capture`) puts `war_01` on the event queue for the next month's roll, one at a time; a prologue beat due the same month goes first (the chain keeps its calendar), and the war beat waits for a month with none. Nothing here names a kingdom: `{raider_realm}` and `{player_realm}` are filled at load.
 
 ---
 

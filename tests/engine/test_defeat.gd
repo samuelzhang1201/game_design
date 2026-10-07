@@ -165,11 +165,21 @@ func test_morale_hit_has_a_reason() -> void:
 	assert_eq(lines.size(), 1)
 	assert_eq(int(float(lines[0]["delta"])), -8)
 	assert_eq(String(lines[0]["reason"]), "−8: lost %s to the raiders" % _label(town))
-	# clamped at the schema's floor
+	# clamped at the schema's floor: the reason names what fell
 	var s2 := SuiteData.campaign(repo, 7)
 	s2.metrics["peasant_contentment"] = 5.0
-	DefeatSystem.on_town_lost(repo, s2, town, _host("main"))
+	var ev2 := DefeatSystem.on_town_lost(repo, s2, town, _host("main"))
 	assert_eq(int(s2.metrics["peasant_contentment"]), 0, "5 - 8 clamps to the schema's 0")
+	var lines2 := _log_of(s2, "metrics.peasant_contentment", "defeat")
+	assert_eq(lines2.size(), 1)
+	assert_eq(String(lines2[0]["reason"]), "−5: lost %s to the raiders" % _label(town), "the 5 that fell")
+	assert_eq(int(ev2[0]["morale"]), 5)
+	# nothing left to fall: no line at all
+	var s3 := SuiteData.campaign(repo, 7)
+	s3.metrics["peasant_contentment"] = 0.0
+	var ev3 := DefeatSystem.on_town_lost(repo, s3, town, _host("main"))
+	assert_eq(_log_of(s3, "metrics.peasant_contentment", "defeat").size(), 0, "no zero line")
+	assert_eq(int(ev3[0]["morale"]), 0)
 
 
 ## --- the council -----------------------------------------------------------------
@@ -250,6 +260,40 @@ func test_loss_event_is_scheduled_and_text_names_no_realm() -> void:
 		assert_ne(String(d["reason"]), "", "every drift has a reason")
 
 
+## No dead war beat: every war_* row of the chapter table is one DefeatSystem
+## schedules, and every beat it schedules is a war_* row there.
+func test_every_war_beat_is_one_the_engine_schedules() -> void:
+	var war: Array = []
+	for row: Dictionary in repo.chapter_events:
+		var id := String(row["event_id"])
+		if id.begins_with(DefeatSystem.BEAT_PREFIX):
+			war.append(id)
+			assert_has(DefeatSystem.BEATS, id, id + " is a war beat nothing schedules")
+	assert_gt(war.size(), 0, "the war's beats are in the chapter table")
+	for id: String in DefeatSystem.BEATS:
+		assert_has(war, id, id + " is scheduled but is no war_* chapter row")
+	assert_has(DefeatSystem.BEATS, DefeatSystem.EVENT_ID)
+
+
+## The prologue is month-exact: a town that falls while a chain beat waits for
+## its answer must not take that beat's month. The chain beat the answer
+## schedules wins its roll; war_01 waits for the next roll with no chain beat due.
+func test_a_lost_town_never_delays_the_chain() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var sys := EventSystem.new(repo)
+	s.event_state["scheduled"] = [{"event_id": "c0_12", "due_tick": s.tick}]
+	s.pending_event = {}
+	assert_eq(String(sys.roll(s).get("event_id", "")), "c0_12", "the last reckoning waits for its answer")
+	DefeatSystem.on_town_lost(repo, s, String(_town_and_garrison(s)[0]), _host("main"))
+	assert_false(sys.apply_choice("nothing", s).is_empty(), "answered: the ending is scheduled for next month")
+	s.tick += 1
+	var ending := String(sys.roll(s).get("event_id", ""))
+	assert_true(ending in ["c0_13", "c0_14", "c0_15", "c0_16"], "the chain's ending on its own tick, not " + ending)
+	sys.apply_choice("on", s)
+	s.tick += 1
+	assert_eq(String(sys.roll(s).get("event_id", "")), DefeatSystem.EVENT_ID, "the lost town's beat, the next roll")
+
+
 ## --- once per loss, nothing back ----------------------------------------------------
 
 func test_triggers_once_per_loss() -> void:
@@ -298,6 +342,22 @@ func test_capture_pays_the_cost_of_the_loss() -> void:
 	# the HOLD days after take nothing more
 	SiegeSystem.settle_day(repo, s, [])
 	assert_eq(int(s.metrics["treasury"]), 8500, "a held town costs once")
+
+
+## The letter's line names only what was lost: no "0 gold", no "falls by 0".
+func test_letter_line_drops_a_zero_figure() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var town := String(_town_and_garrison(s)[0])
+	for case: Array in [[1500, 8, true, true], [0, 8, false, true], [1500, 0, true, false], [0, 0, false, false]]:
+		var e := {"kind": "defeat_town_lost", "town": town, "host": _host("main"), "day": s.absolute_day(),
+			"gold": case[0], "morale": case[1], "opinion": [], "event_id": ""}
+		var letter := MissiveWriter.battle_report(repo, s, [e])
+		var text := "\n".join((letter["facts"] as Array).map(func(f: Dictionary) -> String: return String(f["text"])))
+		assert_false(text.contains("[missing template"), text)
+		assert_true(text.contains(_label(town)), text)
+		assert_false(text.contains(" 0 "), "no zero figure: " + text)
+		assert_eq(text.contains("1500"), bool(case[2]), text)
+		assert_eq(text.contains("contentment"), bool(case[3]), text)
 
 
 func test_recapture_refunds_nothing() -> void:

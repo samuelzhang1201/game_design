@@ -11,18 +11,31 @@ func _init(d: DataRepository) -> void:
 func roll(state: GameState) -> Dictionary:
 	if not state.pending_event.is_empty():
 		return state.pending_event
-	# chains first: due scheduled events fire regardless of the daily roll
+	# chains first: due scheduled events fire regardless of the daily roll.
+	# The first due entry in queue order fires, except that a beat the engine
+	# fires off the war (DefeatSystem.BEAT_PREFIX) yields to any other due
+	# entry, so the prologue's month-exact chain never slips: the war beat
+	# waits for a roll with no chain beat due.
 	var remaining: Array = []
-	var due_id := ""
 	for sc in state.event_state["scheduled"]:
 		var event_id := String(sc["event_id"])
 		if not data.events_by_id.has(event_id):
 			printerr("EventSystem: scheduled event %s not in events_by_id — dropped" % event_id)
 			continue
-		if due_id == "" and int(sc["due_tick"]) <= state.tick:
-			due_id = event_id
-		else:
-			remaining.append(sc)
+		remaining.append(sc)
+	var pick := -1
+	for i in remaining.size():
+		if int(remaining[i]["due_tick"]) > state.tick:
+			continue
+		if pick < 0:
+			pick = i
+		elif _yields(String(remaining[pick]["event_id"])) and not _yields(String(remaining[i]["event_id"])):
+			pick = i
+			break
+	var due_id := ""
+	if pick >= 0:
+		due_id = String(remaining[pick]["event_id"])
+		remaining.remove_at(pick)
 	state.event_state["scheduled"] = remaining
 	if due_id != "":
 		return _fire(due_id, state)
@@ -45,6 +58,10 @@ func roll(state: GameState) -> Dictionary:
 	if eligible.is_empty():
 		return {}
 	return _fire(String(eligible[state.rng.pick_weighted(weights)]["event_id"]), state)
+
+## A war beat (DefeatSystem's) yields its month to any other due beat.
+static func _yields(event_id: String) -> bool:
+	return event_id.begins_with(DefeatSystem.BEAT_PREFIX)
 
 func _fire(event_id: String, state: GameState) -> Dictionary:
 	var row: Dictionary = data.events_by_id[event_id]
