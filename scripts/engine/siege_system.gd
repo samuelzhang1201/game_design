@@ -159,11 +159,12 @@ static func starving(repo: DataRepository, state: GameState, town: String) -> bo
 
 
 ## The events settle_day returns that make a letter's line: the siege_* kinds
-## but the quiet day's wearing down (host_mode events are EnemyAi's).
+## but the quiet day's wearing down, and a fall's cost (defeat_*, DefeatSystem);
+## host_mode events are EnemyAi's.
 static func news(events: Array) -> Array:
 	return events.filter(func(e: Dictionary) -> bool:
 		var k := String(e.get("kind", ""))
-		return k.begins_with("siege_") and k != "siege_day")
+		return (k.begins_with("siege_") and k != "siege_day") or k.begins_with("defeat_"))
 
 
 ## The sieges' day, run once a day right AFTER BattleSystem.settle_day (an
@@ -191,7 +192,8 @@ static func news(events: Array) -> Array:
 ## the returned events. The siege's own events: {kind, host, town, day,
 ## progress, ...}: siege_begin and siege_day {attack, defend, gain, starving},
 ## siege_starving, siege_repulsed {lost}, siege_fallen {days, reason,
-## garrison_out}, siege_undefended, siege_lifted {why}, siege_liberated {why}.
+## garrison_out}, siege_undefended, siege_lifted {why}, siege_liberated {why};
+## after a siege_fallen, its cost (DefeatSystem.on_town_lost: defeat_town_lost).
 static func settle_day(repo: DataRepository, state: GameState, battle_events: Array = []) -> Array:
 	var events: Array = []
 	if state.ai_hosts.is_empty():
@@ -223,8 +225,10 @@ static func settle_day(repo: DataRepository, state: GameState, battle_events: Ar
 ## when the host leaves; no province, border or capital moves. An assault
 ## still being fought there is called off; the garrison still standing marches
 ## out for the nearest town of its own (as a column falling back from a
-## battle); every host before the town turns HOLD. Returns the siege_fallen
-## event; `events` gets the host_mode events.
+## battle); every host before the town turns HOLD. The loss then costs the
+## crown (DefeatSystem.on_town_lost: treasury, contentment, the council, the
+## beat; once per loss). Returns the siege_fallen event; `events` gets the
+## host_mode events, then the defeat's (defeat_town_lost).
 static func capture(repo: DataRepository, state: GameState, host_code: String, events: Array = []) -> Dictionary:
 	if not state.ai_hosts.has(host_code):
 		return {}
@@ -262,6 +266,8 @@ static func capture(repo: DataRepository, state: GameState, host_code: String, e
 	for h: String in hosts:
 		EnemyAi.set_mode(state, h, HOLD, "took " + label, events)
 		state.ai_hosts[h]["siege_town"] = ""
+	# what the fall costs the crown, once the manors have moved (spec §6)
+	events.append_array(DefeatSystem.on_town_lost(repo, state, town, host_code))
 	return {"kind": "siege_fallen", "host": host_code, "town": town, "day": state.absolute_day(),
 		"progress": maxi(progress, 1000), "days": days, "reason": reason, "garrison_out": out}
 
@@ -429,7 +435,11 @@ static func _fall(repo: DataRepository, state: GameState, h: String, hosts: Arra
 	# the capture reads its host in SIEGE: every host before the town still is
 	var ev := capture(repo, state, h, events)
 	if not ev.is_empty():
-		events.append(ev)
+		# the fall is told before what it costs (capture appended the defeat's events)
+		var at := events.size()
+		while at > 0 and String((events[at - 1] as Dictionary).get("kind", "")).begins_with("defeat_"):
+			at -= 1
+		events.insert(at, ev)
 	for x: String in hosts:
 		state.ai_hosts[x]["siege_town"] = ""
 

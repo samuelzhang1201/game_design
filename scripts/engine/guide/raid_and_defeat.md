@@ -20,3 +20,13 @@ Spec `docs/superpowers/specs/2026-10-07-enemy-ai-and-battle-design.md` §5.3; th
   - The take is debited wholly as GOLD, though the month counts the goods' worth too; no goods pool is debited.
   - Any column of a host leaving a battle beaten (rout, retreat, broken) makes the WHOLE host pay its spoils, as `should_retreat` turns the whole host for one beaten column.
   - The ledger lines go only into `world_log` (the player sees the purse and the letter).
+
+# A lost town (`DefeatSystem`)
+
+Spec §6: a loss costs the crown, never ends the campaign. `SiegeSystem.capture` calls `DefeatSystem.on_town_lost(repo, state, town, host)` once the town's manors have moved; its `defeat_town_lost` event follows `siege_fallen` among the day's events and gets a line in the battle letter (`templates.csv` `defeat_town_lost`: the town, the event's `gold` and `morale`).
+
+- **Treasury**: `battle_defeat_treasury_permille` of a POSITIVE `metrics.treasury`, whole gold rounded down (`treasury_loss`), one `WorldLedger.apply` line (source `defeat`, reason `lost <town> to <host label>`). An empty or indebted treasury (the schema lets it go below 0) loses nothing more; a share of a positive one never makes it negative.
+- **The people**: `battle_defeat_morale` points of `metrics.peasant_contentment` (the schema's row, clamped 0..100), reason `−<N>: lost <town> to the raiders`.
+- **The council**: each seat −round(`battle_defeat_opinion` × (1 + `OpinionDrift.weight`)) (`opinion_loss`): the drift's own weight (alignment × `policy_sensitivity` × (1 − `pragmatism`)) of the `BATTLE_LOST` row of `action_signatures.csv` (not an order: militarism and expansionism), so a seat that prizes arms takes it harder; never a gain. `Character.change_opinion` with OpinionDrift's reason form, `lost <town> to the raiders (opposes, <axis>)`. No other opinion code.
+- **The beat**: chapter beat `war_01` (`DefeatSystem.EVENT_ID`; `data/chapter_events.csv` `trigger` `never`, its two choices with signatures in `chapter_event_choices.csv`, prose in `game_story/chapter_0/war_events.md` under `### W-01`, presented by the Marshal) is put on `event_state.scheduled` for the next month's roll, unless one already waits there. It is outside the prologue's chain, so `test_chapter_zero`'s reachability, path and illustration checks cover `c0_*` only; its illustration is not yet planned.
+- **Once per loss**: `GameState.town_losses` (saved) keeps `{town, host, day}`; the same key again returns `[]`. Taking the town back (liberation) calls nothing here: no refund.

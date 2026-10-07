@@ -157,6 +157,8 @@ event_c0_13_on,,"They toll the mill bells in the valley for an hour, and nobody 
 event_c0_14_on,,"The winter passes without a hard word said anywhere, which is what you bought."
 event_c0_15_on,,"The tax grain comes in on the day it is due, every year, for as long as the spears are there."
 event_c0_16_on,,The council stops bringing you things. Malvern sends word that you should sleep in the keep this winter.
+event_war_01_rally,,"You keep the council at the table until the lamps are lit, and every office leaves with a task. By morning the riders are out to the towns that still stand, and the Marshal has stopped looking at the door."
+event_war_01_blame,,"The Marshal hears it in front of the whole council and says nothing at all. The others are grateful it was not them; none of them will forget that it could have been."
 event_c0_02_summon_searched,,"A safe conduct is written out and sealed, and Captain Hale goes to empty the side chamber himself, which he does not treat as a formality."
 audience_open,,"You sent for me, Majesty. I am listening."
 audience_open,,"Majesty. What would you have of me?"
@@ -197,5 +199,6 @@ siege_undefended,,"No garrison holds {town} any more: {raider_realm}'s men walk 
 siege_lifted,,"The siege of {town} is lifted: {raider_realm}'s host has drawn off."
 siege_fallen_slain,,"{town} has fallen to {raider_realm}'s host after {days} days of siege. Not one of the garrison is left standing."
 siege_liberated,,"{town} is free again: {raider_realm}'s host has left it, and its manors return to their houses."
+defeat_town_lost,,"The fall of {town} costs the crown {gold} gold from its treasury, and the people's contentment falls by {morale}."
 raid_begin,,"{raider_realm}'s men are stripping {place}: they carry off its harvest and its stores, and the roads about it are unsafe."
 raid_spoils,,"{raider_realm}'s beaten host leaves its plunder on the field at {place}: {spoils} in strategic goods come into {player_realm}'s stores."

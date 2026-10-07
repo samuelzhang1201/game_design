@@ -313,6 +313,10 @@ var ai_hosts: Dictionary = {}
 ## The battles being fought (§4, BattleSystem): an Array of {id, att, def
 ## (regiment codes), start_day, rounds, place_x_m, place_y_m, town}.
 var battles: Array = []
+## The towns lost to a siege (spec 2026-10-07-enemy-ai-and-battle §6,
+## DefeatSystem): an Array of {town, host, day (absolute)}, one per loss; the
+## key that makes a loss cost the crown once.
+var town_losses: Array = []
 ## The last id handed to a foe or a battle (a higher id is a newer one).
 var foe_next_id := 0
 ## The couriers on the road (owner 2026-09-27, CourierSystem): an Array of
@@ -394,6 +398,7 @@ func to_dict() -> Dictionary:
 		"foes": _encode_values(foes.duplicate(true)),
 		"ai_hosts": _encode_values(ai_hosts.duplicate(true)),
 		"battles": _encode_values(battles.duplicate(true)),
+		"town_losses": _encode_values(town_losses.duplicate(true)),
 		"foe_next_id": _encode_values(foe_next_id),
 		"couriers": _encode_values(couriers.duplicate(true)),
 		"war_drafts": _encode_values(war_drafts.duplicate(true)),
@@ -482,6 +487,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.foes = _decode_values(d.get("foes", {}))
 	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
 	s.battles = _decode_values(d.get("battles", []))
+	# Saves from before defeat carry no losses.
+	s.town_losses = _decode_values(d.get("town_losses", []))
 	s.foe_next_id = int(_decode_values(d.get("foe_next_id", 0)))
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))

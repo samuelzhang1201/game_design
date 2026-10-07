@@ -194,7 +194,8 @@ static func battle_words(repo: DataRepository, key: String, vars: Dictionary, pi
 ## (templates.csv `siege_*`); a letter of siege news alone is about the town.
 ## The day's raid news (RaidSystem.news: raid_begin, raid_spoils) follows the
 ## same way (templates.csv `raid_*`, the place and the event's figures); a
-## letter of raid news alone is about the first raid's place.
+## letter of raid news alone is about the first raid's place. A fall's cost
+## (DefeatSystem: defeat_*) follows its siege_fallen line (`_defeat_fact`).
 static func battle_report(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
 	var pick := state.absolute_day()
 	var at: Dictionary = {}       # battle id -> an event that carries its place
@@ -206,7 +207,7 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 		if String(e["kind"]).begins_with("raid_"):
 			raid_at = e if raid_at.is_empty() else raid_at
 			continue
-		if String(e["kind"]).begins_with("siege_"):
+		if String(e["kind"]).begins_with("siege_") or String(e["kind"]).begins_with("defeat_"):
 			siege_town = String(e["town"]) if siege_town == "" else siege_town
 			continue
 		var id := int(e["battle_id"])
@@ -220,6 +221,9 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 	for e: Dictionary in events:
 		if String(e["kind"]).begins_with("siege_"):
 			facts.append(_siege_fact(repo, e, pick))
+			continue
+		if String(e["kind"]).begins_with("defeat_"):
+			facts.append(_defeat_fact(repo, e, pick))
 			continue
 		if String(e["kind"]).begins_with("raid_"):
 			facts.append(MissiveLog.words("%s@%s.%d" % [e["kind"], e["host"], int(e.get("day", 0))], "The raid",
@@ -256,6 +260,18 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 		else MissiveLog.subject("point", "", -1, pack)
 	return MissiveLog.make("battle", "credible", state.absolute_day(), subject,
 		battle_words(repo, "battle_title", {"place": battle_place(repo, state, head)}, pick), facts)
+
+
+## One line of a fall's cost (DefeatSystem.on_town_lost): templates.csv
+## `<kind>` (defeat_town_lost) with the town's name and the event's own
+## figures: the gold the treasury lost and the contentment's points.
+static func _defeat_fact(repo: DataRepository, e: Dictionary, pick: int) -> Dictionary:
+	var kind := String(e["kind"])
+	var town := String(e["town"])
+	var vars := {"town": String((repo.burgs.get(town, {}) as Dictionary).get("label", town)),
+		"gold": int(e.get("gold", 0)), "morale": int(e.get("morale", 0))}
+	return MissiveLog.words("%s@%s.%d" % [kind, town, int(e.get("day", 0))], "The cost",
+		battle_words(repo, kind, vars, pick))
 
 
 ## One line of siege news: templates.csv `<kind>` (siege_begin, siege_starving,

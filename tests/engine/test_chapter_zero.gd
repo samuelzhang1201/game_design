@@ -14,7 +14,19 @@ var data: DataRepository
 func before_each() -> void:
 	data = SuiteData.repo()
 
+## The chain's own beats (`c0_*`). The chapter table also holds the beats the
+## ENGINE fires off the war (`war_*`, game_story/chapter_0/war_events.md,
+## DefeatSystem): fixed prose under the same content rules (the loops over
+## data.chapter_events / chapter_event_choices below and test_defeat.gd), but
+## outside the chain, so not reachable from the opener nor on its paths.
 func _ids() -> Array:
+	var out: Array = []
+	for id: String in _all_ids():
+		if id.begins_with("c0_"):
+			out.append(id)
+	return out
+
+func _all_ids() -> Array:
 	var out: Array = []
 	for row in data.chapter_events:
 		out.append(String(row["event_id"]))
@@ -38,9 +50,12 @@ func test_the_chapter_is_all_there() -> void:
 			id + " must be chained, never sampled by the random roll")
 		assert_eq(String(row["once"]), "1", id + " fires at most once")
 		assert_between(_choices_of(id).size(), 1, 4, id + " choice count")
-	var ids := _ids()
+	var ids := _all_ids()
 	for c in data.chapter_event_choices:
 		assert_has(ids, String(c["event_id"]), "%s belongs to a chapter beat" % c["choice_id"])
+	for id: String in ids:
+		assert_true(id.begins_with("c0_") or id.begins_with("war_"),
+			id + " is neither a chain beat nor a war beat")
 
 ## The prologue is free of the model (PRD §8, invariant 9): every beat is
 ## authored prose shown verbatim.
@@ -54,7 +69,7 @@ func test_chapter_beats_are_not_in_the_random_pool() -> void:
 	var pool := {}
 	for row in data.events:
 		pool[String(row["event_id"])] = true
-	for id: String in _ids():
+	for id: String in _all_ids():
 		assert_false(pool.has(id), id + " must not be in data/events.csv")
 		assert_true(data.events_by_id.has(id), id + " must be findable by id")
 	assert_eq(data.event_choices_all().size(),
@@ -66,7 +81,7 @@ func test_every_beat_has_an_authored_scene_a_title_and_an_outcome_line() -> void
 	var keys := {}
 	for t in data.templates:
 		keys[String(t["key"])] = true
-	for id: String in _ids():
+	for id: String in _all_ids():
 		assert_true(data.event_scenes.has(id), "missing authored scene for " + id)
 		assert_ne(String(data.event_scenes.get(id, "")).strip_edges(), "", id + " scene is blank")
 		assert_ne(String(data.event_titles.get(id, "")).strip_edges(), "",
@@ -85,7 +100,7 @@ func test_no_scene_names_a_kingdom() -> void:
 		if code != "" and data.kingdoms.has(code):
 			names.append(String((data.kingdoms[code] as Dictionary)["label"]))
 	assert_gt(names.size(), 0, "the pack binds at least one realm")
-	for id: String in _ids():
+	for id: String in _all_ids():
 		# event_scenes is the FILLED copy; the authored one is what the
 		# author typed and is the thing that must be slot-only.
 		var authored := String(data.event_scenes_authored.get(id, ""))
@@ -222,7 +237,7 @@ func test_every_beat_is_reachable_from_the_opener() -> void:
 ## would silently swallow a chapter beat. Either a beat has an unconditional
 ## choice, or two of its choices are exact complements (`X` and `!X`).
 func test_no_beat_can_gate_every_choice_off() -> void:
-	for id: String in _ids():
+	for id: String in _all_ids():
 		var open_choice := false
 		var reqs: Array = []
 		for c in _choices_of(id):

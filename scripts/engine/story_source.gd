@@ -30,6 +30,9 @@ const DOCUMENTS: Array[Dictionary] = [
 	{"path": DEFAULT_PATH, "heading": HEADING_PREFIX, "id": ID_PREFIX},
 	{"path": "res://game_story/chapter_0/chapter_0_events.md",
 		"heading": "### C0-", "id": "c0_"},
+	# the beats the engine fires off the war (DefeatSystem), not the chain
+	{"path": "res://game_story/chapter_0/war_events.md",
+		"heading": "### W-", "id": "war_"},
 ]
 
 ## event_id -> scene text, over every document. Empty when the files are
