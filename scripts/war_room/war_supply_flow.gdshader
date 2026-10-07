@@ -11,9 +11,9 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, blend_mix, shadows_disabled, fog_disabled;
 
-uniform vec4 colour : source_color = vec4(0.859, 0.639, 0.2, 1.0);
-uniform vec4 glow : source_color = vec4(1.0, 0.95, 0.75, 1.0);
-uniform vec4 edge : source_color = vec4(0.17, 0.12, 0.08, 0.85);
+uniform vec4 colour : source_color = vec4(0.859, 0.639, 0.2, 1.0);   // #DBA333, the 3D map's gold
+uniform vec4 glow : source_color = vec4(0.949, 0.784, 0.376, 1.0);  // #F2C860
+uniform vec4 edge : source_color = vec4(0.227, 0.165, 0.078, 0.9);  // #3A2A14 at 90%
 uniform float width_m = 0.004;
 uniform float lift_m = 0.0006;
 // the hairline's share of the half-width, each side
