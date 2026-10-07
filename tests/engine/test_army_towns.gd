@@ -20,6 +20,16 @@ func _reg_at(at: Vector2, kingdom: String) -> Dictionary:
 	return {"regiment_code": "t", "kingdom_code": kingdom, "x": str(at.x), "y": str(at.y),
 		"is_naval": "0", "infantry": "100", "cavalry": "100"}
 
+## `town`'s seat given, in campaign `s`, to a stand-in unit of `kingdom` on
+## the town's point (spec 2026-10-07-army-split-and-ground §4.1: the works
+## are the seat's). Returns the stand-in's row.
+func _seat_at(s: GameState, town: String, kingdom: String) -> Dictionary:
+	var reg := _reg_at(_xy(town), kingdom)
+	reg["regiment_code"] = "t_" + kingdom
+	s.army_roster[String(reg["regiment_code"])] = reg
+	s.town_seat[town] = String(reg["regiment_code"])
+	return reg
+
 func _works(code: String) -> String:
 	var feats := String(repo.burgs[code].get("features", "")).split("|")
 	return "citadel" if "citadel" in feats else ("walls" if "walls" in feats else "town")
@@ -84,6 +94,7 @@ func test_a_fleet_is_in_no_town() -> void:
 # --- the town's works -------------------------------------------------------
 
 func test_the_works_are_the_best_the_town_has() -> void:
+	var s := SuiteData.campaign(repo, 7)
 	var seen := {}
 	var codes := repo.burgs.keys()
 	codes.sort()
@@ -91,10 +102,10 @@ func test_the_works_are_the_best_the_town_has() -> void:
 		var w := _works(code)
 		if seen.has(w):
 			continue
-		var reg := _reg_at(_xy(code), String(repo.burgs[code]["kingdom_code"]))
+		var reg := _seat_at(s, code, String(repo.burgs[code]["kingdom_code"]))
 		if ArmySystem.town_of(repo, reg) != code:
 			continue   # another burg's point sits nearer
-		assert_eq(ArmySystem.works_of(repo, reg), w, code)
+		assert_eq(ArmySystem.works_of(repo, reg, s), w, code)
 		seen[w] = true
 	assert_eq(seen.size(), 3, "the pack has towns of every works")
 
@@ -107,15 +118,16 @@ func test_only_the_side_that_holds_the_town_gets_its_works() -> void:
 		if k != mine:
 			theirs = k
 			break
-	var foe := _reg_at(_xy(town), theirs)
+	var s := SuiteData.campaign(repo, 7)
+	var foe := _seat_at(s, town, theirs)
 	assert_eq(ArmySystem.town_of(repo, foe), town, "the foe stands in it")
 	assert_eq(ArmySystem.held_town_of(repo, foe), "", "but does not hold it")
-	assert_eq(ArmySystem.works_of(repo, foe), "", "so it fights in the field")
-	assert_eq(ArmySystem.terrain_label(repo, foe), ArmySystem.terrain_of(repo, foe).capitalize())
-	var own := _reg_at(_xy(town), mine)
-	assert_eq(ArmySystem.works_of(repo, own), "walls")
-	assert_eq(ArmySystem.terrain_label(repo, own), "%s — behind the walls of %s" % [
-		ArmySystem.terrain_of(repo, own).capitalize(), String(repo.burgs[town]["label"])])
+	assert_eq(ArmySystem.works_of(repo, foe, s), "", "so even on its seat it fights in the field")
+	assert_eq(ArmySystem.terrain_label(repo, foe, s), ArmySystem.terrain_of(repo, foe, s).capitalize())
+	var own := _seat_at(s, town, mine)
+	assert_eq(ArmySystem.works_of(repo, own, s), "walls")
+	assert_eq(ArmySystem.terrain_label(repo, own, s), "%s — behind the walls of %s" % [
+		ArmySystem.terrain_of(repo, own, s).capitalize(), String(repo.burgs[town]["label"])])
 
 func test_a_town_follows_its_province_when_it_changes_hands() -> void:
 	var town := _lonely_town(func(c: String) -> bool: return _works(c) == "walls")
@@ -127,8 +139,8 @@ func test_a_town_follows_its_province_when_it_changes_hands() -> void:
 			break
 	var s := SuiteData.campaign(repo, 7)
 	MapOwnership.set_owner(repo, s, String(repo.burgs[town]["province_code"]), theirs, "test: taken")
-	assert_eq(ArmySystem.works_of(repo, _reg_at(_xy(town), theirs), s), "walls", "the new holder's")
-	assert_eq(ArmySystem.works_of(repo, _reg_at(_xy(town), mine), s), "", "no longer the old one's")
+	assert_eq(ArmySystem.works_of(repo, _seat_at(s, town, theirs), s), "walls", "the new holder's")
+	assert_eq(ArmySystem.works_of(repo, _seat_at(s, town, mine), s), "", "no longer the old one's")
 
 func test_town_defence_by_works_and_arm() -> void:
 	var d := func(works: String, arm: String) -> int:
@@ -142,7 +154,7 @@ func test_town_defence_by_works_and_arm() -> void:
 		assert_eq(ArmySystem.terrain_factor(repo, "plains", "infantry", "attack", works), 1000,
 			"%s only helps the defender" % works)
 
-## The works follow a regiment from a walled town to an unwalled one.
+## The works follow a unit from a walled town's seat to an unwalled one's.
 func test_the_works_follow_the_regiment() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
@@ -151,15 +163,20 @@ func test_the_works_follow_the_regiment() -> void:
 		if String(r.get("is_naval", "0")) != "1":
 			code = String(r["regiment_code"])
 			break
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, s)
 	var put := func(at: Vector2) -> void:
+		# march in and arrive on the town's point: the seat is emptied first,
+		# so the arrival takes it
+		ArmySystem.set_march(repo, s, code, at)
+		s.town_seat.erase(ArmySystem.town_at(repo, at))
 		var m := ArmySystem.pack_to_metres(repo, at)
 		s.regiments[code]["x_m"] = m.x
 		s.regiments[code]["y_m"] = m.y
+		ArmySystem.march_day(repo, s)
 	var walled := ""
 	var open := ""
 	for b: String in repo.burgs:
-		if String(repo.burgs[b]["kingdom_code"]) != realm:
+		if String(repo.burgs[b]["kingdom_code"]) != realm or ArmySystem.town_at(repo, _xy(b)) != b:
 			continue
 		if walled == "" and _works(b) == "walls":
 			walled = b
@@ -196,6 +213,8 @@ func _field_of(s: GameState, realm: String) -> Vector2:
 			return at
 	return Vector2(-1, -1)
 
+## A unit arriving in a held town whose seat is empty garrisons THAT town
+## (spec 2026-10-07-army-split-and-ground §4.3).
 func test_a_garrison_is_the_held_town_it_stands_in() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := _player_land(s)
@@ -205,22 +224,27 @@ func test_a_garrison_is_the_held_town_it_stands_in() -> void:
 				and ArmySystem.town_at(repo, _xy(b)) == b:
 			town = b
 			break
+	ArmySystem.set_march(repo, s, code, _xy(town))
+	s.town_seat.erase(town)
 	var m := ArmySystem.pack_to_metres(repo, _xy(town))
 	s.regiments[code]["x_m"] = m.x
 	s.regiments[code]["y_m"] = m.y
-	ArmySystem.set_garrison(repo, s, code)
-	assert_eq(SupplySystem.garrisoned_in(repo, s, code), town, "it garrisons THAT town")
+	assert_eq(ArmySystem.march_day(repo, s), [code], "it arrives")
+	assert_eq(ArmyGround.seated_in(repo, s, code), town, "it garrisons THAT town")
 
 func test_a_halt_in_the_open_is_a_field_camp() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := _player_land(s)
 	var field := _field_of(s, repo.resolve_realm("player_realm"))
 	assert_true(field.x >= 0.0, "the crown's province has open country")
+	# marched out of its town and halted on the road in the open
+	ArmySystem.set_march(repo, s, code, field)
 	var m := ArmySystem.pack_to_metres(repo, field)
 	s.regiments[code]["x_m"] = m.x
 	s.regiments[code]["y_m"] = m.y
 	ArmySystem.set_garrison(repo, s, code)
-	assert_eq(SupplySystem.garrisoned_in(repo, s, code), "", "no garrison in the open")
+	assert_eq(ArmyGround.seated_in(repo, s, code), "", "no garrison in the open")
+	assert_eq(ArmyGround.camped_by(repo, s, code), "", "nor a camp by a town")
 	assert_false(bool(SupplySystem.line_of(repo, s, code)["garrison"]))
 	var rows: Array = []
 	for sec: Dictionary in WarFolio.sections(repo, s, code):
@@ -234,7 +258,7 @@ func test_a_halt_in_the_open_is_a_field_camp() -> void:
 	var reg := ArmySystem.regiment(repo, code)
 	var use := ArmySystem.supply_use(repo, reg, s)
 	var score := ArmySystem.supply_score(repo, int(s.regiments[code]["supplies"]), use)
-	assert_eq(ArmySystem.morale_mark(repo, score, SupplySystem.garrisoned_in(repo, s, code) != ""),
+	assert_eq(ArmySystem.morale_mark(repo, score, ArmyGround.seated_in(repo, s, code) != ""),
 		ArmySystem.morale_mark(repo, score, false))
 
 # --- the ground's pace ------------------------------------------------------
@@ -352,6 +376,36 @@ func test_every_land_regiment_starts_in_a_town_its_kingdom_holds() -> void:
 		assert_ne(town, "", code + " stands in a town of its own")
 		assert_true(_land_at(ArmySystem.position_of(repo, null, reg)), code + " stands on land")
 		assert_eq(ArmySystem.province_of(repo, null, reg), String(reg["province_code"]), code + " in its province")
+
+## The LIVE units the split made of them (spec 2026-10-07-army-split-and-ground
+## §4.3): every land unit whose regiment stood in a held town camps by that
+## town (a royal train by its capital), and every unit with a camp_town is
+## camped by a town its kingdom holds — so every one of them is fed.
+func test_every_live_land_unit_starts_camped_by_a_town_its_kingdom_holds() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var parents: Dictionary = repo.world_table("military", "regiments")
+	var roster := ArmySystem.roster(repo, s)
+	var codes := roster.keys()
+	codes.sort()
+	var land := 0
+	for code: String in codes:
+		var unit: Dictionary = roster[code]
+		if String(unit.get("is_naval", "0")) == "1":
+			continue
+		land += 1
+		var parent := String(unit.get("parent_code", ""))
+		var want := ""
+		if parent != "":
+			want = ArmySystem.held_town_of(repo, parents[parent])
+		else:
+			want = String(repo.kingdoms[String(unit["kingdom_code"])]["capital_burg"])
+		assert_ne(want, "", code + ": its regiment stood in a held town")
+		assert_eq(String(unit.get("camp_town", "")), want, code + " was placed by that town")
+		var camp := String(unit.get("camp_town", ""))
+		if camp != "":
+			assert_eq(ArmyGround.camped_by(repo, s, code), camp, code + " camps by it")
+			assert_true(ArmyGround.holds(repo, s, String(unit["kingdom_code"]), camp), code + ": its kingdom holds it")
+	assert_gt(land, 0)
 
 ## The crown's banner still flies over the regiment the capital is named for:
 ## where two stand in the capital, the first by the pack's order stands nearest.

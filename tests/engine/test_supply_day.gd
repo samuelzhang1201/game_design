@@ -21,9 +21,11 @@ func before_each() -> void:
 	m.attributes["integrity"] = 50
 	var codes: Array = s.regiments.keys()
 	codes.sort()
+	# in the field: camped by no town (spec 2026-10-07-army-split-and-ground
+	# §4.1), so no town tops it up
 	for c in codes:
 		var reg := ArmySystem.regiment(repo, String(c))
-		if String(reg.get("is_naval", "0")) != "1" and ArmySystem.held_town_of(repo, reg, s) == "":
+		if String(reg.get("is_naval", "0")) != "1" and ArmyGround.camped_by(repo, s, String(c)) == "":
 			code = String(c)
 			break
 	if code != "":
@@ -54,12 +56,17 @@ func _eligible_town() -> String:
 	return ""
 
 ## The first land regiment that, a step out of its town onto dry land, still
-## has a supply town in reach (a step may cross a bay and leave none).
+## has a supply town in reach (a step may cross a bay and leave none). It
+## leaves its camp (camp_town ""); a seated unit is passed over, so no seat
+## is left on a unit in the field, and so is one eating under a unit a day
+## (a small unit's month spread over thirty days skips some).
 func _march_one_out(codes: Array) -> void:
 	for c in codes:
 		var reg := ArmySystem.regiment(repo, String(c))
-		if String(reg.get("is_naval", "0")) == "1":
+		if String(reg.get("is_naval", "0")) == "1" or ArmyGround.seated_in(repo, s, String(c)) != "" \
+				or ArmySystem.supply_use(repo, reg, s) < Calendar.DAYS_PER_TICK:
 			continue
+		var camp := String(s.regiments[c].get("camp_town", ""))
 		var home := ArmySystem.position_of(repo, s, reg)
 		for step: Vector2 in [Vector2(40.0, 0.0), Vector2(-40.0, 0.0), Vector2(0.0, 40.0), Vector2(0.0, -40.0)]:
 			var cell := MapEconomy.cell_at(repo, home + step)
@@ -68,6 +75,7 @@ func _march_one_out(codes: Array) -> void:
 			var mm := ArmySystem.pack_to_metres(repo, home + step)
 			s.regiments[c]["x_m"] = mm.x
 			s.regiments[c]["y_m"] = mm.y
+			s.regiments[c]["camp_town"] = ""
 			code = String(c)
 			if ArmySystem.held_town_of(repo, reg, s) == "":
 				town = _eligible_town()
@@ -76,6 +84,7 @@ func _march_one_out(codes: Array) -> void:
 			var back := ArmySystem.pack_to_metres(repo, home)
 			s.regiments[c]["x_m"] = back.x
 			s.regiments[c]["y_m"] = back.y
+			s.regiments[c]["camp_town"] = camp
 	code = ""
 
 func _use() -> int:
@@ -233,7 +242,7 @@ func test_a_regiment_in_a_realm_town_is_topped_up_free() -> void:
 	codes.sort()
 	for c in codes:
 		var reg := ArmySystem.regiment(repo, String(c))
-		var held := ArmySystem.held_town_of(repo, reg, s)
+		var held := SupplyLines.home_town(repo, s, String(c))
 		if held == "" or String(c) == code or String(reg.get("is_naval", "0")) == "1":
 			continue
 		s.regiments[c]["supplies"] = 0
@@ -423,7 +432,7 @@ func test_a_refill_that_buys_from_a_house_is_counted_on_the_regiment() -> void:
 	codes.sort()
 	for c in codes:
 		var reg := ArmySystem.regiment(repo, String(c))
-		var held := ArmySystem.held_town_of(repo, reg, s)
+		var held := SupplyLines.home_town(repo, s, String(c))
 		if held == "" or String(c) == code or String(reg.get("is_naval", "0")) == "1":
 			continue
 		s.regiments[c]["supplies"] = 0

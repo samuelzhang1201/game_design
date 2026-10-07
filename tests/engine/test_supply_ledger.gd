@@ -141,13 +141,12 @@ func _a_family() -> String:
 
 func test_sells_to_counts_a_retired_lines_and_a_towns_topups() -> void:
 	var fam := _a_family()
-	# a regiment with no line: its entry's top-ups sell from the town it holds
+	# a regiment with no line: its entry's top-ups sell from the town it camps by
 	var held := ""
 	for c in s.regiments.keys():
-		var reg := ArmySystem.regiment(repo, String(c))
-		if String(reg.get("is_naval", "0")) != "1" and ArmySystem.held_town_of(repo, reg, s) != "":
+		if ArmyGround.camped_by(repo, s, String(c)) != "":
 			code = String(c)
-			held = ArmySystem.held_town_of(repo, reg, s)
+			held = ArmyGround.camped_by(repo, s, String(c))
 			break
 	assert_ne(held, "", "a land regiment stands in a town the realm holds")
 	s.supply_lines.erase(code)
@@ -167,11 +166,19 @@ func test_sells_to_counts_a_retired_lines_and_a_towns_topups() -> void:
 
 func test_sells_to_skips_a_regiment_in_the_open_with_no_line() -> void:
 	var fam := _a_family()
-	for c in s.regiments.keys():
-		var reg := ArmySystem.regiment(repo, String(c))
-		if String(reg.get("is_naval", "0")) != "1" and ArmySystem.held_town_of(repo, reg, s) == "":
-			s.regiments[c]["m_bought"] = {fam: 50}
+	# every land unit starts camped by a town: march one out into the open
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	var out := ""
+	for c in codes:
+		if ArmyGround.camped_by(repo, s, String(c)) != "":
+			out = String(c)
 			break
+	assert_ne(out, "")
+	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, out, s))
+	ArmySystem.set_march(repo, s, out, here + Vector2(40.0, 0.0))
+	assert_eq(ArmyGround.camped_by(repo, s, out), "", "on the march, in the open")
+	s.regiments[out]["m_bought"] = {fam: 50}
 	assert_eq(_run("sells_to", ""), [])
 
 func test_the_town_card_says_how_long_its_stores_last() -> void:

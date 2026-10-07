@@ -32,19 +32,28 @@ func _govern(seat: String, skill: String, value: int, traits: Array) -> Characte
 	c.attributes["integrity"] = 50
 	return c
 
-## The first land unit standing in the field: no town refills it, so its
-## line is all that feeds it.
+## The first land unit in the field, camped by no town: no town refills it,
+## so its line is all that feeds it. Every land unit starts camped by a town
+## (spec 2026-10-07-army-split-and-ground §4.3), so the first one off a seat
+## that eats a unit a day or more (a small unit's day may draw none) is
+## marched out.
 func _first_land() -> String:
 	var codes: Array = s.regiments.keys()
 	codes.sort()
 	for c in codes:
 		if _in_field(String(c)):
 			return String(c)
+	for c in codes:
+		var reg := ArmySystem.regiment(data, String(c), s)
+		if String(reg.get("is_naval", "0")) != "1" and ArmyGround.seated_in(data, s, String(c)) == "" \
+				and ArmySystem.supply_use(data, reg, s) >= Calendar.DAYS_PER_TICK:
+			ArmySystem.set_march(data, s, String(c), ArmySystem.position_of(data, s, reg) + Vector2(40.0, 0.0))
+			return String(c)
 	return ""
 
 func _in_field(code: String) -> bool:
 	var reg := ArmySystem.regiment(data, code, s)
-	return String(reg.get("is_naval", "0")) != "1" and ArmySystem.held_town_of(data, reg, s) == ""
+	return String(reg.get("is_naval", "0")) != "1" and ArmyGround.camped_by(data, s, code) == ""
 
 ## A day of `code`'s line with its town well stocked: the line's month counters.
 func _a_day_of_the_line(code: String) -> Dictionary:

@@ -152,6 +152,7 @@ func test_power_reads_the_ground_the_regiment_stands_on_now() -> void:
 	entry["dest_x_m"] = m.x
 	entry["dest_y_m"] = m.y
 	assert_eq(ArmySystem.held_town_of(repo, reg, s), target)
+	_seat(s, code, target)   # the works are the seat's (spec 2026-10-07-army-split-and-ground §4.1)
 	var moved := ArmySystem.power(repo, s, code, "defend")
 	# The same unit quartered there by the roster, with the same state.
 	var s2 := SuiteData.campaign(repo, 7)
@@ -159,8 +160,16 @@ func test_power_reads_the_ground_the_regiment_stands_on_now() -> void:
 	row2["x"] = str(at.x)
 	row2["y"] = str(at.y)
 	(s2.regiments[code] as Dictionary).erase("x_m")
+	_seat(s2, code, target)
 	assert_eq(moved, ArmySystem.power(repo, s2, code, "defend"))
 	assert_ne(moved, home, "other works change its power")
+
+## `code` holds `town`'s seat in `s`, and no other.
+func _seat(s: GameState, code: String, town: String) -> void:
+	for t: String in s.town_seat.keys():
+		if String(s.town_seat[t]) == code:
+			s.town_seat.erase(t)
+	s.town_seat[town] = code
 
 func test_power_is_power_on_its_own_ground() -> void:
 	var s := SuiteData.campaign(repo, 7)

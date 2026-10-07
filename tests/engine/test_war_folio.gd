@@ -55,7 +55,8 @@ func test_morale_names_its_mark_and_the_months_drift() -> void:
 	var st := ArmySystem.state_of(repo, state, code)
 	var reg := ArmySystem.regiment(repo, code)
 	var score := ArmySystem.supply_score(repo, int(st["supplies"]), ArmySystem.supply_use(repo, reg, state))
-	var mark := ArmySystem.morale_mark(repo, score, false)
+	# the seat's unit heads for the garrison's mark (spec 2026-10-07-army-split-and-ground §4.1)
+	var mark := ArmySystem.morale_mark(repo, score, ArmyGround.seated_in(repo, state, code) != "")
 	var rows := _rows("morale")
 	assert_eq(rows["Morale"], "%d / 100" % int(st["morale"]))
 	assert_eq(rows["Heading for (by today's stores)"], "%d — the ranks are %s" % [mark, ArmySystem.morale_word(repo, score)])
@@ -147,15 +148,13 @@ func test_march_under_orders_names_destination_and_arrival() -> void:
 
 
 func test_garrison_adds_its_morale_row() -> void:
-	var held := ""   # a land regiment standing in a town of a province the crown controls
+	var held := ""   # the unit holding the seat of a town the crown holds
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var c := String(r["regiment_code"])
-		if String(r.get("is_naval", "0")) != "1" \
-				and ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, c), state) != "":
+		if ArmyGround.seated_in(repo, state, c) != "":
 			held = c
 			break
-	assert_ne(held, "", "the pack has a land regiment at a crown town")
-	ArmySystem.set_garrison(repo, state, held)
+	assert_ne(held, "", "the pack has a land unit on a crown town's seat")
 	var morale := {}
 	var supply := {}
 	for sec: Dictionary in WarFolio.sections(repo, state, held):
@@ -171,13 +170,13 @@ func test_garrison_adds_its_morale_row() -> void:
 	assert_true(String(supply["Line"]).contains(" tops it up"), supply["Line"])
 
 
-## Final review 6: a regiment merely standing in its realm town (no garrison
-## order) is topped up by it, and the folio says so.
+## Final review 6: a unit camped round its realm town (not on the seat) is
+## topped up by it, and the folio says so.
 func test_a_standing_regiment_reads_the_town_that_tops_it_up() -> void:
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var c := String(r["regiment_code"])
 		var held := SupplyLines.home_town(repo, state, c)
-		if held == "" or ArmySystem.order_of(repo, state, c) == ArmySystem.ORDER_GARRISON:
+		if held == "" or ArmyGround.seated_in(repo, state, c) != "":
 			continue
 		for sec: Dictionary in WarFolio.sections(repo, state, c):
 			if String(sec["key"]) != "supply":

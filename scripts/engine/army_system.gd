@@ -133,11 +133,11 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 		if String(reg.get("is_naval", "0")) != "1":
 			# Morale reads the stores in hand as the month turns, after the
 			# supply lines refilled them and before the month is eaten. Only
-			# an explicit GARRISON order earns the garrison's bonus; a column
-			# merely standing by at home is supplied through the town but is
-			# not behind its walls (controller ruling, final review).
+			# the unit holding a town's seat earns the garrison's bonus; one
+			# camped round the town is fed by it but is not behind its walls
+			# (spec 2026-10-07-army-split-and-ground §4.1).
 			var mark := morale_mark(repo, supply_score(repo, int(entry["supplies"]), use),
-				SupplySystem.garrisoned_in(repo, state, code) != "")
+				ArmyGround.seated_in(repo, state, code) != "")
 			entry["morale"] = drift_morale(int(entry["morale"]), mark, int(repo.bal("army_morale_drift_per_month")))
 		entry["training"] = mini(100, int(entry["training"]) + int(repo.bal("army_training_per_month")))
 
@@ -366,10 +366,12 @@ static func quartered_in(repo: DataRepository, reg: Dictionary, state: GameState
 		return ""
 	return held_town_of(repo, reg, state)
 
-## The works a regiment fights from: "citadel", "walls" or "town" for the best
-## its held town has (political/burgs.csv features), "" in the field.
+## The works a unit fights from: "citadel", "walls" or "town" for the best
+## the town whose SEAT it holds has (ArmyGround.seated_in; political/burgs.csv
+## features), "" in the field and in a camp round a town (spec
+## 2026-10-07-army-split-and-ground §4.1).
 static func works_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
-	var town := held_town_of(repo, reg, state)
+	var town := ArmyGround.seated_in(repo, state, String(reg.get("regiment_code", "")))
 	if town == "":
 		return ""
 	var feats := String((repo.burgs[town] as Dictionary).get("features", "")).split("|")
@@ -396,7 +398,8 @@ static func terrain_label(repo: DataRepository, reg: Dictionary, state: GameStat
 	var works := works_of(repo, reg, state)
 	if works == "":
 		return text
-	var town := String((repo.burgs[held_town_of(repo, reg, state)] as Dictionary).get("label", ""))
+	var seat := ArmyGround.seated_in(repo, state, String(reg.get("regiment_code", "")))
+	var town := String((repo.burgs[seat] as Dictionary).get("label", ""))
 	match works:
 		"citadel":
 			return "%s — in the citadel of %s" % [text, town]
@@ -841,7 +844,8 @@ static func day_march_at(repo: DataRepository, state: GameState, code: String, a
 
 
 ## Send a regiment to `dest` (pack pixels). The engine's only writer of a
-## march order; ActionSystem calls it after ARMY_MARCH validates.
+## march order; ActionSystem calls it after ARMY_MARCH validates. The unit
+## leaves its camp and, holding a seat, empties it (ArmyGround.leave).
 static func set_march(repo: DataRepository, state: GameState, code: String, dest: Vector2) -> void:
 	ensure(repo, state)
 	if not state.regiments.has(code):
@@ -851,20 +855,26 @@ static func set_march(repo: DataRepository, state: GameState, code: String, dest
 	entry["dest_x_m"] = m.x
 	entry["dest_y_m"] = m.y
 	entry["order"] = ORDER_MARCH
+	ArmyGround.leave(repo, state, code)
 
 
-## Halt a regiment where it stands.
+## Halt a regiment where it stands. A column halted on the road settles
+## there as an arrival does (ArmyGround.settle); a standing one keeps its ground.
 static func set_garrison(repo: DataRepository, state: GameState, code: String) -> void:
 	ensure(repo, state)
 	if not state.regiments.has(code):
 		return
 	var entry: Dictionary = state.regiments[code]
+	var marching := String(entry.get("order", ORDER_STANDBY)) == ORDER_MARCH
 	entry["order"] = ORDER_GARRISON
 	entry["dest_x_m"] = int(entry["x_m"])
 	entry["dest_y_m"] = int(entry["y_m"])
+	if marching:
+		ArmyGround.settle(repo, state, code)
 
 
 ## One DAY of marching for every regiment under a march order, in code order.
+## Each arrival settles at once (ArmyGround.settle: first come, first in).
 ## Returns the codes that arrived today, for the news bar. Straight-line: the
 ## column walks at its own pace toward where it was sent, and there is no
 ## pathfinding yet — a march ordered across a bay walks across it.
@@ -876,6 +886,7 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	for c in codes:
 		var code := String(c)
 		if _march_one(repo, state, code, state.regiments[code], state.absolute_day()):
+			ArmyGround.settle(repo, state, code)
 			arrived.append(code)
 			# the column holds its ground: a halt pencilled in the war room has
 			# nothing left to stop (a pencilled new march still stands)

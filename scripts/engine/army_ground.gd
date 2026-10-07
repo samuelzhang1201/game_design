@@ -101,3 +101,182 @@ static func free_slot(repo: DataRepository, centre_m: Vector2i, arm: String, tak
 static func town_point_m(repo: DataRepository, town: String) -> Vector2i:
 	var b: Dictionary = repo.burgs[town]
 	return ArmySystem.pack_to_metres(repo, Vector2(float(b["x"]), float(b["y"])))
+
+
+## --- Seats and camps (spec §4.1, §4.3–4.4) -----------------------------
+
+## The seats in play: the campaign's, else the pack's opening ones.
+static func _seats(repo: DataRepository, state: GameState) -> Dictionary:
+	return state.town_seat if state != null else ArmySplit.seats_of(repo)
+
+
+## Whether kingdom `k` holds `town` now (its province's owner).
+static func holds(repo: DataRepository, state: GameState, k: String, town: String) -> bool:
+	var b: Dictionary = repo.burgs.get(town, {})
+	return not b.is_empty() and MapOwnership.owner_of(repo, state, String(b.get("province_code", ""))) == k
+
+
+## The unit holding `town`'s seat, "" for an empty one.
+static func seat_of(repo: DataRepository, state: GameState, town: String) -> String:
+	return String(_seats(repo, state).get(town, ""))
+
+
+## The town whose seat `code` holds — one its own kingdom holds — else "".
+## What earns the works and the garrison's morale. A unit holds one seat at
+## most; were it ever on two, the earlier town code is the one.
+static func seated_in(repo: DataRepository, state: GameState, code: String) -> String:
+	var seats := _seats(repo, state)
+	var found := ""
+	for town: String in seats:
+		if String(seats[town]) == code and (found == "" or town < found):
+			found = town
+	if found == "":
+		return ""
+	var reg := ArmySystem.regiment(repo, code, state)
+	return found if not reg.is_empty() and holds(repo, state, String(reg["kingdom_code"]), found) else ""
+
+
+## The held town a STANDING land unit settled around (R3: the town it camped
+## by, `camp_town`), the seat's own town included; "" on the march, in the
+## field, afloat, or round a town its kingdom no longer holds. What feeds it.
+static func camped_by(repo: DataRepository, state: GameState, code: String) -> String:
+	var reg := ArmySystem.regiment(repo, code, state)
+	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+		return ""
+	var town := String(reg.get("camp_town", ""))
+	if state != null and state.regiments.has(code):
+		var entry: Dictionary = state.regiments[code]
+		if String(entry.get("order", "")) == ArmySystem.ORDER_MARCH:
+			return ""
+		town = String(entry.get("camp_town", ""))
+	return town if town != "" and holds(repo, state, String(reg["kingdom_code"]), town) else ""
+
+
+## The ground every OTHER standing land unit holds now, metres. Built per
+## settle (arrivals are rare), never per frame.
+static func standing_taken(repo: DataRepository, state: GameState, except_code: String) -> Dictionary:
+	var taken := new_taken(repo)
+	var all := ArmySystem.roster(repo, state)
+	var codes := all.keys()
+	codes.sort()
+	for c: String in codes:
+		var r: Dictionary = all[c]
+		if c == except_code or String(r.get("is_naval", "0")) == "1":
+			continue
+		if state != null and ArmySystem.order_of(repo, state, c) == ArmySystem.ORDER_MARCH:
+			continue
+		take(taken, ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, r)))
+	return taken
+
+
+static func _put(entry: Dictionary, p_m: Vector2i) -> void:
+	entry["x_m"] = p_m.x
+	entry["y_m"] = p_m.y
+	entry["dest_x_m"] = p_m.x
+	entry["dest_y_m"] = p_m.y
+
+
+## A unit has ARRIVED (ArmySystem.march_day) or halted on the road
+## (ArmySystem.set_garrison): it takes an empty seat of a held town it
+## stands in the reach of, else the first free slot round the town, or round
+## the point it reached in the field — on any terrain when the free ground is
+## all blocked (a mountain hold, as the split places); with none free it
+## holds the point it reached (§4.3). Its camp_town is the town, "" in the
+## field.
+static func settle(repo: DataRepository, state: GameState, code: String) -> void:
+	var entry: Dictionary = state.regiments.get(code, {})
+	var reg := ArmySystem.regiment(repo, code, state)
+	if entry.is_empty() or reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+		return
+	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	var town := ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, here))
+	if town != "" and not holds(repo, state, String(reg["kingdom_code"]), town):
+		town = ""
+	entry["camp_town"] = town
+	var centre := town_point_m(repo, town) if town != "" else here
+	if town != "" and seat_of(repo, state, town) == "":
+		state.town_seat[town] = code
+		_put(entry, centre)
+		return
+	var arm := MapObjects.regiment_arm(repo, reg)
+	var taken := standing_taken(repo, state, code)
+	var slot := free_slot(repo, centre, arm, taken, town != "")
+	if slot == NONE:
+		slot = free_slot(repo, centre, arm, taken, town != "", true)
+	if slot != NONE:
+		_put(entry, slot)
+
+
+## A unit's march order has taken effect (ArmySystem.set_march): it leaves
+## its camp and, holding a seat, empties it — refilled the same day from the
+## camp (§4.4).
+static func leave(repo: DataRepository, state: GameState, code: String) -> void:
+	if state.regiments.has(code):
+		state.regiments[code]["camp_town"] = ""
+	var towns := state.town_seat.keys()
+	towns.sort()
+	for town: String in towns:
+		if String(state.town_seat[town]) == code:
+			state.town_seat.erase(town)
+			refill(repo, state, town)
+
+
+## Fill `town`'s empty seat from the units camped round it that are not on
+## the march: the most infantry (ties to the earlier code), else the largest.
+## The one chosen steps onto the town's point. Returns it, "" for none.
+static func refill(repo: DataRepository, state: GameState, town: String) -> String:
+	if seat_of(repo, state, town) != "":
+		return seat_of(repo, state, town)
+	var all := ArmySystem.roster(repo, state)
+	var codes := all.keys()
+	codes.sort()
+	var pick := ""
+	for pass_foot: bool in [true, false]:
+		var best := 0
+		for c: String in codes:
+			if camped_by(repo, state, c) != town:
+				continue
+			var r: Dictionary = all[c]
+			var n := int(float(r.get("infantry", 0))) if pass_foot else int(MapObjects.regiment_size(repo, r))
+			if n > best:
+				best = n
+				pick = c
+		if pick != "":
+			break
+	if pick == "":
+		return ""
+	state.town_seat[town] = pick
+	if state.regiments.has(pick):
+		_put(state.regiments[pick], town_point_m(repo, town))
+	return pick
+
+
+## ARMY_SEAT delivered (§4.5): `code`, camped by a held town, takes its
+## seat; the unit that held it takes the newcomer's camp. False when `code`
+## no longer camps by a town — the order lapses.
+static func take_seat(repo: DataRepository, state: GameState, code: String) -> bool:
+	var town := camped_by(repo, state, code)
+	if town == "" or not state.regiments.has(code):
+		return false
+	var held := seat_of(repo, state, town)
+	if held == code:
+		return true
+	var entry: Dictionary = state.regiments[code]
+	var mine := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	state.town_seat[town] = code
+	_put(entry, town_point_m(repo, town))
+	if held != "" and state.regiments.has(held):
+		_put(state.regiments[held], mine)
+		state.regiments[held]["camp_town"] = town
+	return true
+
+
+## A seat whose town its holder's kingdom no longer holds is cleared (a day,
+## after the march; spec §4.4).
+static func reconcile(repo: DataRepository, state: GameState) -> void:
+	var towns := state.town_seat.keys()
+	towns.sort()
+	for town: String in towns:
+		var reg := ArmySystem.regiment(repo, String(state.town_seat[town]), state)
+		if reg.is_empty() or not holds(repo, state, String(reg["kingdom_code"]), town):
+			state.town_seat.erase(town)

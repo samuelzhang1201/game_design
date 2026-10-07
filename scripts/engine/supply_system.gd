@@ -101,22 +101,12 @@ static func gold_for(repo: DataRepository, units: int) -> int:
 	return (units * int(repo.bal("army_supply_gold_permille")) + 999) / 1000
 
 
-## The town a regiment is GARRISONED in (spec 2026-10-06-army-location-and-
-## town-defence §4): under a GARRISON order, the town of its own kingdom it
-## stands IN (ArmySystem.held_town_of) — what earns the garrison's morale and
-## the LEDGER's "garrisons in" thread. "" otherwise: a column halted in the
-## open is a field camp.
-static func garrisoned_in(repo: DataRepository, state: GameState, code: String) -> String:
-	if ArmySystem.order_of(repo, state, code) != ArmySystem.ORDER_GARRISON:
-		return ""
-	return ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, code, state), state)
-
-
 ## A regiment's line as it stands, for the cards: {town ("" with none),
 ## state, rate, length_km, loss_permille (the road's and its robbers',
-## total_loss), hazards (road_loss's names), garrison, garrison_town}.
+## total_loss), hazards (road_loss's names), garrison, garrison_town (the
+## town whose seat it holds, ArmyGround.seated_in)}.
 static func line_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	var held := garrisoned_in(repo, state, code)
+	var held := ArmyGround.seated_in(repo, state, code)
 	var ln := SupplyLines.line(state, code)
 	var out := {"town": "", "state": "", "rate": 0, "length_km": 0, "loss_permille": 0,
 		"garrison": held != "", "garrison_town": held, "hazards": []}

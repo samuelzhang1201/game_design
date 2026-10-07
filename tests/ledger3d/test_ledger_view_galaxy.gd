@@ -868,7 +868,14 @@ func test_the_selected_label_sits_at_its_ring_and_nothing_touches_it() -> void:
 	view.focus_cluster("war")
 	for i in 60:
 		view._process(1.0 / 60.0)
-	var reg := "regiment:" + String(MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), s)[0]["regiment_code"])
+	# the regiment a planned tie ends on (Ledger._planned_end: the one with
+	# the most links — a seat's garrison link counts, so it is read, not assumed)
+	var reg := ""
+	for l: Dictionary in view._snap["links"]:
+		if String(l["status"]) == "planned":
+			for end: String in [String(l["from"]), String(l["to"])]:
+				if reg == "" and end.begins_with("regiment:"):
+					reg = end
 	assert_true(view._nodes.has(reg))
 	view.frame_web(reg)
 	for f: String in view._frame_ids:

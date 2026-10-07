@@ -691,7 +691,7 @@ static func _sells_to(repo: DataRepository, state: GameState, id: String) -> Arr
 			continue
 		var town := String(ln.get("town", ""))
 		if town == "":
-			town = ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, code, state), state)
+			town = ArmyGround.camped_by(repo, state, code)
 		if town == "":
 			continue
 		for house: String in sold:
@@ -816,15 +816,14 @@ static func _skims(repo: DataRepository, state: GameState, id: String, to_t: Str
 	return out
 
 
-## A regiment under a GARRISON order standing in a town its kingdom holds
-## garrisons that town (SupplySystem.garrisoned_in; one merely standing by
-## there, or halted in the open, is not garrisoned).
+## The unit holding a town's seat garrisons that town (ArmyGround.seated_in;
+## one camped round it, or halted in the open, does not).
 static func _garrisons(repo: DataRepository, state: GameState, id: String) -> Array:
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	var out: Array = []
 	for c in codes:
-		var town := SupplySystem.garrisoned_in(repo, state, String(c))
+		var town := ArmyGround.seated_in(repo, state, String(c))
 		if town == "":
 			continue
 		var rid := "regiment:" + String(c)

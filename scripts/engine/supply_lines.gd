@@ -252,13 +252,10 @@ static func _room(repo: DataRepository, supplies: int, use: int, day: int, targe
 	return maxi(mini(target, ArmySystem.max_units(repo, use) + bite) - supplies, 0)
 
 
-## The realm town a land regiment stands in, which tops it up each day
-## (ArmySystem.held_town_of, a town of the realm); "" in the field or afloat.
+## The realm town a land unit camps by (ArmyGround.camped_by), which tops it
+## up each day; "" on the march, in the field or afloat.
 static func home_town(repo: DataRepository, state: GameState, code: String) -> String:
-	var reg := ArmySystem.regiment(repo, code, state)
-	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
-		return ""
-	var held := ArmySystem.held_town_of(repo, reg, state)
+	var held := ArmyGround.camped_by(repo, state, code)
 	return held if held != "" and TownStores.is_realm_town(repo, state, held) else ""
 
 
