@@ -92,6 +92,7 @@ var _themes := Map3DLayerThemes.new()
 var _weather := Map3DLayerWeather.new()  # the weather's look (spec 2026-09-29-weather-visuals)
 var _picker := Map3DPicker.new()
 var _selection := Map3DSelection.new()
+var _supply := Map3DSupplyLines.new()  # the supply lines and the pick's rings (spec 2026-10-07)
 var _input := Map3DInput.new()
 var _meta: Dictionary = {}
 var _loaded := false
@@ -257,6 +258,7 @@ func _load() -> void:
 	_weather.bind(_ctx, _themes.tint_material(), $Viewport/World/Precip as Map3DLayerPrecip, _houses)
 	_picker.bind(_ctx, self, _tooltip, _borders)
 	_selection.bind(_ctx, _lines, _markers, self)
+	_supply.bind(_ctx, _lines, self, _units)
 	_loaded = true
 	_rig.place(_home(), _rig.start_distance(), 0.0)
 	_update_line_scale()
@@ -393,6 +395,7 @@ func _process(delta: float) -> void:
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
 		_trails.step()  # behind them, the ground they trod
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
+		_supply.step()  # the flowing lines, to the pieces as drawn
 		_sun.sweep(Game.day_progress)  # a round a game day, the north half dusk
 	_picker.step()
 	if not _hovered:
@@ -494,7 +497,7 @@ var supply_pick: Dictionary = {}:
 	set(v): supply_pick = v; if _loaded: _redraw_supply()
 var supply_preview := PackedVector2Array():
 	set(v): supply_preview = v; if _loaded: _redraw_supply()
-func _redraw_supply() -> void: pass  # Map3DSupplyLines draws it (Task 11)
+func _redraw_supply() -> void: _supply.redraw()
 
 ## True when a regiment was under it (its order menu opens) or the ground was
 ## hit (SpyOrderMenu's "Send a spy here" opens); false only over the sky.
