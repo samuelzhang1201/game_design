@@ -509,6 +509,10 @@ func redraw_live() -> void:
 			var at: Variant = _view.screen_pos_of_px(p)
 			if at != null:
 				road.append(at)
+		if road.size() >= 2:
+			# it leaves the town's ring — or the plinth of a piece standing there: never drawn over a piece
+			var off := _repo.bal("war_pick_px") * 0.85 if _view.piece_under(road[0]) != "" else _repo.bal("war_supply_lit_px")
+			road = WarPlanGeometry.cut(road, off, WarPlanGeometry.length(road))
 	if ink["crayon"].is_empty() and ink["pen"].is_empty() and handles.is_empty() and facing.is_empty() and road.size() < 2:
 		_hud.clear_live()
 		return

@@ -580,18 +580,17 @@ func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -
 func test_the_hud_draws_rings_hints_a_marquee_and_the_live_layer_the_supply_road() -> void:
 	var hud: WarHud = view.get_node("%Hud")
 	var pal: Dictionary = repo.war_palette
-	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [], [], pal["ink"], pal["pencil"], null)
+	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [], pal["ink"], null)
 	hud.set_supply([], pal["supply_route"])
 	assert_false(hud.drawing())
 	hud.draw_state([{"at": Vector2(40, 40), "r": 30.0, "colour": pal["plan_blue"]}], Rect2(), [], pal["plan_red"],
-		pal["chalk"], [], [], pal["ink"], pal["pencil"], null)
+		pal["chalk"], [], pal["ink"], null)
 	assert_true(hud.drawing(), "a selection ring")
-	hud.draw_state([], Rect2(), [Vector2(80, 80)], pal["plan_red"], pal["chalk"], [], [], pal["ink"], pal["pencil"], null)
+	hud.draw_state([], Rect2(), [Vector2(80, 80)], pal["plan_red"], pal["chalk"], [], pal["ink"], null)
 	assert_true(hud.drawing(), "an intel hint")
-	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [[Vector2(10, 10), Vector2(200, 10)]], [], pal["ink"],
-		pal["pencil"], null)
+	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [[Vector2(10, 10), Vector2(200, 10)]], pal["ink"], null)
 	assert_true(hud.drawing(), "a route alone is drawn")
-	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [], [], pal["ink"], pal["pencil"], null)
+	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [], pal["ink"], null)
 	hud.set_supply([{"at": Vector2(5, 5), "lit": true}], pal["supply_route"])
 	assert_true(hud.drawing(), "a lit town")
 	var live := view.get_node("%PlanHud") as WarPlanHud
@@ -941,7 +940,7 @@ func test_a_draft_is_drawn_as_a_pencil_line_from_its_piece() -> void:
 	WarDrafts.plant(repo, state, String(p["code"]), "march", (p["at"] as Vector2).move_toward(rect.get_center(), 10.0))
 	view.refresh()
 	await wait_process_frames(2)
-	var hud := view.get_node("%Hud") as WarHud
+	var hud := view.get_node("%PlanHud") as WarPlanHud   # the pencils lie under the crayon
 	assert_eq(hud.draft_lines().size(), 1)
 	assert_true(hud.drawing())
 
@@ -961,7 +960,7 @@ func test_a_resized_view_redraws_its_lines_where_the_pennants_now_stand() -> voi
 	await wait_process_frames(2)
 	view.size = Vector2(1300, 600)   # the room widens over the column
 	await wait_process_frames(2)
-	var hud := view.get_node("%Hud") as WarHud
+	var hud := view.get_node("%PlanHud") as WarPlanHud
 	var end: Vector2 = hud.draft_lines()[0][1]
 	assert_almost_eq(end.distance_to(view.screen_pos_of_px(to)), 0.0, 1.0, "the line follows the view's new projection")
 

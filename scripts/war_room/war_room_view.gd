@@ -174,7 +174,7 @@ func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable, drawn_f
 	_plan_input.setup(self, repo, %PlanHud)
 	_plan_input.selection_changed.connect(_on_plan_selection)
 	_pennants.setup(repo, self)
-	_pointer.setup(self, repo, {"hud": %Hud, "pieces": _pieces, "pennants": _pennants, "camera": _camera,
+	_pointer.setup(self, repo, {"hud": %Hud, "plan_hud": %PlanHud, "pieces": _pieces, "pennants": _pennants, "camera": _camera,
 		"arrows": _arrows, "chart": _chart})
 	_table_w = repo.bal("war_table_w_m")
 	_rig.distance = repo.bal("war_cam_distance_m")
@@ -513,6 +513,7 @@ func enter_board() -> void:
 	# selection's rings, the pennants' dashes, the pencils) hangs over the
 	# board while the camera is away (owner 2026-10-07)
 	(%Hud as CanvasItem).visible = false
+	(%PlanHud as CanvasItem).visible = false   # the drafts' pencils and the live strokes too
 	_table_pose = _camera.transform
 	_fly_from = _table_pose
 	_board_dist = _repo.bal("war_board_distance_m")
@@ -540,6 +541,7 @@ func _step_board(delta: float) -> bool:
 			if _board_mode == "to_table":
 				_board_mode = "table"
 				(%Hud as CanvasItem).visible = true
+				(%PlanHud as CanvasItem).visible = true
 				_apply_camera()   # the marks redrawn where the table's view puts them
 				board_left.emit()
 				return false

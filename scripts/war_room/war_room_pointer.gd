@@ -20,6 +20,7 @@ var _pressed := false
 var _view: WarRoomView
 var _repo: DataRepository
 var _hud: WarHud
+var _plan_hud: WarPlanHud
 var _pieces: WarPieces
 var _pennants: WarPennants
 var _camera: Camera3D
@@ -31,6 +32,7 @@ func setup(view: WarRoomView, repo: DataRepository, nodes: Dictionary) -> void:
 	_view = view
 	_repo = repo
 	_hud = nodes["hud"]
+	_plan_hud = nodes["plan_hud"]
 	_pieces = nodes["pieces"]
 	_pennants = nodes["pennants"]
 	_camera = nodes["camera"]
@@ -112,8 +114,8 @@ func redraw() -> void:
 			var at: Variant = _view.screen_pos_of_px(h["at"])
 			if at != null:
 				hints.append(at)
-	_hud.draw_state(rings, input.marquee(), hints, pal["plan_red"], pal["chalk"], _routes(), _drafts(), pal["ink"],
-		pal["pencil"], _view.lettering())
+	_hud.draw_state(rings, input.marquee(), hints, pal["plan_red"], pal["chalk"], _routes(), pal["ink"], _view.lettering())
+	_plan_hud.show_drafts(_repo, _drafts(), pal["pencil"])   # under the crayon
 	_hud.set_route(_handles(_view.aim_code if _view.aiming else ""), pal["plan_blue"])
 	_hud.set_supply(_supply_rings(), pal["supply_route"])
 
