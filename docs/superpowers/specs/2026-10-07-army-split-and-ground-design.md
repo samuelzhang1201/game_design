@@ -90,6 +90,7 @@ The numbers live in a new table, `data/army_split.csv` (key, value, notes):
 - `arm_order` `infantry|archers|cavalry`;
 - `start_ring_infantry` 1, `start_ring_archers` 2, `start_ring_cavalry` 3;
 - `slot_spacing_m` (set in the visual review, §7);
+- `max_rings` (the farthest ring searched for a free slot);
 - `blocked_terrain` `mountains`.
 
 ### 3.1 The rule
