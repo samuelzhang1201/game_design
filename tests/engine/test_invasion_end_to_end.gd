@@ -69,10 +69,13 @@ func _prepare(scenario: String) -> String:
 ## (event), before {treasury, content} of the fall's day, home (the main
 ## host's first homeward day), lifted, beat_scheduled}.
 func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Dictionary = {}) -> Dictionary:
-	if seen.is_empty():
-		seen = {"rumour": -1, "left": {}, "town": "", "siege_begin": -1, "siege_days": [], "repulsed": [],
-			"assaults": [], "battle_letters": [], "fell": -1, "fallen": {}, "defeat": {}, "before": {},
-			"home": -1, "lifted": -1, "beat_scheduled": false, "hungry": 0}
+	var blank := {"rumour": -1, "left": {}, "town": "", "siege_begin": -1, "siege_days": [], "repulsed": [],
+		"assaults": [], "battle_letters": [], "fell": -1, "fallen": {}, "defeat": {}, "before": {},
+		"home": -1, "lifted": -1, "beat_scheduled": false, "hungry": 0, "garrison": [], "dead": {},
+		"fought": [], "first_assault_over": -1}
+	for k: String in blank:
+		if not seen.has(k):
+			seen[k] = blank[k]
 	var main := Play.host(repo, "main")
 	var cross := Play.first_appear(repo)
 	while s.absolute_day() <= last:
@@ -90,6 +93,7 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 			seen["town"] = town
 			for c: String in garrison:
 				Play.place(s, c, Play.town_m(repo, town), ArmySystem.ORDER_GARRISON)
+			seen["garrison"] = garrison.duplicate()
 		for e: Dictionary in engine.day_siege:
 			match String(e.get("kind", "")):
 				"siege_begin":
@@ -113,10 +117,19 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 				"siege_lifted":
 					seen["lifted"] = today
 		for e: Dictionary in engine.day_battles:
-			if String(e.get("kind", "")) == "start" and String(e["town"]) == String(seen["town"]):
+			var k := String(e.get("kind", ""))
+			if k in ["start", "round"] and not today in seen["fought"]:
+				seen["fought"].append(today)
+			if k == "start" and String(e["town"]) == String(seen["town"]):
 				var a := e.duplicate()
 				a["on"] = today
 				seen["assaults"].append(a)
+			if k == "end" and String(e["town"]) == String(seen["town"]) and int(seen["first_assault_over"]) < 0:
+				seen["first_assault_over"] = today
+		var dead := 0
+		for c: String in seen["garrison"]:
+			dead += int(s.regiments[c].get("dead", 0))
+		seen["dead"][today] = dead
 		if s.missives.any(func(m: Dictionary) -> bool:
 				return String(m["kind"]) == "battle" and int(m["day"]) == today):
 			seen["battle_letters"].append(today)
@@ -266,13 +279,28 @@ func test_strong_walled_defence_holds_and_the_host_goes_home() -> void:
 	for c: String in garrison:
 		assert_gt(ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, c)), s.regiments[c]), 0,
 			c + " still stands")
+	# a host going home fights no more: no battle from the day it turns home,
+	# and the garrison's dead are what the assaults cost — at most the first
+	# assault's toll again for each later one, nothing after the host leaves
+	var home := int(seen["home"])
+	assert_eq((seen["fought"] as Array).filter(func(d: int) -> bool: return d >= home), [],
+		"no blow struck from the day the host turned home (day %d)" % home)
+	var first_over := int(seen["first_assault_over"])
+	assert_gt(first_over, 0, "the first assault was fought out")
+	var first_toll := int(seen["dead"].get(first_over, 0))
+	assert_gt(first_toll, 0, "and cost the garrison")
+	var total := int(seen["dead"][DAYS])
+	var bound := first_toll * (seen["assaults"] as Array).size()
+	assert_lte(total, bound, "the garrison's dead %d within %d assaults' worth of the first (%d)" % [
+		total, (seen["assaults"] as Array).size(), first_toll])
+	assert_eq(total, int(seen["dead"][home]), "not one more dead after the host turned home")
 	assert_eq(_war_floats(s), [], "no float in the war's state")
 	var best := 0
 	for e: Dictionary in seen["siege_days"]:
 		best = maxi(best, int(e["progress"]))
-	gut.p("strong: siege d%d, assaults %d, repulsed rounds %d, best progress %d, lifted d%d, home d%d (%s)" % [
+	gut.p("strong: siege d%d, assaults %d, repulsed rounds %d, best progress %d, lifted d%d, home d%d (%s), garrison dead %d (first assault %d)" % [
 		int(seen["siege_begin"]), (seen["assaults"] as Array).size(), (seen["repulsed"] as Array).size(), best,
-		int(seen["lifted"]), int(seen["home"]), s.ai_hosts[main]["mode"]])
+		int(seen["lifted"]), home, s.ai_hosts[main]["mode"], total, first_toll])
 
 
 ## --- determinism ------------------------------------------------------------------

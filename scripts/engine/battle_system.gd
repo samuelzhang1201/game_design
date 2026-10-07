@@ -268,10 +268,13 @@ static func _within(a: Vector2i, b: Vector2i, metres: int) -> bool:
 
 ## A land regiment with state and fit men that is not falling back from a
 ## battle (`disengaging`, cleared when its march ends) nor drawing breath
-## after one (`disengaged_until`, an absolute day still to come).
+## after one (`disengaged_until`, an absolute day still to come), nor a foe
+## whose host is going home (`homeward`).
 static func _can_fight(repo: DataRepository, state: GameState, code: String) -> bool:
 	var reg := ArmySystem.regiment(repo, code)
 	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+		return false
+	if homeward(state, code):
 		return false
 	var e := _stored(state, code)
 	if e.is_empty() or int(e.get("disengaging", 0)) == 1:
@@ -279,6 +282,47 @@ static func _can_fight(repo: DataRepository, state: GameState, code: String) -> 
 	if int(e.get("disengaged_until", 0)) > state.absolute_day():
 		return false
 	return ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), e) > 0
+
+
+## True for a foe whose host (GameState.ai_hosts) is going home — mode RETREAT
+## or WITHDRAW (EnemyAi.HOMEWARD): it makes no contact, joins no battle, and
+## leaves any battle it is in before the day's round (`_withdraw_homeward`).
+static func homeward(state: GameState, code: String) -> bool:
+	var host := String((state.foes.get(code, {}) as Dictionary).get("host", ""))
+	return host != "" and state.ai_hosts.has(host) \
+		and String((state.ai_hosts[host] as Dictionary).get("mode", "")) in EnemyAi.HOMEWARD
+
+
+## Takes every foe of a host going home out of the battles it is in, before
+## the day's contacts and rounds, so the day it turns home it strikes no more
+## blows. A battle left with no foe ENDS (why "withdrawn", the crown's side
+## holding the field) and its survivors draw breath as after a draw (`_pause`);
+## the homeward foes pause too. Battles in id order.
+static func _withdraw_homeward(repo: DataRepository, state: GameState, events: Array) -> void:
+	var order: Array = state.battles.duplicate()
+	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["id"]) < int(b["id"]))
+	var over: Array = []
+	for b: Dictionary in order:
+		var gone: Array = []
+		for side: String in SIDES:
+			for c: Variant in (b[side] as Array).duplicate():
+				if homeward(state, String(c)):
+					(b[side] as Array).erase(c)
+					gone.append(String(c))
+		if gone.is_empty():
+			continue
+		for c: String in gone:
+			_pause(repo, state, c)
+		var foes_left := false
+		for side: String in SIDES:
+			for c: Variant in b[side]:
+				foes_left = foes_left or ArmySystem.is_foe(state, String(c))
+		if foes_left:
+			continue
+		_end(repo, state, b, "withdrawn", events)
+		over.append(int(b["id"]))
+	if not over.is_empty():
+		state.battles = state.battles.filter(func(b: Dictionary) -> bool: return not int(b["id"]) in over)
 
 
 ## The town a foe's host besieges while it waits for its assault: its host
@@ -434,10 +478,11 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 ##  results (apply_round's), left [{code, side, why}], att, def (who fought it,
 ##  before anyone left), town, place_x_m, place_y_m} and
 ## {kind: "end", battle_id, why ("rout_attacker" / "rout_defender" / "emptied" /
-##  "rounds"), winner ("att" / "def" / ""), att, def (the survivors), rounds,
+##  "rounds" / "withdrawn": the foes' host went home), winner ("att" / "def" / ""), att, def (the survivors), rounds,
 ##  town, place_x_m, place_y_m}.
 static func settle_day(repo: DataRepository, state: GameState) -> Array:
 	var events: Array = []
+	_withdraw_homeward(repo, state, events)
 	_detect(repo, state, events)
 	var order: Array = state.battles.duplicate()
 	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["id"]) < int(b["id"]))
@@ -630,11 +675,13 @@ static func _pause(repo: DataRepository, state: GameState, code: String) -> void
 ## End battle `b`: its survivors stay halted where they stand (the player's
 ## await orders; a foe's host decides its own, EnemyAi). A battle that ran to
 ## battle_max_rounds is a DRAW: every survivor pauses (_pause), and if the
-## two are still in contact after it a new battle starts.
+## two are still in contact after it a new battle starts. One its foes' host
+## left ("withdrawn", `_withdraw_homeward`) goes to the side left standing,
+## whose survivors pause the same.
 static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: String, events: Array) -> void:
 	var att: Array = b["att"]
 	var def: Array = b["def"]
-	if why == "rounds":
+	if why == "rounds" or why == "withdrawn":
 		for side: String in SIDES:
 			for c: Variant in b[side]:
 				_pause(repo, state, String(c))
@@ -644,7 +691,7 @@ static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: Str
 			winner = "def"
 		"rout_defender":
 			winner = "att"
-		"emptied":
+		"emptied", "withdrawn":
 			if att.is_empty() and not def.is_empty():
 				winner = "def"
 			elif def.is_empty() and not att.is_empty():
