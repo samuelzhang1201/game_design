@@ -87,23 +87,49 @@ func test_a_right_click_on_open_ground_places_a_supposed_piece_through_the_form(
 	assert_not_null(view.plan_pieces().piece(String(pieces.keys()[0])), "the piece stands on the table")
 
 
-func test_a_stick_from_the_roll_draws_an_arrow_across_the_table() -> void:
+## Spec 2026-10-08-war-room-draw-orders rulings 1-2: two rows, a side first.
+func test_a_rows_slot_draws_a_front_in_that_sides_colour_facing_the_other_side() -> void:
 	var screen := await _room()
 	var view := screen.view()
 	var roll := screen.get_node("%ToolRoll") as WarToolRoll
-	roll.slot("arrow").pressed.emit("arrow")
+	assert_not_null(roll.slot("front", "red"))
+	assert_not_null(roll.slot("front", "blue"))
+	assert_null(roll.slot("ink"), "the pen is retired")
+	assert_null(roll.slot("piece", "blue"), "a supposed piece is theirs only")
+	assert_ne(roll.slot("arrow", "blue").why, "", "no selection: the blue arrow is greyed")
+	roll.slot("front", "red").pressed.emit("front")
 	assert_true(view.plan_input().tool.in_hand())
-	assert_true(roll.slot("arrow").chosen)
-	assert_true(roll.slot("blue").chosen, "the arrow takes the blue crayon")
-	var from := Vector2(view.size) * Vector2(0.3, 0.6)
-	var to := Vector2(view.size) * Vector2(0.6, 0.4)
+	assert_eq(view.plan_input().tool.side, "red")
+	assert_true(roll.slot("front", "red").chosen)
+	assert_false(roll.slot("front", "blue").chosen)
+	assert_lt(roll.row("blue").modulate.a, 1.0, "the other row is dimmed")
+	# a row of open table, no piece of ours within 80 px of it
+	var fy := -1.0
+	for y: float in [0.6, 0.5, 0.7, 0.4, 0.3, 0.75, 0.25]:
+		var a := Vector2(view.size) * Vector2(0.3, y)
+		var b := Vector2(view.size) * Vector2(0.6, y)
+		var clear := WarRoom.pieces(Game.data, Game.state, view.drawn()).all(func(q: Dictionary) -> bool:
+			var at: Variant = view.screen_pos_of_px(q["at"])
+			return at == null or Geometry2D.get_closest_point_to_segment(at, a, b).distance_to(at) > 80.0)
+		if clear and view.pack_at(a).x >= 0.0 and view.pack_at(b).x >= 0.0:
+			fy = y
+			break
+	assert_gt(fy, 0.0, "an open row of table")
+	var from := Vector2(view.size) * Vector2(0.3, fy)
+	var to := Vector2(view.size) * Vector2(0.6, fy)
+	# a blue mark below the line: the red front faces it
+	var below := view.pack_at(Vector2(view.size) * Vector2(0.45, fy) + Vector2(0, 30))
+	Game.draw_plan("phase", "blue", PackedVector2Array([below, below + Vector2(3, 0)]), 0.0, "Line I", false)
 	var target := view.camera_rig().target
 	_drag(view, from, to)
 	assert_eq(view.camera_rig().target, target, "drawing never pans")
-	var strokes: Dictionary = Game.state.war_plans["strokes"]
-	assert_eq(strokes.size(), 1)
-	var s: Dictionary = strokes.values()[0]
-	assert_eq([String(s["kind"]), String(s["colour"])], ["arrow", "blue"])
+	var fronts: Array = (Game.state.war_plans["strokes"] as Dictionary).values().filter(
+		func(s: Dictionary) -> bool: return String(s["kind"]) == "front")
+	assert_eq(fronts.size(), 1)
+	var s: Dictionary = fronts[0]
+	assert_eq(String(s["colour"]), "red")
+	# drawn left to right (east): the drawer's right is the screen's south when the room looks north
+	assert_eq(int(s["flip"]), 0, "its teeth face the blue mark south of it")
 	assert_true(view.plan_input().tool.in_hand(), "the stick stays in hand")
 
 
@@ -114,7 +140,16 @@ func test_escape_lays_the_stick_down_and_digits_pick_a_kind() -> void:
 	k.pressed = true
 	k.keycode = KEY_2
 	screen._unhandled_input(k)
-	assert_eq(view.plan_input().tool.kind, "front")
+	assert_false(view.plan_input().tool.in_hand(), "no side yet: a digit takes nothing")
+	k.keycode = KEY_TAB
+	screen._unhandled_input(k)
+	assert_eq(view.plan_input().tool.side, "blue", "Tab lights a row")
+	k.keycode = KEY_2
+	screen._unhandled_input(k)
+	assert_eq([view.plan_input().tool.side, view.plan_input().tool.kind], ["blue", "front"])
+	k.keycode = KEY_TAB
+	screen._unhandled_input(k)
+	assert_eq([view.plan_input().tool.side, view.plan_input().tool.kind], ["red", "front"], "Tab: the same kind, theirs")
 	k.keycode = KEY_ESCAPE
 	screen._unhandled_input(k)
 	assert_false(view.plan_input().tool.in_hand())
@@ -123,7 +158,7 @@ func test_escape_lays_the_stick_down_and_digits_pick_a_kind() -> void:
 func test_a_phase_line_asks_its_name_and_keeps_it() -> void:
 	var screen := await _room()
 	var view := screen.view()
-	view.plan_input().pick_kind("phase")
+	view.plan_input().pick_kind("phase", "blue")
 	_drag(view, Vector2(view.size) * Vector2(0.4, 0.3), Vector2(view.size) * Vector2(0.45, 0.7))
 	var box := screen.get_node("%PlanName") as WarPlanName
 	assert_true(box.visible, "the name box")
@@ -180,8 +215,85 @@ func test_the_scraper_removes_a_stroke() -> void:
 	var a := view.pack_at(Vector2(view.size) * Vector2(0.3, 0.5))
 	var b := view.pack_at(Vector2(view.size) * Vector2(0.7, 0.5))
 	var id := Game.draw_plan("front", "red", PackedVector2Array([a, b]), 0.0, "", false)
-	view.plan_input().pick_action(WarPlanInput.SCRAPE)
+	view.plan_input().pick_action("red", WarPlanInput.SCRAPE)
 	var on: Vector2 = view.screen_pos_of_px(a.lerp(b, 0.5))
 	_button(view, on, true)
 	_button(view, on, false)
 	assert_false((Game.state.war_plans["strokes"] as Dictionary).has(id))
+
+
+
+func test_the_blue_scraper_leaves_a_red_mark() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var a := view.pack_at(Vector2(view.size) * Vector2(0.3, 0.5))
+	var b := view.pack_at(Vector2(view.size) * Vector2(0.7, 0.5))
+	var id := Game.draw_plan("front", "red", PackedVector2Array([a, b]), 0.0, "", false)
+	view.plan_input().pick_action("blue", WarPlanInput.SCRAPE)
+	var on: Vector2 = view.screen_pos_of_px(a.lerp(b, 0.5))
+	_button(view, on, true)
+	_button(view, on, false)
+	assert_true((Game.state.war_plans["strokes"] as Dictionary).has(id), "ours scrapes only ours")
+
+
+## Ruling 17: the red arrow is drawn for a selected supposed piece, and goes with it.
+func test_a_red_arrow_is_drawn_for_a_selected_supposed_piece() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var at := _open_land(screen)
+	var id := Game.place_plan_piece("cavalry", 2000, WarPlans.UNKNOWN, view.pack_at(at), 0)
+	await wait_process_frames(2)
+	var roll := screen.get_node("%ToolRoll") as WarToolRoll
+	assert_ne(roll.slot("arrow", "red").why, "")
+	var spot: Vector2 = view.screen_pos_of_px(WarPlans.at_px(Game.data, Game.state.war_plans["pieces"][id]))
+	_button(view, spot, true)
+	_button(view, spot, false)
+	assert_eq([view.plan_input().sel_side, view.plan_input().sel], ["red", [id]])
+	assert_eq(roll.slot("arrow", "red").why, "", "a supposed piece selected: the red arrow is live")
+	roll.slot("arrow", "red").pressed.emit("arrow")
+	_drag(view, spot + Vector2(10, 0), spot + Vector2(160, -40))
+	var arrows: Array = (Game.state.war_plans["strokes"] as Dictionary).values().filter(
+		func(s: Dictionary) -> bool: return String(s["kind"]) == "arrow")
+	assert_eq(arrows.size(), 1)
+	assert_eq([String(arrows[0]["colour"]), String(arrows[0]["of"])], ["red", id])
+	Game.remove_plan(id)
+	assert_true((Game.state.war_plans["strokes"] as Dictionary).is_empty(), "the piece's arrow went with it")
+
+
+## Ruling 18: a spy's report of foreign men is a hint the red arrow is drawn from.
+func test_an_intel_hint_is_selected_and_its_ants_march() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var at := _open_land(screen)
+	var pk := view.pack_at(at)
+	MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", Game.state.absolute_day(),
+		MissiveLog.subject("point", "", -1, pk), "Spy report — here",
+		[MissiveLog.span("troops_foreign", "Foreign men", 600, 900)]))
+	view.redraw_marks()
+	var hud := view.get_node("%Hud") as WarHud
+	assert_eq((hud.marks()["hints"] as Array).size(), 1, "the hint is drawn")
+	var spot: Vector2 = view.screen_pos_of_px(Vector2(roundi(pk.x), roundi(pk.y)))
+	_button(view, spot, true)
+	_button(view, spot, false)
+	assert_eq(view.plan_input().sel_side, "red")
+	assert_string_starts_with(String(view.plan_input().sel[0]), "h")
+	assert_eq((screen.get_node("%ToolRoll") as WarToolRoll).slot("arrow", "red").why, "")
+
+
+## Ruling 12: a chosen front's facing handle flips its teeth.
+func test_the_facing_handle_flips_a_chosen_front() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var a := view.pack_at(Vector2(view.size) * Vector2(0.3, 0.5))
+	var b := view.pack_at(Vector2(view.size) * Vector2(0.7, 0.5))
+	var id := Game.draw_plan("front", "red", PackedVector2Array([a, b]), 0.0, "", false, 0)
+	var on: Vector2 = view.screen_pos_of_px(a.lerp(b, 0.3))
+	_button(view, on, true)
+	_button(view, on, false)
+	assert_eq(view.plan_input().chosen_id, id)
+	var hud := view.get_node("%PlanHud") as WarPlanHud
+	var f: Dictionary = hud.facing()
+	assert_false(f.is_empty(), "the facing arrow shows")
+	_button(view, f["at"], true)
+	_button(view, f["at"], false)
+	assert_eq(int(Game.state.war_plans["strokes"][id]["flip"]), 1, "a click flips the teeth")

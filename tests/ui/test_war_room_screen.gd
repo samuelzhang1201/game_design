@@ -164,8 +164,8 @@ func _roll(view: WarRoomView) -> void:
 
 
 ## The clock is held in the room (owner 2026-10-02), so the map's "pause the
-## clock first" never stands between the rake and its march.
-func test_the_clock_cannot_run_in_the_room_so_the_rake_always_arms() -> void:
+## clock first" never stands between a drawn arrow and its march.
+func test_the_clock_cannot_run_in_the_room_so_a_drawn_march_always_arms() -> void:
 	var r: GameRoot = await _court()
 	Game.set_clock_speed(1)
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
@@ -173,13 +173,15 @@ func test_the_clock_cannot_run_in_the_room_so_the_rake_always_arms() -> void:
 	Game.set_clock_speed(1)
 	assert_eq(Game.clock_speed, 0, "nothing starts the clock in the room")
 	var screen := r.war_room_screen()
-	var code := String(_land_piece(screen)["code"])
-	screen.view().rake_started.emit(code)
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	var to := _land_near(screen, p["at"])
+	screen.view().plan_input().order_drawn.emit([code], PackedVector2Array([p["at"], to]), 0.01)
 	assert_eq(screen.orders().aiming(), code, "the march is armed")
 	screen.orders().withdraw_aim()
 
 
-func test_a_committed_rake_pencils_a_draft_pennant() -> void:
+func test_a_committed_march_pencils_a_draft_pennant() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(2)
@@ -191,7 +193,7 @@ func test_a_committed_rake_pencils_a_draft_pennant() -> void:
 			p = q
 			break
 	var code := String(p["code"])
-	screen.view().rake_started.emit(code)
+	screen.orders().aim_for(code)
 	assert_eq(screen.orders().aiming(), code)
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(6.0, 0.0)
 	if MapEconomy.cell_at(Game.data, to) < 0:
@@ -227,19 +229,23 @@ func _land_piece(screen: WarRoomScreen) -> Dictionary:
 
 
 ## A land point of the sheet, at least war_rake_min_px + 4 design px from `at` on the screen.
-func _land_near(screen: WarRoomScreen, at: Vector2) -> Vector2:
+func _land_near(screen: WarRoomScreen, at: Vector2, min_px := -1.0) -> Vector2:
 	var from: Vector2 = screen.view().screen_pos_of_px(at)
-	for k: float in [6.0, 12.0, 24.0, 40.0]:
+	var least := min_px if min_px > 0.0 else Game.data.bal("war_rake_min_px") + 4.0
+	for k: float in [6.0, 12.0, 24.0, 40.0, 60.0]:
 		for d: Vector2 in [Vector2(-k, 0), Vector2(0, -k), Vector2(k, 0), Vector2(0, k)]:
 			var scr: Variant = screen.view().screen_pos_of_px(at + d)
 			if scr != null and MapEconomy.cell_at(Game.data, at + d) >= 0 \
-					and (scr as Vector2).distance_to(from) >= Game.data.bal("war_rake_min_px") + 4.0 \
+					and (scr as Vector2).distance_to(from) >= least \
 					and screen.view().pack_at(scr).x >= 0.0:
 				return at + d
 	return at
 
 
-func test_a_real_drag_from_a_piece_pencils_a_draft() -> void:
+## Spec 2026-10-08-war-room-draw-orders rulings 6-10, 16: a click selects
+## the piece, the blue row's arrow is drawn by real input from anywhere, the
+## confirm opens with the stroke as the route, Confirm pencils the draft.
+func test_a_real_blue_arrow_drawn_for_a_selected_piece_pencils_its_march() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(3)
@@ -249,20 +255,104 @@ func test_a_real_drag_from_a_piece_pencils_a_draft() -> void:
 	var p := _land_piece(screen)
 	var code := String(p["code"])
 	var from: Vector2 = view.screen_pos_of_px(p["at"])
-	var to: Vector2 = view.screen_pos_of_px(_land_near(screen, p["at"]))
+	var to: Vector2 = view.screen_pos_of_px(_land_near(screen, p["at"], Game.data.bal("war_plan_min_len_px") + 16.0))
 	_real_press(view, from, true)
-	var e := InputEventMouseMotion.new()
-	e.position = to
-	e.button_mask = MOUSE_BUTTON_MASK_LEFT
-	view._gui_input(e)
-	assert_eq(screen.orders().aiming(), code, "the drag armed the march")
+	_real_press(view, from, false)
+	assert_true(code in view.plan_input().sel, "the click selected it")
+	var roll := screen.get_node("%ToolRoll") as WarToolRoll
+	roll.slot("arrow", "blue").pressed.emit("arrow")
+	assert_true(view.plan_input().tool.in_hand(), "the blue arrow is in hand")
+	_real_press(view, from, true)
+	for i in range(1, 13):
+		var e := InputEventMouseMotion.new()
+		e.position = from.lerp(to, float(i) / 12.0)
+		e.button_mask = MOUSE_BUTTON_MASK_LEFT
+		view._gui_input(e)
 	_real_press(view, to, false)
-	assert_true(screen.orders().pending().x >= 0.0, "the release named a destination and asked COMMIT / CANCEL")
+	assert_eq(screen.orders().aiming(), code, "the drawn arrow armed the march")
+	assert_not_null(screen.orders().shown_confirm(), "and its confirm stands")
+	assert_true((view.get_node("%PlanHud") as WarPlanHud).drawing(), "the pending march is drawn in blue crayon")
 	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	await wait_process_frames(2)
 	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "the war room pencils a draft")
 	assert_true(WarRoom.pennant_of(Game.data, Game.state, code).is_empty(), "no courier rides for a draft")
 	assert_not_null((view.get_node("%Pennants") as WarPennants).pennant(code + "_draft"))
+	assert_eq(int(Game.state.war_plans["rev"]), 0, "an order is no mark on the paper")
+
+
+## Rulings 9, 13, 15: a march drawn for several lists each; the supply town
+## chosen rides with every one's draft.
+func test_a_march_drawn_for_two_pencils_two_drafts_with_their_supply_town() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var codes: Array = []
+	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		if String(reg.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(Game.data, reg) > 0:
+			codes.append(String(reg["regiment_code"]))
+	codes = codes.slice(0, 2)
+	assert_eq(codes.size(), 2)
+	var start := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, codes[0]))
+	var to := _land_near(screen, start)
+	view.plan_input().order_drawn.emit(codes, PackedVector2Array([start, start.lerp(to, 0.5), to]), 0.01)
+	var menu := screen.orders()
+	var panel := menu.shown_confirm()
+	assert_not_null(panel)
+	assert_eq(panel.shown_group().size(), 2, "each regiment listed")
+	assert_eq(menu.marching().size(), 2)
+	var town := ""
+	var ok := SupplyLines.march_eligibility(Game.data, Game.state, codes[0], to)
+	var ok2 := SupplyLines.march_eligibility(Game.data, Game.state, codes[1], to)
+	var towns: Array = ok.keys()
+	towns.sort()
+	for t: String in towns:
+		if String(ok[t]) == "" and String(ok2.get(t, "x")) == "":
+			town = t
+			break
+	if town == "":
+		pending("no town reaches both")
+		return
+	panel.select_supply(town)
+	assert_eq(menu.supply_choice(), town)
+	assert_gt(view.supply_preview.size(), 1, "the bold dashed road to the end is laid")
+	assert_false(view.supply_pick.is_empty(), "the towns that may supply it are lit")
+	panel.confirm_button().pressed.emit()
+	await wait_process_frames(2)
+	for c: String in codes:
+		var d := WarDrafts.of(Game.state, c)
+		assert_eq(String(d.get("order", "")), "march", c)
+		if String(SupplyLines.line(Game.state, c).get("town", "")) != town:
+			assert_eq(String(d.get("supply_town", "")), town, "the supply town rides on " + c)
+	assert_true(view.supply_preview.is_empty(), "the road is put away with the confirm")
+
+
+## Ruling 9: a regiment left unticked on the confirm is not sent.
+func test_a_regiment_unticked_on_the_confirm_stays() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var codes: Array = []
+	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		if String(reg.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(Game.data, reg) > 0:
+			codes.append(String(reg["regiment_code"]))
+	codes = codes.slice(0, 2)
+	var start := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, codes[0]))
+	var to := _land_near(screen, start)
+	view.plan_input().order_drawn.emit(codes, PackedVector2Array([start, to]), 0.01)
+	var panel := screen.orders().shown_confirm()
+	panel.regiment_toggled.emit(codes[0], false)
+	assert_eq(screen.orders().marching(), [codes[1]], "the lead left out: the next leads")
+	assert_eq(view.aim_code, codes[1])
+	panel.confirm_button().pressed.emit()
+	await wait_process_frames(2)
+	assert_true(WarDrafts.of(Game.state, codes[0]).is_empty())
+	assert_eq(String(WarDrafts.of(Game.state, codes[1]).get("order", "")), "march")
 
 
 ## Spec 2026-10-07-march-waypoints ruling 9: with the confirm standing, a real
@@ -382,7 +472,7 @@ func test_an_order_on_the_map_sets_the_rooms_draft_aside_and_says_so() -> void:
 	assert_true(heard.any(func(t: String) -> bool: return t.contains("draft")), "the news says the draft is set aside")
 
 
-func test_a_rake_released_off_the_table_withdraws_the_armed_march() -> void:
+func test_a_sheet_roll_gives_the_pending_march_up() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(3)
@@ -390,31 +480,7 @@ func test_a_rake_released_off_the_table_withdraws_the_armed_march() -> void:
 	var screen := r.war_room_screen()
 	var view := screen.view()
 	var p := _land_piece(screen)
-	var from: Vector2 = view.screen_pos_of_px(p["at"])
-	_real_press(view, from, true)
-	var e := InputEventMouseMotion.new()
-	e.position = from + Vector2(50, 0)
-	e.button_mask = MOUSE_BUTTON_MASK_LEFT
-	view._gui_input(e)
-	assert_eq(screen.orders().aiming(), String(p["code"]))
-	_real_press(view, Vector2(-50, -50), false)
-	assert_eq(screen.orders().aiming(), "")
-
-
-func test_a_sheet_roll_withdraws_a_rake_in_hand_s_armed_march() -> void:
-	var r: GameRoot = await _court()
-	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_process_frames(3)
-	Game.set_clock_speed(0)
-	var screen := r.war_room_screen()
-	var view := screen.view()
-	var p := _land_piece(screen)
-	var from: Vector2 = view.screen_pos_of_px(p["at"])
-	_real_press(view, from, true)
-	var e := InputEventMouseMotion.new()
-	e.position = from + Vector2(50, 0)
-	e.button_mask = MOUSE_BUTTON_MASK_LEFT
-	view._gui_input(e)
+	view.plan_input().order_drawn.emit([String(p["code"])], PackedVector2Array([p["at"], _land_near(screen, p["at"])]), 0.01)
 	assert_eq(screen.orders().aiming(), String(p["code"]))
 	view.swap_to((view.sheet_index() + 1) % WarSheets.series(Game.data).size())
 	assert_eq(screen.orders().aiming(), "")
@@ -1040,18 +1106,7 @@ func test_a_rest_on_the_table_shows_the_slip_and_a_move_hides_it() -> void:
 	assert_false(slip.visible)
 
 
-func test_a_dropped_rake_hides_the_slip() -> void:
-	var screen := await _open_room()
-	var view := screen.view()
-	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
-	var at := Vector2(view.size) * 0.5
-	view.ground_hovered.emit(view.pack_at(at), at)
-	await wait_process_frames(1)
-	view.rake_dropped.emit()
-	assert_false(slip.visible)
-
-
-func test_the_rakes_slip_goes_when_the_aim_ends() -> void:
+func test_the_arrows_slip_goes_when_the_aim_ends() -> void:
 	var screen := await _open_room()
 	var view := screen.view()
 	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
@@ -1062,7 +1117,7 @@ func test_the_rakes_slip_goes_when_the_aim_ends() -> void:
 			break
 	view.aiming = true
 	var at := Vector2(view.size) * 0.5
-	view.rake_aimed.emit(code, view.pack_at(at), at)
+	view.order_aimed.emit(code, view.pack_at(at), at)
 	await wait_process_frames(1)
 	assert_true(slip.visible)
 	view.aiming = false   # COMMIT, a click away or Escape: ArmyOrderMenu._set_aim("")

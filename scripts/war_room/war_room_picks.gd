@@ -2,7 +2,7 @@ class_name WarRoomPicks
 extends RefCounted
 ## The room's left-button picking (spec 2026-10-01-war-room-design §2-3): what
 ## a click at a screen px asks for — an edge arrow, then the wall chart, then
-## (WarRoomRake) a pennant, a piece. Static answers; the rake acts on them.
+## (WarRoomPointer) a pennant, a piece. Static answers; the pointer acts on them.
 
 
 ## The sheet a click at `screen_px` asks for: an edge arrow, then the wall

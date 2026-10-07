@@ -1,18 +1,19 @@
-class_name WarRoomRake
+class_name WarRoomPointer
 extends RefCounted
-## The player's rake and the room's left button (spec 2026-10-01-war-room-design
-## §3): a click picks, in turn, an edge arrow, the wall chart, a pennant (its
-## Edit route / Cancel march), a piece, else the ground of an armed march; a
-## press on a piece that moves war_rake_min_px takes up the RAKE — the view
-## signals `rake_started`, the screen arms the march (or refuses and calls
-## `cancel`), an ink arrow follows the pointer reading the distance and the
-## days at the regiment's own pace, and its release on the table is the
-## destination (`ground_clicked`, which asks COMMIT / CANCEL). Draws through
-## WarHud. Never reaches the Game autoload.
+## The room's left button and its marks on the HUD (spec 2026-10-01-war-room-
+## design §3, 2026-10-08-war-room-draw-orders rulings 11, 13, 16): a click
+## picks, in turn, a pennant (its route menu), one of our pieces (selected —
+## a town's garrison piece selects its every regiment; Shift adds or takes it
+## out), an edge arrow, the wall chart, else the ground of a march waiting on
+## its confirm (a lit town there is chosen to supply it); a click on open
+## table lets the selection go. A drag pans, from a piece too (orders are
+## DRAWN: WarPlanInput). While the confirm stands, a press near the pending
+## route bends it. Draws through WarHud: the selection's rings in its side's
+## colour, the chalk marquee, the intel hints' marching ants, the pennants'
+## dashes, the drafts' pencils, the waypoints' rings, the towns that may supply
+## the march and the bold dashed gold road from the chosen one. Never reaches
+## the Game autoload.
 
-var code := ""                    # the regiment under the rake
-var to := Vector2(-1, -1)         # the arrow's tip, screen px; (-1, -1) none
-var _press_code := ""
 var _bend := -1                   # the planned route's waypoint in hand, -1 none
 var _press_at := Vector2.ZERO
 var _pressed := false
@@ -38,48 +39,6 @@ func setup(view: WarRoomView, repo: DataRepository, nodes: Dictionary) -> void:
 	_hud.setup(repo)
 
 
-## The rake let go (refused, the aim ended): no arrow.
-func cancel() -> void:
-	code = ""
-	_press_code = ""
-	to = Vector2(-1, -1)
-	redraw()
-
-
-## A rake in hand is given up for good (released off the table, cut by a sheet
-## rolling): the view says so (`rake_dropped`), for the screen to withdraw the
-## armed march with it. Nothing in hand, nothing said.
-func drop() -> void:
-	var held := code != ""
-	cancel()
-	if held:
-		_view.rake_dropped.emit()
-		_view.hover_cleared.emit()
-
-
-## "<distance> <unit> · ~<days> day(s)" from the regiment to a pack point, in
-## the pack's own measure, the days ONE arrival figure — the courier's ride and
-## the march after it (owner 2026-10-02); "cannot march" for a banner with no
-## one to march.
-## Through the planned waypoints when the march being planned is this
-## regiment's, measured along the curve it will walk (spec 2026-10-07-march-waypoints).
-func reading(regiment: String, to_px: Vector2) -> String:
-	var state := _view.state()
-	var from := _view.position_of(regiment)
-	var wps: Array = Array(_view.aim_waypoints) if _view.aim_code == regiment else []
-	var unit := String(_repo.map_info.get("distance_unit", "")).strip_edges()
-	var curve := ArmySystem.curve_px(_repo, from, wps, to_px)
-	var px := 0.0
-	for i in range(1, curve.size()):
-		px += curve[i - 1].distance_to(curve[i])
-	var dist := px * float(_repo.map_info.get("distance_scale", "1"))
-	var text := "%s %s" % [WarRoom.group(int(round(dist))), unit if unit != "" else "km"]
-	if ArmySystem.day_march_m(_repo, state, regiment) <= 0:
-		return text + " · cannot march"
-	var days := CourierSystem.arrival_days(_repo, state, regiment, to_px, from, -1, wps)
-	return text + " · ~%d day%s" % [days, "" if days == 1 else "s"]
-
-
 func on_left(mb: InputEventMouseButton) -> void:
 	if mb.pressed and _press_bend(mb.position):
 		_view.accept_event()   # a waypoint in hand: no pick, no pan
@@ -93,25 +52,12 @@ func on_left(mb: InputEventMouseButton) -> void:
 	if mb.pressed:
 		_press_at = mb.position
 		_pressed = true
-		_press_code = _view.order_code_of(_view.piece_under(mb.position))
 		return
 	if not _pressed:
 		return
 	_pressed = false
-	var moved := mb.position.distance_to(_press_at) >= _repo.bal("war_rake_min_px")
-	if code != "":
-		var px := _view.pack_at(mb.position)
-		to = mb.position
-		if _view.aiming and px.x >= 0.0:
-			code = ""
-			_view.ground_clicked.emit(px, mb.position)
-		else:
-			drop()   # off the table: no destination, so the armed march goes too
-		redraw()
-		_view.accept_event()
-		return
-	if moved and not (_view.aiming and _press_code == ""):
-		return
+	if mb.position.distance_to(_press_at) >= _repo.bal("war_rake_min_px"):
+		return   # a pan, not a click
 	var scale := _view.window_scale()
 	var arrow := WarRoomWall.pick_arrow(_arrows, _camera, mb.position, scale, _repo.bal("war_pick_px"))
 	var chart := -1 if arrow >= 0 else WarRoomWall.pick_chart(_chart, _camera, _repo, mb.position * scale)
@@ -121,22 +67,17 @@ func on_left(mb: InputEventMouseButton) -> void:
 	# what stands ON the sheet (a pennant, a piece) is picked before the flat
 	# chart its top may be drawn over (v2 B: a piece at a sheet's north edge
 	# throws its pennant's head over the index chart)
-	if pennant != "":
+	if pennant != "" and not _view.aiming:
 		_view.route_clicked.emit(pennant, mb.position)
-	elif piece != "" and _view.garrison_of(piece).size() > 1:
-		# a town's garrison: which of its regiments (owner 2026-10-06, choice A)
-		_view.select(piece)
-		_view.garrison_menu_requested.emit(_view.garrison_of(piece), mb.position)
-	elif piece != "":
-		_view.select(piece)
+	elif piece != "" and not _view.aiming:
+		_view.select(piece, mb.shift_pressed)
 	elif arrow >= 0:
 		_view.sheet_requested.emit(arrow)   # an edge arrow lays at once
 	elif chart >= 0:
 		_view.toss_to(chart)                # a chart cell: the marker is tossed first
 	elif _view.aiming and _view.pack_at(mb.position).x >= 0.0:
 		_view.ground_clicked.emit(_view.pack_at(mb.position), mb.position)
-		redraw()   # the end is held now: the arrow is drawn to it, dashed
-	elif _view.selected_army() != "":
+	elif _view.has_selection():
 		_view.clear_selection()
 	else:
 		return
@@ -144,61 +85,94 @@ func on_left(mb: InputEventMouseButton) -> void:
 
 
 func on_motion(mm: InputEventMouseMotion) -> void:
-	if _bend >= 0:
-		var px := _view.pack_at(mm.position)
-		var wps := _view.aim_waypoints
-		if px.x >= 0.0 and _bend < wps.size():
-			wps[_bend] = px
-			_view.aim_waypoints = wps   # redraws
+	if _bend < 0:
 		return
-	if _pressed and code == "" and _press_code != "" \
-			and mm.position.distance_to(_press_at) >= _repo.bal("war_rake_min_px"):
-		code = _press_code
-		_press_code = ""
-		to = mm.position
-		_view.rake_started.emit(code)   # the screen arms the march, or calls cancel
-	elif _view.aiming and _view.aim_dest.x < 0.0:
-		to = mm.position
-	else:
-		return
-	redraw()
+	var px := _view.pack_at(mm.position)
+	var wps := _view.aim_waypoints
+	if px.x >= 0.0 and _bend < wps.size():
+		wps[_bend] = px
+		_view.aim_waypoints = wps   # redraws
 
 
-## The arrow (from the piece to the pointer, or to the held destination,
-## dashed) and the chalk ring round the chosen piece, onto the HUD.
+## The HUD's marks: the selection's rings, the marquee, the hints, the
+## pennants' dashes, the drafts' pencils, the pending route's rings, the
+## supply pick.
 func redraw() -> void:
 	var pal: Dictionary = _repo.war_palette
-	var from := Vector2(-1, -1)
-	var tip := Vector2(-1, -1)
-	var text := ""
-	var held := _view.aim_dest.x >= 0.0
-	var path := PackedVector2Array()
-	var who := code if code != "" else (_view.aim_code if _view.aiming else "")
-	if _view.rolling():
-		who = ""   # the table is rolling up: the pieces, pennants and their marks are put away
-	if who != "":
-		var home := _view.position_of(who)
-		var at: Variant = _view.screen_pos_of_px(home) if _view.sheet_rect().has_point(home) else null
+	var input := _view.plan_input()
+	var rings: Array = []
+	if not _view.rolling() and input.sel_side != "":
+		var colour: Color = pal["plan_blue"] if input.sel_side == "blue" else pal["plan_red"]
+		var r := _repo.bal("war_pick_px") * _repo.bal("war_select_ring_ratio")
+		for at: Vector2 in _selected_spots(input):
+			rings.append({"at": at, "r": r, "colour": colour})
+	var hints: Array = []
+	if not _view.rolling():
+		for h: Dictionary in input.hints_on_sheet():
+			var at: Variant = _view.screen_pos_of_px(h["at"])
+			if at != null:
+				hints.append(at)
+	_hud.draw_state(rings, input.marquee(), hints, pal["plan_red"], pal["chalk"], _routes(), _drafts(), pal["ink"],
+		pal["pencil"], _view.lettering())
+	_hud.set_route(_handles(_view.aim_code if _view.aiming else ""), pal["plan_blue"])
+	_hud.set_supply(_supply_rings(), _supply_road(), pal["supply_route"])
+
+
+## Where each selected thing stands on the screen: our pieces (a garrison's
+## regiments share its piece), supposed pieces, intel hints.
+func _selected_spots(input: WarPlanInput) -> Array:
+	var out: Array = []
+	var seen := {}
+	var st := _view.state()
+	for id: Variant in input.sel:
+		var at: Variant = null
+		if input.sel_side == "blue":
+			var node := _pieces.piece(String(id))
+			if node == null:
+				for q: Dictionary in WarRoom.on_sheet(_repo, st, _view.sheet_index(), _view.drawn()):
+					if String(id) in (q.get("garrison", [q["code"]]) as Array):
+						node = _pieces.piece(String(q["code"]))
+			if node != null and not _camera.is_position_behind(node.global_position):
+				at = _camera.unproject_position(node.global_position) / _view.window_scale()
+		elif String(id).begins_with("p"):
+			var p: Dictionary = st.war_plans[WarPlans.PIECES].get(String(id), {})
+			at = _view.screen_pos_of_px(WarPlans.at_px(_repo, p)) if not p.is_empty() else null
+		else:
+			var h := WarRoom.hint_of(_repo, st, String(id))
+			at = _view.screen_pos_of_px(h["at"]) if not h.is_empty() else null
+		if at != null and not seen.has(Vector2i((at as Vector2).round())):
+			seen[Vector2i((at as Vector2).round())] = true
+			out.append(at)
+	return out
+
+
+## The towns that may supply the pending march, on the screen: [{at, lit}].
+func _supply_rings() -> Array:
+	var out: Array = []
+	var pick: Dictionary = _view.supply_pick
+	var towns: Array = pick.keys()
+	towns.sort()
+	for t: String in towns:
+		var b: Dictionary = _repo.burgs.get(t, {})
+		if b.is_empty():
+			continue
+		var px := Vector2(float(b["x"]), float(b["y"]))
+		if not _view.sheet_rect().has_point(px):
+			continue
+		var at: Variant = _view.screen_pos_of_px(px)
 		if at != null:
-			from = at
-			var px := Vector2(-1, -1)
-			if held:
-				var end: Variant = _view.screen_pos_of_px(_view.aim_dest)
-				tip = end if end != null else tip
-				px = _view.aim_dest
-			elif to.x >= 0.0:
-				tip = to
-				px = _view.pack_at(to)
-			text = reading(who, px) if px.x >= 0.0 else ""
-			if px.x >= 0.0:
-				path = _screen_curve(_view.position_of(who), px, from)
-	var chalk := Vector2(-1, -1)
-	var node := _pieces.piece(_view.selected_army()) if _view.selected_army() != "" else null
-	if node != null and not _view.rolling() and not _camera.is_position_behind(node.global_position):
-		chalk = _camera.unproject_position(node.global_position) / _view.window_scale()
-	_hud.draw_state(from, tip, text, chalk, _repo.bal("war_pick_px") * _repo.bal("war_hud_chalk_ratio"),
-		pal["ink"], pal["arrow"], pal["chalk"], _view.lettering(), held, _routes(), _drafts(), pal["pencil"])
-	_hud.set_route(path if path.size() > 2 else PackedVector2Array(), _handles(who))
+			out.append({"at": at, "lit": String(pick[t]) == ""})
+	return out
+
+
+## The chosen supply town's road to the march's end, screen px.
+func _supply_road() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p: Vector2 in _view.supply_preview:
+		var at: Variant = _view.screen_pos_of_px(p)
+		if at != null:
+			out.append(at)
+	return out
 
 
 ## Each pennant's dashed line from its piece (where we know it stands) to the
@@ -322,10 +296,9 @@ func _press_bend(at: Vector2) -> bool:
 	return true
 
 
-## A left press on open table with nothing in hand and no march armed: a drag
-## from it pans the room (spec 2026-10-02-war-room-v2 §1.1), as on the 3D map.
+## A left press that may pan: anything but a bend (a pan from a piece too).
 func empty_press() -> bool:
-	return _pressed and _press_code == "" and code == "" and not _view.aiming
+	return _pressed and _bend < 0
 
 
 ## A left release that ends a press which moved (a pan), so it is no click.
@@ -333,7 +306,6 @@ func empty_press_moved(at: Vector2) -> bool:
 	return _pressed and at.distance_to(_press_at) >= _repo.bal("war_rake_min_px")
 
 
-## The press was taken by something else (the easel): the rake forgets it.
+## The press was taken by something else (the easel): it is forgotten.
 func forget_press() -> void:
 	_pressed = false
-	_press_code = ""

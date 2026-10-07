@@ -6,7 +6,9 @@ extends Control
 ## The only WAR ROOM piece that touches Game: it binds the view, redraws it
 ## after a state change (at most once a frame), opens a chosen regiment's
 ## folio docked in its upper-left, and runs orders through the map's own
-## ArmyOrderMenu.
+## ArmyOrderMenu — an order is a blue arrow drawn for the selected regiments
+## (spec 2026-10-08-war-room-draw-orders): the stroke is fitted into a route
+## (WarOrderSketch) and the march's confirm opens with it.
 
 signal closed
 
@@ -50,8 +52,7 @@ func _ready() -> void:
 	_view.board_left.connect(_show_board_chrome.bind(false))
 	_view.piece_selected.connect(_on_piece)
 	_view.selection_cleared.connect(_folio.close)   # the docked book is the chosen piece's
-	_view.rake_started.connect(_on_rake)
-	_view.rake_dropped.connect(_orders.withdraw_aim)   # a rake given up takes its armed march with it
+	_view.sheet_rolling.connect(_orders.withdraw_aim)   # a pending march does not follow the table up
 	_orders.drafting = true   # orders given in the room are drafts until sealed (spec 2026-10-02-war-room-v2 §3.1)
 	_view.sheet_requested.connect(_view.swap_to)
 	_view.sheet_laid.connect(_on_laid)
@@ -112,9 +113,10 @@ func open() -> void:
 		slip.setup(Game.data)
 		_view.ground_hovered.connect(_on_ground_hovered)
 		_view.piece_hovered.connect(_on_piece_hovered)
-		_view.rake_aimed.connect(_on_rake_aimed)
+		_view.order_aimed.connect(_on_order_aimed)
 		_view.hover_cleared.connect(slip.hide_slip)
-		_view.rake_dropped.connect(slip.hide_slip)
+		_view.plan_input().order_drawn.connect(_on_order_drawn)
+		_view.plan_input().refused.connect(Game.publish_news)
 		_view.set_caps_font(UiPalette.role_font("header"))
 		Game.plans_changed.connect(_view.refresh_plans)
 		_plans.bind(self, _view, %GroundMenu, %PlanForm, %PlanName, %ToolRoll, slip)
@@ -435,11 +437,11 @@ func _on_piece_hovered(code: String, screen_px: Vector2) -> void:
 	_show_slip(WarPieceSlip.lines(Game.data, WarPieceSlip.reading(Game.data, Game.state, codes), town), screen_px)
 
 
-## A rake aimed: read its destination for the raked regiment, the days left to
-## the arrow's own reading.
-func _on_rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2) -> void:
+## An order arrow being drawn: read its tip for the selection's first
+## regiment, with the days there.
+func _on_order_aimed(code: String, pack_px: Vector2, screen_px: Vector2) -> void:
 	var r := WarGround.reading(Game.data, Game.state, pack_px, code)
-	var lines := WarGround.lines(Game.data, r, true)
+	var lines := WarGround.lines(Game.data, r)
 	lines.append_array(_plans.contact_lines(code, pack_px))   # a supposed host within reach of the tip
 	_show_slip(lines, screen_px, true)
 
@@ -474,9 +476,20 @@ func _make_way() -> void:
 	slip.visible = room and _view.board_mode() == "table"
 
 
-## The rake took hold of a piece: arm the march, or say why not.
-func _on_rake(code: String) -> void:
-	var why := _orders.aim_for(code)
+## A blue arrow drawn for the selected regiments (spec 2026-10-08-war-room-
+## draw-orders rulings 7-9): the stroke fitted into the drawn path, each
+## regiment joining it where it stands nearest, and the march's confirm opened
+## with every regiment's route — or the news says why not.
+func _on_order_drawn(codes: Array, samples: PackedVector2Array, tol: float) -> void:
+	var path := WarOrderSketch.fit(Game.data, samples, tol)
+	if path.size() < 2:
+		Game.publish_news("Draw the march's route a little longer.")
+		return
+	var routes := {}
+	for c: Variant in codes:
+		var code := String(c)
+		routes[code] = WarOrderSketch.route_for(Game.data, _view.position_of(code), path)
+	var tip: Variant = _view.screen_pos_of_px(path[path.size() - 1])
+	var why := _orders.plan_group(codes, routes, path[path.size() - 1], tip if tip != null else Vector2.ZERO)
 	if why != "":
 		Game.publish_news(why)
-		_view.cancel_rake()

@@ -92,3 +92,15 @@ func test_short_counts_the_days_the_stores_will_not_cover() -> void:
 		else:
 			assert_eq(int(row["set_out"]), 0)
 		assert_eq(int(row["short"]), maxi(0, int(row["march"]) - int(row["set_out"])))
+
+
+func test_a_march_of_several_reads_the_last_arrival_the_trains_together_and_the_worst_shortfall() -> void:
+	var a := [{"days": 10, "label": "10 days", "arrive": 9, "march": 7, "units": 100, "lasts": 10, "set_out": 10, "short": 0},
+		{"days": 20, "label": "20 days", "arrive": 11, "march": 9, "units": 200, "lasts": 20, "set_out": 20, "short": 0}]
+	var b := [{"days": 10, "label": "10 days", "arrive": 12, "march": 10, "units": 50, "lasts": 10, "set_out": 6, "short": 4},
+		{"days": 20, "label": "20 days", "arrive": 14, "march": 12, "units": 100, "lasts": 20, "set_out": 6, "short": 6}]
+	var g := MarchPlan.group_rows({"r2": b, "r1": a})
+	assert_eq(g.size(), 2)
+	assert_eq([int(g[0]["days"]), int(g[0]["arrive"]), int(g[0]["units"]), int(g[0]["short"])], [10, 12, 150, 4])
+	assert_eq([int(g[1]["arrive"]), int(g[1]["units"]), int(g[1]["short"]), int(g[1]["set_out"])], [14, 300, 6, 6])
+	assert_eq(a[0]["arrive"], 9, "the regiments' own rows are left alone")

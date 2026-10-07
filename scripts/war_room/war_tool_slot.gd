@@ -2,13 +2,14 @@
 class_name WarToolSlot
 extends Control
 ## One slot of the WAR ROOM's tool roll (spec 2026-10-07-war-room-annotations-
-## and-planning-pieces ruling 15): an inked glyph of a stick, a mark or an
-## action, ringed in brass while chosen. Its look is its exported fields, set
-## in the scene; a click says `pressed(key)`.
+## and-planning-pieces ruling 15, 2026-10-08-war-room-draw-orders ruling 1):
+## an inked glyph of a side's crayon, a mark or an action, ringed in brass
+## while chosen, faint while it cannot be used (`why`, its tooltip then). Its
+## look is its exported fields, set in the scene; a click says `pressed(key)`.
 
 signal pressed(key: String)
 
-## hand, blue, red, ink (sticks); arrow, front, objective, phase (kinds);
+## hand, blue, red (sticks: the hand and each row's crayon); arrow, front, objective, phase (kinds);
 ## piece, scrape (actions).
 @export var key := "hand":
 	set(v):
@@ -35,12 +36,31 @@ signal pressed(key: String)
 	set(v):
 		chosen = v
 		queue_redraw()
+## How faint a slot that cannot be used is drawn.
+@export var faint := 0.3:
+	set(v):
+		faint = v
+		queue_redraw()
+## Why it cannot be used now ("" it can): drawn faint, said by its tooltip,
+## and a click does nothing.
+var why := "":
+	set(v):
+		if why == v:
+			return
+		if why == "":
+			_hint = tooltip_text
+		why = v
+		tooltip_text = _hint if v == "" else v
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if v == "" else Control.CURSOR_FORBIDDEN
+		queue_redraw()
+var _hint := ""
 
 
 func _gui_input(event: InputEvent) -> void:
 	var mb := event as InputEventMouseButton
 	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-		pressed.emit(key)
+		if why == "":
+			pressed.emit(key)
 		accept_event()
 
 
@@ -51,6 +71,8 @@ func _draw() -> void:
 		draw_arc(c, 20.0 * s, 0.0, TAU, 32, ring, 2.5 * s, true)
 	var p := func(x: float, y: float) -> Vector2: return c + Vector2(x, y) * s
 	var ink := glyph_ink
+	if why != "":
+		ink.a *= faint
 	var w := 2.0 * s
 	match key:
 		"hand":

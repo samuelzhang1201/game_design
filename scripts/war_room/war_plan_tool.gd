@@ -1,8 +1,9 @@
 class_name WarPlanTool
 extends RefCounted
 ## The staff's tools in the player's hand (spec 2026-10-07-war-room-
-## annotations-and-planning-pieces §2.4, rulings 15-17): which stick (the hand,
-## the blue or red crayon, the pen) and which kind of mark; a drag drawn
+## annotations-and-planning-pieces §2.4, 2026-10-08-war-room-draw-orders
+## rulings 1-3): the SIDE chosen (red theirs, blue ours; "" none yet — nothing
+## draws until one is) and the kind of mark in hand ("" the hand); a drag drawn
 ## freehand in pack px, sampled every war_plan_sample_px of pointer travel and
 ## smoothed on release to war_plan_points_max points (Shift: straight); a ring
 ## drawn as a compass; a stroke or its handle picked on the screen; the
@@ -10,12 +11,12 @@ extends RefCounted
 ## drawn to the screen, which writes it.
 
 const HAND := "hand"
-const STICKS := ["blue", "red", "ink"]
+const SIDES := ["red", "blue"]
 
-var stick := HAND
+var side := ""
 var kind := ""
 var drawing := false
-var _last_kind := "arrow"
+var _last := {"red": "front", "blue": "front"}   # each side's kind last in hand
 var _samples := PackedVector2Array()   # pack px
 var _screen := PackedVector2Array()    # the same samples on the screen
 var _repo: DataRepository
@@ -27,46 +28,65 @@ func _init(repo: DataRepository) -> void:
 	_repo = repo
 
 
-## A stick and a kind are in hand: a left press draws.
+## A side and a kind are in hand: a left press draws.
 func in_hand() -> bool:
-	return stick != HAND and kind != ""
+	return side != "" and kind != ""
+
+
+## The colour what is drawn now takes (its side's).
+var stick: String:
+	get:
+		return side if in_hand() else HAND
 
 
 func _gesture(k: String) -> String:
 	return String((_repo.war_plan_kinds.get(k, {}) as Dictionary).get("gesture", "path"))
 
 
-## Picks a kind; the stick follows it when the hand is empty or it is a pen
-## kind (the pen's), or when a pen kind gives way to a crayon one (the blue).
-func pick_kind(k: String) -> void:
-	if not _repo.war_plan_kinds.has(k):
-		return
-	var pen := bool(_repo.war_plan_kinds[k]["pen"])
-	if pen:
-		stick = "ink"
-	elif stick == HAND or stick == "ink":
-		stick = "blue"
+## Takes kind `k` on side `sd`; false when either is unknown.
+func pick(sd: String, k: String) -> bool:
+	if not sd in SIDES or not _repo.war_plan_kinds.has(k):
+		return false
+	side = sd
 	kind = k
-	_last_kind = k
+	_last[sd] = k
 	drawing = false
+	return true
 
 
-## Picks a stick; with no kind in hand it takes the last one.
-func pick_stick(s: String) -> void:
+## Takes kind `k` on the side chosen; false with no side yet.
+func pick_kind(k: String) -> bool:
+	return pick(side, k) if side != "" else false
+
+
+## A row's crayon: that side, its kind last in hand (`fallback` when that
+## one cannot be used now). The hand: nothing in hand, the side kept.
+func pick_stick(s: String, fallback := "") -> void:
 	if s == HAND:
 		put_down()
 		return
-	if not s in STICKS:
+	if not s in SIDES:
 		return
-	stick = s
+	pick(s, fallback if fallback != "" else String(_last[s]))
+
+
+## Tab: the other side, the same kind in hand (`fallback` when the same
+## cannot be used there); with no side yet, ours.
+func switch_side(fallback := "") -> void:
+	var to := "blue" if side != "blue" else "red"
 	if kind == "":
-		kind = _last_kind
-	drawing = false
+		side = to
+		return
+	pick(to, fallback if fallback != "" else kind)
 
 
-## Esc or the hand: nothing in hand.
+## The kind last in hand on a side.
+func last_kind(sd: String) -> String:
+	return String(_last.get(sd, "front"))
+
+
+## Esc or the hand: nothing in hand (the side stays lit).
 func put_down() -> void:
-	stick = HAND
 	kind = ""
 	drawing = false
 	_samples.clear()
@@ -118,7 +138,7 @@ func release(pack_px: Vector2, screen_px: Vector2, shift: bool, px_per_pack: flo
 	_screen = PackedVector2Array()
 	if travel < _repo.bal("war_plan_min_len_px") or samples.size() < 2:
 		return {}
-	var out := {"kind": kind, "colour": stick, "r": 0.0}
+	var out := {"kind": kind, "colour": side, "r": 0.0, "samples": samples}
 	if _gesture(kind) == "ring":
 		out["pts"] = PackedVector2Array([samples[0]])
 		out["r"] = samples[0].distance_to(samples[samples.size() - 1])

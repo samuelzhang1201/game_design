@@ -1,15 +1,15 @@
 [gd_scene format=3 uid="uid://d3x2yucqvg6x"]
 
-[ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="1_88hrj"]
-[ext_resource type="Script" path="res://scripts/ui/march_confirm_panel.gd" id="2_hxh13"]
+[ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="1_dytlk"]
+[ext_resource type="Script" uid="uid://b4m3d66stttoj" path="res://scripts/ui/march_confirm_panel.gd" id="2_p30ta"]
 
 [node name="MarchConfirmPanel" type="PanelContainer" unique_id=1981989342]
 editor_description = "The march confirm (spec 2026-10-07-march-waypoints ruling 6). Code fills the texts and duplicates RowProto once per carried load; the look is here."
 visible = false
 top_level = true
 custom_minimum_size = Vector2(400, 0)
-theme_override_styles/panel = ExtResource("1_88hrj")
-script = ExtResource("2_hxh13")
+theme_override_styles/panel = ExtResource("1_dytlk")
+script = ExtResource("2_p30ta")
 
 [node name="Body" type="VBoxContainer" parent="." unique_id=1189129603]
 layout_mode = 2
@@ -92,6 +92,64 @@ theme_type_variation = &"CardWarn"
 theme_override_font_sizes/font_size = 14
 text = "runs 3 days short"
 vertical_alignment = 1
+
+[node name="Regiments" type="VBoxContainer" parent="Body" unique_id=1786128318]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="RegimentProto" type="HBoxContainer" parent="Body/Regiments" unique_id=1397247608]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Pick" type="CheckBox" parent="Body/Regiments/RegimentProto" unique_id=62963765]
+custom_minimum_size = Vector2(190, 0)
+layout_mode = 2
+focus_mode = 0
+theme_override_font_sizes/font_size = 14
+text = "1st (Axbrigh) Regiment"
+
+[node name="Line" type="Label" parent="Body/Regiments/RegimentProto" unique_id=261625183]
+layout_mode = 2
+theme_type_variation = &"CardValue"
+text = "9 days · 240 supplies"
+vertical_alignment = 1
+
+[node name="Short" type="Label" parent="Body/Regiments/RegimentProto" unique_id=2142911667]
+layout_mode = 2
+theme_type_variation = &"CardWarn"
+theme_override_font_sizes/font_size = 14
+text = "runs 3 days short"
+vertical_alignment = 1
+
+[node name="SupplyRow" type="HBoxContainer" parent="Body" unique_id=1587549722]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SupplyLabel" type="Label" parent="Body/SupplyRow" unique_id=576749810]
+custom_minimum_size = Vector2(96, 0)
+layout_mode = 2
+theme_type_variation = &"CardSmall"
+text = "Supply from"
+vertical_alignment = 1
+
+[node name="SupplyTown" type="OptionButton" parent="Body/SupplyRow" unique_id=66909850]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "The town whose wagons follow the march — or click a lit town on the map"
+focus_mode = 0
+theme_type_variation = &"CardMenu"
+
+[node name="SupplyFigures" type="Label" parent="Body" unique_id=1601164964]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+theme_type_variation = &"CardHint"
+text = "42 km to the end · wagons 2 days · 6% lost · 0.4 gold a day"
+autowrap_mode = 3
 
 [node name="Buttons" type="HBoxContainer" parent="Body" unique_id=297367054]
 layout_mode = 2
