@@ -144,7 +144,13 @@ static func _apply_side(repo: DataRepository, state: GameState, codes: Array, lo
 	var live: Array = []
 	var fits: Array = []
 	var total_fit := 0
+	# code order, not the order the caller listed them in: a tie in the spread
+	# goes to the earlier code whatever dictionary the side came from
+	var ordered: Array = []
 	for c: Variant in codes:
+		ordered.append(String(c))
+	ordered.sort()
+	for c: Variant in ordered:
 		var code := String(c)
 		var entry := _entry_of(repo, state, code)
 		if entry.is_empty():

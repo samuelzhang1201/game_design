@@ -290,8 +290,9 @@ var manor_province: Dictionary = {}
 ## {tick, cell, building, reason}: a manor that changed must say why.
 var manor_log: Array = []
 ## The player's regiments (owner 2026-09-17, ArmySystem): code ->
-## {morale, wounded, supplies, training}, all whole numbers. Only the player's
-## realm's regiments; the pack's arms stay the headcount.
+## {morale, wounded, dead, supplies, training, carry_days, the march fields
+## x_m / y_m / dest_x_m / dest_y_m / order}, all whole numbers. Only the
+## player's realm's regiments; the pack's arms stay the headcount.
 var regiments: Dictionary = {}
 ## The raider realm's regiments in the field (spec 2026-10-07-enemy-ai-and-
 ## battle §2): regiment code -> a state of the same shape as `regiments`, kept

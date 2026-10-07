@@ -244,3 +244,24 @@ func test_side_power_scales_by_height_against_the_mean_of_the_enemy() -> void:
 	assert_eq(BattleSystem.side_power(repo, s, [a], steady, true, [b]), want)
 	assert_eq(BattleSystem.side_power(repo, s, [a], steady, true), ArmySystem.power(repo, s, a, "attack"),
 		"with no enemy named there is no height factor")
+
+
+func test_a_tie_goes_to_the_earlier_code_whatever_order_the_side_is_listed_in() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var two := _land_codes().slice(0, 2)   # sorted: two[0] < two[1]
+	for c: String in two:
+		var reg := ArmySystem.regiment(repo, c)
+		var kept := false
+		for arm: String in repo.world_table("military", "unit_types"):
+			if not kept and int(float(reg.get(arm, 0))) > 0:
+				reg[arm] = 500
+				kept = true
+			else:
+				reg[arm] = 0
+		assert_eq(_heads(c), 500)
+	# 1000 fit x 1 / 1000 = ONE man lost, all dead: two equal shares of 0.5
+	var tier := {"attacker_loss_permille": 1, "defender_loss_permille": 0, "wounded_share_permille": 0,
+		"attacker_morale": 0, "defender_morale": 0}
+	BattleSystem.apply_round(repo, s, [two[1], two[0]], [], tier, "a tie")
+	assert_eq(int(s.regiments[two[0]].get("dead", 0)), 1, "the earlier code takes the man")
+	assert_eq(int(s.regiments[two[1]].get("dead", 0)), 0)
