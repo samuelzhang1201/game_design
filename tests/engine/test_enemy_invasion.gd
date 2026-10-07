@@ -1,0 +1,325 @@
+extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
+const RunDir := preload("res://tests/run_dir.gd")
+## The invasion on the real day loop (spec 2026-10-07-enemy-ai-and-battle-design
+## §2 timeline, §3): TickEngine runs the hosts' minds once a day between the
+## march and the battles, the border rumour reaches the crown
+## raid_rumour_lead_days before the first host crosses, a spy who stands near a
+## foe column counts it, the hosts' moves are told in a letter, and the whole
+## run is deterministic and whole-numbered. No player order is given.
+
+var repo: DataRepository
+
+
+func before_each() -> void:
+	repo = SuiteData.repo()
+
+
+## --- helpers ----------------------------------------------------------------
+
+## A campaign after its opening tick (GameRoot's): tick 1, day 1.
+func _opened(engine: TickEngine) -> GameState:
+	var s := SuiteData.campaign(repo, 11)
+	engine.advance(s)
+	assert_eq(s.absolute_day(), 1)
+	return s
+
+
+## One day, exactly as Game.advance_day plays it: the thirtieth is the tick.
+func _day(engine: TickEngine, s: GameState) -> void:
+	if s.day >= Calendar.DAYS_PER_TICK:
+		engine.advance(s)
+	else:
+		engine.advance_day(s)
+
+
+## Plays days until the absolute day `last` has ended.
+func _play_through(engine: TickEngine, s: GameState, last: int) -> void:
+	while s.absolute_day() <= last:
+		_day(engine, s)
+
+
+func _host(role: String) -> String:
+	for h: Dictionary in repo.raid_hosts:
+		if String(h["role"]) == role:
+			return String(h["host_code"])
+	return ""
+
+
+func _first_appear() -> int:
+	var first := -1
+	for h: Dictionary in repo.raid_hosts:
+		var d := int(h["appear_day"])
+		first = d if first < 0 else mini(first, d)
+	return first
+
+
+func _letters(s: GameState, kind: String) -> Array:
+	return s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == kind)
+
+
+func _texts(m: Dictionary) -> Array:
+	var out: Array = [String(m["title"])]
+	for f: Dictionary in m["facts"]:
+		out.append(String(f.get("text", "")))
+	return out
+
+
+func _has_digit(text: String) -> bool:
+	var re := RegEx.new()
+	re.compile("[0-9]")
+	return re.search(text) != null
+
+
+func _floats_in(v: Variant, path: String, out: Array) -> void:
+	if typeof(v) == TYPE_FLOAT:
+		out.append(path)
+	elif v is Dictionary:
+		for k in v:
+			_floats_in(v[k], path + "/" + str(k), out)
+	elif v is Array:
+		for i in (v as Array).size():
+			_floats_in(v[i], path + "[%d]" % i, out)
+
+
+## --- the rumour (spec §2: about day 8, vague, source "rumour") ------------------
+
+func test_rumour_arrives_before_the_invasion() -> void:
+	var engine := TickEngine.new(repo)
+	var s := _opened(engine)
+	var on := _first_appear() - int(repo.bal("raid_rumour_lead_days"))
+	assert_gt(on, 1, "the pack's timeline leaves room for the rumour")
+	_play_through(engine, s, on - 1)
+	assert_eq(_letters(s, "rumour").size(), 0, "no rumour before its day")
+	_play_through(engine, s, on)
+	var rumours := _letters(s, "rumour")
+	assert_eq(rumours.size(), 1, "one rumour, as day %d ends" % on)
+	if rumours.is_empty():
+		return
+	var m: Dictionary = rumours[0]
+	assert_eq(int(m["day"]), on, "dated the day it came")
+	assert_eq(String(m["column"]), "rumour", "filed as rumour")
+	assert_gt((m["facts"] as Array).size(), 0, "it says something")
+	# the place is the pack's name, which may carry a numeral of its own
+	var first := ""
+	for h: Dictionary in repo.raid_hosts:
+		if first == "" and int(h["appear_day"]) == _first_appear():
+			first = String(h["host_code"])
+	var place := Intel.place_label(repo, s, ArmySystem.metres_to_pack(repo, EnemyAi.home_m(repo, first)))
+	assert_true(" ".join(_texts(m)).contains(place), "it says where they gather: " + place)
+	for t: String in _texts(m):
+		assert_false(_has_digit(t.replace(place, "")), "a rumour gives no figure: " + t)
+		assert_false(t.contains("[missing template"), "its words are in templates.csv: " + t)
+		assert_false(t.contains("{"), "every slot filled: " + t)
+	var raider := repo.realm_label("raider_realm")
+	assert_true(" ".join(_texts(m)).contains(raider), "it names the raider realm through its slot")
+	_play_through(engine, s, on + 3)
+	assert_eq(_letters(s, "rumour").size(), 1, "and only once")
+
+
+func test_rumour_templates_spell_no_kingdom() -> void:
+	# the raw file: DataRepository fills the realm slots at load
+	var raw := FileAccess.get_file_as_string("res://data/templates.csv")
+	var found := 0
+	for line: String in raw.split("\n"):
+		if line.begins_with("raid_rumour,") or line.begins_with("host_news_") and not line.begins_with("host_news_title"):
+			found += 1
+			assert_true(line.contains("{raider_realm}"), "the realm by its slot: " + line)
+			assert_false(_has_digit(line), "fixed prose with no figure: " + line)
+			for k: Variant in repo.kingdoms:
+				var label := String((repo.kingdoms[k] as Dictionary).get("label", ""))
+				if label != "":
+					assert_false(line.contains(label), "a template names no kingdom: " + line)
+	assert_gt(found, 0, "the rumour's words are rows of templates.csv")
+
+
+func test_warnings_are_once_and_only_for_a_campaign_with_hosts() -> void:
+	var s := SuiteData.campaign(repo, 11)
+	var on := _first_appear() - int(repo.bal("raid_rumour_lead_days"))
+	s.tick = 1
+	s.day = on - 1
+	assert_eq(EnemyAi.warnings(repo, s), [], "not the day before")
+	s.day = on
+	assert_eq(EnemyAi.warnings(repo, s).size(), 1, "the day itself")
+	s.day = on + 1
+	assert_eq(EnemyAi.warnings(repo, s), [], "not the day after")
+	var old := SuiteData.campaign(repo, 11)
+	old.foes = {}
+	old.ai_hosts = {}
+	old.tick = 1
+	old.day = on
+	assert_eq(EnemyAi.warnings(repo, old), [], "a save without hosts hears nothing")
+
+
+## --- the scout (spec §2: about day 12, a spy's credible report) -------------------
+
+func test_scout_report_names_a_credible_estimate() -> void:
+	var s := SuiteData.campaign(repo, 11)
+	s.tick = 1
+	s.day = 12
+	var main := _host("main")
+	var codes := EnemyAi.regiments_of(s, main)
+	assert_gt(codes.size(), 0)
+	var first: Dictionary = s.foes[codes[0]]
+	var at := ArmySystem.metres_to_pack(repo, Vector2i(int(first["x_m"]), int(first["y_m"])))
+	# the truth within the spy's reach: columns and men under arms
+	var reach := int(round(repo.bal("spy_radius_km") * 1000.0))
+	var cols := 0
+	var men := 0
+	for c: Variant in s.foes:
+		var e: Dictionary = s.foes[c]
+		var d := Vector2(float(e["x_m"]), float(e["y_m"])).distance_to(Vector2(float(first["x_m"]), float(first["y_m"])))
+		if d <= float(reach):
+			cols += 1
+			men += ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c))) - int(e.get("dead", 0))
+	assert_gt(men, 0)
+	var r := SpySystem.report(repo, s, at, 999, 0)
+	assert_eq(String(r["column"]), "credible", "a good spy's report is credible")
+	var facts := {}
+	for f: Dictionary in r["facts"]:
+		facts[String(f["key"])] = f
+	assert_true(facts.has("foe_columns"), "how many columns")
+	assert_true(facts.has("foe_troops"), "about how many men")
+	if facts.has("foe_columns") and facts.has("foe_troops"):
+		assert_true(int(facts["foe_columns"]["lo"]) <= cols and cols <= int(facts["foe_columns"]["hi"]),
+			"columns %d within the estimate" % cols)
+		assert_true(int(facts["foe_troops"]["lo"]) <= men and men <= int(facts["foe_troops"]["hi"]),
+			"men %d within the estimate" % men)
+		assert_lt(int(facts["foe_troops"]["lo"]), int(facts["foe_troops"]["hi"]), "an estimate, never the exact roll")
+		assert_eq(String(facts["foe_troops"]["label"]),
+			String((repo.intel_facts["foe_troops"] as Dictionary)["label"]), "labelled by intel_facts.csv")
+	# a spy far from every foe reports none
+	var home := MapManors.home_province(repo, s)
+	var prov: Dictionary = repo.provinces[home]
+	var far := Vector2(float(prov["center_x"]), float(prov["center_y"]))
+	var near_any := false
+	for c: Variant in s.foes:
+		var e: Dictionary = s.foes[c]
+		var p := ArmySystem.metres_to_pack(repo, Vector2i(int(e["x_m"]), int(e["y_m"])))
+		near_any = near_any or p.distance_to(far) * float(ArmySystem.metres_per_pack_px(repo)) <= float(reach)
+	if not near_any:
+		var keys: Array = (SpySystem.report(repo, s, far, 999, 0)["facts"] as Array).map(
+			func(f: Dictionary) -> String: return String(f["key"]))
+		assert_false("foe_columns" in keys, "no foe in reach, no foe fact")
+
+
+## --- the wiring (spec §7: march → couriers → minds → battles) ----------------------
+
+func test_the_minds_run_once_a_day_through_the_tick() -> void:
+	# nothing within reach: every host withdraws where it stands (its home),
+	# so it eats each day where it stands, the same ground every day
+	repo.balance["ai_target_reach_km"] = 0.0
+	var engine := TickEngine.new(repo)
+	var s := _opened(engine)
+	var main := _host("main")
+	var appear := _first_appear()
+	_play_through(engine, s, appear)
+	assert_eq(String(s.ai_hosts[main]["mode"]), "WITHDRAW", "nothing worth taking: home")
+	var c0: String = EnemyAi.regiments_of(s, main)[0]
+	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c0), s)
+	var before := int(s.foes[c0]["supplies"])
+	var last := Calendar.DAYS_PER_TICK + 2      # through the thirtieth day's tick
+	var eaten := 0
+	for d in range(appear + 1, last + 1):
+		eaten += ArmySystem.day_bite(use, (d - 1) % Calendar.DAYS_PER_TICK + 1)
+	_play_through(engine, s, last)
+	assert_eq(int(s.foes[c0]["supplies"]), maxi(0, before - eaten), "one meal a day, the tick's day too")
+
+
+func test_foes_withdraw_when_nothing_is_worth_it() -> void:
+	repo.balance["ai_target_reach_km"] = 0.0
+	var engine := TickEngine.new(repo)
+	var s := _opened(engine)
+	var appear := _first_appear()
+	_play_through(engine, s, appear - 1)
+	_day(engine, s)
+	var modes: Array = engine.day_ai.filter(func(e: Dictionary) -> bool:
+		return String(e["type"]) == "host_mode" and String(e["mode"]) == "WITHDRAW")
+	assert_gt(modes.size(), 0, "the day's events on the engine (day_ai)")
+	for h: String in EnemyAi.host_codes(s):
+		if String(s.ai_hosts[h]["mode"]) != "ASSEMBLE":
+			assert_eq(String(s.ai_hosts[h]["mode"]), "WITHDRAW", h + " goes home")
+	var news := _letters(s, "host_news")
+	assert_eq(news.size(), 1, "the day's moves in one letter")
+	if news.size() == 1:
+		for t: String in _texts(news[0]):
+			assert_false(t.contains("[missing template"), t)
+			assert_false(t.contains("{"), "every slot filled: " + t)
+			for e: Dictionary in modes:
+				assert_false(t.contains(String(e["why"])), "the enemy's reasons are not the crown's to read")
+
+
+## --- the whole invasion, headless ---------------------------------------------------
+
+## Plays `days` days from the opened campaign; returns what it saw.
+func _invade(engine: TickEngine, s: GameState, days: int) -> Dictionary:
+	var seen := {"targets": {}, "modes": {}, "advanced_on": {}, "events": []}
+	for n in days:
+		var today := s.absolute_day()
+		_day(engine, s)
+		seen["events"].append_array(engine.day_ai)
+		for h: String in EnemyAi.host_codes(s):
+			var m: Dictionary = s.ai_hosts[h]
+			if String(m["target_id"]) != "":
+				seen["targets"][h] = String(m["target_id"])
+			seen["modes"][String(m["mode"])] = true
+			if String(m["mode"]) != "ASSEMBLE" and not seen["advanced_on"].has(h):
+				seen["advanced_on"][h] = today
+	return seen
+
+
+func test_invasion_runs_headless_for_thirty_five_days() -> void:
+	var engine := TickEngine.new(repo)
+	var s := _opened(engine)
+	var start := {}
+	for c: Variant in s.foes:
+		start[c] = Vector2i(int(s.foes[c]["x_m"]), int(s.foes[c]["y_m"]))
+	var rng_seed := s.rng.seed_value
+	var seen := _invade(engine, s, 35)
+	for row: Dictionary in repo.raid_hosts:
+		var h := String(row["host_code"])
+		assert_eq(int(seen["advanced_on"].get(h, -1)), int(row["appear_day"]), h + " leaves ASSEMBLE on its day")
+	assert_gt((seen["targets"] as Dictionary).size(), 0, "a host targets something")
+	var moved := 0
+	for c: Variant in s.foes:
+		if Vector2i(int(s.foes[c]["x_m"]), int(s.foes[c]["y_m"])) != start[c]:
+			moved += 1
+	assert_gt(moved, 0, "the foes march")
+	var fought := _letters(s, "battle").size() > 0
+	var modes: Dictionary = seen["modes"]
+	# with no order given, a host reaches its target: a fight, a siege or a raid
+	assert_true(fought or modes.has("SIEGE") or modes.has("RAID"),
+		"the invasion is observable: %s, battles %s" % [modes.keys(), fought])
+	assert_gt(_letters(s, "host_news").size(), 0, "the crossing is told")
+	assert_eq(s.rng.seed_value, rng_seed)
+	var floats: Array = []
+	_floats_in(s.foes, "foes", floats)
+	_floats_in(s.ai_hosts, "ai_hosts", floats)
+	_floats_in(s.battles, "battles", floats)
+	assert_eq(floats, [], "no float in the foes, the minds or the battles")
+	gut.p("invasion: modes %s, targets %s, battles %d, moved %d" % [modes.keys(), seen["targets"],
+		_letters(s, "battle").size(), moved])
+
+
+func test_two_runs_from_one_save_are_identical() -> void:
+	var a_engine := TickEngine.new(repo)
+	var a := _opened(a_engine)
+	var b_engine := TickEngine.new(repo)
+	var b := GameState.from_dict(a.to_dict())
+	_invade(a_engine, a, 35)
+	_invade(b_engine, b, 35)
+	assert_eq(SaveLoad.state_hash(a), SaveLoad.state_hash(b), "same save, same days, same state")
+
+
+func test_save_and_load_mid_invasion_changes_nothing() -> void:
+	var a_engine := TickEngine.new(repo)
+	var a := _opened(a_engine)
+	var b := GameState.from_dict(a.to_dict())
+	_invade(a_engine, a, 35)
+	var b_engine := TickEngine.new(repo)
+	_invade(b_engine, b, 20)
+	var path := RunDir.dir("invasion").path_join("mid_invasion.json")
+	SaveLoad.save_game(b, path)
+	var c := SaveLoad.load_game(path)
+	_invade(TickEngine.new(repo), c, 15)
+	assert_eq(SaveLoad.state_hash(c), SaveLoad.state_hash(a), "a save mid-invasion plays on the same")

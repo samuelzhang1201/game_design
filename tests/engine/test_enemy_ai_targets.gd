@@ -247,6 +247,41 @@ func test_candidates_are_the_players_within_reach() -> void:
 	assert_gt(towns, 0, "towns are candidates too")
 
 
+## A host never chooses what it cannot reach on what it carries: a candidate
+## more march days away than its hungriest column's days in hand less
+## ai_retreat_supply_days is none (it would turn home hungry on the road).
+func test_a_target_beyond_the_hosts_supplies_is_no_candidate() -> void:
+	var s := _field(_appear(_host("main")))
+	var host := _host("main")
+	var full := EnemyAi.candidates(repo, s, host)
+	var floor_days := int(repo.bal("ai_retreat_supply_days"))
+	var horizon := EnemyAi.supply_reach_days(repo, s, host)
+	var least := -1
+	for c: String in EnemyAi.live_regiments(repo, s, host):
+		var days := ArmySystem.days_in_hand(int(s.foes[c]["supplies"]),
+			ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), s))
+		least = days if least < 0 else mini(least, days)
+	assert_eq(horizon, least - floor_days, "days in hand less the retreat floor")
+	for c: Dictionary in full:
+		assert_lte(int(c["distance_days"]), horizon, "%s within the host's supplies" % c["id"])
+	# eight days in hand: only what lies within five days' march
+	for c: String in EnemyAi.regiments_of(s, host):
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), s)
+		s.foes[c]["supplies"] = (use * 8 + 29) / 30
+	assert_eq(EnemyAi.supply_reach_days(repo, s, host), 8 - floor_days)
+	var short := EnemyAi.candidates(repo, s, host)
+	assert_gt(short.size(), 0, "the pack has something within five days of the main host")
+	assert_lt(short.size(), full.size(), "and something beyond")
+	for c: Dictionary in short:
+		assert_lte(int(c["distance_days"]), 8 - floor_days, "%s within eight days' supplies" % c["id"])
+	EnemyAi.think(repo, s, host)
+	var mind: Dictionary = s.ai_hosts[host]
+	var picked := false
+	for c: Dictionary in short:
+		picked = picked or (String(c["id"]) == String(mind["target_id"]) and String(c["kind"]) == String(mind["target_kind"]))
+	assert_true(picked, "think chooses among the reachable")
+
+
 func test_ai_sees_only_what_is_in_sight() -> void:
 	var s := _field(_appear(_host("main")))
 	var host := _host("main")

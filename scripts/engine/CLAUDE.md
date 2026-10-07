@@ -7,7 +7,7 @@ The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, 
 These topics' rules live in `guide/` beside this file, which Claude Code does NOT load on its own — open the guide when the task touches its topic:
 
 - `scripts/engine/guide/regiments.md` — regiments and their march (`ArmySystem`)
-- `scripts/engine/guide/battle_and_ai.md` — battles, stances and the enemy (`BattleSystem`, the foes, `ARMY_STANCE`, `EnemyAi`: the hosts' minds)
+- `scripts/engine/guide/battle_and_ai.md` — battles, stances and the enemy (`BattleSystem`, the foes, `ARMY_STANCE`, `EnemyAi`: the hosts' minds; the invasion's day order, rumour, scout facts and host news)
 - `scripts/engine/guide/supply_and_workshop.md` — supply, morale and the war workshop (`SupplySystem`, `SupplyLines`, `TownStores`, `WorkshopSystem`)
 - `scripts/engine/guide/ledger_model.md` — the LEDGER's model (`ledger.gd`, `ledger_resolvers.gd`, `ledger_cards.gd`)
 - `scripts/engine/guide/governors_and_audit.md` — governors, skimming and the audit (`Governance`, `AuditWriter`)
@@ -32,7 +32,7 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 
 ## Time
 
-- **Time runs in days**: `GameState.day` (1..30) under the tick is the day NOW RUNNING — the date the top bar shows. `TickEngine.advance_day` ENDS it (works, marches, couriers, battles, supply, the host eats) then turns the calendar; the thirtieth day ends inside the tick (`advance`), before the month settles. The reign's opening tick ends no day, so day 1 is played. The clock (`||` `>` `2x` `4x`, `time_day_seconds`, `time_speed_*`) is driven only by `GameRoot._process` (court AND council stage) through `Game.advance_day`. No End Turn.
+- **Time runs in days**: `GameState.day` (1..30) under the tick is the day NOW RUNNING — the date the top bar shows. `TickEngine.advance_day` ENDS it (works, marches, couriers, the enemy hosts' minds, battles, supply, the host eats) then turns the calendar; the thirtieth day ends inside the tick (`advance`), before the month settles. The reign's opening tick ends no day, so day 1 is played. The clock (`||` `>` `2x` `4x`, `time_day_seconds`, `time_speed_*`) is driven only by `GameRoot._process` (court AND council stage) through `Game.advance_day`. No End Turn.
 - `Game.hold_clock(on, who)` is a SET of named holders (`holds_clock`, `release_clock_holds` on a new reign or restart): while any holds it, Space and the play buttons start nothing. The LEDGER and the WAR ROOM hold it while open; closing, like an order, starts nothing.
 
 ## Events and the prologue

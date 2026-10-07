@@ -37,6 +37,20 @@ func _end_day(state: GameState) -> Array:
 	# courier arrives as the day ENDS): he reaches the column where its day
 	# left it, and the order he delivers is marched on from tomorrow.
 	day_couriers = CourierSystem.ride_day(data, state)
+	# The raider realm's hosts (spec 2026-10-07-enemy-ai-and-battle §2-3), ONCE
+	# a day: after the march and the couriers, so a host reads the places and
+	# the garrisons the day's battles will read; BEFORE the battles, so a column
+	# that marched into a garrisoned town's reach today has put its host in
+	# SIEGE before the contacts are taken. step_day (the meal, retreat, arrival,
+	# the columns sent on) then think_day the same day, so a host that set out
+	# or stood aside today chooses before its columns march tomorrow.
+	day_ai = EnemyAi.step_day(data, state)
+	day_ai.append_array(EnemyAi.think_day(data, state))
+	for m: Dictionary in EnemyAi.warnings(data, state):
+		MissiveLog.add(data, state, m)
+	var news := MissiveWriter.host_news(data, state, day_ai)
+	if not news.is_empty():
+		MissiveLog.add(data, state, news)
 	# The day's battles, AFTER the couriers (spec 2026-10-07-enemy-ai-and-battle
 	# §4): an order a courier lands today (a stance, a march) is in the
 	# regiment's state before the round, and a stance he delivers takes hold at
@@ -77,6 +91,10 @@ var day_supply: Array = []
 ## battle report.
 var day_battles: Array = []
 
+## The hosts' events of the last day (EnemyAi.step_day then think_day:
+## host_advance, host_mode), for the host-news letter.
+var day_ai: Array = []
+
 ## The buildings the last advance() left idle that were working the month
 ## before (M5), [{cell, building, missing}] in cell then code order — read
 ## by Game for the news bar, ONCE per spell idle; never in the TickReport.
@@ -111,6 +129,7 @@ func advance(state: GameState) -> TickReport:
 		day_arrivals = []
 		day_couriers = []
 		day_battles = []
+		day_ai = []
 		day_supply = []
 	# The month that just ended is settled BEFORE the tick moves: its lines
 	# are the month's own (growth of tick t), and the ledger reasons carry

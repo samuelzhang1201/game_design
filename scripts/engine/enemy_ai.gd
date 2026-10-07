@@ -253,13 +253,36 @@ static func seen_by(repo: DataRepository, state: GameState, host_code: String) -
 ## whole; distance_days = ArmySystem.march_days_between for the anchor;
 ## defence = the summed ArmySystem.power in the defend stance (the town's works,
 ## data/army_town_defence.csv, in it) of the player's regiments the host SEES
-## (seen_by) that stand at the target. [] for a host with no live column.
+## (seen_by) that stand at the target. A target more march days away than the
+## host's supply_reach_days is none. [] for a host with no live column.
 static func candidates(repo: DataRepository, state: GameState, host_code: String) -> Array[Dictionary]:
-	var out := _gather(repo, state, host_code)
+	var out: Array[Dictionary] = []
 	var anchor := anchor_of(repo, state, host_code)
-	for c: Dictionary in out:
+	var horizon := supply_reach_days(repo, state, host_code)
+	for c: Dictionary in _gather(repo, state, host_code):
 		c["distance_days"] = _days(repo, state, anchor, c)
+		if int(c["distance_days"]) <= horizon:
+			out.append(c)
 	return out
+
+
+## The most march days a host can go for a target: its hungriest live column's
+## days in hand (ArmySystem.days_in_hand where it stands) less
+## ai_retreat_supply_days — further, it would turn home hungry on the road
+## (should_retreat) before it arrived. A host with no live column: -1.
+static func supply_reach_days(repo: DataRepository, state: GameState, host_code: String) -> int:
+	var least := _least_days(repo, state, host_code)
+	return -1 if least < 0 else least - int(repo.bal("ai_retreat_supply_days"))
+
+
+## The hungriest live column's whole days in hand; -1 with none.
+static func _least_days(repo: DataRepository, state: GameState, host_code: String) -> int:
+	var least := -1
+	for c: String in live_regiments(repo, state, host_code):
+		var days := ArmySystem.days_in_hand(int((state.foes[c] as Dictionary)["supplies"]),
+			ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), state))
+		least = days if least < 0 else mini(least, days)
+	return least
 
 
 ## The live column a host's distances are measured for: the slowest that can
@@ -398,6 +421,29 @@ static func think_day(repo: DataRepository, state: GameState) -> Array:
 	return events
 
 
+## --- the warnings (spec §2 timeline) -----------------------------------------------
+
+## The letters the crown hears of the hosts TODAY, for TickEngine to file: the
+## border rumour (MissiveWriter.raid_rumour) on the absolute day
+## raid_rumour_lead_days before the earliest appear_day of the hosts this
+## campaign has (state.ai_hosts; a save without hosts hears nothing), about the
+## host that crosses first (ties to the earlier code). Today only, so it comes
+## once. The spy's count of a column near his point is SpySystem's (foe facts).
+static func warnings(repo: DataRepository, state: GameState) -> Array:
+	var first := ""
+	var first_day := 0
+	for h: String in host_codes(state):
+		var row := _row_of(repo, h)
+		if row.is_empty():
+			continue
+		if first == "" or int(row["appear_day"]) < first_day:
+			first = h
+			first_day = int(row["appear_day"])
+	if first == "" or state.absolute_day() != first_day - int(repo.bal("raid_rumour_lead_days")):
+		return []
+	return [MissiveWriter.raid_rumour(repo, state, home_m(repo, first))]
+
+
 ## --- engage and retreat (spec §3.4) ---------------------------------------------------
 
 ## Whether the host takes a fight with the player regiments it sees: its odds
@@ -427,13 +473,9 @@ static func should_retreat(repo: DataRepository, state: GameState, host_code: St
 	if live.is_empty():
 		return ""
 	var morale := 0
-	var least := -1
 	for c: String in live:
-		var e: Dictionary = state.foes[c]
-		morale += int(e["morale"])
-		var days := ArmySystem.days_in_hand(int(e["supplies"]),
-			ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), state))
-		least = days if least < 0 else mini(least, days)
+		morale += int((state.foes[c] as Dictionary)["morale"])
+	var least := _least_days(repo, state, host_code)
 	@warning_ignore("integer_division")  # whole points
 	morale /= live.size()
 	var floor_morale := int(doctrine_of(repo, host_code).get("retreat_morale", 0))
@@ -689,6 +731,7 @@ static func _choose(repo: DataRepository, state: GameState, host_code: String) -
 	var taken := taken_by_others(repo, state, host_code)
 	var permille := int(repo.bal("ai_target_overlap_permille"))
 	var anchor := anchor_of(repo, state, host_code)
+	var horizon := supply_reach_days(repo, state, host_code)
 	var bound: Dictionary = {}
 	for c: Dictionary in cands:
 		bound[_key(c)] = _final(c, 0, doctrine, taken, permille)
@@ -700,6 +743,8 @@ static func _choose(repo: DataRepository, state: GameState, host_code: String) -
 		if not best.is_empty() and int(bound[_key(c)]) < best_score:
 			break
 		c["distance_days"] = _days(repo, state, anchor, c)
+		if int(c["distance_days"]) > horizon:
+			continue                     # beyond its supplies: no candidate
 		var sc := _final(c, int(c["distance_days"]), doctrine, taken, permille)
 		if best.is_empty() or _better(sc, c, best_score, best):
 			best = c

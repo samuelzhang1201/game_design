@@ -226,6 +226,62 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 		battle_words(repo, "battle_title", {"place": battle_place(repo, state, head)}, pick), facts)
 
 
+## --- Word of the enemy (spec 2026-10-07-enemy-ai-and-battle §2) ---------------
+
+## The border rumour (EnemyAi.warnings): men gathering beyond the border near
+## `at_m` (a host's assembly point, whole metres), under the raider realm's
+## banners — no figure, column and source `rumour`. Fixed prose, the
+## templates.csv `raid_rumour*` rows.
+static func raid_rumour(repo: DataRepository, state: GameState, at_m: Vector2i) -> Dictionary:
+	var pick := state.absolute_day()
+	var at := ArmySystem.metres_to_pack(repo, at_m)
+	var place := Intel.place_label(repo, state, at)
+	return MissiveLog.make("rumour", "rumour", state.absolute_day(), MissiveLog.subject("point", "", -1, at),
+		battle_words(repo, "raid_rumour_title", {}, pick),
+		[MissiveLog.words("word", "Word from the border", battle_words(repo, "raid_rumour", {"place": place}, pick))])
+
+
+## The hosts' day (EnemyAi.step_day / think_day events) in ONE letter, a line
+## per host that crossed the border (`host_advance`) or changed its mode
+## (`host_mode`: SIEGE, RAID, WITHDRAW, RETREAT — templates.csv `host_news_*`);
+## {} when none of them is news. Where: a siege's or a raid's target, else the
+## host's first column. No figure and no engine reason (the enemy's morale and
+## stores are not the crown's to read). Column `credible` when a siege or a raid
+## is in it (the crown's own people see it), else `rumour`.
+static func host_news(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
+	var pick := state.absolute_day()
+	var facts: Array = []
+	var seen_close := false
+	var first_at := Vector2.ZERO
+	for e: Dictionary in events:
+		var host := String(e.get("host", ""))
+		var mode := "ADVANCE" if String(e["type"]) == "host_advance" else String(e.get("mode", ""))
+		if not mode in ["ADVANCE", "SIEGE", "RAID", "WITHDRAW", "RETREAT"]:
+			continue
+		var mind: Dictionary = state.ai_hosts.get(host, {})
+		var at_m := _host_at_m(repo, state, host)
+		if mode in ["SIEGE", "RAID"] and String(mind.get("target_id", "")) != "":
+			at_m = EnemyAi.target_point_m(repo, String(mind["target_kind"]), String(mind["target_id"]))
+			seen_close = true
+		var at := ArmySystem.metres_to_pack(repo, at_m)
+		if facts.is_empty():
+			first_at = at
+		facts.append(MissiveLog.words("host@%s.%s" % [host, mode.to_lower()], "The enemy",
+			battle_words(repo, "host_news_" + mode.to_lower(), {"place": Intel.place_label(repo, state, at)}, pick)))
+	if facts.is_empty():
+		return {}
+	return MissiveLog.make("host_news", "credible" if seen_close else "rumour", state.absolute_day(),
+		MissiveLog.subject("point", "", -1, first_at), battle_words(repo, "host_news_title", {}, pick), facts)
+
+
+## A host's first foe's place in whole metres (code order); its home with none.
+static func _host_at_m(repo: DataRepository, state: GameState, host: String) -> Vector2i:
+	for c: String in EnemyAi.regiments_of(state, host):
+		var e: Dictionary = state.foes[c]
+		return Vector2i(int(e["x_m"]), int(e["y_m"]))
+	return EnemyAi.home_m(repo, host)
+
+
 ## Where a battle was fought, in words ("" with no event to ask).
 static func battle_place(repo: DataRepository, state: GameState, e: Dictionary) -> String:
 	return "" if e.is_empty() else BattleSystem.place_label(repo, state, e)
