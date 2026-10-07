@@ -512,6 +512,7 @@ def hermite(keys, m0, m1):
     return f
 
 
+RUN_LEAN = 7.0           # the run's forward lean (deg, at the hips): nearly upright, the chest open (owner's sheet 2026-10-07)
 HEEL_BACK = 0.065        # the boot's heel behind the ankle, on the sole
 ARM_OUT = (0.23, 0.38)   # the run's left upper arm / forearm, out from straight down (tan): the forearm
                          # angled a little out from the elbow, a man's carrying angle (never in: a C)
@@ -626,14 +627,14 @@ def march(R):
     ch = {
         "foot_l": foot("L"), "foot_r": foot("R"),
         "hips_off": lambda t: Vector((0.012 * math.cos(w(t) - 0.9), -0.02, hz(t))),
-        "hips_rot": lambda t: Vector((14 + 2.0 * math.cos(2 * w(t, 1.0)), 3 * math.cos(w(t) + 0.6), -6 * math.cos(w(t)))),
-        "spine": lambda t: Vector((3, 4 * math.cos(w(t, 1.0)), 0)),
-        "chest": lambda t: Vector((3 - 1.5 * math.cos(2 * w(t, 1.5)), 6 * math.cos(w(t, 1.5)), 0)),
-        "neck": lambda t: Vector((-5, -3 * math.cos(w(t, 2.0)), 0)),
-        "head": lambda t: Vector((-12 + 1.5 * math.cos(2 * w(t, 2.5)), -1.5 * math.cos(w(t, 2.5)), 0)),
+        "hips_rot": lambda t: Vector((RUN_LEAN + 2.0 * math.cos(2 * w(t, 1.0)), 3 * math.cos(w(t) + 0.6), -6 * math.cos(w(t)))),
+        "spine": lambda t: Vector((0, 4 * math.cos(w(t, 1.0)), 0)),
+        "chest": lambda t: Vector((-1 - 1.0 * math.cos(2 * w(t, 1.5)), 6 * math.cos(w(t, 1.5)), 0)),           # the chest open
+        "neck": lambda t: Vector((-2, -3 * math.cos(w(t, 2.0)), 0)),
+        "head": lambda t: Vector((-RUN_LEAN + 1.5 * math.cos(2 * w(t, 2.5)), -1.5 * math.cos(w(t, 2.5)), 0)),   # the gaze level
         "clav_r": lambda t: Vector((4 * math.cos(w(t, 1)), 0, 0)),
         "clav_l": lambda t: Vector((-3 * math.cos(w(t, 1.5)), 0, 0)),
-        "rfk": lambda t: Vector((-10 + 42 * math.cos(w(t, 1.5)), 84 + 14 * math.cos(w(t, 2.5)))),
+        "rfk": lambda t: Vector((-4 + 38 * math.cos(w(t, 1.5)), 102 - 12 * math.cos(w(t, 2.5)))),     # a runner's arm: the elbow ~90, the fist at the waist
         # the left arm hanging from the shoulder and swinging against the left leg (forward at the
         # right foot's strike), the bow in the relaxed fist rocking behind the forearm
         "l_wrist": l_wrist,
