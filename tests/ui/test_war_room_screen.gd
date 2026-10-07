@@ -490,6 +490,29 @@ func test_the_easel_shows_the_missive_board_and_a_note_opens_the_full_board_over
 	assert_true(screen.visible, "over the room, which stays open")
 
 
+## Owner 2026-10-07: a march armed from the menu (its destination pinned)
+## still showed its arrow once the camera turned to the board. Studying the
+## board gives the armed order up.
+func test_turning_to_the_board_gives_an_armed_march_up() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var code := ""
+	for p: Dictionary in WarRoom.on_sheet(Game.data, Game.state, view.sheet_index(), screen.drawn()):
+		if screen.orders().aim_for(String(p["code"])) == "":
+			code = String(p["code"])
+			break
+	assert_ne(code, "", "a land regiment's march is armed")
+	assert_true(view.aiming)
+	view.enter_board()
+	await wait_process_frames(1)
+	assert_eq(screen.orders().aiming(), "", "the armed march is withdrawn")
+	assert_false(view.aiming)
+	assert_false((view.get_node("%Hud") as CanvasItem).is_visible_in_tree(), "no mark hangs over the board")
+
+
 func test_escape_in_board_view_returns_to_the_table_not_the_pause_menu() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()

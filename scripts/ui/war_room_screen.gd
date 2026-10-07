@@ -140,6 +140,11 @@ func open(detail: MapDetailPanel) -> void:
 ## Facing the easel, the margin's slips would lie over the board: they make
 ## way, and Back to the table stands in the top row (spec §1.3).
 func _show_board_chrome(on: bool) -> void:
+	if on:
+		# an armed march (MARCH… from the menu, or a destination waiting for
+		# COMMIT) is given up: its arrow must not wait behind the board
+		_orders.withdraw_aim()
+		(%HoverSlip as WarHoverSlip).hide_slip()
 	%BackToTable.visible = on
 	%Slip.visible = not on
 	%KeySlip.visible = not on

@@ -672,6 +672,31 @@ func test_entering_the_board_flies_the_camera_square_in_front_of_it_and_back() -
 	assert_almost_eq(cam.transform.origin.distance_to(before.origin), 0.0, 0.001, "back where it left")
 
 
+## Owner 2026-10-07: a march's arrow pinned on the table still hung over the
+## board after the camera turned to it. The HUD's marks are the table's.
+func test_the_huds_marks_are_put_away_while_the_board_holds_the_camera() -> void:
+	var p: Dictionary = WarRoom.pieces(repo, state)[0]
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	var code := String(p["code"])
+	view.aiming = true
+	view.aim_code = code
+	view.aim_dest = (WarSheets.series(repo)[int(p["sheet"])]["rect"] as Rect2).get_center()
+	view.select(code)
+	var hud := view.get_node("%Hud") as WarHud
+	assert_true(hud.drawing(), "the pinned arrow and the chalk ring are drawn on the table")
+	assert_true(hud.is_visible_in_tree())
+	view.enter_board()
+	assert_false(hud.is_visible_in_tree(), "flying to the board, the marks go")
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	assert_false(hud.is_visible_in_tree(), "and stay away while the board is studied")
+	view.leave_board()
+	await wait_process_frames(2)
+	assert_false(hud.is_visible_in_tree(), "not back until the camera is")
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	assert_true(hud.is_visible_in_tree(), "back over the table, the marks return")
+
+
 func test_in_board_view_a_left_click_on_the_panel_is_the_boards_not_the_rooms() -> void:
 	view.lay_sheet(0)
 	await wait_process_frames(2)

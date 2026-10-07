@@ -420,6 +420,10 @@ func enter_board() -> void:
 	if _board_mode != "table":
 		return
 	_rake.drop()
+	# the HUD's marks are screen px of the TABLE's view: none of them (the rake's
+	# arrow, the chalk ring, the pennants' dashes, the pencils) hangs over the
+	# board while the camera is away (owner 2026-10-07)
+	(%Hud as CanvasItem).visible = false
 	_table_pose = _camera.transform
 	_fly_from = _table_pose
 	_board_dist = _repo.bal("war_board_distance_m")
@@ -446,7 +450,8 @@ func _step_board(delta: float) -> bool:
 		if _fly_t >= 1.0:
 			if _board_mode == "to_table":
 				_board_mode = "table"
-				_apply_camera()
+				(%Hud as CanvasItem).visible = true
+				_apply_camera()   # the marks redrawn where the table's view puts them
 				board_left.emit()
 				return false
 			_board_mode = "board"
