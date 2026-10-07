@@ -20,7 +20,7 @@ Status: 设计已在 brainstorming 中逐段确认(2026-10-07),待 owner 审阅�
 
 ## 2. 敌军的数据模型与入侵时间线
 
-**敌军就是普通 regiment。** 进 `GameState.regiments`,所属 `{raider_realm}`;行军、`power`、补给 `eat_day`、地形、高度、城防全部复用 `ArmySystem`。敌对关系已有:`army_hostile_stances.csv` 的 `Enemy`。
+**敌军就是普通 regiment 的形状。** 条目放进 `GameState.foes`(与 `regiments` 同形状,所属 `{raider_realm}`),**不**放进 `regiments`:后者有三十多处遍历默认只含玩家的兵(补给线、LEDGER、危险区、地图)。`ArmySystem.state_of` 与 `march_day` 额外接纳 `foes`,行军、`power`、地形、高度、城防因此全部复用 `ArmySystem`;敌军补给由 `EnemyAi` 自己结算。敌对关系已有:`army_hostile_stances.csv` 的 `Enemy`。
 
 **编成:** `data/maps/<id>/military/raid_hosts.csv`,一行一个 host:`host_code, regiments, appear_day, role, start_x, start_y`。`role` 取三值:
 - `main` 主力:偏向富裕城镇,主要围城对象。
