@@ -249,19 +249,26 @@ func test_candidates_are_the_players_within_reach() -> void:
 
 ## A host never chooses what it cannot reach on what it carries: a candidate
 ## more march days away than its hungriest column's days in hand less
-## ai_retreat_supply_days is none (it would turn home hungry on the road).
+## ai_retreat_supply_days and ai_supply_margin_days is none (it would turn
+## home hungry on the road; the margin covers the meals' whole-unit rounding).
 func test_a_target_beyond_the_hosts_supplies_is_no_candidate() -> void:
 	var s := _field(_appear(_host("main")))
 	var host := _host("main")
 	var full := EnemyAi.candidates(repo, s, host)
-	var floor_days := int(repo.bal("ai_retreat_supply_days"))
+	assert_true(repo.balance.has("ai_supply_margin_days"), "the margin is a balance key")
+	if not repo.balance.has("ai_supply_margin_days"):
+		return
+	var floor_days := int(repo.bal("ai_retreat_supply_days")) + int(repo.bal("ai_supply_margin_days"))
 	var horizon := EnemyAi.supply_reach_days(repo, s, host)
 	var least := -1
 	for c: String in EnemyAi.live_regiments(repo, s, host):
 		var days := ArmySystem.days_in_hand(int(s.foes[c]["supplies"]),
 			ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), s))
 		least = days if least < 0 else mini(least, days)
-	assert_eq(horizon, least - floor_days, "days in hand less the retreat floor")
+	assert_eq(horizon, least - floor_days, "days in hand less the retreat floor and the margin")
+	repo.balance["ai_supply_margin_days"] = float(repo.bal("ai_supply_margin_days")) + 2.0
+	assert_eq(EnemyAi.supply_reach_days(repo, s, host), horizon - 2, "a wider margin, a shorter reach")
+	repo.balance["ai_supply_margin_days"] = _balance["ai_supply_margin_days"]
 	for c: Dictionary in full:
 		assert_lte(int(c["distance_days"]), horizon, "%s within the host's supplies" % c["id"])
 	# eight days in hand: only what lies within five days' march

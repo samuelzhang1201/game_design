@@ -274,7 +274,6 @@ func test_invasion_runs_headless_for_thirty_five_days() -> void:
 	var start := {}
 	for c: Variant in s.foes:
 		start[c] = Vector2i(int(s.foes[c]["x_m"]), int(s.foes[c]["y_m"]))
-	var rng_seed := s.rng.seed_value
 	var seen := _invade(engine, s, 35)
 	for row: Dictionary in repo.raid_hosts:
 		var h := String(row["host_code"])
@@ -291,7 +290,6 @@ func test_invasion_runs_headless_for_thirty_five_days() -> void:
 	assert_true(fought or modes.has("SIEGE") or modes.has("RAID"),
 		"the invasion is observable: %s, battles %s" % [modes.keys(), fought])
 	assert_gt(_letters(s, "host_news").size(), 0, "the crossing is told")
-	assert_eq(s.rng.seed_value, rng_seed)
 	var floats: Array = []
 	_floats_in(s.foes, "foes", floats)
 	_floats_in(s.ai_hosts, "ai_hosts", floats)
@@ -323,3 +321,109 @@ func test_save_and_load_mid_invasion_changes_nothing() -> void:
 	var c := SaveLoad.load_game(path)
 	_invade(TickEngine.new(repo), c, 15)
 	assert_eq(SaveLoad.state_hash(c), SaveLoad.state_hash(a), "a save mid-invasion plays on the same")
+
+
+## The minds and their letters draw no random number (spec §3.2): the
+## stream's STATE (Rng.to_dict) is the same before and after step_day,
+## think_day, warnings and host_news, every day from the rumour through the
+## crossing and the march. (The rest of the day loop may draw; not asserted.)
+func test_the_minds_and_their_letters_draw_no_random_number() -> void:
+	var s := SuiteData.campaign(repo, 11)
+	s.tick = 1
+	var drawn: Array = []
+	var events := 0
+	for d in range(_first_appear() - int(repo.bal("raid_rumour_lead_days")), _first_appear() + 12):
+		s.day = d
+		var before: Dictionary = s.rng.to_dict()
+		var ev: Array = EnemyAi.step_day(repo, s)
+		ev.append_array(EnemyAi.think_day(repo, s))
+		var letters: Array = EnemyAi.warnings(repo, s)
+		letters.append(MissiveWriter.host_news(repo, s, ev))
+		events += ev.size()
+		if s.rng.to_dict() != before:
+			drawn.append(d)
+		ArmySystem.march_day(repo, s)
+	assert_gt(events, 0, "the hosts did something")
+	assert_eq(drawn, [], "no day drew from GameState.rng")
+
+
+## --- contact on the real day loop ------------------------------------------------------
+
+## The player's land regiments with men, in code order.
+func _mine() -> Array:
+	var out: Array = []
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) > 0:
+			out.append(String(r["regiment_code"]))
+	out.sort()
+	return out
+
+
+func _place_mine(s: GameState, code: String, at: Vector2i, order: String) -> void:
+	var e: Dictionary = s.regiments[code]
+	e["x_m"] = at.x
+	e["y_m"] = at.y
+	e["dest_x_m"] = at.x
+	e["dest_y_m"] = at.y
+	e["order"] = order
+
+
+## The day loop to the main host's crossing, its target held from then on
+## (ai_think_days out of the run's reach, so the test reads one plan).
+func _crossed(engine: TickEngine) -> GameState:
+	repo.balance["ai_think_days"] = 999.0
+	var s := _opened(engine)
+	_play_through(engine, s, _first_appear())
+	var mind: Dictionary = s.ai_hosts[_host("main")]
+	assert_eq(String(mind["mode"]), "ADVANCE")
+	assert_ne(String(mind["target_id"]), "", "the main host has chosen")
+	return s
+
+
+func test_a_regiment_on_the_hosts_road_is_fought_on_the_day_loop() -> void:
+	var engine := TickEngine.new(repo)
+	var s := _crossed(engine)
+	var main := _host("main")
+	var mind: Dictionary = s.ai_hosts[main]
+	var lead: Dictionary = s.foes[EnemyAi.regiments_of(s, main)[0]]
+	var from := Vector2i(int(lead["x_m"]), int(lead["y_m"]))
+	var to := EnemyAi.target_point_m(repo, String(mind["target_kind"]), String(mind["target_id"]))
+	# halfway along the straight road the host marches, standing (no garrison)
+	var mine: String = _mine()[0]
+	_place_mine(s, mine, (from + to) / 2, ArmySystem.ORDER_STANDBY)
+	var fought_on := -1
+	for n in 15:
+		var today := s.absolute_day()
+		_day(engine, s)
+		if fought_on < 0 and not engine.day_battles.is_empty():
+			fought_on = today
+	assert_gt(fought_on, 0, "the host ran into the regiment on its road")
+	assert_gt(_letters(s, "battle").size(), 0, "and the fight is reported")
+
+
+func test_a_garrisoned_target_is_besieged_on_arrival_without_a_battle() -> void:
+	var engine := TickEngine.new(repo)
+	var s := _crossed(engine)
+	var main := _host("main")
+	var mind: Dictionary = s.ai_hosts[main]
+	var town := String(mind["target_id"])
+	assert_eq(String(mind["target_kind"]), "town", "the main host goes for a town")
+	var mine: String = _mine()[0]
+	_place_mine(s, mine, EnemyAi.target_point_m(repo, "town", town), ArmySystem.ORDER_GARRISON)
+	assert_eq(SupplySystem.garrisoned_in(repo, s, mine), town, "the town is garrisoned")
+	var arrived := -1
+	for n in 20:
+		var today := s.absolute_day()
+		_day(engine, s)
+		var siege := engine.day_ai.filter(func(e: Dictionary) -> bool:
+			return String(e["type"]) == "host_mode" and String(e["host"]) == main and String(e["mode"]) == "SIEGE")
+		if not siege.is_empty():
+			arrived = today
+			assert_eq(engine.day_battles, [], "no battle the day the siege begins")
+			assert_eq(s.battles, [], "no assault before SiegeSystem (Task 9)")
+			break
+		assert_eq(engine.day_battles, [], "no battle on the road, day %d" % today)
+	assert_gt(arrived, 0, "the host reached the town and sat down before it")
+	assert_eq(String(s.ai_hosts[main]["mode"]), "SIEGE")
+	gut.p("siege of %s begun on day %d" % [town, arrived])
+

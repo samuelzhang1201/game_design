@@ -269,10 +269,12 @@ static func candidates(repo: DataRepository, state: GameState, host_code: String
 ## The most march days a host can go for a target: its hungriest live column's
 ## days in hand (ArmySystem.days_in_hand where it stands) less
 ## ai_retreat_supply_days — further, it would turn home hungry on the road
-## (should_retreat) before it arrived. A host with no live column: -1.
+## (should_retreat) before it arrived — less ai_supply_margin_days (the whole-
+## unit meals can run a unit ahead of the even share). No live column: -1.
 static func supply_reach_days(repo: DataRepository, state: GameState, host_code: String) -> int:
 	var least := _least_days(repo, state, host_code)
-	return -1 if least < 0 else least - int(repo.bal("ai_retreat_supply_days"))
+	return -1 if least < 0 else least - int(repo.bal("ai_retreat_supply_days")) \
+		- int(repo.bal("ai_supply_margin_days"))
 
 
 ## The hungriest live column's whole days in hand; -1 with none.
