@@ -293,6 +293,18 @@ var manor_log: Array = []
 ## {morale, wounded, supplies, training}, all whole numbers. Only the player's
 ## realm's regiments; the pack's arms stay the headcount.
 var regiments: Dictionary = {}
+## The raider realm's regiments in the field (spec 2026-10-07-enemy-ai-and-
+## battle §2): regiment code -> a state of the same shape as `regiments`, kept
+## APART so the player-only iterations (supply lines, the LEDGER, hazards, the
+## map) never see a foe. ArmySystem.state_of reads both.
+var foes: Dictionary = {}
+## The enemy hosts' minds (§2, EnemyAi): host code -> {mode, target_kind,
+## target_id, think_day, plunder, siege_progress}, ints and strings.
+var ai_hosts: Dictionary = {}
+## The battles being fought (§4, BattleSystem): an Array of Dictionaries.
+var battles: Array = []
+## The last id handed to a foe or a battle (a higher id is a newer one).
+var foe_next_id := 0
 ## The couriers on the road (owner 2026-09-27, CourierSystem): an Array of
 ## Dictionaries in whole metres and ints, walked in ascending id order.
 var couriers: Array = []
@@ -369,6 +381,10 @@ func to_dict() -> Dictionary:
 		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 		"regiments": _encode_values(regiments.duplicate(true)),
+		"foes": _encode_values(foes.duplicate(true)),
+		"ai_hosts": _encode_values(ai_hosts.duplicate(true)),
+		"battles": _encode_values(battles.duplicate(true)),
+		"foe_next_id": _encode_values(foe_next_id),
 		"couriers": _encode_values(couriers.duplicate(true)),
 		"war_drafts": _encode_values(war_drafts.duplicate(true)),
 		"next_courier_id": _encode_values(next_courier_id),
@@ -452,6 +468,11 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.closed_routes = (d.get("closed_routes", []) as Array).duplicate()
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))
+	# Saves from before the raiders carry none of these: no foe in the field.
+	s.foes = _decode_values(d.get("foes", {}))
+	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
+	s.battles = _decode_values(d.get("battles", []))
+	s.foe_next_id = int(_decode_values(d.get("foe_next_id", 0)))
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))
 	s.war_drafts = _decode_values(d.get("war_drafts", {}))

@@ -1,0 +1,4 @@
+host_code,regiments,appear_day,role,start_x,start_y,notes
+raid_main,corwyn_8th_blandbury_regiment|corwyn_3rd_horstony_regiment|corwyn_5th_cocking_regiment,15,main,1124,729,"spec 2026-10-07-enemy-ai-and-battle §2: first draft, hand-maintained (the importer never writes it). regiments = pack regiment codes of the raider realm joined by |; appear_day = the campaign's absolute day the host crosses the border; start_x / start_y = pack coordinates, as in regiments.csv"
+raid_raiders,corwyn_10th_lympsdon_regiment|corwyn_4th_oshamia_regiment,15,raider,1018,737,"fast, few men: the cavalry-heavy regiments"
+raid_reserve,corwyn_1st_witham_regiment|corwyn_7th_chister_regiment,18,reserve,1010,700,"the rear host, over the border three days after the others"

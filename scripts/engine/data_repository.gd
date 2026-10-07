@@ -118,6 +118,22 @@ var army_carry_loads: Array = []
 var army_supply_orders: Dictionary = {}
 ## data/army_hostile_stances.csv: the stances whose regiments cut supply lines.
 var army_hostile_stances: Array[String] = []
+## data/battle_outcomes.csv (spec 2026-10-07-enemy-ai-and-battle §4.3): the five
+## result tiers in ascending eff_min, {tier, eff_min, eff_max,
+## attacker_loss_permille, defender_loss_permille, wounded_share_permille,
+## attacker_morale, defender_morale, rout} — whole numbers; rout is
+## "attacker" / "defender" / "none".
+var battle_outcomes: Array[Dictionary] = []
+## data/battle_stances.csv (§4.4): stance -> {label, defence_permille,
+## morale_decay_permille, retreat_odds_permille, retreats_on_contact (bool)}.
+var battle_stances: Dictionary = {}
+## data/ai_doctrines.csv (§3.3): host role -> {greed_permille, caution_permille,
+## dist_cost, engage_odds_permille, retreat_morale, town_bonus}.
+var ai_doctrines: Dictionary = {}
+## The pack's military/raid_hosts.csv (§2) in file order: [{host_code,
+## regiments (Array of regiment codes), appear_day, role, start_x, start_y}].
+## Cleared by load_map.
+var raid_hosts: Array[Dictionary] = []
 ## data/event_presenters.csv: an event id or an event category -> the council
 ## seat whose holder brings that event before the crown (owner 2026-10-02:
 ## every event waits on the table as a minister's matter); an id wins.
@@ -809,6 +825,36 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/army_hostile_stances.csv", ["stance"],
 			func(r): army_hostile_stances.append(String(r["stance"]))):
 		return false
+	if not _load_if_present(dir + "/battle_outcomes.csv",
+			["tier", "eff_min", "eff_max", "attacker_loss_permille", "defender_loss_permille",
+			"wounded_share_permille", "attacker_morale", "defender_morale", "rout"],
+			func(r): battle_outcomes.append({"tier": String(r["tier"]),
+				"eff_min": int(r["eff_min"]), "eff_max": int(r["eff_max"]),
+				"attacker_loss_permille": int(r["attacker_loss_permille"]),
+				"defender_loss_permille": int(r["defender_loss_permille"]),
+				"wounded_share_permille": int(r["wounded_share_permille"]),
+				"attacker_morale": int(r["attacker_morale"]),
+				"defender_morale": int(r["defender_morale"]), "rout": String(r["rout"])})):
+		return false
+	battle_outcomes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a["eff_min"]) < int(b["eff_min"]))
+	if not _load_if_present(dir + "/battle_stances.csv",
+			["stance", "label", "defence_permille", "morale_decay_permille",
+			"retreat_odds_permille", "retreats_on_contact"],
+			func(r): battle_stances[String(r["stance"])] = {"label": String(r["label"]),
+				"defence_permille": int(r["defence_permille"]),
+				"morale_decay_permille": int(r["morale_decay_permille"]),
+				"retreat_odds_permille": int(r["retreat_odds_permille"]),
+				"retreats_on_contact": int(r["retreats_on_contact"]) == 1}):
+		return false
+	if not _load_if_present(dir + "/ai_doctrines.csv",
+			["role", "greed_permille", "caution_permille", "dist_cost", "engage_odds_permille",
+			"retreat_morale", "town_bonus"],
+			func(r): ai_doctrines[String(r["role"])] = {"greed_permille": int(r["greed_permille"]),
+				"caution_permille": int(r["caution_permille"]), "dist_cost": int(r["dist_cost"]),
+				"engage_odds_permille": int(r["engage_odds_permille"]),
+				"retreat_morale": int(r["retreat_morale"]), "town_bonus": int(r["town_bonus"])}):
+		return false
 	if not _load_if_present(dir + "/army_formations.csv", ["figures", "min_fit_permille", "slots"],
 			func(r):
 				var slots: Array = []
@@ -930,6 +976,7 @@ func load_map(id: String) -> bool:
 	landmark_name_overrides.clear()
 	world_tables.clear()
 	deals.clear()
+	raid_hosts.clear()
 	MarketSystem.forget()
 	if not _load_if_present(dir + "/political/kingdoms.csv",
 			["kingdom_code", "state_id", "label", "capital_burg"],
@@ -1005,6 +1052,14 @@ func load_map(id: String) -> bool:
 				deals.append({"seller_type": String(r["seller_type"]), "seller": String(r["seller"]),
 					"buyer_type": String(r["buyer_type"]), "buyer": String(r["buyer"]),
 					"good": String(r["good_code"]), "units": float(r["units"]), "price": float(r["price"])})):
+		return false
+	if not _load_if_present(dir + "/military/raid_hosts.csv",
+			["host_code", "regiments", "appear_day", "role", "start_x", "start_y"],
+			func(r: Dictionary) -> void:
+				raid_hosts.append({"host_code": String(r["host_code"]),
+					"regiments": Array(String(r["regiments"]).split("|", false)),
+					"appear_day": int(r["appear_day"]), "role": String(r["role"]),
+					"start_x": int(float(r["start_x"])), "start_y": int(float(r["start_y"]))})):
 		return false
 	if not _load_if_present(dir + "/realm_bindings.csv", ["slot", "kingdom_code"],
 			func(r): realm_bindings[r["slot"]] = r["kingdom_code"]):

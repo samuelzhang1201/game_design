@@ -1,0 +1,6 @@
+tier,eff_min,eff_max,attacker_loss_permille,defender_loss_permille,wounded_share_permille,attacker_morale,defender_morale,rout,notes
+attacker_routed,0,200,150,30,600,-20,5,attacker,"spec 2026-10-07-enemy-ai-and-battle §4.3: first draft. eff 0..1000 is the attacker's side of the round (odds with the stance, the height and the dice); loss = per mille of the side's heads, wounded_share = the part of the loss that is wounded (the rest are dead); morale = a whole-point change; rout = which side breaks (attacker / defender / none)"
+attacker_checked,200,400,80,40,600,-8,2,none,"first draft"
+stalemate,400,600,50,50,600,-3,-3,none,"first draft"
+defender_checked,600,800,40,80,600,2,-8,none,"first draft"
+defender_routed,800,1000,30,150,600,5,-20,defender,"first draft"

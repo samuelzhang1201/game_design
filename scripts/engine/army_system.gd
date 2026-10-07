@@ -74,9 +74,16 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 			entry["carry_days"] = int(repo.bal("army_carry_default_days"))
 			entry["supplies"] = mini(int(entry["supplies"]), max_units(repo, supply_use(repo, reg, state)))
 
-## A regiment's state for reading: the stored one, else what it would start
-## with. Never writes. {} for a regiment that is not the player's.
+## True for a regiment of the raider realm in the field (GameState.foes).
+static func is_foe(state: GameState, code: String) -> bool:
+	return state != null and state.foes.has(code)
+
+## A regiment's state for reading: a foe's stored one (GameState.foes, spec
+## 2026-10-07-enemy-ai-and-battle §2), else the player's stored one, else what
+## it would start with. Never writes. {} for a regiment that is neither.
 static func state_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	if is_foe(state, code):
+		return state.foes[code]
 	var reg := regiment(repo, code)
 	if reg.is_empty() or String(reg["kingdom_code"]) != repo.resolve_realm("player_realm"):
 		return {}
