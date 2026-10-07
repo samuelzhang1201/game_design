@@ -122,7 +122,7 @@ static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, 
 			Intel.stance_of(repo, MapOwnership.owner_of(repo, state, prov)) if sees_words else Intel.UNCLEAR))
 		facts.append(MissiveLog.words("wealth", _label(repo, "wealth"),
 			Intel.wealth_word(repo, Intel.wealth_tier(repo, state, prov)) if sees_words else Intel.UNCLEAR))
-	var troops := _troops(repo, state, at)
+	var troops := troops_near(repo, state, at)
 	for key in ["troops_own", "troops_foreign"]:
 		var tl := estimate(repo, int(troops[key]), q, bias, _round_to(repo, key))
 		facts.append(MissiveLog.span(key, _label(repo, key), int(tl[0]), int(tl[1])))
@@ -137,9 +137,11 @@ static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, 
 		"Spy report — " + Intel.place_label(repo, state, at), facts)
 
 
-## Heads within spy_radius_km of a point: ours (live positions) and foreign
-## (the pack's rows, which stand still until enemy AI exists).
-static func _troops(repo: DataRepository, state: GameState, at: Vector2) -> Dictionary:
+## Men under arms within spy_radius_km of a point (PACK px), each regiment at
+## its live place (ArmySystem.position_of: a foe where its host has marched
+## it): ours and foreign — headcount less the regiment's `dead`, never below
+## 0, so beside an enemy host troops_foreign and foe_troops count the same men.
+static func troops_near(repo: DataRepository, state: GameState, at: Vector2) -> Dictionary:
 	var reach := repo.bal("spy_radius_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
 	var realm := repo.resolve_realm("player_realm")
 	var own := 0
@@ -150,10 +152,11 @@ static func _troops(repo: DataRepository, state: GameState, at: Vector2) -> Dict
 		var reg: Dictionary = repo.world_table("military", "regiments")[code]
 		if ArmySystem.position_of(repo, state, reg).distance_to(at) > reach:
 			continue
+		var men := maxi(0, ArmySystem.headcount(repo, reg) - int(ArmySystem.state_of(repo, state, code).get("dead", 0)))
 		if String(reg.get("kingdom_code", "")) == realm:
-			own += ArmySystem.headcount(repo, reg)
+			own += men
 		else:
-			foreign += ArmySystem.headcount(repo, reg)
+			foreign += men
 	return {"troops_own": own, "troops_foreign": foreign}
 
 

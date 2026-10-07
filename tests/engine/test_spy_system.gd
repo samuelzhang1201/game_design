@@ -139,6 +139,40 @@ func test_troops_near_the_point_split_own_and_foreign() -> void:
 	assert_true(int(own["hi"]) >= ArmySystem.headcount(repo, reg), "our own regiment is counted")
 
 
+## Men under arms are headcount less the dead, for every column a spy counts:
+## beside an enemy host his foreign troops and his foe troops fall by the
+## same dead (hand: 300 dead, 300 fewer of each; a column dead to the last man
+## counts 0, never less), and his own side's count drops by its own dead.
+func test_troops_near_count_men_under_arms() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var codes: Array = s.foes.keys()
+	codes.sort()
+	var code: String = codes[0]
+	var e: Dictionary = s.foes[code]
+	var at := ArmySystem.metres_to_pack(repo, Vector2i(int(e["x_m"]), int(e["y_m"])))
+	var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
+	assert_gt(heads, 300)
+	var t0: Dictionary = SpySystem.troops_near(repo, s, at)
+	var f0 := SpySystem.foes_near(repo, s, at)
+	assert_gte(int(t0["troops_foreign"]), int(f0["foe_troops"]), "the foes are among the foreign troops")
+	e["dead"] = 300
+	var t1: Dictionary = SpySystem.troops_near(repo, s, at)
+	var f1 := SpySystem.foes_near(repo, s, at)
+	assert_eq(int(f1["foe_troops"]), int(f0["foe_troops"]) - 300, "foe troops less the dead")
+	assert_eq(int(t1["troops_foreign"]), int(t0["troops_foreign"]) - 300, "foreign troops less the same dead")
+	e["dead"] = heads
+	var t2: Dictionary = SpySystem.troops_near(repo, s, at)
+	assert_eq(int(t2["troops_foreign"]), int(t0["troops_foreign"]) - heads, "a column slain to the last man counts 0")
+	# our own: a regiment of the crown's, 200 of it dead
+	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))[0]
+	var mine := String(reg["regiment_code"])
+	var here := ArmySystem.position_of(repo, s, reg)
+	var o0: Dictionary = SpySystem.troops_near(repo, s, here)
+	s.regiments[mine]["dead"] = 200
+	var o1: Dictionary = SpySystem.troops_near(repo, s, here)
+	assert_eq(int(o1["troops_own"]), int(o0["troops_own"]) - 200, "our own less our dead")
+
+
 func test_a_spy_at_sea_reports_troops_only() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var wet := Vector2(1.0, 1.0)
