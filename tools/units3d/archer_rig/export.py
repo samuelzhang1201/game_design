@@ -22,6 +22,9 @@ def export(path=None):
         st = tr.strips.new(n, int(act.frame_range[0]), act)
         st.name = n
     reset(a)
+    hidden = [(x, x.hide_get()) for x in (a, o)]
+    for x, _ in hidden:                 # a hidden object cannot be selected: the export would drop it
+        x.hide_set(False)
     for x in bpy.context.view_layer.objects:
         x.select_set(False)
     a.select_set(True); o.select_set(True)
@@ -30,6 +33,8 @@ def export(path=None):
                               export_skins=True, export_animations=True, export_animation_mode="NLA_TRACKS",
                               export_def_bones=False, export_force_sampling=True, export_frame_step=1,
                               export_anim_single_armature=True, export_reset_pose_bones=True)
+    for x, h in hidden:
+        x.hide_set(h)
     return path
 
 
