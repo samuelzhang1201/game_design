@@ -59,7 +59,8 @@ func test_a_front_has_its_line_and_its_teeth_and_flips() -> void:
 	var b := _mid() + Vector2(r.size.x * 0.1, 0)
 	var id := WarPlans.draw(repo, state, "front", "red", PackedVector2Array([a, b]), 0.0, "")
 	var ink := WarPlanInk.strokes(repo, state, sheet, TEX, 1.4)
-	var length_mm := r.size.x * 0.1 * _k()
+	var pts := WarPlans.points_px(repo, state.war_plans["strokes"][id])   # as stored: whole metres
+	var length_mm := pts[0].distance_to(pts[1]) * _k()
 	var teeth := int(floor(length_mm / repo.bal("war_plan_tooth_every_mm")))
 	assert_eq((ink["crayon"] as Array).size(), 1 + teeth)
 	var apex_y: float = (ink["crayon"][1]["poly"] as PackedVector2Array)[1].y

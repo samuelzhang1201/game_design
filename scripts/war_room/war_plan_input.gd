@@ -7,8 +7,8 @@ extends RefCounted
 ## lands on; with the hand a supposed piece is carried by a drag (a click
 ## chooses it), a stroke's handle reshapes it and its line moves it whole. A
 ## crown piece under the pointer is the rake's, never this. The live stroke
-## is WarPlanHud's. It only says what was done; the screen writes it through
-## Game. Never reaches the Game autoload.
+## is WarPlanHud's. It only says what was done; the screen writes it. Never
+## reaches the autoload.
 
 signal drawn(stroke: Dictionary)                       # {kind, colour, pts (pack px), r}
 signal piece_moved(id: String, to_px: Vector2, facing_deg: int)

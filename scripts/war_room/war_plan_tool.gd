@@ -7,7 +7,7 @@ extends RefCounted
 ## smoothed on release to war_plan_points_max points (Shift: straight); a ring
 ## drawn as a compass; a stroke or its handle picked on the screen; the
 ## session's undo. Pure: the view routes the pointer here and hands what is
-## drawn to the screen, which writes it through Game.
+## drawn to the screen, which writes it.
 
 const HAND := "hand"
 const STICKS := ["blue", "red", "ink"]
