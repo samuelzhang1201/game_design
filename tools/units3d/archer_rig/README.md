@@ -36,7 +36,7 @@ then `tools/units3d/archer_install/install.py` (→ `assets/3D/units/archers/arc
 | 1d | `labels.py` | parts ICP-aligned (median 0.79 cm), identified on `shots/parts_sheet.png`, a role per part; nearest-part labels, 3-pass majority; the bow told from the fist and the boot by its own centreline (the parts' bow is a separate generation 10 cm off), the bottom tip by walking the mesh |
 | 3C | `armature.py` | 27 bones: a standing humanoid (`head` the chip's bone), `Quiver`, `Scabbard`, `Bow` in the left fist with `BowLimb.U` / `.D`, `String` (the nock point), `Arrow` |
 | 4 | `weights.py` | heat solve per body sub-group with its own bones (the torso never follows an upper arm: a raised arm tore the chest), the arms' seams cut; the coat's skirt keeps 60 % on Hips and is smoothed; quiver, scabbard, buckler rigid with a 4-ring blend; the bow graded grip → tips; seams split, duplicates' roles fixed |
-| props | `props.py` | the string (two strands graded tip → nock) and the 76 cm arrow (shaft, vanes, bodkin), textured from spots of the atlas, joined in |
+| props | `props.py` | the string (two strands graded tip → nock) and the 76 cm arrow (shaft, vanes, bodkin), textured from spots of the atlas, joined in; `cut_cuff_scraps()` deletes the leather flap Tripo welded under the right wrist and the skin shards it left on the coat |
 | 5 | `validate.py` | numeric gates (all 0), stretch per test pose (raised arm 0, knee lift 34, twist 20 edges), weight map, test poses; `clip_metrics` per clip |
 | clips | `actions.py` | every frame SOLVED from smooth channels (body-frame targets, lags down the chains): analytic two-bone IK with the hinge set explicitly (no flips), the left arm solved to hold the bow where the clip puts it, the string following the hooked hand, the arrow on the string / in the hand / hidden |
 | 6/7 | `export.py` | one NLA track a clip, the debug colour layers dropped |
@@ -45,7 +45,7 @@ then `tools/units3d/archer_install/install.py` (→ `assets/3D/units/archers/arc
 
 | clip | frames | what |
 | --- | --- | --- |
-| MARCH 行进 | 24 | a run after the owner's 8-phase sheet (2026-10-07: contact → down → passing → up/flight per step), duty 0.36, 2 m a loop (`stride_m` 4.9 = × the pieces' 2.47); the stance foot rolls heel → flat → toe on the belt, the swing a Hermite through the sheet's poses joined to the stance with no velocity step; the hips sink ~4 cm after the strike, rise in the push-off and are ballistic in the flight; the bow upright before the chest, top 10° forward, string toward him |
+| MARCH 行进 | 24 | a run after the owner's 8-phase sheet (2026-10-07: contact → down → passing → up/flight per step), duty 0.36, 2 m a loop (`stride_m` 4.9 = × the pieces' 2.47); the stance foot rolls heel → flat → toe on the belt, the swing a Hermite through the sheet's poses joined to the stance with no velocity step; the hips sink ~4 cm after the strike, rise in the push-off and are ballistic in the flight; the knees lifted low (owner: 抬腿稍低); the left arm LEADS (`l_wrist`: the wrist an offset from the posed shoulder; the elbow untwisted against the upper arm; the hand at its rest angle to the forearm but for a fixed ulnar bend `l_dev`, ≤ `DEV_MAX` 45°): it hangs a little behind and swings against the left leg, and the bow rides in the fist 30–56° below level, upper tip forward and down, rocking with the arm (owner 2026-10-07: 左手自然下垂并摆动，弓倾斜45度角向前下方; a bow forced to 45° by the hand had twisted the wrist and forearm: 左手手腕和小臂扭曲严重). The fist holds the bow square to the forearm, so the tilt comes from the arm hanging back plus the wrist's side bend, never from a forearm twist |
 | GARRISON 驻防 | 150 | side-on (the figure turned −90°, the shot along its march direction), an arrow nocked: half draw → full draw to the jaw → a held aim with a tremble → let down |
 | ATTACK 攻击 | 48 | an arrow every 1.6 s: into the quiver, drawn up and over, nocked, raised to 14°, drawn, loosed (the arrow gone, the string straight, the hand past the ear), follow-through |
 | DEFEND 防御 | 80 | crouched behind the bow held crosswise before the face; a blow at f 38, he gives and recovers |
@@ -54,7 +54,8 @@ then `tools/units3d/archer_install/install.py` (→ `assets/3D/units/archers/arc
 Gates (`validate.clip_metrics`): every loop closes exactly; no toe under the ground; the run's
 planted toes slip ≤ 4.8 mm a frame; the fastest bone turn is 38° a frame in ATTACK's arrow pull
 (a real, continuous motion) and 25° a frame in MARCH's swinging foot (continuous), ≤ 15° elsewhere; every IK
-target reached within 1 cm; MARCH's jerk spike ratio ≤ 5.4 and the bow ≥ 1.3 cm off the body.
+target reached within 1 cm; MARCH's bow ≥ 2 cm off the body; `validate.limb_twist(clip)` reports each forearm's twist against its upper arm and each hand's
+against its forearm (MARCH: elbows 0°, left wrist ≤ 13°).
 
 ## Known limitations
 

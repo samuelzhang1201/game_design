@@ -29,7 +29,7 @@
   "label": "Archer",
   "source": "Tripo 3D (owner, paid plan) from REF_archers_qwenfast_s2.png; tools/units3d/archer_rig/",
   "stride_m": 2.0,
-  "tris": 18709,
+  "tris": 18591,
   "weights": {
    "body": "heat",
    "props": "rigid",
