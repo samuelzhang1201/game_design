@@ -242,3 +242,35 @@ func test_a_garrison_is_one_piece_on_its_town() -> void:
 	ArmySystem.set_march(repo, state, other, Vector2(float(b["x"]) + 40.0, float(b["y"])))
 	var codes := WarRoom.pieces(repo, state).map(func(p: Dictionary) -> String: return String(p["code"]))
 	assert_true(other in codes, "its own piece once it marches")
+
+
+# --- intel hints (spec 2026-10-08-war-room-draw-orders ruling 18) ------------
+
+func _spy_report(at: Vector2, lo: int, hi: int, day: int) -> int:
+	var facts: Array = [MissiveLog.span("troops_own", "Our men", 0, 0), MissiveLog.span("troops_foreign", "Foreign men", lo, hi)]
+	return MissiveLog.add(repo, state, MissiveLog.make("spy", "credible", day, MissiveLog.subject("point", "", -1, at),
+		"Spy report — somewhere", facts))
+
+
+func test_a_spy_report_of_foreign_men_is_a_hint_where_it_saw_them() -> void:
+	assert_eq(WarRoom.intel_hints(repo, state), [], "no report, no hint")
+	var id := _spy_report(Vector2(400, 300), 800, 1200, 50)
+	_spy_report(Vector2(500, 300), 0, 0, 51)   # nobody there: no hint
+	var hints := WarRoom.intel_hints(repo, state)
+	assert_eq(hints.size(), 1)
+	var h: Dictionary = hints[0]
+	assert_eq(String(h["id"]), "h%d" % id)
+	assert_eq(h["at"], Vector2(400, 300))
+	assert_eq([int(h["lo"]), int(h["hi"]), int(h["day"])], [800, 1200, 50])
+	var newer := _spy_report(Vector2(400, 300), 0, 100, 60)
+	hints = WarRoom.intel_hints(repo, state)
+	assert_eq(hints.size(), 1, "the newest report about a place stands for it")
+	assert_eq(String(hints[0]["id"]), "h%d" % newer)
+	assert_eq(WarRoom.hint_of(repo, state, "h%d" % newer)["at"], Vector2(400, 300))
+	assert_eq(WarRoom.hint_of(repo, state, "h999"), {})
+
+
+func test_a_report_below_the_threshold_hints_nothing() -> void:
+	repo.balance["war_intel_hint_min_heads"] = 500
+	_spy_report(Vector2(400, 300), 100, 400, 50)
+	assert_eq(WarRoom.intel_hints(repo, state), [])

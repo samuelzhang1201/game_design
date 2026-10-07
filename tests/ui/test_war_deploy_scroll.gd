@@ -140,3 +140,31 @@ func test_cancelling_a_seal_puts_it_away_and_sends_nothing() -> void:
 		+ Game.data.bal("war_deploy_roll_s") + Game.data.bal("missive_seal_s") + Game.data.bal("missive_fly_s") + 0.6)
 	assert_signal_not_emitted(scroll, "sealed")
 	assert_true(WarDrafts.any(Game.state))
+
+
+## A march drafted with a supply town (spec 2026-10-08-war-room-draw-orders
+## ruling 15): the line names the town and counts the supply courier's gold,
+## and the seal runs the supply point, then the march — each its own courier.
+func test_a_draft_with_a_supply_town_counts_its_courier_and_sends_it_first() -> void:
+	var code := String(codes[0])
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var town := ""
+	var ok := SupplyLines.march_eligibility(Game.data, Game.state, code, here + Vector2(12, 0))
+	var towns: Array = ok.keys()
+	towns.sort()
+	for t: String in towns:
+		if String(ok[t]) == "":
+			town = t
+			break
+	assert_ne(town, "", "some town supplies a march next door")
+	_draft(0)
+	var plain := int(Game.review_drafts()["lines"][0]["gold"])
+	Game.plant_draft(code, "march", here + Vector2(12, 0), [], -1, town, 1000)
+	var line: Dictionary = Game.review_drafts()["lines"][0]
+	assert_eq(String(line["supply"]), String(Game.data.burgs[town]["label"]))
+	assert_gt(int(line["gold"]), plain, "the supply courier's fee is counted")
+	var couriers := Game.state.couriers.size()
+	Game.deploy_drafts()
+	assert_eq(Game.state.couriers.size(), couriers + 2, "a courier to the town and one to the column")
+	assert_eq(String(SupplyLines.line(Game.state, code).get("town", "")), town, "the line waits ORDERED for its town")
+	scroll.refresh()

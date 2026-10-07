@@ -125,3 +125,29 @@ func test_a_quiet_copy_leaves_the_live_border_caches_alone() -> void:
 	var copy := GameState.from_dict(state.to_dict(), false)
 	assert_eq(MapOwnership._cache_owner_version, v)
 	assert_eq(copy.tick, state.tick)
+
+
+# --- the supply town on a march draft (spec 2026-10-08-war-room-draw-orders ruling 15)
+
+func test_a_march_draft_carries_its_supply_town_and_runs_it_first() -> void:
+	var town: String = TownStores.realm_towns(repo, state)[0]
+	var own := ArmySystem.carry_of(repo, ArmySystem.state_of(repo, state, code))
+	var load := 10 if own != 10 else 15
+	WarDrafts.plant(repo, state, code, "march", _somewhere(), [], load, town, 1200)
+	var d := WarDrafts.of(state, code)
+	assert_eq([String(d["supply_town"]), int(d["supply_rate"])], [town, 1200])
+	var reqs := WarDrafts.requests_from(repo, state, code, d)
+	assert_eq(reqs.map(func(r: ActionRequest) -> String: return r.action_code),
+		["SUPPLY_POINT_SET", "SUPPLY_CARRY_SET", "ARMY_MARCH"], "supply point, then load, then march")
+	assert_eq([String(reqs[0].params["town"]), int(reqs[0].params["rate"]), String(reqs[0].params["regiment"])],
+		[town, 1200, code])
+
+
+func test_the_line_it_has_already_is_no_new_order() -> void:
+	var town: String = TownStores.realm_towns(repo, state)[0]
+	SupplyLines.order_set(state, code, town, 1000, 1)
+	WarDrafts.plant(repo, state, code, "march", _somewhere(), [], -1, town, 1000)
+	assert_eq(WarDrafts.requests_from(repo, state, code, WarDrafts.of(state, code)).map(
+		func(r: ActionRequest) -> String: return r.action_code), ["ARMY_MARCH"])
+	WarDrafts.plant(repo, state, code, "march", _somewhere())
+	assert_false(WarDrafts.of(state, code).has("supply_town"), "no town named, none kept")

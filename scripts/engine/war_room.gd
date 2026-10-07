@@ -30,6 +30,43 @@ static func believed_hosts(_repo: DataRepository, _state: GameState) -> Array:
 	return []
 
 
+## Where the crown KNOWS of foreign men (spec 2026-10-08-war-room-draw-orders
+## ruling 18): every spy report that has come in (a `spy` missive) whose
+## `troops_foreign` span reaches war_intel_hint_min_heads, the newest about a
+## place standing for it, then the believed hosts (intel P2). Each {id ("h" +
+## the letter's id, "b" + a host's code), at (pack px), lo, hi, day, title} —
+## only what a report said, never a force the crown was not told of.
+static func intel_hints(repo: DataRepository, state: GameState) -> Array:
+	var out: Array = []
+	var least := int(repo.bal("war_intel_hint_min_heads"))
+	var seen: Dictionary = {}
+	var spies: Array = state.missives.filter(func(m: Dictionary) -> bool: return String(m.get("kind", "")) == "spy")
+	spies.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["id"]) > int(b["id"]))
+	for m: Dictionary in spies:
+		var subj: Dictionary = m["subject"]
+		var at := Vector2(float(subj.get("x", 0)), float(subj.get("y", 0)))
+		var key := Vector2i(at.round())
+		if seen.has(key):
+			continue
+		seen[key] = true   # the newest report about a place stands for it
+		for f: Dictionary in m["facts"]:
+			if String(f.get("key", "")) == "troops_foreign" and f.has("hi") and int(f["hi"]) >= maxi(least, 1):
+				out.append({"id": "h%d" % int(m["id"]), "at": at, "lo": int(f["lo"]), "hi": int(f["hi"]),
+					"day": int(m["day"]), "title": String(m["title"])})
+	for h: Dictionary in believed_hosts(repo, state):
+		out.append({"id": "b" + String(h["code"]), "at": h["at"], "lo": int(h.get("low", 0)),
+			"hi": int(h.get("high", 0)), "day": int(h.get("day", 0)), "title": String(h.get("source", ""))})
+	return out
+
+
+## One hint by id, {} when no report stands for it now.
+static func hint_of(repo: DataRepository, state: GameState, id: String) -> Dictionary:
+	for h: Dictionary in intel_hints(repo, state):
+		if String(h["id"]) == id:
+			return h
+	return {}
+
+
 ## The crown's regiments as pieces: code, believed place, naval, home sheet,
 ## and `garrison` — the codes a piece stands for. A town's garrison is ONE
 ## piece on the town, as the map draws it one counter (owner 2026-10-06,

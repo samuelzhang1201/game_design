@@ -249,3 +249,51 @@ func test_the_piece_nearest_a_point_within_reach() -> void:
 	var px := km * WarSheets.px_per_unit(repo)
 	assert_eq(String(WarPlans.piece_near(repo, state, at + Vector2(px * 0.5, 0), km).get("id", "")), id)
 	assert_true(WarPlans.piece_near(repo, state, at + Vector2(px * 1.5, 0), km).is_empty(), "beyond reach")
+
+
+# --- a front's facing (spec 2026-10-08-war-room-draw-orders ruling 12) -------
+
+## An eastward line (y down): the drawer's right is SOUTH (+y), flip 0; the
+## left is north, flip 1.
+func test_a_front_faces_the_side_its_nearest_target_lies_on() -> void:
+	var line := PackedVector2Array([Vector2(0, 0), Vector2(100, 0)])
+	assert_eq(WarPlans.facing_flip(line, [Vector2(50, 30)]), 0, "a target south of an eastward line: the right")
+	assert_eq(WarPlans.facing_flip(line, [Vector2(50, -30)]), 1, "north: the left")
+	assert_eq(WarPlans.facing_flip(line, []), 1, "nothing to face: the drawer's left")
+	assert_eq(WarPlans.facing_flip(line, [Vector2(50, -80), Vector2(90, 20)]), 0, "the NEAREST target decides")
+	var bent := PackedVector2Array([Vector2(0, 0), Vector2(100, 0), Vector2(100, 100)])
+	assert_eq(WarPlans.facing_flip(bent, [Vector2(130, 60)]), 1, "on the southward leg east is the left")
+
+
+func test_the_opposing_points_are_the_other_sides() -> void:
+	var o := _land()
+	var blue := WarPlans.draw(repo, state, "arrow", "blue", PackedVector2Array([o, o + Vector2(20, 0)]), 0.0, "")
+	var red := WarPlans.draw(repo, state, "front", "red", PackedVector2Array([o + Vector2(0, 40), o + Vector2(20, 40)]), 0.0, "")
+	WarPlans.place(repo, state, "infantry", 1000, _foreign(), o + Vector2(5, 80), 0)
+	var ours: Array = [o + Vector2(-50, 0)]
+	var for_red := WarPlans.opposing_points(repo, state, "red", ours, red)
+	assert_eq(for_red.size(), 3, "the blue stroke's two points and our piece")
+	assert_almost_eq((for_red[0] as Vector2).distance_to(o), 0.0, 0.01)
+	var for_blue := WarPlans.opposing_points(repo, state, "blue", ours, blue)
+	assert_eq(for_blue.size(), 3, "the red front's two points and the supposed piece; never ours")
+	assert_eq(WarPlans.opposing_points(repo, state, "red", ours, blue).size(), 1,
+		"a stroke never faces itself: only our piece is left when the blue one is the one asking")
+
+
+func test_a_front_drawn_with_a_facing_keeps_it() -> void:
+	var id := WarPlans.draw(repo, state, "front", "red", _path(), 0.0, "", false, 1)
+	assert_eq(int(state.war_plans["strokes"][id]["flip"]), 1)
+	var plain := WarPlans.draw(repo, state, "front", "red", _path(), 0.0, "")
+	assert_eq(int(state.war_plans["strokes"][plain]["flip"]), 0, "no facing given: the right, as before")
+
+
+func test_a_red_arrow_drawn_for_a_supposed_piece_goes_with_it() -> void:
+	var o := _land()
+	var p := WarPlans.place(repo, state, "cavalry", 2000, _foreign(), o, 0)
+	var arrow := WarPlans.draw(repo, state, "arrow", "red", _path(), 0.0, "", false, -1, p)
+	var free := WarPlans.draw(repo, state, "front", "red", _path(), 0.0, "")
+	assert_eq(String(state.war_plans["strokes"][arrow]["of"]), p)
+	assert_false(state.war_plans["strokes"][free].has("of"), "a mark drawn for nothing names nothing")
+	assert_true(WarPlans.remove(state, p))
+	assert_false(state.war_plans["strokes"].has(arrow), "the piece's arrow went with it")
+	assert_true(state.war_plans["strokes"].has(free))

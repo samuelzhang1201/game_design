@@ -26,12 +26,20 @@ static func _burg_px(repo: DataRepository, town: String) -> Vector2:
 ## The road from `town` to the regiment, pack px (the courier's road:
 ## CourierSystem.path_between), the town first and the column last.
 static func road_px(repo: DataRepository, state: GameState, code: String, town: String) -> PackedVector2Array:
-	var out := PackedVector2Array()
 	var reg := ArmySystem.regiment(repo, code)
-	if reg.is_empty() or not repo.burgs.has(town):
+	if reg.is_empty():
+		return PackedVector2Array()
+	return road_between_px(repo, town, ArmySystem.position_of(repo, state, reg))
+
+
+## The road from `town` to any pack point (the courier's road), the town
+## first and the point last — a march's end, for the supply town chosen on
+## its confirm (spec 2026-10-08-war-room-draw-orders ruling 13).
+static func road_between_px(repo: DataRepository, town: String, to: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if not repo.burgs.has(town):
 		return out
 	var from := _burg_px(repo, town)
-	var to := ArmySystem.position_of(repo, state, reg)
 	out.append(from)
 	for p: Array in CourierSystem.path_between(repo, from, to):
 		out.append(ArmySystem.metres_to_pack(repo, Vector2i(int(p[0]), int(p[1]))))
@@ -79,6 +87,25 @@ static func eligibility(repo: DataRepository, state: GameState, code: String) ->
 		var days := wagon_days(repo, road_km(repo, road_px(repo, state, code, town)))
 		out[town] = "" if days <= max_days else hint.format({
 			"town": String(repo.burgs[town].get("label", town)), "days": days, "max": max_days})
+	return out
+
+
+## The towns that may supply `code` on a march to `dest_px` (ruling 13):
+## those the engine takes NOW (eligibility, measured from where the column
+## stands, as the order is validated when sent) whose wagons also reach the
+## march's end within supply_point_max_days; town -> "" or why not
+## (army_supply_orders.csv pick_far_end).
+static func march_eligibility(repo: DataRepository, state: GameState, code: String, dest_px: Vector2) -> Dictionary:
+	var out := eligibility(repo, state, code)
+	var max_days := int(repo.bal("supply_point_max_days"))
+	var hint := String((repo.army_supply_orders.get("pick_far_end", {}) as Dictionary).get("hint",
+		"{town}: the wagons need {days} days to the march's end, the most is {max}"))
+	for town: String in out:
+		if String(out[town]) != "":
+			continue
+		var days := wagon_days(repo, road_km(repo, road_between_px(repo, town, dest_px)))
+		if days > max_days:
+			out[town] = hint.format({"town": String(repo.burgs[town].get("label", town)), "days": days, "max": max_days})
 	return out
 
 

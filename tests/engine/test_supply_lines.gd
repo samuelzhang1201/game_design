@@ -114,3 +114,35 @@ func test_gold_words_read_tenths() -> void:
 	assert_eq(SupplyLines.gold_words(0), "0.0")
 	assert_eq(SupplyLines.gold_words(361), "0.4")
 	assert_eq(SupplyLines.gold_words(12345), "12.3")
+
+
+# --- the supply town chosen on the march's confirm (spec 2026-10-08-war-room-draw-orders ruling 13)
+
+func test_the_road_between_a_town_and_any_point() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(repo, s)[0]
+	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))
+	assert_eq(SupplyLines.road_between_px(repo, town, here), SupplyLines.road_px(repo, s, code, town),
+		"to where the column stands it is the line's own road")
+	var b: Dictionary = repo.burgs[town]
+	var far := here + Vector2(30, 10)
+	var route := SupplyLines.road_between_px(repo, town, far)
+	assert_almost_eq(route[0].distance_to(Vector2(float(b["x"]), float(b["y"]))), 0.0, 1.0)
+	assert_almost_eq(route[route.size() - 1].distance_to(far), 0.0, 0.001, "it ends ON the point")
+
+
+func test_a_march_supply_town_must_reach_the_column_now_and_the_end() -> void:
+	var code := _land()
+	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))
+	var now := SupplyLines.eligibility(repo, s, code)
+	assert_eq(SupplyLines.march_eligibility(repo, s, code, here), now, "a march that ends where it stands: the same towns")
+	repo.balance["supply_point_max_days"] = 1000
+	var lax := SupplyLines.march_eligibility(repo, s, code, here + Vector2(400, 0))
+	for town: String in lax:
+		assert_eq(String(lax[town]), "", "within a thousand wagon days every town reaches")
+	repo.balance["supply_point_max_days"] = int(SupplyLines.wagon_days(repo, 0))   # one day: only a very near town
+	var end := here + Vector2(5000, 0)
+	var strict := SupplyLines.march_eligibility(repo, s, code, end)
+	for town: String in strict:
+		if String(SupplyLines.eligibility(repo, s, code)[town]) == "":
+			assert_string_contains(String(strict[town]), "end", "a town reaching the column now but not the end says so")
