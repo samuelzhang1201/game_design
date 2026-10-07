@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://cwmbdh0w7oj8q"]
+
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/plan/wax_tooth.tres" id="1_eh3d1"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="2_l1wyv"]
+
+[resource]
+script = ExtResource("2_l1wyv")
+art = Dictionary[String, Resource]({
+"wax_tooth": ExtResource("1_eh3d1")
+})

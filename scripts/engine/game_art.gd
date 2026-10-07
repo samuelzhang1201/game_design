@@ -10,6 +10,9 @@ const ARMY_MODELS := "res://assets/3D/units/army_models.tres"
 ## The WAR ROOM's wooden piece by art piece key (MapObjects.army_piece; a
 ## fleet has none: its tin token). Spec 2026-10-06-war-room-wooden-pieces.
 const WAR_PIECES := "res://assets/3D/war_room/war_pieces.tres"
+## The WAR ROOM's plan layer: the wax crayon's tooth (spec
+## 2026-10-07-war-room-annotations-and-planning-pieces §2.5).
+const WAR_PLAN_ART := "res://assets/2D/war_room/plan/war_plan_art.tres"
 ## The couriers' paintings by kind, and the scenes a courier's card or the
 ## Missive desk may wear (foul weather, delivered).
 const COURIER_PAINTINGS := "res://assets/2D/paintings/couriers/courier_paintings.tres"

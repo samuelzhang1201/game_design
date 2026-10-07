@@ -10,11 +10,15 @@ var px: Dictionary = {}   # the war_ink_* widths and ratios, by short key
 var font: Font
 var intel := false   # the intelligence layer (WarIntelInk), not the sheet's ink
 var fine := false    # the fine print (WarFinePrint), not the sheet's ink
+var plan := false    # the staff's plan layer (WarPlanInk), drawn by WarPlanDraw with `look`
+var look: Dictionary = {}
 
 
 func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font, as_intel := false, as_fine := false) -> void:
 	intel = as_intel
 	fine = as_fine
+	plan = false
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_PARENT_NODE
 	ink = p_ink
 	pal = p_pal
 	px = p_px
@@ -22,7 +26,22 @@ func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font,
 	queue_redraw()
 
 
+## The plan layer: WarPlanInk's parts drawn with `p_look` (WarPlanDraw.paint).
+func paint_plan(p_ink: Dictionary, p_look: Dictionary) -> void:
+	intel = false
+	fine = false
+	plan = true
+	ink = p_ink
+	look = p_look
+	# the tooth's UVs run past 1 across a stroke: it tiles (a sampling rule, not a look)
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	queue_redraw()
+
+
 func _draw() -> void:
+	if plan:
+		WarPlanDraw.paint(self, ink, look)
+		return
 	if ink.is_empty():
 		return
 	if intel:

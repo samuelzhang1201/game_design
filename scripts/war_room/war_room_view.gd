@@ -84,6 +84,7 @@ var _detail_state: Dictionary = {}   # the near-zoom patch drawn now: {level, re
 var _render_scale := 1.0
 var _selected := ""
 var _font: Font
+var _caps: Font
 var _chart_built := false
 var _swap := WarSheetSwap.new()
 var _rake := WarRoomRake.new()
@@ -211,6 +212,17 @@ func set_font(f: Font) -> void:
 	_font = f
 
 
+## The plan layer's small capitals (an objective's name), set by the screen.
+func set_caps_font(f: Font) -> void:
+	_caps = f
+
+
+## The plans changed (the screen hears plans_changed): only the plan layer is redrawn.
+func refresh_plans() -> void:
+	if _sheet >= 0:
+		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
+
+
 func lettering() -> Font:
 	return _font if _font != null else ThemeDB.fallback_font
 
@@ -285,6 +297,7 @@ func lay_sheet(index: int) -> void:
 	_table.mesh = WarRoomTable.build_mesh(WarRoomTable.clamp_sea(raw), _nx, _nz, _table_w, _depth, _y_scale, raw, shore, _heights)
 	var mat := _table.get_active_material(0) as ShaderMaterial
 	mat.set_shader_parameter("intel_tex", null)   # no sheet wears another's intelligence (final review I2)
+	mat.set_shader_parameter("plan_tex", null)    # nor another's plans
 	mat.set_shader_parameter("fine_tex", null)
 	mat.set_shader_parameter("detail_on", 0.0)
 	_detail_state = {}
@@ -539,9 +552,15 @@ func _paint_intel(mat: ShaderMaterial) -> void:
 	var sheet := _sheet
 	var tex := await _inks.intel_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
 		func() -> bool: return is_inside_tree() and sheet == _sheet)
-	_intel_busy = false
 	if tex != null and sheet == _sheet:
 		mat.set_shader_parameter("intel_tex", tex)
+	# the staff's plan layer after it, on the same viewport (spec
+	# 2026-10-07-war-room-annotations-and-planning-pieces §2.5)
+	var plan := await _inks.plan_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(), _caps,
+		func() -> bool: return is_inside_tree() and sheet == _sheet)
+	_intel_busy = false
+	if plan != null and sheet == _sheet:
+		mat.set_shader_parameter("plan_tex", plan)
 	if _intel_again:
 		_intel_again = false
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
