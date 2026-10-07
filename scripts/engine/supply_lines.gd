@@ -284,9 +284,10 @@ static func _carry(ln: Dictionary, key: String, thou: int) -> int:
 
 
 ## A flowing line's day (spec §3.2 step 3, §3.4): the day's quota at its
-## rate, drawn, thinned by the road and the marshal, its cartage charged.
+## rate, drawn, thinned by the road (`loss`, per mille: its length's and its
+## robbers', SupplySystem.total_loss) and the marshal, its cartage charged.
 static func _deliver_line(repo: DataRepository, state: GameState, code: String, reg: Dictionary,
-		ln: Dictionary, km: int) -> void:
+		ln: Dictionary, km: int, loss: int) -> void:
 	var entry: Dictionary = state.regiments[code]
 	var use := ArmySystem.supply_use(repo, reg, state)
 	@warning_ignore("integer_division")  # the rate's whole units
@@ -299,7 +300,7 @@ static func _deliver_line(repo: DataRepository, state: GameState, code: String, 
 	var got := int(d["got"])
 	var g := Governance.factors(repo, state, "supply_line")
 	var eff := int(g["efficiency"])
-	var keep := 1000 - SupplySystem.loss_of(repo, km)
+	var keep := 1000 - loss
 	# In thousandths of a unit, each remainder carried on the line, so a
 	# month's small daily draws come to what SupplySystem.plan projects: the
 	# skim off the draw, then the road and the marshal on the rest.
@@ -421,7 +422,11 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 			ln["cut_y_m"] = -1
 			ln["cut_by"] = ""
 			events.append({"type": "restored", "regiment": code, "town": town})
-		_deliver_line(repo, state, code, reg, ln, road_km(repo, route))
+		# the road's length and its robbers (main's marks and hazards, spec
+		# 2026-10-07-war-room-p2 §1.2, §2.3) read once a line a day
+		var km := road_km(repo, route)
+		var robbed := SupplySystem.road_loss(repo, state, code, route)
+		_deliver_line(repo, state, code, reg, ln, km, SupplySystem.total_loss(repo, km, int(robbed["permille"])))
 	TownStores.sync_metrics(repo, state)
 	return events
 
@@ -500,9 +505,13 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 		add_houses(bought, ln.get("m_bought", {}))
 		add_houses(bought, entry.get("m_bought", {}))
 		var skimmed := TownStores.gold_of_units(repo, int(sum["m_skim"]))
+		var route := PackedVector2Array() if ln.is_empty() else road_px(repo, state, code, String(ln["town"]))
+		var km := road_km(repo, route)
+		var robbed := SupplySystem.road_loss(repo, state, code, route)
 		rows.append({"code": code, "town": String(ln.get("town", "")), "rate": int(ln.get("rate", 0)),
 			"days": ArmySystem.days_in_hand(int(entry["supplies"]), use), "carry": ArmySystem.carry_of(repo, entry),
-			"km": 0 if ln.is_empty() else road_km(repo, road_px(repo, state, code, String(ln["town"]))),
+			"km": km, "loss_permille": SupplySystem.total_loss(repo, km, int(robbed["permille"])),
+			"robbers": (robbed["hazards"] as Array).map(func(h: Dictionary) -> String: return String(h["label"])),
 			"drawn": int(sum["m_drawn"]), "arrived": int(sum["m_arrived"]),
 			"claimed": int(sum["m_claimed"]), "fee": int(sum["m_fee"]),
 			"buy": int(sum["m_buy"]), "bought": bought,

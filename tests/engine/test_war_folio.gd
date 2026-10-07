@@ -229,3 +229,29 @@ func test_the_archers_kit_is_not_hidden_by_the_infantrys_names() -> void:
 	var inf: Array = WarFolio.kit_of(repo, "infantry").map(func(r: Dictionary) -> String: return String(r["label"]))
 	for r: Dictionary in WarFolio.kit_of(repo, "archers"):
 		assert_false(String(r["label"]) in inf, "archers' %s shares the infantry's name" % r["part"])
+
+
+func test_the_supply_row_names_a_brigand_on_the_road() -> void:
+	# a flowing line from the first eligible realm town with a road to the column
+	var e := SupplyLines.eligibility(repo, state, code)
+	var towns: Array = e.keys()
+	towns.sort()
+	for t: String in towns:
+		if String(e[t]) == "" and SupplyLines.road_px(repo, state, code, t).size() >= 2:
+			state.supply_lines[code] = SupplyLines._new_record(t, 1000, 1)
+			state.supply_lines[code]["state"] = SupplyLines.FLOWING
+			break
+	var route := SupplySystem.route_px(repo, state, code)
+	if route.size() < 2:
+		pass_test("no realm town in reach of this regiment")
+		return
+	var mid := route[route.size() / 2]
+	var codes: Array = repo.markers.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(repo.markers[c]["type"]) == "brigands":
+			repo.markers[c]["x"] = str(mid.x)
+			repo.markers[c]["y"] = str(mid.y)
+			assert_string_contains(_rows("supply")["Line"], "to the %s" % repo.markers[c]["label"])
+			return
+	pass_test("no brigands on this pack")

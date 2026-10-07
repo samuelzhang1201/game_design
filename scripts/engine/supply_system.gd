@@ -11,6 +11,91 @@ static func loss_of(repo: DataRepository, km: int) -> int:
 	return mini(loss, int(repo.bal("army_supply_loss_cap_permille")))
 
 
+## A line's whole loss: its length's (loss_of) and its marks' (mark_loss),
+## held to army_supply_loss_cap_permille.
+static func total_loss(repo: DataRepository, km: int, mark_permille: int) -> int:
+	return mini(loss_of(repo, km) + maxi(mark_permille, 0), int(repo.bal("army_supply_loss_cap_permille")))
+
+
+## What the brigands and pirates along a route take (spec
+## 2026-10-07-war-room-p2-tactical-layer §1.2): each hazard mark
+## (data/war_mark_hazards.csv) whose reach the route (pack px) passes through,
+## once per mark, in code order — {permille, hazards: [{code, label, permille}]}.
+## Pirates need no water test: their marks stand at sea, so a road within their
+## reach runs along the coast they raid.
+static func mark_loss(repo: DataRepository, route: PackedVector2Array) -> Dictionary:
+	var hazards: Array = []
+	var total := 0
+	if route.size() < 2:
+		return {"permille": 0, "hazards": hazards}
+	var per_px := WarMarks.km_per_px(repo)
+	var codes: Array = repo.markers.keys()
+	codes.sort()
+	for code: String in codes:
+		var m: Dictionary = repo.markers[code]
+		var hz: Dictionary = repo.war_mark_hazards.get(String(m.get("type", "")), {})
+		if hz.is_empty():
+			continue
+		var at := Vector2(float(m["x"]), float(m["y"]))
+		if _poly_distance(route, at) * per_px <= float(hz["reach_km"]):
+			total += int(hz["permille"])
+			hazards.append({"code": code, "label": String(m.get("label", code)), "permille": int(hz["permille"])})
+	return {"permille": total, "hazards": hazards}
+
+
+## What the active hazards a route crosses take (spec 2026-10-07-war-room-p2
+## §2.3): each hazard with a supply_loss_permille once, id order, sampled along
+## the route every war_hazard_sample_km; a hazard the crown does not know is
+## not named ("trouble on the road").
+static func hazard_loss(repo: DataRepository, state: GameState, route: PackedVector2Array) -> Dictionary:
+	var hazards: Array = []
+	var total := 0
+	if state == null or route.size() < 2:
+		return {"permille": 0, "hazards": hazards}
+	var step := repo.bal("war_hazard_sample_km") / WarMarks.km_per_px(repo)
+	var hit: Dictionary = {}
+	for i in route.size() - 1:
+		var a := route[i]
+		var b := route[i + 1]
+		var n := maxi(1, ceili(a.distance_to(b) / step))
+		for j in n + 1:
+			for id: String in Hazards.at_point(repo, state, a.lerp(b, float(j) / float(n))):
+				hit[id] = true
+	var ids: Array = hit.keys()
+	ids.sort()
+	for id: String in ids:
+		var h: Dictionary = state.hazards[id]
+		var p := int(Hazards.kind_of(repo, String(h["kind"])).get("supply_loss_permille", 0))
+		if p <= 0:
+			continue
+		total += p
+		hazards.append({"code": id, "permille": p,
+			"label": String(h["label"]) if Hazards.known(repo, state, id) else "trouble on the road"})
+	return {"permille": total, "hazards": hazards}
+
+
+## The nearest a polyline comes to a point, pack px.
+static func _poly_distance(poly: PackedVector2Array, at: Vector2) -> float:
+	var best := INF
+	for i in poly.size() - 1:
+		best = minf(best, at.distance_to(Geometry2D.get_closest_point_to_segment(at, poly[i], poly[i + 1])))
+	return best
+
+
+## What the brigands, the pirates and the active hazards along a land
+## regiment's road take (mark_loss + hazard_loss, once each), {permille,
+## hazards}; a fleet's road is no road they can rob (spec 2026-10-07-war-room-
+## p2 §1.2). `route` is the line's road (SupplyLines.road_px).
+static func road_loss(repo: DataRepository, state: GameState, code: String, route: PackedVector2Array) -> Dictionary:
+	if String(ArmySystem.regiment(repo, code).get("is_naval", "0")) == "1":
+		return {"permille": 0, "hazards": []}
+	var out := mark_loss(repo, route)
+	var through := hazard_loss(repo, state, route)
+	out["permille"] = int(out["permille"]) + int(through["permille"])
+	(out["hazards"] as Array).append_array(through["hazards"])
+	return out
+
+
 static func gold_for(repo: DataRepository, units: int) -> int:
 	@warning_ignore("integer_division")
 	return (units * int(repo.bal("army_supply_gold_permille")) + 999) / 1000
@@ -28,20 +113,24 @@ static func garrisoned_in(repo: DataRepository, state: GameState, code: String) 
 
 
 ## A regiment's line as it stands, for the cards: {town ("" with none),
-## state, rate, length_km, loss_permille, garrison, garrison_town}.
+## state, rate, length_km, loss_permille (the road's and its robbers',
+## total_loss), hazards (road_loss's names), garrison, garrison_town}.
 static func line_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	var held := garrisoned_in(repo, state, code)
 	var ln := SupplyLines.line(state, code)
 	var out := {"town": "", "state": "", "rate": 0, "length_km": 0, "loss_permille": 0,
-		"garrison": held != "", "garrison_town": held}
+		"garrison": held != "", "garrison_town": held, "hazards": []}
 	if ln.is_empty():
 		return out
-	var km := SupplyLines.road_km(repo, SupplyLines.road_px(repo, state, code, String(ln["town"])))
+	var route := SupplyLines.road_px(repo, state, code, String(ln["town"]))
+	var km := SupplyLines.road_km(repo, route)
+	var robbed := road_loss(repo, state, code, route)
 	out["town"] = String(ln["town"])
 	out["state"] = String(ln["state"])
 	out["rate"] = int(ln["rate"])
 	out["length_km"] = km
-	out["loss_permille"] = loss_of(repo, km)
+	out["loss_permille"] = total_loss(repo, km, int(robbed["permille"]))
+	out["hazards"] = robbed["hazards"]
 	return out
 
 

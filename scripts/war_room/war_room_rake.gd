@@ -53,6 +53,7 @@ func drop() -> void:
 	cancel()
 	if held:
 		_view.rake_dropped.emit()
+		_view.hover_cleared.emit()
 
 
 ## "<distance> <unit> · ~<days> day(s)" from the regiment to a pack point, in

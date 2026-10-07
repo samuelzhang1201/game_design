@@ -32,14 +32,17 @@ static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font)
 	var margin := repo.bal("war_chart_axis_margin_m")
 	var font_px := int(repo.bal("war_chart_numeral_font_px"))
 	var pixel_m := repo.bal("war_chart_numeral_pixel_m")
-	for col in g.x:
+	# a letter every war_chart_label_every columns and rows (the 10° series is
+	# 36 x 18: every cell lettered crowds the chart's edges)
+	var every := maxi(1, int(repo.bal("war_chart_label_every")))
+	for col in range(0, g.x, every):
 		var cx := (minf(MapCoords.cell_rect(repo, Vector2i(col, 0), deg).get_center().x, w) / w - 0.5) * size.x
-		var l := _label(char(65 + col), font, repo.war_palette["rubric"], Vector3(cx, size.y * 0.5 + margin, lift),
+		var l := _label(WarSheets.column_letters(col), font, repo.war_palette["rubric"], Vector3(cx, size.y * 0.5 + margin, lift),
 			font_px, pixel_m, false)
 		l.set_meta("axis", "col")
 		l.set_meta("n", col)
 		chart.add_child(l)
-	for row in g.y:
+	for row in range(0, g.y, every):
 		var cy := (0.5 - minf(MapCoords.cell_rect(repo, Vector2i(0, row), deg).get_center().y, h) / h) * size.y
 		var l := _label(str(row + 1), font, repo.war_palette["rubric"], Vector3(-size.x * 0.5 - margin, cy, lift),
 			font_px, pixel_m, false)

@@ -1,0 +1,10 @@
+kind,label,months,public,wounds_permille,morale,supply_loss_permille,pace_permille,ink,notes
+Disease,plague,12,1,15,0,0,1000,plague,"first draft (spec 2026-10-07-war-room-p2-tactical-layer §2.2): months a seeded hazard lasts (0 never ends of itself); public 1 = known abroad; wounds_permille of a crown regiment's fit heads a month while it stands in it; morale a month; supply_loss_permille once on a supply line through it; pace_permille on a march through it; ink the war room's hatch"
+Rebels,rebels,24,0,0,-3,50,1000,unrest,
+Invasion,raiders,6,0,0,-2,80,1000,unrest,
+Flood,flood,3,1,0,0,0,600,water,
+Avalanche,avalanche,4,1,0,0,0,500,rock,
+Eruption,eruption,6,1,0,0,0,700,rock,
+Fault,fault line,0,1,0,0,0,1000,none,"geology: no effect, its name in the fine print"
+Tsunami,old tsunami,0,1,0,0,0,1000,none,history: no effect
+Proselytism,preaching,0,0,0,0,0,1000,none,"the religion system's (post-MVP): no military effect"

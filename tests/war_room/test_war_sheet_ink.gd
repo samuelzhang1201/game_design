@@ -168,3 +168,128 @@ func test_crossings_outside_the_clip_are_not_looked_for() -> void:
 	var river := PackedVector2Array([Vector2(4, -5), Vector2(4, 5)])
 	assert_eq(WarSheetInk.crossings([road], [river], Rect2(0, -6, 10, 12)).size(), 1)
 	assert_eq(WarSheetInk.crossings([road], [river], Rect2(100, 100, 10, 10)).size(), 0)
+
+
+func test_a_window_keeps_only_its_strokes_in_its_own_px() -> void:
+	var s: Dictionary = WarSheets.series(repo)[0]
+	var r: Rect2 = s["rect"]
+	var win := Rect2(r.position + r.size * 0.25, r.size * 0.5)
+	var whole := WarSheetInk.strokes(repo, state, s, 4096)
+	var part := WarSheetInk.strokes(repo, state, s, 2048, null, win)
+	assert_lte((part["towns"] as Array).size(), (whole["towns"] as Array).size())
+	for t: Dictionary in part["towns"]:
+		assert_true(Rect2(Vector2.ZERO, win.size * (2048.0 / win.size.x)).has_point(t["at"]))
+
+
+func test_a_window_keeps_the_sheets_sizes_on_the_table() -> void:
+	var s: Dictionary = WarSheets.series(repo)[0]
+	var r: Rect2 = s["rect"]
+	var win := Rect2(r.position + r.size * 0.25, r.size * 0.25)   # a quarter of the width: x4 at 4096 / 4096
+	var sheet_px := int(repo.bal("war_sheet_texture_px"))
+	var part := WarSheetInk.strokes(repo, state, s, sheet_px, null, win)
+	var mag := (float(sheet_px) / win.size.x) / (float(sheet_px) / r.size.x)
+	for rv: Dictionary in part["rivers"]:
+		assert_almost_eq(float(rv["w0"]), repo.bal("war_ink_river_px") * mag, 0.001)
+	for g: Dictionary in part["graticule"]:
+		assert_eq(int(g["size"]), int(round(repo.bal("war_grid_label_px") * mag)))
+	assert_almost_eq(WarSheetInk.town_label_box(repo, {"at": Vector2.ZERO, "tier": 0, "label": "Abc"}, mag).size.x,
+		WarSheetInk.town_label_box(repo, {"at": Vector2.ZERO, "tier": 0, "label": "Abc"}).size.x * mag, 0.01)
+
+
+func test_a_window_draws_the_sheets_own_woods() -> void:
+	var bake := WarBake.of(repo)
+	if bake == null:
+		pass_test("no bake in this checkout")
+		return
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	var matched := 0
+	for s: Dictionary in WarSheets.series(repo):
+		var r: Rect2 = s["rect"]
+		var whole := WarSheetInk.strokes(repo, state, s, tex, bake)
+		if (whole["woods"] as Array).size() < 20:
+			continue
+		var win := Rect2(r.position + r.size * Vector2(0.37, 0.41), r.size * 0.3)   # an arbitrary corner
+		var part := WarSheetInk.strokes(repo, state, s, tex, bake, win)
+		var k_whole := float(tex) / r.size.x
+		var k_part := float(tex) / win.size.x
+		var sheet_at: Array = (whole["woods"] as Array).map(func(w: Dictionary) -> Vector2: return (w["at"] as Vector2) / k_whole + r.position)
+		for w: Dictionary in part["woods"]:
+			var pack: Vector2 = (w["at"] as Vector2) / k_part + win.position
+			if not win.has_point(pack):
+				continue
+			var near := sheet_at.any(func(p: Vector2) -> bool: return p.distance_to(pack) < 0.01)
+			assert_true(near, "a patch tree at %s is not one of the sheet's" % pack)
+			matched += 1
+		if matched > 0:
+			return
+	fail_test("no sheet with woods to compare")
+
+
+func test_a_window_keeps_a_town_whose_name_reaches_into_it() -> void:
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	for s: Dictionary in WarSheets.series(repo):
+		var r: Rect2 = s["rect"]
+		for code: String in repo.burgs:
+			var b: Dictionary = repo.burgs[code]
+			var at := Vector2(float(b["x"]), float(b["y"]))
+			if not r.grow(-r.size.x * 0.2).has_point(at):
+				continue
+			# a window starting just right of the town: its ring is out, its name runs in
+			var win := Rect2(at + Vector2(0.3, -r.size.y * 0.1), r.size * 0.2)
+			var part := WarSheetInk.strokes(repo, state, s, tex, null, win)
+			var labels := (part["towns"] as Array).map(func(t: Dictionary) -> String: return String(t["label"]))
+			assert_true(labels.has(String(b["label"])), "%s's name is cut at the patch's edge" % b["label"])
+			return
+	fail_test("no town to test")
+
+
+func test_sheet_marks_are_inked_with_their_reach() -> void:
+	var placed := 0
+	for s: Dictionary in WarSheets.series(repo):
+		var r: Rect2 = s["rect"]
+		var tex := int(repo.bal("war_sheet_texture_px"))
+		var k := float(tex) / r.size.x
+		var ink := WarSheetInk.strokes(repo, state, s, tex)
+		for m: Dictionary in WarMarks.inked(repo, "sheet"):
+			if not r.has_point(m["at"]):
+				continue
+			var hit := (ink["places"] as Array).filter(func(p: Dictionary) -> bool:
+				return (p["ring_at"] as Vector2).distance_to(((m["at"] as Vector2) - r.position) * k) < 0.01)
+			assert_eq(hit.size(), 1, String(m["code"]))
+			var hz: Dictionary = repo.war_mark_hazards.get(String(m["type"]), {})
+			var want := 0.0 if hz.is_empty() else float(hz["reach_km"]) / WarMarks.km_per_px(repo) * k
+			assert_almost_eq(float(hit[0]["hazard_r"]), want, 0.01)
+			placed += 1
+	assert_gt(placed, 0, "some sheet holds a mark")
+
+
+func test_a_mark_on_a_town_stands_aside_of_its_ring() -> void:
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	var checked := 0
+	for s: Dictionary in WarSheets.series(repo):
+		var ink := WarSheetInk.strokes(repo, state, s, tex)
+		for p: Dictionary in ink["places"]:
+			for t: Dictionary in ink["towns"]:
+				var ring := float(repo.bal("war_ink_town_px")) * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
+				var d := (p["at"] as Vector2).distance_to(t["at"])
+				assert_gte(d, ring + repo.bal("war_mark_px") * 0.7 - 0.01, "a mark touches %s" % t["label"])
+				checked += 1
+	assert_gt(checked, 0)
+
+
+func test_a_reach_ring_is_drawn_from_a_mark_just_outside_the_window() -> void:
+	var s: Dictionary = WarSheets.series(repo)[0]
+	var r: Rect2 = s["rect"]
+	var code: String = ""
+	for m: Dictionary in WarMarks.inked(repo, "sheet"):
+		if String(m["type"]) == "pirates":
+			code = String(m["code"])
+	var reach_px := float(repo.war_mark_hazards["pirates"]["reach_km"]) / WarMarks.km_per_px(repo)
+	var win := Rect2(r.position + r.size * 0.3, r.size * 0.2)
+	# the mark stands just past the window's right edge, its ring reaching in
+	var spot := Vector2(win.end.x + reach_px * 0.95, win.get_center().y)
+	repo.markers[code]["x"] = str(spot.x)
+	repo.markers[code]["y"] = str(spot.y)
+	var part := WarSheetInk.strokes(repo, state, s, 2048, null, win)
+	var rings := (part["places"] as Array).filter(func(p: Dictionary) -> bool: return float(p["hazard_r"]) > 0.0)
+	assert_eq(rings.size(), 1, "the ring that reaches into the window is drawn")

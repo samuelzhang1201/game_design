@@ -126,10 +126,12 @@ static func marshal_report(repo: DataRepository, state: GameState, tick: int, ro
 		var town := String((repo.burgs.get(String(r["town"]), {}) as Dictionary).get("label", ""))
 		var where := "no supply point" if town == "" else "%s · %.1f× · %d km" % [town, float(int(r["rate"])) / 1000.0, int(r["km"])]
 		@warning_ignore("integer_division")  # whole per cent of the permille
-		var lost := SupplySystem.loss_of(repo, int(r["km"])) / 10
+		var lost := int(r.get("loss_permille", SupplySystem.loss_of(repo, int(r["km"])))) / 10
+		var robbers: Array = r.get("robbers", [])
+		var to_whom := "" if robbers.is_empty() else " (%s)" % ", ".join(robbers)
 		facts.append(MissiveLog.words("days@" + String(r["code"]), label,
 			"%d days in hand of %d · %s%s · %d arrived · %d gold cartage" % [int(r["days"]), int(r["carry"]), where,
-				"" if town == "" else " · %d%% lost on the road" % lost,
+				"" if town == "" else " · %d%% lost on the road%s" % [lost, to_whom],
 				int(r["claimed"]), int(r["fee"])]))
 		fee += int(r["fee"])
 		buy += int(r["buy"])

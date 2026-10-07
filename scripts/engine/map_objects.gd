@@ -412,9 +412,14 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 			regs.append(String(row["label"]))
 	if not regs.is_empty():
 		fields.append(["Regiments", ", ".join(regs)])
-	for row: Dictionary in repo.world_table("society", "zones").values():
-		if code in String(row.get("province_codes", "")).split("|", false):
-			fields.append(["Hazard", "%s (%s)" % [row["label"], String(row["type"]).to_lower()]])
+	if state != null:   # the hazards in play there that the crown knows (spec 2026-10-07-war-room-p2 ruling 7)
+		for id: String in Hazards.active_ids(state):
+			if Hazards.known(repo, state, id) and Hazards.touches_province(repo, state, id, code):
+				var h: Dictionary = state.hazards[id]
+				var left := Hazards.months_left(state, id)
+				fields.append(["Hazard", "%s (%s, %s)" % [String(h["label"]),
+					String(Hazards.kind_of(repo, String(h["kind"])).get("label", h["kind"])),
+					"lasting" if left < 0 else "%d month%s left" % [left, "" if left == 1 else "s"]]])
 	if state != null:
 		for i in range(state.territory_log.size() - 1, -1, -1):
 			var t: Dictionary = state.territory_log[i]

@@ -199,6 +199,8 @@ func _process(delta: float) -> void:
 				String((Game.data.manor_buildings.get(String(w["building"]), {}) as Dictionary).get("label", w["building"])).to_lower(),
 				MapManors.label_of(Game.data, int(w["cell"])),
 				IndustrySystem.idle_words(w["missing"] as Array)])
+		for line: String in out.get("hazards", []):   # a plague's toll, a flood's end (spec 2026-10-07-war-room-p2 §2.3)
+			Game.publish_news(line)
 		var new_ids: Array = []
 		for id in range(missives_before + 1, Game.state.next_missive_id + 1):
 			new_ids.append(id)

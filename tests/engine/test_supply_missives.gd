@@ -204,3 +204,15 @@ func test_the_skims_odd_units_carry_to_next_month() -> void:
 	s.supply_lines[code]["m_skim"] = upg - 1
 	row = _row(SupplyLines.settle_month(repo, s), code)
 	assert_eq(int(row["skimmed"]), 1, "last month's odd unit and this month's make a gold")
+
+func test_the_report_names_the_robbers_of_a_line() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(repo, s)[0]
+	var rows := [{"code": code, "town": town, "rate": 1000, "days": 9, "carry": 20, "km": 100,
+		"loss_permille": 170, "robbers": ["Test Brigands"], "claimed": 5, "fee": 3, "buy": 0, "bought": {}}]
+	var m := MissiveWriter.marshal_report(repo, s, 1, rows)
+	var text := ""
+	for f: Dictionary in m["facts"]:
+		if String(f["key"]) == "days@" + code:
+			text = String(f["text"])
+	assert_string_contains(text, "17% lost on the road (Test Brigands)")

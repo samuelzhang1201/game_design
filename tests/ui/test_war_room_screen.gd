@@ -945,11 +945,23 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 	var screen := r.war_room_screen()
 	var code := ""
 	var engine := Vector2.ZERO
-	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
-		if String(reg.get("is_naval", "0")) != "1":
+	# a land regiment whose sheet holds another of ours, so there is a second
+	# piece to compare (the series' scale decides which: derived, not named)
+	var mine := MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))
+	for reg: Dictionary in mine:
+		if String(reg.get("is_naval", "0")) == "1":
+			continue
+		var at := ArmySystem.position_of(Game.data, Game.state, reg)
+		var sheet := WarSheets.sheet_of(Game.data, at + Vector2(4.5, -1.25))
+		var rect: Rect2 = WarSheets.series(Game.data)[sheet]["rect"]
+		var shared := mine.any(func(o: Dictionary) -> bool:
+			return String(o["regiment_code"]) != String(reg["regiment_code"]) \
+				and rect.has_point(ArmySystem.position_of(Game.data, Game.state, o)))
+		if shared:
 			code = String(reg["regiment_code"])
-			engine = ArmySystem.position_of(Game.data, Game.state, reg)
+			engine = at
 			break
+	assert_ne(code, "", "some sheet holds two of our regiments")
 	# on the march: a regiment quartered in a town stands as its garrison's piece
 	ArmySystem.ensure(Game.data, Game.state)
 	ArmySystem.set_march(Game.data, Game.state, code, engine + Vector2(40.0, 0.0))
@@ -975,3 +987,54 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 			assert_almost_eq((at[c] as Vector2).distance_to(want),
 				0.0, 0.001, "a regiment the map does not name stands at the engine's spot")
 	assert_ne(other, "", "the sheet holds another piece to compare")
+
+
+func _open_room() -> WarRoomScreen:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(3)
+	return r.war_room_screen()
+
+
+func test_a_rest_on_the_table_shows_the_slip_and_a_move_hides_it() -> void:
+	var screen := await _open_room()
+	var view := screen.view()
+	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
+	var at := Vector2(view.size) * 0.5
+	var pk: Vector2 = view.pack_at(at)
+	view.ground_hovered.emit(pk, at)
+	await wait_process_frames(1)
+	assert_true(slip.visible)
+	var first := ((slip.get_node("%Lines") as Node).get_child(0) as Label).text
+	assert_eq(first, Intel.place_label(Game.data, Game.state, pk))
+	view.hover_cleared.emit()
+	assert_false(slip.visible)
+
+
+func test_a_dropped_rake_hides_the_slip() -> void:
+	var screen := await _open_room()
+	var view := screen.view()
+	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
+	var at := Vector2(view.size) * 0.5
+	view.ground_hovered.emit(view.pack_at(at), at)
+	await wait_process_frames(1)
+	view.rake_dropped.emit()
+	assert_false(slip.visible)
+
+
+func test_the_rakes_slip_goes_when_the_aim_ends() -> void:
+	var screen := await _open_room()
+	var view := screen.view()
+	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
+	var code := ""
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		if String(r.get("is_naval", "0")) != "1":
+			code = String(r["regiment_code"])
+			break
+	view.aiming = true
+	var at := Vector2(view.size) * 0.5
+	view.rake_aimed.emit(code, view.pack_at(at), at)
+	await wait_process_frames(1)
+	assert_true(slip.visible)
+	view.aiming = false   # COMMIT, a click away or Escape: ArmyOrderMenu._set_aim("")
+	assert_false(slip.visible)

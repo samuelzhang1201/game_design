@@ -25,6 +25,11 @@ const LEGEND := [
 	{"key": "bridge", "label": "Bridge"}, {"key": "ford", "label": "Ford"},
 	{"key": "supply", "label": "Supply road"}, {"key": "courier", "label": "Courier"},
 	{"key": "weather", "label": "Foul weather"}, {"key": "spy", "label": "Spy report"},
+	{"key": "mark_brigands", "label": "Brigands"}, {"key": "mark_pirates", "label": "Pirates"},
+	{"key": "mark_mines", "label": "Mine"}, {"key": "mark_battlefields", "label": "Battlefield"},
+	{"key": "mark_lighthouses", "label": "Lighthouse"},
+	{"key": "hazard_plague", "label": "Plague"}, {"key": "hazard_unrest", "label": "Unrest"},
+	{"key": "hazard_water", "label": "Flood"}, {"key": "hazard_rock", "label": "Rockfall"},
 ]
 
 var _repo: DataRepository
@@ -160,6 +165,32 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 	var b := Vector2(r.end.x, r.get_center().y)
 	var line := _repo.bal("war_key_line_px")
 	var dash := _repo.bal("war_key_dash_px")
+	if key.begins_with("mark_"):   # the map's marks (spec 2026-10-07-war-room-p2 §1.3), a hazard in rubric
+		var type := key.trim_prefix("mark_")
+		var row: Dictionary = _repo.war_marks.get(type, {})
+		WarMarkGlyph.draw(self, String(row.get("glyph", "dot")), r.get_center(), r.size.y * 0.9,
+			pal.get("hazard_ink", pal["rubric"]) if _repo.war_mark_hazards.has(type) else ink)
+		return
+	if key.begins_with("hazard_"):   # a hazard's hatch in the intel ink (spec 2026-10-07-war-room-p2 §2.4)
+		var hc: Color = pal.get("intel_ink", ink)
+		var fill := hc
+		fill.a *= _repo.bal("war_intel_hazard_alpha")   # the hatch as faint as on the sheet; the edge at full ink
+		var box := r.grow(-r.size.y * 0.1)
+		var kind := key.trim_prefix("hazard_")
+		var poly := PackedVector2Array([box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)])
+		var gap := box.size.y * 0.5
+		for l: PackedVector2Array in WarIntelInk.hatch_lines([poly], kind, gap):
+			if kind == "rock":
+				for d: PackedVector2Array in WarSheetInk.dashed(l, gap * 0.5, gap * 0.35):
+					draw_polyline(d, fill, line * 0.8, true)
+			else:
+				draw_polyline(l, fill, line * 0.8, true)
+		for p: Vector2 in WarIntelInk.hatch_dots([poly], kind, gap * 0.6):   # a few rows of distinct dots, not a tone
+			draw_circle(p, line * 0.7, fill)
+		for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([box.position, Vector2(box.end.x, box.position.y),
+				box.end, Vector2(box.position.x, box.end.y), box.position]), gap * 0.4, gap * 0.25):
+			draw_polyline(d, hc, line * 0.6, true)
+		return
 	match key:
 		"road":
 			draw_line(a, b, ink, line * 1.6, true)

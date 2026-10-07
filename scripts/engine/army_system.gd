@@ -456,6 +456,17 @@ static func _arm_base(repo: DataRepository, code: String, arm: String, tick: int
 ## without state.
 static func power(repo: DataRepository, state: GameState, code: String, stance: String) -> int:
 	var reg := regiment(repo, code)
+	if reg.is_empty():
+		return 0
+	return power_on(repo, state, code, stance, terrain_of(repo, reg, state), works_of(repo, reg, state))
+
+
+## power(), on a given ground: `terrain` (terrain_at's words) and `works`
+## ("citadel", "walls", "town" or ""). The WAR ROOM's slip reads a regiment
+## on ground it does not stand on (spec 2026-10-07-war-room-scale-hover §4.1).
+static func power_on(repo: DataRepository, state: GameState, code: String, stance: String,
+		terrain: String, works: String) -> int:
+	var reg := regiment(repo, code)
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0
@@ -466,8 +477,6 @@ static func power(repo: DataRepository, state: GameState, code: String, stance: 
 	var tick := 0 if state == null else state.tick
 	var training_f := int(repo.bal("army_training_base_permille")) + int(st["training"]) * int(repo.bal("army_training_step_permille"))
 	var morale_f := int(repo.bal("army_morale_base_permille")) + int(st["morale"]) * int(repo.bal("army_morale_step_permille"))
-	var terrain := terrain_of(repo, reg, state)
-	var works := works_of(repo, reg, state)
 	var total := 0
 	for arm: String in repo.world_table("military", "unit_types"):
 		var n := int(float(reg.get(arm, 0)))
@@ -611,7 +620,7 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 		supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state)),
 		int(st["morale"]), int(st["training"])) / 10.0 \
 		* float(load_permille(repo, carry_of(repo, st))) / 1000.0 \
-		* float(ground_permille(repo, reg, position_of(repo, state, reg))) / 1000.0
+		* float(ground_permille(repo, reg, position_of(repo, state, reg), state)) / 1000.0
 
 
 ## --- The ground's pace (spec 2026-10-06-army-location-and-town-defence §6)
@@ -669,9 +678,10 @@ static func road_at(repo: DataRepository, at: Vector2) -> String:
 ## A march's pace on the ground at a pack point, per mille of its base
 ## (data/army_ground_speed.csv): on a road or trail, the road's row times its
 ## height tier's; off it, the terrain's (terrain_at). 1000 for a fleet.
-static func ground_permille(repo: DataRepository, reg: Dictionary, at: Vector2) -> int:
+static func ground_permille(repo: DataRepository, reg: Dictionary, at: Vector2, state: GameState = null) -> int:
 	if String(reg.get("is_naval", "0")) == "1":
 		return 1000
+	var base := 1000
 	var road := road_at(repo, at)
 	if road != "":
 		var id := MapEconomy.cell_at(repo, at)
@@ -679,9 +689,14 @@ static func ground_permille(repo: DataRepository, reg: Dictionary, at: Vector2) 
 		if id >= 0:
 			tier = String(Elevation.tier_of(repo, float(repo.cells[id]["height"]))["tier"])
 		@warning_ignore("integer_division")  # whole per-mille
-		return maxi(1, int(repo.army_ground_speed.get(road, 1000))
+		base = maxi(1, int(repo.army_ground_speed.get(road, 1000))
 			* int(repo.army_ground_speed.get("tier_" + tier, 1000)) / 1000)
-	return maxi(1, int(repo.army_ground_speed.get(terrain_at(repo, at), 1000)))
+	else:
+		base = maxi(1, int(repo.army_ground_speed.get(terrain_at(repo, at), 1000)))
+	if state == null:
+		return base
+	@warning_ignore("integer_division")  # whole per-mille: a flood, an avalanche (spec 2026-10-07-war-room-p2 §2.3)
+	return maxi(1, base * Hazards.pace_permille(repo, state, at) / 1000)
 
 ## The ground a regiment's pace reads now, in words: "road ×1.25",
 ## "forest ×0.75" (the card and the folio).
@@ -689,7 +704,7 @@ static func ground_word(repo: DataRepository, state: GameState, reg: Dictionary)
 	var at := position_of(repo, state, reg)
 	var road := road_at(repo, at)
 	var what := road if road != "" else terrain_at(repo, at)
-	return "%s ×%.2f" % [what, float(ground_permille(repo, reg, at)) / 1000.0]
+	return "%s ×%.2f" % [what, float(ground_permille(repo, reg, at, state)) / 1000.0]
 
 
 ## --- The march (owner 2026-09-22) ----------------------------------------
@@ -811,7 +826,7 @@ static func day_march_at(repo: DataRepository, state: GameState, code: String, a
 	if step <= 0:
 		return step
 	@warning_ignore("integer_division")  # whole metres
-	return maxi(1, step * ground_permille(repo, regiment(repo, code), at) / 1000)
+	return maxi(1, step * ground_permille(repo, regiment(repo, code), at, state) / 1000)
 
 
 ## Send a regiment to `dest` (pack pixels). The engine's only writer of a

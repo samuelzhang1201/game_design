@@ -329,6 +329,7 @@ From the build:
 - The Missive desk scrolls its facts (a `ScrollContainer` round `LetterFacts` in `missive_screen.tscn`): the marshal's report has a row per land regiment and ran off the window. The scene was patched as text, because the editor MCP drives the main checkout. If wrong: the editor may re-save the scene once.
 - PARKED for the owner (tuning): at `supply_cart_milligold_per_unit_km` 1 the cartage of one regiment is under a gold a day, so the rate menu's rows (0.8 / 1.0 / 1.2) all read "0 gold a day" and the three speeds cost the same in whole gold. If wrong: raise the key (about 10 puts a 1,600-man regiment on a 140 km road near 7 gold a day).
 - "Play it" was verified by real-window snapshots of the cards, the menu and the Missive board, not by clicking through the live game. If wrong: an interaction bug only a human click finds.
+- main's marks and hazards (war-room P2) take their share of a supply line's road daily: `SupplyLines.day_step` reads `SupplySystem.road_loss` (brigands, pirates, active hazards on the town→regiment road) once a line a day and thins the delivery by `total_loss`; `line_of`, `plan()`, the rate menu and the marshal's report (which names the robbers) read the same loss. If wrong: none.
 
 ## 9. Not in this spec (the brief's other items)
 

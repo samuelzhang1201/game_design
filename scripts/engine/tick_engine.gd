@@ -70,6 +70,9 @@ var day_supply: Array = []
 ## by Game for the news bar, ONCE per spell idle; never in the TickReport.
 var newly_idle: Array = []
 
+## The month's hazard news (Hazards: the toll, then the endings), for the news bar.
+var month_hazard_news: Array = []
+
 func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
 	var out: Array = []
 	var keys: Array = state.idle_buildings.keys()
@@ -146,8 +149,11 @@ func advance(state: GameState) -> TickReport:
 	var supply_rows := SupplyLines.settle_month(data, state)
 	if state.tick > 0:
 		MissiveLog.add(data, state, MissiveWriter.marshal_report(data, state, state.tick, supply_rows))
+	# The hazards take their month's toll (spec 2026-10-07-war-room-p2 §2.3).
+	month_hazard_news = Hazards.settle_regiments(data, state)
 	state.tick += 1
 	state.day = 1
+	month_hazard_news.append_array(Hazards.settle_month(data, state))
 	r.tick = state.tick
 	r.season = state.season()
 	r.year = state.year()

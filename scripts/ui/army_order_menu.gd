@@ -532,8 +532,10 @@ func _open_rates(town: String, route: PackedVector2Array, at: Vector2) -> void:
 	var reg := ArmySystem.regiment(Game.data, _supply_for)
 	var use := ArmySystem.supply_use(Game.data, reg, Game.state)
 	var row: Dictionary = Game.data.army_supply_orders.get("confirm", {"label": "{rate}× — {fee} gold a day", "hint": ""})
+	# the road's length and its robbers (marks and hazards), read once on the pick
+	var robbed := SupplySystem.road_loss(Game.data, Game.state, _supply_for, route)
 	@warning_ignore("integer_division")
-	var loss_pct := SupplySystem.loss_of(Game.data, km) / 10
+	var loss_pct := SupplySystem.total_loss(Game.data, km, int(robbed["permille"])) / 10
 	for i in SupplyLines.RATES.size():
 		var rate := int(SupplyLines.RATES[i])
 		var fee := SupplyLines.day_fee_estimate(Game.data, Game.state, _supply_for, town, rate, km)

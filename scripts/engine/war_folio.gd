@@ -176,6 +176,11 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 			var lost := int(line["loss_permille"]) / 10
 			text = "%s from %s, %.1f×, %d km, %d%% lost" % [String(line["state"]), from,
 				float(int(line["rate"])) / 1000.0, int(line["length_km"]), lost]
+			var named: Array = (line.get("hazards", []) as Array).map(func(h: Dictionary) -> String:
+				@warning_ignore("integer_division")
+				return "%d%% to the %s" % [int(h["permille"]) / 10, String(h["label"])])
+			if not named.is_empty():
+				text += " (%s)" % ", ".join(named)
 		if held != "":
 			text += "; topped up in %s" % held
 		rows.append(_row("Line", text))
