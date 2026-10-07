@@ -149,7 +149,7 @@ func _mine(code: String) -> bool:
 
 ## The selection becomes `codes`; the card shows the first, or closes on none.
 func _select_armies(codes: Array) -> void:
-	var had := army != ""
+	var had := burg != "" or province != "" or manor >= 0 or army != ""   # as clear() counts it
 	armies = codes
 	army = String(armies[0]) if not armies.is_empty() else ""
 	burg = ""

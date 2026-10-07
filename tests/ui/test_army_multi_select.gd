@@ -336,3 +336,64 @@ func test_mixed_selection_sends_what_it_can() -> void:
 	var label := String(ArmySystem.regiment(Game.data, fleet, Game.state)["label"])
 	assert_true(_news(Game).has("%s is a fleet: it carries no supply train" % label),
 		"the fleet is refused aloud: %s" % str(_news(Game)))
+
+
+## A screen point on land a box of `half` px round touches no unit, with what a
+## plain click there picks; [] when none on screen.
+func _empty_land(v: Map3DView, half: float) -> Array:
+	for iy in range(2, 9):
+		for ix in range(2, 15):
+			var p := Vector2(v.size.x * ix / 16.0, v.size.y * iy / 10.0)
+			var kind := String(v.pick_at(p).get("kind", ""))
+			if kind not in ["province", "burg"]:
+				continue
+			if _touched(v, Rect2(p - Vector2.ONE * half, Vector2.ONE * half * 2.0)).is_empty():
+				return [p, kind]
+	return []
+
+
+## An empty Shift-box clears what was clicked before it, and its card closes.
+func test_an_empty_shift_box_closes_the_card() -> void:
+	var v := _view()
+	v.look_at_pack(_capital_xy(), AT_M)
+	await wait_process_frames(2)
+	var half := Map3DInput.CLICK_SLOP * 2.0
+	var spot := _empty_land(v, half)
+	assert_false(spot.is_empty(), "premise: a patch of land with no unit on screen")
+	if spot.is_empty():
+		return
+	var p: Vector2 = spot[0]
+	_click(v, p)
+	assert_true(v.selected_province() != "" or v.selected_burg() != "", "the click selected the ground")
+	watch_signals(v)
+	var a := p - Vector2.ONE * half
+	var b := p + Vector2.ONE * half
+	_mouse(v, MOUSE_BUTTON_LEFT, a, true, true)
+	_drag_motion(v, a, b)
+	_mouse(v, MOUSE_BUTTON_LEFT, b, false, true)
+	assert_eq(v.selected_armies(), [], "nothing in the box")
+	assert_eq(v.selected_province(), "")
+	assert_eq(v.selected_burg(), "")
+	assert_signal_emitted_with_parameters(v, "object_selected", [{}])
+
+
+## A Shift press whose release was lost leaves no box armed: the next plain
+## press-drag pans the camera.
+func test_a_plain_drag_after_a_lost_shift_release_pans() -> void:
+	var v := _view()
+	v.look_at_pack(_capital_xy(), AT_M)
+	await wait_process_frames(2)
+	var mid := v.size * 0.5
+	_mouse(v, MOUSE_BUTTON_LEFT, mid, true, true)   # its release never comes
+	var target := v.target()
+	_mouse(v, MOUSE_BUTTON_LEFT, mid, true)
+	var m := InputEventMouseMotion.new()
+	m.position = mid + Vector2(80, 30)
+	m.relative = Vector2(80, 30)
+	m.button_mask = MOUSE_BUTTON_MASK_LEFT
+	v._gui_input(m)
+	await wait_process_frames(2)
+	assert_false(v.box_rect.has_area(), "no box is drawn")
+	assert_ne(v.target(), target, "the camera panned")
+	_mouse(v, MOUSE_BUTTON_LEFT, mid + Vector2(80, 30), false)
+	assert_eq(v.selected_armies(), [], "the release toggles nothing")

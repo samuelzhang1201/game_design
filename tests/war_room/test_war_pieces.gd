@@ -55,8 +55,9 @@ func _move_to(code: String, pack_px: Vector2) -> void:
 
 ## Stand `code` on the home sheet's point farthest from every other piece:
 ## the units camped round one town are spread plinth to plinth on the table
-## (WarPieces._spread), well within a pick's war_pick_px reach, where the
-## piece nearest the camera wins; a pick test wants its piece clear of them.
+## (WarPieces._spread), so a neighbour in front can stand its figures over a
+## piece's foot on screen — a click there rightly takes the front one; a pick
+## test wants its piece clear of them.
 func _stand_alone(code: String) -> void:
 	var rect: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
 	var others: Array = []
@@ -351,8 +352,11 @@ func test_a_click_on_the_pieces_top_picks_it_and_the_nearer_one_wins() -> void:
 	var centre := cam.unproject_position(node.global_position) / sc
 	assert_gt(centre.distance_to(at), 1.0, "the piece's top is off the plinth's centre")
 	assert_eq(pieces.pick(cam, sc, at, 0.0), code, "a click on the piece's top picks it")
+	# a nearer piece of the same size, its box over the click: the nearest wins
 	var near := Node3D.new()
 	near.set_meta("code", "zz_nearer")
+	near.set_meta("half", node.get_meta("half"))
+	near.set_meta("top_m", node.get_meta("top_m"))
 	pieces.add_child(near)
 	near.global_position = node.global_position + Vector3(0.0, 0.0, 0.002)
 	assert_eq(pieces.pick(cam, sc, centre, repo.bal("war_pick_px")), "zz_nearer", "the piece nearest the camera wins")
@@ -475,3 +479,39 @@ func test_the_chalk_ring_follows_a_pushed_piece() -> void:
 	assert_ne(hud._chalk.x, before.x, "and it has moved with it")
 	await wait_until(func() -> bool: return not pieces.pushing(), repo.bal("war_plot_push_s") * 2.0)
 	assert_false(pieces.pushing(), "the push is over and the redraws stop")
+
+
+## A click squarely on a piece picks it even where a nearer piece's
+## war_pick_px reach covers the point (camps stand plinth to plinth); only a
+## click on no piece falls back to the reach, the nearest winning.
+func test_a_click_on_a_back_piece_picks_it_over_a_nearer_ones_reach() -> void:
+	var code := _land_code()
+	_stand_alone(code)
+	view.lay_sheet(_home_sheet())
+	await wait_process_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var cam: Camera3D = view.get_node("%Camera")
+	var sc: float = view.window_scale()
+	var reach := repo.bal("war_pick_px")
+	var node := pieces.piece(code)
+	var at := cam.unproject_position(node.global_position + Vector3(0.0, float(node.get_meta("top_m")) * 0.5, 0.0)) / sc
+	# a nearer piece whose own box stands a few px off, its reach over `at`
+	var depth := cam.global_position.distance_to(node.global_position)
+	var near := Node3D.new()
+	near.set_meta("code", "zz_nearer")
+	pieces.add_child(near)
+	near.global_position = cam.project_position((at + Vector2(reach * 0.5, 0.0)) * sc, depth * 0.5)
+	var rect := Rect2()
+	for h: Dictionary in pieces.screen_hits(cam, sc):
+		if String(h["code"]) == "zz_nearer":
+			assert_false((h["rect"] as Rect2).has_point(at), "premise: the nearer box is off the point")
+			assert_true((h["rect"] as Rect2).grow(reach).has_point(at), "premise: its reach covers it")
+		if String(h["code"]) == code:
+			rect = h["rect"]
+	assert_true(rect.has_point(at), "premise: the point is on the piece")
+	assert_eq(pieces.pick(cam, sc, at, reach), code, "the piece under the click wins")
+	# off every box but within reach of both: the nearer wins
+	var off := Vector2(rect.end.x + reach * 0.75, at.y)
+	assert_eq(pieces.pick(cam, sc, off, reach), "zz_nearer", "the reach falls back to the nearest")
+	pieces.remove_child(near)
+	near.free()

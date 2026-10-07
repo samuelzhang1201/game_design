@@ -150,16 +150,22 @@ func screen_hits(camera: Camera3D, scale: float) -> Array:
 
 
 ## The code of the piece under `at` (design px): a click inside a piece's rect
-## (base box and figures) grown by `radius` picks it, the one nearest the
-## camera when several overlap; "" when none.
+## (base box and figures) picks it, the one nearest the camera when several
+## overlap; only a click on none falls back to the rects grown by `radius`
+## (camps stand plinth to plinth: a reach first would hand a click squarely on
+## a back piece to the one in front). "" when none.
 func pick(camera: Camera3D, scale: float, at: Vector2, radius: float) -> String:
-	var best := ""
-	var best_depth := INF
-	for h: Dictionary in screen_hits(camera, scale):
-		if (h["rect"] as Rect2).grow(radius).has_point(at) and float(h["depth"]) < best_depth:
-			best_depth = float(h["depth"])
-			best = String(h["code"])
-	return best
+	var hits := screen_hits(camera, scale)
+	for grow: float in [0.0, radius]:
+		var best := ""
+		var best_depth := INF
+		for h: Dictionary in hits:
+			if (h["rect"] as Rect2).grow(grow).has_point(at) and float(h["depth"]) < best_depth:
+				best_depth = float(h["depth"])
+				best = String(h["code"])
+		if best != "":
+			return best
+	return ""
 
 
 ## A piece's resting height at table point `xz`: level on the HIGHEST relief

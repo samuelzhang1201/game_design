@@ -97,6 +97,9 @@ func _button(mb: InputEventMouseButton) -> bool:
 		if mb.pressed:
 			_press_pos = mb.position
 			_dragging = false
+			if _boxing:   # a Shift press whose release was lost: this one pans
+				_boxing = false
+				view.box_rect = Rect2()
 		elif not _dragging:
 			view.select_at(mb.position)
 		return true
