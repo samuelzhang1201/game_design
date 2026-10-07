@@ -73,6 +73,9 @@ static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 	var days := CourierSystem.days_left(repo, state, c)
 	var is_spy := kind == CourierSystem.SPY
 	var carrying := "Orders to march" if order == "ARMY_MARCH" else "Orders to stand"
+	if order == "ARMY_STANCE":
+		var stance := String((c["order"] as Dictionary).get("stance", ""))
+		carrying = "Stance orders: " + String((repo.battle_stances.get(stance, {}) as Dictionary).get("label", stance))
 	if order.begins_with("SUPPLY_"):
 		var reg_label := String(ArmySystem.regiment(repo, String(c["target"])).get("label", c["target"]))
 		carrying = "Orders to carry %d days" % int((c["order"] as Dictionary).get("days", 0)) \

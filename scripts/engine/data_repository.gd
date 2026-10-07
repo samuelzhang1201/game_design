@@ -103,8 +103,10 @@ var army_matchups: Dictionary = {}
 ## data/army_training_grades.csv rows {above, label}, first match wins.
 var army_training_grades: Array[Dictionary] = []
 ## data/army_orders.csv, IN ORDER: the rows of a regiment's right-click menu
-## on the map, [{action_code, label, hint}] (ArmyOrderMenu). A list, not a
-## dictionary, because the order of the entries is the order they are shown in.
+## on the map, [{action_code, label, hint, params}] (ArmyOrderMenu); params is
+## the row's `key=value|key=value` as a Dictionary of strings, sent with the
+## regiment (ARMY_STANCE's stance). A list, not a dictionary, because the
+## order of the entries is the order they are shown in.
 var army_orders: Array = []
 ## data/army_route_orders.csv: key -> {label, hint} — the rows of the march's
 ## confirm menu (commit / cancel) and route menu (edit / halt), and the
@@ -804,7 +806,8 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/army_orders.csv", ["action_code", "label", "hint"],
 			func(r): army_orders.append({"action_code": String(r["action_code"]),
-				"label": String(r["label"]), "hint": String(r["hint"])})):
+				"label": String(r["label"]), "hint": String(r["hint"]),
+				"params": _order_params(String(r.get("params", "")))})):
 		return false
 	if not _load_if_present(dir + "/event_presenters.csv", ["key", "seat"],
 			func(r): event_presenters[String(r["key"])] = String(r["seat"])):
@@ -1276,6 +1279,15 @@ func _load_if_present(path: String, required_cols: Array, sink: Callable) -> boo
 	for r in rows:
 		sink.call(r)
 	return true
+
+## An order row's `key=value|key=value` params as a Dictionary of strings.
+static func _order_params(text: String) -> Dictionary:
+	var out: Dictionary = {}
+	for pair: String in text.split("|", false):
+		var kv := pair.split("=", true, 1)
+		if kv.size() == 2 and kv[0].strip_edges() != "":
+			out[kv[0].strip_edges()] = kv[1].strip_edges()
+	return out
 
 func bal(key: String) -> float:
 	assert(balance.has(key), "balance.csv missing key: " + key)

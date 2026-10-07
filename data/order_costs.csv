@@ -32,6 +32,7 @@ GOODS_SELL,gold:-1:the factor's fee,1,
 MANOR_RUSH,gold:-1:the foreman's bonus,1,
 ARMY_MARCH,gold:-2:the column's provisions on the road,1,a regiment on the march eats off the chest
 ARMY_GARRISON,gold:-1:the quartermaster's billets,1,
+ARMY_STANCE,gold:-1:the marshal's standing orders,1,
 SPY_SEND,gold:-1:the spy's purse for the road,1,his fee is the courier_kinds spy row
 WORKSHOP_RATE,opinion:steward:-1:the workshop's reeve re-sets his fires,1,
 GOVERNOR_SET,gold:-2:the chancery's letters of appointment,1,the passed-over governor's goodwill is charged by the order itself

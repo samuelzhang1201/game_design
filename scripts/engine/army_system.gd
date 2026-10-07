@@ -54,6 +54,7 @@ static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 		"dest_x_m": home.x,
 		"dest_y_m": home.y,
 		"order": ORDER_STANDBY,
+		"stance": STANCE_DEFAULT,
 	}
 
 ## Seeds every regiment of the player's realm that has no state yet — a new
@@ -79,6 +80,10 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 		if not entry.has("carry_days"):
 			entry["carry_days"] = int(repo.bal("army_carry_default_days"))
 			entry["supplies"] = mini(int(entry["supplies"]), max_units(repo, supply_use(repo, reg, state)))
+		# A save from before the battle stances (spec 2026-10-07-enemy-ai-and-
+		# battle §4.4): every regiment stood steady.
+		if not entry.has("stance"):
+			entry["stance"] = STANCE_DEFAULT
 
 ## True for a regiment of the raider realm in the field (GameState.foes).
 static func is_foe(state: GameState, code: String) -> bool:
@@ -748,6 +753,9 @@ static func ground_word(repo: DataRepository, state: GameState, reg: Dictionary)
 const ORDER_STANDBY := "standby"
 const ORDER_GARRISON := "garrison"
 const ORDER_MARCH := "march"
+## The battle stance (data/battle_stances.csv) a regiment starts with and an
+## old save's regiments read as; ARMY_STANCE changes it by courier.
+const STANCE_DEFAULT := "steady"
 
 
 ## Metres to one pack pixel, from the pack's own map_info.

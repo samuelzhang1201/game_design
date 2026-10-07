@@ -500,6 +500,8 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 	if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
 		return SupplyLines.deliver(repo, state, c)
 	var entry: Dictionary = state.regiments.get(code, {})
+	if String((c["order"] as Dictionary).get("action_code", "")) == "ARMY_STANCE":
+		return _deliver_stance(repo, state, c, entry)
 	if int(entry.get("order_id", 0)) > int(c["id"]):
 		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, true))
 		return _event("stale", c)
@@ -512,6 +514,20 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 			ArmySystem.set_garrison(repo, state, code)
 	if state.regiments.has(code):
 		state.regiments[code]["order_id"] = int(c["id"])
+	MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, false))
+	return _event("delivered", c)
+
+
+## A standing battle order (ARMY_STANCE) has its own newest-wins count
+## (`stance_order_id`), apart from the march's: it waits in `stance_next` and
+## BattleSystem.settle_stances makes it the stance at the end of the day's
+## battles, so it fights from the next day (spec 2026-10-07-enemy-ai-and-battle §4.4).
+static func _deliver_stance(repo: DataRepository, state: GameState, c: Dictionary, entry: Dictionary) -> Dictionary:
+	if entry.is_empty() or int(entry.get("stance_order_id", 0)) > int(c["id"]):
+		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, true))
+		return _event("stale", c)
+	entry["stance_next"] = String((c["order"] as Dictionary).get("stance", ArmySystem.STANCE_DEFAULT))
+	entry["stance_order_id"] = int(c["id"])
 	MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, false))
 	return _event("delivered", c)
 
@@ -531,15 +547,16 @@ static func _event(type: String, c: Dictionary, weather: String = "") -> Diction
 
 
 ## The newest MARCH / HALT courier riding for a regiment, {} when none. The
-## supply orders (SUPPLY_*) are not the march: they never move a column's
-## arrival day, so this reader (days_to_arrival, the regiment card, the war
-## folio) passes them by.
+## supply orders (SUPPLY_*) and the battle stance (ARMY_STANCE) are not the
+## march: they never move a column's arrival day, so this reader
+## (days_to_arrival, the regiment card, the war folio) passes them by.
 static func pending_for(state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	if state == null:
 		return best
 	for c: Dictionary in state.couriers:
-		if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
+		var kind := String((c["order"] as Dictionary).get("action_code", ""))
+		if kind.begins_with("SUPPLY_") or kind == "ARMY_STANCE":
 			continue
 		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c

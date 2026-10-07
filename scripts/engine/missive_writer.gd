@@ -15,6 +15,9 @@ static func receipt(repo: DataRepository, state: GameState, c: Dictionary, stale
 	var order := String((c["order"] as Dictionary).get("action_code", ""))
 	var said := "Newer orders stand: this one is set aside" if stale else \
 		("March" if order == "ARMY_MARCH" else "Stand")
+	if not stale and order == "ARMY_STANCE":
+		var stance := String((c["order"] as Dictionary).get("stance", ""))
+		said = "Stance: %s, from the next day" % String((repo.battle_stances.get(stance, {}) as Dictionary).get("label", stance))
 	var facts: Array = [MissiveLog.words("orders", "Orders", said)]
 	if not st.is_empty():
 		facts.append(MissiveLog.exact("morale", "Morale", int(st["morale"])))

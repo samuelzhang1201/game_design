@@ -9,6 +9,8 @@ extends PopupMenu
 ## COMMIT or CANCEL there, the route drawn to it (owner 2026-09-27) — only a
 ## commit sends the order. That is why its label ends in an ellipsis.
 ## GARRISON runs at once. Escape or a click away from the confirm gives it up.
+## A STANCE row (ARMY_STANCE) runs at once too, its row's `params` (the
+## stance) sent with the regiment; the war room's menu leaves stances off.
 ## A committed march's end ring opens the ROUTE menu: Edit route… aims it
 ## anew, Cancel march halts it (an ARMY_GARRISON).
 ##
@@ -97,10 +99,14 @@ func _open_for(code: String, at: Vector2) -> void:
 	clear()
 	for i in Game.data.army_orders.size():
 		var row: Dictionary = Game.data.army_orders[i]
+		# a battle stance is the map's order: the war room drafts only marches
+		if drafting and String(row["action_code"]) != "ARMY_MARCH":
+			continue
 		add_item(String(row["label"]), i)
-		var why := _refusal(String(row["action_code"]), code)
-		set_item_disabled(i, why != "")
-		set_item_tooltip(i, why if why != "" else String(row["hint"]))
+		var why := _refusal(String(row["action_code"]), code, row.get("params", {}))
+		var row_at := get_item_index(i)
+		set_item_disabled(row_at, why != "")
+		set_item_tooltip(row_at, why if why != "" else String(row["hint"]))
 	_add_supply_rows(code)
 	if item_count == 0:
 		return
@@ -229,10 +235,10 @@ func _paused_reason() -> String:
 ## without one — the questions that do not need a destination (is it mine,
 ## has it anyone under arms, can the chest pay) are the ones worth asking
 ## before the player aims.
-func _refusal(action_code: String, code: String) -> String:
+func _refusal(action_code: String, code: String, params: Dictionary = {}) -> String:
 	if action_code == "ARMY_MARCH" and _paused_reason() != "":
 		return _paused_reason()
-	var req := ActionRequest.make(action_code, {"regiment": code})
+	var req := ActionRequest.make(action_code, params.merged({"regiment": code}, true))
 	if action_code == "ARMY_MARCH":
 		var here := ArmySystem.position_of(Game.data, Game.state,
 			ArmySystem.regiment(Game.data, code))
@@ -308,7 +314,8 @@ func _on_chosen(id: int) -> void:
 		_set_aim(_code)
 		Game.publish_news("%s awaits its orders — click where to send it." % _name_of(_code))
 		return
-	_run(ActionRequest.make(String(row["action_code"]), {"regiment": _code}))
+	_run(ActionRequest.make(String(row["action_code"]),
+		(row.get("params", {}) as Dictionary).merged({"regiment": _code}, true)))
 
 
 ## The aimed march's destination: held, drawn to, and asked about — the
@@ -399,7 +406,7 @@ func _run(req: ActionRequest) -> void:
 			Game.publish_news(String(e["reason"]))
 	# An order on a stopped clock waits for play (owner 2026-09-24) — and since
 	# 2026-09-27 it rides by courier, who waits in the capital with it.
-	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON"] \
+	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON", "ARMY_STANCE"] \
 			or req.action_code.begins_with("SUPPLY_")):
 		var code := String(req.params["regiment"])
 		if CourierSystem.carries_orders(ArmySystem.regiment(Game.data, code)):

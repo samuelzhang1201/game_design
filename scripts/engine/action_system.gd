@@ -79,6 +79,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			return _validate_manor(req, state, needs)
 		"ARMY_MARCH", "ARMY_GARRISON":
 			return _validate_army(req, state)
+		"ARMY_STANCE":
+			return _validate_stance(req, state)
 		"SUPPLY_POINT_SET", "SUPPLY_POINT_CLEAR", "SUPPLY_CARRY_SET":
 			return _validate_supply(req, state)
 		"GOVERNOR_SET":
@@ -216,6 +218,26 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 		return "%s cannot march into the sea" % String(reg["label"])
 	if ArmySystem.position_of(data, state, reg).distance_to(dest) < 1.0:
 		return "%s is already there" % String(reg["label"])
+	return ""
+
+## ARMY_STANCE (spec 2026-10-07-enemy-ai-and-battle §4.4): a land regiment
+## of the realm (never a foe), a courier the chest can pay, and a stance of
+## data/battle_stances.csv.
+func _validate_stance(req: ActionRequest, state: GameState) -> String:
+	var code := String(req.params.get("regiment", ""))
+	var reg := ArmySystem.regiment(data, code)
+	if reg.is_empty():
+		return "No such regiment: " + code
+	if ArmySystem.is_foe(state, code) or String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
+		return "%s is not yours to command" % String(reg["label"])
+	if not CourierSystem.carries_orders(reg):
+		return "%s is a fleet: it takes no battle stance" % String(reg["label"])
+	var stance := String(req.params.get("stance", ""))
+	if not data.battle_stances.has(stance):
+		return "No such stance: " + stance
+	if float(state.metrics["treasury"]) < OrderCosts.gold_of(data, req.action_code) \
+			+ float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
+		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	return ""
 
 ## The supply orders (spec 2026-10-07-army-supply-lines §4): a land regiment
@@ -611,6 +633,11 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				effects.append({"metric": "army", "delta": 0.0,
 					"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
 						else "%s stands to its post") % String(reg["label"])})
+		"ARMY_STANCE":
+			var code := String(req.params["regiment"])
+			var stance := String(req.params["stance"])
+			_send_courier(state, effects, code, {"action_code": "ARMY_STANCE", "stance": stance},
+				"with a new battle stance (%s)" % String(data.battle_stances[stance]["label"]))
 		"SUPPLY_POINT_SET":
 			var code := String(req.params["regiment"])
 			var town := String(req.params["town"])

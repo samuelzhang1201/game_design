@@ -7,6 +7,7 @@ The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, 
 These topics' rules live in `guide/` beside this file, which Claude Code does NOT load on its own — open the guide when the task touches its topic:
 
 - `scripts/engine/guide/regiments.md` — regiments and their march (`ArmySystem`)
+- `scripts/engine/guide/battle_and_ai.md` — battles, stances and the enemy (`BattleSystem`, the foes, `ARMY_STANCE`)
 - `scripts/engine/guide/supply_and_workshop.md` — supply, morale and the war workshop (`SupplySystem`, `SupplyLines`, `TownStores`, `WorkshopSystem`)
 - `scripts/engine/guide/ledger_model.md` — the LEDGER's model (`ledger.gd`, `ledger_resolvers.gd`, `ledger_cards.gd`)
 - `scripts/engine/guide/governors_and_audit.md` — governors, skimming and the audit (`Governance`, `AuditWriter`)
