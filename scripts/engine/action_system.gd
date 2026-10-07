@@ -77,7 +77,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 				return "mode must be gold (slice 1)"
 		"MANOR_BUY", "MANOR_SELL", "MANOR_BUILD", "MANOR_SEIZE", "MANOR_FOCUS", "MANOR_DEMOLISH", "MANOR_RUSH", "WORKSHOP_RATE":
 			return _validate_manor(req, state, needs)
-		"ARMY_MARCH", "ARMY_GARRISON":
+		"ARMY_MARCH", "ARMY_GARRISON", "ARMY_SEAT":
 			return _validate_army(req, state)
 		"SUPPLY_POINT_SET", "SUPPLY_POINT_CLEAR", "SUPPLY_CARRY_SET":
 			return _validate_supply(req, state)
@@ -198,6 +198,15 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 	if check_purse and CourierSystem.carries_orders(reg) and float(state.metrics["treasury"]) \
 			< OrderCosts.gold_of(data, req.action_code) + float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
+	if req.action_code == "ARMY_SEAT":
+		if not CourierSystem.carries_orders(reg):
+			return "%s has no town to enter" % String(reg["label"])
+		var town := ArmyGround.camped_by(data, state, code)
+		if town == "":
+			return "%s does not camp by a town of the realm" % String(reg["label"])
+		if ArmyGround.seat_of(data, state, town) == code:
+			return "%s already holds %s" % [String(reg["label"]), String(data.burgs[town].get("label", town))]
+		return ""
 	if req.action_code == "ARMY_GARRISON":
 		return ""
 	if ArmySystem.base_pace_km(data, reg) <= 0:
@@ -611,6 +620,9 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				effects.append({"metric": "army", "delta": 0.0,
 					"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
 						else "%s stands to its post") % String(reg["label"])})
+		"ARMY_SEAT":
+			var code := String(req.params["regiment"])
+			_send_courier(state, effects, code, {"action_code": "ARMY_SEAT"}, "with orders to take the seat")
 		"SUPPLY_POINT_SET":
 			var code := String(req.params["regiment"])
 			var town := String(req.params["town"])

@@ -43,6 +43,9 @@ const SUPPLY_ADD := 400
 const SUPPLY_WITHDRAW := 401
 const CARRY_BASE := 410
 const RATE_BASE := 420
+## The seat row (spec 2026-10-07-army-split-and-ground §4.5): Take the seat /
+## Garrison the town, for a unit camped by a town of the realm.
+const SEAT := 500
 
 ## The WAR ROOM's menu (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1):
 ## every order given here is a DRAFT — COMMIT pencils a march, Cancel march
@@ -101,6 +104,13 @@ func _open_for(code: String, at: Vector2) -> void:
 		var why := _refusal(String(row["action_code"]), code)
 		set_item_disabled(i, why != "")
 		set_item_tooltip(i, why if why != "" else String(row["hint"]))
+	# the seat (spec 2026-10-07-army-split-and-ground §4.5): only a unit camped
+	# by a town of the realm and not inside it; the map's orders, never a draft
+	if not drafting:
+		var town := ArmyGround.camped_by(Game.data, Game.state, code)
+		if town != "" and ArmyGround.seat_of(Game.data, Game.state, town) != code:
+			var empty := ArmyGround.seat_of(Game.data, Game.state, town) == ""
+			_add_row("seat_empty" if empty else "seat", SEAT, _refusal("ARMY_SEAT", code))
 	_add_supply_rows(code)
 	if item_count == 0:
 		return
@@ -296,6 +306,10 @@ func _on_chosen(id: int) -> void:
 			elif _code != "":
 				_run(ActionRequest.make("ARMY_GARRISON", {"regiment": _code}))
 			return
+		SEAT:
+			if _code != "":
+				_run(ActionRequest.make("ARMY_SEAT", {"regiment": _code}))
+			return
 		STRIKE:
 			if _code != "":
 				Game.strike_draft(_code)
@@ -399,7 +413,7 @@ func _run(req: ActionRequest) -> void:
 			Game.publish_news(String(e["reason"]))
 	# An order on a stopped clock waits for play (owner 2026-09-24) — and since
 	# 2026-09-27 it rides by courier, who waits in the capital with it.
-	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON"] \
+	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON", "ARMY_SEAT"] \
 			or req.action_code.begins_with("SUPPLY_")):
 		var code := String(req.params["regiment"])
 		if CourierSystem.carries_orders(ArmySystem.regiment(Game.data, code, Game.state)):

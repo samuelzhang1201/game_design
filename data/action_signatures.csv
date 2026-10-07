@@ -36,3 +36,4 @@ TRADE_ROUTE_SET,,5,5,0,0,0,the crown's hand on the trade
 SUPPLY_POINT_SET,,5,5,0,0,0,the crown feeds its host from its own towns
 SUPPLY_POINT_CLEAR,,0,0,0,0,0,the wagons are called home
 SUPPLY_CARRY_SET,,0,3,0,0,0,the host's train is loaded
+ARMY_SEAT,,3,3,0,0,0,the watch is changed at the gate

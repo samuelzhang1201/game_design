@@ -64,7 +64,7 @@ func _deliver_all() -> void:
 func _supply_ids(menu: ArmyOrderMenu) -> Array:
 	var out: Array = []
 	for i in range(Game.data.army_orders.size(), menu.item_count):
-		if not menu.is_item_separator(i):
+		if not menu.is_item_separator(i) and menu.get_item_id(i) != ArmyOrderMenu.SEAT:
 			out.append(menu.get_item_id(i))
 	return out
 
@@ -86,6 +86,54 @@ func test_the_menu_offers_exactly_the_rows_in_the_table() -> void:
 	assert_eq(_supply_ids(_menu), _land_supply_ids(), "the supply rows follow the march rows, and only they")
 	for row: Dictionary in Game.data.army_orders:
 		assert_ne(String(row["action_code"]), "ARMY_GARRISON", "no Garrison row")
+
+
+## A land unit of the realm camped by a town but not seated in it, "" for none.
+func _camper() -> String:
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		var c := String(r["regiment_code"])
+		if ArmyGround.camped_by(Game.data, Game.state, c) != "" and ArmyGround.seated_in(Game.data, Game.state, c) == "":
+			return c
+	return ""
+
+
+func _ids(menu: ArmyOrderMenu) -> Array:
+	var out: Array = []
+	for i in menu.item_count:
+		out.append(menu.get_item_id(i))
+	return out
+
+
+## Spec 2026-10-07-army-split-and-ground §4.5: a camped unit may take its
+## town's seat; the unit already inside has no such row; a draft never does.
+func test_a_camped_unit_is_offered_the_seat_and_the_seated_one_is_not() -> void:
+	var camper := _camper()
+	assert_ne(camper, "")
+	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
+	assert_true(ArmyOrderMenu.SEAT in _ids(_menu), "the seat row")
+	var i := _menu.get_item_index(ArmyOrderMenu.SEAT)
+	assert_eq(_menu.get_item_text(i), String(Game.data.army_route_orders["seat"]["label"]))
+	var town := ArmyGround.camped_by(Game.data, Game.state, camper)
+	var seated := ArmyGround.seat_of(Game.data, Game.state, town)
+	_map.army_menu_requested.emit(seated, Vector2(10.0, 10.0))
+	assert_false(ArmyOrderMenu.SEAT in _ids(_menu), "the holder is inside already")
+	Game.state.town_seat.erase(town)
+	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
+	i = _menu.get_item_index(ArmyOrderMenu.SEAT)
+	assert_eq(_menu.get_item_text(i), String(Game.data.army_route_orders["seat_empty"]["label"]), "an empty seat reads Garrison the town")
+	_menu.drafting = true
+	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
+	assert_false(ArmyOrderMenu.SEAT in _ids(_menu), "the war room's drafts never take the seat")
+
+
+func test_choosing_the_seat_row_sends_a_courier() -> void:
+	var camper := _camper()
+	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
+	_menu.hide()
+	_menu.id_pressed.emit(ArmyOrderMenu.SEAT)
+	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the seat order")
+	_deliver_all()
+	assert_eq(ArmyGround.seat_of(Game.data, Game.state, ArmyGround.camped_by(Game.data, Game.state, camper)), camper)
 
 
 func test_choosing_march_only_AIMS_it_and_gives_the_map_the_word() -> void:

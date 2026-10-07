@@ -505,6 +505,11 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 				Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"]))))
 		"ARMY_GARRISON":
 			ArmySystem.set_garrison(repo, state, code)
+		"ARMY_SEAT":
+			if not ArmyGround.take_seat(repo, state, code):
+				if state.regiments.has(code):
+					state.regiments[code]["order_id"] = int(c["id"])
+				return _event("lapsed", c)
 	if state.regiments.has(code):
 		state.regiments[code]["order_id"] = int(c["id"])
 	MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, false))
@@ -526,15 +531,16 @@ static func _event(type: String, c: Dictionary, weather: String = "") -> Diction
 
 
 ## The newest MARCH / HALT courier riding for a regiment, {} when none. The
-## supply orders (SUPPLY_*) are not the march: they never move a column's
-## arrival day, so this reader (days_to_arrival, the regiment card, the war
-## folio) passes them by.
+## supply orders (SUPPLY_*) and the seat order (ARMY_SEAT) are not the march:
+## they never move a column's arrival day, so this reader (days_to_arrival,
+## the regiment card, the war folio) passes them by.
 static func pending_for(state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	if state == null:
 		return best
 	for c: Dictionary in state.couriers:
-		if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
+		var kind := String((c["order"] as Dictionary).get("action_code", ""))
+		if kind.begins_with("SUPPLY_") or kind == "ARMY_SEAT":
 			continue
 		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c
@@ -570,6 +576,8 @@ static func headline(repo: DataRepository, e: Dictionary) -> String:
 			return "Orders delivered to %s." % label
 		"stale":
 			return "Older orders to %s came after newer ones and were set aside." % label
+		"lapsed":
+			return "Orders for %s to take the seat lapsed: it no longer camps by the town." % label
 		"lost":
 			return "Orders to %s undelivered: the regiment is gone." % label
 		"fuse":
