@@ -9,6 +9,10 @@ signal missive_read(id: int)
 ## reactions, tick advance, load). UI that mirrors live state (e.g. the
 ## TopBar) subscribes to this instead of refreshing at call sites.
 signal state_changed
+## The WAR ROOM's plans changed (WarPlans): only the room's plan layer
+## listens, so a crayon stroke refreshes nothing else (spec
+## 2026-10-07-war-room-annotations-and-planning-pieces §1.1).
+signal plans_changed
 ## Cross-cutting UI signal: the TopBar's MENU button asks for the pause
 ## menu; GameRoot (the flow owner) listens and shows it.
 @warning_ignore("unused_signal")
@@ -180,6 +184,57 @@ func discard_drafts() -> void:
 	if WarDrafts.any(state):
 		state.war_drafts.clear()
 		state_changed.emit()
+
+
+## The WAR ROOM's plans (spec 2026-10-07-war-room-annotations-and-planning-
+## pieces): the player's own paper. Game is their only writer; each write that
+## lands says plans_changed.
+func _plans(done: Variant) -> Variant:
+	if (done is bool and done) or (done is String and done != "") or (done is int and done > 0):
+		plans_changed.emit()
+	return done
+
+
+func place_plan_piece(arm: String, heads: int, side: String, at: Vector2, facing_deg: int) -> String:
+	return _plans(WarPlans.place(data, state, arm, heads, side, at, facing_deg))
+
+
+func move_plan_piece(id: String, to: Vector2, facing_deg: int) -> bool:
+	return _plans(WarPlans.move_piece(data, state, id, to, facing_deg))
+
+
+func edit_plan_piece(id: String, arm: String, heads: int, side: String) -> bool:
+	return _plans(WarPlans.edit_piece(data, state, id, arm, heads, side))
+
+
+func remove_plan(id: String) -> bool:
+	return _plans(WarPlans.remove(state, id))
+
+
+func clear_plans(kind: String, rect: Rect2) -> int:
+	return _plans(WarPlans.clear(data, state, kind, rect))
+
+
+func draw_plan(kind: String, colour: String, pts: PackedVector2Array, r_px: float, name: String, dashed: bool) -> String:
+	return _plans(WarPlans.draw(data, state, kind, colour, pts, r_px, name, dashed))
+
+
+func reshape_plan(id: String, pts: PackedVector2Array, r_px := -1.0) -> bool:
+	return _plans(WarPlans.reshape(data, state, id, pts, r_px))
+
+
+func shift_plan(id: String, offset: Vector2) -> bool:
+	return _plans(WarPlans.shift(data, state, id, offset))
+
+
+func restyle_plan(id: String, changes: Dictionary) -> bool:
+	return _plans(WarPlans.restyle(data, state, id, changes))
+
+
+## The room's undo: a snapshot of war_plans put back.
+func restore_plans(snapshot: Dictionary) -> void:
+	WarPlans.restore(state, snapshot)
+	plans_changed.emit()
 
 
 ## The resolutions as they would be sealed now (spec §3.3): each draft's
