@@ -70,6 +70,11 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	var tex_rect := Rect2(Vector2.ZERO, r.size * k).grow(r.size.x * k * 0.02)
 	out["bridges"] = crossings(out["roads"], river_polys, tex_rect)
 	out["fords"] = crossings(out["trails"], river_polys, tex_rect)
+	# the pack's trade on the roads (spec 2026-10-07-war-room-p3 §1.3): a busy
+	# road is drawn heavier, by tier
+	out["trade"] = []
+	for s: Dictionary in WarEconomy.trade_segments(repo, r.grow(r.size.x * 0.02)):
+		(out["trade"] as Array).append({"poly": _to_tex(r, k, s["poly"]), "tier": int(s["tier"])})
 	for row: Dictionary in repo.coasts:
 		var poly: PackedVector2Array = row["polyline"]
 		if _touches(r, poly):
@@ -100,8 +105,14 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if not keep.has_point(at):
 			continue
 		var tier := 3 if String(b.get("is_capital", "0")) == "1" else int(TOWN_TIERS.get(String(b.get("group", "")), 0))
-		(out["towns"] as Array).append({"at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
-			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"})
+		var t := {"code": code, "at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
+			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"}
+		t.merge(town_marks(repo, code))
+		# a works glyph stands above the ring, a market's scales below it
+		var ring := repo.bal("war_ink_town_px") * px_k * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
+		t["works_at"] = (t["at"] as Vector2) - Vector2(0.0, ring + repo.bal("war_ink_works_px") * px_k * 0.75)
+		t["market_at"] = (t["at"] as Vector2) + Vector2(0.0, ring + repo.bal("war_ink_market_px") * px_k * 0.75)
+		(out["towns"] as Array).append(t)
 	for m: Dictionary in Elevation.landmarks(repo):
 		if String(m["kind"]) != "high":
 			continue
@@ -193,6 +204,13 @@ static func graticule(repo: DataRepository, sheet: Dictionary, k: float, px_k :=
 	return out
 
 
+## A town's economic marks (spec 2026-10-07-war-room-p3 §1.3): the glyph of
+## its works family ("" for none) and whether a market is centred on it.
+static func town_marks(repo: DataRepository, burg: String) -> Dictionary:
+	return {"works": String((WarEconomy.works(repo).get(burg, {}) as Dictionary).get("glyph", "")),
+		"market": WarEconomy.market_of_town(repo, burg) != ""}
+
+
 ## A town's ring and name as one box, ink px (the painter's own layout: the
 ## ring at `at`, the name to its right), for keeping other names off it.
 static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> Rect2:
@@ -201,8 +219,14 @@ static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> 
 	var label := repo.bal("war_ink_label_px") * px_k
 	var w := r + town * repo.bal("war_ink_label_gap_ratio") + float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
 	var h := maxf(r, label * 0.6)
+	var up := h
+	var down := h
+	if String(t.get("works", "")) != "":
+		up = maxf(up, r + repo.bal("war_ink_works_px") * px_k * 1.25)
+	if bool(t.get("market", false)):
+		down = maxf(down, r + repo.bal("war_ink_market_px") * px_k * 1.25)
 	var at: Vector2 = t["at"]
-	return Rect2(at.x - r, at.y - h, r + w, h * 2.0)
+	return Rect2(at.x - r, at.y - up, r + w, up + down)
 
 
 ## A manor's name as a box, ink px, centred where the painter sets it.

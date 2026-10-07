@@ -79,6 +79,8 @@ func _draw() -> void:
 	for poly: PackedVector2Array in ink["trails"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(poly, float(px["dash"]), float(px["gap"])):
 			draw_polyline(d, c_ink, float(px["trail"]), true)
+	for tr: Dictionary in ink.get("trade", []):   # a trade road weighs more, by tier (spec P3 §1.3)
+		draw_polyline(tr["poly"], c_ink, float(px["road"]) + float(px.get("trade", 0.0)) * float(int(tr["tier"])), true)
 	for poly: PackedVector2Array in ink["roads"]:
 		draw_polyline(poly, c_ink, float(px["road"]), true)
 	for br: Dictionary in ink.get("bridges", []):   # two parapets across the river
@@ -117,6 +119,10 @@ func _draw() -> void:
 		draw_string(font, (t["at"] as Vector2) + Vector2(r + float(px["town"]) * float(px["label_gap_ratio"]),
 			float(px["label"]) * float(px["label_drop_ratio"])), String(t["label"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["label"]), c_ink)
+		if String(t.get("works", "")) != "":
+			WarMarkGlyph.draw(self, String(t["works"]), t["works_at"], float(px.get("works", px["town"])), c_ink)
+		if bool(t.get("market", false)):
+			WarMarkGlyph.draw(self, "scales", t["market_at"], float(px.get("market", px["town"])), c_ink)
 	for p: Dictionary in ink["peaks"]:
 		if int(p.get("lod", 0)) != 0:  # thinned to the most prominent; the strokes list stays whole
 			continue

@@ -293,3 +293,80 @@ func test_a_reach_ring_is_drawn_from_a_mark_just_outside_the_window() -> void:
 	var part := WarSheetInk.strokes(repo, state, s, 2048, null, win)
 	var rings := (part["places"] as Array).filter(func(p: Dictionary) -> bool: return float(p["hazard_r"]) > 0.0)
 	assert_eq(rings.size(), 1, "the ring that reaches into the window is drawn")
+
+
+## The sheet holding the first market's centre town (a work on the default pack).
+func _market_sheet() -> Dictionary:
+	var m: Dictionary = WarEconomy.markets(repo)[0]
+	return WarSheets.series(repo)[WarSheets.sheet_of(repo, m["at"])]
+
+
+func test_towns_carry_their_works_and_market() -> void:
+	var sheet := _market_sheet()
+	var ink := WarSheetInk.strokes(repo, state, sheet, int(repo.bal("war_sheet_texture_px")))
+	var works := WarEconomy.works(repo)
+	var seen_market := false
+	for t: Dictionary in ink["towns"]:
+		var code := String(t["code"])
+		assert_eq(String(t["works"]), String((works.get(code, {}) as Dictionary).get("glyph", "")), code)
+		assert_eq(bool(t["market"]), WarEconomy.market_of_town(repo, code) != "", code)
+		seen_market = seen_market or bool(t["market"])
+	assert_true(seen_market)
+
+
+func test_a_towns_glyphs_never_touch_its_ring_or_each_other() -> void:
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	var checked := 0
+	for s: Dictionary in WarSheets.series(repo):
+		for t: Dictionary in WarSheetInk.strokes(repo, state, s, tex)["towns"]:
+			var ring := repo.bal("war_ink_town_px") * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
+			if String(t["works"]) != "":
+				assert_gte((t["works_at"] as Vector2).distance_to(t["at"]), ring + repo.bal("war_ink_works_px") * 0.5, String(t["label"]))
+				checked += 1
+			if bool(t["market"]):
+				assert_gte((t["market_at"] as Vector2).distance_to(t["at"]), ring + repo.bal("war_ink_market_px") * 0.5, String(t["label"]))
+			if String(t["works"]) != "" and bool(t["market"]):
+				assert_gte((t["works_at"] as Vector2).distance_to(t["market_at"]),
+					(repo.bal("war_ink_works_px") + repo.bal("war_ink_market_px")) * 0.5, String(t["label"]))
+	assert_gt(checked, 0)
+
+
+func test_a_town_box_grows_to_hold_its_glyphs() -> void:
+	var plain := WarSheetInk.town_label_box(repo, {"at": Vector2(500, 500), "tier": 1, "label": "Testford"})
+	var marked := WarSheetInk.town_label_box(repo, {"at": Vector2(500, 500), "tier": 1, "label": "Testford",
+		"works": "anvil", "market": true})
+	assert_lt(marked.position.y, plain.position.y, "room above for the works")
+	assert_gt(marked.end.y, plain.end.y, "room below for the market")
+	assert_eq(marked.position.x, plain.position.x)
+
+
+func test_trade_roads_are_inked_by_tier_in_texture_px() -> void:
+	var sheet := _market_sheet()
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	var ink := WarSheetInk.strokes(repo, state, sheet, tex)
+	assert_gt((ink["trade"] as Array).size(), 0)
+	var r: Rect2 = sheet["rect"]
+	var k := float(tex) / r.size.x
+	# a road leaving the sheet is drawn to its edge: the sheet grown 2 %, as strokes() asks
+	var segs := WarEconomy.trade_segments(repo, r.grow(r.size.x * 0.02))
+	assert_eq((ink["trade"] as Array).size(), segs.size())
+	for tr: Dictionary in ink["trade"]:
+		assert_between(int(tr["tier"]), 1, 3)
+		assert_eq((tr["poly"] as PackedVector2Array).size(), 2)
+	var first: Dictionary = segs[0]
+	assert_almost_eq((ink["trade"][0]["poly"] as PackedVector2Array)[0], ((first["poly"] as PackedVector2Array)[0] - r.position) * k, Vector2.ONE * 0.01)
+
+
+func test_a_window_keeps_the_trade_roads_in_its_own_px() -> void:
+	var sheet := _market_sheet()
+	var m: Dictionary = WarEconomy.markets(repo)[0]
+	var window := Rect2(m["at"] - Vector2(8, 8), Vector2(16, 16))
+	var ink := WarSheetInk.strokes(repo, state, sheet, 2048, null, window)
+	var k := 2048.0 / window.size.x
+	for tr: Dictionary in ink["trade"]:
+		var poly: PackedVector2Array = tr["poly"]
+		var grown := Rect2(Vector2.ZERO, window.size * k).grow(window.size.x * k)
+		assert_true(grown.has_point(poly[0]) or grown.has_point(poly[1]), "an end in or beside the window")
+	for t: Dictionary in ink["towns"]:
+		if String(t["code"]) == String(m["burg"]):
+			assert_true(bool(t["market"]))
