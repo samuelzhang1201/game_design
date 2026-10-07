@@ -1,0 +1,5 @@
+arm,start_ring,code_word,label_word,pooled,notes
+infantry,1,foot,Foot,0,"owner 2026-10-07 (spec 2026-10-07-army-split-and-ground §3): file order is the split's arm order; a unit of this arm takes its first slot at this ring or further out (§4.2)"
+archers,2,archers,Archers,0,
+cavalry,3,horse,Horse,0,
+artillery,1,royal_train,Royal Train of {kingdom},1,"pooled (owner choice B): every gun of a kingdom is ONE unit at its capital; {kingdom} is the kingdom's label"

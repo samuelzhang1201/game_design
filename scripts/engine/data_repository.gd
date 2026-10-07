@@ -126,6 +126,12 @@ var event_presenters: Dictionary = {}
 ## slots: [Vector2]}] — how many figures a regiment's piece shows by its
 ## strength (Map3DFormation).
 var army_formations: Array = []
+## data/army_split.csv (spec 2026-10-07-army-split-and-ground §3): the arms a
+## regiment splits into, in file order: [{arm, start_ring, code_word,
+## label_word, pooled}]; a POOLED arm is one unit a kingdom, at its capital.
+var army_split: Array = []
+## data/army_camp_blocked.csv: terrain -> true where no unit makes camp (ArmyGround).
+var army_camp_blocked: Dictionary = {}
 ## data/army_speed.csv: arm -> km a day (int), the arm's own march
 ## (owner 2026-09-19, ArmySystem.base_pace_km).
 var army_speed: Dictionary = {}
@@ -820,6 +826,14 @@ func _load(dir: String) -> bool:
 		return false
 	army_formations.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["min_fit_permille"]) < int(b["min_fit_permille"]))
+	if not _load_if_present(dir + "/army_split.csv", ["arm", "start_ring", "code_word", "label_word", "pooled"],
+			func(r): army_split.append({"arm": String(r["arm"]), "start_ring": int(r["start_ring"]),
+				"code_word": String(r["code_word"]), "label_word": String(r["label_word"]),
+				"pooled": String(r["pooled"]) == "1"})):
+		return false
+	if not _load_if_present(dir + "/army_camp_blocked.csv", ["terrain"],
+			func(r): army_camp_blocked[String(r["terrain"])] = true):
+		return false
 	if not _load_if_present(dir + "/war_palette.csv", ["key", "color"],
 			func(r): war_palette[String(r["key"])] = Color(String(r["color"]))):
 		return false
