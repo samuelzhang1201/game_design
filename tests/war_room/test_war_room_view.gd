@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const ClearPiece := preload("res://tests/war_room/clear_piece.gd")
 ## The room's view laid with a sheet: the table, the ink, the picks (spec §1–2).
 
 var repo: DataRepository
@@ -327,29 +328,19 @@ func _release(at: Vector2) -> void:
 	view._gui_input(e)
 
 
-## The first land piece on the laid sheet that a press on its own point
-## takes up (the units camped round one town share a point at the table's
-## scale and are spread plinth to plinth, WarPieces._spread: a spread piece
-## stands off its engine point, so a press there can land squarely on a
-## neighbour); the first land piece while nothing can be picked yet.
+## A land piece of the laid sheet a click on its own drawn point takes up,
+## with that point as `press` (tests/war_room/clear_piece.gd: the camp's
+## spread moves pieces off their engine points and may stand one's figures
+## over another's base, whatever army_slot_spacing_m is).
 func _first_land_piece() -> Dictionary:
-	var first: Dictionary = {}
-	for p: Dictionary in WarRoom.on_sheet(repo, state, view.sheet_index()):
-		if bool(p["naval"]):
-			continue
-		if first.is_empty():
-			first = p
-		var at: Variant = view.screen_pos_of_px(p["at"])
-		if at != null and view.piece_under(at as Vector2) == String(p["code"]):
-			return p
-	return first
+	return ClearPiece.find(view, repo, state)
 
 
 func test_a_click_on_a_piece_selects_it_and_arms_nothing() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
-	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	var at: Vector2 = p["press"]
 	watch_signals(view)
 	_press(at)
 	_move(at + Vector2(2, 0))   # under war_rake_min_px
@@ -362,7 +353,7 @@ func test_a_drag_from_a_piece_takes_up_the_rake_and_a_release_names_the_ground()
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
-	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	var at: Vector2 = p["press"]
 	watch_signals(view)
 	_press(at)
 	_move(at + Vector2(60, 0))
@@ -378,7 +369,7 @@ func test_a_refused_rake_lets_go_and_the_rest_of_the_drag_does_nothing() -> void
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
-	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	var at: Vector2 = p["press"]
 	watch_signals(view)
 	_press(at)
 	_move(at + Vector2(30, 0))
@@ -469,7 +460,7 @@ func test_a_sheet_roll_lets_go_of_the_rake() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
-	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	var at: Vector2 = p["press"]
 	_press(at)
 	_move(at + Vector2(40, 0))
 	assert_eq(view._rake.code, String(p["code"]))
@@ -492,7 +483,7 @@ func test_a_rake_released_off_the_table_says_it_was_dropped() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
-	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	var at: Vector2 = p["press"]
 	watch_signals(view)
 	_press(at)
 	_move(at + Vector2(40, 0))
@@ -507,7 +498,7 @@ func test_a_sheet_roll_drops_a_rake_in_hand_and_hides_the_pennants() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
-	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	var at: Vector2 = p["press"]
 	_press(at)
 	_move(at + Vector2(40, 0))
 	watch_signals(view)

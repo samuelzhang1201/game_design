@@ -1,4 +1,5 @@
 extends GutTest
+const ClearPiece := preload("res://tests/war_room/clear_piece.gd")
 ## The WAR ROOM tab opens the plotting room over the map (spec 2026-10-01 §1, §5).
 
 ## The court on a fresh reign, as Start Game begins it but without the
@@ -227,16 +228,12 @@ func _real_press(view: WarRoomView, at: Vector2, pressed: bool) -> void:
 	view._gui_input(e)
 
 
-## The first land piece of the sheet a click on its own spot picks (regiments
-## quartered in one town stand within one base, and the nearer hides the other).
+## A land piece of the sheet a click on its own drawn point takes up, with
+## that point as `press` and the pack point it stands on as `drawn`
+## (tests/war_room/clear_piece.gd: the camp's spread moves pieces off their
+## engine points, whatever army_slot_spacing_m is).
 func _land_piece(screen: WarRoomScreen) -> Dictionary:
-	for q: Dictionary in WarRoom.on_sheet(Game.data, Game.state, screen.view().sheet_index()):
-		if bool(q["naval"]):
-			continue
-		var at: Variant = screen.view().screen_pos_of_px(q["at"])
-		if at != null and screen.view().piece_under(at) == String(q["code"]):
-			return q
-	return {}
+	return ClearPiece.find(screen.view(), Game.data, Game.state)
 
 
 ## A land point of the sheet, at least war_rake_min_px + 4 design px from `at` on the screen.
@@ -261,8 +258,8 @@ func test_a_real_drag_from_a_piece_pencils_a_draft() -> void:
 	var view := screen.view()
 	var p := _land_piece(screen)
 	var code := String(p["code"])
-	var from: Vector2 = view.screen_pos_of_px(p["at"])
-	var to: Vector2 = view.screen_pos_of_px(_land_near(screen, p["at"]))
+	var from: Vector2 = p["press"]
+	var to: Vector2 = view.screen_pos_of_px(_land_near(screen, p["drawn"]))
 	_real_press(view, from, true)
 	var e := InputEventMouseMotion.new()
 	e.position = to
@@ -287,7 +284,7 @@ func test_a_click_on_a_riding_pennant_offers_edit_and_a_pencilled_cancel() -> vo
 	var view := screen.view()
 	var p := _land_piece(screen)
 	var code := String(p["code"])
-	var to := _land_near(screen, p["at"])
+	var to := _land_near(screen, p["drawn"])
 	assert_true(bool(Game.try_execute(ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": to.x, "y": to.y}))["ok"]),
 		"a march sent from the 3D map")
 	await wait_process_frames(2)
@@ -318,7 +315,7 @@ func test_a_click_on_a_draft_pennant_offers_edit_and_strike() -> void:
 	var p := _land_piece(screen)
 	var code := String(p["code"])
 	screen.orders().aim_for(code)
-	view.ground_clicked.emit(_land_near(screen, p["at"]), Vector2(100, 100))
+	view.ground_clicked.emit(_land_near(screen, p["drawn"]), Vector2(100, 100))
 	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
 	await wait_process_frames(2)
 	var hit: Dictionary = (view.get_node("%Pennants") as WarPennants).screen_hits(
@@ -366,7 +363,7 @@ func test_a_rake_released_off_the_table_withdraws_the_armed_march() -> void:
 	var screen := r.war_room_screen()
 	var view := screen.view()
 	var p := _land_piece(screen)
-	var from: Vector2 = view.screen_pos_of_px(p["at"])
+	var from: Vector2 = p["press"]
 	_real_press(view, from, true)
 	var e := InputEventMouseMotion.new()
 	e.position = from + Vector2(50, 0)
@@ -385,7 +382,7 @@ func test_a_sheet_roll_withdraws_a_rake_in_hand_s_armed_march() -> void:
 	var screen := r.war_room_screen()
 	var view := screen.view()
 	var p := _land_piece(screen)
-	var from: Vector2 = view.screen_pos_of_px(p["at"])
+	var from: Vector2 = p["press"]
 	_real_press(view, from, true)
 	var e := InputEventMouseMotion.new()
 	e.position = from + Vector2(50, 0)
@@ -784,7 +781,7 @@ func test_pencilling_into_the_sea_is_refused_at_once_but_an_empty_chest_is_not()
 	assert_false(WarDrafts.any(Game.state), "no pennant in the sea")
 	Game.state.metrics["treasury"] = 0.0
 	screen.orders().aim_for(code)
-	screen.view().ground_clicked.emit(_land_near(screen, p["at"]), Vector2(100, 100))
+	screen.view().ground_clicked.emit(_land_near(screen, p["drawn"]), Vector2(100, 100))
 	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
 	assert_true(WarDrafts.any(Game.state), "a draft costs nothing yet")
 
