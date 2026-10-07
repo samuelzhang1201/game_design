@@ -27,6 +27,9 @@ var _drawn: Dictionary = {}
 ## Where `_drawn` comes from: the map under the room (_map_drawn); a test hands
 ## in its own (the suite has no 3D map).
 var drawn_source := Callable()
+## The plans' menus, form, name box, tool roll and keys (spec
+## 2026-10-07-war-room-annotations-and-planning-pieces).
+var _plans := WarPlanDesk.new()
 
 @onready var _view: WarRoomView = %View
 @onready var _orders: ArmyOrderMenu = %Orders
@@ -120,6 +123,9 @@ func open(detail: MapDetailPanel) -> void:
 		_view.rake_aimed.connect(_on_rake_aimed)
 		_view.hover_cleared.connect(slip.hide_slip)
 		_view.rake_dropped.connect(slip.hide_slip)
+		_view.set_caps_font(UiPalette.role_font("header"))
+		Game.plans_changed.connect(_view.refresh_plans)
+		_plans.bind(self, _view, %GroundMenu, %PlanForm, %PlanName, %ToolRoll, slip)
 	if detail != _detail:
 		_card_mine = false
 	_detail = detail
@@ -143,6 +149,7 @@ func _show_board_chrome(on: bool) -> void:
 	%BackToTable.visible = on
 	%Slip.visible = not on
 	%KeySlip.visible = not on
+	%ToolRoll.visible = not on
 
 
 func board_screen() -> MissiveScreen:
@@ -212,6 +219,9 @@ func refresh_board() -> void:
 ## pause menu, which takes it in its own _unhandled_input).
 func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
+	if visible and key != null and _view.board_mode() == "table" and _plans.key(key):
+		get_viewport().set_input_as_handled()
+		return
 	if not visible or key == null or not key.pressed or key.keycode != KEY_ESCAPE:
 		return
 	if _view.board_mode() == "board" or _view.board_mode() == "to_board":
@@ -386,6 +396,7 @@ func close(animate := true) -> void:
 	if _orders.visible:
 		_orders.hide()
 	_orders.withdraw_aim()
+	_view.plan_input().put_down()   # no stick is carried out of the room
 	_folio.close()
 	visible = false
 	_dirty = false
@@ -435,7 +446,9 @@ func _on_ground_hovered(pack_px: Vector2, screen_px: Vector2) -> void:
 ## the arrow's own reading.
 func _on_rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2) -> void:
 	var r := WarGround.reading(Game.data, Game.state, pack_px, code)
-	_show_slip(WarGround.lines(Game.data, r, true), screen_px, true)
+	var lines := WarGround.lines(Game.data, r, true)
+	lines.append_array(_plans.contact_lines(code, pack_px))   # a supposed host within reach of the tip
+	_show_slip(lines, screen_px, true)
 
 
 func _show_slip(lines: Array, view_px: Vector2, left := false) -> void:

@@ -2,17 +2,20 @@
 
 [ext_resource type="Script" uid="uid://ohlmo0ocqnm" path="res://scripts/ui/war_room_screen.gd" id="1_kq51n"]
 [ext_resource type="StyleBox" uid="uid://dmgtj5dq4d8hu" path="res://assets/2D/ui/panels/styles/ledger_frame.tres" id="2_06wvo"]
-[ext_resource type="PackedScene" path="res://scenes/war_room/war_room.tscn" id="3_8qfjp"]
+[ext_resource type="PackedScene" uid="uid://dtdpn5w4w3d0b" path="res://scenes/war_room/war_room.tscn" id="3_8qfjp"]
 [ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="4_mjjvv"]
 [ext_resource type="StyleBox" uid="uid://c4rntxxfax7n8" path="res://assets/2D/ui/war_table/styles/war_slip.tres" id="5_c0xm8"]
 [ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="6_qjwf1"]
 [ext_resource type="Script" uid="uid://4r7bjqgxwvn5" path="res://scripts/ui/war_margin_key.gd" id="8_i8jnq"]
+[ext_resource type="PackedScene" path="res://scenes/war_room/war_tool_roll.tscn" id="9_0palb"]
 [ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="9_e6x4j"]
-[ext_resource type="PackedScene" path="res://scenes/war_room/war_hover_slip.tscn" id="10_softr"]
+[ext_resource type="PackedScene" uid="uid://c3s0yjcmu4nio" path="res://scenes/war_room/war_hover_slip.tscn" id="10_softr"]
 [ext_resource type="PackedScene" uid="uid://d0fhma2vbrkdx" path="res://scenes/war_room/war_folio.tscn" id="11_p22xw"]
 [ext_resource type="PackedScene" uid="uid://6mgact71qw5u" path="res://scenes/war_room/war_deploy_scroll.tscn" id="12_7osk2"]
 [ext_resource type="Script" uid="uid://buo18m7j8xhkt" path="res://scripts/ui/war_leave_prompt.gd" id="13_2sciq"]
 [ext_resource type="StyleBox" uid="uid://cb2lbhrj618ti" path="res://assets/2D/ui/panels/styles/leather_window_24.tres" id="14_s2b7v"]
+[ext_resource type="PackedScene" path="res://scenes/war_room/war_plan_form.tscn" id="15_lhnim"]
+[ext_resource type="PackedScene" path="res://scenes/war_room/war_plan_name.tscn" id="16_dm6fh"]
 
 [node name="WarRoomScreen" type="Control" unique_id=166001307]
 layout_mode = 3
@@ -125,6 +128,20 @@ script = ExtResource("8_i8jnq")
 unique_name_in_owner = true
 script = ExtResource("9_e6x4j")
 
+[node name="ToolRoll" parent="." unique_id=311334527 instance=ExtResource("9_0palb")]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -88.0
+offset_right = 520.0
+offset_bottom = -20.0
+grow_vertical = 0
+
+[node name="GroundMenu" type="PopupMenu" parent="." unique_id=1655200344]
+unique_name_in_owner = true
+
 [node name="HoverSlip" parent="." unique_id=813852285 instance=ExtResource("10_softr")]
 unique_name_in_owner = true
 layout_mode = 0
@@ -218,3 +235,11 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Command"
 text = "Stay"
+
+[node name="PlanForm" parent="." unique_id=768631345 instance=ExtResource("15_lhnim")]
+unique_name_in_owner = true
+layout_mode = 0
+
+[node name="PlanName" parent="." unique_id=527605595 instance=ExtResource("16_dm6fh")]
+unique_name_in_owner = true
+layout_mode = 0

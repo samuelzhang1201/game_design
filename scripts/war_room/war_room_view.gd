@@ -37,6 +37,13 @@ signal ground_hovered(pack_px: Vector2, screen_px: Vector2)
 signal rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2)
 ## The slip goes: the pointer moved, the rake ended, the room got busy.
 signal hover_cleared
+## A right click on open table (spec 2026-10-07-war-room-annotations-and-
+## planning-pieces §1.5): the ground menu — Place a supposed enemy, Draw, Clear.
+signal ground_menu_requested(pack_px: Vector2, screen_px: Vector2)
+## A right click on a supposed piece or a stroke: its own menu.
+signal plan_menu_requested(id: String, screen_px: Vector2)
+## The pointer has rested on a supposed piece: the screen shows its slip.
+signal plan_hovered(id: String, screen_px: Vector2)
 
 var aiming := false:
 	set(v):
@@ -88,6 +95,7 @@ var _font: Font
 var _caps: Font
 var _chart_built := false
 var _swap := WarSheetSwap.new()
+var _plan_input := WarPlanInput.new()
 var _rake := WarRoomRake.new()
 var _gestures := WarRoomGestures.new()
 var _hold_size := false
@@ -108,8 +116,8 @@ var _toss_n := 0
 ## No slip while the camera or the sheet moves, in board mode, or while a
 ## popup or a text box has the input (spec §4.2).
 func hover_allowed() -> bool:
-	if _sheet < 0 or _board_mode != "table" or rolling() or tossing() or aiming:
-		return false   # aiming: the order's confirm menu stands beside the tip
+	if _sheet < 0 or _board_mode != "table" or rolling() or tossing() or aiming or _plan_input.busy():
+		return false   # aiming: the order's confirm menu stands beside the tip; a stick in hand draws
 	var owner := get_viewport().gui_get_focus_owner()
 	return not (owner is LineEdit or owner is TextEdit)
 
@@ -135,6 +143,7 @@ func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable, drawn_f
 	_drawn_fn = drawn_fn
 	_pieces.setup(repo, self)
 	_plan_pieces.setup(repo, self)
+	_plan_input.setup(self, repo, %PlanHud)
 	_pennants.setup(repo, self)
 	_rake.setup(self, repo, {"hud": %Hud, "pieces": _pieces, "pennants": _pennants, "camera": _camera,
 		"arrows": _arrows, "chart": _chart})
@@ -224,11 +233,25 @@ func refresh_plans() -> void:
 	if _sheet >= 0:
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
 		_plan_pieces.update(state())
+		_plan_input.redraw_live()
 
 
 ## The supposed pieces (WarPlanPieces).
 func plan_pieces() -> WarPlanPieces:
 	return _plan_pieces
+
+
+## The plans' left button and what is in hand (WarPlanInput).
+func plan_input() -> WarPlanInput:
+	return _plan_input
+
+
+func camera() -> Camera3D:
+	return _camera
+
+
+func caps_font() -> Font:
+	return _caps
 
 
 func lettering() -> Font:
@@ -351,7 +374,10 @@ func _process(delta: float) -> void:
 		var at := _dwell.at
 		var pk := pack_at(at)
 		var on_mark := piece_under(at) != "" or WarRoomPicks.nearest(_pennants.screen_hits(_camera, window_scale()), at, _repo.bal("war_pick_px")) != ""
-		if pk.x >= 0.0 and not on_mark:
+		var plan := "" if on_mark else _plan_pieces.pick(_camera, window_scale(), at, _repo.bal("war_pick_px"))
+		if plan != "":
+			plan_hovered.emit(plan, at)   # a supposed piece: its men on this ground
+		elif pk.x >= 0.0 and not on_mark:
 			ground_hovered.emit(pk, at)
 	var flying := _step_board(delta)
 	if not flying and (_rig.step(delta, _repo.bal("war_cam_north_s")) or key_pan(delta)):
@@ -597,6 +623,7 @@ func _paint_ink(mat: ShaderMaterial) -> void:
 
 func _apply_camera() -> void:
 	_camera.transform = _rig.transform()
+	_plan_input.redraw_live()   # the live stroke and the handles follow the table
 	if _dwell.clear():   # the ground under the pointer moved: the slip goes, the rest restarts
 		hover_cleared.emit()
 	if _repo != null:
@@ -817,6 +844,24 @@ func _ground_under(screen_px: Vector2) -> Vector3:
 
 
 ## The pointer left the view (onto the folio, the margin, a bar): no rest to read.
+## A right click off the crown's pieces: a supposed piece's or a stroke's
+## menu, else the ground menu on the table (not while a march or a supply pick
+## is aimed: the aim owns the ground).
+func _plan_right_click(at: Vector2) -> void:
+	var radius := _repo.bal("war_pick_px")
+	var pid := _plan_pieces.pick(_camera, window_scale(), at, radius)
+	if pid != "":
+		plan_menu_requested.emit(pid, at)
+		return
+	var hit := WarPlanTool.hit(_repo, _plan_input.strokes_on_screen(), at, _plan_input.chosen_id, radius)
+	if not hit.is_empty():
+		plan_menu_requested.emit(String(hit["id"]), at)
+		return
+	var pk := pack_at(at)
+	if pk.x >= 0.0 and not aiming:
+		ground_menu_requested.emit(pk, at)
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_MOUSE_EXIT and _dwell.clear():
 		hover_cleared.emit()
@@ -826,6 +871,13 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if _board_mode != "table":
 		_board_input(event)
+		return
+	# the plans first: a stick in hand draws, a supposed piece is carried, a
+	# stroke is reshaped (spec 2026-10-07-war-room-annotations-and-planning-pieces §1.6)
+	if _plan_input.handle(event):
+		if _dwell.clear():
+			hover_cleared.emit()
+		accept_event()
 		return
 	# a click (not a pan) on the easel's board flies there; nothing behind it is picked
 	var press := event as InputEventMouseButton
@@ -863,6 +915,8 @@ func _gui_input(event: InputEvent) -> void:
 			garrison_menu_requested.emit(garrison_of(code), mb.position)
 		elif code != "":
 			army_menu_requested.emit(code, mb.position)
+		else:
+			_plan_right_click(mb.position)
 		accept_event()
 	elif did == WarRoomGestures.MOVED:
 		_apply_camera()
