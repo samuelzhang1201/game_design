@@ -100,6 +100,8 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	s.relationships = RelationshipGraph.init_from_data(data)
 	s.knowledge = KnowledgeBase.init_from_data(data, s)
 	s.source_trust = SourceTrust.init_from_relationships(data, s)
+	# The pack's zones are the reign's opening hazards (spec 2026-10-07-war-room-p2 §2.2).
+	Hazards.seed_pack(data, s, 0)
 	# The reign opens with its provinces' wealth already settled (Ruling 15).
 	Intel.settle_wealth_tiers(data, s)
 	return s
@@ -306,6 +308,14 @@ var next_missive_id := 0
 ## (Intel.settle_wealth_tiers), so a card opened mid-month can never decide
 ## what a spy's saved report says. province_code -> int.
 var wealth_tiers: Dictionary = {}
+## The hazards that come and go (spec 2026-10-07-war-room-p2-tactical-layer §2,
+## Hazards): id -> {kind, label, cells, start, end, source}, whole numbers;
+## an ended one stays (end <= tick) as the record.
+var hazards: Dictionary = {}
+## True once the pack's zones were seeded (a new reign, or once for an old save).
+var hazards_seeded := false
+## Bumped by every change to `hazards` (Hazards' cell index); not saved.
+var hazards_rev := 0
 
 const SAVE_VERSION := 5
 
@@ -354,6 +364,8 @@ func to_dict() -> Dictionary:
 		"missives": _encode_values(missives.duplicate(true)),
 		"next_missive_id": _encode_values(next_missive_id),
 		"wealth_tiers": _encode_values(wealth_tiers.duplicate()),
+		"hazards": _encode_values(hazards.duplicate(true)),
+		"hazards_seeded": hazards_seeded,
 	}
 
 ## `invalidate` false for a scratch copy of the live state (Game.review_drafts):
@@ -437,6 +449,10 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Saves from before the tiers were state carry none: Game.load_campaign
 	# computes them once from the loaded state (Intel.ensure_wealth_tiers).
 	s.wealth_tiers = _decode_values(d.get("wealth_tiers", {}))
+	# Saves from before the hazards were state carry neither key: Game.load_campaign
+	# seeds them once at the save's own tick (Hazards.ensure).
+	s.hazards = _decode_values(d.get("hazards", {}))
+	s.hazards_seeded = bool(d.get("hazards_seeded", false))
 	if invalidate:
 		MapOwnership.invalidate()
 	return s
