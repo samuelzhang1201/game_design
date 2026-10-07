@@ -84,6 +84,10 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	# roster, because the chest is the crown's own provinces' (2026-09-13)
 	# and the crown is the player character's house.
 	WorldLedger.seed_metrics(data, s)
+	# The army as its units (spec 2026-10-07-army-split-and-ground §3).
+	var split := ArmySplit.split(data)
+	s.army_roster = split["roster"]
+	s.town_seat = split["seats"]
 	ArmySystem.ensure(data, s)
 	# The pools as each town holds them (spec 2026-10-07-army-supply-lines §3.1).
 	TownStores.seed_from_pools(data, s)
@@ -293,6 +297,14 @@ var manor_log: Array = []
 ## {morale, wounded, supplies, training}, all whole numbers. Only the player's
 ## realm's regiments; the pack's arms stay the headcount.
 var regiments: Dictionary = {}
+## Every kingdom's army as UNITS (owner 2026-10-07, spec
+## 2026-10-07-army-split-and-ground §2.1): unit code -> a row shaped as
+## military/regiments.csv's, + parent_code, is_royal, camp_town. Split from
+## the pack once, as the campaign starts (ArmySplit); read through
+## ArmySystem.roster / regiment, never directly.
+var army_roster: Dictionary = {}
+## town code -> the one unit holding its seat (ArmyGround, spec §4.4).
+var town_seat: Dictionary = {}
 ## The couriers on the road (owner 2026-09-27, CourierSystem): an Array of
 ## Dictionaries in whole metres and ints, walked in ascending id order.
 var couriers: Array = []
@@ -328,7 +340,10 @@ var hazards_seeded := false
 ## Bumped by every change to `hazards` (Hazards' cell index); not saved.
 var hazards_rev := 0
 
-const SAVE_VERSION := 5
+const SAVE_VERSION := 6
+## The oldest save this build loads (spec 2026-10-07-army-split-and-ground
+## §2.3): a save from before the split names regiments that no longer exist.
+const MIN_SAVE_VERSION := 6
 
 func to_dict() -> Dictionary:
 	var chars := {}
@@ -369,6 +384,7 @@ func to_dict() -> Dictionary:
 		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 		"regiments": _encode_values(regiments.duplicate(true)),
+		"army_roster": army_roster.duplicate(true), "town_seat": town_seat.duplicate(true),
 		"couriers": _encode_values(couriers.duplicate(true)),
 		"war_drafts": _encode_values(war_drafts.duplicate(true)),
 		"next_courier_id": _encode_values(next_courier_id),
@@ -452,6 +468,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.closed_routes = (d.get("closed_routes", []) as Array).duplicate()
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))
+	s.army_roster = d.get("army_roster", {})
+	s.town_seat = d.get("town_seat", {})
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))
 	s.war_drafts = _decode_values(d.get("war_drafts", {}))

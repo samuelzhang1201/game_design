@@ -946,7 +946,7 @@ func _on_menu_save() -> void:
 
 func _on_menu_load() -> void:
 	if not Game.load_campaign():
-		_pause_status.text = "No saved realm found."
+		_pause_status.text = Game.load_error
 		return
 	_reset_reports()
 	_pause_menu.visible = false
@@ -1103,7 +1103,7 @@ func _on_menu_load_from_title() -> void:
 	var pack := Game.data.map_id
 	if not Game.load_campaign():
 		if current_screen is MainMenu:
-			current_screen.show_load_failed()
+			current_screen.show_load_failed(Game.load_error)
 		return
 	_reset_reports()
 	_pending_report = null

@@ -61,12 +61,15 @@ static func _bucket(taken: Dictionary, p_m: Vector2i) -> Vector2i:
 
 
 ## Ground a unit may camp on: land, not a blocked terrain, and no standing
-## unit within half a pitch.
-static func is_free(repo: DataRepository, taken: Dictionary, p_m: Vector2i) -> bool:
+## unit within half a pitch. `any_terrain` waives the blocked terrains, for a
+## town that stands among them (a mountain hold): its camps lie on the
+## mountain, the one ground it has.
+static func is_free(repo: DataRepository, taken: Dictionary, p_m: Vector2i,
+		any_terrain := false) -> bool:
 	var px := ArmySystem.metres_to_pack(repo, p_m)
 	if MapEconomy.cell_at(repo, px) < 0:
 		return false
-	if repo.army_camp_blocked.has(ArmySystem.terrain_at(repo, px)):
+	if not any_terrain and repo.army_camp_blocked.has(ArmySystem.terrain_at(repo, px)):
 		return false
 	var half := float(int(taken["cell"])) / 2.0
 	var home := _bucket(taken, p_m)
@@ -82,14 +85,14 @@ static func is_free(repo: DataRepository, taken: Dictionary, p_m: Vector2i) -> b
 ## false) the centre itself while it is free; else the first free slot at the
 ## arm's ring or further out, ring by ring; NONE past army_slot_max_rings.
 static func free_slot(repo: DataRepository, centre_m: Vector2i, arm: String, taken: Dictionary,
-		town: bool) -> Vector2i:
-	if not town and is_free(repo, taken, centre_m):
+		town: bool, any_terrain := false) -> Vector2i:
+	if not town and is_free(repo, taken, centre_m, any_terrain):
 		return centre_m
 	var spacing := int(repo.bal("army_slot_spacing_m"))
 	for k in range(maxi(start_ring(repo, arm), 1), int(repo.bal("army_slot_max_rings")) + 1):
 		for ax: Vector2i in ring(k):
 			var p := slot_m(centre_m, ax, spacing)
-			if is_free(repo, taken, p):
+			if is_free(repo, taken, p, any_terrain):
 				return p
 	return NONE
 

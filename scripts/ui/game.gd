@@ -284,10 +284,15 @@ func save_campaign(path: String = "") -> bool:
 	path = save_path if path == "" else path
 	return SaveLoad.save_game(state, path)
 
+## Why the last load_campaign failed, in the player's words ("" after a good one).
+var load_error := ""
+
 func load_campaign(path: String = "") -> bool:
 	path = save_path if path == "" else path
 	var loaded := SaveLoad.load_game(path)
 	if loaded == null:
+		load_error = "The army's organisation has changed since this realm was saved; begin a new reign." \
+			if SaveLoad.last_error == "outdated" else "No saved realm found."
 		return false
 	# The save names its world. Swap the pack in before the state goes live,
 	# and refuse rather than silently drop the player into a different map
@@ -296,7 +301,9 @@ func load_campaign(path: String = "") -> bool:
 		if not data.load_map(loaded.map_id):
 			push_error("load_campaign: save needs map '%s' which is not installed"
 				% loaded.map_id)
+			load_error = "No saved realm found."
 			return false
+	load_error = ""
 	state = loaded
 	# A save from before the wealth tiers were state computes them once, from
 	# the state it loaded (Ruling 15).
