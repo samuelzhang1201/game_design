@@ -20,11 +20,17 @@ extends Map3DHudPiece
 @export var box_color := Color(1.0, 0.92, 0.6, 0.9)
 @export var box_width_px := 1.5
 ## The leader line from a counter the spreading moved (further than
-## balance.csv map3d_leader_min_px) back to its unit, and the dot on the unit
-## (owner 2026-10-08, after the visual review: which unit is it?); design px.
-@export var leader_color := Color(0.14, 0.11, 0.08, 0.8)
-@export var leader_width_px := 1.25
-@export var leader_dot_px := 2.0
+## balance.csv map3d_leader_min_px) back to its unit (owner 2026-10-08, after
+## the visual review: which unit is it?): a dark casing under a pale core,
+## fading toward the counter to `leader_fade` of its alpha; on the unit a dot
+## (diameter) in the core's ink with a casing rim. Design px.
+@export var leader_casing := Color(0.1, 0.08, 0.06, 0.9)
+@export var leader_core := Color(0.98, 0.94, 0.82, 1.0)
+@export var leader_casing_px := 2.25
+@export var leader_core_px := 1.0
+@export var leader_dot_px := 5.0
+@export var leader_dot_rim_px := 1.25
+@export_range(0.0, 1.0) var leader_fade := 0.35
 
 var _drawn := 0
 ## markers()' cut and the pose it was cut for (see there).
@@ -32,8 +38,11 @@ var _cache: Array = []
 var _key: Array = []
 ## Each regiment's bars and what they were read under, {code: {key, bars}} (_bars_of).
 var _bars: Dictionary = {}
-## On-land tests left in this cut (_on_land; map3d_leader_land_tests).
-var _land_tests := 0
+## This cut's on-land answers by a map3d_declutter_step_px cell of the view
+## (_on_land): stacked counters search the same ground.
+var _land: Dictionary = {}
+## How many ground rays the last cut cast (the bench's and the tests' reading).
+var land_tests := 0
 
 
 ## A counter's height in design px: map_army_badge_native_px of the map at
@@ -102,23 +111,34 @@ func _cut() -> Array:
 			anchor = sp
 		if frame.has_point(sp):
 			points.append({"reg": r, "pos": sp, "anchor": anchor, "h": ph, "bars": _bars_of(code)})
-	_land_tests = int(repo.bal("map3d_leader_land_tests"))
+	_land.clear()
+	land_tests = 0
 	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops, view.selected_armies(),
 		_on_land)
 
 
-## Whether a design-px point of the view lies over land: the picker's ray to
-## the ground, then the pack's cells (Map3DDeclutter's `allowed`). At most
-## map3d_leader_land_tests a cut; past them every point passes.
+## Whether a design-px point of the view lies over land (Map3DDeclutter's
+## `allowed`, a HARD rule: a land counter stands on the sea only when no
+## clear land lies within reach): the view's ray from the middle of the
+## point's step cell to the SEA's plane — exact at the shore, where the
+## ground is the sea's height, and a twelfth of the picker's height-marched
+## ray — then the picker's cell bitmap (world_cell_index.png: a lookup,
+## where MapEconomy.cell_at walks polygons); once a cell a cut. Asked lazily, in the spiral's order, only of clear places off home.
 func _on_land(pos: Vector2) -> bool:
-	if _land_tests <= 0:
-		return true
-	_land_tests -= 1
-	var hit: Variant = ctx.ground_at(pos)
-	if hit == null:
-		return false
-	var p := hit as Vector3
-	return MapEconomy.cell_at(ctx.repo, ctx.to_pack(Vector2(p.x, p.z))) >= 0
+	var q := maxf(ctx.repo.bal("map3d_declutter_step_px"), 1.0)
+	var key := Vector2i((pos / q).floor())
+	if _land.has(key):
+		return _land[key]
+	land_tests += 1
+	var px := (Vector2(key) + Vector2(0.5, 0.5)) * q * ctx.viewport_px_scale()
+	var from := ctx.camera.project_ray_origin(px)
+	var dir := ctx.camera.project_ray_normal(px)
+	var ok := false
+	if dir.y < -0.0001:
+		var p := from + dir * ((float(ctx.meta.get("sea_y", 0.0)) - from.y) / dir.y)
+		ok = view.cell_at(ctx.to_pack(Vector2(p.x, p.z))) >= 0
+	_land[key] = ok
+	return ok
 
 
 ## ArmySystem.bars_of, kept while nothing it reads moves: the day (the
@@ -148,7 +168,9 @@ func _draw() -> void:
 	_drawn = list.size()
 	_draw_routes()
 	ArmyCounters.draw(self, ctx.repo, list, view.selected_armies(),
-		{"color": leader_color, "width": leader_width_px, "dot": leader_dot_px})
+		{"casing": leader_casing, "core": leader_core, "casing_px": leader_casing_px,
+		"core_px": leader_core_px, "dot_px": leader_dot_px, "rim_px": leader_dot_rim_px,
+		"fade": leader_fade})
 	if view.box_rect.has_area():
 		draw_rect(view.box_rect, box_color, false, box_width_px)
 

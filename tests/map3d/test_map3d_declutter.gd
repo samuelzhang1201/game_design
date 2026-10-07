@@ -140,6 +140,28 @@ func test_allowed_is_honoured() -> void:
 	assert_ne(offs[1], _walk(b, [b], 2.0, 50.0), "premise: the nearest clear one was not allowed")
 
 
+## The hard rule: with the near half-plane refused, the box goes to the far
+## side although nearer overlap-free places exist — it falls back to a
+## refused place only when no allowed one is clear within reach.
+func test_a_refused_near_side_sends_the_box_to_the_far_side() -> void:
+	var b := Rect2(0, 0, 20, 10)
+	# the box's own row and all below it refused: only far north (y < -60) is "land"
+	var far_north := func(c: Vector2) -> bool: return c.y < -60.0
+	var crowd: Array = [Rect2(-30, -30, 80, 25)]   # a band over its head, overlap-free beside it
+	var offs := Map3DDeclutter.place([b, b], [false, false], crowd, 4.0, 120.0, far_north)
+	var nearest: Variant = _walk(b, crowd + [b], 4.0, 120.0)
+	assert_not_null(nearest)
+	assert_gt(Rect2(b.position + (nearest as Vector2), b.size).get_center().y, -60.0,
+		"premise: the nearest overlap-free place is on the refused side")
+	var at := Rect2(b.position + (offs[1] as Vector2), b.size)
+	assert_lt(at.get_center().y, -60.0, "it crossed to the allowed side")
+	assert_false(at.intersects(b) or at.intersects(crowd[0]), "and overlaps nothing")
+	assert_gt((offs[1] as Vector2).length(), (nearest as Vector2).length(), "though nearer places were clear")
+	# nothing allowed within reach: the nearest clear place, never lost
+	var short := Map3DDeclutter.place([b, b], [false, false], crowd, 4.0, 40.0, far_north)
+	assert_eq(short[1], _walk(b, crowd + [b], 4.0, 40.0), "the fallback is the nearest clear place")
+
+
 func test_allowed_is_asked_only_off_home_of_clear_places() -> void:
 	var asked: Array = []
 	var spy := func(c: Vector2) -> bool:
@@ -205,13 +227,15 @@ func test_the_leader_starts_on_the_counters_edge() -> void:
 	assert_eq(ArmyCounters.edge_toward(r, Vector2(60, 50)), Vector2(30, 20), "a corner-ward line: the nearer edge")
 
 
-## Two counters stand at least map_army_stack_gap_px apart, measured on the
-## counters themselves (not the grown boxes the spreading used).
+## Two counters stand at least map_army_stack_gap_px apart, measured rim to
+## rim on what is drawn — the counter's rect (its bars on top included) grown
+## by its outline — not on the grown boxes the spreading used.
 func test_counters_keep_the_gap_between_them() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 42)
 	var gap := repo.bal("map_army_stack_gap_px")
-	assert_gte(gap, 6.0, "the gap reads as a gap")
+	var rim := ArmyCounters.outline_px(repo)
+	assert_gte(gap, 8.0, "the gap reads as a gap")
 	var points: Array = []
 	var i := 0
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
@@ -221,8 +245,12 @@ func test_counters_keep_the_gap_between_them() -> void:
 	assert_eq(marks.size(), points.size())
 	for a in marks.size():
 		for b in range(a + 1, marks.size()):
-			var ra: Rect2 = marks[a]["rect"]
-			var rb: Rect2 = marks[b]["rect"]
+			var ra: Rect2 = (marks[a]["rect"] as Rect2).grow(rim)
+			var rb: Rect2 = (marks[b]["rect"] as Rect2).grow(rim)
+			assert_eq(ra.position.y + rim, (marks[a]["rect"] as Rect2).position.y, "premise")
+			assert_lte((marks[a]["rect"] as Rect2).position.y,
+				(marks[a]["count"] as Rect2).position.y - ArmyCounters.bars_height(repo) + 0.001,
+				"the bars lie inside the measured box")
 			var apart := maxf(maxf(rb.position.x - ra.end.x, ra.position.x - rb.end.x),
 				maxf(rb.position.y - ra.end.y, ra.position.y - rb.end.y))
 			assert_gte(apart, gap - 0.001, "%s and %s" % [marks[a]["code"], marks[b]["code"]])

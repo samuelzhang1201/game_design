@@ -141,7 +141,7 @@ map_army_font_frac,0.5,military layer: the headcount's font size as a share of t
 map_army_count_pad_px,3.0,military layer: side padding inside the headcount box in screen px
 map_army_outline_px,1.0,military layer: width of the dark outline round a counter in screen px
 map_army_glyph_frac,0.8,military layer: the glyph's size as a fraction of its square
-map_army_stack_gap_px,6.0,"military layer: the least gap, design px, between two counters or chips once spread (ArmyCounters.layout grows each box by half of it for Map3DDeclutter; owner 2026-10-08 after the visual review: never edge to edge); also the headcount chip's lift over its unit's piece, past half the chip (Map3DHudArmies)"
+map_army_stack_gap_px,8.0,"military layer: the least gap, design px, between two counters or chips once spread, rim to rim — the bars on a counter's top count as the counter (ArmyCounters.layout grows each box by its drawn rim and half of this for Map3DDeclutter; owner 2026-10-08 after the visual reviews: never edge to edge, 6 read as ~2 px at a 1280 window); also the headcount chip's lift over its unit's piece, past half the chip (Map3DHudArmies)"
 map_army_count_sat,0.35,military layer: the least saturation the headcount box's realm colour is pushed to
 map_army_count_sat_max,0.5,"military layer: the most saturation the headcount box's realm colour may keep (1 = no cap)"
 map_army_count_val,0.5,military layer: the brightness the headcount box's realm colour is set to
@@ -873,6 +873,5 @@ army_slot_max_rings,12,"spec §4.2: the farthest ring searched for a free slot; 
 map3d_declutter_step_px,4,"spec 2026-10-07-army-split-and-ground §5.2: the spiral's grid, design px, that spreads the army counters and chips"
 map3d_declutter_max_px,160,"spec §5.2: how far a counter or chip may be pushed from its unit before a chip hides"
 map3d_leader_min_px,12,"spec §5.2 (2026-10-08 visual review): a counter or chip the spreading moved further than this, design px, draws a leader line to its unit (ArmyCounters.draw; its look is Map3DHudArmies' exports)"
-map3d_leader_land_tests,200,"spec §5.2 (2026-10-08): the most on-land tests (a ground ray each) one cut of the counters may make to keep them off the sea (Map3DHudArmies); past it a counter takes its first clear place, so a camera drag never stalls"
 war_spread_step_m,0.004,"spec §5.4: the war room's spread of the pieces on the table, metres"
 war_spread_max_m,0.12,"spec §5.4: how far a piece may be pushed on the table"

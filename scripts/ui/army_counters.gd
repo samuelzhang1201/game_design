@@ -28,8 +28,9 @@ extends RefCounted
 ## the map (Map3DLayerUnits). Those keep only their headcount box (a chip):
 ## the model IS the counter's square now, and drawing the flat piece beside it
 ## put the same regiment on the map twice.
-## Two counters stand at least map_army_stack_gap_px apart: each box is grown
-## by half of it for the spreading, the marker keeps the box itself. Each
+## Two counters stand at least map_army_stack_gap_px apart, rim to rim: each
+## box (its bars on top included) is grown by its drawn rim (outline_px) and
+## half the gap for the spreading; the marker keeps the box itself. Each
 ## marker keeps `anchor` (the point's `anchor`, else its `pos`: where its unit
 ## truly is) and `offset` (how far the spreading moved it), for the leader
 ## line (`draw`). `allowed` (a box centre -> bool, Map3DDeclutter.place) keeps
@@ -80,8 +81,8 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		if float(a["size"]) != float(b["size"]):
 			return float(a["size"]) > float(b["size"])
 		return String(a["code"]) < String(b["code"]))
-	var half_gap := repo.bal("map_army_stack_gap_px") * 0.5
-	var boxes: Array = out.map(func(m: Dictionary) -> Rect2: return (m["rect"] as Rect2).grow(half_gap))
+	var room := outline_px(repo) + repo.bal("map_army_stack_gap_px") * 0.5
+	var boxes: Array = out.map(func(m: Dictionary) -> Rect2: return (m["rect"] as Rect2).grow(room))
 	var hide: Array = out.map(func(m: Dictionary) -> bool: return bool(m["solo"]))
 	var afloat: Array = out.map(func(m: Dictionary) -> bool: return bool(m["naval"]))
 	var offs := Map3DDeclutter.place(boxes, hide, obstacles, repo.bal("map3d_declutter_step_px"),
@@ -142,22 +143,40 @@ static func count_color(repo: DataRepository, kingdom_code: String) -> Color:
 		repo.bal("map_army_count_val"))
 
 
+## How far a counter's drawn rim stands outside its rect, design px: its
+## outline (on the war table the realm-hued ring, if wider).
+static func outline_px(repo: DataRepository) -> float:
+	var line := repo.bal("map_army_outline_px")
+	if MapPalette.war_table(repo) and repo.balance.has("map_army_outline_px_table"):
+		line = maxf(line, repo.bal("map_army_outline_px_table"))
+	return line
+
+
 ## The leader lines of the counters the spreading moved more than
-## map3d_leader_min_px: from the counter's edge to its unit, a dot there;
-## drawn BEHIND the counters (owner 2026-10-08: which unit is it?). `look` is
-## {color, width, dot} from the HUD node's exports; none drawn without it.
+## map3d_leader_min_px (owner 2026-10-08: which unit is it?): from the
+## counter's edge to its unit, a dark casing under a pale core, fading toward
+## the counter (its alpha × `fade` there); a dot on the unit, the core's ink
+## in a casing rim. Drawn BEHIND the counters. `look` is the HUD node's
+## exports {casing, core, casing_px, core_px, dot_px (diameter), rim_px,
+## fade}; none drawn without it.
 static func _draw_leaders(ci: CanvasItem, repo: DataRepository, markers: Array, look: Dictionary) -> void:
 	if look.is_empty():
 		return
 	var min_px := repo.bal("map3d_leader_min_px")
-	var ink: Color = look["color"]
+	var fade := float(look["fade"])
 	for m: Dictionary in markers:
 		var to: Vector2 = m.get("anchor", m["pos"])
 		var rect: Rect2 = m["rect"]
 		if (m.get("offset", Vector2.ZERO) as Vector2).length() <= min_px or rect.has_point(to):
 			continue
-		ci.draw_line(edge_toward(rect, to), to, ink, float(look["width"]), true)
-		ci.draw_circle(to, float(look["dot"]), ink)
+		var pts := PackedVector2Array([edge_toward(rect, to), to])
+		for part: Array in [["casing", "casing_px"], ["core", "core_px"]]:
+			var ink: Color = look[part[0]]
+			var faint := Color(ink, ink.a * fade)
+			ci.draw_polyline_colors(pts, PackedColorArray([faint, ink]), float(look[part[1]]), true)
+		var r := float(look["dot_px"]) * 0.5
+		ci.draw_circle(to, r + float(look["rim_px"]), look["casing"])
+		ci.draw_circle(to, r, look["core"])
 
 
 ## Where the segment from `rect`'s centre to `to` (outside it) leaves the rect.
@@ -185,13 +204,11 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected:
 	var icon_bg := MapPalette.named(repo, "army_icon_bg")
 	var glyph_ink := MapPalette.named(repo, "army_glyph")
 	var count_ink := MapPalette.named(repo, "army_count_ink")
-	var line := repo.bal("map_army_outline_px")
 	# THE WAR TABLE: a dark token printed on the sheet, ringed in its realm's hue
 	# (the realm still tells the counters apart) rather than a box OF that hue
 	var table := MapPalette.war_table(repo)
 	var token := MapPalette.named(repo, "army_count_box")
-	if table:
-		line = maxf(line, repo.bal("map_army_outline_px_table") if repo.balance.has("map_army_outline_px_table") else line)
+	var line := outline_px(repo)
 	var glyph_frac := repo.bal("map_army_glyph_frac")
 	var font := UiPalette.body_font()
 	for m: Dictionary in markers:

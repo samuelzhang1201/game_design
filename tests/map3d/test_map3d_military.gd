@@ -268,3 +268,45 @@ func test_a_click_on_a_units_counter_selects_that_unit() -> void:
 	assert_eq(v.selected_armies(), [seat], "the one unit is selected")
 	v.clear_selection()
 	assert_eq(v.selected_armies(), [], "and let go")
+
+
+## A land unit's counter keeps off the sea (2026-10-08 visual review, a hard
+## rule): far out over the capital every land counter the spreading moved
+## stands over land, as the HUD's own land test reads it.
+func test_moved_land_counters_stand_on_land() -> void:
+	var v := _view()
+	v.set_military(true)
+	var hud := v._hud.piece("Armies") as Map3DHudArmies
+	var moved := 0
+	for d: float in [90000.0, 150000.0]:
+		v.look_at_pack(_capital_xy(), d)
+		for m: Dictionary in v.army_markers():
+			if bool(m["naval"]) or (m["offset"] as Vector2) == Vector2.ZERO:
+				continue
+			moved += 1
+			assert_true(hud._on_land((m["rect"] as Rect2).get_center()), "%s at %.0f m" % [m["code"], d])
+	assert_gt(moved, 0, "premise: some counter was moved")
+
+
+## The land test never gives up (wave 2: a cap of tests per cut let crowded
+## counters fall back to the sea): open sea reads as sea however many points
+## one cut asks about.
+func test_the_land_test_has_no_budget() -> void:
+	var v := _view()
+	v.set_military(true)
+	var hud := v._hud.piece("Armies") as Map3DHudArmies
+	v.look_at_pack(_capital_xy(), 150000.0)
+	v.army_markers()
+	var ctx: Map3DContext = hud.ctx
+	var wet := func(p: Vector2) -> bool:
+		var hit: Variant = ctx.ground_at(p)
+		return hit == null or MapEconomy.cell_at(ctx.repo, ctx.to_pack(Vector2((hit as Vector3).x, (hit as Vector3).z))) < 0
+	var sea: Array = []
+	for y in range(8, 450, 8):
+		for x in range(8, 800, 8):
+			var p := Vector2(x, y)
+			if [p, p + Vector2(8, 0), p - Vector2(8, 0), p + Vector2(0, 8), p - Vector2(0, 8)].all(wet):
+				sea.append(p)
+	assert_gt(sea.size(), 300, "premise: open sea in view")
+	for p: Vector2 in sea:
+		assert_false(hud._on_land(p), "open sea at %s" % p)
