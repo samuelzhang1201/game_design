@@ -239,25 +239,78 @@ static func _room(repo: DataRepository, supplies: int, use: int, day: int, targe
 	return maxi(mini(target, ArmySystem.max_units(repo, use) + bite) - supplies, 0)
 
 
-## A land regiment standing in a realm town is topped up to its carried load
-## from that town, free of cartage and road (spec §3.2 step 4).
-static func _refill_in_town(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> void:
+## The realm town a land regiment stands in, which tops it up each day
+## (ArmySystem.held_town_of, a town of the realm); "" in the field or afloat.
+static func home_town(repo: DataRepository, state: GameState, code: String) -> String:
+	var reg := ArmySystem.regiment(repo, code)
+	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+		return ""
 	var held := ArmySystem.held_town_of(repo, reg, state)
-	if held == "" or not TownStores.is_realm_town(repo, state, held):
-		return
+	return held if held != "" and TownStores.is_realm_town(repo, state, held) else ""
+
+
+## Where a regiment's daily top-up comes from, for the cards: {town: its home
+## town ("" in the field), from: that town, or the depot while the town's
+## stores are dry (the entry's `supply_dry` mark)}.
+static func refill_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var town := home_town(repo, state, code)
+	var entry: Dictionary = state.regiments.get(code, {}) if state != null else {}
+	var dry := town != "" and String(entry.get("supply_dry", "")) == town
+	return {"town": town, "from": TownStores.depot(repo, state) if dry else town}
+
+
+## The cards' words for refill_of: "" in the field, "<town> tops it up", or
+## "<town>'s stores are empty: it is fed from <depot>".
+static func refill_words(repo: DataRepository, state: GameState, code: String) -> String:
+	var r := refill_of(repo, state, code)
+	if String(r["town"]) == "":
+		return ""
+	var town := String(repo.burgs[String(r["town"])].get("label", r["town"]))
+	if String(r["from"]) == String(r["town"]):
+		return "%s tops it up" % town
+	return "%s's stores are empty: it is fed from %s" % [town,
+		String((repo.burgs.get(String(r["from"]), {}) as Dictionary).get("label", r["from"]))]
+
+
+## A land regiment standing in a realm town is topped up to its carried load
+## from that town, free of cartage and road (spec §3.2 step 4). What its town
+## cannot give (crown, lord, the houses' stock bought) it takes from the
+## depot, crown then lord, as free; the first such day returns a `town_dry`
+## event (said once, until its own town fills it again — `supply_dry`).
+static func _refill_in_town(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Dictionary:
 	var entry: Dictionary = state.regiments[code]
+	var held := home_town(repo, state, code)
+	if held == "":
+		entry.erase("supply_dry")
+		return {}
 	var use := ArmySystem.supply_use(repo, reg, state)
 	@warning_ignore("integer_division")  # whole units, rounded UP so the days in hand read the load (not one short)
 	var target := (use * ArmySystem.carry_of(repo, entry) + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK \
 		+ ArmySystem.day_bite(use, state.day)
 	var room := _room(repo, int(entry["supplies"]), use, state.day, target)
 	if room <= 0:
-		return
+		return {}
 	var acc := {"buy_milli": int(entry.get("buy_milli", 0))}
 	var d := _draw(repo, state, held, room, acc)
 	entry["buy_milli"] = int(acc["buy_milli"])
 	entry["supplies"] = int(entry["supplies"]) + int(d["got"])
 	_count_buy(repo, state, entry, held, d)
+	var rest := room - int(d["got"])
+	if rest <= 0:
+		entry.erase("supply_dry")
+		return {}
+	var dep := TownStores.depot(repo, state)
+	if dep == "" or dep == held:
+		return {}
+	var got := TownStores.take(state, dep, "crown", rest)
+	got += TownStores.take(state, dep, "lord", rest - got)
+	if got <= 0:
+		return {}
+	entry["supplies"] = int(entry["supplies"]) + got
+	if String(entry.get("supply_dry", "")) == held:
+		return {}
+	entry["supply_dry"] = held
+	return {"type": "town_dry", "regiment": code, "town": held, "depot": dep}
 
 
 ## The month's purchases from the houses on `rec` (a line, or a regiment
@@ -361,10 +414,11 @@ static func _still_ordered(state: GameState, code: String, ln: Dictionary, ridin
 
 ## The day's supply for every regiment of the realm, in code order
 ## (TickEngine._end_day, after the couriers ride, before the host eats):
-## the town refills, then each line's state, interception and delivery.
-## An ORDERED line, or a `pending` point, whose courier no longer rides (lost
-## on the road) is dropped (_still_ordered). Returns the day's events
-## {type, regiment, town, by?, at?} for the dispatches; the low / empty /
+## the town refills (a dry town's rest from the depot), then each line's
+## state, interception and delivery. An ORDERED line, or a `pending` point,
+## whose courier no longer rides (lost on the road) is dropped
+## (_still_ordered). Returns the day's events {type, regiment, town, by?,
+## at?, depot?} for the dispatches; the low / empty /
 ## town_low warnings are warn_day's, once the host has eaten.
 static func day_step(repo: DataRepository, state: GameState) -> Array:
 	TownStores.reconcile(repo, state)
@@ -376,7 +430,9 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 		var reg := ArmySystem.regiment(repo, code)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
-		_refill_in_town(repo, state, code, reg)
+		var dry := _refill_in_town(repo, state, code, reg)
+		if not dry.is_empty():
+			events.append(dry)
 	var riding := _riding_orders(state)
 	var lines: Array = state.supply_lines.keys()
 	lines.sort()

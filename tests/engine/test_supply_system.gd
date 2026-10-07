@@ -97,6 +97,31 @@ func test_a_garrison_reads_in_garrison_at_its_town() -> void:
 	assert_string_contains(String(_card_stat(code, "army_supply_line")["tooltip"]).to_lower(),
 		(town + " tops it up").to_lower())
 
+## Final review 6: a regiment merely STANDING in its realm town (no garrison
+## order) is topped up by it all the same, and the card says so.
+func test_a_standing_regiment_reads_that_its_town_tops_it_up() -> void:
+	var code: String = _land_codes()[0]
+	var p := _stand_at_home(code, ArmySystem.ORDER_STANDBY)
+	var town := String(data.burgs[String(p["capital_burg"])]["label"])
+	assert_false(SupplySystem.line_of(data, s, code)["garrison"], "no garrison order")
+	var tip := String(_card_stat(code, "army_supply_line")["tooltip"])
+	assert_string_contains(tip.to_lower(), (town + " tops it up").to_lower())
+
+## Final review 1: a regiment whose own town has run dry reads the depot
+## that feeds it.
+func test_a_regiment_whose_town_is_dry_reads_the_depot_that_feeds_it() -> void:
+	var dep := TownStores.depot(data, s)
+	for code: String in _land_codes():
+		var held := SupplyLines.home_town(data, s, code)
+		if held == "" or held == dep:
+			continue
+		s.regiments[code]["supply_dry"] = held
+		var tip := String(_card_stat(code, "army_supply_line")["tooltip"])
+		assert_string_contains(tip, "%s's stores are empty" % String(data.burgs[held]["label"]))
+		assert_string_contains(tip, "fed from %s" % String(data.burgs[dep]["label"]))
+		return
+	pending("no regiment stands in a realm town other than the depot")
+
 ## A regiment quartered in a realm town with stores to spare is topped up
 ## every day to its carried load (spec 2026-10-07-army-supply-lines §3.2):
 ## a month on, its ranks are well fed.

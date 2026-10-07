@@ -35,12 +35,23 @@ func test_every_event_kind_reads_as_a_sentence() -> void:
 	var town: String = TownStores.realm_towns(repo, s)[0]
 	var kingdom: String = String(repo.kingdoms.keys()[0])
 	var events: Array = []
-	for t: String in ["opened", "cut", "restored", "town_low", "low", "empty", "cancelled"]:
-		events.append({"type": t, "regiment": code, "town": town, "by": kingdom, "days": 3})
+	for t: String in ["opened", "cut", "restored", "town_low", "low", "empty", "cancelled", "town_dry"]:
+		events.append({"type": t, "regiment": code, "town": town, "by": kingdom, "days": 3, "depot": town})
 	var m := MissiveWriter.supply_dispatch(repo, s, events)
 	for f: Dictionary in m["facts"]:
 		assert_ne(String(f["text"]), "")
 		assert_false(String(f["text"]).contains("%"), "no unfilled placeholder")
+
+## Final review 1: a dry town's regiment fed from the depot says both towns.
+func test_a_dry_town_names_the_depot_that_feeds_the_regiment() -> void:
+	var code := _land()
+	var towns := TownStores.realm_towns(repo, s)
+	var dry := String(towns[0])
+	var dep := TownStores.depot(repo, s)
+	var m := MissiveWriter.supply_dispatch(repo, s, [{"type": "town_dry", "regiment": code, "town": dry, "depot": dep}])
+	var reg := String(ArmySystem.regiment(repo, code)["label"])
+	assert_eq(String((m["facts"] as Array)[0]["text"]), "%s's stores are empty: %s is fed from %s." % [
+		String(repo.burgs[dry]["label"]), reg, String(repo.burgs[dep]["label"])])
 
 func test_a_low_event_with_no_town_reads_whole() -> void:
 	var m := MissiveWriter.supply_dispatch(repo, s, [

@@ -169,7 +169,25 @@ func test_garrison_adds_its_morale_row() -> void:
 			supply = out
 	assert_true(morale.has("In garrison"))
 	assert_eq(morale["In garrison"], "+%d" % int(repo.bal("army_morale_garrison_bonus")))
-	assert_true(String(supply["Line"]).contains("topped up in "), supply["Line"])
+	assert_true(String(supply["Line"]).contains(" tops it up"), supply["Line"])
+
+
+## Final review 6: a regiment merely standing in its realm town (no garrison
+## order) is topped up by it, and the folio says so.
+func test_a_standing_regiment_reads_the_town_that_tops_it_up() -> void:
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		var c := String(r["regiment_code"])
+		var held := SupplyLines.home_town(repo, state, c)
+		if held == "" or ArmySystem.order_of(repo, state, c) == ArmySystem.ORDER_GARRISON:
+			continue
+		for sec: Dictionary in WarFolio.sections(repo, state, c):
+			if String(sec["key"]) != "supply":
+				continue
+			for row: Dictionary in sec["rows"]:
+				if String(row["label"]) == "Line":
+					assert_string_contains(String(row["text"]), "%s tops it up" % String(repo.burgs[held]["label"]))
+					return
+	fail_test("no standing regiment in a realm town, or no Line row")
 
 
 func test_matchups_are_named_per_arm() -> void:
@@ -210,7 +228,9 @@ func test_every_order_has_a_word() -> void:
 
 func test_the_line_row_names_its_supply_point() -> void:
 	state.supply_lines.erase(code)
-	assert_eq(String(_rows("supply")["Line"]), "no supply point")
+	var none := String(_rows("supply")["Line"])
+	var refill := SupplyLines.refill_words(repo, state, code)
+	assert_eq(none, "no supply point" + ("" if refill == "" else "; " + refill))
 	var town: String = TownStores.realm_towns(repo, state)[0]
 	state.supply_lines[code] = SupplyLines._new_record(town, 1500, 1)
 	state.supply_lines[code]["state"] = SupplyLines.FLOWING

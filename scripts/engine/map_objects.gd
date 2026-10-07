@@ -1022,10 +1022,10 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		if state != null and state.regiments.has(code) and not naval:
 			var line := SupplySystem.line_of(repo, state, code)
 			var from := String((repo.burgs.get(String(line["town"]), {}) as Dictionary).get("label", ""))
-			var held := String((repo.burgs.get(String(line["garrison_town"]), {}) as Dictionary).get("label", ""))
+			var refill := SupplyLines.refill_words(repo, state, code)
 			var ln := SupplyLines.line(state, code)
 			var text := "none"
-			var tip := "No supply point — it eats what it carries%s" % ("" if held == "" else "; %s tops it up" % held)
+			var tip := "No supply point — it eats what it carries%s" % ("" if refill == "" else "; " + refill)
 			match String(line["state"]):
 				SupplyLines.ORDERED:
 					text = "ordered"

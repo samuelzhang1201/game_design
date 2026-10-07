@@ -420,3 +420,73 @@ func test_the_tick_engine_runs_the_day_and_keeps_its_events() -> void:
 	engine.advance_day(s)
 	assert_true(_has(engine.day_supply, "opened", code))
 	assert_eq(String(SupplyLines.line(s, code)["state"]), SupplyLines.FLOWING)
+
+## A land regiment of the realm standing in a realm town that is not the
+## depot, other than the line's regiment; "" with none.
+func _quartered_off_the_depot() -> String:
+	var dep := TownStores.depot(repo, s)
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var held := SupplyLines.home_town(repo, s, String(c))
+		if String(c) != code and held != "" and held != dep:
+			return String(c)
+	return ""
+
+## Its own town run dry (final review 1), a regiment quartered there takes
+## the rest of its load from the depot — crown, then lord, never a house's
+## stock there — free of cartage, and the dispatch says so once.
+func test_a_regiment_whose_town_is_dry_is_fed_from_the_depot() -> void:
+	s.supply_lines.clear()
+	var c := _quartered_off_the_depot()
+	if c == "":
+		pending("no regiment stands in a realm town other than the depot")
+		return
+	var held := SupplyLines.home_town(repo, s, c)
+	var dep := TownStores.depot(repo, s)
+	s.town_stock[held] = {"crown": 0, "lord": 0, "house": 0}
+	s.town_stock[dep] = {"crown": 3, "lord": 100000, "house": 100000}
+	TownStores.sync_metrics(repo, s)
+	s.regiments[c]["supplies"] = 0
+	var gold := float(s.metrics["treasury"])
+	var ev := SupplyLines.day_step(repo, s)
+	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), s)
+	var bite := ArmySystem.day_bite(use, s.day)
+	@warning_ignore("integer_division")
+	var want := mini((use * ArmySystem.carry_of(repo, s.regiments[c]) + 29) / 30 + bite,
+		ArmySystem.max_units(repo, use) + bite)
+	assert_eq(int(s.regiments[c]["supplies"]), want, "topped up in full")
+	var st := TownStores.stock_of(s, dep)
+	assert_eq(int(st["crown"]), 0, "the crown's first")
+	assert_eq(int(st["lord"]), 100000 - (want - 3), "then the lord's")
+	assert_eq(int(st["house"]), 100000, "no house's stock is bought at the depot")
+	assert_eq(float(s.metrics["treasury"]), gold, "no cartage, no purchase")
+	var dry: Array = ev.filter(func(e: Dictionary) -> bool: return String(e["type"]) == "town_dry")
+	assert_eq(dry.size(), 1)
+	assert_eq(String(dry[0]["regiment"]), c)
+	assert_eq(String(dry[0]["town"]), held)
+	assert_eq(String(dry[0]["depot"]), dep)
+	assert_eq(String(SupplyLines.refill_of(repo, s, c)["from"]), dep)
+	ArmySystem.eat_day(repo, s)
+	assert_false(_has(SupplyLines.day_step(repo, s), "town_dry", c), "said once while it lasts")
+	# the town restocked feeds it again; run dry once more, it is said again
+	_stock(held, 100000, 0, 0)
+	ArmySystem.eat_day(repo, s)
+	SupplyLines.day_step(repo, s)
+	assert_eq(String(SupplyLines.refill_of(repo, s, c)["from"]), held)
+	_stock(held, 0, 0, 0)
+	ArmySystem.eat_day(repo, s)
+	assert_true(_has(SupplyLines.day_step(repo, s), "town_dry", c), "dry again: said again")
+
+## A regiment its own town fills reads that town as its feeder.
+func test_a_regiment_its_town_fills_is_fed_by_that_town() -> void:
+	s.supply_lines.clear()
+	var c := _quartered_off_the_depot()
+	if c == "":
+		pending("no regiment stands in a realm town other than the depot")
+		return
+	var held := SupplyLines.home_town(repo, s, c)
+	_stock(held, 100000, 0, 0)
+	s.regiments[c]["supplies"] = 0
+	assert_false(_has(SupplyLines.day_step(repo, s), "town_dry", c))
+	assert_eq(SupplyLines.refill_of(repo, s, c), {"town": held, "from": held})

@@ -59,6 +59,11 @@ func test_a_quiet_day_leaves_the_table_alone() -> void:
 	var r: GameRoot = await _court()
 	var screen: CourtScreen = r.current_screen
 	var panel: ManorMasterPanel = screen.manor_master()
+	# every realm town stocked, so no garrison's town runs dry and files a
+	# supply letter today (a letter is something the table watches)
+	for t: String in TownStores.realm_towns(Game.data, Game.state):
+		Game.state.town_stock[t] = {"crown": 100000, "lord": 0, "house": 0}
+	TownStores.sync_metrics(Game.data, Game.state)
 	r.bottom_bar().button("MANORS").pressed.emit()
 	await wait_process_frames(2)
 	var built := panel.rebuilds

@@ -77,6 +77,7 @@ const _SUPPLY_WORDS := {
 	"low": "%s has under %d days of supplies (%s).",
 	"empty": "%s has eaten its last supplies (%s).",
 	"cancelled": "%s is no longer ours: the line to %s is gone.",
+	"town_dry": "%s's stores are empty: %s is fed from %s.",
 }
 
 
@@ -100,6 +101,8 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 				text = _SUPPLY_WORDS["empty"] % [reg, _fed_from(town)]
 			"cancelled":
 				text = _SUPPLY_WORDS["cancelled"] % [town, reg]
+			"town_dry":
+				text = _SUPPLY_WORDS["town_dry"] % [town, reg, _town_label(repo, String(e.get("depot", "")))]
 			_:
 				text = _SUPPLY_WORDS[String(e["type"])] % [town, reg]
 		facts.append(MissiveLog.words("supply_%d" % i, String(e["type"]).capitalize().replace("_", " "), text))
@@ -107,6 +110,10 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, first))
 	return MissiveLog.make("supply", "credible", state.absolute_day(),
 		MissiveLog.subject("regiment", first, -1, at), "Supply dispatch", facts)
+
+
+static func _town_label(repo: DataRepository, burg: String) -> String:
+	return String((repo.burgs.get(burg, {}) as Dictionary).get("label", burg))
 
 
 static func _fed_from(town: String) -> String:

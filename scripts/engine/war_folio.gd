@@ -169,7 +169,7 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 	if state.regiments.has(code):
 		var line := SupplySystem.line_of(repo, state, code)
 		var from := String((repo.burgs.get(String(line["town"]), {}) as Dictionary).get("label", ""))
-		var held := String((repo.burgs.get(String(line["garrison_town"]), {}) as Dictionary).get("label", ""))
+		var refill := SupplyLines.refill_words(repo, state, code)
 		var text := "no supply point"
 		if String(line["town"]) != "":
 			@warning_ignore("integer_division")
@@ -181,8 +181,8 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 				return "%d%% to the %s" % [int(h["permille"]) / 10, String(h["label"])])
 			if not named.is_empty():
 				text += " (%s)" % ", ".join(named)
-		if held != "":
-			text += "; topped up in %s" % held
+		if refill != "":
+			text += "; " + refill
 		rows.append(_row("Line", text))
 	var f := Governance.factors(repo, state, "supply_line")
 	var gid := String(f["governor"])
