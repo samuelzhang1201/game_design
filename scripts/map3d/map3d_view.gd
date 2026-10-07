@@ -33,6 +33,7 @@ signal garrison_menu_requested(codes: Array, at: Vector2)
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 ## A click on a committed march's end ring (owner 2026-09-27): ArmyOrderMenu's route menu (Map3DSelection emits it).
 @warning_ignore("unused_signal") signal route_clicked(code: String, at: Vector2)
+@warning_ignore("unused_signal") signal route_bent(waypoints: PackedVector2Array)  # ArmyOrderMenu checks it
 ## A right click on open ground (owner 2026-09-28): SpyOrderMenu's "Send a spy here".
 signal ground_menu_requested(pack_px: Vector2, at: Vector2)
 
@@ -489,8 +490,10 @@ var aim_code := "":
 	set(v):
 		aim_code = v
 		if _loaded: _hud.refresh()  # the aim's ruler goes, the committed route shows
-## The aimed march's destination (pack px) while COMMIT / CANCEL is asked, else (-1, -1).
+## The aimed march's end (pack px) while its confirm stands, else (-1, -1); its waypoints
+## (pack px), bent by a drag on the line (Map3DRouteEdit, which emits route_bent).
 var aim_dest := Vector2(-1, -1)
+var aim_waypoints := PackedVector2Array()
 ## The supply point being picked (ArmyOrderMenu sets both, spec 2026-10-07-army-supply-lines
 ## §5.2): town -> "" lit / why not, then the chosen town's road (pack px); {} / empty when not.
 var supply_pick: Dictionary = {}:

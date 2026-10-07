@@ -213,6 +213,10 @@ army_road_reach_m,1500,"owner 2026-10-06 (spec 2026-10-06-army-location-and-town
 army_march_days_cap,3650,"the most days ArmySystem.march_days_between walks a route before it gives the figure up (a guard, never reached on a pack: ten years)"
 army_route_sample_m,3000,"march waypoints (spec 2026-10-07-march-waypoints §1): a route through waypoints is sampled into a whole-metre point every this many metres of chord per leg (MarchRoute) — the line drawn and walked; a 3 km chord on a 50 km bend strays 20 m"
 army_march_waypoints_max,8,"march waypoints (spec §1, ruling 3): the most waypoints one ARMY_MARCH may name; Add waypoint and a bend stop there"
+map3d_route_grab_px,10,"march waypoints (spec 2026-10-07-march-waypoints ruling 9): on the 3D map a left press this near (design px) a planned route's waypoint takes it, this near its line inserts one (Map3DRouteEdit)"
+map3d_route_handle_px,5,"march waypoints: the radius (design px) of the ring each waypoint of a planned route is drawn with on the 3D map (Map3DHudRuler)"
+war_route_grab_px,10,"march waypoints (ruling 9): the WAR ROOM's grab reach, screen px (WarRoomRake)"
+war_route_handle_px,5,"march waypoints: a waypoint's ring in the WAR ROOM, screen px (WarHud)"
 army_morale_drift_per_month,6,LEDGER M1: points morale moves toward its mark a month
 army_wound_recovery_permille,200,"regiments: share of the wounded who return to the ranks each month, per mille, at least 1 while any are wounded"
 army_training_per_month,0,regiments: training gained each month (placeholder: none)

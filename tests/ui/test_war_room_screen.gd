@@ -210,7 +210,7 @@ func test_a_committed_rake_pencils_a_draft_pennant() -> void:
 	if MapEconomy.cell_at(Game.data, to) < 0:
 		to = (p["at"] as Vector2) + Vector2(0.0, 6.0)
 	screen.view().ground_clicked.emit(to, Vector2(100, 100))
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	await wait_process_frames(2)
 	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "the war room pencils a draft")
 	assert_true(WarRoom.pennant_of(Game.data, Game.state, code).is_empty(), "no courier rides for a draft")
@@ -271,7 +271,7 @@ func test_a_real_drag_from_a_piece_pencils_a_draft() -> void:
 	assert_eq(screen.orders().aiming(), code, "the drag armed the march")
 	_real_press(view, to, false)
 	assert_true(screen.orders().pending().x >= 0.0, "the release named a destination and asked COMMIT / CANCEL")
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	await wait_process_frames(2)
 	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "the war room pencils a draft")
 	assert_true(WarRoom.pennant_of(Game.data, Game.state, code).is_empty(), "no courier rides for a draft")
@@ -319,7 +319,7 @@ func test_a_click_on_a_draft_pennant_offers_edit_and_strike() -> void:
 	var code := String(p["code"])
 	screen.orders().aim_for(code)
 	view.ground_clicked.emit(_land_near(screen, p["at"]), Vector2(100, 100))
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	await wait_process_frames(2)
 	var hit: Dictionary = (view.get_node("%Pennants") as WarPennants).screen_hits(
 		view.get_node("%Camera"), view.window_scale())[0]
@@ -780,12 +780,12 @@ func test_pencilling_into_the_sea_is_refused_at_once_but_an_empty_chest_is_not()
 	assert_gte(sea.x, 0.0, "the map has sea")
 	screen.orders().aim_for(code)
 	screen.view().ground_clicked.emit(sea, Vector2(100, 100))
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	assert_false(WarDrafts.any(Game.state), "no pennant in the sea")
 	Game.state.metrics["treasury"] = 0.0
 	screen.orders().aim_for(code)
 	screen.view().ground_clicked.emit(_land_near(screen, p["at"]), Vector2(100, 100))
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	assert_true(WarDrafts.any(Game.state), "a draft costs nothing yet")
 
 

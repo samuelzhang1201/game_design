@@ -18,6 +18,9 @@ signal army_menu_requested(code: String, at: Vector2)
 signal garrison_menu_requested(codes: Array, at: Vector2)
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 signal route_clicked(code: String, at: Vector2)
+## A planned march's waypoints were bent on the table (WarRoomRake; spec
+## 2026-10-07-march-waypoints ruling 9): ArmyOrderMenu keeps or refuses them.
+signal route_bent(waypoints: PackedVector2Array)
 signal rake_started(code: String)
 signal rake_dropped
 signal sheet_requested(index: int)
@@ -50,6 +53,12 @@ var aiming := false:
 			_rake.redraw()
 var aim_dest := Vector2(-1, -1)
 var aim_code := ""
+## The planned march's waypoints, pack px (ArmyOrderMenu sets them; a bend moves them).
+var aim_waypoints := PackedVector2Array():
+	set(v):
+		aim_waypoints = v
+		if _repo != null and is_inside_tree():
+			_rake.redraw()
 
 @onready var _viewport: SubViewport = %Viewport
 @onready var _display: TextureRect = %Display

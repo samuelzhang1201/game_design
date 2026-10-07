@@ -1,7 +1,7 @@
 key,label,hint,notes
 commit,Confirm order,Issue this march order. Fee: {fee} gold,"owner 2026-09-27: after the destination click, the order waits for COMMIT or CANCEL (ArmyOrderMenu, the confirm menu); the order rides by courier (spec 2026-09-27-courier-core), but owner 2026-09-28: 不要说发送信使，就是确认命令即可 — the row only confirms the order"
 cancel,Cancel,Give this route up,the confirm menu's other row; clicking away from the menu does the same
-edit,Edit route…,Aim the march anew from where the column stands,"owner 2026-09-27: 行进路线commit后，再次点击终点可以edit路线或者cancel操作 — the route menu, opened by a click on a march's end ring"
+edit,Edit route…,"Bend its route, add waypoints, or change the load","owner 2026-09-27: 行进路线commit后，再次点击终点可以edit路线或者cancel操作 — the route menu, opened by a click on a march's end ring"
 halt,Cancel march,Send a courier to halt the column where it has got to,"the route menu's other row: an ARMY_GARRISON, owner 2026-09-27: the order rides by courier (spec 2026-09-27-courier-core)"
 paused_only,,Pause the clock to plan a march,"owner 2026-09-27: 兵人行进路线只能在暂停模式下选择 — the reason MARCH, Edit and Cancel march are greyed out while time runs"
 commit_fleet,Commit march,Send the fleet along this route,"final review 2026-09-28: a fleet takes no courier yet (CourierSystem.carries_orders), so its COMMIT keeps the pre-courier words"
@@ -9,3 +9,5 @@ halt_fleet,Cancel march,Halt the fleet where it has got to,"final review 2026-09
 commit_draft,Pencil it in,"A draft: no courier and no fee until the council's resolutions are sealed","WAR ROOM v2 C (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1): in the war room COMMIT plants a draft (ArmyOrderMenu.drafting)"
 halt_draft,Cancel march,"Pencil a halt: it rides when the council's resolutions are sealed","WAR ROOM v2 C (spec §3.1): the war room's Cancel march is a garrison draft too — every order given in the room waits for the seal"
 strike,Strike the draft,Rub the pencilled order out,"WAR ROOM v2 C (spec §3.1): the route menu over a regiment with a draft (a draft pennant, or a march with a pencilled halt)"
+add_waypoint,Add waypoint,"Keep this point and click where the march goes next; drag the line to bend it","owner 2026-10-07 (spec 2026-10-07-march-waypoints): the confirm panel's third button — 除了Confirm和Cancel，再加一个Add waypoint选项"
+waypoints_full,,A march takes at most {max} waypoints,"spec 2026-10-07-march-waypoints ruling 3: Add waypoint greyed out at army_march_waypoints_max"

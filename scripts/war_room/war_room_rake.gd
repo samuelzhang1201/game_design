@@ -13,6 +13,7 @@ extends RefCounted
 var code := ""                    # the regiment under the rake
 var to := Vector2(-1, -1)         # the arrow's tip, screen px; (-1, -1) none
 var _press_code := ""
+var _bend := -1                   # the planned route's waypoint in hand, -1 none
 var _press_at := Vector2.ZERO
 var _pressed := false
 var _view: WarRoomView
@@ -60,19 +61,35 @@ func drop() -> void:
 ## the pack's own measure, the days ONE arrival figure — the courier's ride and
 ## the march after it (owner 2026-10-02); "cannot march" for a banner with no
 ## one to march.
+## Through the planned waypoints when the march being planned is this
+## regiment's, measured along the curve it will walk (spec 2026-10-07-march-waypoints).
 func reading(regiment: String, to_px: Vector2) -> String:
 	var state := _view.state()
 	var from := _view.position_of(regiment)
+	var wps: Array = Array(_view.aim_waypoints) if _view.aim_code == regiment else []
 	var unit := String(_repo.map_info.get("distance_unit", "")).strip_edges()
-	var dist := from.distance_to(to_px) * float(_repo.map_info.get("distance_scale", "1"))
+	var curve := ArmySystem.curve_px(_repo, from, wps, to_px)
+	var px := 0.0
+	for i in range(1, curve.size()):
+		px += curve[i - 1].distance_to(curve[i])
+	var dist := px * float(_repo.map_info.get("distance_scale", "1"))
 	var text := "%s %s" % [WarRoom.group(int(round(dist))), unit if unit != "" else "km"]
 	if ArmySystem.day_march_m(_repo, state, regiment) <= 0:
 		return text + " · cannot march"
-	var days := CourierSystem.arrival_days(_repo, state, regiment, to_px, from)
+	var days := CourierSystem.arrival_days(_repo, state, regiment, to_px, from, -1, wps)
 	return text + " · ~%d day%s" % [days, "" if days == 1 else "s"]
 
 
 func on_left(mb: InputEventMouseButton) -> void:
+	if mb.pressed and _press_bend(mb.position):
+		_view.accept_event()   # a waypoint in hand: no pick, no pan
+		return
+	if not mb.pressed and _bend >= 0:
+		_bend = -1
+		_pressed = false
+		_view.route_bent.emit(_view.aim_waypoints)
+		_view.accept_event()
+		return
 	if mb.pressed:
 		_press_at = mb.position
 		_pressed = true
@@ -126,6 +143,13 @@ func on_left(mb: InputEventMouseButton) -> void:
 
 
 func on_motion(mm: InputEventMouseMotion) -> void:
+	if _bend >= 0:
+		var px := _view.pack_at(mm.position)
+		var wps := _view.aim_waypoints
+		if px.x >= 0.0 and _bend < wps.size():
+			wps[_bend] = px
+			_view.aim_waypoints = wps   # redraws
+		return
 	if _pressed and code == "" and _press_code != "" \
 			and mm.position.distance_to(_press_at) >= _repo.bal("war_rake_min_px"):
 		code = _press_code
@@ -147,6 +171,7 @@ func redraw() -> void:
 	var tip := Vector2(-1, -1)
 	var text := ""
 	var held := _view.aim_dest.x >= 0.0
+	var path := PackedVector2Array()
 	var who := code if code != "" else (_view.aim_code if _view.aiming else "")
 	if _view.rolling():
 		who = ""   # the table is rolling up: the pieces, pennants and their marks are put away
@@ -164,12 +189,15 @@ func redraw() -> void:
 				tip = to
 				px = _view.pack_at(to)
 			text = reading(who, px) if px.x >= 0.0 else ""
+			if px.x >= 0.0:
+				path = _screen_curve(_view.position_of(who), px, from)
 	var chalk := Vector2(-1, -1)
 	var node := _pieces.piece(_view.selected_army()) if _view.selected_army() != "" else null
 	if node != null and not _view.rolling() and not _camera.is_position_behind(node.global_position):
 		chalk = _camera.unproject_position(node.global_position) / _view.window_scale()
 	_hud.draw_state(from, tip, text, chalk, _repo.bal("war_pick_px") * _repo.bal("war_hud_chalk_ratio"),
 		pal["ink"], pal["arrow"], pal["chalk"], _view.lettering(), held, _routes(), _drafts(), pal["pencil"])
+	_hud.set_route(path if path.size() > 2 else PackedVector2Array(), _handles(who))
 
 
 ## Each pennant's dashed line from its piece (where we know it stands) to the
@@ -183,12 +211,13 @@ func _routes() -> Array:
 		var pen := WarRoom.pennant_of(_repo, state, String(p["code"]))
 		if pen.is_empty() or not _view.sheet_rect().has_point(pen["at"]):
 			continue
+		var bend := _pennant_waypoints(String(p["code"]), pen)
 		var node := _pieces.piece(String(p["code"]))   # where the piece stands now, mid-push included
 		var a: Variant = _view.screen_pos_of_px(p["at"]) if node == null or _camera.is_position_behind(node.global_position) \
 			else _camera.unproject_position(node.global_position) / _view.window_scale()
 		var b: Variant = _view.screen_pos_of_px(pen["at"])
 		if a != null and b != null:
-			out.append([a, b])
+			out.append(_screen_curve(p["at"], pen["at"], a, bend) if not bend.is_empty() else PackedVector2Array([a, b]))
 	return out
 
 
@@ -211,8 +240,85 @@ func _drafts() -> Array:
 			else _camera.unproject_position(node.global_position) / _view.window_scale()
 		var b: Variant = _view.screen_pos_of_px(to)
 		if a != null and b != null:
-			out.append([a, b])
+			var wps := Array(WarDrafts.waypoints_px(_repo, d))
+			out.append(_screen_curve(p["at"], to, a, wps) if not wps.is_empty() else PackedVector2Array([a, b]))
 	return out
+
+
+## The curve from `from_px` through `waypoints` (the planned ones when none are
+## given) to `to_px`, in screen px, its first point `start` (where the piece
+## stands drawn) — the line the column will walk (ArmySystem.curve_px).
+func _screen_curve(from_px: Vector2, to_px: Vector2, start: Vector2, waypoints: Variant = null) -> PackedVector2Array:
+	var wps: Array = Array(_view.aim_waypoints) if waypoints == null else waypoints
+	var out := PackedVector2Array([start])
+	var curve := ArmySystem.curve_px(_repo, from_px, wps, to_px)
+	for i in range(1, curve.size()):
+		var at: Variant = _view.screen_pos_of_px(curve[i])
+		if at != null:
+			out.append(at)
+	return out
+
+
+## A pennant's waypoints still ahead: a riding march courier's, else the column's.
+func _pennant_waypoints(code: String, pen: Dictionary) -> Array:
+	var state := _view.state()
+	if String(pen.get("status", "")) == "riding":
+		var c := CourierSystem.pending_for(state, code)
+		if not c.is_empty():
+			return CourierSystem.waypoints_px(_repo, c.get("order", {}))
+		return []
+	return Array(ArmySystem.waypoints_of(_repo, state, code))
+
+
+## The planned waypoints' rings in screen px, for the regiment being aimed.
+func _handles(who: String) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if who == "" or who != _view.aim_code:
+		return out
+	for w: Vector2 in _view.aim_waypoints:
+		var at: Variant = _view.screen_pos_of_px(w)
+		if at != null:
+			out.append(at)
+	return out
+
+
+## A left press while the march's confirm stands (spec 2026-10-07-march-waypoints
+## ruling 9): within war_route_grab_px of a waypoint takes it; of the line,
+## inserts one there on the leg it lies on. True when a waypoint is in hand.
+func _press_bend(at: Vector2) -> bool:
+	if not _view.aiming or _view.aim_dest.x < 0.0 or _view.aim_code == "" or _view.rolling():
+		return false
+	var grab := _repo.bal("war_route_grab_px")
+	var wps := _view.aim_waypoints
+	for i in wps.size():
+		var s: Variant = _view.screen_pos_of_px(wps[i])
+		if s != null and (s as Vector2).distance_to(at) <= grab:
+			_bend = i
+			return true
+	var pts_m: Array = [ArmySystem.pack_to_metres(_repo, _view.position_of(_view.aim_code))]
+	for w: Vector2 in wps:
+		pts_m.append(ArmySystem.pack_to_metres(_repo, w))
+	pts_m.append(ArmySystem.pack_to_metres(_repo, _view.aim_dest))
+	var legs := MarchRoute.legs(pts_m, int(_repo.bal("army_route_sample_m")))
+	var best := -1
+	var best_d := grab
+	for i in legs.size():
+		var prev: Variant = _view.screen_pos_of_px(ArmySystem.metres_to_pack(_repo, pts_m[i]))
+		for q: Vector2i in legs[i]:
+			var s: Variant = _view.screen_pos_of_px(ArmySystem.metres_to_pack(_repo, q))
+			if prev != null and s != null:
+				var d := Geometry2D.get_closest_point_to_segment(at, prev, s).distance_to(at)
+				if d <= best_d:
+					best_d = d
+					best = i
+			prev = s
+	var px := _view.pack_at(at)
+	if best < 0 or px.x < 0.0:
+		return false
+	wps.insert(best, px)
+	_bend = best
+	_view.aim_waypoints = wps
+	return true
 
 
 ## A left press on open table with nothing in hand and no march armed: a drag
