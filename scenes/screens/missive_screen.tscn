@@ -198,9 +198,15 @@ layout_mode = 2
 theme_type_variation = &"MissiveLetterMeta"
 autowrap_mode = 3
 
-[node name="LetterFacts" type="VBoxContainer" parent="Frame/Col/Body/Desk/Letter" unique_id=99530901]
+[node name="FactsScroll" type="ScrollContainer" parent="Frame/Col/Body/Desk/Letter" unique_id=1784368423]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="LetterFacts" type="VBoxContainer" parent="Frame/Col/Body/Desk/Letter/FactsScroll" unique_id=99530901]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
 [node name="ShowOnMap" type="Button" parent="Frame/Col/Body/Desk/Letter" unique_id=1390984967]

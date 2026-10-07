@@ -29,9 +29,23 @@ func test_a_new_campaign_seeds_only_the_players_regiments() -> void:
 	assert_eq(int(entry["wounded"]), 0)
 	# heads x 100 / 1000 a month (scaled by the cell's height tier), times
 	# army_start_supply_days (20) of the 30 days of a month, in a 20-day load
-	assert_eq(int(entry["supplies"]), ArmySystem.supply_use(repo, r) * 20 / 30)
+	assert_eq(int(entry["supplies"]), (ArmySystem.supply_use(repo, r) * 20 + 29) / 30)
 	assert_eq(int(entry["carry_days"]), 20)
 	assert_false(s.regiments.has(_other_code()))
+
+## A fresh regiment reads the days it was given: 20 in hand of its 20-day load,
+## never 19 for the whole-unit floor.
+func test_a_fresh_regiment_has_the_days_it_was_given() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var n := 0
+	for r: Dictionary in _mine():
+		var code := String(r["regiment_code"])
+		var use := ArmySystem.supply_use(repo, r)
+		if String(r.get("is_naval", "0")) == "1" or use < 30:
+			continue
+		n += 1
+		assert_eq(ArmySystem.days_in_hand(int(s.regiments[code]["supplies"]), use), 20, code)
+	assert_gt(n, 0, "some land regiment of the realm")
 
 func test_wound_recovery_is_a_share_with_a_floor_of_one() -> void:
 	assert_eq(ArmySystem.wound_recovery(repo, 0), 0)

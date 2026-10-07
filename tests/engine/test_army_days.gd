@@ -51,7 +51,8 @@ func test_a_new_regiment_starts_with_twenty_days_and_the_default_load() -> void:
 	var reg := ArmySystem.regiment(repo, code)
 	var st := ArmySystem.starting_state(repo, reg)
 	var use := ArmySystem.supply_use(repo, reg)
-	assert_eq(int(st["supplies"]), use * 20 / 30)
+	@warning_ignore("integer_division")  # rounded UP: it reads the 20 days it was given
+	assert_eq(int(st["supplies"]), (use * 20 + 29) / 30)
 	assert_eq(int(st["carry_days"]), 20)
 
 func test_an_old_entry_gets_a_load_and_is_clamped_to_thirty_days() -> void:

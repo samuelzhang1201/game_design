@@ -223,8 +223,12 @@ func test_a_regiment_in_a_realm_town_is_topped_up_free() -> void:
 		SupplyLines.day_step(repo, s)
 		var use := ArmySystem.supply_use(repo, reg, s)
 		@warning_ignore("integer_division")
-		var want := use * ArmySystem.carry_of(repo, s.regiments[c]) / 30 + ArmySystem.day_bite(use, s.day)
+		var want := (use * ArmySystem.carry_of(repo, s.regiments[c]) + 29) / 30 + ArmySystem.day_bite(use, s.day)
 		assert_eq(int(s.regiments[c]["supplies"]), mini(want, ArmySystem.max_units(repo, use) + ArmySystem.day_bite(use, s.day)))
+		# once the day's meal is eaten the regiment reads the days it carries, not one short
+		ArmySystem.eat_day(repo, s)
+		if use >= 30:
+			assert_eq(ArmySystem.days_in_hand(int(s.regiments[c]["supplies"]), use), ArmySystem.carry_of(repo, s.regiments[c]))
 		assert_eq(float(s.metrics["treasury"]), gold, "no cartage inside a town")
 		return
 	pending("no regiment stands in a realm town on this pack")

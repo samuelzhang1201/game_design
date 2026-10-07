@@ -96,6 +96,33 @@ func test_the_frame_fits_inside_the_viewport_with_all_art_installed() -> void:
 		"the frame's bottom edge (%.1f) fits inside the %d-tall viewport" % [rect.end.y, int(viewport.y)])
 
 
+## The marshal's monthly report has a row per land regiment (spec 2026-10-07-
+## army-supply-lines §5.5), far more than the desk's height: the desk scrolls
+## its facts, so the frame stays inside the window and Show on map stays in
+## reach (a real-window shot showed the report running off the bottom).
+func test_a_long_marshal_report_scrolls_inside_the_desk() -> void:
+	Game.start_campaign(42)
+	var rows := SupplyLines.settle_month(Game.data, Game.state)
+	var id := MissiveLog.add(Game.data, Game.state, MissiveWriter.marshal_report(Game.data, Game.state, 3, rows))
+	var r := _root()
+	await _enter(r)
+	get_tree().root.size = Vector2i(1280, 720)
+	await wait_process_frames(2)
+	r.toggle_missives()
+	await wait_process_frames(1)
+	var ms := r.missive_screen()
+	ms.select(id)
+	await wait_process_frames(2)
+	assert_gt(ms.get_node("%LetterFacts").get_child_count(), 8, "a row per regiment")
+	var viewport := r.get_viewport_rect().size
+	var frame := ms.get_node("%Frame") as Control
+	assert_true(frame.get_global_rect().end.y <= viewport.y + 0.5,
+		"the frame's bottom (%.1f) fits the %d-tall window" % [frame.get_global_rect().end.y, int(viewport.y)])
+	var button := ms.get_node("%ShowOnMap") as Control
+	assert_true(button.get_global_rect().end.y <= viewport.y + 0.5, "Show on map stays on screen")
+	assert_true(ms.get_node("%LetterFacts").get_parent() is ScrollContainer, "the facts scroll")
+
+
 ## Plaques on one line: board_art_v3_desk.png showed "WORTH CONSULTING"
 ## breaking INSIDE a word ("CONSULTI / NG"), spilling a third line below the
 ## plaque's own box, while the other three plaques wrapped to one or two

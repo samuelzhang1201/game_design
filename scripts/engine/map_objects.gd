@@ -320,7 +320,7 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 			return String((state.supply_lines[k] as Dictionary)["town"]) == code)
 		@warning_ignore("integer_division")
 		var markup := int(repo.bal("supply_buy_markup_permille")) / 10
-		fields.append(["Strategic stores", "%d — crown %d, lord %d, House stock %d (bought at +%d%%)" % [
+		fields.append(["Strategic stores", "%d — crown %d, lord %d, house stock %d (bought at +%d%%)" % [
 			int(held["crown"]) + int(held["lord"]) + int(held["house"]),
 			int(held["crown"]), int(held["lord"]), int(held["house"]), markup]])
 		if not lines.is_empty():

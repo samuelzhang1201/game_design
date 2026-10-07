@@ -30,14 +30,17 @@ static func fit_permille(repo: DataRepository, state: GameState, code: String) -
 	@warning_ignore("integer_division")  # whole per-mille
 	return (heads - wounded) * 1000 / heads
 
-## What a regiment starts a campaign with.
+## What a regiment starts a campaign with: army_start_supply_days of its use,
+## in whole supplies rounded UP, so the days in hand read the days it was given
+## (rounded down, a fresh regiment showed 19 of its 20).
 @warning_ignore("integer_division")  # whole supplies
 static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 	var home := pack_to_metres(repo, Vector2(float(reg.get("x", 0)), float(reg.get("y", 0))))
+	var start_days := int(repo.bal("army_start_supply_days"))
 	return {
 		"morale": int(repo.bal("army_start_morale")),
 		"wounded": 0,
-		"supplies": supply_use(repo, reg) * int(repo.bal("army_start_supply_days")) / Calendar.DAYS_PER_TICK,
+		"supplies": (supply_use(repo, reg) * start_days + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK,
 		"carry_days": int(repo.bal("army_carry_default_days")),
 		"training": int(repo.bal("army_start_training")),
 		"x_m": home.x,

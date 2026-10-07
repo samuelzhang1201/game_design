@@ -247,8 +247,9 @@ static func _refill_in_town(repo: DataRepository, state: GameState, code: String
 		return
 	var entry: Dictionary = state.regiments[code]
 	var use := ArmySystem.supply_use(repo, reg, state)
-	@warning_ignore("integer_division")  # whole units
-	var target := use * ArmySystem.carry_of(repo, entry) / Calendar.DAYS_PER_TICK + ArmySystem.day_bite(use, state.day)
+	@warning_ignore("integer_division")  # whole units, rounded UP so the days in hand read the load (not one short)
+	var target := (use * ArmySystem.carry_of(repo, entry) + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK \
+		+ ArmySystem.day_bite(use, state.day)
 	var room := _room(repo, int(entry["supplies"]), use, state.day, target)
 	if room <= 0:
 		return

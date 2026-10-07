@@ -325,6 +325,9 @@ From the build:
 - Accepted deviations of the map layer: the pick ring's radius is the town's click reach (not the cut reach); the line is snapped onto the drawn road; its end follows the drawn piece; `bind()` takes the units layer. If wrong: none.
 - Route searches are cached per line per day, end-following redraws are throttled by `map3d_supply_follow_s`, and pick or preview changes redraw only the rings and the preview. If wrong: the line's end lags the piece by up to the throttle.
 - OWNER TO RULE: the supply line's look (white, alpha 0.15, 22 px, fully soft; preview white dashes; gold lit rings reusing the selection gold; grey greyed rings). If wrong: the `.tres` values change, nothing else.
+- Whole-unit supplies are rounded UP where a day count is promised (a new regiment's `army_start_supply_days`, a town refill to `carry_days`), so a fresh or topped-up regiment reads 20 days in hand of 20, never 19. If wrong: none.
+- The Missive desk scrolls its facts (a `ScrollContainer` round `LetterFacts` in `missive_screen.tscn`): the marshal's report has a row per land regiment and ran off the window. The scene was patched as text, because the editor MCP drives the main checkout. If wrong: the editor may re-save the scene once.
+- PARKED for the owner (tuning): at `supply_cart_milligold_per_unit_km` 1 the cartage of one regiment is under a gold a day, so the rate menu's rows (0.8 / 1.0 / 1.2) all read "0 gold a day" and the three speeds cost the same in whole gold. If wrong: raise the key (about 10 puts a 1,600-man regiment on a 140 km road near 7 gold a day).
 - "Play it" was verified by real-window snapshots of the cards, the menu and the Missive board, not by clicking through the live game. If wrong: an interaction bug only a human click finds.
 
 ## 9. Not in this spec (the brief's other items)
