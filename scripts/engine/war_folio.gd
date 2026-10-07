@@ -97,7 +97,8 @@ static func _tier_word(n: int) -> String:
 
 static func _composition(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
 	var st := _state_of(repo, state, code, reg)
-	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.headcount(repo, reg)))]
+	# the dead are no longer under arms
+	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.headcount(repo, reg) - maxi(0, int(st.get("dead", 0)))))]
 	for a: Dictionary in arms_of(repo, code):
 		rows.append(_row(_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))))
 	var wounded := int(st.get("wounded", 0))

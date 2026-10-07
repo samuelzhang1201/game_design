@@ -420,7 +420,8 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 ## {kind: "start", battle_id, att, def, town, place_x_m, place_y_m},
 ## {kind: "join", battle_id, code, side},
 ## {kind: "round", battle_id, round, att_power, def_power, odds, roll, eff, tier,
-##  results (apply_round's), left [{code, side, why}]} and
+##  results (apply_round's), left [{code, side, why}], att, def (who fought it,
+##  before anyone left), town, place_x_m, place_y_m} and
 ## {kind: "end", battle_id, why ("rout_attacker" / "rout_defender" / "emptied" /
 ##  "rounds"), winner ("att" / "def" / ""), att, def (the survivors), rounds,
 ##  town, place_x_m, place_y_m}.
@@ -450,8 +451,9 @@ static func settle_stances(state: GameState) -> void:
 				e.erase("stance_next")
 
 
-## The battle's place in words, for the reasons.
-static func _place_label(repo: DataRepository, state: GameState, b: Dictionary) -> String:
+## The battle's place in words, for the reasons and the report: `b` is a
+## battle or any event carrying town, place_x_m and place_y_m.
+static func place_label(repo: DataRepository, state: GameState, b: Dictionary) -> String:
 	if String(b["town"]) != "":
 		return String((repo.burgs.get(String(b["town"]), {}) as Dictionary).get("label", b["town"]))
 	return Intel.place_label(repo, state, ArmySystem.metres_to_pack(repo,
@@ -478,13 +480,14 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 	var eff := eff_permille(odds, r, int(repo.bal("battle_variance_permille")))
 	var tier := tier_of(repo, eff)
 	var reason := "%s at %s, the battle's day %d" % [String(tier.get("tier", "")).replace("_", " "),
-		_place_label(repo, state, b), n]
+		place_label(repo, state, b), n]
 	var results := apply_round(repo, state, att, def, tier, reason, stance)
 	b["rounds"] = n
 	var left := _exits(repo, state, b, String(tier.get("rout", "none")), odds)
 	events.append({"kind": "round", "battle_id": int(b["id"]), "round": n, "att_power": a_pow,
 		"def_power": d_pow, "odds": odds, "roll": r, "eff": eff, "tier": String(tier.get("tier", "")),
-		"results": results, "left": left})
+		"results": results, "left": left, "att": att.duplicate(), "def": def.duplicate(),
+		"town": String(b["town"]), "place_x_m": int(b["place_x_m"]), "place_y_m": int(b["place_y_m"])})
 	var rout := String(tier.get("rout", "none"))
 	if rout == "attacker" or rout == "defender":
 		_end(repo, state, b, "rout_" + rout, events)

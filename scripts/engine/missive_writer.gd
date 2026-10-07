@@ -161,3 +161,146 @@ static func marshal_report(repo: DataRepository, state: GameState, tick: int, ro
 	return MissiveLog.make("supply_month", "credible", state.absolute_day(),
 		MissiveLog.subject("province", home, -1, Vector2(float(prov.get("center_x", 0)), float(prov.get("center_y", 0)))),
 		"Marshal's supply report — %s, Year %d" % [Calendar.month_label(tick), Calendar.year_of(tick)], facts)
+
+
+## --- The battle report (spec 2026-10-07-enemy-ai-and-battle §4.5) -------------
+
+## A `templates.csv` line of `key` (its trait-less rows; `pick` chooses among
+## several, so a day's words are the same on every replay), `{vars}` filled with
+## `vars` and the realm slots. The engine's numbers go in as vars; the
+## wording is data, and never spells a kingdom.
+static func battle_words(repo: DataRepository, key: String, vars: Dictionary, pick: int) -> String:
+	var pool: Array = []
+	for row: Dictionary in repo.templates:
+		if String(row["key"]) == key and String(row["trait"]) == "":
+			pool.append(String(row["text"]))
+	if pool.is_empty():
+		return "[missing template: %s]" % key
+	var all_vars := repo.realm_vars()
+	all_vars.merge(vars, true)
+	return String(pool[pick % pool.size()]).format(all_vars)
+
+
+## The day's battles in ONE letter, like supply_dispatch (a fact per event, in
+## the order BattleSystem.settle_day gave them): where they met, who joined,
+## each round's strength, odds and losses (every regiment's dead, wounded and
+## morale WITH the reason the engine recorded for it, invariant 4), who left
+## the field and how each battle ended. Numbers are the events' own; nothing is
+## recomputed here. About the first of the player's regiments in the fights.
+static func battle_report(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
+	var pick := state.absolute_day()
+	var at: Dictionary = {}       # battle id -> an event that carries its place
+	var rounds: Dictionary = {}   # battle id -> its round event today
+	for e: Dictionary in events:
+		var id := int(e["battle_id"])
+		if e.has("place_x_m") and not at.has(id):
+			at[id] = e
+		if String(e["kind"]) == "round":
+			rounds[id] = e
+	var facts: Array = []
+	var first_mine := ""
+	for e: Dictionary in events:
+		var id := int(e["battle_id"])
+		var place := battle_place(repo, state, at.get(id, {}))
+		match String(e["kind"]):
+			"start":
+				facts.append(MissiveLog.words("start@%d" % id, "Contact", battle_words(repo, "battle_start",
+					{"att": _battle_names(repo, e["att"]), "def": _battle_names(repo, e["def"]),
+						"place": place}, pick)))
+			"join":
+				facts.append(MissiveLog.words("join@%d.%s" % [id, e["code"]], "Joined",
+					battle_words(repo, "battle_join_" + String(e["side"]), {"unit": _unit_label(repo, String(e["code"])),
+						"place": place}, pick)))
+			"round":
+				_round_facts(repo, e, place, pick, facts)
+			"end":
+				facts.append(MissiveLog.words("end@%d" % id, "Result",
+					battle_words(repo, _end_key(state, e, rounds.get(id, {})),
+						{"place": place, "rounds": int(e["rounds"])}, pick)))
+		if first_mine == "":
+			first_mine = _first_mine(state, e)
+	var head: Dictionary = at.get(int((events[0] as Dictionary)["battle_id"]), {})
+	var pack := ArmySystem.metres_to_pack(repo, Vector2i(int(head.get("place_x_m", 0)), int(head.get("place_y_m", 0))))
+	return MissiveLog.make("battle", "credible", state.absolute_day(),
+		MissiveLog.subject("regiment", first_mine, -1, pack),
+		battle_words(repo, "battle_title", {"place": battle_place(repo, state, head)}, pick), facts)
+
+
+## Where a battle was fought, in words ("" with no event to ask).
+static func battle_place(repo: DataRepository, state: GameState, e: Dictionary) -> String:
+	return "" if e.is_empty() else BattleSystem.place_label(repo, state, e)
+
+
+## One round: the strength line with each side's losses, a line per regiment
+## (its dead, wounded and morale change, and why) and one per departure.
+static func _round_facts(repo: DataRepository, e: Dictionary, place: String, pick: int, facts: Array) -> void:
+	var id := int(e["battle_id"])
+	var n := int(e["round"])
+	var results: Dictionary = e["results"]
+	var totals := {}
+	for side: String in BattleSystem.SIDES:
+		var dead := 0
+		var wounded := 0
+		for c: Variant in e[side]:
+			var r: Dictionary = results.get(String(c), {})
+			dead += int(r.get("dead", 0))
+			wounded += int(r.get("wounded", 0))
+		totals[side] = [dead, wounded]
+	facts.append(MissiveLog.words("round@%d.%d" % [id, n], "Day %d" % n, battle_words(repo, "battle_round", {
+		"round": n, "place": place, "tier": String(e["tier"]).replace("_", " "),
+		"att_power": int(e["att_power"]), "def_power": int(e["def_power"]), "odds": int(e["odds"]),
+		"att": _battle_names(repo, e["att"]), "def": _battle_names(repo, e["def"]),
+		"att_dead": totals["att"][0], "att_wounded": totals["att"][1],
+		"def_dead": totals["def"][0], "def_wounded": totals["def"][1]}, pick)))
+	var codes: Array = results.keys()
+	codes.sort()
+	for code: String in codes:
+		var r: Dictionary = results[code]
+		var morale := int(r["morale"])
+		facts.append(MissiveLog.words("loss@%d.%d.%s" % [id, n, code], "Losses", battle_words(repo, "battle_loss", {
+			"unit": _unit_label(repo, code), "dead": int(r["dead"]), "wounded": int(r["wounded"]),
+			"morale": ("%+d" % morale) if morale != 0 else "0", "reason": String(r["reason"])}, pick)))
+	for l: Dictionary in e["left"]:
+		facts.append(MissiveLog.words("left@%d.%d.%s" % [id, n, l["code"]], "Left the field",
+			battle_words(repo, "battle_left_" + String(l["why"]), {"unit": _unit_label(repo, String(l["code"]))}, pick)))
+
+
+## How a battle ended, from the player's side: the template key.
+static func _end_key(state: GameState, e: Dictionary, round_ev: Dictionary) -> String:
+	var winner := String(e["winner"])
+	if String(e["why"]) == "rounds":
+		return "battle_end_draw"
+	if winner == "":
+		return "battle_end_none"
+	# who held the field: the winning side's regiments, as they fought (the
+	# round's list) or, with no round today, as they stood at the end
+	var codes: Array = round_ev.get(winner, e[winner])
+	if codes.is_empty():
+		return "battle_end_none"
+	return "battle_end_lost" if ArmySystem.is_foe(state, String(codes[0])) else "battle_end_won"
+
+
+static func _first_mine(state: GameState, e: Dictionary) -> String:
+	var seen: Array = []
+	for k: String in ["att", "def"]:
+		seen.append_array(e.get(k, []))
+	if e.has("code"):
+		seen.append(e["code"])
+	for c: Variant in seen:
+		if not ArmySystem.is_foe(state, String(c)):
+			return String(c)
+	return ""
+
+
+static func _unit_label(repo: DataRepository, code: String) -> String:
+	return String(ArmySystem.regiment(repo, code).get("label", code))
+
+
+## "A", "A and B", "A, B and C", in code order.
+static func _battle_names(repo: DataRepository, codes: Array) -> String:
+	var sorted: Array = codes.duplicate()
+	sorted.sort()
+	var labels: Array = sorted.map(func(c: Variant) -> String: return _unit_label(repo, String(c)))
+	if labels.size() <= 1:
+		return "" if labels.is_empty() else String(labels[0])
+	return ", ".join(labels.slice(0, labels.size() - 1)) + " and " + String(labels[labels.size() - 1])

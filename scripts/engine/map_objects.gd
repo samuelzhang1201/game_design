@@ -992,13 +992,16 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	else:
 		stats.append(_stat("army_total", total_text, "Headcount — " + total_text))
 	var st := ArmySystem.state_of(repo, state, code) if state != null else {}
+	# the dead are no longer under arms (the pack's headcount is immutable;
+	# ArmySystem.fit_heads' own count of them)
+	var under := total - maxi(0, int(st.get("dead", 0)))
 	if st.is_empty():
 		stats.append(_stat("army", total_text, "Under arms — %s" % total_text))
 	else:
 		var wounded := int(st["wounded"])
-		stats.append(_stat("army", "%d (%d wounded)" % [total, wounded],
-			"Under arms — %d, of whom %d are wounded" % [total, wounded]))
-	var fields: Array = [["Under arms", total_text]]
+		stats.append(_stat("army", "%d (%d wounded)" % [under, wounded],
+			"Under arms — %d, of whom %d are wounded" % [under, wounded]))
+	var fields: Array = [["Under arms", str(under) if reg_known == "full" and not st.is_empty() else total_text]]
 	if province != "":
 		var where := _label(repo.provinces, province)
 		stats.append(_stat("manor_province", where, "Quartered in %s" % where))

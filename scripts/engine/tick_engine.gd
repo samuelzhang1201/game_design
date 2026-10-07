@@ -37,6 +37,14 @@ func _end_day(state: GameState) -> Array:
 	# courier arrives as the day ENDS): he reaches the column where its day
 	# left it, and the order he delivers is marched on from tomorrow.
 	day_couriers = CourierSystem.ride_day(data, state)
+	# The day's battles, AFTER the couriers (spec 2026-10-07-enemy-ai-and-battle
+	# §4): an order a courier lands today (a stance, a march) is in the
+	# regiment's state before the round, and a stance he delivers takes hold at
+	# the end of this very settlement. ONE letter for all of the day's
+	# fighting, when there is any.
+	day_battles = BattleSystem.settle_day(data, state)
+	if not day_battles.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, day_battles))
 	# The supply lines' day (spec 2026-10-07-army-supply-lines §3.2): the towns
 	# refill their garrisons, the wagons roll, before the host eats.
 	day_supply = SupplyLines.day_step(data, state)
@@ -64,6 +72,10 @@ var day_couriers: Array = []
 ## The supply lines' events of the last day (SupplyLines.day_step), for the
 ## marshal's dispatches.
 var day_supply: Array = []
+
+## The battles' events of the last day (BattleSystem.settle_day), for the
+## battle report.
+var day_battles: Array = []
 
 ## The buildings the last advance() left idle that were working the month
 ## before (M5), [{cell, building, missing}] in cell then code order — read
@@ -98,6 +110,7 @@ func advance(state: GameState) -> TickReport:
 	else:
 		day_arrivals = []
 		day_couriers = []
+		day_battles = []
 		day_supply = []
 	# The month that just ended is settled BEFORE the tick moves: its lines
 	# are the month's own (growth of tick t), and the ledger reasons carry
