@@ -233,3 +233,70 @@ func test_hazard_words_by_kind() -> void:
 	assert_string_contains(WarGround.hazard_words(repo, "Disease"), "a month")
 	assert_string_contains(WarGround.hazard_words(repo, "Flood"), "×")
 	assert_eq(WarGround.hazard_words(repo, "Fault"), "no effect on a march")
+
+
+func _texts(r: Dictionary) -> Array:
+	return WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
+
+
+func _town_point(code: String) -> Vector2:
+	var b: Dictionary = repo.burgs[code]
+	return Vector2(float(b["x"]), float(b["y"]))
+
+
+func test_a_road_carrying_trade_names_it() -> void:
+	var flows := WarEconomy.trade_flows(repo)
+	var g := RoadGraph.of_pack(repo)
+	var busiest := Vector2i(-1, -1)
+	for seg: Vector2i in flows:
+		if busiest.x < 0 or int(flows[seg]) > int(flows[busiest]):
+			busiest = seg
+	var at := ArmySystem.metres_to_pack(repo, Vector2i((Vector2(g.nodes[busiest.x]) + Vector2(g.nodes[busiest.y])) * 0.5))
+	var r := WarGround.reading(repo, state, at, "")
+	assert_eq(int(r["trade"]), WarEconomy.trade_at(repo, at))
+	assert_true(_texts(r).any(func(t: String) -> bool: return t == "Trade: about %s gold a month passes" % Intel.num(int(r["trade"]))))
+
+
+func test_a_work_names_its_goods_and_at_home_its_month() -> void:
+	var realm := repo.resolve_realm("player_realm")
+	var home := ""
+	var abroad := ""
+	var codes: Array = WarEconomy.works(repo).keys()
+	codes.sort()
+	for code: String in codes:
+		var mine := MapOwnership.owner_of(repo, state, String(repo.burgs[code]["province_code"])) == realm
+		if mine and home == "":
+			home = code
+		elif not mine and abroad == "":
+			abroad = code
+	assert_ne(abroad, "")
+	var ra := WarGround.reading(repo, state, _town_point(abroad), "")
+	var line_a: Array = _texts(ra).filter(func(t: String) -> bool: return t.begins_with("Works: "))
+	assert_eq(line_a.size(), 1)
+	assert_false(String(line_a[0]).contains("this month"), "a foreign works' month is not known")
+	assert_string_contains(String(line_a[0]), "(%s gold a month)" % Intel.num(int(WarEconomy.works(repo)[abroad]["gold"])))
+	if home != "":
+		var rh := WarGround.reading(repo, state, _town_point(home), "")
+		assert_true(_texts(rh).any(func(t: String) -> bool: return t.begins_with("Works: ") and t.contains("(this month: ")))
+
+
+func test_a_market_town_names_its_market_and_food_price() -> void:
+	var m: Dictionary = WarEconomy.markets(repo)[0]
+	var r := WarGround.reading(repo, state, m["at"], "")
+	var label := String(repo.burgs[String(m["burg"])]["label"])
+	var price := String.num(float(WarEconomy.food_price_permille(repo, String(m["id"]))) / 1000.0, 2)
+	assert_true(_texts(r).any(func(t: String) -> bool: return t.begins_with("Market of %s (" % label) and t.ends_with("— food at ×%s" % price)))
+
+
+func test_a_market_won_reads_ours() -> void:
+	var m: Dictionary = WarEconomy.markets(repo)[0]
+	var prov := String(repo.burgs[String(m["burg"])]["province_code"])
+	MapOwnership.set_owner(repo, state, prov, repo.resolve_realm("player_realm"), "test: the market's province is taken")
+	var r := WarGround.reading(repo, state, m["at"], "")
+	assert_true(_texts(r).any(func(t: String) -> bool: return t.begins_with("Market of ") and t.contains("(ours)")))
+
+
+func test_the_open_sea_has_no_economy_lines() -> void:
+	var texts := _texts(WarGround.reading(repo, state, _sea_point(), ""))
+	for t: String in texts:
+		assert_false(t.begins_with("Trade: ") or t.begins_with("Works: ") or t.begins_with("Market of "), t)

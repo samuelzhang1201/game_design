@@ -40,6 +40,21 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 			if state != null else [],
 		"regiment": {},
 	}
+	# the war economy at the point (spec 2026-10-07-war-room-p3 §1.3): public,
+	# save a home works' live month
+	out["trade"] = 0 if sea or String(out["road"]) == "" else WarEconomy.trade_at(repo, at)
+	out["making"] = WarEconomy.works(repo).get(town, {}) if town != "" else {}
+	out["making_live"] = -1
+	if not (out["making"] as Dictionary).is_empty() and state != null and town_holder == repo.resolve_realm("player_realm"):
+		var town_cell := int(MapEconomy.burg_cells(repo).get(town, -1))
+		if town_cell >= 0:
+			out["making_live"] = int(ManorEconomy.line_of(repo, state, town_cell, state.tick)["strategic"])
+	out["market"] = {}
+	var market := WarEconomy.market_of_town(repo, town) if town != "" else ""
+	if market != "":
+		out["market"] = {"id": market, "label": String(repo.burgs[town].get("label", town)),
+			"holder": MarketSystem.kingdom_of_party(repo, state, "market", market) if state != null else "",
+			"food_permille": WarEconomy.food_price_permille(repo, market)}
 	if code != "":
 		out["regiment"] = _for_regiment(repo, state, at, code, out)
 	return out
@@ -104,6 +119,7 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 		_add(out, text)
 		if not (r["garrison"] as Array).is_empty():
 			_add(out, "Garrison: " + ", ".join(r["garrison"]))
+	_economy_lines(repo, r, out)
 	_add(out, "Weather: " + Weather.describe_kind(repo, String(r["weather"])))
 	_hazard_lines(repo, r, out)
 	_place_lines(repo, r, out)
@@ -118,6 +134,29 @@ static func _hazard_lines(repo: DataRepository, r: Dictionary, out: Array) -> vo
 		var when := "" if left < 0 else " — %d month%s left" % [left, "" if left == 1 else "s"]
 		_add(out, "%s%s: %s" % [String(h["label"]), when, hazard_words(repo, String(h["kind"]))])
 
+
+## The war economy at the point (spec 2026-10-07-war-room-p3 §1.3): the trade
+## passing on the road, a works' goods (at home with this month's gold), a
+## market and its food price against the catalogue.
+static func _economy_lines(repo: DataRepository, r: Dictionary, out: Array) -> void:
+	if int(r.get("trade", 0)) > 0:
+		_add(out, "Trade: about %s gold a month passes" % Intel.num(int(r["trade"])))
+	var mk: Dictionary = r.get("making", {})
+	if not mk.is_empty():
+		var parts: Array[String] = []
+		for g: Dictionary in (mk["goods"] as Array).slice(0, 3):
+			parts.append("%s %s" % [WarEconomy.good_label(repo, String(g["good"])).to_lower(), Intel.num(roundi(float(g["units"])))])
+		var text := "Works: %s (%s gold a month)" % [", ".join(parts), Intel.num(int(mk["gold"]))]
+		if int(r.get("making_live", -1)) >= 0:
+			text += " (this month: %s)" % Intel.num(int(r["making_live"]))
+		_add(out, text)
+	var m: Dictionary = r.get("market", {})
+	if not m.is_empty():
+		var holder := String(m["holder"])
+		var whose := "ours" if holder == repo.resolve_realm("player_realm") \
+			else String((repo.kingdoms.get(holder, {}) as Dictionary).get("label", holder))
+		_add(out, "Market of %s (%s) — food at ×%s" % [String(m["label"]), whose,
+			String.num(float(int(m["food_permille"])) / 1000.0, 2)])
 
 ## A kind's effects in words (data/hazard_kinds.csv).
 static func hazard_words(repo: DataRepository, kind: String) -> String:
