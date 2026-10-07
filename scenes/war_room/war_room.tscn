@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://cw4xr6qb7ll1n" path="res://assets/3D/war_room/candlestick/candlestick.glb" id="5_13ru6"]
 [ext_resource type="Material" path="res://scenes/war_room/materials/war_table.tres" id="6_ycnr8"]
 [ext_resource type="Script" uid="uid://cb5ix87vpi32" path="res://scripts/war_room/war_pieces.gd" id="7_qefqx"]
+[ext_resource type="Script" path="res://scripts/war_room/war_plan_pieces.gd" id="8_72abi"]
 [ext_resource type="Script" uid="uid://d4ak510hs1jur" path="res://scripts/war_room/war_pennants.gd" id="8_g585r"]
 [ext_resource type="PackedScene" uid="uid://crhxjpb0voenb" path="res://assets/3D/war_room/pennant/pennant.glb" id="9_mbbr6"]
 [ext_resource type="Script" uid="uid://cfv64budsa2t3" path="res://scripts/war_room/war_ink_painter.gd" id="10_bfe1t"]
@@ -261,6 +262,10 @@ unique_name_in_owner = true
 [node name="Pieces" type="Node3D" parent="Viewport" unique_id=1468745768]
 unique_name_in_owner = true
 script = ExtResource("7_qefqx")
+
+[node name="PlanPieces" type="Node3D" parent="Viewport" unique_id=1024507216]
+unique_name_in_owner = true
+script = ExtResource("8_72abi")
 
 [node name="Pennants" type="Node3D" parent="Viewport" unique_id=1076665146]
 unique_name_in_owner = true

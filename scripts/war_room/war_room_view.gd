@@ -60,6 +60,7 @@ var aim_code := ""
 @onready var _chart: MeshInstance3D = %IndexChart
 @onready var _arrows: Node3D = %EdgeArrows
 @onready var _pieces: WarPieces = %Pieces
+@onready var _plan_pieces: WarPlanPieces = %PlanPieces
 @onready var _pennants: WarPennants = %Pennants
 @onready var _board: MeshInstance3D = %BoardPanel
 @onready var _marker: Node3D = %Marker
@@ -133,6 +134,7 @@ func bind(repo: DataRepository, state_fn: Callable, paused_fn: Callable, drawn_f
 	_paused_fn = paused_fn
 	_drawn_fn = drawn_fn
 	_pieces.setup(repo, self)
+	_plan_pieces.setup(repo, self)
 	_pennants.setup(repo, self)
 	_rake.setup(self, repo, {"hud": %Hud, "pieces": _pieces, "pennants": _pennants, "camera": _camera,
 		"arrows": _arrows, "chart": _chart})
@@ -221,6 +223,12 @@ func set_caps_font(f: Font) -> void:
 func refresh_plans() -> void:
 	if _sheet >= 0:
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
+		_plan_pieces.update(state())
+
+
+## The supposed pieces (WarPlanPieces).
+func plan_pieces() -> WarPlanPieces:
+	return _plan_pieces
 
 
 func lettering() -> Font:
@@ -313,6 +321,7 @@ func lay_sheet(index: int) -> void:
 	WarRoomWall.lay_arrows(_arrows, _repo, index, _table_w, _depth, lettering())
 	_stand_marker(index)
 	_pieces.rebuild(state())
+	_plan_pieces.rebuild(state())
 	_pennants.rebuild(state(), true)
 	_rake.redraw()
 	sheet_laid.emit(index)
@@ -354,6 +363,7 @@ func _process(delta: float) -> void:
 	_table.scale = Vector3(1.0, 1.0, _swap.z_scale())
 	_pieces.visible = not _swap.active()   # the pieces and pennants are put away while a sheet rolls
 	_pennants.visible = _pieces.visible
+	_plan_pieces.visible = _pieces.visible
 
 
 func tossing() -> bool:
@@ -532,6 +542,7 @@ func _finish_swap() -> void:
 			lay_sheet(_swap.to)
 	_table.scale = Vector3.ONE
 	_pieces.visible = true
+	_plan_pieces.visible = true
 	_pennants.visible = true
 
 
@@ -590,6 +601,7 @@ func _apply_camera() -> void:
 		hover_cleared.emit()
 	if _repo != null:
 		_pieces.set_camera_distance(_rig.distance)
+		_plan_pieces.set_camera_distance(_rig.distance)
 		var mat := _table.get_active_material(0) as ShaderMaterial
 		if mat != null:
 			mat.set_shader_parameter("contour_m", WarNear.contour_m(_repo, _rig.distance))
