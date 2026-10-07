@@ -1,0 +1,150 @@
+[gd_scene format=3 uid="uid://gsj5vd22ynry"]
+
+[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="1_nxwvx"]
+[ext_resource type="StyleBox" uid="uid://c4rntxxfax7n8" path="res://assets/2D/ui/war_table/styles/war_slip.tres" id="2_us71h"]
+[ext_resource type="Script" path="res://scripts/ui/war_plan_form.gd" id="3_qplu8"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_aji30"]
+
+[node name="WarPlanForm" type="PanelContainer" unique_id=768631345]
+visible = false
+theme = ExtResource("1_nxwvx")
+theme_override_styles/panel = ExtResource("2_us71h")
+script = ExtResource("3_qplu8")
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=976875704]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="Col" type="VBoxContainer" parent="Margin" unique_id=143205437]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FormTitle" type="Label" parent="Margin/Col" unique_id=1397274700]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"WarHoverTitle"
+text = "A supposed host"
+
+[node name="Arms" type="HBoxContainer" parent="Margin/Col" unique_id=301153992]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Foot" type="Button" parent="Margin/Col/Arms" unique_id=1270002360]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_aji30")
+text = "Foot"
+
+[node name="Bows" type="Button" parent="Margin/Col/Arms" unique_id=1904481343]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_aji30")
+text = "Bows"
+
+[node name="Horse" type="Button" parent="Margin/Col/Arms" unique_id=608136767]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_aji30")
+text = "Horse"
+
+[node name="Guns" type="Button" parent="Margin/Col/Arms" unique_id=242189150]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_aji30")
+text = "Guns"
+
+[node name="HeadsRow" type="HBoxContainer" parent="Margin/Col" unique_id=5523180]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="HeadsLabel" type="Label" parent="Margin/Col/HeadsRow" unique_id=1524520286]
+layout_mode = 2
+theme_type_variation = &"WarHoverLine"
+text = "Heads"
+
+[node name="Heads" type="SpinBox" parent="Margin/Col/HeadsRow" unique_id=2109568229]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+min_value = 100.0
+max_value = 20000.0
+step = 100.0
+value = 1000.0
+
+[node name="Quick" type="HBoxContainer" parent="Margin/Col" unique_id=1700802898]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Q500" type="Button" parent="Margin/Col/Quick" unique_id=1180896905]
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "500"
+
+[node name="Q1000" type="Button" parent="Margin/Col/Quick" unique_id=1511017640]
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "1,000"
+
+[node name="Q2000" type="Button" parent="Margin/Col/Quick" unique_id=680029941]
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "2,000"
+
+[node name="Q5000" type="Button" parent="Margin/Col/Quick" unique_id=44074901]
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "5,000"
+
+[node name="SideRow" type="HBoxContainer" parent="Margin/Col" unique_id=942191437]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SideLabel" type="Label" parent="Margin/Col/SideRow" unique_id=587920150]
+layout_mode = 2
+theme_type_variation = &"WarHoverLine"
+text = "Side"
+
+[node name="Side" type="OptionButton" parent="Margin/Col/SideRow" unique_id=1536523958]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(170, 0)
+layout_mode = 2
+
+[node name="Rule" type="HSeparator" parent="Margin/Col" unique_id=1175341836]
+layout_mode = 2
+theme_type_variation = &"WarHoverRule"
+
+[node name="Figures" type="VBoxContainer" parent="Margin/Col" unique_id=152357319]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Buttons" type="HBoxContainer" parent="Margin/Col" unique_id=1287996851]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 2
+
+[node name="Cancel" type="Button" parent="Margin/Col/Buttons" unique_id=1224479772]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Cancel"
+
+[node name="Place" type="Button" parent="Margin/Col/Buttons" unique_id=60770882]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Place"
