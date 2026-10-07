@@ -151,7 +151,8 @@ func test_garrison_adds_its_morale_row() -> void:
 	var held := ""   # a land regiment standing in a town of a province the crown controls
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
 		var c := String(r["regiment_code"])
-		if String(r.get("is_naval", "0")) != "1" and SupplyLines.line(state, c).is_empty():
+		if String(r.get("is_naval", "0")) != "1" \
+				and ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, c), state) != "":
 			held = c
 			break
 	assert_ne(held, "", "the pack has a land regiment at a crown town")

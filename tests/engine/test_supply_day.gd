@@ -99,8 +99,10 @@ func test_a_flowing_line_draws_from_its_town_and_delivers_less_the_road() -> voi
 	var keep := 1000 - SupplySystem.loss_of(repo, km)
 	SupplyLines.day_step(repo, s)
 	assert_eq(int(TownStores.stock_of(s, town)["crown"]), 100000 - send)
+	# in thousandths: send × keep arrive, the whole units now, the rest carried
 	@warning_ignore("integer_division")
 	assert_eq(int(s.regiments[code]["supplies"]), send * keep / 1000)
+	assert_eq(int(s.supply_lines[code]["arrive_milli"]), send * keep % 1000)
 
 func test_the_rate_scales_the_draw() -> void:
 	s.day = 5
@@ -181,19 +183,26 @@ func test_a_line_whose_town_leaves_the_realm_is_cancelled() -> void:
 	assert_true(SupplyLines.line(s, code).is_empty())
 	assert_true(_has(ev, "cancelled", code))
 
-func test_a_cut_line_draws_nothing_and_says_so() -> void:
-	s.regiments[code]["supplies"] = 0
-	_stock(town, 100000, 0, 0)
+## A foreign regiment made an enemy and stood on the middle of the line's
+## road; returns it with where it stood, to be marched off again.
+func _cut_the_road() -> Array:
 	var route := SupplyLines.road_px(repo, s, code, town)
 	var realm := repo.resolve_realm("player_realm")
 	@warning_ignore("integer_division")
 	var mid := route[route.size() / 2]
 	for r: Dictionary in repo.world_table("military", "regiments").values():
 		if String(r["kingdom_code"]) != realm:
+			var was := [r, r["x"], r["y"]]
 			r["x"] = mid.x
 			r["y"] = mid.y
 			repo.world_table("political", "diplomacy")["%s>%s" % [realm, String(r["kingdom_code"])]] = {"stance": "Enemy"}
-			break
+			return was
+	return []
+
+func test_a_cut_line_draws_nothing_and_says_so() -> void:
+	s.regiments[code]["supplies"] = 0
+	_stock(town, 100000, 0, 0)
+	assert_false(_cut_the_road().is_empty(), "the pack has a foreign regiment")
 	var ev := SupplyLines.day_step(repo, s)
 	assert_eq(String(s.supply_lines[code]["state"]), SupplyLines.CUT)
 	assert_eq(int(TownStores.stock_of(s, town)["crown"]), 100000)
@@ -253,6 +262,41 @@ func test_an_ordered_line_whose_courier_is_lost_is_cancelled() -> void:
 	assert_true(SupplyLines.line(s, code).is_empty())
 	assert_true(_has(ev, "cancelled", code))
 
+## The ORDERED line's own courier lost while a newer point still rides: that
+## point is the order now waited on.
+func test_a_pending_point_still_riding_is_waited_on_when_the_first_is_lost() -> void:
+	_order_point()
+	var first := int(s.couriers[0]["id"])
+	var req := ActionRequest.make("SUPPLY_POINT_SET", {"regiment": code, "town": town, "rate": 800})
+	var actions := ActionSystem.new(repo)
+	assert_eq(actions.validate(req, s), "")
+	actions.execute(req, s)
+	var second := int((SupplyLines.line(s, code)["pending"] as Dictionary)["order_id"])
+	s.couriers = s.couriers.filter(func(c: Dictionary) -> bool: return int(c["id"]) != first)
+	var ev := SupplyLines.day_step(repo, s)
+	var ln := SupplyLines.line(s, code)
+	assert_false(_has(ev, "cancelled", code))
+	assert_eq(String(ln["state"]), SupplyLines.ORDERED)
+	assert_eq(int(ln["order_id"]), second)
+	assert_eq(int(ln["rate"]), 800)
+	assert_false(ln.has("pending"))
+
+## A CLEAR sent after the SET is lost: the SET still riding is waited on.
+func test_a_lost_clear_leaves_the_set_awaited() -> void:
+	_order_point()
+	var set_id := int(s.couriers[0]["id"])
+	var req := ActionRequest.make("SUPPLY_POINT_CLEAR", {"regiment": code})
+	var actions := ActionSystem.new(repo)
+	assert_eq(actions.validate(req, s), "")
+	actions.execute(req, s)
+	var clear_id := int(SupplyLines.line(s, code)["order_id"])
+	assert_ne(clear_id, set_id)
+	s.couriers = s.couriers.filter(func(c: Dictionary) -> bool: return int(c["id"]) != clear_id)
+	SupplyLines.day_step(repo, s)
+	var ln := SupplyLines.line(s, code)
+	assert_eq(String(ln.get("state", "")), SupplyLines.ORDERED)
+	assert_eq(int(ln["order_id"]), set_id)
+
 func test_a_pending_point_whose_courier_is_lost_is_dropped() -> void:
 	s.metrics["treasury"] = 1000.0
 	var req := ActionRequest.make("SUPPLY_POINT_SET", {"regiment": code, "town": town, "rate": 800})
@@ -271,10 +315,99 @@ func test_a_pending_point_whose_courier_is_lost_is_dropped() -> void:
 func test_low_and_empty_are_said_once() -> void:
 	s.supply_lines.clear()
 	s.regiments[code]["supplies"] = 0
-	var ev := SupplyLines.day_step(repo, s)
+	var ev := SupplyLines.warn_day(repo, s)
 	assert_true(_has(ev, "empty", code))
-	ev = SupplyLines.day_step(repo, s)
+	ev = SupplyLines.warn_day(repo, s)
 	assert_false(_has(ev, "empty", code), "said once until it recovers")
+
+## Said off what the host has left once it has eaten the day: a regiment
+## eating its last day is empty that very day.
+func test_the_tick_warns_after_the_host_eats() -> void:
+	s.supply_lines.clear()
+	s.day = 5
+	s.regiments[code]["supplies"] = ArmySystem.day_bite(_use(), 5)
+	var engine := TickEngine.new(repo)
+	engine.advance_day(s)
+	assert_eq(int(s.regiments[code]["supplies"]), 0)
+	assert_true(_has(engine.day_supply, "empty", code))
+
+func test_a_town_running_short_is_said_once() -> void:
+	_stock(town, 1, 0, 0)
+	var ev := SupplyLines.warn_day(repo, s)
+	assert_true(_has(ev, "town_low", code))
+	ev = SupplyLines.warn_day(repo, s)
+	assert_false(_has(ev, "town_low", code), "said once until it recovers")
+	_stock(town, 1000000, 0, 0)
+	SupplyLines.warn_day(repo, s)
+	_stock(town, 1, 0, 0)
+	assert_true(_has(SupplyLines.warn_day(repo, s), "town_low", code), "short again: said again")
+
+func test_a_cleared_road_restores_the_line_once() -> void:
+	_stock(town, 100000, 0, 0)
+	var was := _cut_the_road()
+	assert_false(was.is_empty(), "the pack has a foreign regiment")
+	SupplyLines.day_step(repo, s)
+	assert_eq(String(s.supply_lines[code]["state"]), SupplyLines.CUT)
+	var r: Dictionary = was[0]
+	r["x"] = was[1]
+	r["y"] = was[2]
+	s.regiments[code]["supplies"] = 0
+	var ev := SupplyLines.day_step(repo, s)
+	assert_eq(String(s.supply_lines[code]["state"]), SupplyLines.FLOWING)
+	assert_eq(ev.filter(func(e: Dictionary) -> bool: return String(e["type"]) == "restored").size(), 1)
+	assert_eq(String(s.supply_lines[code]["cut_by"]), "")
+	assert_gt(int(s.regiments[code]["supplies"]), 0, "the wagons roll again")
+	assert_false(_has(SupplyLines.day_step(repo, s), "restored", code), "said once")
+
+## The remainders are carried (fix round 1): a small regiment's month of
+## draws, under a clumsy, skimming marshal, comes to what the plan projects.
+func test_a_month_of_small_draws_comes_to_the_plan() -> void:
+	var m: Character = s.characters[String(s.council["marshal"])]
+	m.traits = ["venal"]
+	m.skills["sk_admin"] = 4
+	_stock(town, 100000, 0, 0)
+	s.regiments[code]["supplies"] = 0
+	var rows := SupplySystem.plan(repo, s)
+	assert_eq(rows.size(), 1)
+	var row: Dictionary = rows[0]
+	assert_lt(int(row["efficiency"]), 1000)
+	assert_gt(int(row["skim"]), 0)
+	@warning_ignore("integer_division")
+	assert_eq(ArmySystem.day_bite(_use(), 1) * int(row["skim"]) / 1000, 0, "a day's skim is under a unit")
+	for d in range(1, Calendar.DAYS_PER_TICK + 1):
+		s.day = d
+		SupplyLines.day_step(repo, s)
+	var ln := SupplyLines.line(s, code)
+	assert_eq(int(ln["m_drawn"]), int(row["need"]))
+	assert_almost_eq(float(ln["m_arrived"]), float(row["delivered"]), 2.0)
+	assert_almost_eq(float(ln["m_claimed"]), float(row["claimed"]), 2.0)
+	assert_gt(int(ln["m_skim"]), 0)
+	@warning_ignore("integer_division")
+	assert_almost_eq(float(ln["m_skim"]), float(int(row["need"]) * int(row["skim"]) / 1000), 1.0)
+	assert_lt(int(ln["m_arrived"]), int(ln["m_claimed"]))
+
+func test_a_refill_that_buys_from_a_house_is_counted_on_the_regiment() -> void:
+	s.supply_lines.clear()
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var reg := ArmySystem.regiment(repo, String(c))
+		var held := ArmySystem.held_town_of(repo, reg, s)
+		if held == "" or String(c) == code or String(reg.get("is_naval", "0")) == "1":
+			continue
+		s.regiments[c]["supplies"] = 0
+		_stock(held, 0, 0, 100000)
+		s.metrics["treasury"] = 100000.0
+		SupplyLines.day_step(repo, s)
+		var e: Dictionary = s.regiments[c]
+		assert_gt(int(e.get("m_buy", 0)), 0)
+		assert_eq(100000.0 - float(s.metrics["treasury"]), float(e["m_buy"]), "the gold paid")
+		var units := 0
+		for h: String in e["m_bought"]:
+			units += int(e["m_bought"][h])
+		assert_eq(units, 100000 - int(TownStores.stock_of(s, held)["house"]), "the units bought, by house")
+		return
+	pending("no regiment stands in a realm town on this pack")
 
 func test_the_tick_engine_runs_the_day_and_keeps_its_events() -> void:
 	var engine := TickEngine.new(repo)

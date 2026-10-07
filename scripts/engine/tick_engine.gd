@@ -44,6 +44,8 @@ func _end_day(state: GameState) -> Array:
 	ArmySystem.eat_day(data, state)
 	# A hungry host loses heart every day (spec 2026-10-07-army-supply-lines §3.7).
 	ArmySystem.hunger_day(data, state)
+	# The day's supply warnings, read off what the host has left after eating.
+	day_supply.append_array(SupplyLines.warn_day(data, state))
 	# The month's economy is computed a bucket a day (spec §11.2).
 	RealmEconomy.step_day(data, state)
 	return done

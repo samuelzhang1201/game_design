@@ -99,6 +99,7 @@ static func cut_point(repo: DataRepository, state: GameState, route: PackedVecto
 static func _new_record(town: String, rate: int, order_id: int) -> Dictionary:
 	return {"town": town, "rate": rate, "state": ORDERED, "order_id": order_id, "ready_day": 0,
 		"cut_x_m": -1, "cut_y_m": -1, "cut_by": "", "fee_milli": 0, "buy_milli": 0, "warned": "",
+		"arrive_milli": 0, "claim_milli": 0, "skim_milli": 0,
 		"m_drawn": 0, "m_arrived": 0, "m_claimed": 0, "m_skim": 0, "m_fee": 0, "m_buy": 0, "m_bought": {}}
 
 
@@ -106,7 +107,8 @@ static func _new_record(town: String, rate: int, order_id: int) -> Dictionary:
 ## counters of the line it follows carried over so the marshal's report keeps them.
 static func _renewed(old: Dictionary, pending: Dictionary) -> Dictionary:
 	var rec := _new_record(String(pending["town"]), int(pending["rate"]), int(pending["order_id"]))
-	for k: String in ["m_drawn", "m_arrived", "m_claimed", "m_skim", "m_fee", "m_buy", "fee_milli", "buy_milli"]:
+	for k: String in ["m_drawn", "m_arrived", "m_claimed", "m_skim", "m_fee", "m_buy", "fee_milli", "buy_milli",
+			"arrive_milli", "claim_milli", "skim_milli"]:
 		rec[k] = int(old.get(k, 0))
 	rec["m_bought"] = (old.get("m_bought", {}) as Dictionary).duplicate(true)
 	return rec
@@ -215,6 +217,30 @@ static func _refill_in_town(repo: DataRepository, state: GameState, code: String
 	var d := _draw(repo, state, held, room, acc)
 	entry["buy_milli"] = int(acc["buy_milli"])
 	entry["supplies"] = int(entry["supplies"]) + int(d["got"])
+	_count_buy(repo, state, entry, held, d)
+
+
+## The month's purchases from the houses on `rec` (a line, or a regiment
+## entry for its refills in town) for the marshal's report: m_buy (gold
+## paid), m_bought (house -> units).
+static func _count_buy(repo: DataRepository, state: GameState, rec: Dictionary, town: String, d: Dictionary) -> void:
+	rec["m_buy"] = int(rec.get("m_buy", 0)) + int(d["house_gold"])
+	if int(d["house"]) <= 0:
+		return
+	var house := MapManors.controller_of(repo, state, String(repo.burgs[town]["province_code"]))
+	if not rec.has("m_bought"):
+		rec["m_bought"] = {}
+	var bought: Dictionary = rec["m_bought"]
+	bought[house] = int(bought.get(house, 0)) + int(d["house"])
+
+
+## Adds `thou` thousandths of a unit to the remainder `key` carried on `ln`
+## and returns the whole units now due (the rest stays carried).
+static func _carry(ln: Dictionary, key: String, thou: int) -> int:
+	var t := int(ln.get(key, 0)) + thou
+	ln[key] = t % 1000
+	@warning_ignore("integer_division")  # whole units, the rest carried
+	return t / 1000
 
 
 ## A flowing line's day (spec §3.2 step 3, §3.4): the day's quota at its
@@ -232,13 +258,19 @@ static func _deliver_line(repo: DataRepository, state: GameState, code: String, 
 	var d := _draw(repo, state, String(ln["town"]), send, ln)
 	var got := int(d["got"])
 	var g := Governance.factors(repo, state, "supply_line")
-	@warning_ignore("integer_division")  # whole units
-	var skimmed := got * int(g["skim"]) / 1000
+	var eff := int(g["efficiency"])
 	var keep := 1000 - SupplySystem.loss_of(repo, km)
-	@warning_ignore("integer_division")  # whole units, the road then the marshal
-	var arrived := (got - skimmed) * keep / 1000 * int(g["efficiency"]) / 1000
+	# In thousandths of a unit, each remainder carried on the line, so a
+	# month's small daily draws come to what SupplySystem.plan projects: the
+	# skim off the draw, then the road and the marshal on the rest.
+	var skim_thou := got * int(g["skim"])
+	@warning_ignore("integer_division")  # thousandths, floored once a day
+	var arrive_thou := (got * 1000 - skim_thou) * keep * eff / 1_000_000
 	@warning_ignore("integer_division")  # his word: as if nothing were skimmed
-	var claimed := got * keep / 1000 * int(g["efficiency"]) / 1000
+	var claim_thou := got * keep * eff / 1000
+	var skimmed := _carry(ln, "skim_milli", skim_thou)
+	var arrived := _carry(ln, "arrive_milli", arrive_thou)
+	var claimed := _carry(ln, "claim_milli", claim_thou)
 	entry["supplies"] = int(entry["supplies"]) + arrived
 	var milli := int(ln["fee_milli"]) + got * km * int(repo.bal("supply_cart_milligold_per_unit_km"))
 	@warning_ignore("integer_division")  # whole gold, the rest carried
@@ -251,11 +283,7 @@ static func _deliver_line(repo: DataRepository, state: GameState, code: String, 
 	ln["m_claimed"] = int(ln["m_claimed"]) + claimed
 	ln["m_skim"] = int(ln["m_skim"]) + skimmed
 	ln["m_fee"] = int(ln["m_fee"]) + fee
-	ln["m_buy"] = int(ln["m_buy"]) + int(d["house_gold"])
-	if int(d["house"]) > 0:
-		var house := MapManors.controller_of(repo, state, String(repo.burgs[String(ln["town"])]["province_code"]))
-		var bought: Dictionary = ln["m_bought"]
-		bought[house] = int(bought.get(house, 0)) + int(d["house"])
+	_count_buy(repo, state, ln, String(ln["town"]), d)
 
 
 ## The order ids the couriers on the road carry now.
@@ -266,12 +294,37 @@ static func _riding_orders(state: GameState) -> Dictionary:
 	return out
 
 
+## An ORDERED line whose own courier no longer rides (lost on the road): a
+## `pending` point whose courier still rides becomes the order waited on; a
+## SET courier still riding for this line's town (a CLEAR that overwrote its
+## id was lost) is waited on again; else {} — nothing is coming.
+static func _still_ordered(state: GameState, code: String, ln: Dictionary, riding: Dictionary) -> Dictionary:
+	if riding.has(int(ln["order_id"])):
+		return ln
+	var p: Dictionary = ln.get("pending", {})
+	if not p.is_empty() and riding.has(int(p["order_id"])):
+		var rec := _renewed(ln, p)
+		state.supply_lines[code] = rec
+		return rec
+	var newest := 0
+	for c: Dictionary in state.couriers:
+		var o: Dictionary = c.get("order", {})
+		if String(c.get("target", "")) == code and String(o.get("action_code", "")) == "SUPPLY_POINT_SET" \
+				and String(o.get("to_town", "")) == String(ln["town"]) and int(c["id"]) > newest:
+			newest = int(c["id"])
+	if newest > 0:
+		ln["order_id"] = newest
+		return ln
+	return {}
+
+
 ## The day's supply for every regiment of the realm, in code order
 ## (TickEngine._end_day, after the couriers ride, before the host eats):
 ## the town refills, then each line's state, interception and delivery.
 ## An ORDERED line, or a `pending` point, whose courier no longer rides (lost
-## on the road) is dropped. Returns the day's events
-## {type, regiment, town, by?, at?} for the dispatches.
+## on the road) is dropped (_still_ordered). Returns the day's events
+## {type, regiment, town, by?, at?} for the dispatches; the low / empty /
+## town_low warnings are warn_day's, once the host has eaten.
 static func day_step(repo: DataRepository, state: GameState) -> Array:
 	TownStores.reconcile(repo, state)
 	var events: Array = []
@@ -294,11 +347,13 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 			state.supply_lines.erase(code)
 			continue
 		var town := String(ln["town"])
-		if not TownStores.is_realm_town(repo, state, town) \
-				or (String(ln["state"]) == ORDERED and not riding.has(int(ln["order_id"]))):
+		if String(ln["state"]) == ORDERED and TownStores.is_realm_town(repo, state, town):
+			ln = _still_ordered(state, code, ln, riding)
+		if ln.is_empty() or not TownStores.is_realm_town(repo, state, String(ln["town"])):
 			state.supply_lines.erase(code)
 			events.append({"type": "cancelled", "regiment": code, "town": town})
 			continue
+		town = String(ln["town"])
 		if ln.has("pending") and not riding.has(int((ln["pending"] as Dictionary)["order_id"])):
 			ln.erase("pending")
 		if String(ln["state"]) == ORDERED:
@@ -327,14 +382,14 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 			ln["cut_by"] = ""
 			events.append({"type": "restored", "regiment": code, "town": town})
 		_deliver_line(repo, state, code, reg, ln, road_km(repo, route))
-	events.append_array(_warnings(repo, state))
 	TownStores.sync_metrics(repo, state)
 	return events
 
 
 ## Low and empty regiments, and supply towns running short — each said once
-## until it recovers (the `supply_warn` mark on the regiment, `warned` on the line).
-static func _warnings(repo: DataRepository, state: GameState) -> Array:
+## until it recovers (the `supply_warn` mark on the regiment, `warned` on the
+## line). TickEngine._end_day, after the host has eaten the day.
+static func warn_day(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
 	var low := int(repo.bal("army_supply_low_days"))
 	var codes: Array = state.regiments.keys()
