@@ -5,8 +5,9 @@ extends RefCounted
 ## painted piece (data/army_art.csv), else a glyph: swords, a crown for the
 ## household (the roster's `is_royal`), waves for a fleet — joined to a box in
 ## the realm's hue stating its headcount. Nothing is merged into one counter
-## (spec 2026-10-07-army-split-and-ground §5.1). Shared by both maps: each map gathers its regiments' screen
-## points and the settlement marks to keep clear of, and hands them here.
+## (spec 2026-10-07-army-split-and-ground §5.1). Shared by both maps: each map
+## gathers its regiments' screen points and the settlement marks to keep clear
+## of, and hands them here.
 ## Every colour and size is political_palette.csv army_* / balance.csv
 ## map_army_*.
 

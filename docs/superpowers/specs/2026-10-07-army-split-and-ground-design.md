@@ -354,3 +354,5 @@ Where the build departs from the wording above, as the plan ruled it (R1-R7) and
 - **R11 - the box takes land units only.** The Shift + drag selection box never picks a fleet.
 - **R12 - `regiments_of` is sorted by code.** Callers that want the lists' order go through `ArmySystem.ordered`.
 - **R13 - the household leads its list.** The royal household is a unit of its parent regiment, yet `ArmySystem.ordered` puts it first (before the royal train), so it stands apart from its regiment's other units in the lists.
+- **R14 - the hover's garrison and works.** The WAR ROOM slip names the unit on a town's seat as its garrison and counts the rest of the camp ("N camped round it"). Its defend forecast gives a town's works to the unit on the seat, or to any unit of the holder while the seat is empty, since an arrival takes an empty seat (§4.3); a unit camped off the seat reads the field's terrain (§4.1).
+- **R15 - a train with no capital.** A kingdom with guns but no capital keeps them: its royal train camps where its first land regiment (by code) stands, round that regiment's town when its kingdom holds it, else in the field, so the split adds and loses no man.

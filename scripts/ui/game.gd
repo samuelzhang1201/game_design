@@ -31,6 +31,8 @@ var voicer: Voicer
 ## Makes a new campaign from (data, seed): GameState.new_campaign unless the
 ## test suite hands its cached copier here (tests/pre_run.gd, tests/suite_data.gd).
 var campaign_maker: Callable = GameState.new_campaign
+## Why the last load_campaign failed, in the player's words ("" after a good one).
+var load_error := ""
 
 func _ready() -> void:
 	data = DataRepository.load_all("res://data")
@@ -283,9 +285,6 @@ func mark_missive_read(id: int) -> void:
 func save_campaign(path: String = "") -> bool:
 	path = save_path if path == "" else path
 	return SaveLoad.save_game(state, path)
-
-## Why the last load_campaign failed, in the player's words ("" after a good one).
-var load_error := ""
 
 func load_campaign(path: String = "") -> bool:
 	path = save_path if path == "" else path

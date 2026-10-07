@@ -141,7 +141,7 @@ map_army_font_frac,0.5,military layer: the headcount's font size as a share of t
 map_army_count_pad_px,3.0,military layer: side padding inside the headcount box in screen px
 map_army_outline_px,1.0,military layer: width of the dark outline round a counter in screen px
 map_army_glyph_frac,0.8,military layer: the glyph's size as a fraction of its square
-map_army_stack_gap_px,2.0,military layer: gap left between counters stacked because they would overlap
+map_army_stack_gap_px,2.0,"military layer: the headcount chip's lift over its unit's piece, past half the chip (Map3DHudArmies); the spreading of counters is map3d_declutter_*"
 map_army_count_sat,0.35,military layer: the least saturation the headcount box's realm colour is pushed to
 map_army_count_sat_max,0.5,"military layer: the most saturation the headcount box's realm colour may keep (1 = no cap)"
 map_army_count_val,0.5,military layer: the brightness the headcount box's realm colour is set to
