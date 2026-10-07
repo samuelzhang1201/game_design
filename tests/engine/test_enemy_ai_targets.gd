@@ -616,8 +616,10 @@ func test_siege_begins_with_the_first_column_and_no_lone_battle() -> void:
 				var dx := int(e["x_m"]) - at.x
 				near += 1 if dx * dx < 5000 * 5000 * 4 else 0
 			assert_lt(near, cols.size(), "the siege began before the last column came up")
-		BattleSystem.settle_day(repo, s)
-		assert_eq(s.battles, [], "day %d: no lone column fights the town" % n)
+		var fought := BattleSystem.settle_day(repo, s)
+		assert_false(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
+			"day %d: no lone column fights the town" % n)
+		assert_eq(s.battles, [], "day %d: no battle stands" % n)
 	assert_gt(siege_day, 0, "the host sat down to the siege")
 	for c: String in cols:
 		var e: Dictionary = s.foes[c]
@@ -656,6 +658,81 @@ func test_a_host_reaching_a_town_another_besieges_rethinks() -> void:
 	assert_eq(String(mind["target_id"]), "", "the target is dropped")
 	EnemyAi.think(repo, s, host)
 	assert_ne(String(mind["target_id"]), town, "it chooses again, and not the besieged town")
+
+
+## N2: a host that finds its town besieged by another halts and stands aside
+## that day: none of its columns, though in reach of the garrison, starts a
+## battle of its own.
+func test_a_rethinking_host_halts_and_fights_nothing_that_day() -> void:
+	var host := _host("main")
+	var other := _host("raider")
+	var s := _field(_appear(host))
+	var town := _empty_town(s)
+	var at := _town_m(town)
+	_place_mine(s, _mine()[0], at, ArmySystem.ORDER_GARRISON)
+	s.ai_hosts[other]["mode"] = "SIEGE"
+	s.ai_hosts[other]["target_kind"] = "town"
+	s.ai_hosts[other]["target_id"] = town
+	_aim(s, host, "town", town)
+	_place_host(s, host, at - Vector2i(2000, 0))
+	for c: String in EnemyAi.regiments_of(s, host):
+		s.foes[c]["dest_x_m"] = at.x
+		s.foes[c]["order"] = ArmySystem.ORDER_MARCH
+	EnemyAi.step_day(repo, s)
+	assert_eq(String(s.ai_hosts[host]["target_id"]), "")
+	for c: String in EnemyAi.regiments_of(s, host):
+		var e: Dictionary = s.foes[c]
+		assert_ne(String(e["order"]), ArmySystem.ORDER_MARCH, c + " halts")
+		assert_eq(Vector2i(int(e["dest_x_m"]), int(e["dest_y_m"])), Vector2i(int(e["x_m"]), int(e["y_m"])))
+	var fought := BattleSystem.settle_day(repo, s)
+	assert_false(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
+		"no column of it fights the besieged town alone")
+	assert_eq(s.battles, [])
+
+
+## N1: the reserve follows the main host to its siege and SITS DOWN to it (the
+## guard is for non-reserve hosts only), so its columns are left to the
+## assaults and no lone battle starts.
+func test_reserve_joins_its_main_hosts_siege() -> void:
+	var reserve := _host("reserve")
+	var main := _host("main")
+	var s := _field(_appear(reserve))
+	var town := _empty_town(s)
+	var at := _town_m(town)
+	_place_mine(s, _mine()[0], at, ArmySystem.ORDER_GARRISON)
+	s.ai_hosts[main]["mode"] = "SIEGE"
+	s.ai_hosts[main]["target_kind"] = "town"
+	s.ai_hosts[main]["target_id"] = town
+	_place_host(s, main, at)
+	_aim(s, reserve, "town", town)
+	_place_host(s, reserve, at)
+	EnemyAi.step_day(repo, s)
+	assert_eq(String(s.ai_hosts[reserve]["mode"]), "SIEGE", "the reserve joins the siege")
+	assert_eq(String(s.ai_hosts[reserve]["target_id"]), town)
+	var fought := BattleSystem.settle_day(repo, s)
+	assert_false(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
+		"no assault day: nobody fights")
+	assert_eq(s.battles, [])
+	EnemyAi.think_day(repo, s)
+	assert_eq(String(s.ai_hosts[reserve]["mode"]), "SIEGE", "and stays at it")
+
+
+## Nit: the ban holds in think, not only in rank: the host's own best target,
+## once another host holds it, is not chosen.
+func test_think_never_takes_a_target_another_host_holds() -> void:
+	var host := _host("main")
+	var other := _host("raider")
+	var alone := _field(_appear(host))
+	EnemyAi.think(repo, alone, host)
+	var best := String(alone.ai_hosts[host]["target_id"])
+	var kind := String(alone.ai_hosts[host]["target_kind"])
+	assert_ne(best, "")
+	var s := _field(_appear(host))
+	s.ai_hosts[other]["target_kind"] = kind
+	s.ai_hosts[other]["target_id"] = best
+	EnemyAi.think(repo, s, host)
+	assert_ne(String(s.ai_hosts[host]["target_id"]), best, "its best, taken, is not chosen")
+	assert_ne(String(s.ai_hosts[host]["target_id"]), "", "it goes elsewhere")
 
 
 ## Minor (a): the town -> cell table follows the repository's map.

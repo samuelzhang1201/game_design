@@ -98,10 +98,12 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 		if mode == MODE_ADVANCE and String(mind["target_id"]) != "":
 			var next := arrival_mode(repo, state, code)
 			if next == ARRIVAL_RETHINK:
-				# another host already besieges it: drop it and choose again
+				# another host already besieges it: drop it, choose again, and
+				# stand aside today so no column of it fights the town alone
 				mind["target_kind"] = ""
 				mind["target_id"] = ""
 				mind["think_day"] = 0
+				_stand_aside(repo, state, code)
 			elif next != "":
 				_set_mode(state, code, next, _arrival_why(next), events)
 		_march_host(repo, state, code)
@@ -451,8 +453,9 @@ static func should_retreat(repo: DataRepository, state: GameState, host_code: St
 ## column touches the town as a battle would (within battle_contact_km of a
 ## garrisoning regiment or of the town's point, or within the town's reach) →
 ## SIEGE, so BattleSystem leaves the host to the siege's assaults while the
-## other columns come up — or ARRIVAL_RETHINK when another non-reserve host
-## already besieges that town (no second siege). Else, once its first live
+## other columns come up (a reserve joins its main host's siege so) — or, for a
+## NON-reserve host, ARRIVAL_RETHINK when another non-reserve host already
+## besieges that town (no second siege). Else, once its first live
 ## column stands within battle_contact_km of the target's point: the player no
 ## longer holds the target → WITHDRAW; a player regiment it sees stands at the
 ## target → nothing (contact fights it); else → RAID (an open manor, or a town
@@ -480,7 +483,9 @@ static func arrival_mode(repo: DataRepository, state: GameState, host_code: Stri
 				for p: String in garrison:
 					touches = touches or _within(here, _at_m(repo, state, p), reach)
 				if touches:
-					return ARRIVAL_RETHINK if _besieged_by_another(repo, state, host_code, id) else MODE_SIEGE
+					if role_of(repo, host_code) != ROLE_RESERVE and _besieged_by_another(repo, state, host_code, id):
+						return ARRIVAL_RETHINK
+					return MODE_SIEGE
 			return ""
 	var come := false
 	for c: String in live:
@@ -521,6 +526,23 @@ static func _main_mind(repo: DataRepository, state: GameState) -> Dictionary:
 		if role_of(repo, h) == ROLE_MAIN and String(state.ai_hosts[h]["mode"]) != MODE_ASSEMBLE:
 			return state.ai_hosts[h]
 	return {}
+
+
+## Halts every live column of the host that is in no battle where it stands
+## (order garrison, destination its own place) and keeps it out of contact for
+## the rest of today (`disengaged_until` = tomorrow, never shortening a longer
+## pause): a host that found its town besieged by another stands aside while it
+## chooses again.
+static func _stand_aside(repo: DataRepository, state: GameState, host_code: String) -> void:
+	var tomorrow := state.absolute_day() + 1
+	for c: String in live_regiments(repo, state, host_code):
+		if not BattleSystem.battle_of(state, c).is_empty():
+			continue
+		var e: Dictionary = state.foes[c]
+		e["order"] = ArmySystem.ORDER_GARRISON
+		e["dest_x_m"] = int(e["x_m"])
+		e["dest_y_m"] = int(e["y_m"])
+		e["disengaged_until"] = maxi(int(e.get("disengaged_until", 0)), tomorrow)
 
 
 ## True when a non-reserve host other than `host_code` sits in SIEGE at `town`.
