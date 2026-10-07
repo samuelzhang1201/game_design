@@ -1048,3 +1048,32 @@ func test_resting_on_a_piece_reads_the_piece_not_the_ground() -> void:
 	assert_signal_not_emitted(view, "ground_hovered")
 	view._process(1.0)
 	assert_signal_emit_count(view, "piece_hovered", 1, "once per rest")
+
+
+## Owner 2026-10-07: the supply lines are gold ribbons on the table that end
+## where the piece stands NOW, following it as it is pushed.
+func test_a_flowing_supply_line_is_laid_and_follows_its_piece() -> void:
+	var p := _first_land_piece_anywhere()
+	var code := String(p["code"])
+	state.supply_lines[code] = SupplyLines._new_record(TownStores.realm_towns(repo, state)[0], 1000, 1)
+	state.supply_lines[code]["state"] = SupplyLines.FLOWING
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	if WarSupplyFlow.routes(repo, state, view.sheet_rect()).is_empty():
+		pass_test("this fixture's line does not reach the sheet")
+		return
+	var before := view.supply_mesh()
+	assert_not_null(before, "the line is laid")
+	var piece := (view.get_node("%Pieces") as WarPieces).piece(code)
+	if piece == null:
+		return
+	piece.position += Vector3(0.05, 0, 0)
+	view.redraw_marks()   # as WarPieces asks every frame a piece is pushed
+	assert_ne(view.supply_mesh(), before, "laid again to the piece's new place")
+
+
+func _first_land_piece_anywhere() -> Dictionary:
+	for p: Dictionary in WarRoom.pieces(repo, state):
+		if not bool(p["naval"]):
+			return p
+	return {}

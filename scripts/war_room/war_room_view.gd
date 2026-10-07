@@ -66,6 +66,7 @@ var aim_code := ""
 @onready var _pennants: WarPennants = %Pennants
 @onready var _board: MeshInstance3D = %BoardPanel
 @onready var _marker: Node3D = %Marker
+@onready var _supply: MeshInstance3D = %SupplyFlow
 
 var _repo: DataRepository
 var _state_fn: Callable
@@ -104,6 +105,7 @@ var _toss: Dictionary = {}
 var _toss_t := 0.0
 var _toss_to := -1
 var _toss_n := 0
+var _supply_routes: Array = []   # the flowing supply roads on this sheet (WarSupplyFlow.routes), read on a state change
 
 
 ## No slip while the camera or the sheet moves, in board mode, or while a
@@ -304,6 +306,7 @@ func lay_sheet(index: int) -> void:
 	_stand_marker(index)
 	_pieces.rebuild(state())
 	_pennants.rebuild(state(), true)
+	_read_supply()
 	_rake.redraw()
 	sheet_laid.emit(index)
 	await _paint_ink(mat)
@@ -344,8 +347,9 @@ func _process(delta: float) -> void:
 	if _swap.step(delta):
 		lay_sheet(_swap.to)
 	_table.scale = Vector3(1.0, 1.0, _swap.z_scale())
-	_pieces.visible = not _swap.active()   # the pieces and pennants are put away while a sheet rolls
+	_pieces.visible = not _swap.active()   # the pieces, pennants and supply lines are put away while a sheet rolls
 	_pennants.visible = _pieces.visible
+	_supply.visible = _pieces.visible
 
 
 func tossing() -> bool:
@@ -535,6 +539,7 @@ func _finish_swap() -> void:
 	_table.scale = Vector3.ONE
 	_pieces.visible = true
 	_pennants.visible = true
+	_supply.visible = true
 
 
 ## The laid sheet's intelligence layer onto the table's material (redrawn only
@@ -730,13 +735,52 @@ func refresh() -> void:
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
 	_pieces.update(state())
 	_pennants.rebuild(state())
+	_read_supply()
 	_rake.redraw()
 
 
-## Redraw the HUD's marks (the rake, the chalk ring, the pennants' dashes):
-## WarPieces asks each frame a piece is pushed, so they follow it.
+## Redraw the HUD's marks (the rake, the chalk ring, the pennants' dashes)
+## and lay the supply lines' ends again: WarPieces asks each frame a piece is
+## pushed, so they follow it.
 func redraw_marks() -> void:
 	_rake.redraw()
+	_lay_supply()
+
+
+## The flowing supply roads on the laid sheet, found again (the state moved).
+func _read_supply() -> void:
+	_supply_routes = WarSupplyFlow.routes(_repo, state(), _rect) if _sheet >= 0 else []
+	_lay_supply()
+
+
+## The supply lines' gold ribbons, each ending where its piece stands NOW
+## (mid-push included; a regiment of a garrison where the garrison's piece is).
+func _lay_supply() -> void:
+	if _supply_routes.is_empty():
+		_supply.mesh = null
+		return
+	var at := piece_pack_positions()
+	var ends := {}
+	for r: Dictionary in _supply_routes:
+		var code := String(r["code"])
+		ends[code] = at[code] if at.has(code) else position_of(code)
+	var lines: Array = []
+	for l: Dictionary in WarSupplyFlow.lines(_supply_routes, ends, _rect):
+		var pts := PackedVector3Array()
+		for p: Vector2 in l["poly"]:
+			pts.append(table_point(p))
+		lines.append(pts)
+	_supply.mesh = WarSupplyFlow.ribbon(lines)
+
+
+## The supply lines' look (war_supply_flow.tres): the key slip draws its line from it.
+func supply_look() -> ShaderMaterial:
+	return _supply.material_override as ShaderMaterial
+
+
+## The supply lines' mesh now (tests read it).
+func supply_mesh() -> ArrayMesh:
+	return _supply.mesh as ArrayMesh
 
 
 ## The rake's march was refused (or its order is done): let go of the piece.

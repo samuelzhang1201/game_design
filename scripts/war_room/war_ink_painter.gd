@@ -288,8 +288,7 @@ func _draw_graticule(_c_ink: Color) -> void:
 		draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c_fig)
 
 
-## What we know (WarIntelInk), in the intel ink: supply roads dashed and
-## fading with their loss, couriers with their road ahead and a pennon (a spy's
+## What we know (WarIntelInk), in the intel ink: couriers with their road ahead and a pennon (a spy's
 ## in rubric), weather marks, spy reports as dashed rings with their words.
 func _draw_intel() -> void:
 	var c: Color = pal["intel_ink"]
@@ -313,11 +312,6 @@ func _draw_intel() -> void:
 		draw_string_outline(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, maxi(int(w * 3.0), 1),
 			pal.get("parchment", pal.get("paper", Color.WHITE)))
 		draw_string(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, pal["intel_ink"])
-	for s: Dictionary in ink["supply"]:
-		var col := c
-		col.a *= clampf(1.0 - float(s["loss_permille"]) / 1000.0 * float(px["supply_loss_fade"]), 0.25, 1.0)
-		for d: PackedVector2Array in WarSheetInk.dashed(s["poly"], float(px["supply_dash"]), float(px["supply_gap"])):
-			draw_polyline(d, col, float(px["supply"]), true)
 	for cr: Dictionary in ink["couriers"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], float(px["supply_dash"]) / 1.5, float(px["supply_gap"])):
 			draw_polyline(d, c, float(px["supply"]) * 0.7, true)

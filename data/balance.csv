@@ -650,7 +650,6 @@ war_intel_texture_px,4096,"(visual review 2026-10-07: 2048 -> 4096 with every wa
 war_intel_supply_px,3.6,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a supply road's width, intel px — plan B Task 10, the critic of 2026-10-02: thick and blurred close in"
 war_intel_supply_dash_px,6,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a supply road's dash, intel px — plan B Task 10, the critic of 2026-10-02: a dotted line, not the trails' dash"
 war_intel_supply_gap_px,14,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a supply road's gap, intel px — plan B Task 10, the critic of 2026-10-02: dotted"
-war_intel_supply_loss_fade,1.5,"WAR ROOM v2 B: a supply road fades by its loss x this (never below a quarter)"
 war_intel_courier_px,28,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a courier's mark, intel px"
 war_intel_weather_px,36,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a weather mark, intel px"
 war_intel_label_px,30,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a spy report's words, intel px"

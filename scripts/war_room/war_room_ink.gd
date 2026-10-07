@@ -18,7 +18,7 @@ const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_
 	"river_label_lift"]
 ## The intelligence layer's widths (war_intel_<k>_px) and ratios (war_intel_<k>).
 const INTEL_PX := ["supply", "supply_dash", "supply_gap", "courier", "weather", "label", "spy_ring", "hazard", "hazard_label"]
-const INTEL_RATIOS := ["supply_loss_fade", "hazard_alpha"]
+const INTEL_RATIOS := ["hazard_alpha"]
 ## The fine print's widths (war_fine_<k>_px), by short key.
 const FINE_PX := ["note", "route", "mark", "figure"]
 ## How many sheets' ink are kept: the laid one and one more.
