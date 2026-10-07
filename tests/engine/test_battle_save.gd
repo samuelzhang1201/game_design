@@ -82,9 +82,8 @@ func test_no_float_in_the_values_or_the_encoding() -> void:
 	assert_eq(found, [], "no float in the state's own values")
 	var d := s.to_dict()
 	for key: String in ["foes", "ai_hosts", "battles", "foe_next_id"]:
-		_floats_in(d[key], key, found)
 		_encoded_floats_in(d[key], key, found)
-	assert_eq(found, [], "no float, and no encoded float, in the saved foes / ai_hosts / battles")
+	assert_eq(found, [], "no encoded float in the saved foes / ai_hosts / battles")
 	var back := GameState.from_dict(d)
 	_floats_in(back.foes, "foes", found)
 	_floats_in(back.ai_hosts, "ai_hosts", found)

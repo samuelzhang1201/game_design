@@ -164,6 +164,7 @@ static func dispatch(repo: DataRepository, state: GameState, kind: String, code:
 ## A courier for regiment `code` whose road ends at `to_px` — the regiment
 ## itself (dispatch), or its supply TOWN (spec 2026-10-07-army-supply-lines
 ## §4, `order.to_town`): such a courier is never re-aimed at the column.
+## Returns {} for a foe's code (GameState.foes): callers must validate first.
 static func dispatch_to(repo: DataRepository, state: GameState, kind: String, code: String,
 		order: Dictionary, to_px: Vector2) -> Dictionary:
 	if ArmySystem.is_foe(state, code):
