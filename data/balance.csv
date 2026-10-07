@@ -880,7 +880,7 @@ battle_defeat_opinion,5,"defeat: opinion points each council seat loses on a los
 ai_think_days,3,"enemy AI (spec §3.2): a host chooses its target again every this many days (first draft)"
 ai_sight_km,40,"enemy AI (spec §3): a host sees the player's regiments and towns only this far (first draft)"
 ai_target_reach_km,150,"enemy AI §3.3: candidate targets lie within this many km of the host (first draft)"
-ai_target_overlap_permille,500,"enemy AI §3.3: a target another host has already chosen is worth this much less, per mille (first draft)"
+ai_target_overlap_permille,1000,"enemy AI §3.3: the share of its score, per mille, a target loses when another (non-reserve) host has already chosen it; 1000 is a BAN: it scores 0 and EnemyAi.rank never takes a target at 0, so two hosts never share one (controller ruling, Task 7 review)"
 ai_retreat_supply_days,3,"enemy AI §3.4: a host with fewer days of supply than this retreats (first draft)"
 siege_rate,40,"siege (spec §5): siege_progress, of 1000, gained a day by a host sitting before a town (first draft)"
 siege_assault_days,5,"siege: a host assaults the town every this many days (first draft)"

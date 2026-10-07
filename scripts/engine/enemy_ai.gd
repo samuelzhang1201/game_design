@@ -20,12 +20,16 @@ const TARGETING := [MODE_ADVANCE, MODE_SIEGE, MODE_RAID, MODE_HOLD]
 ## The modes of a host going home: it chooses nothing more.
 const HOMEWARD := [MODE_RETREAT, MODE_WITHDRAW]
 
+## arrival_mode's answer for a host reaching a town another host besieges.
+const ARRIVAL_RETHINK := "RETHINK"
+
 const KIND_TOWN := "town"
 const KIND_MANOR := "manor"
 const ROLE_MAIN := "main"
 const ROLE_RESERVE := "reserve"
 
-## repo instance id -> {burg code -> its manor cell}, built once per repository.
+## "repo instance id|map id" -> {burg code -> its manor cell}, built once per
+## repository and map.
 static var _town_cells: Dictionary = {}
 
 
@@ -60,13 +64,17 @@ static func spawn(repo: DataRepository, state: GameState, host: Dictionary) -> v
 ##  1. eats a day (ArmySystem.eat_one on each of its foes; an assembling host is
 ##     fed at home);
 ##  2. in a TARGETING mode, turns to RETREAT when should_retreat gives a reason;
-##  3. in ADVANCE, on reaching its target (arrival_mode), sits down to a SIEGE,
-##     RAIDs, or WITHDRAWs;
-##  4. sends every idle column of its own on: an advancing host's for the
-##     target, a homeward host's for its start point (a battle halts a column;
-##     the host, not a courier, moves it on).
+##  3. in ADVANCE, once its FIRST column reaches the target (arrival_mode),
+##     sits down to a SIEGE, RAIDs, or WITHDRAWs — or, at a town another host
+##     already besieges, drops the target to choose again;
+##  4. sends every idle column of its own on: an advancing, besieging or
+##     raiding host's for the target, a homeward host's for its start point (a
+##     battle halts a column; the host, not a courier, moves it on).
 ## Returns the day's events: {type: "host_advance", host, day} and
 ## {type: "host_mode", host, mode, why, day} for every change of mode.
+## Run it once a day, AFTER ArmySystem.march_day and BEFORE
+## BattleSystem.settle_day: the column that marched into a garrisoned town's
+## contact today puts its host in SIEGE before the day's contacts are read.
 static func step_day(repo: DataRepository, state: GameState) -> Array:
 	var events: Array = []
 	var today := state.absolute_day()
@@ -89,7 +97,12 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 				continue
 		if mode == MODE_ADVANCE and String(mind["target_id"]) != "":
 			var next := arrival_mode(repo, state, code)
-			if next != "":
+			if next == ARRIVAL_RETHINK:
+				# another host already besieges it: drop it and choose again
+				mind["target_kind"] = ""
+				mind["target_id"] = ""
+				mind["think_day"] = 0
+			elif next != "":
 				_set_mode(state, code, next, _arrival_why(next), events)
 		_march_host(repo, state, code)
 	return events
@@ -277,7 +290,7 @@ static func target_point_m(repo: DataRepository, kind: String, id: String) -> Ve
 static func target_cell(repo: DataRepository, _state: GameState, kind: String, id: String) -> int:
 	if kind != KIND_TOWN:
 		return int(id) if repo.manors.has(int(id)) else -1
-	var key := repo.get_instance_id()
+	var key := "%d|%s" % [repo.get_instance_id(), repo.map_id]
 	if not _town_cells.has(key):
 		var map: Dictionary = {}
 		var ids: Array = repo.manors.keys()
@@ -319,58 +332,68 @@ static func defenders_of(repo: DataRepository, state: GameState, kind: String, i
 
 ## --- choosing (spec §3.2-3.3) -------------------------------------------------------
 
-## A host's decision. Only a host in ADVANCE thinks, and only when it has no
-## target or ai_think_days have passed since its last decision (think_day);
-## between, it keeps its target, so the player can read its intent. A reserve
-## takes the main host's target (WITHDRAWs when the main host goes home); any
-## other host takes rank's best of its candidates, a target another host holds
-## paying the overlap (ai_target_overlap_permille). With no target worth more
-## than 0 it WITHDRAWs. A chosen target sends every column of the host marching
-## for it at once (no courier); a withdrawal sends it home.
-static func think(repo: DataRepository, state: GameState, host_code: String) -> void:
+## A host's decision; returns its events ({type: "host_mode", host, mode,
+## why, day} when it turns to WITHDRAW, else none). Only a host in ADVANCE
+## thinks. A reserve follows the first main host EVERY call: it takes the main
+## host's target (WITHDRAWs when the main host goes home, waits while it has
+## none). Any other host chooses only when it has no target or ai_think_days
+## have passed since its last decision (think_day); between, it keeps its
+## target, so the player can read its intent. It takes rank's best of its
+## candidates, a target another host holds paying the overlap
+## (ai_target_overlap_permille, 1000: a ban); with none worth more than 0 it
+## WITHDRAWs. A chosen target sends every column of the host marching for it at
+## once (no courier); a withdrawal sends it home.
+static func think(repo: DataRepository, state: GameState, host_code: String) -> Array:
+	var events: Array = []
 	if not state.ai_hosts.has(host_code):
-		return
+		return events
 	var mind: Dictionary = state.ai_hosts[host_code]
 	if String(mind["mode"]) != MODE_ADVANCE:
-		return
+		return events
 	var today := state.absolute_day()
-	if String(mind["target_id"]) != "" and today - int(mind["think_day"]) < int(repo.bal("ai_think_days")):
-		return
-	mind["think_day"] = today
 	var pick: Dictionary = {}
+	var why := "nothing within reach is worth taking"
 	if role_of(repo, host_code) == ROLE_RESERVE:
 		var lead := _main_mind(repo, state)
 		if lead.is_empty():
-			return                      # no main host out yet: the reserve waits
+			return events                # no main host out yet: the reserve waits
 		if String(lead["mode"]) in HOMEWARD:
-			pick = {}
+			why = "the main host is going home"
 		elif String(lead["target_id"]) == "":
-			return
+			return events
 		else:
 			pick = {"kind": String(lead["target_kind"]), "id": String(lead["target_id"])}
+		mind["think_day"] = today
 	else:
+		if String(mind["target_id"]) != "" and today - int(mind["think_day"]) < int(repo.bal("ai_think_days")):
+			return events
+		mind["think_day"] = today
 		pick = _choose(repo, state, host_code)
 	if pick.is_empty():
 		mind["target_kind"] = ""
 		mind["target_id"] = ""
-		mind["mode"] = MODE_WITHDRAW
+		_set_mode(state, host_code, MODE_WITHDRAW, why, events)
 	else:
 		mind["target_kind"] = String(pick["kind"])
 		mind["target_id"] = String(pick["id"])
 	_march_host(repo, state, host_code)
+	return events
 
 
 ## Every host's decision of the day: the hosts with targets of their own in
 ## code order, then the reserves, so a reserve follows today's main target.
-static func think_day(repo: DataRepository, state: GameState) -> void:
+## Returns the decisions' events.
+static func think_day(repo: DataRepository, state: GameState) -> Array:
+	var events: Array = []
 	var reserves: Array = []
 	for h: String in host_codes(state):
 		if role_of(repo, h) == ROLE_RESERVE:
 			reserves.append(h)
 		else:
-			think(repo, state, h)
+			events.append_array(think(repo, state, h))
 	for h: String in reserves:
-		think(repo, state, h)
+		events.append_array(think(repo, state, h))
+	return events
 
 
 ## --- engage and retreat (spec §3.4) ---------------------------------------------------
@@ -422,12 +445,18 @@ static func should_retreat(repo: DataRepository, state: GameState, host_code: St
 
 ## --- arrival (Ruling 5) --------------------------------------------------------------
 
-## What an ADVANCING host does now, "" for nothing new: once every live column
-## of it stands within battle_contact_km of the target's point, not marching and
-## in no battle — WITHDRAW when the player no longer holds the target; SIEGE at
-## a town a player regiment GARRISONS (SupplySystem.garrisoned_in); nothing
-## while a player regiment it sees stands at the target (contact fights it,
-## BattleSystem); else RAID (an open manor, or a town with no garrison).
+## What an ADVANCING host does now, "" for nothing new. Nothing while any of
+## its live columns is in a battle (the battle decides first). At a town a
+## player regiment GARRISONS (SupplySystem.garrisoned_in): once its FIRST live
+## column touches the town as a battle would (within battle_contact_km of a
+## garrisoning regiment or of the town's point, or within the town's reach) →
+## SIEGE, so BattleSystem leaves the host to the siege's assaults while the
+## other columns come up — or ARRIVAL_RETHINK when another non-reserve host
+## already besieges that town (no second siege). Else, once its first live
+## column stands within battle_contact_km of the target's point: the player no
+## longer holds the target → WITHDRAW; a player regiment it sees stands at the
+## target → nothing (contact fights it); else → RAID (an open manor, or a town
+## with no garrison).
 static func arrival_mode(repo: DataRepository, state: GameState, host_code: String) -> String:
 	var mind: Dictionary = state.ai_hosts[host_code]
 	var kind := String(mind["target_kind"])
@@ -435,23 +464,46 @@ static func arrival_mode(repo: DataRepository, state: GameState, host_code: Stri
 	var live := live_regiments(repo, state, host_code)
 	if id == "" or live.is_empty():
 		return ""
+	for c: String in live:
+		if not BattleSystem.battle_of(state, c).is_empty():
+			return ""
 	var at := target_point_m(repo, kind, id)
 	var reach := int(round(repo.bal("battle_contact_km") * 1000.0))
-	for c: String in live:
-		if String(state.foes[c].get("order", "")) == ArmySystem.ORDER_MARCH \
-				or not BattleSystem.battle_of(state, c).is_empty() or not _within(_at_m(repo, state, c), at, reach):
+	if kind == KIND_TOWN:
+		var garrison := garrison_of(repo, state, id)
+		if not garrison.is_empty():
+			var town_m := int(round(float(repo.army_town_reach.get(
+				String((repo.burgs[id] as Dictionary).get("group", "")), 0.0)) * 1000.0))
+			for c: String in live:
+				var here := _at_m(repo, state, c)
+				var touches := _within(here, at, maxi(reach, town_m))
+				for p: String in garrison:
+					touches = touches or _within(here, _at_m(repo, state, p), reach)
+				if touches:
+					return ARRIVAL_RETHINK if _besieged_by_another(repo, state, host_code, id) else MODE_SIEGE
 			return ""
+	var come := false
+	for c: String in live:
+		come = come or _within(_at_m(repo, state, c), at, reach)
+	if not come:
+		return ""
 	if not target_held(repo, state, kind, id):
 		return MODE_WITHDRAW
-	if kind == KIND_TOWN:
-		var codes: Array = state.regiments.keys()
-		codes.sort()
-		for c: Variant in codes:
-			if SupplySystem.garrisoned_in(repo, state, String(c)) == id:
-				return MODE_SIEGE
 	if not defenders_of(repo, state, kind, id, seen_by(repo, state, host_code)).is_empty():
 		return ""
 	return MODE_RAID
+
+
+## The player's regiments that GARRISON a town (SupplySystem.garrisoned_in), in
+## code order.
+static func garrison_of(repo: DataRepository, state: GameState, town: String) -> Array:
+	var out: Array = []
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c: Variant in codes:
+		if SupplySystem.garrisoned_in(repo, state, String(c)) == town:
+			out.append(String(c))
+	return out
 
 
 ## --- inside ------------------------------------------------------------------------
@@ -469,6 +521,17 @@ static func _main_mind(repo: DataRepository, state: GameState) -> Dictionary:
 		if role_of(repo, h) == ROLE_MAIN and String(state.ai_hosts[h]["mode"]) != MODE_ASSEMBLE:
 			return state.ai_hosts[h]
 	return {}
+
+
+## True when a non-reserve host other than `host_code` sits in SIEGE at `town`.
+static func _besieged_by_another(repo: DataRepository, state: GameState, host_code: String, town: String) -> bool:
+	for h: String in host_codes(state):
+		if h == host_code or role_of(repo, h) == ROLE_RESERVE:
+			continue
+		var m: Dictionary = state.ai_hosts[h]
+		if String(m["mode"]) == MODE_SIEGE and String(m["target_kind"]) == KIND_TOWN and String(m["target_id"]) == town:
+			return true
+	return false
 
 
 static func _set_mode(state: GameState, host_code: String, mode: String, why: String, events: Array) -> void:
@@ -494,8 +557,9 @@ static func _eat(repo: DataRepository, state: GameState, host_code: String) -> v
 			ArmySystem.eat_one(repo, state, reg, state.foes[c])
 
 
-## Sends the host's columns where its mode wants them: ADVANCE for its target,
-## RETREAT / WITHDRAW for its start point (a column falling back from a battle
+## Sends the host's columns where its mode wants them: ADVANCE, SIEGE and RAID
+## for its target (the columns behind the first come up), RETREAT / WITHDRAW
+## for its start point (a column falling back from a battle
 ## too: the host owns its retreat); any other mode, or ADVANCE with no target,
 ## leaves them. A column in a battle is never ordered (an order would take it
 ## out of the fight); one with no fit man cannot move; one already there stays.
@@ -506,7 +570,7 @@ static func _march_host(repo: DataRepository, state: GameState, host_code: Strin
 	var homeward := mode in HOMEWARD
 	if homeward:
 		to = home_m(repo, host_code)
-	elif mode == MODE_ADVANCE and String(mind["target_id"]) != "":
+	elif mode in [MODE_ADVANCE, MODE_SIEGE, MODE_RAID] and String(mind["target_id"]) != "":
 		to = target_point_m(repo, String(mind["target_kind"]), String(mind["target_id"]))
 	else:
 		return

@@ -550,18 +550,148 @@ func test_arrival_at_a_lost_target_withdraws() -> void:
 		assert_eq(Vector2i(int(s.foes[c]["dest_x_m"]), int(s.foes[c]["dest_y_m"])), _home(host))
 
 
-func test_no_arrival_while_a_column_is_still_on_the_road() -> void:
+func test_no_arrival_while_every_column_is_still_on_the_road() -> void:
 	var host := _host("raider")
 	var s := _field(_appear(host))
 	var cell := _empty_manor(s)
 	var at := _cell_m(cell)
 	_aim(s, host, "manor", str(cell))
-	_place_host(s, host, at)
-	var c0: String = EnemyAi.regiments_of(s, host)[0]
-	s.foes[c0]["x_m"] = at.x - 30000
-	s.foes[c0]["order"] = ArmySystem.ORDER_MARCH
+	_place_host(s, host, at - Vector2i(30000, 0))
 	EnemyAi.step_day(repo, s)
-	assert_eq(String(s.ai_hosts[host]["mode"]), "ADVANCE", "the host waits for its last column")
+	assert_eq(String(s.ai_hosts[host]["mode"]), "ADVANCE", "no column has reached it")
+
+
+func test_raid_begins_when_the_first_column_reaches_the_manor() -> void:
+	var host := _host("raider")
+	var s := _field(_appear(host))
+	var cell := _empty_manor(s)
+	var at := _cell_m(cell)
+	_aim(s, host, "manor", str(cell))
+	_place_host(s, host, at - Vector2i(30000, 0))
+	var cols := EnemyAi.regiments_of(s, host)
+	assert_gte(cols.size(), 2, "the test needs a host of two columns")
+	var c0: String = cols[0]
+	s.foes[c0]["x_m"] = at.x
+	s.foes[c0]["y_m"] = at.y
+	EnemyAi.step_day(repo, s)
+	assert_eq(String(s.ai_hosts[host]["mode"]), "RAID", "the first column on the manor starts the raid")
+	for c: String in cols.slice(1):
+		assert_eq(String(s.foes[c]["order"]), ArmySystem.ORDER_MARCH, c + " still comes on")
+		assert_eq(Vector2i(int(s.foes[c]["dest_x_m"]), int(s.foes[c]["dest_y_m"])), at)
+
+
+## I1: the columns come on at their own paces from their own places; the
+## first to touch the garrisoned town puts the HOST in SIEGE before the day's
+## battles, so no lone column ever starts a town battle of its own.
+func test_siege_begins_with_the_first_column_and_no_lone_battle() -> void:
+	var host := _host("main")
+	var s := _field(_appear(host))
+	var town := _empty_town(s)
+	var at := _town_m(town)
+	var mine: Array = _mine()
+	_place_mine(s, mine[0], at, ArmySystem.ORDER_GARRISON)
+	for c: String in mine.slice(1):     # the rest of the realm's army far away
+		_place_mine(s, c, at + Vector2i(0, 400000), ArmySystem.ORDER_GARRISON)
+	_aim(s, host, "town", town)
+	var cols := EnemyAi.regiments_of(s, host)
+	assert_gte(cols.size(), 2)
+	for i in cols.size():
+		var e: Dictionary = s.foes[cols[i]]
+		e["x_m"] = at.x - 20000 - 25000 * i      # 20 km, 45 km, 70 km out
+		e["y_m"] = at.y
+		e["order"] = ArmySystem.ORDER_GARRISON
+	EnemyAi.step_day(repo, s)          # the host sends its columns on
+	for c: String in cols:
+		assert_eq(String(s.foes[c]["order"]), ArmySystem.ORDER_MARCH)
+	var siege_day := 0
+	for n in range(1, 10):      # nine days: the 70 km column is up, the stores still hold
+		_at_day(s, s.absolute_day() + 1)
+		ArmySystem.march_day(repo, s)
+		EnemyAi.step_day(repo, s)
+		if siege_day == 0 and String(s.ai_hosts[host]["mode"]) == "SIEGE":
+			siege_day = n
+			var near := 0
+			for c: String in cols:
+				var e: Dictionary = s.foes[c]
+				var dx := int(e["x_m"]) - at.x
+				near += 1 if dx * dx < 5000 * 5000 * 4 else 0
+			assert_lt(near, cols.size(), "the siege began before the last column came up")
+		BattleSystem.settle_day(repo, s)
+		assert_eq(s.battles, [], "day %d: no lone column fights the town" % n)
+	assert_gt(siege_day, 0, "the host sat down to the siege")
+	for c: String in cols:
+		var e: Dictionary = s.foes[c]
+		assert_eq(Vector2i(int(e["dest_x_m"]), int(e["dest_y_m"])), at, c + " came on for the town")
+
+
+## I2: a target another host holds is BANNED (ai_target_overlap_permille is
+## 1000: it scores 0), however rich.
+func test_a_taken_target_is_banned_however_rich() -> void:
+	var doc := {"greed_permille": 1000, "caution_permille": 0, "dist_cost": 0}
+	var permille := int(repo.bal("ai_target_overlap_permille"))
+	var rich := _cand("town", "a", 1000000, 0, 0)
+	var poor := _cand("manor", "b", 100, 0, 0)
+	var best := EnemyAi.rank([rich, poor], doc, {"town|a": true}, permille)
+	assert_eq(String(best["id"]), "b", "the second host never takes the first's target")
+	assert_eq(EnemyAi.rank([rich], doc, {"town|a": true}, permille), {}, "taken and alone: nothing")
+
+
+## I2: a host that reaches a town another (non-reserve) host already besieges
+## does not sit down to a second siege: it drops the target and chooses again.
+func test_a_host_reaching_a_town_another_besieges_rethinks() -> void:
+	var host := _host("main")
+	var other := _host("raider")
+	var s := _field(_appear(host))
+	var town := _empty_town(s)
+	var at := _town_m(town)
+	_place_mine(s, _mine()[0], at, ArmySystem.ORDER_GARRISON)
+	s.ai_hosts[other]["mode"] = "SIEGE"
+	s.ai_hosts[other]["target_kind"] = "town"
+	s.ai_hosts[other]["target_id"] = town
+	_aim(s, host, "town", town)
+	_place_host(s, host, at)
+	EnemyAi.step_day(repo, s)
+	var mind: Dictionary = s.ai_hosts[host]
+	assert_eq(String(mind["mode"]), "ADVANCE", "no second siege")
+	assert_eq(String(mind["target_id"]), "", "the target is dropped")
+	EnemyAi.think(repo, s, host)
+	assert_ne(String(mind["target_id"]), town, "it chooses again, and not the besieged town")
+
+
+## Minor (a): the town -> cell table follows the repository's map.
+func test_town_cells_follow_the_map() -> void:
+	var r := SuiteData.repo()
+	var s := SuiteData.campaign(repo, 11)
+	var town := _empty_town(s)
+	var cell := EnemyAi.target_cell(r, s, "town", town)
+	assert_eq(MapManors.burg_of(r, cell), town)
+	# another map in the same repository: the town now stands on another cell
+	var other := -1
+	for c: int in r.manors:
+		if MapManors.burg_of(r, c) == "" and c != cell:
+			other = c
+			break
+	r.manors[cell]["burg_code"] = ""
+	r.manors[other]["burg_code"] = town
+	r.map_id = r.map_id + "_other"
+	assert_eq(EnemyAi.target_cell(r, s, "town", town), other, "not the old map's cell")
+
+
+## Minor (c): the reserve follows the main host every day, not on a cadence.
+func test_reserve_follows_main_every_day() -> void:
+	var reserve := _host("reserve")
+	var s := _field(_appear(reserve))
+	EnemyAi.think_day(repo, s)
+	var main: Dictionary = s.ai_hosts[_host("main")]
+	var town := _empty_town(s)
+	assert_ne(String(main["target_id"]), town)
+	_at_day(s, s.absolute_day() + 1)
+	main["target_kind"] = "town"
+	main["target_id"] = town
+	EnemyAi.think(repo, s, reserve)
+	assert_eq(String(s.ai_hosts[reserve]["target_id"]), town, "the next day, not three days on")
+	for c: String in EnemyAi.regiments_of(s, reserve):
+		assert_eq(Vector2i(int(s.foes[c]["dest_x_m"]), int(s.foes[c]["dest_y_m"])), _town_m(town))
 
 
 func test_a_halted_column_of_an_advancing_host_marches_on() -> void:
@@ -650,3 +780,20 @@ func test_the_minds_are_deterministic() -> void:
 		for k: Variant in a.ai_hosts[h]:
 			var v: Variant = a.ai_hosts[h][k]
 			assert_true(v is int or v is String, "%s.%s is whole or a word" % [h, k])
+
+
+## Minor (b): think's WITHDRAW is a mode change like any other: an event with
+## its reason.
+func test_think_withdraw_is_an_event() -> void:
+	var s := _field(_appear(_host("main")))
+	var host := _host("main")
+	repo.balance["ai_target_reach_km"] = 0.0
+	var events: Array = EnemyAi.think(repo, s, host)
+	assert_eq(String(s.ai_hosts[host]["mode"]), "WITHDRAW")
+	assert_eq(events.size(), 1)
+	assert_eq(String(events[0]["type"]), "host_mode")
+	assert_eq(String(events[0]["host"]), host)
+	assert_eq(String(events[0]["mode"]), "WITHDRAW")
+	assert_ne(String(events[0]["why"]), "", "with its reason")
+	assert_eq(int(events[0]["day"]), s.absolute_day())
+	assert_eq(EnemyAi.think(repo, s, host), [], "a host already going home thinks no more")
