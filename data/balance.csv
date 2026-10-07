@@ -917,7 +917,7 @@ war_select_ring_ratio,1.25,"WAR ROOM draw orders (ruling 16): a selected piece's
 war_select_ring_px,3,"WAR ROOM draw orders (ruling 16): the selection ring's line width, design px"
 war_select_box_dash_px,6,"WAR ROOM draw orders (ruling 16): the chalk marquee's dash, design px"
 war_plan_facing_px,14,"WAR ROOM draw orders (ruling 12): a chosen front's chalk facing handle (a small arrow at its middle), its length in design px"
-war_supply_route_px,6,"WAR ROOM draw orders (ruling 14): the bold dashed gold supply route from the chosen town to the march's end, its width in design px"
+war_supply_route_px,5,"WAR ROOM draw orders (ruling 14): the bold dashed gold supply route from the chosen town to the march's end, its width in design px"
 war_supply_route_dash_px,16,"WAR ROOM draw orders (ruling 14): its dash, design px; the gap is half as long"
 war_supply_lit_px,11,"WAR ROOM draw orders (ruling 13): a town that may supply the march, its lit ring's radius in design px"
 supply_rate_default,1000,"WAR ROOM draw orders (ruling 13): the rate (per mille, one of SupplyLines.RATES) a supply point chosen on the march's confirm runs at when the regiment has no line yet"

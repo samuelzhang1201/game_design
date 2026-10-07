@@ -94,6 +94,8 @@ func _pop(at: Vector2) -> void:
 
 func _show_tool() -> void:
 	_roll.show_state(_input.tool.side, _input.tool.kind, _input.action, _input.whys())
+	if _input.tool.in_hand():
+		_slip.hide_slip()   # a pinned slip never covers the stroke about to be drawn
 
 
 # --- menus -------------------------------------------------------------------

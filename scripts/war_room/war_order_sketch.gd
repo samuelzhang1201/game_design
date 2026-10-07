@@ -32,23 +32,28 @@ static func fit(repo: DataRepository, samples: PackedVector2Array, tol: float) -
 	return path if path.size() >= 2 and path[0] != path[path.size() - 1] else PackedVector2Array()
 
 
-## A regiment at `from` on the drawn `path`: its waypoints (pack px) — the
-## path's points from the one nearest it (the tip aside) on, that one left
-## out when it stands within war_order_join_km of it.
+## A regiment at `from` on the drawn `path`: its waypoints (pack px) — it
+## joins the path on the leg nearest it (a later leg on a tie) and goes on to
+## that leg's END, never back to a point behind it; a regiment short of the
+## path's start (its nearest point the start itself) marches to the start
+## first, unless it stands within war_order_join_km of it. The tip is the
+## destination, never a waypoint.
 static func route_for(repo: DataRepository, from: Vector2, path: PackedVector2Array) -> Array:
 	var n := path.size()
 	if n < 2:
 		return []
-	var j := 0
-	for i in range(1, n - 1):
-		if path[i].distance_to(from) < path[j].distance_to(from):
-			j = i
-	if from.distance_to(path[n - 1]) < from.distance_to(path[j]):
-		return []   # nearer the end than any bend: straight there
-	var reach := repo.bal("war_order_join_km") * WarSheets.px_per_unit(repo)
+	var leg := 0
+	var best := INF
+	for i in range(n - 1):
+		var d := Geometry2D.get_closest_point_to_segment(from, path[i], path[i + 1]).distance_to(from)
+		if d <= best + 0.0001:
+			best = d
+			leg = i
 	var out: Array = []
-	for i in range(j, n - 1):
-		if i == j and path[i].distance_to(from) <= reach:
-			continue
+	var reach := repo.bal("war_order_join_km") * WarSheets.px_per_unit(repo)
+	var q := Geometry2D.get_closest_point_to_segment(from, path[0], path[1])
+	if leg == 0 and q.distance_to(path[0]) < 0.0001 and from.distance_to(path[0]) > reach:
+		out.append(path[0])   # short of the start: onto the path first
+	for i in range(leg + 1, n - 1):
 		out.append(path[i])
 	return out

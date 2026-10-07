@@ -502,12 +502,19 @@ func redraw_live() -> void:
 			if not row.is_empty():
 				handles = WarPlanTool.handles_of(_repo, row)
 	var facing := _facing_handle()
-	var look := WarRoomInk.plan_look(_repo, null, mm, _view.lettering(), _view.caps_font())
-	if ink["crayon"].is_empty() and ink["pen"].is_empty() and handles.is_empty() and facing.is_empty():
+	var look := WarRoomInk.plan_look(_repo, WarRoomInk.tooth(), mm, _view.lettering(), _view.caps_font())
+	var road := PackedVector2Array()   # the supply road under the pending march (ruling 14)
+	if _view.aiming and not _view.rolling():
+		for p: Vector2 in _view.supply_preview:
+			var at: Variant = _view.screen_pos_of_px(p)
+			if at != null:
+				road.append(at)
+	if ink["crayon"].is_empty() and ink["pen"].is_empty() and handles.is_empty() and facing.is_empty() and road.size() < 2:
 		_hud.clear_live()
 		return
 	var hr := _repo.bal("war_plan_handle_px")
 	_hud.show_live(ink, look, handles, _repo.war_palette["chalk"], hr, facing, _repo.bal("war_plan_facing_px"))
+	_hud.show_road(road, _repo.war_palette["supply_route"], _repo.bal("war_supply_route_px"), _repo.bal("war_supply_route_dash_px"))
 
 
 ## The march pending on the confirm (the view's aim_group, set by the order
@@ -531,6 +538,8 @@ func _pending_order(ink: Dictionary, mm: float) -> void:
 				ctrl = PackedVector2Array()
 				break
 			ctrl.append(at)
+		# the crayon starts at the plinth's edge: a mark on the sheet never lies on a standing piece
+		ctrl = WarPlanGeometry.cut(ctrl, _repo.bal("war_pick_px") * 0.85, WarPlanGeometry.length(ctrl))
 		if ctrl.size() < 2:
 			continue
 		var kind := "arrow" if code == _view.aim_code else "phase"

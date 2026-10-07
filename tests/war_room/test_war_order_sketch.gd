@@ -57,7 +57,7 @@ func test_points_closer_than_a_route_sample_are_one() -> void:
 		assert_gt(path[i - 1].distance_to(path[i]), step * 0.99)
 
 
-func test_a_regiment_joins_the_path_at_its_nearest_point() -> void:
+func test_a_regiment_joins_the_path_on_its_nearest_leg_and_never_goes_back() -> void:
 	var path := PackedVector2Array([Vector2(100, 100), Vector2(200, 100), Vector2(300, 100), Vector2(400, 200)])
 	var reach := repo.bal("war_order_join_km") * WarSheets.px_per_unit(repo)
 	assert_eq(WarOrderSketch.route_for(repo, Vector2(100, 100) + Vector2(reach * 0.5, 0), path),
@@ -66,6 +66,8 @@ func test_a_regiment_joins_the_path_at_its_nearest_point() -> void:
 		[Vector2(100, 100), Vector2(200, 100), Vector2(300, 100)], "standing short of the start: it marches to it")
 	assert_eq(WarOrderSketch.route_for(repo, Vector2(200, 100) + Vector2(0, reach * 0.5), path), [Vector2(300, 100)],
 		"standing by the second point: it joins there")
-	assert_eq(WarOrderSketch.route_for(repo, Vector2(200, 100) + Vector2(0, reach * 3.0), path),
-		[Vector2(200, 100), Vector2(300, 100)], "a little off it: it marches onto the path first")
+	assert_eq(WarOrderSketch.route_for(repo, Vector2(150, 140), path), [Vector2(200, 100), Vector2(300, 100)],
+		"beside the first leg: on to that leg's end, not back to the start")
+	assert_eq(WarOrderSketch.route_for(repo, Vector2(260, 120), path), [Vector2(300, 100)],
+		"beside the second leg: on to its end")
 	assert_eq(WarOrderSketch.route_for(repo, Vector2(390, 210), path), [], "beyond the last bend: straight to the end")

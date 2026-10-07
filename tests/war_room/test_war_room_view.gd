@@ -577,11 +577,11 @@ func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -
 	assert_null(pennants.pennant(code), "struck when the column stands down")
 
 
-func test_the_hud_draws_rings_hints_a_marquee_and_the_supply_road() -> void:
+func test_the_hud_draws_rings_hints_a_marquee_and_the_live_layer_the_supply_road() -> void:
 	var hud: WarHud = view.get_node("%Hud")
 	var pal: Dictionary = repo.war_palette
 	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [], [], pal["ink"], pal["pencil"], null)
-	hud.set_supply([], PackedVector2Array(), pal["supply_route"])
+	hud.set_supply([], pal["supply_route"])
 	assert_false(hud.drawing())
 	hud.draw_state([{"at": Vector2(40, 40), "r": 30.0, "colour": pal["plan_blue"]}], Rect2(), [], pal["plan_red"],
 		pal["chalk"], [], [], pal["ink"], pal["pencil"], null)
@@ -592,8 +592,11 @@ func test_the_hud_draws_rings_hints_a_marquee_and_the_supply_road() -> void:
 		pal["pencil"], null)
 	assert_true(hud.drawing(), "a route alone is drawn")
 	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [], [], pal["ink"], pal["pencil"], null)
-	hud.set_supply([{"at": Vector2(5, 5), "lit": true}], PackedVector2Array([Vector2(5, 5), Vector2(300, 40)]), pal["supply_route"])
-	assert_true(hud.drawing(), "the bold dashed road")
+	hud.set_supply([{"at": Vector2(5, 5), "lit": true}], pal["supply_route"])
+	assert_true(hud.drawing(), "a lit town")
+	var live := view.get_node("%PlanHud") as WarPlanHud
+	live.show_road(PackedVector2Array([Vector2(5, 5), Vector2(300, 40)]), pal["supply_route"], 6.0, 16.0)
+	assert_true(live.drawing(), "the bold dashed road, under the march's crayon")
 
 
 func test_a_sheet_roll_hides_the_pennants() -> void:

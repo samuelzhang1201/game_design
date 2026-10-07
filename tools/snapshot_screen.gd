@@ -1455,7 +1455,7 @@ func _seed_war_hint() -> void:
 	var spot := at + Vector2(24.0, -5.0) * k if _war_focus_px.x < 0.0 else _war_focus_px
 	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", Game.state.absolute_day(),
 		MissiveLog.subject("point", "", -1, spot), "Spy report — " + Intel.place_label(Game.data, Game.state, spot),
-		[MissiveLog.span("troops_own", "Our men", 0, 0), MissiveLog.span("troops_foreign", "Foreign men", 1800, 2600)]))
+		[MissiveLog.span("troops_foreign", "Foreign men", 1800, 2600)]))
 	print("war hint: report %d at %s" % [id, spot])
 
 

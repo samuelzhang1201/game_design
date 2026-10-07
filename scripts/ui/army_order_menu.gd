@@ -1043,8 +1043,9 @@ func _supply_words(town: String) -> String:
 	for c: String in many:
 		fee += SupplyLines.day_fee_milli(Game.data, Game.state, c, town, _rate_of(c), km)
 	var row: Dictionary = Game.data.army_supply_orders.get("march_figures", {})
-	return String(row.get("label", "{km} km · wagons {wagon_days} days · {loss}% lost · {fee} gold a day")).format({
-		"km": km, "wagon_days": SupplyLines.wagon_days(Game.data, km), "loss": loss, "fee": SupplyLines.gold_words(fee)})
+	var wd := SupplyLines.wagon_days(Game.data, km)
+	return String(row.get("label", "{km} km · wagons {wagon_days} · {loss}% lost · {fee} gold a day")).format({
+		"km": km, "wagon_days": "%d day%s" % [wd, "" if wd == 1 else "s"], "loss": loss, "fee": SupplyLines.gold_words(fee)})
 
 
 ## Test seam: the supply town chosen on the confirm, "" none.

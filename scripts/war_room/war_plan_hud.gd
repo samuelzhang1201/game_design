@@ -14,6 +14,10 @@ var _chalk := Color.WHITE
 var _handle_r := 7.0
 var _facing: Dictionary = {}   # {at, dir}: a chosen front's facing arrow, screen px
 var _facing_len := 14.0
+var _road := PackedVector2Array()
+var _gold := Color.GOLD
+var _road_w := 6.0
+var _road_dash := 16.0
 
 
 func show_live(ink: Dictionary, look: Dictionary, handles: PackedVector2Array, chalk: Color, handle_r: float,
@@ -28,26 +32,49 @@ func show_live(ink: Dictionary, look: Dictionary, handles: PackedVector2Array, c
 	queue_redraw()
 
 
+## The bold dashed gold supply road of a pending march, under its crayon
+## (spec 2026-10-08-war-room-draw-orders ruling 14); empty: none.
+func show_road(road: PackedVector2Array, gold: Color, width: float, dash: float) -> void:
+	_road = road
+	_gold = gold
+	_road_w = width
+	_road_dash = dash
+	queue_redraw()
+
+
+## The road drawn now (tests read it).
+func road() -> PackedVector2Array:
+	return _road
+
+
 ## The facing arrow drawn now ({} none; tests read it).
 func facing() -> Dictionary:
 	return _facing
 
 
 func clear_live() -> void:
-	if _ink.is_empty() and _handles.is_empty() and _facing.is_empty():
+	if _ink.is_empty() and _handles.is_empty() and _facing.is_empty() and _road.is_empty():
 		return
 	_ink = {}
 	_handles = PackedVector2Array()
 	_facing = {}
+	_road = PackedVector2Array()
 	queue_redraw()
 
 
 ## True while anything is drawn (tests read it).
 func drawing() -> bool:
-	return not _ink.is_empty() or not _handles.is_empty() or not _facing.is_empty()
+	return not _ink.is_empty() or not _handles.is_empty() or not _facing.is_empty() or _road.size() >= 2
 
 
 func _draw() -> void:
+	if _road.size() >= 2:
+		var edge := _gold.darkened(0.5)
+		var runs := WarPlanGeometry.dashes(_road, _road_dash, _road_dash * 0.5)
+		for run: PackedVector2Array in runs:
+			draw_polyline(run, edge, _road_w + 2.0, true)
+		for run: PackedVector2Array in runs:
+			draw_polyline(run, _gold, _road_w, true)
 	if not _ink.is_empty():
 		WarPlanDraw.paint(self, _ink, _look)
 	for h in _handles:

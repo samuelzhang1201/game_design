@@ -10,9 +10,9 @@ extends RefCounted
 ## DRAWN: WarPlanInput). While the confirm stands, a press near the pending
 ## route bends it. Draws through WarHud: the selection's rings in its side's
 ## colour, the chalk marquee, the intel hints' marching ants, the pennants'
-## dashes, the drafts' pencils, the waypoints' rings, the towns that may supply
-## the march and the bold dashed gold road from the chosen one. Never reaches
-## the Game autoload.
+## dashes, the drafts' pencils (none for the regiment whose march is being
+## edited), the waypoints' rings and the towns that may supply the march.
+## Never reaches the Game autoload.
 
 var _bend := -1                   # the planned route's waypoint in hand, -1 none
 var _press_at := Vector2.ZERO
@@ -115,7 +115,7 @@ func redraw() -> void:
 	_hud.draw_state(rings, input.marquee(), hints, pal["plan_red"], pal["chalk"], _routes(), _drafts(), pal["ink"],
 		pal["pencil"], _view.lettering())
 	_hud.set_route(_handles(_view.aim_code if _view.aiming else ""), pal["plan_blue"])
-	_hud.set_supply(_supply_rings(), _supply_road(), pal["supply_route"])
+	_hud.set_supply(_supply_rings(), pal["supply_route"])
 
 
 ## Where each selected thing stands on the screen: our pieces (a garrison's
@@ -165,16 +165,6 @@ func _supply_rings() -> Array:
 	return out
 
 
-## The chosen supply town's road to the march's end, screen px.
-func _supply_road() -> PackedVector2Array:
-	var out := PackedVector2Array()
-	for p: Vector2 in _view.supply_preview:
-		var at: Variant = _view.screen_pos_of_px(p)
-		if at != null:
-			out.append(at)
-	return out
-
-
 ## Each pennant's dashed line from its piece (where we know it stands) to the
 ## pennant, in screen px; none while the table rolls.
 func _routes() -> Array:
@@ -205,8 +195,8 @@ func _drafts() -> Array:
 	var state := _view.state()
 	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
 		var d := WarDrafts.of(state, String(p["code"]))
-		if String(d.get("order", "")) != WarDrafts.MARCH:
-			continue
+		if String(d.get("order", "")) != WarDrafts.MARCH or (_view.aiming and String(p["code"]) == _view.aim_code):
+			continue   # a draft being re-drawn shows only as the pending blue arrow
 		var to := WarDrafts.dest_px(_repo, d)
 		if not _view.sheet_rect().has_point(to):
 			continue

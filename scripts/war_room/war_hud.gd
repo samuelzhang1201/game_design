@@ -25,7 +25,6 @@ var _font: Font
 var _handles := PackedVector2Array()  # the pending route's waypoints' rings
 var _handle_c := Color.BLUE
 var _towns: Array = []                # [{at, lit}]: the towns that may supply the pending march
-var _road := PackedVector2Array()     # the chosen town's road to the march's end
 var _gold := Color.GOLD
 
 
@@ -55,10 +54,9 @@ func set_route(handles: PackedVector2Array, colour: Color) -> void:
 	queue_redraw()
 
 
-## The towns lit for the pending march and the chosen one's road (ruling 13-14).
-func set_supply(towns: Array, road: PackedVector2Array, gold: Color) -> void:
+## The towns lit for the pending march (ruling 13).
+func set_supply(towns: Array, gold: Color) -> void:
 	_towns = towns
-	_road = road
 	_gold = gold
 	queue_redraw()
 
@@ -77,13 +75,13 @@ func draft_lines() -> Array:
 
 ## The marks drawn now (tests read them).
 func marks() -> Dictionary:
-	return {"rings": _rings, "marquee": _marquee, "hints": _hints, "towns": _towns, "road": _road}
+	return {"rings": _rings, "marquee": _marquee, "hints": _hints, "towns": _towns}
 
 
 ## True when anything is drawn.
 func drawing() -> bool:
 	return not _rings.is_empty() or not _routes.is_empty() or not _drafts.is_empty() or not _hints.is_empty() \
-		or _road.size() >= 2 or _marquee.has_area()
+		or not _towns.is_empty() or _marquee.has_area()
 
 
 ## A dashed line from `a` to `b` (the dash war_hud_dash_px unless `dash` is
@@ -130,15 +128,6 @@ func _ants(c: Vector2, r: float, colour: Color, width: float, dash: float, phase
 func _draw() -> void:
 	if _repo == null:
 		return
-	# the supply road under everything else of the pending march: bold, dashed, gold
-	if _road.size() >= 2:
-		var w := _repo.bal("war_supply_route_px")
-		var dash := _repo.bal("war_supply_route_dash_px")
-		var edge := _gold.darkened(0.55)
-		for piece: PackedVector2Array in _dash_runs(_road, dash, dash * 0.5):
-			draw_polyline(piece, edge, w + 2.0, true)
-		for piece: PackedVector2Array in _dash_runs(_road, dash, dash * 0.5):
-			draw_polyline(piece, _gold, w, true)
 	for t: Dictionary in _towns:
 		var lit := bool(t["lit"])
 		var r := _repo.bal("war_supply_lit_px")
@@ -160,8 +149,7 @@ func _draw() -> void:
 		draw_arc(h, _repo.bal("war_route_handle_px"), 0.0, TAU, 20, _handle_c, 2.0, true)
 	var hr := _repo.bal("war_intel_hint_px")
 	for h: Vector2 in _hints:
-		_ants(h, hr, Color(_chalk_c, 0.8), _repo.bal("war_intel_hint_line_px") + 2.0, _repo.bal("war_intel_hint_dash_px"), _phase)
-		_ants(h, hr, _hint_c, _repo.bal("war_intel_hint_line_px"), _repo.bal("war_intel_hint_dash_px"), _phase)
+		_ants(h, hr, _hint_c.darkened(0.15), _repo.bal("war_intel_hint_line_px"), _repo.bal("war_intel_hint_dash_px"), _phase)
 		draw_circle(h, 2.5, _hint_c)
 	for ring: Dictionary in _rings:
 		draw_arc(ring["at"], float(ring["r"]), 0.0, TAU, 48, Color(_chalk_c, 0.85), _repo.bal("war_select_ring_px") + 2.0, true)

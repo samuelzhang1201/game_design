@@ -53,6 +53,11 @@ func _ready() -> void:
 	_view.piece_selected.connect(_on_piece)
 	_view.selection_cleared.connect(_folio.close)   # the docked book is the chosen piece's
 	_view.sheet_rolling.connect(_orders.withdraw_aim)   # a pending march does not follow the table up
+	# a march re-drawn from its pennant (Edit route…) is the selection: its
+	# regiment alone wears the ring (the menu's own handler has armed it first)
+	_orders.id_pressed.connect(func(id: int) -> void:
+		if id == ArmyOrderMenu.EDIT and _orders.aiming() != "":
+			_view.plan_input().select("blue", [_orders.aiming()]))
 	_orders.drafting = true   # orders given in the room are drafts until sealed (spec 2026-10-02-war-room-v2 §3.1)
 	_view.sheet_requested.connect(_view.swap_to)
 	_view.sheet_laid.connect(_on_laid)
