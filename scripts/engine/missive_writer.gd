@@ -189,7 +189,7 @@ static func battle_words(repo: DataRepository, key: String, vars: Dictionary, pi
 ## recomputed here. About the first of the player's regiments in the fights.
 ##
 ## The day's siege news (SiegeSystem.news: begin, starving, repulsed, fallen,
-## undefended, lifted, retaken) rides in the same letter, a line each after the
+## undefended, lifted, liberated) rides in the same letter, a line each after the
 ## fighting, the town by name and the figures the events carry
 ## (templates.csv `siege_*`); a letter of siege news alone is about the town.
 static func battle_report(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
@@ -245,10 +245,13 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 
 
 ## One line of siege news: templates.csv `<kind>` (siege_begin, siege_starving,
-## siege_repulsed, siege_fallen, siege_undefended, siege_lifted,
-## siege_retaken) with the town's name and the event's own figures.
+## siege_repulsed, siege_fallen (siege_fallen_slain when no one of the
+## garrison marched out), siege_undefended, siege_lifted, siege_liberated) with
+## the town's name and the event's own figures.
 static func _siege_fact(repo: DataRepository, e: Dictionary, pick: int) -> Dictionary:
 	var kind := String(e["kind"])
+	if kind == "siege_fallen" and int(e.get("garrison_out", 1)) == 0:
+		kind = "siege_fallen_slain"     # no one of the garrison left to march out
 	var town := String(e["town"])
 	var vars := {"town": String((repo.burgs.get(town, {}) as Dictionary).get("label", town)),
 		"progress": int(e.get("progress", 0)), "attack": int(e.get("attack", 0)), "defend": int(e.get("defend", 0)),

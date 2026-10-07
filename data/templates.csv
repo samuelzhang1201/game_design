@@ -195,4 +195,5 @@ siege_repulsed,,"The assault on {town} is thrown back: {raider_realm}'s host los
 siege_fallen,,"{town} has fallen to {raider_realm}'s host after {days} days of siege. What is left of the garrison marches out."
 siege_undefended,,"No garrison holds {town} any more: {raider_realm}'s men walk in and take what they find."
 siege_lifted,,"The siege of {town} is lifted: {raider_realm}'s host has drawn off."
-siege_retaken,,"{town} flies {player_realm}'s banners again; {raider_realm}'s host there is falling back."
+siege_fallen_slain,,"{town} has fallen to {raider_realm}'s host after {days} days of siege. Not one of the garrison is left standing."
+siege_liberated,,"{town} is free again: {raider_realm}'s host has left it, and its manors return to their houses."

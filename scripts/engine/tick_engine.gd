@@ -61,6 +61,9 @@ func _end_day(state: GameState) -> Array:
 	# assault is that day's town battle, and its outcome moves the siege. The
 	# siege's news rides in the same battle letter, after the fighting.
 	day_siege = SiegeSystem.settle_day(data, state, day_battles)
+	# the sieges' mode changes (EnemyAi.set_mode's host_mode events) join the
+	# day's record of the hosts; the siege's news is the battle letter's
+	day_ai.append_array(day_siege.filter(func(e: Dictionary) -> bool: return e.has("type")))
 	var fights: Array = day_battles + SiegeSystem.news(day_siege)
 	if not fights.is_empty():
 		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, fights))

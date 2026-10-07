@@ -93,7 +93,7 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 		if mode in TARGETING:
 			var why := should_retreat(repo, state, code)
 			if why != "":
-				_set_mode(state, code, MODE_RETREAT, why, events)
+				set_mode(state, code, MODE_RETREAT, why, events)
 				_march_host(repo, state, code)
 				continue
 		if mode == MODE_ADVANCE and String(mind["target_id"]) != "":
@@ -106,7 +106,7 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 				mind["think_day"] = 0
 				_stand_aside(repo, state, code)
 			elif next != "":
-				_set_mode(state, code, next, _arrival_why(next), events)
+				set_mode(state, code, next, _arrival_why(next), events)
 		_march_host(repo, state, code)
 	return events
 
@@ -332,16 +332,20 @@ static func target_cell(repo: DataRepository, _state: GameState, kind: String, i
 
 
 ## True while the player's realm holds the target: a town's province
-## (MapOwnership), a manor's province as it stands now (MapManors.province_of).
+## (MapOwnership), a manor's province as it stands now (MapManors.province_of)
+## — and no host OCCUPIES its manor (SiegeSystem.occupier_of: a town taken by
+## a siege and its manors around it are no target while the host holds them).
 static func target_held(repo: DataRepository, state: GameState, kind: String, id: String) -> bool:
 	var player := repo.resolve_realm("player_realm")
 	if kind == KIND_TOWN:
 		var b: Dictionary = repo.burgs.get(id, {})
-		return not b.is_empty() and MapOwnership.owner_of(repo, state, String(b.get("province_code", ""))) == player
+		return not b.is_empty() and MapOwnership.owner_of(repo, state, String(b.get("province_code", ""))) == player \
+			and SiegeSystem.occupier_of(state, target_cell(repo, state, kind, id)) == ""
 	var cell := int(id)
 	if not repo.manors.has(cell):
 		return false
-	return MapOwnership.owner_of(repo, state, MapManors.province_of(repo, cell, state)) == player
+	return MapOwnership.owner_of(repo, state, MapManors.province_of(repo, cell, state)) == player \
+		and SiegeSystem.occupier_of(state, cell) == ""
 
 
 ## Of `codes` (player regiments), those standing at the target: within
@@ -400,7 +404,7 @@ static func think(repo: DataRepository, state: GameState, host_code: String) -> 
 	if pick.is_empty():
 		mind["target_kind"] = ""
 		mind["target_id"] = ""
-		_set_mode(state, host_code, MODE_WITHDRAW, why, events)
+		set_mode(state, host_code, MODE_WITHDRAW, why, events)
 	else:
 		mind["target_kind"] = String(pick["kind"])
 		mind["target_id"] = String(pick["id"])
@@ -609,10 +613,11 @@ static func _besieged_by_another(repo: DataRepository, state: GameState, host_co
 	return false
 
 
-## A change of mode, told as an event. Leaving a SIEGE clears the siege's
-## figures and its assault flag (SiegeSystem.clear; SiegeSystem tells the
-## siege lifted).
-static func _set_mode(state: GameState, host_code: String, mode: String, why: String, events: Array) -> void:
+## A change of mode, told as a host_mode event {type, host, mode, why, day}
+## in `events` — EnemyAi's own and SiegeSystem's (every mode change goes
+## through here). Leaving a SIEGE clears the siege's figures and its assault
+## flag (SiegeSystem.clear; SiegeSystem tells the siege lifted).
+static func set_mode(state: GameState, host_code: String, mode: String, why: String, events: Array) -> void:
 	var mind: Dictionary = state.ai_hosts[host_code]
 	if String(mind["mode"]) == MODE_SIEGE and mode != MODE_SIEGE:
 		SiegeSystem.clear(mind)

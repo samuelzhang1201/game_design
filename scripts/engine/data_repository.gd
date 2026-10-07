@@ -123,8 +123,9 @@ var army_hostile_stances: Array[String] = []
 ## data/battle_outcomes.csv (spec 2026-10-07-enemy-ai-and-battle §4.3): the five
 ## result tiers in ascending eff_min, {tier, eff_min, eff_max,
 ## attacker_loss_permille, defender_loss_permille, wounded_share_permille,
-## attacker_morale, defender_morale, rout} — whole numbers; rout is
-## "attacker" / "defender" / "none".
+## attacker_morale, defender_morale, rout, siege} — whole numbers; rout is
+## "attacker" / "defender" / "none"; siege (optional column) is what an
+## assault's round of the tier does to the siege: "repulsed", "breach" or "".
 var battle_outcomes: Array[Dictionary] = []
 ## data/battle_stances.csv (§4.4): stance -> {label, defence_permille,
 ## morale_decay_permille, retreat_odds_permille, retreats_on_contact (bool)}.
@@ -837,7 +838,8 @@ func _load(dir: String) -> bool:
 				"defender_loss_permille": int(r["defender_loss_permille"]),
 				"wounded_share_permille": int(r["wounded_share_permille"]),
 				"attacker_morale": int(r["attacker_morale"]),
-				"defender_morale": int(r["defender_morale"]), "rout": String(r["rout"])})):
+				"defender_morale": int(r["defender_morale"]), "rout": String(r["rout"]),
+				"siege": String(r.get("siege", ""))})):
 		return false
 	battle_outcomes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["eff_min"]) < int(b["eff_min"]))

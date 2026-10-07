@@ -612,6 +612,13 @@ static func march_out(repo: DataRepository, state: GameState, code: String, plac
 	_stored(state, code)["disengaging"] = 1
 
 
+## Takes battle `id` off the field with no end of its own (SiegeSystem.capture:
+## the town it was fought for fell under it); its regiments stay where they
+## stand, halted.
+static func call_off(state: GameState, id: int) -> void:
+	state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != id)
+
+
 ## No contact for `code` for battle_disengage_days from today
 ## (`disengaged_until`); its orders still work.
 static func _pause(repo: DataRepository, state: GameState, code: String) -> void:
