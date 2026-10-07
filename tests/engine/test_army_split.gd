@@ -192,3 +192,30 @@ func test_a_new_campaign_carries_the_roster_and_seats() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	assert_eq(s.army_roster.size(), roster.size())
 	assert_eq(s.town_seat, split["seats"])
+
+
+func test_lists_put_the_crown_first_then_group_by_regiment() -> void:
+	var s := SuiteData.campaign(repo, 2)
+	var codes: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), s) \
+		.map(func(r: Dictionary) -> String: return String(r["regiment_code"]))
+	codes.reverse()
+	var out := ArmySystem.ordered(repo, s, codes)
+	assert_eq(out.size(), codes.size())
+	assert_eq(String(ArmySystem.regiment(repo, String(out[0]), s)["is_royal"]), "1", "the household first")
+	var trains: Array = out.filter(func(c: String) -> bool:
+		return String(ArmySystem.regiment(repo, c, s)["parent_code"]) == "" \
+			and String(ArmySystem.regiment(repo, c, s)["is_naval"]) == "0")
+	if not trains.is_empty():
+		assert_eq(out[1], trains[0], "then the royal train")
+	# every regiment's units stand together (the household is one unit of its
+	# regiment but leads the list, so it stands apart)
+	var seen: Dictionary = {}
+	var last := ""
+	for c: String in out:
+		if String(ArmySystem.regiment(repo, c, s)["is_royal"]) == "1":
+			continue
+		var p := String(ArmySystem.regiment(repo, c, s)["parent_code"])
+		if p != last and p != "":
+			assert_false(seen.has(p), "%s's units are split up" % p)
+			seen[p] = true
+		last = p

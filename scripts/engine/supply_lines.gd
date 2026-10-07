@@ -584,8 +584,7 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 	var rows: Array = []
 	var gov := Governance.governor_of(repo, state, "supply_line")
 	var upg := TownStores.units_per_gold(repo)
-	var codes: Array = state.regiments.keys()
-	codes.sort()
+	var codes: Array = ArmySystem.ordered(repo, state, state.regiments.keys())
 	for c in codes:
 		var code := String(c)
 		var reg := ArmySystem.regiment(repo, code, state)

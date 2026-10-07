@@ -72,13 +72,16 @@ func refresh() -> void:
 			"color": UiPalette.chart_color("cat_%d" % (i + 1)), "text": RealmDashboard._compact(counts[u])})
 	_arms.set_rows(arm_rows, top)
 	var strength: Variant = WorldLedger.value_of(data, state, "military.kingdoms.%s.strength" % mine)
-	_summary.text = "%s under arms in %d regiments%s" % [RealmDashboard._compact(total),
+	_summary.text = "%s under arms in %d units%s" % [RealmDashboard._compact(total),
 		_regiments_of(mine).size(),
 		("; strength %s" % RealmDashboard._compact(float(strength))) if strength != null else ""]
 	# Regiments: a bar for each, its size, and the arm it is mostly made of.
 	var reg_rows: Array = []
 	var reg_top := 1.0
-	for r: Dictionary in _regiments_of(mine):
+	var mine_codes: Array = _regiments_of(mine).map(
+		func(r: Dictionary) -> String: return String(r["regiment_code"]))
+	for code: String in ArmySystem.ordered(data, state, mine_codes):
+		var r := ArmySystem.regiment(data, code, state)
 		# The same arithmetic the map's markers use, so the bar here and the
 		# bar under the marker read the same regiment the same way.
 		var reg_size := MapObjects.regiment_size(data, r)
@@ -87,7 +90,6 @@ func refresh() -> void:
 		reg_rows.append({"label": _short(String(r["label"])), "value": reg_size, "icon": _glyph(main_arm),
 			"color": UiPalette.chart_color("cat_%d" % (units.find(main_arm) + 1)),
 			"text": RealmDashboard._compact(reg_size)})
-	reg_rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["value"] > b["value"])
 	_regiments.set_rows(reg_rows, reg_top)
 	# Neighbours: only what may be SAID of them (Intel) — their strength in
 	# common talk, and beneath it the newest spy sighting inside the kingdom

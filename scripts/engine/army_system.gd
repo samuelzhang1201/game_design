@@ -19,6 +19,29 @@ static func roster(repo: DataRepository, state: GameState = null) -> Dictionary:
 static func regiment(repo: DataRepository, code: String, state: GameState = null) -> Dictionary:
 	return roster(repo, state).get(code, {})
 
+## Units in the order the lists show them (spec 2026-10-07-army-split-and-
+## ground §5.5): the royal household, the royal train, then each regiment's
+## units together (by the regiment's code) in arm order, then the rest (the
+## fleets) by code.
+static func ordered(repo: DataRepository, state: GameState, codes: Array) -> Array:
+	var arm_at: Dictionary = {}
+	for i in repo.army_split.size():
+		arm_at[String(repo.army_split[i]["arm"])] = i
+	var key := func(c: String) -> String:
+		var r := regiment(repo, c, state)
+		var rank := 3
+		if String(r.get("is_royal", "0")) == "1":
+			rank = 0
+		elif String(r.get("parent_code", "")) == "" and String(r.get("is_naval", "0")) == "0":
+			rank = 1
+		elif String(r.get("parent_code", "")) != "":
+			rank = 2
+		return "%d|%s|%02d|%s" % [rank, r.get("parent_code", ""),
+			int(arm_at.get(MapObjects.regiment_arm(repo, r), 99)), c]
+	var out := codes.duplicate()
+	out.sort_custom(func(a: String, b: String) -> bool: return key.call(a) < key.call(b))
+	return out
+
 ## Heads under a regiment's banner, as a whole number.
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
 	return int(MapObjects.regiment_size(repo, reg))
