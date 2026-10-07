@@ -255,9 +255,14 @@ func test_one_march_sends_a_courier_to_each() -> void:
 	var at := _screen_of(v, to)
 	assert_true(Rect2(Vector2.ZERO, v.size).has_point(at), "the destination is on screen")
 	_click(v, at)
-	assert_true(menu.pending().x >= 0.0, "COMMIT / CANCEL asked")
+	assert_true(menu.pending().x >= 0.0, "the confirm is asked")
 	var before: float = Game.state.metrics["treasury"]
-	_choose(menu, ArmyOrderMenu.COMMIT)
+	var panel := menu.shown_confirm()
+	assert_not_null(panel, "the confirm panel stands")
+	if panel == null:
+		return
+	autofree(panel)   # made beside the menu, a child of this test
+	panel.confirm_button().pressed.emit()
 	var marches: Array = []
 	for c: Dictionary in Game.state.couriers:
 		if String((c["order"] as Dictionary).get("action_code", "")) == "ARMY_MARCH":

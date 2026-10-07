@@ -4,3 +4,7 @@ garrison,In garrison,
 camp,Encamped in the field,"a GARRISON order camped by no town its kingdom holds (spec 2026-10-07-army-split-and-ground §4.1): it stands in the field, with neither works nor the town's supply"
 camped,Camped by the town,"a GARRISON order camped round a held town off its seat (spec 2026-10-07-army-split-and-ground §4.1): fed by the town, but only the seat's unit is its garrison"
 standby,Standing by,
+arm_infantry,foot,"WAR ROOM plans (spec 2026-10-07-war-room-annotations-and-planning-pieces §1.3): a supposed piece's arm on its pencilled tag"
+arm_archers,bows,
+arm_cavalry,horse,
+arm_artillery,guns,

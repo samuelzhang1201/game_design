@@ -660,6 +660,13 @@ add it here as a principle with its why — not as a changelog entry.
   (`wood_roughness_min`): at Tripo's own gloss the oak read as polished bronze (critic
   2026-10-06). A Tripo mesh is welded before it is collapsed, or its seams crack open and
   the parchment shows through as white speckle.
+- **The staff's plans are wax crayon on the parchment** (owner 2026-10-07, approving style A of the
+  plans spec over ink-and-wash). NATO's overlay translated into woad-blue and minium-red crayon —
+  broad bands whose wax skips on the paper's tooth with a darker pressed rim — and sepia pen for
+  phase lines and objectives, so a plan never passes for the survey's own ink. A supposed enemy is
+  the same carved piece in pale boxwood with a pencilled tag: oak is ours and real, translucent is
+  intel's belief. The critic's first pass: an axis must lead the sheet, never a hairline (12–22 mm
+  on the 1.4 m table), and teeth stay small beside it.
 - **An index chart shows the land it indexes** (owner: 选择地图的格子那个纸也换成羊皮
   纸，然后画上整个大陆地图的形状). The sheet index is parchment with the continent's
   inked coast and water lines, not a grid of dots.
@@ -710,3 +717,10 @@ add it here as a principle with its why — not as a changelog entry.
 - **A piece's base on the plotting table is a muted tincture, not the raw realm
   colour** (`war_base_darken` 0.5): at 0.25 a light realm colour was a sky-blue
   slab pasted on parchment, at 0.65 the hue was lost to black.
+- **An animated figure holds only poses a human body can make, from every
+  view** (owner 2026-10-07, the archer's run: "呈一个C字形，人类不可能有这种形态…
+  大臂和小臂应该是一个类J字形"; earlier "左手手腕和小臂扭曲严重"). A prop's angle
+  never wins over the arm holding it: a wrist bent to its limit on a straight
+  arm, or an elbow pushed out by a shoulder turn, reads as a C; a forearm
+  twisted at one point reads as a wring. Judge the limb from the side, the
+  front AND behind, with the twist measured (`validate.limb_twist`).

@@ -61,14 +61,14 @@ func _draw_pending(c: Dictionary, ink: Color, w: float) -> void:
 		return
 	var to: Vector2 = ends["to"]
 	var faint := Color(ink, ink.a * pending_alpha)
-	draw_dashed_line(ends["from"], to, faint, w, w)  # dotted: a dash as long as the line is wide
+	MapRuler.dashed_path(self, ends["pts"], faint, w, w)  # dotted: a dash as long as the line is wide
 	var r := ring_px()
 	draw_arc(to, r, 0.0, TAU, 24, faint, w, true)
 	ResourceIcon.draw_glyph(self, "letter", to, r * 1.4, faint)
 
 
-## A march order still on the road: {from, to} in design px — the column and
-## where it will go — or {} for any other order or one off the camera.
+## A march order still on the road: {from, to, pts} in design px — the column,
+## where it will go and the line between — or {} for any other order or one off the camera.
 func _pending_ends(c: Dictionary) -> Dictionary:
 	var order: Dictionary = c["order"]
 	if String(order.get("action_code", "")) != "ARMY_MARCH":
@@ -80,7 +80,19 @@ func _pending_ends(c: Dictionary) -> Dictionary:
 	var to: Variant = _screen_of_m(Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))
 	if from == null or to == null:
 		return {}
-	return {"from": from, "to": to}
+	# through its waypoints, along the curve it will walk (spec 2026-10-07-march-waypoints)
+	var pts := PackedVector2Array([from])
+	var wps := CourierSystem.waypoints_px(ctx.repo, order)
+	if not wps.is_empty():
+		pts = PackedVector2Array()
+		for p: Vector2 in ArmySystem.curve_px(ctx.repo, ArmySystem.position_of(ctx.repo, ctx.state(), reg), wps,
+				ArmySystem.metres_to_pack(ctx.repo, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))):
+			var at: Variant = _screen_of(p)
+			if at != null:
+				pts.append(at)
+	else:
+		pts.append(to)
+	return {"from": from, "to": to, "pts": pts}
 
 
 ## An end ring's radius, design px: a march's (the Armies piece's route_px × 4).

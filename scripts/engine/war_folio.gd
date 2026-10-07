@@ -45,6 +45,66 @@ static func sections(repo: DataRepository, state: GameState, code: String) -> Ar
 	return out
 
 
+## The DOCKED folio's single page (owner 2026-10-08: the book shrinks to the
+## room's upper-left): the regiment's name and the rows an officer reads at a
+## glance — heads by arm, morale, stores with their days, the line, the ground,
+## the order and the pace. {title, rows: [{label, text}]}; gated by Intel like
+## sections (a regiment not fully known gives only its headcount word).
+static func brief(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var reg := ArmySystem.regiment(repo, code, state)
+	if reg.is_empty():
+		return {"title": "", "rows": []}
+	var title := String(reg.get("label", code))
+	var heads := ArmySystem.headcount(repo, reg)
+	if Intel.level(repo, state, {"kind": "regiment", "code": code}) != "full":
+		return {"title": title, "rows": [_row("Under arms", Intel.magnitude(repo, heads))]}
+	var st := _state_of(repo, state, code, reg)
+	var wounded := clampi(int(st.get("wounded", 0)), 0, heads)
+	var under := WarRoom.group(heads)
+	if wounded > 0:
+		under += " · %s fit" % WarRoom.group(heads - wounded)
+	var arms: Array[String] = []
+	for a: Dictionary in arms_of(repo, code):
+		arms.append("%s %s" % [_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))])
+	var use := ArmySystem.supply_use(repo, reg, state)
+	var supplies := int(st["supplies"])
+	var score := ArmySystem.supply_score(repo, supplies, use)
+	var stores := WarRoom.group(supplies)
+	if use > 0:
+		var days := mini(ArmySystem.days_in_hand(supplies, use), 999)
+		stores += " (≈ %d day%s)" % [days, "" if days == 1 else "s"]
+	var rows: Array = [_row("Under arms", under), _row("Arms", " · ".join(arms)),
+		_row("Morale", "%d / 100 — %s" % [int(st["morale"]), ArmySystem.morale_word(repo, score)]),
+		_row("Supplies", stores)]
+	if state.regiments.has(code):
+		var line := SupplySystem.line_of(repo, state, code)
+		var town := String(line["town"])
+		rows.append(_row("Line", "no supply point" if town == "" else "%s from %s, %d km" % [
+			String(line["state"]), String((repo.burgs.get(town, {}) as Dictionary).get("label", "")),
+			int(line["length_km"])]))
+	rows.append(_row("Ground", "%s, %d m" % [ArmySystem.terrain_label(repo, reg, state),
+		ArmySystem.elevation_of(repo, reg, state)]))
+	var order := ArmySystem.order_of(repo, state, code)
+	var shown := order
+	# the garrison is the seat's alone (spec 2026-10-07-army-split-and-ground §4.1)
+	if order == ArmySystem.ORDER_GARRISON and ArmyGround.seated_in(repo, state, code) == "":
+		shown = "camped" if ArmyGround.camped_by(repo, state, code) != "" else "camp"
+	var said := order_word(repo, shown)
+	if order == ArmySystem.ORDER_MARCH:
+		var dest := ArmySystem.destination_of(repo, state, code)
+		var si := WarSheets.sheet_of(repo, dest)
+		if si >= 0:
+			said += " to " + WarSheets.grid_ref(repo, WarSheets.series(repo)[si], dest)
+		var days := CourierSystem.days_to_arrival(repo, state, code)
+		said += ", in %d day%s" % [days, "" if days == 1 else "s"]
+	rows.append(_row("Order", said))
+	@warning_ignore("integer_division")
+	var readiness := ArmySystem.bars_of(repo, state, code).x / 10
+	rows.append(_row("Pace", "%.1f km a day · ready %d%%" % [
+		ArmySystem.speed_km_per_day(repo, state, code), readiness]))
+	return {"title": title, "rows": rows}
+
+
 static func _label_of(repo: DataRepository, key: String) -> String:
 	for s: Dictionary in repo.war_folio_sections:
 		if String(s["key"]) == key:

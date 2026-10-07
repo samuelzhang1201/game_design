@@ -223,13 +223,26 @@ func test_a_regiment_card_shows_its_state() -> void:
 	assert_eq(text["army_wounded"], "+%d / mo" % ArmySystem.wound_recovery(Game.data, 120))
 	var use := ArmySystem.supply_use(Game.data, r)
 	var held := ArmySystem.days_in_hand(int(s.regiments[code]["supplies"]), use)
-	assert_eq(text["army_supply"], "%d / %d days" % [mini(held, 999),
-		ArmySystem.carry_of(Game.data, s.regiments[code])])
+	var in_hand := mini(held, 999)
+	assert_eq(text["army_supply"], "%s (≈ %d day%s)" % [MapObjects.grouped(int(s.regiments[code]["supplies"])),
+		in_hand, "" if in_hand == 1 else "s"], "the stores as a number, the days as the estimate")
+	var supply_tip := ""
+	for st: Dictionary in card["stats"]:
+		if String(st["key"]) == "army_supply":
+			supply_tip = String(st["tooltip"])
+	assert_string_contains(supply_tip, "it carries %d days" % ArmySystem.carry_of(Game.data, s.regiments[code]))
 	assert_eq(text["army_training"], ArmySystem.training_grade(Game.data, int(s.regiments[code]["training"])))
 	assert_true(text["army_strength"] in ["Strong", "Average", "Weak"])
 	assert_eq(text["army_terrain"], ArmySystem.terrain_label(Game.data, r))
 	# No number leaks for the hidden values.
 	assert_false(text["army_training"].is_valid_int())
+
+func test_grouped_puts_commas_between_thousands() -> void:
+	assert_eq(MapObjects.grouped(0), "0")
+	assert_eq(MapObjects.grouped(999), "999")
+	assert_eq(MapObjects.grouped(1240), "1,240")
+	assert_eq(MapObjects.grouped(1000000), "1,000,000")
+	assert_eq(MapObjects.grouped(-5000), "-5,000")
 
 ## --- Manors (MANOR_SYSTEM.md §3, §6) ----------------------------------------
 

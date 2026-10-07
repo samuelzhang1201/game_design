@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://d0fhma2vbrkdx"]
 
-[ext_resource type="Script" uid="uid://dvs3gfy60cuwq" path="res://scripts/ui/war_folio_panel.gd" id="1_folio"]
-[ext_resource type="Script" uid="uid://c4hwft7o3c535" path="res://scripts/war_room/war_ink_figure.gd" id="2_figure"]
-[ext_resource type="StyleBox" uid="uid://dednlxjm5dfsp" path="res://assets/2D/ui/panels/styles/folio_book.tres" id="2_huv1c"]
-[ext_resource type="Script" uid="uid://cwq3y8n3u0nmo" path="res://scripts/ui/war_formation_dots.gd" id="3_dots"]
-[ext_resource type="StyleBox" uid="uid://llar7yyxc7o7" path="res://assets/2D/ui/war_table/styles/folio_page.tres" id="3_p0lqx"]
+[ext_resource type="Script" uid="uid://dvs3gfy60cuwq" path="res://scripts/ui/war_folio_panel.gd" id="1_nw1c3"]
+[ext_resource type="StyleBox" uid="uid://dednlxjm5dfsp" path="res://assets/2D/ui/panels/styles/folio_book.tres" id="2_1p4rw"]
+[ext_resource type="StyleBox" uid="uid://llar7yyxc7o7" path="res://assets/2D/ui/war_table/styles/folio_page.tres" id="3_dxf06"]
+[ext_resource type="Script" uid="uid://cwq3y8n3u0nmo" path="res://scripts/ui/war_formation_dots.gd" id="4_bjtl2"]
+[ext_resource type="Script" uid="uid://c4hwft7o3c535" path="res://scripts/war_room/war_ink_figure.gd" id="5_orwk8"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_whoqo"]
 
@@ -23,10 +23,12 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_folio")
+mouse_filter = 2
+script = ExtResource("1_nw1c3")
 
 [node name="Dim" type="ColorRect" parent="." unique_id=860979598]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -35,56 +37,216 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.02, 0.015, 0.01, 0.62)
 
-[node name="Book" type="PanelContainer" parent="." unique_id=2139218606]
+[node name="Folder" type="Control" parent="." unique_id=333601965]
+unique_name_in_owner = true
+editor_description = "The WHOLE book, held up full size: WarFolioPanel._place sizes it to the book and centres it over the dim. The docked book is %Docket."
+visible = false
+anchors_preset = 0
+offset_left = 16.0
+offset_top = 46.0
+offset_right = 976.0
+offset_bottom = 696.0
+mouse_filter = 2
+
+[node name="Book" type="PanelContainer" parent="Folder" unique_id=2139218606]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(960, 650)
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = ExtResource("2_huv1c")
+theme_override_styles/panel = ExtResource("2_1p4rw")
 
-[node name="Pages" type="HBoxContainer" parent="Book" unique_id=1957152105]
+[node name="Pages" type="HBoxContainer" parent="Folder/Book" unique_id=1957152105]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="LeftPage" type="PanelContainer" parent="Book/Pages" unique_id=1175494193]
+[node name="LeftPage" type="PanelContainer" parent="Folder/Book/Pages" unique_id=1175494193]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_styles/panel = ExtResource("3_p0lqx")
+theme_override_styles/panel = ExtResource("3_dxf06")
 
-[node name="Left" type="VBoxContainer" parent="Book/Pages/LeftPage" unique_id=528166969]
+[node name="Left" type="VBoxContainer" parent="Folder/Book/Pages/LeftPage" unique_id=528166969]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Figure" type="Control" parent="Book/Pages/LeftPage/Left" unique_id=791394159]
+[node name="FigSlot" type="MarginContainer" parent="Folder/Book/Pages/LeftPage/Left" unique_id=2031170807]
 unique_name_in_owner = true
+editor_description = "The ink figure's place in the whole book (the figure moves here when the book is held up)."
 custom_minimum_size = Vector2(280, 290)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Drills" type="HFlowContainer" parent="Folder/Book/Pages/LeftPage/Left" unique_id=1230160452]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+
+[node name="Arms" type="HFlowContainer" parent="Folder/Book/Pages/LeftPage/Left" unique_id=721734531]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+
+[node name="Formation" type="Control" parent="Folder/Book/Pages/LeftPage/Left" unique_id=1465219556]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 96)
+layout_mode = 2
+script = ExtResource("4_bjtl2")
+
+[node name="TakeApart" type="Button" parent="Folder/Book/Pages/LeftPage/Left" unique_id=614059812]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"FolioTab"
+text = "Take apart"
+flat = true
+
+[node name="RightPage" type="PanelContainer" parent="Folder/Book/Pages" unique_id=1638939891]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.8
+theme_override_styles/panel = ExtResource("3_dxf06")
+
+[node name="RightScroll" type="ScrollContainer" parent="Folder/Book/Pages/RightPage" unique_id=983122243]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 0
+
+[node name="Right" type="HBoxContainer" parent="Folder/Book/Pages/RightPage/RightScroll" unique_id=94436694]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
+
+[node name="Close" type="Button" parent="Folder" unique_id=611825362]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -20.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_colors/font_hover_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxEmpty_whoqo")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_hp0os")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_ikgvj")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_jt5gt")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_01qlq")
+text = "×"
+flat = true
+
+[node name="Enlarge" type="Button" parent="Folder" unique_id=116723844]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_top = 2.0
+offset_right = -22.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+tooltip_text = "Lay the book back in its corner"
+focus_mode = 0
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_colors/font_hover_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxEmpty_whoqo")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_hp0os")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_ikgvj")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_jt5gt")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_01qlq")
+text = "−"
+flat = true
+
+[node name="Docket" type="Control" parent="." unique_id=1193806474]
+unique_name_in_owner = true
+editor_description = "The DOCKED book (owner 2026-10-07/08: 书缩小显示在左上角): one page in the room's upper-left, where it stands here. WarFolioPanel._place sizes it to its page; + or a click on it holds the whole book (%Folder) up."
+anchors_preset = 0
+offset_left = 16.0
+offset_top = 46.0
+offset_right = 396.0
+offset_bottom = 286.0
+mouse_filter = 2
+
+[node name="DockBook" type="PanelContainer" parent="Docket" unique_id=1897527949]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+tooltip_text = "Hold the book up full size"
+mouse_default_cursor_shape = 2
+theme_override_styles/panel = ExtResource("2_1p4rw")
+
+[node name="DockPage" type="PanelContainer" parent="Docket/DockBook" unique_id=100705785]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("3_dxf06")
+
+[node name="DockBody" type="VBoxContainer" parent="Docket/DockBook/DockPage" unique_id=1056867455]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="DockTitle" type="Label" parent="Docket/DockBook/DockPage/DockBody" unique_id=1994326586]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"FolioHeader"
+text = "Regiment"
+autowrap_mode = 3
+
+[node name="DockColumns" type="HBoxContainer" parent="Docket/DockBook/DockPage/DockBody" unique_id=1753736480]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="DockFigSlot" type="MarginContainer" parent="Docket/DockBook/DockPage/DockBody/DockColumns" unique_id=17774173]
+unique_name_in_owner = true
+editor_description = "The ink figure's place on the docked page (the same figure as the whole book's)."
+custom_minimum_size = Vector2(104, 150)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Figure" type="Control" parent="Docket/DockBook/DockPage/DockBody/DockColumns/DockFigSlot" unique_id=791394159]
+unique_name_in_owner = true
 clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
-script = ExtResource("2_figure")
+mouse_filter = 1
+script = ExtResource("5_orwk8")
 
-[node name="FigViewport" type="SubViewport" parent="Book/Pages/LeftPage/Left/Figure" unique_id=546283106]
+[node name="FigViewport" type="SubViewport" parent="Docket/DockBook/DockPage/DockBody/DockColumns/DockFigSlot/Figure" unique_id=546283106]
 unique_name_in_owner = true
 own_world_3d = true
 transparent_bg = true
 render_target_update_mode = 0
 
-[node name="FigCamera" type="Camera3D" parent="Book/Pages/LeftPage/Left/Figure/FigViewport" unique_id=1173305433]
+[node name="FigCamera" type="Camera3D" parent="Docket/DockBook/DockPage/DockBody/DockColumns/DockFigSlot/Figure/FigViewport" unique_id=1173305433]
 unique_name_in_owner = true
 current = true
 fov = 30.0
 
-[node name="FigDisplay" type="TextureRect" parent="Book/Pages/LeftPage/Left/Figure" unique_id=1164676051]
+[node name="FigDisplay" type="TextureRect" parent="Docket/DockBook/DockPage/DockBody/DockColumns/DockFigSlot/Figure" unique_id=1164676051]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -95,7 +257,7 @@ grow_vertical = 2
 mouse_filter = 2
 expand_mode = 1
 
-[node name="FigGlyph" type="TextureRect" parent="Book/Pages/LeftPage/Left/Figure" unique_id=839647586]
+[node name="FigGlyph" type="TextureRect" parent="Docket/DockBook/DockPage/DockBody/DockColumns/DockFigSlot/Figure" unique_id=839647586]
 unique_name_in_owner = true
 visible = false
 texture_filter = 2
@@ -111,62 +273,53 @@ mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Drills" type="HFlowContainer" parent="Book/Pages/LeftPage/Left" unique_id=1230160452]
-unique_name_in_owner = true
-layout_mode = 2
-alignment = 1
-
-[node name="Arms" type="HFlowContainer" parent="Book/Pages/LeftPage/Left" unique_id=721734531]
-unique_name_in_owner = true
-layout_mode = 2
-alignment = 1
-
-[node name="Formation" type="Control" parent="Book/Pages/LeftPage/Left" unique_id=1465219556]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(140, 96)
-layout_mode = 2
-script = ExtResource("3_dots")
-
-[node name="TakeApart" type="Button" parent="Book/Pages/LeftPage/Left" unique_id=614059812]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-theme_type_variation = &"FolioTab"
-text = "Take apart"
-flat = true
-
-[node name="RightPage" type="PanelContainer" parent="Book/Pages" unique_id=1638939891]
+[node name="DockRows" type="GridContainer" parent="Docket/DockBook/DockPage/DockBody/DockColumns" unique_id=1431141966]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 1.8
-theme_override_styles/panel = ExtResource("3_p0lqx")
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 1
+columns = 2
 
-[node name="RightScroll" type="ScrollContainer" parent="Book/Pages/RightPage" unique_id=983122243]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-horizontal_scroll_mode = 0
-
-[node name="Right" type="HBoxContainer" parent="Book/Pages/RightPage/RightScroll" unique_id=94436694]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 18
-
-[node name="Close" type="Button" parent="." unique_id=611825362]
+[node name="DockEnlarge" type="Button" parent="Docket" unique_id=2034690741]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(18, 18)
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 460.0
-offset_top = -323.0
-offset_right = 478.0
-offset_bottom = -305.0
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_top = 2.0
+offset_right = -22.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+tooltip_text = "Hold the book up full size"
+focus_mode = 0
+theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+theme_override_colors/font_hover_color = Color(0.93333334, 0.8901961, 0.79607844, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxEmpty_whoqo")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_hp0os")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_ikgvj")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_jt5gt")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_01qlq")
+text = "+"
+flat = true
+
+[node name="DockClose" type="Button" parent="Docket" unique_id=1689726273]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -20.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 0

@@ -595,7 +595,7 @@ func toggle_war_room() -> void:
 	# over them like a hanging scroll (owner 2026-10-02: 从上往下的卷轴拉下来).
 	_war_room_screen.position = wide.position
 	_war_room_screen.size = wide.size
-	_war_room_screen.open(current_screen.detail_panel())
+	_war_room_screen.open()
 	WarScrollReveal.play(self, wide, cover, true, Game.data.bal("war_unroll_s"), Game.data.bal("war_unroll_roller_px"))
 
 func _fit_war_room() -> void:

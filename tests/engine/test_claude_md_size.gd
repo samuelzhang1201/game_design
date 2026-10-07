@@ -35,3 +35,11 @@ func test_each_nested_guide_exists_and_stays_short() -> void:
 		var n := _chars(path)
 		assert_lt(n, NESTED_MAX_CHARS,
 			"%s is %d chars: write the rule as it stands, move history to the spec" % [path, n])
+
+func test_each_topic_guide_a_nested_guide_names_exists() -> void:
+	var re := RegEx.create_from_string("`([a-z0-9_/]+/guide/[a-z0-9_]+\\.md)`")
+	for path in _nested_guides():
+		for m in re.search_all(FileAccess.get_file_as_string(path)):
+			var guide := "res://%s" % m.get_string(1)
+			assert_true(FileAccess.file_exists(guide), "%s names %s, which is missing" % [path, guide])
+			assert_lt(_chars(guide), NESTED_MAX_CHARS, "%s is over the nested cap" % guide)

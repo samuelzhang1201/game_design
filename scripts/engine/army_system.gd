@@ -464,15 +464,17 @@ static func float_factor(repo: DataRepository, code: String, vs_arm: String, tic
 	return 1000 - spread + posmod(("%s|%s|%d" % [code, vs_arm, tick]).hash(), spread * 2 + 1)
 
 ## An arm's base, per mille: the mean over its matchups of (attack +
-## defense) / 2, each scaled by the month's float.
+## defense) / 2, each scaled by the month's float — none (1000) for an empty
+## code, a host the crown cannot know the float of (a supposed one).
 static func _arm_base(repo: DataRepository, code: String, arm: String, tick: int) -> int:
 	var rows: Array = repo.army_matchups.get(arm, [])
 	if rows.is_empty():
 		return 1000
 	var sum := 0
 	for m: Dictionary in rows:
+		var f := 1000 if code == "" else float_factor(repo, code, String(m["vs"]), tick)
 		@warning_ignore("integer_division")  # whole per-mille: the arms' mean, then the float factor
-		sum += (int(m["attack"]) + int(m["defense"])) / 2 * float_factor(repo, code, String(m["vs"]), tick) / 1000
+		sum += (int(m["attack"]) + int(m["defense"])) / 2 * f / 1000
 	@warning_ignore("integer_division")  # the arms' whole mean
 	return sum / rows.size()
 
@@ -497,15 +499,28 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 	if reg.is_empty() or st.is_empty():
 		return 0
 	var heads := headcount(repo, reg)
+	var fit := heads - clampi(int(st["wounded"]), 0, heads)
+	return power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
+		code, 0 if state == null else state.tick)
+
+
+## The power of a host of `arms` (arm -> heads, a regiment's row will do) with
+## `fit` of its heads fit, at a training and a morale, on a ground — the body
+## of power_on, for a host with no state: the WAR ROOM's supposed enemy (spec
+## 2026-10-07-war-room-annotations-and-planning-pieces §1.2). `float_code`
+## names whose hidden monthly float to apply at `tick`; "" applies none.
+static func power_of_arms(repo: DataRepository, arms: Dictionary, fit: int, training: int, morale: int,
+		stance: String, terrain: String, works: String, float_code := "", tick := 0) -> int:
+	var heads := 0
+	for arm: String in repo.world_table("military", "unit_types"):
+		heads += int(float(arms.get(arm, 0)))
 	if heads <= 0:
 		return 0
-	var fit := heads - clampi(int(st["wounded"]), 0, heads)
-	var tick := 0 if state == null else state.tick
-	var training_f := int(repo.bal("army_training_base_permille")) + int(st["training"]) * int(repo.bal("army_training_step_permille"))
-	var morale_f := int(repo.bal("army_morale_base_permille")) + int(st["morale"]) * int(repo.bal("army_morale_step_permille"))
+	var training_f := int(repo.bal("army_training_base_permille")) + training * int(repo.bal("army_training_step_permille"))
+	var morale_f := int(repo.bal("army_morale_base_permille")) + morale * int(repo.bal("army_morale_step_permille"))
 	var total := 0
 	for arm: String in repo.world_table("military", "unit_types"):
-		var n := int(float(reg.get(arm, 0)))
+		var n := int(float(arms.get(arm, 0)))
 		if n <= 0:
 			continue
 		# Carry precision through the chain (owner 2026-09-17 review): the
@@ -522,7 +537,7 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 		@warning_ignore("integer_division")  # milli-heads, whole (see the note above)
 		var p := n * fit * 1000 / heads
 		@warning_ignore("integer_division")  # whole per-mille
-		p = p * _arm_base(repo, code, arm, tick) / 1000
+		p = p * _arm_base(repo, float_code, arm, tick) / 1000
 		@warning_ignore("integer_division")  # whole per-mille
 		p = p * training_f / 1000
 		@warning_ignore("integer_division")  # whole per-mille
@@ -811,7 +826,10 @@ static func destination_of(repo: DataRepository, state: GameState, code: String)
 static func heading_of(repo: DataRepository, state: GameState, code: String) -> Vector2:
 	if order_of(repo, state, code) != ORDER_MARCH:
 		return Vector2.ZERO
-	var away := destination_of(repo, state, code) - position_of(repo, state, regiment(repo, code, state))
+	# the next point of its route (spec 2026-10-07-march-waypoints), else the end
+	var ahead := route_px(repo, state, code)
+	var next := ahead[0] if not ahead.is_empty() else destination_of(repo, state, code)
+	var away := next - position_of(repo, state, regiment(repo, code, state))
 	return away.normalized() if away.length() > 0.0001 else Vector2.ZERO
 
 
@@ -819,7 +837,9 @@ static func heading_of(repo: DataRepository, state: GameState, code: String) -> 
 ## under the carried load (load_permille: a heavier train marches slower).
 ## 0 for a banner with no one under arms, which is why an order to march is
 ## refused for one rather than leaving it crawling toward a place forever.
-static func day_step_m(repo: DataRepository, state: GameState, code: String) -> int:
+## `carry` (days) prices another load than the standing order — the march
+## confirm's rows (spec 2026-10-07-march-waypoints §2); -1 is the regiment's own.
+static func day_step_m(repo: DataRepository, state: GameState, code: String, carry := -1) -> int:
 	var reg := regiment(repo, code, state)
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
@@ -827,7 +847,8 @@ static func day_step_m(repo: DataRepository, state: GameState, code: String) -> 
 	@warning_ignore("integer_division")  # whole metres
 	return pace_tenths(repo, base_pace_km(repo, reg),
 		supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state)),
-		int(st["morale"]), int(st["training"])) * 100 * load_permille(repo, carry_of(repo, st)) / 1000
+		int(st["morale"]), int(st["training"])) * 100 \
+		* load_permille(repo, carry if carry >= 0 else carry_of(repo, st)) / 1000
 
 
 ## Metres a regiment covers TODAY (spec 2026-09-27-courier-core §1): its
@@ -842,8 +863,8 @@ static func day_march_m(repo: DataRepository, state: GameState, code: String, ab
 ## that place's weather on the day and on its ground (ground_permille, spec
 ## 2026-10-06 §6) — a march reads where the column IS each day.
 static func day_march_at(repo: DataRepository, state: GameState, code: String, at: Vector2,
-		abs_day: int = -1) -> int:
-	var step := day_step_m(repo, state, code)
+		abs_day: int = -1, carry := -1) -> int:
+	var step := day_step_m(repo, state, code, carry)
 	if step <= 0 or state == null:
 		return step
 	var kind := Weather.at(repo, state, at, state.absolute_day() if abs_day < 0 else abs_day)
@@ -855,19 +876,97 @@ static func day_march_at(repo: DataRepository, state: GameState, code: String, a
 	return maxi(1, step * ground_permille(repo, regiment(repo, code, state), at, state) / 1000)
 
 
-## Send a regiment to `dest` (pack pixels). The engine's only writer of a
+## Send a regiment to `dest` (pack pixels) through `waypoints` (pack px, in
+## order; spec 2026-10-07-march-waypoints). The engine's only writer of a
 ## march order; ActionSystem calls it after ARMY_MARCH validates. The unit
 ## leaves its camp and, holding a seat, empties it (ArmyGround.leave).
-static func set_march(repo: DataRepository, state: GameState, code: String, dest: Vector2) -> void:
+static func set_march(repo: DataRepository, state: GameState, code: String, dest: Vector2,
+		waypoints: Array = []) -> void:
+	var wps: Array = []
+	for w: Vector2 in waypoints:
+		wps.append(pack_to_metres(repo, w))
+	set_march_m(repo, state, code, pack_to_metres(repo, dest), wps)
+
+
+## set_march in whole metres — the courier's order carries metres. With
+## waypoints the regiment keeps the curve from where it stands NOW through
+## them to the end (`route_m`, MarchRoute) and the waypoints still ahead
+## (`waypoints_m`); without, neither, and it walks the straight line.
+static func set_march_m(repo: DataRepository, state: GameState, code: String, dest: Vector2i,
+		waypoints: Array = []) -> void:
 	ensure(repo, state)
 	if not state.regiments.has(code):
 		return
 	var entry: Dictionary = state.regiments[code]
-	var m := pack_to_metres(repo, dest)
-	entry["dest_x_m"] = m.x
-	entry["dest_y_m"] = m.y
+	entry["dest_x_m"] = dest.x
+	entry["dest_y_m"] = dest.y
 	entry["order"] = ORDER_MARCH
+	_clear_route(entry)
+	if not waypoints.is_empty():
+		var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+		entry["route_m"] = MarchRoute.to_pairs(route_m_of(repo, here, waypoints, dest))
+		entry["waypoints_m"] = MarchRoute.to_pairs(waypoints)
 	ArmyGround.leave(repo, state, code)
+
+
+## The sampled curve from `from` (left off) through `waypoints` to `to`, whole
+## metres — what a march through them walks.
+static func route_m_of(repo: DataRepository, from: Vector2i, waypoints: Array, to: Vector2i) -> Array:
+	var pts: Array = [from]
+	pts.append_array(waypoints)
+	pts.append(to)
+	return MarchRoute.curve(pts, int(repo.bal("army_route_sample_m"))).slice(1)
+
+
+## The curve a march from `from` through `waypoints` to `to` (all pack px)
+## would walk, the start included, in pack px — the line the maps draw while
+## it is planned (spec 2026-10-07-march-waypoints rulings 1, 11).
+static func curve_px(repo: DataRepository, from: Vector2, waypoints: Array, to: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array([from])
+	if waypoints.is_empty():
+		out.append(to)
+		return out
+	var wps: Array = []
+	for w: Vector2 in waypoints:
+		wps.append(pack_to_metres(repo, w))
+	for p: Vector2i in route_m_of(repo, pack_to_metres(repo, from), wps, pack_to_metres(repo, to)):
+		out.append(metres_to_pack(repo, p))
+	return out
+
+
+## The road still ahead of a marching regiment, pack px, ending on its
+## destination ([] when it is not marching): its route's points, else the end.
+static func route_px(repo: DataRepository, state: GameState, code: String) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if order_of(repo, state, code) != ORDER_MARCH:
+		return out
+	for p: Vector2i in _path_of(state_of(repo, state, code)):
+		out.append(metres_to_pack(repo, p))
+	return out
+
+
+## The waypoints a marching regiment has still to pass, pack px.
+static func waypoints_of(repo: DataRepository, state: GameState, code: String) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if order_of(repo, state, code) != ORDER_MARCH:
+		return out
+	for p: Vector2i in MarchRoute.from_pairs(state_of(repo, state, code).get("waypoints_m", [])):
+		out.append(metres_to_pack(repo, p))
+	return out
+
+
+## An entry's road ahead in whole metres: its route, else the straight line's end.
+static func _path_of(entry: Dictionary) -> Array:
+	if entry.has("route_m") and not (entry["route_m"] as Array).is_empty():
+		return MarchRoute.from_pairs(entry["route_m"])
+	if not entry.has("dest_x_m"):
+		return []
+	return [Vector2i(int(entry["dest_x_m"]), int(entry["dest_y_m"]))]
+
+
+static func _clear_route(entry: Dictionary) -> void:
+	entry.erase("route_m")
+	entry.erase("waypoints_m")
 
 
 ## Halt a regiment where it stands. A column halted on the road settles
@@ -881,15 +980,17 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 	entry["order"] = ORDER_GARRISON
 	entry["dest_x_m"] = int(entry["x_m"])
 	entry["dest_y_m"] = int(entry["y_m"])
+	_clear_route(entry)
 	if marching:
 		ArmyGround.settle(repo, state, code)
 
 
 ## One DAY of marching for every regiment under a march order, in code order.
 ## Each arrival settles at once (ArmyGround.settle: first come, first in).
-## Returns the codes that arrived today, for the news bar. Straight-line: the
-## column walks at its own pace toward where it was sent, and there is no
-## pathfinding yet — a march ordered across a bay walks across it.
+## Returns the codes that arrived today, for the news bar. The column walks at
+## its own pace along its route (spec 2026-10-07-march-waypoints), else the
+## straight line; there is no pathfinding yet — a march ordered across a bay
+## walks across it.
 static func march_day(repo: DataRepository, state: GameState) -> Array:
 	ensure(repo, state)
 	var arrived: Array = []
@@ -940,49 +1041,82 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		abs_day: int) -> bool:
 	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code, state).is_empty():
 		return false
-	var here := Vector2(float(entry["x_m"]), float(entry["y_m"]))
-	var full := day_march_at(repo, state, code, metres_to_pack(repo, Vector2i(here)), abs_day)
+	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	var full := day_march_at(repo, state, code, metres_to_pack(repo, here), abs_day,
+		int(entry.get("carry_days", -1)))
 	if full <= 0:
 		return false
-	var dest := Vector2(float(entry["dest_x_m"]), float(entry["dest_y_m"]))
-	var left := here.distance_to(dest)
+	# along its route when it has one (spec 2026-10-07-march-waypoints), else
+	# the straight line to the end — the same sums either way
+	var path := _path_of(entry)
+	var left := MarchRoute.length_from(here, path)
 	var days := int(ceil(left / float(full)))
 	var step := mini(full, int(ceil(left / float(maxi(days, 1)))))
 	if days <= 1:
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
 		entry["order"] = ORDER_GARRISON          # arrived: it holds the ground it was sent to
+		_clear_route(entry)
 		return true
-	var way := (dest - here) / left
-	entry["x_m"] = int(round(here.x + way.x * float(step)))
-	entry["y_m"] = int(round(here.y + way.y * float(step)))
+	var walked := MarchRoute.walk(here, path, step)
+	entry["x_m"] = (walked["at"] as Vector2i).x
+	entry["y_m"] = (walked["at"] as Vector2i).y
+	if entry.has("route_m"):
+		# new arrays, never the old ones cut: a preview walks a shallow copy
+		entry["route_m"] = MarchRoute.to_pairs(walked["path"])
+		var wps := MarchRoute.from_pairs(entry.get("waypoints_m", []))
+		for p: Vector2i in walked["passed"]:
+			if not wps.is_empty() and wps[0] == p:
+				wps = wps.slice(1)
+		entry["waypoints_m"] = MarchRoute.to_pairs(wps)
 	return false
 
 
 ## Days still on the road, rounded up; 0 for a regiment that is not marching.
+## Its own route walked, as it stands.
 static func days_out(repo: DataRepository, state: GameState, code: String) -> int:
-	if order_of(repo, state, code) != ORDER_MARCH:
+	if order_of(repo, state, code) != ORDER_MARCH or day_step_m(repo, state, code) <= 0:
 		return 0
-	return march_days_between(repo, state, code, position_of(repo, state, regiment(repo, code, state)),
-		destination_of(repo, state, code))
+	var st := state_of(repo, state, code)
+	var entry := {"x_m": int(st["x_m"]), "y_m": int(st["y_m"]), "dest_x_m": int(st["dest_x_m"]),
+		"dest_y_m": int(st["dest_y_m"]), "order": ORDER_MARCH}
+	if st.has("route_m"):
+		entry["route_m"] = (st["route_m"] as Array).duplicate(true)
+	if MarchRoute.length_from(Vector2i(int(st["x_m"]), int(st["y_m"])), _path_of(entry)) <= 0.0:
+		return 0
+	return _days_walking(repo, state, code, entry, state.absolute_day() if state != null else 0)
 
 
-## Whole days for a regiment to march from `from` to `to` (pack px) starting
-## on `start_day` (today when -1): the march walked day by day exactly as
-## march_day will walk it (_march_one), each day on the ground and in the
-## weather where the column then stands — the weather is a seeded function of
-## the day, so the figure is the day it will arrive. 0 for a regiment that
-## cannot move.
+## Whole days for a regiment to march from `from` to `to` (pack px) through
+## `waypoints` (pack px, along the curve it would walk) starting on
+## `start_day` (today when -1) under the load `carry` (days; -1 its own):
+## the march walked day by day exactly as march_day will walk it
+## (_march_one), each day on the ground and in the weather where the column
+## then stands — the weather is a seeded function of the day, so the figure
+## is the day it will arrive. 0 for a regiment that cannot move.
 static func march_days_between(repo: DataRepository, state: GameState, code: String, from: Vector2,
-		to: Vector2, start_day: int = -1) -> int:
-	if day_step_m(repo, state, code) <= 0:
+		to: Vector2, start_day: int = -1, waypoints: Array = [], carry := -1) -> int:
+	if day_step_m(repo, state, code, carry) <= 0:
 		return 0
 	var a := pack_to_metres(repo, from)
 	var b := pack_to_metres(repo, to)
-	if a == b:
+	if a == b and waypoints.is_empty():
 		return 0
 	var entry := {"x_m": a.x, "y_m": a.y, "dest_x_m": b.x, "dest_y_m": b.y, "order": ORDER_MARCH}
+	if carry >= 0:
+		entry["carry_days"] = carry
+	if not waypoints.is_empty():
+		var wps: Array = []
+		for w: Vector2 in waypoints:
+			wps.append(pack_to_metres(repo, w))
+		entry["route_m"] = MarchRoute.to_pairs(route_m_of(repo, a, wps, b))
 	var day := (state.absolute_day() if state != null else 0) if start_day < 0 else start_day
+	return _days_walking(repo, state, code, entry, day)
+
+
+## Days an `entry` (a copy) takes to arrive, walked from `day`.
+static func _days_walking(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
+		day: int) -> int:
 	var cap := int(repo.bal("army_march_days_cap"))
 	for n in range(1, cap + 1):
 		if _march_one(repo, state, code, entry, day + n - 1):

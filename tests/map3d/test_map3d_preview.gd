@@ -147,7 +147,7 @@ func test_the_world_is_its_own_scene_inside_the_view() -> void:
 	assert_not_null(world, "the view instances the world")
 	assert_eq(world.scene_file_path, "res://scenes/map3d/map3d_world.tscn")
 	for n in ["WorldSlot", "CameraRig", "Sea", "Rivers", "Bridges", "Lines", "Clouds", "Markers",
-			"Houses", "Trees", "Wind", "Environment", "Sun", "FillLight", "Units", "Trails",
+			"Houses", "Trees", "Wind", "Environment", "Sun", "FillLight", "Units", "Dust",
 			"Couriers", "Precip"]:
 		assert_not_null(world.get_node_or_null(n), n + " is the world's")
 	assert_eq((v.get_node("Viewport") as SubViewport).get_child_count(), 1, "the world is the viewport's one child")

@@ -81,8 +81,8 @@ const PORTRAIT_TOP := 0.03
 const PORTRAIT_HEIGHT := 0.56
 
 ## The screen's look lives in scenes/screens/conversation.tscn and is edited in the
-## editor (owner 2026-10-02): THE WAR TABLE's oak, sheet, report, compass and
-## seal as on the court, the audience window's leather, banner, gilt portrait
+## editor (owner 2026-10-02): THE WAR TABLE's oak, sheet, report and seal
+## as on the court, the audience window's leather, banner, gilt portrait
 ## frame and name plate, the label kinds, the council column. _ready fetches
 ## the nodes and wires signals; dynamic content (portraits, trait chips,
 ## reply buttons) is spawned at runtime below. Under balance ui_war_table 0
@@ -135,10 +135,9 @@ func _ready() -> void:
 	_military.closed.connect(func() -> void: set_military_view(false))
 	if UiPalette.war_table():
 		# the report writes in paper ink and is drawn only as tall as the
-		# realm's card; the compass turns the map north
+		# realm's card (the compass is the map's own, at its top-left)
 		WarTable.ink_column(%MinisterPanel)
 		WarTable.fit_report(%MinisterPanel, _dashboard)
-		%TableCompass.view = _map3d
 	_plate_arms = %PlateArms
 	_show_dossier(false)
 	_build_skill_rows()
@@ -166,7 +165,7 @@ func _ready() -> void:
 	_set_right("")
 	_refresh_left()
 
-## The leather chrome (balance ui_war_table 0): no table, no compass, no seal;
+## The leather chrome (balance ui_war_table 0): no table, no seal;
 ## the map and the facts column in the 2026-09-28 dark leather, and ENTER THE
 ## COUNCIL the screen's primary button. The audience window, the popup and
 ## the council column are leather either way (scenes/screens/conversation.tscn).
@@ -175,7 +174,6 @@ func _dress_leather() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%Bg.z_index = 0
 	%Table.queue_free()
-	%TableCompass.queue_free()
 	%CouncilHandle.queue_free()
 	%MapPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "map"))

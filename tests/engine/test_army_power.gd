@@ -196,3 +196,30 @@ func test_archers_alone_on_hills_by_the_terrain_table() -> void:
 	# army_town_defence.csv: walls,archers defend 1250, attack untouched
 	assert_almost_eq(float(ArmySystem.power_on(r, s, code, "defend", "plains", "walls")) / plains_d, 1.25, 0.01)
 	assert_eq(ArmySystem.power_on(r, s, code, "attack", "plains", "walls"), plains_a)
+
+
+## power_of_arms (spec 2026-10-07-war-room-annotations-and-planning-pieces
+## §1.2): a host of given arms with no state — no wounds, the float at 1000.
+## By hand from the CSVs: archers' base is the mean of (1200+800)/2,
+## (1000+1000)/2, (800+700)/2, (1000+900)/2 = 925; training 10 -> 600,
+## morale 75 -> 875; hills archers defend 1150; a citadel archers 1350.
+func test_power_of_arms_is_worked_by_hand() -> void:
+	var arms := {"archers": 2000}
+	# 2000 * 1000 milli-heads * 925 * 600 * 875 / 1000^3 = 971,250
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "defend", "plains", ""), 972)
+	# 971,250 * 1150 / 1000 = 1,116,937 -> ceil to 1117
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "defend", "hills", ""), 1117)
+	# and behind a citadel's works: 1,116,937 * 1350 / 1000 = 1,507,864 -> 1508
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "defend", "hills", "citadel"), 1508)
+	# works never help the attacker: hills archers attack 1050
+	assert_eq(ArmySystem.power_of_arms(repo, arms, 2000, 10, 75, "attack", "hills", "citadel"), 1020)
+
+
+func test_power_on_is_power_of_arms_with_the_regiments_own_state() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	for code: String in _land_codes():
+		var reg := ArmySystem.regiment(repo, code)
+		var st: Dictionary = s.regiments[code]
+		var fit := ArmySystem.headcount(repo, reg) - int(st["wounded"])
+		assert_eq(ArmySystem.power_on(repo, s, code, "attack", "hills", "walls"),
+			ArmySystem.power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), "attack", "hills", "walls", code, s.tick))

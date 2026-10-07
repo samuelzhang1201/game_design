@@ -1,6 +1,6 @@
 # Crown and Council
 
-Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years through a council of ministers with real personalities, ideologies, and grudges. Godot 4 project. The campaign map is the **3D map** (Terrain3D, `scripts/map3d/`, built by `tools/map3d/`) — the ONLY map; the 2D map was deleted (2026-09-24) and is never to come back. A checkout with no built world shows the 3D view's notice naming `build_pack.sh`.
+Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years through a council of ministers with real personalities, ideologies, and grudges. Godot 4 project. The campaign map is the **3D map** (Terrain3D, `scripts/map3d/`, built by `tools/map3d/`) — the ONLY map; there is no 2D map and none is ever added. A checkout with no built world shows the 3D view's notice naming `build_pack.sh`.
 
 ## How the guidance is split (read this first)
 
@@ -15,8 +15,9 @@ This file holds only what holds EVERYWHERE. Each subsystem's rules live in a `CL
 | `scripts/ledger3d/CLAUDE.md` | the LEDGER galaxy view |
 | `tools/CLAUDE.md` | art and build pipelines: Flux / ComfyUI, installers, arms, portraits, house and unit models, bakes, `snapshot_screen`, benches |
 | `data/CLAUDE.md` | the CSV tables and the map pack tables |
+| `scripts/llm/CLAUDE.md` | the OpenAI client, `.env` / `user://config.json`, prompts, validation, the voicers |
 
-**Writing guidance:** a feature's detail goes into its subsystem's `CLAUDE.md` or its spec under `docs/superpowers/specs/`, never here. Write the rule as it stands NOW — no history ("was X until …"), no owner quotes (those belong in the spec), and no tuning numbers that live in a CSV (name the key instead). `tests/engine/test_claude_md_size.gd` caps this file and each nested one.
+**Writing guidance:** a feature's detail goes into its subsystem's `CLAUDE.md` or its spec under `docs/superpowers/specs/`, never here. Write the rule as it stands NOW — no history ("was X until …"), no owner quotes (those belong in the spec), and no tuning numbers that live in a CSV (name the key instead). `tests/engine/test_claude_md_size.gd` caps this file and each nested one. A nested guide near its cap moves whole topics into `guide/<topic>.md` beside it and lists them in a **Topic guides** index (Claude Code does not load those on its own, so the index names the classes each covers).
 
 ## Key documents
 
@@ -27,8 +28,7 @@ This file holds only what holds EVERYWHERE. Each subsystem's rules live in a `CL
 - `docs/design/CHAPTER_0.md` + `game_story/chapter_0/chapter_0_events.md` — the prologue, which is the tutorial.
 - `RANDOM_EVENTS.md` (repo root) — the random-events system. **Loaded at runtime**: `StorySource` parses each `### EV-NN` entry's `**Scene:**` prose and the game shows it verbatim, so keep the heading and `**Scene:**` labels intact (a test asserts all ids resolve). The "Your event seeds" section at the top is the owner's inbox: expand each new seed into a fully spec'd event (trigger, weight, choices with signatures, chain) in the pool below. **No event is ever model-written** — `Voicer.voice_event` has no path to the API; if an event needs different words, write them there.
 - `.claude/skills/visual-review/` — the loop for EVERY visual change (shoot, compare variants, crop, independent critic) and `taste.md`, the owner's art rulings as principles; add each new ruling there.
-- `tools/NEW_MAP.md` (bringing in a new map pack), `tools/map3d/README.md` (the Terrain3D pipeline), `assets/flux/README.md` (the 2D art pipeline: Z-Image and Qwen-Image-2512 only, no Flux model — the folder keeps its old name).
-- `docs/art_team/README.md` — the art collaboration: the artist's locked ComfyUI workflows (a Comfy Cloud copy beside them) and the `cc_art_check` Blender add-on (`docs/art_team/kit/`), rebuilt by `tools/art_kit/build_kit.py`; the artist's handbook is the owner's Confluence page.
+- Art and build pipelines (new map packs, Terrain3D, 2D art, the art team's kit): the guides listed at the top of `tools/CLAUDE.md`.
 - `docs/superpowers/specs/` and `plans/` — one spec and plan per feature; the history and the owner's words behind every rule.
 
 ## Stack
@@ -37,11 +37,11 @@ This file holds only what holds EVERYWHERE. Each subsystem's rules live in a `CL
 - **A tick is a MONTH of 30 days** (`Calendar.DAYS_PER_TICK`, 12 ticks a year); `GameState.day` runs 1..30 under it and the month's end is the settlement.
 - **GUT** for tests. The simulation engine must be unit-testable headless.
 - **OpenAI API via raw HTTP** (`HTTPRequest`). Model IDs and prices live in one config table (PRD §8).
-- **Run:** `/Applications/Godot.app/Contents/MacOS/Godot --path .`
+- **Run:** `/Applications/Godot.app/Contents/MacOS/Godot --path .` (macOS). `$GODOT`, when set, names the binary for `run_tests.sh` (the cloud SessionStart hook sets it).
 - **A fresh clone runs as it is**: every asset the game draws is committed (the Terrain3D build and its textures included). Steps: Godot 4.7, `git clone`, ONE import pass (`Godot --headless --path . --import`, or open the editor; `.godot/` is never committed) — the first pass prints font/theme load errors that are gone on the next run. No Blender, ComfyUI, Python or `build_pack.sh` is needed to play; those only REBUILD art. `.env` / `user://config.json` are optional (absent, the game runs offline).
-- **Test:** `./run_tests.sh` runs the full GUT suite headless and must report the **expected error count**: "Errors 2" while the `gdai-mcp-plugin-godot` GDExtension binaries are installed (GUT cannot resolve its class-database probing headless), 0 without them — the script keys off `gdai_mcp_plugin.gdextension`, which git ignores, so a fresh clone expects 0. It exports `CC_FORCE_OFFLINE=1` so no live API call is possible. `./run_tests.sh --fast` runs only `tests/engine`, `tests/ledger3d`, `tests/llm` for the edit-run loop; run the whole suite before a merge.
+- **Test:** `./run_tests.sh` runs the full GUT suite headless (`CC_FORCE_OFFLINE=1`, so no live API call) and fails on any error count but the expected one: 2 while the git-ignored `gdai-mcp-plugin-godot` binaries are installed, 0 without them (a fresh clone, the cloud). `./run_tests.sh --fast` runs only `tests/engine`, `tests/ledger3d`, `tests/llm` for the edit-run loop; run the whole suite before a merge.
 - **A test takes its data from `tests/suite_data.gd`, never `DataRepository.load_all`**: `SuiteData.repo()` is a deep copy of data parsed once per run (change any table freely), `SuiteData.campaign(repo, seed)` a cached campaign copied through the save format; `tests/pre_run.gd` hands the same copier to `Game.campaign_maker`. Wait with `wait_process_frames` or `wait_until`, never `wait_frames` (a 60 Hz physics frame of real time in this GUT).
-- **`.env`** (git-ignored, read by `OpenAIClient.load_config()`; `.env.example` lists `OPENAI_API_KEY`, `LLM_MODEL`/per-tier overrides, `LLM_MAX_OUTPUT_TOKENS`) overlays defaults and is overlaid by **`user://config.json`** (`api_key`, `model_parse`, `model_voice`, `model_order`, `model_flagship`, `offline_mode`). A missing/malformed file, an empty key or `CC_FORCE_OFFLINE=1` fails closed to `offline_mode: true`.
+- **Config** (`.env`, `user://config.json`) is optional and fails closed to offline: `scripts/llm/CLAUDE.md`.
 
 ## Architecture invariants (do not violate)
 
@@ -54,46 +54,52 @@ This file holds only what holds EVERYWHERE. Each subsystem's rules live in a `CL
 7. **Save = one JSON file.** All state in memory, serialized whole. No database, no partial saves.
 8. **Every order carries a cost.** `OrderCosts` guarantees an explicit (gold, grain, population) or hidden (opinion, relationship, attribute) cost per executed order from `data/order_costs.csv` (polarity in `data/metric_polarity.csv`); `COUNCIL_CONSULT` and `EVENT_CHOICE` are the exemptions. A typed order is ONE model call returning `{narrative, impacts}`; the screens print the narrative and then the ledger lines that actually applied, so an overreaching narrative is visible as such.
 9. **Cost discipline.** Clicked suggestions bypass the LLM. Low-stakes minister lines use trait-tinted templates with no API call. The flagship model is only for rare confrontation/betrayal scenes.
-10. **The columns divide by kind.** The LEFT column is FACTS (the realm card, the hovered country, the host, the card of whatever is clicked on the map — a click replaces the left column, never the right); the RIGHT slot is PEOPLE (the council column and the record of what was said). The talk itself is the **audience window** centred over the map; events and the opening narration stand in the same window. A map click never displaces the talk. The left column's width is fixed (`ScreenLayout.LEFT_WIDTH`): anything in it must wrap and scroll, never widen it. Each screen owns one `_refresh_left()` applying the precedence (card > hovered country > host > the column's own content); no panel hides its siblings. Details: `scripts/ui/CLAUDE.md`.
+10. **The columns divide by kind.** The LEFT column is FACTS (the realm card, the hovered country, the host, the card of whatever is clicked on the map — a click replaces the left column, never the right); the RIGHT slot is PEOPLE (the council column and the record of what was said). The talk itself is the **audience window** centred over the map; events and the opening narration stand in the same window. A map click never displaces the talk. The left column's width is fixed (`ScreenLayout.LEFT_WIDTH`): anything in it must wrap and scroll, never widen it. Precedence and `_refresh_left()`: `scripts/ui/CLAUDE.md`.
 11. **The economy is whole gold, rounded once, at the manor** (`ManorEconomy.line_of`). Provinces and the realm are sums; growth is an integer per-mille table; iteration order is fixed.
 
 ## Rules that cut across every module
 
 - **Design values live in `data/*.csv`, never hardcoded in scripts.** Add columns/rows rather than embedding constants (`data/CLAUDE.md`).
 - **The LOOK lives in the editor, not in code or CSV** (binding): a screen's static look is authored in its `.tscn` and `.tres` resources so the editor shows what the game draws — never built in `_ready()`, never a `res://` path column in a CSV, never a style assembled in code. A key → art table is an `ArtTable` / typed Resource `.tres` (`GameArt`), the game's Theme is `assets/2D/ui/theme/game_theme.tres` with label kinds (`theme_type_variation`) instead of code colours, custom styles and drawn pieces are `@tool` with `@export`ed fields. Look changes are made THROUGH THE EDITOR (gdai MCP), never by text-editing a `.tscn`, checking every open script buffer against disk before an editor save (a stale buffer clobbers the file). In a `@tool` path read tables through `UiPalette.data()`, never `Game.data`. Guards: `tests/ui/test_editor_owned_look.gd`, `tests/map3d/test_map3d_editor_owned_look.gd`. Details: `scripts/ui/CLAUDE.md`.
-- **Asset layout**: every 3D asset the game uses is in `assets/3D/{category}/{object}/`, whatever produced it in that object's `model_wip/` (git-ignored but its `.gdignore`; a category-wide source in `assets/3D/{category}/model_wip/`). A Tripo export waiting to be processed sits in the staging folder `assets/3D/model_wip/tripo_inbox/<category>/<object>/` beside its picked reference, and moves to its object's `model_wip/tripo/` once processed (README there). Every 2D asset is in `assets/2D/{category}/{set}/`, a set being what one installer fills. Fonts, audio, `assets/maps/` (data bitmaps) and `assets/flux/` stay outside. Every installer and exporter already writes there. **`assets/` holds art, never a scene** (owner 2026-10-04): a model's `.glb` (the art Godot imports; it stays, since the import is made from it and the scenes instance it) is in `assets/`, its scene in `scenes/models/`; the Terrain3D build writes its world scene to `scenes/map3d/worlds/<map>.tscn` and keeps its data in `assets/3D/terrain/<map>/`; `test_scene_layout.gd` holds it.
-- **Every `world_*.png` is DATA**: imported lossless, never VRAM compressed (it scrambles manor ids and bands the sea); `project.godot`'s `[importer_defaults] texture` carries `detect_3d/compress_to: 0` for that reason. They are generated (`tools/import_azgaar.gd` and the bakes) — lasting changes belong in Azgaar, not hand edits.
+- **Asset layout**: every 3D asset the game uses is in `assets/3D/{category}/{object}/` (its sources in that object's git-ignored `model_wip/`), every 2D asset in `assets/2D/{category}/{set}/`. **`assets/` holds art, never a scene**: a model's `.glb` is in `assets/`, its scene in `scenes/models/` (`test_scene_layout.gd`). Staging folders and the Terrain3D build's layout: `tools/CLAUDE.md`.
+- **Every `world_*.png` is DATA**: imported lossless, never VRAM compressed, generated by the tools, never hand-edited (`data/CLAUDE.md`).
 - **Art sourcing**: ComfyUI's work ends at the IMAGE. **No Hunyuan3D** anywhere (its licence). Tripo 3D is allowed for 3D sources on the owner's PAID plan only.
 - **Every visual change** goes through the `visual-review` skill; real-window shots with `tools/snapshot_screen.gd --resolution WxH` are the only faithful check. Headless Godot cannot render 3D (a 3D snapshot hangs) — never run one with `--headless`.
+- **In a cloud session** (claude.ai/code: Linux, headless Godot at `$GODOT`, no editor, no gdai MCP, no window) the tests run but nothing can be looked at. Do the code, data and test part; never text-edit a `.tscn`/`.tres` look or claim a visual change reviewed — end with the editor steps and the `visual-review` pass left for a local session.
 - **`scripts/map3d/` and `scripts/war_room/` never read the `Game` autoload** (`map3d_view.gd` and `WarRoomScreen` in `scripts/ui/` are the bridges; a test scans for `Game.`), so their layers draw in the editor from a pack alone.
 - **Time**: the clock is driven only by `GameRoot._process` through `Game.advance_day`; there is no End Turn. An order never starts the clock. Space pauses/resumes on every play screen (never from a text box or under the pause menu).
-- **Build order** is PRD §6, strictly (briefings/suggestions → opinion drift → debates → recruitment → factions to stage 3 → chapter framework → faction stages 4–6 for Tomas's faction only → raid defense → chapter-1 event chains → art integration), except that the 3D map look route (`docs/superpowers/specs/2026-09-24-map3d-humankind-look-gap.md`) runs first. The MVP is ONE complete chapter, the prologue (`docs/design/CHAPTER_0.md`), expanded so PRD §7's three arcs play inside it (owner 2026-10-04): every feature, its art and its gameplay, nothing placeholder. Succession, assassination, aging and stages 4–6 for other factions are post-MVP.
+- **Build order** is PRD §6, strictly, except that the 3D map look route (`docs/superpowers/specs/2026-09-24-map3d-humankind-look-gap.md`) runs first. The MVP is ONE complete chapter, the prologue (`docs/design/CHAPTER_0.md`), expanded so PRD §7's three arcs play inside it: every feature, its art and its gameplay, nothing placeholder. Succession, assassination, aging and stages 4–6 for other factions are post-MVP.
 
 ## Layout
 
 ```
-project.godot
-icon.png          # the application icon
-RANDOM_EVENTS.md  # event pool — loaded at runtime (StorySource), stays at the root
-game_story/       # opening narration and the chapter documents — loaded at runtime (.gdignore)
-data/             # CSVs, the design source of truth (.gdignore; read by FileAccess); data/maps/<id>/ = pack tables
-scripts/engine/   # deterministic sim: tick, actions, characters, opinion, factions, economy, armies, couriers, intel, ledger model, save
-scripts/llm/      # OpenAI client, prompt builders, response validation
-scripts/ui/       # screens, panels, and the HUD pieces the 3D map shares; scripts/ui/war_table/ the oak-table pieces
-scripts/map3d/    # the 3D map: Map3DView the coordinator, Map3DContext, one script per layer / HUD job, pure maths, .gdshader files
-scripts/war_room/ # the WAR ROOM's 3D plotting room (WarRoomScreen itself is in scripts/ui/)
-scripts/ledger3d/ # the LEDGER galaxy view
-scenes/           # EVERY scene, by kind (owner 2026-10-04): game_root.tscn (MENU → CONVERSATION → COURT); screens/ (court, conversation, main_menu, ledger, missive, war room, info, pause); hud/ (top and bottom bars, news slip, fps); panels/ (the cards and popups); models/buildings/ and models/units/ (each model a scene inheriting its .glb in assets/); map3d/worlds/ (each pack's built Terrain3D world, written by build_pack.sh); tools/ (the snapshot and bench tools' scenes); characters/, locations/, map3d/, war_room/, ledger/, war_table/
-tests/            # GUT: engine/, llm/, ui/, map3d/, ledger3d/, war_room/, fixtures/
-tools/            # headless bakes, importers, snapshots, benches (Godot -s); every tool takes --map, none names a pack
-tools/map3d/      # the Terrain3D pipeline: build_pack.sh, bench.gd, README.md
-assets/3D/ assets/2D/   # every asset the game uses (see Asset layout)
-assets/fonts/ assets/audio/ assets/maps/ assets/flux/
+RANDOM_EVENTS.md  # event pool, loaded at runtime — stays at the root
+game_story/       # opening narration and chapter documents, loaded at runtime (.gdignore)
+data/             # CSVs, the design source of truth (.gdignore); data/maps/<id>/ = pack tables
+scripts/          # engine/ llm/ ui/ map3d/ war_room/ ledger3d/ — one nested CLAUDE.md each (table above)
+scenes/           # EVERY scene, by kind (screens/, hud/, panels/, models/, map3d/worlds/, tools/, …)
+tests/            # GUT, one folder per scripts/ folder, plus fixtures/
+tools/            # bakes, importers, snapshots, benches (Godot -s); every tool takes --map
+assets/           # art only: 3D/ 2D/ fonts/ audio/ maps/ flux/
 addons/           # gut, terrain_3d (committed); gdai-mcp-plugin-godot (binaries git-ignored)
-docs/design/      # PRD, council / manor systems, chapter 0, data architecture
-docs/references/  # owner reference images; the art prompt library (art_prompt_library.md)
-docs/superpowers/ # specs/ and plans/ per feature
+docs/             # design/ (PRD, systems, chapter 0), references/, superpowers/specs|plans/, art_team/
 ```
+
+## Done means
+
+1. `./run_tests.sh --fast` while iterating; the whole `./run_tests.sh` (expected error count) before a commit that touches more than docs.
+2. A new engine formula has its hand-computed GUT test; a new rule is written into the right nested `CLAUDE.md` (or its `guide/`), not here.
+3. A visual change has been through `visual-review` — or, in a cloud session, the final message says it still needs it.
+
+## Model routing
+
+The main conversation runs on the session's model (project default: Sonnet, `.claude/settings.json`); there is no automatic per-task switch, so delegate by kind:
+- **`architect` subagent (Opus)** — engine formulas, determinism / save bugs, anything spanning two or more subsystems or touching a numbered invariant; it returns a plan and expected test values, the main loop implements.
+- **`implementer` subagent (Sonnet, medium effort)** — well-specified work whose design is decided: a GUT test from given numbers, a change across a few files, applying an architect plan.
+- **`quickfix` subagent (Sonnet, low effort)** — trivial edits: one CSV value, a rename, a typo, moving text between guides.
+- **`deep-solver` subagent (Fable)** — reserved for the hardest problems: a determinism / save bug that survived a first attempt, a redesign across several invariants, a rebalance that ripples through many systems, or when the architect's plan was not enough. It may edit and test; it is costly, so never routine.
+- **Explore** (built in) — finding files and call sites across the tree.
+- A long design discussion with the owner: suggest `/model opus` (or `opusplan`) for that stretch and back afterwards.
 
 ## Conventions
 

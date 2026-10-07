@@ -30,6 +30,7 @@ signal army_menu_requested(code: String, at: Vector2)
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 ## A click on a committed march's end ring (owner 2026-09-27): ArmyOrderMenu's route menu (Map3DSelection emits it).
 @warning_ignore("unused_signal") signal route_clicked(code: String, at: Vector2)
+@warning_ignore("unused_signal") signal route_bent(waypoints: PackedVector2Array)  # ArmyOrderMenu checks it
 ## A right click on open ground (owner 2026-09-28): SpyOrderMenu's "Send a spy here".
 signal ground_menu_requested(pack_px: Vector2, at: Vector2)
 
@@ -70,7 +71,7 @@ var _scene_path := ""
 @onready var _houses: Map3DLayerHouses = $Viewport/World/Houses
 @onready var _trees: Map3DLayerTrees = $Viewport/World/Trees
 @onready var _units: Map3DLayerUnits = $Viewport/World/Units
-@onready var _trails: Map3DLayerTrails = $Viewport/World/Trails
+@onready var _dust: Map3DLayerDust = $Viewport/World/Dust
 @onready var _couriers: Map3DLayerCouriers = $Viewport/World/Couriers
 @onready var _env: Map3DSky = $Viewport/World/Environment
 @onready var _sun: Map3DSun = $Viewport/World/Sun
@@ -232,7 +233,7 @@ func _load() -> void:
 	_houses.bind(_ctx)
 	_ctx.dev = _dev
 	_units.bind(_ctx)
-	_trails.bind(_ctx)  # the ground the columns trod (owner 2026-10-01)
+	_dust.bind(_ctx)  # the dust the columns raise (owner 2026-10-07)
 	_couriers.bind(_ctx)
 	_units.set_shown(_military)
 	_ctx.settle_ground()
@@ -390,7 +391,7 @@ func _process(delta: float) -> void:
 		_weather.step()
 		_clouds.step(delta)
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
-		_trails.step()  # behind them, the ground they trod
+		_dust.step()  # behind them, the dust they raise
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
 		_supply.step(delta)  # the flowing lines, to the pieces as drawn
 		_sun.sweep(Game.day_progress)  # a round a game day, the north half dusk
@@ -423,6 +424,7 @@ func army_badge_height() -> float:
 	return (_hud.piece("Armies") as Map3DHudArmies).badge_height() if _loaded else 0.0
 func army_markers() -> Array: return (_hud.piece("Armies") as Map3DHudArmies).markers() if _loaded else []
 func cell_at(pack_px: Vector2) -> int: return _picker.cell_at(pack_px)  # the picker's bitmap: -1 off the land
+func screen_pos_of_px(pack_px: Vector2) -> Variant: return (_input as Map3DInput).route.screen_of(pack_px) if _loaded else null  # the march confirm keeps off the route
 func route_ends() -> Array: return (_hud.piece("Armies") as Map3DHudArmies).route_ends() if _loaded else []
 func drawn_army_count() -> int: return (_hud.piece("Armies") as Map3DHudArmies).drawn_count() if _loaded else 0
 func landmark_marks() -> Array: return (_hud.piece("Landmarks") as Map3DHudLandmarks).marks() if _loaded else []
@@ -490,8 +492,10 @@ var aim_code := "":
 	set(v):
 		aim_code = v
 		if _loaded: _hud.refresh()  # the aim's ruler goes, the committed route shows
-## The aimed march's destination (pack px) while COMMIT / CANCEL is asked, else (-1, -1).
+## The aimed march's end (pack px) while its confirm stands, else (-1, -1); its waypoints
+## (pack px), bent by a drag on the line (Map3DRouteEdit, which emits route_bent).
 var aim_dest := Vector2(-1, -1)
+var aim_waypoints := PackedVector2Array()
 ## The supply point being picked (ArmyOrderMenu sets both, spec 2026-10-07-army-supply-lines
 ## §5.2): town -> "" lit / why not, then the chosen town's road (pack px); {} / empty when not.
 var supply_pick: Dictionary = {}:

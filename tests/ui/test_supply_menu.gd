@@ -163,16 +163,12 @@ func test_starting_the_clock_withdraws_the_pick() -> void:
 	assert_eq(_map.supply_pick, {})
 	Game.set_clock_speed(0)
 
-func test_carry_rows_send_the_load_order() -> void:
-	var code := _land()
-	_map.army_menu_requested.emit(code, Vector2(10, 10))
-	_menu.hide()
-	_menu.id_pressed.emit(ArmyOrderMenu.CARRY_BASE + 4)   # 30 days
-	# pending_for passes SUPPLY_* orders by (they never move a march), so read the couriers
-	assert_eq(Game.state.couriers.size(), 1, "a courier waits to ride")
-	var order: Dictionary = Game.state.couriers[0]["order"]
-	assert_eq(String(order["action_code"]), "SUPPLY_CARRY_SET")
-	assert_eq(String(Game.state.couriers[0]["target"]), code)
+## Owner 2026-10-07 (item 7): the regiment's menu offers no load — it is
+## asked on the march's confirm (test_army_order_menu).
+func test_the_menu_offers_no_load_rows() -> void:
+	_map.army_menu_requested.emit(_land(), Vector2(10, 10))
+	for i in _menu.item_count:
+		assert_false(_menu.get_item_text(i).begins_with("Carry"), _menu.get_item_text(i))
 
 func test_the_menu_greys_add_while_time_runs_and_says_why() -> void:
 	Game.set_clock_speed(1)
@@ -182,8 +178,8 @@ func test_the_menu_greys_add_while_time_runs_and_says_why() -> void:
 	assert_eq(_menu.get_item_tooltip(i), String(Game.data.army_route_orders["paused_only"]["hint"]))
 	Game.set_clock_speed(0)
 
-## Final review 9: Withdraw and the carry loads are paused-clock orders too.
-func test_the_menu_greys_withdraw_and_carry_while_time_runs() -> void:
+## Final review 9: Withdraw is a paused-clock order too.
+func test_the_menu_greys_withdraw_while_time_runs() -> void:
 	var code := _land()
 	var town: String = TownStores.realm_towns(Game.data, Game.state)[0]
 	Game.state.supply_lines[code] = SupplyLines._new_record(town, 1000, 1)
@@ -192,8 +188,6 @@ func test_the_menu_greys_withdraw_and_carry_while_time_runs() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10, 10))
 	var why := String(Game.data.army_route_orders["paused_only"]["hint"])
 	var ids: Array = [_row("withdraw")]
-	for i in Game.data.army_carry_loads.size():
-		ids.append(ArmyOrderMenu.CARRY_BASE + i)
 	for id: int in ids:
 		var i := _menu.get_item_index(id)
 		assert_ne(i, -1, "row %d is offered" % id)
@@ -202,7 +196,6 @@ func test_the_menu_greys_withdraw_and_carry_while_time_runs() -> void:
 	# a click that slips through still orders nothing
 	var riding := Game.state.couriers.size()
 	_menu.hide()
-	_menu.id_pressed.emit(ArmyOrderMenu.CARRY_BASE + 4)
 	_menu.id_pressed.emit(_row("withdraw"))
 	assert_eq(Game.state.couriers.size(), riding, "nothing rides while time runs")
 	Game.set_clock_speed(0)
@@ -257,7 +250,7 @@ func test_opening_another_regiments_menu_ends_the_pick() -> void:
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, second))
 	_map.ground_clicked.emit(here + Vector2(20.0, 0.0), Vector2(20, 20))
 	assert_eq(_menu.supply_town(), "", "the click was the march's, not a supply pick")
-	assert_ne(_menu.pending(), Vector2(-1, -1), "COMMIT is asked")
+	assert_ne(_menu.pending(), Vector2(-1, -1), "the confirm is asked")
 
 func test_withdraw_aim_ends_a_pick() -> void:
 	_map.army_menu_requested.emit(_land(), Vector2(10, 10))

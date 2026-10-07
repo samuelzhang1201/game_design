@@ -43,3 +43,6 @@ assets/3D/units/*/*_parts_*.jpg
 assets/3D/units/*/*_parts_*.jpg.import
 # the unit tools' contact sheets
 assets/3D/units/shots/
+
+# Personal Claude Code settings (shared ones are in .claude/settings.json)
+.claude/settings.local.json

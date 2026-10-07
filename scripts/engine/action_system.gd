@@ -212,20 +212,49 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 	if ArmySystem.base_pace_km(data, reg) <= 0:
 		return "%s has no one under arms to march" % String(reg["label"])
 	var dest := Vector2(float(req.params.get("x", -1.0)), float(req.params.get("y", -1.0)))
+	var why := _place_refusal(reg, dest, "That is off the map", "%s cannot march into the sea")
+	if why != "":
+		return why
+	# its waypoints, each checked as the end is (spec 2026-10-07-march-waypoints ruling 3)
+	var wps := waypoints_of(req)
+	if wps.size() > int(data.bal("army_march_waypoints_max")):
+		return "A march takes at most %d waypoints" % int(data.bal("army_march_waypoints_max"))
+	for wp: Vector2 in wps:
+		why = _place_refusal(reg, wp, "That waypoint is off the map", "%s cannot march through the sea")
+		if why != "":
+			return why
+	if wps.is_empty() and ArmySystem.position_of(data, state, reg).distance_to(dest) < 1.0:
+		return "%s is already there" % String(reg["label"])
+	return ""
+
+
+## Why `reg` cannot be sent to `at` (pack px): off the map, or ground it
+## cannot stand on — land for a column, the sea for a fleet. "" when it can.
+func _place_refusal(reg: Dictionary, at: Vector2, off_map: String, into_sea: String) -> String:
 	var w := float(data.map_info.get("width", "0"))
 	var h := float(data.map_info.get("height", "0"))
-	if dest.x < 0.0 or dest.y < 0.0 or (w > 0.0 and dest.x > w) or (h > 0.0 and dest.y > h):
-		return "That is off the map"
+	if at.x < 0.0 or at.y < 0.0 or (w > 0.0 and at.x > w) or (h > 0.0 and at.y > h):
+		return off_map
 	var naval := String(reg.get("is_naval", "0")) == "1"
 	# cell_at reads the LAND grid, so a land cell is exactly what it finds.
-	var on_land := MapEconomy.cell_at(data, dest) >= 0
+	var on_land := MapEconomy.cell_at(data, at) >= 0
 	if naval and on_land:
 		return "%s is a fleet and cannot be sent inland" % String(reg["label"])
 	if not naval and not on_land:
-		return "%s cannot march into the sea" % String(reg["label"])
-	if ArmySystem.position_of(data, state, reg).distance_to(dest) < 1.0:
-		return "%s is already there" % String(reg["label"])
+		return into_sea % String(reg["label"])
 	return ""
+
+
+## An ARMY_MARCH's waypoints in pack px, in order: params.waypoints as
+## [[x, y], …] (or Vector2s); [] for none.
+static func waypoints_of(req: ActionRequest) -> Array:
+	var out: Array = []
+	for w: Variant in req.params.get("waypoints", []):
+		if w is Vector2:
+			out.append(w)
+		elif w is Array and (w as Array).size() >= 2:
+			out.append(Vector2(float(w[0]), float(w[1])))
+	return out
 
 ## The supply orders (spec 2026-10-07-army-supply-lines §4): a land regiment
 ## of the realm, a courier the chest can pay, and a point / rate / load the
@@ -596,12 +625,18 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				effects.append({"metric": "war_draft", "delta": 0.0,
 					"reason": "%s's draft in the war room is set aside" % String(reg["label"])})
 			var dest := Vector2(float(req.params["x"]), float(req.params["y"]))
+			var wps := waypoints_of(req)
 			if CourierSystem.carries_orders(reg):
 				var m := ArmySystem.pack_to_metres(data, dest)
-				_send_courier(state, effects, code, {"action_code": "ARMY_MARCH",
-					"dest_x_m": m.x, "dest_y_m": m.y}, "with orders to march")
+				var order := {"action_code": "ARMY_MARCH", "dest_x_m": m.x, "dest_y_m": m.y}
+				if not wps.is_empty():
+					var wm: Array = []
+					for wp: Vector2 in wps:
+						wm.append(ArmySystem.pack_to_metres(data, wp))
+					order["waypoints_m"] = MarchRoute.to_pairs(wm)
+				_send_courier(state, effects, code, order, "with orders to march")
 			else:
-				ArmySystem.set_march(data, state, code, dest)
+				ArmySystem.set_march(data, state, code, dest, wps)
 				var days := ArmySystem.days_out(data, state, code)
 				effects.append({"metric": "army", "delta": 0.0,
 					"reason": "%s takes the road; %d day%s' march" % [

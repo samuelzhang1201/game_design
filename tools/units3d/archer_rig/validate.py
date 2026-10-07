@@ -141,3 +141,30 @@ def clip_metrics(name, belt=None):
         out["stance_slip_m_per_f"] = round(max(slip), 4) if slip else None
     a.animation_data.action = None
     return out
+
+
+def limb_twist(name, chains=(("UpperArm.L", "Forearm.L", "Hand.L"), ("UpperArm.R", "Forearm.R", "Hand.R"))):
+    """Per clip, the worst twist (deg) of each forearm against its upper arm and of each hand against
+    its forearm, about the lower bone's own axis, measured from the rest relation (swing-twist): a
+    twisted wrist or a candy-wrapper elbow shows here before it shows on the mesh."""
+    a = rig()
+    act = bpy.data.actions[PREFIX + name]
+    ad = a.animation_data or a.animation_data_create()
+    held = ad.action
+    ad.action = act
+    B = a.data.bones
+    out = {}
+    for f in range(int(act.frame_range[0]), int(act.frame_range[1]) + 1):
+        bpy.context.scene.frame_set(f)
+        for chain in chains:
+            for up, lo in zip(chain, chain[1:]):
+                rel = a.pose.bones[up].matrix.to_3x3().inverted() @ a.pose.bones[lo].matrix.to_3x3()
+                rel0 = B[up].matrix_local.to_3x3().inverted() @ B[lo].matrix_local.to_3x3()
+                q = (rel0.inverted() @ rel).to_quaternion()          # in the lower bone's rest frame
+                tw = math.degrees(2 * math.atan2(q.y, q.w))
+                tw = (tw + 180) % 360 - 180
+                k = "%s>%s" % (up, lo)
+                if abs(tw) > abs(out.get(k, (0, 0))[0]):
+                    out[k] = (round(tw, 1), f)
+    ad.action = held
+    return out

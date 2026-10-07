@@ -198,3 +198,50 @@ def rest_arrow_along_string():
             v.co = T @ v.co; moved += 1
     o.data.update()
     return {"moved": moved, "head": [round(x, 3) for x in a0], "tail": [round(x, 3) for x in a0 + chord * 0.76]}
+
+
+def cut_cuff_scraps():
+    """Delete what Tripo welded to the right fist where it hung by the scabbard and the buckler
+    (owner 2026-10-07: 右手袖口多出来一块): a ragged leather flap labelled arm_r, found as the arm
+    island's vertices that, at MARCH f0 (the arm forward), hang under the wrist (0-14 cm ahead of
+    the hand's middle, 0.4-7 cm below it), and the skin-coloured shards left on the coat (islands
+    of < 30 vertices labelled lower within 12 cm of the rest hand). Run once on the rigged mesh."""
+    import bmesh as bmm
+    o, a = mesh(), rig()
+    P = co(o); lab = roles()
+    hr = a.data.bones["Hand.R"]
+    c = np.array((hr.head_local + hr.tail_local) / 2)
+    bm = bmm.new(); bm.from_mesh(o.data); bm.verts.ensure_lookup_table()
+    seen = np.full(len(bm.verts), -1); comps = []
+    for v0 in bm.verts:
+        if seen[v0.index] >= 0:
+            continue
+        stack = [v0]; seen[v0.index] = len(comps); mem = []
+        while stack:
+            v = stack.pop(); mem.append(v.index)
+            for e in v.link_edges:
+                w = e.other_vert(v)
+                if seen[w.index] < 0:
+                    seen[w.index] = len(comps); stack.append(w)
+        comps.append(mem)
+    arm = ROLES.index("arm_r"); lower = ROLES.index("lower")
+    arm_isl = max((m for m in comps if lab[m[0]] == arm), key=len)
+    shards = [i for m in comps if len(m) < 30 and all(lab[j] == lower for j in m)
+              and np.linalg.norm(P[m] - c, axis=1).min() < 0.12 for i in m]
+    # the flap: pose MARCH f0 and pick by place
+    R = Rest(); calibrate(); ch, N = march(R)
+    PREV_W.clear()
+    for f in range(N):
+        apply_pose(ch, float(f), R)
+    apply_pose(ch, 0.0, R)
+    hand = a.pose.bones["Hand.R"]; hc = np.array((hand.head + hand.tail) / 2)
+    dg = bpy.context.evaluated_depsgraph_get(); me = o.evaluated_get(dg).to_mesh()
+    Q = np.empty(len(me.vertices) * 3); me.vertices.foreach_get("co", Q); Q = Q.reshape(-1, 3)
+    o.evaluated_get(dg).to_mesh_clear()
+    reset()
+    idx = np.array(arm_isl); rel = Q[idx] - hc
+    flap = idx[(-rel[:, 1] > 0) & (-rel[:, 1] < 0.14) & (rel[:, 2] < -0.004) & (rel[:, 2] > -0.07)].tolist()
+    gone = sorted(set(flap) | set(shards))
+    bmm.ops.delete(bm, geom=[bm.verts[i] for i in gone], context="VERTS")
+    bm.to_mesh(o.data); bm.free(); o.data.update()
+    return {"flap": len(flap), "shards": len(shards), "verts": len(o.data.vertices), "tris": tris(o)}

@@ -271,5 +271,117 @@ static func _regiment_lines(_repo: DataRepository, r: Dictionary, raking: bool, 
 	_add(out, pace)
 
 
+# --- a supposed piece (spec 2026-10-07-war-room-annotations-and-planning-pieces §1.2)
+
+## What the slip says of a supposed piece (WarPlans): the ground under it (as
+## `reading`), and in `plan` its men on this ground — heads × its power here
+## over its power on open plains with no works, at the ASSUMED training and
+## morale (war_plan_training / war_plan_morale, no hidden float); works only in
+## a town its side holds. With a crown regiment chosen (`code`), `regiment`
+## sets them side by side: ours attacking on its ground, theirs defending,
+## each scaled by the height between them — figures, never an odds (the
+## battle formula is open). `piece`: {arm, heads, side} and `at` (pack px) or
+## x_m / y_m. Read-only.
+static func plan_reading(repo: DataRepository, state: GameState, piece: Dictionary, code: String) -> Dictionary:
+	var at: Vector2 = piece["at"] if piece.has("at") else WarPlans.at_px(repo, piece)
+	var out := reading(repo, state, at, "")
+	var arm := String(piece["arm"])
+	var heads := int(piece["heads"])
+	var side := String(piece["side"])
+	var works := String(out["works"]) if String(out["town"]) != "" and side != WarPlans.UNKNOWN \
+		and String(out["town_holder"]) == side else ""
+	var terrain := String(out["terrain"])
+	var defend_f := _plan_factor(repo, arm, heads, "defend", terrain, works)
+	var attack_f := _plan_factor(repo, arm, heads, "attack", terrain, "")
+	@warning_ignore("integer_division")  # whole men
+	var defend := heads * defend_f / 1000
+	@warning_ignore("integer_division")  # whole men
+	var attack := heads * attack_f / 1000
+	out["plan"] = {"arm": arm, "heads": heads, "side": side, "works": works,
+		"defend_f": defend_f, "attack_f": attack_f, "defend": defend, "attack": attack}
+	out["regiment"] = {}
+	if code == "" or bool(out["sea"]):
+		return out
+	var reg := ArmySystem.regiment(repo, code, state)
+	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+		return out
+	var delta := ArmySystem.elevation_of(repo, reg, state) - int(out["metres"])
+	var heads_ours := ArmySystem.headcount(repo, reg)
+	var fit := heads_ours - clampi(int(ArmySystem.state_of(repo, state, code).get("wounded", 0)), 0, heads_ours)
+	@warning_ignore("integer_division")  # whole men, per-mille factors
+	var ours := fit * _factor(repo, state, code, "attack", terrain, "") / 1000 * ArmySystem.height_factor(repo, delta) / 1000
+	@warning_ignore("integer_division")  # whole men, per-mille height
+	var theirs := defend * ArmySystem.height_factor(repo, -delta) / 1000
+	var step := ArmySystem.day_march_at(repo, state, code, at)
+	out["regiment"] = {"code": code, "label": String(reg.get("label", code)), "delta_m": delta,
+		"height": ArmySystem.height_factor(repo, delta), "ours": ours, "theirs": theirs,
+		"days": ArmySystem.march_days_between(repo, state, code, ArmySystem.position_of(repo, state, reg), at) if step > 0 else 0}
+	return out
+
+
+## A supposed host's power on a ground over its power on open plains with no
+## works, per mille; 0 for none.
+static func _plan_factor(repo: DataRepository, arm: String, heads: int, stance: String, terrain: String, works: String) -> int:
+	var t := int(repo.bal("war_plan_training"))
+	var m := int(repo.bal("war_plan_morale"))
+	var base := ArmySystem.power_of_arms(repo, {arm: heads}, heads, t, m, stance, "plains", "")
+	if base <= 0:
+		return 0
+	@warning_ignore("integer_division")  # whole per mille
+	return ArmySystem.power_of_arms(repo, {arm: heads}, heads, t, m, stance, terrain, works) * 1000 / base
+
+
+## The side's name: its kingdom's label, or "Unknown".
+static func side_label(repo: DataRepository, side: String) -> String:
+	if side == WarPlans.UNKNOWN:
+		return "Unknown"
+	return String((repo.kingdoms.get(side, {}) as Dictionary).get("label", side))
+
+
+## The arm's short word on a tag and a title ("foot", "horse").
+static func arm_word(repo: DataRepository, arm: String) -> String:
+	return String(repo.war_order_words.get("arm_" + arm, arm))
+
+
+## The slip's lines for a supposed piece.
+static func plan_lines(repo: DataRepository, r: Dictionary) -> Array:
+	var p: Dictionary = r["plan"]
+	var out: Array = []
+	out.append({"text": "Supposed %s" % arm_word(repo, String(p["arm"])), "kind": "title"})
+	out.append({"text": side_label(repo, String(p["side"])), "kind": "sub"})
+	var types: Dictionary = repo.world_table("military", "unit_types")
+	var arm_label := String((types.get(String(p["arm"]), {}) as Dictionary).get("label", p["arm"])).to_lower()
+	var grade := ArmySystem.training_grade(repo, int(repo.bal("war_plan_training"))).to_lower()
+	_add(out, "%s %s · assumed %s" % [Intel.num(int(p["heads"])), arm_label, grade])
+	var ground := "%s · %s m" % [String(r["terrain"]).capitalize(), Intel.num(int(r["metres"]))]
+	match String(r["road"]):
+		"road":
+			ground += " · on a road"
+		"trail":
+			ground += " · on a trail"
+	_add(out, ground)
+	if String(p["works"]) != "":
+		var name := String((repo.burgs[r["town"]] as Dictionary).get("label", r["town"]))
+		_add(out, ({"citadel": "In the citadel of %s", "walls": "Behind the walls of %s"} as Dictionary).get(
+			String(p["works"]), "In %s") % name + " (theirs)")
+	_add(out, "Defends as %s (×%.2f %s)" % [Intel.num(int(p["defend"])), float(p["defend_f"]) / 1000.0, String(r["terrain"])])
+	_add(out, "Attacks as %s (×%.2f)" % [Intel.num(int(p["attack"])), float(p["attack_f"]) / 1000.0])
+	_add(out, "Weather: " + Weather.describe_kind(repo, String(r["weather"])))
+	var g: Dictionary = r["regiment"]
+	if g.is_empty():
+		return out
+	out.append({"text": "", "kind": "rule"})
+	out.append({"text": "%s against it" % g["label"], "kind": "rubric"})
+	var d := int(g["delta_m"])
+	if d == 0:
+		_add(out, "It attacks level with them")
+	else:
+		_add(out, "It attacks from %d m %s (×%.2f)" % [absi(d), "above" if d > 0 else "below", float(g["height"]) / 1000.0])
+	_add(out, "Theirs %s · ours %s on this ground" % [Intel.num(int(g["theirs"])), Intel.num(int(g["ours"]))])
+	if int(g["days"]) > 0:
+		_add(out, "About a day's march" if int(g["days"]) == 1 else "About %d days' march" % int(g["days"]))
+	return out
+
+
 static func _add(out: Array, text: String) -> void:
 	out.append({"text": text, "kind": "line"})

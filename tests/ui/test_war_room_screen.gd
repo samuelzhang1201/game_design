@@ -56,7 +56,10 @@ func test_the_tab_again_closes_it_and_another_tab_closes_it_too() -> void:
 	assert_true(r.ledger_screen().visible)
 
 
-func test_a_picked_piece_unrolls_its_card_over_the_room_and_closing_gives_it_back() -> void:
+## Owner 2026-10-07: a piece's click shows the book shrunk in the room's
+## upper-left and NO card beside it (the hover slip has said it); the column's
+## card stays where it is, and the margin slip steps right of the book.
+func test_a_picked_piece_opens_its_folio_docked_and_no_card() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(2)
@@ -65,44 +68,28 @@ func test_a_picked_piece_unrolls_its_card_over_the_room_and_closing_gives_it_bac
 	var home := detail.get_parent()
 	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
 	screen.view().piece_selected.emit(code)
-	await wait_process_frames(1)
-	var card := MapObjects.army_card(Game.data, code, Game.state)
-	assert_eq(detail.get_parent(), screen.card_roll(), "the card is borrowed into the room's roll")
-	assert_eq(UiPalette.card_ground(detail), UiPalette.card_ground(home), "its scroll fades into the same paper as in the column")
-	assert_true(screen.card_roll().visible)
-	assert_eq(detail.title_label().text, String(card["title"]))
-	# the BODY is there too, not only the title: a regiment's stat rows
-	assert_gt((card["stats"] as Array).size(), 0, "the fixture card has stats")
-	assert_gt(detail.stats_grid().get_child_count(), 0, "the stat rows are there")
-	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.2)
-	var roll := screen.card_roll()
-	var body := detail.stats_grid().get_combined_minimum_size().y
-	assert_gt(detail.content_height(), detail.get_combined_minimum_size().y + body * 0.9, "the card's height counts its scrolled body")
-	assert_gt(roll.size.y, detail.get_combined_minimum_size().y + body * 0.9, "unrolled past the pinned parts: the body shows")
-	var folio := screen.get_node("%Folio") as Control
-	assert_gte(folio.get_global_rect().position.x, roll.get_global_rect().end.x, "the folio stands clear of the card")
-	screen.close()
-	assert_eq(detail.get_parent(), home, "given back to the column")
-	assert_almost_eq(folio.offset_left, 0.0, 0.01, "and the folio has the room again")
-	assert_false(detail.has_content())
-
-
-func test_clearing_the_pick_rolls_the_card_away_and_gives_it_back() -> void:
-	var r: GameRoot = await _court()
-	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_process_frames(2)
-	var screen := r.war_room_screen()
-	var detail: MapDetailPanel = r.current_screen.detail_panel()
-	var home := detail.get_parent()
-	var index := detail.get_index()
-	var code := String(WarRoom.pieces(Game.data, Game.state)[0]["code"])
-	screen.view().piece_selected.emit(code)
-	await wait_process_frames(1)
+	var folio := screen.get_node("%Folio") as WarFolioPanel
+	assert_true(folio.visible)
+	assert_false(folio.is_full(), "docked, not held up")
+	assert_eq(detail.get_parent(), home, "the column's card is not borrowed")
+	assert_false(detail.has_content(), "and no card is shown")
+	var slip := screen.get_node("%Slip") as Control
+	assert_gte(slip.get_global_rect().position.x, folio.get_global_rect().position.x + folio.book_rect().end.x,
+		"the margin slip stands clear of the book")
+	var another := ""
+	for p: Dictionary in WarRoom.pieces(Game.data, Game.state):
+		if String(p["code"]) != code:
+			another = String(p["code"])
+			break
+	if another != "":
+		screen.view().piece_selected.emit(another)
+		await wait_process_frames(1)
+		assert_eq(folio.code(), another, "another piece swaps the book")
 	screen.view().clear_selection()
-	await wait_seconds(Game.data.bal("war_report_roll_s") + 0.2)
-	assert_eq(detail.get_parent(), home)
-	assert_eq(detail.get_index(), index, "at its old place among the column's cards")
-	assert_false(screen.card_roll().visible)
+	assert_false(folio.visible, "letting the piece go closes its book")
+	await wait_process_frames(1)
+	assert_almost_eq(slip.offset_left, 16.0, 0.01, "and the slip has its corner back")
 
 
 func test_after_the_room_the_courts_own_card_still_lands_in_the_column() -> void:
@@ -211,7 +198,7 @@ func test_a_committed_rake_pencils_a_draft_pennant() -> void:
 	if MapEconomy.cell_at(Game.data, to) < 0:
 		to = (p["at"] as Vector2) + Vector2(0.0, 6.0)
 	screen.view().ground_clicked.emit(to, Vector2(100, 100))
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	await wait_process_frames(2)
 	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "the war room pencils a draft")
 	assert_true(WarRoom.pennant_of(Game.data, Game.state, code).is_empty(), "no courier rides for a draft")
@@ -268,11 +255,48 @@ func test_a_real_drag_from_a_piece_pencils_a_draft() -> void:
 	assert_eq(screen.orders().aiming(), code, "the drag armed the march")
 	_real_press(view, to, false)
 	assert_true(screen.orders().pending().x >= 0.0, "the release named a destination and asked COMMIT / CANCEL")
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	await wait_process_frames(2)
 	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "the war room pencils a draft")
 	assert_true(WarRoom.pennant_of(Game.data, Game.state, code).is_empty(), "no courier rides for a draft")
 	assert_not_null((view.get_node("%Pennants") as WarPennants).pennant(code + "_draft"))
+
+
+## Spec 2026-10-07-march-waypoints ruling 9: with the confirm standing, a real
+## press on the planned line inserts a waypoint and a drag moves it; Confirm
+## pencils the draft with it.
+func test_a_drag_on_the_planned_line_bends_it_into_the_draft() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	var to := _land_near(screen, p["at"])
+	screen.orders().aim_for(code)
+	view.ground_clicked.emit(to, Vector2(100, 100))
+	assert_not_null(screen.orders().shown_confirm())
+	var a: Vector2 = view.screen_pos_of_px(view.position_of(code))
+	var b: Vector2 = view.screen_pos_of_px(to)
+	var grab := a.lerp(b, 0.5)
+	var side := (b - a).orthogonal().normalized() * 12.0
+	_real_press(view, grab, true)
+	assert_eq(view.aim_waypoints.size(), 1, "the press on the line took a new waypoint")
+	var e := InputEventMouseMotion.new()
+	e.position = grab + side
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT
+	view._gui_input(e)
+	_real_press(view, grab + side, false)
+	var bent: Array = screen.orders().waypoints()
+	if bent.is_empty():
+		assert_true(true, "the bend fell where the regiment cannot go (the sea): put back")
+		return
+	assert_eq(bent.size(), 1, "the menu kept the bend")
+	assert_almost_eq((bent[0] as Vector2).distance_to(view.pack_at(grab + side)), 0.0, 0.01, "where it was dropped")
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
+	assert_eq((WarDrafts.of(Game.state, code).get("waypoints_m", []) as Array).size(), 1, "the draft keeps it")
 
 
 func test_a_click_on_a_riding_pennant_offers_edit_and_a_pencilled_cancel() -> void:
@@ -316,7 +340,7 @@ func test_a_click_on_a_draft_pennant_offers_edit_and_strike() -> void:
 	var code := String(p["code"])
 	screen.orders().aim_for(code)
 	view.ground_clicked.emit(_land_near(screen, p["drawn"]), Vector2(100, 100))
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	await wait_process_frames(2)
 	var hit: Dictionary = (view.get_node("%Pennants") as WarPennants).screen_hits(
 		view.get_node("%Camera"), view.window_scale())[0]
@@ -487,6 +511,29 @@ func test_the_easel_shows_the_missive_board_and_a_note_opens_the_full_board_over
 	assert_true(screen.visible, "over the room, which stays open")
 
 
+## Owner 2026-10-07: a march armed from the menu (its destination pinned)
+## still showed its arrow once the camera turned to the board. Studying the
+## board gives the armed order up.
+func test_turning_to_the_board_gives_an_armed_march_up() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(2)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var code := ""
+	for p: Dictionary in WarRoom.on_sheet(Game.data, Game.state, view.sheet_index(), screen.drawn()):
+		if screen.orders().aim_for(String(p["code"])) == "":
+			code = String(p["code"])
+			break
+	assert_ne(code, "", "a land regiment's march is armed")
+	assert_true(view.aiming)
+	view.enter_board()
+	await wait_process_frames(1)
+	assert_eq(screen.orders().aiming(), "", "the armed march is withdrawn")
+	assert_false(view.aiming)
+	assert_false((view.get_node("%Hud") as CanvasItem).is_visible_in_tree(), "no mark hangs over the board")
+
+
 func test_escape_in_board_view_returns_to_the_table_not_the_pause_menu() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
@@ -548,21 +595,6 @@ func test_a_screen_switch_under_the_room_unrolls_no_stale_report() -> void:
 	await wait_process_frames(1)
 	var rolls := r.get_children().filter(func(n: Node) -> bool: return n is WarScrollReveal and not n.is_queued_for_deletion())
 	assert_eq(rolls.size(), 0, "the old column's picture is not drawn over the new screen")
-
-
-func test_the_host_from_the_borrowed_card_leaves_the_room_for_the_column() -> void:
-	var r: GameRoot = await _court()
-	r.bottom_bar().button("WAR ROOM").pressed.emit()
-	await wait_process_frames(2)
-	var screen := r.war_room_screen()
-	var detail: MapDetailPanel = r.current_screen.detail_panel()
-	var home := detail.get_parent()
-	screen.view().piece_selected.emit(String(WarRoom.pieces(Game.data, Game.state)[0]["code"]))
-	await wait_process_frames(1)
-	detail.host_requested.emit()
-	await wait_process_frames(1)
-	assert_false(screen.visible, "the host is shown in the column, so the room steps aside")
-	assert_eq(detail.get_parent(), home)
 
 
 func _room_with_a_draft() -> GameRoot:
@@ -777,12 +809,12 @@ func test_pencilling_into_the_sea_is_refused_at_once_but_an_empty_chest_is_not()
 	assert_gte(sea.x, 0.0, "the map has sea")
 	screen.orders().aim_for(code)
 	screen.view().ground_clicked.emit(sea, Vector2(100, 100))
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	assert_false(WarDrafts.any(Game.state), "no pennant in the sea")
 	Game.state.metrics["treasury"] = 0.0
 	screen.orders().aim_for(code)
 	screen.view().ground_clicked.emit(_land_near(screen, p["drawn"]), Vector2(100, 100))
-	screen.orders().id_pressed.emit(ArmyOrderMenu.COMMIT)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	assert_true(WarDrafts.any(Game.state), "a draft costs nothing yet")
 
 
@@ -852,9 +884,6 @@ func test_every_way_out_of_the_room_lets_the_clock_go() -> void:
 			r.missive_screen().show_requested.emit(MissiveLog.find(Game.state, id)["subject"]),
 		"an event's switch": func(r: GameRoot) -> void: r._switch_to(GameRoot.State.COURT),
 		"Quit's door": func(r: GameRoot) -> void: r.leave_war_room(func() -> void: pass),
-		"the host from the card": func(r: GameRoot) -> void:
-			r.war_room_screen().view().piece_selected.emit(String(WarRoom.pieces(Game.data, Game.state)[0]["code"]))
-			r.current_screen.detail_panel().host_requested.emit(),
 	}
 	for name: String in doors:
 		var r: GameRoot = await _court()

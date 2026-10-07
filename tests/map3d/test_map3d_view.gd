@@ -37,8 +37,8 @@ func after_each() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(_rivers_json))
 
 
-## The map's own compass is the leather look's: on the war table it lies on
-## the table (TableCompass) and the map draws none — these tests take leather.
+## The map's own compass is drawn on both looks: map_compass_size_px under the
+## leather, map_compass_size_px_table on the war table (owner 2026-10-07).
 var _table_was := -1.0
 
 func _leather() -> void:
@@ -594,11 +594,14 @@ func _open_land() -> Dictionary:
 
 
 func test_the_hud_is_over_the_view_and_the_compass_turns_it_north() -> void:
-	_leather()
 	var v := _view()
 	v.activate()
 	var hud := v.get_node("Hud") as Map3DHud
 	assert_not_null(hud)
+	# owner 2026-10-07: on the war table it sits inside the map's top-left, 1.2x the table's 104 px
+	var m := Game.data.bal("map_compass_margin_px")
+	assert_eq(hud.compass_rect(), Rect2(Vector2(m, m), Vector2.ONE * Game.data.bal("map_compass_size_px_table")))
+	assert_eq(Game.data.bal("map_compass_size_px_table"), 125.0)
 	_drag(v, MOUSE_BUTTON_RIGHT, Vector2(80, 0))
 	assert_ne(v.yaw(), 0.0)
 	var press := InputEventMouseButton.new()
@@ -610,8 +613,15 @@ func test_the_hud_is_over_the_view_and_the_compass_turns_it_north() -> void:
 	assert_almost_eq(v.yaw(), 0.0, 0.001)
 
 
-func test_a_compass_press_that_moves_does_not_pan_or_select() -> void:
+func test_the_leather_map_keeps_its_own_compass_size() -> void:
 	_leather()
+	var v := _view()
+	v.activate()
+	var hud := v.get_node("Hud") as Map3DHud
+	assert_eq(hud.compass_rect().size.x, Game.data.bal("map_compass_size_px"))
+
+
+func test_a_compass_press_that_moves_does_not_pan_or_select() -> void:
 	var v := _view()
 	v.activate()
 	var hud := v.get_node("Hud") as Map3DHud

@@ -142,6 +142,10 @@ var army_height_supply: Array = []
 ## (ArmySystem.morale_word reads the first it reaches; spec
 ## 2026-09-30-ledger-supply-design §4).
 var army_morale_words: Array = []
+## data/war_plan_kinds.csv: kind -> {label, tool_key, gesture, head, teeth,
+## pen, name_default, cut} — the staff's stroke kinds (WAR ROOM plans, spec
+## 2026-10-07-war-room-annotations-and-planning-pieces §2.1), in file order.
+var war_plan_kinds: Dictionary = {}
 ## data/war_palette.csv: key -> Color (WAR ROOM, spec 2026-10-01 §5).
 var war_palette: Dictionary = {}
 ## data/war_drills.csv, file order: [{key, clip, label, arms: PackedStringArray}].
@@ -685,6 +689,12 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/war_marks.csv", ["type", "glyph", "layer", "note"],
 			func(r): war_marks[String(r["type"])] = {"glyph": String(r["glyph"]), "layer": String(r["layer"]),
 				"note": String(r["note"])}):
+		return false
+	if not _load_if_present(dir + "/war_plan_kinds.csv", ["kind", "label", "tool_key", "gesture", "head", "teeth",
+			"pen", "name_default", "cut"],
+			func(r): war_plan_kinds[String(r["kind"])] = {"label": String(r["label"]), "tool_key": String(r["tool_key"]),
+				"gesture": String(r["gesture"]), "head": String(r["head"]) == "1", "teeth": String(r["teeth"]) == "1",
+				"pen": String(r["pen"]) == "1", "name_default": String(r["name_default"]), "cut": int(r["cut"])}):
 		return false
 	if not _load_if_present(dir + "/war_mark_hazards.csv", ["type", "reach_km", "supply_loss_permille"],
 			func(r): war_mark_hazards[String(r["type"])] = {"reach_km": float(r["reach_km"]),

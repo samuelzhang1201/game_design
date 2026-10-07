@@ -10,8 +10,10 @@ class FakeMap extends Node:
 	signal army_menu_requested(code: String, at: Vector2)
 	signal ground_clicked(pack_px: Vector2)
 	signal route_clicked(code: String, at: Vector2)
+	signal route_bent(waypoints: PackedVector2Array)
 	var aiming := false
 	var aim_dest := Vector2(-1, -1)
+	var aim_waypoints := PackedVector2Array()
 
 
 ## The 3D view's own signature: the click's point rides with it.
@@ -69,12 +71,10 @@ func _supply_ids(menu: ArmyOrderMenu) -> Array:
 	return out
 
 
-## What a land regiment of the realm with no supply point is offered: Add, then the carry loads.
+## What a land regiment of the realm with no supply point is offered: Add
+## alone — the load is asked on the march's confirm (owner 2026-10-07).
 func _land_supply_ids() -> Array:
-	var out: Array = [ArmyOrderMenu.SUPPLY_ADD]
-	for i in Game.data.army_carry_loads.size():
-		out.append(ArmyOrderMenu.CARRY_BASE + i)
-	return out
+	return [ArmyOrderMenu.SUPPLY_ADD]
 
 
 ## Owner 2026-09-30 (军队到达目的地后自动驻防，取消驻防按钮): the regiment's
@@ -188,10 +188,12 @@ func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
 		["A courier will ride for %s when time runs." % String(ArmySystem.regiment(Game.data, code)["label"])])
 
 
-## COMMIT chosen the way PopupMenu chooses: hidden first, then id_pressed.
-func _commit() -> void:
-	_menu.hide()
-	_menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
+## Confirm pressed on the march's confirm panel, as a click on it presses it.
+func _commit(menu: ArmyOrderMenu = null) -> void:
+	var m := menu if menu != null else _menu
+	assert_not_null(m.shown_confirm(), "the confirm panel stands")
+	if m.shown_confirm() != null:
+		m.shown_confirm().confirm_button().pressed.emit()
 
 
 func test_the_next_click_on_the_ground_sends_it_on_commit() -> void:
@@ -269,9 +271,12 @@ func test_the_destination_click_only_ASKS() -> void:
 		"nothing is sent before COMMIT")
 	assert_eq(_menu.pending(), there)
 	assert_eq(_map.aim_dest, there, "the route is drawn to where it was clicked")
-	assert_eq(_menu.get_item_index(ArmyOrderMenu.COMMIT), 0)
-	assert_eq(_menu.get_item_text(0), String(Game.data.army_route_orders["commit"]["label"]))
-	assert_eq(_menu.get_item_text(1), String(Game.data.army_route_orders["cancel"]["label"]))
+	var panel := _menu.shown_confirm()
+	assert_not_null(panel, "the confirm panel asks")
+	assert_eq(panel.confirm_button().text, String(Game.data.army_route_orders["commit"]["label"]))
+	assert_eq(panel.add_button().text, String(Game.data.army_route_orders["add_waypoint"]["label"]))
+	assert_eq(panel.cancel_button().text, String(Game.data.army_route_orders["cancel"]["label"]))
+	assert_eq(panel.shown_rows().size(), Game.data.army_carry_loads.size(), "a row for every load")
 
 
 func test_cancel_gives_the_march_up() -> void:
@@ -283,14 +288,16 @@ func test_cancel_gives_the_march_up() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
-	_menu.hide()
-	_menu.id_pressed.emit(ArmyOrderMenu.CANCEL)
+	_menu.shown_confirm().cancel_button().pressed.emit()
+	assert_null(_menu.shown_confirm(), "the panel goes")
 	assert_eq(_menu.aiming(), "")
 	assert_eq(_map.aim_dest, Vector2(-1, -1))
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY)
 
 
-func test_clicking_away_from_the_confirm_gives_it_up() -> void:
+## Spec 2026-10-07-march-waypoints ruling 7: the confirm stands while the map
+## is clicked (the route is bent there); Escape gives it up.
+func test_a_click_away_from_the_confirm_leaves_it_and_escape_gives_it_up() -> void:
 	var code := _marcher()
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
 	var there := _land_near(here)
@@ -299,9 +306,14 @@ func test_clicking_away_from_the_confirm_gives_it_up() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
-	_menu.hide()   # closed with no row chosen
+	_map.ground_clicked.emit(there + Vector2(3, 3))
 	await wait_process_frames(2)
+	assert_eq(_menu.aiming(), code, "a click away keeps the route")
+	assert_eq(_menu.pending(), there, "and its end")
+	assert_not_null(_menu.shown_confirm())
+	_menu._unhandled_input(_escape())
 	assert_eq(_menu.aiming(), "")
+	assert_null(_menu.shown_confirm())
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY)
 
 
@@ -340,8 +352,11 @@ func test_the_end_ring_edits_or_halts_the_march() -> void:
 	assert_eq(_menu.get_item_text(0), String(Game.data.army_route_orders["edit"]["label"]))
 	_menu.hide()
 	_menu.id_pressed.emit(ArmyOrderMenu.EDIT)
-	assert_eq(_menu.aiming(), code, "Edit aims the march anew")
-	_menu.id_pressed.emit(ArmyOrderMenu.CANCEL)
+	assert_eq(_menu.aiming(), code, "Edit takes the march up")
+	assert_almost_eq(_menu.pending().distance_to(here + Vector2(30.0, 0.0)), 0.0, 0.002,
+		"its end loaded for the confirm (spec 2026-10-07-march-waypoints ruling 10)")
+	assert_not_null(_menu.shown_confirm())
+	_menu.shown_confirm().cancel_button().pressed.emit()
 	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
 	assert_eq(_menu.get_item_text(_menu.get_item_index(ArmyOrderMenu.HALT)),
 		String(Game.data.army_route_orders["halt"]["label"]), "and Cancel march halts it (see above)")
@@ -382,11 +397,12 @@ func test_a_fleets_route_menus_promise_no_courier() -> void:
 	_menu.hide()
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(here + Vector2(20.0, 0.0))
-	var commit := _menu.get_item_index(ArmyOrderMenu.COMMIT)
-	assert_eq(_menu.get_item_text(commit), String(Game.data.army_route_orders["commit_fleet"]["label"]))
-	assert_false(_menu.get_item_tooltip(commit).to_lower().contains("courier"), "no courier for a fleet")
-	assert_false(_menu.get_item_tooltip(commit).contains("Fee"), "and no fee")
-	_menu.id_pressed.emit(ArmyOrderMenu.CANCEL)
+	var commit := _menu.shown_confirm().confirm_button()
+	assert_eq(commit.text, String(Game.data.army_route_orders["commit_fleet"]["label"]))
+	assert_false(commit.tooltip_text.to_lower().contains("courier"), "no courier for a fleet")
+	assert_false(commit.tooltip_text.contains("Fee"), "and no fee")
+	assert_eq(_menu.shown_confirm().shown_rows(), [], "a fleet carries no train: no loads")
+	_menu.shown_confirm().cancel_button().pressed.emit()
 	ArmySystem.set_march(Game.data, Game.state, fleet, here + Vector2(30.0, 0.0))
 	_map.route_clicked.emit(fleet, Vector2(10.0, 10.0))
 	var halt := _menu.get_item_index(ArmyOrderMenu.HALT)
@@ -416,8 +432,8 @@ func test_the_confirm_opens_where_the_ground_was_clicked() -> void:
 	menu.hide()
 	menu.id_pressed.emit(0)
 	map.ground_clicked.emit(there, Vector2(120.0, 70.0))
-	assert_true(menu.visible, "COMMIT / CANCEL asked")
-	assert_eq(menu.position, Vector2i(120, 70))
+	assert_not_null(menu.shown_confirm(), "the confirm asked")
+	assert_eq(menu.shown_confirm().global_position, Vector2(134.0, 84.0), "beside the click, not the OS cursor")
 
 
 func test_aim_for_arms_a_march_on_a_paused_clock() -> void:
@@ -442,7 +458,7 @@ func test_aim_for_then_ground_then_commit_runs_the_march() -> void:
 	assert_eq(_menu.aim_for(code), "")
 	_map.ground_clicked.emit(to)
 	assert_eq(_menu.pending(), to)
-	_menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
+	_commit()
 	assert_eq(_menu.aiming(), "")
 	assert_false(CourierSystem.pending_for(Game.state, code).is_empty(), "a courier rides with the order")
 
@@ -507,3 +523,77 @@ func test_a_unit_round_a_town_opens_its_own_orders_not_a_list() -> void:
 		for label: String in labels:
 			assert_false(menu.get_item_text(i).begins_with(label), "no row names a unit: %s" % label)
 	assert_eq(_supply_ids(menu), _land_supply_ids(), "the unit's own order rows, then its supply rows")
+
+
+## Owner 2026-10-07 (item 9): Add waypoint keeps the point and aims on; the
+## next click is the end; Confirm sends the route, the courier carrying it.
+func test_add_waypoint_aims_on_and_confirm_sends_the_route() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var wp := _land_near(here)
+	var to := _land_near(here + Vector2(6.0, 0.0))
+	if wp == Vector2.ZERO or to == Vector2.ZERO:
+		return
+	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_menu.hide()
+	_menu.id_pressed.emit(0)
+	_map.ground_clicked.emit(wp)
+	_menu.shown_confirm().add_button().pressed.emit()
+	assert_null(_menu.shown_confirm(), "the panel steps aside for the next click")
+	assert_eq(_menu.waypoints(), [wp])
+	assert_eq(_map.aim_waypoints, PackedVector2Array([wp]), "the map draws through it")
+	assert_eq(_map.aim_dest, Vector2(-1, -1), "and aims on from it")
+	_map.ground_clicked.emit(to)
+	assert_eq(_menu.pending(), to)
+	_commit()
+	var order: Dictionary = CourierSystem.pending_for(Game.state, code)["order"]
+	assert_eq((order["waypoints_m"] as Array).size(), 1, "the courier carries the route")
+	assert_eq(_map.aim_waypoints, PackedVector2Array(), "the plan is spent")
+
+
+## Owner 2026-10-07 (item 7): the load is chosen on the confirm; a new one
+## rides as its own order before the march.
+func test_a_load_chosen_on_the_confirm_rides_before_the_march() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var to := _land_near(here)
+	if to == Vector2.ZERO:
+		return
+	var own := ArmySystem.carry_of(Game.data, Game.state.regiments[code])
+	var other := 30 if own != 30 else 10
+	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_menu.hide()
+	_menu.id_pressed.emit(0)
+	_map.ground_clicked.emit(to)
+	var panel := _menu.shown_confirm()
+	var pressed: Array = panel.shown_rows().filter(func(r: Dictionary) -> bool: return bool(r["pressed"]))
+	assert_eq(pressed.size(), 1, "one load pressed")
+	assert_eq(int(pressed[0]["days"]), own, "the load it carries now")
+	panel.pick(other)
+	assert_eq(panel.chosen_carry(), other)
+	_commit()
+	var kinds: Array = []
+	for c: Dictionary in Game.state.couriers:
+		kinds.append(String(c["order"]["action_code"]))
+	assert_eq(kinds, ["SUPPLY_CARRY_SET", "ARMY_MARCH"])
+
+
+## Ruling 9: a bend the regiment could not walk (a waypoint in the sea) is put back.
+func test_a_bend_into_the_sea_is_put_back() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var to := _land_near(here)
+	if to == Vector2.ZERO:
+		return
+	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_menu.hide()
+	_menu.id_pressed.emit(0)
+	_map.ground_clicked.emit(to)
+	var land := (here + to) * 0.5
+	if MapEconomy.cell_at(Game.data, land) >= 0:
+		_map.aim_waypoints = PackedVector2Array([land])
+		_map.route_bent.emit(_map.aim_waypoints)
+		assert_eq(_menu.waypoints(), [land], "a bend on land is kept")
+	_map.aim_waypoints = PackedVector2Array([Vector2(-50, -50)])
+	_map.route_bent.emit(_map.aim_waypoints)
+	assert_eq(_map.aim_waypoints, PackedVector2Array(_menu.waypoints()), "off the map: put back")

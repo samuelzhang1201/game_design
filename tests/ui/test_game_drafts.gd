@@ -104,3 +104,29 @@ func test_every_writer_tells_the_screens() -> void:
 	Game.plant_draft(codes[0], "march", _near(codes[0]))
 	Game.discard_drafts()
 	assert_signal_emit_count(Game, "state_changed", 4)
+
+
+## Spec 2026-10-07-march-waypoints ruling 8: a march draft's new load rides as
+## its own order before the march when sealed, and the line counts both.
+func test_a_draft_with_a_new_load_seals_the_load_then_the_march() -> void:
+	var code := String(codes[0])
+	var carry := ArmySystem.carry_of(Game.data, Game.state.regiments[code])
+	var other := 30 if carry != 30 else 10
+	Game.plant_draft(code, "march", _near(code))
+	var plain := int(Game.review_drafts()["lines"][0]["gold"])
+	var wp := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code)) + Vector2(8, 4)
+	if MapEconomy.cell_at(Game.data, wp) < 0:
+		wp = _near(code)
+	Game.plant_draft(code, "march", _near(code), [wp], other)
+	var line: Dictionary = Game.review_drafts()["lines"][0]
+	assert_eq(String(line["refusal"]), "")
+	assert_gt(int(line["gold"]), plain, "the load's courier and order are counted too")
+	var riders := Game.state.couriers.size()
+	var out := Game.deploy_drafts()
+	assert_eq(out["sent"], [code])
+	assert_eq(Game.state.couriers.size(), riders + 2, "a courier for the load, one for the march")
+	var kinds: Array = []
+	for c: Dictionary in Game.state.couriers:
+		kinds.append(String(c["order"]["action_code"]))
+	assert_eq(kinds.slice(kinds.size() - 2), ["SUPPLY_CARRY_SET", "ARMY_MARCH"], "the load first")
+	assert_eq((Game.state.couriers.back()["order"] as Dictionary)["waypoints_m"].size(), 1, "the march keeps its route")

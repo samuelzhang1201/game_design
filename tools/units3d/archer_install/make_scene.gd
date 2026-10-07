@@ -15,6 +15,8 @@ extends SceneTree
 const SCENE := "res://scenes/models/units/archers.tscn"
 const GLB := "res://assets/3D/units/archers/archers.glb"
 const MAPS := "res://assets/3D/units/archers/archers_archers_atlas%s.jpg"
+## the second surface: the bow, string, arrow and quiver, on their spots of the v1 atlas
+const PROPS_MAPS := "res://assets/3D/units/archers/archers_archers_props%s.jpg"
 const NOTE := "A longbowman, one FIGURE of an archers regiment's piece. The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/army_art.csv."
 
 
@@ -30,22 +32,13 @@ func _init() -> void:
 	var root := base.instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
 	root.editor_description = NOTE
 	var mi: MeshInstance3D = Map3DUnits.meshes(root)[0]
-	var src := mi.mesh.surface_get_material(0) as BaseMaterial3D
-	var mat := StandardMaterial3D.new()
-	mat.resource_name = "archers_atlas"
-	mat.albedo_texture = load(MAPS % "")
-	mat.metallic = 1.0
-	mat.metallic_texture = load(MAPS % "_mr")
-	mat.metallic_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_BLUE
-	mat.roughness_texture = mat.metallic_texture
-	mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
-	mat.normal_enabled = true
-	mat.normal_texture = load(MAPS % "_n")
-	if src != null:
-		mat.cull_mode = src.cull_mode   # the delivery's doubleSided
-	mi.set_surface_override_material(0, mat)
-	for dep: String in [GLB, MAPS % "", MAPS % "_mr", MAPS % "_n"]:
-		_register(dep)
+	for i in mi.mesh.get_surface_count():
+		var maps := MAPS if i == 0 else PROPS_MAPS
+		mi.set_surface_override_material(i, _material(mi.mesh.surface_get_material(i) as BaseMaterial3D,
+			"archers_atlas" if i == 0 else "archers_props", maps))
+		for dep: String in [maps % "", maps % "_mr", maps % "_n"]:
+			_register(dep)
+	_register(GLB)
 	var packed := PackedScene.new()
 	packed.pack(root)
 	root.free()
@@ -60,6 +53,22 @@ func _init() -> void:
 	print("army_models.tres: ", error_string(ResourceSaver.save(table, GameArt.ARMY_MODELS)))
 	ResourceSaver.set_uid(GameArt.ARMY_MODELS, table_uid)
 	quit()
+
+
+func _material(src: BaseMaterial3D, name: String, maps: String) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = name
+	mat.albedo_texture = load(maps % "")
+	mat.metallic = 1.0
+	mat.metallic_texture = load(maps % "_mr")
+	mat.metallic_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_BLUE
+	mat.roughness_texture = mat.metallic_texture
+	mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+	mat.normal_enabled = true
+	mat.normal_texture = load(maps % "_n")
+	if src != null:
+		mat.cull_mode = src.cull_mode   # the delivery's doubleSided
+	return mat
 
 
 ## A script run (-s) does not load the editor's UID cache, so the saver

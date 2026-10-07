@@ -2,14 +2,17 @@
 
     python3 tools/units3d/archer_install/install.py [SRC.glb]
 
-SRC defaults to assets/3D/units/archers/model_wip/tripo/archer_rigged.glb:
-tools/units3d/archer_rig/export.py's export of archer_rig_work.blend (the
-Tripo generation rigged and animated by tools/units3d/archer_rig/).
-Writes assets/3D/units/archers/archers.glb: the same mesh, skin and five clips,
-turned half round to face the way every piece faces (glTF -Z), named on the
-cavalry's pattern (archers_rig / archers / archers_atlas*) so Godot's import
-extracts the maps as archers_archers_atlas{,_n,_mr}.jpg beside it, each
-downsized 4096 -> 2048 JPEG (one 2048 atlas per unit). It also writes the
+SRC defaults to assets/3D/units/archers/model_wip/tripo_v2/archer_rigged.glb:
+tools/units3d/archer_tripo/export.py's export of archer_tripo_work.blend (the
+v2 archer: Tripo's own rig and skin, the v1 bow and quiver put on, the clips
+of tools/units3d/archer_tripo/).
+Writes assets/3D/units/archers/archers.glb: the same mesh (two surfaces: the
+body, the bow and quiver), skin and five clips, turned half round to face the
+way every piece faces (glTF -Z), named on the cavalry's pattern (archers_rig /
+archers / archers_atlas*, archers_props*) so Godot's import extracts the maps as
+archers_archers_atlas{,_n,_mr}.jpg and archers_archers_props{,_n,_mr}.jpg beside
+it, re-encoded JPEG at most SIZE (the body) / PROPS_SIZE (the props: their
+spots of the v1 atlas). It also writes the
 archers' entry in assets/3D/units/units3d.json (MEASURED: height, stride).
 Then: Godot's import, and tools/units3d/archer_install/make_scene.gd.
 """
@@ -22,11 +25,12 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[3]
-SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "assets/3D/units/archers/model_wip/tripo/archer_rigged.glb"
+SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "assets/3D/units/archers/model_wip/tripo_v2/archer_rigged.glb"
 OUT = ROOT / "assets/3D/units/archers/archers.glb"
 UNITS = ROOT / "assets/3D/units/units3d.json"
-STRIDE_M = 1.5          # archer_rig/actions.py march(): one loop of MARCH carries the body this far
+STRIDE_M = 2.0          # archer_tripo/actions.py march(): one loop of MARCH carries the body this far
 SIZE = 2048
+PROPS_SIZE = 1024
 QUALITY = 92
 BONES: dict = {}       # the rig already names the chip's bone "head"
 
@@ -51,13 +55,15 @@ def write_glb(path: Path, j: dict, binary: bytes) -> None:
 
 def main() -> None:
     j, b = read_glb(SRC)
-    mat = j["materials"][0]
-    pbr = mat["pbrMetallicRoughness"]
-    role = {  # image index -> its new name
-        j["textures"][pbr["baseColorTexture"]["index"]]["source"]: "archers_atlas",
-        j["textures"][mat["normalTexture"]["index"]]["source"]: "archers_atlas_n",
-        j["textures"][pbr["metallicRoughnessTexture"]["index"]]["source"]: "archers_atlas_mr",
-    }
+    role, cap = {}, {}  # image index -> its new name, its largest side
+    for mi, (mname, size) in enumerate((("archers_atlas", SIZE), ("archers_props", PROPS_SIZE))):
+        mat = j["materials"][mi]
+        pbr = mat["pbrMetallicRoughness"]
+        for key, tex in (("", pbr["baseColorTexture"]), ("_n", mat["normalTexture"]), ("_mr", pbr["metallicRoughnessTexture"])):
+            src = j["textures"][tex["index"]]["source"]
+            role[src] = mname + key
+            cap[src] = size
+        mat["name"] = mname
     image_views = {im["bufferView"]: i for i, im in enumerate(j["images"])}
     # rebuild the buffer view by view, the images re-encoded
     out = bytearray()
@@ -66,8 +72,9 @@ def main() -> None:
         chunk = b[off:off + bv["byteLength"]]
         if vi in image_views:
             img = Image.open(io.BytesIO(chunk)).convert("RGB")
-            if img.width > SIZE:
-                img = img.resize((SIZE, SIZE), Image.LANCZOS)
+            c = cap[image_views[vi]]
+            if img.width > c:
+                img = img.resize((c, c), Image.LANCZOS)
             buf = io.BytesIO()
             img.save(buf, "JPEG", quality=QUALITY, subsampling=0)
             chunk = buf.getvalue()
@@ -79,7 +86,6 @@ def main() -> None:
         bv["byteLength"] = len(chunk)
         out += chunk
     j["buffers"] = [{"byteLength": len(out)}]
-    mat["name"] = "archers_atlas"
     for n in j["nodes"]:
         if "mesh" in n:
             n["name"] = "archers"
@@ -97,31 +103,31 @@ def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     write_glb(OUT, j, bytes(out))
     acc = j["accessors"]
-    prim = j["meshes"][0]["primitives"][0]
     write_units(j)
     print("%s: %d tris, %d bones, clips %s, %.1f MB" % (
-        OUT.relative_to(ROOT), acc[prim["indices"]]["count"] // 3, len(j["skins"][0]["joints"]),
+        OUT.relative_to(ROOT), sum(acc[p["indices"]]["count"] for p in j["meshes"][0]["primitives"]) // 3, len(j["skins"][0]["joints"]),
         [a["name"] for a in j["animations"]], OUT.stat().st_size / 1e6))
 
 
 def write_units(j: dict) -> None:
     """The archers' entry in units3d.json, measured from the file: height (glTF y of the mesh's
-    POSITION max), the clips' frame ranges at 30 fps, bones, triangles."""
+    POSITION over its surfaces), the clips' frame ranges at 30 fps, bones, triangles."""
     acc = j["accessors"]
-    prim = j["meshes"][0]["primitives"][0]
-    pos = acc[prim["attributes"]["POSITION"]]
+    prims = j["meshes"][0]["primitives"]
+    top = max(acc[p["attributes"]["POSITION"]]["max"][1] for p in prims)
+    bottom = min(acc[p["attributes"]["POSITION"]]["min"][1] for p in prims)
     units = json.loads(UNITS.read_text())
     units["archers"] = {
         "actions": {a["name"]: [0, round(max(acc[s["input"]]["max"][0] for s in a["samplers"]) * 30)] for a in j["animations"]},
         "bones": len(j["skins"][0]["joints"]),
         "fps": 30,
-        "height_m": round(pos["max"][1] - pos["min"][1], 3),
+        "height_m": round(top - bottom, 3),
         "kind": "humanoid",
         "label": "Archer",
-        "source": "Tripo 3D (owner, paid plan) from REF_archers_qwenfast_s2.png; tools/units3d/archer_rig/",
+        "source": "Tripo 3D (owner, paid plan): the v2 T-pose generation auto-rigged by Tripo, the v1 bow and quiver put on; tools/units3d/archer_tripo/",
         "stride_m": STRIDE_M,
-        "tris": acc[prim["indices"]]["count"] // 3,
-        "weights": {"body": "heat", "props": "rigid", "bow": "graded"},
+        "tris": sum(acc[p["indices"]]["count"] for p in prims) // 3,
+        "weights": {"body": "tripo", "props": "rigid", "bow": "graded"},
     }
     UNITS.write_text(json.dumps(dict(sorted(units.items())), indent=1) + "\n")
 

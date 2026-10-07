@@ -5,12 +5,15 @@ extends PopupMenu
 ## in the order they are shown — so renaming or reordering them touches no code.
 ##
 ## MARCH is AIMED, not issued by the menu: choosing it arms the map, the next
-## left click on the ground is the destination, and the same menu then asks
-## COMMIT or CANCEL there, the route drawn to it (owner 2026-09-27) — only a
-## commit sends the order. That is why its label ends in an ellipsis.
-## GARRISON runs at once. Escape or a click away from the confirm gives it up.
-## A committed march's end ring opens the ROUTE menu: Edit route… aims it
-## anew, Cancel march halts it (an ARMY_GARRISON).
+## left click on the ground is the destination, and the CONFIRM PANEL
+## (MarchConfirmPanel, spec 2026-10-07-march-waypoints) opens there, the route
+## drawn to it — the load to carry with each load's days, Confirm, Add
+## waypoint, Cancel. Only Confirm sends the order. Add waypoint keeps the point
+## and aims on from it; while the panel stands the route can be bent on the map
+## (its `route_bent`), each waypoint checked as the end is. That is why its
+## label ends in an ellipsis. Escape, Cancel or a right click give it up.
+## A committed march's end ring opens the ROUTE menu: Edit route… loads its
+## waypoints and end into the panel, Cancel march halts it (an ARMY_GARRISON).
 ##
 ## Routes are planned only on a PAUSED clock (owner 2026-09-27: 兵人行进路线只能
 ## 在暂停模式下选择，时间流逝的时候不可以操作): while time runs MARCH, Edit and
@@ -26,23 +29,25 @@ extends PopupMenu
 ## landed on.
 signal aiming_changed(regiment_code: String)
 
-## The confirm and route menus' ids, after the order rows'.
-const COMMIT := 100
+## The route menu's ids, after the order rows'; CANCEL is the supply
+## rates' Cancel row.
 const CANCEL := 101
 const EDIT := 200
 const HALT := 201
 const STRIKE := 202
 ## The supply rows (spec 2026-10-07-army-supply-lines §5.1): Add / Change
-## supply point…, Withdraw supply point, Carry N days (CARRY_BASE + the
-## row's index in data/army_carry_loads.csv), and the confirm's rates
-## (RATE_BASE + the index in SupplyLines.RATES).
+## supply point…, Withdraw supply point, and the confirm's rates (RATE_BASE +
+## the index in SupplyLines.RATES). The load is asked on the march's confirm
+## (owner 2026-10-07: 右键点击军队时，不要显示携带多少补给).
 const SUPPLY_ADD := 400
 const SUPPLY_WITHDRAW := 401
-const CARRY_BASE := 410
 const RATE_BASE := 420
 ## The seat row (spec 2026-10-07-army-split-and-ground §4.5): Take the seat /
 ## Garrison the town, for a unit camped by a town of the realm.
 const SEAT := 500
+
+## The march's confirm, authored (spec 2026-10-07-march-waypoints ruling 6).
+const CONFIRM_SCENE := preload("res://scenes/panels/march_confirm_panel.tscn")
 
 ## The WAR ROOM's menu (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1):
 ## every order given here is a DRAFT — COMMIT pencils a march, Cancel march
@@ -57,9 +62,15 @@ var _code := ""
 ## §5.6): the map's selection when `_code` is in it, else [_code].
 var _codes: Array = []
 var _aiming := ""
-## The aimed march's destination (pack px) while COMMIT / CANCEL is asked;
+## The aimed march's destination (pack px) while the confirm is asked;
 ## Vector2(-1, -1) when none waits.
 var _pending := Vector2(-1, -1)
+## The pending route's waypoints, pack px in order (the map's `aim_waypoints`).
+var _waypoints: Array = []
+## The confirm panel (made on first use, beside this menu) and where the route
+## menu was opened, for an Edit route… that opens the panel there.
+var _panel: MarchConfirmPanel = null
+var _route_at := Vector2.ZERO
 ## The regiment whose supply point is being picked, "" when none; and the
 ## town clicked, whose rate the confirm asks.
 var _supply_for := ""
@@ -80,6 +91,8 @@ func follow(map: Node) -> void:
 	map.connect("ground_clicked", _on_ground)
 	if map.has_signal("route_clicked"):
 		map.connect("route_clicked", _open_route)
+	if map.has_signal("route_bent"):
+		map.connect("route_bent", _on_route_bent)
 	popup_hide.connect(func() -> void: _after_hide.call_deferred())
 
 
@@ -136,16 +149,6 @@ func _add_supply_rows(code: String) -> void:
 	_supply_row("change" if has_line else "add", SUPPLY_ADD, paused)
 	if has_line:
 		_supply_row("withdraw", SUPPLY_WITHDRAW, paused if paused != "" else _refusal("SUPPLY_POINT_CLEAR", code))
-	var carry := ArmySystem.carry_of(Game.data, Game.state.regiments.get(code, {}))
-	var carry_row: Dictionary = Game.data.army_supply_orders.get("carry", {})
-	var title := String(carry_row.get("label", "Carry"))
-	for i in Game.data.army_carry_loads.size():
-		var row: Dictionary = Game.data.army_carry_loads[i]
-		add_check_item("%s %s" % [title, String(row["label"])], CARRY_BASE + i)
-		var at := get_item_index(CARRY_BASE + i)
-		set_item_checked(at, int(row["days"]) == carry)
-		set_item_disabled(at, paused != "")
-		set_item_tooltip(at, paused if paused != "" else String(carry_row.get("hint", "")))
 
 
 ## A committed march's end ring (or the war room's pennant, which also stands
@@ -162,6 +165,7 @@ func _open_route(code: String, at: Vector2) -> void:
 	_set_aim("")
 	_code = code
 	_codes = [code]
+	_route_at = at
 	clear()
 	_add_row("edit", EDIT, _paused_reason())
 	if draft:
@@ -172,12 +176,97 @@ func _open_route(code: String, at: Vector2) -> void:
 	_pop(at)
 
 
-## The destination was clicked: ask COMMIT or CANCEL there.
+## The destination was clicked (or a route loaded for editing): the confirm
+## panel opens beside `at` (the map's px) with the route's figures.
 func _open_confirm(at: Vector2) -> void:
-	clear()
-	_add_row("commit_draft" if drafting else _row_key("commit", _aiming), COMMIT, "")
-	_add_row("cancel", CANCEL, "")
-	_pop(at)
+	var p := confirm_panel()
+	var plan := _plan()
+	var carry := ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, _aiming))
+	if drafting:
+		var d := WarDrafts.of(Game.state, _aiming)
+		carry = int(d.get("carry_days", carry))
+	var commit := _route_row("commit_draft" if drafting else _row_key("commit", _aiming))
+	p.show_plan(plan["title"], plan["sub"], plan["rows"], carry if not (plan["rows"] as Array).is_empty() else -1,
+		commit, _add_waypoint_row(), _route_row("cancel"))
+	var origin := (_map as Control).get_global_rect().position if _map is Control else Vector2.ZERO
+	var map_rect := (_map as Control).get_global_rect() if _map is Control else Rect2()
+	if _map != null and _map.has_signal("hover_cleared"):
+		_map.emit_signal("hover_cleared")   # the WAR ROOM's slip at the tip goes: the confirm speaks now
+	p.place_near(origin + at, _route_rect(origin), map_rect)
+
+
+## The planned route's box on screen (global px): the piece, its waypoints and
+## the end, as the map projects them — the panel keeps off it. Rect2() when
+## the map cannot project.
+func _route_rect(origin: Vector2) -> Rect2:
+	if _map == null or not _map.has_method("screen_pos_of_px"):
+		return Rect2()
+	var pts: Array = [ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, _aiming, Game.state))]
+	if _map.has_method("position_of"):
+		pts[0] = _map.call("position_of", _aiming)   # the WAR ROOM's believed place
+	pts.append_array(_waypoints)
+	pts.append(_pending)
+	var box := Rect2()
+	var any := false
+	for p: Vector2 in pts:
+		var at: Variant = _map.call("screen_pos_of_px", p)
+		if at == null:
+			continue
+		var g := origin + (at as Vector2)
+		box = Rect2(g, Vector2.ZERO) if not any else box.expand(g)
+		any = true
+	return box
+
+
+## The panel, made on first use beside this menu (a child of its screen).
+func confirm_panel() -> MarchConfirmPanel:
+	if _panel == null:
+		_panel = CONFIRM_SCENE.instantiate() as MarchConfirmPanel
+		var host := get_parent() if get_parent() != null else self
+		host.add_child(_panel)
+		_panel.confirmed.connect(func(_carry: int) -> void: _commit())
+		_panel.waypoint_added.connect(_add_waypoint)
+		_panel.cancelled.connect(func() -> void: _withdraw("The march is given up."))
+	return _panel
+
+
+## The pending route's title, sub line and load rows (MarchPlan) — a fleet,
+## which carries no train, has no rows and says its days in the sub line.
+func _plan() -> Dictionary:
+	var code := _aiming
+	var reg := ArmySystem.regiment(Game.data, code, Game.state)
+	var naval := String(reg.get("is_naval", "0")) == "1"
+	var rows := [] if naval else MarchPlan.carry_rows(Game.data, Game.state, code, _pending, _waypoints)
+	var from := ArmySystem.position_of(Game.data, Game.state, reg)
+	var metres := 0.0
+	var curve := ArmySystem.curve_px(Game.data, from, _waypoints, _pending)
+	for i in range(1, curve.size()):
+		metres += curve[i - 1].distance_to(curve[i]) * float(ArmySystem.metres_per_pack_px(Game.data))
+	var unit := String(Game.data.map_info.get("distance_unit", "km"))
+	var dist := metres / (1609.0 if unit == "mi" else 1000.0)
+	var sub := "%s %s" % [UiPalette.format_int(int(round(dist))), unit]
+	if not _waypoints.is_empty():
+		sub += " · %d waypoint%s" % [_waypoints.size(), "" if _waypoints.size() == 1 else "s"]
+	if naval:
+		var days := CourierSystem.arrival_days(Game.data, Game.state, code, _pending, Vector2(-1, -1), -1, _waypoints)
+		sub += " · arrives in %d day%s" % [days, "" if days == 1 else "s"]
+	return {"title": "%s to %s" % [_name_of(code), Intel.place_label(Game.data, Game.state, _pending)],
+		"sub": sub, "rows": rows}
+
+
+func _route_row(key: String) -> Dictionary:
+	var row: Dictionary = Game.data.army_route_orders.get(key, {"label": key, "hint": ""})
+	return {"label": String(row["label"]), "hint": String(row["hint"]).replace("{fee}",
+		str(CourierSystem.fee_gold(Game.data, CourierSystem.ORDINARY))), "why": ""}
+
+
+func _add_waypoint_row() -> Dictionary:
+	var row := _route_row("add_waypoint")
+	var most := int(Game.data.bal("army_march_waypoints_max"))
+	if _waypoints.size() >= most:
+		row["why"] = String(Game.data.army_route_orders.get("waypoints_full", {}).get("hint",
+			"A march takes at most {max} waypoints")).replace("{max}", str(most))
+	return row
 
 
 ## A fleet's orders take no courier yet (CourierSystem.carries_orders), so
@@ -242,10 +331,6 @@ func _on_chosen(id: int) -> void:
 	if id >= RATE_BASE and id < RATE_BASE + SupplyLines.RATES.size():
 		_send_supply(int(SupplyLines.RATES[id - RATE_BASE]))
 		return
-	if id >= CARRY_BASE and id < CARRY_BASE + Game.data.army_carry_loads.size():
-		if _code != "" and _paused_reason() == "":
-			_run_each("SUPPLY_CARRY_SET", {"days": int(Game.data.army_carry_loads[id - CARRY_BASE]["days"])})
-		return
 	if id == SUPPLY_ADD:
 		if _code != "" and _paused_reason() == "":
 			_start_supply_pick(_code)
@@ -255,9 +340,6 @@ func _on_chosen(id: int) -> void:
 			_run_each("SUPPLY_POINT_CLEAR", {})
 		return
 	match id:
-		COMMIT:
-			_commit()
-			return
 		CANCEL:
 			if _supply_for != "":
 				_end_supply_pick()
@@ -267,8 +349,7 @@ func _on_chosen(id: int) -> void:
 			return
 		EDIT:
 			if _code != "" and _paused_reason() == "":
-				_set_aim(_code)
-				Game.publish_news("%s awaits a new route — click where to send it." % _name_of(_code))
+				_edit_route(_code)
 			return
 		HALT:
 			if _code != "" and drafting:
@@ -297,10 +378,11 @@ func _on_chosen(id: int) -> void:
 
 
 ## The aimed march's destination: held, drawn to, and asked about — the
-## order goes in only on COMMIT. The confirm opens at `screen_px`, the click's
+## order goes in only on Confirm. The panel opens at `screen_px`, the click's
 ## own point in the map's px: the OS cursor (get_local_mouse_position) is not
 ## the click's when the click was pushed rather than made — the snapshot
 ## harness's, which put the menu wherever the real cursor was (2026-09-30).
+## While the panel stands a click on the ground does nothing (ruling 7).
 func _on_ground(pack_px: Vector2, screen_px := Vector2(-1, -1)) -> void:
 	if _supply_for != "" and _supply_town == "":
 		var pick_at := screen_px
@@ -319,24 +401,113 @@ func _on_ground(pack_px: Vector2, screen_px := Vector2(-1, -1)) -> void:
 	_open_confirm(at)
 
 
+## Confirm: the load (when it changes) and the march with its waypoints — in
+## the WAR ROOM one draft holding both (ruling 8). A refusal is said and the
+## route stays up to be mended.
 func _commit() -> void:
 	if _aiming == "" or _pending.x < 0.0:
 		return
 	var code := _aiming
 	var to := _pending
-	_set_aim("")
+	var wps := _waypoints.duplicate()
+	var pairs: Array = []
+	for w: Vector2 in wps:
+		pairs.append([w.x, w.y])
+	var params := {"regiment": code, "x": to.x, "y": to.y}
+	if not pairs.is_empty():
+		params["waypoints"] = pairs
+	var march := ActionRequest.make("ARMY_MARCH", params)
+	var carry := _panel.chosen_carry() if _panel != null else -1
+	var own := ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, code))
 	if drafting:
 		# a draft costs nothing yet, but no seal could ever send one into the sea
-		var why := Game.engine.actions.validate_place(
-			ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": to.x, "y": to.y}), Game.state)
+		var why := Game.engine.actions.validate_place(march, Game.state)
 		if why != "":
 			Game.publish_news(why)
 			return
-		Game.plant_draft(code, WarDrafts.MARCH, to)
+		_set_aim("")
+		Game.plant_draft(code, WarDrafts.MARCH, to, wps, carry if carry >= 0 and carry != own else -1)
 		Game.publish_news("%s's march is pencilled in." % _name_of(code))
 		return
-	# one destination for the whole selection (spec §5.6): each its own order
-	_run_each("ARMY_MARCH", {"x": to.x, "y": to.y})
+	# one destination for the whole selection (spec 2026-10-07-army-split-and-
+	# ground §5.6): each unit its own load and march, judged alone
+	var sends: Array = []
+	var refused: Array = []
+	for c: String in ([code] + _codes.filter(func(x: String) -> bool: return x != code)):
+		var reqs := _march_reqs(c, to, pairs, carry)
+		var why := ""
+		for req: ActionRequest in reqs:
+			why = Game.engine.actions.validate(req, Game.state)
+			if why != "":
+				break
+		if why == "":
+			sends.append(reqs)
+		else:
+			refused.append(why if refused.is_empty() and sends.is_empty() and c == code
+				else "%s: %s" % [_name_of(c), why])
+	if sends.is_empty():
+		Game.publish_news(String(refused[0]))   # the route stays up to be mended
+		return
+	_set_aim("")
+	for why: String in refused:
+		Game.publish_news(why)
+	for reqs: Array in sends:
+		if reqs.size() > 1:
+			var out := Game.try_execute(reqs[0])   # its own courier; the march's news follows
+			if not bool(out.get("ok", false)):
+				Game.publish_news(String(out.get("error", "That order cannot be given.")))
+				continue
+		_run(reqs.back())
+
+
+## A unit's Confirm: SUPPLY_CARRY_SET when `carry` changes its load, then
+## ARMY_MARCH to `to` through `pairs` (waypoints as [x, y]).
+func _march_reqs(c: String, to: Vector2, pairs: Array, carry: int) -> Array:
+	var params := {"regiment": c, "x": to.x, "y": to.y}
+	if not pairs.is_empty():
+		params["waypoints"] = pairs.duplicate(true)
+	var out: Array = []
+	if carry >= 0 and carry != ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, c)):
+		out.append(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": c, "days": carry}))
+	out.append(ActionRequest.make("ARMY_MARCH", params))
+	return out
+
+
+## Add waypoint: the destination becomes the route's next waypoint and the
+## aim goes on from it (owner 2026-10-07: 可以继续选择前进路线).
+func _add_waypoint() -> void:
+	if _aiming == "" or _pending.x < 0.0:
+		return
+	if String(_add_waypoint_row()["why"]) != "":
+		Game.publish_news(String(_add_waypoint_row()["why"]))
+		return
+	_waypoints.append(_pending)
+	_pending = Vector2(-1, -1)
+	_map_set("aim_dest", Vector2(-1, -1))
+	_map_set("aim_waypoints", PackedVector2Array(_waypoints))
+	if _panel != null:
+		_panel.hide()
+	Game.publish_news("%s — click where the march goes next." % _name_of(_aiming))
+
+
+## The map bent the pending route (a waypoint dragged or inserted): taken when
+## every point is one the regiment could be sent to, else put back and why said.
+func _on_route_bent(waypoints: PackedVector2Array) -> void:
+	if _aiming == "" or _pending.x < 0.0:
+		return
+	var pairs: Array = []
+	for w: Vector2 in waypoints:
+		pairs.append([w.x, w.y])
+	var why := Game.engine.actions.validate_place(ActionRequest.make("ARMY_MARCH",
+		{"regiment": _aiming, "x": _pending.x, "y": _pending.y, "waypoints": pairs}), Game.state)
+	if why != "":
+		Game.publish_news(why)
+		_map_set("aim_waypoints", PackedVector2Array(_waypoints))
+		return
+	_waypoints = Array(waypoints)
+	if _panel != null and _panel.visible:
+		var plan := _plan()
+		_panel.refresh(plan["title"], plan["sub"], plan["rows"], _add_waypoint_row())
 
 
 ## An aim or a waiting confirm given up.
@@ -347,14 +518,36 @@ func _withdraw(news: String) -> void:
 	Game.publish_news(news)
 
 
-## The confirm closed without COMMIT (a click away from it): give it up.
-## Deferred, because PopupMenu hides BEFORE it emits id_pressed.
+## Edit route…: the march's waypoints still ahead and its end loaded as the
+## pending route, the panel opened where the route menu stood (ruling 10) — a
+## draft's own, else the newest march courier's, else the column's.
+func _edit_route(code: String) -> void:
+	var dest := ArmySystem.destination_of(Game.data, Game.state, code)
+	var wps: Array = Array(ArmySystem.waypoints_of(Game.data, Game.state, code))
+	var draft := WarDrafts.of(Game.state, code) if drafting else {}
+	var riding := CourierSystem.pending_for(Game.state, code)
+	var order: Dictionary = riding.get("order", {}) if not riding.is_empty() else {}
+	if String(draft.get("order", "")) == WarDrafts.MARCH:
+		dest = WarDrafts.dest_px(Game.data, draft)
+		wps = Array(WarDrafts.waypoints_px(Game.data, draft))
+	elif String(order.get("action_code", "")) == "ARMY_MARCH":
+		dest = ArmySystem.metres_to_pack(Game.data, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))
+		wps = CourierSystem.waypoints_px(Game.data, order)
+	_set_aim(code)
+	_waypoints = wps
+	_pending = dest
+	_map_set("aim_waypoints", PackedVector2Array(_waypoints))
+	_map_set("aim_dest", dest)
+	_open_confirm(_route_at)
+
+
+## The supply rates closed with no row chosen (a click away): give the pick
+## up. Deferred, because PopupMenu hides BEFORE it emits id_pressed. The
+## march's confirm is the panel, which a click away leaves standing (ruling 7).
 func _after_hide() -> void:
 	if _supply_town != "" and not visible:   # the rates, closed with no row chosen
 		_end_supply_pick()
 		Game.publish_news("No supply point is chosen.")
-	if _pending.x >= 0.0 and not visible:
-		_withdraw("The march is given up.")
 
 
 ## The clock started: no route is planned while time runs.
@@ -440,6 +633,10 @@ func _run(req: ActionRequest) -> void:
 
 func _set_aim(code: String) -> void:
 	_pending = Vector2(-1, -1)
+	_waypoints = []
+	if _panel != null:
+		_panel.hide()
+	_map_set("aim_waypoints", PackedVector2Array())
 	if _map != null and "aim_dest" in _map:
 		_map.set("aim_dest", Vector2(-1, -1))
 	if _aiming == code:
@@ -604,6 +801,16 @@ func aiming() -> String:
 	return _aiming
 
 
-## Test seam: the destination waiting for COMMIT, Vector2(-1, -1) when none.
+## Test seam: the destination waiting for Confirm, Vector2(-1, -1) when none.
 func pending() -> Vector2:
 	return _pending
+
+
+## Test seam: the pending route's waypoints, pack px.
+func waypoints() -> Array:
+	return _waypoints
+
+
+## The confirm panel when it is up, else null (tests and the snapshot tool).
+func shown_confirm() -> MarchConfirmPanel:
+	return _panel if _panel != null and _panel.visible else null
