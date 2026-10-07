@@ -208,6 +208,23 @@ static func _migrate_skims(raw: Dictionary) -> Dictionary:
 ## strings, bools, already-nested structures) untouched. Saves written before
 ## version 4 carry ints in the float encoding; those still load, as floats —
 ## the same values this build produced before, so no migration is needed.
+## A plain JSON value with every number made whole again (JSON reads them as
+## floats); strings untouched.
+static func _whole(value):
+	if value is Dictionary:
+		var out := {}
+		for k in value:
+			out[k] = _whole(value[k])
+		return out
+	elif value is Array:
+		var out := []
+		for v in value:
+			out.append(_whole(v))
+		return out
+	elif typeof(value) == TYPE_FLOAT:
+		return int(round(value))
+	return value
+
 static func _decode_values(value):
 	if value is Dictionary:
 		var out := {}
@@ -301,6 +318,10 @@ var next_courier_id := 0
 ## The WAR ROOM's pencilled orders (spec 2026-10-02-war-room-v2 §3.1,
 ## WarDrafts): regiment code -> {order, dest_x_m, dest_y_m, tick, day, refused}.
 var war_drafts: Dictionary = {}
+## The WAR ROOM's plans (spec 2026-10-07-war-room-annotations-and-planning-
+## pieces §1.1, WarPlans): the player's own paper — supposed enemy pieces and
+## the staff's strokes, in whole metres; no engine rule reads them.
+var war_plans: Dictionary = WarPlans.empty()
 ## The letters the crown has received (owner 2026-09-28, MissiveLog): an Array
 ## of Dictionaries, whole numbers and strings only.
 var missives: Array = []
@@ -371,6 +392,9 @@ func to_dict() -> Dictionary:
 		"regiments": _encode_values(regiments.duplicate(true)),
 		"couriers": _encode_values(couriers.duplicate(true)),
 		"war_drafts": _encode_values(war_drafts.duplicate(true)),
+		# whole numbers and the player's own words only: written plain, so a
+		# name shaped like the codec's "i5" stays a name (_whole reads it back)
+		"war_plans": war_plans.duplicate(true),
 		"next_courier_id": _encode_values(next_courier_id),
 		"missives": _encode_values(missives.duplicate(true)),
 		"next_missive_id": _encode_values(next_missive_id),
@@ -455,6 +479,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))
 	s.war_drafts = _decode_values(d.get("war_drafts", {}))
+	# Saves from before the plans carry none: an empty table.
+	s.war_plans = _whole(d.get("war_plans", WarPlans.empty()))
 	s.next_courier_id = int(_decode_values(d.get("next_courier_id", 0)))
 	# Saves from before the Missive board carry neither key: an empty board.
 	s.missives = _decode_values(d.get("missives", []))

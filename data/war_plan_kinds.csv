@@ -1,0 +1,7 @@
+kind,label,tool_key,gesture,head,teeth,pen,name_default,cut,notes
+arrow,Axis arrow,1,path,1,0,0,,1,"WAR ROOM plans (owner 2026-10-07, spec 2026-10-07-war-room-annotations-and-planning-pieces §2.1): NATO's axis of advance as a broad crayon band widening to a filled head, its tail notched like a pennon. gesture: path (press-drag-release), ring (a compass from the centre), loop (a closed lasso), point (a click). pen 1: drawn as sepia ink, not crayon, and the pen is its default stick. cut: the build the kind came with (2 = the second cut, no slot yet)"
+front,Front line,2,path,0,1,0,,1,"a fortified line: a thick crayon line with saw teeth on the side it faces (the drawer's right; Flip teeth moves them)"
+phase,Phase line,3,path,0,0,1,Line {roman},1,"a dashed pen line lettered at both ends"
+objective,Objective,4,ring,0,0,1,Obj. {letter},1,"a double ring lettered in small capitals"
+area,Area,,loop,0,0,0,,2,"an assembly area: a crayon outline hatched across"
+checkpoint,Checkpoint,,point,0,0,0,{n},2,"a small crayon triangle, numbered"

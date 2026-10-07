@@ -19,3 +19,7 @@ candle,#FFB46B,"WAR ROOM (fix round 1): the candles' light, key and accents alik
 wood_ink,#3E4A2C77,"WAR ROOM v2 B (spec §2.4): the woods' little trees, a green-black ink"
 intel_ink,#3B2F6E99,"WAR ROOM v2 B (spec §2.4): the intelligence layer's ink — a dark violet, apart from the sheet's sepia"
 pencil,#5A4C3CB8,"WAR ROOM v2 C (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1): graphite on vellum — a draft's line"
+plan_blue,#2E4C86,"WAR ROOM plans (owner 2026-10-07, style A): the woad / azurite wax crayon — ours"
+plan_red,#B02E1C,"WAR ROOM plans (owner 2026-10-07, style A): the minium (red lead) wax crayon — theirs; warmer than rubric and hazard_ink"
+plan_boxwood,#E8D2A0,"WAR ROOM plans (ruling 7): a supposed piece's pale boxwood, apart from the crown's dark oak"
+plan_unknown,#28241F,"WAR ROOM plans (ruling 5): the plinth lacquer of a supposed host whose side is Unknown — sable"
