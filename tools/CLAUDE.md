@@ -24,6 +24,14 @@ Headless bakes, importers, installers, snapshots and benches (`Godot -s`, or the
 - **The application icon** `icon.png` (X-01, its own matte emblem style, `app_icon_prompts.csv`, `APP_ICON_SEED` chosen to read at 16 px), installed full-bleed by `install_map_art.py app_icon`.
 - **Table props** (the council seal U-60 and friends): `assets/flux/table_prop_prompts.csv`, `STYLE_CORE_table_prop.txt`, cut out by colour. The Missive board's styles are derived from installed art by `tools/missive_board_art.py` (nothing generated).
 - **Tree crowns**: aerial photographs of trees on white (`assets/flux/tree_crown_prompts.csv`, `STYLE_CORE_aerial_tree.txt`), cut and packed by `build_tree_atlas.py`.
+- **Event illustration prompt rules** (prologue pictures; five rounds, 2026-09-21). Read before writing or re-rolling an event picture's prompt:
+  1. **画布拼在 prompt 末尾，抢得过场景词。** `STYLE_CORE` 在最前面说的"12–14 世纪"压不住场景自己的名词——写 `livery` 就出拿破仑制服，写 `ministers` 就出 19 世纪会议室，写 `travelling gown` 就出维多利亚裙。凡是要钉死的约束，写进 `[C-...]` 画布，不要指望风格核心。
+  2. **画面里有纸，就一定会长出假文字。** 负面词里的 `printed typography, lettering` 挡不住账簿、请愿书、条约。唯一有效的办法是**让纸本身看不见字**：合上、折起、背过去、只露封蜡，或者以极斜的角度只看得见尺线；并且在 subject 里明写"看不见任何字"。
+  3. **一个场景里有国王和别人打架，模型会把王冠戴错人。** 与其反复重摇，不如**把主角移出画面**——"从国王自己的位置看出去，画面里只有他伸出的手和袖子"，歧义就没了。
+  附带：Flux 把 `corn` 画成玉米。中世纪欧洲的麦田一律写 `wheat`，并加 `no maize`。
+  4. **手和脸糟，多半是构图问题，不是参数问题。** 同 seed 下 32 步对 20 步几乎没差别。一条 12:5 的宽带里七张脸、十四只手，4B 模型一定崩。画布里规定"最多三个清晰人物，其余小而虚"，并且**每只手都要有交代**——平放且手指并拢、交叠、握住一个点名的东西，或者出画。越肩构图（前景人物只有后脑和肩膀）是最省事的解法。
+  5. **画布只禁止，不规定。** 为了压时代漂移往画布里写"锁子甲、头盔、鸢形盾"，结果每张图都生效：大臣成了士兵，织工成了卫兵。改成"没被点名为士兵的人不许穿甲"，需要盔甲的场景自己写。
+  6. **人会被画两遍。** "站在他们身后的门口"经常变成"旁边一个、门口一个"。要么明写"画面里只有 N 个人"，要么把那个人挪进主群。
 
 ## 3D models
 
@@ -36,3 +44,7 @@ Headless bakes, importers, installers, snapshots and benches (`Godot -s`, or the
 - **The artist's kit** (`docs/art_team/`, README there): locked ComfyUI workflows built from `generate.py`'s presets and the style files, and the `cc_art_check` Blender add-on, whose export writes the node and image names the model scenes need (`tools/art_kit/blender/cc_art_check/specs.json`, from the shipped GLBs by `extract_specs.py` / `glb_names.py`), so a delivery overwrites the `.glb` as it is. `tools/art_kit/build_kit.py` rebuilds it; rerun it (and `extract_specs.py` after a skeleton, house row or shipped model changes).
 - **The WAR ROOM's art**: `tools/war_room/blender/` and `assets/flux/war_room_ref_prompts.csv`; textures kept as Basis Universal in the import. Its wooden pieces are Tripo generations (references `assets/flux/war_piece_prompts.csv`) processed by `wr_pieces.py` there (welded before the collapse: glTF splits seams, and collapsed apart they crack open) and dressed by `tools/war_room/make_piece_scenes.gd` (not headless).
 - `tools/migrate_asset_layout.py --apply` moves an old checkout's ignored files into the asset layout.
+
+## Topic guides (read the one you need BEFORE editing its code)
+
+- `tools/guide/unit_figures.md` — the owner's rulings on the infantry and cavalry figures: field kit, helmet, cloth, march / standby / garrison clips, the knight's shield (`tools/units3d/infantry_tripo/`, `cavalry_tripo/`, `cavalry_rig/`, `army_models.tres`)
