@@ -400,14 +400,19 @@ func _board_size() -> Vector2:
 	return (_board.mesh as QuadMesh).size
 
 
-## True when the panel's centre is in view, or the camera is the board's (the
-## screen renders the board's viewport only then).
+## True when any of the panel (its centre or a corner) is in view, or the
+## camera is the board's (the screen renders the board's viewport only then:
+## a board half in view must not show black).
 func board_visible() -> bool:
 	if _board_mode != "table":
 		return true
-	if _camera.is_position_behind(_board.global_position):
-		return false
-	return Rect2(Vector2.ZERO, size).has_point(_camera.unproject_position(_board.global_position) / window_scale())
+	var half := _board_size() * 0.5
+	var view := Rect2(Vector2.ZERO, size)
+	for c: Vector2 in [Vector2.ZERO, Vector2(-half.x, -half.y), Vector2(half.x, -half.y), Vector2(-half.x, half.y), half]:
+		var p := _board.global_transform * Vector3(c.x, c.y, 0.0)
+		if not _camera.is_position_behind(p) and view.has_point(_camera.unproject_position(p) / window_scale()):
+			return true
+	return false
 
 
 func _board_pose() -> Transform3D:

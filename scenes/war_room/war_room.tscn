@@ -124,7 +124,7 @@ mesh = SubResource("Marker_base")
 
 [node name="Easel" type="Node3D" parent="Viewport/Room" unique_id=185669517]
 unique_name_in_owner = true
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -1.5, -0.8, -0.15)
+transform = Transform3D(0.70710677, 0.21850802, -0.6724985, 0, 0.95105654, 0.309017, 0.70710677, -0.21850802, 0.6724985, 1.65, -0.9, -1.2)
 
 [node name="LegL" type="MeshInstance3D" parent="Viewport/Room/Easel" unique_id=1220550194]
 transform = Transform3D(0.996, 0.087, 0, -0.087, 0.996, 0, 0, 0, 1, -0.5, 0.75, -0.05)
