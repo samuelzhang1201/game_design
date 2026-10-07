@@ -74,8 +74,8 @@ const _SUPPLY_WORDS := {
 	"cut": "The road from %s to %s is cut by %s.",
 	"restored": "The road from %s to %s is open again.",
 	"town_low": "%s can feed %s for only %d more days.",
-	"low": "%s has under %d days of supplies (fed from %s).",
-	"empty": "%s has eaten its last supplies (fed from %s).",
+	"low": "%s has under %d days of supplies (%s).",
+	"empty": "%s has eaten its last supplies (%s).",
 	"cancelled": "%s is no longer ours: the line to %s is gone.",
 }
 
@@ -95,9 +95,9 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 			"town_low":
 				text = _SUPPLY_WORDS["town_low"] % [town, reg, int(e["days"])]
 			"low":
-				text = _SUPPLY_WORDS["low"] % [reg, int(repo.bal("army_supply_low_days")), town if town != "" else "no town"]
+				text = _SUPPLY_WORDS["low"] % [reg, int(repo.bal("army_supply_low_days")), _fed_from(town)]
 			"empty":
-				text = _SUPPLY_WORDS["empty"] % [reg, town if town != "" else "no town"]
+				text = _SUPPLY_WORDS["empty"] % [reg, _fed_from(town)]
 			"cancelled":
 				text = _SUPPLY_WORDS["cancelled"] % [town, reg]
 			_:
@@ -109,6 +109,10 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 		MissiveLog.subject("regiment", first, -1, at), "Supply dispatch", facts)
 
 
+static func _fed_from(town: String) -> String:
+	return "fed from %s" % town if town != "" else "no supply point"
+
+
 ## The marshal's month (spec §5.5): a row per land regiment — his CLAIM of
 ## what arrived, beside days in hand, load, point, rate, road, cartage and
 ## purchases.
@@ -116,14 +120,25 @@ static func marshal_report(repo: DataRepository, state: GameState, tick: int, ro
 	var facts: Array = []
 	var fee := 0
 	var buy := 0
+	var houses: Dictionary = {}
 	for r: Dictionary in rows:
 		var label := String(ArmySystem.regiment(repo, String(r["code"])).get("label", r["code"]))
 		var town := String((repo.burgs.get(String(r["town"]), {}) as Dictionary).get("label", ""))
 		var where := "no supply point" if town == "" else "%s · %.1f× · %d km" % [town, float(int(r["rate"])) / 1000.0, int(r["km"])]
+		@warning_ignore("integer_division")  # whole per cent of the permille
+		var lost := SupplySystem.loss_of(repo, int(r["km"])) / 10
 		facts.append(MissiveLog.words("days@" + String(r["code"]), label,
-			"%d days in hand of %d · %s · %d arrived · %d gold cartage" % [int(r["days"]), int(r["carry"]), where, int(r["claimed"]), int(r["fee"])]))
+			"%d days in hand of %d · %s%s · %d arrived · %d gold cartage" % [int(r["days"]), int(r["carry"]), where,
+				"" if town == "" else " · %d%% lost on the road" % lost,
+				int(r["claimed"]), int(r["fee"])]))
 		fee += int(r["fee"])
 		buy += int(r["buy"])
+		for h: String in (r["bought"] as Dictionary):
+			houses[h] = int(houses.get(h, 0)) + int((r["bought"] as Dictionary)[h])
+	var names: Array = houses.keys()
+	names.sort()
+	for i in range(names.size() - 1, -1, -1):
+		facts.push_front(MissiveLog.exact("bought@" + String(names[i]), "Bought from House %s" % names[i], int(houses[names[i]])))
 	facts.push_front(MissiveLog.exact("supply_buy", "Bought from the houses", buy))
 	facts.push_front(MissiveLog.exact("supply_fee", "Cartage, all lines", fee))
 	var home := MapManors.home_province(repo, state)

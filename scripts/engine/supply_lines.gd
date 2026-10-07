@@ -103,6 +103,34 @@ static func _new_record(town: String, rate: int, order_id: int) -> Dictionary:
 		"m_drawn": 0, "m_arrived": 0, "m_claimed": 0, "m_skim": 0, "m_fee": 0, "m_buy": 0, "m_bought": {}}
 
 
+const MONTH_KEYS := ["m_drawn", "m_arrived", "m_claimed", "m_skim", "m_fee", "m_buy"]
+
+
+## A line leaves state.supply_lines (cleared, cancelled, purged): its month's
+## counters are folded into the regiment's entry under the same keys, so the
+## marshal's report still tells of its cartage and its skim is still banked.
+static func _retire(state: GameState, code: String) -> void:
+	var ln := line(state, code)
+	var entry: Dictionary = state.regiments.get(code, {})
+	if not ln.is_empty() and not entry.is_empty():
+		for k: String in MONTH_KEYS:
+			entry[k] = int(entry.get(k, 0)) + int(ln.get(k, 0))
+		_merge_bought(entry, ln.get("m_bought", {}))
+	state.supply_lines.erase(code)
+
+
+## `bought` (house -> units) added into the record's m_bought.
+static func _merge_bought(rec: Dictionary, bought: Dictionary) -> void:
+	var mine: Dictionary = rec.get("m_bought", {})
+	add_houses(mine, bought)
+	rec["m_bought"] = mine
+
+
+static func add_houses(into: Dictionary, bought: Dictionary) -> void:
+	for house: String in bought:
+		into[house] = int(into.get(house, 0)) + int(bought[house])
+
+
 ## The record for a `pending` point replacing `old`: ORDERED, the month's
 ## counters of the line it follows carried over so the marshal's report keeps them.
 static func _renewed(old: Dictionary, pending: Dictionary) -> Dictionary:
@@ -161,7 +189,7 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 				# a newer SET is still riding: the wagons stop, the new point waits
 				state.supply_lines[code] = _renewed(ln, held)
 			else:
-				state.supply_lines.erase(code)
+				_retire(state, code)
 	return ev
 
 
@@ -344,13 +372,13 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 		var ln: Dictionary = state.supply_lines[code]
 		var reg := ArmySystem.regiment(repo, code)
 		if reg.is_empty() or not state.regiments.has(code):
-			state.supply_lines.erase(code)
+			_retire(state, code)
 			continue
 		var town := String(ln["town"])
 		if String(ln["state"]) == ORDERED and TownStores.is_realm_town(repo, state, town):
 			ln = _still_ordered(state, code, ln, riding)
 		if ln.is_empty() or not TownStores.is_realm_town(repo, state, String(ln["town"])):
-			state.supply_lines.erase(code)
+			_retire(state, code)
 			events.append({"type": "cancelled", "regiment": code, "town": town})
 			continue
 		town = String(ln["town"])
@@ -442,6 +470,7 @@ static func warn_day(repo: DataRepository, state: GameState) -> Array:
 static func settle_month(repo: DataRepository, state: GameState) -> Array:
 	var rows: Array = []
 	var gov := Governance.governor_of(repo, state, "supply_line")
+	var upg := TownStores.units_per_gold(repo)
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	for c in codes:
@@ -452,23 +481,30 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 		var entry: Dictionary = state.regiments[code]
 		var ln := line(state, code)
 		var use := ArmySystem.supply_use(repo, reg, state)
+		# The month's counters: the line's own plus those folded onto the entry
+		# (its refills in town, a line retired mid-month).
+		var sum: Dictionary = {}
+		for k: String in MONTH_KEYS:
+			sum[k] = int(ln.get(k, 0)) + int(entry.get(k, 0))
 		var bought: Dictionary = {}
-		for src: Dictionary in [ln, entry]:
-			var b: Dictionary = src.get("m_bought", {})
-			for house: String in b:
-				bought[house] = int(bought.get(house, 0)) + int(b[house])
+		add_houses(bought, ln.get("m_bought", {}))
+		add_houses(bought, entry.get("m_bought", {}))
+		var skimmed := TownStores.gold_of_units(repo, int(sum["m_skim"]))
 		rows.append({"code": code, "town": String(ln.get("town", "")), "rate": int(ln.get("rate", 0)),
 			"days": ArmySystem.days_in_hand(int(entry["supplies"]), use), "carry": ArmySystem.carry_of(repo, entry),
 			"km": 0 if ln.is_empty() else road_km(repo, road_px(repo, state, code, String(ln["town"]))),
-			"drawn": int(ln.get("m_drawn", 0)), "arrived": int(ln.get("m_arrived", 0)),
-			"claimed": int(ln.get("m_claimed", 0)), "fee": int(ln.get("m_fee", 0)),
-			"buy": int(ln.get("m_buy", 0)) + int(entry.get("m_buy", 0)), "bought": bought,
-			"skimmed": TownStores.gold_of_units(repo, int(ln.get("m_skim", 0))), "governor": gov})
+			"drawn": int(sum["m_drawn"]), "arrived": int(sum["m_arrived"]),
+			"claimed": int(sum["m_claimed"]), "fee": int(sum["m_fee"]),
+			"buy": int(sum["m_buy"]), "bought": bought,
+			"skimmed": skimmed, "governor": gov})
 		if not ln.is_empty():
-			for k: String in ["m_drawn", "m_arrived", "m_claimed", "m_skim", "m_fee", "m_buy"]:
+			for k: String in MONTH_KEYS:
 				ln[k] = 0
 			ln["m_bought"] = {}
-		entry["m_buy"] = 0
+		for k: String in MONTH_KEYS:
+			entry[k] = 0
+		# the fraction of a gold not yet banked is still owed, and stays
+		entry["m_skim"] = int(sum["m_skim"]) % upg
 		entry["m_bought"] = {}
 	Governance.add_skims(state, rows, "supply_line")
 	return rows

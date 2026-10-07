@@ -42,6 +42,14 @@ func test_every_event_kind_reads_as_a_sentence() -> void:
 		assert_ne(String(f["text"]), "")
 		assert_false(String(f["text"]).contains("%"), "no unfilled placeholder")
 
+func test_a_low_event_with_no_town_reads_whole() -> void:
+	var m := MissiveWriter.supply_dispatch(repo, s, [
+		{"type": "low", "regiment": _land(), "town": ""}, {"type": "empty", "regiment": _land(), "town": ""}])
+	for f: Dictionary in m["facts"]:
+		var t := String(f["text"])
+		assert_false(t.contains("%") or t.contains("{}"), t)
+		assert_true(t.ends_with("(no supply point)."), t)
+
 func test_a_day_with_events_files_one_letter_and_a_quiet_day_none() -> void:
 	var engine := TickEngine.new(repo)
 	var code := _land()
@@ -61,6 +69,9 @@ func test_a_day_with_events_files_one_letter_and_a_quiet_day_none() -> void:
 	supply = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "supply")
 	assert_eq(supply.size(), 1)
 	assert_true(s.missives.size() >= before + 1)
+	var facts: Array = supply[0]["facts"]
+	assert_eq(facts.filter(func(f: Dictionary) -> bool: return String(f["label"]) == "Empty").size(), 1,
+		"the hungry regiment's 'empty' event is in the letter")
 
 func test_the_marshals_report_has_a_row_per_land_regiment_and_resets_the_month() -> void:
 	var code := _land()
@@ -119,3 +130,77 @@ func test_a_month_turn_files_the_marshals_report() -> void:
 	engine.advance(s)
 	var got: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "supply_month")
 	assert_eq(got.size(), 1)
+
+func test_the_opening_tick_files_no_marshals_report() -> void:
+	var engine := TickEngine.new(repo)
+	s.tick = 0
+	engine.advance(s)
+	var got: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "supply_month")
+	assert_eq(got.size(), 0)
+
+func test_the_report_tells_the_road_loss_and_who_was_bought_from() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(repo, s)[0]
+	var rows := [
+		{"code": code, "town": town, "rate": 1000, "days": 9, "carry": 20, "km": 100, "claimed": 5, "fee": 3,
+			"buy": 8, "bought": {"House B": 4, "House A": 2}},
+		{"code": code, "town": "", "rate": 0, "days": 9, "carry": 20, "km": 0, "claimed": 0, "fee": 0,
+			"buy": 1, "bought": {"House B": 1}}]
+	var m := MissiveWriter.marshal_report(repo, s, 1, rows)
+	var facts: Array = m["facts"]
+	var by_key := {}
+	for f: Dictionary in facts:
+		by_key[String(f["key"])] = f
+	assert_eq(int(by_key["bought@House A"]["exact"]), 2)
+	assert_eq(int(by_key["bought@House B"]["exact"]), 5, "summed over the rows")
+	assert_eq(String(by_key["bought@House A"]["label"]), "Bought from House House A")
+	var keys: Array = facts.map(func(f: Dictionary) -> String: return String(f["key"]))
+	assert_lt(keys.find("bought@House A"), keys.find("bought@House B"), "houses in order")
+	var pct := SupplySystem.loss_of(repo, 100) / 10
+	assert_gt(pct, 0)
+	var first := ""
+	var second := ""
+	for f: Dictionary in facts:
+		if String(f["key"]) == "days@" + code:
+			if first == "":
+				first = String(f["text"])
+			else:
+				second = String(f["text"])
+	assert_string_contains(first, "%d%% lost on the road" % pct)
+	assert_false(second.contains("lost on the road"), "no road, no loss")
+
+func test_a_line_cancelled_mid_month_still_reports_its_fee_and_banks_its_skim() -> void:
+	var code := _land()
+	var realm: Array = TownStores.realm_towns(repo, s)
+	var far := ""
+	for b: String in repo.burgs.keys():
+		if not b in realm:
+			far = b
+			break
+	assert_ne(far, "")
+	s.supply_lines[code] = SupplyLines._new_record(far, 1000, 1)
+	s.supply_lines[code]["state"] = SupplyLines.FLOWING
+	s.supply_lines[code]["m_fee"] = 7
+	s.supply_lines[code]["m_skim"] = 100000
+	s.supply_lines[code]["m_bought"] = {"House A": 3}
+	SupplyLines.day_step(repo, s)
+	assert_false(s.supply_lines.has(code), "the line is cancelled")
+	var rows := SupplyLines.settle_month(repo, s)
+	var row := _row(rows, code)
+	assert_eq(int(row["fee"]), 7)
+	assert_eq(row["bought"], {"House A": 3})
+	assert_gt(int(row["skimmed"]), 0)
+	assert_eq(Governance.skimmed_on(s, String(row["governor"]), "supply_line"), int(row["skimmed"]))
+	assert_eq(int(s.regiments[code]["m_fee"]), 0)
+
+func test_the_skims_odd_units_carry_to_next_month() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(repo, s)[0]
+	var upg := TownStores.units_per_gold(repo)
+	s.supply_lines[code] = SupplyLines._new_record(town, 1000, 1)
+	s.supply_lines[code]["m_skim"] = upg * 3 + 1
+	var row := _row(SupplyLines.settle_month(repo, s), code)
+	assert_eq(int(row["skimmed"]), 3)
+	s.supply_lines[code]["m_skim"] = upg - 1
+	row = _row(SupplyLines.settle_month(repo, s), code)
+	assert_eq(int(row["skimmed"]), 1, "last month's odd unit and this month's make a gold")

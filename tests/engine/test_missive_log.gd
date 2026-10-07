@@ -47,6 +47,39 @@ func test_each_column_is_capped_on_its_own() -> void:
 	assert_eq(MissiveLog.column(s, "truth").size(), 1, "another column is untouched")
 
 
+func _supply(day: int) -> Dictionary:
+	return MissiveLog.make("supply", "credible", day, MissiveLog.subject("regiment", "r", -1, Vector2.ZERO),
+		"Supply dispatch", [MissiveLog.words("supply_0", "Low", "x")])
+
+
+## Spec 2026-10-07-army-supply-lines §5.5: the marshal's letters have a cap of
+## their own and never push another kind off the column.
+func test_supply_letters_never_evict_a_spy_report() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var spy := MissiveLog.add(repo, s, _m("credible", 1))
+	for d in 45:
+		MissiveLog.add(repo, s, _supply(d))
+	assert_ne(MissiveLog.find(s, spy), {}, "the spy's report stays")
+	var supply: Array = MissiveLog.column(s, "credible").filter(
+		func(m: Dictionary) -> bool: return String(m["kind"]) == "supply")
+	assert_eq(supply.size(), int(repo.bal("missive_keep_supply")))
+	assert_eq(int(supply[0]["day"]), 44, "the newest stay")
+
+
+func test_other_letters_are_capped_without_counting_supply() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	for d in 5:
+		MissiveLog.add(repo, s, _supply(d))
+	for d in 41:
+		MissiveLog.add(repo, s, _m("credible", d))
+	var spy: Array = MissiveLog.column(s, "credible").filter(
+		func(m: Dictionary) -> bool: return String(m["kind"]) == "spy")
+	assert_eq(spy.size(), int(repo.bal("missive_keep_per_column")))
+	var supply: Array = MissiveLog.column(s, "credible").filter(
+		func(m: Dictionary) -> bool: return String(m["kind"]) == "supply")
+	assert_eq(supply.size(), 5, "the supply letters are untouched")
+
+
 func test_the_log_survives_a_save() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	MissiveLog.add(repo, s, _m("rumour", 5))
