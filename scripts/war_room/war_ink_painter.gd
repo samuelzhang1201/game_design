@@ -119,9 +119,14 @@ func _draw() -> void:
 		draw_string(font, (t["at"] as Vector2) + Vector2(r + float(px["town"]) * float(px["label_gap_ratio"]),
 			float(px["label"]) * float(px["label_drop_ratio"])), String(t["label"]),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["label"]), c_ink)
+		# a works' glyph above, a market's scales below, each on a parchment
+		# knock-out so a road leaving the town does not run through it
+		var ground: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
 		if String(t.get("works", "")) != "":
+			draw_circle(t["works_at"], float(px.get("works", px["town"])) * 0.6, ground)
 			WarMarkGlyph.draw(self, String(t["works"]), t["works_at"], float(px.get("works", px["town"])), c_ink)
 		if bool(t.get("market", false)):
+			draw_circle(t["market_at"], float(px.get("market", px["town"])) * 0.6, ground)
 			WarMarkGlyph.draw(self, "scales", t["market_at"], float(px.get("market", px["town"])), c_ink)
 	for p: Dictionary in ink["peaks"]:
 		if int(p.get("lod", 0)) != 0:  # thinned to the most prominent; the strokes list stays whole

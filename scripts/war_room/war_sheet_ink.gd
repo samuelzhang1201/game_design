@@ -108,8 +108,11 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		var t := {"code": code, "at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
 			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"}
 		t.merge(town_marks(repo, code))
-		# a works glyph stands above the ring, a market's scales below it
+		# a works glyph stands above the ring, a market's scales below it — clear
+		# of a walled town's square and its corner towers
 		var ring := repo.bal("war_ink_town_px") * px_k * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
+		if bool(t["walls"]):
+			ring *= repo.bal("war_ink_wall_ratio") * 1.22
 		t["works_at"] = (t["at"] as Vector2) - Vector2(0.0, ring + repo.bal("war_ink_works_px") * px_k * 0.75)
 		t["market_at"] = (t["at"] as Vector2) + Vector2(0.0, ring + repo.bal("war_ink_market_px") * px_k * 0.75)
 		(out["towns"] as Array).append(t)
@@ -221,10 +224,11 @@ static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> 
 	var h := maxf(r, label * 0.6)
 	var up := h
 	var down := h
+	var clear := r * (repo.bal("war_ink_wall_ratio") * 1.22 if bool(t.get("walls", false)) else 1.0)
 	if String(t.get("works", "")) != "":
-		up = maxf(up, r + repo.bal("war_ink_works_px") * px_k * 1.25)
+		up = maxf(up, clear + repo.bal("war_ink_works_px") * px_k * 1.25)
 	if bool(t.get("market", false)):
-		down = maxf(down, r + repo.bal("war_ink_market_px") * px_k * 1.25)
+		down = maxf(down, clear + repo.bal("war_ink_market_px") * px_k * 1.25)
 	var at: Vector2 = t["at"]
 	return Rect2(at.x - r, at.y - up, r + w, up + down)
 

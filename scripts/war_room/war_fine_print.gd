@@ -15,13 +15,13 @@ static func town_note(b: Dictionary) -> String:
 		Intel.num(int(float(b.get("population", "0")))), String(b.get("elevation_m", "0"))]
 
 
-## "works: artillery · bronze" — a works town's two largest strategic goods
-## (spec 2026-10-07-war-room-p3 §1.3).
+## "works: artillery, coal, bronze" — a works town's three largest strategic
+## goods, the slip's own list (spec 2026-10-07-war-room-p3 §1.3).
 static func works_note(repo: DataRepository, w: Dictionary) -> String:
 	var names: Array[String] = []
-	for g: Dictionary in (w["goods"] as Array).slice(0, 2):
+	for g: Dictionary in (w["goods"] as Array).slice(0, 3):
 		names.append(WarEconomy.good_label(repo, String(g["good"])).to_lower())
-	return "works: " + " · ".join(names)
+	return "works: " + ", ".join(names)
 
 static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int, bake: WarBake) -> Dictionary:
 	var r: Rect2 = sheet["rect"]

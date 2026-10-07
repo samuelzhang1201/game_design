@@ -145,7 +145,7 @@ static func _economy_lines(repo: DataRepository, r: Dictionary, out: Array) -> v
 	if not mk.is_empty():
 		var parts: Array[String] = []
 		for g: Dictionary in (mk["goods"] as Array).slice(0, 3):
-			parts.append("%s %s" % [WarEconomy.good_label(repo, String(g["good"])).to_lower(), Intel.num(roundi(float(g["units"])))])
+			parts.append(WarEconomy.good_label(repo, String(g["good"])).to_lower())   # the pack's units mean nothing to a reader: the gold below says how much
 		var text := "Works: %s (%s gold a month)" % [", ".join(parts), Intel.num(int(mk["gold"]))]
 		if int(r.get("making_live", -1)) >= 0:
 			text += " (this month: %s)" % Intel.num(int(r["making_live"]))

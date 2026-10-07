@@ -274,7 +274,10 @@ func test_a_work_names_its_goods_and_at_home_its_month() -> void:
 	var line_a: Array = _texts(ra).filter(func(t: String) -> bool: return t.begins_with("Works: "))
 	assert_eq(line_a.size(), 1)
 	assert_false(String(line_a[0]).contains("this month"), "a foreign works' month is not known")
-	assert_string_contains(String(line_a[0]), "(%s gold a month)" % Intel.num(int(WarEconomy.works(repo)[abroad]["gold"])))
+	var w: Dictionary = WarEconomy.works(repo)[abroad]
+	assert_true(String(line_a[0]).begins_with("Works: %s" % WarEconomy.good_label(repo, String(w["goods"][0]["good"])).to_lower()), String(line_a[0]))
+	assert_false(String(line_a[0]).contains(" %d," % roundi(float(w["goods"][0]["units"]))), "no pack units")
+	assert_string_contains(String(line_a[0]), "(%s gold a month)" % Intel.num(int(w["gold"])))
 	if home != "":
 		var rh := WarGround.reading(repo, state, _town_point(home), "")
 		assert_true(_texts(rh).any(func(t: String) -> bool: return t.begins_with("Works: ") and t.contains("(this month: ")))

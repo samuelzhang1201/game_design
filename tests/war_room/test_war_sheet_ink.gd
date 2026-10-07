@@ -370,3 +370,21 @@ func test_a_window_keeps_the_trade_roads_in_its_own_px() -> void:
 	for t: Dictionary in ink["towns"]:
 		if String(t["code"]) == String(m["burg"]):
 			assert_true(bool(t["market"]))
+
+
+func test_a_walled_towns_glyphs_stand_clear_of_its_walls() -> void:
+	var tex := int(repo.bal("war_sheet_texture_px"))
+	var checked := 0
+	for s: Dictionary in WarSheets.series(repo):
+		for t: Dictionary in WarSheetInk.strokes(repo, state, s, tex)["towns"]:
+			if not bool(t["walls"]) or (String(t["works"]) == "" and not bool(t["market"])):
+				continue
+			var ring := repo.bal("war_ink_town_px") * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
+			# the wall's square reaches ring x wall_ratio, its corner towers 0.22 of that again
+			var wall := ring * repo.bal("war_ink_wall_ratio") * 1.22
+			if String(t["works"]) != "":
+				assert_gte(absf((t["works_at"] as Vector2).y - (t["at"] as Vector2).y), wall + repo.bal("war_ink_works_px") * 0.5, String(t["label"]))
+			if bool(t["market"]):
+				assert_gte(absf((t["market_at"] as Vector2).y - (t["at"] as Vector2).y), wall + repo.bal("war_ink_market_px") * 0.5, String(t["label"]))
+			checked += 1
+	assert_gt(checked, 0)

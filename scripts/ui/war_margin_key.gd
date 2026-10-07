@@ -210,7 +210,7 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 		return
 	match key:
 		"trade":
-			draw_line(a, b, ink, line * 3.0, true)
+			draw_line(a, b, ink, line * 2.2, true)
 		"road":
 			draw_line(a, b, ink, line * 1.6, true)
 		"trail":

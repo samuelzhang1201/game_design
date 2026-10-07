@@ -139,9 +139,10 @@ func test_a_works_town_says_what_it_makes_under_its_note() -> void:
 	keys.sort()
 	code = String(keys[0])
 	var w: Dictionary = works[code]
-	var expected := "works: %s · %s" % [WarEconomy.good_label(repo, String(w["goods"][0]["good"])).to_lower(),
-		WarEconomy.good_label(repo, String(w["goods"][1]["good"])).to_lower()] if (w["goods"] as Array).size() > 1 \
-		else "works: %s" % WarEconomy.good_label(repo, String(w["goods"][0]["good"])).to_lower()
+	var names: Array[String] = []
+	for g: Dictionary in (w["goods"] as Array).slice(0, 3):
+		names.append(WarEconomy.good_label(repo, String(g["good"])).to_lower())
+	var expected := "works: " + ", ".join(names)   # the slip's own list (visual review 2026-10-07)
 	assert_eq(WarFinePrint.works_note(repo, w), expected)
 	var b: Dictionary = repo.burgs[code]
 	var sheet: Dictionary = WarSheets.series(repo)[WarSheets.sheet_of(repo, Vector2(float(b["x"]), float(b["y"])))]

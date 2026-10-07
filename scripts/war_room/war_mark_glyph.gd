@@ -55,20 +55,20 @@ static func draw(ci: CanvasItem, glyph: String, at: Vector2, size: float, color:
 			for a in [-1.0, 1.0]:
 				ci.draw_line(at + Vector2(s * 0.35 * a, -s * 0.45), at + Vector2(s * 1.0 * a, -s * 0.7), color, w * 0.8, true)
 				ci.draw_line(at + Vector2(s * 0.35 * a, -s * 0.45), at + Vector2(s * 1.0 * a, -s * 0.25), color, w * 0.8, true)
-		"anvil":   # an arms works: the anvil's face and horn on its waist and foot
-			ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-s * 0.55, -s * 0.45), at + Vector2(s * 0.55, -s * 0.45),
-				at + Vector2(s, -s * 0.3), at + Vector2(s * 0.55, -s * 0.15), at + Vector2(-s * 0.55, -s * 0.15)]), color)
-			ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-s * 0.25, -s * 0.15), at + Vector2(s * 0.25, -s * 0.15),
-				at + Vector2(s * 0.15, s * 0.45), at + Vector2(-s * 0.15, s * 0.45)]), color)
-			ci.draw_rect(Rect2(at + Vector2(-s * 0.6, s * 0.45), Vector2(s * 1.2, s * 0.3)), color, true)
+		"anvil":   # an arms works: a broad face with its long horn, a narrow waist, a line of foot — wider than tall
+			ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-s * 1.1, -s * 0.4), at + Vector2(-s * 0.35, -s * 0.55),
+				at + Vector2(s * 0.95, -s * 0.55), at + Vector2(s * 0.95, -s * 0.25), at + Vector2(-s * 0.3, -s * 0.25)]), color)
+			ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-s * 0.15, -s * 0.25), at + Vector2(s * 0.45, -s * 0.25),
+				at + Vector2(s * 0.3, s * 0.3), at + Vector2(0.0, s * 0.3)]), color)
+			ci.draw_line(at + Vector2(-s * 0.45, s * 0.4), at + Vector2(s * 0.75, s * 0.4), color, w * 1.6, true)
 		"horseshoe":   # horse works: a shoe, open below, its nail holes
 			ci.draw_arc(at + Vector2(0, -s * 0.05), s * 0.7, PI * 0.95, PI * 2.05, 16, color, w * 2.2, true)
 			ci.draw_line(at + Vector2(-s * 0.7, -s * 0.05), at + Vector2(-s * 0.6, s * 0.75), color, w * 2.2, true)
 			ci.draw_line(at + Vector2(s * 0.7, -s * 0.05), at + Vector2(s * 0.6, s * 0.75), color, w * 2.2, true)
-		"ingot":   # ore works: a cast bar, its top face lit
-			ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-s * 0.9, s * 0.45), at + Vector2(s * 0.9, s * 0.45),
-				at + Vector2(s * 0.6, -s * 0.3), at + Vector2(-s * 0.6, -s * 0.3)]), color)
-			ci.draw_line(at + Vector2(-s * 0.45, -s * 0.05), at + Vector2(s * 0.45, -s * 0.05), Color(color, color.a * 0.4), w, true)
+		"ingot":   # ore works: a cast bar, its top face edged
+			ci.draw_colored_polygon(PackedVector2Array([at + Vector2(-s, s * 0.55), at + Vector2(s, s * 0.55),
+				at + Vector2(s * 0.65, -s * 0.5), at + Vector2(-s * 0.65, -s * 0.5)]), color)
+			ci.draw_line(at + Vector2(-s * 0.55, -s * 0.15), at + Vector2(s * 0.55, -s * 0.15), Color(color, color.a * 0.35), w * 1.2, true)
 		"keel":   # a shipyard: a hull's ribs on the stocks
 			ci.draw_arc(at + Vector2(0, -s * 0.6), s * 0.95, PI * 0.2, PI * 0.8, 12, color, w * 1.5, true)
 			for x in [-0.5, 0.0, 0.5]:
