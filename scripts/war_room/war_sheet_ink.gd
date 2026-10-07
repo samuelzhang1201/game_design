@@ -74,7 +74,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	# road is drawn heavier, by tier
 	out["trade"] = []
 	for s: Dictionary in WarEconomy.trade_segments(repo, r.grow(r.size.x * 0.02)):
-		(out["trade"] as Array).append({"poly": _to_tex(r, k, s["poly"]), "tier": int(s["tier"])})
+		(out["trade"] as Array).append({"poly": _to_tex(r, k, s["poly"]), "tier": int(s["tier"]), "kind": String(s["kind"])})
 	for row: Dictionary in repo.coasts:
 		var poly: PackedVector2Array = row["polyline"]
 		if _touches(r, poly):

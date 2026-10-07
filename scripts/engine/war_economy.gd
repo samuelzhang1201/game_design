@@ -189,8 +189,8 @@ static func trade_tier(repo: DataRepository, gold: int) -> int:
 	return tier
 
 
-## The drawn segments (tier >= 1) with an end inside `rect`, pack px, in the
-## flows' own order.
+## The drawn segments (tier >= 1) with an end inside `rect`: {poly (pack px),
+## tier, kind ("road" | "trail")}, in the flows' own order.
 static func trade_segments(repo: DataRepository, rect: Rect2) -> Array:
 	var g := RoadGraph.of_pack(repo)
 	var flows := trade_flows(repo)
@@ -202,7 +202,8 @@ static func trade_segments(repo: DataRepository, rect: Rect2) -> Array:
 		var a := ArmySystem.metres_to_pack(repo, g.nodes[seg.x])
 		var b := ArmySystem.metres_to_pack(repo, g.nodes[seg.y])
 		if rect.has_point(a) or rect.has_point(b):
-			out.append({"poly": PackedVector2Array([a, b]), "tier": tier})
+			# the edge's own kind: a trail keeps its dashes however busy it is
+			out.append({"poly": PackedVector2Array([a, b]), "tier": tier, "kind": g._kind_between(seg.x, seg.y)})
 	return out
 
 

@@ -154,3 +154,12 @@ func test_a_works_town_says_what_it_makes_under_its_note() -> void:
 		if (sheet["rect"] as Rect2).has_point(Vector2(float(wb["x"]), float(wb["y"]))):
 			works_here += 1
 	assert_gt(texts.filter(func(t: String) -> bool: return t.begins_with("works: ")).size(), 0, "of %d works here" % works_here)
+
+
+func test_town_notes_appear_under_their_names() -> void:
+	# the note sits below its town's own box, never counted against it
+	var shown := 0
+	for s: Dictionary in WarSheets.series(repo).slice(0, 200):
+		var fine := WarFinePrint.strokes(repo, state, s, int(repo.bal("war_sheet_texture_px")), null)
+		shown += (fine["notes"] as Array).filter(func(n: Dictionary) -> bool: return String(n["text"]).contains(" souls · ")).size()
+	assert_gt(shown, 0)

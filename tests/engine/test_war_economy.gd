@@ -177,3 +177,13 @@ func test_segments_are_the_drawn_tiers_touching_the_rect() -> void:
 		var poly: PackedVector2Array = s["poly"]
 		assert_eq(poly.size(), 2)
 		assert_true(rect.has_point(poly[0]) or rect.has_point(poly[1]))
+
+
+func test_a_segment_says_whether_it_is_a_road_or_a_trail() -> void:
+	var m: Dictionary = WarEconomy.markets(repo)[0]
+	var segs := WarEconomy.trade_segments(repo, Rect2(Vector2.ZERO, Vector2(1e6, 1e6)))
+	var kinds: Dictionary = {}
+	for s: Dictionary in segs:
+		assert_true(["road", "trail"].has(String(s["kind"])), String(s["kind"]))
+		kinds[String(s["kind"])] = true
+	assert_true(kinds.has("road") and kinds.has("trail"), "the default pack's trade runs on both")

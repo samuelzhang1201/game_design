@@ -43,7 +43,8 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if not r.has_point(at):
 			continue
 		var tier := 3 if String(b.get("is_capital", "0")) == "1" else int(WarSheetInk.TOWN_TIERS.get(String(b.get("group", "")), 0))
-		var t := {"at": (at - r.position) * k, "tier": tier, "label": String(b["label"])}
+		var t := {"at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
+			"walls": String(b.get("features", "")).split("|").has("walls")}
 		var plain := WarSheetInk.town_label_box(repo, t)
 		t.merge(WarSheetInk.town_marks(repo, code))
 		var box := WarSheetInk.town_label_box(repo, t)
@@ -52,7 +53,9 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		for text: String in [town_note(b), works_note(repo, WarEconomy.works(repo)[code]) if WarEconomy.works(repo).has(code) else ""]:
 			if text == "":
 				continue
-			var nb := Rect2(pos - Vector2(0, note_px), Vector2(float(text.length()) * note_px * char_w, note_px * 1.2))
+			# the line's own extent, from its cap height to its descenders — never the
+			# town's own box above it, which `taken` holds
+			var nb := Rect2(pos - Vector2(0, note_px * 0.8), Vector2(float(text.length()) * note_px * char_w, note_px))
 			if _clear(nb, taken):
 				taken.append(nb)
 				(out["notes"] as Array).append({"at": pos, "text": text})
