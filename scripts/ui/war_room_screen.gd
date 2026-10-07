@@ -108,6 +108,7 @@ func open() -> void:
 		var slip := %HoverSlip as WarHoverSlip
 		slip.setup(Game.data)
 		_view.ground_hovered.connect(_on_ground_hovered)
+		_view.piece_hovered.connect(_on_piece_hovered)
 		_view.rake_aimed.connect(_on_rake_aimed)
 		_view.hover_cleared.connect(slip.hide_slip)
 		_view.rake_dropped.connect(slip.hide_slip)
@@ -413,6 +414,14 @@ func _process(_delta: float) -> void:
 func _on_ground_hovered(pack_px: Vector2, screen_px: Vector2) -> void:
 	var r := WarGround.reading(Game.data, Game.state, pack_px, _view.selected_army())
 	_show_slip(WarGround.lines(Game.data, r), screen_px)
+
+
+## The pointer rested on a piece: the regiments it stands for (a town's
+## garrison lists each), their combat figures (WarPieceSlip).
+func _on_piece_hovered(code: String, screen_px: Vector2) -> void:
+	var codes := _view.garrison_of(code)
+	var town := ArmySystem.quartered_in(Game.data, ArmySystem.regiment(Game.data, code), Game.state) if codes.size() > 1 else ""
+	_show_slip(WarPieceSlip.lines(Game.data, WarPieceSlip.reading(Game.data, Game.state, codes), town), screen_px)
 
 
 ## A rake aimed: read its destination for the raked regiment, the days left to

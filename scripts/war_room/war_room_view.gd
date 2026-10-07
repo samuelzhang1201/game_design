@@ -33,6 +33,9 @@ signal board_hovered(uv: Vector2)
 ## The pointer has rested on open table (spec 2026-10-07-war-room-scale-hover
 ## §4.2): the screen reads the ground there.
 signal ground_hovered(pack_px: Vector2, screen_px: Vector2)
+## The pointer has rested on a piece (owner 2026-10-07): the screen shows the
+## regiments it stands for, with their combat figures.
+signal piece_hovered(code: String, screen_px: Vector2)
 ## A rake is aimed at `pack_px`: the screen reads the destination for `code`.
 signal rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2)
 ## The slip goes: the pointer moved, the rake ended, the room got busy.
@@ -328,8 +331,10 @@ func _process(delta: float) -> void:
 	elif _rake.code == "" and _dwell.step(delta, _repo.bal("war_hover_delay_s")):
 		var at := _dwell.at
 		var pk := pack_at(at)
-		var on_mark := piece_under(at) != "" or WarRoomPicks.nearest(_pennants.screen_hits(_camera, window_scale()), at, _repo.bal("war_pick_px")) != ""
-		if pk.x >= 0.0 and not on_mark:
+		var piece := piece_under(at)
+		if piece != "":
+			piece_hovered.emit(piece, at)   # its combat figures (owner 2026-10-07)
+		elif pk.x >= 0.0 and WarRoomPicks.nearest(_pennants.screen_hits(_camera, window_scale()), at, _repo.bal("war_pick_px")) == "":
 			ground_hovered.emit(pk, at)
 	var flying := _step_board(delta)
 	if not flying and (_rig.step(delta, _repo.bal("war_cam_north_s")) or key_pan(delta)):

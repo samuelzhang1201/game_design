@@ -1032,3 +1032,19 @@ func test_closing_at_a_near_lean_unbinds_the_patch_and_reopening_redraws_it() ->
 	view.set_active(true)
 	assert_eq(float(mat.get_shader_parameter("detail_on")), 1.0, "drawn again on reopening at the same lean")
 	assert_gt((view.get_node("%DetailViewport") as SubViewport).size.x, 2)
+
+
+## Owner 2026-10-07: a pointer resting on a piece names the piece (its combat
+## figures), never the ground under it.
+func test_resting_on_a_piece_reads_the_piece_not_the_ground() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_process_frames(2)
+	var p := _first_land_piece()
+	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	watch_signals(view)
+	_hover(at)
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_emitted_with_parameters(view, "piece_hovered", [view.piece_under(at), at])
+	assert_signal_not_emitted(view, "ground_hovered")
+	view._process(1.0)
+	assert_signal_emit_count(view, "piece_hovered", 1, "once per rest")
