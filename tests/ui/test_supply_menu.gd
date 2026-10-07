@@ -9,6 +9,11 @@ class FakeMap extends Node:
 	var aim_dest := Vector2(-1, -1)
 	var supply_pick: Dictionary = {}
 	var supply_preview := PackedVector2Array()
+	var picked := "x"
+	func selected_army() -> String:
+		return picked
+	func clear_selection() -> void:
+		picked = ""
 
 var _menu: ArmyOrderMenu
 var _map: FakeMap
@@ -178,3 +183,58 @@ func test_a_fleet_has_no_supply_rows() -> void:
 			assert_eq(_row("add"), -1)
 			return
 	pending("no fleet in the realm")
+
+func _escape() -> InputEventKey:
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_ESCAPE
+	ev.pressed = true
+	return ev
+
+func test_escape_ends_the_pick_before_it_lets_the_selection_go() -> void:
+	# a left click selects the regiment before its menu opens
+	_map.army_menu_requested.emit(_land(), Vector2(10, 10))
+	_menu.id_pressed.emit(_row("add"))
+	_menu._unhandled_input(_escape())
+	assert_eq(_menu.supply_picking(), "")
+	assert_eq(_map.supply_pick, {})
+	assert_false(_map.aiming)
+	assert_eq(_map.picked, "x", "the selection is untouched")
+	_menu._unhandled_input(_escape())
+	assert_eq(_map.picked, "", "the next Escape lets it go")
+
+func _other_land(not_code: String) -> String:
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+		if String(r.get("is_naval", "0")) != "1" and String(r["regiment_code"]) != not_code \
+				and ArmySystem.base_pace_km(Game.data, r) > 0:
+			return String(r["regiment_code"])
+	return ""
+
+func test_opening_another_regiments_menu_ends_the_pick() -> void:
+	var first := _land()
+	var second := _other_land(first)
+	_map.army_menu_requested.emit(first, Vector2(10, 10))
+	_menu.id_pressed.emit(_row("add"))
+	_map.army_menu_requested.emit(second, Vector2(10, 10))
+	assert_eq(_menu.supply_picking(), "", "the pick is gone")
+	assert_eq(_map.supply_pick, {})
+	_menu.hide()
+	_menu.id_pressed.emit(0)   # MARCH
+	assert_eq(_menu.aiming(), second)
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, second))
+	_map.ground_clicked.emit(here + Vector2(20.0, 0.0), Vector2(20, 20))
+	assert_eq(_menu.supply_town(), "", "the click was the march's, not a supply pick")
+	assert_ne(_menu.pending(), Vector2(-1, -1), "COMMIT is asked")
+
+func test_withdraw_aim_ends_a_pick() -> void:
+	_map.army_menu_requested.emit(_land(), Vector2(10, 10))
+	_menu.id_pressed.emit(_row("add"))
+	_menu.withdraw_aim()
+	assert_eq(_menu.supply_picking(), "")
+	assert_eq(_map.supply_pick, {})
+	assert_false(_map.aiming)
+
+func test_the_war_room_menu_offers_no_supply_rows() -> void:
+	_menu.drafting = true
+	_map.army_menu_requested.emit(_land(), Vector2(10, 10))
+	for i in _menu.item_count:
+		assert_lt(_menu.get_item_id(i), ArmyOrderMenu.SUPPLY_ADD, "no supply row in the war room")

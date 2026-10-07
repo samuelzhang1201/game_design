@@ -330,8 +330,7 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 			if String(row["town"]) == code:
 				draw += int(row["need"])
 		if draw > 0:
-			@warning_ignore("integer_division")
-			var days := (int(held["crown"]) + int(held["lord"]) + int(held["house"])) * Calendar.DAYS_PER_TICK / draw
+			var days := TownStores.days_of_stock(state, code, draw)
 			fields.append(["Stores last", "%d days at today's draw" % days])
 	if not card.has("actions"):
 		card["actions"] = []
@@ -1031,9 +1030,8 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 					text = "wagons %dd" % days
 					tip = "The first wagons from %s arrive in %d day%s" % [from, days, "" if days == 1 else "s"]
 				SupplyLines.FLOWING:
-					@warning_ignore("integer_division")
-					var fee := ArmySystem.day_bite(use * int(line["rate"]) / 1000, state.day) * int(line["length_km"]) \
-						* int(repo.bal("supply_cart_milligold_per_unit_km")) / 1000
+					var fee := SupplyLines.day_fee_estimate(repo, state, code, String(line["town"]),
+						int(line["rate"]), int(line["length_km"]))
 					@warning_ignore("integer_division")
 					var lost := int(line["loss_permille"]) / 10
 					text = "%s %.1f×" % [from, float(int(line["rate"])) / 1000.0]

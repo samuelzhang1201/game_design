@@ -91,6 +91,7 @@ func follow(map: Node) -> void:
 func _open_for(code: String, at: Vector2) -> void:
 	if Game.state == null:
 		return
+	_end_supply_pick()
 	_set_aim("")
 	_code = code
 	clear()
@@ -117,7 +118,8 @@ func _supply_row(key: String, id: int, why: String) -> void:
 ## The regiment's supply rows: offered only for a land regiment of the realm.
 func _add_supply_rows(code: String) -> void:
 	var reg := ArmySystem.regiment(Game.data, code)
-	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1" \
+	# supply orders are the map's: the war room's orders are drafts (owner ruling 2026-10-07)
+	if drafting or reg.is_empty() or String(reg.get("is_naval", "0")) == "1" \
 			or String(reg["kingdom_code"]) != Game.data.resolve_realm("player_realm"):
 		return
 	add_separator()
@@ -139,6 +141,7 @@ func _add_supply_rows(code: String) -> void:
 func _open_garrison(codes: Array, at: Vector2) -> void:
 	if Game.state == null or codes.is_empty():
 		return
+	_end_supply_pick()
 	_set_aim("")
 	_garrison = codes.duplicate()
 	_garrison_at = at
@@ -160,6 +163,7 @@ func _open_route(code: String, at: Vector2) -> void:
 	if not draft and ArmySystem.order_of(Game.data, Game.state, code) != ArmySystem.ORDER_MARCH \
 			and WarRoom.pennant_of(Game.data, Game.state, code).is_empty():
 		return
+	_end_supply_pick()
 	_set_aim("")
 	_code = code
 	clear()
@@ -429,16 +433,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	# A map that is hidden (the WAR ROOM closed, the LEDGER over the map) never
 	# takes Escape: only a map on screen lets its selection go.
 	var map_shown := not (_map is CanvasItem) or (_map as CanvasItem).is_visible_in_tree()
-	if _aiming == "" and _map != null and map_shown and _map.has_method("selected_army") \
-			and String(_map.call("selected_army")) != "" and event is InputEventKey \
-			and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
-		_map.call("clear_selection")   # Escape lets the selected regiment go
-		get_viewport().set_input_as_handled()
-		return
+	# a supply pick comes first: the selected regiment (a left click selects it
+	# before its menu opens) must not swallow the Escape that gives the pick up
 	if _supply_for != "" and event is InputEventKey and (event as InputEventKey).pressed \
 			and (event as InputEventKey).keycode == KEY_ESCAPE:
 		_end_supply_pick()
 		Game.publish_news("The supply order is withdrawn.")
+		get_viewport().set_input_as_handled()
+		return
+	if _aiming == "" and _map != null and map_shown and _map.has_method("selected_army") \
+			and String(_map.call("selected_army")) != "" and event is InputEventKey \
+			and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
+		_map.call("clear_selection")   # Escape lets the selected regiment go
 		get_viewport().set_input_as_handled()
 		return
 	if _aiming != "" and event is InputEventKey and (event as InputEventKey).pressed \
@@ -452,6 +458,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func withdraw_aim() -> void:
 	if visible:
 		hide()
+	if _supply_for != "":
+		_end_supply_pick()
+		Game.publish_news("The supply order is withdrawn.")
 	_withdraw("The order is withdrawn.")
 
 
@@ -522,18 +531,14 @@ func _open_rates(town: String, route: PackedVector2Array, at: Vector2) -> void:
 	var km := SupplyLines.road_km(Game.data, route)
 	var reg := ArmySystem.regiment(Game.data, _supply_for)
 	var use := ArmySystem.supply_use(Game.data, reg, Game.state)
-	var st := TownStores.stock_of(Game.state, town)
-	var row: Dictionary = Game.data.army_supply_orders["confirm"]
+	var row: Dictionary = Game.data.army_supply_orders.get("confirm", {"label": "{rate}× — {fee} gold a day", "hint": ""})
 	@warning_ignore("integer_division")
 	var loss_pct := SupplySystem.loss_of(Game.data, km) / 10
 	for i in SupplyLines.RATES.size():
 		var rate := int(SupplyLines.RATES[i])
-		@warning_ignore("integer_division")
-		var per_day := use * rate / 1000 / Calendar.DAYS_PER_TICK
-		@warning_ignore("integer_division")
-		var fee := per_day * km * int(Game.data.bal("supply_cart_milligold_per_unit_km")) / 1000
-		@warning_ignore("integer_division")
-		var stock_days := (int(st["crown"]) + int(st["lord"]) + int(st["house"])) / maxi(per_day, 1)
+		var fee := SupplyLines.day_fee_estimate(Game.data, Game.state, _supply_for, town, rate, km)
+		@warning_ignore("integer_division")  # the month's whole units
+		var stock_days := TownStores.days_of_stock(Game.state, town, use * rate / 1000)
 		add_item(String(row["label"]).format({"rate": "%.1f" % (float(rate) / 1000.0), "fee": fee}), RATE_BASE + i)
 		set_item_tooltip(get_item_index(RATE_BASE + i), String(row["hint"]).format({
 			"town": String(Game.data.burgs[town]["label"]), "km": km, "loss": loss_pct,

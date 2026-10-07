@@ -60,13 +60,30 @@ func _deliver_all() -> void:
 		Game.advance_day()
 
 
+## The ids of the rows after the march rows (separators left out).
+func _supply_ids(menu: ArmyOrderMenu) -> Array:
+	var out: Array = []
+	for i in range(Game.data.army_orders.size(), menu.item_count):
+		if not menu.is_item_separator(i):
+			out.append(menu.get_item_id(i))
+	return out
+
+
+## What a land regiment of the realm with no supply point is offered: Add, then the carry loads.
+func _land_supply_ids() -> Array:
+	var out: Array = [ArmyOrderMenu.SUPPLY_ADD]
+	for i in Game.data.army_carry_loads.size():
+		out.append(ArmyOrderMenu.CARRY_BASE + i)
+	return out
+
+
 ## Owner 2026-09-30 (军队到达目的地后自动驻防，取消驻防按钮): the regiment's
 ## menu has no Garrison row — a march garrisons on arrival.
 func test_the_menu_offers_exactly_the_rows_in_the_table() -> void:
 	_map.army_menu_requested.emit(_marcher(), Vector2(10.0, 10.0))
-	assert_gte(_menu.item_count, Game.data.army_orders.size(), "the supply rows follow")
 	for i in Game.data.army_orders.size():
 		assert_eq(_menu.get_item_text(i), String(Game.data.army_orders[i]["label"]))
+	assert_eq(_supply_ids(_menu), _land_supply_ids(), "the supply rows follow the march rows, and only they")
 	for row: Dictionary in Game.data.army_orders:
 		assert_ne(String(row["action_code"]), "ARMY_GARRISON", "no Garrison row")
 
@@ -447,4 +464,4 @@ func test_a_garrison_lists_its_regiments_and_the_chosen_one_takes_orders() -> vo
 	await wait_process_frames(2)
 	assert_eq(map.selected, String(codes[1]), "the chosen regiment is selected on the map")
 	assert_true(menu.visible, "and its orders are open")
-	assert_gte(menu.item_count, Game.data.army_orders.size(), "the regiment's own order rows")
+	assert_eq(_supply_ids(menu), _land_supply_ids(), "the regiment's own order rows, then its supply rows")

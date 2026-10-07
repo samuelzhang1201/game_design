@@ -107,6 +107,14 @@ static func stock_of(state: GameState, burg: String) -> Dictionary:
 	return {"crown": int(s.get("crown", 0)), "lord": int(s.get("lord", 0)), "house": int(s.get("house", 0))}
 
 
+## How many days a town's stores last at `monthly_draw` units a month (the
+## engine's `holds`; whole days).
+static func days_of_stock(state: GameState, burg: String, monthly_draw: int) -> int:
+	var st := stock_of(state, burg)
+	@warning_ignore("integer_division")
+	return (int(st["crown"]) + int(st["lord"]) + int(st["house"])) * Calendar.DAYS_PER_TICK / maxi(monthly_draw, 1)
+
+
 static func total(state: GameState, pool: String) -> int:
 	var n := 0
 	for b: String in state.town_stock:

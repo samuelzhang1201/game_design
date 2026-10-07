@@ -47,6 +47,17 @@ static func road_km(repo: DataRepository, route: PackedVector2Array) -> int:
 	return int(m / 1000.0)
 
 
+## About what a line of rate `rate` costs a day on the road to `town`, gold
+## (the card's and the rate menu's one formula); `km` < 0 measures the road now.
+static func day_fee_estimate(repo: DataRepository, state: GameState, code: String, town: String,
+		rate: int, km := -1) -> int:
+	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), state)
+	var length := km if km >= 0 else road_km(repo, road_px(repo, state, code, town))
+	@warning_ignore("integer_division")
+	return ArmySystem.day_bite(use * rate / 1000, state.day) * length \
+		* int(repo.bal("supply_cart_milligold_per_unit_km")) / 1000
+
+
 static func wagon_days(repo: DataRepository, km: int) -> int:
 	var per := maxi(1, int(repo.bal("supply_wagon_km_per_day")))
 	@warning_ignore("integer_division")  # whole days, rounded up
@@ -448,9 +459,7 @@ static func warn_day(repo: DataRepository, state: GameState) -> Array:
 	var towns: Array = draw.keys()
 	towns.sort()
 	for t: String in towns:
-		var st := TownStores.stock_of(state, t)
-		@warning_ignore("integer_division")  # whole days
-		var holds := (int(st["crown"]) + int(st["lord"]) + int(st["house"])) * Calendar.DAYS_PER_TICK / maxi(int(draw[t]), 1)
+		var holds := TownStores.days_of_stock(state, t, int(draw[t]))
 		for code: String in keys:
 			var ln: Dictionary = state.supply_lines[code]
 			if String(ln["town"]) != t:

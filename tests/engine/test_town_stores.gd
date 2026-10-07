@@ -146,3 +146,10 @@ func test_the_stores_survive_the_save() -> void:
 	s.town_stock[b] = {"crown": 11, "lord": 22, "house": 33}
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	assert_eq(TownStores.stock_of(back, b), {"crown": 11, "lord": 22, "house": 33})
+
+func test_days_of_stock_is_the_month_over_the_draw() -> void:
+	s.town_stock = {"t": {"crown": 100, "lord": 50, "house": 10}}
+	assert_eq(TownStores.days_of_stock(s, "t", 160), 30, "a month's draw lasts a month")
+	assert_eq(TownStores.days_of_stock(s, "t", 80), 60)
+	assert_eq(TownStores.days_of_stock(s, "t", 0), 160 * Calendar.DAYS_PER_TICK, "no draw is read as 1 a month")
+	assert_eq(TownStores.days_of_stock(s, "nowhere", 80), 0)

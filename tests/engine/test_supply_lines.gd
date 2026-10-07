@@ -75,3 +75,14 @@ func test_the_lines_survive_the_save() -> void:
 	s.supply_lines["x"] = {"town": "t", "rate": 1000, "state": SupplyLines.FLOWING}
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	assert_eq(String(SupplyLines.line(back, "x")["state"]), SupplyLines.FLOWING)
+
+func test_day_fee_estimate_is_the_days_bite_over_the_road() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(repo, s)[0]
+	var km := SupplyLines.road_km(repo, SupplyLines.road_px(repo, s, code, town))
+	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), s)
+	var milli := int(repo.bal("supply_cart_milligold_per_unit_km"))
+	var want := ArmySystem.day_bite(use * 1200 / 1000, s.day) * km * milli / 1000
+	assert_eq(SupplyLines.day_fee_estimate(repo, s, code, town, 1200), want)
+	assert_eq(SupplyLines.day_fee_estimate(repo, s, code, town, 1200, km), want, "a given length is the road's")
+	assert_eq(SupplyLines.day_fee_estimate(repo, s, code, town, 1200, 0), 0, "no road, no fee")
