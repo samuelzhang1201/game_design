@@ -1874,670 +1874,850 @@
      ],
      "tail": [
       0.0,
-      1.1265,
+      -1.2337,
       0.0
      ],
      "roll": 0.0
     },
     {
-     "name": "horse_body",
+     "name": "Pelvis",
      "parent": "root",
      "head": [
       0.0,
-      -0.55,
-      0.9831
+      -0.42,
+      1.16
      ],
      "tail": [
       0.0,
-      -0.3263,
-      1.0387
+      -0.6224,
+      1.2444
      ],
      "roll": 0.0
     },
     {
-     "name": "case",
-     "parent": "horse_body",
+     "name": "HindThigh.L",
+     "parent": "Pelvis",
      "head": [
-      -0.2542,
-      0.0069,
-      1.4433
+      -0.12,
+      -0.6,
+      1.1
      ],
      "tail": [
-      -0.2542,
-      0.0069,
-      1.2128
+      -0.12,
+      -0.48,
+      0.84
      ],
-     "roll": 0.0
+     "roll": 3.1416
     },
     {
-     "name": "fore_upper_l",
-     "parent": "horse_body",
+     "name": "HindShin.L",
+     "parent": "HindThigh.L",
      "head": [
-      -0.1917,
-      0.4096,
-      1.2407
+      -0.12,
+      -0.48,
+      0.84
      ],
      "tail": [
-      -0.1873,
-      0.9,
-      0.6608
+      -0.07,
+      -0.76,
+      0.55
      ],
-     "roll": 0.0
+     "roll": -2.9709
     },
     {
-     "name": "fore_lower_l",
-     "parent": "fore_upper_l",
+     "name": "HindCannon.L",
+     "parent": "HindShin.L",
      "head": [
-      -0.1873,
-      0.9,
-      0.6608
+      -0.07,
+      -0.76,
+      0.55
      ],
      "tail": [
-      -0.1615,
-      0.7957,
-      0.3332
+      -0.047,
+      -0.805,
+      0.23
      ],
-     "roll": 0.0
+     "roll": -3.0698
     },
     {
-     "name": "fore_hoof_l",
-     "parent": "fore_lower_l",
+     "name": "HindHoof.L",
+     "parent": "HindCannon.L",
      "head": [
-      -0.1615,
-      0.7957,
-      0.3332
+      -0.047,
+      -0.805,
+      0.23
      ],
      "tail": [
-      -0.1075,
-      0.6174,
-      0.0429
+      -0.0457,
+      -0.7046,
+      -0.078
      ],
-     "roll": 0.0
+     "roll": -3.1372
     },
     {
-     "name": "fore_upper_r",
-     "parent": "horse_body",
+     "name": "HindThigh.R",
+     "parent": "Pelvis",
      "head": [
-      0.1045,
-      0.4096,
-      1.2407
+      0.11,
+      -0.6,
+      1.1
      ],
      "tail": [
-      0.0352,
-      0.485,
-      0.5277
+      0.1,
+      -0.27,
+      0.85
      ],
-     "roll": 0.0
+     "roll": 3.0515
     },
     {
-     "name": "fore_lower_r",
-     "parent": "fore_upper_r",
+     "name": "HindShin.R",
+     "parent": "HindThigh.R",
      "head": [
-      0.0352,
-      0.485,
-      0.5277
+      0.1,
+      -0.27,
+      0.85
      ],
      "tail": [
-      0.0208,
-      0.4552,
-      0.2073
+      0.06,
+      -0.41,
+      0.53
      ],
-     "roll": 0.0
+     "roll": 3.0172
     },
     {
-     "name": "fore_hoof_r",
-     "parent": "fore_lower_r",
+     "name": "HindCannon.R",
+     "parent": "HindShin.R",
      "head": [
-      0.0208,
-      0.4552,
-      0.2073
+      0.06,
+      -0.41,
+      0.53
      ],
      "tail": [
-      -0.0034,
-      0.5864,
-      -0.0859
+      0.02,
+      -0.155,
+      0.22
      ],
-     "roll": 0.0
+     "roll": 3.0133
     },
     {
-     "name": "hind_upper_l",
-     "parent": "horse_body",
+     "name": "HindHoof.R",
+     "parent": "HindCannon.R",
      "head": [
-      -0.0561,
-      -0.758,
-      1.0649
+      0.02,
+      -0.155,
+      0.22
      ],
      "tail": [
-      -0.0561,
-      -0.658,
-      0.8292
+      -0.0082,
+      0.0074,
+      -0.1482
      ],
-     "roll": 0.0
+     "roll": 3.0653
     },
     {
-     "name": "hind_gaskin_l",
-     "parent": "hind_upper_l",
-     "head": [
-      -0.0561,
-      -0.658,
-      0.8292
-     ],
-     "tail": [
-      -0.0611,
-      -0.7457,
-      0.49
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "hind_lower_l",
-     "parent": "hind_gaskin_l",
-     "head": [
-      -0.0611,
-      -0.7457,
-      0.49
-     ],
-     "tail": [
-      -0.0398,
-      -0.816,
-      0.2073
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "hind_hoof_l",
-     "parent": "hind_lower_l",
-     "head": [
-      -0.0398,
-      -0.816,
-      0.2073
-     ],
-     "tail": [
-      -0.0487,
-      -0.7065,
-      -0.0633
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "hind_upper_r",
-     "parent": "horse_body",
-     "head": [
-      0.0961,
-      -0.2815,
-      1.0649
-     ],
-     "tail": [
-      0.0961,
-      -0.1815,
-      0.8292
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "hind_gaskin_r",
-     "parent": "hind_upper_r",
-     "head": [
-      0.0961,
-      -0.1815,
-      0.8292
-     ],
-     "tail": [
-      0.0162,
-      -0.1211,
-      0.49
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "hind_lower_r",
-     "parent": "hind_gaskin_r",
-     "head": [
-      0.0162,
-      -0.1211,
-      0.49
-     ],
-     "tail": [
-      0.0162,
-      -0.1211,
-      0.2073
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "hind_hoof_r",
-     "parent": "hind_lower_r",
-     "head": [
-      0.0162,
-      -0.1211,
-      0.2073
-     ],
-     "tail": [
-      0.0049,
-      -0.0288,
-      -0.0597
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "hips",
-     "parent": "horse_body",
-     "head": [
-      0.0,
-      0.0292,
-      1.3156
-     ],
-     "tail": [
-      0.0,
-      0.1086,
-      1.3808
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "spine",
-     "parent": "hips",
-     "head": [
-      0.0,
-      0.151,
-      1.4156
-     ],
-     "tail": [
-      0.0,
-      0.1129,
-      1.567
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "chest",
-     "parent": "spine",
-     "head": [
-      0.0,
-      0.113,
-      1.567
-     ],
-     "tail": [
-      0.0,
-      0.1314,
-      1.6781
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "clavicle_l",
-     "parent": "chest",
-     "head": [
-      -0.03,
-      0.1403,
-      1.6721
-     ],
-     "tail": [
-      -0.2213,
-      0.1085,
-      1.6721
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "upperarm_l",
-     "parent": "clavicle_l",
-     "head": [
-      -0.2213,
-      0.1085,
-      1.6721
-     ],
-     "tail": [
-      -0.2223,
-      0.1687,
-      1.4526
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "forearm_l",
-     "parent": "upperarm_l",
-     "head": [
-      -0.2223,
-      0.1687,
-      1.4526
-     ],
-     "tail": [
-      -0.1124,
-      0.3756,
-      1.4955
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "hand_l",
-     "parent": "forearm_l",
-     "head": [
-      -0.1124,
-      0.3756,
-      1.4955
-     ],
-     "tail": [
-      -0.0024,
-      0.5826,
-      1.5384
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "clavicle_r",
-     "parent": "chest",
+     "name": "Tail1",
+     "parent": "Pelvis",
      "head": [
       0.03,
-      0.1403,
-      1.6721
+      -0.64,
+      1.29
      ],
      "tail": [
-      0.1868,
-      0.1308,
-      1.6721
+      0.06,
+      -0.74,
+      1.17
      ],
-     "roll": -0.0
+     "roll": -2.8966
     },
     {
-     "name": "upperarm_r",
-     "parent": "clavicle_r",
+     "name": "Tail2",
+     "parent": "Tail1",
      "head": [
-      0.1868,
-      0.1308,
-      1.6721
+      0.06,
+      -0.74,
+      1.17
      ],
      "tail": [
-      0.1722,
-      0.1948,
-      1.4905
+      0.07,
+      -0.83,
+      1.03
      ],
-     "roll": -0.0
+     "roll": -3.0703
     },
     {
-     "name": "forearm_r",
-     "parent": "upperarm_r",
+     "name": "Tail3",
+     "parent": "Tail2",
      "head": [
-      0.1722,
-      0.1948,
-      1.4905
+      0.07,
+      -0.83,
+      1.03
      ],
      "tail": [
-      0.0432,
-      0.4062,
-      1.5796
+      0.075,
+      -0.91,
+      0.86
      ],
-     "roll": -0.0
+     "roll": -3.1122
     },
     {
-     "name": "hand_r",
-     "parent": "forearm_r",
+     "name": "Tail4",
+     "parent": "Tail3",
      "head": [
-      0.0432,
-      0.4062,
-      1.5796
+      0.075,
+      -0.91,
+      0.86
      ],
      "tail": [
-      0.0264,
-      0.4338,
-      1.5913
+      0.078,
+      -0.97,
+      0.68
      ],
-     "roll": -0.0
+     "roll": -3.1249
     },
     {
-     "name": "pole",
-     "parent": "hand_r",
+     "name": "Tail5",
+     "parent": "Tail4",
      "head": [
-      0.0402,
-      0.413,
-      1.6132
+      0.078,
+      -0.97,
+      0.68
      ],
      "tail": [
-      0.0214,
-      0.5232,
-      2.2474
+      0.0657,
+      -1.0932,
+      0.5362
      ],
-     "roll": -0.0
+     "roll": 3.0561
     },
     {
-     "name": "pennon_1",
-     "parent": "pole",
+     "name": "Reins.L",
+     "parent": "root",
      "head": [
-      0.0214,
-      0.5232,
-      2.2474
+      -0.14,
+      0.31,
+      1.5
      ],
      "tail": [
-      0.0293,
-      0.599,
-      2.2345
+      -0.14,
+      0.31,
+      2.7337
      ],
-     "roll": -0.0
+     "roll": 0.0
     },
     {
-     "name": "pennon_2",
-     "parent": "pennon_1",
+     "name": "Reins.R",
+     "parent": "root",
      "head": [
-      0.0293,
-      0.599,
-      2.2345
+      0.09,
+      0.35,
+      1.57
      ],
      "tail": [
-      0.0373,
-      0.6748,
-      2.2215
+      0.09,
+      0.35,
+      2.8037
      ],
-     "roll": -0.0
+     "roll": 0.0
     },
     {
-     "name": "neck",
-     "parent": "chest",
+     "name": "Spine1",
+     "parent": "root",
      "head": [
+      -0.0,
+      -0.42,
+      1.16
+     ],
+     "tail": [
+      -0.0,
+      -0.02,
+      1.19
+     ],
+     "roll": 3.1416
+    },
+    {
+     "name": "Case",
+     "parent": "Spine1",
+     "head": [
+      -0.26,
       0.0,
-      0.1403,
-      1.7321
+      1.43
      ],
      "tail": [
-      0.0,
-      0.1146,
-      1.9881
+      -0.26,
+      -0.0,
+      1.0289
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "Saddle",
+     "parent": "Spine1",
+     "head": [
+      -0.02,
+      0.03,
+      1.36
+     ],
+     "tail": [
+      -0.02,
+      0.03,
+      1.7611
+     ],
+     "roll": -0.0
+    },
+    {
+     "name": "R_Hips",
+     "parent": "Saddle",
+     "head": [
+      -0.02,
+      0.03,
+      1.36
+     ],
+     "tail": [
+      -0.02,
+      0.0442,
+      1.4736
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "R_Spine",
+     "parent": "R_Hips",
+     "head": [
+      -0.02,
+      0.05,
+      1.52
+     ],
+     "tail": [
+      -0.02,
+      0.07,
+      1.66
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "R_Chest",
+     "parent": "R_Spine",
+     "head": [
+      -0.02,
+      0.07,
+      1.66
+     ],
+     "tail": [
+      -0.02,
+      0.0913,
+      1.8019
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "R_Clavicle.L",
+     "parent": "R_Chest",
+     "head": [
+      -0.05,
+      0.08,
+      1.8
+     ],
+     "tail": [
+      -0.19,
+      0.07,
+      1.79
+     ],
+     "roll": 0.0662
+    },
+    {
+     "name": "R_UpperArm.L",
+     "parent": "R_Clavicle.L",
+     "head": [
+      -0.19,
+      0.07,
+      1.79
+     ],
+     "tail": [
+      -0.21,
+      0.12,
+      1.49
+     ],
+     "roll": 3.075
+    },
+    {
+     "name": "R_Forearm.L",
+     "parent": "R_UpperArm.L",
+     "head": [
+      -0.21,
+      0.12,
+      1.49
+     ],
+     "tail": [
+      -0.14,
+      0.31,
+      1.5
+     ],
+     "roll": 0.275
+    },
+    {
+     "name": "R_Hand.L",
+     "parent": "R_Forearm.L",
+     "head": [
+      -0.14,
+      0.31,
+      1.5
+     ],
+     "tail": [
+      -0.0572,
+      0.4921,
+      1.4669
+     ],
+     "roll": -0.7254
+    },
+    {
+     "name": "R_Clavicle.R",
+     "parent": "R_Chest",
+     "head": [
+      0.01,
+      0.09,
+      1.8
+     ],
+     "tail": [
+      0.16,
+      0.1,
+      1.79
+     ],
+     "roll": -0.071
+    },
+    {
+     "name": "R_UpperArm.R",
+     "parent": "R_Clavicle.R",
+     "head": [
+      0.16,
+      0.1,
+      1.79
+     ],
+     "tail": [
+      0.19,
+      0.14,
+      1.49
+     ],
+     "roll": -3.0419
+    },
+    {
+     "name": "R_Forearm.R",
+     "parent": "R_UpperArm.R",
+     "head": [
+      0.19,
+      0.14,
+      1.49
+     ],
+     "tail": [
+      0.09,
+      0.35,
+      1.57
+     ],
+     "roll": -1.274
+    },
+    {
+     "name": "R_Hand.R",
+     "parent": "R_Forearm.R",
+     "head": [
+      0.09,
+      0.35,
+      1.57
+     ],
+     "tail": [
+      0.0424,
+      0.4112,
+      1.5904
+     ],
+     "roll": -0.7211
+    },
+    {
+     "name": "Pole",
+     "parent": "R_Hand.R",
+     "head": [
+      0.046,
+      0.41,
+      1.6
+     ],
+     "tail": [
+      0.0233,
+      0.5544,
+      2.4399
+     ],
+     "roll": 0.0271
+    },
+    {
+     "name": "Pennon1",
+     "parent": "Pole",
+     "head": [
+      0.03,
+      0.555,
+      2.44
+     ],
+     "tail": [
+      0.03,
+      0.56,
+      2.24
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "Pennon2",
+     "parent": "Pennon1",
+     "head": [
+      0.03,
+      0.56,
+      2.24
+     ],
+     "tail": [
+      0.03,
+      0.56,
+      2.0399
+     ],
+     "roll": -3.1416
+    },
+    {
+     "name": "R_Neck",
+     "parent": "R_Chest",
+     "head": [
+      -0.02,
+      0.1,
+      1.86
+     ],
+     "tail": [
+      -0.02,
+      0.11,
+      1.97
      ],
      "roll": 0.0
     },
     {
      "name": "head",
-     "parent": "neck",
+     "parent": "R_Neck",
+     "head": [
+      -0.02,
+      0.11,
+      1.97
+     ],
+     "tail": [
+      -0.02,
+      0.1045,
+      2.0803
+     ],
+     "roll": 0.0
+    },
+    {
+     "name": "R_Thigh.L",
+     "parent": "R_Hips",
+     "head": [
+      -0.13,
+      0.04,
+      1.33
+     ],
+     "tail": [
+      -0.325,
+      0.33,
+      1.18
+     ],
+     "roll": 1.1862
+    },
+    {
+     "name": "R_Shin.L",
+     "parent": "R_Thigh.L",
+     "head": [
+      -0.325,
+      0.33,
+      1.18
+     ],
+     "tail": [
+      -0.335,
+      0.28,
+      0.87
+     ],
+     "roll": 3.1093
+    },
+    {
+     "name": "R_Foot.L",
+     "parent": "R_Shin.L",
+     "head": [
+      -0.335,
+      0.28,
+      0.87
+     ],
+     "tail": [
+      -0.4515,
+      0.544,
+      0.7458
+     ],
+     "roll": 1.5484
+    },
+    {
+     "name": "R_Thigh.R",
+     "parent": "R_Hips",
+     "head": [
+      0.09,
+      0.02,
+      1.33
+     ],
+     "tail": [
+      0.275,
+      0.34,
+      1.18
+     ],
+     "roll": -1.258
+    },
+    {
+     "name": "R_Shin.R",
+     "parent": "R_Thigh.R",
+     "head": [
+      0.275,
+      0.34,
+      1.18
+     ],
+     "tail": [
+      0.29,
+      0.29,
+      0.87
+     ],
+     "roll": -3.0932
+    },
+    {
+     "name": "R_Foot.R",
+     "parent": "R_Shin.R",
+     "head": [
+      0.29,
+      0.29,
+      0.87
+     ],
+     "tail": [
+      0.3928,
+      0.5588,
+      0.7435
+     ],
+     "roll": -1.6994
+    },
+    {
+     "name": "Spine2",
+     "parent": "Spine1",
      "head": [
       -0.0,
-      0.1146,
-      1.9881
+      -0.02,
+      1.19
      ],
      "tail": [
-      -0.069,
-      0.1367,
-      2.2351
+      -0.0,
+      0.3,
+      1.22
      ],
-     "roll": 0.0
+     "roll": 3.1416
     },
     {
-     "name": "thigh_l",
-     "parent": "hips",
-     "head": [
-      -0.1684,
-      0.0511,
-      1.3028
-     ],
-     "tail": [
-      -0.3305,
-      0.3703,
-      1.1548
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "shin_l",
-     "parent": "thigh_l",
-     "head": [
-      -0.3305,
-      0.3703,
-      1.1548
-     ],
-     "tail": [
-      -0.335,
-      0.2742,
-      0.8644
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "foot_l",
-     "parent": "shin_l",
-     "head": [
-      -0.335,
-      0.2742,
-      0.8644
-     ],
-     "tail": [
-      -0.4474,
-      0.5346,
-      0.7499
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "thigh_r",
-     "parent": "hips",
-     "head": [
-      0.0995,
-      0.0073,
-      1.3285
-     ],
-     "tail": [
-      0.2781,
-      0.3816,
-      1.1621
-     ],
-     "roll": -0.0
-    },
-    {
-     "name": "shin_r",
-     "parent": "thigh_r",
-     "head": [
-      0.2781,
-      0.3816,
-      1.1621
-     ],
-     "tail": [
-      0.2878,
-      0.2899,
-      0.8651
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "foot_r",
-     "parent": "shin_r",
-     "head": [
-      0.2878,
-      0.2899,
-      0.8651
-     ],
-     "tail": [
-      0.3916,
-      0.5588,
-      0.7483
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "neck_1",
-     "parent": "horse_body",
+     "name": "Chest",
+     "parent": "Spine2",
      "head": [
       0.0,
-      0.5,
-      1.3609
+      0.3,
+      1.22
      ],
      "tail": [
       0.0,
-      0.7836,
-      1.5806
+      0.4362,
+      1.2654
      ],
-     "roll": 0.0
+     "roll": -3.1416
     },
     {
-     "name": "neck_2",
-     "parent": "neck_1",
+     "name": "FrontScapula.L",
+     "parent": "Chest",
      "head": [
-      0.0,
-      0.7836,
-      1.5806
+      -0.09,
+      0.36,
+      1.33
      ],
      "tail": [
-      0.0,
-      1.0072,
-      1.7003
+      -0.19,
+      0.68,
+      1.06
      ],
-     "roll": 0.0
+     "roll": 2.3247
+    },
+    {
+     "name": "FrontUpperArm.L",
+     "parent": "FrontScapula.L",
+     "head": [
+      -0.19,
+      0.68,
+      1.06
+     ],
+     "tail": [
+      -0.17,
+      0.58,
+      0.8
+     ],
+     "roll": -3.0648
+    },
+    {
+     "name": "FrontForearm.L",
+     "parent": "FrontUpperArm.L",
+     "head": [
+      -0.17,
+      0.58,
+      0.8
+     ],
+     "tail": [
+      -0.185,
+      0.89,
+      0.59
+     ],
+     "roll": 2.9842
+    },
+    {
+     "name": "FrontCannon.L",
+     "parent": "FrontForearm.L",
+     "head": [
+      -0.185,
+      0.89,
+      0.59
+     ],
+     "tail": [
+      -0.175,
+      0.855,
+      0.4
+     ],
+     "roll": -3.089
+    },
+    {
+     "name": "FrontHoof.L",
+     "parent": "FrontCannon.L",
+     "head": [
+      -0.175,
+      0.855,
+      0.4
+     ],
+     "tail": [
+      -0.1485,
+      0.7603,
+      0.2334
+     ],
+     "roll": -2.9838
+    },
+    {
+     "name": "FrontScapula.R",
+     "parent": "Chest",
+     "head": [
+      0.07,
+      0.36,
+      1.33
+     ],
+     "tail": [
+      0.11,
+      0.68,
+      1.06
+     ],
+     "roll": -2.8022
+    },
+    {
+     "name": "FrontUpperArm.R",
+     "parent": "FrontScapula.R",
+     "head": [
+      0.11,
+      0.68,
+      1.06
+     ],
+     "tail": [
+      0.07,
+      0.46,
+      0.8
+     ],
+     "roll": 2.9889
+    },
+    {
+     "name": "FrontForearm.R",
+     "parent": "FrontUpperArm.R",
+     "head": [
+      0.07,
+      0.46,
+      0.8
+     ],
+     "tail": [
+      0.04,
+      0.49,
+      0.48
+     ],
+     "roll": 3.0481
+    },
+    {
+     "name": "FrontCannon.R",
+     "parent": "FrontForearm.R",
+     "head": [
+      0.04,
+      0.49,
+      0.48
+     ],
+     "tail": [
+      0.02,
+      0.465,
+      0.22
+     ],
+     "roll": 3.0648
+    },
+    {
+     "name": "FrontHoof.R",
+     "parent": "FrontCannon.R",
+     "head": [
+      0.02,
+      0.465,
+      0.22
+     ],
+     "tail": [
+      0.0032,
+      0.5543,
+      -0.0257
+     ],
+     "roll": 3.0735
+    },
+    {
+     "name": "Neck1",
+     "parent": "Chest",
+     "head": [
+      0.0,
+      0.48,
+      1.28
+     ],
+     "tail": [
+      -0.03,
+      0.74,
+      1.5
+     ],
+     "roll": -2.8286
+    },
+    {
+     "name": "Neck2",
+     "parent": "Neck1",
+     "head": [
+      -0.03,
+      0.74,
+      1.5
+     ],
+     "tail": [
+      -0.06,
+      0.99,
+      1.68
+     ],
+     "roll": -2.773
     },
     {
      "name": "head_h",
-     "parent": "neck_2",
+     "parent": "Neck2",
      "head": [
-      0.0,
-      1.0072,
-      1.7003
+      -0.06,
+      0.99,
+      1.68
      ],
      "tail": [
-      0.0,
-      1.0848,
-      1.4589
+      -0.082,
+      1.1368,
+      1.4084
      ],
-     "roll": 0.0
-    },
-    {
-     "name": "tail_1",
-     "parent": "horse_body",
-     "head": [
-      0.0565,
-      -0.611,
-      1.2384
-     ],
-     "tail": [
-      0.048,
-      -0.8003,
-      0.9763
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "tail_2",
-     "parent": "tail_1",
-     "head": [
-      0.048,
-      -0.8003,
-      0.9763
-     ],
-     "tail": [
-      0.0395,
-      -0.9897,
-      0.7142
-     ],
-     "roll": 0.0
-    },
-    {
-     "name": "tail_3",
-     "parent": "tail_2",
-     "head": [
-      0.0395,
-      -0.9897,
-      0.7142
-     ],
-     "tail": [
-      0.0309,
-      -1.1791,
-      0.4521
-     ],
-     "roll": 0.0
+     "roll": 3.0607
     }
    ],
    "shipped_clips": [
@@ -2545,7 +2725,7 @@
     "IDLE"
    ],
    "shipped_tris": 19426,
-   "shipped_height_m": 3.26,
+   "shipped_height_m": 3.326,
    "rig": "courier_rig",
    "mesh": "courier",
    "images": {
