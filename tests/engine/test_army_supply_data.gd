@@ -30,6 +30,6 @@ func test_the_carry_loads_run_10_to_30_and_slow_as_they_grow() -> void:
 	assert_true(days.has(int(data.bal("army_carry_default_days"))))
 
 func test_the_supply_menu_rows_and_the_hostile_stances_load() -> void:
-	for key in ["add", "change", "withdraw", "carry", "pick_far", "confirm", "cancel"]:
+	for key in ["add", "change", "withdraw", "pick_far", "confirm", "cancel"]:
 		assert_true(data.army_supply_orders.has(key), key)
 	assert_true(data.army_hostile_stances.has("Enemy"))

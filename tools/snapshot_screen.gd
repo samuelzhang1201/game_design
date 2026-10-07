@@ -108,7 +108,11 @@ var _weather := ""
 ## specified it (2026-09-24, 2026-09-27): a left click on the first regiment's
 ## piece opens its orders, MARCH is chosen, the pointer is put at that share of
 ## the 3D map (the aim's ruler follows it); with --march-confirm a left click
-## there opens COMMIT / CANCEL, and --march-commit then commits it. --shot-frame N waits
+## there opens the confirm panel (MarchConfirmPanel), and --march-commit then
+## clicks its Confirm. --march-via "fx,fy;fx,fy" clicks those shares first,
+## each followed by a real click on the panel's Add waypoint (spec
+## 2026-10-07-march-waypoints); --march-bend fx,fy then grabs the middle of the
+## route's last leg and drags it there with the left button held. --shot-frame N waits
 ## N frames before the shot (default 40), so a run with --speed can show the
 ## piece walking; without --speed the clock stays stopped and nothing moves.
 var _march3d := Vector2(-1, -1)
@@ -116,8 +120,10 @@ var _march3d := Vector2(-1, -1)
 ## when the world is still loading its pieces.
 var _march_at := 14
 var _march_confirm := false
-## --march-commit (with --march-confirm): choose COMMIT on the confirm menu.
+## --march-commit (with --march-confirm): click Confirm on the confirm panel.
 var _march_commit := false
+var _march_via: Array = []
+var _march_bend := Vector2(-1, -1)
 ## --dev: the 3D map in DEV MODE (every realm's regiments) for this shot only —
 ## the view's switch, never GameRoot's, which would write the player's settings.
 var _dev := false
@@ -158,6 +164,11 @@ var _click_courier := -1
 ## and where he is DRAWN, and his regiment's drawn spot — the courier's pace
 ## and the column's start read off the running window.
 var _trace_couriers := false
+## --supply-flow DX,DY (with --screen root): the player's first land regiment
+## marches DX,DY pack px from where it stands with a FLOWING supply line from
+## the realm's capital (the state set directly, for a shot of the line);
+## prints where it stands, for --look3d.
+var _supply_flow := Vector2.INF
 var _shot_frame := 40
 ## The Missive board and spies (2026-09-28), all with --screen root:
 ## --quiet drops the chapter's scheduled beats, rolls no random event and runs the
@@ -203,9 +214,8 @@ var _ledger_select := ""
 ## --war-hover fx,fy rests the pointer at that share of the view (a real
 ## motion) until the hover slip is up; --war-drag fx,fy (a share of the view), RAKES it there: a real left press
 ## on the piece, eight pushed motion events with the left button held, a real
-## release (the arrow and its COMMIT / CANCEL menu show; --war-commit then
-## chooses COMMIT the way PopupMenu.activate_item does, so the order's pennant
-## is planted). --war-folio
+## release (the arrow and its confirm panel show; --war-commit then clicks
+## its Confirm, so the order's draft is pencilled). --war-folio
 ## DRILL|explode opens the folio's drill or presses Take apart — it says so
 ## and skips while the folio, its drill tabs or its Take apart button are not
 ## built; an explode waits out its flight (war_explode_s) before the moment.
@@ -224,6 +234,11 @@ var _ledger_select := ""
 ## --war-leave TAB clicks that bottom tab with drafts standing and shoots the
 ## leave prompt.
 var _war_deploy := ""
+## --war-via "fx,fy;…" (after --war-drag): Add waypoint on the confirm panel,
+## then a real click at each share of the view; --war-bend fx,fy drags the
+## middle of the route's last leg there (spec 2026-10-07-march-waypoints).
+var _war_via: Array = []
+var _war_bend := Vector2(-1, -1)
 var _war_leave := ""
 var _war_room := false
 ## --war-room-at F (with --war-room): the frame the WAR ROOM tab is clicked
@@ -326,6 +341,20 @@ func _ready() -> void:
 		elif args[i] == "--march3d":
 			var mparts := args[i + 1].split(",")
 			_march3d = Vector2(float(mparts[0]), float(mparts[1]))
+		elif args[i] == "--war-via":
+			for pt in args[i + 1].split(";"):
+				var wparts := pt.split(",")
+				_war_via.append(Vector2(float(wparts[0]), float(wparts[1])))
+		elif args[i] == "--war-bend":
+			var wb := args[i + 1].split(",")
+			_war_bend = Vector2(float(wb[0]), float(wb[1]))
+		elif args[i] == "--march-via":
+			for pt in args[i + 1].split(";"):
+				var vparts := pt.split(",")
+				_march_via.append(Vector2(float(vparts[0]), float(vparts[1])))
+		elif args[i] == "--march-bend":
+			var bparts := args[i + 1].split(",")
+			_march_bend = Vector2(float(bparts[0]), float(bparts[1]))
 		elif args[i] == "--march-at":
 			_march_at = int(args[i + 1])
 		elif args[i] == "--shot-frame":
@@ -337,6 +366,9 @@ func _ready() -> void:
 			_click_courier = int(args[i + 1])
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
+		elif args[i] == "--supply-flow":
+			var sf := args[i + 1].split(",")
+			_supply_flow = Vector2(float(sf[0]), float(sf[1]))
 		elif args[i] == "--speed":
 			_speed = int(args[i + 1])
 		elif args[i] == "--spy3d":
@@ -474,6 +506,8 @@ func _ready() -> void:
 		# the reign's opening tick, as GameRoot._on_start_requested runs it —
 		# without it the clock starts at tick 0, whose days repeat tick 1's
 		Game.next_tick()
+	if _supply_flow != Vector2.INF:
+		_lay_supply_flow()
 	if _res != Vector2i.ZERO:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(_res)
@@ -529,6 +563,98 @@ func _ready() -> void:
 			screen.call("start", [_minister_beat(_speaker)], null)
 		if _tab >= 0 and screen.has_method("select_tab"):
 			screen.call("select_tab", _tab)
+
+
+## The middle of a planned route's last leg, pack px, on the curve it walks
+## (MarchRoute) — where --march-bend / --war-bend grab the line.
+func _last_leg_middle(pts: Array) -> Vector2:
+	var pts_m: Array = []
+	for p: Vector2 in pts:
+		pts_m.append(ArmySystem.pack_to_metres(Game.data, p))
+	var last: Array = MarchRoute.legs(pts_m, int(Game.data.bal("army_route_sample_m"))).back()
+	if last.size() < 3:
+		return (pts[pts.size() - 2] as Vector2).lerp(pts[pts.size() - 1], 0.5)
+	@warning_ignore("integer_division")
+	return ArmySystem.metres_to_pack(Game.data, last[last.size() / 2])
+
+
+## The frames the --march3d sequence takes before its bend and commit: the
+## piece, MARCH, then six a point (move, click, Add waypoint).
+func _march_steps() -> int:
+	return 4 + 6 * (_march_via.size() + 1)
+
+
+## One step of the --march3d sequence at offset `o` frames. REAL input all the
+## way (2026-09-24: a shot that called the view's and the menu's functions
+## directly hid that a chosen order was thrown away): mouse events pushed into
+## the viewport the view lives in, so they route through the GUI exactly as a
+## player's clicks do, the menu row chosen in PopupMenu.activate_item's order,
+## and the confirm panel's buttons clicked where they stand.
+func _march3d_step(o: int) -> void:
+	var mv: Map3DView = _root.current_screen.map3d_view()
+	var menu := _root.current_screen.get_node("%ArmyOrders") as ArmyOrderMenu
+	var points: Array = []
+	for v: Vector2 in _march_via:
+		points.append(mv.size * v)
+	points.append(mv.size * _march3d)
+	if o == 0:
+		# the first piece whose box is actually inside the view
+		var target := Vector2(-1, -1)
+		for code: String in mv.unit_rects():
+			var c := (mv.unit_rects()[code] as Rect2).get_center()
+			if Rect2(Vector2.ZERO, mv.size).has_point(c):
+				target = c
+				break
+		if target.x < 0.0:
+			# every column quartered: a land regiment's counter, a town of one regiment
+			for m: Dictionary in mv.army_markers():
+				var r: Rect2 = m["rect"]
+				if not bool(m["naval"]) and (m["codes"] as Array).size() <= 1 \
+						and Rect2(Vector2.ZERO, mv.size).has_point(r.get_center()):
+					target = r.get_center()
+					break
+		if target.x < 0.0:
+			push_error("march3d: no piece on screen")
+		else:
+			_real_click(mv, target)
+			print("march3d: menu open=%s selected=%s" % [menu.visible, mv.selected_army()])
+	elif o == 2:
+		# MARCH…, hidden first and then id_pressed — PopupMenu.activate_item's order
+		menu.hide()
+		menu.id_pressed.emit(0)
+		print("march3d: aiming=%s" % menu.aiming())
+	elif o < _march_steps():
+		var k := (o - 4) / 6
+		var at: Vector2 = points[k]
+		match (o - 4) % 6:
+			0:
+				_real_move(mv, at)
+			2:
+				if _march_confirm:
+					_real_click(mv, at)
+					print("march3d: confirm open=%s pending=%s waypoints=%s" % [menu.shown_confirm() != null,
+						menu.pending(), menu.waypoints()])
+			4:
+				if _march_confirm and k < _march_via.size() and menu.shown_confirm() != null:
+					var add := menu.shown_confirm().add_button()
+					_real_click(add, add.size * 0.5)
+					print("march3d: waypoint added, waypoints=%s" % [menu.waypoints()])
+	elif o == _march_steps() and _march_bend.x >= 0.0 and menu.shown_confirm() != null:
+		var edit := (mv.component("input") as Map3DInput).route
+		var grab: Variant = edit.screen_of(_last_leg_middle(Map3DRouteEdit.control_points(mv, edit.ctx)))
+		if grab == null:
+			push_error("march3d: the route's middle is off the camera")
+		else:
+			_real_drag(mv, grab, mv.size * _march_bend)
+			print("march3d: bent from %s, waypoints=%s" % [grab, menu.waypoints()])
+	elif o == _march_steps() + 2 and _march_commit and menu.shown_confirm() != null:
+		var code := menu.aiming()
+		var ok := menu.shown_confirm().confirm_button()
+		_real_click(ok, ok.size * 0.5)
+		print("march3d: order=%s days=%d clock=%d aiming_after=%s couriers=%s" % [
+			ArmySystem.order_of(Game.data, Game.state, code),
+			ArmySystem.days_out(Game.data, Game.state, code), Game.clock_speed, menu.aiming(),
+			Game.state.couriers])
 
 
 ## A left click at `local` (design px of `c`), pushed into c's viewport as
@@ -686,7 +812,7 @@ func _process(_delta: float) -> void:
 		# the clock starts only once the order is in, as the player's play would.
 		if _speed >= 0 and _march3d.x < 0.0 and _spy3d.is_empty():
 			_start_clock()
-	if _root != null and _frames == _march_at + 10 and _speed >= 0 and _march3d.x >= 0.0 and _spy3d.is_empty():
+	if _root != null and _frames == _march_at + _march_steps() + 4 and _speed >= 0 and _march3d.x >= 0.0 and _spy3d.is_empty():
 		_start_clock()
 	if _root != null and not _spy3d.is_empty():
 		_spy_step()
@@ -750,53 +876,11 @@ func _process(_delta: float) -> void:
 		var at := hv.size * _hover3d
 		hv.hover_pick(hv.pick_at(at), at)
 		print("hover3d: kingdom=%s name=%s" % [hv.hovered_kingdom(), hv.hover_tooltip()])
-	if _root != null and _march3d.x >= 0.0 and _frames - _march_at in [0, 2, 4, 6, 8] \
+	if _root != null and _march3d.x >= 0.0 and _frames >= _march_at and (_frames - _march_at) % 2 == 0 \
+			and _frames - _march_at <= _march_steps() + 2 \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
-		# REAL input all the way (2026-09-24: a shot that called the view's and
-		# the menu's functions directly hid that a chosen order was thrown
-		# away): mouse events pushed into the viewport the view lives in, so
-		# they route through the GUI exactly as a player's clicks do, and the
-		# menu row chosen through PopupMenu.activate_item, its real path.
-		var mv: Map3DView = _root.current_screen.map3d_view()
-		var menu := _root.current_screen.get_node("%ArmyOrders") as ArmyOrderMenu
-		var at := mv.size * _march3d
-		if _frames - _march_at == 0:
-			# the first piece whose box is actually inside the view (a piece in
-			# front of the camera but off the panel has a box too)
-			var target := Vector2(-1, -1)
-			for code: String in mv.unit_rects():
-				var c := (mv.unit_rects()[code] as Rect2).get_center()
-				if Rect2(Vector2.ZERO, mv.size).has_point(c):
-					target = c
-					break
-			if target.x < 0.0:
-				push_error("march3d: no piece on screen")
-			else:
-				_real_click(mv, target)
-				print("march3d: menu open=%s selected=%s" % [menu.visible, mv.selected_army()])
-		elif _frames - _march_at == 2:
-			# The first row, MARCH…, chosen in the order PopupMenu.activate_item
-			# (not exposed to scripts) does it: the menu HIDES first, and only
-			# then emits id_pressed. That order is what threw every chosen
-			# order away until 2026-09-24, so the shot must keep it.
-			menu.hide()
-			menu.id_pressed.emit(0)
-			print("march3d: aiming=%s" % menu.aiming())
-		elif _frames - _march_at == 4:
-			_real_move(mv, at)
-		elif _frames - _march_at == 6 and _march_confirm:
-			# the destination click only ASKS: COMMIT / CANCEL (owner 2026-09-27)
-			_real_click(mv, at)
-			print("march3d: confirm open=%s pending=%s" % [menu.visible, menu.pending()])
-		elif _frames - _march_at == 8 and _march_confirm and _march_commit:
-			var code := menu.aiming()
-			menu.hide()
-			menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
-			print("march3d: order=%s days=%d clock=%d aiming_after=%s couriers=%s" % [
-				ArmySystem.order_of(Game.data, Game.state, code),
-				ArmySystem.days_out(Game.data, Game.state, code), Game.clock_speed, menu.aiming(),
-				Game.state.couriers])
+		_march3d_step(_frames - _march_at)
 	if _root != null and _frames == 6 and _town != "" and _root.current_screen.has_method("detail_panel"):
 		var burg: Dictionary = Game.data.burgs.get(_town, {})
 		if burg.is_empty():
@@ -837,6 +921,24 @@ func _process(_delta: float) -> void:
 			int(ProjectSettings.get_setting("rendering/textures/canvas_textures/default_texture_filter", 0))])
 		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 		get_tree().quit()
+
+
+## --supply-flow: a marching regiment fed by a FLOWING line from the capital.
+func _lay_supply_flow() -> void:
+	var repo := Game.data
+	var realm := repo.resolve_realm("player_realm")
+	var cap := String((repo.kingdoms[realm] as Dictionary)["capital_burg"])
+	for r: Dictionary in MapObjects.regiments_of(repo, realm):
+		var code := String(r["regiment_code"])
+		if String(r.get("is_naval", "0")) == "1" or not Game.state.regiments.has(code):
+			continue
+		var at := ArmySystem.position_of(repo, Game.state, r)
+		ArmySystem.set_march(repo, Game.state, code, at + _supply_flow)
+		var rec := SupplyLines._new_record(cap, 1000, 1)
+		rec["state"] = SupplyLines.FLOWING
+		Game.state.supply_lines[code] = rec
+		print("supply-flow: %s at %s marching to %s, fed from %s" % [code, at, at + _supply_flow, cap])
+		return
 
 
 ## One --trace-couriers line: the frame, day, share, and every courier's
@@ -1133,10 +1235,25 @@ func _war_room_step() -> void:
 			gm.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
 			gm.id_pressed.emit(WarPlanDesk.PLACE)
 			print("war plan: form open=%s" % (screen.get_node("%PlanForm") as Control).visible)
-		if _war_commit:
-			var menu := screen.orders()
-			menu.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
-			menu.id_pressed.emit(ArmyOrderMenu.COMMIT)
+		var menu := screen.orders()
+		for v: Vector2 in _war_via:
+			# Add waypoint on the confirm panel, then the next point on the table
+			if menu.shown_confirm() != null:
+				var add := menu.shown_confirm().add_button()
+				_real_click(add, add.size * 0.5)
+			_real_click(view, Vector2(view.size) * v)
+			print("war: via %s waypoints=%s pending=%s" % [Vector2(view.size) * v, menu.waypoints(), menu.pending()])
+		if _war_bend.x >= 0.0 and menu.shown_confirm() != null:
+			var pts: Array = [view.position_of(menu.aiming())]
+			pts.append_array(menu.waypoints())
+			pts.append(menu.pending())
+			var grab: Variant = view.screen_pos_of_px(_last_leg_middle(pts))
+			if grab != null:
+				_real_drag(view, grab, Vector2(view.size) * _war_bend)
+			print("war: bent from %s waypoints=%s" % [grab, menu.waypoints()])
+		if _war_commit and menu.shown_confirm() != null:
+			var ok := menu.shown_confirm().confirm_button()
+			_real_click(ok, ok.size * 0.5)
 			print("war: committed order=%s pennant=%s draft=%s" % [ArmySystem.order_of(Game.data, Game.state, _war_piece),
 				WarRoom.pennant_of(Game.data, Game.state, _war_piece), WarDrafts.of(Game.state, _war_piece)])
 		if _war_folio != "":

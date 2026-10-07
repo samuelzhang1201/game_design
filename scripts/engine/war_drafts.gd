@@ -10,10 +10,22 @@ const MARCH := "march"
 const GARRISON := "garrison"
 
 
-static func plant(repo: DataRepository, state: GameState, code: String, order: String, dest_px: Vector2) -> void:
+## A march draft may name `waypoints` (pack px, in order) and the load it
+## should carry, `carry` days (spec 2026-10-07-march-waypoints ruling 8; -1
+## leaves the load alone).
+static func plant(repo: DataRepository, state: GameState, code: String, order: String, dest_px: Vector2,
+		waypoints: Array = [], carry := -1) -> void:
 	var m := ArmySystem.pack_to_metres(repo, dest_px) if order == MARCH else Vector2i.ZERO
-	state.war_drafts[code] = {"order": order, "dest_x_m": m.x, "dest_y_m": m.y,
+	var d := {"order": order, "dest_x_m": m.x, "dest_y_m": m.y,
 		"tick": state.tick, "day": state.day, "refused": ""}
+	if order == MARCH and not waypoints.is_empty():
+		var wm: Array = []
+		for w: Vector2 in waypoints:
+			wm.append(ArmySystem.pack_to_metres(repo, w))
+		d["waypoints_m"] = MarchRoute.to_pairs(wm)
+	if order == MARCH and carry >= 0:
+		d["carry_days"] = carry
+	state.war_drafts[code] = d
 
 
 static func strike(state: GameState, code: String) -> bool:
@@ -38,6 +50,25 @@ static func dest_px(repo: DataRepository, draft: Dictionary) -> Vector2:
 	return ArmySystem.metres_to_pack(repo, Vector2i(int(draft["dest_x_m"]), int(draft["dest_y_m"])))
 
 
+## A draft's waypoints in pack px, in order.
+static func waypoints_px(repo: DataRepository, draft: Dictionary) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for p: Vector2i in MarchRoute.from_pairs(draft.get("waypoints_m", [])):
+		out.append(ArmySystem.metres_to_pack(repo, p))
+	return out
+
+
+## Every real order a draft stands for, in the order they run: the load
+## (SUPPLY_CARRY_SET, only when it changes the regiment's) before the march.
+static func requests_from(repo: DataRepository, state: GameState, code: String, draft: Dictionary) -> Array:
+	var out: Array = []
+	if String(draft.get("order", "")) == MARCH and draft.has("carry_days") \
+			and int(draft["carry_days"]) != ArmySystem.carry_of(repo, ArmySystem.state_of(repo, state, code)):
+		out.append(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": code, "days": int(draft["carry_days"])}))
+	out.append(request_from(repo, code, draft))
+	return out
+
+
 ## The real order a draft stands for.
 static func request_of(repo: DataRepository, state: GameState, code: String) -> ActionRequest:
 	return request_from(repo, code, of(state, code))
@@ -47,5 +78,11 @@ static func request_of(repo: DataRepository, state: GameState, code: String) -> 
 static func request_from(repo: DataRepository, code: String, draft: Dictionary) -> ActionRequest:
 	if String(draft.get("order", "")) == MARCH:
 		var to := dest_px(repo, draft)
-		return ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": to.x, "y": to.y})
+		var params := {"regiment": code, "x": to.x, "y": to.y}
+		if draft.has("waypoints_m"):
+			var pairs: Array = []
+			for w: Vector2 in waypoints_px(repo, draft):
+				pairs.append([w.x, w.y])
+			params["waypoints"] = pairs
+		return ActionRequest.make("ARMY_MARCH", params)
 	return ActionRequest.make("ARMY_GARRISON", {"regiment": code})

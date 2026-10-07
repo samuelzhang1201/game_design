@@ -1,16 +1,22 @@
 class_name WarFolioPanel
 extends Control
-## The open folio over the war room (owner 2026-10-01, spec 2026-10-01-war-room-design
-## §4): a two-page manuscript held up to the eye. The book is a dark-leather
-## window (the war table's rule: windows stay leather); its PAGES are vellum
-## with ink text. The right page is WarFolio.sections laid dense in
-## balance war_folio_columns columns — rubric small-capital headers, the
-## reading face beneath, every size a war_folio_* key; the left page is the ink
-## figure (WarInkFigure, Task 13). ×, Escape or a click outside closes it; the
-## left column's card stays. While it is open the screen asks it to refresh as
-## the clock runs, so the page never goes stale.
+## The open folio in the war room (owner 2026-10-01, spec 2026-10-01-war-room-design
+## §4): a two-page manuscript. The book is a dark-leather window (the war
+## table's rule: windows stay leather); its PAGES are vellum with ink text.
+## The right page is WarFolio.sections laid dense in balance war_folio_columns
+## columns — rubric small-capital headers, the reading face beneath, every
+## size a war_folio_* key; the left page is the ink figure (WarInkFigure).
+## It opens DOCKED (owner 2026-10-07: 书缩小显示在左上角): the book shrunk in the
+## room's upper-left as the scene's %Folder stands — no dim, the room around it
+## still taking the camera, the pieces and the rake; ⤢ (%Enlarge) holds it up
+## full size and centred over a dim, whose click lays it back. × or Escape
+## closes it; another piece swaps it. While it is open the screen asks it to
+## refresh as the clock runs, so the page never goes stale.
 
 signal closed
+## The book was laid in its corner or held up (WarFolioPanel._place): the
+## screen moves its margin slip out of the docked book's way.
+signal placed
 
 ## The folio's look is scenes/war_room/war_folio.tscn (owner 2026-10-02: the
 ## look lives in the editor): the leather book (folio_book.tres), its vellum
@@ -35,16 +41,54 @@ var _inked: Dictionary = {}   # arm -> its icon redrawn in ink
 var _left_key: Array = []   # [order, figures, arms] the left page was last laid for
 var _apart := false         # the figure shows the kit taken apart, not the drill
 var _fly: Tween
+var _full := false
+var _dock_at := Vector2.ZERO        # the docked book's place and scale: the scene's %Folder
+var _dock_scale := Vector2.ONE
 
 
 func _ready() -> void:
 	visible = false
+	var folder: Control = %Folder
+	_dock_at = folder.position
+	_dock_scale = folder.scale
 	%Close.pressed.connect(close)
+	%Enlarge.pressed.connect(func() -> void: set_full(not _full))
 	(%TakeApart as Button).pressed.connect(toggle_take_apart)
 	(%Figure as WarInkFigure).label_font = UiPalette.role_font("body_italic")
 	(%Dim as ColorRect).gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
-			close())
+			set_full(false))   # a click beside the held-up book lays it back in its corner
+	resized.connect(_place)
+
+
+## Held up full size over a dim (true), or docked in the room's corner (false).
+func set_full(on: bool) -> void:
+	_full = on
+	(%Dim as Control).visible = on
+	var big: Button = %Enlarge
+	big.text = "−" if on else "+"
+	big.tooltip_text = "Lay the book back in its corner" if on else "Hold the book up full size"
+	_place()
+
+
+func is_full() -> bool:
+	return _full
+
+
+## The book's rect on this panel as it is drawn now (scaled).
+func book_rect() -> Rect2:
+	var folder: Control = %Folder
+	return Rect2(folder.position, folder.size * folder.scale)
+
+
+## The folder takes the book's size; docked it stands where the scene puts it,
+## held up it is centred at full size.
+func _place() -> void:
+	var folder: Control = %Folder
+	folder.size = (%Book as Control).get_combined_minimum_size()
+	folder.scale = Vector2.ONE if _full else _dock_scale
+	folder.position = ((size - folder.size) * 0.5).max(Vector2.ZERO) if _full else _dock_at
+	placed.emit()
 
 
 ## The graphics tier reaches the figure's own viewport.
@@ -63,12 +107,14 @@ func open_for(code: String) -> void:
 	_fill_left()
 	(%RightScroll as ScrollContainer).scroll_vertical = 0
 	visible = true
+	_place.call_deferred()   # the new rows' size is known once they are laid out
 
 
 func close() -> void:
 	if not visible:
 		return
 	visible = false
+	set_full(false)   # it opens docked again
 	_set_apart(false)   # the kit goes back together, its tween stopped
 	(%Figure as WarInkFigure).set_active(false)
 	closed.emit()
@@ -84,6 +130,7 @@ func refresh() -> void:
 	var at := scroll.scroll_vertical
 	if _fill_right():
 		scroll.set_deferred("scroll_vertical", at)   # the new rows lay out next frame
+		_place.call_deferred()
 
 
 ## The section boxes of the right page, in order, whatever column holds them.

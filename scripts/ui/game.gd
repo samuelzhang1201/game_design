@@ -170,8 +170,8 @@ func try_execute(req: ActionRequest) -> Dictionary:
 
 ## The WAR ROOM's drafts (spec 2026-10-02-war-room-v2 §3): pencilled, not
 ## sent. Game is their only writer.
-func plant_draft(code: String, order: String, dest_px: Vector2) -> void:
-	WarDrafts.plant(data, state, code, order, dest_px)
+func plant_draft(code: String, order: String, dest_px: Vector2, waypoints: Array = [], carry := -1) -> void:
+	WarDrafts.plant(data, state, code, order, dest_px, waypoints, carry)
 	state_changed.emit()
 
 
@@ -251,14 +251,25 @@ func review_drafts() -> Dictionary:
 	var sim := GameState.from_dict(state.to_dict(), false)
 	for code: String in WarDrafts.codes(state):
 		var d := WarDrafts.of(state, code)
-		var req := WarDrafts.request_from(data, code, d)
+		# a march draft may carry a new load: its order runs first (spec
+		# 2026-10-07-march-waypoints ruling 8), the line its gold and the march's
+		var reqs := WarDrafts.requests_from(data, state, code, d)
+		var req: ActionRequest = reqs.back()
 		var reg := ArmySystem.regiment(data, code)
-		var refusal := engine.actions.validate(req, sim)
+		# each order weighed after the one before it has spent; a draft of two
+		# runs on its own copy, kept only when both pass (nothing half-spent)
+		var trial := sim if reqs.size() == 1 else GameState.from_dict(sim.to_dict(), false)
+		var chest := float(trial.metrics.get("treasury", 0.0))
+		var refusal := ""
+		trial.war_drafts.erase(code)
+		for r: ActionRequest in reqs:
+			refusal = engine.actions.validate(r, trial)
+			if refusal != "":
+				break
+			engine.actions.execute(r, trial)
 		var gold := 0
 		if refusal == "":
-			var chest := float(sim.metrics.get("treasury", 0.0))
-			sim.war_drafts.erase(code)
-			engine.actions.execute(req, sim)
+			sim = trial
 			gold = int(round(chest - float(sim.metrics.get("treasury", 0.0))))
 			total += gold
 		var to := "where it stands"
@@ -266,7 +277,8 @@ func review_drafts() -> Dictionary:
 		if req.action_code == "ARMY_MARCH":
 			var dest := WarDrafts.dest_px(data, d)
 			to = Intel.place_label(data, state, dest)
-			days = CourierSystem.arrival_days(data, state, code, dest)   # ride + march
+			days = CourierSystem.arrival_days(data, state, code, dest, Vector2(-1, -1), -1,
+				Array(WarDrafts.waypoints_px(data, d)), int(d.get("carry_days", -1)))   # ride + march
 		lines.append({"code": code, "label": String(reg.get("label", code)), "order": String(d["order"]),
 			"to": to, "days": days, "gold": gold, "refusal": refusal})
 	return {"lines": lines, "total": total}
@@ -286,7 +298,11 @@ func deploy_drafts() -> Dictionary:
 		var why := String(line["refusal"])
 		if why == "":
 			state.war_drafts.erase(code)
-			var out := try_execute(WarDrafts.request_from(data, code, d))
+			var out := {}
+			for r: ActionRequest in WarDrafts.requests_from(data, state, code, d):
+				out = try_execute(r)
+				if not bool(out.get("ok", false)):
+					break
 			if bool(out.get("ok", false)):
 				sent.append(code)
 				continue

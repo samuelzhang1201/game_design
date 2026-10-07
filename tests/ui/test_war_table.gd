@@ -61,9 +61,13 @@ func test_the_report_ends_above_the_bookmarks_and_scrolls() -> void:
 	var court := _court(r)
 	await wait_process_frames(3)
 	var column: Control = court.get_node("%LogPanel")
-	var bar_top := r.size.y - BottomBar.BAR_HEIGHT
-	assert_lt(column.get_global_rect().end.y, bar_top + 1.0,
-		"the left column never runs under the bottom bar (it did, 2026-10-01)")
+	# the bookmarks hang from under the map sheet, right of the column: the
+	# column runs down past their tops (owner 2026-10-07) but never over one
+	for tab: String in BottomBar.TABS:
+		var b := r.bottom_bar().button(tab)
+		if b != null and b.visible:
+			assert_false(column.get_global_rect().intersects(b.get_global_rect()),
+				"the left column never runs over the %s bookmark (it did, 2026-10-01)" % tab)
 	var scroll: ScrollContainer = court.dashboard().find_child("Scroll", true, false)
 	assert_not_null(scroll, "the realm's card scrolls inside the column")
 
@@ -224,48 +228,27 @@ func test_a_months_event_waits_on_the_table_while_time_runs() -> void:
 	seal.refresh()
 	assert_eq(seal.bubble_for(), String(Game.state.council["chaplain"]))
 
-## Owner 2026-10-01: 指南针被盖住了，往下挪，露出来 — the compass lies in the
-## free band below the report's DRAWN foot, as big as that band allows up to
-## ui_table_compass_px, wholly on the screen and clear of the paper, the news
-## slip and every bookmark — at 1280x720 and at a 16:10 window (1280x800).
-func test_the_compass_lies_on_the_table_below_the_report() -> void:
+## Owner 2026-10-07: 指南针挪到地图左上角里 — no compass lies on the table any
+## more (the map draws its own at its top-left), so the report's column runs
+## on down to the screen's foot margin, clear of every bookmark.
+func test_the_report_runs_down_where_the_compass_lay() -> void:
 	var was := get_tree().root.size
 	for shape: Vector2i in [Vector2i(1280, 720), Vector2i(2560, 1600)]:
 		get_tree().root.size = shape
 		var r := _root()
 		var court := _court(r)
 		await wait_process_frames(4)
-		var compass: TableCompass = court.find_child("TableCompass", false, false)
-		assert_not_null(compass, "the compass lies on the table")
-		var rect := compass.wheel_global_rect()
 		var tag := " at %s (design %s)" % [shape, r.size]
-		assert_true(Rect2(Vector2.ZERO, r.size).encloses(rect), "wholly on the screen" + tag)
-		var col := court.get_node("%LogPanel") as Control
-		var paper := Rect2(col.global_position, Vector2(col.size.x, compass.paper_bottom() - col.global_position.y))
-		assert_false(rect.intersects(paper), "clear of the report's drawn paper" + tag)
-		assert_false(rect.intersects(r.news_ticker().get_global_rect()), "clear of the news slip" + tag)
+		assert_null(court.find_child("TableCompass", true, false), "no compass on the table" + tag)
+		var col := (court.get_node("%LogPanel") as Control).get_global_rect()
+		assert_almost_eq(col.end.y, r.size.y - 12.0, 0.5, "the column reaches the foot margin" + tag)
 		for tab: String in BottomBar.TABS:
 			var b := r.bottom_bar().button(tab)
 			if b != null and b.visible:
-				assert_false(rect.intersects(b.get_global_rect()), "clear of the " + tab + " bookmark" + tag)
-		if r.size.y >= 799.0:
-			assert_gte(rect.size.x, 90.0, "near its full size where the band allows" + tag)
-		gut.p("compass %s: %s, paper foot %.0f" % [tag, rect, compass.paper_bottom()])
+				assert_false(col.intersects(b.get_global_rect()), "clear of the " + tab + " bookmark" + tag)
+		assert_false(col.intersects(r.news_ticker().get_global_rect()), "clear of the news slip" + tag)
 		r.free()
 	get_tree().root.size = was
-
-
-## The fit itself: as big as the band allows, up to ui_table_compass_px.
-func test_the_compass_fits_the_band_below_the_report() -> void:
-	var full := Game.data.bal("ui_table_compass_px")
-	var clear := Game.data.bal("ui_table_compass_clear_px")
-	var wide := TableCompass.fit(640.0, 796.0, ScreenLayout.LEFT_WIDTH)
-	assert_eq(wide.size.x, full, "a 16:10 band (~150 px) takes the whole compass")
-	assert_gte(wide.position.y, 640.0 + clear)
-	var tight := TableCompass.fit(664.0, 716.0, ScreenLayout.LEFT_WIDTH)
-	assert_eq(tight.size.x, 716.0 - 664.0 - clear, "a tight band, as large as it allows")
-	assert_lte(tight.end.y, 716.0)
-	assert_eq(TableCompass.fit(716.0, 716.0, 240.0).size.x, 0.0, "no band, no wheel")
 
 
 func test_a_tooltip_over_the_paper_keeps_the_chip_light_ink() -> void:

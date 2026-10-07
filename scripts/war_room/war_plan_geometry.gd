@@ -7,9 +7,6 @@ extends RefCounted
 ## filled head (its tail notched like a pennon), a front's saw teeth on the
 ## drawer's right, dashes, a crayon band round a line, and hit distances. Pure.
 
-const ALPHA := 0.5   # centripetal: never loops or cusps between close points
-
-
 ## Ramer–Douglas–Peucker at `tol`, coarsened (the tolerance doubled) until at
 ## most `max_n` points remain; the ends always kept.
 static func simplify(points: PackedVector2Array, tol: float, max_n: int) -> PackedVector2Array:
@@ -51,7 +48,9 @@ static func _rdp(points: PackedVector2Array, tol: float) -> PackedVector2Array:
 	return out
 
 
-## The curve through every control point, sampled about `step` apart.
+## The curve through every control point, sampled about `step` apart: the
+## march route's centripetal Catmull-Rom (MarchRoute.point, the ends'
+## missing neighbours reflected as there), in floats rather than whole metres.
 static func curve(ctrl: PackedVector2Array, step: float) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for p in ctrl:
@@ -68,29 +67,9 @@ static func curve(ctrl: PackedVector2Array, step: float) -> PackedVector2Array:
 		var p3 := pts[i + 2] if i + 2 < n else p2 * 2.0 - p1
 		var count := maxi(1, ceili(p1.distance_to(p2) / maxf(step, 0.0001)))
 		for k in range(1, count):
-			out.append(point(p0, p1, p2, p3, float(k) / float(count)))
+			out.append(MarchRoute.point(p0, p1, p2, p3, float(k) / float(count)))
 		out.append(p2)
 	return out
-
-
-## The point at `u` (0..1) between p1 and p2 (Barry and Goldman's pyramid) —
-## the same curve as MarchRoute's, in floats.
-static func point(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, u: float) -> Vector2:
-	var t0 := 0.0
-	var t1 := t0 + _knot(p0, p1)
-	var t2 := t1 + _knot(p1, p2)
-	var t3 := t2 + _knot(p2, p3)
-	var t := lerpf(t1, t2, u)
-	var a1 := p0 * ((t1 - t) / (t1 - t0)) + p1 * ((t - t0) / (t1 - t0))
-	var a2 := p1 * ((t2 - t) / (t2 - t1)) + p2 * ((t - t1) / (t2 - t1))
-	var a3 := p2 * ((t3 - t) / (t3 - t2)) + p3 * ((t - t2) / (t3 - t2))
-	var b1 := a1 * ((t2 - t) / (t2 - t0)) + a2 * ((t - t0) / (t2 - t0))
-	var b2 := a2 * ((t3 - t) / (t3 - t1)) + a3 * ((t - t1) / (t3 - t1))
-	return b1 * ((t2 - t) / (t2 - t1)) + b2 * ((t - t1) / (t2 - t1))
-
-
-static func _knot(a: Vector2, b: Vector2) -> float:
-	return maxf(pow(a.distance_to(b), ALPHA), 0.0001)
 
 
 static func length(path: PackedVector2Array) -> float:

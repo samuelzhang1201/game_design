@@ -59,8 +59,8 @@ func _lines(path: String) -> int:
 ## build line — Map3DLayerTrees does the work.
 ## 578 since the march's road is draped from where its piece is DRAWN
 ## (2026-09-30): one line handing the HUD the pieces' positions.
-## 581 since the march trails (2026-10-01): the trails layer's var, its bind
-## and its step in _process — Map3DLayerTrails does the work.
+## 581 since the march trails (2026-10-01; the march dust since 2026-10-07):
+## the layer's var, its bind and its step in _process — Map3DLayerDust does the work.
 ## 582 since the view put away stops its subtree's processing (perf
 ## 2026-10-02): one line each in activate and deactivate.
 func test_the_view_is_a_coordinator() -> void:

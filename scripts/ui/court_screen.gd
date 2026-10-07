@@ -53,7 +53,7 @@ var _map3d_military := false
 
 ## The screen's look lives in scenes/screens/court.tscn and is edited in the editor
 ## (owner 2026-10-02): THE WAR TABLE's oak (%Table), the map's vellum sheet,
-## the steward's report, the compass on the table, the council's wax seal,
+## the steward's report, the council's wax seal,
 ## the council column's leather. _ready fetches the nodes and wires signals;
 ## log lines and suggestion buttons are spawned at runtime below. Under
 ## balance ui_war_table 0 it puts the 2026-09-28 leather on instead
@@ -106,10 +106,9 @@ func _ready() -> void:
 	_military.closed.connect(func() -> void: set_military_view(false))
 	if UiPalette.war_table():
 		# the report writes in paper ink and is drawn only as tall as the
-		# realm's card; the compass turns the map north
+		# realm's card (the compass is the map's own, at its top-left)
 		WarTable.ink_column(%LogPanel)
 		WarTable.fit_report(%LogPanel, _dashboard)
-		%TableCompass.view = _map3d
 	_log_scroll = %LogScroll
 	log_box = %LogBox
 	suggestions_box = %SuggestionsBox
@@ -120,7 +119,7 @@ func _ready() -> void:
 	_set_right("")
 	_refresh_left()
 
-## The leather chrome (balance ui_war_table 0): no table, no compass, no seal;
+## The leather chrome (balance ui_war_table 0): no table, no seal;
 ## the map, the column and the council in the 2026-09-28 dark leather, and
 ## ENTER THE COUNCIL the screen's primary button.
 func _dress_leather() -> void:
@@ -128,7 +127,6 @@ func _dress_leather() -> void:
 	%Bg.color = UiPalette.BG_SCREEN
 	%Bg.z_index = 0
 	%Table.queue_free()
-	%TableCompass.queue_free()
 	%CouncilHandle.queue_free()
 	%MapPanel.add_theme_stylebox_override("panel",
 		UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 4, "map"))

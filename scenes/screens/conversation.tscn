@@ -1,26 +1,24 @@
 [gd_scene format=3 uid="uid://x10wk6i843n2"]
 
-[ext_resource type="Script" uid="uid://bjfj0a5io4f7y" path="res://scripts/ui/conversation_scene.gd" id="1"]
-[ext_resource type="PackedScene" uid="uid://cbqhq1qgdyef8" path="res://scenes/hud/top_bar.tscn" id="2"]
-[ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_re25w"]
-[ext_resource type="Script" uid="uid://dgo56mr5okaon" path="res://scripts/ui/audience_backdrop.gd" id="3"]
-[ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_mcr13"]
-[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="4_jcdsd"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_qiomc"]
-[ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="5_spy01"]
-[ext_resource type="Theme" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_s1f5y"]
-[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_qawe0"]
-[ext_resource type="Script" uid="uid://bbrp2ldvjuip0" path="res://scripts/ui/war_table/table_compass.gd" id="8_me260"]
-[ext_resource type="Texture2D" uid="uid://bd7f6xayv2ffr" path="res://assets/2D/ui/compass/compass.png" id="9_ljhws"]
-[ext_resource type="StyleBox" uid="uid://dkmwlf8acscqq" path="res://assets/2D/ui/panels/styles/leather_window.tres" id="10_exqs4"]
-[ext_resource type="StyleBox" uid="uid://bjddf0cjlcs34" path="res://assets/2D/ui/panels/styles/audience_banner.tres" id="11_kjli4"]
-[ext_resource type="StyleBox" uid="uid://36epxikbc22a" path="res://assets/2D/ui/panels/styles/portrait_frame.tres" id="12_4cycb"]
-[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="14_xhpf2"]
-[ext_resource type="StyleBox" uid="uid://clgvpa72i73d2" path="res://assets/2D/ui/panels/styles/bar_track.tres" id="15_jpvuw"]
-[ext_resource type="StyleBox" uid="uid://x16loajcjew1" path="res://assets/2D/ui/panels/styles/leather_council.tres" id="16_ta68s"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="17_p0mqs"]
-[ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="18_ypg0k"]
-[ext_resource type="PackedScene" uid="uid://rkch67nhd00f" path="res://scenes/war_table/council_seal.tscn" id="21_re25w"]
+[ext_resource type="Script" uid="uid://bjfj0a5io4f7y" path="res://scripts/ui/conversation_scene.gd" id="1_ovjs3"]
+[ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_80gft"]
+[ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_ivri7"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_03wsj"]
+[ext_resource type="PackedScene" uid="uid://cbqhq1qgdyef8" path="res://scenes/hud/top_bar.tscn" id="5_v8j15"]
+[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_oeip7"]
+[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_pe3qh"]
+[ext_resource type="StyleBox" uid="uid://dkmwlf8acscqq" path="res://assets/2D/ui/panels/styles/leather_window.tres" id="8_4d3yy"]
+[ext_resource type="StyleBox" uid="uid://bjddf0cjlcs34" path="res://assets/2D/ui/panels/styles/audience_banner.tres" id="9_arvkg"]
+[ext_resource type="StyleBox" uid="uid://36epxikbc22a" path="res://assets/2D/ui/panels/styles/portrait_frame.tres" id="10_kdha7"]
+[ext_resource type="Script" uid="uid://dgo56mr5okaon" path="res://scripts/ui/audience_backdrop.gd" id="11_nusqr"]
+[ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="12_sop0l"]
+[ext_resource type="StyleBox" uid="uid://clgvpa72i73d2" path="res://assets/2D/ui/panels/styles/bar_track.tres" id="13_3tsmo"]
+[ext_resource type="StyleBox" uid="uid://x16loajcjew1" path="res://assets/2D/ui/panels/styles/leather_council.tres" id="14_4q174"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="15_qetrq"]
+[ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="16_hcofa"]
+[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="17_e3vqp"]
+[ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="18_w6l2q"]
+[ext_resource type="PackedScene" uid="uid://rkch67nhd00f" path="res://scenes/war_table/council_seal.tscn" id="19_cy0f3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bwxhs"]
 content_margin_left = 14.0
@@ -94,7 +92,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1")
+script = ExtResource("1_ovjs3")
 
 [node name="Bg" type="ColorRect" parent="." unique_id=87825667]
 unique_name_in_owner = true
@@ -112,8 +110,8 @@ anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-script = ExtResource("2_re25w")
-texture = ExtResource("3_mcr13")
+script = ExtResource("2_80gft")
+texture = ExtResource("3_ivri7")
 tone = Color(0.627451, 0.4392157, 0.22745098, 0.13333334)
 light = Color(1, 0.9490196, 0.8156863, 0.14117648)
 vignette = Color(0, 0, 0, 0.17254902)
@@ -128,9 +126,9 @@ offset_left = 268.0
 offset_top = 67.0
 offset_right = -12.0
 offset_bottom = -48.0
-theme_override_styles/panel = ExtResource("4_qiomc")
+theme_override_styles/panel = ExtResource("4_03wsj")
 
-[node name="TopBar" parent="." unique_id=1742348619 instance=ExtResource("2")]
+[node name="TopBar" parent="." unique_id=1742348619 instance=ExtResource("5_v8j15")]
 unique_name_in_owner = true
 layout_mode = 1
 
@@ -142,27 +140,14 @@ anchor_bottom = 1.0
 offset_left = 12.0
 offset_top = 67.0
 offset_right = 252.0
-offset_bottom = -56.0
-theme = ExtResource("6_s1f5y")
-theme_override_styles/panel = ExtResource("7_qawe0")
+offset_bottom = -12.0
+theme = ExtResource("6_oeip7")
+theme_override_styles/panel = ExtResource("7_pe3qh")
 metadata/paper_ground = Color(0.8235294, 0.7411765, 0.5647059, 1)
 
 [node name="MVBox" type="VBoxContainer" parent="MinisterPanel" unique_id=1601692104]
 layout_mode = 2
 theme_override_constants/separation = 4
-
-[node name="TableCompass" type="Control" parent="." unique_id=297773124 node_paths=PackedStringArray("column")]
-unique_name_in_owner = true
-editor_description = "The wheel turns with the clock and its needle with the map at runtime; in the editor it lies at the strip's foot."
-anchors_preset = 0
-anchor_bottom = 1.0
-offset_left = 12.0
-offset_right = 252.0
-offset_bottom = -4.0
-tooltip_text = "The compass — press to turn the map north"
-script = ExtResource("8_me260")
-column = NodePath("../MinisterPanel")
-art = ExtResource("9_ljhws")
 
 [node name="AudienceLayer" type="Control" parent="." unique_id=732824053]
 unique_name_in_owner = true
@@ -194,7 +179,7 @@ mouse_filter = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(760, 500)
 layout_mode = 2
-theme_override_styles/panel = ExtResource("10_exqs4")
+theme_override_styles/panel = ExtResource("8_4d3yy")
 
 [node name="AudienceCol" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow" unique_id=5494348]
 layout_mode = 2
@@ -203,7 +188,7 @@ theme_override_constants/separation = 10
 [node name="AudienceBanner" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol" unique_id=1193525787]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_styles/panel = ExtResource("11_kjli4")
+theme_override_styles/panel = ExtResource("9_arvkg")
 
 [node name="AudienceTitle" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBanner" unique_id=1782393403]
 unique_name_in_owner = true
@@ -237,7 +222,7 @@ theme_override_constants/separation = 6
 [node name="PortraitFrame" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide" unique_id=309489969]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_styles/panel = ExtResource("12_4cycb")
+theme_override_styles/panel = ExtResource("10_kdha7")
 
 [node name="FrameStack" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame" unique_id=2044004590]
 custom_minimum_size = Vector2(222, 250)
@@ -251,7 +236,7 @@ anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-script = ExtResource("3")
+script = ExtResource("11_nusqr")
 
 [node name="PortraitBox" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/PortraitFrame/FrameStack" unique_id=1046049573]
 unique_name_in_owner = true
@@ -276,7 +261,7 @@ custom_minimum_size = Vector2(30.6, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
-script = ExtResource("14_xhpf2")
+script = ExtResource("12_sop0l")
 
 [node name="MinisterName" type="Label" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/PortraitSide/DossierHead/PlateRow" unique_id=1198441752]
 unique_name_in_owner = true
@@ -312,7 +297,7 @@ custom_minimum_size = Vector2(40, 8)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-theme_override_styles/background = ExtResource("15_jpvuw")
+theme_override_styles/background = ExtResource("13_3tsmo")
 min_value = -100.0
 show_percentage = false
 
@@ -486,7 +471,7 @@ offset_left = -332.0
 offset_top = 67.0
 offset_right = -12.0
 offset_bottom = -56.0
-theme_override_styles/panel = ExtResource("16_ta68s")
+theme_override_styles/panel = ExtResource("14_4q174")
 
 [node name="Col" type="VBoxContainer" parent="DialoguePanel" unique_id=746815519]
 layout_mode = 2
@@ -496,7 +481,7 @@ theme_override_constants/separation = 6
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
-theme_override_fonts/font = ExtResource("17_p0mqs")
+theme_override_fonts/font = ExtResource("15_qetrq")
 theme_override_font_sizes/font_size = 14
 text = "Leave the Council"
 
@@ -521,7 +506,7 @@ theme_override_constants/v_separation = 4
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
-theme_override_fonts/font = ExtResource("17_p0mqs")
+theme_override_fonts/font = ExtResource("15_qetrq")
 theme_override_font_sizes/font_size = 16
 text = "Move"
 
@@ -583,7 +568,7 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_styles/panel = ExtResource("18_ypg0k")
+theme_override_styles/panel = ExtResource("16_hcofa")
 
 [node name="PopupCol" type="VBoxContainer" parent="EventPopup/PopupPanel" unique_id=414715254]
 layout_mode = 2
@@ -615,13 +600,13 @@ theme_override_constants/separation = 4
 
 [node name="ArmyOrders" type="PopupMenu" parent="." unique_id=1559366654]
 unique_name_in_owner = true
-script = ExtResource("4_jcdsd")
+script = ExtResource("17_e3vqp")
 
 [node name="SpyOrders" type="PopupMenu" parent="." unique_id=2035525363]
 unique_name_in_owner = true
-script = ExtResource("5_spy01")
+script = ExtResource("18_w6l2q")
 
-[node name="CouncilHandle" parent="." unique_id=1423902817 instance=ExtResource("21_re25w")]
+[node name="CouncilHandle" parent="." unique_id=1423902817 instance=ExtResource("19_cy0f3")]
 unique_name_in_owner = true
 editor_description = "Grows leftward with the council row: the councillors, who waits to be heard (WaxSeal.refresh) and their miniatures are set at runtime. Hidden while the council column is open."
 custom_minimum_size = Vector2(137, 96)

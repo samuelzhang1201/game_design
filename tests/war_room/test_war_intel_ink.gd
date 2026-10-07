@@ -1,7 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## What we KNOW, inked over the laid sheet once a day (spec 2026-10-02-war-room-v2
-## §2.4): our supply lines, our couriers, the weather, spy reports that came in.
+## §2.4): our couriers, the weather, spy reports that came in.
 
 var repo: DataRepository
 var state: GameState
@@ -18,42 +18,14 @@ func _sheet_of_first_regiment() -> Dictionary:
 	return WarSheets.series(repo)[int(p["sheet"])]
 
 
-func test_only_our_own_supply_lines_are_inked() -> void:
-	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).map(
-		func(r: Dictionary) -> String: return String(r["regiment_code"]))
-	# every land regiment of ours runs a supply line (spec 2026-10-07-army-supply-lines)
+## The supply lines move with the pieces (WarSupplyFlow, owner 2026-10-07):
+## they are not baked into what we know.
+func test_supply_lines_are_not_inked_into_the_intel() -> void:
 	for c in state.regiments.keys():
 		if String(ArmySystem.regiment(repo, String(c)).get("is_naval", "0")) != "1":
 			state.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(repo, state)[0], 1000, 1)
 			state.supply_lines[c]["state"] = SupplyLines.FLOWING
-	var inked := 0
-	for s: Dictionary in WarSheets.series(repo):
-		for line: Dictionary in WarIntelInk.strokes(repo, state, s, 1024)["supply"]:
-			assert_true(String(line["code"]) in ours, "a foreign regiment's supply line is not ours to know")
-			assert_gte((line["poly"] as PackedVector2Array).size(), 2)
-			inked += 1
-	assert_gt(inked, 0, "our lines are inked")
-
-
-## Final review 7: only a FLOWING line is a road the wagons roll on (as the
-## 3D map draws them): ordered, riding and cut lines are not inked.
-func test_only_flowing_lines_are_inked() -> void:
-	var codes: Array = []
-	for c in state.regiments.keys():
-		if String(ArmySystem.regiment(repo, String(c)).get("is_naval", "0")) != "1":
-			codes.append(String(c))
-	codes.sort()
-	for st: String in [SupplyLines.ORDERED, SupplyLines.RIDING, SupplyLines.CUT, SupplyLines.FLOWING]:
-		for c: String in codes:
-			state.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(repo, state)[0], 1000, 1)
-			state.supply_lines[c]["state"] = st
-		var inked := 0
-		for s: Dictionary in WarSheets.series(repo):
-			inked += (WarIntelInk.strokes(repo, state, s, 1024)["supply"] as Array).size()
-		if st == SupplyLines.FLOWING:
-			assert_gt(inked, 0, "a flowing line is inked")
-		else:
-			assert_eq(inked, 0, "a %s line is not inked" % st)
+	assert_false(WarIntelInk.strokes(repo, state, _sheet_of_first_regiment(), 1024).has("supply"))
 
 
 func test_a_spy_still_riding_is_a_courier_and_files_no_report_yet() -> void:
