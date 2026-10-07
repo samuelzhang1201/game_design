@@ -192,13 +192,20 @@ static func battle_words(repo: DataRepository, key: String, vars: Dictionary, pi
 ## undefended, lifted, liberated) rides in the same letter, a line each after the
 ## fighting, the town by name and the figures the events carry
 ## (templates.csv `siege_*`); a letter of siege news alone is about the town.
+## The day's raid news (RaidSystem.news: raid_begin, raid_spoils) follows the
+## same way (templates.csv `raid_*`, the place and the event's figures); a
+## letter of raid news alone is about the first raid's place.
 static func battle_report(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
 	var pick := state.absolute_day()
 	var at: Dictionary = {}       # battle id -> an event that carries its place
 	var rounds: Dictionary = {}   # battle id -> its round event today
 	var first_battle := -1
 	var siege_town := ""
+	var raid_at: Dictionary = {}  # the first raid line's event (its place)
 	for e: Dictionary in events:
+		if String(e["kind"]).begins_with("raid_"):
+			raid_at = e if raid_at.is_empty() else raid_at
+			continue
 		if String(e["kind"]).begins_with("siege_"):
 			siege_town = String(e["town"]) if siege_town == "" else siege_town
 			continue
@@ -213,6 +220,11 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 	for e: Dictionary in events:
 		if String(e["kind"]).begins_with("siege_"):
 			facts.append(_siege_fact(repo, e, pick))
+			continue
+		if String(e["kind"]).begins_with("raid_"):
+			facts.append(MissiveLog.words("%s@%s.%d" % [e["kind"], e["host"], int(e.get("day", 0))], "The raid",
+				battle_words(repo, String(e["kind"]), {"place": String(e.get("place", "")),
+					"spoils": int(e.get("spoils", 0)), "plunder": int(e.get("plunder", 0))}, pick)))
 			continue
 		var id := int(e["battle_id"])
 		var place := battle_place(repo, state, at.get(id, {}))
@@ -237,6 +249,8 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 	if head.is_empty() and siege_town != "":
 		var town_m := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, siege_town)
 		head = {"town": siege_town, "place_x_m": town_m.x, "place_y_m": town_m.y}
+	if head.is_empty() and not raid_at.is_empty():
+		head = {"town": "", "place_x_m": int(raid_at["place_x_m"]), "place_y_m": int(raid_at["place_y_m"])}
 	var pack := ArmySystem.metres_to_pack(repo, Vector2i(int(head.get("place_x_m", 0)), int(head.get("place_y_m", 0))))
 	var subject := MissiveLog.subject("regiment", first_mine, -1, pack) if first_mine != "" \
 		else MissiveLog.subject("point", "", -1, pack)
@@ -290,6 +304,8 @@ static func host_news(repo: DataRepository, state: GameState, events: Array) -> 
 	for e: Dictionary in events:
 		var host := String(e.get("host", ""))
 		var mode := "ADVANCE" if String(e["type"]) == "host_advance" else String(e.get("mode", ""))
+		if String(e["type"]) == "host_mode" and mode == "ADVANCE":
+			continue                    # setting out again from a stripped manor is no crossing
 		if not mode in ["ADVANCE", "SIEGE", "RAID", "WITHDRAW", "RETREAT"]:
 			continue
 		var mind: Dictionary = state.ai_hosts.get(host, {})

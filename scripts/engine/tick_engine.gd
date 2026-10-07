@@ -61,10 +61,17 @@ func _end_day(state: GameState) -> Array:
 	# assault is that day's town battle, and its outcome moves the siege. The
 	# siege's news rides in the same battle letter, after the fighting.
 	day_siege = SiegeSystem.settle_day(data, state, day_battles)
-	# the sieges' mode changes (EnemyAi.set_mode's host_mode events) join the
-	# day's record of the hosts; the siege's news is the battle letter's
+	# The raids' day (spec §5.3) right after the sieges, once: a host the day's
+	# battles beat pays its spoils, a raiding host takes its day (a siege whose
+	# garrison left has just turned its host RAID), one that stripped its manor
+	# sets out again. Its own events (TickEngine.day_raid); its news rides in
+	# the same battle letter, after the siege's.
+	day_raid = RaidSystem.settle_day(data, state, day_battles)
+	# the sieges' and the raids' mode changes (EnemyAi.set_mode's host_mode
+	# events) join the day's record of the hosts; their news is the battle letter's
 	day_ai.append_array(day_siege.filter(func(e: Dictionary) -> bool: return e.has("type")))
-	var fights: Array = day_battles + SiegeSystem.news(day_siege)
+	day_ai.append_array(day_raid.filter(func(e: Dictionary) -> bool: return e.has("type")))
+	var fights: Array = day_battles + SiegeSystem.news(day_siege) + RaidSystem.news(day_raid)
 	if not fights.is_empty():
 		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, fights))
 	# The supply lines' day (spec 2026-10-07-army-supply-lines §3.2): the towns
@@ -102,6 +109,11 @@ var day_battles: Array = []
 ## The sieges' events of the last day (SiegeSystem.settle_day), the quiet
 ## siege_day included; the battle letter carries SiegeSystem.news of them.
 var day_siege: Array = []
+
+## The raids' events of the last day (RaidSystem.settle_day: raid_spoils,
+## raid_begin, the quiet raid_day, host_mode); the battle letter carries
+## RaidSystem.news of them.
+var day_raid: Array = []
 
 ## The hosts' events of the last day (EnemyAi.step_day then think_day:
 ## host_advance, host_mode), for the host-news letter.
@@ -142,6 +154,7 @@ func advance(state: GameState) -> TickReport:
 		day_couriers = []
 		day_battles = []
 		day_siege = []
+		day_raid = []
 		day_ai = []
 		day_supply = []
 	# The month that just ended is settled BEFORE the tick moves: its lines

@@ -255,7 +255,8 @@ static func seen_by(repo: DataRepository, state: GameState, host_code: String) -
 ## defence = the summed ArmySystem.power in the defend stance (the town's works,
 ## data/army_town_defence.csv, in it) of the player's regiments the host SEES
 ## (seen_by) that stand at the target. A target more march days away than the
-## host's supply_reach_days is none. [] for a host with no live column.
+## host's supply_reach_days is none, and so is a manor a raid has stripped
+## bare (RaidSystem.stripped). [] for a host with no live column.
 static func candidates(repo: DataRepository, state: GameState, host_code: String) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var anchor := anchor_of(repo, state, host_code)
@@ -711,7 +712,8 @@ static func _gather(repo: DataRepository, state: GameState, host_code: String) -
 			var kind := KIND_TOWN if town != "" else KIND_MANOR
 			var id := town if town != "" else str(cell)
 			var at := target_point_m(repo, kind, id)
-			if not _within(from, at, reach) or not target_held(repo, state, kind, id):
+			if not _within(from, at, reach) or not target_held(repo, state, kind, id) \
+					or RaidSystem.stripped(repo, state, cell):
 				continue
 			var base := int(round(MapManors.value_of_line(repo, state, cell, RealmEconomy.line_of(repo, state, cell))))
 			var defence := 0

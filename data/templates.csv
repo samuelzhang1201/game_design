@@ -197,3 +197,5 @@ siege_undefended,,"No garrison holds {town} any more: {raider_realm}'s men walk 
 siege_lifted,,"The siege of {town} is lifted: {raider_realm}'s host has drawn off."
 siege_fallen_slain,,"{town} has fallen to {raider_realm}'s host after {days} days of siege. Not one of the garrison is left standing."
 siege_liberated,,"{town} is free again: {raider_realm}'s host has left it, and its manors return to their houses."
+raid_begin,,"{raider_realm}'s men are stripping {place}: they carry off its harvest and its stores, and the roads about it are unsafe."
+raid_spoils,,"{raider_realm}'s beaten host leaves its plunder on the field at {place}: {spoils} in strategic goods come into {player_realm}'s stores."
