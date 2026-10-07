@@ -89,7 +89,7 @@ python3 assets/flux/generate.py --build-csv                      # after editing
 | `goods_icons` | colour G- → `assets/2D/icons/goods/` (64 px) |
 | `decor` | D- ships and whale → `assets/decor/` |
 | `estates` | D-43..D-78 → `assets/manors/<focus>_<size>.png` (greyed, lightened) |
-| `events` | V-35..V-55 → `assets/2D/events/illustrations/<event_id>.png` (1280×533, colour; cut INTO the scene, so a paper margin round a full-bleed render is trimmed off) |
+| `events` | V-35..V-56 (by `event_art.csv`; V-56 planned, not yet rendered) → `assets/2D/events/illustrations/<event_id>.png` (1280×533, colour; cut INTO the scene, so a paper margin round a full-bleed render is trimmed off) |
 | `paintings` | B-01..B-36 → `assets/2D/paintings/estates/` (720×576, colour) |
 | `army_paintings` | B-37..B-42 → `assets/2D/paintings/armies/` |
 | `buildings` | H- → `assets/2D/icons/buildings/bld_<code>.png` (128 px) |

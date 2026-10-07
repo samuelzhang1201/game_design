@@ -2130,7 +2130,7 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 ---
 
 
-### 8.6 第零章 · 卢顿之约（`V-35`~`V-55`，2026-09-21）
+### 8.6 第零章 · 卢顿之约（`V-35`~`V-56`，2026-09-21）
 
 > 序章（`game_story/chapter_0/chapter_0_events.md`）21 个节拍一图一条，一一对应，`assets/flux/event_art.csv` 把编号接回 `event_id`。
 >
@@ -2370,6 +2370,17 @@ cloaked riders waiting under hanging lanterns with a different noble colour on e
 saddle cloth, their breath and the horses' breath showing, one upper window glowing warm
 with a figure standing black against it, deep blue and umber snow light, cold and
 foreboding [C-EVENT]
+```
+
+#### `V-56` 失城 · A Town Lost
+```
+[S] a vaulted stone council hall at dusk, a mud-spattered dispatch rider standing at the
+foot of a long oak table with his helmet under his arm, a map of a river valley spread
+across the table with one small walled town on it pinned by a dagger driven into the oak,
+a grey-bearded marshal in a mail shirt and a dark surcoat leaning on his fists over the
+map, the other councillors seated in shadow and turned towards the rider, a tall arched
+window behind them showing a far column of smoke rising on the horizon, no banners, no
+bodies, no blood, cold blue evening light as the first candles are lit [C-EVENT]
 ```
 
 ## 9. UI 框架件 `U-`

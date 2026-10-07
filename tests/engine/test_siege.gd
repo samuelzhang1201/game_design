@@ -1,6 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 const RunDir := preload("res://tests/run_dir.gd")
+const Play := preload("res://tests/invasion_play.gd")
 ## The siege (spec 2026-10-07-enemy-ai-and-battle-design §5.1-5.2): a host in
 ## SIEGE wears a garrisoned town down a day at a time (SiegeSystem.step),
 ## storms it every siege_assault_days through an ordinary town battle, starves
@@ -23,32 +24,19 @@ func before_each() -> void:
 
 ## The player's land regiments of 1000 men or more, in code order.
 func _mine() -> Array:
-	var out: Array = []
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) >= 1000:
-			out.append(String(r["regiment_code"]))
-	out.sort()
-	return out
+	return Play.land_regiments(repo, 1000)
 
 
 func _host(role: String) -> String:
-	for h: Dictionary in repo.raid_hosts:
-		if String(h["role"]) == role:
-			return String(h["host_code"])
-	return ""
+	return Play.host(repo, role)
 
 
 func _town_m(town: String) -> Vector2i:
-	return EnemyAi.target_point_m(repo, "town", town)
+	return Play.town_m(repo, town)
 
 
 func _place(s: GameState, code: String, at: Vector2i, order: String) -> void:
-	var e: Dictionary = s.foes.get(code, s.regiments.get(code, {}))
-	e["x_m"] = at.x
-	e["y_m"] = at.y
-	e["dest_x_m"] = at.x
-	e["dest_y_m"] = at.y
-	e["order"] = order
+	Play.place(s, code, at, order)
 
 
 ## A town the pack quarters one of the player's regiments in that is not the
@@ -447,6 +435,101 @@ func test_hold_host_leaving_liberates_the_manors() -> void:
 	assert_eq(_of(SiegeSystem.settle_day(repo, s, []), "siege_liberated").size(), 0, "once")
 
 
+## A manor of the town that had already left its province's house (the crown
+## bought it) goes back to THAT holder when the town is freed, not to the
+## province's default house.
+func test_liberation_restores_a_non_default_prior_holder() -> void:
+	var main := _host("main")
+	var s := SuiteData.campaign(repo, 7)
+	s.tick = 1
+	s.day = 20
+	var g := String(_town_and_garrison(s)[1])
+	var town := _besiege(s, main, [g])
+	var cell: int = _taken_cells(s, town)[0]
+	var default := MapManors.default_owner(repo, s, cell)
+	var buyer := MapManors.crown(s)
+	if buyer == default:
+		for p: String in MapOwnership.provinces_of(repo, s, repo.resolve_realm("player_realm")):
+			if MapObjects.house_name_of(repo, p) != default:
+				buyer = MapObjects.house_name_of(repo, p)
+				break
+	assert_ne(buyer, default, "a holder other than the province's own")
+	assert_true(MapManors.set_owner(repo, s, cell, buyer, "bought before the war"), "the manor changed hands")
+	s.ai_hosts[main]["siege_progress"] = 1000
+	SiegeSystem.settle_day(repo, s, [])
+	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD")
+	assert_ne(MapManors.owner_of(repo, s, cell), buyer, "taken")
+	assert_eq(String((s.ai_hosts[main]["occupied"] as Dictionary).get(str(cell), "")), buyer, "its holder kept")
+	s.foes[EnemyAi.regiments_of(s, main)[0]]["disengaging"] = 1
+	EnemyAi.step_day(repo, s)
+	SiegeSystem.settle_day(repo, s, [])
+	assert_eq(MapManors.owner_of(repo, s, cell), buyer, "back to the house that held it, not " + default)
+	var log: Array = s.manor_log.filter(func(m: Dictionary) -> bool: return int(m["cell"]) == cell)
+	assert_eq(log.size(), 3, "bought, taken, liberated")
+	if log.size() == 3:
+		assert_eq(String(log[0]["to"]), buyer)
+		assert_true(String(log[1]["reason"]).begins_with("taken by "), String(log[1]["reason"]))
+		assert_eq(String(log[2]["from"]), String(log[1]["to"]), "from the raider's house")
+		assert_eq(String(log[2]["to"]), buyer, "to the buyer")
+		assert_true(String(log[2]["reason"]).begins_with("liberated"), String(log[2]["reason"]))
+
+
+## An occupation saved to disk and loaded plays on exactly as the one that
+## never stopped: the occupied manors and their holders before survive the
+## save, and the host's leaving frees them the same.
+func test_save_and_load_mid_occupation_continues_identically() -> void:
+	var main := _host("main")
+	var s := SuiteData.campaign(repo, 7)
+	s.tick = 1
+	s.day = 20
+	var g := String(_town_and_garrison(s)[1])
+	var town := _besiege(s, main, [g])
+	var before := {}
+	for c: int in _taken_cells(s, town):
+		before[c] = MapManors.owner_of(repo, s, c)
+	s.ai_hosts[main]["siege_progress"] = 1000
+	SiegeSystem.settle_day(repo, s, [])
+	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD", "occupied")
+	var path := RunDir.dir("siege").path_join("mid_occupation.json")
+	assert_true(SaveLoad.save_game(s, path), "saved")
+	var c := SaveLoad.load_game(path)
+	assert_eq(SaveLoad.state_hash(c), SaveLoad.state_hash(s), "the same state loaded")
+	assert_eq(c.ai_hosts[main]["occupied"], s.ai_hosts[main]["occupied"], "the holders before, kept")
+	for st: GameState in [s, c]:
+		SiegeSystem.settle_day(repo, st, [])  # a day held
+		st.foes[EnemyAi.regiments_of(st, main)[0]]["disengaging"] = 1
+		EnemyAi.step_day(repo, st)
+		SiegeSystem.settle_day(repo, st, [])
+	assert_eq(String(c.ai_hosts[main]["mode"]), "RETREAT")
+	for cell: int in before:
+		assert_eq(MapManors.owner_of(repo, c, cell), before[cell], "manor %d freed after the load" % cell)
+	assert_eq(SaveLoad.state_hash(c), SaveLoad.state_hash(s), "and the same state after")
+
+
+## The shipped data/battle_outcomes.csv (the file, not the loaded table) maps
+## SiegeSystem's two assault tiers: `breach` on defender_routed, `repulsed` on
+## attacker_checked, and no other row moves a siege.
+func test_shipped_outcomes_map_breach_and_repulsed() -> void:
+	var f := FileAccess.open("res://data/battle_outcomes.csv", FileAccess.READ)
+	assert_not_null(f, "the shipped table")
+	if f == null:
+		return
+	var head := f.get_csv_line()
+	var tier_at := head.find("tier")
+	var siege_at := head.find("siege")
+	assert_true(tier_at >= 0 and siege_at >= 0, "tier and siege columns")
+	var by_siege := {}
+	while not f.eof_reached():
+		var row := f.get_csv_line()
+		if row.size() <= siege_at or row[tier_at] == "":
+			continue
+		if row[siege_at] != "":
+			by_siege[row[siege_at]] = row[tier_at]
+	assert_eq(SiegeSystem.TIER_BREACH, "breach")
+	assert_eq(SiegeSystem.TIER_REPULSED, "repulsed")
+	assert_eq(by_siege, {"breach": "defender_routed", "repulsed": "attacker_checked"}, "the two siege rows")
+
+
 func test_hold_host_with_no_column_left_frees_the_town() -> void:
 	var main := _host("main")
 	var s := SuiteData.campaign(repo, 7)
@@ -817,24 +900,15 @@ func test_siege_templates_spell_no_kingdom() -> void:
 ## --- the real day loop ---------------------------------------------------------
 
 func _opened(engine: TickEngine) -> GameState:
-	var s := SuiteData.campaign(repo, 11)
-	engine.advance(s)
-	return s
+	return Play.opened(repo, engine)
 
 
 func _day(engine: TickEngine, s: GameState) -> void:
-	if s.day >= Calendar.DAYS_PER_TICK:
-		engine.advance(s)
-	else:
-		engine.advance_day(s)
+	Play.day(engine, s)
 
 
 func _first_appear() -> int:
-	var first := -1
-	for h: Dictionary in repo.raid_hosts:
-		var d := int(h["appear_day"])
-		first = d if first < 0 else mini(first, d)
-	return first
+	return Play.first_appear(repo)
 
 
 ## The day loop to the main host's crossing, its target held from then on, the
@@ -848,12 +922,7 @@ func _invaded(engine: TickEngine, n: int, weakest: bool) -> Array:
 	var mind: Dictionary = s.ai_hosts[_host("main")]
 	assert_eq(String(mind["target_kind"]), "town", "the main host goes for a town")
 	var town := String(mind["target_id"])
-	var by_size := _mine()
-	by_size.sort_custom(func(a: String, b: String) -> bool:
-		var ha := ArmySystem.headcount(repo, ArmySystem.regiment(repo, a))
-		var hb := ArmySystem.headcount(repo, ArmySystem.regiment(repo, b))
-		return (ha < hb if weakest else ha > hb) or (ha == hb and a < b))
-	var garrison: Array = by_size.slice(0, n)
+	var garrison: Array = Play.by_size(repo, _mine(), weakest).slice(0, n)
 	for c: String in garrison:
 		_place(s, c, _town_m(town), ArmySystem.ORDER_GARRISON)
 	return [s, town, garrison]
@@ -956,6 +1025,7 @@ func test_a_strongly_held_walled_town_outlasts_the_besiegers_supplies() -> void:
 		if String(e.get("kind", "")) == "siege_day":
 			best = maxi(best, int(e["progress"]))
 			hungry += 1 if bool(e["starving"]) else 0
+	assert_eq(hungry, 0, "the garrison never starved: it ate what it carried until the host went home")
 	gut.p("strong walled town, unstocked: siege from day %d, lifted day %d, best progress %d, starving days %d, checked assault rounds %d" % [
 		int(run["begun"]), int(run["lifted"]), best, hungry, _of(run["events"], "siege_repulsed").size()])
 
@@ -997,14 +1067,7 @@ func test_siege_is_deterministic() -> void:
 
 
 func _floats_in(v: Variant, path: String, out: Array) -> void:
-	if typeof(v) == TYPE_FLOAT:
-		out.append(path)
-	elif v is Dictionary:
-		for k in v:
-			_floats_in(v[k], path + "/" + str(k), out)
-	elif v is Array:
-		for i in (v as Array).size():
-			_floats_in(v[i], path + "[%d]" % i, out)
+	Play.floats_in(v, path, out)
 
 
 func test_siege_draws_no_random_number() -> void:

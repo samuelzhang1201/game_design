@@ -1,6 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 const RunDir := preload("res://tests/run_dir.gd")
+const Play := preload("res://tests/invasion_play.gd")
 ## The invasion on the real day loop (spec 2026-10-07-enemy-ai-and-battle-design
 ## §2 timeline, §3): TickEngine runs the hosts' minds once a day between the
 ## march and the battles, the border rumour reaches the crown
@@ -19,43 +20,31 @@ func before_each() -> void:
 
 ## A campaign after its opening tick (GameRoot's): tick 1, day 1.
 func _opened(engine: TickEngine) -> GameState:
-	var s := SuiteData.campaign(repo, 11)
-	engine.advance(s)
+	var s := Play.opened(repo, engine)
 	assert_eq(s.absolute_day(), 1)
 	return s
 
 
 ## One day, exactly as Game.advance_day plays it: the thirtieth is the tick.
 func _day(engine: TickEngine, s: GameState) -> void:
-	if s.day >= Calendar.DAYS_PER_TICK:
-		engine.advance(s)
-	else:
-		engine.advance_day(s)
+	Play.day(engine, s)
 
 
 ## Plays days until the absolute day `last` has ended.
 func _play_through(engine: TickEngine, s: GameState, last: int) -> void:
-	while s.absolute_day() <= last:
-		_day(engine, s)
+	Play.play_through(engine, s, last)
 
 
 func _host(role: String) -> String:
-	for h: Dictionary in repo.raid_hosts:
-		if String(h["role"]) == role:
-			return String(h["host_code"])
-	return ""
+	return Play.host(repo, role)
 
 
 func _first_appear() -> int:
-	var first := -1
-	for h: Dictionary in repo.raid_hosts:
-		var d := int(h["appear_day"])
-		first = d if first < 0 else mini(first, d)
-	return first
+	return Play.first_appear(repo)
 
 
 func _letters(s: GameState, kind: String) -> Array:
-	return s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == kind)
+	return Play.letters(s, kind)
 
 
 func _texts(m: Dictionary) -> Array:
@@ -72,14 +61,7 @@ func _has_digit(text: String) -> bool:
 
 
 func _floats_in(v: Variant, path: String, out: Array) -> void:
-	if typeof(v) == TYPE_FLOAT:
-		out.append(path)
-	elif v is Dictionary:
-		for k in v:
-			_floats_in(v[k], path + "/" + str(k), out)
-	elif v is Array:
-		for i in (v as Array).size():
-			_floats_in(v[i], path + "[%d]" % i, out)
+	Play.floats_in(v, path, out)
 
 
 ## --- the rumour (spec §2: about day 8, vague, source "rumour") ------------------
@@ -351,21 +333,11 @@ func test_the_minds_and_their_letters_draw_no_random_number() -> void:
 
 ## The player's land regiments with men, in code order.
 func _mine() -> Array:
-	var out: Array = []
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) > 0:
-			out.append(String(r["regiment_code"]))
-	out.sort()
-	return out
+	return Play.land_regiments(repo)
 
 
 func _place_mine(s: GameState, code: String, at: Vector2i, order: String) -> void:
-	var e: Dictionary = s.regiments[code]
-	e["x_m"] = at.x
-	e["y_m"] = at.y
-	e["dest_x_m"] = at.x
-	e["dest_y_m"] = at.y
-	e["order"] = order
+	Play.place(s, code, at, order)
 
 
 ## The day loop to the main host's crossing, its target held from then on

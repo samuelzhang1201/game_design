@@ -59,3 +59,34 @@ func test_the_engine_names_no_ui_or_llm_class_and_no_autoload() -> void:
 			if m != null:
 				offences.append("%s:%d  %s" % [path.get_file(), n, m.get_string(0)])
 	assert_eq(offences, [], "engine code reaching into ui/llm or the Game autoload")
+
+
+## The war's classes (spec 2026-10-07-enemy-ai-and-battle §1, §7) by name:
+## each is a script the scan above reads (top level of scripts/engine, which
+## it does not recurse), RefCounted, and names no ui/llm class, no
+## scripts/ui or scripts/llm path and not the Game autoload, even in a string.
+const WAR_CLASSES := ["BattleSystem", "EnemyAi", "SiegeSystem", "RaidSystem", "DefeatSystem"]
+
+func test_the_war_classes_are_engine_pure() -> void:
+	var scanned := _scripts_in(ENGINE_DIR)
+	var names := _class_names(FORBIDDEN_DIRS)
+	var re := RegEx.create_from_string("\\b(%s)\\b|\\bGame\\.|scripts/ui|scripts/llm" % "|".join(names))
+	var decl := RegEx.create_from_string("^class_name\\s+([A-Za-z_][A-Za-z0-9_]*)")
+	var found := {}
+	var offences: Array = []
+	for path in scanned:
+		var text := FileAccess.get_file_as_string(path)
+		var m := decl.search(text.split("\n")[0])
+		if m == null or not m.get_string(1) in WAR_CLASSES:
+			continue
+		found[m.get_string(1)] = path
+		assert_true(text.contains("extends RefCounted"), path + " is RefCounted")
+		var n := 0
+		for line in text.split("\n"):
+			n += 1
+			var code := _code_of(line)
+			if code != "" and re.search(code) != null:
+				offences.append("%s:%d  %s" % [path.get_file(), n, code.strip_edges()])
+	assert_eq(offences, [], "a war class reaching out of the engine")
+	var missing: Array = WAR_CLASSES.filter(func(c: String) -> bool: return not found.has(c))
+	assert_eq(missing, [], "every war class is a script the engine scan reads")
