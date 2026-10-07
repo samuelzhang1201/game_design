@@ -869,7 +869,7 @@ war_hover_gap_px,18,"WAR ROOM slip §4.2: the slip stands this far right of and 
 war_hover_budget_ms,4,"WAR ROOM slip (spec 2026-10-07-war-room-scale-hover §5): the most one WarGround.reading may take, its worst case a march walked to army_march_days_cap (0.5 ms measured 2026-10-07)"
 army_split_cap_men,600,"owner 2026-10-07 (spec 2026-10-07-army-split-and-ground §3): the most men of one arm in one unit; an arm over it splits into ceil(men / cap) even units"
 army_slot_spacing_m,1500,"spec 2026-10-07-army-split-and-ground §4.2: the hex lattice's pitch in whole metres between two units' camps; set in the visual review (2026-10-08): the camp must read as a camp round the walls, units not standing on each other"
-army_slot_max_rings,8,"spec §4.2: the farthest ring searched for a free slot; past it the unit stands where it arrived"
+army_slot_max_rings,12,"spec §4.2: the farthest ring searched for a free slot; past it the unit stands where it arrived. 12 (R16, 2026-10-08): round a town the rings start past its reach, so at a 600 m pitch the opening camps reach ring 12 before every unit finds unblocked ground"
 map3d_declutter_step_px,4,"spec 2026-10-07-army-split-and-ground §5.2: the spiral's grid, design px, that spreads the army counters and chips"
 map3d_declutter_max_px,160,"spec §5.2: how far a counter or chip may be pushed from its unit before a chip hides"
 war_spread_step_m,0.004,"spec §5.4: the war room's spread of the pieces on the table, metres"

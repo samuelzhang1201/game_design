@@ -156,6 +156,25 @@ func test_no_two_standing_units_share_ground() -> void:
 				"units %d and %d overlap" % [i, j])
 
 
+## R16: no standing unit but the seat holder stands within its town's reach
+## at the start — the camp lies outside the walls (owner 2026-10-08: 城外).
+func test_only_the_seat_stands_within_its_towns_reach() -> void:
+	var seats: Dictionary = split["seats"]
+	var camped := 0
+	var codes := roster.keys()
+	codes.sort()
+	for code: String in codes:
+		var r: Dictionary = roster[code]
+		var town := String(r.get("camp_town", ""))
+		if String(r["is_naval"]) == "1" or town == "" or String(seats.get(town, "")) == code:
+			continue
+		camped += 1
+		var b: Dictionary = repo.burgs[town]
+		var d := Vector2(float(r["x"]), float(r["y"])).distance_to(Vector2(float(b["x"]), float(b["y"])))
+		assert_gt(d, ArmySystem.town_reach_px(repo, b), "%s camps inside %s's reach" % [code, town])
+	assert_gt(camped, 0, "premise: some unit camps round a town")
+
+
 func test_at_most_one_seat_a_town_held_by_its_holder() -> void:
 	var seats: Dictionary = split["seats"]
 	var seen: Dictionary = {}

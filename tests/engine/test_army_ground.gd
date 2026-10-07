@@ -29,10 +29,21 @@ func test_start_rings_are_the_tables() -> void:
 		assert_eq(ArmyGround.start_ring(repo, String(row["arm"])), int(row["start_ring"]))
 
 
-## A land point well inside the player's capital province, in metres.
+## The player's capital, and its point in metres (well inside its province).
+func _cap() -> String:
+	return String(repo.kingdoms[repo.resolve_realm("player_realm")]["capital_burg"])
+
+
 func _land_m() -> Vector2i:
-	var cap: Dictionary = repo.burgs[String(repo.kingdoms[repo.resolve_realm("player_realm")]["capital_burg"])]
-	return ArmySystem.pack_to_metres(repo, Vector2(float(cap["x"]), float(cap["y"])))
+	return ArmyGround.town_point_m(repo, _cap())
+
+
+## The hex ring `p_m` lies on round `c_m` at `pitch` (the lattice's own inverse).
+func _ring_of(c_m: Vector2i, p_m: Vector2i, pitch: int) -> int:
+	var d := Vector2(p_m - c_m)
+	var r := roundi(d.y / (float(pitch) * sqrt(3.0) / 2.0))
+	var q := roundi(d.x / float(pitch) - float(r) * 0.5)
+	return (absi(q) + absi(r) + absi(q + r)) / 2
 
 
 func test_a_taken_point_blocks_half_a_pitch_round_it() -> void:
@@ -55,26 +66,49 @@ func test_free_slot_starts_at_the_arms_ring() -> void:
 	var c := _land_m()
 	var taken := ArmyGround.new_taken(repo)
 	var spacing := int(repo.bal("army_slot_spacing_m"))
+	var clear := ArmyGround.clear_rings(ArmyGround.town_reach_m(repo, _cap()), spacing)
 	for row: Dictionary in repo.army_split:
 		var arm := String(row["arm"])
-		var got := ArmyGround.free_slot(repo, c, arm, taken, true)
+		var got := ArmyGround.free_slot(repo, c, arm, taken, _cap())
 		assert_ne(got, ArmyGround.NONE)
-		# its ring: the lattice distance from the centre, never inside start_ring
-		var d := Vector2(got - c).length()
-		assert_gte(d, float(spacing * int(row["start_ring"])) * 0.85, arm)
+		# its ring: never inside the arm's ring counted from the town's clear rings
+		assert_gte(_ring_of(c, got, spacing), clear + int(row["start_ring"]) - 1, arm)
+		assert_eq(ArmyGround.first_ring(repo, arm, _cap()), maxi(clear + int(row["start_ring"]) - 1, 1), arm)
+		assert_eq(ArmyGround.first_ring(repo, arm, ""), maxi(int(row["start_ring"]), 1), arm + " in the field")
+
+
+## R16: the rings a town's reach covers, ceil(reach / pitch), at least one.
+func test_the_rings_a_reach_clears() -> void:
+	assert_eq(ArmyGround.clear_rings(3000.0, 1500), 2, "3 km at 1500 m")
+	assert_eq(ArmyGround.clear_rings(1000.0, 1500), 1, "1 km at 1500 m")
+	assert_eq(ArmyGround.clear_rings(3000.0, 900), 4, "3 km at 900 m: 3.33 rounds up")
+	assert_eq(ArmyGround.clear_rings(0.0, 1500), 1, "no reach: still one")
+
+
+## R16: round the capital the first infantry camp lies past its reach (城外).
+func test_the_first_camp_round_the_capital_is_outside_its_reach() -> void:
+	var c := _land_m()
+	var spacing := int(repo.bal("army_slot_spacing_m"))
+	var reach_m := ArmyGround.town_reach_m(repo, _cap())
+	assert_eq(reach_m, float(repo.army_town_reach[String(repo.burgs[_cap()]["group"])]) * 1000.0)
+	var got := ArmyGround.free_slot(repo, c, "infantry", ArmyGround.new_taken(repo), _cap())
+	assert_ne(got, ArmyGround.NONE)
+	assert_gte(_ring_of(c, got, spacing), ArmyGround.clear_rings(reach_m, spacing))
+	assert_false(ArmyGround.in_reach(repo, _cap(), got))
+	assert_ne(ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, got)), _cap(), "outside the walls")
 
 
 func test_the_field_centre_goes_to_the_first() -> void:
 	var c := _land_m()
 	var taken := ArmyGround.new_taken(repo)
-	assert_eq(ArmyGround.free_slot(repo, c, "cavalry", taken, false), c, "an empty field: the centre")
+	assert_eq(ArmyGround.free_slot(repo, c, "cavalry", taken, ""), c, "an empty field: the centre")
 	ArmyGround.take(taken, c)
-	assert_ne(ArmyGround.free_slot(repo, c, "cavalry", taken, false), c)
+	assert_ne(ArmyGround.free_slot(repo, c, "cavalry", taken, ""), c)
 
 
 func test_a_town_centre_is_never_a_camp_slot() -> void:
 	var c := _land_m()
-	assert_ne(ArmyGround.free_slot(repo, c, "infantry", ArmyGround.new_taken(repo), true), c)
+	assert_ne(ArmyGround.free_slot(repo, c, "infantry", ArmyGround.new_taken(repo), _cap()), c)
 
 
 func test_no_free_slot_returns_none() -> void:
@@ -84,15 +118,15 @@ func test_no_free_slot_returns_none() -> void:
 	for k in range(0, int(repo.bal("army_slot_max_rings")) + 1):
 		for ax: Vector2i in ArmyGround.ring(k):
 			ArmyGround.take(taken, ArmyGround.slot_m(c, ax, spacing))
-	assert_eq(ArmyGround.free_slot(repo, c, "infantry", taken, true), ArmyGround.NONE)
+	assert_eq(ArmyGround.free_slot(repo, c, "infantry", taken, _cap()), ArmyGround.NONE)
 
 
 func test_two_slots_in_order_are_distinct() -> void:
 	var c := _land_m()
 	var taken := ArmyGround.new_taken(repo)
-	var a := ArmyGround.free_slot(repo, c, "infantry", taken, true)
+	var a := ArmyGround.free_slot(repo, c, "infantry", taken, _cap())
 	ArmyGround.take(taken, a)
-	var b := ArmyGround.free_slot(repo, c, "infantry", taken, true)
+	var b := ArmyGround.free_slot(repo, c, "infantry", taken, _cap())
 	assert_ne(a, b)
 	assert_gte(Vector2(a - b).length(), float(int(repo.bal("army_slot_spacing_m")) / 2))
 

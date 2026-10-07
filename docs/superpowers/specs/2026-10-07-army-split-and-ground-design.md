@@ -158,14 +158,16 @@ Around a centre point, the slots lie on a hex lattice of pitch `slot_spacing_m`,
 
 The free slot for a unit of arm A, around a centre:
 
-1. Take the first slot, in ring-then-index order, at ring ≥ the start ring for A that is:
+1. Take the first slot, in ring-then-index order, at ring ≥ the first ring for A that is:
+   - in the field, the first ring is the start ring for A (`data/army_split.csv` `start_ring`);
+   - round a TOWN, the first ring is `clear + start_ring(A) − 1`, where `clear = max(1, ceil(reach_m / slot_spacing_m))` is the number of whole rings the town's reach (`data/army_town_reach.csv`, by its group) covers; and no slot within the reach is taken (a ring's mid-sides stand at √3/2 of its corners, so ring `clear` can still reach inside). The camp stands outside the walls (R16);
    - on land: `MapEconomy.cell_at ≥ 0`;
    - not on a terrain listed in `blocked_terrain`: `ArmySystem.terrain_at`;
    - not within `slot_spacing_m / 2` of another standing land unit of any kingdom.
 2. The ring-0 slot is special:
    - at a town centre it is the SEAT and never a camp slot;
    - in the field, a unit takes it when it is free, whatever its arm.
-3. If nothing is free within `max_rings`, the unit stands where it arrived.
+3. If nothing is free within `max_rings` (`army_slot_max_rings`), the slots are tried again on any terrain (R9); with still nothing, the unit stands where it arrived.
 
 ### 4.3 Settling on arrival
 
@@ -174,14 +176,14 @@ The free slot for a unit of arm A, around a centre:
 1. **Centre.** If the ordered point lies in the ring of a town its kingdom holds, the centre is that town's point; otherwise it is the ordered point.
 2. **Town centre.**
    - If the seat is empty, the unit takes the seat and stands on the town's point.
-   - Otherwise it takes the free slot for its arm (§4.2).
+   - Otherwise it takes the free slot for its arm (§4.2): outside the town's reach, yet still camped by the town (`camp_town`), so the seat refill and the free supply read it as before (R3, R16).
 3. **Field centre.** It takes the free slot for its arm.
 
 The slot is fixed on ARRIVAL, not when the order is sent: first come, first in. The map slides the piece the last few hundred metres.
 
 At the campaign start, `ArmySplit` places units with the same rule:
 
-- **Parents.** Each pack regiment's units, in arm order, settle around a centre. The centre is the town's point when the regiment stands in a town's ring, and its own point otherwise. Kingdoms go in code order, then regiments in code order.
+- **Parents.** Each pack regiment's units, in arm order, settle around a centre. The centre is the town's point when the regiment stands in a town's ring, and its own point otherwise; round a town the slots lie outside its reach (§4.2, R16). Kingdoms go in code order, then regiments in code order.
 - **Royal trains.** Each royal train settles last, around its capital.
 
 ### 4.4 Who holds the seat
@@ -339,7 +341,7 @@ Each step ends with the full suite green at the expected error count.
 
 ## 10. Implementation rulings
 
-Where the build departs from the wording above, as the plan ruled it (R1-R7) and as the later tasks found it (R8-R12).
+Where the build departs from the wording above, as the plan ruled it (R1-R7) and as the later tasks and the visual review found it (R8-R16).
 
 - **R1 - argument order.** `ArmySystem.regiment(repo, code, state := null)`, `ArmySystem.roster(repo, state := null)` and `MapObjects.regiments_of(repo, kingdom, state := null)` keep the existing order and append an optional state, so ~90 call sites are not touched at once; every engine call site with a `state` in scope passes it.
 - **R2 - data layout.** The single key/value table becomes per-arm rows in `data/army_split.csv`, the scalars in `data/balance.csv` (`army_split_cap_men`, `army_slot_spacing_m`, `army_slot_max_rings`, `map3d_declutter_step_px`, `map3d_declutter_max_px`, `war_spread_step_m`, `war_spread_max_m`) and the blocked terrains in `data/army_camp_blocked.csv`: the repository's existing shapes, the same values.
@@ -356,3 +358,4 @@ Where the build departs from the wording above, as the plan ruled it (R1-R7) and
 - **R13 - the household leads its list.** The royal household is a unit of its parent regiment, yet `ArmySystem.ordered` puts it first (before the royal train), so it stands apart from its regiment's other units in the lists.
 - **R14 - the hover's garrison and works.** The WAR ROOM slip names the unit on a town's seat as its garrison and counts the rest of the camp ("N camped round it"). Its defend forecast gives a town's works to the unit on the seat, or to any unit of the holder while the seat is empty, since an arrival takes an empty seat (§4.3); a unit camped off the seat reads the field's terrain (§4.1).
 - **R15 - a train with no capital.** A kingdom with guns but no capital keeps them: its royal train camps where its first land regiment (by code) stands, round that regiment's town when its kingdom holds it, else in the field, so the split adds and loses no man.
+- **R16 - the camp stands outside the walls** (owner 2026-10-08, 城外, after the real-window review). Rings laid from the town's point put the foot and horse inside a walled town and buried its houses. Round a town an arm's first ring is `clear + start_ring − 1`, `clear = max(1, ceil(reach_m / slot_spacing_m))`, and a slot within the reach is skipped (`ArmyGround.first_ring`, `in_reach`); the seat stays on ring 0 and field centres are unchanged. The reach is the one the town's suburbs already used (`data/army_town_reach.csv`), so the camp begins where the town ends and no new value was needed; `army_slot_max_rings` rose to 12 so that at a 600 m pitch every opening camp still finds unblocked ground. A camped unit now stands outside `town_at`'s reach, which R3 already allowed for: `camp_town` keeps it camped by its town.

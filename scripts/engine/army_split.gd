@@ -95,7 +95,7 @@ static func _make(repo: DataRepository) -> Dictionary:
 			for i in parts.size():
 				var unit := _unit(repo, row, arm_row, i, parts.size(), int(parts[i]), armed == 1)
 				unit["camp_town"] = town
-				_place(repo, unit, centre, arm, taken, town != "")
+				_place(repo, unit, centre, arm, taken, town)
 				roster[String(unit["regiment_code"])] = unit
 	var ks := guns.keys()
 	ks.sort()
@@ -104,7 +104,7 @@ static func _make(repo: DataRepository) -> Dictionary:
 			var train := _train(repo, k, int(guns[k]), home[k])
 			var t_town := String(train["camp_town"])
 			var t_centre: Vector2i = ArmyGround.town_point_m(repo, t_town) if t_town != "" else home[k]["centre"]
-			_place(repo, train, t_centre, String(train["_arm"]), taken, t_town != "")
+			_place(repo, train, t_centre, String(train["_arm"]), taken, t_town)
 			train.erase("_arm")
 			roster[String(train["regiment_code"])] = train
 	_crown(repo, rows, roster)
@@ -119,9 +119,10 @@ static func _held(repo: DataRepository, town: String, k: String) -> String:
 	return town if MapOwnership.owner_of(repo, null, String(b.get("province_code", ""))) == k else ""
 
 
-## Put `unit` on the first free slot round `centre` (its centre when none is free).
+## Put `unit` on the first free slot round `centre` — round `town` ("" in the
+## field) outside its reach (R16) — its centre when none is free.
 static func _place(repo: DataRepository, unit: Dictionary, centre: Vector2i, arm: String,
-		taken: Dictionary, town: bool) -> void:
+		taken: Dictionary, town: String) -> void:
 	var slot := ArmyGround.free_slot(repo, centre, arm, taken, town)
 	if slot == ArmyGround.NONE:  # a town among the blocked terrains camps on them
 		slot = ArmyGround.free_slot(repo, centre, arm, taken, town, true)

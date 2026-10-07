@@ -8,6 +8,8 @@ extends RefCounted
 ## from the east counter-clockwise); a unit takes the first free slot at its
 ## arm's ring (data/army_split.csv start_ring) or further out. Ring 0 is a
 ## town's SEAT, never a camp; in the field it goes to whoever comes first.
+## Round a TOWN the camps stand outside the walls (R16, owner 2026-10-08: 城外):
+## the arm's ring counts from the first past the town's reach.
 
 ## No slot (none free within army_slot_max_rings).
 const NONE := Vector2i(-1, -1)
@@ -81,17 +83,48 @@ static func is_free(repo: DataRepository, taken: Dictionary, p_m: Vector2i,
 	return true
 
 
-## The slot a unit of `arm` takes around `centre_m`: in the FIELD (`town`
-## false) the centre itself while it is free; else the first free slot at the
-## arm's ring or further out, ring by ring; NONE past army_slot_max_rings.
+## The whole rings a town's reach covers at `pitch`: ceil(reach / pitch), at
+## least 1. A town's camps count their arm's ring from the last of them (R16).
+static func clear_rings(reach_m: float, pitch: int) -> int:
+	return maxi(ceili(reach_m / float(maxi(pitch, 1))), 1)
+
+
+## A town's reach in metres (data/army_town_reach.csv by its group).
+static func town_reach_m(repo: DataRepository, town: String) -> float:
+	var b: Dictionary = repo.burgs.get(town, {})
+	return float(repo.army_town_reach.get(String(b.get("group", "")), 0.0)) * 1000.0
+
+
+## The first ring a unit of `arm` camps on round `town` ("" in the field).
+static func first_ring(repo: DataRepository, arm: String, town: String) -> int:
+	if town == "":
+		return maxi(start_ring(repo, arm), 1)
+	var clear := clear_rings(town_reach_m(repo, town), int(repo.bal("army_slot_spacing_m")))
+	return maxi(clear + start_ring(repo, arm) - 1, 1)
+
+
+## Whether `p_m` lies within `town`'s reach, as ArmySystem.town_at measures it.
+static func in_reach(repo: DataRepository, town: String, p_m: Vector2i) -> bool:
+	var b: Dictionary = repo.burgs[town]
+	var d := ArmySystem.metres_to_pack(repo, p_m).distance_to(Vector2(float(b["x"]), float(b["y"])))
+	return d <= ArmySystem.town_reach_px(repo, b)
+
+
+## The slot a unit of `arm` takes around `centre_m`: in the FIELD (`town` "")
+## the centre itself while it is free; else the first free slot at the arm's
+## ring (first_ring) or further out, ring by ring — round a town never one
+## within its reach, as a ring's mid-sides stand nearer than its corners —
+## NONE past army_slot_max_rings.
 static func free_slot(repo: DataRepository, centre_m: Vector2i, arm: String, taken: Dictionary,
-		town: bool, any_terrain := false) -> Vector2i:
-	if not town and is_free(repo, taken, centre_m, any_terrain):
+		town: String, any_terrain := false) -> Vector2i:
+	if town == "" and is_free(repo, taken, centre_m, any_terrain):
 		return centre_m
 	var spacing := int(repo.bal("army_slot_spacing_m"))
-	for k in range(maxi(start_ring(repo, arm), 1), int(repo.bal("army_slot_max_rings")) + 1):
+	for k in range(first_ring(repo, arm, town), int(repo.bal("army_slot_max_rings")) + 1):
 		for ax: Vector2i in ring(k):
 			var p := slot_m(centre_m, ax, spacing)
+			if town != "" and in_reach(repo, town, p):
+				continue
 			if is_free(repo, taken, p, any_terrain):
 				return p
 	return NONE
@@ -180,10 +213,10 @@ static func _put(entry: Dictionary, p_m: Vector2i) -> void:
 ## A unit has ARRIVED (ArmySystem.march_day) or halted on the road
 ## (ArmySystem.set_garrison): it takes an empty seat of a held town it
 ## stands in the reach of, else the first free slot round the town, or round
-## the point it reached in the field — on any terrain when the free ground is
-## all blocked (a mountain hold, as the split places); with none free it
-## holds the point it reached (§4.3). Its camp_town is the town, "" in the
-## field.
+## the point it reached in the field — outside the town's reach (R16), on any
+## terrain when the free ground is all blocked (a mountain hold, as the split
+## places); with none free it holds the point it reached (§4.3). Its
+## camp_town is the town, "" in the field.
 static func settle(repo: DataRepository, state: GameState, code: String) -> void:
 	var entry: Dictionary = state.regiments.get(code, {})
 	var reg := ArmySystem.regiment(repo, code, state)
@@ -201,9 +234,9 @@ static func settle(repo: DataRepository, state: GameState, code: String) -> void
 		return
 	var arm := MapObjects.regiment_arm(repo, reg)
 	var taken := standing_taken(repo, state, code)
-	var slot := free_slot(repo, centre, arm, taken, town != "")
+	var slot := free_slot(repo, centre, arm, taken, town)
 	if slot == NONE:
-		slot = free_slot(repo, centre, arm, taken, town != "", true)
+		slot = free_slot(repo, centre, arm, taken, town, true)
 	if slot != NONE:
 		_put(entry, slot)
 
