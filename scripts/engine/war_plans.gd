@@ -163,6 +163,20 @@ static func pieces_in(repo: DataRepository, state: GameState, rect: Rect2) -> Ar
 	return out
 
 
+## The supposed piece nearest a pack point within `km` of the pack's measure
+## (with its `id` and `at`), {} when none.
+static func piece_near(repo: DataRepository, state: GameState, at: Vector2, km: float) -> Dictionary:
+	var reach := km * WarSheets.px_per_unit(repo)
+	var best := {}
+	var best_d := reach
+	for p: Dictionary in pieces_in(repo, state, Rect2(at - Vector2.ONE * reach, Vector2.ONE * reach * 2.0)):
+		var d := (p["at"] as Vector2).distance_to(at)
+		if d <= best_d:
+			best_d = d
+			best = p
+	return best
+
+
 ## Removes every piece (`kind` PIECES) or stroke (STROKES) lying in a rect;
 ## how many went.
 static func clear(repo: DataRepository, state: GameState, kind: String, rect: Rect2) -> int:

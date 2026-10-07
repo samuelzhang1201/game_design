@@ -239,3 +239,13 @@ func test_no_engine_rule_reads_the_plans() -> void:
 	da.erase("war_plans")
 	db.erase("war_plans")
 	assert_eq(JSON.stringify(da), JSON.stringify(db))
+
+
+## The rake's tip reads a supposed piece within war_plan_contact_km (ruling 10).
+func test_the_piece_nearest_a_point_within_reach() -> void:
+	var at := _land()
+	var id := WarPlans.place(repo, state, "infantry", 1000, _foreign(), at)
+	var km := repo.bal("war_plan_contact_km")
+	var px := km * WarSheets.px_per_unit(repo)
+	assert_eq(String(WarPlans.piece_near(repo, state, at + Vector2(px * 0.5, 0), km).get("id", "")), id)
+	assert_true(WarPlans.piece_near(repo, state, at + Vector2(px * 1.5, 0), km).is_empty(), "beyond reach")
