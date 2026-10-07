@@ -633,13 +633,26 @@ static func _stocks(repo: DataRepository, state: GameState, id: String) -> Array
 			out.append(_link(id, "town:" + town, int(RealmEconomy.line_of(repo, state, cell)["strategic"]), "gold",
 				_manor_subj(repo, cell)))
 	elif id.begins_with("town:"):
-		var catch := TownStores.catchment(repo, state)
-		var cells: Array = catch.keys().filter(func(c: int) -> bool: return "town:" + String(catch[c]) == id)
-		cells.sort()
-		for cell: int in cells:
+		for cell: int in _cells_of_town(repo, state).get(id.substr(5), []):
 			out.append(_link("manor:%d" % cell, id, int(RealmEconomy.line_of(repo, state, cell)["strategic"]), "gold",
 				_manor_subj(repo, cell)))
 	return out
+
+
+## town -> its catchment's cells in order, built once per memo (one index for
+## the whole galaxy rather than a scan of the catchment per town asked).
+static func _cells_of_town(repo: DataRepository, state: GameState) -> Dictionary:
+	if _memo_on and _memo.has("town_cells"):
+		return _memo["town_cells"]
+	var catch := TownStores.catchment(repo, state)
+	var cells: Array = catch.keys()
+	cells.sort()
+	var idx: Dictionary = {}
+	for cell: int in cells:
+		(idx.get_or_add(String(catch[cell]), []) as Array).append(cell)
+	if _memo_on:
+		_memo["town_cells"] = idx
+	return idx
 
 
 ## town -> supply_line: what each line draws in the month (gold).
@@ -663,12 +676,27 @@ static func _dispatches(repo: DataRepository, state: GameState, id: String) -> A
 ## the lines' month counters).
 static func _sells_to(repo: DataRepository, state: GameState, id: String) -> Array:
 	var by: Dictionary = {}
-	for code: String in state.supply_lines:
-		var ln: Dictionary = state.supply_lines[code]
-		var bought: Dictionary = ln.get("m_bought", {})
-		for house: String in bought:
-			var key := "%s>%s" % [house, String(ln["town"])]
-			by[key] = int(by.get(key, 0)) + TownStores.gold_of_units(repo, int(bought[house]))
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var ln: Dictionary = state.supply_lines.get(code, {})
+		var entry: Dictionary = state.regiments[code]
+		# the line's own purchases, and the entry's (top-ups in town, a retired
+		# line's): the town that sold them is the line's, else the one held
+		var sold := {}
+		SupplyLines.add_houses(sold, ln.get("m_bought", {}))
+		SupplyLines.add_houses(sold, entry.get("m_bought", {}))
+		if sold.is_empty():
+			continue
+		var town := String(ln.get("town", ""))
+		if town == "":
+			town = ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, code), state)
+		if town == "":
+			continue
+		for house: String in sold:
+			var key := "%s>%s" % [house, town]
+			by[key] = int(by.get(key, 0)) + TownStores.gold_of_units(repo, int(sold[house]))
 	if id == "":
 		var n := 0
 		for k: String in by:

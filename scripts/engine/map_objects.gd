@@ -325,6 +325,14 @@ static func burg_card(repo: DataRepository, state: GameState, code: String) -> D
 			int(held["crown"]), int(held["lord"]), int(held["house"]), markup]])
 		if not lines.is_empty():
 			fields.append(["Supply lines", "%d from here" % lines.size()])
+		var draw := 0
+		for row: Dictionary in SupplySystem.plan(repo, state):
+			if String(row["town"]) == code:
+				draw += int(row["need"])
+		if draw > 0:
+			@warning_ignore("integer_division")
+			var days := (int(held["crown"]) + int(held["lord"]) + int(held["house"])) * Calendar.DAYS_PER_TICK / draw
+			fields.append(["Stores last", "%d days at today's draw" % days])
 	if not card.has("actions"):
 		card["actions"] = []
 	(card["actions"] as Array).append(_spy_send_action(repo, state, center))
