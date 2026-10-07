@@ -45,11 +45,12 @@ func markers() -> Array:
 	# Map3DHudLandmarks' clearance — so it is cut once per camera pose, exactly
 	# as Map3DHudLandmarks.marks() is (final review 2026-09-20). Same key shape:
 	# the pose, the view's size, the render scale, the layer's own switch and
-	# the date (regiments march and are settled by the month).
+	# the date (regiments march and are settled by the month) and the selection
+	# (the selected counters are placed first and never move).
 	var st := ctx.state()
 	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(),
 		view.military(), st.tick if st != null else 0, st.day if st != null else 0,
-		view.unit_tops().size(), view.unit_moves()]
+		view.unit_tops().size(), view.unit_moves(), view.selected_armies().duplicate()]
 	if key == _key:
 		return _cache
 	_cache = _cut()
@@ -86,7 +87,7 @@ func _cut() -> Array:
 			sp = camera.unproject_position(ground) / s
 		if frame.has_point(sp):
 			points.append({"reg": r, "pos": sp, "h": ph, "bars": _bars_of(code)})
-	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops)
+	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops, view.selected_armies())
 
 
 ## ArmySystem.bars_of, kept while nothing it reads moves: the day (the

@@ -56,19 +56,23 @@ func piece(code: String) -> Node3D:
 ## is (no push): a laid sheet, a changed regiment set.
 func rebuild(state: GameState) -> void:
 	_clear()
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
+	var entries := WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn())
+	var spot := _spread(state, entries)
+	for p: Dictionary in entries:
 		var code := String(p["code"])
-		_add(state, code, bool(p["naval"]), _seated(p["at"], _half(code, bool(p["naval"]))))
+		_add(state, code, bool(p["naval"]), spot[code])
 
 
 ## A state change: a moved piece is pushed over war_plot_push_s, a new piece
 ## built and a gone one freed, a changed pose or figure count rebuilt in place.
 func update(state: GameState) -> void:
 	var keep: Dictionary = {}
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
+	var entries := WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn())
+	var spot := _spread(state, entries)
+	for p: Dictionary in entries:
 		var code := String(p["code"])
 		keep[code] = true
-		var want := _seated(p["at"], _half(code, bool(p["naval"])))
+		var want: Vector3 = spot[code]
 		var node := piece(code)
 		if node != null and _signature(state, code) != _sig.get(code, []):
 			var at := node.position
@@ -168,6 +172,47 @@ func _seat_y(xz: Vector2, half: Vector2) -> float:
 		for dz in [-half.y, half.y]:
 			y = maxf(y, _view.y_at(xz + Vector2(dx, dz)))
 	return y
+
+
+## Where each piece of `entries` (WarRoom.on_sheet) stands on the table,
+## seated: code -> Vector3. Units near one another (those camped round one
+## town stand plinth to plinth at the table's scale) are spread by
+## Map3DDeclutter over their footprints so no two overlap (spec
+## 2026-10-07-army-split-and-ground §5.4) — the table's display only, the
+## engine's positions untouched. The household first, then by men, then by
+## code; the first never moves, the rest step out war_spread_step_m at a time
+## up to war_spread_max_m, and each is seated again where it lands.
+func _spread(state: GameState, entries: Array) -> Dictionary:
+	var rows: Array = []
+	for p: Dictionary in entries:
+		var code := String(p["code"])
+		var half := _half(code, bool(p["naval"]))
+		var at := _seated(p["at"], half)
+		var reg := ArmySystem.regiment(_repo, code, state)
+		rows.append({"code": code, "half": half, "at": at,
+			"royal": String(reg.get("is_royal", "0")) == "1",
+			"men": MapObjects.regiment_size(_repo, reg)})
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if bool(a["royal"]) != bool(b["royal"]):
+			return bool(a["royal"])
+		if float(a["men"]) != float(b["men"]):
+			return float(a["men"]) > float(b["men"])
+		return String(a["code"]) < String(b["code"]))
+	var boxes: Array = rows.map(func(r: Dictionary) -> Rect2:
+		var at: Vector3 = r["at"]
+		var half: Vector2 = r["half"]
+		return Rect2(Vector2(at.x, at.z) - half, half * 2.0))
+	var offs := Map3DDeclutter.place(boxes, rows.map(func(_r: Dictionary) -> bool: return false), [],
+		_repo.bal("war_spread_step_m"), _repo.bal("war_spread_max_m"))
+	var out: Dictionary = {}
+	for i in rows.size():
+		var at: Vector3 = rows[i]["at"]
+		var off: Vector2 = offs[i]
+		if off != Vector2.ZERO:
+			var xz := Vector2(at.x, at.z) + off
+			at = Vector3(xz.x, _seat_y(xz, rows[i]["half"]), xz.y)
+		out[String(rows[i]["code"])] = at
+	return out
 
 
 ## Where a piece at pack point `pack_px` stands on the table, seated.

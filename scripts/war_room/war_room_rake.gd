@@ -149,6 +149,11 @@ func redraw() -> void:
 	if who != "":
 		var home := _view.position_of(who)
 		var at: Variant = _view.screen_pos_of_px(home) if _view.sheet_rect().has_point(home) else null
+		# the arrow leaves the piece where it stands (spread clear of its
+		# neighbours, spec 2026-10-07-army-split-and-ground §5.4)
+		var piece := _pieces.piece(who)
+		if at != null and piece != null and not _camera.is_position_behind(piece.global_position):
+			at = _camera.unproject_position(piece.global_position) / _view.window_scale()
 		if at != null:
 			from = at
 			var px := Vector2(-1, -1)

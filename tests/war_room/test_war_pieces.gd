@@ -54,8 +54,9 @@ func _move_to(code: String, pack_px: Vector2) -> void:
 
 
 ## Stand `code` on the home sheet's point farthest from every other piece:
-## one piece a unit, the units camped round one town stand plinth to plinth
-## at the table's scale, and a pick test wants its piece clear of them.
+## the units camped round one town are spread plinth to plinth on the table
+## (WarPieces._spread), well within a pick's war_pick_px reach, where the
+## piece nearest the camera wins; a pick test wants its piece clear of them.
 func _stand_alone(code: String) -> void:
 	var rect: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
 	var others: Array = []
@@ -85,9 +86,52 @@ func test_every_regiment_on_the_sheet_stands_as_a_piece_where_we_know_it_is() ->
 	for p: Dictionary in on:
 		var node := pieces.piece(String(p["code"]))
 		assert_not_null(node)
+		# where we know it is, or stepped aside from a neighbour on the table
+		# (spec 2026-10-07-army-split-and-ground §5.4)
 		var want := view.table_point(p["at"])
-		assert_almost_eq(node.position.x, want.x, 0.0001)
-		assert_almost_eq(node.position.z, want.z, 0.0001)
+		var off := Vector2(node.position.x - want.x, node.position.z - want.z)
+		assert_lte(maxf(absf(off.x), absf(off.y)), repo.bal("war_spread_max_m") + 0.0001, String(p["code"]))
+	_assert_apart(pieces)
+
+
+## No two pieces' footprints (their plinth squares, a fleet's base) overlap
+## on the table.
+func _assert_apart(pieces: WarPieces) -> void:
+	var boxes: Array = []
+	for c: Node3D in pieces.get_children():
+		var half: Vector2 = c.get_meta("half", Vector2.ZERO)
+		boxes.append([String(c.get_meta("code")), Rect2(Vector2(c.position.x, c.position.z) - half, half * 2.0)])
+	for i in boxes.size():
+		for j in range(i + 1, boxes.size()):
+			assert_false((boxes[i][1] as Rect2).intersects(boxes[j][1]), "%s and %s" % [boxes[i][0], boxes[j][0]])
+
+
+## Two units standing within a plinth of each other are spread on the table
+## so their plinths stand clear (spec 2026-10-07-army-split-and-ground §5.4);
+## the engine's positions are untouched.
+func test_two_units_within_a_plinth_stand_apart() -> void:
+	var codes: Array = []
+	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+		if not bool(p["naval"]):
+			codes.append(String(p["code"]))
+	assert_gte(codes.size(), 2, "premise: the home sheet holds two land units")
+	var rect: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
+	var plinth_px := repo.bal("war_piece_plinth_mm") / 1000.0 * rect.size.x / repo.bal("war_table_w_m")
+	var spot := rect.get_center()
+	_move_to(String(codes[0]), spot)
+	_move_to(String(codes[1]), spot + Vector2(plinth_px * 0.3, plinth_px * 0.2))
+	var engine := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, String(codes[1]), state))
+	view.lay_sheet(_home_sheet())
+	await wait_process_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	_assert_apart(pieces)
+	# and again after a refresh moves one onto the other
+	_move_to(String(codes[0]), spot + Vector2(plinth_px * 0.1, 0.0))
+	view.refresh()
+	pieces.settle()
+	_assert_apart(pieces)
+	assert_eq(ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, String(codes[1]), state)), engine,
+		"the spread is the table's only")
 
 
 func test_a_land_piece_is_its_arms_wooden_piece_with_its_tag() -> void:

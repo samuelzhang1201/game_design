@@ -976,14 +976,18 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 	assert_almost_eq((at[code] as Vector2).distance_to(drawn), 0.0, 0.001, "the piece stands on the map's spot")
 	assert_almost_eq(screen.view().position_of(code).distance_to(drawn), 0.0, 0.001, "and the rake measures from it")
 	var other := ""
+	var reach := Game.data.bal("war_spread_max_m") * screen.view().sheet_rect().size.x / Game.data.bal("war_table_w_m")
 	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		var c := String(reg["regiment_code"])
 		if c != code and at.has(c):
 			other = c
-			# every unit at its own engine spot (the seat's is its town's point)
+			# every unit at its own engine spot (the seat's is its town's point),
+			# or stepped aside on the table from a neighbour sharing it (spec
+			# 2026-10-07-army-split-and-ground §5.4: war_spread_max_m at most)
 			var want := ArmySystem.position_of(Game.data, Game.state, reg)
-			assert_almost_eq((at[c] as Vector2).distance_to(want),
-				0.0, 0.001, "a regiment the map does not name stands at the engine's spot")
+			var off := (at[c] as Vector2) - want
+			assert_lte(maxf(absf(off.x), absf(off.y)), reach + 0.001,
+				"a regiment the map does not name stands at the engine's spot")
 	assert_ne(other, "", "the sheet holds another piece to compare")
 
 

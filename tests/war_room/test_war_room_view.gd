@@ -328,9 +328,9 @@ func _release(at: Vector2) -> void:
 
 
 ## The first land piece on the laid sheet that a press on its own point
-## takes up (one piece a unit: the units camped round one town stand plinth
-## to plinth at the table's scale, so a neighbour's plinth can lie over a
-## unit's point); the first land piece while nothing can be picked yet.
+## takes up (the units camped round one town share a point at the table's
+## scale and are spread plinth to plinth, WarPieces._spread, so a press there
+## can take a neighbour); the first land piece while nothing can be picked yet.
 func _first_land_piece() -> Dictionary:
 	var first: Dictionary = {}
 	for p: Dictionary in WarRoom.on_sheet(repo, state, view.sheet_index()):

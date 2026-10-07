@@ -15,18 +15,22 @@ extends RefCounted
 ## at height `h`: {code, pos, size, text, font_px, rect, icon, count, bars,
 ## glyph, piece, color, naval, royal}, one a unit. `bars` is ArmySystem.bars_of's
 ## Vector2i (readiness, supply per mille): two thin bars, red over yellow,
-## stand on the counter inside its `rect` (owner 2026-09-27). Sorted top to bottom; a counter meeting a
-## settlement mark or an earlier counter drops to just under it, so no
-## counter ever covers a town or another counter.
+## stand on the counter inside its `rect` (owner 2026-09-27). Spread by
+## Map3DDeclutter (spec 2026-10-07-army-split-and-ground §5.2) in priority
+## order — `first` (the selected codes), the royal household, then by men,
+## then by code — so no counter or chip covers a settlement mark or another:
+## the first never moves, each other takes the nearest clear place out to
+## map3d_declutter_max_px. A counter with no clear place takes the clearest
+## it found (never hidden); a chip with none is left out until the camera
+## comes closer.
 ## `with_piece` names the regiments that already have a 3D PIECE standing on
-## the map (Map3DLayerUnits). Those keep only their headcount box: the model
-## IS the counter's square now, and drawing the flat piece beside it put the
-## same regiment on the map twice.
+## the map (Map3DLayerUnits). Those keep only their headcount box (a chip):
+## the model IS the counter's square now, and drawing the flat piece beside it
+## put the same regiment on the map twice.
 static func layout(repo: DataRepository, points: Array, h: float, obstacles: Array,
-		with_piece: Dictionary = {}) -> Array:
+		with_piece: Dictionary = {}, first: Array = []) -> Array:
 	var mine := repo.resolve_realm("player_realm")
 	var pad := repo.bal("map_army_count_pad_px")
-	var gap := repo.bal("map_army_stack_gap_px")
 	var font := UiPalette.body_font()
 	var bars_h := bars_height(repo)
 	var out: Array = []
@@ -57,32 +61,36 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 			"piece": MapObjects.army_piece(repo, r),
 			"color": colors[kingdom],
 			"naval": naval, "royal": royal})
+	# Priority (spec §5.2): the selected, the royal household, then by men, then code.
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var ay := (a["pos"] as Vector2).y
-		var by := (b["pos"] as Vector2).y
-		return String(a["code"]) < String(b["code"]) if ay == by else ay < by)
-	# The settlements are obstacles from the start: counters only ever move
-	# down, so a counter meeting a town drops to just under its mark.
-	var placed: Array = obstacles.duplicate()
-	for m: Dictionary in out:
-		var rect: Rect2 = m["rect"]
-		# Each push can land on another obstacle, so go round again until the
-		# rect is clear; every pass moves it strictly down, so this ends.
-		var moved := true
-		while moved:
-			moved = false
-			for other: Rect2 in placed:
-				if rect.intersects(other.grow(gap * 0.5)):
-					rect.position.y = other.end.y + gap
-					moved = true
-		placed.append(rect)
+		var sa := first.has(a["code"])
+		var sb := first.has(b["code"])
+		if sa != sb:
+			return sa
+		if bool(a["royal"]) != bool(b["royal"]):
+			return bool(a["royal"])
+		if float(a["size"]) != float(b["size"]):
+			return float(a["size"]) > float(b["size"])
+		return String(a["code"]) < String(b["code"]))
+	var boxes: Array = out.map(func(m: Dictionary) -> Rect2: return m["rect"])
+	var hide: Array = out.map(func(m: Dictionary) -> bool: return bool(m["solo"]))
+	var offs := Map3DDeclutter.place(boxes, hide, obstacles, repo.bal("map3d_declutter_step_px"),
+		repo.bal("map3d_declutter_max_px"))
+	var kept: Array = []
+	for i in out.size():
+		if offs[i] == null:
+			continue
+		var m: Dictionary = out[i]
+		var rect := Rect2((m["rect"] as Rect2).position + (offs[i] as Vector2), (m["rect"] as Rect2).size)
 		m["rect"] = rect
+		m["pos"] = (m["pos"] as Vector2) + (offs[i] as Vector2)
 		var mh := float(m["h"])
-		var square := 0.0 if bool(m.get("solo", false)) else mh
+		var square := 0.0 if bool(m["solo"]) else mh
 		var top := rect.position + Vector2(0.0, bars_h)
 		m["icon"] = Rect2(top, Vector2(square, mh))
 		m["count"] = Rect2(top + Vector2(square, 0.0), Vector2(rect.size.x - square, mh))
-	return out
+		kept.append(m)
+	return kept
 
 
 ## The two bars and their gaps, screen px (0 while map_army_bar_px is 0).
