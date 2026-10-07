@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://crhxjpb0voenb" path="res://assets/3D/war_room/pennant/pennant.glb" id="9_mbbr6"]
 [ext_resource type="Script" uid="uid://cfv64budsa2t3" path="res://scripts/war_room/war_ink_painter.gd" id="10_bfe1t"]
 [ext_resource type="Script" uid="uid://b2lueju2wrv3g" path="res://scripts/war_room/war_hud.gd" id="11_8tgs3"]
+[ext_resource type="Script" path="res://scripts/war_room/war_plan_hud.gd" id="12_54vep"]
 
 [sub_resource type="Environment" id="Environment_room"]
 background_mode = 1
@@ -302,6 +303,14 @@ render_target_update_mode = 0
 [node name="DetailInk" type="Node2D" parent="DetailViewport" unique_id=1532023032]
 unique_name_in_owner = true
 script = ExtResource("10_bfe1t")
+
+[node name="PlanHud" type="Control" parent="." unique_id=1275703149]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("12_54vep")
 
 [node name="Hud" type="Control" parent="." unique_id=286485825]
 unique_name_in_owner = true
