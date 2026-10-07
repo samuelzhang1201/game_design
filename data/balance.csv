@@ -661,6 +661,13 @@ war_intel_hazard_alpha,0.6,WAR ROOM P2-B §2.4: the hatching's alpha in the inte
 war_hazard_hatch_km,1.5,"WAR ROOM P2-B §2.4: the hatch's spacing, in the pack's measure"
 war_intel_hazard_label_px,48,"WAR ROOM P2-B §2.4 (visual review 2026-10-07): a hazard's name, intel px — larger than a spy report's words (war_intel_label_px) so it reads at the far lean, with a paper halo over the hatch"
 war_hazard_dot_ratio,0.6,"WAR ROOM P2-B §2.4 (visual review 2026-10-07): a plague's dots are set this share of war_hazard_hatch_km apart, staggered row by row, so they read as a pattern and not as foxing"
+war_works_min_gold,60,"WAR ROOM P3-A (spec 2026-10-07-war-room-p3 §0 ruling 3): a town is marked as a war works when its strategic goods (pack units x goods_economy price_gold) reach this many gold a month"
+war_trade_tier1_gold,40,"WAR ROOM P3-A ruling 5: a road segment carrying this much trade gold a month is drawn one weight heavier"
+war_trade_tier2_gold,120,WAR ROOM P3-A ruling 5: ... two weights heavier
+war_trade_tier3_gold,300,WAR ROOM P3-A ruling 5: ... three weights heavier
+war_ink_trade_px,3,"WAR ROOM P3-A §1.3: a trade road's extra width per tier over war_ink_road_px, sheet ink px"
+war_ink_works_px,30,"WAR ROOM P3-A §1.3: a works glyph's height above its town ring, sheet ink px"
+war_ink_market_px,30,"WAR ROOM P3-A §1.3: a market's scales below its town ring, sheet ink px"
 war_chart_numeral_font_px,48,"WAR ROOM (Task 9): a sheet numeral's lettering size on the index chart (Label3D font_size)"
 war_chart_numeral_pixel_m,0.0008,"WAR ROOM (Task 9): metres a numeral's font px covers on the chart (Label3D pixel_size): 48 px reads ~4 cm on a 1 m chart"
 war_arrow_font_px,48,"WAR ROOM (Task 9): an edge arrow's lettering size (Label3D font_size)"
