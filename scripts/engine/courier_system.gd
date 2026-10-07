@@ -158,7 +158,7 @@ static func days_for(repo: DataRepository, kind: String, need: int) -> int:
 static func dispatch(repo: DataRepository, state: GameState, kind: String, code: String,
 		order: Dictionary) -> Dictionary:
 	return dispatch_to(repo, state, kind, code, order,
-		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)))
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code, state)))
 
 
 ## A courier for regiment `code` whose road ends at `to_px` — the regiment
@@ -224,7 +224,7 @@ static func spy_eta_days(repo: DataRepository, state: GameState, to_px: Vector2)
 ## the regiment — counted in day-ends, the day now running (or about to run)
 ## the first — the route and his first day's weather held. 0 for no regiment.
 static func eta_days(repo: DataRepository, state: GameState, kind: String, code: String) -> int:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty():
 		return 0
 	var from := origin(repo, state)
@@ -250,7 +250,7 @@ static func eta_days_to(repo: DataRepository, state: GameState, kind: String, to
 ## day-ends. 0 for a regiment that cannot march.
 static func arrival_days(repo: DataRepository, state: GameState, code: String, dest_px: Vector2,
 		from_px := Vector2(-1, -1), ride := -1) -> int:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty() or ArmySystem.day_march_m(repo, state, code) <= 0:
 		return 0
 	if ride < 0:
@@ -295,7 +295,7 @@ static func ride_day(repo: DataRepository, state: GameState) -> Array:
 ## One courier's day; false when he is done (delivered, lost, or out of time).
 static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> bool:
 	var code := String(c["target"])
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
 		events.append(_event("lost", c))
 		return false
@@ -368,7 +368,7 @@ static func ride_ahead(repo: DataRepository, state: GameState, c: Dictionary) ->
 ## as the day starts.
 static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, before: Array) -> Dictionary:
 	var code := String(c["target"])
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	# a spy rides for a point, not a regiment: nothing to lose, nothing to re-aim
 	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}

@@ -28,7 +28,7 @@ func before_each() -> void:
 	_menu.follow(_map)
 
 func _land() -> String:
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1":
 			return String(r["regiment_code"])
 	return ""
@@ -211,7 +211,7 @@ func test_the_menu_greys_withdraw_and_carry_while_time_runs() -> void:
 		assert_false(_menu.is_item_disabled(_menu.get_item_index(id)), "paused, row %d is offered" % id)
 
 func test_a_fleet_has_no_supply_rows() -> void:
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) == "1":
 			_map.army_menu_requested.emit(String(r["regiment_code"]), Vector2(10, 10))
 			assert_eq(_row("add"), -1)
@@ -237,7 +237,7 @@ func test_escape_ends_the_pick_before_it_lets_the_selection_go() -> void:
 	assert_eq(_map.picked, "", "the next Escape lets it go")
 
 func _other_land(not_code: String) -> String:
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1" and String(r["regiment_code"]) != not_code \
 				and ArmySystem.base_pace_km(Game.data, r) > 0:
 			return String(r["regiment_code"])

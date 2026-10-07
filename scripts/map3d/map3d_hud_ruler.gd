@@ -22,7 +22,7 @@ func _process(_delta: float) -> void:
 ## the column stands, and the weather only on the day.
 func _courier_eta(code: String) -> int:
 	var st := ctx.state()
-	var reg := ArmySystem.regiment(ctx.repo, code)
+	var reg := ArmySystem.regiment(ctx.repo, code, ctx.state())
 	if st == null or reg.is_empty() or not CourierSystem.carries_orders(reg):
 		return 0
 	var key := "%s|%s|%d" % [code, ArmySystem.position_of(ctx.repo, st, reg), st.absolute_day()]
@@ -55,7 +55,7 @@ func _draw_aim() -> void:
 	if hit == null:
 		return
 	var repo := ctx.repo
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, ctx.state())
 	var from := ArmySystem.position_of(repo, ctx.state(), reg)
 	# from where the piece is DRAWN, along the ground it will walk (owner 2026-09-30: 贴地)
 	var fxz: Vector2 = view.unit_positions().get(code, ctx.to_world(from))

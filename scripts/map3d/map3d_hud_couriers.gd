@@ -73,7 +73,7 @@ func _pending_ends(c: Dictionary) -> Dictionary:
 	var order: Dictionary = c["order"]
 	if String(order.get("action_code", "")) != "ARMY_MARCH":
 		return {}
-	var reg := ArmySystem.regiment(ctx.repo, String(c["target"]))
+	var reg := ArmySystem.regiment(ctx.repo, String(c["target"]), ctx.state())
 	if reg.is_empty():
 		return {}
 	var from: Variant = _screen_of(ArmySystem.position_of(ctx.repo, ctx.state(), reg))

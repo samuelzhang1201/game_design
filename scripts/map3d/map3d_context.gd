@@ -125,10 +125,10 @@ func home(of: GameState = null) -> Vector2:
 	return bounds.get_center() if burg.is_empty() else to_world(Vector2(float(burg["x"]), float(burg["y"])))
 
 
-## The regiments the map draws: the player's, or every realm's in DEV MODE.
+## The units the map draws: the player's, or every realm's in DEV MODE.
 func regiments() -> Array:
-	return repo.world_table("military", "regiments").values() if dev \
-		else MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
+	return ArmySystem.roster(repo, state()).values() if dev \
+		else MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state())
 
 ## The couriers on the road (spec 2026-09-27-courier-core §2), from the live state.
 func couriers() -> Array: return state().couriers if state() != null else []

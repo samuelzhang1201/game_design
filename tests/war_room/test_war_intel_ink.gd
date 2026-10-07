@@ -19,7 +19,7 @@ func _sheet_of_first_regiment() -> Dictionary:
 
 
 func test_only_our_own_supply_lines_are_inked() -> void:
-	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).map(
+	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state).map(
 		func(r: Dictionary) -> String: return String(r["regiment_code"]))
 	# every land regiment of ours runs a supply line (spec 2026-10-07-army-supply-lines)
 	for c in state.regiments.keys():

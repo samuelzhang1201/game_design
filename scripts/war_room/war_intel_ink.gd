@@ -19,7 +19,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	var r: Rect2 = sheet["rect"]
 	var k := float(tex_px) / r.size.x
 	var out := {"supply": [], "couriers": [], "weather": [], "spies": [], "hazards": []}
-	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).map(
+	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state).map(
 		func(x: Dictionary) -> String: return String(x["regiment_code"]))
 	ours.sort()
 	for code: String in ours:

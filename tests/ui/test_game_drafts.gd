@@ -9,7 +9,7 @@ var codes: Array = []
 func before_each() -> void:
 	Game.start_campaign(44)
 	codes.clear()
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(Game.data, r) > 0:
 			codes.append(String(r["regiment_code"]))
 	codes.sort()

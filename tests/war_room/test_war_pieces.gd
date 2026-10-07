@@ -183,11 +183,21 @@ func test_screen_hits_name_each_piece() -> void:
 
 
 func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() -> void:
+	# a unit set marching stands as its own piece (a town's garrison of
+	# several is one piece that asks for its own menu)
+	var mover := _land_code()
+	ArmySystem.ensure(repo, state)
+	ArmySystem.set_march(repo, state, mover,
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, mover, state)) + Vector2(10.0, 0.0))
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var cam: Camera3D = view.get_node("%Camera")
-	var hit: Dictionary = pieces.screen_hits(cam, view.window_scale())[0]
+	var hit: Dictionary = {}
+	for h: Dictionary in pieces.screen_hits(cam, view.window_scale()):
+		if String(h["code"]) == mover:
+			hit = h
+	assert_false(hit.is_empty(), "the marching unit's piece is on the sheet")
 	var at: Vector2 = hit["at"]
 	assert_eq(pieces.pick(cam, view.window_scale(), at, repo.bal("war_pick_px")), String(hit["code"]))
 	assert_eq(pieces.pick(cam, view.window_scale(), at + Vector2(5000, 5000), repo.bal("war_pick_px")), "")
@@ -308,7 +318,10 @@ func test_a_regiment_leaving_the_sheet_loses_its_piece() -> void:
 	var here: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
 	var spot := away.get_center()
 	assert_false(here.has_point(spot), "the spot is off this sheet")
-	_move_to(code, spot)
+	# a town's garrison is one piece: every unit it stands for leaves
+	var held := MapObjects.garrison_of(repo, state, code)
+	for c in (held if not held.is_empty() else [code]):
+		_move_to(String(c), spot)
 	view.refresh()
 	assert_null(pieces.piece(code))
 	assert_eq(pieces.get_child_count(), n - 1)

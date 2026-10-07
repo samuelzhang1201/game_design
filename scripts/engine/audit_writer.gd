@@ -24,7 +24,7 @@ static func facts(repo: DataRepository, state: GameState, flow: String) -> Array
 			for row: Dictionary in SupplySystem.plan(repo, state):
 				var code := String(row["code"])
 				out.append(_fact("supply_line:" + code,
-					"To " + String(ArmySystem.regiment(repo, code).get("label", code)), int(row["delivered"]),
+					"To " + String(ArmySystem.regiment(repo, code, state).get("label", code)), int(row["delivered"]),
 					int(row["claimed"])))
 				total += int(row["delivered"])
 				said += int(row["claimed"])

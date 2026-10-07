@@ -117,7 +117,7 @@ func _supply_row(key: String, id: int, why: String) -> void:
 
 ## The regiment's supply rows: offered only for a land regiment of the realm.
 func _add_supply_rows(code: String) -> void:
-	var reg := ArmySystem.regiment(Game.data, code)
+	var reg := ArmySystem.regiment(Game.data, code, Game.state)
 	# supply orders are the map's: the war room's orders are drafts (owner ruling 2026-10-07)
 	if drafting or reg.is_empty() or String(reg.get("is_naval", "0")) == "1" \
 			or String(reg["kingdom_code"]) != Game.data.resolve_realm("player_realm"):
@@ -153,7 +153,7 @@ func _open_garrison(codes: Array, at: Vector2) -> void:
 	_garrison_at = at
 	clear()
 	for i in _garrison.size():
-		var reg := ArmySystem.regiment(Game.data, String(_garrison[i]))
+		var reg := ArmySystem.regiment(Game.data, String(_garrison[i]), Game.state)
 		add_item("%s — %d" % [String(reg.get("label", _garrison[i])), int(MapObjects.regiment_size(Game.data, reg))],
 			GARRISON_ROW + i)
 	_pop(at)
@@ -193,7 +193,7 @@ func _open_confirm(at: Vector2) -> void:
 ## A fleet's orders take no courier yet (CourierSystem.carries_orders), so
 ## its COMMIT and Cancel march read the rows that promise none.
 func _row_key(key: String, code: String) -> String:
-	var reg := ArmySystem.regiment(Game.data, code)
+	var reg := ArmySystem.regiment(Game.data, code, Game.state)
 	if not reg.is_empty() and not CourierSystem.carries_orders(reg) \
 			and Game.data.army_route_orders.has(key + "_fleet"):
 		return key + "_fleet"
@@ -235,7 +235,7 @@ func _refusal(action_code: String, code: String) -> String:
 	var req := ActionRequest.make(action_code, {"regiment": code})
 	if action_code == "ARMY_MARCH":
 		var here := ArmySystem.position_of(Game.data, Game.state,
-			ArmySystem.regiment(Game.data, code))
+			ArmySystem.regiment(Game.data, code, Game.state))
 		req.params["x"] = here.x
 		req.params["y"] = here.y + 1.0   # anywhere but here, so "already there" is not the answer
 	# a draft costs nothing until sealed: in the war room only the place can refuse it
@@ -402,7 +402,7 @@ func _run(req: ActionRequest) -> void:
 	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON"] \
 			or req.action_code.begins_with("SUPPLY_")):
 		var code := String(req.params["regiment"])
-		if CourierSystem.carries_orders(ArmySystem.regiment(Game.data, code)):
+		if CourierSystem.carries_orders(ArmySystem.regiment(Game.data, code, Game.state)):
 			Game.publish_news("A courier will ride for %s when time runs." % _name_of(code))
 			return
 		if req.action_code == "ARMY_MARCH":
@@ -430,7 +430,7 @@ func _set_aim(code: String) -> void:
 
 
 func _name_of(code: String) -> String:
-	return String(ArmySystem.regiment(Game.data, code).get("label", code))
+	return String(ArmySystem.regiment(Game.data, code, Game.state).get("label", code))
 
 
 ## Escape gives an aimed order up — the player changed their mind and should
@@ -535,7 +535,7 @@ func _on_supply_ground(pack_px: Vector2, at: Vector2) -> void:
 func _open_rates(town: String, route: PackedVector2Array, at: Vector2) -> void:
 	clear()
 	var km := SupplyLines.road_km(Game.data, route)
-	var reg := ArmySystem.regiment(Game.data, _supply_for)
+	var reg := ArmySystem.regiment(Game.data, _supply_for, Game.state)
 	var use := ArmySystem.supply_use(Game.data, reg, Game.state)
 	var row: Dictionary = Game.data.army_supply_orders.get("confirm", {"label": "{rate}× — {fee} gold a day", "hint": ""})
 	# the road's length and its robbers (marks and hazards), read once on the pick

@@ -13,14 +13,14 @@ func before_each() -> void:
 
 
 func _land_code() -> String:
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) != "1":
 			return String(r["regiment_code"])
 	return ""
 
 
 func _naval_code() -> String:
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) == "1":
 			return String(r["regiment_code"])
 	return ""
@@ -87,7 +87,7 @@ func test_a_fleet_cannot_go_ashore() -> void:
 func test_an_empty_banner_reads_no_power_no_pace_and_no_days() -> void:
 	var code := _land_code()
 	var at := _land_point() + Vector2(3, 3)
-	var row: Dictionary = repo.world_table("military", "regiments")[code]
+	var row: Dictionary = state.army_roster[code]
 	for arm in ["infantry", "archers", "cavalry", "artillery", "fleet"]:
 		row[arm] = "0"   # day_step_m is 0 only for an empty banner (base_pace_km 0)
 	var r := WarGround.reading(repo, state, at, code)

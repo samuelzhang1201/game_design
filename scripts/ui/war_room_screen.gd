@@ -284,7 +284,7 @@ func _fill_margin() -> void:
 		var b := Button.new()
 		b.flat = true
 		b.focus_mode = Control.FOCUS_NONE
-		var reg := ArmySystem.regiment(Game.data, String(p["code"]))
+		var reg := ArmySystem.regiment(Game.data, String(p["code"]), Game.state)
 		b.text = "%s → %s" % [reg.get("label", p["code"]), series[to]["id"]]
 		# a slip of tight rows in the slip's ink (the WarMarginRow kind)
 		b.theme_type_variation = &"WarMarginRow"

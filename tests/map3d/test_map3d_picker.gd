@@ -99,7 +99,7 @@ func test_a_town_is_still_clickable_with_no_dot_shown_in_the_no_dot_gap() -> voi
 func test_a_waiting_courier_yields_the_click_to_the_town_under_him() -> void:
 	var v := _view()
 	var code := ""
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if CourierSystem.carries_orders(r):
 			code = String(r["regiment_code"])
 			break

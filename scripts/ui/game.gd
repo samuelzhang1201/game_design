@@ -197,7 +197,7 @@ func review_drafts() -> Dictionary:
 	for code: String in WarDrafts.codes(state):
 		var d := WarDrafts.of(state, code)
 		var req := WarDrafts.request_from(data, code, d)
-		var reg := ArmySystem.regiment(data, code)
+		var reg := ArmySystem.regiment(data, code, state)
 		var refusal := engine.actions.validate(req, sim)
 		var gold := 0
 		if refusal == "":

@@ -21,7 +21,7 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 		var feats := String(b.get("features", "")).split("|")
 		works = "citadel" if "citadel" in feats else ("walls" if "walls" in feats else "town")
 		if town_holder == repo.resolve_realm("player_realm"):
-			for r: Dictionary in MapObjects.regiments_of(repo, town_holder):
+			for r: Dictionary in MapObjects.regiments_of(repo, town_holder, state):
 				if ArmySystem.town_of(repo, r, state) == town:
 					garrison.append(String(r.get("label", r["regiment_code"])))
 	var out := {
@@ -61,7 +61,7 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 
 
 static func _for_regiment(repo: DataRepository, state: GameState, at: Vector2, code: String, g: Dictionary) -> Dictionary:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	var naval := String(reg.get("is_naval", "0")) == "1"
 	var out := {"code": code, "label": String(reg.get("label", code)), "ashore": naval and not bool(g["sea"]),
 		"afloat": not naval and bool(g["sea"])}   # ARMY_MARCH refuses the sea: no pace, no days

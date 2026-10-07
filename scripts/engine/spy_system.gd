@@ -137,10 +137,11 @@ static func _troops(repo: DataRepository, state: GameState, at: Vector2) -> Dict
 	var realm := repo.resolve_realm("player_realm")
 	var own := 0
 	var foreign := 0
-	var codes := repo.world_table("military", "regiments").keys()
+	var all := ArmySystem.roster(repo, state)
+	var codes := all.keys()
 	codes.sort()
 	for code: String in codes:
-		var reg: Dictionary = repo.world_table("military", "regiments")[code]
+		var reg: Dictionary = all[code]
 		if ArmySystem.position_of(repo, state, reg).distance_to(at) > reach:
 			continue
 		if String(reg.get("kingdom_code", "")) == realm:

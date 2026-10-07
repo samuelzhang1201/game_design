@@ -14,9 +14,12 @@ func _mine() -> Array:
 
 func _other_code() -> String:
 	var mine := repo.resolve_realm("player_realm")
-	for r: Dictionary in repo.world_table("military", "regiments").values():
-		if String(r["kingdom_code"]) != mine:
-			return String(r["regiment_code"])
+	var army := ArmySystem.roster(repo)
+	var codes := army.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(army[c]["kingdom_code"]) != mine:
+			return c
 	return ""
 
 func test_a_new_campaign_seeds_only_the_players_regiments() -> void:
@@ -100,11 +103,15 @@ func test_a_day_bites_its_share_and_the_month_sums_exactly() -> void:
 ## The map's yellow bar is the stores against a full train, so it falls every day.
 func test_the_yellow_bar_falls_day_by_day() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	var r: Dictionary = _mine()[0]
+	# the first land unit that eats at least a unit every day
+	var r: Dictionary = {}
+	for u: Dictionary in _mine():
+		if String(u.get("is_naval", "0")) != "1" and ArmySystem.supply_use(repo, u) >= Calendar.DAYS_PER_TICK:
+			r = u
+			break
+	assert_false(r.is_empty(), "the realm has a unit that eats every day")
 	var code := String(r["regiment_code"])
 	var use := ArmySystem.supply_use(repo, r)
-	if use < Calendar.DAYS_PER_TICK:
-		return
 	# the carried days in whole units, rounded UP so the bar reads full
 	s.regiments[code]["supplies"] = (use * ArmySystem.carry_of(repo, s.regiments[code]) + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK
 	var bar := ArmySystem.bars_of(repo, s, code).y

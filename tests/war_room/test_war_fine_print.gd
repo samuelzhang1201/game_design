@@ -44,7 +44,7 @@ func test_flat_ground_has_no_figures() -> void:
 
 func test_a_town_note_says_size_works_souls_and_height() -> void:
 	var sheet: Dictionary = WarSheets.series(repo)[WarSheets.sheet_of(repo, ArmySystem.position_of(repo, state,
-		ArmySystem.regiment(repo, MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))[0]["regiment_code"])))]
+		ArmySystem.regiment(repo, MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state)[0]["regiment_code"])))]
 	var fine := WarFinePrint.strokes(repo, state, sheet, int(repo.bal("war_sheet_texture_px")), null)
 	var r: Rect2 = sheet["rect"]
 	var expected: Array = []
@@ -93,7 +93,7 @@ func test_contour_figures_keep_off_the_roads_trails_and_rivers() -> void:
 	var clear := repo.bal("war_fine_figure_px") * repo.bal("war_ink_char_w") * 2.0 + repo.bal("war_fine_figure_px") * 0.5
 	var checked := 0
 	var sheets: Dictionary = {}
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		sheets[WarSheets.sheet_of(repo, ArmySystem.position_of(repo, state, r))] = true
 	for si: int in sheets:
 		var s: Dictionary = WarSheets.series(repo)[si]

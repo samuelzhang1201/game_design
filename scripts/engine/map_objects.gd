@@ -89,8 +89,7 @@ static func label_of(repo: DataRepository, obj: Dictionary, state: GameState = n
 		"river":
 			return String(repo.rivers.get(obj["code"], {}).get("label", ""))
 		"army":
-			return String(repo.world_table("military", "regiments")
-				.get(obj["code"], {}).get("label", ""))
+			return String(ArmySystem.regiment(repo, String(obj["code"]), state).get("label", ""))
 		"garrison":
 			return garrison_label(repo, String(obj.get("town", "")), obj.get("codes", []))
 		"manor":
@@ -407,9 +406,12 @@ static func province_card(repo: DataRepository, state: GameState, code: String) 
 		fields.append(["Terrain", String(biome["label"])])
 	fields.append(["Towns", "%d%s" % [towns.size(), (": " + ", ".join(names)) if not names.is_empty() else ""]])
 	var regs: Array[String] = []
-	for row: Dictionary in repo.world_table("military", "regiments").values():
-		if String(row.get("province_code", "")) == code:
-			regs.append(String(row["label"]))
+	var army := ArmySystem.roster(repo, state)
+	var army_codes := army.keys()
+	army_codes.sort()
+	for c: String in army_codes:
+		if String(army[c].get("province_code", "")) == code:
+			regs.append(String(army[c]["label"]))
 	if not regs.is_empty():
 		fields.append(["Regiments", ", ".join(regs)])
 	if state != null:   # the hazards in play there that the crown knows (spec 2026-10-07-war-room-p2 ruling 7)
@@ -851,12 +853,15 @@ static func holdings_text(repo: DataRepository, state: GameState, province_code:
 ## them. The counts per arm live in data/maps/<id>/military/regiments.csv;
 ## these read them so the map and the MILITARY panel agree on every number.
 
-## Every regiment of a kingdom, in the pack's order.
-static func regiments_of(repo: DataRepository, kingdom_code: String) -> Array:
+## Every unit of a kingdom (ArmySystem.roster), in code order.
+static func regiments_of(repo: DataRepository, kingdom_code: String, state: GameState = null) -> Array:
 	var out: Array = []
-	for r: Dictionary in repo.world_table("military", "regiments").values():
-		if String(r["kingdom_code"]) == kingdom_code:
-			out.append(r)
+	var all := ArmySystem.roster(repo, state)
+	var codes := all.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(all[c]["kingdom_code"]) == kingdom_code:
+			out.append(all[c])
 	return out
 
 ## The garrisons among `regs` (owner 2026-10-06, choice A: a regiment
@@ -890,11 +895,11 @@ static func garrisons(repo: DataRepository, state: GameState, regs: Array) -> Ar
 ## else every regiment of its kingdom quartered in the same town, the royal
 ## regiment first.
 static func garrison_of(repo: DataRepository, state: GameState, code: String) -> Array:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	var town := ArmySystem.quartered_in(repo, reg, state) if not reg.is_empty() else ""
 	if town == "":
 		return []
-	for g: Dictionary in garrisons(repo, state, regiments_of(repo, String(reg["kingdom_code"]))):
+	for g: Dictionary in garrisons(repo, state, regiments_of(repo, String(reg["kingdom_code"]), state)):
 		if String(g["town"]) == town:
 			return g["codes"]
 	return []
@@ -965,7 +970,7 @@ static func army_piece(repo: DataRepository, regiment: Dictionary) -> String:
 ## the player's own regiment with a state, its terrain, morale, wounded,
 ## supplies, training and strength (ArmySystem, owner 2026-09-17).
 static func army_card(repo: DataRepository, code: String, state: GameState = null) -> Dictionary:
-	var r: Dictionary = repo.world_table("military", "regiments").get(code, {})
+	var r: Dictionary = ArmySystem.regiment(repo, code, state)
 	if r.is_empty():
 		return {}
 	var label := String(r["label"])

@@ -202,7 +202,7 @@ func drawn() -> Dictionary:
 ## Where a regiment's piece stands, pack px: the map's drawn spot, else the
 ## engine's believed one.
 func position_of(code: String) -> Vector2:
-	return WarRoom.believed_position(_repo, state(), ArmySystem.regiment(_repo, code), drawn())
+	return WarRoom.believed_position(_repo, state(), ArmySystem.regiment(_repo, code, state()), drawn())
 
 
 ## The lettering face is handed in by the screen (UiPalette's body_italic

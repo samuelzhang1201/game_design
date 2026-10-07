@@ -63,7 +63,7 @@ func test_refusals() -> void:
 		"no line to withdraw")
 	assert_ne(actions.validate(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": code, "days": 12}), s), "",
 		"12 days is not a load")
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), s):
 		if String(r.get("is_naval", "0")) == "1":
 			assert_ne(actions.validate(ActionRequest.make("SUPPLY_CARRY_SET",
 				{"regiment": String(r["regiment_code"]), "days": 20}), s), "", "a fleet carries no train")

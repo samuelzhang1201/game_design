@@ -246,7 +246,7 @@ func _build(state: GameState, code: String, naval: bool) -> Node3D:
 	root.set_meta("code", code)
 	root.set_meta("naval", naval)
 	root.set_meta("half", _half(code, naval))
-	var reg := ArmySystem.regiment(_repo, code)
+	var reg := ArmySystem.regiment(_repo, code, state)
 	var side := _repo.bal("war_piece_base_mm") / 1000.0
 	var base_h := _repo.bal("war_piece_base_h_mm") / 1000.0
 	var wood := _wood_scene(code)

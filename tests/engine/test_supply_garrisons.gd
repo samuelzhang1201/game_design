@@ -13,8 +13,12 @@ func _check(repo: DataRepository, s: GameState, low: int) -> String:
 	var codes: Array = s.regiments.keys()
 	codes.sort()
 	for c in codes:
-		var reg := ArmySystem.regiment(repo, String(c))
+		var reg := ArmySystem.regiment(repo, String(c), s)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		# in its quarters: a unit camped beyond its town's reach is in the
+		# field, fed by a line (task 4 seats a camp in its camp_town)
+		if ArmySystem.held_town_of(repo, reg, s) == "":
 			continue
 		var days := ArmySystem.days_in_hand(int(s.regiments[c]["supplies"]), ArmySystem.supply_use(repo, reg, s))
 		if days < low:

@@ -469,7 +469,7 @@ static func _regiment_provinces(repo: DataRepository, state: GameState) -> Dicti
 	if _memo_on and _memo.has("regiment_provinces"):
 		return _memo["regiment_provinces"]
 	var idx := {}
-	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		idx[String(reg["regiment_code"])] = {"province": _province_now(repo, state, reg), "reg": reg}
 	if _memo_on:
 		_memo["regiment_provinces"] = idx
@@ -691,7 +691,7 @@ static func _sells_to(repo: DataRepository, state: GameState, id: String) -> Arr
 			continue
 		var town := String(ln.get("town", ""))
 		if town == "":
-			town = ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, code), state)
+			town = ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, code, state), state)
 		if town == "":
 			continue
 		for house: String in sold:
@@ -971,7 +971,7 @@ static func props_of(repo: DataRepository, state: GameState, id: String) -> Arra
 	if not id.begins_with("regiment:"):
 		return []
 	var code := _rest(id)
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty():
 		return []
 	var subj := MissiveLog.subject("regiment", code, -1, ArmySystem.position_of(repo, state, reg))
@@ -1009,7 +1009,7 @@ static func instances(name: String, repo: DataRepository, state: GameState, type
 			for code: String in MapOwnership.provinces_of(repo, state, realm):
 				out.append({"id": "province:" + code, "strain": 2 - int(state.wealth_tiers.get(code, 1))})
 		"regiments":
-			for reg: Dictionary in MapObjects.regiments_of(repo, realm):
+			for reg: Dictionary in MapObjects.regiments_of(repo, realm, state):
 				var code := String(reg["regiment_code"])
 				out.append({"id": "regiment:" + code, "strain": 1000 - ArmySystem.bars_of(repo, state, code).x})
 		"characters":
@@ -1141,12 +1141,12 @@ static func _label_of_raw(repo: DataRepository, state: GameState, id: String) ->
 		"seat":
 			return String((repo.seats.get(rest, {}) as Dictionary).get("label", ""))
 		"regiment":
-			return String(ArmySystem.regiment(repo, rest).get("label", ""))
+			return String(ArmySystem.regiment(repo, rest, state).get("label", ""))
 		"workshop":
 			return "War workshop at " + MapManors.label_of(repo, int(rest)) \
 				if rest.is_valid_int() and int(rest) in WorkshopSystem.cells(repo, state) else ""
 		"supply_line":
-			var reg := ArmySystem.regiment(repo, rest)
+			var reg := ArmySystem.regiment(repo, rest, state)
 			# one per ordered line: a land regiment of the crown's with a supply point
 			if reg.is_empty() or not state.supply_lines.has(rest) \
 					or String(reg.get("is_naval", "0")) == "1":

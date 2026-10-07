@@ -780,7 +780,7 @@ func _on_missive_show(subject: Dictionary) -> void:
 				"obj": {"kind": "burg", "code": code}})
 		"regiment":  # a receipt: its regiment's card (final review M3)
 			var code := String(subject["code"])
-			if not ArmySystem.regiment(Game.data, code).is_empty():
+			if not ArmySystem.regiment(Game.data, code, Game.state).is_empty():
 				var picked := {"kind": "army", "code": code}
 				view.object_selected.emit({"title": MapObjects.label_of(Game.data, picked), "obj": picked})
 

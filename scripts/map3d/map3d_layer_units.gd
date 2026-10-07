@@ -115,7 +115,7 @@ func _place(code: String, piece: Dictionary) -> void:
 	var centre := Vector3(xz.x, ctx.height_at(xz), xz.y)
 	# Far out every regiment is its flat counter (Map3DUnits.as_counters); one quartered in its town, the town's garrison counter.
 	if ctx.camera.is_position_behind(centre) or Map3DUnits.as_counters(repo, ctx.meta, ctx.distance, ctx.view_size.y) \
-			or ArmySystem.quartered_in(repo, ArmySystem.regiment(repo, code), ctx.state()) != "":
+			or ArmySystem.quartered_in(repo, ArmySystem.regiment(repo, code, ctx.state()), ctx.state()) != "":
 		show_piece(piece, false)
 		return
 	show_piece(piece, true)
@@ -228,7 +228,7 @@ func play(code: String, action: String) -> void:
 
 ## The piece for a regiment, built on first sight; {} for an arm with no model (a fleet).
 func _piece_of(code: String) -> Dictionary:
-	var reg := ArmySystem.regiment(ctx.repo, code)
+	var reg := ArmySystem.regiment(ctx.repo, code, ctx.state())
 	if reg.is_empty():
 		return {}
 	var tier := Map3DFormation.tier_of(ctx.repo, ArmySystem.fit_permille(ctx.repo, ctx.state(), code))
@@ -273,7 +273,7 @@ func _day_of(code: String) -> Dictionary:
 	var st := ctx.state()
 	var key := [st.regiments.get(code, {}), st.absolute_day(), st.next_courier_id, st.couriers.size()] if st != null else []
 	if not _days.has(code) or _days[code]["key"] != key:
-		var here := _target_xz(ArmySystem.regiment(ctx.repo, code))
+		var here := _target_xz(ArmySystem.regiment(ctx.repo, code, ctx.state()))
 		_days[code] = Map3DUnits.day_march(ctx.repo, st, code, ctx.meta, here, _shown_xz.get(code, here), ctx.day_share())
 		_days[code]["key"] = key.duplicate(true)
 	return _days[code]

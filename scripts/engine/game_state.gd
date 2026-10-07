@@ -468,8 +468,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.closed_routes = (d.get("closed_routes", []) as Array).duplicate()
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))
-	s.army_roster = d.get("army_roster", {})
-	s.town_seat = d.get("town_seat", {})
+	s.army_roster = (d.get("army_roster", {}) as Dictionary).duplicate(true)
+	s.town_seat = (d.get("town_seat", {}) as Dictionary).duplicate(true)
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))
 	s.war_drafts = _decode_values(d.get("war_drafts", {}))

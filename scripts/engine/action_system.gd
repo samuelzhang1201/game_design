@@ -184,7 +184,7 @@ func validate_place(req: ActionRequest, state: GameState) -> String:
 
 func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -> String:
 	var code := String(req.params.get("regiment", ""))
-	var reg := ArmySystem.regiment(data, code)
+	var reg := ArmySystem.regiment(data, code, state)
 	if reg.is_empty():
 		return "No such regiment: " + code
 	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
@@ -223,7 +223,7 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 ## tables allow.
 func _validate_supply(req: ActionRequest, state: GameState) -> String:
 	var code := String(req.params.get("regiment", ""))
-	var reg := ArmySystem.regiment(data, code)
+	var reg := ArmySystem.regiment(data, code, state)
 	if reg.is_empty():
 		return "No such regiment: " + code
 	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
@@ -582,7 +582,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				"reason": "%s taken from House %s by force" % [label, victim]})
 		"ARMY_MARCH":
 			var code := String(req.params["regiment"])
-			var reg := ArmySystem.regiment(data, code)
+			var reg := ArmySystem.regiment(data, code, state)
 			if state.war_drafts.erase(code):
 				effects.append({"metric": "war_draft", "delta": 0.0,
 					"reason": "%s's draft in the war room is set aside" % String(reg["label"])})
@@ -599,7 +599,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 						String(reg["label"]), days, "" if days == 1 else "s"]})
 		"ARMY_GARRISON":
 			var code := String(req.params["regiment"])
-			var reg := ArmySystem.regiment(data, code)
+			var reg := ArmySystem.regiment(data, code, state)
 			if state.war_drafts.erase(code):
 				effects.append({"metric": "war_draft", "delta": 0.0,
 					"reason": "%s's draft in the war room is set aside" % String(reg["label"])})
@@ -805,7 +805,7 @@ func _apply(state: GameState, effects: Array, metric: String, delta: float, reas
 ## courier from the capital, his fee a ledger line, and the army line saying
 ## when he should get there. The regiment is untouched until he does.
 func _send_courier(state: GameState, effects: Array, code: String, order: Dictionary, what: String) -> void:
-	var label := String(ArmySystem.regiment(data, code)["label"])
+	var label := String(ArmySystem.regiment(data, code, state)["label"])
 	var c := CourierSystem.dispatch(data, state, CourierSystem.ORDINARY, code, order)
 	_apply(state, effects, "treasury", -float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)),
 		"a courier rides for " + label)

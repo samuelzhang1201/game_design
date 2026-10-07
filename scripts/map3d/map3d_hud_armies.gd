@@ -94,7 +94,7 @@ func _cut() -> Array:
 		for c in codes:
 			var b := _bars_of(String(c))
 			bars = Vector2i(mini(bars.x, b.x), mini(bars.y, b.y))
-		points.append({"reg": ArmySystem.regiment(repo, String(codes[0])), "pos": gp, "h": garrison_h,
+		points.append({"reg": ArmySystem.regiment(repo, String(codes[0]), ctx.state()), "pos": gp, "h": garrison_h,
 			"bars": bars, "garrison": String(g["town"]), "codes": codes, "heads": int(g["heads"])})
 	for r: Dictionary in regs:
 		var code := String(r["regiment_code"])

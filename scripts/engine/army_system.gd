@@ -8,9 +8,16 @@ extends RefCounted
 ## 要每天都在以一定速率减少). Every number is a whole number and every rate is
 ## data (balance.csv army_*).
 
-## The pack's row for a regiment, {} when there is none.
-static func regiment(repo: DataRepository, code: String) -> Dictionary:
-	return repo.world_table("military", "regiments").get(code, {})
+## The army as it stands (spec 2026-10-07-army-split-and-ground §2.4): the
+## campaign's roster, else — no state, or a state with none — the pack's split.
+static func roster(repo: DataRepository, state: GameState = null) -> Dictionary:
+	if state != null and not state.army_roster.is_empty():
+		return state.army_roster
+	return ArmySplit.roster_of(repo)
+
+## A unit's row, {} when there is none.
+static func regiment(repo: DataRepository, code: String, state: GameState = null) -> Dictionary:
+	return roster(repo, state).get(code, {})
 
 ## Heads under a regiment's banner, as a whole number.
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
@@ -21,7 +28,7 @@ static func headcount(repo: DataRepository, reg: Dictionary) -> int:
 ## 残兵, Map3DFormation). A regiment that is not the player's has no state and
 ## reads as it would start (full); one with no one under arms is 0.
 static func fit_permille(repo: DataRepository, state: GameState, code: String) -> int:
-	var reg := regiment(repo, code)
+	var reg := regiment(repo, code, state)
 	var heads := headcount(repo, reg)
 	if heads <= 0:
 		return 0
@@ -48,12 +55,13 @@ static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 		"dest_x_m": home.x,
 		"dest_y_m": home.y,
 		"order": ORDER_STANDBY,
+		"camp_town": String(reg.get("camp_town", "")),
 	}
 
 ## Seeds every regiment of the player's realm that has no state yet — a new
 ## campaign, and an old save at its next settlement.
 static func ensure(repo: DataRepository, state: GameState) -> void:
-	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var code := String(reg["regiment_code"])
 		if not state.regiments.has(code):
 			state.regiments[code] = starting_state(repo, reg)
@@ -77,7 +85,7 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 ## A regiment's state for reading: the stored one, else what it would start
 ## with. Never writes. {} for a regiment that is not the player's.
 static func state_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	var reg := regiment(repo, code)
+	var reg := regiment(repo, code, state)
 	if reg.is_empty() or String(reg["kingdom_code"]) != repo.resolve_realm("player_realm"):
 		return {}
 	if state != null and state.regiments.has(code):
@@ -114,7 +122,7 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		var reg := regiment(repo, code)
+		var reg := regiment(repo, code, state)
 		if reg.is_empty():
 			continue
 		var entry: Dictionary = state.regiments[code]
@@ -153,7 +161,7 @@ static func eat_day(repo: DataRepository, state: GameState) -> void:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		var reg := regiment(repo, code)
+		var reg := regiment(repo, code, state)
 		if reg.is_empty():
 			continue
 		var entry: Dictionary = state.regiments[code]
@@ -203,7 +211,7 @@ static func hunger_day(repo: DataRepository, state: GameState) -> void:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		var reg := regiment(repo, code)
+		var reg := regiment(repo, code, state)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
 		var use := supply_use(repo, reg, state)
@@ -458,7 +466,7 @@ static func _arm_base(repo: DataRepository, code: String, arm: String, tick: int
 ## base, the training and morale factors and the terrain. 0 for a regiment
 ## without state.
 static func power(repo: DataRepository, state: GameState, code: String, stance: String) -> int:
-	var reg := regiment(repo, code)
+	var reg := regiment(repo, code, state)
 	if reg.is_empty():
 		return 0
 	return power_on(repo, state, code, stance, terrain_of(repo, reg, state), works_of(repo, reg, state))
@@ -469,7 +477,7 @@ static func power(repo: DataRepository, state: GameState, code: String, stance: 
 ## on ground it does not stand on (spec 2026-10-07-war-room-scale-hover §4.1).
 static func power_on(repo: DataRepository, state: GameState, code: String, stance: String,
 		terrain: String, works: String) -> int:
-	var reg := regiment(repo, code)
+	var reg := regiment(repo, code, state)
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0
@@ -521,13 +529,13 @@ static func training_grade(repo: DataRepository, training: int) -> String:
 ## the player's regiments of the same kind (land or fleet). A kind of one is
 ## Average.
 static func strength_grade(repo: DataRepository, state: GameState, code: String) -> String:
-	var reg := regiment(repo, code)
+	var reg := regiment(repo, code, state)
 	if reg.is_empty():
 		return ""
 	var naval := String(reg.get("is_naval", "0")) == "1"
 	var sum := 0
 	var n := 0
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if (String(r.get("is_naval", "0")) == "1") != naval:
 			continue
 		sum += power(repo, state, String(r["regiment_code"]), "defend")
@@ -591,7 +599,7 @@ static func readiness_permille(repo: DataRepository, supply_permille: int, moral
 ## regiment that is not the player's has no state, and reads as it would
 ## start (dev mode shows every realm's).
 static func bars_of(repo: DataRepository, state: GameState, code: String) -> Vector2i:
-	var reg := regiment(repo, code)
+	var reg := regiment(repo, code, state)
 	if reg.is_empty():
 		return Vector2i.ZERO
 	var st := state_of(repo, state, code)
@@ -614,7 +622,7 @@ static func pace_tenths(repo: DataRepository, base_km: int, supply_permille: int
 ## stands on (weather-free); 0 for a regiment that is not the player's (no
 ## state) or has no one under arms.
 static func speed_km_per_day(repo: DataRepository, state: GameState, code: String) -> float:
-	var reg := regiment(repo, code)
+	var reg := regiment(repo, code, state)
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0.0
@@ -778,7 +786,7 @@ static func order_of(repo: DataRepository, state: GameState, code: String) -> St
 static func destination_of(repo: DataRepository, state: GameState, code: String) -> Vector2:
 	var entry: Dictionary = state_of(repo, state, code)
 	if entry.is_empty() or not entry.has("dest_x_m"):
-		return position_of(repo, state, regiment(repo, code))
+		return position_of(repo, state, regiment(repo, code, state))
 	return metres_to_pack(repo, Vector2i(int(entry["dest_x_m"]), int(entry["dest_y_m"])))
 
 
@@ -788,7 +796,7 @@ static func destination_of(repo: DataRepository, state: GameState, code: String)
 static func heading_of(repo: DataRepository, state: GameState, code: String) -> Vector2:
 	if order_of(repo, state, code) != ORDER_MARCH:
 		return Vector2.ZERO
-	var away := destination_of(repo, state, code) - position_of(repo, state, regiment(repo, code))
+	var away := destination_of(repo, state, code) - position_of(repo, state, regiment(repo, code, state))
 	return away.normalized() if away.length() > 0.0001 else Vector2.ZERO
 
 
@@ -797,7 +805,7 @@ static func heading_of(repo: DataRepository, state: GameState, code: String) -> 
 ## 0 for a banner with no one under arms, which is why an order to march is
 ## refused for one rather than leaving it crawling toward a place forever.
 static func day_step_m(repo: DataRepository, state: GameState, code: String) -> int:
-	var reg := regiment(repo, code)
+	var reg := regiment(repo, code, state)
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0
@@ -812,7 +820,7 @@ static func day_step_m(repo: DataRepository, state: GameState, code: String) -> 
 ## under it — on `abs_day` when given (the map's preview of the next day),
 ## else today.
 static func day_march_m(repo: DataRepository, state: GameState, code: String, abs_day: int = -1) -> int:
-	return day_march_at(repo, state, code, position_of(repo, state, regiment(repo, code)), abs_day)
+	return day_march_at(repo, state, code, position_of(repo, state, regiment(repo, code, state)), abs_day)
 
 
 ## day_march_m for a column standing at `at` (pack px): its day_step_m under
@@ -829,7 +837,7 @@ static func day_march_at(repo: DataRepository, state: GameState, code: String, a
 	if step <= 0:
 		return step
 	@warning_ignore("integer_division")  # whole metres
-	return maxi(1, step * ground_permille(repo, regiment(repo, code), at, state) / 1000)
+	return maxi(1, step * ground_permille(repo, regiment(repo, code, state), at, state) / 1000)
 
 
 ## Send a regiment to `dest` (pack pixels). The engine's only writer of a
@@ -880,7 +888,7 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 ## 加一条军队到达目的地的新闻): its name and where it now stands. "" for a
 ## regiment not the player's realm's — a foreign column's march is not news.
 static func arrival_headline(repo: DataRepository, state: GameState, code: String) -> String:
-	var reg := regiment(repo, code)
+	var reg := regiment(repo, code, state)
 	if reg.is_empty() or String(reg.get("kingdom_code", "")) != repo.resolve_realm("player_realm"):
 		return ""
 	return "%s reaches %s." % [String(reg.get("label", code)),
@@ -896,7 +904,7 @@ static func march_ahead(repo: DataRepository, state: GameState, code: String, en
 	if entry.has("x_m"):
 		_march_one(repo, state, code, entry, state.absolute_day())
 		return Vector2i(int(entry["x_m"]), int(entry["y_m"]))
-	return pack_to_metres(repo, position_of(repo, state, regiment(repo, code)))
+	return pack_to_metres(repo, position_of(repo, state, regiment(repo, code, state)))
 
 
 ## One regiment's day on the road, written to `entry`; true when it arrives.
@@ -907,7 +915,7 @@ static func march_ahead(repo: DataRepository, state: GameState, code: String, en
 ## one pace over all N and ends exactly as the Nth day ends.
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		abs_day: int) -> bool:
-	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code).is_empty():
+	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code, state).is_empty():
 		return false
 	var here := Vector2(float(entry["x_m"]), float(entry["y_m"]))
 	var full := day_march_at(repo, state, code, metres_to_pack(repo, Vector2i(here)), abs_day)
@@ -932,7 +940,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 static func days_out(repo: DataRepository, state: GameState, code: String) -> int:
 	if order_of(repo, state, code) != ORDER_MARCH:
 		return 0
-	return march_days_between(repo, state, code, position_of(repo, state, regiment(repo, code)),
+	return march_days_between(repo, state, code, position_of(repo, state, regiment(repo, code, state)),
 		destination_of(repo, state, code))
 
 
@@ -976,8 +984,8 @@ static func march_days(repo: DataRepository, state: GameState, code: String, met
 ## 2026-09-19-map3d-heights §2): the higher side's power is scaled up and the
 ## lower side's down by the same height_factor.
 static func battle_odds(repo: DataRepository, state: GameState, attacker_code: String, defender_code: String) -> float:
-	var delta := elevation_of(repo, regiment(repo, attacker_code), state) \
-		- elevation_of(repo, regiment(repo, defender_code), state)
+	var delta := elevation_of(repo, regiment(repo, attacker_code, state), state) \
+		- elevation_of(repo, regiment(repo, defender_code, state), state)
 	@warning_ignore("integer_division")  # whole power, per-mille height factor
 	var a := power(repo, state, attacker_code, "attack") * height_factor(repo, delta) / 1000
 	@warning_ignore("integer_division")  # whole power, per-mille height factor

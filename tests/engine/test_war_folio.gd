@@ -12,7 +12,7 @@ func before_each() -> void:
 	repo = SuiteData.repo()
 	state = SuiteData.campaign(repo, 42)
 	WarSheets.forget()
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0 \
 				and int(float(r.get("infantry", 0))) > 0:
 			code = String(r["regiment_code"])
@@ -69,11 +69,7 @@ func test_ground_gives_the_grid_reference() -> void:
 
 
 func test_a_foreign_regiment_gets_only_its_headcount_word() -> void:
-	var foreign := ""
-	for r: Dictionary in repo.world_table("military", "regiments").values():
-		if String(r["kingdom_code"]) != repo.resolve_realm("player_realm"):
-			foreign = String(r["regiment_code"])
-			break
+	var foreign := _foreign()
 	var secs := WarFolio.sections(repo, state, foreign)
 	assert_eq(secs.size(), 1)
 	assert_eq(String(secs[0]["key"]), "composition")
@@ -111,9 +107,12 @@ func test_figures_follow_the_strength_tiers() -> void:
 
 
 func _foreign() -> String:
-	for r: Dictionary in repo.world_table("military", "regiments").values():
-		if String(r["kingdom_code"]) != repo.resolve_realm("player_realm"):
-			return String(r["regiment_code"])
+	var army := ArmySystem.roster(repo, state)
+	var codes := army.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(army[c]["kingdom_code"]) != repo.resolve_realm("player_realm"):
+			return c
 	return ""
 
 
@@ -149,7 +148,7 @@ func test_march_under_orders_names_destination_and_arrival() -> void:
 
 func test_garrison_adds_its_morale_row() -> void:
 	var held := ""   # a land regiment standing in a town of a province the crown controls
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var c := String(r["regiment_code"])
 		if String(r.get("is_naval", "0")) != "1" \
 				and ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, c), state) != "":
@@ -175,7 +174,7 @@ func test_garrison_adds_its_morale_row() -> void:
 ## Final review 6: a regiment merely standing in its realm town (no garrison
 ## order) is topped up by it, and the folio says so.
 func test_a_standing_regiment_reads_the_town_that_tops_it_up() -> void:
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var c := String(r["regiment_code"])
 		var held := SupplyLines.home_town(repo, state, c)
 		if held == "" or ArmySystem.order_of(repo, state, c) == ArmySystem.ORDER_GARRISON:

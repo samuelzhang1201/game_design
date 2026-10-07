@@ -36,7 +36,7 @@ static func believed_hosts(_repo: DataRepository, _state: GameState) -> Array:
 ## choice A): coded by its first regiment (the royal one first).
 static func pieces(repo: DataRepository, state: GameState, drawn: Dictionary = {}) -> Array:
 	var out: Array = []
-	var regs := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))
+	var regs := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state)
 	var quartered: Dictionary = {}
 	for g: Dictionary in MapObjects.garrisons(repo, state, regs):
 		var codes: Array = g["codes"]
@@ -148,9 +148,9 @@ static func tag_text(repo: DataRepository, state: GameState, code: String) -> St
 	if held.size() > 1:
 		var all := 0
 		for c in held:
-			all += ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c)))
+			all += ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c), state))
 		return "%d regiments · %s" % [held.size(), group(all)]
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	var heads := group(ArmySystem.headcount(repo, reg))
 	var st := ArmySystem.state_of(repo, state, code)
 	var use := ArmySystem.supply_use(repo, reg, state)

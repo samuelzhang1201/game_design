@@ -14,7 +14,7 @@ func before_each() -> void:
 
 
 func _land_code() -> String:
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0:
 			return String(r["regiment_code"])
 	return ""
@@ -31,7 +31,7 @@ func _marching_code() -> String:
 
 
 func test_the_table_believes_the_truth_until_intel_p2() -> void:
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		assert_eq(WarRoom.believed_position(repo, state, r), ArmySystem.position_of(repo, state, r))
 	assert_eq(WarRoom.believed_hosts(repo, state), [], "no enemy is on the table before P2")
 
@@ -41,7 +41,7 @@ func test_every_crown_regiment_is_a_piece_on_exactly_one_side_of_each_sheet() ->
 	var stood_for := 0
 	for p: Dictionary in all:
 		stood_for += (p["garrison"] as Array).size()
-	assert_eq(stood_for, MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).size(),
+	assert_eq(stood_for, MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state).size(),
 		"every regiment is one piece's, a garrison's piece standing for all of it")
 	for s: Dictionary in WarSheets.series(repo):
 		var on := WarRoom.on_sheet(repo, state, int(s["index"]))
@@ -128,7 +128,7 @@ func test_a_garrison_courier_alone_strikes_no_pennant() -> void:
 
 
 func test_the_tag_reads_heads_and_months_of_stores() -> void:
-	var code := _land_code()
+	var code := _marching_code()   # no town's garrison: its own tag, not its camp's
 	var reg := ArmySystem.regiment(repo, code)
 	var st := ArmySystem.state_of(repo, state, code)
 	var use := ArmySystem.supply_use(repo, reg, state)

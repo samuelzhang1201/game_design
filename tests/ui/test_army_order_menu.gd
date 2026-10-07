@@ -37,7 +37,7 @@ func before_each() -> void:
 
 
 func _marcher() -> String:
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if ArmySystem.base_pace_km(Game.data, r) > 0 and String(r.get("is_naval", "0")) != "1":
 			return String(r["regiment_code"])
 	return ""
@@ -318,7 +318,7 @@ func test_the_route_menu_is_paused_only() -> void:
 
 
 func _fleet() -> String:
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if not CourierSystem.carries_orders(r):
 			return String(r["regiment_code"])
 	return ""

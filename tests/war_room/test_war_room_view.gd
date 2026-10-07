@@ -404,13 +404,13 @@ func test_a_regiment_that_cannot_move_reads_a_word_not_zero_days() -> void:
 	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var code := String(p["code"])
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	var kept: Dictionary = reg.duplicate()
 	for arm: String in repo.army_speed:
 		reg[arm] = "0"   # no one under arms: no pace at all
 	assert_eq(ArmySystem.day_march_m(repo, state, code), 0, "premise: it cannot march")
 	var text := view.rake_reading(code, (p["at"] as Vector2) + Vector2(10.0, 0.0))
-	reg.merge(kept, true)   # the pack's row is shared: put it back
+	reg.merge(kept, true)   # the campaign's row: put it back
 	assert_string_ends_with(text, "cannot march")
 
 

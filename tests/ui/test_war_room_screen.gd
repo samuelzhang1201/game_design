@@ -947,7 +947,7 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 	var engine := Vector2.ZERO
 	# a land regiment whose sheet holds another of ours, so there is a second
 	# piece to compare (the series' scale decides which: derived, not named)
-	var mine := MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))
+	var mine := MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state)
 	for reg: Dictionary in mine:
 		if String(reg.get("is_naval", "0")) == "1":
 			continue
@@ -976,7 +976,7 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 	assert_almost_eq((at[code] as Vector2).distance_to(drawn), 0.0, 0.001, "the piece stands on the map's spot")
 	assert_almost_eq(screen.view().position_of(code).distance_to(drawn), 0.0, 0.001, "and the rake measures from it")
 	var other := ""
-	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		var c := String(reg["regiment_code"])
 		if c != code and at.has(c):
 			other = c
@@ -1027,7 +1027,7 @@ func test_the_rakes_slip_goes_when_the_aim_ends() -> void:
 	var view := screen.view()
 	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
 	var code := ""
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1":
 			code = String(r["regiment_code"])
 			break

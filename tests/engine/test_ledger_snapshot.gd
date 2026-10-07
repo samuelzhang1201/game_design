@@ -51,7 +51,7 @@ func test_the_court_lens_is_the_web_of_the_court() -> void:
 	assert_eq(int(kin["flow"]), absi(int(kin["sentiment"])))
 
 func test_the_ego_network_of_a_regiment_touches_it() -> void:
-	var reg: Dictionary = MapObjects.regiments_of(data, data.resolve_realm("player_realm"))[0]
+	var reg: Dictionary = MapObjects.regiments_of(data, data.resolve_realm("player_realm"), s)[0]
 	var id := "regiment:" + String(reg["regiment_code"])
 	var snap := Ledger.snapshot(data, s, "all", {"id": id})
 	assert_eq(String(snap["focus_id"]), id)

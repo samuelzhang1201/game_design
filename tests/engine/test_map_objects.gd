@@ -169,7 +169,7 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 	var mine := Game.data.resolve_realm("player_realm")
 	var royal := MapObjects.royal_regiment(Game.data, mine)
 	var checked := 0
-	for r: Dictionary in MapObjects.regiments_of(Game.data, mine):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, mine, Game.state):
 		var code := String(r["regiment_code"])
 		var card := MapObjects.army_card(Game.data, code)
 		assert_eq(String(card["kind"]), "army")
@@ -204,7 +204,7 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 func test_a_regiment_card_shows_its_state() -> void:
 	var s := SuiteData.campaign(Game.data, 7)
 	var mine := Game.data.resolve_realm("player_realm")
-	var r: Dictionary = MapObjects.regiments_of(Game.data, mine)[0]
+	var r: Dictionary = MapObjects.regiments_of(Game.data, mine, Game.state)[0]
 	var code := String(r["regiment_code"])
 	var heads := int(MapObjects.regiment_size(Game.data, r))
 	s.regiments[code]["wounded"] = 120

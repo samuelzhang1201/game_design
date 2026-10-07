@@ -157,10 +157,10 @@ func test_a_sphere_without_a_property_carries_none() -> void:
 func test_a_foreign_regiment_shows_no_gauge_unless_in_dev_mode() -> void:
 	var realm := data.resolve_realm("player_realm")
 	var foreign := ""
-	var codes: Array = data.world_table("military", "regiments").keys()
+	var codes: Array = ArmySystem.roster(data, s).keys()
 	codes.sort()
 	for c in codes:
-		if String(ArmySystem.regiment(data, String(c)).get("kingdom_code", "")) != realm:
+		if String(ArmySystem.regiment(data, String(c), s).get("kingdom_code", "")) != realm:
 			foreign = String(c)
 			break
 	if foreign == "":

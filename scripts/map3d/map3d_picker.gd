@@ -196,10 +196,10 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 		"manor", "landmark":
 			province = MapManors.province_of(repo, int(picked["cell"]), state)
 		"army":
-			var k := String(ArmySystem.regiment(repo, String(picked["code"])).get("kingdom_code", ""))
+			var k := String(ArmySystem.regiment(repo, String(picked["code"]), state).get("kingdom_code", ""))
 			return k if repo.kingdoms.has(k) else ""
 		"garrison":
-			var g := String(ArmySystem.regiment(repo, String(picked["codes"][0])).get("kingdom_code", ""))
+			var g := String(ArmySystem.regiment(repo, String(picked["codes"][0]), state).get("kingdom_code", ""))
 			return g if repo.kingdoms.has(g) else ""
 	if province == "":
 		return ""

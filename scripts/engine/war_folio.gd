@@ -15,7 +15,7 @@ static func has_builder(key: String) -> bool:
 
 
 static func sections(repo: DataRepository, state: GameState, code: String) -> Array:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty():
 		return []
 	if Intel.level(repo, state, {"kind": "regiment", "code": code}) != "full":

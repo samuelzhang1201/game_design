@@ -41,7 +41,7 @@ func _view() -> Map3DView:
 
 
 func _first_regiment() -> Dictionary:
-	return MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))[0]
+	return MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state)[0]
 
 
 func _look_at_regiment(v: Map3DView, r: Dictionary, at_m: float) -> void:

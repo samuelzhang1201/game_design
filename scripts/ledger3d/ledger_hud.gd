@@ -168,8 +168,9 @@ static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
 ## screen's top chrome) are never entered by anything.
 ## Task 11 fix round 4 (T1): an entry with `first: true` (the selected star,
 ## put first by the view) becomes a wall once placed, so no later name touches
-## its label; a `lit: true` entry prefers, within each ring, a place no
-## planned link's dashes (`dashes`: screen segments [a, b]) cross; a `dim:
+## its label, and with every place on another star takes its nearest anyway;
+## a `lit: true` entry prefers, within each ring, a place no planned link's
+## dashes (`dashes`: screen segments [a, b]) cross; a `dim:
 ## true` (ghost) entry only tries its nearest ring and is dropped rather than
 ## moved further off. Over and under its star a name slides along the view's
 ## edge to stay inside `bounds` rather than leave its star.
@@ -258,6 +259,13 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 		if pick < 0 and bool(e.get("keep", false)) and bool(e.get("title", false)):
 			for k: int in order:
 				if not _meets(boxes[k], hard) and not _meets(boxes[k], names):
+					pick = k
+					break
+		if pick < 0 and bool(e.get("first", false)):
+			# the selected star is always named (spec §7): ringed by stars on
+			# every side, its name crosses the nearest rather than go unnamed
+			for k: int in order:
+				if not _meets(boxes[k], hard) and (not bounds.has_area() or bounds.encloses(boxes[k])):
 					pick = k
 					break
 		if pick < 0:

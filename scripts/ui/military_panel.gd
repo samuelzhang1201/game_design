@@ -126,7 +126,7 @@ func refresh() -> void:
 	_officers.text = "\n".join(lines)
 
 func _regiments_of(kingdom_code: String) -> Array:
-	return MapObjects.regiments_of(Game.data, kingdom_code)
+	return MapObjects.regiments_of(Game.data, kingdom_code, Game.state)
 
 ## A plain text row for the neighbours block.
 func _row(text: String) -> Label:
