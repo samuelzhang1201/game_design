@@ -90,15 +90,15 @@ func test_the_real_pack_anchors() -> void:
 	var st: Dictionary = lin["stars"]
 	var line := "supply_line:" + reg.substr(9)
 	assert_eq(int(st.get(line, 0)), LedgerLineage.FULL, "its supply line")
-	assert_eq(int(st.get("type:strategic_goods", 0)), LedgerLineage.FULL, "the strategic goods it is fed from")
-	# whatever feeds the strategic goods is lit (markets, a province's manors)
-	var feeders := 0
+	# the town it is fed from folds into its province in the galaxy
+	var feeder := ""
 	for l: Dictionary in g["links"]:
-		if String(l["to"]) == "type:strategic_goods" and _look(l) == "flow" and String(l["status"]) == "live":
-			feeders += 1
-			assert_eq(int(st.get(String(l["from"]), 0)), LedgerLineage.FULL, String(l["from"]) + " feeds the chain")
-	assert_gt(feeders, 0)
-	assert_gt(st.size(), 6, "more than its neighbours: %d" % st.size())
+		if String(l["to"]) == line and _look(l) == "flow" and String(l["status"]) == "live":
+			feeder = String(l["from"])
+	assert_ne(feeder, "", "the line is fed from a town's star")
+	assert_eq(int(st.get(feeder, 0)), LedgerLineage.FULL, "the town it is fed from")
+	# the manors that stock a town fold into the same province: no link of their own in the galaxy
+	assert_gt(st.size(), 4, "more than its neighbours: %d" % st.size())
 	# the King: his own ties and his house full, the ties of his ties far
 	var king := LedgerLineage.of(g, "character:you", _look, 2)
 	var ks: Dictionary = king["stars"]

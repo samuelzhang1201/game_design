@@ -30,7 +30,9 @@ admires,character,character,admires,court|all,live,court_relations,,,,,tie,
 acquaintance,character,character,knows,court|all,live,court_relations,,,,,tie,
 converts_in,civil_goods,workshop,feeds,economy|war|all,live,converts_in,steward,seat,,,flow,
 converts_out,workshop,strategic_goods,makes,economy|war|all,live,converts_out,steward,seat,,,flow,
-supplies_in,strategic_goods,supply_line,loads,war|all,live,supplies_in,marshal,seat,,,flow,
+stocks,manor,town,stocks,economy|war|all,live,stocks,,,,,flow,"spec 2026-10-07-army-supply-lines §2.3: a manor's strategic goods landing in its catchment town"
+dispatches,town,supply_line,dispatches,war|all,live,dispatches,marshal,seat,,,flow,"spec 2026-10-07 §2.3: a town's wagons on a supply line"
+sells_to,house,town,sells to,economy|war|all,live,sells_to,,,,,flow,"spec 2026-10-07 §2.3: a house's stock bought for the host this month"
 supplies_out,supply_line,regiment,supplies,war|all,live,supplies_out,marshal,seat,,,flow,
 garrisons,regiment,town,garrisons in,war|all,live,garrisons,marshal,seat,,,structure,
 attacks,regiment,enemy_host,attacks,war|all,planned,,,,M4,lit by battle,flow,

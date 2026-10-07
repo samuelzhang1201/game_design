@@ -21,7 +21,7 @@ extends RefCounted
 
 const NAMES := ["works", "part_of", "yields_civil", "yields_strategic", "taxed", "trade_gold",
 	"rations", "stands_on", "holds", "member", "sits", "based_in", "carries", "spies_on",
-	"describes", "court_relations", "converts_in", "converts_out", "supplies_in", "supplies_out", "garrisons",
+	"describes", "court_relations", "converts_in", "converts_out", "stocks", "dispatches", "sells_to", "supplies_out", "garrisons",
 	"governs", "skims", "builds", "consumes", "trades", "routes", "static"]
 const INSTANCE_LISTS := ["peasants", "manors", "provinces", "regiments", "characters", "houses",
 	"seats", "reports", "couriers", "workshops", "supply_lines", "artisans", "markets", "trade_routes", "static"]
@@ -215,10 +215,14 @@ static func run(row: Dictionary, repo: DataRepository, state: GameState, focus: 
 			return _workshops(repo, state, id, true)
 		"converts_out":
 			return _workshops(repo, state, id, false)
-		"supplies_in":
-			return _supply(repo, state, id, true)
+		"stocks":
+			return _stocks(repo, state, id)
+		"dispatches":
+			return _dispatches(repo, state, id)
+		"sells_to":
+			return _sells_to(repo, state, id)
 		"supplies_out":
-			return _supply(repo, state, id, false)
+			return _supply(repo, state, id)
 		"garrisons":
 			return _garrisons(repo, state, id)
 		"governs":
@@ -589,16 +593,14 @@ static func _workshops(repo: DataRepository, state: GameState, id: String, inwar
 	return out
 
 
-static func _supply(repo: DataRepository, state: GameState, id: String, inward: bool) -> Array:
+static func _supply(repo: DataRepository, state: GameState, id: String) -> Array:
 	var rows := _supply_plan(repo, state)
 	if id == "":
 		var n := 0
 		var said := 0
 		for row: Dictionary in rows:
-			n += int(row["paid"] if inward else row["delivered"])
+			n += int(row["delivered"])
 			said += int(row["claimed"])
-		if inward:
-			return [_type_link("strategic_goods", "supply_line", n, "gold")]
 		var t := _type_link("supply_line", "regiment", n, "units")
 		t["claims"] = _supply_claims(repo, state, said, n, "the regiments' own count")
 		return [t]
@@ -606,13 +608,81 @@ static func _supply(repo: DataRepository, state: GameState, id: String, inward: 
 	for row: Dictionary in rows:
 		var code := String(row["code"])
 		var line := "supply_line:" + code
-		if inward and id == line:
-			out.append(_link("type:strategic_goods", line, int(row["paid"]), "gold"))
-		elif not inward and (id == line or id == "regiment:" + code):
+		if id == line or id == "regiment:" + code:
 			var l := _link(line, "regiment:" + code, int(row["delivered"]), "units")
 			l["claims"] = _supply_claims(repo, state, int(row["claimed"]), int(row["delivered"]),
 				"the regiment's own count")
 			out.append(l)
+	return out
+
+
+## manor -> town: the month's strategic goods into its catchment town (gold;
+## spec 2026-10-07-army-supply-lines §2.3).
+static func _stocks(repo: DataRepository, state: GameState, id: String) -> Array:
+	if id == "":
+		var inflow := TownStores.month_inflow(repo, state)
+		var n := 0
+		for t: String in inflow:
+			n += int(inflow[t]["lord"]) + int(inflow[t]["crown"]) + int(inflow[t]["house"])
+		return [_type_link("manor", "town", n, "gold")]
+	var out: Array = []
+	if id.begins_with("manor:"):
+		var cell := int(id.substr(6))
+		var town := String(TownStores.catchment(repo, state).get(cell, ""))
+		if town != "":
+			out.append(_link(id, "town:" + town, int(RealmEconomy.line_of(repo, state, cell)["strategic"]), "gold",
+				_manor_subj(repo, cell)))
+	elif id.begins_with("town:"):
+		var catch := TownStores.catchment(repo, state)
+		var cells: Array = catch.keys().filter(func(c: int) -> bool: return "town:" + String(catch[c]) == id)
+		cells.sort()
+		for cell: int in cells:
+			out.append(_link("manor:%d" % cell, id, int(RealmEconomy.line_of(repo, state, cell)["strategic"]), "gold",
+				_manor_subj(repo, cell)))
+	return out
+
+
+## town -> supply_line: what each line draws in the month (gold).
+static func _dispatches(repo: DataRepository, state: GameState, id: String) -> Array:
+	var rows := _supply_plan(repo, state)
+	if id == "":
+		var n := 0
+		for row: Dictionary in rows:
+			n += int(row["paid"])
+		return [_type_link("town", "supply_line", n, "gold")]
+	var out: Array = []
+	for row: Dictionary in rows:
+		var lid := "supply_line:" + String(row["code"])
+		var tid := "town:" + String(row["town"])
+		if id == lid or id == tid:
+			out.append(_link(tid, lid, int(row["paid"]), "gold"))
+	return out
+
+
+## house -> town: what the crown bought from a house this month (gold, from
+## the lines' month counters).
+static func _sells_to(repo: DataRepository, state: GameState, id: String) -> Array:
+	var by: Dictionary = {}
+	for code: String in state.supply_lines:
+		var ln: Dictionary = state.supply_lines[code]
+		var bought: Dictionary = ln.get("m_bought", {})
+		for house: String in bought:
+			var key := "%s>%s" % [house, String(ln["town"])]
+			by[key] = int(by.get(key, 0)) + TownStores.gold_of_units(repo, int(bought[house]))
+	if id == "":
+		var n := 0
+		for k: String in by:
+			n += int(by[k])
+		return [_type_link("house", "town", n, "gold")] if n > 0 else []
+	var out: Array = []
+	var keys: Array = by.keys()
+	keys.sort()
+	for k: String in keys:
+		var parts := k.split(">")
+		var hid := "house:" + parts[0]
+		var tid := "town:" + parts[1]
+		if id == hid or id == tid:
+			out.append(_link(hid, tid, int(by[k]), "gold"))
 	return out
 
 
@@ -1049,10 +1119,13 @@ static func _label_of_raw(repo: DataRepository, state: GameState, id: String) ->
 				if rest.is_valid_int() and int(rest) in WorkshopSystem.cells(repo, state) else ""
 		"supply_line":
 			var reg := ArmySystem.regiment(repo, rest)
-			# one per supplied regiment: a land regiment of the crown's (a fleet has none)
-			return "Supply line to " + String(reg["label"]) \
-				if not reg.is_empty() and state.regiments.has(rest) \
-					and String(reg.get("is_naval", "0")) != "1" else ""
+			# one per ordered line: a land regiment of the crown's with a supply point
+			if reg.is_empty() or not state.supply_lines.has(rest) \
+					or String(reg.get("is_naval", "0")) == "1":
+				return ""
+			var from := String(state.supply_lines[rest]["town"])
+			return "Supply line from %s to %s" % [
+				String((repo.burgs.get(from, {}) as Dictionary).get("label", from)), String(reg["label"])]
 		"courier":
 			for c: Dictionary in state.couriers:
 				if str(int(c["id"])) == rest:

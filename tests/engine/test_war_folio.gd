@@ -169,7 +169,7 @@ func test_garrison_adds_its_morale_row() -> void:
 			supply = out
 	assert_true(morale.has("In garrison"))
 	assert_eq(morale["In garrison"], "+%d" % int(repo.bal("army_morale_garrison_bonus")))
-	assert_true(String(supply["Line"]).begins_with("in garrison at "))
+	assert_true(String(supply["Line"]).contains("topped up in "), supply["Line"])
 
 
 func test_matchups_are_named_per_arm() -> void:
@@ -208,19 +208,21 @@ func test_every_order_has_a_word() -> void:
 	assert_eq(WarFolio.order_word(repo, ArmySystem.ORDER_STANDBY), "Standing by")
 
 
-func test_the_line_names_the_depot_town() -> void:
-	var name := WarFolio.depot_name(repo, state)
-	assert_ne(name, "the depot", "the capital is a town")
-	var realm := repo.resolve_realm("player_realm")
-	var cap := String(repo.kingdoms[realm]["capital_burg"])
-	assert_eq(name, String(repo.burgs[cap]["label"]))
-	# a regiment out on the road reads its line from that town
-	var reg := ArmySystem.regiment(repo, code)
-	var from := ArmySystem.position_of(repo, state, reg)
-	ArmySystem.set_march(repo, state, code, from + Vector2(30, 0))
-	var line := String(_rows("supply").get("Line", ""))
-	if line.contains(" km from "):
-		assert_true(line.contains(name), line)
+func test_the_line_row_names_its_supply_point() -> void:
+	state.supply_lines.erase(code)
+	assert_eq(String(_rows("supply")["Line"]), "no supply point")
+	var town: String = TownStores.realm_towns(repo, state)[0]
+	state.supply_lines[code] = SupplyLines._new_record(town, 1500, 1)
+	state.supply_lines[code]["state"] = SupplyLines.FLOWING
+	var line := String(_rows("supply")["Line"])
+	assert_true(line.begins_with("flowing from %s, 1.5×" % String(repo.burgs[town]["label"])), line)
+	assert_true(line.contains(" km, "), line)
+
+
+func test_in_hand_reads_days_of_the_carry() -> void:
+	var st := ArmySystem.state_of(repo, state, code)
+	var text := String(_rows("supply")["In hand"])
+	assert_true(text.ends_with(" days of %d)" % ArmySystem.carry_of(repo, st)), text)
 
 
 func test_the_archers_kit_is_not_hidden_by_the_infantrys_names() -> void:

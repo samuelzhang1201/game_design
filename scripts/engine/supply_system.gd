@@ -29,12 +29,11 @@ static func garrisoned_in(repo: DataRepository, state: GameState, code: String) 
 
 ## A regiment's line as it stands, for the cards: {town ("" with none),
 ## state, rate, length_km, loss_permille, garrison, garrison_town}.
-## `stronghold` stays "" for the cards that still read it (retired).
 static func line_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	var held := garrisoned_in(repo, state, code)
 	var ln := SupplyLines.line(state, code)
 	var out := {"town": "", "state": "", "rate": 0, "length_km": 0, "loss_permille": 0,
-		"garrison": held != "", "garrison_town": held, "stronghold": ""}
+		"garrison": held != "", "garrison_town": held}
 	if ln.is_empty():
 		return out
 	var km := SupplyLines.road_km(repo, SupplyLines.road_px(repo, state, code, String(ln["town"])))

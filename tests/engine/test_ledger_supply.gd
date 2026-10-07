@@ -76,7 +76,7 @@ func test_a_regiments_supply_line_is_its_plan() -> void:
 	assert_eq(String(out["from"]), "supply_line:" + code)
 	assert_eq(out["flow"], int(row["delivered"]))
 	var line := Ledger.snapshot(data, s, "war", {"id": "supply_line:" + code})
-	assert_eq(_link(line, "supplies_in")["flow"], int(row["paid"]))
+	assert_eq(_link(line, "dispatches")["flow"], int(row["paid"]))
 
 func test_a_garrison_stands_in_its_town() -> void:
 	var code := String(SupplySystem.plan(data, s)[0]["code"])
@@ -111,7 +111,7 @@ func test_labels() -> void:
 	assert_string_contains(LedgerResolvers.label_of(data, s, "workshop:%d" % cell), "War workshop at")
 	assert_eq(LedgerResolvers.label_of(data, s, "workshop:999999999"), "")
 	var code := String(SupplySystem.plan(data, s)[0]["code"])
-	assert_string_contains(LedgerResolvers.label_of(data, s, "supply_line:" + code), "Supply line to")
+	assert_string_contains(LedgerResolvers.label_of(data, s, "supply_line:" + code), "Supply line from")
 
 func test_the_instances_are_the_plans_rows() -> void:
 	var ws := LedgerResolvers.instances("workshops", data, s)
@@ -178,9 +178,10 @@ func test_a_supply_lines_card_states_its_road() -> void:
 	var id := "supply_line:" + code
 	var line := SupplySystem.line_of(data, s, code)
 	var card := LedgerCards.entry(data, s, id, Ledger.snapshot(data, s, "war", {"id": id}))
+	var from := String(data.burgs[String(line["town"])]["label"])
 	@warning_ignore("integer_division")
-	assert_eq(String(card["lines"][0]), "%d km, %d%% lost on the way" % [int(line["length_km"]),
-		int(line["loss_permille"]) / 10])
+	assert_eq(String(card["lines"][0]), "from %s, %d km, %d%% lost on the way — %s" % [from,
+		int(line["length_km"]), int(line["loss_permille"]) / 10, String(line["state"])])
 
 func test_a_workshops_card_names_its_rate() -> void:
 	var id := "workshop:%d" % cell

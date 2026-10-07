@@ -93,9 +93,9 @@ func test_a_garrison_reads_in_garrison_at_its_town() -> void:
 	var p := _stand_at_home(code, ArmySystem.ORDER_GARRISON)
 	var town := String(data.burgs[String(p["capital_burg"])]["label"])
 	assert_true(SupplySystem.line_of(data, s, code)["garrison"])
-	assert_eq(String(_card_stat(code, "army_supply_line")["text"]), "in garrison")
+	assert_eq(String(_card_stat(code, "army_supply_line")["text"]), "none", "no line ordered")
 	assert_string_contains(String(_card_stat(code, "army_supply_line")["tooltip"]).to_lower(),
-		("in garrison at " + town).to_lower())
+		(town + " tops it up").to_lower())
 
 ## A regiment quartered in a realm town with stores to spare is topped up
 ## every day to its carried load (spec 2026-10-07-army-supply-lines §3.2):

@@ -223,7 +223,9 @@ func test_a_regiment_card_shows_its_state() -> void:
 	assert_eq(text["army_morale"], str(int(s.regiments[code]["morale"])))
 	assert_eq(text["army_wounded"], "+%d / mo" % ArmySystem.wound_recovery(Game.data, 120))
 	var use := ArmySystem.supply_use(Game.data, r)
-	assert_eq(text["army_supply"], "%d (−%d / mo)" % [int(s.regiments[code]["supplies"]), use])
+	var held := ArmySystem.days_in_hand(int(s.regiments[code]["supplies"]), use)
+	assert_eq(text["army_supply"], "%d / %d days" % [mini(held, 999),
+		ArmySystem.carry_of(Game.data, s.regiments[code])])
 	assert_eq(text["army_training"], ArmySystem.training_grade(Game.data, int(s.regiments[code]["training"])))
 	assert_true(text["army_strength"] in ["Strong", "Average", "Weak"])
 	assert_eq(text["army_terrain"], ArmySystem.terrain_label(Game.data, r))
