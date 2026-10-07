@@ -8,7 +8,7 @@ extends Control
 ## settling with the smallest give, then crossfades into the real sheet; as it
 ## lands the table's other pieces come to it one by one — the tally board and
 ## dial from above, the report from the left, the bookmarks and the slip from
-## below, the seal, the compass — and the window that speaks comes last. Every
+## below, the seal — and the window that speaks comes last. Every
 ## timing is balance.csv ui_landing_*. Presentation only; it holds the input
 ## while it plays and frees itself.
 

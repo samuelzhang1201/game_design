@@ -1,45 +1,45 @@
 [gd_scene format=3 uid="uid://bq8iccp67dqf8"]
 
-[ext_resource type="Script" uid="uid://cnmschgwspkxf" path="res://scripts/map3d/map3d_world.gd" id="1_jaa02"]
-[ext_resource type="Script" uid="uid://c0fdq5yaeymx8" path="res://scripts/map3d/map3d_camera_rig.gd" id="2_jyn7a"]
-[ext_resource type="Material" uid="uid://bjk4qolalxb8i" path="res://scenes/map3d/materials/water_sea.tres" id="3_w2qt7"]
-[ext_resource type="Script" uid="uid://blsrnfbpmcqs2" path="res://scripts/map3d/map3d_layer_sea.gd" id="4_07fot"]
-[ext_resource type="Material" uid="uid://blcgi53vfweuv" path="res://scenes/map3d/materials/water_river.tres" id="5_8qp4h"]
-[ext_resource type="Script" uid="uid://dotqljdc2fmkp" path="res://scripts/map3d/map3d_layer_rivers.gd" id="6_rrvs5"]
-[ext_resource type="Material" uid="uid://ckxs4cm6uye8q" path="res://scenes/map3d/materials/bridge_stone.tres" id="7_cqqwl"]
-[ext_resource type="Script" uid="uid://doh3alf7ojk4r" path="res://scripts/map3d/map3d_layer_lines.gd" id="8_05tsl"]
-[ext_resource type="Material" uid="uid://bn160h81mvxwr" path="res://scenes/map3d/materials/cloud_deck.tres" id="9_g52bs"]
-[ext_resource type="Script" uid="uid://prihlsk25ejt" path="res://scripts/map3d/map3d_layer_clouds.gd" id="10_4rkuw"]
-[ext_resource type="Material" uid="uid://dfvtylmtrbc4v" path="res://scenes/map3d/materials/cloud_shadow.tres" id="11_qhspj"]
-[ext_resource type="Script" uid="uid://bdbdtbw8fi2va" path="res://scripts/map3d/map3d_layer_settlements.gd" id="12_jxnve"]
-[ext_resource type="Script" uid="uid://ef76stqaenwo" path="res://scripts/map3d/map3d_layer_houses.gd" id="13_sespq"]
-[ext_resource type="Script" uid="uid://c1powtnrolur2" path="res://scripts/map3d/map3d_layer_trees.gd" id="14_ynap6"]
-[ext_resource type="Script" uid="uid://dc5gcghnvvyf6" path="res://scripts/map3d/map3d_layer_wind.gd" id="15_gbaj8"]
-[ext_resource type="Environment" uid="uid://c3ufh1051rmw3" path="res://scenes/map3d/world_environment.tres" id="16_7kg3e"]
-[ext_resource type="Script" uid="uid://bjo6rt75kqwum" path="res://scripts/map3d/map3d_layer_units.gd" id="17_1wqa2"]
-[ext_resource type="Script" uid="uid://dw4nycj86fxmj" path="res://scripts/map3d/map3d_sky.gd" id="17_w2qt7"]
-[ext_resource type="Script" uid="uid://xi5cbfr3ejwl" path="res://scripts/map3d/map3d_sun.gd" id="18_07fot"]
-[ext_resource type="Script" uid="uid://bq3gusv0v5st0" path="res://scripts/map3d/map3d_layer_trails.gd" id="18_vfx2u"]
-[ext_resource type="Script" uid="uid://bgwhiybi1dien" path="res://scripts/map3d/map3d_layer_couriers.gd" id="19_e48lp"]
-[ext_resource type="Script" uid="uid://826sps2k5kcg" path="res://scripts/map3d/map3d_layer_precip.gd" id="20_efdo1"]
-[ext_resource type="Material" uid="uid://btf3lxc1xv1rp" path="res://scenes/map3d/materials/precip_fall.tres" id="23_cqqwl"]
-[ext_resource type="Material" uid="uid://bhsqih8uox5ar" path="res://scenes/map3d/materials/precip_drop_rain.tres" id="24_05tsl"]
-[ext_resource type="Script" uid="uid://d0j1615g26j72" path="res://scripts/map3d/map3d_precip_kind.gd" id="25_g52bs"]
-[ext_resource type="Material" uid="uid://hbcsw3occqy0" path="res://scenes/map3d/materials/precip_drop_snow.tres" id="26_4rkuw"]
+[ext_resource type="Script" uid="uid://cnmschgwspkxf" path="res://scripts/map3d/map3d_world.gd" id="1_g0eg1"]
+[ext_resource type="Script" uid="uid://c0fdq5yaeymx8" path="res://scripts/map3d/map3d_camera_rig.gd" id="2_jadcq"]
+[ext_resource type="Material" uid="uid://bjk4qolalxb8i" path="res://scenes/map3d/materials/water_sea.tres" id="3_446ae"]
+[ext_resource type="Script" uid="uid://blsrnfbpmcqs2" path="res://scripts/map3d/map3d_layer_sea.gd" id="4_j5jps"]
+[ext_resource type="Material" uid="uid://blcgi53vfweuv" path="res://scenes/map3d/materials/water_river.tres" id="5_x8v0h"]
+[ext_resource type="Script" uid="uid://dotqljdc2fmkp" path="res://scripts/map3d/map3d_layer_rivers.gd" id="6_gqob0"]
+[ext_resource type="Material" uid="uid://ckxs4cm6uye8q" path="res://scenes/map3d/materials/bridge_stone.tres" id="7_nd5rx"]
+[ext_resource type="Script" uid="uid://doh3alf7ojk4r" path="res://scripts/map3d/map3d_layer_lines.gd" id="8_3xqur"]
+[ext_resource type="Material" uid="uid://bn160h81mvxwr" path="res://scenes/map3d/materials/cloud_deck.tres" id="9_q3cwm"]
+[ext_resource type="Script" uid="uid://prihlsk25ejt" path="res://scripts/map3d/map3d_layer_clouds.gd" id="10_iq1lb"]
+[ext_resource type="Material" uid="uid://dfvtylmtrbc4v" path="res://scenes/map3d/materials/cloud_shadow.tres" id="11_cs3dw"]
+[ext_resource type="Script" uid="uid://bdbdtbw8fi2va" path="res://scripts/map3d/map3d_layer_settlements.gd" id="12_d61c0"]
+[ext_resource type="Script" uid="uid://ef76stqaenwo" path="res://scripts/map3d/map3d_layer_houses.gd" id="13_g80v4"]
+[ext_resource type="Script" uid="uid://c1powtnrolur2" path="res://scripts/map3d/map3d_layer_trees.gd" id="14_7o1h0"]
+[ext_resource type="Script" uid="uid://dc5gcghnvvyf6" path="res://scripts/map3d/map3d_layer_wind.gd" id="15_w7li7"]
+[ext_resource type="Environment" uid="uid://c3ufh1051rmw3" path="res://scenes/map3d/world_environment.tres" id="16_mqgp3"]
+[ext_resource type="Script" uid="uid://dw4nycj86fxmj" path="res://scripts/map3d/map3d_sky.gd" id="17_d5g3j"]
+[ext_resource type="Script" uid="uid://xi5cbfr3ejwl" path="res://scripts/map3d/map3d_sun.gd" id="18_rbuoc"]
+[ext_resource type="Script" uid="uid://bjo6rt75kqwum" path="res://scripts/map3d/map3d_layer_units.gd" id="19_aia40"]
+[ext_resource type="Script" uid="uid://b4vk81mo24an1" path="res://scripts/map3d/map3d_layer_dust.gd" id="20_davwj"]
+[ext_resource type="Script" uid="uid://bgwhiybi1dien" path="res://scripts/map3d/map3d_layer_couriers.gd" id="21_d7bwq"]
+[ext_resource type="Script" uid="uid://826sps2k5kcg" path="res://scripts/map3d/map3d_layer_precip.gd" id="22_n1nns"]
+[ext_resource type="Material" uid="uid://btf3lxc1xv1rp" path="res://scenes/map3d/materials/precip_fall.tres" id="23_3gn34"]
+[ext_resource type="Material" uid="uid://bhsqih8uox5ar" path="res://scenes/map3d/materials/precip_drop_rain.tres" id="24_xn3ia"]
+[ext_resource type="Script" uid="uid://d0j1615g26j72" path="res://scripts/map3d/map3d_precip_kind.gd" id="25_paall"]
+[ext_resource type="Material" uid="uid://hbcsw3occqy0" path="res://scenes/map3d/materials/precip_drop_snow.tres" id="26_cnumn"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_qhspj"]
-material = ExtResource("24_05tsl")
+material = ExtResource("24_xn3ia")
 
 [sub_resource type="QuadMesh" id="QuadMesh_jxnve"]
-material = ExtResource("26_4rkuw")
+material = ExtResource("26_cnumn")
 
 [node name="World" type="Node3D" unique_id=660259412]
-script = ExtResource("1_jaa02")
+script = ExtResource("1_g0eg1")
 
 [node name="WorldSlot" type="Node3D" parent="." unique_id=1435114459]
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=391170711]
-script = ExtResource("2_jyn7a")
+script = ExtResource("2_jadcq")
 
 [node name="RigCamera" type="Camera3D" parent="CameraRig" unique_id=383985795]
 fov = 45.0
@@ -47,50 +47,50 @@ near = 50.0
 far = 400000.0
 
 [node name="Sea" type="MeshInstance3D" parent="." unique_id=888949554]
-material_override = ExtResource("3_w2qt7")
+material_override = ExtResource("3_446ae")
 cast_shadow = 0
-script = ExtResource("4_07fot")
+script = ExtResource("4_j5jps")
 
 [node name="Rivers" type="MeshInstance3D" parent="." unique_id=1189924628]
-material_override = ExtResource("5_8qp4h")
+material_override = ExtResource("5_x8v0h")
 cast_shadow = 0
 extra_cull_margin = 16384.0
-script = ExtResource("6_rrvs5")
+script = ExtResource("6_gqob0")
 
 [node name="Bridges" type="MeshInstance3D" parent="." unique_id=531083100]
-material_override = ExtResource("7_cqqwl")
+material_override = ExtResource("7_nd5rx")
 
 [node name="Lines" type="Node3D" parent="." unique_id=505890697]
-script = ExtResource("8_05tsl")
+script = ExtResource("8_3xqur")
 
 [node name="Clouds" type="MultiMeshInstance3D" parent="." unique_id=709351108]
-material_override = ExtResource("9_g52bs")
+material_override = ExtResource("9_q3cwm")
 cast_shadow = 0
 extra_cull_margin = 16384.0
-script = ExtResource("10_4rkuw")
+script = ExtResource("10_iq1lb")
 
 [node name="Shadows" type="MultiMeshInstance3D" parent="Clouds" unique_id=325918479]
-material_override = ExtResource("11_qhspj")
+material_override = ExtResource("11_cs3dw")
 cast_shadow = 3
 extra_cull_margin = 16384.0
 
 [node name="Markers" type="Node3D" parent="." unique_id=1753765991]
-script = ExtResource("12_jxnve")
+script = ExtResource("12_d61c0")
 
 [node name="Houses" type="Node3D" parent="." unique_id=1359289226]
-script = ExtResource("13_sespq")
+script = ExtResource("13_g80v4")
 wall_tints = PackedColorArray(1, 1, 1, 1, 0.96862745, 0.9137255, 0.8235294, 1, 0.9019608, 0.8901961, 0.8627451, 1, 0.8627451, 0.8156863, 0.74509805, 1, 0.95686275, 0.8784314, 0.7529412, 1, 0.92941177, 0.9019608, 0.8784314, 1)
 roof_tints = PackedColorArray(1, 1, 1, 1, 1, 0.9019608, 0.84705883, 1, 0.9254902, 0.9019608, 0.87058824, 1, 1, 0.9372549, 0.8235294, 1, 0.95686275, 0.8862745, 0.83137256, 1)
 
 [node name="Trees" type="Node3D" parent="." unique_id=1359289300]
-script = ExtResource("14_ynap6")
+script = ExtResource("14_7o1h0")
 
 [node name="Wind" type="Node3D" parent="." unique_id=1359289301]
-script = ExtResource("15_gbaj8")
+script = ExtResource("15_w7li7")
 
 [node name="Environment" type="WorldEnvironment" parent="." unique_id=1880847201]
-environment = ExtResource("16_7kg3e")
-script = ExtResource("17_w2qt7")
+environment = ExtResource("16_mqgp3")
+script = ExtResource("17_d5g3j")
 fog_depth_begin = 0.9
 fog_depth_end = 3.0
 fog_depth_density = 0.45
@@ -107,7 +107,7 @@ shadow_normal_bias = 2.5
 shadow_opacity = 0.45
 shadow_blur = 2.0
 directional_shadow_max_distance = 60000.0
-script = ExtResource("18_07fot")
+script = ExtResource("18_rbuoc")
 day_shadow_opacity = 0.72
 fill = NodePath("../FillLight")
 
@@ -118,16 +118,16 @@ light_specular = 0.0
 sky_mode = 1
 
 [node name="Units" type="Node3D" parent="." unique_id=157155689]
-script = ExtResource("17_1wqa2")
+script = ExtResource("19_aia40")
 
-[node name="Trails" type="Node3D" parent="." unique_id=1359289302]
-script = ExtResource("18_vfx2u")
+[node name="Dust" type="Node3D" parent="." unique_id=1688739781]
+script = ExtResource("20_davwj")
 
 [node name="Couriers" type="Node3D" parent="." unique_id=210987654]
-script = ExtResource("19_e48lp")
+script = ExtResource("21_d7bwq")
 
 [node name="Precip" type="Node3D" parent="." unique_id=1618033988]
-script = ExtResource("20_efdo1")
+script = ExtResource("22_n1nns")
 
 [node name="Rain" type="GPUParticles3D" parent="Precip" unique_id=1414213562]
 cast_shadow = 0
@@ -136,9 +136,9 @@ amount = 12000
 lifetime = 0.8
 fixed_fps = 0
 visibility_aabb = AABB(-10000000, -100000, -10000000, 20000000, 200000, 20000000)
-process_material = ExtResource("23_cqqwl")
+process_material = ExtResource("23_3gn34")
 draw_pass_1 = SubResource("QuadMesh_qhspj")
-script = ExtResource("25_g52bs")
+script = ExtResource("25_paall")
 
 [node name="Snow" type="GPUParticles3D" parent="Precip" unique_id=1732050807]
 cast_shadow = 0
@@ -147,9 +147,9 @@ amount = 20000
 lifetime = 3.0
 fixed_fps = 0
 visibility_aabb = AABB(-10000000, -100000, -10000000, 20000000, 200000, 20000000)
-process_material = ExtResource("23_cqqwl")
+process_material = ExtResource("23_3gn34")
 draw_pass_1 = SubResource("QuadMesh_jxnve")
-script = ExtResource("25_g52bs")
+script = ExtResource("25_paall")
 kind = 1
 slant = 0.35
 length_share = 0.0026
