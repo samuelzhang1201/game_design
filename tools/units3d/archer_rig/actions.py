@@ -2,7 +2,7 @@
 frame (the pose of each frame is SOLVED from smooth parameter tracks, the blender-natural-animation
 skill's "generate it, don't pose it"):
 
-  MARCH     行进 -- a run, 24 f (two steps of 1 m), after the owner's 8-phase sheet, the left arm hanging and swinging, the bow at 45 deg forward-down
+  MARCH     行进 -- a run, 24 f (two steps of 1 m), after the owner's 8-phase sheet, the left arm hanging in a J and swinging, the bow tilted forward-down
   GARRISON  驻防 -- side-on, an arrow on the string: half draw -> full draw -> hold -> let down, 150 f
   ATTACK    攻击 -- shooting without pause: arrow from the quiver, nock, raise, draw, loose, 48 f
   DEFEND    防御 -- crouched behind the bow held crosswise before the face, a flinch at f 40, 80 f
@@ -295,7 +295,14 @@ def apply_pose(ch, t, R):
         wr = pb["UpperArm.L"].head + Wd(g("l_wrist"))
         over["arm.L"] = two_bone(a, "UpperArm.L", "Forearm.L", wr, Wd(g("l_pole", (0.3, 0.6, -1))), -1.0)
         untwist(a, "UpperArm.L", "Forearm.L", R)
-        Rf = pb["Forearm.L"].matrix.to_3x3() @ R.M["Forearm.L"].to_3x3().inverted()   # rest -> posed
+        # pronation (+ turns the thumb in), as the forearm does it: along its length, half of it
+        # showing at the elbow end of the bone and half at the wrist
+        pr = math.radians(g("l_pron", 0.0))
+        pf = pb["Forearm.L"]; Mf_ = pf.matrix.copy(); fax = Mf_.to_3x3().col[1].normalized()
+        Nf = (Matrix.Rotation(0.5 * pr, 3, fax) @ Mf_.to_3x3()).to_4x4(); Nf.translation = Mf_.translation
+        pf.matrix = Nf
+        _upd()
+        Rf = Matrix.Rotation(0.5 * pr, 3, fax) @ pb["Forearm.L"].matrix.to_3x3() @ R.M["Forearm.L"].to_3x3().inverted()   # rest -> posed
         Rh0 = Rf @ R.M["Hand.L"].to_3x3()
         ax = (Rf @ R.dev_axis).normalized()
         dev = max(-math.radians(DEV_MAX), min(math.radians(DEV_MAX), math.radians(g("l_dev", 0.0))))
@@ -305,7 +312,7 @@ def apply_pose(ch, t, R):
         pb["Hand.L"].matrix = M_hand
         _upd()
         bowT = M_hand @ R.M["Hand.L"].inverted()                              # rest bow -> posed bow
-        M_bow = bowT @ R.M["Bow"]
+        M_bow = bowT @ R.M["Bow"]                     # (the bow never turns in the fist: welded, it tears)
     else:
         Gd = W(g("bow_g"))
         Fd = frame_of(Wd(g("bow_chord")), Wd(g("bow_draw")))
@@ -506,7 +513,10 @@ def hermite(keys, m0, m1):
 
 
 HEEL_BACK = 0.065        # the boot's heel behind the ankle, on the sole
-ARM_HANG = 0.49          # the run's left shoulder -> wrist: the arm hanging, the elbow barely bent
+ARM_OUT = (0.23, 0.38)   # the run's left upper arm / forearm, out from straight down (tan): the forearm
+                         # angled a little out from the elbow, a man's carrying angle (never in: a C)
+ELBOW_RUN = 18.0         # the run's left elbow, bent forward: the arm hangs in a J, never a straight rod
+L_PRON = 36.0           # the run's left forearm turned thumb-in (half at each end): the bow fore and aft
 DEV_MAX = 45.0           # the wrist's side bend (ulnar/radial), at most
 DEV_SEEN = []            # the side bends the last solve used (diagnostics)
 RUN = dict(N=24, duty=0.36, S=2.0)
@@ -521,10 +531,11 @@ def march(R):
                flight, the hips at their HIGHEST
     The stance foot ROLLS heel -> flat -> toe, its pivot carried back at the belt's speed (in place:
     2 m a loop); the swing is a Hermite through the sheet's poses, joined to the stance with no
-    step in velocity. The left arm hangs, the elbow a little bent, and swings against the left leg
-    like the right against the right; the bow rides in its fist at 45 deg, the upper tip forward and
-    down (the wrist's ulnar bend), the string up toward the forearm, rocking with the swing a few
-    frames behind it (owner 2026-10-07: 左手自然下垂并摆动，弓倾斜45度角向前下方)."""
+    step in velocity. The left arm hangs in a J (owner 2026-10-07: 大臂和小臂应该是一个类J字形 -- a
+    straight arm with the wrist bent hard read as a C): the upper arm close and a little behind,
+    the elbow bent ELBOW_RUN forward, swinging against the left leg; the hand at its rest angle to
+    the forearm but for an ulnar bend, the arm turned at the shoulder so the bow runs fore and aft
+    beside him, its upper tip forward and down (左手自然下垂并摆动，弓倾斜向前下方), rocking with the arm."""
     N, duty, S = RUN["N"], RUN["duty"], RUN["S"]
     D = S * duty                                       # the ground's travel under one stance
     hy = R.hips_head.y
@@ -594,7 +605,15 @@ def march(R):
     hz_keys = [(0.0, -0.040), (0.26 * st, -0.078), (0.52 * st, -0.058), (fo, -0.040), ((fo + st) / 2, -0.026)]
     hz = track(hz_keys + [(f + st, v) for f, v in hz_keys], N)
     sw_l = lambda t, lag=1.5: math.cos(w(t, lag) - math.pi)                       # +1 forward, -1 back
-    swing_l = lambda t: math.radians(-19 + 16 * sw_l(t))                       # the hand a little behind
+    swing_l = lambda t: math.radians(-25 + 13 * sw_l(t))                       # the upper arm, + forward
+    lu, lf = R.len["UpperArm.L"], R.len["Forearm.L"]
+
+    def l_wrist(t):
+        """The wrist from the shoulder: the upper arm hanging close at its swing, the forearm bent
+        ELBOW_RUN forward of it (a J), both a little out from the coat."""
+        a1 = swing_l(t); a2 = a1 + math.radians(ELBOW_RUN + 4 * sw_l(t, 2.5))
+        return (Vector((ARM_OUT[0], -math.sin(a1), -math.cos(a1))).normalized() * lu
+                + Vector((ARM_OUT[1], -math.sin(a2), -math.cos(a2))).normalized() * lf)
     ch = {
         "foot_l": foot("L"), "foot_r": foot("R"),
         "hips_off": lambda t: Vector((0.012 * math.cos(w(t) - 0.9), -0.02, hz(t))),
@@ -608,9 +627,10 @@ def march(R):
         "rfk": lambda t: Vector((-10 + 42 * math.cos(w(t, 1.5)), 84 + 14 * math.cos(w(t, 2.5)))),
         # the left arm hanging from the shoulder and swinging against the left leg (forward at the
         # right foot's strike), the bow at 45 deg in the fist, rocking 2.5 f behind the arm
-        "l_wrist": lambda t: Vector((0.17, -ARM_HANG * math.sin(swing_l(t)), -ARM_HANG * math.cos(swing_l(t)))),
-        "l_dev": lambda t: -42.0 - 3.0 * sw_l(t, 3.5),                          # the wrist bent toward the little finger
-        "l_pole": lambda t: Vector((0.8, 1.0, 0.0)),
+        "l_wrist": l_wrist,
+        "l_dev": lambda t: -38.0 - 3.0 * sw_l(t, 3.5),                          # the wrist bent toward the little finger
+        "l_pole": lambda t: Vector((0.0, 1.0, 0.0)),                            # the elbow bends fore and aft only (no C)
+        "l_pron": lambda t: L_PRON,
         "quiver": lambda t: Vector((5 * math.cos(2 * w(t, 3.5)), 0, 2 * math.cos(w(t, 3)))),
         "scab": lambda t: Vector((9 * math.cos(w(t, 3) - math.pi), 0, 3 * math.cos(2 * w(t, 2)))),
         "arrow": lambda t: "off",
