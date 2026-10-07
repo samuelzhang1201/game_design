@@ -141,14 +141,6 @@ static func day_bite(use: int, day: int) -> int:
 	return use * d / n - use * (d - 1) / n
 
 
-## What is still to be eaten of `use` after day `day` of the month: the
-## supply lines refill against the stores the month's END will leave
-## (SupplySystem.plan), so their projection holds all month.
-static func left_to_eat(use: int, day: int) -> int:
-	@warning_ignore("integer_division")  # the same whole split as day_bite
-	return use - use * clampi(day, 0, Calendar.DAYS_PER_TICK) / Calendar.DAYS_PER_TICK
-
-
 ## One DAY of eating for every regiment of the player's realm, in code order
 ## (TickEngine, every day of the thirty, the tick's included): today's share of
 ## the month's use where it stands now.

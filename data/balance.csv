@@ -202,8 +202,8 @@ build_rush_gold_per_day,3,ECONOMY (spec §5): gold that takes one day off a work
 manor_rush_days_per_click,5,ECONOMY: days one press of a manor card's HURRY button buys (MANOR_RUSH)
 army_start_morale,70,"regiments (owner 2026-09-17, spec 2026-09-17-regiment-state): morale a regiment starts with, 0..100; it does not change yet"
 army_start_training,10,regiments: the hidden training value a regiment starts with — militia
-army_supply_per_head_permille,100,"regiments: supply units a head uses a month, per mille (5000 heads use 500 a month); refilled monthly by SupplySystem"
-army_supply_gold_permille,100,"LEDGER M1 (spec 2026-09-30-ledger-supply-design §3): gold per mille a supply unit costs; calibrated so refilling the realm's regiments costs about half the crown's and lord's monthly strategic intake (measured on the default pack: 202 gold a month against the crown's and the lord's strategic intake of 414, ratio 0.49, the regiments standing at home drawing through their town since the final review; test_supply_system)"
+army_supply_per_head_permille,100,"regiments: supply units a head uses a month, per mille (5000 heads use 500 a month); eaten a day at a time (ArmySystem.eat_day), and the unit of every supply line and town store"
+army_supply_gold_permille,100,"a supply unit's gold value, per mille (spec 2026-09-30-ledger-supply-design §3, 2026-10-07-army-supply-lines): the metrics strategic and lord_strategic are the gold of the towns' units, a house's stock is bought at this x supply_buy_markup_permille, and the LEDGER and the marshal's report count a unit's gold by it"
 army_supply_loss_permille_per_100km,60,LEDGER M1: supplies lost on the road per mille for every 100 km of it
 army_supply_loss_cap_permille,600,LEDGER M1: the most a road can lose
 army_supply_warn_permille,500,"LEDGER M1: a regiment whose supply score is under this is hungry (TriggerDsl host_hungry, the hungry_host loop)"

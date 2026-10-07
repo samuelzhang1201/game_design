@@ -79,7 +79,6 @@ func test_a_day_bites_its_share_and_the_month_sums_exactly() -> void:
 			var b := ArmySystem.day_bite(use, d)
 			assert_true(b >= 0)
 			total += b
-			assert_eq(ArmySystem.left_to_eat(use, d), use - total, "what is left after day %d" % d)
 		assert_eq(total, use, "a month of %d" % use)
 	assert_eq(ArmySystem.day_bite(300, 1), 10, "a steady rate: 300 a month is 10 a day")
 

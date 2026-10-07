@@ -1,5 +1,7 @@
 # LEDGER M1 + M2 — supply lines, morale and the war workshop — design
 
+> §3's monthly capital resupply is replaced by 2026-10-07-army-supply-lines.
+
 Status: built 2026-09-30 (branch ledger-supply). Designed 2026-09-30
 overnight under the owner's standing order ("完成游戏本体论的设计…plan和
 implementation，补全缺少的部分。根据你自己的判断行动，不用问我了"). Every

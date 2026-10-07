@@ -11,8 +11,7 @@ sub-projects of their own, §9):
 > 6. 军队补给信息很重要，要反映在missive上
 > 7. 军队补给低于5天则会影响士气
 
-**Status: design APPROVED in chat 2026-10-07 (owner, section by section); this
-written spec awaits the owner's review.** The owner's answers, in order:
+**Status: BUILT 2026-10-07 on feat/army-supply-lines (not yet merged); the look of the line awaits the owner's ruling.** Design APPROVED in chat 2026-10-07 (owner, section by section). The owner's answers, in order:
 town stores A (each town holds its own stores), catchment A (nearest town in
 the province), tax-and-trade A (tax in kind, house stock bought for gold),
 the daily gold is a CARTAGE fee ("运输费理解正确"), interception A (cut on
@@ -41,14 +40,14 @@ capital resupply of `2026-09-30-ledger-supply-design.md` §3.
 
 | Field | Shape | Meaning |
 |---|---|---|
-| `town_stock` | `burg -> {crown, lord, house}` | strategic goods held in the town, in the same measure as `metrics.strategic` (gold value). `crown` = the crown's tax in kind, `lord` = the player-lord's own goods, `house` = the holding house's goods, which the crown may BUY (§3.3) |
+| `town_stock` | `burg -> {crown, lord, house}` | strategic goods held in the town, in whole SUPPLY UNITS (`army_supply_gold_permille` is a unit's gold). `crown` = the crown's tax in kind, `lord` = the player-lord's own goods, `house` = the holding house's goods, which the crown may BUY (§3.3) |
 | `regiments[code].supplies` | int | unchanged: whole supply units (`supply_use` per month). DAYS in hand = `supplies × 30 / supply_use`, derived, never saved |
 | `regiments[code].carry_days` | int | the standing carried-load order, one of `data/army_carry_loads.csv`'s rows (10/15/20/25/30) |
-| `supply_lines` | `code -> {town, rate_permille, courier_id, state, ready_day, cut_at_m, fee_milli}` | one line per regiment at most, created when the order is given. `state` ∈ `ordered` (the courier is on the road), `riding` (the first wagons are), `flowing`, `cut`. `fee_milli` carries the cartage remainder (§3.4) |
+| `supply_lines` | `code -> {town, rate, state, order_id, ready_day, cut_x_m, cut_y_m, cut_by, fee_milli, buy_milli, arrive_milli, claim_milli, skim_milli, m_* month counters, pending?}` | one line per regiment at most, created when the order is given. `state` ∈ `ordered` (the courier is on the road), `riding` (the first wagons are), `flowing`, `cut`. The `*_milli` fields carry the cartage, purchase, road, efficiency and skim remainders (§3.4); `pending` holds a replacing point still on its way |
 
 `metrics.strategic` / `lord_strategic` stay as the top bar and every reader
-sees them, but are written only as the sum of `town_stock[*].crown` /
-`[*].lord` (one function, `TownStores.sync_metrics`), so nothing that reads
+sees them, but are written only as the gold of the sum of `town_stock[*].crown` /
+`[*].lord` units (one function, `TownStores.sync_metrics`; a writer that moves a metric elsewhere is absorbed by `TownStores.reconcile`), so nothing that reads
 them changes.
 
 ### 2.2 Derived (never saved)
@@ -102,9 +101,8 @@ town instead of a realm pool, split by the purse rule of
 Every other strategic inflow (the war workshop's output, an order that adds
 strategic goods) lands in the town of its manor, or in the capital's
 stores when it has no manor. Every outflow that today debits a pool
-(GOODS_SELL, building inputs) debits the towns in burg-code order, crown
-before lord as today's pool rule. After the settlement `sync_metrics`
-rewrites the two metrics. Regression guard: the sum of the towns'
+(GOODS_SELL, building inputs) still moves the metric, and `reconcile` takes the fall from the towns in proportion to their stock. After the settlement `reconcile` and `sync_metrics`
+rewrite the two metrics. Regression guard: the sum of the towns'
 `crown + lord` after a month equals what the two pools would have held.
 
 `house` stock is capped at `town_house_stock_months` months of its own
@@ -151,7 +149,7 @@ dry delivers what it has.
 ### 3.4 Cartage
 
 Each day a `flowing` line accrues
-`drawn_units × length_km × supply_cart_fee_permille` milligold into
+`drawn_units × length_km × supply_cart_milligold_per_unit_km` milligold into
 `fee_milli`; whole gold is taken from the treasury the day it crosses a
 whole number, the remainder carried (one rounding, invariant 11). So 1.2×
 costs a fifth more than 1.0× and 0.8× a fifth less, and a longer road costs
@@ -180,7 +178,7 @@ is 1000 at ≥ `army_supply_low_days` (5) days in hand and falls linearly to
 Above `army_supply_low_days` days the monthly drift stays as it is
 (`morale_mark` reads days: `army_morale_fed` at ≥ 5 days). Below it, every
 day: morale −`army_morale_hungry_day`; at 0 days −`army_morale_starving_day`
-instead, each with a reason line. `host_hungry` reads days < 5.
+instead (`ArmySystem.hunger_day`, after the host eats). The dispatch of the day says which regiments ran low or empty; a regiment's morale has no reason log of its own (see the rulings below). `host_hungry` reads days < 5.
 
 ## 4. Orders
 
@@ -208,12 +206,12 @@ when it has one), **Withdraw supply point**, **Carry ▸ 10 / 15 / 20 / 25 /
 
 ### 5.2 Picking the point
 
-Pick mode: eligible towns lit; ineligible ones greyed with the reason on
-hover ("wagons need 13 days, the most is 10"). Hovering a lit town previews
-the road route (dashed) with its length, wagon days, road loss, the 1.0×
-daily cartage and how many days of this regiment the town's stores hold.
-A click opens the confirm menu: the three rates, each with its daily
-cartage, and the courier's days → Confirm / Cancel. Esc leaves pick mode.
+Pick mode: eligible towns lit; ineligible ones greyed, and a click on one
+says why in the news bar ("wagons need 13 days, the most is 10"). A click on
+a lit town previews the road route (dashed) and opens the confirm menu: the
+three rates, each with its daily cartage, and on each row's tooltip the road's
+length, road loss, wagon days, how many days of this regiment the town's stores
+hold, and the courier's days → Cancel. Esc leaves pick mode.
 
 ### 5.3 The line on the map
 
@@ -240,6 +238,7 @@ reads the same lines.
   holds under `supply_warn_town_days` days of its lines' draw, a regiment
   under 5 days, a regiment out of supplies, a line cancelled because its
   town was lost.
+- Supply letters keep their own count (`missive_keep_supply`) so they never evict a spy's report or a receipt.
 - **The marshal's monthly report**: one row per regiment — days in hand,
   carried load, point, rate, road km, the month's cartage, road loss,
   goods bought and from whom. It is the marshal's CLAIM (skimming and the
@@ -250,7 +249,7 @@ reads the same lines.
 `balance.csv` new keys: `army_start_supply_days`, `army_supply_low_days`
 (5), `army_supply_max_days` (30), `army_morale_hungry_day`,
 `army_morale_starving_day`, `supply_wagon_km_per_day`,
-`supply_point_max_days`, `supply_cut_reach_m`, `supply_cart_fee_permille`,
+`supply_point_max_days`, `supply_cut_reach_m`, `supply_cart_milligold_per_unit_km`,
 `supply_buy_markup_permille`, `supply_warn_town_days`,
 `town_house_stock_months`, `army_carry_default_days` (20).
 Retired: `army_start_supply_months`, `army_supply_target_months`,
@@ -290,6 +289,43 @@ cancellation when the town is lost; the carried load's pace and the
 below-5-days drag; the daily morale penalties; a save round-trip of the new
 state, and an old save's migration. UI through real input: right-click →
 Add supply point → lit towns → click → confirm.
+
+## 8a. Implementation rulings
+
+Made while building (2026-10-07); each is a default the owner may overturn, with what it costs if wrong.
+
+The plan's three, approved with it:
+
+- Stores are in supply UNITS, the pool's gold rounded down once over the whole pool. If wrong: the stores would be counted in gold and a unit's price could not move without rewriting every town.
+- `reconcile` takes a fall in the metrics from the towns in proportion to their stock, not in burg-code order. If wrong: the first towns by code would drain first.
+- The route preview shows on a CLICK of a lit town, not on hover. If wrong: a hover preview must be added to the pick mode.
+
+From the build:
+
+- Daily morale loss has no reason line: regiment morale has no reason log anywhere in the engine (invariant 4 covers opinions and owner moves); the day's dispatch letter says the regiment is low or empty. If wrong: a morale reason log added later.
+- A lost town's stores are lost with it (reconcile erases entries that are no longer realm towns). If wrong: captured stores could instead be returned to the depot.
+- A realm with no town keeps no strategic stores (a rise with no depot to land in is dropped). If wrong: an event's gold vanishes in that edge case, where the game has no realm left to play.
+- An extra `TownStores.reconcile` runs after the workshops and the market in `TickEngine.advance`, so any other writer's move on the two metrics is settled into the towns. If wrong: one redundant call.
+- `TownStores.seed` is named `seed_from_pools` (it shadowed GDScript's global `seed()`). If wrong: nothing.
+- A CLEAR arriving while a NEWER SET is pending turns the line into that SET's ORDERED record instead of erasing it (the player's last order wins). If wrong: the newer order would be lost.
+- `CourierSystem.pending_for` ignores SUPPLY_* couriers (it is the march / halt reader); headlines and the courier card name the town for a town-bound courier. If wrong: a supply courier is not shown as the regiment's pending order anywhere.
+- A pending SET that replaces a running line carries the old line's month counters forward (the marshal's report is per regiment). If wrong: a replaced line's month would start from zero in the report.
+- Per-day flooring of road loss, efficiency and skim is replaced by milli-unit carries on the line (`arrive_milli`, `claim_milli`, `skim_milli`), so the month's truth matches `plan()`. If wrong: nothing; it is more exact.
+- Daily treasury debits (cartage, house purchases) stay DAILY, as the owner asked; their reason and record is the marshal's monthly report, and in-town refill purchases are counted on the regiment's entry. If wrong: the month's `TickReport` has no line for them; the owner may want monthly ledger lines.
+- PARKED for the owner: cartage may push the treasury below zero (purchases stop at zero; salaries already do). If wrong: a broke crown keeps paying carters.
+- An ORDERED line whose own courier is gone but whose pending SET courier rides is promoted, not purged. If wrong: none.
+- The low and empty warnings move after the host eats (`SupplyLines.warn_day`, called by `TickEngine` after `eat_day` and `hunger_day`), so they read what the regiment really has left. If wrong: none.
+- Supply letters (`supply`, `supply_month`) get their own keep count (`missive_keep_supply`) in the credible column and never evict other kinds, since spy reports and receipts feed Intel and `ManorBars`. If wrong: one balance key.
+- The marshal's report adds road loss per cent to each row and a fact per house bought from (§5.5). If wrong: none.
+- A line erased mid-month folds its month counters into the regiment's entry so its skim is banked and its cartage reported; the skim's sub-gold fraction carries over. If wrong: none.
+- The burg card's stores sit in `fields` (no icon), because adding `stats` would hide every burg field in `map_detail_panel`. If wrong: an icon-less row on the town card.
+- Supply rows are not offered in the war room (its orders are drafts, the spec asks for supply orders from the map). If wrong: the owner cannot pencil supply points in the war room.
+- One formula for the daily cartage estimate (`SupplyLines.day_fee_estimate`) and the stock days (`TownStores.days_of_stock`), used by the rate menu and the regiment card. If wrong: none.
+- The four looks `scenes/map3d/materials/lines/supply_{line,pick,pick_off,preview}.tres` were written by the engine (a one-off headless script), not hand-edited text or the editor. If wrong: the editor may re-save them once to settle UIDs.
+- Accepted deviations of the map layer: the pick ring's radius is the town's click reach (not the cut reach); the line is snapped onto the drawn road; its end follows the drawn piece; `bind()` takes the units layer. If wrong: none.
+- Route searches are cached per line per day, end-following redraws are throttled by `map3d_supply_follow_s`, and pick or preview changes redraw only the rings and the preview. If wrong: the line's end lags the piece by up to the throttle.
+- OWNER TO RULE: the supply line's look (white, alpha 0.15, 22 px, fully soft; preview white dashes; gold lit rings reusing the selection gold; grey greyed rings). If wrong: the `.tres` values change, nothing else.
+- "Play it" was verified by real-window snapshots of the cards, the menu and the Missive board, not by clicking through the live game. If wrong: an interaction bug only a human click finds.
 
 ## 9. Not in this spec (the brief's other items)
 
