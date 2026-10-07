@@ -55,6 +55,37 @@ static func mark_loss(repo: DataRepository, route: PackedVector2Array) -> Dictio
 	return {"permille": total, "hazards": hazards}
 
 
+## What the active hazards a route crosses take (spec 2026-10-07-war-room-p2
+## §2.3): each hazard with a supply_loss_permille once, id order, sampled along
+## the route every war_hazard_sample_km; a hazard the crown does not know is
+## not named ("trouble on the road").
+static func hazard_loss(repo: DataRepository, state: GameState, route: PackedVector2Array) -> Dictionary:
+	var hazards: Array = []
+	var total := 0
+	if state == null or route.size() < 2:
+		return {"permille": 0, "hazards": hazards}
+	var step := repo.bal("war_hazard_sample_km") / WarMarks.km_per_px(repo)
+	var hit: Dictionary = {}
+	for i in route.size() - 1:
+		var a := route[i]
+		var b := route[i + 1]
+		var n := maxi(1, ceili(a.distance_to(b) / step))
+		for j in n + 1:
+			for id: String in Hazards.at_point(repo, state, a.lerp(b, float(j) / float(n))):
+				hit[id] = true
+	var ids: Array = hit.keys()
+	ids.sort()
+	for id: String in ids:
+		var h: Dictionary = state.hazards[id]
+		var p := int(Hazards.kind_of(repo, String(h["kind"])).get("supply_loss_permille", 0))
+		if p <= 0:
+			continue
+		total += p
+		hazards.append({"code": id, "permille": p,
+			"label": String(h["label"]) if Hazards.known(repo, state, id) else "trouble on the road"})
+	return {"permille": total, "hazards": hazards}
+
+
 ## The nearest a polyline comes to a point, pack px.
 static func _poly_distance(poly: PackedVector2Array, at: Vector2) -> float:
 	var best := INF
@@ -213,6 +244,10 @@ static func _line_of(repo: DataRepository, state: GameState, code: String, ctx: 
 	# a fleet's line is no road the brigands or pirates can rob (spec §1.2)
 	var marks := {"permille": 0, "hazards": []} \
 		if String(ArmySystem.regiment(repo, code).get("is_naval", "0")) == "1" else mark_loss(repo, route)
+	if String(ArmySystem.regiment(repo, code).get("is_naval", "0")) != "1":
+		var through := hazard_loss(repo, state, route)
+		marks["permille"] = int(marks["permille"]) + int(through["permille"])
+		(marks["hazards"] as Array).append_array(through["hazards"])
 	return {"length_km": km, "loss_permille": total_loss(repo, km, int(marks["permille"])),
 		"garrison": false, "garrison_town": "", "stronghold": "", "hazards": marks["hazards"]}
 

@@ -103,3 +103,48 @@ func test_a_fleet_pays_no_mark_toll() -> void:
 		assert_eq(SupplySystem.line_of(repo, state, code)["hazards"], [], code)
 		return
 	pass_test("no fleet")
+
+
+func _road_regiment(state: GameState) -> String:
+	for code: String in state.regiments:
+		if SupplySystem.route_px(repo, state, code).size() >= 2:
+			return code
+	return ""
+
+
+func test_a_line_through_rebels_pays_and_names_them_when_known() -> void:
+	var state := SuiteData.campaign(repo, 42)
+	var code := _road_regiment(state)
+	if code == "":
+		pass_test("no regiment on a road")
+		return
+	var route := SupplySystem.route_px(repo, state, code)
+	var cell := MapEconomy.cell_at(repo, route[route.size() / 2])
+	Hazards.add(state, "rb", "Rebels", "Road Rebels", [cell], state.tick, -1, "test")
+	var line := SupplySystem.line_of(repo, state, code)
+	var hz: Array = (line["hazards"] as Array).filter(func(h: Dictionary) -> bool: return String(h["code"]) == "rb")
+	assert_eq(hz.size(), 1)
+	assert_eq(int(hz[0]["permille"]), int(Hazards.kind_of(repo, "Rebels")["supply_loss_permille"]))
+	var label := "Road Rebels" if Hazards.known(repo, state, "rb") else "trouble on the road"
+	assert_eq(String(hz[0]["label"]), label)
+
+
+func test_an_unknown_hazard_is_never_named() -> void:
+	var state := SuiteData.campaign(repo, 42)
+	var route := PackedVector2Array()
+	var mine := repo.resolve_realm("player_realm")
+	var foreign := -1
+	var ids: Array = repo.cells.keys()
+	ids.sort()
+	for c: int in ids:
+		var owner := MapOwnership.owner_of(repo, state, MapManors.province_of(repo, c, state))
+		if owner != "" and owner != mine and not MapTerrain.is_water(repo.cells[c]):
+			foreign = c
+			break
+	var at := MapTerrain.cell_center(repo, repo.cells[foreign])
+	route.append(at + Vector2(-0.2, 0))
+	route.append(at + Vector2(0.2, 0))
+	Hazards.add(state, "far", "Rebels", "Secret Rebels", [foreign], state.tick, -1, "test")
+	var got := SupplySystem.hazard_loss(repo, state, route)
+	assert_eq(int(got["permille"]), int(Hazards.kind_of(repo, "Rebels")["supply_loss_permille"]))
+	assert_eq(String(got["hazards"][0]["label"]), "trouble on the road")
