@@ -1,8 +1,8 @@
 # WAR ROOM — supposed enemy pieces and the staff's annotations — design
 
-Status: written 2026-10-07 for the owner's review, before any code (owner's
-items 11 and 15). The owner answered two questions (below); every other
-choice is a recommendation, listed in §0 so each can be overturned alone.
+Status: **approved 2026-10-07, style A (wax crayon)** — the owner: "按推荐做"
+(every ruling in §0 as recommended). Written for the owner's items 11 and 15;
+the owner answered two questions (below) and approved the rest as listed in §0.
 Builds on `2026-10-07-war-room-scale-hover-design.md` (the hover slip,
 `WarGround`, `ArmySystem.power_on`, the near-zoom patch) and
 `2026-10-06-war-room-wooden-pieces.md` (the carved pieces).
@@ -476,7 +476,7 @@ names the supposed piece; `scripts/engine/CLAUDE.md` names `WarPlans` and
 `GameState`; `.claude/skills/visual-review/taste.md` takes the owner's ruling
 on the finish (crayon or ink and wash) and on boxwood.
 
-## 8. Concept mocks (shown with this spec, not committed)
+## 8. Concept mocks
 
 Drawn by a small PIL script (no generation): a parchment patch with contours,
 a walled town, woods, a road and a river; a hatched blue assembly area, two
@@ -485,6 +485,6 @@ thrust, a sepia phase line "Line II", the objective "Obj. A", our dark-oak
 piece on blue lacquer, two boxwood supposed pieces (red lacquer; Unknown in
 sable) with pencilled tags.
 
-- **A — wax crayon** (recommended), with the supposed piece's slip and the
-  tool roll.
-- **B — ink and wash**, with the ground menu.
+- **A — wax crayon**, with the supposed piece's slip and the tool roll — the
+  owner's pick, kept as `docs/references/war_room/plans_style_A_crayon.png`.
+- **B — ink and wash**, with the ground menu (not chosen; not kept).
