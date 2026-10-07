@@ -216,7 +216,8 @@ var _ledger_select := ""
 ## on the piece, eight pushed motion events with the left button held, a real
 ## release (the arrow and its confirm panel show; --war-commit then clicks
 ## its Confirm, so the order's draft is pencilled). --war-folio
-## DRILL|explode opens the folio's drill or presses Take apart — it says so
+## full|DRILL|arm:ARM|explode holds the docked book up by its + (a real
+## click) and then opens its drill, an arm or presses Take apart — it says so
 ## and skips while the folio, its drill tabs or its Take apart button are not
 ## built; an explode waits out its flight (war_explode_s) before the moment.
 ## The moment is `war`, taken at frame +90 unless --shot-on says otherwise.
@@ -252,6 +253,7 @@ var _war_commit := false
 var _war_sheet := -1
 var _war_piece := ""
 var _war_folio := ""
+var _war_folio_inner := false   # the held-up book's tab still to click
 var _war_drag := Vector2(-1, -1)
 var _war_focus_px := Vector2(-1, -1)   # --war-focus-px x,y: lean in on a pack point, not a piece
 var _war_hover := Vector2(-1, -1)   # --war-hover fx,fy: rest the pointer there for the slip
@@ -1076,7 +1078,7 @@ func _ledger_step() -> void:
 
 
 ## --war-room [--war-sheet N] [--war-zoom M] [--war-piece CODE [--war-drag fx,fy]]
-## [--war-folio DRILL|arm:ARM|explode]: the WAR ROOM through its own tab and its own
+## [--war-folio full|DRILL|arm:ARM|explode]: the WAR ROOM through its own tab and its own
 ## gestures, then the moment `war`. Each step waits for the one before it by
 ## CONDITION, never by a fixed frame: the tab opened and a sheet laid, the
 ## requested sheet laid and the roll over (then a few frames for its ink), the
@@ -1188,35 +1190,21 @@ func _war_room_step() -> void:
 			print("war: committed order=%s pennant=%s draft=%s" % [ArmySystem.order_of(Game.data, Game.state, _war_piece),
 				WarRoom.pennant_of(Game.data, Game.state, _war_piece), WarDrafts.of(Game.state, _war_piece)])
 		if _war_folio != "":
-			var folio := screen.get_node_or_null("%Folio")
+			var folio := screen.get_node_or_null("%Folio") as WarFolioPanel
 			if folio == null:
 				print("war: no folio yet")
-			elif _war_folio == "explode":
-				var b := folio.get_node_or_null("%TakeApart") as Button
-				if b == null:
-					print("war: no Take apart button yet")
-				else:
-					_real_click(b, b.size * 0.5)
-			elif _war_folio.begins_with("arm:"):
-				# an arms button of the left page, by its arm key (arm:artillery)
-				var hit_arm := false
-				for t: Button in folio.get_node("%Arms").get_children():
-					if String(t.get_meta("arm")) == _war_folio.substr(4):
-						_real_click(t, t.size * 0.5)
-						hit_arm = true
-				if not hit_arm:
-					print("war: no arms button '%s'" % _war_folio)
 			else:
-				var drills := folio.get_node_or_null("%Drills")
-				var hit := false
-				if drills != null:
-					for t: Button in drills.get_children():
-						if String(t.text).to_lower().contains(_war_folio):
-							_real_click(t, t.size * 0.5)
-							hit = true
-				if not hit:
-					print("war: no drill tab '%s' yet" % _war_folio)
+				if not folio.is_full():
+					# the docked page's + holds the whole book up (a real click)
+					var big := folio.get_node("%DockEnlarge") as Button
+					_real_click(big, big.size * 0.5)
+					print("war: folio held up=%s" % folio.is_full())
+				_war_folio_inner = _war_folio != "full"   # its tabs are clicked once the book is laid out
 		_war_to(10 if _war_deploy != "" or _war_leave != "" else 5)
+	elif _war_phase == 5 and _war_folio_inner and _frames - _war_at >= 6:
+		_war_folio_inner = false
+		_war_folio_click(screen.get_node("%Folio"))
+		_war_to(5)   # the shot waits from the click
 	elif _war_phase == 5 and _frames - _war_at >= 40 + (ceili(Game.data.bal("war_explode_s") * 120.0)   # a 120 Hz display's frames
 			if _war_folio == "explode" else 0):
 		_war_sync("room")
@@ -1266,6 +1254,36 @@ func _war_sync(when: String) -> void:
 		print("  %s engine=%s map=%s room=%s map-engine=%.2f px room-map=%s" % [code, eng, d, r,
 			(d as Vector2).distance_to(eng) if d != null else -1.0,
 			"%.3f px" % (r as Vector2).distance_to(d) if r != null and d != null else "-"])
+
+
+
+## --war-folio's click inside the held-up book: a drill tab, an arms button or Take apart.
+func _war_folio_click(folio: Node) -> void:
+	if _war_folio == "explode":
+		var b := folio.get_node_or_null("%TakeApart") as Button
+		if b == null:
+			print("war: no Take apart button yet")
+		else:
+			_real_click(b, b.size * 0.5)
+	elif _war_folio.begins_with("arm:"):
+		# an arms button of the left page, by its arm key (arm:artillery)
+		var hit_arm := false
+		for t: Button in folio.get_node("%Arms").get_children():
+			if String(t.get_meta("arm")) == _war_folio.substr(4):
+				_real_click(t, t.size * 0.5)
+				hit_arm = true
+		if not hit_arm:
+			print("war: no arms button '%s'" % _war_folio)
+	else:
+		var drills := folio.get_node_or_null("%Drills")
+		var hit := false
+		if drills != null:
+			for t: Button in drills.get_children():
+				if String(t.text).to_lower().contains(_war_folio):
+					_real_click(t, t.size * 0.5)
+					hit = true
+		if not hit:
+			print("war: no drill tab '%s' yet" % _war_folio)
 
 
 func _war_to(phase: int) -> void:
