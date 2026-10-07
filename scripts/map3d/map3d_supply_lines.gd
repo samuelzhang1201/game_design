@@ -1,9 +1,10 @@
 class_name Map3DSupplyLines
 extends RefCounted
-## The supply lines on the 3D map (owner 2026-10-07: 一个淡淡的虚化的补给线, spec
-## 2026-10-07-army-supply-lines §5.3): one faint ribbon per FLOWING line,
-## along the road from its town to the column, its end following the piece
-## where Map3DLayerUnits draws it on its day's march; an ordered, riding or
+## The supply lines on the 3D map (spec 2026-10-07-army-supply-lines §5.3;
+## owner 2026-10-07: 实心的金色线，带流动感，实时跟随军队移动): one solid gold
+## ribbon per FLOWING line, flowing from its town to the column along the
+## road, its end following the piece where Map3DLayerUnits draws it every
+## frame (a body and a tail, Map3DSupplyRoad); an ordered, riding or
 ## cut line is not drawn (the card and the missives say why), nor any while
 ## the regiments are hidden. While a supply point is picked (the view's
 ## supply_pick, burg -> "" lit or the reason it is greyed), a ring round each
@@ -23,14 +24,14 @@ var draws := 0
 var _line_sigs: Dictionary = {}
 ## code -> the flowing line's road in world XZ, searched once a day a line.
 var _roads: Dictionary = {}
-var _ends_sig := 0
 var _shown_on := true
-## Seconds since the lines' ends were last laid (map3d_supply_follow_s).
+## Seconds since the bodies were last laid (map3d_supply_follow_s).
 var _since := 0.0
-## The drawn roads' segments by grid cell (on_roads), keyed per repo
-## instance and map: built once and never refreshed, so it assumes
-## repo.routes does not change after the pack is loaded.
-static var _index: Dictionary = {}
+## code -> [cut, arc]: the body runs over the road's points before `cut`, `arc` metres long.
+var _cut: Dictionary = {}
+## Where the pieces were when the bodies, and the tails, were last laid.
+var _body_sig := 0
+var _tail_sig := 0
 
 
 func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_view: Object, p_units: Map3DLayerUnits) -> void:
@@ -40,70 +41,16 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_view: Object, p_units
 	units = p_units
 	_line_sigs.clear()
 	_roads.clear()
-	_ends_sig = 0
+	_cut.clear()
 
 
 ## A road (pack px) in world XZ, laid on the drawn roads, a point every line step.
 static func _world(ctx: Map3DContext, route: PackedVector2Array) -> PackedVector2Array:
 	var step_px := ctx.line_step() / maxf(float(ctx.meta.get("m_per_px", 1.0)), 0.001)
 	var pts := PackedVector2Array()
-	for p in on_roads(ctx.repo, Map3DGeometry.resample(route, step_px)):
+	for p in Map3DSupplyRoad.on_roads(ctx.repo, Map3DGeometry.resample(route, step_px)):
 		pts.append(ctx.to_world(p))
 	return pts
-
-
-## The drawn roads' segments (pack px, smoothed as Map3DBorders.route_lines
-## draws them) in every grid cell within the snap reach of them.
-static func _road_index(repo: DataRepository) -> Dictionary:
-	var key := "%d:%s" % [repo.get_instance_id(), repo.map_id]
-	if _index.has(key):
-		return _index[key]
-	var reach := repo.bal("courier_graph_snap_px")
-	var size := maxf(reach * 2.0, 1.0)
-	var grid: Dictionary = {}
-	var steps := int(repo.bal("map_route_smoothing_steps"))
-	for code: String in repo.routes:
-		var r: Dictionary = repo.routes[code]
-		if not RoadGraph.GROUPS.has(String(r.get("group", ""))):
-			continue
-		var line := MapGeometry.smooth_open(r["polyline"], steps)
-		for i in range(1, line.size()):
-			var a := line[i - 1]
-			var b := line[i]
-			var lo := Vector2i(((a.min(b) - Vector2(reach, reach)) / size).floor())
-			var hi := Vector2i(((a.max(b) + Vector2(reach, reach)) / size).floor())
-			for gy in range(lo.y, hi.y + 1):
-				for gx in range(lo.x, hi.x + 1):
-					var cell := Vector2i(gx, gy)
-					if not grid.has(cell):
-						grid[cell] = []
-					(grid[cell] as Array).append([a, b])
-	_index = {key: {"size": size, "reach": reach, "grid": grid}}
-	return _index[key]
-
-
-## `route` (pack px) moved onto the drawn roads: the courier's road runs
-## through RoadGraph's snapped nodes, up to `courier_graph_snap_px` off the
-## road the map draws; each point within that reach goes to the nearest point
-## of a drawn road, its ends (the town, the column) stay.
-static func on_roads(repo: DataRepository, route: PackedVector2Array) -> PackedVector2Array:
-	var idx := _road_index(repo)
-	var size: float = idx["size"]
-	var reach: float = idx["reach"]
-	var grid: Dictionary = idx["grid"]
-	var out := route.duplicate()
-	for i in range(1, route.size() - 1):
-		var p := route[i]
-		var best := p
-		var best_d := reach * reach
-		for seg: Array in grid.get(Vector2i((p / size).floor()), []):
-			var q := Geometry2D.get_closest_point_to_segment(p, seg[0], seg[1])
-			var d := q.distance_squared_to(p)
-			if d < best_d:
-				best_d = d
-				best = q
-		out[i] = best
-	return out
 
 
 ## Every FLOWING line's road in world XZ, {code: points}, the town first.
@@ -154,31 +101,7 @@ static func _to_piece(ctx: Map3DContext, code: String, road: PackedVector2Array,
 	var piece: Vector2 = shown[code]
 	if piece.distance_to(road[road.size() - 1]) > Map3DUnits.snap_m(ctx.repo, ctx.state(), code, ctx.meta):
 		return road
-	return follow(road, piece)
-
-
-## `road` ending at `piece`: cut at the road's nearest point to it (the end
-## when that is as near) and run on to the piece — a piece walking on past the
-## end extends it, one walking back along the road shortens it.
-static func follow(road: PackedVector2Array, piece: Vector2) -> PackedVector2Array:
-	if road.size() < 2:
-		return road
-	var best_i := road.size() - 1
-	var best := road[best_i]
-	var best_d := best.distance_squared_to(piece)
-	for i in range(1, road.size()):
-		var q := Geometry2D.get_closest_point_to_segment(piece, road[i - 1], road[i])
-		var d := q.distance_squared_to(piece)
-		if d < best_d - 0.0001:
-			best_d = d
-			best_i = i
-			best = q
-	var out := road.slice(0, best_i)
-	if out[out.size() - 1].distance_to(best) > 0.01:
-		out.append(best)
-	if best.distance_to(piece) > 0.01:
-		out.append(piece)
-	return out
+	return Map3DSupplyRoad.follow(road, piece)
 
 
 static func _ring(ctx: Map3DContext, burg: Dictionary) -> PackedVector2Array:
@@ -195,17 +118,66 @@ func _shown() -> Dictionary:
 	return units.shown_positions() if units != null else {}
 
 
-## Lay the flowing lines from the roads in hand, each to its drawn piece.
+## Where `code`'s piece is drawn while it walks its line's road (within
+## Map3DUnits.snap_m of the road's end, as _to_piece); null else.
+func _piece(code: String, shown: Dictionary) -> Variant:
+	var road: PackedVector2Array = _roads.get(code, PackedVector2Array())
+	if not shown.has(code) or road.size() < 2:
+		return null
+	var at: Vector2 = shown[code]
+	return at if at.distance_to(road[road.size() - 1]) <= Map3DUnits.snap_m(ctx.repo, ctx.state(), code, ctx.meta) else null
+
+
+## Lay the bodies — each road up to its cut by its drawn piece, or whole —
+## from the roads in hand, then the tails.
 func _draw_lines() -> void:
 	draws += 1
 	var shown := _shown()
 	var out: Array = []
+	_cut.clear()
 	if units == null or units.shown:
 		var codes: Array = _roads.keys()
 		codes.sort()
 		for code: String in codes:
-			out.append(_to_piece(ctx, code, _roads[code], shown))
+			var road: PackedVector2Array = _roads[code]
+			var piece: Variant = _piece(code, shown)
+			if piece == null:
+				out.append(road)
+				continue
+			var body := road.slice(0, int(Map3DSupplyRoad.nearest(road, piece)[0]))
+			_cut[code] = [body.size(), Map3DSupplyRoad.arc(body)]
+			out.append(body)
 	lines.set_lines("SupplyLines", out, Map3DLayerLines.SUPPLY_LINE, Map3DPriority.SUPPLY_LINES)
+	_body_sig = _pieces_sig()
+	_draw_tails()
+
+
+## Each tail from its body's cut to its piece, UV carried on from the body;
+## false (nothing laid) when a piece came onto or left its road.
+func _draw_tails() -> bool:
+	var shown := _shown()
+	var tails: Array = []
+	var offsets: Array = []
+	var codes: Array = _roads.keys()
+	codes.sort()
+	for code: String in codes:
+		var road: PackedVector2Array = _roads[code]
+		var piece: Variant = _piece(code, shown)
+		if (piece == null) != (not _cut.has(code)):
+			return false  # a piece came onto, or left, its road: the bodies again
+		if piece == null:
+			continue
+		var cut := int(_cut[code][0])
+		var at := Map3DSupplyRoad.nearest(road, piece)
+		# nearer a stretch before the cut (walked back, or off the road's
+		# end): straight from the cut until the body is laid again
+		tails.append(Map3DSupplyRoad.tail(road, cut, piece, at) if int(at[0]) >= cut
+			else PackedVector2Array([road[cut - 1], piece]))
+		offsets.append(float(_cut[code][1]))
+	_tail_sig = _pieces_sig()
+	lines.put_look("SupplyTails", Map3DSupplyRoad.tail_arrays(tails, offsets, ctx.height_at),
+		Map3DLayerLines.SUPPLY_LINE, Map3DPriority.SUPPLY_LINES)
+	return true
 
 
 ## Search again each FLOWING line whose day or record moved since its road
@@ -244,7 +216,6 @@ func redraw() -> void:
 	if st != null:
 		_refresh_roads(st)
 	_draw_lines()
-	_ends_sig = _ends()
 	redraw_pick()
 
 
@@ -270,29 +241,31 @@ func redraw_pick() -> void:
 
 
 ## Per frame. A line's road is searched once a day (or when its record
-## moves) and the lines laid at once; a piece walking with a line re-lays
-## them from the roads in hand — no search — at most once every
-## map3d_supply_follow_s; hiding or showing the regiments, at once.
+## moves) and the lines laid at once; a piece walking with a line re-lays its
+## short tail every frame it moved, and the bodies from the roads in hand — no
+## search — at most once every map3d_supply_follow_s (at once when a piece
+## comes onto or leaves its road); hiding or showing the regiments, at once.
 func step(delta: float) -> void:
 	var st := ctx.state() if ctx != null else null
 	if st == null or lines == null:
 		return
 	_since += delta
 	var fresh := _refresh_roads(st)
-	var ends := _ends()
 	var on := units == null or units.shown
-	if fresh or on != _shown_on or (ends != _ends_sig and _since >= ctx.repo.bal("map3d_supply_follow_s")):
+	var moved := _pieces_sig()
+	if fresh or on != _shown_on or (moved != _body_sig and _since >= ctx.repo.bal("map3d_supply_follow_s")):
 		_shown_on = on
-		_ends_sig = ends
+		_since = 0.0
+		_draw_lines()
+	elif moved != _tail_sig and not _draw_tails():
 		_since = 0.0
 		_draw_lines()
 
 
-## Where the pieces with a line are drawn, to a line step.
-func _ends() -> int:
+## Where the pieces with a line are drawn.
+func _pieces_sig() -> int:
 	var shown := _shown()
-	var ends: Array = []
-	var q := maxf(ctx.line_step(), 1.0)
+	var at: Array = []
 	for code: String in _roads:
-		ends.append(Vector2i((shown.get(code, Vector2.ZERO) as Vector2) / q))
-	return hash(ends)
+		at.append(shown.get(code, Vector2.ZERO))
+	return hash(at)

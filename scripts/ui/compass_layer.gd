@@ -37,7 +37,8 @@ func _draw() -> void:
 	var r := box.call() as Rect2
 	if r.size.x <= 0.0:
 		return
-	var alpha := Game.data.bal("map_compass_alpha") if Game.data != null else 1.0
+	var alpha := Game.data.bal(MapPalette.table_key(Game.data, Game.data.balance, "map_compass_alpha")) \
+		if Game.data != null else 1.0
 	draw_set_transform(r.get_center(), angle, Vector2.ONE)
 	draw_texture_rect(texture, Rect2(-r.size * 0.5, r.size), false, Color(1.0, 1.0, 1.0, alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

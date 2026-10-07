@@ -672,6 +672,31 @@ func test_entering_the_board_flies_the_camera_square_in_front_of_it_and_back() -
 	assert_almost_eq(cam.transform.origin.distance_to(before.origin), 0.0, 0.001, "back where it left")
 
 
+## Owner 2026-10-07: a march's arrow pinned on the table still hung over the
+## board after the camera turned to it. The HUD's marks are the table's.
+func test_the_huds_marks_are_put_away_while_the_board_holds_the_camera() -> void:
+	var p: Dictionary = WarRoom.pieces(repo, state)[0]
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	var code := String(p["code"])
+	view.aiming = true
+	view.aim_code = code
+	view.aim_dest = (WarSheets.series(repo)[int(p["sheet"])]["rect"] as Rect2).get_center()
+	view.select(code)
+	var hud := view.get_node("%Hud") as WarHud
+	assert_true(hud.drawing(), "the pinned arrow and the chalk ring are drawn on the table")
+	assert_true(hud.is_visible_in_tree())
+	view.enter_board()
+	assert_false(hud.is_visible_in_tree(), "flying to the board, the marks go")
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	assert_false(hud.is_visible_in_tree(), "and stay away while the board is studied")
+	view.leave_board()
+	await wait_process_frames(2)
+	assert_false(hud.is_visible_in_tree(), "not back until the camera is")
+	await wait_seconds(repo.bal("war_board_fly_s") + 0.2)
+	assert_true(hud.is_visible_in_tree(), "back over the table, the marks return")
+
+
 func test_in_board_view_a_left_click_on_the_panel_is_the_boards_not_the_rooms() -> void:
 	view.lay_sheet(0)
 	await wait_process_frames(2)
@@ -1007,3 +1032,48 @@ func test_closing_at_a_near_lean_unbinds_the_patch_and_reopening_redraws_it() ->
 	view.set_active(true)
 	assert_eq(float(mat.get_shader_parameter("detail_on")), 1.0, "drawn again on reopening at the same lean")
 	assert_gt((view.get_node("%DetailViewport") as SubViewport).size.x, 2)
+
+
+## Owner 2026-10-07: a pointer resting on a piece names the piece (its combat
+## figures), never the ground under it.
+func test_resting_on_a_piece_reads_the_piece_not_the_ground() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_process_frames(2)
+	var p := _first_land_piece()
+	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	watch_signals(view)
+	_hover(at)
+	view._process(repo.bal("war_hover_delay_s") + 0.01)
+	assert_signal_emitted_with_parameters(view, "piece_hovered", [view.piece_under(at), at])
+	assert_signal_not_emitted(view, "ground_hovered")
+	view._process(1.0)
+	assert_signal_emit_count(view, "piece_hovered", 1, "once per rest")
+
+
+## Owner 2026-10-07: the supply lines are gold ribbons on the table that end
+## where the piece stands NOW, following it as it is pushed.
+func test_a_flowing_supply_line_is_laid_and_follows_its_piece() -> void:
+	var p := _first_land_piece_anywhere()
+	var code := String(p["code"])
+	state.supply_lines[code] = SupplyLines._new_record(TownStores.realm_towns(repo, state)[0], 1000, 1)
+	state.supply_lines[code]["state"] = SupplyLines.FLOWING
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	if WarSupplyFlow.routes(repo, state, view.sheet_rect()).is_empty():
+		pass_test("this fixture's line does not reach the sheet")
+		return
+	var before := view.supply_mesh()
+	assert_not_null(before, "the line is laid")
+	var piece := (view.get_node("%Pieces") as WarPieces).piece(code)
+	if piece == null:
+		return
+	piece.position += Vector3(0.05, 0, 0)
+	view.redraw_marks()   # as WarPieces asks every frame a piece is pushed
+	assert_ne(view.supply_mesh(), before, "laid again to the piece's new place")
+
+
+func _first_land_piece_anywhere() -> Dictionary:
+	for p: Dictionary in WarRoom.pieces(repo, state):
+		if not bool(p["naval"]):
+			return p
+	return {}

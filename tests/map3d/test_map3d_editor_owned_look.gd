@@ -31,9 +31,8 @@ const CODE_OWNED := {
 	# to the window; the selection ring's gold is its own (the needle's too)
 	"settlement_ring": ["colour", "dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
 		"max_view_m", "min_view_m"],
-	# the clock, the camera and the bake's field map; lift_px scaled
-	"march_trail": ["has_field_map", "field_map", "pack_origin", "field_m_per_texel", "now_days",
-		"px_per_dist", "lift_px"],
+	# the clock
+	"march_dust": ["now_days"],
 	# the box, the sizes and the speeds follow the camera; the field, the pack
 	"precip_fall": ["kind", "box_center", "box_half", "box_height", "fall_m_s", "wind_m_s", "wind_dir",
 		"sway_m_s", "strength", "fall_now", "fall_next", "blend", "pack_origin", "m_per_px", "step_px"],
@@ -129,13 +128,12 @@ func test_the_rings_draw_what_their_tres_say() -> void:
 			float(look.get_shader_parameter("lift_px")) * s, 0.0001, String(mmi.name) + ".lift_px, scaled")
 
 
-## The march trails wear their .tres but for the clock, the camera, the field
-## map and the lift (scaled).
-func test_the_march_trails_draw_what_their_tres_say() -> void:
+## The march dust wears its .tres but for the clock.
+func test_the_march_dust_draws_what_its_tres_says() -> void:
 	var v := _view()
-	var trails := v.world().get_node("Trails") as Map3DLayerTrails
-	var mesh := trails.get_child(0) as MeshInstance3D
-	_assert_material_holds(mesh.material_override as ShaderMaterial, "march_trail", 12)
+	var dust := v.world().get_node("Dust") as Map3DLayerDust
+	var mmi := dust.get_child(0) as MultiMeshInstance3D
+	_assert_material_holds(mmi.multimesh.mesh.surface_get_material(0) as ShaderMaterial, "march_dust", 11)
 
 
 ## Each kind of falling weather wears its node's materials; the node holds

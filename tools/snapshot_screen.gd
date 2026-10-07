@@ -158,6 +158,11 @@ var _click_courier := -1
 ## and where he is DRAWN, and his regiment's drawn spot — the courier's pace
 ## and the column's start read off the running window.
 var _trace_couriers := false
+## --supply-flow DX,DY (with --screen root): the player's first land regiment
+## marches DX,DY pack px from where it stands with a FLOWING supply line from
+## the realm's capital (the state set directly, for a shot of the line);
+## prints where it stands, for --look3d.
+var _supply_flow := Vector2.INF
 var _shot_frame := 40
 ## The Missive board and spies (2026-09-28), all with --screen root:
 ## --quiet drops the chapter's scheduled beats, rolls no random event and runs the
@@ -332,6 +337,9 @@ func _ready() -> void:
 			_click_courier = int(args[i + 1])
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
+		elif args[i] == "--supply-flow":
+			var sf := args[i + 1].split(",")
+			_supply_flow = Vector2(float(sf[0]), float(sf[1]))
 		elif args[i] == "--speed":
 			_speed = int(args[i + 1])
 		elif args[i] == "--spy3d":
@@ -458,6 +466,8 @@ func _ready() -> void:
 		# the reign's opening tick, as GameRoot._on_start_requested runs it —
 		# without it the clock starts at tick 0, whose days repeat tick 1's
 		Game.next_tick()
+	if _supply_flow != Vector2.INF:
+		_lay_supply_flow()
 	if _res != Vector2i.ZERO:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(_res)
@@ -821,6 +831,24 @@ func _process(_delta: float) -> void:
 			int(ProjectSettings.get_setting("rendering/textures/canvas_textures/default_texture_filter", 0))])
 		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 		get_tree().quit()
+
+
+## --supply-flow: a marching regiment fed by a FLOWING line from the capital.
+func _lay_supply_flow() -> void:
+	var repo := Game.data
+	var realm := repo.resolve_realm("player_realm")
+	var cap := String((repo.kingdoms[realm] as Dictionary)["capital_burg"])
+	for r: Dictionary in MapObjects.regiments_of(repo, realm):
+		var code := String(r["regiment_code"])
+		if String(r.get("is_naval", "0")) == "1" or not Game.state.regiments.has(code):
+			continue
+		var at := ArmySystem.position_of(repo, Game.state, r)
+		ArmySystem.set_march(repo, Game.state, code, at + _supply_flow)
+		var rec := SupplyLines._new_record(cap, 1000, 1)
+		rec["state"] = SupplyLines.FLOWING
+		Game.state.supply_lines[code] = rec
+		print("supply-flow: %s at %s marching to %s, fed from %s" % [code, at, at + _supply_flow, cap])
+		return
 
 
 ## One --trace-couriers line: the frame, day, share, and every courier's
