@@ -193,3 +193,19 @@ func test_the_month_is_deterministic() -> void:
 		a.tick += 1
 		b.tick += 1
 	assert_eq(a.regiments, b.regiments)
+
+
+func test_a_flood_slows_the_march_through_it() -> void:
+	var state := SuiteData.campaign(repo, 42)
+	for id: String in state.hazards.keys():
+		state.hazards.erase(id)
+	state.hazards_rev += 1
+	var code := _crown_land_code(state)
+	var reg := ArmySystem.regiment(repo, code)
+	var at := ArmySystem.position_of(repo, state, reg)
+	var dry := ArmySystem.ground_permille(repo, reg, at, state)
+	Hazards.add(state, "f", "Flood", "Test Flood", [MapEconomy.cell_at(repo, at)], state.tick, -1, "test")
+	var pace := int(Hazards.kind_of(repo, "Flood")["pace_permille"])
+	@warning_ignore("integer_division")
+	assert_eq(ArmySystem.ground_permille(repo, reg, at, state), maxi(1, dry * pace / 1000))
+	assert_eq(ArmySystem.ground_permille(repo, reg, at), dry, "no state, no hazard")

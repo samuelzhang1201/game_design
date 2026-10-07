@@ -161,3 +161,13 @@ static func settle_regiments(repo: DataRepository, state: GameState) -> Array[St
 				if int(entry["morale"]) != was:
 					news.append("The %s's morale %s under the %s." % [name, "falls" if m < 0 else "rises", String(h["label"])])
 	return news
+
+
+## A march's pace through the active hazards at a point, per mille (1000 none).
+static func pace_permille(repo: DataRepository, state: GameState, at: Vector2) -> int:
+	var p := 1000
+	for id: String in at_point(repo, state, at):
+		var f := int(kind_of(repo, String(state.hazards[id]["kind"])).get("pace_permille", 1000))
+		@warning_ignore("integer_division")  # whole per mille
+		p = p * f / 1000
+	return p

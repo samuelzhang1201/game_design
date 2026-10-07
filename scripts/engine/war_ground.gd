@@ -53,7 +53,7 @@ static func _for_regiment(repo: DataRepository, state: GameState, at: Vector2, c
 	out["attack"] = _factor(repo, state, code, "attack", String(g["terrain"]), "")
 	out["delta_m"] = int(g["metres"]) - ArmySystem.elevation_of(repo, reg, state)
 	out["height"] = ArmySystem.height_factor(repo, int(out["delta_m"]))
-	out["ground"] = ArmySystem.ground_permille(repo, reg, at)
+	out["ground"] = ArmySystem.ground_permille(repo, reg, at, state)
 	var step := ArmySystem.day_march_at(repo, state, code, at)
 	out["km_day"] = float(maxi(step, 0)) / 1000.0
 	out["days"] = ArmySystem.march_days_between(repo, state, code, ArmySystem.position_of(repo, state, reg), at) if step > 0 else 0
