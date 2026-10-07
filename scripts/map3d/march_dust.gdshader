@@ -13,7 +13,7 @@ render_mode unshaded, cull_disabled, blend_mix, depth_draw_never, shadows_disabl
 uniform vec4 colour : source_color = vec4(0.76, 0.68, 0.53, 1.0);
 // the puff's top lit, its underside this much darker (0 flat)
 uniform float shade : hint_range(0.0, 1.0) = 0.3;
-uniform float opacity : hint_range(0.0, 1.0) = 0.55;
+uniform float opacity : hint_range(0.0, 1.0) = 0.45;
 uniform float life_days = 1.0;
 // the share of its life it takes to rise in (a puff never pops in)
 uniform float rise_in : hint_range(0.0, 1.0) = 0.08;

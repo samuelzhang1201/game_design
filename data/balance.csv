@@ -819,6 +819,7 @@ ui_title_day_share,0.62,"TITLE: the share of the day the title opens on (0.25 no
 ui_title_day_per_s,0.004,"TITLE: how fast the title's sun turns, day shares a second (a slow sweep, not the game's clock)"
 ui_title_sweep_s,1.8,TITLE: seconds the camera sweeps from the title's height down to the game's opening view when the reign begins
 map_compass_size_px_table,125,"WAR TABLE (owner 2026-10-07: 指南针挪到地图左上角里，放大1.2倍): the map's own compass at the map sheet's top-left, 1.2x the 104 px it had lying on the table below the report; it turns with the clock, its needle with the view, a click eases north"
+map_compass_alpha_table,1.0,"WAR TABLE (2026-10-07, the critic of the move into the map): the compass on the map sheet is a solid object, the map never showing through its wood"
 ui_landing_lift_s,0.4,"LANDING (owner 2026-10-01: the map is picked up and laid on the table): seconds the title's frame is lifted like a sheet — drawing back, the vellum margin and a shadow appearing"
 ui_landing_carry_s,0.9,"LANDING: seconds it is carried down onto the table to the map sheet's place, turning square"
 ui_landing_settle_s,0.25,LANDING: seconds it settles on the wood (ui_landing_give)

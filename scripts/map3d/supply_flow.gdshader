@@ -13,8 +13,8 @@ shader_type spatial;
 render_mode unshaded, cull_disabled, blend_mix, depth_draw_never, shadows_disabled, fog_disabled;
 
 uniform vec4 colour : source_color = vec4(0.859, 0.639, 0.2, 1.0);
-uniform vec4 glow : source_color = vec4(1.0, 0.95, 0.75, 1.0);
-uniform vec4 edge : source_color = vec4(0.17, 0.12, 0.08, 0.85);
+uniform vec4 glow : source_color = vec4(0.949, 0.784, 0.376, 1.0);
+uniform vec4 edge : source_color = vec4(0.227, 0.165, 0.078, 0.9);
 uniform float width_px = 6.0;
 uniform float lift_px = 10.0;
 // the hairline's share of the half-width, each side
@@ -23,7 +23,7 @@ uniform float dash_px = 26.0;
 uniform float gap_px = 54.0;
 uniform float flow_px_s = 60.0;
 // how much of the core a streak's head lights (0 none)
-uniform float glow_strength : hint_range(0.0, 1.0) = 0.85;
+uniform float glow_strength : hint_range(0.0, 1.0) = 1.0;
 // 2 * tan(fov / 2) / viewport height: metres per screen px per metre away.
 uniform float px_per_dist = 0.001;
 
@@ -44,7 +44,7 @@ void fragment() {
 	float period = max(dash_px + gap_px, 1.0);
 	float phase = mod(v_arc_px - TIME * flow_px_s, period);
 	float streak = phase < dash_px ? phase / max(dash_px, 0.001) : 0.0;
-	streak = streak * streak * smoothstep(dash_px, dash_px - 3.0, phase);
+	streak = streak * streak * smoothstep(dash_px, dash_px - 6.0, phase);
 	vec3 core = mix(colour.rgb, glow.rgb, glow_strength * streak);
 	// the dark hairline at both sides, its inner edge anti-aliased
 	float inner = 1.0 - edge_share;

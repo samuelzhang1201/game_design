@@ -21,12 +21,14 @@ const MATERIAL := preload("res://scenes/map3d/materials/march_dust.tres")
 ## A puff every this share of a piece's height walked.
 @export var step_share := 0.35
 ## The string's length behind the column, piece heights; it fades over its last half.
-@export var tail_share := 5.0
+@export var tail_share := 4.0
 ## A puff's size, a share of a piece's height (each varies ±`size_jitter`).
-@export var size_share := 1.3
+@export var size_share := 0.8
 @export var size_jitter := 0.3
 ## How far either side of the column's line a puff rises, a share of a piece's height.
-@export var spread_share := 0.8
+@export var spread_share := 0.5
+## How far behind the column's middle a puff rises (its rear ranks), a share of a piece's height.
+@export var back_share := 1.0
 ## The most puffs drawn at once (the MultiMesh's capacity).
 @export var max_puffs := 600
 
@@ -135,8 +137,9 @@ func _walk(code: String, xz: Vector2, h: float, running: bool, now: float) -> vo
 	while at <= walked + d:
 		var p := from.lerp(xz, (at - walked) / d)
 		var sd := seed_of(code, puffs.size() + int(at / step))
-		var side := (xz - from).normalized().orthogonal() * (sd - 0.5) * 2.0 * spread_share * h
-		puffs.append([p + side, now, sd, at])
+		var ahead := (xz - from).normalized()
+		var side := ahead.orthogonal() * (sd - 0.5) * 2.0 * spread_share * h
+		puffs.append([p + side - ahead * back_share * h, now, sd, at])
 		col["emitted"] = at
 		at += step
 	col["walked"] = walked + d
