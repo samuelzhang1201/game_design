@@ -267,13 +267,16 @@ static func _within(a: Vector2i, b: Vector2i, metres: int) -> bool:
 
 
 ## A land regiment with state and fit men that is not falling back from a
-## battle (`disengaging`, cleared when its march ends).
+## battle (`disengaging`, cleared when its march ends) nor drawing breath
+## after one (`disengaged_until`, an absolute day still to come).
 static func _can_fight(repo: DataRepository, state: GameState, code: String) -> bool:
 	var reg := ArmySystem.regiment(repo, code)
 	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 		return false
 	var e := _stored(state, code)
 	if e.is_empty() or int(e.get("disengaging", 0)) == 1:
+		return false
+	if int(e.get("disengaged_until", 0)) > state.absolute_day():
 		return false
 	return ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), e) > 0
 
@@ -464,7 +467,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 	var att: Array = b["att"]
 	var def: Array = b["def"]
 	if att.is_empty() or def.is_empty():
-		_end(state, b, "emptied", events)
+		_end(repo, state, b, "emptied", events)
 		return true
 	var n := int(b["rounds"]) + 1
 	var stance := func(c: String) -> String: return stance_of(state, c)
@@ -484,13 +487,13 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		"results": results, "left": left})
 	var rout := String(tier.get("rout", "none"))
 	if rout == "attacker" or rout == "defender":
-		_end(state, b, "rout_" + rout, events)
+		_end(repo, state, b, "rout_" + rout, events)
 		return true
 	if (b["att"] as Array).is_empty() or (b["def"] as Array).is_empty():
-		_end(state, b, "emptied", events)
+		_end(repo, state, b, "emptied", events)
 		return true
 	if n >= int(repo.bal("battle_max_rounds")):
-		_end(state, b, "rounds", events)
+		_end(repo, state, b, "rounds", events)
 		return true
 	return false
 
@@ -573,18 +576,35 @@ static func _fall_back(repo: DataRepository, state: GameState, code: String, b: 
 			best_d = d
 			best_m = m
 	if best == "":
+		# nowhere to go: it halts, and draws breath as after a draw, so the
+		# same enemy does not take it again the next morning
 		_halt(state, code)
+		_pause(repo, state, code)
 		return
 	e["dest_x_m"] = best_m.x
 	e["dest_y_m"] = best_m.y
 	e["order"] = ArmySystem.ORDER_MARCH
 
 
+## No contact for `code` for battle_disengage_days from today
+## (`disengaged_until`); its orders still work.
+static func _pause(repo: DataRepository, state: GameState, code: String) -> void:
+	var e := _stored(state, code)
+	if not e.is_empty():
+		e["disengaged_until"] = state.absolute_day() + int(repo.bal("battle_disengage_days"))
+
+
 ## End battle `b`: its survivors stay halted where they stand (the player's
-## await orders; a foe's host decides its own, EnemyAi).
-static func _end(state: GameState, b: Dictionary, why: String, events: Array) -> void:
+## await orders; a foe's host decides its own, EnemyAi). A battle that ran to
+## battle_max_rounds is a DRAW: every survivor pauses (_pause), and if the
+## two are still in contact after it a new battle starts.
+static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: String, events: Array) -> void:
 	var att: Array = b["att"]
 	var def: Array = b["def"]
+	if why == "rounds":
+		for side: String in SIDES:
+			for c: Variant in b[side]:
+				_pause(repo, state, String(c))
 	var winner := ""
 	match why:
 		"rout_attacker":

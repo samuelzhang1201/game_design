@@ -294,6 +294,22 @@ func test_battle_ends_after_max_rounds_or_rout() -> void:
 	assert_eq(String(ends[0]["why"]), "rounds")
 	assert_eq(ArmySystem.order_of(repo, s, p), ArmySystem.ORDER_GARRISON, "survivors hold their ground")
 	assert_false(_in_battle(s, p))
+	# a draw: both sides draw breath for battle_disengage_days, still in contact
+	var ended_on := s.absolute_day()
+	var first_id := int(ends[0]["battle_id"])
+	var pause := int(repo.bal("battle_disengage_days"))
+	assert_gt(pause, 0, "balance.csv battle_disengage_days")
+	assert_eq(int(s.regiments[p]["disengaged_until"]), ended_on + pause)
+	assert_eq(int(s.foes[f]["disengaged_until"]), ended_on + pause)
+	for n in pause - 1:
+		_next_day(s)
+		BattleSystem.settle_day(repo, s)
+		assert_eq(s.battles.size(), 0, "day %d after the draw: no new battle" % (n + 1))
+	_next_day(s)
+	var again := BattleSystem.settle_day(repo, s)
+	assert_eq(s.battles.size(), 1, "after battle_disengage_days, still in contact: the war is renewed")
+	var renewed: Dictionary = _kinds(again, "start")[0]
+	assert_gt(int(renewed["battle_id"]), first_id, "a new battle, a new id")
 	# a rout ends it on the day
 	var s2 := SuiteData.campaign(repo, 7)
 	_one_tier(30, 150, 600, 5, -20, "defender")
@@ -370,6 +386,7 @@ func test_steady_retreats_below_retreat_odds() -> void:
 		var f: String = _theirs()[0]
 		_place(s, p, _spot(s))
 		_foe(s, f, _spot(s) + Vector2i(1000, 0))
+		s.foes[f]["stance"] = "hold"   # the foe never gives way, whatever the pack's numbers
 		var steady := func(_c: String) -> String: return "steady"
 		var a := BattleSystem.side_power(repo, s, [f], steady, true, [p])
 		var d := BattleSystem.side_power(repo, s, [p], steady, false, [f])
@@ -379,6 +396,28 @@ func test_steady_retreats_below_retreat_odds() -> void:
 		outcomes[margin] = _in_battle(s, p)
 	assert_false(bool(outcomes[1]), "odds one below retreat_odds_permille: it retreats")
 	assert_true(bool(outcomes[0]), "odds at retreat_odds_permille: it stays")
+
+
+func test_a_fall_back_with_no_town_is_not_caught_again_next_day() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	_one_tier(0, 0, 600, 0, 0)
+	var p: String = _mine()[0]
+	var f: String = _theirs()[0]
+	_place(s, p, _spot(s))
+	_foe(s, f, _spot(s) + Vector2i(1000, 0))
+	s.regiments[p]["stance"] = "evade"
+	# the realm has lost every town: nowhere to fall back to
+	var raider := repo.resolve_realm("raider_realm")
+	for t: String in repo.burgs:
+		s.province_owner[String(repo.burgs[t].get("province_code", ""))] = raider
+	BattleSystem.settle_day(repo, s)
+	assert_false(_in_battle(s, p), "it evaded")
+	assert_ne(ArmySystem.order_of(repo, s, p), ArmySystem.ORDER_MARCH, "no town to march for: it halts")
+	assert_eq(int(s.regiments[p]["disengaged_until"]), s.absolute_day() + int(repo.bal("battle_disengage_days")))
+	_next_day(s)
+	BattleSystem.settle_day(repo, s)
+	assert_false(_in_battle(s, p), "not caught again the next morning")
+	assert_eq(s.battles.size(), 0)
 
 
 ## --- reinforcements and leaving ------------------------------------------
