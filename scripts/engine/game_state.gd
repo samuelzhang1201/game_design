@@ -85,6 +85,10 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	# and the crown is the player character's house.
 	WorldLedger.seed_metrics(data, s)
 	ArmySystem.ensure(data, s)
+	# The raid hosts stand at their assembly points until their day (spec
+	# 2026-10-07-enemy-ai-and-battle §2): foes, not regiments.
+	for host: Dictionary in data.raid_hosts:
+		EnemyAi.spawn(data, s, host)
 	# The pools as each town holds them (spec 2026-10-07-army-supply-lines §3.1).
 	TownStores.seed_from_pools(data, s)
 	for id in s.characters:

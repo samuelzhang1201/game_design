@@ -878,8 +878,9 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 	entry["dest_y_m"] = int(entry["y_m"])
 
 
-## One DAY of marching for every regiment under a march order, in code order.
-## Returns the codes that arrived today, for the news bar. Straight-line: the
+## One DAY of marching for every regiment under a march order, in code order,
+## the player's first and then the foes' (GameState.foes).
+## Returns the player's codes that arrived today, for the news bar. Straight-line: the
 ## column walks at its own pace toward where it was sent, and there is no
 ## pathfinding yet — a march ordered across a bay walks across it.
 static func march_day(repo: DataRepository, state: GameState) -> Array:
@@ -895,6 +896,16 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 			# nothing left to stop (a pencilled new march still stands)
 			if String(WarDrafts.of(state, code).get("order", "")) == WarDrafts.GARRISON:
 				WarDrafts.strike(state, code)
+	# The foes' second pass (spec 2026-10-07-enemy-ai-and-battle §2), in code
+	# order and by the same even step: a column in a battle stands; one that
+	# arrives holds its ground, and a foreign column's arrival is not news, so
+	# it is not in `arrived`.
+	var foes := state.foes.keys()
+	foes.sort()
+	for c in foes:
+		var code := String(c)
+		if BattleSystem.battle_of(state, code).is_empty():
+			_march_one(repo, state, code, state.foes[code], state.absolute_day())
 	return arrived
 
 

@@ -991,7 +991,10 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 			stats.append(_stat(unit, str(n), "%s — %d" % [unit_label, n]))
 	else:
 		stats.append(_stat("army_total", total_text, "Headcount — " + total_text))
-	var st := ArmySystem.state_of(repo, state, code) if state != null else {}
+	# Only a viewer who knows the regiment "full" reads its state (a foe's
+	# state exists, and is the fog's to keep: the exact men, the morale, the
+	# stores and the rest stay behind the words).
+	var st := ArmySystem.state_of(repo, state, code) if state != null and reg_known == "full" else {}
 	# the dead are no longer under arms (the pack's headcount is immutable;
 	# ArmySystem.fit_heads' own count of them)
 	var under := total - maxi(0, int(st.get("dead", 0)))

@@ -74,6 +74,7 @@ func test_raid_hosts_name_real_regiments() -> void:
 func test_state_of_reads_foes() -> void:
 	var s := SuiteData.campaign(repo, 11)
 	var code := String((repo.raid_hosts[0]["regiments"] as Array)[0])
+	s.foes.erase(code)   # the campaign spawns every host's regiments (EnemyAi.spawn)
 	assert_eq(ArmySystem.state_of(repo, s, code), {}, "not a foe yet, not the player's: nothing")
 	assert_false(ArmySystem.is_foe(s, code))
 	var entry := {"morale": 80, "wounded": 0, "supplies": 40, "x_m": 5, "y_m": 6}
@@ -90,8 +91,10 @@ func test_foes_never_in_player_iteration() -> void:
 
 func test_foe_fields_survive_the_save() -> void:
 	var s := SuiteData.campaign(repo, 11)
-	assert_eq(s.foes, {})
-	assert_eq(s.ai_hosts, {})
+	assert_false(s.foes.is_empty(), "the hosts are spawned with the campaign")
+	assert_false(s.ai_hosts.is_empty())
+	s.foes.clear()
+	s.ai_hosts.clear()
 	assert_eq(s.battles, [])
 	assert_eq(s.foe_next_id, 0)
 	s.foes["a"] = {"morale": 80, "x_m": 12}
