@@ -23,7 +23,7 @@ const LEGEND := [
 	{"key": "wood", "label": "Woods"}, {"key": "manor", "label": "Manor"},
 	{"key": "walls", "label": "Walled town"}, {"key": "port", "label": "Port"},
 	{"key": "bridge", "label": "Bridge"}, {"key": "ford", "label": "Ford"},
-	{"key": "supply", "label": "Supply road"}, {"key": "courier", "label": "Courier"},
+	{"key": "supply", "label": "Supply line"}, {"key": "courier", "label": "Courier"},
 	{"key": "weather", "label": "Foul weather"}, {"key": "spy", "label": "Spy report"},
 	{"key": "mark_brigands", "label": "Brigands"}, {"key": "mark_pirates", "label": "Pirates"},
 	{"key": "mark_mines", "label": "Mine"}, {"key": "mark_battlefields", "label": "Battlefield"},
@@ -278,9 +278,15 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([c + Vector2(0, -s), c + Vector2(0, s)]), s * 0.35, s * 0.3):
 				draw_polyline(d, ink, line, true)
 		"supply":
-			var intel: Color = pal.get("intel_ink", ink)
-			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([a, b]), dash * 0.3, dash * 0.6):
-				draw_polyline(d, intel, line, true)
+			# the gold line as the table draws it (its look, war_supply_flow.tres): a
+			# dark hairline edge, the gold core, one bright streak toward the army
+			var look := _view.supply_look() if _view != null else null
+			var gold: Color = look.get_shader_parameter("colour") if look != null else Color(0.86, 0.64, 0.2)
+			var edge: Color = look.get_shader_parameter("edge") if look != null else ink
+			var glow: Color = look.get_shader_parameter("glow") if look != null else Color.WHITE
+			draw_line(a, b, edge, line * 2.4, true)
+			draw_line(a, b, gold, line * 1.4, true)
+			draw_line(a.lerp(b, 0.55), a.lerp(b, 0.8), glow, line * 1.4, true)
 		"courier":
 			var intel: Color = pal.get("intel_ink", ink)
 			var c := r.get_center()

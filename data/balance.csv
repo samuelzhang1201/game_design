@@ -211,6 +211,12 @@ army_morale_fed,75,LEDGER M1: the morale a regiment with full stores climbs towa
 army_morale_garrison_bonus,5,LEDGER M1: a garrison's mark stands this much higher
 army_road_reach_m,1500,"owner 2026-10-06 (spec 2026-10-06-army-location-and-town-defence §6): a marching regiment within this many metres of a road or trail marches at the road's pace (data/army_ground_speed.csv)"
 army_march_days_cap,3650,"the most days ArmySystem.march_days_between walks a route before it gives the figure up (a guard, never reached on a pack: ten years)"
+army_route_sample_m,3000,"march waypoints (spec 2026-10-07-march-waypoints §1): a route through waypoints is sampled into a whole-metre point every this many metres of chord per leg (MarchRoute) — the line drawn and walked; a 3 km chord on a 50 km bend strays 20 m"
+army_march_waypoints_max,8,"march waypoints (spec §1, ruling 3): the most waypoints one ARMY_MARCH may name; Add waypoint and a bend stop there"
+map3d_route_grab_px,10,"march waypoints (spec 2026-10-07-march-waypoints ruling 9): on the 3D map a left press this near (design px) a planned route's waypoint takes it, this near its line inserts one (Map3DRouteEdit)"
+map3d_route_handle_px,5,"march waypoints: the radius (design px) of the ring each waypoint of a planned route is drawn with on the 3D map (Map3DHudRuler)"
+war_route_grab_px,10,"march waypoints (ruling 9): the WAR ROOM's grab reach, screen px (WarRoomRake)"
+war_route_handle_px,5,"march waypoints: a waypoint's ring in the WAR ROOM, screen px (WarHud)"
 army_morale_drift_per_month,6,LEDGER M1: points morale moves toward its mark a month
 army_wound_recovery_permille,200,"regiments: share of the wounded who return to the ranks each month, per mille, at least 1 while any are wounded"
 army_training_per_month,0,regiments: training gained each month (placeholder: none)
@@ -458,8 +464,6 @@ war_room_floor_z_min_m,-2.0,"WAR ROOM v2 (spec §1.1): the room's north wall (z)
 war_room_floor_z_max_m,3.0,"WAR ROOM v2 (spec §1.1): the room's south wall (z), metres"
 war_unroll_s,0.55,"WAR ROOM (owner 2026-10-02: 点击war room的进入动画太突兀，做成一个从上往下的卷轴拉下来即可): seconds the room takes to come down over the map and the left column like a hanging scroll, and to roll back up on close (WarScrollReveal)"
 war_unroll_roller_px,20,"WAR ROOM (owner 2026-10-02): the hanging scroll's roller, design px thick (its rod at the top is 0.6 of it)"
-war_report_roll_s,0.45,"WAR ROOM v2 (spec §1.2): seconds a picked piece's card takes to unroll over the room's left (× 0.6); the room itself comes down by war_unroll_s since 2026-10-02"
-war_report_roller_px,12,"WAR ROOM v2 (spec §1.2): the roller under a picked piece's card, design px thick"
 war_board_fly_s,0.7,"WAR ROOM v2 (owner 2026-10-02, spec §1.3): seconds the camera takes to fly from the table to the easel's board, and back"
 war_board_distance_m,1.35,"WAR ROOM v2 (spec §1.3): the camera's opening distance square in front of the board, metres — the whole 0.8 m panel and a margin in the 40-degree view (1.0 cut its title off)"
 war_board_min_m,0.35,"WAR ROOM v2 (spec §1.3): closest lean to the board — a note's date reads"
@@ -643,12 +647,15 @@ war_ink_anchor_ratio,0.9,"WAR ROOM v2 B (spec §2.4): a port's anchor, as a shar
 war_ink_river_discharge_k,0.06,"WAR ROOM v2 B (spec §2.4): a river's mouth width: war_ink_river_px x (1 + this x sqrt(discharge))"
 war_ink_river_max_px,9,"WAR ROOM v2 B (spec §2.4): no river is inked wider than this at its mouth, ink px"
 war_ink_river_label_px,22,"WAR ROOM v2 B (spec §2.4): a river's name, ink px, in the river's blue"
+war_ink_river_smooth_steps,4,"WAR ROOM (owner 2026-10-07: the rivers were stiff and ruler-straight): without the build's rivers.json (WarBake.river_courses, the 3D map's own courses), a river's pack polyline is smoothed by MapGeometry.smooth_open with this many points per segment before it is inked"
+war_ink_river_step_px,6,"WAR ROOM (owner 2026-10-07: the rivers read as ruler-straight segments): a river's course is inked with a point at least every this many ink px, on a centripetal Catmull-Rom curve through its samples (WarSheetInk.densify via WarSheetInk.river_line) — the build's samples lie ~60 ink px apart on a sheet"
+war_ink_river_feather_px,1.2,"WAR ROOM (owner 2026-10-07): a river is inked as one tapered ribbon (WarInkPainter._draw_river) whose edges fade to clear over this many ink px — the ribbon's antialiasing"
+war_ink_river_label_lift,0.35,"WAR ROOM (owner 2026-10-07): a river's name is written along its course on its upper side, its baseline this share of war_ink_river_label_px beyond the river's mouth half-width"
 war_ink_bridge_px,7,"WAR ROOM v2 B (spec §2.4): a bridge's parapets / a ford's dashes, ink px"
 war_intel_texture_px,4096,"(visual review 2026-10-07: 2048 -> 4096 with every war_intel_*_px doubled, so nothing changes size on the table: at 10° sheets and the closest lean the supply dashes smeared into streaks) WAR ROOM v2 B (spec §2.4): the intelligence layer's texture width — redrawn once a day, so smaller than the sheet's ink"
 war_intel_supply_px,3.6,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a supply road's width, intel px — plan B Task 10, the critic of 2026-10-02: thick and blurred close in"
 war_intel_supply_dash_px,6,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a supply road's dash, intel px — plan B Task 10, the critic of 2026-10-02: a dotted line, not the trails' dash"
 war_intel_supply_gap_px,14,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a supply road's gap, intel px — plan B Task 10, the critic of 2026-10-02: dotted"
-war_intel_supply_loss_fade,1.5,"WAR ROOM v2 B: a supply road fades by its loss x this (never below a quarter)"
 war_intel_courier_px,28,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a courier's mark, intel px"
 war_intel_weather_px,36,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a weather mark, intel px"
 war_intel_label_px,30,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a spy report's words, intel px"
@@ -818,10 +825,8 @@ ui_title_drift_deg_per_s,0.8,TITLE: degrees a second the camera drifts round the
 ui_title_day_share,0.62,"TITLE: the share of the day the title opens on (0.25 noon in the south, past 0.5 the north's dusk): a low warm sun"
 ui_title_day_per_s,0.004,"TITLE: how fast the title's sun turns, day shares a second (a slow sweep, not the game's clock)"
 ui_title_sweep_s,1.8,TITLE: seconds the camera sweeps from the title's height down to the game's opening view when the reign begins
-map_compass_size_px_table,0,"WAR TABLE (owner 2026-10-01): the compass lies on the table (TableCompass), so the map draws none and its corner takes no click"
-ui_table_compass_px,104,"WAR TABLE: design px across the compass lying on the table below the report's drawn foot, at most — smaller only as far as the free band there demands (owner 2026-10-01: 指南针被盖住了，往下挪，露出来; it had lain under the report, which now fills its column)"
-ui_table_compass_inset_px,18,WAR TABLE: design px from the table's left edge to the compass
-ui_table_compass_clear_px,8,"WAR TABLE: design px the compass keeps off the report's drawn foot (its deckle, its tilt and its shadow)"
+map_compass_size_px_table,125,"WAR TABLE (owner 2026-10-07: 指南针挪到地图左上角里，放大1.2倍): the map's own compass at the map sheet's top-left, 1.2x the 104 px it had lying on the table below the report; it turns with the clock, its needle with the view, a click eases north"
+map_compass_alpha_table,1.0,"WAR TABLE (2026-10-07, the critic of the move into the map): the compass on the map sheet is a solid object, the map never showing through its wood"
 ui_landing_lift_s,0.4,"LANDING (owner 2026-10-01: the map is picked up and laid on the table): seconds the title's frame is lifted like a sheet — drawing back, the vellum margin and a shadow appearing"
 ui_landing_carry_s,0.9,"LANDING: seconds it is carried down onto the table to the map sheet's place, turning square"
 ui_landing_settle_s,0.25,LANDING: seconds it settles on the wood (ui_landing_give)

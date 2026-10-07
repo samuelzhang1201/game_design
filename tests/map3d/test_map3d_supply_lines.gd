@@ -68,12 +68,12 @@ func test_a_flowing_line_runs_from_its_town_to_the_column() -> void:
 ## piece, cut back to the road's nearest point when it walks back along it.
 func test_the_end_follows_the_drawn_piece() -> void:
 	var road := PackedVector2Array([Vector2(0, 0), Vector2(1000, 0), Vector2(2000, 0)])
-	var ahead := Map3DSupplyLines.follow(road, Vector2(2300, 100))
+	var ahead := Map3DSupplyRoad.follow(road, Vector2(2300, 100))
 	assert_eq(ahead.size(), 4)
 	assert_eq(ahead[3], Vector2(2300, 100))
-	var back := Map3DSupplyLines.follow(road, Vector2(1500, 40))
+	var back := Map3DSupplyRoad.follow(road, Vector2(1500, 40))
 	assert_eq(back, PackedVector2Array([Vector2(0, 0), Vector2(1000, 0), Vector2(1500, 0), Vector2(1500, 40)]))
-	assert_eq(Map3DSupplyLines.follow(road, Vector2(2000, 0)), road, "at the end: unchanged")
+	assert_eq(Map3DSupplyRoad.follow(road, Vector2(2000, 0)), road, "at the end: unchanged")
 
 
 ## Only a piece drawn within a few days' march of its regiment's spot moves
@@ -104,7 +104,7 @@ func test_the_line_lies_on_the_drawn_road() -> void:
 	var on := drawn[drawn.size() / 2]
 	var off := on + Vector2(0.7, -0.7)
 	var route := PackedVector2Array([Vector2(-50, -50), off, Vector2(-60, -60)])
-	var laid := Map3DSupplyLines.on_roads(_repo, route)
+	var laid := Map3DSupplyRoad.on_roads(_repo, route)
 	assert_eq(laid[0], route[0])
 	assert_eq(laid[2], route[2])
 	assert_lt(laid[1].distance_to(on), off.distance_to(on), "moved toward the road")
@@ -183,8 +183,18 @@ func test_step_lays_the_lines_only_when_they_moved() -> void:
 	await wait_process_frames(2)
 
 
-## Hidden regiments draw no line; a walking piece moves the end, at most once
-## every map3d_supply_follow_s.
+## Whether the tail's mesh ends at `xz` (its last vertex pair, world XZ).
+func _tail_reaches(lines: Map3DLayerLines, xz: Vector2) -> bool:
+	var mesh := lines.line_mesh("SupplyTails")
+	if mesh == null:
+		return false
+	var verts: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var last := verts[verts.size() - 1]
+	return Vector2(last.x, last.z).distance_to(xz) < 0.5
+
+
+## Hidden regiments draw no line; a walking piece moves the tail every frame
+## and the body at most once every map3d_supply_follow_s.
 func test_the_lines_follow_the_units_layer() -> void:
 	_s.supply_lines[_code]["state"] = SupplyLines.FLOWING
 	var units := FakeUnits.new()
@@ -198,14 +208,44 @@ func test_the_lines_follow_the_units_layer() -> void:
 	units.shown = true
 	layer.step(0.016)
 	assert_not_null(lines.line_mesh("SupplyLines"), "shown again, at once")
-	var drawn := layer.draws
 	var road: PackedVector2Array = Map3DSupplyLines.lines_world(_ctx())[0]
 	var end := road[road.size() - 1]
-	units.pos = {_code: end + Vector2(_repo.bal("map3d_line_step_m") * 3.0, 0)}
+	units.pos = {_code: end}
+	var drawn := layer.draws
 	layer.step(0.01)
-	assert_eq(layer.draws, drawn, "within the throttle the end waits")
+	assert_eq(layer.draws, drawn + 1, "a piece come onto its road: the body is cut for it at once")
+	drawn = layer.draws
+	var on := (end - road[road.size() - 2]).normalized()  # walking on along the road's last stretch
+	var piece := end + on * _repo.bal("map3d_line_step_m") * 3.0
+	units.pos = {_code: piece}
+	layer.step(0.01)
+	assert_eq(layer.draws, drawn, "within the throttle the body waits")
+	assert_true(_tail_reaches(lines, piece), "but the tail follows the piece that frame")
+	units.pos = {_code: piece + on * 20.0}
+	layer.step(0.01)
+	assert_true(_tail_reaches(lines, piece + on * 20.0), "and the next")
 	layer.step(_repo.bal("map3d_supply_follow_s"))
-	assert_eq(layer.draws, drawn + 1, "then it follows the piece")
+	assert_eq(layer.draws, drawn + 1, "then the body is laid again")
 	layer.step(_repo.bal("map3d_supply_follow_s"))
 	assert_eq(layer.draws, drawn + 1, "a piece standing still lays nothing")
 	await wait_process_frames(2)
+
+
+## The tail carries the body's arc in UV.x, so the flow runs on across the cut.
+func test_the_tail_runs_on_from_the_body() -> void:
+	var road := PackedVector2Array([Vector2(0, 0), Vector2(100, 0), Vector2(200, 0), Vector2(300, 0)])
+	var at := Map3DSupplyRoad.nearest(road, Vector2(250, 30))
+	assert_eq(int(at[0]), 3)
+	assert_eq(at[1], Vector2(250, 0))
+	var tail := Map3DSupplyRoad.tail(road, 2, Vector2(250, 30), at)
+	assert_eq(tail, PackedVector2Array([Vector2(100, 0), Vector2(200, 0), Vector2(250, 0), Vector2(250, 30)]))
+	assert_eq(Map3DSupplyRoad.follow(road, Vector2(250, 30)),
+		road.slice(0, 2) + tail.slice(1), "the body and its tail are the followed road")
+	var flat := func(_xz: Vector2) -> float: return 0.0
+	var arrays := Map3DSupplyRoad.tail_arrays([tail, tail], [100.0, 7.0], flat)
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	assert_eq(uvs[0].x, 100.0, "the first tail starts at its body's arc")
+	assert_eq(uvs[tail.size() * 2].x, 7.0, "the second at its own")
+	assert_eq((arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size(), 2 * (tail.size() - 1) * 6)
+	assert_eq((arrays[Mesh.ARRAY_INDEX] as PackedInt32Array)[(tail.size() - 1) * 6], tail.size() * 2,
+		"the second tail's triangles index its own vertices")

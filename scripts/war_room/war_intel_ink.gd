@@ -1,8 +1,7 @@
 class_name WarIntelInk
 extends RefCounted
 ## What we KNOW, inked over the laid sheet (owner 2026-10-02, spec
-## 2026-10-02-war-room-v2 §2.4): the crown's regiments' flowing supply roads
-## (fainter for what they lose), the crown's couriers on the road and the road ahead,
+## 2026-10-02-war-room-v2 §2.4): the crown's couriers on the road and the road ahead,
 ## this spell's weather by province, and every spy report that has COME IN (a
 ## missive) as a ring of its estimate. Never a foreign regiment's line, never a
 ## spy still riding as a report. In ink-texture px like WarSheetInk; drawn into
@@ -18,19 +17,8 @@ static func cache_key(state: GameState, sheet_index: int) -> int:
 static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int) -> Dictionary:
 	var r: Rect2 = sheet["rect"]
 	var k := float(tex_px) / r.size.x
-	var out := {"supply": [], "couriers": [], "weather": [], "spies": [], "hazards": []}
-	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).map(
-		func(x: Dictionary) -> String: return String(x["regiment_code"]))
-	ours.sort()
-	for code: String in ours:
-		# only the wagons rolling are a road (as the 3D map): no ordered, riding or cut line
-		if String(SupplyLines.line(state, code).get("state", "")) != SupplyLines.FLOWING:
-			continue
-		var route := SupplySystem.route_px(repo, state, code)
-		if route.size() >= 2 and WarSheetInk._touches(r, route):
-			var line := SupplySystem.line_of(repo, state, code)
-			(out["supply"] as Array).append({"code": code, "poly": WarSheetInk._to_tex(r, k, route),
-				"loss_permille": int(line["loss_permille"])})
+	# the supply lines are not inked: they move with the pieces (WarSupplyFlow)
+	var out := {"couriers": [], "weather": [], "spies": [], "hazards": []}
 	for c: Dictionary in state.couriers:
 		var pts := PackedVector2Array([ArmySystem.metres_to_pack(repo, Vector2i(int(c["x_m"]), int(c["y_m"])))])
 		for p: Array in c.get("path", []):

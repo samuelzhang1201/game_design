@@ -15,6 +15,9 @@ if [ "$1" = "--fast" ]; then
   SCRIPT_DIRS=$(for d in $FAST_DIRS; do printf 'tests/%s ' "$d"; done)
 fi
 
+# $GODOT overrides the Godot binary (the cloud SessionStart hook sets it).
+GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
+
 TEST_OUTPUT="/tmp/gut_test_output_$$.txt"
 trap 'rm -f "$TEST_OUTPUT"' EXIT
 
@@ -22,7 +25,7 @@ trap 'rm -f "$TEST_OUTPUT"' EXIT
 # shutdown issue, but the import completes successfully before the crash. Exit code 0
 # is also acceptable (no crash on other platforms). Show diagnostics on real failure.
 code=0
-/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --import || code=$?
+"$GODOT" --headless --path . --import || code=$?
 if [ "$code" != "0" ] && [ "$code" != "134" ]; then
   echo "import failed with exit code $code" >&2
   exit "$code"
@@ -32,7 +35,7 @@ fi
 # exit code: piping into `tee` under /bin/sh yields the pipeline's status,
 # which is tee's exit code, not Godot's — a red suite would exit 0.
 code=0
-/Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
+"$GODOT" --headless --path . \
   -s addons/gut/gut_cmdln.gd -gdir="$DIRS" -ginclude_subdirs -gpre_run_script=res://tests/pre_run.gd -gpost_run_script=res://tests/post_run.gd -gexit > "$TEST_OUTPUT" 2>&1 || code=$?
 cat "$TEST_OUTPUT"
 

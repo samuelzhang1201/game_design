@@ -18,12 +18,15 @@ var _press_on_hud := false
 var _rpress_pos := Vector2.ZERO
 ## Whether the right button has turned the view since it went down.
 var _rdragged := false
+## A planned march's line, bent by a left drag while its confirm stands.
+var route := Map3DRouteEdit.new()
 
 
 func bind(p_view: Map3DView, p_rig: Map3DCameraRig, p_repo: DataRepository) -> void:
 	view = p_view
 	rig = p_rig
 	repo = p_repo
+	route.bind(p_view, p_rig)
 
 
 ## Takes one event; true when the view takes it. Its camera moves are told to
@@ -74,6 +77,11 @@ func _button(mb: InputEventMouseButton) -> bool:
 		if not mb.pressed and _press_on_hud:
 			_press_on_hud = false
 			return true
+		if mb.pressed and route.press(mb.position):
+			return true   # a press on the planned route takes a waypoint, no pan
+		if not mb.pressed and route.bending():
+			route.release()
+			return true
 		if mb.pressed:
 			_press_pos = mb.position
 			_dragging = false
@@ -101,6 +109,9 @@ func _motion(mm: InputEventMouseMotion) -> bool:
 		view.clear_hover()
 	if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
 		if _press_on_hud:
+			return true
+		if route.bending():
+			route.drag(mm.position)
 			return true
 		if not _dragging and _press_pos.distance_to(mm.position) > CLICK_SLOP:
 			_dragging = true

@@ -18,6 +18,9 @@ signal army_menu_requested(code: String, at: Vector2)
 signal garrison_menu_requested(codes: Array, at: Vector2)
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 signal route_clicked(code: String, at: Vector2)
+## A planned march's waypoints were bent on the table (WarRoomRake; spec
+## 2026-10-07-march-waypoints ruling 9): ArmyOrderMenu keeps or refuses them.
+signal route_bent(waypoints: PackedVector2Array)
 signal rake_started(code: String)
 signal rake_dropped
 signal sheet_requested(index: int)
@@ -33,6 +36,9 @@ signal board_hovered(uv: Vector2)
 ## The pointer has rested on open table (spec 2026-10-07-war-room-scale-hover
 ## §4.2): the screen reads the ground there.
 signal ground_hovered(pack_px: Vector2, screen_px: Vector2)
+## The pointer has rested on a piece (owner 2026-10-07): the screen shows the
+## regiments it stands for, with their combat figures.
+signal piece_hovered(code: String, screen_px: Vector2)
 ## A rake is aimed at `pack_px`: the screen reads the destination for `code`.
 signal rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2)
 ## The slip goes: the pointer moved, the rake ended, the room got busy.
@@ -50,6 +56,12 @@ var aiming := false:
 			_rake.redraw()
 var aim_dest := Vector2(-1, -1)
 var aim_code := ""
+## The planned march's waypoints, pack px (ArmyOrderMenu sets them; a bend moves them).
+var aim_waypoints := PackedVector2Array():
+	set(v):
+		aim_waypoints = v
+		if _repo != null and is_inside_tree():
+			_rake.redraw()
 
 @onready var _viewport: SubViewport = %Viewport
 @onready var _display: TextureRect = %Display
@@ -63,6 +75,7 @@ var aim_code := ""
 @onready var _pennants: WarPennants = %Pennants
 @onready var _board: MeshInstance3D = %BoardPanel
 @onready var _marker: Node3D = %Marker
+@onready var _supply: MeshInstance3D = %SupplyFlow
 
 var _repo: DataRepository
 var _state_fn: Callable
@@ -101,6 +114,7 @@ var _toss: Dictionary = {}
 var _toss_t := 0.0
 var _toss_to := -1
 var _toss_n := 0
+var _supply_routes: Array = []   # the flowing supply roads on this sheet (WarSupplyFlow.routes), read on a state change
 
 
 ## No slip while the camera or the sheet moves, in board mode, or while a
@@ -301,6 +315,7 @@ func lay_sheet(index: int) -> void:
 	_stand_marker(index)
 	_pieces.rebuild(state())
 	_pennants.rebuild(state(), true)
+	_read_supply()
 	_rake.redraw()
 	sheet_laid.emit(index)
 	await _paint_ink(mat)
@@ -328,8 +343,10 @@ func _process(delta: float) -> void:
 	elif _rake.code == "" and _dwell.step(delta, _repo.bal("war_hover_delay_s")):
 		var at := _dwell.at
 		var pk := pack_at(at)
-		var on_mark := piece_under(at) != "" or WarRoomPicks.nearest(_pennants.screen_hits(_camera, window_scale()), at, _repo.bal("war_pick_px")) != ""
-		if pk.x >= 0.0 and not on_mark:
+		var piece := piece_under(at)
+		if piece != "":
+			piece_hovered.emit(piece, at)   # its combat figures (owner 2026-10-07)
+		elif pk.x >= 0.0 and WarRoomPicks.nearest(_pennants.screen_hits(_camera, window_scale()), at, _repo.bal("war_pick_px")) == "":
 			ground_hovered.emit(pk, at)
 	var flying := _step_board(delta)
 	if not flying and (_rig.step(delta, _repo.bal("war_cam_north_s")) or key_pan(delta)):
@@ -339,8 +356,9 @@ func _process(delta: float) -> void:
 	if _swap.step(delta):
 		lay_sheet(_swap.to)
 	_table.scale = Vector3(1.0, 1.0, _swap.z_scale())
-	_pieces.visible = not _swap.active()   # the pieces and pennants are put away while a sheet rolls
+	_pieces.visible = not _swap.active()   # the pieces, pennants and supply lines are put away while a sheet rolls
 	_pennants.visible = _pieces.visible
+	_supply.visible = _pieces.visible
 
 
 func tossing() -> bool:
@@ -400,14 +418,19 @@ func _board_size() -> Vector2:
 	return (_board.mesh as QuadMesh).size
 
 
-## True when the panel's centre is in view, or the camera is the board's (the
-## screen renders the board's viewport only then).
+## True when any of the panel (its centre or a corner) is in view, or the
+## camera is the board's (the screen renders the board's viewport only then:
+## a board half in view must not show black).
 func board_visible() -> bool:
 	if _board_mode != "table":
 		return true
-	if _camera.is_position_behind(_board.global_position):
-		return false
-	return Rect2(Vector2.ZERO, size).has_point(_camera.unproject_position(_board.global_position) / window_scale())
+	var half := _board_size() * 0.5
+	var view := Rect2(Vector2.ZERO, size)
+	for c: Vector2 in [Vector2.ZERO, Vector2(-half.x, -half.y), Vector2(half.x, -half.y), Vector2(-half.x, half.y), half]:
+		var p := _board.global_transform * Vector3(c.x, c.y, 0.0)
+		if not _camera.is_position_behind(p) and view.has_point(_camera.unproject_position(p) / window_scale()):
+			return true
+	return false
 
 
 func _board_pose() -> Transform3D:
@@ -420,6 +443,10 @@ func enter_board() -> void:
 	if _board_mode != "table":
 		return
 	_rake.drop()
+	# the HUD's marks are screen px of the TABLE's view: none of them (the rake's
+	# arrow, the chalk ring, the pennants' dashes, the pencils) hangs over the
+	# board while the camera is away (owner 2026-10-07)
+	(%Hud as CanvasItem).visible = false
 	_table_pose = _camera.transform
 	_fly_from = _table_pose
 	_board_dist = _repo.bal("war_board_distance_m")
@@ -446,7 +473,8 @@ func _step_board(delta: float) -> bool:
 		if _fly_t >= 1.0:
 			if _board_mode == "to_table":
 				_board_mode = "table"
-				_apply_camera()
+				(%Hud as CanvasItem).visible = true
+				_apply_camera()   # the marks redrawn where the table's view puts them
 				board_left.emit()
 				return false
 			_board_mode = "board"
@@ -520,6 +548,7 @@ func _finish_swap() -> void:
 	_table.scale = Vector3.ONE
 	_pieces.visible = true
 	_pennants.visible = true
+	_supply.visible = true
 
 
 ## The laid sheet's intelligence layer onto the table's material (redrawn only
@@ -715,13 +744,52 @@ func refresh() -> void:
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
 	_pieces.update(state())
 	_pennants.rebuild(state())
+	_read_supply()
 	_rake.redraw()
 
 
-## Redraw the HUD's marks (the rake, the chalk ring, the pennants' dashes):
-## WarPieces asks each frame a piece is pushed, so they follow it.
+## Redraw the HUD's marks (the rake, the chalk ring, the pennants' dashes)
+## and lay the supply lines' ends again: WarPieces asks each frame a piece is
+## pushed, so they follow it.
 func redraw_marks() -> void:
 	_rake.redraw()
+	_lay_supply()
+
+
+## The flowing supply roads on the laid sheet, found again (the state moved).
+func _read_supply() -> void:
+	_supply_routes = WarSupplyFlow.routes(_repo, state(), _rect) if _sheet >= 0 else []
+	_lay_supply()
+
+
+## The supply lines' gold ribbons, each ending where its piece stands NOW
+## (mid-push included; a regiment of a garrison where the garrison's piece is).
+func _lay_supply() -> void:
+	if _supply_routes.is_empty():
+		_supply.mesh = null
+		return
+	var at := piece_pack_positions()
+	var ends := {}
+	for r: Dictionary in _supply_routes:
+		var code := String(r["code"])
+		ends[code] = at[code] if at.has(code) else position_of(code)
+	var lines: Array = []
+	for l: Dictionary in WarSupplyFlow.lines(_supply_routes, ends, _rect):
+		var pts := PackedVector3Array()
+		for p: Vector2 in l["poly"]:
+			pts.append(table_point(p))
+		lines.append(pts)
+	_supply.mesh = WarSupplyFlow.ribbon(lines)
+
+
+## The supply lines' look (war_supply_flow.tres): the key slip draws its line from it.
+func supply_look() -> ShaderMaterial:
+	return _supply.material_override as ShaderMaterial
+
+
+## The supply lines' mesh now (tests read it).
+func supply_mesh() -> ArrayMesh:
+	return _supply.mesh as ArrayMesh
 
 
 ## The rake's march was refused (or its order is done): let go of the piece.

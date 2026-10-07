@@ -141,6 +141,88 @@ func test_rivers_widen_toward_the_mouth_and_carry_their_names() -> void:
 		assert_true(rv.has("label"))
 
 
+## Owner 2026-10-07: the rivers were stiff and ruler-straight. A river is
+## inked on a curve with a point every war_ink_river_step_px at most; without
+## the build its course is the pack's polyline smoothed (MapGeometry.smooth_open),
+## its source and mouth kept where the whole of it is drawn.
+func test_a_river_is_inked_on_a_fine_curve_its_ends_kept() -> void:
+	var step := repo.bal("war_ink_river_step_px")
+	var sources := 0
+	var mouths := 0
+	for s: Dictionary in WarSheets.series(repo):
+		var r: Rect2 = s["rect"]
+		var k := 4096.0 / r.size.x
+		var ink := WarSheetInk.strokes(repo, state, s, 4096)
+		for rv: Dictionary in ink["rivers"]:
+			var poly: PackedVector2Array = rv["poly"]
+			for i in poly.size() - 1:
+				assert_lte(poly[i].distance_to(poly[i + 1]), step * 1.5, "a point every %s px or so" % step)
+			for code: String in repo.rivers:
+				var raw: PackedVector2Array = repo.rivers[code]["polyline"]
+				if float(rv["t0"]) == 0.0 and poly[0].distance_to((raw[0] - r.position) * k) < 0.01:
+					sources += 1
+				if float(rv["t1"]) == 1.0 and poly[poly.size() - 1].distance_to((raw[raw.size() - 1] - r.position) * k) < 0.01:
+					mouths += 1
+		if sources > 0 and mouths > 0:
+			break
+	assert_gt(sources, 0, "a river drawn from its source starts on the pack's source")
+	assert_gt(mouths, 0, "and one drawn to its mouth ends on the pack's mouth")
+
+
+func test_a_river_line_keeps_only_what_reaches_the_area_and_where_it_lies_along() -> void:
+	var poly := PackedVector2Array([Vector2(-100, 0), Vector2(0, 0), Vector2(10, 0), Vector2(20, 0), Vector2(120, 0), Vector2(220, 0)])
+	var c := WarSheetInk.river_line(poly, Rect2(5, -5, 10, 10), 5.0)
+	var line: PackedVector2Array = c["poly"]
+	assert_eq(line[0], Vector2(-100, 0), "one sample beyond the area's first span")
+	assert_eq(line[line.size() - 1], Vector2(120, 0), "and beyond its last")
+	assert_almost_eq(float(c["t0"]), 0.0, 0.0001)
+	assert_almost_eq(float(c["t1"]), 220.0 / 320.0, 0.0001)
+	assert_true((WarSheetInk.river_line(poly, Rect2(500, 500, 5, 5), 5.0)["poly"] as PackedVector2Array).is_empty())
+
+
+## With the build, each river is the 3D map's own course (rivers.json): many
+## samples, its source where the pack's is.
+func test_with_the_build_a_river_is_the_3d_maps_course() -> void:
+	var bake := WarBake.of(repo)
+	if bake == null or bake.river_courses().is_empty():
+		pending("no build in this checkout")
+		return
+	var s := _richest_sheet()
+	var r: Rect2 = s["rect"]
+	var k := 1024.0 / r.size.x
+	var ink := WarSheetInk.strokes(repo, state, s, 1024, bake)
+	var courses := bake.river_courses()
+	var heads: Array = (ink["rivers"] as Array).map(func(rv: Dictionary) -> Vector2: return (rv["poly"] as PackedVector2Array)[0])
+	var area := Rect2(Vector2.ZERO, r.size * k)
+	var found := 0
+	for code: String in courses:
+		var tex := PackedVector2Array()
+		for p: Vector2 in courses[code]:
+			tex.append((p - r.position) * k)
+		var line: PackedVector2Array = WarSheetInk.river_line(tex, area, repo.bal("war_ink_river_step_px"))["poly"]
+		if not line.is_empty() and heads.any(func(h: Vector2) -> bool: return h.distance_to(line[0]) < 0.001):
+			found += 1
+			assert_lt((courses[code] as PackedVector2Array)[0].distance_to((repo.rivers[code]["polyline"] as PackedVector2Array)[0]),
+				10.0, "%s rises where the pack's river does" % code)
+	assert_eq(found, (ink["rivers"] as Array).size(), "every inked river is a course of the build")
+
+
+func test_a_rivers_name_runs_along_its_longest_stretch_on_the_sheet() -> void:
+	var poly := PackedVector2Array([Vector2(-5, 5), Vector2(2, 5), Vector2(4, 5), Vector2(20, 5), Vector2(30, 5),
+		Vector2(50, 5), Vector2(60, 5), Vector2(70, 5)])
+	assert_eq(WarSheetInk.longest_run(poly, Rect2(0, 0, 25, 10)), Vector2i(1, 3))
+	assert_eq(WarSheetInk.longest_run(poly, Rect2(0, 0, 100, 10)), Vector2i(1, 7))
+	assert_eq(WarSheetInk.longest_run(poly, Rect2(200, 0, 10, 10)), Vector2i(0, -1), "none on the sheet")
+
+
+func test_crossings_on_a_dense_river_are_each_found_once() -> void:
+	var road := PackedVector2Array([Vector2(0, 0), Vector2(300, 0)])
+	# a river crossing the road three times, once on a bucket's edge (x = 128)
+	var river := PackedVector2Array([Vector2(64, -10), Vector2(64, 10), Vector2(128, 10), Vector2(128, -10), Vector2(200, -10), Vector2(200, 10)])
+	var hits := WarSheetInk.crossings([road], [river])
+	assert_eq(hits.size(), 3)
+
+
 func test_roads_over_rivers_are_bridges_and_trails_fords() -> void:
 	var s := _richest_sheet()
 	var ink := WarSheetInk.strokes(repo, state, s, 1024)
@@ -388,3 +470,31 @@ func test_a_walled_towns_glyphs_stand_clear_of_its_walls() -> void:
 				assert_gte(absf((t["market_at"] as Vector2).y - (t["at"] as Vector2).y), wall + repo.bal("war_ink_market_px") * 0.5, String(t["label"]))
 			checked += 1
 	assert_gt(checked, 0)
+
+
+## The WAR ROOM's rivers (owner 2026-10-07: stiff, ruler-straight): a line
+## densified on a curve THROUGH its points, a point every `step` at most.
+func test_densify_runs_through_every_point_a_step_apart_at_most() -> void:
+	var pts := PackedVector2Array([Vector2(0, 0), Vector2(30, 0), Vector2(40, 25), Vector2(41, 26), Vector2(100, 10)])
+	var step := 4.0
+	var out := WarSheetInk.densify(pts, step)
+	var want := 1
+	for i in pts.size() - 1:
+		want += maxi(1, ceili(pts[i].distance_to(pts[i + 1]) / step))
+	assert_eq(out.size(), want, "1 + ceil(span / step) a span")
+	assert_eq(out[0], pts[0], "the source kept")
+	assert_eq(out[out.size() - 1], pts[pts.size() - 1], "the mouth kept")
+	for p in pts:
+		assert_true(out.has(p), "every original point stays on the curve: %s" % p)
+	for i in out.size() - 1:
+		assert_lte(out[i].distance_to(out[i + 1]), step * 1.5, "no long chord (a curve is a little longer than its chord)")
+	assert_eq(WarSheetInk.densify(PackedVector2Array([Vector2.ZERO]), step).size(), 1, "one point is left alone")
+
+
+func test_densify_bends_where_the_line_turns() -> void:
+	var out := WarSheetInk.densify(PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10)]), 1.0)
+	var off := 0.0
+	for p in out:
+		if p.x < 9.99 and p.x > 0.01:
+			off = maxf(off, absf(p.y))
+	assert_gt(off, 0.01, "the first leg curves into the turn: no ruled straight segment and a corner")

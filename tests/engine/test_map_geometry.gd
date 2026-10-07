@@ -216,3 +216,4 @@ func test_a_duplicated_last_point_carries_its_pin_into_index_0() -> void:
 	assert_almost_eq(d.x, 0.0, 0.06, "leaves close to due south along 0->1")
 	var back := (out[0] - out[out.size() - 1]).normalized()
 	assert_almost_eq(back.y, 0.0, 0.06, "arrives close to due east along 3->0")
+

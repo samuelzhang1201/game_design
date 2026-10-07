@@ -1,19 +1,17 @@
 [gd_scene format=3 uid="uid://c383jbakpc7d8"]
 
-[ext_resource type="Script" uid="uid://bkm0g1bago8lo" path="res://scripts/ui/court_screen.gd" id="1"]
-[ext_resource type="PackedScene" uid="uid://cbqhq1qgdyef8" path="res://scenes/hud/top_bar.tscn" id="2"]
-[ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_2768l"]
-[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="3_i1kge"]
-[ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_rnrgf"]
-[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_i5cvy"]
-[ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="4_sy0rd"]
-[ext_resource type="Theme" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_c6ra0"]
-[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_d0d5a"]
-[ext_resource type="Script" uid="uid://bbrp2ldvjuip0" path="res://scripts/ui/war_table/table_compass.gd" id="8_4enwl"]
-[ext_resource type="Texture2D" uid="uid://bd7f6xayv2ffr" path="res://assets/2D/ui/compass/compass.png" id="9_lc033"]
-[ext_resource type="StyleBox" uid="uid://cvlyoynpedxif" path="res://assets/2D/ui/panels/styles/leather_column.tres" id="10_revm4"]
-[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="11_rnrgf"]
-[ext_resource type="PackedScene" uid="uid://rkch67nhd00f" path="res://scenes/war_table/council_seal.tscn" id="14_rnrgf"]
+[ext_resource type="Script" uid="uid://bkm0g1bago8lo" path="res://scripts/ui/court_screen.gd" id="1_bfc1y"]
+[ext_resource type="Script" uid="uid://gl63edwhrq2g" path="res://scripts/ui/war_table/war_table_backdrop.gd" id="2_ismar"]
+[ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="3_18upj"]
+[ext_resource type="StyleBox" path="res://assets/2D/ui/war_table/styles/map_sheet.tres" id="4_cpo53"]
+[ext_resource type="PackedScene" uid="uid://cbqhq1qgdyef8" path="res://scenes/hud/top_bar.tscn" id="5_giwvn"]
+[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="6_y8dux"]
+[ext_resource type="StyleBox" uid="uid://07pg2yfvp206" path="res://assets/2D/ui/war_table/styles/report_paper.tres" id="7_21xhw"]
+[ext_resource type="StyleBox" uid="uid://cvlyoynpedxif" path="res://assets/2D/ui/panels/styles/leather_column.tres" id="8_gwpkg"]
+[ext_resource type="FontVariation" path="res://assets/fonts/roles/tab.tres" id="9_76loa"]
+[ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="10_6cjny"]
+[ext_resource type="Script" uid="uid://dq7am4164rjll" path="res://scripts/ui/spy_order_menu.gd" id="11_mco8b"]
+[ext_resource type="PackedScene" uid="uid://rkch67nhd00f" path="res://scenes/war_table/council_seal.tscn" id="12_8vhef"]
 
 [node name="CourtScreen" type="Control" unique_id=626180433]
 editor_description = "Under balance ui_war_table 0 the screen strips the table, compass and seal and lays out the 2026-09-28 leather in code (_dress_leather)."
@@ -23,7 +21,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1")
+script = ExtResource("1_bfc1y")
 
 [node name="Bg" type="ColorRect" parent="." unique_id=1308777378]
 unique_name_in_owner = true
@@ -41,8 +39,8 @@ anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-script = ExtResource("2_2768l")
-texture = ExtResource("3_rnrgf")
+script = ExtResource("2_ismar")
+texture = ExtResource("3_18upj")
 tone = Color(0.627451, 0.4392157, 0.22745098, 0.13333334)
 light = Color(1, 0.9490196, 0.8156863, 0.14117648)
 vignette = Color(0, 0, 0, 0.17254902)
@@ -57,9 +55,9 @@ offset_left = 268.0
 offset_top = 67.0
 offset_right = -12.0
 offset_bottom = -48.0
-theme_override_styles/panel = ExtResource("4_i5cvy")
+theme_override_styles/panel = ExtResource("4_cpo53")
 
-[node name="TopBar" parent="." unique_id=1122720887 instance=ExtResource("2")]
+[node name="TopBar" parent="." unique_id=1122720887 instance=ExtResource("5_giwvn")]
 unique_name_in_owner = true
 layout_mode = 1
 
@@ -71,27 +69,14 @@ anchor_bottom = 1.0
 offset_left = 12.0
 offset_top = 67.0
 offset_right = 252.0
-offset_bottom = -56.0
-theme = ExtResource("6_c6ra0")
-theme_override_styles/panel = ExtResource("7_d0d5a")
+offset_bottom = -12.0
+theme = ExtResource("6_y8dux")
+theme_override_styles/panel = ExtResource("7_21xhw")
 metadata/paper_ground = Color(0.8235294, 0.7411765, 0.5647059, 1)
 
 [node name="LVBox" type="VBoxContainer" parent="LogPanel" unique_id=2007783036]
 layout_mode = 2
 theme_override_constants/separation = 5
-
-[node name="TableCompass" type="Control" parent="." unique_id=1743797370 node_paths=PackedStringArray("column")]
-unique_name_in_owner = true
-editor_description = "The wheel turns with the clock and its needle with the map at runtime; in the editor it lies at the strip's foot."
-anchors_preset = 0
-anchor_bottom = 1.0
-offset_left = 12.0
-offset_right = 252.0
-offset_bottom = -4.0
-tooltip_text = "The compass — press to turn the map north"
-script = ExtResource("8_4enwl")
-column = NodePath("../LogPanel")
-art = ExtResource("9_lc033")
 
 [node name="SidePanel" type="PanelContainer" parent="." unique_id=1631763932]
 unique_name_in_owner = true
@@ -105,7 +90,7 @@ offset_left = -412.0
 offset_top = 67.0
 offset_right = -12.0
 offset_bottom = -56.0
-theme_override_styles/panel = ExtResource("10_revm4")
+theme_override_styles/panel = ExtResource("8_gwpkg")
 
 [node name="SVBox" type="VBoxContainer" parent="SidePanel" unique_id=1136924669]
 layout_mode = 2
@@ -115,7 +100,7 @@ theme_override_constants/separation = 4
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
-theme_override_fonts/font = ExtResource("11_rnrgf")
+theme_override_fonts/font = ExtResource("9_76loa")
 theme_override_font_sizes/font_size = 14
 text = "Leave the Council"
 
@@ -161,13 +146,13 @@ theme_override_constants/separation = 3
 
 [node name="ArmyOrders" type="PopupMenu" parent="." unique_id=1155623443]
 unique_name_in_owner = true
-script = ExtResource("3_i1kge")
+script = ExtResource("10_6cjny")
 
 [node name="SpyOrders" type="PopupMenu" parent="." unique_id=695425565]
 unique_name_in_owner = true
-script = ExtResource("4_sy0rd")
+script = ExtResource("11_mco8b")
 
-[node name="CouncilHandle" parent="." unique_id=1423902817 instance=ExtResource("14_rnrgf")]
+[node name="CouncilHandle" parent="." unique_id=1423902817 instance=ExtResource("12_8vhef")]
 unique_name_in_owner = true
 editor_description = "Grows leftward with the council row: the councillors, who waits to be heard (WaxSeal.refresh) and their miniatures are set at runtime. Hidden while the council column is open."
 custom_minimum_size = Vector2(137, 96)

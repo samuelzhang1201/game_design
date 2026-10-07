@@ -1,0 +1,117 @@
+[gd_scene format=3 uid="uid://d3x2yucqvg6x"]
+
+[ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="1_88hrj"]
+[ext_resource type="Script" path="res://scripts/ui/march_confirm_panel.gd" id="2_hxh13"]
+
+[node name="MarchConfirmPanel" type="PanelContainer" unique_id=1981989342]
+editor_description = "The march confirm (spec 2026-10-07-march-waypoints ruling 6). Code fills the texts and duplicates RowProto once per carried load; the look is here."
+visible = false
+top_level = true
+custom_minimum_size = Vector2(400, 0)
+theme_override_styles/panel = ExtResource("1_88hrj")
+script = ExtResource("2_hxh13")
+
+[node name="Body" type="VBoxContainer" parent="." unique_id=1189129603]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Body" unique_id=2642316]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "March to Hallow Ford"
+
+[node name="Sub" type="Label" parent="Body" unique_id=15585493]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardHint"
+text = "182 km · 2 waypoints"
+
+[node name="Head" type="HBoxContainer" parent="Body" unique_id=405062729]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Load" type="Label" parent="Body/Head" unique_id=1013855451]
+custom_minimum_size = Vector2(96, 0)
+layout_mode = 2
+theme_type_variation = &"CardSmall"
+text = "Carry"
+
+[node name="Arrive" type="Label" parent="Body/Head" unique_id=270512640]
+custom_minimum_size = Vector2(70, 0)
+layout_mode = 2
+theme_type_variation = &"CardSmall"
+text = "Arrives in"
+
+[node name="Stores" type="Label" parent="Body/Head" unique_id=733958053]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_type_variation = &"CardSmall"
+text = "Supplies"
+
+[node name="Short" type="Label" parent="Body/Head" unique_id=1496835826]
+layout_mode = 2
+theme_type_variation = &"CardSmall"
+
+[node name="Rows" type="VBoxContainer" parent="Body" unique_id=1977313590]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="RowProto" type="HBoxContainer" parent="Body/Rows" unique_id=368625697]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Pick" type="Button" parent="Body/Rows/RowProto" unique_id=1645307455]
+custom_minimum_size = Vector2(96, 0)
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+toggle_mode = true
+text = "20 days"
+alignment = 0
+
+[node name="Arrive" type="Label" parent="Body/Rows/RowProto" unique_id=295464109]
+custom_minimum_size = Vector2(70, 0)
+layout_mode = 2
+theme_type_variation = &"CardValue"
+text = "9 days"
+vertical_alignment = 1
+
+[node name="Stores" type="Label" parent="Body/Rows/RowProto" unique_id=700352451]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_type_variation = &"CardSmall"
+text = "240 supplies"
+vertical_alignment = 1
+
+[node name="Short" type="Label" parent="Body/Rows/RowProto" unique_id=1359705206]
+layout_mode = 2
+theme_type_variation = &"CardWarn"
+theme_override_font_sizes/font_size = 14
+text = "runs 3 days short"
+vertical_alignment = 1
+
+[node name="Buttons" type="HBoxContainer" parent="Body" unique_id=297367054]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 2
+
+[node name="Confirm" type="Button" parent="Body/Buttons" unique_id=731059600]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Confirm order"
+
+[node name="AddWaypoint" type="Button" parent="Body/Buttons" unique_id=296770015]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "Add waypoint"
+
+[node name="Cancel" type="Button" parent="Body/Buttons" unique_id=1115702534]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "Cancel"

@@ -17,8 +17,10 @@ var _arrow := Color.BLACK
 var _chalk_c := Color.WHITE
 var _font: Font
 var _held := false
-var _routes: Array = []   # [from, to] screen px of each piece's dashed line to its pennant
-var _drafts: Array = []   # [from, to] screen px of each draft's pencil line (spec 2026-10-02-war-room-v2 §3.1)
+var _routes: Array = []   # each piece's dashed line to its pennant, a polyline in screen px (its route's curve)
+var _drafts: Array = []   # each draft's pencil line, a polyline in screen px (spec 2026-10-02-war-room-v2 §3.1)
+var _path := PackedVector2Array()     # the rake bent through waypoints (spec 2026-10-07-march-waypoints), else empty
+var _handles := PackedVector2Array()  # the planned waypoints' rings
 var _pencil := Color.GRAY
 
 
@@ -42,6 +44,14 @@ func draw_state(rake_from: Vector2, rake_to: Vector2, reading: String, chalk: Ve
 	_routes = routes
 	_drafts = drafts
 	_pencil = pencil
+	queue_redraw()
+
+
+## The rake's line through planned waypoints (screen px; empty: the straight
+## arrow) and the waypoints' rings (spec 2026-10-07-march-waypoints).
+func set_route(path: PackedVector2Array, handles: PackedVector2Array) -> void:
+	_path = path
+	_handles = handles
 	queue_redraw()
 
 
@@ -91,16 +101,56 @@ func _pencilled(a: Vector2, b: Vector2) -> void:
 	draw_polyline(PackedVector2Array([tail + side * head * 0.55, b, tail - side * head * 0.55]), _pencil, width, true)
 
 
+## The rake's arrow along its bent line: the shaft through every point, the
+## head on the last segment, the reading at the middle point.
+func _draw_bent() -> void:
+	var width := _repo.bal("war_hud_arrow_px")
+	var head := _repo.bal("war_hud_head_px")
+	var end := _path[_path.size() - 1]
+	var dir := (end - _path[_path.size() - 2]).normalized()
+	var side := Vector2(-dir.y, dir.x)
+	var tail := end - dir * head
+	var shaft := _path.slice(0, _path.size() - 1)
+	shaft.append(tail)
+	if _held:
+		draw_multiline(MapRuler.dash_pieces(shaft, _repo.bal("war_hud_dash_px")), _arrow, width, true)
+	else:
+		draw_polyline(shaft, _arrow, width, true)
+	var half := _repo.bal("war_hud_head_half_px")
+	draw_colored_polygon(PackedVector2Array([end, tail + side * half, tail - side * half]), _arrow)
+	if _reading != "" and _font != null:
+		var mid := _path[int(_path.size() * 0.5)] + side * _repo.bal("war_hud_reading_gap_px")
+		var px := int(_repo.bal("war_hud_reading_px"))
+		var halo: Color = _repo.war_palette["paper"]
+		halo.a = _repo.bal("war_hud_halo_alpha")
+		draw_string_outline(_font, mid, _reading, HORIZONTAL_ALIGNMENT_CENTER, -1, px,
+			int(_repo.bal("war_hud_reading_outline_px")), halo)
+		draw_string(_font, mid, _reading, HORIZONTAL_ALIGNMENT_CENTER, -1, px, _ink)
+
+
 func _draw() -> void:
 	if _repo == null:
 		return
 	if _chalk.x >= 0.0:
 		draw_arc(_chalk, _chalk_r, 0.0, TAU, 48, _chalk_c, _repo.bal("war_hud_chalk_px"), true)
-	for r: Array in _routes:
-		_dashed(r[0], r[1], _ink, _repo.bal("war_hud_arrow_px"))
-	for r: Array in _drafts:
-		_pencilled(r[0], r[1])
+	for line: Variant in _routes:
+		var r := PackedVector2Array(line)
+		if r.size() > 2:   # a route's curve: the dashes run on across its joints
+			draw_multiline(MapRuler.dash_pieces(r, _repo.bal("war_hud_dash_px")), _ink, _repo.bal("war_hud_arrow_px"), true)
+		elif r.size() == 2:
+			_dashed(r[0], r[1], _ink, _repo.bal("war_hud_arrow_px"))
+	for line: Variant in _drafts:
+		var r := PackedVector2Array(line)
+		if r.size() > 2:   # a route's curve, one stroke up to its last segment
+			draw_polyline(r.slice(0, r.size() - 1), _pencil, _repo.bal("war_draft_pencil_px"), true)
+		if r.size() >= 2:
+			_pencilled(r[r.size() - 2], r[r.size() - 1])
+	for h in _handles:
+		draw_arc(h, _repo.bal("war_route_handle_px"), 0.0, TAU, 20, _arrow, _repo.bal("war_hud_arrow_px"), true)
 	if not _has_arrow():
+		return
+	if _path.size() > 2:
+		_draw_bent()
 		return
 	var dir := (_to - _from).normalized()
 	var side := Vector2(-dir.y, dir.x)
