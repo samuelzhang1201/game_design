@@ -77,15 +77,36 @@ func preview_build(p_ctx: Map3DContext) -> void:
 ## vertex colours (the realm band); replacing any before.
 func set_lines(line_name: String, lines: Array, look: ShaderMaterial, priority: int,
 		colours: Array = []) -> void:
-	var one_sided := float(look.get_shader_parameter("one_sided")) > 0.5
-	var arrays := Map3DBorders.ribbon_arrays(lines, ctx.height_at, [], one_sided, colours)
+	var side: Variant = look.get_shader_parameter("one_sided")  # null on a look without it (supply_flow)
+	var one_sided := side != null and float(side) > 0.5
+	put_mesh(line_name, Map3DBorders.ribbon_arrays(lines, ctx.height_at, [], one_sided, colours),
+		_look_material(look, priority))
+
+
+## Prebuilt ribbon `arrays` wearing `look` in `priority`'s row: the node's
+## mesh refilled in place when it is there (a supply line's per-frame tail),
+## else a new node; nothing when `arrays` is empty.
+func put_look(line_name: String, arrays: Array, look: ShaderMaterial, priority: int) -> void:
+	var mi := get_node_or_null(line_name) as MeshInstance3D
+	if mi == null or arrays.is_empty():
+		put_mesh(line_name, arrays, _look_material(look, priority))
+		return
+	var mesh := mi.mesh as ArrayMesh
+	var mat := mesh.surface_get_material(0)
+	mesh.clear_surfaces()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh.surface_set_material(0, mat)
+
+
+## A copy of `look` in `priority`'s row, its design px kept to scale (_scale_material).
+func _look_material(look: ShaderMaterial, priority: int) -> ShaderMaterial:
 	var mat := look.duplicate() as ShaderMaterial
 	mat.render_priority = priority
 	var base := {}
 	for k: String in PX_PARAMS:
 		base[k] = float(look.get_shader_parameter(k))
 	mat.set_meta("base_px", base)
-	put_mesh(line_name, arrays, mat)
+	return mat
 
 
 ## Any ribbon mesh (the roads bring their own material), replacing any
