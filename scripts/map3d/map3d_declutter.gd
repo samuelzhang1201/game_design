@@ -7,7 +7,12 @@ extends RefCounted
 ## the first offset of a fixed outward spiral that touches nothing placed and
 ## no obstacle. A HIDEABLE box (a headcount chip) with no clear offset within
 ## reach hides (null); any other (a counter) takes the least-covered offset
-## of the spiral, so a unit is never lost from the map.
+## of the spiral, so a unit is never lost from the map. An optional `allowed`
+## (the box's centre -> bool; the HUD's: on land) is asked only of clear
+## offsets off the box's home (its unit stands there): the first clear AND
+## allowed one wins, else the first clear one (owner 2026-10-08: counters off
+## the sea where they can be). A box whose `any_ground` is true (a fleet) is
+## never asked.
 
 static var _spirals: Dictionary = {}   # Vector2(step, reach) -> the spiral's offsets
 
@@ -34,7 +39,8 @@ static func spiral(step: float, reach: float) -> Array:
 
 
 ## One offset per box (Vector2), or null for a hideable box with no room.
-static func place(boxes: Array, hideable: Array, obstacles: Array, step: float, reach: float) -> Array:
+static func place(boxes: Array, hideable: Array, obstacles: Array, step: float, reach: float,
+		allowed: Callable = Callable(), any_ground: Array = []) -> Array:
 	var placed: Array[Rect2] = []
 	placed.assign(obstacles)
 	var out: Array = []
@@ -47,7 +53,8 @@ static func place(boxes: Array, hideable: Array, obstacles: Array, step: float, 
 		for p: Rect2 in placed:
 			if zone.intersects(p):
 				near.append(p)
-		var at: Variant = _first_clear(b, near, offs)
+		var ask := allowed.is_valid() and not (i < any_ground.size() and bool(any_ground[i]))
+		var at: Variant = _first_clear(b, near, offs, allowed if ask else Callable())
 		if at == null:
 			if bool(hideable[i]):
 				out.append(null)
@@ -58,13 +65,16 @@ static func place(boxes: Array, hideable: Array, obstacles: Array, step: float, 
 	return out
 
 
-## The first offset of the spiral at which `b` touches nothing in `near`, or
-## null. The rect that blocked the last offset is tried first: the spiral's
-## next offset is beside it, so it usually blocks that one too (perf: the HUD
-## cuts the counters every frame the camera moves).
-static func _first_clear(b: Rect2, near: Array[Rect2], offs: Array) -> Variant:
+## The first offset of the spiral at which `b` touches nothing in `near`
+## and `allowed` (when valid) takes its centre — ZERO, the home, always
+## does — else the first clear one;
+## null for none. The rect that blocked the last offset is tried first: the
+## spiral's next offset is beside it, so it usually blocks that one too
+## (perf: the HUD cuts the counters every frame the camera moves).
+static func _first_clear(b: Rect2, near: Array[Rect2], offs: Array, allowed: Callable) -> Variant:
 	var last := 0
 	var n := near.size()
+	var fallback: Variant = null
 	for off: Vector2 in offs:
 		var r := Rect2(b.position + off, b.size)
 		if n > 0 and r.intersects(near[last]):
@@ -75,9 +85,13 @@ static func _first_clear(b: Rect2, near: Array[Rect2], offs: Array) -> Variant:
 				clear = false
 				last = k
 				break
-		if clear:
+		if not clear:
+			continue
+		if not allowed.is_valid() or off == Vector2.ZERO or bool(allowed.call(r.get_center())):
 			return off
-	return null
+		if fallback == null:
+			fallback = off
+	return fallback
 
 
 ## The offset of `offs` at which `b` is least covered by `near` (the first

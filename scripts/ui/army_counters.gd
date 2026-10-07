@@ -29,9 +29,13 @@ extends RefCounted
 ## the model IS the counter's square now, and drawing the flat piece beside it
 ## put the same regiment on the map twice.
 ## Two counters stand at least map_army_stack_gap_px apart: each box is grown
-## by half of it for the spreading, the marker keeps the box itself.
+## by half of it for the spreading, the marker keeps the box itself. Each
+## marker keeps `anchor` (the point's `anchor`, else its `pos`: where its unit
+## truly is) and `offset` (how far the spreading moved it), for the leader
+## line (`draw`). `allowed` (a box centre -> bool, Map3DDeclutter.place) keeps
+## a land unit's counter off the sea where it can be; a fleet is never asked.
 static func layout(repo: DataRepository, points: Array, h: float, obstacles: Array,
-		with_piece: Dictionary = {}, first: Array = []) -> Array:
+		with_piece: Dictionary = {}, first: Array = [], allowed: Callable = Callable()) -> Array:
 	var mine := repo.resolve_realm("player_realm")
 	var pad := repo.bal("map_army_count_pad_px")
 	var font := UiPalette.body_font()
@@ -55,7 +59,8 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var kingdom := String(r.get("kingdom_code", mine))
 		if not colors.has(kingdom):
 			colors[kingdom] = count_color(repo, kingdom)
-		out.append({"code": code, "pos": sp, "size": strength, "text": text, "solo": solo,
+		out.append({"code": code, "pos": sp, "anchor": p.get("anchor", sp), "size": strength,
+			"text": text, "solo": solo,
 			"font_px": font_px,
 			"h": ph,
 			"rect": Rect2(sp - Vector2(w, ph) / 2.0 - Vector2(0.0, bars_h), Vector2(w, ph + bars_h)),
@@ -78,8 +83,9 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 	var half_gap := repo.bal("map_army_stack_gap_px") * 0.5
 	var boxes: Array = out.map(func(m: Dictionary) -> Rect2: return (m["rect"] as Rect2).grow(half_gap))
 	var hide: Array = out.map(func(m: Dictionary) -> bool: return bool(m["solo"]))
+	var afloat: Array = out.map(func(m: Dictionary) -> bool: return bool(m["naval"]))
 	var offs := Map3DDeclutter.place(boxes, hide, obstacles, repo.bal("map3d_declutter_step_px"),
-		repo.bal("map3d_declutter_max_px"))
+		repo.bal("map3d_declutter_max_px"), allowed, afloat)
 	var kept: Array = []
 	for i in out.size():
 		if offs[i] == null:
@@ -88,6 +94,7 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var rect := Rect2((m["rect"] as Rect2).position + (offs[i] as Vector2), (m["rect"] as Rect2).size)
 		m["rect"] = rect
 		m["pos"] = (m["pos"] as Vector2) + (offs[i] as Vector2)
+		m["offset"] = offs[i]
 		var mh := float(m["h"])
 		var square := 0.0 if bool(m["solo"]) else mh
 		var top := rect.position + Vector2(0.0, bars_h)
@@ -135,11 +142,45 @@ static func count_color(repo: DataRepository, kingdom_code: String) -> Color:
 		repo.bal("map_army_count_val"))
 
 
-## Draw `markers` (from layout) on `ci`; each counter whose code is in
-## `selected` is outlined in gold.
-static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected: Array = []) -> void:
+## The leader lines of the counters the spreading moved more than
+## map3d_leader_min_px: from the counter's edge to its unit, a dot there;
+## drawn BEHIND the counters (owner 2026-10-08: which unit is it?). `look` is
+## {color, width, dot} from the HUD node's exports; none drawn without it.
+static func _draw_leaders(ci: CanvasItem, repo: DataRepository, markers: Array, look: Dictionary) -> void:
+	if look.is_empty():
+		return
+	var min_px := repo.bal("map3d_leader_min_px")
+	var ink: Color = look["color"]
+	for m: Dictionary in markers:
+		var to: Vector2 = m.get("anchor", m["pos"])
+		var rect: Rect2 = m["rect"]
+		if (m.get("offset", Vector2.ZERO) as Vector2).length() <= min_px or rect.has_point(to):
+			continue
+		ci.draw_line(edge_toward(rect, to), to, ink, float(look["width"]), true)
+		ci.draw_circle(to, float(look["dot"]), ink)
+
+
+## Where the segment from `rect`'s centre to `to` (outside it) leaves the rect.
+static func edge_toward(rect: Rect2, to: Vector2) -> Vector2:
+	var c := rect.get_center()
+	var d := to - c
+	var half := rect.size * 0.5
+	var t := 1.0
+	if absf(d.x) > 0.0001:
+		t = minf(t, half.x / absf(d.x))
+	if absf(d.y) > 0.0001:
+		t = minf(t, half.y / absf(d.y))
+	return c + d * t
+
+
+## Draw `markers` (from layout) on `ci`, their leader lines (`leader`, see
+## _draw_leaders) first; each counter whose code is in `selected` is
+## outlined in gold.
+static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected: Array = [],
+		leader: Dictionary = {}) -> void:
 	if markers.is_empty():
 		return
+	_draw_leaders(ci, repo, markers, leader)
 	var outline := MapPalette.named(repo, "army_outline")
 	var icon_bg := MapPalette.named(repo, "army_icon_bg")
 	var glyph_ink := MapPalette.named(repo, "army_glyph")

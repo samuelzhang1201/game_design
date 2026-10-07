@@ -19,6 +19,12 @@ extends Map3DHudPiece
 ## §5.6), design px; edited on the node.
 @export var box_color := Color(1.0, 0.92, 0.6, 0.9)
 @export var box_width_px := 1.5
+## The leader line from a counter the spreading moved (further than
+## balance.csv map3d_leader_min_px) back to its unit, and the dot on the unit
+## (owner 2026-10-08, after the visual review: which unit is it?); design px.
+@export var leader_color := Color(0.14, 0.11, 0.08, 0.8)
+@export var leader_width_px := 1.25
+@export var leader_dot_px := 2.0
 
 var _drawn := 0
 ## markers()' cut and the pose it was cut for (see there).
@@ -26,6 +32,8 @@ var _cache: Array = []
 var _key: Array = []
 ## Each regiment's bars and what they were read under, {code: {key, bars}} (_bars_of).
 var _bars: Dictionary = {}
+## On-land tests left in this cut (_on_land; map3d_leader_land_tests).
+var _land_tests := 0
 
 
 ## A counter's height in design px: map_army_badge_native_px of the map at
@@ -79,9 +87,11 @@ func _cut() -> Array:
 		var code := String(r["regiment_code"])
 		var sp := Vector2.ZERO
 		var ph := h
+		var anchor := Vector2.ZERO
 		if tops.has(code):
 			ph = chip
-			sp = (tops[code] as Vector2) - Vector2(0.0, lift)
+			anchor = tops[code]
+			sp = anchor - Vector2(0.0, lift)
 		else:
 			var xz := Map3DGeometry.pack_to_world(ctx.meta,
 				ArmySystem.position_of(repo, st, r))
@@ -89,9 +99,26 @@ func _cut() -> Array:
 			if camera.is_position_behind(ground):
 				continue
 			sp = camera.unproject_position(ground) / s
+			anchor = sp
 		if frame.has_point(sp):
-			points.append({"reg": r, "pos": sp, "h": ph, "bars": _bars_of(code)})
-	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops, view.selected_armies())
+			points.append({"reg": r, "pos": sp, "anchor": anchor, "h": ph, "bars": _bars_of(code)})
+	_land_tests = int(repo.bal("map3d_leader_land_tests"))
+	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops, view.selected_armies(),
+		_on_land)
+
+
+## Whether a design-px point of the view lies over land: the picker's ray to
+## the ground, then the pack's cells (Map3DDeclutter's `allowed`). At most
+## map3d_leader_land_tests a cut; past them every point passes.
+func _on_land(pos: Vector2) -> bool:
+	if _land_tests <= 0:
+		return true
+	_land_tests -= 1
+	var hit: Variant = ctx.ground_at(pos)
+	if hit == null:
+		return false
+	var p := hit as Vector3
+	return MapEconomy.cell_at(ctx.repo, ctx.to_pack(Vector2(p.x, p.z))) >= 0
 
 
 ## ArmySystem.bars_of, kept while nothing it reads moves: the day (the
@@ -120,7 +147,8 @@ func _draw() -> void:
 	var list := markers()
 	_drawn = list.size()
 	_draw_routes()
-	ArmyCounters.draw(self, ctx.repo, list, view.selected_armies())
+	ArmyCounters.draw(self, ctx.repo, list, view.selected_armies(),
+		{"color": leader_color, "width": leader_width_px, "dot": leader_dot_px})
 	if view.box_rect.has_area():
 		draw_rect(view.box_rect, box_color, false, box_width_px)
 

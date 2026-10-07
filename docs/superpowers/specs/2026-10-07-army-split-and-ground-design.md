@@ -236,6 +236,12 @@ It is used in two places:
 - **Far-out counters** (`map3d_hud_armies.gd`): every counter is placed, and none is hidden or merged. If the spiral runs out, the counter takes the clearest offset it found.
 - **Headcount chips:** a chip that finds no clear offset hides until the camera comes closer.
 
+After the visual review (2026-10-08, R17):
+
+- **A gap.** Every box is grown by half of `map_army_stack_gap_px` for the spreading, so two counters end at least that gap apart; the marker keeps the box itself.
+- **Off the sea.** `place` takes an optional `allowed` (a box centre → bool) and a per-box `any_ground`. A clear offset off the box's home is accepted only when `allowed` takes it; with none taken, the first clear offset still wins, so no counter is lost. The HUD's `allowed` casts the picker's ground ray and asks `MapEconomy.cell_at ≥ 0`; a fleet is never asked.
+- **A leader line.** Each marker keeps its unit's true screen point (`anchor`: the ground point, or a chip's piece's head) and its `offset`. Moved further than `map3d_leader_min_px`, it draws a thin line from its edge to the anchor and a dot there, behind every counter; colour, width and dot are `Map3DHudArmies`' exports.
+
 ### 5.3 Performance
 
 The player's pieces go from 14 to about 44, which is about 400 animated figures instead of about 126. The plan runs the 3D bench (`tools/map3d/bench.gd`) before and after. If a gate in `scripts/map3d/CLAUDE.md` fails, pieces that are off-screen or beyond a CSV distance have their `AnimationPlayer` paused. No art changes.
@@ -341,7 +347,7 @@ Each step ends with the full suite green at the expected error count.
 
 ## 10. Implementation rulings
 
-Where the build departs from the wording above, as the plan ruled it (R1-R7) and as the later tasks and the visual review found it (R8-R16).
+Where the build departs from the wording above, as the plan ruled it (R1-R7) and as the later tasks and the visual review found it (R8-R17).
 
 - **R1 - argument order.** `ArmySystem.regiment(repo, code, state := null)`, `ArmySystem.roster(repo, state := null)` and `MapObjects.regiments_of(repo, kingdom, state := null)` keep the existing order and append an optional state, so ~90 call sites are not touched at once; every engine call site with a `state` in scope passes it.
 - **R2 - data layout.** The single key/value table becomes per-arm rows in `data/army_split.csv`, the scalars in `data/balance.csv` (`army_split_cap_men`, `army_slot_spacing_m`, `army_slot_max_rings`, `map3d_declutter_step_px`, `map3d_declutter_max_px`, `war_spread_step_m`, `war_spread_max_m`) and the blocked terrains in `data/army_camp_blocked.csv`: the repository's existing shapes, the same values.
@@ -359,3 +365,4 @@ Where the build departs from the wording above, as the plan ruled it (R1-R7) and
 - **R14 - the hover's garrison and works.** The WAR ROOM slip names the unit on a town's seat as its garrison and counts the rest of the camp ("N camped round it"). Its defend forecast gives a town's works to the unit on the seat, or to any unit of the holder while the seat is empty, since an arrival takes an empty seat (§4.3); a unit camped off the seat reads the field's terrain (§4.1).
 - **R15 - a train with no capital.** A kingdom with guns but no capital keeps them: its royal train camps where its first land regiment (by code) stands, round that regiment's town when its kingdom holds it, else in the field, so the split adds and loses no man.
 - **R16 - the camp stands outside the walls** (owner 2026-10-08, 城外, after the real-window review). Rings laid from the town's point put the foot and horse inside a walled town and buried its houses. Round a town an arm's first ring is `clear + start_ring − 1`, `clear = max(1, ceil(reach_m / slot_spacing_m))`, and a slot within the reach is skipped (`ArmyGround.first_ring`, `in_reach`); the seat stays on ring 0 and field centres are unchanged. The reach is the one the town's suburbs already used (`data/army_town_reach.csv`), so the camp begins where the town ends and no new value was needed; `army_slot_max_rings` rose to 12 so that at a 600 m pitch every opening camp still finds unblocked ground. A camped unit now stands outside `town_at`'s reach, which R3 already allowed for: `camp_town` keeps it camped by its town.
+- **R17 - the counters after the visual review** (§5.2; owner 2026-10-08 approved the critic's three fixes). The spreading set counters edge to edge, pushed some into the sea and left a moved counter unconnected to its unit. Now a gap (`map_army_stack_gap_px`, raised to 6), an `allowed` test that keeps a land unit's counter on land where a clear place exists, and a leader line from any counter moved past `map3d_leader_min_px`. Two implementer's rulings: the home offset is never asked (the unit stands there, and asking it would cast a ray for every counter in every cut), and one cut makes at most `map3d_leader_land_tests` ground tests, past which a counter takes its first clear place, so a camera drag over a crowded coast never stalls.

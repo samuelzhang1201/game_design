@@ -115,6 +115,96 @@ func test_each_offset_is_the_first_clear_one_of_the_spiral() -> void:
 				placed.append(Rect2(b.position + (walked as Vector2), b.size))
 
 
+# --- the land, the leader and the gap (2026-10-08 visual review) -------------
+
+## The first clear offset of the spiral that `ok` takes (or any, without it).
+func _walk(b: Rect2, placed: Array, step: float, reach: float, ok: Callable = Callable()) -> Variant:
+	for off: Vector2 in Map3DDeclutter.spiral(step, reach):
+		var r := Rect2(b.position + off, b.size)
+		if placed.any(func(p: Rect2) -> bool: return r.intersects(p)):
+			continue
+		if not ok.is_valid() or off == Vector2.ZERO or bool(ok.call(r.get_center())):
+			return off
+	return null
+
+
+func test_allowed_is_honoured() -> void:
+	var b := Rect2(0, 0, 10, 10)
+	var east := func(c: Vector2) -> bool: return c.x > 20.0
+	var offs := Map3DDeclutter.place([b, b], [false, false], [], 2.0, 50.0, east)
+	assert_eq(offs[0], Vector2.ZERO, "the first stays home")
+	var at := Rect2(b.position + (offs[1] as Vector2), b.size)
+	assert_gt(at.get_center().x, 20.0, "the second goes where it is allowed")
+	assert_false(at.intersects(b))
+	assert_eq(offs[1], _walk(b, [b], 2.0, 50.0, east), "the first clear and allowed offset")
+	assert_ne(offs[1], _walk(b, [b], 2.0, 50.0), "premise: the nearest clear one was not allowed")
+
+
+func test_allowed_is_asked_only_off_home_of_clear_places() -> void:
+	var asked: Array = []
+	var spy := func(c: Vector2) -> bool:
+		asked.append(c)
+		return true
+	Map3DDeclutter.place([Rect2(0, 0, 10, 10)], [false], [], 2.0, 50.0, spy)
+	assert_eq(asked.size(), 0, "a box at home on clear ground asks nothing")
+	Map3DDeclutter.place([Rect2(0, 0, 10, 10), Rect2(0, 0, 10, 10)], [false, false], [], 2.0, 50.0, spy)
+	assert_eq(asked.size(), 1, "one ask: the first clear place off home is taken")
+	assert_false(Rect2((asked[0] as Vector2) - Vector2(5, 5), Vector2(10, 10)).intersects(Rect2(0, 0, 10, 10)))
+
+
+func test_a_fleet_is_never_asked() -> void:
+	var b := Rect2(0, 0, 10, 10)
+	var never := func(_c: Vector2) -> bool: return false
+	var counted: Array = [0]
+	var count := func(_c: Vector2) -> bool:
+		counted[0] += 1
+		return false
+	var free := Map3DDeclutter.place([b, b], [false, false], [], 2.0, 50.0)
+	var offs := Map3DDeclutter.place([b, b], [false, false], [], 2.0, 50.0, never, [false, true])
+	assert_eq(offs, free, "a fleet takes the first clear place, the sea or not")
+	Map3DDeclutter.place([b, b], [false, false], [], 2.0, 50.0, count, [false, true])
+	assert_eq(counted[0], 0)
+
+
+func test_with_nowhere_allowed_no_box_is_lost() -> void:
+	var b := Rect2(0, 0, 10, 10)
+	var never := func(_c: Vector2) -> bool: return false
+	var boxes := [b, b, b, b]
+	var offs := Map3DDeclutter.place(boxes, [false, true, false, true], [], 2.0, 50.0, never)
+	var free := Map3DDeclutter.place(boxes, [false, true, false, true], [], 2.0, 50.0)
+	assert_eq(offs, free, "each takes its nearest overlap-free place")
+	for o: Variant in offs:
+		assert_not_null(o, "a chip with room is never hidden for the sea")
+
+
+## A counter the spreading moved keeps where its unit truly is.
+func test_a_displaced_counter_carries_its_anchor() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 42)
+	var points: Array = []
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		points.append({"reg": r, "pos": Vector2(400.0, 300.0)})
+	var head := Vector2(400.0, 280.0)
+	points[0]["anchor"] = head
+	var marks := ArmyCounters.layout(repo, points, 20.0, [])
+	var moved := 0
+	for m: Dictionary in marks:
+		var want: Vector2 = head if String(m["code"]) == String(points[0]["reg"]["regiment_code"]) else Vector2(400.0, 300.0)
+		assert_eq(m["anchor"], want, String(m["code"]))
+		assert_eq(m["pos"], Vector2(400.0, 300.0) + (m["offset"] as Vector2), "offset is how far it moved")
+		if (m["offset"] as Vector2).length() > repo.bal("map3d_leader_min_px"):
+			moved += 1
+	assert_gt(moved, 0, "premise: some counter moved far enough to draw a leader")
+
+
+## The leader leaves the counter at its edge, on the line to the unit.
+func test_the_leader_starts_on_the_counters_edge() -> void:
+	var r := Rect2(0, 0, 40, 20)
+	assert_eq(ArmyCounters.edge_toward(r, Vector2(20, 100)), Vector2(20, 20), "straight down: the bottom edge")
+	assert_eq(ArmyCounters.edge_toward(r, Vector2(120, 10)), Vector2(40, 10), "east: the right edge")
+	assert_eq(ArmyCounters.edge_toward(r, Vector2(60, 50)), Vector2(30, 20), "a corner-ward line: the nearer edge")
+
+
 ## Two counters stand at least map_army_stack_gap_px apart, measured on the
 ## counters themselves (not the grown boxes the spreading used).
 func test_counters_keep_the_gap_between_them() -> void:
