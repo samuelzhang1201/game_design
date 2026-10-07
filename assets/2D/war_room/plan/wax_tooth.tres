@@ -1,13 +1,13 @@
 [gd_resource type="NoiseTexture2D" format=3 uid="uid://se8or50ylvm8"]
 
 [sub_resource type="Gradient" id="Gradient_n4mrj"]
-offsets = PackedFloat32Array(0.25, 0.62)
-colors = PackedColorArray(1, 1, 1, 0.12, 1, 1, 1, 1)
+offsets = PackedFloat32Array(0.22, 0.42)
+colors = PackedColorArray(1, 1, 1, 0.3, 1, 1, 1, 0.92)
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_wu6q8"]
 seed = 7
-frequency = 0.09
-fractal_octaves = 3
+frequency = 0.22
+fractal_octaves = 2
 
 [resource]
 width = 256

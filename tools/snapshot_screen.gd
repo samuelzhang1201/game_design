@@ -246,6 +246,7 @@ var _war_cell := ""
 var _war_board := false
 var _war_board_click := Vector2(-1, -1)
 var _war_phase := 0
+var _war_plans_demo := false   # --war-plans-demo: a fixed set of plans laid near the first land piece before the room opens
 var _war_at := 0
 ## --shot-on report|flight|board|card|spymenu takes the shot --shot-delay N
 ## frames (default 6) after that moment rather than at --shot-frame.
@@ -361,6 +362,8 @@ func _ready() -> void:
 			_war_focus_px = Vector2(float(fparts[0]), float(fparts[1]))
 		elif args[i] == "--war-focus":
 			_war_focus = args[i + 1]
+		elif args[i] == "--war-plans-demo":
+			_war_plans_demo = true
 		elif args[i] == "--war-zoom":
 			_war_zoom = float(args[i + 1])
 		elif args[i] == "--war-deploy":
@@ -980,12 +983,37 @@ func _ledger_step() -> void:
 ## requested sheet laid and the roll over (then a few frames for its ink), the
 ## camera leant, the piece clicked or raked (its screen place read AFTER the
 ## camera and the sheet are settled), then the folio, then the shot.
+## --war-plans-demo (spec 2026-10-07-war-room-annotations-and-planning-pieces):
+## the staff's marks and two supposed pieces laid through Game near the
+## --war-focus regiment (else the first land piece), offsets in km — a fixed
+## scene for the plan layer's look.
+func _seed_war_plans() -> void:
+	var at := Vector2(-1, -1)
+	for q: Dictionary in WarRoom.pieces(Game.data, Game.state):
+		if not bool(q["naval"]) and (_war_focus == "" or String(q["code"]) == _war_focus):
+			at = q["at"]
+			break
+	var k := 1000.0 / float(ArmySystem.metres_per_pack_px(Game.data))
+	var km := func(x: float, y: float) -> Vector2: return at + Vector2(x, y) * k
+	var side := String(WarPlans.sides(Game.data)[0])
+	print("war plans: ", [
+		Game.draw_plan("arrow", "blue", PackedVector2Array([km.call(-2, 6), km.call(6, 0), km.call(14, -4), km.call(20, -5)]), 0.0, "", false),
+		Game.draw_plan("front", "red", PackedVector2Array([km.call(24, -14), km.call(25, -6), km.call(27, 2), km.call(30, 8)]), 0.0, "", false),
+		Game.draw_plan("phase", "ink", PackedVector2Array([km.call(12, -16), km.call(13, 0), km.call(12, 14)]), 0.0, "Line I", false),
+		Game.draw_plan("objective", "ink", PackedVector2Array([km.call(26, -3)]), 3.0 * k, "Obj. A", false),
+		Game.draw_plan("arrow", "red", PackedVector2Array([km.call(36, -10), km.call(31, -6), km.call(28, -4)]), 0.0, "", true),
+		Game.place_plan_piece("cavalry", 2000, side, km.call(29, -1), 180),
+		Game.place_plan_piece("infantry", 3000, WarPlans.UNKNOWN, km.call(30, 6), 180)])
+
+
 func _war_room_step() -> void:
 	var screen := _root.war_room_screen()
 	var view := screen.view()
 	if _war_phase == 0:
 		if _frames == _war_room_at:
 			_war_sync("map")
+			if _war_plans_demo:
+				_seed_war_plans()
 			var tab := _root.bottom_bar().button("WAR ROOM")
 			_real_click(tab, tab.size * 0.5)
 			print("war: open=%s sheet=%d" % [screen.visible, view.sheet_index()])
@@ -1054,6 +1082,9 @@ func _war_room_step() -> void:
 			print("war: hover at %s" % (Vector2(view.size) * _war_hover))
 		_war_to(4)
 	elif _war_phase == 4:
+		if _war_plans_demo and _frames - _war_at == 1:
+			print("war plans on sheet: pieces=%d built=%d strokes=%d rev=%d" % [WarPlans.pieces_in(Game.data, Game.state, view.sheet_rect()).size(),
+				view.plan_pieces().get_child_count(), WarPlans.strokes_in(Game.data, Game.state, view.sheet_rect()).size(), int(Game.state.war_plans["rev"])])
 		if _war_hover.x >= 0.0 and _frames - _war_at < ceili(Game.data.bal("war_hover_delay_s") * 120.0) + 10:
 			return   # a 120 Hz display's frames: the slip has come up
 		if _frames - _war_at < 6:
