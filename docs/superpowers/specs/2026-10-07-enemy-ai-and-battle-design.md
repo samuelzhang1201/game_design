@@ -83,6 +83,7 @@ score = value × greed − distance_days × dist_cost − defence × caution −
 ### 3.4 遇敌与撤退(每天检查)
 
 1. 视野内出现玩家 regiment,AI 用自己看到的数字估 `odds`:不低于 `engage_odds`(Default 0.45)→ ENGAGE;否则绕开,或继续原目标。
+   **本版未接线(2026-10-07 终审裁定):** `EnemyAi.engages` 与 `ai_doctrines.csv` 的 `engage_odds_permille` 列(以及 `reserve` 行的 greed / caution / dist_cost / town_bonus)保留但不被调用、不改变行为;AI 对有守军目标的回避只来自 §3.3 打分里的 `caution` 项,接触后的战斗由 `BattleSystem` 决定,不看 odds。接线需要另行设计。
 2. 自身士气低于 `retreat_morale`,或补给低于 `ai_retreat_supply_days` 天 → RETREAT。
 3. 战败(战斗溃败档)→ RETREAT,保留残兵。
 

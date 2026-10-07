@@ -2132,7 +2132,7 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 
 ### 8.6 第零章 · 卢顿之约（`V-35`~`V-56`，2026-09-21）
 
-> 序章（`game_story/chapter_0/chapter_0_events.md`）21 个节拍一图一条，一一对应，`assets/flux/event_art.csv` 把编号接回 `event_id`。
+> 序章（`game_story/chapter_0/chapter_0_events.md`）21 个节拍 `V-35`~`V-55` 一图一条，一一对应；`V-56` 是战事节拍 `war_01`（`game_story/chapter_0/war_events.md`，由 `DefeatSystem` 在丢城时排期，不在序章链上）。`assets/flux/event_art.csv` 把编号接回 `event_id`。
 >
 > **画布是 `[C-EVENT]` 而不是 `[C-SCENE]`**：事件图在会见窗（`%AudienceWindow`，760×500 设计像素）顶端横幅里显示，所以构图是宽带，主体居中，上下留空。装进 `assets/2D/events/illustrations/<event_id>.png`，1280×533。
 >
@@ -2377,10 +2377,12 @@ foreboding [C-EVENT]
 [S] a vaulted stone council hall at dusk, a mud-spattered dispatch rider standing at the
 foot of a long oak table with his helmet under his arm, a map of a river valley spread
 across the table with one small walled town on it pinned by a dagger driven into the oak,
-a grey-bearded marshal in a mail shirt and a dark surcoat leaning on his fists over the
-map, the other councillors seated in shadow and turned towards the rider, a tall arched
-window behind them showing a far column of smoke rising on the horizon, no banners, no
-bodies, no blood, cold blue evening light as the first candles are lit [C-EVENT]
+nothing written anywhere on the map, a weather-beaten European marshal of forty-five with
+iron-grey cropped hair and beard and an old white scar through one eyebrow, in a padded
+oxblood arming coat over mail, leaning on his fists over the map, the other councillors
+seated in shadow and turned towards the rider, a tall arched window behind them showing
+a far column of smoke rising on the horizon, no banners, no bodies, no blood, cold blue
+evening light as the first candles are lit [C-EVENT]
 ```
 
 ## 9. UI 框架件 `U-`

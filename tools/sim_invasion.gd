@@ -17,6 +17,16 @@ extends SceneTree
 ## only, no 3D, no clock: safe headless.
 
 const SIDE := {"att": "attacker", "def": "defender", "": "none"}
+const VALUE_FLAGS := ["--map", "--seed", "--defence", "--days", "--bal"]
+const USAGE := "usage: Godot --headless --path . -s tools/sim_invasion.gd -- [--map ID] [--seed N] [--defence none|weak|strong] [--days N] [--walls] [--bal key=value ...]"
+
+
+## A wrong argument stops the run (a typo such as --defense must never run
+## the default setup silently).
+func _usage(why: String) -> void:
+	push_error("sim_invasion: " + why)
+	printerr(USAGE)
+	quit(2)
 
 
 func _init() -> void:
@@ -27,23 +37,31 @@ func _init() -> void:
 	var walls := false
 	var bal := {}
 	var args := OS.get_cmdline_user_args()
-	for i in args.size():
+	var i := 0
+	while i < args.size():
+		var flag := args[i]
 		var next := args[i + 1] if i + 1 < args.size() else ""
-		match args[i]:
+		i += 1
+		if flag == "--walls":
+			walls = true
+			continue
+		if not flag in VALUE_FLAGS or next == "" or next.begins_with("--"):
+			_usage("unknown flag or missing value: %s" % flag)
+			return
+		i += 1
+		match flag:
 			"--map": map = next
 			"--seed": seed_value = int(next)
 			"--defence": defence = next
 			"--days": days = int(next)
-			"--walls": walls = true
 			"--bal":
 				var kv := next.split("=")
-				if kv.size() == 2:
-					bal[kv[0]] = float(kv[1])
-			_:
-				pass
+				if kv.size() != 2:
+					_usage("--bal wants key=value, not %s" % next)
+					return
+				bal[kv[0]] = float(kv[1])
 	if not defence in ["none", "weak", "strong"]:
-		push_error("sim_invasion: --defence none|weak|strong, not %s" % defence)
-		quit(1)
+		_usage("--defence none|weak|strong, not %s" % defence)
 		return
 	var repo := DataRepository.load_all("res://data")
 	if repo == null or (repo.map_id != map and not repo.load_map(map)):
@@ -75,14 +93,27 @@ func _init() -> void:
 		"strategic": _metric(s, "strategic")}
 	var sums := {"battles": 0, "won": 0, "lost": 0, "drawn": 0, "taken": 0, "fell": -1, "town": "",
 		"garrison": [], "letters": 0, "best": 0}
+	var think_us: Array = []   # per day: EnemyAi.think_day's wall-clock cost (a TOOL may read the clock)
+	var day_us: Array = []
 	for n in days:
 		var today := s.absolute_day()
+		# the minds' cost, timed alone: a copy of the day played to the minds
+		# (march, couriers, step_day), then think_day under the clock
+		var probe := GameState.from_dict(s.to_dict())
+		ArmySystem.march_day(repo, probe)
+		CourierSystem.ride_day(repo, probe)
+		EnemyAi.step_day(repo, probe)
+		var t0 := Time.get_ticks_usec()
+		EnemyAi.think_day(repo, probe)
+		think_us.append(Time.get_ticks_usec() - t0)
 		var treasury := _metric(s, "treasury")
 		var content := _metric(s, "peasant_contentment")
+		var t1 := Time.get_ticks_usec()
 		if s.day >= Calendar.DAYS_PER_TICK:
 			engine.advance(s)
 		else:
 			engine.advance_day(s)
+		day_us.append(Time.get_ticks_usec() - t1)
 		var lines: Array = []
 		if today == cross:
 			var town := String(s.ai_hosts[main].get("target_id", ""))
@@ -149,12 +180,22 @@ func _init() -> void:
 	sums["letters"] = s.missives.filter(func(m: Dictionary) -> bool:
 		return String(m["kind"]) in ["battle", "host_news", "rumour"]).size()
 	_summary(repo, s, start, sums)
+	print("  cost: think_day mean %.2f ms, worst %.2f ms (day %d); whole day mean %.1f ms, worst %.1f ms" % [
+		_mean(think_us) / 1000.0, float(think_us.max()) / 1000.0, think_us.find(think_us.max()) + 1,
+		_mean(day_us) / 1000.0, float(day_us.max()) / 1000.0])
 	quit(0)
+
+
+func _mean(v: Array) -> float:
+	var sum := 0
+	for x: int in v:
+		sum += x
+	return float(sum) / float(maxi(1, v.size()))
 
 
 ## Garrisons `town` with the defence's regiments (by headcount: the smallest
 ## for weak, the three largest for strong, code order on ties), placed there
-## as an order already carried out. Returns their codes.
+## as if the march had already been carried out. Returns their codes.
 func _garrison(repo: DataRepository, s: GameState, town: String, defence: String, walls: bool) -> Array:
 	if walls:
 		repo.burgs[town]["features"] = "walls|citadel"
@@ -191,7 +232,7 @@ func _hosts(repo: DataRepository, s: GameState) -> String:
 		if not live.is_empty():
 			var f: Dictionary = s.foes[live[0]]
 			var at := Vector2i(int(f["x_m"]), int(f["y_m"]))
-			where = "(%d,%d)km x%d" % [at.x / 1000, at.y / 1000, live.size()]
+			where = "(%d,%d)km x%d" % [roundi(at.x / 1000.0), roundi(at.y / 1000.0), live.size()]
 			if String(m.get("target_id", "")) != "":
 				var to := EnemyAi.target_point_m(repo, String(m["target_kind"]), String(m["target_id"]))
 				where += " %dkm off" % int(Vector2(at).distance_to(Vector2(to)) / 1000.0)
