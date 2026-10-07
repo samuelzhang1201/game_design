@@ -34,6 +34,10 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 		"town": town, "works": works, "town_holder": town_holder, "garrison": garrison,
 		"weather": Weather.at(repo, state, at, state.absolute_day()) if state != null else Weather.CLEAR,
 		"places": _places_near(repo, at),
+		"hazards": Hazards.at_point(repo, state, at).filter(func(id: String) -> bool: return Hazards.known(repo, state, id)).map(
+			func(id: String) -> Dictionary: return {"id": id, "label": String(state.hazards[id]["label"]),
+				"kind": String(state.hazards[id]["kind"]), "months_left": Hazards.months_left(state, id)}) \
+			if state != null else [],
 		"regiment": {},
 	}
 	if code != "":
@@ -77,6 +81,7 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 	out.append({"text": String(r["place"]), "kind": "title"})
 	if bool(r["sea"]):
 		_add(out, "Weather: " + Weather.describe_kind(repo, String(r["weather"])))
+		_hazard_lines(repo, r, out)
 		_place_lines(repo, r, out)
 		_regiment_lines(repo, r, raking, out)
 		return out
@@ -100,6 +105,7 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 		if not (r["garrison"] as Array).is_empty():
 			_add(out, "Garrison: " + ", ".join(r["garrison"]))
 	_add(out, "Weather: " + Weather.describe_kind(repo, String(r["weather"])))
+	_hazard_lines(repo, r, out)
 	_place_lines(repo, r, out)
 	_regiment_lines(repo, r, raking, out)
 	return out
@@ -110,6 +116,30 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 ## The marks the slip names: within war_mark_hover_km, or within a hazard's
 ## own reach (a pointer inside a brigands' dotted ring names them), nearest
 ## first, at most war_mark_hover_max.
+## A known hazard at the point: its name, months left and what it does.
+static func _hazard_lines(repo: DataRepository, r: Dictionary, out: Array) -> void:
+	for h: Dictionary in r.get("hazards", []):
+		var left := int(h["months_left"])
+		var when := "" if left < 0 else " — %d month%s left" % [left, "" if left == 1 else "s"]
+		_add(out, "%s%s: %s" % [String(h["label"]), when, hazard_words(repo, String(h["kind"]))])
+
+
+## A kind's effects in words (data/hazard_kinds.csv).
+static func hazard_words(repo: DataRepository, kind: String) -> String:
+	var k := Hazards.kind_of(repo, kind)
+	var parts: Array[String] = []
+	if int(k.get("wounds_permille", 0)) > 0:
+		parts.append("regiments here lose about %s%% a month" % String.num(float(k["wounds_permille"]) / 10.0, 1))
+	if int(k.get("morale", 0)) < 0:
+		parts.append("morale falls %d a month" % -int(k["morale"]))
+	if int(k.get("supply_loss_permille", 0)) > 0:
+		@warning_ignore("integer_division")
+		parts.append("supply lines through it lose %d%%" % (int(k["supply_loss_permille"]) / 10))
+	if int(k.get("pace_permille", 1000)) < 1000:
+		parts.append("marches here go at ×%.2f" % (float(k["pace_permille"]) / 1000.0))
+	return "; ".join(parts) if not parts.is_empty() else "no effect on a march"
+
+
 static func _places_near(repo: DataRepository, at: Vector2) -> Array:
 	var hover := repo.bal("war_mark_hover_km")
 	var widest := hover

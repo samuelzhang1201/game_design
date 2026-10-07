@@ -201,3 +201,35 @@ func test_a_pointer_inside_a_hazards_reach_names_it() -> void:
 		assert_true(codes.has(String(m["code"])), "inside the dotted ring, the brigands are named")
 		return
 	pass_test("no brigands on this pack")
+
+
+func test_the_slip_names_a_known_hazard_with_its_months_and_effect() -> void:
+	var at := _land_point()
+	var cell := MapEconomy.cell_at(repo, at)
+	Hazards.add(state, "pl", "Disease", "Test Plague", [cell], state.tick, state.tick + 7, "test")
+	var r := WarGround.reading(repo, state, at, "")
+	assert_true((r["hazards"] as Array).any(func(h: Dictionary) -> bool: return String(h["id"]) == "pl"))
+	var texts := WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
+	assert_true(texts.any(func(t: String) -> bool:
+		return t.begins_with("Test Plague") and t.contains("7 months left") and t.contains(WarGround.hazard_words(repo, "Disease"))))
+
+
+func test_the_slip_never_names_an_unknown_hazard() -> void:
+	var mine := repo.resolve_realm("player_realm")
+	var ids: Array = repo.cells.keys()
+	ids.sort()
+	for c: int in ids:
+		var owner := MapOwnership.owner_of(repo, state, MapManors.province_of(repo, c, state))
+		if owner != "" and owner != mine and not MapTerrain.is_water(repo.cells[c]):
+			Hazards.add(state, "sr", "Rebels", "Secret Rebels", [c], state.tick, -1, "test")
+			var r := WarGround.reading(repo, state, MapTerrain.cell_center(repo, repo.cells[c]), "")
+			var texts := WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
+			assert_false(texts.any(func(t: String) -> bool: return t.contains("Secret Rebels")))
+			return
+	pass_test("no foreign land")
+
+
+func test_hazard_words_by_kind() -> void:
+	assert_string_contains(WarGround.hazard_words(repo, "Disease"), "a month")
+	assert_string_contains(WarGround.hazard_words(repo, "Flood"), "×")
+	assert_eq(WarGround.hazard_words(repo, "Fault"), "no effect on a march")
