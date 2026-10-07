@@ -130,9 +130,14 @@ ride, BEFORE the host eats:
    `drawn × (1000 − loss_permille) / 1000` (`SupplySystem.loss_of`, the
    road's length, unchanged rule). Cartage is charged (§3.4).
 4. **Town refill.** A land regiment standing in a town of the realm
-   (`ArmySystem.town_of` + held) is topped up to its `carry_days` from that
-   town, drawn as §3.3, with NO cartage and no road loss. A regiment both
-   in a town and with a line takes the town first.
+   (`ArmySystem.town_of` + held, whatever its order) is topped up to its
+   `carry_days` from that town, drawn as §3.3, with NO cartage and no road
+   loss. What its town cannot give it takes from the DEPOT
+   (`TownStores.depot`), crown then lord, as free — no house's stock is
+   bought there unless the depot is its own town. The first day it is fed
+   from the depot the dispatch says so ("Castleton's stores are empty: the
+   3rd Regiment is fed from Walbover"), once until its own town fills it
+   again. A regiment both in a town and with a line takes the town first.
 5. The host eats (`ArmySystem.eat_day`, unchanged).
 
 A regiment in the field with no line eats what it carries. Nothing else
@@ -237,7 +242,8 @@ reads the same lines.
   line opened, line cut (where, by whom), line restored, a supply town
   holds under `supply_warn_town_days` days of its lines' draw, a regiment
   under 5 days, a regiment out of supplies, a line cancelled because its
-  town was lost.
+  town was lost, supply orders whose courier never reached the town, a
+  garrison's town run dry and the depot feeding it.
 - Supply letters keep their own count (`missive_keep_supply`) so they never evict a spy's report or a receipt.
 - **The marshal's monthly report**: one row per regiment — days in hand,
   carried load, point, rate, road km, the month's cartage, road loss,
@@ -320,16 +326,30 @@ From the build:
 - A line erased mid-month folds its month counters into the regiment's entry so its skim is banked and its cartage reported; the skim's sub-gold fraction carries over. If wrong: none.
 - The burg card's stores sit in `fields` (no icon), because adding `stats` would hide every burg field in `map_detail_panel`. If wrong: an icon-less row on the town card.
 - Supply rows are not offered in the war room (its orders are drafts, the spec asks for supply orders from the map). If wrong: the owner cannot pencil supply points in the war room.
-- One formula for the daily cartage estimate (`SupplyLines.day_fee_estimate`) and the stock days (`TownStores.days_of_stock`), used by the rate menu and the regiment card. If wrong: none.
+- One formula for the daily cartage estimate (`SupplyLines.day_fee_milli`: the month's draw at the rate over the road, a thirtieth of it, in milligold) and the stock days (`TownStores.days_of_stock`), used by the rate menu and the regiment card. If wrong: none.
 - The four looks `scenes/map3d/materials/lines/supply_{line,pick,pick_off,preview}.tres` were written by the engine (a one-off headless script), not hand-edited text or the editor. If wrong: the editor may re-save them once to settle UIDs.
 - Accepted deviations of the map layer: the pick ring's radius is the town's click reach (not the cut reach); the line is snapped onto the drawn road; its end follows the drawn piece; `bind()` takes the units layer. If wrong: none.
 - Route searches are cached per line per day, end-following redraws are throttled by `map3d_supply_follow_s`, and pick or preview changes redraw only the rings and the preview. If wrong: the line's end lags the piece by up to the throttle.
 - OWNER TO RULE: the supply line's look (white, alpha 0.15, 22 px, fully soft; preview white dashes; gold lit rings reusing the selection gold; grey greyed rings). If wrong: the `.tres` values change, nothing else.
 - Whole-unit supplies are rounded UP where a day count is promised (a new regiment's `army_start_supply_days`, a town refill to `carry_days`), so a fresh or topped-up regiment reads 20 days in hand of 20, never 19. If wrong: none.
 - The Missive desk scrolls its facts (a `ScrollContainer` round `LetterFacts` in `missive_screen.tscn`): the marshal's report has a row per land regiment and ran off the window. The scene was patched as text, because the editor MCP drives the main checkout. If wrong: the editor may re-save the scene once.
-- PARKED for the owner (tuning): at `supply_cart_milligold_per_unit_km` 1 the cartage of one regiment is under a gold a day, so the rate menu's rows (0.8 / 1.0 / 1.2) all read "0 gold a day" and the three speeds cost the same in whole gold. If wrong: raise the key (about 10 puts a 1,600-man regiment on a 140 km road near 7 gold a day).
+- PARKED for the owner (tuning): at `supply_cart_milligold_per_unit_km` 1 the cartage of one regiment is under a gold a day. The key is kept; the rate menu and the card show cartage in TENTHS of a gold a day (`SupplyLines.gold_words`, display only), so 0.8 / 1.0 / 1.2 read apart on a long road. If wrong: raise the key (about 10 puts a 1,600-man regiment on a 140 km road near 7 gold a day).
 - "Play it" was verified by real-window snapshots of the cards, the menu and the Missive board, not by clicking through the live game. If wrong: an interaction bug only a human click finds.
 - main's marks and hazards (war-room P2) take their share of a supply line's road daily: `SupplyLines.day_step` reads `SupplySystem.road_loss` (brigands, pirates, active hazards on the town→regiment road) once a line a day and thins the delivery by `total_loss`; `line_of`, `plan()`, the rate menu and the marshal's report (which names the robbers) read the same loss. If wrong: none.
+
+From the final review (2026-10-07):
+
+- Home garrisons are fed from the depot when their own town runs dry (§3.2 step 4): the catchment leaves several realm towns with little or nothing in store, so a regiment quartered there starved in its first month while the pools grew. The depot gives crown then lord, free; a `town_dry` dispatch says it once (`supply_dry` on the regiment's entry until its town fills it), and the card and the war folio say "<town> tops it up" or "<town>'s stores are empty: it is fed from <depot>" (`SupplyLines.refill_words`, for any regiment standing in a realm town, not only a GARRISON). If wrong: a garrison in a poor town eats what it carries. KNOWN LIMIT: the depot is the capital, whose provinces the crown controls, so it holds only `lord` stock; on the default pack seven regiments drawing on it empty it by month 7 and they starve from month 8, while the crown's stock piles up in other towns. The owner may want the depot fallback to reach the crown's stock wherever it lies.
+- A lost supply courier is its own letter (`order_lost`: "The supply orders for <regiment> never reached <town>."); `cancelled` is kept for a town the realm lost. If wrong: none.
+- A SET for the town a FLOWING or CUT line already draws on changes only the rate and the order (the wagons keep rolling, the month's counters and warnings stay). If wrong: a rate change would cost the wagons' road days again.
+- The rate menu's courier days are his ride to the TOWN (`CourierSystem.eta_days_to`), where the supply orders go. If wrong: none.
+- The WAR ROOM inks only FLOWING lines, as the 3D map draws them. If wrong: none.
+- `host_hungry` is under `army_supply_low_days` days in hand (the line the daily morale loss starts at); `army_supply_warn_permille` is gone. If wrong: one balance key back.
+- All three supply rows (Add / Change, Withdraw, Carry) are greyed while time runs (§4). If wrong: none.
+- The marshal's report labels say what they count: "Bought from House X (units)", "Bought from the houses (gold)", "Bought from an unheld town (units)". If wrong: none.
+- `Game.load_campaign` runs `ArmySystem.ensure` beside `TownStores.ensure`, so an old save reads its load at once. If wrong: none.
+- The cut letter says where: "The road from X to Y is cut near Z by K." (`Intel.place_label`). If wrong: none.
+- A regiment whose supply use is 0 never starves nor warns (`hunger_day`, `warn_day`). If wrong: none.
 
 ## 9. Not in this spec (the brief's other items)
 
