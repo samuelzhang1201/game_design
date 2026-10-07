@@ -30,7 +30,7 @@ static func paint(canvas: CanvasItem, ink: Dictionary, look: Dictionary) -> void
 		var edge := poly.duplicate()
 		edge.append(poly[0])
 		var dark := col.darkened(1.0 - float(look.get("edge_dark", 0.78)))
-		dark.a = col.a * 0.6
+		dark.a = col.a * 0.9
 		canvas.draw_polyline(edge, dark, edge_w, true)
 	for p: Dictionary in ink.get("pen", []):
 		canvas.draw_polyline(p["line"], colours.get(String(p["colour"]), Color.BLACK), maxf(float(p["width"]), 1.0), true)

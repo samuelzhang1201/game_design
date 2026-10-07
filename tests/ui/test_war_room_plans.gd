@@ -171,7 +171,7 @@ func test_the_slip_reads_a_supposed_piece() -> void:
 	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
 	assert_true(slip.visible)
 	var first := ((slip.get_node("%Lines") as Node).get_child(0) as Label).text
-	assert_eq(first, "Supposed host — Unknown horse")
+	assert_eq(first, "Supposed horse")
 
 
 func test_the_scraper_removes_a_stroke() -> void:

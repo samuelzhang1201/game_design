@@ -227,5 +227,5 @@ static func plan_look(repo: DataRepository, tooth: Texture2D, mm: float, font: F
 	var cells := float(tooth.get_width()) if tooth != null else 1.0
 	return {"colours": {"blue": pal["plan_blue"], "red": pal["plan_red"], "ink": pal["ink"]},
 		"tooth": tooth, "tooth_uv": repo.bal("war_plan_tooth_scale") / maxf(mm, 0.0001) / cells,
-		"edge_dark": repo.bal("war_plan_edge_dark"), "edge_px": maxf(repo.bal("war_plan_pen_mm") * 0.5 * mm, 1.0),
+		"edge_dark": repo.bal("war_plan_edge_dark"), "edge_px": maxf(repo.bal("war_plan_edge_mm") * mm, 1.0),
 		"font": font, "caps": caps, "halo": pal.get("parchment", Color.WHITE)}

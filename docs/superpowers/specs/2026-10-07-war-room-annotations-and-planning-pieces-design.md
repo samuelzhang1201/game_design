@@ -488,3 +488,18 @@ sable) with pencilled tags.
 - **A — wax crayon**, with the supposed piece's slip and the tool roll — the
   owner's pick, kept as `docs/references/war_room/plans_style_A_crayon.png`.
 - **B — ink and wash**, with the ground menu (not chosen; not kept).
+
+## 9. Changed while building (2026-10-08)
+
+- Ruling 19: the near-zoom patch does NOT repaint the plan layer; at the closest lean the crayon is
+  soft but reads as crayon (shot `r2_near`). A later step if the owner wants it crisp.
+- Ruling 9: a click on a supposed piece pins its slip; the room no longer has a card roll (the
+  docked folio landed beside it), so nothing else changes.
+- Ruling 5: Unknown's lacquer is a dark umber (`#4A3B30`), not black — black caught white stripes
+  of gloss; boxwood toned down to `#D6BC86` (it read as amber glass).
+- Ruling 16: the name box opens on release prefilled; the stroke is drawn at once with the default.
+- The slip's title is "Supposed horse" with the side under it (the long title wrapped).
+- Strokes' widths were raised at the visual review (the axis 12 → 22 mm, a 1.2 mm pressed rim:
+  `war_plan_edge_mm`); the curve is MarchRoute's own (`MarchRoute.point`).
+- Plans never take the left button or the right click while a march is aimed or raked (the
+  march's waypoints and bends own the table then).

@@ -211,7 +211,7 @@ func _form_lines(arm: String, heads: int, side: String) -> Array:
 		return []
 	var r := WarGround.plan_reading(Game.data, Game.state, {"arm": arm, "heads": heads, "side": side, "at": _form_at}, "")
 	var lines := WarGround.plan_lines(Game.data, r)
-	return lines.slice(2, lines.size() - 1).map(func(l: Dictionary) -> String: return String(l["text"]))
+	return lines.slice(3, lines.size() - 1).map(func(l: Dictionary) -> String: return String(l["text"]))
 
 
 func _on_placed(arm: String, heads: int, side: String) -> void:

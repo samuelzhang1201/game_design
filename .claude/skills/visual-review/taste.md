@@ -666,6 +666,13 @@ add it here as a principle with its why — not as a changelog entry.
   (`wood_roughness_min`): at Tripo's own gloss the oak read as polished bronze (critic
   2026-10-06). A Tripo mesh is welded before it is collapsed, or its seams crack open and
   the parchment shows through as white speckle.
+- **The staff's plans are wax crayon on the parchment** (owner 2026-10-07, approving style A of the
+  plans spec over ink-and-wash). NATO's overlay translated into woad-blue and minium-red crayon —
+  broad bands whose wax skips on the paper's tooth with a darker pressed rim — and sepia pen for
+  phase lines and objectives, so a plan never passes for the survey's own ink. A supposed enemy is
+  the same carved piece in pale boxwood with a pencilled tag: oak is ours and real, translucent is
+  intel's belief. The critic's first pass: an axis must lead the sheet, never a hairline (12–22 mm
+  on the 1.4 m table), and teeth stay small beside it.
 - **An index chart shows the land it indexes** (owner: 选择地图的格子那个纸也换成羊皮
   纸，然后画上整个大陆地图的形状). The sheet index is parchment with the continent's
   inked coast and water lines, not a grid of dots.

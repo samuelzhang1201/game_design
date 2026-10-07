@@ -330,8 +330,8 @@ static func arm_word(repo: DataRepository, arm: String) -> String:
 static func plan_lines(repo: DataRepository, r: Dictionary) -> Array:
 	var p: Dictionary = r["plan"]
 	var out: Array = []
-	out.append({"text": "Supposed host — %s %s" % [side_label(repo, String(p["side"])), arm_word(repo, String(p["arm"]))],
-		"kind": "title"})
+	out.append({"text": "Supposed %s" % arm_word(repo, String(p["arm"])), "kind": "title"})
+	out.append({"text": side_label(repo, String(p["side"])), "kind": "sub"})
 	var types: Dictionary = repo.world_table("military", "unit_types")
 	var arm_label := String((types.get(String(p["arm"]), {}) as Dictionary).get("label", p["arm"])).to_lower()
 	var grade := ArmySystem.training_grade(repo, int(repo.bal("war_plan_training"))).to_lower()

@@ -50,7 +50,7 @@ static func add(repo: DataRepository, out: Dictionary, s: Dictionary, kind: Dict
 				ring.append(ctrl[0] + Vector2.from_angle(TAU * float(i) / RING_SEGMENTS) * rr)
 			_pen(repo, out, ring, colour, pen * (1.6 if rr == r else 1.0), dashed, mm)
 		if name != "":
-			out["names"].append({"at": ctrl[0] + Vector2(0, -r - name_px * 0.35), "text": name, "colour": colour,
+			out["names"].append({"at": ctrl[0] + Vector2(0, -r - name_px * 0.9), "text": name, "colour": colour,
 				"caps": true, "size": name_px})
 		return
 	if ctrl.size() < 2:
@@ -68,8 +68,9 @@ static func add(repo: DataRepository, out: Dictionary, s: Dictionary, kind: Dict
 		var body := WarPlanGeometry.cut(path, 0.0, maxf(neck, 0.0))
 		var w := (repo.bal("war_plan_arrow_tail_mm") + repo.bal("war_plan_arrow_neck_mm")) * 0.5 * mm
 		if dashed:
-			for d: PackedVector2Array in WarPlanGeometry.dashes(body, repo.bal("war_plan_dash_mm") * mm * 1.6,
-					repo.bal("war_plan_gap_mm") * mm * 1.6):
+			# a dash a few widths long, or the broad band breaks into squares (critic 2026-10-08)
+			for d: PackedVector2Array in WarPlanGeometry.dashes(body, maxf(repo.bal("war_plan_dash_mm") * mm, w * 2.5),
+					maxf(repo.bal("war_plan_gap_mm") * mm, w * 0.8)):
 				_band(out, d, w, colour)
 		elif Geometry2D.triangulate_polygon(a["band"]).is_empty():
 			_band(out, body, w, colour)   # a band crossing itself on a tight turn: an even one instead
