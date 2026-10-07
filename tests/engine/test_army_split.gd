@@ -219,3 +219,48 @@ func test_lists_put_the_crown_first_then_group_by_regiment() -> void:
 			assert_false(seen.has(p), "%s's units are split up" % p)
 			seen[p] = true
 		last = p
+
+
+## A kingdom with no capital still keeps every gun (§3.1 step 3: no unit
+## added or lost): its train camps where its first land regiment, by code,
+## stands.
+func test_a_kingdom_with_no_capital_keeps_its_guns() -> void:
+	var r2 := SuiteData.repo()
+	var rows: Array = r2.world_table("military", "regiments").values()
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return String(a["regiment_code"]) < String(b["regiment_code"]))
+	var guns: Dictionary = {}
+	for r: Dictionary in rows:
+		var k := String(r["kingdom_code"])
+		guns[k] = int(guns.get(k, 0)) + int(float(r.get("artillery", 0)))
+	var ks := guns.keys()
+	ks.sort()
+	var gunned := ""
+	for k: String in ks:
+		if int(guns[k]) > 0:
+			gunned = k
+			break
+	assert_ne(gunned, "", "premise: a kingdom has guns")
+	var first: Dictionary = {}
+	for r: Dictionary in rows:
+		if String(r["kingdom_code"]) == gunned and String(r.get("is_naval", "0")) != "1":
+			first = r
+			break
+	r2.kingdoms[gunned]["capital_burg"] = ""
+	var ro: Dictionary = ArmySplit.split(r2)["roster"]
+	var men := 0
+	var train: Dictionary = {}
+	for c: String in ro:
+		var u: Dictionary = ro[c]
+		if String(u["kingdom_code"]) == gunned:
+			men += int(float(u.get("artillery", 0)))
+			if int(float(u.get("artillery", 0))) > 0:
+				train = u
+	assert_eq(men, int(guns[gunned]), "every gun kept")
+	assert_false(train.is_empty(), "as a train")
+	if not train.is_empty():
+		var at := Vector2(float(first["x"]), float(first["y"]))
+		var town := ArmySystem.town_at(r2, at)
+		if town != "" and MapOwnership.owner_of(r2, null, String(r2.burgs[town].get("province_code", ""))) != gunned:
+			town = ""
+		assert_eq(String(train["camp_town"]), town, "it camps by the first land regiment's town")

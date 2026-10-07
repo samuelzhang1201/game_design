@@ -64,7 +64,11 @@ func test_a_chosen_regiment_reads_its_factors_against_open_plains() -> void:
 	var r := WarGround.reading(repo, state, at, code)
 	var g: Dictionary = r["regiment"]
 	var town := String(r["town"])
-	var works := String(r["works"]) if town != "" and String(r["town_holder"]) == String(ArmySystem.regiment(repo, code)["kingdom_code"]) else ""
+	# a town's works only for the unit on its seat, or one that would take an
+	# empty seat (spec 2026-10-07-army-split-and-ground §4.1, §4.3)
+	var seat := ArmyGround.seat_of(repo, state, town) if town != "" else ""
+	var works := String(r["works"]) if town != "" and String(r["town_holder"]) == String(ArmySystem.regiment(repo, code)["kingdom_code"]) \
+		and (seat == "" or seat == code) else ""
 	var plains := ArmySystem.power_on(repo, state, code, "defend", "plains", "")
 	@warning_ignore("integer_division")
 	assert_eq(g["defend"], ArmySystem.power_on(repo, state, code, "defend", String(r["terrain"]), works) * 1000 / plains)
@@ -110,6 +114,68 @@ func test_a_foreign_town_never_shows_a_garrison() -> void:
 		assert_eq(r["garrison"], [], "foreign town %s" % code)
 		return
 	pass_test("no foreign town on this pack")
+
+
+## The capital, the unit on its seat and the units camped round it off the
+## seat (spec 2026-10-07-army-split-and-ground §4.1).
+func _capital_camp() -> Dictionary:
+	var realm := repo.resolve_realm("player_realm")
+	var town := String(repo.kingdoms[realm]["capital_burg"])
+	var seat := ArmyGround.seat_of(repo, state, town)
+	var camped: Array = []
+	for r: Dictionary in MapObjects.regiments_of(repo, realm, state):
+		var c := String(r["regiment_code"])
+		if c != seat and ArmyGround.camped_by(repo, state, c) == town:
+			camped.append(c)
+	var b: Dictionary = repo.burgs[town]
+	return {"town": town, "seat": seat, "camped": camped, "at": Vector2(float(b["x"]), float(b["y"]))}
+
+
+## The garrison is the unit on the seat; the rest of the camp is a count, the
+## outer rings' units in it and a column passing through not.
+func test_the_garrison_is_the_seat_and_the_camp_a_count() -> void:
+	var cap := _capital_camp()
+	var seat := String(cap["seat"])
+	assert_ne(seat, "", "premise: the capital's seat is held")
+	var n := (cap["camped"] as Array).size()
+	assert_gt(n, 1, "premise: several units camp round the capital")
+	# a column passing through the capital holds no ground and is no garrison
+	var through := String((cap["camped"] as Array)[0])
+	ArmySystem.ensure(repo, state)
+	ArmySystem.set_march(repo, state, through, (cap["at"] as Vector2) + Vector2(40.0, 0.0))
+	state.regiments[through]["x_m"] = ArmySystem.pack_to_metres(repo, cap["at"]).x
+	state.regiments[through]["y_m"] = ArmySystem.pack_to_metres(repo, cap["at"]).y
+	var r := WarGround.reading(repo, state, cap["at"], "")
+	var label := String(ArmySystem.regiment(repo, seat, state)["label"])
+	assert_eq(r["garrison"], [label], "one name: the seat's")
+	assert_eq(int(r["camped"]), n - 1, "the camp, less the column on the march")
+	var texts := WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))
+	assert_true(texts.has("Garrison: %s · %d camped round it" % [label, n - 1]), str(texts))
+
+
+## The town's works go to the seat's unit alone (§4.1): a unit camped round
+## the town reads the field's terrain; an empty seat is the next arrival's
+## (§4.3), so then it reads the works too.
+func test_only_the_seat_reads_the_towns_works() -> void:
+	var cap := _capital_camp()
+	var seat := String(cap["seat"])
+	var camper := String((cap["camped"] as Array)[0])
+	var at: Vector2 = cap["at"]
+	var r := WarGround.reading(repo, state, at, "")
+	var works := String(r["works"])
+	var terrain := String(r["terrain"])
+	assert_eq(works, ArmySystem.works_of(repo, ArmySystem.regiment(repo, seat, state), state), "premise: the seat's works")
+	var factor := func(c: String, w: String) -> int:
+		@warning_ignore("integer_division")
+		return ArmySystem.power_on(repo, state, c, "defend", terrain, w) * 1000 \
+			/ ArmySystem.power_on(repo, state, c, "defend", "plains", "")
+	assert_eq(int(WarGround.reading(repo, state, at, seat)["regiment"]["defend"]), factor.call(seat, works))
+	assert_ne(factor.call(camper, works), factor.call(camper, ""), "premise: the works would tell on the camper")
+	assert_eq(int(WarGround.reading(repo, state, at, camper)["regiment"]["defend"]), factor.call(camper, ""),
+		"a camp fights on the field's terrain")
+	state.town_seat.erase(String(cap["town"]))
+	assert_eq(int(WarGround.reading(repo, state, at, camper)["regiment"]["defend"]), factor.call(camper, works),
+		"an empty seat is the next arrival's")
 
 
 func test_raking_leaves_the_days_out() -> void:

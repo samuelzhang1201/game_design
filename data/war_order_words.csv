@@ -1,5 +1,6 @@
 key,word,notes
 march,On the march,"WAR ROOM (final review, spec §4): how the folio's March section names a regiment's standing order (ArmySystem.ORDER_*), never the raw id"
 garrison,In garrison,
-camp,Encamped in the field,"a GARRISON order outside any town its kingdom holds (spec 2026-10-06-army-location-and-town-defence §4): it stands, but earns no garrison"
+camp,Encamped in the field,"a GARRISON order camped by no town its kingdom holds (spec 2026-10-07-army-split-and-ground §4.1): it stands in the field, with neither works nor the town's supply"
+camped,Camped by the town,"a GARRISON order camped round a held town off its seat (spec 2026-10-07-army-split-and-ground §4.1): fed by the town, but only the seat's unit is its garrison"
 standby,Standing by,

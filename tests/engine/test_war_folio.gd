@@ -188,6 +188,32 @@ func test_a_standing_regiment_reads_the_town_that_tops_it_up() -> void:
 	fail_test("no standing regiment in a realm town, or no Line row")
 
 
+## The Order row (spec 2026-10-07-army-split-and-ground §4.1): only the unit
+## on a town's seat is its garrison; a unit camped round the town reads as
+## camped by it, one halted in the open as encamped in the field.
+func test_the_order_row_tells_the_seat_from_the_camp_and_the_field() -> void:
+	var seated := ""
+	var camped := ""
+	ArmySystem.ensure(repo, state)
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		var c := String(r["regiment_code"])
+		if String(r.get("is_naval", "0")) == "1":
+			continue
+		state.regiments[c]["order"] = ArmySystem.ORDER_GARRISON   # as an arrival leaves it
+		if seated == "" and ArmyGround.seated_in(repo, state, c) != "":
+			seated = c
+		elif camped == "" and ArmyGround.seated_in(repo, state, c) == "" and ArmyGround.camped_by(repo, state, c) != "":
+			camped = c
+	assert_ne(seated, "", "premise: a unit on a seat")
+	assert_ne(camped, "", "premise: a unit camped off the seat")
+	code = seated
+	assert_eq(_rows("march")["Order"], "In garrison")
+	code = camped
+	assert_eq(_rows("march")["Order"], "Camped by the town")
+	state.regiments[camped]["camp_town"] = ""   # settled in the open
+	assert_eq(_rows("march")["Order"], "Encamped in the field")
+
+
 func test_matchups_are_named_per_arm() -> void:
 	var rows := _rows("arms")
 	assert_true(rows.has("Matchups — Infantry"))

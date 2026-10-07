@@ -14,16 +14,23 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 	var town := "" if sea else ArmySystem.town_at(repo, at)
 	var town_holder := ""
 	var works := ""
+	# the garrison is the unit on the seat; the rest of the camp round the town
+	# a count (spec 2026-10-07-army-split-and-ground §4.1) — our own towns only
 	var garrison: Array[String] = []
+	var camped := 0
 	if town != "":
 		var b: Dictionary = repo.burgs[town]
 		town_holder = MapOwnership.owner_of(repo, state, String(b.get("province_code", "")))
 		var feats := String(b.get("features", "")).split("|")
 		works = "citadel" if "citadel" in feats else ("walls" if "walls" in feats else "town")
 		if town_holder == repo.resolve_realm("player_realm"):
+			var seat := ArmyGround.seat_of(repo, state, town)
+			if seat != "" and ArmyGround.seated_in(repo, state, seat) == town:
+				garrison.append(String(ArmySystem.regiment(repo, seat, state).get("label", seat)))
 			for r: Dictionary in MapObjects.regiments_of(repo, town_holder, state):
-				if ArmySystem.town_of(repo, r, state) == town:
-					garrison.append(String(r.get("label", r["regiment_code"])))
+				var c := String(r["regiment_code"])
+				if c != seat and ArmyGround.camped_by(repo, state, c) == town:
+					camped += 1
 	var out := {
 		"place": Intel.place_label(repo, state, at),
 		"holder": MapOwnership.owner_of(repo, state, prov) if prov != "" else "",
@@ -32,6 +39,7 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 		"metres": Elevation.metres_of_cell(repo, cell),
 		"road": "" if sea else ArmySystem.road_at(repo, at),
 		"town": town, "works": works, "town_holder": town_holder, "garrison": garrison,
+		"camped": camped,
 		"weather": Weather.at(repo, state, at, state.absolute_day()) if state != null else Weather.CLEAR,
 		"places": _places_near(repo, at),
 		"hazards": Hazards.at_point(repo, state, at).filter(func(id: String) -> bool: return Hazards.known(repo, state, id)).map(
@@ -67,7 +75,13 @@ static func _for_regiment(repo: DataRepository, state: GameState, at: Vector2, c
 		"afloat": not naval and bool(g["sea"])}   # ARMY_MARCH refuses the sea: no pace, no days
 	if bool(out["ashore"]) or bool(out["afloat"]):
 		return out
-	var works := String(g["works"]) if String(g["town"]) != "" and String(g["town_holder"]) == String(reg.get("kingdom_code", "")) else ""
+	# the town's works are the seat's alone (§4.1): the unit on it, or one
+	# that would take it empty on arrival (§4.3); a camp fights on the field
+	var works := ""
+	if String(g["town"]) != "" and String(g["town_holder"]) == String(reg.get("kingdom_code", "")):
+		var seat := ArmyGround.seat_of(repo, state, String(g["town"]))
+		if seat == "" or seat == code:
+			works = String(g["works"])
 	out["defend"] = _factor(repo, state, code, "defend", String(g["terrain"]), works)
 	out["attack"] = _factor(repo, state, code, "attack", String(g["terrain"]), "")
 	out["delta_m"] = int(g["metres"]) - ArmySystem.elevation_of(repo, reg, state)
@@ -117,8 +131,11 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 		if String(r["town_holder"]) != "" and String(r["town_holder"]) != repo.resolve_realm("player_realm"):
 			text += " — held by " + String((repo.kingdoms.get(r["town_holder"], {}) as Dictionary).get("label", r["town_holder"]))
 		_add(out, text)
+		var camp := int(r.get("camped", 0))
 		if not (r["garrison"] as Array).is_empty():
-			_add(out, "Garrison: " + ", ".join(r["garrison"]))
+			_add(out, "Garrison: " + ", ".join(r["garrison"]) + (" · %d camped round it" % camp if camp > 0 else ""))
+		elif camp > 0:
+			_add(out, "No garrison · %d camped round it" % camp)
 	_economy_lines(repo, r, out)
 	_add(out, "Weather: " + Weather.describe_kind(repo, String(r["weather"])))
 	_hazard_lines(repo, r, out)

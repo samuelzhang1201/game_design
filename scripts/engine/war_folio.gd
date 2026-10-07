@@ -243,10 +243,11 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 		_row("Supplies score", "%d%%" % supplies_pct),
 		_row("Training", grade)]
 	var order := ArmySystem.order_of(repo, state, code)
-	# a halt in the open, camped by no town, is a field camp (spec 2026-10-06 §4)
+	# a standing unit: the garrison is the seat's alone, the rest are camped
+	# round its town or in the field (spec 2026-10-07-army-split-and-ground §4.1)
 	var shown := order
-	if order == ArmySystem.ORDER_GARRISON and ArmyGround.camped_by(repo, state, code) == "":
-		shown = "camp"
+	if order == ArmySystem.ORDER_GARRISON and ArmyGround.seated_in(repo, state, code) == "":
+		shown = "camped" if ArmyGround.camped_by(repo, state, code) != "" else "camp"
 	rows.append(_row("Order", order_word(repo, shown)))
 	if order == ArmySystem.ORDER_MARCH:
 		var dest := ArmySystem.destination_of(repo, state, code)

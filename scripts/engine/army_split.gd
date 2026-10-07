@@ -66,6 +66,7 @@ static func _make(repo: DataRepository) -> Dictionary:
 	var roster: Dictionary = {}
 	var taken := ArmyGround.new_taken(repo)
 	var guns: Dictionary = {}
+	var home: Dictionary = {}   # kingdom -> its first land regiment's {town, centre}
 	for row: Dictionary in rows:
 		var code := String(row["regiment_code"])
 		if String(row.get("is_naval", "0")) == "1":
@@ -80,6 +81,8 @@ static func _make(repo: DataRepository) -> Dictionary:
 		var at := Vector2(float(row["x"]), float(row["y"]))
 		var town := _held(repo, ArmySystem.town_at(repo, at), k)
 		var centre := ArmyGround.town_point_m(repo, town) if town != "" else ArmySystem.pack_to_metres(repo, at)
+		if not home.has(k):
+			home[k] = {"town": town, "centre": centre, "province_code": String(row.get("province_code", ""))}
 		var armed := 0
 		for arm_row: Dictionary in repo.army_split:
 			if not bool(arm_row["pooled"]) and int(float(row.get(String(arm_row["arm"]), 0))) > 0:
@@ -98,12 +101,12 @@ static func _make(repo: DataRepository) -> Dictionary:
 	ks.sort()
 	for k: String in ks:
 		if int(guns[k]) > 0:
-			var train := _train(repo, k, int(guns[k]))
-			if not train.is_empty():
-				var t_town := String(train["camp_town"])
-				_place(repo, train, ArmyGround.town_point_m(repo, t_town), String(train["_arm"]), taken, true)
-				train.erase("_arm")
-				roster[String(train["regiment_code"])] = train
+			var train := _train(repo, k, int(guns[k]), home[k])
+			var t_town := String(train["camp_town"])
+			var t_centre: Vector2i = ArmyGround.town_point_m(repo, t_town) if t_town != "" else home[k]["centre"]
+			_place(repo, train, t_centre, String(train["_arm"]), taken, t_town != "")
+			train.erase("_arm")
+			roster[String(train["regiment_code"])] = train
 	_crown(repo, rows, roster)
 	return {"roster": roster, "seats": _seat(repo, roster)}
 
@@ -155,19 +158,24 @@ static func _unit(repo: DataRepository, parent: Dictionary, arm_row: Dictionary,
 	return out
 
 
-## A kingdom's royal train: every gun it has, quartered on its capital. {} for
-## a kingdom with no capital. `_arm` (the pooled arm) is the caller's to drop.
-static func _train(repo: DataRepository, k: String, men: int) -> Dictionary:
+## A kingdom's royal train: every gun it has, quartered on its capital — or,
+## with no capital, where its first land regiment (by code) stands (`home`:
+## its town, centre and province), so no gun is lost. `_arm` (the pooled arm)
+## is the caller's to drop.
+static func _train(repo: DataRepository, k: String, men: int, home: Dictionary) -> Dictionary:
 	var cap_code := String((repo.kingdoms.get(k, {}) as Dictionary).get("capital_burg", ""))
-	if not repo.burgs.has(cap_code):
-		return {}
+	var province := String(home["province_code"])
+	if repo.burgs.has(cap_code):
+		province = String(repo.burgs[cap_code].get("province_code", ""))
+	else:
+		cap_code = String(home["town"])
 	var pooled: Dictionary = {}
 	for row: Dictionary in repo.army_split:
 		if bool(row["pooled"]):
 			pooled = row
 	var out: Dictionary = {"regiment_code": "%s_%s" % [k, pooled["code_word"]], "kingdom_code": k,
-		"province_code": String(repo.burgs[cap_code].get("province_code", "")),
-		"label": String(pooled["label_word"]).replace("{kingdom}", String(repo.kingdoms[k].get("label", k))),
+		"province_code": province,
+		"label": String(pooled["label_word"]).replace("{kingdom}", String((repo.kingdoms.get(k, {}) as Dictionary).get("label", k))),
 		"is_naval": "0", "parent_code": "", "is_royal": "0", "camp_town": cap_code, "_arm": String(pooled["arm"])}
 	for arm: String in repo.world_table("military", "unit_types"):
 		out[arm] = "0"

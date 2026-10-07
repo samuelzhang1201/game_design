@@ -105,9 +105,10 @@ static func town_point_m(repo: DataRepository, town: String) -> Vector2i:
 
 ## --- Seats and camps (spec §4.1, §4.3–4.4) -----------------------------
 
-## The seats in play: the campaign's, else the pack's opening ones.
+## The seats in play: the campaign's, else — no state, or a state with no
+## roster, as ArmySystem.roster reads it — the pack's opening ones.
 static func _seats(repo: DataRepository, state: GameState) -> Dictionary:
-	return state.town_seat if state != null else ArmySplit.seats_of(repo)
+	return state.town_seat if state != null and not state.army_roster.is_empty() else ArmySplit.seats_of(repo)
 
 
 ## Whether kingdom `k` holds `town` now (its province's owner).

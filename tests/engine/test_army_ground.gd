@@ -275,3 +275,17 @@ func test_a_lost_town_loses_its_seat() -> void:
 	MapOwnership.set_owner(repo, s, String(repo.burgs[town]["province_code"]), foe, "test: the town falls")
 	ArmyGround.reconcile(repo, s)
 	assert_false(s.town_seat.has(town))
+
+
+## A state with no roster reads the pack's split (ArmySystem.roster), and so
+## its opening seats too (spec §2.4: one way in).
+func test_a_state_with_no_roster_reads_the_packs_seats() -> void:
+	var s := GameState.new()
+	assert_true(s.army_roster.is_empty(), "premise: no roster")
+	var seats := ArmySplit.seats_of(repo)
+	var towns := seats.keys()
+	towns.sort()
+	assert_false(towns.is_empty(), "premise: the pack fills a seat")
+	var town := String(towns[0])
+	assert_eq(ArmyGround.seat_of(repo, s, town), String(seats[town]))
+	assert_eq(ArmyGround.seated_in(repo, s, String(seats[town])), town)
