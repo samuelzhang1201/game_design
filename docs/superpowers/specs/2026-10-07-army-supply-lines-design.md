@@ -134,9 +134,14 @@ ride, BEFORE the host eats:
    `carry_days` from that town, drawn as §3.3, with NO cartage and no road
    loss. What its town cannot give it takes from the DEPOT
    (`TownStores.depot`), crown then lord, as free — no house's stock is
-   bought there unless the depot is its own town. The first day it is fed
-   from the depot the dispatch says so ("Castleton's stores are empty: the
-   3rd Regiment is fed from Walbover"), once until its own town fills it
+   bought there unless the depot is its own town. What the depot cannot
+   give it takes from the CROWN's stock of the other realm towns, nearest
+   its own town first (straight line, ties by burg code;
+   `TownStores.nearest_first`), as free — never a lord's or a house's stock
+   there (owner 2026-10-07, option A). The first day its own town falls
+   short the dispatch says so ("Castleton's stores are empty: the 3rd
+   Regiment is fed from Walbover", or "… is fed from the realm's stores"
+   when the other towns were drawn), once until its own town fills it
    again. A regiment both in a town and with a line takes the town first.
 5. The host eats (`ArmySystem.eat_day`, unchanged).
 
@@ -243,7 +248,7 @@ reads the same lines.
   holds under `supply_warn_town_days` days of its lines' draw, a regiment
   under 5 days, a regiment out of supplies, a line cancelled because its
   town was lost, supply orders whose courier never reached the town, a
-  garrison's town run dry and the depot feeding it.
+  garrison's town run dry and the depot (or the realm's stores) feeding it.
 - Supply letters keep their own count (`missive_keep_supply`) so they never evict a spy's report or a receipt.
 - **The marshal's monthly report**: one row per regiment — days in hand,
   carried load, point, rate, road km, the month's cartage, road loss,
@@ -339,7 +344,8 @@ From the build:
 
 From the final review (2026-10-07):
 
-- Home garrisons are fed from the depot when their own town runs dry (§3.2 step 4): the catchment leaves several realm towns with little or nothing in store, so a regiment quartered there starved in its first month while the pools grew. The depot gives crown then lord, free; a `town_dry` dispatch says it once (`supply_dry` on the regiment's entry until its town fills it), and the card and the war folio say "<town> tops it up" or "<town>'s stores are empty: it is fed from <depot>" (`SupplyLines.refill_words`, for any regiment standing in a realm town, not only a GARRISON). If wrong: a garrison in a poor town eats what it carries. KNOWN LIMIT: the depot is the capital, whose provinces the crown controls, so it holds only `lord` stock; on the default pack seven regiments drawing on it empty it by month 7 and they starve from month 8, while the crown's stock piles up in other towns. The owner may want the depot fallback to reach the crown's stock wherever it lies.
+- Home garrisons are fed from the depot when their own town runs dry (§3.2 step 4): the catchment leaves several realm towns with little or nothing in store, so a regiment quartered there starved in its first month while the pools grew. The depot gives crown then lord, free; a `town_dry` dispatch says it once (`supply_dry` on the regiment's entry until its town fills it), and the card and the war folio say "<town> tops it up" or "<town>'s stores are empty: it is fed from <depot>" (`SupplyLines.refill_words`, for any regiment standing in a realm town, not only a GARRISON). If wrong: a garrison in a poor town eats what it carries.
+- The depot alone did not last the year (the capital's provinces are the crown's own, so it holds only `lord` stock, and seven regiments emptied it by month 7 while the crown's stock piled up elsewhere). Owner 2026-10-07 chose option A: past the depot a home garrison draws the CROWN's stock of the other realm towns, nearest its town first, free of cartage and road loss, buying nothing (`TownStores.nearest_first`, cached on who holds what). `supply_fed` on the entry keeps where it was fed from last, so the card reads "fed from the realm's stores" once the other towns were drawn. On the default pack a year with no orders now keeps every home regiment at 20 days.
 - A lost supply courier is its own letter (`order_lost`: "The supply orders for <regiment> never reached <town>."); `cancelled` is kept for a town the realm lost. If wrong: none.
 - A SET for the town a FLOWING or CUT line already draws on changes only the rate and the order (the wagons keep rolling, the month's counters and warnings stay). If wrong: a rate change would cost the wagons' road days again.
 - The rate menu's courier days are his ride to the TOWN (`CourierSystem.eta_days_to`), where the supply orders go. If wrong: none.

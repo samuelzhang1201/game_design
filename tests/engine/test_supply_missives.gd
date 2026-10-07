@@ -54,6 +54,15 @@ func test_a_dry_town_names_the_depot_that_feeds_the_regiment() -> void:
 	assert_eq(String((m["facts"] as Array)[0]["text"]), "%s's stores are empty: %s is fed from %s." % [
 		String(repo.burgs[dry]["label"]), reg, String(repo.burgs[dep]["label"])])
 
+## Owner 2026-10-07, option A: fed past the depot, it says the realm's stores.
+func test_a_dry_town_fed_by_the_realm_says_so() -> void:
+	var code := _land()
+	var dry := String(TownStores.realm_towns(repo, s)[0])
+	var m := MissiveWriter.supply_dispatch(repo, s, [{"type": "town_dry", "regiment": code, "town": dry,
+		"depot": TownStores.depot(repo, s), "realm": true}])
+	assert_eq(String((m["facts"] as Array)[0]["text"]), "%s's stores are empty: %s is fed from the realm's stores." % [
+		String(repo.burgs[dry]["label"]), String(ArmySystem.regiment(repo, code)["label"])])
+
 func test_a_low_event_with_no_town_reads_whole() -> void:
 	var m := MissiveWriter.supply_dispatch(repo, s, [
 		{"type": "low", "regiment": _land(), "town": ""}, {"type": "empty", "regiment": _land(), "town": ""}])

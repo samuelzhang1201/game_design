@@ -14,6 +14,7 @@ const POOLS := ["crown", "lord", "house"]
 const METRIC := {"crown": "strategic", "lord": "lord_strategic"}
 
 static var _catch_cache: Dictionary = {}
+static var _near_cache: Dictionary = {}
 
 
 static func units_per_gold(repo: DataRepository) -> int:
@@ -67,6 +68,30 @@ static func _nearest(repo: DataRepository, at: Vector2, towns: Array) -> String:
 			best_d = d
 			best = code
 	return best
+
+
+## The other realm towns, nearest `burg` first (straight line; ties by burg
+## code) — where a dry town's garrison draws on the crown's stores (spec
+## §3.2 step 4, owner 2026-10-07 option A). Cached on who holds what.
+static func nearest_first(repo: DataRepository, state: GameState, burg: String) -> Array:
+	var key := hash([repo.get_instance_id(), state.province_owner.hash()])
+	if not _near_cache.has(key):
+		if _near_cache.size() > 16:
+			_near_cache.clear()
+		_near_cache[key] = {}
+	var by_town: Dictionary = _near_cache[key]
+	if by_town.has(burg):
+		return by_town[burg]
+	var at := _burg_px(repo.burgs.get(burg, {}))
+	var ranked: Array = []
+	for code: String in realm_towns(repo, state):
+		if code != burg:
+			ranked.append([at.distance_squared_to(_burg_px(repo.burgs[code])), code])
+	ranked.sort_custom(func(a: Array, b: Array) -> bool:
+		return float(a[0]) < float(b[0]) or (float(a[0]) == float(b[0]) and String(a[1]) < String(b[1])))
+	var out: Array = ranked.map(func(r: Array) -> String: return String(r[1]))
+	by_town[burg] = out
+	return out
 
 
 ## cell -> burg for every manor of the realm (spec §2.2): the nearest realm

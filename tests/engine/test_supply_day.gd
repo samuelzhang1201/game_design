@@ -496,3 +496,51 @@ func test_a_regiment_its_town_fills_is_fed_by_that_town() -> void:
 	s.regiments[c]["supplies"] = 0
 	assert_false(_has(SupplyLines.day_step(repo, s), "town_dry", c))
 	assert_eq(SupplyLines.refill_of(repo, s, c), {"town": held, "from": held})
+
+## Its own town and the depot both dry (owner 2026-10-07, option A), a
+## regiment quartered in a realm town draws the CROWN's stock of the other
+## realm towns, nearest first — never their lord's or a house's, and free.
+func test_a_dry_town_and_depot_draw_the_crowns_stores_nearest_first() -> void:
+	s.supply_lines.clear()
+	var c := _quartered_off_the_depot()
+	if c == "":
+		pending("no regiment stands in a realm town other than the depot")
+		return
+	var held := SupplyLines.home_town(repo, s, c)
+	var dep := TownStores.depot(repo, s)
+	var order: Array = TownStores.nearest_first(repo, s, held).filter(func(t: String) -> bool: return t != dep)
+	assert_gt(order.size(), 2, "two other realm towns")
+	var near := String(order[0])
+	var far := String(order[order.size() - 1])
+	var at := Vector2(float(repo.burgs[held]["x"]), float(repo.burgs[held]["y"]))
+	assert_lt(at.distance_to(Vector2(float(repo.burgs[near]["x"]), float(repo.burgs[near]["y"]))),
+		at.distance_to(Vector2(float(repo.burgs[far]["x"]), float(repo.burgs[far]["y"]))), "the near town is nearer")
+	for t: String in TownStores.realm_towns(repo, s):
+		s.town_stock[t] = {"crown": 0, "lord": 0, "house": 0}
+	s.town_stock[near] = {"crown": 1, "lord": 100000, "house": 100000}
+	_stock(far, 100000, 100000, 100000)
+	s.regiments[c]["supplies"] = 0
+	var gold := float(s.metrics["treasury"])
+	var ev := SupplyLines.day_step(repo, s)
+	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), s)
+	var bite := ArmySystem.day_bite(use, s.day)
+	@warning_ignore("integer_division")
+	var want := mini((use * ArmySystem.carry_of(repo, s.regiments[c]) + 29) / 30 + bite,
+		ArmySystem.max_units(repo, use) + bite)
+	assert_eq(int(s.regiments[c]["supplies"]), want, "topped up in full")
+	assert_eq(TownStores.stock_of(s, near), {"crown": 0, "lord": 100000, "house": 100000}, "the nearer town's crown first")
+	assert_eq(TownStores.stock_of(s, far), {"crown": 100000 - (want - 1), "lord": 100000, "house": 100000},
+		"then the farther one's crown; no lord's, no house's")
+	assert_eq(float(s.metrics["treasury"]), gold, "no cartage, no purchase")
+	assert_eq(int(s.metrics["strategic"]), TownStores.gold_of_units(repo, TownStores.total(s, "crown")))
+	var dry: Array = ev.filter(func(e: Dictionary) -> bool: return String(e["type"]) == "town_dry")
+	assert_eq(dry.size(), 1)
+	assert_true(bool(dry[0]["realm"]), "the realm's other towns fed it")
+	assert_eq(SupplyLines.refill_of(repo, s, c), {"town": held, "from": ""})
+	assert_string_contains(SupplyLines.refill_words(repo, s, c), "fed from the realm's stores")
+	# the nearer town restocked, it alone feeds the next day's top-up
+	_stock(near, 100000, 0, 0)
+	ArmySystem.eat_day(repo, s)
+	SupplyLines.day_step(repo, s)
+	assert_eq(int(TownStores.stock_of(s, far)["crown"]), 100000 - (want - 1), "the farther town untouched")
+	assert_lt(int(TownStores.stock_of(s, near)["crown"]), 100000)

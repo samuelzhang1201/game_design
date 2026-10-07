@@ -107,7 +107,8 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 			"order_lost":
 				text = _SUPPLY_WORDS["order_lost"] % [reg, town]
 			"town_dry":
-				text = _SUPPLY_WORDS["town_dry"] % [town, reg, _town_label(repo, String(e.get("depot", "")))]
+				text = _SUPPLY_WORDS["town_dry"] % [town, reg,
+					SupplyLines.fed_from_words(repo, "" if bool(e.get("realm", false)) else String(e.get("depot", "")))]
 			_:
 				text = _SUPPLY_WORDS[String(e["type"])] % [town, reg]
 		facts.append(MissiveLog.words("supply_%d" % i, String(e["type"]).capitalize().replace("_", " "), text))
@@ -115,10 +116,6 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, first))
 	return MissiveLog.make("supply", "credible", state.absolute_day(),
 		MissiveLog.subject("regiment", first, -1, at), "Supply dispatch", facts)
-
-
-static func _town_label(repo: DataRepository, burg: String) -> String:
-	return String((repo.burgs.get(burg, {}) as Dictionary).get("label", burg))
 
 
 static func _fed_from(town: String) -> String:
