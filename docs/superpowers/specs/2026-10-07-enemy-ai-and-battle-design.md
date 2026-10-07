@@ -152,7 +152,7 @@ siege_progress += siege_rate × 敌军 power / (敌军 power + 守军 power × �
 
 ### 5.2 夺城(只换主人)
 
-城破时经 `MapOwnership.set_owner`(城镇)与 `MapManors.set_owner`(周边庄园)移交,**必须带原因串**。敌 host 转 HOLD,停在城中等玩家来夺回。夺城后的治安、占领区行政、被占省份的经济变化**不做**。
+城破时只在**庄园层**移交:城镇自身的庄园与同省内 `siege_capture_radius_km` 以内的周边庄园,经 `MapManors.set_owner` 归敌方家族,**必须带原因串**;**不**经 `MapOwnership.set_owner` 移交省份(省界、首都、他处城镇不动)。敌 host 转 HOLD,停在城中;它撤走或被击退时,这些庄园以"liberated"为由还给原家族。夺城后的治安、占领区行政、被占省份的经济变化**不做**。
 
 ### 5.3 劫掠与战利品
 
