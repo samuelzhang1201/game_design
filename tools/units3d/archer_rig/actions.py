@@ -512,9 +512,14 @@ def hermite(keys, m0, m1):
     return f
 
 
+RUN_LEAN = 7.0           # the run's forward lean (deg, at the hips): nearly upright, the chest open (owner's sheet 2026-10-07)
 HEEL_BACK = 0.065        # the boot's heel behind the ankle, on the sole
 ARM_OUT = (0.23, 0.38)   # the run's left upper arm / forearm, out from straight down (tan): the forearm
                          # angled a little out from the elbow, a man's carrying angle (never in: a C)
+ARM_SWING = (18.0, 22.0)  # the run's left upper arm / forearm swing (deg either way)
+ARM_LAG = 2.5            # frames the left forearm trails the upper arm
+HAND_LAG = 2.0           # ... and the hand (and the bow) the forearm: a relaxed wrist
+L_DEV = -33.0            # the run's left wrist, bent toward the little finger at rest
 ELBOW_RUN = 18.0         # the run's left elbow, bent forward: the arm hangs in a J, never a straight rod
 L_PRON = 36.0           # the run's left forearm turned thumb-in (half at each end): the bow fore and aft
 DEV_MAX = 45.0           # the wrist's side bend (ulnar/radial), at most
@@ -605,30 +610,35 @@ def march(R):
     hz_keys = [(0.0, -0.040), (0.26 * st, -0.078), (0.52 * st, -0.058), (fo, -0.040), ((fo + st) / 2, -0.026)]
     hz = track(hz_keys + [(f + st, v) for f, v in hz_keys], N)
     sw_l = lambda t, lag=1.5: math.cos(w(t, lag) - math.pi)                       # +1 forward, -1 back
-    swing_l = lambda t: math.radians(-25 + 13 * sw_l(t))                       # the upper arm, + forward
+    # the left arm as a chain of hanging weights (owner 2026-10-07: 大臂带动小臂，手腕自然放松): the
+    # upper arm swings, the forearm follows it ARM_LAG frames late (so the elbow opens and closes by
+    # itself), the hand and bow follow the forearm another ARM_LAG late (a relaxed wrist)
     lu, lf = R.len["UpperArm.L"], R.len["Forearm.L"]
+    up_ang = lambda t: -25 + ARM_SWING[0] * sw_l(t)                             # deg, + forward
+    fore_ang = lambda t: -25 + ELBOW_RUN + ARM_SWING[1] * sw_l(t, 1.5 + ARM_LAG)
+    hand_ang = lambda t: -25 + ELBOW_RUN + ARM_SWING[1] * sw_l(t, 1.5 + ARM_LAG + HAND_LAG)
 
     def l_wrist(t):
-        """The wrist from the shoulder: the upper arm hanging close at its swing, the forearm bent
-        ELBOW_RUN forward of it (a J), both a little out from the coat."""
-        a1 = swing_l(t); a2 = a1 + math.radians(ELBOW_RUN + 4 * sw_l(t, 2.5))
+        """The wrist from the shoulder: the upper arm at its swing, the forearm at its own (lagging)
+        angle, both a little out from the coat; the elbow never straighter than its own bend."""
+        a1 = math.radians(up_ang(t)); a2 = math.radians(fore_ang(t))
         return (Vector((ARM_OUT[0], -math.sin(a1), -math.cos(a1))).normalized() * lu
                 + Vector((ARM_OUT[1], -math.sin(a2), -math.cos(a2))).normalized() * lf)
     ch = {
         "foot_l": foot("L"), "foot_r": foot("R"),
         "hips_off": lambda t: Vector((0.012 * math.cos(w(t) - 0.9), -0.02, hz(t))),
-        "hips_rot": lambda t: Vector((14 + 2.0 * math.cos(2 * w(t, 1.0)), 3 * math.cos(w(t) + 0.6), -6 * math.cos(w(t)))),
-        "spine": lambda t: Vector((3, 4 * math.cos(w(t, 1.0)), 0)),
-        "chest": lambda t: Vector((3 - 1.5 * math.cos(2 * w(t, 1.5)), 6 * math.cos(w(t, 1.5)), 0)),
-        "neck": lambda t: Vector((-5, -3 * math.cos(w(t, 2.0)), 0)),
-        "head": lambda t: Vector((-12 + 1.5 * math.cos(2 * w(t, 2.5)), -1.5 * math.cos(w(t, 2.5)), 0)),
+        "hips_rot": lambda t: Vector((RUN_LEAN + 2.0 * math.cos(2 * w(t, 1.0)), 3 * math.cos(w(t) + 0.6), -6 * math.cos(w(t)))),
+        "spine": lambda t: Vector((0, 4 * math.cos(w(t, 1.0)), 0)),
+        "chest": lambda t: Vector((-1 - 1.0 * math.cos(2 * w(t, 1.5)), 6 * math.cos(w(t, 1.5)), 0)),           # the chest open
+        "neck": lambda t: Vector((-2, -3 * math.cos(w(t, 2.0)), 0)),
+        "head": lambda t: Vector((-RUN_LEAN + 1.5 * math.cos(2 * w(t, 2.5)), -1.5 * math.cos(w(t, 2.5)), 0)),   # the gaze level
         "clav_r": lambda t: Vector((4 * math.cos(w(t, 1)), 0, 0)),
         "clav_l": lambda t: Vector((-3 * math.cos(w(t, 1.5)), 0, 0)),
-        "rfk": lambda t: Vector((-10 + 42 * math.cos(w(t, 1.5)), 84 + 14 * math.cos(w(t, 2.5)))),
+        "rfk": lambda t: Vector((-4 + 38 * math.cos(w(t, 1.5)), 102 - 12 * math.cos(w(t, 2.5)))),     # a runner's arm: the elbow ~90, the fist at the waist
         # the left arm hanging from the shoulder and swinging against the left leg (forward at the
-        # right foot's strike), the bow at 45 deg in the fist, rocking 2.5 f behind the arm
+        # right foot's strike), the bow in the relaxed fist rocking behind the forearm
         "l_wrist": l_wrist,
-        "l_dev": lambda t: -38.0 - 3.0 * sw_l(t, 3.5),                          # the wrist bent toward the little finger
+        "l_dev": lambda t: L_DEV + (hand_ang(t) - fore_ang(t)),                 # ulnar, plus the hand trailing
         "l_pole": lambda t: Vector((0.0, 1.0, 0.0)),                            # the elbow bends fore and aft only (no C)
         "l_pron": lambda t: L_PRON,
         "quiver": lambda t: Vector((5 * math.cos(2 * w(t, 3.5)), 0, 2 * math.cos(w(t, 3)))),
