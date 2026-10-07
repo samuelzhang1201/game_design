@@ -426,6 +426,7 @@ func drawn_badge_count() -> int: return (_hud.piece("Badges") as Map3DHudBadges)
 func army_badge_height() -> float:
 	return (_hud.piece("Armies") as Map3DHudArmies).badge_height() if _loaded else 0.0
 func army_markers() -> Array: return (_hud.piece("Armies") as Map3DHudArmies).markers() if _loaded else []
+func screen_pos_of_px(pack_px: Vector2) -> Variant: return (_input as Map3DInput).route.screen_of(pack_px) if _loaded else null  # the march confirm keeps off the route
 func route_ends() -> Array: return (_hud.piece("Armies") as Map3DHudArmies).route_ends() if _loaded else []
 func drawn_army_count() -> int: return (_hud.piece("Armies") as Map3DHudArmies).drawn_count() if _loaded else 0
 func landmark_marks() -> Array: return (_hud.piece("Landmarks") as Map3DHudLandmarks).marks() if _loaded else []

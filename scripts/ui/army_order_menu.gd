@@ -199,7 +199,31 @@ func _open_confirm(at: Vector2) -> void:
 	p.show_plan(plan["title"], plan["sub"], plan["rows"], carry if not (plan["rows"] as Array).is_empty() else -1,
 		commit, _add_waypoint_row(), _route_row("cancel"))
 	var origin := (_map as Control).get_global_rect().position if _map is Control else Vector2.ZERO
-	p.place_near(origin + at)
+	var map_rect := (_map as Control).get_global_rect() if _map is Control else Rect2()
+	p.place_near(origin + at, _route_rect(origin), map_rect)
+
+
+## The planned route's box on screen (global px): the piece, its waypoints and
+## the end, as the map projects them — the panel keeps off it. Rect2() when
+## the map cannot project.
+func _route_rect(origin: Vector2) -> Rect2:
+	if _map == null or not _map.has_method("screen_pos_of_px"):
+		return Rect2()
+	var pts: Array = [ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, _aiming))]
+	if _map.has_method("position_of"):
+		pts[0] = _map.call("position_of", _aiming)   # the WAR ROOM's believed place
+	pts.append_array(_waypoints)
+	pts.append(_pending)
+	var box := Rect2()
+	var any := false
+	for p: Vector2 in pts:
+		var at: Variant = _map.call("screen_pos_of_px", p)
+		if at == null:
+			continue
+		var g := origin + (at as Vector2)
+		box = Rect2(g, Vector2.ZERO) if not any else box.expand(g)
+		any = true
+	return box
 
 
 ## The panel, made on first use beside this menu (a child of its screen).

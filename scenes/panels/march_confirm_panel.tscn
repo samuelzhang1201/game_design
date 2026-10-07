@@ -26,7 +26,6 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"CardHint"
 text = "182 km · 2 waypoints"
-autowrap_mode = 3
 
 [node name="Head" type="HBoxContainer" parent="Body" unique_id=405062729]
 unique_name_in_owner = true
@@ -68,7 +67,7 @@ theme_override_constants/separation = 10
 [node name="Pick" type="Button" parent="Body/Rows/RowProto" unique_id=1645307455]
 custom_minimum_size = Vector2(96, 0)
 layout_mode = 2
-theme_type_variation = &"CardRow"
+theme_type_variation = &"CardCommandSmall"
 toggle_mode = true
 text = "20 days"
 alignment = 0

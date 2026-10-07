@@ -48,7 +48,7 @@ func press(pos: Vector2) -> bool:
 	var grab := ctx.repo.bal("map3d_route_grab_px")
 	var wps := view.aim_waypoints
 	for i in wps.size():
-		var at: Variant = _screen(wps[i])
+		var at: Variant = screen_of(wps[i])
 		if at != null and (at as Vector2).distance_to(pos) <= grab:
 			_index = i
 			return true
@@ -94,9 +94,9 @@ func _leg_near(pos: Vector2, grab: float) -> int:
 	var best := -1
 	var best_d := grab
 	for i in legs.size():
-		var prev: Variant = _screen(ArmySystem.metres_to_pack(repo, pts_m[i]))
+		var prev: Variant = screen_of(ArmySystem.metres_to_pack(repo, pts_m[i]))
 		for q: Vector2i in legs[i]:
-			var at: Variant = _screen(ArmySystem.metres_to_pack(repo, q))
+			var at: Variant = screen_of(ArmySystem.metres_to_pack(repo, q))
 			if prev != null and at != null:
 				var d := Geometry2D.get_closest_point_to_segment(pos, prev, at).distance_to(pos)
 				if d <= best_d:
@@ -107,7 +107,7 @@ func _leg_near(pos: Vector2, grab: float) -> int:
 
 
 ## A pack point on the ground, projected into design px; null behind the camera.
-func _screen(pack: Vector2) -> Variant:
+func screen_of(pack: Vector2) -> Variant:
 	var p := ctx.ground_of_pack(pack)
 	if ctx.camera.is_position_behind(p):
 		return null

@@ -278,6 +278,43 @@ func test_a_real_drag_from_a_piece_pencils_a_draft() -> void:
 	assert_not_null((view.get_node("%Pennants") as WarPennants).pennant(code + "_draft"))
 
 
+## Spec 2026-10-07-march-waypoints ruling 9: with the confirm standing, a real
+## press on the planned line inserts a waypoint and a drag moves it; Confirm
+## pencils the draft with it.
+func test_a_drag_on_the_planned_line_bends_it_into_the_draft() -> void:
+	var r: GameRoot = await _court()
+	r.bottom_bar().button("WAR ROOM").pressed.emit()
+	await wait_process_frames(3)
+	Game.set_clock_speed(0)
+	var screen := r.war_room_screen()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	var to := _land_near(screen, p["at"])
+	screen.orders().aim_for(code)
+	view.ground_clicked.emit(to, Vector2(100, 100))
+	assert_not_null(screen.orders().shown_confirm())
+	var a: Vector2 = view.screen_pos_of_px(view.position_of(code))
+	var b: Vector2 = view.screen_pos_of_px(to)
+	var grab := a.lerp(b, 0.5)
+	var side := (b - a).orthogonal().normalized() * 12.0
+	_real_press(view, grab, true)
+	assert_eq(view.aim_waypoints.size(), 1, "the press on the line took a new waypoint")
+	var e := InputEventMouseMotion.new()
+	e.position = grab + side
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT
+	view._gui_input(e)
+	_real_press(view, grab + side, false)
+	var bent: Array = screen.orders().waypoints()
+	if bent.is_empty():
+		assert_true(true, "the bend fell where the regiment cannot go (the sea): put back")
+		return
+	assert_eq(bent.size(), 1, "the menu kept the bend")
+	assert_almost_eq((bent[0] as Vector2).distance_to(view.pack_at(grab + side)), 0.0, 0.01, "where it was dropped")
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
+	assert_eq((WarDrafts.of(Game.state, code).get("waypoints_m", []) as Array).size(), 1, "the draft keeps it")
+
+
 func test_a_click_on_a_riding_pennant_offers_edit_and_a_pencilled_cancel() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()

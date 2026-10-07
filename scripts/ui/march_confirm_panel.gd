@@ -93,18 +93,34 @@ func cancel_button() -> Button:
 	return _cancel
 
 
-## Stand beside `global_px` (the destination click), kept inside the window.
-func place_near(global_px: Vector2) -> void:
+## Stand beside `global_px` (the destination click) — or, when every spot
+## beside it would cover the route (`route`, its box on screen), in a corner
+## of the map (`map`) — kept inside the window: the place covering least of
+## the route wins, the nearest first on a tie.
+func place_near(global_px: Vector2, route := Rect2(), map := Rect2()) -> void:
 	reset_size()
 	var box := get_combined_minimum_size()
-	var view := get_viewport_rect().size
-	var gap := Vector2(14, 14)
-	var at := global_px + gap
-	if at.x + box.x > view.x:
-		at.x = global_px.x - gap.x - box.x
-	if at.y + box.y > view.y:
-		at.y = global_px.y - gap.y - box.y
-	global_position = at.clamp(Vector2.ZERO, (view - box).max(Vector2.ZERO))
+	var view := Rect2(Vector2.ZERO, get_viewport_rect().size)
+	var gap := 14.0
+	var spots: Array = [
+		global_px + Vector2(gap, gap), global_px + Vector2(gap, -gap - box.y),
+		global_px + Vector2(-gap - box.x, gap), global_px + Vector2(-gap - box.x, -gap - box.y)]
+	if map.has_area():
+		var inner := map.grow(-gap)
+		spots.append_array([inner.position, Vector2(inner.end.x - box.x, inner.position.y),
+			Vector2(inner.position.x, inner.end.y - box.y), inner.end - box])
+	var keep := route.grow(gap * 2.0)
+	var best := Vector2.ZERO
+	var best_cost := INF
+	for spot: Vector2 in spots:
+		var at := spot.clamp(view.position, (view.end - box).max(view.position))
+		var cost := Rect2(at, box).intersection(keep).get_area() if keep.has_area() else 0.0
+		if Rect2(at, box).grow(-1.0).has_point(global_px):
+			cost += 1e9   # never over the end itself
+		if cost < best_cost - 0.5:
+			best_cost = cost
+			best = at
+	global_position = best
 
 
 func _fill(rows: Array) -> void:

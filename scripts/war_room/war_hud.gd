@@ -112,11 +112,10 @@ func _draw_bent() -> void:
 	var tail := end - dir * head
 	var shaft := _path.slice(0, _path.size() - 1)
 	shaft.append(tail)
-	for i in range(1, shaft.size()):
-		if _held:
-			_dashed(shaft[i - 1], shaft[i], _arrow, width)
-		else:
-			draw_line(shaft[i - 1], shaft[i], _arrow, width, true)
+	if _held:
+		draw_multiline(MapRuler.dash_pieces(shaft, _repo.bal("war_hud_dash_px")), _arrow, width, true)
+	else:
+		draw_polyline(shaft, _arrow, width, true)
 	var half := _repo.bal("war_hud_head_half_px")
 	draw_colored_polygon(PackedVector2Array([end, tail + side * half, tail - side * half]), _arrow)
 	if _reading != "" and _font != null:
@@ -136,12 +135,14 @@ func _draw() -> void:
 		draw_arc(_chalk, _chalk_r, 0.0, TAU, 48, _chalk_c, _repo.bal("war_hud_chalk_px"), true)
 	for line: Variant in _routes:
 		var r := PackedVector2Array(line)
-		for i in range(1, r.size()):
-			_dashed(r[i - 1], r[i], _ink, _repo.bal("war_hud_arrow_px"))
+		if r.size() > 2:   # a route's curve: the dashes run on across its joints
+			draw_multiline(MapRuler.dash_pieces(r, _repo.bal("war_hud_dash_px")), _ink, _repo.bal("war_hud_arrow_px"), true)
+		elif r.size() == 2:
+			_dashed(r[0], r[1], _ink, _repo.bal("war_hud_arrow_px"))
 	for line: Variant in _drafts:
 		var r := PackedVector2Array(line)
-		for i in range(1, r.size() - 1):
-			draw_line(r[i - 1], r[i], _pencil, _repo.bal("war_draft_pencil_px"), true)
+		if r.size() > 2:   # a route's curve, one stroke up to its last segment
+			draw_polyline(r.slice(0, r.size() - 1), _pencil, _repo.bal("war_draft_pencil_px"), true)
 		if r.size() >= 2:
 			_pencilled(r[r.size() - 2], r[r.size() - 1])
 	for h in _handles:
