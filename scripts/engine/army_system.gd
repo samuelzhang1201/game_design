@@ -174,8 +174,14 @@ static func eat_day(repo: DataRepository, state: GameState) -> void:
 		var reg := regiment(repo, code)
 		if reg.is_empty():
 			continue
-		var entry: Dictionary = state.regiments[code]
-		entry["supplies"] = maxi(0, int(entry["supplies"]) - day_bite(supply_use(repo, reg, state), state.day))
+		eat_one(repo, state, reg, state.regiments[code])
+
+
+## One regiment's meal of the day now running, written to its state `entry`
+## (a player's or a foe's — EnemyAi feeds its hosts through this): today's
+## share (day_bite) of the month's use where it stands now, never below 0.
+static func eat_one(repo: DataRepository, state: GameState, reg: Dictionary, entry: Dictionary) -> void:
+	entry["supplies"] = maxi(0, int(entry["supplies"]) - day_bite(supply_use(repo, reg, state), state.day))
 
 
 ## Whole days a regiment's `supplies` last at `use` a month (spec
