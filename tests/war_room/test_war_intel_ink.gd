@@ -76,3 +76,27 @@ func test_a_spy_ring_names_its_source() -> void:
 		MissiveLog.subject("point", "", -1, at), "A report", [MissiveLog.span("people", "People", 2800, 3200)]))
 	var ink := WarIntelInk.strokes(repo, state, s, 1024)
 	assert_string_contains(String(ink["spies"][0]["text"]).to_lower(), "rumour")
+
+
+func test_a_known_hazard_is_hatched_and_named_and_an_unknown_is_not() -> void:
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	var home := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, String(codes[0])))
+	var s: Dictionary = WarSheets.series(repo)[WarSheets.sheet_of(repo, home)]
+	var r: Rect2 = s["rect"]
+	var cells: Array = []
+	for c: int in repo.cells:
+		if not MapTerrain.is_water(repo.cells[c]) and r.has_point(MapTerrain.cell_center(repo, repo.cells[c])):
+			cells.append(c)
+		if cells.size() >= 3:
+			break
+	Hazards.add(state, "hz", "Flood", "Sheet Flood", cells, state.tick, state.tick + 2, "test")
+	var ink := WarIntelInk.strokes(repo, state, s, int(repo.bal("war_intel_texture_px")))
+	var mine: Array = (ink["hazards"] as Array).filter(func(h: Dictionary) -> bool: return String(h["text"]).begins_with("Sheet Flood"))
+	assert_eq(mine.size(), 1)
+	assert_gt((mine[0]["lines"] as Array).size(), 0, "hatched")
+	assert_gt((mine[0]["edges"] as Array).size(), 0, "outlined")
+	assert_eq(String(mine[0]["ink"]), "water")
+	var before := WarIntelInk.cache_key(state, int(s["index"]))
+	Hazards.end_now(state, "hz")
+	assert_ne(WarIntelInk.cache_key(state, int(s["index"])), before, "an ending redraws the layer")

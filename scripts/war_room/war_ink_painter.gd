@@ -177,6 +177,23 @@ func _draw_graticule(_c_ink: Color) -> void:
 ## in rubric), weather marks, spy reports as dashed rings with their words.
 func _draw_intel() -> void:
 	var c: Color = pal["intel_ink"]
+	var hz_c: Color = pal["intel_ink"]
+	hz_c.a *= float(px.get("hazard_alpha", 0.5))
+	for h: Dictionary in ink.get("hazards", []):
+		var w := float(px.get("hazard", 3.0))
+		for l: PackedVector2Array in h["lines"]:
+			if String(h["ink"]) == "rock":
+				for d: PackedVector2Array in WarSheetInk.dashed(l, w * 4.0, w * 3.0):
+					draw_polyline(d, hz_c, w, true)
+			else:
+				draw_polyline(l, hz_c, w, true)
+		for p: Vector2 in h["dots"]:
+			draw_circle(p, w * 0.8, hz_c)
+		for e: PackedVector2Array in h["edges"]:
+			for d: PackedVector2Array in WarSheetInk.dashed(e, float(px["supply_dash"]), float(px["supply_gap"])):
+				draw_polyline(d, pal["intel_ink"], w, true)
+		draw_string(font, (h["at"] as Vector2), String(h["text"]), HORIZONTAL_ALIGNMENT_CENTER, -1,
+			int(px["intel_label"]), pal["intel_ink"])
 	for s: Dictionary in ink["supply"]:
 		var col := c
 		col.a *= clampf(1.0 - float(s["loss_permille"]) / 1000.0 * float(px["supply_loss_fade"]), 0.25, 1.0)

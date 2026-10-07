@@ -28,6 +28,8 @@ const LEGEND := [
 	{"key": "mark_brigands", "label": "Brigands"}, {"key": "mark_pirates", "label": "Pirates"},
 	{"key": "mark_mines", "label": "Mine"}, {"key": "mark_battlefields", "label": "Battlefield"},
 	{"key": "mark_lighthouses", "label": "Lighthouse"},
+	{"key": "hazard_plague", "label": "Plague"}, {"key": "hazard_unrest", "label": "Unrest"},
+	{"key": "hazard_water", "label": "Flood"}, {"key": "hazard_rock", "label": "Rockfall"},
 ]
 
 var _repo: DataRepository
@@ -168,6 +170,17 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 		var row: Dictionary = _repo.war_marks.get(type, {})
 		WarMarkGlyph.draw(self, String(row.get("glyph", "dot")), r.get_center(), r.size.y * 0.9,
 			pal.get("hazard_ink", pal["rubric"]) if _repo.war_mark_hazards.has(type) else ink)
+		return
+	if key.begins_with("hazard_"):   # a hazard's hatch in the intel ink (spec 2026-10-07-war-room-p2 §2.4)
+		var hc: Color = pal.get("intel_ink", ink)
+		var box := r.grow(-r.size.y * 0.1)
+		var kind := key.trim_prefix("hazard_")
+		var poly := PackedVector2Array([box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)])
+		for l: PackedVector2Array in WarIntelInk.hatch_lines([poly], kind, box.size.y * 0.35):
+			draw_polyline(l, hc, line * 0.8, true)
+		for p: Vector2 in WarIntelInk.hatch_dots([poly], kind, box.size.y * 0.35):
+			draw_circle(p, line * 0.7, hc)
+		draw_rect(box, hc, false, line * 0.6, true)
 		return
 	match key:
 		"road":

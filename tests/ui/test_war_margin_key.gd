@@ -37,7 +37,8 @@ func _is_125(d: float) -> bool:
 func test_the_legend_lists_the_sheets_inks() -> void:
 	assert_eq(WarMarginKey.legend_keys(), PackedStringArray(
 		["road", "trail", "river", "border", "seam", "town", "peak", "contour", "wood", "manor", "walls", "port", "bridge", "ford", "supply", "courier", "weather", "spy",
-		"mark_brigands", "mark_pirates", "mark_mines", "mark_battlefields", "mark_lighthouses"]))
+		"mark_brigands", "mark_pirates", "mark_mines", "mark_battlefields", "mark_lighthouses",
+		"hazard_plague", "hazard_unrest", "hazard_water", "hazard_rock"]))
 	for e: Dictionary in WarMarginKey.LEGEND:
 		assert_false(String(e["label"]).is_empty(), String(e["key"]))
 
