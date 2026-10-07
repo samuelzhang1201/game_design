@@ -297,8 +297,8 @@ var manor_log: Array = []
 ## {morale, wounded, dead, supplies, training, carry_days, the march fields
 ## x_m / y_m / dest_x_m / dest_y_m / order, the battle stance (a
 ## battle_stances.csv key) with a delivered stance_next / stance_order_id, and
-## disengaging while it falls back from a battle, disengaged_until (an
-## absolute day) after a drawn battle}, whole numbers but the
+## disengaging while it falls back from a battle, disengaged_until (the
+## last absolute day of a pause with no contact) after a drawn battle}, whole numbers but the
 ## stance and order names. Only the
 ## player's realm's regiments; the pack's arms stay the headcount.
 var regiments: Dictionary = {}

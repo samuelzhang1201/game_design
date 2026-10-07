@@ -183,9 +183,10 @@ static func battle_words(repo: DataRepository, key: String, vars: Dictionary, pi
 
 ## The day's battles in ONE letter, like supply_dispatch (a fact per event, in
 ## the order BattleSystem.settle_day gave them): where they met, who joined,
-## each round's strength, odds and losses (every regiment's dead, wounded and
-## morale WITH the reason the engine recorded for it, invariant 4), who left
-## the field and how each battle ended. Numbers are the events' own; nothing is
+## each round's outcome and losses (each of OUR regiments' dead, wounded and
+## morale WITH the reason the engine recorded for it, invariant 4; the enemy's
+## losses only as our men's estimate, `_round_facts`), who left the field and
+## how each battle ended. Numbers are the events' own; nothing is
 ## recomputed here. About the first of the player's regiments in the fights.
 ##
 ## The day's siege news (SiegeSystem.news: begin, starving, repulsed, fallen,
@@ -242,7 +243,7 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 					battle_words(repo, "battle_join_" + String(e["side"]), {"unit": _unit_label(repo, String(e["code"])),
 						"place": place}, pick)))
 			"round":
-				_round_facts(repo, e, place, pick, facts)
+				_round_facts(repo, state, e, place, pick, facts)
 			"end":
 				facts.append(MissiveLog.words("end@%d" % id, "Result",
 					battle_words(repo, _end_key(state, e, rounds.get(id, {})),
@@ -358,30 +359,42 @@ static func battle_place(repo: DataRepository, state: GameState, e: Dictionary) 
 	return "" if e.is_empty() else BattleSystem.place_label(repo, state, e)
 
 
-## One round: the strength line with each side's losses, a line per regiment
-## (its dead, wounded and morale change, and why) and one per departure.
-static func _round_facts(repo: DataRepository, e: Dictionary, place: String, pick: int, facts: Array) -> void:
+## One round, told through the fog (spec §2): the tier, OUR side's dead and
+## wounded exactly, the enemy's dead and wounded together as our men count them
+## (SpySystem.estimate at battle_foe_estimate_quality, rounded out to
+## intel_facts `foe_losses`); no side's strength and no odds (they would give
+## the enemy's strength away). Then a line per regiment of OURS (its dead,
+## wounded and morale change, and why) — never a foe's — and one per departure.
+static func _round_facts(repo: DataRepository, state: GameState, e: Dictionary, place: String, pick: int,
+		facts: Array) -> void:
 	var id := int(e["battle_id"])
 	var n := int(e["round"])
 	var results: Dictionary = e["results"]
-	var totals := {}
+	var ours: Array = []
+	var theirs: Array = []
+	var own := [0, 0]
+	var foe_men := 0
 	for side: String in BattleSystem.SIDES:
-		var dead := 0
-		var wounded := 0
 		for c: Variant in e[side]:
 			var r: Dictionary = results.get(String(c), {})
-			dead += int(r.get("dead", 0))
-			wounded += int(r.get("wounded", 0))
-		totals[side] = [dead, wounded]
+			if ArmySystem.is_foe(state, String(c)):
+				theirs.append(c)
+				foe_men += int(r.get("dead", 0)) + int(r.get("wounded", 0))
+			else:
+				ours.append(c)
+				own[0] += int(r.get("dead", 0))
+				own[1] += int(r.get("wounded", 0))
+	var span := SpySystem.estimate(repo, foe_men, int(repo.bal("battle_foe_estimate_quality")), 0,
+		int((repo.intel_facts.get("foe_losses", {}) as Dictionary).get("round_to", 1)))
 	facts.append(MissiveLog.words("round@%d.%d" % [id, n], "Day %d" % n, battle_words(repo, "battle_round", {
 		"round": n, "place": place, "tier": String(e["tier"]).replace("_", " "),
-		"att_power": int(e["att_power"]), "def_power": int(e["def_power"]), "odds": int(e["odds"]),
-		"att": _battle_names(repo, e["att"]), "def": _battle_names(repo, e["def"]),
-		"att_dead": totals["att"][0], "att_wounded": totals["att"][1],
-		"def_dead": totals["def"][0], "def_wounded": totals["def"][1]}, pick)))
+		"ours": _battle_names(repo, ours), "theirs": _battle_names(repo, theirs),
+		"own_dead": own[0], "own_wounded": own[1], "foe_lo": int(span[0]), "foe_hi": int(span[1])}, pick)))
 	var codes: Array = results.keys()
 	codes.sort()
 	for code: String in codes:
+		if ArmySystem.is_foe(state, code):
+			continue
 		var r: Dictionary = results[code]
 		var morale := int(r["morale"])
 		facts.append(MissiveLog.words("loss@%d.%d.%s" % [id, n, code], "Losses", battle_words(repo, "battle_loss", {
@@ -397,6 +410,8 @@ static func _end_key(state: GameState, e: Dictionary, round_ev: Dictionary) -> S
 	var winner := String(e["winner"])
 	if String(e["why"]) == "rounds":
 		return "battle_end_draw"
+	if String(e["why"]) == "withdrawn":
+		return "battle_end_withdrawn"   # the foe drew off for home: held, not won
 	if winner == "":
 		return "battle_end_none"
 	# who held the field: the winning side's regiments, as they fought (the

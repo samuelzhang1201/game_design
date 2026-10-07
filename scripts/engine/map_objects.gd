@@ -1009,6 +1009,11 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		var where := _label(repo.provinces, province)
 		stats.append(_stat("manor_province", where, "Quartered in %s" % where))
 		fields.append(["Quartered in", where])
+	# the crown's own regiment's standing order for a fight ("Stance" is the
+	# realms' diplomatic word, so this is the BATTLE stance)
+	var stance := BattleSystem.stance_words(repo, state, code) if reg_known == "full" else ""
+	if stance != "":
+		fields.append(["Battle stance", stance])
 	if not st.is_empty():
 		# The ground, the height and the supply tier are the ground the
 		# regiment is on NOW, not the one the pack quartered it on: a column

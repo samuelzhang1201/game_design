@@ -176,14 +176,20 @@ func test_report_numbers_come_from_the_engine() -> void:
 	var results: Dictionary = round_ev["results"]
 	assert_eq(results.size(), 2)
 	var text := _text_of(_battle_letters(s)[0])
+	var p := String(m[1])
+	var f := String(m[2])
 	for code: String in results:
 		var r: Dictionary = results[code]
 		assert_gt(int(r["dead"]) + int(r["wounded"]), 0, "the hand-made tier costs men")
-		var label := String(ArmySystem.regiment(repo, code)["label"])
-		assert_string_contains(text, "%s: %d dead, %d wounded" % [label, int(r["dead"]), int(r["wounded"])])
-	# the round line carries the engine's powers and odds, and the side totals
-	assert_string_contains(text, "%d against %d" % [int(round_ev["att_power"]), int(round_ev["def_power"])])
-	assert_string_contains(text, "%d in a thousand" % int(round_ev["odds"]))
+	# our own regiment's losses exactly, the engine's own numbers
+	var pr: Dictionary = results[p]
+	var p_label := String(ArmySystem.regiment(repo, p)["label"])
+	assert_string_contains(text, "%s: %d dead, %d wounded" % [p_label, int(pr["dead"]), int(pr["wounded"])])
+	# the enemy's as our men's count: the fog's estimate of its dead and wounded
+	var fr: Dictionary = results[f]
+	var span := SpySystem.estimate(repo, int(fr["dead"]) + int(fr["wounded"]),
+		int(repo.bal("battle_foe_estimate_quality")), 0, int(repo.intel_facts["foe_losses"]["round_to"]))
+	assert_string_contains(text, "%d–%d" % [int(span[0]), int(span[1])], "the enemy's losses as a span")
 	# and the state agrees with what the letter says (the dead are the state's dead)
 	for code: String in results:
 		assert_eq(int(ArmySystem.state_of(repo, s, code)["dead"]), int(results[code]["dead"]))
@@ -200,14 +206,14 @@ func test_every_morale_change_carries_a_reason() -> void:
 	var changed := 0
 	for code: String in round_ev["results"]:
 		var r: Dictionary = round_ev["results"][code]
-		if int(r["morale"]) == 0:
+		if int(r["morale"]) == 0 or ArmySystem.is_foe(s, code):
 			continue
 		changed += 1
 		assert_ne(String(r["reason"]), "", "the engine gave a reason")
 		var label := String(ArmySystem.regiment(repo, code)["label"])
 		assert_string_contains(text, "%s: %d dead, %d wounded; morale %+d (%s)" % [label,
 			int(r["dead"]), int(r["wounded"]), int(r["morale"]), String(r["reason"])])
-	assert_eq(changed, 2, "both sides lost heart and both say why")
+	assert_eq(changed, 1, "our side lost heart and says why")
 
 
 func test_a_regiment_that_leaves_is_named_with_why() -> void:
@@ -226,11 +232,48 @@ func test_a_regiment_that_leaves_is_named_with_why() -> void:
 	assert_false(text.contains("[missing template"), text)
 
 
+## --- the fog (spec §2: the enemy's figures are estimates) --------------------------
+
+## A battle letter tells our own regiments' dead, wounded and morale exactly,
+## with the engine's reasons; of the enemy it gives ONE estimated span of its
+## dead and wounded — never a foe regiment's exact dead, wounded or morale, its
+## morale reason, nor either side's exact strength or the odds that would give
+## the enemy's strength away.
+func test_the_letter_gives_no_exact_foe_figure() -> void:
+	_one_tier(100, 200, 500, -10, -10)
+	var m := _meeting()
+	var s: GameState = m[0]
+	var f := String(m[2])
+	var engine := TickEngine.new(repo)
+	engine.advance_day(s)
+	var round_ev: Dictionary = _round_events(engine.day_battles)[0]
+	var fr: Dictionary = round_ev["results"][f]
+	var text := _text_of(_battle_letters(s)[0])
+	var f_label := String(ArmySystem.regiment(repo, f)["label"])
+	assert_false(text.contains("%s: %d dead" % [f_label, int(fr["dead"])]), "no foe regiment's exact dead")
+	assert_false(text.contains(String(fr["reason"])) and String(fr["reason"]) != String(round_ev["results"][m[1]]["reason"]),
+		"no foe morale reason")
+	assert_false(text.contains("morale %+d" % int(fr["morale"])) and int(fr["morale"]) != int(round_ev["results"][m[1]]["morale"]),
+		"no foe morale")
+	for k: String in ["att_power", "def_power"]:
+		assert_false(text.contains(str(int(round_ev[k]))), "no exact strength (%s %d)" % [k, int(round_ev[k])])
+	assert_false(text.contains("%d in a thousand" % int(round_ev["odds"])), "no odds")
+	var facts: Array = (_battle_letters(s)[0]["facts"] as Array).filter(func(x: Dictionary) -> bool:
+		return String(x["key"]).begins_with("loss@"))
+	assert_eq(facts.size(), 1, "one loss line: ours")
+	# the siege's words give no besieger strength
+	var raw := FileAccess.get_file_as_string("res://data/templates.csv")
+	for line: String in raw.split("\n"):
+		if line.begins_with("siege_") or line.begins_with("battle_"):
+			assert_false(line.contains("{attack}") or line.contains("{att_power}") or line.contains("{def_power}")
+				or line.contains("{odds}"), "no enemy strength in: " + line)
+
+
 ## --- the words -----------------------------------------------------------------
 
 func test_report_text_uses_templates_and_no_realm_names() -> void:
 	for key: String in ["battle_start", "battle_join_att", "battle_join_def", "battle_round", "battle_loss", "battle_title",
-			"battle_end_won", "battle_end_lost", "battle_end_draw", "battle_end_none",
+			"battle_end_won", "battle_end_lost", "battle_end_draw", "battle_end_none", "battle_end_withdrawn",
 			"battle_left_ordered", "battle_left_broken", "battle_left_rout", "battle_left_evade",
 			"battle_left_retreat"]:
 		assert_true(repo.templates.any(func(r: Dictionary) -> bool: return String(r["key"]) == key), key)

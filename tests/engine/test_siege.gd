@@ -273,7 +273,10 @@ func test_an_assault_with_no_battle_is_tried_again_and_never_sticks() -> void:
 	assert_eq(BattleSystem.settle_day(repo, s), [], "no battle while it draws breath")
 	SiegeSystem.settle_day(repo, s, [])
 	assert_eq(int(s.ai_hosts[main]["assault_due"]), 1, "the assault is still owed")
-	s.day += 2
+	for n in 2:
+		s.day += 1
+		assert_eq(BattleSystem.settle_day(repo, s), [], "day %d of the pause: still none" % (n + 1))
+	s.day += 1
 	var fight := BattleSystem.settle_day(repo, s)
 	assert_eq(_of(fight, "start").size(), 1, "tried again once the pause is over")
 	# the siege ends: no flag outlives it
@@ -767,6 +770,46 @@ func test_a_garrison_waits_for_the_assault() -> void:
 	assert_eq(_of(BattleSystem.settle_day(repo, s), "start").size(), 1, "the assault day's battle")
 
 
+## A supply line into a besieged town is CUT (spec §5.1: the siege starves the
+## town): the line's regiment garrisons the town, its line is flowing from the
+## depot — the day's step delivers nothing, says `cut` by the besiegers'
+## kingdom (the host named), and the line flows again once the siege is gone.
+func test_a_supply_line_into_a_besieged_town_is_cut() -> void:
+	var main := _host("main")
+	var s := SuiteData.campaign(repo, 7)
+	s.tick = 1
+	s.day = 20
+	var g := String(_town_and_garrison(s)[1])
+	var town := _besiege(s, main, [g])
+	assert_true(SiegeSystem.besieged(s, town), "besieged")
+	var dep := TownStores.depot(repo, s)
+	TownStores.add(s, dep, "crown", 100000)
+	for k: String in ["crown", "lord", "house"]:
+		TownStores.take(s, town, k, 1000000)   # the town itself has nothing left to give
+	TownStores.sync_metrics(repo, s)
+	s.supply_lines[g] = SupplyLines._new_record(dep, 1000, 1)
+	s.supply_lines[g]["state"] = SupplyLines.FLOWING
+	s.regiments[g]["supplies"] = 0
+	var ev := SupplyLines.day_step(repo, s)
+	var cut: Array = ev.filter(func(e: Dictionary) -> bool:
+		return String(e["type"]) == "cut" and String(e["regiment"]) == g)
+	assert_eq(cut.size(), 1, "the line is cut")
+	if cut.size() == 1:
+		var kingdom := String(ArmySystem.regiment(repo, EnemyAi.regiments_of(s, main)[0])["kingdom_code"])
+		assert_eq(String(cut[0]["by"]), kingdom, "by the besiegers' kingdom")
+		assert_eq(String(cut[0].get("host", "")), main, "the host that holds the road")
+	assert_eq(String(s.supply_lines[g]["state"]), SupplyLines.CUT)
+	assert_eq(int(s.regiments[g]["supplies"]), 0, "nothing came through")
+	assert_eq(SupplyLines.day_step(repo, s).filter(func(e: Dictionary) -> bool:
+		return String(e["type"]) == "cut").size(), 0, "said once")
+	# the host goes home: the road is open again
+	EnemyAi.set_mode(s, main, "RETREAT", "test", [])
+	var after := SupplyLines.day_step(repo, s)
+	assert_eq(after.filter(func(e: Dictionary) -> bool:
+		return String(e["type"]) == "restored" and String(e["regiment"]) == g).size(), 1, "restored")
+	assert_gt(int(s.regiments[g]["supplies"]), 0, "and it delivers")
+
+
 ## --- a host going home fights no more (RETREAT / WITHDRAW) ------------------------
 
 ## The "start" and "round" events among `events`.
@@ -828,7 +871,10 @@ func test_a_running_assault_is_called_off_the_day_its_host_turns_home() -> void:
 	if ends.size() == 1:
 		assert_eq(String(ends[0]["why"]), "withdrawn", "the host withdrew from it")
 		assert_eq(String(ends[0]["winner"]), "def", "the garrison holds the field")
-		assert_eq(String(MissiveWriter._end_key(s, ends[0], {})), "battle_end_won", "told as the crown's field")
+		assert_eq(String(MissiveWriter._end_key(s, ends[0], {})), "battle_end_withdrawn",
+			"told as the enemy drawing off, not a fought win")
+		var words := MissiveWriter.battle_words(repo, "battle_end_withdrawn", {"place": "X", "rounds": 1}, 0)
+		assert_false(words.contains("[missing") or words.contains("{"), words)
 	assert_eq(s.battles, [], "no battle kept")
 	assert_eq(int(s.regiments[g].get("dead", 0)), dead, "the garrison's casualties stop")
 	var pause := s.absolute_day() + int(repo.bal("battle_disengage_days"))

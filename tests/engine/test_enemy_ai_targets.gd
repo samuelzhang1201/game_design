@@ -578,18 +578,35 @@ func test_arrival_at_an_ungarrisoned_town_raids_it() -> void:
 	assert_eq(MapManors.burg_of(repo, EnemyAi.target_cell(repo, s, "town", town)), town, "the town's own cell")
 
 
-func test_arrival_at_a_lost_target_withdraws() -> void:
+## A host that reaches a target the crown no longer holds drops it and chooses
+## again that same day (think_day 0, think_day runs after step_day) — it goes
+## home only if nothing else is worth it.
+func test_arrival_at_a_lost_target_chooses_again() -> void:
 	var host := _host("main")
 	var s := _field(_appear(host))
 	var town := _empty_town(s)
 	_aim(s, host, "town", town)
 	_place_host(s, host, _town_m(town))
 	s.province_owner[String(repo.burgs[town]["province_code"])] = repo.resolve_realm("raider_realm")
-	EnemyAi.step_day(repo, s)
-	assert_eq(String(s.ai_hosts[host]["mode"]), "WITHDRAW")
-	for c: String in EnemyAi.regiments_of(s, host):
-		assert_eq(String(s.foes[c]["order"]), ArmySystem.ORDER_MARCH)
-		assert_eq(Vector2i(int(s.foes[c]["dest_x_m"]), int(s.foes[c]["dest_y_m"])), _home(host))
+	var ev := EnemyAi.step_day(repo, s)
+	var mind: Dictionary = s.ai_hosts[host]
+	assert_eq(String(mind["mode"]), "ADVANCE", "not home for good")
+	assert_eq(String(mind["target_id"]), "", "the lost target dropped")
+	assert_eq(int(mind["think_day"]), 0, "to choose again")
+	assert_eq(ev.filter(func(e: Dictionary) -> bool: return String(e.get("mode", "")) == "WITHDRAW"), [])
+	EnemyAi.think_day(repo, s)
+	assert_ne(String(mind["target_id"]), town, "never the lost town again")
+	assert_true(String(mind["mode"]) == "WITHDRAW" or String(mind["target_id"]) != "",
+		"a new target, or home only for want of one")
+	# with nothing within reach the same arrival does send it home
+	repo.balance["ai_target_reach_km"] = 0.0
+	var s2 := _field(_appear(host))
+	_aim(s2, host, "town", town)
+	_place_host(s2, host, _town_m(town))
+	s2.province_owner[String(repo.burgs[town]["province_code"])] = repo.resolve_realm("raider_realm")
+	EnemyAi.step_day(repo, s2)
+	EnemyAi.think_day(repo, s2)
+	assert_eq(String(s2.ai_hosts[host]["mode"]), "WITHDRAW", "nothing else worth it: home")
 
 
 func test_no_arrival_while_every_column_is_still_on_the_road() -> void:
@@ -916,3 +933,21 @@ func test_think_withdraw_is_an_event() -> void:
 	assert_ne(String(events[0]["why"]), "", "with its reason")
 	assert_eq(int(events[0]["day"]), s.absolute_day())
 	assert_eq(EnemyAi.think(repo, s, host), [], "a host already going home thinks no more")
+
+
+## The AI walks a target's march only as far as can matter: march_days_between
+## with `max_days` stops there (the figure is min(the true days, max_days)),
+## and candidates() / _choose walk at most supply_reach_days + 1 — a target
+## further than that is no candidate whatever its true distance.
+func test_the_march_walk_stops_at_the_cap() -> void:
+	var s := _field(_appear(_host("main")))
+	var c: String = EnemyAi.regiments_of(s, _host("main"))[0]
+	var from := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, c))
+	var to := from + Vector2(400.0, 0.0)
+	var days := ArmySystem.march_days_between(repo, s, c, from, to)
+	assert_gt(days, 3, "a long march")
+	for cap: int in [1, days - 1, days, days + 3]:
+		assert_eq(ArmySystem.march_days_between(repo, s, c, from, to, -1, cap), mini(days, cap), "cap %d" % cap)
+	var horizon := EnemyAi.supply_reach_days(repo, s, _host("main"))
+	for cand: Dictionary in EnemyAi.candidates(repo, s, _host("main")):
+		assert_lte(int(cand["distance_days"]), horizon, "within supply reach, walked exactly")

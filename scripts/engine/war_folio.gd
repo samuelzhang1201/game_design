@@ -249,6 +249,9 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 	if order == ArmySystem.ORDER_GARRISON and SupplySystem.garrisoned_in(repo, state, code) == "":
 		shown = "camp"
 	rows.append(_row("Order", order_word(repo, shown)))
+	var stance := BattleSystem.stance_words(repo, state, code)
+	if stance != "":
+		rows.append(_row("Battle stance", stance))
 	if order == ArmySystem.ORDER_MARCH:
 		var dest := ArmySystem.destination_of(repo, state, code)
 		var si := WarSheets.sheet_of(repo, dest)

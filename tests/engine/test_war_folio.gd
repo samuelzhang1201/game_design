@@ -275,3 +275,22 @@ func test_the_supply_row_names_a_brigand_on_the_road() -> void:
 			assert_string_contains(_rows("supply")["Line"], "to the %s" % repo.markers[c]["label"])
 			return
 	pass_test("no brigands on this pack")
+
+
+## The battle stance (data/battle_stances.csv, the regiment's `stance`) is on
+## the folio's march page for the crown's own regiments, by its table label,
+## with one a courier has landed for tomorrow beside it; never for a foe.
+func test_the_battle_stance_is_on_the_march_page() -> void:
+	state.regiments[code]["stance"] = "hold"
+	assert_eq(_rows("march").get("Battle stance", ""), String(repo.battle_stances["hold"]["label"]))
+	state.regiments[code]["stance_next"] = "evade"
+	assert_eq(_rows("march").get("Battle stance", ""), "%s, %s from tomorrow" % [
+		String(repo.battle_stances["hold"]["label"]), String(repo.battle_stances["evade"]["label"])])
+	var foe: String = (state.foes.keys() as Array)[0]
+	Intel.dev_all = true
+	var rows := {}
+	for s: Dictionary in WarFolio.sections(repo, state, foe):
+		for row: Dictionary in s["rows"]:
+			rows[String(row["label"])] = String(row["text"])
+	Intel.dev_all = false
+	assert_false(rows.has("Battle stance"), "not a foe's, even in dev mode")

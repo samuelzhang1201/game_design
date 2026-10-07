@@ -229,6 +229,22 @@ static func stance_of(state: GameState, code: String) -> String:
 	return String(_stored(state, code).get("stance", ArmySystem.STANCE_DEFAULT))
 
 
+## The battle stance of one of the CROWN's regiments in words, for its card
+## and the folio: the battle_stances.csv label of today's stance, and a
+## stance a courier has landed for tomorrow (`stance_next`) beside it
+## ("Hold, Evade from tomorrow"); "" for a foe or a regiment with no state —
+## a foe's stance is not the crown's to read.
+static func stance_words(repo: DataRepository, state: GameState, code: String) -> String:
+	if state == null or not state.regiments.has(code):
+		return ""
+	var now := String(_stance_row(repo, stance_of(state, code)).get("label", stance_of(state, code)))
+	var e: Dictionary = state.regiments[code]
+	if not e.has("stance_next") or String(e["stance_next"]) == stance_of(state, code):
+		return now
+	var next := String(e["stance_next"])
+	return "%s, %s from tomorrow" % [now, String(_stance_row(repo, next).get("label", next))]
+
+
 ## A stance's row of data/battle_stances.csv; the default stance's for an
 ## unknown name.
 static func _stance_row(repo: DataRepository, stance: String) -> Dictionary:
@@ -268,7 +284,8 @@ static func _within(a: Vector2i, b: Vector2i, metres: int) -> bool:
 
 ## A land regiment with state and fit men that is not falling back from a
 ## battle (`disengaging`, cleared when its march ends) nor drawing breath
-## after one (`disengaged_until`, an absolute day still to come), nor a foe
+## after one (`disengaged_until`: the LAST absolute day of its pause, so
+## today <= it means no contact), nor a foe
 ## whose host is going home (`homeward`).
 static func _can_fight(repo: DataRepository, state: GameState, code: String) -> bool:
 	var reg := ArmySystem.regiment(repo, code)
@@ -279,7 +296,7 @@ static func _can_fight(repo: DataRepository, state: GameState, code: String) -> 
 	var e := _stored(state, code)
 	if e.is_empty() or int(e.get("disengaging", 0)) == 1:
 		return false
-	if int(e.get("disengaged_until", 0)) > state.absolute_day():
+	if int(e.get("disengaged_until", 0)) >= state.absolute_day():
 		return false
 	return ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), e) > 0
 
@@ -664,8 +681,9 @@ static func call_off(state: GameState, id: int) -> void:
 	state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != id)
 
 
-## No contact for `code` for battle_disengage_days from today
-## (`disengaged_until`); its orders still work.
+## No contact for `code` for exactly battle_disengage_days days after today
+## (`disengaged_until` = today + N, the last day of the pause: N = 1 keeps it
+## out of the next day's battles only); its orders still work.
 static func _pause(repo: DataRepository, state: GameState, code: String) -> void:
 	var e := _stored(state, code)
 	if not e.is_empty():

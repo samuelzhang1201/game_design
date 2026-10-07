@@ -22,6 +22,9 @@ const HOMEWARD := [MODE_RETREAT, MODE_WITHDRAW]
 
 ## arrival_mode's answer for a host reaching a town another host besieges.
 const ARRIVAL_RETHINK := "RETHINK"
+## arrival_mode's answer for a target the crown no longer holds: drop it and
+## choose again the same day (think_day 0), never home for good on that alone.
+const ARRIVAL_LOST := "LOST"
 
 const KIND_TOWN := "town"
 const KIND_MANOR := "manor"
@@ -105,6 +108,12 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 				mind["target_id"] = ""
 				mind["think_day"] = 0
 				_stand_aside(repo, state, code)
+			elif next == ARRIVAL_LOST:
+				# the crown no longer holds it: choose again today (think_day
+				# runs after step_day); home only if nothing else is worth it
+				mind["target_kind"] = ""
+				mind["target_id"] = ""
+				mind["think_day"] = 0
 			elif next != "":
 				set_mode(state, code, next, _arrival_why(next), events)
 		_march_host(repo, state, code)
@@ -262,7 +271,7 @@ static func candidates(repo: DataRepository, state: GameState, host_code: String
 	var anchor := anchor_of(repo, state, host_code)
 	var horizon := supply_reach_days(repo, state, host_code)
 	for c: Dictionary in _gather(repo, state, host_code):
-		c["distance_days"] = _days(repo, state, anchor, c)
+		c["distance_days"] = _days(repo, state, anchor, c, horizon + 1)
 		if int(c["distance_days"]) <= horizon:
 			out.append(c)
 	return out
@@ -508,7 +517,7 @@ static func should_retreat(repo: DataRepository, state: GameState, host_code: St
 ## NON-reserve host, ARRIVAL_RETHINK when another non-reserve host already
 ## besieges that town (no second siege). Else, once its first live
 ## column stands within battle_contact_km of the target's point: the player no
-## longer holds the target → WITHDRAW; a player regiment it sees stands at the
+## longer holds the target → ARRIVAL_LOST (choose again); a player regiment it sees stands at the
 ## target → nothing (contact fights it); else → RAID (an open manor, or a town
 ## with no garrison).
 static func arrival_mode(repo: DataRepository, state: GameState, host_code: String) -> String:
@@ -544,7 +553,7 @@ static func arrival_mode(repo: DataRepository, state: GameState, host_code: Stri
 	if not come:
 		return ""
 	if not target_held(repo, state, kind, id):
-		return MODE_WITHDRAW
+		return ARRIVAL_LOST
 	if not defenders_of(repo, state, kind, id, seen_by(repo, state, host_code)).is_empty():
 		return ""
 	return MODE_RAID
@@ -588,11 +597,11 @@ static func main_host(repo: DataRepository, state: GameState) -> String:
 
 ## Halts every live column of the host that is in no battle where it stands
 ## (order garrison, destination its own place) and keeps it out of contact for
-## the rest of today (`disengaged_until` = tomorrow, never shortening a longer
+## the rest of today (`disengaged_until` = today, the pause's last day, never shortening a longer
 ## pause): a host that found its town besieged by another stands aside while it
 ## chooses again.
 static func _stand_aside(repo: DataRepository, state: GameState, host_code: String) -> void:
-	var tomorrow := state.absolute_day() + 1
+	var today := state.absolute_day()
 	for c: String in live_regiments(repo, state, host_code):
 		if not BattleSystem.battle_of(state, c).is_empty():
 			continue
@@ -600,7 +609,7 @@ static func _stand_aside(repo: DataRepository, state: GameState, host_code: Stri
 		e["order"] = ArmySystem.ORDER_GARRISON
 		e["dest_x_m"] = int(e["x_m"])
 		e["dest_y_m"] = int(e["y_m"])
-		e["disengaged_until"] = maxi(int(e.get("disengaged_until", 0)), tomorrow)
+		e["disengaged_until"] = maxi(int(e.get("disengaged_until", 0)), today)
 
 
 ## True when a non-reserve host other than `host_code` sits in SIEGE at `town`.
@@ -725,13 +734,15 @@ static func _gather(repo: DataRepository, state: GameState, host_code: String) -
 	return out
 
 
-## Whole days for the anchor to march to a candidate's point.
-static func _days(repo: DataRepository, state: GameState, anchor: String, c: Dictionary) -> int:
+## Whole days for the anchor to march to a candidate's point, walked at most
+## `max_days` (the supply reach + 1: further is no candidate, however far).
+static func _days(repo: DataRepository, state: GameState, anchor: String, c: Dictionary, max_days: int = -1) -> int:
 	if anchor == "":
 		return 0
 	var to := target_point_m(repo, String(c["kind"]), String(c["id"]))
 	return ArmySystem.march_days_between(repo, state, anchor,
-		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, anchor)), ArmySystem.metres_to_pack(repo, to))
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, anchor)), ArmySystem.metres_to_pack(repo, to),
+		-1, max_days)
 
 
 ## A candidate's score with the overlap when another host holds it.
@@ -772,7 +783,7 @@ static func _choose(repo: DataRepository, state: GameState, host_code: String) -
 	for c: Dictionary in cands:
 		if not best.is_empty() and int(bound[_key(c)]) < best_score:
 			break
-		c["distance_days"] = _days(repo, state, anchor, c)
+		c["distance_days"] = _days(repo, state, anchor, c, horizon + 1)
 		if int(c["distance_days"]) > horizon:
 			continue                     # beyond its supplies: no candidate
 		var sc := _final(c, int(c["distance_days"]), doctrine, taken, permille)

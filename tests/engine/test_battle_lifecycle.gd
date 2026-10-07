@@ -314,7 +314,7 @@ func test_battle_ends_after_max_rounds_or_rout() -> void:
 	assert_gt(pause, 0, "balance.csv battle_disengage_days")
 	assert_eq(int(s.regiments[p]["disengaged_until"]), ended_on + pause)
 	assert_eq(int(s.foes[f]["disengaged_until"]), ended_on + pause)
-	for n in pause - 1:
+	for n in pause:
 		_next_day(s)
 		BattleSystem.settle_day(repo, s)
 		assert_eq(s.battles.size(), 0, "day %d after the draw: no new battle" % (n + 1))
@@ -336,6 +336,35 @@ func test_battle_ends_after_max_rounds_or_rout() -> void:
 	assert_eq(ArmySystem.order_of(repo, s2, p), ArmySystem.ORDER_MARCH, "the routed fall back to a town")
 	assert_eq(int(s2.regiments[p].get("disengaging", 0)), 1)
 	assert_eq(String(s2.foes[f]["order"]), ArmySystem.ORDER_GARRISON, "the winner holds the field")
+
+
+## battle_disengage_days is exactly that many days with no contact: N = 1
+## keeps the two apart the one day after the draw, N = 2 the two days after;
+## the day after the last, still in contact, they fight again.
+func test_the_pause_is_exactly_battle_disengage_days() -> void:
+	for days: int in [1, 2]:
+		repo = SuiteData.repo()
+		repo.balance["battle_disengage_days"] = float(days)
+		var s := SuiteData.campaign(repo, 7)
+		_one_tier(0, 0, 600, 0, 0)
+		var p: String = _mine()[0]
+		var f: String = _theirs()[0]
+		_place(s, p, _spot(s))
+		_foe(s, f, _spot(s) + Vector2i(1000, 0))
+		for n in int(repo.bal("battle_max_rounds")):
+			BattleSystem.settle_day(repo, s)
+			if s.battles.is_empty():
+				break
+			_next_day(s)
+		assert_eq(s.battles.size(), 0, "N=%d: the draw" % days)
+		var quiet := 0
+		for n in 4:
+			_next_day(s)
+			BattleSystem.settle_day(repo, s)
+			if not s.battles.is_empty():
+				break
+			quiet += 1
+		assert_eq(quiet, days, "N=%d: exactly %d days with no contact, then the war is renewed" % [days, days])
 
 
 func test_evade_stance_leaves_on_first_contact() -> void:

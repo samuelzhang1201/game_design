@@ -980,9 +980,11 @@ static func days_out(repo: DataRepository, state: GameState, code: String) -> in
 ## march_day will walk it (_march_one), each day on the ground and in the
 ## weather where the column then stands — the weather is a seeded function of
 ## the day, so the figure is the day it will arrive. 0 for a regiment that
-## cannot move.
+## cannot move. `max_days` >= 0 stops the walk there (the figure is then
+## min(the true days, max_days)): a caller that only needs to know "more than
+## N" (EnemyAi's supply reach) walks N + 1 days, never army_march_days_cap.
 static func march_days_between(repo: DataRepository, state: GameState, code: String, from: Vector2,
-		to: Vector2, start_day: int = -1) -> int:
+		to: Vector2, start_day: int = -1, max_days: int = -1) -> int:
 	if day_step_m(repo, state, code) <= 0:
 		return 0
 	var a := pack_to_metres(repo, from)
@@ -992,6 +994,8 @@ static func march_days_between(repo: DataRepository, state: GameState, code: Str
 	var entry := {"x_m": a.x, "y_m": a.y, "dest_x_m": b.x, "dest_y_m": b.y, "order": ORDER_MARCH}
 	var day := (state.absolute_day() if state != null else 0) if start_day < 0 else start_day
 	var cap := int(repo.bal("army_march_days_cap"))
+	if max_days >= 0:
+		cap = mini(cap, max_days)
 	for n in range(1, cap + 1):
 		if _march_one(repo, state, code, entry, day + n - 1):
 			return n

@@ -5,7 +5,7 @@ const Play := preload("res://tests/invasion_play.gd")
 ## The prologue's invasion end to end (spec 2026-10-07-enemy-ai-and-battle-
 ## design, all of it) on the REAL day loop of a suite campaign, with no hand
 ## on the engine but the player's defence: on the main host's crossing day the
-## town it chose is garrisoned as if a courier had landed the order.
+## town it chose is garrisoned as if the march had already been carried out.
 ##   A  WEAK: the pack's smallest land regiment holds it — the rumour comes,
 ##      the hosts cross on their days, the main host sits down before the
 ##      town, wears it down, storms it and takes it; the loss costs the crown
