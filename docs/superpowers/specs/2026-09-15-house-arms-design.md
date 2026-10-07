@@ -101,3 +101,7 @@ Owner request 2026-09-15: 根据地图 json 家族文件，生成所有相应的
 
 Arms on the map itself (the MANORS layer), regenerating arms when a house
 gains or loses its seat, and the Azgaar SVG renderer.
+
+## Resolution rules (moved from `scripts/engine/CLAUDE.md`)
+
+`HouseArms` (pure, cached, forgotten on `load_map`) resolves family → seat → texture. A house wears its SEAT's arms: its first province by `province_id` among those `MapObjects.house_name_of` gives it, that province's capital town's `coa` (the province's when the town has none). Keys: `kingdom_<code>`, `seat_<capital burg>`, `province_<code>`. The crown resolves through `player_setup.house_was`, so renaming the royal family keeps its arms. A new map needs no new arms: a key wears `data/maps/<id>/arms_bindings.csv`'s pin, else the pack's installed art, else arms BORROWED from other packs in the pack's order, never twice while the pool lasts (`HouseArms.resolved_path` / `report`; `tools/arms_report.gd --map <id>`). Generating arms: `tools/CLAUDE.md`. The realm and the ruler are not customised: a reign begins with the founding names.

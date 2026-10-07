@@ -226,3 +226,7 @@ state → effects → ink → slip → card). Each is a plan of its own.
   3D map's look of a hazard, foreign forces and rebels abroad (intel P2),
   mines / inns / markets as economy (P3), proselytism's effect on faith
   (the religion system, post-MVP).
+
+## 6. Engine rules as they stood (moved from `scripts/engine/CLAUDE.md`)
+
+`Hazards` are STATE: `GameState.hazards` (id → kind, label, cells, start, end, source), seeded once from the pack's zones (`seed_pack`, `hazards_seeded`), saved whole; `hazards_rev` (not saved) bumps on every change for the caches. What a kind does is `data/hazard_kinds.csv` (months, public, wounds, morale, supply loss, pace, ink). In the crown's realm every hazard is known; abroad only a `public` kind (`known`). The month's end runs `settle_regiments` after `ArmySystem.settle_month` and `settle_month` (endings, news only for a known one) after the day turns; a march's pace multiplies by `pace_permille`, a supply line's road loses its share, sampled every `war_hazard_sample_km` (`SupplySystem.hazard_loss`; an unknown one is "trouble on the road").

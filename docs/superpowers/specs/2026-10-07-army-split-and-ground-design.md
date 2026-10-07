@@ -6,7 +6,7 @@ foraging/desertion are sub-projects of their own):
 
 > 14. 把开局军队拆分成 40 支左右、每支 300–1000 人的部队，不新增兵力。
 
-**Status: DESIGN APPROVED in chat 2026-10-07 (owner, section by section); not yet built.**
+**Status: BUILT 2026-10-08 on feat/army-split (not yet merged); the slot pitch and the look await the visual review.**
 The owner's answers, in order:
 
 - split rule A — "有多少人就是多少人，不要因为不到300就合为一队。只要纯兵种部队，所有单位在地图上不要重叠，就近放在一起即可。数量marker也不要重叠";
@@ -336,3 +336,21 @@ Each step ends with the full suite green at the expected error count.
 - How foreign units are shown (unchanged: through intel).
 - Multi-select in the war room.
 - Laws (sub-project C), and foraging, plunder and desertion (sub-project B).
+
+## 10. Implementation rulings
+
+Where the build departs from the wording above, as the plan ruled it (R1-R7) and as the later tasks found it (R8-R12).
+
+- **R1 - argument order.** `ArmySystem.regiment(repo, code, state := null)`, `ArmySystem.roster(repo, state := null)` and `MapObjects.regiments_of(repo, kingdom, state := null)` keep the existing order and append an optional state, so ~90 call sites are not touched at once; every engine call site with a `state` in scope passes it.
+- **R2 - data layout.** The single key/value table becomes per-arm rows in `data/army_split.csv`, the scalars in `data/balance.csv` (`army_split_cap_men`, `army_slot_spacing_m`, `army_slot_max_rings`, `map3d_declutter_step_px`, `map3d_declutter_max_px`, `war_spread_step_m`, `war_spread_max_m`) and the blocked terrains in `data/army_camp_blocked.csv`: the repository's existing shapes, the same values.
+- **R3 - camped means settled around the town.** `camped_by` reads the town a unit SETTLED around (`camp_town`), not the distance to the town, because the hex rings can reach past a village's reach and a unit settled around its town is still fed from it.
+- **R4 - Shift for the box.** A plain left drag pans the camera, so the selection box is a Shift + left drag and a Shift + left click toggles one unit.
+- **R5 - lists.** The war folio shows one unit at a time; grouping applies to the MILITARY panel's rows and the marshal's monthly report, through one ordering function, `ArmySystem.ordered`.
+- **R6 - seat menu rows.** The seat rows are `data/army_route_orders.csv` keys `seat` and `seat_empty`, added by `ArmyOrderMenu._open_for` only for a camped unit that is not seated.
+- **R7 - split cache.** `ArmySplit` caches the pack's split per repository instance and keeps at most four entries.
+- **R8 - `ARMY_SEAT` stays single-unit in a multi-selection.** Two units camped by one town would both pass validation and both ride and pay for one seat.
+- **R9 - `any_terrain` retry.** `ArmyGround.is_free` and `free_slot` take `any_terrain`, and both `ArmySplit._place` and `ArmyGround.settle` retry with it before keeping the arrival point; a town ringed by blocked terrain would otherwise stack its units.
+- **R10 - a halted column settles.** `set_garrison` settles a column that was halted mid-march: it takes a seat or a slot and gets its `camp_town`.
+- **R11 - the box takes land units only.** The Shift + drag selection box never picks a fleet.
+- **R12 - `regiments_of` is sorted by code.** Callers that want the lists' order go through `ArmySystem.ordered`.
+- **R13 - the household leads its list.** The royal household is a unit of its parent regiment, yet `ArmySystem.ordered` puts it first (before the royal train), so it stands apart from its regiment's other units in the lists.
