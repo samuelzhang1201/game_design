@@ -113,9 +113,8 @@ func _place(code: String, piece: Dictionary) -> void:
 	_tops.erase(code)
 	_rects.erase(code)
 	var centre := Vector3(xz.x, ctx.height_at(xz), xz.y)
-	# Far out every regiment is its flat counter (Map3DUnits.as_counters); one quartered in its town, the town's garrison counter.
-	if ctx.camera.is_position_behind(centre) or Map3DUnits.as_counters(repo, ctx.meta, ctx.distance, ctx.view_size.y) \
-			or ArmySystem.quartered_in(repo, ArmySystem.regiment(repo, code, ctx.state()), ctx.state()) != "":
+	# Far out every regiment is its flat counter (Map3DUnits.as_counters).
+	if ctx.camera.is_position_behind(centre) or Map3DUnits.as_counters(repo, ctx.meta, ctx.distance, ctx.view_size.y):
 		show_piece(piece, false)
 		return
 	show_piece(piece, true)

@@ -1,10 +1,11 @@
 class_name ArmyCounters
 extends RefCounted
 ## The MILITARY layer's counters (owner 2026-09-13 on the 2D map, 2026-09-19
-## on the 3D map): each of the player's regiments as a square — its painted
-## piece (data/army_art.csv), else a glyph: swords, a crown for the royal
-## regiment, waves for a fleet — joined to a box in the realm's hue stating
-## the headcount. Shared by both maps: each map gathers its regiments' screen
+## on the 3D map): each of the player's units as a square of its own — its
+## painted piece (data/army_art.csv), else a glyph: swords, a crown for the
+## household (the roster's `is_royal`), waves for a fleet — joined to a box in
+## the realm's hue stating its headcount. Nothing is merged into one counter
+## (spec 2026-10-07-army-split-and-ground §5.1). Shared by both maps: each map gathers its regiments' screen
 ## points and the settlement marks to keep clear of, and hands them here.
 ## Every colour and size is political_palette.csv army_* / balance.csv
 ## map_army_*.
@@ -12,10 +13,7 @@ extends RefCounted
 
 ## The counters for `points` ([{reg, pos, bars?}], pos in the map's screen px)
 ## at height `h`: {code, pos, size, text, font_px, rect, icon, count, bars,
-## glyph, piece, color, garrison, codes, naval, royal}. A point with a
-## `garrison` (a town code) is that town's garrison — `codes` its regiments,
-## the royal one first, `heads` their sum, "2100 (2)" — drawn under a tower (the crown when
-## the royal regiment is in it). `bars` is ArmySystem.bars_of's
+## glyph, piece, color, naval, royal}, one a unit. `bars` is ArmySystem.bars_of's
 ## Vector2i (readiness, supply per mille): two thin bars, red over yellow,
 ## stand on the counter inside its `rect` (owner 2026-09-27). Sorted top to bottom; a counter meeting a
 ## settlement mark or an earlier counter drops to just under it, so no
@@ -27,7 +25,6 @@ extends RefCounted
 static func layout(repo: DataRepository, points: Array, h: float, obstacles: Array,
 		with_piece: Dictionary = {}) -> Array:
 	var mine := repo.resolve_realm("player_realm")
-	var royal := MapObjects.royal_regiment(repo, mine)
 	var pad := repo.bal("map_army_count_pad_px")
 	var gap := repo.bal("map_army_stack_gap_px")
 	var font := UiPalette.body_font()
@@ -40,13 +37,8 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var code := String(r["regiment_code"])
 		var strength := MapObjects.regiment_size(repo, r)
 		var naval := String(r.get("is_naval", "0")) == "1"
+		var royal := String(r.get("is_royal", "0")) == "1"
 		var text := str(int(strength))
-		# a town's garrison (owner 2026-10-06, choice A): every regiment
-		# quartered there, its heads summed, "2100 (2)" for two regiments
-		var codes: Array = p.get("codes", [code])
-		if p.has("garrison"):
-			strength = float(p["heads"])
-			text = ("%d (%d)" % [int(strength), codes.size()]) if codes.size() > 1 else str(int(strength))
 		var solo := with_piece.has(code)
 		# a chip over a 3D piece is its tag, never bigger than the soldier
 		var ph: float = minf(h, float(p.get("h", h)))
@@ -56,21 +48,15 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var kingdom := String(r.get("kingdom_code", mine))
 		if not colors.has(kingdom):
 			colors[kingdom] = count_color(repo, kingdom)
-		# MapObjects.army_piece's rule, with the royal regiment found once above
-		# (army_piece looks it up again for every regiment)
-		var piece := "fleet" if naval else ("royal" if code == royal and kingdom == mine \
-			else (MapObjects.army_piece(repo, r) if kingdom != mine else MapObjects.regiment_arm(repo, r)))
 		out.append({"code": code, "pos": sp, "size": strength, "text": text, "solo": solo,
 			"font_px": font_px,
 			"h": ph,
 			"rect": Rect2(sp - Vector2(w, ph) / 2.0 - Vector2(0.0, bars_h), Vector2(w, ph + bars_h)),
 			"bars": p.get("bars", Vector2i(-1, -1)),
-			"glyph": "waves" if naval else ("crown" if code == royal else \
-				("tower" if p.has("garrison") else "swords")),
-			"piece": piece,
+			"glyph": "waves" if naval else ("crown" if royal else "swords"),
+			"piece": MapObjects.army_piece(repo, r),
 			"color": colors[kingdom],
-			"garrison": String(p.get("garrison", "")), "codes": codes,
-			"naval": naval, "royal": code == royal})
+			"naval": naval, "royal": royal})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var ay := (a["pos"] as Vector2).y
 		var by := (b["pos"] as Vector2).y
@@ -137,9 +123,9 @@ static func count_color(repo: DataRepository, kingdom_code: String) -> Color:
 		repo.bal("map_army_count_val"))
 
 
-## Draw `markers` (from layout) on `ci`; the counter coded `selected`, if any,
-## is outlined in gold.
-static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected := "") -> void:
+## Draw `markers` (from layout) on `ci`; each counter whose code is in
+## `selected` is outlined in gold.
+static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected: Array = []) -> void:
 	if markers.is_empty():
 		return
 	var outline := MapPalette.named(repo, "army_outline")
@@ -166,7 +152,7 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 			ci.draw_rect(count, token if table else m["color"])
 			ManorBadges.draw_centered_text(ci, font, count, String(m["text"]),
 				int(m["font_px"]), count_ink)
-			if selected != "" and selected in (m.get("codes", [m["code"]]) as Array):
+			if selected.has(String(m["code"])):
 				ci.draw_rect(rect.grow(line + 1.5), UiPalette.GOLD, false, 2.0)
 			continue
 		# the glyph square (the 2D counter art went 2026-09-29, Hunyuan's licence)
@@ -178,5 +164,5 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected 
 		ResourceIcon.draw_glyph(ci, String(m["glyph"]), icon.get_center(),
 			icon.size.y * glyph_frac, glyph_ink)
 		ManorBadges.draw_centered_text(ci, font, count, String(m["text"]), int(m["font_px"]), count_ink)
-		if selected != "" and selected in (m.get("codes", [m["code"]]) as Array):
+		if selected.has(String(m["code"])):
 			ci.draw_rect(rect.grow(repo.bal("map_army_outline_px") + 1.5), UiPalette.GOLD, false, 2.0)

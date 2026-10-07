@@ -327,11 +327,21 @@ func _release(at: Vector2) -> void:
 	view._gui_input(e)
 
 
+## The first land piece on the laid sheet that a press on its own point
+## takes up (one piece a unit: the units camped round one town stand plinth
+## to plinth at the table's scale, so a neighbour's plinth can lie over a
+## unit's point); the first land piece while nothing can be picked yet.
 func _first_land_piece() -> Dictionary:
+	var first: Dictionary = {}
 	for p: Dictionary in WarRoom.on_sheet(repo, state, view.sheet_index()):
-		if not bool(p["naval"]):
+		if bool(p["naval"]):
+			continue
+		if first.is_empty():
+			first = p
+		var at: Variant = view.screen_pos_of_px(p["at"])
+		if at != null and view.piece_under(at as Vector2) == String(p["code"]):
 			return p
-	return {}
+	return first
 
 
 func test_a_click_on_a_piece_selects_it_and_arms_nothing() -> void:

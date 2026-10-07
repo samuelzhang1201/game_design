@@ -25,9 +25,6 @@ signal country_hovered(kingdom_code: String)
 ## A right CLICK (not a turn) on one of the player's regiments: ArmyOrderMenu
 ## opens over it. `at` is design px in this view.
 signal army_menu_requested(code: String, at: Vector2)
-## A click on a town's garrison of several regiments (owner 2026-10-06, choice
-## A): ArmyOrderMenu lists them; the one chosen is selected and given its orders.
-signal garrison_menu_requested(codes: Array, at: Vector2)
 ## Where on the pack a left click landed — an order being AIMED needs the
 ## ground, not the thing picked.
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
@@ -468,9 +465,7 @@ func set_dev_mode(on: bool) -> void:
 
 func dev_mode() -> bool: return _dev
 func selected_army() -> String: return _selection.army
-## Select one regiment as a click on it does (its card, its gold outline) —
-## the regiment chosen from a garrison's list (ArmyOrderMenu).
-func select_army(code: String) -> void: if _loaded: _selection.select({"kind": "army", "code": code})
+func selected_armies() -> Array: return _selection.armies if _loaded else []
 
 # --- picking (Map3DPicker, Map3DSelection) --------------------------------------------
 func ground_at(pos: Vector2) -> Variant: return _ctx.ground_at(pos) if _ctx != null else null
@@ -505,9 +500,6 @@ func right_click(pos: Vector2) -> bool:
 	var picked := pick_at(pos)
 	if String(picked.get("kind", "")) == "army":
 		army_menu_requested.emit(String(picked["code"]), pos)
-		return true
-	if String(picked.get("kind", "")) == "garrison":
-		garrison_menu_requested.emit(picked["codes"], pos)
 		return true
 	var hit: Variant = ground_at(pos)
 	if hit == null:

@@ -53,6 +53,29 @@ func _move_to(code: String, pack_px: Vector2) -> void:
 	state.regiments[code]["y_m"] = m.y
 
 
+## Stand `code` on the home sheet's point farthest from every other piece:
+## one piece a unit, the units camped round one town stand plinth to plinth
+## at the table's scale, and a pick test wants its piece clear of them.
+func _stand_alone(code: String) -> void:
+	var rect: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
+	var others: Array = []
+	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+		if String(p["code"]) != code:
+			others.append(p["at"])
+	var best := rect.get_center()
+	var best_d := -1.0
+	for i in range(1, 8):
+		for j in range(1, 8):
+			var at := rect.position + rect.size * Vector2(i / 8.0, j / 8.0)
+			var d := INF
+			for o: Vector2 in others:
+				d = minf(d, at.distance_to(o))
+			if d > best_d:
+				best_d = d
+				best = at
+	_move_to(code, best)
+
+
 func test_every_regiment_on_the_sheet_stands_as_a_piece_where_we_know_it_is() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
@@ -94,9 +117,14 @@ func test_the_war_pieces_table_draws_artillery_as_the_trebuchet_and_has_no_fleet
 	assert_eq(GameArt.path(GameArt.WAR_PIECES, "fleet"), "", "a fleet keeps its tin token")
 
 
-func test_the_royal_regiment_stands_as_the_royal_piece() -> void:
-	var royal := MapObjects.royal_regiment(repo, repo.resolve_realm("player_realm"))
-	assert_ne(royal, "", "the crown has a royal regiment")
+## The crown's piece is the household's (the roster's `is_royal`, spec
+## 2026-10-07-army-split-and-ground §5.1).
+func test_the_household_stands_as_the_royal_piece() -> void:
+	var royal := ""
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		if String(r.get("is_royal", "0")) == "1":
+			royal = String(r["regiment_code"])
+	assert_ne(royal, "", "the crown has a household")
 	var sheet := -1
 	for p: Dictionary in WarRoom.pieces(repo, state):
 		if String(p["code"]) == royal:
@@ -183,9 +211,9 @@ func test_screen_hits_name_each_piece() -> void:
 
 
 func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() -> void:
-	# a unit set marching stands as its own piece (a town's garrison of
-	# several is one piece that asks for its own menu)
+	# a unit set marching, standing clear of the others
 	var mover := _land_code()
+	_stand_alone(mover)
 	ArmySystem.ensure(repo, state)
 	ArmySystem.set_march(repo, state, mover,
 		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, mover, state)) + Vector2(10.0, 0.0))
@@ -266,12 +294,13 @@ func test_a_piece_moved_onto_a_slope_rests_on_its_highest_corner() -> void:
 
 
 func test_a_click_on_the_pieces_top_picks_it_and_the_nearer_one_wins() -> void:
+	var code := _land_code()
+	_stand_alone(code)
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var cam: Camera3D = view.get_node("%Camera")
 	var sc: float = view.window_scale()
-	var code := _land_code()
 	var node := pieces.piece(code)
 	var top := node.global_position + Vector3(0.0, float(node.get_meta("top_m")) * 0.95, 0.0)
 	var at := cam.unproject_position(top) / sc
@@ -318,10 +347,8 @@ func test_a_regiment_leaving_the_sheet_loses_its_piece() -> void:
 	var here: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
 	var spot := away.get_center()
 	assert_false(here.has_point(spot), "the spot is off this sheet")
-	# a town's garrison is one piece: every unit it stands for leaves
-	var held := MapObjects.garrison_of(repo, state, code)
-	for c in (held if not held.is_empty() else [code]):
-		_move_to(String(c), spot)
+	# one piece a unit: only this one leaves
+	_move_to(code, spot)
 	view.refresh()
 	assert_null(pieces.piece(code))
 	assert_eq(pieces.get_child_count(), n - 1)

@@ -407,10 +407,15 @@ func test_every_live_land_unit_starts_camped_by_a_town_its_kingdom_holds() -> vo
 			assert_true(ArmyGround.holds(repo, s, String(unit["kingdom_code"]), camp), code + ": its kingdom holds it")
 	assert_gt(land, 0)
 
-## The crown's banner still flies over the regiment the capital is named for:
-## where two stand in the capital, the first by the pack's order stands nearest.
-func test_the_royal_regiment_stands_in_the_capital() -> void:
+## The crown's banner flies over the roster's household (`is_royal`, spec
+## 2026-10-07-army-split-and-ground §5.1), one unit of the regiment that stood
+## nearest the capital, and that unit camps by the capital.
+func test_the_household_camps_by_the_capital() -> void:
 	var realm := repo.resolve_realm("player_realm")
-	var royal := MapObjects.royal_regiment(repo, realm)
 	var capital := String(repo.kingdoms[realm]["capital_burg"])
-	assert_eq(ArmySystem.town_of(repo, ArmySystem.regiment(repo, royal)), capital)
+	var crowned: Array = []
+	for r: Dictionary in MapObjects.regiments_of(repo, realm):
+		if String(r.get("is_royal", "0")) == "1":
+			crowned.append(r)
+	assert_eq(crowned.size(), 1, "one household a crown")
+	assert_eq(String(crowned[0]["camp_town"]), capital)

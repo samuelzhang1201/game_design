@@ -14,7 +14,7 @@ extends SceneTree
 const SCENE := "res://scenes/models/units/royal.tscn"
 const GLB := "res://assets/3D/units/royal/royal.glb"
 const MAPS := "res://assets/3D/units/royal/royal_royal_atlas%s.jpg"
-const NOTE := "The king on horseback, one FIGURE of the royal regiment's piece (MapObjects.royal_regiment). The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/army_art.csv."
+const NOTE := "The king on horseback, one FIGURE of the royal piece, the household's (MapObjects.army_piece: the roster's is_royal). The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/army_art.csv."
 
 
 func _init() -> void:

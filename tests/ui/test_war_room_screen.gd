@@ -980,10 +980,8 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 		var c := String(reg["regiment_code"])
 		if c != code and at.has(c):
 			other = c
-			# the engine's spot, or for a garrison its town's point (owner 2026-10-06, choice A)
-			var town := ArmySystem.quartered_in(Game.data, reg, Game.state)
-			var want := ArmySystem.position_of(Game.data, Game.state, reg) if town == "" \
-				else Vector2(float(Game.data.burgs[town]["x"]), float(Game.data.burgs[town]["y"]))
+			# every unit at its own engine spot (the seat's is its town's point)
+			var want := ArmySystem.position_of(Game.data, Game.state, reg)
 			assert_almost_eq((at[c] as Vector2).distance_to(want),
 				0.0, 0.001, "a regiment the map does not name stands at the engine's spot")
 	assert_ne(other, "", "the sheet holds another piece to compare")

@@ -17,6 +17,8 @@ var burg := ""
 ## The manor cell clicked under a theme, -1 for none.
 var manor := -1
 var army := ""
+## The units selected together (spec §5.6); [army] after a plain click.
+var armies: Array = []
 
 
 func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_markers: Map3DLayerSettlements,
@@ -35,11 +37,6 @@ func click(picked: Dictionary, pos: Vector2) -> void:
 	if String(picked.get("kind", "")) == "route":
 		view.route_clicked.emit(String(picked["code"]), pos)
 		return
-	if String(picked.get("kind", "")) == "garrison":
-		# a town's garrison: the town's card, and which of its regiments
-		select({"kind": "burg", "code": String(picked["town"])})
-		view.garrison_menu_requested.emit(picked["codes"], pos)
-		return
 	select(picked)
 	if String(picked.get("kind", "")) == "army":
 		view.army_menu_requested.emit(String(picked["code"]), pos)
@@ -53,6 +50,7 @@ func select(picked: Dictionary) -> void:
 		"burg":
 			var code := String(picked["code"])
 			army = ""
+			armies = []
 			_set_province("")
 			burg = code
 			_show_ring(code)
@@ -61,6 +59,7 @@ func select(picked: Dictionary) -> void:
 		"province":
 			burg = ""
 			army = ""
+			armies = []
 			_show_ring("")
 			_set_province(String(picked["code"]))
 			province_selected.emit(province)
@@ -70,12 +69,14 @@ func select(picked: Dictionary) -> void:
 			_show_ring("")
 			_set_province("")
 			army = code
+			armies = [code]
 			_refresh_hud()
 			object_selected.emit({"title": MapObjects.label_of(ctx.repo, picked),
 				"obj": {"kind": "army", "code": code}})
 		"manor":
 			var cell := int(picked["cell"])
 			army = ""
+			armies = []
 			burg = ""
 			_show_ring("")
 			province = ""
@@ -87,6 +88,7 @@ func select(picked: Dictionary) -> void:
 			var id := int(picked["id"])
 			burg = ""
 			army = ""
+			armies = []
 			_show_ring("")
 			_set_province("")
 			_refresh_hud()
@@ -96,6 +98,7 @@ func select(picked: Dictionary) -> void:
 			var cell := int(picked["cell"])
 			if army != "":
 				army = ""
+				armies = []
 				_refresh_hud()
 			burg = ""
 			_show_ring("")
@@ -113,6 +116,7 @@ func clear() -> void:
 	var had := burg != "" or province != "" or manor >= 0 or army != ""
 	if army != "":
 		army = ""
+		armies = []
 		_refresh_hud()
 	burg = ""
 	_show_ring("")

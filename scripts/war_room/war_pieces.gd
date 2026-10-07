@@ -1,8 +1,9 @@
 class_name WarPieces
 extends Node3D
-## The crown's regiments on the table (spec 2026-10-01-war-room-design §3): a
-## land regiment is ONE solid wooden piece of its art key (MapObjects.army_piece:
-## its chief arm, the royal regiment the royal piece, artillery the trebuchet —
+## The crown's units on the table (spec 2026-10-01-war-room-design §3), one
+## piece a unit, never merged: a land unit is ONE solid wooden piece of its art
+## key (MapObjects.army_piece: its chief arm, the household (the roster's
+## `is_royal`) the royal piece, artillery the trebuchet —
 ## GameArt.WAR_PIECES), its round plinth war_piece_plinth_mm across with the
 ## lacquer in the realm's colour, the whole piece turned to its heading (spec
 ## 2026-10-06-war-room-wooden-pieces); a fleet is a flat tin token on a base

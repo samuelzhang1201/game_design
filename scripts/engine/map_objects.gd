@@ -90,8 +90,6 @@ static func label_of(repo: DataRepository, obj: Dictionary, state: GameState = n
 			return String(repo.rivers.get(obj["code"], {}).get("label", ""))
 		"army":
 			return String(ArmySystem.regiment(repo, String(obj["code"]), state).get("label", ""))
-		"garrison":
-			return garrison_label(repo, String(obj.get("town", "")), obj.get("codes", []))
 		"manor":
 			return MapManors.label_of(repo, int(obj.get("cell", -1)))
 		"landmark":
@@ -864,55 +862,6 @@ static func regiments_of(repo: DataRepository, kingdom_code: String, state: Game
 			out.append(all[c])
 	return out
 
-## The garrisons among `regs` (owner 2026-10-06, choice A: a regiment
-## quartered in a town is drawn as that town's garrison): one row per town,
-## [{town, kingdom, codes, heads}], the codes the royal regiment first and then
-## by code, the rows by town code. Only the regiments ArmySystem.quartered_in.
-static func garrisons(repo: DataRepository, state: GameState, regs: Array) -> Array:
-	var by: Dictionary = {}
-	for r: Dictionary in regs:
-		var town := ArmySystem.quartered_in(repo, r, state)
-		if town == "":
-			continue
-		var key := "%s|%s" % [town, String(r.get("kingdom_code", ""))]
-		if not by.has(key):
-			by[key] = {"town": town, "kingdom": String(r.get("kingdom_code", "")), "codes": [], "heads": 0}
-		(by[key]["codes"] as Array).append(String(r["regiment_code"]))
-		by[key]["heads"] = int(by[key]["heads"]) + int(regiment_size(repo, r))
-	var keys := by.keys()
-	keys.sort()
-	var out: Array = []
-	for key: String in keys:
-		var g: Dictionary = by[key]
-		var royal := royal_regiment(repo, String(g["kingdom"]))
-		var codes: Array = g["codes"]
-		codes.sort_custom(func(a: String, b: String) -> bool:
-			return a == royal if (a == royal) != (b == royal) else a < b)
-		out.append(g)
-	return out
-
-## The garrison `codes` stands in: [] for a regiment that is not quartered;
-## else every regiment of its kingdom quartered in the same town, the royal
-## regiment first.
-static func garrison_of(repo: DataRepository, state: GameState, code: String) -> Array:
-	var reg := ArmySystem.regiment(repo, code, state)
-	var town := ArmySystem.quartered_in(repo, reg, state) if not reg.is_empty() else ""
-	if town == "":
-		return []
-	for g: Dictionary in garrisons(repo, state, regiments_of(repo, String(reg["kingdom_code"]), state)):
-		if String(g["town"]) == town:
-			return g["codes"]
-	return []
-
-## "Garrison of Walbover — 2 regiments, 2100 men".
-static func garrison_label(repo: DataRepository, town: String, codes: Array) -> String:
-	var heads := 0
-	for c in codes:
-		heads += int(regiment_size(repo, ArmySystem.regiment(repo, String(c))))
-	var n := codes.size()
-	return "Garrison of %s — %d regiment%s, %d men" % [
-		String((repo.burgs.get(town, {}) as Dictionary).get("label", town)), n, "" if n == 1 else "s", heads]
-
 ## Heads under a regiment's banner: every arm in unit_types added up.
 static func regiment_size(repo: DataRepository, regiment: Dictionary) -> float:
 	var total := 0.0
@@ -932,35 +881,14 @@ static func regiment_arm(repo: DataRepository, regiment: Dictionary) -> String:
 			best = unit
 	return best
 
-## The regiment the crown's own banner flies over: the LAND regiment quartered
-## nearest the kingdom's capital (ties to the earlier code). "" when the
-## kingdom has no land regiment or no capital. The military layer draws it
-## with a crown.
-static func royal_regiment(repo: DataRepository, kingdom_code: String) -> String:
-	var realm: Dictionary = repo.kingdoms.get(kingdom_code, {})
-	var capital: Dictionary = repo.burgs.get(String(realm.get("capital_burg", "")), {})
-	if capital.is_empty():
-		return ""
-	var seat := Vector2(float(capital["x"]), float(capital["y"]))
-	var best := ""
-	var best_d := INF
-	for r: Dictionary in regiments_of(repo, kingdom_code):
-		if String(r.get("is_naval", "0")) == "1":
-			continue
-		var code := String(r["regiment_code"])
-		var d := seat.distance_squared_to(Vector2(float(r["x"]), float(r["y"])))
-		if d < best_d or (d == best_d and code < best):
-			best_d = d
-			best = code
-	return best
-
 ## The painted piece a regiment is drawn with, whose painting heads its card
 ## (owner 2026-09-15, data/army_art.csv): the fleet for a naval regiment, the
-## royal piece for the crown's own (royal_regiment), else its chief arm.
+## royal piece for the crown's household (the roster's `is_royal`), else its
+## chief arm.
 static func army_piece(repo: DataRepository, regiment: Dictionary) -> String:
 	if String(regiment.get("is_naval", "0")) == "1":
 		return "fleet"
-	if String(regiment.get("regiment_code", "")) == royal_regiment(repo, String(regiment.get("kingdom_code", ""))):
+	if String(regiment.get("is_royal", "0")) == "1":
 		return "royal"
 	return regiment_arm(repo, regiment)
 
