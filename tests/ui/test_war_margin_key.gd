@@ -38,7 +38,8 @@ func test_the_legend_lists_the_sheets_inks() -> void:
 	assert_eq(WarMarginKey.legend_keys(), PackedStringArray(
 		["road", "trail", "river", "border", "seam", "town", "peak", "contour", "wood", "manor", "walls", "port", "bridge", "ford", "supply", "courier", "weather", "spy",
 		"mark_brigands", "mark_pirates", "mark_mines", "mark_battlefields", "mark_lighthouses",
-		"hazard_plague", "hazard_unrest", "hazard_water", "hazard_rock"]))
+		"hazard_plague", "hazard_unrest", "hazard_water", "hazard_rock",
+		"works_arms", "works_horses", "works_ore", "works_naval", "market", "trade"]))
 	for e: Dictionary in WarMarginKey.LEGEND:
 		assert_false(String(e["label"]).is_empty(), String(e["key"]))
 
@@ -95,3 +96,9 @@ func test_the_key_lists_every_sheet_mark() -> void:
 	for type: String in repo.war_marks:
 		if String(repo.war_marks[type]["layer"]) == "sheet":
 			assert_true(keys.has("mark_" + type), type)
+
+
+func test_the_key_lists_every_works_family() -> void:
+	var keys := WarMarginKey.legend_keys()
+	for good: String in repo.war_works:
+		assert_true(keys.has("works_" + String(repo.war_works[good]["family"])), good)
