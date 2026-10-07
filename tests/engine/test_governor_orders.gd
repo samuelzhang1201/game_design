@@ -22,8 +22,9 @@ func _steward() -> Character:
 	return s.characters[String(s.council["steward"])]
 
 ## A month of the supply lines banked as the marshal's month banks it: the
-## first land regiment runs a line (spec 2026-10-07-army-supply-lines) and
-## the plan's skim goes to its governor.
+## first land regiment ran a line (spec 2026-10-07-army-supply-lines) that
+## skimmed some units, and SupplyLines.settle_month banks the gold to its
+## governor.
 func _bank_a_supply_month() -> void:
 	var codes: Array = s.regiments.keys()
 	codes.sort()
@@ -31,8 +32,9 @@ func _bank_a_supply_month() -> void:
 		if String(ArmySystem.regiment(data, String(c)).get("is_naval", "0")) != "1":
 			s.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(data, s)[0], 1000, 1)
 			s.supply_lines[c]["state"] = SupplyLines.FLOWING
+			s.supply_lines[c]["m_skim"] = 100000
 			break
-	Governance.add_skims(s, SupplySystem.plan(data, s), "supply_line")
+	SupplyLines.settle_month(data, s)
 
 func test_giving_a_flow_to_another_councillor() -> void:
 	var other := String(s.council["chancellor"])

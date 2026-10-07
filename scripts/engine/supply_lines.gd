@@ -432,3 +432,43 @@ static func warn_day(repo: DataRepository, state: GameState) -> Array:
 				out.append({"type": "town_low", "regiment": code, "town": t, "days": holds})
 			ln["warned"] = "town_low" if short else ""
 	return out
+
+
+## The month's close (TickEngine.advance): a row per land regiment for the
+## marshal's report, the skims banked (Governance.add_skims), the month's
+## counters reset. The in-town refills of a regiment's own entry count with
+## its line's purchases. The carried remainders (*_milli) are fractions still
+## owed, and cross the month.
+static func settle_month(repo: DataRepository, state: GameState) -> Array:
+	var rows: Array = []
+	var gov := Governance.governor_of(repo, state, "supply_line")
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var reg := ArmySystem.regiment(repo, code)
+		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		var entry: Dictionary = state.regiments[code]
+		var ln := line(state, code)
+		var use := ArmySystem.supply_use(repo, reg, state)
+		var bought: Dictionary = {}
+		for src: Dictionary in [ln, entry]:
+			var b: Dictionary = src.get("m_bought", {})
+			for house: String in b:
+				bought[house] = int(bought.get(house, 0)) + int(b[house])
+		rows.append({"code": code, "town": String(ln.get("town", "")), "rate": int(ln.get("rate", 0)),
+			"days": ArmySystem.days_in_hand(int(entry["supplies"]), use), "carry": ArmySystem.carry_of(repo, entry),
+			"km": 0 if ln.is_empty() else road_km(repo, road_px(repo, state, code, String(ln["town"]))),
+			"drawn": int(ln.get("m_drawn", 0)), "arrived": int(ln.get("m_arrived", 0)),
+			"claimed": int(ln.get("m_claimed", 0)), "fee": int(ln.get("m_fee", 0)),
+			"buy": int(ln.get("m_buy", 0)) + int(entry.get("m_buy", 0)), "bought": bought,
+			"skimmed": TownStores.gold_of_units(repo, int(ln.get("m_skim", 0))), "governor": gov})
+		if not ln.is_empty():
+			for k: String in ["m_drawn", "m_arrived", "m_claimed", "m_skim", "m_fee", "m_buy"]:
+				ln[k] = 0
+			ln["m_bought"] = {}
+		entry["m_buy"] = 0
+		entry["m_bought"] = {}
+	Governance.add_skims(state, rows, "supply_line")
+	return rows

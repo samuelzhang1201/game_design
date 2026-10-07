@@ -48,6 +48,10 @@ func _end_day(state: GameState) -> Array:
 	day_supply.append_array(SupplyLines.warn_day(data, state))
 	# The month's economy is computed a bucket a day (spec §11.2).
 	RealmEconomy.step_day(data, state)
+	# The day's supply news goes out as ONE letter, when there is any (spec
+	# 2026-10-07-army-supply-lines §5.5): day_supply holds all of the day now.
+	if not day_supply.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.supply_dispatch(data, state, day_supply))
 	return done
 
 ## The regiments that reached their destination in the last advance_day, in
@@ -137,6 +141,11 @@ func advance(state: GameState) -> TickReport:
 	# supply-design §4): wounded return, morale drifts toward what the stores
 	# just refilled allow, training grows (the supplies are eaten daily).
 	ArmySystem.settle_month(data, state)
+	# The marshal's month (spec 2026-10-07-army-supply-lines §5.5): his
+	# report, his skims banked, the lines' counters reset.
+	var supply_rows := SupplyLines.settle_month(data, state)
+	if state.tick > 0:
+		MissiveLog.add(data, state, MissiveWriter.marshal_report(data, state, state.tick, supply_rows))
 	state.tick += 1
 	state.day = 1
 	r.tick = state.tick
