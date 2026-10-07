@@ -1,14 +1,14 @@
 zone_code,label,type,cells,center_x,center_y,province_codes,kingdom_codes
-wighamnian_raid,Wighamnian Raid,Invasion,11,1503.47,571.99,osbury|brasinia|craftham|broburland,farhold
-fadinginese_renegades,Fadinginese Renegades,Rebels,4,602.25,302.06,chawces|baria,irongate
-watchian_renegades,Watchian Renegades,Rebels,22,1085.5,258.96,knamerskirk|brampingia|whitnesford|stotford|oakhamia,irongate
-wighamnian_revolters,Wighamnian Revolters,Rebels,3,1359.9,472.48,rothin,kelvarn
-mertonan_proselytism,Mertonan Proselytism,Proselytism,15,1298.09,481.46,dunsbury|midgedine|rothin|witfordia_2,kelvarn
-unknown_plague,Unknown Plague,Disease,61,921.8,704.57,causfield|charhamia|canrith|goden|harden|burne|causford|marshelmond|camblexeso|lympstow|cambrid|redclifnal|herther|draxningin|berland,corwyn
-golden_dropsy,Golden Dropsy,Disease,27,681.47,697.85,holinland|bretland|swalelister|winch|withewesia|witham|helsham,corwyn
-hinckseytes_eruption,Hinckseytes Eruption,Eruption,17,1816.49,418.22,castfordia|wickhampia|stapletown|thetfordia|whitford,farhold|yorwald
-botfordan_avalanche,Botfordan Avalanche,Avalanche,12,957.19,465.1,horsin|bingdoney,kelvarn|irongate
-salsean_fault,Salsean Fault,Fault,6,1175.84,496.19,haldock|witfordia_2,kelvarn
-bingmorean_fault,Bingmorean Fault,Fault,10,612.51,463.22,seazion|flokhamp|presterton,corwyn|irongate
-thatcham_flood,Thatcham Flood,Flood,5,1287.42,232.78,caustonver|newcesbury|shole,brackmoor
-watch_tsunami,Watch Tsunami,Tsunami,24,625.54,334.22,baria|creterbute|masaland|chawces|ormscastia,irongate
+wighamnian_raid,Wighamnian Raid,Invasion,3014|3015|3016|3126|3127|3128|3241|3242|3357|3358|3473,1503.47,571.99,osbury|brasinia|craftham|broburland,farhold
+fadinginese_renegades,Fadinginese Renegades,Rebels,924|1043|1044,602.25,302.06,chawces|baria,irongate
+watchian_renegades,Watchian Renegades,Rebels,228|229|336|338|456|457|458|459|576|578|703|828|830|960|1086|1087|1216|1217|1218|1347|1480,1085.5,258.96,knamerskirk|brampingia|whitnesford|stotford|oakhamia,irongate
+wighamnian_revolters,Wighamnian Revolters,Rebels,2470|2580,1359.9,472.48,rothin,kelvarn
+mertonan_proselytism,Mertonan Proselytism,Proselytism,2360|2464|2465|2466|2467|2468|2574|2575|2576|2577|2578|2682|2683|2684,1298.09,481.46,dunsbury|midgedine|rothin|witfordia_2,kelvarn
+unknown_plague,Unknown Plague,Disease,3429|3552|3684|3791|3792|3793|3795|3796|3799|3906|3908|3909|3910|3911|3915|4017|4019|4021|4026|4027|4126|4128|4129|4130|4131|4132|4133|4134|4135|4136|4137|4233|4234|4235|4236|4238|4240|4241|4242|4245|4326|4327|4330|4331|4332|4333|4334|4335|4336|4338|4339|4340|4420|4422|4423|4426|4427|4429|4430|4521,921.8,704.57,causfield|charhamia|canrith|goden|harden|burne|causford|marshelmond|camblexeso|lympstow|cambrid|redclifnal|herther|draxningin|berland,corwyn
+golden_dropsy,Golden Dropsy,Disease,3665|3667|3779|3780|3782|3783|3894|3895|3896|3897|4002|4003|4004|4005|4006|4007|4116|4223|4224|4315|4406|4407|4508|4509|4510|4511,681.47,697.85,holinland|bretland|swalelister|winch|withewesia|witham|helsham,corwyn
+hinckseytes_eruption,Hinckseytes Eruption,Eruption,1790|1920|1921|1922|2045|2046|2047|2048|2166|2167|2168|2169|2282|2283|2284|2392|2394,1816.49,418.22,castfordia|wickhampia|stapletown|thetfordia|whitford,farhold|yorwald
+botfordan_avalanche,Botfordan Avalanche,Avalanche,1864|1991|2112|2227|2339|2444|2553|2660|2661|2662|2767|2768,957.19,465.1,horsin|bingdoney,kelvarn|irongate
+salsean_fault,Salsean Fault,Fault,2457|2567|2674|2675|2784|2785,1175.84,496.19,haldock|witfordia_2,kelvarn
+bingmorean_fault,Bingmorean Fault,Fault,1967|1969|2090|2206|2316|2422|2531|2637|2745|2852,612.51,463.22,seazion|flokhamp|presterton,corwyn|irongate
+thatcham_flood,Thatcham Flood,Flood,355|471|592|593|716,1287.42,232.78,caustonver|newcesbury|shole,brackmoor
+watch_tsunami,Watch Tsunami,Tsunami,927|1046|1048|1049|1050|1052|1053|1058|1174|1177|1178|1184|1185|1318|1448|1449|1573|1574|1575|1578|1707|1708|1709|1839,625.54,334.22,baria|creterbute|masaland|chawces|ormscastia,irongate

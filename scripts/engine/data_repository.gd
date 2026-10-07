@@ -86,6 +86,9 @@ var war_marks: Dictionary = {}
 ## data/war_mark_hazards.csv: marker type -> {reach_km, permille} — the marks
 ## that take a share of a supply line passing within their reach (§1.2).
 var war_mark_hazards: Dictionary = {}
+## data/hazard_kinds.csv: zone kind -> {label, months, public, wounds_permille,
+## morale, supply_loss_permille, pace_permille, ink} (spec 2026-10-07-war-room-p2 §2.2).
+var hazard_kinds: Dictionary = {}
 ## data/army_town_defence.csv: "works|arm" -> {defend, attack} per mille, works
 ## town / walls / citadel (ArmySystem.works_of).
 var army_town_defence: Dictionary = {}
@@ -669,6 +672,13 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/war_mark_hazards.csv", ["type", "reach_km", "supply_loss_permille"],
 			func(r): war_mark_hazards[String(r["type"])] = {"reach_km": float(r["reach_km"]),
 				"permille": int(r["supply_loss_permille"])}):
+		return false
+	if not _load_if_present(dir + "/hazard_kinds.csv", ["kind", "label", "months", "public", "wounds_permille",
+			"morale", "supply_loss_permille", "pace_permille", "ink"],
+			func(r): hazard_kinds[String(r["kind"])] = {"label": String(r["label"]), "months": int(r["months"]),
+				"public": String(r["public"]) == "1", "wounds_permille": int(r["wounds_permille"]),
+				"morale": int(r["morale"]), "supply_loss_permille": int(r["supply_loss_permille"]),
+				"pace_permille": int(r["pace_permille"]), "ink": String(r["ink"])}):
 		return false
 	if not _load_if_present(dir + "/army_town_defence.csv", ["works", "arm", "defend_permille", "attack_permille"],
 			func(r): army_town_defence["%s|%s" % [r["works"], r["arm"]]] = {
