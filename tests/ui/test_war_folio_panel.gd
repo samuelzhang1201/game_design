@@ -40,13 +40,45 @@ func test_escape_closes_it() -> void:
 	assert_signal_emitted(panel, "closed")
 
 
-func test_a_click_on_the_dim_closes_it() -> void:
+## Owner 2026-10-07: the book opens shrunk in the room's upper-left with no
+## dim, so the room around it stays in play; + holds it up full size over a
+## dim, and a click on the dim lays it back.
+func test_it_opens_docked_and_small_with_the_room_free_around_it() -> void:
 	panel.open_for(code)
+	await wait_process_frames(2)
+	assert_false((panel.get_node("%Dim") as Control).visible, "no dim")
+	assert_eq(panel.mouse_filter, Control.MOUSE_FILTER_IGNORE, "clicks beside the book reach the room")
+	var folder: Control = panel.get_node("%Folder")
+	assert_lt(folder.scale.x, 1.0, "the book is shrunk")
+	var rect := panel.book_rect()
+	assert_lt(rect.get_center().x, panel.size.x * 0.5, "in the left half")
+	assert_lt(rect.get_center().y, panel.size.y * 0.5, "and the upper")
+	assert_almost_eq(rect.size.x, (panel.get_node("%Book") as Control).get_combined_minimum_size().x * folder.scale.x, 0.5)
+
+
+func test_the_book_held_up_is_full_size_and_a_click_on_the_dim_lays_it_back() -> void:
+	panel.open_for(code)
+	await wait_process_frames(2)
+	(panel.get_node("%Enlarge") as Button).pressed.emit()
+	assert_true(panel.is_full())
+	assert_true((panel.get_node("%Dim") as Control).visible)
+	assert_eq((panel.get_node("%Folder") as Control).scale, Vector2.ONE)
 	var e := InputEventMouseButton.new()
 	e.button_index = MOUSE_BUTTON_LEFT
 	e.pressed = true
 	(panel.get_node("%Dim") as ColorRect).gui_input.emit(e)
+	assert_true(panel.visible, "still open")
+	assert_false(panel.is_full(), "back in its corner")
+	assert_false((panel.get_node("%Dim") as Control).visible)
+
+
+func test_the_close_cross_closes_it_and_it_opens_docked_again() -> void:
+	panel.open_for(code)
+	panel.set_full(true)
+	(panel.get_node("%Close") as Button).pressed.emit()
 	assert_false(panel.visible)
+	panel.open_for(code)
+	assert_false(panel.is_full())
 
 
 ## The court on a fresh reign, as Start Game begins it but without the

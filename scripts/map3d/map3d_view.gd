@@ -74,7 +74,7 @@ var _scene_path := ""
 @onready var _houses: Map3DLayerHouses = $Viewport/World/Houses
 @onready var _trees: Map3DLayerTrees = $Viewport/World/Trees
 @onready var _units: Map3DLayerUnits = $Viewport/World/Units
-@onready var _trails: Map3DLayerTrails = $Viewport/World/Trails
+@onready var _dust: Map3DLayerDust = $Viewport/World/Dust
 @onready var _couriers: Map3DLayerCouriers = $Viewport/World/Couriers
 @onready var _env: Map3DSky = $Viewport/World/Environment
 @onready var _sun: Map3DSun = $Viewport/World/Sun
@@ -236,7 +236,7 @@ func _load() -> void:
 	_houses.bind(_ctx)
 	_ctx.dev = _dev
 	_units.bind(_ctx)
-	_trails.bind(_ctx)  # the ground the columns trod (owner 2026-10-01)
+	_dust.bind(_ctx)  # the dust the columns raise (owner 2026-10-07)
 	_couriers.bind(_ctx)
 	_units.set_shown(_military)
 	_ctx.settle_ground()
@@ -394,7 +394,7 @@ func _process(delta: float) -> void:
 		_weather.step()
 		_clouds.step(delta)
 		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
-		_trails.step()  # behind them, the ground they trod
+		_dust.step()  # behind them, the dust they raise
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
 		_supply.step(delta)  # the flowing lines, to the pieces as drawn
 		_sun.sweep(Game.day_progress)  # a round a game day, the north half dusk

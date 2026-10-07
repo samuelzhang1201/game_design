@@ -4,18 +4,14 @@ extends Control
 ## laid exactly over the map panel (GameRoot fits it) like the LEDGER, so the
 ## left column keeps FACTS and the right column the council (invariant 10).
 ## The only WAR ROOM piece that touches Game: it binds the view, redraws it
-## after a state change (at most once a frame), puts a chosen regiment's card
-## in the left column, and runs orders through the map's own ArmyOrderMenu.
+## after a state change (at most once a frame), opens a chosen regiment's
+## folio docked in its upper-left, and runs orders through the map's own
+## ArmyOrderMenu.
 
 signal closed
 
-var _detail: MapDetailPanel
 var _bound := false
 var _dirty := false
-var _card_mine := false
-var _home: Node                # the column the card was borrowed from
-var _home_index := -1
-var _roll_tween: Tween
 var _board_vp: SubViewport
 var _board_screen: MissiveScreen
 var _margin_sig: Array = []   # [sheet, the off-sheet (code, sheet) pairs, none on this sheet] last filled
@@ -35,8 +31,7 @@ var drawn_source := Callable()
 
 func _ready() -> void:
 	# its look is scenes/screens/war_room_screen.tscn (owner 2026-10-02): the frame,
-	# the title, the paper slips (war_slip.tres) and the card's roll, each
-	# under the paper's theme so their words write in its ink; the leather of
+	# the title and the paper slips (war_slip.tres), each under the paper's theme so their words write in its ink; the leather of
 	# ui_war_table 0 is put on in code (_dress_leather)
 	visible = false
 	if not UiPalette.war_table():
@@ -51,19 +46,15 @@ func _ready() -> void:
 	_view.board_entered.connect(_show_board_chrome.bind(true))
 	_view.board_left.connect(_show_board_chrome.bind(false))
 	_view.piece_selected.connect(_on_piece)
-	_view.selection_cleared.connect(_clear_card)
+	_view.selection_cleared.connect(_folio.close)   # the docked book is the chosen piece's
 	_view.rake_started.connect(_on_rake)
 	_view.rake_dropped.connect(_orders.withdraw_aim)   # a rake given up takes its armed march with it
 	_orders.drafting = true   # orders given in the room are drafts until sealed (spec 2026-10-02-war-room-v2 §3.1)
 	_view.sheet_requested.connect(_view.swap_to)
 	_view.sheet_laid.connect(_on_laid)
 	_folio.closed.connect(_view.clear_selection)
-	var roll: PanelContainer = %CardRoll
-	if UiPalette.war_table():
-		WarTable.ink_column(roll)   # the cards not yet written in theme kinds
-	roll.draw.connect(func() -> void:
-		var px := Game.data.bal("war_report_roller_px")
-		WarScrollReveal.draw_roller(roll, Rect2(0.0, roll.size.y - px, roll.size.x, px)))
+	_folio.closed.connect(_make_way)
+	_folio.placed.connect(_make_way)
 
 
 func view() -> WarRoomView:
@@ -101,7 +92,7 @@ func orders() -> ArmyOrderMenu:
 	return _orders
 
 
-func open(detail: MapDetailPanel) -> void:
+func open() -> void:
 	if not _bound:
 		_bound = true
 		_view.bind(Game.data, func() -> GameState: return Game.state,
@@ -117,12 +108,10 @@ func open(detail: MapDetailPanel) -> void:
 		var slip := %HoverSlip as WarHoverSlip
 		slip.setup(Game.data)
 		_view.ground_hovered.connect(_on_ground_hovered)
+		_view.piece_hovered.connect(_on_piece_hovered)
 		_view.rake_aimed.connect(_on_rake_aimed)
 		_view.hover_cleared.connect(slip.hide_slip)
 		_view.rake_dropped.connect(slip.hide_slip)
-	if detail != _detail:
-		_card_mine = false
-	_detail = detail
 	# the clock stops and nothing starts it while the room is open (owner
 	# 2026-10-02: 进入war room时间也一直是暂停的，无法继续，直到下达命令并退出)
 	Game.hold_clock(true, "war_room")
@@ -140,8 +129,13 @@ func open(detail: MapDetailPanel) -> void:
 ## Facing the easel, the margin's slips would lie over the board: they make
 ## way, and Back to the table stands in the top row (spec §1.3).
 func _show_board_chrome(on: bool) -> void:
+	if on:
+		# an armed march (MARCH… from the menu, or a destination waiting for
+		# COMMIT) is given up: its arrow must not wait behind the board
+		_orders.withdraw_aim()
+		(%HoverSlip as WarHoverSlip).hide_slip()
 	%BackToTable.visible = on
-	%Slip.visible = not on
+	_make_way()   # the margin slip makes way for the board (and for a docked book)
 	%KeySlip.visible = not on
 
 
@@ -250,17 +244,13 @@ func _on_laid(index: int) -> void:
 	%Key.queue_redraw()   # a new sheet, a new scale
 
 
-## The leather (`ui_war_table` 0): the margin's slips and the card's roll are
-## dark cards with light type (the game theme's), not paper. The slips stand
-## in the screen's top-left and top-right corners, never over the sheet.
+## The leather (`ui_war_table` 0): the margin's slips are dark cards with
+## light type (the game theme's), not paper. The slips stand in the screen's
+## top-left and top-right corners, never over the sheet.
 func _dress_leather() -> void:
 	for slip: PanelContainer in [%Slip, %KeySlip]:
 		slip.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 1, 8, "column"))
 		slip.theme = null
-	var roll: PanelContainer = %CardRoll
-	roll.add_theme_stylebox_override("panel", UiPalette.panel_style(UiPalette.BORDER_GOLD, 2, 24, "column"))
-	roll.theme = null
-	roll.remove_meta("paper_ground")
 
 
 ## One flat button per regiment off this sheet ("label → numeral") that lays
@@ -391,11 +381,6 @@ func close(animate := true) -> void:
 	_dirty = false
 	_view.set_active(false)
 	_view.clear_selection()   # a closed room's selection must never take Escape
-	_clear_card()
-	if _roll_tween != null:
-		_roll_tween.kill()
-	%CardRoll.visible = false
-	_give_back()   # the room is gone at once: the column has its card back now
 	# let go, but not restarted: the player starts the clock again (owner 2026-10-02)
 	Game.hold_clock(false, "war_room")
 	closed.emit()
@@ -431,6 +416,14 @@ func _on_ground_hovered(pack_px: Vector2, screen_px: Vector2) -> void:
 	_show_slip(WarGround.lines(Game.data, r), screen_px)
 
 
+## The pointer rested on a piece: the regiments it stands for (a town's
+## garrison lists each), their combat figures (WarPieceSlip).
+func _on_piece_hovered(code: String, screen_px: Vector2) -> void:
+	var codes := _view.garrison_of(code)
+	var town := ArmySystem.quartered_in(Game.data, ArmySystem.regiment(Game.data, code), Game.state) if codes.size() > 1 else ""
+	_show_slip(WarPieceSlip.lines(Game.data, WarPieceSlip.reading(Game.data, Game.state, codes), town), screen_px)
+
+
 ## A rake aimed: read its destination for the raked regiment, the days left to
 ## the arrow's own reading.
 func _on_rake_aimed(code: String, pack_px: Vector2, screen_px: Vector2) -> void:
@@ -444,99 +437,28 @@ func _show_slip(lines: Array, view_px: Vector2, left := false) -> void:
 	slip.show_lines(lines, origin + view_px, Rect2(origin, _view.size), left)
 
 
+## A piece picked (owner 2026-10-07: 左上角显示缩小的书, no card beside it —
+## the hover slip has said it already): its folio opens docked in the room's
+## upper-left, or swaps to it, and the margin slip steps right of the book.
 func _on_piece(code: String) -> void:
 	(%HoverSlip as WarHoverSlip).hide_slip()
-	if _detail == null or not is_instance_valid(_detail):
-		return
-	_detail.show_card(MapObjects.army_card(Game.data, code, Game.state))
-	_card_mine = true
-	_unroll_card()
 	_folio.open_for(code)
+	_make_way()
 
 
-func _clear_card() -> void:
-	if _card_mine and _detail != null and is_instance_valid(_detail):
-		_detail.show_entry({})
-	_card_mine = false
-	_roll_card_away()
-
-
-func card_roll() -> PanelContainer:
-	return %CardRoll
-
-
-## Unroll the card over the room's left, where the column was (spec
-## 2026-10-02-war-room-v2 §1.2): the column's MapDetailPanel is BORROWED into
-## %CardRoll (the same node, so its signals and the screen's references hold)
-## and the roll grows to the card's height; the margin slip steps right of it.
-func _unroll_card() -> void:
-	var roll: PanelContainer = %CardRoll
-	if _detail.get_parent() != roll:
-		_home = _detail.get_parent()
-		_home_index = _detail.get_index()
-		_detail.reparent(roll, false)
-		if not _detail.closed.is_connected(_view.clear_selection):
-			_detail.closed.connect(_view.clear_selection)
-		if not _detail.host_requested.is_connected(close):
-			_detail.host_requested.connect(close)   # the host takes the column the room covers (review I5)
-	_detail.visible = true
-	if not roll.visible:
-		roll.position = Vector2(16.0, %Slip.offset_top)
-		roll.size = Vector2(ScreenLayout.LEFT_WIDTH, 0.0)
-		roll.visible = true
-	var right := roll.position.x + ScreenLayout.LEFT_WIDTH + 12.0
-	%Slip.offset_left = right
-	%Slip.offset_right = right + 236.0
-	_folio.offset_left = right   # the folio's book centres in the room right of the card
-	_fit_roll.call_deferred()
-
-
-## The card's height is known once its new rows are laid out (a frame after
-## show_card): unroll to it, held inside the room.
-func _fit_roll() -> void:
-	var roll: PanelContainer = %CardRoll
-	if not roll.visible or _detail == null or _detail.get_parent() != roll:
-		return
-	var px := Game.data.bal("war_report_roller_px")
-	var margins := roll.get_theme_stylebox("panel").get_minimum_size().y if roll.has_theme_stylebox("panel") else 0.0
-	_tween_roll(minf(_detail.content_height() + margins + px, size.y - roll.position.y - 16.0), Callable())
-
-
-func _roll_card_away() -> void:
-	var roll: PanelContainer = %CardRoll
-	if not roll.visible:
-		_give_back()
-		return
-	_tween_roll(0.0, func() -> void:
-		roll.visible = false
-		_give_back())
-
-
-func _tween_roll(to_h: float, done: Callable) -> void:
-	if _roll_tween != null:
-		_roll_tween.kill()
-	_roll_tween = create_tween()
-	_roll_tween.tween_property(%CardRoll, "size:y", to_h, Game.data.bal("war_report_roll_s") * 0.6)
-	_roll_tween.tween_callback(%CardRoll.queue_redraw)
-	if done.is_valid():
-		_roll_tween.finished.connect(done)
-
-
-## The card back where it came from (the court's column), at its old place.
-func _give_back() -> void:
-	%Slip.offset_left = 16.0
-	%Slip.offset_right = 252.0
-	_folio.offset_left = 0.0
-	if _home == null or _detail == null or not is_instance_valid(_detail) or _detail.get_parent() == _home:
-		_home = null
-		return
-	if _detail.closed.is_connected(_view.clear_selection):
-		_detail.closed.disconnect(_view.clear_selection)
-	if _detail.host_requested.is_connected(close):
-		_detail.host_requested.disconnect(close)
-	_detail.reparent(_home, false)
-	_home.move_child(_detail, _home_index)
-	_home = null
+## The margin slip stands right of the docked book while it is open — or,
+## where it would run into the key slip there, is put away until the book
+## closes — and is back in its corner when the book closes or is held up.
+func _make_way() -> void:
+	var slip: Control = %Slip
+	var left := 16.0
+	var room := true
+	if _folio.visible and not _folio.is_full():
+		left = _folio.book_rect().end.x + 12.0
+		room = left + 236.0 <= (%KeySlip as Control).position.x - 8.0
+	slip.offset_left = left
+	slip.offset_right = left + 236.0
+	slip.visible = room and _view.board_mode() == "table"
 
 
 ## The rake took hold of a piece: arm the march, or say why not.

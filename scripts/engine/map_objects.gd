@@ -959,6 +959,15 @@ static func army_piece(repo: DataRepository, regiment: Dictionary) -> String:
 		return "royal"
 	return regiment_arm(repo, regiment)
 
+## A whole number with its thousands grouped: 1240 → "1,240", -5000 → "-5,000".
+static func grouped(n: int) -> String:
+	var digits := str(absi(n))
+	var out := ""
+	while digits.length() > 3:
+		out = "," + digits.substr(digits.length() - 3) + out
+		digits = digits.substr(0, digits.length() - 3)
+	return ("-" if n < 0 else "") + digits + out
+
 ## A regiment's fact card (owner 2026-09-15: "军队的 card info 还是 2D 彩绘风格"):
 ## its piece's painting over the card, and its facts as icons — each arm it
 ## musters, the whole host under arms, and where it is quartered, and, for
@@ -1059,9 +1068,10 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 			"%d wounded return to the ranks each month" % back))
 		var in_hand := mini(ArmySystem.days_in_hand(int(st["supplies"]), use), 999)
 		var carry := ArmySystem.carry_of(repo, st)
-		stats.append(_stat("army_supply", "%d / %d days" % [in_hand, carry],
-			"Supplies — %d days in hand; it carries %d days; under %d days morale falls every day" % [
-				in_hand, carry, int(repo.bal("army_supply_low_days"))]))
+		var held := grouped(int(st["supplies"]))
+		stats.append(_stat("army_supply", "%s (≈ %d day%s)" % [held, in_hand, "" if in_hand == 1 else "s"],
+			"Supplies — %s, about %d days in hand; it carries %d days; under %d days morale falls every day" % [
+				held, in_hand, carry, int(repo.bal("army_supply_low_days"))]))
 		var drill := ArmySystem.training_grade(repo, int(st["training"]))
 		stats.append(_stat("army_training", drill, "Training — %s" % drill))
 		var might := ArmySystem.strength_grade(repo, state, code)
