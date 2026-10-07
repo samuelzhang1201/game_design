@@ -111,6 +111,58 @@ func select(picked: Dictionary) -> void:
 			clear()
 
 
+## Shift-click (spec 2026-10-07-army-split-and-ground §5.6): one of the
+## player's units in or out of the selection; anything else is ignored.
+func toggle_pick(picked: Dictionary) -> void:
+	if String(picked.get("kind", "")) != "army" or not _mine(String(picked["code"])):
+		return
+	var code := String(picked["code"])
+	var codes := armies.duplicate()
+	if codes.has(code):
+		codes.erase(code)
+	else:
+		codes.append(code)
+	_select_armies(codes)
+
+
+## A Shift-drag box (design px): every LAND unit of the player's whose piece
+## or counter it touches (spec §5.6), sorted.
+func select_box(r: Rect2) -> void:
+	var codes: Array = []
+	var rects: Dictionary = view.unit_rects()
+	for code: String in rects:
+		if (rects[code] as Rect2).intersects(r) and not codes.has(code):
+			codes.append(code)
+	for m: Dictionary in view.army_markers():
+		if (m["rect"] as Rect2).intersects(r) and not codes.has(String(m["code"])):
+			codes.append(String(m["code"]))
+	codes = codes.filter(func(c: String) -> bool: return _mine(c) and String(ArmySystem.regiment(
+		ctx.repo, c, ctx.state()).get("is_naval", "0")) != "1")
+	codes.sort()
+	_select_armies(codes)
+
+
+func _mine(code: String) -> bool:
+	return String(ArmySystem.regiment(ctx.repo, code, ctx.state()).get("kingdom_code", "")) \
+		== ctx.repo.resolve_realm("player_realm")
+
+
+## The selection becomes `codes`; the card shows the first, or closes on none.
+func _select_armies(codes: Array) -> void:
+	var had := army != ""
+	armies = codes
+	army = String(armies[0]) if not armies.is_empty() else ""
+	burg = ""
+	_show_ring("")
+	_set_province("")
+	_refresh_hud()
+	if army != "":
+		object_selected.emit({"title": MapObjects.label_of(ctx.repo, {"kind": "army", "code": army}),
+			"obj": {"kind": "army", "code": army}})
+	elif had:
+		object_selected.emit({})
+
+
 ## Forget the selection (the card was closed, or the sea clicked).
 func clear() -> void:
 	var had := burg != "" or province != "" or manor >= 0 or army != ""

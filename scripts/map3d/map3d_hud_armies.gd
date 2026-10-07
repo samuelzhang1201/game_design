@@ -15,6 +15,10 @@ extends Map3DHudPiece
 ## The dashed road a marching regiment still has ahead, design px wide (in
 ## the realm's own colour); its end ring is four times it.
 @export var route_px := 2.0
+## The Shift-drag selection box's line (spec 2026-10-07-army-split-and-ground
+## §5.6), design px; edited on the node.
+@export var box_color := Color(1.0, 0.92, 0.6, 0.9)
+@export var box_width_px := 1.5
 
 var _drawn := 0
 ## markers()' cut and the pose it was cut for (see there).
@@ -117,6 +121,8 @@ func _draw() -> void:
 	_drawn = list.size()
 	_draw_routes()
 	ArmyCounters.draw(self, ctx.repo, list, view.selected_armies())
+	if view.box_rect.has_area():
+		draw_rect(view.box_rect, box_color, false, box_width_px)
 
 
 ## Each marching regiment's road still ahead: a dashed line DRAPED on the

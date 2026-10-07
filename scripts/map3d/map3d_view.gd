@@ -466,6 +466,11 @@ func set_dev_mode(on: bool) -> void:
 func dev_mode() -> bool: return _dev
 func selected_army() -> String: return _selection.army
 func selected_armies() -> Array: return _selection.armies if _loaded else []
+## Shift + left click toggles a unit, a Shift + left drag boxes several (spec 2026-10-07 §5.6, R4).
+var box_rect := Rect2():  # the box being drawn, design px
+	set(v): box_rect = v; if _loaded: _hud.refresh()
+func toggle_at(pos: Vector2) -> void: if _loaded: _selection.toggle_pick(pick_at(pos))
+func select_box(r: Rect2) -> void: if _loaded: _selection.select_box(r)
 
 # --- picking (Map3DPicker, Map3DSelection) --------------------------------------------
 func ground_at(pos: Vector2) -> Variant: return _ctx.ground_at(pos) if _ctx != null else null

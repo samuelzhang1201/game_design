@@ -53,6 +53,9 @@ var drafting := false
 
 var _map: Node = null
 var _code := ""
+## The units this menu's orders go to (spec 2026-10-07-army-split-and-ground
+## §5.6): the map's selection when `_code` is in it, else [_code].
+var _codes: Array = []
 var _aiming := ""
 ## The aimed march's destination (pack px) while COMMIT / CANCEL is asked;
 ## Vector2(-1, -1) when none waits.
@@ -89,11 +92,13 @@ func _open_for(code: String, at: Vector2) -> void:
 	_end_supply_pick()
 	_set_aim("")
 	_code = code
+	# the war room's drafts are one piece's each
+	_codes = [code] if drafting else _selected_with(code)
 	clear()
 	for i in Game.data.army_orders.size():
 		var row: Dictionary = Game.data.army_orders[i]
 		add_item(String(row["label"]), i)
-		var why := _refusal(String(row["action_code"]), code)
+		var why := _refusal_any(String(row["action_code"]))
 		set_item_disabled(i, why != "")
 		set_item_tooltip(i, why if why != "" else String(row["hint"]))
 	# the seat (spec 2026-10-07-army-split-and-ground §4.5): only a unit camped
@@ -156,6 +161,7 @@ func _open_route(code: String, at: Vector2) -> void:
 	_end_supply_pick()
 	_set_aim("")
 	_code = code
+	_codes = [code]
 	clear()
 	_add_row("edit", EDIT, _paused_reason())
 	if draft:
@@ -238,8 +244,7 @@ func _on_chosen(id: int) -> void:
 		return
 	if id >= CARRY_BASE and id < CARRY_BASE + Game.data.army_carry_loads.size():
 		if _code != "" and _paused_reason() == "":
-			_run(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": _code,
-				"days": int(Game.data.army_carry_loads[id - CARRY_BASE]["days"])}))
+			_run_each("SUPPLY_CARRY_SET", {"days": int(Game.data.army_carry_loads[id - CARRY_BASE]["days"])})
 		return
 	if id == SUPPLY_ADD:
 		if _code != "" and _paused_reason() == "":
@@ -247,7 +252,7 @@ func _on_chosen(id: int) -> void:
 		return
 	if id == SUPPLY_WITHDRAW:
 		if _code != "" and _paused_reason() == "":
-			_run(ActionRequest.make("SUPPLY_POINT_CLEAR", {"regiment": _code}))
+			_run_each("SUPPLY_POINT_CLEAR", {})
 		return
 	match id:
 		COMMIT:
@@ -288,7 +293,7 @@ func _on_chosen(id: int) -> void:
 		_set_aim(_code)
 		Game.publish_news("%s awaits its orders — click where to send it." % _name_of(_code))
 		return
-	_run(ActionRequest.make(String(row["action_code"]), {"regiment": _code}))
+	_run_each(String(row["action_code"]), {})
 
 
 ## The aimed march's destination: held, drawn to, and asked about — the
@@ -330,7 +335,8 @@ func _commit() -> void:
 		Game.plant_draft(code, WarDrafts.MARCH, to)
 		Game.publish_news("%s's march is pencilled in." % _name_of(code))
 		return
-	_run(ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": to.x, "y": to.y}))
+	# one destination for the whole selection (spec §5.6): each its own order
+	_run_each("ARMY_MARCH", {"x": to.x, "y": to.y})
 
 
 ## An aim or a waiting confirm given up.
@@ -362,6 +368,43 @@ func _process(_delta: float) -> void:
 		if visible:
 			hide()
 		_withdraw("Time runs — the march order is withdrawn.")
+
+
+## The units this menu's orders go to: the map's selection when the unit the
+## menu opened over is in it (spec 2026-10-07-army-split-and-ground §5.6),
+## else that unit alone.
+func _selected_with(code: String) -> Array:
+	if _map != null and _map.has_method("selected_armies"):
+		var sel: Array = _map.call("selected_armies")
+		if sel.has(code):
+			return sel.duplicate()
+	return [code]
+
+
+## Test seam: the units the open menu orders.
+func selected_codes() -> Array:
+	return _codes
+
+
+## "" when any of the units would take the order, else the first refusal.
+func _refusal_any(action_code: String) -> String:
+	var first := ""
+	for c: String in _codes:
+		var why := _refusal(action_code, c)
+		if why == "":
+			return ""
+		if first == "":
+			first = why
+	return first
+
+
+## Run an order for every unit in the menu's charge, each judged alone: its
+## own action, courier and charge, and a refusal said aloud while the rest ride.
+func _run_each(action_code: String, extra: Dictionary) -> void:
+	for c: String in _codes:
+		var params := extra.duplicate()
+		params["regiment"] = c
+		_run(ActionRequest.make(action_code, params))
 
 
 ## Run an order and say what came of it in the news bar — a refusal has to be
@@ -460,6 +503,7 @@ func aim_for(code: String) -> String:
 	if why != "":
 		return why
 	_code = code
+	_codes = [code]
 	_set_aim(code)
 	return ""
 
@@ -540,9 +584,9 @@ func _open_rates(town: String, route: PackedVector2Array, at: Vector2) -> void:
 func _send_supply(rate: int) -> void:
 	if _supply_for == "" or _supply_town == "":
 		return
-	var req := ActionRequest.make("SUPPLY_POINT_SET", {"regiment": _supply_for, "town": _supply_town, "rate": rate})
+	var town := _supply_town
 	_end_supply_pick()
-	_run(req)
+	_run_each("SUPPLY_POINT_SET", {"town": town, "rate": rate})
 
 
 ## Test seam: the regiment whose supply point is being picked, "" when none.
