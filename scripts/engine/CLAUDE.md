@@ -81,6 +81,10 @@ The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, 
 - `stronghold` is retired: a garrison stands in a `town`, and `garrisons` runs regiment → town for an explicit GARRISON order only. The Court lens is the court's web (`RelationshipGraph`, unchanged).
 - The view: `scripts/ledger3d/CLAUDE.md`.
 
+## Hazards
+
+`Hazards` (spec `2026-10-07-war-room-p2-tactical-layer-design.md` §2) are STATE: `GameState.hazards` (id → kind, label, cells, start, end, source), seeded once from the pack's zones (`seed_pack`, `hazards_seeded`) and saved whole; `hazards_rev` (not saved) turns on every change for the caches. What a kind does is `data/hazard_kinds.csv` (months, public, wounds, morale, supply loss, pace, ink). Every hazard in the crown's realm is known; abroad only a `public` kind (`known`). The month's end runs `settle_regiments` after `ArmySystem.settle_month` and `settle_month` (endings, news only for a known one) after the day turns; a march's pace multiplies by `pace_permille`, a land supply line loses its share sampled every `war_hazard_sample_km` (`SupplySystem.hazard_loss`, an unknown one named "trouble on the road").
+
 ## Supply, morale and the war workshop
 
 - **One `plan()` per system** (`WorkshopSystem`, `SupplySystem`) that the tick, the regiment card and the LEDGER all read; the LEDGER projects the month from the pools as they stand, the settlement runs after the month's intake. Spec `2026-09-30-ledger-supply-design.md`.

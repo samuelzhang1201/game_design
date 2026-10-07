@@ -111,11 +111,6 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 	return out
 
 
-## The marks near the pointer (spec 2026-10-07-war-room-p2 §1.3): one line
-## each, nearest first, a hazard's toll on supply; the nearest one's legend.
-## The marks the slip names: within war_mark_hover_km, or within a hazard's
-## own reach (a pointer inside a brigands' dotted ring names them), nearest
-## first, at most war_mark_hover_max.
 ## A known hazard at the point: its name, months left and what it does.
 static func _hazard_lines(repo: DataRepository, r: Dictionary, out: Array) -> void:
 	for h: Dictionary in r.get("hazards", []):
@@ -140,6 +135,9 @@ static func hazard_words(repo: DataRepository, kind: String) -> String:
 	return "; ".join(parts) if not parts.is_empty() else "no effect on a march"
 
 
+## The marks the slip names: within war_mark_hover_km, or within a hazard's
+## own reach (a pointer inside a brigands' dotted ring names them), nearest
+## first, at most war_mark_hover_max.
 static func _places_near(repo: DataRepository, at: Vector2) -> Array:
 	var hover := repo.bal("war_mark_hover_km")
 	var widest := hover
@@ -171,6 +169,8 @@ static func legend_of(repo: DataRepository, text: String) -> String:
 	return cut.rstrip(" ,;:—-") + "…"
 
 
+## The marks near the pointer (spec 2026-10-07-war-room-p2 §1.3): one line
+## each, nearest first, a hazard's toll on supply; the nearest one's legend.
 static func _place_lines(repo: DataRepository, r: Dictionary, out: Array) -> void:
 	var places: Array = r.get("places", [])
 	for p: Dictionary in places:

@@ -62,6 +62,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if ink == "none":
 			continue
 		var polys: Array = []
+		var centres: Array[Vector2] = []
 		var centre := Vector2.ZERO
 		for c in h["cells"]:
 			var cell: Dictionary = repo.cells[int(c)]
@@ -69,7 +70,8 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 			for v in (cell["vertex_ids"] as PackedInt32Array):
 				poly.append(((repo.vertices[v] as Vector2) - r.position) * k)
 			polys.append(poly)
-			centre += (MapTerrain.cell_center(repo, cell) - r.position) * k
+			centres.append((MapTerrain.cell_center(repo, cell) - r.position) * k)
+			centre += centres[-1]
 		centre /= float(maxi(polys.size(), 1))
 		var tex_rect := Rect2(Vector2.ZERO, r.size * k)
 		if not polys.any(func(p: PackedVector2Array) -> bool: return Geometry2D.intersect_polygons(p,
@@ -77,7 +79,8 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 			continue
 		var left := Hazards.months_left(state, id)
 		(out["hazards"] as Array).append({"ink": ink, "lines": hatch_lines(polys, ink, gap),
-			"dots": hatch_dots(polys, ink, gap), "edges": outline(polys), "at": centre,
+			"dots": hatch_dots(polys, ink, gap * repo.bal("war_hazard_dot_ratio")), "edges": outline(polys),
+			"at": name_at(centres, centre, tex_rect, repo.bal("war_intel_hazard_label_px")),
 			"text": String(h["label"]) + ("" if left < 0 else " · %d mo" % left)})
 	var seen: Dictionary = {}
 	var spies: Array = state.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "spy")
@@ -124,7 +127,20 @@ static func hatch_lines(polys: Array, ink: String, gap: float) -> Array:
 	return out
 
 
-## A plague's dots: a grid inside each polygon.
+## Where a hazard's name goes: on the centre of its cell nearest the middle
+## (a hazard in two pieces has its middle in neither), kept on the sheet.
+static func name_at(centres: Array[Vector2], middle: Vector2, sheet: Rect2, label_px: float) -> Vector2:
+	var at := middle
+	var best := INF
+	for c: Vector2 in centres:
+		if c.distance_squared_to(middle) < best:
+			best = c.distance_squared_to(middle)
+			at = c
+	var room := sheet.grow_individual(-label_px * 4.0, -label_px * 1.5, -label_px * 4.0, -label_px * 1.5)
+	return at.clamp(room.position, room.end) if room.has_area() else at
+
+
+## A plague's dots: a grid inside each polygon, each row half a step over.
 static func hatch_dots(polys: Array, ink: String, gap: float) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	if ink != "plague":
@@ -135,7 +151,8 @@ static func hatch_dots(polys: Array, ink: String, gap: float) -> PackedVector2Ar
 			box = box.expand(p)
 		var y := ceilf(box.position.y / gap) * gap
 		while y < box.end.y:
-			var x := ceilf(box.position.x / gap) * gap
+			var shift := gap * 0.5 if posmod(roundi(y / gap), 2) == 1 else 0.0
+			var x := ceilf((box.position.x - shift) / gap) * gap + shift
 			while x < box.end.x:
 				if Geometry2D.is_point_in_polygon(Vector2(x, y), poly):
 					out.append(Vector2(x, y))

@@ -173,14 +173,23 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 		return
 	if key.begins_with("hazard_"):   # a hazard's hatch in the intel ink (spec 2026-10-07-war-room-p2 §2.4)
 		var hc: Color = pal.get("intel_ink", ink)
+		var fill := hc
+		fill.a *= _repo.bal("war_intel_hazard_alpha")   # the hatch as faint as on the sheet; the edge at full ink
 		var box := r.grow(-r.size.y * 0.1)
 		var kind := key.trim_prefix("hazard_")
 		var poly := PackedVector2Array([box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)])
-		for l: PackedVector2Array in WarIntelInk.hatch_lines([poly], kind, box.size.y * 0.35):
-			draw_polyline(l, hc, line * 0.8, true)
-		for p: Vector2 in WarIntelInk.hatch_dots([poly], kind, box.size.y * 0.35):
-			draw_circle(p, line * 0.7, hc)
-		draw_rect(box, hc, false, line * 0.6, true)
+		var gap := box.size.y * 0.5
+		for l: PackedVector2Array in WarIntelInk.hatch_lines([poly], kind, gap):
+			if kind == "rock":
+				for d: PackedVector2Array in WarSheetInk.dashed(l, gap * 0.5, gap * 0.35):
+					draw_polyline(d, fill, line * 0.8, true)
+			else:
+				draw_polyline(l, fill, line * 0.8, true)
+		for p: Vector2 in WarIntelInk.hatch_dots([poly], kind, gap * 0.6):   # a few rows of distinct dots, not a tone
+			draw_circle(p, line * 0.7, fill)
+		for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([box.position, Vector2(box.end.x, box.position.y),
+				box.end, Vector2(box.position.x, box.end.y), box.position]), gap * 0.4, gap * 0.25):
+			draw_polyline(d, hc, line * 0.6, true)
 		return
 	match key:
 		"road":

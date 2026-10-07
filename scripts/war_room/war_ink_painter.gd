@@ -188,12 +188,15 @@ func _draw_intel() -> void:
 			else:
 				draw_polyline(l, hz_c, w, true)
 		for p: Vector2 in h["dots"]:
-			draw_circle(p, w * 0.8, hz_c)
+			draw_circle(p, w * 1.6, hz_c)
 		for e: PackedVector2Array in h["edges"]:
 			for d: PackedVector2Array in WarSheetInk.dashed(e, float(px["supply_dash"]), float(px["supply_gap"])):
 				draw_polyline(d, pal["intel_ink"], w, true)
-		draw_string(font, (h["at"] as Vector2), String(h["text"]), HORIZONTAL_ALIGNMENT_CENTER, -1,
-			int(px["intel_label"]), pal["intel_ink"])
+		var size := int(px.get("hazard_label", px["intel_label"]))
+		var at := (h["at"] as Vector2) - Vector2(font.get_string_size(String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, 0)
+		draw_string_outline(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, maxi(int(w * 3.0), 1),
+			pal.get("parchment", pal.get("paper", Color.WHITE)))
+		draw_string(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, pal["intel_ink"])
 	for s: Dictionary in ink["supply"]:
 		var col := c
 		col.a *= clampf(1.0 - float(s["loss_permille"]) / 1000.0 * float(px["supply_loss_fade"]), 0.25, 1.0)
