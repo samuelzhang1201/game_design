@@ -21,6 +21,8 @@ var _fh := 0
 var _px0 := 0
 var _pz0 := 0
 var _woods: Image
+var _origin := Vector2.ZERO   # the pack's (0, 0) in world metres
+var _rivers: Variant = null   # code -> PackedVector2Array pack px, read once (river_courses)
 var _file := "height.r32"
 var _bytes := 4   # a sample's size: 4 (float32) or 2 (float16)
 
@@ -37,6 +39,7 @@ static func open(dir: String) -> WarBake:
 	b._dir = dir
 	b._vm = float(world["vertex_m"])
 	b._m_per_px = float(world["m_per_px"])
+	b._origin = Vector2(float(world["pack_origin"][0]), float(world["pack_origin"][1]))
 	b._sea_y = float(world["sea_y"])
 	b._fw = int(world["padded"][0])
 	b._fh = int(world["padded"][1])
@@ -61,6 +64,33 @@ static func of(repo: DataRepository) -> WarBake:
 
 static func forget() -> void:
 	_opened.clear()
+
+
+## The rivers as the 3D map draws them (owner 2026-10-07: the sheet's rivers
+## were stiff, ruler-straight): rivers.json beside the build — the pack's
+## polylines smoothed, meandered and joined by tools/map3d/bake_world.py, a
+## sample every few tens of metres — as code -> PackedVector2Array in pack px,
+## source to mouth; {} without the file.
+func river_courses() -> Dictionary:
+	if _rivers != null:
+		return _rivers
+	var out: Dictionary = {}
+	_rivers = out
+	var path := _dir.get_base_dir().path_join("rivers.json")
+	if not FileAccess.file_exists(path):
+		return out
+	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not data is Dictionary:
+		return out
+	for r: Variant in (data as Dictionary).get("rivers", []):
+		var pts: Array = (r as Dictionary).get("points", [])
+		var line := PackedVector2Array()
+		for p: Array in pts:
+			line.append((Vector2(float(p[0]), float(p[1])) - _origin) / _m_per_px)
+		var code := String((r as Dictionary).get("code", ""))
+		if line.size() >= 2 and line.size() > (out.get(code, PackedVector2Array()) as PackedVector2Array).size():
+			out[code] = line
+	return out
 
 
 ## The padded grid's vertex coordinates of a pack px.

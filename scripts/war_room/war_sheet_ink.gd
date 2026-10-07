@@ -56,16 +56,27 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 			(out[group] as Array).append(_to_tex(r, k, poly))
 	var river_codes: Array = repo.rivers.keys()
 	river_codes.sort()
-	# a river widens from its source to its mouth by its discharge, and is named
+	# a river widens from its source to its mouth by its discharge, and is named;
+	# its course is the 3D map's own (the build's rivers.json), else the pack's
+	# polyline smoothed as the build smooths it (owner 2026-10-07: no stiff,
+	# ruler-straight rivers)
 	var base_w := repo.bal("war_ink_river_px") * px_k
+	var courses: Dictionary = bake.river_courses() if bake != null else {}
+	var steps := int(repo.bal("war_ink_river_smooth_steps"))
+	var tex_area := Rect2(Vector2.ZERO, r.size * k)
 	for code: String in river_codes:
 		var row: Dictionary = repo.rivers[code]
-		var poly: PackedVector2Array = row["polyline"]
+		var poly: PackedVector2Array = courses[code] if courses.has(code) \
+			else MapGeometry.smooth_open(row["polyline"] as PackedVector2Array, steps)
 		if _touches(r, poly):
 			var mouth := minf(base_w * (1.0 + repo.bal("war_ink_river_discharge_k") * sqrt(maxf(float(row.get("discharge", "0")), 0.0))),
 				repo.bal("war_ink_river_max_px") * px_k)
-			(out["rivers"] as Array).append({"poly": _to_tex(r, k, poly), "w0": base_w, "w1": maxf(mouth, base_w),
-				"label": String(row.get("label", ""))})
+			var c := river_line(_to_tex(r, k, poly), tex_area, repo.bal("war_ink_river_step_px"))
+			if (c["poly"] as PackedVector2Array).size() < 2:
+				continue
+			(out["rivers"] as Array).append({"poly": c["poly"], "t0": c["t0"], "t1": c["t1"], "w0": base_w,
+				"w1": maxf(mouth, base_w), "label": String(row.get("label", "")),
+				"label_run": longest_run(c["poly"], tex_area)})
 	var river_polys: Array = (out["rivers"] as Array).map(func(rv: Dictionary) -> PackedVector2Array: return rv["poly"])
 	var tex_rect := Rect2(Vector2.ZERO, r.size * k).grow(r.size.x * k * 0.02)
 	out["bridges"] = crossings(out["roads"], river_polys, tex_rect)
@@ -285,19 +296,84 @@ static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, 
 				(out["manors"] as Array).append(m)
 
 
+## A river's course in ink px made ready to draw: the part reaching `area`
+## (one point beyond it either side, so the curve inside is the whole
+## course's), with a point every `step` px along a curve through its samples
+## (MapGeometry.densify_open), and `t0` / `t1` — how far along the WHOLE
+## course (by length) the part starts and ends, for its taper.
+## {poly, t0, t1}; poly empty when no span reaches the area.
+static func river_line(poly: PackedVector2Array, area: Rect2, step: float) -> Dictionary:
+	var lo := -1
+	var hi := -1
+	for i in poly.size() - 1:
+		if Rect2(poly[i], Vector2.ZERO).expand(poly[i + 1]).intersects(area, true):
+			if lo < 0:
+				lo = i
+			hi = i + 1
+	if lo < 0:
+		return {"poly": PackedVector2Array(), "t0": 0.0, "t1": 1.0}
+	lo = maxi(lo - 1, 0)
+	hi = mini(hi + 1, poly.size() - 1)
+	var total := 0.0
+	var at_lo := 0.0
+	var at_hi := 0.0
+	for i in range(1, poly.size()):
+		total += poly[i].distance_to(poly[i - 1])
+		if i == lo:
+			at_lo = total
+		if i == hi:
+			at_hi = total
+	total = maxf(total, 0.0001)
+	return {"poly": MapGeometry.densify_open(poly.slice(lo, hi + 1), step), "t0": at_lo / total, "t1": at_hi / total}
+
+
+## The longest stretch of `poly` (by its length) whose points all lie in
+## `area`: Vector2i(first, last) point index; (0, -1) when no two do. A
+## river's name is written along it, so it never runs off the sheet.
+static func longest_run(poly: PackedVector2Array, area: Rect2) -> Vector2i:
+	var best := Vector2i(0, -1)
+	var best_len := 0.0
+	var start := -1
+	var run_len := 0.0
+	for i in poly.size() + 1:
+		if i < poly.size() and area.has_point(poly[i]):
+			if start < 0:
+				start = i
+				run_len = 0.0
+			else:
+				run_len += poly[i].distance_to(poly[i - 1])
+			continue
+		if start >= 0 and i - 1 > start and run_len > best_len:
+			best = Vector2i(start, i - 1)
+			best_len = run_len
+		start = -1
+	return best
+
+
 ## Where any of `lines` crosses any of `rivers` (both lists of polylines in one
-## space): the point and the LINE's direction there. Segment against segment;
-## a sheet's few hundred segments keep the plain double loop cheap enough.
+## space): the point and the LINE's direction there. The rivers' segments are
+## put in a grid of CROSS_CELL_PX buckets once (a river drawn on its smooth
+## course runs to thousands of segments), so each line segment meets only the
+## few river segments near it.
+const CROSS_CELL_PX := 64.0
+
+
 static func crossings(lines: Array, rivers: Array, clip := Rect2()) -> Array:
 	var out: Array = []
 	var clipped := clip.size != Vector2.ZERO
-	# the rivers' segments that reach the clip, with their boxes, once
-	var segs: Array = []
+	var grid: Dictionary = {}   # Vector2i cell -> [[a, b, box, id], ...]
+	var n_segs := 0
 	for rv: PackedVector2Array in rivers:
 		for j in rv.size() - 1:
 			var box := Rect2(rv[j], Vector2.ZERO).expand(rv[j + 1])
-			if not clipped or box.intersects(clip, true):
-				segs.append([rv[j], rv[j + 1], box])
+			if clipped and not box.intersects(clip, true):
+				continue
+			var seg := [rv[j], rv[j + 1], box, n_segs]
+			n_segs += 1
+			for cell: Vector2i in _cells(box):
+				if not grid.has(cell):
+					grid[cell] = []
+				(grid[cell] as Array).append(seg)
 	for line: PackedVector2Array in lines:
 		for i in line.size() - 1:
 			var a := line[i]
@@ -305,11 +381,25 @@ static func crossings(lines: Array, rivers: Array, clip := Rect2()) -> Array:
 			var lbox := Rect2(a, Vector2.ZERO).expand(b)
 			if clipped and not lbox.intersects(clip, true):
 				continue
-			for sg: Array in segs:
-				if lbox.intersects(sg[2] as Rect2, true):
+			var seen: Dictionary = {}   # a river segment in two of this segment's cells is met once
+			for cell: Vector2i in _cells(lbox):
+				for sg: Array in grid.get(cell, []):
+					if seen.has(sg[3]) or not lbox.intersects(sg[2] as Rect2, true):
+						continue
+					seen[sg[3]] = true
 					var hit: Variant = Geometry2D.segment_intersects_segment(a, b, sg[0], sg[1])
 					if hit != null:
 						out.append({"at": hit as Vector2, "dir": (b - a).normalized()})
+	return out
+
+
+static func _cells(box: Rect2) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var lo := Vector2i((box.position / CROSS_CELL_PX).floor())
+	var hi := Vector2i((box.end / CROSS_CELL_PX).floor())
+	for y in range(lo.y, hi.y + 1):
+		for x in range(lo.x, hi.x + 1):
+			out.append(Vector2i(x, y))
 	return out
 
 
