@@ -76,13 +76,41 @@ func test_the_lines_survive_the_save() -> void:
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	assert_eq(String(SupplyLines.line(back, "x")["state"]), SupplyLines.FLOWING)
 
-func test_day_fee_estimate_is_the_days_bite_over_the_road() -> void:
+func test_day_fee_milli_is_the_months_draw_over_the_road_a_day() -> void:
 	var code := _land()
 	var town: String = TownStores.realm_towns(repo, s)[0]
 	var km := SupplyLines.road_km(repo, SupplyLines.road_px(repo, s, code, town))
 	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), s)
 	var milli := int(repo.bal("supply_cart_milligold_per_unit_km"))
-	var want := ArmySystem.day_bite(use * 1200 / 1000, s.day) * km * milli / 1000
-	assert_eq(SupplyLines.day_fee_estimate(repo, s, code, town, 1200), want)
-	assert_eq(SupplyLines.day_fee_estimate(repo, s, code, town, 1200, km), want, "a given length is the road's")
-	assert_eq(SupplyLines.day_fee_estimate(repo, s, code, town, 1200, 0), 0, "no road, no fee")
+	@warning_ignore("integer_division")
+	var want := use * 1200 / 1000 * km * milli / Calendar.DAYS_PER_TICK
+	assert_eq(SupplyLines.day_fee_milli(repo, s, code, town, 1200), want)
+	assert_eq(SupplyLines.day_fee_milli(repo, s, code, town, 1200, km), want, "a given length is the road's")
+	assert_eq(SupplyLines.day_fee_milli(repo, s, code, town, 1200, 0), 0, "no road, no fee")
+
+## Final review 4: under a gold a day the three rates still read apart, in
+## tenths of a gold, on a road of 100 km or more.
+func test_the_three_rates_read_three_fees_on_a_long_road() -> void:
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var reg := ArmySystem.regiment(repo, String(c))
+		if String(reg.get("is_naval", "0")) == "1":
+			continue
+		for town: String in TownStores.realm_towns(repo, s):
+			var km := SupplyLines.road_km(repo, SupplyLines.road_px(repo, s, String(c), town))
+			if km < 100:
+				continue
+			var words: Array = []
+			for rate: int in SupplyLines.RATES:
+				words.append(SupplyLines.gold_words(SupplyLines.day_fee_milli(repo, s, String(c), town, rate, km)))
+			assert_ne(words[0], words[1], str(words))
+			assert_ne(words[1], words[2], str(words))
+			assert_ne(String(words[1]), "0.0", "not nothing")
+			return
+	fail_test("no road of 100 km from a realm town")
+
+func test_gold_words_read_tenths() -> void:
+	assert_eq(SupplyLines.gold_words(0), "0.0")
+	assert_eq(SupplyLines.gold_words(361), "0.4")
+	assert_eq(SupplyLines.gold_words(12345), "12.3")

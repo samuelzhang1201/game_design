@@ -48,3 +48,24 @@ func test_host_hungry_reads_the_regiments() -> void:
 		var use := ArmySystem.supply_use(data, ArmySystem.regiment(data, String(c)), s)
 		s.regiments[c]["supplies"] = ArmySystem.max_units(data, use)
 	assert_false(TriggerDsl.evaluate("host_hungry", s, data))
+
+## Final review 8: hungry is under army_supply_low_days days in hand (spec
+## 2026-10-07-army-supply-lines §3.7), the same line the morale loss starts at.
+func test_host_hungry_is_under_the_low_days() -> void:
+	var low := int(data.bal("army_supply_low_days"))
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	var land := ""
+	for c in codes:
+		var reg := ArmySystem.regiment(data, String(c))
+		s.regiments[c]["supplies"] = ArmySystem.max_units(data, ArmySystem.supply_use(data, reg, s))
+		if land == "" and String(reg.get("is_naval", "0")) != "1":
+			land = String(c)
+	var use := ArmySystem.supply_use(data, ArmySystem.regiment(data, land), s)
+	var at_low := 0
+	while ArmySystem.days_in_hand(at_low, use) < low:
+		at_low += 1
+	s.regiments[land]["supplies"] = at_low
+	assert_false(TriggerDsl.evaluate("host_hungry", s, data), "%d days is not hungry" % low)
+	s.regiments[land]["supplies"] = at_low - 1
+	assert_true(TriggerDsl.evaluate("host_hungry", s, data), "under %d days is" % low)

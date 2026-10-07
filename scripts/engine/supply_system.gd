@@ -189,13 +189,13 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 	return rows
 
 
-## Any land regiment whose supply SCORE is under army_supply_warn_permille
-## (TriggerDsl host_hungry).
+## Any land regiment under army_supply_low_days days in hand (TriggerDsl
+## host_hungry; the line ArmySystem.hunger_day starts taking morale at).
 static func any_hungry(repo: DataRepository, state: GameState) -> bool:
+	var low := int(repo.bal("army_supply_low_days"))
 	for code: String in _land_codes(repo, state):
 		var reg := ArmySystem.regiment(repo, code)
-		var score := ArmySystem.supply_score(repo, int(state.regiments[code]["supplies"]),
-			ArmySystem.supply_use(repo, reg, state))
-		if score < int(repo.bal("army_supply_warn_permille")):
+		if ArmySystem.days_in_hand(int(state.regiments[code]["supplies"]),
+				ArmySystem.supply_use(repo, reg, state)) < low:
 			return true
 	return false

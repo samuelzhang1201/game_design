@@ -35,6 +35,27 @@ func test_only_our_own_supply_lines_are_inked() -> void:
 	assert_gt(inked, 0, "our lines are inked")
 
 
+## Final review 7: only a FLOWING line is a road the wagons roll on (as the
+## 3D map draws them): ordered, riding and cut lines are not inked.
+func test_only_flowing_lines_are_inked() -> void:
+	var codes: Array = []
+	for c in state.regiments.keys():
+		if String(ArmySystem.regiment(repo, String(c)).get("is_naval", "0")) != "1":
+			codes.append(String(c))
+	codes.sort()
+	for st: String in [SupplyLines.ORDERED, SupplyLines.RIDING, SupplyLines.CUT, SupplyLines.FLOWING]:
+		for c: String in codes:
+			state.supply_lines[c] = SupplyLines._new_record(TownStores.realm_towns(repo, state)[0], 1000, 1)
+			state.supply_lines[c]["state"] = st
+		var inked := 0
+		for s: Dictionary in WarSheets.series(repo):
+			inked += (WarIntelInk.strokes(repo, state, s, 1024)["supply"] as Array).size()
+		if st == SupplyLines.FLOWING:
+			assert_gt(inked, 0, "a flowing line is inked")
+		else:
+			assert_eq(inked, 0, "a %s line is not inked" % st)
+
+
 func test_a_spy_still_riding_is_a_courier_and_files_no_report_yet() -> void:
 	var s := _sheet_of_first_regiment()
 	var at: Vector2 = (s["cell"] as Rect2).get_center()

@@ -184,3 +184,65 @@ func test_a_town_bound_courier_is_named_by_its_town() -> void:
 	actions.execute(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": code, "days": 25}), s)
 	var carry: Dictionary = s.couriers[s.couriers.size() - 1]
 	assert_eq(String(CourierCard.card(repo, s, int(carry["id"]))["fields"][0][1]), "Orders to carry 25 days")
+
+## Final review 3: a new rate from the town the line already draws on keeps
+## the wagons rolling — only the rate (and the order) change, no fresh ride.
+func test_a_new_rate_from_the_same_town_keeps_the_line_flowing() -> void:
+	var code := _land()
+	var town := _eligible(code)
+	for st: String in [SupplyLines.FLOWING, SupplyLines.CUT]:
+		s.supply_lines.erase(code)
+		s.couriers.clear()
+		_order_set(code, town, 1000)
+		_run_until_no_couriers()
+		var ln := SupplyLines.line(s, code)
+		ln["state"] = st
+		ln["ready_day"] = 3
+		ln["cut_by"] = "x" if st == SupplyLines.CUT else ""
+		ln["m_drawn"] = 7
+		ln["fee_milli"] = 450
+		ln["warned"] = "town_low"
+		var c := _order_set(code, town, 1200)
+		assert_true(SupplyLines.line(s, code).has("pending"))
+		SupplyLines.deliver(repo, s, c)
+		ln = SupplyLines.line(s, code)
+		assert_eq(String(ln["state"]), st, "still %s" % st)
+		assert_eq(int(ln["rate"]), 1200)
+		assert_eq(int(ln["order_id"]), int(c["id"]))
+		assert_false(ln.has("pending"))
+		assert_eq(int(ln["ready_day"]), 3)
+		assert_eq(String(ln["cut_by"]), "x" if st == SupplyLines.CUT else "")
+		assert_eq(int(ln["m_drawn"]), 7)
+		assert_eq(int(ln["fee_milli"]), 450)
+		assert_eq(String(ln["warned"]), "town_low")
+
+## Another town is a new line: its wagons ride first.
+func test_a_new_town_rides_afresh() -> void:
+	var code := _land()
+	var e := SupplyLines.eligibility(repo, s, code)
+	var towns: Array = e.keys().filter(func(t: String) -> bool: return String(e[t]) == "")
+	towns.sort()
+	if towns.size() < 2:
+		pending("one town in reach")
+		return
+	_order_set(code, String(towns[0]), 1000)
+	_run_until_no_couriers()
+	SupplyLines.line(s, code)["state"] = SupplyLines.FLOWING
+	var c := _order_set(code, String(towns[1]), 1000)
+	SupplyLines.deliver(repo, s, c)
+	assert_eq(String(SupplyLines.line(s, code)["state"]), SupplyLines.RIDING)
+	assert_eq(String(SupplyLines.line(s, code)["town"]), String(towns[1]))
+
+## Final review 5: the supply courier rides to the TOWN, and the estimate the
+## rate menu shows is his ride there.
+func test_the_town_estimate_is_the_supply_couriers_ride() -> void:
+	var code := _land()
+	var e := SupplyLines.eligibility(repo, s, code)
+	var towns: Array = e.keys().filter(func(t: String) -> bool: return String(e[t]) == "")
+	towns.sort()
+	var town := String(towns[towns.size() - 1])
+	var b: Dictionary = repo.burgs[town]
+	var eta := CourierSystem.eta_days_to(repo, s, CourierSystem.ORDINARY, Vector2(float(b["x"]), float(b["y"])))
+	var c := _order_set(code, town, 1000)
+	assert_eq(CourierSystem.days_left(repo, s, c), eta)
+	assert_gt(eta, 0)

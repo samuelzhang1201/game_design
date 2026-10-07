@@ -206,12 +206,15 @@ static func hunger_day(repo: DataRepository, state: GameState) -> void:
 		var reg := regiment(repo, code)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
+		var use := supply_use(repo, reg, state)
+		if use <= 0:
+			continue   # it eats nothing: it never starves
 		var entry: Dictionary = state.regiments[code]
 		var supplies := int(entry["supplies"])
 		var loss := 0
 		if supplies <= 0:
 			loss = int(repo.bal("army_morale_starving_day"))
-		elif days_in_hand(supplies, supply_use(repo, reg, state)) < int(repo.bal("army_supply_low_days")):
+		elif days_in_hand(supplies, use) < int(repo.bal("army_supply_low_days")):
 			loss = int(repo.bal("army_morale_hungry_day"))
 		entry["morale"] = maxi(0, int(entry["morale"]) - loss)
 

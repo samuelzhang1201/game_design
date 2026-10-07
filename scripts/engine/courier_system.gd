@@ -233,6 +233,15 @@ static func eta_days(repo: DataRepository, state: GameState, kind: String, code:
 		path, _ride_day_of(state)))
 
 
+## Days for a courier sent now to reach `to_px` (a supply town: the supply
+## orders ride to the town, not the column) — eta_days to a place.
+static func eta_days_to(repo: DataRepository, state: GameState, kind: String, to_px: Vector2) -> int:
+	var from := origin(repo, state)
+	var path := path_between(repo, from, to_px)
+	return days_for(repo, kind, need_along(repo, state, ArmySystem.pack_to_metres(repo, from),
+		path, _ride_day_of(state)))
+
+
 ## Days until `code` stands at `dest_px` if a march there were ordered now —
 ## ONE figure, the courier's ride and the march after it (owner 2026-10-02:
 ## 显示一个总的到达日): his days (none for a regiment that takes its orders

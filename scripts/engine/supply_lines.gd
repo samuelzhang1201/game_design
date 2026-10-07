@@ -47,15 +47,20 @@ static func road_km(repo: DataRepository, route: PackedVector2Array) -> int:
 	return int(m / 1000.0)
 
 
-## About what a line of rate `rate` costs a day on the road to `town`, gold
-## (the card's and the rate menu's one formula); `km` < 0 measures the road now.
-static func day_fee_estimate(repo: DataRepository, state: GameState, code: String, town: String,
+## About what a line of rate `rate` costs a day on the road to `town`, in
+## MILLIGOLD (the card's and the rate menu's one formula): the month's draw at
+## that rate over the road's km, a day of thirty; `km` < 0 measures the road now.
+static func day_fee_milli(repo: DataRepository, state: GameState, code: String, town: String,
 		rate: int, km := -1) -> int:
 	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), state)
 	var length := km if km >= 0 else road_km(repo, road_px(repo, state, code, town))
 	@warning_ignore("integer_division")
-	return ArmySystem.day_bite(use * rate / 1000, state.day) * length \
-		* int(repo.bal("supply_cart_milligold_per_unit_km")) / 1000
+	return use * rate / 1000 * length * int(repo.bal("supply_cart_milligold_per_unit_km")) / Calendar.DAYS_PER_TICK
+
+
+## Milligold read in tenths of a gold ("0.4") — for display only.
+static func gold_words(milli: int) -> String:
+	return "%.1f" % (float(milli) / 1000.0)
 
 
 static func wagon_days(repo: DataRepository, km: int) -> int:
@@ -164,7 +169,8 @@ static func order_set(state: GameState, code: String, town: String, rate: int, o
 
 
 ## A supply courier delivered (CourierSystem._deliver). An older order than
-## the line's newest is set aside.
+## the line's newest is set aside; a SET for the town a flowing or cut line
+## already draws on changes only its rate.
 static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
 	var code := String(c["target"])
 	var order: Dictionary = c["order"]
@@ -181,6 +187,13 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 		"SUPPLY_POINT_SET":
 			var ln := line(state, code)
 			var p: Dictionary = ln.get("pending", {}) if not ln.is_empty() else {}
+			if not p.is_empty() and int(p["order_id"]) == id and String(p["town"]) == String(ln["town"]) \
+					and String(ln["state"]) in [FLOWING, CUT]:
+				# a new rate from the same town: the wagons already roll (final review 3)
+				ln["rate"] = int(p["rate"])
+				ln["order_id"] = id
+				ln.erase("pending")
+				return ev
 			if not p.is_empty() and int(p["order_id"]) == id:
 				ln = _renewed(ln, p)
 				state.supply_lines[code] = ln
@@ -446,7 +459,11 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 		var town := String(ln["town"])
 		if String(ln["state"]) == ORDERED and TownStores.is_realm_town(repo, state, town):
 			ln = _still_ordered(state, code, ln, riding)
-		if ln.is_empty() or not TownStores.is_realm_town(repo, state, String(ln["town"])):
+			if ln.is_empty():   # its courier was lost: the town never heard of it
+				_retire(state, code)
+				events.append({"type": "order_lost", "regiment": code, "town": town})
+				continue
+		if not TownStores.is_realm_town(repo, state, String(ln["town"])):
 			_retire(state, code)
 			events.append({"type": "cancelled", "regiment": code, "town": town})
 			continue
@@ -501,7 +518,10 @@ static func warn_day(repo: DataRepository, state: GameState) -> Array:
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
 		var entry: Dictionary = state.regiments[code]
-		var days := ArmySystem.days_in_hand(int(entry["supplies"]), ArmySystem.supply_use(repo, reg, state))
+		var use := ArmySystem.supply_use(repo, reg, state)
+		if use <= 0:
+			continue   # it eats nothing: never low, never empty
+		var days := ArmySystem.days_in_hand(int(entry["supplies"]), use)
 		var now := "empty" if int(entry["supplies"]) <= 0 else ("low" if days < low else "")
 		if now != String(entry.get("supply_warn", "")):
 			entry["supply_warn"] = now

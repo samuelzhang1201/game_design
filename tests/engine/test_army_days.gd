@@ -77,3 +77,25 @@ func test_hunger_costs_morale_every_day_under_five_days() -> void:
 	s.regiments[code]["supplies"] = use * 6 / 30          # fed: no daily loss
 	ArmySystem.hunger_day(repo, s)
 	assert_eq(int(s.regiments[code]["morale"]), 56)
+
+## Final review 13: a regiment that eats nothing (no one under arms, or a
+## use of 0) never starves, whatever it carries.
+func test_a_regiment_that_eats_nothing_never_starves() -> void:
+	var code := _land()
+	repo.balance["army_supply_per_head_permille"] = 0
+	assert_eq(ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), s), 0)
+	s.regiments[code]["morale"] = 60
+	s.regiments[code]["supplies"] = 0
+	ArmySystem.hunger_day(repo, s)
+	assert_eq(int(s.regiments[code]["morale"]), 60)
+
+## Final review 11: the old save's migration is idempotent — a second ensure
+## (the load's, then the month's) changes nothing.
+func test_ensure_twice_is_ensure_once() -> void:
+	var code := _land()
+	s.regiments[code].erase("carry_days")
+	s.regiments[code]["supplies"] = 1000000
+	ArmySystem.ensure(repo, s)
+	var once: Dictionary = s.regiments.duplicate(true)
+	ArmySystem.ensure(repo, s)
+	assert_eq(s.regiments, once)

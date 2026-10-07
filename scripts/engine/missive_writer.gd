@@ -71,13 +71,14 @@ static func _last_total(state: GameState) -> int:
 
 const _SUPPLY_WORDS := {
 	"opened": "The wagons from %s have reached %s.",
-	"cut": "The road from %s to %s is cut by %s.",
+	"cut": "The road from %s to %s is cut%s by %s.",
 	"restored": "The road from %s to %s is open again.",
 	"town_low": "%s can feed %s for only %d more days.",
 	"low": "%s has under %d days of supplies (%s).",
 	"empty": "%s has eaten its last supplies (%s).",
 	"cancelled": "%s is no longer ours: the line to %s is gone.",
 	"town_dry": "%s's stores are empty: %s is fed from %s.",
+	"order_lost": "The supply orders for %s never reached %s.",
 }
 
 
@@ -92,7 +93,9 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 		var text := ""
 		match String(e["type"]):
 			"cut":
-				text = _SUPPLY_WORDS["cut"] % [town, reg, String((repo.kingdoms.get(String(e["by"]), {}) as Dictionary).get("label", e["by"]))]
+				var near := "" if not e.has("at") else " near " + Intel.place_label(repo, state, e["at"])
+				text = _SUPPLY_WORDS["cut"] % [town, reg, near,
+					String((repo.kingdoms.get(String(e["by"]), {}) as Dictionary).get("label", e["by"]))]
 			"town_low":
 				text = _SUPPLY_WORDS["town_low"] % [town, reg, int(e["days"])]
 			"low":
@@ -101,6 +104,8 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 				text = _SUPPLY_WORDS["empty"] % [reg, _fed_from(town)]
 			"cancelled":
 				text = _SUPPLY_WORDS["cancelled"] % [town, reg]
+			"order_lost":
+				text = _SUPPLY_WORDS["order_lost"] % [reg, town]
 			"town_dry":
 				text = _SUPPLY_WORDS["town_dry"] % [town, reg, _town_label(repo, String(e.get("depot", "")))]
 			_:
@@ -147,8 +152,9 @@ static func marshal_report(repo: DataRepository, state: GameState, tick: int, ro
 	var names: Array = houses.keys()
 	names.sort()
 	for i in range(names.size() - 1, -1, -1):
-		facts.push_front(MissiveLog.exact("bought@" + String(names[i]), "Bought from House %s" % names[i], int(houses[names[i]])))
-	facts.push_front(MissiveLog.exact("supply_buy", "Bought from the houses", buy))
+		var who := "an unheld town" if String(names[i]) == "" else "House %s" % names[i]
+		facts.push_front(MissiveLog.exact("bought@" + String(names[i]), "Bought from %s (units)" % who, int(houses[names[i]])))
+	facts.push_front(MissiveLog.exact("supply_buy", "Bought from the houses (gold)", buy))
 	facts.push_front(MissiveLog.exact("supply_fee", "Cartage, all lines", fee))
 	var home := MapManors.home_province(repo, state)
 	var prov: Dictionary = repo.provinces.get(home, {})

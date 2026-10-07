@@ -35,8 +35,9 @@ func test_every_event_kind_reads_as_a_sentence() -> void:
 	var town: String = TownStores.realm_towns(repo, s)[0]
 	var kingdom: String = String(repo.kingdoms.keys()[0])
 	var events: Array = []
-	for t: String in ["opened", "cut", "restored", "town_low", "low", "empty", "cancelled", "town_dry"]:
-		events.append({"type": t, "regiment": code, "town": town, "by": kingdom, "days": 3, "depot": town})
+	for t: String in ["opened", "cut", "restored", "town_low", "low", "empty", "cancelled", "town_dry", "order_lost"]:
+		events.append({"type": t, "regiment": code, "town": town, "by": kingdom, "days": 3, "depot": town,
+			"at": Vector2(float(repo.burgs[town]["x"]), float(repo.burgs[town]["y"]))})
 	var m := MissiveWriter.supply_dispatch(repo, s, events)
 	for f: Dictionary in m["facts"]:
 		assert_ne(String(f["text"]), "")
@@ -164,7 +165,7 @@ func test_the_report_tells_the_road_loss_and_who_was_bought_from() -> void:
 		by_key[String(f["key"])] = f
 	assert_eq(int(by_key["bought@House A"]["exact"]), 2)
 	assert_eq(int(by_key["bought@House B"]["exact"]), 5, "summed over the rows")
-	assert_eq(String(by_key["bought@House A"]["label"]), "Bought from House House A")
+	assert_eq(String(by_key["bought@House A"]["label"]), "Bought from House House A (units)")
 	var keys: Array = facts.map(func(f: Dictionary) -> String: return String(f["key"]))
 	assert_lt(keys.find("bought@House A"), keys.find("bought@House B"), "houses in order")
 	var pct := SupplySystem.loss_of(repo, 100) / 10
@@ -227,3 +228,37 @@ func test_the_report_names_the_robbers_of_a_line() -> void:
 		if String(f["key"]) == "days@" + code:
 			text = String(f["text"])
 	assert_string_contains(text, "17% lost on the road (Test Brigands)")
+
+
+## Final review 10: the houses' facts say units, the total says gold, and a
+## town no house holds is not "House ".
+func test_the_marshals_purchases_say_units_and_gold() -> void:
+	var code := _land()
+	var rows := SupplyLines.settle_month(repo, s)
+	var row := _row(rows, code)
+	row["bought"] = {"Ashvale": 30, "": 4}
+	row["buy"] = 9
+	var m := MissiveWriter.marshal_report(repo, s, 1, rows)
+	var by_key := {}
+	for f: Dictionary in m["facts"]:
+		by_key[String(f["key"])] = f
+	assert_eq(String(by_key["supply_buy"]["label"]), "Bought from the houses (gold)")
+	assert_eq(int(by_key["supply_buy"]["exact"]), 9)
+	assert_eq(String(by_key["bought@Ashvale"]["label"]), "Bought from House Ashvale (units)")
+	assert_eq(int(by_key["bought@Ashvale"]["exact"]), 30)
+	assert_eq(String(by_key["bought@"]["label"]), "Bought from an unheld town (units)")
+	for f: Dictionary in m["facts"]:
+		assert_false(String(f.get("label", "")).contains("House  ") or String(f.get("label", "")).ends_with("House "))
+
+
+## Final review 12: the cut letter says where on the road.
+func test_the_cut_letter_says_where() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(repo, s)[0]
+	var kingdom: String = String(repo.kingdoms.keys()[0])
+	var at := Vector2(float(repo.burgs[town]["x"]), float(repo.burgs[town]["y"]))
+	var m := MissiveWriter.supply_dispatch(repo, s, [{"type": "cut", "regiment": code, "town": town,
+		"by": kingdom, "at": at}])
+	assert_eq(String((m["facts"] as Array)[0]["text"]), "The road from %s to %s is cut near %s by %s." % [
+		String(repo.burgs[town]["label"]), String(ArmySystem.regiment(repo, code)["label"]),
+		Intel.place_label(repo, s, at), String(repo.kingdoms[kingdom]["label"])])

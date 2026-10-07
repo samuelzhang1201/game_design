@@ -1,8 +1,8 @@
 class_name WarIntelInk
 extends RefCounted
 ## What we KNOW, inked over the laid sheet (owner 2026-10-02, spec
-## 2026-10-02-war-room-v2 §2.4): the crown's regiments' supply roads (fainter
-## for what they lose), the crown's couriers on the road and the road ahead,
+## 2026-10-02-war-room-v2 §2.4): the crown's regiments' flowing supply roads
+## (fainter for what they lose), the crown's couriers on the road and the road ahead,
 ## this spell's weather by province, and every spy report that has COME IN (a
 ## missive) as a ring of its estimate. Never a foreign regiment's line, never a
 ## spy still riding as a report. In ink-texture px like WarSheetInk; drawn into
@@ -23,6 +23,9 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		func(x: Dictionary) -> String: return String(x["regiment_code"]))
 	ours.sort()
 	for code: String in ours:
+		# only the wagons rolling are a road (as the 3D map): no ordered, riding or cut line
+		if String(SupplyLines.line(state, code).get("state", "")) != SupplyLines.FLOWING:
+			continue
 		var route := SupplySystem.route_px(repo, state, code)
 		if route.size() >= 2 and WarSheetInk._touches(r, route):
 			var line := SupplySystem.line_of(repo, state, code)

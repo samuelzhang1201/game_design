@@ -124,15 +124,21 @@ func _add_supply_rows(code: String) -> void:
 		return
 	add_separator()
 	var has_line := not SupplyLines.line(Game.state, code).is_empty()
-	_supply_row("change" if has_line else "add", SUPPLY_ADD, _paused_reason())
+	# all three supply orders are given on a paused clock (spec §4), as a march is
+	var paused := _paused_reason()
+	_supply_row("change" if has_line else "add", SUPPLY_ADD, paused)
 	if has_line:
-		_supply_row("withdraw", SUPPLY_WITHDRAW, _refusal("SUPPLY_POINT_CLEAR", code))
+		_supply_row("withdraw", SUPPLY_WITHDRAW, paused if paused != "" else _refusal("SUPPLY_POINT_CLEAR", code))
 	var carry := ArmySystem.carry_of(Game.data, Game.state.regiments.get(code, {}))
-	var title := String((Game.data.army_supply_orders.get("carry", {}) as Dictionary).get("label", "Carry"))
+	var carry_row: Dictionary = Game.data.army_supply_orders.get("carry", {})
+	var title := String(carry_row.get("label", "Carry"))
 	for i in Game.data.army_carry_loads.size():
 		var row: Dictionary = Game.data.army_carry_loads[i]
 		add_check_item("%s %s" % [title, String(row["label"])], CARRY_BASE + i)
-		set_item_checked(get_item_index(CARRY_BASE + i), int(row["days"]) == carry)
+		var at := get_item_index(CARRY_BASE + i)
+		set_item_checked(at, int(row["days"]) == carry)
+		set_item_disabled(at, paused != "")
+		set_item_tooltip(at, paused if paused != "" else String(carry_row.get("hint", "")))
 
 
 ## A town's garrison of several regiments was clicked: one row a regiment,
@@ -255,7 +261,7 @@ func _on_chosen(id: int) -> void:
 		_send_supply(int(SupplyLines.RATES[id - RATE_BASE]))
 		return
 	if id >= CARRY_BASE and id < CARRY_BASE + Game.data.army_carry_loads.size():
-		if _code != "":
+		if _code != "" and _paused_reason() == "":
 			_run(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": _code,
 				"days": int(Game.data.army_carry_loads[id - CARRY_BASE]["days"])}))
 		return
@@ -264,7 +270,7 @@ func _on_chosen(id: int) -> void:
 			_start_supply_pick(_code)
 		return
 	if id == SUPPLY_WITHDRAW:
-		if _code != "":
+		if _code != "" and _paused_reason() == "":
 			_run(ActionRequest.make("SUPPLY_POINT_CLEAR", {"regiment": _code}))
 		return
 	match id:
@@ -538,14 +544,15 @@ func _open_rates(town: String, route: PackedVector2Array, at: Vector2) -> void:
 	var loss_pct := SupplySystem.total_loss(Game.data, km, int(robbed["permille"])) / 10
 	for i in SupplyLines.RATES.size():
 		var rate := int(SupplyLines.RATES[i])
-		var fee := SupplyLines.day_fee_estimate(Game.data, Game.state, _supply_for, town, rate, km)
+		var fee := SupplyLines.gold_words(SupplyLines.day_fee_milli(Game.data, Game.state, _supply_for, town, rate, km))
 		@warning_ignore("integer_division")  # the month's whole units
 		var stock_days := TownStores.days_of_stock(Game.state, town, use * rate / 1000)
 		add_item(String(row["label"]).format({"rate": "%.1f" % (float(rate) / 1000.0), "fee": fee}), RATE_BASE + i)
 		set_item_tooltip(get_item_index(RATE_BASE + i), String(row["hint"]).format({
 			"town": String(Game.data.burgs[town]["label"]), "km": km, "loss": loss_pct,
 			"wagon_days": SupplyLines.wagon_days(Game.data, km), "stock_days": stock_days,
-			"courier_days": CourierSystem.eta_days(Game.data, Game.state, CourierSystem.ORDINARY, _supply_for)}))
+			"courier_days": CourierSystem.eta_days_to(Game.data, Game.state, CourierSystem.ORDINARY,
+				Vector2(float(Game.data.burgs[town]["x"]), float(Game.data.burgs[town]["y"])))}))
 	_add_row("cancel", CANCEL, "")
 	_pop(at)
 

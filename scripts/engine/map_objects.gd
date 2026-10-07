@@ -1035,12 +1035,12 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 					text = "wagons %dd" % days
 					tip = "The first wagons from %s arrive in %d day%s" % [from, days, "" if days == 1 else "s"]
 				SupplyLines.FLOWING:
-					var fee := SupplyLines.day_fee_estimate(repo, state, code, String(line["town"]),
-						int(line["rate"]), int(line["length_km"]))
+					var fee := SupplyLines.gold_words(SupplyLines.day_fee_milli(repo, state, code, String(line["town"]),
+						int(line["rate"]), int(line["length_km"])))
 					@warning_ignore("integer_division")
 					var lost := int(line["loss_permille"]) / 10
 					text = "%s %.1f×" % [from, float(int(line["rate"])) / 1000.0]
-					tip = "Supply point: %s · %.1f× · about %d gold a day · %d km, %d%% lost on the road" % [
+					tip = "Supply point: %s · %.1f× · about %s gold a day · %d km, %d%% lost on the road" % [
 						from, float(int(line["rate"])) / 1000.0, fee, int(line["length_km"]), lost]
 				SupplyLines.CUT:
 					text = "cut"

@@ -259,12 +259,18 @@ func test_an_ordered_line_waits_while_its_courier_rides() -> void:
 	assert_eq(String(SupplyLines.line(s, code).get("state", "")), SupplyLines.ORDERED)
 	assert_false(_has(ev, "cancelled", code))
 
-func test_an_ordered_line_whose_courier_is_lost_is_cancelled() -> void:
+## Final review 2: a lost courier is not a lost town — its own letter.
+func test_an_ordered_line_whose_courier_is_lost_says_the_orders_never_came() -> void:
 	_order_point()
 	s.couriers.clear()
 	var ev := SupplyLines.day_step(repo, s)
 	assert_true(SupplyLines.line(s, code).is_empty())
-	assert_true(_has(ev, "cancelled", code))
+	assert_true(_has(ev, "order_lost", code))
+	assert_false(_has(ev, "cancelled", code), "the town is still ours")
+	var m := MissiveWriter.supply_dispatch(repo, s, ev.filter(func(e: Dictionary) -> bool:
+		return String(e["type"]) == "order_lost"))
+	assert_eq(String((m["facts"] as Array)[0]["text"]), "The supply orders for %s never reached %s." % [
+		String(ArmySystem.regiment(repo, code)["label"]), String(repo.burgs[town]["label"])])
 
 ## The ORDERED line's own courier lost while a newer point still rides: that
 ## point is the order now waited on.

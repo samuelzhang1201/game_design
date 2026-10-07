@@ -206,7 +206,6 @@ army_supply_per_head_permille,100,"regiments: supply units a head uses a month, 
 army_supply_gold_permille,100,"a supply unit's gold value, per mille (spec 2026-09-30-ledger-supply-design §3, 2026-10-07-army-supply-lines): the metrics strategic and lord_strategic are the gold of the towns' units, a house's stock is bought at this x supply_buy_markup_permille, and the LEDGER and the marshal's report count a unit's gold by it"
 army_supply_loss_permille_per_100km,60,LEDGER M1: supplies lost on the road per mille for every 100 km of it
 army_supply_loss_cap_permille,600,LEDGER M1: the most a road can lose
-army_supply_warn_permille,500,"LEDGER M1: a regiment whose supply score is under this is hungry (TriggerDsl host_hungry, the hungry_host loop)"
 army_morale_starving,20,"LEDGER M1 (spec 2026-09-30-ledger-supply-design §4): the morale a regiment with no stores sinks toward"
 army_morale_fed,75,LEDGER M1: the morale a regiment with full stores climbs toward
 army_morale_garrison_bonus,5,LEDGER M1: a garrison's mark stands this much higher

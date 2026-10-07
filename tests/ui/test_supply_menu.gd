@@ -87,6 +87,12 @@ func test_the_rate_rows_carry_the_fee_and_the_road() -> void:
 	var first := _menu.get_item_index(ArmyOrderMenu.RATE_BASE)
 	assert_string_contains(_menu.get_item_text(first), "0.8")
 	assert_string_contains(_menu.get_item_tooltip(first), String(b["label"]))
+	# tenths of a gold a day (final review 4); the courier's ride to the TOWN (5)
+	var re := RegEx.create_from_string("— \\d+\\.\\d gold a day$")
+	assert_not_null(re.search(_menu.get_item_text(first)), _menu.get_item_text(first))
+	var ride := CourierSystem.eta_days_to(Game.data, Game.state, CourierSystem.ORDINARY,
+		Vector2(float(b["x"]), float(b["y"])))
+	assert_string_contains(_menu.get_item_tooltip(first), "the courier rides %d days" % ride)
 	assert_ne(_menu.get_item_index(ArmyOrderMenu.CANCEL), -1, "and a Cancel row")
 
 func test_a_greyed_town_says_why_and_keeps_picking() -> void:
@@ -175,6 +181,34 @@ func test_the_menu_greys_add_while_time_runs_and_says_why() -> void:
 	assert_true(_menu.is_item_disabled(i))
 	assert_eq(_menu.get_item_tooltip(i), String(Game.data.army_route_orders["paused_only"]["hint"]))
 	Game.set_clock_speed(0)
+
+## Final review 9: Withdraw and the carry loads are paused-clock orders too.
+func test_the_menu_greys_withdraw_and_carry_while_time_runs() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(Game.data, Game.state)[0]
+	Game.state.supply_lines[code] = SupplyLines._new_record(town, 1000, 1)
+	Game.state.supply_lines[code]["state"] = SupplyLines.FLOWING
+	Game.set_clock_speed(1)
+	_map.army_menu_requested.emit(code, Vector2(10, 10))
+	var why := String(Game.data.army_route_orders["paused_only"]["hint"])
+	var ids: Array = [_row("withdraw")]
+	for i in Game.data.army_carry_loads.size():
+		ids.append(ArmyOrderMenu.CARRY_BASE + i)
+	for id: int in ids:
+		var i := _menu.get_item_index(id)
+		assert_ne(i, -1, "row %d is offered" % id)
+		assert_true(_menu.is_item_disabled(i), "row %d is greyed" % id)
+		assert_eq(_menu.get_item_tooltip(i), why)
+	# a click that slips through still orders nothing
+	var riding := Game.state.couriers.size()
+	_menu.hide()
+	_menu.id_pressed.emit(ArmyOrderMenu.CARRY_BASE + 4)
+	_menu.id_pressed.emit(_row("withdraw"))
+	assert_eq(Game.state.couriers.size(), riding, "nothing rides while time runs")
+	Game.set_clock_speed(0)
+	_map.army_menu_requested.emit(code, Vector2(10, 10))
+	for id: int in ids:
+		assert_false(_menu.is_item_disabled(_menu.get_item_index(id)), "paused, row %d is offered" % id)
 
 func test_a_fleet_has_no_supply_rows() -> void:
 	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
