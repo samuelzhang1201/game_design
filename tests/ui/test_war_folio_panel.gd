@@ -40,29 +40,72 @@ func test_escape_closes_it() -> void:
 	assert_signal_emitted(panel, "closed")
 
 
-## Owner 2026-10-07: the book opens shrunk in the room's upper-left with no
-## dim, so the room around it stays in play; + holds it up full size over a
-## dim, and a click on the dim lays it back.
-func test_it_opens_docked_and_small_with_the_room_free_around_it() -> void:
+## Owner 2026-10-07/08: the book opens SMALL in the room's upper-left — one
+## page, the figure beside the regiment's name and the glance rows — with no
+## dim, so the room around it stays in play; + holds the whole book up full
+## size over a dim, and the book's − or a click on the dim lays it back.
+func test_it_opens_docked_as_one_small_page_with_the_room_free_around_it() -> void:
 	panel.open_for(code)
 	await wait_process_frames(2)
 	assert_false((panel.get_node("%Dim") as Control).visible, "no dim")
 	assert_eq(panel.mouse_filter, Control.MOUSE_FILTER_IGNORE, "clicks beside the book reach the room")
-	var folder: Control = panel.get_node("%Folder")
-	assert_lt(folder.scale.x, 1.0, "the book is shrunk")
+	assert_true((panel.get_node("%Docket") as Control).visible)
+	assert_false((panel.get_node("%Folder") as Control).visible, "the whole book waits")
 	var rect := panel.book_rect()
+	# the design canvas is 1280x720: at most ~30% of its width and ~45% of its height
+	assert_lte(rect.size.x, 1280.0 * 0.30, "narrow")
+	assert_lte(rect.size.y, 720.0 * 0.45, "short")
 	assert_lt(rect.get_center().x, panel.size.x * 0.5, "in the left half")
 	assert_lt(rect.get_center().y, panel.size.y * 0.5, "and the upper")
-	assert_almost_eq(rect.size.x, (panel.get_node("%Book") as Control).get_combined_minimum_size().x * folder.scale.x, 0.5)
+	assert_eq(panel.get_node("%Figure").get_parent(), panel.get_node("%DockFigSlot"), "the figure is on the small page")
+
+
+func test_the_docked_page_reads_the_brief_and_follows_the_state() -> void:
+	panel.open_for(code)
+	var b := WarFolio.brief(Game.data, Game.state, code)
+	assert_eq((panel.get_node("%DockTitle") as Label).text, String(b["title"]))
+	var want := {}
+	for row: Dictionary in b["rows"]:
+		want[String(row["label"])] = String(row["text"])
+	assert_eq(panel.brief_rows(), want)
+	var st := ArmySystem.state_of(Game.data, Game.state, code).duplicate()
+	st["morale"] = int(st["morale"]) - 7
+	Game.state.regiments[code] = st
+	panel.refresh()
+	assert_true(String(panel.brief_rows()["Morale"]).begins_with("%d / 100" % int(st["morale"])))
+
+
+func test_the_docked_pages_plus_or_a_click_on_it_holds_the_whole_book_up() -> void:
+	panel.open_for(code)
+	await wait_process_frames(2)
+	(panel.get_node("%DockEnlarge") as Button).pressed.emit()
+	assert_true(panel.is_full())
+	panel.set_full(false)
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = true
+	(panel.get_node("%DockBook") as Control).gui_input.emit(e)
+	assert_true(panel.is_full(), "a click on the page opens the book")
+	(panel.get_node("%Enlarge") as Button).pressed.emit()
+	assert_false(panel.is_full(), "the book's − lays it back")
+	(panel.get_node("%DockClose") as Button).pressed.emit()
+	assert_false(panel.visible, "the small page's × closes it")
 
 
 func test_the_book_held_up_is_full_size_and_a_click_on_the_dim_lays_it_back() -> void:
 	panel.open_for(code)
 	await wait_process_frames(2)
-	(panel.get_node("%Enlarge") as Button).pressed.emit()
+	(panel.get_node("%DockEnlarge") as Button).pressed.emit()
 	assert_true(panel.is_full())
 	assert_true((panel.get_node("%Dim") as Control).visible)
-	assert_eq((panel.get_node("%Folder") as Control).scale, Vector2.ONE)
+	assert_true((panel.get_node("%Folder") as Control).visible)
+	assert_false((panel.get_node("%Docket") as Control).visible)
+	assert_eq((panel.get_node("%Folder") as Control).scale, Vector2.ONE, "full size")
+	var fig: WarInkFigure = panel.get_node("%Figure")
+	assert_eq(fig.get_parent(), panel.get_node("%FigSlot"), "the figure moved into the whole book")
+	assert_not_null(panel.get_node_or_null("%FigViewport"), "its own names still resolve")
+	await wait_process_frames(2)
+	assert_eq((panel.get_node("%FigViewport") as SubViewport).render_target_update_mode, SubViewport.UPDATE_ALWAYS)
 	var e := InputEventMouseButton.new()
 	e.button_index = MOUSE_BUTTON_LEFT
 	e.pressed = true
@@ -70,6 +113,9 @@ func test_the_book_held_up_is_full_size_and_a_click_on_the_dim_lays_it_back() ->
 	assert_true(panel.visible, "still open")
 	assert_false(panel.is_full(), "back in its corner")
 	assert_false((panel.get_node("%Dim") as Control).visible)
+	assert_eq(fig.get_parent(), panel.get_node("%DockFigSlot"), "the figure came back")
+	assert_eq((panel.get_node("%FigViewport") as SubViewport).render_target_update_mode, SubViewport.UPDATE_ALWAYS,
+		"and still draws")
 
 
 func test_the_close_cross_closes_it_and_it_opens_docked_again() -> void:

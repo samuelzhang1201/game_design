@@ -275,3 +275,66 @@ func test_the_supply_row_names_a_brigand_on_the_road() -> void:
 			assert_string_contains(_rows("supply")["Line"], "to the %s" % repo.markers[c]["label"])
 			return
 	pass_test("no brigands on this pack")
+
+
+func _brief_rows(c: String) -> Dictionary:
+	var out := {}
+	for row: Dictionary in WarFolio.brief(repo, state, c)["rows"]:
+		out[String(row["label"])] = String(row["text"])
+	return out
+
+
+## The docked book's page (owner 2026-10-08): the regiment's name and the rows
+## read at a glance, in order.
+func test_the_brief_names_the_regiment_and_carries_its_glance_rows_in_order() -> void:
+	var reg := ArmySystem.regiment(repo, code)
+	var b := WarFolio.brief(repo, state, code)
+	assert_eq(String(b["title"]), String(reg["label"]))
+	var labels: Array = (b["rows"] as Array).map(func(r: Dictionary) -> String: return String(r["label"]))
+	assert_eq(labels, ["Under arms", "Arms", "Morale", "Supplies", "Line", "Ground", "Order", "Pace"])
+
+
+func test_the_brief_counts_heads_by_arm_and_the_fit() -> void:
+	var reg := ArmySystem.regiment(repo, code)
+	var heads := ArmySystem.headcount(repo, reg)
+	var rows := _brief_rows(code)
+	assert_eq(rows["Under arms"], WarRoom.group(heads), "no wounded: the bare figure")
+	for a: Dictionary in WarFolio.arms_of(repo, code):
+		var label := String((repo.resource_icons.get(String(a["arm"]), {}) as Dictionary).get("label", ""))
+		assert_true(rows["Arms"].contains("%s %s" % [label, WarRoom.group(int(a["heads"]))]), String(a["arm"]))
+	ArmySystem.ensure(repo, state)
+	state.regiments[code]["wounded"] = 100
+	assert_eq(_brief_rows(code)["Under arms"], "%s · %s fit" % [WarRoom.group(heads), WarRoom.group(heads - 100)])
+
+
+func test_the_brief_gives_morale_and_the_stores_days() -> void:
+	ArmySystem.ensure(repo, state)
+	var reg := ArmySystem.regiment(repo, code)
+	state.regiments[code]["supplies"] = 1240
+	state.regiments[code]["morale"] = 61
+	var use := ArmySystem.supply_use(repo, reg, state)
+	assert_gt(use, 0)
+	var days := ArmySystem.days_in_hand(1240, use)
+	var rows := _brief_rows(code)
+	assert_eq(rows["Supplies"], "1,240 (≈ %d day%s)" % [days, "" if days == 1 else "s"])
+	assert_eq(rows["Morale"], "61 / 100 — %s" % ArmySystem.morale_word(repo,
+		ArmySystem.supply_score(repo, 1240, use)))
+
+
+func test_the_briefs_order_names_a_march_with_its_end_and_days() -> void:
+	var reg := ArmySystem.regiment(repo, code)
+	assert_eq(_brief_rows(code)["Order"], WarFolio.order_word(repo, ArmySystem.order_of(repo, state, code)))
+	ArmySystem.set_march(repo, state, code, ArmySystem.position_of(repo, state, reg) + Vector2(30, 0))
+	var dest := ArmySystem.destination_of(repo, state, code)
+	var sheet: Dictionary = WarSheets.series(repo)[WarSheets.sheet_of(repo, dest)]
+	var days := CourierSystem.days_to_arrival(repo, state, code)
+	assert_eq(_brief_rows(code)["Order"], "On the march to %s, in %d day%s" % [
+		WarSheets.grid_ref(repo, sheet, dest), days, "" if days == 1 else "s"])
+
+
+func test_a_foreign_regiments_brief_is_only_its_headcount_word() -> void:
+	var foreign := _foreign()
+	var b := WarFolio.brief(repo, state, foreign)
+	assert_eq((b["rows"] as Array).size(), 1)
+	assert_eq(String(b["rows"][0]["text"]),
+		Intel.magnitude(repo, ArmySystem.headcount(repo, ArmySystem.regiment(repo, foreign))))

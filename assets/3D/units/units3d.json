@@ -22,16 +22,16 @@
     150
    ]
   },
-  "bones": 27,
+  "bones": 67,
   "fps": 30,
-  "height_m": 1.851,
+  "height_m": 1.853,
   "kind": "humanoid",
   "label": "Archer",
-  "source": "Tripo 3D (owner, paid plan) from REF_archers_qwenfast_s2.png; tools/units3d/archer_rig/",
+  "source": "Tripo 3D (owner, paid plan): the v2 T-pose generation auto-rigged by Tripo, the v1 bow and quiver put on; tools/units3d/archer_tripo/",
   "stride_m": 2.0,
-  "tris": 18591,
+  "tris": 21328,
   "weights": {
-   "body": "heat",
+   "body": "tripo",
    "props": "rigid",
    "bow": "graded"
   }

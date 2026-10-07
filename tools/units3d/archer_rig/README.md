@@ -1,4 +1,9 @@
-# The longbowman (the archers' piece)
+# The longbowman, v1 (superseded)
+
+**Superseded 2026-10-08 by `tools/units3d/archer_tripo/`** (the owner's Tripo-rigged T-pose
+model; this model's bow and quiver are cut out of it, and its clips ported there). Kept for the
+props' source and the clips' history.
+
 
 Rigged and animated by the **blender-auto-rig** and **blender-natural-animation** skills' phases
 (owner 2026-10-06: 请设计弓箭手的动作 — 行进奔跑 / 驻防拉弓搭箭 / 攻击不断射箭 / 防御弓横举在前 /
