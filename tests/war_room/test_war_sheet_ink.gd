@@ -470,3 +470,31 @@ func test_a_walled_towns_glyphs_stand_clear_of_its_walls() -> void:
 				assert_gte(absf((t["market_at"] as Vector2).y - (t["at"] as Vector2).y), wall + repo.bal("war_ink_market_px") * 0.5, String(t["label"]))
 			checked += 1
 	assert_gt(checked, 0)
+
+
+## The WAR ROOM's rivers (owner 2026-10-07: stiff, ruler-straight): a line
+## densified on a curve THROUGH its points, a point every `step` at most.
+func test_densify_runs_through_every_point_a_step_apart_at_most() -> void:
+	var pts := PackedVector2Array([Vector2(0, 0), Vector2(30, 0), Vector2(40, 25), Vector2(41, 26), Vector2(100, 10)])
+	var step := 4.0
+	var out := WarSheetInk.densify(pts, step)
+	var want := 1
+	for i in pts.size() - 1:
+		want += maxi(1, ceili(pts[i].distance_to(pts[i + 1]) / step))
+	assert_eq(out.size(), want, "1 + ceil(span / step) a span")
+	assert_eq(out[0], pts[0], "the source kept")
+	assert_eq(out[out.size() - 1], pts[pts.size() - 1], "the mouth kept")
+	for p in pts:
+		assert_true(out.has(p), "every original point stays on the curve: %s" % p)
+	for i in out.size() - 1:
+		assert_lte(out[i].distance_to(out[i + 1]), step * 1.5, "no long chord (a curve is a little longer than its chord)")
+	assert_eq(WarSheetInk.densify(PackedVector2Array([Vector2.ZERO]), step).size(), 1, "one point is left alone")
+
+
+func test_densify_bends_where_the_line_turns() -> void:
+	var out := WarSheetInk.densify(PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 10)]), 1.0)
+	var off := 0.0
+	for p in out:
+		if p.x < 9.99 and p.x > 0.01:
+			off = maxf(off, absf(p.y))
+	assert_gt(off, 0.01, "the first leg curves into the turn: no ruled straight segment and a corner")

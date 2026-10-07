@@ -642,7 +642,7 @@ war_ink_river_discharge_k,0.06,"WAR ROOM v2 B (spec §2.4): a river's mouth widt
 war_ink_river_max_px,9,"WAR ROOM v2 B (spec §2.4): no river is inked wider than this at its mouth, ink px"
 war_ink_river_label_px,22,"WAR ROOM v2 B (spec §2.4): a river's name, ink px, in the river's blue"
 war_ink_river_smooth_steps,4,"WAR ROOM (owner 2026-10-07: the rivers were stiff and ruler-straight): without the build's rivers.json (WarBake.river_courses, the 3D map's own courses), a river's pack polyline is smoothed by MapGeometry.smooth_open with this many points per segment before it is inked"
-war_ink_river_step_px,6,"WAR ROOM (owner 2026-10-07: the rivers read as ruler-straight segments): a river's course is inked with a point at least every this many ink px, on a centripetal Catmull-Rom curve through its samples (MapGeometry.densify_open via WarSheetInk.river_line) — the build's samples lie ~60 ink px apart on a sheet"
+war_ink_river_step_px,6,"WAR ROOM (owner 2026-10-07: the rivers read as ruler-straight segments): a river's course is inked with a point at least every this many ink px, on a centripetal Catmull-Rom curve through its samples (WarSheetInk.densify via WarSheetInk.river_line) — the build's samples lie ~60 ink px apart on a sheet"
 war_ink_river_feather_px,1.2,"WAR ROOM (owner 2026-10-07): a river is inked as one tapered ribbon (WarInkPainter._draw_river) whose edges fade to clear over this many ink px — the ribbon's antialiasing"
 war_ink_river_label_lift,0.35,"WAR ROOM (owner 2026-10-07): a river's name is written along its course on its upper side, its baseline this share of war_ink_river_label_px beyond the river's mouth half-width"
 war_ink_bridge_px,7,"WAR ROOM v2 B (spec §2.4): a bridge's parapets / a ford's dashes, ink px"

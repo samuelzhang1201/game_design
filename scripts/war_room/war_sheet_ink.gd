@@ -299,7 +299,7 @@ static func _manors(repo: DataRepository, state: GameState, r: Rect2, k: float, 
 ## A river's course in ink px made ready to draw: the part reaching `area`
 ## (one point beyond it either side, so the curve inside is the whole
 ## course's), with a point every `step` px along a curve through its samples
-## (MapGeometry.densify_open), and `t0` / `t1` — how far along the WHOLE
+## (`densify`), and `t0` / `t1` — how far along the WHOLE
 ## course (by length) the part starts and ends, for its taper.
 ## {poly, t0, t1}; poly empty when no span reaches the area.
 static func river_line(poly: PackedVector2Array, area: Rect2, step: float) -> Dictionary:
@@ -324,7 +324,44 @@ static func river_line(poly: PackedVector2Array, area: Rect2, step: float) -> Di
 		if i == hi:
 			at_hi = total
 	total = maxf(total, 0.0001)
-	return {"poly": MapGeometry.densify_open(poly.slice(lo, hi + 1), step), "t0": at_lo / total, "t1": at_hi / total}
+	return {"poly": densify(poly.slice(lo, hi + 1), step), "t0": at_lo / total, "t1": at_hi / total}
+
+
+## An open line with points added between its own so no two consecutive
+## points are more than `step` apart: a CENTRIPETAL Catmull-Rom curve through
+## every original point (they all stay on it, the ends included; the
+## centripetal knots never loop or overshoot on unevenly spaced points), the
+## ends extended by mirroring so the first and last spans curve too.
+## 1 + the sum over the spans of ceil(span / step) points.
+static func densify(pts: PackedVector2Array, step: float) -> PackedVector2Array:
+	var n := pts.size()
+	if n < 2 or step <= 0.0:
+		return pts
+	var out := PackedVector2Array()
+	for i in n - 1:
+		var p1 := pts[i]
+		var p2 := pts[i + 1]
+		var p0 := pts[i - 1] if i > 0 else p1 * 2.0 - p2
+		var p3 := pts[i + 2] if i + 2 < n else p2 * 2.0 - p1
+		var pieces := maxi(1, ceili(p1.distance_to(p2) / step))
+		out.append(p1)
+		if pieces == 1 or p1.distance_to(p2) < 1e-4:
+			for k in range(1, pieces):
+				out.append(p1.lerp(p2, float(k) / float(pieces)))
+			continue
+		var t1 := maxf(sqrt(p0.distance_to(p1)), 1e-4)
+		var t2 := t1 + maxf(sqrt(p1.distance_to(p2)), 1e-4)
+		var t3 := t2 + maxf(sqrt(p2.distance_to(p3)), 1e-4)
+		for k in range(1, pieces):
+			var t := lerpf(t1, t2, float(k) / float(pieces))
+			var a1 := p0.lerp(p1, t / t1)
+			var a2 := p1.lerp(p2, (t - t1) / (t2 - t1))
+			var a3 := p2.lerp(p3, (t - t2) / (t3 - t2))
+			var b1 := a1.lerp(a2, t / t2)
+			var b2 := a2.lerp(a3, (t - t1) / (t3 - t1))
+			out.append(b1.lerp(b2, (t - t1) / (t2 - t1)))
+	out.append(pts[n - 1])
+	return out
 
 
 ## The longest stretch of `poly` (by its length) whose points all lie in
