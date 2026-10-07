@@ -28,6 +28,8 @@ extends RefCounted
 ## the map (Map3DLayerUnits). Those keep only their headcount box (a chip):
 ## the model IS the counter's square now, and drawing the flat piece beside it
 ## put the same regiment on the map twice.
+## Two counters stand at least map_army_stack_gap_px apart: each box is grown
+## by half of it for the spreading, the marker keeps the box itself.
 static func layout(repo: DataRepository, points: Array, h: float, obstacles: Array,
 		with_piece: Dictionary = {}, first: Array = []) -> Array:
 	var mine := repo.resolve_realm("player_realm")
@@ -73,7 +75,8 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		if float(a["size"]) != float(b["size"]):
 			return float(a["size"]) > float(b["size"])
 		return String(a["code"]) < String(b["code"]))
-	var boxes: Array = out.map(func(m: Dictionary) -> Rect2: return m["rect"])
+	var half_gap := repo.bal("map_army_stack_gap_px") * 0.5
+	var boxes: Array = out.map(func(m: Dictionary) -> Rect2: return (m["rect"] as Rect2).grow(half_gap))
 	var hide: Array = out.map(func(m: Dictionary) -> bool: return bool(m["solo"]))
 	var offs := Map3DDeclutter.place(boxes, hide, obstacles, repo.bal("map3d_declutter_step_px"),
 		repo.bal("map3d_declutter_max_px"))

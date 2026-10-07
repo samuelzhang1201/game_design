@@ -113,3 +113,26 @@ func test_each_offset_is_the_first_clear_one_of_the_spiral() -> void:
 			assert_eq(offs[i], walked, "trial %d box %d" % [trial, i])
 			if walked != null:
 				placed.append(Rect2(b.position + (walked as Vector2), b.size))
+
+
+## Two counters stand at least map_army_stack_gap_px apart, measured on the
+## counters themselves (not the grown boxes the spreading used).
+func test_counters_keep_the_gap_between_them() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 42)
+	var gap := repo.bal("map_army_stack_gap_px")
+	assert_gte(gap, 6.0, "the gap reads as a gap")
+	var points: Array = []
+	var i := 0
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		points.append({"reg": r, "pos": Vector2(400.0 + float(i % 3) * 7.0, 300.0 + float(i % 2) * 5.0)})
+		i += 1
+	var marks := ArmyCounters.layout(repo, points, 20.0, [])
+	assert_eq(marks.size(), points.size())
+	for a in marks.size():
+		for b in range(a + 1, marks.size()):
+			var ra: Rect2 = marks[a]["rect"]
+			var rb: Rect2 = marks[b]["rect"]
+			var apart := maxf(maxf(rb.position.x - ra.end.x, ra.position.x - rb.end.x),
+				maxf(rb.position.y - ra.end.y, ra.position.y - rb.end.y))
+			assert_gte(apart, gap - 0.001, "%s and %s" % [marks[a]["code"], marks[b]["code"]])
