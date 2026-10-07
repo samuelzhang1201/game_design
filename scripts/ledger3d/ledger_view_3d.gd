@@ -1113,10 +1113,11 @@ func _may_be_hub(id: String) -> bool:
 
 ## The name a star is DRAWN with in the galaxy: its label less the words its
 ## type already says — the type's `short_name` in ledger_object_types.csv,
-## a pattern whose `*` is the part kept ("* Regiment": "8th (Canceswest)"),
-## optionally followed by " -> " and a template the kept part is set in
-## ("Supply line from * Regiment -> Supplies from *": "Supplies from
-## Altnesbury to 8th (Canceswest)", so a supply line never reads as its regiment); a label
+## a pattern whose `*` is the part kept, optionally followed by " -> " and a
+## template the kept part is set in ("Supply line from * -> Supplies from *":
+## "Supply line from Altnesbury to 10th (Rothbridbu) Foot" is drawn "Supplies
+## from Altnesbury to 10th (Rothbridbu) Foot", so a supply line never reads as
+## its unit); a label
 ## that does not match — or would leave a blank name — is kept whole. The
 ## card and the tooltip keep the full label (Task 11 fix rounds 2-3, R2 / S1b).
 func drawn_name(id: String) -> String:

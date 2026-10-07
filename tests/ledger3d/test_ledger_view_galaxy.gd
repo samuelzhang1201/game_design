@@ -9,6 +9,10 @@ var repo: DataRepository
 var s: GameState
 var view: LedgerView3D
 
+## The pending reason of a check that holds on the thinned realm but not yet at
+## the density the army split brought.
+const DENSITY_PENDING := "owner ruling pending: LEDGER War density after the army split (spec 2026-10-07-army-split-and-ground)"
+
 
 func before_each() -> void:
 	repo = SuiteData.repo()
@@ -372,17 +376,37 @@ func test_a_camera_gesture_ends_the_framing() -> void:
 
 
 ## I2: at the opening view every cluster's title survives the cull — over its
-## highest star and a name line, never on a disc.
+## highest star and a name line, never on a disc. On the realm thinned to the
+## density the layout is tuned for (the mechanics)...
 func test_every_cluster_title_stands_at_the_opening_view() -> void:
 	_one_unit_a_regiment()
+	assert_eq(_titles_missed(), [])
+
+
+## ...and on the campaign as the game shows it, every unit a star. Pending
+## while the owner rules on the War cluster's density; it turns live by
+## itself once every title stands.
+func test_every_cluster_title_stands_at_the_opening_view_at_real_density() -> void:
+	var missed := _titles_missed()
+	if not missed.is_empty():
+		pending(DENSITY_PENDING + ": " + "; ".join(missed))
+		return
+	assert_eq(missed, [])
+
+
+## What the opening view gets wrong about its titles: [] when every cluster
+## in view has one.
+func _titles_missed() -> Array:
 	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
 	_settle_by_frames()
 	var titles: Array = view._hud._entries.filter(func(e: Dictionary) -> bool: return bool(e.get("title", false)))
 	var want := {}
 	for id: String in view.stars():
 		want[String(view._nodes[id].get("cluster", ""))] = true
-	assert_eq(titles.size(), want.size(), "one title per cluster: %s" % [titles.map(func(e: Dictionary) -> String:
-		return String(e["text"]))])
+	if titles.size() == want.size():
+		return []
+	return ["one title per cluster (%d of %d): %s" % [titles.size(), want.size(),
+		titles.map(func(e: Dictionary) -> String: return String(e["text"]))]]
 
 
 ## I6: a star behind the camera's edge is not counted in its title nor named
@@ -772,6 +796,24 @@ func test_ghosts_wear_their_hue_stars_are_capped_and_dealt_right() -> void:
 ## name.
 func test_the_war_names_are_short_near_and_only_the_selected_has_gauges() -> void:
 	_one_unit_a_regiment()
+	assert_eq(_war_names_wrong(), [])
+
+
+## The same on the campaign as the game shows it. Pending while the owner
+## rules on the War cluster's density; it turns live by itself once the
+## names sit by their stars again.
+func test_the_war_names_are_short_near_and_only_the_selected_has_gauges_at_real_density() -> void:
+	var wrong := _war_names_wrong()
+	if not wrong.is_empty():
+		pending(DENSITY_PENDING + ": " + "; ".join(wrong))
+		return
+	assert_eq(wrong, [])
+
+
+## What the War view at rest and with a regiment selected gets wrong about
+## its names: [] when nothing.
+func _war_names_wrong() -> Array:
+	var wrong: Array = []
 	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
 	_settle_by_frames()
 	view.focus_cluster("war")
@@ -785,27 +827,35 @@ func test_the_war_names_are_short_near_and_only_the_selected_has_gauges() -> voi
 		if bool(e.get("title", false)):
 			continue
 		names += 1
-		assert_true((e.get("props", []) as Array).is_empty(), "no gauges at rest: " + String(e["text"]))
-		assert_false(String(e["text"]).ends_with("Regiment"), String(e["text"]))
+		if not (e.get("props", []) as Array).is_empty():
+			wrong.append("gauges at rest: " + String(e["text"]))
+		if String(e["text"]).ends_with("Regiment"):
+			wrong.append("says Regiment: " + String(e["text"]))
 		var px := float(e["px"])
 		var w := font.get_string_size(String(e["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
 		var r := Rect2((e["at"] as Vector2) - Vector2(w * 0.5, px * 0.45), Vector2(w, px * 1.05))
-		assert_true(box.encloses(r), "inside the view: " + String(e["text"]))
+		if not box.encloses(r):
+			wrong.append("outside the view: " + String(e["text"]))
 		var c: Vector2 = view.screen_pos_of(String(e["id"]))
 		var gap := maxf(0.0, maxf(absf(c.x - r.get_center().x) - r.size.x * 0.5, absf(c.y - r.get_center().y) - r.size.y * 0.5)) \
 			- view._screen_radius(String(e["id"]))
 		if gap <= px * 0.6:
 			near += 1
-	assert_gt(names, 4)
-	assert_gte(near, int(ceil(names * 0.7)), "most names sit at the nearest ring (%d of %d)" % [near, names])
+	if names <= 4:
+		wrong.append("only %d names" % names)
+	if near < int(ceil(names * 0.7)):
+		wrong.append("most names sit at the nearest ring (%d of %d)" % [near, names])
 	var reg := _first("regiment:")
 	view.select(reg)
 	var mine: Dictionary = {}
 	for e: Dictionary in view._hud._entries:
 		if String(e.get("id", "")) == reg:
 			mine = e
-	assert_false((mine.get("props", []) as Array).is_empty(), "the selected regiment carries its gauges")
-	assert_false(bool(mine["gauges_up"]), "under its name")
+	if (mine.get("props", []) as Array).is_empty():
+		wrong.append("the selected regiment carries no gauges")
+	elif bool(mine["gauges_up"]):
+		wrong.append("the selected regiment's gauges are over its name")
+	return wrong
 
 
 ## Task 11 fix round 4 (T1): in the War view with a regiment selected (its
