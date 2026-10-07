@@ -57,8 +57,13 @@ func _end_day(state: GameState) -> Array:
 	# the end of this very settlement. ONE letter for all of the day's
 	# fighting, when there is any.
 	day_battles = BattleSystem.settle_day(data, state)
-	if not day_battles.is_empty():
-		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, day_battles))
+	# The sieges' day (spec §5.1-5.2) right AFTER the battles, once: an
+	# assault is that day's town battle, and its outcome moves the siege. The
+	# siege's news rides in the same battle letter, after the fighting.
+	day_siege = SiegeSystem.settle_day(data, state, day_battles)
+	var fights: Array = day_battles + SiegeSystem.news(day_siege)
+	if not fights.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, fights))
 	# The supply lines' day (spec 2026-10-07-army-supply-lines §3.2): the towns
 	# refill their garrisons, the wagons roll, before the host eats.
 	day_supply = SupplyLines.day_step(data, state)
@@ -90,6 +95,10 @@ var day_supply: Array = []
 ## The battles' events of the last day (BattleSystem.settle_day), for the
 ## battle report.
 var day_battles: Array = []
+
+## The sieges' events of the last day (SiegeSystem.settle_day), the quiet
+## siege_day included; the battle letter carries SiegeSystem.news of them.
+var day_siege: Array = []
 
 ## The hosts' events of the last day (EnemyAi.step_day then think_day:
 ## host_advance, host_mode), for the host-news letter.
@@ -129,6 +138,7 @@ func advance(state: GameState) -> TickReport:
 		day_arrivals = []
 		day_couriers = []
 		day_battles = []
+		day_siege = []
 		day_ai = []
 		day_supply = []
 	# The month that just ended is settled BEFORE the tick moves: its lines

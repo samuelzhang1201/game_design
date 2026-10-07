@@ -181,14 +181,27 @@ func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
+	var town := ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, p), s)
+	assert_ne(town, "", "the pack quarters the regiment in a town of its own")
 	_place(s, p, _spot(s))
+	s.regiments[p]["order"] = ArmySystem.ORDER_GARRISON
+	assert_eq(SupplySystem.garrisoned_in(repo, s, p), town, "the town's garrison")
 	_foe(s, f, _spot(s) + Vector2i(500, 0), "raid_main")
-	s.ai_hosts["raid_main"] = {"mode": "SIEGE", "assault": 0}
+	s.ai_hosts["raid_main"] = {"mode": "SIEGE", "assault": 0, "target_kind": "town", "target_id": town}
 	BattleSystem.settle_day(repo, s)
-	assert_eq(s.battles.size(), 0, "a host sitting down to a siege does not fight every day")
+	assert_eq(s.battles.size(), 0, "a host sitting down to a siege does not fight its garrison every day")
 	s.ai_hosts["raid_main"]["assault"] = 1
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 1, "its assault is an ordinary battle")
+	# a column of the player's that is NOT the besieged town's garrison (a
+	# relief in the open) meets the besiegers any day
+	var s3 := SuiteData.campaign(repo, 7)
+	_place(s3, p, _spot(s3))
+	_foe(s3, f, _spot(s3) + Vector2i(500, 0), "raid_main")
+	s3.ai_hosts["raid_main"] = {"mode": "SIEGE", "assault": 0, "target_kind": "town", "target_id": town}
+	assert_eq(SupplySystem.garrisoned_in(repo, s3, p), "", "standing by: no garrison")
+	BattleSystem.settle_day(repo, s3)
+	assert_eq(s3.battles.size(), 1, "a relief is fought in the field")
 	var s2 := SuiteData.campaign(repo, 7)
 	_place(s2, p, _spot(s2))
 	_foe(s2, f, _spot(s2) + Vector2i(500, 0), "raid_main")

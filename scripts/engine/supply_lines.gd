@@ -297,7 +297,8 @@ static func fed_from_words(repo: DataRepository, from: String) -> String:
 ## each day, free of cartage and road (spec §3.2 step 4), from: its own town
 ## (crown, lord, the houses' stock bought); then the depot (crown, lord);
 ## then the CROWN's stock of the other realm towns, nearest first (owner
-## 2026-10-07, option A). Nothing past its own town is bought. The first day
+## 2026-10-07, option A) — but a town under siege (SiegeSystem.besieged)
+## feeds its garrison from its own stores alone. Nothing past its own town is bought. The first day
 ## its town falls short returns a `town_dry` event {depot, realm: the other
 ## towns were drawn}, said once until its town fills it again (`supply_dry`);
 ## `supply_fed` keeps where it was fed from last (the depot, "" the realm's).
@@ -323,6 +324,8 @@ static func _refill_in_town(repo: DataRepository, state: GameState, code: String
 	if rest <= 0:
 		_wet(entry)
 		return {}
+	if SiegeSystem.besieged(state, held):
+		return {}   # the besiegers let nothing in: the garrison eats what it carries
 	var dep := TownStores.depot(repo, state)
 	var got := 0
 	if dep != held:

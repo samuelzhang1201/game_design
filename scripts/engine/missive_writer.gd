@@ -187,12 +187,23 @@ static func battle_words(repo: DataRepository, key: String, vars: Dictionary, pi
 ## morale WITH the reason the engine recorded for it, invariant 4), who left
 ## the field and how each battle ended. Numbers are the events' own; nothing is
 ## recomputed here. About the first of the player's regiments in the fights.
+##
+## The day's siege news (SiegeSystem.news: begin, starving, repulsed, fallen,
+## undefended, lifted, retaken) rides in the same letter, a line each after the
+## fighting, the town by name and the figures the events carry
+## (templates.csv `siege_*`); a letter of siege news alone is about the town.
 static func battle_report(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
 	var pick := state.absolute_day()
 	var at: Dictionary = {}       # battle id -> an event that carries its place
 	var rounds: Dictionary = {}   # battle id -> its round event today
+	var first_battle := -1
+	var siege_town := ""
 	for e: Dictionary in events:
+		if String(e["kind"]).begins_with("siege_"):
+			siege_town = String(e["town"]) if siege_town == "" else siege_town
+			continue
 		var id := int(e["battle_id"])
+		first_battle = id if first_battle < 0 else first_battle
 		if e.has("place_x_m") and not at.has(id):
 			at[id] = e
 		if String(e["kind"]) == "round":
@@ -200,6 +211,9 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 	var facts: Array = []
 	var first_mine := ""
 	for e: Dictionary in events:
+		if String(e["kind"]).begins_with("siege_"):
+			facts.append(_siege_fact(repo, e, pick))
+			continue
 		var id := int(e["battle_id"])
 		var place := battle_place(repo, state, at.get(id, {}))
 		match String(e["kind"]):
@@ -219,11 +233,28 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 						{"place": place, "rounds": int(e["rounds"])}, pick)))
 		if first_mine == "":
 			first_mine = _first_mine(state, e)
-	var head: Dictionary = at.get(int((events[0] as Dictionary)["battle_id"]), {})
+	var head: Dictionary = at.get(first_battle, {})
+	if head.is_empty() and siege_town != "":
+		var town_m := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, siege_town)
+		head = {"town": siege_town, "place_x_m": town_m.x, "place_y_m": town_m.y}
 	var pack := ArmySystem.metres_to_pack(repo, Vector2i(int(head.get("place_x_m", 0)), int(head.get("place_y_m", 0))))
-	return MissiveLog.make("battle", "credible", state.absolute_day(),
-		MissiveLog.subject("regiment", first_mine, -1, pack),
+	var subject := MissiveLog.subject("regiment", first_mine, -1, pack) if first_mine != "" \
+		else MissiveLog.subject("point", "", -1, pack)
+	return MissiveLog.make("battle", "credible", state.absolute_day(), subject,
 		battle_words(repo, "battle_title", {"place": battle_place(repo, state, head)}, pick), facts)
+
+
+## One line of siege news: templates.csv `<kind>` (siege_begin, siege_starving,
+## siege_repulsed, siege_fallen, siege_undefended, siege_lifted,
+## siege_retaken) with the town's name and the event's own figures.
+static func _siege_fact(repo: DataRepository, e: Dictionary, pick: int) -> Dictionary:
+	var kind := String(e["kind"])
+	var town := String(e["town"])
+	var vars := {"town": String((repo.burgs.get(town, {}) as Dictionary).get("label", town)),
+		"progress": int(e.get("progress", 0)), "attack": int(e.get("attack", 0)), "defend": int(e.get("defend", 0)),
+		"gain": int(e.get("gain", 0)), "lost": int(e.get("lost", 0)), "days": int(e.get("days", 0))}
+	return MissiveLog.words("%s@%s.%d" % [kind, town, int(e.get("day", 0))], "The siege",
+		battle_words(repo, kind, vars, pick))
 
 
 ## --- Word of the enemy (spec 2026-10-07-enemy-ai-and-battle §2) ---------------

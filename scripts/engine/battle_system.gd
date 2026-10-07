@@ -281,15 +281,20 @@ static func _can_fight(repo: DataRepository, state: GameState, code: String) -> 
 	return ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), e) > 0
 
 
-## A foe whose host sits down to a siege (GameState.ai_hosts mode "SIEGE")
-## fights only on an assault day (`assault` 1): the siege's assault is the
-## ordinary town battle (SiegeSystem sets and clears the flag).
-static func _sieging(state: GameState, code: String) -> bool:
+## The town a foe's host besieges while it waits for its assault: its host
+## (GameState.ai_hosts) in mode "SIEGE" with the `assault` flag down; "" any
+## other time. Such a foe does not fight that town's GARRISON (the garrison
+## waits behind its walls for the assault, the ordinary town battle that
+## SiegeSystem lets through with the flag), but meets any other regiment of
+## the player's as ever — a relief force in the open is fought in the field.
+static func siege_town_of(state: GameState, code: String) -> String:
 	var host := String((state.foes.get(code, {}) as Dictionary).get("host", ""))
 	if host == "" or not state.ai_hosts.has(host):
-		return false
+		return ""
 	var h: Dictionary = state.ai_hosts[host]
-	return String(h.get("mode", "")) == "SIEGE" and int(h.get("assault", 0)) != 1
+	if String(h.get("mode", "")) != "SIEGE" or int(h.get("assault", 0)) == 1:
+		return ""
+	return String(h.get("target_id", ""))
 
 
 ## The town a foe assaults when it stands within the reach
@@ -364,14 +369,20 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 	var mine: Array = state.regiments.keys().filter(func(c: Variant) -> bool:
 		return _can_fight(repo, state, String(c)))
 	var theirs: Array = state.foes.keys().filter(func(c: Variant) -> bool:
-		return _can_fight(repo, state, String(c)) and not _sieging(state, String(c)))
+		return _can_fight(repo, state, String(c)))
 	mine.sort()
 	theirs.sort()
 	var reach := int(round(repo.bal("battle_contact_km") * 1000.0))
+	var garrisons: Dictionary = {}   # the town each of mine garrisons ("" none), read once
+	for pc: Variant in mine:
+		garrisons[pc] = SupplySystem.garrisoned_in(repo, state, String(pc))
 	for fc: Variant in theirs:
 		var f := String(fc)
+		var held_off := siege_town_of(state, f)
 		for pc: Variant in mine:
 			var p := String(pc)
+			if held_off != "" and String(garrisons[pc]) == held_off:
+				continue    # a besieged town's garrison waits for the assault
 			var town := _town_contact(repo, state, p, f)
 			if town == "" and not _within(_at_m(repo, state, f), _at_m(repo, state, p), reach):
 				continue
@@ -587,6 +598,18 @@ static func _fall_back(repo: DataRepository, state: GameState, code: String, b: 
 	e["dest_x_m"] = best_m.x
 	e["dest_y_m"] = best_m.y
 	e["order"] = ArmySystem.ORDER_MARCH
+
+
+## A regiment leaves a place it can no longer hold (a town that fell,
+## SiegeSystem.capture): it marches for the nearest town of its own kingdom
+## beyond battle_contact_km of `place_m`, as a column falling back from a
+## battle does (`disengaging` until its march ends; it halts and pauses with
+## nowhere to go).
+static func march_out(repo: DataRepository, state: GameState, code: String, place_m: Vector2i) -> void:
+	if _stored(state, code).is_empty():
+		return
+	_fall_back(repo, state, code, {"place_x_m": place_m.x, "place_y_m": place_m.y})
+	_stored(state, code)["disengaging"] = 1
 
 
 ## No contact for `code` for battle_disengage_days from today

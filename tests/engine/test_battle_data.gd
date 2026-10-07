@@ -53,7 +53,7 @@ func test_balance_keys_present() -> void:
 			"battle_variance_permille", "battle_spoils_permille", "battle_defeat_treasury_permille",
 			"battle_defeat_morale", "battle_defeat_opinion", "ai_think_days", "ai_sight_km", "ai_target_reach_km",
 			"ai_target_overlap_permille", "ai_retreat_supply_days", "ai_supply_margin_days", "siege_rate", "siege_assault_days",
-			"siege_starve_bonus_permille", "raid_appear_day", "raid_rumour_lead_days",
+			"siege_starve_bonus_permille", "siege_assault_fail_permille", "raid_appear_day", "raid_rumour_lead_days",
 			"raid_plunder_permille"]:
 		assert_true(repo.balance.has(k), "balance key " + k)
 		assert_gt(repo.bal(k), 0.0, "balance key %s reads positive through bal()" % k)

@@ -88,7 +88,8 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 			mind["mode"] = MODE_ADVANCE
 			events.append({"type": "host_advance", "host": code, "day": today})
 			continue
-		_eat(repo, state, code)
+		if mode != MODE_HOLD:
+			_eat(repo, state, code)          # a host holding a town lives off it
 		if mode in TARGETING:
 			var why := should_retreat(repo, state, code)
 			if why != "":
@@ -466,7 +467,8 @@ static func engages(repo: DataRepository, state: GameState, host_code: String, s
 ## Why the host turns for home, "" when it holds on: a column of it fell back
 ## beaten from a battle (`disengaging`, BattleSystem); its live columns' mean
 ## morale below the doctrine's retreat_morale; or its hungriest live column's
-## days in hand (ArmySystem.days_in_hand) below ai_retreat_supply_days.
+## days in hand (ArmySystem.days_in_hand) below ai_retreat_supply_days — but a
+## host that HOLDs a town it took lives off the town and never goes home hungry.
 static func should_retreat(repo: DataRepository, state: GameState, host_code: String) -> String:
 	for c: String in regiments_of(state, host_code):
 		if int((state.foes[c] as Dictionary).get("disengaging", 0)) == 1:
@@ -484,7 +486,7 @@ static func should_retreat(repo: DataRepository, state: GameState, host_code: St
 	if morale < floor_morale:
 		return "morale %d below %d" % [morale, floor_morale]
 	var floor_days := int(repo.bal("ai_retreat_supply_days"))
-	if least < floor_days:
+	if least < floor_days and String((state.ai_hosts.get(host_code, {}) as Dictionary).get("mode", "")) != MODE_HOLD:
 		return "supplies for %d days, below %d" % [least, floor_days]
 	return ""
 
@@ -566,10 +568,17 @@ static func _row_of(repo: DataRepository, host_code: String) -> Dictionary:
 
 ## The first main host's mind (code order), {} when none is out of ASSEMBLE.
 static func _main_mind(repo: DataRepository, state: GameState) -> Dictionary:
+	var h := main_host(repo, state)
+	return {} if h == "" else state.ai_hosts[h]
+
+
+## The first main host (code order) out of ASSEMBLE, the one a reserve
+## follows; "" when none.
+static func main_host(repo: DataRepository, state: GameState) -> String:
 	for h: String in host_codes(state):
 		if role_of(repo, h) == ROLE_MAIN and String(state.ai_hosts[h]["mode"]) != MODE_ASSEMBLE:
-			return state.ai_hosts[h]
-	return {}
+			return h
+	return ""
 
 
 ## Halts every live column of the host that is in no battle where it stands
@@ -600,8 +609,14 @@ static func _besieged_by_another(repo: DataRepository, state: GameState, host_co
 	return false
 
 
+## A change of mode, told as an event. Leaving a SIEGE clears the siege's
+## figures and its assault flag (SiegeSystem.clear; SiegeSystem tells the
+## siege lifted).
 static func _set_mode(state: GameState, host_code: String, mode: String, why: String, events: Array) -> void:
-	state.ai_hosts[host_code]["mode"] = mode
+	var mind: Dictionary = state.ai_hosts[host_code]
+	if String(mind["mode"]) == MODE_SIEGE and mode != MODE_SIEGE:
+		SiegeSystem.clear(mind)
+	mind["mode"] = mode
 	events.append({"type": "host_mode", "host": host_code, "mode": mode, "why": why,
 		"day": state.absolute_day()})
 
@@ -621,6 +636,12 @@ static func _eat(repo: DataRepository, state: GameState, host_code: String) -> v
 		var reg := ArmySystem.regiment(repo, c)
 		if not reg.is_empty():
 			ArmySystem.eat_one(repo, state, reg, state.foes[c])
+
+
+## Sends the host's columns where its mode wants them (_march_host), for
+## SiegeSystem: a host it sends home marches at once.
+static func march_host(repo: DataRepository, state: GameState, host_code: String) -> void:
+	_march_host(repo, state, host_code)
 
 
 ## Sends the host's columns where its mode wants them: ADVANCE, SIEGE and RAID
