@@ -2,13 +2,11 @@ class_name Map3DLayerCouriers
 extends Node3D
 ## The couriers on the 3D map (spec 2026-09-27-courier-core §2): one small rider
 ## per courier of GameState.couriers, drawn RIDING the day the clock is running
-## (CourierSystem.ride_ahead), walked by the day's share (owner 2026-09-28: drawn
-## a day behind before) — at one pace over the whole day, reaching the column as
-## the day ends (owner 2026-10-02). Map3DUnits sizes him: gallops while the
-## clock runs and idles paused or not set out, a counter past the counter scale,
-## and fades out where he delivered once the engine lets him go
-## (Map3DCourierRide). Model:
-## courier_art.csv, cavalry stand-in until sub-project D. Never the Game autoload.
+## (CourierSystem.ride_ahead) at one pace over the whole day, reaching the column
+## as the day ends (owner 2026-10-02), out of and home into the palace's door
+## (Map3DCourierPalace). Map3DUnits sizes him: gallops while the clock runs, idles
+## paused or not set out, a counter past the counter scale, and fades out where
+## he delivered (Map3DCourierRide). Model: courier_art.csv. Never the Game autoload.
 
 const GALLOP := "GALLOP"
 const IDLE := "IDLE"
@@ -41,6 +39,8 @@ static func clip_or_fallback(anim: AnimationPlayer, action: String) -> String:
 ## a gallop, and past the ceiling the rider slides.
 @export var anim_min := 0.8
 @export var anim_max := 3.0
+## How far outside the palace's walls he waits and rides out (Map3DCourierPalace.door), metres.
+@export var palace_gap_m := 20.0
 
 var ctx: Map3DContext
 var _pieces: Dictionary = {}
@@ -160,7 +160,6 @@ func _ride_of(c: Dictionary) -> Dictionary:
 		int(c.get("aim_y_m", 0)), st.absolute_day() if st != null else 0]
 	if _rides.has(id) and _rides[id]["key"] == key:
 		return _rides[id]
-	var from := _target_xz(c)
 	var day: Dictionary = CourierSystem.ride_ahead(ctx.repo, st, c) if st != null else {"points": [], "share": 1.0, "ends": false}
 	var passed: Array = day["points"]
 	var ahead: Array = []
@@ -169,8 +168,12 @@ func _ride_of(c: Dictionary) -> Dictionary:
 	var rest: Array = []
 	for i in range(maxi(passed.size() - 1, 0), path.size()):
 		rest.append(_world_of_m(Vector2i(int(path[i][0]), int(path[i][1]))))
-	var ride := {"key": key, "from": from, "ahead": ahead, "rest": rest,
-		"length": Map3DCourierRide.length_along(from, ahead), "share": float(day["share"]), "ends": bool(day["ends"])}
+	# he sets out from, and rides home into, the palace's door (Map3DCourierPalace)
+	var origin := CourierSystem.origin(ctx.repo, st) if st != null else Vector2.INF
+	var road := Map3DCourierPalace.dress(Map3DCourierPalace.seat_of(ctx.repo, ctx.houses(), origin,
+		ctx.to_world(origin)), _target_xz(c), ahead, rest, palace_gap_m)
+	var ride := {"key": key, "from": road["from"], "ahead": road["ahead"], "rest": road["rest"], "share": float(day["share"]),
+		"length": Map3DCourierRide.length_along(road["from"], road["ahead"]), "ends": bool(day["ends"])}
 	_rides[id] = ride
 	return ride
 
@@ -179,8 +182,8 @@ func _world_of_m(m: Vector2i) -> Vector2:
 	return ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, m))
 
 
-func _target_xz(c: Dictionary) -> Vector2:
-	return ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(int(c["x_m"]), int(c["y_m"]))))
+func _target_xz(c: Dictionary) -> Vector2:  # where the engine has him
+	return _world_of_m(Vector2i(int(c["x_m"]), int(c["y_m"])))
 
 
 ## He faces the next point of the road ahead of where he is drawn.
@@ -193,9 +196,7 @@ func _heading_from(id: int, xz: Vector2, c: Dictionary) -> Vector2:
 
 func _heading(c: Dictionary) -> Vector2:  # the next waypoint of his road
 	var path: Array = c["path"]
-	if path.is_empty():
-		return Vector2.ZERO
-	var d := Vector2(float(path[0][0]) - float(c["x_m"]), float(path[0][1]) - float(c["y_m"]))
+	var d := Vector2.ZERO if path.is_empty() else Vector2(float(path[0][0]) - float(c["x_m"]), float(path[0][1]) - float(c["y_m"]))
 	return d.normalized() if d.length() > 0.5 else Vector2.ZERO
 
 
@@ -237,8 +238,8 @@ func _place(c: Dictionary, xz: Vector2) -> void:
 		"counter": false, "lead": _lead(id, xz), "waiting": _waiting(c, xz)}
 
 
-func _waiting(c: Dictionary, xz: Vector2) -> bool:  # not yet set out
-	return int(c["days"]) == 0 and xz.distance_to(_target_xz(c)) < 0.5
+func _waiting(c: Dictionary, xz: Vector2) -> bool:  # not yet set out: where his drawn ride starts
+	return int(c["days"]) == 0 and xz.distance_to((_rides.get(int(c["id"]), {}) as Dictionary).get("from", _target_xz(c))) < 0.5
 
 
 func _lead(id: int, xz: Vector2) -> Array:

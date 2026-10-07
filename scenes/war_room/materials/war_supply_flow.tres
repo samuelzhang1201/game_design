@@ -1,0 +1,17 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://bchvm38kygdud"]
+
+[ext_resource type="Shader" path="res://scripts/war_room/war_supply_flow.gdshader" id="1_3u1bv"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_3u1bv")
+shader_parameter/colour = Color(0.8588235, 0.6392157, 0.2, 1)
+shader_parameter/glow = Color(0.9490196, 0.78431374, 0.3764706, 1)
+shader_parameter/edge = Color(0.22745098, 0.16470589, 0.078431375, 0.9)
+shader_parameter/width_m = 0.008
+shader_parameter/lift_m = 0.0006
+shader_parameter/edge_share = 0.25
+shader_parameter/dash_m = 0.03
+shader_parameter/gap_m = 0.05
+shader_parameter/flow_m_s = 0.045
+shader_parameter/glow_strength = 0.85

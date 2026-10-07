@@ -95,7 +95,9 @@ docs/             # design/ (PRD, systems, chapter 0), references/, superpowers/
 
 The main conversation runs on the session's model (project default: Sonnet, `.claude/settings.json`); there is no automatic per-task switch, so delegate by kind:
 - **`architect` subagent (Opus)** — engine formulas, determinism / save bugs, anything spanning two or more subsystems or touching a numbered invariant; it returns a plan and expected test values, the main loop implements.
-- **`implementer` subagent (Sonnet, low effort)** — mechanical work with a clear spec: CSV values, renames, a GUT test from given numbers, moving text between guides.
+- **`implementer` subagent (Sonnet, medium effort)** — well-specified work whose design is decided: a GUT test from given numbers, a change across a few files, applying an architect plan.
+- **`quickfix` subagent (Sonnet, low effort)** — trivial edits: one CSV value, a rename, a typo, moving text between guides.
+- **`deep-solver` subagent (Fable)** — reserved for the hardest problems: a determinism / save bug that survived a first attempt, a redesign across several invariants, a rebalance that ripples through many systems, or when the architect's plan was not enough. It may edit and test; it is costly, so never routine.
 - **Explore** (built in) — finding files and call sites across the tree.
 - A long design discussion with the owner: suggest `/model opus` (or `opusplan`) for that stretch and back afterwards.
 

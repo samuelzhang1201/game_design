@@ -34,6 +34,7 @@ var _label_h_m := 0.0              # a name label's height in model metres (the 
 var _note_drop := 0.0
 var _model_cam := Transform3D.IDENTITY   # the camera as the drill framed it, for show_drill
 var _plate: Array = []             # [box, right, up, centre, margin]: the kit's plate, refitted on a resize
+var _glyph_px := 0.0               # the unmodelled arm's glyph side (war_figure_glyph_px)
 
 
 func _ready() -> void:
@@ -54,6 +55,8 @@ func _fit_viewport() -> void:
 		_material.set_shader_parameter("stroke_px", _stroke_px * s)
 	if _parts_mat != null:
 		_parts_mat.set_shader_parameter("stroke_px", _stroke_px * s)
+	if _glyph_px > 0.0:
+		_fit_glyph()
 	if not _plate.is_empty():
 		_fit_camera()   # the page changed shape (the drill tabs make way): the plate still fits
 
@@ -130,9 +133,18 @@ func _show_glyph(repo: DataRepository, arm: String) -> void:
 	var tex: Texture2D = null
 	if art != null:
 		tex = WarInkIcon.inked(art, repo.war_palette["ink"], repo.bal("war_ink_icon_light_keep"))
-	_glyph.custom_minimum_size = Vector2.ONE * repo.bal("war_figure_glyph_px")
+	_glyph_px = repo.bal("war_figure_glyph_px")
+	_fit_glyph()
 	_glyph.texture = tex
 	_glyph.visible = tex != null
+
+
+## The glyph at its design side, never larger than the page's room for it
+## (the docked folio's slot is small).
+func _fit_glyph() -> void:
+	var room := minf(size.x, size.y) if size.x > 0.0 and size.y > 0.0 else _glyph_px
+	_glyph.custom_minimum_size = Vector2.ONE * minf(_glyph_px, room)
+	_glyph.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 
 
 func glyph_shown() -> bool:

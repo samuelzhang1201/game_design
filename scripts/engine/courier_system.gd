@@ -251,8 +251,10 @@ static func eta_days_to(repo: DataRepository, state: GameState, kind: String, to
 ## directly), then the march from where it stands, walked over the ground and
 ## the weather it will meet (ArmySystem.march_days_between), each counted in
 ## day-ends. 0 for a regiment that cannot march.
+## Through `waypoints` (pack px) along the curve it would walk, under the load
+## `carry` (days; -1 its own) — spec 2026-10-07-march-waypoints.
 static func arrival_days(repo: DataRepository, state: GameState, code: String, dest_px: Vector2,
-		from_px := Vector2(-1, -1), ride := -1) -> int:
+		from_px := Vector2(-1, -1), ride := -1, waypoints: Array = [], carry := -1) -> int:
 	var reg := ArmySystem.regiment(repo, code)
 	if reg.is_empty() or ArmySystem.day_march_m(repo, state, code) <= 0:
 		return 0
@@ -261,7 +263,15 @@ static func arrival_days(repo: DataRepository, state: GameState, code: String, d
 	var from := from_px if from_px.x >= 0.0 else ArmySystem.position_of(repo, state, reg)
 	# the march walked over its own ground and weather, from the day it starts
 	return ride + ArmySystem.march_days_between(repo, state, code, from, dest_px,
-		state.absolute_day() + ride)
+		state.absolute_day() + ride, waypoints, carry)
+
+
+## A march order's waypoints (its `waypoints_m`) in pack px, in order.
+static func waypoints_px(repo: DataRepository, order: Dictionary) -> Array:
+	var out: Array = []
+	for p: Vector2i in MarchRoute.from_pairs(order.get("waypoints_m", [])):
+		out.append(ArmySystem.metres_to_pack(repo, p))
+	return out
 
 
 ## Days until `code` arrives where it was last ordered: a march order still
@@ -272,7 +282,8 @@ static func days_to_arrival(repo: DataRepository, state: GameState, code: String
 	var order: Dictionary = c.get("order", {}) if not c.is_empty() else {}
 	if String(order.get("action_code", "")) == "ARMY_MARCH":
 		var dest := ArmySystem.metres_to_pack(repo, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))
-		return arrival_days(repo, state, code, dest, Vector2(-1, -1), days_left(repo, state, c))
+		return arrival_days(repo, state, code, dest, Vector2(-1, -1), days_left(repo, state, c),
+			waypoints_px(repo, order))
 	if not c.is_empty():
 		return 0   # a halt is riding: the column stops where it is
 	return ArmySystem.days_out(repo, state, code)
@@ -508,8 +519,8 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 	var order: Dictionary = c["order"]
 	match String(order.get("action_code", "")):
 		"ARMY_MARCH":
-			ArmySystem.set_march(repo, state, code, ArmySystem.metres_to_pack(repo,
-				Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"]))))
+			ArmySystem.set_march_m(repo, state, code, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])),
+				MarchRoute.from_pairs(order.get("waypoints_m", [])))
 		"ARMY_GARRISON":
 			ArmySystem.set_garrison(repo, state, code)
 	if state.regiments.has(code):

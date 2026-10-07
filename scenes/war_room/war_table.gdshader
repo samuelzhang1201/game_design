@@ -61,6 +61,9 @@ uniform vec4 grid_ink : source_color = vec4(0.608, 0.173, 0.122, 1.0); // faded 
 uniform float neat_band_alpha = 0.85;
 // the intelligence layer (v2 B Task 9): premultiplied sRGB bytes, as ink_tex
 uniform sampler2D intel_tex : filter_linear_mipmap_anisotropic, hint_default_transparent;
+// the staff's plan layer (spec 2026-10-07-war-room-annotations-and-planning-pieces
+// §2.5): crayon and pen over everything inked, the collar included
+uniform sampler2D plan_tex : filter_linear_mipmap_anisotropic, hint_default_transparent;
 // the fine print (spec 2026-10-07-war-room-scale-hover §3): premultiplied sRGB
 // bytes as ink_tex, faded in by the camera's distance (WarNear.fine_alpha)
 // the near-zoom detail patch (spec 2026-10-07-war-room-scale-hover §2): the ink
@@ -215,6 +218,9 @@ void fragment() {
 	vec4 intel = texture(intel_tex, vec2(UV.x, UV.y * tex_aspect));
 	vec3 intel_straight = srgb_to_linear(intel.rgb / max(intel.a, 1e-4));
 	col = col * (1.0 - intel.a) + intel_straight * intel.a;
+	vec4 planned = texture(plan_tex, vec2(UV.x, UV.y * tex_aspect));
+	vec3 plan_straight = srgb_to_linear(planned.rgb / max(planned.a, 1e-4));
+	col = col * (1.0 - planned.a) + plan_straight * planned.a;
 	ALBEDO = col;
 	ROUGHNESS = paper_roughness;
 }

@@ -147,7 +147,7 @@ func _draw() -> void:
 
 
 ## Each marching regiment's road still ahead: a dashed line DRAPED on the
-## ground from where its piece is DRAWN to where it was sent, and a ring
+## ground from where its piece is DRAWN along its route to where it was sent, and a ring
 ## there, in the realm's own colour as its aim was — the order made visible,
 ## so a click that sent a column is seen to have. Draped, not a straight line
 ## between two projected ends: the column walks the ground's rises and falls,
@@ -167,9 +167,14 @@ func _draw_routes() -> void:
 		var code := String(r["regiment_code"])
 		if ArmySystem.order_of(repo, st, code) != ArmySystem.ORDER_MARCH:
 			continue
-		var from_xz: Vector2 = shown.get(code, ctx.to_world(ArmySystem.position_of(repo, st, r)))
-		var to_xz := ctx.to_world(ArmySystem.destination_of(repo, st, code))
-		var pts := draped(from_xz, to_xz)
+		# along its route still ahead, the curve it walks (spec 2026-10-07-march-waypoints)
+		var prev: Vector2 = shown.get(code, ctx.to_world(ArmySystem.position_of(repo, st, r)))
+		var pts := PackedVector2Array()
+		for p: Vector2 in ArmySystem.route_px(repo, st, code):
+			var xz := ctx.to_world(p)
+			var leg := draped(prev, xz)
+			pts.append_array(leg if pts.is_empty() else leg.slice(1))
+			prev = xz
 		if pts.size() < 2:
 			continue
 		var ink := MapPalette.color_of(repo, String(r.get("kingdom_code", "")))

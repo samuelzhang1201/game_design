@@ -742,7 +742,7 @@ static func _days(repo: DataRepository, state: GameState, anchor: String, c: Dic
 	var to := target_point_m(repo, String(c["kind"]), String(c["id"]))
 	return ArmySystem.march_days_between(repo, state, anchor,
 		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, anchor)), ArmySystem.metres_to_pack(repo, to),
-		-1, max_days)
+		-1, [], -1, max_days)
 
 
 ## A candidate's score with the overlap when another host holds it.

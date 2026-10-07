@@ -20,7 +20,7 @@ const MATERIALS := {
 	"precip_fall": "res://scripts/map3d/precip_fall.gdshader",
 	"precip_drop_rain": "res://scripts/map3d/precip_drop.gdshader",
 	"precip_drop_snow": "res://scripts/map3d/precip_drop.gdshader",
-	"march_trail": "res://scripts/map3d/march_trail.gdshader",
+	"march_dust": "res://scripts/map3d/march_dust.gdshader",
 	"tree_sway": "res://scripts/map3d/tree_sway.gdshader",
 	"tree_card": "res://scripts/map3d/tree_card.gdshader",
 }
@@ -54,7 +54,7 @@ func test_the_previews_are_committed_and_small() -> void:
 ## test_map3d_editor_owned_look.gd holds them; the others are not yet converted.
 const EDITOR_OWNED := ["water_sea", "water_river", "road_line", "trail_line", "cloud_deck", "cloud_shadow",
 	"settlement_ring", "selection_ring", "precip_fall", "precip_drop_rain", "precip_drop_snow",
-	"march_trail", "tree_sway", "tree_card"]
+	"march_dust", "tree_sway", "tree_card"]
 
 
 func test_an_unconverted_material_carries_no_tuned_number() -> void:

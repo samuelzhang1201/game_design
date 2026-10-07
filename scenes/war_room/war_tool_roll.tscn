@@ -1,0 +1,136 @@
+[gd_scene format=3 uid="uid://ct41acasji28f"]
+
+[ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="1_x7yxf"]
+[ext_resource type="StyleBox" uid="uid://cb2lbhrj618ti" path="res://assets/2D/ui/panels/styles/leather_window_24.tres" id="2_dymvn"]
+[ext_resource type="Script" path="res://scripts/war_room/war_tool_roll.gd" id="3_giptu"]
+[ext_resource type="Script" path="res://scripts/war_room/war_tool_slot.gd" id="4_f0ga3"]
+
+[node name="WarToolRoll" type="PanelContainer" unique_id=311334527]
+theme = ExtResource("1_x7yxf")
+theme_override_styles/panel = ExtResource("2_dymvn")
+script = ExtResource("3_giptu")
+
+[node name="Row" type="HBoxContainer" parent="." unique_id=1168919145]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Hand" type="Control" parent="Row" unique_id=2022221510]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "Lay the stick down (Esc)"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.8862745, 0.80784315, 0.627451, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
+
+[node name="Blue" type="Control" parent="Row" unique_id=575707959]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "The woad crayon: ours"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+key = "blue"
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.18039216, 0.29803923, 0.5254902, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
+
+[node name="Red" type="Control" parent="Row" unique_id=71152088]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "The minium crayon: theirs"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+key = "red"
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.6901961, 0.18039216, 0.10980392, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
+
+[node name="Ink" type="Control" parent="Row" unique_id=867606698]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "The pen"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+key = "ink"
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.16862746, 0.12941177, 0.09411765, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
+
+[node name="Sep0" type="VSeparator" parent="Row" unique_id=286366263]
+layout_mode = 2
+
+[node name="Arrow" type="Control" parent="Row" unique_id=1267045924]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "Axis arrow (1)"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+key = "arrow"
+group = "kind"
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.8862745, 0.80784315, 0.627451, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
+
+[node name="Front" type="Control" parent="Row" unique_id=545967459]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "Front line, its teeth on the side it faces (2)"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+key = "front"
+group = "kind"
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.8862745, 0.80784315, 0.627451, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
+
+[node name="Phase" type="Control" parent="Row" unique_id=286727353]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "Phase line (3)"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+key = "phase"
+group = "kind"
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.8862745, 0.80784315, 0.627451, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
+
+[node name="Objective" type="Control" parent="Row" unique_id=1806516951]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "Objective (4)"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+key = "objective"
+group = "kind"
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.8862745, 0.80784315, 0.627451, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
+
+[node name="Sep1" type="VSeparator" parent="Row" unique_id=732155831]
+layout_mode = 2
+
+[node name="Piece" type="Control" parent="Row" unique_id=1933568207]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "Place a supposed enemy"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+key = "piece"
+group = "action"
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.5411765, 0.16470589, 0.10980392, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
+
+[node name="Scrape" type="Control" parent="Row" unique_id=102505361]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+tooltip_text = "Scrape away a mark or a supposed piece"
+mouse_default_cursor_shape = 2
+script = ExtResource("4_f0ga3")
+key = "scrape"
+group = "action"
+glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
+stick_color = Color(0.8862745, 0.80784315, 0.627451, 1)
+ring = Color(0.8392157, 0.69803923, 0.3764706, 1)

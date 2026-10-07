@@ -947,7 +947,7 @@ func test_the_march_walk_stops_at_the_cap() -> void:
 	var days := ArmySystem.march_days_between(repo, s, c, from, to)
 	assert_gt(days, 3, "a long march")
 	for cap: int in [1, days - 1, days, days + 3]:
-		assert_eq(ArmySystem.march_days_between(repo, s, c, from, to, -1, cap), mini(days, cap), "cap %d" % cap)
+		assert_eq(ArmySystem.march_days_between(repo, s, c, from, to, -1, [], -1, cap), mini(days, cap), "cap %d" % cap)
 	var horizon := EnemyAi.supply_reach_days(repo, s, _host("main"))
 	for cand: Dictionary in EnemyAi.candidates(repo, s, _host("main")):
 		assert_lte(int(cand["distance_days"]), horizon, "within supply reach, walked exactly")

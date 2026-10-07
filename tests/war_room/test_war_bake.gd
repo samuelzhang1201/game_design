@@ -57,3 +57,31 @@ func test_woods_are_where_the_canopy_is() -> void:
 
 func test_no_bake_no_reader() -> void:
 	assert_null(WarBake.open(dir + "/nothing"))
+
+
+## The build's rivers.json (world metres, beside bake/) read as pack px:
+## (x - pack_origin) / m_per_px, source to mouth.
+func test_the_builds_river_courses_are_read_in_pack_px() -> void:
+	var root := RunDir.dir("war_bake_rivers")
+	var d := root + "/bake"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(d))
+	var world := {"m_per_px": 50.0, "vertex_m": 20.0, "vertices": [4, 4], "padded": [4, 4],
+		"import_corner": [-100.0, -200.0], "pack_origin": [-100.0, -200.0], "sea_y": 0.0}
+	var f := FileAccess.open(d + "/world.json", FileAccess.WRITE)
+	f.store_string(JSON.stringify(world))
+	f.close()
+	var h := FileAccess.open(d + "/height.r32", FileAccess.WRITE)
+	for i in 16:
+		h.store_float(0.0)
+	h.close()
+	var b := WarBake.open(d)
+	assert_true(b.river_courses().is_empty(), "no rivers.json, no courses")
+	WarBake.forget()
+	b = WarBake.open(d)
+	f = FileAccess.open(root + "/rivers.json", FileAccess.WRITE)
+	f.store_string(JSON.stringify({"rivers": [{"code": "aa", "points": [[-100.0, -200.0, 5.0, 6.0, 0.0],
+		[400.0, 300.0, 5.0, 6.0, 0.0], [900.0, 300.0, 5.0, 9.0, 1.0]]}, {"code": "bb", "points": [[0.0, 0.0, 0, 0, 0]]}]}))
+	f.close()
+	var c := b.river_courses()
+	assert_eq(c.keys(), ["aa"], "a course of one point is no river")
+	assert_eq(c["aa"], PackedVector2Array([Vector2(0, 0), Vector2(10, 10), Vector2(20, 10)]))

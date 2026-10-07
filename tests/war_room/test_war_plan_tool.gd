@@ -1,0 +1,123 @@
+extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
+## The staff's tools (spec 2026-10-07-war-room-annotations-and-planning-pieces
+## §2.4, rulings 15-17): the stick in hand, a drag drawn and smoothed, a ring
+## by compass, a short drag nothing, picking a stroke or its handle, undo.
+
+var repo: DataRepository
+var tool: WarPlanTool
+
+
+func before_each() -> void:
+	repo = SuiteData.repo()
+	tool = WarPlanTool.new(repo)
+
+
+func _drag(points: Array, shift := false) -> Dictionary:
+	# 1 pack px = 2 screen px
+	tool.press(points[0], points[0] * 2.0)
+	for p: Vector2 in points.slice(1):
+		tool.move(p, p * 2.0)
+	return tool.release(points[points.size() - 1], points[points.size() - 1] * 2.0, shift, 2.0)
+
+
+func test_the_hand_holds_nothing() -> void:
+	assert_false(tool.in_hand())
+	tool.press(Vector2.ZERO, Vector2.ZERO)
+	assert_false(tool.drawing)
+	assert_eq(tool.release(Vector2(50, 0), Vector2(100, 0), false, 2.0), {})
+
+
+func test_a_kind_takes_its_default_stick_and_a_stick_keeps_the_kind() -> void:
+	tool.pick_kind("phase")
+	assert_eq(tool.stick, "ink", "a pen kind is the pen's")
+	tool.pick_kind("arrow")
+	assert_eq(tool.stick, "blue", "a crayon kind from the pen: the blue crayon")
+	tool.pick_stick("red")
+	assert_eq(tool.kind, "arrow")
+	assert_true(tool.in_hand())
+	tool.put_down()
+	assert_false(tool.in_hand())
+	tool.pick_stick("red")
+	assert_eq(tool.kind, "arrow", "a stick alone takes the last kind")
+
+
+func test_a_drag_is_smoothed_to_a_few_points() -> void:
+	tool.pick_kind("arrow")
+	var pts: Array = []
+	for i in 60:
+		pts.append(Vector2(i * 2.0, sin(i * 0.1) * 10.0))
+	var d := _drag(pts)
+	assert_eq(String(d["kind"]), "arrow")
+	assert_eq(String(d["colour"]), "blue")
+	var ctrl: PackedVector2Array = d["pts"]
+	assert_lte(ctrl.size(), int(repo.bal("war_plan_points_max")))
+	assert_gte(ctrl.size(), 3, "a wave keeps its bends")
+	assert_eq(ctrl[0], pts[0])
+	assert_eq(ctrl[ctrl.size() - 1], pts[pts.size() - 1])
+	assert_true(tool.in_hand(), "the stick stays in hand")
+
+
+func test_shift_draws_it_straight() -> void:
+	tool.pick_kind("front")
+	var d := _drag([Vector2(0, 0), Vector2(10, 8), Vector2(30, 0)], true)
+	assert_eq(d["pts"], PackedVector2Array([Vector2(0, 0), Vector2(30, 0)]))
+
+
+func test_a_short_drag_draws_nothing() -> void:
+	tool.pick_kind("arrow")
+	var px := repo.bal("war_plan_min_len_px")
+	assert_eq(_drag([Vector2(0, 0), Vector2(px * 0.25, 0)]), {}, "shorter than war_plan_min_len_px on the screen")
+
+
+func test_a_ring_is_a_compass() -> void:
+	tool.pick_kind("objective")
+	var d := _drag([Vector2(10, 10), Vector2(20, 10), Vector2(40, 10)])
+	assert_eq(d["pts"], PackedVector2Array([Vector2(10, 10)]))
+	assert_almost_eq(float(d["r"]), 30.0, 0.0001)
+	assert_eq(String(d["colour"]), "ink")
+
+
+func test_the_live_preview_follows_the_drag() -> void:
+	tool.pick_kind("arrow")
+	tool.press(Vector2.ZERO, Vector2.ZERO)
+	tool.move(Vector2(20, 0), Vector2(40, 0))
+	assert_eq(tool.preview().size(), 2)
+
+
+## Strokes in screen px: {id, kind, ctrl, r}.
+func test_picking_a_handle_before_the_line() -> void:
+	var strokes := [
+		{"id": "s1", "kind": "arrow", "ctrl": PackedVector2Array([Vector2(0, 0), Vector2(100, 0)]), "r": 0.0},
+		{"id": "s2", "kind": "objective", "ctrl": PackedVector2Array([Vector2(300, 300)]), "r": 40.0}]
+	assert_eq(WarPlanTool.hit(repo, strokes, Vector2(50, 4), "", 8.0), {"id": "s1", "handle": -1})
+	assert_eq(WarPlanTool.hit(repo, strokes, Vector2(50, 30), "", 8.0), {})
+	assert_eq(WarPlanTool.hit(repo, strokes, Vector2(340, 302), "", 8.0), {"id": "s2", "handle": -1}, "a ring by its rim")
+	assert_eq(WarPlanTool.hit(repo, strokes, Vector2(98, 1), "s1", 8.0), {"id": "s1", "handle": 1},
+		"the chosen stroke's handle first")
+	assert_eq(WarPlanTool.hit(repo, strokes, Vector2(341, 300), "s2", 8.0), {"id": "s2", "handle": 1},
+		"a ring's rim handle is its radius")
+
+
+func test_undo_and_redo() -> void:
+	var a := {"rev": 1}
+	var b := {"rev": 2}
+	var c := {"rev": 3}
+	tool.remember(a)
+	tool.remember(b)
+	assert_eq(tool.undo(c), b)
+	assert_eq(tool.undo(b), a)
+	assert_eq(tool.undo(a), {}, "nothing further back")
+	assert_eq(tool.redo(a), b)
+	tool.remember(b)
+	assert_eq(tool.redo(c), {}, "a new edit forgets the redo")
+
+
+func test_undo_is_capped() -> void:
+	repo.balance["war_plan_undo_max"] = 2
+	tool = WarPlanTool.new(repo)
+	for i in 5:
+		tool.remember({"rev": i})
+	assert_eq(tool.undo({"rev": 9}), {"rev": 4})
+	assert_eq(tool.undo({"rev": 4}), {"rev": 3})
+	assert_eq(tool.undo({"rev": 3}), {})

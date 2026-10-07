@@ -10,11 +10,15 @@ var px: Dictionary = {}   # the war_ink_* widths and ratios, by short key
 var font: Font
 var intel := false   # the intelligence layer (WarIntelInk), not the sheet's ink
 var fine := false    # the fine print (WarFinePrint), not the sheet's ink
+var plan := false    # the staff's plan layer (WarPlanInk), drawn by WarPlanDraw with `look`
+var look: Dictionary = {}
 
 
 func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font, as_intel := false, as_fine := false) -> void:
 	intel = as_intel
 	fine = as_fine
+	plan = false
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_PARENT_NODE
 	ink = p_ink
 	pal = p_pal
 	px = p_px
@@ -22,7 +26,22 @@ func paint(p_ink: Dictionary, p_pal: Dictionary, p_px: Dictionary, p_font: Font,
 	queue_redraw()
 
 
+## The plan layer: WarPlanInk's parts drawn with `p_look` (WarPlanDraw.paint).
+func paint_plan(p_ink: Dictionary, p_look: Dictionary) -> void:
+	intel = false
+	fine = false
+	plan = true
+	ink = p_ink
+	look = p_look
+	# the tooth's UVs run past 1 across a stroke: it tiles (a sampling rule, not a look)
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	queue_redraw()
+
+
 func _draw() -> void:
+	if plan:
+		WarPlanDraw.paint(self, ink, look)
+		return
 	if ink.is_empty():
 		return
 	if intel:
@@ -40,17 +59,9 @@ func _draw() -> void:
 			draw_polyline(_closed(loop), band, float(px["band"]), true)
 	for poly: PackedVector2Array in ink["coasts"]:
 		draw_polyline(poly, pal["sea_ink"], float(px["coast"]), true)
-	for rv: Dictionary in ink["rivers"]:   # widening from source to mouth, and named
-		var poly: PackedVector2Array = rv["poly"]
-		var n := poly.size()
-		for i in n - 1:
-			var w := lerpf(float(rv["w0"]), float(rv["w1"]), float(i) / float(maxi(n - 2, 1)))
-			draw_line(poly[i], poly[i + 1], pal["river_ink"], w, true)
-		if String(rv["label"]) != "" and n >= 2:
-			@warning_ignore("integer_division")
-			var mid := poly[n / 2]
-			draw_string(font, mid + Vector2(float(px["river_label"]) * 0.4, -float(px["river_label"]) * 0.3), String(rv["label"]),
-				HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["river_label"]), pal["river_ink"])
+	for rv: Dictionary in ink["rivers"]:   # one tapered stroke from source to mouth, named along its course
+		_draw_river(rv, pal["river_ink"])
+		_name_river(rv, pal["river_ink"])
 	for poly: PackedVector2Array in ink["seams"]:  # fine work: a hairline (the segments arrive two points apiece)
 		draw_polyline(poly, c_faint, float(px["seam"]), true)
 	for b: Dictionary in ink["borders"]:
@@ -160,6 +171,114 @@ func _draw() -> void:
 	_draw_graticule(c_ink)
 
 
+## A river as ONE continuous ribbon (owner 2026-10-07: no stiff segments, no
+## visible joints): its half-width swells with the length run from the source
+## (w0) to the mouth (w1), each point offset along the bisector of its two
+## legs, the edges feathered to clear over war_ink_river_feather_px so the
+## triangles are as smooth as an antialiased line.
+func _draw_river(rv: Dictionary, color: Color) -> void:
+	var poly: PackedVector2Array = rv["poly"]
+	var n := poly.size()
+	if n < 2:
+		return
+	var arc := _arc(poly)
+	var total := maxf(arc[n - 1], 0.001)
+	var feather := float(px.get("river_feather", 1.0))
+	var clear := color
+	clear.a = 0.0
+	var pts := PackedVector2Array()
+	var cols := PackedColorArray()
+	var idx := PackedInt32Array()
+	for i in n:
+		var dir := Vector2.ZERO
+		if i > 0:
+			dir += (poly[i] - poly[i - 1]).normalized()
+		if i < n - 1:
+			dir += (poly[i + 1] - poly[i]).normalized()
+		var nrm := (dir.normalized() if dir.length_squared() > 0.0 else Vector2.RIGHT).orthogonal()
+		var t := lerpf(float(rv.get("t0", 0.0)), float(rv.get("t1", 1.0)), arc[i] / total)   # along the whole course
+		var h := lerpf(float(rv["w0"]), float(rv["w1"]), t) * 0.5
+		for off: float in [h + feather, h, -h, -h - feather]:
+			pts.append(poly[i] + nrm * off)
+		cols.append_array([clear, color, color, clear])
+	for i in n - 1:
+		var a := i * 4
+		for band in 3:   # feather, core, feather
+			idx.append_array([a + band, a + band + 1, a + 4 + band, a + band + 1, a + 5 + band, a + 4 + band])
+	RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), idx, pts, cols)
+
+
+## A river's name written ALONG its course, letter by letter, on its upper side
+## and reading left to right, over the middle of its longest stretch on the
+## sheet (WarSheetInk.longest_run); the baseline follows the course averaged
+## over a few letters, so it bends with the river but not with every meander.
+func _name_river(rv: Dictionary, color: Color) -> void:
+	var text := String(rv["label"])
+	var run: Vector2i = rv.get("label_run", Vector2i(0, -1))
+	if text == "" or run.y <= run.x:
+		return
+	var size := int(px["river_label"])
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var line := (rv["poly"] as PackedVector2Array).slice(run.x, run.y + 1)
+	var arc := _arc(line)
+	var total := arc[arc.size() - 1]
+	if total < width * 1.3:
+		return   # too little of it on the sheet to carry its name
+	# the baseline: points every half letter over the name's span, averaged
+	var step := float(size) * 0.5
+	var s0 := total * 0.5 - width * 0.5 - float(size)
+	var raw := PackedVector2Array()
+	var at := s0
+	while at <= total * 0.5 + width * 0.5 + float(size):
+		raw.append(_point_at(line, arc, at))
+		at += step
+	var base := PackedVector2Array()
+	for i in raw.size():
+		var sum := Vector2.ZERO
+		var c := 0
+		for j in range(maxi(0, i - 3), mini(raw.size(), i + 4)):
+			sum += raw[j]
+			c += 1
+		base.append(sum / float(c))
+	if base[base.size() - 1].x < base[0].x:
+		base.reverse()   # never upside down
+	var barc := _arc(base)
+	var lift := float(rv["w1"]) * 0.5 + float(size) * float(px.get("river_label_lift", 0.35))
+	var halo: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
+	halo.a = 0.6
+	var pos := (barc[barc.size() - 1] - width) * 0.5
+	for i in text.length():
+		var ch := text.substr(i, 1)
+		var adv := font.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		var mid := pos + adv * 0.5
+		var tangent := (_point_at(base, barc, mid + step) - _point_at(base, barc, mid - step)).normalized()
+		draw_set_transform(_point_at(base, barc, mid) + tangent.orthogonal() * lift, tangent.angle(), Vector2.ONE)
+		draw_char_outline(font, Vector2(-adv * 0.5, 0.0), ch, size, maxi(int(float(size) * 0.15), 1), halo)
+		draw_char(font, Vector2(-adv * 0.5, 0.0), ch, size, color)
+		pos += adv
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## The length run along `poly` to each of its points.
+static func _arc(poly: PackedVector2Array) -> PackedFloat32Array:
+	var arc := PackedFloat32Array()
+	arc.resize(poly.size())
+	for i in range(1, poly.size()):
+		arc[i] = arc[i - 1] + poly[i].distance_to(poly[i - 1])
+	return arc
+
+
+## The point `s` along `poly` (held to its ends).
+static func _point_at(poly: PackedVector2Array, arc: PackedFloat32Array, s: float) -> Vector2:
+	if s <= 0.0:
+		return poly[0]
+	var i := arc.bsearch(s)
+	if i >= poly.size():
+		return poly[poly.size() - 1]
+	var span := arc[i] - arc[i - 1]
+	return poly[i - 1].lerp(poly[i], (s - arc[i - 1]) / span if span > 0.0 else 0.0)
+
+
 ## The meridians' and parallels' figures inside the neat line: a meridian's
 ## beside its line (the line never runs through the figure), a parallel's
 ## just above its line, each set in from its own edge.
@@ -188,8 +307,7 @@ func _draw_graticule(_c_ink: Color) -> void:
 		draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c_fig)
 
 
-## What we know (WarIntelInk), in the intel ink: supply roads dashed and
-## fading with their loss, couriers with their road ahead and a pennon (a spy's
+## What we know (WarIntelInk), in the intel ink: couriers with their road ahead and a pennon (a spy's
 ## in rubric), weather marks, spy reports as dashed rings with their words.
 func _draw_intel() -> void:
 	var c: Color = pal["intel_ink"]
@@ -213,11 +331,6 @@ func _draw_intel() -> void:
 		draw_string_outline(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, maxi(int(w * 3.0), 1),
 			pal.get("parchment", pal.get("paper", Color.WHITE)))
 		draw_string(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, pal["intel_ink"])
-	for s: Dictionary in ink["supply"]:
-		var col := c
-		col.a *= clampf(1.0 - float(s["loss_permille"]) / 1000.0 * float(px["supply_loss_fade"]), 0.25, 1.0)
-		for d: PackedVector2Array in WarSheetInk.dashed(s["poly"], float(px["supply_dash"]), float(px["supply_gap"])):
-			draw_polyline(d, col, float(px["supply"]), true)
 	for cr: Dictionary in ink["couriers"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], float(px["supply_dash"]) / 1.5, float(px["supply_gap"])):
 			draw_polyline(d, c, float(px["supply"]) * 0.7, true)

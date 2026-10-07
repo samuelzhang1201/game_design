@@ -11,12 +11,14 @@ extends RefCounted
 
 ## The painter's widths (war_ink_<k>_px) and ratios (war_ink_<k>), by short key.
 const INK_PX := ["road", "trail", "river", "coast", "border", "band", "seam", "town", "label", "dash", "gap",
-	"wood", "manor", "manor_label", "manor_dash", "manor_gap", "river_label", "bridge", "trade", "works", "market"]
+	"wood", "manor", "manor_label", "manor_dash", "manor_gap", "river_label", "bridge", "trade", "works", "market",
+	"river_feather"]
 const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_dot_ratio", "label_gap_ratio",
-	"label_drop_ratio", "peak_label_ratio", "peak_half_w", "peak_drop", "border_dot_ratio", "wall_ratio", "anchor_ratio", "char_w"]
+	"label_drop_ratio", "peak_label_ratio", "peak_half_w", "peak_drop", "border_dot_ratio", "wall_ratio", "anchor_ratio", "char_w",
+	"river_label_lift"]
 ## The intelligence layer's widths (war_intel_<k>_px) and ratios (war_intel_<k>).
 const INTEL_PX := ["supply", "supply_dash", "supply_gap", "courier", "weather", "label", "spy_ring", "hazard", "hazard_label"]
-const INTEL_RATIOS := ["supply_loss_fade", "hazard_alpha"]
+const INTEL_RATIOS := ["hazard_alpha"]
 ## The fine print's widths (war_fine_<k>_px), by short key.
 const FINE_PX := ["note", "route", "mark", "figure"]
 ## How many sheets' ink are kept: the laid one and one more.
@@ -26,6 +28,7 @@ const REST := Vector2i(2, 2)
 
 var cache: Dictionary = {}   # sheet index -> {key, tex}
 var intel: Dictionary = {}
+var plan: Dictionary = {}    # the laid sheet's plan layer (WarPlanInk): {sheet, key, tex}
 var fine: Dictionary = {}    # sheet index -> {key, tex}: the fine print (WarFinePrint)   # the laid sheet's intelligence layer: {sheet, key, tex}
 var _order: Array[int] = []  # cached sheets, least recently laid first
 ## The frame the draw is read back after (a headless run never draws, so a
@@ -177,3 +180,52 @@ func intel_for(repo: DataRepository, state: GameState, sheet: int, viewport: Sub
 	img.generate_mipmaps()
 	intel = {"sheet": sheet, "key": key, "tex": ImageTexture.create_from_image(img)}
 	return intel["tex"]
+
+
+## The laid sheet's plan layer (WarPlanInk: the staff's strokes, spec
+## 2026-10-07-war-room-annotations-and-planning-pieces §2.5), redrawn when the
+## plans' revision turns; null when none is to be had (headless) or a later
+## draw took the viewport over. An empty layer is still drawn (it clears).
+func plan_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubViewport,
+		painter: WarInkPainter, font: Font, caps: Font, still_wanted: Callable) -> Texture2D:
+	var key := WarPlanInk.cache_key(state, sheet)
+	if int(plan.get("key", -1)) == key and int(plan.get("sheet", -1)) == sheet:
+		return plan.get("tex") as Texture2D
+	var row: Dictionary = WarSheets.series(repo)[sheet]
+	var rect: Rect2 = row["rect"]
+	var w := int(repo.bal("war_plan_texture_px"))
+	var size := Vector2i(w, maxi(1, ceili(w * rect.size.y / rect.size.x)))
+	_gen += 1
+	var gen := _gen
+	viewport.size = size
+	var table_w := repo.bal("war_table_w_m")
+	var mm := float(w) / (table_w * 1000.0)
+	painter.paint_plan(WarPlanInk.strokes(repo, state, row, size.x, table_w), plan_look(repo, tooth(), mm, font, caps))
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	await frame_done
+	if gen != _gen:
+		return null
+	var img: Image = viewport.get_texture().get_image() if bool(still_wanted.call()) else null
+	if is_instance_valid(viewport):
+		viewport.size = REST
+	if img == null or img.is_empty():
+		return null
+	img.generate_mipmaps()
+	plan = {"sheet": sheet, "key": key, "tex": ImageTexture.create_from_image(img)}
+	return plan["tex"]
+
+
+## The wax crayon's tooth (GameArt.WAR_PLAN_ART "wax_tooth"): a seamless
+## noise whose alpha is where the wax took; null draws the crayon flat.
+static func tooth() -> Texture2D:
+	return GameArt.table(GameArt.WAR_PLAN_ART).of("wax_tooth") as Texture2D
+
+
+## WarPlanDraw's look at `mm` px a table millimetre.
+static func plan_look(repo: DataRepository, tooth: Texture2D, mm: float, font: Font, caps: Font) -> Dictionary:
+	var pal := repo.war_palette
+	var cells := float(tooth.get_width()) if tooth != null else 1.0
+	return {"colours": {"blue": pal["plan_blue"], "red": pal["plan_red"], "ink": pal["ink"]},
+		"tooth": tooth, "tooth_uv": repo.bal("war_plan_tooth_scale") / maxf(mm, 0.0001) / cells,
+		"edge_dark": repo.bal("war_plan_edge_dark"), "edge_px": maxf(repo.bal("war_plan_edge_mm") * mm, 1.0),
+		"font": font, "caps": caps, "halo": pal.get("parchment", Color.WHITE)}
