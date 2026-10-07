@@ -103,3 +103,121 @@ static func food_price_permille(repo: DataRepository, market_id: String) -> int:
 ## A good's name as goods.csv gives it; its code when the table has none.
 static func good_label(repo: DataRepository, good: String) -> String:
 	return String((repo.world_table("economy", "goods").get(good, {}) as Dictionary).get("label", good))
+
+
+## The pack's trade laid on the road network (ruling 5): {Vector2i(a, b) (RoadGraph
+## node ids, a < b): gold a month}. Every deal has a market on one side; its
+## month (units x price, the gold MarketSystem counts) is summed per market–
+## town pair (a market buying from a market: its centre town), rounded once,
+## and laid on every segment of the shortest road from the market's centre
+## town — one tree per market, markets in numeric order. A town farther than
+## courier_offroad_max_km from the network, or not reached, adds nothing.
+static func trade_flows(repo: DataRepository) -> Dictionary:
+	var key := _key(repo, "flows")
+	if _cache.has(key):
+		return _cache[key]
+	var centre: Dictionary = {}
+	for m: Dictionary in markets(repo):
+		centre[String(m["id"])] = String(m["burg"])
+	var pairs: Dictionary = {}   # market id -> {town: gold}
+	for d: Dictionary in repo.deals:
+		var market := ""
+		var other := ""
+		var other_type := ""
+		if String(d["seller_type"]) == "market":
+			market = String(d["seller"])
+			other = String(d["buyer"])
+			other_type = String(d["buyer_type"])
+		elif String(d["buyer_type"]) == "market":
+			market = String(d["buyer"])
+			other = String(d["seller"])
+			other_type = String(d["seller_type"])
+		if not centre.has(market):
+			continue
+		var town := String(centre.get(other, "")) if other_type == "market" else other
+		if not repo.burgs.has(town) or town == String(centre[market]):
+			continue
+		if not pairs.has(market):
+			pairs[market] = {}
+		pairs[market][town] = float((pairs[market] as Dictionary).get(town, 0.0)) + float(d["units"]) * float(d["price"])
+	var g := RoadGraph.of_pack(repo)
+	var reach := repo.bal("courier_offroad_max_km") * 1000.0
+	var node_of: Dictionary = {}   # town -> node, -1 off the roads
+	var out: Dictionary = {}
+	var ids: Array = pairs.keys()
+	ids.sort_custom(func(a: String, b: String) -> bool: return int(a) < int(b))
+	for id: String in ids:
+		var start := _node_of(repo, g, String(centre[id]), reach, node_of)
+		if start < 0:
+			continue
+		var tree := g.shortest(start)
+		var towns: Array = (pairs[id] as Dictionary).keys()
+		towns.sort()
+		for town: String in towns:
+			var gold := roundi(float(pairs[id][town]))
+			var goal := _node_of(repo, g, town, reach, node_of)
+			if gold <= 0 or goal < 0 or goal == start or int(tree["dist"][goal]) < 0:
+				continue
+			var at := goal
+			while int(tree["prev"][at]) >= 0:
+				var p := int(tree["prev"][at])
+				var seg := Vector2i(mini(p, at), maxi(p, at))
+				out[seg] = int(out.get(seg, 0)) + gold
+				at = p
+	_cache[key] = out
+	return out
+
+
+static func _node_of(repo: DataRepository, g: RoadGraph, town: String, reach: float, memo: Dictionary) -> int:
+	if memo.has(town):
+		return int(memo[town])
+	var b: Dictionary = repo.burgs[town]
+	var at := ArmySystem.pack_to_metres(repo, Vector2(float(b["x"]), float(b["y"])))
+	var node := g.nearest(at)
+	if node >= 0 and Vector2(at).distance_to(Vector2(g.nodes[node])) > reach:
+		node = -1
+	memo[town] = node
+	return node
+
+
+## A segment's weight on the sheet, 0..3 by war_trade_tier<N>_gold.
+static func trade_tier(repo: DataRepository, gold: int) -> int:
+	var tier := 0
+	for n in [1, 2, 3]:
+		if float(gold) >= repo.bal("war_trade_tier%d_gold" % n):
+			tier = n
+	return tier
+
+
+## The drawn segments (tier >= 1) with an end inside `rect`, pack px, in the
+## flows' own order.
+static func trade_segments(repo: DataRepository, rect: Rect2) -> Array:
+	var g := RoadGraph.of_pack(repo)
+	var flows := trade_flows(repo)
+	var out: Array = []
+	for seg: Vector2i in flows:
+		var tier := trade_tier(repo, int(flows[seg]))
+		if tier <= 0:
+			continue
+		var a := ArmySystem.metres_to_pack(repo, g.nodes[seg.x])
+		var b := ArmySystem.metres_to_pack(repo, g.nodes[seg.y])
+		if rect.has_point(a) or rect.has_point(b):
+			out.append({"poly": PackedVector2Array([a, b]), "tier": tier})
+	return out
+
+
+## The gold a month on the flow segment nearest `at` (pack px) within
+## army_road_reach_m; 0 when no trade road is that near. The first of equals wins.
+static func trade_at(repo: DataRepository, at: Vector2) -> int:
+	var g := RoadGraph.of_pack(repo)
+	var flows := trade_flows(repo)
+	var m := Vector2(ArmySystem.pack_to_metres(repo, at))
+	var reach := repo.bal("army_road_reach_m")
+	var best := INF
+	var gold := 0
+	for seg: Vector2i in flows:
+		var d := m.distance_to(Geometry2D.get_closest_point_to_segment(m, Vector2(g.nodes[seg.x]), Vector2(g.nodes[seg.y])))
+		if d <= reach and d < best:
+			best = d
+			gold = int(flows[seg])
+	return gold

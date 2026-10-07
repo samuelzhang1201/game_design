@@ -71,3 +71,109 @@ func test_a_markets_food_price_by_hand() -> void:
 	var first := String(WarEconomy.markets(repo)[0]["id"])
 	assert_eq(WarEconomy.food_price_permille(repo, first), 471)
 	assert_eq(WarEconomy.food_price_permille(repo, "no_such_market"), 1000, "no food held: the catalogue")
+
+
+## A town reachable on the roads from the first market's centre, by another node.
+func _reachable_town(m: Dictionary) -> String:
+	var g := RoadGraph.of_pack(repo)
+	var start := g.nearest(ArmySystem.pack_to_metres(repo, m["at"]))
+	var tree := g.shortest(start)
+	var reach := repo.bal("courier_offroad_max_km") * 1000.0
+	var codes: Array = repo.burgs.keys()
+	codes.sort()
+	for code: String in codes:
+		var b: Dictionary = repo.burgs[code]
+		var at := ArmySystem.pack_to_metres(repo, Vector2(float(b["x"]), float(b["y"])))
+		var node := g.nearest(at)
+		if node != start and int(tree["dist"][node]) > 0 and Vector2(at).distance_to(Vector2(g.nodes[node])) <= reach:
+			return code
+	return ""
+
+
+func test_a_pairs_gold_lies_on_every_segment_of_its_path_and_nowhere_else() -> void:
+	var m: Dictionary = WarEconomy.markets(repo)[0]
+	var town := _reachable_town(m)
+	assert_ne(town, "")
+	repo.deals = [{"seller_type": "market", "seller": String(m["id"]), "buyer_type": "burg", "buyer": town,
+		"good": "grain", "units": 10.0, "price": 3.0}]
+	var flows := WarEconomy.trade_flows(repo)
+	var g := RoadGraph.of_pack(repo)
+	var tree := g.shortest(g.nearest(ArmySystem.pack_to_metres(repo, m["at"])))
+	var b: Dictionary = repo.burgs[town]
+	var goal := g.nearest(ArmySystem.pack_to_metres(repo, Vector2(float(b["x"]), float(b["y"]))))
+	assert_eq(flows.size(), g.route(tree, goal).size(), "one entry per segment of the path")
+	for seg: Vector2i in flows:
+		assert_eq(int(flows[seg]), 30)
+		assert_lt(seg.x, seg.y)
+
+
+func test_a_towns_sale_to_its_market_runs_the_same_road() -> void:
+	var m: Dictionary = WarEconomy.markets(repo)[0]
+	var town := _reachable_town(m)
+	repo.deals = [{"seller_type": "burg", "seller": town, "buyer_type": "market", "buyer": String(m["id"]),
+		"good": "grain", "units": 2.0, "price": 2.6}]
+	var flows := WarEconomy.trade_flows(repo)
+	assert_gt(flows.size(), 0)
+	for seg: Vector2i in flows:
+		assert_eq(int(flows[seg]), 5, "5.2 gold rounded once to whole gold")
+
+
+func test_a_market_to_market_deal_runs_between_their_centres() -> void:
+	var ms := WarEconomy.markets(repo)
+	repo.deals = [{"seller_type": "market", "seller": String(ms[0]["id"]), "buyer_type": "market", "buyer": String(ms[1]["id"]),
+		"good": "grain", "units": 10.0, "price": 1.0},
+		{"seller_type": "market", "seller": String(ms[0]["id"]), "buyer_type": "burg", "buyer": String(ms[0]["burg"]),
+		"good": "grain", "units": 10.0, "price": 1.0}]
+	var flows := WarEconomy.trade_flows(repo)
+	for seg: Vector2i in flows:
+		assert_eq(int(flows[seg]), 10, "the market's own centre town adds nothing")
+
+
+func test_towns_off_the_roads_add_nothing() -> void:
+	repo.balance["courier_offroad_max_km"] = -1.0
+	assert_eq(WarEconomy.trade_flows(repo).size(), 0)
+
+
+func test_the_flows_are_built_once_per_pack() -> void:
+	var a := WarEconomy.trade_flows(repo)
+	var runs := RoadGraph.of_pack(repo).dijkstra_runs
+	var b := WarEconomy.trade_flows(repo)
+	assert_eq(RoadGraph.of_pack(repo).dijkstra_runs, runs)
+	assert_eq(a, b)
+	assert_eq(WarEconomy.trade_flows(SuiteData.repo()), a, "a fresh copy of the pack lays the same flows")
+	for seg: Vector2i in a:
+		assert_typeof(a[seg], TYPE_INT)
+
+
+func test_tiers_by_the_thresholds() -> void:
+	repo.balance["war_trade_tier1_gold"] = 40.0
+	repo.balance["war_trade_tier2_gold"] = 120.0
+	repo.balance["war_trade_tier3_gold"] = 300.0
+	assert_eq(WarEconomy.trade_tier(repo, 39), 0)
+	assert_eq(WarEconomy.trade_tier(repo, 40), 1)
+	assert_eq(WarEconomy.trade_tier(repo, 299), 2)
+	assert_eq(WarEconomy.trade_tier(repo, 300), 3)
+
+
+func test_the_trade_at_a_point_on_and_off_the_road() -> void:
+	var flows := WarEconomy.trade_flows(repo)
+	var g := RoadGraph.of_pack(repo)
+	var busiest := Vector2i(-1, -1)
+	for seg: Vector2i in flows:
+		if busiest.x < 0 or int(flows[seg]) > int(flows[busiest]):
+			busiest = seg
+	var mid_m := Vector2i((Vector2(g.nodes[busiest.x]) + Vector2(g.nodes[busiest.y])) * 0.5)
+	assert_eq(WarEconomy.trade_at(repo, ArmySystem.metres_to_pack(repo, mid_m)), int(flows[busiest]))
+	assert_eq(WarEconomy.trade_at(repo, Vector2(-100000, -100000)), 0)
+
+
+func test_segments_are_the_drawn_tiers_touching_the_rect() -> void:
+	var m: Dictionary = WarEconomy.markets(repo)[0]
+	var rect := Rect2(m["at"] - Vector2(40, 40), Vector2(80, 80))
+	var segs := WarEconomy.trade_segments(repo, rect)
+	assert_gt(segs.size(), 0)
+	for s: Dictionary in segs:
+		assert_between(int(s["tier"]), 1, 3)
+		var poly: PackedVector2Array = s["poly"]
+		assert_eq(poly.size(), 2)
+		assert_true(rect.has_point(poly[0]) or rect.has_point(poly[1]))
