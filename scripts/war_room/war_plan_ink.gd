@@ -64,13 +64,15 @@ static func add(repo: DataRepository, out: Dictionary, s: Dictionary, kind: Dict
 	if bool(kind["head"]):
 		var a := WarPlanGeometry.arrow(path, repo.bal("war_plan_arrow_tail_mm") * mm, repo.bal("war_plan_arrow_neck_mm") * mm,
 			repo.bal("war_plan_arrow_head_mm") * mm, repo.bal("war_plan_arrow_head_w_mm") * mm)
+		var neck := WarPlanGeometry.length(path) - repo.bal("war_plan_arrow_head_mm") * mm
+		var body := WarPlanGeometry.cut(path, 0.0, maxf(neck, 0.0))
+		var w := (repo.bal("war_plan_arrow_tail_mm") + repo.bal("war_plan_arrow_neck_mm")) * 0.5 * mm
 		if dashed:
-			var neck := WarPlanGeometry.length(path) - repo.bal("war_plan_arrow_head_mm") * mm
-			var body := WarPlanGeometry.cut(path, 0.0, maxf(neck, 0.0))
-			var w := (repo.bal("war_plan_arrow_tail_mm") + repo.bal("war_plan_arrow_neck_mm")) * 0.5 * mm
 			for d: PackedVector2Array in WarPlanGeometry.dashes(body, repo.bal("war_plan_dash_mm") * mm * 1.6,
 					repo.bal("war_plan_gap_mm") * mm * 1.6):
-				out["crayon"].append({"poly": WarPlanGeometry.band(d, w), "colour": colour})
+				_band(out, d, w, colour)
+		elif Geometry2D.triangulate_polygon(a["band"]).is_empty():
+			_band(out, body, w, colour)   # a band crossing itself on a tight turn: an even one instead
 		else:
 			out["crayon"].append({"poly": a["band"], "colour": colour})
 		out["crayon"].append({"poly": a["head"], "colour": colour})
@@ -79,7 +81,7 @@ static func add(repo: DataRepository, out: Dictionary, s: Dictionary, kind: Dict
 	var runs: Array = WarPlanGeometry.dashes(path, repo.bal("war_plan_dash_mm") * mm, repo.bal("war_plan_gap_mm") * mm) \
 		if dashed else [path]
 	for run: PackedVector2Array in runs:
-		out["crayon"].append({"poly": WarPlanGeometry.band(run, width), "colour": colour})
+		_band(out, run, width, colour)
 	if bool(kind["teeth"]):
 		var side := -1 if int(s.get("flip", 0)) != 0 else 1
 		for t: PackedVector2Array in WarPlanGeometry.teeth(path, repo.bal("war_plan_tooth_every_mm") * mm,
@@ -87,6 +89,17 @@ static func add(repo: DataRepository, out: Dictionary, s: Dictionary, kind: Dict
 			out["crayon"].append({"poly": t, "colour": colour})
 	if name != "":
 		_end_names(out, path, name, colour, name_px)
+
+
+## A crayon line of even width as simple polygons (Clipper's offset: a tight
+## turn never crosses itself, which a polygon fill would refuse).
+static func _band(out: Dictionary, line: PackedVector2Array, width: float, colour: String) -> void:
+	if line.size() < 2:
+		return
+	var polys := Geometry2D.offset_polyline(line, width * 0.5, Geometry2D.JOIN_ROUND, Geometry2D.END_BUTT)
+	for poly: PackedVector2Array in polys:
+		if polys.size() == 1 or not Geometry2D.is_polygon_clockwise(poly):   # a hole (clockwise) is left unfilled
+			out["crayon"].append({"poly": poly, "colour": colour})
 
 
 static func _pen(repo: DataRepository, out: Dictionary, line: PackedVector2Array, colour: String, width: float,
