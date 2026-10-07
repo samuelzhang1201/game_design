@@ -16,8 +16,14 @@ static func regiment(repo: DataRepository, code: String) -> Dictionary:
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
 	return int(MapObjects.regiment_size(repo, reg))
 
-## A regiment's STRENGTH: its fit men (headcount less the wounded) per mille
-## of its headcount — what its piece shows (owner 2026-09-30: 满员 / 减员 /
+## The men able to fight: `heads` less the wounded and the dead of a regiment's
+## state `st` (a state with no `dead`, an old save's, has none), never below 0.
+## The pack's headcount is immutable, so the dead are a count beside it.
+static func fit_heads(heads: int, st: Dictionary) -> int:
+	return maxi(0, heads - maxi(0, int(st.get("wounded", 0))) - maxi(0, int(st.get("dead", 0))))
+
+## A regiment's STRENGTH: its fit men (headcount less the wounded and the dead)
+## per mille of its headcount — what its piece shows (owner 2026-09-30: 满员 / 减员 /
 ## 残兵, Map3DFormation). A regiment that is not the player's has no state and
 ## reads as it would start (full); one with no one under arms is 0.
 static func fit_permille(repo: DataRepository, state: GameState, code: String) -> int:
@@ -26,9 +32,8 @@ static func fit_permille(repo: DataRepository, state: GameState, code: String) -
 	if heads <= 0:
 		return 0
 	var st := state_of(repo, state, code)
-	var wounded := clampi(int(st.get("wounded", 0)), 0, heads)
 	@warning_ignore("integer_division")  # whole per-mille
-	return (heads - wounded) * 1000 / heads
+	return fit_heads(heads, st) * 1000 / heads
 
 ## What a regiment starts a campaign with: army_start_supply_days of its use,
 ## in whole supplies rounded UP, so the days in hand read the days it was given
@@ -40,6 +45,7 @@ static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 	return {
 		"morale": int(repo.bal("army_start_morale")),
 		"wounded": 0,
+		"dead": 0,
 		"supplies": (supply_use(repo, reg) * start_days + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK,
 		"carry_days": int(repo.bal("army_carry_default_days")),
 		"training": int(repo.bal("army_start_training")),
@@ -461,7 +467,7 @@ static func _arm_base(repo: DataRepository, code: String, arm: String, tick: int
 	return sum / rows.size()
 
 ## A regiment's power where it stands, in the given stance ("defend" or
-## "attack"): each arm's heads less its share of the wounded, times the arm's
+## "attack"): each arm's heads less its share of the wounded and the dead, times the arm's
 ## base, the training and morale factors and the terrain. 0 for a regiment
 ## without state.
 static func power(repo: DataRepository, state: GameState, code: String, stance: String) -> int:
@@ -483,7 +489,7 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 	var heads := headcount(repo, reg)
 	if heads <= 0:
 		return 0
-	var fit := heads - clampi(int(st["wounded"]), 0, heads)
+	var fit := fit_heads(heads, st)
 	var tick := 0 if state == null else state.tick
 	var training_f := int(repo.bal("army_training_base_permille")) + int(st["training"]) * int(repo.bal("army_training_step_permille"))
 	var morale_f := int(repo.bal("army_morale_base_permille")) + int(st["morale"]) * int(repo.bal("army_morale_step_permille"))
@@ -768,7 +774,8 @@ static func position_of(repo: DataRepository, state: GameState, reg: Dictionary)
 	var home := Vector2(float(reg.get("x", 0)), float(reg.get("y", 0)))
 	if state == null:
 		return home
-	var entry: Dictionary = state.regiments.get(String(reg.get("regiment_code", "")), {})
+	var code := String(reg.get("regiment_code", ""))
+	var entry: Dictionary = state.foes.get(code, state.regiments.get(code, {}))   # a foe's live place is its own
 	if not entry.has("x_m"):
 		return home
 	return metres_to_pack(repo, Vector2i(int(entry["x_m"]), int(entry["y_m"])))
@@ -976,10 +983,10 @@ static func march_days(repo: DataRepository, state: GameState, code: String, met
 	return int(ceil(metres / float(step)))
 
 
-## PLACEHOLDER (owner 2026-09-17: the battle formula is not decided). The
-## attacker's power in the attack stance over both sides' powers, each on its
-## own ground. Called by nothing but its test; replace it whole when the
-## owner settles the formula. Height is its first settled factor (spec
+## The attacker's power in the attack stance over both sides' powers, each on
+## its own ground, as a float for a single pair. A battle's round is
+## BattleSystem (spec 2026-10-07-enemy-ai-and-battle §4.2), which sums whole
+## sides and settles in per mille with the same height factor (spec
 ## 2026-09-19-map3d-heights §2): the higher side's power is scaled up and the
 ## lower side's down by the same height_factor.
 static func battle_odds(repo: DataRepository, state: GameState, attacker_code: String, defender_code: String) -> float:

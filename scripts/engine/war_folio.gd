@@ -101,7 +101,7 @@ static func _composition(repo: DataRepository, state: GameState, code: String, r
 	for a: Dictionary in arms_of(repo, code):
 		rows.append(_row(_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))))
 	var wounded := int(st.get("wounded", 0))
-	rows.append(_row("Fit", WarRoom.group(maxi(0, ArmySystem.headcount(repo, reg) - wounded))))
+	rows.append(_row("Fit", WarRoom.group(ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), st))))
 	rows.append(_row("Wounded", WarRoom.group(wounded)))
 	var n := figures(repo, state, code)
 	rows.append(_row("Formation", "%d figures — %s" % [n, _tier_word(n)]))

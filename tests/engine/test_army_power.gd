@@ -189,3 +189,54 @@ func test_archers_alone_on_hills_by_the_terrain_table() -> void:
 	# army_town_defence.csv: walls,archers defend 1250, attack untouched
 	assert_almost_eq(float(ArmySystem.power_on(r, s, code, "defend", "plains", "walls")) / plains_d, 1.25, 0.01)
 	assert_eq(ArmySystem.power_on(r, s, code, "attack", "plains", "walls"), plains_a)
+
+
+func test_fit_heads_takes_the_dead_and_the_wounded() -> void:
+	assert_eq(ArmySystem.fit_heads(1000, {"wounded": 100, "dead": 50}), 850)
+	assert_eq(ArmySystem.fit_heads(1000, {"wounded": 100}), 900, "a save from before the dead: none")
+	assert_eq(ArmySystem.fit_heads(1000, {"wounded": 700, "dead": 600}), 0, "never below nothing")
+
+func test_fit_permille_and_power_count_the_dead() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var code: String = _land_codes()[0]
+	# a regiment of exactly 1000 heads, whatever the pack gave it
+	var reg := ArmySystem.regiment(repo, code)
+	var kept := false
+	for arm: String in repo.world_table("military", "unit_types"):
+		if not kept and int(float(reg.get(arm, 0))) > 0:
+			reg[arm] = 1000
+			kept = true
+		else:
+			reg[arm] = 0
+	var heads := ArmySystem.headcount(repo, reg)
+	assert_eq(heads, 1000)
+	s.regiments[code]["wounded"] = 100
+	s.regiments[code]["dead"] = 50
+	assert_eq(ArmySystem.fit_permille(repo, s, code), 850)   # (1000 - 100 - 50) x 1000 / 1000
+	# 150 dead is as many fewer men as 150 wounded: the same power
+	var by_both := ArmySystem.power(repo, s, code, "defend")
+	s.regiments[code]["wounded"] = 150
+	s.regiments[code]["dead"] = 0
+	assert_eq(ArmySystem.power(repo, s, code, "defend"), by_both)
+	s.regiments[code]["wounded"] = 0
+	s.regiments[code]["dead"] = heads
+	assert_eq(ArmySystem.power(repo, s, code, "defend"), 0, "a regiment of dead has no power")
+	assert_eq(ArmySystem.fit_permille(repo, s, code), 0)
+
+func test_a_fresh_regiment_has_no_dead_and_old_saves_default_to_none() -> void:
+	var code: String = _land_codes()[0]
+	assert_eq(int(ArmySystem.starting_state(repo, ArmySystem.regiment(repo, code))["dead"]), 0)
+	var s := SuiteData.campaign(repo, 7)
+	s.regiments[code].erase("dead")
+	assert_eq(ArmySystem.fit_permille(repo, s, code), 1000)
+	ArmySystem.settle_month(repo, s)   # an old entry settles without a dead field
+	assert_eq(ArmySystem.fit_permille(repo, s, code), 1000)
+
+func test_the_dead_never_recover() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var code: String = _land_codes()[0]
+	s.regiments[code]["wounded"] = 100
+	s.regiments[code]["dead"] = 50
+	ArmySystem.settle_month(repo, s)
+	assert_eq(int(s.regiments[code]["dead"]), 50)
+	assert_lt(int(s.regiments[code]["wounded"]), 100)
