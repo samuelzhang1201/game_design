@@ -3,7 +3,7 @@
   "actions": {
    "MARCH": [
     0,
-    22
+    24
    ],
    "GARRISON": [
     0,
@@ -28,7 +28,7 @@
   "kind": "humanoid",
   "label": "Archer",
   "source": "Tripo 3D (owner, paid plan) from REF_archers_qwenfast_s2.png; tools/units3d/archer_rig/",
-  "stride_m": 1.5,
+  "stride_m": 2.0,
   "tris": 18709,
   "weights": {
    "body": "heat",

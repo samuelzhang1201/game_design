@@ -2,7 +2,7 @@
 frame (the pose of each frame is SOLVED from smooth parameter tracks, the blender-natural-animation
 skill's "generate it, don't pose it"):
 
-  MARCH     行进 -- a run, 22 f (two steps), flight phase, the bow carried low in the left hand
+  MARCH     行进 -- a run, 24 f (two steps of 1 m), after the owner's 8-phase sheet, the bow upright before the chest
   GARRISON  驻防 -- side-on, an arrow on the string: half draw -> full draw -> hold -> let down, 150 f
   ATTACK    攻击 -- shooting without pause: arrow from the quiver, nock, raise, draw, loose, 48 f
   DEFEND    防御 -- crouched behind the bow held crosswise before the face, a flinch at f 40, 80 f
@@ -442,65 +442,128 @@ def _rest_feet(R, dx_l=0.0, dx_r=0.0, dy_l=0.0, dy_r=0.0, dz=0.0):
     return (L.x + dx_l, L.y + dy_l, L.z + dz, 0.0, 0.0), (Rr.x + dx_r, Rr.y + dy_r, Rr.z + dz, 0.0, 0.0)
 
 
+def hermite(keys, m0, m1):
+    """A cubic Hermite through keys [(q, vector)] on q in [0, 1], the end slopes given (per unit q)
+    so a swing joins its stance with no step in velocity; interior slopes the weighted three-point
+    derivative."""
+    q = [k for k, _ in keys]
+    y = [np.array(v, float) for _, v in keys]
+    m = [np.array(m0, float)]
+    for i in range(1, len(q) - 1):
+        a, b = q[i] - q[i - 1], q[i + 1] - q[i]
+        m.append(((y[i + 1] - y[i]) / b * a + (y[i] - y[i - 1]) / a * b) / (a + b))
+    m.append(np.array(m1, float))
+
+    def f(t):
+        i = min(max(int(np.searchsorted(q, t, side="right") - 1), 0), len(q) - 2)
+        h = q[i + 1] - q[i]; s = (t - q[i]) / h
+        return ((2 * s ** 3 - 3 * s ** 2 + 1) * y[i] + (s ** 3 - 2 * s ** 2 + s) * h * m[i]
+                + (-2 * s ** 3 + 3 * s ** 2) * y[i + 1] + (s ** 3 - s ** 2) * h * m[i + 1])
+    return f
+
+
+HEEL_BACK = 0.065        # the boot's heel behind the ankle, on the sole
+RUN = dict(N=24, duty=0.36, S=2.0)
+
+
 def march(R):
-    """A run: 22 f, two steps, duty 0.32 (a flight phase), 1.5 m a stride, in place."""
-    N, duty, S, lift = 22, 0.30, 1.5, 0.20
-    sweep = S * duty
+    """A run after the owner's 8-phase sheet (2026-10-07), 24 f, two steps of 1 m; per step:
+      contact  the front heel strikes, the toe up, the leg nearly straight, ahead of the hip
+      down     the foot flat, the knee bent, the hips at their LOWEST
+      passing  the support leg straightening under him, the swing heel tucked up past its knee
+      up       pushed off the toe, the rear leg out behind, the other knee driven forward: the
+               flight, the hips at their HIGHEST
+    The stance foot ROLLS heel -> flat -> toe, its pivot carried back at the belt's speed (in place:
+    2 m a loop); the swing is a Hermite through the sheet's poses, joined to the stance with no
+    step in velocity. The bow is held upright before his chest (top a little forward, the string
+    toward him), riding the bob and swinging a little against his left leg; the right arm swings
+    against the right leg."""
+    N, duty, S = RUN["N"], RUN["duty"], RUN["S"]
+    D = S * duty                                       # the ground's travel under one stance
     hy = R.hips_head.y
     x = {"L": R.ankle["L"].x - 0.05, "R": R.ankle["R"].x + 0.05}
     z0 = {"L": R.ankle["L"].z, "R": R.ankle["R"].z}
     phase = {"L": 0.0, "R": 0.5}
-    c_off = 0.05                                       # the stance's centre behind the hip
-
+    mid = hy + 0.035                                   # the stance's middle: the foot under the hip at "down"
     yawf = {"L": -22.0, "R": 18.0}
+    nst, nsw = duty * N, (1 - duty) * N                # frames of stance / swing
 
-    def fdir(s, pitch):            # the foot's vector as apply_pose builds it
+    def rot(s, pitch):
         fd = Matrix.Rotation(math.radians(yawf[s]), 3, "Z") @ R.footdir[s]
         lat = Vector((0, 0, 1)).cross(fd).normalized()
-        return Matrix.Rotation(math.radians(pitch), 3, lat) @ fd
+        return Matrix.Rotation(math.radians(pitch), 3, lat), fd
 
-    def stance(s, q):
-        """The TOE planted on the ground and carried back at the belt's speed; the foot flat, then
-        rolling over the toe (the heel rises) for push-off; the ankle follows from the toe."""
-        pitch = 26 * smooth((q - 0.45) / 0.55)
-        toe0 = Vector((x[s], hy - sweep / 2 + c_off, z0[s])) + fdir(s, 0)
-        toe = Vector((toe0.x, toe0.y + sweep * q, toe0.z))
-        return toe - fdir(s, pitch), pitch
+    def pitch_of(u):                                   # u: the stance's fraction
+        if u < 0.28:
+            return -13.0 * (1 - u / 0.28) ** 2         # heel strike, the toe up, lowered onto the sole
+        if u > 0.42:
+            return 48.0 * ((u - 0.42) / 0.58) ** 2     # the heel rising: the roll onto the toe
+        return 0.0
+
+    def stance(s, u):
+        """The ankle (y, z) and pitch at stance fraction u: the pivot (heel, or toe once the heel
+        is up) fixed to the ground, which moves back D over the stance."""
+        th = pitch_of(u)
+        M, fd = rot(s, th)
+        e = mid + D * (u - 0.5)
+        A0 = Vector((x[s], e, z0[s]))
+        if th < 0:
+            fh = Vector((fd.x, fd.y, 0)).normalized()
+            heel = Vector((x[s], e, 0.01)) - fh * HEEL_BACK
+            A = heel + M @ (A0 - heel)
+        else:
+            toe = A0 + fd
+            A = toe - M @ fd
+        return np.array((A.y, A.z, th))
 
     def foot(s):
-        a_on, _ = stance(s, 0.0)
-        a_off, p_off = stance(s, 1.0)
+        eps = 1e-3
+        on, off = stance(s, 0.0), stance(s, 1.0)
+        v_on = (stance(s, eps) - on) / eps * (nsw / nst)        # per unit swing fraction
+        v_off = (off - stance(s, 1 - eps)) / eps * (nsw / nst)
+        # the sheet's swing poses (ankle y from the hip, ankle z, pitch toe-down +)
+        sw = hermite([(0.0, off),
+                      (0.18, (hy + 0.44, 0.31, 70)),            # trailing behind (the other's contact)
+                      (0.36, (hy + 0.33, 0.47, 84)),            # the heel kicked up (the other's down)
+                      (0.54, (hy + 0.10, 0.50, 60)),            # passing: tucked under him
+                      (0.72, (hy - 0.12, 0.41, 30)),            # the knee driven forward
+                      (0.84, (hy - 0.24, 0.29, 8)),             # the shin swinging out (the flight)
+                      (0.94, (hy - 0.297, 0.16, -9)),           # reaching: the longest just before the strike
+                      (1.0, on)], v_off, v_on)
 
         def f(t):
             p = (t / N - phase[s]) % 1.0
             if p < duty:
-                A, pitch = stance(s, p / duty)
+                y, z, th = stance(s, p / duty)
             else:
-                q = (p - duty) / (1 - duty)
-                e = smooth(q)
-                A = a_off.lerp(a_on, e)
-                A.y += 0.20 * math.sin(math.pi * min(1, q * 1.4)) * (1 - q)     # the heel kicks up behind
-                A.z += lift * math.sin(math.pi * q) ** 1.2
-                pitch = p_off * (1 - smooth(q / 0.5)) + 8 * math.sin(math.pi * q) - 6 * math.sin(math.pi * smooth((q - 0.7) / 0.3))
-            return (A.x, A.y, A.z, pitch, yawf[s])
+                y, z, th = sw((p - duty) / (1 - duty))
+            return (x[s], float(y), float(z), float(th), yawf[s])
         return f
     w = lambda t, lag=0.0: 2 * math.pi * ((t - lag) / N)
+    # the hips' height over a step (frames into the step): sinking from the strike to "down", driven
+    # up by the push-off, then BALLISTIC in the flight (a shallow parabola: ~1.5 cm over 3.4 f)
+    st = N / 2
+    fo = duty * N                                      # the toe-off, frames into the step
+    hz_keys = [(0.0, -0.040), (0.26 * st, -0.078), (0.52 * st, -0.058), (fo, -0.040), ((fo + st) / 2, -0.026)]
+    hz = track(hz_keys + [(f + st, v) for f, v in hz_keys], N)
     ch = {
         "foot_l": foot("L"), "foot_r": foot("R"),
-        "hips_off": lambda t: Vector((0.012 * math.cos(w(t) - 0.9), -0.02, -0.022 - 0.014 * math.cos(2 * (w(t) - 2 * math.pi * 0.15)))),
-        "hips_rot": lambda t: Vector((8, 3 * math.cos(w(t) + 0.6), -7 * math.cos(w(t)))),
-        "spine": lambda t: Vector((2, 4 * math.cos(w(t, 1.0)), 0)),
-        "chest": lambda t: Vector((3 + 1.5 * math.cos(2 * w(t, 1.5)), 6 * math.cos(w(t, 1.5)), 0)),
+        "hips_off": lambda t: Vector((0.012 * math.cos(w(t) - 0.9), -0.02, hz(t))),
+        "hips_rot": lambda t: Vector((14 + 2.0 * math.cos(2 * w(t, 1.0)), 3 * math.cos(w(t) + 0.6), -6 * math.cos(w(t)))),
+        "spine": lambda t: Vector((3, 4 * math.cos(w(t, 1.0)), 0)),
+        "chest": lambda t: Vector((3 - 1.5 * math.cos(2 * w(t, 1.5)), 6 * math.cos(w(t, 1.5)), 0)),
         "neck": lambda t: Vector((-5, -3 * math.cos(w(t, 2.0)), 0)),
-        "head": lambda t: Vector((-9 - 2 * math.cos(2 * w(t, 2.5)), -3 * math.cos(w(t, 2.5)), 0)),
+        "head": lambda t: Vector((-12 + 1.5 * math.cos(2 * w(t, 2.5)), -1.5 * math.cos(w(t, 2.5)), 0)),
         "clav_r": lambda t: Vector((4 * math.cos(w(t, 1)), 0, 0)),
-        "rfk": lambda t: Vector((-8 + 34 * math.cos(w(t, 2.0)), 78 + 14 * math.cos(w(t, 3.0)))),
-        "bow_g": lambda t: Vector((0.33, -0.03 - 0.07 * math.cos(w(t, 2.5) - math.pi), 0.90 + 0.012 * math.cos(2 * w(t, 2)))),
-        # the string up, the back end flaring out: the chord lies 16 cm off the grip on the string's
-        # side, so a string turned in ran the chord through his hip and the back tip through him
-        "bow_chord": lambda t: Vector((-0.10, -math.cos(math.radians(24 + 3 * math.cos(w(t, 3) - math.pi))), -math.sin(math.radians(24 + 3 * math.cos(w(t, 3) - math.pi))))),
-        "bow_draw": lambda t: Vector((0.25, 0, 1)),
-        "l_pole": lambda t: Vector((0.4, 0.8, -0.3)),
+        "clav_l": lambda t: Vector((-2 * math.cos(w(t, 1.5)), 0, 0)),
+        "rfk": lambda t: Vector((-10 + 42 * math.cos(w(t, 1.5)), 84 + 14 * math.cos(w(t, 2.5)))),
+        # the bow upright before the chest, riding the bob 2 f late, swinging against the left leg
+        "bow_g": lambda t: Vector((0.335 + 0.008 * math.cos(w(t, 2.0)), -0.31 + 0.03 * math.cos(w(t, 2.0)),
+                                   1.26 + 0.6 * hz(t - 2.0))),
+        "bow_chord": lambda t: Vector((-0.15, -math.sin(math.radians(8 + 2.5 * math.cos(w(t, 3.0)))),
+                                       math.cos(math.radians(8 + 2.5 * math.cos(w(t, 3.0)))))),
+        "bow_draw": lambda t: Vector((-0.6, 0.8, 0)),
+        "l_pole": lambda t: Vector((0.5, 0.4, -0.8)),
         "quiver": lambda t: Vector((5 * math.cos(2 * w(t, 3.5)), 0, 2 * math.cos(w(t, 3)))),
         "scab": lambda t: Vector((9 * math.cos(w(t, 3) - math.pi), 0, 3 * math.cos(2 * w(t, 2)))),
         "arrow": lambda t: "off",
@@ -704,6 +767,10 @@ def preview(name, frames, prefix, views=(("q", (0.6, 1, -0.25)), ("s", (1, 0.05,
         calibrate()
     ch, N = CLIPS[name](R)
     out = []
+    ad = rig().animation_data
+    muted = [(t, t.mute) for t in ad.nla_tracks] if ad else []
+    for t, _ in muted:                  # export.py's NLA tracks would pose the rig at render time
+        t.mute = True
     PREV_W.clear()
     for f in range(N):
         apply_pose(ch, float(f), R)
@@ -713,5 +780,7 @@ def preview(name, frames, prefix, views=(("q", (0.6, 1, -0.25)), ("s", (1, 0.05,
             p = "%s%s_%03d_%s.png" % (prefix, name, f, vn)
             shot(p, (0.05, -0.05, 0.95), look, 2.3, res=360, objs=[mesh()])
             out.append(p)
+    for t, m in muted:
+        t.mute = m
     reset()
     return out

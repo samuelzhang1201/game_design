@@ -45,7 +45,7 @@ then `tools/units3d/archer_install/install.py` (→ `assets/3D/units/archers/arc
 
 | clip | frames | what |
 | --- | --- | --- |
-| MARCH 行进 | 22 | a run, two steps, duty 0.30 (a flight phase), 1.5 m a loop (`stride_m` 3.7 = × the pieces' 2.47); the toe planted on the belt and rolled over; the bow carried low, string up |
+| MARCH 行进 | 24 | a run after the owner's 8-phase sheet (2026-10-07: contact → down → passing → up/flight per step), duty 0.36, 2 m a loop (`stride_m` 4.9 = × the pieces' 2.47); the stance foot rolls heel → flat → toe on the belt, the swing a Hermite through the sheet's poses joined to the stance with no velocity step; the hips sink ~4 cm after the strike, rise in the push-off and are ballistic in the flight; the bow upright before the chest, top 10° forward, string toward him |
 | GARRISON 驻防 | 150 | side-on (the figure turned −90°, the shot along its march direction), an arrow nocked: half draw → full draw to the jaw → a held aim with a tremble → let down |
 | ATTACK 攻击 | 48 | an arrow every 1.6 s: into the quiver, drawn up and over, nocked, raised to 14°, drawn, loosed (the arrow gone, the string straight, the hand past the ear), follow-through |
 | DEFEND 防御 | 80 | crouched behind the bow held crosswise before the face; a blow at f 38, he gives and recovers |
@@ -53,7 +53,8 @@ then `tools/units3d/archer_install/install.py` (→ `assets/3D/units/archers/arc
 
 Gates (`validate.clip_metrics`): every loop closes exactly; no toe under the ground; the run's
 planted toes slip ≤ 4.8 mm a frame; the fastest bone turn is 38° a frame in ATTACK's arrow pull
-(a real, continuous motion), ≤ 14° elsewhere; every IK target reached within 1 cm.
+(a real, continuous motion) and 25° a frame in MARCH's swinging foot (continuous), ≤ 15° elsewhere; every IK
+target reached within 1 cm; MARCH's jerk spike ratio ≤ 5.4 and the bow ≥ 1.3 cm off the body.
 
 ## Known limitations
 
