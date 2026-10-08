@@ -7,6 +7,8 @@ extends RefCounted
 ## Builds missives; MissiveLog files them.
 
 static func receipt(repo: DataRepository, state: GameState, c: Dictionary, stale: bool) -> Dictionary:
+	if CourierSystem.place_bound(c):
+		return _place_receipt(repo, state, c, stale)
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code, state)
 	var label := String(reg.get("label", code))
@@ -15,6 +17,8 @@ static func receipt(repo: DataRepository, state: GameState, c: Dictionary, stale
 	var order := String((c["order"] as Dictionary).get("action_code", ""))
 	var said := "Newer orders stand: this one is set aside" if stale else \
 		("March" if order == "ARMY_MARCH" else "Take the seat" if order == "ARMY_SEAT" else "Stand")
+	if order == LawSystem.ACTION:
+		said = "A newer decree stands: this one is set aside" if stale else CourierCard.decree_words(repo, c["order"])
 	var facts: Array = [MissiveLog.words("orders", "Orders", said)]
 	if not st.is_empty():
 		facts.append(MissiveLog.exact("morale", "Morale", int(st["morale"])))
@@ -25,6 +29,20 @@ static func receipt(repo: DataRepository, state: GameState, c: Dictionary, stale
 			Weather.label_of(repo, Weather.at(repo, state, at, state.absolute_day()))))
 	return MissiveLog.make("receipt", "credible", state.absolute_day(),
 		MissiveLog.subject("regiment", code, -1, at), "Receipt — " + label, facts)
+
+
+## A decree's receipt from the place it rode to (a province or a camp's
+## town, laws plan ruling R6): no column, so no column's figures.
+static func _place_receipt(repo: DataRepository, state: GameState, c: Dictionary, stale: bool) -> Dictionary:
+	var target := String(c["target"])
+	var label := LawSystem.place_label(repo, state, target)
+	var at := LawSystem.place_px(repo, target)
+	var subj := MissiveLog.subject("province", target.trim_prefix(LawSystem.PROVINCE_PREFIX), -1, at) \
+		if target.begins_with(LawSystem.PROVINCE_PREFIX) \
+		else MissiveLog.subject("burg", target.trim_prefix(LawSystem.TOWN_PREFIX), -1, at)
+	var said := "A newer decree stands: this one is set aside" if stale else CourierCard.decree_words(repo, c["order"])
+	return MissiveLog.make("receipt", "credible", state.absolute_day(), subj, "Receipt — " + label,
+		[MissiveLog.words("orders", "Orders", said)])
 
 
 ## The settled month's report: each controlled province's tax, goods and

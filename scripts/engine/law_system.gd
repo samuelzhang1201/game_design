@@ -2,7 +2,8 @@ class_name LawSystem
 extends RefCounted
 ## The laws (spec 2026-10-08-laws-tab-design §2): data-driven rules the crown
 ## decrees and each place follows. This file holds the tables' reads and the
-## state's seeding; the order and the couriers come later.
+## state's seeding, and the order LAW_SET: who it is sent to, the couriers
+## that carry it and what their arrival writes (§3).
 ##
 ## A law's value is always a String ("on", a choice's name, a range's digits),
 ## stored that way in every state map; `number` gives a range's int.
@@ -127,3 +128,288 @@ static func seed(repo: DataRepository, state: GameState) -> void:
 static func ensure(repo: DataRepository, state: GameState) -> void:
 	if state.law_decree.is_empty():
 		LawSystem.seed(repo, state)
+
+
+## The order that decrees a law (§3).
+const ACTION := "LAW_SET"
+
+
+## A value as the law's String: a whole number (or a float that is one) its
+## digits, anything else its text.
+static func value_text(raw: Variant) -> String:
+	if raw is int:
+		return str(raw)
+	if raw is float and is_equal_approx(float(raw), roundf(float(raw))):
+		return str(int(roundf(float(raw))))
+	return str(raw).strip_edges()
+
+
+## Whether `text` is one of the law's values: a range's whole number inside
+## its bounds, a toggle's or a choice's name.
+static func allowed(repo: DataRepository, law: String, text: String) -> bool:
+	var d := def(repo, law)
+	if d.is_empty():
+		return false
+	if String(d["kind"]) == "range":
+		return text.is_valid_int() and int(text) >= int(d["values"][0]) and int(text) <= int(d["values"][1])
+	return (d["values"] as Array).has(text)
+
+
+## A value's word for the screen and the letters: law_words.csv's
+## `value_<value>` when it has one (On, Off), else the value capitalised.
+static func value_label(repo: DataRepository, text: String) -> String:
+	return String(repo.law_words.get("value_" + text, text.capitalize()))
+
+
+## A province's decree point: its capital town, else its centre (pack px).
+static func province_px(repo: DataRepository, code: String) -> Vector2:
+	var row: Dictionary = repo.provinces.get(code, {})
+	var cap := String(row.get("capital_burg", ""))
+	if repo.burgs.has(cap):
+		return Vector2(float(repo.burgs[cap]["x"]), float(repo.burgs[cap]["y"]))
+	return Vector2(float(row.get("center_x", 0.0)), float(row.get("center_y", 0.0)))
+
+
+static func _town_px(repo: DataRepository, town: String) -> Vector2:
+	var b: Dictionary = repo.burgs.get(town, {})
+	return Vector2(float(b.get("x", 0.0)), float(b.get("y", 0.0)))
+
+
+## A courier's or a recipient's place in words: `province:<code>` the
+## province's name, `town:<code>` the town's, a unit code the unit's label.
+static func place_label(repo: DataRepository, state: GameState, target: String) -> String:
+	if target.begins_with(PROVINCE_PREFIX):
+		var code := target.trim_prefix(PROVINCE_PREFIX)
+		return String((repo.provinces.get(code, {}) as Dictionary).get("label", code))
+	if target.begins_with(TOWN_PREFIX):
+		var town := target.trim_prefix(TOWN_PREFIX)
+		return String((repo.burgs.get(town, {}) as Dictionary).get("label", town))
+	var code := target.trim_prefix(UNIT_PREFIX)
+	return String(ArmySystem.regiment(repo, code, state).get("label", code))
+
+
+## A place courier's end point in pack px (where his road was set to end).
+static func place_px(repo: DataRepository, target: String) -> Vector2:
+	if target.begins_with(PROVINCE_PREFIX):
+		return province_px(repo, target.trim_prefix(PROVINCE_PREFIX))
+	return _town_px(repo, target.trim_prefix(TOWN_PREFIX))
+
+
+## Whether a held town has a camp: a land unit of the realm camped by it.
+static func _has_camp(repo: DataRepository, state: GameState, town: String) -> bool:
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		if String(r.get("is_naval", "0")) != "1" \
+				and ArmyGround.camped_by(repo, state, String(r["regiment_code"])) == town:
+			return true
+	return false
+
+
+## Who a decree of `law` is sent to, sorted by scope key (§3): a province law
+## each province the realm holds, ending at its capital town; a camp law each
+## held town with a camp of the realm's land units (target `town:<code>`) and
+## each land unit camped by no held town (target its code, chased as it
+## moves). Fleets never. Each {scope_key, kind: province|town|unit, target,
+## to_px}. `only_missing`: only the places `delivery` counts as missing.
+static func recipients(repo: DataRepository, state: GameState, law: String, only_missing := false) -> Array:
+	var d := def(repo, law)
+	var out: Array = []
+	if d.is_empty():
+		return out
+	var realm := repo.resolve_realm("player_realm")
+	if String(d["scope"]) == "province":
+		for code: String in MapOwnership.provinces_of(repo, state, realm):
+			out.append({"scope_key": PROVINCE_PREFIX + code, "kind": "province",
+				"target": PROVINCE_PREFIX + code, "to_px": province_px(repo, code)})
+	else:
+		var towns := {}
+		for r: Dictionary in MapObjects.regiments_of(repo, realm, state):
+			if not CourierSystem.carries_orders(r):
+				continue
+			var code := String(r["regiment_code"])
+			var town := ArmyGround.camped_by(repo, state, code)
+			if town != "":
+				towns[town] = true
+			else:
+				out.append({"scope_key": UNIT_PREFIX + code, "kind": "unit", "target": code,
+					"to_px": ArmySystem.position_of(repo, state, r)})
+		for town: String in towns:
+			out.append({"scope_key": TOWN_PREFIX + town, "kind": "town", "target": TOWN_PREFIX + town,
+				"to_px": _town_px(repo, town)})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a["scope_key"]) < String(b["scope_key"]))
+	if only_missing:
+		var missing: Array = _tally(repo, state, law)["missing"]
+		out = out.filter(func(r: Dictionary) -> bool: return String(r["scope_key"]) in missing)
+	return out
+
+
+## The decree's id now (0: never decreed since the reign began).
+static func _decree_id(state: GameState, law: String) -> int:
+	return int((state.law_decree.get(law, {}) as Dictionary).get("decree_id", 0))
+
+
+## Whether a decree of `value` re-sends the standing decree (R5): the same
+## value, with places it has not reached and no courier riding for.
+static func _resend(repo: DataRepository, state: GameState, law: String, value: String) -> bool:
+	return decreed(repo, state, law) == value and not (_tally(repo, state, law)["missing"] as Array).is_empty()
+
+
+## Gold the law's own cost ops take, as a positive number.
+static func _ops_gold(ops: String) -> int:
+	var gold := 0
+	for raw in ops.split(";", false):
+		var p := raw.strip_edges().split(":")
+		if p[0] == "gold" and p.size() > 1:
+			gold += maxi(-int(p[1]), 0)
+	return gold
+
+
+## The gold a decree of `law` costs besides its couriers: the order's own row
+## (order_costs.csv), the law's gold_cost and its cost ops' gold.
+static func order_gold(repo: DataRepository, law: String) -> int:
+	var d := def(repo, law)
+	return int(OrderCosts.gold_of(repo, ACTION)) + int(d.get("gold_cost", 0)) + _ops_gold(String(d.get("cost_ops", "")))
+
+
+## Why a decree of `law` to `value` (a law's String) is refused; "" when it
+## may be sent. ActionSystem's LAW_SET validation and the screen's preview.
+static func refusal(repo: DataRepository, state: GameState, law: String, value: String) -> String:
+	var d := def(repo, law)
+	if d.is_empty():
+		return "No such law: " + law
+	var label := String(d["label"])
+	if not allowed(repo, law, value):
+		return "%s is not a value of %s" % [value, label]
+	var resend := _resend(repo, state, law, value)
+	if decreed(repo, state, law) == value and not resend:
+		return "%s is already %s" % [label, value]
+	if not resend and int(state.law_cooldown.get(law, 0)) > state.tick:
+		return "%s is on cooldown until tick %d" % [label, int(state.law_cooldown[law])]
+	var n := recipients(repo, state, law, resend).size()
+	if n == 0:
+		return "No place to send it to"
+	if float(state.metrics.get("treasury", 0.0)) < float(order_gold(repo, law) + n * CourierSystem.fee_gold(repo, CourierSystem.ORDINARY)):
+		return "The chancery cannot pay the couriers"
+	return ""
+
+
+## What a decree would cost and take, for the screen (§5): {couriers, fee
+## (one ordinary fee a courier), gold (order_gold), max_days (the longest
+## ride), refusal}. ActionSystem charges exactly gold + fee.
+static func preview(repo: DataRepository, state: GameState, law: String, value: String) -> Dictionary:
+	var why := refusal(repo, state, law, value)
+	if def(repo, law).is_empty() or not allowed(repo, law, value):
+		return {"couriers": 0, "fee": 0, "gold": 0, "max_days": 0, "refusal": why}
+	var to := recipients(repo, state, law, _resend(repo, state, law, value))
+	var longest := 0
+	for r: Dictionary in to:
+		longest = maxi(longest, CourierSystem.eta_days_to(repo, state, CourierSystem.ORDINARY, r["to_px"]))
+	return {"couriers": to.size(), "fee": to.size() * CourierSystem.fee_gold(repo, CourierSystem.ORDINARY),
+		"gold": order_gold(repo, law), "max_days": longest, "refusal": why}
+
+
+## Decree `law` to `value` (validated by the caller): a new value is a new
+## decree — the decree, its cooldown, the metric mirror (ruling P1) — sent to
+## every recipient; the standing value re-sends that decree, same id, to the
+## places it is missing in (R5). Returns the couriers sent, in scope-key order.
+## Charges nothing: the fees are ActionSystem's ledger lines.
+static func decree(repo: DataRepository, state: GameState, law: String, value: String) -> Array:
+	var resend := _resend(repo, state, law, value)
+	var to := recipients(repo, state, law, resend)
+	if not resend:
+		state.law_decree[law] = {"value": value, "decree_id": _decree_id(state, law) + 1,
+			"day": state.absolute_day()}
+		var cd := int(def(repo, law).get("cooldown_ticks", 0))
+		if cd > 0:
+			state.law_cooldown[law] = state.tick + cd
+		if METRIC_OF.has(law):
+			state.metrics[String(METRIC_OF[law])] = (1.0 if value == "ration" else 0.0) \
+				if law == "grain_ration" else float(int(value))
+	var id := _decree_id(state, law)
+	var sent: Array = []
+	for r: Dictionary in to:
+		var order := {"action_code": ACTION, "law": law, "value": value, "decree_id": id,
+			"scope_key": String(r["scope_key"])}
+		if String(r["kind"]) == "unit":
+			sent.append(CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, String(r["target"]), order))
+		else:
+			sent.append(CourierSystem.dispatch_to(repo, state, CourierSystem.ORDINARY, String(r["target"]),
+				order, r["to_px"]))
+	return sent
+
+
+## A law courier arrives (CourierSystem._deliver): his place's entry takes
+## the decree when it is newer than the entry's, or the same decree with a
+## different value; else he is set aside ("stale"). A province the realm no
+## longer holds, or a town with no camp now, is "lost": nothing is written.
+## A unit's courier was already lost by CourierSystem if the unit is gone.
+static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
+	var order: Dictionary = c["order"]
+	var key := String(order["scope_key"])
+	var law := String(order["law"])
+	var ev := CourierSystem._event("delivered", c)
+	if key.begins_with(PROVINCE_PREFIX):
+		if MapOwnership.owner_of(repo, state, key.trim_prefix(PROVINCE_PREFIX)) != repo.resolve_realm("player_realm"):
+			ev["type"] = "lost"
+			return ev
+	elif key.begins_with(TOWN_PREFIX):
+		if not _has_camp(repo, state, key.trim_prefix(TOWN_PREFIX)):
+			ev["type"] = "lost"
+			return ev
+	var here: Dictionary = state.law_in_force.get(key, {})
+	var id := int(order["decree_id"])
+	var value := String(order["value"])
+	if here.has(law):
+		var was: Dictionary = here[law]
+		if int(was["decree_id"]) > id or (int(was["decree_id"]) == id and String(was["value"]) == value):
+			ev["type"] = "stale"
+			return ev
+	here[law] = {"value": value, "decree_id": id}
+	state.law_in_force[key] = here
+	return ev
+
+
+## How far the standing decree of `law` has got (§5): {total: its recipients
+## now, reached: those whose entry holds it, riding: those a courier of it
+## still rides for, lost: missing.size(), last_days: the longest ride left,
+## missing: the scope keys neither reached nor ridden for — a lost courier's
+## place, a camp or province gained since}. An undecreed law (decree id 0)
+## is reached everywhere: a place with no entry follows the seeded value.
+static func delivery(repo: DataRepository, state: GameState, law: String) -> Dictionary:
+	var out := _tally(repo, state, law)
+	var last := 0
+	for c: Dictionary in _riders(state, law):
+		last = maxi(last, CourierSystem.days_left(repo, state, c))
+	out["last_days"] = last
+	return out
+
+
+## The couriers of the standing decree of `law` still on the road.
+static func _riders(state: GameState, law: String) -> Array:
+	var id := _decree_id(state, law)
+	return state.couriers.filter(func(c: Dictionary) -> bool:
+		var o: Dictionary = c.get("order", {})
+		return String(o.get("action_code", "")) == ACTION and String(o.get("law", "")) == law \
+			and int(o.get("decree_id", -1)) == id)
+
+
+## `delivery` without the days (no ride is reckoned): the counts and missing.
+static func _tally(repo: DataRepository, state: GameState, law: String) -> Dictionary:
+	var id := _decree_id(state, law)
+	var riding := {}
+	for c: Dictionary in _riders(state, law):
+		riding[String(c["order"]["scope_key"])] = true
+	var total := 0
+	var reached := 0
+	var on_road := 0
+	var missing: Array = []
+	for r: Dictionary in recipients(repo, state, law):
+		var key := String(r["scope_key"])
+		total += 1
+		var entry: Dictionary = (state.law_in_force.get(key, {}) as Dictionary).get(law, {})
+		if id == 0 or (not entry.is_empty() and int(entry["decree_id"]) >= id):
+			reached += 1
+		elif riding.has(key):
+			on_road += 1
+		else:
+			missing.append(key)
+	return {"total": total, "reached": reached, "riding": on_road, "lost": missing.size(), "missing": missing}

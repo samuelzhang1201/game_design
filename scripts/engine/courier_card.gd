@@ -24,10 +24,19 @@ static func title(repo: DataRepository, state: GameState, id: int) -> String:
 	if String(c["kind"]) == CourierSystem.SPY:
 		return "Spy bound for " + Intel.place_label(repo, state, ArmySystem.metres_to_pack(repo,
 			Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))))
+	if String((c["order"] as Dictionary).get("action_code", "")) == LawSystem.ACTION:
+		return "Decree to " + LawSystem.place_label(repo, state, String(c["target"]))
 	var to_town := String((c["order"] as Dictionary).get("to_town", ""))
 	if to_town != "":
 		return "Courier to " + String((repo.burgs.get(to_town, {}) as Dictionary).get("label", to_town))
 	return "Courier to " + String(ArmySystem.regiment(repo, String(c["target"]), state).get("label", c["target"]))
+
+
+## What a decree's courier carries: "Decree: <law> → <value>".
+static func decree_words(repo: DataRepository, order: Dictionary) -> String:
+	var law := String(order.get("law", ""))
+	return "Decree: %s → %s" % [String((repo.laws.get(law, {}) as Dictionary).get("label", law)),
+		LawSystem.value_label(repo, String(order.get("value", "")))]
 
 
 ## Calendar's date of an absolute day.
@@ -79,6 +88,8 @@ static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 		var reg_label := String(ArmySystem.regiment(repo, String(c["target"]), state).get("label", c["target"]))
 		carrying = "Orders to carry %d days" % int((c["order"] as Dictionary).get("days", 0)) \
 			if order == "SUPPLY_CARRY_SET" else "Supply orders for " + reg_label
+	if order == LawSystem.ACTION:
+		carrying = decree_words(repo, c["order"])
 	return {
 		"kind": "courier", "id": int(c["id"]), "title": title(repo, state, id),
 		"subtitle": ("Spy of %s" % String((repo.kingdoms.get(realm, {}) as Dictionary).get("label", ""))) if is_spy \

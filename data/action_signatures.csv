@@ -37,3 +37,15 @@ SUPPLY_POINT_SET,,5,5,0,0,0,the crown feeds its host from its own towns
 SUPPLY_POINT_CLEAR,,0,0,0,0,0,the wagons are called home
 SUPPLY_CARRY_SET,,0,3,0,0,0,the host's train is loaded
 ARMY_SEAT,,3,3,0,0,0,the watch is changed at the gate
+LAW_SET,law=tax_rate&delta_pos,10,0,0,-30,0,raising tax burdens the commons
+LAW_SET,law=tax_rate&delta_neg,-5,0,0,30,0,
+LAW_SET,law=tariff_rate&delta_pos,0,0,0,15,-15,tariffs squeeze trade
+LAW_SET,law=tariff_rate&delta_neg,0,0,0,-10,15,
+LAW_SET,law=grain_ration&value=ration,10,0,0,-15,0,
+LAW_SET,law=grain_ration&value=release,0,0,0,20,0,
+LAW_SET,law=grain_ration&value=market,0,0,0,0,0,
+LAW_SET,law=church_policy&value=endow,0,0,50,0,0,
+LAW_SET,law=church_policy&value=tithe,10,0,-50,0,0,
+LAW_SET,law=justice_severity&delta_pos,30,0,10,-10,0,
+LAW_SET,law=justice_severity&delta_neg,-20,0,-5,10,0,
+LAW_SET,,0,0,0,0,0,"a law with no signature of its own: the decree drifts no one"

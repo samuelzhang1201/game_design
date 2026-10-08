@@ -41,3 +41,4 @@ SUPPLY_POINT_SET,gold:-1:the quartermaster's warrant to the town,1,spec 2026-10-
 SUPPLY_POINT_CLEAR,gold:-1:the quartermaster's letter recalling the wagons,1,
 SUPPLY_CARRY_SET,gold:-1:the wagon-master's tally,1,
 ARMY_SEAT,gold:-1:the change of the watch,1,"spec 2026-10-07-army-split-and-ground §4.5"
+LAW_SET,gold:-1:the chancery drafts the decree,1,"spec 2026-10-08-laws-tab §3; the law's own gold_cost and cost_ops (data/laws.csv) and one ordinary courier fee a courier are charged by the order itself"

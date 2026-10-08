@@ -100,6 +100,7 @@ func test_every_handled_action_leaves_a_cost() -> void:
 		ActionRequest.make("CHARACTER_CONFIDE", {}, "char_marshal"),
 		ActionRequest.make("RECRUIT_COURTIER", {}, "char_bard_corvin"),
 		ActionRequest.make("GUARD_ADJUST"),
+		ActionRequest.make("LAW_SET", {"law": "plunder", "value": "allow"}),
 	]
 	for req in cases:
 		var s := SuiteData.campaign(data, 42)
