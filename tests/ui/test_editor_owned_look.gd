@@ -15,7 +15,8 @@ const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversa
 	"res://scripts/ui/military_panel.gd", "res://scripts/ui/manor_master_panel.gd",
 	"res://scripts/ui/ledger_screen.gd", "res://scripts/ui/war_room_screen.gd",
 	"res://scripts/ui/war_folio_panel.gd", "res://scripts/ui/war_deploy_scroll.gd",
-	"res://scripts/ui/war_leave_prompt.gd", "res://scripts/ui/info_screen.gd"]
+	"res://scripts/ui/war_leave_prompt.gd", "res://scripts/ui/info_screen.gd",
+	"res://scripts/ui/laws_screen.gd", "res://scripts/ui/law_row.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -113,6 +114,24 @@ func test_the_court_keeps_its_scenes_look() -> void:
 	for n in ["%LogPanel", "%MapPanel", "%SidePanel"]:
 		assert_gte((r.current_screen.get_node(n) as Control).offset_top, bar.bar_height() + 3.0,
 			n + " starts under the top bar")
+
+## The laws screen and a row of it (spec 2026-10-08-laws-tab-design §5): code
+## sets no look on either — only words, values, which rows and titles show and
+## which buttons are greyed. (A row's menu popup wears CardMenuPopup from code:
+## a popup is no scene node, so the scene cannot declare it.)
+func test_the_laws_screen_keeps_its_scenes_look() -> void:
+	var r := _root()
+	_start(r)
+	r._switch_to(GameRoot.State.COURT)
+	r.current_screen.enter_court(null)
+	r.toggle_laws()
+	await wait_process_frames(3)
+	var laws := r.laws_screen()
+	assert_true(laws.visible)
+	_assert_scene_holds(laws, "res://scenes/screens/laws_screen.tscn", "Laws/")
+	var row := laws.row("tax_rate")
+	_assert_scene_holds(row, "res://scenes/panels/law_row.tscn", "LawRow/", 8)
+	assert_eq(row.choice().get_popup().theme_type_variation, &"CardMenuPopup")
 
 func test_the_conversation_keeps_its_scenes_look() -> void:
 	var r := _root()

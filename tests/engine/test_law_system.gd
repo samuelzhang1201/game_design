@@ -23,6 +23,24 @@ func test_the_tables_load_seventeen_laws_in_three_pages() -> void:
 	assert_eq(LawSystem.codes_on(repo, "economy"), ["tax_rate", "tariff_rate", "grain_ration"], "file order")
 	assert_true(repo.law_words.has("page_military"))
 
+## A military law's `group` is a key whose title is law_words' `group_<key>`
+## (the laws screen prints it); the other pages' laws have none. A group's
+## laws stand together in file order, so each title is printed once.
+func test_each_military_group_is_a_key_titled_in_the_words() -> void:
+	var seen: Array = []
+	var last := ""
+	for law: String in repo.law_order:
+		var group := String(repo.laws[law]["group"])
+		if String(repo.laws[law]["tab"]) != "military":
+			assert_eq(group, "", law + " is on a page without groups")
+			continue
+		assert_true(repo.law_words.has("group_" + group), "%s's group %s has a title" % [law, group])
+		if group != last:
+			assert_false(group in seen, group + " stands together")
+			seen.append(group)
+			last = group
+	assert_eq(seen, ["conduct", "discipline", "chivalry"])
+
 ## Every law_effects.csv row (R11) names a known law and one of its values —
 ## blank only for a range law's once-row, which is paid per point of change —
 ## a known timing and share, and an amount that is a number or a balance key.

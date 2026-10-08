@@ -42,3 +42,20 @@ phrase_ransom_ransom,ransom captives
 phrase_ransom_execute,execute captives
 phrase_no_havoc_on,no unauthorised Havoc
 phrase_no_havoc_off,Havoc allowed
+title,Laws
+law,Law
+choose,Decree as
+places,Places
+not_told,Not yet told
+all_told,Every place has been told.
+send_again,Send again
+lost,lost
+courier,courier
+couriers_riding,couriers riding
+last_in,the last in
+and,and
+day,day
+days,days
+days_at_most,days at most
+gold,gold
+order,order

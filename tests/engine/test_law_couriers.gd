@@ -302,3 +302,63 @@ func test_a_law_courier_is_no_regiment_edge_in_the_ledger() -> void:
 	for c: Dictionary in s.couriers:
 		var links := LedgerResolvers._couriers(repo, s, "courier:%d" % int(c["id"]), false)
 		assert_eq(links.size(), 0, "a courier to a province carries no orders to a regiment")
+
+
+## The laws screen's count by kind of place (spec §5: "8 / 10 camps and 3 / 5
+## units in the field"): a camp law's towns and field units counted apart, a
+## province law's provinces.
+func test_the_delivery_counts_each_kind_of_place_apart() -> void:
+	var marcher := _march_one()
+	assert_ne(marcher, "")
+	var towns := 0
+	var field := 0
+	for r: Dictionary in LawSystem.recipients(repo, s, "plunder"):
+		if String(r["kind"]) == "town":
+			towns += 1
+		else:
+			field += 1
+	assert_gt(towns, 0)
+	assert_gt(field, 0)
+	LawSystem.decree(repo, s, "plunder", "allow")
+	var kinds: Dictionary = LawSystem.delivery(repo, s, "plunder")["kinds"]
+	assert_eq(kinds["town"], {"reached": 0, "total": towns})
+	assert_eq(kinds["unit"], {"reached": 0, "total": field})
+	assert_false(kinds.has("province"))
+	_ride_all()
+	kinds = LawSystem.delivery(repo, s, "plunder")["kinds"]
+	assert_eq(kinds["town"], {"reached": towns, "total": towns}, "every camp told")
+	assert_eq(kinds["unit"], {"reached": field, "total": field}, "every unit in the field told")
+	var n := MapOwnership.provinces_of(repo, s, realm).size()
+	assert_eq(LawSystem.delivery(repo, s, "tax_rate")["kinds"], {"province": {"reached": n, "total": n}},
+		"undecreed: every province follows the seeded value")
+
+
+## The places not yet told (spec §5's list): each riding courier's place with
+## the days he has left, each missing place marked lost (R5 sends it again),
+## sorted by scope key; empty once every courier is home.
+func test_the_untold_list_names_each_place_with_its_days_or_lost() -> void:
+	var sent := LawSystem.decree(repo, s, "tax_rate", "7")
+	var gone_key := String(sent[0]["order"]["scope_key"])
+	s.couriers.remove_at(0)
+	var days := {}
+	for c: Dictionary in s.couriers:
+		days[String(c["order"]["scope_key"])] = CourierSystem.days_left(repo, s, c)
+	var rows := LawSystem.untold(repo, s, "tax_rate")
+	assert_eq(rows.size(), sent.size(), "every place is untold: one lost, the rest ridden for")
+	var keys: Array = rows.map(func(r: Dictionary) -> String: return String(r["scope_key"]))
+	var sorted_keys := keys.duplicate()
+	sorted_keys.sort()
+	assert_eq(keys, sorted_keys)
+	for r: Dictionary in rows:
+		var key := String(r["scope_key"])
+		assert_eq(String(r["label"]), LawSystem.place_label(repo, s, key))
+		if key == gone_key:
+			assert_true(bool(r["lost"]), key + " lost")
+			assert_eq(int(r["days"]), -1)
+		else:
+			assert_false(bool(r["lost"]), key)
+			assert_eq(int(r["days"]), int(days[key]), key + "'s courier's days left")
+	_ride_all()
+	rows = LawSystem.untold(repo, s, "tax_rate")
+	assert_eq(rows.size(), 1, "only the lost place is left")
+	assert_eq(String(rows[0]["scope_key"]), gone_key)

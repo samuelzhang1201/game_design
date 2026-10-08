@@ -539,8 +539,10 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 ## now, reached: those whose entry holds it, riding: those a courier of it
 ## still rides for, lost: missing.size(), last_days: the longest ride left,
 ## missing: the scope keys neither reached nor ridden for — a lost courier's
-## place, a camp or province gained since}. An undecreed law (decree id 0)
-## is reached everywhere: a place with no entry follows the seeded value.
+## place, a camp or province gained since; kinds: recipient kind (province |
+## town | unit) -> {reached, total}, the screen's "camps and units in the
+## field"}. An undecreed law (decree id 0) is reached everywhere: a place with
+## no entry follows the seeded value.
 static func delivery(repo: DataRepository, state: GameState, law: String) -> Dictionary:
 	var out := _tally(repo, state, law)
 	var last := 0
@@ -559,7 +561,29 @@ static func _riders(state: GameState, law: String) -> Array:
 			and int(o.get("decree_id", -1)) == id)
 
 
-## `delivery` without the days (no ride is reckoned): the counts and missing.
+## The places the standing decree of `law` has not reached (the laws
+## screen's list, §5), sorted by scope key: each {scope_key, label, days: the
+## ride its courier has left (-1 for none), lost: no courier rides for it — a
+## decree of the same value sends it again (R5)}.
+static func untold(repo: DataRepository, state: GameState, law: String) -> Array:
+	var days := {}
+	for c: Dictionary in _riders(state, law):
+		var key := String(c["order"]["scope_key"])
+		var left := CourierSystem.days_left(repo, state, c)
+		days[key] = mini(left, int(days[key])) if days.has(key) else left
+	var t := _tally(repo, state, law)
+	var keys: Array = (t["riding_keys"] as Array) + (t["missing"] as Array)
+	keys.sort()
+	var out: Array = []
+	for k in keys:
+		var key := String(k)
+		out.append({"scope_key": key, "label": place_label(repo, state, key),
+			"days": int(days.get(key, -1)), "lost": not days.has(key)})
+	return out
+
+
+## `delivery` without the days (no ride is reckoned): the counts, missing,
+## the kinds, and riding_keys (the places a courier still rides for).
 static func _tally(repo: DataRepository, state: GameState, law: String) -> Dictionary:
 	var id := _decree_id(state, law)
 	var riding := {}
@@ -567,16 +591,23 @@ static func _tally(repo: DataRepository, state: GameState, law: String) -> Dicti
 		riding[String(c["order"]["scope_key"])] = true
 	var total := 0
 	var reached := 0
-	var on_road := 0
+	var on_road: Array = []
 	var missing: Array = []
+	var kinds := {}
 	for r: Dictionary in recipients(repo, state, law):
 		var key := String(r["scope_key"])
+		var kind := String(r["kind"])
+		if not kinds.has(kind):
+			kinds[kind] = {"reached": 0, "total": 0}
+		kinds[kind]["total"] = int(kinds[kind]["total"]) + 1
 		total += 1
 		var entry: Dictionary = (state.law_in_force.get(key, {}) as Dictionary).get(law, {})
 		if id == 0 or (not entry.is_empty() and int(entry["decree_id"]) >= id):
 			reached += 1
+			kinds[kind]["reached"] = int(kinds[kind]["reached"]) + 1
 		elif riding.has(key):
-			on_road += 1
+			on_road.append(key)
 		else:
 			missing.append(key)
-	return {"total": total, "reached": reached, "riding": on_road, "lost": missing.size(), "missing": missing}
+	return {"total": total, "reached": reached, "riding": on_road.size(), "lost": missing.size(),
+		"missing": missing, "kinds": kinds, "riding_keys": on_road}
