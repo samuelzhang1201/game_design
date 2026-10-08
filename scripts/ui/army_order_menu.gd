@@ -37,6 +37,8 @@ extends PopupMenu
 ## reads this to stop a left click also opening the card of whatever it
 ## landed on.
 signal aiming_changed(regiment_code: String)
+## A draft is about to be planted for these regiments (the room's undo).
+signal drafts_planting(codes: Array)
 
 ## The route menu's ids, after the order rows'; CANCEL is the supply
 ## rates' Cancel row.
@@ -392,6 +394,7 @@ func _on_chosen(id: int) -> void:
 			return
 		HALT:
 			if _code != "" and drafting:
+				drafts_planting.emit([_code])
 				Game.plant_draft(_code, WarDrafts.GARRISON, Vector2.ZERO)
 				Game.publish_news("A halt for %s is pencilled in." % _name_of(_code))
 			elif _code != "":
@@ -474,6 +477,7 @@ func _commit() -> void:
 		for c: String in many:
 			dests[c] = _wps_of(c).duplicate()
 		_set_aim("")
+		drafts_planting.emit(many)
 		for c: String in many:
 			var mine := ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, c))
 			Game.plant_draft(c, WarDrafts.MARCH, to, dests[c], carry if carry >= 0 and carry != mine else -1,

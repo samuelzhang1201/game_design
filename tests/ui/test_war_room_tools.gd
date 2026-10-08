@@ -424,3 +424,60 @@ func test_a_released_stroke_stays_drawn_until_its_layer_is_painted() -> void:
 	await wait_until(func() -> bool: return view.plan_key_shown() == key, 5.0)
 	assert_eq(view.plan_key_shown(), key, "its layer was painted")
 	assert_false(hud.drawing(), "the ghost is gone once the layer is painted")
+
+
+func _cmd_z(screen: WarRoomScreen, shift := false) -> void:
+	var k := InputEventKey.new()
+	k.keycode = KEY_Z
+	k.meta_pressed = true
+	k.ctrl_pressed = true
+	k.shift_pressed = shift
+	k.pressed = true
+	screen._unhandled_input(k)
+
+
+## A red front drawn by real input; true when it landed.
+func _draw_front(screen: WarRoomScreen) -> void:
+	var view := screen.view()
+	_pick_stick(screen, "red")
+	var a := _open_land(screen)
+	_button(view, a, true)
+	for j in range(1, 9):
+		_motion(view, a + Vector2(float(j) * 12.0, 0.0))
+	_button(view, a + Vector2(96.0, 0.0), false)
+
+
+func test_cmd_z_strikes_a_drawn_march() -> void:
+	var screen := await _room()
+	_draw_front(screen)
+	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), 1, "a front is drawn")
+	screen.view().plan_input().put_down()
+	var code := _blue_drag_from_piece(screen)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
+	await wait_process_frames(2)
+	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "the march is pencilled")
+	_cmd_z(screen)
+	assert_true(WarDrafts.of(Game.state, code).is_empty(), "Cmd-Z struck the march")
+	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), 1, "the front drawn earlier stands")
+	_cmd_z(screen, true)
+	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "Shift-Cmd-Z puts it back")
+
+
+func test_undo_after_a_new_campaign_does_nothing() -> void:
+	var screen := await _room()
+	_draw_front(screen)
+	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), 1)
+	Game.start_campaign(45)
+	var before: Dictionary = Game.state.war_plans.duplicate(true)
+	_cmd_z(screen)
+	assert_eq(Game.state.war_plans, before, "the old game's step was not applied")
+
+
+func test_a_refused_write_leaves_no_undo_step() -> void:
+	var screen := await _room()
+	_draw_front(screen)
+	_draw_front(screen)
+	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), 2)
+	screen.view().plan_input().piece_moved.emit("p999", Vector2(1, 1), 0)   # no such piece: refused
+	_cmd_z(screen)
+	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), 1, "Cmd-Z undid the previous mark, not the refusal")

@@ -29,7 +29,7 @@ var _kinds: Array = []          # the kinds the roll and the menu offer (cut 1),
 
 
 func bind(screen: Control, view: WarRoomView, menu: PopupMenu, form: WarPlanForm, name_box: WarPlanName,
-		roll: WarToolRoll, slip: WarHoverSlip) -> void:
+		roll: WarToolRoll, slip: WarHoverSlip, orders: ArmyOrderMenu = null) -> void:
 	_screen = screen
 	_view = view
 	_menu = menu
@@ -38,6 +38,8 @@ func bind(screen: Control, view: WarRoomView, menu: PopupMenu, form: WarPlanForm
 	_roll = roll
 	_slip = slip
 	_input = view.plan_input()
+	if orders != null:
+		orders.drafts_planting.connect(_on_drafts_planting)
 	for k: String in Game.data.war_plan_kinds:
 		if int(Game.data.war_plan_kinds[k]["cut"]) == 1:
 			_kinds.append(k)
@@ -56,19 +58,15 @@ func bind(screen: Control, view: WarRoomView, menu: PopupMenu, form: WarPlanForm
 	_roll.action_picked.connect(_input.pick_action)
 	_input.tool_changed.connect(_show_tool)
 	_input.stroke_faced.connect(func(id: String, flip: int) -> void:
-		_remember()
-		Game.restyle_plan(id, {"flip": flip}))
+		_write(func() -> Variant: return Game.restyle_plan(id, {"flip": flip})))
 	_input.drawn.connect(_on_drawn)
 	_input.piece_moved.connect(func(id: String, to: Vector2, facing: int) -> void:
-		_remember()
-		if not Game.move_plan_piece(id, to, facing):
+		if not _write(func() -> Variant: return Game.move_plan_piece(id, to, facing)):
 			_view.refresh_plans())   # refused (the sea): the piece goes back
 	_input.stroke_reshaped.connect(func(id: String, pts: PackedVector2Array, r: float) -> void:
-		_remember()
-		Game.reshape_plan(id, pts, r))
+		_write(func() -> Variant: return Game.reshape_plan(id, pts, r)))
 	_input.stroke_shifted.connect(func(id: String, offset: Vector2) -> void:
-		_remember()
-		Game.shift_plan(id, offset))
+		_write(func() -> Variant: return Game.shift_plan(id, offset)))
 	_input.scraped.connect(_remove)
 	_input.piece_requested.connect(_open_form)
 	_input.chosen.connect(_on_chosen)
@@ -78,9 +76,25 @@ func bind(screen: Control, view: WarRoomView, menu: PopupMenu, form: WarPlanForm
 	_show_tool()
 
 
-## Before every write: the plans as they were, for undo.
-func _remember() -> void:
-	_input.tool.remember(Game.state.war_plans.duplicate(true))
+## A write to the plans through Game: the plans as they were are kept for undo
+## only when the write landed (Game._plans' rule), so a refusal leaves no step.
+func _write(f: Callable) -> Variant:
+	_input.tool.own(Game.state.get_instance_id())
+	var before: Dictionary = Game.state.war_plans.duplicate(true)
+	var done: Variant = f.call()
+	if (done is bool and done) or (done is String and done != "") or (done is int and done > 0):
+		_input.tool.remember(before)
+	return done
+
+
+## A march or halt is about to be pencilled for these regiments: their drafts as
+## they are now, for undo.
+func _on_drafts_planting(codes: Array) -> void:
+	_input.tool.own(Game.state.get_instance_id())
+	var before := {}
+	for c: String in codes:
+		before[c] = WarDrafts.of(Game.state, c).duplicate(true)
+	_input.tool.remember_drafts(before)
 
 
 func _origin() -> Vector2:
@@ -160,8 +174,7 @@ func _confirm(text: String, clear: String) -> void:
 func _on_row(id: int) -> void:
 	var f := _for
 	if id >= COLOUR:
-		_remember()
-		Game.restyle_plan(String(f["id"]), {"colour": String(COLOURS.keys()[id - COLOUR])})
+		_write(func() -> Variant: return Game.restyle_plan(String(f["id"]), {"colour": String(COLOURS.keys()[id - COLOUR])}))
 		return
 	match id:
 		PLACE:
@@ -171,8 +184,7 @@ func _on_row(id: int) -> void:
 		CLEAR_STROKES:
 			_confirm("Clear %d drawings" % WarPlans.strokes_in(Game.data, Game.state, _view.sheet_rect()).size(), WarPlans.STROKES)
 		CONFIRM:
-			_remember()
-			Game.clear_plans(String(f["clear"]), _view.sheet_rect())
+			_write(func() -> Variant: return Game.clear_plans(String(f["clear"]), _view.sheet_rect()))
 		EDIT:
 			var p: Dictionary = Game.state.war_plans[WarPlans.PIECES].get(String(f["id"]), {})
 			if not p.is_empty():
@@ -187,24 +199,20 @@ func _on_row(id: int) -> void:
 				int(Game.data.bal("war_plan_name_chars")))
 		DASHED:
 			var s: Dictionary = Game.state.war_plans[WarPlans.STROKES].get(String(f["id"]), {})
-			_remember()
-			Game.restyle_plan(String(f["id"]), {"dashed": 0 if int(s.get("dashed", 0)) != 0 else 1})
+			_write(func() -> Variant: return Game.restyle_plan(String(f["id"]), {"dashed": 0 if int(s.get("dashed", 0)) != 0 else 1}))
 		FLIP:
 			var s: Dictionary = Game.state.war_plans[WarPlans.STROKES].get(String(f["id"]), {})
-			_remember()
-			Game.restyle_plan(String(f["id"]), {"flip": 0 if int(s.get("flip", 0)) != 0 else 1})
+			_write(func() -> Variant: return Game.restyle_plan(String(f["id"]), {"flip": 0 if int(s.get("flip", 0)) != 0 else 1}))
 		FACE:
 			var s: Dictionary = Game.state.war_plans[WarPlans.STROKES].get(String(f["id"]), {})
 			if not s.is_empty():
-				_remember()
-				Game.restyle_plan(String(f["id"]), {"flip": _facing(String(s["colour"]), WarPlans.points_px(Game.data, s), String(f["id"]))})
+				_write(func() -> Variant: return Game.restyle_plan(String(f["id"]), {"flip": _facing(String(s["colour"]), WarPlans.points_px(Game.data, s), String(f["id"]))}))
 
 
 # --- writes ------------------------------------------------------------------
 
 func _remove(id: String) -> void:
-	_remember()
-	if Game.remove_plan(id) and _input.chosen_id == id:
+	if _write(func() -> Variant: return Game.remove_plan(id)) and _input.chosen_id == id:
 		_input.choose("")
 
 
@@ -227,9 +235,8 @@ func _form_lines(arm: String, heads: int, side: String) -> Array:
 
 func _on_placed(arm: String, heads: int, side: String) -> void:
 	_last_side = side
-	_remember()
 	if _form_edit != "":
-		Game.edit_plan_piece(_form_edit, arm, heads, side)
+		_write(func() -> Variant: return Game.edit_plan_piece(_form_edit, arm, heads, side))
 		return
 	var facing := 0
 	var nearest := INF
@@ -238,15 +245,14 @@ func _on_placed(arm: String, heads: int, side: String) -> void:
 		if d < nearest:
 			nearest = d
 			facing = WarPlanPieces.facing_of((q["at"] as Vector2) - _form_at)   # it faces the nearest of ours
-	Game.place_plan_piece(arm, heads, side, _form_at, facing)
+	_write(func() -> Variant: return Game.place_plan_piece(arm, heads, side, _form_at, facing))
 
 
 func _on_drawn(d: Dictionary) -> void:
 	var kind := String(d["kind"])
 	var name := WarPlans.next_name(Game.data, Game.state, kind)
 	var flip := _facing(String(d["colour"]), d["pts"]) if bool(Game.data.war_plan_kinds[kind]["teeth"]) else -1
-	_remember()
-	var id := Game.draw_plan(kind, String(d["colour"]), d["pts"], float(d["r"]), name, false, flip, String(d.get("of", "")))
+	var id: String = _write(func() -> Variant: return Game.draw_plan(kind, String(d["colour"]), d["pts"], float(d["r"]), name, false, flip, String(d.get("of", ""))))
 	if id == "":
 		Game.publish_news(WarPlans.stroke_refusal(Game.data, Game.state, kind, String(d["colour"]), d["pts"], float(d["r"]), name))
 		return
@@ -268,8 +274,7 @@ func _on_named(id: String, text: String) -> void:
 	var s: Dictionary = Game.state.war_plans[WarPlans.STROKES].get(id, {})
 	if s.is_empty() or String(s["name"]) == text:
 		return
-	_remember()
-	Game.restyle_plan(id, {"name": text})
+	_write(func() -> Variant: return Game.restyle_plan(id, {"name": text}))
 
 
 # --- the slip ----------------------------------------------------------------
@@ -326,10 +331,19 @@ func key(event: InputEventKey) -> bool:
 		_input.switch_side()
 		return true
 	if command and event.keycode == KEY_Z:
-		var now: Dictionary = Game.state.war_plans.duplicate(true)
-		var back := _input.tool.redo(now) if event.shift_pressed else _input.tool.undo(now)
-		if not back.is_empty():
-			Game.restore_plans(back)
+		_input.tool.own(Game.state.get_instance_id())
+		var now_of := func(e: Dictionary) -> Dictionary:
+			if e.has("drafts"):
+				var cur := {}
+				for c: String in e["drafts"]:
+					cur[c] = WarDrafts.of(Game.state, c).duplicate(true)
+				return {"drafts": cur}
+			return {"plans": Game.state.war_plans.duplicate(true)}
+		var back: Dictionary = _input.tool.redo(now_of) if event.shift_pressed else _input.tool.undo(now_of)
+		if back.has("plans"):
+			Game.restore_plans(back["plans"])
+		elif back.has("drafts"):
+			Game.restore_drafts(back["drafts"])
 		return true
 	if command:
 		return false

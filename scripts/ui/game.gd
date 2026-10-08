@@ -178,6 +178,11 @@ func plant_draft(code: String, order: String, dest_px: Vector2, waypoints: Array
 	state_changed.emit()
 
 
+func restore_drafts(drafts: Dictionary) -> void:
+	WarDrafts.restore(state, drafts)
+	state_changed.emit()
+
+
 func strike_draft(code: String) -> void:
 	if WarDrafts.strike(state, code):
 		state_changed.emit()

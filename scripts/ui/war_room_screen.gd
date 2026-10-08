@@ -127,7 +127,7 @@ func open() -> void:
 		_view.plan_input().refused.connect(Game.publish_news)
 		_view.set_caps_font(UiPalette.role_font("header"))
 		Game.plans_changed.connect(_view.refresh_plans)
-		_plans.bind(self, _view, %GroundMenu, %PlanForm, %PlanName, %ToolRoll, slip)
+		_plans.bind(self, _view, %GroundMenu, %PlanForm, %PlanName, %ToolRoll, slip, _orders)
 	# the clock stops and nothing starts it while the room is open (owner
 	# 2026-10-02: 进入war room时间也一直是暂停的，无法继续，直到下达命令并退出)
 	Game.hold_clock(true, "war_room")

@@ -151,3 +151,13 @@ func test_the_line_it_has_already_is_no_new_order() -> void:
 		func(r: ActionRequest) -> String: return r.action_code), ["ARMY_MARCH"])
 	WarDrafts.plant(repo, state, code, "march", _somewhere())
 	assert_false(WarDrafts.of(state, code).has("supply_town"), "no town named, none kept")
+
+
+func test_restore_puts_back_and_erases() -> void:
+	WarDrafts.plant(repo, state, code, "march", _somewhere())
+	var given := {"order": "garrison", "dest_x_m": 0, "dest_y_m": 0, "tick": 1, "day": 1, "refused": ""}
+	WarDrafts.restore(state, {code: {}, "other": given})
+	assert_true(WarDrafts.of(state, code).is_empty(), "an empty entry erases the draft")
+	assert_eq(WarDrafts.of(state, "other"), given)
+	given["order"] = "march"
+	assert_eq(String(WarDrafts.of(state, "other")["order"]), "garrison", "it is a copy")

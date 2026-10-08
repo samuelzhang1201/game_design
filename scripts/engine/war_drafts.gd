@@ -32,6 +32,16 @@ static func plant(repo: DataRepository, state: GameState, code: String, order: S
 	state.war_drafts[code] = d
 
 
+## Puts drafts back (the room's undo): each code's draft, or none for {}.
+static func restore(state: GameState, drafts: Dictionary) -> void:
+	for code: String in drafts:
+		var d: Dictionary = drafts[code]
+		if d.is_empty():
+			state.war_drafts.erase(code)
+		else:
+			state.war_drafts[code] = d.duplicate(true)
+
+
 static func strike(state: GameState, code: String) -> bool:
 	return state.war_drafts.erase(code)
 

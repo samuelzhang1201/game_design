@@ -107,18 +107,22 @@ func test_picking_a_handle_before_the_line() -> void:
 		"a ring's rim handle is its radius")
 
 
+func _same(e: Dictionary) -> Dictionary:
+	return e
+
+
 func test_undo_and_redo() -> void:
 	var a := {"rev": 1}
 	var b := {"rev": 2}
-	var c := {"rev": 3}
+	var now := func(e: Dictionary) -> Dictionary: return {"plans": {"rev": int(e["plans"]["rev"]) + 1}}
 	tool.remember(a)
 	tool.remember(b)
-	assert_eq(tool.undo(c), b)
-	assert_eq(tool.undo(b), a)
-	assert_eq(tool.undo(a), {}, "nothing further back")
-	assert_eq(tool.redo(a), b)
+	assert_eq(tool.undo(now), {"plans": b})
+	assert_eq(tool.undo(now), {"plans": a})
+	assert_eq(tool.undo(now), {}, "nothing further back")
+	assert_eq(tool.redo(now), {"plans": {"rev": 2}})
 	tool.remember(b)
-	assert_eq(tool.redo(c), {}, "a new edit forgets the redo")
+	assert_eq(tool.redo(now), {}, "a new edit forgets the redo")
 
 
 func test_undo_is_capped() -> void:
@@ -126,6 +130,22 @@ func test_undo_is_capped() -> void:
 	tool = WarPlanTool.new(repo)
 	for i in 5:
 		tool.remember({"rev": i})
-	assert_eq(tool.undo({"rev": 9}), {"rev": 4})
-	assert_eq(tool.undo({"rev": 4}), {"rev": 3})
-	assert_eq(tool.undo({"rev": 3}), {})
+	assert_eq(tool.undo(_same), {"plans": {"rev": 4}})
+	assert_eq(tool.undo(_same), {"plans": {"rev": 3}})
+	assert_eq(tool.undo(_same), {})
+
+
+func test_undo_holds_plans_and_drafts_in_one_stack() -> void:
+	tool.remember({"rev": 1})
+	tool.remember_drafts({"u1": {}})
+	var now := func(e: Dictionary) -> Dictionary: return {"drafts": {"u1": {"order": "march"}}} if e.has("drafts") else {"plans": {"rev": 2}}
+	assert_eq(tool.undo(now), {"drafts": {"u1": {}}})
+	assert_eq(tool.undo(now), {"plans": {"rev": 1}})
+	assert_eq(tool.redo(now), {"plans": {"rev": 2}})
+
+
+func test_a_new_state_empties_the_stacks() -> void:
+	tool.own(1)
+	tool.remember({"rev": 1})
+	tool.own(2)
+	assert_eq(tool.undo(_same), {})

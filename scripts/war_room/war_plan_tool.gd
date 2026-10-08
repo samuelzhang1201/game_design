@@ -22,6 +22,7 @@ var _screen := PackedVector2Array()    # the same samples on the screen
 var _repo: DataRepository
 var _undo: Array = []
 var _redo: Array = []
+var _owner := 0
 
 
 func _init(repo: DataRepository) -> void:
@@ -192,22 +193,43 @@ static func handles_of(repo: DataRepository, s: Dictionary) -> PackedVector2Arra
 
 ## Before an edit: the plans as they were (a deep copy is the caller's).
 func remember(before: Dictionary) -> void:
-	_undo.append(before)
+	_push({"plans": before})
+
+
+## Before a drawn march or halt: each regiment's draft as it was ({} = none).
+func remember_drafts(before: Dictionary) -> void:
+	_push({"drafts": before})
+
+
+func _push(entry: Dictionary) -> void:
+	_undo.append(entry)
 	while _undo.size() > int(_repo.bal("war_plan_undo_max")):
 		_undo.pop_front()
 	_redo.clear()
 
 
-## The plans to put back, given the plans now; {} when there is nothing to undo.
-func undo(now: Dictionary) -> Dictionary:
+## The stacks belong to one game: a different state (a new campaign, a load)
+## empties them.
+func own(state_id: int) -> void:
+	if state_id != _owner:
+		_owner = state_id
+		_undo.clear()
+		_redo.clear()
+
+
+## The entry to put back ({"plans": …} or {"drafts": …}); {} when there is
+## nothing to undo. `now_of(entry)` gives the present counterpart, kept for redo.
+func undo(now_of: Callable) -> Dictionary:
 	if _undo.is_empty():
 		return {}
-	_redo.append(now)
-	return _undo.pop_back()
+	var e: Dictionary = _undo.pop_back()
+	_redo.append(now_of.call(e))
+	return e
 
 
-func redo(now: Dictionary) -> Dictionary:
+func redo(now_of: Callable) -> Dictionary:
 	if _redo.is_empty():
 		return {}
-	_undo.append(now)
-	return _redo.pop_back()
+	var e: Dictionary = _redo.pop_back()
+	_undo.append(now_of.call(e))
+	return e
