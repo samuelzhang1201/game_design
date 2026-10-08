@@ -61,7 +61,10 @@ func _ready() -> void:
 	_orders.drafting = true   # orders given in the room are drafts until sealed (spec 2026-10-02-war-room-v2 §3.1)
 	_view.sheet_requested.connect(_view.swap_to)
 	_view.sheet_laid.connect(_on_laid)
-	_folio.closed.connect(_view.clear_selection)
+	_folio.escape_closes = false   # Esc is the desk's: the stick, a chosen stroke, the selection, then the book
+	_folio.closed.connect(func() -> void:
+		if _view.selected_army() != "":   # a side change already let go of ours; its clear must stay
+			_view.clear_selection())
 	_folio.closed.connect(_make_way)
 	_folio.placed.connect(_make_way)
 
@@ -224,6 +227,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if not visible or key == null or not key.pressed or key.keycode != KEY_ESCAPE:
+		return
+	if _view.board_mode() == "table" and _folio.visible:
+		_folio.close()
+		get_viewport().set_input_as_handled()
 		return
 	if _view.board_mode() == "board" or _view.board_mode() == "to_board":
 		_view.leave_board()

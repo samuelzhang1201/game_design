@@ -37,6 +37,8 @@ signal placed
 @export var section_sep := 6
 @export var label_gap := 6
 
+## False when the room owns Esc (it closes the book itself after the desk's chain).
+var escape_closes := true
 var _code := ""
 var _shown: Array = []   # the sections last laid, so a refresh that changes nothing rebuilds nothing
 var _arm := ""           # the arm the figure shows
@@ -165,7 +167,7 @@ func section_nodes() -> Array[Node]:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if is_visible_in_tree() and event is InputEventKey and (event as InputEventKey).pressed \
+	if escape_closes and is_visible_in_tree() and event is InputEventKey and (event as InputEventKey).pressed \
 			and (event as InputEventKey).keycode == KEY_ESCAPE:
 		close()
 		if is_inside_tree():
