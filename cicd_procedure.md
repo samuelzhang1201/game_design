@@ -25,6 +25,23 @@ It does **not** trigger on a plain push to `main` (e.g. after a PR merges) — m
 
 它**不会**在直接 push 到 `main`（比如 PR 合并后）时触发——因为合并的这个 commit 已经在 PR 上测过了，在 main 上再测一次只是白白浪费 Actions 的分钟数配额，没有任何新信息。
 
+It also **skips entirely** (no run at all, not even a pending check) when every changed file in the PR is one of:
+
+它还会在以下情况**完全跳过**（压根不触发任何 run，也不会有 pending 的检查项）——条件是 PR 里改动的文件全部满足：
+
+- a plain documentation file (`**/*.md` — `CLAUDE.md`, `docs/**`, `cicd_procedure.md`, etc.), or
+  纯文档文件（`**/*.md`——比如各处的 `CLAUDE.md`、`docs/**`、`cicd_procedure.md` 等）；或者
+- a CSV value tweak under `data/**/*.csv` — tests read their data through `tests/suite_data.gd`, never the live CSVs, so a tuning-number change there can't break a test.
+  `data/**/*.csv` 下的数值调整——测试是通过 `tests/suite_data.gd` 读数据的，不会读真实的 CSV，所以单纯调一个数值不可能把测试搞挂。
+
+**Exception**: `RANDOM_EVENTS.md` and everything under `game_story/**` are excluded from the doc skip — they're runtime game content (narration, event prose), not documentation, and have their own id-resolution tests, so a PR touching them still runs the full suite.
+
+**例外**：`RANDOM_EVENTS.md` 和 `game_story/**` 下的所有文件，不算在"文档"豁免范围内——它们是运行时真正加载的游戏内容（叙事文本、事件文案），不是文档，而且有专门校验 id 是否能解析的测试，所以改到它们还是会照常跑全量测试。
+
+If a PR mixes an ignored file (docs/CSV) with a real code change, the run still happens as normal — the skip only applies when *every* changed file matches.
+
+如果一个 PR 里既改了文档/CSV，又改了别的代码，还是会正常触发全量测试——这个跳过规则只在**所有**改动文件都命中豁免条件时才生效。
+
 ## 2. What the workflow actually does 工作流具体做了什么
 
 Each run, on a fresh `ubuntu-latest` GitHub-hosted machine:
