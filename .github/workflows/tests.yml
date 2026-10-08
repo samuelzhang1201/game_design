@@ -1,0 +1,35 @@
+name: tests
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  gut-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Cache Godot binary
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: /opt/godot
+          key: godot-4.7-stable-linux-x86_64
+
+      - name: Download Godot 4.7
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /opt/godot
+          curl -L -o /tmp/godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
+          unzip /tmp/godot.zip -d /opt/godot
+
+      - name: Run full GUT suite
+        env:
+          GODOT: /opt/godot/Godot_v4.7-stable_linux.x86_64
+        run: |
+          chmod +x "$GODOT"
+          ./run_tests.sh
