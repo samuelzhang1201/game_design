@@ -269,7 +269,7 @@ func test_the_opposing_points_are_the_other_sides() -> void:
 	var o := _land()
 	var blue := WarPlans.draw(repo, state, "arrow", "blue", PackedVector2Array([o, o + Vector2(20, 0)]), 0.0, "")
 	var red := WarPlans.draw(repo, state, "front", "red", PackedVector2Array([o + Vector2(0, 40), o + Vector2(20, 40)]), 0.0, "")
-	WarPlans.place(repo, state, "infantry", 1000, _foreign(), o + Vector2(5, 80), 0)
+	assert_ne(WarPlans.place(repo, state, "infantry", 1000, _foreign(), o + Vector2(3, 2), 0), "", "premise: on land")
 	var ours: Array = [o + Vector2(-50, 0)]
 	var for_red := WarPlans.opposing_points(repo, state, "red", ours, red)
 	assert_eq(for_red.size(), 3, "the blue stroke's two points and our piece")

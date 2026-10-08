@@ -282,7 +282,7 @@ func _plan() -> Dictionary:
 	if naval:
 		var days := CourierSystem.arrival_days(Game.data, Game.state, code, _pending, Vector2(-1, -1), -1, _waypoints)
 		sub += " · arrives in %d day%s" % [days, "" if days == 1 else "s"]
-	var who := _name_of(code) if many.size() <= 1 else "%d regiments" % many.size()
+	var who := _name_of(code) if many.size() <= 1 else "%d units" % many.size()
 	return {"title": "%s to %s" % [who, Intel.place_label(Game.data, Game.state, _pending)],
 		"sub": sub, "rows": rows}
 
@@ -472,7 +472,7 @@ func _commit() -> void:
 			Game.plant_draft(c, WarDrafts.MARCH, to, dests[c], carry if carry >= 0 and carry != mine else -1,
 				town if town != String(SupplyLines.line(Game.state, c).get("town", "")) else "", _rate_of(c))
 		Game.publish_news("%s's march is pencilled in." % _name_of(code) if many.size() <= 1 \
-			else "The march of %d regiments is pencilled in." % many.size())
+			else "The march of %d units is pencilled in." % many.size())
 		return
 	# one destination for the whole selection (spec 2026-10-07-army-split-and-
 	# ground §5.6): each unit its own supply point, load and march, judged alone

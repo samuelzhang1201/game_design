@@ -60,7 +60,7 @@ func setup(view: WarRoomView, repo: DataRepository, hud: WarPlanHud) -> void:
 ## arrow wants a selection of its side.
 func why_of(side: String, key: String) -> String:
 	if key == "arrow" and (sel_side != side or sel.is_empty()):
-		return "Select a unit first: one of our regiments (Shift adds, Shift-drag boxes)" if side == "blue" \
+		return "Select a unit first: one of ours (Shift-click adds, Shift-drag boxes)" if side == "blue" \
 			else "Select a unit first: a supposed host or an intel hint"
 	return ""
 
