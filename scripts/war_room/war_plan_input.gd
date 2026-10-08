@@ -126,11 +126,12 @@ func pick_stick(s: String) -> void:
 	tool_changed.emit()
 
 
-## Tab: the other side, the same kind (a front when its arrow cannot be used).
+## Tab: the other side, the same kind (nothing in hand: that side's last kind); a front when its arrow cannot be used.
 func switch_side() -> void:
 	action = ""
 	var to := "blue" if tool.side != "blue" else "red"
-	tool.switch_side("front" if tool.kind != "" and why_of(to, tool.kind) != "" else "")
+	var k := tool.kind if tool.kind != "" else tool.last_kind(to)
+	tool.switch_side("front" if why_of(to, k) != "" else "")
 	tool_changed.emit()
 
 

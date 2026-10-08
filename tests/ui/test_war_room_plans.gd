@@ -143,7 +143,7 @@ func test_escape_lays_the_stick_down_and_digits_pick_a_kind() -> void:
 	assert_false(view.plan_input().tool.in_hand(), "no side yet: a digit takes nothing")
 	k.keycode = KEY_TAB
 	screen._unhandled_input(k)
-	assert_eq(view.plan_input().tool.side, "blue", "Tab lights a row")
+	assert_eq([view.plan_input().tool.side, view.plan_input().tool.kind], ["blue", "front"], "Tab takes the other side's last kind")
 	k.keycode = KEY_2
 	screen._unhandled_input(k)
 	assert_eq([view.plan_input().tool.side, view.plan_input().tool.kind], ["blue", "front"])

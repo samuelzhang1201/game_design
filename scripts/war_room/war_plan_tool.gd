@@ -72,13 +72,10 @@ func pick_stick(s: String, fallback := "") -> void:
 
 
 ## Tab: the other side, the same kind in hand (`fallback` when the same
-## cannot be used there); with no side yet, ours.
+## cannot be used there); with nothing in hand, that side's last kind.
 func switch_side(fallback := "") -> void:
 	var to := "blue" if side != "blue" else "red"
-	if kind == "":
-		side = to
-		return
-	pick(to, fallback if fallback != "" else kind)
+	pick(to, fallback if fallback != "" else (kind if kind != "" else last_kind(to)))
 
 
 ## The kind last in hand on a side.

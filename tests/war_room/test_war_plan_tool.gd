@@ -46,7 +46,7 @@ func test_no_side_no_kind_and_each_side_keeps_its_last() -> void:
 	assert_false(tool.pick("ink", "front"), "no ink stick any more")
 	tool.put_down()
 	tool.switch_side()
-	assert_eq([tool.side, tool.kind], ["blue", ""], "Tab with nothing in hand lights the other row")
+	assert_eq([tool.side, tool.kind], ["blue", "phase"], "Tab with nothing in hand takes the other side's last kind")
 
 
 func test_a_drag_is_smoothed_to_a_few_points() -> void:
