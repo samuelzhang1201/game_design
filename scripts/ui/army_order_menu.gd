@@ -39,6 +39,8 @@ extends PopupMenu
 signal aiming_changed(regiment_code: String)
 ## A draft is about to be planted for these regiments (the room's undo).
 signal drafts_planting(codes: Array)
+## ... and it is planted (the undo step keeps what was left).
+signal drafts_planted(codes: Array)
 
 ## The route menu's ids, after the order rows'; CANCEL is the supply
 ## rates' Cancel row.
@@ -396,6 +398,7 @@ func _on_chosen(id: int) -> void:
 			if _code != "" and drafting:
 				drafts_planting.emit([_code])
 				Game.plant_draft(_code, WarDrafts.GARRISON, Vector2.ZERO)
+				drafts_planted.emit([_code])
 				Game.publish_news("A halt for %s is pencilled in." % _name_of(_code))
 			elif _code != "":
 				_run(ActionRequest.make("ARMY_GARRISON", {"regiment": _code}))
@@ -482,6 +485,7 @@ func _commit() -> void:
 			var mine := ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, c))
 			Game.plant_draft(c, WarDrafts.MARCH, to, dests[c], carry if carry >= 0 and carry != mine else -1,
 				town if town != String(SupplyLines.line(Game.state, c).get("town", "")) else "", _rate_of(c))
+		drafts_planted.emit(many)
 		Game.publish_news("%s's march is pencilled in." % _name_of(code) if many.size() <= 1 \
 			else "The march of %d units is pencilled in." % many.size())
 		return

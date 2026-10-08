@@ -26,6 +26,7 @@ var _form_at := Vector2(-1, -1)
 var _form_edit := ""            # the piece the form edits, "" placing
 var _last_side := ""
 var _kinds: Array = []          # the kinds the roll and the menu offer (cut 1), in tool_key order
+var _drafts_before: Dictionary = {}   # the drafts as they were while a march or halt is pencilled
 
 
 func bind(screen: Control, view: WarRoomView, menu: PopupMenu, form: WarPlanForm, name_box: WarPlanName,
@@ -40,6 +41,7 @@ func bind(screen: Control, view: WarRoomView, menu: PopupMenu, form: WarPlanForm
 	_input = view.plan_input()
 	if orders != null:
 		orders.drafts_planting.connect(_on_drafts_planting)
+		orders.drafts_planted.connect(_on_drafts_planted)
 	for k: String in Game.data.war_plan_kinds:
 		if int(Game.data.war_plan_kinds[k]["cut"]) == 1:
 			_kinds.append(k)
@@ -77,12 +79,12 @@ func bind(screen: Control, view: WarRoomView, menu: PopupMenu, form: WarPlanForm
 
 
 ## A write to the plans through Game: the plans as they were are kept for undo
-## only when the write landed (Game._plans' rule), so a refusal leaves no step.
+## only when the write landed (Game.landed), so a refusal leaves no step.
 func _write(f: Callable) -> Variant:
 	_input.tool.own(Game.state.get_instance_id())
 	var before: Dictionary = Game.state.war_plans.duplicate(true)
 	var done: Variant = f.call()
-	if (done is bool and done) or (done is String and done != "") or (done is int and done > 0):
+	if Game.landed(done):
 		_input.tool.remember(before)
 	return done
 
@@ -90,11 +92,25 @@ func _write(f: Callable) -> Variant:
 ## A march or halt is about to be pencilled for these regiments: their drafts as
 ## they are now, for undo.
 func _on_drafts_planting(codes: Array) -> void:
+	_drafts_before = _drafts_of(codes)
+
+
+## It is pencilled: the step keeps the drafts before and as left, so an undo
+## after a seal, a strike or a map order (the drafts since changed) does nothing.
+func _on_drafts_planted(codes: Array) -> void:
 	_input.tool.own(Game.state.get_instance_id())
 	var before := {}
 	for c: String in codes:
-		before[c] = WarDrafts.of(Game.state, c).duplicate(true)
-	_input.tool.remember_drafts(before)
+		before[c] = _drafts_before.get(c, {})
+	_drafts_before = {}
+	_input.tool.remember_drafts(before, _drafts_of(codes))
+
+
+func _drafts_of(codes: Variant) -> Dictionary:
+	var out := {}
+	for c: String in codes:
+		out[c] = WarDrafts.of(Game.state, c).duplicate(true)
+	return out
 
 
 func _origin() -> Vector2:
@@ -334,13 +350,15 @@ func key(event: InputEventKey) -> bool:
 		_input.tool.own(Game.state.get_instance_id())
 		var now_of := func(e: Dictionary) -> Dictionary:
 			if e.has("drafts"):
-				var cur := {}
-				for c: String in e["drafts"]:
-					cur[c] = WarDrafts.of(Game.state, c).duplicate(true)
-				return {"drafts": cur}
+				return {"drafts": _drafts_of(e["drafts"]), "expect": e["drafts"]}
 			return {"plans": Game.state.war_plans.duplicate(true)}
-		var back: Dictionary = _input.tool.redo(now_of) if event.shift_pressed else _input.tool.undo(now_of)
-		if back.has("plans"):
+		# a march's step holds only while its drafts are as it left them
+		var holds := func(e: Dictionary) -> bool:
+			return not e.has("drafts") or _drafts_of(e.get("expect", {})) == e.get("expect", {})
+		var back: Dictionary = _input.tool.redo(now_of, holds) if event.shift_pressed else _input.tool.undo(now_of, holds)
+		if back.has("stale"):
+			Game.publish_news("That march has since been sealed or changed — nothing to undo.")
+		elif back.has("plans"):
 			Game.restore_plans(back["plans"])
 		elif back.has("drafts"):
 			Game.restore_drafts(back["drafts"])

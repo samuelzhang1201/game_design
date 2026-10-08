@@ -137,9 +137,9 @@ func test_undo_is_capped() -> void:
 
 func test_undo_holds_plans_and_drafts_in_one_stack() -> void:
 	tool.remember({"rev": 1})
-	tool.remember_drafts({"u1": {}})
+	tool.remember_drafts({"u1": {}}, {"u1": {"order": "march"}})
 	var now := func(e: Dictionary) -> Dictionary: return {"drafts": {"u1": {"order": "march"}}} if e.has("drafts") else {"plans": {"rev": 2}}
-	assert_eq(tool.undo(now), {"drafts": {"u1": {}}})
+	assert_eq(tool.undo(now), {"drafts": {"u1": {}}, "expect": {"u1": {"order": "march"}}})
 	assert_eq(tool.undo(now), {"plans": {"rev": 1}})
 	assert_eq(tool.redo(now), {"plans": {"rev": 2}})
 
@@ -149,3 +149,15 @@ func test_a_new_state_empties_the_stacks() -> void:
 	tool.remember({"rev": 1})
 	tool.own(2)
 	assert_eq(tool.undo(_same), {})
+
+
+func test_a_step_that_no_longer_holds_is_dropped() -> void:
+	tool.remember({"rev": 1})
+	tool.remember_drafts({"u1": {}}, {"u1": {"order": "march"}})
+	var never := func(_e: Dictionary) -> bool: return false
+	assert_eq(tool.undo(_same, never), {"stale": true}, "the step is dropped, said stale")
+	assert_eq(tool.redo(_same), {}, "a dropped step leaves no redo")
+	assert_eq(tool.undo(_same), {"plans": {"rev": 1}}, "the next step is the one before")
+	var holds := func(_e: Dictionary) -> bool: return true
+	assert_eq(tool.redo(_same, never), {"stale": true}, "a redo that no longer holds is dropped too")
+	assert_eq(tool.undo(_same, holds), {}, "and leaves no undo")

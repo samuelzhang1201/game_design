@@ -193,9 +193,11 @@ func remember(before: Dictionary) -> void:
 	_push({"plans": before})
 
 
-## Before a drawn march or halt: each regiment's draft as it was ({} = none).
-func remember_drafts(before: Dictionary) -> void:
-	_push({"drafts": before})
+## A drawn march or halt pencilled: each regiment's draft as it was ({} =
+## none) and as it was left (`after`), so the step is put back only while the
+## drafts are still as it left them.
+func remember_drafts(before: Dictionary, after: Dictionary = {}) -> void:
+	_push({"drafts": before, "expect": after})
 
 
 func _push(entry: Dictionary) -> void:
@@ -216,17 +218,21 @@ func own(state_id: int) -> void:
 
 ## The entry to put back ({"plans": …} or {"drafts": …}); {} when there is
 ## nothing to undo. `now_of(entry)` gives the present counterpart, kept for redo.
-func undo(now_of: Callable) -> Dictionary:
-	if _undo.is_empty():
-		return {}
-	var e: Dictionary = _undo.pop_back()
-	_redo.append(now_of.call(e))
-	return e
+## `holds(entry)`, when given, says whether the entry still applies: one that
+## does not is dropped and {"stale": true} returned (the next is not tried).
+func undo(now_of: Callable, holds := Callable()) -> Dictionary:
+	return _step(_undo, _redo, now_of, holds)
 
 
-func redo(now_of: Callable) -> Dictionary:
-	if _redo.is_empty():
+func redo(now_of: Callable, holds := Callable()) -> Dictionary:
+	return _step(_redo, _undo, now_of, holds)
+
+
+func _step(from: Array, to: Array, now_of: Callable, holds: Callable) -> Dictionary:
+	if from.is_empty():
 		return {}
-	var e: Dictionary = _redo.pop_back()
-	_undo.append(now_of.call(e))
+	var e: Dictionary = from.pop_back()
+	if holds.is_valid() and not bool(holds.call(e)):
+		return {"stale": true}
+	to.append(now_of.call(e))
 	return e

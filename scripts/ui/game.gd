@@ -198,9 +198,14 @@ func discard_drafts() -> void:
 ## pieces): the player's own paper. Game is their only writer; each write that
 ## lands says plans_changed.
 func _plans(done: Variant) -> Variant:
-	if (done is bool and done) or (done is String and done != "") or (done is int and done > 0):
+	if landed(done):
 		plans_changed.emit()
 	return done
+
+
+## Whether a plans write landed: true, a new id, or a count above 0.
+static func landed(done: Variant) -> bool:
+	return (done is bool and done) or (done is String and done != "") or (done is int and done > 0)
 
 
 func place_plan_piece(arm: String, heads: int, side: String, at: Vector2, facing_deg: int) -> String:
