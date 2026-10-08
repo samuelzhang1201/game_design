@@ -43,6 +43,11 @@ var _root: GameRoot = null
 ## --layer manors|heights lights that bottom-bar tab once
 ## the root is up, so a shot can show a thematic view and its left column.
 var _layer := ""
+## --laws-page economy|politics|military (with --layer laws): the laws screen's page.
+var _laws_page := ""
+## --laws-decree LAW=VALUE@DAYS (with --layer laws): decree that law, then run DAYS days, so the
+## screen shows a decree part-way home (spec 2026-10-08-laws-tab §5).
+var _laws_decree := ""
 ## --speaker <portrait_id> opens the council on the conversation screen and
 ## stands that courtier up in it, which is the only way a shot can show the
 ## dossier and the full-body art — the screen otherwise boots to the map.
@@ -316,6 +321,10 @@ func _ready() -> void:
 			_scale = float(args[i + 1])
 		elif args[i] == "--layer":
 			_layer = args[i + 1]
+		elif args[i] == "--laws-page":
+			_laws_page = args[i + 1]
+		elif args[i] == "--laws-decree":
+			_laws_decree = args[i + 1]
 		elif args[i] == "--speaker":
 			_speaker = args[i + 1]
 		elif args[i] == "--event":
@@ -862,7 +871,15 @@ func _process(_delta: float) -> void:
 		_root._switch_to(GameRoot.State.COURT)
 		_root.current_screen.enter_court(null)
 		if _layer != "":
+			if _layer.to_upper() == "LAWS" and _laws_decree != "":
+				var at := _laws_decree.split("@")
+				var lv := at[0].split("=")
+				Game.try_execute(ActionRequest.make("LAW_SET", {"law": lv[0], "value": lv[1]}))
+				for d in (int(at[1]) if at.size() > 1 else 0):
+					Game.advance_day()
 			_root._on_bottom_tab(_layer.to_upper())
+			if _layer.to_upper() == "LAWS" and _laws_page != "":
+				_root._laws_screen.show_page(_laws_page)
 		if _manor != "" and _root.current_screen.has_method("detail_panel"):
 			var cell := MapManors.find(Game.data, _manor)
 			if cell < 0:
