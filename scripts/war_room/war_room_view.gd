@@ -984,7 +984,6 @@ func _ground_under(screen_px: Vector2) -> Vector3:
 	return table_point(at) if at.x >= 0.0 else _rig.target
 
 
-## The pointer left the view (onto the folio, the margin, a bar): no rest to read.
 ## A right click: a supposed piece's or a stroke's menu, else the ground menu
 ## on the table; none on one of our pieces (orders are drawn), nor while a
 ## march waits on its confirm (the aim owns the ground).
@@ -1005,9 +1004,11 @@ func _plan_right_click(at: Vector2) -> void:
 		ground_menu_requested.emit(pk, at)
 
 
+## The pointer left the view (onto the folio, the margin, a bar): no rest to read.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_MOUSE_EXIT and _dwell.clear():
 		hover_cleared.emit()
+
 
 func _gui_input(event: InputEvent) -> void:
 	if _sheet < 0:

@@ -481,3 +481,97 @@ func test_a_refused_write_leaves_no_undo_step() -> void:
 	screen.view().plan_input().piece_moved.emit("p999", Vector2(1, 1), 0)   # no such piece: refused
 	_cmd_z(screen)
 	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), 1, "Cmd-Z undid the previous mark, not the refusal")
+
+
+func _news_since(f: Callable) -> Array:
+	var said: Array = []
+	var listen := func(t: String) -> void: said.append(t)
+	Game.news_published.connect(listen)
+	f.call()
+	Game.news_published.disconnect(listen)
+	return said
+
+
+func test_undo_of_a_march_since_sealed_revives_nothing() -> void:
+	var screen := await _room()
+	var code := _blue_drag_from_piece(screen)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
+	await wait_process_frames(2)
+	var first: Dictionary = WarDrafts.of(Game.state, code).duplicate(true)
+	assert_eq(String(first.get("order", "")), "march", "M1 pencilled")
+	_blue_drag_from_piece(screen)   # re-drawn: M2 over M1
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
+	await wait_process_frames(2)
+	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march", "M2 pencilled")
+	var out := Game.deploy_drafts()
+	assert_true(code in out["sent"], "M2 went by courier")
+	var said := _news_since(func() -> void: _cmd_z(screen))
+	assert_true(WarDrafts.of(Game.state, code).is_empty(), "M1 is not pencilled again")
+	assert_true(WarDrafts.codes(Game.state).is_empty(), "nothing is pencilled")
+	assert_true("That march has since been sealed or changed — nothing to undo." in said, "the news says why")
+
+
+func test_undo_of_a_march_puts_the_earlier_draft_back() -> void:
+	var screen := await _room()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	Game.plant_draft(code, WarDrafts.GARRISON, Vector2.ZERO)
+	var earlier: Dictionary = WarDrafts.of(Game.state, code).duplicate(true)
+	_blue_drag_from_piece(screen)
+	screen.orders().shown_confirm().confirm_button().pressed.emit()
+	await wait_process_frames(2)
+	assert_eq(String(WarDrafts.of(Game.state, code).get("order", "")), "march")
+	_cmd_z(screen)
+	assert_eq(WarDrafts.of(Game.state, code), earlier, "the halt pencilled before is back")
+
+
+func test_a_ghost_goes_once_the_layer_is_current_after_an_undo() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var hud := view.get_node("%PlanHud") as WarPlanHud
+	view._inks.frame_done = get_tree().process_frame
+	view._intel_busy = false
+	view._ink_busy = 0
+	view.refresh_plans()
+	view.plan_input().pick_kind("front", "red")
+	_drag(view, Vector2(view.size) * Vector2(0.4, 0.3), Vector2(view.size) * Vector2(0.45, 0.7))
+	assert_true(hud.drawing(), "the ghost is drawn right after release")
+	_cmd_z(screen)   # before the paint ends: the ghost's own key is never painted
+	assert_true((Game.state.war_plans["strokes"] as Dictionary).is_empty(), "the front is undone")
+	await wait_until(func() -> bool: return view.plan_key_shown() == WarPlanInk.cache_key(Game.state, view.sheet_index()), 5.0)
+	assert_eq(view.plan_key_shown(), WarPlanInk.cache_key(Game.state, view.sheet_index()), "the layer is current")
+	assert_false(hud.drawing(), "the ghost went with it")
+
+
+func test_a_shift_drag_from_an_unchosen_stroke_boxes_not_pans() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var a := view.pack_at(Vector2(view.size) * Vector2(0.3, 0.5))
+	var b := view.pack_at(Vector2(view.size) * Vector2(0.7, 0.5))
+	var id := Game.draw_plan("phase", "red", PackedVector2Array([a, b]), 0.0, "Line", false)
+	await wait_process_frames(2)
+	var before := _stroke_pts(id)
+	var mid: Vector2 = view.screen_pos_of_px(a.lerp(b, 0.5))
+	var cam_before := view.camera_rig().target
+	_drag(view, mid, mid + Vector2(60, 60), true)
+	assert_eq(view.camera_rig().target, cam_before, "a Shift-drag never pans")
+	assert_eq(_stroke_pts(id), before, "the stroke did not move")
+	assert_ne(view.plan_input().chosen_id, id, "a box chooses no stroke")
+
+
+func test_a_stick_drag_out_and_back_is_no_click() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	_click(view, p["press"])
+	assert_false(view.plan_input().sel.is_empty())
+	_pick_stick(screen, "red")
+	var at := _open_land(screen)
+	assert_ne(at, Vector2(-1, -1))
+	_button(view, at, true)
+	for j in range(1, 9):
+		_motion(view, at + Vector2(float(j) * 10.0, 0.0))
+	for j in range(1, 9):
+		_motion(view, at + Vector2(80.0 - float(j) * 10.0, 4.0))
+	_button(view, at + Vector2(2.0, 2.0), false)
+	assert_false(view.plan_input().sel.is_empty(), "a drag out and back is not an open-table click")

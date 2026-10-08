@@ -46,6 +46,7 @@ var _hud: WarPlanHud
 var _drag: Dictionary = {}
 var _click_from := Vector2.ZERO
 var _click_shift := false
+var _click_far := 0.0   # the farthest the stick has gone from its press (a click stays under war_rake_min_px)
 var _pending_choose := ""   # an unchosen stroke pressed with the hand: a click chooses it, a drag pans
 var _pending_from := Vector2.ZERO
 var _order := false     # the stroke being drawn is the selection's march
@@ -234,6 +235,7 @@ func _press(mb: InputEventMouseButton) -> bool:
 			return true
 		_click_from = pos
 		_click_shift = mb.shift_pressed
+		_click_far = 0.0
 		_order = tool.kind == "arrow" and tool.side == "blue"
 		tool.press(pack, pos)
 		redraw_live()
@@ -266,11 +268,12 @@ func _press(mb: InputEventMouseButton) -> bool:
 	if not facing.is_empty() and (facing["at"] as Vector2).distance_to(pos) <= _repo.bal("war_plan_facing_px"):
 		_drag = {"mode": "facing", "id": chosen_id, "from": pos, "from_pack": pack, "moved": false}
 		return true
-	if not hit.is_empty() and int(hit["handle"]) < 0 and String(hit["id"]) != chosen_id:
+	var unchosen := not hit.is_empty() and int(hit["handle"]) < 0 and String(hit["id"]) != chosen_id
+	if unchosen and not mb.shift_pressed:
 		_pending_choose = String(hit["id"])   # only the chosen stroke is carried: the press pans, a click chooses
 		_pending_from = pos
 		return false
-	if not hit.is_empty():
+	if not hit.is_empty() and not unchosen:
 		_drag = {"mode": "handle" if int(hit["handle"]) >= 0 else "stroke", "id": String(hit["id"]),
 			"handle": int(hit["handle"]), "from": pos, "from_pack": pack, "moved": false, "to_pack": pack}
 		return true
@@ -291,6 +294,7 @@ func _scrapes(id: String) -> bool:
 func _motion(mm: InputEventMouseMotion) -> bool:
 	var pack := _view.pack_at(mm.position)
 	if tool.drawing:
+		_click_far = maxf(_click_far, mm.position.distance_to(_click_from))
 		tool.move(pack, mm.position)
 		if _order and pack.x >= 0.0 and not sel.is_empty():
 			_view.order_aimed.emit(String(sel[0]), pack, mm.position)
@@ -319,7 +323,7 @@ func _motion(mm: InputEventMouseMotion) -> bool:
 
 func _release(mb: InputEventMouseButton) -> bool:
 	if tool.drawing:
-		if mb.position.distance_to(_click_from) < _repo.bal("war_rake_min_px"):
+		if maxf(_click_far, mb.position.distance_to(_click_from)) < _repo.bal("war_rake_min_px"):
 			tool.cancel()
 			_order = false
 			redraw_live()
@@ -609,7 +613,9 @@ func redraw_live() -> void:
 			WarPlanInk.add(_repo, ink, row, _repo.war_plan_kinds[tool.kind], row["ctrl"], float(row["r"]), mm)
 	_pending_order(ink, mm)
 	if not _ghost.is_empty():
-		if _view.plan_key_shown() == int(_ghost["key"]) or _view.sheet_index() != int(_ghost["sheet"]):
+		var shown := _view.plan_key_shown()
+		if shown == int(_ghost["key"]) or _view.sheet_index() != int(_ghost["sheet"]) \
+				or (st != null and shown == WarPlanInk.cache_key(st, _view.sheet_index())):   # the plans moved on: the layer is current
 			_ghost = {}
 		else:
 			for g: Dictionary in _ghost["rows"]:
