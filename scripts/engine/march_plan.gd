@@ -13,7 +13,7 @@ extends RefCounted
 ## one a load, in the table's order. `waypoints` in pack px.
 static func carry_rows(repo: DataRepository, state: GameState, code: String, dest_px: Vector2,
 		waypoints: Array) -> Array:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	var entry := ArmySystem.state_of(repo, state, code)
 	var out: Array = []
 	if reg.is_empty() or entry.is_empty():

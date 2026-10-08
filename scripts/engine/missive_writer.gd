@@ -8,13 +8,13 @@ extends RefCounted
 
 static func receipt(repo: DataRepository, state: GameState, c: Dictionary, stale: bool) -> Dictionary:
 	var code := String(c["target"])
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	var label := String(reg.get("label", code))
 	var at := ArmySystem.position_of(repo, state, reg) if not reg.is_empty() else Vector2.ZERO
 	var st := ArmySystem.state_of(repo, state, code)
 	var order := String((c["order"] as Dictionary).get("action_code", ""))
 	var said := "Newer orders stand: this one is set aside" if stale else \
-		("March" if order == "ARMY_MARCH" else "Stand")
+		("March" if order == "ARMY_MARCH" else "Take the seat" if order == "ARMY_SEAT" else "Stand")
 	var facts: Array = [MissiveLog.words("orders", "Orders", said)]
 	if not st.is_empty():
 		facts.append(MissiveLog.exact("morale", "Morale", int(st["morale"])))
@@ -88,7 +88,7 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 	var facts: Array = []
 	for i in events.size():
 		var e: Dictionary = events[i]
-		var reg := String(ArmySystem.regiment(repo, String(e["regiment"])).get("label", e["regiment"]))
+		var reg := String(ArmySystem.regiment(repo, String(e["regiment"]), state).get("label", e["regiment"]))
 		var town := String((repo.burgs.get(String(e.get("town", "")), {}) as Dictionary).get("label", e.get("town", "")))
 		var text := ""
 		match String(e["type"]):
@@ -113,7 +113,7 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 				text = _SUPPLY_WORDS[String(e["type"])] % [town, reg]
 		facts.append(MissiveLog.words("supply_%d" % i, String(e["type"]).capitalize().replace("_", " "), text))
 	var first := String((events[0] as Dictionary)["regiment"])
-	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, first))
+	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, first, state))
 	return MissiveLog.make("supply", "credible", state.absolute_day(),
 		MissiveLog.subject("regiment", first, -1, at), "Supply dispatch", facts)
 
@@ -131,7 +131,7 @@ static func marshal_report(repo: DataRepository, state: GameState, tick: int, ro
 	var buy := 0
 	var houses: Dictionary = {}
 	for r: Dictionary in rows:
-		var label := String(ArmySystem.regiment(repo, String(r["code"])).get("label", r["code"]))
+		var label := String(ArmySystem.regiment(repo, String(r["code"]), state).get("label", r["code"]))
 		var town := String((repo.burgs.get(String(r["town"]), {}) as Dictionary).get("label", ""))
 		var where := "no supply point" if town == "" else "%s · %.1f× · %d km" % [town, float(int(r["rate"])) / 1000.0, int(r["km"])]
 		@warning_ignore("integer_division")  # whole per cent of the permille

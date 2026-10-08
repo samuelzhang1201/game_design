@@ -33,7 +33,7 @@ static func level(repo: DataRepository, state: GameState, subj: Dictionary) -> S
 		return "full"
 	var realm := repo.resolve_realm("player_realm")
 	if String(subj.get("kind", "")) == "regiment":
-		var reg := ArmySystem.regiment(repo, String(subj["code"]))
+		var reg := ArmySystem.regiment(repo, String(subj["code"]), state)
 		return "full" if String(reg.get("kingdom_code", "")) == realm else "basic"
 	var prov := province_of(repo, state, subj)
 	if prov == "":

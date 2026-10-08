@@ -74,7 +74,7 @@ func test_a_right_click_while_aiming_withdraws_the_aim_not_a_spy() -> void:
 	var spies := SpyOrderMenu.new()
 	add_child_autofree(spies)
 	spies.follow(map, army)
-	var code := String(MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))[0]["regiment_code"])
+	var code := String(MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state)[0]["regiment_code"])
 	map.army_menu_requested.emit(code, Vector2(10, 10))
 	army.hide()
 	army.id_pressed.emit(0)   # MARCH: aims

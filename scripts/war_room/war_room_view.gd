@@ -243,7 +243,7 @@ func drawn() -> Dictionary:
 ## Where a regiment's piece stands, pack px: the map's drawn spot, else the
 ## engine's believed one.
 func position_of(code: String) -> Vector2:
-	return WarRoom.believed_position(_repo, state(), ArmySystem.regiment(_repo, code), drawn())
+	return WarRoom.believed_position(_repo, state(), ArmySystem.regiment(_repo, code, state()), drawn())
 
 
 ## The lettering face is handed in by the screen (UiPalette's body_italic
@@ -794,6 +794,11 @@ func screen_pos_of_px(pack_px: Vector2) -> Variant:
 	return _camera.unproject_position(p) / window_scale()
 
 
+## The node of a unit's piece on the laid sheet, null when none.
+func piece_node(code: String) -> Node3D:
+	return _pieces.piece(code)
+
+
 ## Where each piece of the laid sheet stands, in pack px (its base's centre,
 ## mid-push included): code -> Vector2.
 func piece_pack_positions() -> Dictionary:
@@ -840,7 +845,7 @@ func _read_supply() -> void:
 
 
 ## The supply lines' gold ribbons, each ending where its piece stands NOW
-## (mid-push included; a regiment of a garrison where the garrison's piece is).
+## (mid-push included; one piece a unit).
 func _lay_supply() -> void:
 	if _supply_routes.is_empty():
 		_supply.mesh = null
@@ -904,12 +909,12 @@ func rolling() -> bool:
 
 
 ## One of our pieces clicked (spec 2026-10-08-war-room-draw-orders ruling
-## 16): its regiments (a garrison's every one) are the blue selection —
-## `additive` (Shift) toggles them in or out — and the piece's folio opens
-## docked; `quiet` leaves the selection as it is (the box has set it).
+## 16): its unit is the blue selection — `additive` (Shift) toggles it in or
+## out — and the piece's folio opens docked; `quiet` leaves the selection as
+## it is (the box has set it).
 func select(code: String, additive := false, quiet := false) -> void:
 	if not quiet:
-		_plan_input.select("blue", garrison_of(code), additive)
+		_plan_input.select("blue", [code], additive)
 		if _plan_input.sel.is_empty():
 			clear_selection()   # Shift took the last one out
 			return
@@ -920,15 +925,9 @@ func select(code: String, additive := false, quiet := false) -> void:
 	_pointer.redraw()
 
 
-## ArmyOrderMenu's map contract: a regiment chosen.
+## ArmyOrderMenu's map contract: a unit chosen.
 func select_army(code: String) -> void:
 	select(code)
-
-
-## The regiments a piece stands for: a town's garrison, else the one.
-func garrison_of(code: String) -> Array:
-	var held := MapObjects.garrison_of(_repo, state(), code)
-	return held if not held.is_empty() else [code]
 
 
 ## The code of the piece under a screen px, "" when none (and none while a

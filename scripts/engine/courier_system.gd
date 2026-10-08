@@ -158,7 +158,7 @@ static func days_for(repo: DataRepository, kind: String, need: int) -> int:
 static func dispatch(repo: DataRepository, state: GameState, kind: String, code: String,
 		order: Dictionary) -> Dictionary:
 	return dispatch_to(repo, state, kind, code, order,
-		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)))
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code, state)))
 
 
 ## A courier for regiment `code` whose road ends at `to_px` — the regiment
@@ -224,7 +224,7 @@ static func spy_eta_days(repo: DataRepository, state: GameState, to_px: Vector2)
 ## the regiment — counted in day-ends, the day now running (or about to run)
 ## the first — the route and his first day's weather held. 0 for no regiment.
 static func eta_days(repo: DataRepository, state: GameState, kind: String, code: String) -> int:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty():
 		return 0
 	var from := origin(repo, state)
@@ -252,7 +252,7 @@ static func eta_days_to(repo: DataRepository, state: GameState, kind: String, to
 ## `carry` (days; -1 its own) — spec 2026-10-07-march-waypoints.
 static func arrival_days(repo: DataRepository, state: GameState, code: String, dest_px: Vector2,
 		from_px := Vector2(-1, -1), ride := -1, waypoints: Array = [], carry := -1) -> int:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty() or ArmySystem.day_march_m(repo, state, code) <= 0:
 		return 0
 	if ride < 0:
@@ -306,7 +306,7 @@ static func ride_day(repo: DataRepository, state: GameState) -> Array:
 ## One courier's day; false when he is done (delivered, lost, or out of time).
 static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> bool:
 	var code := String(c["target"])
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
 		events.append(_event("lost", c))
 		return false
@@ -379,7 +379,7 @@ static func ride_ahead(repo: DataRepository, state: GameState, c: Dictionary) ->
 ## as the day starts.
 static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, before: Array) -> Dictionary:
 	var code := String(c["target"])
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	# a spy rides for a point, not a regiment: nothing to lose, nothing to re-aim
 	if not _is_spy(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}
@@ -516,6 +516,11 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 				MarchRoute.from_pairs(order.get("waypoints_m", [])))
 		"ARMY_GARRISON":
 			ArmySystem.set_garrison(repo, state, code)
+		"ARMY_SEAT":
+			if not ArmyGround.take_seat(repo, state, code):
+				if state.regiments.has(code):
+					state.regiments[code]["order_id"] = int(c["id"])
+				return _event("lapsed", c)
 	if state.regiments.has(code):
 		state.regiments[code]["order_id"] = int(c["id"])
 	MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, false))
@@ -537,15 +542,16 @@ static func _event(type: String, c: Dictionary, weather: String = "") -> Diction
 
 
 ## The newest MARCH / HALT courier riding for a regiment, {} when none. The
-## supply orders (SUPPLY_*) are not the march: they never move a column's
-## arrival day, so this reader (days_to_arrival, the regiment card, the war
-## folio) passes them by.
+## supply orders (SUPPLY_*) and the seat order (ARMY_SEAT) are not the march:
+## they never move a column's arrival day, so this reader (days_to_arrival,
+## the regiment card, the war folio) passes them by.
 static func pending_for(state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	if state == null:
 		return best
 	for c: Dictionary in state.couriers:
-		if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
+		var kind := String((c["order"] as Dictionary).get("action_code", ""))
+		if kind.begins_with("SUPPLY_") or kind == "ARMY_SEAT":
 			continue
 		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c
@@ -581,6 +587,8 @@ static func headline(repo: DataRepository, e: Dictionary) -> String:
 			return "Orders delivered to %s." % label
 		"stale":
 			return "Older orders to %s came after newer ones and were set aside." % label
+		"lapsed":
+			return "Orders for %s to take the seat lapsed: it no longer camps by the town." % label
 		"lost":
 			return "Orders to %s undelivered: the regiment is gone." % label
 		"fuse":

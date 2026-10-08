@@ -14,14 +14,13 @@ func before_each() -> void:
 
 
 func _land_code() -> String:
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0:
 			return String(r["regiment_code"])
 	return ""
 
 
-## A land regiment on the march: the map draws it where it walks, and it is
-## no town's garrison (a quartered one stands as its town's piece).
+## A land regiment on the march: the map draws it where it walks.
 func _marching_code() -> String:
 	var code := _land_code()
 	ArmySystem.ensure(repo, state)
@@ -31,18 +30,20 @@ func _marching_code() -> String:
 
 
 func test_the_table_believes_the_truth_until_intel_p2() -> void:
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		assert_eq(WarRoom.believed_position(repo, state, r), ArmySystem.position_of(repo, state, r))
 	assert_eq(WarRoom.believed_hosts(repo, state), [], "no enemy is on the table before P2")
 
 
 func test_every_crown_regiment_is_a_piece_on_exactly_one_side_of_each_sheet() -> void:
 	var all := WarRoom.pieces(repo, state)
-	var stood_for := 0
+	var seen: Dictionary = {}
 	for p: Dictionary in all:
-		stood_for += (p["garrison"] as Array).size()
-	assert_eq(stood_for, MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).size(),
-		"every regiment is one piece's, a garrison's piece standing for all of it")
+		assert_false(p.has("garrison"), "no piece stands for a garrison")
+		assert_false(seen.has(String(p["code"])), "%s is one piece" % p["code"])
+		seen[String(p["code"])] = true
+	assert_eq(seen.size(), MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state).size(),
+		"every unit is its own piece")
 	for s: Dictionary in WarSheets.series(repo):
 		var on := WarRoom.on_sheet(repo, state, int(s["index"]))
 		var off := WarRoom.off_sheet(repo, state, int(s["index"]))
@@ -128,7 +129,7 @@ func test_a_garrison_courier_alone_strikes_no_pennant() -> void:
 
 
 func test_the_tag_reads_heads_and_months_of_stores() -> void:
-	var code := _land_code()
+	var code := _marching_code()   # no town's garrison: its own tag, not its camp's
 	var reg := ArmySystem.regiment(repo, code)
 	var st := ArmySystem.state_of(repo, state, code)
 	var use := ArmySystem.supply_use(repo, reg, state)
@@ -213,35 +214,29 @@ func test_the_sheets_split_by_the_drawn_spot() -> void:
 	assert_true(code in there, "and on the sheet the map draws it on")
 
 
-## Owner 2026-10-06 (choice A): a town's garrison is ONE piece on the town,
-## coded by its first regiment, the royal one first, its tag counting them.
-func test_a_garrison_is_one_piece_on_its_town() -> void:
+## Every unit holds its own ground (spec 2026-10-07-army-split-and-ground §5.4):
+## the units round the capital are each their own piece, the seat's on the
+## town's point, every tag one unit's own.
+func test_every_unit_round_a_town_is_its_own_piece() -> void:
 	var realm := repo.resolve_realm("player_realm")
-	var royal := MapObjects.royal_regiment(repo, realm)
-	var held := MapObjects.garrison_of(repo, state, royal)
-	assert_gt(held.size(), 1, "the capital holds more than one regiment")
-	assert_eq(String(held[0]), royal, "the royal regiment first")
-	var town := ArmySystem.quartered_in(repo, ArmySystem.regiment(repo, royal), state)
-	var b: Dictionary = repo.burgs[town]
-	var found := 0
+	var capital := String(repo.kingdoms[realm]["capital_burg"])
+	var b: Dictionary = repo.burgs[capital]
+	var seat := ArmyGround.seat_of(repo, state, capital)
+	assert_ne(seat, "", "the capital's seat is held")
+	var around: Array = []
+	for r: Dictionary in MapObjects.regiments_of(repo, realm, state):
+		if ArmyGround.camped_by(repo, state, String(r["regiment_code"])) == capital:
+			around.append(String(r["regiment_code"]))
+	assert_gt(around.size(), 1, "more than one unit stands round the capital")
+	var pieces: Dictionary = {}
 	for p: Dictionary in WarRoom.pieces(repo, state):
-		for c in held:
-			if String(p["code"]) == String(c):
-				found += 1
-				assert_eq(String(p["code"]), royal)
-				assert_eq(p["garrison"], held)
-				assert_eq(p["at"], Vector2(float(b["x"]), float(b["y"])), "on the town's point")
-	assert_eq(found, 1, "one piece for the whole garrison")
-	var heads := 0
-	for c in held:
-		heads += ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c)))
-	assert_eq(WarRoom.tag_text(repo, state, royal), "%d regiments · %s" % [held.size(), WarRoom.group(heads)])
-	# marching out, a regiment stands as its own piece again
-	var other := String(held[1])
-	ArmySystem.ensure(repo, state)
-	ArmySystem.set_march(repo, state, other, Vector2(float(b["x"]) + 40.0, float(b["y"])))
-	var codes := WarRoom.pieces(repo, state).map(func(p: Dictionary) -> String: return String(p["code"]))
-	assert_true(other in codes, "its own piece once it marches")
+		pieces[String(p["code"])] = p
+	for c: String in around:
+		assert_true(pieces.has(c), "%s has its own piece" % c)
+		var reg := ArmySystem.regiment(repo, c, state)
+		assert_eq(pieces[c]["at"], WarRoom.believed_position(repo, state, reg), "%s where it stands" % c)
+		assert_false(WarRoom.tag_text(repo, state, c).contains("regiments"), "%s's tag is its own" % c)
+	assert_eq(pieces[seat]["at"], Vector2(float(b["x"]), float(b["y"])), "the seat on the town's point")
 
 
 # --- intel hints (spec 2026-10-08-war-room-draw-orders ruling 18) ------------

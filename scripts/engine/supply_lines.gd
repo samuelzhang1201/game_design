@@ -26,7 +26,7 @@ static func _burg_px(repo: DataRepository, town: String) -> Vector2:
 ## The road from `town` to the regiment, pack px (the courier's road:
 ## CourierSystem.path_between), the town first and the column last.
 static func road_px(repo: DataRepository, state: GameState, code: String, town: String) -> PackedVector2Array:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty():
 		return PackedVector2Array()
 	return road_between_px(repo, town, ArmySystem.position_of(repo, state, reg))
@@ -60,7 +60,7 @@ static func road_km(repo: DataRepository, route: PackedVector2Array) -> int:
 ## that rate over the road's km, a day of thirty; `km` < 0 measures the road now.
 static func day_fee_milli(repo: DataRepository, state: GameState, code: String, town: String,
 		rate: int, km := -1) -> int:
-	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), state)
+	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code, state), state)
 	var length := km if km >= 0 else road_km(repo, road_px(repo, state, code, town))
 	@warning_ignore("integer_division")
 	return use * rate / 1000 * length * int(repo.bal("supply_cart_milligold_per_unit_km")) / Calendar.DAYS_PER_TICK
@@ -113,7 +113,7 @@ static func march_eligibility(repo: DataRepository, state: GameState, code: Stri
 static func _hostiles(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
 	var realm := repo.resolve_realm("player_realm")
-	var rows: Array = repo.world_table("military", "regiments").values()
+	var rows: Array = ArmySystem.roster(repo, state).values()
 	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return String(a["regiment_code"]) < String(b["regiment_code"]))
 	for r: Dictionary in rows:
@@ -279,13 +279,10 @@ static func _room(repo: DataRepository, supplies: int, use: int, day: int, targe
 	return maxi(mini(target, ArmySystem.max_units(repo, use) + bite) - supplies, 0)
 
 
-## The realm town a land regiment stands in, which tops it up each day
-## (ArmySystem.held_town_of, a town of the realm); "" in the field or afloat.
+## The realm town a land unit camps by (ArmyGround.camped_by), which tops it
+## up each day; "" on the march, in the field or afloat.
 static func home_town(repo: DataRepository, state: GameState, code: String) -> String:
-	var reg := ArmySystem.regiment(repo, code)
-	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
-		return ""
-	var held := ArmySystem.held_town_of(repo, reg, state)
+	var held := ArmyGround.camped_by(repo, state, code)
 	return held if held != "" and TownStores.is_realm_town(repo, state, held) else ""
 
 
@@ -492,7 +489,7 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		var reg := ArmySystem.regiment(repo, code)
+		var reg := ArmySystem.regiment(repo, code, state)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
 		var dry := _refill_in_town(repo, state, code, reg)
@@ -504,7 +501,7 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 	for c in lines:
 		var code := String(c)
 		var ln: Dictionary = state.supply_lines[code]
-		var reg := ArmySystem.regiment(repo, code)
+		var reg := ArmySystem.regiment(repo, code, state)
 		if reg.is_empty() or not state.regiments.has(code):
 			_retire(state, code)
 			continue
@@ -566,7 +563,7 @@ static func warn_day(repo: DataRepository, state: GameState) -> Array:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		var reg := ArmySystem.regiment(repo, code)
+		var reg := ArmySystem.regiment(repo, code, state)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
 		var entry: Dictionary = state.regiments[code]
@@ -587,7 +584,7 @@ static func warn_day(repo: DataRepository, state: GameState) -> Array:
 		var ln: Dictionary = state.supply_lines[code]
 		if String(ln["state"]) != FLOWING:
 			continue
-		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), state)
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code, state), state)
 		@warning_ignore("integer_division")  # the month's whole units
 		draw[String(ln["town"])] = int(draw.get(String(ln["town"]), 0)) + use * int(ln["rate"]) / 1000
 	var towns: Array = draw.keys()
@@ -614,11 +611,10 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 	var rows: Array = []
 	var gov := Governance.governor_of(repo, state, "supply_line")
 	var upg := TownStores.units_per_gold(repo)
-	var codes: Array = state.regiments.keys()
-	codes.sort()
+	var codes: Array = ArmySystem.ordered(repo, state, state.regiments.keys())
 	for c in codes:
 		var code := String(c)
-		var reg := ArmySystem.regiment(repo, code)
+		var reg := ArmySystem.regiment(repo, code, state)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
 		var entry: Dictionary = state.regiments[code]

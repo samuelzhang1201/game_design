@@ -59,7 +59,8 @@ func test_the_total_never_passes_the_cap() -> void:
 
 
 ## A land regiment out in the field (a step out of its town onto dry land, as
-## test_supply_day marches one out) fed by a FLOWING line from the first
+## test_supply_day marches one out: out of its camp, never a seated one) fed
+## by a FLOWING line from the first
 ## eligible realm town, its marshal able and honest (efficiency 1000, no skim)
 ## and every other regiment too full to draw — [code, town], or [] when the
 ## pack offers none.
@@ -73,8 +74,9 @@ func _flowing_line(state: GameState) -> Array:
 	codes.sort()
 	for c in codes:
 		var reg := ArmySystem.regiment(repo, String(c))
-		if String(reg.get("is_naval", "0")) == "1":
+		if String(reg.get("is_naval", "0")) == "1" or ArmyGround.seated_in(repo, state, String(c)) != "":
 			continue
+		var camp := String(state.regiments[c].get("camp_town", ""))
 		var home := ArmySystem.position_of(repo, state, reg)
 		for step: Vector2 in [Vector2.ZERO, Vector2(40.0, 0.0), Vector2(-40.0, 0.0), Vector2(0.0, 40.0), Vector2(0.0, -40.0)]:
 			var cell := MapEconomy.cell_at(repo, home + step)
@@ -83,6 +85,7 @@ func _flowing_line(state: GameState) -> Array:
 			var mm := ArmySystem.pack_to_metres(repo, home + step)
 			state.regiments[c]["x_m"] = mm.x
 			state.regiments[c]["y_m"] = mm.y
+			state.regiments[c]["camp_town"] = ""
 			var town := _eligible_town(state, String(c)) if ArmySystem.held_town_of(repo, reg, state) == "" else ""
 			if town != "":
 				state.supply_lines[String(c)] = SupplyLines._new_record(town, 1000, 1)
@@ -95,6 +98,7 @@ func _flowing_line(state: GameState) -> Array:
 		var back := ArmySystem.pack_to_metres(repo, home)
 		state.regiments[c]["x_m"] = back.x
 		state.regiments[c]["y_m"] = back.y
+		state.regiments[c]["camp_town"] = camp
 	return []
 
 

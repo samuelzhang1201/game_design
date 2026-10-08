@@ -82,13 +82,18 @@ func test_a_garrison_stands_in_its_town() -> void:
 	var code := String(SupplySystem.plan(data, s)[0]["code"])
 	var home := MapManors.home_province(data, s)
 	var p: Dictionary = data.provinces[home]
-	# IN the town: a garrison is one inside a town its kingdom holds (spec
-	# 2026-10-06-army-location-and-town-defence §4)
-	var b: Dictionary = data.burgs[String(p["capital_burg"])]
-	var m := ArmySystem.pack_to_metres(data, Vector2(float(b["x"]), float(b["y"])))
+	# the garrison is the unit holding the seat of a town its kingdom holds
+	# (spec 2026-10-07-army-split-and-ground §4.1): it marches in and, the
+	# seat empty, takes it on arrival
+	var town := String(p["capital_burg"])
+	var b: Dictionary = data.burgs[town]
+	var at := Vector2(float(b["x"]), float(b["y"]))
+	ArmySystem.set_march(data, s, code, at)
+	s.town_seat.erase(town)
+	var m := ArmySystem.pack_to_metres(data, at)
 	s.regiments[code]["x_m"] = m.x
 	s.regiments[code]["y_m"] = m.y
-	s.regiments[code]["order"] = ArmySystem.ORDER_GARRISON
+	ArmySystem.march_day(data, s)
 	var g := _link(Ledger.snapshot(data, s, "war", {"id": "regiment:" + code}), "garrisons")
 	assert_eq(String(g["to"]), "town:" + String(p["capital_burg"]))
 
@@ -157,10 +162,10 @@ func test_a_sphere_without_a_property_carries_none() -> void:
 func test_a_foreign_regiment_shows_no_gauge_unless_in_dev_mode() -> void:
 	var realm := data.resolve_realm("player_realm")
 	var foreign := ""
-	var codes: Array = data.world_table("military", "regiments").keys()
+	var codes: Array = ArmySystem.roster(data, s).keys()
 	codes.sort()
 	for c in codes:
-		if String(ArmySystem.regiment(data, String(c)).get("kingdom_code", "")) != realm:
+		if String(ArmySystem.regiment(data, String(c), s).get("kingdom_code", "")) != realm:
 			foreign = String(c)
 			break
 	if foreign == "":

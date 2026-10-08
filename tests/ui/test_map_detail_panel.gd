@@ -98,7 +98,7 @@ func test_a_regiment_opens_its_painted_card() -> void:
 	var p := _panel()
 	await wait_process_frames(1)
 	var mine := Game.data.resolve_realm("player_realm")
-	var r: Dictionary = MapObjects.regiments_of(Game.data, mine)[0]
+	var r: Dictionary = MapObjects.regiments_of(Game.data, mine, Game.state)[0]
 	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "army", "code": String(r["regiment_code"])}})
 	await wait_process_frames(1)
 	assert_true(p.visible)
@@ -121,7 +121,7 @@ func test_a_courier_flies_his_kingdoms_arms() -> void:
 	await wait_process_frames(1)
 	var mine := Game.data.resolve_realm("player_realm")
 	var code := ""
-	for r: Dictionary in MapObjects.regiments_of(Game.data, mine):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, mine, Game.state):
 		if String(r.get("is_naval", "0")) != "1":
 			code = String(r["regiment_code"])
 			break

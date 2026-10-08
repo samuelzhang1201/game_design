@@ -147,7 +147,7 @@ func test_the_regiment_province_index_matches_the_scan() -> void:
 	LedgerResolvers.begin_memo()
 	var idx := LedgerResolvers._regiment_provinces(data, s)
 	LedgerResolvers.end_memo()
-	for reg: Dictionary in MapObjects.regiments_of(data, data.resolve_realm("player_realm")):
+	for reg: Dictionary in MapObjects.regiments_of(data, data.resolve_realm("player_realm"), s):
 		var code := String(reg["regiment_code"])
 		assert_eq(String((idx[code] as Dictionary)["province"]), LedgerResolvers._province_now(data, s, reg), code)
 

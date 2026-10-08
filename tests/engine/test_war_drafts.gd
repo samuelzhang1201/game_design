@@ -12,14 +12,14 @@ func before_each() -> void:
 	repo = SuiteData.repo()
 	state = SuiteData.campaign(repo, 42)
 	code = ""
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0:
 			code = String(r["regiment_code"])
 			break
 
 
 func _somewhere() -> Vector2:
-	return ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)) + Vector2(20, 0)
+	return ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code, state)) + Vector2(20, 0)
 
 
 func test_a_draft_is_planted_in_whole_metres_and_replaces_the_last() -> void:

@@ -9,7 +9,7 @@ var codes: Array = []
 func before_each() -> void:
 	Game.start_campaign(44)
 	codes.clear()
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(Game.data, r) > 0:
 			codes.append(String(r["regiment_code"]))
 	codes.sort()
@@ -24,7 +24,7 @@ func before_each() -> void:
 
 func _draft(i: int) -> void:
 	Game.plant_draft(codes[i], "march", ArmySystem.position_of(Game.data, Game.state,
-		ArmySystem.regiment(Game.data, codes[i])) + Vector2(12, 0))
+		ArmySystem.regiment(Game.data, codes[i], Game.state)) + Vector2(12, 0))
 
 
 func test_the_button_is_grey_without_drafts() -> void:
@@ -147,7 +147,7 @@ func test_cancelling_a_seal_puts_it_away_and_sends_nothing() -> void:
 ## and the seal runs the supply point, then the march — each its own courier.
 func test_a_draft_with_a_supply_town_counts_its_courier_and_sends_it_first() -> void:
 	var code := String(codes[0])
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var town := ""
 	var ok := SupplyLines.march_eligibility(Game.data, Game.state, code, here + Vector2(12, 0))
 	var towns: Array = ok.keys()

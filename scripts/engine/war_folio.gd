@@ -15,7 +15,7 @@ static func has_builder(key: String) -> bool:
 
 
 static func sections(repo: DataRepository, state: GameState, code: String) -> Array:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty():
 		return []
 	if Intel.level(repo, state, {"kind": "regiment", "code": code}) != "full":
@@ -51,7 +51,7 @@ static func sections(repo: DataRepository, state: GameState, code: String) -> Ar
 ## the order and the pace. {title, rows: [{label, text}]}; gated by Intel like
 ## sections (a regiment not fully known gives only its headcount word).
 static func brief(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty():
 		return {"title": "", "rows": []}
 	var title := String(reg.get("label", code))
@@ -86,8 +86,9 @@ static func brief(repo: DataRepository, state: GameState, code: String) -> Dicti
 		ArmySystem.elevation_of(repo, reg, state)]))
 	var order := ArmySystem.order_of(repo, state, code)
 	var shown := order
-	if order == ArmySystem.ORDER_GARRISON and SupplySystem.garrisoned_in(repo, state, code) == "":
-		shown = "camp"
+	# the garrison is the seat's alone (spec 2026-10-07-army-split-and-ground §4.1)
+	if order == ArmySystem.ORDER_GARRISON and ArmyGround.seated_in(repo, state, code) == "":
+		shown = "camped" if ArmyGround.camped_by(repo, state, code) != "" else "camp"
 	var said := order_word(repo, shown)
 	if order == ArmySystem.ORDER_MARCH:
 		var dest := ArmySystem.destination_of(repo, state, code)
@@ -207,7 +208,7 @@ static func _arms(repo: DataRepository, _state: GameState, code: String, _reg: D
 static func _morale(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
 	var st := _state_of(repo, state, code, reg)
 	var score := ArmySystem.supply_score(repo, int(st["supplies"]), ArmySystem.supply_use(repo, reg, state))
-	var garrison := SupplySystem.garrisoned_in(repo, state, code) != ""
+	var garrison := ArmyGround.seated_in(repo, state, code) != ""
 	var mark := ArmySystem.morale_mark(repo, score, garrison)
 	var rows: Array = [_row("Morale", "%d / 100" % int(st["morale"])),
 		_row("Heading for (by today's stores)", "%d — the ranks are %s" % [mark, ArmySystem.morale_word(repo, score)])]
@@ -302,10 +303,11 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 		_row("Supplies score", "%d%%" % supplies_pct),
 		_row("Training", grade)]
 	var order := ArmySystem.order_of(repo, state, code)
-	# a GARRISON order in the open is a field camp (spec 2026-10-06 §4)
+	# a standing unit: the garrison is the seat's alone, the rest are camped
+	# round its town or in the field (spec 2026-10-07-army-split-and-ground §4.1)
 	var shown := order
-	if order == ArmySystem.ORDER_GARRISON and SupplySystem.garrisoned_in(repo, state, code) == "":
-		shown = "camp"
+	if order == ArmySystem.ORDER_GARRISON and ArmyGround.seated_in(repo, state, code) == "":
+		shown = "camped" if ArmyGround.camped_by(repo, state, code) != "" else "camp"
 	rows.append(_row("Order", order_word(repo, shown)))
 	if order == ArmySystem.ORDER_MARCH:
 		var dest := ArmySystem.destination_of(repo, state, code)

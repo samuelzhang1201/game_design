@@ -15,6 +15,22 @@ extends Map3DHudPiece
 ## The dashed road a marching regiment still has ahead, design px wide (in
 ## the realm's own colour); its end ring is four times it.
 @export var route_px := 2.0
+## The Shift-drag selection box's line (spec 2026-10-07-army-split-and-ground
+## §5.6), design px; edited on the node.
+@export var box_color := Color(1.0, 0.92, 0.6, 0.9)
+@export var box_width_px := 1.5
+## The leader line from a counter the spreading moved (further than
+## balance.csv map3d_leader_min_px) back to its unit (owner 2026-10-08, after
+## the visual review: which unit is it?): a dark casing under a pale core,
+## fading toward the counter to `leader_fade` of its alpha; on the unit a dot
+## (diameter) in the core's ink with a casing rim. Design px.
+@export var leader_casing := Color(0.1, 0.08, 0.06, 0.9)
+@export var leader_core := Color(0.98, 0.94, 0.82, 1.0)
+@export var leader_casing_px := 2.25
+@export var leader_core_px := 1.0
+@export var leader_dot_px := 5.0
+@export var leader_dot_rim_px := 1.25
+@export_range(0.0, 1.0) var leader_fade := 0.35
 
 var _drawn := 0
 ## markers()' cut and the pose it was cut for (see there).
@@ -22,6 +38,11 @@ var _cache: Array = []
 var _key: Array = []
 ## Each regiment's bars and what they were read under, {code: {key, bars}} (_bars_of).
 var _bars: Dictionary = {}
+## This cut's on-land answers by a map3d_declutter_step_px cell of the view
+## (_on_land): stacked counters search the same ground.
+var _land: Dictionary = {}
+## How many ground rays the last cut cast (the bench's and the tests' reading).
+var land_tests := 0
 
 
 ## A counter's height in design px: map_army_badge_native_px of the map at
@@ -45,11 +66,12 @@ func markers() -> Array:
 	# Map3DHudLandmarks' clearance — so it is cut once per camera pose, exactly
 	# as Map3DHudLandmarks.marks() is (final review 2026-09-20). Same key shape:
 	# the pose, the view's size, the render scale, the layer's own switch and
-	# the date (regiments march and are settled by the month).
+	# the date (regiments march and are settled by the month) and the selection
+	# (the selected counters are placed first and never move).
 	var st := ctx.state()
 	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(),
 		view.military(), st.tick if st != null else 0, st.day if st != null else 0,
-		view.unit_tops().size(), view.unit_moves()]
+		view.unit_tops().size(), view.unit_moves(), view.selected_armies().duplicate()]
 	if key == _key:
 		return _cache
 	_cache = _cut()
@@ -70,41 +92,15 @@ func _cut() -> Array:
 	var tops := view.unit_tops()
 	var chip := minf(h, chip_px)
 	var lift := chip * 0.5 + repo.bal("map_army_stack_gap_px")
-	# A town's garrison is ONE counter on the town (owner 2026-10-06, choice
-	# A): its regiments stand in no piece of their own while quartered there.
-	var regs := ctx.regiments()
-	var quartered: Dictionary = {}
-	# close in, where the pieces stand, a garrison is no bigger than a piece's
-	# chip: the town is the thing there, not its counter (critic 2026-10-06)
-	var garrison_h := h if Map3DUnits.as_counters(repo, ctx.meta, ctx.distance, ctx.view_size.y) else chip
-	for g: Dictionary in MapObjects.garrisons(repo, st, regs):
-		var codes: Array = g["codes"]
-		for c in codes:
-			quartered[String(c)] = true
-		var town: Dictionary = repo.burgs[String(g["town"])]
-		var xz := Map3DGeometry.pack_to_world(ctx.meta, Vector2(float(town["x"]), float(town["y"])))
-		var ground := Vector3(xz.x, ctx.height_at(xz), xz.y)
-		if camera.is_position_behind(ground):
-			continue
-		var gp := camera.unproject_position(ground) / s
-		if not frame.has_point(gp):
-			continue
-		# the weakest regiment's bars: the garrison is as ready as its worst
-		var bars := Vector2i(1000, 1000)
-		for c in codes:
-			var b := _bars_of(String(c))
-			bars = Vector2i(mini(bars.x, b.x), mini(bars.y, b.y))
-		points.append({"reg": ArmySystem.regiment(repo, String(codes[0])), "pos": gp, "h": garrison_h,
-			"bars": bars, "garrison": String(g["town"]), "codes": codes, "heads": int(g["heads"])})
-	for r: Dictionary in regs:
+	for r: Dictionary in ctx.regiments():
 		var code := String(r["regiment_code"])
-		if quartered.has(code):
-			continue
 		var sp := Vector2.ZERO
 		var ph := h
+		var anchor := Vector2.ZERO
 		if tops.has(code):
 			ph = chip
-			sp = (tops[code] as Vector2) - Vector2(0.0, lift)
+			anchor = tops[code]
+			sp = anchor - Vector2(0.0, lift)
 		else:
 			var xz := Map3DGeometry.pack_to_world(ctx.meta,
 				ArmySystem.position_of(repo, st, r))
@@ -112,9 +108,37 @@ func _cut() -> Array:
 			if camera.is_position_behind(ground):
 				continue
 			sp = camera.unproject_position(ground) / s
+			anchor = sp
 		if frame.has_point(sp):
-			points.append({"reg": r, "pos": sp, "h": ph, "bars": _bars_of(code)})
-	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops)
+			points.append({"reg": r, "pos": sp, "anchor": anchor, "h": ph, "bars": _bars_of(code)})
+	_land.clear()
+	land_tests = 0
+	return ArmyCounters.layout(repo, points, h, ctx.settlement_rects(), tops, view.selected_armies(),
+		_on_land)
+
+
+## Whether a design-px point of the view lies over land (Map3DDeclutter's
+## `allowed`, a HARD rule: a land counter stands on the sea only when no
+## clear land lies within reach): the view's ray from the middle of the
+## point's step cell to the SEA's plane — exact at the shore, where the
+## ground is the sea's height, and a twelfth of the picker's height-marched
+## ray — then the picker's cell bitmap (world_cell_index.png: a lookup,
+## where MapEconomy.cell_at walks polygons); once a cell a cut. Asked lazily, in the spiral's order, only of clear places off home.
+func _on_land(pos: Vector2) -> bool:
+	var q := maxf(ctx.repo.bal("map3d_declutter_step_px"), 1.0)
+	var key := Vector2i((pos / q).floor())
+	if _land.has(key):
+		return _land[key]
+	land_tests += 1
+	var px := (Vector2(key) + Vector2(0.5, 0.5)) * q * ctx.viewport_px_scale()
+	var from := ctx.camera.project_ray_origin(px)
+	var dir := ctx.camera.project_ray_normal(px)
+	var ok := false
+	if dir.y < -0.0001:
+		var p := from + dir * ((float(ctx.meta.get("sea_y", 0.0)) - from.y) / dir.y)
+		ok = view.cell_at(ctx.to_pack(Vector2(p.x, p.z))) >= 0
+	_land[key] = ok
+	return ok
 
 
 ## ArmySystem.bars_of, kept while nothing it reads moves: the day (the
@@ -143,7 +167,12 @@ func _draw() -> void:
 	var list := markers()
 	_drawn = list.size()
 	_draw_routes()
-	ArmyCounters.draw(self, ctx.repo, list, view.selected_army())
+	ArmyCounters.draw(self, ctx.repo, list, view.selected_armies(),
+		{"casing": leader_casing, "core": leader_core, "casing_px": leader_casing_px,
+		"core_px": leader_core_px, "dot_px": leader_dot_px, "rim_px": leader_dot_rim_px,
+		"fade": leader_fade})
+	if view.box_rect.has_area():
+		draw_rect(view.box_rect, box_color, false, box_width_px)
 
 
 ## Each marching regiment's road still ahead: a dashed line DRAPED on the

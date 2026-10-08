@@ -1417,11 +1417,11 @@ var _war_spread_codes: Array = []
 func _seed_war_spread() -> void:
 	ArmySystem.ensure(Game.data, Game.state)
 	var codes: Array = []
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(Game.data, r) > 0:
 			codes.append(String(r["regiment_code"]))
 	var lead := _war_focus if _war_focus != "" else String(codes[0])
-	var at := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, lead))
+	var at := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, lead, Game.state))
 	var k := WarSheets.px_per_unit(Game.data)
 	var placed := 0
 	for c: String in codes:
@@ -1440,7 +1440,7 @@ func _seed_war_spread() -> void:
 	Game.state_changed.emit()
 	if _war_sheet < 0 and not _war_spread_codes.is_empty():
 		_war_sheet = WarSheets.sheet_of(Game.data, ArmySystem.position_of(Game.data, Game.state,
-			ArmySystem.regiment(Game.data, String(_war_spread_codes[0]))))
+			ArmySystem.regiment(Game.data, String(_war_spread_codes[0]), Game.state)))
 	print("war spread: ", _war_spread_codes)
 
 
@@ -1573,7 +1573,7 @@ func _war_sync(when: String) -> void:
 	var room := _root.war_room_screen().view().piece_pack_positions()
 	print("war sync (%s): day=%d share=%.3f clock=%d held=%s" % [when, Game.state.absolute_day(),
 		Game.day_progress, Game.clock_speed, Game.clock_held])
-	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		var code := String(reg["regiment_code"])
 		var eng := ArmySystem.position_of(Game.data, Game.state, reg)
 		var d: Variant = drawn.get(code)

@@ -12,7 +12,7 @@ func before_each() -> void:
 	panel = load("res://scenes/war_room/war_folio.tscn").instantiate()
 	panel.size = Vector2(1000, 640)
 	add_child_autofree(panel)
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1":
 			code = String(r["regiment_code"])
 			break
@@ -329,7 +329,7 @@ func test_a_changed_order_replays_the_current_drill_without_a_reload() -> void:
 
 ## A crown land regiment with the given arm among its men ("" when none).
 func _code_with(arm: String) -> String:
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1" and int(float(r.get(arm, 0))) > 0:
 			return String(r["regiment_code"])
 	return ""
@@ -390,7 +390,10 @@ func test_artillery_has_no_model_so_it_draws_its_glyph_with_no_tabs() -> void:
 	assert_eq(panel.get_node("%Drills").get_child_count(), 0)
 	assert_eq(fig.playing(), "")
 	assert_eq(fig.loads(), loads, "no model is loaded for the guns")
-	_arm_button("infantry").pressed.emit()
+	# a unit is one arm: the guns' train has only its own button, and a foot
+	# unit opened after it shows its model with its drills
+	assert_null(_arm_button("infantry"), "the train fields no foot")
+	panel.open_for(_code_with("infantry"))
 	assert_false(fig.glyph_shown())
 	assert_gt(panel.get_node("%Drills").get_child_count(), 0)
 

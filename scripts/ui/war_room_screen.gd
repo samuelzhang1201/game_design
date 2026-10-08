@@ -291,7 +291,7 @@ func _fill_margin() -> void:
 		var b := Button.new()
 		b.flat = true
 		b.focus_mode = Control.FOCUS_NONE
-		var reg := ArmySystem.regiment(Game.data, String(p["code"]))
+		var reg := ArmySystem.regiment(Game.data, String(p["code"]), Game.state)
 		b.text = "%s → %s" % [reg.get("label", p["code"]), series[to]["id"]]
 		# a slip of tight rows in the slip's ink (the WarMarginRow kind)
 		b.theme_type_variation = &"WarMarginRow"
@@ -434,12 +434,11 @@ func _on_ground_hovered(pack_px: Vector2, screen_px: Vector2) -> void:
 	_show_slip(WarGround.lines(Game.data, r), screen_px)
 
 
-## The pointer rested on a piece: the regiments it stands for (a town's
-## garrison lists each), their combat figures (WarPieceSlip).
+## The pointer rested on a piece: the one unit it stands for (one piece a
+## unit, spec 2026-10-07-army-split-and-ground §5.4), its combat figures
+## (WarPieceSlip).
 func _on_piece_hovered(code: String, screen_px: Vector2) -> void:
-	var codes := _view.garrison_of(code)
-	var town := ArmySystem.quartered_in(Game.data, ArmySystem.regiment(Game.data, code), Game.state) if codes.size() > 1 else ""
-	_show_slip(WarPieceSlip.lines(Game.data, WarPieceSlip.reading(Game.data, Game.state, codes), town), screen_px)
+	_show_slip(WarPieceSlip.lines(Game.data, WarPieceSlip.reading(Game.data, Game.state, [code])), screen_px)
 
 
 ## An order arrow being drawn: read its tip for the selection's first

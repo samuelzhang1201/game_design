@@ -17,6 +17,8 @@ var burg := ""
 ## The manor cell clicked under a theme, -1 for none.
 var manor := -1
 var army := ""
+## The units selected together (spec §5.6); [army] after a plain click.
+var armies: Array = []
 
 
 func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_markers: Map3DLayerSettlements,
@@ -35,11 +37,6 @@ func click(picked: Dictionary, pos: Vector2) -> void:
 	if String(picked.get("kind", "")) == "route":
 		view.route_clicked.emit(String(picked["code"]), pos)
 		return
-	if String(picked.get("kind", "")) == "garrison":
-		# a town's garrison: the town's card, and which of its regiments
-		select({"kind": "burg", "code": String(picked["town"])})
-		view.garrison_menu_requested.emit(picked["codes"], pos)
-		return
 	select(picked)
 	if String(picked.get("kind", "")) == "army":
 		view.army_menu_requested.emit(String(picked["code"]), pos)
@@ -53,6 +50,7 @@ func select(picked: Dictionary) -> void:
 		"burg":
 			var code := String(picked["code"])
 			army = ""
+			armies = []
 			_set_province("")
 			burg = code
 			_show_ring(code)
@@ -61,6 +59,7 @@ func select(picked: Dictionary) -> void:
 		"province":
 			burg = ""
 			army = ""
+			armies = []
 			_show_ring("")
 			_set_province(String(picked["code"]))
 			province_selected.emit(province)
@@ -70,12 +69,14 @@ func select(picked: Dictionary) -> void:
 			_show_ring("")
 			_set_province("")
 			army = code
+			armies = [code]
 			_refresh_hud()
 			object_selected.emit({"title": MapObjects.label_of(ctx.repo, picked),
 				"obj": {"kind": "army", "code": code}})
 		"manor":
 			var cell := int(picked["cell"])
 			army = ""
+			armies = []
 			burg = ""
 			_show_ring("")
 			province = ""
@@ -87,6 +88,7 @@ func select(picked: Dictionary) -> void:
 			var id := int(picked["id"])
 			burg = ""
 			army = ""
+			armies = []
 			_show_ring("")
 			_set_province("")
 			_refresh_hud()
@@ -96,6 +98,7 @@ func select(picked: Dictionary) -> void:
 			var cell := int(picked["cell"])
 			if army != "":
 				army = ""
+				armies = []
 				_refresh_hud()
 			burg = ""
 			_show_ring("")
@@ -108,11 +111,64 @@ func select(picked: Dictionary) -> void:
 			clear()
 
 
+## Shift-click (spec 2026-10-07-army-split-and-ground §5.6): one of the
+## player's units in or out of the selection; anything else is ignored.
+func toggle_pick(picked: Dictionary) -> void:
+	if String(picked.get("kind", "")) != "army" or not _mine(String(picked["code"])):
+		return
+	var code := String(picked["code"])
+	var codes := armies.duplicate()
+	if codes.has(code):
+		codes.erase(code)
+	else:
+		codes.append(code)
+	_select_armies(codes)
+
+
+## A Shift-drag box (design px): every LAND unit of the player's whose piece
+## or counter it touches (spec §5.6), sorted.
+func select_box(r: Rect2) -> void:
+	var codes: Array = []
+	var rects: Dictionary = view.unit_rects()
+	for code: String in rects:
+		if (rects[code] as Rect2).intersects(r) and not codes.has(code):
+			codes.append(code)
+	for m: Dictionary in view.army_markers():
+		if (m["rect"] as Rect2).intersects(r) and not codes.has(String(m["code"])):
+			codes.append(String(m["code"]))
+	codes = codes.filter(func(c: String) -> bool: return _mine(c) and String(ArmySystem.regiment(
+		ctx.repo, c, ctx.state()).get("is_naval", "0")) != "1")
+	codes.sort()
+	_select_armies(codes)
+
+
+func _mine(code: String) -> bool:
+	return String(ArmySystem.regiment(ctx.repo, code, ctx.state()).get("kingdom_code", "")) \
+		== ctx.repo.resolve_realm("player_realm")
+
+
+## The selection becomes `codes`; the card shows the first, or closes on none.
+func _select_armies(codes: Array) -> void:
+	var had := burg != "" or province != "" or manor >= 0 or army != ""   # as clear() counts it
+	armies = codes
+	army = String(armies[0]) if not armies.is_empty() else ""
+	burg = ""
+	_show_ring("")
+	_set_province("")
+	_refresh_hud()
+	if army != "":
+		object_selected.emit({"title": MapObjects.label_of(ctx.repo, {"kind": "army", "code": army}),
+			"obj": {"kind": "army", "code": army}})
+	elif had:
+		object_selected.emit({})
+
+
 ## Forget the selection (the card was closed, or the sea clicked).
 func clear() -> void:
 	var had := burg != "" or province != "" or manor >= 0 or army != ""
 	if army != "":
 		army = ""
+		armies = []
 		_refresh_hud()
 	burg = ""
 	_show_ring("")

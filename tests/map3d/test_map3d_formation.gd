@@ -67,7 +67,7 @@ func test_remnants_are_one_in_front_two_behind() -> void:
 func test_strength_is_fit_men_per_mille_of_the_headcount() -> void:
 	var state := GameState.new()
 	var code := ""
-	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if ArmySystem.headcount(repo, reg) > 0:
 			code = String(reg["regiment_code"])
 			break

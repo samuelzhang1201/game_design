@@ -58,11 +58,14 @@ func test_a_hostile_regiment_on_the_road_cuts_it() -> void:
 	# make a foreign kingdom an Enemy and stand one of its regiments on the road's midpoint
 	var realm := repo.resolve_realm("player_realm")
 	var foe := ""
-	for r: Dictionary in repo.world_table("military", "regiments").values():
-		if String(r["kingdom_code"]) != realm and String(r.get("is_naval", "0")) != "1":
-			foe = String(r["regiment_code"])
+	var army := ArmySystem.roster(repo, s)
+	var codes := army.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(army[c]["kingdom_code"]) != realm and String(army[c].get("is_naval", "0")) != "1":
+			foe = c
 			break
-	var foe_reg: Dictionary = repo.world_table("military", "regiments")[foe]
+	var foe_reg: Dictionary = army[foe]
 	var mid := route[route.size() / 2]
 	foe_reg["x"] = mid.x
 	foe_reg["y"] = mid.y

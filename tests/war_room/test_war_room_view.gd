@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const ClearPiece := preload("res://tests/war_room/clear_piece.gd")
 ## The room's view laid with a sheet: the table, the ink, the picks (spec §1–2).
 
 var repo: DataRepository
@@ -327,11 +328,12 @@ func _release(at: Vector2) -> void:
 	view._gui_input(e)
 
 
+## A land piece of the laid sheet a click on its own drawn point takes up,
+## with that point as `press` (tests/war_room/clear_piece.gd: the camp's
+## spread moves pieces off their engine points and may stand one's figures
+## over another's base, whatever army_slot_spacing_m is).
 func _first_land_piece() -> Dictionary:
-	for p: Dictionary in WarRoom.on_sheet(repo, state, view.sheet_index()):
-		if not bool(p["naval"]):
-			return p
-	return {}
+	return ClearPiece.find(view, repo, state)
 
 
 func _shift(e: InputEventWithModifiers) -> InputEventWithModifiers:
@@ -348,12 +350,12 @@ func _land_pieces() -> Array:
 func _lay_with(n: int) -> bool:
 	ArmySystem.ensure(repo, state)
 	var codes: Array = []
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0:
 			codes.append(String(r["regiment_code"]))
 	if codes.size() < n:
 		return false
-	var base := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, codes[0]))
+	var base := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, codes[0], state))
 	var k := WarSheets.px_per_unit(repo)   # pack px a km
 	for i in n:
 		var m := ArmySystem.pack_to_metres(repo, base + Vector2(7.0 * (i + 1), 4.0) * k)
@@ -367,14 +369,14 @@ func test_a_click_on_a_piece_selects_its_regiments_and_arms_nothing() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
-	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	var at: Vector2 = p["press"]
 	watch_signals(view)
 	_press(at)
 	_move(at + Vector2(2, 0))   # under war_rake_min_px
 	_release(at + Vector2(2, 0))
 	assert_signal_emitted_with_parameters(view, "piece_selected", [String(p["code"])])
 	assert_eq(view.plan_input().sel_side, "blue")
-	assert_eq(view.plan_input().sel, view.garrison_of(String(p["code"])), "a garrison piece selects its every regiment")
+	assert_eq(view.plan_input().sel, [String(p["code"])], "one unit a piece")
 	assert_false(view.aiming, "a click arms no march")
 
 
@@ -382,7 +384,7 @@ func test_a_drag_from_a_piece_pans_and_orders_nothing() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
-	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	var at: Vector2 = p["press"]
 	var target := view.camera_rig().target
 	watch_signals(view)
 	_press(at)
@@ -415,11 +417,11 @@ func test_shift_click_adds_a_piece_and_takes_it_out_and_a_click_away_lets_all_go
 	var r := e.duplicate() as InputEventMouseButton
 	r.pressed = false
 	view._gui_input(r)
-	var both: Array = view.garrison_of(String(two[0]["code"])) + view.garrison_of(String(two[1]["code"]))
+	var both: Array = [String(two[0]["code"]), String(two[1]["code"])]
 	assert_eq(view.plan_input().sel.size(), both.size(), "Shift adds")
 	view._gui_input(_shift(e.duplicate() as InputEventMouseButton))
 	view._gui_input(r)
-	assert_eq(view.plan_input().sel, view.garrison_of(String(two[0]["code"])), "Shift again takes it out")
+	assert_eq(view.plan_input().sel, [String(two[0]["code"])], "Shift again takes it out")
 	var open := _open_spot([a, b])
 	assert_ne(open, Vector2(-1, -1), "an open spot of table")
 	_press(open)
@@ -457,7 +459,7 @@ func test_shift_drag_boxes_every_land_piece_inside() -> void:
 		if at == null:
 			continue
 		box = Rect2(at, Vector2.ZERO) if want.is_empty() else box.expand(at)
-		want.append_array(view.garrison_of(String(q["code"])))
+		want.append(String(q["code"]))
 	var start := Vector2(-1, -1)
 	var end := Vector2(-1, -1)
 	for g: float in [20.0, 35.0, 50.0, 70.0]:
@@ -503,7 +505,7 @@ func test_the_blue_arrow_waits_for_a_selection_then_draws_its_march() -> void:
 	assert_false(input.tool.in_hand(), "no selection: the arrow cannot be taken")
 	assert_ne(input.why_of("blue", "arrow"), "")
 	var p := _first_land_piece()
-	var at: Vector2 = view.screen_pos_of_px(p["at"])
+	var at: Vector2 = p["press"]
 	_press(at)
 	_release(at)
 	assert_eq(input.why_of("blue", "arrow"), "")
@@ -516,7 +518,7 @@ func test_the_blue_arrow_waits_for_a_selection_then_draws_its_march() -> void:
 	_release(from + Vector2(120, -60))
 	assert_signal_emitted(input, "order_drawn")
 	var args: Array = get_signal_parameters(input, "order_drawn")
-	assert_eq(args[0], view.garrison_of(String(p["code"])))
+	assert_eq(args[0], [String(p["code"])], "one unit a piece")
 	assert_gt((args[1] as PackedVector2Array).size(), 2, "the stroke's own samples, for the fit")
 	assert_eq(int(state.war_plans["rev"]), 0, "an order is no stroke on the paper")
 
@@ -524,7 +526,7 @@ func test_the_blue_arrow_waits_for_a_selection_then_draws_its_march() -> void:
 func test_a_right_click_on_our_piece_opens_no_menu() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
-	var at: Vector2 = view.screen_pos_of_px(_first_land_piece()["at"])
+	var at: Vector2 = _first_land_piece()["press"]
 	watch_signals(view)
 	for pressed: bool in [true, false]:
 		var e := InputEventMouseButton.new()

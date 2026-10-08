@@ -162,7 +162,7 @@ func test_an_arrival_has_its_headline() -> void:
 	assert_eq(ArmySystem.arrival_headline(repo, s, code),
 		"%s reaches %s." % [String(r["label"]), Intel.place_label(repo, s, here)])
 	var foreign := ""
-	for other: Dictionary in repo.world_table("military", "regiments").values():
+	for other: Dictionary in ArmySystem.roster(repo, s).values():
 		if String(other["kingdom_code"]) != repo.resolve_realm("player_realm"):
 			foreign = String(other["regiment_code"])
 			break
@@ -194,7 +194,9 @@ func test_the_months_last_day_is_a_day_on_the_road_too() -> void:
 	# the second day is paced after day 29's bite is eaten; the march is even
 	# (owner 2026-10-06): what is left over the whole days it takes
 	var step2 := float(ArmySystem.day_step_m(repo, s, code))
-	var left2 := step * 1000.0 - day1
+	# what is left in the whole metres the engine stores (the float day1 can
+	# tip an exact quotient over a whole day)
+	var left2 := float(int(s.regiments[code]["dest_x_m"]) - int(s.regiments[code]["x_m"]))
 	var even2 := ceilf(left2 / ceilf(left2 / step2))
 	engine.advance(s)       # day 30 ends, inside the tick
 	assert_eq([s.tick, s.day], [2, 1], "the new month's first day runs")
@@ -258,7 +260,7 @@ func test_the_orders_validate_against_the_regiment_and_the_ground() -> void:
 
 	var theirs := ActionRequest.new()
 	theirs.action_code = "ARMY_GARRISON"
-	for other: Dictionary in repo.world_table("military", "regiments").values():
+	for other: Dictionary in ArmySystem.roster(repo, s).values():
 		if String(other["kingdom_code"]) != repo.resolve_realm("player_realm"):
 			theirs.params = {"regiment": String(other["regiment_code"])}
 			break

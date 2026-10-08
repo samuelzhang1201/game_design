@@ -158,6 +158,27 @@ func test_a_kept_name_never_lies_on_another_star() -> void:
 		"an ordinary name with every place on other stars is dropped")
 
 
+## The selected star is always named (spec §7): ringed by other stars on every
+## side, its name (`first`) crosses the nearest rather than go unnamed — where
+## an ordinary or kept name is dropped; never into a wall.
+func test_the_first_name_stands_when_every_place_is_on_another_star() -> void:
+	var own := [Vector2(100, 100), 10.0]
+	var e := {"text": "Walbover", "at": Vector2(100, 76), "strong": true, "keep": true, "first": true,
+		"beside": own}
+	var boxed := [Rect2(0, 0, 400, 88), Rect2(0, 112, 400, 300), Rect2(0, 88, 88, 24), Rect2(112, 88, 300, 24)]
+	var kept := LedgerHud.cull([e], 14.0, null, LedgerHud.DEFAULT_GAUGE, boxed)
+	assert_eq(kept.size(), 1, "the selected star is named")
+	var w := 8.0 * 14.0 * 0.55
+	var at: Vector2 = kept[0]["at"]
+	assert_lt(at.distance_to(Vector2(100, 100)), 10.0 + 14.0 + w, "at its nearest ring")
+	var kept_only := e.duplicate()
+	kept_only.erase("first")
+	assert_eq(LedgerHud.cull([kept_only], 14.0, null, LedgerHud.DEFAULT_GAUGE, boxed).size(), 0,
+		"a kept name that is not the selected one is still dropped")
+	assert_eq(LedgerHud.cull([e], 14.0, null, LedgerHud.DEFAULT_GAUGE, boxed, null, [Rect2(0, 0, 400, 400)]).size(), 0,
+		"never in a wall")
+
+
 ## Task 11 fix round 2 (R6): a dimmed name's halo and gauges fade with it.
 func test_a_dim_names_gauges_fade_with_it() -> void:
 	assert_almost_eq(LedgerHud.fade_of(Color(1, 1, 1, 0.8)), 1.0, 0.001)

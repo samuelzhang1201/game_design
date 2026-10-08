@@ -217,8 +217,8 @@ func _on_load_pressed() -> void:
 	if not _starting:
 		load_requested.emit()
 
-func show_load_failed() -> void:
-	_status.text = "No saved realm found."
+func show_load_failed(why := "No saved realm found.") -> void:
+	_status.text = why
 
 ## Test seam.
 func menu_column() -> VBoxContainer:

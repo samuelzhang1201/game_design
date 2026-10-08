@@ -463,13 +463,7 @@ add it here as a principle with its why — not as a changelog entry.
 - **Status reads as two thin bars on the counter**, red (readiness) over
   yellow (supplies), in the counter's own width.
 - **A miniature casts its shadow** — the table-top look wants it.
-- **A garrison is its town's counter, not soldiers in the streets**
-  (owner 2026-10-06, choosing A over standing them outside the houses or
-  keeping them): a piece is wider than any open ground inside a town, so
-  quartered regiments buried the lanes and their counters stacked over the
-  town. One counter on the town — a tower, the crown with the royal
-  regiment, "2100 (2)" — no bigger than a piece's chip close in; a regiment
-  shows its figures again when it marches out.
+- **Every unit holds its own ground** (owner 2026-10-07, overturning 2026-10-06's garrison counter): one unit per town holds the seat, on the town's point; the rest camp outside it in hex rings, infantry innermost, then archers, then horse. Nothing is merged into a counter, and no counter or headcount chip ever covers another — they spread, they never stack into one (spec `2026-10-07-army-split-and-ground-design.md`).
 
 ## Unit figures (details: `tools/guide/unit_figures.md`)
 

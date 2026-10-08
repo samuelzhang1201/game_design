@@ -1,8 +1,9 @@
 class_name WarPieceSlip
 extends RefCounted
 ## The slip a pointer resting on a WAR ROOM piece raises (owner 2026-10-07:
-## 棋子的tooltip显示基本战斗数据): each regiment the piece stands for — one, or
-## a town's garrison — with its arm and heads, its defend and attack on the
+## 棋子的tooltip显示基本战斗数据): the unit the piece stands for (one piece a
+## unit, spec 2026-10-07-army-split-and-ground §5.4; `lines` still lists several
+## when given them) with its arm and heads, its defend and attack on the
 ## ground where it stands now (ArmySystem.power), its readiness and morale, and
 ## its supplies with the days they last ("Supplies 1,240 (≈ 18 days)").
 ## Pure and read-only; only the player's own regiments are pieces.
@@ -13,7 +14,7 @@ static func reading(repo: DataRepository, state: GameState, codes: Array) -> Arr
 	var out: Array = []
 	for c: Variant in codes:
 		var code := String(c)
-		var reg := ArmySystem.regiment(repo, code)
+		var reg := ArmySystem.regiment(repo, code, state)
 		if reg.is_empty():
 			continue
 		var st := ArmySystem.state_of(repo, state, code)

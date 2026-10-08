@@ -65,7 +65,7 @@ func test_the_pace_in_tenths_of_a_km() -> void:
 func test_a_real_regiment_of_the_player_has_a_speed() -> void:
 	Game.start_campaign(42)
 	var mine := Game.data.resolve_realm("player_realm")
-	var reg: Dictionary = MapObjects.regiments_of(Game.data, mine)[0]
+	var reg: Dictionary = MapObjects.regiments_of(Game.data, mine, Game.state)[0]
 	var code := String(reg["regiment_code"])
 	var km := ArmySystem.speed_km_per_day(Game.data, Game.state, code)
 	assert_gt(km, 0.0)
@@ -82,7 +82,7 @@ func test_a_real_regiment_of_the_player_has_a_speed() -> void:
 func test_hunger_and_low_morale_slow_the_march() -> void:
 	Game.start_campaign(42)
 	var mine := Game.data.resolve_realm("player_realm")
-	var code := String(MapObjects.regiments_of(Game.data, mine)[0]["regiment_code"])
+	var code := String(MapObjects.regiments_of(Game.data, mine, Game.state)[0]["regiment_code"])
 	ArmySystem.ensure(Game.data, Game.state)
 	var before := ArmySystem.speed_km_per_day(Game.data, Game.state, code)
 	Game.state.regiments[code]["supplies"] = 0
@@ -95,7 +95,7 @@ func test_hunger_and_low_morale_slow_the_march() -> void:
 func test_the_regiments_detail_card_carries_its_march() -> void:
 	Game.start_campaign(42)
 	var mine := Game.data.resolve_realm("player_realm")
-	var code := String(MapObjects.regiments_of(Game.data, mine)[0]["regiment_code"])
+	var code := String(MapObjects.regiments_of(Game.data, mine, Game.state)[0]["regiment_code"])
 	var card := MapObjects.army_card(Game.data, code, Game.state)
 	var march: Dictionary = {}
 	for s: Dictionary in card["stats"]:
@@ -109,14 +109,20 @@ func test_the_regiments_detail_card_carries_its_march() -> void:
 ## The map's two bars (owner 2026-09-27): red the readiness, yellow the supply.
 func test_the_bars_are_readiness_and_supply() -> void:
 	var st := GameState.new()
-	var reg: Dictionary = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"))[0]
+	# the first of the realm's units whose month's use is a multiple of ten,
+	# so the hand sums below take a whole number of units a day
+	var reg: Dictionary = {}
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), st):
+		if ArmySystem.supply_use(repo, r) > 0 and ArmySystem.supply_use(repo, r) % 10 == 0:
+			reg = r
+			break
+	assert_false(reg.is_empty(), "the realm has a unit whose use is a multiple of ten")
 	var code := String(reg["regiment_code"])
 	var use := ArmySystem.supply_use(repo, reg)
 	# three days in hand, a 20-day load: the supply score is 3 of the 5-day low mark = 600
-	# (use*3/30 units; use is a multiple of ten at this pack), readiness
+	# (use*3/30 units), readiness
 	# (40*1000 + 25*600 + 20*500 + 15*200) / 100 = 680; the yellow bar is
 	# three days of the 20 carried (owner 2026-09-30: it falls every day) = 150.
-	assert_eq(use % 10, 0, "the hand sums below need a whole number of units a day")
 	st.regiments[code] = {"morale": 50, "training": 20, "supplies": use * 3 / 30, "wounded": 0,
 		"carry_days": 20}
 	assert_eq(ArmySystem.bars_of(repo, st, code), Vector2i(680, 150))
@@ -126,7 +132,11 @@ func test_a_foreign_regiment_reads_as_it_would_start() -> void:
 	repo.balance["army_start_morale"] = 70.0
 	repo.balance["army_start_training"] = 10.0
 	var mine := repo.resolve_realm("player_realm")
-	for reg: Dictionary in repo.world_table("military", "regiments").values():
+	var army := ArmySystem.roster(repo)
+	var codes := army.keys()
+	codes.sort()
+	for c: String in codes:
+		var reg: Dictionary = army[c]
 		if String(reg["kingdom_code"]) != mine:
 			# twenty days of a 20-day load: the supply score full, readiness 805
 			# (above); the stores bar a whole unit or two short of 1000, the

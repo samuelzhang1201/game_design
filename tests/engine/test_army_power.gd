@@ -92,26 +92,25 @@ func test_strength_grades_against_the_mean_of_its_kind() -> void:
 	assert_eq(ArmySystem.strength_grade(repo, s, weak), "Weak")
 
 func test_a_lone_kind_is_average() -> void:
-	# The pack's player realm has more than one fleet, so this test builds its
-	# own repository and strips every fleet but the first, to assert the
+	# The pack's player realm has more than one fleet, so this test strips
+	# every fleet but the first from its campaign's roster, to assert the
 	# spec's rule ("a kind with one regiment is Average") for real rather
 	# than skipping via pass_test whenever the pack happens to have several.
-	var repo2 := SuiteData.repo()
-	var realm := repo2.resolve_realm("player_realm")
+	var s := SuiteData.campaign(repo, 7)
+	var realm := repo.resolve_realm("player_realm")
 	var fleets: Array = []
-	for r: Dictionary in MapObjects.regiments_of(repo2, realm):
+	for r: Dictionary in MapObjects.regiments_of(repo, realm, s):
 		if String(r.get("is_naval", "0")) == "1":
 			fleets.append(r)
-	assert_gt(fleets.size(), 0, "the pack's player realm has a fleet")
-	var table: Dictionary = repo2.world_table("military", "regiments")
+	assert_gt(fleets.size(), 0, "the player's realm has a fleet")
 	for i in range(1, fleets.size()):
-		table.erase(String(fleets[i]["regiment_code"]))
+		s.army_roster.erase(String(fleets[i]["regiment_code"]))
+		s.regiments.erase(String(fleets[i]["regiment_code"]))
 	var lone_code: String = String(fleets[0]["regiment_code"])
-	var s := SuiteData.campaign(repo2, 7)
 	# Differ the lone fleet's power from its starting value so the assertion
 	# is not trivially satisfied by the untouched default state.
 	s.regiments[lone_code]["training"] = 100
-	assert_eq(ArmySystem.strength_grade(repo2, s, lone_code), "Average")
+	assert_eq(ArmySystem.strength_grade(repo, s, lone_code), "Average")
 
 func test_battle_odds_placeholder() -> void:
 	var s := SuiteData.campaign(repo, 7)
@@ -153,16 +152,24 @@ func test_power_reads_the_ground_the_regiment_stands_on_now() -> void:
 	entry["dest_x_m"] = m.x
 	entry["dest_y_m"] = m.y
 	assert_eq(ArmySystem.held_town_of(repo, reg, s), target)
+	_seat(s, code, target)   # the works are the seat's (spec 2026-10-07-army-split-and-ground §4.1)
 	var moved := ArmySystem.power(repo, s, code, "defend")
-	# The same regiment quartered there by the pack, with the same state.
-	var other := SuiteData.repo()
-	var row2: Dictionary = other.world_table("military", "regiments")[code]
+	# The same unit quartered there by the roster, with the same state.
+	var s2 := SuiteData.campaign(repo, 7)
+	var row2: Dictionary = s2.army_roster[code]
 	row2["x"] = str(at.x)
 	row2["y"] = str(at.y)
-	var s2 := SuiteData.campaign(repo, 7)
 	(s2.regiments[code] as Dictionary).erase("x_m")
-	assert_eq(moved, ArmySystem.power(other, s2, code, "defend"))
+	_seat(s2, code, target)
+	assert_eq(moved, ArmySystem.power(repo, s2, code, "defend"))
 	assert_ne(moved, home, "other works change its power")
+
+## `code` holds `town`'s seat in `s`, and no other.
+func _seat(s: GameState, code: String, town: String) -> void:
+	for t: String in s.town_seat.keys():
+		if String(s.town_seat[t]) == code:
+			s.town_seat.erase(t)
+	s.town_seat[town] = code
 
 func test_power_is_power_on_its_own_ground() -> void:
 	var s := SuiteData.campaign(repo, 7)
@@ -177,7 +184,7 @@ func test_archers_alone_on_hills_by_the_terrain_table() -> void:
 	var r := SuiteData.repo()
 	var s := SuiteData.campaign(r, 7)
 	var code: String = _land_codes()[0]
-	var row: Dictionary = r.world_table("military", "regiments")[code]
+	var row: Dictionary = s.army_roster[code]
 	for arm in ["infantry", "cavalry", "artillery", "fleet"]:
 		row[arm] = "0"
 	row["archers"] = "800"

@@ -82,7 +82,7 @@ func test_a_characters_ties_touch_him() -> void:
 		assert_true(String(l["from"]) == "character:you" or String(l["to"]) == "character:you")
 
 func test_a_regiment_stands_in_the_province_it_has_reached() -> void:
-	var reg: Dictionary = MapObjects.regiments_of(data, data.resolve_realm("player_realm"))[0]
+	var reg: Dictionary = MapObjects.regiments_of(data, data.resolve_realm("player_realm"), s)[0]
 	var code := String(reg["regiment_code"])
 	var got := LedgerResolvers.run(_row("based_in"), data, s, {"id": "regiment:" + code})
 	assert_eq(got.size(), 1)

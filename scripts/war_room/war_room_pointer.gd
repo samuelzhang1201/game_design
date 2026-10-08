@@ -2,9 +2,8 @@ class_name WarRoomPointer
 extends RefCounted
 ## The room's left button and its marks on the HUD (spec 2026-10-01-war-room-
 ## design §3, 2026-10-08-war-room-draw-orders rulings 11, 13, 16): a click
-## picks, in turn, a pennant (its route menu), one of our pieces (selected —
-## a town's garrison piece selects its every regiment; Shift adds or takes it
-## out), an edge arrow, the wall chart, else the ground of a march waiting on
+## picks, in turn, a pennant (its route menu), one of our pieces (its unit
+## selected; Shift adds or takes it out), an edge arrow, the wall chart, else the ground of a march waiting on
 ## its confirm (a lit town there is chosen to supply it); a click on open
 ## table lets the selection go. A drag pans, from a piece too (orders are
 ## DRAWN: WarPlanInput). While the confirm stands, a press near the pending
@@ -120,8 +119,8 @@ func redraw() -> void:
 	_hud.set_supply(_supply_rings(), pal["supply_route"])
 
 
-## Where each selected thing stands on the screen: our pieces (a garrison's
-## regiments share its piece), supposed pieces, intel hints.
+## Where each selected thing stands on the screen: our pieces (where each is
+## drawn, spread clear of its neighbours), supposed pieces, intel hints.
 func _selected_spots(input: WarPlanInput) -> Array:
 	var out: Array = []
 	var seen := {}
@@ -130,10 +129,6 @@ func _selected_spots(input: WarPlanInput) -> Array:
 		var at: Variant = null
 		if input.sel_side == "blue":
 			var node := _pieces.piece(String(id))
-			if node == null:
-				for q: Dictionary in WarRoom.on_sheet(_repo, st, _view.sheet_index(), _view.drawn()):
-					if String(id) in (q.get("garrison", [q["code"]]) as Array):
-						node = _pieces.piece(String(q["code"]))
 			if node != null and not _camera.is_position_behind(node.global_position):
 				at = _camera.unproject_position(node.global_position) / _view.window_scale()
 		elif String(id).begins_with("p"):

@@ -76,11 +76,18 @@ func test_a_day_with_events_files_one_letter_and_a_quiet_day_none() -> void:
 	var code := _land()
 	# out in the field, so no town tops it up before the warnings are read
 	var at := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)) + Vector2(40.0, 0.0)
+	ArmySystem.set_march(repo, s, code, at)   # it leaves its camp
 	var mm := ArmySystem.pack_to_metres(repo, at)
 	s.regiments[code]["x_m"] = mm.x
 	s.regiments[code]["y_m"] = mm.y
 	s.regiments[code]["dest_x_m"] = mm.x
 	s.regiments[code]["dest_y_m"] = mm.y
+	# every other unit carries more than it may take, so none of them (a
+	# unit camped beyond its town's reach among them) runs low today
+	for c in s.regiments.keys():
+		if String(c) != code:
+			var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, String(c), s), s)
+			s.regiments[c]["supplies"] = ArmySystem.max_units(repo, use) + use
 	var before := s.missives.size()
 	s.regiments[code]["supplies"] = 0     # it goes hungry today: one "empty" event
 	engine.advance_day(s)

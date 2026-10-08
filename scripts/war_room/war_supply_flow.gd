@@ -15,7 +15,7 @@ extends RefCounted
 ## road, SupplySystem.route_px), in code order.
 static func routes(repo: DataRepository, state: GameState, rect: Rect2) -> Array:
 	var out: Array = []
-	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).map(
+	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state).map(
 		func(x: Dictionary) -> String: return String(x["regiment_code"]))
 	ours.sort()
 	for code: String in ours:

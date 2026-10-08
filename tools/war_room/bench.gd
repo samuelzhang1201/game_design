@@ -121,7 +121,7 @@ func _a_land_piece(view: WarRoomView) -> Node3D:
 	var pieces := view.get_node("%Pieces") as WarPieces
 	for p: Dictionary in WarRoom.on_sheet(Game.data, Game.state, view.sheet_index(), view.drawn()):
 		var code := String(p["code"])
-		if MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code)) != "fleet":
+		if MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, code, Game.state)) != "fleet":
 			return pieces.piece(code)
 	return null
 

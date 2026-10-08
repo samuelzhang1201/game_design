@@ -87,7 +87,7 @@ static func _poly_distance(poly: PackedVector2Array, at: Vector2) -> float:
 ## hazards}; a fleet's road is no road they can rob (spec 2026-10-07-war-room-
 ## p2 §1.2). `route` is the line's road (SupplyLines.road_px).
 static func road_loss(repo: DataRepository, state: GameState, code: String, route: PackedVector2Array) -> Dictionary:
-	if String(ArmySystem.regiment(repo, code).get("is_naval", "0")) == "1":
+	if String(ArmySystem.regiment(repo, code, state).get("is_naval", "0")) == "1":
 		return {"permille": 0, "hazards": []}
 	var out := mark_loss(repo, route)
 	var through := hazard_loss(repo, state, route)
@@ -101,22 +101,12 @@ static func gold_for(repo: DataRepository, units: int) -> int:
 	return (units * int(repo.bal("army_supply_gold_permille")) + 999) / 1000
 
 
-## The town a regiment is GARRISONED in (spec 2026-10-06-army-location-and-
-## town-defence §4): under a GARRISON order, the town of its own kingdom it
-## stands IN (ArmySystem.held_town_of) — what earns the garrison's morale and
-## the LEDGER's "garrisons in" thread. "" otherwise: a column halted in the
-## open is a field camp.
-static func garrisoned_in(repo: DataRepository, state: GameState, code: String) -> String:
-	if ArmySystem.order_of(repo, state, code) != ArmySystem.ORDER_GARRISON:
-		return ""
-	return ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, code), state)
-
-
 ## A regiment's line as it stands, for the cards: {town ("" with none),
 ## state, rate, length_km, loss_permille (the road's and its robbers',
-## total_loss), hazards (road_loss's names), garrison, garrison_town}.
+## total_loss), hazards (road_loss's names), garrison, garrison_town (the
+## town whose seat it holds, ArmyGround.seated_in)}.
 static func line_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
-	var held := garrisoned_in(repo, state, code)
+	var held := ArmyGround.seated_in(repo, state, code)
 	var ln := SupplyLines.line(state, code)
 	var out := {"town": "", "state": "", "rate": 0, "length_km": 0, "loss_permille": 0,
 		"garrison": held != "", "garrison_town": held, "hazards": []}
@@ -146,7 +136,7 @@ static func route_px(repo: DataRepository, state: GameState, code: String) -> Pa
 static func _land_codes(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
 	for c in state.regiments.keys():
-		var reg := ArmySystem.regiment(repo, String(c))
+		var reg := ArmySystem.regiment(repo, String(c), state)
 		if not reg.is_empty() and String(reg.get("is_naval", "0")) != "1":
 			out.append(String(c))
 	out.sort()
@@ -167,7 +157,7 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		var reg := ArmySystem.regiment(repo, code)
+		var reg := ArmySystem.regiment(repo, code, state)
 		if reg.is_empty():
 			continue
 		var ln: Dictionary = state.supply_lines[code]
@@ -194,7 +184,7 @@ static func plan(repo: DataRepository, state: GameState) -> Array:
 static func any_hungry(repo: DataRepository, state: GameState) -> bool:
 	var low := int(repo.bal("army_supply_low_days"))
 	for code: String in _land_codes(repo, state):
-		var reg := ArmySystem.regiment(repo, code)
+		var reg := ArmySystem.regiment(repo, code, state)
 		if ArmySystem.days_in_hand(int(state.regiments[code]["supplies"]),
 				ArmySystem.supply_use(repo, reg, state)) < low:
 			return true

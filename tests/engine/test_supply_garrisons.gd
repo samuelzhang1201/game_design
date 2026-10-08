@@ -2,19 +2,24 @@ extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## Home garrisons are fed (final review 1, spec 2026-10-07-army-supply-lines
 ## §3.2 step 4): a campaign left to run a YEAR with no orders keeps every
-## land regiment of the realm in its quarters above army_supply_low_days, the
+## land unit of the realm camped by a town above army_supply_low_days, the
 ## towns that run dry topped up from the depot and then the crown's stores in
 ## the other realm towns (owner 2026-10-07, option A), and the two pools equal
 ## to the towns all the while.
 
-## "" when every land regiment holds army_supply_low_days and the pools are
+## "" when every camped land unit holds army_supply_low_days and the pools are
 ## the towns', else what is wrong.
 func _check(repo: DataRepository, s: GameState, low: int) -> String:
 	var codes: Array = s.regiments.keys()
 	codes.sort()
 	for c in codes:
-		var reg := ArmySystem.regiment(repo, String(c))
+		var reg := ArmySystem.regiment(repo, String(c), s)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		# camped by a town of the realm (ArmyGround.camped_by, spec
+		# 2026-10-07-army-split-and-ground §4.1): every camped unit, the seat's
+		# and the camp's beyond the town's reach alike, is fed by its town
+		if ArmyGround.camped_by(repo, s, String(c)) == "":
 			continue
 		var days := ArmySystem.days_in_hand(int(s.regiments[c]["supplies"]), ArmySystem.supply_use(repo, reg, s))
 		if days < low:

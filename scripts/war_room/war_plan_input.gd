@@ -328,8 +328,8 @@ func _flip_of(id: String) -> int:
 
 
 ## Shift-drag's box (screen px): every piece of the side lit (ours when none)
-## standing in it is selected — our regiments (a garrison's every one), or the
-## supposed pieces and the intel hints.
+## standing in it is selected — our units, or the supposed pieces and the
+## intel hints.
 func _box(box: Rect2) -> void:
 	var side := tool.side if tool.side != "" else (sel_side if sel_side != "" else "blue")
 	var ids: Array = []
@@ -337,9 +337,7 @@ func _box(box: Rect2) -> void:
 		for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.sheet_index(), _view.drawn()):
 			var at: Variant = _view.screen_pos_of_px(q["at"])
 			if at != null and box.has_point(at) and not bool(q["naval"]):
-				for c: String in (q.get("garrison", [q["code"]]) as Array):
-					if not c in ids:
-						ids.append(c)
+				ids.append(String(q["code"]))
 	else:
 		for p: Dictionary in WarPlans.pieces_in(_repo, _view.state(), _view.sheet_rect()):
 			var at: Variant = _view.screen_pos_of_px(p["at"])
@@ -536,6 +534,11 @@ func _pending_order(ink: Dictionary, mm: float) -> void:
 		var wps: Array = Array(_view.aim_waypoints) if code == _view.aim_code else Array(group[code])
 		var curve := ArmySystem.curve_px(_repo, _view.position_of(code), wps, _view.aim_dest)
 		var ctrl := PackedVector2Array()
+		# the curve leaves the piece where it is drawn (spread clear of its neighbours)
+		var piece := _view.piece_node(code)
+		if piece != null and not _view.camera().is_position_behind(piece.global_position) and curve.size() > 0:
+			curve = curve.slice(1)
+			ctrl.append(_view.camera().unproject_position(piece.global_position) / _view.window_scale())
 		for p: Vector2 in curve:
 			var at: Variant = _view.screen_pos_of_px(p)
 			if at == null:
