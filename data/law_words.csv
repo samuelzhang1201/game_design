@@ -8,18 +8,14 @@ group_chivalry,Chivalry
 decree,Decree
 decreed,Decreed
 delivered,Delivered
-riding,riding
-reached,reached
-in_force,In force
 effects,Effects
 effects_paid,the laws took hold where the couriers reached
-cost,Cost
 couriers,couriers
 provinces,provinces
 camps,camps
 units_in_the_field,units in the field
 refusal_unchanged,That is already the decreed law.
-refusal_cooldown,The chancery has only just drafted a change to this law.
+refusal_cooldown,The chancery has only just changed this law: it may change again in {n} {days}.
 refusal_gold,The chest cannot pay the couriers.
 refusal_no_recipient,There is no one to carry the decree.
 value_on,On
@@ -44,7 +40,6 @@ phrase_no_havoc_on,no unauthorised Havoc
 phrase_no_havoc_off,Havoc allowed
 title,Laws
 law,Law
-choose,Decree as
 places,Places
 not_told,Not yet told
 all_told,Every place has been told.
@@ -59,3 +54,4 @@ days,days
 days_at_most,days at most
 gold,gold
 order,order
+not_sent,not sent

@@ -39,7 +39,8 @@
 
 - **3D MAP** swaps the map for a 3D landscape (drag to pan, right-drag to turn, wheel to zoom, WASD / arrows); clicks open the same cards. It needs the 3D world built for the map (`tools/map3d/`).
 - **HEIGHTS**, **ECONOMY**, **MANORS** are map themes, one at a time. **MILITARY** draws your regiments on the map and your host in the left column.
-- **REALM**, **FAMILIES**, **LAWS**, **RELIGION** open tables of the realm's current state; **WAR ROOM** is a placeholder; **RELATIONSHIP** opens the web of kin, friendships and feuds.
+- **REALM**, **FAMILIES**, **RELIGION** open tables of the realm's current state; **WAR ROOM** is a placeholder; **RELATIONSHIP** opens the web of kin, friendships and feuds.
+- **LAWS** opens the laws screen over the map; the clock keeps running. It has three pages (economy, politics, military), with one row per law: what is decreed, how many places the couriers have told so far, what the chosen value does, and its cost (couriers, gold, the longest ride) or why it cannot be sent. **Decree** sends the law by courier, and each place follows it only once its courier arrives. **Places** lists the places not yet told, with the days left for each courier; a place is marked "lost" if its courier was lost and "not sent" if it was gained after the decree, and **Send again** rides for both. Press LAWS again, Close or Esc to put it away.
 
 ## Other keys
 

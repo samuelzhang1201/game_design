@@ -236,3 +236,38 @@ func test_a_range_value_is_stored_in_plain_digits() -> void:
 	assert_eq(actions.validate(_law("tax_rate", "+%d" % to), s), "Tax rate is already %d" % to)
 	assert_eq(LawSystem.decree(repo, s, "justice_severity", "04").size() > 0, true)
 	assert_eq(String(s.law_decree["justice_severity"]["value"]), "4")
+
+
+## The laws screen words a refusal by its key (law_words.csv refusal_<key>);
+## a cooldown's wait is days, counted as every day count shown — day-ends,
+## the running day first — up to the month `law_cooldown` names, never ticks.
+func test_each_refusal_has_its_key_and_a_cooldown_its_days() -> void:
+	var now := LawSystem.decreed(repo, s, "tax_rate")
+	assert_eq(LawSystem.refusal_of(repo, s, "tax_rate", now)["key"], "unchanged")
+	assert_eq(LawSystem.refusal_of(repo, s, "tax_rate", "11")["key"], "invalid")
+	assert_eq(LawSystem.refusal_of(repo, s, "tax_rate", _other_tax())["key"], "")
+	var p := LawSystem.preview(repo, s, "tax_rate", _other_tax())
+	assert_eq(String(p["refusal_key"]), "")
+	s.metrics["treasury"] = 0.0
+	assert_eq(LawSystem.preview(repo, s, "tax_rate", _other_tax())["refusal_key"], "gold")
+	s.metrics["treasury"] = 5000.0
+	var v := _other_tax()
+	actions.execute(_law("tax_rate", v), s)
+	var until := int(s.law_cooldown["tax_rate"])
+	var back := str(int(v) - 1) if int(v) > 1 else str(int(v) + 1)
+	# hand-computed: cooldown 2 ticks, decreed on day d of tick t → the law may
+	# change once tick t+2 begins: (t+2 − t − 1) × 30 + (30 − d + 1) days
+	var r := LawSystem.refusal_of(repo, s, "tax_rate", back)
+	assert_eq(r["key"], "cooldown")
+	assert_eq(until - s.tick, 2)
+	assert_eq(int(r["days"]), 30 + 30 - s.day + 1)
+	var pv := LawSystem.preview(repo, s, "tax_rate", back)
+	assert_eq(String(pv["refusal_key"]), "cooldown")
+	assert_eq(int(pv["wait_days"]), int(r["days"]))
+	s.day = 30
+	s.tick = until - 1
+	assert_eq(int(LawSystem.refusal_of(repo, s, "tax_rate", back)["days"]), 1, "the last day of the month before")
+	s.tick = until
+	assert_eq(LawSystem.refusal_of(repo, s, "tax_rate", back)["key"], "", "the named month: free again")
+	assert_eq(LawSystem.refusal(repo, s, "tax_rate", v), "Tax rate is already " + v,
+		"the order's own words stay the engine's (the model and the news read them)")

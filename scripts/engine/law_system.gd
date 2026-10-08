@@ -389,49 +389,69 @@ static func is_resend(repo: DataRepository, state: GameState, law: String, value
 
 
 ## Why a decree of `law` to `value` (a law's String) is refused; "" when it
-## may be sent. ActionSystem's LAW_SET validation and the screen's preview.
+## may be sent. ActionSystem's LAW_SET validation (the model and the news bar
+## read these words).
 static func refusal(repo: DataRepository, state: GameState, law: String, value: String) -> String:
+	return String(refusal_of(repo, state, law, value)["text"])
+
+
+## The refusal as {text: `refusal`'s words, key: unchanged | cooldown | gold |
+## no_recipient | invalid ("" when it may be sent), days: the cooldown's days
+## left (0 for any other)}. The laws screen words a key from law_words.csv
+## `refusal_<key>`; a cooldown's days count day-ends, the running day first,
+## as every day count shown (the law may change again on the month the
+## cooldown names, `law_cooldown`).
+static func refusal_of(repo: DataRepository, state: GameState, law: String, value: String) -> Dictionary:
 	value = canonical(repo, law, value)
 	var d := def(repo, law)
 	if d.is_empty():
-		return "No such law: " + law
+		return {"text": "No such law: " + law, "key": "invalid", "days": 0}
 	var label := String(d["label"])
 	if not allowed(repo, law, value):
-		return "%s is not a value of %s" % [value, label]
+		return {"text": "%s is not a value of %s" % [value, label], "key": "invalid", "days": 0}
 	var resend := _resend(repo, state, law, value)
 	if decreed(repo, state, law) == value and not resend:
-		return "%s is already %s" % [label, value]
-	if not resend and int(state.law_cooldown.get(law, 0)) > state.tick:
-		return "%s is on cooldown until tick %d" % [label, int(state.law_cooldown[law])]
+		return {"text": "%s is already %s" % [label, value], "key": "unchanged", "days": 0}
+	var until := int(state.law_cooldown.get(law, 0))
+	if not resend and until > state.tick:
+		var days := (until - state.tick - 1) * Calendar.DAYS_PER_TICK + Calendar.DAYS_PER_TICK - state.day + 1
+		return {"text": "%s is on cooldown until tick %d" % [label, until], "key": "cooldown", "days": days}
 	var n := recipients(repo, state, law, resend).size()
 	if n == 0:
-		return "No place to send it to"
+		return {"text": "No place to send it to", "key": "no_recipient", "days": 0}
 	if float(state.metrics.get("treasury", 0.0)) < float(order_gold(repo, law, resend) + n * CourierSystem.fee_gold(repo, CourierSystem.ORDINARY)):
-		return "The chancery cannot pay the couriers"
-	return ""
+		return {"text": "The chancery cannot pay the couriers", "key": "gold", "days": 0}
+	return {"text": "", "key": "", "days": 0}
 
 
 ## What a decree would cost and take, for the screen (§5): {couriers, fee
 ## (one ordinary fee a courier), gold (order_gold), max_days (the longest
-## ride), refusal}. ActionSystem charges exactly gold + fee.
+## ride), refusal (`refusal`'s words), refusal_key and wait_days
+## (`refusal_of`'s key and days)}. ActionSystem charges exactly gold + fee.
 static func preview(repo: DataRepository, state: GameState, law: String, value: String) -> Dictionary:
 	value = canonical(repo, law, value)
-	var why := refusal(repo, state, law, value)
+	var no := refusal_of(repo, state, law, value)
+	var why := String(no["text"])
 	if def(repo, law).is_empty() or not allowed(repo, law, value):
-		return {"couriers": 0, "fee": 0, "gold": 0, "max_days": 0, "refusal": why}
+		return {"couriers": 0, "fee": 0, "gold": 0, "max_days": 0, "refusal": why,
+			"refusal_key": String(no["key"]), "wait_days": 0}
 	var resend := _resend(repo, state, law, value)
 	var to := recipients(repo, state, law, resend)
 	var longest := 0
 	for r: Dictionary in to:
 		longest = maxi(longest, CourierSystem.eta_days_to(repo, state, CourierSystem.ORDINARY, r["to_px"]))
 	return {"couriers": to.size(), "fee": to.size() * CourierSystem.fee_gold(repo, CourierSystem.ORDINARY),
-		"gold": order_gold(repo, law, resend), "max_days": longest, "refusal": why}
+		"gold": order_gold(repo, law, resend), "max_days": longest, "refusal": why,
+		"refusal_key": String(no["key"]), "wait_days": int(no["days"])}
 
 
 ## Decree `law` to `value` (validated by the caller): a new value is a new
 ## decree — the decree, its cooldown, the metric mirror (ruling P1) — sent to
 ## every recipient; the standing value re-sends that decree, same id, to the
-## places it is missing in (R5). Returns the couriers sent, in scope-key order.
+## places it is missing in (R5). The decree's `sent` lists every place a
+## courier of it set out for (so a missing place is told apart: its courier
+## lost, or none sent — a place gained since). Returns the couriers sent, in
+## scope-key order.
 ## Charges nothing: the fees are ActionSystem's ledger lines.
 static func decree(repo: DataRepository, state: GameState, law: String, value: String) -> Array:
 	value = canonical(repo, law, value)
@@ -439,7 +459,7 @@ static func decree(repo: DataRepository, state: GameState, law: String, value: S
 	var to := recipients(repo, state, law, resend)
 	if not resend:
 		state.law_decree[law] = {"value": value, "decree_id": _decree_id(state, law) + 1,
-			"day": state.absolute_day()}
+			"day": state.absolute_day(), "sent": []}
 		var cd := int(def(repo, law).get("cooldown_ticks", 0))
 		if cd > 0:
 			state.law_cooldown[law] = state.tick + cd
@@ -448,6 +468,12 @@ static func decree(repo: DataRepository, state: GameState, law: String, value: S
 		# follows a decree, data/events.csv)
 		state.event_state["last_action_tick"]["LAW_" + law] = state.tick
 	var id := _decree_id(state, law)
+	var keys: Array = (state.law_decree[law] as Dictionary).get("sent", [])
+	for r: Dictionary in to:
+		if not String(r["scope_key"]) in keys:
+			keys.append(String(r["scope_key"]))
+	keys.sort()
+	state.law_decree[law]["sent"] = keys
 	var sent: Array = []
 	for r: Dictionary in to:
 		var order := {"action_code": ACTION, "law": law, "value": value, "decree_id": id,
@@ -537,9 +563,10 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 
 ## How far the standing decree of `law` has got (§5): {total: its recipients
 ## now, reached: those whose entry holds it, riding: those a courier of it
-## still rides for, lost: missing.size(), last_days: the longest ride left,
-## missing: the scope keys neither reached nor ridden for — a lost courier's
-## place, a camp or province gained since; kinds: recipient kind (province |
+## still rides for, last_days: the longest ride left, missing: the scope keys
+## neither reached nor ridden for, of which lost: those a courier set out for
+## (`sent`) and never reached, not_sent: those none set out for (a camp or
+## province gained since); kinds: recipient kind (province |
 ## town | unit) -> {reached, total}, the screen's "camps and units in the
 ## field"}. An undecreed law (decree id 0) is reached everywhere: a place with
 ## no entry follows the seeded value.
@@ -564,7 +591,8 @@ static func _riders(state: GameState, law: String) -> Array:
 ## The places the standing decree of `law` has not reached (the laws
 ## screen's list, §5), sorted by scope key: each {scope_key, label, days: the
 ## ride its courier has left (-1 for none), lost: no courier rides for it — a
-## decree of the same value sends it again (R5)}.
+## decree of the same value sends it again (R5) — and sent: a courier set out
+## for it (lost and not sent: a place gained since the decree)}.
 static func untold(repo: DataRepository, state: GameState, law: String) -> Array:
 	var days := {}
 	for c: Dictionary in _riders(state, law):
@@ -574,12 +602,19 @@ static func untold(repo: DataRepository, state: GameState, law: String) -> Array
 	var t := _tally(repo, state, law)
 	var keys: Array = (t["riding_keys"] as Array) + (t["missing"] as Array)
 	keys.sort()
+	var sent := _sent(state, law)
 	var out: Array = []
 	for k in keys:
 		var key := String(k)
 		out.append({"scope_key": key, "label": place_label(repo, state, key),
-			"days": int(days.get(key, -1)), "lost": not days.has(key)})
+			"days": int(days.get(key, -1)), "lost": not days.has(key), "sent": sent.has(key)})
 	return out
+
+
+## The places a courier of the standing decree of `law` set out for (an
+## event's decree, or a save from before `sent` was kept: none).
+static func _sent(state: GameState, law: String) -> Array:
+	return (state.law_decree.get(law, {}) as Dictionary).get("sent", [])
 
 
 ## `delivery` without the days (no ride is reckoned): the counts, missing,
@@ -609,5 +644,7 @@ static func _tally(repo: DataRepository, state: GameState, law: String) -> Dicti
 			on_road.append(key)
 		else:
 			missing.append(key)
-	return {"total": total, "reached": reached, "riding": on_road.size(), "lost": missing.size(),
-		"missing": missing, "kinds": kinds, "riding_keys": on_road}
+	var sent := _sent(state, law)
+	var lost := missing.filter(func(k: String) -> bool: return sent.has(k)).size()
+	return {"total": total, "reached": reached, "riding": on_road.size(), "lost": lost,
+		"not_sent": missing.size() - lost, "missing": missing, "kinds": kinds, "riding_keys": on_road}

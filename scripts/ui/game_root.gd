@@ -140,6 +140,7 @@ func _ready() -> void:
 	Intel.dev_all = _dev_mode
 	_fps_counter.visible = _dev_mode
 	_build_pause_menu()
+	_laws_screen.above = [_report_popup, _pause_menu]
 	_start_bgm()
 	_switch_to(State.MENU)
 

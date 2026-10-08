@@ -145,6 +145,8 @@ func test_choosing_a_value_shows_the_cost_from_the_preview() -> void:
 	var r: GameRoot = await _court()
 	var screen := await _open(r)
 	var row := screen.row("tax_rate")
+	assert_eq(row.preview_text(), _word("refusal_unchanged"), "the decreed value: law_words' refusal")
+	assert_true(row.decree_button().disabled)
 	var v := _other_tax()
 	await _choose(r, row, v)
 	var p := LawSystem.preview(Game.data, Game.state, "tax_rate", v)
@@ -160,7 +162,8 @@ func test_choosing_a_value_shows_the_cost_from_the_preview() -> void:
 	var refused := LawSystem.preview(Game.data, Game.state, "tax_rate", v)
 	assert_ne(String(refused["refusal"]), "")
 	assert_true(row.decree_button().disabled, "a refused choice greys Decree")
-	assert_string_contains(row.preview_text(), String(refused["refusal"]))
+	assert_eq(String(refused["refusal_key"]), "gold")
+	assert_eq(row.preview_text(), _word("refusal_gold"), "the row says why in law_words' words")
 	# a value that does something says so, spelled from law_effects.csv
 	await _click_on(r, screen.page_button("politics"))
 	var church := screen.row("church_policy")
@@ -286,3 +289,121 @@ func test_another_screen_puts_the_laws_away() -> void:
 	await _click_on(r, r.bottom_bar().button("MISSIVE"))
 	assert_false(screen.visible, "the Missive board takes its place")
 	assert_true(r.missive_screen().visible)
+
+
+## A law just changed waits out its cooldown: the row says so in law_words'
+## words, the wait in days, never the engine's ticks.
+func test_a_cooldown_refusal_names_days_not_ticks() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	var row := screen.row("tax_rate")
+	var v := _other_tax()
+	await _choose(r, row, v)
+	await _click_on(r, row.decree_button())
+	var back := str(int(v) - 1) if int(v) > 1 else str(int(v) + 1)
+	await _choose(r, row, back)
+	var p := LawSystem.preview(Game.data, Game.state, "tax_rate", back)
+	assert_eq(String(p["refusal_key"]), "cooldown")
+	var n := int(p["wait_days"])
+	assert_gt(n, 0)
+	assert_eq(row.preview_text(), _word("refusal_cooldown").format({"n": n, "days": _word("day") if n == 1 else _word("days")}))
+	assert_string_contains(row.preview_text(), "%d %s" % [n, _word("days")])
+	assert_false(row.preview_text().contains("tick"), "no engine unit in the player's words")
+	assert_true(row.decree_button().disabled)
+
+
+## Esc under the pause menu is the menu's: it closes the menu, and the laws
+## stay open beneath.
+func test_esc_over_the_laws_closes_the_pause_menu_first() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	r.toggle_pause_menu()
+	await wait_process_frames(1)
+	assert_true(r.pause_menu().visible)
+	await _key(r, KEY_ESCAPE)
+	assert_false(r.pause_menu().visible, "Escape closed the pause menu")
+	assert_true(screen.visible, "and left the laws open")
+	await _key(r, KEY_ESCAPE)
+	assert_false(screen.visible, "the next Escape is the laws'")
+
+
+## A province lost on a paused clock (no day passes, no courier moves): the
+## row reads its recipients again on the next state change.
+func test_a_same_day_change_of_owner_redraws_the_row() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	var row := screen.row("tax_rate")
+	var v := _other_tax()
+	await _choose(r, row, v)
+	await _click_on(r, row.decree_button())
+	var realm := Game.data.resolve_realm("player_realm")
+	var held := MapOwnership.provinces_of(Game.data, Game.state, realm)
+	var n := held.size()
+	assert_string_contains(row.delivery_text(), "0 / %d %s" % [n, _word("provinces")])
+	var other := ""
+	var codes: Array = Game.data.kingdoms.keys()
+	codes.sort()
+	for k: String in codes:
+		if k != realm:
+			other = k
+			break
+	var home := MapManors.home_province(Game.data, Game.state)
+	var lose := ""
+	for code: String in held:
+		if code != home:
+			lose = code
+			break
+	assert_true(MapOwnership.set_owner(Game.data, Game.state, lose, other, "test: the province falls"))
+	Game.state_changed.emit()
+	await wait_process_frames(2)
+	assert_string_contains(row.delivery_text(), "0 / %d %s" % [n - 1, _word("provinces")],
+		"the lost province is no longer counted")
+
+
+## A value chosen is forgotten when the screen closes, and when a new reign
+## begins under it: the row opens on the decree again.
+func test_the_chosen_value_is_forgotten_on_close_and_on_a_new_reign() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	var row := screen.row("tax_rate")
+	var decreed := LawSystem.decreed(Game.data, Game.state, "tax_rate")
+	await _choose(r, row, _other_tax())
+	assert_ne(String(row.choice().get_item_metadata(row.choice().selected)), decreed)
+	await _click_on(r, screen.get_node("%Close"))
+	assert_false(screen.visible)
+	screen = await _open(r)
+	assert_eq(String(row.choice().get_item_metadata(row.choice().selected)), decreed, "reopened on the decree")
+	assert_eq(row.preview_text(), _word("refusal_unchanged"))
+	await _choose(r, row, _other_tax())
+	Game.start_campaign(45)
+	Game.state_changed.emit()
+	await wait_process_frames(2)
+	assert_eq(String(row.choice().get_item_metadata(row.choice().selected)),
+		LawSystem.decreed(Game.data, Game.state, "tax_rate"), "a new reign: the new decree")
+	assert_eq(row.preview_text(), _word("refusal_unchanged"))
+
+
+## A province gained since the decree has had no courier: it is listed as
+## "not sent", apart from a place whose courier was lost.
+func test_a_place_gained_since_is_listed_as_not_sent() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	var row := screen.row("tax_rate")
+	await _choose(r, row, _other_tax())
+	await _click_on(r, row.decree_button())
+	var realm := Game.data.resolve_realm("player_realm")
+	var gained := ""
+	var codes: Array = Game.data.provinces.keys()
+	codes.sort()
+	for code: String in codes:
+		if MapOwnership.owner_of(Game.data, Game.state, code) != realm:
+			gained = code
+			break
+	assert_true(MapOwnership.set_owner(Game.data, Game.state, gained, realm, "test: the province comes over"))
+	Game.state_changed.emit()
+	await wait_process_frames(2)
+	assert_string_contains(row.delivery_text(), "1 %s" % _word("not_sent"))
+	await _click_on(r, row.places_button())
+	var label := LawSystem.place_label(Game.data, Game.state, "province:" + gained)
+	assert_string_contains(screen.detail_text(), "%s — %s" % [label, _word("not_sent")])
+	assert_false(screen.detail_text().contains("%s — %s" % [label, _word("lost")]))

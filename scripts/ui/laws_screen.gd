@@ -22,12 +22,20 @@ var _rows: Array = []
 var _dirty := false
 ## The law whose places the detail lists ("" while it is shut).
 var _detail_law := ""
+## The reign the rows last read (its instance id): a new one forgets their
+## chosen values and kept previews.
+var _reign := 0
+## What stands above the screen (GameRoot's pause menu and spy report): while
+## one shows, Esc is its, not the screen's.
+var above: Array[Control] = []
 
 
 ## Its nodes are the scene's: this wires them, puts in the words of
 ## law_words.csv and instances a row a law.
 func _ready() -> void:
 	%Title.text = _word("title")
+	for head: Array in [["LawHead", "law"], ["DecreedHead", "decreed"], ["DeliveryHead", "delivered"]]:
+		(get_node("Frame/Col/Heads/" + String(head[0])) as Label).text = _word(String(head[1]))
 	%Close.pressed.connect(close)
 	%DetailClose.pressed.connect(_close_detail)
 	%SendAgain.text = _word("send_again")
@@ -66,10 +74,13 @@ func open() -> void:
 	visible = true
 
 
+## Closing forgets each row's chosen value: it opens again on the decrees.
 func close() -> void:
 	if not visible:
 		return
 	_close_detail()
+	for row: LawRow in _rows:
+		row.reset()
 	visible = false
 	closed.emit()
 
@@ -98,18 +109,39 @@ func _refresh() -> void:
 	_dirty = false
 	if Game.state == null:
 		return
+	if Game.state.get_instance_id() != _reign:
+		_reign = Game.state.get_instance_id()
+		for row: LawRow in _rows:
+			row.reset()
+	var places := _places_signature()
 	for row: LawRow in _rows:
 		if row.visible:
-			row.refresh()
+			row.refresh(places)
 	if _detail_law != "":
 		_fill_detail()
 
 
+## Who a decree would be sent to, cheaply: the realm's provinces and land
+## units counted (an owner or a unit changing on a paused clock moves it).
+func _places_signature() -> String:
+	var repo := Game.data
+	var realm := repo.resolve_realm("player_realm")
+	var land := 0
+	for r: Dictionary in MapObjects.regiments_of(repo, realm, Game.state):
+		if String(r.get("is_naval", "0")) != "1":
+			land += 1
+	return "%d|%d" % [MapOwnership.provinces_of(repo, Game.state, realm).size(), land]
+
+
 ## Esc closes the list of places, else the screen — before GameRoot's pause
-## menu (a child's _unhandled_input runs first).
+## menu (a child's _unhandled_input runs first), unless something above it
+## shows (the pause menu: Esc is the menu's).
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible or not event.is_action_pressed("ui_cancel"):
 		return
+	for c: Control in above:
+		if c != null and c.visible:
+			return
 	if _detail_law != "":
 		_close_detail()
 	else:
@@ -144,7 +176,7 @@ func _fill_detail() -> void:
 	for u: Dictionary in LawSystem.untold(Game.data, Game.state, _detail_law):
 		if bool(u["lost"]):
 			any_lost = true
-			lines.append("%s — %s" % [String(u["label"]), _word("lost")])
+			lines.append("%s — %s" % [String(u["label"]), _word("lost" if bool(u["sent"]) else "not_sent")])
 		else:
 			var d := int(u["days"])
 			lines.append("%s — %d %s" % [String(u["label"]), d, _word("day") if d == 1 else _word("days")])

@@ -362,3 +362,38 @@ func test_the_untold_list_names_each_place_with_its_days_or_lost() -> void:
 	rows = LawSystem.untold(repo, s, "tax_rate")
 	assert_eq(rows.size(), 1, "only the lost place is left")
 	assert_eq(String(rows[0]["scope_key"]), gone_key)
+
+
+## A place gained since the decree is missing but was never sent to: not
+## "lost" (its courier lost) but "not sent" — the decree keeps the places its
+## couriers set out for (`sent`), a re-send adds to them, the save keeps them.
+func test_a_place_gained_since_is_not_sent_not_lost() -> void:
+	var sent := LawSystem.decree(repo, s, "tax_rate", "7")
+	var gone_key := String(sent[0]["order"]["scope_key"])
+	s.couriers.remove_at(0)
+	var other := _another_kingdom()
+	var gained := ""
+	var codes: Array = repo.provinces.keys()
+	codes.sort()
+	for code: String in codes:
+		if MapOwnership.owner_of(repo, s, code) == other:
+			gained = code
+			break
+	assert_ne(gained, "")
+	assert_true(MapOwnership.set_owner(repo, s, gained, realm, "test: the province comes over"))
+	var d := LawSystem.delivery(repo, s, "tax_rate")
+	assert_eq(int(d["lost"]), 1, "the courier lost on the road")
+	assert_eq(int(d["not_sent"]), 1, "the province gained since")
+	for u: Dictionary in LawSystem.untold(repo, s, "tax_rate"):
+		var key := String(u["scope_key"])
+		if key == "province:" + gained:
+			assert_true(bool(u["lost"]) and not bool(u["sent"]), key + ": none set out for it")
+		elif key == gone_key:
+			assert_true(bool(u["lost"]) and bool(u["sent"]), key + ": its courier lost")
+		else:
+			assert_true(bool(u["sent"]) and not bool(u["lost"]), key)
+	# the re-send rides for both, and both are then sent for
+	LawSystem.decree(repo, s, "tax_rate", "7")
+	assert_true("province:" + gained in s.law_decree["tax_rate"]["sent"])
+	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	assert_eq(back.law_decree["tax_rate"]["sent"], s.law_decree["tax_rate"]["sent"], "the save keeps them")

@@ -10,7 +10,8 @@ extends VBoxContainer
 ##
 ## The preview works out every courier's ride, so it is kept until what it
 ## reads changes (the chosen value, the day, the couriers, the decree, the
-## chest); the delivery likewise.
+## chest, and the screen's signature of who would be sent to: the realm's
+## provinces and land units); the delivery likewise.
 
 ## Decree pressed: the screen gives the order.
 signal decree_pressed(law: String, value: String)
@@ -69,9 +70,19 @@ static func _values(d: Dictionary) -> Array:
 	return out
 
 
+## Forget the chosen value and the kept preview and delivery (the screen
+## closed, or a new reign): the next refresh starts from the decree.
+func reset() -> void:
+	_chosen = ""
+	_preview_key = ""
+	_delivery_key = ""
+
+
 ## Read the state again: the decreed value, the delivery, the effects and the
 ## preview of the chosen value (each recomputed only when what it reads moved).
-func refresh() -> void:
+## `places` is the screen's signature of the realm's recipients (provinces and
+## land units held now), so a same-day change of either is read again.
+func refresh(places := "") -> void:
 	var repo := Game.data
 	var state := Game.state
 	if state == null or _law == "":
@@ -82,23 +93,21 @@ func refresh() -> void:
 	_select(_chosen)
 	%Decreed.text = LawSystem.value_label(repo, decreed)
 	var id := int((state.law_decree.get(_law, {}) as Dictionary).get("decree_id", 0))
-	var dkey := "%d|%d|%d|%d" % [state.tick, state.day, state.couriers.size(), id]
+	var dkey := "%d|%d|%d|%d|%s" % [state.tick, state.day, state.couriers.size(), id, places]
 	if dkey != _delivery_key:
 		_delivery_key = dkey
 		_delivery = LawSystem.delivery(repo, state, _law)
 	%Delivery.text = _delivery_words(_delivery)
-	%Places.disabled = int(_delivery["riding"]) + int(_delivery["lost"]) == 0
-	var pkey := "%s|%s|%d|%d|%d|%d|%d" % [_chosen, decreed, id, state.tick, state.day,
-		state.couriers.size(), int(float(state.metrics.get("treasury", 0.0)))]
+	%Places.disabled = int(_delivery["riding"]) + (_delivery["missing"] as Array).size() == 0
+	var pkey := "%s|%s|%d|%d|%d|%d|%d|%s" % [_chosen, decreed, id, state.tick, state.day,
+		state.couriers.size(), int(float(state.metrics.get("treasury", 0.0))), places]
 	if pkey != _preview_key:
 		_preview_key = pkey
 		_preview = LawSystem.preview(repo, state, _law, _chosen)
 	var summary := LawEffects.summary(repo, _law, _chosen)
 	%Effects.text = "%s: %s" % [_word("effects"), summary] if summary != "" else ""
 	var why := String(_preview["refusal"])
-	# the decreed value with nothing to send again: nothing to say
-	var idle := _chosen == decreed and why != "" and (_delivery["missing"] as Array).is_empty()
-	%Preview.text = "" if idle else (why if why != "" else _cost_words(_preview))
+	%Preview.text = refusal_words(_preview) if why != "" else _cost_words(_preview)
 	%Decree.disabled = why != ""
 
 
@@ -121,7 +130,19 @@ func _delivery_words(d: Dictionary) -> String:
 			_word("day") if last == 1 else _word("days")]
 	if int(d["lost"]) > 0:
 		text += " · %d %s" % [int(d["lost"]), _word("lost")]
+	if int(d["not_sent"]) > 0:
+		text += " · %d %s" % [int(d["not_sent"]), _word("not_sent")]
 	return text
+
+
+## A preview's refusal in law_words.csv's words (`refusal_<key>`, a cooldown's
+## {n} {days} filled in); the engine's own sentence for a key with no words.
+static func refusal_words(p: Dictionary) -> String:
+	var key := "refusal_" + String(p.get("refusal_key", ""))
+	if not Game.data.law_words.has(key):
+		return String(p.get("refusal", ""))
+	var n := int(p.get("wait_days", 0))
+	return String(Game.data.law_words[key]).format({"n": n, "days": _word("day") if n == 1 else _word("days")})
 
 
 ## "20 couriers · 40 gold · order 5 gold · 9 days at most".
