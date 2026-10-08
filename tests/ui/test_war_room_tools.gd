@@ -160,3 +160,45 @@ func test_escape_lays_the_stick_down_before_closing_the_book() -> void:
 	_esc(screen)
 	assert_false(view.has_selection(), "the selection is empty")
 	assert_false(folio.visible, "the book is closed")
+
+
+func _fleet_code(view: WarRoomView) -> String:
+	for q: Dictionary in WarRoom.on_sheet(Game.data, Game.state, view.sheet_index(), view.drawn()):
+		if bool(q["naval"]):
+			return String(q["code"])
+	return ""
+
+
+func test_a_new_sheet_drops_off_sheet_units_and_closes_their_book() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var folio := screen.get_node("%Folio") as WarFolioPanel
+	var roll := screen.get_node("%ToolRoll") as WarToolRoll
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	_click(view, p["press"])
+	assert_true(folio.visible)
+	var other := -1
+	for i in range(WarSheets.series(Game.data).size()):
+		if i == view.sheet_index():
+			continue
+		var held := WarRoom.on_sheet(Game.data, Game.state, i, view.drawn()).any(
+			func(q: Dictionary) -> bool: return String(q["code"]) == code)
+		if not held:
+			other = i
+			break
+	assert_ne(other, -1, "a sheet that does not hold the unit")
+	view.lay_sheet(other)
+	await wait_process_frames(2)
+	assert_true(view.plan_input().sel.is_empty(), "the off-sheet unit left the selection")
+	assert_false(folio.visible, "its book closed")
+	assert_ne(roll.slot("arrow", "blue").why, "", "the blue arrow greys")
+
+
+func test_a_fleet_alone_greys_the_blue_arrow() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var fleet := _fleet_code(view)
+	assert_ne(fleet, "", "the home sheet holds a fleet")
+	view.plan_input().select("blue", [fleet])
+	assert_eq(view.plan_input().why_of("blue", "arrow"), "Fleets are ordered on the map")

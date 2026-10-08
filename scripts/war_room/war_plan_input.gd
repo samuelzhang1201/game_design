@@ -62,7 +62,33 @@ func why_of(side: String, key: String) -> String:
 	if key == "arrow" and (sel_side != side or sel.is_empty()):
 		return "Select a unit first: one of ours (Shift-click adds, Shift-drag boxes)" if side == "blue" \
 			else "Select a unit first: a supposed host or an intel hint"
+	if key == "arrow" and side == "blue" and sel.all(func(c: Variant) -> bool: return naval(String(c))):
+		return "Fleets are ordered on the map"
 	return ""
+
+
+## True when the regiment `code` is a fleet (the room never marches one).
+func naval(code: String) -> bool:
+	return String(ArmySystem.regiment(_repo, code, _view.state()).get("is_naval", "0")) == "1"
+
+
+## The laid sheet's own: drops from the selection every unit of ours not on
+## the sheet and every supposed piece or hint not on it.
+func keep_on_sheet() -> void:
+	if sel.is_empty():
+		return
+	var here: Array = []
+	if sel_side == "blue":
+		for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.sheet_index(), _view.drawn()):
+			here.append(String(q["code"]))
+	else:
+		for p: Dictionary in WarPlans.pieces_in(_repo, _view.state(), _view.sheet_rect()):
+			here.append(String(p["id"]))
+		for h: Dictionary in hints_on_sheet():
+			here.append(String(h["id"]))
+	var kept := sel.filter(func(i: Variant) -> bool: return i in here)
+	if kept.size() != sel.size():
+		select(sel_side, kept)
 
 
 ## Every slot that cannot be used now: {side: {key: why}} (the roll greys them).
@@ -280,7 +306,10 @@ func _release(mb: InputEventMouseButton) -> bool:
 			return true
 		if order:
 			_view.hover_cleared.emit()
-			order_drawn.emit(sel.duplicate(), d["samples"], _repo.bal("war_order_fit_px") / maxf(per, 0.0001))
+			var marching := sel.filter(func(c: Variant) -> bool: return not naval(String(c)))
+			if marching.is_empty():
+				return true
+			order_drawn.emit(marching, d["samples"], _repo.bal("war_order_fit_px") / maxf(per, 0.0001))
 		else:
 			if String(d["kind"]) == "arrow" and not sel.is_empty():
 				d["of"] = String(sel[0])   # a red arrow: the host it is drawn for

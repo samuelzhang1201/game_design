@@ -377,6 +377,10 @@ func lay_sheet(index: int) -> void:
 	_pennants.rebuild(state(), true)
 	_read_supply()
 	_pointer.redraw()
+	_plan_input.keep_on_sheet()
+	if _selected != "" and not _selected in _plan_input.sel:
+		_selected = ""
+		selection_cleared.emit()
 	sheet_laid.emit(index)
 	await _paint_ink(mat)
 	await _paint_intel(mat)
