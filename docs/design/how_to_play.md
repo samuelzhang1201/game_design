@@ -25,7 +25,7 @@
 - Talking to someone opens the **audience window** over the map: their portrait, opinion (hover for its reasons), traits and skills on the left; their words, BIO / SKILLS / TIES, your options and a talk box on the right. Events use the same window.
 - Click a face in the council column to seek that person out; **MOVE** takes you to another place in the district at no cost in time.
 - **Click a suggestion** to carry it out at once, or **type an order** in plain words. A typed order gets a reply, then the ledger lines that actually applied. Every order costs something — gold, goods, or someone's opinion.
-- **Laws** — the tax and tariff rates, grain policy, the severity of justice, the church policy — are decreed: a decree rides by courier to every province you hold, and each province follows it from the day its courier arrives. An event may change a law at once.
+- **Laws** are decreed and ride by courier. The economy and political laws (the tax and tariff rates, grain policy, the severity of justice, the church policy) go to every province you hold, and each province follows its law from the day its courier arrives. The military laws (plunder, the conduct of the host, quarter, ransom and the rest) go to each camp and to each unit in the field, and a unit carries what it was told into the next camp. A decree is said once in the news when it is sent and once when it has reached every place; the chancery files a letter on the MISSIVE board for each. An event may change a law at once.
 - Ministers remember: opinions move for stated reasons, promises you make fall due, and a broken promise is the worst insult you can give.
 
 ## Manors and the economy

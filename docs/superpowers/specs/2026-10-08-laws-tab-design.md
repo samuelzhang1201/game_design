@@ -7,7 +7,7 @@ Owner request 2026-10-07 (items 10–13 of the fourteen-item army brief; supply,
 > 12. 例如“允许/禁止劫掠”，以及中世纪军法：服从指挥、保护教会、保护妇女、禁止擅自喊“Havoc”、俘虏登记、佩戴标识、禁止私斗。
 > 13. 请脑暴骑士精神政策。
 
-**Status: DESIGN APPROVED in chat 2026-10-08 (owner, section by section); not yet built.** The owner's answers, in order:
+**Status: BUILT 2026-10-08 on feat/laws-tab (not yet merged); the screen's look awaits the visual review.** Design approved in chat 2026-10-08 (owner, section by section); where the build settles what this text leaves open, §11 rules. The owner's answers, in order:
 
 - existing settings: **A** — tax rate, tariff, grain ration, justice severity and church policy become laws, and every change rides by courier;
 - delivery of economy and political laws: **A** — one courier to each province, a province's new law is in force when its courier arrives;
@@ -114,7 +114,7 @@ A row: `law_code`, `value`, `channel`, `target`, `amount`, `reason`.
 
 ### 4.4 The military laws' first numbers
 
-A first draft, every number in the CSV and the owner's to tune. The default value has no effect, except for quarter and ransom, whose defaults carry the effects shown in brackets. "Morale mark" is the unit channel; realm rows are per month at full share.
+A first draft, every number in the CSV and the owner's to tune. The value listed first is the default (every toggle's is `off`). A default value has no effect, except quarter's `give` and ransom's `ransom`, whose effects the table gives after "(the default)". "Morale mark" is the unit channel; realm rows are per month at full share.
 
 | Law | Values (default first) | Effect of the non-default value |
 |---|---|---|
@@ -182,3 +182,47 @@ Each step ends with the full suite green at the expected error count.
 - The economy by province touches the realm economy's cache (its key must carry the provinces' law versions) and a batch of economy tests; it is the widest change.
 - The council's suggestions and the model's action codes change with the old actions' removal.
 - Many couriers on the map at once after a military decree: the courier layer's cost is watched in the bench.
+
+## 11. Implementation rulings
+
+Where the plan (`docs/superpowers/plans/2026-10-08-laws-tab.md`) and the build settle what the text above leaves open. Each holds over the section it names.
+
+**The plan's rulings.**
+
+- **R1 — values are Strings** in every state map ("on" / "off", a choice's name, a range's plain digits); `LawSystem.number` gives a range's int.
+- **R2 — no `admin_cost`** (§2.1): no script read the policy tables' column; a law carries `cost_ops` instead, in the `EventEffects` op grammar (`opinion:steward:-2:re-cutting the tax rolls`), charged when the order executes. `gold_cost` is extra gold on top of the order's row.
+- **R3 — `LAW_SET` has one `order_costs.csv` row** (`gold:-1:the chancery drafts the decree`), so invariant 8 holds; the per-law gold and ops are `laws.csv`'s.
+- **R4 — the cooldown is per law**: `law_cooldown[law]` is the tick it runs to; the action row's own `cooldown_ticks` is 0.
+- **R5 — re-sending** (§3, §5): the decreed value may be decreed again while some places are missing it (`delivery(...).missing`); couriers then ride ONLY to those places, with the SAME `decree_id`.
+- **R6 — a courier to a place** has the scope key as his target (`province:<code>`, `town:<code>`): he is never lost for want of a regiment and never re-aimed. A courier to a unit has the unit's code and is re-aimed as it moves.
+- **R7 — the three old modes are choices**: grain policy `market | ration | release` (`release` reads as `market` for the court's ration and pays its one-shot on delivery), church policy `none | endow | tithe`, justice severity a range. A one-shot is paid when the value CHANGES to it.
+- **R8 — the metrics stand in** for a state with no law state at all (a hand-built test state), so `LawSystem.value` reads `metrics` there.
+- **R9 — no save version bump**: the three maps load empty from an older save and `LawSystem.ensure` seeds them.
+- **R10 — law couriers are `ordinary`**: no new courier kind (it would need courier art).
+- **R11 — `law_effects.csv` has `timing` (`monthly | once`) and `share` (`army | people | unit | flat`)** beside §4's columns: `law_code,value,channel,target,amount,timing,share,reason`. A range law's once-row has a blank value and is paid per point of change.
+- **R12 — the state keys** are `law_decree`, `law_in_force` and `law_cooldown`, saved plain.
+- **R13 — a province with no entry** (annexed, or retaken) follows the law's default until a courier reaches it.
+
+**The controller's rulings.**
+
+- **P1** — `LawSystem.decree` writes the metric mirror (§2.5) at once, from the first decree.
+- **P2** — `LawEffects.summary(repo, law, value)` spells the screen's effects text from the rows.
+- **P3** — the two scenes are authored in the editor; an agent that cannot reach it stops and hands back.
+- **P4** — landing on `main` waits for the owner's word.
+
+**The build's rulings.**
+
+- **A re-send's cost** (R5): only the order's row and the couriers' fees — no `gold_cost`, no `cost_ops`, no opinion drift (it changes no law) — and it skips the cooldown.
+- **Every toggle defaults to its first value**, `off`, as §4.4's table heading says ("Values (default first)"); plunder `forbid`, quarter `give` and ransom `ransom` likewise. A law is a tool the crown imposes: undecreed, only quarter's and ransom's default rows pay.
+- **The one-shots are apportioned exactly** (§4.3 and invariant 11, over the plan's one-decimal rounding): each once-row's old realm-wide total is split over the realm's provinces by people, largest remainder (ties to the code that sorts first; with no people anywhere, evenly), in whole units for treasury and grain and tenths otherwise, the sign re-applied. Delivered everywhere, in any order, the provinces pay the old total exactly.
+- **The shares are taken at each delivery's moment**: a province's part is re-split on the people as they are when its courier arrives, so a realm that grows, shrinks or loses a province mid-decree drifts from the old total.
+- **An event's change of law (`law:<code>:<value>`, `LawSystem.impose`)** is a new decree in force at once everywhere (a range takes a signed step, `+1`, clamped): no courier, no cooldown, and it pays no one-shot.
+- **`LawSystem.reconcile`** (each day's end) extends §2.4 to every scope: a province the realm no longer holds forgets its entries (retaken, it reads the default, R13); a town lost or left with no camp is forgotten, the realm's units still camped there keeping what they read (another kingdom's never take a law); the entry of a unit gone, or no longer the realm's land unit, goes with it.
+- **A camp no courier reached is told** when every unit camped there reads the decree (or a newer one): a camp formed after the decree of units that carried it in is not "missing".
+- **The letters** (§3): ALL of a decree's letters, not only the military ones, are kind `law` and keep their own count (`missive_keep_law`). The reach letter counts the decree's recipients NOW (a province lost meanwhile leaves the count) and the days from the decree's day to the last courier's, both counted (a re-send counts from the first decree). It is filed after the day's ride (`LawSystem.close_rides`), not inside a delivery, since a unit courier's loss and a spent fuse never reach `LawSystem.deliver`; a courier of an older decree closes nothing.
+- **The news** (§3): one line as a decree's couriers set out ("The decree on <law> is sent: N couriers.") and one when its last is home ("The decree on <law> is in force everywhere: N of N places in D days.", or "reached X of Y places" when some are missing). Single deliveries and weather delays are not said; a courier set aside, lost or out of time is said once.
+- **The military page's group** is a key in `laws.csv`, its title `law_words.csv`'s; refusals are worded from `law_words.csv` too.
+
+**For the owner.**
+
+- **Legitimacy creeps**: undecreed, quarter's `give` (+0.2 legitimacy, +0.1 church a month) and ransom's `ransom` (+0.1 legitimacy) pay from the first day at full share. Against the drift toward 50 that is about +0.2 a month above it, ~+2.4 a year, with no ceiling short of the metric's own cap. Tune those two rows or `legitimacy_drift`.

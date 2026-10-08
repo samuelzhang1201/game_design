@@ -84,7 +84,7 @@ Traits (see `character_traits.csv`) apply modifiers to attributes and skills at 
 
 **Opinion drift is computed from policy-position distance, not from LLM judgment.**
 
-Every action in the taxonomy carries an ideology signature (`data/action_signatures.csv`, one row per action code and variant). decreeing the church law to `tithe` (`LAW_SET`, variant `law=church_policy&value=tithe`; a range law's variant names its direction, `law=tax_rate&delta_pos`) scores `centralism +10, orthodoxy −50`; `MANOR_SEIZE` scores `centralism +30, militarism +40`. Event choices carry the same five columns in `data/event_choices.csv`. When you execute an action (`OpinionDrift.apply`, every seated minister):
+Every action in the taxonomy carries an ideology signature (`data/action_signatures.csv`, one row per action code and variant). Decreeing the church law to `tithe` (`LAW_SET`, variant `law=church_policy&value=tithe`; a range law's variant names its direction, `law=tax_rate&delta_pos`) scores `centralism +10, orthodoxy −50`; `MANOR_SEIZE` scores `centralism +30, militarism +40`. A decree sent again, at the same value, to the places its couriers missed is no change of law: it drifts no one. Event choices carry the same five columns in `data/event_choices.csv`. When you execute an action (`OpinionDrift.apply`, every seated minister):
 
 ```
 alignment     = Σ(sig_axis × ideology_axis) / (Σ|sig_axis| × 100)     # −1..+1
