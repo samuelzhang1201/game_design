@@ -141,6 +141,7 @@ func test_fleets_get_no_courier() -> void:
 	for r: Dictionary in MapObjects.regiments_of(repo, realm, s):
 		if String(r.get("is_naval", "0")) == "1":
 			fleets.append(String(r["regiment_code"]))
+	assert_gt(fleets.size(), 0, "the realm has a fleet in its roster, or this test proves nothing")
 	for c: Dictionary in LawSystem.decree(repo, s, "plunder", "allow"):
 		assert_false(String(c["target"]) in fleets, "no courier rides for a fleet")
 		assert_false(String(c["order"]["scope_key"]).trim_prefix("unit:") in fleets)
@@ -252,7 +253,7 @@ func test_the_headline_words_a_law_courier() -> void:
 	assert_string_contains(CourierSystem.headline(repo, leaving), "Tax rate")
 
 
-func test_the_card_and_receipt_say_decree_not_stand() -> void:
+func test_the_card_says_decree_not_stand_and_no_receipt_is_filed() -> void:
 	var c: Dictionary = LawSystem.decree(repo, s, "tax_rate", "7")[0]
 	var card := CourierCard.card(repo, s, int(c["id"]))
 	assert_true(String(card["title"]).begins_with("Decree to "), String(card["title"]))
@@ -263,14 +264,13 @@ func test_the_card_and_receipt_say_decree_not_stand() -> void:
 			carrying = String(f[1])
 	assert_string_contains(carrying, "Decree: Tax rate")
 	assert_string_contains(carrying, "7")
-	var receipt := MissiveWriter.receipt(repo, s, c, false)
-	var said := ""
-	for f: Dictionary in receipt["facts"]:
-		if String(f["key"]) == "orders":
-			said = String(f.get("text", ""))
-	assert_false(said == "Stand", "a decree is no order to stand")
-	assert_string_contains(said, "Tax rate")
-	assert_false(String(receipt["title"]).contains("province:"))
+	# a decree's courier files no receipt: the reach letter speaks for the
+	# decree (LawSystem.close_rides), delivered or set aside
+	s.missives = []
+	assert_eq(String(CourierSystem._deliver(repo, s, c)["type"]), "delivered")
+	assert_eq(String(CourierSystem._deliver(repo, s, c)["type"]), "stale")
+	assert_true(s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "receipt").is_empty(),
+		"no receipt for a decree's courier")
 	var u_sent := LawSystem.decree(repo, s, "plunder", "allow")
 	var unit: Array = u_sent.filter(func(x: Dictionary) -> bool: return not String(x["target"]).begins_with("town:"))
 	if not unit.is_empty():

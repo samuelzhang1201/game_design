@@ -8,12 +8,11 @@ const COLUMNS := ["truth", "credible", "consult", "rumour"]
 ## The marshal's letters: capped apart (missive_keep_supply), so a campaign's
 ## daily dispatches never push a spy's report or a receipt off a column.
 const SUPPLY_KINDS := ["supply", "supply_month"]
-## The kinds kept apart from the column's own count: kind -> its group's
-## balance.csv keep key. A kind not listed counts against
-## missive_keep_per_column. The supply letters (SUPPLY_KINDS) share one
-## group; a decree's letters (law, laws spec §3) are another.
-const KIND_GROUPS := {"supply": "missive_keep_supply", "supply_month": "missive_keep_supply",
-	"law": "missive_keep_law"}
+## The other kinds kept apart from the column's own count: kind -> its
+## group's balance.csv keep key — a decree's letters (law, laws spec §3). The
+## supply letters (SUPPLY_KINDS) share missive_keep_supply; any other kind
+## counts against missive_keep_per_column.
+const KIND_GROUPS := {"law": "missive_keep_law"}
 const COLUMN_KEEP := "missive_keep_per_column"
 
 
@@ -58,9 +57,11 @@ static func add(repo: DataRepository, state: GameState, m: Dictionary) -> int:
 	return state.next_missive_id
 
 
-## The keep key a letter of `kind` counts against (KIND_GROUPS, else the
-## column's own).
+## The keep key a letter of `kind` counts against (SUPPLY_KINDS', KIND_GROUPS',
+## else the column's own).
 static func group_of(kind: String) -> String:
+	if kind in SUPPLY_KINDS:
+		return "missive_keep_supply"
 	return String(KIND_GROUPS.get(kind, COLUMN_KEEP))
 
 
