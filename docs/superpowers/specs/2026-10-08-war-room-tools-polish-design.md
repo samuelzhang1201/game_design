@@ -56,8 +56,7 @@ Rulings marked **[R]** were proposed by Claude and approved by the owner.
   two-point route. A red arrow drawn with several supposed pieces / hints
   selected writes one arrow per selected item (each from its own spot to the
   tip). A red arrow for an intel hint is tied to the hint's PLACE, so a
-  newer report on the same place keeps it; removing a hint's place's last
-  report takes its arrows as removing a supposed piece does.
+  newer report on the same place keeps it (a hint's id is its place).
 - **A9. The name box never traps the keyboard.** After a phase line or
   objective, the name box commits its prefilled name when it loses focus or
   the table is pressed; while it is open the room's keys still reach the
