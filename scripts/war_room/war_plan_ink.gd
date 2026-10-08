@@ -16,14 +16,14 @@ static func cache_key(state: GameState, sheet_index: int) -> int:
 
 ## {crayon: [{poly, colour}], pen: [{line, colour, width}], names: [{at, text,
 ## colour, caps, size}]}, `colour` a WarPlans colour name.
-static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int, table_w_m: float) -> Dictionary:
+static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int, table_w_m: float, hidden := "") -> Dictionary:
 	var out := {"crayon": [], "pen": [], "names": []}
 	var rect: Rect2 = sheet["rect"]
 	var k := float(tex_px) / rect.size.x
 	var mm := float(tex_px) / (table_w_m * 1000.0)
 	for s: Dictionary in WarPlans.strokes_in(repo, state, rect):
 		var kind: Dictionary = repo.war_plan_kinds.get(String(s["kind"]), {})
-		if kind.is_empty():
+		if kind.is_empty() or (hidden != "" and String(s.get("id", "")) == hidden):
 			continue
 		var ctrl := PackedVector2Array()
 		for p in WarPlans.points_px(repo, s):

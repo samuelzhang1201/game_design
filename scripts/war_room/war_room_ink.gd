@@ -186,10 +186,11 @@ func intel_for(repo: DataRepository, state: GameState, sheet: int, viewport: Sub
 ## 2026-10-07-war-room-annotations-and-planning-pieces §2.5), redrawn when the
 ## plans' revision turns; null when none is to be had (headless) or a later
 ## draw took the viewport over. An empty layer is still drawn (it clears).
+## The stroke `hidden` (being dragged) is left out.
 func plan_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubViewport,
-		painter: WarInkPainter, font: Font, caps: Font, still_wanted: Callable) -> Texture2D:
+		painter: WarInkPainter, font: Font, caps: Font, still_wanted: Callable, hidden := "") -> Texture2D:
 	var key := WarPlanInk.cache_key(state, sheet)
-	if int(plan.get("key", -1)) == key and int(plan.get("sheet", -1)) == sheet:
+	if int(plan.get("key", -1)) == key and int(plan.get("sheet", -1)) == sheet and String(plan.get("hidden", "")) == hidden:
 		return plan.get("tex") as Texture2D
 	var row: Dictionary = WarSheets.series(repo)[sheet]
 	var rect: Rect2 = row["rect"]
@@ -200,7 +201,7 @@ func plan_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubV
 	viewport.size = size
 	var table_w := repo.bal("war_table_w_m")
 	var mm := float(w) / (table_w * 1000.0)
-	painter.paint_plan(WarPlanInk.strokes(repo, state, row, size.x, table_w), plan_look(repo, tooth(), mm, font, caps))
+	painter.paint_plan(WarPlanInk.strokes(repo, state, row, size.x, table_w, hidden), plan_look(repo, tooth(), mm, font, caps))
 	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	await frame_done
 	if gen != _gen:
@@ -211,7 +212,7 @@ func plan_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubV
 	if img == null or img.is_empty():
 		return null
 	img.generate_mipmaps()
-	plan = {"sheet": sheet, "key": key, "tex": ImageTexture.create_from_image(img)}
+	plan = {"sheet": sheet, "key": key, "hidden": hidden, "tex": ImageTexture.create_from_image(img)}
 	return plan["tex"]
 
 

@@ -49,6 +49,9 @@ var _click_shift := false
 var _pending_choose := ""   # an unchosen stroke pressed with the hand: a click chooses it, a drag pans
 var _pending_from := Vector2.ZERO
 var _order := false     # the stroke being drawn is the selection's march
+## The stroke just let go (pack px), drawn live until the plan layer shows it:
+## {s: the stroke's row, pts, r, key (WarPlanInk.cache_key once written)}; {} none.
+var _ghost: Dictionary = {}
 
 
 func setup(view: WarRoomView, repo: DataRepository, hud: WarPlanHud) -> void:
@@ -144,6 +147,8 @@ func put_down() -> bool:
 	var held := tool.in_hand() or action != ""
 	tool.put_down()
 	action = ""
+	if not _drag.is_empty() and bool(_drag.get("moved", false)):
+		_view.hide_plan_stroke("")
 	_drag = {}
 	_order = false
 	redraw_live()
@@ -290,6 +295,8 @@ func _motion(mm: InputEventMouseMotion) -> bool:
 		return false
 	if not bool(_drag["moved"]) and mm.position.distance_to(_drag["from"]) < _repo.bal("war_rake_min_px"):
 		return true
+	if not bool(_drag["moved"]) and String(_drag["mode"]) in ["stroke", "handle"]:
+		_view.hide_plan_stroke(String(_drag["id"]))   # carried live: the table's own copy goes
 	_drag["moved"] = true
 	if String(_drag["mode"]) == "box":
 		_drag["to"] = mm.position
@@ -342,8 +349,11 @@ func _release(mb: InputEventMouseButton) -> bool:
 					one["pts"] = pts
 					one["of"] = String(id)
 					drawn.emit(one)
+					_keep_ghost(one)
 			else:
 				drawn.emit(d)
+				_keep_ghost(d)
+		redraw_live()
 		return true
 	if _pending_choose != "":
 		var pend := _pending_choose
@@ -376,6 +386,7 @@ func _release(mb: InputEventMouseButton) -> bool:
 			piece_moved.emit(id, to, int(d.get("facing", 0)))
 		"stroke":
 			stroke_shifted.emit(id, to - (d["from_pack"] as Vector2))
+			_keep_ghost_of(id)
 		"facing":
 			var s: Dictionary = _view.state().war_plans[WarPlans.STROKES].get(id, {})
 			if not s.is_empty():
@@ -385,8 +396,26 @@ func _release(mb: InputEventMouseButton) -> bool:
 			if not s.is_empty():
 				var r := _reshaped(s, int(d["handle"]), to)
 				stroke_reshaped.emit(id, r["pts"], float(r["r"]))
+				_keep_ghost_of(id)
+	if String(d["mode"]) in ["stroke", "handle"]:
+		_view.hide_plan_stroke("")
 	redraw_live()
 	return true
+
+
+## The stroke `d` just drawn (pack px) stays on the hud until the plan layer
+## has been painted for the plans as they are now.
+func _keep_ghost(d: Dictionary) -> void:
+	var s := {"kind": String(d["kind"]), "colour": String(d["colour"]), "dashed": 0, "flip": 0, "name": ""}
+	_ghost = {"s": s, "pts": d["pts"], "r": float(d["r"]), "key": WarPlanInk.cache_key(_view.state(), _view.sheet_index())}
+
+
+## The stroke `id` as the plans now hold it, the same way.
+func _keep_ghost_of(id: String) -> void:
+	var s: Dictionary = _view.state().war_plans[WarPlans.STROKES].get(id, {})
+	if not s.is_empty():
+		_keep_ghost({"kind": s["kind"], "colour": s.get("colour", "ink"), "pts": WarPlans.points_px(_repo, s),
+			"r": WarPlans.radius_px(_repo, s)})
 
 
 ## A click with a stick in hand: a supposed piece or an intel hint under it is
@@ -574,6 +603,14 @@ func redraw_live() -> void:
 		if not row.is_empty():
 			WarPlanInk.add(_repo, ink, row, _repo.war_plan_kinds[tool.kind], row["ctrl"], float(row["r"]), mm)
 	_pending_order(ink, mm)
+	if not _ghost.is_empty():
+		if _view.plan_key_shown() == int(_ghost["key"]):
+			_ghost = {}
+		else:
+			var g: Dictionary = _ghost
+			var grow := _on_screen(g["s"], g["pts"], float(g["r"]))
+			if not grow.is_empty():
+				WarPlanInk.add(_repo, ink, grow, _repo.war_plan_kinds[String(g["s"]["kind"])], grow["ctrl"], float(grow["r"]), mm)
 	if not _drag.is_empty() and bool(_drag["moved"]) and String(_drag["mode"]) in ["stroke", "handle"] and st != null:
 		var s: Dictionary = st.war_plans[WarPlans.STROKES].get(String(_drag["id"]), {})
 		if not s.is_empty():

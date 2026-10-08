@@ -15,6 +15,7 @@ var _default := ""
 
 func _ready() -> void:
 	_edit.text_submitted.connect(func(t: String) -> void: _done(t))
+	_edit.focus_exited.connect(commit)   # clicking anywhere else keeps what is written
 	_edit.gui_input.connect(func(e: InputEvent) -> void:
 		var k := e as InputEventKey
 		if k != null and k.pressed and k.keycode == KEY_ESCAPE:
@@ -32,6 +33,11 @@ func open_at(id: String, text: String, pointer: Vector2, bounds: Rect2, max_char
 	position = WarHoverSlip.place(pointer, get_combined_minimum_size(), bounds, 12.0)
 	_edit.grab_focus()
 	_edit.select_all()
+
+
+## Keeps what is written and closes (a press on the table, focus lost).
+func commit() -> void:
+	_done(_edit.text)
 
 
 func _done(text: String) -> void:

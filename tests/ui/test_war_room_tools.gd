@@ -383,3 +383,44 @@ func test_a_red_arrow_for_two_selected_pieces_draws_two() -> void:
 		assert_true(starts.has(pair[0]), "an arrow of %s" % pair[0])
 		var scr: Variant = view.screen_pos_of_px(starts.get(pair[0], Vector2.ZERO))
 		assert_lt((scr as Vector2).distance_to(pair[1]), 6.0, "starts at its piece")
+
+
+func test_a_table_press_commits_the_name_and_keys_work_again() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	view.plan_input().pick_kind("phase", "blue")
+	_drag(view, Vector2(view.size) * Vector2(0.4, 0.3), Vector2(view.size) * Vector2(0.45, 0.7))
+	var box := screen.get_node("%PlanName") as WarPlanName
+	assert_true(box.visible, "the name box is open")
+	var k := InputEventKey.new()
+	k.pressed = true
+	k.keycode = KEY_TAB
+	screen._unhandled_input(k)
+	assert_eq(view.plan_input().tool.side, "blue", "the open box traps the keys")
+	_button(view, Vector2(view.size) * Vector2(0.8, 0.5), true, MOUSE_BUTTON_RIGHT)
+	assert_false(box.visible, "a press on the table commits the name")
+	var s: Dictionary = Game.state.war_plans["strokes"].values()[0]
+	assert_eq(String(s["name"]), "Line I", "the default is kept")
+	screen._unhandled_input(k)
+	assert_eq(view.plan_input().tool.side, "red", "Tab reaches the desk again")
+
+
+func test_a_released_stroke_stays_drawn_until_its_layer_is_painted() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var hud := view.get_node("%PlanHud") as WarPlanHud
+	# headless never posts a draw: the paint begun when the room opened never ends. Hand in the
+	# process frame and start the layer's paints afresh.
+	view._inks.frame_done = get_tree().process_frame
+	view._intel_busy = false
+	view._ink_busy = 0
+	view.refresh_plans()
+	view.plan_input().pick_kind("front", "red")
+	_drag(view, Vector2(view.size) * Vector2(0.4, 0.3), Vector2(view.size) * Vector2(0.45, 0.7))
+	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), 1, "the front was written")
+	assert_true(hud.drawing(), "the ghost is drawn right after release")
+	var key := WarPlanInk.cache_key(Game.state, view.sheet_index())
+	await wait_until(func() -> bool: return view.plan_key_shown() == key, 5.0)
+	assert_eq(view.plan_key_shown(), key, "its layer was painted")
+	view.plan_input().put_down()
+	assert_false(hud.drawing(), "the ghost is gone once the layer is painted")

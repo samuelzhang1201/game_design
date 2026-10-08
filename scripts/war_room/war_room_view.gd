@@ -50,6 +50,8 @@ signal ground_menu_requested(pack_px: Vector2, screen_px: Vector2)
 signal plan_menu_requested(id: String, screen_px: Vector2)
 ## The pointer has rested on a supposed piece: the screen shows its slip.
 signal plan_hovered(id: String, screen_px: Vector2)
+## A mouse button went down on the table (the name box commits on it).
+signal table_pressed
 
 var aiming := false:
 	set(v):
@@ -263,6 +265,21 @@ func refresh_plans() -> void:
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
 		_plan_pieces.update(state())
 		_plan_input.redraw_live()
+
+
+## The key (WarPlanInk.cache_key) of the plan layer last painted onto the table, -1 none.
+func plan_key_shown() -> int:
+	return _plan_key_shown
+
+
+## The stroke `id` is left out of the plan layer ("" shows all): a stroke being
+## dragged is drawn live, never twice.
+func hide_plan_stroke(id: String) -> void:
+	if id == _plan_hidden:
+		return
+	_plan_hidden = id
+	if _sheet >= 0:
+		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
 
 
 ## The supposed pieces (WarPlanPieces).
@@ -627,6 +644,8 @@ func _finish_swap() -> void:
 ## The laid sheet's intelligence layer onto the table's material (redrawn only
 ## when its key turns: WarRoomInk.intel_for). Never two draws at once.
 var _intel_busy := false
+var _plan_hidden := ""   # the stroke being dragged: left out of the plan layer
+var _plan_key_shown := -1   # the WarPlanInk.cache_key of the last plan paint that finished
 var _intel_again := false   # a repaint asked for while one was in flight
 var _ink_busy := 0   # sheet ink draws in flight: the intel layer waits (one ink viewport, one draw at a time)
 
@@ -645,11 +664,16 @@ func _paint_intel(mat: ShaderMaterial) -> void:
 		mat.set_shader_parameter("intel_tex", tex)
 	# the staff's plan layer after it, on the same viewport (spec
 	# 2026-10-07-war-room-annotations-and-planning-pieces §2.5)
+	var key := WarPlanInk.cache_key(state(), sheet)
+	var hidden := _plan_hidden
 	var plan := await _inks.plan_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(), _caps,
-		func() -> bool: return is_inside_tree() and sheet == _sheet)
+		func() -> bool: return is_inside_tree() and sheet == _sheet, hidden)
 	_intel_busy = false
 	if plan != null and sheet == _sheet:
 		mat.set_shader_parameter("plan_tex", plan)
+	if sheet == _sheet and hidden == _plan_hidden:
+		_plan_key_shown = key   # this paint is done, a texture or not: the ghost has served
+		_plan_input.redraw_live()
 	if _intel_again:
 		_intel_again = false
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
@@ -934,13 +958,13 @@ func select_army(code: String) -> void:
 	select(code)
 
 
-## A click the plans' stick let through (the pointer's pick).
 ## The press was the plans' (a stroke chosen by a click): the pointer must not
 ## also read its release as an open-table click.
 func forget_press() -> void:
 	_pointer.forget_press()
 
 
+## A click the plans' stick let through (the pointer's pick).
 func click_through(at: Vector2, shift: bool) -> void:
 	if _pointer.click(at, shift):
 		accept_event()
@@ -990,6 +1014,9 @@ func _gui_input(event: InputEvent) -> void:
 	if _board_mode != "table":
 		_board_input(event)
 		return
+	var down := event as InputEventMouseButton
+	if down != null and down.pressed:
+		table_pressed.emit()
 	# the plans first: a stick in hand draws, a supposed piece is carried, a
 	# stroke is reshaped (spec 2026-10-07-war-room-annotations-and-planning-pieces §1.6);
 	# never while a march waits on its confirm — its route, waypoints and bends own the table

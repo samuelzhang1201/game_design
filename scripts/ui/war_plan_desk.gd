@@ -48,6 +48,9 @@ func bind(screen: Control, view: WarRoomView, menu: PopupMenu, form: WarPlanForm
 	_form.reading_fn = _form_lines
 	_form.placed.connect(_on_placed)
 	_name.named.connect(_on_named)
+	view.table_pressed.connect(func() -> void:
+		if _name.visible:
+			_name.commit())
 	_roll.stick_picked.connect(_input.pick_stick)
 	_roll.kind_picked.connect(func(side: String, k: String) -> void: _input.pick_kind(k, side))
 	_roll.action_picked.connect(_input.pick_action)
