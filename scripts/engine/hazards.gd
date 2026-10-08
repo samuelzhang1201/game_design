@@ -148,7 +148,7 @@ static func settle_regiments(repo: DataRepository, state: GameState) -> Array[St
 		for id: String in at_point(repo, state, ArmySystem.position_of(repo, state, reg)):
 			var h: Dictionary = state.hazards[id]
 			var k := kind_of(repo, String(h["kind"]))
-			var fit := heads - clampi(int(entry["wounded"]), 0, heads)
+			var fit := ArmySystem.fit_heads(heads, entry)
 			@warning_ignore("integer_division")  # whole heads
 			var lost := fit * int(k.get("wounds_permille", 0)) / 1000
 			if lost > 0:

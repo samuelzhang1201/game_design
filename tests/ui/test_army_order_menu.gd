@@ -16,6 +16,11 @@ class FakeMap extends Node:
 	var aim_waypoints := PackedVector2Array()
 	var supply_pick := {}
 	var supply_preview := PackedVector2Array()
+	## The map's selection (Map3DView.selected_armies), set by a test.
+	var selection: Array = []
+
+	func selected_armies() -> Array:
+		return selection
 
 
 ## The 3D view's own signature: the click's point rides with it.
@@ -136,6 +141,34 @@ func test_choosing_the_seat_row_sends_a_courier() -> void:
 	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the seat order")
 	_deliver_all()
 	assert_eq(ArmyGround.seat_of(Game.data, Game.state, ArmyGround.camped_by(Game.data, Game.state, camper)), camper)
+
+
+## A battle stance row (spec 2026-10-07-enemy-ai-and-battle §4.4) sends its
+## row's `params` stance with every selected unit: one ARMY_STANCE courier each,
+## and each unit holds the stance once its courier has landed.
+func test_a_stance_row_rides_to_every_selected_unit() -> void:
+	var units: Array = []
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if units.size() < 2 and String(r.get("is_naval", "0")) != "1" and CourierSystem.carries_orders(r):
+			units.append(String(r["regiment_code"]))
+	assert_eq(units.size(), 2)
+	_map.selection = units
+	_map.army_menu_requested.emit(units[0], Vector2(10.0, 10.0))
+	assert_eq(_menu.selected_codes(), units, "the menu orders the selection")
+	var hold := -1
+	for i in Game.data.army_orders.size():
+		var row: Dictionary = Game.data.army_orders[i]
+		if String(row["action_code"]) == "ARMY_STANCE" and String((row["params"] as Dictionary).get("stance", "")) == "hold":
+			hold = i
+	assert_gte(hold, 0, "a Hold row")
+	assert_false(_menu.is_item_disabled(_menu.get_item_index(hold)), "the stance is an order the engine takes")
+	_menu.hide()
+	_menu.id_pressed.emit(hold)
+	assert_eq(Game.state.couriers.size(), 2, "a courier for each unit")
+	_deliver_all()
+	Game.advance_day()
+	for c: String in units:
+		assert_eq(BattleSystem.stance_of(Game.state, c), "hold", c + " holds")
 
 
 func test_choosing_march_only_AIMS_it_and_gives_the_map_the_word() -> void:

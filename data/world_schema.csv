@@ -1,5 +1,6 @@
 path,type,min,max,enum_values,good_direction,llm_cap,alias_to,alias_scale_key,label,notes
 metrics.treasury,int,-100000000,100000000,,1,60,,,Treasury,gold in the crown's chest (the range is the pools': the month's settlement can carry it far past 100 000)
+metrics.lord_gold,int,-100000000,100000000,,1,0,,,Your gold,"the lord's own purse (MANOR_SYSTEM.md §5c), engine-only (llm_cap 0): RaidSystem debits a raid on a manor of a province the crown controls here, with its reason (Ruling 4, spec 2026-10-07-enemy-ai-and-battle §5.3)"
 metrics.grain,int,0,100000000,,1,30,,,Civil goods,"the CIVIL pool in whole gold (spec §5): food, timber, cloth, wares; the harvest fills it, the court eats from it, building spends it"
 metrics.strategic,int,0,100000000,,1,30,,,Strategic goods,"the STRATEGIC pool in whole gold (spec §5): iron, horses, arms, ships — the army's capacity and reach"
 metrics.civil,int,0,100000000,,1,30,metrics.grain,,Civil goods,the schema's name for the civil pool; the metric key stays grain

@@ -144,10 +144,16 @@ static func _seats(repo: DataRepository, state: GameState) -> Dictionary:
 	return state.town_seat if state != null and not state.army_roster.is_empty() else ArmySplit.seats_of(repo)
 
 
-## Whether kingdom `k` holds `town` now (its province's owner).
+## Whether kingdom `k` holds `town` now (its province's owner) — and no enemy
+## host occupies it (a town taken by siege, SiegeSystem.capture: its province
+## does not move, yet no unit of the crown's holds its seat or camps by it
+## until it is liberated).
 static func holds(repo: DataRepository, state: GameState, k: String, town: String) -> bool:
 	var b: Dictionary = repo.burgs.get(town, {})
-	return not b.is_empty() and MapOwnership.owner_of(repo, state, String(b.get("province_code", ""))) == k
+	if b.is_empty() or MapOwnership.owner_of(repo, state, String(b.get("province_code", ""))) != k:
+		return false
+	return state == null or state.ai_hosts.is_empty() \
+		or SiegeSystem.occupier_of(state, EnemyAi.target_cell(repo, state, EnemyAi.KIND_TOWN, town)) == ""
 
 
 ## The unit holding `town`'s seat, "" for an empty one.
@@ -159,6 +165,8 @@ static func seat_of(repo: DataRepository, state: GameState, town: String) -> Str
 ## What earns the works and the garrison's morale. A unit holds one seat at
 ## most; were it ever on two, the earlier town code is the one.
 static func seated_in(repo: DataRepository, state: GameState, code: String) -> String:
+	if ArmySystem.is_foe(state, code):
+		return ""   # a raised host's unit left its camp (EnemyAi.spawn)
 	var seats := _seats(repo, state)
 	var found := ""
 	for town: String in seats:
@@ -175,7 +183,7 @@ static func seated_in(repo: DataRepository, state: GameState, code: String) -> S
 ## field, afloat, or round a town its kingdom no longer holds. What feeds it.
 static func camped_by(repo: DataRepository, state: GameState, code: String) -> String:
 	var reg := ArmySystem.regiment(repo, code, state)
-	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1" or ArmySystem.is_foe(state, code):
 		return ""
 	var town := String(reg.get("camp_town", ""))
 	if state != null and state.regiments.has(code):
@@ -184,6 +192,30 @@ static func camped_by(repo: DataRepository, state: GameState, code: String) -> S
 			return ""
 		town = String(entry.get("camp_town", ""))
 	return town if town != "" and holds(repo, state, String(reg["kingdom_code"]), town) else ""
+
+
+## The town a player's land unit DEFENDS (the enemy's town battles and
+## sieges, spec 2026-10-07-enemy-ai-and-battle §4.1, §5.1; guide/siege.md):
+## the town whose seat it holds (seated_in) or whose camp it stands in
+## (camped_by) — a town and its camp are invested together, whatever the
+## standing order — else a held town within whose reach it stands under a
+## garrison order (a column halted there). Only the seat fights from the
+## works (ArmySystem.works_of); the camp fights on the field's ground. ""
+## on the march, in the field, and for a foe, a fleet or another kingdom's unit.
+static func garrison_town(repo: DataRepository, state: GameState, code: String) -> String:
+	if state == null or not state.regiments.has(code):
+		return ""
+	var order := ArmySystem.order_of(repo, state, code)
+	if order == ArmySystem.ORDER_MARCH:
+		return ""
+	var town := seated_in(repo, state, code)
+	if town == "":
+		town = camped_by(repo, state, code)
+	if town != "" or order != ArmySystem.ORDER_GARRISON:
+		return town
+	var reg := ArmySystem.regiment(repo, code, state)
+	town = ArmySystem.town_of(repo, reg, state)
+	return town if town != "" and holds(repo, state, String(reg.get("kingdom_code", "")), town) else ""
 
 
 ## The ground every OTHER standing land unit holds now, metres. Built per

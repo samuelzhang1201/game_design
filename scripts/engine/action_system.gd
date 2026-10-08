@@ -79,6 +79,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			return _validate_manor(req, state, needs)
 		"ARMY_MARCH", "ARMY_GARRISON", "ARMY_SEAT":
 			return _validate_army(req, state)
+		"ARMY_STANCE":
+			return _validate_stance(req, state)
 		"SUPPLY_POINT_SET", "SUPPLY_POINT_CLEAR", "SUPPLY_CARRY_SET":
 			return _validate_supply(req, state)
 		"GOVERNOR_SET":
@@ -187,7 +189,7 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 	var reg := ArmySystem.regiment(data, code, state)
 	if reg.is_empty():
 		return "No such regiment: " + code
-	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
+	if ArmySystem.is_foe(state, code) or String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
 		return "%s is not yours to command" % String(reg["label"])
 	# The order rides by courier (owner 2026-09-27): his fee is paid from the
 	# crown's chest ON TOP of the order's own always-charged cost (fix round 1:
@@ -244,6 +246,27 @@ func _place_refusal(reg: Dictionary, at: Vector2, off_map: String, into_sea: Str
 		return into_sea % String(reg["label"])
 	return ""
 
+## ARMY_STANCE (spec 2026-10-07-enemy-ai-and-battle §4.4): a land regiment
+## of the realm (never a foe), a courier the chest can pay, and a stance of
+## data/battle_stances.csv.
+func _validate_stance(req: ActionRequest, state: GameState) -> String:
+	var code := String(req.params.get("regiment", ""))
+	var reg := ArmySystem.regiment(data, code, state)
+	if reg.is_empty():
+		return "No such regiment: " + code
+	if ArmySystem.is_foe(state, code) or String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
+		return "%s is not yours to command" % String(reg["label"])
+	if not CourierSystem.carries_orders(reg):
+		return "%s is a fleet: it takes no battle stance" % String(reg["label"])
+	var stance := String(req.params.get("stance", ""))
+	if not data.battle_stances.has(stance):
+		return "No such stance: " + stance
+	if float(state.metrics["treasury"]) < OrderCosts.gold_of(data, req.action_code) \
+			+ float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
+		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
+	return ""
+
+
 
 ## An ARMY_MARCH's waypoints in pack px, in order: params.waypoints as
 ## [[x, y], …] (or Vector2s); [] for none.
@@ -264,7 +287,7 @@ func _validate_supply(req: ActionRequest, state: GameState) -> String:
 	var reg := ArmySystem.regiment(data, code, state)
 	if reg.is_empty():
 		return "No such regiment: " + code
-	if String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
+	if ArmySystem.is_foe(state, code) or String(reg["kingdom_code"]) != data.resolve_realm("player_realm"):
 		return "%s is not yours to command" % String(reg["label"])
 	if String(reg.get("is_naval", "0")) == "1":
 		return "%s is a fleet: it carries no supply train" % String(reg["label"])
@@ -655,6 +678,11 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				effects.append({"metric": "army", "delta": 0.0,
 					"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
 						else "%s stands to its post") % String(reg["label"])})
+		"ARMY_STANCE":
+			var code := String(req.params["regiment"])
+			var stance := String(req.params["stance"])
+			_send_courier(state, effects, code, {"action_code": "ARMY_STANCE", "stance": stance},
+				"with a new battle stance (%s)" % String(data.battle_stances[stance]["label"]))
 		"ARMY_SEAT":
 			var code := String(req.params["regiment"])
 			_send_courier(state, effects, code, {"action_code": "ARMY_SEAT"}, "with orders to take the seat")

@@ -12,6 +12,8 @@ extends PopupMenu
 ## and aims on from it; while the panel stands the route can be bent on the map
 ## (its `route_bent`), each waypoint checked as the end is. That is why its
 ## label ends in an ellipsis. Escape, Cancel or a right click give it up.
+## A STANCE row (ARMY_STANCE) runs at once, its row's `params` (the stance)
+## sent with the regiment; the war room's menu leaves stances off.
 ## A committed march's end ring opens the ROUTE menu: Edit route… loads its
 ## waypoints and end into the panel, Cancel march halts it (an ARMY_GARRISON).
 ## The confirm also asks where to SUPPLY the march from (spec 2026-10-08-war-
@@ -130,8 +132,11 @@ func _open_for(code: String, at: Vector2) -> void:
 	clear()
 	for i in Game.data.army_orders.size():
 		var row: Dictionary = Game.data.army_orders[i]
+		# a battle stance is the map's order: the war room drafts only marches
+		if drafting and String(row["action_code"]) != "ARMY_MARCH":
+			continue
 		add_item(String(row["label"]), i)
-		var why := _refusal_any(String(row["action_code"]))
+		var why := _refusal_any(String(row["action_code"]), row.get("params", {}))
 		set_item_disabled(i, why != "")
 		set_item_tooltip(i, why if why != "" else String(row["hint"]))
 	# the seat (spec 2026-10-07-army-split-and-ground §4.5): only a unit camped
@@ -342,10 +347,10 @@ func _paused_reason() -> String:
 ## without one — the questions that do not need a destination (is it mine,
 ## has it anyone under arms, can the chest pay) are the ones worth asking
 ## before the player aims.
-func _refusal(action_code: String, code: String) -> String:
+func _refusal(action_code: String, code: String, params: Dictionary = {}) -> String:
 	if action_code == "ARMY_MARCH" and _paused_reason() != "":
 		return _paused_reason()
-	var req := ActionRequest.make(action_code, {"regiment": code})
+	var req := ActionRequest.make(action_code, params.merged({"regiment": code}, true))
 	if action_code == "ARMY_MARCH":
 		var here := ArmySystem.position_of(Game.data, Game.state,
 			ArmySystem.regiment(Game.data, code, Game.state))
@@ -408,7 +413,8 @@ func _on_chosen(id: int) -> void:
 		_set_aim(_code)
 		Game.publish_news("%s awaits its orders — click where to send it." % _name_of(_code))
 		return
-	_run_each(String(row["action_code"]), {})
+	# a stance row's params (the stance) ride with each unit (ARMY_STANCE)
+	_run_each(String(row["action_code"]), row.get("params", {}))
 
 
 ## The aimed march's destination: held, drawn to, and asked about — the
@@ -642,11 +648,12 @@ func selected_codes() -> Array:
 	return _codes
 
 
-## "" when any of the units would take the order, else the first refusal.
-func _refusal_any(action_code: String) -> String:
+## "" when any of the units would take the order (with the row's `params`,
+## a stance's), else the first refusal.
+func _refusal_any(action_code: String, params: Dictionary = {}) -> String:
 	var first := ""
 	for c: String in _codes:
-		var why := _refusal(action_code, c)
+		var why := _refusal(action_code, c, params)
 		if why == "":
 			return ""
 		if first == "":
@@ -678,7 +685,7 @@ func _run(req: ActionRequest) -> void:
 			Game.publish_news(String(e["reason"]))
 	# An order on a stopped clock waits for play (owner 2026-09-24) — and since
 	# 2026-09-27 it rides by courier, who waits in the capital with it.
-	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON", "ARMY_SEAT"] \
+	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON", "ARMY_STANCE", "ARMY_SEAT"] \
 			or req.action_code.begins_with("SUPPLY_")):
 		var code := String(req.params["regiment"])
 		if CourierSystem.carries_orders(ArmySystem.regiment(Game.data, code, Game.state)):

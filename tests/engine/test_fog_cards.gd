@@ -94,6 +94,36 @@ func test_a_foreign_regiments_army_card_carries_no_exact_headcount() -> void:
 	assert_false(_leaks(_texts(card), total), "headcount")
 
 
+func test_a_foes_army_card_shows_words_not_figures() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var code := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
+	var r: Dictionary = ArmySystem.regiment(repo, code, s)
+	var total := int(MapObjects.regiment_size(repo, r))
+	assert_true(s.foes.has(code), "a spawned foe")
+	s.foes[code]["dead"] = 123
+	s.foes[code]["wounded"] = 321
+	var card := MapObjects.army_card(repo, code, s)
+	var army := ""
+	for st: Dictionary in card["stats"]:
+		if String(st["key"]) == "army":
+			army = String(st["text"])
+		assert_false(String(st["key"]) in ["army_morale", "army_supply", "army_training", "army_wounded"],
+			"a foe's card holds no inner figure: " + String(st["key"]))
+	assert_eq(army, Intel.magnitude(repo, total), "the army stat is the magnitude word")
+	var text := _texts(card)
+	assert_false(_leaks(text, total - 123), "no exact men under arms")
+	assert_false(_leaks(text, total), "no exact headcount")
+	assert_false(text.contains("321"), "no exact wounded")
+	assert_false(text.contains("123"), "no exact dead")
+	Intel.dev_all = true
+	var seen := MapObjects.army_card(repo, code, s)
+	var exact := ""
+	for st: Dictionary in seen["stats"]:
+		if String(st["key"]) == "army":
+			exact = String(st["text"])
+	assert_eq(exact, "%d (321 wounded)" % (total - 123), "dev mode still sees it all")
+
+
 func test_a_report_shows_up_on_the_card_with_its_tag() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var cell := _foreign_manor(s)

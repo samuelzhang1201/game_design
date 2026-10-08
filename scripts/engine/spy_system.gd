@@ -122,17 +122,26 @@ static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, 
 			Intel.stance_of(repo, MapOwnership.owner_of(repo, state, prov)) if sees_words else Intel.UNCLEAR))
 		facts.append(MissiveLog.words("wealth", _label(repo, "wealth"),
 			Intel.wealth_word(repo, Intel.wealth_tier(repo, state, prov)) if sees_words else Intel.UNCLEAR))
-	var troops := _troops(repo, state, at)
+	var troops := troops_near(repo, state, at)
 	for key in ["troops_own", "troops_foreign"]:
 		var tl := estimate(repo, int(troops[key]), q, bias, _round_to(repo, key))
 		facts.append(MissiveLog.span(key, _label(repo, key), int(tl[0]), int(tl[1])))
+	# The enemy hosts' columns he can count (spec 2026-10-07-enemy-ai-and-battle
+	# §2: "how many, about how many men"), only when there is one in reach.
+	var foes := foes_near(repo, state, at)
+	if int(foes["foe_columns"]) > 0:
+		for key in ["foe_columns", "foe_troops"]:
+			var fl := estimate(repo, int(foes[key]), q, bias, _round_to(repo, key))
+			facts.append(MissiveLog.span(key, _label(repo, key), int(fl[0]), int(fl[1])))
 	return MissiveLog.make("spy", "credible" if credible else "rumour", state.absolute_day(), subj,
 		"Spy report — " + Intel.place_label(repo, state, at), facts)
 
 
-## Heads within spy_radius_km of a point: ours (live positions) and foreign
-## (the pack's rows, which stand still until enemy AI exists).
-static func _troops(repo: DataRepository, state: GameState, at: Vector2) -> Dictionary:
+## Men under arms within spy_radius_km of a point (PACK px), each regiment at
+## its live place (ArmySystem.position_of: a foe where its host has marched
+## it): ours and foreign — headcount less the regiment's `dead`, never below
+## 0, so beside an enemy host troops_foreign and foe_troops count the same men.
+static func troops_near(repo: DataRepository, state: GameState, at: Vector2) -> Dictionary:
 	var reach := repo.bal("spy_radius_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
 	var realm := repo.resolve_realm("player_realm")
 	var own := 0
@@ -144,11 +153,36 @@ static func _troops(repo: DataRepository, state: GameState, at: Vector2) -> Dict
 		var reg: Dictionary = all[code]
 		if ArmySystem.position_of(repo, state, reg).distance_to(at) > reach:
 			continue
+		var men := maxi(0, ArmySystem.headcount(repo, reg) - int(ArmySystem.state_of(repo, state, code).get("dead", 0)))
 		if String(reg.get("kingdom_code", "")) == realm:
-			own += ArmySystem.headcount(repo, reg)
+			own += men
 		else:
-			foreign += ArmySystem.headcount(repo, reg)
+			foreign += men
 	return {"troops_own": own, "troops_foreign": foreign}
+
+
+## The enemy hosts' columns (GameState.foes) within spy_radius_km of a point
+## (PACK px), by their live place in whole metres: how many, and their men
+## under arms (headcount less the dead). {foe_columns, foe_troops}.
+static func foes_near(repo: DataRepository, state: GameState, at: Vector2) -> Dictionary:
+	var here := ArmySystem.pack_to_metres(repo, at)
+	var reach := int(round(repo.bal("spy_radius_km") * 1000.0))
+	var cols := 0
+	var men := 0
+	var codes: Array = state.foes.keys()
+	codes.sort()
+	for c: Variant in codes:
+		var e: Dictionary = state.foes[c]
+		var dx := int(e["x_m"]) - here.x
+		var dy := int(e["y_m"]) - here.y
+		if dx * dx + dy * dy > reach * reach:
+			continue
+		var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c), state)) - int(e.get("dead", 0))
+		if heads <= 0:
+			continue
+		cols += 1
+		men += heads
+	return {"foe_columns": cols, "foe_troops": men}
 
 
 ## A spy has arrived: draw his rolls (quality, then — for a rumour — the

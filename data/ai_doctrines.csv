@@ -1,0 +1,4 @@
+role,greed_permille,caution_permille,dist_cost,engage_odds_permille,retreat_morale,town_bonus,notes
+main,1000,300,100,450,20,2000,"spec 2026-10-07-enemy-ai-and-battle §3.3: first draft. score = value x greed - distance_days x dist_cost - defence x caution - overlap, in gold; town_bonus is added to a town's value; engage_odds_permille = the odds at which the host takes a fight; retreat_morale = the morale below which it retreats. The main host leans to rich towns"
+raider,1200,800,60,600,30,0,"the raiding party leans to undefended manors: greedier, warier, cheap to move, fights only on good odds"
+reserve,1000,500,100,500,25,0,"the rear host has no target of its own and follows the main host; these rows apply once it is let loose"

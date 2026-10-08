@@ -46,8 +46,14 @@ static func ordered(repo: DataRepository, state: GameState, codes: Array) -> Arr
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
 	return int(MapObjects.regiment_size(repo, reg))
 
-## A regiment's STRENGTH: its fit men (headcount less the wounded) per mille
-## of its headcount — what its piece shows (owner 2026-09-30: 满员 / 减员 /
+## The men able to fight: `heads` less the wounded and the dead of a regiment's
+## state `st` (a state with no `dead`, an old save's, has none), never below 0.
+## The pack's headcount is immutable, so the dead are a count beside it.
+static func fit_heads(heads: int, st: Dictionary) -> int:
+	return maxi(0, heads - maxi(0, int(st.get("wounded", 0))) - maxi(0, int(st.get("dead", 0))))
+
+## A regiment's STRENGTH: its fit men (headcount less the wounded and the dead)
+## per mille of its headcount — what its piece shows (owner 2026-09-30: 满员 / 减员 /
 ## 残兵, Map3DFormation). A regiment that is not the player's has no state and
 ## reads as it would start (full); one with no one under arms is 0.
 static func fit_permille(repo: DataRepository, state: GameState, code: String) -> int:
@@ -56,9 +62,8 @@ static func fit_permille(repo: DataRepository, state: GameState, code: String) -
 	if heads <= 0:
 		return 0
 	var st := state_of(repo, state, code)
-	var wounded := clampi(int(st.get("wounded", 0)), 0, heads)
 	@warning_ignore("integer_division")  # whole per-mille
-	return (heads - wounded) * 1000 / heads
+	return fit_heads(heads, st) * 1000 / heads
 
 ## What a regiment starts a campaign with: army_start_supply_days of its use,
 ## in whole supplies rounded UP, so the days in hand read the days it was given
@@ -70,6 +75,7 @@ static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 	return {
 		"morale": int(repo.bal("army_start_morale")),
 		"wounded": 0,
+		"dead": 0,
 		"supplies": (supply_use(repo, reg) * start_days + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK,
 		"carry_days": int(repo.bal("army_carry_default_days")),
 		"training": int(repo.bal("army_start_training")),
@@ -78,6 +84,7 @@ static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 		"dest_x_m": home.x,
 		"dest_y_m": home.y,
 		"order": ORDER_STANDBY,
+		"stance": STANCE_DEFAULT,
 		"camp_town": String(reg.get("camp_town", "")),
 	}
 
@@ -104,10 +111,21 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 		if not entry.has("carry_days"):
 			entry["carry_days"] = int(repo.bal("army_carry_default_days"))
 			entry["supplies"] = mini(int(entry["supplies"]), max_units(repo, supply_use(repo, reg, state)))
+		# A save from before the battle stances (spec 2026-10-07-enemy-ai-and-
+		# battle §4.4): every regiment stood steady.
+		if not entry.has("stance"):
+			entry["stance"] = STANCE_DEFAULT
 
-## A regiment's state for reading: the stored one, else what it would start
-## with. Never writes. {} for a regiment that is not the player's.
+## True for a regiment of the raider realm in the field (GameState.foes).
+static func is_foe(state: GameState, code: String) -> bool:
+	return state != null and state.foes.has(code)
+
+## A regiment's state for reading: a foe's stored one (GameState.foes, spec
+## 2026-10-07-enemy-ai-and-battle §2), else the player's stored one, else what
+## it would start with. Never writes. {} for a regiment that is neither.
 static func state_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	if is_foe(state, code):
+		return state.foes[code]
 	var reg := regiment(repo, code, state)
 	if reg.is_empty() or String(reg["kingdom_code"]) != repo.resolve_realm("player_realm"):
 		return {}
@@ -187,8 +205,14 @@ static func eat_day(repo: DataRepository, state: GameState) -> void:
 		var reg := regiment(repo, code, state)
 		if reg.is_empty():
 			continue
-		var entry: Dictionary = state.regiments[code]
-		entry["supplies"] = maxi(0, int(entry["supplies"]) - day_bite(supply_use(repo, reg, state), state.day))
+		eat_one(repo, state, reg, state.regiments[code])
+
+
+## One regiment's meal of the day now running, written to its state `entry`
+## (a player's or a foe's — EnemyAi feeds its hosts through this): today's
+## share (day_bite) of the month's use where it stands now, never below 0.
+static func eat_one(repo: DataRepository, state: GameState, reg: Dictionary, entry: Dictionary) -> void:
+	entry["supplies"] = maxi(0, int(entry["supplies"]) - day_bite(supply_use(repo, reg, state), state.day))
 
 
 ## Whole days a regiment's `supplies` last at `use` a month (spec
@@ -479,7 +503,7 @@ static func _arm_base(repo: DataRepository, code: String, arm: String, tick: int
 	return sum / rows.size()
 
 ## A regiment's power where it stands, in the given stance ("defend" or
-## "attack"): each arm's heads less its share of the wounded, times the arm's
+## "attack"): each arm's heads less its share of the wounded and the dead, times the arm's
 ## base, the training and morale factors and the terrain. 0 for a regiment
 ## without state.
 static func power(repo: DataRepository, state: GameState, code: String, stance: String) -> int:
@@ -499,7 +523,7 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 	if reg.is_empty() or st.is_empty():
 		return 0
 	var heads := headcount(repo, reg)
-	var fit := heads - clampi(int(st["wounded"]), 0, heads)
+	var fit := fit_heads(heads, st)
 	return power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
 		code, 0 if state == null else state.tick)
 
@@ -773,6 +797,9 @@ static func ground_word(repo: DataRepository, state: GameState, reg: Dictionary)
 const ORDER_STANDBY := "standby"
 const ORDER_GARRISON := "garrison"
 const ORDER_MARCH := "march"
+## The battle stance (data/battle_stances.csv) a regiment starts with and an
+## old save's regiments read as; ARMY_STANCE changes it by courier.
+const STANCE_DEFAULT := "steady"
 
 
 ## Metres to one pack pixel, from the pack's own map_info.
@@ -799,7 +826,8 @@ static func position_of(repo: DataRepository, state: GameState, reg: Dictionary)
 	var home := Vector2(float(reg.get("x", 0)), float(reg.get("y", 0)))
 	if state == null:
 		return home
-	var entry: Dictionary = state.regiments.get(String(reg.get("regiment_code", "")), {})
+	var code := String(reg.get("regiment_code", ""))
+	var entry: Dictionary = state.foes.get(code, state.regiments.get(code, {}))   # a foe's live place is its own
 	if not entry.has("x_m"):
 		return home
 	return metres_to_pack(repo, Vector2i(int(entry["x_m"]), int(entry["y_m"])))
@@ -985,11 +1013,12 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 		ArmyGround.settle(repo, state, code)
 
 
-## One DAY of marching for every regiment under a march order, in code order.
+## One DAY of marching for every regiment under a march order, in code order,
+## the player's first and then the foes' (GameState.foes).
 ## Each arrival settles at once (ArmyGround.settle: first come, first in).
-## Returns the codes that arrived today, for the news bar. The column walks at
-## its own pace along its route (spec 2026-10-07-march-waypoints), else the
-## straight line; there is no pathfinding yet — a march ordered across a bay
+## Returns the player's codes that arrived today, for the news bar. The column
+## walks at its own pace along its route (spec 2026-10-07-march-waypoints), else
+## the straight line; there is no pathfinding yet — a march ordered across a bay
 ## walks across it.
 static func march_day(repo: DataRepository, state: GameState) -> Array:
 	ensure(repo, state)
@@ -1005,6 +1034,16 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 			# nothing left to stop (a pencilled new march still stands)
 			if String(WarDrafts.of(state, code).get("order", "")) == WarDrafts.GARRISON:
 				WarDrafts.strike(state, code)
+	# The foes' second pass (spec 2026-10-07-enemy-ai-and-battle §2), in code
+	# order and by the same even step: a column in a battle stands; one that
+	# arrives holds its ground, and a foreign column's arrival is not news, so
+	# it is not in `arrived`.
+	var foes := state.foes.keys()
+	foes.sort()
+	for c in foes:
+		var code := String(c)
+		if BattleSystem.battle_of(state, code).is_empty():
+			_march_one(repo, state, code, state.foes[code], state.absolute_day())
 	return arrived
 
 
@@ -1093,9 +1132,12 @@ static func days_out(repo: DataRepository, state: GameState, code: String) -> in
 ## the march walked day by day exactly as march_day will walk it
 ## (_march_one), each day on the ground and in the weather where the column
 ## then stands — the weather is a seeded function of the day, so the figure
-## is the day it will arrive. 0 for a regiment that cannot move.
+## is the day it will arrive. 0 for a regiment that cannot move. `max_days` >= 0
+## stops the walk there (the figure is then min(the true days, max_days)): a
+## caller that only needs to know "more than N" (EnemyAi's supply reach) walks
+## N + 1 days, never army_march_days_cap.
 static func march_days_between(repo: DataRepository, state: GameState, code: String, from: Vector2,
-		to: Vector2, start_day: int = -1, waypoints: Array = [], carry := -1) -> int:
+		to: Vector2, start_day: int = -1, waypoints: Array = [], carry := -1, max_days: int = -1) -> int:
 	if day_step_m(repo, state, code, carry) <= 0:
 		return 0
 	var a := pack_to_metres(repo, from)
@@ -1111,13 +1153,15 @@ static func march_days_between(repo: DataRepository, state: GameState, code: Str
 			wps.append(pack_to_metres(repo, w))
 		entry["route_m"] = MarchRoute.to_pairs(route_m_of(repo, a, wps, b))
 	var day := (state.absolute_day() if state != null else 0) if start_day < 0 else start_day
-	return _days_walking(repo, state, code, entry, day)
+	return _days_walking(repo, state, code, entry, day, max_days)
 
 
 ## Days an `entry` (a copy) takes to arrive, walked from `day`.
 static func _days_walking(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
-		day: int) -> int:
+		day: int, max_days: int = -1) -> int:
 	var cap := int(repo.bal("army_march_days_cap"))
+	if max_days >= 0:
+		cap = mini(cap, max_days)
 	for n in range(1, cap + 1):
 		if _march_one(repo, state, code, entry, day + n - 1):
 			return n
@@ -1134,10 +1178,10 @@ static func march_days(repo: DataRepository, state: GameState, code: String, met
 	return int(ceil(metres / float(step)))
 
 
-## PLACEHOLDER (owner 2026-09-17: the battle formula is not decided). The
-## attacker's power in the attack stance over both sides' powers, each on its
-## own ground. Called by nothing but its test; replace it whole when the
-## owner settles the formula. Height is its first settled factor (spec
+## The attacker's power in the attack stance over both sides' powers, each on
+## its own ground, as a float for a single pair. A battle's round is
+## BattleSystem (spec 2026-10-07-enemy-ai-and-battle §4.2), which sums whole
+## sides and settles in per mille with the same height factor (spec
 ## 2026-09-19-map3d-heights §2): the higher side's power is scaled up and the
 ## lower side's down by the same height_factor.
 static func battle_odds(repo: DataRepository, state: GameState, attacker_code: String, defender_code: String) -> float:

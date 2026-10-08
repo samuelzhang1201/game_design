@@ -307,7 +307,7 @@ static func plan_reading(repo: DataRepository, state: GameState, piece: Dictiona
 		return out
 	var delta := ArmySystem.elevation_of(repo, reg, state) - int(out["metres"])
 	var heads_ours := ArmySystem.headcount(repo, reg)
-	var fit := heads_ours - clampi(int(ArmySystem.state_of(repo, state, code).get("wounded", 0)), 0, heads_ours)
+	var fit := ArmySystem.fit_heads(heads_ours, ArmySystem.state_of(repo, state, code))
 	@warning_ignore("integer_division")  # whole men, per-mille factors
 	var ours := fit * _factor(repo, state, code, "attack", terrain, "") / 1000 * ArmySystem.height_factor(repo, delta) / 1000
 	@warning_ignore("integer_division")  # whole men, per-mille height

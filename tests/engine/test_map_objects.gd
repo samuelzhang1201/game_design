@@ -197,6 +197,34 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 	for piece: String in Game.data.army_art:
 		assert_true(GameArt.table(GameArt.ARMY_PAINTINGS).of(piece) is Texture2D, "%s's card painting is installed" % piece)
 
+## The regiment card names its BATTLE stance (battle_stances.csv label; not
+## "Stance", the diplomatic word) for the crown's own regiments, a landed
+## stance for tomorrow beside it; a foe's card never shows one.
+func test_a_regiment_card_names_its_battle_stance() -> void:
+	var s := SuiteData.campaign(Game.data, 7)
+	var mine := Game.data.resolve_realm("player_realm")
+	var code := String((MapObjects.regiments_of(Game.data, mine)[0] as Dictionary)["regiment_code"])
+	s.regiments[code]["stance"] = "hold"
+	var fields := {}
+	for f: Array in MapObjects.army_card(Game.data, code, s)["fields"]:
+		fields[String(f[0])] = String(f[1])
+	assert_eq(fields.get("Battle stance", ""), String(Game.data.battle_stances["hold"]["label"]))
+	assert_false(fields.has("Stance"), "the diplomatic word is not used")
+	s.regiments[code]["stance_next"] = "steady"
+	fields = {}
+	for f: Array in MapObjects.army_card(Game.data, code, s)["fields"]:
+		fields[String(f[0])] = String(f[1])
+	assert_eq(fields.get("Battle stance", ""), "%s, %s from tomorrow" % [
+		String(Game.data.battle_stances["hold"]["label"]), String(Game.data.battle_stances["steady"]["label"])])
+	var foe: String = (s.foes.keys() as Array)[0]
+	var was := Intel.dev_all
+	Intel.dev_all = true
+	var foe_fields: Array = (MapObjects.army_card(Game.data, foe, s)["fields"] as Array).map(
+		func(f: Array) -> String: return String(f[0]))
+	Intel.dev_all = was
+	assert_false("Battle stance" in foe_fields, "never a foe's, even in dev mode")
+
+
 ## The card of a player's regiment reads its state (owner 2026-09-17): the
 ## ground, morale, the wounded beside the headcount, the month's recovery
 ## and supply use, and the training and strength only as words.

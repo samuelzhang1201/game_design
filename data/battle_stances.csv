@@ -1,0 +1,4 @@
+stance,label,defence_permille,morale_decay_permille,retreat_odds_permille,retreats_on_contact,notes
+hold,Hold,1150,500,0,0,"spec 2026-10-07-enemy-ai-and-battle §4.4: first draft. A standing order set by courier. defence_permille scales the side's defence (1000 = none); morale_decay_permille scales a day's morale loss (1000 = none); retreat_odds_permille = the odds below which the regiment retreats on its own (0 = never); retreats_on_contact 1 = leaves on the first day of contact"
+steady,Steady,1000,1000,300,0,"no change; retreats of its own accord when the odds fall below 300 per mille"
+evade,Evade,800,1000,1000,1,"weaker in defence; leaves the field on the first day of contact"

@@ -189,6 +189,23 @@ static func _hostiles(repo: DataRepository, state: GameState) -> Array:
 
 ## Where a hostile regiment stands within supply_cut_reach_m of the road:
 ## {at: the nearest road point (pack px), by: its kingdom}; {} when clear.
+## A line whose regiment GARRISONS a town under siege (ArmyGround.garrison_town,
+## SiegeSystem.besieged) is cut by the besiegers (spec §5.1: a besieged town is
+## cut off, lines too, so its hunger cannot be fed by a supply point): {at (the
+## town's point, PACK px), by (the leading host's kingdom), host}; {} otherwise.
+static func siege_cut(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var held := ArmyGround.garrison_town(repo, state, code)
+	if held == "" or not SiegeSystem.besieged(state, held):
+		return {}
+	var host := SiegeSystem.lead_of(repo, state, held)
+	var kingdom := ""
+	for c: String in EnemyAi.regiments_of(state, host):
+		kingdom = String(ArmySystem.regiment(repo, c, state).get("kingdom_code", ""))
+		break
+	return {"at": ArmySystem.metres_to_pack(repo, EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, held)),
+		"by": kingdom if kingdom != "" else host, "host": host}
+
+
 static func cut_point(repo: DataRepository, state: GameState, route: PackedVector2Array) -> Dictionary:
 	if route.size() < 2:
 		return {}
@@ -384,7 +401,8 @@ static func fed_from_words(repo: DataRepository, from: String) -> String:
 ## each day, free of cartage and road (spec §3.2 step 4), from: its own town
 ## (crown, lord, the houses' stock bought); then the depot (crown, lord);
 ## then the CROWN's stock of the other realm towns, nearest first (owner
-## 2026-10-07, option A). Nothing past its own town is bought. The first day
+## 2026-10-07, option A) — but a town under siege (SiegeSystem.besieged)
+## feeds its garrison from its own stores alone. Nothing past its own town is bought. The first day
 ## its town falls short returns a `town_dry` event {depot, realm: the other
 ## towns were drawn}, said once until its town fills it again (`supply_dry`);
 ## `supply_fed` keeps where it was fed from last (the depot, "" the realm's).
@@ -410,6 +428,8 @@ static func _refill_in_town(repo: DataRepository, state: GameState, code: String
 	if rest <= 0:
 		_wet(entry)
 		return {}
+	if SiegeSystem.besieged(state, held):
+		return {}   # the besiegers let nothing in: the garrison eats what it carries
 	var dep := TownStores.depot(repo, state)
 	var got := 0
 	if dep != held:
@@ -590,15 +610,19 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 			ln["state"] = FLOWING
 			events.append({"type": "opened", "regiment": code, "town": town})
 		var route := road_px(repo, state, code, town)
-		var cut := cut_point(repo, state, route)
+		var cut := siege_cut(repo, state, code)
+		if cut.is_empty():
+			cut = cut_point(repo, state, route)
 		if not cut.is_empty():
 			if String(ln["state"]) != CUT:
 				var at := ArmySystem.pack_to_metres(repo, cut["at"])
 				ln["cut_x_m"] = at.x
 				ln["cut_y_m"] = at.y
 				ln["cut_by"] = String(cut["by"])
-				events.append({"type": "cut", "regiment": code, "town": town, "by": String(cut["by"]),
-					"at": cut["at"]})
+				var ev := {"type": "cut", "regiment": code, "town": town, "by": String(cut["by"]), "at": cut["at"]}
+				if cut.has("host"):
+					ev["host"] = String(cut["host"])
+				events.append(ev)
 			ln["state"] = CUT
 			continue
 		if String(ln["state"]) == CUT:

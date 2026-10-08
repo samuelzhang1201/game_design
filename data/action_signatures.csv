@@ -28,6 +28,7 @@ GOODS_SELL,,0,0,0,0,0,
 MANOR_RUSH,,10,0,0,0,0,the crown hurries its own works
 ARMY_MARCH,,0,15,0,0,5,the host takes the road
 ARMY_GARRISON,,5,5,0,0,0,the host holds its ground
+ARMY_STANCE,,0,5,0,0,0,the host is told how to stand in battle
 SPY_SEND,,0,5,0,0,0,eyes on another's land
 WORKSHOP_RATE,,0,5,0,0,0,civil goods turned to arms
 GOVERNOR_SET,,5,0,0,0,0,the crown chooses its own men
@@ -36,4 +37,5 @@ TRADE_ROUTE_SET,,5,5,0,0,0,the crown's hand on the trade
 SUPPLY_POINT_SET,,5,5,0,0,0,the crown feeds its host from its own towns
 SUPPLY_POINT_CLEAR,,0,0,0,0,0,the wagons are called home
 SUPPLY_CARRY_SET,,0,3,0,0,0,the host's train is loaded
+BATTLE_LOST,,0,20,0,0,10,"not an order: a town lost to a siege (DefeatSystem); each seat feels battle_defeat_opinion scaled by OpinionDrift.weight of this — the realm's arms and reach"
 ARMY_SEAT,,3,3,0,0,0,the watch is changed at the gate

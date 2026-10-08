@@ -402,7 +402,10 @@ func test_every_live_land_unit_starts_camped_by_a_town_its_kingdom_holds() -> vo
 		assert_ne(want, "", code + ": its regiment stood in a held town")
 		assert_eq(String(unit.get("camp_town", "")), want, code + " was placed by that town")
 		var camp := String(unit.get("camp_town", ""))
-		if camp != "":
+		if camp != "" and ArmySystem.is_foe(s, code):
+			# a raid host raised it: it left its camp (EnemyAi.spawn)
+			assert_eq(ArmyGround.camped_by(repo, s, code), "", code + " raised: camps by no town")
+		elif camp != "":
 			assert_eq(ArmyGround.camped_by(repo, s, code), camp, code + " camps by it")
 			assert_true(ArmyGround.holds(repo, s, String(unit["kingdom_code"]), camp), code + ": its kingdom holds it")
 	assert_gt(land, 0)
