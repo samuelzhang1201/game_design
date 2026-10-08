@@ -91,6 +91,8 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	ArmySystem.ensure(data, s)
 	# The pools as each town holds them (spec 2026-10-07-army-supply-lines §3.1).
 	TownStores.seed_from_pools(data, s)
+	# The laws start as the metrics and the pack's economy row left them.
+	LawSystem.seed(data, s)
 	for id in s.characters:
 		if s.characters[id].seat != "":
 			s.council[s.characters[id].seat] = id
@@ -360,6 +362,16 @@ var hazards: Dictionary = {}
 var hazards_seeded := false
 ## Bumped by every change to `hazards` (Hazards' cell index); not saved.
 var hazards_rev := 0
+## The laws (spec 2026-10-08-laws-tab-design §2.2, LawSystem). Values are
+## Strings ("on", a choice's name, a range's digits).
+## law_code -> {value, decree_id, day}: what the crown has decreed.
+var law_decree: Dictionary = {}
+## scope_key ("province:<code>", "town:<code>", "unit:<code>") -> {law_code ->
+## {value, decree_id}}: what each place or unit follows. A place with no entry
+## follows the law's default. Read it through LawSystem.value.
+var law_in_force: Dictionary = {}
+## law_code -> the tick until which the law is on cooldown.
+var law_cooldown: Dictionary = {}
 
 const SAVE_VERSION := 6
 ## The oldest save this build loads (spec 2026-10-07-army-split-and-ground
@@ -419,6 +431,9 @@ func to_dict() -> Dictionary:
 		"supply_lines": _encode_values(supply_lines.duplicate(true)),
 		"hazards": _encode_values(hazards.duplicate(true)),
 		"hazards_seeded": hazards_seeded,
+		"law_decree": _encode_values(law_decree.duplicate(true)),
+		"law_in_force": _encode_values(law_in_force.duplicate(true)),
+		"law_cooldown": _encode_values(law_cooldown.duplicate(true)),
 	}
 
 ## `invalidate` false for a scratch copy of the live state (Game.review_drafts):
@@ -515,6 +530,11 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# seeds them once at the save's own tick (Hazards.ensure).
 	s.hazards = _decode_values(d.get("hazards", {}))
 	s.hazards_seeded = bool(d.get("hazards_seeded", false))
+	# Saves from before the laws carry none: Game.load_campaign seeds them from
+	# the metrics (LawSystem.ensure).
+	s.law_decree = _decode_values(d.get("law_decree", {}))
+	s.law_in_force = _decode_values(d.get("law_in_force", {}))
+	s.law_cooldown = _decode_values(d.get("law_cooldown", {}))
 	if invalidate:
 		MapOwnership.invalidate()
 	return s

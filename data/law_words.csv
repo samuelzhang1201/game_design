@@ -1,0 +1,25 @@
+key,text
+page_economy,Economy
+page_politics,Politics
+page_military,Military
+group_conduct,Conduct in the field
+group_discipline,Discipline in camp
+group_chivalry,Chivalry
+decree,Decree
+decreed,Decreed
+delivered,Delivered
+riding,riding
+reached,reached
+in_force,In force
+effects,Effects
+cost,Cost
+couriers,couriers
+provinces,provinces
+camps,camps
+units_in_the_field,units in the field
+refusal_unchanged,That is already the decreed law.
+refusal_cooldown,The chancery has only just drafted a change to this law.
+refusal_gold,The chest cannot pay the couriers.
+refusal_no_recipient,There is no one to carry the decree.
+value_on,On
+value_off,Off
