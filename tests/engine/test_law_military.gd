@@ -511,10 +511,10 @@ func test_a_day_reconciles_the_laws() -> void:
 
 func test_the_summary_spells_the_rows() -> void:
 	assert_eq(LawEffects.summary(repo, "plunder", "allow"),
-		"morale +2 · contentment −0.4/month · church −0.2/month · legitimacy −0.1/month · a standing order")
+		"Morale +2 · Contentment −0.4/month · Church −0.2/month · Legitimacy −0.1/month · A standing order")
 	assert_eq(LawEffects.summary(repo, "plunder", "forbid"), "")
 	assert_eq(LawEffects.summary(repo, "register_prisoners", "on"),
-		"treasury −2/month per 1,000 men · legitimacy +0.1/month · a standing order")
-	assert_eq(LawEffects.summary(repo, "truce_days", "on"), "church +0.3/month · pace −50‰")
+		"Treasury −2/month per 1,000 men · Legitimacy +0.1/month · A standing order")
+	assert_eq(LawEffects.summary(repo, "truce_days", "on"), "Church +0.3/month · Pace −50‰")
 	assert_eq(LawEffects.summary(repo, "justice_severity", "4"),
-		"once: unrest −2.0 per point · once: contentment −2.0 per point")
+		"Unrest −2 per point, once · Contentment −2 per point, once")

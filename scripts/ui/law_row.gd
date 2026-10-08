@@ -36,16 +36,18 @@ func _ready() -> void:
 
 
 ## Fill the row for `law`: its name, its group's title when it is the first
-## row of its group (`titled`), its words, and the menu of its values. The
+## row of its group (`titled`) with the scene's gap above it when another group
+## stands before it (`gapped`), its words, and the menu of its values. The
 ## menu's popup wears the CardMenuPopup kind (a popup is no scene node, so it
 ## cannot be authored; MapDetailPanel's build menu does the same).
-func setup(law: String, titled: bool) -> void:
+func setup(law: String, titled: bool, gapped := false) -> void:
 	_law = law
 	var repo := Game.data
 	var d := LawSystem.def(repo, law)
 	%Label.text = String(d["label"])
 	var group := String(d.get("group", ""))
 	%GroupTitle.visible = titled and group != ""
+	%GroupGap.visible = titled and gapped and group != ""
 	%GroupTitle.text = _word("group_" + group) if group != "" else ""
 	%Decree.text = _word("decree")
 	%Places.text = _word("places")
@@ -98,17 +100,29 @@ func refresh(places := "") -> void:
 		_delivery_key = dkey
 		_delivery = LawSystem.delivery(repo, state, _law)
 	%Delivery.text = _delivery_words(_delivery)
-	%Places.disabled = int(_delivery["riding"]) + (_delivery["missing"] as Array).size() == 0
+	# Places only while something is outstanding: a courier riding, a place
+	# lost or not sent
+	%Places.visible = int(_delivery["riding"]) + (_delivery["missing"] as Array).size() > 0
 	var pkey := "%s|%s|%d|%d|%d|%d|%d|%s" % [_chosen, decreed, id, state.tick, state.day,
 		state.couriers.size(), int(float(state.metrics.get("treasury", 0.0))), places]
 	if pkey != _preview_key:
 		_preview_key = pkey
 		_preview = LawSystem.preview(repo, state, _law, _chosen)
-	var summary := LawEffects.summary(repo, _law, _chosen)
+	# The note under the row speaks only while the player decides: the chosen
+	# value's effects when it differs from the decree, its cost or the real
+	# reason it cannot be sent; the decreed value itself says nothing (the
+	# Decree button's tooltip says why it is greyed).
+	var differs := _chosen != decreed
+	var summary := LawEffects.summary(repo, _law, _chosen) if differs else ""
 	%Effects.text = "%s: %s" % [_word("effects"), summary] if summary != "" else ""
 	var why := String(_preview["refusal"])
-	%Preview.text = refusal_words(_preview) if why != "" else _cost_words(_preview)
+	var unchanged := String(_preview.get("refusal_key", "")) == "unchanged"
+	%Preview.text = "" if unchanged else (refusal_words(_preview) if why != "" else _cost_words(_preview))
 	%Decree.disabled = why != ""
+	%Decree.tooltip_text = refusal_words(_preview) if unchanged else ""
+	%Effects.visible = %Effects.text != ""
+	%Preview.visible = %Preview.text != ""
+	%Notes.visible = %Effects.visible or %Preview.visible
 
 
 ## "20 / 20 provinces"; "8 / 10 camps and 3 / 5 units in the field"; then

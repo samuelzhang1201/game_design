@@ -334,10 +334,11 @@ static func month_lines(repo: DataRepository, state: GameState) -> Array:
 
 
 ## The screen's words for what `law` at `value` does, spelled from its
-## law_effects.csv rows in file order and joined by " · ": "morale +2",
-## "contentment −0.4/month", "treasury −2/month per 1,000 men", "pace −50‰",
-## "once: unrest −2.0 per point"; a row with no number is its channel's word
-## ("a standing order" for a flag). A range law's rows with no value hold at
+## law_effects.csv rows in file order and joined by " · ", each part
+## capitalised: "Morale +2", "Contentment −0.4/month", "Treasury −2/month per
+## 1,000 men", "Pace −50‰", "Unrest −2 per point, once"; a row with no number
+## is its channel's word ("A standing order" for a flag). Whole figures lose
+## their ".0", others keep tenths. A range law's rows with no value hold at
 ## every value. "" when the value does nothing.
 static func summary(repo: DataRepository, law: String, value: String) -> String:
 	var d := LawSystem.def(repo, law)
@@ -354,23 +355,29 @@ static func summary(repo: DataRepository, law: String, value: String) -> String:
 		var channel := String(row["channel"])
 		var word := channel_word(repo, channel)
 		var raw := String(row["amount"]).strip_edges()
+		var text := ""
 		if channel == CHANNEL_FLAG or raw == "":
-			parts.append(word)
-			continue
-		var amount := amount_of(repo, raw)
-		var whole := channel in WHOLE_POOLS
-		if channel == CHANNEL_PACE:
-			parts.append("%s %s%s" % [word, _signed(amount, true), String(repo.law_words.get("per_mille", "‰"))])
-		elif channel == CHANNEL_MARK:
-			parts.append("%s %s" % [word, _signed(amount, is_equal_approx(amount, roundf(amount)))])
-		elif String(row["timing"]) == ONCE:
-			var text := "%s %s %s" % [String(repo.law_words.get("once", "once:")), word, _signed(amount, whole)]
-			if v == "" and is_range:
-				text += " " + String(repo.law_words.get("per_point", "per point"))
-			parts.append(text)
+			text = word
 		else:
-			var text := "%s %s%s" % [word, _signed(amount, whole), String(repo.law_words.get("per_month", "/month"))]
-			if whole and String(row["share"]) == ARMY:
-				text += " " + String(repo.law_words.get("per_1000_men", "per 1,000 men"))
-			parts.append(text)
+			var amount := amount_of(repo, raw)
+			if channel == CHANNEL_PACE:
+				text = "%s %s%s" % [word, _figure(amount), String(repo.law_words.get("per_mille", "‰"))]
+			elif channel == CHANNEL_MARK:
+				text = "%s %s" % [word, _figure(amount)]
+			elif String(row["timing"]) == ONCE:
+				text = "%s %s" % [word, _figure(amount)]
+				if v == "" and is_range:
+					text += " " + String(repo.law_words.get("per_point", "per point"))
+				text += ", " + String(repo.law_words.get("once", "once"))
+			else:
+				text = "%s %s%s" % [word, _figure(amount), String(repo.law_words.get("per_month", "/month"))]
+				if channel in WHOLE_POOLS and String(row["share"]) == ARMY:
+					text += " " + String(repo.law_words.get("per_1000_men", "per 1,000 men"))
+		parts.append(text.left(1).to_upper() + text.substr(1))
 	return " · ".join(parts)
+
+
+## A signed figure for the screen: a whole one without ".0" ("−2"), any other
+## in tenths ("−0.4"); the minus a real minus sign.
+static func _figure(value: float) -> String:
+	return _signed(value, is_equal_approx(value, roundf(value)))

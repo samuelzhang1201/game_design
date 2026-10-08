@@ -5,8 +5,16 @@
 [node name="LawRow" type="VBoxContainer" unique_id=1311606854]
 editor_description = "One law's row on the laws screen, instanced a law at a time by LawsScreen; LawRow fills its words and values from the engine."
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
+theme_override_constants/separation = 0
 script = ExtResource("1_jde1k")
+
+[node name="GroupGap" type="Control" parent="." unique_id=1562717890]
+unique_name_in_owner = true
+editor_description = "The space above a military group's title after the first; shown by LawRow.setup."
+visible = false
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+mouse_filter = 2
 
 [node name="GroupTitle" type="Label" parent="." unique_id=1449097703]
 unique_name_in_owner = true
@@ -22,7 +30,7 @@ theme_override_constants/separation = 12
 
 [node name="Label" type="Label" parent="Line" unique_id=1502011575]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(180, 0)
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 theme_type_variation = &"InfoLabel"
 text = "Tax rate"
@@ -59,9 +67,9 @@ unique_name_in_owner = true
 editor_description = "Its items are the law's values (LawRow.setup: a toggle's two, a choice's names, a range's levels). Its popup wears the CardMenuPopup kind, set in code: a popup is no scene node."
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
-size_flags_vertical = 4
 focus_mode = 0
 theme_type_variation = &"CardMenu"
+theme_override_font_sizes/font_size = 20
 fit_to_longest_item = false
 
 [node name="Decree" type="Button" parent="Line" unique_id=1267894580]
@@ -74,12 +82,14 @@ theme_type_variation = &"Command"
 text = "Decree"
 
 [node name="Notes" type="MarginContainer" parent="." unique_id=1699696751]
+unique_name_in_owner = true
+editor_description = "The row's note (the chosen value's effects, its cost or why it cannot be sent): LawRow.refresh hides it, and each label in it, while it has nothing to say, so a row gives its space back."
 layout_mode = 2
-theme_override_constants/margin_left = 192
+theme_override_constants/margin_left = 232
 
 [node name="NotesCol" type="VBoxContainer" parent="Notes" unique_id=1102207834]
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 0
 
 [node name="Effects" type="Label" parent="Notes/NotesCol" unique_id=1791916812]
 unique_name_in_owner = true

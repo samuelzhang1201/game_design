@@ -29,7 +29,7 @@ channel_unrest,unrest
 channel_treasury,treasury
 channel_grain,grain
 channel_flag,a standing order
-once,once:
+once,once
 per_month,/month
 per_point,per point
 per_mille,‰

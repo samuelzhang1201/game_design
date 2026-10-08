@@ -63,7 +63,7 @@ func _build_rows() -> void:
 			var row: LawRow = ROW.instantiate()
 			row.name = "Law_" + law
 			%Rows.add_child(row)
-			row.setup(law, group != last)
+			row.setup(law, group != last, last != "")
 			last = group
 			row.decree_pressed.connect(_decree)
 			row.places_pressed.connect(_show_places)

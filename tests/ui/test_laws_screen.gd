@@ -135,17 +135,24 @@ func test_three_pages_show_their_laws() -> void:
 			continue
 		var group := String(Game.data.laws[row.law()]["group"])
 		assert_eq(row.group_title().visible, group != last, row.law() + ": a title only over its group's first row")
+		assert_eq((row.get_node("%GroupGap") as Control).visible, group != last and last != "",
+			row.law() + ": a gap above every title but the first")
 		if group != last:
 			titles.append(row.group_title().text)
 			last = group
 	assert_eq(titles, [_word("group_conduct"), _word("group_discipline"), _word("group_chivalry")])
+	# twelve rows and three titles overflow the frame: the page scrolls
+	var scroll := screen.get_node("%Scroll") as ScrollContainer
+	await wait_process_frames(2)
+	assert_gt(scroll.get_v_scroll_bar().max_value, scroll.size.y + 1.0, "the military page scrolls")
 
 
 func test_choosing_a_value_shows_the_cost_from_the_preview() -> void:
 	var r: GameRoot = await _court()
 	var screen := await _open(r)
 	var row := screen.row("tax_rate")
-	assert_eq(row.preview_text(), _word("refusal_unchanged"), "the decreed value: law_words' refusal")
+	assert_eq(row.preview_text(), "", "the decreed value: no note")
+	assert_eq(row.decree_button().tooltip_text, _word("refusal_unchanged"), "the button says why it is greyed")
 	assert_true(row.decree_button().disabled)
 	var v := _other_tax()
 	await _choose(r, row, v)
@@ -398,14 +405,16 @@ func test_the_chosen_value_is_forgotten_on_close_and_on_a_new_reign() -> void:
 	assert_false(screen.visible)
 	screen = await _open(r)
 	assert_eq(String(row.choice().get_item_metadata(row.choice().selected)), decreed, "reopened on the decree")
-	assert_eq(row.preview_text(), _word("refusal_unchanged"))
+	assert_eq(row.preview_text(), "")
+	assert_eq(row.decree_button().tooltip_text, _word("refusal_unchanged"))
 	await _choose(r, row, _other_tax())
 	Game.start_campaign(45)
 	Game.state_changed.emit()
 	await wait_process_frames(2)
 	assert_eq(String(row.choice().get_item_metadata(row.choice().selected)),
 		LawSystem.decreed(Game.data, Game.state, "tax_rate"), "a new reign: the new decree")
-	assert_eq(row.preview_text(), _word("refusal_unchanged"))
+	assert_eq(row.preview_text(), "")
+	assert_eq(row.decree_button().tooltip_text, _word("refusal_unchanged"))
 
 
 ## A province gained since the decree has had no courier: it is listed as
@@ -432,3 +441,67 @@ func test_a_place_gained_since_is_listed_as_not_sent() -> void:
 	var label := LawSystem.place_label(Game.data, Game.state, "province:" + gained)
 	assert_string_contains(screen.detail_text(), "%s — %s" % [label, _word("not_sent")])
 	assert_false(screen.detail_text().contains("%s — %s" % [label, _word("lost")]))
+
+
+## The decreed value has nothing to say: no note under the row (the note
+## gives its space back), and Decree's tooltip carries the sentence.
+func test_an_unchanged_row_shows_no_note_and_the_tooltip_says_why() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	for page: String in ["economy", "politics", "military"]:
+		await _click_on(r, screen.page_button(page))
+		for row: LawRow in screen.rows():
+			if not row.is_visible_in_tree():
+				continue
+			assert_eq(row.preview_text(), "", row.law())
+			assert_eq(row.effects_text(), "", row.law())
+			assert_false((row.get_node("%Notes") as Control).visible, row.law() + ": the note gives its space back")
+			assert_eq(row.decree_button().tooltip_text, _word("refusal_unchanged"), row.law())
+			assert_true(row.decree_button().disabled)
+
+
+## A value other than the decree shows what it does, spelled from
+## law_effects.csv, beside its cost.
+func test_a_differing_value_shows_its_effects() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	await _click_on(r, screen.page_button("politics"))
+	var row := screen.row("justice_severity")
+	var now := int(LawSystem.decreed(Game.data, Game.state, "justice_severity"))
+	var v := str(now + 1 if now < 5 else now - 1)
+	await _choose(r, row, v)
+	var said := LawEffects.summary(Game.data, "justice_severity", v)
+	assert_eq(said, "Unrest −2 per point, once · Contentment −2 per point, once")
+	assert_eq(row.effects_text(), "%s: %s" % [_word("effects"), said])
+	assert_true((row.get_node("%Notes") as Control).visible)
+	assert_ne(row.preview_text(), "", "its cost beside it")
+	assert_eq(row.decree_button().tooltip_text, "")
+	# back to the decree: silent again
+	await _choose(r, row, str(now))
+	assert_eq(row.effects_text(), "")
+	assert_false((row.get_node("%Notes") as Control).visible)
+
+
+## Places shows only while something is outstanding: hidden at 20 / 20,
+## shown while a courier rides, hidden again once every place is told.
+func test_places_shows_only_while_a_place_is_untold() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	var row := screen.row("tax_rate")
+	assert_false(row.places_button().visible, "every place told: nothing to list")
+	var v := _other_tax()
+	await _choose(r, row, v)
+	var n := int(LawSystem.preview(Game.data, Game.state, "tax_rate", v)["couriers"])
+	await _click_on(r, row.decree_button())
+	await wait_process_frames(2)
+	assert_true(row.places_button().visible, "couriers riding: the list has places")
+	for i in 60:
+		Game.advance_day()
+		await wait_process_frames(1)
+		var d := LawSystem.delivery(Game.data, Game.state, "tax_rate")
+		if int(d["riding"]) == 0:
+			break
+	await wait_process_frames(2)
+	var d := LawSystem.delivery(Game.data, Game.state, "tax_rate")
+	assert_eq(int(d["reached"]), n)
+	assert_false(row.places_button().visible, "all told again: Places hides")

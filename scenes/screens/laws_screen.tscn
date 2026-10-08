@@ -9,9 +9,11 @@
 editor_description = "The laws (spec 2026-10-08-laws-tab-design §5): GameRoot toggles it from the LAWS tab. It never holds the clock. Its root and Dim let clicks through, and the frame stops short of the top bar (the clock) and the bottom bar (the tabs), so both stay usable while it is open."
 visible = false
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_cytqp")
 
@@ -100,7 +102,7 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="LawHead" type="Label" parent="Frame/Col/Heads" unique_id=53058022]
-custom_minimum_size = Vector2(180, 0)
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 theme_type_variation = &"InfoHead"
 text = "Law"
@@ -129,7 +131,7 @@ unique_name_in_owner = true
 editor_description = "A LawRow (scenes/panels/law_row.tscn) a law, instanced by LawsScreen._build_rows in each page's file order."
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 0
 
 [node name="Detail" type="PanelContainer" parent="." unique_id=262044696]
 unique_name_in_owner = true
