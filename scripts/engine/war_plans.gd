@@ -133,9 +133,15 @@ static func edit_piece(repo: DataRepository, state: GameState, id: String, arm: 
 	return true
 
 
-## Removes a piece or a stroke by id.
+## Removes a piece or a stroke by id; a piece takes the red arrows drawn
+## for it (`of`) with it.
 static func remove(state: GameState, id: String) -> bool:
 	var gone: bool = (state.war_plans[PIECES] as Dictionary).erase(id) or (state.war_plans[STROKES] as Dictionary).erase(id)
+	if gone and id.begins_with("p"):
+		var strokes: Dictionary = state.war_plans[STROKES]
+		for sid: String in strokes.keys():
+			if String((strokes[sid] as Dictionary).get("of", "")) == id:
+				strokes.erase(sid)
 	if gone:
 		bump(state)
 	return gone
@@ -233,16 +239,64 @@ static func _pts_m(repo: DataRepository, pts_px: PackedVector2Array) -> Array:
 	return out
 
 
-## Draws a stroke; its id, "" when refused.
+## Draws a stroke; its id, "" when refused. `flip` its facing (a front's
+## teeth: 0 the drawer's right, 1 the left; -1 the right); `of` the supposed
+## piece or intel hint a red arrow is drawn for (spec 2026-10-08-war-room-
+## draw-orders rulings 12, 17), "" none.
 static func draw(repo: DataRepository, state: GameState, kind: String, colour: String,
-		pts_px: PackedVector2Array, r_px: float, name: String, dashed := false) -> String:
+		pts_px: PackedVector2Array, r_px: float, name: String, dashed := false, flip := -1, of := "") -> String:
 	if stroke_refusal(repo, state, kind, colour, pts_px, r_px, name) != "":
 		return ""
 	var id := _next_id(state, "s")
-	state.war_plans[STROKES][id] = {"kind": kind, "colour": colour, "dashed": 1 if dashed else 0, "flip": 0,
-		"name": name, "pts": _pts_m(repo, pts_px), "r_m": _metres(repo, Vector2(r_px, 0.0)).x}
+	state.war_plans[STROKES][id] = {"kind": kind, "colour": colour, "dashed": 1 if dashed else 0,
+		"flip": 1 if flip == 1 else 0, "name": name, "pts": _pts_m(repo, pts_px), "r_m": _metres(repo, Vector2(r_px, 0.0)).x}
+	if of != "":
+		state.war_plans[STROKES][id]["of"] = of
 	bump(state)
 	return id
+
+
+## A front's facing (spec 2026-10-08-war-room-draw-orders ruling 12): the
+## stored `flip` that puts its teeth on the side of `pts` (its control
+## points, any y-down frame) where the NEAREST of `targets` lies — 0 the
+## drawer's right, 1 the left; with no target, the left.
+static func facing_flip(pts: PackedVector2Array, targets: Array) -> int:
+	if pts.size() < 2 or targets.is_empty():
+		return 1
+	var best := INF
+	var flip := 1
+	for t: Vector2 in targets:
+		for i in range(1, pts.size()):
+			var q := Geometry2D.get_closest_point_to_segment(t, pts[i - 1], pts[i])
+			var d := q.distance_to(t)
+			if d < best:
+				best = d
+				var dir := (pts[i] - pts[i - 1]).normalized()
+				flip = 0 if (t - q).dot(Vector2(-dir.y, dir.x)) > 0.0 else 1
+	return flip
+
+
+## What a front of `colour` faces (pack px): for red, the blue strokes'
+## points and `ours` (our pieces); for blue, the red strokes' points and the
+## supposed pieces; nothing for ink. The stroke `except_id` is left out.
+static func opposing_points(repo: DataRepository, state: GameState, colour: String, ours: Array,
+		except_id := "") -> Array:
+	var out: Array = []
+	if not colour in ["red", "blue"]:
+		return out
+	var other := "blue" if colour == "red" else "red"
+	var ids: Array = (state.war_plans[STROKES] as Dictionary).keys()
+	ids.sort()
+	for id: String in ids:
+		var s: Dictionary = state.war_plans[STROKES][id]
+		if id != except_id and String(s["colour"]) == other:
+			out.append_array(Array(points_px(repo, s)))
+	if colour == "red":
+		out.append_array(ours)
+	else:
+		for p: Dictionary in pieces_in(repo, state, Rect2(-Vector2.ONE * 1e9, Vector2.ONE * 2e9)):
+			out.append(p["at"])
+	return out
 
 
 ## A stroke's control points in pack px.

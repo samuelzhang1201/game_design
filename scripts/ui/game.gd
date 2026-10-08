@@ -172,8 +172,9 @@ func try_execute(req: ActionRequest) -> Dictionary:
 
 ## The WAR ROOM's drafts (spec 2026-10-02-war-room-v2 §3): pencilled, not
 ## sent. Game is their only writer.
-func plant_draft(code: String, order: String, dest_px: Vector2, waypoints: Array = [], carry := -1) -> void:
-	WarDrafts.plant(data, state, code, order, dest_px, waypoints, carry)
+func plant_draft(code: String, order: String, dest_px: Vector2, waypoints: Array = [], carry := -1,
+		supply_town := "", supply_rate := 0) -> void:
+	WarDrafts.plant(data, state, code, order, dest_px, waypoints, carry, supply_town, supply_rate)
 	state_changed.emit()
 
 
@@ -217,8 +218,9 @@ func clear_plans(kind: String, rect: Rect2) -> int:
 	return _plans(WarPlans.clear(data, state, kind, rect))
 
 
-func draw_plan(kind: String, colour: String, pts: PackedVector2Array, r_px: float, name: String, dashed: bool) -> String:
-	return _plans(WarPlans.draw(data, state, kind, colour, pts, r_px, name, dashed))
+func draw_plan(kind: String, colour: String, pts: PackedVector2Array, r_px: float, name: String, dashed: bool,
+		flip := -1, of := "") -> String:
+	return _plans(WarPlans.draw(data, state, kind, colour, pts, r_px, name, dashed, flip, of))
 
 
 func reshape_plan(id: String, pts: PackedVector2Array, r_px := -1.0) -> bool:
@@ -281,8 +283,10 @@ func review_drafts() -> Dictionary:
 			to = Intel.place_label(data, state, dest)
 			days = CourierSystem.arrival_days(data, state, code, dest, Vector2(-1, -1), -1,
 				Array(WarDrafts.waypoints_px(data, d)), int(d.get("carry_days", -1)))   # ride + march
+		var town := String(d.get("supply_town", ""))
 		lines.append({"code": code, "label": String(reg.get("label", code)), "order": String(d["order"]),
-			"to": to, "days": days, "gold": gold, "refusal": refusal})
+			"to": to, "days": days, "gold": gold, "refusal": refusal,
+			"supply": String((data.burgs.get(town, {}) as Dictionary).get("label", town)) if town != "" else ""})
 	return {"lines": lines, "total": total}
 
 

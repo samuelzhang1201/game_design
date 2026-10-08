@@ -28,22 +28,29 @@ func test_the_hand_holds_nothing() -> void:
 	assert_eq(tool.release(Vector2(50, 0), Vector2(100, 0), false, 2.0), {})
 
 
-func test_a_kind_takes_its_default_stick_and_a_stick_keeps_the_kind() -> void:
-	tool.pick_kind("phase")
-	assert_eq(tool.stick, "ink", "a pen kind is the pen's")
-	tool.pick_kind("arrow")
-	assert_eq(tool.stick, "blue", "a crayon kind from the pen: the blue crayon")
-	tool.pick_stick("red")
-	assert_eq(tool.kind, "arrow")
-	assert_true(tool.in_hand())
+## Spec 2026-10-08-war-room-draw-orders rulings 1-3: a side first, then a kind.
+func test_no_side_no_kind_and_each_side_keeps_its_last() -> void:
+	assert_false(tool.pick_kind("front"), "no side chosen yet: nothing is taken")
+	assert_false(tool.in_hand())
+	assert_true(tool.pick("red", "front"))
+	assert_eq([tool.side, tool.kind, tool.stick], ["red", "front", "red"])
+	assert_true(tool.pick_kind("phase"))
+	assert_eq(tool.stick, "red", "the pen is retired: a phase line is the side's colour")
+	tool.switch_side()
+	assert_eq([tool.side, tool.kind], ["blue", "phase"], "Tab: the other side, the same kind")
 	tool.put_down()
 	assert_false(tool.in_hand())
+	assert_eq(tool.side, "blue", "the hand keeps the side lit")
 	tool.pick_stick("red")
-	assert_eq(tool.kind, "arrow", "a stick alone takes the last kind")
+	assert_eq(tool.kind, "phase", "a row's crayon takes that side's last kind")
+	assert_false(tool.pick("ink", "front"), "no ink stick any more")
+	tool.put_down()
+	tool.switch_side()
+	assert_eq([tool.side, tool.kind], ["blue", ""], "Tab with nothing in hand lights the other row")
 
 
 func test_a_drag_is_smoothed_to_a_few_points() -> void:
-	tool.pick_kind("arrow")
+	tool.pick("blue", "arrow")
 	var pts: Array = []
 	for i in 60:
 		pts.append(Vector2(i * 2.0, sin(i * 0.1) * 10.0))
@@ -55,31 +62,32 @@ func test_a_drag_is_smoothed_to_a_few_points() -> void:
 	assert_gte(ctrl.size(), 3, "a wave keeps its bends")
 	assert_eq(ctrl[0], pts[0])
 	assert_eq(ctrl[ctrl.size() - 1], pts[pts.size() - 1])
+	assert_gte((d["samples"] as PackedVector2Array).size(), pts.size(), "the raw samples too (an order's fit)")
 	assert_true(tool.in_hand(), "the stick stays in hand")
 
 
 func test_shift_draws_it_straight() -> void:
-	tool.pick_kind("front")
+	tool.pick("red", "front")
 	var d := _drag([Vector2(0, 0), Vector2(10, 8), Vector2(30, 0)], true)
 	assert_eq(d["pts"], PackedVector2Array([Vector2(0, 0), Vector2(30, 0)]))
 
 
 func test_a_short_drag_draws_nothing() -> void:
-	tool.pick_kind("arrow")
+	tool.pick("blue", "arrow")
 	var px := repo.bal("war_plan_min_len_px")
 	assert_eq(_drag([Vector2(0, 0), Vector2(px * 0.25, 0)]), {}, "shorter than war_plan_min_len_px on the screen")
 
 
 func test_a_ring_is_a_compass() -> void:
-	tool.pick_kind("objective")
+	tool.pick("blue", "objective")
 	var d := _drag([Vector2(10, 10), Vector2(20, 10), Vector2(40, 10)])
 	assert_eq(d["pts"], PackedVector2Array([Vector2(10, 10)]))
 	assert_almost_eq(float(d["r"]), 30.0, 0.0001)
-	assert_eq(String(d["colour"]), "ink")
+	assert_eq(String(d["colour"]), "blue")
 
 
 func test_the_live_preview_follows_the_drag() -> void:
-	tool.pick_kind("arrow")
+	tool.pick("red", "front")
 	tool.press(Vector2.ZERO, Vector2.ZERO)
 	tool.move(Vector2(20, 0), Vector2(40, 0))
 	assert_eq(tool.preview().size(), 2)

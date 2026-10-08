@@ -104,6 +104,8 @@ func unroll() -> void:
 		var days := int(l["days"])
 		lab.text = "%s → %s" % [l["label"], l["to"]] if String(l["order"]) == WarDrafts.MARCH \
 			else "%s halts where it stands" % l["label"]
+		if String(l.get("supply", "")) != "":
+			lab.text += ", supplied from %s" % String(l["supply"])   # its supply point rides with it (ruling 15)
 		if String(l["refusal"]) != "":
 			lab.text += "\n" + String(l["refusal"])   # no price: it cannot run
 			lab.theme_type_variation = &"DeployBad"

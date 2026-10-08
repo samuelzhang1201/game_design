@@ -35,3 +35,28 @@ static func carry_rows(repo: DataRepository, state: GameState, code: String, des
 			"arrive": arrive, "march": march, "units": units, "lasts": lasts, "set_out": set_out,
 			"short": maxi(0, march - set_out)})
 	return out
+
+
+## The rows of a march drawn for SEVERAL regiments (spec 2026-10-08-war-room-
+## draw-orders ruling 9): `per` code -> its carry_rows; one row a load, its
+## arrival the LAST to arrive, its supplies the sum of the trains, its
+## shortfall the worst — the regiments' own rows say each.
+static func group_rows(per: Dictionary) -> Array:
+	var codes: Array = per.keys()
+	codes.sort()
+	var out: Array = []
+	for code: String in codes:
+		var rows: Array = per[code]
+		for i in rows.size():
+			var r: Dictionary = rows[i]
+			if i >= out.size():
+				out.append(r.duplicate())
+				continue
+			var o: Dictionary = out[i]
+			o["arrive"] = maxi(int(o["arrive"]), int(r["arrive"]))
+			o["march"] = maxi(int(o["march"]), int(r["march"]))
+			o["units"] = int(o["units"]) + int(r["units"])
+			o["short"] = maxi(int(o["short"]), int(r["short"]))
+			o["set_out"] = mini(int(o["set_out"]), int(r["set_out"]))
+			o["lasts"] = mini(int(o["lasts"]), int(r["lasts"]))
+	return out

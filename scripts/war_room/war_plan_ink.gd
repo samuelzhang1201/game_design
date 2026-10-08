@@ -78,7 +78,7 @@ static func add(repo: DataRepository, out: Dictionary, s: Dictionary, kind: Dict
 			out["crayon"].append({"poly": a["band"], "colour": colour})
 		out["crayon"].append({"poly": a["head"], "colour": colour})
 		return
-	var width := repo.bal("war_plan_front_mm") * mm
+	var width := float(s.get("width_mm", repo.bal("war_plan_front_mm"))) * mm   # a pending march's feeder line names its own
 	var runs: Array = WarPlanGeometry.dashes(path, repo.bal("war_plan_dash_mm") * mm, repo.bal("war_plan_gap_mm") * mm) \
 		if dashed else [path]
 	for run: PackedVector2Array in runs:

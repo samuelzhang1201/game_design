@@ -190,7 +190,7 @@ func test_a_row_chosen_the_way_PopupMenu_chooses_it_still_takes() -> void:
 	_menu.hide()
 	_menu.id_pressed.emit(0)   # ARMY_MARCH
 	assert_eq(_menu.aiming(), code, "MARCH chosen from a closing menu still aims")
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	ArmySystem.set_march(Game.data, Game.state, code, here + Vector2(30.0, 0.0))
 	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
 	_menu.hide()
@@ -204,7 +204,7 @@ func test_a_row_chosen_the_way_PopupMenu_chooses_it_still_takes() -> void:
 func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
 	# owner 2026-09-24: 兵棋不进行移动，直到玩家点击继续游戏按钮.
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var there := _land_near(here)
 	if there == Vector2.ZERO:
 		return
@@ -218,7 +218,7 @@ func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY, "the column waits for him")
 	assert_eq(Game.clock_speed, 0, "but time stays stopped")
 	assert_signal_emitted_with_parameters(Game, "news_published",
-		["A courier will ride for %s when time runs." % String(ArmySystem.regiment(Game.data, code)["label"])])
+		["A courier will ride for %s when time runs." % String(ArmySystem.regiment(Game.data, code, Game.state)["label"])])
 
 
 ## Confirm pressed on the march's confirm panel, as a click on it presses it.
@@ -231,7 +231,7 @@ func _commit(menu: ArmyOrderMenu = null) -> void:
 
 func test_the_next_click_on_the_ground_sends_it_on_commit() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var there := _land_near(here)
 	if there == Vector2.ZERO:
 		return
@@ -276,7 +276,7 @@ func test_a_row_that_can_be_paid_for_is_live_and_says_what_it_does() -> void:
 
 func test_the_order_is_charged_like_every_other() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var there := _land_near(here)
 	if there == Vector2.ZERO:
 		return
@@ -293,7 +293,7 @@ func test_the_order_is_charged_like_every_other() -> void:
 ## owner 2026-09-27: 当点击完兵人行进路线后，会出现commit/cancel的选项.
 func test_the_destination_click_only_ASKS() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var there := _land_near(here)
 	if there == Vector2.ZERO:
 		return
@@ -314,7 +314,7 @@ func test_the_destination_click_only_ASKS() -> void:
 
 func test_cancel_gives_the_march_up() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var there := _land_near(here)
 	if there == Vector2.ZERO:
 		return
@@ -332,7 +332,7 @@ func test_cancel_gives_the_march_up() -> void:
 ## is clicked (the route is bent there); Escape gives it up.
 func test_a_click_away_from_the_confirm_leaves_it_and_escape_gives_it_up() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var there := _land_near(here)
 	if there == Vector2.ZERO:
 		return
@@ -378,7 +378,7 @@ func test_starting_the_clock_withdraws_an_aim() -> void:
 ## owner 2026-09-27: 行进路线commit后，再次点击终点可以edit路线或者cancel操作.
 func test_the_end_ring_edits_or_halts_the_march() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	ArmySystem.set_march(Game.data, Game.state, code, here + Vector2(30.0, 0.0))
 	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
 	assert_eq(_menu.item_count, 2)
@@ -404,7 +404,7 @@ func test_the_commit_row_confirms_the_order_and_names_the_fee() -> void:
 
 func test_the_route_menu_is_paused_only() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	ArmySystem.set_march(Game.data, Game.state, code, here + Vector2(30.0, 0.0))
 	Game.set_clock_speed(1)
 	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
@@ -425,7 +425,7 @@ func _fleet() -> String:
 func test_a_fleets_route_menus_promise_no_courier() -> void:
 	var fleet := _fleet()
 	assert_ne(fleet, "", "the realm has a fleet")
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, fleet))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, fleet, Game.state))
 	_map.army_menu_requested.emit(fleet, Vector2(10.0, 10.0))
 	_menu.hide()
 	_menu.id_pressed.emit(0)
@@ -442,7 +442,7 @@ func test_a_fleets_route_menus_promise_no_courier() -> void:
 	assert_eq(_menu.get_item_tooltip(halt), String(Game.data.army_route_orders["halt_fleet"]["hint"]))
 	# a land regiment's rows still send a courier
 	var code := _marcher()
-	var there := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var there := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	ArmySystem.set_march(Game.data, Game.state, code, there + Vector2(30.0, 0.0))
 	_map.route_clicked.emit(code, Vector2(10.0, 10.0))
 	assert_string_contains(_menu.get_item_tooltip(_menu.get_item_index(ArmyOrderMenu.HALT)), "courier")
@@ -457,7 +457,7 @@ func test_the_confirm_opens_where_the_ground_was_clicked() -> void:
 	add_child_autofree(menu)
 	menu.follow(map)
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var there := _land_near(here)
 	if there == Vector2.ZERO:
 		return
@@ -486,7 +486,7 @@ func test_aim_for_refuses_while_time_runs_and_arms_nothing() -> void:
 
 func test_aim_for_then_ground_then_commit_runs_the_march() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var to := _land_near(here + Vector2(8.0, 0.0))
 	assert_eq(_menu.aim_for(code), "")
 	_map.ground_clicked.emit(to)
@@ -562,7 +562,7 @@ func test_a_unit_round_a_town_opens_its_own_orders_not_a_list() -> void:
 ## next click is the end; Confirm sends the route, the courier carrying it.
 func test_add_waypoint_aims_on_and_confirm_sends_the_route() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var wp := _land_near(here)
 	var to := _land_near(here + Vector2(6.0, 0.0))
 	if wp == Vector2.ZERO or to == Vector2.ZERO:
@@ -588,7 +588,7 @@ func test_add_waypoint_aims_on_and_confirm_sends_the_route() -> void:
 ## rides as its own order before the march.
 func test_a_load_chosen_on_the_confirm_rides_before_the_march() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var to := _land_near(here)
 	if to == Vector2.ZERO:
 		return
@@ -614,7 +614,7 @@ func test_a_load_chosen_on_the_confirm_rides_before_the_march() -> void:
 ## Ruling 9: a bend the regiment could not walk (a waypoint in the sea) is put back.
 func test_a_bend_into_the_sea_is_put_back() -> void:
 	var code := _marcher()
-	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code))
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var to := _land_near(here)
 	if to == Vector2.ZERO:
 		return
@@ -630,3 +630,38 @@ func test_a_bend_into_the_sea_is_put_back() -> void:
 	_map.aim_waypoints = PackedVector2Array([Vector2(-50, -50)])
 	_map.route_bent.emit(_map.aim_waypoints)
 	assert_eq(_map.aim_waypoints, PackedVector2Array(_menu.waypoints()), "off the map: put back")
+
+
+## Spec 2026-10-08-war-room-draw-orders rulings 13-15: the confirm asks where
+## to supply the march from; the towns are lit on the map, a click on a lit
+## one chooses it, and Confirm sends the supply point, then the march.
+func test_a_supply_town_chosen_on_the_confirm_rides_before_the_march() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
+	var to := _land_near(here)
+	if to == Vector2.ZERO:
+		return
+	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+	_menu.hide()
+	_menu.id_pressed.emit(0)
+	_map.ground_clicked.emit(to)
+	assert_not_null(_menu.shown_confirm())
+	assert_eq(_menu.supply_choice(), "", "the current point (none) pressed")
+	var ok := SupplyLines.march_eligibility(Game.data, Game.state, code, to)
+	var town := ""
+	var towns: Array = ok.keys()
+	towns.sort()
+	for t: String in towns:
+		if String(ok[t]) == "":
+			town = t
+			break
+	assert_ne(town, "")
+	var b: Dictionary = Game.data.burgs[town]
+	_map.ground_clicked.emit(Vector2(float(b["x"]), float(b["y"])))   # a click on the lit town
+	assert_eq(_menu.supply_choice(), town, "the click chose it")
+	assert_eq(_menu.pending(), to, "and the march's end stayed")
+	_commit()
+	var kinds: Array = []
+	for c: Dictionary in Game.state.couriers:
+		kinds.append(String(c["order"]["action_code"]))
+	assert_eq(kinds, ["SUPPLY_POINT_SET", "ARMY_MARCH"], "the supply point rides first, its own courier")
