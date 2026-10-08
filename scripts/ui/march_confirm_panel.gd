@@ -132,6 +132,15 @@ func set_supply_figures(text: String) -> void:
 	reset_size()
 
 
+## The Supply from list as shown: [{town, label, why, disabled, selected}] (tests read it).
+func shown_supply() -> Array:
+	var out: Array = []
+	for i in _towns.size():
+		out.append({"town": String(_towns[i]), "label": _supply_town.get_item_text(i), "why": _supply_town.get_item_tooltip(i),
+			"disabled": _supply_town.is_item_disabled(i), "selected": _supply_town.selected == i})
+	return out
+
+
 ## The supply town selected ("" none / no new point).
 func chosen_supply() -> String:
 	var i := _supply_town.selected

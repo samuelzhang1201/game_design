@@ -140,6 +140,7 @@ func test_a_march_supply_town_must_reach_the_column_now_and_the_end() -> void:
 	var now := SupplyLines.eligibility(repo, s, code)
 	assert_eq(SupplyLines.march_eligibility(repo, s, code, here), now, "a march that ends where it stands: the same towns")
 	repo.balance["supply_point_max_days"] = 1000
+	repo.balance["supply_ahead_km"] = 1000000   # the reach alone (no town ahead: ruling 20 is tested below)
 	var lax := SupplyLines.march_eligibility(repo, s, code, here + Vector2(400, 0))
 	for town: String in lax:
 		assert_eq(String(lax[town]), "", "within a thousand wagon days every town reaches")
@@ -149,3 +150,73 @@ func test_a_march_supply_town_must_reach_the_column_now_and_the_end() -> void:
 	for town: String in strict:
 		if String(SupplyLines.eligibility(repo, s, code)[town]) == "":
 			assert_string_contains(String(strict[town]), "end", "a town reaching the column now but not the end says so")
+
+
+# --- never a town ahead of the column (owner 2026-10-08, spec 2026-10-08-war-room-draw-orders ruling 20)
+
+## supply_ahead_km set so the tolerance is exactly 5 pack px.
+func _tol5() -> void:
+	repo.balance["supply_ahead_km"] = 5.0 * float(ArmySystem.metres_per_pack_px(repo)) / 1000.0
+
+
+func test_a_town_behind_or_beside_the_column_is_not_ahead() -> void:
+	_tol5()
+	var at := Vector2(100, 100)
+	var dest := Vector2(200, 100)   # due east, 100 px; the first leg toward the end
+	assert_false(SupplyLines.is_ahead(repo, at, dest, dest, Vector2(80, 100)), "behind: 120 px from the end, -20 along")
+	assert_false(SupplyLines.is_ahead(repo, at, dest, dest, Vector2(100, 130)), "beside: 104.4 px from the end, 0 along")
+	assert_false(SupplyLines.is_ahead(repo, at, dest, dest, Vector2(104, 128)),
+		"equidistant (100 px from the end) and 4 px along, inside the 5 px tolerance")
+
+
+func test_a_town_nearer_the_end_or_beyond_the_column_is_ahead() -> void:
+	_tol5()
+	var at := Vector2(100, 100)
+	var dest := Vector2(200, 100)
+	assert_true(SupplyLines.is_ahead(repo, at, dest, dest, Vector2(150, 100)), "50 px from the end against 100 - 5")
+	assert_true(SupplyLines.is_ahead(repo, at, dest, dest, Vector2(140, 180)),
+		"equidistant (60-80-100 from the end) but 40 px along the advance")
+	assert_true(SupplyLines.is_ahead(repo, at, dest, dest, Vector2(106, 100)),
+		"94 px from the end: nearer by 6, beyond the tolerance")
+
+
+func test_the_first_leg_is_the_direction_of_advance() -> void:
+	_tol5()
+	var at := Vector2(100, 100)
+	var wp := Vector2(100, 200)    # south first
+	var dest := Vector2(200, 200)  # 141.4 px from the column
+	var town := Vector2(40, 150)   # 167.6 px from the end (farther than the column) but 50 px down the first leg
+	assert_true(SupplyLines.is_ahead(repo, at, wp, dest, town), "the column passes it on its first leg")
+	assert_false(SupplyLines.is_ahead(repo, at, dest, dest, town), "marching straight to the end it lies behind")
+	assert_false(SupplyLines.is_ahead(repo, at, at, at, Vector2(300, 300)), "a march that stays: nothing is ahead")
+
+
+func test_the_rear_order_puts_the_nearest_allowed_town_first_ties_toward_the_capital() -> void:
+	var why := {"a": "", "b": "", "c": "ahead of the column", "d": "", "e": ""}
+	var km := {"a": 30, "b": 12, "c": 2, "d": 12, "e": 40}
+	var to_capital := {"a": 5.0, "b": 90.0, "c": 1.0, "d": 20.0, "e": 0.0}
+	assert_eq(SupplyLines.rear_sorted(why, km, to_capital), ["d", "b", "a", "e", "c"],
+		"12 km twice: d is nearer the capital; the forbidden town last")
+
+
+func test_a_march_supply_town_ahead_of_the_column_is_greyed_with_why() -> void:
+	var code := _land()
+	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))
+	repo.balance["supply_point_max_days"] = 1000
+	_tol5()
+	var now := SupplyLines.eligibility(repo, s, code)
+	var towns: Array = now.keys()
+	towns.sort()
+	var town := String(towns[0])
+	var b: Dictionary = repo.burgs[town]
+	var t := Vector2(float(b["x"]), float(b["y"]))
+	if t.distance_to(here) < 10.0:
+		pending("the first town stands on the column")
+		return
+	var past := here + (t - here) * 2.0   # the march ends beyond the town: it lies ahead
+	var e := SupplyLines.march_eligibility(repo, s, code, past)
+	assert_string_contains(String(e[town]), "ahead", "a town the column marches through is forbidden")
+	var away := here - (t - here) * 2.0   # marching away from it: it lies behind
+	assert_eq(String(SupplyLines.march_eligibility(repo, s, code, away)[town]), "")
+	assert_string_contains(String(SupplyLines.march_eligibility(repo, s, code, away, [t])[town]), "ahead",
+		"a first waypoint on the town turns the advance toward it")

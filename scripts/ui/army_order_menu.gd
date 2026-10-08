@@ -92,6 +92,7 @@ var _group_off: Dictionary = {}
 ## The supply town chosen on the confirm ("" no new point) and every realm
 ## town's answer for this march (town -> "" or why not).
 var _supply_choice := ""
+var _supply_set := false   # the player chose the supply town (the list or a lit town): kept on a re-open
 var _supply_ok: Dictionary = {}
 
 
@@ -569,6 +570,7 @@ func _on_route_bent(waypoints: PackedVector2Array) -> void:
 		var plan := _plan()
 		_panel.refresh(plan["title"], plan["sub"], plan["rows"], _add_waypoint_row())
 		_panel.show_group(_group_rows())
+		_open_supply()   # a new first leg may turn a town ahead of the column (ruling 20)
 
 
 ## An aim or a waiting confirm given up.
@@ -699,6 +701,7 @@ func _set_aim(code: String) -> void:
 	_group_wps = {}
 	_group_why = {}
 	_group_off = {}
+	_supply_set = false
 	if not _supply_ok.is_empty() or _supply_choice != "":
 		_supply_ok = {}
 		_supply_choice = ""
@@ -782,7 +785,12 @@ func _start_supply_pick(code: String) -> void:
 	_set_aim("")
 	_supply_for = code
 	_supply_town = ""
-	_map_set("supply_pick", SupplyLines.eligibility(Game.data, Game.state, code))
+	var pick := SupplyLines.eligibility(Game.data, Game.state, code)
+	if ArmySystem.order_of(Game.data, Game.state, code) == ArmySystem.ORDER_MARCH:
+		# a column on the march: never a town ahead of it (ruling 20); standing, no direction to judge
+		SupplyLines.mark_ahead(Game.data, Game.state, code, pick, ArmySystem.destination_of(Game.data, Game.state, code),
+			Array(ArmySystem.waypoints_of(Game.data, Game.state, code)))
+	_map_set("supply_pick", pick)
 	_map_set("supply_preview", PackedVector2Array())
 	if _map != null and "aiming" in _map:
 		_map.set("aiming", true)   # the next left click only says where it landed
@@ -1005,8 +1013,11 @@ func _on_regiment_toggled(code: String, on: bool) -> void:
 
 
 ## The supply point a march's confirm asks for (ruling 13): the towns that
-## reach every marching regiment now and the march's end lit on the map, the
-## current town (or none) first and pressed.
+## reach every marching regiment now and the march's end, none AHEAD of any
+## of them (ruling 20), lit on the map; the current town (or none) first, then
+## the rest nearest the lead's column first (SupplyLines.rear_order). Pressed:
+## the player's own choice, else a draft's town, else the current town when it
+## may still serve, else the nearest town allowed — never one ahead.
 func _open_supply() -> void:
 	if _panel == null:
 		return
@@ -1021,7 +1032,7 @@ func _open_supply() -> void:
 		_map_set("supply_preview", PackedVector2Array())
 		return
 	for c: String in many:
-		var e := SupplyLines.march_eligibility(Game.data, Game.state, c, _pending)
+		var e := SupplyLines.march_eligibility(Game.data, Game.state, c, _pending, _wps_of(c))
 		for t: String in e:
 			if not _supply_ok.has(t) or (String(_supply_ok[t]) == "" and String(e[t]) != ""):
 				_supply_ok[t] = e[t]
@@ -1029,19 +1040,27 @@ func _open_supply() -> void:
 	var now := String(SupplyLines.line(Game.state, lead).get("town", ""))
 	var rows: Dictionary = Game.data.army_supply_orders
 	var first := {"town": "", "label": String(rows.get("march_none", {}).get("label", "No supply point")), "why": ""}
+	var keep := true   # the current town may go on serving: not ahead of any column
 	if now != "":
 		first["label"] = String(rows.get("march_keep", {}).get("label", "{town} (now)")).format(
 			{"town": String(Game.data.burgs.get(now, {}).get("label", now))})
-	var towns: Array = _supply_ok.keys().filter(func(t: String) -> bool: return t != now)
-	towns.sort_custom(func(a: String, b: String) -> bool:
-		var ka := (1000000 if String(_supply_ok[a]) != "" else 0) + _end_km(a)
-		var kb := (1000000 if String(_supply_ok[b]) != "" else 0) + _end_km(b)
-		return ka < kb if ka != kb else a < b)
+		for c: String in many:
+			var ahead := SupplyLines.mark_ahead(Game.data, Game.state, c, {now: ""}, _pending, _wps_of(c))
+			if String(ahead[now]) != "":
+				first["why"] = ahead[now]
+				keep = false
+				break
+	var towns: Array = _rear_order(lead).filter(func(t: String) -> bool: return t != now)
 	var options: Array = [first]
 	for t: String in towns:
 		options.append({"town": t, "label": String(Game.data.burgs[t].get("label", t)), "why": String(_supply_ok[t])})
-	if drafting and _supply_choice == "":
-		_supply_choice = String(WarDrafts.of(Game.state, lead).get("supply_town", ""))
+	if not _supply_set:
+		_supply_choice = String(WarDrafts.of(Game.state, lead).get("supply_town", "")) if drafting else ""
+		if _supply_choice == "" and not (now != "" and keep):
+			for t: String in towns:   # the nearest town on our side
+				if String(_supply_ok[t]) == "":
+					_supply_choice = t
+					break
 	if _supply_choice != "" and String(_supply_ok.get(_supply_choice, "x")) != "":
 		_supply_choice = ""
 	_panel.show_supply(options, _supply_choice, _supply_words(_supply_choice))
@@ -1049,19 +1068,24 @@ func _open_supply() -> void:
 	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, _supply_choice, _pending) if _supply_choice != "" else PackedVector2Array())
 
 
-var _km_cache: Dictionary = {}
+var _rear_cache: Dictionary = {}
 
 
-## The road's km from a town to the pending march's end (sorting the list).
-func _end_km(town: String) -> int:
-	var key := [town, _pending]
-	if not _km_cache.has(key):
-		_km_cache[key] = SupplyLines.road_km(Game.data, SupplyLines.road_between_px(Game.data, town, _pending))
-	return int(_km_cache[key])
+## The towns in the list's order for the lead's column where it stands
+## (SupplyLines.rear_order; the roads measured once a place).
+func _rear_order(lead: String) -> Array:
+	var at := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, lead, Game.state))
+	var key := [lead, at, _supply_ok.hash()]
+	if not _rear_cache.has(key):
+		if _rear_cache.size() > 32:
+			_rear_cache.clear()
+		_rear_cache[key] = SupplyLines.rear_order(Game.data, Game.state, lead, _supply_ok)
+	return _rear_cache[key]
 
 
 func _choose_supply(town: String) -> void:
 	_supply_choice = town
+	_supply_set = true
 	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, town, _pending) if town != "" else PackedVector2Array())
 	if _panel != null:
 		_panel.set_supply_figures(_supply_words(town))

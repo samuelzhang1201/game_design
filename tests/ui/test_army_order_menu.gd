@@ -14,6 +14,8 @@ class FakeMap extends Node:
 	var aiming := false
 	var aim_dest := Vector2(-1, -1)
 	var aim_waypoints := PackedVector2Array()
+	var supply_pick := {}
+	var supply_preview := PackedVector2Array()
 
 
 ## The 3D view's own signature: the click's point rides with it.
@@ -180,6 +182,7 @@ func test_an_order_on_a_stopped_clock_does_not_start_it() -> void:
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
 	watch_signals(Game)
+	_menu.shown_confirm().select_supply("")   # no supply point: the march's courier alone
 	_commit()
 	assert_eq(Game.state.couriers.size(), 1, "the order is given: a courier waits to ride")
 	assert_eq(ArmySystem.order_of(Game.data, Game.state, code), ArmySystem.ORDER_STANDBY, "the column waits for him")
@@ -205,6 +208,7 @@ func test_the_next_click_on_the_ground_sends_it_on_commit() -> void:
 	_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(there)
+	_menu.shown_confirm().select_supply("")   # no supply point: the march's courier alone
 	_commit()
 	assert_eq(_menu.aiming(), "", "the aim is spent")
 	assert_false(_map.aiming)
@@ -571,6 +575,7 @@ func test_a_load_chosen_on_the_confirm_rides_before_the_march() -> void:
 	assert_eq(int(pressed[0]["days"]), own, "the load it carries now")
 	panel.pick(other)
 	assert_eq(panel.chosen_carry(), other)
+	panel.select_supply("")   # no supply point: the load and the march alone
 	_commit()
 	var kinds: Array = []
 	for c: Dictionary in Game.state.couriers:
@@ -613,12 +618,13 @@ func test_a_supply_town_chosen_on_the_confirm_rides_before_the_march() -> void:
 	_menu.id_pressed.emit(0)
 	_map.ground_clicked.emit(to)
 	assert_not_null(_menu.shown_confirm())
-	assert_eq(_menu.supply_choice(), "", "the current point (none) pressed")
 	var ok := SupplyLines.march_eligibility(Game.data, Game.state, code, to)
+	var order := SupplyLines.rear_order(Game.data, Game.state, code, ok)
+	assert_eq(_menu.supply_choice(), String(order[0]) if String(ok[order[0]]) == "" else "",
+		"no line yet: the nearest town on our side pressed (ruling 20)")
+	_menu.shown_confirm().select_supply("")
 	var town := ""
-	var towns: Array = ok.keys()
-	towns.sort()
-	for t: String in towns:
+	for t: String in order:
 		if String(ok[t]) == "":
 			town = t
 			break
@@ -632,3 +638,56 @@ func test_a_supply_town_chosen_on_the_confirm_rides_before_the_march() -> void:
 	for c: Dictionary in Game.state.couriers:
 		kinds.append(String(c["order"]["action_code"]))
 	assert_eq(kinds, ["SUPPLY_POINT_SET", "ARMY_MARCH"], "the supply point rides first, its own courier")
+
+
+## Owner 2026-10-08 (spec 2026-10-08-war-room-draw-orders ruling 20): a town
+## AHEAD of the column is greyed with its reason; the town pressed is the
+## nearest allowed one on our side, listed first after the current point.
+func test_a_town_ahead_is_greyed_and_the_nearest_rear_town_is_pressed() -> void:
+	var code := _marcher()
+	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
+	var now := SupplyLines.eligibility(Game.data, Game.state, code)
+	var towns: Array = now.keys()
+	towns.sort()
+	var ahead := ""   # a town the column can be sent to, far enough off to lie ahead of it
+	var tol := Game.data.bal("supply_ahead_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(Game.data))
+	for t: String in towns:
+		var b: Dictionary = Game.data.burgs[t]
+		var at := Vector2(float(b["x"]), float(b["y"]))
+		if String(now[t]) == "" and at.distance_to(here) > tol * 2.0 and Game.engine.actions.validate_place(
+				ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": at.x, "y": at.y}), Game.state) == "":
+			ahead = t
+			break
+	if ahead == "":
+		pending("no town to march on")
+		return
+	var b: Dictionary = Game.data.burgs[ahead]
+	var to := Vector2(float(b["x"]), float(b["y"]))
+	assert_eq(_menu.aim_for(code), "")
+	_map.ground_clicked.emit(to)   # the march ends ON the town: it lies ahead of the column
+	var panel := _menu.shown_confirm()
+	assert_not_null(panel)
+	var rows := panel.shown_supply()
+	var row: Dictionary = rows.filter(func(r: Dictionary) -> bool: return String(r["town"]) == ahead)[0]
+	assert_true(bool(row["disabled"]), "the town ahead cannot be chosen")
+	assert_string_contains(String(row["why"]), "ahead of the column")
+	assert_ne(_menu.supply_choice(), ahead)
+	var ok := SupplyLines.march_eligibility(Game.data, Game.state, code, to)
+	var first := ""
+	for t: String in SupplyLines.rear_order(Game.data, Game.state, code, ok):
+		if String(ok[t]) == "":
+			first = t
+			break
+	assert_eq(_menu.supply_choice(), first, "the nearest town on our side pressed")
+	if first != "":
+		assert_eq(String(rows[1]["town"]), first, "and listed first after the current point")
+		assert_true(bool(rows[1]["selected"]))
+		assert_gt(_map.supply_preview.size(), 1, "its road to the end is drawn")
+	for r: Dictionary in rows.slice(1):
+		var t := String(r["town"])
+		if not bool(r["disabled"]):
+			var tb: Dictionary = Game.data.burgs[t]
+			assert_false(SupplyLines.is_ahead(Game.data, here, to, to, Vector2(float(tb["x"]), float(tb["y"]))), t + " is not ahead")
+	panel.select_supply("")
+	_map.route_bent.emit(PackedVector2Array())   # a re-open keeps the player's own choice
+	assert_eq(_menu.supply_choice(), "", "the player's none is kept")
