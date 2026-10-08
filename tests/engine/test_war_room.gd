@@ -249,19 +249,19 @@ func _spy_report(at: Vector2, lo: int, hi: int, day: int) -> int:
 
 func test_a_spy_report_of_foreign_men_is_a_hint_where_it_saw_them() -> void:
 	assert_eq(WarRoom.intel_hints(repo, state), [], "no report, no hint")
-	var id := _spy_report(Vector2(400, 300), 800, 1200, 50)
+	_spy_report(Vector2(400, 300), 800, 1200, 50)
 	_spy_report(Vector2(500, 300), 0, 0, 51)   # nobody there: no hint
 	var hints := WarRoom.intel_hints(repo, state)
 	assert_eq(hints.size(), 1)
 	var h: Dictionary = hints[0]
-	assert_eq(String(h["id"]), "h%d" % id)
+	assert_eq(String(h["id"]), "h400_300")
 	assert_eq(h["at"], Vector2(400, 300))
 	assert_eq([int(h["lo"]), int(h["hi"]), int(h["day"])], [800, 1200, 50])
-	var newer := _spy_report(Vector2(400, 300), 0, 100, 60)
+	_spy_report(Vector2(400, 300), 0, 100, 60)
 	hints = WarRoom.intel_hints(repo, state)
 	assert_eq(hints.size(), 1, "the newest report about a place stands for it")
-	assert_eq(String(hints[0]["id"]), "h%d" % newer)
-	assert_eq(WarRoom.hint_of(repo, state, "h%d" % newer)["at"], Vector2(400, 300))
+	assert_eq(String(hints[0]["id"]), "h400_300", "the same place keeps its id")
+	assert_eq(WarRoom.hint_of(repo, state, "h400_300")["at"], Vector2(400, 300))
 	assert_eq(WarRoom.hint_of(repo, state, "h999"), {})
 
 

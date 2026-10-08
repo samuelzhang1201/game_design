@@ -34,7 +34,7 @@ static func believed_hosts(_repo: DataRepository, _state: GameState) -> Array:
 ## ruling 18): every spy report that has come in (a `spy` missive) whose
 ## `troops_foreign` span reaches war_intel_hint_min_heads, the newest about a
 ## place standing for it, then the believed hosts (intel P2). Each {id ("h" +
-## the letter's id, "b" + a host's code), at (pack px), lo, hi, day, title} —
+## the place's rounded px, "b" + a host's code), at (pack px), lo, hi, day, title} —
 ## only what a report said, never a force the crown was not told of.
 static func intel_hints(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
@@ -51,7 +51,7 @@ static func intel_hints(repo: DataRepository, state: GameState) -> Array:
 		seen[key] = true   # the newest report about a place stands for it
 		for f: Dictionary in m["facts"]:
 			if String(f.get("key", "")) == "troops_foreign" and f.has("hi") and int(f["hi"]) >= maxi(least, 1):
-				out.append({"id": "h%d" % int(m["id"]), "at": at, "lo": int(f["lo"]), "hi": int(f["hi"]),
+				out.append({"id": "h%d_%d" % [key.x, key.y], "at": at, "lo": int(f["lo"]), "hi": int(f["hi"]),
 					"day": int(m["day"]), "title": String(m["title"])})
 	for h: Dictionary in believed_hosts(repo, state):
 		out.append({"id": "b" + String(h["code"]), "at": h["at"], "lo": int(h.get("low", 0)),

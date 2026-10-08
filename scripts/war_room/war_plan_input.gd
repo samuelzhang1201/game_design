@@ -46,6 +46,8 @@ var _hud: WarPlanHud
 var _drag: Dictionary = {}
 var _click_from := Vector2.ZERO
 var _click_shift := false
+var _pending_choose := ""   # an unchosen stroke pressed with the hand: a click chooses it, a drag pans
+var _pending_from := Vector2.ZERO
 var _order := false     # the stroke being drawn is the selection's march
 
 
@@ -213,6 +215,7 @@ func handle(event: InputEvent) -> bool:
 func _press(mb: InputEventMouseButton) -> bool:
 	var pos := mb.position
 	var pack := _view.pack_at(pos)
+	_pending_choose = ""
 	if tool.in_hand():
 		if pack.x < 0.0:
 			return false
@@ -253,6 +256,10 @@ func _press(mb: InputEventMouseButton) -> bool:
 	if not facing.is_empty() and (facing["at"] as Vector2).distance_to(pos) <= _repo.bal("war_plan_facing_px"):
 		_drag = {"mode": "facing", "id": chosen_id, "from": pos, "from_pack": pack, "moved": false}
 		return true
+	if not hit.is_empty() and int(hit["handle"]) < 0 and String(hit["id"]) != chosen_id:
+		_pending_choose = String(hit["id"])   # only the chosen stroke is carried: the press pans, a click chooses
+		_pending_from = pos
+		return false
 	if not hit.is_empty():
 		_drag = {"mode": "handle" if int(hit["handle"]) >= 0 else "stroke", "id": String(hit["id"]),
 			"handle": int(hit["handle"]), "from": pos, "from_pack": pack, "moved": false, "to_pack": pack}
@@ -319,15 +326,32 @@ func _release(mb: InputEventMouseButton) -> bool:
 			var marching := sel.filter(func(c: Variant) -> bool: return not naval(String(c)))
 			if marching.is_empty():
 				return true
-			order_drawn.emit(marching, d["samples"], _repo.bal("war_order_fit_px") / maxf(per, 0.0001))
+			order_drawn.emit(marching, (d["samples"] as PackedVector2Array) if not mb.shift_pressed \
+				else PackedVector2Array([d["samples"][0], d["samples"][d["samples"].size() - 1]]), _repo.bal("war_order_fit_px") / maxf(per, 0.0001))
 			if _view.aiming:
 				tool.put_down()   # the blue arrow is laid down once its march is drawn
 				tool_changed.emit()
 		else:
 			if String(d["kind"]) == "arrow" and not sel.is_empty():
-				d["of"] = String(sel[0])   # a red arrow: the host it is drawn for
-			drawn.emit(d)
+				for id: Variant in sel:   # a red arrow for each host selected, drawn from its own spot
+					var one := d.duplicate()
+					var pts: PackedVector2Array = (d["pts"] as PackedVector2Array).duplicate()
+					var spot: Variant = _spot_of(String(id))
+					if spot != null:
+						pts[0] = spot
+					one["pts"] = pts
+					one["of"] = String(id)
+					drawn.emit(one)
+			else:
+				drawn.emit(d)
 		return true
+	if _pending_choose != "":
+		var pend := _pending_choose
+		_pending_choose = ""
+		if mb.position.distance_to(_pending_from) < _repo.bal("war_rake_min_px"):
+			choose(pend)
+			_view.forget_press()
+		return false
 	if _drag.is_empty():
 		return false
 	var d := _drag
@@ -378,6 +402,17 @@ func _click_through(pos: Vector2, shift: bool) -> void:
 		select("red", [hint], shift)
 	else:
 		_view.click_through(pos, shift)
+
+
+## Where a red selection's member stands (pack px), null when it is gone: a
+## supposed piece, or an intel hint.
+func _spot_of(id: String) -> Variant:
+	var st := _view.state()
+	if id.begins_with("h") or id.begins_with("b"):
+		var h := WarRoom.hint_of(_repo, st, id)
+		return h["at"] if not h.is_empty() else null
+	var p: Dictionary = st.war_plans[WarPlans.PIECES].get(id, {})
+	return WarPlans.at_px(_repo, p) if not p.is_empty() else null
 
 
 func _flip_of(id: String) -> int:

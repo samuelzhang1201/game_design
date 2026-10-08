@@ -59,9 +59,10 @@ func _land_piece(screen: WarRoomScreen) -> Dictionary:
 	return ClearPiece.find(screen.view(), Game.data, Game.state)
 
 
-func _motion(view: WarRoomView, at: Vector2) -> void:
+func _motion(view: WarRoomView, at: Vector2, rel := Vector2.ZERO) -> void:
 	var e := InputEventMouseMotion.new()
 	e.position = at
+	e.relative = rel
 	e.button_mask = MOUSE_BUTTON_MASK_LEFT
 	view._gui_input(e)
 
@@ -299,3 +300,86 @@ func test_a_click_with_a_stick_on_a_supposed_piece_selects_it_red() -> void:
 	_click(view, view.screen_pos_of_px(WarPlans.at_px(Game.data, Game.state.war_plans["pieces"][id])))
 	assert_eq([view.plan_input().sel_side, view.plan_input().sel], ["red", [id]])
 	assert_true((Game.state.war_plans["strokes"] as Dictionary).is_empty(), "no stroke written")
+
+
+func _drag(view: WarRoomView, from: Vector2, to: Vector2, shift := false, steps := 12) -> void:
+	_button(view, from, true, MOUSE_BUTTON_LEFT, shift)
+	for i in range(1, steps + 1):
+		_motion(view, from.lerp(to, float(i) / steps), (to - from) / steps)
+	_button(view, to, false, MOUSE_BUTTON_LEFT, shift)
+
+
+func _stroke_pts(id: String) -> PackedVector2Array:
+	return WarPlans.points_px(Game.data, Game.state.war_plans["strokes"][id])
+
+
+func test_a_drag_from_an_unchosen_stroke_pans_and_a_click_chooses_it() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var a := view.pack_at(Vector2(view.size) * Vector2(0.3, 0.5))
+	var b := view.pack_at(Vector2(view.size) * Vector2(0.7, 0.5))
+	var id := Game.draw_plan("phase", "red", PackedVector2Array([a, b]), 0.0, "Line", false)
+	await wait_process_frames(2)
+	var before := _stroke_pts(id)
+	var mid: Vector2 = view.screen_pos_of_px(a.lerp(b, 0.5))
+	var cam_before := view.camera_rig().target
+	_drag(view, mid, mid + Vector2(0, 120))
+	assert_ne(view.camera_rig().target, cam_before, "the drag panned the table")
+	assert_eq(_stroke_pts(id), before, "the stroke did not move")
+	assert_ne(view.plan_input().chosen_id, id, "a drag chooses nothing")
+	mid = view.screen_pos_of_px(a.lerp(b, 0.5))
+	_click(view, mid)
+	assert_eq(view.plan_input().chosen_id, id, "a click chooses the stroke")
+	_drag(view, mid, mid + Vector2(0, 60))
+	assert_ne(_stroke_pts(id), before, "the chosen stroke now drags")
+
+
+func test_a_shift_drawn_blue_arrow_marches_straight() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var from: Vector2 = p["press"]
+	var to: Vector2 = view.screen_pos_of_px(_land_near(screen, p["drawn"], Game.data.bal("war_plan_min_len_px") + 90.0))
+	var away := (to - from).orthogonal().normalized() * 90.0
+	_click(view, from)
+	var roll := screen.get_node("%ToolRoll") as WarToolRoll
+	roll.slot("arrow", "blue").pressed.emit("arrow")
+	_button(view, from, true, MOUSE_BUTTON_LEFT, true)
+	for i in range(1, 7):
+		_motion(view, from.lerp(from + (to - from) * 0.5 + away, float(i) / 6.0))
+	for i in range(1, 7):
+		_motion(view, (from + (to - from) * 0.5 + away).lerp(to, float(i) / 6.0))
+	_button(view, to, false, MOUSE_BUTTON_LEFT, true)
+	assert_ne(screen.orders().aiming(), "", "the march was armed")
+	assert_eq(view.aim_waypoints.size(), 0, "a Shift-drawn arrow has no bend")
+	screen.orders().withdraw_aim()
+
+
+func test_a_red_arrow_for_two_selected_pieces_draws_two() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var at := _open_land(screen)
+	var ida := Game.place_plan_piece("cavalry", 2000, WarPlans.UNKNOWN, view.pack_at(at), 0)
+	var idb := Game.place_plan_piece("cavalry", 2000, WarPlans.UNKNOWN, view.pack_at(at + Vector2(0, 90)), 0)
+	await wait_process_frames(2)
+	var spot_a: Vector2 = view.screen_pos_of_px(WarPlans.at_px(Game.data, Game.state.war_plans["pieces"][ida]))
+	var spot_b: Vector2 = view.screen_pos_of_px(WarPlans.at_px(Game.data, Game.state.war_plans["pieces"][idb]))
+	_click(view, spot_a)
+	_button(view, spot_b, true, MOUSE_BUTTON_LEFT, true)
+	_button(view, spot_b, false, MOUSE_BUTTON_LEFT, true)
+	assert_eq(view.plan_input().sel.size(), 2, "two pieces selected")
+	var roll := screen.get_node("%ToolRoll") as WarToolRoll
+	roll.slot("arrow", "red").pressed.emit("arrow")
+	var open := _open_land(screen)
+	_drag(view, open + Vector2(120, 0), open + Vector2(260, -30))
+	var arrows: Array = (Game.state.war_plans["strokes"] as Dictionary).values().filter(
+		func(s: Dictionary) -> bool: return String(s["kind"]) == "arrow")
+	assert_eq(arrows.size(), 2, "one arrow a host")
+	var starts: Dictionary = {}
+	for s: Dictionary in arrows:
+		starts[String(s["of"])] = WarPlans.points_px(Game.data, s)[0]
+	assert_eq(starts.keys().size(), 2)
+	for pair: Array in [[ida, spot_a], [idb, spot_b]]:
+		assert_true(starts.has(pair[0]), "an arrow of %s" % pair[0])
+		var scr: Variant = view.screen_pos_of_px(starts.get(pair[0], Vector2.ZERO))
+		assert_lt((scr as Vector2).distance_to(pair[1]), 6.0, "starts at its piece")

@@ -935,6 +935,12 @@ func select_army(code: String) -> void:
 
 
 ## A click the plans' stick let through (the pointer's pick).
+## The press was the plans' (a stroke chosen by a click): the pointer must not
+## also read its release as an open-table click.
+func forget_press() -> void:
+	_pointer.forget_press()
+
+
 func click_through(at: Vector2, shift: bool) -> void:
 	if _pointer.click(at, shift):
 		accept_event()
