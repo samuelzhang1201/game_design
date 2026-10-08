@@ -112,3 +112,11 @@ redraw on state change); the supply ribbon rebuilt per box-drag motion; the
 order tip's ground reading per motion event (throttle to the hover dwell);
 dead code from the pen, the rake and the piece menu; `war_rake_min_px`
 renamed for what it now means.
+
+### Carried from batch A (deferred minors, for D)
+
+- `Game.landed` is a static on the autoload called through the instance (an editor STATIC_CALLED_ON_INSTANCE warning): move it to `WarPlans.landed`.
+- Several red arrows from one gesture are one undo step and one cap slot EACH: write them in one step.
+- Esc with the book held up full size and a stick in hand lays the stick down behind the dim: lay the book back first.
+- Tests to tighten: the box's exact set and its red branch; the fleet filter on release; a click on an unchosen stroke keeps the selection; the name box's focus-out commit; Tab's arrow → front fallback; a refused write through a real sea drag; the ghost test's private seams (a frame-signal seam instead).
+- `WarPlanInput`: the supposed-piece / hint pick is written twice (`_press`, the stick's click); a blue stick stays in hand after a click selects a red piece.
