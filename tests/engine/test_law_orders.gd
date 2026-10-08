@@ -111,6 +111,25 @@ func test_the_preview_counts_a_military_laws_couriers() -> void:
 	assert_eq(int(round(before - float(s.metrics["treasury"]))), int(preview["gold"]) + int(preview["fee"]))
 
 
+## The laws screen previews every row on each refresh; a row whose chosen
+## value is the decree's (most rows, most of the time) is refused before any
+## ride is worked out: no courier counted, no fee, no day — the same shape.
+func test_an_unchanged_laws_preview_rides_nothing() -> void:
+	var p := LawSystem.preview(repo, s, "tax_rate", LawSystem.decreed(repo, s, "tax_rate"))
+	assert_eq(String(p["refusal_key"]), "unchanged")
+	assert_eq(String(p["refusal"]), LawSystem.refusal(repo, s, "tax_rate", LawSystem.decreed(repo, s, "tax_rate")))
+	assert_eq(int(p["couriers"]), 0, "no recipients counted")
+	assert_eq(int(p["fee"]), 0)
+	assert_eq(int(p["gold"]), 0)
+	assert_eq(int(p["max_days"]), 0, "no ride worked out")
+	assert_eq(int(p["wait_days"]), 0)
+	var shape: Array = LawSystem.preview(repo, s, "tax_rate", _other_tax()).keys()
+	shape.sort()
+	var keys: Array = p.keys()
+	keys.sort()
+	assert_eq(keys, shape, "the preview's shape is kept")
+
+
 func test_the_chest_must_pay_every_courier() -> void:
 	var preview := LawSystem.preview(repo, s, "tax_rate", _other_tax())
 	s.metrics["treasury"] = float(int(preview["gold"]) + int(preview["fee"]) - 1)

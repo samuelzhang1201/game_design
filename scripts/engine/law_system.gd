@@ -442,11 +442,13 @@ static func refusal_of(repo: DataRepository, state: GameState, law: String, valu
 ## (one ordinary fee a courier), gold (order_gold), max_days (the longest
 ## ride), refusal (`refusal`'s words), refusal_key and wait_days
 ## (`refusal_of`'s key and days)}. ActionSystem charges exactly gold + fee.
+## An unchanged value (the decree's own, nothing missing — most rows of the
+## screen) is refused before any ride is worked out: zeros, the same shape.
 static func preview(repo: DataRepository, state: GameState, law: String, value: String) -> Dictionary:
 	value = canonical(repo, law, value)
 	var no := refusal_of(repo, state, law, value)
 	var why := String(no["text"])
-	if def(repo, law).is_empty() or not allowed(repo, law, value):
+	if def(repo, law).is_empty() or not allowed(repo, law, value) or String(no["key"]) == "unchanged":
 		return {"couriers": 0, "fee": 0, "gold": 0, "max_days": 0, "refusal": why,
 			"refusal_key": String(no["key"]), "wait_days": 0}
 	var resend := _resend(repo, state, law, value)

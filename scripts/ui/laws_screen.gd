@@ -149,15 +149,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
-## Give the order; a refusal is said in the news bar, as is what was decreed.
+## Give the order; a refusal is said in the news bar. A decree given is said
+## once, by its couriers as they set out (CourierSystem.news), not here.
 func _decree(law: String, value: String) -> void:
 	var out := Game.try_execute(ActionRequest.make(LawSystem.ACTION, {"law": law, "value": value}))
 	if not bool(out.get("ok", false)):
 		Game.publish_news(String(out.get("error", "")))
-	else:
-		for e: Dictionary in (out["outcome"] as Dictionary).get("effects", []):
-			if String(e.get("metric", "")) == "law":
-				Game.publish_news(String(e["reason"]))
 	decreed.emit(out)
 
 

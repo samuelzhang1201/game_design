@@ -640,15 +640,25 @@ static func headline(repo: DataRepository, e: Dictionary) -> String:
 ## line per decree ("The decree on <law> is sent: N couriers."), their
 ## deliveries and weather nothing, and the event that closes the decree
 ## (`reach`, LawSystem.close_rides) ONE line — "is in force everywhere" when
-## it reached every place, else how many it reached. A decree's courier set
-## aside, lost or out of time is still said, once each. Every other courier
-## is said by `headline`.
+## it reached every place, else how many it reached. A decree's couriers set
+## aside, lost or out of time in the batch are ONE counted line ("N couriers
+## of the decree on <law> were set aside"), a lone one its `headline` — so an
+## event that overrides a riding decree is no flood. Every other courier is
+## said by `headline`.
 static func news(repo: DataRepository, events: Array) -> Array:
 	var counts := {}
+	var missed := {}  # law#decree_id -> [set aside, lost or out of time]
 	for e: Dictionary in events:
-		if e.has("law") and String(e.get("type", "")) == "set_out":
-			var k := "%s#%d" % [String(e["law"]), int(e.get("decree_id", 0))]
+		if not e.has("law"):
+			continue
+		var k := "%s#%d" % [String(e["law"]), int(e.get("decree_id", 0))]
+		var type := String(e.get("type", ""))
+		if type == "set_out":
 			counts[k] = int(counts.get(k, 0)) + 1
+		elif type in ["stale", "lost", "fuse"]:
+			var m: Array = missed.get(k, [0, 0])
+			m[0 if type == "stale" else 1] += 1
+			missed[k] = m
 	var out: Array = []
 	var said := {}
 	for e: Dictionary in events:
@@ -658,15 +668,21 @@ static func news(repo: DataRepository, events: Array) -> Array:
 				out.append(line)
 			continue
 		var law := String((repo.laws.get(String(e["law"]), {}) as Dictionary).get("label", e["law"]))
+		var k := "%s#%d" % [String(e["law"]), int(e.get("decree_id", 0))]
 		match String(e.get("type", "")):
 			"set_out":
-				var k := "%s#%d" % [String(e["law"]), int(e.get("decree_id", 0))]
 				if not said.has(k):
 					said[k] = true
 					var n := int(counts[k])
 					out.append("The decree on %s is sent: %d courier%s." % [law, n, "" if n == 1 else "s"])
 			"stale", "lost", "fuse":
-				out.append(headline(repo, e))
+				var m: Array = missed[k]
+				if int(m[0]) + int(m[1]) == 1:
+					out.append(headline(repo, e))
+				elif not said.has("missed " + k):
+					said["missed " + k] = true
+					out.append("%d couriers of the decree on %s were %s." % [int(m[0]) + int(m[1]), law,
+						"set aside" if int(m[1]) == 0 else ("lost" if int(m[0]) == 0 else "set aside or lost")])
 		if e.has("reach"):
 			var r: Dictionary = e["reach"]
 			var d := int(r["days"])

@@ -204,6 +204,31 @@ func test_decree_sends_the_order_and_the_delivery_text_follows_the_days() -> voi
 		"the row follows the couriers home")
 
 
+## A decree is said ONCE in the news as it is sent: the couriers' one line
+## as the clock runs their first day (CourierSystem.news), never the order's
+## own ledger line beside it on the press.
+func test_a_decree_is_one_news_line_at_send() -> void:
+	var r: GameRoot = await _court()
+	var screen := await _open(r)
+	var said: Array = []
+	var hear := func(t: String) -> void: said.append(t)
+	Game.news_published.connect(hear)
+	var row := screen.row("tax_rate")
+	var v := _other_tax()
+	await _choose(r, row, v)
+	var n := int(LawSystem.preview(Game.data, Game.state, "tax_rate", v)["couriers"])
+	assert_gt(n, 0)
+	await _click_on(r, row.decree_button())
+	assert_eq(said, [], "nothing said on the press of a paused clock")
+	Game.set_clock_speed(1)
+	await wait_process_frames(2)
+	Game.set_clock_speed(0)
+	Game.news_published.disconnect(hear)
+	var label := String(LawSystem.def(Game.data, "tax_rate")["label"])
+	var about := said.filter(func(t: String) -> bool: return t.to_lower().contains(label.to_lower()))
+	assert_eq(about, ["The decree on %s is sent: %d couriers." % [label, n]], "one line: %s" % [said])
+
+
 func test_the_screen_works_while_the_clock_runs() -> void:
 	var r: GameRoot = await _court()
 	Game.set_clock_speed(1)

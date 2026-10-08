@@ -21,7 +21,12 @@ static func apply(ops: String, state: GameState, data: DataRepository,
 			"metric":
 				# metric:<name>:<delta>[:<reason>] — an op's own reason wins
 				# over the choice label, so a cost row can say why.
-				state.metrics[p[1]] = float(state.metrics.get(p[1], 0.0)) + float(p[2])
+				# A law's rate mirror moves only with a decree (law:<code>:<value>):
+				# moved here it would change the display and no province's rate.
+				if p[1] in LawSystem.METRIC_OF.values():
+					push_error("EventEffects: metric:%s moves a law's mirror alone; a law changes by law:<code>:<value>" % p[1])
+					continue
+				state.metrics[p[1]] =float(state.metrics.get(p[1], 0.0)) + float(p[2])
 				var r := {"kind": "metric", "metric": p[1], "delta": float(p[2])}
 				if p.size() > 3 and p[3] != "":
 					r["reason"] = p[3]

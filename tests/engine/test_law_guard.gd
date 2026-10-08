@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The laws have one way in (spec 2026-10-08-laws-tab-design §2.3, §2.5, §7):
 ## `LawSystem.value`. The rate metrics (`tax_rate`, `tariff_rate`,
 ## `grain_ration`) only mirror the decree, so no script reads them as the
@@ -109,3 +110,42 @@ func test_the_exemption_is_one_function() -> void:
 	])
 	assert_eq(_scan_text("f", text, rx, ["realm_signature"]), ["f:7"], "only the other function's read")
 	assert_eq(_scan_text("f", text, rx, []), ["f:2", "f:7"], "both, with no exemption")
+
+
+## A rate metric moves only with a decree (§2.5): an effect op
+## `metric:tax_rate:…` would move the display mirror and no province's rate,
+## so EventEffects refuses it — nothing applied, no result line (it pushes an
+## error) — while any other metric still moves.
+func test_a_metric_op_on_a_law_mirror_is_refused() -> void:
+	var repo := SuiteData.repo()
+	var s := SuiteData.campaign(repo, 42)
+	for law: String in LawSystem.METRIC_OF:
+		var metric := String(LawSystem.METRIC_OF[law])
+		var before := float(s.metrics.get(metric, 0.0))
+		var out := EventEffects.apply("metric:%s:1:a test" % metric, s, repo)
+		assert_eq(float(s.metrics.get(metric, 0.0)), before, metric + " unmoved")
+		assert_true(out.is_empty(), metric + ": no result line")
+	var unrest := float(s.metrics.get("unrest", 0.0))
+	assert_eq(EventEffects.apply("metric:unrest:1:a test", s, repo).size(), 1)
+	assert_eq(float(s.metrics["unrest"]), unrest + 1.0, "another metric still moves")
+
+
+## No data row's op names a rate mirror as a metric: the event choices (the
+## chapter's too), the laws' cost ops and the order costs all speak the
+## EventEffects grammar; a law changes by `law:<code>:<value>`.
+func test_no_data_op_moves_a_law_mirror() -> void:
+	var repo := SuiteData.repo()
+	var sources: Array = []
+	for c: Dictionary in repo.event_choices_all():
+		sources.append(["%s/%s" % [c["event_id"], c["choice_id"]], String(c["effects"])])
+	for law: String in repo.laws:
+		sources.append(["laws.csv " + law, String(repo.laws[law].get("cost_ops", ""))])
+	for code: String in repo.order_costs:
+		sources.append(["order_costs.csv " + code, String(repo.order_costs[code].get("cost", ""))])
+	assert_gt(sources.size(), 20, "the scan reads the tables")
+	for src: Array in sources:
+		for raw: String in String(src[1]).split(";", false):
+			var p := raw.strip_edges().split(":")
+			if p.size() > 1 and p[0] == "metric":
+				assert_false(p[1] in LawSystem.METRIC_OF.values(),
+					"%s moves the rate mirror %s: use law:<code>:<value>" % [src[0], p[1]])

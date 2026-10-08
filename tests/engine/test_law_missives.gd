@@ -180,12 +180,64 @@ func test_the_news_bar_is_told_once_when_all_have_arrived() -> void:
 	assert_eq(CourierSystem.news(repo, [other]), [CourierSystem.headline(repo, other)])
 
 
+## A decree overtaken while its couriers ride (here the newer decree's
+## couriers are home first): every older courier arrives set aside, closes
+## nothing and files no reach letter, and the news says them as ONE counted
+## line, never a line a courier.
 func test_a_stale_courier_of_an_older_decree_closes_nothing() -> void:
 	var old := LawSystem.decree(repo, s, "tax_rate", "7")
 	s.law_cooldown.erase("tax_rate")
 	var newer := LawSystem.decree(repo, s, "tax_rate", "4")
 	assert_eq(newer.size(), old.size())
-	_ride_all()
-	var reach := _reach_letters()
-	assert_eq(reach.size(), 1, "only the standing decree closes")
-	assert_string_contains(String(_fact(reach[0], "decree")["text"]), "4")
+	assert_gt(old.size(), 1, "a realm of more than one province")
+	# the newer decree's couriers are delivered first, where they rode
+	var newer_id := int(newer[0]["order"]["decree_id"])
+	for c: Dictionary in newer:
+		assert_eq(String(LawSystem.deliver(repo, s, c)["type"]), "delivered")
+	s.couriers = s.couriers.filter(func(c: Dictionary) -> bool: return int(c["order"]["decree_id"]) != newer_id)
+	assert_eq(s.couriers.size(), old.size(), "the older decree's couriers still ride")
+	# the ride's own events (a weather delay, "slow", is said by no one here)
+	var events := _ride_all().filter(func(e: Dictionary) -> bool: return String(e["type"]) != "slow")
+	assert_eq(events.size(), old.size(), "every older courier arrives")
+	for e: Dictionary in events:
+		assert_eq(String(e["type"]), "stale", "set aside: a newer decree stands there")
+		assert_false(e.has("reach"), "a courier of an older decree closes nothing")
+	assert_true(_reach_letters().is_empty(), "and files no reach letter")
+	for code: String in MapOwnership.provinces_of(repo, s, realm):
+		assert_eq(LawSystem.value(repo, s, "tax_rate", code), "4", code + " keeps the newer decree")
+	var lines := CourierSystem.news(repo, events)
+	assert_eq(lines, ["%d couriers of the decree on Tax rate were set aside." % old.size()],
+		"ONE counted line for the batch")
+
+
+## An event's change of law over a decree still riding (ev_07's tariff step,
+## LawSystem.impose): the riding couriers all arrive set aside, and a day's
+## news says them as one line at most, counted when more than one.
+func test_an_event_over_a_riding_decree_is_said_once_a_day() -> void:
+	var was := int(LawSystem.decreed(repo, s, "tariff_rate"))
+	var sent := LawSystem.decree(repo, s, "tariff_rate", str(was + 1 if was < 10 else was - 1))
+	assert_gt(sent.size(), 1)
+	EventEffects.apply("law:tariff_rate:+1", s, repo, "test")
+	var label := String(LawSystem.def(repo, "tariff_rate")["label"])
+	var stale := 0
+	var crowded := false
+	for i in int(repo.bal("courier_max_days")) + 2:
+		if s.couriers.is_empty():
+			break
+		var day := CourierSystem.ride_day(repo, s)
+		var set_aside := day.filter(func(e: Dictionary) -> bool: return String(e["type"]) == "stale")
+		stale += set_aside.size()
+		var lines := CourierSystem.news(repo, day)
+		assert_lte(lines.size(), 1, "one line a day at most: %s" % [lines])
+		if set_aside.size() > 1:
+			crowded = true
+			assert_eq(lines, ["%d couriers of the decree on %s were set aside." % [set_aside.size(), label]])
+	assert_eq(stale, sent.size(), "every riding courier is set aside")
+	assert_true(crowded, "some day brought more than one home")
+	# one courier alone is still said by name (headline)
+	var one := CourierSystem._event("stale", sent[0])
+	assert_eq(CourierSystem.news(repo, [one]), [CourierSystem.headline(repo, one)])
+	# a batch of set-aside and lost couriers of one decree: one line
+	var lost := CourierSystem._event("fuse", sent[1])
+	assert_eq(CourierSystem.news(repo, [one, lost]),
+		["2 couriers of the decree on %s were set aside or lost." % label])
