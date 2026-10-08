@@ -66,13 +66,9 @@ func test_the_month_returns_wounded_and_the_days_eat_the_supplies() -> void:
 	# 2026-09-30-ledger-supply-design §4); the month itself is eaten a day at
 	# a time (owner 2026-09-30: 军事单位的补给要每天都在以一定速率减少).
 	var naval := String(r.get("is_naval", "0")) == "1"
-	# the default camp laws add +1 to a land unit's mark (laws spec §4.4: obey
-	# command +1, protect women -0.5, no Havoc -1, no private feuds +1 = +0.5,
-	# rounded once half away from zero)
-	var laws := 0 if naval else 1
-	var mark1 := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, use + 5, use), false) + laws
+	var mark1 := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, use + 5, use), false)
 	var morale1 := 70 if naval else ArmySystem.drift_morale(70, mark1, int(repo.bal("army_morale_drift_per_month")))
-	var mark2 := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, 5, use), false) + laws
+	var mark2 := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, 5, use), false)
 	var expected := morale1 if naval else ArmySystem.drift_morale(morale1, mark2, int(repo.bal("army_morale_drift_per_month")))
 	ArmySystem.settle_month(repo, s)
 	assert_eq(int(s.regiments[code]["wounded"]), 200)

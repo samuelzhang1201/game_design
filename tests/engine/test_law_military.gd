@@ -69,10 +69,13 @@ func _set_men(sizes: Dictionary) -> void:
 		row["infantry"] = str(int(sizes.get(code, 0)))
 
 
-## The default-on conduct laws read off, so a unit's mark is its own law's.
-func _quiet_defaults() -> void:
-	for law: String in ["obey_command", "protect_church", "protect_women", "no_havoc", "no_feuds"]:
-		repo.laws[law]["default"] = "off"
+## The sum of `law_effects.csv`'s `channel` rows for `law` at `value`.
+func _rows_sum(law: String, value: String, channel: String) -> float:
+	var sum := 0.0
+	for row: Dictionary in repo.law_effects:
+		if String(row["law_code"]) == law and String(row["value"]) == value and String(row["channel"]) == channel:
+			sum += float(row["amount"])
+	return sum
 
 
 ## A held town with a camp, and a land unit camped by it.
@@ -106,6 +109,16 @@ func _arrive(code: String, town: String) -> void:
 	ArmyGround.settle(repo, s, code)
 
 
+func _folio_morale(code: String) -> Dictionary:
+	for sec: Dictionary in WarFolio.sections(repo, s, code):
+		if String(sec["key"]) == "morale":
+			var out := {}
+			for row: Dictionary in sec["rows"]:
+				out[String(row["label"])] = String(row["text"])
+			return out
+	return {}
+
+
 func _lines_named(lines: Array, head: String) -> Array:
 	return lines.filter(func(l: Dictionary) -> bool: return String(l["reason"]).begins_with(head))
 
@@ -120,7 +133,6 @@ func _line_of(lines: Array, head: String, metric: String) -> Dictionary:
 # --- unit channels ------------------------------------------------------------
 
 func test_a_unit_pays_the_mark_of_its_own_value() -> void:
-	_quiet_defaults()
 	var units := _land_units()
 	var a := String(units[0])
 	var b := String(units[1])
@@ -130,6 +142,9 @@ func test_a_unit_pays_the_mark_of_its_own_value() -> void:
 	assert_eq(LawSystem.value(repo, s, "plunder", a), "allow")
 	assert_eq(LawEffects.unit_mark(repo, s, a), 2, "allow plunder: morale mark +2")
 	assert_eq(LawEffects.unit_mark(repo, s, b), 0, "forbid plunder: no mark")
+	# the folio names the law's mark beside the stores' (WarFolio._morale)
+	assert_eq(_folio_morale(a).get("The camp laws", ""), "+2")
+	assert_false(_folio_morale(b).has("The camp laws"), "no row for no mark")
 	# both start AT their stores' mark: A drifts up by its law's 2, B stays
 	var step := int(repo.bal("army_morale_drift_per_month"))
 	assert_gt(step, 2, "a month's drift covers the law's 2")
@@ -145,12 +160,25 @@ func test_a_unit_pays_the_mark_of_its_own_value() -> void:
 	assert_eq(int(s.regiments[b]["morale"]), int(base[b]), "B holds its mark")
 
 
-func test_the_default_conduct_laws_give_every_unit_the_same_mark() -> void:
-	# the defaults on (laws.csv): obey command +1, protect women -0.5, no Havoc
-	# -1, no private feuds +1 = +0.5, rounded once, half away from zero: +1
-	var units := _land_units()
-	for code: String in units:
-		assert_eq(LawEffects.unit_mark(repo, s, code), 1, code)
+func test_a_fresh_host_carries_no_law_mark() -> void:
+	# every toggle defaults off and plunder to forbid (spec §4.4, default
+	# first): no default value has a unit row
+	for code: String in _land_units():
+		assert_eq(LawEffects.unit_mark(repo, s, code), 0, code)
+		assert_eq(LawEffects.unit_pace_permille(repo, s, code), 1000, code)
+
+
+func test_the_conduct_laws_add_their_marks_rounded_once() -> void:
+	var laws := ["obey_command", "protect_women", "no_havoc", "no_feuds"]
+	var sum := 0.0
+	for law: String in laws:
+		LawSystem.impose(repo, s, law, "on")
+		sum += _rows_sum(law, "on", "morale_mark")
+	# the rows as shipped: +1 -0.5 -1 +1 = +0.5, rounded once, half away from zero: +1
+	assert_almost_eq(sum, 0.5, EPS, "the rows' sum")
+	var want := int(signf(sum) * floorf(absf(sum) + 0.5))
+	for code: String in _land_units():
+		assert_eq(LawEffects.unit_mark(repo, s, code), want, code)
 
 
 func test_pace_follows_truce_days() -> void:
@@ -222,6 +250,9 @@ func test_a_realm_channel_is_scaled_by_the_share_of_men() -> void:
 func test_the_default_rows_pay_too() -> void:
 	var n := _land_units().size()
 	var lines := LawEffects.month_lines(repo, s)
+	# a fresh host pays only the two defaults that carry rows (spec §4.4)
+	assert_eq(lines.size(), 3, "give quarter (legitimacy, church) and ransom (legitimacy)")
+	assert_eq(lines.size(), _lines_named(lines, "give quarter").size() + _lines_named(lines, "ransom captives").size())
 	var give := _line_of(lines, "give quarter", "legitimacy")
 	assert_almost_eq(float(give.get("delta", 0.0)), 0.2, EPS, "quarter give: legitimacy +0.2 at full share")
 	assert_eq(String(give.get("reason", "")), "give quarter: legitimacy +0.2 (%d units, 100%% of the host)" % n)
@@ -257,9 +288,15 @@ func test_no_land_men_no_share() -> void:
 
 func test_a_year_of_a_law_is_visible_against_the_drift() -> void:
 	var off := SuiteData.campaign(repo, 42)
-	LawSystem.impose(repo, off, "protect_church", "off")
-	assert_eq(LawEffects.army_share_permille(repo, s, "protect_church", "on"), 1000, "the default: everyone")
-	assert_eq(LawEffects.army_share_permille(repo, off, "protect_church", "on"), 0)
+	LawSystem.impose(repo, s, "protect_church", "on")
+	assert_eq(LawEffects.army_share_permille(repo, s, "protect_church", "on"), 1000, "imposed: everyone")
+	assert_eq(LawEffects.army_share_permille(repo, off, "protect_church", "on"), 0, "the default is off")
+	var protect := _rows_sum("protect_church", "on", "church_opinion")
+	var quarter := _rows_sum("quarter", "give", "church_opinion")
+	var pull := float(repo.bal("church_drift"))
+	assert_almost_eq(protect, 0.3, EPS)
+	assert_almost_eq(quarter, 0.1, EPS)
+	assert_almost_eq(pull, 0.2, EPS)
 	assert_almost_eq(float(s.metrics["church_opinion"]), 50.0, EPS)
 	assert_almost_eq(float(off.metrics["church_opinion"]), 50.0, EPS)
 	var engine := TickEngine.new(repo)

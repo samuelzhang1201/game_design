@@ -202,9 +202,6 @@ func test_only_the_seat_earns_the_garrison_morale() -> void:
 		s.regiments[c]["morale"] = fed - 1
 		s.regiments[c]["supplies"] = ArmySystem.supply_use(data, ArmySystem.regiment(data, c), s) * 4
 	ArmySystem.settle_month(data, s)
-	# the default camp laws add +1 to every land unit's mark (laws spec §4.4:
-	# +1 -0.5 -1 +1 = +0.5, rounded once half away from zero)
-	var laws := 1
-	assert_eq(int(s.regiments[standing]["morale"]), fed + laws, "camped round the town: the fed mark")
-	assert_eq(int(s.regiments[holding]["morale"]), mini(fed + bonus + laws, fed - 1 + drift),
+	assert_eq(int(s.regiments[standing]["morale"]), fed, "camped round the town: the fed mark")
+	assert_eq(int(s.regiments[holding]["morale"]), mini(fed + bonus, fed - 1 + drift),
 		"on the seat: toward the fed mark and the bonus")

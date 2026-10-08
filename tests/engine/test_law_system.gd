@@ -62,6 +62,25 @@ func test_every_default_is_an_allowed_value() -> void:
 		else:
 			assert_true((d["values"] as Array).has(String(d["default"])), law)
 
+## Every law's default, pinned against spec 2026-10-08-laws-tab-design §4.4
+## ("Values (default first)": a law is a tool the crown imposes, so every
+## toggle starts off) and the five old settings' starting values — a slip in
+## laws.csv fails here by name.
+func test_every_default_is_the_specs() -> void:
+	var want := {
+		"tax_rate": "5", "tariff_rate": "3", "grain_ration": "market",
+		"justice_severity": "3", "church_policy": "none",
+		"plunder": "forbid", "obey_command": "off", "protect_church": "off",
+		"protect_women": "off", "no_havoc": "off", "register_prisoners": "off",
+		"wear_badges": "off", "no_feuds": "off", "quarter": "give", "ransom": "ransom",
+		"truce_days": "off", "envoys": "off"}
+	assert_eq(repo.law_order.size(), want.size(), "seventeen laws")
+	for law: String in repo.law_order:
+		assert_true(want.has(law), "%s is a law of the spec" % law)
+		assert_eq(String(LawSystem.def(repo, law)["default"]), String(want.get(law, "")), law)
+		if String(LawSystem.def(repo, law)["kind"]) == "toggle":
+			assert_eq(LawSystem.def(repo, law)["values"], ["off", "on"], "%s: off first" % law)
+
 func test_a_fresh_campaign_follows_the_defaults_and_the_metrics() -> void:
 	assert_eq(LawSystem.decreed(repo, s, "tax_rate"), str(int(s.metrics["tax_rate"])))
 	assert_eq(LawSystem.decreed(repo, s, "tariff_rate"), str(int(s.metrics["tariff_rate"])))
@@ -75,8 +94,8 @@ func test_a_fresh_campaign_follows_the_defaults_and_the_metrics() -> void:
 		assert_eq(LawSystem.value(repo, s, "church_policy", code), "none", code)
 	var unit := String(s.regiments.keys()[0]) if not s.regiments.is_empty() else "no_such_unit"
 	assert_eq(LawSystem.value(repo, s, "plunder", unit), "forbid", "a military law reads its default")
-	assert_eq(LawSystem.value(repo, s, "obey_command", unit), "on")
-	assert_eq(LawSystem.number(repo, s, "obey_command", unit), 1)
+	assert_eq(LawSystem.value(repo, s, "obey_command", unit), "off", "a toggle defaults to off")
+	assert_eq(LawSystem.number(repo, s, "obey_command", unit), 0)
 	for law: String in repo.law_order:
 		assert_true(s.law_decree.has(law), law)
 		assert_eq(int(s.law_decree[law]["decree_id"]), 0)
