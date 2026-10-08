@@ -375,6 +375,7 @@ func test_a_red_arrow_for_two_selected_pieces_draws_two() -> void:
 	var arrows: Array = (Game.state.war_plans["strokes"] as Dictionary).values().filter(
 		func(s: Dictionary) -> bool: return String(s["kind"]) == "arrow")
 	assert_eq(arrows.size(), 2, "one arrow a host")
+	assert_eq((view.plan_input()._ghost["rows"] as Array).size(), 2, "both arrows stay drawn until painted")
 	var starts: Dictionary = {}
 	for s: Dictionary in arrows:
 		starts[String(s["of"])] = WarPlans.points_px(Game.data, s)[0]
@@ -422,5 +423,4 @@ func test_a_released_stroke_stays_drawn_until_its_layer_is_painted() -> void:
 	var key := WarPlanInk.cache_key(Game.state, view.sheet_index())
 	await wait_until(func() -> bool: return view.plan_key_shown() == key, 5.0)
 	assert_eq(view.plan_key_shown(), key, "its layer was painted")
-	view.plan_input().put_down()
 	assert_false(hud.drawing(), "the ghost is gone once the layer is painted")

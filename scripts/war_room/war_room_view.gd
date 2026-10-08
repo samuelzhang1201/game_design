@@ -278,6 +278,7 @@ func hide_plan_stroke(id: String) -> void:
 	if id == _plan_hidden:
 		return
 	_plan_hidden = id
+	_plan_key_shown = -1   # the layer on the table no longer matches
 	if _sheet >= 0:
 		_paint_intel(_table.get_active_material(0) as ShaderMaterial)
 
@@ -1015,7 +1016,7 @@ func _gui_input(event: InputEvent) -> void:
 		_board_input(event)
 		return
 	var down := event as InputEventMouseButton
-	if down != null and down.pressed:
+	if down != null and down.pressed and down.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]:
 		table_pressed.emit()
 	# the plans first: a stick in hand draws, a supposed piece is carried, a
 	# stroke is reshaped (spec 2026-10-07-war-room-annotations-and-planning-pieces §1.6);

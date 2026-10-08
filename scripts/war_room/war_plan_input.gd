@@ -147,7 +147,8 @@ func put_down() -> bool:
 	var held := tool.in_hand() or action != ""
 	tool.put_down()
 	action = ""
-	if not _drag.is_empty() and bool(_drag.get("moved", false)):
+	if not _drag.is_empty() and bool(_drag.get("moved", false)) and String(_drag["mode"]) in ["stroke", "handle"]:
+		_keep_ghost_of([String(_drag["id"])])   # back at its place until the layer shows it again
 		_view.hide_plan_stroke("")
 	_drag = {}
 	_order = false
@@ -221,6 +222,9 @@ func _press(mb: InputEventMouseButton) -> bool:
 	var pos := mb.position
 	var pack := _view.pack_at(pos)
 	_pending_choose = ""
+	if not _drag.is_empty():   # a drag whose release was lost
+		_drag = {}
+		_view.hide_plan_stroke("")
 	if tool.in_hand():
 		if pack.x < 0.0:
 			return false
@@ -339,6 +343,7 @@ func _release(mb: InputEventMouseButton) -> bool:
 				tool.put_down()   # the blue arrow is laid down once its march is drawn
 				tool_changed.emit()
 		else:
+			var before: Array = _view.state().war_plans[WarPlans.STROKES].keys()
 			if String(d["kind"]) == "arrow" and not sel.is_empty():
 				for id: Variant in sel:   # a red arrow for each host selected, drawn from its own spot
 					var one := d.duplicate()
@@ -349,10 +354,10 @@ func _release(mb: InputEventMouseButton) -> bool:
 					one["pts"] = pts
 					one["of"] = String(id)
 					drawn.emit(one)
-					_keep_ghost(one)
 			else:
 				drawn.emit(d)
-				_keep_ghost(d)
+			_keep_ghost_of(_view.state().war_plans[WarPlans.STROKES].keys().filter(
+				func(i: Variant) -> bool: return not i in before))
 		redraw_live()
 		return true
 	if _pending_choose != "":
@@ -386,7 +391,7 @@ func _release(mb: InputEventMouseButton) -> bool:
 			piece_moved.emit(id, to, int(d.get("facing", 0)))
 		"stroke":
 			stroke_shifted.emit(id, to - (d["from_pack"] as Vector2))
-			_keep_ghost_of(id)
+			_keep_ghost_of([id])
 		"facing":
 			var s: Dictionary = _view.state().war_plans[WarPlans.STROKES].get(id, {})
 			if not s.is_empty():
@@ -396,26 +401,25 @@ func _release(mb: InputEventMouseButton) -> bool:
 			if not s.is_empty():
 				var r := _reshaped(s, int(d["handle"]), to)
 				stroke_reshaped.emit(id, r["pts"], float(r["r"]))
-				_keep_ghost_of(id)
+				_keep_ghost_of([id])
 	if String(d["mode"]) in ["stroke", "handle"]:
 		_view.hide_plan_stroke("")
 	redraw_live()
 	return true
 
 
-## The stroke `d` just drawn (pack px) stays on the hud until the plan layer
-## has been painted for the plans as they are now.
-func _keep_ghost(d: Dictionary) -> void:
-	var s := {"kind": String(d["kind"]), "colour": String(d["colour"]), "dashed": 0, "flip": 0, "name": ""}
-	_ghost = {"s": s, "pts": d["pts"], "r": float(d["r"]), "key": WarPlanInk.cache_key(_view.state(), _view.sheet_index())}
-
-
-## The stroke `id` as the plans now hold it, the same way.
-func _keep_ghost_of(id: String) -> void:
-	var s: Dictionary = _view.state().war_plans[WarPlans.STROKES].get(id, {})
-	if not s.is_empty():
-		_keep_ghost({"kind": s["kind"], "colour": s.get("colour", "ink"), "pts": WarPlans.points_px(_repo, s),
-			"r": WarPlans.radius_px(_repo, s)})
+## The strokes `ids` as the plans now hold them (their own name, dash and
+## teeth) stay on the hud until the plan layer has been painted for the plans
+## as they are now (one gesture, one key; none held, no ghost).
+func _keep_ghost_of(ids: Array) -> void:
+	var rows: Array = []
+	for id: Variant in ids:
+		var s: Dictionary = _view.state().war_plans[WarPlans.STROKES].get(String(id), {})
+		if not s.is_empty():
+			rows.append({"s": s, "pts": WarPlans.points_px(_repo, s), "r": WarPlans.radius_px(_repo, s)})
+	if rows.is_empty():
+		return
+	_ghost = {"rows": rows, "sheet": _view.sheet_index(), "key": WarPlanInk.cache_key(_view.state(), _view.sheet_index())}
 
 
 ## A click with a stick in hand: a supposed piece or an intel hint under it is
@@ -604,13 +608,13 @@ func redraw_live() -> void:
 			WarPlanInk.add(_repo, ink, row, _repo.war_plan_kinds[tool.kind], row["ctrl"], float(row["r"]), mm)
 	_pending_order(ink, mm)
 	if not _ghost.is_empty():
-		if _view.plan_key_shown() == int(_ghost["key"]):
+		if _view.plan_key_shown() == int(_ghost["key"]) or _view.sheet_index() != int(_ghost["sheet"]):
 			_ghost = {}
 		else:
-			var g: Dictionary = _ghost
-			var grow := _on_screen(g["s"], g["pts"], float(g["r"]))
-			if not grow.is_empty():
-				WarPlanInk.add(_repo, ink, grow, _repo.war_plan_kinds[String(g["s"]["kind"])], grow["ctrl"], float(grow["r"]), mm)
+			for g: Dictionary in _ghost["rows"]:
+				var grow := _on_screen(g["s"], g["pts"], float(g["r"]))
+				if not grow.is_empty():
+					WarPlanInk.add(_repo, ink, grow, _repo.war_plan_kinds[String(g["s"]["kind"])], grow["ctrl"], float(grow["r"]), mm)
 	if not _drag.is_empty() and bool(_drag["moved"]) and String(_drag["mode"]) in ["stroke", "handle"] and st != null:
 		var s: Dictionary = st.war_plans[WarPlans.STROKES].get(String(_drag["id"]), {})
 		if not s.is_empty():
