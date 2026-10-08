@@ -255,7 +255,7 @@ func test_screen_hits_name_each_piece() -> void:
 		assert_not_null(pieces.piece(String(h["code"])))
 
 
-func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() -> void:
+func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_nothing() -> void:
 	# a unit set marching, standing clear of the others
 	var mover := _land_code()
 	_stand_alone(mover)
@@ -285,16 +285,19 @@ func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() ->
 	view._gui_input(up)
 	assert_signal_emitted_with_parameters(view, "piece_selected", [String(hit["code"])])
 	assert_eq(view.selected_army(), String(hit["code"]))
+	# orders are drawn (spec 2026-10-08-war-room-draw-orders ruling 11): the
+	# room has no order menu on a piece
+	assert_false(view.has_signal("army_menu_requested"))
 	var right := InputEventMouseButton.new()
 	right.button_index = MOUSE_BUTTON_RIGHT
 	right.pressed = true
 	right.position = at
 	view._gui_input(right)
-	assert_signal_not_emitted(view, "army_menu_requested", "the press alone is not yet a click (v2: a right drag turns)")
 	var right_up := right.duplicate() as InputEventMouseButton
 	right_up.pressed = false
 	view._gui_input(right_up)
-	assert_signal_emitted_with_parameters(view, "army_menu_requested", [String(hit["code"]), at])
+	assert_signal_not_emitted(view, "ground_menu_requested")
+	assert_signal_not_emitted(view, "plan_menu_requested")
 
 
 func test_a_piece_sits_level_on_the_highest_relief_under_its_base() -> void:
@@ -463,7 +466,8 @@ func test_the_chalk_ring_follows_a_pushed_piece() -> void:
 	var p: Dictionary = WarRoom.on_sheet(repo, state, _home_sheet())[0]
 	var code := String(p["code"])
 	view.select(code)
-	var before: Vector2 = hud._chalk
+	var ring := func() -> Vector2: return (hud.marks()["rings"][0] as Dictionary)["at"]   # the selection's ring
+	var before: Vector2 = ring.call()
 	ArmySystem.ensure(repo, state)
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(20.0, 0.0)
 	var m := ArmySystem.pack_to_metres(repo, to)
@@ -475,8 +479,8 @@ func test_the_chalk_ring_follows_a_pushed_piece() -> void:
 	assert_true(pieces.pushing(), "half way")
 	var cam: Camera3D = view.get_node("%Camera")
 	var now := cam.unproject_position(pieces.piece(code).global_position) / view.window_scale()
-	assert_almost_eq(hud._chalk.x, now.x, 0.5, "the ring stands where the piece is mid-push")
-	assert_ne(hud._chalk.x, before.x, "and it has moved with it")
+	assert_almost_eq((ring.call() as Vector2).x, now.x, 0.5, "the ring stands where the piece is mid-push")
+	assert_ne((ring.call() as Vector2).x, before.x, "and it has moved with it")
 	await wait_until(func() -> bool: return not pieces.pushing(), repo.bal("war_plot_push_s") * 2.0)
 	assert_false(pieces.pushing(), "the push is over and the redraws stop")
 

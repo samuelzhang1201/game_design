@@ -22,15 +22,14 @@ func test_every_balance_key_the_room_reads_is_there() -> void:
 			"war_explode_s", "war_explode_m", "war_ink_road_px", "war_ink_trail_px", "war_ink_river_px",
 			"war_ink_coast_px", "war_ink_border_px", "war_ink_band_px", "war_ink_seam_px",
 			"war_ink_town_px", "war_ink_label_px", "war_ink_dash_px", "war_ink_gap_px",
-			"war_draft_alpha", "war_draft_pencil_px", "war_draft_pencil_dash_px",
-			"war_draft_head_px", "war_deploy_wax_s", "war_deploy_press_s",
+			"war_draft_alpha", "war_deploy_wax_s", "war_deploy_press_s",
 			"war_deploy_roll_s", "war_deploy_rolled_share"]:
 		assert_true(repo.balance.has(key), key)
 
 
 func test_the_palette_has_every_ink_the_room_draws() -> void:
 	for key in ["paper", "paper_age", "ink", "ink_faint", "contour_figure", "hazard_ink", "rubric", "sea_ink", "river_ink",
-			"chalk", "brass", "arrow", "candle", "background", "pencil"]:
+			"chalk", "brass", "arrow", "candle", "background", "pencil", "plan_blue", "plan_blue_draft"]:
 		assert_true(repo.war_palette.has(key), key)
 		assert_true(repo.war_palette[key] is Color, key)
 

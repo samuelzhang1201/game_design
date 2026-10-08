@@ -26,12 +26,20 @@ static func _burg_px(repo: DataRepository, town: String) -> Vector2:
 ## The road from `town` to the regiment, pack px (the courier's road:
 ## CourierSystem.path_between), the town first and the column last.
 static func road_px(repo: DataRepository, state: GameState, code: String, town: String) -> PackedVector2Array:
-	var out := PackedVector2Array()
 	var reg := ArmySystem.regiment(repo, code, state)
-	if reg.is_empty() or not repo.burgs.has(town):
+	if reg.is_empty():
+		return PackedVector2Array()
+	return road_between_px(repo, town, ArmySystem.position_of(repo, state, reg))
+
+
+## The road from `town` to any pack point (the courier's road), the town
+## first and the point last — a march's end, for the supply town chosen on
+## its confirm (spec 2026-10-08-war-room-draw-orders ruling 13).
+static func road_between_px(repo: DataRepository, town: String, to: Vector2) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if not repo.burgs.has(town):
 		return out
 	var from := _burg_px(repo, town)
-	var to := ArmySystem.position_of(repo, state, reg)
 	out.append(from)
 	for p: Array in CourierSystem.path_between(repo, from, to):
 		out.append(ArmySystem.metres_to_pack(repo, Vector2i(int(p[0]), int(p[1]))))
@@ -82,6 +90,82 @@ static func eligibility(repo: DataRepository, state: GameState, code: String) ->
 	return out
 
 
+## The towns that may supply `code` on a march to `dest_px` (ruling 13):
+## those the engine takes NOW (eligibility, measured from where the column
+## stands, as the order is validated when sent) whose wagons also reach the
+## march's end within supply_point_max_days, and none AHEAD of the column
+## (ruling 20, `mark_ahead`); town -> "" or why not (army_supply_orders.csv
+## pick_far_end, pick_ahead).
+static func march_eligibility(repo: DataRepository, state: GameState, code: String, dest_px: Vector2) -> Dictionary:
+	var out := eligibility(repo, state, code)
+	var max_days := int(repo.bal("supply_point_max_days"))
+	var hint := String((repo.army_supply_orders.get("pick_far_end", {}) as Dictionary).get("hint",
+		"{town}: the wagons need {days} days to the march's end, the most is {max}"))
+	for town: String in out:
+		if String(out[town]) != "":
+			continue
+		var days := wagon_days(repo, road_km(repo, road_between_px(repo, town, dest_px)))
+		if days > max_days:
+			out[town] = hint.format({"town": String(repo.burgs[town].get("label", town)), "days": days, "max": max_days})
+	return mark_ahead(repo, state, code, out)
+
+
+## `why` (town -> "" or why not) with every allowed town AHEAD of `code`
+## greyed (ruling 20), whichever way or whether it marches; the column is
+## where the engine has it. Returns `why`, changed in place.
+static func mark_ahead(repo: DataRepository, state: GameState, code: String, why: Dictionary) -> Dictionary:
+	var reg := ArmySystem.regiment(repo, code, state)
+	if reg.is_empty():
+		return why
+	var at := ArmySystem.position_of(repo, state, reg)
+	var rear := CourierSystem.origin(repo, state)
+	var hint := String((repo.army_supply_orders.get("pick_ahead", {}) as Dictionary).get("hint", "{town}: on the frontier side of the column"))
+	for town: String in why:
+		if String(why[town]) == "" and is_ahead(repo, rear, at, _burg_px(repo, town)):
+			why[town] = hint.format({"town": String(repo.burgs[town].get("label", town))})
+	return why
+
+
+## A town is AHEAD of a column at `at` (owner 2026-10-08, ruling 20) when it
+## lies FARTHER from the crown's rear `rear` (its capital's point) than the
+## column by more than supply_ahead_km: the frontier side, whichever way the
+## column marches. Nearer the rear, or within the tolerance, is not ahead.
+static func is_ahead(repo: DataRepository, rear: Vector2, at: Vector2, town: Vector2) -> bool:
+	var tol := repo.bal("supply_ahead_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
+	return town.distance_to(rear) > at.distance_to(rear) + tol
+
+
+## The towns in the order the march's confirm lists them (ruling 20): the
+## allowed ones first, nearest the column by road first, a tie to the one
+## nearer the crown's capital, then by code; the refused after, the same way.
+## `km` town -> road km to the column, `to_capital` town -> distance to it.
+static func rear_sorted(why: Dictionary, km: Dictionary, to_capital: Dictionary) -> Array:
+	var towns: Array = why.keys()
+	towns.sort_custom(func(a: String, b: String) -> bool:
+		var ra := String(why[a]) != ""
+		var rb := String(why[b]) != ""
+		if ra != rb:
+			return rb
+		if int(km.get(a, 0)) != int(km.get(b, 0)):
+			return int(km.get(a, 0)) < int(km.get(b, 0))
+		if float(to_capital.get(a, 0.0)) != float(to_capital.get(b, 0.0)):
+			return float(to_capital.get(a, 0.0)) < float(to_capital.get(b, 0.0))
+		return a < b)
+	return towns
+
+
+## `rear_sorted` on the pack's roads: each town's road km to `code` where it
+## stands, and its distance to the crown's capital.
+static func rear_order(repo: DataRepository, state: GameState, code: String, why: Dictionary) -> Array:
+	var km := {}
+	var to_capital := {}
+	var cap_px := CourierSystem.origin(repo, state)
+	for town: String in why:
+		km[town] = road_km(repo, road_px(repo, state, code, town))
+		to_capital[town] = _burg_px(repo, town).distance_to(cap_px)
+	return rear_sorted(why, km, to_capital)
+
+
 ## The hostile regiments' positions (data/army_hostile_stances.csv), [[px, kingdom]].
 static func _hostiles(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
@@ -99,6 +183,23 @@ static func _hostiles(repo: DataRepository, state: GameState) -> Array:
 
 ## Where a hostile regiment stands within supply_cut_reach_m of the road:
 ## {at: the nearest road point (pack px), by: its kingdom}; {} when clear.
+## A line whose regiment GARRISONS a town under siege (ArmyGround.garrison_town,
+## SiegeSystem.besieged) is cut by the besiegers (spec §5.1: a besieged town is
+## cut off, lines too, so its hunger cannot be fed by a supply point): {at (the
+## town's point, PACK px), by (the leading host's kingdom), host}; {} otherwise.
+static func siege_cut(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var held := ArmyGround.garrison_town(repo, state, code)
+	if held == "" or not SiegeSystem.besieged(state, held):
+		return {}
+	var host := SiegeSystem.lead_of(repo, state, held)
+	var kingdom := ""
+	for c: String in EnemyAi.regiments_of(state, host):
+		kingdom = String(ArmySystem.regiment(repo, c, state).get("kingdom_code", ""))
+		break
+	return {"at": ArmySystem.metres_to_pack(repo, EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, held)),
+		"by": kingdom if kingdom != "" else host, "host": host}
+
+
 static func cut_point(repo: DataRepository, state: GameState, route: PackedVector2Array) -> Dictionary:
 	if route.size() < 2:
 		return {}
@@ -294,7 +395,8 @@ static func fed_from_words(repo: DataRepository, from: String) -> String:
 ## each day, free of cartage and road (spec §3.2 step 4), from: its own town
 ## (crown, lord, the houses' stock bought); then the depot (crown, lord);
 ## then the CROWN's stock of the other realm towns, nearest first (owner
-## 2026-10-07, option A). Nothing past its own town is bought. The first day
+## 2026-10-07, option A) — but a town under siege (SiegeSystem.besieged)
+## feeds its garrison from its own stores alone. Nothing past its own town is bought. The first day
 ## its town falls short returns a `town_dry` event {depot, realm: the other
 ## towns were drawn}, said once until its town fills it again (`supply_dry`);
 ## `supply_fed` keeps where it was fed from last (the depot, "" the realm's).
@@ -320,6 +422,8 @@ static func _refill_in_town(repo: DataRepository, state: GameState, code: String
 	if rest <= 0:
 		_wet(entry)
 		return {}
+	if SiegeSystem.besieged(state, held):
+		return {}   # the besiegers let nothing in: the garrison eats what it carries
 	var dep := TownStores.depot(repo, state)
 	var got := 0
 	if dep != held:
@@ -500,15 +604,19 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 			ln["state"] = FLOWING
 			events.append({"type": "opened", "regiment": code, "town": town})
 		var route := road_px(repo, state, code, town)
-		var cut := cut_point(repo, state, route)
+		var cut := siege_cut(repo, state, code)
+		if cut.is_empty():
+			cut = cut_point(repo, state, route)
 		if not cut.is_empty():
 			if String(ln["state"]) != CUT:
 				var at := ArmySystem.pack_to_metres(repo, cut["at"])
 				ln["cut_x_m"] = at.x
 				ln["cut_y_m"] = at.y
 				ln["cut_by"] = String(cut["by"])
-				events.append({"type": "cut", "regiment": code, "town": town, "by": String(cut["by"]),
-					"at": cut["at"]})
+				var ev := {"type": "cut", "regiment": code, "town": town, "by": String(cut["by"]), "at": cut["at"]}
+				if cut.has("host"):
+					ev["host"] = String(cut["host"])
+				events.append(ev)
 			ln["state"] = CUT
 			continue
 		if String(ln["state"]) == CUT:

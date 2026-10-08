@@ -48,7 +48,8 @@ func test_add_supply_point_lights_the_eligible_towns() -> void:
 	_menu.hide()
 	_menu.id_pressed.emit(id)
 	assert_eq(_menu.supply_picking(), code)
-	assert_eq(_map.supply_pick, SupplyLines.eligibility(Game.data, Game.state, code))
+	assert_eq(_map.supply_pick, SupplyLines.mark_ahead(Game.data, Game.state, code, SupplyLines.eligibility(Game.data, Game.state, code)),
+			"the eligible towns, the frontier side of the column greyed")
 	assert_true(_map.aiming, "the next click only says where it landed")
 
 func test_clicking_a_lit_town_then_a_rate_sends_the_order() -> void:

@@ -3,12 +3,15 @@ extends RefCounted
 ## The WAR ROOM's plans at the screen (spec 2026-10-07-war-room-annotations-
 ## and-planning-pieces §1.5, §2.4): the right-click menus (open ground, a
 ## supposed piece, a stroke), the Place form, the name box, the tool roll, the
-## keys (Esc, 1-4, Delete, undo) and the slip of a supposed piece — and every
-## write, through Game (the view's WarPlanInput only says what was done).
-## WarRoomScreen owns one.
+## keys (Esc, 1-4 on the side in hand, Tab the other side, Delete, undo) and
+## the slip of a supposed piece — and every write, through Game (the view's
+## WarPlanInput only says what was done). A front is drawn facing the other
+## side's nearest mark or piece (spec 2026-10-08-war-room-draw-orders ruling
+## 12). WarRoomScreen owns one.
 
-enum { PLACE = 1, CLEAR_PIECES, CLEAR_STROKES, EDIT, REMOVE, NAME, DASHED, FLIP, CONFIRM, KEEP, DRAW = 100, COLOUR = 200 }
-const COLOURS := {"blue": "Woad crayon (ours)", "red": "Minium crayon (theirs)", "ink": "The pen"}
+enum { PLACE = 1, CLEAR_PIECES, CLEAR_STROKES, EDIT, REMOVE, NAME, DASHED, FLIP, CONFIRM, KEEP, FACE, COLOUR = 200 }
+## The sides a mark may be recoloured to (the pen is retired: ruling 3).
+const COLOURS := {"blue": "Ours (woad blue)", "red": "Theirs (minium red)"}
 
 var _screen: Control
 var _view: WarRoomView
@@ -46,9 +49,12 @@ func bind(screen: Control, view: WarRoomView, menu: PopupMenu, form: WarPlanForm
 	_form.placed.connect(_on_placed)
 	_name.named.connect(_on_named)
 	_roll.stick_picked.connect(_input.pick_stick)
-	_roll.kind_picked.connect(_input.pick_kind)
+	_roll.kind_picked.connect(func(side: String, k: String) -> void: _input.pick_kind(k, side))
 	_roll.action_picked.connect(_input.pick_action)
 	_input.tool_changed.connect(_show_tool)
+	_input.stroke_faced.connect(func(id: String, flip: int) -> void:
+		_remember()
+		Game.restyle_plan(id, {"flip": flip}))
 	_input.drawn.connect(_on_drawn)
 	_input.piece_moved.connect(func(id: String, to: Vector2, facing: int) -> void:
 		_remember()
@@ -87,8 +93,9 @@ func _pop(at: Vector2) -> void:
 
 
 func _show_tool() -> void:
-	_roll.show_state(_input.tool.stick if _input.tool.in_hand() else WarPlanTool.HAND,
-		_input.tool.kind if _input.tool.in_hand() else "", _input.action)
+	_roll.show_state(_input.tool.side, _input.tool.kind, _input.action, _input.whys())
+	if _input.tool.in_hand():
+		_slip.hide_slip()   # a pinned slip never covers the stroke about to be drawn
 
 
 # --- menus -------------------------------------------------------------------
@@ -101,8 +108,6 @@ func _open_ground_menu(pack: Vector2, at: Vector2) -> void:
 	var why := WarPlans.refusal(Game.data, Game.state, String(WarPlans.arms(Game.data)[0]), 1000, WarPlans.UNKNOWN, pack)
 	_menu.set_item_disabled(_menu.get_item_index(PLACE), why != "")
 	_menu.set_item_tooltip(_menu.get_item_index(PLACE), why)
-	for i in _kinds.size():
-		_menu.add_item("Draw: %s" % String(Game.data.war_plan_kinds[_kinds[i]]["label"]).to_lower(), DRAW + i)
 	_menu.add_separator()
 	_menu.add_item("Clear supposed pieces on %s" % sheet, CLEAR_PIECES)
 	_menu.set_item_disabled(_menu.get_item_index(CLEAR_PIECES), WarPlans.pieces_in(Game.data, Game.state, _view.sheet_rect()).is_empty())
@@ -133,6 +138,7 @@ func _open_plan_menu(id: String, at: Vector2) -> void:
 	_menu.set_item_checked(_menu.get_item_index(DASHED), int(s["dashed"]) != 0)
 	if bool(kind["teeth"]):
 		_menu.add_item("Flip the teeth", FLIP)
+		_menu.add_item("Face the enemy", FACE)
 	_menu.add_separator()
 	_menu.add_item("Remove", REMOVE)
 	_input.choose(id)
@@ -153,9 +159,6 @@ func _on_row(id: int) -> void:
 	if id >= COLOUR:
 		_remember()
 		Game.restyle_plan(String(f["id"]), {"colour": String(COLOURS.keys()[id - COLOUR])})
-		return
-	if id >= DRAW:
-		_input.pick_kind(String(_kinds[id - DRAW]))
 		return
 	match id:
 		PLACE:
@@ -187,6 +190,11 @@ func _on_row(id: int) -> void:
 			var s: Dictionary = Game.state.war_plans[WarPlans.STROKES].get(String(f["id"]), {})
 			_remember()
 			Game.restyle_plan(String(f["id"]), {"flip": 0 if int(s.get("flip", 0)) != 0 else 1})
+		FACE:
+			var s: Dictionary = Game.state.war_plans[WarPlans.STROKES].get(String(f["id"]), {})
+			if not s.is_empty():
+				_remember()
+				Game.restyle_plan(String(f["id"]), {"flip": _facing(String(s["colour"]), WarPlans.points_px(Game.data, s), String(f["id"]))})
 
 
 # --- writes ------------------------------------------------------------------
@@ -233,8 +241,9 @@ func _on_placed(arm: String, heads: int, side: String) -> void:
 func _on_drawn(d: Dictionary) -> void:
 	var kind := String(d["kind"])
 	var name := WarPlans.next_name(Game.data, Game.state, kind)
+	var flip := _facing(String(d["colour"]), d["pts"]) if bool(Game.data.war_plan_kinds[kind]["teeth"]) else -1
 	_remember()
-	var id := Game.draw_plan(kind, String(d["colour"]), d["pts"], float(d["r"]), name, false)
+	var id := Game.draw_plan(kind, String(d["colour"]), d["pts"], float(d["r"]), name, false, flip, String(d.get("of", "")))
 	if id == "":
 		Game.publish_news(WarPlans.stroke_refusal(Game.data, Game.state, kind, String(d["colour"]), d["pts"], float(d["r"]), name))
 		return
@@ -243,6 +252,13 @@ func _on_drawn(d: Dictionary) -> void:
 		var at: Variant = _view.screen_pos_of_px(pts[pts.size() - 1])
 		if at != null:
 			_name.open_at(id, name, _origin() + (at as Vector2), _bounds(), int(Game.data.bal("war_plan_name_chars")))
+
+
+## A front's facing: toward the nearest of the other side's marks and pieces
+## (ours are where the room stands them).
+func _facing(colour: String, pts: PackedVector2Array, except_id := "") -> int:
+	var ours: Array = WarRoom.pieces(Game.data, Game.state, _view.drawn()).map(func(q: Dictionary) -> Vector2: return q["at"])
+	return WarPlans.facing_flip(pts, WarPlans.opposing_points(Game.data, Game.state, colour, ours, except_id))
 
 
 func _on_named(id: String, text: String) -> void:
@@ -299,7 +315,13 @@ func key(event: InputEventKey) -> bool:
 		if _input.chosen_id != "":
 			_input.choose("")
 			return true
+		if _view.has_selection():
+			_view.clear_selection()
+			return true
 		return false
+	if event.keycode == KEY_TAB and not command:
+		_input.switch_side()
+		return true
 	if command and event.keycode == KEY_Z:
 		var now: Dictionary = Game.state.war_plans.duplicate(true)
 		var back := _input.tool.redo(now) if event.shift_pressed else _input.tool.undo(now)
@@ -313,6 +335,6 @@ func key(event: InputEventKey) -> bool:
 		return true
 	for k: String in _kinds:
 		if String(Game.data.war_plan_kinds[k]["tool_key"]) == OS.get_keycode_string(event.keycode):
-			_input.pick_kind(k)
+			_input.pick_kind(k)   # on the side in hand; none yet: the news says to choose one
 			return true
 	return false

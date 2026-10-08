@@ -60,9 +60,10 @@ static func brief(repo: DataRepository, state: GameState, code: String) -> Dicti
 		return {"title": title, "rows": [_row("Under arms", Intel.magnitude(repo, heads))]}
 	var st := _state_of(repo, state, code, reg)
 	var wounded := clampi(int(st.get("wounded", 0)), 0, heads)
-	var under := WarRoom.group(heads)
+	var dead := clampi(int(st.get("dead", 0)), 0, heads)
+	var under := WarRoom.group(heads - dead)
 	if wounded > 0:
-		under += " · %s fit" % WarRoom.group(heads - wounded)
+		under += " · %s fit" % WarRoom.group(ArmySystem.fit_heads(heads, st))
 	var arms: Array[String] = []
 	for a: Dictionary in arms_of(repo, code):
 		arms.append("%s %s" % [_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))])
@@ -157,11 +158,12 @@ static func _tier_word(n: int) -> String:
 
 static func _composition(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
 	var st := _state_of(repo, state, code, reg)
-	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.headcount(repo, reg)))]
+	# the dead are no longer under arms
+	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.headcount(repo, reg) - maxi(0, int(st.get("dead", 0)))))]
 	for a: Dictionary in arms_of(repo, code):
 		rows.append(_row(_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))))
 	var wounded := int(st.get("wounded", 0))
-	rows.append(_row("Fit", WarRoom.group(maxi(0, ArmySystem.headcount(repo, reg) - wounded))))
+	rows.append(_row("Fit", WarRoom.group(ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), st))))
 	rows.append(_row("Wounded", WarRoom.group(wounded)))
 	var n := figures(repo, state, code)
 	rows.append(_row("Formation", "%d figures — %s" % [n, _tier_word(n)]))
@@ -313,6 +315,9 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 	if order == ArmySystem.ORDER_GARRISON and ArmyGround.seated_in(repo, state, code) == "":
 		shown = "camped" if ArmyGround.camped_by(repo, state, code) != "" else "camp"
 	rows.append(_row("Order", order_word(repo, shown)))
+	var stance := BattleSystem.stance_words(repo, state, code)
+	if stance != "":
+		rows.append(_row("Battle stance", stance))
 	if order == ArmySystem.ORDER_MARCH:
 		var dest := ArmySystem.destination_of(repo, state, code)
 		var si := WarSheets.sheet_of(repo, dest)

@@ -43,6 +43,43 @@ func _end_day(state: GameState) -> Array:
 	# courier arrives as the day ENDS): he reaches the column where its day
 	# left it, and the order he delivers is marched on from tomorrow.
 	day_couriers = CourierSystem.ride_day(data, state)
+	# The raider realm's hosts (spec 2026-10-07-enemy-ai-and-battle §2-3), ONCE
+	# a day: after the march and the couriers, so a host reads the places and
+	# the garrisons the day's battles will read; BEFORE the battles, so a column
+	# that marched into a garrisoned town's reach today has put its host in
+	# SIEGE before the contacts are taken. step_day (the meal, retreat, arrival,
+	# the columns sent on) then think_day the same day, so a host that set out
+	# or stood aside today chooses before its columns march tomorrow.
+	day_ai = EnemyAi.step_day(data, state)
+	day_ai.append_array(EnemyAi.think_day(data, state))
+	for m: Dictionary in EnemyAi.warnings(data, state):
+		MissiveLog.add(data, state, m)
+	var news := MissiveWriter.host_news(data, state, day_ai)
+	if not news.is_empty():
+		MissiveLog.add(data, state, news)
+	# The day's battles, AFTER the couriers (spec 2026-10-07-enemy-ai-and-battle
+	# §4): an order a courier lands today (a stance, a march) is in the
+	# regiment's state before the round, and a stance he delivers takes hold at
+	# the end of this very settlement. ONE letter for all of the day's
+	# fighting, when there is any.
+	day_battles = BattleSystem.settle_day(data, state)
+	# The sieges' day (spec §5.1-5.2) right AFTER the battles, once: an
+	# assault is that day's town battle, and its outcome moves the siege. The
+	# siege's news rides in the same battle letter, after the fighting.
+	day_siege = SiegeSystem.settle_day(data, state, day_battles)
+	# The raids' day (spec §5.3) right after the sieges, once: a host the day's
+	# battles beat pays its spoils, a raiding host takes its day (a siege whose
+	# garrison left has just turned its host RAID), one that stripped its manor
+	# sets out again. Its own events (TickEngine.day_raid); its news rides in
+	# the same battle letter, after the siege's.
+	day_raid = RaidSystem.settle_day(data, state, day_battles)
+	# the sieges' and the raids' mode changes (EnemyAi.set_mode's host_mode
+	# events) join the day's record of the hosts; their news is the battle letter's
+	day_ai.append_array(day_siege.filter(func(e: Dictionary) -> bool: return e.has("type")))
+	day_ai.append_array(day_raid.filter(func(e: Dictionary) -> bool: return e.has("type")))
+	var fights: Array = day_battles + SiegeSystem.news(day_siege) + RaidSystem.news(day_raid)
+	if not fights.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, fights))
 	# The supply lines' day (spec 2026-10-07-army-supply-lines §3.2): the towns
 	# refill their garrisons, the wagons roll, before the host eats.
 	day_supply = SupplyLines.day_step(data, state)
@@ -70,6 +107,23 @@ var day_couriers: Array = []
 ## The supply lines' events of the last day (SupplyLines.day_step), for the
 ## marshal's dispatches.
 var day_supply: Array = []
+
+## The battles' events of the last day (BattleSystem.settle_day), for the
+## battle report.
+var day_battles: Array = []
+
+## The sieges' events of the last day (SiegeSystem.settle_day), the quiet
+## siege_day included; the battle letter carries SiegeSystem.news of them.
+var day_siege: Array = []
+
+## The raids' events of the last day (RaidSystem.settle_day: raid_spoils,
+## raid_begin, the quiet raid_day, host_mode); the battle letter carries
+## RaidSystem.news of them.
+var day_raid: Array = []
+
+## The hosts' events of the last day (EnemyAi.step_day then think_day:
+## host_advance, host_mode), for the host-news letter.
+var day_ai: Array = []
 
 ## The buildings the last advance() left idle that were working the month
 ## before (M5), [{cell, building, missing}] in cell then code order — read
@@ -104,6 +158,10 @@ func advance(state: GameState) -> TickReport:
 	else:
 		day_arrivals = []
 		day_couriers = []
+		day_battles = []
+		day_siege = []
+		day_raid = []
+		day_ai = []
 		day_supply = []
 	# The month that just ended is settled BEFORE the tick moves: its lines
 	# are the month's own (growth of tick t), and the ledger reasons carry

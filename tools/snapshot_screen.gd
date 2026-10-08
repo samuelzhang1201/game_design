@@ -212,10 +212,22 @@ var _ledger_select := ""
 ## clicks that regiment's piece (a chalk ring, its card) or, with
 ## --war-focus-px x,y leans in on that pack point instead of a piece;
 ## --war-hover fx,fy rests the pointer at that share of the view (a real
-## motion) until the hover slip is up; --war-drag fx,fy (a share of the view), RAKES it there: a real left press
-## on the piece, eight pushed motion events with the left button held, a real
-## release (the arrow and its confirm panel show; --war-commit then clicks
-## its Confirm, so the order's draft is pencilled). --war-folio
+## motion) until the hover slip is up; --war-drag fx,fy (a share of the view)
+## DRAWS the selection's march there (spec 2026-10-08-war-room-draw-orders):
+## the piece clicked (or the --war-box selection kept), the blue row's arrow
+## slot clicked, then a real left drag from the selection along a bent path to
+## that point (the blue arrow, then its confirm panel; --war-supply then
+## clicks the nearest lit town on the table, the bold dashed gold road
+## following; --war-supply-list opens the Supply from list for real and
+## prints its rows; --war-commit clicks its Confirm, so the drafts are pencilled;
+## --war-edit then clicks the regiment's draft pennant and its Edit route…,
+## reopening the confirm with the pending blue arrow). --war-spread N stands
+## N land regiments side by side in the field near the focus before the room
+## opens and --war-box Shift-drags a real box round them. --war-hint seeds a
+## spy report of foreign men near the focus (the red ants); --war-plan-select
+## first|hint clicks the first supposed piece or intel hint (the red
+## selection). --war-plan-draw takes "side:kind,fx1,fy1,fx2,fy2" (side red or
+## blue, blue when left out), several joined by ';'. --war-folio
 ## full|DRILL|arm:ARM|explode holds the docked book up by its + (a real
 ## click) and then opens its drill, an arm or presses Take apart — it says so
 ## and skips while the folio, its drill tabs or its Take apart button are not
@@ -265,7 +277,15 @@ var _war_board_click := Vector2(-1, -1)
 var _war_phase := 0
 var _war_plan_menu := Vector2(-1, -1)   # --war-plan-menu fx,fy: a REAL right click on open table (the ground menu)
 var _war_plan_place := false            # --war-plan-place: then its Place row (the form)
-var _war_plan_draw: PackedStringArray = []   # --war-plan-draw kind,fx1,fy1,fx2,fy2: the roll's slot, then a real drag
+var _war_plan_draw: Array = []   # --war-plan-draw [side:]kind,fx1,fy1,fx2,fy2[;…]: the roll's slot, then a real drag
+var _war_spread := 0             # --war-spread N: N land regiments stood side by side near the focus
+var _war_box := false            # --war-box: a real Shift-drag box round them
+var _war_supply := false         # --war-supply: a real click on the nearest lit town while the confirm stands
+var _war_supply_list := false    # --war-supply-list: a real click opening the confirm's Supply from list
+var _war_edit := false           # --war-edit: the draft pennant's Edit route… after the commit
+var _war_hint := false           # --war-hint: a spy report of foreign men seeded near the focus
+var _war_plan_select := ""       # --war-plan-select first|hint: the red selection by a real click
+var _war_wait := 0               # --war-wait N: N more frames before the moment (the hint's ants walk on)
 var _war_plan_hover := false            # --war-plan-hover: rest the pointer on the first supposed piece (the slip)
 var _war_plans_demo := false   # --war-plans-demo: a fixed set of plans laid near the first land piece before the room opens
 var _war_at := 0
@@ -406,7 +426,14 @@ func _ready() -> void:
 		elif args[i] == "--war-plan-place":
 			_war_plan_place = true
 		elif args[i] == "--war-plan-draw":
-			_war_plan_draw = args[i + 1].split(",")
+			for one: String in args[i + 1].split(";"):
+				_war_plan_draw.append(one.split(","))
+		elif args[i] == "--war-spread":
+			_war_spread = int(args[i + 1])
+		elif args[i] == "--war-plan-select":
+			_war_plan_select = args[i + 1]
+		elif args[i] == "--war-wait":
+			_war_wait = int(args[i + 1])
 		elif args[i] == "--war-plan-hover":
 			_war_plan_hover = true
 		elif args[i] == "--war-plans-demo":
@@ -459,11 +486,16 @@ func _ready() -> void:
 		i += 1
 	_war_room = args.has("--war-room")
 	_war_commit = args.has("--war-commit")
+	_war_box = args.has("--war-box")
+	_war_supply = args.has("--war-supply")
+	_war_supply_list = args.has("--war-supply-list")
+	_war_edit = args.has("--war-edit")
+	_war_hint = args.has("--war-hint")
 	_war_board = args.has("--war-board") or _war_board_click.x >= 0.0
 	if _war_room and _shot_on == "":
 		_shot_on = "war"
-	if _war_drag.x >= 0.0 and _war_piece == "":
-		push_warning("--war-drag needs --war-piece (the piece to rake); there is nothing to drag")
+	if _war_drag.x >= 0.0 and _war_piece == "" and not _war_box:
+		push_warning("--war-drag needs --war-piece or --war-box (a selection to draw the march for)")
 	_march_confirm = args.has("--march-confirm")
 	_ledger_search_pick = args.has("--ledger-search-pick")
 	_march_commit = args.has("--march-commit")
@@ -739,6 +771,40 @@ func _real_right_drag(c: Control, from: Vector2, to: Vector2) -> void:
 	release.button_index = MOUSE_BUTTON_RIGHT
 	release.pressed = false
 	release.position = origin * to
+	release.global_position = release.position
+	c.get_viewport().push_input(release, true)
+
+
+## A real left drag along a PATH (each point a motion, eight between each
+## two), Shift held when `shift` — a drawn stroke or a box, like a hand.
+func _real_path(c: Control, pts: Array, shift := false) -> void:
+	_real_move(c, pts[0])
+	var origin := c.get_global_transform_with_canvas()
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.shift_pressed = shift
+	press.position = origin * (pts[0] as Vector2)
+	press.global_position = press.position
+	c.get_viewport().push_input(press, true)
+	var last: Vector2 = pts[0]
+	for j in range(1, pts.size()):
+		for i in range(1, 9):
+			var at := (pts[j - 1] as Vector2).lerp(pts[j], float(i) / 8.0)
+			var m := InputEventMouseMotion.new()
+			m.button_mask = MOUSE_BUTTON_MASK_LEFT
+			m.shift_pressed = shift
+			m.position = origin * at
+			m.global_position = m.position
+			m.relative = at - last
+			last = at
+			c.get_viewport().push_input(m, true)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.shift_pressed = shift
+	release.position = origin * last
 	release.global_position = release.position
 	c.get_viewport().push_input(release, true)
 
@@ -1114,11 +1180,10 @@ func _seed_war_plans() -> void:
 	var km := func(x: float, y: float) -> Vector2: return at + Vector2(x, y) * k
 	var side := String(WarPlans.sides(Game.data)[0])
 	print("war plans: ", [
-		Game.draw_plan("arrow", "blue", PackedVector2Array([km.call(-2, 6), km.call(6, 0), km.call(14, -4), km.call(20, -5)]), 0.0, "", false),
-		Game.draw_plan("front", "red", PackedVector2Array([km.call(24, -14), km.call(25, -6), km.call(27, 2), km.call(30, 8)]), 0.0, "", false),
-		Game.draw_plan("phase", "ink", PackedVector2Array([km.call(12, -16), km.call(13, 0), km.call(12, 14)]), 0.0, "Line I", false),
-		Game.draw_plan("objective", "ink", PackedVector2Array([km.call(26, -3)]), 3.0 * k, "Obj. A", false),
-		Game.draw_plan("arrow", "red", PackedVector2Array([km.call(36, -10), km.call(31, -6), km.call(28, -4)]), 0.0, "", true),
+		Game.draw_plan("front", "blue", PackedVector2Array([km.call(14, -14), km.call(15, -4), km.call(16, 4), km.call(17, 10)]), 0.0, "", false, 1),
+		Game.draw_plan("front", "red", PackedVector2Array([km.call(24, -14), km.call(25, -6), km.call(27, 2), km.call(30, 8)]), 0.0, "", false, 0),
+		Game.draw_plan("phase", "blue", PackedVector2Array([km.call(8, -16), km.call(9, 0), km.call(8, 14)]), 0.0, "Line I", false),
+		Game.draw_plan("objective", "red", PackedVector2Array([km.call(26, -3)]), 3.0 * k, "Obj. A", false),
 		Game.place_plan_piece("cavalry", 2000, side, km.call(29, -1), 180),
 		Game.place_plan_piece("infantry", 3000, WarPlans.UNKNOWN, km.call(30, 6), 180)])
 
@@ -1131,6 +1196,10 @@ func _war_room_step() -> void:
 			_war_sync("map")
 			if _war_plans_demo:
 				_seed_war_plans()
+			if _war_spread > 0:
+				_seed_war_spread()
+			if _war_hint:
+				_seed_war_hint()
 			var tab := _root.bottom_bar().button("WAR ROOM")
 			_real_click(tab, tab.size * 0.5)
 			print("war: open=%s sheet=%d" % [screen.visible, view.sheet_index()])
@@ -1163,7 +1232,11 @@ func _war_room_step() -> void:
 			if _war_zoom > 0.0:
 				var focus := Vector2(-1, -1)
 				var on := _war_focus if _war_focus != "" else _war_piece
-				if on != "":
+				if not _war_spread_codes.is_empty():
+					focus = Vector2.ZERO   # lean in on the regiments stood out (--war-spread)
+					for c: String in _war_spread_codes:
+						focus += view.position_of(c) / float(_war_spread_codes.size())
+				elif on != "":
 					focus = view.position_of(on)
 				elif _war_focus_px.x >= 0.0:
 					focus = _war_focus_px
@@ -1188,21 +1261,32 @@ func _war_room_step() -> void:
 			var at: Variant = view.screen_pos_of_px(view.position_of(_war_piece))
 			if at == null:
 				push_error("war: piece %s not in view" % _war_piece)
-			elif _war_drag.x >= 0.0:
-				_real_drag(view, at, Vector2(view.size) * _war_drag)
 			else:
 				_real_click(view, at)
-			print("war: piece=%s sheet=%d at=%s selected=%s aiming=%s" % [_war_piece, view.sheet_index(), at,
-				view.selected_army(), screen.orders().aiming()])
-		if _war_plan_draw.size() == 5:
-			var roll := screen.get_node("%ToolRoll") as WarToolRoll
-			var slot := roll.slot(_war_plan_draw[0])
+			print("war: piece=%s sheet=%d at=%s selected=%s sel=%s" % [_war_piece, view.sheet_index(), at,
+				view.selected_army(), view.plan_input().sel])
+		if _war_box:
+			_war_box_select(view)
+		if _war_plan_select != "":
+			_war_select_red(view)
+		var roll := screen.get_node("%ToolRoll") as WarToolRoll
+		if _war_drag.x >= 0.0:
+			_war_draw_order(screen, view, roll)
+		for spec: PackedStringArray in _war_plan_draw:
+			if spec.size() != 5:
+				continue
+			var sk := spec[0].split(":")
+			var side := sk[0] if sk.size() == 2 else "blue"
+			var kind := sk[sk.size() - 1]
+			var slot := roll.slot(kind, side)
 			_real_click(slot, slot.size * 0.5)
-			var a := Vector2(view.size) * Vector2(float(_war_plan_draw[1]), float(_war_plan_draw[2]))
-			var b := Vector2(view.size) * Vector2(float(_war_plan_draw[3]), float(_war_plan_draw[4]))
-			_real_drag(view, a, b)
-			print("war plan: drew %s strokes=%d in hand=%s" % [_war_plan_draw[0], (Game.state.war_plans["strokes"] as Dictionary).size(),
-				view.plan_input().tool.in_hand()])
+			var a := Vector2(view.size) * Vector2(float(spec[1]), float(spec[2]))
+			if spec[1] == "sel":
+				a = _red_spot(view) + Vector2(18, 0)   # from beside the red selection ("sel,_")
+			var b := Vector2(view.size) * Vector2(float(spec[3]), float(spec[4]))
+			_real_path(view, [a, a.lerp(b, 0.5) + (b - a).orthogonal() * 0.08, b] if kind == "arrow" else [a, b])
+			print("war plan: drew %s:%s strokes=%d in hand=%s why=%s" % [side, kind, (Game.state.war_plans["strokes"] as Dictionary).size(),
+				view.plan_input().tool.in_hand(), slot.why])
 		if _war_plan_menu.x >= 0.0:
 			var at := Vector2(view.size) * _war_plan_menu
 			_real_right_drag(view, at, at)
@@ -1253,11 +1337,23 @@ func _war_room_step() -> void:
 			if grab != null:
 				_real_drag(view, grab, Vector2(view.size) * _war_bend)
 			print("war: bent from %s waypoints=%s" % [grab, menu.waypoints()])
+		if _war_supply and menu.shown_confirm() != null:
+			_war_click_supply(view, menu)
+		if _war_supply_list and menu.shown_confirm() != null:
+			for o: Dictionary in menu.shown_confirm().shown_supply():
+				print("war: supply row %s%s%s" % [o["label"], " [pressed]" if bool(o["selected"]) else "",
+					" — greyed: " + String(o["why"]) if bool(o["disabled"]) else ""])
+			var list := menu.shown_confirm().get_node("%SupplyTown") as OptionButton
+			_real_click(list, list.size * 0.5)
 		if _war_commit and menu.shown_confirm() != null:
+			var marching := menu.marching()
 			var ok := menu.shown_confirm().confirm_button()
 			_real_click(ok, ok.size * 0.5)
-			print("war: committed order=%s pennant=%s draft=%s" % [ArmySystem.order_of(Game.data, Game.state, _war_piece),
-				WarRoom.pennant_of(Game.data, Game.state, _war_piece), WarDrafts.of(Game.state, _war_piece)])
+			print("war: committed %s drafts=%s" % [marching, marching.map(func(c: String) -> Dictionary: return WarDrafts.of(Game.state, c))])
+			if _war_edit and not marching.is_empty():
+				_war_edit_code = String(marching[0])
+				_war_to(7)
+				return
 		if _war_folio != "":
 			var folio := screen.get_node_or_null("%Folio") as WarFolioPanel
 			if folio == null:
@@ -1270,11 +1366,25 @@ func _war_room_step() -> void:
 					print("war: folio held up=%s" % folio.is_full())
 				_war_folio_inner = _war_folio != "full"   # its tabs are clicked once the book is laid out
 		_war_to(10 if _war_deploy != "" or _war_leave != "" else 5)
+	elif _war_phase == 7 and _frames - _war_at >= 8:
+		# the draft's pennant clicked for real: its route menu
+		for h: Dictionary in (view.get_node("%Pennants") as WarPennants).screen_hits(view.get_node("%Camera"), view.window_scale()):
+			if String(h["code"]) == _war_edit_code:
+				_real_click(view, (h["rect"] as Rect2).get_center())
+				break
+		print("war: pennant menu open=%s" % screen.orders().visible)
+		_war_to(8)
+	elif _war_phase == 8 and _frames - _war_at >= 4:
+		var menu := screen.orders()
+		menu.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
+		menu.id_pressed.emit(ArmyOrderMenu.EDIT)
+		print("war: edit route aiming=%s confirm=%s waypoints=%s" % [menu.aiming(), menu.shown_confirm() != null, menu.waypoints()])
+		_war_to(5)
 	elif _war_phase == 5 and _war_folio_inner and _frames - _war_at >= 6:
 		_war_folio_inner = false
 		_war_folio_click(screen.get_node("%Folio"))
 		_war_to(5)   # the shot waits from the click
-	elif _war_phase == 5 and _frames - _war_at >= 40 + (ceili(Game.data.bal("war_explode_s") * 120.0)   # a 120 Hz display's frames
+	elif _war_phase == 5 and _frames - _war_at >= 40 + _war_wait + (ceili(Game.data.bal("war_explode_s") * 120.0)   # a 120 Hz display's frames
 			if _war_folio == "explode" else 0):
 		_war_sync("room")
 		_moment("war")
@@ -1305,6 +1415,163 @@ func _war_room_step() -> void:
 		elif _war_deploy == "sent" and not scroll.sealing() and _frames - _war_at >= 30:
 			print("war: sent — drafts=%s couriers=%d" % [WarDrafts.codes(Game.state), Game.state.couriers.size()])
 			_war_to(5)
+
+
+var _war_edit_code := ""
+var _war_spread_codes: Array = []
+
+
+## The harness's own setup (--war-spread N): N land regiments of the realm
+## stood side by side in the field near the focus, a few km apart, on land.
+func _seed_war_spread() -> void:
+	ArmySystem.ensure(Game.data, Game.state)
+	var codes: Array = []
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(Game.data, r) > 0:
+			codes.append(String(r["regiment_code"]))
+	var lead := _war_focus if _war_focus != "" else String(codes[0])
+	var at := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, lead, Game.state))
+	var k := WarSheets.px_per_unit(Game.data)
+	var placed := 0
+	for c: String in codes:
+		if placed >= _war_spread:
+			break
+		for tries in 12:
+			var p := at + Vector2(-6.0 + 6.0 * placed + tries * 0.7, 9.0 + tries * 1.3) * k
+			var cell := MapEconomy.cell_at(Game.data, p)
+			if cell >= 0 and not MapTerrain.is_water(Game.data.cells[cell]) and ArmySystem.town_at(Game.data, p) == "":
+				var m := ArmySystem.pack_to_metres(Game.data, p)
+				Game.state.regiments[c]["x_m"] = m.x
+				Game.state.regiments[c]["y_m"] = m.y
+				_war_spread_codes.append(c)
+				placed += 1
+				break
+	Game.state_changed.emit()
+	if _war_sheet < 0 and not _war_spread_codes.is_empty():
+		_war_sheet = WarSheets.sheet_of(Game.data, ArmySystem.position_of(Game.data, Game.state,
+			ArmySystem.regiment(Game.data, String(_war_spread_codes[0]), Game.state)))
+	print("war spread: ", _war_spread_codes)
+
+
+## --war-hint: a spy report of foreign men a few km off the focus, come in.
+func _seed_war_hint() -> void:
+	var at := Vector2(-1, -1)
+	for q: Dictionary in WarRoom.pieces(Game.data, Game.state):
+		if not bool(q["naval"]) and (_war_focus == "" or String(q["code"]) == _war_focus):
+			at = q["at"]
+			break
+	var k := WarSheets.px_per_unit(Game.data)
+	var spot := at + Vector2(24.0, -5.0) * k if _war_focus_px.x < 0.0 else _war_focus_px
+	var id := MissiveLog.add(Game.data, Game.state, MissiveLog.make("spy", "credible", Game.state.absolute_day(),
+		MissiveLog.subject("point", "", -1, spot), "Spy report — " + Intel.place_label(Game.data, Game.state, spot),
+		[MissiveLog.span("troops_foreign", "Foreign men", 1800, 2600)]))
+	print("war hint: report %d at %s" % [id, spot])
+
+
+## --war-box: a real Shift-drag round the spread regiments' pieces.
+func _war_box_select(view: WarRoomView) -> void:
+	var box := Rect2()
+	var any := false
+	for c: String in (_war_spread_codes if not _war_spread_codes.is_empty() else [_war_piece]):
+		var at: Variant = view.screen_pos_of_px(view.position_of(c))
+		if at != null:
+			box = Rect2(at, Vector2.ZERO) if not any else box.expand(at)
+			any = true
+	if not any:
+		print("war: nothing to box")
+		return
+	var from := Vector2(-1, -1)
+	var to := Vector2(-1, -1)
+	for g: float in [44.0, 60.0, 80.0, 30.0]:
+		var bx := box.grow(g)
+		var corners := [bx.position, Vector2(bx.end.x, bx.position.y), bx.end, Vector2(bx.position.x, bx.end.y)]
+		for i in 4:
+			var c: Vector2 = corners[i]
+			if from.x < 0.0 and view.pack_at(c).x >= 0.0 and view.piece_under(c) == "":
+				from = c
+				to = corners[(i + 2) % 4]
+	if from.x < 0.0:
+		print("war: no corner of open table to start the box")
+		return
+	box = Rect2(from, Vector2.ZERO).expand(to)
+	_real_path(view, [from, from.lerp(to, 0.5), to], true)
+	print("war: boxed %s -> sel=%s" % [box, view.plan_input().sel])
+
+
+## --war-plan-select: a real click on the first supposed piece or intel hint.
+func _war_select_red(view: WarRoomView) -> void:
+	var at: Variant = null
+	if _war_plan_select == "hint":
+		var hints := view.plan_input().hints_on_sheet()
+		at = view.screen_pos_of_px(hints[0]["at"]) if not hints.is_empty() else null
+	else:
+		var ps := WarPlans.pieces_in(Game.data, Game.state, view.sheet_rect())
+		at = view.screen_pos_of_px(ps[0]["at"]) if not ps.is_empty() else null
+	if at == null:
+		print("war: no %s to select" % _war_plan_select)
+		return
+	_real_click(view, at)
+	print("war: selected %s -> %s %s" % [_war_plan_select, view.plan_input().sel_side, view.plan_input().sel])
+
+
+## Where the red selection's first stands on the screen.
+func _red_spot(view: WarRoomView) -> Vector2:
+	var sel := view.plan_input().sel
+	if sel.is_empty():
+		return Vector2(view.size) * 0.5
+	var id := String(sel[0])
+	var px: Vector2 = WarRoom.hint_of(Game.data, Game.state, id).get("at", Vector2.ZERO) if id.begins_with("h") \
+		else WarPlans.at_px(Game.data, Game.state.war_plans["pieces"][id])
+	var at: Variant = view.screen_pos_of_px(px)
+	return at if at != null else Vector2(view.size) * 0.5
+
+
+## --war-drag: the blue row's arrow, then a real stroke from the selection
+## along a gentle bend to the point.
+func _war_draw_order(screen: WarRoomScreen, view: WarRoomView, roll: WarToolRoll) -> void:
+	var slot := roll.slot("arrow", "blue")
+	_real_click(slot, slot.size * 0.5)
+	var from := Vector2.ZERO
+	var n := 0
+	for c: Variant in view.plan_input().sel:
+		var at: Variant = view.screen_pos_of_px(view.position_of(String(c)))
+		if at != null:
+			from += at
+			n += 1
+	if n == 0:
+		print("war: no selection to draw a march for (arrow why=%s)" % slot.why)
+		return
+	from /= float(n)
+	var to := Vector2(view.size) * _war_drag
+	var bend := from.lerp(to, 0.5) + (to - from).orthogonal() * 0.15
+	_real_path(view, [from, from.lerp(bend, 0.5), bend, bend.lerp(to, 0.5), to])
+	var menu := screen.orders()
+	print("war: drew the march for %s -> aiming=%s marching=%s waypoints=%s confirm=%s" % [view.plan_input().sel,
+		menu.aiming(), menu.marching(), menu.waypoints(), menu.shown_confirm() != null])
+
+
+## --war-supply: a real click on the lit town nearest the march's end.
+func _war_click_supply(view: WarRoomView, menu: ArmyOrderMenu) -> void:
+	var best := ""
+	var best_d := INF
+	var end: Variant = view.screen_pos_of_px(menu.pending())
+	for t: String in view.supply_pick:
+		if String(view.supply_pick[t]) != "":
+			continue
+		var b: Dictionary = Game.data.burgs[t]
+		var at: Variant = view.screen_pos_of_px(Vector2(float(b["x"]), float(b["y"])))
+		if at == null or end == null or not Rect2(Vector2.ZERO, view.size).grow(-30).has_point(at):
+			continue
+		var d := (at as Vector2).distance_to(end)
+		if d < best_d and String(SupplyLines.line(Game.state, menu.aiming()).get("town", "")) != t:
+			best_d = d
+			best = t
+	if best == "":
+		print("war: no lit town on the table")
+		return
+	var b: Dictionary = Game.data.burgs[best]
+	_real_click(view, view.screen_pos_of_px(Vector2(float(b["x"]), float(b["y"]))))
+	print("war: supply from %s -> choice=%s road=%d pts" % [best, menu.supply_choice(), view.supply_preview.size()])
 
 
 ## Each regiment's place three ways, in pack px: the engine's, the 3D map's

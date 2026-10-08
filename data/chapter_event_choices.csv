@@ -50,3 +50,5 @@ c0_13,on,The reign goes on,0,0,0,0,0,flag:c0_end_just; flag:aymer_resentful; wor
 c0_14,on,The reign goes on,0,0,0,0,0,flag:c0_end_compromise; flag:tomas_retired; world:metrics.legitimacy:-2:a quiet winter bought with a quiet truth,
 c0_15,on,The reign goes on,0,0,0,0,0,"flag:c0_end_iron; flag:brotherhood_underground; world:metrics.unrest:5:the sheaf scratched again, lower down the wall; world:metrics.peasant_contentment:-8:a valley as quiet as a church",
 c0_16,on,The reign goes on,0,0,0,0,0,"flag:c0_end_winter; flag:coup_pending; world:metrics.legitimacy:-5:four figures, and the crown short of all of them; opinion:char_duke_tomas:10:three riders out in the snow",
+war_01,rally,Rally the council — the towns that stand will be held,10,15,0,0,0,gold:-300:riders and pay for the towns that still stand; opinion:marshal:4:the king stood by his captains after the fall; world:metrics.legitimacy:1:the king faced his council after the fall,
+war_01,blame,Blame the Marshal for the fall,15,-10,0,0,0,opinion:marshal:-12:blamed before the council for the fall of a town; world:metrics.legitimacy:-1:the crown blamed its own captain,

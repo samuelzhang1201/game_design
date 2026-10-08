@@ -9,3 +9,6 @@ holder,Held by,1,,always given
 stance,Stance,1,,"the player realm's stance toward the holder (the pack's diplomacy.csv), always given"
 town_people,Town people,100,,"a town's own people, reported when the spy's point lies in the town's cell (Ruling 12, 2026-09-28); the town card reads this, never the manor's people"
 worth,Worth a month,10,,"gold a month: the manor's tax and the worth of its goods (ManorBars.worth_of) — the MANORS bars' wealth (owner 2026-10-04)"
+foe_columns,Enemy columns nearby,1,,"spec 2026-10-07-enemy-ai-and-battle §2: the enemy hosts' columns (GameState.foes) within spy_radius_km; a spy reports it only when there is one"
+foe_troops,Enemy men nearby,100,,"the men under arms (headcount less the dead) of those columns"
+foe_losses,Enemy losses,10,,"spec 2026-10-07-enemy-ai-and-battle §2/§4.5: the enemy's dead and wounded in a battle round as our men count them (MissiveWriter battle letter), an estimate at battle_foe_estimate_quality rounded out to this"

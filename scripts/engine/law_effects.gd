@@ -203,10 +203,11 @@ static func _round_div(a: int, b: int) -> int:
 	return -q if a < 0 else q
 
 
-## Whether `code` is a land unit of the realm, the only units a camp law binds.
+## Whether `code` is a land unit of the realm, the only units a camp law binds
+## (never a foe in the field, GameState.foes).
 static func _bound(repo: DataRepository, state: GameState, code: String) -> bool:
 	var reg := ArmySystem.regiment(repo, code, state)
-	return not reg.is_empty() and String(reg.get("is_naval", "0")) != "1" \
+	return not reg.is_empty() and not ArmySystem.is_foe(state, code) and String(reg.get("is_naval", "0")) != "1" \
 		and String(reg.get("kingdom_code", "")) == repo.resolve_realm("player_realm")
 
 

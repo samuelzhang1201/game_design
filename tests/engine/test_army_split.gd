@@ -210,7 +210,19 @@ func test_deterministic_and_copied() -> void:
 func test_a_new_campaign_carries_the_roster_and_seats() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	assert_eq(s.army_roster.size(), roster.size())
-	assert_eq(s.town_seat, split["seats"])
+	# the split's seats, but for those a raid host's unit held: a raised unit
+	# leaves its seat, refilled from its old camp (EnemyAi.spawn), never a foe
+	var seats: Dictionary = split["seats"]
+	for town: String in seats:
+		var was := String(seats[town])
+		if not ArmySystem.is_foe(s, was):
+			assert_eq(String(s.town_seat.get(town, "")), was, town + " keeps its seat")
+		elif s.town_seat.has(town):
+			var now := String(s.town_seat[town])
+			assert_false(ArmySystem.is_foe(s, now), town + "'s seat is no foe's")
+			assert_eq(ArmyGround.camped_by(repo, s, now), town, town + "'s seat refilled from its camp")
+	for town: String in s.town_seat:
+		assert_true(seats.has(town), town + ": no seat the split did not make")
 
 
 func test_lists_put_the_crown_first_then_group_by_regiment() -> void:

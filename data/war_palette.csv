@@ -20,6 +20,8 @@ wood_ink,#3E4A2C77,"WAR ROOM v2 B (spec §2.4): the woods' little trees, a green
 intel_ink,#3B2F6E99,"WAR ROOM v2 B (spec §2.4): the intelligence layer's ink — a dark violet, apart from the sheet's sepia"
 pencil,#5A4C3CB8,"WAR ROOM v2 C (owner 2026-10-02, spec 2026-10-02-war-room-v2 §3.1): graphite on vellum — a draft's line"
 plan_blue,#2E4C86,"WAR ROOM plans (owner 2026-10-07, style A): the woad / azurite wax crayon — ours"
+plan_blue_draft,#6D788BF0,"WAR ROOM draw orders (owner 2026-10-08, ruling 19): a pencilled DRAFT march's blue crayon arrow — the same arrow as a sealed one, woad greyed toward slate, near-opaque and edged in graphite (palette pencil): pencilled, not yet sent (critic 2026-10-08: the translucent paler blue let the survey ink through the band); sealed, it is plan_blue"
 plan_red,#B02E1C,"WAR ROOM plans (owner 2026-10-07, style A): the minium (red lead) wax crayon — theirs; warmer than rubric and hazard_ink"
 plan_boxwood,#D6BC86,"WAR ROOM plans (ruling 7): a supposed piece's pale boxwood, apart from the crown's dark oak (critic 2026-10-08: #E8D2A0 read as amber glass under the candles)"
 plan_unknown,#4A3B30,"WAR ROOM plans (ruling 5): the plinth lacquer of a supposed host whose side is Unknown — a dark umber (critic 2026-10-08: near-black lacquer caught white stripes of gloss)"
+supply_route,#C08A22,"WAR ROOM draw orders (owner 2026-10-08, spec 2026-10-08-war-room-draw-orders ruling 14): the bold dashed gold road from the town chosen to supply a march to its end, and the lit towns that may — bolder and warmer than the flowing line's ribbon"

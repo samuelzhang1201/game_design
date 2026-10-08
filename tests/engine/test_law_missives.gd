@@ -157,9 +157,10 @@ func test_law_letters_are_kept_apart_from_the_rest() -> void:
 		"the receipts untouched")
 	assert_eq(s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "supply").size(), 3,
 		"the supply letters untouched")
-	assert_eq(MissiveLog.group_of("law"), "missive_keep_law")
-	assert_eq(MissiveLog.group_of("supply_month"), "missive_keep_supply")
-	assert_eq(MissiveLog.group_of("receipt"), "missive_keep_per_column")
+	assert_eq(MissiveLog.keep_group("law"), "law")
+	assert_eq(MissiveLog.keep_group("supply_month"), "supply")
+	assert_eq(MissiveLog.keep_group("battle"), "battle")
+	assert_eq(MissiveLog.keep_group("receipt"), "")
 
 
 func test_the_news_bar_is_told_once_when_all_have_arrived() -> void:

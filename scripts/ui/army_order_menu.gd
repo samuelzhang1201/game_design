@@ -12,8 +12,17 @@ extends PopupMenu
 ## and aims on from it; while the panel stands the route can be bent on the map
 ## (its `route_bent`), each waypoint checked as the end is. That is why its
 ## label ends in an ellipsis. Escape, Cancel or a right click give it up.
+## A STANCE row (ARMY_STANCE) runs at once, its row's `params` (the stance)
+## sent with the regiment; the war room's menu leaves stances off.
 ## A committed march's end ring opens the ROUTE menu: Edit route… loads its
 ## waypoints and end into the panel, Cancel march halts it (an ARMY_GARRISON).
+## The confirm also asks where to SUPPLY the march from (spec 2026-10-08-war-
+## room-draw-orders ruling 13): the towns that reach the column now and the
+## march's end are lit on the map (`supply_pick`), the chosen one's road to the
+## end drawn (`supply_preview`); Confirm sends the supply point, the load and
+## the march, each its own courier. In the WAR ROOM there is no regiment menu:
+## a blue arrow drawn for the selected regiments hands their routes in
+## (`plan_group`) and the confirm lists each.
 ##
 ## Routes are planned only on a PAUSED clock (owner 2026-09-27: 兵人行进路线只能
 ## 在暂停模式下选择，时间流逝的时候不可以操作): while time runs MARCH, Edit and
@@ -75,6 +84,18 @@ var _route_at := Vector2.ZERO
 ## town clicked, whose rate the confirm asks.
 var _supply_for := ""
 var _supply_town := ""
+## A march drawn for several regiments (the WAR ROOM, plan_group): every one
+## in the selection's order, each one's waypoints (the lead's are _waypoints),
+## why each is left out ("" it marches) and the ones the player unticked.
+var _group: Array = []
+var _group_wps: Dictionary = {}
+var _group_why: Dictionary = {}
+var _group_off: Dictionary = {}
+## The supply town chosen on the confirm ("" no new point) and every realm
+## town's answer for this march (town -> "" or why not).
+var _supply_choice := ""
+var _supply_set := false   # the player chose the supply town (the list or a lit town): kept on a re-open
+var _supply_ok: Dictionary = {}
 
 
 func _ready() -> void:
@@ -87,7 +108,8 @@ func _ready() -> void:
 ## Follow a map — either map, by signal name, as MapDetailPanel.follow does.
 func follow(map: Node) -> void:
 	_map = map
-	map.connect("army_menu_requested", _open_for)
+	if map.has_signal("army_menu_requested"):
+		map.connect("army_menu_requested", _open_for)
 	map.connect("ground_clicked", _on_ground)
 	if map.has_signal("route_clicked"):
 		map.connect("route_clicked", _open_route)
@@ -110,8 +132,11 @@ func _open_for(code: String, at: Vector2) -> void:
 	clear()
 	for i in Game.data.army_orders.size():
 		var row: Dictionary = Game.data.army_orders[i]
+		# a battle stance is the map's order: the war room drafts only marches
+		if drafting and String(row["action_code"]) != "ARMY_MARCH":
+			continue
 		add_item(String(row["label"]), i)
-		var why := _refusal_any(String(row["action_code"]))
+		var why := _refusal_any(String(row["action_code"]), row.get("params", {}))
 		set_item_disabled(i, why != "")
 		set_item_tooltip(i, why if why != "" else String(row["hint"]))
 	# the seat (spec 2026-10-07-army-split-and-ground §4.5): only a unit camped
@@ -180,14 +205,18 @@ func _open_route(code: String, at: Vector2) -> void:
 ## panel opens beside `at` (the map's px) with the route's figures.
 func _open_confirm(at: Vector2) -> void:
 	var p := confirm_panel()
-	var plan := _plan()
 	var carry := ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, _aiming))
 	if drafting:
 		var d := WarDrafts.of(Game.state, _aiming)
 		carry = int(d.get("carry_days", carry))
+	p.set_meta("carry", carry)
+	var plan := _plan()
 	var commit := _route_row("commit_draft" if drafting else _row_key("commit", _aiming))
 	p.show_plan(plan["title"], plan["sub"], plan["rows"], carry if not (plan["rows"] as Array).is_empty() else -1,
 		commit, _add_waypoint_row(), _route_row("cancel"))
+	p.set_add_shown(not drafting)   # the room draws its route (ruling 9)
+	p.show_group(_group_rows())
+	_open_supply()
 	var origin := (_map as Control).get_global_rect().position if _map is Control else Vector2.ZERO
 	var map_rect := (_map as Control).get_global_rect() if _map is Control else Rect2()
 	if _map != null and _map.has_signal("hover_cleared"):
@@ -227,6 +256,9 @@ func confirm_panel() -> MarchConfirmPanel:
 		_panel.confirmed.connect(func(_carry: int) -> void: _commit())
 		_panel.waypoint_added.connect(_add_waypoint)
 		_panel.cancelled.connect(func() -> void: _withdraw("The march is given up."))
+		_panel.carry_changed.connect(func(_d: int) -> void: _panel.show_group(_group_rows()))
+		_panel.regiment_toggled.connect(_on_regiment_toggled)
+		_panel.supply_chosen.connect(_choose_supply)
 	return _panel
 
 
@@ -237,6 +269,12 @@ func _plan() -> Dictionary:
 	var reg := ArmySystem.regiment(Game.data, code, Game.state)
 	var naval := String(reg.get("is_naval", "0")) == "1"
 	var rows := [] if naval else MarchPlan.carry_rows(Game.data, Game.state, code, _pending, _waypoints)
+	var many := _marching()
+	if many.size() > 1:
+		var per := {}
+		for c: String in many:
+			per[c] = MarchPlan.carry_rows(Game.data, Game.state, c, _pending, _wps_of(c))
+		rows = MarchPlan.group_rows(per)
 	var from := ArmySystem.position_of(Game.data, Game.state, reg)
 	var metres := 0.0
 	var curve := ArmySystem.curve_px(Game.data, from, _waypoints, _pending)
@@ -250,7 +288,8 @@ func _plan() -> Dictionary:
 	if naval:
 		var days := CourierSystem.arrival_days(Game.data, Game.state, code, _pending, Vector2(-1, -1), -1, _waypoints)
 		sub += " · arrives in %d day%s" % [days, "" if days == 1 else "s"]
-	return {"title": "%s to %s" % [_name_of(code), Intel.place_label(Game.data, Game.state, _pending)],
+	var who := _name_of(code) if many.size() <= 1 else "%d units" % many.size()
+	return {"title": "%s to %s" % [who, Intel.place_label(Game.data, Game.state, _pending)],
 		"sub": sub, "rows": rows}
 
 
@@ -308,10 +347,10 @@ func _paused_reason() -> String:
 ## without one — the questions that do not need a destination (is it mine,
 ## has it anyone under arms, can the chest pay) are the ones worth asking
 ## before the player aims.
-func _refusal(action_code: String, code: String) -> String:
+func _refusal(action_code: String, code: String, params: Dictionary = {}) -> String:
 	if action_code == "ARMY_MARCH" and _paused_reason() != "":
 		return _paused_reason()
-	var req := ActionRequest.make(action_code, {"regiment": code})
+	var req := ActionRequest.make(action_code, params.merged({"regiment": code}, true))
 	if action_code == "ARMY_MARCH":
 		var here := ArmySystem.position_of(Game.data, Game.state,
 			ArmySystem.regiment(Game.data, code, Game.state))
@@ -374,7 +413,8 @@ func _on_chosen(id: int) -> void:
 		_set_aim(_code)
 		Game.publish_news("%s awaits its orders — click where to send it." % _name_of(_code))
 		return
-	_run_each(String(row["action_code"]), {})
+	# a stance row's params (the stance) ride with each unit (ARMY_STANCE)
+	_run_each(String(row["action_code"]), row.get("params", {}))
 
 
 ## The aimed march's destination: held, drawn to, and asked about — the
@@ -389,6 +429,9 @@ func _on_ground(pack_px: Vector2, screen_px := Vector2(-1, -1)) -> void:
 		if pick_at.x < 0.0:
 			pick_at = (_map as Control).get_local_mouse_position() if _map is Control else Vector2.ZERO
 		_on_supply_ground(pack_px, pick_at)
+		return
+	if _aiming != "" and _pending.x >= 0.0 and not _supply_ok.is_empty():
+		_on_supply_click(pack_px)   # the confirm stands: a lit town is chosen to supply the march
 		return
 	if _aiming == "" or _pending.x >= 0.0:
 		return
@@ -419,22 +462,31 @@ func _commit() -> void:
 	var march := ActionRequest.make("ARMY_MARCH", params)
 	var carry := _panel.chosen_carry() if _panel != null else -1
 	var own := ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, code))
+	var town := _supply_choice
 	if drafting:
 		# a draft costs nothing yet, but no seal could ever send one into the sea
 		var why := Game.engine.actions.validate_place(march, Game.state)
 		if why != "":
 			Game.publish_news(why)
 			return
+		var many := _marching()
+		var dests := {}
+		for c: String in many:
+			dests[c] = _wps_of(c).duplicate()
 		_set_aim("")
-		Game.plant_draft(code, WarDrafts.MARCH, to, wps, carry if carry >= 0 and carry != own else -1)
-		Game.publish_news("%s's march is pencilled in." % _name_of(code))
+		for c: String in many:
+			var mine := ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, c))
+			Game.plant_draft(c, WarDrafts.MARCH, to, dests[c], carry if carry >= 0 and carry != mine else -1,
+				town if town != String(SupplyLines.line(Game.state, c).get("town", "")) else "", _rate_of(c))
+		Game.publish_news("%s's march is pencilled in." % _name_of(code) if many.size() <= 1 \
+			else "The march of %d units is pencilled in." % many.size())
 		return
 	# one destination for the whole selection (spec 2026-10-07-army-split-and-
-	# ground §5.6): each unit its own load and march, judged alone
+	# ground §5.6): each unit its own supply point, load and march, judged alone
 	var sends: Array = []
 	var refused: Array = []
-	for c: String in ([code] + _codes.filter(func(x: String) -> bool: return x != code)):
-		var reqs := _march_reqs(c, to, pairs, carry)
+	for c: String in ([code] + _marching().filter(func(x: String) -> bool: return x != code)):
+		var reqs := _march_reqs(c, to, pairs, carry, town)
 		var why := ""
 		for req: ActionRequest in reqs:
 			why = Game.engine.actions.validate(req, Game.state)
@@ -452,21 +504,28 @@ func _commit() -> void:
 	for why: String in refused:
 		Game.publish_news(why)
 	for reqs: Array in sends:
-		if reqs.size() > 1:
-			var out := Game.try_execute(reqs[0])   # its own courier; the march's news follows
+		var ok := true
+		for req: ActionRequest in reqs.slice(0, reqs.size() - 1):
+			var out := Game.try_execute(req)   # its own courier; the march's news follows
 			if not bool(out.get("ok", false)):
 				Game.publish_news(String(out.get("error", "That order cannot be given.")))
-				continue
-		_run(reqs.back())
+				ok = false
+				break
+		if ok:
+			_run(reqs.back())
 
 
-## A unit's Confirm: SUPPLY_CARRY_SET when `carry` changes its load, then
-## ARMY_MARCH to `to` through `pairs` (waypoints as [x, y]).
-func _march_reqs(c: String, to: Vector2, pairs: Array, carry: int) -> Array:
+## A unit's Confirm: SUPPLY_POINT_SET when `town` is not its line's already
+## (spec 2026-10-08-war-room-draw-orders ruling 15), SUPPLY_CARRY_SET when
+## `carry` changes its load, then ARMY_MARCH to `to` through `pairs`
+## (waypoints as [x, y]).
+func _march_reqs(c: String, to: Vector2, pairs: Array, carry: int, town := "") -> Array:
 	var params := {"regiment": c, "x": to.x, "y": to.y}
 	if not pairs.is_empty():
 		params["waypoints"] = pairs.duplicate(true)
 	var out: Array = []
+	if town != "" and town != String(SupplyLines.line(Game.state, c).get("town", "")):
+		out.append(ActionRequest.make("SUPPLY_POINT_SET", {"regiment": c, "town": town, "rate": _rate_of(c)}))
 	if carry >= 0 and carry != ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, c)):
 		out.append(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": c, "days": carry}))
 	out.append(ActionRequest.make("ARMY_MARCH", params))
@@ -505,9 +564,19 @@ func _on_route_bent(waypoints: PackedVector2Array) -> void:
 		_map_set("aim_waypoints", PackedVector2Array(_waypoints))
 		return
 	_waypoints = Array(waypoints)
+	if _group.size() > 1:
+		# the others join the bent path where they stand nearest (WarOrderSketch)
+		var path := PackedVector2Array(_waypoints)
+		path.append(_pending)
+		for c: String in _group:
+			if c != _aiming:
+				_group_wps[c] = WarOrderSketch.route_for(Game.data, _pos_of(c), path)
+		_push_group()
 	if _panel != null and _panel.visible:
 		var plan := _plan()
 		_panel.refresh(plan["title"], plan["sub"], plan["rows"], _add_waypoint_row())
+		_panel.show_group(_group_rows())
+		_open_supply()   # the end moved: the wagons' reach to it is read again
 
 
 ## An aim or a waiting confirm given up.
@@ -579,11 +648,12 @@ func selected_codes() -> Array:
 	return _codes
 
 
-## "" when any of the units would take the order, else the first refusal.
-func _refusal_any(action_code: String) -> String:
+## "" when any of the units would take the order (with the row's `params`,
+## a stance's), else the first refusal.
+func _refusal_any(action_code: String, params: Dictionary = {}) -> String:
 	var first := ""
 	for c: String in _codes:
-		var why := _refusal(action_code, c)
+		var why := _refusal(action_code, c, params)
 		if why == "":
 			return ""
 		if first == "":
@@ -615,7 +685,7 @@ func _run(req: ActionRequest) -> void:
 			Game.publish_news(String(e["reason"]))
 	# An order on a stopped clock waits for play (owner 2026-09-24) — and since
 	# 2026-09-27 it rides by courier, who waits in the capital with it.
-	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON", "ARMY_SEAT"] \
+	if Game.clock_speed <= 0 and (req.action_code in ["ARMY_MARCH", "ARMY_GARRISON", "ARMY_STANCE", "ARMY_SEAT"] \
 			or req.action_code.begins_with("SUPPLY_")):
 		var code := String(req.params["regiment"])
 		if CourierSystem.carries_orders(ArmySystem.regiment(Game.data, code, Game.state)):
@@ -634,9 +704,20 @@ func _run(req: ActionRequest) -> void:
 func _set_aim(code: String) -> void:
 	_pending = Vector2(-1, -1)
 	_waypoints = []
+	_group = []
+	_group_wps = {}
+	_group_why = {}
+	_group_off = {}
+	_supply_set = false
+	if not _supply_ok.is_empty() or _supply_choice != "":
+		_supply_ok = {}
+		_supply_choice = ""
+		_map_set("supply_pick", {})
+		_map_set("supply_preview", PackedVector2Array())
 	if _panel != null:
 		_panel.hide()
 	_map_set("aim_waypoints", PackedVector2Array())
+	_map_set("aim_group", {})
 	if _map != null and "aim_dest" in _map:
 		_map.set("aim_dest", Vector2(-1, -1))
 	if _aiming == code:
@@ -711,7 +792,9 @@ func _start_supply_pick(code: String) -> void:
 	_set_aim("")
 	_supply_for = code
 	_supply_town = ""
-	_map_set("supply_pick", SupplyLines.eligibility(Game.data, Game.state, code))
+	var pick := SupplyLines.eligibility(Game.data, Game.state, code)
+	SupplyLines.mark_ahead(Game.data, Game.state, code, pick)   # never a town on the frontier side (ruling 20)
+	_map_set("supply_pick", pick)
 	_map_set("supply_preview", PackedVector2Array())
 	if _map != null and "aiming" in _map:
 		_map.set("aiming", true)   # the next left click only says where it landed
@@ -784,6 +867,282 @@ func _send_supply(rate: int) -> void:
 	var town := _supply_town
 	_end_supply_pick()
 	_run_each("SUPPLY_POINT_SET", {"town": town, "rate": rate})
+
+
+## A blue arrow drawn in the WAR ROOM for the selected regiments (spec
+## 2026-10-08-war-room-draw-orders rulings 6-9): `routes` code -> its
+## waypoints (pack px, the drawn path joined where it stands nearest), `dest`
+## the arrow's tip. Each is asked what MARCH… asks; a waypoint it cannot be
+## sent to is dropped (the news says so), a refused end leaves it out with its
+## reason. The confirm opens beside `at` (the view's px) with every one's
+## figures, the first that may march leading. "" when it opened, else why not.
+func plan_group(codes: Array, routes: Dictionary, dest: Vector2, at: Vector2) -> String:
+	if Game.state == null:
+		return "No reign is under way."
+	_end_supply_pick()
+	var why := {}
+	var wps := {}
+	var ok: Array = []
+	var first := ""
+	for c: Variant in codes:
+		var code := String(c)
+		var w := _refusal("ARMY_MARCH", code)
+		var route: Array = (routes.get(code, []) as Array).duplicate()
+		if w == "":
+			var fit := _fit_route(code, dest, route)
+			route = fit["wps"]
+			w = String(fit["why"])
+		why[code] = w
+		wps[code] = route
+		if w == "":
+			ok.append(code)
+		elif first == "":
+			first = w
+	if ok.is_empty():
+		return first
+	var lead := String(ok[0])
+	_code = lead
+	_set_aim(lead)
+	_group = codes.map(func(c: Variant) -> String: return String(c))
+	_group_wps = wps
+	_group_why = why
+	_waypoints = Array(wps[lead])
+	_pending = dest
+	_map_set("aim_waypoints", PackedVector2Array(_waypoints))
+	_map_set("aim_dest", dest)
+	_push_group()
+	_open_confirm(at)
+	return ""
+
+
+## A drawn route checked as the map checks one: {wps, why} — the waypoints a
+## regiment cannot be sent to dropped (said once), "" when the end is good.
+func _fit_route(code: String, dest: Vector2, route: Array) -> Dictionary:
+	var why := _place_why(code, dest, route)
+	if why == "":
+		return {"wps": route, "why": ""}
+	var end_why := _place_why(code, dest, [])
+	if end_why != "":
+		return {"wps": route, "why": end_why}
+	var kept: Array = route.filter(func(w: Vector2) -> bool: return _place_why(code, w, []) == "")
+	why = _place_why(code, dest, kept)
+	if why == "" and kept.size() < route.size():
+		var n := route.size() - kept.size()
+		Game.publish_news("%s: %d waypoint%s it cannot be sent to left out." % [_name_of(code), n, "" if n == 1 else "s"])
+	return {"wps": kept, "why": why}
+
+
+func _place_why(code: String, to: Vector2, wps: Array) -> String:
+	var params := {"regiment": code, "x": to.x, "y": to.y}
+	if not wps.is_empty():
+		params["waypoints"] = wps.map(func(w: Vector2) -> Array: return [w.x, w.y])
+	return Game.engine.actions.validate_place(ActionRequest.make("ARMY_MARCH", params), Game.state)
+
+
+## Where a regiment stands as the map shows it.
+func _pos_of(code: String) -> Vector2:
+	if _map != null and _map.has_method("position_of"):
+		return _map.call("position_of", code)
+	return ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
+
+
+## The units the pending march sends: a drawn group's ticked, unrefused ones;
+## else the map's selection holding the one aimed (one order rides to each,
+## spec 2026-10-07-army-split-and-ground §5.6); else the one aimed.
+func _marching() -> Array:
+	if _group.is_empty():
+		if _aiming != "" and _codes.has(_aiming):
+			return _codes.duplicate()
+		return [_aiming] if _aiming != "" else []
+	return _group.filter(func(c: String) -> bool: return String(_group_why.get(c, "")) == "" and not _group_off.has(c))
+
+
+## A marching unit's waypoints: the lead's (and, on the map, every selected
+## unit's: one route for all) are the pending ones, a drawn group's its own.
+func _wps_of(code: String) -> Array:
+	return _waypoints if code == _aiming or _group.is_empty() else Array(_group_wps.get(code, []))
+
+
+## The other marching regiments' routes onto the map (it draws them).
+func _push_group() -> void:
+	var g := {}
+	for c: String in _marching():
+		if c != _aiming:
+			g[c] = PackedVector2Array(_wps_of(c))
+	_map_set("aim_group", g)
+
+
+## The confirm's regiment rows: each one's arrival and supplies at the load
+## pressed, or why it is left out.
+func _group_rows() -> Array:
+	if _group.size() <= 1 or _panel == null:
+		return []
+	var carry := _panel.chosen_carry()
+	var out: Array = []
+	for c: String in _group:
+		var row := {"code": c, "label": _name_of(c), "why": String(_group_why.get(c, "")), "on": not _group_off.has(c)}
+		if row["why"] == "":
+			for r: Dictionary in MarchPlan.carry_rows(Game.data, Game.state, c, _pending, _wps_of(c)):
+				if int(r["days"]) == carry:
+					var arrive := int(r["arrive"])
+					row["line"] = "%d day%s · %s supplies" % [arrive, "" if arrive == 1 else "s", UiPalette.format_int(int(r["units"]))]
+					var short := int(r["short"])
+					row["short"] = "runs %d day%s short" % [short, "" if short == 1 else "s"] if short > 0 else ""
+		out.append(row)
+	return out
+
+
+func _on_regiment_toggled(code: String, on: bool) -> void:
+	if on:
+		_group_off.erase(code)
+	else:
+		_group_off[code] = true
+	if _marching().is_empty():
+		_group_off.erase(code)   # one at least marches: the last tick stays
+		_panel.show_group(_group_rows())
+		return
+	if not code in _marching() and code == _aiming:
+		# the lead left out: the next one leads, its route the bent one's
+		var next := String(_marching()[0])
+		_group_wps[_aiming] = _waypoints
+		_aiming = next
+		_waypoints = Array(_group_wps.get(next, []))
+		_map_set("aim_code", next)
+		_map_set("aim_waypoints", PackedVector2Array(_waypoints))
+	_push_group()
+	var plan := _plan()
+	_panel.refresh(plan["title"], plan["sub"], plan["rows"], _add_waypoint_row())
+	_panel.show_group(_group_rows())
+	_open_supply()
+
+
+## The supply point a march's confirm asks for (ruling 13): the towns that
+## reach every marching regiment now and the march's end, none AHEAD of any
+## of them (ruling 20), lit on the map; the current town (or none) first, then
+## the rest nearest the lead's column first (SupplyLines.rear_order). Pressed:
+## the player's own choice, else a draft's town, else the current town when it
+## may still serve, else the nearest town allowed — never one ahead.
+func _open_supply() -> void:
+	if _panel == null:
+		return
+	var many := _marching()
+	_supply_ok = {}
+	var land := not many.is_empty() and many.all(func(c: String) -> bool:
+		var reg := ArmySystem.regiment(Game.data, c, Game.state)
+		return String(reg.get("is_naval", "0")) != "1" and String(reg["kingdom_code"]) == Game.data.resolve_realm("player_realm"))
+	if not land:
+		_panel.show_supply([], "", "")
+		_map_set("supply_pick", {})
+		_map_set("supply_preview", PackedVector2Array())
+		return
+	for c: String in many:
+		var e := SupplyLines.march_eligibility(Game.data, Game.state, c, _pending)
+		for t: String in e:
+			if not _supply_ok.has(t) or (String(_supply_ok[t]) == "" and String(e[t]) != ""):
+				_supply_ok[t] = e[t]
+	var lead := String(many[0])
+	var now := String(SupplyLines.line(Game.state, lead).get("town", ""))
+	var rows: Dictionary = Game.data.army_supply_orders
+	var first := {"town": "", "label": String(rows.get("march_none", {}).get("label", "No supply point")), "why": ""}
+	var keep := true   # the current town may go on serving: not ahead of any column
+	if now != "":
+		first["label"] = String(rows.get("march_keep", {}).get("label", "{town} (now)")).format(
+			{"town": String(Game.data.burgs.get(now, {}).get("label", now))})
+		for c: String in many:
+			var ahead := SupplyLines.mark_ahead(Game.data, Game.state, c, {now: ""})
+			if String(ahead[now]) != "":
+				first["why"] = ahead[now]
+				keep = false
+				break
+	var towns: Array = _rear_order(lead).filter(func(t: String) -> bool: return t != now)
+	var options: Array = [first]
+	for t: String in towns:
+		options.append({"town": t, "label": String(Game.data.burgs[t].get("label", t)), "why": String(_supply_ok[t])})
+	if not _supply_set:
+		_supply_choice = String(WarDrafts.of(Game.state, lead).get("supply_town", "")) if drafting else ""
+		if _supply_choice == "" and not (now != "" and keep):
+			for t: String in towns:   # the nearest town on our side
+				if String(_supply_ok[t]) == "":
+					_supply_choice = t
+					break
+	if _supply_choice != "" and String(_supply_ok.get(_supply_choice, "x")) != "":
+		_supply_choice = ""
+	_panel.show_supply(options, _supply_choice, _supply_words(_supply_choice))
+	_map_set("supply_pick", _supply_ok)
+	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, _supply_choice, _pending) if _supply_choice != "" else PackedVector2Array())
+
+
+var _rear_cache: Dictionary = {}
+
+
+## The towns in the list's order for the lead's column where it stands
+## (SupplyLines.rear_order; the roads measured once a place).
+func _rear_order(lead: String) -> Array:
+	var at := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, lead, Game.state))
+	var key := [lead, at, _supply_ok.hash()]
+	if not _rear_cache.has(key):
+		if _rear_cache.size() > 32:
+			_rear_cache.clear()
+		_rear_cache[key] = SupplyLines.rear_order(Game.data, Game.state, lead, _supply_ok)
+	return _rear_cache[key]
+
+
+func _choose_supply(town: String) -> void:
+	_supply_choice = town
+	_supply_set = true
+	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, town, _pending) if town != "" else PackedVector2Array())
+	if _panel != null:
+		_panel.set_supply_figures(_supply_words(town))
+
+
+## A click on the map while the confirm stands: the realm town there is chosen
+## when it may supply the march, else the news says why.
+func _on_supply_click(pack_px: Vector2) -> void:
+	var town := ArmySystem.town_at(Game.data, pack_px)
+	if town == "" or not _supply_ok.has(town):
+		return
+	if String(_supply_ok[town]) != "":
+		Game.publish_news(String(_supply_ok[town]))
+		return
+	if _panel != null:
+		_panel.select_supply(town)
+
+
+## The rate a new supply point runs at: the line's own, else supply_rate_default.
+func _rate_of(code: String) -> int:
+	var line := SupplyLines.line(Game.state, code)
+	return int(line.get("rate", Game.data.bal("supply_rate_default"))) if not line.is_empty() \
+		else int(Game.data.bal("supply_rate_default"))
+
+
+## The figures of supplying the march from `town`: the road from it to the
+## march's end, wagon days, the share lost on it, the gold a day.
+func _supply_words(town: String) -> String:
+	if town == "" or not Game.data.burgs.has(town):
+		return ""
+	var route := SupplyLines.road_between_px(Game.data, town, _pending)
+	var km := SupplyLines.road_km(Game.data, route)
+	var many := _marching()
+	var robbed := SupplySystem.road_loss(Game.data, Game.state, String(many[0]), route) if not many.is_empty() else {"permille": 0}
+	@warning_ignore("integer_division")
+	var loss := SupplySystem.total_loss(Game.data, km, int(robbed["permille"])) / 10
+	var fee := 0
+	for c: String in many:
+		fee += SupplyLines.day_fee_milli(Game.data, Game.state, c, town, _rate_of(c), km)
+	var row: Dictionary = Game.data.army_supply_orders.get("march_figures", {})
+	var wd := SupplyLines.wagon_days(Game.data, km)
+	return String(row.get("label", "{km} km · wagons {wagon_days} · {loss}% lost · {fee} gold a day")).format({
+		"km": km, "wagon_days": "%d day%s" % [wd, "" if wd == 1 else "s"], "loss": loss, "fee": SupplyLines.gold_words(fee)})
+
+
+## Test seam: the supply town chosen on the confirm, "" none.
+func supply_choice() -> String:
+	return _supply_choice
+
+
+## Test seam: the regiments the pending march sends.
+func marching() -> Array:
+	return _marching()
 
 
 ## Test seam: the regiment whose supply point is being picked, "" when none.

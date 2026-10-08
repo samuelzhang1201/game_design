@@ -1,23 +1,34 @@
 class_name WarPlanInput
 extends RefCounted
-## The left button for the room's PLANS (spec 2026-10-07-war-room-
-## annotations-and-planning-pieces §1.5, §1.6, §2.4): with a stick in hand a
-## press-drag-release draws (WarPlanTool); with the piece slot a click on the
-## table asks for the Place form; with the scraper a click removes what it
-## lands on; with the hand a supposed piece is carried by a drag (a click
-## chooses it), a stroke's handle reshapes it and its line moves it whole. A
-## crown piece under the pointer is the rake's, never this. The live stroke
-## is WarPlanHud's. It only says what was done; the screen writes it. Never
-## reaches the autoload.
+## The left button for the room's PLANS and its SELECTION (spec
+## 2026-10-07-war-room-annotations-and-planning-pieces §1.5, §1.6, §2.4;
+## 2026-10-08-war-room-draw-orders rulings 1-4, 6, 12, 16-18). What is in
+## hand is a SIDE (red theirs, blue ours) and a kind: a press-drag-release
+## draws (WarPlanTool). The ARROW of a side is drawn only for a SELECTION of
+## that side — ours: the selected regiments, and the stroke is their march's
+## route (`order_drawn`); theirs: a supposed piece or an intel hint, the arrow
+## drawn for it (`of`). The piece slot asks for the Place form; the scraper
+## removes what it lands on (its side's, and ink); with the hand a supposed
+## piece is carried by a drag (a click chooses and selects it), a stroke's
+## handle reshapes it, its line moves it, a front's facing handle turns its
+## teeth; a click on an intel hint selects it; Shift-click adds to the
+## selection, Shift-drag on open table boxes every piece of the side. Crown
+## pieces are clicked through the view (`WarRoomPointer`), which hands them here.
+## The live stroke is WarPlanHud's. It only says what was done; the screen
+## writes it. Never reaches the autoload.
 
-signal drawn(stroke: Dictionary)                       # {kind, colour, pts (pack px), r}
+signal drawn(stroke: Dictionary)                       # {kind, colour, pts (pack px), r, of}
+signal order_drawn(codes: Array, samples: PackedVector2Array, tol: float)   # pack px, the smoothing's tolerance
 signal piece_moved(id: String, to_px: Vector2, facing_deg: int)
 signal stroke_reshaped(id: String, pts: PackedVector2Array, r: float)
 signal stroke_shifted(id: String, offset: Vector2)
+signal stroke_faced(id: String, flip: int)
 signal chosen(id: String)                              # a supposed piece or a stroke; "" none
 signal scraped(id: String)
 signal piece_requested(pack_px: Vector2, screen_px: Vector2)
+signal refused(why: String)                            # a press that cannot draw: the news says why
 signal tool_changed
+signal selection_changed
 
 const PIECE := "piece"
 const SCRAPE := "scrape"
@@ -25,10 +36,15 @@ const SCRAPE := "scrape"
 var tool: WarPlanTool
 var action := ""        # PIECE or SCRAPE in hand, else ""
 var chosen_id := ""
+## The selection: its side ("" none) and its members — our regiments' codes
+## (blue), or supposed pieces' and intel hints' ids (red).
+var sel_side := ""
+var sel: Array = []
 var _view: WarRoomView
 var _repo: DataRepository
 var _hud: WarPlanHud
 var _drag: Dictionary = {}
+var _order := false     # the stroke being drawn is the selection's march
 
 
 func setup(view: WarRoomView, repo: DataRepository, hud: WarPlanHud) -> void:
@@ -40,20 +56,55 @@ func setup(view: WarRoomView, repo: DataRepository, hud: WarPlanHud) -> void:
 
 # --- what is in hand ----------------------------------------------------------
 
-func pick_kind(k: String) -> void:
+## Why the slot `key` of `side` cannot be used now, "" when it can: an
+## arrow wants a selection of its side.
+func why_of(side: String, key: String) -> String:
+	if key == "arrow" and (sel_side != side or sel.is_empty()):
+		return "Select a unit first: one of ours (Shift-click adds, Shift-drag boxes)" if side == "blue" \
+			else "Select a unit first: a supposed host or an intel hint"
+	return ""
+
+
+## Every slot that cannot be used now: {side: {key: why}} (the roll greys them).
+func whys() -> Dictionary:
+	return {"red": {"arrow": why_of("red", "arrow")}, "blue": {"arrow": why_of("blue", "arrow")}}
+
+
+## Kind `k` on `side` (the side chosen when ""): refused (and said) when it
+## cannot be used now.
+func pick_kind(k: String, side := "") -> void:
+	var sd := side if side != "" else tool.side
+	if sd == "":
+		refused.emit("Choose a side first: Tab, or the red (theirs) or blue (ours) row")
+		return
+	if why_of(sd, k) != "":
+		refused.emit(why_of(sd, k))
+		return
 	action = ""
-	tool.pick_kind(k)
+	tool.pick(sd, k)
 	tool_changed.emit()
 
 
+## A row's crayon or the hand.
 func pick_stick(s: String) -> void:
 	action = ""
-	tool.pick_stick(s)
+	var k := tool.last_kind(s) if s in WarPlanTool.SIDES else ""
+	tool.pick_stick(s, "front" if k != "" and why_of(s, k) != "" else "")
 	tool_changed.emit()
 
 
-func pick_action(a: String) -> void:
+## Tab: the other side, the same kind (a front when its arrow cannot be used).
+func switch_side() -> void:
+	action = ""
+	var to := "blue" if tool.side != "blue" else "red"
+	tool.switch_side("front" if tool.kind != "" and why_of(to, tool.kind) != "" else "")
+	tool_changed.emit()
+
+
+func pick_action(side: String, a: String) -> void:
 	tool.put_down()
+	if side != "":
+		tool.side = side
 	action = "" if action == a else a
 	tool_changed.emit()
 
@@ -64,6 +115,7 @@ func put_down() -> bool:
 	tool.put_down()
 	action = ""
 	_drag = {}
+	_order = false
 	redraw_live()
 	if held:
 		tool_changed.emit()
@@ -81,6 +133,40 @@ func choose(id: String) -> void:
 	chosen_id = id
 	chosen.emit(id)
 	redraw_live()
+
+
+# --- the selection ---------------------------------------------------------
+
+## Selects `ids` on `side` (Shift: `additive` toggles each in, or out when all
+## are in already); another side's selection goes. A side's arrow put down
+## when its selection empties.
+func select(side: String, ids: Array, additive := false) -> void:
+	if not additive or side != sel_side:
+		sel = []
+	sel_side = side
+	if additive and not ids.is_empty() and ids.all(func(i: Variant) -> bool: return i in sel):
+		for i: Variant in ids:
+			sel.erase(i)
+	else:
+		for i: Variant in ids:
+			if not i in sel:
+				sel.append(i)
+	if sel.is_empty():
+		sel_side = ""
+	if tool.kind == "arrow" and why_of(tool.side, "arrow") != "":
+		tool.put_down()
+	if sel_side != "" and not tool.in_hand() and action == "":
+		tool.side = sel_side   # the side selected lights its row
+	selection_changed.emit()
+	tool_changed.emit()
+	redraw_live()
+
+
+func clear_selection() -> bool:
+	if sel.is_empty():
+		return false
+	select("", [])
+	return true
 
 
 # --- the pointer -------------------------------------------------------------
@@ -102,6 +188,10 @@ func _press(mb: InputEventMouseButton) -> bool:
 	if tool.in_hand():
 		if pack.x < 0.0:
 			return false
+		if tool.kind == "arrow" and why_of(tool.side, "arrow") != "":
+			refused.emit(why_of(tool.side, "arrow"))
+			return true
+		_order = tool.kind == "arrow" and tool.side == "blue"
 		tool.press(pack, pos)
 		redraw_live()
 		return true
@@ -109,35 +199,54 @@ func _press(mb: InputEventMouseButton) -> bool:
 		if pack.x < 0.0:
 			return false
 		piece_requested.emit(pack, pos)
-		pick_action(PIECE)   # laid down: one piece a pick
+		pick_action(tool.side, PIECE)   # laid down: one piece a pick
 		return true
 	if _view.piece_under(pos) != "":
-		return false
+		return false   # a crown piece: the view's click (it selects it)
 	var radius := _repo.bal("war_pick_px")
 	var pid := _view.plan_pieces().pick(_view.camera(), _view.window_scale(), pos, radius)
-	var hit := {} if pid != "" else WarPlanTool.hit(_repo, strokes_on_screen(), pos, chosen_id, radius)
+	var hint := "" if pid != "" else hint_at(pos)
+	var hit := {} if pid != "" or hint != "" else WarPlanTool.hit(_repo, strokes_on_screen(), pos, chosen_id, radius)
 	if action == SCRAPE:
-		var gone := pid if pid != "" else String(hit.get("id", ""))
-		if gone == "":
+		var gone := pid if pid != "" and tool.side != "blue" else String(hit.get("id", ""))
+		if gone == "" or (gone.begins_with("s") and not _scrapes(gone)):
 			return false
 		scraped.emit(gone)
 		return true
 	if pid != "":
-		_drag = {"mode": "piece", "id": pid, "from": pos, "from_pack": pack, "moved": false}
+		_drag = {"mode": "piece", "id": pid, "from": pos, "from_pack": pack, "moved": false, "shift": mb.shift_pressed}
+		return true
+	if hint != "":
+		select("red", [hint], mb.shift_pressed)
+		return true
+	var facing := _facing_handle()
+	if not facing.is_empty() and (facing["at"] as Vector2).distance_to(pos) <= _repo.bal("war_plan_facing_px"):
+		_drag = {"mode": "facing", "id": chosen_id, "from": pos, "from_pack": pack, "moved": false}
 		return true
 	if not hit.is_empty():
 		_drag = {"mode": "handle" if int(hit["handle"]) >= 0 else "stroke", "id": String(hit["id"]),
 			"handle": int(hit["handle"]), "from": pos, "from_pack": pack, "moved": false, "to_pack": pack}
+		return true
+	if mb.shift_pressed and pack.x >= 0.0:
+		_drag = {"mode": "box", "from": pos, "to": pos, "moved": false}
 		return true
 	if chosen_id != "":
 		choose("")
 	return false
 
 
+## The scraper in hand takes its own side's marks and the pen's.
+func _scrapes(id: String) -> bool:
+	var s: Dictionary = _view.state().war_plans[WarPlans.STROKES].get(id, {})
+	return String(s.get("colour", "")) in [tool.side, "ink"] or tool.side == ""
+
+
 func _motion(mm: InputEventMouseMotion) -> bool:
 	var pack := _view.pack_at(mm.position)
 	if tool.drawing:
 		tool.move(pack, mm.position)
+		if _order and pack.x >= 0.0 and not sel.is_empty():
+			_view.order_aimed.emit(String(sel[0]), pack, mm.position)
 		redraw_live()
 		return true
 	if _drag.is_empty():
@@ -145,6 +254,10 @@ func _motion(mm: InputEventMouseMotion) -> bool:
 	if not bool(_drag["moved"]) and mm.position.distance_to(_drag["from"]) < _repo.bal("war_rake_min_px"):
 		return true
 	_drag["moved"] = true
+	if String(_drag["mode"]) == "box":
+		_drag["to"] = mm.position
+		_view.redraw_marks()
+		return true
 	if pack.x < 0.0:
 		return true
 	_drag["to_pack"] = pack
@@ -158,18 +271,38 @@ func _motion(mm: InputEventMouseMotion) -> bool:
 func _release(mb: InputEventMouseButton) -> bool:
 	if tool.drawing:
 		var pack := _view.pack_at(mb.position)
-		var d := tool.release(pack, mb.position, mb.shift_pressed, px_per_pack(pack if pack.x >= 0.0 else _view.sheet_rect().get_center()))
+		var per := px_per_pack(pack if pack.x >= 0.0 else _view.sheet_rect().get_center())
+		var d := tool.release(pack, mb.position, mb.shift_pressed, per)
+		var order := _order
+		_order = false
 		redraw_live()
-		if not d.is_empty():
+		if d.is_empty():
+			return true
+		if order:
+			_view.hover_cleared.emit()
+			order_drawn.emit(sel.duplicate(), d["samples"], _repo.bal("war_order_fit_px") / maxf(per, 0.0001))
+		else:
+			if String(d["kind"]) == "arrow" and not sel.is_empty():
+				d["of"] = String(sel[0])   # a red arrow: the host it is drawn for
 			drawn.emit(d)
 		return true
 	if _drag.is_empty():
 		return false
 	var d := _drag
 	_drag = {}
+	if String(d["mode"]) == "box":
+		_view.redraw_marks()
+		if bool(d["moved"]):
+			_box(Rect2(d["from"], Vector2.ZERO).expand(d["to"]))
+		return true
 	var id := String(d["id"])
 	if not bool(d["moved"]):
+		if String(d["mode"]) == "facing":
+			stroke_faced.emit(id, _flip_of(id) ^ 1)
+			return true
 		choose(id)
+		if id.begins_with("p"):
+			select("red", [id], bool(d.get("shift", false)))
 		return true
 	var to: Vector2 = d.get("to_pack", d["from_pack"])
 	match String(d["mode"]):
@@ -177,6 +310,10 @@ func _release(mb: InputEventMouseButton) -> bool:
 			piece_moved.emit(id, to, int(d.get("facing", 0)))
 		"stroke":
 			stroke_shifted.emit(id, to - (d["from_pack"] as Vector2))
+		"facing":
+			var s: Dictionary = _view.state().war_plans[WarPlans.STROKES].get(id, {})
+			if not s.is_empty():
+				stroke_faced.emit(id, WarPlans.facing_flip(WarPlans.points_px(_repo, s), [to]))
 		"handle":
 			var s: Dictionary = _view.state().war_plans[WarPlans.STROKES].get(id, {})
 			if not s.is_empty():
@@ -184,6 +321,82 @@ func _release(mb: InputEventMouseButton) -> bool:
 				stroke_reshaped.emit(id, r["pts"], float(r["r"]))
 	redraw_live()
 	return true
+
+
+func _flip_of(id: String) -> int:
+	return int((_view.state().war_plans[WarPlans.STROKES].get(id, {}) as Dictionary).get("flip", 0))
+
+
+## Shift-drag's box (screen px): every piece of the side lit (ours when none)
+## standing in it is selected — our units, or the supposed pieces and the
+## intel hints.
+func _box(box: Rect2) -> void:
+	var side := tool.side if tool.side != "" else (sel_side if sel_side != "" else "blue")
+	var ids: Array = []
+	if side == "blue":
+		for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.sheet_index(), _view.drawn()):
+			var at: Variant = _view.screen_pos_of_px(q["at"])
+			if at != null and box.has_point(at) and not bool(q["naval"]):
+				ids.append(String(q["code"]))
+	else:
+		for p: Dictionary in WarPlans.pieces_in(_repo, _view.state(), _view.sheet_rect()):
+			var at: Variant = _view.screen_pos_of_px(p["at"])
+			if at != null and box.has_point(at):
+				ids.append(String(p["id"]))
+		for h: Dictionary in hints_on_sheet():
+			var at: Variant = _view.screen_pos_of_px(h["at"])
+			if at != null and box.has_point(at):
+				ids.append(String(h["id"]))
+	if not ids.is_empty():
+		select(side, ids, true)   # a box opens no book: the book is a click's
+
+
+## The box being dragged (screen px), Rect2() when none.
+func marquee() -> Rect2:
+	if _drag.is_empty() or String(_drag["mode"]) != "box" or not bool(_drag["moved"]):
+		return Rect2()
+	return Rect2(_drag["from"], Vector2.ZERO).expand(_drag["to"])
+
+
+## The intel hints on the laid sheet (WarRoom.intel_hints).
+func hints_on_sheet() -> Array:
+	var st := _view.state()
+	if st == null or _view.sheet_index() < 0:
+		return []
+	var rect := _view.sheet_rect()
+	return WarRoom.intel_hints(_repo, st).filter(func(h: Dictionary) -> bool: return rect.has_point(h["at"]))
+
+
+## The intel hint under a screen point, "" none.
+func hint_at(at: Vector2) -> String:
+	var best := ""
+	var best_d := _repo.bal("war_intel_hint_px")
+	for h: Dictionary in hints_on_sheet():
+		var p: Variant = _view.screen_pos_of_px(h["at"])
+		if p != null and (p as Vector2).distance_to(at) <= best_d:
+			best_d = (p as Vector2).distance_to(at)
+			best = String(h["id"])
+	return best
+
+
+## The chosen front's facing handle on the screen: {at, dir (where its teeth
+## point), id}; {} when no front is chosen.
+func _facing_handle() -> Dictionary:
+	if not chosen_id.begins_with("s"):
+		return {}
+	var s: Dictionary = _view.state().war_plans[WarPlans.STROKES].get(chosen_id, {})
+	if s.is_empty() or not bool(_repo.war_plan_kinds.get(String(s["kind"]), {}).get("teeth", false)):
+		return {}
+	var row := _on_screen(s, WarPlans.points_px(_repo, s), 0.0)
+	if row.is_empty():
+		return {}
+	var path := WarPlanGeometry.curve(row["ctrl"], 4.0)
+	var half := WarPlanGeometry.cut(path, 0.0, WarPlanGeometry.length(path) * 0.5)
+	if half.size() < 2:
+		return {}
+	var at := half[half.size() - 1]
+	var dir := WarPlanGeometry.right_of((at - half[half.size() - 2]).normalized()) * (-1.0 if int(s.get("flip", 0)) != 0 else 1.0)
+	return {"at": at + dir * _repo.bal("war_plan_facing_px") * 0.9, "dir": dir, "id": chosen_id}
 
 
 ## A stroke's control points with handle `i` dragged to `to` (pack px): a
@@ -244,7 +457,9 @@ func _on_screen(s: Dictionary, pts: PackedVector2Array, r: float) -> Dictionary:
 
 
 ## The live layer: the stroke being drawn, the stroke being dragged, the
-## chosen stroke's handles and the chosen piece's chalk ring.
+## pending march's blue crayon arrow (each regiment's curve as the column
+## will walk it — ArmySystem.curve_px — the lead's with its head), the chosen
+## stroke's handles (a front's facing arrow too) and the chosen piece's ring.
 func redraw_live() -> void:
 	if _hud == null:
 		return
@@ -256,12 +471,13 @@ func redraw_live() -> void:
 	if tool.drawing and tool.preview().size() >= 2:
 		var pts := tool.preview()
 		var gesture := String(_repo.war_plan_kinds[tool.kind]["gesture"])
-		var s := {"kind": tool.kind, "colour": tool.stick, "dashed": 0, "flip": 0, "name": ""}
+		var s := {"kind": tool.kind, "colour": tool.side, "dashed": 0, "flip": 0, "name": ""}
 		var row := _on_screen(s, PackedVector2Array([pts[0]]) if gesture == "ring" else pts,
 			pts[0].distance_to(pts[pts.size() - 1]) if gesture == "ring" else 0.0)
 		if not row.is_empty():
 			WarPlanInk.add(_repo, ink, row, _repo.war_plan_kinds[tool.kind], row["ctrl"], float(row["r"]), mm)
-	if not _drag.is_empty() and bool(_drag["moved"]) and String(_drag["mode"]) != "piece" and st != null:
+	_pending_order(ink, mm)
+	if not _drag.is_empty() and bool(_drag["moved"]) and String(_drag["mode"]) in ["stroke", "handle"] and st != null:
 		var s: Dictionary = st.war_plans[WarPlans.STROKES].get(String(_drag["id"]), {})
 		if not s.is_empty():
 			var to: Vector2 = _drag.get("to_pack", _drag["from_pack"])
@@ -283,14 +499,40 @@ func redraw_live() -> void:
 			var row := _on_screen(s, WarPlans.points_px(_repo, s), WarPlans.radius_px(_repo, s))
 			if not row.is_empty():
 				handles = WarPlanTool.handles_of(_repo, row)
-	if chosen_id.begins_with("p") and st != null:
-		var p: Dictionary = st.war_plans[WarPlans.PIECES].get(chosen_id, {})
-		var at: Variant = _view.screen_pos_of_px(WarPlans.at_px(_repo, p)) if not p.is_empty() else null
-		if at != null:
-			handles.append(at)
-	if ink["crayon"].is_empty() and ink["pen"].is_empty() and handles.is_empty():
+	var facing := _facing_handle()
+	var look := WarRoomInk.plan_look(_repo, WarRoomInk.tooth(), mm, _view.lettering(), _view.caps_font())
+	var road := PackedVector2Array()   # the supply road under the pending march (ruling 14)
+	if _view.aiming and not _view.rolling():
+		for p: Vector2 in _view.supply_preview:
+			var at: Variant = _view.screen_pos_of_px(p)
+			if at != null:
+				road.append(at)
+		if road.size() >= 2:
+			# it leaves the town's ring — or the plinth of a piece standing there: never drawn over a piece
+			var off := _repo.bal("war_pick_px") * 0.85 if _view.piece_under(road[0]) != "" else _repo.bal("war_supply_lit_px")
+			road = WarPlanGeometry.cut(road, off, WarPlanGeometry.length(road))
+	if ink["crayon"].is_empty() and ink["pen"].is_empty() and handles.is_empty() and facing.is_empty() and road.size() < 2:
 		_hud.clear_live()
 		return
-	var look := WarRoomInk.plan_look(_repo, null, mm, _view.lettering(), _view.caps_font())
 	var hr := _repo.bal("war_plan_handle_px")
-	_hud.show_live(ink, look, handles, _repo.war_palette["chalk"], hr if chosen_id.begins_with("s") else _repo.bal("war_pick_px") * _repo.bal("war_hud_chalk_ratio"))
+	_hud.show_live(ink, look, handles, _repo.war_palette["chalk"], hr, facing, _repo.bal("war_plan_facing_px"))
+	_hud.show_road(road, _repo.war_palette["supply_route"], _repo.bal("war_supply_route_px"), _repo.bal("war_supply_route_dash_px"))
+
+
+## The march pending on the confirm (the view's aim_group, set by the order
+## menu): each regiment's walked curve in blue crayon, the lead's an arrow
+## with its head, the others a plain crayon line joining it (WarOrderArrows).
+func _pending_order(ink: Dictionary, mm: float) -> void:
+	if not _view.aiming or _view.aim_dest.x < 0.0 or _view.aim_code == "" or _view.rolling():
+		return
+	var group: Dictionary = _view.aim_group
+	var codes: Array = group.keys()
+	codes.erase(_view.aim_code)
+	codes.sort()
+	codes.push_front(_view.aim_code)
+	var lines: Array = []
+	for code: String in codes:
+		var wps: Array = Array(_view.aim_waypoints) if code == _view.aim_code else Array(group[code])
+		lines.append(WarOrderArrows.screen_line(_repo, _view, code, _view.position_of(code), wps, _view.aim_dest))
+	# the crayon starts at the plinth's edge: a mark on the sheet never lies on a standing piece
+	WarOrderArrows.add(_repo, ink, lines, "blue", _repo.bal("war_pick_px") * 0.85, mm)

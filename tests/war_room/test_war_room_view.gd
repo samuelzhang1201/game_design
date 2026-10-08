@@ -336,7 +336,36 @@ func _first_land_piece() -> Dictionary:
 	return ClearPiece.find(view, repo, state)
 
 
-func test_a_click_on_a_piece_selects_it_and_arms_nothing() -> void:
+func _shift(e: InputEventWithModifiers) -> InputEventWithModifiers:
+	e.shift_pressed = true
+	return e
+
+
+func _land_pieces() -> Array:
+	return WarRoom.on_sheet(repo, state, view.sheet_index()).filter(func(q: Dictionary) -> bool: return not bool(q["naval"]))
+
+
+## `n` land regiments stood out in the field side by side (no town's
+## garrison), their sheet laid.
+func _lay_with(n: int) -> bool:
+	ArmySystem.ensure(repo, state)
+	var codes: Array = []
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0:
+			codes.append(String(r["regiment_code"]))
+	if codes.size() < n:
+		return false
+	var base := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, codes[0], state))
+	var k := WarSheets.px_per_unit(repo)   # pack px a km
+	for i in n:
+		var m := ArmySystem.pack_to_metres(repo, base + Vector2(7.0 * (i + 1), 4.0) * k)
+		state.regiments[codes[i]]["x_m"] = m.x
+		state.regiments[codes[i]]["y_m"] = m.y
+	view.lay_sheet(WarSheets.sheet_of(repo, base + Vector2(7.0, 4.0) * k))
+	return true
+
+
+func test_a_click_on_a_piece_selects_its_regiments_and_arms_nothing() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
@@ -346,74 +375,168 @@ func test_a_click_on_a_piece_selects_it_and_arms_nothing() -> void:
 	_move(at + Vector2(2, 0))   # under war_rake_min_px
 	_release(at + Vector2(2, 0))
 	assert_signal_emitted_with_parameters(view, "piece_selected", [String(p["code"])])
-	assert_signal_not_emitted(view, "rake_started")
+	assert_eq(view.plan_input().sel_side, "blue")
+	assert_eq(view.plan_input().sel, [String(p["code"])], "one unit a piece")
+	assert_false(view.aiming, "a click arms no march")
 
 
-func test_a_drag_from_a_piece_takes_up_the_rake_and_a_release_names_the_ground() -> void:
+func test_a_drag_from_a_piece_pans_and_orders_nothing() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
 	var p := _first_land_piece()
 	var at: Vector2 = p["press"]
+	var target := view.camera_rig().target
 	watch_signals(view)
 	_press(at)
-	_move(at + Vector2(60, 0))
-	assert_signal_emitted_with_parameters(view, "rake_started", [String(p["code"])])
-	view.aiming = true   # what ArmyOrderMenu.aim_for sets
+	var m := InputEventMouseMotion.new()
+	m.position = at + Vector2(60, 0)
+	m.relative = Vector2(60, 0)
+	m.button_mask = MOUSE_BUTTON_MASK_LEFT
+	view._gui_input(m)
 	_release(at + Vector2(60, 0))
-	assert_signal_emitted(view, "ground_clicked")
-	var args: Array = get_signal_parameters(view, "ground_clicked")
-	assert_almost_eq((args[1] as Vector2).x, at.x + 60.0, 0.001)
-
-
-func test_a_refused_rake_lets_go_and_the_rest_of_the_drag_does_nothing() -> void:
-	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_process_frames(2)
-	var p := _first_land_piece()
-	var at: Vector2 = p["press"]
-	watch_signals(view)
-	_press(at)
-	_move(at + Vector2(30, 0))
-	view.cancel_rake()   # what the screen does when the clock runs
-	_move(at + Vector2(60, 0))
-	_release(at + Vector2(60, 0))
-	assert_signal_emit_count(view, "rake_started", 1)
+	assert_ne(view.camera_rig().target, target, "the drag panned the room")
 	assert_signal_not_emitted(view, "ground_clicked")
 	assert_signal_not_emitted(view, "piece_selected")
 
 
-func test_the_arrow_reads_the_distance_in_the_packs_measure_and_the_arrival_day() -> void:
-	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+func test_shift_click_adds_a_piece_and_takes_it_out_and_a_click_away_lets_all_go() -> void:
+	if not _lay_with(2):
+		pending("no sheet holds two land pieces")
+		return
 	await wait_process_frames(2)
-	var p := _first_land_piece()
-	var code := String(p["code"])
-	var to: Vector2 = (p["at"] as Vector2) + Vector2(10.0, 0.0)
-	# the rake measures from where the regiment IS (a garrison's piece stands
-	# on its town's point, the regiment within the town's reach)
-	var dist := view.position_of(code).distance_to(to) * float(repo.map_info.get("distance_scale", "1"))
-	# ONE arrival day: the courier's ride, then the march (owner 2026-10-02)
-	var days := CourierSystem.arrival_days(repo, state, code, to, view.position_of(code))
-	var ride := CourierSystem.eta_days(repo, state, CourierSystem.ORDINARY, code) \
-		if CourierSystem.carries_orders(ArmySystem.regiment(repo, code)) else 0
-	# the march walked over its ground from the day the courier reaches it
-	assert_eq(days, ride + ArmySystem.march_days_between(repo, state, code, view.position_of(code), to,
-		state.absolute_day() + ride))
-	assert_eq(view.rake_reading(code, to), "%s %s · ~%d day%s" % [WarRoom.group(int(round(dist))),
-		String(repo.map_info.get("distance_unit", "km")), days, "" if days == 1 else "s"])
+	var two := _land_pieces()
+	var a: Vector2 = view.screen_pos_of_px(two[0]["at"])
+	var b: Vector2 = view.screen_pos_of_px(two[1]["at"])
+	_press(a)
+	_release(a)
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.position = b
+	e.pressed = true
+	view._gui_input(_shift(e))
+	var r := e.duplicate() as InputEventMouseButton
+	r.pressed = false
+	view._gui_input(r)
+	var both: Array = [String(two[0]["code"]), String(two[1]["code"])]
+	assert_eq(view.plan_input().sel.size(), both.size(), "Shift adds")
+	view._gui_input(_shift(e.duplicate() as InputEventMouseButton))
+	view._gui_input(r)
+	assert_eq(view.plan_input().sel, [String(two[0]["code"])], "Shift again takes it out")
+	var open := _open_spot([a, b])
+	assert_ne(open, Vector2(-1, -1), "an open spot of table")
+	_press(open)
+	_release(open)
+	assert_eq(view.plan_input().sel, [], "a click on open table lets the selection go")
+	assert_eq(view.selected_army(), "")
 
 
-func test_a_regiment_that_cannot_move_reads_a_word_not_zero_days() -> void:
+## A spot of open table well away from `away` (screen px): no piece, pennant,
+## edge arrow or chart under it.
+func _open_spot(away: Array) -> Vector2:
+	var cam := view.get_node("%Camera") as Camera3D
+	for y in range(int(view.size.y * 0.3), int(view.size.y * 0.8), 15):
+		for x in range(int(view.size.x * 0.2), int(view.size.x * 0.8), 15):
+			var q := Vector2(x, y)
+			if view.pack_at(q).x < 0.0 or view.piece_under(q) != "" or away.any(func(w: Vector2) -> bool: return w.distance_to(q) < 70.0):
+				continue
+			if WarRoomWall.pick_arrow(view.get_node("%EdgeArrows"), cam, q, view.window_scale(), repo.bal("war_pick_px")) >= 0:
+				continue
+			if WarRoomWall.pick_chart(view.get_node("%IndexChart"), cam, repo, q * view.window_scale()) >= 0:
+				continue
+			return q
+	return Vector2(-1, -1)
+
+
+func test_shift_drag_boxes_every_land_piece_inside() -> void:
+	if not _lay_with(2):
+		pending("no sheet holds two land pieces")
+		return
+	await wait_process_frames(2)
+	var want: Array = []
+	var box := Rect2()
+	for q: Dictionary in _land_pieces():
+		var at: Variant = view.screen_pos_of_px(q["at"])
+		if at == null:
+			continue
+		box = Rect2(at, Vector2.ZERO) if want.is_empty() else box.expand(at)
+		want.append(String(q["code"]))
+	var start := Vector2(-1, -1)
+	var end := Vector2(-1, -1)
+	for g: float in [20.0, 35.0, 50.0, 70.0]:
+		var bx := box.grow(g)
+		var corners := [bx.position, Vector2(bx.end.x, bx.position.y), bx.end, Vector2(bx.position.x, bx.end.y)]
+		for i in 4:
+			var c: Vector2 = corners[i]
+			if start.x < 0.0 and view.pack_at(c).x >= 0.0 and view.piece_under(c) == "" and view.plan_input().hint_at(c) == "":
+				start = c
+				end = corners[(i + 2) % 4]
+	assert_true(start.x >= 0.0, "the box starts on open table")
+	box = Rect2(start, Vector2.ZERO).expand(end)
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.position = start
+	e.pressed = true
+	view._gui_input(_shift(e))
+	var m := InputEventMouseMotion.new()
+	m.position = end
+	m.button_mask = MOUSE_BUTTON_MASK_LEFT
+	view._gui_input(_shift(m))
+	assert_true(view.plan_input().marquee().has_area(), "the chalk marquee follows the drag")
+	var r := e.duplicate() as InputEventMouseButton
+	r.pressed = false
+	r.position = end
+	view._gui_input(r)
+	want.sort()
+	var got: Array = view.plan_input().sel.duplicate()
+	got.sort()
+	assert_eq(got, want)
+	assert_eq(view.plan_input().sel_side, "blue")
+	assert_false(view.plan_input().marquee().has_area())
+	assert_eq((view.get_node("%Hud") as WarHud).marks()["rings"].size() > 0, true, "rings round the selection")
+
+
+func test_the_blue_arrow_waits_for_a_selection_then_draws_its_march() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
+	var input := view.plan_input()
+	watch_signals(input)
+	input.pick_kind("arrow", "blue")
+	assert_signal_emitted(input, "refused")
+	assert_false(input.tool.in_hand(), "no selection: the arrow cannot be taken")
+	assert_ne(input.why_of("blue", "arrow"), "")
 	var p := _first_land_piece()
-	var code := String(p["code"])
-	var reg := ArmySystem.regiment(repo, code, state)
-	var kept: Dictionary = reg.duplicate()
-	for arm: String in repo.army_speed:
-		reg[arm] = "0"   # no one under arms: no pace at all
-	assert_eq(ArmySystem.day_march_m(repo, state, code), 0, "premise: it cannot march")
-	var text := view.rake_reading(code, (p["at"] as Vector2) + Vector2(10.0, 0.0))
-	reg.merge(kept, true)   # the campaign's row: put it back
-	assert_string_ends_with(text, "cannot march")
+	var at: Vector2 = p["press"]
+	_press(at)
+	_release(at)
+	assert_eq(input.why_of("blue", "arrow"), "")
+	input.pick_kind("arrow", "blue")
+	assert_true(input.tool.in_hand())
+	var from := at + Vector2(-40, 30)   # the arrow's start is free
+	_press(from)
+	for i in 10:
+		_move(from + Vector2(12 * i, -6 * i))
+	_release(from + Vector2(120, -60))
+	assert_signal_emitted(input, "order_drawn")
+	var args: Array = get_signal_parameters(input, "order_drawn")
+	assert_eq(args[0], [String(p["code"])], "one unit a piece")
+	assert_gt((args[1] as PackedVector2Array).size(), 2, "the stroke's own samples, for the fit")
+	assert_eq(int(state.war_plans["rev"]), 0, "an order is no stroke on the paper")
+
+
+func test_a_right_click_on_our_piece_opens_no_menu() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_process_frames(2)
+	var at: Vector2 = _first_land_piece()["press"]
+	watch_signals(view)
+	for pressed: bool in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_RIGHT
+		e.pressed = pressed
+		e.position = at
+		view._gui_input(e)
+	assert_signal_not_emitted(view, "ground_menu_requested")
+	assert_signal_not_emitted(view, "plan_menu_requested")
+	assert_false(view.has_signal("army_menu_requested"), "the room has no order menu of its own")
 
 
 func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -> void:
@@ -443,7 +566,10 @@ func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -
 	_press(at)
 	_release(at)
 	assert_signal_emitted_with_parameters(view, "route_clicked", [code, at])
-	assert_eq(view._rake._routes().size(), 1, "a dashed line from the piece to its pennant")
+	var arrows: Array = view._pointer.orders()
+	assert_eq(arrows.size(), 1, "the march is its blue crayon arrow from the piece to its pennant, never a dashed line")
+	assert_eq(String(arrows[0]["kind"]), WarOrderArrows.SEALED)
+	assert_false(((view.get_node("%PlanHud") as WarPlanHud).orders_ink()["crayon"] as Array).is_empty(), "drawn in crayon")
 	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
 	view.refresh()
 	assert_string_starts_with((pennants.pennant(code).get_node("Slip") as Label3D).text, "countermand riding · ")
@@ -456,78 +582,34 @@ func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -
 	assert_null(pennants.pennant(code), "struck when the column stands down")
 
 
-func test_a_sheet_roll_lets_go_of_the_rake() -> void:
-	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_process_frames(2)
-	var p := _first_land_piece()
-	var at: Vector2 = p["press"]
-	_press(at)
-	_move(at + Vector2(40, 0))
-	assert_eq(view._rake.code, String(p["code"]))
-	view.swap_to((view.sheet_index() + 1) % WarSheets.series(repo).size())
-	assert_eq(view._rake.code, "")
-
-
-func test_the_hud_draws_an_arrow_only_between_two_real_points() -> void:
+func test_the_hud_draws_rings_hints_a_marquee_and_the_live_layer_the_supply_road() -> void:
 	var hud: WarHud = view.get_node("%Hud")
 	var pal: Dictionary = repo.war_palette
-	hud.draw_state(Vector2(-1, -1), Vector2(-1, -1), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
+	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"])
+	hud.set_supply([], pal["supply_route"])
 	assert_false(hud.drawing())
-	hud.draw_state(Vector2(10, 10), Vector2(90, 10), "80 km · ~2 days", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
-	assert_true(hud.drawing())
-	hud.draw_state(Vector2(10, 10), Vector2(10, 10), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
-	assert_false(hud.drawing(), "no length, no arrow")
+	hud.draw_state([{"at": Vector2(40, 40), "r": 30.0, "colour": pal["plan_blue"]}], Rect2(), [], pal["plan_red"],
+		pal["chalk"])
+	assert_true(hud.drawing(), "a selection ring")
+	hud.draw_state([], Rect2(), [Vector2(80, 80)], pal["plan_red"], pal["chalk"])
+	assert_true(hud.drawing(), "an intel hint")
+	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"])
+	hud.set_supply([{"at": Vector2(5, 5), "lit": true}], pal["supply_route"])
+	assert_true(hud.drawing(), "a lit town")
+	var live := view.get_node("%PlanHud") as WarPlanHud
+	live.show_road(PackedVector2Array([Vector2(5, 5), Vector2(300, 40)]), pal["supply_route"], 6.0, 16.0)
+	assert_true(live.drawing(), "the bold dashed road, under the march's crayon")
 
 
-func test_a_rake_released_off_the_table_says_it_was_dropped() -> void:
+func test_a_sheet_roll_hides_the_pennants() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)
-	var p := _first_land_piece()
-	var at: Vector2 = p["press"]
-	watch_signals(view)
-	_press(at)
-	_move(at + Vector2(40, 0))
-	view.aiming = true
-	_release(Vector2(-50, -50))   # off the table
-	assert_signal_emitted(view, "rake_dropped")
-	assert_signal_not_emitted(view, "ground_clicked")
-	assert_eq(view._rake.code, "")
-
-
-func test_a_sheet_roll_drops_a_rake_in_hand_and_hides_the_pennants() -> void:
-	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
-	await wait_process_frames(2)
-	var p := _first_land_piece()
-	var at: Vector2 = p["press"]
-	_press(at)
-	_move(at + Vector2(40, 0))
-	watch_signals(view)
 	view.swap_to((view.sheet_index() + 1) % WarSheets.series(repo).size())
-	assert_signal_emitted(view, "rake_dropped")
 	view._process(0.01)
 	assert_false((view.get_node("%Pennants") as Node3D).visible, "pennants are put away while the sheet rolls")
-	assert_eq(view._rake._routes(), [], "and so are their lines")
+	assert_eq(view._pointer.orders(), [], "and so are their arrows")
 	view._process(repo.bal("war_sheet_swap_s"))
 	assert_true((view.get_node("%Pennants") as Node3D).visible)
-
-
-func test_no_rake_in_hand_means_nothing_is_dropped_by_a_roll() -> void:
-	view.lay_sheet(0)
-	await wait_process_frames(2)
-	watch_signals(view)
-	view.swap_to(1)
-	assert_signal_not_emitted(view, "rake_dropped")
-
-
-func test_the_hud_draws_a_pennants_line_and_its_min_length_is_data() -> void:
-	var hud: WarHud = view.get_node("%Hud")
-	var pal: Dictionary = repo.war_palette
-	hud.draw_state(Vector2(-1, -1), Vector2(-1, -1), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null, false,
-		[[Vector2(10, 10), Vector2(200, 10)]])
-	assert_true(hud.drawing(), "a route alone is drawn")
-	var short := repo.bal("war_hud_min_len_px") - 1.0
-	hud.draw_state(Vector2(10, 10), Vector2(10 + short, 10), "", Vector2(-1, -1), 30.0, pal["ink"], pal["arrow"], pal["chalk"], null)
-	assert_false(hud.drawing())
 
 
 func test_the_tier_sets_the_rooms_msaa_from_the_table() -> void:
@@ -849,7 +931,7 @@ func test_a_draft_plants_a_pale_pennant_with_a_draft_slip() -> void:
 	assert_null((view.get_node("%Pennants") as WarPennants).pennant(code + "_draft"))
 
 
-func test_a_draft_is_drawn_as_a_pencil_line_from_its_piece() -> void:
+func test_a_draft_stays_a_blue_crayon_arrow_from_its_piece() -> void:
 	var p: Dictionary = {}
 	for q: Dictionary in WarRoom.pieces(repo, state):
 		if not bool(q["naval"]):
@@ -861,8 +943,15 @@ func test_a_draft_is_drawn_as_a_pencil_line_from_its_piece() -> void:
 	WarDrafts.plant(repo, state, String(p["code"]), "march", (p["at"] as Vector2).move_toward(rect.get_center(), 10.0))
 	view.refresh()
 	await wait_process_frames(2)
-	var hud := view.get_node("%Hud") as WarHud
-	assert_eq(hud.draft_lines().size(), 1)
+	var hud := view.get_node("%PlanHud") as WarPlanHud   # under the pending crayon
+	var arrows: Array = view._pointer.orders()
+	assert_eq(arrows.size(), 1, "one arrow")
+	assert_eq(String(arrows[0]["kind"]), WarOrderArrows.DRAFT, "pencilled: the paler draft arrow")
+	assert_eq(arrows[0]["members"], [String(p["code"])])
+	var crayon: Array = hud.orders_ink()["crayon"]
+	assert_false(crayon.is_empty(), "the arrow's crayon")
+	for c: Dictionary in crayon:
+		assert_eq(String(c["colour"]), "blue_draft")
 	assert_true(hud.drawing())
 
 
@@ -881,8 +970,8 @@ func test_a_resized_view_redraws_its_lines_where_the_pennants_now_stand() -> voi
 	await wait_process_frames(2)
 	view.size = Vector2(1300, 600)   # the room widens over the column
 	await wait_process_frames(2)
-	var hud := view.get_node("%Hud") as WarHud
-	var end: Vector2 = hud.draft_lines()[0][1]
+	var line: PackedVector2Array = view._pointer.orders()[0]["lines"][0]
+	var end: Vector2 = line[line.size() - 1]
 	assert_almost_eq(end.distance_to(view.screen_pos_of_px(to)), 0.0, 1.0, "the line follows the view's new projection")
 
 
@@ -1079,3 +1168,58 @@ func _first_land_piece_anywhere() -> Dictionary:
 		if not bool(p["naval"]):
 			return p
 	return {}
+
+
+## Owner 2026-10-08 (spec 2026-10-08-war-room-draw-orders rulings 10, 19):
+## drafts on one drawn path are ONE arrow; the arrow a march being edited
+## draws is the pending one alone; sealed and marching, it stays an arrow
+## whose tail leaves the piece where it is drawn.
+func test_drafts_on_one_path_are_one_arrow_and_an_edited_one_is_the_pending_arrow() -> void:
+	view.lay_sheet(int(_first_land_piece_anywhere()["sheet"]))
+	await wait_process_frames(2)
+	var two := _land_pieces().slice(0, 2)
+	if two.size() < 2:
+		pending("two land pieces on a sheet")
+		return
+	var rect := view.sheet_rect()
+	var a := String(two[0]["code"])
+	var b := String(two[1]["code"])
+	var bend := ((two[0]["at"] as Vector2) + rect.get_center()) * 0.5
+	var to := rect.get_center()
+	WarDrafts.plant(repo, state, a, "march", to, [bend])
+	WarDrafts.plant(repo, state, b, "march", to, [])
+	view.refresh()
+	await wait_process_frames(1)
+	var arrows: Array = view._pointer.orders()
+	assert_eq(arrows.size(), 1, "one arrow for the order's group")
+	assert_eq(arrows[0]["members"], [a, b], "the lead (the bend) with its head, the other its feeder")
+	view.aim_code = a
+	view.aim_dest = to
+	view.aiming = true   # Edit route…: a's march is the pending blue arrow
+	view.redraw_marks()
+	var left: Array = view._pointer.orders()
+	assert_eq(left.size(), 1)
+	assert_eq(left[0]["members"], [b], "a's draft is drawn by the pending arrow alone")
+	view.aiming = false
+	view.aim_code = ""
+
+
+func test_a_marching_column_keeps_its_arrow_from_where_its_piece_is_drawn() -> void:
+	var p := _first_land_piece_anywhere()
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	var code := String(p["code"])
+	var to: Vector2 = (p["at"] as Vector2).move_toward(view.sheet_rect().get_center(), 10.0)
+	ArmySystem.set_march(repo, state, code, to)
+	view.refresh()
+	await wait_process_frames(1)
+	var arrows: Array = view._pointer.orders()
+	assert_eq(arrows.size(), 1)
+	assert_eq(String(arrows[0]["kind"]), WarOrderArrows.SEALED, "order received: full strength")
+	var line: PackedVector2Array = arrows[0]["lines"][0]
+	var node := (view.get_node("%Pieces") as WarPieces).piece(code)
+	var at := view.camera().unproject_position(node.global_position) / view.window_scale()
+	assert_almost_eq(line[0].distance_to(at), 0.0, 0.5, "the tail leaves the piece where it is drawn")
+	assert_almost_eq(line[line.size() - 1].distance_to(view.screen_pos_of_px(to)), 0.0, 1.0, "the head at the end")
+	for c: Dictionary in (view.get_node("%PlanHud") as WarPlanHud).orders_ink()["crayon"]:
+		assert_eq(String(c["colour"]), "blue")

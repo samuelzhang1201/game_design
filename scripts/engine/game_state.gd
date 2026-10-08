@@ -89,6 +89,10 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	s.army_roster = split["roster"]
 	s.town_seat = split["seats"]
 	ArmySystem.ensure(data, s)
+	# The raid hosts stand at their assembly points until their day (spec
+	# 2026-10-07-enemy-ai-and-battle §2): foes, not regiments.
+	for host: Dictionary in data.raid_hosts:
+		EnemyAi.spawn(data, s, host)
 	# The pools as each town holds them (spec 2026-10-07-army-supply-lines §3.1).
 	TownStores.seed_from_pools(data, s)
 	# The laws start as the metrics and the pack's economy row left them.
@@ -313,9 +317,31 @@ var manor_province: Dictionary = {}
 ## {tick, cell, building, reason}: a manor that changed must say why.
 var manor_log: Array = []
 ## The player's regiments (owner 2026-09-17, ArmySystem): code ->
-## {morale, wounded, supplies, training}, all whole numbers. Only the player's
-## realm's regiments; the pack's arms stay the headcount.
+## {morale, wounded, dead, supplies, training, carry_days, the march fields
+## x_m / y_m / dest_x_m / dest_y_m / order, the battle stance (a
+## battle_stances.csv key) with a delivered stance_next / stance_order_id, and
+## disengaging while it falls back from a battle, disengaged_until (the
+## last absolute day of a pause with no contact) after a drawn battle}, whole numbers but the
+## stance and order names. Only the
+## player's realm's regiments; the pack's arms stay the headcount.
 var regiments: Dictionary = {}
+## The raider realm's regiments in the field (spec 2026-10-07-enemy-ai-and-
+## battle §2): regiment code -> a state of the same shape as `regiments`, kept
+## APART so the player-only iterations (supply lines, the LEDGER, hazards, the
+## map) never see a foe. ArmySystem.state_of reads both.
+var foes: Dictionary = {}
+## The enemy hosts' minds (§2, EnemyAi): host code -> {mode, target_kind,
+## target_id, think_day, plunder, siege_progress}, ints and strings.
+var ai_hosts: Dictionary = {}
+## The battles being fought (§4, BattleSystem): an Array of {id, att, def
+## (regiment codes), start_day, rounds, place_x_m, place_y_m, town}.
+var battles: Array = []
+## The towns lost to a siege (spec 2026-10-07-enemy-ai-and-battle §6,
+## DefeatSystem): an Array of {town, host, day (absolute)}, one per loss; the
+## key that makes a loss cost the crown once.
+var town_losses: Array = []
+## The last id handed to a foe or a battle (a higher id is a newer one).
+var foe_next_id := 0
 ## Every kingdom's army as UNITS (owner 2026-10-07, spec
 ## 2026-10-07-army-split-and-ground §2.1): unit code -> a row shaped as
 ## military/regiments.csv's, + parent_code, is_royal, camp_town. Split from
@@ -417,6 +443,11 @@ func to_dict() -> Dictionary:
 		"manor_works": _encode_values(manor_works.duplicate(true)),
 		"manor_log": _encode_values(manor_log.duplicate(true)),
 		"regiments": _encode_values(regiments.duplicate(true)),
+		"foes": _encode_values(foes.duplicate(true)),
+		"ai_hosts": _encode_values(ai_hosts.duplicate(true)),
+		"battles": _encode_values(battles.duplicate(true)),
+		"town_losses": _encode_values(town_losses.duplicate(true)),
+		"foe_next_id": _encode_values(foe_next_id),
 		"army_roster": army_roster.duplicate(true), "town_seat": town_seat.duplicate(true),
 		"couriers": _encode_values(couriers.duplicate(true)),
 		"war_drafts": _encode_values(war_drafts.duplicate(true)),
@@ -507,6 +538,13 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.closed_routes = (d.get("closed_routes", []) as Array).duplicate()
 	s.manor_log = _decode_values(d.get("manor_log", []))
 	s.regiments = _decode_values(d.get("regiments", {}))
+	# Saves from before the raiders carry none of these: no foe in the field.
+	s.foes = _decode_values(d.get("foes", {}))
+	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
+	s.battles = _decode_values(d.get("battles", []))
+	# Saves from before defeat carry no losses.
+	s.town_losses = _decode_values(d.get("town_losses", []))
+	s.foe_next_id = int(_decode_values(d.get("foe_next_id", 0)))
 	s.army_roster = (d.get("army_roster", {}) as Dictionary).duplicate(true)
 	s.town_seat = (d.get("town_seat", {}) as Dictionary).duplicate(true)
 	# Saves from before the couriers carry neither key: no one is on the road.

@@ -11,7 +11,7 @@
     python3 assets/flux/install_map_art.py arms       # A-xxx -> assets/2D/arms/<pack>/<key>.png (ARMS_PACK=id, default maps.csv) (house and kingdom arms)
     python3 assets/flux/install_map_art.py army_paintings  # B-37..42 -> assets/2D/paintings/armies/<piece>.png (army card)
     python3 assets/flux/install_map_art.py app_icon   # X-01 -> icon.png (the game's application icon)
-    python3 assets/flux/install_map_art.py events     # V-35..V-55 -> assets/2D/events/illustrations/<event_id>.png (the audience window's event band)
+    python3 assets/flux/install_map_art.py events     # V-35..V-56 (event_art.csv) -> assets/2D/events/illustrations/<event_id>.png (the audience window's event band)
     python3 assets/flux/install_map_art.py courier_paintings  # B-43..47 -> assets/2D/paintings/couriers/<key>.png (courier card, the desk's receipt)
     python3 assets/flux/install_map_art.py missive  # U-20..26 -> assets/2D/ui/missive_board/<key>.png (the Missive board)
 
@@ -455,7 +455,7 @@ def install_paintings(size: tuple = PAINT_SIZE, table: str = "estate_paint_art.c
 
 
 ## The audience window's event band (chapter 0, 2026-09-21): library
-## V-35..V-55 on the wide [C-EVENT] canvas, mapped to an event_id by
+## V-35..V-56 on the wide [C-EVENT] canvas, mapped to an event_id by
 ## event_art.csv. Drawn across the top of the 760-design-px audience window,
 ## so EVENT_SIZE is that band at roughly 1.8x — the art is a painting, not a
 ## crisp icon, and the render is only 1536 wide to begin with. They keep

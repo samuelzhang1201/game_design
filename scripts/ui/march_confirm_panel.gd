@@ -7,12 +7,19 @@ extends PanelContainer
 ## its supplies and the days they last — "runs N days short" when the stores
 ## would not cover the march — the current load pressed, then Confirm, Add
 ## waypoint, Cancel. It does not close on a click away: the map stays live so
-## the route can be bent under it (ruling 7). ArmyOrderMenu owns it and fills
-## it; it only says what was pressed.
+## the route can be bent under it (ruling 7). A march drawn for several
+## regiments in the WAR ROOM lists each (%Regiments, a tick to leave one out,
+## a refused one greyed with its reason; spec 2026-10-08-war-room-draw-orders
+## ruling 9), and every land march asks where to SUPPLY it from (%SupplyTown,
+## its figures under it; ruling 13). ArmyOrderMenu owns it and fills it; it
+## only says what was pressed.
 
 signal confirmed(carry_days: int)
 signal waypoint_added
 signal cancelled
+signal carry_changed(days: int)
+signal regiment_toggled(code: String, on: bool)
+signal supply_chosen(town: String)
 
 @onready var _title: Label = %Title
 @onready var _sub: Label = %Sub
@@ -22,13 +29,28 @@ signal cancelled
 @onready var _confirm: Button = %Confirm
 @onready var _add: Button = %AddWaypoint
 @onready var _cancel: Button = %Cancel
+@onready var _regiments: VBoxContainer = %Regiments
+@onready var _reg_proto: Control = %RegimentProto
+@onready var _supply_row: Control = %SupplyRow
+@onready var _supply_town: OptionButton = %SupplyTown
+@onready var _supply_figures: Label = %SupplyFigures
 
 var _group := ButtonGroup.new()
 var _carry := -1
 
 
+var _towns: Array = []   # the supply list's towns, in its order ("" the first row: no new point)
+
+
 func _ready() -> void:
 	_proto.visible = false
+	_reg_proto.visible = false
+	_regiments.visible = false
+	_supply_row.visible = false
+	_supply_figures.visible = false
+	_supply_town.item_selected.connect(func(i: int) -> void:
+		if i >= 0 and i < _towns.size():
+			supply_chosen.emit(String(_towns[i])))
 	_confirm.pressed.connect(func() -> void: confirmed.emit(_carry))
 	_add.pressed.connect(func() -> void: waypoint_added.emit())
 	_cancel.pressed.connect(func() -> void: cancelled.emit())
@@ -55,6 +77,99 @@ func refresh(title: String, sub: String, rows: Array, add: Dictionary) -> void:
 	_sub.text = sub
 	_fill(rows)
 	_button(_add, add)
+
+
+## The regiments of a march drawn for several: [{code, label, line, short,
+## why, on}] — `why` greys a refused one (no tick); [] (or one) hides the list.
+func show_group(rows: Array) -> void:
+	for row: Node in _regiments.get_children():
+		if row != _reg_proto:
+			_regiments.remove_child(row)
+			row.queue_free()
+	_regiments.visible = rows.size() > 1
+	if rows.size() <= 1:
+		reset_size()
+		return
+	for r: Dictionary in rows:
+		var row := _reg_proto.duplicate() as Control
+		row.visible = true
+		var code := String(r["code"])
+		row.set_meta("code", code)
+		var tick := row.get_node("Pick") as CheckBox
+		tick.text = String(r["label"])
+		var why := String(r.get("why", ""))
+		tick.button_pressed = why == "" and bool(r.get("on", true))
+		tick.disabled = why != ""
+		tick.tooltip_text = why
+		tick.toggled.connect(func(on: bool) -> void: regiment_toggled.emit(code, on))
+		(row.get_node("Line") as Label).text = why if why != "" else String(r.get("line", ""))
+		(row.get_node("Short") as Label).text = "" if why != "" else String(r.get("short", ""))
+		_regiments.add_child(row)
+	reset_size()
+
+
+## The supply towns: [{town ("" no new point), label, why}] — a `why` greys
+## the town with its reason — `chosen` selected, `figures` under it; [] hides it.
+func show_supply(options: Array, chosen: String, figures: String) -> void:
+	_supply_town.clear()
+	_towns = []
+	_supply_row.visible = not options.is_empty()
+	for o: Dictionary in options:
+		var i := _supply_town.item_count
+		_supply_town.add_item(String(o["label"]))
+		_towns.append(String(o["town"]))
+		var why := String(o.get("why", ""))
+		_supply_town.set_item_disabled(i, why != "")
+		_supply_town.set_item_tooltip(i, why)
+		if String(o["town"]) == chosen:
+			_supply_town.select(i)
+	set_supply_figures(figures if not options.is_empty() else "")
+
+
+func set_supply_figures(text: String) -> void:
+	_supply_figures.text = text
+	_supply_figures.visible = text != ""
+	reset_size()
+
+
+## The Supply from list as shown: [{town, label, why, disabled, selected}] (tests read it).
+func shown_supply() -> Array:
+	var out: Array = []
+	for i in _towns.size():
+		out.append({"town": String(_towns[i]), "label": _supply_town.get_item_text(i), "why": _supply_town.get_item_tooltip(i),
+			"disabled": _supply_town.is_item_disabled(i), "selected": _supply_town.selected == i})
+	return out
+
+
+## The supply town selected ("" none / no new point).
+func chosen_supply() -> String:
+	var i := _supply_town.selected
+	return String(_towns[i]) if i >= 0 and i < _towns.size() else ""
+
+
+## Select a supply town as the list does (a click on a lit town on the map).
+func select_supply(town: String) -> void:
+	var i := _towns.find(town)
+	if i >= 0 and not _supply_town.is_item_disabled(i):
+		_supply_town.select(i)
+		supply_chosen.emit(town)
+
+
+## Every regiment's row as shown: [{code, on, disabled, line}] (tests read it).
+func shown_group() -> Array:
+	var out: Array = []
+	for row: Node in _regiments.get_children():
+		if row == _reg_proto or row.is_queued_for_deletion():
+			continue
+		var tick := row.get_node("Pick") as CheckBox
+		out.append({"code": String(row.get_meta("code", "")), "on": tick.button_pressed, "disabled": tick.disabled,
+			"line": (row.get_node("Line") as Label).text})
+	return out
+
+
+## Add waypoint is the 3D map's; the room draws its route instead.
+func set_add_shown(on: bool) -> void:
+	_add.visible = on
 
 
 ## The load pressed, in days; -1 when no row is offered (a fleet).
@@ -140,8 +255,9 @@ func _fill(rows: Array) -> void:
 		pick_btn.button_pressed = int(r["days"]) == _carry
 		var days := int(r["days"])
 		pick_btn.toggled.connect(func(on: bool) -> void:
-			if on:
-				_carry = days)
+			if on and _carry != days:
+				_carry = days
+				carry_changed.emit(days))
 		var arrive := int(r["arrive"])
 		(row.get_node("Arrive") as Label).text = "%d day%s" % [arrive, "" if arrive == 1 else "s"]
 		# the load's days are its button; its supplies last them (MarchPlan's `lasts`)

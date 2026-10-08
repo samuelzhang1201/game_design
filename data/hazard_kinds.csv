@@ -8,3 +8,4 @@ Eruption,eruption,6,1,0,0,0,700,rock,
 Fault,fault line,0,1,0,0,0,1000,none,"geology: no effect, its name in the fine print"
 Tsunami,old tsunami,0,1,0,0,0,1000,none,history: no effect
 Proselytism,preaching,0,0,0,0,0,1000,none,"the religion system's (post-MVP): no military effect"
+Raided,raided land,2,1,0,-2,100,800,unrest,"spec 2026-10-07-enemy-ai-and-battle §5.3 (RaidSystem): a manor a host has plundered, from its first take; public (the crown knows its land is raided); no wounds, morale a month, a supply line through it loses its share, a march through it drags (Default, Task 10)"

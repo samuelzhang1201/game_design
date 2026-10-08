@@ -25,7 +25,7 @@ static func reading(repo: DataRepository, state: GameState, codes: Array) -> Arr
 		var use := ArmySystem.supply_use(repo, reg, state)
 		out.append({"code": code, "label": String(reg.get("label", code)),
 			"arm": MapObjects.regiment_arm(repo, reg), "naval": String(reg.get("is_naval", "0")) == "1",
-			"heads": heads, "fit": maxi(0, heads - clampi(int(st.get("wounded", 0)), 0, heads)),
+			"heads": heads, "fit": ArmySystem.fit_heads(heads, st),
 			"defend": ArmySystem.power(repo, state, code, "defend"),
 			"attack": ArmySystem.power(repo, state, code, "attack"),
 			"readiness": ArmySystem.bars_of(repo, state, code).x,

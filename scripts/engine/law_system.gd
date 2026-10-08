@@ -143,10 +143,10 @@ static func _camped_towns(repo: DataRepository, state: GameState) -> Dictionary:
 
 
 ## Whether `code` is a land unit of the realm: the only units a camp law
-## binds (fleets and other kingdoms' columns follow none).
+## binds (fleets, foes and other kingdoms' columns follow none).
 static func _realm_land(repo: DataRepository, state: GameState, code: String) -> bool:
 	var reg := ArmySystem.regiment(repo, code, state)
-	return not reg.is_empty() and String(reg.get("is_naval", "0")) != "1" \
+	return not reg.is_empty() and not ArmySystem.is_foe(state, code) and String(reg.get("is_naval", "0")) != "1" \
 		and String(reg.get("kingdom_code", "")) == repo.resolve_realm("player_realm")
 
 

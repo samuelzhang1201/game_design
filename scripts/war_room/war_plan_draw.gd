@@ -7,8 +7,9 @@ extends RefCounted
 ## pressed a shade darker; pen lines plain; names in the room's lettering. The
 ## painter (into plan_tex) and the HUD (live, in screen px) both use it.
 
-## `look`: {colours: {blue, red, ink: Color}, tooth: Texture2D or null,
+## `look`: {colours: {blue, red, ink, …: Color}, tooth: Texture2D or null,
 ## tooth_uv: uv per px, edge_dark: the edge's shade, edge_px: its width,
+## edges: {colour name: Color} an edge of its own (a draft's graphite),
 ## font: Font, caps: Font or null}.
 static func paint(canvas: CanvasItem, ink: Dictionary, look: Dictionary) -> void:
 	var colours: Dictionary = look["colours"]
@@ -31,6 +32,8 @@ static func paint(canvas: CanvasItem, ink: Dictionary, look: Dictionary) -> void
 		edge.append(poly[0])
 		var dark := col.darkened(1.0 - float(look.get("edge_dark", 0.78)))
 		dark.a = col.a * 0.9
+		if (look.get("edges", {}) as Dictionary).has(String(c["colour"])):
+			dark = look["edges"][String(c["colour"])]   # a draft's crayon edged in graphite
 		canvas.draw_polyline(edge, dark, edge_w, true)
 	for p: Dictionary in ink.get("pen", []):
 		canvas.draw_polyline(p["line"], colours.get(String(p["colour"]), Color.BLACK), maxf(float(p["width"]), 1.0), true)

@@ -8,12 +8,36 @@ const COLUMNS := ["truth", "credible", "consult", "rumour"]
 ## The marshal's letters: capped apart (missive_keep_supply), so a campaign's
 ## daily dispatches never push a spy's report or a receipt off a column.
 const SUPPLY_KINDS := ["supply", "supply_month"]
-## The other kinds kept apart from the column's own count: kind -> its
-## group's balance.csv keep key — a decree's letters (law, laws spec §3). The
-## supply letters (SUPPLY_KINDS) share missive_keep_supply; any other kind
-## counts against missive_keep_per_column.
-const KIND_GROUPS := {"law": "missive_keep_law"}
-const COLUMN_KEEP := "missive_keep_per_column"
+## The battle reports (spec 2026-10-07-enemy-ai-and-battle §4.5), a letter a
+## day for as long as a fight lasts: capped apart too (missive_keep_battle).
+const BATTLE_KINDS := ["battle"]
+## A decree's letters (laws spec §3: its sending and its reach): capped apart
+## too (missive_keep_law), so a decree to every camp never pushes a spy's
+## report or a receipt off a column.
+const LAW_KINDS := ["law"]
+
+
+## Which cap a kind of letter counts against: "supply", "battle", "law", or ""
+## for the rest (missive_keep_per_column).
+static func keep_group(kind: String) -> String:
+	if kind in SUPPLY_KINDS:
+		return "supply"
+	if kind in BATTLE_KINDS:
+		return "battle"
+	if kind in LAW_KINDS:
+		return "law"
+	return ""
+
+
+static func _keep_key(group: String) -> String:
+	match group:
+		"supply":
+			return "missive_keep_supply"
+		"battle":
+			return "missive_keep_battle"
+		"law":
+			return "missive_keep_law"
+	return "missive_keep_per_column"
 
 
 static func subject(kind: String, code: String, cell: int, px: Vector2) -> Dictionary:
@@ -45,24 +69,17 @@ static func add(repo: DataRepository, state: GameState, m: Dictionary) -> int:
 	entry["id"] = state.next_missive_id
 	entry["read"] = false
 	state.missives.append(entry)
-	# The cap counts the new letter's own group within its column: a kind of
-	# KIND_GROUPS against its group's keep, every other kind against
+	# The cap counts the new letter's own sort: supply letters against
+	# missive_keep_supply, battle reports against missive_keep_battle, a
+	# decree's letters against missive_keep_law, every other kind against
 	# missive_keep_per_column.
-	var group := group_of(String(entry["kind"]))
-	var keep := maxi(1, int(repo.bal(group)))
+	var group := keep_group(String(entry["kind"]))
+	var keep := maxi(1, int(repo.bal(_keep_key(group))))
 	var mine := column(state, String(entry["column"])).filter(
-		func(m: Dictionary) -> bool: return group_of(String(m["kind"])) == group)
+		func(m: Dictionary) -> bool: return keep_group(String(m["kind"])) == group)
 	for i in range(keep, mine.size()):
 		state.missives.erase(mine[i])
 	return state.next_missive_id
-
-
-## The keep key a letter of `kind` counts against (SUPPLY_KINDS', KIND_GROUPS',
-## else the column's own).
-static func group_of(kind: String) -> String:
-	if kind in SUPPLY_KINDS:
-		return "missive_keep_supply"
-	return String(KIND_GROUPS.get(kind, COLUMN_KEEP))
 
 
 ## A column's letters, newest (highest id) first.

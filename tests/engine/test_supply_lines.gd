@@ -117,3 +117,106 @@ func test_gold_words_read_tenths() -> void:
 	assert_eq(SupplyLines.gold_words(0), "0.0")
 	assert_eq(SupplyLines.gold_words(361), "0.4")
 	assert_eq(SupplyLines.gold_words(12345), "12.3")
+
+
+# --- the supply town chosen on the march's confirm (spec 2026-10-08-war-room-draw-orders ruling 13)
+
+func test_the_road_between_a_town_and_any_point() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(repo, s)[0]
+	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))
+	assert_eq(SupplyLines.road_between_px(repo, town, here), SupplyLines.road_px(repo, s, code, town),
+		"to where the column stands it is the line's own road")
+	var b: Dictionary = repo.burgs[town]
+	var far := here + Vector2(30, 10)
+	var route := SupplyLines.road_between_px(repo, town, far)
+	assert_almost_eq(route[0].distance_to(Vector2(float(b["x"]), float(b["y"]))), 0.0, 1.0)
+	assert_almost_eq(route[route.size() - 1].distance_to(far), 0.0, 0.001, "it ends ON the point")
+
+
+func test_a_march_supply_town_must_reach_the_column_now_and_the_end() -> void:
+	var code := _land()
+	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))
+	var now := SupplyLines.eligibility(repo, s, code)
+	assert_eq(SupplyLines.march_eligibility(repo, s, code, here), SupplyLines.mark_ahead(repo, s, code, now.duplicate()),
+		"a march that ends where it stands: the same towns, less those ahead")
+	repo.balance["supply_point_max_days"] = 1000
+	repo.balance["supply_ahead_km"] = 1000000   # the reach alone (no town ahead: ruling 20 is tested below)
+	var lax := SupplyLines.march_eligibility(repo, s, code, here + Vector2(400, 0))
+	for town: String in lax:
+		assert_eq(String(lax[town]), "", "within a thousand wagon days every town reaches")
+	repo.balance["supply_point_max_days"] = int(SupplyLines.wagon_days(repo, 0))   # one day: only a very near town
+	var end := here + Vector2(5000, 0)
+	var strict := SupplyLines.march_eligibility(repo, s, code, end)
+	for town: String in strict:
+		if String(SupplyLines.eligibility(repo, s, code)[town]) == "":
+			assert_string_contains(String(strict[town]), "end", "a town reaching the column now but not the end says so")
+
+
+# --- never a town ahead of the column (owner 2026-10-08, spec 2026-10-08-war-room-draw-orders ruling 20)
+
+## supply_ahead_km set so the tolerance is exactly 5 pack px.
+func _tol5() -> void:
+	repo.balance["supply_ahead_km"] = 5.0 * float(ArmySystem.metres_per_pack_px(repo)) / 1000.0
+
+
+func test_a_town_nearer_the_rear_or_within_the_tolerance_is_not_ahead() -> void:
+	_tol5()
+	var rear := Vector2(0, 0)
+	var at := Vector2(100, 0)   # the column, 100 px from the capital
+	assert_false(SupplyLines.is_ahead(repo, rear, at, Vector2(40, 0)), "60 px nearer the capital")
+	assert_false(SupplyLines.is_ahead(repo, rear, at, Vector2(0, 100)), "equidistant from the capital")
+	assert_false(SupplyLines.is_ahead(repo, rear, at, Vector2(104, 0)), "4 px farther, inside the 5 px tolerance")
+	assert_false(SupplyLines.is_ahead(repo, rear, at, Vector2(105, 0)), "exactly the tolerance farther")
+
+
+func test_a_town_farther_from_the_rear_than_the_tolerance_is_ahead() -> void:
+	_tol5()
+	var rear := Vector2(0, 0)
+	var at := Vector2(100, 0)
+	assert_true(SupplyLines.is_ahead(repo, rear, at, Vector2(106, 0)), "6 px farther")
+	assert_true(SupplyLines.is_ahead(repo, rear, at, Vector2(0, 150)), "50 px farther, to the side")
+	assert_true(SupplyLines.is_ahead(repo, rear, at, Vector2(-120, 0)), "the far side of the capital is still farther")
+
+
+func test_a_retreat_is_supplied_from_the_home_side() -> void:
+	_tol5()
+	var rear := Vector2(0, 0)
+	var at := Vector2(300, 0)   # far from home, marching HOME toward (50, 0)
+	assert_false(SupplyLines.is_ahead(repo, rear, at, Vector2(120, 0)), "a town toward home, in the direction of travel: allowed")
+	assert_true(SupplyLines.is_ahead(repo, rear, at, Vector2(380, 0)), "a town outward, behind the retreating column: the frontier")
+
+
+func test_the_rear_order_puts_the_nearest_allowed_town_first_ties_toward_the_capital() -> void:
+	var why := {"a": "", "b": "", "c": "ahead of the column", "d": "", "e": ""}
+	var km := {"a": 30, "b": 12, "c": 2, "d": 12, "e": 40}
+	var to_capital := {"a": 5.0, "b": 90.0, "c": 1.0, "d": 20.0, "e": 0.0}
+	assert_eq(SupplyLines.rear_sorted(why, km, to_capital), ["d", "b", "a", "e", "c"],
+		"12 km twice: d is nearer the capital; the forbidden town last")
+
+
+func test_a_town_farther_from_the_capital_than_the_column_is_greyed_with_why() -> void:
+	var code := _land()
+	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code))
+	repo.balance["supply_point_max_days"] = 1000
+	_tol5()
+	var rear := CourierSystem.origin(repo, s)
+	var now := SupplyLines.eligibility(repo, s, code)
+	var tol := 5.0
+	var checked := 0
+	for town: String in now:
+		if String(now[town]) != "":
+			continue
+		var b: Dictionary = repo.burgs[town]
+		var t := Vector2(float(b["x"]), float(b["y"]))
+		var want := t.distance_to(rear) > here.distance_to(rear) + tol
+		# whichever way the column marches: toward the town, away from it, or nowhere
+		for dest: Vector2 in [t, here - (t - here), here]:
+			var e := SupplyLines.march_eligibility(repo, s, code, dest)
+			if String(e[town]).contains("wagons need"):
+				continue
+			assert_eq(String(e[town]) != "", want, town + " ahead only by distance from the capital")
+			if want:
+				assert_string_contains(String(e[town]), "frontier")
+		checked += 1
+	assert_gt(checked, 0)

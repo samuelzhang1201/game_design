@@ -53,6 +53,13 @@ static func dominant_axis(sig: Dictionary, ideology: Dictionary) -> String:
 			best = ax
 	return best
 
+## How strongly one councillor feels a signature, -1..1: its alignment with
+## his ideology, x his policy_sensitivity, x (1 - his pragmatism). apply scales
+## it by opinion_drift_scale; DefeatSystem scales a lost town's blow by it.
+static func weight(sig: Dictionary, c: Character) -> float:
+	return alignment(sig, c.ideology) * float(c.ideology.get("policy_sensitivity", 50)) / 100.0 \
+		* (1.0 - float(c.attributes.get("pragmatism", 50)) / 100.0)
+
 static func apply(data: DataRepository, state: GameState, sig: Dictionary, label: String) -> Array:
 	var out: Array = []
 	if sig.is_empty():
@@ -60,10 +67,7 @@ static func apply(data: DataRepository, state: GameState, sig: Dictionary, label
 	for seat in state.council:
 		var char_id: String = state.council[seat]
 		var c: Character = state.characters[char_id]
-		var a := alignment(sig, c.ideology)
-		var delta := roundi(a * float(c.ideology.get("policy_sensitivity", 50)) / 100.0 \
-			* (1.0 - float(c.attributes.get("pragmatism", 50)) / 100.0) \
-			* data.bal("opinion_drift_scale"))
+		var delta := roundi(weight(sig, c) * data.bal("opinion_drift_scale"))
 		if delta == 0:
 			continue
 		var stance := "approves" if delta > 0 else "opposes"

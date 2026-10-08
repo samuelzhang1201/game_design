@@ -164,8 +164,11 @@ static func dispatch(repo: DataRepository, state: GameState, kind: String, code:
 ## A courier for regiment `code` whose road ends at `to_px` — the regiment
 ## itself (dispatch), or its supply TOWN (spec 2026-10-07-army-supply-lines
 ## §4, `order.to_town`): such a courier is never re-aimed at the column.
+## Returns {} for a foe's code (GameState.foes): callers must validate first.
 static func dispatch_to(repo: DataRepository, state: GameState, kind: String, code: String,
 		order: Dictionary, to_px: Vector2) -> Dictionary:
+	if ArmySystem.is_foe(state, code):
+		return {}   # a foe is nobody's to command: ArmySystem.state_of reads it, the crown's couriers never ride to it
 	var from := origin(repo, state)
 	var home := ArmySystem.pack_to_metres(repo, from)
 	var aim := ArmySystem.pack_to_metres(repo, to_px)
@@ -309,7 +312,8 @@ static func ride_day(repo: DataRepository, state: GameState) -> Array:
 static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> bool:
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code, state)
-	if _chases(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
+	if _chases(c) and (reg.is_empty() or ArmySystem.is_foe(state, code)
+			or ArmySystem.state_of(repo, state, code).is_empty()):
 		events.append(_event("lost", c))
 		return false
 	c["days"] = int(c.get("days", 0)) + 1
@@ -400,7 +404,8 @@ static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, be
 	var reg := ArmySystem.regiment(repo, code, state)
 	# a spy or a decree to a place rides for a point, not a regiment: nothing
 	# to lose, nothing to re-aim
-	if _chases(c) and (reg.is_empty() or ArmySystem.state_of(repo, state, code).is_empty()):
+	if _chases(c) and (reg.is_empty() or ArmySystem.is_foe(state, code)
+			or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}
 	var copy: Dictionary = c.duplicate(true)
 	if not _fixed_point(c):
@@ -528,6 +533,8 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 	if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
 		return SupplyLines.deliver(repo, state, c)
 	var entry: Dictionary = state.regiments.get(code, {})
+	if String((c["order"] as Dictionary).get("action_code", "")) == "ARMY_STANCE":
+		return _deliver_stance(repo, state, c, entry)
 	if int(entry.get("order_id", 0)) > int(c["id"]):
 		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, true))
 		return _event("stale", c)
@@ -545,6 +552,20 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 				return _event("lapsed", c)
 	if state.regiments.has(code):
 		state.regiments[code]["order_id"] = int(c["id"])
+	MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, false))
+	return _event("delivered", c)
+
+
+## A standing battle order (ARMY_STANCE) has its own newest-wins count
+## (`stance_order_id`), apart from the march's: it waits in `stance_next` and
+## BattleSystem.settle_stances makes it the stance at the end of the day's
+## battles, so it fights from the next day (spec 2026-10-07-enemy-ai-and-battle §4.4).
+static func _deliver_stance(repo: DataRepository, state: GameState, c: Dictionary, entry: Dictionary) -> Dictionary:
+	if entry.is_empty() or int(entry.get("stance_order_id", 0)) > int(c["id"]):
+		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, true))
+		return _event("stale", c)
+	entry["stance_next"] = String((c["order"] as Dictionary).get("stance", ArmySystem.STANCE_DEFAULT))
+	entry["stance_order_id"] = int(c["id"])
 	MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, false))
 	return _event("delivered", c)
 
@@ -570,17 +591,18 @@ static func _event(type: String, c: Dictionary, weather: String = "") -> Diction
 
 
 ## The newest MARCH / HALT courier riding for a regiment, {} when none. The
-## supply orders (SUPPLY_*), the seat order (ARMY_SEAT) and a decree
-## (LAW_SET) are not the march: they never move a column's arrival day, so
-## this reader (days_to_arrival, the regiment card, the war folio) passes
-## them by.
+## supply orders (SUPPLY_*), the battle stance (ARMY_STANCE), the seat order
+## (ARMY_SEAT) and a decree (LAW_SET) are not the march: they never move a
+## column's arrival day, so this reader (days_to_arrival, the regiment card,
+## the war folio) passes them by.
 static func pending_for(state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	if state == null:
 		return best
 	for c: Dictionary in state.couriers:
 		var kind := String((c["order"] as Dictionary).get("action_code", ""))
-		if kind.begins_with("SUPPLY_") or kind == "ARMY_SEAT" or kind == LawSystem.ACTION:
+		if kind.begins_with("SUPPLY_") or kind == "ARMY_STANCE" or kind == "ARMY_SEAT" \
+				or kind == LawSystem.ACTION:
 			continue
 		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c
