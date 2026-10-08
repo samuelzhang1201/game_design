@@ -31,6 +31,9 @@ var _pause_status: Label
 var _ledger_screen: LedgerScreen
 var _war_room_screen: WarRoomScreen
 var _missive_screen: MissiveScreen
+## The laws (spec 2026-10-08-laws-tab-design §5): toggled by its tab; it never
+## holds the clock.
+var _laws_screen: LawsScreen
 var _report_popup: MissiveReportPopup
 ## Spy report ids waiting to open, oldest first (a new letter's id is always
 ## the newest, so appending keeps them in arrival order); the dialog opens
@@ -106,6 +109,10 @@ func _ready() -> void:
 	_missive_screen.visible = false
 	_missive_screen.show_requested.connect(_on_missive_show)
 	add_child(_missive_screen)
+	_laws_screen = load("res://scenes/screens/laws_screen.tscn").instantiate()
+	_laws_screen.name = "LawsScreen"
+	_laws_screen.visible = false
+	add_child(_laws_screen)
 	_report_popup = load("res://scenes/panels/missive_report_popup.tscn").instantiate()
 	_report_popup.name = "MissiveReportPopup"
 	_report_popup.visible = false
@@ -133,6 +140,7 @@ func _ready() -> void:
 	Intel.dev_all = _dev_mode
 	_fps_counter.visible = _dev_mode
 	_build_pause_menu()
+	_laws_screen.above = [_report_popup, _pause_menu]
 	_start_bgm()
 	_switch_to(State.MENU)
 
@@ -160,8 +168,11 @@ func _process(delta: float) -> void:
 	if _said_state != Game.state:
 		_said_state = Game.state
 		_said_set_out = 0
-	for e: Dictionary in CourierSystem.setting_out(Game.data, Game.state, _said_set_out):
-		Game.publish_news(CourierSystem.headline(Game.data, e))
+	# A decree's couriers are said as one line (CourierSystem.news).
+	var leaving := CourierSystem.setting_out(Game.data, Game.state, _said_set_out)
+	for line: String in CourierSystem.news(Game.data, leaving):
+		Game.publish_news(line)
+	for e: Dictionary in leaving:
 		_said_set_out = maxi(_said_set_out, int(e["courier"]))
 	var per_day := maxf(Game.data.bal("time_day_seconds") / float(Game.clock_speed), 0.001)
 	_clock_acc += delta
@@ -191,8 +202,8 @@ func _process(delta: float) -> void:
 			var arrived := ArmySystem.arrival_headline(Game.data, Game.state, code)
 			if arrived != "":
 				Game.publish_news(arrived)
-		for e: Dictionary in out.get("couriers", []):
-			Game.publish_news(CourierSystem.headline(Game.data, e))
+		for line: String in CourierSystem.news(Game.data, out.get("couriers", [])):
+			Game.publish_news(line)
 		# A building that first stands idle for want of inputs (M5), once.
 		for w: Dictionary in out.get("idled", []):
 			Game.publish_news("The %s at %s stands %s." % [
@@ -508,6 +519,7 @@ func toggle_ledger() -> void:
 		leave_war_room(toggle_ledger)
 		return
 	_missive_screen.visible = false
+	_laws_screen.close()
 	_info_screen.hide()
 	_war_room_screen.close()
 	if _ledger_screen.visible:
@@ -556,6 +568,7 @@ func leave_war_room(then: Callable) -> void:
 	if _pause_menu != null and _pause_menu.visible:
 		toggle_pause_menu()
 	_missive_screen.visible = false
+	_laws_screen.close()
 	_war_room_screen.ask_leave(then)
 
 ## True when leaving the room must ask first: every door checks it and goes
@@ -573,6 +586,7 @@ func toggle_war_room() -> void:
 		leave_war_room(Callable())
 		return
 	_missive_screen.visible = false
+	_laws_screen.close()
 	_info_screen.hide()
 	_ledger_screen.close()
 	if current_screen == null or not current_screen.has_method("map_panel"):
@@ -640,6 +654,7 @@ func toggle_missives() -> void:
 	_ledger_screen.close()
 	_war_room_screen.close()
 	_info_screen.hide()
+	_laws_screen.close()
 	_missive_screen.visible = not _missive_screen.visible
 	if _missive_screen.visible:
 		# The frame must clear the active screen's own top bar (fix round 1
@@ -671,9 +686,30 @@ func refresh_missive_badge(and_board := true) -> void:
 ## closing the board returns to the easel.
 func open_missive_over_war_room(id: int) -> void:
 	_info_screen.hide()
+	_laws_screen.close()
 	_missive_screen.visible = true
 	_missive_screen.set_top_inset(_active_top_bar_height())
 	_missive_screen.select(id)
+
+## LAWS (spec 2026-10-08-laws-tab-design §5): the laws screen over the map,
+## a toggle like MISSIVE; the other overlays step aside. It holds no clock.
+func toggle_laws() -> void:
+	if state == State.MENU:
+		return
+	if _room_must_ask():
+		leave_war_room(toggle_laws)
+		return
+	_ledger_screen.close()
+	_war_room_screen.close()
+	_missive_screen.visible = false
+	_info_screen.hide()
+	if _laws_screen.visible:
+		_laws_screen.close()
+	else:
+		_laws_screen.open()
+
+func laws_screen() -> LawsScreen:
+	return _laws_screen
 
 ## Test/tool seam.
 func report_popup() -> MissiveReportPopup:
@@ -802,7 +838,7 @@ func _open_ledger_on(flow: String) -> void:
 
 ## Bottom bar routing: MAP is the default view (close every overlay — the
 ## live world map sits in the court screen's middle zone, user ruling
-## 2026-09-03), LEDGER and MISSIVE toggle their screens, the rest open
+## 2026-09-03), LEDGER, MISSIVE and LAWS toggle their screens, the rest open
 ## their info table.
 func _on_bottom_tab(tab: String) -> void:
 	if tab != "WAR ROOM" and _room_must_ask():
@@ -811,12 +847,14 @@ func _on_bottom_tab(tab: String) -> void:
 	match tab:
 		"HEIGHTS":
 			_info_screen.hide()
+			_laws_screen.close()
 			_ledger_screen.close()
 			_war_room_screen.close()
 			_missive_screen.visible = false
 			set_height_view(not _height_view)
 		"MANORS":
 			_info_screen.hide()
+			_laws_screen.close()
 			_ledger_screen.close()
 			_war_room_screen.close()
 			_missive_screen.visible = false
@@ -832,10 +870,13 @@ func _on_bottom_tab(tab: String) -> void:
 		"MISSIVE":
 			_info_screen.hide()
 			toggle_missives()
+		"LAWS":
+			toggle_laws()
 		_:
 			_ledger_screen.close()
 			_war_room_screen.close()
 			_missive_screen.visible = false
+			_laws_screen.close()
 			_info_screen.show_tab(tab)
 
 ## Turn the relief view on or off everywhere (owner request 2026-09-12): the
@@ -1014,6 +1055,9 @@ func _switch_to(new_state: State) -> void:
 	if _missive_screen != null:
 		_missive_screen.visible = false
 		move_child(_missive_screen, get_child_count() - 1)
+	if _laws_screen != null:
+		_laws_screen.close()
+		move_child(_laws_screen, get_child_count() - 1)
 	if _report_popup != null:
 		# Only a switch to MENU forces it shut (a reset already emptied
 		# _pending_reports there, or the campaign is being left outright):

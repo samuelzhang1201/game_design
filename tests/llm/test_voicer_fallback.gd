@@ -28,7 +28,7 @@ func test_parse_path_validates_model_output() -> void:
 	var fake := FakeClient.new()
 	fake.canned_ok = true
 	fake.canned_text = JSON.stringify({"actions":
-		[{"action_code": "TAX_RATE_ADJUST", "params": {"delta": -1}, "target": ""}]})
+		[{"action_code": "LAW_SET", "params": {"law": "tax_rate", "value": 4}, "target": ""}]})
 	add_child_autofree(fake)
 	var v := Voicer.new(fake)
 	add_child_autofree(v)
@@ -38,7 +38,7 @@ func test_parse_path_validates_model_output() -> void:
 	v.parse_player_text("lower taxes", r, s, data, func(res): got = res)
 	await wait_process_frames(3)
 	assert_true(got["ok"])
-	assert_eq(got["actions"][0].action_code, "TAX_RATE_ADJUST")
+	assert_eq(got["actions"][0].action_code, "LAW_SET")
 
 func test_parse_bad_model_output_reports_error_not_crash() -> void:
 	var fake := FakeClient.new()
@@ -155,7 +155,7 @@ func test_order_returns_both_parts_through_one_call() -> void:
 	var fake := FakeClient.new()
 	fake.canned_ok = true
 	fake.canned_text = JSON.stringify({"narrative": "The rolls are cut.", "impacts": {"actions":
-		[{"action_code": "TAX_RATE_ADJUST", "params": {"delta": -1}, "target": ""}],
+		[{"action_code": "LAW_SET", "params": {"law": "tax_rate", "value": 4}, "target": ""}],
 		"world": [], "court_reaction": {}}})
 	add_child_autofree(fake)
 	var v := Voicer.new(fake)
@@ -168,4 +168,4 @@ func test_order_returns_both_parts_through_one_call() -> void:
 	assert_true(got["ok"])
 	assert_eq(fake.calls, 1, "one call carries narrative and impacts")
 	assert_eq(got["narrative"], "The rolls are cut.")
-	assert_eq(got["actions"][0].action_code, "TAX_RATE_ADJUST")
+	assert_eq(got["actions"][0].action_code, "LAW_SET")

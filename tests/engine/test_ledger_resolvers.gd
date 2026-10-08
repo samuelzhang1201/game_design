@@ -47,7 +47,7 @@ func test_the_ration_reader_is_the_ticks_ration() -> void:
 	var people := TickEngine.court_people(data, s)
 	var expect := int(roundf(float(people) / 1000.0 * data.bal("ration_gold_per_1000")))
 	assert_eq(TickEngine.ration_of(data, s), expect)
-	s.metrics["grain_ration"] = 1.0
+	LawSystem.impose(data, s, "grain_ration", "ration")
 	var half := int(float(expect) / 2.0)
 	assert_eq(TickEngine.ration_of(data, s), half, "halved under the ration order")
 	assert_eq(int(LedgerResolvers.run(_row("rations"), data, s, {})[0]["flow"]), half)

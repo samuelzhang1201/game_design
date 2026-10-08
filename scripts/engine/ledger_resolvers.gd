@@ -503,7 +503,8 @@ static func _aim_province(repo: DataRepository, state: GameState, c: Dictionary)
 static func _couriers(repo: DataRepository, state: GameState, id: String, spy: bool) -> Array:
 	var mine: Array = []
 	for c: Dictionary in state.couriers:
-		if (String(c["kind"]) == CourierSystem.SPY) == spy:
+		# a decree riding to a province or a camp carries no orders to a regiment
+		if (String(c["kind"]) == CourierSystem.SPY) == spy and not CourierSystem.place_bound(c):
 			mine.append(c)
 	if id == "":
 		return [_type_link("courier", "province" if spy else "regiment", mine.size(), "count")]

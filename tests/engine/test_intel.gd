@@ -349,9 +349,16 @@ func _tiers_by_hand(s: GameState) -> Dictionary:
 
 ## A change within the month that moves provinces' tax per head apart: the
 ## tariff lands only on towns, so town-heavy provinces climb the terciles.
+## Every province of the map, abroad too, takes tax 1 and tariff 10 as its
+## in-force entry (a province pays its own rates, laws spec 2026-10-08
+## §4.3), so foreign provinces move as well as the realm's.
 func _mid_month_change(s: GameState) -> void:
-	s.metrics["tariff_rate"] = 10.0
-	s.metrics["tax_rate"] = 1.0
+	for c: String in repo.provinces:
+		var key := LawSystem.PROVINCE_PREFIX + c
+		var here: Dictionary = s.law_in_force.get(key, {})
+		here["tax_rate"] = {"value": "1", "decree_id": 0}
+		here["tariff_rate"] = {"value": "10", "decree_id": 0}
+		s.law_in_force[key] = here
 
 
 ## I5 / Ruling 15 (final review): the wealth tiers are STATE, settled with

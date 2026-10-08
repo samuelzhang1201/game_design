@@ -1,0 +1,196 @@
+[gd_scene format=3 uid="uid://dtl3ukdua37sh"]
+
+[ext_resource type="Script" path="res://scripts/ui/laws_screen.gd" id="1_cytqp"]
+[ext_resource type="StyleBox" uid="uid://v3vusure1mms" path="res://assets/2D/ui/panels/styles/leather_info.tres" id="2_1qs8v"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_u0u4j"]
+
+[node name="LawsScreen" type="Control" unique_id=2110792862]
+editor_description = "The laws (spec 2026-10-08-laws-tab-design §5): GameRoot toggles it from the LAWS tab. It never holds the clock. Its root and Dim let clicks through, and the frame stops short of the top bar (the clock) and the bottom bar (the tabs), so both stay usable while it is open."
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_cytqp")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=281174473]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 64.0
+offset_bottom = -56.0
+mouse_filter = 2
+color = Color(0.02, 0.015, 0.01, 0.62)
+
+[node name="Frame" type="PanelContainer" parent="." unique_id=1532334341]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 48.0
+offset_top = 72.0
+offset_right = -48.0
+offset_bottom = -64.0
+theme_override_styles/panel = ExtResource("2_1qs8v")
+
+[node name="Col" type="VBoxContainer" parent="Frame" unique_id=545262290]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Head" type="HBoxContainer" parent="Frame/Col" unique_id=1992097085]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Frame/Col/Head" unique_id=1191791418]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"TitleLabel"
+text = "Laws"
+
+[node name="Close" type="Button" parent="Frame/Col/Head" unique_id=116269588]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+text = "Close"
+
+[node name="Pages" type="HBoxContainer" parent="Frame/Col" unique_id=1267522472]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Economy" type="Button" parent="Frame/Col/Pages" unique_id=47828463]
+unique_name_in_owner = true
+editor_description = "A page of the laws; LawsScreen.show_page shows its rows. Its word is law_words.csv page_<page>."
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+toggle_mode = true
+button_pressed = true
+button_group = SubResource("ButtonGroup_u0u4j")
+text = "Economy"
+
+[node name="Politics" type="Button" parent="Frame/Col/Pages" unique_id=1859496128]
+unique_name_in_owner = true
+editor_description = "A page of the laws; LawsScreen.show_page shows its rows. Its word is law_words.csv page_<page>."
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_u0u4j")
+text = "Politics"
+
+[node name="Military" type="Button" parent="Frame/Col/Pages" unique_id=1977773633]
+unique_name_in_owner = true
+editor_description = "A page of the laws; LawsScreen.show_page shows its rows. Its word is law_words.csv page_<page>."
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+toggle_mode = true
+button_group = SubResource("ButtonGroup_u0u4j")
+text = "Military"
+
+[node name="Rule" type="HSeparator" parent="Frame/Col" unique_id=451748498]
+layout_mode = 2
+
+[node name="Heads" type="HBoxContainer" parent="Frame/Col" unique_id=799812716]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LawHead" type="Label" parent="Frame/Col/Heads" unique_id=53058022]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+theme_type_variation = &"InfoHead"
+text = "Law"
+
+[node name="DecreedHead" type="Label" parent="Frame/Col/Heads" unique_id=1275589392]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+theme_type_variation = &"InfoHead"
+text = "Decreed"
+horizontal_alignment = 1
+
+[node name="DeliveryHead" type="Label" parent="Frame/Col/Heads" unique_id=1335915928]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"InfoHead"
+text = "Delivered"
+
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col" unique_id=1895898389]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Frame/Col/Scroll" unique_id=1234875115]
+unique_name_in_owner = true
+editor_description = "A LawRow (scenes/panels/law_row.tscn) a law, instanced by LawsScreen._build_rows in each page's file order."
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="Detail" type="PanelContainer" parent="." unique_id=262044696]
+unique_name_in_owner = true
+editor_description = "The places a law's decree has not reached, each with its courier's days left or marked lost (LawsScreen._show_places); Send again re-sends the decree to the lost ones (plan ruling R5)."
+visible = false
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -240.0
+offset_top = -170.0
+offset_right = 240.0
+offset_bottom = 170.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = ExtResource("2_1qs8v")
+
+[node name="Col" type="VBoxContainer" parent="Detail" unique_id=1403702509]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DetailTitle" type="Label" parent="Detail/Col" unique_id=1592838216]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "Not yet told — Tax rate"
+autowrap_mode = 3
+
+[node name="DetailScroll" type="ScrollContainer" parent="Detail/Col" unique_id=2045210139]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="DetailList" type="Label" parent="Detail/Col/DetailScroll" unique_id=507606560]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"InfoLabel"
+text = "Province — 4 days
+Province — lost"
+autowrap_mode = 3
+
+[node name="DetailButtons" type="HBoxContainer" parent="Detail/Col" unique_id=439229894]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="SendAgain" type="Button" parent="Detail/Col/DetailButtons" unique_id=1915145761]
+unique_name_in_owner = true
+editor_description = "Greyed (disabled) by LawsScreen._fill_detail unless a place is lost and the decree may ride again."
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+text = "Send again"
+
+[node name="DetailClose" type="Button" parent="Detail/Col/DetailButtons" unique_id=947094349]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"Command"
+text = "Close"

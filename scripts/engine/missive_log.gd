@@ -11,15 +11,21 @@ const SUPPLY_KINDS := ["supply", "supply_month"]
 ## The battle reports (spec 2026-10-07-enemy-ai-and-battle §4.5), a letter a
 ## day for as long as a fight lasts: capped apart too (missive_keep_battle).
 const BATTLE_KINDS := ["battle"]
+## A decree's letters (laws spec §3: its sending and its reach): capped apart
+## too (missive_keep_law), so a decree to every camp never pushes a spy's
+## report or a receipt off a column.
+const LAW_KINDS := ["law"]
 
 
-## Which cap a kind of letter counts against: "supply", "battle", or "" for the
-## rest (missive_keep_per_column).
+## Which cap a kind of letter counts against: "supply", "battle", "law", or ""
+## for the rest (missive_keep_per_column).
 static func keep_group(kind: String) -> String:
 	if kind in SUPPLY_KINDS:
 		return "supply"
 	if kind in BATTLE_KINDS:
 		return "battle"
+	if kind in LAW_KINDS:
+		return "law"
 	return ""
 
 
@@ -29,6 +35,8 @@ static func _keep_key(group: String) -> String:
 			return "missive_keep_supply"
 		"battle":
 			return "missive_keep_battle"
+		"law":
+			return "missive_keep_law"
 	return "missive_keep_per_column"
 
 
@@ -62,8 +70,9 @@ static func add(repo: DataRepository, state: GameState, m: Dictionary) -> int:
 	entry["read"] = false
 	state.missives.append(entry)
 	# The cap counts the new letter's own sort: supply letters against
-	# missive_keep_supply, battle reports against missive_keep_battle, every
-	# other kind against missive_keep_per_column.
+	# missive_keep_supply, battle reports against missive_keep_battle, a
+	# decree's letters against missive_keep_law, every other kind against
+	# missive_keep_per_column.
 	var group := keep_group(String(entry["kind"]))
 	var keep := maxi(1, int(repo.bal(_keep_key(group))))
 	var mine := column(state, String(entry["column"])).filter(

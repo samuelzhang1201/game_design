@@ -51,7 +51,7 @@ func test_effects_and_triggers_parse() -> void:
 			if op == "":
 				continue
 			var head := op.split(":")[0]
-			assert_true(head in ["metric", "gold", "opinion", "schedule", "flag", "promise"],
+			assert_true(head in ["metric", "gold", "opinion", "schedule", "flag", "promise", "law"],
 				"unknown op '%s' in %s/%s" % [head, c["event_id"], c["choice_id"]])
 
 func test_schedule_targets_exist() -> void:
@@ -86,7 +86,7 @@ func test_every_event_reachable_or_chained() -> void:
 ## catches nothing new by itself — it documents the invariant explicitly,
 ## as the ruling requires).
 func test_effect_op_arity_and_colon_safety() -> void:
-	var arity := {"metric": 3, "gold": 2, "opinion": 4, "schedule": 3, "flag": 2, "promise": 4}
+	var arity := {"metric": 3, "gold": 2, "opinion": 4, "schedule": 3, "flag": 2, "promise": 4, "law": 3}
 	for c in data.event_choices:
 		for raw in String(c["effects"]).split(";", false):
 			var op := raw.strip_edges()

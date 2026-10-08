@@ -25,6 +25,7 @@
 - Talking to someone opens the **audience window** over the map: their portrait, opinion (hover for its reasons), traits and skills on the left; their words, BIO / SKILLS / TIES, your options and a talk box on the right. Events use the same window.
 - Click a face in the council column to seek that person out; **MOVE** takes you to another place in the district at no cost in time.
 - **Click a suggestion** to carry it out at once, or **type an order** in plain words. A typed order gets a reply, then the ledger lines that actually applied. Every order costs something — gold, goods, or someone's opinion.
+- **Laws** are decreed and ride by courier. The economy and political laws (the tax and tariff rates, grain policy, the severity of justice, the church policy) go to every province you hold, and each province follows its law from the day its courier arrives. The military laws (plunder, the conduct of the host, quarter, ransom and the rest) go to each camp and to each unit in the field, and a unit carries what it was told into the next camp. A decree is said once in the news when it is sent and once when its last courier is home, "in force everywhere" or how many places it reached; the chancery files a letter on the MISSIVE board for each. An event may change a law at once.
 - Ministers remember: opinions move for stated reasons, promises you make fall due, and a broken promise is the worst insult you can give.
 
 ## Manors and the economy
@@ -38,7 +39,8 @@
 
 - **3D MAP** swaps the map for a 3D landscape (drag to pan, right-drag to turn, wheel to zoom, WASD / arrows); clicks open the same cards. It needs the 3D world built for the map (`tools/map3d/`).
 - **HEIGHTS**, **ECONOMY**, **MANORS** are map themes, one at a time. **MILITARY** draws your regiments on the map and your host in the left column.
-- **REALM**, **FAMILIES**, **LAWS**, **RELIGION** open tables of the realm's current state; **WAR ROOM** is a placeholder; **RELATIONSHIP** opens the web of kin, friendships and feuds.
+- **REALM**, **FAMILIES**, **RELIGION** open tables of the realm's current state; **WAR ROOM** is a placeholder; **RELATIONSHIP** opens the web of kin, friendships and feuds.
+- **LAWS** opens the laws screen over the map; the clock keeps running. It has three pages (economy, politics, military), with one row per law: what is decreed, how many places the couriers have told so far, what the chosen value does, and its cost (couriers, gold, the longest ride) or why it cannot be sent. **Decree** sends the law by courier, and each place follows it only once its courier arrives. **Places** lists the places not yet told, with the days left for each courier; a place is marked "lost" if its courier was lost and "not sent" if it was gained after the decree, and **Send again** rides for both. Press LAWS again, Close or Esc to put it away.
 
 ## Other keys
 

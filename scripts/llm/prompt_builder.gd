@@ -45,11 +45,27 @@ static func persona_context(id: String, state: GameState, data: DataRepository) 
 		lines += "\nWhat you know and believe:\n" + knowledge
 	return lines
 
-static func parse_prompts(player_text: String, report: TickReport, state: GameState,
-		data: DataRepository) -> Dictionary:
+## "- CODE: notes" for every legal action, then the laws LAW_SET may name
+## (the model cannot read data/laws.csv): each law's code, label, values and
+## the value decreed now.
+static func action_catalog(state: GameState, data: DataRepository) -> String:
 	var catalog := ""
 	for code in data.actions:
 		catalog += "- %s: %s\n" % [code, data.actions[code].get("notes", "")]
+	if data.actions.has(LawSystem.ACTION) and not data.law_order.is_empty():
+		catalog += "Laws for %s (law: label, values, decreed now):\n" % LawSystem.ACTION
+		for law: String in data.law_order:
+			var d: Dictionary = data.laws[law]
+			var values: Array = d["values"]
+			var span := "%s..%s" % [values[0], values[1]] if String(d["kind"]) == "range" \
+				else "|".join(PackedStringArray(values))
+			catalog += "  %s: %s, %s, now %s\n" % [law, String(d["label"]), span,
+				LawSystem.decreed(data, state, law)]
+	return catalog
+
+static func parse_prompts(player_text: String, report: TickReport, state: GameState,
+		data: DataRepository) -> Dictionary:
+	var catalog := action_catalog(state, data)
 	var ids := ", ".join(state.characters.keys())
 	var event_ctx := ""
 	if not state.pending_event.is_empty():
@@ -89,9 +105,7 @@ static func order_prompts(player_text: String, speaker_id: String, report: TickR
 		state: GameState, data: DataRepository) -> Dictionary:
 	var persona := persona_context(speaker_id, state, data) if speaker_id != "" else \
 		"the court herald — a neutral clerk who records the ruler's orders and answers plainly."
-	var catalog := ""
-	for code in data.actions:
-		catalog += "- %s: %s\n" % [code, data.actions[code].get("notes", "")]
+	var catalog := action_catalog(state, data)
 	var ids := ", ".join(state.characters.keys())
 	var event_ctx := ""
 	if not state.pending_event.is_empty():

@@ -360,6 +360,7 @@ weather_spell_days,3,"days a province's weather holds (Weather.spell_of) so it d
 map3d_weather_look,1,"3D MAP weather look (spec 2026-09-29-weather-visuals): 1 draws the weather on the ground, the clouds and the falling rain and snow; 0 leaves only the HUD marks"
 missive_keep_per_column,40,"spec 2026-09-28 §1: letters kept per board column; the oldest leaves when one more arrives"
 missive_keep_supply,20,"spec 2026-10-07-army-supply-lines §5.5: supply dispatches and the marshal's months (kinds supply, supply_month) are kept apart from missive_keep_per_column, so they never push a spy report or a receipt off the board"
+missive_keep_law,20,"spec 2026-10-08-laws-tab §3: a decree's letters (kind law: its sending and its reach) are kept apart from missive_keep_per_column, as the supply letters are, so a decree to every camp never pushes a spy report or a receipt off the board"
 missive_keep_battle,20,"spec 2026-10-07-enemy-ai-and-battle §4.5: battle reports (kind battle, a letter a day while a fight lasts) are kept apart from missive_keep_per_column and missive_keep_supply, so a siege never pushes a spy report, a receipt or a supply letter off the board"
 spy_radius_km,25,a spy counts the troops within this distance of his point
 spy_credible_threshold,500,a quality roll (0..999 after spy_difficulty) at or above this files the report as highly credible; below is rumour

@@ -18,6 +18,12 @@ static func signature_for(data: DataRepository, code: String, params: Dictionary
 static func _variant_matches(variant: String, params: Dictionary) -> bool:
 	if variant == "":
 		return true
+	# "a&b": every part must match (LAW_SET's `law=<code>&delta_pos`)
+	if "&" in variant:
+		for part: String in variant.split("&"):
+			if not _variant_matches(part, params):
+				return false
+		return true
 	if variant == "delta_pos":
 		return float(params.get("delta", 0)) > 0.0
 	if variant == "delta_neg":

@@ -10,11 +10,11 @@ func before_each() -> void:
 
 
 func test_variant_matching() -> void:
-	var pos := OpinionDrift.signature_for(data, "TAX_RATE_ADJUST", {"delta": 2})
-	var neg := OpinionDrift.signature_for(data, "TAX_RATE_ADJUST", {"delta": -1})
+	var pos := OpinionDrift.signature_for(data, "LAW_SET", {"law": "tax_rate", "value": "7", "delta": 2})
+	var neg := OpinionDrift.signature_for(data, "LAW_SET", {"law": "tax_rate", "value": "4", "delta": -1})
 	assert_eq(pos["tax_incidence"], -30.0)
 	assert_eq(neg["tax_incidence"], 30.0)
-	var tithe := OpinionDrift.signature_for(data, "CHURCH_POLICY", {"mode": "tithe"})
+	var tithe := OpinionDrift.signature_for(data, "LAW_SET", {"law": "church_policy", "value": "tithe"})
 	assert_eq(tithe["orthodoxy"], -50.0)
 	assert_eq(OpinionDrift.signature_for(data, "COUNCIL_CONSULT", {}), {
 		"centralism": 0.0, "militarism": 0.0, "orthodoxy": 0.0,
@@ -22,11 +22,11 @@ func test_variant_matching() -> void:
 	assert_eq(OpinionDrift.signature_for(data, "NO_SUCH_ACTION", {}), {})
 
 func test_odo_hates_the_tithe_worked_example() -> void:
-	# CHURCH_POLICY tithe sig: centralism +10, orthodoxy -50 (L1 norm 60).
+	# The church law's tithe sig: centralism +10, orthodoxy -50 (L1 norm 60).
 	# Odo: centralism 10, orthodoxy 70, sensitivity 80, pragmatism 30.
 	# dot = 10*10 + (-50)*70 = -3400; alignment = -3400/6000 = -0.5667
 	# delta = round(-0.5667 * 0.8 * 0.7 * 20) = round(-6.35) = -6
-	var sig := OpinionDrift.signature_for(data, "CHURCH_POLICY", {"mode": "tithe"})
+	var sig := OpinionDrift.signature_for(data, "LAW_SET", {"law": "church_policy", "value": "tithe"})
 	var odo: Character = s.characters["char_chaplain"]
 	var before: int = odo.opinion
 	var applied := OpinionDrift.apply(data, s, sig, "tithed the church")
@@ -42,7 +42,7 @@ func test_odo_hates_the_tithe_worked_example() -> void:
 func test_pragmatist_barely_notices() -> void:
 	# Mirella on tithe: dot = 10*10 + (-50)*(-20) = 1100; a = 0.1833
 	# delta = round(0.1833 * 0.55 * 0.25 * 20) = round(0.50) = 1
-	var sig := OpinionDrift.signature_for(data, "CHURCH_POLICY", {"mode": "tithe"})
+	var sig := OpinionDrift.signature_for(data, "LAW_SET", {"law": "church_policy", "value": "tithe"})
 	var before: int = s.characters["char_steward"].opinion
 	OpinionDrift.apply(data, s, sig, "tithed the church")
 	assert_eq(s.characters["char_steward"].opinion, before + 1)

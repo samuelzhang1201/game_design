@@ -303,6 +303,8 @@ static func ride_day(repo: DataRepository, state: GameState) -> Array:
 		if _ride(repo, state, c, today, events):
 			keep.append(c)
 	state.couriers = keep
+	# a decree whose last courier is home files its reach letter (laws spec §3)
+	LawSystem.close_rides(repo, state, events)
 	return events
 
 
@@ -310,7 +312,7 @@ static func ride_day(repo: DataRepository, state: GameState) -> Array:
 static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> bool:
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code, state)
-	if not _is_spy(c) and (reg.is_empty() or ArmySystem.is_foe(state, code)
+	if _chases(c) and (reg.is_empty() or ArmySystem.is_foe(state, code)
 			or ArmySystem.state_of(repo, state, code).is_empty()):
 		events.append(_event("lost", c))
 		return false
@@ -353,10 +355,26 @@ static func _is_spy(c: Dictionary) -> bool:
 	return String(c.get("kind", "")) == SPY
 
 
-## A courier bound for a fixed point, never re-aimed at a column: a spy, or
-## a supply order riding to its town.
+## A courier bound for a fixed point, never re-aimed at a column: a spy, a
+## supply order riding to its town, or a decree riding to a place.
 static func _fixed_point(c: Dictionary) -> bool:
-	return _is_spy(c) or String((c.get("order", {}) as Dictionary).get("to_town", "")) != ""
+	return _is_spy(c) or place_bound(c) or String((c.get("order", {}) as Dictionary).get("to_town", "")) != ""
+
+
+## A decree (LAW_SET) riding to a place — a province or a camp's town — not
+## to a unit (laws plan ruling R6): his target is the place's scope key; he
+## is never lost for want of a regiment and never re-aimed.
+static func place_bound(c: Dictionary) -> bool:
+	if String((c.get("order", {}) as Dictionary).get("action_code", "")) != LawSystem.ACTION:
+		return false
+	var t := String(c.get("target", ""))
+	return t.begins_with(LawSystem.PROVINCE_PREFIX) or t.begins_with(LawSystem.TOWN_PREFIX)
+
+
+## Whether a courier rides for a unit, and so is lost when it is gone: every
+## courier but a spy and a decree to a place.
+static func _chases(c: Dictionary) -> bool:
+	return not _is_spy(c) and not place_bound(c)
 
 
 ## Where a courier's NEXT day on the road takes him: the engine's own ride run
@@ -384,8 +402,9 @@ static func ride_ahead(repo: DataRepository, state: GameState, c: Dictionary) ->
 static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, before: Array) -> Dictionary:
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code, state)
-	# a spy rides for a point, not a regiment: nothing to lose, nothing to re-aim
-	if not _is_spy(c) and (reg.is_empty() or ArmySystem.is_foe(state, code)
+	# a spy or a decree to a place rides for a point, not a regiment: nothing
+	# to lose, nothing to re-aim
+	if _chases(c) and (reg.is_empty() or ArmySystem.is_foe(state, code)
 			or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}
 	var copy: Dictionary = c.duplicate(true)
@@ -508,6 +527,9 @@ static func _spy_placed(repo: DataRepository, state: GameState, c: Dictionary, e
 ## higher courier id), in which case this one is set aside.
 static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
 	var code := String(c["target"])
+	# a decree writes its place's law and touches no order of the column
+	if String((c["order"] as Dictionary).get("action_code", "")) == LawSystem.ACTION:
+		return LawSystem.deliver(repo, state, c)
 	if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
 		return SupplyLines.deliver(repo, state, c)
 	var entry: Dictionary = state.regiments.get(code, {})
@@ -558,21 +580,29 @@ static func _at_capital(repo: DataRepository, c: Dictionary) -> bool:
 
 
 static func _event(type: String, c: Dictionary, weather: String = "") -> Dictionary:
-	return {"type": type, "courier": int(c["id"]), "regiment": String(c["target"]), "weather": weather,
-		"town": String((c.get("order", {}) as Dictionary).get("to_town", ""))}
+	var order: Dictionary = c.get("order", {})
+	var e := {"type": type, "courier": int(c["id"]), "regiment": String(c["target"]), "weather": weather,
+		"town": String(order.get("to_town", ""))}
+	if String(order.get("action_code", "")) == LawSystem.ACTION:
+		e["law"] = String(order.get("law", ""))
+		e["value"] = String(order.get("value", ""))
+		e["decree_id"] = int(order.get("decree_id", 0))
+	return e
 
 
 ## The newest MARCH / HALT courier riding for a regiment, {} when none. The
-## supply orders (SUPPLY_*), the battle stance (ARMY_STANCE) and the seat order
-## (ARMY_SEAT) are not the march: they never move a column's arrival day, so
-## this reader (days_to_arrival, the regiment card, the war folio) passes them by.
+## supply orders (SUPPLY_*), the battle stance (ARMY_STANCE), the seat order
+## (ARMY_SEAT) and a decree (LAW_SET) are not the march: they never move a
+## column's arrival day, so this reader (days_to_arrival, the regiment card,
+## the war folio) passes them by.
 static func pending_for(state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	if state == null:
 		return best
 	for c: Dictionary in state.couriers:
 		var kind := String((c["order"] as Dictionary).get("action_code", ""))
-		if kind.begins_with("SUPPLY_") or kind == "ARMY_STANCE" or kind == "ARMY_SEAT":
+		if kind.begins_with("SUPPLY_") or kind == "ARMY_STANCE" or kind == "ARMY_SEAT" \
+				or kind == LawSystem.ACTION:
 			continue
 		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c
@@ -585,6 +615,8 @@ static func _town_label(repo: DataRepository, town: String) -> String:
 
 ## The news bar's line for a ride_day event.
 static func headline(repo: DataRepository, e: Dictionary) -> String:
+	if e.has("law"):
+		return _law_headline(repo, e)
 	var label := String(ArmySystem.regiment(repo, String(e.get("regiment", ""))).get("label", e.get("regiment", "")))
 	match String(e.get("type", "")):
 		"set_out":
@@ -621,4 +653,95 @@ static func headline(repo: DataRepository, e: Dictionary) -> String:
 			if String(e.get("place", "")) != "":
 				return "The spy riding for %s is held up by %s." % [String(e["place"]), wx]
 			return "The courier to %s is held up by %s." % [label, wx]
+	return ""
+
+
+## The news bar's lines for a batch of courier events (setting_out's, or a
+## day's ride_day), in order. A decree's couriers are said as the DECREE, not
+## one by one (laws spec §3 "News and letters"): their setting out is ONE
+## line per decree ("The decree on <law> is sent: N couriers."), their
+## deliveries and weather nothing, and the event that closes the decree
+## (`reach`, LawSystem.close_rides) ONE line — "is in force everywhere" when
+## it reached every place, else how many it reached. A decree's couriers set
+## aside, lost or out of time in the batch are ONE counted line ("N couriers
+## of the decree on <law> were set aside"), a lone one its `headline` — so an
+## event that overrides a riding decree is no flood. Every other courier is
+## said by `headline`.
+static func news(repo: DataRepository, events: Array) -> Array:
+	var counts := {}
+	var missed := {}  # law#decree_id -> [set aside, lost or out of time]
+	for e: Dictionary in events:
+		if not e.has("law"):
+			continue
+		var k := "%s#%d" % [String(e["law"]), int(e.get("decree_id", 0))]
+		var type := String(e.get("type", ""))
+		if type == "set_out":
+			counts[k] = int(counts.get(k, 0)) + 1
+		elif type in ["stale", "lost", "fuse"]:
+			var m: Array = missed.get(k, [0, 0])
+			m[0 if type == "stale" else 1] += 1
+			missed[k] = m
+	var out: Array = []
+	var said := {}
+	for e: Dictionary in events:
+		if not e.has("law"):
+			var line := headline(repo, e)
+			if line != "":
+				out.append(line)
+			continue
+		var law := String((repo.laws.get(String(e["law"]), {}) as Dictionary).get("label", e["law"]))
+		var k := "%s#%d" % [String(e["law"]), int(e.get("decree_id", 0))]
+		match String(e.get("type", "")):
+			"set_out":
+				if not said.has(k):
+					said[k] = true
+					var n := int(counts[k])
+					out.append("The decree on %s is sent: %d courier%s." % [law, n, "" if n == 1 else "s"])
+			"stale", "lost", "fuse":
+				var m: Array = missed[k]
+				if int(m[0]) + int(m[1]) == 1:
+					out.append(headline(repo, e))
+				elif not said.has("missed " + k):
+					said["missed " + k] = true
+					out.append("%d couriers of the decree on %s were %s." % [int(m[0]) + int(m[1]), law,
+						"set aside" if int(m[1]) == 0 else ("lost" if int(m[0]) == 0 else "set aside or lost")])
+		if e.has("reach"):
+			var r: Dictionary = e["reach"]
+			var d := int(r["days"])
+			if int(r["reached"]) >= int(r["total"]):
+				out.append("The decree on %s is in force everywhere: %d of %d places in %d day%s." % [
+					law, int(r["reached"]), int(r["total"]), d, "" if d == 1 else "s"])
+			else:
+				out.append("The decree on %s reached %d of %d places in %d day%s." % [
+					law, int(r["reached"]), int(r["total"]), d, "" if d == 1 else "s"])
+	return out.filter(func(l: String) -> bool: return l != "")
+
+
+## A decree's courier in the news (headline): the law by its label, the
+## place by its name.
+static func _law_headline(repo: DataRepository, e: Dictionary) -> String:
+	var law := String((repo.laws.get(String(e["law"]), {}) as Dictionary).get("label", e["law"]))
+	var target := String(e.get("regiment", ""))
+	var place := LawSystem.place_label(repo, null, target)
+	var to_place := target.begins_with(LawSystem.PROVINCE_PREFIX) or target.begins_with(LawSystem.TOWN_PREFIX)
+	match String(e.get("type", "")):
+		"set_out":
+			if int(e.get("capital", 0)) == 1:
+				return "A courier leaves the capital for %s with the decree on %s." % [place, law]
+			return "A courier rides for %s with the decree on %s." % [place, law]
+		"delivered":
+			return "The decree on %s is in force at %s." % [law, place]
+		"stale":
+			return "An older decree on %s reached %s after a newer one and was set aside." % [law, place]
+		"lost":
+			if not to_place:
+				return "The decree on %s for %s undelivered: the unit is gone." % [law, place]
+			if target.begins_with(LawSystem.PROVINCE_PREFIX):
+				return "The decree on %s for %s undelivered: the province is no longer the realm's." % [law, place]
+			return "The decree on %s for %s undelivered: no host camps there now." % [law, place]
+		"fuse":
+			return "The decree on %s never reached %s." % [law, place]
+		"slow":
+			var wx := Weather.label_of(repo, String(e.get("weather", ""))).to_lower()
+			return "The courier with the decree on %s for %s is held up by %s." % [law, place, wx]
 	return ""

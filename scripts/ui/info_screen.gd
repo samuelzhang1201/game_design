@@ -1,8 +1,9 @@
 class_name InfoScreen
 extends Control
-## Centered table overlay for the bottom bar's LAWS / RELIGION / FAMILIES
-## tabs (REALM went 2026-10-02, owner): a titled two-column table of engine truth (metrics and
-## office holders), refreshed live on state_changed while visible.
+## Centered table overlay for the bottom bar's RELIGION / FAMILIES tabs
+## (REALM went 2026-10-02, owner; LAWS is its own screen, LawsScreen): a
+## titled two-column table of engine truth (metrics and office holders),
+## refreshed live on state_changed while visible.
 ##
 ## MILITARY is no longer one of them (user request 2026-09-10): it is a map
 ## layer plus the host in the screen's left column, so it never dims the map.
@@ -71,12 +72,6 @@ func _rows_for(tab: String) -> Array:
 	match tab:
 		"FAMILIES":
 			return _family_rows()
-		"LAWS":
-			return [
-				["Tax rate", "%d / 10" % int(m["tax_rate"])],
-				["Tariff rate", "%d / 10" % int(m["tariff_rate"])],
-				["Grain rationing", "in force" if m["grain_ration"] > 0.0 else "none"],
-			]
 		"RELIGION":
 			var rows2 := [["Church opinion", str(int(m["church_opinion"]))]]
 			var chaplain := _seat_holder("chaplain")

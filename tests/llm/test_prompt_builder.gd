@@ -10,7 +10,12 @@ func test_parse_prompt_lists_actions_and_schema() -> void:
 	var s := SuiteData.campaign(data, 42)
 	var r := TickEngine.new(data).advance(s)
 	var p := PromptBuilder.parse_prompts("cut taxes by one", r, s, data)
-	assert_string_contains(p["system"], "TAX_RATE_ADJUST")
+	assert_string_contains(p["system"], "LAW_SET")
+	# the laws LAW_SET may name, with the value decreed now
+	assert_string_contains(p["system"], "tax_rate: Tax rate, 1..10, now " + LawSystem.decreed(data, s, "tax_rate"))
+	assert_string_contains(p["system"], "grain_ration: Grain policy, market|ration|release, now ")
+	var o := PromptBuilder.order_prompts("cut taxes by one", "", r, s, data)
+	assert_string_contains(o["system"], "justice_severity: Severity of justice")
 	assert_string_contains(p["system"], "court_reaction")
 	assert_string_contains(p["system"], "JSON")
 	assert_string_contains(p["user"], "cut taxes by one")

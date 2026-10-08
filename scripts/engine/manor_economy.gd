@@ -46,6 +46,19 @@ static func focus_units(repo: DataRepository, state: GameState, cell: int, peopl
 		* float(growth_index(repo, good, tick)) / 1000.0
 	return {"good": good, "units": int(roundf(exact))}
 
+## The tax and tariff rates in force in a province, (tax, tariff): each the
+## law's value there (`LawSystem.value`), so a province pays at what its
+## last courier brought and an annexed one at the default (spec
+## 2026-10-08-laws-tab-design §4.3, R13). Ranges are whole, so the rates are
+## ints. A bare repository with neither the law nor the metric reads
+## tax_rate_base and no tariff. Resolve it ONCE per province and pass it to
+## line_of for every manor of it (RealmEconomy.recompute_province).
+static func rates_of(repo: DataRepository, state: GameState, province: String) -> Vector2i:
+	var tax := LawSystem.value(repo, state, "tax_rate", province)
+	var tariff := LawSystem.value(repo, state, "tariff_rate", province)
+	return Vector2i(int(tax) if tax.is_valid_int() else int(repo.bal("tax_rate_base")),
+		int(tariff) if tariff.is_valid_int() else 0)
+
 ## The manor's month: {people, tax, tariff, strategic, civil, units, fed}
 ## — `fed` is building code -> {good: own units eaten} for each working
 ## input building (M5), `units` what is left after it ate.
@@ -54,12 +67,15 @@ static func focus_units(repo: DataRepository, state: GameState, cell: int, peopl
 ## tax_rate_base x (1 + Σ tax_bonus)); tariff = round(town goods' gold x
 ## tariff_rate x tariff_per_sales_tax / 100); a town's lines are the pack's
 ## production rows for its burg, each x growth x (1 + Σ output_bonus).
-static func line_of(repo: DataRepository, state: GameState, cell: int, tick: int) -> Dictionary:
+## The rates are the manor's province's in force (`rates_of`); a caller that
+## walks a province's manors passes them as `rates`, resolved once.
+static func line_of(repo: DataRepository, state: GameState, cell: int, tick: int,
+		rates := Vector2i(-1, -1)) -> Dictionary:
+	if rates.x < 0:
+		rates = rates_of(repo, state, MapManors.province_of(repo, cell, state))
 	var people := MapManors.people_of(repo, state, cell)
-	var m := state.metrics
-	var tax_rate := float(m.get("tax_rate", repo.bal("tax_rate_base")))
 	var tax := int(roundf(float(people) / 1000.0 * repo.bal("manor_tax_per_1000")
-		* tax_rate / repo.bal("tax_rate_base")
+		* float(rates.x) / repo.bal("tax_rate_base")
 		* (1.0 + MapManors.building_bonus(repo, state, cell, "tax_bonus"))))
 	var units: Dictionary = {}
 	var f := focus_units(repo, state, cell, people, tick)
@@ -85,7 +101,7 @@ static func line_of(repo: DataRepository, state: GameState, cell: int, tick: int
 		town_gold += u * int(repo.goods_economy_of(good)["price_gold"])
 	var tariff := 0
 	if town_gold > 0:
-		tariff = int(roundf(float(town_gold) * float(m.get("tariff_rate", 0.0))
+		tariff = int(roundf(float(town_gold) * float(rates.y)
 			* repo.bal("tariff_per_sales_tax") / 100.0))
 	# Buildings eat (spec 2026-09-30-ledger-industry-trade-design, M5): each
 	# standing, working input building is fed from this manor's own units

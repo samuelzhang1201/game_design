@@ -114,11 +114,11 @@ func test_the_pools_start_with_months_of_the_crowns_own_production() -> void:
 func test_outcomes_drain_into_next_report() -> void:
 	var s := SuiteData.campaign(data, 42)
 	engine.advance(s)
-	engine.actions.execute(ActionRequest.make("TAX_RATE_ADJUST", {"delta": 1}), s)
+	engine.actions.execute(ActionRequest.make("LAW_SET", {"law": "tax_rate", "value": "6"}), s)
 	var r := engine.advance(s)
 	assert_eq(r.outcomes.size(), 1)
 	assert_eq(s.recent_outcomes.size(), 0)
-	assert_eq(r.outcomes[0]["action_code"], "TAX_RATE_ADJUST")
+	assert_eq(r.outcomes[0]["action_code"], "LAW_SET")
 
 ## The crown's own provinces pay their taxes in full (spec §5; the month's
 ## line itself is test_the_months_end_settles_the_three_pools): the manors

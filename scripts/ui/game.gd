@@ -395,6 +395,7 @@ func load_campaign(path: String = "") -> bool:
 	ArmySystem.ensure(data, state)  # a save from before the carried load: its load and cap now
 	TownStores.ensure(data, state)  # a save from before the town stores
 	Hazards.ensure(data, state)
+	LawSystem.ensure(data, state)  # a save from before the laws
 	state_changed.emit()
 	return true
 

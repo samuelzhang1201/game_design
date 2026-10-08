@@ -49,6 +49,10 @@ extends Node
 ##   --pan               measure a MOVING view instead of a still one (below).
 ##   --frame-cap N       run under the menus' frame-rate cap N (FrameCap; default 0,
 ##                       uncapped) to read the GPU's load under it, not a frame's cost.
+##   --decree LAW        before each zoom's rows, decree LAW to a value other than
+##                       the one decreed (LawSystem.decree, no cost charged), so a
+##                       decree's couriers are on the road while it is priced (a
+##                       camp law sends one to each camp and each unit in the field).
 ##
 ## STILL vs PAN (final review 2026-09-20). Without --pan the camera stands
 ## still for the whole row, so everything the view cuts once per camera pose —
@@ -93,6 +97,8 @@ var _at := Vector2(-1, -1)
 ## --layer's bottom-bar tab ("" for none), tagged onto every row's label.
 var _layer := ""
 var _rig: Map3DCameraRig
+## --decree's law ("" for none).
+var _decree := ""
 
 
 func _ready() -> void:
@@ -115,6 +121,9 @@ func _ready() -> void:
 	var tier := args[qi + 1] if qi >= 0 and qi + 1 < args.size() else "high"
 	_tier = tier
 	Map3DQuality.forced = tier  # before GameRoot exists, so the view's first load wears it
+	var di := args.find("--decree")
+	if di >= 0 and di + 1 < args.size():
+		_decree = args[di + 1]
 	# a bench row reads the frame's own cost, never the player's cap — unless
 	# --frame-cap N asks to price the cap itself (the GPU's load under it)
 	var fi := args.find("--frame-cap")
@@ -189,6 +198,7 @@ func _ready() -> void:
 			v.look_at_pack(_at, Game.data.bal(String(stop[1])))
 		else:
 			v.look_at_home(Game.data.bal(String(stop[1])))
+		_send_decree()
 		worst = maxf(worst, await _measure("%s  all on" % stop[0]))
 		for layer: String in v.layer_names():
 			v.set_layer_visible(layer, false)
@@ -254,6 +264,29 @@ func _measure(plain_label: String) -> float:
 	_rows.append([str(get_window().size.x) + "x" + str(get_window().size.y), _tier, label,
 		median, _mean(frame_ms), _percentile(frame_ms, 0.95), calls, prims])
 	return median
+
+
+## --decree: the law decreed to its first allowed value other than the one
+## decreed (a range's next step), its couriers dispatched as an order's are.
+func _send_decree() -> void:
+	if _decree == "":
+		return
+	var d := LawSystem.def(Game.data, _decree)
+	if d.is_empty():
+		push_error("bench: no law " + _decree)
+		return
+	var was := LawSystem.decreed(Game.data, Game.state, _decree)
+	var to := ""
+	if String(d["kind"]) == "range":
+		to = str(int(was) + 1 if int(was) < int(d["values"][1]) else int(was) - 1)
+	else:
+		for v: String in d["values"]:
+			if v != was:
+				to = v
+				break
+	var sent := LawSystem.decree(Game.data, Game.state, _decree, to)
+	print("decree %s %s -> %s: %d couriers sent, %d on the road" % [_decree, was, to, sent.size(),
+		Game.state.couriers.size()])
 
 
 ## --pan's per-frame work, through the view's own public seams: the rig's

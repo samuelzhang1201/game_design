@@ -1,0 +1,109 @@
+[gd_scene format=3 uid="uid://i5qlxi24vwvb"]
+
+[ext_resource type="Script" path="res://scripts/ui/law_row.gd" id="1_jde1k"]
+
+[node name="LawRow" type="VBoxContainer" unique_id=1311606854]
+editor_description = "One law's row on the laws screen, instanced a law at a time by LawsScreen; LawRow fills its words and values from the engine."
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+script = ExtResource("1_jde1k")
+
+[node name="GroupGap" type="Control" parent="." unique_id=1562717890]
+unique_name_in_owner = true
+editor_description = "The space above a military group's title after the first; shown by LawRow.setup."
+visible = false
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="GroupTitle" type="Label" parent="." unique_id=1449097703]
+unique_name_in_owner = true
+editor_description = "Shown and worded by LawRow.setup: the group's title (law_words.csv group_<key>) over the first row of each military group."
+visible = false
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "Conduct in the field"
+
+[node name="Line" type="HBoxContainer" parent="." unique_id=1823265510]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Label" type="Label" parent="Line" unique_id=1502011575]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+theme_type_variation = &"InfoLabel"
+text = "Tax rate"
+vertical_alignment = 1
+
+[node name="Decreed" type="Label" parent="Line" unique_id=1331020315]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "5"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Delivery" type="Label" parent="Line" unique_id=589435258]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"InfoHead"
+text = "20 / 20 provinces"
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="Places" type="Button" parent="Line" unique_id=1923015330]
+unique_name_in_owner = true
+editor_description = "Opens the laws screen's list of places not yet told (LawsScreen._show_places)."
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"Command"
+text = "Places"
+
+[node name="Choice" type="OptionButton" parent="Line" unique_id=1743929024]
+unique_name_in_owner = true
+editor_description = "Its items are the law's values (LawRow.setup: a toggle's two, a choice's names, a range's levels). Its popup wears the CardMenuPopup kind, set in code: a popup is no scene node."
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"CardMenu"
+theme_override_font_sizes/font_size = 20
+fit_to_longest_item = false
+
+[node name="Decree" type="Button" parent="Line" unique_id=1267894580]
+unique_name_in_owner = true
+editor_description = "Greyed (disabled) by LawRow.refresh while the preview gives a refusal."
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"Command"
+text = "Decree"
+
+[node name="Notes" type="MarginContainer" parent="." unique_id=1699696751]
+unique_name_in_owner = true
+editor_description = "The row's note (the chosen value's effects, its cost or why it cannot be sent): LawRow.refresh hides it, and each label in it, while it has nothing to say, so a row gives its space back."
+layout_mode = 2
+theme_override_constants/margin_left = 232
+
+[node name="NotesCol" type="VBoxContainer" parent="Notes" unique_id=1102207834]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Effects" type="Label" parent="Notes/NotesCol" unique_id=1791916812]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InfoHead"
+text = "Effects: once: unrest −2.0 per point"
+autowrap_mode = 3
+
+[node name="Preview" type="Label" parent="Notes/NotesCol" unique_id=2081693302]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InfoLabel"
+text = "20 couriers · 40 gold · order 1 gold · 9 days at most"
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="." unique_id=2019839426]
+layout_mode = 2

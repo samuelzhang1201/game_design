@@ -55,20 +55,6 @@ func validate(req: ActionRequest, state: GameState) -> String:
 	if row.get("target_type", "none") == "character" and not state.characters.has(req.target):
 		return "No such target character for " + req.action_code
 	match req.action_code:
-		"TAX_RATE_ADJUST", "TARIFF_ADJUST":
-			var d := int(req.params.get("delta", 0))
-			if d < -3 or d > 3 or d == 0:
-				return "delta must be -3..3 and nonzero"
-		"JUSTICE_SEVERITY":
-			var d := int(req.params.get("delta", 0))
-			if d < -2 or d > 2 or d == 0:
-				return "delta must be -2..2 and nonzero"
-		"GRAIN_POLICY_SET":
-			if not req.params.get("mode", "") in ["market", "ration", "release"]:
-				return "mode must be market|ration|release"
-		"CHURCH_POLICY":
-			if not req.params.get("mode", "") in ["endow", "tithe"]:
-				return "mode must be endow|tithe"
 		"BUILD_ECONOMIC":
 			if not req.params.get("project", "") in ["granary", "road"]:
 				return "project must be granary|road"
@@ -83,6 +69,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			return _validate_stance(req, state)
 		"SUPPLY_POINT_SET", "SUPPLY_POINT_CLEAR", "SUPPLY_CARRY_SET":
 			return _validate_supply(req, state)
+		"LAW_SET":
+			return _validate_law(req, state)
 		"GOVERNOR_SET":
 			var flow := String(req.params.get("flow", ""))
 			if not data.ledger_governance.has(flow):
@@ -312,6 +300,15 @@ func _validate_supply(req: ActionRequest, state: GameState) -> String:
 				return "A train carries 10, 15, 20, 25 or 30 days"
 	return ""
 
+## LAW_SET (spec 2026-10-08-laws-tab-design §3): a law, one of its values,
+## not the decreed one (unless places still miss it, plan ruling R5), off
+## cooldown, somewhere to send it, and a chest that pays every courier —
+## LawSystem.refusal, the screen's preview's own words.
+func _validate_law(req: ActionRequest, state: GameState) -> String:
+	# str(), not String(): a model may send a number or null for either
+	var law := str(req.params.get("law", ""))
+	return LawSystem.refusal(data, state, law, LawSystem.canonical(data, law, req.params.get("value", "")))
+
 ## The manor an order names: params.manor (a code, a label in any case, or
 ## a cell id) or params.cell. -1 for none.
 func manor_of(req: ActionRequest) -> int:
@@ -477,37 +474,13 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	var cost := gold_cost(row)
 	if cost > 0.0:
 		_apply(state, effects, "treasury", -cost, "paid for " + String(row["label"]))
+	# what the opinion drift reads: the request's params, a law's with its
+	# direction (LAW_SET's signature variants, data/action_signatures.csv)
+	var sig_params := req.params
 	match req.action_code:
-		"TAX_RATE_ADJUST":
-			var d := int(req.params["delta"])
-			var new_rate := clampf(state.metrics["tax_rate"] + d, 1.0, 10.0)
-			_set_metric(state, effects, "tax_rate", new_rate, "adjusted the tax rate")
-		"TARIFF_ADJUST":
-			var d := int(req.params["delta"])
-			var new_rate := clampf(state.metrics["tariff_rate"] + d, 0.0, 10.0)
-			_set_metric(state, effects, "tariff_rate", new_rate, "adjusted tariffs")
 		"LEVY_RAISE":
 			_apply(state, effects, "army_quality", data.bal("levy_army_gain"), "fresh levies drilled")
 			_apply(state, effects, "unrest", data.bal("levy_unrest"), "villages resent the levy")
-		"GRAIN_POLICY_SET":
-			var mode: String = req.params["mode"]
-			_set_metric(state, effects, "grain_ration", 1.0 if mode == "ration" else 0.0, "grain policy: " + mode)
-			if mode == "ration":
-				_apply(state, effects, "peasant_contentment", data.bal("grain_ration_contentment"), "rationing bites")
-			elif mode == "release":
-				_apply(state, effects, "grain", -data.bal("grain_release_amount"), "stores opened")
-				_apply(state, effects, "peasant_contentment", data.bal("grain_release_contentment"), "grain released to the people")
-		"CHURCH_POLICY":
-			if req.params["mode"] == "endow":
-				_apply(state, effects, "treasury", -data.bal("church_endow_cost"), "endowed the church")
-				_apply(state, effects, "church_opinion", data.bal("church_endow_gain"), "the church blessed the endowment")
-			else:
-				_apply(state, effects, "treasury", data.bal("church_tithe_gain"), "tithed the church")
-				_apply(state, effects, "church_opinion", data.bal("church_tithe_opinion"), "the church resents the tithe")
-		"JUSTICE_SEVERITY":
-			var d := int(req.params["delta"])
-			_apply(state, effects, "unrest", data.bal("justice_unrest_per_point") * d, "justice severity changed")
-			_apply(state, effects, "peasant_contentment", data.bal("justice_contentment_per_point") * d, "harsher courts")
 		"BUILD_ECONOMIC":
 			if req.params["project"] == "granary":
 				_apply(state, effects, "grain", data.bal("granary_civil_gain"), "a royal granary stocked")
@@ -706,6 +679,8 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var code := String(req.params["regiment"])
 			_send_courier(state, effects, code, {"action_code": "SUPPLY_CARRY_SET",
 				"days": int(req.params["days"])}, "with orders to carry %d days" % int(req.params["days"]))
+		"LAW_SET":
+			sig_params = _decree(state, effects, req)
 		"SPY_SEND":
 			var to := Vector2(float(req.params["x"]), float(req.params["y"]))
 			var place := Intel.place_label(data, state, to)
@@ -784,7 +759,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	if cd > 0:
 		state.cooldowns[req.action_code] = state.tick + cd
 	var drift := OpinionDrift.apply(data, state,
-		OpinionDrift.signature_for(data, req.action_code, req.params),
+		OpinionDrift.signature_for(data, req.action_code, sig_params),
 		String(row["label"]))
 	for pr in state.promises:
 		if String(pr["status"]) != "open":
@@ -888,6 +863,42 @@ func _send_courier(state: GameState, effects: Array, code: String, order: Dictio
 	effects.append({"metric": "army", "delta": 0.0, "reason": "A courier rides for %s %s; about %d day%s" % [
 		label, what, days, "" if days == 1 else "s"]})
 
+## LAW_SET: the law's own gold and cost ops, the decree and its couriers
+## (LawSystem.decree), one ordinary fee a courier as one ledger line, and a
+## "law" line saying how many ride and how long the last takes. Returns the
+## params the opinion drift reads: a range law's `delta` (new − old) beside
+## the law and value, so its signature variant knows the direction. A
+## re-send (R5) changes no law: it pays neither the law's gold nor its cost
+## ops, and its drift params match no variant but the blank, drift-free row.
+func _decree(state: GameState, effects: Array, req: ActionRequest) -> Dictionary:
+	var law := str(req.params["law"])
+	var value := LawSystem.canonical(data, law, req.params["value"])
+	var d := LawSystem.def(data, law)
+	var label := String(d["label"])
+	var was := LawSystem.decreed(data, state, law)
+	var again := LawSystem.is_resend(data, state, law, value)
+	if int(d["gold_cost"]) > 0 and not again:
+		_apply(state, effects, "treasury", -float(int(d["gold_cost"])), "the decree on " + label.to_lower())
+	if String(d["cost_ops"]) != "" and not again:
+		effects.append_array(EventEffects.apply(String(d["cost_ops"]), state, data, "the decree on " + label.to_lower()))
+	var sent := LawSystem.decree(data, state, law, value)
+	var n := sent.size()
+	_apply(state, effects, "treasury", -float(n * CourierSystem.fee_gold(data, CourierSystem.ORDINARY)),
+		"%d courier%s ride%s with the decree on %s" % [n, "" if n == 1 else "s", "s" if n == 1 else "",
+			label.to_lower()])
+	var last := 0
+	for c: Dictionary in sent:
+		last = maxi(last, CourierSystem.days_left(data, state, c))
+	effects.append({"metric": "law", "delta": 0.0, "reason": "%s %s %s: %d courier%s, the last in about %d day%s" % [
+		label, "sent again as" if again else "decreed", LawSystem.value_label(data, value).to_lower(),
+		n, "" if n == 1 else "s", last, "" if last == 1 else "s"]})
+	if again:
+		return {"law": law, "resend": 1}
+	var out := {"law": law, "value": value}
+	if String(d["kind"]) == "range":
+		out["delta"] = int(value) - int(was)
+	return out
+
 ## A supply courier's fee and the army line saying when he gets there.
 func _courier_fee(state: GameState, effects: Array, c: Dictionary, what: String) -> void:
 	_apply(state, effects, "treasury", -float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)),
@@ -895,11 +906,6 @@ func _courier_fee(state: GameState, effects: Array, c: Dictionary, what: String)
 	var days := CourierSystem.days_left(data, state, c)
 	effects.append({"metric": "army", "delta": 0.0, "reason": "A courier rides %s; about %d day%s" % [
 		what, days, "" if days == 1 else "s"]})
-
-func _set_metric(state: GameState, effects: Array, metric: String, value: float, reason: String) -> void:
-	var delta: float = value - state.metrics[metric]
-	state.metrics[metric] = value
-	effects.append({"metric": metric, "delta": delta, "reason": reason})
 
 func apply_court_reaction(cr: Dictionary, state: GameState) -> void:
 	var cap := int(data.bal("tone_delta_cap"))

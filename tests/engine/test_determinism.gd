@@ -12,13 +12,13 @@ func before_each() -> void:
 ## Scripted year: on listed ticks, execute the listed request.
 func _scripted_inputs() -> Dictionary:
 	return {
-		2: ActionRequest.make("TAX_RATE_ADJUST", {"delta": 1}),
-		5: ActionRequest.make("CHURCH_POLICY", {"mode": "tithe"}),
+		2: ActionRequest.make("LAW_SET", {"law": "tax_rate", "value": "6"}),
+		5: ActionRequest.make("LAW_SET", {"law": "church_policy", "value": "tithe"}),
 		9: ActionRequest.make("LEVY_RAISE"),
-		14: ActionRequest.make("GRAIN_POLICY_SET", {"mode": "ration"}),
+		14: ActionRequest.make("LAW_SET", {"law": "grain_ration", "value": "ration"}),
 		20: ActionRequest.make("CHARACTER_REWARD", {"mode": "gold"}, "char_marshal"),
 		30: ActionRequest.make("BUILD_ECONOMIC", {"project": "road"}),
-		41: ActionRequest.make("JUSTICE_SEVERITY", {"delta": 1}),
+		41: ActionRequest.make("LAW_SET", {"law": "justice_severity", "value": "4"}),
 	}
 
 func _run_campaign(seed_value: int, reload_at: int = -1) -> String:

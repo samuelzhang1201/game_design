@@ -36,6 +36,9 @@ func _end_day(state: GameState) -> Array:
 	# A seat whose town has fallen is cleared (spec 2026-10-07-army-split-
 	# and-ground §4.4).
 	ArmyGround.reconcile(data, state)
+	# A province or a camp the realm lost, or a camp left empty, forgets its
+	# laws (laws spec §2.4, R13).
+	LawSystem.reconcile(data, state)
 	# The couriers ride AFTER the columns march (owner 2026-10-02: a one-day
 	# courier arrives as the day ENDS): he reaches the column where its day
 	# left it, and the order he delivers is marched on from tomorrow.
@@ -205,6 +208,10 @@ func advance(state: GameState) -> TickReport:
 	# supply-design §4): wounded return, morale drifts toward what the stores
 	# just refilled allow, training grows (the supplies are eaten daily).
 	ArmySystem.settle_month(data, state)
+	# The camp laws' month (laws spec §4.2): each realm line scaled by the
+	# share of the host's men under its value.
+	for l: Dictionary in LawEffects.month_lines(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(l["delta"]), String(l["reason"]))
 	# The marshal's month (spec 2026-10-07-army-supply-lines §5.5): his
 	# report, his skims banked, the lines' counters reset.
 	var supply_rows := SupplyLines.settle_month(data, state)
@@ -298,11 +305,23 @@ static func court_people(data: DataRepository, state: GameState) -> int:
 		people += RealmEconomy._figure(data, state, "economy.provinces.%s.urban_population" % code)
 	return people
 
-## The court's ration of civil goods this month, halved under the ration
-## order. Whole gold (invariant 11).
+## The province the court sits in, whose grain law rations its table: the
+## realm's capital's province while the realm holds it, else the crown's
+## home province (MapManors.home_province).
+static func court_province(data: DataRepository, state: GameState) -> String:
+	var realm := data.resolve_realm("player_realm")
+	var cap := String((data.kingdoms.get(realm, {}) as Dictionary).get("capital_burg", ""))
+	var code := String((data.burgs.get(cap, {}) as Dictionary).get("province_code", ""))
+	if code != "" and MapOwnership.owner_of(data, state, code) == realm:
+		return code
+	return MapManors.home_province(data, state)
+
+## The court's ration of civil goods this month, halved while the grain law
+## in force where the court sits is `ration` (`market` and `release` feed it
+## in full; spec 2026-10-08-laws-tab-design §4.3). Whole gold (invariant 11).
 static func ration_of(data: DataRepository, state: GameState) -> int:
 	var ration := int(roundf(float(court_people(data, state)) / 1000.0 * data.bal("ration_gold_per_1000")))
-	if state.metrics.get("grain_ration", 0.0) > 0.0:
+	if LawSystem.value(data, state, "grain_ration", court_province(data, state)) == "ration":
 		@warning_ignore("integer_division")  # whole gold (invariant 11)
 		ration = ration / 2
 	return ration
@@ -324,7 +343,10 @@ func _drift(state: GameState, r: TickReport) -> void:
 	_apply(r, m, "church_opinion", float(built["church_opinion"]), "the crown's chapels")
 	_apply(r, m, "peasant_contentment", float(built["peasant_contentment"]), "lords in residence")
 	_apply(r, m, "unrest", float(built["unrest"]), "the crown's walls")
-	var unrest_delta: float = (m["tax_rate"] - data.bal("unrest_tax_pivot")) * data.bal("unrest_tax_pressure") - data.bal("unrest_decay")
+	# the tax in force across the realm, weighted by each province's people
+	# (laws, spec 2026-10-08 §4.3), not the decreed mirror
+	var taxed := LawSystem.weighted_number(data, state, "tax_rate")
+	var unrest_delta: float = (taxed - data.bal("unrest_tax_pivot")) * data.bal("unrest_tax_pressure") - data.bal("unrest_decay")
 	if m["grain"] <= 0.0:
 		unrest_delta += data.bal("unrest_famine")
 	_apply(r, m, "unrest", unrest_delta, "tax pressure and the mood of the villages")

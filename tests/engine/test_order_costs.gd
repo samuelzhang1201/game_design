@@ -87,12 +87,12 @@ func test_always_rows_apply_beside_intrinsic_costs() -> void:
 ## campaign, leaves a cost on the record.
 func test_every_handled_action_leaves_a_cost() -> void:
 	var cases := [
-		ActionRequest.make("TAX_RATE_ADJUST", {"delta": 1}),
-		ActionRequest.make("TARIFF_ADJUST", {"delta": -1}),
+		ActionRequest.make("LAW_SET", {"law": "tax_rate", "value": "6"}),
+		ActionRequest.make("LAW_SET", {"law": "tariff_rate", "value": "2"}),
 		ActionRequest.make("LEVY_RAISE"),
-		ActionRequest.make("GRAIN_POLICY_SET", {"mode": "market"}),
-		ActionRequest.make("CHURCH_POLICY", {"mode": "endow"}),
-		ActionRequest.make("JUSTICE_SEVERITY", {"delta": -1}),
+		ActionRequest.make("LAW_SET", {"law": "grain_ration", "value": "release"}),
+		ActionRequest.make("LAW_SET", {"law": "church_policy", "value": "endow"}),
+		ActionRequest.make("LAW_SET", {"law": "justice_severity", "value": "2"}),
 		ActionRequest.make("BUILD_ECONOMIC", {"project": "road"}),
 		ActionRequest.make("SPY_MISSION"),
 		ActionRequest.make("CHARACTER_REWARD", {"mode": "gold"}, "char_marshal"),
@@ -100,6 +100,7 @@ func test_every_handled_action_leaves_a_cost() -> void:
 		ActionRequest.make("CHARACTER_CONFIDE", {}, "char_marshal"),
 		ActionRequest.make("RECRUIT_COURTIER", {}, "char_bard_corvin"),
 		ActionRequest.make("GUARD_ADJUST"),
+		ActionRequest.make("LAW_SET", {"law": "plunder", "value": "allow"}),
 	]
 	for req in cases:
 		var s := SuiteData.campaign(data, 42)

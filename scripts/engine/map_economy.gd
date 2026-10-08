@@ -225,8 +225,9 @@ static func output_of_provinces(repo: DataRepository, provinces: Array, state: G
 			for good: String in per_province.get(province, {}):
 				totals[good] = float(totals.get(good, 0.0)) + float(per_province[province][good])
 			continue
+		var rates := ManorEconomy.rates_of(repo, state, province)
 		for cell: int in MapManors.manors_of_province(repo, province, state):
-			var units: Dictionary = ManorEconomy.line_of(repo, state, cell, state.tick)["units"]
+			var units: Dictionary = ManorEconomy.line_of(repo, state, cell, state.tick, rates)["units"]
 			for good: String in units:
 				totals[good] = float(totals.get(good, 0.0)) + float(units[good])
 	var out: Array = []

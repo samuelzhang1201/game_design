@@ -32,10 +32,10 @@ func test_season_year_seat_trait() -> void:
 	assert_false(TriggerDsl.evaluate("trait_at_court=maimed", s, data))
 
 func test_action_since_and_flags() -> void:
-	s.event_state["last_action_tick"]["TARIFF_ADJUST"] = 3
-	assert_true(TriggerDsl.evaluate("action_since=TARIFF_ADJUST:24", s, data))
+	s.event_state["last_action_tick"]["LAW_tariff_rate"] = 3
+	assert_true(TriggerDsl.evaluate("action_since=LAW_tariff_rate:24", s, data))
 	s.tick = 40
-	assert_false(TriggerDsl.evaluate("action_since=TARIFF_ADJUST:24", s, data))
+	assert_false(TriggerDsl.evaluate("action_since=LAW_tariff_rate:24", s, data))
 	assert_false(TriggerDsl.evaluate("flag=black_market", s, data))
 	s.event_state["flags"].append("black_market")
 	assert_true(TriggerDsl.evaluate("flag=black_market", s, data))

@@ -61,6 +61,7 @@ flowchart TB
 | 庄园与经济 | `manor_focus`（12）、`manor_buildings`（23）、`building_inputs`（8）、`manor_estates`（36）、`goods_economy`（71）、`goods_economy_defaults`（16）、`workshop_rates`（3） | `focus_code` / `building_code` / `good_code` | `MapManors`、`ManorEconomy`、`RealmEconomy`、`IndustrySystem`、`WorkshopSystem` |
 | 治理（LEDGER） | `ledger_governance`（4）及 `ledger_*` 其余 9 张 | `flow_type` / `type_id` / `link_id` | `Governance`、`Ledger`、`LedgerResolvers` |
 | 军事、信使、天气 | `army_*`（11 张）、`unit_models`、`courier_kinds`、`road_speed`、`spy_difficulty`、`weather`、`weather_odds` | `arm` / `tier` / `kind` | `ArmySystem`、`SupplySystem`、`CourierSystem`、`SpySystem`、`Weather` |
+| 法律 | `laws`（17）、`law_effects`、`law_words` | `law_code` | `LawSystem`（状态：`law_decree`、`law_in_force`、`law_cooldown`） |
 | 3D 地图外观 | `map3d_bake`（150）、`map3d_fields`（37）、`map3d_farm_zones`、`map3d_houses`（17）、`map3d_house_variants`、`map3d_trees`、`map3d_tree_crowns`、`map3d_settlements`、`graphics_quality`（4）、`terrain_palette`（68） | `key` / `type` / `tier` | 构建脚本 `tools/map3d/` 和 `scripts/map3d/` |
 | 界面外观 | `political_palette`（62）、`chart_palette`、`ui_table_palette`、`ui_bookmarks`、`ui_fonts`、`resource_icons`（104）、`manor_card_sections`、`goods_palette`、`goods_art`、`*_art.csv` | `key` | `UiPalette`、`MapPalette`、各面板 |
 | 地图包注册 | `maps.csv`（1） | `map_id` | `DataRepository.default_pack_id()`、`tools/packs.py` |
@@ -254,7 +255,7 @@ LEDGER 星图（`Ledger.galaxy`）同样只画认知：官员报给你的数字�
 
 ### 例 1：把税率从 5 调到 6（运行时状态）
 
-- **改了什么**：`metrics.tax_rate` 5 → 6（命令 `TAX_RATE_ADJUST`）。
+- **改了什么**：`metrics.tax_rate` 5 → 6（命令 `LAW_SET` 颁布法律 `tax_rate`；`metrics.tax_rate` 是颁布值的镜像，颁布即更新，各省的在行值随信使到达而更新）。
 - **怎么传导**：
   - `tax_rate` 是每个省缓存键的一部分，所以**全部省份**的缓存失效，按天分摊重算。
   - 每个庄园的税 × 6/5。一个 1,500 人、无建筑的庄园：1.5 × 2 × 5/5 = 3 金 → 1.5 × 2 × 6/5 = 3.6，取整 4 金。

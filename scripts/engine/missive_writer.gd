@@ -3,7 +3,8 @@ extends RefCounted
 ## The routine letters (spec 2026-09-28 §1): a courier's delivery receipt
 ## (highly credible — the regiment's state that day, exact) and the steward's
 ## monthly report on the provinces the crown controls (ground truth, exact),
-## and the marshal's supply dispatch and month (spec 2026-10-07-army-supply-lines).
+## and the marshal's supply dispatch and month (spec 2026-10-07-army-supply-lines),
+## and a decree's two letters (spec 2026-10-08-laws-tab §3).
 ## Builds missives; MissiveLog files them.
 
 static func receipt(repo: DataRepository, state: GameState, c: Dictionary, stale: bool) -> Dictionary:
@@ -161,6 +162,53 @@ static func marshal_report(repo: DataRepository, state: GameState, tick: int, ro
 	return MissiveLog.make("supply_month", "credible", state.absolute_day(),
 		MissiveLog.subject("province", home, -1, Vector2(float(prov.get("center_x", 0)), float(prov.get("center_y", 0)))),
 		"Marshal's supply report — %s, Year %d" % [Calendar.month_label(tick), Calendar.year_of(tick)], facts)
+
+
+## A decree's letters (laws spec §3 "News and letters"): kind `law`, the
+## credible column, about the realm's home province (its capital town's
+## point). Kept apart from the column's count (missive_keep_law).
+static func _law_subject(repo: DataRepository, state: GameState) -> Dictionary:
+	var home := MapManors.home_province(repo, state)
+	return MissiveLog.subject("province", home, -1, LawSystem.province_px(repo, home))
+
+
+static func _law_said(repo: DataRepository, law: String, value: String) -> String:
+	return "%s: %s" % [String(LawSystem.def(repo, law).get("label", law)), LawSystem.value_label(repo, value)]
+
+
+## The chancery's letter as a decree is sealed: the law, its value and how
+## many couriers carry it (`last_days`, when known: the longest ride).
+static func law_decree(repo: DataRepository, state: GameState, law: String, couriers: int,
+		last_days: int = -1) -> Dictionary:
+	var value := LawSystem.decreed(repo, state, law)
+	var label := String(LawSystem.def(repo, law).get("label", law))
+	var facts: Array = [MissiveLog.words("decree", "Decree", _law_said(repo, law, value)),
+		MissiveLog.exact("couriers", "Couriers sent", couriers)]
+	if last_days >= 0:
+		facts.append(MissiveLog.exact("last_days", "The last arrives in (days)", last_days))
+	return MissiveLog.make("law", "credible", state.absolute_day(), _law_subject(repo, state),
+		"Decree sent — " + label, facts)
+
+
+## The chancery's letter when the decree's last courier is home or lost:
+## "reached X of Y places in N days", and the places it has not reached.
+static func law_reach(repo: DataRepository, state: GameState, law: String, reached: int, total: int,
+		days: int) -> Dictionary:
+	var value := LawSystem.decreed(repo, state, law)
+	var label := String(LawSystem.def(repo, law).get("label", law))
+	var facts: Array = [MissiveLog.words("decree", "Decree", _law_said(repo, law, value)),
+		MissiveLog.exact("reached", "Places reached", reached),
+		MissiveLog.exact("total", "Places it was for", total),
+		MissiveLog.exact("days", "Days on the road", days)]
+	var names: PackedStringArray = []
+	for u: Dictionary in LawSystem.untold(repo, state, law):
+		names.append(String(u["label"]))
+	if not names.is_empty():
+		facts.append(MissiveLog.words("not_reached", "Not reached", ", ".join(names)))
+	var title := "Decree in force — " + label
+	if reached < total:
+		title = "Decree reached %d of %d — %s" % [reached, total, label]
+	return MissiveLog.make("law", "credible", state.absolute_day(), _law_subject(repo, state), title, facts)
 
 
 ## --- The battle report (spec 2026-10-07-enemy-ai-and-battle §4.5) -------------

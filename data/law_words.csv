@@ -1,0 +1,57 @@
+key,text
+page_economy,Economy
+page_politics,Politics
+page_military,Military
+group_conduct,Conduct in the field
+group_discipline,Discipline in camp
+group_chivalry,Chivalry
+decree,Decree
+decreed,Decreed
+delivered,Delivered
+effects,Effects
+effects_paid,the laws took hold where the couriers reached
+couriers,couriers
+provinces,provinces
+camps,camps
+units_in_the_field,units in the field
+refusal_unchanged,That is already the decreed law.
+refusal_cooldown,The chancery has only just changed this law: it may change again in {n} {days}.
+refusal_gold,The chest cannot pay the couriers.
+refusal_no_recipient,There is no one to carry the decree.
+value_on,On
+value_off,Off
+channel_morale_mark,morale
+channel_pace,pace
+channel_church_opinion,church
+channel_peasant_contentment,contentment
+channel_legitimacy,legitimacy
+channel_unrest,unrest
+channel_treasury,treasury
+channel_grain,grain
+channel_flag,a standing order
+once,once
+per_month,/month
+per_point,per point
+per_mille,‰
+per_1000_men,"per 1,000 men"
+phrase_ransom_ransom,ransom captives
+phrase_ransom_execute,execute captives
+phrase_no_havoc_on,no unauthorised Havoc
+phrase_no_havoc_off,Havoc allowed
+title,Laws
+law,Law
+places,Places
+not_told,Not yet told
+all_told,Every place has been told.
+send_again,Send again
+lost,lost
+courier,courier
+couriers_riding,couriers riding
+last_in,the last in
+and,and
+day,day
+days,days
+days_at_most,days at most
+gold,gold
+order,order
+not_sent,not sent

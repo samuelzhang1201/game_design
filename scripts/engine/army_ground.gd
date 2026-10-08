@@ -259,6 +259,8 @@ static func settle(repo: DataRepository, state: GameState, code: String) -> void
 	if town != "" and not holds(repo, state, String(reg["kingdom_code"]), town):
 		town = ""
 	entry["camp_town"] = town
+	# it takes the newer of its own laws and the camp's (laws spec §2.4)
+	LawSystem.on_settle(repo, state, code)
 	var centre := town_point_m(repo, town) if town != "" else here
 	if town != "" and seat_of(repo, state, town) == "":
 		state.town_seat[town] = code
@@ -277,6 +279,9 @@ static func settle(repo: DataRepository, state: GameState, code: String) -> void
 ## its camp and, holding a seat, empties it — refilled the same day from the
 ## camp (§4.4).
 static func leave(repo: DataRepository, state: GameState, code: String) -> void:
+	# what it followed in camp marches on as its own (laws spec §2.4): read
+	# while its camp_town still names the camp
+	LawSystem.on_leave(repo, state, code)
 	if state.regiments.has(code):
 		state.regiments[code]["camp_town"] = ""
 	var towns := state.town_seat.keys()
@@ -334,6 +339,7 @@ static func take_seat(repo: DataRepository, state: GameState, code: String) -> b
 	if held != "" and state.regiments.has(held):
 		_put(state.regiments[held], mine)
 		state.regiments[held]["camp_town"] = town
+	LawSystem.on_settle(repo, state, code)
 	return true
 
 

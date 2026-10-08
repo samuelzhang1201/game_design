@@ -187,6 +187,16 @@ var building_inputs: Dictionary = {}
 ## data/courier_kinds.csv: kind -> {speed_permille, fee_gold, offered}
 ## (spec 2026-09-27-courier-core §3).
 var courier_kinds: Dictionary = {}
+## data/laws.csv (spec 2026-10-08-laws-tab-design §2.1): law_code -> {law_code,
+## tab, group, label, kind, values (a range's is [min, max] ints), default,
+## scope, gold_cost, cooldown_ticks, cost_ops}; `law_order` is the file order.
+var laws: Dictionary = {}
+var law_order: Array = []
+## data/law_effects.csv: rows as read, in file order (law_code, value, channel,
+## target, amount, timing, share, reason).
+var law_effects: Array = []
+## data/law_words.csv: key -> the laws screen's fixed words.
+var law_words: Dictionary = {}
 ## The LEDGER's ontology (spec 2026-09-30-ledger-ontology-design §7.1):
 ## rows as read, in file order.
 var ledger_lenses: Array = []
@@ -749,6 +759,15 @@ func _load(dir: String) -> bool:
 			func(r): courier_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
 				"fee_gold": int(r["fee_gold"]), "offered": int(r["offered"]) == 1}):
 		return false
+	if not _load_if_present(dir + "/laws.csv", ["law_code", "tab", "group", "label", "kind", "values", "default",
+			"scope", "gold_cost", "cooldown_ticks", "cost_ops"], _add_law):
+		return false
+	if not _load_if_present(dir + "/law_effects.csv", ["law_code", "value", "channel", "target", "amount",
+			"timing", "share", "reason"], func(r): law_effects.append(r)):
+		return false
+	if not _load_if_present(dir + "/law_words.csv", ["key", "text"],
+			func(r): law_words[String(r["key"])] = String(r["text"])):
+		return false
 	if not _load_if_present(dir + "/ledger_lenses.csv", ["lens", "label", "instance_type"],
 			func(r): ledger_lenses.append(r)):
 		return false
@@ -988,6 +1007,7 @@ func load_map(id: String) -> bool:
 	RoadGraph.forget()
 	ArmySystem.forget_grids()
 	ArmySplit.forget()
+	LawEffects.forget()
 	WarSheets.forget()
 	routes.clear()
 	rivers.clear()
@@ -1290,6 +1310,22 @@ func _add_weather_odds(r: Dictionary) -> void:
 	for kind: String in weather_kinds:
 		w[kind] = int(r.get(kind, "0"))
 	weather_odds["%s|%s" % [String(r["season"]), String(r["tier"])]] = w
+
+## One laws.csv row: `values` is parsed by `kind` (a range's "min|max" becomes
+## two ints; a toggle's and a choice's are the allowed names in order).
+func _add_law(r: Dictionary) -> void:
+	var code := String(r["law_code"])
+	var kind := String(r["kind"])
+	var parts := String(r["values"]).split("|")
+	var values: Array = []
+	for p: String in parts:
+		values.append(int(p) if kind == "range" else p)
+	laws[code] = {"law_code": code, "tab": String(r["tab"]), "group": String(r["group"]),
+		"label": String(r["label"]), "kind": kind, "values": values,
+		"default": String(r["default"]), "scope": String(r["scope"]),
+		"gold_cost": int(r["gold_cost"]), "cooldown_ticks": int(r["cooldown_ticks"]),
+		"cost_ops": String(r["cost_ops"])}
+	law_order.append(code)
 
 ## Loads a live-gameplay CSV that is nonetheless allowed to be genuinely
 ## absent (future saves/mods may not ship it yet). A missing file is not an

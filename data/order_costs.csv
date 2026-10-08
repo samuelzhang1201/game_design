@@ -1,11 +1,6 @@
 action_code,cost,always,notes
 generic_order,gold:-5:the chancery's clerks and couriers,0,an order that executes no action and whose impacts carried no cost
-TAX_RATE_ADJUST,opinion:steward:-2:re-cutting the tax rolls,0,
-TARIFF_ADJUST,opinion:char_guildmaster_tessa:-2:the guilds re-price their wares,0,
 LEVY_RAISE,world:economy.kingdoms.player_realm.rural_population:-2000:levies drawn from the villages;metric:strategic:-20:the baggage train of the levy,1,explicit population cost beside the gold
-GRAIN_POLICY_SET,opinion:steward:-1:the granary clerks grumble at new orders,0,
-CHURCH_POLICY,opinion:chaplain:-1:the church dislikes being managed,0,
-JUSTICE_SEVERITY,opinion:chancellor:-1:the courts resent being retuned,0,
 BUILD_ECONOMIC,opinion:steward:-1:the treasury frets over the outlay,0,
 SPY_MISSION,attribute:you:prestige:-1:whispers about the crown's whisperers,0,
 COUNCIL_CONSULT,none,0,a question is not an order
@@ -42,3 +37,4 @@ SUPPLY_POINT_SET,gold:-1:the quartermaster's warrant to the town,1,spec 2026-10-
 SUPPLY_POINT_CLEAR,gold:-1:the quartermaster's letter recalling the wagons,1,
 SUPPLY_CARRY_SET,gold:-1:the wagon-master's tally,1,
 ARMY_SEAT,gold:-1:the change of the watch,1,"spec 2026-10-07-army-split-and-ground §4.5"
+LAW_SET,gold:-1:the chancery drafts the decree,1,"spec 2026-10-08-laws-tab §3; the law's own gold_cost and cost_ops (data/laws.csv) and one ordinary courier fee a courier are charged by the order itself"

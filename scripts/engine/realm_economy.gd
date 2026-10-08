@@ -5,7 +5,8 @@ extends RefCounted
 ## strategic / civil / units, one entry per manor, province-major
 ## (provinces by code, manors by cell id), so a province is a contiguous
 ## slice — with a KEY per province standing in for a dirty flag: the key strings together
-## everything a line depends on (the tick, the tax levels, the province's
+## everything a line depends on (the tick, the tax and tariff in force in
+## the province, the province's
 ## two ledger figures, and its manors' owner, buildings, focus and idle
 ## buildings), so a
 ## province is recomputed exactly when one of those moved and never
@@ -131,8 +132,11 @@ static func _figure(repo: DataRepository, state: GameState, path: String) -> int
 static func province_key(repo: DataRepository, state: GameState, code: String) -> String:
 	var parts := PackedStringArray()
 	parts.append(str(state.tick))
-	parts.append(str(int(state.metrics.get("tax_rate", 0))))
-	parts.append(str(int(state.metrics.get("tariff_rate", 0))))
+	# the tax and tariff in force HERE (laws, spec 2026-10-08 §4.3): a
+	# courier's arrival recomputes his province alone
+	var rates := ManorEconomy.rates_of(repo, state, code)
+	parts.append(str(rates.x))
+	parts.append(str(rates.y))
 	parts.append(str(_figure(repo, state, "economy.provinces.%s.rural_population" % code)))
 	parts.append(str(_figure(repo, state, "economy.provinces.%s.urban_population" % code)))
 	for id: int in MapManors.manors_of_province(repo, code, state):
@@ -155,8 +159,9 @@ static func recompute_province(repo: DataRepository, state: GameState, code: Str
 	var tax := 0
 	var strategic := 0
 	var civil := 0
+	var rates := ManorEconomy.rates_of(repo, state, code)
 	for i in range(int(r[0]), int(r[1])):
-		var line := ManorEconomy.line_of(repo, state, _cells[i], state.tick)
+		var line := ManorEconomy.line_of(repo, state, _cells[i], state.tick, rates)
 		_people[i] = int(line["people"])
 		_tax[i] = int(line["tax"])
 		_strategic[i] = int(line["strategic"])
@@ -238,12 +243,14 @@ static func tax_table(repo: DataRepository, state: GameState, cells: Array) -> D
 
 ## What the realm's answer depends on, cheaply: the dictionaries that hold
 ## only what moved hash in C++ — ownership included, so a conquest that
-## moves no manor and touches no ledger figure still turns the signature.
+## moves no manor and touches no ledger figure still turns the signature;
+## the laws in force too, so a courier's arrival turns it (the rate metrics
+## stay for a state with no law state, which reads them, R8).
 static func realm_signature(state: GameState) -> String:
-	return "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [state.tick, state.manor_owner.hash(),
+	return "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d" % [state.tick, state.manor_owner.hash(),
 		state.manor_buildings.hash(), state.manor_focus.hash(), state.idle_buildings.hash(),
 		state.world.hash(),
-		state.province_owner.hash(), state.manor_province.hash(),
+		state.province_owner.hash(), state.manor_province.hash(), state.law_in_force.hash(),
 		int(state.metrics.get("tax_rate", 0)), int(state.metrics.get("tariff_rate", 0))]
 
 ## Whether realm() (and so purses()) would answer from its cache: the realm
@@ -319,8 +326,9 @@ static func recompute_all(repo: DataRepository, state: GameState) -> Dictionary:
 	for code: String in _codes:
 		var r: Array = _range[code]
 		var sum := {"tax": 0, "strategic": 0, "civil": 0}
+		var rates := ManorEconomy.rates_of(repo, state, code)
 		for i in range(int(r[0]), int(r[1])):
-			var line := ManorEconomy.line_of(repo, state, _cells[i], state.tick)
+			var line := ManorEconomy.line_of(repo, state, _cells[i], state.tick, rates)
 			sum["tax"] += int(line["tax"])
 			sum["strategic"] += int(line["strategic"])
 			sum["civil"] += int(line["civil"])
