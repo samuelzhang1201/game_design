@@ -278,10 +278,24 @@ func test_the_blue_arrow_is_laid_down_once_its_march_is_drawn() -> void:
 	assert_false(view.plan_input().tool.in_hand(), "the blue arrow was laid down")
 	screen.orders().withdraw_aim()
 	_pick_stick(screen, "red")
+	var before: int = (Game.state.war_plans["strokes"] as Dictionary).size()
 	for i in 2:
 		var a := _open_land(screen)
 		_button(view, a, true)
 		for j in range(1, 9):
 			_motion(view, a + Vector2(float(j) * 12.0, 0.0))
 		_button(view, a + Vector2(96.0, 0.0), false)
+		assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), before + i + 1, "red draw %d was written" % i)
 		assert_true(view.plan_input().tool.in_hand(), "a red front stays in hand (draw %d)" % i)
+
+
+func test_a_click_with_a_stick_on_a_supposed_piece_selects_it_red() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var at := _open_land(screen)
+	var id := Game.place_plan_piece("cavalry", 2000, WarPlans.UNKNOWN, view.pack_at(at), 0)
+	await wait_process_frames(2)
+	_pick_stick(screen, "red")
+	_click(view, view.screen_pos_of_px(WarPlans.at_px(Game.data, Game.state.war_plans["pieces"][id])))
+	assert_eq([view.plan_input().sel_side, view.plan_input().sel], ["red", [id]])
+	assert_true((Game.state.war_plans["strokes"] as Dictionary).is_empty(), "no stroke written")
