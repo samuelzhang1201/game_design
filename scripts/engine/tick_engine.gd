@@ -36,6 +36,9 @@ func _end_day(state: GameState) -> Array:
 	# A seat whose town has fallen is cleared (spec 2026-10-07-army-split-
 	# and-ground §4.4).
 	ArmyGround.reconcile(data, state)
+	# A province or a camp the realm lost, or a camp left empty, forgets its
+	# laws (laws spec §2.4, R13).
+	LawSystem.reconcile(data, state)
 	# The couriers ride AFTER the columns march (owner 2026-10-02: a one-day
 	# courier arrives as the day ENDS): he reaches the column where its day
 	# left it, and the order he delivers is marched on from tomorrow.
@@ -147,6 +150,10 @@ func advance(state: GameState) -> TickReport:
 	# supply-design §4): wounded return, morale drifts toward what the stores
 	# just refilled allow, training grows (the supplies are eaten daily).
 	ArmySystem.settle_month(data, state)
+	# The camp laws' month (laws spec §4.2): each realm line scaled by the
+	# share of the host's men under its value.
+	for l: Dictionary in LawEffects.month_lines(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(l["delta"]), String(l["reason"]))
 	# The marshal's month (spec 2026-10-07-army-supply-lines §5.5): his
 	# report, his skims banked, the lines' counters reset.
 	var supply_rows := SupplyLines.settle_month(data, state)

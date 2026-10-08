@@ -24,3 +24,21 @@ refusal_gold,The chest cannot pay the couriers.
 refusal_no_recipient,There is no one to carry the decree.
 value_on,On
 value_off,Off
+channel_morale_mark,morale
+channel_pace,pace
+channel_church_opinion,church
+channel_peasant_contentment,contentment
+channel_legitimacy,legitimacy
+channel_unrest,unrest
+channel_treasury,treasury
+channel_grain,grain
+channel_flag,a standing order
+once,once:
+per_month,/month
+per_point,per point
+per_mille,‰
+per_1000_men,"per 1,000 men"
+phrase_ransom_ransom,ransom captives
+phrase_ransom_execute,execute captives
+phrase_no_havoc_on,no unauthorised Havoc
+phrase_no_havoc_off,Havoc allowed

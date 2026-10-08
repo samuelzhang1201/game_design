@@ -42,6 +42,10 @@ func test_every_effect_row_names_a_law_and_an_allowed_value() -> void:
 		assert_true(String(row["timing"]) in ["monthly", "once"], "%s: timing" % law)
 		assert_true(String(row["share"]) in ["army", "people", "unit", "flat"], "%s: share" % law)
 		var amount := String(row["amount"]).strip_edges()
+		if String(row["channel"]) == "flag":
+			# a flag changes nothing: it has no amount (spec §4.1)
+			assert_eq(amount, "", "%s: a flag carries no amount" % law)
+			continue
 		assert_true(amount.is_valid_float() or repo.balance.has(amount.trim_prefix("-")),
 			"%s: %s is a number or a balance key" % [law, amount])
 		assert_ne(String(row["reason"]), "", "%s: every line carries a reason" % law)

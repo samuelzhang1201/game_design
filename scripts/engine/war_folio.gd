@@ -209,11 +209,15 @@ static func _morale(repo: DataRepository, state: GameState, code: String, reg: D
 	var st := _state_of(repo, state, code, reg)
 	var score := ArmySystem.supply_score(repo, int(st["supplies"]), ArmySystem.supply_use(repo, reg, state))
 	var garrison := ArmyGround.seated_in(repo, state, code) != ""
-	var mark := ArmySystem.morale_mark(repo, score, garrison)
+	# the camp laws it follows add their mark (laws spec §4.1), as settle_month does
+	var laws := LawEffects.unit_mark(repo, state, code)
+	var mark := clampi(ArmySystem.morale_mark(repo, score, garrison) + laws, 0, 100)
 	var rows: Array = [_row("Morale", "%d / 100" % int(st["morale"])),
 		_row("Heading for (by today's stores)", "%d — the ranks are %s" % [mark, ArmySystem.morale_word(repo, score)])]
 	if garrison:
 		rows.append(_row("In garrison", "+%d" % int(repo.bal("army_morale_garrison_bonus"))))
+	if laws != 0:
+		rows.append(_row("The camp laws", ("%+d" % laws).replace("-", "−")))
 	rows.append(_row("Drift", "%d a month" % int(repo.bal("army_morale_drift_per_month"))))
 	return rows
 

@@ -64,19 +64,110 @@ static func value(repo: DataRepository, state: GameState, law: String, scope_cod
 	if d.is_empty():
 		# a hand-built repository with no law tables (R8): the metric
 		return metric_value(law, state, "")
-	var key := ""
+	var entry := {}
 	if String(d["scope"]) == "province":
-		key = PROVINCE_PREFIX + scope_code
+		entry = _entry_of(state, PROVINCE_PREFIX + scope_code, law)
 	else:
-		# A unit camped by a held town follows the town's entry; one in the
-		# field or on the march follows its own (spec §2.3).
-		var town := ArmyGround.camped_by(repo, state, scope_code)
-		key = TOWN_PREFIX + town if town != "" else UNIT_PREFIX + scope_code
-	if state.law_in_force.has(key) and (state.law_in_force[key] as Dictionary).has(law):
-		return String(state.law_in_force[key][law]["value"])
+		# A unit camped by a held town follows the newer of the town's entry
+		# and its own (a newer decree it carried in is not forgotten, spec
+		# §2.4); one in the field or on the march follows its own (§2.3).
+		entry = _camp_read(state, ArmyGround.camped_by(repo, state, scope_code), scope_code, law)
+	if not entry.is_empty():
+		return String(entry["value"])
 	if state.law_decree.is_empty():
 		return metric_value(law, state, String(d["default"]))
 	return String(d["default"])
+
+## `law`'s entry in the place `key` ({value, decree_id}), {} for none.
+static func _entry_of(state: GameState, key: String, law: String) -> Dictionary:
+	return (state.law_in_force.get(key, {}) as Dictionary).get(law, {})
+
+
+## What a unit camped by `town` ("" for none) follows of a camp law: the
+## entry with the HIGHER decree_id of the town's and its own (the town's on a
+## tie); its own alone out of camp. {} for neither.
+static func _camp_read(state: GameState, town: String, code: String, law: String) -> Dictionary:
+	var own := _entry_of(state, UNIT_PREFIX + code, law)
+	if town == "":
+		return own
+	var camp := _entry_of(state, TOWN_PREFIX + town, law)
+	if camp.is_empty() or (not own.is_empty() and int(own["decree_id"]) > int(camp["decree_id"])):
+		return own
+	return camp
+
+
+## The unit `code` makes what it follows round `town` its own entry, law by
+## law (spec §2.4): the higher decree of its own and the camp's.
+static func _take_camp(repo: DataRepository, state: GameState, code: String, town: String) -> void:
+	if town == "":
+		return
+	for law: String in repo.law_order:
+		if String(repo.laws[law]["scope"]) != "camp":
+			continue
+		var read := _camp_read(state, town, code, law)
+		if read.is_empty() or read == _entry_of(state, UNIT_PREFIX + code, law):
+			continue
+		var here: Dictionary = state.law_in_force.get(UNIT_PREFIX + code, {})
+		here[law] = read.duplicate()
+		state.law_in_force[UNIT_PREFIX + code] = here
+
+
+## A unit has settled into a camp (ArmyGround.settle, take_seat): it takes,
+## law by law, the newer of its own decree and the camp's. The town's entry
+## is a courier's alone to write.
+static func on_settle(repo: DataRepository, state: GameState, code: String) -> void:
+	_take_camp(repo, state, code, ArmyGround.camped_by(repo, state, code))
+
+
+## A unit is leaving its camp (ArmyGround.leave, before its camp_town is
+## cleared — its march order already stands): what it read there becomes its
+## own entry, so it marches on under the same laws.
+static func on_leave(repo: DataRepository, state: GameState, code: String) -> void:
+	var entry: Dictionary = state.regiments.get(code, {})
+	var reg := ArmySystem.regiment(repo, code, state)
+	var town := String(entry.get("camp_town", ""))
+	if town == "" or reg.is_empty() or not ArmyGround.holds(repo, state, String(reg["kingdom_code"]), town):
+		return
+	_take_camp(repo, state, code, town)
+
+
+## The held towns with a camp: those a land unit of the realm is camped by.
+static func _camped_towns(repo: DataRepository, state: GameState) -> Dictionary:
+	var out := {}
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		if String(r.get("is_naval", "0")) != "1":
+			var town := ArmyGround.camped_by(repo, state, String(r["regiment_code"]))
+			if town != "":
+				out[town] = true
+	return out
+
+
+## The day's forgetting (TickEngine._end_day, after ArmyGround.reconcile; spec
+## §2.4): a province the realm no longer holds loses its entries — retaken, it
+## reads the default until a courier reaches it (R13) — and so does a town the
+## realm no longer holds or that has no camp left; the units still camped
+## round a lost town first keep what they followed there.
+static func reconcile(repo: DataRepository, state: GameState) -> void:
+	var realm := repo.resolve_realm("player_realm")
+	var camped := _camped_towns(repo, state)
+	var keys := state.law_in_force.keys()
+	keys.sort()
+	for k in keys:
+		var key := String(k)
+		if key.begins_with(PROVINCE_PREFIX):
+			if MapOwnership.owner_of(repo, state, key.trim_prefix(PROVINCE_PREFIX)) != realm:
+				state.law_in_force.erase(key)
+		elif key.begins_with(TOWN_PREFIX):
+			var town := key.trim_prefix(TOWN_PREFIX)
+			if camped.has(town):
+				continue
+			var codes := state.regiments.keys()
+			codes.sort()
+			for c in codes:
+				if String((state.regiments[c] as Dictionary).get("camp_town", "")) == town:
+					_take_camp(repo, state, String(c), town)
+			state.law_in_force.erase(key)
+
 
 ## A value as a number: a range's own int; a toggle 0 or 1 (its second name is
 ## "on"); a choice its index among the allowed names. With no such law

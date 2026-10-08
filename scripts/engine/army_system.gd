@@ -159,8 +159,9 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 			# the unit holding a town's seat earns the garrison's bonus; one
 			# camped round the town is fed by it but is not behind its walls
 			# (spec 2026-10-07-army-split-and-ground §4.1).
-			var mark := morale_mark(repo, supply_score(repo, int(entry["supplies"]), use),
-				ArmyGround.seated_in(repo, state, code) != "")
+			# the camp laws it follows add their mark (laws spec §4.1)
+			var mark := clampi(morale_mark(repo, supply_score(repo, int(entry["supplies"]), use),
+				ArmyGround.seated_in(repo, state, code) != "") + LawEffects.unit_mark(repo, state, code), 0, 100)
 			entry["morale"] = drift_morale(int(entry["morale"]), mark, int(repo.bal("army_morale_drift_per_month")))
 		entry["training"] = mini(100, int(entry["training"]) + int(repo.bal("army_training_per_month")))
 
@@ -661,7 +662,8 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 		supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state)),
 		int(st["morale"]), int(st["training"])) / 10.0 \
 		* float(load_permille(repo, carry_of(repo, st))) / 1000.0 \
-		* float(ground_permille(repo, reg, position_of(repo, state, reg), state)) / 1000.0
+		* float(ground_permille(repo, reg, position_of(repo, state, reg), state)) / 1000.0 \
+		* float(LawEffects.unit_pace_permille(repo, state, code)) / 1000.0
 
 
 ## --- The ground's pace (spec 2026-10-06-army-location-and-town-defence §6)
@@ -834,7 +836,8 @@ static func heading_of(repo: DataRepository, state: GameState, code: String) -> 
 
 
 ## Metres a regiment covers in one day: pace_tenths (tenths of a km) x 100,
-## under the carried load (load_permille: a heavier train marches slower).
+## under the carried load (load_permille: a heavier train marches slower),
+## then under the camp laws it follows (LawEffects.unit_pace_permille).
 ## 0 for a banner with no one under arms, which is why an order to march is
 ## refused for one rather than leaving it crawling toward a place forever.
 ## `carry` (days) prices another load than the standing order — the march
@@ -845,10 +848,12 @@ static func day_step_m(repo: DataRepository, state: GameState, code: String, car
 	if reg.is_empty() or st.is_empty():
 		return 0
 	@warning_ignore("integer_division")  # whole metres
-	return pace_tenths(repo, base_pace_km(repo, reg),
+	var step := pace_tenths(repo, base_pace_km(repo, reg),
 		supply_score(repo, int(st["supplies"]), supply_use(repo, reg, state)),
 		int(st["morale"]), int(st["training"])) * 100 \
 		* load_permille(repo, carry if carry >= 0 else carry_of(repo, st)) / 1000
+	@warning_ignore("integer_division")  # whole metres
+	return step * LawEffects.unit_pace_permille(repo, state, code) / 1000
 
 
 ## Metres a regiment covers TODAY (spec 2026-09-27-courier-core §1): its

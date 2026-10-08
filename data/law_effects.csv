@@ -8,3 +8,37 @@ church_policy,tithe,church_opinion,,church_tithe_opinion,once,people,the church 
 grain_ration,ration,peasant_contentment,,grain_ration_contentment,once,people,rationing bites
 grain_ration,release,grain,,-grain_release_amount,once,people,stores opened
 grain_ration,release,peasant_contentment,,grain_release_contentment,once,people,grain released to the people
+plunder,allow,morale_mark,,2,monthly,unit,the men keep what they take
+plunder,allow,peasant_contentment,,-0.4,monthly,army,the villages are stripped
+plunder,allow,church_opinion,,-0.2,monthly,army,the churches are not spared
+plunder,allow,legitimacy,,-0.1,monthly,army,the crown's men loot its own roads
+plunder,allow,flag,,,monthly,flat,the camps may take what they find
+obey_command,on,morale_mark,,1,monthly,unit,the ranks know whose word is law
+obey_command,on,flag,,,monthly,flat,a captain who disobeys answers for it
+protect_church,on,church_opinion,,0.3,monthly,army,the host spares the churches
+protect_church,on,flag,,,monthly,flat,a church is sanctuary from the host
+protect_women,on,peasant_contentment,,0.3,monthly,army,the villages fear the host less
+protect_women,on,legitimacy,,0.1,monthly,army,the crown keeps its men in hand
+protect_women,on,morale_mark,,-0.5,monthly,unit,the men chafe at the rule
+no_havoc,on,peasant_contentment,,0.2,monthly,army,no camp cries Havoc on the villages
+no_havoc,on,unrest,,-0.1,monthly,army,the countryside is spared the sack
+no_havoc,on,morale_mark,,-1,monthly,unit,the men are held back from the sack
+register_prisoners,on,treasury,,-2,monthly,army,"clerks keep the rolls: per 1,000 men under the law"
+register_prisoners,on,legitimacy,,0.1,monthly,army,captives are counted and kept
+register_prisoners,on,flag,,,monthly,flat,every prisoner is entered on the rolls
+wear_badges,on,morale_mark,,1,monthly,unit,the men wear the king's colours
+wear_badges,on,treasury,,-1,monthly,army,"cloth for the badges: per 1,000 men under the law"
+no_feuds,on,morale_mark,,1,monthly,unit,the camps are quiet
+no_feuds,on,unrest,,-0.1,monthly,army,no private quarrels spill into the villages
+quarter,refuse,morale_mark,,1,monthly,unit,the men fight without mercy
+quarter,refuse,legitimacy,,-0.3,monthly,army,the crown gives no quarter
+quarter,refuse,flag,,,monthly,flat,no enemy is spared who yields
+quarter,give,legitimacy,,0.2,monthly,army,the crown spares those who yield
+quarter,give,church_opinion,,0.1,monthly,army,mercy to the fallen
+ransom,execute,legitimacy,,-0.2,monthly,army,captives are put to death
+ransom,execute,flag,,,monthly,flat,no captive is ransomed
+ransom,ransom,legitimacy,,0.1,monthly,army,captives are ransomed by custom
+truce_days,on,church_opinion,,0.3,monthly,army,the host keeps the truce of God
+truce_days,on,pace,,-50,monthly,unit,no march on the holy days
+envoys,on,legitimacy,,0.1,monthly,army,heralds pass unharmed
+envoys,on,flag,,,monthly,flat,an envoy is never touched

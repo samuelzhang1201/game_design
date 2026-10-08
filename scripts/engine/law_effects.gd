@@ -119,3 +119,251 @@ static func apply_lines(repo: DataRepository, state: GameState, lines: Array) ->
 			"notes": String(repo.law_words.get("effects_paid", "")), "target": "", "params": {}, "drift": []}
 		state.recent_outcomes.append(outcome)
 	(outcome["effects"] as Array).append_array(lines)
+
+
+## --- The military laws (spec §4.1, §4.2, §4.4) ------------------------------
+##
+## A `share=unit` row (channels `morale_mark`, `pace`) is paid by each land
+## unit of the realm on ITS value in force (`LawSystem.value`): its morale
+## mark (`unit_mark`, added to the mark its morale drifts toward) and its
+## pace (`unit_pace_permille`). A `share=army` row is a realm channel paid
+## monthly (`month_lines`), scaled by the share of the realm's land men under
+## the value (`army_share_permille`): one rounding per line, to tenths — or,
+## on a whole pool (treasury), to whole gold, where the row's amount is PER
+## 1,000 MEN under the value (amount x men / 1000). A `flag` row changes
+## nothing: its law is read by the system it governs through `LawSystem.value`.
+## Fleets follow no camp law: neutral for both unit channels and no man of the
+## host's shares.
+
+const MONTHLY := "monthly"
+const ARMY := "army"
+const UNIT := "unit"
+const CHANNEL_MARK := "morale_mark"
+const CHANNEL_PACE := "pace"
+const CHANNEL_FLAG := "flag"
+
+## repo instance id -> the unit channels' index (`_index`). Four at most are
+## kept, as ArmySplit's: the suite makes a repository copy per test.
+static var _cache: Dictionary = {}
+
+
+## Forget the indexes (a test that rewrites law_effects in place).
+static func forget() -> void:
+	_cache.clear()
+
+
+## The unit channels by law and value, read once per repository (they run per
+## unit per day): {rows (the table indexed), mark_laws, mark: law -> value ->
+## thousandths of a mark, pace_laws, pace: law -> value -> per mille}.
+static func _index(repo: DataRepository) -> Dictionary:
+	var key := repo.get_instance_id()
+	if _cache.has(key):
+		var held: Dictionary = _cache[key]
+		if is_same(held["rows"], repo.law_effects) and int(held["size"]) == repo.law_effects.size():
+			return held
+	if _cache.size() >= 4 and not _cache.has(key):
+		_cache.erase(_cache.keys()[0])
+	var mark := {}
+	var pace := {}
+	for row: Dictionary in repo.law_effects:
+		if String(row["share"]) != UNIT or String(row["timing"]) != MONTHLY:
+			continue
+		var law := String(row["law_code"])
+		var v := String(row["value"])
+		var channel := String(row["channel"])
+		if channel == CHANNEL_MARK:
+			var by: Dictionary = mark.get(law, {})
+			by[v] = int(by.get(v, 0)) + roundi(amount_of(repo, String(row["amount"])) * 1000.0)
+			mark[law] = by
+		elif channel == CHANNEL_PACE:
+			var by: Dictionary = pace.get(law, {})
+			by[v] = int(by.get(v, 0)) + roundi(amount_of(repo, String(row["amount"])))
+			pace[law] = by
+	var out := {"rows": repo.law_effects, "size": repo.law_effects.size(),
+		"mark_laws": _in_law_order(repo, mark), "mark": mark,
+		"pace_laws": _in_law_order(repo, pace), "pace": pace}
+	_cache[key] = out
+	return out
+
+
+static func _in_law_order(repo: DataRepository, by_law: Dictionary) -> Array:
+	return repo.law_order.filter(func(l: String) -> bool: return by_law.has(l))
+
+
+## `a / b` rounded once, half away from zero (b > 0).
+static func _round_div(a: int, b: int) -> int:
+	@warning_ignore("integer_division")  # whole units, rounded half away from zero
+	var q := (absi(a) * 2 + b) / (b * 2)
+	return -q if a < 0 else q
+
+
+## Whether `code` is a land unit of the realm, the only units a camp law binds.
+static func _bound(repo: DataRepository, state: GameState, code: String) -> bool:
+	var reg := ArmySystem.regiment(repo, code, state)
+	return not reg.is_empty() and String(reg.get("is_naval", "0")) != "1" \
+		and String(reg.get("kingdom_code", "")) == repo.resolve_realm("player_realm")
+
+
+## The morale mark the camp laws add to `code`'s: the sum of its `morale_mark`
+## rows for the values it follows, rounded once to whole points (half away
+## from zero). 0 for a fleet or a unit not the realm's.
+static func unit_mark(repo: DataRepository, state: GameState, code: String) -> int:
+	if not _bound(repo, state, code):
+		return 0
+	var idx := _index(repo)
+	var sum := 0
+	for law: String in idx["mark_laws"]:
+		sum += int((idx["mark"][law] as Dictionary).get(LawSystem.value(repo, state, law, code), 0))
+	return _round_div(sum, 1000)
+
+
+## `code`'s pace under the camp laws, per mille: 1000 plus its `pace` rows for
+## the values it follows (truce days on: -50). 1000 for a fleet or a unit not
+## the realm's. ArmySystem.day_step_m and speed_km_per_day multiply by it.
+static func unit_pace_permille(repo: DataRepository, state: GameState, code: String) -> int:
+	if not _bound(repo, state, code):
+		return 1000
+	var idx := _index(repo)
+	var out := 1000
+	for law: String in idx["pace_laws"]:
+		out += int((idx["pace"][law] as Dictionary).get(LawSystem.value(repo, state, law, code), 0))
+	return maxi(out, 0)
+
+
+## The realm's host under `law`: {total: its land men, men: value -> men,
+## units: value -> units}, the units walked in code order; a unit no courier
+## has told follows the default (`LawSystem.value`).
+static func _host(repo: DataRepository, state: GameState, law: String) -> Dictionary:
+	var men := {}
+	var units := {}
+	var total := 0
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		if String(r.get("is_naval", "0")) == "1":
+			continue
+		var n := int(MapObjects.regiment_size(repo, r))
+		var v := LawSystem.value(repo, state, law, String(r["regiment_code"]))
+		men[v] = int(men.get(v, 0)) + n
+		units[v] = int(units.get(v, 0)) + 1
+		total += n
+	return {"total": total, "men": men, "units": units}
+
+
+static func _share_of(host: Dictionary, value: String) -> int:
+	var total := int(host["total"])
+	if total <= 0:
+		return 0
+	return _round_div(int((host["men"] as Dictionary).get(value, 0)) * 1000, total)
+
+
+## Per mille of the realm's land men (MapObjects.regiment_size) whose unit
+## follows `value` of `law`, rounded once; 0 with no land men.
+static func army_share_permille(repo: DataRepository, state: GameState, law: String, value: String) -> int:
+	return _share_of(_host(repo, state, law), value)
+
+
+## A law at a value in words, for a reason line: law_words' `phrase_<law>_<value>`
+## when it has one; else a toggle's label ("register prisoners", "… off"), a
+## choice's value and label ("allow plunder").
+static func phrase(repo: DataRepository, law: String, value: String) -> String:
+	var key := "phrase_%s_%s" % [law, value]
+	if repo.law_words.has(key):
+		return String(repo.law_words[key])
+	var d := LawSystem.def(repo, law)
+	var label := String(d.get("label", law)).to_lower()
+	if String(d.get("kind", "")) == "toggle":
+		return label if value == "on" else "%s %s" % [label, value]
+	return "%s %s" % [value, label]
+
+
+## A channel's word on the screen and in the lines (law_words `channel_<c>`).
+static func channel_word(repo: DataRepository, channel: String) -> String:
+	return String(repo.law_words.get("channel_" + channel, channel.replace("_", " ")))
+
+
+## A signed figure: whole pools and whole numbers as "+2", else "+0.4"; the
+## minus is a real minus sign.
+static func _signed(value: float, whole: bool) -> String:
+	var text := ("%+d" % roundi(value)) if whole else ("%+.1f" % value)
+	return text.replace("-", "−")
+
+
+## The month's realm lines of the military laws (spec §4.2): for each monthly
+## `share=army` row, in file order, its amount times the share of the land men
+## under its value — rounded once to tenths; a whole pool's (treasury) amount
+## is per 1,000 men under the value, rounded once to whole gold. A line that
+## rounds to zero is skipped. Each {metric, delta, reason}; TickEngine.advance
+## applies them after the regiments' month.
+static func month_lines(repo: DataRepository, state: GameState) -> Array:
+	var out: Array = []
+	var hosts := {}
+	for row: Dictionary in repo.law_effects:
+		if String(row["timing"]) != MONTHLY or String(row["share"]) != ARMY:
+			continue
+		var law := String(row["law_code"])
+		var v := String(row["value"])
+		if LawSystem.def(repo, law).is_empty() or v == "":
+			continue
+		if not hosts.has(law):
+			hosts[law] = _host(repo, state, law)
+		var host: Dictionary = hosts[law]
+		var share := _share_of(host, v)
+		if share <= 0:
+			continue
+		var metric := String(row["channel"])
+		var milli := roundi(amount_of(repo, String(row["amount"])) * 1000.0)
+		var whole := metric in WHOLE_POOLS
+		var delta := 0.0
+		if whole:
+			delta = float(_round_div(milli * int((host["men"] as Dictionary).get(v, 0)), 1000 * 1000))
+		else:
+			delta = float(_round_div(milli * share, 100 * 1000)) / 10.0
+		if is_zero_approx(delta):
+			continue
+		var n := int((host["units"] as Dictionary).get(v, 0))
+		out.append({"metric": metric, "delta": delta, "reason": "%s: %s %s (%d %s, %d%% of the host)" % [
+			phrase(repo, law, v), channel_word(repo, metric), _signed(delta, whole), n,
+			"unit" if n == 1 else "units", _round_div(share, 10)]})
+	return out
+
+
+## The screen's words for what `law` at `value` does, spelled from its
+## law_effects.csv rows in file order and joined by " · ": "morale +2",
+## "contentment −0.4/month", "treasury −2/month per 1,000 men", "pace −50‰",
+## "once: unrest −2.0 per point"; a row with no number is its channel's word
+## ("a standing order" for a flag). A range law's rows with no value hold at
+## every value. "" when the value does nothing.
+static func summary(repo: DataRepository, law: String, value: String) -> String:
+	var d := LawSystem.def(repo, law)
+	if d.is_empty():
+		return ""
+	var is_range := String(d["kind"]) == "range"
+	var parts: PackedStringArray = []
+	for row: Dictionary in repo.law_effects:
+		if String(row["law_code"]) != law:
+			continue
+		var v := String(row["value"])
+		if v != value and not (v == "" and is_range):
+			continue
+		var channel := String(row["channel"])
+		var word := channel_word(repo, channel)
+		var raw := String(row["amount"]).strip_edges()
+		if channel == CHANNEL_FLAG or raw == "":
+			parts.append(word)
+			continue
+		var amount := amount_of(repo, raw)
+		var whole := channel in WHOLE_POOLS
+		if channel == CHANNEL_PACE:
+			parts.append("%s %s%s" % [word, _signed(amount, true), String(repo.law_words.get("per_mille", "‰"))])
+		elif channel == CHANNEL_MARK:
+			parts.append("%s %s" % [word, _signed(amount, is_equal_approx(amount, roundf(amount)))])
+		elif String(row["timing"]) == ONCE:
+			var text := "%s %s %s" % [String(repo.law_words.get("once", "once:")), word, _signed(amount, whole)]
+			if v == "" and is_range:
+				text += " " + String(repo.law_words.get("per_point", "per point"))
+			parts.append(text)
+		else:
+			var text := "%s %s%s" % [word, _signed(amount, whole), String(repo.law_words.get("per_month", "/month"))]
+			if whole and String(row["share"]) == ARMY:
+				text += " " + String(repo.law_words.get("per_1000_men", "per 1,000 men"))
+			parts.append(text)
+	return " · ".join(parts)

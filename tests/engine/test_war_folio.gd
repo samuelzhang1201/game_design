@@ -56,8 +56,11 @@ func test_morale_names_its_mark_and_the_months_drift() -> void:
 	var reg := ArmySystem.regiment(repo, code)
 	var score := ArmySystem.supply_score(repo, int(st["supplies"]), ArmySystem.supply_use(repo, reg, state))
 	# the seat's unit heads for the garrison's mark (spec 2026-10-07-army-split-and-ground §4.1)
-	var mark := ArmySystem.morale_mark(repo, score, ArmyGround.seated_in(repo, state, code) != "")
+	# the default camp laws add +1 (laws spec §4.4: +1 -0.5 -1 +1 = +0.5,
+	# rounded once half away from zero), shown on a row of their own
+	var mark := ArmySystem.morale_mark(repo, score, ArmyGround.seated_in(repo, state, code) != "") + 1
 	var rows := _rows("morale")
+	assert_eq(rows["The camp laws"], "+1")
 	assert_eq(rows["Morale"], "%d / 100" % int(st["morale"]))
 	assert_eq(rows["Heading for (by today's stores)"], "%d — the ranks are %s" % [mark, ArmySystem.morale_word(repo, score)])
 	assert_eq(rows["Drift"], "%d a month" % int(repo.bal("army_morale_drift_per_month")))
