@@ -184,27 +184,30 @@ him and is listed for him to overturn one by one. Builds on
     shows only as the pending arrow. The pennants' dashed lines and the drafts'
     graphite strokes are gone (`war_hud_*`, `war_draft_pencil_*`,
     `war_draft_head_px` removed).
-20. **Supply from the rear, never from ahead** (owner, same day: "prefer the
+20. **Supply from the rear, never from the frontier** (owner: "prefer the
     nearest town on OUR side, toward our own rear; a town in front of the army
-    must be forbidden"). A town is AHEAD of a column (`SupplyLines.is_ahead`)
-    when it is nearer the march's end than the column by more than
-    `supply_ahead_km`, or lies more than `supply_ahead_km` beyond the column
-    along its first leg (to its first waypoint, else the end). On the confirm
-    a town ahead of ANY marching unit is greyed "{town}: ahead of the column"
-    (`army_supply_orders.csv` `pick_ahead`; `march_eligibility` takes each
-    unit's waypoints), after the reach rules of ruling 13; the current town's
-    "(now)" row is greyed the same way when it lies ahead. The list runs the
-    current point first, then the allowed towns nearest the LEAD's column by
-    road (`SupplyLines.rear_order`; a tie to the town nearer the crown's
+    must be forbidden"; corrected the same day: "ahead" is the enemy side, never
+    the direction of travel, so a retreat is supplied from the home side). The
+    crown's rear is its capital (`CourierSystem.origin`). A town is AHEAD of a
+    column (`SupplyLines.is_ahead`) when it lies FARTHER from the capital than
+    the column by more than `supply_ahead_km` (straight pack-px distance); a
+    town nearer the capital, or within the tolerance, is allowed whether the
+    column advances, retreats or marches sideways. The march's end and bends do
+    not enter the test. On the confirm a town ahead of ANY marching unit is
+    greyed "{town}: on the frontier side of the column" (`army_supply_orders.csv`
+    `pick_ahead`; `march_eligibility` adds the reach rules of ruling 13); the
+    current town's "(now)" row is greyed the same way when it lies ahead. The
+    list runs the current point first, then the allowed towns nearest the LEAD's
+    column by road (`SupplyLines.rear_order`; a tie to the town nearer the
     capital, then by code), the refused after. Pressed: the player's own pick
     (kept across a bend or a tick), else a draft's town, else the current town
-    when it may still serve (no new courier), else the NEAREST allowed town —
-    so a march with no line now sets one up by default; "No supply point"
-    stays one click away. A bend re-reads the list (a new first leg). The
+    when it may still serve (no new courier), else the NEAREST allowed town, so
+    a retreating column defaults to the nearest town on the home side and a
+    march with no line now sets one up by default; "No supply point" stays one
+    click away. A bend re-reads the list (the wagons' reach to the new end). The
     bold dashed route still runs from the chosen town to the arrow's tip. The
-    3D map's standalone Add supply point… has no destination: it greys towns
-    ahead only for a column already on the march (its order's end and
-    waypoints); a standing column has no direction and is left as it was.
+    3D map's standalone Add supply point… greys towns ahead for every column,
+    marching or standing.
 
 ## 1. Engine (pure, tested)
 

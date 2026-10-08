@@ -262,6 +262,7 @@ func test_one_march_sends_a_courier_to_each() -> void:
 	if panel == null:
 		return
 	autofree(panel)   # made beside the menu, a child of this test
+	panel.select_supply("")   # the march alone is charged here (the default supply town is its own order)
 	panel.confirm_button().pressed.emit()
 	var marches: Array = []
 	for c: Dictionary in Game.state.couriers:

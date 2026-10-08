@@ -584,7 +584,7 @@ func _on_route_bent(waypoints: PackedVector2Array) -> void:
 		var plan := _plan()
 		_panel.refresh(plan["title"], plan["sub"], plan["rows"], _add_waypoint_row())
 		_panel.show_group(_group_rows())
-		_open_supply()   # a new first leg may turn a town ahead of the column (ruling 20)
+		_open_supply()   # the end moved: the wagons' reach to it is read again
 
 
 ## An aim or a waiting confirm given up.
@@ -801,10 +801,7 @@ func _start_supply_pick(code: String) -> void:
 	_supply_for = code
 	_supply_town = ""
 	var pick := SupplyLines.eligibility(Game.data, Game.state, code)
-	if ArmySystem.order_of(Game.data, Game.state, code) == ArmySystem.ORDER_MARCH:
-		# a column on the march: never a town ahead of it (ruling 20); standing, no direction to judge
-		SupplyLines.mark_ahead(Game.data, Game.state, code, pick, ArmySystem.destination_of(Game.data, Game.state, code),
-			Array(ArmySystem.waypoints_of(Game.data, Game.state, code)))
+	SupplyLines.mark_ahead(Game.data, Game.state, code, pick)   # never a town on the frontier side (ruling 20)
 	_map_set("supply_pick", pick)
 	_map_set("supply_preview", PackedVector2Array())
 	if _map != null and "aiming" in _map:
@@ -1047,7 +1044,7 @@ func _open_supply() -> void:
 		_map_set("supply_preview", PackedVector2Array())
 		return
 	for c: String in many:
-		var e := SupplyLines.march_eligibility(Game.data, Game.state, c, _pending, _wps_of(c))
+		var e := SupplyLines.march_eligibility(Game.data, Game.state, c, _pending)
 		for t: String in e:
 			if not _supply_ok.has(t) or (String(_supply_ok[t]) == "" and String(e[t]) != ""):
 				_supply_ok[t] = e[t]
@@ -1060,7 +1057,7 @@ func _open_supply() -> void:
 		first["label"] = String(rows.get("march_keep", {}).get("label", "{town} (now)")).format(
 			{"town": String(Game.data.burgs.get(now, {}).get("label", now))})
 		for c: String in many:
-			var ahead := SupplyLines.mark_ahead(Game.data, Game.state, c, {now: ""}, _pending, _wps_of(c))
+			var ahead := SupplyLines.mark_ahead(Game.data, Game.state, c, {now: ""})
 			if String(ahead[now]) != "":
 				first["why"] = ahead[now]
 				keep = false

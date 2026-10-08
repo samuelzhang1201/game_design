@@ -93,11 +93,10 @@ static func eligibility(repo: DataRepository, state: GameState, code: String) ->
 ## The towns that may supply `code` on a march to `dest_px` (ruling 13):
 ## those the engine takes NOW (eligibility, measured from where the column
 ## stands, as the order is validated when sent) whose wagons also reach the
-## march's end within supply_point_max_days, and none AHEAD of the column on
-## that march (ruling 20, `waypoints` its route's bends, pack px); town -> ""
-## or why not (army_supply_orders.csv pick_far_end, pick_ahead).
-static func march_eligibility(repo: DataRepository, state: GameState, code: String, dest_px: Vector2,
-		waypoints: Array = []) -> Dictionary:
+## march's end within supply_point_max_days, and none AHEAD of the column
+## (ruling 20, `mark_ahead`); town -> "" or why not (army_supply_orders.csv
+## pick_far_end, pick_ahead).
+static func march_eligibility(repo: DataRepository, state: GameState, code: String, dest_px: Vector2) -> Dictionary:
 	var out := eligibility(repo, state, code)
 	var max_days := int(repo.bal("supply_point_max_days"))
 	var hint := String((repo.army_supply_orders.get("pick_far_end", {}) as Dictionary).get("hint",
@@ -108,36 +107,32 @@ static func march_eligibility(repo: DataRepository, state: GameState, code: Stri
 		var days := wagon_days(repo, road_km(repo, road_between_px(repo, town, dest_px)))
 		if days > max_days:
 			out[town] = hint.format({"town": String(repo.burgs[town].get("label", town)), "days": days, "max": max_days})
-	return mark_ahead(repo, state, code, out, dest_px, waypoints)
+	return mark_ahead(repo, state, code, out)
 
 
-## `why` (town -> "" or why not) with every allowed town AHEAD of `code` on a
-## march to `dest_px` through `waypoints` greyed (ruling 20); the column is
+## `why` (town -> "" or why not) with every allowed town AHEAD of `code`
+## greyed (ruling 20), whichever way or whether it marches; the column is
 ## where the engine has it. Returns `why`, changed in place.
-static func mark_ahead(repo: DataRepository, state: GameState, code: String, why: Dictionary, dest_px: Vector2,
-		waypoints: Array = []) -> Dictionary:
+static func mark_ahead(repo: DataRepository, state: GameState, code: String, why: Dictionary) -> Dictionary:
 	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty():
 		return why
 	var at := ArmySystem.position_of(repo, state, reg)
-	var toward: Vector2 = waypoints[0] if not waypoints.is_empty() else dest_px
-	var hint := String((repo.army_supply_orders.get("pick_ahead", {}) as Dictionary).get("hint", "{town}: ahead of the column"))
+	var rear := CourierSystem.origin(repo, state)
+	var hint := String((repo.army_supply_orders.get("pick_ahead", {}) as Dictionary).get("hint", "{town}: on the frontier side of the column"))
 	for town: String in why:
-		if String(why[town]) == "" and is_ahead(repo, at, toward, dest_px, _burg_px(repo, town)):
+		if String(why[town]) == "" and is_ahead(repo, rear, at, _burg_px(repo, town)):
 			why[town] = hint.format({"town": String(repo.burgs[town].get("label", town))})
 	return why
 
 
-## A town is AHEAD of a column at `at` marching first toward `toward` and
-## ending at `dest` (owner 2026-10-08, ruling 20): it is nearer the end than
-## the column by more than supply_ahead_km, or lies more than that beyond the
-## column along its first leg. A town behind or beside the column is not.
-static func is_ahead(repo: DataRepository, at: Vector2, toward: Vector2, dest: Vector2, town: Vector2) -> bool:
+## A town is AHEAD of a column at `at` (owner 2026-10-08, ruling 20) when it
+## lies FARTHER from the crown's rear `rear` (its capital's point) than the
+## column by more than supply_ahead_km: the frontier side, whichever way the
+## column marches. Nearer the rear, or within the tolerance, is not ahead.
+static func is_ahead(repo: DataRepository, rear: Vector2, at: Vector2, town: Vector2) -> bool:
 	var tol := repo.bal("supply_ahead_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
-	if town.distance_to(dest) < at.distance_to(dest) - tol:
-		return true
-	var leg := toward - at
-	return leg.length() > 0.0 and (town - at).dot(leg.normalized()) > tol
+	return town.distance_to(rear) > at.distance_to(rear) + tol
 
 
 ## The towns in the order the march's confirm lists them (ruling 20): the
@@ -164,8 +159,7 @@ static func rear_sorted(why: Dictionary, km: Dictionary, to_capital: Dictionary)
 static func rear_order(repo: DataRepository, state: GameState, code: String, why: Dictionary) -> Array:
 	var km := {}
 	var to_capital := {}
-	var capital := String(repo.kingdoms.get(repo.resolve_realm("player_realm"), {}).get("capital_burg", ""))
-	var cap_px := _burg_px(repo, capital) if repo.burgs.has(capital) else Vector2.ZERO
+	var cap_px := CourierSystem.origin(repo, state)
 	for town: String in why:
 		km[town] = road_km(repo, road_px(repo, state, code, town))
 		to_capital[town] = _burg_px(repo, town).distance_to(cap_px)
