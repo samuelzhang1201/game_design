@@ -37,6 +37,21 @@ static func apply(ops: String, state: GameState, data: DataRepository,
 				elif reason_label != "":
 					r2["reason"] = reason_label
 				results.append(r2)
+			"law":
+				# law:<code>:<value>[:<reason>] — a law's value, or a range
+				# law's signed step (+1) clamped to its range; decreed and in
+				# force everywhere at once, for an event is no courier
+				# (LawSystem.impose).
+				var l := LawSystem.impose(data, state, p[1], p[2] if p.size() > 2 else "")
+				if l.has("error"):
+					push_error("EventEffects: " + String(l["error"]))
+				else:
+					var lr := {"kind": "law", "law": p[1], "value": String(l["value"]),
+						"was": String(l["was"]), "reason": p[3] if p.size() > 3 and p[3] != "" \
+							else (reason_label if reason_label != "" else "an event changed the law")}
+					if String(LawSystem.def(data, p[1])["kind"]) == "range":
+						lr["delta"] = float(int(String(l["value"])) - int(String(l["was"])))
+					results.append(lr)
 			"world":
 				# world:<path>:<delta>:<reason> — any ledger field (spec
 				# 2026-09-09 §2); the ledger clamps, logs, and refuses the unlisted.

@@ -8,13 +8,13 @@ func before_each() -> void:
 
 func test_valid_payload() -> void:
 	var text := JSON.stringify({
-		"actions": [{"action_code": "TAX_RATE_ADJUST", "params": {"delta": -1}, "target": ""}],
+		"actions": [{"action_code": "LAW_SET", "params": {"law": "tax_rate", "value": 4}, "target": ""}],
 		"court_reaction": {"addressed": ["char_marshal"], "tone": "curt", "promises": []},
 	})
 	var out: Dictionary = ResponseValidator.parse(text, data)
 	assert_true(out["ok"])
 	assert_eq(out["actions"].size(), 1)
-	assert_eq(out["actions"][0].action_code, "TAX_RATE_ADJUST")
+	assert_eq(out["actions"][0].action_code, "LAW_SET")
 	assert_eq(out["court_reaction"]["tone"], "curt")
 
 func test_malformed_json_fails() -> void:
@@ -158,9 +158,9 @@ func test_order_empty_reply_is_ok_but_carries_nothing_and_long_ones_are_capped()
 func test_order_accepts_the_flat_legacy_shape() -> void:
 	var s := SuiteData.campaign(data, 42)
 	var out := ResponseValidator.parse_order(JSON.stringify({"actions":
-		[{"action_code": "TAX_RATE_ADJUST", "params": {"delta": -1}, "target": ""}],
+		[{"action_code": "LAW_SET", "params": {"law": "tax_rate", "value": 4}, "target": ""}],
 		"court_reaction": {"addressed": ["char_steward"], "tone": "respectful", "promises": []}}),
 		data, s)
 	assert_true(out["ok"])
-	assert_eq(out["actions"][0].action_code, "TAX_RATE_ADJUST")
+	assert_eq(out["actions"][0].action_code, "LAW_SET")
 	assert_eq(out["court_reaction"]["tone"], "respectful")

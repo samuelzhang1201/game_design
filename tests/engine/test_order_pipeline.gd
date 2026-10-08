@@ -50,10 +50,10 @@ func test_a_pure_impact_order_with_a_cost_is_not_charged_twice() -> void:
 
 func test_rejected_impacts_and_actions_are_reported() -> void:
 	var out := OrderPipeline.apply_order(data, state, engine,
-		[ActionRequest.make("TAX_RATE_ADJUST", {"delta": 9})],
+		[ActionRequest.make("LAW_SET", {"law": "tax_rate", "value": 99})],
 		[{"path": "metrics.grain", "delta": 1.0, "reason": "", "clamped": false}],
 		_reaction(), "order")
-	assert_eq(out["rejected"].size(), 1, "the illegal delta is rejected by validate")
+	assert_eq(out["rejected"].size(), 1, "the illegal value is rejected by validate")
 	assert_eq(out["world_rejected"].size(), 1, "the ledger refuses an impact with no reason")
 	assert_string_contains("\n".join(out["ledger"]), "struck")
 

@@ -72,7 +72,7 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 **Choices:** ① Keep it — court opinion +3; chain: in ~12 ticks the bird recites something compromising at the worst moment (small scandal, random minister −5). ② Give it to the church as a curiosity — Chaplain +4, Spymaster +2 *(approves: caution)*. ③ Strangle it — Spymaster +4, court opinion −3, `compassionate` ministers −3.
 
 ### EV-05 · A Petition of One — `realm · mini`
-**Trigger:** unrest > 30 or `JUSTICE_SEVERITY` recently raised, weight 3. **Scene:** An old widow slips past the heralds and kneels before the throne: the local reeve has been taxing her village twice and pocketing the difference. The Chancellor stiffens — petitions have a *process*.
+**Trigger:** unrest > 30 or the severity of justice recently raised, weight 3. **Scene:** An old widow slips past the heralds and kneels before the throne: the local reeve has been taxing her village twice and pocketing the difference. The Chancellor stiffens — petitions have a *process*.
 **Choices:** ① Hear her now — peasant contentment +3, legitimacy +1, Chancellor −3 *(resents: process bypassed)*; reeve punished (small gold recovered). ② Send it through channels — Chancellor +2; chain: 50/50 the case dies in paperwork → village grievance (+unrest in that province). ③ Hang the reeve by sundown, unexamined — `tax_incidence −40, centralism +30` signature; bold, popular, and `integrity`-heavy ministers −4 *(disapproves: no trial)*.
 
 ### EV-06 · Rats in the Granary — `realm · template`

@@ -1,9 +1,9 @@
 law_code,tab,group,label,kind,values,default,scope,gold_cost,cooldown_ticks,cost_ops,notes
-tax_rate,economy,,Tax rate,range,1|10,5,province,0,2,opinion:steward:-2:re-cutting the tax rolls,"the old TAX_RATE_ADJUST; default is balance start_tax_rate and the pack's seeded metric"
-tariff_rate,economy,,Tariff rate,range,0|10,3,province,0,2,opinion:char_guildmaster_tessa:-2:the guilds re-price their wares,"the old TARIFF_ADJUST; default is balance start_tariff_rate and the pack's seeded metric"
-grain_ration,economy,,Grain policy,choice,market|ration|release,market,province,0,2,opinion:steward:-1:the granary clerks grumble at new orders,"the old GRAIN_POLICY_SET; release acts as market for the court ration and pays its one-shot on delivery"
-justice_severity,politics,,Severity of justice,range,1|5,3,province,0,4,opinion:chancellor:-1:the courts resent being retuned,"the old JUSTICE_SEVERITY; a level, a change of one point is the old delta of one"
-church_policy,politics,,Church policy,choice,none|endow|tithe,none,province,0,4,opinion:chaplain:-1:the church dislikes being managed,"the old CHURCH_POLICY"
+tax_rate,economy,,Tax rate,range,1|10,5,province,0,2,opinion:steward:-2:re-cutting the tax rolls,"the old tax-rate order; default is balance start_tax_rate and the pack's seeded metric"
+tariff_rate,economy,,Tariff rate,range,0|10,3,province,0,2,opinion:char_guildmaster_tessa:-2:the guilds re-price their wares,"the old tariff order; default is balance start_tariff_rate and the pack's seeded metric"
+grain_ration,economy,,Grain policy,choice,market|ration|release,market,province,0,2,opinion:steward:-1:the granary clerks grumble at new orders,"the old grain-policy order; release acts as market for the court ration and pays its one-shot on delivery"
+justice_severity,politics,,Severity of justice,range,1|5,3,province,0,4,opinion:chancellor:-1:the courts resent being retuned,"the old justice order; a level, a change of one point is the old delta of one"
+church_policy,politics,,Church policy,choice,none|endow|tithe,none,province,0,4,opinion:chaplain:-1:the church dislikes being managed,the old church-policy order
 plunder,military,Conduct in the field,Plunder,choice,forbid|allow,forbid,camp,0,2,,"owner 2026-10-07: allow or forbid plunder (允许/禁止劫掠)"
 obey_command,military,Conduct in the field,Obey command,toggle,off|on,on,camp,0,2,,"owner 2026-10-07: obey command (服从指挥)"
 protect_church,military,Conduct in the field,Protect the church,toggle,off|on,on,camp,0,2,,"owner 2026-10-07: protect the church (保护教会)"

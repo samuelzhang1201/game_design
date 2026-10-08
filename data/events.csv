@@ -5,7 +5,7 @@ ev_03,court,trait_at_court=wrathful,3,96,0,template,event_ev_03
 ev_04,folk,seat_filled=marshal&year>=2,2,96,1,template,event_ev_04
 ev_05,realm,unrest>30,3,96,0,template,event_ev_05
 ev_06,realm,grain<60&season=autumn,4,48,0,template,event_ev_06
-ev_07,realm,action_since=TARIFF_ADJUST:24,3,96,0,template,event_ev_07
+ev_07,realm,action_since=LAW_tariff_rate:24,3,96,0,template,event_ev_07
 ev_08,folk,year>=1,2,96,1,template,event_ev_08
 ev_09,realm,action_since=BUILD_ECONOMIC:48,3,96,0,template,event_ev_09
 ev_10,church,unrest>40,3,96,0,template,event_ev_10

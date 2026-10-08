@@ -54,7 +54,7 @@ func test_free_text_executes_via_fake_client_and_tone_applied() -> void:
 	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
 	fake.canned_ok = true
 	fake.canned_text = JSON.stringify({"actions":
-		[{"action_code": "TAX_RATE_ADJUST", "params": {"delta": -1}, "target": ""}],
+		[{"action_code": "LAW_SET", "params": {"law": "tax_rate", "value": 4}, "target": ""}],
 		"court_reaction": {"addressed": ["char_steward"], "tone": "respectful", "promises": []}})
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)
@@ -105,7 +105,7 @@ func test_free_text_during_pending_event_leaves_the_event_pending() -> void:
 	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
 	fake.canned_ok = true
 	fake.canned_text = JSON.stringify({"actions":
-		[{"action_code": "TAX_RATE_ADJUST", "params": {"delta": -1}, "target": ""}],
+		[{"action_code": "LAW_SET", "params": {"law": "tax_rate", "value": 4}, "target": ""}],
 		"court_reaction": {}})
 	add_child_autofree(fake)
 	Game.use_client_for_tests(fake)

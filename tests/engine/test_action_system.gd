@@ -17,21 +17,28 @@ func test_unaffordable_rejected() -> void:
 	s.metrics["treasury"] = 5.0
 	assert_string_contains(sys.validate(ActionRequest.make("LEVY_RAISE"), s), "afford")
 
+## A law's cooldown is its own (LawSystem): a second, different decree of
+## the tax rate right after the first is refused for it.
 func test_cooldown_enforced() -> void:
-	var req := ActionRequest.make("TAX_RATE_ADJUST", {"delta": 1})
+	var now := int(LawSystem.decreed(data, s, "tax_rate"))
+	var req := ActionRequest.make("LAW_SET", {"law": "tax_rate", "value": str(now + 1)})
 	assert_eq(sys.validate(req, s), "")
 	sys.execute(req, s)
-	assert_string_contains(sys.validate(req, s), "cooldown")
+	assert_string_contains(sys.validate(ActionRequest.make("LAW_SET",
+		{"law": "tax_rate", "value": str(now + 2)}), s), "cooldown")
 
+## The tax is a law now: the decree moves the rate's mirror at once (spec
+## 2026-10-08-laws-tab-design §2.5) and its law line says why.
 func test_tax_adjust_moves_rate_with_reason() -> void:
-	var out := sys.execute(ActionRequest.make("TAX_RATE_ADJUST", {"delta": 2}), s)
+	var out := sys.execute(ActionRequest.make("LAW_SET", {"law": "tax_rate", "value": "7"}), s)
 	assert_true(out["ok"])
 	assert_eq(s.metrics["tax_rate"], 7.0)
+	assert_eq(LawSystem.decreed(data, s, "tax_rate"), "7")
 	var found := false
 	for e in out["effects"]:
-		if String(e.get("metric", "")) == "tax_rate":
+		if String(e.get("metric", "")) == "law":
 			found = true
-			assert_string_contains(e["reason"], "tax")
+			assert_string_contains(e["reason"], "Tax rate")
 	assert_true(found)
 
 func test_reward_changes_opinion_with_reason() -> void:
@@ -44,17 +51,27 @@ func test_reward_changes_opinion_with_reason() -> void:
 	assert_lt(s.metrics["treasury"], gold_before)
 
 func test_bad_params_rejected() -> void:
-	assert_string_contains(sys.validate(ActionRequest.make("TAX_RATE_ADJUST", {"delta": 9}), s), "delta")
-	assert_string_contains(sys.validate(ActionRequest.make("GRAIN_POLICY_SET", {"mode": "feast"}), s), "mode")
+	assert_string_contains(sys.validate(ActionRequest.make("LAW_SET", {"law": "tax_rate", "value": 99}), s),
+		"not a value")
+	assert_string_contains(sys.validate(ActionRequest.make("LAW_SET", {"law": "grain_ration", "value": "feast"}), s),
+		"not a value")
 	assert_string_contains(
 		sys.validate(ActionRequest.make("CHARACTER_REWARD", {"mode": "gold"}, "char_nobody"), s), "target")
 
+## The tithe is the church law's value now: the drift is the old tithe's
+## (-6 for Odo), and the law's own cost op (laws.csv cost_ops, charged on
+## every decree) costs him one more.
 func test_execute_applies_ideology_drift() -> void:
 	var odo_before: int = s.characters["char_chaplain"].opinion
-	var out := sys.execute(ActionRequest.make("CHURCH_POLICY", {"mode": "tithe"}), s)
-	assert_eq(s.characters["char_chaplain"].opinion, odo_before - 6)
+	var out := sys.execute(ActionRequest.make("LAW_SET", {"law": "church_policy", "value": "tithe"}), s)
+	assert_eq(s.characters["char_chaplain"].opinion, odo_before - 6 - 1)
 	assert_true(out.has("drift"))
 	assert_gt(out["drift"].size(), 0)
+	var odo_drift := 0
+	for d in out["drift"]:
+		if String(d["character_id"]) == "char_chaplain":
+			odo_drift = int(d["delta"])
+	assert_eq(odo_drift, -6)
 	assert_string_contains(
 		s.characters["char_chaplain"].opinion_log[-1]["reason"], "opposes, orthodoxy")
 

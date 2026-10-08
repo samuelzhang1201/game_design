@@ -343,9 +343,10 @@ static func decree(repo: DataRepository, state: GameState, law: String, value: S
 		var cd := int(def(repo, law).get("cooldown_ticks", 0))
 		if cd > 0:
 			state.law_cooldown[law] = state.tick + cd
-		if METRIC_OF.has(law):
-			state.metrics[String(METRIC_OF[law])] = (1.0 if value == "ration" else 0.0) \
-				if law == "grain_ration" else float(int(value))
+		_mirror(state, law, value)
+		# what TriggerDsl's action_since=LAW_<law> reads (an event that
+		# follows a decree, data/events.csv)
+		state.event_state["last_action_tick"]["LAW_" + law] = state.tick
 	var id := _decree_id(state, law)
 	var sent: Array = []
 	for r: Dictionary in to:
@@ -357,6 +358,43 @@ static func decree(repo: DataRepository, state: GameState, law: String, value: S
 			sent.append(CourierSystem.dispatch_to(repo, state, CourierSystem.ORDINARY, String(r["target"]),
 				order, r["to_px"]))
 	return sent
+
+
+## The metric a law mirrors, set to the decreed value (ruling P1; spec §2.5).
+static func _mirror(state: GameState, law: String, value: String) -> void:
+	if METRIC_OF.has(law):
+		state.metrics[String(METRIC_OF[law])] = (1.0 if value == "ration" else 0.0) \
+			if law == "grain_ration" else float(int(value))
+
+
+## An event's change of law (EventEffects' `law:` op): no courier carries it,
+## so it is a new decree (riding couriers of the old one arrive stale) that
+## every place it would be sent to follows at once. `raw` is one of the law's
+## values or, for a range law, a signed step ("+1", "-2") clamped to its
+## range. No cooldown and no stamp: it is no order of the crown's. Returns
+## {law, value, was} or {error}.
+static func impose(repo: DataRepository, state: GameState, law: String, raw: String) -> Dictionary:
+	var d := def(repo, law)
+	if d.is_empty():
+		return {"error": "No such law: " + law}
+	var was := decreed(repo, state, law)
+	var text := raw.strip_edges()
+	if String(d["kind"]) == "range" and (text.begins_with("+") or text.begins_with("-")) \
+			and text.substr(1).is_valid_int():
+		text = str(clampi(int(was) + int(text), int(d["values"][0]), int(d["values"][1])))
+	text = canonical(repo, law, text)
+	if not allowed(repo, law, text):
+		return {"error": "%s is not a value of %s" % [text, String(d["label"])]}
+	var to := recipients(repo, state, law)
+	var id := _decree_id(state, law) + 1
+	state.law_decree[law] = {"value": text, "decree_id": id, "day": state.absolute_day()}
+	_mirror(state, law, text)
+	for r: Dictionary in to:
+		var key := String(r["scope_key"])
+		var here: Dictionary = state.law_in_force.get(key, {})
+		here[law] = {"value": text, "decree_id": id}
+		state.law_in_force[key] = here
+	return {"law": law, "value": text, "was": was}
 
 
 ## A law courier arrives (CourierSystem._deliver): his place's entry takes

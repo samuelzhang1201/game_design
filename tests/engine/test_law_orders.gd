@@ -168,12 +168,14 @@ func test_every_executed_law_set_leaves_a_cost() -> void:
 func test_a_raised_tax_drifts_as_the_old_order_did() -> void:
 	var now := int(LawSystem.decreed(repo, s, "tax_rate"))
 	var up := {"law": "tax_rate", "value": str(now + 1), "delta": 1}
-	var old_up := OpinionDrift.signature_for(repo, "TAX_RATE_ADJUST", {"delta": 1})
+	# the old tax order's delta_pos / delta_neg rows and the tithe's
+	# (test_law_migration holds every old row)
+	var old_up := {"centralism": 10.0, "militarism": 0.0, "orthodoxy": 0.0, "tax_incidence": -30.0, "expansionism": 0.0}
 	assert_eq(OpinionDrift.signature_for(repo, "LAW_SET", up), old_up)
-	var old_down := OpinionDrift.signature_for(repo, "TAX_RATE_ADJUST", {"delta": -1})
+	var old_down := {"centralism": -5.0, "militarism": 0.0, "orthodoxy": 0.0, "tax_incidence": 30.0, "expansionism": 0.0}
 	assert_eq(OpinionDrift.signature_for(repo, "LAW_SET", {"law": "tax_rate", "value": "1", "delta": -1}), old_down)
 	assert_eq(OpinionDrift.signature_for(repo, "LAW_SET", {"law": "church_policy", "value": "tithe"}),
-		OpinionDrift.signature_for(repo, "CHURCH_POLICY", {"mode": "tithe"}))
+		{"centralism": 10.0, "militarism": 0.0, "orthodoxy": -50.0, "tax_incidence": 0.0, "expansionism": 0.0})
 	var plain := OpinionDrift.signature_for(repo, "LAW_SET", {"law": "plunder", "value": "allow"})
 	for ax: String in plain:
 		assert_eq(float(plain[ax]), 0.0, "a law with no old signature drifts no one")

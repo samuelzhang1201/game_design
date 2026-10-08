@@ -55,20 +55,6 @@ func validate(req: ActionRequest, state: GameState) -> String:
 	if row.get("target_type", "none") == "character" and not state.characters.has(req.target):
 		return "No such target character for " + req.action_code
 	match req.action_code:
-		"TAX_RATE_ADJUST", "TARIFF_ADJUST":
-			var d := int(req.params.get("delta", 0))
-			if d < -3 or d > 3 or d == 0:
-				return "delta must be -3..3 and nonzero"
-		"JUSTICE_SEVERITY":
-			var d := int(req.params.get("delta", 0))
-			if d < -2 or d > 2 or d == 0:
-				return "delta must be -2..2 and nonzero"
-		"GRAIN_POLICY_SET":
-			if not req.params.get("mode", "") in ["market", "ration", "release"]:
-				return "mode must be market|ration|release"
-		"CHURCH_POLICY":
-			if not req.params.get("mode", "") in ["endow", "tithe"]:
-				return "mode must be endow|tithe"
 		"BUILD_ECONOMIC":
 			if not req.params.get("project", "") in ["granary", "road"]:
 				return "project must be granary|road"
@@ -469,36 +455,9 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	# direction (LAW_SET's signature variants, data/action_signatures.csv)
 	var sig_params := req.params
 	match req.action_code:
-		"TAX_RATE_ADJUST":
-			var d := int(req.params["delta"])
-			var new_rate := clampf(state.metrics["tax_rate"] + d, 1.0, 10.0)
-			_set_metric(state, effects, "tax_rate", new_rate, "adjusted the tax rate")
-		"TARIFF_ADJUST":
-			var d := int(req.params["delta"])
-			var new_rate := clampf(state.metrics["tariff_rate"] + d, 0.0, 10.0)
-			_set_metric(state, effects, "tariff_rate", new_rate, "adjusted tariffs")
 		"LEVY_RAISE":
 			_apply(state, effects, "army_quality", data.bal("levy_army_gain"), "fresh levies drilled")
 			_apply(state, effects, "unrest", data.bal("levy_unrest"), "villages resent the levy")
-		"GRAIN_POLICY_SET":
-			var mode: String = req.params["mode"]
-			_set_metric(state, effects, "grain_ration", 1.0 if mode == "ration" else 0.0, "grain policy: " + mode)
-			if mode == "ration":
-				_apply(state, effects, "peasant_contentment", data.bal("grain_ration_contentment"), "rationing bites")
-			elif mode == "release":
-				_apply(state, effects, "grain", -data.bal("grain_release_amount"), "stores opened")
-				_apply(state, effects, "peasant_contentment", data.bal("grain_release_contentment"), "grain released to the people")
-		"CHURCH_POLICY":
-			if req.params["mode"] == "endow":
-				_apply(state, effects, "treasury", -data.bal("church_endow_cost"), "endowed the church")
-				_apply(state, effects, "church_opinion", data.bal("church_endow_gain"), "the church blessed the endowment")
-			else:
-				_apply(state, effects, "treasury", data.bal("church_tithe_gain"), "tithed the church")
-				_apply(state, effects, "church_opinion", data.bal("church_tithe_opinion"), "the church resents the tithe")
-		"JUSTICE_SEVERITY":
-			var d := int(req.params["delta"])
-			_apply(state, effects, "unrest", data.bal("justice_unrest_per_point") * d, "justice severity changed")
-			_apply(state, effects, "peasant_contentment", data.bal("justice_contentment_per_point") * d, "harsher courts")
 		"BUILD_ECONOMIC":
 			if req.params["project"] == "granary":
 				_apply(state, effects, "grain", data.bal("granary_civil_gain"), "a royal granary stocked")
@@ -919,11 +878,6 @@ func _courier_fee(state: GameState, effects: Array, c: Dictionary, what: String)
 	var days := CourierSystem.days_left(data, state, c)
 	effects.append({"metric": "army", "delta": 0.0, "reason": "A courier rides %s; about %d day%s" % [
 		what, days, "" if days == 1 else "s"]})
-
-func _set_metric(state: GameState, effects: Array, metric: String, value: float, reason: String) -> void:
-	var delta: float = value - state.metrics[metric]
-	state.metrics[metric] = value
-	effects.append({"metric": metric, "delta": delta, "reason": reason})
 
 func apply_court_reaction(cr: Dictionary, state: GameState) -> void:
 	var cap := int(data.bal("tone_delta_cap"))

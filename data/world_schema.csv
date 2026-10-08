@@ -10,12 +10,12 @@ metrics.legitimacy,float,0,100,,1,3,,,Legitimacy,
 metrics.army_quality,float,0,100,,1,3,,,Army quality,
 metrics.church_opinion,float,0,100,,1,3,,,Church opinion,
 metrics.peasant_contentment,float,0,100,,1,5,,,Peasant contentment,
-metrics.tax_rate,float,1,10,,0,0,,,Tax rate,engine-only: TAX_RATE_ADJUST moves it
-metrics.tariff_rate,float,0,10,,0,0,,,Tariff rate,engine-only: TARIFF_ADJUST moves it
+metrics.tax_rate,float,1,10,,0,0,,,Tax rate,engine-only: mirror of the decreed law tax_rate (LAW_SET)
+metrics.tariff_rate,float,0,10,,0,0,,,Tariff rate,engine-only: mirror of the decreed law tariff_rate (LAW_SET)
 metrics.tax_income,float,-100000,100000,,1,0,,,Tax income,recomputed every tick
 metrics.admin_capacity,float,0,1000,,1,0,,,Admin capacity,recomputed every tick
 metrics.road_income_bonus,float,0,100000,,1,0,,,Road income,
-metrics.grain_ration,float,0,1,,0,0,,,Grain rationing,
+metrics.grain_ration,float,0,1,,0,0,,,Grain rationing,engine-only: mirror of the decreed law grain_ration (LAW_SET; 1 when ration)
 opinion.*,int,-100,100,,1,3,,,Opinion of the ruler,the same cap as tone
 attribute.*.health,int,0,100,,1,2,,,Health,
 attribute.*.wealth,int,0,100,,1,2,,,Wealth,

@@ -9,15 +9,15 @@ func before_each() -> void:
 
 ## A played state hashes the same after a save and a load — including a
 ## pending action_request in recent_outcomes whose params carry an
-## engine-created int (TAX_RATE_ADJUST's {"delta": 2}): before the
+## int (a LAW_SET's {"value": 7}): before the
 ## to_dict() normalisation fix, JSON's int->float round trip made the loaded
 ## state's canonical JSON diverge from the in-memory state's.
 func test_save_load_round_trip_hash_equal() -> void:
 	var engine := TickEngine.new(data)
 	var s := SuiteData.campaign(data, 42)
 	engine.advance(s)
-	engine.actions.execute(ActionRequest.make("CHURCH_POLICY", {"mode": "tithe"}), s)
-	engine.actions.execute(ActionRequest.make("TAX_RATE_ADJUST", {"delta": 2}), s)
+	engine.actions.execute(ActionRequest.make("LAW_SET", {"law": "church_policy", "value": "tithe"}), s)
+	engine.actions.execute(ActionRequest.make("LAW_SET", {"law": "tax_rate", "value": 7}), s)
 	var path := RunDir.dir("save_load").path_join("test_save.json")
 	assert_true(SaveLoad.save_game(s, path))
 	var loaded := SaveLoad.load_game(path)
