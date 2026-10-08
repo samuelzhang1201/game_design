@@ -93,6 +93,12 @@ static func as_number(repo: DataRepository, law: String, text: String) -> int:
 static func number(repo: DataRepository, state: GameState, law: String, scope_code: String) -> int:
 	return as_number(repo, law, value(repo, state, law, scope_code))
 
+## A province's people: rural plus urban, the figures `TickEngine.court_people`
+## sums. The weight of `weighted_number` and of the one-shots' shares.
+static func people_of(repo: DataRepository, state: GameState, code: String) -> int:
+	return RealmEconomy._figure(repo, state, "economy.provinces.%s.rural_population" % code) \
+		+ RealmEconomy._figure(repo, state, "economy.provinces.%s.urban_population" % code)
+
 ## The in-force numbers of the realm's provinces weighted by each province's
 ## people (rural plus urban, the figures `TickEngine.court_people` sums).
 ## With no people anywhere, what a place with no entry reads (the default;
@@ -101,8 +107,7 @@ static func weighted_number(repo: DataRepository, state: GameState, law: String)
 	var weighted := 0
 	var people := 0
 	for code: String in MapOwnership.provinces_of(repo, state, repo.resolve_realm("player_realm")):
-		var here := RealmEconomy._figure(repo, state, "economy.provinces.%s.rural_population" % code) \
-			+ RealmEconomy._figure(repo, state, "economy.provinces.%s.urban_population" % code)
+		var here := people_of(repo, state, code)
 		weighted += here * number(repo, state, law, code)
 		people += here
 	if people == 0:
@@ -427,8 +432,15 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 		if int(was["decree_id"]) > id or (int(was["decree_id"]) == id and String(was["value"]) == value):
 			ev["type"] = "stale"
 			return ev
+	# what the province followed until now (its entry, else the default, R13)
+	var before := LawSystem.value(repo, state, law, key.trim_prefix(PROVINCE_PREFIX)) \
+		if key.begins_with(PROVINCE_PREFIX) else ""
 	here[law] = {"value": value, "decree_id": id}
 	state.law_in_force[key] = here
+	# the one-shots (§4.3): paid here, once, only on a real change of value
+	if key.begins_with(PROVINCE_PREFIX):
+		LawEffects.apply_lines(repo, state, LawEffects.once_lines(repo, state, law, before, value,
+			key.trim_prefix(PROVINCE_PREFIX)))
 	return ev
 
 

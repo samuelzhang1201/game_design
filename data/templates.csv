@@ -18,6 +18,7 @@ pitch_raise_levies,bold,"Give me the coin and I will give you an army worth fear
 pitch_quiet_rumors,,"Let my people answer the whispers quietly. {tradeoff}"
 pitch_build_road,,"A road pays for itself, given time. {tradeoff}"
 outcome_LAW_SET,,"The decree is sealed, and the couriers ride for every place that must keep it."
+outcome_LAW_EFFECTS,,"The couriers have come home, and where they reached, the new laws were felt at once."
 outcome_LEVY_RAISE,,"The muster rolls fill; sergeants curse recruits on every green."
 outcome_BUILD_ECONOMIC,,"Surveyors and masons are engaged; work begins."
 outcome_SPY_MISSION,,"Coin changes hands in quiet rooms."

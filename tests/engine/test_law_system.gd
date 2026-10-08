@@ -21,8 +21,33 @@ func test_the_tables_load_seventeen_laws_in_three_pages() -> void:
 	assert_eq(LawSystem.codes_on(repo, "economy").size(), 3)
 	assert_eq(LawSystem.codes_on(repo, "politics").size(), 2)
 	assert_eq(LawSystem.codes_on(repo, "economy"), ["tax_rate", "tariff_rate", "grain_ration"], "file order")
-	assert_eq(repo.law_effects.size(), 0, "the effects table is filled by later tasks")
 	assert_true(repo.law_words.has("page_military"))
+
+## Every law_effects.csv row (R11) names a known law and one of its values —
+## blank only for a range law's once-row, which is paid per point of change —
+## a known timing and share, and an amount that is a number or a balance key.
+func test_every_effect_row_names_a_law_and_an_allowed_value() -> void:
+	assert_gt(repo.law_effects.size(), 0)
+	for row: Dictionary in repo.law_effects:
+		var law := String(row["law_code"])
+		var d := LawSystem.def(repo, law)
+		assert_false(d.is_empty(), "%s is a law" % law)
+		if d.is_empty():
+			continue
+		var v := String(row["value"])
+		if String(d["kind"]) == "range" and String(row["timing"]) == "once":
+			assert_eq(v, "", "%s: a range's once-row is per point" % law)
+		else:
+			assert_true(LawSystem.allowed(repo, law, v), "%s: %s is a value of it" % [law, v])
+		assert_true(String(row["timing"]) in ["monthly", "once"], "%s: timing" % law)
+		assert_true(String(row["share"]) in ["army", "people", "unit", "flat"], "%s: share" % law)
+		var amount := String(row["amount"]).strip_edges()
+		assert_true(amount.is_valid_float() or repo.balance.has(amount.trim_prefix("-")),
+			"%s: %s is a number or a balance key" % [law, amount])
+		assert_ne(String(row["reason"]), "", "%s: every line carries a reason" % law)
+		if String(row["timing"]) == "once":
+			assert_eq(String(row["share"]), "people", "%s: a one-shot is shared by people" % law)
+			assert_true(s.metrics.has(String(row["channel"])), "%s: %s is a metric" % [law, row["channel"]])
 
 func test_every_default_is_an_allowed_value() -> void:
 	for law: String in repo.law_order:

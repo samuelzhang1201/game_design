@@ -1,1 +1,10 @@
 law_code,value,channel,target,amount,timing,share,reason
+justice_severity,,unrest,,justice_unrest_per_point,once,people,the villages weigh the courts
+justice_severity,,peasant_contentment,,justice_contentment_per_point,once,people,the people feel the courts' temper
+church_policy,endow,treasury,,-church_endow_cost,once,people,endowed the church
+church_policy,endow,church_opinion,,church_endow_gain,once,people,the church blessed the endowment
+church_policy,tithe,treasury,,church_tithe_gain,once,people,tithed the church
+church_policy,tithe,church_opinion,,church_tithe_opinion,once,people,the church resents the tithe
+grain_ration,ration,peasant_contentment,,grain_ration_contentment,once,people,rationing bites
+grain_ration,release,grain,,-grain_release_amount,once,people,stores opened
+grain_ration,release,peasant_contentment,,grain_release_contentment,once,people,grain released to the people
