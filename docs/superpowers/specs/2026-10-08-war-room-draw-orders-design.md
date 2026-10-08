@@ -95,8 +95,7 @@ him and is listed for him to overturn one by one. Builds on
 10. **The pending order is drawn as a BLUE CRAYON ARROW along the curve the
     column will walk** (`ArmySystem.curve_px` → `WarPlanInk.add` in the live
     plan HUD): the drawn line is the walked line; its waypoints are rings to
-    bend. Once pencilled, a draft stays GRAPHITE with its pale pennant (an
-    order pencilled is not an idea crayoned — the previous spec's ruling 20).
+    bend. Once pencilled or sealed it STAYS that arrow (ruling 19).
 11. **Removed from the room**: the player's rake (a drag from a piece no
     longer arms a march; it pans like a drag on open table) and every order
     menu on a piece (March… / Garrison… on a right click, the garrison's list
@@ -163,8 +162,49 @@ him and is listed for him to overturn one by one. Builds on
     is a red ring of MARCHING ANTS on the HUD (`war_intel_hint_*`; the dashes
     walk round every frame, never baked into the sheet's ink), concentric with
     the intel layer's static spy-report ring; a click selects it.
-19. **Drafts stay graphite** with their pale pennants once pencilled; only the
-    pending march (on its confirm) is the blue crayon arrow.
+19. **A march stays its blue crayon arrow** (owner, same day: "after I
+    confirm, the arrow disappears and turns into a dashed line — keep the
+    arrow"). Pending, pencilled as a draft, sealed and riding, received and
+    marching, countermanded — until the column arrives or the order is struck
+    or cancelled, the march is the same fat crayon arrow with its head along
+    the curve the column will walk (`ArmySystem.curve_px`), never a dashed or
+    graphite line. A DRAFT is told only by its crayon: woad greyed toward
+    slate (palette `plan_blue_draft`) with a graphite rim; a sealed march is
+    full `plan_blue`; the pale draft pennant and the dated pennant stand at the
+    tip as before, their route menu unchanged. The arrows are drawn from the
+    STATE on every redraw (`WarRoomPointer.orders` → `WarPlanHud.show_orders`,
+    never baked into a sheet's ink), so a seal, a loaded save or Edit route…
+    redraws them, and a marching column's arrow leaves its piece where it is
+    drawn and shortens as it advances. Columns whose routes are one drawn path
+    (same kind, same end, the one's bends the tail of the other's —
+    `WarOrderArrows.group`) are ONE arrow: the lead (most bends, then code)
+    with the head, the others feeders; the arrow's crayon parts are merged into
+    one outline (`WarOrderArrows.union`) so no rim shows inside it. A march the
+    confirm is drawing again (Edit route…, or a new arrow for the same unit)
+    shows only as the pending arrow. The pennants' dashed lines and the drafts'
+    graphite strokes are gone (`war_hud_*`, `war_draft_pencil_*`,
+    `war_draft_head_px` removed).
+20. **Supply from the rear, never from ahead** (owner, same day: "prefer the
+    nearest town on OUR side, toward our own rear; a town in front of the army
+    must be forbidden"). A town is AHEAD of a column (`SupplyLines.is_ahead`)
+    when it is nearer the march's end than the column by more than
+    `supply_ahead_km`, or lies more than `supply_ahead_km` beyond the column
+    along its first leg (to its first waypoint, else the end). On the confirm
+    a town ahead of ANY marching unit is greyed "{town}: ahead of the column"
+    (`army_supply_orders.csv` `pick_ahead`; `march_eligibility` takes each
+    unit's waypoints), after the reach rules of ruling 13; the current town's
+    "(now)" row is greyed the same way when it lies ahead. The list runs the
+    current point first, then the allowed towns nearest the LEAD's column by
+    road (`SupplyLines.rear_order`; a tie to the town nearer the crown's
+    capital, then by code), the refused after. Pressed: the player's own pick
+    (kept across a bend or a tick), else a draft's town, else the current town
+    when it may still serve (no new courier), else the NEAREST allowed town —
+    so a march with no line now sets one up by default; "No supply point"
+    stays one click away. A bend re-reads the list (a new first leg). The
+    bold dashed route still runs from the chosen town to the arrow's tip. The
+    3D map's standalone Add supply point… has no destination: it greys towns
+    ahead only for a column already on the march (its order's end and
+    waypoints); a standing column has no direction and is left as it was.
 
 ## 1. Engine (pure, tested)
 

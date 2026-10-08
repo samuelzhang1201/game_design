@@ -566,7 +566,10 @@ func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -
 	_press(at)
 	_release(at)
 	assert_signal_emitted_with_parameters(view, "route_clicked", [code, at])
-	assert_eq(view._pointer._routes().size(), 1, "a dashed line from the piece to its pennant")
+	var arrows: Array = view._pointer.orders()
+	assert_eq(arrows.size(), 1, "the march is its blue crayon arrow from the piece to its pennant, never a dashed line")
+	assert_eq(String(arrows[0]["kind"]), WarOrderArrows.SEALED)
+	assert_false(((view.get_node("%PlanHud") as WarPlanHud).orders_ink()["crayon"] as Array).is_empty(), "drawn in crayon")
 	CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, code, {"action_code": "ARMY_GARRISON"})
 	view.refresh()
 	assert_string_starts_with((pennants.pennant(code).get_node("Slip") as Label3D).text, "countermand riding · ")
@@ -582,17 +585,15 @@ func test_a_pennant_stands_where_the_order_goes_and_its_click_asks_the_route() -
 func test_the_hud_draws_rings_hints_a_marquee_and_the_live_layer_the_supply_road() -> void:
 	var hud: WarHud = view.get_node("%Hud")
 	var pal: Dictionary = repo.war_palette
-	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [], pal["ink"], null)
+	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"])
 	hud.set_supply([], pal["supply_route"])
 	assert_false(hud.drawing())
 	hud.draw_state([{"at": Vector2(40, 40), "r": 30.0, "colour": pal["plan_blue"]}], Rect2(), [], pal["plan_red"],
-		pal["chalk"], [], pal["ink"], null)
+		pal["chalk"])
 	assert_true(hud.drawing(), "a selection ring")
-	hud.draw_state([], Rect2(), [Vector2(80, 80)], pal["plan_red"], pal["chalk"], [], pal["ink"], null)
+	hud.draw_state([], Rect2(), [Vector2(80, 80)], pal["plan_red"], pal["chalk"])
 	assert_true(hud.drawing(), "an intel hint")
-	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [[Vector2(10, 10), Vector2(200, 10)]], pal["ink"], null)
-	assert_true(hud.drawing(), "a route alone is drawn")
-	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"], [], pal["ink"], null)
+	hud.draw_state([], Rect2(), [], pal["plan_red"], pal["chalk"])
 	hud.set_supply([{"at": Vector2(5, 5), "lit": true}], pal["supply_route"])
 	assert_true(hud.drawing(), "a lit town")
 	var live := view.get_node("%PlanHud") as WarPlanHud
@@ -606,7 +607,7 @@ func test_a_sheet_roll_hides_the_pennants() -> void:
 	view.swap_to((view.sheet_index() + 1) % WarSheets.series(repo).size())
 	view._process(0.01)
 	assert_false((view.get_node("%Pennants") as Node3D).visible, "pennants are put away while the sheet rolls")
-	assert_eq(view._pointer._routes(), [], "and so are their lines")
+	assert_eq(view._pointer.orders(), [], "and so are their arrows")
 	view._process(repo.bal("war_sheet_swap_s"))
 	assert_true((view.get_node("%Pennants") as Node3D).visible)
 
@@ -930,7 +931,7 @@ func test_a_draft_plants_a_pale_pennant_with_a_draft_slip() -> void:
 	assert_null((view.get_node("%Pennants") as WarPennants).pennant(code + "_draft"))
 
 
-func test_a_draft_is_drawn_as_a_pencil_line_from_its_piece() -> void:
+func test_a_draft_stays_a_blue_crayon_arrow_from_its_piece() -> void:
 	var p: Dictionary = {}
 	for q: Dictionary in WarRoom.pieces(repo, state):
 		if not bool(q["naval"]):
@@ -942,8 +943,15 @@ func test_a_draft_is_drawn_as_a_pencil_line_from_its_piece() -> void:
 	WarDrafts.plant(repo, state, String(p["code"]), "march", (p["at"] as Vector2).move_toward(rect.get_center(), 10.0))
 	view.refresh()
 	await wait_process_frames(2)
-	var hud := view.get_node("%PlanHud") as WarPlanHud   # the pencils lie under the crayon
-	assert_eq(hud.draft_lines().size(), 1)
+	var hud := view.get_node("%PlanHud") as WarPlanHud   # under the pending crayon
+	var arrows: Array = view._pointer.orders()
+	assert_eq(arrows.size(), 1, "one arrow")
+	assert_eq(String(arrows[0]["kind"]), WarOrderArrows.DRAFT, "pencilled: the paler draft arrow")
+	assert_eq(arrows[0]["members"], [String(p["code"])])
+	var crayon: Array = hud.orders_ink()["crayon"]
+	assert_false(crayon.is_empty(), "the arrow's crayon")
+	for c: Dictionary in crayon:
+		assert_eq(String(c["colour"]), "blue_draft")
 	assert_true(hud.drawing())
 
 
@@ -962,8 +970,8 @@ func test_a_resized_view_redraws_its_lines_where_the_pennants_now_stand() -> voi
 	await wait_process_frames(2)
 	view.size = Vector2(1300, 600)   # the room widens over the column
 	await wait_process_frames(2)
-	var hud := view.get_node("%PlanHud") as WarPlanHud
-	var end: Vector2 = hud.draft_lines()[0][1]
+	var line: PackedVector2Array = view._pointer.orders()[0]["lines"][0]
+	var end: Vector2 = line[line.size() - 1]
 	assert_almost_eq(end.distance_to(view.screen_pos_of_px(to)), 0.0, 1.0, "the line follows the view's new projection")
 
 
@@ -1160,3 +1168,58 @@ func _first_land_piece_anywhere() -> Dictionary:
 		if not bool(p["naval"]):
 			return p
 	return {}
+
+
+## Owner 2026-10-08 (spec 2026-10-08-war-room-draw-orders rulings 10, 19):
+## drafts on one drawn path are ONE arrow; the arrow a march being edited
+## draws is the pending one alone; sealed and marching, it stays an arrow
+## whose tail leaves the piece where it is drawn.
+func test_drafts_on_one_path_are_one_arrow_and_an_edited_one_is_the_pending_arrow() -> void:
+	view.lay_sheet(int(_first_land_piece_anywhere()["sheet"]))
+	await wait_process_frames(2)
+	var two := _land_pieces().slice(0, 2)
+	if two.size() < 2:
+		pending("two land pieces on a sheet")
+		return
+	var rect := view.sheet_rect()
+	var a := String(two[0]["code"])
+	var b := String(two[1]["code"])
+	var bend := ((two[0]["at"] as Vector2) + rect.get_center()) * 0.5
+	var to := rect.get_center()
+	WarDrafts.plant(repo, state, a, "march", to, [bend])
+	WarDrafts.plant(repo, state, b, "march", to, [])
+	view.refresh()
+	await wait_process_frames(1)
+	var arrows: Array = view._pointer.orders()
+	assert_eq(arrows.size(), 1, "one arrow for the order's group")
+	assert_eq(arrows[0]["members"], [a, b], "the lead (the bend) with its head, the other its feeder")
+	view.aim_code = a
+	view.aim_dest = to
+	view.aiming = true   # Edit route…: a's march is the pending blue arrow
+	view.redraw_marks()
+	var left: Array = view._pointer.orders()
+	assert_eq(left.size(), 1)
+	assert_eq(left[0]["members"], [b], "a's draft is drawn by the pending arrow alone")
+	view.aiming = false
+	view.aim_code = ""
+
+
+func test_a_marching_column_keeps_its_arrow_from_where_its_piece_is_drawn() -> void:
+	var p := _first_land_piece_anywhere()
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	var code := String(p["code"])
+	var to: Vector2 = (p["at"] as Vector2).move_toward(view.sheet_rect().get_center(), 10.0)
+	ArmySystem.set_march(repo, state, code, to)
+	view.refresh()
+	await wait_process_frames(1)
+	var arrows: Array = view._pointer.orders()
+	assert_eq(arrows.size(), 1)
+	assert_eq(String(arrows[0]["kind"]), WarOrderArrows.SEALED, "order received: full strength")
+	var line: PackedVector2Array = arrows[0]["lines"][0]
+	var node := (view.get_node("%Pieces") as WarPieces).piece(code)
+	var at := view.camera().unproject_position(node.global_position) / view.window_scale()
+	assert_almost_eq(line[0].distance_to(at), 0.0, 0.5, "the tail leaves the piece where it is drawn")
+	assert_almost_eq(line[line.size() - 1].distance_to(view.screen_pos_of_px(to)), 0.0, 1.0, "the head at the end")
+	for c: Dictionary in (view.get_node("%PlanHud") as WarPlanHud).orders_ink()["crayon"]:
+		assert_eq(String(c["colour"]), "blue")

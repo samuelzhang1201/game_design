@@ -218,7 +218,8 @@ var _ledger_select := ""
 ## slot clicked, then a real left drag from the selection along a bent path to
 ## that point (the blue arrow, then its confirm panel; --war-supply then
 ## clicks the nearest lit town on the table, the bold dashed gold road
-## following; --war-commit clicks its Confirm, so the drafts are pencilled;
+## following; --war-supply-list opens the Supply from list for real and
+## prints its rows; --war-commit clicks its Confirm, so the drafts are pencilled;
 ## --war-edit then clicks the regiment's draft pennant and its Edit route…,
 ## reopening the confirm with the pending blue arrow). --war-spread N stands
 ## N land regiments side by side in the field near the focus before the room
@@ -280,6 +281,7 @@ var _war_plan_draw: Array = []   # --war-plan-draw [side:]kind,fx1,fy1,fx2,fy2[;
 var _war_spread := 0             # --war-spread N: N land regiments stood side by side near the focus
 var _war_box := false            # --war-box: a real Shift-drag box round them
 var _war_supply := false         # --war-supply: a real click on the nearest lit town while the confirm stands
+var _war_supply_list := false    # --war-supply-list: a real click opening the confirm's Supply from list
 var _war_edit := false           # --war-edit: the draft pennant's Edit route… after the commit
 var _war_hint := false           # --war-hint: a spy report of foreign men seeded near the focus
 var _war_plan_select := ""       # --war-plan-select first|hint: the red selection by a real click
@@ -486,6 +488,7 @@ func _ready() -> void:
 	_war_commit = args.has("--war-commit")
 	_war_box = args.has("--war-box")
 	_war_supply = args.has("--war-supply")
+	_war_supply_list = args.has("--war-supply-list")
 	_war_edit = args.has("--war-edit")
 	_war_hint = args.has("--war-hint")
 	_war_board = args.has("--war-board") or _war_board_click.x >= 0.0
@@ -1336,6 +1339,12 @@ func _war_room_step() -> void:
 			print("war: bent from %s waypoints=%s" % [grab, menu.waypoints()])
 		if _war_supply and menu.shown_confirm() != null:
 			_war_click_supply(view, menu)
+		if _war_supply_list and menu.shown_confirm() != null:
+			for o: Dictionary in menu.shown_confirm().shown_supply():
+				print("war: supply row %s%s%s" % [o["label"], " [pressed]" if bool(o["selected"]) else "",
+					" — greyed: " + String(o["why"]) if bool(o["disabled"]) else ""])
+			var list := menu.shown_confirm().get_node("%SupplyTown") as OptionButton
+			_real_click(list, list.size * 0.5)
 		if _war_commit and menu.shown_confirm() != null:
 			var marching := menu.marching()
 			var ok := menu.shown_confirm().confirm_button()

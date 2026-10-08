@@ -5,7 +5,10 @@ extends Control
 ## dragged, the march pending on its confirm (spec 2026-10-08-war-room-draw-
 ## orders ruling 10), a chosen stroke's chalk handles and a chosen front's
 ## facing arrow (ruling 12) — in screen px, drawn as the plan layer draws
-## (WarPlanDraw) until the release paints them into plan_tex. Takes no mouse.
+## (WarPlanDraw) until the release paints them into plan_tex. Under them all,
+## every march's blue crayon arrow, drafted or sealed (ruling 19,
+## WarRoomPointer.orders), redrawn from the state so it follows its piece.
+## Takes no mouse.
 
 var _ink: Dictionary = {}
 var _look: Dictionary = {}
@@ -15,9 +18,8 @@ var _handle_r := 7.0
 var _facing: Dictionary = {}   # {at, dir}: a chosen front's facing arrow, screen px
 var _facing_len := 14.0
 var _road := PackedVector2Array()
-var _drafts: Array = []   # each draft's pencil line, a polyline in screen px (spec 2026-10-02-war-room-v2 §3.1)
-var _pencil := Color.GRAY
-var _repo: DataRepository
+var _orders: Dictionary = {}   # the marches' arrows, WarPlanInk's parts in screen px
+var _orders_look: Dictionary = {}
 var _gold := Color.GOLD
 var _road_w := 6.0
 var _road_dash := 16.0
@@ -47,18 +49,20 @@ func show_road(road: PackedVector2Array, gold: Color, width: float, dash: float)
 	queue_redraw()
 
 
-## The drafts' graphite pencils, UNDER every crayon (a pending march drawn
-## over a shared path hides them; spec 2026-10-08-war-room-draw-orders).
-func show_drafts(repo: DataRepository, drafts: Array, pencil: Color) -> void:
-	_repo = repo
-	_drafts = drafts
-	_pencil = pencil
+## Every march's blue crayon arrow, UNDER the pending march and the supply
+## road (spec 2026-10-08-war-room-draw-orders ruling 19).
+func show_orders(ink: Dictionary, look: Dictionary) -> void:
+	if ink.is_empty() and _orders.is_empty():
+		return
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	_orders = ink
+	_orders_look = look
 	queue_redraw()
 
 
-## The draft lines being drawn (tests read it).
-func draft_lines() -> Array:
-	return _drafts
+## The marches' arrows drawn now (tests read them).
+func orders_ink() -> Dictionary:
+	return _orders
 
 
 ## The road drawn now (tests read it).
@@ -84,17 +88,12 @@ func clear_live() -> void:
 ## True while anything is drawn (tests read it).
 func drawing() -> bool:
 	return not _ink.is_empty() or not _handles.is_empty() or not _facing.is_empty() or _road.size() >= 2 \
-		or not _drafts.is_empty()
+		or not (_orders.get("crayon", []) as Array).is_empty()
 
 
 func _draw() -> void:
-	if _repo != null:
-		for line: Variant in _drafts:
-			var r := PackedVector2Array(line)
-			if r.size() > 2:   # a route's curve, one stroke up to its last segment
-				draw_polyline(r.slice(0, r.size() - 1), _pencil, _repo.bal("war_draft_pencil_px"), true)
-			if r.size() >= 2:
-				_pencilled(r[r.size() - 2], r[r.size() - 1])
+	if not _orders.is_empty() and not _orders_look.is_empty():
+		WarPlanDraw.paint(self, _orders, _orders_look)
 	if _road.size() >= 2:
 		var edge := _gold.darkened(0.5)
 		var runs := WarPlanGeometry.dashes(_road, _road_dash, _road_dash * 0.5)
@@ -118,23 +117,3 @@ func _draw() -> void:
 		draw_circle(at, _facing_len * 0.75, Color(_chalk, 0.3))
 		draw_line(tail, tip - d * _facing_len * 0.3, _chalk, 2.5, true)
 		draw_colored_polygon(PackedVector2Array([tip, tip - d * _facing_len * 0.45 + side, tip - d * _facing_len * 0.45 - side]), _chalk)
-
-
-## A draft's pencil stroke from the piece to its pennant: solid graphite, not
-## the map's dashes (taste: a tool never borrows the map's line language),
-## ending in a small open arrowhead; dashed only if war_draft_pencil_dash_px > 0.
-func _pencilled(a: Vector2, b: Vector2) -> void:
-	var width := _repo.bal("war_draft_pencil_px")
-	var dash := _repo.bal("war_draft_pencil_dash_px")
-	if dash > 0.0:
-		for d: PackedVector2Array in WarPlanGeometry.dashes(PackedVector2Array([a, b]), dash, dash):
-			draw_polyline(d, _pencil, width, true)
-	else:
-		draw_line(a, b, _pencil, width, true)
-	var head := _repo.bal("war_draft_head_px")
-	if a.distance_to(b) <= head * 2.0:
-		return
-	var dir := (b - a).normalized()
-	var side := Vector2(-dir.y, dir.x)
-	var tail := b - dir * head
-	draw_polyline(PackedVector2Array([tail + side * head * 0.55, b, tail - side * head * 0.55]), _pencil, width, true)

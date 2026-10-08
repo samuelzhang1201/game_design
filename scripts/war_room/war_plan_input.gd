@@ -521,7 +521,7 @@ func redraw_live() -> void:
 
 ## The march pending on the confirm (the view's aim_group, set by the order
 ## menu): each regiment's walked curve in blue crayon, the lead's an arrow
-## with its head, the others a plain crayon line joining it.
+## with its head, the others a plain crayon line joining it (WarOrderArrows).
 func _pending_order(ink: Dictionary, mm: float) -> void:
 	if not _view.aiming or _view.aim_dest.x < 0.0 or _view.aim_code == "" or _view.rolling():
 		return
@@ -530,26 +530,9 @@ func _pending_order(ink: Dictionary, mm: float) -> void:
 	codes.erase(_view.aim_code)
 	codes.sort()
 	codes.push_front(_view.aim_code)
+	var lines: Array = []
 	for code: String in codes:
 		var wps: Array = Array(_view.aim_waypoints) if code == _view.aim_code else Array(group[code])
-		var curve := ArmySystem.curve_px(_repo, _view.position_of(code), wps, _view.aim_dest)
-		var ctrl := PackedVector2Array()
-		# the curve leaves the piece where it is drawn (spread clear of its neighbours)
-		var piece := _view.piece_node(code)
-		if piece != null and not _view.camera().is_position_behind(piece.global_position) and curve.size() > 0:
-			curve = curve.slice(1)
-			ctrl.append(_view.camera().unproject_position(piece.global_position) / _view.window_scale())
-		for p: Vector2 in curve:
-			var at: Variant = _view.screen_pos_of_px(p)
-			if at == null:
-				ctrl = PackedVector2Array()
-				break
-			ctrl.append(at)
-		# the crayon starts at the plinth's edge: a mark on the sheet never lies on a standing piece
-		ctrl = WarPlanGeometry.cut(ctrl, _repo.bal("war_pick_px") * 0.85, WarPlanGeometry.length(ctrl))
-		if ctrl.size() < 2:
-			continue
-		var kind := "arrow" if code == _view.aim_code else "phase"
-		var s := {"kind": kind, "colour": "blue", "dashed": 0, "flip": 0, "name": "", "width_mm": _repo.bal("war_order_feeder_mm")}
-		var k: Dictionary = _repo.war_plan_kinds[kind] if code == _view.aim_code else {"gesture": "path", "pen": false, "head": false, "teeth": false}
-		WarPlanInk.add(_repo, ink, s, k, ctrl, 0.0, mm)
+		lines.append(WarOrderArrows.screen_line(_repo, _view, code, _view.position_of(code), wps, _view.aim_dest))
+	# the crayon starts at the plinth's edge: a mark on the sheet never lies on a standing piece
+	WarOrderArrows.add(_repo, ink, lines, "blue", _repo.bal("war_pick_px") * 0.85, mm)

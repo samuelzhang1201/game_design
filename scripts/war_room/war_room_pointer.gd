@@ -8,9 +8,10 @@ extends RefCounted
 ## table lets the selection go. A drag pans, from a piece too (orders are
 ## DRAWN: WarPlanInput). While the confirm stands, a press near the pending
 ## route bends it. Draws through WarHud: the selection's rings in its side's
-## colour, the chalk marquee, the intel hints' marching ants, the pennants'
-## dashes, the drafts' pencils (none for the regiment whose march is being
-## edited), the waypoints' rings and the towns that may supply the march.
+## colour, the chalk marquee, the intel hints' marching ants, every march's
+## BLUE CRAYON ARROW — drafted or sealed, never a dashed line (WarOrderArrows;
+## none for a regiment whose march the confirm is drawing), the waypoints'
+## rings and the towns that may supply the march.
 ## Never reaches the Game autoload.
 
 var _bend := -1                   # the planned route's waypoint in hand, -1 none
@@ -96,8 +97,7 @@ func on_motion(mm: InputEventMouseMotion) -> void:
 
 
 ## The HUD's marks: the selection's rings, the marquee, the hints, the
-## pennants' dashes, the drafts' pencils, the pending route's rings, the
-## supply pick.
+## marches' arrows, the pending route's rings, the supply pick.
 func redraw() -> void:
 	var pal: Dictionary = _repo.war_palette
 	var input := _view.plan_input()
@@ -113,8 +113,14 @@ func redraw() -> void:
 			var at: Variant = _view.screen_pos_of_px(h["at"])
 			if at != null:
 				hints.append(at)
-	_hud.draw_state(rings, input.marquee(), hints, pal["plan_red"], pal["chalk"], _routes(), pal["ink"], _view.lettering())
-	_plan_hud.show_drafts(_repo, _drafts(), pal["pencil"])   # under the crayon
+	_hud.draw_state(rings, input.marquee(), hints, pal["plan_red"], pal["chalk"])
+	var groups := orders() if _view.sheet_index() >= 0 else []
+	if groups.is_empty():
+		_plan_hud.show_orders({}, {})
+	else:   # under the pending crayon
+		var mm := input.px_per_mm(_view.sheet_rect().get_center())
+		_plan_hud.show_orders(_order_ink(groups, mm),
+			WarRoomInk.plan_look(_repo, WarRoomInk.tooth(), mm, _view.lettering(), _view.caps_font()))
 	_hud.set_route(_handles(_view.aim_code if _view.aiming else ""), pal["plan_blue"])
 	_hud.set_supply(_supply_rings(), pal["supply_route"])
 
@@ -162,63 +168,56 @@ func _supply_rings() -> Array:
 	return out
 
 
-## Each pennant's dashed line from its piece (where we know it stands) to the
-## pennant, in screen px; none while the table rolls.
-func _routes() -> Array:
+## Every march of ours on the laid sheet as its blue crayon arrow (owner
+## 2026-10-08, spec 2026-10-08-war-room-draw-orders rulings 10, 19): each
+## SEALED march (its pennant on the sheet: riding, received, countermanded)
+## and each DRAFT (not one the confirm is drawing again), from where its piece
+## is drawn along the curve the column will walk to its end — so a marching
+## arrow shortens as the piece advances. Columns on one drawn path are one
+## arrow (WarOrderArrows.group). None while the table rolls.
+## [{lead, kind, dest, members, lines: screen polylines, the lead's first}].
+func orders() -> Array:
 	var out: Array = []
 	if _view.rolling():
 		return out
 	var state := _view.state()
+	var rows: Array = []
+	var from := {}
+	var rect := _view.sheet_rect()
 	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
-		var pen := WarRoom.pennant_of(_repo, state, String(p["code"]))
-		if pen.is_empty() or not _view.sheet_rect().has_point(pen["at"]):
-			continue
-		var bend := _pennant_waypoints(String(p["code"]), pen)
-		var node := _pieces.piece(String(p["code"]))   # where the piece stands now, mid-push included
-		var a: Variant = _view.screen_pos_of_px(p["at"]) if node == null or _camera.is_position_behind(node.global_position) \
-			else _camera.unproject_position(node.global_position) / _view.window_scale()
-		var b: Variant = _view.screen_pos_of_px(pen["at"])
-		if a != null and b != null:
-			out.append(_screen_curve(p["at"], pen["at"], a, bend) if not bend.is_empty() else PackedVector2Array([a, b]))
-	return out
-
-
-## Each march draft's pencil line from its piece to its draft pennant, in
-## screen px (spec 2026-10-02-war-room-v2 §3.1); none while the table rolls.
-func _drafts() -> Array:
-	var out: Array = []
-	if _view.rolling():
-		return out
-	var state := _view.state()
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
-		var d := WarDrafts.of(state, String(p["code"]))
-		if String(d.get("order", "")) != WarDrafts.MARCH or (_view.aiming and String(p["code"]) == _view.aim_code):
-			continue   # a draft being re-drawn shows only as the pending blue arrow
+		var code := String(p["code"])
+		from[code] = p["at"]
+		var pen := WarRoom.pennant_of(_repo, state, code)
+		if not pen.is_empty() and rect.has_point(pen["at"]):
+			rows.append({"code": code, "kind": WarOrderArrows.SEALED, "dest": pen["at"], "wps": _pennant_waypoints(code, pen)})
+		var d := WarDrafts.of(state, code)
+		if String(d.get("order", "")) != WarDrafts.MARCH \
+				or (_view.aiming and (code == _view.aim_code or _view.aim_group.has(code))):
+			continue   # a draft being drawn again shows only as the pending arrow
 		var to := WarDrafts.dest_px(_repo, d)
-		if not _view.sheet_rect().has_point(to):
-			continue
-		var node := _pieces.piece(String(p["code"]))
-		var a: Variant = _view.screen_pos_of_px(p["at"]) if node == null or _camera.is_position_behind(node.global_position) \
-			else _camera.unproject_position(node.global_position) / _view.window_scale()
-		var b: Variant = _view.screen_pos_of_px(to)
-		if a != null and b != null:
-			var wps := Array(WarDrafts.waypoints_px(_repo, d))
-			out.append(_screen_curve(p["at"], to, a, wps) if not wps.is_empty() else PackedVector2Array([a, b]))
+		if rect.has_point(to):
+			rows.append({"code": code, "kind": WarOrderArrows.DRAFT, "dest": to, "wps": Array(WarDrafts.waypoints_px(_repo, d))})
+	for g: Dictionary in WarOrderArrows.group(rows):
+		var lines: Array = []
+		for c: String in g["members"]:
+			var row: Dictionary = rows.filter(func(r: Dictionary) -> bool:
+				return String(r["code"]) == c and String(r["kind"]) == String(g["kind"]))[0]
+			lines.append(WarOrderArrows.screen_line(_repo, _view, c, from[c], row["wps"], g["dest"]))
+		g["lines"] = lines
+		out.append(g)
 	return out
 
 
-## The curve from `from_px` through `waypoints` (the planned ones when none are
-## given) to `to_px`, in screen px, its first point `start` (where the piece
-## stands drawn) — the line the column will walk (ArmySystem.curve_px).
-func _screen_curve(from_px: Vector2, to_px: Vector2, start: Vector2, waypoints: Variant = null) -> PackedVector2Array:
-	var wps: Array = Array(_view.aim_waypoints) if waypoints == null else waypoints
-	var out := PackedVector2Array([start])
-	var curve := ArmySystem.curve_px(_repo, from_px, wps, to_px)
-	for i in range(1, curve.size()):
-		var at: Variant = _view.screen_pos_of_px(curve[i])
-		if at != null:
-			out.append(at)
-	return out
+## The arrows' crayon, `mm` screen px a table mm: the sealed ones first, the
+## drafts (paler, a pencil edge: palette plan_blue_draft) over them.
+func _order_ink(groups: Array, mm: float) -> Dictionary:
+	var ink := {"crayon": [], "pen": [], "names": []}
+	for kind: String in [WarOrderArrows.SEALED, WarOrderArrows.DRAFT]:
+		for g: Dictionary in groups:
+			if String(g["kind"]) == kind:
+				WarOrderArrows.add(_repo, ink, g["lines"], "blue_draft" if kind == WarOrderArrows.DRAFT else "blue",
+					_repo.bal("war_pick_px") * 0.85, mm)
+	return ink
 
 
 ## A pennant's waypoints still ahead: a riding march courier's, else the column's.

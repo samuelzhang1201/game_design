@@ -4,9 +4,9 @@ extends Control
 ## 2026-10-08-war-room-draw-orders rulings 13, 14, 16, 18), in screen px: the
 ## selection's rings in its side's colour, Shift-drag's chalk marquee, every
 ## intel hint as a red ring of MARCHING ANTS (its dashes walk round as `phase`
-## turns — redrawn each frame, never baked into a sheet's ink), each pennant's
-## dashed route, the pending route's waypoint
-## rings, the towns that may supply a pending march (lit, or faint) and the
+## turns — redrawn each frame, never baked into a sheet's ink), the pending
+## route's waypoint rings (the marches themselves are crayon arrows in
+## WarPlanHud), the towns that may supply a pending march (lit, or faint) and the
 ## BOLD DASHED GOLD road from the chosen one to the march's end. Draws only
 ## what WarRoomPointer hands it.
 
@@ -17,9 +17,6 @@ var _hints: Array = []          # screen px of each intel hint
 var _hint_c := Color.RED
 var _chalk_c := Color.WHITE
 var _phase := 0.0               # the ants' march, design px along the ring
-var _routes: Array = []   # each piece's dashed line to its pennant, a polyline in screen px (its route's curve)
-var _ink := Color.BLACK
-var _font: Font
 var _handles := PackedVector2Array()  # the pending route's waypoints' rings
 var _handle_c := Color.BLUE
 var _towns: Array = []                # [{at, lit}]: the towns that may supply the pending march
@@ -30,16 +27,12 @@ func setup(repo: DataRepository) -> void:
 	_repo = repo
 
 
-func draw_state(rings: Array, marquee: Rect2, hints: Array, hint_c: Color, chalk_c: Color, routes: Array,
-		ink: Color, font: Font) -> void:
+func draw_state(rings: Array, marquee: Rect2, hints: Array, hint_c: Color, chalk_c: Color) -> void:
 	_rings = rings
 	_marquee = marquee
 	_hints = hints
 	_hint_c = hint_c
 	_chalk_c = chalk_c
-	_routes = routes
-	_ink = ink
-	_font = font
 	queue_redraw()
 
 
@@ -71,21 +64,8 @@ func marks() -> Dictionary:
 
 ## True when anything is drawn.
 func drawing() -> bool:
-	return not _rings.is_empty() or not _routes.is_empty() or not _hints.is_empty() \
+	return not _rings.is_empty() or not _hints.is_empty() \
 		or not _towns.is_empty() or _marquee.has_area()
-
-
-## A dashed line from `a` to `b` (the dash war_hud_dash_px unless `dash` is
-## given, the gap its own length).
-func _dashed(a: Vector2, b: Vector2, color: Color, width: float, dash := -1.0) -> void:
-	var dir := (b - a).normalized()
-	if dash <= 0.0:
-		dash = _repo.bal("war_hud_dash_px")
-	var run := a.distance_to(b)
-	var at := 0.0
-	while at < run:
-		draw_line(a + dir * at, a + dir * minf(at + dash, run), color, width, true)
-		at += dash * 2.0
 
 
 ## A ring of dashes `dash` long (the gap as long), walked round by `phase`.
@@ -104,12 +84,6 @@ func _draw() -> void:
 		var lit := bool(t["lit"])
 		var r := _repo.bal("war_supply_lit_px")
 		draw_arc(t["at"], r, 0.0, TAU, 28, Color(_gold, 1.0 if lit else 0.35), 3.0 if lit else 1.5, true)
-	for line: Variant in _routes:
-		var r := PackedVector2Array(line)
-		if r.size() > 2:   # a route's curve: the dashes run on across its joints
-			draw_multiline(MapRuler.dash_pieces(r, _repo.bal("war_hud_dash_px")), _ink, _repo.bal("war_hud_arrow_px"), true)
-		elif r.size() == 2:
-			_dashed(r[0], r[1], _ink, _repo.bal("war_hud_arrow_px"))
 	for h in _handles:
 		draw_circle(h, _repo.bal("war_route_handle_px"), Color(_chalk_c, 0.85))
 		draw_arc(h, _repo.bal("war_route_handle_px"), 0.0, TAU, 20, _handle_c, 2.0, true)
