@@ -177,3 +177,60 @@ func test_a_raised_tax_drifts_as_the_old_order_did() -> void:
 	var plain := OpinionDrift.signature_for(repo, "LAW_SET", {"law": "plunder", "value": "allow"})
 	for ax: String in plain:
 		assert_eq(float(plain[ax]), 0.0, "a law with no old signature drifts no one")
+
+
+## A re-send (R5) is no change of law: neither drift nor the law's cost ops
+## move any opinion, for a choice law (whose signature row names its value)
+## as for a range law (whose rows name a direction).
+func _resend_moves_no_opinion(law: String, value: String) -> void:
+	s.tick += 10
+	assert_eq(actions.validate(_law(law, value), s), "", law + " decreed")
+	actions.execute(_law(law, value), s)
+	s.couriers.remove_at(0)
+	assert_eq(actions.validate(_law(law, value), s), "", law + " may ride again")
+	var before := OrderCosts.snapshot_opinions(s)
+	var preview := LawSystem.preview(repo, s, law, value)
+	var gold := float(s.metrics["treasury"])
+	var out := actions.execute(_law(law, value), s)
+	assert_eq((out["drift"] as Array).size(), 0, law + ": a re-send drifts no one")
+	assert_eq(OrderCosts.snapshot_opinions(s), before, law + ": every councillor's opinion unchanged")
+	assert_eq(int(round(gold - float(s.metrics["treasury"]))), int(preview["gold"]) + int(preview["fee"]),
+		law + ": the preview quotes the re-send")
+	assert_eq(int(preview["gold"]), int(OrderCosts.gold_of(repo, "LAW_SET")), "the order's row alone")
+
+
+func test_a_resend_of_a_choice_law_drifts_no_one() -> void:
+	_resend_moves_no_opinion("church_policy", "endow")
+
+
+func test_a_resend_of_a_range_law_drifts_no_one() -> void:
+	_resend_moves_no_opinion("tax_rate", _other_tax())
+
+
+func test_a_wrong_typed_law_param_is_refused_not_a_crash() -> void:
+	assert_eq(actions.validate(ActionRequest.make("LAW_SET", {"law": 5, "value": null}), s), "No such law: 5")
+	assert_eq(actions.validate(ActionRequest.make("LAW_SET", {"law": null, "value": 3}), s), "No such law: <null>")
+	assert_eq(actions.validate(ActionRequest.make("LAW_SET", {"value": "on"}), s), "No such law: ")
+	assert_eq(actions.validate(_law("tax_rate", null), s), "<null> is not a value of Tax rate")
+	assert_eq(actions.validate(_law("plunder", ["allow"]), s), "[\"allow\"] is not a value of Plunder")
+	var out := OrderPipeline.apply_order(repo, s, TickEngine.new(repo),
+		[ActionRequest.make("LAW_SET", {"law": 5, "value": null})], [],
+		{"addressed": [], "tone": "neutral", "promises": []}, "order")
+	assert_eq(out["executed"].size(), 0)
+	assert_eq(out["rejected"].size(), 1)
+	assert_eq(String(out["rejected"][0]["error"]), "No such law: 5")
+
+
+func test_a_range_value_is_stored_in_plain_digits() -> void:
+	var now := int(LawSystem.decreed(repo, s, "tax_rate"))
+	var to := now + 1 if now < 9 else now - 1
+	var padded := "0%d" % to
+	assert_eq(actions.validate(_law("tax_rate", padded), s), "")
+	actions.execute(_law("tax_rate", padded), s)
+	assert_eq(String(s.law_decree["tax_rate"]["value"]), str(to), "stored as its digits")
+	assert_eq(String(s.couriers[0]["order"]["value"]), str(to), "and carried so")
+	assert_eq(actions.validate(_law("tax_rate", str(to)), s), "Tax rate is already %d" % to,
+		"the plain digits are the same value")
+	assert_eq(actions.validate(_law("tax_rate", "+%d" % to), s), "Tax rate is already %d" % to)
+	assert_eq(LawSystem.decree(repo, s, "justice_severity", "04").size() > 0, true)
+	assert_eq(String(s.law_decree["justice_severity"]["value"]), "4")

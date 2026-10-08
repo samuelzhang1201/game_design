@@ -144,6 +144,16 @@ static func value_text(raw: Variant) -> String:
 	return str(raw).strip_edges()
 
 
+## A param as the law's own value: `value_text`, and a range's whole number
+## in its plain digits ("06" and "+6" are "6"), so the stored value is one
+## spelling and an unchanged value reads as unchanged.
+static func canonical(repo: DataRepository, law: String, raw: Variant) -> String:
+	var text := value_text(raw)
+	if String(def(repo, law).get("kind", "")) == "range" and text.is_valid_int():
+		return str(int(text))
+	return text
+
+
 ## Whether `text` is one of the law's values: a range's whole number inside
 ## its bounds, a toggle's or a choice's name.
 static func allowed(repo: DataRepository, law: String, text: String) -> bool:
@@ -264,15 +274,24 @@ static func _ops_gold(ops: String) -> int:
 
 
 ## The gold a decree of `law` costs besides its couriers: the order's own row
-## (order_costs.csv), the law's gold_cost and its cost ops' gold.
-static func order_gold(repo: DataRepository, law: String) -> int:
+## (order_costs.csv), the law's gold_cost and its cost ops' gold. A re-send
+## (R5) changes no law, so it pays the order's row alone.
+static func order_gold(repo: DataRepository, law: String, resend := false) -> int:
 	var d := def(repo, law)
+	if resend:
+		return int(OrderCosts.gold_of(repo, ACTION))
 	return int(OrderCosts.gold_of(repo, ACTION)) + int(d.get("gold_cost", 0)) + _ops_gold(String(d.get("cost_ops", "")))
+
+
+## Whether a decree of `value` would re-send the standing decree (R5).
+static func is_resend(repo: DataRepository, state: GameState, law: String, value: Variant) -> bool:
+	return _resend(repo, state, law, canonical(repo, law, value))
 
 
 ## Why a decree of `law` to `value` (a law's String) is refused; "" when it
 ## may be sent. ActionSystem's LAW_SET validation and the screen's preview.
 static func refusal(repo: DataRepository, state: GameState, law: String, value: String) -> String:
+	value = canonical(repo, law, value)
 	var d := def(repo, law)
 	if d.is_empty():
 		return "No such law: " + law
@@ -287,7 +306,7 @@ static func refusal(repo: DataRepository, state: GameState, law: String, value: 
 	var n := recipients(repo, state, law, resend).size()
 	if n == 0:
 		return "No place to send it to"
-	if float(state.metrics.get("treasury", 0.0)) < float(order_gold(repo, law) + n * CourierSystem.fee_gold(repo, CourierSystem.ORDINARY)):
+	if float(state.metrics.get("treasury", 0.0)) < float(order_gold(repo, law, resend) + n * CourierSystem.fee_gold(repo, CourierSystem.ORDINARY)):
 		return "The chancery cannot pay the couriers"
 	return ""
 
@@ -296,15 +315,17 @@ static func refusal(repo: DataRepository, state: GameState, law: String, value: 
 ## (one ordinary fee a courier), gold (order_gold), max_days (the longest
 ## ride), refusal}. ActionSystem charges exactly gold + fee.
 static func preview(repo: DataRepository, state: GameState, law: String, value: String) -> Dictionary:
+	value = canonical(repo, law, value)
 	var why := refusal(repo, state, law, value)
 	if def(repo, law).is_empty() or not allowed(repo, law, value):
 		return {"couriers": 0, "fee": 0, "gold": 0, "max_days": 0, "refusal": why}
-	var to := recipients(repo, state, law, _resend(repo, state, law, value))
+	var resend := _resend(repo, state, law, value)
+	var to := recipients(repo, state, law, resend)
 	var longest := 0
 	for r: Dictionary in to:
 		longest = maxi(longest, CourierSystem.eta_days_to(repo, state, CourierSystem.ORDINARY, r["to_px"]))
 	return {"couriers": to.size(), "fee": to.size() * CourierSystem.fee_gold(repo, CourierSystem.ORDINARY),
-		"gold": order_gold(repo, law), "max_days": longest, "refusal": why}
+		"gold": order_gold(repo, law, resend), "max_days": longest, "refusal": why}
 
 
 ## Decree `law` to `value` (validated by the caller): a new value is a new
@@ -313,6 +334,7 @@ static func preview(repo: DataRepository, state: GameState, law: String, value: 
 ## places it is missing in (R5). Returns the couriers sent, in scope-key order.
 ## Charges nothing: the fees are ActionSystem's ledger lines.
 static func decree(repo: DataRepository, state: GameState, law: String, value: String) -> Array:
+	value = canonical(repo, law, value)
 	var resend := _resend(repo, state, law, value)
 	var to := recipients(repo, state, law, resend)
 	if not resend:

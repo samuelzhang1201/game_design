@@ -296,8 +296,9 @@ func _validate_supply(req: ActionRequest, state: GameState) -> String:
 ## cooldown, somewhere to send it, and a chest that pays every courier —
 ## LawSystem.refusal, the screen's preview's own words.
 func _validate_law(req: ActionRequest, state: GameState) -> String:
-	return LawSystem.refusal(data, state, String(req.params.get("law", "")),
-		LawSystem.value_text(req.params.get("value", "")))
+	# str(), not String(): a model may send a number or null for either
+	var law := str(req.params.get("law", ""))
+	return LawSystem.refusal(data, state, law, LawSystem.canonical(data, law, req.params.get("value", "")))
 
 ## The manor an order names: params.manor (a code, a label in any case, or
 ## a cell id) or params.cell. -1 for none.
@@ -879,18 +880,20 @@ func _send_courier(state: GameState, effects: Array, code: String, order: Dictio
 ## (LawSystem.decree), one ordinary fee a courier as one ledger line, and a
 ## "law" line saying how many ride and how long the last takes. Returns the
 ## params the opinion drift reads: a range law's `delta` (new − old) beside
-## the law and value, so its signature variant knows the direction.
+## the law and value, so its signature variant knows the direction. A
+## re-send (R5) changes no law: it pays neither the law's gold nor its cost
+## ops, and its drift params match no variant but the blank, drift-free row.
 func _decree(state: GameState, effects: Array, req: ActionRequest) -> Dictionary:
-	var law := String(req.params["law"])
-	var value := LawSystem.value_text(req.params["value"])
+	var law := str(req.params["law"])
+	var value := LawSystem.canonical(data, law, req.params["value"])
 	var d := LawSystem.def(data, law)
 	var label := String(d["label"])
 	var was := LawSystem.decreed(data, state, law)
-	if int(d["gold_cost"]) > 0:
+	var again := LawSystem.is_resend(data, state, law, value)
+	if int(d["gold_cost"]) > 0 and not again:
 		_apply(state, effects, "treasury", -float(int(d["gold_cost"])), "the decree on " + label.to_lower())
-	if String(d["cost_ops"]) != "":
+	if String(d["cost_ops"]) != "" and not again:
 		effects.append_array(EventEffects.apply(String(d["cost_ops"]), state, data, "the decree on " + label.to_lower()))
-	var again := was == value
 	var sent := LawSystem.decree(data, state, law, value)
 	var n := sent.size()
 	_apply(state, effects, "treasury", -float(n * CourierSystem.fee_gold(data, CourierSystem.ORDINARY)),
@@ -902,8 +905,10 @@ func _decree(state: GameState, effects: Array, req: ActionRequest) -> Dictionary
 	effects.append({"metric": "law", "delta": 0.0, "reason": "%s %s %s: %d courier%s, the last in about %d day%s" % [
 		label, "sent again as" if again else "decreed", LawSystem.value_label(data, value).to_lower(),
 		n, "" if n == 1 else "s", last, "" if last == 1 else "s"]})
+	if again:
+		return {"law": law, "resend": 1}
 	var out := {"law": law, "value": value}
-	if String(d["kind"]) == "range" and not again:
+	if String(d["kind"]) == "range":
 		out["delta"] = int(value) - int(was)
 	return out
 
