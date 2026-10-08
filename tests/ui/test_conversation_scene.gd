@@ -714,6 +714,23 @@ func test_an_option_tells_its_tradeoff() -> void:
 	await wait_process_frames(2)
 	assert_string_contains(c.reply_buttons()[0].tooltip_text, "Gold and grumbling.")
 
+## A decree's option quotes what the decree really costs: the order, the
+## law's own gold and one fee a courier (LawSystem.preview), not the order
+## row's single gold piece.
+func test_a_law_option_quotes_the_whole_decree() -> void:
+	Game.start_campaign(42)
+	var now := int(LawSystem.decreed(Game.data, Game.state, "justice_severity"))
+	var req := ActionRequest.make("LAW_SET", {"law": "justice_severity", "value": str(now + 1)})
+	var pv := LawSystem.preview(Game.data, Game.state, "justice_severity", str(now + 1))
+	assert_gt(int(pv["fee"]), 0, "couriers ride with a decree")
+	var sug := {"seat": "chancellor", "request": req,
+		"pitch_key": "harsh_justice", "tradeoff": "Order through fear."}
+	var c := _scene_with([{"kind": "minister", "portrait_id": "char_chancellor",
+		"speaker": "The Chancellor", "text": "The courts?", "suggestions": [sug]}], TickReport.new())
+	await wait_process_frames(2)
+	assert_string_contains(c.reply_buttons()[0].tooltip_text,
+		"Costs %d gold" % (int(pv["gold"]) + int(pv["fee"])))
+
 ## A narration or council beat has no person, so no dossier — the talk takes
 ## the whole right column.
 func test_no_dossier_without_a_person() -> void:

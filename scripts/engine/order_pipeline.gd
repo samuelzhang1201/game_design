@@ -62,6 +62,9 @@ static func apply_order(data: DataRepository, state: GameState, engine: TickEngi
 
 ## "treasury -40: surveyors hired, grain +5: a gift" — every effect with its
 ## reason, whatever its kind, so the numbers and their causes read together.
+## A law moved by an event reads "Tariff rate 3 → 4: <reason>"; a decree's
+## own line (ActionSystem's "law" pseudo-metric) is its reason alone, which
+## already names the law and its value.
 static func describe_effects(effects: Array, state: GameState) -> String:
 	var parts: Array[String] = []
 	for e in effects:
@@ -72,7 +75,16 @@ static func describe_effects(effects: Array, state: GameState) -> String:
 				var m := String(e.get("metric", ""))
 				if m == "promise":
 					continue
+				if m == "law":
+					parts.append(String(e.get("reason", "")))
+					continue
 				what = m.replace("_", " ")
+			"law":
+				var reason_l := String(e.get("reason", ""))
+				parts.append("%s %s → %s%s" % [String(e.get("label", e.get("law", ""))),
+					String(e.get("was", "")), String(e.get("value", "")),
+					(": " + reason_l) if reason_l != "" else ""])
+				continue
 			"opinion":
 				what = _name(state, String(e.get("character_id", ""))) + " opinion"
 			"attribute":

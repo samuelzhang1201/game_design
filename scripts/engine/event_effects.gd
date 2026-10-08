@@ -46,7 +46,8 @@ static func apply(ops: String, state: GameState, data: DataRepository,
 				if l.has("error"):
 					push_error("EventEffects: " + String(l["error"]))
 				else:
-					var lr := {"kind": "law", "law": p[1], "value": String(l["value"]),
+					var lr := {"kind": "law", "law": p[1], "label": String(LawSystem.def(data, p[1])["label"]),
+						"value": String(l["value"]),
 						"was": String(l["was"]), "reason": p[3] if p.size() > 3 and p[3] != "" \
 							else (reason_label if reason_label != "" else "an event changed the law")}
 					if String(LawSystem.def(data, p[1])["kind"]) == "range":

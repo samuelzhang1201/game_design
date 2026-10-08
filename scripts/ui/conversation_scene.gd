@@ -932,7 +932,8 @@ func _advance() -> void:
 
 ## What an option costs and trades, on hover — CK3 shows an option's effects
 ## before it is taken. The trade-off is the pitch's own words; the gold is
-## OrderCosts' price for the action.
+## OrderCosts' price for the action, or for a decree LawSystem.preview's whole
+## charge (the order, the law's own gold and one fee a courier).
 func _option_tooltip(sug: Dictionary) -> String:
 	var lines: Array = []
 	var tradeoff := String(sug.get("tradeoff", ""))
@@ -941,6 +942,10 @@ func _option_tooltip(sug: Dictionary) -> String:
 	var request = sug.get("request")
 	if request != null:
 		var gold := OrderCosts.gold_of(Game.data, String(request.action_code))
+		if String(request.action_code) == LawSystem.ACTION:
+			var pv := LawSystem.preview(Game.data, Game.state, str(request.params.get("law", "")),
+				str(request.params.get("value", "")))
+			gold = float(int(pv["gold"]) + int(pv["fee"]))
 		if gold > 0.0:
 			lines.append("Costs %d gold" % int(gold))
 	return "\n".join(lines)

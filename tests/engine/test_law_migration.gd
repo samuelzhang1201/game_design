@@ -169,3 +169,23 @@ func test_the_trigger_reads_the_law_stamp() -> void:
 	assert_true(TriggerDsl.evaluate("action_since=LAW_tariff_rate:24", s, repo))
 	s.tick = 65
 	assert_false(TriggerDsl.evaluate("action_since=LAW_tariff_rate:24", s, repo))
+
+
+## An event's law change and a typed decree each print their ledger line
+## (OrderPipeline.describe_effects), naming the law and its values, never
+## a bare "law +0".
+func test_an_event_law_change_prints_its_ledger_line() -> void:
+	var was := int(LawSystem.decreed(repo, s, "tariff_rate"))
+	engine.events._fire("ev_07", s)
+	var res := engine.events.apply_choice("tariff", s)
+	var line := OrderPipeline.describe_effects(res["effects"], s)
+	assert_string_contains(line, "Tariff rate %d → %d" % [was, was + 1])
+	assert_string_contains(line, String(res["label"]))
+
+
+func test_a_typed_decree_prints_its_reason_not_a_zero() -> void:
+	var out := OrderPipeline.apply_order(repo, s, engine, [_law("tax_rate", "7")], [], {}, "order")
+	assert_eq(out["executed"].size(), 1)
+	var ledger := "\n".join(out["ledger"])
+	assert_string_contains(ledger, "Tax rate decreed 7: ")
+	assert_false(ledger.contains("law +0"), ledger)
