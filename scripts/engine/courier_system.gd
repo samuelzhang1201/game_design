@@ -300,6 +300,8 @@ static func ride_day(repo: DataRepository, state: GameState) -> Array:
 		if _ride(repo, state, c, today, events):
 			keep.append(c)
 	state.couriers = keep
+	# a decree whose last courier is home files its reach letter (laws spec §3)
+	LawSystem.close_rides(repo, state, events)
 	return events
 
 
@@ -563,6 +565,7 @@ static func _event(type: String, c: Dictionary, weather: String = "") -> Diction
 	if String(order.get("action_code", "")) == LawSystem.ACTION:
 		e["law"] = String(order.get("law", ""))
 		e["value"] = String(order.get("value", ""))
+		e["decree_id"] = int(order.get("decree_id", 0))
 	return e
 
 
@@ -629,6 +632,51 @@ static func headline(repo: DataRepository, e: Dictionary) -> String:
 				return "The spy riding for %s is held up by %s." % [String(e["place"]), wx]
 			return "The courier to %s is held up by %s." % [label, wx]
 	return ""
+
+
+## The news bar's lines for a batch of courier events (setting_out's, or a
+## day's ride_day), in order. A decree's couriers are said as the DECREE, not
+## one by one (laws spec §3 "News and letters"): their setting out is ONE
+## line per decree ("The decree on <law> is sent: N couriers."), their
+## deliveries and weather nothing, and the event that closes the decree
+## (`reach`, LawSystem.close_rides) ONE line — "is in force everywhere" when
+## it reached every place, else how many it reached. A decree's courier set
+## aside, lost or out of time is still said, once each. Every other courier
+## is said by `headline`.
+static func news(repo: DataRepository, events: Array) -> Array:
+	var counts := {}
+	for e: Dictionary in events:
+		if e.has("law") and String(e.get("type", "")) == "set_out":
+			var k := "%s#%d" % [String(e["law"]), int(e.get("decree_id", 0))]
+			counts[k] = int(counts.get(k, 0)) + 1
+	var out: Array = []
+	var said := {}
+	for e: Dictionary in events:
+		if not e.has("law"):
+			var line := headline(repo, e)
+			if line != "":
+				out.append(line)
+			continue
+		var law := String((repo.laws.get(String(e["law"]), {}) as Dictionary).get("label", e["law"]))
+		match String(e.get("type", "")):
+			"set_out":
+				var k := "%s#%d" % [String(e["law"]), int(e.get("decree_id", 0))]
+				if not said.has(k):
+					said[k] = true
+					var n := int(counts[k])
+					out.append("The decree on %s is sent: %d courier%s." % [law, n, "" if n == 1 else "s"])
+			"stale", "lost", "fuse":
+				out.append(headline(repo, e))
+		if e.has("reach"):
+			var r: Dictionary = e["reach"]
+			var d := int(r["days"])
+			if int(r["reached"]) >= int(r["total"]):
+				out.append("The decree on %s is in force everywhere: %d of %d places in %d day%s." % [
+					law, int(r["reached"]), int(r["total"]), d, "" if d == 1 else "s"])
+			else:
+				out.append("The decree on %s reached %d of %d places in %d day%s." % [
+					law, int(r["reached"]), int(r["total"]), d, "" if d == 1 else "s"])
+	return out.filter(func(l: String) -> bool: return l != "")
 
 
 ## A decree's courier in the news (headline): the law by its label, the

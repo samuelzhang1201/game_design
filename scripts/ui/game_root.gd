@@ -168,8 +168,11 @@ func _process(delta: float) -> void:
 	if _said_state != Game.state:
 		_said_state = Game.state
 		_said_set_out = 0
-	for e: Dictionary in CourierSystem.setting_out(Game.data, Game.state, _said_set_out):
-		Game.publish_news(CourierSystem.headline(Game.data, e))
+	# A decree's couriers are said as one line (CourierSystem.news).
+	var leaving := CourierSystem.setting_out(Game.data, Game.state, _said_set_out)
+	for line: String in CourierSystem.news(Game.data, leaving):
+		Game.publish_news(line)
+	for e: Dictionary in leaving:
 		_said_set_out = maxi(_said_set_out, int(e["courier"]))
 	var per_day := maxf(Game.data.bal("time_day_seconds") / float(Game.clock_speed), 0.001)
 	_clock_acc += delta
@@ -199,8 +202,8 @@ func _process(delta: float) -> void:
 			var arrived := ArmySystem.arrival_headline(Game.data, Game.state, code)
 			if arrived != "":
 				Game.publish_news(arrived)
-		for e: Dictionary in out.get("couriers", []):
-			Game.publish_news(CourierSystem.headline(Game.data, e))
+		for line: String in CourierSystem.news(Game.data, out.get("couriers", [])):
+			Game.publish_news(line)
 		# A building that first stands idle for want of inputs (M5), once.
 		for w: Dictionary in out.get("idled", []):
 			Game.publish_news("The %s at %s stands %s." % [

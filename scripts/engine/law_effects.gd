@@ -53,13 +53,19 @@ static func people_weights(repo: DataRepository, state: GameState) -> Dictionary
 ## pools and tenths otherwise, so the provinces' lines sum to the total
 ## exactly whatever order the couriers arrive in. code -> delta.
 static func apportion(repo: DataRepository, state: GameState, metric: String, total: float) -> Dictionary:
+	return apportion_by(metric, total, people_weights(repo, state))
+
+
+## `apportion` over given weights (code -> whole weight): whole units for the
+## whole pools, tenths otherwise; the sign re-applied to every part.
+static func apportion_by(metric: String, total: float, weights: Dictionary) -> Dictionary:
 	var scale := 1 if metric in WHOLE_POOLS else 10
 	var units := roundi(absf(total) * float(scale))
-	var sign := -1.0 if total < 0.0 else 1.0
-	var shares := TownStores.apportion(units, people_weights(repo, state))
+	var dir := -1.0 if total < 0.0 else 1.0
+	var shares := TownStores.apportion(units, weights)
 	var out := {}
 	for code: String in shares:
-		out[code] = sign * float(int(shares[code])) / float(scale)
+		out[code] = dir * float(int(shares[code])) / float(scale)
 	return out
 
 

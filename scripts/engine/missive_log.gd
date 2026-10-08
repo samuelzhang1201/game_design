@@ -8,6 +8,13 @@ const COLUMNS := ["truth", "credible", "consult", "rumour"]
 ## The marshal's letters: capped apart (missive_keep_supply), so a campaign's
 ## daily dispatches never push a spy's report or a receipt off a column.
 const SUPPLY_KINDS := ["supply", "supply_month"]
+## The kinds kept apart from the column's own count: kind -> its group's
+## balance.csv keep key. A kind not listed counts against
+## missive_keep_per_column. The supply letters (SUPPLY_KINDS) share one
+## group; a decree's letters (law, laws spec §3) are another.
+const KIND_GROUPS := {"supply": "missive_keep_supply", "supply_month": "missive_keep_supply",
+	"law": "missive_keep_law"}
+const COLUMN_KEEP := "missive_keep_per_column"
 
 
 static func subject(kind: String, code: String, cell: int, px: Vector2) -> Dictionary:
@@ -39,15 +46,22 @@ static func add(repo: DataRepository, state: GameState, m: Dictionary) -> int:
 	entry["id"] = state.next_missive_id
 	entry["read"] = false
 	state.missives.append(entry)
-	# The cap counts the new letter's own sort: supply letters against
-	# missive_keep_supply, every other kind against missive_keep_per_column.
-	var supply := String(entry["kind"]) in SUPPLY_KINDS
-	var keep := maxi(1, int(repo.bal("missive_keep_supply" if supply else "missive_keep_per_column")))
+	# The cap counts the new letter's own group within its column: a kind of
+	# KIND_GROUPS against its group's keep, every other kind against
+	# missive_keep_per_column.
+	var group := group_of(String(entry["kind"]))
+	var keep := maxi(1, int(repo.bal(group)))
 	var mine := column(state, String(entry["column"])).filter(
-		func(m: Dictionary) -> bool: return (String(m["kind"]) in SUPPLY_KINDS) == supply)
+		func(m: Dictionary) -> bool: return group_of(String(m["kind"])) == group)
 	for i in range(keep, mine.size()):
 		state.missives.erase(mine[i])
 	return state.next_missive_id
+
+
+## The keep key a letter of `kind` counts against (KIND_GROUPS, else the
+## column's own).
+static func group_of(kind: String) -> String:
+	return String(KIND_GROUPS.get(kind, COLUMN_KEEP))
 
 
 ## A column's letters, newest (highest id) first.

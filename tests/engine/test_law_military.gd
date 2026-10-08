@@ -438,6 +438,67 @@ func test_reconcile_forgets_a_lost_province_and_a_campless_town() -> void:
 		"its camp's units keep the law they followed")
 
 
+func test_reconcile_drops_a_gone_units_entry_and_gives_none_to_a_foreign_one() -> void:
+	_put(s, LawSystem.UNIT_PREFIX + "no_such_unit", "plunder", "allow", 1)
+	var own: String = _land_units()[0]
+	_put(s, LawSystem.UNIT_PREFIX + own, "plunder", "allow", 1)
+	# another kingdom's column with a state entry (as an invader's), told to
+	# camp round a held town of ours
+	var foreign := ""
+	var kingdoms: Array = repo.kingdoms.keys()
+	kingdoms.sort()
+	for k: String in kingdoms:
+		if k == realm or foreign != "":
+			continue
+		for reg: Dictionary in MapObjects.regiments_of(repo, k, s):
+			if String(reg.get("is_naval", "0")) != "1":
+				foreign = String(reg["regiment_code"])
+				s.regiments[foreign] = ArmySystem.starting_state(repo, reg)
+				break
+	assert_ne(foreign, "", "another kingdom has a land column")
+	var empty := ""
+	var burgs: Array = repo.burgs.keys()
+	burgs.sort()
+	for b: String in burgs:
+		if ArmyGround.holds(repo, s, realm, b) and not LawSystem._has_camp(repo, s, b):
+			empty = b
+			break
+	assert_ne(empty, "", "a held town with no camp of ours")
+	_put(s, LawSystem.TOWN_PREFIX + empty, "plunder", "allow", 1)
+	s.regiments[foreign]["camp_town"] = empty
+	LawSystem.reconcile(repo, s)
+	assert_false(s.law_in_force.has(LawSystem.UNIT_PREFIX + "no_such_unit"), "a gone unit's entry goes")
+	assert_true(s.law_in_force.has(LawSystem.UNIT_PREFIX + own), "the realm's unit keeps its own")
+	assert_false(s.law_in_force.has(LawSystem.UNIT_PREFIX + foreign), "another kingdom's column takes no law")
+	assert_false(s.law_in_force.has(LawSystem.TOWN_PREFIX + empty), "the campless town is forgotten")
+	_put(s, LawSystem.UNIT_PREFIX + foreign, "plunder", "allow", 1)
+	LawSystem.reconcile(repo, s)
+	assert_false(s.law_in_force.has(LawSystem.UNIT_PREFIX + foreign), "nor keeps one it was given")
+
+
+func test_a_camp_whose_units_all_carry_the_decree_is_told() -> void:
+	var camp := _a_camp()
+	var town := String(camp["town"])
+	var key := LawSystem.TOWN_PREFIX + town
+	LawSystem.decree(repo, s, "plunder", "allow")
+	var id := int(s.law_decree["plunder"]["decree_id"])
+	s.couriers = []
+	assert_true(key in (LawSystem.delivery(repo, s, "plunder")["missing"] as Array), "no courier reached it")
+	var here: Array = []
+	for code: String in _land_units():
+		if ArmyGround.camped_by(repo, s, code) == town:
+			here.append(code)
+	for code: String in here:
+		_put(s, LawSystem.UNIT_PREFIX + code, "plunder", "allow", id)
+	var d := LawSystem.delivery(repo, s, "plunder")
+	assert_false(key in (d["missing"] as Array), "every unit camped there carries the decree: told")
+	assert_gt(here.size(), 0, "the camp has units")
+	if here.size() > 0:
+		s.law_in_force[LawSystem.UNIT_PREFIX + String(here[0])]["plunder"]["decree_id"] = id - 1
+		assert_true(key in (LawSystem.delivery(repo, s, "plunder")["missing"] as Array),
+			"one unit on an older decree: still missing")
+
+
 func test_a_day_reconciles_the_laws() -> void:
 	var held := MapOwnership.provinces_of(repo, s, realm)
 	var p := String(held[held.size() - 1])

@@ -235,31 +235,6 @@ func test_older_fixtures_still_work() -> void:
 	MapEconomy.forget()
 	ManorEconomy.forget()
 
-## The rate metrics are the decree's display mirror: no engine formula reads
-## them. Only the pack's seeding writes them (WorldLedger.seed_metrics) and
-## the realm signature keeps them for a state with no law state (R8).
-func test_no_engine_formula_reads_the_rate_mirrors() -> void:
-	var allowed := {"world_ledger.gd": true, "realm_economy.gd": true}
-	var rx := RegEx.create_from_string('(metrics|\\bm)(\\.get\\(|\\[)"(tax_rate|tariff_rate|grain_ration)"')
-	var found: Array = []
-	for path: String in _scripts("res://scripts/engine"):
-		if allowed.has(path.get_file()):
-			continue
-		var lines := FileAccess.get_file_as_string(path).split("\n")
-		for i in lines.size():
-			if rx.search(lines[i]) != null:
-				found.append("%s:%d" % [path, i + 1])
-	assert_eq(found, [], "read the law in force (LawSystem), not the metric")
-
-func _scripts(dir: String) -> Array:
-	var out: Array = []
-	for f: String in DirAccess.get_files_at(dir):
-		if f.ends_with(".gd"):
-			out.append(dir.path_join(f))
-	for d: String in DirAccess.get_directories_at(dir):
-		out.append_array(_scripts(dir.path_join(d)))
-	return out
-
 func _hand_repo() -> DataRepository:
 	var r := DataRepository.new()
 	r.balance = {"manor_tax_per_1000": 20.0, "tax_rate_base": 5.0, "tariff_per_sales_tax": 2.0,

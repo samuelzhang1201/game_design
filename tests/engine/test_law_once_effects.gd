@@ -86,8 +86,8 @@ func _hand_split(units: int) -> Dictionary:
 func _share(metric: String, total: float, code: String) -> float:
 	var scale := 1 if metric in ["treasury", "grain"] else 10
 	var units := roundi(absf(total) * scale)
-	var sign := -1.0 if total < 0.0 else 1.0
-	return sign * float(int(_hand_split(units)[code])) / float(scale)
+	var dir := -1.0 if total < 0.0 else 1.0
+	return dir * float(int(_hand_split(units)[code])) / float(scale)
 
 
 ## The most peopled province (ties to the lower code): its part is never zero.
@@ -154,6 +154,24 @@ func test_the_shares_sum_to_the_old_total_exactly() -> void:
 			if metric in ["treasury", "grain"]:
 				assert_eq(float(parts[code]), roundf(float(parts[code])), "%s is whole" % metric)
 		assert_almost_eq(sum, total, EPS, "%s %.1f apportioned exactly" % [metric, total])
+
+
+## Two literal cases, worked by hand: three equal weights share 100 tenths
+## as 34 / 33 / 33 (the one left over to the code that sorts first), the
+## sign re-applied; a realm where no one lives splits evenly.
+func test_the_apportionment_by_literal_weights() -> void:
+	assert_eq(LawEffects.apportion_by("treasury", 100.0, {"a": 1, "b": 1, "c": 1}),
+		{"a": 34.0, "b": 33.0, "c": 33.0})
+	assert_eq(LawEffects.apportion_by("treasury", -100.0, {"c": 1, "b": 1, "a": 1}),
+		{"a": -34.0, "b": -33.0, "c": -33.0})
+	var tenths := LawEffects.apportion_by("unrest", 10.0, {"a": 1, "b": 1, "c": 1})
+	assert_almost_eq(float(tenths["a"]), 3.4, EPS)
+	assert_almost_eq(float(tenths["b"]), 3.3, EPS)
+	assert_almost_eq(float(tenths["c"]), 3.3, EPS)
+	assert_eq(LawEffects.apportion_by("grain", 10.0, {"a": 0, "b": 0}), {"a": 5.0, "b": 5.0},
+		"no people anywhere: an even split")
+	assert_eq(LawEffects.apportion_by("grain", 3.0, {"a": 0, "b": 0}), {"a": 2.0, "b": 1.0},
+		"an odd unit to the code that sorts first")
 
 
 func test_justice_effect_is_the_old_total_times_the_provinces_people_share() -> void:

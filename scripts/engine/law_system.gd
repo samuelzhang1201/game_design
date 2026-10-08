@@ -142,11 +142,21 @@ static func _camped_towns(repo: DataRepository, state: GameState) -> Dictionary:
 	return out
 
 
+## Whether `code` is a land unit of the realm: the only units a camp law
+## binds (fleets and other kingdoms' columns follow none).
+static func _realm_land(repo: DataRepository, state: GameState, code: String) -> bool:
+	var reg := ArmySystem.regiment(repo, code, state)
+	return not reg.is_empty() and String(reg.get("is_naval", "0")) != "1" \
+		and String(reg.get("kingdom_code", "")) == repo.resolve_realm("player_realm")
+
+
 ## The day's forgetting (TickEngine._end_day, after ArmyGround.reconcile; spec
 ## §2.4): a province the realm no longer holds loses its entries — retaken, it
 ## reads the default until a courier reaches it (R13) — and so does a town the
-## realm no longer holds or that has no camp left; the units still camped
-## round a lost town first keep what they followed there.
+## realm no longer holds or that has no camp left; the realm's units still
+## camped round a lost town first keep what they followed there (another
+## kingdom's never take a law). A unit's entry goes with the unit (gone, or
+## no land unit of the realm's any more).
 static func reconcile(repo: DataRepository, state: GameState) -> void:
 	var realm := repo.resolve_realm("player_realm")
 	var camped := _camped_towns(repo, state)
@@ -164,9 +174,13 @@ static func reconcile(repo: DataRepository, state: GameState) -> void:
 			var codes := state.regiments.keys()
 			codes.sort()
 			for c in codes:
-				if String((state.regiments[c] as Dictionary).get("camp_town", "")) == town:
+				if String((state.regiments[c] as Dictionary).get("camp_town", "")) == town \
+						and _realm_land(repo, state, String(c)):
 					_take_camp(repo, state, String(c), town)
 			state.law_in_force.erase(key)
+		elif key.begins_with(UNIT_PREFIX):
+			if not _realm_land(repo, state, key.trim_prefix(UNIT_PREFIX)):
+				state.law_in_force.erase(key)
 
 
 ## A value as a number: a range's own int; a toggle 0 or 1 (its second name is
@@ -483,7 +497,40 @@ static func decree(repo: DataRepository, state: GameState, law: String, value: S
 		else:
 			sent.append(CourierSystem.dispatch_to(repo, state, CourierSystem.ORDINARY, String(r["target"]),
 				order, r["to_px"]))
+	# the chancery's letter, at once: how many ride and the longest ride
+	if not sent.is_empty():
+		var last := 0
+		for c: Dictionary in sent:
+			last = maxi(last, CourierSystem.days_left(repo, state, c))
+		MissiveLog.add(repo, state, MissiveWriter.law_decree(repo, state, law, sent.size(), last))
 	return sent
+
+
+## After a day's ride (CourierSystem.ride_day): a standing decree whose last
+## courier is now home — delivered, set aside, lost or out of time — and none
+## rides for it any more files its reach letter (`MissiveWriter.law_reach`:
+## reached of its recipients now, days since it was decreed, the decree's
+## day counted) and marks that day's LAST event of it with `reach`
+## ({reached, total, days}), which the news bar says once
+## (`CourierSystem.news`). A courier of an older decree closes nothing; a
+## re-send (R5) closes again when its own couriers are home.
+static func close_rides(repo: DataRepository, state: GameState, events: Array) -> void:
+	var seen := {}
+	for i in range(events.size() - 1, -1, -1):
+		var e: Dictionary = events[i]
+		if not e.has("law") or String(e["type"]) == "slow":
+			continue
+		var law := String(e["law"])
+		if seen.has(law) or int(e.get("decree_id", -1)) != _decree_id(state, law):
+			continue
+		seen[law] = true
+		if not _riders(state, law).is_empty():
+			continue
+		var t := _tally(repo, state, law)
+		var days := state.absolute_day() - int((state.law_decree[law] as Dictionary).get("day", 0)) + 1
+		e["reach"] = {"reached": int(t["reached"]), "total": int(t["total"]), "days": days}
+		MissiveLog.add(repo, state, MissiveWriter.law_reach(repo, state, law, int(t["reached"]),
+			int(t["total"]), days))
 
 
 ## The metric a law mirrors, set to the decreed value (ruling P1; spec §2.5).
@@ -617,6 +664,35 @@ static func _sent(state: GameState, law: String) -> Array:
 	return (state.law_decree.get(law, {}) as Dictionary).get("sent", [])
 
 
+## The realm's land units by the held town they camp by: town -> codes, in
+## code order.
+static func _campers(repo: DataRepository, state: GameState) -> Dictionary:
+	var out := {}
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		if not CourierSystem.carries_orders(r):
+			continue
+		var code := String(r["regiment_code"])
+		var town := ArmyGround.camped_by(repo, state, code)
+		if town != "":
+			var list: Array = out.get(town, [])
+			list.append(code)
+			out[town] = list
+	return out
+
+
+## Whether a camp no courier reached is told all the same: every unit camped
+## there reads decree `id` of `law` or a newer one (a camp formed after the
+## decree of units that carried it in).
+static func _camp_told(state: GameState, town: String, codes: Array, law: String, id: int) -> bool:
+	if codes.is_empty():
+		return false
+	for code: String in codes:
+		var read := _camp_read(state, town, code, law)
+		if read.is_empty() or int(read["decree_id"]) < id:
+			return false
+	return true
+
+
 ## `delivery` without the days (no ride is reckoned): the counts, missing,
 ## the kinds, and riding_keys (the places a courier still rides for).
 static func _tally(repo: DataRepository, state: GameState, law: String) -> Dictionary:
@@ -629,6 +705,7 @@ static func _tally(repo: DataRepository, state: GameState, law: String) -> Dicti
 	var on_road: Array = []
 	var missing: Array = []
 	var kinds := {}
+	var campers := _campers(repo, state) if String(def(repo, law).get("scope", "")) == "camp" else {}
 	for r: Dictionary in recipients(repo, state, law):
 		var key := String(r["scope_key"])
 		var kind := String(r["kind"])
@@ -637,7 +714,9 @@ static func _tally(repo: DataRepository, state: GameState, law: String) -> Dicti
 		kinds[kind]["total"] = int(kinds[kind]["total"]) + 1
 		total += 1
 		var entry: Dictionary = (state.law_in_force.get(key, {}) as Dictionary).get(law, {})
-		if id == 0 or (not entry.is_empty() and int(entry["decree_id"]) >= id):
+		if id == 0 or (not entry.is_empty() and int(entry["decree_id"]) >= id) \
+				or (kind == "town" and _camp_told(state, key.trim_prefix(TOWN_PREFIX),
+					campers.get(key.trim_prefix(TOWN_PREFIX), []), law, id)):
 			reached += 1
 			kinds[kind]["reached"] = int(kinds[kind]["reached"]) + 1
 		elif riding.has(key):

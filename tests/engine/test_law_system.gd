@@ -59,6 +59,7 @@ func test_every_effect_row_names_a_law_and_an_allowed_value() -> void:
 			assert_true(LawSystem.allowed(repo, law, v), "%s: %s is a value of it" % [law, v])
 		assert_true(String(row["timing"]) in ["monthly", "once"], "%s: timing" % law)
 		assert_true(String(row["share"]) in ["army", "people", "unit", "flat"], "%s: share" % law)
+		assert_ne(String(row["reason"]).strip_edges(), "", "%s: every row carries a reason" % law)
 		var amount := String(row["amount"]).strip_edges()
 		if String(row["channel"]) == "flag":
 			# a flag changes nothing: it has no amount (spec §4.1)
@@ -66,7 +67,6 @@ func test_every_effect_row_names_a_law_and_an_allowed_value() -> void:
 			continue
 		assert_true(amount.is_valid_float() or repo.balance.has(amount.trim_prefix("-")),
 			"%s: %s is a number or a balance key" % [law, amount])
-		assert_ne(String(row["reason"]), "", "%s: every line carries a reason" % law)
 		if String(row["timing"]) == "once":
 			assert_eq(String(row["share"]), "people", "%s: a one-shot is shared by people" % law)
 			assert_true(s.metrics.has(String(row["channel"])), "%s: %s is a metric" % [law, row["channel"]])
