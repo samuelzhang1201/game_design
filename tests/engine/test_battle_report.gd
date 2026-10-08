@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Play := preload("res://tests/invasion_play.gd")
 ## The battle report and the day hook (spec 2026-10-07-enemy-ai-and-battle-design
 ## §4.5): TickEngine._end_day settles the battles after the couriers ride, and a
 ## day with a battle files ONE letter whose numbers are the engine's and whose
@@ -13,29 +14,40 @@ func before_each() -> void:
 	Weather.forget()
 
 
+## The player's land units of 400 men or more, in code order.
 func _mine() -> Array:
 	var out: Array = []
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) >= 1000:
+		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) >= 400:
 			out.append(String(r["regiment_code"]))
 	out.sort()
 	return out
 
 
+## The raider hosts' units (EnemyAi.host_units) of 400 men or more, in code order.
 func _theirs() -> Array:
 	var out: Array = []
 	for h: Dictionary in repo.raid_hosts:
-		for c: Variant in h["regiments"]:
-			var reg := ArmySystem.regiment(repo, String(c))
-			if String(reg.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, reg) >= 1000:
-				out.append(String(c))
+		for c: String in EnemyAi.host_units(repo, null, h):
+			var reg := ArmySystem.regiment(repo, c)
+			if String(reg.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, reg) >= 400:
+				out.append(c)
 	out.sort()
 	return out
 
 
-func _spot(s: GameState, code: String) -> Vector2i:
-	var e: Dictionary = s.regiments[code]
-	return Vector2i(int(e["x_m"]), int(e["y_m"]))
+## A unit's opening ground, in metres (where the tests meet the enemy).
+func _spot(_s: GameState, code: String) -> Vector2i:
+	var r := ArmySystem.regiment(repo, code)
+	return ArmySystem.pack_to_metres(repo, Vector2(float(r["x"]), float(r["y"])))
+
+
+## A suite campaign with the player's army parked out of the way
+## (Play.park_army): a camp round the tests' ground would join their battles.
+func _campaign(seed_value: int) -> GameState:
+	var s := SuiteData.campaign(repo, seed_value)
+	Play.park_army(repo, s, _spot(s, _mine()[0]))
+	return s
 
 
 func _place(s: GameState, code: String, at: Vector2i) -> void:
@@ -71,7 +83,7 @@ func _one_tier(att_loss: int, def_loss: int, share: int, att_morale: int, def_mo
 
 ## A campaign with one foe on top of one of the player's columns: the foe attacks.
 func _meeting(seed_value := 7) -> Array:
-	var s := SuiteData.campaign(repo, seed_value)
+	var s := _campaign(seed_value)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
 	var at := _spot(s, p)
@@ -121,7 +133,7 @@ func test_two_battles_in_a_day_are_one_letter() -> void:
 	if mine.size() < 2 or theirs.size() < 2:
 		pending("the pack has fewer than two land regiments a side")
 		return
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	var far := Vector2i(200_000, 0)
 	_place(s, mine[0], _spot(s, mine[0]))
 	_place(s, mine[1], _spot(s, mine[0]) + far)

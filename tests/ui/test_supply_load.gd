@@ -7,7 +7,7 @@ func test_an_old_save_reads_its_load_as_it_loads() -> void:
 	Game.start_campaign(42)
 	Game.set_clock_speed(0)
 	var code := ""
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1":
 			code = String(r["regiment_code"])
 			break

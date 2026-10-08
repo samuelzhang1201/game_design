@@ -167,9 +167,8 @@ func test_goods_are_shown_under_a_tag_with_a_glyph() -> void:
 ## as icons with their counts, the host under arms, where it is quartered.
 func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 	var mine := Game.data.resolve_realm("player_realm")
-	var royal := MapObjects.royal_regiment(Game.data, mine)
 	var checked := 0
-	for r: Dictionary in MapObjects.regiments_of(Game.data, mine):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, mine, Game.state):
 		var code := String(r["regiment_code"])
 		var card := MapObjects.army_card(Game.data, code)
 		assert_eq(String(card["kind"]), "army")
@@ -177,7 +176,7 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 		var piece := MapObjects.army_piece(Game.data, r)
 		if String(r.get("is_naval", "0")) == "1":
 			assert_eq(piece, "fleet")
-		elif code == royal:
+		elif String(r.get("is_royal", "0")) == "1":
 			assert_eq(piece, "royal")
 		else:
 			assert_eq(piece, MapObjects.regiment_arm(Game.data, r))
@@ -232,7 +231,7 @@ func test_a_regiment_card_names_its_battle_stance() -> void:
 func test_a_regiment_card_shows_its_state() -> void:
 	var s := SuiteData.campaign(Game.data, 7)
 	var mine := Game.data.resolve_realm("player_realm")
-	var r: Dictionary = MapObjects.regiments_of(Game.data, mine)[0]
+	var r: Dictionary = MapObjects.regiments_of(Game.data, mine, Game.state)[0]
 	var code := String(r["regiment_code"])
 	var heads := int(MapObjects.regiment_size(Game.data, r))
 	s.regiments[code]["wounded"] = 120
@@ -457,3 +456,16 @@ func test_the_province_card_lists_only_active_known_hazards() -> void:
 		func(f: Array) -> String: return String(f[1]))
 	assert_true(lines.any(func(t: String) -> bool: return t.begins_with("Live Flood") and t.contains("2 months left")))
 	assert_false(lines.any(func(t: String) -> bool: return t.contains("Old Flood")))
+
+
+## The crown's piece is the roster's household (spec 2026-10-07 §5.1): exactly
+## the unit whose `is_royal` is "1" stands as the royal piece.
+func test_the_crown_is_the_household() -> void:
+	var data := SuiteData.repo()
+	var s := SuiteData.campaign(data, 1)
+	var crowned: Array = []
+	for r: Dictionary in MapObjects.regiments_of(data, data.resolve_realm("player_realm"), s):
+		if MapObjects.army_piece(data, r) == "royal":
+			crowned.append(String(r["regiment_code"]))
+	assert_eq(crowned.size(), 1)
+	assert_eq(String(ArmySystem.regiment(data, String(crowned[0]), s)["is_royal"]), "1")

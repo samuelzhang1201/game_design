@@ -21,9 +21,11 @@ func before_each() -> void:
 	m.attributes["integrity"] = 50
 	var codes: Array = s.regiments.keys()
 	codes.sort()
+	# in the field: camped by no town (spec 2026-10-07-army-split-and-ground
+	# §4.1), so no town tops it up
 	for c in codes:
 		var reg := ArmySystem.regiment(repo, String(c))
-		if String(reg.get("is_naval", "0")) != "1" and ArmySystem.held_town_of(repo, reg, s) == "":
+		if String(reg.get("is_naval", "0")) != "1" and ArmyGround.camped_by(repo, s, String(c)) == "":
 			code = String(c)
 			break
 	if code != "":
@@ -54,12 +56,17 @@ func _eligible_town() -> String:
 	return ""
 
 ## The first land regiment that, a step out of its town onto dry land, still
-## has a supply town in reach (a step may cross a bay and leave none).
+## has a supply town in reach (a step may cross a bay and leave none). It
+## leaves its camp (camp_town ""); a seated unit is passed over, so no seat
+## is left on a unit in the field, and so is one eating under a unit a day
+## (a small unit's month spread over thirty days skips some).
 func _march_one_out(codes: Array) -> void:
 	for c in codes:
 		var reg := ArmySystem.regiment(repo, String(c))
-		if String(reg.get("is_naval", "0")) == "1":
+		if String(reg.get("is_naval", "0")) == "1" or ArmyGround.seated_in(repo, s, String(c)) != "" \
+				or ArmySystem.supply_use(repo, reg, s) < Calendar.DAYS_PER_TICK:
 			continue
+		var camp := String(s.regiments[c].get("camp_town", ""))
 		var home := ArmySystem.position_of(repo, s, reg)
 		for step: Vector2 in [Vector2(40.0, 0.0), Vector2(-40.0, 0.0), Vector2(0.0, 40.0), Vector2(0.0, -40.0)]:
 			var cell := MapEconomy.cell_at(repo, home + step)
@@ -68,6 +75,7 @@ func _march_one_out(codes: Array) -> void:
 			var mm := ArmySystem.pack_to_metres(repo, home + step)
 			s.regiments[c]["x_m"] = mm.x
 			s.regiments[c]["y_m"] = mm.y
+			s.regiments[c]["camp_town"] = ""
 			code = String(c)
 			if ArmySystem.held_town_of(repo, reg, s) == "":
 				town = _eligible_town()
@@ -76,10 +84,11 @@ func _march_one_out(codes: Array) -> void:
 			var back := ArmySystem.pack_to_metres(repo, home)
 			s.regiments[c]["x_m"] = back.x
 			s.regiments[c]["y_m"] = back.y
+			s.regiments[c]["camp_town"] = camp
 	code = ""
 
 func _use() -> int:
-	return ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), s)
+	return ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code, s), s)
 
 ## A town's stock set by hand, the two metrics synced to it so the day's
 ## reconcile has nothing to absorb (ruling R4).
@@ -122,6 +131,11 @@ func test_the_draw_stops_at_thirty_days() -> void:
 func test_crown_then_lord_then_the_house_is_bought() -> void:
 	s.day = 5
 	s.regiments[code]["supplies"] = 0
+	# a unit's day is a unit or two: this one four times its size, so the
+	# day's draw outruns the crown's and the lord's single unit
+	var row: Dictionary = s.army_roster[code]
+	for arm: String in repo.world_table("military", "unit_types"):
+		row[arm] = str(int(float(row.get(arm, 0))) * 4)
 	var send := ArmySystem.day_bite(_use(), 5)
 	assert_gt(send, 2)
 	_stock(town, 1, 1, 100)
@@ -184,18 +198,32 @@ func test_a_line_whose_town_leaves_the_realm_is_cancelled() -> void:
 	assert_true(_has(ev, "cancelled", code))
 
 ## A foreign regiment made an enemy and stood on the middle of the line's
-## road; returns it with where it stood, to be marched off again.
+## road; returns it with where it stood, to be marched off again. Its
+## kingdom is one whose other units, made enemies too, stand off the road.
 func _cut_the_road() -> Array:
 	var route := SupplyLines.road_px(repo, s, code, town)
 	var realm := repo.resolve_realm("player_realm")
 	@warning_ignore("integer_division")
 	var mid := route[route.size() / 2]
-	for r: Dictionary in repo.world_table("military", "regiments").values():
+	var dip: Dictionary = repo.world_table("political", "diplomacy")
+	var army := ArmySystem.roster(repo, s)
+	var codes := army.keys()
+	codes.sort()
+	for c: String in codes:
+		var r: Dictionary = army[c]
 		if String(r["kingdom_code"]) != realm:
+			var key := "%s>%s" % [realm, String(r["kingdom_code"])]
+			var had: Variant = dip.get(key)
+			dip[key] = {"stance": "Enemy"}
+			if not SupplyLines.cut_point(repo, s, route).is_empty():
+				if had == null:
+					dip.erase(key)
+				else:
+					dip[key] = had
+				continue
 			var was := [r, r["x"], r["y"]]
 			r["x"] = mid.x
 			r["y"] = mid.y
-			repo.world_table("political", "diplomacy")["%s>%s" % [realm, String(r["kingdom_code"])]] = {"stance": "Enemy"}
 			return was
 	return []
 
@@ -214,7 +242,7 @@ func test_a_regiment_in_a_realm_town_is_topped_up_free() -> void:
 	codes.sort()
 	for c in codes:
 		var reg := ArmySystem.regiment(repo, String(c))
-		var held := ArmySystem.held_town_of(repo, reg, s)
+		var held := SupplyLines.home_town(repo, s, String(c))
 		if held == "" or String(c) == code or String(reg.get("is_naval", "0")) == "1":
 			continue
 		s.regiments[c]["supplies"] = 0
@@ -366,7 +394,9 @@ func test_a_cleared_road_restores_the_line_once() -> void:
 	assert_eq(String(s.supply_lines[code]["state"]), SupplyLines.FLOWING)
 	assert_eq(ev.filter(func(e: Dictionary) -> bool: return String(e["type"]) == "restored").size(), 1)
 	assert_eq(String(s.supply_lines[code]["cut_by"]), "")
-	assert_gt(int(s.regiments[code]["supplies"]), 0, "the wagons roll again")
+	# a unit's day is a unit or two, under a unit once the road has thinned
+	# it (the rest carried): the draw is what shows the wagons rolling
+	assert_gt(int(s.supply_lines[code]["m_drawn"]), 0, "the wagons roll again")
 	assert_false(_has(SupplyLines.day_step(repo, s), "restored", code), "said once")
 
 ## The remainders are carried (fix round 1): a small regiment's month of
@@ -402,7 +432,7 @@ func test_a_refill_that_buys_from_a_house_is_counted_on_the_regiment() -> void:
 	codes.sort()
 	for c in codes:
 		var reg := ArmySystem.regiment(repo, String(c))
-		var held := ArmySystem.held_town_of(repo, reg, s)
+		var held := SupplyLines.home_town(repo, s, String(c))
 		if held == "" or String(c) == code or String(reg.get("is_naval", "0")) == "1":
 			continue
 		s.regiments[c]["supplies"] = 0
@@ -428,14 +458,16 @@ func test_the_tick_engine_runs_the_day_and_keeps_its_events() -> void:
 	assert_eq(String(SupplyLines.line(s, code)["state"]), SupplyLines.FLOWING)
 
 ## A land regiment of the realm standing in a realm town that is not the
-## depot, other than the line's regiment; "" with none.
+## depot, other than the line's regiment, that eats at least a unit every
+## day (a small unit's month spread over thirty days skips some); "" with none.
 func _quartered_off_the_depot() -> String:
 	var dep := TownStores.depot(repo, s)
 	var codes: Array = s.regiments.keys()
 	codes.sort()
 	for c in codes:
 		var held := SupplyLines.home_town(repo, s, String(c))
-		if String(c) != code and held != "" and held != dep:
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, String(c), s), s)
+		if String(c) != code and held != "" and held != dep and use >= Calendar.DAYS_PER_TICK:
 			return String(c)
 	return ""
 

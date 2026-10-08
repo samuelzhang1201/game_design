@@ -13,9 +13,6 @@ extends Control
 signal piece_selected(code: String)
 signal selection_cleared
 signal army_menu_requested(code: String, at: Vector2)
-## A garrison piece of several regiments clicked (owner 2026-10-06, choice A):
-## ArmyOrderMenu lists them, as on the map.
-signal garrison_menu_requested(codes: Array, at: Vector2)
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 signal route_clicked(code: String, at: Vector2)
 ## A planned march's waypoints were bent on the table (WarRoomRake; spec
@@ -228,7 +225,7 @@ func drawn() -> Dictionary:
 ## Where a regiment's piece stands, pack px: the map's drawn spot, else the
 ## engine's believed one.
 func position_of(code: String) -> Vector2:
-	return WarRoom.believed_position(_repo, state(), ArmySystem.regiment(_repo, code), drawn())
+	return WarRoom.believed_position(_repo, state(), ArmySystem.regiment(_repo, code, state()), drawn())
 
 
 ## The lettering face is handed in by the screen (UiPalette's body_italic
@@ -821,7 +818,7 @@ func _read_supply() -> void:
 
 
 ## The supply lines' gold ribbons, each ending where its piece stands NOW
-## (mid-push included; a regiment of a garrison where the garrison's piece is).
+## (mid-push included; one piece a unit).
 func _lay_supply() -> void:
 	if _supply_routes.is_empty():
 		_supply.mesh = null
@@ -877,25 +874,6 @@ func select(code: String) -> void:
 	_selected = code
 	piece_selected.emit(code)
 	_rake.redraw()
-
-
-## ArmyOrderMenu's map contract: a regiment chosen from a garrison's list.
-func select_army(code: String) -> void:
-	select(code)
-
-
-## The regiments a piece stands for: a town's garrison, else the one.
-func garrison_of(code: String) -> Array:
-	var held := MapObjects.garrison_of(_repo, state(), code)
-	return held if not held.is_empty() else [code]
-
-
-## The regiment a press on `piece` takes in hand: the one chosen from its
-## garrison's list when that is selected, else the piece's own.
-func order_code_of(piece: String) -> String:
-	if piece != "" and _selected != "" and _selected in garrison_of(piece):
-		return _selected
-	return piece
 
 
 ## The code of the piece under a screen px, "" when none (and none while a
@@ -982,9 +960,7 @@ func _gui_input(event: InputEvent) -> void:
 	var did := _gestures.handle(event, _rig, _repo, _ground_under, _rake.empty_press())
 	if did == WarRoomGestures.RIGHT_CLICK:
 		var code := piece_under(mb.position)
-		if code != "" and garrison_of(code).size() > 1:
-			garrison_menu_requested.emit(garrison_of(code), mb.position)
-		elif code != "":
+		if code != "":
 			army_menu_requested.emit(code, mb.position)
 		else:
 			_plan_right_click(mb.position)

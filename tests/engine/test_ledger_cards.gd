@@ -19,7 +19,7 @@ func test_a_thing_the_map_knows_opens_the_maps_own_card() -> void:
 	var cell := int(MapManors.manors_of_province(data, home, s)[0])
 	var e := LedgerCards.entry(data, s, "manor:%d" % cell, {})
 	assert_eq(e["obj"], {"kind": "manor", "cell": cell})
-	var reg: Dictionary = MapObjects.regiments_of(data, data.resolve_realm("player_realm"))[0]
+	var reg: Dictionary = MapObjects.regiments_of(data, data.resolve_realm("player_realm"), s)[0]
 	assert_eq(LedgerCards.entry(data, s, "regiment:" + String(reg["regiment_code"]), {})["obj"]["kind"], "army")
 
 func test_a_type_card_lists_its_threads_with_their_sources() -> void:

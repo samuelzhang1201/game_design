@@ -29,10 +29,11 @@ func _foreign_manor(s: GameState) -> int:
 
 func _foreign_regiment() -> String:
 	var realm := repo.resolve_realm("player_realm")
-	var codes := repo.world_table("military", "regiments").keys()
+	var army := ArmySystem.roster(repo)
+	var codes := army.keys()
 	codes.sort()
 	for code: String in codes:
-		var r: Dictionary = repo.world_table("military", "regiments")[code]
+		var r: Dictionary = army[code]
 		if String(r["kingdom_code"]) != realm and int(MapObjects.regiment_size(repo, r)) >= 100:
 			return code
 	return ""
@@ -87,7 +88,7 @@ func test_a_foreign_burg_card_is_fogged() -> void:
 func test_a_foreign_regiments_army_card_carries_no_exact_headcount() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := _foreign_regiment()
-	var r: Dictionary = repo.world_table("military", "regiments")[code]
+	var r: Dictionary = ArmySystem.regiment(repo, code, s)
 	var total := int(MapObjects.regiment_size(repo, r))
 	var card := MapObjects.army_card(repo, code, s)
 	assert_false(_leaks(_texts(card), total), "headcount")
@@ -95,8 +96,8 @@ func test_a_foreign_regiments_army_card_carries_no_exact_headcount() -> void:
 
 func test_a_foes_army_card_shows_words_not_figures() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	var code := String((repo.raid_hosts[0]["regiments"] as Array)[0])
-	var r: Dictionary = repo.world_table("military", "regiments")[code]
+	var code := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
+	var r: Dictionary = ArmySystem.regiment(repo, code, s)
 	var total := int(MapObjects.regiment_size(repo, r))
 	assert_true(s.foes.has(code), "a spawned foe")
 	s.foes[code]["dead"] = 123

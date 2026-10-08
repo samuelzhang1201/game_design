@@ -66,14 +66,18 @@ func test_raid_hosts_name_real_regiments() -> void:
 		days.append(int(h["appear_day"]))
 		assert_false((h["regiments"] as Array).is_empty(), String(h["host_code"]) + " has regiments")
 		for code: String in h["regiments"]:
-			var reg := ArmySystem.regiment(repo, code)
-			assert_false(reg.is_empty(), "regiment " + code)
-			assert_eq(String(reg.get("kingdom_code", "")), raiders, code + " is the raider realm's")
+			# a pack regiment code: the host raises the units split from it
+			var units := EnemyAi.host_units(repo, null, {"regiments": [code]})
+			assert_false(units.is_empty(), "regiment " + code + " raises units")
+			for u: String in units:
+				var reg := ArmySystem.regiment(repo, u)
+				assert_eq(String(reg.get("parent_code", "")), code, u + " is split from " + code)
+				assert_eq(String(reg.get("kingdom_code", "")), raiders, u + " is the raider realm's")
 	assert_eq(days, [15, 15, 18])
 
 func test_state_of_reads_foes() -> void:
 	var s := SuiteData.campaign(repo, 11)
-	var code := String((repo.raid_hosts[0]["regiments"] as Array)[0])
+	var code := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
 	s.foes.erase(code)   # the campaign spawns every host's regiments (EnemyAi.spawn)
 	assert_eq(ArmySystem.state_of(repo, s, code), {}, "not a foe yet, not the player's: nothing")
 	assert_false(ArmySystem.is_foe(s, code))
@@ -85,7 +89,7 @@ func test_state_of_reads_foes() -> void:
 
 func test_foes_never_in_player_iteration() -> void:
 	var s := SuiteData.campaign(repo, 11)
-	var code := String((repo.raid_hosts[0]["regiments"] as Array)[0])
+	var code := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
 	s.foes[code] = {"morale": 80}
 	assert_false(s.regiments.has(code))
 

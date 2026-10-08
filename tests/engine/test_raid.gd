@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Play := preload("res://tests/invasion_play.gd")
 ## Raiding and spoils (spec 2026-10-07-enemy-ai-and-battle-design §5.3): a host
 ## in RAID standing at its target takes raid_plunder_permille of the manor's
 ## MONTH (whole gold, ManorEconomy's own line) a thirtieth a day, up to that
@@ -336,12 +337,11 @@ func _rout_the_raiders(s: GameState, h: String) -> Array:
 	keep["eff_max"] = 1000
 	repo.battle_outcomes.clear()
 	repo.battle_outcomes.append(keep)
-	var mine := ""
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if mine == "" and String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) >= 1000:
-			mine = String(r["regiment_code"])
+	var mine := String(Play.land_regiments(repo, 400)[0])
 	var at := Vector2i(int(s.regiments[mine]["x_m"]), int(s.regiments[mine]["y_m"]))
-	_place(s, mine, at, ArmySystem.ORDER_STANDBY)
+	# the rest of the army out of the way: a camp round the spot would join
+	Play.park_army(repo, s, at)
+	Play.place(repo, s, mine, at, ArmySystem.ORDER_STANDBY)
 	for c: String in EnemyAi.regiments_of(s, h):
 		_place(s, c, at + Vector2i(500, 0), ArmySystem.ORDER_GARRISON)
 	s.ai_hosts[h]["mode"] = "RAID"
@@ -478,13 +478,16 @@ func test_raid_templates_spell_no_kingdom() -> void:
 ## --- the tutorial, no orders (the T8 finding: every host went home hungry
 ## about day 33) ---------------------------------------------------------------------
 
+## The bound is three months: a host whose last manor is stripped may come on
+## a town the crown's camp holds (its garrison, ArmyGround.garrison_town) and
+## sit down to a siege on what it carries until hunger turns it home.
 func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 	var engine := TickEngine.new(repo)
 	var s := SuiteData.campaign(repo, 11)
 	engine.advance(s)
 	var raiding_late := ""
 	var home_by := -1
-	while s.absolute_day() <= 60:
+	while s.absolute_day() <= 90:
 		var today := s.absolute_day()
 		if s.day >= Calendar.DAYS_PER_TICK:
 			engine.advance(s)
@@ -501,7 +504,7 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 			home_by = today
 	assert_ne(raiding_late, "", "plunder feeds a raiding host: one still raids after day 33")
 	assert_gt(home_by, 33, "the invasion outlasts the hosts' own stores")
-	assert_true(home_by > 0 and home_by <= 60, "and every host has turned for home by day 60 (%d)" % home_by)
+	assert_true(home_by > 0 and home_by <= 90, "and every host has turned for home by day 90 (%d)" % home_by)
 	gut.p("raiding past day 33: %s; every host homeward from day %d" % [raiding_late, home_by])
 
 

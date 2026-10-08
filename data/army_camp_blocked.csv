@@ -1,0 +1,2 @@
+terrain,notes
+mountains,"owner 2026-10-07 (spec 2026-10-07-army-split-and-ground §4.2): no unit makes camp on a mountain or a peak (ArmySystem.terrain_at)"

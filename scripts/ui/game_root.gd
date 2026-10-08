@@ -780,7 +780,7 @@ func _on_missive_show(subject: Dictionary) -> void:
 				"obj": {"kind": "burg", "code": code}})
 		"regiment":  # a receipt: its regiment's card (final review M3)
 			var code := String(subject["code"])
-			if not ArmySystem.regiment(Game.data, code).is_empty():
+			if not ArmySystem.regiment(Game.data, code, Game.state).is_empty():
 				var picked := {"kind": "army", "code": code}
 				view.object_selected.emit({"title": MapObjects.label_of(Game.data, picked), "obj": picked})
 
@@ -946,7 +946,7 @@ func _on_menu_save() -> void:
 
 func _on_menu_load() -> void:
 	if not Game.load_campaign():
-		_pause_status.text = "No saved realm found."
+		_pause_status.text = Game.load_error
 		return
 	_reset_reports()
 	_pause_menu.visible = false
@@ -1103,7 +1103,7 @@ func _on_menu_load_from_title() -> void:
 	var pack := Game.data.map_id
 	if not Game.load_campaign():
 		if current_screen is MainMenu:
-			current_screen.show_load_failed()
+			current_screen.show_load_failed(Game.load_error)
 		return
 	_reset_reports()
 	_pending_report = null

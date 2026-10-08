@@ -1,10 +1,11 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## The raid hosts take the field (spec 2026-10-07-enemy-ai-and-battle-design
-## §2): every row of the pack's raid_hosts.csv becomes foes in GameState.foes
-## (never in regiments) and a mind in GameState.ai_hosts, stands at its
-## assembly point until its appear_day, and marches EVENLY as the player's
-## columns do.
+## §2): every row of the pack's raid_hosts.csv raises the UNITS split from its
+## pack regiments (EnemyAi.host_units, the army split) as foes in
+## GameState.foes (never in regiments) and a mind in GameState.ai_hosts,
+## stands at its assembly point until its appear_day, and marches EVENLY as
+## the player's columns do. A raised unit leaves its camp and seat.
 
 var repo: DataRepository
 
@@ -27,9 +28,41 @@ func after_each() -> void:
 func _all_foe_codes() -> Array:
 	var out: Array = []
 	for h: Dictionary in repo.raid_hosts:
-		out.append_array(h["regiments"])
+		out.append_array(EnemyAi.host_units(repo, null, h))
 	out.sort()
 	return out
+
+
+## --- the units a host raises ------------------------------------------------
+
+func test_a_pack_regiment_raises_its_land_units() -> void:
+	var raider := repo.resolve_realm("raider_realm")
+	var pack: Dictionary = repo.world_table("military", "regiments")
+	for h: Dictionary in repo.raid_hosts:
+		for entry: String in h["regiments"]:
+			var units := EnemyAi.host_units(repo, null, {"regiments": [entry]})
+			assert_false(units.is_empty(), entry + " raises units")
+			var sorted_units := units.duplicate()
+			sorted_units.sort()
+			assert_eq(units, sorted_units, "in code order")
+			# the headcount of its foot, archers and horse, every man of them
+			# (its guns are its kingdom's royal train's, which no host takes)
+			var row: Dictionary = pack[entry]
+			var want := int(float(row.get("infantry", 0))) + int(float(row.get("archers", 0))) \
+				+ int(float(row.get("cavalry", 0)))
+			var men := 0
+			for u: String in units:
+				var r := ArmySystem.regiment(repo, u)
+				assert_eq(String(r["parent_code"]), entry, u + " is split from " + entry)
+				assert_eq(String(r["kingdom_code"]), raider)
+				assert_ne(String(r.get("is_naval", "0")), "1", "no fleet")
+				men += ArmySystem.headcount(repo, r)
+			assert_eq(men, want, entry + ": the regiment's men, split")
+	# a unit's own code raises that unit; an unknown code raises nothing; and
+	# a unit named twice is raised once
+	var one := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
+	assert_eq(EnemyAi.host_units(repo, null, {"regiments": [one, one]}), [one])
+	assert_eq(EnemyAi.host_units(repo, null, {"regiments": ["no_such_regiment"]}), [])
 
 
 ## --- spawning -------------------------------------------------------------
@@ -45,7 +78,7 @@ func test_new_campaign_spawns_every_host() -> void:
 		assert_eq(s.ai_hosts[code], {"mode": "ASSEMBLE", "target_kind": "", "target_id": "",
 			"think_day": 0, "plunder": 0, "siege_progress": 0}, "the mind of " + code)
 		var start := ArmySystem.pack_to_metres(repo, Vector2(float(h["start_x"]), float(h["start_y"])))
-		for rc: String in h["regiments"]:
+		for rc: String in EnemyAi.host_units(repo, s, h):
 			seen += 1
 			assert_true(s.foes.has(rc), rc)
 			var f: Dictionary = s.foes[rc]
@@ -54,12 +87,20 @@ func test_new_campaign_spawns_every_host() -> void:
 			assert_eq(Vector2i(int(f["dest_x_m"]), int(f["dest_y_m"])), start)
 			assert_eq(String(f["order"]), ArmySystem.ORDER_STANDBY)
 			# the shape of a regiment's state, plus the host
-			var shape := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, rc))
+			var shape := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, rc, s))
 			for k: String in shape:
 				assert_true(f.has(k), "%s has %s" % [rc, k])
 			assert_eq(int(f["supplies"]), int(shape["supplies"]))
 			assert_eq(int(f["morale"]), int(shape["morale"]))
 	assert_eq(s.foes.size(), seen, "no foe but the hosts'")
+	# a raised unit left its camp and seat: no foe holds a town
+	for town: String in s.town_seat:
+		assert_false(ArmySystem.is_foe(s, String(s.town_seat[town])), town + "'s seat is no foe's")
+	for rc: String in s.foes:
+		assert_eq(String(s.foes[rc]["camp_town"]), "", rc + " camps by no town")
+		assert_eq(ArmyGround.seated_in(repo, s, rc), "")
+		assert_eq(ArmyGround.camped_by(repo, s, rc), "")
+		assert_eq(ArmyGround.garrison_town(repo, s, rc), "")
 
 
 func test_host_codes_and_regiments_of() -> void:
@@ -70,9 +111,7 @@ func test_host_codes_and_regiments_of() -> void:
 	assert_eq(codes, sorted_codes, "dictionary order")
 	for h: Dictionary in repo.raid_hosts:
 		var mine := EnemyAi.regiments_of(s, String(h["host_code"]))
-		var want: Array = (h["regiments"] as Array).duplicate()
-		want.sort()
-		assert_eq(mine, want, "the regiments of " + String(h["host_code"]))
+		assert_eq(mine, EnemyAi.host_units(repo, s, h), "the units of " + String(h["host_code"]))
 	assert_eq(EnemyAi.regiments_of(s, "no_such_host"), [])
 
 
@@ -116,18 +155,19 @@ func test_foes_are_not_in_player_regiments() -> void:
 func test_a_foe_is_seated_once_at_its_foe_position() -> void:
 	var s := SuiteData.campaign(repo, 11)
 	var h: Dictionary = repo.raid_hosts[0]
-	var rc := String((h["regiments"] as Array)[0])
-	var reg := ArmySystem.regiment(repo, rc)
+	var rc := String(EnemyAi.host_units(repo, s, h)[0])
+	var reg := ArmySystem.regiment(repo, rc, s)
 	var at := ArmySystem.position_of(repo, s, reg)
 	var start := ArmySystem.pack_to_metres(repo, Vector2(float(h["start_x"]), float(h["start_y"])))
 	assert_eq(ArmySystem.pack_to_metres(repo, at), start, "every reader finds it at the assembly point")
-	# a garrison of the raider realm lists a regiment once, in one town at most
+	# no town of the raider realm keeps a raised unit on its seat or in its
+	# camp: a seat one held went to the camp it left (ArmyGround.refill)
 	var raider := repo.resolve_realm("raider_realm")
-	var held: Array = []
-	for g: Dictionary in MapObjects.garrisons(repo, s, MapObjects.regiments_of(repo, raider)):
-		for c: String in g["codes"]:
-			assert_false(c in held, "%s listed twice" % c)
-			held.append(c)
+	for r: Dictionary in MapObjects.regiments_of(repo, raider, s):
+		var c := String(r["regiment_code"])
+		if ArmySystem.is_foe(s, c):
+			assert_eq(ArmyGround.seated_in(repo, s, c), "", c + " holds no seat")
+			assert_eq(ArmyGround.camped_by(repo, s, c), "", c + " camps by no town")
 	# a hostile regiment cutting a road is counted once per regiment, at its foe place
 	var diplomacy: Dictionary = repo.world_table("political", "diplomacy")
 	var key := "%s>%s" % [repo.resolve_realm("player_realm"), raider]
@@ -139,12 +179,12 @@ func test_a_foe_is_seated_once_at_its_foe_position() -> void:
 	for hs: Array in hostiles:
 		if ArmySystem.pack_to_metres(repo, hs[0]) == start:
 			here += 1
-	assert_gte(here, (h["regiments"] as Array).size(), "the host is at its point")
+	assert_gte(here, EnemyAi.host_units(repo, s, h).size(), "the host is at its point")
 	var old_home := ArmySystem.pack_to_metres(repo, Vector2(float(reg["x"]), float(reg["y"])))
 	if old_home != start:
 		for hs: Array in hostiles:
 			assert_ne(ArmySystem.pack_to_metres(repo, hs[0]), old_home, "no ghost left at the pack's own quarters")
-	assert_eq(hostiles.size(), MapObjects.regiments_of(repo, raider).size(), "each regiment once")
+	assert_eq(hostiles.size(), MapObjects.regiments_of(repo, raider, s).size(), "each unit once")
 
 
 func test_supply_lines_and_ledger_do_not_see_foes() -> void:

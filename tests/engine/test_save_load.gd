@@ -39,3 +39,27 @@ func test_save_version_written_and_newer_save_refused() -> void:
 	newer["version"] = GameState.SAVE_VERSION + 1
 	assert_null(GameState.from_dict(newer),
 		"a save from a newer build must be refused, not half-loaded")
+
+
+func test_roster_and_seats_round_trip() -> void:
+	var data := SuiteData.repo()
+	var s := SuiteData.campaign(data, 11)
+	var path := RunDir.dir("save_load").path_join("test_roster_round_trip.json")
+	assert_true(SaveLoad.save_game(s, path))
+	var back := SaveLoad.load_game(path)
+	assert_not_null(back)
+	assert_eq(SaveLoad.state_hash(back), SaveLoad.state_hash(s))
+	assert_eq(back.army_roster, s.army_roster)
+	assert_eq(back.town_seat, s.town_seat)
+
+
+func test_a_save_from_before_the_split_is_refused() -> void:
+	var data := SuiteData.repo()
+	var d := SuiteData.campaign(data, 11).to_dict()
+	d["version"] = GameState.MIN_SAVE_VERSION - 1
+	var path := RunDir.dir("save_load").path_join("test_old_save.json")
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(d))
+	f.close()
+	assert_null(SaveLoad.load_game(path))
+	assert_eq(SaveLoad.last_error, "outdated")

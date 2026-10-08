@@ -24,12 +24,6 @@ func before_all() -> void:
 
 func before_each() -> void:
 	Game.start_campaign(42)
-	# the first regiment on the march: quartered in its town it would stand
-	# as that town's garrison counter (owner 2026-10-06, choice A)
-	var r := _first_regiment()
-	ArmySystem.ensure(Game.data, Game.state)
-	ArmySystem.set_march(Game.data, Game.state, String(r["regiment_code"]),
-		Vector2(float(r["x"]) + 40.0, float(r["y"])))
 
 
 func _view() -> Map3DView:
@@ -41,7 +35,7 @@ func _view() -> Map3DView:
 
 
 func _first_regiment() -> Dictionary:
-	return MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))[0]
+	return MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state)[0]
 
 
 func _look_at_regiment(v: Map3DView, r: Dictionary, at_m: float) -> void:
@@ -188,64 +182,131 @@ func after_all() -> void:
 	Map3DWorldCache.clear()
 
 
-## Owner 2026-10-06 (choice A): regiments quartered in a town of their own
-## stand as ONE counter on it — a tower (the crown with the royal regiment),
-## "<heads> (2)" for two — and no piece of their own.
-func _capital_garrison() -> Array:
-	return MapObjects.garrison_of(Game.data, Game.state,
-		MapObjects.royal_regiment(Game.data, Game.data.resolve_realm("player_realm")))
+## Every unit holds its own ground (spec 2026-10-07-army-split-and-ground §5.1,
+## overturning 2026-10-06's garrison counter): the units round the capital
+## each stand as their own counter or piece, nothing merged into one.
+func _capital() -> String:
+	return String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])
+
+
+func _capital_units() -> Array:
+	var out: Array = []
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if ArmyGround.camped_by(Game.data, Game.state, String(r["regiment_code"])) == _capital():
+			out.append(String(r["regiment_code"]))
+	return out
 
 
 func _capital_xy() -> Vector2:
-	var b: Dictionary = Game.data.burgs[String(Game.data.kingdoms[Game.data.resolve_realm("player_realm")]["capital_burg"])]
+	var b: Dictionary = Game.data.burgs[_capital()]
 	return Vector2(float(b["x"]), float(b["y"]))
 
 
-func _garrison_marker(v: Map3DView, codes: Array) -> Dictionary:
+func _marker(v: Map3DView, code: String) -> Dictionary:
 	for m: Dictionary in v.army_markers():
-		if m.get("codes", []) == codes:
+		if String(m["code"]) == code:
 			return m
 	return {}
 
 
-func test_a_towns_garrison_is_one_counter_on_it() -> void:
+func test_every_unit_round_a_town_has_its_own_counter() -> void:
 	var v := _view()
 	v.set_military(true)
-	var codes := _capital_garrison()
-	assert_gt(codes.size(), 1, "the capital holds more than one regiment")
+	var codes := _capital_units()
+	assert_gt(codes.size(), 1, "more than one unit stands round the capital")
 	v.look_at_pack(_capital_xy(), 20000.0)
-	var m := _garrison_marker(v, codes)
-	assert_false(m.is_empty(), "the garrison's counter")
-	var heads := 0
-	for c in codes:
-		heads += int(MapObjects.regiment_size(Game.data, ArmySystem.regiment(Game.data, String(c))))
-	assert_eq(String(m["text"]), "%d (%d)" % [heads, codes.size()])
-	assert_eq(String(m["glyph"]), "crown", "the royal regiment is in it")
-	for other: Dictionary in v.army_markers():
-		if other != m:
-			for c in codes:
-				assert_false(String(c) in (other.get("codes", [other["code"]]) as Array), "never drawn twice")
+	var seen: Dictionary = {}
+	for m: Dictionary in v.army_markers():
+		assert_false(m.has("garrison"), "no counter is a garrison's")
+		assert_false(m.has("codes"), "no counter stands for several units")
+		assert_false(seen.has(String(m["code"])), "%s is drawn once" % m["code"])
+		seen[String(m["code"])] = true
+	for c: String in codes:
+		var m := _marker(v, c)
+		assert_false(m.is_empty(), "%s has its own counter" % c)
+		assert_eq(String(m["text"]), str(int(MapObjects.regiment_size(Game.data,
+			ArmySystem.regiment(Game.data, c, Game.state)))), "%s counts only its own men" % c)
 
 
-func test_a_garrisoned_regiment_has_no_piece_until_it_marches() -> void:
+func test_only_the_household_wears_the_crown() -> void:
+	var points: Array = []
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		points.append({"reg": r, "pos": Vector2(40.0 * points.size(), 0.0)})
+	var crowned: Array = []
+	for m: Dictionary in ArmyCounters.layout(Game.data, points, 20.0, []):
+		if bool(m["royal"]):
+			crowned.append(String(m["code"]))
+			assert_eq(String(m["glyph"]), "crown")
+			assert_eq(String(m["piece"]), "royal")
+		else:
+			assert_ne(String(m["glyph"]), "crown", "%s wears no crown" % m["code"])
+	assert_eq(crowned.size(), 1, "one household")
+	assert_eq(String(ArmySystem.regiment(Game.data, String(crowned[0]), Game.state)["is_royal"]), "1")
+
+
+func test_the_seated_unit_stands_as_its_own_piece() -> void:
 	var v := _view()
 	v.set_military(true)
-	var codes := _capital_garrison()
+	var seat := ArmyGround.seat_of(Game.data, Game.state, _capital())
+	assert_ne(seat, "", "the capital's seat is held")
 	v.look_at_pack(_capital_xy(), 2500.0)
 	await wait_process_frames(2)
-	for c in codes:
-		assert_false(v.unit_rects().has(String(c)), "%s stands in no piece of its own" % c)
+	assert_true(v.unit_rects().has(seat), "the seat's unit stands in a piece of its own")
 
 
-func test_a_click_on_a_garrison_asks_which_regiment() -> void:
+func test_a_click_on_a_units_counter_selects_that_unit() -> void:
 	var v := _view()
 	v.set_military(true)
-	var codes := _capital_garrison()
+	var seat := ArmyGround.seat_of(Game.data, Game.state, _capital())
 	v.look_at_pack(_capital_xy(), 20000.0)
-	var m := _garrison_marker(v, codes)
+	var m := _marker(v, seat)
 	var at := (m["rect"] as Rect2).get_center()
-	assert_eq(v.pick_at(at), {"kind": "garrison", "town": String(m["garrison"]), "codes": codes})
+	assert_eq(v.pick_at(at), {"kind": "army", "code": seat})
 	watch_signals(v)
 	_click(v, at)
-	assert_signal_emitted_with_parameters(v, "garrison_menu_requested", [codes, at])
-	assert_signal_emitted(v, "object_selected", "the town's card opens with the list")
+	assert_signal_emitted_with_parameters(v, "army_menu_requested", [seat, at])
+	assert_eq(v.selected_armies(), [seat], "the one unit is selected")
+	v.clear_selection()
+	assert_eq(v.selected_armies(), [], "and let go")
+
+
+## A land unit's counter keeps off the sea (2026-10-08 visual review, a hard
+## rule): far out over the capital every land counter the spreading moved
+## stands over land, as the HUD's own land test reads it.
+func test_moved_land_counters_stand_on_land() -> void:
+	var v := _view()
+	v.set_military(true)
+	var hud := v._hud.piece("Armies") as Map3DHudArmies
+	var moved := 0
+	for d: float in [90000.0, 150000.0]:
+		v.look_at_pack(_capital_xy(), d)
+		for m: Dictionary in v.army_markers():
+			if bool(m["naval"]) or (m["offset"] as Vector2) == Vector2.ZERO:
+				continue
+			moved += 1
+			assert_true(hud._on_land((m["rect"] as Rect2).get_center()), "%s at %.0f m" % [m["code"], d])
+	assert_gt(moved, 0, "premise: some counter was moved")
+
+
+## The land test never gives up (wave 2: a cap of tests per cut let crowded
+## counters fall back to the sea): open sea reads as sea however many points
+## one cut asks about.
+func test_the_land_test_has_no_budget() -> void:
+	var v := _view()
+	v.set_military(true)
+	var hud := v._hud.piece("Armies") as Map3DHudArmies
+	v.look_at_pack(_capital_xy(), 150000.0)
+	v.army_markers()
+	var ctx: Map3DContext = hud.ctx
+	var wet := func(p: Vector2) -> bool:
+		var hit: Variant = ctx.ground_at(p)
+		return hit == null or MapEconomy.cell_at(ctx.repo, ctx.to_pack(Vector2((hit as Vector3).x, (hit as Vector3).z))) < 0
+	var sea: Array = []
+	for y in range(8, 450, 8):
+		for x in range(8, 800, 8):
+			var p := Vector2(x, y)
+			if [p, p + Vector2(8, 0), p - Vector2(8, 0), p + Vector2(0, 8), p - Vector2(0, 8)].all(wet):
+				sea.append(p)
+	assert_gt(sea.size(), 300, "premise: open sea in view")
+	for p: Vector2 in sea:
+		assert_false(hud._on_land(p), "open sea at %s" % p)

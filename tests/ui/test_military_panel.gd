@@ -25,7 +25,7 @@ func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	assert_false(screen.military_panel().visible, "the column shows the realm to begin with")
 	assert_true(screen.dashboard().visible)
 	var mine := Game.data.resolve_realm("player_realm")
-	var first: Dictionary = MapObjects.regiments_of(Game.data, mine)[0]
+	var first: Dictionary = MapObjects.regiments_of(Game.data, mine, Game.state)[0]
 	var detail: MapDetailPanel = screen.find_child("DetailPanel", true, false)
 	detail.show_entry({"title": "x", "obj": {"kind": "army", "code": String(first["regiment_code"])}})
 	await wait_process_frames(1)
@@ -44,7 +44,7 @@ func test_the_host_opens_from_a_regiments_card_and_closes_back() -> void:
 	assert_eq(panel.arms_chart().rows.size(), units.size(), "one bar per arm")
 	for row in panel.arms_chart().rows:
 		assert_ne(String(row.get("dimension", "")), "", "each arm carries its dimension (its art)")
-	var regiments := MapObjects.regiments_of(Game.data, mine).size()
+	var regiments := MapObjects.regiments_of(Game.data, mine, Game.state).size()
 	assert_eq(panel.regiments_chart().rows.size(), regiments, "every regiment of the realm")
 	var neighbours := String(Game.data.kingdoms[mine]["neighbor_codes"]).split("|", false).size()
 	# Neighbours' strength is fogged (Intel, 2026-09-28): a text row each, not

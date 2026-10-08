@@ -337,7 +337,7 @@ func _mine() -> Array:
 
 
 func _place_mine(s: GameState, code: String, at: Vector2i, order: String) -> void:
-	Play.place(s, code, at, order)
+	Play.place(repo, s, code, at, order)
 
 
 ## The day loop to the main host's crossing, its target held from then on
@@ -382,7 +382,7 @@ func test_a_garrisoned_target_is_besieged_on_arrival_without_a_battle() -> void:
 	assert_eq(String(mind["target_kind"]), "town", "the main host goes for a town")
 	var mine: String = _mine()[0]
 	_place_mine(s, mine, EnemyAi.target_point_m(repo, "town", town), ArmySystem.ORDER_GARRISON)
-	assert_eq(SupplySystem.garrisoned_in(repo, s, mine), town, "the town is garrisoned")
+	assert_eq(ArmyGround.garrison_town(repo, s, mine), town, "the town is garrisoned")
 	var arrived := -1
 	for n in 20:
 		var today := s.absolute_day()

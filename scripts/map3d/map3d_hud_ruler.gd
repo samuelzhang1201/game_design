@@ -22,7 +22,7 @@ func _process(_delta: float) -> void:
 ## the column stands, and the weather only on the day.
 func _courier_eta(code: String) -> int:
 	var st := ctx.state()
-	var reg := ArmySystem.regiment(ctx.repo, code)
+	var reg := ArmySystem.regiment(ctx.repo, code, ctx.state())
 	if st == null or reg.is_empty() or not CourierSystem.carries_orders(reg):
 		return 0
 	var key := "%s|%s|%d" % [code, ArmySystem.position_of(ctx.repo, st, reg), st.absolute_day()]
@@ -58,7 +58,7 @@ func _draw_aim() -> void:
 	if hit == null:
 		return
 	var repo := ctx.repo
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, ctx.state())
 	var b3 := hit as Vector3
 	var to_px := ctx.to_pack(Vector2(b3.x, b3.z))
 	var pts := Map3DRouteEdit.control_points(view, ctx, to_px)

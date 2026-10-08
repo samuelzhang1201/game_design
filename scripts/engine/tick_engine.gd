@@ -33,6 +33,9 @@ func _end_day(state: GameState) -> Array:
 	# return value, which is the finished WORKS and is asserted as such by
 	# tests/engine/test_tick_engine.gd.
 	day_arrivals = ArmySystem.march_day(data, state)
+	# A seat whose town has fallen is cleared (spec 2026-10-07-army-split-
+	# and-ground §4.4).
+	ArmyGround.reconcile(data, state)
 	# The couriers ride AFTER the columns march (owner 2026-10-02: a one-day
 	# courier arrives as the day ENDS): he reaches the column where its day
 	# left it, and the order he delivers is marched on from tomorrow.

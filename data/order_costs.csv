@@ -41,3 +41,4 @@ TRADE_ROUTE_SET,gold:-2:the harbour-masters' letters,1,the guildmaster's goodwil
 SUPPLY_POINT_SET,gold:-1:the quartermaster's warrant to the town,1,spec 2026-10-07-army-supply-lines §4; the courier's fee is the courier_kinds ordinary row
 SUPPLY_POINT_CLEAR,gold:-1:the quartermaster's letter recalling the wagons,1,
 SUPPLY_CARRY_SET,gold:-1:the wagon-master's tally,1,
+ARMY_SEAT,gold:-1:the change of the watch,1,"spec 2026-10-07-army-split-and-ground §4.5"

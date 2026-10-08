@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Play := preload("res://tests/invasion_play.gd")
 ## A battle's life (spec 2026-10-07-enemy-ai-and-battle-design §4.1, §4.4):
 ## contact starts it, a round a day, reinforcements join up to the cap, the
 ## stances decide who leaves, and it ends on a rout, the round cap or a side
@@ -14,24 +15,24 @@ func before_each() -> void:
 	Weather.forget()
 
 
-## The player's land regiments, in code order.
+## The player's land units of 400 men or more, in code order.
 func _mine() -> Array:
 	var out: Array = []
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) >= 1000:
+		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) >= 400:
 			out.append(String(r["regiment_code"]))
 	out.sort()
 	return out
 
 
-## The raider hosts' regiments, in code order.
+## The raider hosts' units (EnemyAi.host_units) of 400 men or more, in code order.
 func _theirs() -> Array:
 	var out: Array = []
 	for h: Dictionary in repo.raid_hosts:
-		for c: Variant in h["regiments"]:
-			var reg := ArmySystem.regiment(repo, String(c))
-			if String(reg.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, reg) >= 1000:
-				out.append(String(c))
+		for c: String in EnemyAi.host_units(repo, null, h):
+			var reg := ArmySystem.regiment(repo, c)
+			if String(reg.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, reg) >= 400:
+				out.append(c)
 	out.sort()
 	return out
 
@@ -40,12 +41,23 @@ func _heads(code: String) -> int:
 	return ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
 
 
-## The spot the tests fight on: the first regiment's own quarters, in metres.
-func _spot(s: GameState) -> Vector2i:
-	var e: Dictionary = s.regiments[_mine()[0]]
-	return Vector2i(int(e["x_m"]), int(e["y_m"]))
+## The spot the tests fight on: the first unit's opening ground, in metres.
+func _spot(_s: GameState = null) -> Vector2i:
+	var r := ArmySystem.regiment(repo, _mine()[0])
+	return ArmySystem.pack_to_metres(repo, Vector2(float(r["x"]), float(r["y"])))
 
 
+## A suite campaign with the player's army out of the tests' way: every land
+## unit leaves its seat and camp and stands far off (a camp round the spot's
+## town would otherwise join, or garrison the town); a test brings its own up.
+func _campaign(seed_value: int) -> GameState:
+	var s := SuiteData.campaign(repo, seed_value)
+	Play.park_army(repo, s, _spot())
+	return s
+
+
+## Stands a unit at `at`, standing by: out of any seat or camp (so it
+## garrisons no town unless a test says so).
 func _place(s: GameState, code: String, at: Vector2i) -> void:
 	var e: Dictionary = s.regiments[code]
 	e["x_m"] = at.x
@@ -53,6 +65,10 @@ func _place(s: GameState, code: String, at: Vector2i) -> void:
 	e["dest_x_m"] = at.x
 	e["dest_y_m"] = at.y
 	e["order"] = ArmySystem.ORDER_STANDBY
+	e["camp_town"] = ""
+	for t: Variant in s.town_seat.keys():
+		if String(s.town_seat[t]) == code:
+			s.town_seat.erase(t)
 
 
 func _foe(s: GameState, code: String, at: Vector2i, host := "") -> Dictionary:
@@ -102,7 +118,7 @@ func _next_day(s: GameState) -> void:
 ## --- contact -------------------------------------------------------------
 
 func test_field_contact_starts_one_battle() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -135,7 +151,7 @@ func test_field_contact_starts_one_battle() -> void:
 
 
 func test_no_contact_no_battle() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -151,22 +167,22 @@ func test_no_contact_no_battle() -> void:
 
 
 func test_town_contact_needs_a_garrison() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	repo.balance["battle_contact_km"] = 0.0   # only the town can bring them together
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
-	var town := ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, p), s)
-	assert_ne(town, "", "the pack quarters the regiment in a town of its own")
+	var town := String(ArmySystem.regiment(repo, p).get("camp_town", ""))
+	assert_ne(town, "", "the split camps the unit by a town of its own")
 	var b: Dictionary = repo.burgs[town]
 	var town_m := ArmySystem.pack_to_metres(repo, Vector2(float(b["x"]), float(b["y"])))
 	var reach_m := int(float(repo.army_town_reach[String(b["group"])]) * 1000.0)
 	_place(s, p, town_m)
 	_foe(s, f, town_m + Vector2i(reach_m / 2, 0))
 	BattleSystem.settle_day(repo, s)
-	assert_eq(s.battles.size(), 0, "a column standing by in the town is no garrison")
+	assert_eq(s.battles.size(), 0, "a column standing by in the town, off its seat and camp, is no garrison")
 	s.regiments[p]["order"] = ArmySystem.ORDER_GARRISON
-	assert_eq(SupplySystem.garrisoned_in(repo, s, p), town)
+	assert_eq(ArmyGround.garrison_town(repo, s, p), town)
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 1, "the garrison is attacked")
 	var fight: Dictionary = s.battles[0]
@@ -174,19 +190,39 @@ func test_town_contact_needs_a_garrison() -> void:
 	assert_eq(fight["att"], [f], "the foe assaults the town")
 	assert_eq(fight["def"], [p])
 	assert_eq(Vector2i(int(fight["place_x_m"]), int(fight["place_y_m"])), town_m, "fought at the town")
+	# the unit on the town's seat garrisons it standing by (ArmyGround.seated_in)
+	var s2 := _campaign(7)
+	_place(s2, p, town_m)
+	s2.town_seat[town] = p
+	_foe(s2, f, town_m + Vector2i(reach_m / 2, 0))
+	assert_eq(ArmyGround.garrison_town(repo, s2, p), town, "the seat is the garrison")
+	BattleSystem.settle_day(repo, s2)
+	assert_eq(s2.battles.size(), 1, "the seat's unit is attacked")
+	assert_eq(String(s2.battles[0]["town"]), town)
+	# and so does a unit camped round it, outside the town's reach (camp_town)
+	var s3 := _campaign(7)
+	_place(s3, p, town_m + Vector2i(reach_m * 2, 0))
+	s3.regiments[p]["camp_town"] = town
+	_foe(s3, f, town_m + Vector2i(reach_m / 2, 0))
+	assert_eq(ArmyGround.garrison_town(repo, s3, p), town, "the camp is invested with its town")
+	BattleSystem.settle_day(repo, s3)
+	assert_eq(s3.battles.size(), 1, "the camp defends the town")
+	assert_eq(String(s3.battles[0]["town"]), town)
+	assert_eq(s3.battles[0]["def"], [p])
 
 
 func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
-	var town := ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, p), s)
-	assert_ne(town, "", "the pack quarters the regiment in a town of its own")
-	_place(s, p, _spot(s))
+	var town := String(ArmySystem.regiment(repo, p).get("camp_town", ""))
+	assert_ne(town, "", "the split camps the unit by a town of its own")
+	var town_m := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
+	_place(s, p, town_m)
 	s.regiments[p]["order"] = ArmySystem.ORDER_GARRISON
-	assert_eq(SupplySystem.garrisoned_in(repo, s, p), town, "the town's garrison")
-	_foe(s, f, _spot(s) + Vector2i(500, 0), "raid_main")
+	assert_eq(ArmyGround.garrison_town(repo, s, p), town, "the town's garrison")
+	_foe(s, f, town_m + Vector2i(500, 0), "raid_main")
 	s.ai_hosts["raid_main"] = {"mode": "SIEGE", "assault": 0, "target_kind": "town", "target_id": town}
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 0, "a host sitting down to a siege does not fight its garrison every day")
@@ -195,16 +231,16 @@ func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
 	assert_eq(s.battles.size(), 1, "its assault is an ordinary battle")
 	# a column of the player's that is NOT the besieged town's garrison (a
 	# relief in the open) meets the besiegers any day
-	var s3 := SuiteData.campaign(repo, 7)
-	_place(s3, p, _spot(s3))
-	_foe(s3, f, _spot(s3) + Vector2i(500, 0), "raid_main")
+	var s3 := _campaign(7)
+	_place(s3, p, town_m)
+	_foe(s3, f, town_m + Vector2i(500, 0), "raid_main")
 	s3.ai_hosts["raid_main"] = {"mode": "SIEGE", "assault": 0, "target_kind": "town", "target_id": town}
-	assert_eq(SupplySystem.garrisoned_in(repo, s3, p), "", "standing by: no garrison")
+	assert_eq(ArmyGround.garrison_town(repo, s3, p), "", "standing by off seat and camp: no garrison")
 	BattleSystem.settle_day(repo, s3)
 	assert_eq(s3.battles.size(), 1, "a relief is fought in the field")
-	var s2 := SuiteData.campaign(repo, 7)
-	_place(s2, p, _spot(s2))
-	_foe(s2, f, _spot(s2) + Vector2i(500, 0), "raid_main")
+	var s2 := _campaign(7)
+	_place(s2, p, town_m)
+	_foe(s2, f, town_m + Vector2i(500, 0), "raid_main")
 	s2.ai_hosts["raid_main"] = {"mode": "ADVANCE"}
 	BattleSystem.settle_day(repo, s2)
 	assert_eq(s2.battles.size(), 1, "any other mode meets the enemy as it comes")
@@ -213,33 +249,33 @@ func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
 ## --- a round -------------------------------------------------------------
 
 func test_round_matches_hand_computed_tier() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	# attackers lose 100 per mille, defenders 50; 600 per mille of the lost wounded
 	_one_tier(100, 50, 600, -5, -2)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
 	_place(s, p, _spot(s))
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
-	# exactly 1000 fit men a side
-	s.regiments[p]["dead"] = _heads(p) - 1000
-	s.foes[f]["dead"] = _heads(f) - 1000
+	# exactly 400 fit men a side (a unit is at most army_split_cap_men)
+	s.regiments[p]["dead"] = _heads(p) - 400
+	s.foes[f]["dead"] = _heads(f) - 400
 	var morale_p := int(s.regiments[p]["morale"])
 	var morale_f := int(s.foes[f]["morale"])
 	BattleSystem.settle_day(repo, s)
 	# neither marched: the foe attacks
 	assert_eq(s.battles[0]["att"], [f])
-	# the foe: lost 1000 x 100 / 1000 = 100, wounded 100 x 600 / 1000 = 60, dead 40
-	assert_eq(int(s.foes[f]["wounded"]), 60)
-	assert_eq(int(s.foes[f]["dead"]), _heads(f) - 1000 + 40)
+	# the foe: lost 400 x 100 / 1000 = 40, wounded 40 x 600 / 1000 = 24, dead 16
+	assert_eq(int(s.foes[f]["wounded"]), 24)
+	assert_eq(int(s.foes[f]["dead"]), _heads(f) - 400 + 16)
 	assert_eq(int(s.foes[f]["morale"]), morale_f - 5)
-	# the player: lost 50, wounded 30, dead 20
-	assert_eq(int(s.regiments[p]["wounded"]), 30)
-	assert_eq(int(s.regiments[p]["dead"]), _heads(p) - 1000 + 20)
+	# the player: lost 400 x 50 / 1000 = 20, wounded 12, dead 8
+	assert_eq(int(s.regiments[p]["wounded"]), 12)
+	assert_eq(int(s.regiments[p]["dead"]), _heads(p) - 400 + 8)
 	assert_eq(int(s.regiments[p]["morale"]), morale_p - 2)
 
 
 func test_round_uses_the_outcome_table_tier_of_the_odds() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	repo.balance["battle_variance_permille"] = 0.0   # eff = odds
 	for k: String in repo.battle_stances:
 		repo.battle_stances[k]["retreat_odds_permille"] = 0
@@ -271,7 +307,7 @@ func test_round_uses_the_outcome_table_tier_of_the_odds() -> void:
 
 
 func test_hold_loses_heart_slower() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, -8)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -289,7 +325,7 @@ func test_hold_loses_heart_slower() -> void:
 ## --- the end -------------------------------------------------------------
 
 func test_battle_ends_after_max_rounds_or_rout() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -324,7 +360,7 @@ func test_battle_ends_after_max_rounds_or_rout() -> void:
 	var renewed: Dictionary = _kinds(again, "start")[0]
 	assert_gt(int(renewed["battle_id"]), first_id, "a new battle, a new id")
 	# a rout ends it on the day
-	var s2 := SuiteData.campaign(repo, 7)
+	var s2 := _campaign(7)
 	_one_tier(30, 150, 600, 5, -20, "defender")
 	_place(s2, p, _spot(s2))
 	_foe(s2, f, _spot(s2) + Vector2i(1000, 0))
@@ -345,7 +381,7 @@ func test_the_pause_is_exactly_battle_disengage_days() -> void:
 	for days: int in [1, 2]:
 		repo = SuiteData.repo()
 		repo.balance["battle_disengage_days"] = float(days)
-		var s := SuiteData.campaign(repo, 7)
+		var s := _campaign(7)
 		_one_tier(0, 0, 600, 0, 0)
 		var p: String = _mine()[0]
 		var f: String = _theirs()[0]
@@ -368,7 +404,7 @@ func test_the_pause_is_exactly_battle_disengage_days() -> void:
 
 
 func test_evade_stance_leaves_on_first_contact() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(50, 50, 600, 0, 0)
 	assert_true(bool(repo.battle_stances["evade"]["retreats_on_contact"]), "the table says evade leaves at once")
 	var mine := _mine()
@@ -399,7 +435,7 @@ func test_hold_stance_never_retreats() -> void:
 	assert_eq(int(repo.battle_stances["hold"]["retreat_odds_permille"]), 0, "the table: hold never retreats")
 	assert_false(bool(repo.battle_stances["hold"]["retreats_on_contact"]))
 	for stance: String in ["hold", "steady"]:
-		var s := SuiteData.campaign(repo, 7)
+		var s := _campaign(7)
 		repo.balance["battle_variance_permille"] = 0.0
 		repo.battle_outcomes.clear()
 		repo.battle_outcomes.append({"tier": "hand_made", "eff_min": 0, "eff_max": 1000,
@@ -422,7 +458,7 @@ func test_hold_stance_never_retreats() -> void:
 func test_steady_retreats_below_retreat_odds() -> void:
 	var outcomes := {}
 	for margin: int in [1, 0]:
-		var s := SuiteData.campaign(repo, 7)
+		var s := _campaign(7)
 		_one_tier(0, 0, 600, 0, 0)
 		var p: String = _mine()[0]
 		var f: String = _theirs()[0]
@@ -441,7 +477,7 @@ func test_steady_retreats_below_retreat_odds() -> void:
 
 
 func test_a_fall_back_with_no_town_is_not_caught_again_next_day() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -465,7 +501,7 @@ func test_a_fall_back_with_no_town_is_not_caught_again_next_day() -> void:
 ## --- reinforcements and leaving ------------------------------------------
 
 func test_reinforcement_joins_and_is_capped() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	repo.balance["battle_max_units"] = 2.0
 	var mine := _mine()
@@ -494,7 +530,7 @@ func test_reinforcement_joins_and_is_capped() -> void:
 
 
 func test_march_away_mid_battle_removes_unit() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var mine := _mine()
 	var f: String = _theirs()[0]
@@ -522,7 +558,7 @@ func test_march_away_mid_battle_removes_unit() -> void:
 
 
 func test_battle_with_one_side_emptied_ends() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
@@ -537,7 +573,7 @@ func test_battle_with_one_side_emptied_ends() -> void:
 	assert_eq(String(end["why"]), "emptied")
 	assert_eq(String(end["winner"]), "att")
 	# a foe that vanishes (taken off by its host) leaves an empty side too
-	var s2 := SuiteData.campaign(repo, 7)
+	var s2 := _campaign(7)
 	_place(s2, p, _spot(s2))
 	_foe(s2, f, _spot(s2) + Vector2i(1000, 0))
 	BattleSystem.settle_day(repo, s2)
@@ -569,7 +605,7 @@ func _melee(s: GameState) -> void:
 
 
 func test_battle_state_is_deterministic() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_melee(s)
 	var twin := GameState.from_dict(s.to_dict())
 	var a := _five_days(s)
@@ -583,7 +619,7 @@ func test_battle_state_is_deterministic() -> void:
 
 
 func test_the_battle_path_leaves_game_rng_alone() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_melee(s)
 	var before := s.rng.to_dict().duplicate(true)
 	_five_days(s)
@@ -602,7 +638,7 @@ func _no_floats(v: Variant, where: String) -> void:
 
 
 func test_a_battle_saves_whole_numbers_and_loads_back() -> void:
-	var s := SuiteData.campaign(repo, 7)
+	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	_melee(s)
 	BattleSystem.settle_day(repo, s)

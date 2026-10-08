@@ -305,7 +305,7 @@ func _section_box(s: Dictionary) -> VBoxContainer:
 ## The left page, laid whole: the chief arm's figure and its drills, the arms
 ## row, the formation. Only open_for lays it whole; refresh moves what changed.
 func _fill_left() -> void:
-	_show_arm(MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, _code)))
+	_show_arm(MapObjects.regiment_arm(Game.data, ArmySystem.regiment(Game.data, _code, Game.state)))
 	_left_key = _left_state()
 	_fill_arms()
 	_fill_formation()

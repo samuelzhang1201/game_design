@@ -84,6 +84,10 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	# roster, because the chest is the crown's own provinces' (2026-09-13)
 	# and the crown is the player character's house.
 	WorldLedger.seed_metrics(data, s)
+	# The army as its units (spec 2026-10-07-army-split-and-ground §3).
+	var split := ArmySplit.split(data)
+	s.army_roster = split["roster"]
+	s.town_seat = split["seats"]
 	ArmySystem.ensure(data, s)
 	# The raid hosts stand at their assembly points until their day (spec
 	# 2026-10-07-enemy-ai-and-battle §2): foes, not regiments.
@@ -336,6 +340,14 @@ var battles: Array = []
 var town_losses: Array = []
 ## The last id handed to a foe or a battle (a higher id is a newer one).
 var foe_next_id := 0
+## Every kingdom's army as UNITS (owner 2026-10-07, spec
+## 2026-10-07-army-split-and-ground §2.1): unit code -> a row shaped as
+## military/regiments.csv's, + parent_code, is_royal, camp_town. Split from
+## the pack once, as the campaign starts (ArmySplit); read through
+## ArmySystem.roster / regiment, never directly.
+var army_roster: Dictionary = {}
+## town code -> the one unit holding its seat (ArmyGround, spec §4.4).
+var town_seat: Dictionary = {}
 ## The couriers on the road (owner 2026-09-27, CourierSystem): an Array of
 ## Dictionaries in whole metres and ints, walked in ascending id order.
 var couriers: Array = []
@@ -375,7 +387,10 @@ var hazards_seeded := false
 ## Bumped by every change to `hazards` (Hazards' cell index); not saved.
 var hazards_rev := 0
 
-const SAVE_VERSION := 5
+const SAVE_VERSION := 6
+## The oldest save this build loads (spec 2026-10-07-army-split-and-ground
+## §2.3): a save from before the split names regiments that no longer exist.
+const MIN_SAVE_VERSION := 6
 
 func to_dict() -> Dictionary:
 	var chars := {}
@@ -421,6 +436,7 @@ func to_dict() -> Dictionary:
 		"battles": _encode_values(battles.duplicate(true)),
 		"town_losses": _encode_values(town_losses.duplicate(true)),
 		"foe_next_id": _encode_values(foe_next_id),
+		"army_roster": army_roster.duplicate(true), "town_seat": town_seat.duplicate(true),
 		"couriers": _encode_values(couriers.duplicate(true)),
 		"war_drafts": _encode_values(war_drafts.duplicate(true)),
 		# whole numbers and the player's own words only: written plain, so a
@@ -514,6 +530,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Saves from before defeat carry no losses.
 	s.town_losses = _decode_values(d.get("town_losses", []))
 	s.foe_next_id = int(_decode_values(d.get("foe_next_id", 0)))
+	s.army_roster = (d.get("army_roster", {}) as Dictionary).duplicate(true)
+	s.town_seat = (d.get("town_seat", {}) as Dictionary).duplicate(true)
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))
 	s.war_drafts = _decode_values(d.get("war_drafts", {}))

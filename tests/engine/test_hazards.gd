@@ -129,9 +129,16 @@ func _crown_land_code(state: GameState) -> String:
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	for code: String in codes:
-		if String(ArmySystem.regiment(repo, code).get("is_naval", "0")) != "1":
+		if String(ArmySystem.regiment(repo, code, state).get("is_naval", "0")) != "1":
 			return code
 	return ""
+
+
+## The news of `code`'s own toll: a unit shares its cell with its camp-mates,
+## who take their own.
+func _toll_of(state: GameState, code: String, news: Array) -> Array:
+	var name := String(ArmySystem.regiment(repo, code, state)["label"])
+	return news.filter(func(n: String) -> bool: return n.begins_with("The %s loses " % name) and n.contains("Test Plague"))
 
 
 func _cell_of(state: GameState, code: String) -> int:
@@ -166,7 +173,7 @@ func test_two_hazards_both_take_their_toll_once() -> void:
 	Hazards.add(state, "r", "Rebels", "Test Rebels", [cell], state.tick, -1, "test")
 	var morale := int(state.regiments[code]["morale"])
 	var news := Hazards.settle_regiments(repo, state)
-	assert_eq(news.filter(func(n: String) -> bool: return n.contains("Test Plague")).size(), 1)
+	assert_eq(_toll_of(state, code, news).size(), 1)
 	assert_eq(int(state.regiments[code]["morale"]), clampi(morale + int(Hazards.kind_of(repo, "Rebels")["morale"]), 0, 100))
 
 
@@ -180,7 +187,7 @@ func test_no_fit_men_no_toll_and_no_news() -> void:
 	Hazards.add(state, "p", "Disease", "Test Plague", [_cell_of(state, code)], state.tick, -1, "test")
 	var news := Hazards.settle_regiments(repo, state)
 	assert_eq(int(state.regiments[code]["wounded"]), ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)))
-	assert_eq(news.filter(func(n: String) -> bool: return n.contains("Test Plague")), [])
+	assert_eq(_toll_of(state, code, news), [])
 
 
 func test_the_month_is_deterministic() -> void:

@@ -41,14 +41,24 @@ func _place(code: String, px: Vector2) -> void:
 	s.regiments[code]["dest_x_m"] = m.x
 	s.regiments[code]["dest_y_m"] = m.y
 
-## Stands a regiment IN the crown's home province's capital town (a garrison
-## is only one inside a town, spec 2026-10-06-army-location-and-town-defence §4).
-func _stand_at_home(code: String, order: String) -> Dictionary:
+## Marches a unit into the crown's home province's capital town and has it
+## arrive (spec 2026-10-07-army-split-and-ground §4.3): SEATED — the seat
+## emptied first, so the arrival takes it — or CAMPED round the town, its
+## seat held by another.
+func _arrive_at_home(code: String, seated: bool) -> Dictionary:
 	var home := MapManors.home_province(data, s)
 	var p: Dictionary = data.provinces[home]
-	var b: Dictionary = data.burgs[String(p["capital_burg"])]
-	_place(code, Vector2(float(b["x"]), float(b["y"])))
-	s.regiments[code]["order"] = order
+	var town := String(p["capital_burg"])
+	var b: Dictionary = data.burgs[town]
+	var at := Vector2(float(b["x"]), float(b["y"]))
+	ArmySystem.set_march(data, s, code, at)
+	if seated:
+		s.town_seat.erase(town)
+	assert_true(seated or ArmyGround.seat_of(data, s, town) != "", "another holds the seat")
+	_place(code, at)
+	assert_eq(ArmySystem.march_day(data, s), [code], "it arrives")
+	assert_eq(ArmyGround.seated_in(data, s, code), town if seated else "")
+	assert_eq(ArmyGround.camped_by(data, s, code), town)
 	return p
 
 func _card_stat(code: String, key: String) -> Dictionary:
@@ -83,27 +93,27 @@ func test_line_of_reads_the_line() -> void:
 
 func test_a_garrison_in_a_crown_town_reads_its_town() -> void:
 	var code: String = _land_codes()[0]
-	var p := _stand_at_home(code, ArmySystem.ORDER_GARRISON)
+	var p := _arrive_at_home(code, true)
 	var line := SupplySystem.line_of(data, s, code)
 	assert_true(line["garrison"])
 	assert_eq(String(line["garrison_town"]), String(p["capital_burg"]))
 
 func test_a_garrison_reads_in_garrison_at_its_town() -> void:
 	var code: String = _land_codes()[0]
-	var p := _stand_at_home(code, ArmySystem.ORDER_GARRISON)
+	var p := _arrive_at_home(code, true)
 	var town := String(data.burgs[String(p["capital_burg"])]["label"])
 	assert_true(SupplySystem.line_of(data, s, code)["garrison"])
 	assert_eq(String(_card_stat(code, "army_supply_line")["text"]), "none", "no line ordered")
 	assert_string_contains(String(_card_stat(code, "army_supply_line")["tooltip"]).to_lower(),
 		(town + " tops it up").to_lower())
 
-## Final review 6: a regiment merely STANDING in its realm town (no garrison
-## order) is topped up by it all the same, and the card says so.
+## Final review 6: a unit CAMPED round its realm town (not on its seat) is
+## topped up by it all the same, and the card says so.
 func test_a_standing_regiment_reads_that_its_town_tops_it_up() -> void:
 	var code: String = _land_codes()[0]
-	var p := _stand_at_home(code, ArmySystem.ORDER_STANDBY)
+	var p := _arrive_at_home(code, false)
 	var town := String(data.burgs[String(p["capital_burg"])]["label"])
-	assert_false(SupplySystem.line_of(data, s, code)["garrison"], "no garrison order")
+	assert_false(SupplySystem.line_of(data, s, code)["garrison"], "not on the seat")
 	var tip := String(_card_stat(code, "army_supply_line")["tooltip"])
 	assert_string_contains(tip.to_lower(), (town + " tops it up").to_lower())
 
@@ -127,7 +137,7 @@ func test_a_regiment_whose_town_is_dry_reads_the_depot_that_feeds_it() -> void:
 ## a month on, its ranks are well fed.
 func test_a_month_in_a_stocked_town_leaves_the_ranks_well_fed() -> void:
 	var code: String = _land_codes()[0]
-	var p := _stand_at_home(code, ArmySystem.ORDER_GARRISON)
+	var p := _arrive_at_home(code, true)
 	s.regiments[code]["supplies"] = 0
 	s.town_stock[String(p["capital_burg"])] = {"crown": 1000000, "lord": 0, "house": 0}
 	TownStores.sync_metrics(data, s)
@@ -175,8 +185,9 @@ func test_a_regiment_on_the_mountains_uses_more_than_at_home() -> void:
 			height_text = String(st["tooltip"])
 	assert_string_contains(height_text, String(there["tier"]))
 
-## Only a GARRISON order earns the garrison's morale.
-func test_only_a_garrison_order_earns_the_garrison_morale() -> void:
+## Only the seat earns the garrison's morale (spec 2026-10-07-army-split-and-
+## ground §4.1); a unit camped round the town is fed, not behind its walls.
+func test_only_the_seat_earns_the_garrison_morale() -> void:
 	var codes := _land_codes()
 	var standing: String = codes[0]
 	var holding: String = codes[1]
@@ -185,12 +196,12 @@ func test_only_a_garrison_order_earns_the_garrison_morale() -> void:
 	var drift := int(data.bal("army_morale_drift_per_month"))
 	assert_gt(bonus, 0)
 	assert_gt(drift, 1, "the drift reaches past the fed mark")
-	for pair: Array in [[standing, ArmySystem.ORDER_STANDBY], [holding, ArmySystem.ORDER_GARRISON]]:
+	for pair: Array in [[holding, true], [standing, false]]:
 		var c: String = pair[0]
-		_stand_at_home(c, String(pair[1]))
+		_arrive_at_home(c, bool(pair[1]))
 		s.regiments[c]["morale"] = fed - 1
 		s.regiments[c]["supplies"] = ArmySystem.supply_use(data, ArmySystem.regiment(data, c), s) * 4
 	ArmySystem.settle_month(data, s)
-	assert_eq(int(s.regiments[standing]["morale"]), fed, "standing by at home: the fed mark")
+	assert_eq(int(s.regiments[standing]["morale"]), fed, "camped round the town: the fed mark")
 	assert_eq(int(s.regiments[holding]["morale"]), mini(fed + bonus, fed - 1 + drift),
-		"in garrison: toward the fed mark and the bonus")
+		"on the seat: toward the fed mark and the bonus")

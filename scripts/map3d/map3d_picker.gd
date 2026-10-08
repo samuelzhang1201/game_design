@@ -126,13 +126,8 @@ func pick_at(pos: Vector2) -> Dictionary:
 	return {"kind": "province", "code": province} if province != "" else {}
 
 
-## What a counter names: its regiment; a town's garrison of more than one
-## regiment as {kind: garrison, town, codes} (owner 2026-10-06, choice A —
-## the click then asks which of them).
+## What a counter names: its own unit, one a counter.
 static func _army_pick(m: Dictionary) -> Dictionary:
-	var codes: Array = m.get("codes", [])
-	if String(m.get("garrison", "")) != "" and codes.size() > 1:
-		return {"kind": "garrison", "town": String(m["garrison"]), "codes": codes}
 	return {"kind": "army", "code": String(m["code"])}
 
 
@@ -196,11 +191,8 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 		"manor", "landmark":
 			province = MapManors.province_of(repo, int(picked["cell"]), state)
 		"army":
-			var k := String(ArmySystem.regiment(repo, String(picked["code"])).get("kingdom_code", ""))
+			var k := String(ArmySystem.regiment(repo, String(picked["code"]), state).get("kingdom_code", ""))
 			return k if repo.kingdoms.has(k) else ""
-		"garrison":
-			var g := String(ArmySystem.regiment(repo, String(picked["codes"][0])).get("kingdom_code", ""))
-			return g if repo.kingdoms.has(g) else ""
 	if province == "":
 		return ""
 	var holder := MapOwnership.owner_of(repo, state, province)
@@ -236,7 +228,7 @@ func hover_pick(picked: Dictionary, pos: Vector2) -> void:
 		return
 	var repo: DataRepository = ctx.repo if ctx != null else null
 	var state: GameState = ctx.state() if ctx != null else null
-	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army", "garrison", "landmark"] else {}
+	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army", "landmark"] else {}
 	if obj != _hover_obj:
 		_hover_obj = obj
 		var label := MapObjects.label_of(repo, obj, state)

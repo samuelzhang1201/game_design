@@ -35,6 +35,8 @@ var voicer: Voicer
 ## Makes a new campaign from (data, seed): GameState.new_campaign unless the
 ## test suite hands its cached copier here (tests/pre_run.gd, tests/suite_data.gd).
 var campaign_maker: Callable = GameState.new_campaign
+## Why the last load_campaign failed, in the player's words ("" after a good one).
+var load_error := ""
 
 func _ready() -> void:
 	data = DataRepository.load_all("res://data")
@@ -255,7 +257,7 @@ func review_drafts() -> Dictionary:
 		# 2026-10-07-march-waypoints ruling 8), the line its gold and the march's
 		var reqs := WarDrafts.requests_from(data, state, code, d)
 		var req: ActionRequest = reqs.back()
-		var reg := ArmySystem.regiment(data, code)
+		var reg := ArmySystem.regiment(data, code, state)
 		# each order weighed after the one before it has spent; a draft of two
 		# runs on its own copy, kept only when both pass (nothing half-spent)
 		var trial := sim if reqs.size() == 1 else GameState.from_dict(sim.to_dict(), false)
@@ -359,6 +361,8 @@ func load_campaign(path: String = "") -> bool:
 	path = save_path if path == "" else path
 	var loaded := SaveLoad.load_game(path)
 	if loaded == null:
+		load_error = "The army's organisation has changed since this realm was saved; begin a new reign." \
+			if SaveLoad.last_error == "outdated" else "No saved realm found."
 		return false
 	# The save names its world. Swap the pack in before the state goes live,
 	# and refuse rather than silently drop the player into a different map
@@ -367,7 +371,9 @@ func load_campaign(path: String = "") -> bool:
 		if not data.load_map(loaded.map_id):
 			push_error("load_campaign: save needs map '%s' which is not installed"
 				% loaded.map_id)
+			load_error = "No saved realm found."
 			return false
+	load_error = ""
 	state = loaded
 	# A save from before the wealth tiers were state computes them once, from
 	# the state it loaded (Ruling 15).

@@ -22,9 +22,9 @@ func before_each() -> void:
 
 ## --- helpers ----------------------------------------------------------------
 
-## The player's land regiments of 1000 men or more, in code order.
+## The player's land units, in code order.
 func _mine() -> Array:
-	return Play.land_regiments(repo, 1000)
+	return Play.land_regiments(repo)
 
 
 func _host(role: String) -> String:
@@ -36,15 +36,15 @@ func _town_m(town: String) -> Vector2i:
 
 
 func _place(s: GameState, code: String, at: Vector2i, order: String) -> void:
-	Play.place(s, code, at, order)
+	Play.place(repo, s, code, at, order)
 
 
-## A town the pack quarters one of the player's regiments in that is not the
-## depot (so a dry garrison could be fed from elsewhere): [town, regiment].
+## A town the campaign opens with one of the player's units on its seat that
+## is not the depot (so a dry garrison could be fed from elsewhere): [town, unit].
 func _town_and_garrison(s: GameState) -> Array:
 	var dep := TownStores.depot(repo, s)
 	for c: String in _mine():
-		var t := ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, c), s)
+		var t := ArmyGround.seated_in(repo, s, c)
 		if t != "" and t != dep:
 			return [t, c]
 	return ["", ""]
@@ -738,7 +738,7 @@ func test_relief_force_joins_battle_and_can_lift_siege() -> void:
 	var at := _town_m(town) + Vector2i(3000, 0)
 	for c: String in relief:
 		_place(s, c, at, ArmySystem.ORDER_STANDBY)
-		assert_eq(SupplySystem.garrisoned_in(repo, s, c), "", c + " is no garrison")
+		assert_eq(ArmyGround.garrison_town(repo, s, c), "", c + " is no garrison")
 	var ev := BattleSystem.settle_day(repo, s)
 	var starts := _of(ev, "start")
 	assert_eq(starts.size(), 1, "the relief meets the besiegers in the field")
@@ -1075,8 +1075,10 @@ func _first_appear() -> int:
 
 
 ## The day loop to the main host's crossing, its target held from then on, the
-## town garrisoned by `n` of the player's regiments (`weakest`: the smallest
-## first, else the largest first). [state, town, garrison].
+## town garrisoned by the units of `n` of the player's pack regiments
+## (`weakest`: the smallest first, else the largest first; Play.regiment_units),
+## sent there as arrivals (Play.arrive: the seat, then the camp round it).
+## [state, town, garrison].
 func _invaded(engine: TickEngine, n: int, weakest: bool) -> Array:
 	repo.balance["ai_think_days"] = 999.0
 	var s := _opened(engine)
@@ -1085,9 +1087,9 @@ func _invaded(engine: TickEngine, n: int, weakest: bool) -> Array:
 	var mind: Dictionary = s.ai_hosts[_host("main")]
 	assert_eq(String(mind["target_kind"]), "town", "the main host goes for a town")
 	var town := String(mind["target_id"])
-	var garrison: Array = Play.by_size(repo, _mine(), weakest).slice(0, n)
+	var garrison: Array = Play.regiment_units(repo, weakest, n)
 	for c: String in garrison:
-		_place(s, c, _town_m(town), ArmySystem.ORDER_GARRISON)
+		Play.arrive(repo, s, c, _town_m(town))
 	return [s, town, garrison]
 
 

@@ -65,7 +65,7 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 		attacking: bool, enemy_codes: Array = []) -> int:
 	var enemy_m := 0
 	for e: Variant in enemy_codes:
-		enemy_m += ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, String(e)), state)
+		enemy_m += ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, String(e), state), state)
 	if not enemy_codes.is_empty():
 		@warning_ignore("integer_division")  # whole metres
 		enemy_m /= enemy_codes.size()
@@ -74,7 +74,7 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 		var code := String(c)
 		var p := ArmySystem.power(repo, state, code, "attack" if attacking else "defend")
 		if not enemy_codes.is_empty():
-			var delta := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, code), state) - enemy_m
+			var delta := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, code, state), state) - enemy_m
 			@warning_ignore("integer_division")  # whole power, per-mille height factor
 			p = p * ArmySystem.height_factor(repo, delta) / 1000
 		if not attacking:
@@ -160,7 +160,7 @@ static func _apply_side(repo: DataRepository, state: GameState, codes: Array, lo
 		var entry := _entry_of(repo, state, code)
 		if entry.is_empty():
 			continue
-		var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)), entry)
+		var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, code, state)), entry)
 		live.append(code)
 		fits.append(fit)
 		total_fit += fit
@@ -272,7 +272,7 @@ static func _at_m(repo: DataRepository, state: GameState, code: String) -> Vecto
 	var e := _stored(state, code)
 	if e.has("x_m"):
 		return Vector2i(int(e["x_m"]), int(e["y_m"]))
-	return ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)))
+	return ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code, state)))
 
 
 ## True when two points are no more than `metres` apart (whole numbers).
@@ -288,7 +288,7 @@ static func _within(a: Vector2i, b: Vector2i, metres: int) -> bool:
 ## today <= it means no contact), nor a foe
 ## whose host is going home (`homeward`).
 static func _can_fight(repo: DataRepository, state: GameState, code: String) -> bool:
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 		return false
 	if homeward(state, code):
@@ -359,17 +359,25 @@ static func siege_town_of(state: GameState, code: String) -> String:
 
 
 ## The town a foe assaults when it stands within the reach
-## (data/army_town_reach.csv) of the held town player regiment `p` garrisons
-## (SupplySystem.garrisoned_in); "" otherwise.
-static func _town_contact(repo: DataRepository, state: GameState, p: String, f: String) -> String:
-	var town := SupplySystem.garrisoned_in(repo, state, p)
+## (data/army_town_reach.csv) of `town`, the held town a player unit
+## garrisons (ArmyGround.garrison_town: its seat or camp); "" otherwise.
+static func _town_contact(repo: DataRepository, state: GameState, town: String, f: String) -> String:
 	if town == "":
 		return ""
 	var b: Dictionary = repo.burgs[town]
-	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, f))
+	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, f, state))
 	if at.distance_to(Vector2(float(b["x"]), float(b["y"]))) <= ArmySystem.town_reach_px(repo, b):
 		return town
 	return ""
+
+
+## The battle fought at `town` (the earliest id), {} when none.
+static func _battle_at(state: GameState, town: String) -> Dictionary:
+	var out: Dictionary = {}
+	for b: Dictionary in state.battles:
+		if String(b["town"]) == town and (out.is_empty() or int(b["id"]) < int(out["id"])):
+			out = b
+	return out
 
 
 ## Halt a regiment where it stands: a column in a battle does not march.
@@ -436,7 +444,7 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 	var reach := int(round(repo.bal("battle_contact_km") * 1000.0))
 	var garrisons: Dictionary = {}   # the town each of mine garrisons ("" none), read once
 	for pc: Variant in mine:
-		garrisons[pc] = SupplySystem.garrisoned_in(repo, state, String(pc))
+		garrisons[pc] = ArmyGround.garrison_town(repo, state, String(pc))
 	for fc: Variant in theirs:
 		var f := String(fc)
 		var held_off := siege_town_of(state, f)
@@ -444,12 +452,19 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 			var p := String(pc)
 			if held_off != "" and String(garrisons[pc]) == held_off:
 				continue    # a besieged town's garrison waits for the assault
-			var town := _town_contact(repo, state, p, f)
+			# read fresh: a column halted in a town's reach today is its garrison now
+			var town := _town_contact(repo, state, ArmyGround.garrison_town(repo, state, p), f)
 			if town == "" and not _within(_at_m(repo, state, f), _at_m(repo, state, p), reach):
 				continue
 			var bf := battle_of(state, f)
 			var bp := battle_of(state, p)
-			if bf.is_empty() and bp.is_empty():
+			var at_town := _battle_at(state, town) if town != "" else {}
+			if not at_town.is_empty() and bf.is_empty() and bp.is_empty():
+				# one battle a town: a town contact joins the assault already
+				# fought there (each side's cap holding); one left out waits
+				_join_event(repo, state, at_town, f, events)
+				_join_event(repo, state, at_town, p, events)
+			elif bf.is_empty() and bp.is_empty():
 				_start(repo, state, p, f, town, events)
 			elif bf.is_empty():
 				_join_event(repo, state, bp, f, events)
@@ -583,7 +598,7 @@ static func _exit_why(repo: DataRepository, state: GameState, code: String, side
 	var e := _stored(state, code)
 	if String(e.get("order", "")) == ArmySystem.ORDER_MARCH:
 		return "ordered"
-	if ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)), e) <= 0:
+	if ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, code, state)), e) <= 0:
 		return "broken"
 	if rout == ("attacker" if side == "att" else "defender"):
 		return "rout"
@@ -629,7 +644,7 @@ static func _exits(repo: DataRepository, state: GameState, b: Dictionary, rout: 
 ## earlier town code); it halts where it is when there is none.
 static func _fall_back(repo: DataRepository, state: GameState, code: String, b: Dictionary) -> void:
 	var e := _stored(state, code)
-	var kingdom := String(ArmySystem.regiment(repo, code).get("kingdom_code", ""))
+	var kingdom := String(ArmySystem.regiment(repo, code, state).get("kingdom_code", ""))
 	var place := Vector2i(int(b["place_x_m"]), int(b["place_y_m"]))
 	var reach := int(round(repo.bal("battle_contact_km") * 1000.0))
 	var here := _at_m(repo, state, code)
@@ -660,6 +675,10 @@ static func _fall_back(repo: DataRepository, state: GameState, code: String, b: 
 	e["dest_x_m"] = best_m.x
 	e["dest_y_m"] = best_m.y
 	e["order"] = ArmySystem.ORDER_MARCH
+	if not ArmySystem.is_foe(state, code):
+		# a unit of the crown's leaves its camp and, holding a seat, empties it
+		# (refilled from the camp; spec 2026-10-07-army-split-and-ground §4.4)
+		ArmyGround.leave(repo, state, code)
 
 
 ## A regiment leaves a place it can no longer hold (a town that fell,

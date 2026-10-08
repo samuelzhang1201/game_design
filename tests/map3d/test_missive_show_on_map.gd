@@ -138,7 +138,7 @@ func test_a_receipts_regiment_opens_its_card() -> void:
 	var r: GameRoot = await _court()
 	var screen: CourtScreen = r.current_screen
 	var view := screen.map3d_view()
-	var code := String(MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))[0]["regiment_code"])
+	var code := String(MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state)[0]["regiment_code"])
 	var id := _letter(MissiveLog.subject("regiment", code, -1, Vector2(500, 300)))
 	watch_signals(view)
 	_show(r, id)

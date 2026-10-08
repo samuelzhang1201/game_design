@@ -5,13 +5,15 @@ const Play := preload("res://tests/invasion_play.gd")
 ## The prologue's invasion end to end (spec 2026-10-07-enemy-ai-and-battle-
 ## design, all of it) on the REAL day loop of a suite campaign, with no hand
 ## on the engine but the player's defence: on the main host's crossing day the
-## town it chose is garrisoned as if the march had already been carried out.
-##   A  WEAK: the pack's smallest land regiment holds it — the rumour comes,
+## town it chose is garrisoned as if the march had already been carried out
+## (Play.arrive: the first unit takes the seat, the rest camp round the town —
+## the town's garrison all the same, ArmyGround.garrison_town).
+##   A  WEAK: the units of the pack's smallest land regiment hold it — the rumour comes,
 ##      the hosts cross on their days, the main host sits down before the
 ##      town, wears it down, storms it and takes it; the loss costs the crown
 ##      (treasury, contentment, the council, the war beat) and the campaign
 ##      plays on.
-##   B  STRONG: the three largest hold it, behind walls and a citadel (the
+##   B  STRONG: the units of the three largest hold it, behind walls and a citadel (the
 ##      test gives the town them; the host keeps its plan, ai_think_days out of
 ##      reach — with its own mind it turns away from a garrison it sees) — the
 ##      town never falls, the garrison never starves, the host goes home.
@@ -43,10 +45,11 @@ func _chosen_town() -> String:
 	return String(mind["target_id"])
 
 
-## The defence of `scenario` ("weak" | "strong"): its regiments, by size.
+## The defence of `scenario` ("weak" | "strong"): the units of the player's
+## smallest pack regiment, or of its three largest (Play.regiment_units).
 func _garrison(scenario: String) -> Array:
 	var weak := scenario == "weak"
-	return Play.by_size(repo, Play.land_regiments(repo), weak).slice(0, 1 if weak else 3)
+	return Play.regiment_units(repo, weak, 1 if weak else 3)
 
 
 ## Sets the repository up for `scenario` BEFORE its campaign is made (every
@@ -92,7 +95,7 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 			var town := String(s.ai_hosts[main]["target_id"])
 			seen["town"] = town
 			for c: String in garrison:
-				Play.place(s, c, Play.town_m(repo, town), ArmySystem.ORDER_GARRISON)
+				Play.arrive(repo, s, c, Play.town_m(repo, town))
 			seen["garrison"] = garrison.duplicate()
 		for e: Dictionary in engine.day_siege:
 			match String(e.get("kind", "")):
@@ -190,7 +193,7 @@ func test_weak_defence_loses_the_town_and_the_campaign_plays_on() -> void:
 		return
 	var stormed := int(assaults[0]["on"])
 	assert_eq(stormed, begun + int(repo.bal("siege_assault_days")), "on the siege's assault day")
-	assert_true(int(assaults[0]["def"].size()) > 0 and garrison[0] in assaults[0]["def"], "the garrison defends")
+	assert_true((assaults[0]["def"] as Array).any(func(c: String) -> bool: return c in garrison), "the garrison defends")
 	assert_true(stormed in seen["battle_letters"], "the assault's letter, day %d" % stormed)
 	# the fall
 	var fell := int(seen["fell"])
@@ -277,7 +280,7 @@ func test_strong_walled_defence_holds_and_the_host_goes_home() -> void:
 	assert_gt(int(seen["home"]), int(seen["siege_begin"]), "the host goes home")
 	assert_true(String(s.ai_hosts[main]["mode"]) in EnemyAi.HOMEWARD, "RETREAT or WITHDRAW")
 	for c: String in garrison:
-		assert_gt(ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, c)), s.regiments[c]), 0,
+		assert_gt(ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, c, s)), s.regiments[c]), 0,
 			c + " still stands")
 	# a host going home fights no more: no battle from the day it turns home,
 	# and the garrison's dead are what the assaults cost — at most the first

@@ -2,7 +2,7 @@ class_name SiegeSystem
 extends RefCounted
 ## The siege (spec docs/superpowers/specs/2026-10-07-enemy-ai-and-battle-design.md
 ## §5.1-5.2). A host in mode SIEGE (EnemyAi sets it on arrival) sits before a
-## town the player's regiments GARRISON (SupplySystem.garrisoned_in) and wears
+## town the player's regiments GARRISON (ArmyGround.garrison_town) and wears
 ## it down a day at a time:
 ##
 ##   step  = siege_rate x A / (A + D)        (0 when A + D == 0)
@@ -153,7 +153,7 @@ static func starving(repo: DataRepository, state: GameState, town: String) -> bo
 	var least := -1
 	for p: String in garrison:
 		var days := ArmySystem.days_in_hand(int(state.regiments[p].get("supplies", 0)),
-			ArmySystem.supply_use(repo, ArmySystem.regiment(repo, p), state))
+			ArmySystem.supply_use(repo, ArmySystem.regiment(repo, p, state), state))
 		least = days if least < 0 else mini(least, days)
 	return least <= 0
 
@@ -198,7 +198,7 @@ static func settle_day(repo: DataRepository, state: GameState, battle_events: Ar
 	var events: Array = []
 	if state.ai_hosts.is_empty():
 		return events
-	_follow_main(repo, state, events)
+	follow_main(repo, state, events)
 	for h: String in EnemyAi.host_codes(state):
 		var mind: Dictionary = state.ai_hosts[h]
 		var mode := String(mind["mode"])
@@ -260,7 +260,7 @@ static func capture(repo: DataRepository, state: GameState, host_code: String, e
 	var at := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
 	var out := 0
 	for p: String in garrison:
-		if ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, p)), state.regiments[p]) > 0:
+		if ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, p, state)), state.regiments[p]) > 0:
 			BattleSystem.march_out(repo, state, p, at)
 			out += 1
 	for h: String in hosts:
@@ -308,8 +308,10 @@ static func _sits_before(mind: Dictionary, town: String) -> bool:
 
 ## A reserve follows its main host: out of a SIEGE when the main host goes
 ## home (WITHDRAW, RETREAT) or holds the town it took (HOLD); out of a HOLD
-## when the main host goes home.
-static func _follow_main(repo: DataRepository, state: GameState, events: Array) -> void:
+## when the main host goes home. Run by settle_day and again at the end of
+## EnemyAi.step_day, so a reserve follows its main host home the SAME day,
+## before the day's battles (a host going home strikes no more blows).
+static func follow_main(repo: DataRepository, state: GameState, events: Array) -> void:
 	var lead := EnemyAi.main_host(repo, state)
 	if lead == "":
 		return
@@ -391,7 +393,7 @@ static func _siege_day(repo: DataRepository, state: GameState, h: String, battle
 	var garrison := EnemyAi.garrison_of(repo, state, town)
 	var fit := 0
 	for p: String in garrison:
-		fit += ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, p)), state.regiments[p])
+		fit += ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, p, state)), state.regiments[p])
 	if progress >= 1000 or (not garrison.is_empty() and fit <= 0):
 		_fall(repo, state, h, hosts, events)
 		return
@@ -574,7 +576,7 @@ static func _of_hosts(state: GameState, code: String, hosts: Array) -> bool:
 ## raider realm's.
 static func _kingdom_of(repo: DataRepository, state: GameState, host_code: String) -> String:
 	for c: String in EnemyAi.regiments_of(state, host_code):
-		var k := String(ArmySystem.regiment(repo, c).get("kingdom_code", ""))
+		var k := String(ArmySystem.regiment(repo, c, state).get("kingdom_code", ""))
 		if k != "" and repo.kingdoms.has(k):
 			return k
 	return repo.resolve_realm("raider_realm")

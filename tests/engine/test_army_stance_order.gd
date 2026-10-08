@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Play := preload("res://tests/invasion_play.gd")
 ## ARMY_STANCE (spec 2026-10-07-enemy-ai-and-battle-design §4.4): a regiment's
 ## standing battle order, set by courier like ARMY_GARRISON; it takes effect
 ## from the day AFTER he arrives, in battle or out of it.
@@ -28,7 +29,7 @@ func _mine() -> String:
 
 
 func _foe_code() -> String:
-	return String((repo.raid_hosts[0]["regiments"] as Array)[0])
+	return String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
 
 
 func _stance(code: String, stance: String) -> ActionRequest:
@@ -140,6 +141,9 @@ func test_stance_order_lands_after_day_end_and_applies_next_day() -> void:
 	var f := _foe_code()
 	var e: Dictionary = s.regiments[p]
 	var at := Vector2i(int(e["x_m"]), int(e["y_m"]))
+	# the rest of the army out of the way (its camp would join), the column back
+	Play.park_army(repo, s, at)
+	Play.place(repo, s, p, at, ArmySystem.ORDER_STANDBY)
 	var st := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, f))
 	st["x_m"] = at.x + 1000
 	st["y_m"] = at.y

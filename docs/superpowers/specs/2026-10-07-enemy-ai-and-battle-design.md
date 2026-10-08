@@ -204,3 +204,14 @@ siege_progress += siege_rate × 敌军 power / (敌军 power + 守军 power × �
 ## 10. 仍待 owner 确认的 Default
 
 战斗最多 5 轮;默认编成 3 支;`ai_think_days` 为 3;`engage_odds` 为 0.45;`reserve` 约第 18 天越境;强攻间隔与影响幅度;战败时国库与民心的扣法;夺城后敌军留 HOLD。以上全是 CSV / `balance.csv` 数值,实现后可调,不影响结构。
+
+## 11. 与军队拆分(units)合并后的裁定
+
+军队拆分(`2026-10-07-army-split-and-ground-design.md`)把每个王国的开局军队拆成纯兵种单位,存进 `state.army_roster`;合并后本设计按下面的规则运行(implementer's rulings,待 owner 确认):
+
+- **敌军是单位。** `raid_hosts.csv` 的 `regiments` 仍写 pack 的 regiment 代码;`EnemyAi.host_units` 把每个代码解析为 roster 里同码的单位,否则为 `parent_code` 是它的全部陆军单位(步、弓、骑;它的炮已并入本国 royal train,host 不带)。`GameState.foes` 以单位代码为键。`new_campaign` 先拆分、再 `EnemyAi.spawn`。被征出的单位离开营地:它占着的城座清空,由原营地补上(`ArmyGround.refill`);敌军单位不占城座、不扎营(`seated_in` / `camped_by` / `garrison_town` 对 foe 一律为空)。
+- **守军 = 城座 + 城外营地。** 对敌军的城战与围城,城镇的守军是站着(非行军)的玩家单位中:占城座的、扎营在该城的(`camp_town`,不论 standby 还是 garrison),以及以 garrison 令站在城镇范围内的(`ArmyGround.garrison_town`)。城与营一同被围:围城期间敌军不与其中任何单位接战,直到强攻;营地的兵只吃城里的存粮;其补给线被切断。只有城座单位享有城防(`works_of`),营地单位在野外地形上迎战强攻。理由:按拆分规则每城只有一个单位能进城(至多 600 人),若只算城座,任何城镇都守不住一次围城。
+- **一城一战。** 城镇处的接战加入该城已有的那场战斗(双方仍受 `battle_max_units` 上限),不再开第二场;因上限进不去的单位等待。否则一支营地小队在分战中败退就会被算作破城。
+- **被占的城无人驻守。** 敌军占领(`SiegeSystem.occupier_of`)的城,`ArmyGround.holds` 视为不在王国手中:撤出的守军空出城座,收复前无人补位,营地也不再从该城补给。
+- **预备队同日随主力回撤。** 主力当天转为 RETREAT / WITHDRAW 时,`EnemyAi.step_day` 末尾立即执行 `SiegeSystem.follow_main`,预备队不再在当天的战斗中出手。
+- 无命令的推演里,raiders 在掠空的庄园后会围一座有营地的城,约第 72 天回撤(`test_raid` 的上限因此为 90 天)。

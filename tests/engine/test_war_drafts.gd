@@ -12,7 +12,7 @@ func before_each() -> void:
 	repo = SuiteData.repo()
 	state = SuiteData.campaign(repo, 42)
 	code = ""
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0:
 			code = String(r["regiment_code"])
 			break

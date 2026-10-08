@@ -36,6 +36,9 @@ func test_the_picker_picks_what_the_view_picks() -> void:
 	var v := _view()
 	var picker := v.component("picker") as Map3DPicker
 	assert_not_null(picker)
+	# the counters spread round their towns (Map3DDeclutter) and one may cover
+	# the view's middle: this asks about the town, so the layer is off
+	v.set_military(false)
 	var at := v.size * 0.5
 	assert_eq(picker.pick_at(at), v.pick_at(at))
 	assert_eq(picker.pick_at(at), {"kind": "burg", "code": _capital()}, "the capital sits mid-view")
@@ -99,7 +102,7 @@ func test_a_town_is_still_clickable_with_no_dot_shown_in_the_no_dot_gap() -> voi
 func test_a_waiting_courier_yields_the_click_to_the_town_under_him() -> void:
 	var v := _view()
 	var code := ""
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if CourierSystem.carries_orders(r):
 			code = String(r["regiment_code"])
 			break

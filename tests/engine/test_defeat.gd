@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Play := preload("res://tests/invasion_play.gd")
 ## The cost of a lost town (spec 2026-10-07-enemy-ai-and-battle-design §6, not
 ## a Game Over): DefeatSystem.on_town_lost takes battle_defeat_treasury_permille
 ## of the crown's treasury and battle_defeat_morale of the people's contentment
@@ -19,13 +20,9 @@ func before_each() -> void:
 
 ## --- helpers ----------------------------------------------------------------
 
+## The player's land units, in code order.
 func _mine() -> Array:
-	var out: Array = []
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) >= 1000:
-			out.append(String(r["regiment_code"]))
-	out.sort()
-	return out
+	return Play.land_regiments(repo)
 
 
 func _host(role: String) -> String:
@@ -40,19 +37,15 @@ func _town_m(town: String) -> Vector2i:
 
 
 func _place(s: GameState, code: String, at: Vector2i, order: String) -> void:
-	var e: Dictionary = s.foes.get(code, s.regiments.get(code, {}))
-	e["x_m"] = at.x
-	e["y_m"] = at.y
-	e["dest_x_m"] = at.x
-	e["dest_y_m"] = at.y
-	e["order"] = order
+	Play.place(repo, s, code, at, order)
 
 
-## A town the pack quarters one of the player's regiments in, not the depot: [town, regiment].
+## A town the campaign opens with one of the player's units on its seat, not
+## the depot: [town, unit].
 func _town_and_garrison(s: GameState) -> Array:
 	var dep := TownStores.depot(repo, s)
 	for c: String in _mine():
-		var t := ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, c), s)
+		var t := ArmyGround.seated_in(repo, s, c)
 		if t != "" and t != dep:
 			return [t, c]
 	return ["", ""]

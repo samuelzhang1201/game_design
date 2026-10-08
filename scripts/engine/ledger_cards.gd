@@ -67,7 +67,7 @@ static func _head(repo: DataRepository, state: GameState, kind: String, rest: St
 	match kind:
 		"supply_line":
 			if not state.regiments.has(rest) \
-					or String(ArmySystem.regiment(repo, rest).get("is_naval", "0")) == "1":
+					or String(ArmySystem.regiment(repo, rest, state).get("is_naval", "0")) == "1":
 				return ""  # a fleet has no supply line
 			var line := SupplySystem.line_of(repo, state, rest)
 			if String(line["town"]) == "":
@@ -207,7 +207,7 @@ static func subject_of(repo: DataRepository, state: GameState, node_id: String) 
 			var b: Dictionary = repo.burgs.get(rest, {})
 			return {} if b.is_empty() else MissiveLog.subject("burg", rest, -1, Vector2(float(b["x"]), float(b["y"])))
 		"regiment":
-			var reg := ArmySystem.regiment(repo, rest)
+			var reg := ArmySystem.regiment(repo, rest, state)
 			return {} if reg.is_empty() else MissiveLog.subject("regiment", rest, -1,
 				ArmySystem.position_of(repo, state, reg))
 	return {}

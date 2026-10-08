@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Play := preload("res://tests/invasion_play.gd")
 ## The enemy hosts' minds (spec 2026-10-07-enemy-ai-and-battle-design §3.2–3.5):
 ## one scoring formula over the player's manors and towns within reach, a
 ## decision every ai_think_days, hosts that split rather than pile on one
@@ -71,13 +72,11 @@ func _place_host(s: GameState, host: String, at: Vector2i) -> void:
 		e["order"] = ArmySystem.ORDER_GARRISON
 
 
+## A unit of the player's standing at `at` under `order`, out of its own
+## seat and camp; under a garrison order in a town's reach it takes the empty
+## seat (Play.place).
 func _place_mine(s: GameState, code: String, at: Vector2i, order: String) -> void:
-	var e: Dictionary = s.regiments[code]
-	e["x_m"] = at.x
-	e["y_m"] = at.y
-	e["dest_x_m"] = at.x
-	e["dest_y_m"] = at.y
-	e["order"] = order
+	Play.place(repo, s, code, at, order)
 
 
 ## The player's land regiments, in code order.
@@ -548,7 +547,7 @@ func test_arrival_at_a_garrisoned_town_sits_down_to_a_siege() -> void:
 	_place_host(s, host, at)
 	var mine: String = _mine()[0]
 	_place_mine(s, mine, at, ArmySystem.ORDER_GARRISON)
-	assert_eq(SupplySystem.garrisoned_in(repo, s, mine), town)
+	assert_eq(ArmyGround.garrison_town(repo, s, mine), town)
 	var events := EnemyAi.step_day(repo, s)
 	assert_eq(String(s.ai_hosts[host]["mode"]), "SIEGE")
 	assert_true(events.any(func(e: Dictionary) -> bool:
@@ -656,7 +655,7 @@ func test_siege_begins_with_the_first_column_and_no_lone_battle() -> void:
 	assert_gte(cols.size(), 2)
 	for i in cols.size():
 		var e: Dictionary = s.foes[cols[i]]
-		e["x_m"] = at.x - 20000 - 25000 * i      # 20 km, 45 km, 70 km out
+		e["x_m"] = at.x - 20000 - 25000 * (i % 3)      # 20 km, 45 km, 70 km out, in turn
 		e["y_m"] = at.y
 		e["order"] = ArmySystem.ORDER_GARRISON
 	EnemyAi.step_day(repo, s)          # the host sends its columns on

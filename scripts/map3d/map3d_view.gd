@@ -25,9 +25,6 @@ signal country_hovered(kingdom_code: String)
 ## A right CLICK (not a turn) on one of the player's regiments: ArmyOrderMenu
 ## opens over it. `at` is design px in this view.
 signal army_menu_requested(code: String, at: Vector2)
-## A click on a town's garrison of several regiments (owner 2026-10-06, choice
-## A): ArmyOrderMenu lists them; the one chosen is selected and given its orders.
-signal garrison_menu_requested(codes: Array, at: Vector2)
 ## Where on the pack a left click landed — an order being AIMED needs the
 ## ground, not the thing picked.
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
@@ -426,6 +423,7 @@ func drawn_badge_count() -> int: return (_hud.piece("Badges") as Map3DHudBadges)
 func army_badge_height() -> float:
 	return (_hud.piece("Armies") as Map3DHudArmies).badge_height() if _loaded else 0.0
 func army_markers() -> Array: return (_hud.piece("Armies") as Map3DHudArmies).markers() if _loaded else []
+func cell_at(pack_px: Vector2) -> int: return _picker.cell_at(pack_px)  # the picker's bitmap: -1 off the land
 func screen_pos_of_px(pack_px: Vector2) -> Variant: return (_input as Map3DInput).route.screen_of(pack_px) if _loaded else null  # the march confirm keeps off the route
 func route_ends() -> Array: return (_hud.piece("Armies") as Map3DHudArmies).route_ends() if _loaded else []
 func drawn_army_count() -> int: return (_hud.piece("Armies") as Map3DHudArmies).drawn_count() if _loaded else 0
@@ -470,9 +468,12 @@ func set_dev_mode(on: bool) -> void:
 
 func dev_mode() -> bool: return _dev
 func selected_army() -> String: return _selection.army
-## Select one regiment as a click on it does (its card, its gold outline) —
-## the regiment chosen from a garrison's list (ArmyOrderMenu).
-func select_army(code: String) -> void: if _loaded: _selection.select({"kind": "army", "code": code})
+func selected_armies() -> Array: return _selection.armies if _loaded else []
+## Shift + left click toggles a unit, a Shift + left drag boxes several (spec 2026-10-07 §5.6, R4).
+var box_rect := Rect2():  # the box being drawn, design px
+	set(v): box_rect = v; if _loaded: _hud.refresh()
+func toggle_at(pos: Vector2) -> void: if _loaded: _selection.toggle_pick(pick_at(pos))
+func select_box(r: Rect2) -> void: if _loaded: _selection.select_box(r)
 
 # --- picking (Map3DPicker, Map3DSelection) --------------------------------------------
 func ground_at(pos: Vector2) -> Variant: return _ctx.ground_at(pos) if _ctx != null else null
@@ -509,9 +510,6 @@ func right_click(pos: Vector2) -> bool:
 	var picked := pick_at(pos)
 	if String(picked.get("kind", "")) == "army":
 		army_menu_requested.emit(String(picked["code"]), pos)
-		return true
-	if String(picked.get("kind", "")) == "garrison":
-		garrison_menu_requested.emit(picked["codes"], pos)
 		return true
 	var hit: Variant = ground_at(pos)
 	if hit == null:

@@ -93,7 +93,7 @@ func on_left(mb: InputEventMouseButton) -> void:
 	if mb.pressed:
 		_press_at = mb.position
 		_pressed = true
-		_press_code = _view.order_code_of(_view.piece_under(mb.position))
+		_press_code = _view.piece_under(mb.position)
 		return
 	if not _pressed:
 		return
@@ -123,10 +123,6 @@ func on_left(mb: InputEventMouseButton) -> void:
 	# throws its pennant's head over the index chart)
 	if pennant != "":
 		_view.route_clicked.emit(pennant, mb.position)
-	elif piece != "" and _view.garrison_of(piece).size() > 1:
-		# a town's garrison: which of its regiments (owner 2026-10-06, choice A)
-		_view.select(piece)
-		_view.garrison_menu_requested.emit(_view.garrison_of(piece), mb.position)
 	elif piece != "":
 		_view.select(piece)
 	elif arrow >= 0:
@@ -179,6 +175,11 @@ func redraw() -> void:
 	if who != "":
 		var home := _view.position_of(who)
 		var at: Variant = _view.screen_pos_of_px(home) if _view.sheet_rect().has_point(home) else null
+		# the arrow leaves the piece where it stands (spread clear of its
+		# neighbours, spec 2026-10-07-army-split-and-ground §5.4)
+		var piece := _pieces.piece(who)
+		if at != null and piece != null and not _camera.is_position_behind(piece.global_position):
+			at = _camera.unproject_position(piece.global_position) / _view.window_scale()
 		if at != null:
 			from = at
 			var px := Vector2(-1, -1)

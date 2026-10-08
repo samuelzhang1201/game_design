@@ -7,8 +7,11 @@ extends SceneTree
 ## Game.advance_day runs it (the thirtieth day is the tick). On the main host's
 ## crossing day the player's defence is set on the town it has chosen:
 ##   none    nothing (every regiment where the pack quartered it);
-##   weak    the smallest land regiment garrisons it;
-##   strong  the three largest land regiments garrison it.
+##   weak    the units of the smallest land regiment are sent to it;
+##   strong  the units of the three largest land regiments are sent to it.
+## A unit sent there settles as an arrival does: the first takes the town's
+## empty seat, the others camp round it outside the walls: the seat and its
+## camp are the town's garrison (ArmyGround.garrison_town).
 ## --walls gives that town walls and a citadel in this run's copy of the data;
 ## --bal overrides a balance.csv key for the run. Each day prints the hosts
 ## (mode, target, lead column in km and its distance to the target), the day's
@@ -120,7 +123,8 @@ func _init() -> void:
 			if String(s.ai_hosts[main].get("target_kind", "")) == EnemyAi.KIND_TOWN and defence != "none":
 				sums["town"] = town
 				sums["garrison"] = _garrison(repo, s, town, defence, walls)
-				lines.append("  DEFENCE %s garrisons %s with %s" % [defence, town, sums["garrison"]])
+				lines.append("  DEFENCE %s sends %s to %s; its garrison %s (the seat %s)" % [defence, sums["garrison"],
+					town, EnemyAi.garrison_of(repo, s, town), ArmyGround.seat_of(repo, s, town)])
 			elif defence != "none":
 				lines.append("  DEFENCE none set: the main host chose %s %s, not a town" % [
 					s.ai_hosts[main].get("target_kind", ""), town])
@@ -193,31 +197,45 @@ func _mean(v: Array) -> float:
 	return float(sum) / float(maxi(1, v.size()))
 
 
-## Garrisons `town` with the defence's regiments (by headcount: the smallest
-## for weak, the three largest for strong, code order on ties), placed there
-## as if the march had already been carried out. Returns their codes.
+## Garrisons `town` with the defence's units: every unit of the player's
+## smallest pack regiment (weak) or of its three largest (strong) — by the
+## men of their units, code order on ties (ArmySplit: a regiment's units share
+## its `parent_code`) — each sent there as if its march had already been
+## carried out: ordered there (ArmySystem.set_march_m: it leaves its camp and
+## seat), standing on the town's point, then halted (set_garrison), so it
+## settles as an arrival does (ArmyGround.settle): the first takes the town's
+## empty seat, the others camp round the town — its garrison all the same
+## (ArmyGround.garrison_town). Returns their codes.
 func _garrison(repo: DataRepository, s: GameState, town: String, defence: String, walls: bool) -> Array:
 	if walls:
 		repo.burgs[town]["features"] = "walls|citadel"
 		ArmySystem.forget_grids()
-	var mine: Array = []
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
-		if String(r.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, r) > 0:
-			mine.append(String(r["regiment_code"]))
+	var men: Dictionary = {}     # parent regiment -> its units' men
+	var units: Dictionary = {}   # parent regiment -> its units
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), s):
+		var parent := String(r.get("parent_code", ""))
+		if parent == "" or String(r.get("is_naval", "0")) == "1":
+			continue
+		men[parent] = int(men.get(parent, 0)) + ArmySystem.headcount(repo, r)
+		if not units.has(parent):
+			units[parent] = []
+		(units[parent] as Array).append(String(r["regiment_code"]))
 	var weak := defence == "weak"
-	mine.sort_custom(func(a: String, b: String) -> bool:
-		var ha := ArmySystem.headcount(repo, ArmySystem.regiment(repo, a))
-		var hb := ArmySystem.headcount(repo, ArmySystem.regiment(repo, b))
+	var parents := men.keys()
+	parents.sort_custom(func(a: String, b: String) -> bool:
+		var ha := int(men[a])
+		var hb := int(men[b])
 		return (ha < hb if weak else ha > hb) or (ha == hb and a < b))
-	var picked: Array = mine.slice(0, 1 if weak else 3)
+	var picked: Array = []
+	for parent: String in parents.slice(0, 1 if weak else 3):
+		picked.append_array(units[parent])
 	var at := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
 	for c: String in picked:
+		ArmySystem.set_march_m(repo, s, c, at)
 		var e: Dictionary = s.regiments[c]
 		e["x_m"] = at.x
 		e["y_m"] = at.y
-		e["dest_x_m"] = at.x
-		e["dest_y_m"] = at.y
-		e["order"] = ArmySystem.ORDER_GARRISON
+		ArmySystem.set_garrison(repo, s, c)
 	return picked
 
 

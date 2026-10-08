@@ -139,7 +139,7 @@ static func settle_regiments(repo: DataRepository, state: GameState) -> Array[St
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		var reg := ArmySystem.regiment(repo, code)
+		var reg := ArmySystem.regiment(repo, code, state)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
 		var entry: Dictionary = state.regiments[code]

@@ -17,7 +17,7 @@ func before_each() -> void:
 ## string, bool, array or dictionary of them.
 func _filled() -> GameState:
 	var s := SuiteData.campaign(repo, 11)
-	var code := String((repo.raid_hosts[0]["regiments"] as Array)[0])
+	var code := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
 	s.foes[code] = {"morale": 80, "wounded": 3, "dead": 1, "supplies": 40, "x_m": 5100,
 		"y_m": -620, "order": "march", "dest_x_m": 7000, "dest_y_m": 8800, "stance": "steady",
 		"host": "raid_main", "wounded_arms": {"infantry": 2, "archer": 1}}
@@ -62,7 +62,7 @@ func test_foes_ai_hosts_battles_round_trip() -> void:
 	assert_eq(back.ai_hosts, s.ai_hosts, "ai_hosts item for item")
 	assert_eq(back.battles, s.battles, "battles item for item")
 	assert_eq(back.foe_next_id, 4)
-	var code := String((repo.raid_hosts[0]["regiments"] as Array)[0])
+	var code := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
 	assert_eq(int(back.foes[code]["x_m"]), 5100)
 	assert_eq(int(back.foes[code]["y_m"]), -620, "a negative metre survives")
 	assert_eq(String(back.ai_hosts["raid_main"]["mode"]), "ADVANCE")

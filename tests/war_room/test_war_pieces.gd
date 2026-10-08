@@ -53,6 +53,31 @@ func _move_to(code: String, pack_px: Vector2) -> void:
 	state.regiments[code]["y_m"] = m.y
 
 
+## Stand `code` on the home sheet's point farthest from every other piece:
+## the units camped round one town are spread plinth to plinth on the table
+## (WarPieces._spread), so a neighbour in front can stand its figures over a
+## piece's foot on screen — a click there rightly takes the front one; a pick
+## test wants its piece clear of them.
+func _stand_alone(code: String) -> void:
+	var rect: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
+	var others: Array = []
+	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+		if String(p["code"]) != code:
+			others.append(p["at"])
+	var best := rect.get_center()
+	var best_d := -1.0
+	for i in range(1, 8):
+		for j in range(1, 8):
+			var at := rect.position + rect.size * Vector2(i / 8.0, j / 8.0)
+			var d := INF
+			for o: Vector2 in others:
+				d = minf(d, at.distance_to(o))
+			if d > best_d:
+				best_d = d
+				best = at
+	_move_to(code, best)
+
+
 func test_every_regiment_on_the_sheet_stands_as_a_piece_where_we_know_it_is() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
@@ -62,9 +87,52 @@ func test_every_regiment_on_the_sheet_stands_as_a_piece_where_we_know_it_is() ->
 	for p: Dictionary in on:
 		var node := pieces.piece(String(p["code"]))
 		assert_not_null(node)
+		# where we know it is, or stepped aside from a neighbour on the table
+		# (spec 2026-10-07-army-split-and-ground §5.4)
 		var want := view.table_point(p["at"])
-		assert_almost_eq(node.position.x, want.x, 0.0001)
-		assert_almost_eq(node.position.z, want.z, 0.0001)
+		var off := Vector2(node.position.x - want.x, node.position.z - want.z)
+		assert_lte(maxf(absf(off.x), absf(off.y)), repo.bal("war_spread_max_m") + 0.0001, String(p["code"]))
+	_assert_apart(pieces)
+
+
+## No two pieces' footprints (their plinth squares, a fleet's base) overlap
+## on the table.
+func _assert_apart(pieces: WarPieces) -> void:
+	var boxes: Array = []
+	for c: Node3D in pieces.get_children():
+		var half: Vector2 = c.get_meta("half", Vector2.ZERO)
+		boxes.append([String(c.get_meta("code")), Rect2(Vector2(c.position.x, c.position.z) - half, half * 2.0)])
+	for i in boxes.size():
+		for j in range(i + 1, boxes.size()):
+			assert_false((boxes[i][1] as Rect2).intersects(boxes[j][1]), "%s and %s" % [boxes[i][0], boxes[j][0]])
+
+
+## Two units standing within a plinth of each other are spread on the table
+## so their plinths stand clear (spec 2026-10-07-army-split-and-ground §5.4);
+## the engine's positions are untouched.
+func test_two_units_within_a_plinth_stand_apart() -> void:
+	var codes: Array = []
+	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+		if not bool(p["naval"]):
+			codes.append(String(p["code"]))
+	assert_gte(codes.size(), 2, "premise: the home sheet holds two land units")
+	var rect: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
+	var plinth_px := repo.bal("war_piece_plinth_mm") / 1000.0 * rect.size.x / repo.bal("war_table_w_m")
+	var spot := rect.get_center()
+	_move_to(String(codes[0]), spot)
+	_move_to(String(codes[1]), spot + Vector2(plinth_px * 0.3, plinth_px * 0.2))
+	var engine := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, String(codes[1]), state))
+	view.lay_sheet(_home_sheet())
+	await wait_process_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	_assert_apart(pieces)
+	# and again after a refresh moves one onto the other
+	_move_to(String(codes[0]), spot + Vector2(plinth_px * 0.1, 0.0))
+	view.refresh()
+	pieces.settle()
+	_assert_apart(pieces)
+	assert_eq(ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, String(codes[1]), state)), engine,
+		"the spread is the table's only")
 
 
 func test_a_land_piece_is_its_arms_wooden_piece_with_its_tag() -> void:
@@ -94,9 +162,14 @@ func test_the_war_pieces_table_draws_artillery_as_the_trebuchet_and_has_no_fleet
 	assert_eq(GameArt.path(GameArt.WAR_PIECES, "fleet"), "", "a fleet keeps its tin token")
 
 
-func test_the_royal_regiment_stands_as_the_royal_piece() -> void:
-	var royal := MapObjects.royal_regiment(repo, repo.resolve_realm("player_realm"))
-	assert_ne(royal, "", "the crown has a royal regiment")
+## The crown's piece is the household's (the roster's `is_royal`, spec
+## 2026-10-07-army-split-and-ground §5.1).
+func test_the_household_stands_as_the_royal_piece() -> void:
+	var royal := ""
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		if String(r.get("is_royal", "0")) == "1":
+			royal = String(r["regiment_code"])
+	assert_ne(royal, "", "the crown has a household")
 	var sheet := -1
 	for p: Dictionary in WarRoom.pieces(repo, state):
 		if String(p["code"]) == royal:
@@ -183,11 +256,21 @@ func test_screen_hits_name_each_piece() -> void:
 
 
 func test_a_click_on_a_piece_picks_it_and_a_right_click_asks_for_its_orders() -> void:
+	# a unit set marching, standing clear of the others
+	var mover := _land_code()
+	_stand_alone(mover)
+	ArmySystem.ensure(repo, state)
+	ArmySystem.set_march(repo, state, mover,
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, mover, state)) + Vector2(10.0, 0.0))
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var cam: Camera3D = view.get_node("%Camera")
-	var hit: Dictionary = pieces.screen_hits(cam, view.window_scale())[0]
+	var hit: Dictionary = {}
+	for h: Dictionary in pieces.screen_hits(cam, view.window_scale()):
+		if String(h["code"]) == mover:
+			hit = h
+	assert_false(hit.is_empty(), "the marching unit's piece is on the sheet")
 	var at: Vector2 = hit["at"]
 	assert_eq(pieces.pick(cam, view.window_scale(), at, repo.bal("war_pick_px")), String(hit["code"]))
 	assert_eq(pieces.pick(cam, view.window_scale(), at + Vector2(5000, 5000), repo.bal("war_pick_px")), "")
@@ -256,20 +339,24 @@ func test_a_piece_moved_onto_a_slope_rests_on_its_highest_corner() -> void:
 
 
 func test_a_click_on_the_pieces_top_picks_it_and_the_nearer_one_wins() -> void:
+	var code := _land_code()
+	_stand_alone(code)
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var cam: Camera3D = view.get_node("%Camera")
 	var sc: float = view.window_scale()
-	var code := _land_code()
 	var node := pieces.piece(code)
 	var top := node.global_position + Vector3(0.0, float(node.get_meta("top_m")) * 0.95, 0.0)
 	var at := cam.unproject_position(top) / sc
 	var centre := cam.unproject_position(node.global_position) / sc
 	assert_gt(centre.distance_to(at), 1.0, "the piece's top is off the plinth's centre")
 	assert_eq(pieces.pick(cam, sc, at, 0.0), code, "a click on the piece's top picks it")
+	# a nearer piece of the same size, its box over the click: the nearest wins
 	var near := Node3D.new()
 	near.set_meta("code", "zz_nearer")
+	near.set_meta("half", node.get_meta("half"))
+	near.set_meta("top_m", node.get_meta("top_m"))
 	pieces.add_child(near)
 	near.global_position = node.global_position + Vector3(0.0, 0.0, 0.002)
 	assert_eq(pieces.pick(cam, sc, centre, repo.bal("war_pick_px")), "zz_nearer", "the piece nearest the camera wins")
@@ -308,6 +395,7 @@ func test_a_regiment_leaving_the_sheet_loses_its_piece() -> void:
 	var here: Rect2 = WarSheets.series(repo)[_home_sheet()]["rect"]
 	var spot := away.get_center()
 	assert_false(here.has_point(spot), "the spot is off this sheet")
+	# one piece a unit: only this one leaves
 	_move_to(code, spot)
 	view.refresh()
 	assert_null(pieces.piece(code))
@@ -391,3 +479,39 @@ func test_the_chalk_ring_follows_a_pushed_piece() -> void:
 	assert_ne(hud._chalk.x, before.x, "and it has moved with it")
 	await wait_until(func() -> bool: return not pieces.pushing(), repo.bal("war_plot_push_s") * 2.0)
 	assert_false(pieces.pushing(), "the push is over and the redraws stop")
+
+
+## A click squarely on a piece picks it even where a nearer piece's
+## war_pick_px reach covers the point (camps stand plinth to plinth); only a
+## click on no piece falls back to the reach, the nearest winning.
+func test_a_click_on_a_back_piece_picks_it_over_a_nearer_ones_reach() -> void:
+	var code := _land_code()
+	_stand_alone(code)
+	view.lay_sheet(_home_sheet())
+	await wait_process_frames(2)
+	var pieces: WarPieces = view.get_node("%Pieces")
+	var cam: Camera3D = view.get_node("%Camera")
+	var sc: float = view.window_scale()
+	var reach := repo.bal("war_pick_px")
+	var node := pieces.piece(code)
+	var at := cam.unproject_position(node.global_position + Vector3(0.0, float(node.get_meta("top_m")) * 0.5, 0.0)) / sc
+	# a nearer piece whose own box stands a few px off, its reach over `at`
+	var depth := cam.global_position.distance_to(node.global_position)
+	var near := Node3D.new()
+	near.set_meta("code", "zz_nearer")
+	pieces.add_child(near)
+	near.global_position = cam.project_position((at + Vector2(reach * 0.5, 0.0)) * sc, depth * 0.5)
+	var rect := Rect2()
+	for h: Dictionary in pieces.screen_hits(cam, sc):
+		if String(h["code"]) == "zz_nearer":
+			assert_false((h["rect"] as Rect2).has_point(at), "premise: the nearer box is off the point")
+			assert_true((h["rect"] as Rect2).grow(reach).has_point(at), "premise: its reach covers it")
+		if String(h["code"]) == code:
+			rect = h["rect"]
+	assert_true(rect.has_point(at), "premise: the point is on the piece")
+	assert_eq(pieces.pick(cam, sc, at, reach), code, "the piece under the click wins")
+	# off every box but within reach of both: the nearer wins
+	var off := Vector2(rect.end.x + reach * 0.75, at.y)
+	assert_eq(pieces.pick(cam, sc, off, reach), "zz_nearer", "the reach falls back to the nearest")
+	pieces.remove_child(near)
+	near.free()

@@ -52,7 +52,8 @@ static func letters(s: GameState, kind: String) -> Array:
 	return s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == kind)
 
 
-## The player's land regiments of at least `min_heads` men, in code order.
+## The player's land units (the army's roster, ArmySplit) of at least
+## `min_heads` men, in code order.
 static func land_regiments(repo: DataRepository, min_heads: int = 1) -> Array:
 	var out: Array = []
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
@@ -73,20 +74,94 @@ static func by_size(repo: DataRepository, codes: Array, smallest: bool) -> Array
 	return out
 
 
+## The units of the player's `n` smallest (`smallest`) or largest pack
+## regiments — by the men of their units (ArmySplit: a regiment's units share
+## its `parent_code`), code order on ties — in code order. The same pick as
+## tools/sim_invasion.gd's defences.
+static func regiment_units(repo: DataRepository, smallest: bool, n: int) -> Array:
+	var men: Dictionary = {}
+	var units: Dictionary = {}
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+		var parent := String(r.get("parent_code", ""))
+		if parent == "" or String(r.get("is_naval", "0")) == "1":
+			continue
+		men[parent] = int(men.get(parent, 0)) + ArmySystem.headcount(repo, r)
+		if not units.has(parent):
+			units[parent] = []
+		(units[parent] as Array).append(String(r["regiment_code"]))
+	var parents := men.keys()
+	parents.sort_custom(func(a: String, b: String) -> bool:
+		var ha := int(men[a])
+		var hb := int(men[b])
+		return (ha < hb if smallest else ha > hb) or (ha == hb and a < b))
+	var out: Array = []
+	for parent: String in parents.slice(0, n):
+		out.append_array(units[parent])
+	out.sort()
+	return out
+
+
+## Sends a unit of the player's to `at` (whole metres) as if its march had
+## been carried out, through the engine: ordered there (ArmySystem.set_march_m:
+## it leaves its camp and seat), standing on the point, then halted
+## (set_garrison), so it settles as an arrival does (ArmyGround.settle: an
+## empty seat of a town there, else a camp slot round it).
+static func arrive(repo: DataRepository, s: GameState, code: String, at: Vector2i) -> void:
+	ArmySystem.set_march_m(repo, s, code, at)
+	var e: Dictionary = s.regiments[code]
+	e["x_m"] = at.x
+	e["y_m"] = at.y
+	ArmySystem.set_garrison(repo, s, code)
+
+
+## Takes the player's whole land army out of a test's way: every land unit
+## leaves its seat and camp and stands by at the realm's town farthest from
+## `away_from` (whole metres), so no camp round the test's ground joins its
+## battles or garrisons its town; a test brings up the units it wants.
+static func park_army(repo: DataRepository, s: GameState, away_from: Vector2i) -> void:
+	var far := ""
+	var far_d := -1.0
+	for t: String in TownStores.realm_towns(repo, s):
+		var d := Vector2(town_m(repo, t)).distance_to(Vector2(away_from))
+		if d > far_d or (d == far_d and t < far):
+			far = t
+			far_d = d
+	var at := town_m(repo, far)
+	for c: String in s.regiments:
+		if String(ArmySystem.regiment(repo, c, s).get("is_naval", "0")) != "1":
+			place(repo, s, c, at, ArmySystem.ORDER_STANDBY)
+
+
 ## A town's point in whole metres.
 static func town_m(repo: DataRepository, town: String) -> Vector2i:
 	return EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
 
 
-## Stands a regiment (the player's or a foe) at `at` under `order`, as an
-## order already carried out.
-static func place(s: GameState, code: String, at: Vector2i, order: String) -> void:
+## Stands a unit (the player's or a foe) at `at` under `order`, as an order
+## already carried out. A unit of the player's leaves its camp and any seat it
+## held (state.town_seat); under a garrison order within the reach of a town
+## the crown holds whose seat is empty, it takes the seat (ArmyGround: one
+## unit per town holds it), as an arrival there does.
+static func place(repo: DataRepository, s: GameState, code: String, at: Vector2i, order: String) -> void:
 	var e: Dictionary = s.foes.get(code, s.regiments.get(code, {}))
 	e["x_m"] = at.x
 	e["y_m"] = at.y
 	e["dest_x_m"] = at.x
 	e["dest_y_m"] = at.y
 	e["order"] = order
+	if ArmySystem.is_foe(s, code) or not s.regiments.has(code):
+		return
+	e["camp_town"] = ""
+	for t: Variant in s.town_seat.keys():
+		if String(s.town_seat[t]) == code:
+			s.town_seat.erase(t)
+	if order != ArmySystem.ORDER_GARRISON:
+		return
+	var town := ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, at))
+	var k := String(ArmySystem.regiment(repo, code, s).get("kingdom_code", ""))
+	if town != "" and ArmyGround.holds(repo, s, k, town) and ArmyGround.seat_of(repo, s, town) == "":
+		s.town_seat[town] = code
+		e["camp_town"] = town
 
 
 ## Every float under `v`, by path (the save holds none in the war's state).

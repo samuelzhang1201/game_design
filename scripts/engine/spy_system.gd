@@ -146,10 +146,11 @@ static func troops_near(repo: DataRepository, state: GameState, at: Vector2) -> 
 	var realm := repo.resolve_realm("player_realm")
 	var own := 0
 	var foreign := 0
-	var codes := repo.world_table("military", "regiments").keys()
+	var all := ArmySystem.roster(repo, state)
+	var codes := all.keys()
 	codes.sort()
 	for code: String in codes:
-		var reg: Dictionary = repo.world_table("military", "regiments")[code]
+		var reg: Dictionary = all[code]
 		if ArmySystem.position_of(repo, state, reg).distance_to(at) > reach:
 			continue
 		var men := maxi(0, ArmySystem.headcount(repo, reg) - int(ArmySystem.state_of(repo, state, code).get("dead", 0)))
@@ -176,7 +177,7 @@ static func foes_near(repo: DataRepository, state: GameState, at: Vector2) -> Di
 		var dy := int(e["y_m"]) - here.y
 		if dx * dx + dy * dy > reach * reach:
 			continue
-		var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c))) - int(e.get("dead", 0))
+		var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c), state)) - int(e.get("dead", 0))
 		if heads <= 0:
 			continue
 		cols += 1

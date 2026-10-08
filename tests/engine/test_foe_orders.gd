@@ -14,7 +14,7 @@ func before_each() -> void:
 
 func _foe_state() -> Array:
 	var s := SuiteData.campaign(repo, 11)
-	var code := String((repo.raid_hosts[0]["regiments"] as Array)[0])
+	var code := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
 	var home := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)))
 	s.foes[code] = {"morale": 80, "wounded": 0, "supplies": 40, "x_m": home.x, "y_m": home.y}
 	return [s, code]

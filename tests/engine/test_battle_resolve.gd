@@ -169,7 +169,7 @@ func test_apply_round_spreads_a_side_by_fit_heads() -> void:
 func test_apply_round_zero_heads_no_divide() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code: String = _land_codes()[0]
-	var reg := ArmySystem.regiment(repo, code)
+	var reg := ArmySystem.regiment(repo, code, s)   # the campaign's own row
 	for arm: String in repo.world_table("military", "unit_types"):
 		reg[arm] = 0
 	var tier := {"attacker_loss_permille": 150, "defender_loss_permille": 30, "wounded_share_permille": 600,
@@ -184,7 +184,7 @@ func test_apply_round_zero_heads_no_divide() -> void:
 
 func test_apply_round_hits_a_foe_in_its_own_state() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	var foe := String((repo.raid_hosts[0]["regiments"] as Array)[0])
+	var foe := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
 	var heads := _heads(foe)
 	s.foes[foe] = ArmySystem.starting_state(repo, ArmySystem.regiment(repo, foe))
 	var tier := {"attacker_loss_permille": 0, "defender_loss_permille": 200, "wounded_share_permille": 600,
@@ -212,7 +212,7 @@ func test_morale_stays_within_bounds() -> void:
 
 func test_a_foe_stands_where_its_own_state_says() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	var foe := String((repo.raid_hosts[0]["regiments"] as Array)[0])
+	var foe := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
 	var st := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, foe))
 	st["x_m"] = 12_000
 	st["y_m"] = 34_000
@@ -250,7 +250,7 @@ func test_a_tie_goes_to_the_earlier_code_whatever_order_the_side_is_listed_in() 
 	var s := SuiteData.campaign(repo, 7)
 	var two := _land_codes().slice(0, 2)   # sorted: two[0] < two[1]
 	for c: String in two:
-		var reg := ArmySystem.regiment(repo, c)
+		var reg := ArmySystem.regiment(repo, c, s)   # the campaign's own row
 		var kept := false
 		for arm: String in repo.world_table("military", "unit_types"):
 			if not kept and int(float(reg.get(arm, 0))) > 0:
@@ -258,7 +258,7 @@ func test_a_tie_goes_to_the_earlier_code_whatever_order_the_side_is_listed_in() 
 				kept = true
 			else:
 				reg[arm] = 0
-		assert_eq(_heads(c), 500)
+		assert_eq(ArmySystem.headcount(repo, reg), 500)
 	# 1000 fit x 1 / 1000 = ONE man lost, all dead: two equal shares of 0.5
 	var tier := {"attacker_loss_permille": 1, "defender_loss_permille": 0, "wounded_share_permille": 0,
 		"attacker_morale": 0, "defender_morale": 0}

@@ -1,4 +1,5 @@
 extends GutTest
+const ClearPiece := preload("res://tests/war_room/clear_piece.gd")
 ## The WAR ROOM tab opens the plotting room over the map (spec 2026-10-01 §1, §5).
 
 ## The court on a fresh reign, as Start Game begins it but without the
@@ -214,16 +215,12 @@ func _real_press(view: WarRoomView, at: Vector2, pressed: bool) -> void:
 	view._gui_input(e)
 
 
-## The first land piece of the sheet a click on its own spot picks (regiments
-## quartered in one town stand within one base, and the nearer hides the other).
+## A land piece of the sheet a click on its own drawn point takes up, with
+## that point as `press` and the pack point it stands on as `drawn`
+## (tests/war_room/clear_piece.gd: the camp's spread moves pieces off their
+## engine points, whatever army_slot_spacing_m is).
 func _land_piece(screen: WarRoomScreen) -> Dictionary:
-	for q: Dictionary in WarRoom.on_sheet(Game.data, Game.state, screen.view().sheet_index()):
-		if bool(q["naval"]):
-			continue
-		var at: Variant = screen.view().screen_pos_of_px(q["at"])
-		if at != null and screen.view().piece_under(at) == String(q["code"]):
-			return q
-	return {}
+	return ClearPiece.find(screen.view(), Game.data, Game.state)
 
 
 ## A land point of the sheet, at least war_rake_min_px + 4 design px from `at` on the screen.
@@ -248,8 +245,8 @@ func test_a_real_drag_from_a_piece_pencils_a_draft() -> void:
 	var view := screen.view()
 	var p := _land_piece(screen)
 	var code := String(p["code"])
-	var from: Vector2 = view.screen_pos_of_px(p["at"])
-	var to: Vector2 = view.screen_pos_of_px(_land_near(screen, p["at"]))
+	var from: Vector2 = p["press"]
+	var to: Vector2 = view.screen_pos_of_px(_land_near(screen, p["drawn"]))
 	_real_press(view, from, true)
 	var e := InputEventMouseMotion.new()
 	e.position = to
@@ -311,7 +308,7 @@ func test_a_click_on_a_riding_pennant_offers_edit_and_a_pencilled_cancel() -> vo
 	var view := screen.view()
 	var p := _land_piece(screen)
 	var code := String(p["code"])
-	var to := _land_near(screen, p["at"])
+	var to := _land_near(screen, p["drawn"])
 	assert_true(bool(Game.try_execute(ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": to.x, "y": to.y}))["ok"]),
 		"a march sent from the 3D map")
 	await wait_process_frames(2)
@@ -342,7 +339,7 @@ func test_a_click_on_a_draft_pennant_offers_edit_and_strike() -> void:
 	var p := _land_piece(screen)
 	var code := String(p["code"])
 	screen.orders().aim_for(code)
-	view.ground_clicked.emit(_land_near(screen, p["at"]), Vector2(100, 100))
+	view.ground_clicked.emit(_land_near(screen, p["drawn"]), Vector2(100, 100))
 	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	await wait_process_frames(2)
 	var hit: Dictionary = (view.get_node("%Pennants") as WarPennants).screen_hits(
@@ -390,7 +387,7 @@ func test_a_rake_released_off_the_table_withdraws_the_armed_march() -> void:
 	var screen := r.war_room_screen()
 	var view := screen.view()
 	var p := _land_piece(screen)
-	var from: Vector2 = view.screen_pos_of_px(p["at"])
+	var from: Vector2 = p["press"]
 	_real_press(view, from, true)
 	var e := InputEventMouseMotion.new()
 	e.position = from + Vector2(50, 0)
@@ -409,7 +406,7 @@ func test_a_sheet_roll_withdraws_a_rake_in_hand_s_armed_march() -> void:
 	var screen := r.war_room_screen()
 	var view := screen.view()
 	var p := _land_piece(screen)
-	var from: Vector2 = view.screen_pos_of_px(p["at"])
+	var from: Vector2 = p["press"]
 	_real_press(view, from, true)
 	var e := InputEventMouseMotion.new()
 	e.position = from + Vector2(50, 0)
@@ -816,7 +813,7 @@ func test_pencilling_into_the_sea_is_refused_at_once_but_an_empty_chest_is_not()
 	assert_false(WarDrafts.any(Game.state), "no pennant in the sea")
 	Game.state.metrics["treasury"] = 0.0
 	screen.orders().aim_for(code)
-	screen.view().ground_clicked.emit(_land_near(screen, p["at"]), Vector2(100, 100))
+	screen.view().ground_clicked.emit(_land_near(screen, p["drawn"]), Vector2(100, 100))
 	screen.orders().shown_confirm().confirm_button().pressed.emit()
 	assert_true(WarDrafts.any(Game.state), "a draft costs nothing yet")
 
@@ -976,7 +973,7 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 	var engine := Vector2.ZERO
 	# a land regiment whose sheet holds another of ours, so there is a second
 	# piece to compare (the series' scale decides which: derived, not named)
-	var mine := MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"))
+	var mine := MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state)
 	for reg: Dictionary in mine:
 		if String(reg.get("is_naval", "0")) == "1":
 			continue
@@ -1005,16 +1002,18 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 	assert_almost_eq((at[code] as Vector2).distance_to(drawn), 0.0, 0.001, "the piece stands on the map's spot")
 	assert_almost_eq(screen.view().position_of(code).distance_to(drawn), 0.0, 0.001, "and the rake measures from it")
 	var other := ""
-	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	var reach := Game.data.bal("war_spread_max_m") * screen.view().sheet_rect().size.x / Game.data.bal("war_table_w_m")
+	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		var c := String(reg["regiment_code"])
 		if c != code and at.has(c):
 			other = c
-			# the engine's spot, or for a garrison its town's point (owner 2026-10-06, choice A)
-			var town := ArmySystem.quartered_in(Game.data, reg, Game.state)
-			var want := ArmySystem.position_of(Game.data, Game.state, reg) if town == "" \
-				else Vector2(float(Game.data.burgs[town]["x"]), float(Game.data.burgs[town]["y"]))
-			assert_almost_eq((at[c] as Vector2).distance_to(want),
-				0.0, 0.001, "a regiment the map does not name stands at the engine's spot")
+			# every unit at its own engine spot (the seat's is its town's point),
+			# or stepped aside on the table from a neighbour sharing it (spec
+			# 2026-10-07-army-split-and-ground §5.4: war_spread_max_m at most)
+			var want := ArmySystem.position_of(Game.data, Game.state, reg)
+			var off := (at[c] as Vector2) - want
+			assert_lte(maxf(absf(off.x), absf(off.y)), reach + 0.001,
+				"a regiment the map does not name stands at the engine's spot")
 	assert_ne(other, "", "the sheet holds another piece to compare")
 
 
@@ -1056,7 +1055,7 @@ func test_the_rakes_slip_goes_when_the_aim_ends() -> void:
 	var view := screen.view()
 	var slip := screen.get_node("%HoverSlip") as WarHoverSlip
 	var code := ""
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if String(r.get("is_naval", "0")) != "1":
 			code = String(r["regiment_code"])
 			break

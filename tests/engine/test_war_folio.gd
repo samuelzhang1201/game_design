@@ -12,7 +12,7 @@ func before_each() -> void:
 	repo = SuiteData.repo()
 	state = SuiteData.campaign(repo, 42)
 	WarSheets.forget()
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, r) > 0 \
 				and int(float(r.get("infantry", 0))) > 0:
 			code = String(r["regiment_code"])
@@ -55,7 +55,8 @@ func test_morale_names_its_mark_and_the_months_drift() -> void:
 	var st := ArmySystem.state_of(repo, state, code)
 	var reg := ArmySystem.regiment(repo, code)
 	var score := ArmySystem.supply_score(repo, int(st["supplies"]), ArmySystem.supply_use(repo, reg, state))
-	var mark := ArmySystem.morale_mark(repo, score, false)
+	# the seat's unit heads for the garrison's mark (spec 2026-10-07-army-split-and-ground §4.1)
+	var mark := ArmySystem.morale_mark(repo, score, ArmyGround.seated_in(repo, state, code) != "")
 	var rows := _rows("morale")
 	assert_eq(rows["Morale"], "%d / 100" % int(st["morale"]))
 	assert_eq(rows["Heading for (by today's stores)"], "%d — the ranks are %s" % [mark, ArmySystem.morale_word(repo, score)])
@@ -69,11 +70,7 @@ func test_ground_gives_the_grid_reference() -> void:
 
 
 func test_a_foreign_regiment_gets_only_its_headcount_word() -> void:
-	var foreign := ""
-	for r: Dictionary in repo.world_table("military", "regiments").values():
-		if String(r["kingdom_code"]) != repo.resolve_realm("player_realm"):
-			foreign = String(r["regiment_code"])
-			break
+	var foreign := _foreign()
 	var secs := WarFolio.sections(repo, state, foreign)
 	assert_eq(secs.size(), 1)
 	assert_eq(String(secs[0]["key"]), "composition")
@@ -111,9 +108,12 @@ func test_figures_follow_the_strength_tiers() -> void:
 
 
 func _foreign() -> String:
-	for r: Dictionary in repo.world_table("military", "regiments").values():
-		if String(r["kingdom_code"]) != repo.resolve_realm("player_realm"):
-			return String(r["regiment_code"])
+	var army := ArmySystem.roster(repo, state)
+	var codes := army.keys()
+	codes.sort()
+	for c: String in codes:
+		if String(army[c]["kingdom_code"]) != repo.resolve_realm("player_realm"):
+			return c
 	return ""
 
 
@@ -148,15 +148,13 @@ func test_march_under_orders_names_destination_and_arrival() -> void:
 
 
 func test_garrison_adds_its_morale_row() -> void:
-	var held := ""   # a land regiment standing in a town of a province the crown controls
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	var held := ""   # the unit holding the seat of a town the crown holds
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var c := String(r["regiment_code"])
-		if String(r.get("is_naval", "0")) != "1" \
-				and ArmySystem.held_town_of(repo, ArmySystem.regiment(repo, c), state) != "":
+		if ArmyGround.seated_in(repo, state, c) != "":
 			held = c
 			break
-	assert_ne(held, "", "the pack has a land regiment at a crown town")
-	ArmySystem.set_garrison(repo, state, held)
+	assert_ne(held, "", "the pack has a land unit on a crown town's seat")
 	var morale := {}
 	var supply := {}
 	for sec: Dictionary in WarFolio.sections(repo, state, held):
@@ -172,13 +170,13 @@ func test_garrison_adds_its_morale_row() -> void:
 	assert_true(String(supply["Line"]).contains(" tops it up"), supply["Line"])
 
 
-## Final review 6: a regiment merely standing in its realm town (no garrison
-## order) is topped up by it, and the folio says so.
+## Final review 6: a unit camped round its realm town (not on the seat) is
+## topped up by it, and the folio says so.
 func test_a_standing_regiment_reads_the_town_that_tops_it_up() -> void:
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var c := String(r["regiment_code"])
 		var held := SupplyLines.home_town(repo, state, c)
-		if held == "" or ArmySystem.order_of(repo, state, c) == ArmySystem.ORDER_GARRISON:
+		if held == "" or ArmyGround.seated_in(repo, state, c) != "":
 			continue
 		for sec: Dictionary in WarFolio.sections(repo, state, c):
 			if String(sec["key"]) != "supply":
@@ -188,6 +186,32 @@ func test_a_standing_regiment_reads_the_town_that_tops_it_up() -> void:
 					assert_string_contains(String(row["text"]), "%s tops it up" % String(repo.burgs[held]["label"]))
 					return
 	fail_test("no standing regiment in a realm town, or no Line row")
+
+
+## The Order row (spec 2026-10-07-army-split-and-ground §4.1): only the unit
+## on a town's seat is its garrison; a unit camped round the town reads as
+## camped by it, one halted in the open as encamped in the field.
+func test_the_order_row_tells_the_seat_from_the_camp_and_the_field() -> void:
+	var seated := ""
+	var camped := ""
+	ArmySystem.ensure(repo, state)
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		var c := String(r["regiment_code"])
+		if String(r.get("is_naval", "0")) == "1":
+			continue
+		state.regiments[c]["order"] = ArmySystem.ORDER_GARRISON   # as an arrival leaves it
+		if seated == "" and ArmyGround.seated_in(repo, state, c) != "":
+			seated = c
+		elif camped == "" and ArmyGround.seated_in(repo, state, c) == "" and ArmyGround.camped_by(repo, state, c) != "":
+			camped = c
+	assert_ne(seated, "", "premise: a unit on a seat")
+	assert_ne(camped, "", "premise: a unit camped off the seat")
+	code = seated
+	assert_eq(_rows("march")["Order"], "In garrison")
+	code = camped
+	assert_eq(_rows("march")["Order"], "Camped by the town")
+	state.regiments[camped]["camp_town"] = ""   # settled in the open
+	assert_eq(_rows("march")["Order"], "Encamped in the field")
 
 
 func test_matchups_are_named_per_arm() -> void:
@@ -328,16 +352,20 @@ func test_the_brief_counts_heads_by_arm_and_the_fit() -> void:
 
 func test_the_brief_gives_morale_and_the_stores_days() -> void:
 	ArmySystem.ensure(repo, state)
-	var reg := ArmySystem.regiment(repo, code)
-	state.regiments[code]["supplies"] = 1240
-	state.regiments[code]["morale"] = 61
+	var reg := ArmySystem.regiment(repo, code, state)
 	var use := ArmySystem.supply_use(repo, reg, state)
 	assert_gt(use, 0)
-	var days := ArmySystem.days_in_hand(1240, use)
+	# a unit of the split army eats little: stores for about two months keep
+	# the days under the brief's 999 cap
+	var supplies := use * 2 + 7
+	state.regiments[code]["supplies"] = supplies
+	state.regiments[code]["morale"] = 61
+	var days := ArmySystem.days_in_hand(supplies, use)
+	assert_lt(days, 999)
 	var rows := _brief_rows(code)
-	assert_eq(rows["Supplies"], "1,240 (≈ %d day%s)" % [days, "" if days == 1 else "s"])
+	assert_eq(rows["Supplies"], "%s (≈ %d day%s)" % [WarRoom.group(supplies), days, "" if days == 1 else "s"])
 	assert_eq(rows["Morale"], "61 / 100 — %s" % ArmySystem.morale_word(repo,
-		ArmySystem.supply_score(repo, 1240, use)))
+		ArmySystem.supply_score(repo, supplies, use)))
 
 
 func test_the_briefs_order_names_a_march_with_its_end_and_days() -> void:

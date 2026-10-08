@@ -14,6 +14,11 @@ class FakeMap extends Node:
 	var aiming := false
 	var aim_dest := Vector2(-1, -1)
 	var aim_waypoints := PackedVector2Array()
+	## The map's selection (Map3DView.selected_armies), set by a test.
+	var selection: Array = []
+
+	func selected_armies() -> Array:
+		return selection
 
 
 ## The 3D view's own signature: the click's point rides with it.
@@ -39,7 +44,7 @@ func before_each() -> void:
 
 
 func _marcher() -> String:
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if ArmySystem.base_pace_km(Game.data, r) > 0 and String(r.get("is_naval", "0")) != "1":
 			return String(r["regiment_code"])
 	return ""
@@ -66,7 +71,7 @@ func _deliver_all() -> void:
 func _supply_ids(menu: ArmyOrderMenu) -> Array:
 	var out: Array = []
 	for i in range(Game.data.army_orders.size(), menu.item_count):
-		if not menu.is_item_separator(i):
+		if not menu.is_item_separator(i) and menu.get_item_id(i) != ArmyOrderMenu.SEAT:
 			out.append(menu.get_item_id(i))
 	return out
 
@@ -86,6 +91,82 @@ func test_the_menu_offers_exactly_the_rows_in_the_table() -> void:
 	assert_eq(_supply_ids(_menu), _land_supply_ids(), "the supply rows follow the march rows, and only they")
 	for row: Dictionary in Game.data.army_orders:
 		assert_ne(String(row["action_code"]), "ARMY_GARRISON", "no Garrison row")
+
+
+## A land unit of the realm camped by a town but not seated in it, "" for none.
+func _camper() -> String:
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		var c := String(r["regiment_code"])
+		if ArmyGround.camped_by(Game.data, Game.state, c) != "" and ArmyGround.seated_in(Game.data, Game.state, c) == "":
+			return c
+	return ""
+
+
+func _ids(menu: ArmyOrderMenu) -> Array:
+	var out: Array = []
+	for i in menu.item_count:
+		out.append(menu.get_item_id(i))
+	return out
+
+
+## Spec 2026-10-07-army-split-and-ground §4.5: a camped unit may take its
+## town's seat; the unit already inside has no such row; a draft never does.
+func test_a_camped_unit_is_offered_the_seat_and_the_seated_one_is_not() -> void:
+	var camper := _camper()
+	assert_ne(camper, "")
+	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
+	assert_true(ArmyOrderMenu.SEAT in _ids(_menu), "the seat row")
+	var i := _menu.get_item_index(ArmyOrderMenu.SEAT)
+	assert_eq(_menu.get_item_text(i), String(Game.data.army_route_orders["seat"]["label"]))
+	var town := ArmyGround.camped_by(Game.data, Game.state, camper)
+	var seated := ArmyGround.seat_of(Game.data, Game.state, town)
+	_map.army_menu_requested.emit(seated, Vector2(10.0, 10.0))
+	assert_false(ArmyOrderMenu.SEAT in _ids(_menu), "the holder is inside already")
+	Game.state.town_seat.erase(town)
+	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
+	i = _menu.get_item_index(ArmyOrderMenu.SEAT)
+	assert_eq(_menu.get_item_text(i), String(Game.data.army_route_orders["seat_empty"]["label"]), "an empty seat reads Garrison the town")
+	_menu.drafting = true
+	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
+	assert_false(ArmyOrderMenu.SEAT in _ids(_menu), "the war room's drafts never take the seat")
+
+
+func test_choosing_the_seat_row_sends_a_courier() -> void:
+	var camper := _camper()
+	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
+	_menu.hide()
+	_menu.id_pressed.emit(ArmyOrderMenu.SEAT)
+	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the seat order")
+	_deliver_all()
+	assert_eq(ArmyGround.seat_of(Game.data, Game.state, ArmyGround.camped_by(Game.data, Game.state, camper)), camper)
+
+
+## A battle stance row (spec 2026-10-07-enemy-ai-and-battle §4.4) sends its
+## row's `params` stance with every selected unit: one ARMY_STANCE courier each,
+## and each unit holds the stance once its courier has landed.
+func test_a_stance_row_rides_to_every_selected_unit() -> void:
+	var units: Array = []
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if units.size() < 2 and String(r.get("is_naval", "0")) != "1" and CourierSystem.carries_orders(r):
+			units.append(String(r["regiment_code"]))
+	assert_eq(units.size(), 2)
+	_map.selection = units
+	_map.army_menu_requested.emit(units[0], Vector2(10.0, 10.0))
+	assert_eq(_menu.selected_codes(), units, "the menu orders the selection")
+	var hold := -1
+	for i in Game.data.army_orders.size():
+		var row: Dictionary = Game.data.army_orders[i]
+		if String(row["action_code"]) == "ARMY_STANCE" and String((row["params"] as Dictionary).get("stance", "")) == "hold":
+			hold = i
+	assert_gte(hold, 0, "a Hold row")
+	assert_false(_menu.is_item_disabled(_menu.get_item_index(hold)), "the stance is an order the engine takes")
+	_menu.hide()
+	_menu.id_pressed.emit(hold)
+	assert_eq(Game.state.couriers.size(), 2, "a courier for each unit")
+	_deliver_all()
+	Game.advance_day()
+	for c: String in units:
+		assert_eq(BattleSystem.stance_of(Game.state, c), "hold", c + " holds")
 
 
 func test_choosing_march_only_AIMS_it_and_gives_the_map_the_word() -> void:
@@ -333,7 +414,7 @@ func test_the_route_menu_is_paused_only() -> void:
 
 
 func _fleet() -> String:
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if not CourierSystem.carries_orders(r):
 			return String(r["regiment_code"])
 	return ""
@@ -447,40 +528,34 @@ func test_escape_lets_a_shown_maps_selection_go_but_a_hidden_map_keeps_it() -> v
 	assert_eq(m.picked, "", "a shown map lets go")
 
 
-## Owner 2026-10-06 (choice A): a town's garrison lists its regiments; the one
-## chosen is selected on the map and its own orders open where the list stood.
-class GarrisonMap extends Node:
-	signal army_menu_requested(code: String, at: Vector2)
-	signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
-	signal garrison_menu_requested(codes: Array, at: Vector2)
-	var aiming := false
-	var aim_dest := Vector2(-1, -1)
-	var selected := ""
-	func select_army(code: String) -> void:
-		selected = code
-
-
-func test_a_garrison_lists_its_regiments_and_the_chosen_one_takes_orders() -> void:
+## Every unit holds its own ground (spec 2026-10-07-army-split-and-ground §5.1):
+## a unit standing with others round its town opens its OWN orders, never a
+## list of the town's units to choose from.
+func test_a_unit_round_a_town_opens_its_own_orders_not_a_list() -> void:
+	assert_false((ArmyOrderMenu as Script).get_script_constant_map().has("GARRISON_ROW"),
+		"no garrison list rows")
+	var camper := _camper()
+	var town := ArmyGround.camped_by(Game.data, Game.state, camper)
+	var seated := ArmyGround.seat_of(Game.data, Game.state, town)
+	assert_ne(seated, "", "the town's seat is held")
+	var labels: Array = []
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if ArmyGround.camped_by(Game.data, Game.state, String(r["regiment_code"])) == town:
+			labels.append(String(r["label"]))
+	assert_gt(labels.size(), 1, "more than one unit stands round the town")
+	var map := ClickMap.new()
+	add_child_autofree(map)
 	var menu := ArmyOrderMenu.new()
 	add_child_autofree(menu)
-	var map := GarrisonMap.new()
-	add_child_autofree(map)
 	menu.follow(map)
-	var codes := MapObjects.garrison_of(Game.data, Game.state,
-		MapObjects.royal_regiment(Game.data, Game.data.resolve_realm("player_realm")))
-	assert_gt(codes.size(), 1)
-	map.garrison_menu_requested.emit(codes, Vector2(40, 40))
-	assert_true(menu.visible, "the list is up")
-	assert_eq(menu.item_count, codes.size(), "a row a regiment")
-	var second := ArmySystem.regiment(Game.data, String(codes[1]))
-	assert_string_starts_with(menu.get_item_text(1), String(second["label"]))
-	# choose the second, as a click does: the menu hides, then names the row
-	menu.hide()
-	menu.id_pressed.emit(ArmyOrderMenu.GARRISON_ROW + 1)
-	await wait_process_frames(2)
-	assert_eq(map.selected, String(codes[1]), "the chosen regiment is selected on the map")
-	assert_true(menu.visible, "and its orders are open")
-	assert_eq(_supply_ids(menu), _land_supply_ids(), "the regiment's own order rows, then its supply rows")
+	map.army_menu_requested.emit(seated, Vector2(40, 40))
+	assert_true(menu.visible, "its orders are open")
+	for i in Game.data.army_orders.size():
+		assert_eq(menu.get_item_text(i), String(Game.data.army_orders[i]["label"]), "the order rows first")
+	for i in menu.item_count:
+		for label: String in labels:
+			assert_false(menu.get_item_text(i).begins_with(label), "no row names a unit: %s" % label)
+	assert_eq(_supply_ids(menu), _land_supply_ids(), "the unit's own order rows, then its supply rows")
 
 
 ## Owner 2026-10-07 (item 9): Add waypoint keeps the point and aims on; the

@@ -1315,7 +1315,7 @@ func _war_sync(when: String) -> void:
 	var room := _root.war_room_screen().view().piece_pack_positions()
 	print("war sync (%s): day=%d share=%.3f clock=%d held=%s" % [when, Game.state.absolute_day(),
 		Game.day_progress, Game.clock_speed, Game.clock_held])
-	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm")):
+	for reg: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		var code := String(reg["regiment_code"])
 		var eng := ArmySystem.position_of(Game.data, Game.state, reg)
 		var d: Variant = drawn.get(code)

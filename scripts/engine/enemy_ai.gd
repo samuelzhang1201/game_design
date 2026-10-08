@@ -37,27 +37,62 @@ static var _town_cells: Dictionary = {}
 
 
 ## Puts `host` (a DataRepository.raid_hosts row) in the field: a foe for each of
-## its regiments, in the same shape as a player regiment's state, standing at
-## the host's assembly point (whole metres of the pack's measure) with no order,
-## and a mind in ASSEMBLE. A regiment the pack does not have is left out.
+## its UNITS (host_units), in the same shape as a player unit's state and keyed
+## by the unit's code, standing at the host's assembly point (whole metres of
+## the pack's measure) with no order, and a mind in ASSEMBLE. A unit leaves its
+## camp: a seat it held is emptied and refilled from the camp it left
+## (ArmyGround.refill), so no foe holds a town. Run it after the split (the
+## roster in `state`).
 static func spawn(repo: DataRepository, state: GameState, host: Dictionary) -> void:
 	var code := String(host["host_code"])
 	var start := ArmySystem.pack_to_metres(repo,
 		Vector2(float(host.get("start_x", 0)), float(host.get("start_y", 0))))
-	for rc: Variant in host["regiments"]:
-		var reg := ArmySystem.regiment(repo, String(rc))
-		if reg.is_empty():
-			continue
-		var st := ArmySystem.starting_state(repo, reg)
+	for unit: String in host_units(repo, state, host):
+		var st := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, unit, state))
 		st["x_m"] = start.x
 		st["y_m"] = start.y
 		st["dest_x_m"] = start.x
 		st["dest_y_m"] = start.y
 		st["order"] = ArmySystem.ORDER_STANDBY
+		st["camp_town"] = ""
 		st["host"] = code
-		state.foes[String(rc)] = st
+		state.foes[unit] = st
+	var towns := state.town_seat.keys()
+	towns.sort()
+	for town: String in towns:
+		if ArmySystem.is_foe(state, String(state.town_seat[town])):
+			state.town_seat.erase(town)
+			ArmyGround.refill(repo, state, town)
 	state.ai_hosts[code] = {"mode": MODE_ASSEMBLE, "target_kind": "", "target_id": "",
 		"think_day": 0, "plunder": 0, "siege_progress": 0}
+
+
+## The roster units a raid_hosts row raises, in code order: each entry of its
+## `regiments` (the pack's regiment codes of the raider realm) is that unit
+## when the roster has one by the code, else every LAND unit split from it
+## (`parent_code`, ArmySplit: its foot, archers and horse; its guns are in its
+## kingdom's royal train, which no host takes). An entry the roster does not
+## know is left out; no unit is raised twice.
+static func host_units(repo: DataRepository, state: GameState, host: Dictionary) -> Array:
+	var all := ArmySystem.roster(repo, state)
+	var codes := all.keys()
+	codes.sort()
+	var out: Array = []
+	for rc: Variant in host["regiments"]:
+		var entry := String(rc)
+		var found: Array = []
+		if all.has(entry):
+			found.append(entry)
+		else:
+			for c: String in codes:
+				var r: Dictionary = all[c]
+				if String(r.get("parent_code", "")) == entry and String(r.get("is_naval", "0")) != "1":
+					found.append(c)
+		for c: String in found:
+			if not c in out:
+				out.append(c)
+	out.sort()
+	return out
 
 
 ## One day of the hosts' minds, in host-code order (spec §3.1, §3.4, §3.5).
@@ -117,6 +152,9 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 			elif next != "":
 				set_mode(state, code, next, _arrival_why(next), events)
 		_march_host(repo, state, code)
+	# a reserve besieging or holding beside a main host that turned home today
+	# follows it now, before the day's battles
+	SiegeSystem.follow_main(repo, state, events)
 	return events
 
 
@@ -142,7 +180,7 @@ static func regiments_of(state: GameState, host_code: String) -> Array:
 static func live_regiments(repo: DataRepository, state: GameState, host_code: String) -> Array:
 	var out: Array = []
 	for c: String in regiments_of(state, host_code):
-		var reg := ArmySystem.regiment(repo, c)
+		var reg := ArmySystem.regiment(repo, c, state)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
 		if ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), state.foes[c]) > 0:
@@ -241,7 +279,7 @@ static func seen_by(repo: DataRepository, state: GameState, host_code: String) -
 	codes.sort()
 	for c: Variant in codes:
 		var code := String(c)
-		var reg := ArmySystem.regiment(repo, code)
+		var reg := ArmySystem.regiment(repo, code, state)
 		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
 		if ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), state.regiments[code]) <= 0:
@@ -293,7 +331,7 @@ static func _least_days(repo: DataRepository, state: GameState, host_code: Strin
 	var least := -1
 	for c: String in live_regiments(repo, state, host_code):
 		var days := ArmySystem.days_in_hand(int((state.foes[c] as Dictionary)["supplies"]),
-			ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), state))
+			ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c, state), state))
 		least = days if least < 0 else mini(least, days)
 	return least
 
@@ -367,7 +405,7 @@ static func defenders_of(repo: DataRepository, state: GameState, kind: String, i
 	for c: Variant in codes:
 		var code := String(c)
 		if _within(_at_m(repo, state, code), at, reach) \
-				or (kind == KIND_TOWN and ArmySystem.town_of(repo, ArmySystem.regiment(repo, code), state) == id):
+				or (kind == KIND_TOWN and ArmySystem.town_of(repo, ArmySystem.regiment(repo, code, state), state) == id):
 			out.append(code)
 	return out
 
@@ -509,7 +547,7 @@ static func should_retreat(repo: DataRepository, state: GameState, host_code: St
 
 ## What an ADVANCING host does now, "" for nothing new. Nothing while any of
 ## its live columns is in a battle (the battle decides first). At a town a
-## player regiment GARRISONS (SupplySystem.garrisoned_in): once its FIRST live
+## player regiment GARRISONS (ArmyGround.garrison_town): once its FIRST live
 ## column touches the town as a battle would (within battle_contact_km of a
 ## garrisoning regiment or of the town's point, or within the town's reach) →
 ## SIEGE, so BattleSystem leaves the host to the siege's assaults while the
@@ -559,14 +597,14 @@ static func arrival_mode(repo: DataRepository, state: GameState, host_code: Stri
 	return MODE_RAID
 
 
-## The player's regiments that GARRISON a town (SupplySystem.garrisoned_in), in
+## The player's regiments that GARRISON a town (ArmyGround.garrison_town), in
 ## code order.
 static func garrison_of(repo: DataRepository, state: GameState, town: String) -> Array:
 	var out: Array = []
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	for c: Variant in codes:
-		if SupplySystem.garrisoned_in(repo, state, String(c)) == town:
+		if ArmyGround.garrison_town(repo, state, String(c)) == town:
 			out.append(String(c))
 	return out
 
@@ -648,7 +686,7 @@ static func _arrival_why(mode: String) -> String:
 ## A day's meal for every foe of the host (ArmySystem.eat_one).
 static func _eat(repo: DataRepository, state: GameState, host_code: String) -> void:
 	for c: String in regiments_of(state, host_code):
-		var reg := ArmySystem.regiment(repo, c)
+		var reg := ArmySystem.regiment(repo, c, state)
 		if not reg.is_empty():
 			ArmySystem.eat_one(repo, state, reg, state.foes[c])
 
@@ -694,7 +732,7 @@ static func _at_m(repo: DataRepository, state: GameState, code: String) -> Vecto
 	var e: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
 	if e.has("x_m"):
 		return Vector2i(int(e["x_m"]), int(e["y_m"]))
-	return ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code)))
+	return ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code, state)))
 
 
 ## True when two points are no more than `metres` apart (whole numbers).
@@ -741,7 +779,7 @@ static func _days(repo: DataRepository, state: GameState, anchor: String, c: Dic
 		return 0
 	var to := target_point_m(repo, String(c["kind"]), String(c["id"]))
 	return ArmySystem.march_days_between(repo, state, anchor,
-		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, anchor)), ArmySystem.metres_to_pack(repo, to),
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, anchor, state)), ArmySystem.metres_to_pack(repo, to),
 		-1, [], -1, max_days)
 
 

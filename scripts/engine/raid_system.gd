@@ -270,7 +270,7 @@ static func _feed(repo: DataRepository, state: GameState, h: String, take: int) 
 	var room := 0
 	for c: String in live:
 		var e: Dictionary = state.foes[c]
-		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), state)
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c, state), state)
 		var free := maxi(0, ArmySystem.max_units(repo, use) - int(e["supplies"]))
 		rooms.append(free)
 		room += free
