@@ -57,11 +57,13 @@ static func decreed(repo: DataRepository, state: GameState, law: String) -> Stri
 ## The value in force in one place: a province code for a province-scoped law,
 ## a unit code for a camp-scoped one. The place's own entry; else the metric
 ## when the law state is empty (R8); else the law's default (R13: a province
-## annexed after the start, a unit no courier has reached).
+## annexed after the start, a unit no courier has reached). A repository
+## without the law (a hand-built test one) reads the metric, else "".
 static func value(repo: DataRepository, state: GameState, law: String, scope_code: String) -> String:
 	var d := def(repo, law)
 	if d.is_empty():
-		return ""
+		# a hand-built repository with no law tables (R8): the metric
+		return metric_value(law, state, "")
 	var key := ""
 	if String(d["scope"]) == "province":
 		key = PROVINCE_PREFIX + scope_code
@@ -77,11 +79,12 @@ static func value(repo: DataRepository, state: GameState, law: String, scope_cod
 	return String(d["default"])
 
 ## A value as a number: a range's own int; a toggle 0 or 1 (its second name is
-## "on"); a choice its index among the allowed names.
+## "on"); a choice its index among the allowed names. With no such law
+## (a hand-built repository) whole digits are their int, anything else 0.
 static func as_number(repo: DataRepository, law: String, text: String) -> int:
 	var d := def(repo, law)
 	if d.is_empty():
-		return 0
+		return int(text) if text.is_valid_int() else 0
 	if String(d["kind"]) == "range":
 		return int(text)
 	return maxi((d["values"] as Array).find(text), 0)
@@ -92,7 +95,8 @@ static func number(repo: DataRepository, state: GameState, law: String, scope_co
 
 ## The in-force numbers of the realm's provinces weighted by each province's
 ## people (rural plus urban, the figures `TickEngine.court_people` sums).
-## With no people anywhere the plain default is returned.
+## With no people anywhere, what a place with no entry reads (the default;
+## the metric with no law state, R8).
 static func weighted_number(repo: DataRepository, state: GameState, law: String) -> float:
 	var weighted := 0
 	var people := 0
@@ -102,7 +106,7 @@ static func weighted_number(repo: DataRepository, state: GameState, law: String)
 		weighted += here * number(repo, state, law, code)
 		people += here
 	if people == 0:
-		return float(as_number(repo, law, String(def(repo, law).get("default", ""))))
+		return float(number(repo, state, law, ""))
 	return float(weighted) / float(people)
 
 ## Seed the laws at a new reign: every law decreed at its default (the three
