@@ -327,28 +327,33 @@ func _flip_of(id: String) -> int:
 	return int((_view.state().war_plans[WarPlans.STROKES].get(id, {}) as Dictionary).get("flip", 0))
 
 
-## Shift-drag's box (screen px): every piece of the side lit (ours when none)
-## standing in it is selected — our units, or the supposed pieces and the
-## intel hints.
+## Shift-drag's box (screen px): what lies in it replaces the selection — our
+## land units first (at the spot they are DRAWN), else the supposed pieces and
+## the intel hints; nothing in it, no change.
 func _box(box: Rect2) -> void:
-	var side := tool.side if tool.side != "" else (sel_side if sel_side != "" else "blue")
-	var ids: Array = []
-	if side == "blue":
-		for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.sheet_index(), _view.drawn()):
-			var at: Variant = _view.screen_pos_of_px(q["at"])
-			if at != null and box.has_point(at) and not bool(q["naval"]):
-				ids.append(String(q["code"]))
-	else:
-		for p: Dictionary in WarPlans.pieces_in(_repo, _view.state(), _view.sheet_rect()):
-			var at: Variant = _view.screen_pos_of_px(p["at"])
-			if at != null and box.has_point(at):
-				ids.append(String(p["id"]))
-		for h: Dictionary in hints_on_sheet():
-			var at: Variant = _view.screen_pos_of_px(h["at"])
-			if at != null and box.has_point(at):
-				ids.append(String(h["id"]))
-	if not ids.is_empty():
-		select(side, ids, true)   # a box opens no book: the book is a click's
+	var drawn: Dictionary = _view.piece_pack_positions()
+	var ours: Array = []
+	for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.sheet_index(), _view.drawn()):
+		if bool(q["naval"]):
+			continue
+		var code := String(q["code"])
+		var at: Variant = _view.screen_pos_of_px(drawn.get(code, q["at"]))
+		if at != null and box.has_point(at):
+			ours.append(code)
+	if not ours.is_empty():
+		select("blue", ours, false)   # a box opens no book: the book is a click's
+		return
+	var theirs: Array = []
+	for p: Dictionary in WarPlans.pieces_in(_repo, _view.state(), _view.sheet_rect()):
+		var at: Variant = _view.screen_pos_of_px(p["at"])
+		if at != null and box.has_point(at):
+			theirs.append(String(p["id"]))
+	for h: Dictionary in hints_on_sheet():
+		var at: Variant = _view.screen_pos_of_px(h["at"])
+		if at != null and box.has_point(at):
+			theirs.append(String(h["id"]))
+	if not theirs.is_empty():
+		select("red", theirs, false)
 
 
 ## The box being dragged (screen px), Rect2() when none.

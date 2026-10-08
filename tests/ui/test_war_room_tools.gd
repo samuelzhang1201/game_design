@@ -59,6 +59,70 @@ func _land_piece(screen: WarRoomScreen) -> Dictionary:
 	return ClearPiece.find(screen.view(), Game.data, Game.state)
 
 
+func _motion(view: WarRoomView, at: Vector2) -> void:
+	var e := InputEventMouseMotion.new()
+	e.position = at
+	e.button_mask = MOUSE_BUTTON_MASK_LEFT
+	view._gui_input(e)
+
+
+## A real Shift-drag box round `spot` (screen px), `half` px each way.
+func _box_round(view: WarRoomView, spot: Vector2, half := 90.0) -> void:
+	var from := spot - Vector2(half, half)
+	var to := spot + Vector2(half, half)
+	_button(view, from, true, MOUSE_BUTTON_LEFT, true)
+	for i in range(1, 9):
+		_motion(view, from.lerp(to, float(i) / 8.0))
+	_button(view, to, false, MOUSE_BUTTON_LEFT, true)
+
+
+## The DRAWN screen spot of one of our land pieces.
+func _drawn_spot(screen: WarRoomScreen, code: String) -> Vector2:
+	var view := screen.view()
+	var pk: Vector2 = view.piece_pack_positions()[code]
+	return view.screen_pos_of_px(pk)
+
+
+func test_a_box_over_our_units_selects_them_after_red_work() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var at := _open_land(screen)
+	assert_ne(at, Vector2(-1, -1))
+	var id := Game.place_plan_piece("cavalry", 2000, WarPlans.UNKNOWN, view.pack_at(at), 0)
+	await wait_process_frames(2)
+	_click(view, view.screen_pos_of_px(WarPlans.at_px(Game.data, Game.state.war_plans["pieces"][id])))
+	assert_eq(view.plan_input().sel_side, "red")
+	var code := String(_land_piece(screen)["code"])
+	_box_round(view, _drawn_spot(screen, code))
+	assert_eq(view.plan_input().sel_side, "blue")
+	assert_true(code in view.plan_input().sel, "the boxed unit is chosen")
+
+
+func test_a_second_box_over_the_same_units_keeps_them() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var code := String(_land_piece(screen)["code"])
+	var spot := _drawn_spot(screen, code)
+	_box_round(view, spot)
+	var first: Array = view.plan_input().sel.duplicate()
+	_box_round(view, spot)
+	assert_true(code in first)
+	assert_eq(view.plan_input().sel_side, "blue")
+	assert_eq(view.plan_input().sel, first, "the same box keeps the same units")
+
+
+func test_an_empty_box_keeps_the_selection() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	_click(view, p["press"])
+	var before: Array = view.plan_input().sel.duplicate()
+	assert_false(before.is_empty())
+	var at := _open_land(screen)
+	_box_round(view, at, 8.0)
+	assert_eq(view.plan_input().sel, before)
+
+
 func test_a_supposed_piece_clicked_with_our_unit_chosen_stays_selected() -> void:
 	var screen := await _room()
 	var view := screen.view()
