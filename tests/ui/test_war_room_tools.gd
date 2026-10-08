@@ -202,3 +202,86 @@ func test_a_fleet_alone_greys_the_blue_arrow() -> void:
 	assert_ne(fleet, "", "the home sheet holds a fleet")
 	view.plan_input().select("blue", [fleet])
 	assert_eq(view.plan_input().why_of("blue", "arrow"), "Fleets are ordered on the map")
+
+
+func _pick_stick(screen: WarRoomScreen, side: String) -> void:
+	var roll := screen.get_node("%ToolRoll") as WarToolRoll
+	roll.slot("front", side).pressed.emit("front")
+
+
+func test_a_click_with_a_front_in_hand_selects_our_piece() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	_pick_stick(screen, "red")
+	assert_true(view.plan_input().tool.in_hand(), "a red front is in hand")
+	_click(view, p["press"])
+	assert_true(code in view.plan_input().sel, "the click selected our piece")
+	assert_true(Game.state.war_plans["strokes"].is_empty(), "no stroke was written")
+	assert_true(view.plan_input().tool.in_hand(), "the stick is still in hand")
+
+
+func test_a_click_on_open_table_with_a_stick_lets_the_selection_go() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	_click(view, p["press"])
+	assert_false(view.plan_input().sel.is_empty())
+	_pick_stick(screen, "red")
+	var at := _open_land(screen)
+	assert_ne(at, Vector2(-1, -1))
+	_click(view, at)
+	assert_true(view.plan_input().sel.is_empty(), "the selection went")
+	assert_true(Game.state.war_plans["strokes"].is_empty(), "no stroke was written")
+	assert_true(view.plan_input().tool.in_hand(), "the stick is still in hand")
+
+
+func _blue_drag_from_piece(screen: WarRoomScreen) -> String:
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	var from: Vector2 = p["press"]
+	var to: Vector2 = view.screen_pos_of_px(_land_near(screen, p["drawn"], Game.data.bal("war_plan_min_len_px") + 16.0))
+	_click(view, from)
+	var roll := screen.get_node("%ToolRoll") as WarToolRoll
+	roll.slot("arrow", "blue").pressed.emit("arrow")
+	_button(view, from, true)
+	for i in range(1, 13):
+		_motion(view, from.lerp(to, float(i) / 12.0))
+	_button(view, to, false)
+	return code
+
+
+func _land_near(screen: WarRoomScreen, at: Vector2, min_px: float) -> Vector2:
+	var from: Vector2 = screen.view().screen_pos_of_px(at)
+	for k: float in [6.0, 12.0, 24.0, 40.0, 60.0]:
+		for d: Vector2 in [Vector2(-k, 0), Vector2(0, -k), Vector2(k, 0), Vector2(0, k)]:
+			var scr: Variant = screen.view().screen_pos_of_px(at + d)
+			if scr != null and MapEconomy.cell_at(Game.data, at + d) >= 0 \
+					and (scr as Vector2).distance_to(from) >= min_px and screen.view().pack_at(scr).x >= 0.0:
+				return at + d
+	return at
+
+
+func test_a_drag_from_a_piece_with_the_blue_arrow_draws() -> void:
+	var screen := await _room()
+	var code := _blue_drag_from_piece(screen)
+	assert_eq(screen.orders().aiming(), code, "the drawn arrow armed the march")
+	screen.orders().withdraw_aim()
+
+
+func test_the_blue_arrow_is_laid_down_once_its_march_is_drawn() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	_blue_drag_from_piece(screen)
+	assert_false(view.plan_input().tool.in_hand(), "the blue arrow was laid down")
+	screen.orders().withdraw_aim()
+	_pick_stick(screen, "red")
+	for i in 2:
+		var a := _open_land(screen)
+		_button(view, a, true)
+		for j in range(1, 9):
+			_motion(view, a + Vector2(float(j) * 12.0, 0.0))
+		_button(view, a + Vector2(96.0, 0.0), false)
+		assert_true(view.plan_input().tool.in_hand(), "a red front stays in hand (draw %d)" % i)

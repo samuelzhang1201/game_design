@@ -934,6 +934,12 @@ func select_army(code: String) -> void:
 	select(code)
 
 
+## A click the plans' stick let through (the pointer's pick).
+func click_through(at: Vector2, shift: bool) -> void:
+	if _pointer.click(at, shift):
+		accept_event()
+
+
 ## The code of the piece under a screen px, "" when none (and none while a
 ## sheet rolls: the pieces are put away).
 func piece_under(screen_px: Vector2) -> String:

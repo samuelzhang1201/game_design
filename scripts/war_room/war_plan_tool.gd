@@ -93,6 +93,13 @@ func put_down() -> void:
 	_screen.clear()
 
 
+## A drag ended without a stroke (a click): the kind stays in hand.
+func cancel() -> void:
+	drawing = false
+	_samples.clear()
+	_screen.clear()
+
+
 func press(pack_px: Vector2, screen_px: Vector2) -> void:
 	if not in_hand() or pack_px.x < 0.0:
 		return

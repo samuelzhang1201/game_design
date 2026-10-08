@@ -60,30 +60,37 @@ func on_left(mb: InputEventMouseButton) -> void:
 	_pressed = false
 	if mb.position.distance_to(_press_at) >= _repo.bal("war_rake_min_px"):
 		return   # a pan, not a click
+	if click(mb.position, mb.shift_pressed):
+		_view.accept_event()
+
+
+## A click at `at` (screen px): a pennant, one of our pieces, an edge arrow, the wall chart,
+## the ground of a march aiming, else the selection goes; true when it took the click.
+func click(at: Vector2, shift: bool) -> bool:
 	var scale := _view.window_scale()
-	var arrow := WarRoomWall.pick_arrow(_arrows, _camera, mb.position, scale, _repo.bal("war_pick_px"))
-	var chart := -1 if arrow >= 0 else WarRoomWall.pick_chart(_chart, _camera, _repo, mb.position * scale)
+	var arrow := WarRoomWall.pick_arrow(_arrows, _camera, at, scale, _repo.bal("war_pick_px"))
+	var chart := -1 if arrow >= 0 else WarRoomWall.pick_chart(_chart, _camera, _repo, at * scale)
 	var radius := _repo.bal("war_pick_px")
-	var pennant := "" if _view.rolling() else WarRoomPicks.nearest(_pennants.screen_hits(_camera, scale), mb.position, radius)
-	var piece := _view.piece_under(mb.position)
+	var pennant := "" if _view.rolling() else WarRoomPicks.nearest(_pennants.screen_hits(_camera, scale), at, radius)
+	var piece := _view.piece_under(at)
 	# what stands ON the sheet (a pennant, a piece) is picked before the flat
 	# chart its top may be drawn over (v2 B: a piece at a sheet's north edge
 	# throws its pennant's head over the index chart)
 	if pennant != "" and not _view.aiming:
-		_view.route_clicked.emit(pennant, mb.position)
+		_view.route_clicked.emit(pennant, at)
 	elif piece != "" and not _view.aiming:
-		_view.select(piece, mb.shift_pressed)
+		_view.select(piece, shift)
 	elif arrow >= 0:
 		_view.sheet_requested.emit(arrow)   # an edge arrow lays at once
 	elif chart >= 0:
 		_view.toss_to(chart)                # a chart cell: the marker is tossed first
-	elif _view.aiming and _view.pack_at(mb.position).x >= 0.0:
-		_view.ground_clicked.emit(_view.pack_at(mb.position), mb.position)
+	elif _view.aiming and _view.pack_at(at).x >= 0.0:
+		_view.ground_clicked.emit(_view.pack_at(at), at)
 	elif _view.has_selection():
 		_view.clear_selection()
 	else:
-		return
-	_view.accept_event()
+		return false
+	return true
 
 
 func on_motion(mm: InputEventMouseMotion) -> void:

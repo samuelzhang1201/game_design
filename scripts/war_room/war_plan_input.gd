@@ -44,6 +44,8 @@ var _view: WarRoomView
 var _repo: DataRepository
 var _hud: WarPlanHud
 var _drag: Dictionary = {}
+var _click_from := Vector2.ZERO
+var _click_shift := false
 var _order := false     # the stroke being drawn is the selection's march
 
 
@@ -217,6 +219,8 @@ func _press(mb: InputEventMouseButton) -> bool:
 		if tool.kind == "arrow" and why_of(tool.side, "arrow") != "":
 			refused.emit(why_of(tool.side, "arrow"))
 			return true
+		_click_from = pos
+		_click_shift = mb.shift_pressed
 		_order = tool.kind == "arrow" and tool.side == "blue"
 		tool.press(pack, pos)
 		redraw_live()
@@ -296,6 +300,12 @@ func _motion(mm: InputEventMouseMotion) -> bool:
 
 func _release(mb: InputEventMouseButton) -> bool:
 	if tool.drawing:
+		if mb.position.distance_to(_click_from) < _repo.bal("war_rake_min_px"):
+			tool.cancel()
+			_order = false
+			redraw_live()
+			_click_through(mb.position, _click_shift)
+			return true
 		var pack := _view.pack_at(mb.position)
 		var per := px_per_pack(pack if pack.x >= 0.0 else _view.sheet_rect().get_center())
 		var d := tool.release(pack, mb.position, mb.shift_pressed, per)
@@ -310,6 +320,9 @@ func _release(mb: InputEventMouseButton) -> bool:
 			if marching.is_empty():
 				return true
 			order_drawn.emit(marching, d["samples"], _repo.bal("war_order_fit_px") / maxf(per, 0.0001))
+			if _view.aiming:
+				tool.put_down()   # the blue arrow is laid down once its march is drawn
+				tool_changed.emit()
 		else:
 			if String(d["kind"]) == "arrow" and not sel.is_empty():
 				d["of"] = String(sel[0])   # a red arrow: the host it is drawn for
@@ -350,6 +363,21 @@ func _release(mb: InputEventMouseButton) -> bool:
 				stroke_reshaped.emit(id, r["pts"], float(r["r"]))
 	redraw_live()
 	return true
+
+
+## A click with a stick in hand: a supposed piece or an intel hint under it is
+## chosen and selected, else the view's own pick (our piece, the selection let go).
+func _click_through(pos: Vector2, shift: bool) -> void:
+	var radius := _repo.bal("war_pick_px")
+	var pid := "" if _view.piece_under(pos) != "" else _view.plan_pieces().pick(_view.camera(), _view.window_scale(), pos, radius)
+	var hint := "" if pid != "" or _view.piece_under(pos) != "" else hint_at(pos)
+	if pid != "":
+		choose(pid)
+		select("red", [pid], shift)
+	elif hint != "":
+		select("red", [hint], shift)
+	else:
+		_view.click_through(pos, shift)
 
 
 func _flip_of(id: String) -> int:
