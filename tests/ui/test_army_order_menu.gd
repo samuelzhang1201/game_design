@@ -682,12 +682,13 @@ func test_a_town_ahead_is_greyed_and_the_nearest_rear_town_is_pressed() -> void:
 	var now := SupplyLines.eligibility(Game.data, Game.state, code)
 	var towns: Array = now.keys()
 	towns.sort()
-	var ahead := ""   # a town the column can be sent to, far enough off to lie ahead of it
+	var ahead := ""   # a town the column can be sent to, farther from the capital than the column
+	var rear := CourierSystem.origin(Game.data, Game.state)
 	var tol := Game.data.bal("supply_ahead_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(Game.data))
 	for t: String in towns:
 		var b: Dictionary = Game.data.burgs[t]
 		var at := Vector2(float(b["x"]), float(b["y"]))
-		if String(now[t]) == "" and at.distance_to(here) > tol * 2.0 and Game.engine.actions.validate_place(
+		if String(now[t]) == "" and at.distance_to(rear) > here.distance_to(rear) + tol * 2.0 and Game.engine.actions.validate_place(
 				ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": at.x, "y": at.y}), Game.state) == "":
 			ahead = t
 			break
@@ -697,13 +698,13 @@ func test_a_town_ahead_is_greyed_and_the_nearest_rear_town_is_pressed() -> void:
 	var b: Dictionary = Game.data.burgs[ahead]
 	var to := Vector2(float(b["x"]), float(b["y"]))
 	assert_eq(_menu.aim_for(code), "")
-	_map.ground_clicked.emit(to)   # the march ends ON the town: it lies ahead of the column
+	_map.ground_clicked.emit(to)   # the march ends ON the town, which lies on the frontier side of the column
 	var panel := _menu.shown_confirm()
 	assert_not_null(panel)
 	var rows := panel.shown_supply()
 	var row: Dictionary = rows.filter(func(r: Dictionary) -> bool: return String(r["town"]) == ahead)[0]
 	assert_true(bool(row["disabled"]), "the town ahead cannot be chosen")
-	assert_string_contains(String(row["why"]), "ahead of the column")
+	assert_string_contains(String(row["why"]), "frontier side of the column")
 	assert_ne(_menu.supply_choice(), ahead)
 	var ok := SupplyLines.march_eligibility(Game.data, Game.state, code, to)
 	var first := ""
@@ -720,7 +721,7 @@ func test_a_town_ahead_is_greyed_and_the_nearest_rear_town_is_pressed() -> void:
 		var t := String(r["town"])
 		if not bool(r["disabled"]):
 			var tb: Dictionary = Game.data.burgs[t]
-			assert_false(SupplyLines.is_ahead(Game.data, here, to, to, Vector2(float(tb["x"]), float(tb["y"]))), t + " is not ahead")
+			assert_false(SupplyLines.is_ahead(Game.data, rear, here, Vector2(float(tb["x"]), float(tb["y"]))), t + " is not ahead")
 	panel.select_supply("")
 	_map.route_bent.emit(PackedVector2Array())   # a re-open keeps the player's own choice
 	assert_eq(_menu.supply_choice(), "", "the player's none is kept")
