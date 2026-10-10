@@ -646,22 +646,55 @@ func redraw_live() -> void:
 				handles = WarPlanTool.handles_of(_repo, row)
 	var facing := _facing_handle()
 	var look := WarRoomInk.plan_look(_repo, WarRoomInk.tooth(), mm, _view.lettering(), _view.caps_font())
-	var road := PackedVector2Array()   # the supply road under the pending march (ruling 14)
+	var runs: Array = []   # the supply road under the pending march (ruling 14), screen px
+	var exit_mark: Dictionary = {}
 	if _view.aiming and not _view.rolling():
-		for p: Vector2 in _view.supply_preview:
-			var at: Variant = _view.screen_pos_of_px(p)
-			if at != null:
-				road.append(at)
-		if road.size() >= 2:
+		var pack := _view.supply_preview
+		var rect := _view.sheet_rect()
+		var town_on := pack.size() >= 2 and rect.has_point(pack[0])
+		for run: PackedVector2Array in WarPlanGeometry.clip_to_rect(pack, rect):
+			var scr := PackedVector2Array()
+			for p: Vector2 in run:
+				var at: Variant = _view.screen_pos_of_px(p)
+				if at != null:
+					scr.append(at)
+			if scr.size() >= 2:
+				runs.append(scr)
+		if not runs.is_empty() and town_on and (runs[0] as PackedVector2Array)[0].distance_to(_view.screen_pos_of_px(pack[0])) < 0.01:
 			# it leaves the town's ring — or the plinth of a piece standing there: never drawn over a piece
+			var road: PackedVector2Array = runs[0]
 			var off := _repo.bal("war_pick_px") * 0.85 if _view.piece_under(road[0]) != "" else _repo.bal("war_supply_lit_px")
 			road = WarPlanGeometry.cut(road, off, WarPlanGeometry.length(road))
-	if ink["crayon"].is_empty() and ink["pen"].is_empty() and handles.is_empty() and facing.is_empty() and road.size() < 2:
+			if road.size() >= 2:
+				runs[0] = road
+			else:
+				runs.remove_at(0)
+		if not town_on and not runs.is_empty():
+			exit_mark = _exit_mark(pack[0], runs[0])
+	if ink["crayon"].is_empty() and ink["pen"].is_empty() and handles.is_empty() and facing.is_empty() and runs.is_empty():
 		_hud.clear_live()
 		return
 	var hr := _repo.bal("war_plan_handle_px")
 	_hud.show_live(ink, look, handles, _repo.war_palette["chalk"], hr, facing, _repo.bal("war_plan_facing_px"))
-	_hud.show_road(road, _repo.war_palette["supply_route"], _repo.bal("war_supply_route_px"), _repo.bal("war_supply_route_dash_px"))
+	_hud.show_road(runs, _repo.war_palette["supply_route"], _repo.bal("war_supply_route_px"), _repo.bal("war_supply_route_dash_px"),
+			exit_mark, int(_repo.bal("war_supply_exit_font_px")))
+
+
+## Where the supply road leaves the sheet toward its town: the first run's
+## start (the clipped end nearest the town), pointing out along the road's
+## direction reversed, with "from TOWN · SHEET".
+func _exit_mark(town_px: Vector2, first: PackedVector2Array) -> Dictionary:
+	var name := ""
+	for code: String in _repo.burgs:
+		var b: Dictionary = _repo.burgs[code]
+		if Vector2(float(b.get("x", 0)), float(b.get("y", 0))).distance_to(town_px) < 0.5:
+			name = String(b.get("label", code))
+			break
+	var sheets := WarSheets.series(_repo)
+	var si := WarSheets.sheet_of(_repo, town_px)
+	var sheet_id := String((sheets[si] as Dictionary).get("id", "")) if si >= 0 and si < sheets.size() else ""
+	var d := (first[0] - first[1]).normalized()
+	return {"at": first[0], "dir": d, "text": "from %s · %s" % [name, sheet_id]}
 
 
 ## The march pending on the confirm (the view's aim_group, set by the order

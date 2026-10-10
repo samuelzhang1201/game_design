@@ -587,3 +587,58 @@ func test_a_resting_pointer_on_open_table_shows_the_slip() -> void:
 	view._gui_input(e)
 	await wait_until(func() -> bool: return (screen.get_node("%HoverSlip") as Control).visible, 3.0)
 	assert_true((screen.get_node("%HoverSlip") as Control).visible, "a pointer at rest on open table raises the slip")
+
+
+## B1: the supply preview is clipped to the laid sheet in pack px; a road from a
+## town off the sheet ends at the sheet's edge with the town's name beside it.
+func _burg_off_sheet(view: WarRoomView) -> String:
+	var codes: Array = Game.data.burgs.keys()
+	codes.sort()
+	for t: String in codes:
+		var b: Dictionary = Game.data.burgs[t]
+		if WarSheets.sheet_of(Game.data, Vector2(float(b["x"]), float(b["y"]))) != view.sheet_index() \
+				and not view.sheet_rect().has_point(Vector2(float(b["x"]), float(b["y"]))):
+			return t
+	return ""
+
+
+func _in_quad(view: WarRoomView, p: Vector2) -> bool:
+	var r := view.sheet_rect()
+	var quad := PackedVector2Array()
+	for c: Vector2 in [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]:
+		quad.append(view.screen_pos_of_px(c))
+	var fat := Geometry2D.offset_polygon(quad, 3.0)
+	return not fat.is_empty() and Geometry2D.is_point_in_polygon(p, fat[0])
+
+
+func test_a_supply_road_inside_the_sheet_has_no_exit_mark() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var c := view.sheet_rect().get_center()
+	view.aiming = true
+	view.supply_preview = PackedVector2Array([c, c + Vector2(40, 20)])
+	view.plan_input().redraw_live()
+	var hud := view.get_node("%PlanHud") as WarPlanHud
+	assert_eq(hud.runs().size(), 1)
+	assert_true(hud.exit_mark().is_empty())
+
+
+func test_a_supply_road_from_off_the_sheet_ends_at_its_edge_with_the_towns_name() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var town := _burg_off_sheet(view)
+	assert_ne(town, "")
+	var b: Dictionary = Game.data.burgs[town]
+	var from := Vector2(float(b["x"]), float(b["y"]))
+	view.aiming = true
+	view.supply_preview = PackedVector2Array([from, view.sheet_rect().get_center()])
+	view.plan_input().redraw_live()
+	var hud := view.get_node("%PlanHud") as WarPlanHud
+	assert_gt(hud.runs().size(), 0, "the part on the sheet is drawn")
+	for run: PackedVector2Array in hud.runs():
+		for p in run:
+			assert_true(_in_quad(view, p), "no gold on the oak: " + str(p))
+	var mark := hud.exit_mark()
+	assert_false(mark.is_empty())
+	assert_string_contains(String(mark["text"]), String(b["label"]))
+	assert_string_contains(String(mark["text"]), String(WarSheets.series(Game.data)[WarSheets.sheet_of(Game.data, from)]["id"]))

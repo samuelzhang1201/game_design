@@ -597,7 +597,7 @@ func test_the_hud_draws_rings_hints_a_marquee_and_the_live_layer_the_supply_road
 	hud.set_supply([{"at": Vector2(5, 5), "lit": true}], pal["supply_route"])
 	assert_true(hud.drawing(), "a lit town")
 	var live := view.get_node("%PlanHud") as WarPlanHud
-	live.show_road(PackedVector2Array([Vector2(5, 5), Vector2(300, 40)]), pal["supply_route"], 6.0, 16.0)
+	live.show_road([PackedVector2Array([Vector2(5, 5), Vector2(300, 40)])], pal["supply_route"], 6.0, 16.0)
 	assert_true(live.drawing(), "the bold dashed road, under the march's crayon")
 
 
