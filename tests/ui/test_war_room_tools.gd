@@ -643,3 +643,30 @@ func test_a_supply_road_from_off_the_sheet_ends_at_its_edge_with_the_towns_name(
 	assert_false(mark.is_empty())
 	assert_string_contains(String(mark["text"]), String(b["label"]))
 	assert_string_contains(String(mark["text"]), String(WarSheets.series(Game.data)[WarSheets.sheet_of(Game.data, from)]["id"]))
+
+
+func test_the_confirm_does_not_cover_the_margin_slip() -> void:
+	var screen := await _room()
+	_blue_drag_from_piece(screen)
+	var p := screen.orders().confirm_panel()
+	assert_true(p.visible, "the confirm is open")
+	var slip := screen.get_node("%Slip") as Control
+	assert_true(slip.visible, "the margin slip stands")
+	# a route box swallowing every tip-adjacent spot sends the old placement to the top-left corner
+	var view_rect := screen.view().get_global_rect()
+	var tip := view_rect.get_center()
+	p.place_near(tip, view_rect.grow(-40.0), view_rect, screen.blocked_rects())
+	assert_false(p.get_global_rect().intersects(slip.get_global_rect()), "the confirm keeps off the slip")
+	screen.orders().withdraw_aim()
+
+
+func test_the_confirm_opens_somewhere_when_every_spot_is_blocked() -> void:
+	var p := load("res://scenes/panels/march_confirm_panel.tscn").instantiate() as MarchConfirmPanel
+	add_child_autofree(p)
+	await wait_process_frames(2)
+	var view := Rect2(Vector2.ZERO, p.get_viewport_rect().size)
+	var all: Array[Rect2] = [view]
+	p.place_near(view.get_center(), Rect2(), view, all)
+	var r := Rect2(p.global_position, p.get_combined_minimum_size())
+	assert_true(view.encloses(r), "still inside the window")
+	assert_false(r.grow(-1.0).has_point(view.get_center()), "never over the tip")

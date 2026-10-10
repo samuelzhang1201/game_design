@@ -100,6 +100,18 @@ func drawn() -> Dictionary:
 	return _drawn
 
 
+## The room's furniture the march's confirm keeps off, in global px: the
+## margin slip and key slip while shown, the tool roll, the docked book.
+func blocked_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for c: Control in [%Slip, %KeySlip, %ToolRoll]:
+		if c.visible:
+			out.append(c.get_global_rect())
+	if _folio.visible:
+		out.append(Rect2(_folio.get_global_rect().position + _folio.book_rect().position, _folio.book_rect().size))
+	return out
+
+
 func orders() -> ArmyOrderMenu:
 	return _orders
 
@@ -112,6 +124,7 @@ func open() -> void:
 		_view.set_font(UiPalette.role_font("body_italic"))
 		_build_board()
 		_orders.follow(_view)
+		_orders.blocked_rects = blocked_rects
 		Game.state_changed.connect(refresh)
 		(%Key as WarMarginKey).setup(Game.data, _view)
 		_folio.set_tier(Game.data, Map3DQuality.resolve_here(GameRoot.settings_path))

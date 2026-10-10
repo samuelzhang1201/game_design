@@ -225,7 +225,15 @@ func _open_confirm(at: Vector2) -> void:
 	var map_rect := (_map as Control).get_global_rect() if _map is Control else Rect2()
 	if _map != null and _map.has_signal("hover_cleared"):
 		_map.emit_signal("hover_cleared")   # the WAR ROOM's slip at the tip goes: the confirm speaks now
-	p.place_near(origin + at, _route_rect(origin), map_rect)
+	var blocked: Array[Rect2] = []
+	if blocked_rects.is_valid():
+		blocked.assign(blocked_rects.call())
+	p.place_near(origin + at, _route_rect(origin), map_rect, blocked)
+
+
+## Set by a screen that has furniture over its map (the war room's slips and
+## book): returns the global rects the confirm keeps off. The 3D map sets none.
+var blocked_rects: Callable = Callable()
 
 
 ## The planned route's box on screen (global px): the piece, its waypoints and
