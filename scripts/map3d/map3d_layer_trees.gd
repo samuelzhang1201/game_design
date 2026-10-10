@@ -6,8 +6,9 @@ extends Node3D
 ## MultiMeshes in fixed map_tree_chunk_m squares, one per species (the kind
 ## column, data/map3d_tree_species.csv), variant and level of detail, each
 ## square shown by Godot's own visibility range — the photo cards out to
-## map3d_tree_card_far_m from the camera, faded over map3d_tree_card_fade_m,
-## nothing past it (the ground's canopy tint carries the wood from there).
+## map3d_tree_card_far_m from the camera, then the same clumps thinned to
+## map3d_tree_card_thin out to map3d_tree_card_thin_far_m (each switch faded
+## over map3d_tree_card_fade_m), nothing past it (the ground's canopy tint).
 ## Past map3d_lod_trees_m of camera distance the whole wood is HIDDEN
 ## (owner 2026-10-10: 镜头抬高到很高，不需要渲染树木 — LOD like other games),
 ## shown again under it by map3d_lod_margin_m. Built ONCE at load: no
@@ -94,7 +95,7 @@ func build(p_ctx: Map3DContext) -> void:
 	# The clumps are kept between views (Map3DAssetCache's rule: ~0.5 s a
 	# screen swap), by every input they are made of; the nodes are this view's.
 	var look: Array = [path, FileAccess.get_modified_time(path), density, cards, repo.map3d_tree_species]
-	for k: String in ["map3d_tree_chunk_m", "map3d_tree_scale", "map3d_tree_size_spread",
+	for k: String in ["map3d_tree_chunk_m", "map3d_tree_scale", "map3d_tree_size_spread", "map3d_tree_card_thin",
 			"map3d_tree_variants", "map3d_tree_thin_cell_m"]:
 		look.append(repo.bal(k))
 	var key := var_to_str(look).md5_text()
@@ -103,9 +104,9 @@ func build(p_ctx: Map3DContext) -> void:
 		_kept_key = key
 	material = _kept["material"]
 	var near := repo.bal("map3d_tree_card_far_m") if cards else repo.bal("map3d_tree_near_m")
-	var far := repo.bal("map3d_tree_card_far_m") if cards else repo.bal("map3d_tree_far_m")
-	var margin := repo.bal("map3d_tree_margin_m")
-	var fade := repo.bal("map3d_tree_card_fade_m") if cards else margin
+	var far := repo.bal("map3d_tree_card_thin_far_m") if cards else repo.bal("map3d_tree_far_m")
+	var margin := repo.bal("map3d_tree_card_fade_m") if cards else repo.bal("map3d_tree_margin_m")
+	var fade := margin
 	for one: Array in _kept["chunks"]:
 		var node := MultiMeshInstance3D.new()
 		node.multimesh = one[0]
@@ -170,7 +171,9 @@ func _plan(data: PackedFloat32Array, density: float, cards: bool) -> Dictionary:
 		g[sub] = rows_of
 	var meshes := {}
 	var mat := _card_material() if cards else _material()
-	var lods := 1 if cards else 2
+	# the cards' far level is the same clumps THINNED evenly (map3d_tree_card_thin)
+	var lods := 2
+	var thin := repo.bal("map3d_tree_card_thin")
 	var tints := {}   # kind -> [lo, hi]
 	for r: Dictionary in repo.map3d_tree_species:
 		var kind := int(r["kind"])
@@ -191,6 +194,10 @@ func _plan(data: PackedFloat32Array, density: float, cards: bool) -> Dictionary:
 			var rows: PackedInt32Array = g[sub]
 			var centre := Vector3((key.x + 0.5) * chunk, 0.0, (key.y + 0.5) * chunk)
 			for lod in lods:
+				if cards and lod == 1:
+					rows = _thinned(data, rows, thin, thin_cell)
+					if rows.is_empty():
+						continue
 				var mm := MultiMesh.new()
 				mm.transform_format = MultiMesh.TRANSFORM_3D
 				mm.use_colors = true
@@ -206,8 +213,19 @@ func _plan(data: PackedFloat32Array, density: float, cards: bool) -> Dictionary:
 					mm.set_instance_transform(j, Transform3D(turn, at))
 					mm.set_instance_color(j, tint_of(tints.get(int(data[i * ROW + 5]), [Color.WHITE, Color.WHITE]), i))
 				chunks.append([mm, centre, lod])
-			count += rows.size()
+				if lod == 0:
+					count += rows.size()
 	return {"material": mat, "count": count, "chunks": chunks}
+
+
+## `rows` kept where Map3DGeometry.thin_rank (on a 2x coarser square, so the
+## near level's own thinning never empties it) is under `share`.
+static func _thinned(data: PackedFloat32Array, rows: PackedInt32Array, share: float, cell: float) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	for i in rows:
+		if Map3DGeometry.thin_rank(data[i * ROW] + cell * 0.5, data[i * ROW + 2] + cell * 0.5, cell * 2.0) < share:
+			out.append(i)
+	return out
 
 
 ## A clump's tint: its species' tint_lo..tint_hi, each channel by the row's own hash.

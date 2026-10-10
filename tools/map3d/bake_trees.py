@@ -474,6 +474,9 @@ def main(argv=None):
             a[:] = np.apply_along_axis(lambda r: np.convolve(r, k, "same"), 1, a)
             a[:] = np.apply_along_axis(lambda r: np.convolve(r, k, "same"), 0, a)
     share = np.where(cover > 1e-4, con / np.maximum(cover, 1e-4), 0)
+    # the canopy as seen from above closes over the gaps between crowns:
+    # what carries the wood once no tree is drawn (the height gate)
+    cover *= rules.get("canopy_gain", 1.0)
     img = np.zeros((wh, ww, 4), np.uint8)
     img[..., 0] = np.round(np.clip(cover, 0, 1) * 255)
     img[..., 1] = np.round(np.clip(share, 0, 1) * 255)
