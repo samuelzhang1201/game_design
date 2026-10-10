@@ -237,10 +237,23 @@ him and is listed for him to overturn one by one. Builds on
     g. Drawing: the 3D map's and the WAR ROOM's gold lines draw FLOWING lines
        only, so a FRONT line vanishes like a cut one (the least intrusive
        coherent look); the key slip shows no cut state, so no new legend.
-       The army card's supply stat reads "broken: town ahead" with the
-       `front_card` sentence as its tooltip; the folio's Line rows (docked and
-       open) read that sentence; the piece slip adds a rubric line
-       (`front_slip`); the LEDGER's line card says "broken: town ahead".
+       The army card's supply stat reads "Line broken: town ahead" in the
+       card's ordinary ink with the `front_card` sentence as its tooltip
+       (the critic ruled `CardWarn`'s pale rose too faint on the paper
+       column — quieter than the facts round it; it waits for the owner to
+       retune `CardWarn`'s paper ink in the editor, which would also mend the
+       idle-building word); the folio's Line rows (docked and
+       open) read that sentence; the piece slip adds "Line broken" in rubric
+       and the sentence with its remedy in its book face (`front_slip`; a
+       whole sentence in small capitals reads badly); the LEDGER's line card
+       says "Line broken: town ahead". The short surfaces say "ahead of the
+       column" (the critic: "frontier side" parses badly in a slip); the card
+       tooltip and the folio add "on the frontier side", and the news keeps
+       the owner's brief's sentence.
+       Left for the owner (critic, not done): the folio has no warning ink
+       of its own (a `FolioWarn` theme kind is an editor change), and the
+       map could draw the broken line instead of hiding it (a dashed, dimmed
+       line is a new look).
     h. `SUPPLY_POINT_SET` is refused when it RUNS (sent, deployed, or measured
        by `Game.review_drafts`) for a town ahead of the column where it stands
        then (`mark_ahead` in `ActionSystem._validate_supply`, the `pick_ahead`

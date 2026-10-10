@@ -176,16 +176,18 @@ static func front_words(repo: DataRepository, state: GameState, code: String) ->
 	if String(ln.get("state", "")) != FRONT:
 		return ""
 	return words(repo, "front_card", {"town": _town_label(repo, String(ln["town"]))}, "hint",
-		"Broken: {town} lies on the frontier side of the column")
+		"Broken: {town} lies ahead of the column")
 
 
-## The WAR ROOM piece slip's line for a FRONT line (`front_slip`), else "".
-static func slip_words(repo: DataRepository, state: GameState, code: String) -> String:
+## The WAR ROOM piece slip's words for a FRONT line (`front_slip`): {title:
+## the rubric ("Line broken"), text: the sentence}; {} for any other line.
+static func slip_words(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	var ln := line(state, code)
 	if String(ln.get("state", "")) != FRONT:
-		return ""
-	return words(repo, "front_slip", {"town": _town_label(repo, String(ln["town"]))}, "hint",
-		"Supply line broken: {town} lies ahead of the column")
+		return {}
+	return {"title": words(repo, "front_slip", {}, "label", "Line broken"),
+		"text": words(repo, "front_slip", {"town": _town_label(repo, String(ln["town"]))}, "hint",
+			"{town} lies ahead of the column")}
 
 
 ## The news bar's lines for a day's supply events (GameRoot, after the day):

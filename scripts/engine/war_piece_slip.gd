@@ -6,8 +6,8 @@ extends RefCounted
 ## when given them) with its arm and heads, its defend and attack on the
 ## ground where it stands now (ArmySystem.power), its readiness and morale, and
 ## its supplies with the days they last ("Supplies 1,240 (≈ 18 days)") —
-## and, in rubric, a supply line broken because its town lies ahead of it
-## (`SupplyLines.slip_words`, owner 2026-10-10). Pure and read-only; only the player's own regiments are pieces.
+## and a supply line broken because its town lies ahead of it, its name in
+## rubric (`SupplyLines.slip_words`, owner 2026-10-10). Pure and read-only; only the player's own regiments are pieces.
 
 
 ## One reading per regiment code, in the order given.
@@ -49,8 +49,10 @@ static func lines(repo: DataRepository, readings: Array, town := "") -> Array:
 			"kind": "line"})
 		out.append({"text": _readiness(r), "kind": "line"})
 		out.append({"text": supplies_text(r), "kind": "line"})
-		if String(r.get("line_broken", "")) != "":   # its supply town ahead of it (ruling 20 kept daily)
-			out.append({"text": String(r["line_broken"]), "kind": "rubric"})
+		var broken: Dictionary = r.get("line_broken", {})
+		if not broken.is_empty():   # its supply town ahead of it (ruling 20 kept daily)
+			out.append({"text": String(broken["title"]), "kind": "rubric"})
+			out.append({"text": String(broken["text"]), "kind": "line"})
 		return out
 	var heads := 0
 	for r: Dictionary in readings:
@@ -64,8 +66,9 @@ static func lines(repo: DataRepository, readings: Array, town := "") -> Array:
 		out.append({"text": "%s · Defend %s · Attack %s" % [_strength(repo, r), Intel.num(int(r["defend"])),
 			Intel.num(int(r["attack"]))], "kind": "line"})
 		out.append({"text": "%s · %s" % [_readiness(r), supplies_text(r)], "kind": "line"})
-		if String(r.get("line_broken", "")) != "":
-			out.append({"text": String(r["line_broken"]), "kind": "line"})
+		var broken: Dictionary = r.get("line_broken", {})
+		if not broken.is_empty():
+			out.append({"text": "%s: %s" % [broken["title"], broken["text"]], "kind": "line"})
 	return out
 
 

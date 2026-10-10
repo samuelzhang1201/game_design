@@ -76,7 +76,7 @@ static func _head(repo: DataRepository, state: GameState, kind: String, rest: St
 			@warning_ignore("integer_division")  # whole percent from per-mille
 			var said := String(line["state"])
 			if said == SupplyLines.FRONT:   # its town ahead of the column (ruling 20 kept daily)
-				said = SupplyLines.words(repo, "front_card", {}, "label", "broken")
+				said = SupplyLines.words(repo, "front_card", {}, "label", "Line broken")
 			return "from %s, %d km, %d%% lost on the way — %s" % [from, int(line["length_km"]),
 				int(line["loss_permille"]) / 10, said]
 		"workshop":

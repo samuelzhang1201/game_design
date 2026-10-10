@@ -217,10 +217,10 @@ func test_the_cards_the_slip_and_the_news_say_it_plainly() -> void:
 	var ev := SupplyLines.day_step(repo, s)
 	var label := String(repo.burgs[town]["label"])
 	var reg := String(ArmySystem.regiment(repo, code, s)["label"])
-	var broken := "Broken: %s lies on the frontier side of the column — choose a supply town behind it" % label
+	var broken := "Broken: %s lies ahead of the column, on the frontier side — choose a supply town behind it" % label
 	var stat: Dictionary = (MapObjects.army_card(repo, code, s)["stats"] as Array).filter(
 		func(x: Dictionary) -> bool: return String(x["key"]) == "army_supply_line")[0]
-	assert_eq(String(stat["text"]), "broken: town ahead")
+	assert_eq(String(stat["text"]), "Line broken: town ahead")
 	assert_eq(String(stat["tooltip"]), broken)
 	var brief: Array = (WarFolio.brief(repo, s, code)["rows"] as Array).filter(
 		func(r: Dictionary) -> bool: return String(r["label"]) == "Line")
@@ -230,8 +230,11 @@ func test_the_cards_the_slip_and_the_news_say_it_plainly() -> void:
 	var row: Array = (supply["rows"] as Array).filter(func(r: Dictionary) -> bool: return String(r["label"]) == "Line")
 	assert_true(String(row[0]["text"]).begins_with(broken), String(row[0]["text"]))
 	var slip := WarPieceSlip.lines(repo, WarPieceSlip.reading(repo, s, [code]))
-	assert_eq(String(slip.back()["text"]), "Supply line broken: %s lies ahead of the column" % label)
-	assert_eq(String(slip.back()["kind"]), "rubric")
+	assert_eq(String(slip[slip.size() - 2]["text"]), "Line broken")
+	assert_eq(String(slip[slip.size() - 2]["kind"]), "rubric")
+	assert_eq(String(slip.back()["text"]),
+		"%s lies ahead of the column — choose a supply town behind it" % label)
+	assert_eq(String(slip.back()["kind"]), "line")
 	var said := "The supply line of %s from %s is broken: the town now lies on the frontier side of the column — choose a supply town behind it" % [reg, label]
 	assert_eq(SupplyLines.news(repo, s, ev), [said])
 	var letter := MissiveWriter.supply_dispatch(repo, s, _of(ev, "front"))
@@ -242,7 +245,8 @@ func test_the_cards_the_slip_and_the_news_say_it_plainly() -> void:
 	assert_eq(SupplyLines.news(repo, s, ev),
 		["The supply line of %s from %s flows again: the town lies behind the column once more" % [reg, label]])
 	assert_eq(SupplyLines.front_words(repo, s, code), "", "a flowing line has no broken words")
-	assert_ne(String(WarPieceSlip.lines(repo, WarPieceSlip.reading(repo, s, [code])).back()["kind"]), "rubric")
+	assert_false(WarPieceSlip.lines(repo, WarPieceSlip.reading(repo, s, [code])).any(
+		func(l: Dictionary) -> bool: return String(l["kind"]) == "rubric"), "a flowing line says nothing")
 
 
 ## Cut wins over front: the foe and the place are the news; once the road is

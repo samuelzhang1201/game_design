@@ -10,7 +10,7 @@ pick_ahead,,"{town}: on the frontier side of the column","the march's confirm an
 march_none,No supply point,The regiment draws on no town: it lives on what it carries,the confirm's Supply from list when the regiment has no line
 march_keep,{town} (now),The supply point it has: no new order,the confirm's Supply from list: the current town kept
 march_figures,"{km} km to the end · wagons {wagon_days} · {loss}% lost · {fee} gold a day","Supply from {town} at {rate}×: the road from the town to where the march ends","the confirm's figures for the town chosen"
-front_card,broken: town ahead,"Broken: {town} lies on the frontier side of the column — choose a supply town behind it","the army card's and the folio's words for a FRONT line (owner 2026-10-10, spec 2026-10-08-war-room-draw-orders ruling 20 kept daily): its town now lies AHEAD of the column, so it delivers nothing"
+front_card,Line broken: town ahead,"Broken: {town} lies ahead of the column, on the frontier side — choose a supply town behind it","the army card's and the folio's words for a FRONT line (owner 2026-10-10, spec 2026-10-08-war-room-draw-orders ruling 20 kept daily): its town now lies AHEAD of the column, so it delivers nothing"
 front_news,Line broken,"The supply line of {regiment} from {town} is broken: the town now lies on the frontier side of the column — choose a supply town behind it","said once as a line turns FRONT: the news bar and the supply dispatch (label: the dispatch's fact name)"
 front_cleared_news,Line flows again,"The supply line of {regiment} from {town} flows again: the town lies behind the column once more","said once as a FRONT line flows again"
-front_slip,,"Supply line broken: {town} lies ahead of the column","the WAR ROOM piece slip's line for a FRONT line"
+front_slip,Line broken,"{town} lies ahead of the column — choose a supply town behind it","the WAR ROOM piece slip for a FRONT line: the label in rubric, then the hint in the slip's book face"
