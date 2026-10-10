@@ -42,7 +42,7 @@ first is edited, the others are references, e.g. a costume or a material) and
 `--instruction "…"` (what to change). With `--ids` the row's assembled prompt
 follows the instruction and the row's canvas sets the size; without, the
 output keeps the first picture's aspect at about one megapixel (or takes
-`--canvas`) and lands in `out/edits/`. Uses: a 3D structure view from the
+`--canvas`) and lands in `out/edits/`. An edit's name is `<first picture>_<--tag or the instruction's first words>_<6-char hash of instruction + pictures>_<model>_s<seed>`, so edits never overwrite each other. Uses: a 3D structure view from the
 picked design (instead of keeping the design by words), a character's bust
 from its picked full figure, a local fix (a cloak's colour, a missing boot)
 without losing the pick, and variants of one piece of art. Download with

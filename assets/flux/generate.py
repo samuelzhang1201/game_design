@@ -11,7 +11,9 @@
 Edit presets (qwenedit / qwenedit_fast, Qwen-Image-Edit-2511) take one to
 three pictures with --images: the first is edited, the others are references.
 The prompt is --instruction, followed by the assembled row prompt when --ids
-are given too; without --ids the output goes to out/edits/.
+are given too; without --ids the output goes to out/edits/. An edit's file
+name carries --tag (or the instruction's first words) and a 6-character hash
+of the instruction and the input pictures, so two edits never share a name.
 
 Every prompt is assembled as  STYLE_CORE + subject + CANVAS  from the files
 beside this script, never typed by hand (prompt library §0.1 / §10.8). The
@@ -27,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 import sys
@@ -342,6 +345,8 @@ def main() -> int:
                     help="edit presets: 1-3 comma-separated PNGs; the first is edited, the others are references")
     ap.add_argument("--instruction", default="",
                     help="edit presets: what to change, put before the row prompt (or alone without --ids)")
+    ap.add_argument("--tag", default="",
+                    help="edits: a readable name part, e.g. infantry_body_front (default: the instruction's first words)")
     ap.add_argument("--dry-run", action="store_true", help="print prompts, queue nothing")
     ap.add_argument("--front", action="store_true", help="queue ahead of jobs already waiting in ComfyUI")
     ap.add_argument("--timeout", type=float, default=900.0, help="seconds to wait per image")
@@ -437,6 +442,10 @@ def main() -> int:
               "NEGATIVE.txt is not applied")
 
     uploaded = [] if args.dry_run else [upload(p) for p in images]
+    # Same seed + same first words used to overwrite an earlier edit (2026-10-10):
+    # the hash keys the name to the whole instruction and the pictures.
+    edit_key = hashlib.sha1("\n".join([args.instruction] + [p.name for p in images]).encode()).hexdigest()[:6]
+    edit_label = re.sub(r"[^A-Za-z0-9_-]+", "-", args.tag).strip("-") if args.tag else slug("", args.instruction)
     jobs = []
     for r in rows:
         prompt = "" if r["id"] == "EDIT" else assemble(r, canvas, style, args.small, fragments)
@@ -452,8 +461,10 @@ def main() -> int:
                 tag += "_" + Path(args.style_file).stem.replace("STYLE_CORE_", "").lower()
             if args.res:
                 tag += "_r%d" % args.res
+            if preset.get("edit"):
+                tag += f"_{edit_label}_{edit_key}"
             if r["id"] == "EDIT":
-                name = f"{r['title']}_{slug('', args.instruction)}{tag}_{args.model}_s{seed}"
+                name = f"{r['title']}{tag}_{args.model}_s{seed}"
             else:
                 name = f"{r['id']}_{slug(r['title'], r['subject'])}{tag}_{args.model}_s{seed}"
             prefix = f"flux/{r['dir']}/{name}"
