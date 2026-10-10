@@ -7,8 +7,9 @@ extends RefCounted
 ## its confirm (a lit town there is chosen to supply it); a click on open
 ## table lets the selection go. A drag pans, from a piece too (orders are
 ## DRAWN: WarPlanInput). While the confirm stands, a press near the pending
-## route bends it. Draws through WarHud: the selection's rings in its side's
-## colour, the chalk marquee, the intel hints' marching ants, every march's
+## route bends it. Marks the selection: a piece (ours or a supposed one)
+## glows faintly on the table under itself (WarPieces.show_selected), a
+## selected intel hint is ringed in red through WarHud with the chalk marquee, the intel hints' marching ants, every march's
 ## BLUE CRAYON ARROW — drafted or sealed, never a dashed line (WarOrderArrows;
 ## none for a regiment whose march the confirm is drawing), the waypoints'
 ## rings and the towns that may supply the march.
@@ -103,17 +104,26 @@ func on_motion(mm: InputEventMouseMotion) -> void:
 		_view.aim_waypoints = wps   # redraws
 
 
-## The HUD's marks: the selection's rings, the marquee, the hints, the
-## marches' arrows, the pending route's rings, the supply pick.
+## The selection's marks (the pieces' glow, a hint's ring), the marquee, the
+## hints, the marches' arrows, the pending route's rings, the supply pick.
 func redraw() -> void:
 	var pal: Dictionary = _repo.war_palette
 	var input := _view.plan_input()
 	var rings: Array = []
+	var ours: Array = []
+	var theirs: Array = []
 	if not _view.rolling() and input.sel_side != "":
 		var colour: Color = pal["plan_blue"] if input.sel_side == "blue" else pal["plan_red"]
 		var r := _repo.bal("war_pick_px") * _repo.bal("war_select_ring_ratio")
 		for at: Vector2 in _selected_spots(input):
 			rings.append({"at": at, "r": r, "colour": colour})
+		for id: Variant in input.sel:
+			if input.sel_side == "blue":
+				ours.append(String(id))
+			elif String(id).begins_with("p"):
+				theirs.append(String(id))
+	_pieces.show_selected(ours, pal["plan_blue"])
+	_view.plan_pieces().show_selected(theirs, pal["plan_red"])
 	var hints: Array = []
 	if not _view.rolling():
 		for h: Dictionary in input.hints_on_sheet():
@@ -132,24 +142,17 @@ func redraw() -> void:
 	_hud.set_supply(_supply_rings(), pal["supply_route"])
 
 
-## Where each selected thing stands on the screen: our pieces (where each is
-## drawn, spread clear of its neighbours), supposed pieces, intel hints.
+## Where each selected intel hint stands on the screen (a selected piece,
+## ours or supposed, glows on the table instead: no ring).
 func _selected_spots(input: WarPlanInput) -> Array:
 	var out: Array = []
 	var seen := {}
 	var st := _view.state()
 	for id: Variant in input.sel:
-		var at: Variant = null
-		if input.sel_side == "blue":
-			var node := _pieces.piece(String(id))
-			if node != null and not _camera.is_position_behind(node.global_position):
-				at = _camera.unproject_position(node.global_position) / _view.window_scale()
-		elif String(id).begins_with("p"):
-			var p: Dictionary = st.war_plans[WarPlans.PIECES].get(String(id), {})
-			at = _view.screen_pos_of_px(WarPlans.at_px(_repo, p)) if not p.is_empty() else null
-		else:
-			var h := WarRoom.hint_of(_repo, st, String(id))
-			at = _view.screen_pos_of_px(h["at"]) if not h.is_empty() else null
+		if input.sel_side == "blue" or String(id).begins_with("p"):
+			continue
+		var h := WarRoom.hint_of(_repo, st, String(id))
+		var at: Variant = _view.screen_pos_of_px(h["at"]) if not h.is_empty() else null
 		if at != null and not seen.has(Vector2i((at as Vector2).round())):
 			seen[Vector2i((at as Vector2).round())] = true
 			out.append(at)
