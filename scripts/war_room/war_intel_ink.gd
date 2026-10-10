@@ -11,14 +11,14 @@ extends RefCounted
 static func cache_key(state: GameState, sheet_index: int) -> int:
 	var couriers: Array = state.couriers.map(func(c: Dictionary) -> Array: return [c["id"], c["x_m"], c["y_m"]])
 	return hash([sheet_index, state.absolute_day(), couriers, state.next_missive_id, state.regiments.hash(),
-		state.manor_owner.hash(), state.manor_province.hash(), state.hazards_rev, state.hazards.size()])
+		state.manor_owner.hash(), state.manor_province.hash(), state.hazards_rev, state.hazards.size(), state.forage_stripped.hash()])
 
 
 static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, tex_px: int) -> Dictionary:
 	var r: Rect2 = sheet["rect"]
 	var k := float(tex_px) / r.size.x
 	# the supply lines are not inked: they move with the pieces (WarSupplyFlow)
-	var out := {"couriers": [], "weather": [], "spies": [], "hazards": []}
+	var out := {"couriers": [], "weather": [], "spies": [], "hazards": [], "stripped": []}
 	for c: Dictionary in state.couriers:
 		var pts := PackedVector2Array([ArmySystem.metres_to_pack(repo, Vector2i(int(c["x_m"]), int(c["y_m"])))])
 		for p: Array in c.get("path", []):
@@ -43,6 +43,13 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 			continue   # fair weather is not news
 		(out["weather"] as Array).append({"at": (at - r.position) * k, "rain": rain, "snow": snow,
 			"overcast": overcast, "label": Weather.label_of(repo, kind)})
+	# a province foraged bare is named so at its centre (spec 2026-10-10-foraging-and-desertion §4)
+	for code: String in Forage.stripped_bare(repo, state):
+		var row: Dictionary = repo.provinces.get(code, {})
+		var at := Vector2(float(row.get("center_x", 0)), float(row.get("center_y", 0)))
+		if r.has_point(at):
+			(out["stripped"] as Array).append({"at": (at - r.position) * k,
+				"text": String(repo.conduct_words.get("ink_stripped", ""))})
 	# the known hazards in play (spec 2026-10-07-war-room-p2 §2.4): hatched by kind, outlined, named
 	var gap := repo.bal("war_hazard_hatch_km") / WarMarks.km_per_px(repo) * k
 	for id: String in Hazards.active_ids(state):

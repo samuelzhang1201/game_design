@@ -5,3 +5,12 @@ forage_havoc,Havoc is cried at %s: the host breaks loose.
 stripped_bare,%s is stripped bare; no army can live off it now.
 deserting,Men slip away from %s in the night.
 deserting_big,%s has lost a great part of its men to desertion.
+state_law,living off the land (law)
+state_desperate,living off the land (desperate)
+row_foraging,Foraging
+row_deserted,Deserted
+row_grievance,Grievance
+slip_forage,Forage: %s (%d a day)
+slip_feeds,would feed it %d of %d a day
+slip_home,Our own land — not foraged
+ink_stripped,Stripped

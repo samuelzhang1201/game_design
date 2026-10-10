@@ -149,3 +149,42 @@ static func strip(repo: DataRepository, state: GameState, province: String, take
 	@warning_ignore("integer_division")  # whole per mille
 	var add := taken * int(repo.bal("forage_strip_k")) / cap
 	state.forage_stripped[province] = clampi(int(state.forage_stripped.get(province, 0)) + add, 0, 1000)
+
+
+## A province's forage in a word, from today's yield against a full unstripped
+## summer day: "rich" (forage_word_rich_permille and up), "fair"
+## (forage_word_fair_permille), "thin" (any), "stripped" (none).
+static func word_of(repo: DataRepository, state: GameState, province: String) -> String:
+	var today := day_capacity(repo, state, province, state.day)
+	var full := _full_day(repo, province, state.day)
+	if today <= 0 or full <= 0:
+		return "stripped"
+	@warning_ignore("integer_division")  # whole per mille
+	var share := today * 1000 / full
+	if share >= int(repo.bal("forage_word_rich_permille")):
+		return "rich"
+	if share >= int(repo.bal("forage_word_fair_permille")):
+		return "fair"
+	return "thin"
+
+
+## What day `day` yields in high summer with nothing stripped (day_capacity's
+## own split of the month).
+static func _full_day(repo: DataRepository, province: String, day: int) -> int:
+	var d := clampi(day, 1, Calendar.DAYS_PER_TICK)
+	@warning_ignore("integer_division")  # whole supplies
+	var c := food_units(repo, province) * int(repo.bal("forage_supply_per_food_unit")) \
+		* int(repo.bal("forage_summer_permille")) / 1000
+	@warning_ignore("integer_division")  # whole supplies
+	return (c * d / Calendar.DAYS_PER_TICK - c * (d - 1) / Calendar.DAYS_PER_TICK) \
+		* int(repo.bal("forage_share_permille")) / 1000
+
+
+## The provinces stripped past forage_bare_permille, sorted.
+static func stripped_bare(repo: DataRepository, state: GameState) -> Array:
+	var out: Array = []
+	for p: String in state.forage_stripped:
+		if int(state.forage_stripped[p]) > int(repo.bal("forage_bare_permille")):
+			out.append(p)
+	out.sort()
+	return out

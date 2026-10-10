@@ -61,7 +61,8 @@ static func brief(repo: DataRepository, state: GameState, code: String) -> Dicti
 	var st := _state_of(repo, state, code, reg)
 	var wounded := clampi(int(st.get("wounded", 0)), 0, heads)
 	var dead := clampi(int(st.get("dead", 0)), 0, heads)
-	var under := WarRoom.group(heads - dead)
+	var deserted := clampi(int(st.get("deserted", 0)), 0, heads - dead)
+	var under := WarRoom.group(heads - dead - deserted)
 	if wounded > 0:
 		under += " · %s fit" % WarRoom.group(ArmySystem.fit_heads(heads, st))
 	var arms: Array[String] = []
@@ -77,6 +78,7 @@ static func brief(repo: DataRepository, state: GameState, code: String) -> Dicti
 	var rows: Array = [_row("Under arms", under), _row("Arms", " · ".join(arms)),
 		_row("Morale", "%d / 100 — %s" % [int(st["morale"]), ArmySystem.morale_word(repo, score)]),
 		_row("Supplies", stores)]
+	rows.append_array(conduct_rows(repo, st))
 	if state.regiments.has(code):
 		var line := SupplySystem.line_of(repo, state, code)
 		var town := String(line["town"])
@@ -120,6 +122,20 @@ static func _state_of(repo: DataRepository, state: GameState, code: String, reg:
 	return st if not st.is_empty() else ArmySystem.starting_state(repo, reg)
 
 
+## The rows foraging and desertion add (spec 2026-10-10-foraging-and-desertion
+## §4; words in data/conduct_words.csv): how the unit is living, and its deserters.
+static func conduct_rows(repo: DataRepository, st: Dictionary) -> Array:
+	var rows: Array = []
+	var forage := String(st.get("forage", ""))
+	if forage != "":
+		var said := String(repo.conduct_words.get("state_law", "")) if forage == "law" \
+			else String(repo.conduct_words.get("state_desperate", ""))
+		rows.append(_row(String(repo.conduct_words.get("row_foraging", "")), said))
+	if int(st.get("deserted", 0)) > 0:
+		rows.append(_row(String(repo.conduct_words.get("row_deserted", "")), str(int(st["deserted"]))))
+	return rows
+
+
 static func _row(label: String, text: String) -> Dictionary:
 	return {"label": label, "text": text}
 
@@ -158,8 +174,11 @@ static func _tier_word(n: int) -> String:
 
 static func _composition(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
 	var st := _state_of(repo, state, code, reg)
-	# the dead are no longer under arms
-	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.headcount(repo, reg) - maxi(0, int(st.get("dead", 0)))))]
+	# the dead and the deserted are no longer under arms
+	var heads := ArmySystem.headcount(repo, reg)
+	var gone := clampi(int(st.get("dead", 0)), 0, heads)
+	gone += clampi(int(st.get("deserted", 0)), 0, heads - gone)
+	var rows: Array = [_row("Under arms", WarRoom.group(heads - gone))]
 	for a: Dictionary in arms_of(repo, code):
 		rows.append(_row(_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))))
 	var wounded := int(st.get("wounded", 0))
@@ -250,6 +269,7 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 		if refill != "":
 			text += "; " + refill
 		rows.append(_row("Line", text))
+	rows.append_array(conduct_rows(repo, st))
 	var f := Governance.factors(repo, state, "supply_line")
 	var gid := String(f["governor"])
 	if gid == "":

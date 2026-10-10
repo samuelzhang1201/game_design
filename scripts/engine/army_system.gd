@@ -53,7 +53,7 @@ static func headcount(repo: DataRepository, reg: Dictionary) -> int:
 static func fit_heads(heads: int, st: Dictionary) -> int:
 	return maxi(0, heads - maxi(0, int(st.get("wounded", 0))) - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))))
 
-## A regiment's STRENGTH: its fit men (headcount less the wounded and the dead)
+## A regiment's STRENGTH: its fit men (headcount less the wounded, the dead and the deserted)
 ## per mille of its headcount — what its piece shows (owner 2026-09-30: 满员 / 减员 /
 ## 残兵, Map3DFormation). A regiment that is not the player's has no state and
 ## reads as it would start (full); one with no one under arms is 0.
