@@ -52,6 +52,9 @@ CHAPTER_DIR = {
     # X- (2026-09-18) is the game's own application icon, read with
     # --prompts-file app_icon_prompts.csv; installed by install_map_art.py app_icon.
     "X": "app_icon",
+    # L- (2026-10-10) are the LEDGER galaxy's materials: a star's sphere and a
+    # link's strand, read with --prompts-file ledger_art_prompts.csv.
+    "L": "ledger",
 }
 # Table-driven chapters carry their canvas per chapter (§5, §6, §7, §9);
 # E/P rows are fragments layered onto a character, not assets on their own.
@@ -72,6 +75,7 @@ CANVAS_SIZE = {
     "C-TILEWIDE": (1024, 1024),
     "C-TOWNFLAT": (1024, 1024),
     "C-WARPIECE": (1024, 1024),
+    "C-ORB": (1024, 1024), "C-STRAND": (1536, 512),
 }
 # One preset per model: which template graph to fill and its sampler values.
 # Only two models make the game's 2D art (owner 2026-10-01: no Flux at all —
