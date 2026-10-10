@@ -132,3 +132,78 @@ static func _havoc(repo: DataRepository, state: GameState, starter: String, prov
 		follower["forage"] = DESPERATE
 		n += 1
 	return n
+
+
+## One day's foraging in `province` by `codes` (the units living off it today):
+## the day's shares go into their supplies (never past what they may hold), the
+## land is stripped by what was taken, and a crossing is acted on. Returns the
+## events filed: {type: "stripped_bare", province} when the stripping passes
+## forage_bare_permille. Passing forage_hazard_strip_permille (the _protected
+## line when any taker keeps protect_church) lays the "Raided" hazard.
+static func take_day(repo: DataRepository, state: GameState, province: String, codes: Array) -> Array:
+	var out: Array = []
+	if codes.is_empty():
+		return out
+	var sorted: Array = codes.duplicate()
+	sorted.sort()
+	var before := int(state.forage_stripped.get(province, 0))
+	var shares := Forage.shares(repo, state, province, sorted, state.day)
+	var taken := 0
+	var protected := false
+	for c: String in sorted:
+		var entry: Dictionary = state.regiments.get(c, {})
+		if entry.is_empty():
+			continue
+		var reg := ArmySystem.regiment(repo, c, state)
+		var cap := ArmySystem.max_units(repo, ArmySystem.supply_use(repo, reg, state))
+		var have := int(entry.get("supplies", 0))
+		var got := maxi(0, mini(int(shares.get(c, 0)), cap - have))
+		entry["supplies"] = have + got
+		entry["forage_days"] = int(entry.get("forage_days", 0)) + 1
+		taken += got
+		if LawSystem.value(repo, state, "protect_church", c) == "on":
+			protected = true
+	Forage.strip(repo, state, province, taken)
+	var after := int(state.forage_stripped.get(province, 0))
+	var line := int(repo.bal("forage_hazard_strip_permille_protected" if protected else "forage_hazard_strip_permille"))
+	if before < line and line <= after:
+		lay_hazard(repo, state, province)
+	var bare := int(repo.bal("forage_bare_permille"))
+	if before < bare and bare <= after:
+		out.append({"type": "stripped_bare", "province": province})
+	return out
+
+
+## The month's end (day 30) for the columns that lived off the land: morale up,
+## training down and the wounded by the days they foraged (d/30 of the month's
+## figure, whole), whether or not they are still on that land; then the stripped
+## lands recover and the old month's once-marks go.
+@warning_ignore("integer_division")
+static func settle_month(repo: DataRepository, state: GameState) -> void:
+	if state.day != Calendar.DAYS_PER_TICK:
+		return
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c: String in codes:
+		var entry: Dictionary = state.regiments[c]
+		var d := int(entry.get("forage_days", 0))
+		if d <= 0:
+			continue
+		entry["morale"] = mini(100, int(entry.get("morale", 0)) + int(repo.bal("forage_morale_month")) * d / Calendar.DAYS_PER_TICK)
+		entry["training"] = maxi(0, int(entry.get("training", 0)) - int(repo.bal("forage_training_month")) * d / Calendar.DAYS_PER_TICK)
+		var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, c, state)), entry)
+		var hurt := mini(fit, fit * int(repo.bal("forage_harass_permille")) * d / (Calendar.DAYS_PER_TICK * 1000))
+		entry["wounded"] = int(entry.get("wounded", 0)) + hurt
+		entry["forage_days"] = 0
+	var provs: Array = state.forage_stripped.keys()
+	provs.sort()
+	for p: String in provs:
+		var left := clampi(int(state.forage_stripped[p]) - int(repo.bal("forage_recover_permille")), 0, 1000)
+		if left <= 0:
+			state.forage_stripped.erase(p)
+		else:
+			state.forage_stripped[p] = left
+	var marks: Array = state.conduct_marks.keys()
+	for k: String in marks:
+		if int(state.conduct_marks[k]) != state.tick:
+			state.conduct_marks.erase(k)
