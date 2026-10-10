@@ -84,6 +84,9 @@ var _waypoints: Array = []
 ## menu was opened, for an Edit route… that opens the panel there.
 var _panel: MarchConfirmPanel = null
 var _route_at := Vector2.ZERO
+## Set by a screen that has furniture over its map (the war room's slips and
+## book): returns the global rects the confirm keeps off. The 3D map sets none.
+var blocked_rects: Callable = Callable()
 ## The regiment whose supply point is being picked, "" when none; and the
 ## town clicked, whose rate the confirm asks.
 var _supply_for := ""
@@ -229,11 +232,6 @@ func _open_confirm(at: Vector2) -> void:
 	if blocked_rects.is_valid():
 		blocked.assign(blocked_rects.call())
 	p.place_near(origin + at, _route_rect(origin), map_rect, blocked)
-
-
-## Set by a screen that has furniture over its map (the war room's slips and
-## book): returns the global rects the confirm keeps off. The 3D map sets none.
-var blocked_rects: Callable = Callable()
 
 
 ## The planned route's box on screen (global px): the piece, its waypoints and

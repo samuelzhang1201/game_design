@@ -654,8 +654,12 @@ func test_the_confirm_does_not_cover_the_margin_slip() -> void:
 	# a route box swallowing every tip-adjacent spot sends the old placement to the top-left corner
 	var view_rect := screen.view().get_global_rect()
 	p.place_near(view_rect.get_center(), view_rect.grow(-40.0), view_rect, screen.blocked_rects())
-	assert_true(not slip.visible or not p.get_global_rect().intersects(slip.get_global_rect()),
-		"the confirm and the margin slip do not overlap, whichever moved")
+	# in this layout the confirm stands mid-view, so there is no room right of it before the key slip
+	assert_false(slip.visible, "the slip is put away")
+	p.global_position = view_rect.position + Vector2(8, 8)   # a confirm in the corner: the slip steps right of it, clear
+	screen._make_way()
+	assert_true(slip.visible, "the slip steps aside when there is room")
+	assert_false(p.get_global_rect().intersects(slip.get_global_rect()), "the confirm and the margin slip do not overlap")
 	screen.orders().withdraw_aim()
 
 
@@ -702,3 +706,60 @@ func test_the_confirm_opens_somewhere_when_every_spot_is_blocked() -> void:
 	var r := Rect2(p.global_position, p.get_combined_minimum_size())
 	assert_true(view.encloses(r), "still inside the window")
 	assert_false(r.grow(-1.0).has_point(view.get_center()), "never over the tip")
+
+
+func _covered(r: Rect2, blocked: Array[Rect2]) -> float:
+	var sum := 0.0
+	for b: Rect2 in blocked:
+		sum += r.intersection(b).get_area()
+	return sum
+
+
+func test_a_blocked_rect_over_the_winning_spot_moves_the_confirm() -> void:
+	var p := load("res://scenes/panels/march_confirm_panel.tscn").instantiate() as MarchConfirmPanel
+	add_child_autofree(p)
+	await wait_process_frames(2)
+	var view := Rect2(Vector2.ZERO, p.get_viewport_rect().size)
+	var tip := view.get_center()
+	p.place_near(tip, Rect2(), view, [])
+	var free_at := p.global_position
+	var box := p.size
+	var over: Array[Rect2] = [Rect2(free_at, box)]
+	p.place_near(tip, Rect2(), view, over)
+	assert_ne(p.global_position, free_at, "the blocked rect moved the winner")
+	assert_lt(_covered(Rect2(p.global_position, p.size), over), box.x * box.y, "and it covers less of it")
+
+
+func test_the_least_covered_spot_wins_among_blocked_rects() -> void:
+	var p := load("res://scenes/panels/march_confirm_panel.tscn").instantiate() as MarchConfirmPanel
+	add_child_autofree(p)
+	await wait_process_frames(2)
+	var view := Rect2(Vector2.ZERO, p.get_viewport_rect().size)
+	var left := Rect2(view.position, Vector2(view.size.x * 0.5, view.size.y))
+	var blocked: Array[Rect2] = [left, view]   # the left half is covered twice, the right once
+	p.place_near(view.get_center(), Rect2(), view, blocked)
+	var got := _covered(Rect2(p.global_position, p.size), blocked)
+	var at_left := _covered(Rect2(view.position, p.size), blocked)
+	assert_lt(got, at_left, "less covered than the left corner")
+	var best := INF
+	for spot: Vector2 in [view.position, Vector2(view.end.x - p.size.x, view.position.y),
+			Vector2(view.position.x, view.end.y - p.size.y), view.end - p.size]:
+		best = minf(best, _covered(Rect2(spot.clamp(view.position, (view.end - p.size).max(view.position)), p.size), blocked))
+	assert_lte(got, best + 1.0, "no corner is less covered")
+
+
+func test_a_held_up_book_is_blocked_whole() -> void:
+	var screen := await _room()
+	var land := _land_piece(screen)
+	screen._on_piece(String(land["code"]))
+	await wait_process_frames(2)
+	var folio := screen.get_node("%Folio") as WarFolioPanel
+	folio.set_full(true)
+	await wait_process_frames(2)
+	var folder := folio.get_node("%Folder") as Control
+	var want := Rect2(folder.global_position, folder.size * folder.scale)
+	var found := false
+	for r: Rect2 in screen.blocked_rects():
+		if r.position.distance_to(want.position) < 2.0 and r.size.distance_to(want.size) < 2.0:
+			found = true
+	assert_true(found, "the held-up book's rect %s is blocked (%s)" % [want, screen.blocked_rects()])

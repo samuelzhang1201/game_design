@@ -208,19 +208,15 @@ func cancel_button() -> Button:
 	return _cancel
 
 
-## Stand beside `global_px` (the destination click) — or, when every spot
-## beside it would cover the route (`route`, its box on screen), in a corner
-## of the map (`map`) — kept inside the window: the place covering least of
-## the route wins, the nearest first on a tie. `blocked` (global rects: the
-## room's slips and book) cost their overlap like the route does.
-## The route covered weighs this many times a blocked rect covered: the march
-## being confirmed is never hidden while any spot avoids it.
-const ROUTE_WEIGHT := 1000.0
-
 ## The panel has been put in its place.
 signal placed
 
 
+## Stand beside `global_px` (the destination click) — or, when every spot
+## beside it would cover the route (`route`, its box on screen), in a corner
+## of the map (`map`) — kept inside the window: the place covering least of
+## the route wins, the nearest first on a tie. `blocked` (global rects: the
+## room's furniture) cost their overlap, the route `war_confirm_route_weight` times that.
 func place_near(global_px: Vector2, route := Rect2(), map := Rect2(), blocked: Array[Rect2] = []) -> void:
 	reset_size()
 	var box := get_combined_minimum_size()
@@ -238,11 +234,12 @@ func place_near(global_px: Vector2, route := Rect2(), map := Rect2(), blocked: A
 			Vector2(inner.position.x, inner.get_center().y - box.y * 0.5),
 			Vector2(inner.end.x - box.x, inner.get_center().y - box.y * 0.5)])
 	var keep := route.grow(gap * 2.0)
+	var route_weight := Game.data.bal("war_confirm_route_weight")
 	var best := Vector2.ZERO
 	var best_cost := INF
 	for spot: Vector2 in spots:
 		var at := spot.clamp(view.position, (view.end - box).max(view.position))
-		var cost := ROUTE_WEIGHT * (Rect2(at, box).intersection(keep).get_area() if keep.has_area() else 0.0)
+		var cost := route_weight * (Rect2(at, box).intersection(keep).get_area() if keep.has_area() else 0.0)
 		for b: Rect2 in blocked:
 			cost += Rect2(at, box).intersection(b).get_area() if b.has_area() else 0.0
 		if Rect2(at, box).grow(-1.0).has_point(global_px):
