@@ -53,6 +53,7 @@ var _proj_key: Array = []
 var _proj: Array = []
 var _houses: Dictionary = {}
 var _houses_loaded := false
+var _sight := Map3DSight.new()
 
 
 func _init(p_repo: DataRepository, p_meta: Dictionary, p_world: Node3D = null) -> void:
@@ -125,11 +126,10 @@ func home(of: GameState = null) -> Vector2:
 	return bounds.get_center() if burg.is_empty() else to_world(Vector2(float(burg["x"]), float(burg["y"])))
 
 
-## The units the map draws: the player's, or every realm's in DEV MODE.
-func regiments() -> Array:
-	return ArmySystem.roster(repo, state()).values() if dev \
-		else MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state())
-
+## The units the map draws, a foe under the fog, the ghosts: Map3DSight (spec 2026-10-10-player-sight-and-ghosts).
+func regiments() -> Array: return _sight.regiments(repo, state(), dev)
+func fogged(code: String) -> bool: return not dev and ArmySystem.is_foe(state(), code)
+func ghosts() -> Array: return [] if dev else Sighting.ghosts(repo, state())
 ## The couriers on the road (spec 2026-09-27-courier-core §2), from the live state.
 func couriers() -> Array: return state().couriers if state() != null else []
 
