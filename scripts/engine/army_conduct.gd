@@ -71,7 +71,8 @@ static func lay_hazard(repo: DataRepository, state: GameState, province: String)
 	if Hazards.is_active(state, id):
 		return
 	var months := int(Hazards.kind_of(repo, HAZARD_KIND).get("months", 0))
-	Hazards.add(state, id, HAZARD_KIND, "plundered by the crown's host",
+	var plain := String((repo.provinces.get(province, {}) as Dictionary).get("label", province))
+	Hazards.add(state, id, HAZARD_KIND, String(repo.conduct_words.get("hazard_label", "%s")) % plain,
 		MapManors.manors_of_province(repo, province, state), state.tick,
 		state.tick + months if months > 0 else -1, "forage")
 

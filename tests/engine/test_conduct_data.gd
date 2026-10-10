@@ -22,6 +22,7 @@ const KEYS: Array[String] = [
 const WORDS: Dictionary = {
 	"forage_unlawful": 2, "forage_incident": 3, "forage_havoc": 1,
 	"stripped_bare": 1, "deserting": 1, "deserting_big": 1,
+	"hazard_label": 1,
 }
 
 var repo: DataRepository

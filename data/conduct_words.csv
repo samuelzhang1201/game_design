@@ -14,3 +14,4 @@ slip_forage,Forage: %s (%d a day)
 slip_feeds,would feed it %d of %d a day
 slip_home,Our own land — not foraged
 ink_stripped,Stripped
+hazard_label,foraging in %s

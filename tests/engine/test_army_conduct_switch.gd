@@ -215,6 +215,9 @@ func test_lay_hazard_is_idempotent() -> void:
 	assert_eq(int(h["start"]), state.tick)
 	assert_eq(int(h["end"]), state.tick + int(Hazards.kind_of(repo, "Raided").get("months")))
 	assert_eq(h["cells"], MapManors.manors_of_province(repo, foreign, state))
+	var plain := String((repo.provinces[foreign] as Dictionary).get("label", foreign))
+	assert_eq(String(h["label"]), String(repo.conduct_words["hazard_label"]) % plain)
+	assert_eq(String(h["label"]), "foraging in " + plain)
 	var rev := state.hazards_rev
 	state.tick += 1
 	ArmyConduct.lay_hazard(repo, state, foreign)
