@@ -281,7 +281,7 @@ func _plan() -> Dictionary:
 		rows = MarchPlan.group_rows(per)
 	var from := ArmySystem.position_of(Game.data, Game.state, reg)
 	var metres := 0.0
-	var curve := ArmySystem.curve_px(Game.data, from, _waypoints, _pending)
+	var curve := ArmySystem.curve_px(Game.data, from, _waypoints, _pending, naval)
 	for i in range(1, curve.size()):
 		metres += curve[i - 1].distance_to(curve[i]) * float(ArmySystem.metres_per_pack_px(Game.data))
 	var unit := String(Game.data.map_info.get("distance_unit", "km"))

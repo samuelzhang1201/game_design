@@ -29,11 +29,22 @@ static func repo() -> DataRepository:
 ## GameState.new_campaign(data, seed_value) would make it.
 ## Every ground at the base pace (data/army_ground_speed.csv all 1000), for
 ## a test of the march's own mechanics — readiness, weather, the even step —
-## that must not depend on the road or the terrain the pack puts under it;
-## the ground's pace has its own tests (test_army_towns.gd). Returns `data`.
+## that must not depend on the road or the terrain the pack puts under it,
+## nor bend round it (open_country); the ground's pace has its own tests
+## (test_army_towns.gd). Returns `data`.
 static func flat_ground(data: DataRepository) -> DataRepository:
 	for k: String in data.army_ground_speed:
 		data.army_ground_speed[k] = 1000
+	return open_country(data)
+
+
+## No ground a column must go round (army_march_grid_px 0: MarchPath has no
+## grid, spec 2026-10-10-march-slope-detour): every march walks its straight
+## line, for a test whose march must not bend round the pack's scarps and
+## water (a short hop from the capital to a town across its bay). The detour
+## has its own tests (test_march_path.gd). Returns `data`.
+static func open_country(data: DataRepository) -> DataRepository:
+	data.balance["army_march_grid_px"] = 0
 	return data
 
 static func campaign(data: DataRepository, seed_value: int) -> GameState:
