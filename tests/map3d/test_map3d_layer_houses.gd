@@ -248,6 +248,26 @@ func test_houses_wear_their_own_colour_variants() -> void:
 	assert_gt(seen.size(), 6, "neighbours vary")
 
 
+## The Houses node's tints are exactly the palettes the bake indexes
+## (map3d_bake.csv house_wall_palettes x house_wall_palette_size, and the
+## roofs'), none above 1 in any channel, and the shader's arrays hold them.
+func test_the_tint_arrays_are_the_bakes_palettes() -> void:
+	var node: Map3DLayerHouses = (load("res://scenes/map3d/map3d_world.tscn") as PackedScene) \
+		.instantiate().get_node("Houses")
+	var t := Game.data.map3d_bake
+	var walls: PackedColorArray = node.wall_tints
+	var roofs: PackedColorArray = node.roof_tints
+	var trims: PackedColorArray = node.trim_tints
+	node.get_parent().free()
+	assert_eq(walls.size(), int(t["house_wall_palettes"]) * int(t["house_wall_palette_size"]))
+	assert_eq(roofs.size(), int(t["house_roof_palettes"]) * int(t["house_roof_palette_size"]))
+	assert_lte(walls.size(), 24, "the shader's wall_tints[24]")
+	assert_lte(roofs.size(), 24)
+	assert_lte(trims.size(), 8)
+	for c: Color in walls + roofs + trims:
+		assert_true(c.r <= 1.0 and c.g <= 1.0 and c.b <= 1.0, "never lighter than the mesh")
+
+
 func _home() -> Vector2:
 	var codes: Array = Game.data.burgs.keys()
 	codes.sort()
