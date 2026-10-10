@@ -213,9 +213,12 @@ func cancel_button() -> Button:
 ## of the map (`map`) — kept inside the window: the place covering least of
 ## the route wins, the nearest first on a tie. `blocked` (global rects: the
 ## room's slips and book) cost their overlap like the route does.
-## A slip or book covered weighs this many times the route covered: the room's
-## furniture is never hidden while the route can still be read round the panel.
-const BLOCKED_WEIGHT := 4.0
+## The route covered weighs this many times a blocked rect covered: the march
+## being confirmed is never hidden while any spot avoids it.
+const ROUTE_WEIGHT := 1000.0
+
+## The panel has been put in its place.
+signal placed
 
 
 func place_near(global_px: Vector2, route := Rect2(), map := Rect2(), blocked: Array[Rect2] = []) -> void:
@@ -239,15 +242,16 @@ func place_near(global_px: Vector2, route := Rect2(), map := Rect2(), blocked: A
 	var best_cost := INF
 	for spot: Vector2 in spots:
 		var at := spot.clamp(view.position, (view.end - box).max(view.position))
-		var cost := Rect2(at, box).intersection(keep).get_area() if keep.has_area() else 0.0
+		var cost := ROUTE_WEIGHT * (Rect2(at, box).intersection(keep).get_area() if keep.has_area() else 0.0)
 		for b: Rect2 in blocked:
-			cost += BLOCKED_WEIGHT * (Rect2(at, box).intersection(b).get_area() if b.has_area() else 0.0)
+			cost += Rect2(at, box).intersection(b).get_area() if b.has_area() else 0.0
 		if Rect2(at, box).grow(-1.0).has_point(global_px):
 			cost += 1e9   # never over the end itself
 		if cost < best_cost - 0.5:
 			best_cost = cost
 			best = at
 	global_position = best
+	placed.emit()
 
 
 func _fill(rows: Array) -> void:

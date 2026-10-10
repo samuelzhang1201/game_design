@@ -651,13 +651,45 @@ func test_the_confirm_does_not_cover_the_margin_slip() -> void:
 	var p := screen.orders().confirm_panel()
 	assert_true(p.visible, "the confirm is open")
 	var slip := screen.get_node("%Slip") as Control
-	assert_true(slip.visible, "the margin slip stands")
 	# a route box swallowing every tip-adjacent spot sends the old placement to the top-left corner
 	var view_rect := screen.view().get_global_rect()
-	var tip := view_rect.get_center()
-	p.place_near(tip, view_rect.grow(-40.0), view_rect, screen.blocked_rects())
-	assert_false(p.get_global_rect().intersects(slip.get_global_rect()), "the confirm keeps off the slip")
+	p.place_near(view_rect.get_center(), view_rect.grow(-40.0), view_rect, screen.blocked_rects())
+	assert_true(not slip.visible or not p.get_global_rect().intersects(slip.get_global_rect()),
+		"the confirm and the margin slip do not overlap, whichever moved")
 	screen.orders().withdraw_aim()
+
+
+func test_the_margin_slip_comes_back_when_the_confirm_closes() -> void:
+	var screen := await _room()
+	var slip := screen.get_node("%Slip") as Control
+	_blue_drag_from_piece(screen)
+	var p := screen.orders().confirm_panel()
+	var view_rect := screen.view().get_global_rect()
+	p.global_position = view_rect.position + Vector2(8, 8)   # over the slip's corner
+	screen._make_way()
+	assert_true(not slip.visible or slip.offset_left > 16.0, "the slip made way for the confirm")
+	screen.orders().withdraw_aim()
+	await wait_process_frames(2)
+	assert_false(p.visible, "the confirm closed")
+	assert_true(slip.visible, "the slip is back")
+	var folio := screen.get_node("%Folio") as WarFolioPanel
+	var home := folio.book_rect().end.x + 12.0 if folio.visible and not folio.is_full() else 16.0
+	assert_eq(slip.offset_left, home, "where the book (or the corner) leaves it")
+
+
+func test_the_open_book_is_a_blocked_rect_where_it_stands() -> void:
+	var screen := await _room()
+	var land := _land_piece(screen)
+	screen._on_piece(String(land["code"]))
+	await wait_process_frames(2)
+	var folio := screen.get_node("%Folio") as Control
+	var docket := folio.get_node("%Docket") as Control
+	var want := Rect2(docket.global_position, docket.size * docket.scale)
+	var found := false
+	for r: Rect2 in screen.blocked_rects():
+		if r.position.distance_to(want.position) < 2.0 and r.size.distance_to(want.size) < 2.0:
+			found = true
+	assert_true(found, "the docked book's rect %s is blocked (%s)" % [want, screen.blocked_rects()])
 
 
 func test_the_confirm_opens_somewhere_when_every_spot_is_blocked() -> void:

@@ -100,11 +100,12 @@ func drawn() -> Dictionary:
 	return _drawn
 
 
-## The room's furniture the march's confirm keeps off, in global px: the
-## margin slip and key slip while shown, the tool roll, the docked book.
+## The room's furniture the march's confirm keeps off, in global px: the key
+## slip and tool roll while shown, the docked book. (The margin slip is not
+## here: it makes way for the confirm, `_make_way`.)
 func blocked_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
-	for c: Control in [%Slip, %KeySlip, %ToolRoll]:
+	for c: Control in [%KeySlip, %ToolRoll]:
 		if c.visible:
 			out.append(c.get_global_rect())
 	if _folio.visible:
@@ -125,6 +126,9 @@ func open() -> void:
 		_build_board()
 		_orders.follow(_view)
 		_orders.blocked_rects = blocked_rects
+		var confirm := _orders.confirm_panel()
+		confirm.placed.connect(_make_way)
+		confirm.visibility_changed.connect(_make_way)
 		Game.state_changed.connect(refresh)
 		(%Key as WarMarginKey).setup(Game.data, _view)
 		_folio.set_tier(Game.data, Map3DQuality.resolve_here(GameRoot.settings_path))
@@ -495,6 +499,14 @@ func _make_way() -> void:
 	if _folio.visible and not _folio.is_full():
 		left = _folio.book_rect().end.x + 12.0
 		room = left + 236.0 <= (%KeySlip as Control).position.x - 8.0
+	var confirm := _orders.confirm_panel() if _orders != null else null
+	if room and confirm != null and confirm.visible:
+		var mine := get_global_rect().position
+		var c := Rect2(confirm.get_global_rect().position - mine, confirm.size)
+		var tall := maxf(slip.size.y, 1.0)
+		if Rect2(left, slip.offset_top, 236.0, tall).intersects(c):
+			left = c.end.x + 12.0
+			room = left + 236.0 <= (%KeySlip as Control).position.x - 8.0
 	slip.offset_left = left
 	slip.offset_right = left + 236.0
 	slip.visible = room and _view.board_mode() == "table"
