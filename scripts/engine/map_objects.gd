@@ -1006,6 +1006,10 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 					text = "%s %.1f×" % [from, float(int(line["rate"])) / 1000.0]
 					tip = "Supply point: %s · %.1f× · about %s gold a day · %d km, %d%% lost on the road" % [
 						from, float(int(line["rate"])) / 1000.0, fee, int(line["length_km"]), lost]
+				SupplyLines.FRONT:
+					# broken: its town now lies ahead of the column (ruling 20 kept daily)
+					text = SupplyLines.words(repo, "front_card", {}, "label", "Line broken")
+					tip = SupplyLines.front_words(repo, state, code)
 				SupplyLines.CUT:
 					text = "cut"
 					tip = "The road from %s is cut by %s" % [from,

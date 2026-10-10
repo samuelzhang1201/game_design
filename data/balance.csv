@@ -588,6 +588,9 @@ ledger_star_emit,1.8,LEDGER galaxy: a star's glow
 ledger_star_rim,1.6,LEDGER galaxy: a star's rim light
 ledger_star_metallic,0.35,LEDGER galaxy: a star's metallic
 ledger_star_roughness,0.22,LEDGER galaxy: a star's roughness
+ledger_star_matcap_mix,1.0,"LEDGER galaxy (owner 2026-10-10: the art drawn by Comfy, the star-chart glass orb L-01): how much of a star is its generated matcap (star.tres matcap) rather than the plain shine; 0 is the plain shine"
+ledger_star_matcap_gain,3.5,LEDGER galaxy: the matcap's value times the cluster colour (the glass orb's brightness)
+ledger_star_matcap_white,1.0,LEDGER galaxy: how far the matcap's brightest highlights go toward white
 ledger_haze_strength,0.075,LEDGER galaxy: a cluster haze's brightness
 ledger_haze_scale,3.4,LEDGER galaxy: a cluster haze's size as a multiple of the cluster's mean radius
 ledger_link_min_px,1,LEDGER galaxy: a link's width at no flow (screen px)
@@ -598,6 +601,12 @@ ledger_tie_max_px,2.6,LEDGER galaxy: a court tie's width at ledger_tie_ref (scre
 ledger_strand_gap_px,2,LEDGER galaxy: screen px between two strands' edges
 ledger_pair_offset_px,3,LEDGER galaxy: screen px between two links joining the same stars both ways
 ledger_link_edge_soft,0.35,LEDGER galaxy: share of a link's half-width over which its sides soften
+ledger_link_strand_mix,1.0,"LEDGER galaxy (owner 2026-10-10: the braided gold cord L-05, '绞绳调细一点'): how much of a link is its generated strand (link.tres strand) rather than the plain soft line; 0 is the plain line"
+ledger_link_strand_widen,1.3,"LEDGER galaxy: a stranded link is drawn this many times its width, room for the cord's glints (2.0 read too heavy, 1.0 lost the twist)"
+ledger_link_strand_px,140,LEDGER galaxy: screen px along a link per repeat of the strand texture (shorter shimmered)
+ledger_link_strand_power,1.5,LEDGER galaxy: contrast on the strand texture (above 1 thins its glow toward the core)
+ledger_link_strand_gain,1.6,LEDGER galaxy: the strand's value times the link colour
+ledger_link_strand_white,0.35,LEDGER galaxy: how far the strand's brightest glints go toward white
 ledger_dashes_per_m,0.5,LEDGER galaxy: dashes per metre along a planned link
 ledger_glow_intensity,0.9,LEDGER galaxy: the view's glow intensity
 ledger_glow_threshold,0.8,LEDGER galaxy: the view's glow HDR threshold
@@ -860,6 +869,7 @@ army_morale_starving_day,3,"army supply §3.7: morale lost each day with no supp
 supply_wagon_km_per_day,25,"army supply §3.2: the supply wagons' road km a day — how long a new line takes to start flowing, and the reach of a supply point"
 supply_point_max_days,10,"army supply §3.5: the most wagon days a supply point may be from its regiment when it is chosen"
 supply_ahead_km,5,"WAR ROOM draw orders (owner 2026-10-08, ruling 20): a town is AHEAD of a column — never its supply town — when it is farther from the crown's capital than the column by more than this, whichever way the column marches; km"
+supply_front_resume_km,1,"owner 2026-10-10 (ruling 20 kept daily): a line broken because its town lies AHEAD of its column (state front) flows again only once the town is no farther than the column by supply_ahead_km less this — a small hysteresis so a column on the boundary does not flicker; km"
 supply_cut_reach_m,5000,"army supply §3.2: a supply line is cut on any day a hostile regiment stands within this many metres of its road"
 supply_cart_milligold_per_unit_km,1,"army supply §3.4: cartage, in thousandths of a gold, for each supply unit carried one km; charged daily in whole gold"
 supply_buy_markup_permille,200,"army supply §3.3: a house sells its stock to the crown at its value plus this per mille"

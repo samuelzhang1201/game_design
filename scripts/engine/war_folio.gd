@@ -80,9 +80,13 @@ static func brief(repo: DataRepository, state: GameState, code: String) -> Dicti
 	if state.regiments.has(code):
 		var line := SupplySystem.line_of(repo, state, code)
 		var town := String(line["town"])
-		rows.append(_row("Line", "no supply point" if town == "" else "%s from %s, %d km" % [
-			String(line["state"]), String((repo.burgs.get(town, {}) as Dictionary).get("label", "")),
-			int(line["length_km"])]))
+		var broken := SupplyLines.front_words(repo, state, code)   # its town ahead of the column
+		if broken != "":
+			rows.append(_row("Line", broken))
+		else:
+			rows.append(_row("Line", "no supply point" if town == "" else "%s from %s, %d km" % [
+				String(line["state"]), String((repo.burgs.get(town, {}) as Dictionary).get("label", "")),
+				int(line["length_km"])]))
 	rows.append(_row("Ground", "%s, %d m" % [ArmySystem.terrain_label(repo, reg, state),
 		ArmySystem.elevation_of(repo, reg, state)]))
 	var order := ArmySystem.order_of(repo, state, code)
@@ -237,7 +241,10 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 		var from := String((repo.burgs.get(String(line["town"]), {}) as Dictionary).get("label", ""))
 		var refill := SupplyLines.refill_words(repo, state, code)
 		var text := "no supply point"
-		if String(line["town"]) != "":
+		var broken := SupplyLines.front_words(repo, state, code)   # its town ahead of the column
+		if broken != "":
+			text = broken
+		elif String(line["town"]) != "":
 			@warning_ignore("integer_division")
 			var lost := int(line["loss_permille"]) / 10
 			text = "%s from %s, %.1f×, %d km, %d%% lost" % [String(line["state"]), from,
