@@ -165,10 +165,21 @@ static func troops_near(repo: DataRepository, state: GameState, at: Vector2) -> 
 ## (PACK px), by their live place in whole metres: how many, and their men
 ## under arms (headcount less the dead). {foe_columns, foe_troops}.
 static func foes_near(repo: DataRepository, state: GameState, at: Vector2) -> Dictionary:
-	var here := ArmySystem.pack_to_metres(repo, at)
-	var reach := int(round(repo.bal("spy_radius_km") * 1000.0))
 	var cols := 0
 	var men := 0
+	for c: String in foe_codes_near(repo, state, at):
+		cols += 1
+		men += ArmySystem.headcount(repo, ArmySystem.regiment(repo, c, state)) - int(state.foes[c].get("dead", 0))
+	return {"foe_columns": cols, "foe_troops": men}
+
+
+## The foe columns foes_near counts — within spy_radius_km of a point (PACK
+## px) by their live place in whole metres, with men under arms — in code
+## order. A spy's ghosts are these (Sighting.on_spy).
+static func foe_codes_near(repo: DataRepository, state: GameState, at: Vector2) -> Array:
+	var here := ArmySystem.pack_to_metres(repo, at)
+	var reach := int(round(repo.bal("spy_radius_km") * 1000.0))
+	var out: Array = []
 	var codes: Array = state.foes.keys()
 	codes.sort()
 	for c: Variant in codes:
@@ -177,12 +188,10 @@ static func foes_near(repo: DataRepository, state: GameState, at: Vector2) -> Di
 		var dy := int(e["y_m"]) - here.y
 		if dx * dx + dy * dy > reach * reach:
 			continue
-		var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c), state)) - int(e.get("dead", 0))
-		if heads <= 0:
+		if ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c), state)) - int(e.get("dead", 0)) <= 0:
 			continue
-		cols += 1
-		men += heads
-	return {"foe_columns": cols, "foe_troops": men}
+		out.append(String(c))
+	return out
 
 
 ## A spy has arrived: draw his rolls (quality, then — for a rumour — the
@@ -195,5 +204,8 @@ static func observe(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 		var most := int(repo.bal("spy_bias_max"))
 		bias = state.rng.randi_range(-most, most)
 	var id := MissiveLog.add(repo, state, report(repo, state, at, q, bias))
+	# what he saw of the enemy's columns stays on the map as their ghosts
+	# (spec 2026-10-10-player-sight-and-ghosts §2): his own estimate, no new roll
+	Sighting.on_spy(repo, state, at, q, bias)
 	return {"type": "spy_report", "courier": int(c["id"]), "missive": id, "regiment": "",
 		"place": Intel.place_label(repo, state, at), "weather": ""}
