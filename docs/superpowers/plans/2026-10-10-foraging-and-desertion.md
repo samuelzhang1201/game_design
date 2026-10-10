@@ -85,7 +85,7 @@ Inputs the spec implies but a straight reading of the tasks would not test; each
 - `land_kind(repo, state, province) -> String` — `"home"` when `MapOwnership.owner_of(...)` is the player's realm, else by `Intel.stance_of` of the owner: Enemy → `"enemy"`; Neutral, Suspicion, Unknown → `"grey"`; Suzerain, Vassal → `"none"`; province `""` → `"none"`.
 - `cut_permille(repo, state, code) -> int` — `1000 −` `forage_protect_cut_permille` for each of `protect_church`, `protect_women` that `LawSystem.value(repo, state, law, code) == "on"`.
 - `shares(repo, state, province, codes: Array, day: int) -> Dictionary` — `{code: units}`: each of `codes` (sorted) gets `min(need, day_capacity × need / Σneed)` then `× cut_permille / 1000`, remainder to none; `need = ArmySystem.max_units(...)` bound by its `carry_days` (`ArmySystem.carry_of` days × daily use) `−` its `supplies`, ≥ 0.
-- `strip(state, repo, province, taken: int) -> void` — adds `taken × forage_strip_k / monthly_capacity` (floor; 0 capacity adds 0) to `forage_stripped`, clamped 0..1000.
+- `strip(repo, state, province, taken: int) -> void` — adds `taken × forage_strip_k / monthly_capacity` (floor; 0 capacity adds 0) to `forage_stripped`, clamped 0..1000.
 
 `conduct_helpers.gd` offers `set_food(repo, province, units)` (removes the province's food rows, adds one row of `units` of a food good) and `land_unit(repo, state)` (first non-naval regiment code) used by Tasks 3–8.
 
