@@ -7,6 +7,7 @@
 #   bash assets/flux/download_models.sh           # everything, ~47 GB
 #   bash assets/flux/download_models.sh zimage    # Z-Image Turbo only, ~12 GB
 #   bash assets/flux/download_models.sh qwen      # Qwen-Image-2512 stack only, ~35 GB
+#   bash assets/flux/download_models.sh qwenedit  # Qwen-Image-Edit-2511 (+ the qwen stack's encoder/VAE), ~18 GB more
 #
 # Resumable: re-run after an interruption and curl continues each .part file.
 # Every model here is Apache 2.0 (checked 2026-09-24; see the Claude project doc
@@ -49,7 +50,7 @@ if [[ "$WHAT" == all || "$WHAT" == zimage ]]; then
     "$HF/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors"
 fi
 
-if [[ "$WHAT" == all || "$WHAT" == qwen ]]; then
+if [[ "$WHAT" == all || "$WHAT" == qwen || "$WHAT" == qwenedit ]]; then
   # Qwen-Image-2512 as Q6_K GGUF: on MPS ComfyUI upcasts fp8 to 16-bit, so the
   # fp8 file would sit at ~41 GB in memory; the GGUF stays ~17 GB.
   fetch diffusion_models qwen-image-2512-Q6_K.gguf \
@@ -68,6 +69,17 @@ if [[ "$WHAT" == all || "$WHAT" == qwen ]]; then
     "$UV" pip install --python "$PY" "gguf>=0.13.0" protobuf
   fi
   "$PY" -c "import gguf, google.protobuf; print('ok    gguf', gguf.__file__)"
+fi
+
+if [[ "$WHAT" == all || "$WHAT" == qwenedit ]]; then
+  # Qwen-Image-Edit-2511 (Apache 2.0, checked 2026-10-10 on the Qwen, unsloth and
+  # lightx2v model cards): image editing for generate.py's qwenedit presets. It
+  # shares the qwen stack's text encoder and VAE (fetched above). Q6_K GGUF for
+  # the same MPS reason as 2512.
+  fetch diffusion_models qwen-image-edit-2511-Q6_K.gguf \
+    "$HF/unsloth/Qwen-Image-Edit-2511-GGUF/resolve/main/qwen-image-edit-2511-Q6_K.gguf"
+  fetch loras Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors \
+    "$HF/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/main/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors"
 fi
 
 echo
