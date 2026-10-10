@@ -485,6 +485,17 @@ static func think_day(repo: DataRepository, state: GameState) -> Array:
 ## host that crosses first (ties to the earlier code). Today only, so it comes
 ## once. The spy's count of a column near his point is SpySystem's (foe facts).
 static func warnings(repo: DataRepository, state: GameState) -> Array:
+	var first := rumoured_host(repo, state)
+	if first == "":
+		return []
+	return [MissiveWriter.raid_rumour(repo, state, home_m(repo, first))]
+
+
+## The host the border rumour is about TODAY — the first to cross (earliest
+## appear_day, ties to the earlier code) on the absolute day
+## raid_rumour_lead_days before its crossing — else "". The rumour's letter
+## (warnings) and its ghost (Sighting.update) both ask this.
+static func rumoured_host(repo: DataRepository, state: GameState) -> String:
 	var first := ""
 	var first_day := 0
 	for h: String in host_codes(state):
@@ -495,8 +506,8 @@ static func warnings(repo: DataRepository, state: GameState) -> Array:
 			first = h
 			first_day = int(row["appear_day"])
 	if first == "" or state.absolute_day() != first_day - int(repo.bal("raid_rumour_lead_days")):
-		return []
-	return [MissiveWriter.raid_rumour(repo, state, home_m(repo, first))]
+		return ""
+	return first
 
 
 ## --- engage and retreat (spec §3.4) ---------------------------------------------------

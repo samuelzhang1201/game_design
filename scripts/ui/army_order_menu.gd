@@ -128,6 +128,10 @@ func follow(map: Node) -> void:
 func _open_for(code: String, at: Vector2) -> void:
 	if Game.state == null:
 		return
+	# an enemy unit the crown sees, or a ghost of one (spec 2026-10-10-player-
+	# sight-and-ghosts), takes no order: its card is the click's answer
+	if code.begins_with(Sighting.GHOST_CODE) or (ArmySystem.is_foe(Game.state, code) and not Intel.dev_all):
+		return
 	_end_supply_pick()
 	_set_aim("")
 	_code = code

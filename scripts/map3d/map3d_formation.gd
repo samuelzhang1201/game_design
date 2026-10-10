@@ -70,3 +70,28 @@ static func anims_of(root: Node) -> Array:
 		if a != null:
 			out.append(a)
 	return out
+
+
+## A regiment's whole piece from its figure `scene` and its army_art.csv row
+## `art`, in formation `tier` with `gap` (Map3DLayerUnits' formation_gap): one
+## figure measured, then the FORMATION built round it — {node (not yet in the
+## tree, no owner), anims, height_m, head_m, half_w_m, extent, figures,
+## stand_deg, size, stride_m, clip_s}; {} when the scene makes no Node3D.
+static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tier: Dictionary,
+		gap: float) -> Dictionary:
+	var one := scene.instantiate() as Node3D
+	if one == null:
+		return {}
+	var span := Map3DUnits.model_size(one)
+	var ext := Map3DUnits.stand_extent(one)
+	var offs := offsets(tier, ext, gap, rank_depth(art))
+	var node := build(scene, offs, one)
+	var anims := anims_of(node)
+	var half := half_extent(offs, ext)
+	var clip := Map3DUnits.clip_named(anims[0], "MARCH") if not anims.is_empty() else ""
+	return {"node": node, "anims": anims, "height_m": span.y,
+		"head_m": Map3DUnitRig.head_m(repo, one, span.y),
+		"half_w_m": maxf(half.x, half.y), "extent": half, "figures": offs.size(),
+		"stand_deg": float(art.get("stand_deg", "0")),
+		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
+		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
