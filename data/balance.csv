@@ -833,6 +833,8 @@ ui_title_drift_deg_per_s,0.8,TITLE: degrees a second the camera drifts round the
 ui_title_day_share,0.62,"TITLE: the share of the day the title opens on (0.25 noon in the south, past 0.5 the north's dusk): a low warm sun"
 ui_title_day_per_s,0.004,"TITLE: how fast the title's sun turns, day shares a second (a slow sweep, not the game's clock)"
 ui_title_sweep_s,1.8,TITLE: seconds the camera sweeps from the title's height down to the game's opening view when the reign begins
+ui_title_reveal_frames,3,"TITLE (owner 2026-10-10: no black screen at launch): the frames the painted page is shown before the living map is made over it (it waits too for the boot's threaded loads, BootLoads.title_ready), so the window draws the title at once"
+ui_title_reveal_s,0.8,"TITLE: seconds the painted page fades off the living map once the map is made"
 map_compass_size_px_table,125,"WAR TABLE (owner 2026-10-07: 指南针挪到地图左上角里，放大1.2倍): the map's own compass at the map sheet's top-left, 1.2x the 104 px it had lying on the table below the report; it turns with the clock, its needle with the view, a click eases north"
 map_compass_alpha_table,1.0,"WAR TABLE (2026-10-07, the critic of the move into the map): the compass on the map sheet is a solid object, the map never showing through its wood"
 ui_landing_lift_s,0.4,"LANDING (owner 2026-10-01: the map is picked up and laid on the table): seconds the title's frame is lifted like a sheet — drawing back, the vellum margin and a shadow appearing"

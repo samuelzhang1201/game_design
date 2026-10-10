@@ -14,6 +14,16 @@ const MENU_SCENE := preload("res://scenes/screens/main_menu.tscn")
 const CONVERSATION_SCENE := preload("res://scenes/screens/conversation.tscn")
 const COURT_SCENE := preload("res://scenes/screens/court.tscn")
 
+## The overlays GameRoot makes at launch and the first screen's panels, read on
+## worker threads (BootLoads).
+const OVERLAY_SCENES := ["res://scenes/screens/ledger_screen.tscn", "res://scenes/screens/war_room_screen.tscn",
+	"res://scenes/screens/missive_screen.tscn", "res://scenes/screens/laws_screen.tscn",
+	"res://scenes/panels/missive_report_popup.tscn", "res://scenes/screens/info_screen.tscn",
+	"res://scenes/hud/bottom_bar.tscn", "res://scenes/hud/news_ticker.tscn", "res://scenes/screens/pause_menu.tscn",
+	# and the first screen's panels, made as the reign begins
+	"res://scenes/panels/country_panel.tscn", "res://scenes/panels/realm_dashboard.tscn",
+	"res://scenes/panels/military_panel.tscn", "res://scenes/panels/map_detail_panel.tscn"]
+
 const BGM_PATH := "res://assets/audio/BGM.mp3"
 const BGM_VOLUME_DB := -12.0
 
@@ -89,6 +99,10 @@ func _exit_tree() -> void:
 	Map3DWorldCache.clear()
 
 func _ready() -> void:
+	# the heavy art on worker threads first (BootLoads): the overlays' load()
+	# below then waits on threads running side by side, and the title's living
+	# map opens once the world is in
+	BootLoads.start(Game.data, OVERLAY_SCENES)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# Fit-any-screen guarantee: fullscreen scales the whole UI to the monitor
 	# (stretch settings in project.godot); a windowed player cannot drag the
@@ -1103,11 +1117,23 @@ func _switch_to(new_state: State) -> void:
 
 const BACKGROUND_STORY_PATH := "res://game_story/chapter_0/game_start.md"
 
+## The reign begins over two frames (owner 2026-10-10: no stall as the game
+## opens): the campaign and its opening month are made in this one, under the
+## title as it lies; the title hands its map over and the screen is laid in
+## the next, so no single frame does both. A second Start meanwhile is ignored.
+var _beginning := false
 func _on_start_requested() -> void:
+	if _beginning:
+		return
+	_beginning = true
 	_reset_reports()
 	Game.start_campaign(44)
 	refresh_missive_badge()
 	_pending_report = Game.next_tick()
+	await get_tree().process_frame
+	_beginning = false
+	if current_screen is MainMenu:
+		(current_screen as MainMenu).hand_over()
 	# The reign opens with the game background as a nameless narration beat
 	# (user ruling 2026-08-30) so the player knows the challenge ahead — and
 	# only that (owner 2026-10-02: 背景介绍之后，不要立即开始剧情): the
@@ -1189,6 +1215,8 @@ func _on_menu_load_from_title() -> void:
 ## The loaded reign resumes on the court (a decision still pending waiting
 ## with its presenter); laid on the table when the title swept into it.
 func _resume_loaded() -> void:
+	if current_screen is MainMenu:
+		(current_screen as MainMenu).hand_over()
 	# A decision still pending waits on the table with its presenter, as it
 	# does in play (owner 2026-10-02).
 	_switch_to(State.COURT)

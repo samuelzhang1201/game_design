@@ -32,6 +32,30 @@ func test_space_starts_campaign() -> void:
 	# begin_with, so campaign start lands on exactly tick 1.
 	assert_eq(Game.state.tick, 1)
 
+## Owner 2026-10-10 (no stall as the game opens): Start makes the reign and
+## its opening month in one frame, under the title, and lays the first screen
+## in the next; a second Start in between begins nothing more.
+func test_the_reign_begins_over_two_frames() -> void:
+	var r := _root()
+	await wait_process_frames(2)
+	r.current_screen.start_requested.emit()
+	assert_eq(r.state, GameRoot.State.MENU, "the title still stands this frame")
+	assert_not_null(Game.state, "but the reign is made")
+	assert_eq(Game.state.tick, 1, "with its opening month")
+	r.current_screen.start_requested.emit()
+	await wait_process_frames(2)
+	assert_eq(r.state, GameRoot.State.CONVERSATION, "the first screen is laid the next frame")
+	assert_eq(Game.state.tick, 1, "a second Start began nothing more")
+
+## The boot asks for the overlays and the art tables on worker threads, so
+## the title's first frame comes at once (BootLoads); all of them come in.
+func test_the_boot_reads_the_heavy_art_on_threads() -> void:
+	var r := _root()
+	await wait_until(func() -> bool: return not BootLoads.loading(), 20.0)
+	assert_false(BootLoads.loading(), "every threaded load came in")
+	assert_true(BootLoads.title_ready())
+	assert_not_null(r.current_screen)
+
 func test_r_restarts_to_menu() -> void:
 	var r := _root()
 	await wait_process_frames(2)
