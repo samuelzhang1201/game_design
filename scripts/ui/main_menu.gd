@@ -31,6 +31,11 @@ var _realm: TitleRealm
 var _preview: GameState
 var _left: Control
 var _starting := false
+## The living map waits for the boot's threaded loads (BootLoads.title_ready)
+## and for the title's first frames, so the painted page shows at once and the
+## map opens over it (owner 2026-10-10: no black screen at launch).
+var _realm_waiting := false
+var _frames_shown := 0
 ## The title's last frame, kept as the reign begins for TableLanding (GameRoot
 ## takes it once, after the switch).
 static var landing_frame: Texture2D
@@ -136,12 +141,13 @@ func _start() -> void:
 ## Continue the Chronicle (owner 2026-10-01: 点击Continue the Chronicle时，也要有
 ## 同样的动画效果): the column fades, the camera sweeps down to the opening view
 ## over the home of `to` (the loaded reign; null the preview's), the map as it
-## lies then is kept for TableLanding and the live view handed to the game,
-## then `done`. False — nothing done — without a living map: the caller goes on.
+## lies then is kept for TableLanding, then `done` (GameRoot takes the live
+## view through `hand_over` as it lays the first screen). False — nothing
+## done — without a living map (none, or not yet open): the caller goes on.
 func leave(done: Callable, to: GameState = null) -> bool:
 	if _starting:
 		return true
-	if _realm == null or _realm.view == null or _realm.view.context() == null:
+	if _realm == null or not _realm.is_open() or _realm.view == null or _realm.view.context() == null:
 		return false
 	_starting = true
 	var fade := create_tween().set_parallel(true)
@@ -152,7 +158,6 @@ func leave(done: Callable, to: GameState = null) -> bool:
 	_realm.swept.connect(func() -> void:
 		# the map as it lies now becomes the sheet that is laid on the table
 		landing_frame = ImageTexture.create_from_image(get_viewport().get_texture().get_image())
-		_realm.hand_over()
 		done.call(), CONNECT_ONE_SHOT)
 	_realm.sweep(to)
 	return true
@@ -166,13 +171,7 @@ func leave(done: Callable, to: GameState = null) -> bool:
 ## painting's label. Every look is the scene's; this fills the words.
 func _fill_living_title() -> void:
 	_preview = GameState.new_campaign(Game.data, int(Game.data.bal("ui_title_seed")))
-	if TitleRealm.available():
-		_realm = TitleRealm.new()
-		_realm.name = "LivingRealm"
-		_realm.preview = _preview
-		add_child(_realm)
-		move_child(_realm, 0)
-		$Backdrop.visible = false
+	_realm_waiting = TitleRealm.available()
 	_left = $TitleColumn
 	($TitleColumn/Col/TitleArms as HeraldicShield).set_texture(
 		HouseArms.texture_of_house(Game.data, _preview, MapManors.crown(_preview)))
@@ -191,15 +190,41 @@ func _fill_living_title() -> void:
 		_title_word(b)
 		_menu_col.add_child(b)
 		_menu_col.move_child(b, _status.get_index())
-	var cap := _realm.caption() if _realm != null else {}
-	if cap.is_empty():
-		var code := MapManors.home_province(Game.data, _preview)
-		var p: Dictionary = Game.data.provinces.get(code, {})
-		var burg := String(p.get("capital_burg", ""))
-		cap = {"place": String(Game.data.burgs.get(burg, p).get("label", code)),
-			"house": MapManors.crown(_preview), "season": Calendar.season_name(_preview.tick)}
+	var cap := TitleRealm.caption_of(_preview)
 	($Caption/Place as Label).text = "%s, seat of House %s" % [cap["place"], cap["house"]]
 	($Caption/When as Label).text = "%s, the first year of the reign" % cap["season"]
+
+## The living map, made once the boot's loads are in and the painted page has
+## been shown (ui_title_reveal_frames frames): the realm behind the page, the
+## page fading off it over ui_title_reveal_s. Never once the title is leaving.
+func _process(_delta: float) -> void:
+	if not _realm_waiting:
+		return
+	_frames_shown += 1
+	if _starting:
+		_realm_waiting = false
+		return
+	if _frames_shown < int(Game.data.bal("ui_title_reveal_frames")) or not BootLoads.title_ready():
+		return
+	_realm_waiting = false
+	_realm = TitleRealm.new()
+	_realm.name = "LivingRealm"
+	_realm.preview = _preview
+	add_child(_realm)
+	move_child(_realm, 0)
+	_realm.opened.connect(_reveal_realm, CONNECT_ONE_SHOT)
+
+## The live map is up: the painted page fades off it (ui_title_reveal_s).
+func _reveal_realm() -> void:
+	if _starting or _realm.view == null or _realm.view.context() == null:
+		return
+	var page := $Backdrop as CanvasItem
+	create_tween().tween_property(page, "modulate:a", 0.0, Game.data.bal("ui_title_reveal_s")) \
+		.finished.connect(func() -> void: page.visible = false)
+
+## Whether the living map is still to come or opening (tools wait on it).
+func realm_pending() -> bool:
+	return _realm_waiting or (_realm != null and not _realm.is_open())
 
 ## A row GameRoot hands in, as a word on the map: the theme's TitleWordSmall
 ## (no box, the body face, a gold underline under the pointer).
@@ -211,6 +236,12 @@ func _title_word(b: Button) -> void:
 	b.theme_type_variation = &"TitleWordSmall"
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+
+## The live view handed to the game's first screen (TitleRealm.hand_over),
+## once; nothing when the title has none.
+func hand_over() -> void:
+	if _realm != null:
+		_realm.hand_over()
 
 ## Continue the Chronicle: GameRoot loads the save, then leaves through `leave`.
 func _on_load_pressed() -> void:

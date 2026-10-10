@@ -89,7 +89,11 @@ static func label_of(repo: DataRepository, obj: Dictionary, state: GameState = n
 		"river":
 			return String(repo.rivers.get(obj["code"], {}).get("label", ""))
 		"army":
-			return String(ArmySystem.regiment(repo, String(obj["code"]), state).get("label", ""))
+			var code := String(obj["code"])
+			if code.begins_with(Sighting.GHOST_CODE) and state != null:
+				var g: Dictionary = state.sightings.get(code.trim_prefix(Sighting.GHOST_CODE), {})
+				return "" if g.is_empty() else Sighting.label_of(repo, state, g)
+			return String(ArmySystem.regiment(repo, code, state).get("label", ""))
 		"manor":
 			return MapManors.label_of(repo, int(obj.get("cell", -1)))
 		"landmark":
@@ -907,6 +911,9 @@ static func grouped(n: int) -> String:
 ## the player's own regiment with a state, its terrain, morale, wounded,
 ## supplies, training and strength (ArmySystem, owner 2026-09-17).
 static func army_card(repo: DataRepository, code: String, state: GameState = null) -> Dictionary:
+	# a ghost's piece (spec 2026-10-10-player-sight-and-ghosts): what the crown knows
+	if code.begins_with(Sighting.GHOST_CODE):
+		return Sighting.ghost_card(repo, state, code.trim_prefix(Sighting.GHOST_CODE))
 	var r: Dictionary = ArmySystem.regiment(repo, code, state)
 	if r.is_empty():
 		return {}
@@ -956,6 +963,10 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var stance := BattleSystem.stance_words(repo, state, code) if reg_known == "full" else ""
 	if stance != "":
 		fields.append(["Battle stance", stance])
+	# a foe: when the crown saw it, or what last told of it (Sighting)
+	var sighted := Sighting.card_line(repo, state, code)
+	if sighted != "":
+		fields.append(["Sighted", sighted])
 	if not st.is_empty():
 		# The ground, the height and the supply tier are the ground the
 		# regiment is on NOW, not the one the pack quartered it on: a column
