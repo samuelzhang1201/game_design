@@ -122,6 +122,34 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 		MissiveLog.subject("regiment", first, -1, at), "Supply dispatch", facts)
 
 
+## The marshal's report on foraging and desertion (spec
+## 2026-10-10-foraging-and-desertion §4): ONE supply-kind letter for the day's
+## conduct events (each carries its regiment); words from data/conduct_words.csv.
+static func conduct_dispatch(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
+	var facts: Array = []
+	for i in events.size():
+		var e: Dictionary = events[i]
+		var type := String(e["type"])
+		var reg := String(ArmySystem.regiment(repo, String(e["regiment"]), state).get("label", e["regiment"]))
+		var prov := String((repo.provinces.get(String(e.get("province", "")), {}) as Dictionary).get("label", e.get("province", "")))
+		var words := String(repo.conduct_words.get(type, type))
+		var text := ""
+		match type:
+			"forage_unlawful":
+				text = words % [reg, prov]
+			"forage_incident":
+				text = words % [reg, prov, String((repo.kingdoms.get(String(e.get("kingdom", "")), {}) as Dictionary).get("label", e.get("kingdom", "")))]
+			"forage_havoc", "stripped_bare":
+				text = words % [prov]
+			_:
+				text = words % [reg]
+		facts.append(MissiveLog.words("conduct_%d" % i, type.capitalize().replace("_", " "), text))
+	var first := String((events[0] as Dictionary)["regiment"])
+	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, first, state))
+	return MissiveLog.make("supply", "credible", state.absolute_day(),
+		MissiveLog.subject("regiment", first, -1, at), "Marshal's report", facts)
+
+
 static func _fed_from(town: String) -> String:
 	return "fed from %s" % town if town != "" else "no supply point"
 

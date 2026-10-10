@@ -140,7 +140,7 @@ static func _havoc(repo: DataRepository, state: GameState, starter: String, prov
 ## One day's foraging in `province` by `codes` (the units living off it today):
 ## the day's shares go into their supplies (never past what they may hold), the
 ## land is stripped by what was taken, and a crossing is acted on. Returns the
-## events filed: {type: "stripped_bare", province} when the stripping passes
+## events filed: {type: "stripped_bare", province, regiment: the last taker in code order} when the stripping passes
 ## forage_bare_permille. Standing at or past forage_hazard_strip_permille (the _protected
 ## line when any taker keeps protect_church) lays (once) the "Raided" hazard.
 static func take_day(repo: DataRepository, state: GameState, province: String, codes: Array) -> Array:
@@ -171,7 +171,7 @@ static func take_day(repo: DataRepository, state: GameState, province: String, c
 		lay_hazard(repo, state, province)
 	var bare := int(repo.bal("forage_bare_permille"))
 	if before < bare and bare <= after:
-		out.append({"type": "stripped_bare", "province": province})
+		out.append({"type": "stripped_bare", "province": province, "regiment": sorted.back()})
 	return out
 
 

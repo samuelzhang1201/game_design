@@ -87,6 +87,9 @@ func _end_day(state: GameState) -> Array:
 	ArmySystem.eat_day(data, state)
 	# A hungry host loses heart every day (spec 2026-10-07-army-supply-lines §3.7).
 	ArmySystem.hunger_day(data, state)
+	# Living off the land and desertion (spec 2026-10-10-foraging-and-desertion
+	# §3.3): after the meal, so the warnings below read what foraging left.
+	day_conduct = ArmyConduct.day_step(data, state)
 	# The day's supply warnings, read off what the host has left after eating.
 	day_supply.append_array(SupplyLines.warn_day(data, state))
 	# The month's economy is computed a bucket a day (spec §11.2).
@@ -95,6 +98,8 @@ func _end_day(state: GameState) -> Array:
 	# 2026-10-07-army-supply-lines §5.5): day_supply holds all of the day now.
 	if not day_supply.is_empty():
 		MissiveLog.add(data, state, MissiveWriter.supply_dispatch(data, state, day_supply))
+	if not day_conduct.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.conduct_dispatch(data, state, day_conduct))
 	return done
 
 ## The regiments that reached their destination in the last advance_day, in
@@ -107,6 +112,10 @@ var day_couriers: Array = []
 ## The supply lines' events of the last day (SupplyLines.day_step), for the
 ## marshal's dispatches.
 var day_supply: Array = []
+
+## The foraging and desertion events of the last day (ArmyConduct.day_step),
+## for the marshal's report.
+var day_conduct: Array = []
 
 ## The battles' events of the last day (BattleSystem.settle_day), for the
 ## battle report.
@@ -163,6 +172,7 @@ func advance(state: GameState) -> TickReport:
 		day_raid = []
 		day_ai = []
 		day_supply = []
+		day_conduct = []
 	# The month that just ended is settled BEFORE the tick moves: its lines
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.

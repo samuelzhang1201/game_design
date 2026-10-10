@@ -139,6 +139,7 @@ func test_bare_news_once_per_crossing() -> void:
 	assert_eq(int(state.forage_stripped[prov]), 900)
 	assert_eq(events.size(), 1)
 	assert_eq(String(events[0]["type"]), "stripped_bare")
+	assert_eq(String(events[0]["regiment"]), code, "the last taker names the report")
 	assert_eq(String(events[0]["province"]), prov)
 	state.forage_stripped[prov] = 950
 	state.regiments[code]["supplies"] = 0
@@ -279,3 +280,4 @@ func test_bare_news_with_protect_church_on() -> void:
 	assert_eq(int(state.forage_stripped[prov]), 900)
 	assert_eq(events.size(), 1)
 	assert_eq(String(events[0]["type"]), "stripped_bare")
+	assert_eq(String(events[0]["regiment"]), code, "the last taker names the report")
