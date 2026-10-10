@@ -86,7 +86,7 @@ add it here as a principle with its why — not as a changelog entry.
   under a town, no slab under a building or a house mesh, no base under a
   wargame piece (owner 2026-09-27: 不满意，请撤除所有底座 — a flat disc in the
   realm's colour, "太丑，就是一个灰色阴影", then a modelled plinth, both
-  rejected the same day). Whose piece it is, is the headcount chip's job. Do
+  rejected the same day). Do
   not bring a base back without the owner asking.
 
 ## Type
@@ -453,11 +453,11 @@ add it here as a principle with its why — not as a changelog entry.
 
 ## The regiment pieces (owner 2026-09-27, round 2)
 
-- **A miniature grows with the zoom, then holds; far out it is a counter.**
+- **A miniature grows with the zoom.**
   A piece held at one screen size at every zoom read wrong ("随着镜头的缩放，
   兵人大小没有变化这是不对的"): it is one world size (~20 px at the opening
   view) growing as the camera comes in, capped close in so it never towers
-  over the houses, and a flat square counter once the scale bar reads 50 km.
+  over the houses.
   Bigger is not better: the cavalry at 1.5× was ruled wrong ("应该更小一点").
   Then, the same day, "骑兵和步兵的size稍微再调大一点点": +15% (ref 26→30 px,
   cap 36→41) — "a little" means a step you can see side by side, not one
@@ -467,10 +467,18 @@ add it here as a principle with its why — not as a changelog entry.
 - **A selection emphasises the line that is already there.** The clicked
   province is its own black dashed seam, heavier and full ink — never a new
   gold solid line laid over it ("一个黄色实心线…很丑").
-- **Status reads as two thin bars on the counter**, red (readiness) over
-  yellow (supplies), in the counter's own width.
+- **Nothing is drawn over a land unit on the map** (owner 2026-10-10:
+  请移除大地图上军事单位的所有标记和数字的mark): no counter, headcount chip,
+  number, status bar or leader line at any zoom — the piece itself is the
+  unit. Its status lives in its card. A selected piece glows faintly on the
+  ground under it, never a box. Only a unit with no piece (a fleet) keeps a
+  flat counter.
+- **A piece faces the way it last advanced** (owner 2026-10-10: 应当固定向他们
+  之前前进的方向前方): never toward the camera, never turned by a pan.
+- **Kingdom names are the far view's lettering** (owner 2026-10-10: 国家名字
+  无论我视角如何调整都会显示，很碍事): pinned to their ground, gone close in.
 - **A miniature casts its shadow** — the table-top look wants it.
-- **Every unit holds its own ground** (owner 2026-10-07, overturning 2026-10-06's garrison counter): one unit per town holds the seat, on the town's point; the rest camp outside it in hex rings, infantry innermost, then archers, then horse. Nothing is merged into a counter, and no counter or headcount chip ever covers another — they spread, they never stack into one (spec `2026-10-07-army-split-and-ground-design.md`).
+- **Every unit holds its own ground** (owner 2026-10-07, overturning 2026-10-06's garrison counter): one unit per town holds the seat, on the town's point; the rest camp outside it in hex rings, infantry innermost, then archers, then horse. Nothing is merged into one piece or counter (spec `2026-10-07-army-split-and-ground-design.md`).
 
 ## Unit figures (details: `tools/guide/unit_figures.md`)
 

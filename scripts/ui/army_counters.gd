@@ -1,46 +1,31 @@
 class_name ArmyCounters
 extends RefCounted
-## The MILITARY layer's counters (owner 2026-09-13 on the 2D map, 2026-09-19
-## on the 3D map): each of the player's units as a square of its own — its
-## painted piece (data/army_art.csv), else a glyph: swords, a crown for the
-## household (the roster's `is_royal`), waves for a fleet — joined to a box in
-## the realm's hue stating its headcount. Nothing is merged into one counter
-## (spec 2026-10-07-army-split-and-ground §5.1). Shared by both maps: each map
-## gathers its regiments' screen points and the settlement marks to keep clear
-## of, and hands them here.
+## The flat counter of a unit that has NO 3D piece on the map — a fleet
+## (owner 2026-09-13 on the 2D map, 2026-09-19 on the 3D map): a glyph square
+## (waves for a fleet; swords, or a crown for the household — the roster's
+## `is_royal` — for a land unit with no model) joined to a box in the realm's
+## hue stating its headcount. A land unit is its 3D piece alone, with no
+## counter, chip, bar or number over it (owner 2026-10-10). Nothing is merged
+## into one counter (spec 2026-10-07-army-split-and-ground §5.1).
 ## Every colour and size is political_palette.csv army_* / balance.csv
 ## map_army_*.
 
 
-## The counters for `points` ([{reg, pos, bars?}], pos in the map's screen px)
-## at height `h`: {code, pos, size, text, font_px, rect, icon, count, bars,
-## glyph, piece, color, naval, royal}, one a unit. `bars` is ArmySystem.bars_of's
-## Vector2i (readiness, supply per mille): two thin bars, red over yellow,
-## stand on the counter inside its `rect` (owner 2026-09-27). Spread by
-## Map3DDeclutter (spec 2026-10-07-army-split-and-ground §5.2) in priority
-## order — `first` (the selected codes), the royal household, then by men,
-## then by code — so no counter or chip covers a settlement mark or another:
-## the first never moves, each other takes the nearest clear place out to
-## map3d_declutter_max_px. A counter with no clear place takes the clearest
-## it found (never hidden); a chip with none is left out until the camera
-## comes closer.
-## `with_piece` names the regiments that already have a 3D PIECE standing on
-## the map (Map3DLayerUnits). Those keep only their headcount box (a chip):
-## the model IS the counter's square now, and drawing the flat piece beside it
-## put the same regiment on the map twice.
-## Two counters stand at least map_army_stack_gap_px apart, rim to rim: each
-## box (its bars on top included) is grown by its drawn rim (outline_px) and
-## half the gap for the spreading; the marker keeps the box itself. Each
-## marker keeps `anchor` (the point's `anchor`, else its `pos`: where its unit
-## truly is) and `offset` (how far the spreading moved it), for the leader
-## line (`draw`). `allowed` (a box centre -> bool, Map3DDeclutter.place) keeps
-## a land unit's counter off the sea where it can be; a fleet is never asked.
+## The counters for `points` ([{reg, pos}], pos in the map's screen px) at
+## height `h`: {code, pos, size, text, font_px, rect, icon, count, glyph,
+## piece, color, naval, royal}, one a unit. Spread by Map3DDeclutter (spec
+## 2026-10-07-army-split-and-ground §5.2) in priority order — `first` (the
+## selected codes), the royal household, then by men, then by code — so no
+## counter covers an obstacle (a settlement mark, a 3D piece) or another: the
+## first never moves, each other takes the nearest clear place out to
+## map3d_declutter_max_px, else the clearest it found (never hidden). Two
+## counters stand at least map_army_stack_gap_px apart, rim to rim: each box is
+## grown by its drawn rim (outline_px) and half the gap for the spreading.
 static func layout(repo: DataRepository, points: Array, h: float, obstacles: Array,
-		with_piece: Dictionary = {}, first: Array = [], allowed: Callable = Callable()) -> Array:
+		first: Array = []) -> Array:
 	var mine := repo.resolve_realm("player_realm")
 	var pad := repo.bal("map_army_count_pad_px")
 	var font := UiPalette.body_font()
-	var bars_h := bars_height(repo)
 	var out: Array = []
 	var colors: Dictionary = {}  # kingdom -> count_color, once a layout (perf 2026-10-02)
 	for p: Dictionary in points:
@@ -51,21 +36,14 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var naval := String(r.get("is_naval", "0")) == "1"
 		var royal := String(r.get("is_royal", "0")) == "1"
 		var text := str(int(strength))
-		var solo := with_piece.has(code)
-		# a chip over a 3D piece is its tag, never bigger than the soldier
-		var ph: float = minf(h, float(p.get("h", h)))
-		var font_px := maxi(int(round(ph * repo.bal("map_army_font_frac"))), 1)
-		var count_w := maxf(ph, ManorBadges.text_width(font, text, font_px) + pad * 2.0)
-		var w := count_w if solo else ph + count_w
+		var font_px := maxi(int(round(h * repo.bal("map_army_font_frac"))), 1)
+		var count_w := maxf(h, ManorBadges.text_width(font, text, font_px) + pad * 2.0)
+		var w := h + count_w
 		var kingdom := String(r.get("kingdom_code", mine))
 		if not colors.has(kingdom):
 			colors[kingdom] = count_color(repo, kingdom)
-		out.append({"code": code, "pos": sp, "anchor": p.get("anchor", sp), "size": strength,
-			"text": text, "solo": solo,
-			"font_px": font_px,
-			"h": ph,
-			"rect": Rect2(sp - Vector2(w, ph) / 2.0 - Vector2(0.0, bars_h), Vector2(w, ph + bars_h)),
-			"bars": p.get("bars", Vector2i(-1, -1)),
+		out.append({"code": code, "pos": sp, "size": strength, "text": text, "font_px": font_px,
+			"rect": Rect2(sp - Vector2(w, h) / 2.0, Vector2(w, h)),
 			"glyph": "waves" if naval else ("crown" if royal else "swords"),
 			"piece": MapObjects.army_piece(repo, r),
 			"color": colors[kingdom],
@@ -83,10 +61,9 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		return String(a["code"]) < String(b["code"]))
 	var room := outline_px(repo) + repo.bal("map_army_stack_gap_px") * 0.5
 	var boxes: Array = out.map(func(m: Dictionary) -> Rect2: return (m["rect"] as Rect2).grow(room))
-	var hide: Array = out.map(func(m: Dictionary) -> bool: return bool(m["solo"]))
-	var afloat: Array = out.map(func(m: Dictionary) -> bool: return bool(m["naval"]))
+	var hide: Array = out.map(func(_m: Dictionary) -> bool: return false)
 	var offs := Map3DDeclutter.place(boxes, hide, obstacles, repo.bal("map3d_declutter_step_px"),
-		repo.bal("map3d_declutter_max_px"), allowed, afloat)
+		repo.bal("map3d_declutter_max_px"))
 	var kept: Array = []
 	for i in out.size():
 		if offs[i] == null:
@@ -95,40 +72,10 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var rect := Rect2((m["rect"] as Rect2).position + (offs[i] as Vector2), (m["rect"] as Rect2).size)
 		m["rect"] = rect
 		m["pos"] = (m["pos"] as Vector2) + (offs[i] as Vector2)
-		m["offset"] = offs[i]
-		var mh := float(m["h"])
-		var square := 0.0 if bool(m["solo"]) else mh
-		var top := rect.position + Vector2(0.0, bars_h)
-		m["icon"] = Rect2(top, Vector2(square, mh))
-		m["count"] = Rect2(top + Vector2(square, 0.0), Vector2(rect.size.x - square, mh))
+		m["icon"] = Rect2(rect.position, Vector2(h, h))
+		m["count"] = Rect2(rect.position + Vector2(h, 0.0), Vector2(rect.size.x - h, h))
 		kept.append(m)
 	return kept
-
-
-## The two bars and their gaps, screen px (0 while map_army_bar_px is 0).
-static func bars_height(repo: DataRepository) -> float:
-	var bar := repo.bal("map_army_bar_px")
-	return 0.0 if bar <= 0.0 else (bar + repo.bal("map_army_bar_gap_px")) * 2.0
-
-
-## Red (readiness) over yellow (supply), each as wide as the counter and
-## filled by its per mille, on a dark track — the top of `rect`.
-static func _draw_bars(ci: CanvasItem, repo: DataRepository, m: Dictionary) -> void:
-	var v: Vector2i = m.get("bars", Vector2i(-1, -1))
-	var bar := repo.bal("map_army_bar_px")
-	if v.x < 0 or bar <= 0.0:
-		return
-	var gap := repo.bal("map_army_bar_gap_px")
-	var rect: Rect2 = m["rect"]
-	var track := MapPalette.named(repo, "army_bar_track")
-	var y := rect.position.y
-	for row: Array in [[v.x, "army_bar_ready"], [v.y, "army_bar_supply"]]:
-		var full := Rect2(rect.position.x, y, rect.size.x, bar + gap)
-		ci.draw_rect(full, track)
-		var inner := Rect2(full.position + Vector2(gap, gap), Vector2(full.size.x - gap * 2.0, bar))
-		inner.size.x *= clampf(float(row[0]) / 1000.0, 0.0, 1.0)
-		ci.draw_rect(inner, MapPalette.named(repo, String(row[1])))
-		y += bar + gap
 
 
 ## The colour of a realm's headcount box: the realm's own hue, its saturation
@@ -152,54 +99,11 @@ static func outline_px(repo: DataRepository) -> float:
 	return line
 
 
-## The leader lines of the counters the spreading moved more than
-## map3d_leader_min_px (owner 2026-10-08: which unit is it?): from the
-## counter's edge to its unit, a dark casing under a pale core, fading toward
-## the counter (its alpha × `fade` there); a dot on the unit, the core's ink
-## in a casing rim. Drawn BEHIND the counters. `look` is the HUD node's
-## exports {casing, core, casing_px, core_px, dot_px (diameter), rim_px,
-## fade}; none drawn without it.
-static func _draw_leaders(ci: CanvasItem, repo: DataRepository, markers: Array, look: Dictionary) -> void:
-	if look.is_empty():
-		return
-	var min_px := repo.bal("map3d_leader_min_px")
-	var fade := float(look["fade"])
-	for m: Dictionary in markers:
-		var to: Vector2 = m.get("anchor", m["pos"])
-		var rect: Rect2 = m["rect"]
-		if (m.get("offset", Vector2.ZERO) as Vector2).length() <= min_px or rect.has_point(to):
-			continue
-		var pts := PackedVector2Array([edge_toward(rect, to), to])
-		for part: Array in [["casing", "casing_px"], ["core", "core_px"]]:
-			var ink: Color = look[part[0]]
-			var faint := Color(ink, ink.a * fade)
-			ci.draw_polyline_colors(pts, PackedColorArray([faint, ink]), float(look[part[1]]), true)
-		var r := float(look["dot_px"]) * 0.5
-		ci.draw_circle(to, r + float(look["rim_px"]), look["casing"])
-		ci.draw_circle(to, r, look["core"])
-
-
-## Where the segment from `rect`'s centre to `to` (outside it) leaves the rect.
-static func edge_toward(rect: Rect2, to: Vector2) -> Vector2:
-	var c := rect.get_center()
-	var d := to - c
-	var half := rect.size * 0.5
-	var t := 1.0
-	if absf(d.x) > 0.0001:
-		t = minf(t, half.x / absf(d.x))
-	if absf(d.y) > 0.0001:
-		t = minf(t, half.y / absf(d.y))
-	return c + d * t
-
-
-## Draw `markers` (from layout) on `ci`, their leader lines (`leader`, see
-## _draw_leaders) first; each counter whose code is in `selected` is
-## outlined in gold.
-static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected: Array = [],
-		leader: Dictionary = {}) -> void:
+## Draw `markers` (from layout) on `ci`; each counter whose code is in
+## `selected` is outlined in gold.
+static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected: Array = []) -> void:
 	if markers.is_empty():
 		return
-	_draw_leaders(ci, repo, markers, leader)
 	var outline := MapPalette.named(repo, "army_outline")
 	var icon_bg := MapPalette.named(repo, "army_icon_bg")
 	var glyph_ink := MapPalette.named(repo, "army_glyph")
@@ -215,17 +119,6 @@ static func draw(ci: CanvasItem, repo: DataRepository, markers: Array, selected:
 		var rect: Rect2 = m["rect"]
 		var icon: Rect2 = m["icon"]
 		var count: Rect2 = m["count"]
-		_draw_bars(ci, repo, m)
-		if bool(m.get("solo", false)):
-			# The 3D piece is the counter; this is only its headcount.
-			ci.draw_rect(count.grow(line), m["color"] if table else outline)
-			ci.draw_rect(count, token if table else m["color"])
-			ManorBadges.draw_centered_text(ci, font, count, String(m["text"]),
-				int(m["font_px"]), count_ink)
-			if selected.has(String(m["code"])):
-				ci.draw_rect(rect.grow(line + 1.5), UiPalette.GOLD, false, 2.0)
-			continue
-		# the glyph square (the 2D counter art went 2026-09-29, Hunyuan's licence)
 		ci.draw_rect(icon.merge(count).grow(line), m["color"] if table else outline)
 		ci.draw_rect(icon, icon_bg)
 		ci.draw_rect(count, token if table else m["color"])

@@ -13,19 +13,15 @@ extends RefCounted
 ## seen from `ref_m` — the opening view's distance — and from there ONE world
 ## height at every zoom, so a piece grows and shrinks with the camera exactly
 ## as the ground and the houses do (owner 2026-09-30: 兵人模型的比例缩放需要和游戏
-## 视角缩放一致; the map3d_unit_max_px cap of 2026-09-27 held it at a fixed
-## screen size close in, so it stopped growing and its gait sped up). Far out
-## it is not drawn at all: the regiment is a flat counter (as_counters).
-## px x metres-per-px: the window's height cancels, since ref_m grows with it.
+## 视角缩放一致). It is drawn at every zoom, with no mark over it (owner
+## 2026-10-10). px x metres-per-px: the window's height cancels, since ref_m
+## grows with it.
 static func height_m(repo: DataRepository, fov_deg: float, view_h_px: float, ref_m: float) -> float:
 	return repo.bal("map3d_unit_ref_px") * Map3DGeometry.metres_per_pixel(maxf(ref_m, 1.0), fov_deg, view_h_px)
 
 
-## A piece ({node, anims}) shown or hidden; its figures' AnimationPlayers run
-## only while it is shown (perf 2026-10-02: every regiment's nine figures kept
-## posing their skeletons far out, where each is a flat mark, and behind the
-## camera; under the LEDGER or the WAR ROOM the view's whole subtree stops,
-## Map3DView.deactivate).
+## A piece ({node, anims}) shown or hidden; its AnimationPlayers run only while
+## it is shown (perf 2026-10-02; under the LEDGER or the WAR ROOM the view stops).
 static func show_piece(piece: Dictionary, on: bool) -> void:
 	(piece["node"] as Node3D).visible = on
 	if bool(piece.get("running", true)) == on:
@@ -35,12 +31,10 @@ static func show_piece(piece: Dictionary, on: bool) -> void:
 		anim.active = on
 
 
-## Whether the camera is far enough out that every regiment is its square
-## counter — its MARK — instead of a piece: once a piece, one world size at
+## Whether the camera is far enough out that a COURIER is its flat mark
+## instead of a rider (Map3DLayerCouriers): once a piece, one world size at
 ## every zoom (height_m), would be drawn under `map3d_unit_mark_px` design px
-## at the camera's target, where a miniature no longer reads as one (owner
-## 2026-09-30: zoom out最高处应该显示为一个标志即可 — replacing the 50 km scale
-## bar of 2026-09-27). Its px there: ref_px x ref_m / distance.
+## at the camera's target. Its px there: ref_px x ref_m / distance.
 static func as_counters(repo: DataRepository, meta: Dictionary, camera_distance_m: float,
 		view_h_px: float) -> bool:
 	var ref_m := Map3DGeometry.distance_for_bar(repo, meta, repo.bal("map3d_zoom_start_scale"), view_h_px)
@@ -57,16 +51,23 @@ static func scale_for(repo: DataRepository, fov_deg: float, view_h_px: float, re
 	return height_m(repo, fov_deg, view_h_px, ref_m) / model_h_m * size
 
 
-## The yaw a piece stands at: the way it MARCHES (a heading in PACK space,
-## which is world XZ), or — standing still — square to the camera, because a
-## counter on a map is there to be read and a miniature seen edge-on is not.
-##
-## `stand_deg` (data/army_art.csv) turns a STANDING piece that far off square:
-## a horse square to the camera is nose-on, the narrowest thing it can show
-## (owner 2026-09-27, the scanned knight read as a sliver in game).
-##
-## The models are authored facing +Y in Blender, which the glTF exporter
-## turns into -Z here, and -Z turned by a yaw is (-sin, -cos).
+## The way a piece faces when it has never advanced and has no march: toward
+## where the opening camera stands (it looks north, so south, +Z) — a fixed
+## world heading, never the camera's live pose, so a pan turns no piece.
+const REST := Vector2(0.0, 1.0)
+## How far, world metres, the DRAWN piece must have gone from where its heading
+## was last taken before that heading turns (a frame's sub-metre creep, or a
+## halt, keeps the last one; owner 2026-10-10: 应当固定向他们之前前进的方向).
+const TRACK_MIN_M := 0.5
+
+
+## The yaw a figure stands at: the way it MARCHES (a heading in PACK space,
+## which is world XZ), or — with none — toward `camera_xz` (a courier on the
+## 3D map, a WAR ROOM piece toward the table's near edge), turned `stand_deg`
+## (data/army_art.csv) further, since a horse square to the view is nose-on,
+## the narrowest thing it can show (owner 2026-09-27). The models are authored
+## facing +Y in Blender, which the glTF exporter turns into -Z here, and -Z
+## turned by a yaw is (-sin, -cos).
 static func yaw_for(heading: Vector2, camera_xz: Vector2, at_xz: Vector2,
 		stand_deg: float = 0.0) -> float:
 	var dir := heading
@@ -79,12 +80,29 @@ static func yaw_for(heading: Vector2, camera_xz: Vector2, at_xz: Vector2,
 	return atan2(-dir.x, -dir.y) + off
 
 
-## Where a piece is DRAWN on its day's march (owner 2026-09-28: drawn a day
-## behind the engine, it stood still a whole day after play was pressed):
-## `day` is {from, to, s0} — where it stood when its day (or order) last
-## turned, where the engine's next day leaves it (CourierSystem.day_ahead_of),
-## and the day's share then — walked by `share`, the day's share now. A
-## stopped clock holds the share, so the piece holds too.
+## A regiment PIECE's yaw on the 3D map: `heading` (the way it last advanced,
+## Map3DLayerUnits keeps it by track()), else at REST — a fixed world
+## heading, never the live camera, so a pan or a halt turns no piece (owner
+## 2026-10-10: 应当固定向他们之前前进的方向前方).
+static func facing_yaw(heading: Vector2, stand_deg: float = 0.0) -> float:
+	return yaw_for(heading, REST, Vector2.ZERO, stand_deg)
+
+
+## A piece's facing kept as it is drawn from `from` to `at` (world XZ):
+## `kept` {heading, trail} -> the new one. The heading turns only once the
+## piece stands TRACK_MIN_M past `trail` (where it was last taken; `from` the
+## first time), so a halt, a stopped clock or a camera move never turns it.
+static func track(kept: Dictionary, from: Vector2, at: Vector2) -> Dictionary:
+	var trail: Vector2 = kept.get("trail", from)
+	var heading: Vector2 = kept.get("heading", Vector2.ZERO)
+	if at.distance_to(trail) > TRACK_MIN_M:
+		return {"heading": (at - trail).normalized(), "trail": at}
+	return {"heading": heading, "trail": trail}
+
+
+## Where a piece is DRAWN on its day's march (owner 2026-09-28): `day` is
+## {from, to, s0} (Map3DUnits.day_march), walked by `share`, the day's share
+## now. A stopped clock holds the share, so the piece holds too.
 static func along_day(day: Dictionary, share: float) -> Vector2:
 	var s0 := float(day["s0"])
 	var f := clampf((share - s0) / maxf(1.0 - s0, 0.001), 0.0, 1.0)
@@ -92,20 +110,14 @@ static func along_day(day: Dictionary, share: float) -> Vector2:
 
 
 ## Whether a piece WALKS its day's march at the day's `share`: it has somewhere
-## to go and its start has come (s0: the share at which its day was reckoned —
-## an order taking effect mid-day, a fleet's). Not "it moved this frame": a
-## frame that happened not to move it read as a halt and blended the gait out
-## and back.
+## to go and its start (s0) has come — not "it moved this frame".
 static func walking(day: Dictionary, share: float) -> bool:
 	# a few world metres: the last frame of a day lands just short of its end
 	return (day["from"] as Vector2).distance_to(day["to"]) > 0.5 and share >= float(day["s0"])
 
 
-## A piece's day's march for along_day, reckoned at the day's `share`: from
-## where it is `drawn` — or the engine's spot `here`, when farther than the
-## snap — to where the engine's next day leaves it (CourierSystem.day_ahead_of;
-## a courier delivering that day changes nothing until the day ends, owner
-## 2026-10-02). World XZ.
+## A piece's day's march for along_day, reckoned at the day's `share`: from where
+## it is `drawn` (or `here`, past the snap) to where the engine's next day leaves it.
 static func day_march(repo: DataRepository, state: GameState, code: String, meta: Dictionary,
 		here: Vector2, drawn: Vector2, share: float) -> Dictionary:
 	if state == null:
@@ -126,9 +138,7 @@ static func day_world_m(repo: DataRepository, state: GameState, code: String,
 
 
 ## How far from the engine's spot a drawn piece may stand when its day turns
-## before it simply jumps there: map3d_unit_snap_days days' march. A save loaded, a column that is not
-## walking at all, or a clock that ran several days in one frame would
-## otherwise leave a piece crawling after its regiment across the map.
+## before it jumps there: map3d_unit_snap_days days' march.
 static func snap_m(repo: DataRepository, state: GameState, code: String, meta: Dictionary) -> float:
 	return day_world_m(repo, state, code, meta) * repo.bal("map3d_unit_snap_days")
 
@@ -220,9 +230,7 @@ static func stand_extent(node: Node3D) -> Vector2:
 	return half if half != Vector2.ZERO else Vector2(0.5, 0.5)
 
 
-## A model's own (half width, height) in metres, measured off its meshes
-## rather than read from a table — a .glb rebuilt at another size needs
-## nothing changed anywhere.
+## A model's own (half width, height) in metres, measured off its meshes.
 static func model_size(node: Node3D) -> Vector2:
 	var top := -INF
 	var bottom := INF
@@ -243,10 +251,7 @@ static func model_size(node: Node3D) -> Vector2:
 
 
 ## The box a piece covers on screen, design px: its standing volume's eight
-## corners projected, not the two centre points between its feet and its
-## head — at a low camera the piece leans right across the screen and a box
-## drawn between those two misses most of it. Rect2() when it is behind the
-## camera.
+## corners projected (a low camera leans it across the screen). Rect2() behind.
 static func screen_box(camera: Camera3D, ground: Vector3, high: float, wide: float,
 		px_scale: float) -> Rect2:
 	var top := ground + Vector3.UP * high

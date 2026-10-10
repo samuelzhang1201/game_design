@@ -52,33 +52,40 @@ func pick_at(pos: Vector2) -> Dictionary:
 		return {}
 	var p := hit as Vector3
 	var xz := Vector2(p.x, p.z)
-	# A regiment is picked first, as on the 2D map. Its 3D PIECE comes before
-	# its counter: the piece is the big thing the player is aiming at, and
-	# under MILITARY the counter has shrunk to a headcount chip over its head.
-	for code: String in view.unit_rects():
-		if (view.unit_rects()[code] as Rect2).has_point(pos):
-			return {"kind": "army", "code": code}
-	# ...anywhere on the counter, or within map_army_pick_px of its point.
-	# A regiment is quartered IN a town, beside its point, and its counter is
-	# wider than the town's whole reach at most zooms: where a town's dot is in
-	# reach too, the nearer of the two centres takes the click (spec
+	# A regiment is picked first, as on the 2D map: its 3D PIECE (drawn at
+	# every zoom, nothing over it) or a fleet's counter. A regiment is quartered
+	# IN a town, beside its point: where a town's dot is in reach too, the
+	# nearer of the two centres takes the click (spec
 	# 2026-10-06-army-location-and-town-defence §5.3); a town's output badge
 	# under the click counts as its dot.
 	var near := _settlement_at(pos)
 	var town := String(near[0])
 	var town_d := float(near[1])
+	var on_badge := false
 	for b: Dictionary in view.manor_badges():
 		var bd := (b["rect"] as Rect2).get_center().distance_to(pos)
+		on_badge = on_badge or (b["rect"] as Rect2).has_point(pos)
 		if (b["rect"] as Rect2).has_point(pos) and bd < town_d:
 			town_d = bd
+	# the piece whose box holds the click (the nearest centre among several);
+	# far out a piece is a few px, so then one within map_army_pick_px of it.
+	# A badge is drawn OVER the pieces, so a click on one is never a piece's.
+	var rects: Dictionary = {} if on_badge else view.unit_rects()
+	var piece := _nearest_piece(rects, pos, 0.0)
+	if piece != "" and (rects[piece] as Rect2).get_center().distance_to(pos) < town_d:
+		return {"kind": "army", "code": piece}
+	var reach := ctx.repo.bal("map_army_pick_px")
 	var armies := view.army_markers()
 	for i in range(armies.size() - 1, -1, -1):
 		var box := armies[i]["rect"] as Rect2
 		if box.has_point(pos) and box.get_center().distance_to(pos) < town_d:
 			return _army_pick(armies[i])
+	piece = _nearest_piece(rects, pos, reach)
+	if piece != "" and (rects[piece] as Rect2).get_center().distance_to(pos) < town_d:
+		return {"kind": "army", "code": piece}
 	for i in range(armies.size() - 1, -1, -1):
 		var d := (armies[i]["pos"] as Vector2).distance_to(pos)
-		if d <= ctx.repo.bal("map_army_pick_px") and d < town_d:
+		if d <= reach and d < town_d:
 			return _army_pick(armies[i])
 	# A committed march's end ring opens its route (owner 2026-09-27).
 	for e: Dictionary in view.route_ends():
@@ -124,6 +131,20 @@ func pick_at(pos: Vector2) -> Dictionary:
 		return {"kind": "manor", "cell": cell} if cell >= 0 else {}
 	var province := province_at(ctx.to_pack(xz))
 	return {"kind": "province", "code": province} if province != "" else {}
+
+
+## The piece whose box, grown by `reach` design px, holds `pos` with its centre
+## nearest it (ties: the lower code); "" for none.
+static func _nearest_piece(rects: Dictionary, pos: Vector2, reach: float) -> String:
+	var best := ""
+	var best_d := INF
+	for code: String in rects:
+		var r := rects[code] as Rect2
+		var d := r.get_center().distance_to(pos)
+		if r.has_area() and r.grow(reach).has_point(pos) and (d < best_d or (d == best_d and code < best)):
+			best = code
+			best_d = d
+	return best
 
 
 ## What a counter names: its own unit, one a counter.

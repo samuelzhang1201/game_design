@@ -6,7 +6,7 @@ extends Node3D
 ## Nine, six or three .glb figures per regiment by its strength (Map3DFormation),
 ## each posed by its own AnimationPlayer — the one layer that cannot be a MultiMesh.
 ## THE SIZE IS NOT THE MODEL'S SIZE: a miniature's, one world size at every
-## zoom (under map3d_unit_mark_px none: the HUD's square counter). That rule,
+## zoom, drawn at every zoom with no mark over it (owner 2026-10-10). That rule,
 ## the facing, seating, measuring and screen box are Map3DUnits, the pure half.
 ## Takes everything from Map3DContext, never the Game autoload (a test scans).
 
@@ -30,8 +30,10 @@ var shown := false
 var _pieces: Dictionary = {}
 ## code -> the piece's box on screen, design px. What a click hits.
 var _rects: Dictionary = {}
-## code -> the screen point of the piece's TOP, design px (the chip hangs there).
-var _tops: Dictionary = {}
+## code -> {at, up, r}: the ground under the piece, world (the selection's glow).
+var _rings: Dictionary = {}
+## code -> {heading, trail}: the way it last ADVANCED (Map3DUnits.track).
+var _track: Dictionary = {}
 var _want_yaw: Dictionary = {}  ## code -> the yaw it turns toward
 var _yaw: Dictionary = {}  ## code -> the yaw it is at
 var _scenes: Dictionary = {}
@@ -52,6 +54,9 @@ func set_shown(on: bool) -> void:
 	visible = on
 	if on:
 		refresh()
+	else:  # hidden: nothing to click or ring
+		_rects.clear()
+		_rings.clear()
 
 
 func set_preview(on: bool) -> void:
@@ -62,7 +67,7 @@ func set_preview(on: bool) -> void:
 		preview_build(Map3DPreview.context_for(self))
 	else:
 		_pieces.clear()
-		_tops.clear()
+		_rings.clear()
 		Map3DPreview.clear_generated(self)
 	Map3DPreview.sync_viewport(self)
 
@@ -77,13 +82,12 @@ func preview_build(p_ctx: Map3DContext) -> void:
 	refresh()
 
 
-## Every piece placed, sized and turned for the camera, cut once per camera
-## pose; the MARCH between two days is step()'s.
+## Every piece placed and sized for the camera (never turned by it), cut once per pose.
 func refresh() -> void:
 	if ctx == null or not shown or ctx.camera == null or not is_inside_tree():
 		return  # out of the tree: a view handed between screens (the title's)
 	var live: Dictionary = {}
-	_tops.clear()
+	_rings.clear()
 	_rects.clear()
 	for reg: Dictionary in ctx.regiments():
 		var code := String(reg["regiment_code"])
@@ -110,21 +114,20 @@ func _place(code: String, piece: Dictionary) -> void:
 	var repo := ctx.repo
 	var xz: Vector2 = _shown_xz[code]
 	var node: Node3D = piece["node"]
-	_tops.erase(code)
+	_rings.erase(code)
 	_rects.erase(code)
-	var centre := Vector3(xz.x, ctx.height_at(xz), xz.y)
-	# Far out every regiment is its flat counter (Map3DUnits.as_counters).
-	if ctx.camera.is_position_behind(centre) or Map3DUnits.as_counters(repo, ctx.meta, ctx.distance, ctx.view_size.y):
+	if ctx.camera.is_position_behind(Vector3(xz.x, ctx.height_at(xz), xz.y)):
 		show_piece(piece, false)
 		return
 	show_piece(piece, true)
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), piece["size"])
-	var ahead: Vector2 = (_days[code]["to"] if _days.has(code) else xz) - xz
-	var heading := ahead.normalized() if ahead.length() > 0.5 else ArmySystem.heading_of(repo, ctx.state(), code)
-	var cam := ctx.camera.global_position
-	_want_yaw[code] = Map3DUnits.yaw_for(heading, Vector2(cam.x, cam.z), xz, piece.get("stand_deg", 0.0))
+	# the way it last advanced; a piece never moved its order's way, else at rest
+	var heading: Vector2 = _track.get(code, {}).get("heading", Vector2.ZERO)
+	if heading == Vector2.ZERO:
+		heading = ArmySystem.heading_of(repo, ctx.state(), code)
+	_want_yaw[code] = Map3DUnits.facing_yaw(heading, piece.get("stand_deg", 0.0))
 	_yaw[code] = _yaw.get(code, _want_yaw[code])
 	var yaw := float(_yaw[code])
 	var sit := Map3DUnits.seat_at(repo, ctx.height_at, xz, piece["extent"], yaw, k)
@@ -136,18 +139,13 @@ func _place(code: String, piece: Dictionary) -> void:
 	var up: Vector3 = sit["normal"]
 	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw))
 		.scaled(Vector3(k, k, k)), ground)
-	# the chip hangs over the figures' HEADS, not the spear tips (Map3DUnitRig.head_m)
-	var top := ground + up * float(piece["head_m"]) * k
-	if ctx.camera.is_position_behind(top):
-		return
-	var s_px := ctx.viewport_px_scale()
-	_tops[code] = ctx.camera.unproject_position(top) / s_px
+	_rings[code] = {"at": Vector3(xz.x, float(sit["y"]), xz.y), "up": up, "r": float(piece["half_w_m"]) * k}
 	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, high,
-		float(piece["half_w_m"]) * k, s_px)
+		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())
 
 
 ## Per FRAME: draw every piece where the day's share has it on its march
-## (_day_of), turned to its facing; true when one moved (the chips redraw).
+## (_day_of), turned the way it last advanced; true when one moved (the HUD redraws).
 func step(delta: float) -> bool:
 	if ctx == null or not shown:
 		return false
@@ -162,6 +160,7 @@ func step(delta: float) -> bool:
 		var want := Map3DUnits.along_day(day, ctx.day_share())
 		if now != want:
 			_shown_xz[code] = want
+			_track[code] = Map3DUnits.track(_track.get(code, {}), now, want)
 			_place(code, _pieces[code])
 			moved = true
 		# the feet keep pace with the ground, timed from the day's PLAN (Map3DUnitRig.walk_speed)
@@ -181,8 +180,7 @@ func step(delta: float) -> bool:
 	return moved
 
 
-## Bumped each frame a piece moves (the chips' cache key).
-func moves() -> int: return _moves
+func moves() -> int: return _moves  ## bumped each frame a piece moves
 
 func show_piece(piece: Dictionary, on: bool) -> void: Map3DUnits.show_piece(piece, on)
 
@@ -190,10 +188,13 @@ func show_piece(piece: Dictionary, on: bool) -> void: Map3DUnits.show_piece(piec
 func shown_positions() -> Dictionary: return _shown_xz
 
 
-## The pieces' TOPS in design px, {code: Vector2} — where the chip hangs.
-func screen_tops() -> Dictionary:
-	return _tops
+## The ground under each piece standing before the camera, {code: {at (world),
+## up (its seat's normal), r (its half width, metres)}} — the selection's glow.
+func ground_rings() -> Dictionary:
+	return _rings
 
+
+func has_piece(code: String) -> bool: return _pieces.has(code)  ## a fleet has none: its counter
 
 ## The pieces' boxes on screen, {code: Rect2} in design px — what a click on
 ## the SOLDIER hits (Map3DPicker), before the province under him.
