@@ -458,16 +458,21 @@ func test_the_tags_show_only_near_the_table() -> void:
 	assert_true((pieces.piece(code).get_node("Tag") as Label3D).visible, "a rebuilt piece wears the current setting")
 
 
-func test_the_chalk_ring_follows_a_pushed_piece() -> void:
+## Owner 2026-10-10 (只要玩家点选的单位下方有一个淡淡的光圈即可): a selected
+## piece glows faintly on the table under itself, moving with it.
+func test_the_selection_glow_lies_under_a_pushed_piece() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
-	var hud: WarHud = view.get_node("%Hud")
 	var p: Dictionary = WarRoom.on_sheet(repo, state, _home_sheet())[0]
 	var code := String(p["code"])
 	view.select(code)
-	var ring := func() -> Vector2: return (hud.marks()["rings"][0] as Dictionary)["at"]   # the selection's ring
-	var before: Vector2 = ring.call()
+	assert_eq(pieces.glowing(), [code], "the selected piece glows")
+	assert_eq((view.get_node("%Hud") as WarHud).marks()["rings"], [], "no HUD ring round it")
+	var glow := pieces.piece(code).get_node("Glow") as MeshInstance3D
+	var half: Vector2 = pieces.piece(code).get_meta("half")
+	assert_almost_eq((glow.mesh as PlaneMesh).size.x, maxf(half.x, half.y) * 2.0 * repo.bal("war_select_glow_ratio"),
+		0.00001, "war_select_glow_ratio × the plinth across")
 	ArmySystem.ensure(repo, state)
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(20.0, 0.0)
 	var m := ArmySystem.pack_to_metres(repo, to)
@@ -477,12 +482,12 @@ func test_the_chalk_ring_follows_a_pushed_piece() -> void:
 	assert_true(pieces.pushing())
 	await wait_seconds(repo.bal("war_plot_push_s") * 0.5)
 	assert_true(pieces.pushing(), "half way")
-	var cam: Camera3D = view.get_node("%Camera")
-	var now := cam.unproject_position(pieces.piece(code).global_position) / view.window_scale()
-	assert_almost_eq((ring.call() as Vector2).x, now.x, 0.5, "the ring stands where the piece is mid-push")
-	assert_ne((ring.call() as Vector2).x, before.x, "and it has moved with it")
+	assert_almost_eq(glow.global_position.x, pieces.piece(code).global_position.x, 0.00001,
+		"the glow stands under the piece mid-push")
 	await wait_until(func() -> bool: return not pieces.pushing(), repo.bal("war_plot_push_s") * 2.0)
 	assert_false(pieces.pushing(), "the push is over and the redraws stop")
+	view.clear_selection()
+	assert_eq(pieces.glowing(), [], "let go, it glows no more")
 
 
 ## A click squarely on a piece picks it even where a nearer piece's

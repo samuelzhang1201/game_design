@@ -35,6 +35,7 @@ func update(state: GameState) -> void:
 		if node == null:
 			node = _build_plan(p)
 			add_child(node)
+			_glow(node)
 			_plan_sig[id] = sig
 		_stand(node, p["at"], int(p["facing_deg"]))
 		(node.get_node("Tag") as Label3D).text = tag_text(_repo, p)
