@@ -191,7 +191,7 @@ Inputs the spec implies but a straight reading of the tasks would not test; each
 ### Task 9: Presentation — folio, hover slip, kingdom card, intel ink
 
 **Files:**
-- Modify: `scripts/engine/war_folio.gd` (`_supply`: the state word; a "Deserted" row), `scripts/engine/war_ground.gd` (the forage line), `scripts/engine/map_objects.gd` (the unit card's supply line, the kingdom card's grievance line), the intel-ink drawing that names a province (find it with `grep -rn "intel" scripts/war_room`; add "Stripped" for `Forage.stripped_bare(...)`); `data/conduct_words.csv`
+- Modify: `scripts/engine/war_folio.gd` (`_supply`: the state word; a "Deserted" row; its "under arms" counts at ~lines 64 and 164 and `map_objects.gd` ~943 are heads − dead and must also subtract `deserted`), `scripts/engine/war_ground.gd` (the forage line), `scripts/engine/map_objects.gd` (the unit card's supply line, the kingdom card's grievance line), the intel-ink drawing that names a province (find it with `grep -rn "intel" scripts/war_room`; add "Stripped" for `Forage.stripped_bare(...)`); `data/conduct_words.csv`
 - Modify: `scripts/engine/forage.gd` — `word_of(repo, state, province) -> String` ("rich" ≥ 750 of a full day, "fair" ≥ 400, "thin" > 0, "stripped" 0 — thresholds as `balance.csv` keys `forage_word_rich_permille`, `_fair_permille`, share of the full unstripped summer day) and `stripped_bare(repo, state) -> Array` (sorted provinces above `forage_bare_permille`)
 - Create: `tests/engine/test_conduct_lines.gd`
 
