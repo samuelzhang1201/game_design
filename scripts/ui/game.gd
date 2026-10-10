@@ -5,6 +5,9 @@ signal report_ready(report: TickReport)
 ## A letter was read on the Missive board (final review M7): the read flag
 ## is saved state, so it changes only here.
 signal missive_read(id: int)
+## Letters were marked seen (the board shown, a spy's report opened): the
+## MISSIVE tab's count is redrawn from MissiveLog.unseen.
+signal missives_seen
 ## Emitted after any mutation of Game.state (orders, event choices, court
 ## reactions, tick advance, load). UI that mirrors live state (e.g. the
 ## TopBar) subscribes to this instead of refreshing at call sites.
@@ -367,6 +370,14 @@ func mark_missive_read(id: int) -> void:
 		return
 	MissiveLog.mark_read(state, id)
 	missive_read.emit(id)
+
+## Mark letters SEEN (owner 2026-10-10): all of them when a Missive board is
+## shown (or open as more land), one when a spy's report opens in its dialog.
+func mark_missives_seen(id := -1) -> void:
+	if state == null:
+		return
+	if MissiveLog.mark_seen(state, id):
+		missives_seen.emit()
 
 func save_campaign(path: String = "") -> bool:
 	path = save_path if path == "" else path

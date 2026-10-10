@@ -231,8 +231,17 @@ through `Intel`.
 ## 2. Presentation
 
 **The Missive tab.**
-- `BottomBar.TABS` gains `MISSIVE` after `RELATIONSHIP`, with an unread count
-  drawn on the button (`BottomBar.set_badge(tab, n)`).
+- `BottomBar.TABS` gains `MISSIVE` after `RELATIONSHIP`, with the count of
+  letters not yet SEEN drawn on the button (`BottomBar.set_badge(tab, n)`;
+  none, just "MISSIVE"). Owner 2026-10-10 ("玩家看过了信息就不算新的了，括号的
+  数字只显示玩家没看过的"): `GameState.missives_seen_id` (saved; an old save
+  takes `next_missive_id`, every letter seen) is the highest id seen and
+  `MissiveLog.unseen` counts the letters above it not marked `seen` alone.
+  `Game.mark_missives_seen()` sees them all whenever a board is in front of
+  the player — the overlay shown, the WAR ROOM's easel faced — and again as
+  letters land while it is; a spy's report opened in its dialog is seen alone
+  (`mark_missives_seen(id)`). `read` stays the note's own gold edge, set only
+  by selecting it.
 - `GameRoot` opens and closes `MissiveScreen` like the relations screen,
   stacked in `_switch_to`.
 

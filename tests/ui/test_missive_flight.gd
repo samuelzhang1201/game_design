@@ -61,17 +61,21 @@ func test_a_spy_report_stops_the_clock_and_opens_the_dialog() -> void:
 	r.on_new_missives([id])
 	assert_eq(Game.clock_speed, 0, "the clock stopped")
 	assert_true(r.report_popup().visible)
-	r.refresh_missive_badge()
-	var before := r.bottom_bar().badge("MISSIVE")
+	assert_true(bool(MissiveLog.find(Game.state, id).get("seen", false)),
+		"a report opened in its dialog is seen (owner 2026-10-10)")
+	var before := MissiveLog.unseen(Game.state)
+	var receipt := MissiveLog.add(Game.data, Game.state, MissiveLog.make("receipt", "truth", 3,
+		MissiveLog.subject("point", "", -1, Vector2(500, 300)), "Receipt", []))
+	assert_gt(receipt, id)
 	r.report_popup().seal_button().pressed.emit()
 	await wait_until(func() -> bool: return _flown(r), 2.0)
 	assert_false(r.report_popup().visible)
 	assert_eq(Game.clock_speed, 0, "nothing restarts the clock")
-	# M16 (final review): Seal ends with the letter counted on the tab.
-	assert_eq(r.bottom_bar().badge("MISSIVE"), MissiveLog.unread(Game.state))
-	assert_true(r.bottom_bar().button("MISSIVE").text.contains("(%d)" % MissiveLog.unread(Game.state)),
+	# M16 (final review): Seal ends with the tab's count redrawn — the unseen
+	# receipt alone, never the report just read.
+	assert_eq(r.bottom_bar().badge("MISSIVE"), before + 1)
+	assert_eq(r.bottom_bar().button("MISSIVE").text, "MISSIVE (%d)" % (before + 1),
 		"the tab's label carries the count")
-	assert_gte(r.bottom_bar().badge("MISSIVE"), before)
 
 
 ## Fix round 1 finding 4: spec §2 says the dialog is "centred over the map

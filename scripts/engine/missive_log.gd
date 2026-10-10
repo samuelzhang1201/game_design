@@ -104,6 +104,35 @@ static func unread(state: GameState) -> int:
 	return n
 
 
+## The letters the player has not yet SEEN (owner 2026-10-10: 括号的数字只显示
+## 玩家没看过的): ids above GameState.missives_seen_id not marked `seen` one by
+## one. The MISSIVE tab's count; `read` is the note's own gold edge, apart.
+static func unseen(state: GameState) -> int:
+	var n := 0
+	for m: Dictionary in state.missives:
+		if int(m["id"]) > state.missives_seen_id and not bool(m.get("seen", false)):
+			n += 1
+	return n
+
+
+## Mark letters seen: every letter so far (id < 0: the board was shown), or
+## one letter (a spy's report opened in its dialog). Returns whether the count
+## of unseen letters can have changed.
+static func mark_seen(state: GameState, id := -1) -> bool:
+	if id < 0:
+		if state.missives_seen_id >= state.next_missive_id:
+			return false
+		state.missives_seen_id = state.next_missive_id
+		for m: Dictionary in state.missives:
+			m.erase("seen")   # the mark covers them now
+		return true
+	var m := find(state, id)
+	if m.is_empty() or id <= state.missives_seen_id or bool(m.get("seen", false)):
+		return false
+	m["seen"] = true
+	return true
+
+
 static func mark_read(state: GameState, id: int) -> void:
 	var m := find(state, id)
 	if not m.is_empty():
