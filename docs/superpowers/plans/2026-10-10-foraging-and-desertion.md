@@ -19,7 +19,7 @@
 - Every state move that takes a reason carries one (a legitimacy line: `WorldLedger.apply(repo, state, "metrics.legitimacy", delta, reason, "conduct")`).
 - Design values live in `data/balance.csv` (spec §1.1), words in `data/conduct_words.csv`; no constant a designer would tune in a script. No kingdom or pack name in code, tests or words (`repo.resolve_realm("player_realm")`, `DataRepository.default_pack_id()`).
 - A test takes data from `SuiteData.repo()` / `SuiteData.campaign(repo, seed)`; override a value with `repo.balance["key"] = 12.0`. Wait with `wait_process_frames` / `wait_until`, never `wait_frames`.
-- `./run_tests.sh` must end all-passed with the expected error count (2 with the gdai binaries installed in the worktree, else 0; the script says which). `--fast` while iterating; the whole suite before the last commit of a task that touches more than docs.
+- CI process (`cicd_procedure.md`): `./run_tests.sh --fast` while iterating and before every commit; CI runs the whole `./run_tests.sh` on the pull request, so the full suite is NOT run locally as routine — only to reproduce a CI failure, or for a change under `tests/ui`, `tests/map3d`, `tests/war_room` (outside `--fast`: run those test files directly). The expected error count is 2 with the gdai binaries in the worktree, else 0 (the script says which).
 - The look lives in the editor: this plan adds text lines only; touch no `.tscn`/`.tres`.
 - Nested `CLAUDE.md` files are capped by `tests/engine/test_claude_md_size.gd`; write current rules only, no history, no tuning numbers.
 - "News" in the spec is the marshal's letter: the army's news in this codebase is a missive (`MissiveLog`), so conduct events go out as ONE `supply`-kind letter a day (`MissiveWriter.conduct_dispatch`, Task 8); no separate news-bar channel.
@@ -183,7 +183,7 @@ Inputs the spec implies but a straight reading of the tasks would not test; each
 - [ ] **Step 1: Write the failing test** `test_conduct_missives.gd`: `test_letter_for_each_event_type` (build one event of each type, `conduct_dispatch` gives a letter of kind `supply` with the filled text, no `%s` left); `test_engine_files_one_letter_a_day` (a unit forced desperate at day end → exactly one new missive that day, none on a quiet day); `test_old_save_plays_a_month` (Review Focus 4: strip the new keys from a saved dict, load, run 30 days).
 - [ ] **Step 2: Run;** expect FAIL.
 - [ ] **Step 3: Implement** the call, the writer, the words; un-pend the determinism test.
-- [ ] **Step 4: Run** the whole suite `./run_tests.sh`; PASS with the expected error count.
+- [ ] **Step 4: Run** `./run_tests.sh --fast`; PASS with the expected error count.
 - [ ] **Step 5: Commit** `feat(conduct): daily call and the marshal's letter`.
 
 ---
@@ -220,7 +220,7 @@ Inputs the spec implies but a straight reading of the tasks would not test; each
 
 ### Task 11: Whole-branch check, review and visual review
 
-- [ ] **Step 1:** `./run_tests.sh` (whole suite) passes with the expected error count.
+- [ ] **Step 1:** `./run_tests.sh --fast` passes, and the `tests/ui` files this branch touched are run directly (the whole suite is CI's job on the pull request; run it locally only to reproduce a CI failure).
 - [ ] **Step 2:** One fresh reviewer on the whole branch against the spec; fix the findings in one commit.
 - [ ] **Step 3:** Shoot the added lines with `tools/snapshot_screen.gd --resolution WxH` (real window, never `--headless` for 3D): a unit card and folio with the state word and the deserted row, the war-room hover slip in enemy land, the kingdom card with a grievance, the intel ink "Stripped"; run the `visual-review` skill over them. Fix text that crowds a name.
-- [ ] **Step 4:** Update the memory note `army-supply-and-war-subprojects.md` (B phase I done; phase II prisoners open). **Landing happens only on the owner's word** (ff-only into main, then push).
+- [ ] **Step 4:** Update the memory note `army-supply-and-war-subprojects.md` (B phase I done; phase II prisoners open). **Landing happens only on the owner's word, and through a pull request**: push `feat/foraging-desertion` and open a PR against `main`; the `gut-tests` check (full suite) must be green before merge; no direct push to `main`.
