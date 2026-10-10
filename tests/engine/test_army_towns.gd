@@ -8,7 +8,9 @@ const SuiteData := preload("res://tests/suite_data.gd")
 var repo: DataRepository
 
 func before_all() -> void:
-	repo = SuiteData.repo()
+	# its marches are short hops between the capital and its towns, which the
+	# pack's bay and scarps would bend: walked straight (spec 2026-10-10-march-slope-detour)
+	repo = SuiteData.open_country(SuiteData.repo())
 
 func _xy(code: String) -> Vector2:
 	var b: Dictionary = repo.burgs[code]

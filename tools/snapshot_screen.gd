@@ -674,7 +674,7 @@ func _march3d_step(o: int) -> void:
 			# every column quartered: a land regiment's counter, a town of one regiment
 			for m: Dictionary in mv.army_markers():
 				var r: Rect2 = m["rect"]
-				if not bool(m["naval"]) and (m["codes"] as Array).size() <= 1 \
+				if not bool(m["naval"]) and (m.get("codes", [m.get("code", "")]) as Array).size() <= 1 \
 						and Rect2(Vector2.ZERO, mv.size).has_point(r.get_center()):
 					target = r.get_center()
 					break

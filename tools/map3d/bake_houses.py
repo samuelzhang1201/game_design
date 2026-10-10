@@ -130,14 +130,82 @@ def landmark_height_scale(row, rules):
     return float(own) if own else float(rules["house_height_max"])
 
 
-def _pick(rng, types, role, group):
-    """One type of this role that the group allows, by weight."""
-    keys = sorted(t for t, r in types.items()
-                  if r["role"] == role and _group_allows(group, r["min_group"]))
+def _pick(rng, types, role, group, t=0.0, rules=None):
+    """One type of this role by weight. `t` is how far out the house stands
+    (0 the core, 1 the rim of the cluster): past `house_rim_frac` a type's
+    `rim_mul` scales its weight (cottages crowd the edge, townhouses thin
+    out); inside it a type the group does NOT allow may stray in by its
+    `stray_weight` (a workshop in a village's core), owner 2026-10-10: more
+    house variants. A table without those columns draws as it always did."""
+    rim = t >= float((rules or {}).get("house_rim_frac", 1.0))
+    keys, ws = [], []
+    for k in sorted(types):
+        r = types[k]
+        if r["role"] != role:
+            continue
+        if _group_allows(group, r["min_group"]):
+            w = float(r["weight"]) * (float(r.get("rim_mul") or 1.0) if rim else 1.0)
+        elif not rim and role == "house":
+            w = float(r.get("stray_weight") or 0.0)
+        else:
+            w = 0.0
+        if w > 0.0:
+            keys.append(k)
+            ws.append(w)
     if not keys:
         return None
-    w = np.array([float(types[t]["weight"]) for t in keys], dtype=np.float64)
+    w = np.array(ws, dtype=np.float64)
     return keys[int(rng.choice(len(keys), p=w / w.sum()))]
+
+
+def palette_of(code, salt, palettes):
+    """Which of `palettes` colour palettes a settlement wears: a stable hash
+    of its code, `salt` apart for the wall and the roof."""
+    return _seed("%s|%s" % (code, salt)) % max(int(palettes), 1)
+
+
+def assign_variants(rows, code, rules, types):
+    """Give every row of one settlement its `wall` and `roof` tint index
+    (owner 2026-10-10: the houses repeat too much): the settlement wears one
+    wall palette and one roof palette (palette_of), each house a colour of
+    those, and no house takes the (type, wall, roof) of another within
+    `house_variant_clear_m` while another pair of the palette is free.
+    Deterministic from the burg's code and the rows' order. Positions are in
+    metres in any one frame."""
+    pw, sw = int(rules.get("house_wall_palettes", 1)), int(rules.get("house_wall_palette_size", 1))
+    pr, sr = int(rules.get("house_roof_palettes", 1)), int(rules.get("house_roof_palette_size", 1))
+    if pw * sw <= 1 and pr * sr <= 1:
+        return rows
+    clear = float(rules.get("house_variant_clear_m", 0.0))
+    wall0 = palette_of(code, "wall", pw) * sw
+    roof0 = palette_of(code, "roof", pr) * sr
+    rng = np.random.default_rng(_seed(code + "|variants"))
+    pairs = [(wall0 + a, roof0 + b) for a in range(sw) for b in range(sr)]
+    placed = []   # (x, z, type, wall, roof)
+    for r in rows:
+        if types.get(r["type"], {}).get("role") not in ("house", "barn", "landmark"):
+            continue
+        near = {(t, w, f) for x, z, t, w, f in placed
+                if math.hypot(x - r["x_m"], z - r["z_m"]) < clear}
+        free = [p for p in pairs if (r["type"], p[0], p[1]) not in near]
+        w, f = (free or pairs)[int(rng.integers(len(free or pairs)))]
+        r["wall"], r["roof"] = w, f
+        placed.append((r["x_m"], r["z_m"], r["type"], w, f))
+    return rows
+
+
+def identical_neighbours(rows, clear):
+    """Pairs of rows of one settlement with the same type, wall and roof
+    within `clear` metres (what assign_variants avoids)."""
+    out = []
+    for i, a in enumerate(rows):
+        for b in rows[i + 1:]:
+            if a.get("wall") is None or a["type"] != b["type"]:
+                continue
+            if (a["wall"], a["roof"]) == (b["wall"], b["roof"]) \
+                    and math.hypot(a["x_m"] - b["x_m"], a["z_m"] - b["z_m"]) < clear:
+                out.append((a, b))
+    return out
 
 
 def _pick_landmark(types, group, code=""):
@@ -667,6 +735,8 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
     hmin, hmax = float(rules["house_height_min"]), float(rules["house_height_max"])
     span = hmax - hmin
     scale_min = float(rules["house_edge_scale_min"])
+    sj = float(rules.get("house_scale_jitter", 0.08))
+    vrng = np.random.default_rng(_seed(code + "|stretch"))
 
     # fix round 1, finding 2: filling greedily nearest-first up to a flat
     # n_target and then stopping cuts a hard circle -- full density right up
@@ -722,6 +792,11 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
 
     def _try_place(ox, oz, yaw, pick, ring, foot_min=None):
         d = math.hypot(ox, oz)
+        # the type's own width stretch (owner 2026-10-10): drawn from its own
+        # stream so the layout's rng is untouched; the rectangle reserved is
+        # the stretched one
+        st = float(types[pick].get("stretch") or 0.0)
+        stretch = 1.0 + float(vrng.uniform(-st, st)) if st > 0.0 else 1.0
         if d > r_house or d < 1e-6:
             return False
         vx, vy = cx + ox / VERTEX_M, cy + oz / VERTEX_M
@@ -734,6 +809,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
         if _slope(height, vx, vy, vw, vh) > rules["house_max_slope"]:
             return False
         half = half_extents(types[pick])
+        half = (half[0], half[1] * stretch)
         # owner 2026-09-24 (不可以被地面遮住部分): the runtime stands a house on
         # its highest ground over a foundation down to its lowest, so a plot
         # the ground falls across by more than this would stand on a tower
@@ -762,13 +838,15 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
         # the nominal r_house, which the ring quotas now genuinely reach
         t = float(np.clip(d / max(r_house, 1e-6), 0.0, 1.0))
         base_h = hmax - span * t
-        h_jitter = rng.uniform(-0.3 * span, 0.3 * span) if span > 0 else 0.0
+        hj = float(rules.get("house_height_jitter", 0.3))
+        h_jitter = rng.uniform(-hj * span, hj * span) if span > 0 else 0.0
         height_scale = float(np.clip(base_h + h_jitter, hmin, hmax))
         base_scale = 1.0 - (1.0 - scale_min) * t
         taken.append((ox, oz, half, yaw))
         rows.append({"burg_code": code, "rank": 0, "x_m": float(round(ox, 2)),
                      "z_m": float(round(oz, 2)), "yaw_deg": float(round(yaw % 360.0, 2)),
-                     "type": pick, "scale": float(round(base_scale * rng.uniform(0.92, 1.08), 3)),
+                     "type": pick, "stretch": float(round(stretch, 3)),
+                     "scale": float(round(base_scale * rng.uniform(1.0 - sj, 1.0 + sj), 3)),
                      "height_scale": float(round(height_scale, 3))})
         ring_counts[ring] += 1
         return True
@@ -790,7 +868,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
             if enforce_quota and ring_counts[ring] >= frontage_cap[ring]:
                 continue   # frontage's own share of this band is spent
             role = "barn" if d0 > barn_r else "house"
-            pick = _pick(rng, types, role, group)
+            pick = _pick(rng, types, role, group, d0 / max(r_house, 1e-6), rules)
             if pick is None:
                 continue
             half = 0.5 * float(types[pick]["footprint_m"])
@@ -835,7 +913,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
             if enforce_quota and ring_counts[ring] >= quotas[ring]:
                 continue
             role = "barn" if d > barn_r else "house"
-            pick = _pick(rng, types, role, group)
+            pick = _pick(rng, types, role, group, d / max(r_house, 1e-6), rules)
             if pick is None:
                 continue
             half = 0.5 * float(types[pick]["footprint_m"])
@@ -924,6 +1002,7 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
         for i, r in enumerate(rows):
             r["rank"] = i
 
+    assign_variants(rows, code, rules, types)
     for r in rows:   # back from the landmark's frame to the burg's own point
         r["x_m"] = float(round(r["x_m"] + lx, 2))
         r["z_m"] = float(round(r["z_m"] + lz, 2))

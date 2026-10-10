@@ -66,7 +66,7 @@ func _draw_aim() -> void:
 	var wps := view.aim_waypoints
 	# from where the piece is DRAWN, along the ground it will walk (owner 2026-09-30: 贴地)
 	var world: Array = []
-	for p: Vector2 in ArmySystem.curve_px(repo, from, Array(wps), to_px):
+	for p: Vector2 in ArmySystem.curve_px(repo, from, Array(wps), to_px, String(reg.get("is_naval", "0")) == "1"):
 		world.append(ctx.to_world(p))
 	var path := PackedVector2Array()
 	for i in range(1, world.size()):

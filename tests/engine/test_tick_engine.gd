@@ -5,7 +5,9 @@ var data: DataRepository
 var engine: TickEngine
 
 func before_each() -> void:
-	data = SuiteData.repo()
+	# its marches are short hops between the capital and its towns, which the
+	# pack's bay and scarps would bend: walked straight (spec 2026-10-10-march-slope-detour)
+	data = SuiteData.open_country(SuiteData.repo())
 	engine = TickEngine.new(data)
 
 ## The month's settlement (spec §5): the crown's provinces in full, a share

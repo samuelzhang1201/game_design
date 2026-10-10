@@ -733,9 +733,8 @@ static func _march_host(repo: DataRepository, state: GameState, host_code: Strin
 			continue
 		if int(e["x_m"]) == to.x and int(e["y_m"]) == to.y:
 			continue
-		e["dest_x_m"] = to.x
-		e["dest_y_m"] = to.y
-		e["order"] = ArmySystem.ORDER_MARCH
+		# round ground it cannot climb, as the crown's columns go (MarchPath)
+		ArmySystem.aim_entry(repo, e, to, ArmySystem.is_naval(repo, state, c))
 
 
 ## A regiment's place in whole metres: its stored state's, else the pack's.

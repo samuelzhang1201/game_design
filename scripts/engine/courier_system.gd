@@ -479,6 +479,16 @@ static func day_ahead_of(repo: DataRepository, state: GameState, code: String) -
 	return ArmySystem.march_ahead(repo, state, code, entry)
 
 
+## The day now running's march of a regiment (owner 2026-10-10: a piece cut a
+## corner over the scarp its column walks round): the corners of its route it
+## passes today, then where the day leaves it (day_ahead_of), whole metres.
+static func day_path_of(repo: DataRepository, state: GameState, code: String) -> Array:
+	var entry: Dictionary = (state.regiments.get(code, {}) as Dictionary).duplicate(true)
+	var before: Array = entry.get("route_m", [])
+	var now := ArmySystem.march_ahead(repo, state, code, entry)
+	return passed_points(before, (entry.get("route_m", []) as Array).size(), now)
+
+
 ## The points (whole metres) a courier passed on a day: the waypoints his road
 ## dropped from its front, then where he stands.
 static func passed_points(old_path: Array, new_size: int, now: Vector2i) -> Array:

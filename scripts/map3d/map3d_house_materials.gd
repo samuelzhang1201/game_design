@@ -18,7 +18,8 @@ const HOUSE_SHADER := preload("res://scripts/map3d/house_surface.gdshader")
 ## them later). A surface whose scene material is not house_surface.gdshader
 ## keeps it as it is — untinted, no weather — and says so once.
 static func tinted(mesh: Mesh, materials: Array, wall_tints: PackedVector3Array,
-		roof_tints: PackedVector3Array, weather: Dictionary, made: Array) -> Mesh:
+		roof_tints: PackedVector3Array, weather: Dictionary, made: Array,
+		trim_tints: PackedVector3Array = PackedVector3Array()) -> Mesh:
 	var out := mesh.duplicate() as Mesh
 	if not (out is ArrayMesh):
 		return mesh
@@ -35,6 +36,9 @@ static func tinted(mesh: Mesh, materials: Array, wall_tints: PackedVector3Array,
 		mat.set_shader_parameter("roof_tints", roof_tints)
 		mat.set_shader_parameter("wall_count", wall_tints.size())
 		mat.set_shader_parameter("roof_count", roof_tints.size())
+		if trim_tints.size() > 1:
+			mat.set_shader_parameter("trim_tints", trim_tints)
+			mat.set_shader_parameter("trim_count", trim_tints.size())
 		made.append(mat)
 		for key: String in weather: mat.set_shader_parameter(key, weather[key])
 		(out as ArrayMesh).surface_set_material(i, mat)
