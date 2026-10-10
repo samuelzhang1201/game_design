@@ -22,12 +22,12 @@ By the holder of the unit's province: `home` (the crown's own), `enemy` (`Intel.
 
 - Capacity: the province's burgs' `food`-tagged production units × `forage_supply_per_food_unit` × the season's `forage_<season>_permille` (`Forage.monthly_capacity`); cut by `GameState.forage_stripped` (per mille) into the month's remainder; day `d` gets the running thirtieth, so the days sum to the month before `day_capacity` scales the day by `forage_share_permille`/1000 (a scale, not a cap).
 - `Forage.shares` splits the day among the province's foragers by need (carried-load order less supplies, bounded by what the unit may hold), each cut by `forage_protect_cut_permille` per law of `protect_church`, `protect_women` it keeps. A unit never takes past its need or its cap; leftover goes to no one.
-- Each taker raises `supplies` and `forage_days`, and strips the province by `taken × forage_strip_k / monthly_capacity` (floor, per taker). At or past `forage_hazard_strip_permille` (`_protected` if any taker keeps `protect_church`) the province gets the "Raided" hazard once while it stands (laid again after it expires). Crossing `forage_bare_permille` files `stripped_bare` once per crossing.
+- Each taker raises `supplies` (and `forage_days`, only on a day it took more than 0), and strips the province by `taken × forage_strip_k / monthly_capacity` (floor, per taker). At or past `forage_hazard_strip_permille` (`_protected` if any taker keeps `protect_church`) the province gets the "Raided" hazard once while it stands (laid again after it expires). Crossing `forage_bare_permille` files `stripped_bare` once per crossing.
 - `Forage.word_of` is the slip's "rich | fair | thin | stripped" (today's yield against a full summer day, `forage_word_*`).
 
 ## The month's settlement (`settle_month`, day 30)
 
-For each unit with `forage_days = d > 0`, wherever it now stands: morale up `forage_morale_month × d/30`, training down `forage_training_month × d/30` (floor 0), morale capped at 100, wounded up by `forage_harass_permille` of the fit men × d/30; `forage_days` reset. Every stripped province recovers `forage_recover_permille` (sorted, zero entries erased). `conduct_marks` of an older month are dropped.
+For each unit with `forage_days = d > 0`, wherever it now stands: morale up `forage_morale_month × d/30`, training down `forage_training_month × d/30` but never below `forage_training_floor` (a unit already under it keeps its training), morale capped at 100, wounded up by `forage_harass_permille` of the fit men × d/30; `forage_days` reset. Every stripped province recovers `forage_recover_permille` (sorted, zero entries erased). `conduct_marks` of an older month are dropped.
 
 ## Desertion (`Desertion`, home land only)
 

@@ -162,7 +162,8 @@ static func take_day(repo: DataRepository, state: GameState, province: String, c
 		var have := int(entry.get("supplies", 0))
 		var got := maxi(0, mini(int(shares.get(c, 0)), cap - have))
 		entry["supplies"] = have + got
-		entry["forage_days"] = int(entry.get("forage_days", 0)) + 1
+		if got > 0:   # a day that took nothing is no day of foraging (ruling R7)
+			entry["forage_days"] = int(entry.get("forage_days", 0)) + 1
 		Forage.strip(repo, state, province, got)   # per taker, floored each (spec §3.3 step 7)
 		if LawSystem.value(repo, state, "protect_church", c) == "on":
 			protected = true
@@ -192,7 +193,10 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 		if d <= 0:
 			continue
 		entry["morale"] = mini(100, int(entry.get("morale", 0)) + int(repo.bal("forage_morale_month")) * d / Calendar.DAYS_PER_TICK)
-		entry["training"] = maxi(0, int(entry.get("training", 0)) - int(repo.bal("forage_training_month")) * d / Calendar.DAYS_PER_TICK)
+		# never below forage_training_floor; a unit already under it keeps what it has (ruling R7)
+		var training := int(entry.get("training", 0))
+		entry["training"] = maxi(training - int(repo.bal("forage_training_month")) * d / Calendar.DAYS_PER_TICK,
+			mini(training, int(repo.bal("forage_training_floor"))))
 		var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, c, state)), entry)
 		var hurt := mini(fit, fit * int(repo.bal("forage_harass_permille")) * d / (Calendar.DAYS_PER_TICK * 1000))
 		entry["wounded"] = int(entry.get("wounded", 0)) + hurt

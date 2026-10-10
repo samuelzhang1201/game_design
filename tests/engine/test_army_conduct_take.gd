@@ -179,7 +179,38 @@ func test_settle_caps_morale_and_floors_training() -> void:
 	state.regiments[code]["training"] = 1
 	var r := _settle_with(30)
 	assert_eq(int(r["entry"]["morale"]), 100)
-	assert_eq(int(r["entry"]["training"]), 0)
+	assert_eq(int(r["entry"]["training"]), 1, "already under forage_training_floor 5: unchanged")
+
+
+func test_training_loss_stops_at_the_floor() -> void:
+	# ruling R7: forage_training_floor 5; 6 - 3 x 30 / 30 = 3 -> 5
+	assert_eq(repo.bal("forage_training_floor"), 5.0)
+	state.regiments[code]["training"] = 6
+	var r := _settle_with(30)
+	assert_eq(int(r["entry"]["training"]), 5)
+
+
+func test_training_under_the_floor_is_kept() -> void:
+	# 4 - 3 = 1, but foraging never takes it below min(4, 5) = 4
+	state.regiments[code]["training"] = 4
+	var r := _settle_with(30)
+	assert_eq(int(r["entry"]["training"]), 4)
+
+
+func test_a_day_that_takes_nothing_is_no_forage_day() -> void:
+	# ruling R7: full stores take 0, so the day does not count
+	H.set_food(repo, prov, 9)
+	var entry: Dictionary = state.regiments[code]
+	var reg := ArmySystem.regiment(repo, code, state)
+	entry["supplies"] = ArmySystem.max_units(repo, ArmySystem.supply_use(repo, reg, state))
+	ArmyConduct.take_day(repo, state, prov, [code])
+	assert_eq(int(entry["forage_days"]), 0)
+	# stripped bare land takes 0 too
+	entry["supplies"] = 0
+	state.forage_stripped[prov] = 1000
+	ArmyConduct.take_day(repo, state, prov, [code])
+	assert_eq(int(entry["supplies"]), 0)
+	assert_eq(int(entry["forage_days"]), 0)
 
 
 func test_settle_waits_for_the_month_end() -> void:

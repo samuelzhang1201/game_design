@@ -989,6 +989,7 @@ forage_hazard_strip_permille,500,spec 2026-10-10-foraging-and-desertion §1.1
 forage_hazard_strip_permille_protected,750,spec 2026-10-10-foraging-and-desertion §1.1
 forage_morale_month,4,spec 2026-10-10-foraging-and-desertion §1.1
 forage_training_month,3,spec 2026-10-10-foraging-and-desertion §1.1
+forage_training_floor,5,"spec 2026-10-10-foraging-and-desertion §1.1, §3.3 step 8 (ruling R7): the month's foraging never takes training below this (a unit already under it keeps what it has)"
 forage_harass_permille,10,spec 2026-10-10-foraging-and-desertion §1.1
 forage_protect_cut_permille,100,spec 2026-10-10-foraging-and-desertion §1.1
 forage_incident_legitimacy,3,spec 2026-10-10-foraging-and-desertion §1.1

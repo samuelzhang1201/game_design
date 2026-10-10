@@ -10,7 +10,7 @@ const KEYS: Array[String] = [
 	"forage_share_permille", "forage_strip_k", "forage_recover_permille", "forage_bare_permille",
 	"forage_word_rich_permille", "forage_word_fair_permille",
 	"forage_hazard_strip_permille", "forage_hazard_strip_permille_protected",
-	"forage_morale_month", "forage_training_month", "forage_harass_permille",
+	"forage_morale_month", "forage_training_month", "forage_training_floor", "forage_harass_permille",
 	"forage_protect_cut_permille", "forage_incident_legitimacy",
 	"forage_grievance_month", "forage_grievance_month_protected",
 	"desert_morale", "desert_training", "desert_supply_days", "desert_permille_per_day",

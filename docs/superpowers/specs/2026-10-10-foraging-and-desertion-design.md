@@ -67,6 +67,7 @@ words in a new `data/conduct_words.csv` (`key,text`); laws in `laws.csv`,
 | `forage_word_rich_permille` / `_fair_permille` | 750 / 400 | the slip's "rich" and "fair": today's yield per mille of a full summer day (above 0 but under "fair" is "thin", 0 is "stripped") |
 | `forage_hazard_strip_permille` / `_protected` | 500 / 750 | stripping past which the province gets the "Raided" hazard; the second with `protect_church` on |
 | `forage_morale_month` / `forage_training_month` | 4 / 3 | morale gained / training lost for 30 days foraging |
+| `forage_training_floor` | 5 | the month's foraging never takes training below this (ruling R7) |
 | `forage_harass_permille` | 10 | share of the fit men wounded for 30 days foraging |
 | `forage_protect_cut_permille` | 100 | the yield lost for each of `protect_church`, `protect_women` on |
 | `forage_incident_legitimacy` | 3 | legitimacy lost when an unlawful start happens (once per unit per month) |
@@ -163,14 +164,18 @@ hazards through the call `RaidSystem` uses).
    crown land unit in the same province with `forage = ""` becomes `desperate`
    the same day, without its own legitimacy charge or news.
 7. **Taking:** each unit with `forage != ""` takes its share (§3.1), its
-   `supplies` rise, `forage_days += 1`. The province's stripping rises by
+   `supplies` rise, and `forage_days += 1` only when it took more than 0 (a
+   day that took nothing, full stores or stripped land, is no foraging day). The province's stripping rises by
    `taken × forage_strip_k / monthly_capacity` per taker (floor). Past
    `forage_hazard_strip_permille` (or `_protected`) the province gets the
    "Raided" hazard once. Crossing `forage_bare_permille` files the "stripped
    bare" news once per crossing.
 8. **The month's last day:** for each unit with `forage_days = d > 0`: morale
    += `forage_morale_month × d / 30`, training −= `forage_training_month × d
-   / 30` (floor at 0), wounded += `fit × forage_harass_permille × d / 30000`;
+   / 30` but never below `forage_training_floor` (a unit already under it
+   keeps what it has; ruling R7: training does not recover by itself, so
+   foraging alone must not push a unit under its own restart or desertion
+   line), wounded += `fit × forage_harass_permille × d / 30000`;
    `forage_days` reset. Every province's stripping recovers by
    `forage_recover_permille` (sorted order, clamped 0..1000, zero entries
    erased). Old `conduct_marks` are dropped.
