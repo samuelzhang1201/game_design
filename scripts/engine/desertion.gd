@@ -53,6 +53,6 @@ static func daily_loss(repo: DataRepository, state: GameState, code: String) -> 
 	var units := fit * rate + int(entry.get("desert_rem", 0))
 	@warning_ignore("integer_division")
 	var lost := mini(units / SCALE, fit)
-	entry["desert_rem"] = units % SCALE
+	entry["desert_rem"] = 0 if lost >= fit else units % SCALE   # nobody left to carry a fraction of
 	entry["deserted"] = int(entry.get("deserted", 0)) + lost
 	return lost

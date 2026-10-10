@@ -205,3 +205,48 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 	for k: String in marks:
 		if int(state.conduct_marks[k]) != state.tick:
 			state.conduct_marks.erase(k)
+
+
+## One day of the crown's columns on the land (spec 2026-10-10-foraging-and-
+## desertion §3.3): pass 1 per land unit in code order (home land: stop living
+## off it and desert; other land: switch), pass 2 the day's take per province
+## (provinces and codes sorted), pass 3 the month's settlement (day 30 only).
+## Fleets, foes and units that eat nothing are skipped. Returns the events in
+## the order made; mutates nothing but `state`.
+static func day_step(repo: DataRepository, state: GameState) -> Array:
+	var out: Array = []
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	var foragers: Dictionary = {}   # province -> [codes]
+	for c: String in codes:
+		if state.foes.has(c):
+			continue
+		var entry: Dictionary = state.regiments[c]
+		var reg := ArmySystem.regiment(repo, c, state)
+		if entry.is_empty() or reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		if ArmySystem.supply_use(repo, reg, state) <= 0:
+			continue
+		var province := ArmySystem.province_of(repo, state, reg)
+		var kind := Forage.land_kind(repo, state, province)
+		if kind == Forage.HOME:
+			entry["forage"] = ""
+			var was := int(entry.get("deserted", 0))
+			var lost := Desertion.daily_loss(repo, state, c)
+			if lost > 0 and mark_once(repo, state, "desert_news:" + c):
+				out.append({"type": "deserting", "regiment": c, "lost": lost})
+			var line := int(repo.bal("desert_news_cumulative_permille")) * ArmySystem.headcount(repo, reg)
+			if was * 1000 <= line and line < int(entry.get("deserted", 0)) * 1000:
+				out.append({"type": "deserting_big", "regiment": c})
+			continue
+		out.append_array(switch(repo, state, c, province, kind))
+		if String(entry.get("forage", "")) != "":
+			if not foragers.has(province):
+				foragers[province] = []
+			(foragers[province] as Array).append(c)
+	var provs: Array = foragers.keys()
+	provs.sort()
+	for p: String in provs:
+		out.append_array(take_day(repo, state, p, foragers[p]))
+	settle_month(repo, state)
+	return out
