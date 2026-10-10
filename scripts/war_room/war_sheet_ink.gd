@@ -119,6 +119,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		var t := {"code": code, "at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
 			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"}
 		t.merge(town_marks(repo, code))
+		t["name_dx"] = name_dx(repo, tier, px_k)
 		# a works glyph stands above the ring, a market's scales below it — clear
 		# of a walled town's square and its corner towers
 		var ring := repo.bal("war_ink_town_px") * px_k * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
@@ -198,6 +199,7 @@ static func graticule(repo: DataRepository, sheet: Dictionary, k: float, px_k :=
 	var step := MapCoords.px_per_deg(repo) * repo.bal("war_grid_deg")
 	var pad := repo.bal("war_grid_label_pad_px") * px_k
 	var size := int(round(repo.bal("war_grid_label_px") * px_k))
+	var alpha := repo.bal("war_grid_label_alpha")
 	var out: Array = []
 	var x0 := ceili(cell.position.x / step.x + 0.001)
 	var x1 := floori(cell.end.x / step.x - 0.001)
@@ -205,16 +207,16 @@ static func graticule(repo: DataRepository, sheet: Dictionary, k: float, px_k :=
 		var x := (float(i) * step.x - r.position.x) * k
 		var lon := MapCoords.lon_lat(repo, Vector2(float(i) * step.x, 0.0)).x
 		var text := "%d°%s" % [absi(roundi(lon)), "W" if roundi(lon) < 0 else "E"]
-		out.append({"at": Vector2(x, (cell.position.y - r.position.y) * k + pad), "side": "n", "text": text, "size": size})
-		out.append({"at": Vector2(x, (cell.end.y - r.position.y) * k - pad), "side": "s", "text": text, "size": size})
+		out.append({"at": Vector2(x, (cell.position.y - r.position.y) * k + pad), "side": "n", "text": text, "size": size, "alpha": alpha})
+		out.append({"at": Vector2(x, (cell.end.y - r.position.y) * k - pad), "side": "s", "text": text, "size": size, "alpha": alpha})
 	var y0 := ceili(cell.position.y / step.y + 0.001)
 	var y1 := floori(cell.end.y / step.y - 0.001)
 	for j in range(y0, y1 + 1):
 		var y := (float(j) * step.y - r.position.y) * k
 		var lat := MapCoords.lon_lat(repo, Vector2(0.0, float(j) * step.y)).y
 		var text := "%d°%s" % [absi(roundi(lat)), "S" if roundi(lat) < 0 else "N"]
-		out.append({"at": Vector2((cell.position.x - r.position.x) * k + pad, y), "side": "w", "text": text, "size": size})
-		out.append({"at": Vector2((cell.end.x - r.position.x) * k - pad, y), "side": "e", "text": text, "size": size})
+		out.append({"at": Vector2((cell.position.x - r.position.x) * k + pad, y), "side": "w", "text": text, "size": size, "alpha": alpha})
+		out.append({"at": Vector2((cell.end.x - r.position.x) * k - pad, y), "side": "e", "text": text, "size": size, "alpha": alpha})
 	return out
 
 
@@ -231,7 +233,7 @@ static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> 
 	var town := repo.bal("war_ink_town_px") * px_k
 	var r := town * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
 	var label := repo.bal("war_ink_label_px") * px_k
-	var w := r + town * repo.bal("war_ink_label_gap_ratio") + float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
+	var w := float(t.get("name_dx", name_dx(repo, int(t["tier"]), px_k))) + float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
 	var h := maxf(r, label * 0.6)
 	var up := h
 	var down := h
@@ -242,6 +244,30 @@ static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> 
 		down = maxf(down, clear + repo.bal("war_ink_market_px") * px_k * 1.25)
 	var at: Vector2 = t["at"]
 	return Rect2(at.x - r, at.y - up, r + w, up + down)
+
+
+## The foot of a seat piece's round plinth on the sheet, as a radius in ink px
+## (war_piece_plinth_mm on a sheet war_table_w_m wide, the texture war_sheet_texture_px across).
+static func plinth_radius_px(repo: DataRepository, px_k := 1.0) -> float:
+	return repo.bal("war_piece_plinth_mm") / 1000.0 * 0.5 / repo.bal("war_table_w_m") * repo.bal("war_sheet_texture_px") * px_k
+
+
+## How far right of its town's point a name starts: the ring and the gap, or
+## clear of the plinth of the unit seated on the town's point (static: the
+## seat's spot never moves, so the cached ink never redraws for a march).
+static func name_dx(repo: DataRepository, tier: int, px_k := 1.0) -> float:
+	var town := repo.bal("war_ink_town_px") * px_k
+	var r := town * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
+	return maxf(r + town * repo.bal("war_ink_label_gap_ratio"), plinth_radius_px(repo, px_k) + repo.bal("war_ink_label_clear_px") * px_k)
+
+
+## A town's name alone as a box, ink px (where the painter sets the lettering).
+static func town_name_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> Rect2:
+	var label := repo.bal("war_ink_label_px") * px_k
+	var w := float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
+	var at: Vector2 = t["at"]
+	var dx := float(t.get("name_dx", name_dx(repo, int(t["tier"]), px_k)))
+	return Rect2(at.x + dx, at.y - label * 0.65, w, label)
 
 
 ## A manor's name as a box, ink px, centred where the painter sets it.

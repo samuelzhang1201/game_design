@@ -12,7 +12,7 @@ extends RefCounted
 ## The painter's widths (war_ink_<k>_px) and ratios (war_ink_<k>), by short key.
 const INK_PX := ["road", "trail", "river", "coast", "border", "band", "seam", "town", "label", "dash", "gap",
 	"wood", "manor", "manor_label", "manor_dash", "manor_gap", "river_label", "bridge", "trade", "works", "market",
-	"river_feather"]
+	"river_feather", "label_halo"]
 const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_dot_ratio", "label_gap_ratio",
 	"label_drop_ratio", "peak_label_ratio", "peak_half_w", "peak_drop", "border_dot_ratio", "wall_ratio", "anchor_ratio", "char_w",
 	"river_label_lift"]

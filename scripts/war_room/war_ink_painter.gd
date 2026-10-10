@@ -132,9 +132,12 @@ func _draw() -> void:
 			draw_line(an + Vector2(0, -aa), an + Vector2(0, aa), c_ink, aw, true)
 			draw_line(an + Vector2(-aa * 0.45, -aa * 0.55), an + Vector2(aa * 0.45, -aa * 0.55), c_ink, aw, true)
 			draw_arc(an + Vector2(0, aa * 0.2), aa * 0.75, 0.15 * PI, 0.85 * PI, 10, c_ink, aw, true)
-		draw_string(font, (t["at"] as Vector2) + Vector2(r + float(px["town"]) * float(px["label_gap_ratio"]),
-			float(px["label"]) * float(px["label_drop_ratio"])), String(t["label"]),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["label"]), c_ink)
+		var name_at := (t["at"] as Vector2) + Vector2(float(t["name_dx"]), float(px["label"]) * float(px["label_drop_ratio"]))
+		if float(px.get("label_halo", 0.0)) > 0.0:   # a paper halo, so a contour or a road leaves the letters whole
+			var halo_c: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
+			draw_string_outline(font, name_at, String(t["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["label"]),
+				int(round(float(px["label_halo"]))), halo_c)
+		draw_string(font, name_at, String(t["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["label"]), c_ink)
 		# a works' glyph above, a market's scales below, each on a parchment
 		# knock-out so a road leaving the town does not run through it
 		var ground: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
@@ -285,8 +288,8 @@ static func _point_at(poly: PackedVector2Array, arc: PackedFloat32Array, s: floa
 func _draw_graticule(_c_ink: Color) -> void:
 	var c_fig: Color = pal.get("rubric", _c_ink)
 	var ground: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
-	ground.a = 0.6
 	for g: Dictionary in ink.get("graticule", []):
+		ground.a = float(g.get("alpha", 0.6))
 		var fs := int(g["size"])
 		var text := String(g["text"])
 		var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
