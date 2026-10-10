@@ -170,15 +170,19 @@ hazards through the call `RaidSystem` uses).
    `forage_hazard_strip_permille` (or `_protected`) the province gets the
    "Raided" hazard once. Crossing `forage_bare_permille` files the "stripped
    bare" news once per crossing.
-8. **The month's last day:** for each unit with `forage_days = d > 0`: morale
+8. **The month's end:** for each unit with `forage_days = d > 0`: morale
    += `forage_morale_month × d / 30`, training −= `forage_training_month × d
    / 30` but never below `forage_training_floor` (a unit already under it
    keeps what it has; ruling R7: training does not recover by itself, so
    foraging alone must not push a unit under its own restart or desertion
    line), wounded += `fit × forage_harass_permille × d / 30000`;
-   `forage_days` reset. Every province's stripping recovers by
+   `forage_days` reset. This unit settlement (`ArmyConduct.settle_units`)
+   runs once a month in `TickEngine.advance` right after
+   `ArmySystem.settle_month` (ruling R8), so the month's morale drift and
+   wound recovery do not undo it. On the month's last day `day_step`
+   (`settle_provinces`) recovers every province's stripping by
    `forage_recover_permille` (sorted order, clamped 0..1000, zero entries
-   erased). Old `conduct_marks` are dropped.
+   erased) and drops the old `conduct_marks`.
 9. **Desertion letter facts** (only on home land): `desert_news:<code>` the first
    time a unit loses men in a month; once (judged by the crossing, no mark) when
    `deserted` first exceeds `desert_news_cumulative_permille` of the unit's

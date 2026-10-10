@@ -1,7 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 const H := preload("res://tests/engine/conduct_helpers.gd")
-## ArmyConduct taking and the month's settlement (spec
+## ArmyConduct taking and the month's settlement (settle_units, settle_provinces; spec
 ## 2026-10-10-foraging-and-desertion §3.3 steps 7-8), hand-computed from the
 ## balance defaults: 30 supply per food unit, summer 1000, share 1000, strip_k
 ## 500, recover 100, hazard line 500 (750 protected), bare 900, morale +4,
@@ -152,7 +152,7 @@ func _settle_with(d: int) -> Dictionary:
 	state.regiments[code]["forage_days"] = d
 	var reg := ArmySystem.regiment(repo, code, state)
 	var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), state.regiments[code])
-	ArmyConduct.settle_month(repo, state)
+	ArmyConduct.settle_units(repo, state)
 	return {"fit": fit, "entry": state.regiments[code]}
 
 
@@ -213,12 +213,12 @@ func test_a_day_that_takes_nothing_is_no_forage_day() -> void:
 	assert_eq(int(entry["forage_days"]), 0)
 
 
-func test_settle_waits_for_the_month_end() -> void:
+func test_province_recovery_waits_for_the_month_end() -> void:
 	state.day = 29
 	state.regiments[code]["forage_days"] = 12
 	state.forage_stripped[prov] = 500
-	ArmyConduct.settle_month(repo, state)
-	assert_eq(int(state.regiments[code]["forage_days"]), 12)
+	ArmyConduct.settle_provinces(repo, state)
+	assert_eq(int(state.regiments[code]["forage_days"]), 12, "the units settle in TickEngine.advance")
 	assert_eq(int(state.forage_stripped[prov]), 500)
 
 
@@ -243,7 +243,7 @@ func test_recovery_erases_zeros() -> void:
 	state.forage_stripped[prov] = 100
 	state.forage_stripped[other] = 950
 	state.day = Calendar.DAYS_PER_TICK
-	ArmyConduct.settle_month(repo, state)
+	ArmyConduct.settle_provinces(repo, state)
 	assert_false(state.forage_stripped.has(prov))
 	assert_eq(int(state.forage_stripped[other]), 850)
 
@@ -252,7 +252,7 @@ func test_settle_drops_old_marks() -> void:
 	state.conduct_marks["incident:a"] = state.tick - 1
 	state.conduct_marks["incident:b"] = state.tick
 	state.day = Calendar.DAYS_PER_TICK
-	ArmyConduct.settle_month(repo, state)
+	ArmyConduct.settle_provinces(repo, state)
 	assert_false(state.conduct_marks.has("incident:a"))
 	assert_true(state.conduct_marks.has("incident:b"))
 

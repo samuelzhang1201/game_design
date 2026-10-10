@@ -4,7 +4,7 @@ Spec `2026-10-10-foraging-and-desertion-design.md`. Integers only, no RNG, code 
 
 ## Day order
 
-`TickEngine._end_day` runs `ArmySystem.eat_day`, `ArmySystem.hunger_day`, then `ArmyConduct.day_step` (its events land in `day_conduct`, filed as ONE `supply`-kind "Marshal's report" letter by `MissiveWriter.conduct_dispatch`), then `SupplyLines.warn_day`, so the supply warnings read what foraging left. `day_step` is three passes: (1) each land unit in code order: on home land `forage` is cleared and `Desertion` runs; elsewhere `ArmyConduct.switch`; (2) per province (sorted) the day's take, `take_day`; (3) `settle_month`, which acts on day 30 only.
+`TickEngine._end_day` runs `ArmySystem.eat_day`, `ArmySystem.hunger_day`, then `ArmyConduct.day_step` (its events land in `day_conduct`, filed as ONE `supply`-kind "Marshal's report" letter by `MissiveWriter.conduct_dispatch`), then `SupplyLines.warn_day`, so the supply warnings read what foraging left. `day_step` is three passes: (1) each land unit in code order: on home land `forage` is cleared and `Desertion` runs; elsewhere `ArmyConduct.switch`; (2) per province (sorted) the day's take, `take_day`; (3) `settle_provinces`, which acts on day 30 only (the units' month is `settle_units`, run by `TickEngine.advance`).
 
 ## Land kinds (`Forage.land_kind`)
 
@@ -25,9 +25,10 @@ By the holder of the unit's province: `home` (the crown's own), `enemy` (`Intel.
 - Each taker raises `supplies` (and `forage_days`, only on a day it took more than 0), and strips the province by `taken × forage_strip_k / monthly_capacity` (floor, per taker). At or past `forage_hazard_strip_permille` (`_protected` if any taker keeps `protect_church`) the province gets the "Raided" hazard once while it stands (laid again after it expires). Crossing `forage_bare_permille` files `stripped_bare` once per crossing.
 - `Forage.word_of` is the slip's "rich | fair | thin | stripped" (today's yield against a full summer day, `forage_word_*`).
 
-## The month's settlement (`settle_month`, day 30)
+## The month's settlement (`settle_units`, `settle_provinces`)
 
-For each unit with `forage_days = d > 0`, wherever it now stands: morale up `forage_morale_month × d/30`, training down `forage_training_month × d/30` but never below `forage_training_floor` (a unit already under it keeps its training), morale capped at 100, wounded up by `forage_harass_permille` of the fit men × d/30; `forage_days` reset. Every stripped province recovers `forage_recover_permille` (sorted, zero entries erased). `conduct_marks` of an older month are dropped.
+- **The units** (`settle_units`): `TickEngine.advance` runs it once a month, right AFTER `ArmySystem.settle_month` (whose morale drift toward the mark and wound recovery would otherwise undo it), before `Hazards.settle_regiments`. For each unit with `forage_days = d > 0`, wherever it now stands: morale up `forage_morale_month × d/30` (capped at 100), training down `forage_training_month × d/30` but never below `forage_training_floor` (a unit already under it keeps its training), wounded up by `forage_harass_permille` of the fit men × d/30; `forage_days` reset.
+- **The provinces** (`settle_provinces`, pass 3 of `day_step`, day 30 only): every stripped province recovers `forage_recover_permille` (sorted, zero entries erased); `conduct_marks` of an older month are dropped.
 
 ## Desertion (`Desertion`, home land only)
 

@@ -208,7 +208,7 @@ func test_fleet_and_foe_untouched() -> void:
 		assert_eq(state.regiments[fleet], fleet_before)
 
 
-func test_month_end_settles_on_day_30() -> void:
+func test_units_settle_apart_from_day_30() -> void:
 	_place(a, home)
 	_men(a, 1000)
 	_put(a, 30, 90, 90)
@@ -222,10 +222,41 @@ func test_month_end_settles_on_day_30() -> void:
 	assert_eq(int(state.regiments[a]["forage_days"]), 30)
 	state.day = 30
 	ArmyConduct.day_step(repo, state)
+	assert_eq(int(state.regiments[a]["forage_days"]), 30, "day 30 settles the provinces only")
+	ArmyConduct.settle_units(repo, state)
 	assert_eq(int(state.regiments[a]["morale"]), 54, "50 + 4 x 30 / 30")
 	assert_eq(int(state.regiments[a]["training"]), 7, "10 - 3")
 	assert_eq(int(state.regiments[a]["wounded"]), 10, "1000 x 10 x 30 / 30000")
 	assert_eq(int(state.regiments[a]["forage_days"]), 0)
+
+
+func test_tick_settles_foraging_after_the_regiments_month() -> void:
+	# ruling R8: the unit settlement runs in TickEngine.advance right after
+	# ArmySystem.settle_month, so the drift and the wound recovery do not eat it.
+	for c: String in H.land_units(repo, state):
+		_place(c, home)
+		_put(c, 30, 90, 90)
+	_men(a, 1000)
+	var reg := ArmySystem.regiment(repo, a, state)
+	var use := ArmySystem.supply_use(repo, reg, state)
+	state.regiments[a]["supplies"] = ArmySystem.max_units(repo, use)   # stores full: supply score 1000
+	# morale already at its mark, so the month's drift leaves it there
+	var mark := clampi(ArmySystem.morale_mark(repo, 1000, ArmyGround.seated_in(repo, state, a) != "")
+		+ LawEffects.unit_mark(repo, state, a), 0, 100)
+	assert_lte(mark + 4, 100)
+	state.regiments[a]["morale"] = mark
+	state.regiments[a]["training"] = 10
+	state.regiments[a]["forage_days"] = 30
+	if state.tick == 0:
+		state.tick = 12
+	state.day = Calendar.DAYS_PER_TICK
+	TickEngine.new(repo).advance(state)
+	var e: Dictionary = state.regiments[a]
+	assert_eq(ArmySystem.supply_score(repo, int(e["supplies"]), use), 1000, "the mark held")
+	assert_eq(int(e["morale"]), mark + 4, "drift(mark -> mark) = mark, then + 4 x 30 / 30")
+	assert_eq(int(e["training"]), 7, "10 - 3 x 30 / 30 (army_training_per_month 0)")
+	assert_eq(int(e["wounded"]), 10, "1000 x 10 x 30 / 30000, after the month's recovery of 0")
+	assert_eq(int(e["forage_days"]), 0)
 
 
 func _two_foragers(first: String, second: String) -> void:

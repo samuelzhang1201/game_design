@@ -223,6 +223,12 @@ func advance(state: GameState) -> TickReport:
 	# supply-design §4): wounded return, morale drifts toward what the stores
 	# just refilled allow, training grows (the supplies are eaten daily).
 	ArmySystem.settle_month(data, state)
+	# The columns that lived off the land settle their month right after it
+	# (spec 2026-10-10-foraging-and-desertion §3.3 step 8, ruling R8), so the
+	# drift and the wound recovery above do not undo the foraging's gain and
+	# wounds. Once per advance: once a month, the reign's opening tick included
+	# (no unit has foraged then).
+	ArmyConduct.settle_units(data, state)
 	# The camp laws' month (laws spec §4.2): each realm line scaled by the
 	# share of the host's men under its value.
 	for l: Dictionary in LawEffects.month_lines(data, state):

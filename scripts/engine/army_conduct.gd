@@ -177,14 +177,14 @@ static func take_day(repo: DataRepository, state: GameState, province: String, c
 	return out
 
 
-## The month's end (day 30) for the columns that lived off the land: morale up,
-## training down and the wounded by the days they foraged (d/30 of the month's
-## figure, whole), whether or not they are still on that land; then the stripped
-## lands recover and the old month's once-marks go.
+## The month's end for the columns that lived off the land, once a month in
+## TickEngine.advance right AFTER ArmySystem.settle_month (ruling R8: the
+## morale drift and the wound recovery come first, so they do not undo it):
+## morale up, training down (never below forage_training_floor) and the
+## wounded by the days they foraged (d/30 of the month's figure, whole),
+## whether or not they are still on that land; forage_days reset.
 @warning_ignore("integer_division")
-static func settle_month(repo: DataRepository, state: GameState) -> void:
-	if state.day != Calendar.DAYS_PER_TICK:
-		return
+static func settle_units(repo: DataRepository, state: GameState) -> void:
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	for c: String in codes:
@@ -201,6 +201,13 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 		var hurt := mini(fit, fit * int(repo.bal("forage_harass_permille")) * d / (Calendar.DAYS_PER_TICK * 1000))
 		entry["wounded"] = int(entry.get("wounded", 0)) + hurt
 		entry["forage_days"] = 0
+
+
+## The month's last day (day 30, in day_step): the stripped lands recover and
+## the old month's once-marks go.
+static func settle_provinces(repo: DataRepository, state: GameState) -> void:
+	if state.day != Calendar.DAYS_PER_TICK:
+		return
 	var provs: Array = state.forage_stripped.keys()
 	provs.sort()
 	for p: String in provs:
@@ -218,7 +225,8 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 ## One day of the crown's columns on the land (spec 2026-10-10-foraging-and-
 ## desertion §3.3): pass 1 per land unit in code order (home land: stop living
 ## off it and desert; other land: switch), pass 2 the day's take per province
-## (provinces and codes sorted), pass 3 the month's settlement (day 30 only).
+## (provinces and codes sorted), pass 3 the provinces' month (day 30 only; the
+## units' month is settle_units, from TickEngine.advance).
 ## Fleets, foes and units that eat nothing are skipped. Returns the events in
 ## the order made; mutates nothing but `state`.
 static func day_step(repo: DataRepository, state: GameState) -> Array:
@@ -263,5 +271,5 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 	provs.sort()
 	for p: String in provs:
 		out.append_array(take_day(repo, state, p, foragers[p]))
-	settle_month(repo, state)
+	settle_provinces(repo, state)
 	return out
