@@ -384,6 +384,11 @@ bg_color = Color(0, 0, 0, 0)
 border_width_bottom = 2
 border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_8kn0q"]
+color = Color(0.8784314, 0.73333335, 0.41568628, 0.35)
+grow_begin = 0.0
+grow_end = 0.0
+
 [resource]
 default_font = ExtResource("4_66g1x")
 default_font_size = 20
@@ -712,3 +717,10 @@ WarMarginRow/styles/hover = SubResource("StyleBoxFlat_m0ttl")
 WarMarginRow/styles/hover_pressed = SubResource("StyleBoxFlat_lwx1g")
 WarMarginRow/styles/normal = SubResource("StyleBoxFlat_0578s")
 WarMarginRow/styles/pressed = SubResource("StyleBoxFlat_6hjtm")
+WarSheetRule/base_type = &"HSeparator"
+WarSheetRule/constants/separation = 6
+WarSheetRule/styles/separator = SubResource("StyleBoxLine_8kn0q")
+WarSheetTitle/base_type = &"Label"
+WarSheetTitle/colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
+WarSheetTitle/font_sizes/font_size = 22
+WarSheetTitle/fonts/font = ExtResource("5_yfb1m")
