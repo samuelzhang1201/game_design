@@ -497,14 +497,17 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 			var m: Dictionary = s.ai_hosts[h]
 			if today > 33 and String(m["mode"]) == "RAID" and int(m["plunder"]) > 0 and raiding_late == "":
 				raiding_late = h
+		# done: turned for home, or holding a town it took (HOLD never thinks
+		# again; on the pack's real roads, spec 2026-10-10-march-slope-detour,
+		# the raiders come on Castleton and take it)
 		var all_home := true
 		for h: String in EnemyAi.host_codes(s):
-			all_home = all_home and String(s.ai_hosts[h]["mode"]) in EnemyAi.HOMEWARD
+			all_home = all_home and String(s.ai_hosts[h]["mode"]) in EnemyAi.HOMEWARD + [EnemyAi.MODE_HOLD]
 		if all_home and home_by < 0:
 			home_by = today
 	assert_ne(raiding_late, "", "plunder feeds a raiding host: one still raids after day 33")
 	assert_gt(home_by, 33, "the invasion outlasts the hosts' own stores")
-	assert_true(home_by > 0 and home_by <= 90, "and every host has turned for home by day 90 (%d)" % home_by)
+	assert_true(home_by > 0 and home_by <= 90, "and every host has turned for home or holds what it took by day 90 (%d)" % home_by)
 	gut.p("raiding past day 33: %s; every host homeward from day %d" % [raiding_late, home_by])
 
 

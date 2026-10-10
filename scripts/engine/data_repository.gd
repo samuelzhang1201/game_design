@@ -1011,6 +1011,7 @@ func load_map(id: String) -> bool:
 	Elevation.forget()
 	Weather.forget()
 	RoadGraph.forget()
+	MarchPath.forget()
 	ArmySystem.forget_grids()
 	ArmySplit.forget()
 	LawEffects.forget()

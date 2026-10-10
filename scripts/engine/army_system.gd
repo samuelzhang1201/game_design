@@ -927,10 +927,11 @@ static func set_march(repo: DataRepository, state: GameState, code: String, dest
 	set_march_m(repo, state, code, pack_to_metres(repo, dest), wps)
 
 
-## set_march in whole metres — the courier's order carries metres. With
-## waypoints the regiment keeps the curve from where it stands NOW through
-## them to the end (`route_m`, MarchRoute) and the waypoints still ahead
-## (`waypoints_m`); without, neither, and it walks the straight line.
+## set_march in whole metres — the courier's order carries metres. The
+## regiment keeps the road from where it stands NOW (`route_m`, route_m_of):
+## through waypoints the curve (MarchRoute) and the waypoints still ahead
+## (`waypoints_m`); without, the way round any ground it cannot climb
+## (MarchPath) — and when the straight line is clear, no route at all.
 static func set_march_m(repo: DataRepository, state: GameState, code: String, dest: Vector2i,
 		waypoints: Array = []) -> void:
 	ensure(repo, state)
@@ -941,34 +942,91 @@ static func set_march_m(repo: DataRepository, state: GameState, code: String, de
 	entry["dest_y_m"] = dest.y
 	entry["order"] = ORDER_MARCH
 	_clear_route(entry)
+	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	var route := route_m_of(repo, here, waypoints, dest, is_naval(repo, state, code))
+	if not waypoints.is_empty() or route.size() > 1:
+		entry["route_m"] = MarchRoute.to_pairs(route)
 	if not waypoints.is_empty():
-		var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
-		entry["route_m"] = MarchRoute.to_pairs(route_m_of(repo, here, waypoints, dest))
 		entry["waypoints_m"] = MarchRoute.to_pairs(waypoints)
 	ArmyGround.leave(repo, state, code)
 
 
-## The sampled curve from `from` (left off) through `waypoints` to `to`, whole
-## metres — what a march through them walks.
-static func route_m_of(repo: DataRepository, from: Vector2i, waypoints: Array, to: Vector2i) -> Array:
+## Point a column's state row (a foe's, a retreat's) at `to` (whole metres)
+## on the road set_march_m would give it, through no waypoints: the route it
+## already walks is kept when it ends there (the hosts re-aim every day).
+static func aim_entry(repo: DataRepository, entry: Dictionary, to: Vector2i, naval := false) -> void:
+	var same := String(entry.get("order", "")) == ORDER_MARCH and int(entry.get("dest_x_m", 0)) == to.x \
+		and int(entry.get("dest_y_m", 0)) == to.y
+	entry["dest_x_m"] = to.x
+	entry["dest_y_m"] = to.y
+	entry["order"] = ORDER_MARCH
+	if same:
+		return
+	_clear_route(entry)
+	if not entry.has("x_m"):
+		return
+	var route := route_m_of(repo, Vector2i(int(entry["x_m"]), int(entry["y_m"])), [], to, naval)
+	if route.size() > 1:
+		entry["route_m"] = MarchRoute.to_pairs(route)
+
+
+## True for a fleet.
+static func is_naval(repo: DataRepository, state: GameState, code: String) -> bool:
+	return String(regiment(repo, code, state).get("is_naval", "0")) == "1"
+
+
+## The road from `from` (left off) through `waypoints` to `to`, whole metres —
+## what a march through them walks: the curve through the waypoints
+## (MarchRoute), each leg that would cross ground a column cannot climb
+## replaced by MarchPath's way round it (spec 2026-10-10-march-slope-detour);
+## [to] for a straight march with nothing in the way. A fleet (`naval`) keeps
+## the curve as it is.
+static func route_m_of(repo: DataRepository, from: Vector2i, waypoints: Array, to: Vector2i,
+		naval := false) -> Array:
+	var grid: MarchPath = null if naval else MarchPath.of_pack(repo)
+	if waypoints.is_empty():
+		return [to] if grid == null else grid.road(from, to)
 	var pts: Array = [from]
 	pts.append_array(waypoints)
 	pts.append(to)
-	return MarchRoute.curve(pts, int(repo.bal("army_route_sample_m"))).slice(1)
+	var ctrl := MarchRoute.distinct(pts)
+	var out: Array = []
+	var legs := MarchRoute.legs(ctrl, int(repo.bal("army_route_sample_m")))
+	for i in legs.size():
+		var leg: Array = legs[i]
+		if grid != null and not _leg_clear(grid, ctrl[i], leg):
+			leg = grid.road(ctrl[i], ctrl[i + 1])
+		out.append_array(leg)
+	return out
 
 
-## The curve a march from `from` through `waypoints` to `to` (all pack px)
+## True when a leg's samples, from `start`, cross no closed cell of `grid`
+## but its two ends'.
+static func _leg_clear(grid: MarchPath, start: Vector2i, leg: Array) -> bool:
+	var ends := [grid.cell_of(start), grid.cell_of(leg[leg.size() - 1])]
+	var prev := start
+	for p: Vector2i in leg:
+		if not grid.clear(prev, p, ends):
+			return false
+		prev = p
+	return true
+
+
+## The road a march from `from` through `waypoints` to `to` (all pack px)
 ## would walk, the start included, in pack px — the line the maps draw while
-## it is planned (spec 2026-10-07-march-waypoints rulings 1, 11).
-static func curve_px(repo: DataRepository, from: Vector2, waypoints: Array, to: Vector2) -> PackedVector2Array:
+## it is planned (spec 2026-10-07-march-waypoints rulings 1, 11; round a scarp,
+## spec 2026-10-10-march-slope-detour). `naval` for a fleet's.
+static func curve_px(repo: DataRepository, from: Vector2, waypoints: Array, to: Vector2,
+		naval := false) -> PackedVector2Array:
 	var out := PackedVector2Array([from])
-	if waypoints.is_empty():
-		out.append(to)
-		return out
 	var wps: Array = []
 	for w: Vector2 in waypoints:
 		wps.append(pack_to_metres(repo, w))
-	for p: Vector2i in route_m_of(repo, pack_to_metres(repo, from), wps, pack_to_metres(repo, to)):
+	var route := route_m_of(repo, pack_to_metres(repo, from), wps, pack_to_metres(repo, to), naval)
+	if waypoints.is_empty() and route.size() <= 1:
+		out.append(to)
+		return out
+	for p: Vector2i in route:
 		out.append(metres_to_pack(repo, p))
 	return out
 
@@ -994,10 +1052,14 @@ static func waypoints_of(repo: DataRepository, state: GameState, code: String) -
 	return out
 
 
-## An entry's road ahead in whole metres: its route, else the straight line's end.
+## An entry's road ahead in whole metres: its route, else the straight line's
+## end. A route that no longer ends on the destination (a writer that moved the
+## end without set_march_m / aim_entry) is stale and walks the straight line.
 static func _path_of(entry: Dictionary) -> Array:
 	if entry.has("route_m") and not (entry["route_m"] as Array).is_empty():
-		return MarchRoute.from_pairs(entry["route_m"])
+		var last: Array = (entry["route_m"] as Array).back()
+		if int(last[0]) == int(entry.get("dest_x_m", last[0])) and int(last[1]) == int(entry.get("dest_y_m", last[1])):
+			return MarchRoute.from_pairs(entry["route_m"])
 	if not entry.has("dest_x_m"):
 		return []
 	return [Vector2i(int(entry["dest_x_m"]), int(entry["dest_y_m"]))]
@@ -1029,8 +1091,8 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 ## Each arrival settles at once (ArmyGround.settle: first come, first in).
 ## Returns the player's codes that arrived today, for the news bar. The column
 ## walks at its own pace along its route (spec 2026-10-07-march-waypoints), else
-## the straight line; there is no pathfinding yet — a march ordered across a bay
-## walks across it.
+## the straight line. The route goes round ground a column cannot climb and
+## round water (MarchPath, set when the march is ordered); a fleet's does not.
 static func march_day(repo: DataRepository, state: GameState) -> Array:
 	ensure(repo, state)
 	var arrived: Array = []
@@ -1158,11 +1220,12 @@ static func march_days_between(repo: DataRepository, state: GameState, code: Str
 	var entry := {"x_m": a.x, "y_m": a.y, "dest_x_m": b.x, "dest_y_m": b.y, "order": ORDER_MARCH}
 	if carry >= 0:
 		entry["carry_days"] = carry
-	if not waypoints.is_empty():
-		var wps: Array = []
-		for w: Vector2 in waypoints:
-			wps.append(pack_to_metres(repo, w))
-		entry["route_m"] = MarchRoute.to_pairs(route_m_of(repo, a, wps, b))
+	var wps: Array = []
+	for w: Vector2 in waypoints:
+		wps.append(pack_to_metres(repo, w))
+	var route := route_m_of(repo, a, wps, b, is_naval(repo, state, code))
+	if not waypoints.is_empty() or route.size() > 1:
+		entry["route_m"] = MarchRoute.to_pairs(route)
 	var day := (state.absolute_day() if state != null else 0) if start_day < 0 else start_day
 	return _days_walking(repo, state, code, entry, day, max_days)
 
