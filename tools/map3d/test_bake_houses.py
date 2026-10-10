@@ -1250,3 +1250,67 @@ def test_a_low_town_keeps_its_timber_pier_and_a_walled_cliff_town_its_quay_gate(
                key=lambda r: math.hypot(r["x_m"] - head[0], r["z_m"] - head[1]))
     assert gate["type"] == "wall_gate", "the wall opens on the landing's stair head"
     assert _circuit_closes([r for r in merged if STAIR_TYPES[r["type"]]["role"] == "wall"])
+
+
+# -- variants (owner 2026-10-10: the houses repeat too much) ---------------------------
+
+VARIANT_RULES = dict(RULES, house_wall_palettes=4, house_wall_palette_size=4,
+                     house_roof_palettes=4, house_roof_palette_size=3,
+                     house_variant_clear_m=45, house_rim_frac=0.6,
+                     house_scale_jitter=0.12, house_height_jitter=0.4)
+VARIANT_TYPES = dict(TYPES, cottage_a=dict(TYPES["cottage_a"], stretch=0.16, rim_mul=1.5),
+                     workshop={"role": "house", "weight": 0.35, "footprint_m": 9.0, "min_group": "town",
+                               "stray_weight": 0.5, "rim_mul": 0.6})
+
+
+def test_no_identical_neighbours_while_another_choice_is_free():
+    foot, land, height = flat_world()
+    rows = place(burg(group="village"), VARIANT_RULES, VARIANT_TYPES, foot, land, height, K, VW, VH)
+    assert len(rows) > 8
+    # 12 (wall, roof) pairs a palette, far more than the houses within 45 m of
+    # any one of them, so a free choice always exists: no twin within the radius
+    assert bake_houses.identical_neighbours(rows, 45.0) == []
+    assert all("wall" in r and "roof" in r for r in rows)
+
+
+def test_a_settlement_wears_one_palette_and_towns_differ():
+    foot, land, height = flat_world()
+    seen = set()
+    for code in ("alpha", "beta", "gamma", "delta", "eps", "zeta", "eta", "theta"):
+        rows = place(burg(code=code, group="village"), VARIANT_RULES, VARIANT_TYPES, foot, land, height, K, VW, VH)
+        assert {r["wall"] // 4 for r in rows} == {bake_houses.palette_of(code, "wall", 4)}
+        assert {r["roof"] // 3 for r in rows} == {bake_houses.palette_of(code, "roof", 4)}
+        seen.add((rows[0]["wall"] // 4, rows[0]["roof"] // 3))
+    assert len(seen) >= 3, "eight settlements share more than their palette"
+
+
+def test_identical_neighbours_is_found_when_they_exist():
+    a = {"type": "cottage_a", "x_m": 0.0, "z_m": 0.0, "wall": 1, "roof": 2}
+    b = dict(a, x_m=20.0)
+    assert bake_houses.identical_neighbours([a, b], 45.0) == [(a, b)]
+    assert bake_houses.identical_neighbours([a, dict(b, wall=2)], 45.0) == []
+    assert bake_houses.identical_neighbours([a, dict(b, x_m=90.0)], 45.0) == []
+
+
+def test_assign_variants_is_deterministic():
+    foot, land, height = flat_world()
+    a = place(burg(), VARIANT_RULES, VARIANT_TYPES, foot, land, height, K, VW, VH)
+    b = place(burg(), VARIANT_RULES, VARIANT_TYPES, foot, land, height, K, VW, VH)
+    assert a == b
+
+
+def test_width_stretch_stays_in_the_types_band_and_is_reserved():
+    foot, land, height = flat_world()
+    rows = place(burg(group="village"), VARIANT_RULES, VARIANT_TYPES, foot, land, height, K, VW, VH)
+    st = [r["stretch"] for r in rows if r["type"] == "cottage_a"]
+    assert st and all(0.84 <= s <= 1.16 for s in st)
+    assert len(set(st)) > 1, "the stretch varies house to house"
+    assert all(r["stretch"] == 1.0 for r in rows if r["type"] == "longhouse")
+
+
+def test_a_village_lets_a_town_type_stray_into_its_core_only():
+    rng = np.random.default_rng(1)
+    core = [bake_houses._pick(rng, VARIANT_TYPES, "house", "village", 0.2, VARIANT_RULES) for _ in range(400)]
+    rim = [bake_houses._pick(rng, VARIANT_TYPES, "house", "village", 0.9, VARIANT_RULES) for _ in range(400)]
+    assert "workshop" in core and "workshop" not in rim
+    assert rim.count("cottage_a") > core.count("cottage_a")   # rim_mul 1.5

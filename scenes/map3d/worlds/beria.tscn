@@ -1,12 +1,12 @@
 [gd_scene format=3]
 
-[ext_resource type="Terrain3DAssets" path="res://assets/3D/terrain/beria/terrain_assets.tres" id="1_qpu2y"]
+[ext_resource type="Terrain3DAssets" path="res://assets/3D/terrain/beria/terrain_assets.tres" id="1_bijye"]
 
-[sub_resource type="Gradient" id="Gradient_qpu2y"]
+[sub_resource type="Gradient" id="Gradient_35oom"]
 offsets = PackedFloat32Array(0.2, 1)
 colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
 
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_t6v47"]
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_m6v0t"]
 noise_type = 2
 frequency = 0.03
 cellular_jitter = 3.0
@@ -18,12 +18,12 @@ domain_warp_fractal_type = 2
 domain_warp_fractal_lacunarity = 1.5
 domain_warp_fractal_gain = 1.0
 
-[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_wxxfl"]
-noise = SubResource("FastNoiseLite_t6v47")
-color_ramp = SubResource("Gradient_qpu2y")
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_6yvf5"]
+noise = SubResource("FastNoiseLite_m6v0t")
+color_ramp = SubResource("Gradient_35oom")
 seamless = true
 
-[sub_resource type="Terrain3DMaterial" id="Terrain3DMaterial_72a2i"]
+[sub_resource type="Terrain3DMaterial" id="Terrain3DMaterial_bj4bi"]
 _shader_parameters = {
 &"bias_distance": 512.0,
 &"blend_sharpness": 0.35,
@@ -43,14 +43,14 @@ _shader_parameters = {
 &"noise1_offset": Vector2(0.5, 0.5),
 &"noise1_scale": 0.0004,
 &"noise2_scale": 0.00076,
-&"noise_texture": SubResource("NoiseTexture2D_wxxfl"),
+&"noise_texture": SubResource("NoiseTexture2D_6yvf5"),
 &"projection_threshold": 0.87,
 &"tri_scale_reduction": 0.3
 }
 world_background = 0
 dual_scaling = true
 
-[node name="Terrain_beria" type="Node3D" unique_id=1506689246]
+[node name="Terrain_beria" type="Node3D" unique_id=1623191885]
 metadata/map3d_world = {
 "format_version": 2,
 "m_per_px": 50.0,
@@ -59,10 +59,10 @@ metadata/map3d_world = {
 "sea_y": 5.0
 }
 
-[node name="Terrain3D" type="Terrain3D" parent="." unique_id=919030481]
+[node name="Terrain3D" type="Terrain3D" parent="." unique_id=1406413203]
 data_directory = "res://assets/3D/terrain/beria/terrain"
-material = SubResource("Terrain3DMaterial_72a2i")
-assets = ExtResource("1_qpu2y")
+material = SubResource("Terrain3DMaterial_bj4bi")
+assets = ExtResource("1_bijye")
 vertex_spacing = 20.0
 top_level = true
 metadata/_edit_lock_ = true

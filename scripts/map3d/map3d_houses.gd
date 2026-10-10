@@ -8,7 +8,6 @@ extends RefCounted
 ## its live population — so this only decides WHICH settlements are near
 ## enough to build at all, and drops whole settlements, farthest first, to
 ## stay inside the instance budget.
-##
 ## Never reaches for the Game autoload — tests/map3d/test_map3d_preview.gd
 ## scans this directory for it.
 
@@ -37,6 +36,10 @@ static func load_csv(path: String) -> Dictionary:
 			"type": String(r["type"]),
 			"scale": float(r["scale"]),
 			"height_scale": float(r["height_scale"]),
+			# a blank stretch is 1, a blank wall / roof -1 (the hash picks)
+			"stretch": float(r["stretch"]) if String(r.get("stretch", "")) != "" else 1.0,
+			"wall": int(r["wall"]) if String(r.get("wall", "")) != "" else -1,
+			"roof": int(r["roof"]) if String(r.get("roof", "")) != "" else -1,
 		})
 	for code: String in out:
 		(out[code] as Array).sort_custom(func(a, b): return int(a["rank"]) < int(b["rank"]))
@@ -164,20 +167,21 @@ static func seat(ground: Vector3, clear: float) -> Vector2:
 static func footprint_grid(h: Dictionary, box: AABB, inset: float, n: int) -> PackedVector2Array:
 	var at: Vector2 = h["at"]
 	var s: float = float(h["scale"])
+	var st: float = s * float(h.get("stretch", 1.0))
 	var turn := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
 	var c := box.get_center()
 	var hx := box.size.x * 0.5 * inset
 	var hz := box.size.z * 0.5 * inset
 	var out := PackedVector2Array()
 	if n < 2:
-		var w0: Vector3 = turn * (Vector3(c.x, 0, c.z) * s)
+		var w0: Vector3 = turn * (Vector3(c.x * st, 0, c.z * s))
 		out.append(at + Vector2(w0.x, w0.z))
 		return out
 	for i in n:
 		for j in n:
 			var u := -1.0 + 2.0 * float(i) / float(n - 1)
 			var v := -1.0 + 2.0 * float(j) / float(n - 1)
-			var w: Vector3 = turn * (Vector3(c.x + u * hx, 0, c.z + v * hz) * s)
+			var w: Vector3 = turn * Vector3((c.x + u * hx) * st, 0, (c.z + v * hz) * s)
 			out.append(at + Vector2(w.x, w.z))
 	return out
 
@@ -189,6 +193,9 @@ static func footprint_grid(h: Dictionary, box: AABB, inset: float, n: int) -> Pa
 static func variant_of(h: Dictionary, count: int, salt: int) -> int:
 	if count <= 1:
 		return 0
+	var baked := int(h.get("wall" if salt == 0 else "roof", -1)) if salt < 2 else -1
+	if baked >= 0:
+		return baked % count
 	var at: Vector2 = h["at"]
 	var x := int(roundf(at.x * 10.0))
 	var z := int(roundf(at.y * 10.0))
@@ -208,22 +215,14 @@ static func tints_of(tints: PackedColorArray) -> PackedVector3Array:
 	return out
 
 
-## The world transform for one baked house row: yaw about the vertical,
-## scaled HORIZONTALLY by `scale` and VERTICALLY by `scale * height_scale`
-## (the bake's own per-house bias, tallest at a settlement's core, jittered
-## per house — 高低层次不齐), standing upright at `height` (Map3DHouses.seat:
-## the highest ground under its footprint, so nothing of it is buried). Pure,
-## so a test can check the maths directly rather than reading it back off a
-## MultiMesh.
-## Floats one instance takes in a TRANSFORM_3D MultiMesh with custom data
-## and no colour: the 3x4 transform row by row, then the custom Color.
+## Floats one instance takes: the 3x4 transform row by row, then custom data.
 const BUFFER_STRIDE := 16
 
 
 ## Houses placed and packed for a MultiMesh: {buf: its buffer (BUFFER_STRIDE
-## floats each, the custom data the (wall, roof) variant), xf: [Transform3D],
+## floats each, the custom data the (wall, roof, trim) variant), xf: [Transform3D],
 ## picks: [Vector2i]}, in row order. `seat_of` gives a row's (lowest, seat).
-static func pack(rows: Array, seat_of: Callable, walls: int, roofs: int) -> Dictionary:
+static func pack(rows: Array, seat_of: Callable, walls: int, roofs: int, trims: int = 1) -> Dictionary:
 	var buf := PackedFloat32Array()
 	buf.resize(rows.size() * BUFFER_STRIDE)
 	var xforms: Array[Transform3D] = []
@@ -242,15 +241,19 @@ static func pack(rows: Array, seat_of: Callable, walls: int, roofs: int) -> Dict
 			buf[o + r * 4 + 3] = t.origin[r]
 		buf[o + 12] = float(pick.x)
 		buf[o + 13] = float(pick.y)
+		buf[o + 14] = float(variant_of(h, trims, 2))
 	return {"buf": buf, "xf": xforms, "picks": picks}
 
 
+## The world transform of one baked row: yaw, scaled by `scale` (x also by
+## its `stretch`, along the house's own x) and vertically by `scale *
+## height_scale`, upright at `height` (Map3DHouses.seat). Pure.
 static func transform_of(h: Dictionary, height: float) -> Transform3D:
 	var at: Vector2 = h["at"]
 	var s: float = float(h["scale"])
 	var height_scale: float = float(h["height_scale"])
 	var turn := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
-	turn = turn.scaled(Vector3(s, s * height_scale, s))
+	turn = turn * Basis.from_scale(Vector3(s * float(h.get("stretch", 1.0)), s * height_scale, s))
 	# a wall module SHEARED along its length onto the ground's slope (seat_of
 	# "slope"): its verticals stay plumb, its foot and crest follow the hill
 	turn.x += Vector3(0.0, float(h.get("_rise", 0.0)) * s, 0.0)
