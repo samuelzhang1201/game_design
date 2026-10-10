@@ -55,9 +55,8 @@ static func scale_for(repo: DataRepository, fov_deg: float, view_h_px: float, re
 ## where the opening camera stands (it looks north, so south, +Z) — a fixed
 ## world heading, never the camera's live pose, so a pan turns no piece.
 const REST := Vector2(0.0, 1.0)
-## How far, world metres, the DRAWN piece must have gone from where its heading
-## was last taken before that heading turns (a frame's sub-metre creep, or a
-## halt, keeps the last one; owner 2026-10-10: 应当固定向他们之前前进的方向).
+## How far, world metres, the DRAWN piece must go from where its heading was last taken before it
+## turns (sub-metre creep or a halt keeps it; owner 2026-10-10: 应当固定向他们之前前进的方向).
 const TRACK_MIN_M := 0.5
 
 
@@ -80,17 +79,14 @@ static func yaw_for(heading: Vector2, camera_xz: Vector2, at_xz: Vector2,
 	return atan2(-dir.x, -dir.y) + off
 
 
-## A regiment PIECE's yaw on the 3D map: `heading` (the way it last advanced,
-## Map3DLayerUnits keeps it by track()), else at REST — a fixed world
-## heading, never the live camera, so a pan or a halt turns no piece (owner
-## 2026-10-10: 应当固定向他们之前前进的方向前方).
+## A regiment PIECE's yaw on the 3D map: `heading` (the way it last advanced, kept by track()),
+## else at REST — never the live camera, so a pan or a halt turns no piece (owner 2026-10-10).
 static func facing_yaw(heading: Vector2, stand_deg: float = 0.0) -> float:
 	return yaw_for(heading, REST, Vector2.ZERO, stand_deg)
 
 
-## A piece's facing kept as it is drawn from `from` to `at` (world XZ):
-## `kept` {heading, trail} -> the new one. The heading turns only once the
-## piece stands TRACK_MIN_M past `trail` (where it was last taken; `from` the
+## A piece's facing kept as it is drawn from `from` to `at` (world XZ): `kept` {heading, trail} -> the
+## new one, turned only once it stands TRACK_MIN_M past `trail` (where it was last taken; `from` the
 ## first time), so a halt, a stopped clock or a camera move never turns it.
 static func track(kept: Dictionary, from: Vector2, at: Vector2) -> Dictionary:
 	var trail: Vector2 = kept.get("trail", from)
@@ -106,7 +102,11 @@ static func track(kept: Dictionary, from: Vector2, at: Vector2) -> Dictionary:
 static func along_day(day: Dictionary, share: float) -> Vector2:
 	var s0 := float(day["s0"])
 	var f := clampf((share - s0) / maxf(1.0 - s0, 0.001), 0.0, 1.0)
-	return (day["from"] as Vector2).lerp(day["to"], f)
+	if (day.get("via", PackedVector2Array()) as PackedVector2Array).is_empty():
+		return (day["from"] as Vector2).lerp(day["to"], f)
+	# along the route's corners it passes today, never across them (a scarp)
+	var pts := PackedVector2Array([day["from"]]) + (day["via"] as PackedVector2Array) + PackedVector2Array([day["to"]])
+	return MarchRoute.along(pts, f)
 
 
 ## Whether a piece WALKS its day's march at the day's `share`: it has somewhere
@@ -116,16 +116,17 @@ static func walking(day: Dictionary, share: float) -> bool:
 	return (day["from"] as Vector2).distance_to(day["to"]) > 0.5 and share >= float(day["s0"])
 
 
-## A piece's day's march for along_day, reckoned at the day's `share`: from where
-## it is `drawn` (or `here`, past the snap) to where the engine's next day leaves it.
+## A piece's day's march for along_day, reckoned at the day's `share`: from where it is `drawn`
+## (or `here`, past the snap) to where the engine's next day leaves it, by its route's corners.
 static func day_march(repo: DataRepository, state: GameState, code: String, meta: Dictionary,
 		here: Vector2, drawn: Vector2, share: float) -> Dictionary:
 	if state == null:
 		return {"from": here, "to": here, "s0": 0.0}
 	var from := here if drawn.distance_to(here) > snap_m(repo, state, code, meta) else drawn
-	var to := CourierSystem.day_ahead_of(repo, state, code)
-	return {"from": from, "s0": share,
-		"to": Map3DGeometry.pack_to_world(meta, ArmySystem.metres_to_pack(repo, to))}
+	var via := PackedVector2Array()
+	for p: Vector2i in CourierSystem.day_path_of(repo, state, code):
+		via.append(Map3DGeometry.pack_to_world(meta, ArmySystem.metres_to_pack(repo, p)))
+	return {"from": from, "s0": share, "to": via[via.size() - 1], "via": via.slice(0, via.size() - 1)}
 
 
 ## A day's march in the built world's metres.

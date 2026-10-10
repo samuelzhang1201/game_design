@@ -764,7 +764,13 @@ def house_types(path=None):
                                 "depth_m": float(r.get("depth_m") or 0.0),
                                 "min_group": r["min_group"],
                                 "height_m": float(r.get("height_m") or 0.0),
-                                "landmark_height_scale": r.get("landmark_height_scale", "") or ""}
+                                "landmark_height_scale": r.get("landmark_height_scale", "") or "",
+                                # owner 2026-10-10: the type's own width stretch,
+                                # its rim weight multiplier and the weight with
+                                # which it strays into a group below its own
+                                "stretch": float(r.get("stretch") or 0.0),
+                                "rim_mul": float(r.get("rim_mul") or 1.0),
+                                "stray_weight": float(r.get("stray_weight") or 0.0)}
     return types
 
 
@@ -1622,7 +1628,8 @@ def main(argv=None):
     with open(os.path.join(OUT, "rivers.json"), "w") as f:
         json.dump({"rivers": rivers_out}, f)
     with open(os.path.join(OUT, "houses.csv"), "w", newline="") as f:
-        w = csv.DictWriter(f, ["burg_code", "rank", "x_m", "z_m", "yaw_deg", "type", "scale", "height_scale"])
+        w = csv.DictWriter(f, ["burg_code", "rank", "x_m", "z_m", "yaw_deg", "type", "scale", "height_scale",
+                              "stretch", "wall", "roof"])
         w.writeheader()
         for r in sorted(house_rows, key=lambda r: (r["burg_code"], r["rank"])):
             w.writerow(r)
