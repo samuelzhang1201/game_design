@@ -92,7 +92,8 @@ var _pal: Dictionary = {}
 ## a res:// resource (set before anything instances it: a .tres material or
 ## the world's Environment) or the name of a node in the 3D world (set as the
 ## camera is framed, so it needs --zoom3d); VALUE is parsed by str_to_var
-## ("0.5", "Color(0.2, 0.3, 0.4, 1)"). Material uniforms are
+## ("0.5", "Color(0.2, 0.3, 0.4, 1)"), or loaded when it is a res:// path
+## (a texture for a sampler uniform). Material uniforms are
 ## shader_parameter/NAME.
 var _sets: Array = []
 ## The resources --set changed, held so the cache keeps the changed copy
@@ -351,8 +352,10 @@ func _ready() -> void:
 			var colon := sv.rfind(":", sv.find("="))
 			var eq := sv.find("=")
 			if colon > 0 and eq > colon:
+				var raw := sv.substr(eq + 1)
+				# a res:// VALUE is a resource (a texture for a sampler uniform)
 				_sets.append([sv.substr(0, colon), sv.substr(colon + 1, eq - colon - 1),
-					str_to_var(sv.substr(eq + 1))])
+					load(raw) if raw.begins_with("res://") else str_to_var(raw)])
 			else:
 				push_error("--set wants TARGET:PROP=VALUE, got %s" % sv)
 		elif args[i] == "--bal":

@@ -15,6 +15,14 @@ uniform float emit = 1.4;
 uniform float rim_gain = 1.6;
 uniform float metal = 0.35;
 uniform float rough = 0.22;
+// The generated MATCAP (owner 2026-10-10: the ledger's art drawn by Comfy,
+// `L-01`..`L-03`, tools/ledger/ledger_art_prep.py): a sphere's VALUE looked
+// up by the view-space normal and tinted with the cluster's colour, its
+// brightest highlights going toward white. matcap_mix 0 is the plain shine.
+uniform sampler2D matcap : source_color, hint_default_white, filter_linear_mipmap;
+uniform float matcap_mix = 0.0;
+uniform float matcap_gain = 2.2;
+uniform float matcap_white = 0.6;
 
 varying vec4 col;
 
@@ -35,6 +43,11 @@ void fragment() {
 	METALLIC = metal;
 	ROUGHNESS = rough;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.4);
-	EMISSION = c * emit + c * rim * rim_gain;
+	vec3 shine = c * emit + c * rim * rim_gain;
+	float m = texture(matcap, NORMAL.xy * vec2(0.5, -0.5) + 0.5).r;
+	vec3 painted = c * m * matcap_gain + vec3(pow(m, 4.0)) * matcap_white;
+	ALBEDO *= 1.0 - matcap_mix;
+	SPECULAR = 0.5 * (1.0 - matcap_mix);
+	EMISSION = mix(shine, painted, matcap_mix);
 	ALPHA = pow(clamp(col.a, 0.0, 1.0), 2.2);
 }
