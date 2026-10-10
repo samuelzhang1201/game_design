@@ -328,9 +328,7 @@ func _draw_intel() -> void:
 				draw_polyline(d, pal["intel_ink"], w, true)
 		var size := int(px.get("hazard_label", px["intel_label"]))
 		var at := (h["at"] as Vector2) - Vector2(font.get_string_size(String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, 0)
-		draw_string_outline(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, maxi(int(w * 3.0), 1),
-			pal.get("parchment", pal.get("paper", Color.WHITE)))
-		draw_string(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, pal["intel_ink"])
+		_haloed_text(at, String(h["text"]), size, pal["intel_ink"], w)
 	for cr: Dictionary in ink["couriers"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], float(px["supply_dash"]) / 1.5, float(px["supply_gap"])):
 			draw_polyline(d, c, float(px["supply"]) * 0.7, true)
@@ -361,8 +359,16 @@ func _draw_intel() -> void:
 			ring.append(at + Vector2.from_angle(TAU * float(i) / 48.0) * float(sp["radius"]))
 		for d: PackedVector2Array in WarSheetInk.dashed(ring, float(px["supply_dash"]), float(px["supply_gap"])):
 			draw_polyline(d, pal["rubric"], float(px["supply"]), true)
-		draw_string(font, at + Vector2(float(sp["radius"]) + 4.0, 0), String(sp["text"]),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, int(px["intel_label"]), pal["rubric"])
+		_haloed_text(at + Vector2(float(sp["radius"]) + 4.0, 0), String(sp["text"]),
+			int(px["intel_label"]), pal["rubric"], float(px.get("hazard", 3.0)))
+
+
+## A name on a parchment halo (a hazard's, a spy report's): the outline
+## `w * 3` px wide under the ink, so it reads over hatch and grid.
+func _haloed_text(at: Vector2, text: String, size: int, ink_c: Color, w: float) -> void:
+	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, maxi(int(w * 3.0), 1),
+		pal.get("parchment", pal.get("paper", Color.WHITE)))
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, ink_c)
 
 
 ## The fine print (WarFinePrint): notes and route names in faint ink, minor
