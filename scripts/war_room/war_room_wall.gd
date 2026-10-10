@@ -14,14 +14,17 @@ const SIDES := {"n": "↑", "s": "↓", "e": "→", "w": "←"}
 static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font) -> void:
 	var w := float(repo.map_info.get("width", "1"))
 	var h := float(repo.map_info.get("height", "1"))
-	var size := Vector2(repo.bal("war_chart_w_m"), repo.bal("war_chart_w_m") * h / w)
+	var size := Vector2(repo.bal("war_chart_w_m"), repo.bal("war_chart_w_m") * h / w)   # the MAP's size on the chart
+	var pad := repo.bal("war_chart_margin_m")   # the parchment margin the letters are printed on
 	var quad := chart.mesh.duplicate() as QuadMesh
-	quad.size = size
+	quad.size = size + Vector2(pad, pad) * 2.0
+	chart.set_meta("margin_m", pad)
 	chart.mesh = quad
 	chart.position = Vector3(0.0, repo.bal("war_chart_y_m"), repo.bal("war_chart_z_m"))
 	chart.rotation_degrees = Vector3(-(90.0 - repo.bal("war_chart_tilt_deg")), 0.0, 0.0)
 	var mat := chart.material_override.duplicate() as StandardMaterial3D
-	mat.albedo_texture = ImageTexture.create_from_image(WarIndexChart.image(repo, int(repo.bal("war_chart_px"))))
+	mat.albedo_texture = ImageTexture.create_from_image(WarIndexChart.image_with_margin(repo, int(repo.bal("war_chart_px")),
+			int(round(pad / size.x * repo.bal("war_chart_px")))))
 	chart.material_override = mat
 	for n in chart.get_children():
 		chart.remove_child(n)
@@ -51,6 +54,11 @@ static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font)
 		chart.add_child(l)
 
 
+## The map's own size on the chart: the quad less its parchment margin.
+static func map_size(chart: MeshInstance3D) -> Vector2:
+	return (chart.mesh as QuadMesh).size - Vector2.ONE * 2.0 * float(chart.get_meta("margin_m", 0.0))
+
+
 ## The sheet under a screen px on the chart, -1 off it. `screen_px` is already
 ## in the viewport's own px (the view multiplies its window scale in).
 ## The chart UV (0..1 across the map, v down) under a screen px, (-1, -1) off
@@ -65,7 +73,7 @@ static func chart_uv(chart: MeshInstance3D, camera: Camera3D, screen_px: Vector2
 	if t < 0.0:
 		return Vector2(-1, -1)
 	var hit := lo + ld * t
-	var size := (chart.mesh as QuadMesh).size
+	var size := map_size(chart)
 	return Vector2(hit.x / size.x + 0.5, 0.5 - hit.y / size.y)
 
 
@@ -76,7 +84,7 @@ static func pick_chart(chart: MeshInstance3D, camera: Camera3D, repo: DataReposi
 
 ## A chart UV as a world point on the chart's face (the war marker lands here).
 static func chart_point(chart: MeshInstance3D, uv: Vector2) -> Vector3:
-	var size := (chart.mesh as QuadMesh).size
+	var size := map_size(chart)
 	return chart.global_transform * Vector3((uv.x - 0.5) * size.x, (0.5 - uv.y) * size.y, 0.0)
 
 
