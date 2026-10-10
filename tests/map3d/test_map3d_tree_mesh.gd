@@ -78,7 +78,7 @@ func test_a_species_clump_wears_its_own_row() -> void:
 	assert_gt(drawn, 6, "more than a broadleaf, a conifer and a lone tree")
 
 
-func test_a_species_has_six_layouts_that_differ() -> void:
+func test_a_species_has_map3d_tree_variants_layouts_that_differ() -> void:
 	var repo := SuiteData.repo()
 	var row: Dictionary = repo.map3d_tree_species[0]
 	var seen := {}

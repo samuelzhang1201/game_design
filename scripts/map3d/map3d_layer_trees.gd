@@ -114,7 +114,9 @@ func build(p_ctx: Map3DContext) -> void:
 		# both levels cast: a plain square without its shadows read as a
 		# lighter tile in the wood; the switch dithers over the margin
 		node.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		# the thinned far cards cast none: past card_far a crown's shadow is under a px
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if cards and int(one[2]) == 1 \
+			else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		if int(one[2]) == 0:
 			node.visibility_range_end = near
 			node.visibility_range_end_margin = fade
@@ -188,33 +190,39 @@ func _plan(data: PackedFloat32Array, density: float, cards: bool) -> Dictionary:
 				meshes["%d:%d:%d" % [kind, v, lod]] = m
 	var chunks: Array = []
 	var count := 0
+	var fill := func(rows: PackedInt32Array, mesh: Mesh, centre: Vector3) -> MultiMesh:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.mesh = mesh
+		mm.instance_count = rows.size()
+		for j in rows.size():
+			var i := rows[j]
+			# a wood of old trees and young ones, not one even carpet
+			var grow := 1.0 + size_spread * (float((i * 2246822519) % 1009) / 1009.0 * 2.0 - 1.0)
+			var sz := data[i * ROW + 4] * size_k * grow
+			var turn := Basis(Vector3.UP, data[i * ROW + 3]).scaled(Vector3(sz, sz, sz))
+			var at := Vector3(data[i * ROW], data[i * ROW + 1], data[i * ROW + 2]) - centre
+			mm.set_instance_transform(j, Transform3D(turn, at))
+			mm.set_instance_color(j, tint_of(tints.get(int(data[i * ROW + 5]), [Color.WHITE, Color.WHITE]), i))
+		return mm
 	for key: Vector2i in groups:
 		var g: Dictionary = groups[key]
+		var centre := Vector3((key.x + 0.5) * chunk, 0.0, (key.y + 0.5) * chunk)
+		var far_rows := {}   # cards: kind -> its thinned rows, every variant in ONE far MultiMesh
 		for sub: String in g:
 			var rows: PackedInt32Array = g[sub]
-			var centre := Vector3((key.x + 0.5) * chunk, 0.0, (key.y + 0.5) * chunk)
+			count += rows.size()
 			for lod in lods:
 				if cards and lod == 1:
-					rows = _thinned(data, rows, thin, thin_cell)
-					if rows.is_empty():
-						continue
-				var mm := MultiMesh.new()
-				mm.transform_format = MultiMesh.TRANSFORM_3D
-				mm.use_colors = true
-				mm.mesh = meshes["%s:%d" % [sub, lod]]
-				mm.instance_count = rows.size()
-				for j in rows.size():
-					var i := rows[j]
-					# a wood of old trees and young ones, not one even carpet
-					var grow := 1.0 + size_spread * (float((i * 2246822519) % 1009) / 1009.0 * 2.0 - 1.0)
-					var s := data[i * ROW + 4] * size_k * grow
-					var turn := Basis(Vector3.UP, data[i * ROW + 3]).scaled(Vector3(s, s, s))
-					var at := Vector3(data[i * ROW], data[i * ROW + 1], data[i * ROW + 2]) - centre
-					mm.set_instance_transform(j, Transform3D(turn, at))
-					mm.set_instance_color(j, tint_of(tints.get(int(data[i * ROW + 5]), [Color.WHITE, Color.WHITE]), i))
-				chunks.append([mm, centre, lod])
-				if lod == 0:
-					count += rows.size()
+					var kind := sub.get_slice(":", 0)
+					far_rows[kind] = (far_rows.get(kind, PackedInt32Array()) as PackedInt32Array) \
+						+ _thinned(data, rows, thin, thin_cell)
+					continue
+				chunks.append([fill.call(rows, meshes["%s:%d" % [sub, lod]], centre), centre, lod])
+		for kind: String in far_rows:
+			if not (far_rows[kind] as PackedInt32Array).is_empty():
+				chunks.append([fill.call(far_rows[kind], meshes["%s:0:1" % kind], centre), centre, 1])
 	return {"material": mat, "count": count, "chunks": chunks}
 
 
