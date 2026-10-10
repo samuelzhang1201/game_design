@@ -21,6 +21,10 @@ var _push: Dictionary = {}    # code -> {from: Vector3, to: Vector3, left: float
 var _scenes: Dictionary = {}  # model path -> PackedScene
 var _tins: Dictionary = {}    # source material -> its one tin ShaderMaterial
 var _tags_on := true          # the paper tags show only near the table (war_tag_view_m)
+var _glow_ids: Dictionary = {} # code -> true: the selected pieces, each glowing faintly on the table
+var _glow_c := Color.WHITE     # the selection's side colour
+
+const GLOW := preload("res://scenes/war_room/materials/war_select_glow.tres")
 
 
 func setup(repo: DataRepository, view: WarRoomView) -> void:
@@ -43,6 +47,55 @@ func set_camera_distance(metres: float) -> void:
 
 func tags_shown() -> bool:
 	return _tags_on
+
+
+## The selection (owner 2026-10-10: 只要玩家点选的单位下方有一个淡淡的光圈即可):
+## a faint soft ring of light lying on the table under each piece of `ids`,
+## in the side's `colour` lightened (war_select_glow_lighten), war_select_glow_ratio
+## × the piece's plinth or base across; a child of the piece, so it moves with
+## it. The rest show none. A piece built later wears it too.
+func show_selected(ids: Array, colour: Color) -> void:
+	_glow_ids.clear()
+	for id: Variant in ids:
+		_glow_ids[String(id)] = true
+	_glow_c = colour
+	for c: Node in get_children():
+		if not c.is_queued_for_deletion():
+			_glow(c as Node3D)
+
+
+## The codes whose glow shows now (tests read them).
+func glowing() -> Array:
+	var out: Array = []
+	for c: Node in get_children():
+		var g := c.get_node_or_null("Glow") as Node3D
+		if not c.is_queued_for_deletion() and g != null and g.visible:
+			out.append(String(c.get_meta("code", "")))
+	return out
+
+
+## Show or hide `node`'s glow by the selection, making it the first time.
+func _glow(node: Node3D) -> void:
+	var want := _glow_ids.has(String(node.get_meta("code", "")))
+	var g := node.get_node_or_null("Glow") as MeshInstance3D
+	if g == null:
+		if not want:
+			return
+		var half: Vector2 = node.get_meta("half", Vector2.ZERO)
+		var ratio := maxf(_repo.bal("war_select_glow_ratio"), 1.0)
+		g = MeshInstance3D.new()
+		g.name = "Glow"
+		var quad := PlaneMesh.new()
+		quad.size = Vector2.ONE * maxf(half.x, half.y) * 2.0 * ratio
+		g.mesh = quad
+		g.material_override = GLOW
+		g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		g.position.y = _repo.bal("war_select_glow_lift_mm") / 1000.0
+		g.set_instance_shader_parameter("edge", 1.0 / ratio)
+		node.add_child(g)
+	g.visible = want
+	if want:
+		g.set_instance_shader_parameter("tint", _glow_c.lightened(_repo.bal("war_select_glow_lighten")))
 
 
 func piece(code: String) -> Node3D:
@@ -122,7 +175,7 @@ func _process(delta: float) -> void:
 		n.position = pos
 		if t >= 1.0:
 			_push.erase(code)
-	_view.redraw_marks()   # the chalk ring and the pennant's dashes follow a pushed piece, only while one moves
+	_view.redraw_marks()   # the pennant's dashes and the supply line follow a pushed piece, only while one moves
 
 
 ## Every piece on the screen (the view's design px): its foot's centre `at`,
@@ -274,6 +327,7 @@ func _add(state: GameState, code: String, naval: bool, at: Vector3) -> Node3D:
 	add_child(node)
 	_pose(state, code, node)
 	_face(node, code, ArmySystem.heading_of(_repo, state, code))
+	_glow(node)
 	return node
 
 

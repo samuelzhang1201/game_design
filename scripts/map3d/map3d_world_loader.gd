@@ -32,6 +32,47 @@ const NOTICES := {
 }
 ## The warnings already given, so a missing optional input is said once.
 static var _warned: Dictionary = {}
+## Each world scene a threaded `request` brought in (scene path ->
+## PackedScene), held so `status` and `instance` take it without reading the
+## file again; Map3DWorldCache.clear lets them go. Main thread only: a worker
+## thread only ever runs ResourceLoader's own threaded load.
+static var _packed: Dictionary = {}
+
+
+## Start reading the world at `scene_path` on worker threads (the boot asks,
+## so the title's live map opens without a stall; spec 2026-10-10 startup):
+## `is_ready` says when it is in; `status` / `instance` take it then, or wait
+## for it. False when there is no such file.
+static func request(scene_path: String) -> bool:
+	if _packed.has(scene_path) or not ResourceLoader.exists(scene_path):
+		return _packed.has(scene_path)
+	if ResourceLoader.load_threaded_get_status(scene_path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		return ResourceLoader.load_threaded_request(scene_path, "PackedScene", true) == OK
+	return true
+
+
+## Whether the world at `scene_path` can be taken without waiting on a thread.
+static func is_ready(scene_path: String) -> bool:
+	return ResourceLoader.load_threaded_get_status(scene_path) != ResourceLoader.THREAD_LOAD_IN_PROGRESS
+
+
+## The PackedScene at `scene_path`: the threaded load's when one was asked
+## (waiting for it if it is still running, then kept), else read now; null
+## when there is none.
+static func packed(scene_path: String) -> PackedScene:
+	if _packed.has(scene_path):
+		return _packed[scene_path]
+	if ResourceLoader.load_threaded_get_status(scene_path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		var ps := ResourceLoader.load_threaded_get(scene_path) as PackedScene
+		if ps != null:
+			_packed[scene_path] = ps
+		return ps
+	return load(scene_path) as PackedScene if ResourceLoader.exists(scene_path) else null
+
+
+## Let go of the world scenes a `request` brought in.
+static func forget() -> void:
+	_packed.clear()
 
 
 ## Whether the build at `scene_path` can be opened: `{state, why, manifest}`,
@@ -75,9 +116,9 @@ static func data_dir(scene_path: String) -> String:
 
 
 ## The root's map3d_world meta, read from the packed scene without instancing
-## it (the load is cached; instance() reuses it).
+## it (the load is kept; instance() reuses it).
 static func scene_meta(scene_path: String) -> Dictionary:
-	var ps := load(scene_path) as PackedScene
+	var ps := packed(scene_path)
 	if ps == null:
 		return {}
 	var st := ps.get_state()
@@ -144,8 +185,8 @@ static func clear_warnings() -> void:
 static func instance(scene_path: String) -> Node3D:
 	if not ResourceLoader.exists(scene_path):
 		return null
-	var packed := load(scene_path) as PackedScene
-	var w: Node3D = packed.instantiate() as Node3D if packed != null else null
+	var ps := packed(scene_path)
+	var w: Node3D = ps.instantiate() as Node3D if ps != null else null
 	if w == null or not w.has_meta("map3d_world"):
 		if w != null:
 			w.free()

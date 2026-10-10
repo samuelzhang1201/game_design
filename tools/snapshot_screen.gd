@@ -607,6 +607,9 @@ func _ready() -> void:
 		# regiments) is overridden in memory, never written; --dev asks for it.
 		_root._dev_mode = _dev
 		Intel.dev_all = _dev
+		# the player's FPS row likewise: no counter in a shot
+		_root._show_fps = false
+		_root.fps_counter().visible = false
 	elif screen.has_method("enter_court"):
 		screen.call("enter_court", null)
 	if _event != "" and screen.has_method("enter_council"):
@@ -859,7 +862,10 @@ func _process(_delta: float) -> void:
 	_frames += 1
 	if _root != null and _pause_menu and _frames == 20:
 		_root.toggle_pause_menu()
-	if _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu:
+	if _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu \
+			and (_root.current_screen as MainMenu).realm_pending():
+		_title_click_frame += 1   # the living map is still opening (BootLoads, a step a frame)
+	elif _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu:
 		var row := (_root.current_screen as MainMenu).menu_column().get_node_or_null(_title_click) as Control
 		if row == null:
 			push_error("--title-click: no title row %s" % _title_click)

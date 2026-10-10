@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://dyxjsl1sxwj7o"]
+
+[ext_resource type="Shader" path="res://scripts/war_room/war_select_glow.gdshader" id="1_ci1dc"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_ci1dc")
+shader_parameter/strength = 0.6
+shader_parameter/gap = 0.14
+shader_parameter/outer_soft = 0.35
