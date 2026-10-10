@@ -1,0 +1,7 @@
+key,text
+forage_unlawful,%s is out of bread and has taken to plunder in %s.
+forage_incident,"%s plundered %s, in %s's land, against the law. They will remember it."
+forage_havoc,Havoc is cried at %s: the host breaks loose.
+stripped_bare,%s is stripped bare; no army can live off it now.
+deserting,Men slip away from %s in the night.
+deserting_big,%s has lost a twentieth of its men to desertion.
