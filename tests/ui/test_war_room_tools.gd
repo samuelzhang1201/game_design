@@ -631,6 +631,7 @@ func test_a_supply_road_from_off_the_sheet_ends_at_its_edge_with_the_towns_name(
 	var b: Dictionary = Game.data.burgs[town]
 	var from := Vector2(float(b["x"]), float(b["y"]))
 	view.aiming = true
+	view.supply_town = town
 	view.supply_preview = PackedVector2Array([from, view.sheet_rect().get_center()])
 	view.plan_input().redraw_live()
 	var hud := view.get_node("%PlanHud") as WarPlanHud

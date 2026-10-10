@@ -838,6 +838,7 @@ func _on_supply_ground(pack_px: Vector2, at: Vector2) -> void:
 		return
 	_supply_town = town
 	var route := SupplyLines.road_px(Game.data, Game.state, _supply_for, town)
+	_map_set("supply_town", town)
 	_map_set("supply_preview", route)
 	_open_rates(town, route, at)
 
@@ -1077,6 +1078,7 @@ func _open_supply() -> void:
 		_supply_choice = ""
 	_panel.show_supply(options, _supply_choice, _supply_words(_supply_choice))
 	_map_set("supply_pick", _supply_ok)
+	_map_set("supply_town", _supply_choice)
 	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, _supply_choice, _pending) if _supply_choice != "" else PackedVector2Array())
 
 
@@ -1098,6 +1100,7 @@ func _rear_order(lead: String) -> Array:
 func _choose_supply(town: String) -> void:
 	_supply_choice = town
 	_supply_set = true
+	_map_set("supply_town", town)
 	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, town, _pending) if town != "" else PackedVector2Array())
 	if _panel != null:
 		_panel.set_supply_figures(_supply_words(town))

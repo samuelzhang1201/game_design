@@ -20,6 +20,8 @@ var _facing_len := 14.0
 var _road: Array = []   # runs of PackedVector2Array, screen px
 var _exit: Dictionary = {}   # {at, dir, text}: where the road leaves the sheet
 var _exit_px := 18
+var _exit_halo_px := 5
+var _exit_halo_alpha := 0.85
 var _orders: Dictionary = {}   # the marches' arrows, WarPlanInk's parts in screen px
 var _orders_look: Dictionary = {}
 var _gold := Color.GOLD
@@ -44,10 +46,12 @@ func show_live(ink: Dictionary, look: Dictionary, handles: PackedVector2Array, c
 ## The bold dashed gold supply road of a pending march, under its crayon
 ## (spec 2026-10-08-war-room-draw-orders ruling 14); empty: none.
 func show_road(road: Array, gold: Color, width: float, dash: float, exit_mark: Dictionary = {},
-		font_px := 18) -> void:
+		font_px := 18, halo_px := 5, halo_alpha := 0.85) -> void:
 	_road = road
 	_exit = exit_mark
 	_exit_px = font_px
+	_exit_halo_px = halo_px
+	_exit_halo_alpha = halo_alpha
 	_gold = gold
 	_road_w = width
 	_road_dash = dash
@@ -153,5 +157,5 @@ func _draw_exit() -> void:
 	var colours: Dictionary = _look.get("colours", {})
 	var ink: Color = colours.get("ink", _gold.darkened(0.6))
 	var halo: Color = _look.get("halo", Color.WHITE)
-	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, _exit_px, 5, Color(halo, 0.85))
+	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, _exit_px, _exit_halo_px, Color(halo, _exit_halo_alpha))
 	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, _exit_px, ink)

@@ -286,7 +286,7 @@ var _war_plan_draw: Array = []   # --war-plan-draw [side:]kind,fx1,fy1,fx2,fy2[;
 var _war_spread := 0             # --war-spread N: N land regiments stood side by side near the focus
 var _war_box := false            # --war-box: a real Shift-drag box round them
 var _war_supply := false         # --war-supply: a real click on the nearest lit town while the confirm stands
-var _war_supply_town := ""        # --war-supply-town CODE|off: choose that town (off: the lit town nearest the laid sheet but off it) through the confirm's Supply from list
+var _war_supply_town := ""        # --war-supply-town CODE|off: choose that town (off: the lit town nearest the laid sheet but off it) through the confirm's select_supply (documented exception to real input)
 var _war_supply_list := false    # --war-supply-list: a real click opening the confirm's Supply from list
 var _war_edit := false           # --war-edit: the draft pennant's Edit route… after the commit
 var _war_hint := false           # --war-hint: a spy report of foreign men seeded near the focus
@@ -1577,11 +1577,12 @@ func _war_draw_order(screen: WarRoomScreen, view: WarRoomView, roll: WarToolRoll
 		menu.aiming(), menu.marching(), menu.waypoints(), menu.shown_confirm() != null])
 
 
-## --war-supply-town: the town chosen from the confirm's Supply from list; "off"
+## --war-supply-town: the town chosen through the confirm's select_supply (a documented exception: the list's popup takes no pushed input); "off"
 ## takes the lit town nearest the laid sheet's rect yet off it (its road enters
 ## the sheet at the exit mark).
 func _war_pick_supply_town(view: WarRoomView, menu: ArmyOrderMenu) -> void:
 	var town := _war_supply_town
+	_war_supply_town = ""   # once: the caller runs every frame the confirm stands
 	if town == "off":
 		var best_d := INF
 		town = ""
@@ -1600,6 +1601,10 @@ func _war_pick_supply_town(view: WarRoomView, menu: ArmyOrderMenu) -> void:
 	if town == "":
 		print("war: no lit town off the sheet")
 		return
+	# DOCUMENTED EXCEPTION to real input: the Supply from list's popup is an embedded PopupMenu window
+	# whose rows take no pushed pointer or key here (a click opens it, a sweep never hovers a row, keys
+	# never move its focus before the shot), so the row is taken through the panel's select_supply,
+	# the very call the list's item-selected signal ends in.
 	menu.shown_confirm().select_supply(town)
 	print("war: supply town %s -> choice=%s road=%d pts" % [town, menu.supply_choice(), view.supply_preview.size()])
 
