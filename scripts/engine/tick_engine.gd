@@ -80,6 +80,11 @@ func _end_day(state: GameState) -> Array:
 	var fights: Array = day_battles + SiegeSystem.news(day_siege) + RaidSystem.news(day_raid)
 	if not fights.is_empty():
 		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, fights))
+	# The crown's sight (spec 2026-10-10-player-sight-and-ghosts), once a day
+	# when every column has marched and fought: the rumour's host ghost on its
+	# day, each foe the crown sees refreshed where it stands, the stale and
+	# the destroyed forgotten.
+	Sighting.update(data, state)
 	# The supply lines' day (spec 2026-10-07-army-supply-lines §3.2): the towns
 	# refill their garrisons, the wagons roll, before the host eats.
 	# a supply warrant a courier delivered today sets its wagons out: said first
