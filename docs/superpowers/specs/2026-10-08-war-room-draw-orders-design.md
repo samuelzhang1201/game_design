@@ -208,6 +208,47 @@ him and is listed for him to overturn one by one. Builds on
     bold dashed route still runs from the chosen town to the arrow's tip. The
     3D map's standalone Add supply point… greys towns ahead for every column,
     marching or standing.
+    **Kept daily** (owner 2026-10-10: "supply lines must automatically break
+    and tell the player when the supply town ends up in front of the army").
+    Rulings, made without the owner:
+    a. Each day (`SupplyLines.day_step`) a running line whose town lies AHEAD
+       of its column where it stands now (`SupplyLines.front_of`) turns
+       `FRONT` (saved as the string `"front"`; no new field, so an old save's
+       line loads as it was): it draws and pays nothing that day, exactly as
+       a CUT line (no stores, no cartage, no purchase), and flows again by
+       itself.
+    b. Hysteresis: it breaks past `supply_ahead_km`; once broken it flows again
+       only when the town is within `supply_ahead_km` less
+       `supply_front_resume_km` (1 km), so a column standing on the boundary
+       does not flicker. A line never broken keeps the plain tolerance.
+    c. CUT wins over FRONT: a foe on the road or a siege names an enemy and a
+       place, the more urgent news. A cut that clears on a line still ahead
+       turns FRONT (said as such, never "open again").
+    d. Said once each way: a `front` event as it breaks and `front_cleared`
+       as it flows again — a fact in the day's supply dispatch AND a line in
+       the news bar (`SupplyLines.news`, through `Game.advance_day`'s
+       `supply`); words in `army_supply_orders.csv` `front_news` /
+       `front_cleared_news`. Cut events keep their dispatch-only path.
+    e. Wagons reaching a column that has passed behind their town say only the
+       break, never "the wagons have reached".
+    f. The town refill of a unit camped by a realm town (`_refill_in_town`)
+       is no line and is untouched; a unit both camped and holding a broken
+       line is still topped up by its town.
+    g. Drawing: the 3D map's and the WAR ROOM's gold lines draw FLOWING lines
+       only, so a FRONT line vanishes like a cut one (the least intrusive
+       coherent look); the key slip shows no cut state, so no new legend.
+       The army card's supply stat reads "broken: town ahead" with the
+       `front_card` sentence as its tooltip; the folio's Line rows (docked and
+       open) read that sentence; the piece slip adds a rubric line
+       (`front_slip`); the LEDGER's line card says "broken: town ahead".
+    h. `SUPPLY_POINT_SET` is refused when it RUNS (sent, deployed, or measured
+       by `Game.review_drafts`) for a town ahead of the column where it stands
+       then (`mark_ahead` in `ActionSystem._validate_supply`, the `pick_ahead`
+       words), so a stale draft cannot make a line that breaks at once. The
+       courier's arrival is not re-checked: if the column has moved since,
+       the daily rule breaks the line on its first flowing day and says so.
+    i. A SET for the same town as a FRONT line is not a rate change (that is
+       FLOWING / CUT only): its wagons set out again (RIDING).
 
 ## 1. Engine (pure, tested)
 

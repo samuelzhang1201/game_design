@@ -95,7 +95,14 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 		var reg := String(ArmySystem.regiment(repo, String(e["regiment"]), state).get("label", e["regiment"]))
 		var town := String((repo.burgs.get(String(e.get("town", "")), {}) as Dictionary).get("label", e.get("town", "")))
 		var text := ""
+		var fact := String(e["type"]).capitalize().replace("_", " ")
 		match String(e["type"]):
+			"front", "front_cleared":
+				# a line whose town lies ahead of its column (ruling 20 kept
+				# daily): army_supply_orders.csv front_news / front_cleared_news
+				var key := "front_news" if String(e["type"]) == "front" else "front_cleared_news"
+				text = SupplyLines.event_words(repo, state, e, key) + "."
+				fact = SupplyLines.words(repo, key, {}, "label", fact)
 			"cut":
 				var near := "" if not e.has("at") else " near " + Intel.place_label(repo, state, e["at"])
 				text = _SUPPLY_WORDS["cut"] % [town, reg, near,
@@ -115,7 +122,7 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 					SupplyLines.fed_from_words(repo, "" if bool(e.get("realm", false)) else String(e.get("depot", "")))]
 			_:
 				text = _SUPPLY_WORDS[String(e["type"])] % [town, reg]
-		facts.append(MissiveLog.words("supply_%d" % i, String(e["type"]).capitalize().replace("_", " "), text))
+		facts.append(MissiveLog.words("supply_%d" % i, fact, text))
 	var first := String((events[0] as Dictionary)["regiment"])
 	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, first, state))
 	return MissiveLog.make("supply", "credible", state.absolute_day(),

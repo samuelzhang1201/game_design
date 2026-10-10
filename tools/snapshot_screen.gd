@@ -174,6 +174,10 @@ var _trace_couriers := false
 ## the realm's capital (the state set directly, for a shot of the line);
 ## prints where it stands, for --look3d.
 var _supply_flow := Vector2.INF
+## --supply-front (with --screen root): the player's first land regiment with a
+## realm town AHEAD of it gets a line from that town, and the engine's day step
+## breaks it (FRONT, ruling 20 kept daily) — the card, folio and slip words.
+var _supply_front := false
 var _shot_frame := 40
 ## The Missive board and spies (2026-09-28), all with --screen root:
 ## --quiet drops the chapter's scheduled beats, rolls no random event and runs the
@@ -397,6 +401,8 @@ func _ready() -> void:
 			_click_courier = int(args[i + 1])
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
+		elif args[i] == "--supply-front":
+			_supply_front = true
 		elif args[i] == "--supply-flow":
 			var sf := args[i + 1].split(",")
 			_supply_flow = Vector2(float(sf[0]), float(sf[1]))
@@ -551,6 +557,8 @@ func _ready() -> void:
 		Game.next_tick()
 	if _supply_flow != Vector2.INF:
 		_lay_supply_flow()
+	if _supply_front:
+		_lay_supply_front()
 	if _res != Vector2i.ZERO:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(_res)
@@ -1024,6 +1032,30 @@ func _lay_supply_flow() -> void:
 		Game.state.supply_lines[code] = rec
 		print("supply-flow: %s at %s marching to %s, fed from %s" % [code, at, at + _supply_flow, cap])
 		return
+
+
+## --supply-front: a FLOWING line from a realm town ahead of the first land
+## regiment that has one, then the engine's own day step (which breaks it).
+func _lay_supply_front() -> void:
+	var repo := Game.data
+	var rear := CourierSystem.origin(repo, Game.state)
+	var towns: Array = TownStores.realm_towns(repo, Game.state)
+	towns.sort()
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), Game.state):
+		var code := String(r["regiment_code"])
+		if String(r.get("is_naval", "0")) == "1" or not Game.state.regiments.has(code):
+			continue
+		var at := ArmySystem.position_of(repo, Game.state, r)
+		for t: String in towns:
+			var b: Dictionary = repo.burgs[t]
+			if SupplyLines.is_ahead(repo, rear, at, Vector2(float(b["x"]), float(b["y"]))):
+				var rec := SupplyLines._new_record(t, 1000, 1)
+				rec["state"] = SupplyLines.FLOWING
+				Game.state.supply_lines[code] = rec
+				var ev := SupplyLines.day_step(repo, Game.state)
+				print("supply-front: %s at %s fed from %s -> %s; news %s" % [code, at, t,
+					String(rec["state"]), SupplyLines.news(repo, Game.state, ev)])
+				return
 
 
 ## One --trace-couriers line: the frame, day, share, and every courier's

@@ -5,12 +5,17 @@ extends RefCounted
 ## the road to where the column stands each day. A line is ORDERED while the
 ## courier rides to the town, RIDING while its first wagons are on the road,
 ## then FLOWING — or CUT on a day a hostile regiment stands by its road (no
-## rerouting). GameState.supply_lines; whole numbers; regiment code order.
+## rerouting), or FRONT on a day its town lies AHEAD of the column (ruling 20
+## kept daily, owner 2026-10-10). GameState.supply_lines; whole numbers;
+## regiment code order.
 
 const ORDERED := "ordered"
 const RIDING := "riding"
 const FLOWING := "flowing"
 const CUT := "cut"
+## Broken because its town lies on the frontier side of the column (`front_of`):
+## it draws and pays nothing, like a cut line, and flows again by itself.
+const FRONT := "front"
 const RATES := [800, 1000, 1200]
 
 
@@ -130,9 +135,83 @@ static func mark_ahead(repo: DataRepository, state: GameState, code: String, why
 ## lies FARTHER from the crown's rear `rear` (its capital's point) than the
 ## column by more than supply_ahead_km: the frontier side, whichever way the
 ## column marches. Nearer the rear, or within the tolerance, is not ahead.
-static func is_ahead(repo: DataRepository, rear: Vector2, at: Vector2, town: Vector2) -> bool:
-	var tol := repo.bal("supply_ahead_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
+## `less_km` narrows the tolerance (a broken line's way back, `front_of`).
+static func is_ahead(repo: DataRepository, rear: Vector2, at: Vector2, town: Vector2, less_km := 0.0) -> bool:
+	var tol := (repo.bal("supply_ahead_km") - less_km) * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
 	return town.distance_to(rear) > at.distance_to(rear) + tol
+
+
+## Whether `code`'s line from `town` is broken today because the town lies
+## AHEAD of the column where it stands now (ruling 20 kept daily, owner
+## 2026-10-10): past supply_ahead_km it breaks; a line already broken
+## (`broken`) flows again only within supply_ahead_km less
+## supply_front_resume_km, so a column on the boundary does not flicker.
+static func front_of(repo: DataRepository, state: GameState, code: String, town: String, broken: bool) -> bool:
+	var reg := ArmySystem.regiment(repo, code, state)
+	if reg.is_empty() or not repo.burgs.has(town):
+		return false
+	return is_ahead(repo, CourierSystem.origin(repo, state), ArmySystem.position_of(repo, state, reg),
+		_burg_px(repo, town), repo.bal("supply_front_resume_km") if broken else 0.0)
+
+
+## A row of data/army_supply_orders.csv, its `col` filled from `fields`
+## ({town}, {regiment}); `fallback` when the row is missing.
+static func words(repo: DataRepository, key: String, fields: Dictionary, col := "hint", fallback := "") -> String:
+	var text := String((repo.army_supply_orders.get(key, {}) as Dictionary).get(col, ""))
+	return (text if text != "" else fallback).format(fields)
+
+
+static func _town_label(repo: DataRepository, town: String) -> String:
+	return String((repo.burgs.get(town, {}) as Dictionary).get("label", town))
+
+
+static func _reg_label(repo: DataRepository, state: GameState, code: String) -> String:
+	return String(ArmySystem.regiment(repo, code, state).get("label", code))
+
+
+## The words of a line broken FRONT for the cards ("Broken: Walbover lies on
+## the frontier side of the column — …", `front_card`); "" for any other line.
+static func front_words(repo: DataRepository, state: GameState, code: String) -> String:
+	var ln := line(state, code)
+	if String(ln.get("state", "")) != FRONT:
+		return ""
+	return words(repo, "front_card", {"town": _town_label(repo, String(ln["town"]))}, "hint",
+		"Broken: {town} lies on the frontier side of the column")
+
+
+## The WAR ROOM piece slip's line for a FRONT line (`front_slip`), else "".
+static func slip_words(repo: DataRepository, state: GameState, code: String) -> String:
+	var ln := line(state, code)
+	if String(ln.get("state", "")) != FRONT:
+		return ""
+	return words(repo, "front_slip", {"town": _town_label(repo, String(ln["town"]))}, "hint",
+		"Supply line broken: {town} lies ahead of the column")
+
+
+## The news bar's lines for a day's supply events (GameRoot, after the day):
+## a line turning FRONT and one flowing again, each said once (`front_news`,
+## `front_cleared_news`); the other events go only into the dispatch letter.
+static func news(repo: DataRepository, state: GameState, events: Array) -> Array:
+	var out: Array = []
+	for e: Dictionary in events:
+		var key := ""
+		match String(e.get("type", "")):
+			"front":
+				key = "front_news"
+			"front_cleared":
+				key = "front_cleared_news"
+			_:
+				continue
+		out.append(event_words(repo, state, e, key))
+	return out
+
+
+## A front / front_cleared event in words (`key`: front_news, front_cleared_news).
+static func event_words(repo: DataRepository, state: GameState, e: Dictionary, key: String) -> String:
+	return words(repo, key, {"regiment": _reg_label(repo, state, String(e["regiment"])),
+		"town": _town_label(repo, String(e.get("town", "")))}, "hint",
+		"The supply line of {regiment} from {town} is broken" if key == "front_news"
+			else "The supply line of {regiment} from {town} flows again")
 
 
 ## The towns in the order the march's confirm lists them (ruling 20): the
@@ -556,8 +635,12 @@ static func _still_ordered(state: GameState, code: String, ln: Dictionary, ridin
 ## the town refills (a dry town's rest from the depot and the realm), then each line's
 ## state, interception and delivery. An ORDERED line, or a `pending` point,
 ## whose courier no longer rides (lost on the road) is dropped
-## (_still_ordered). Returns the day's events {type, regiment, town, by?,
-## at?, depot?, realm?} for the dispatches; the low / empty /
+## (_still_ordered). A line whose town lies AHEAD of its column (`front_of`)
+## is FRONT: it draws and pays nothing that day, said once as `front`, and
+## once as `front_cleared` when it flows again; a CUT road wins over it (its
+## foe and place are the news), and a cut that clears on a line still ahead
+## turns FRONT, never `restored`. Returns the day's events {type, regiment,
+## town, by?, at?, depot?, realm?} for the dispatches; the low / empty /
 ## town_low warnings are warn_day's, once the host has eaten.
 static func day_step(repo: DataRepository, state: GameState) -> Array:
 	TownStores.reconcile(repo, state)
@@ -602,7 +685,10 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 			if state.absolute_day() < int(ln["ready_day"]):
 				continue
 			ln["state"] = FLOWING
-			events.append({"type": "opened", "regiment": code, "town": town})
+			# its first wagons arrive at a column that has passed behind the
+			# town: only the break is said (below), never an opening
+			if not front_of(repo, state, code, town, false):
+				events.append({"type": "opened", "regiment": code, "town": town})
 		var route := road_px(repo, state, code, town)
 		var cut := siege_cut(repo, state, code)
 		if cut.is_empty():
@@ -619,6 +705,17 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 				events.append(ev)
 			ln["state"] = CUT
 			continue
+		if front_of(repo, state, code, town, String(ln["state"]) == FRONT):
+			if String(ln["state"]) != FRONT:
+				ln["state"] = FRONT
+				ln["cut_x_m"] = -1
+				ln["cut_y_m"] = -1
+				ln["cut_by"] = ""
+				events.append({"type": "front", "regiment": code, "town": town})
+			continue   # broken: no stores, no cartage, as a cut line
+		if String(ln["state"]) == FRONT:
+			ln["state"] = FLOWING
+			events.append({"type": "front_cleared", "regiment": code, "town": town})
 		if String(ln["state"]) == CUT:
 			ln["state"] = FLOWING
 			ln["cut_x_m"] = -1

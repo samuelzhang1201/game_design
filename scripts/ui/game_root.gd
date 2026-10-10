@@ -204,6 +204,10 @@ func _process(delta: float) -> void:
 				Game.publish_news(arrived)
 		for line: String in CourierSystem.news(Game.data, out.get("couriers", [])):
 			Game.publish_news(line)
+		# a supply line broken because its town now lies ahead of the column,
+		# and flowing again (ruling 20 kept daily): said once each
+		for line: String in SupplyLines.news(Game.data, Game.state, out.get("supply", [])):
+			Game.publish_news(line)
 		# A building that first stands idle for want of inputs (M5), once.
 		for w: Dictionary in out.get("idled", []):
 			Game.publish_news("The %s at %s stands %s." % [
