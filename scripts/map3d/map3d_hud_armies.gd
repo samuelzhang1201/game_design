@@ -81,7 +81,12 @@ func _cut() -> Array:
 			continue
 		var sp := camera.unproject_position(ground) / s
 		if frame.has_point(sp):
-			points.append({"reg": r, "pos": sp})
+			var pt := {"reg": r, "pos": sp}
+			if ctx.fogged(String(r["regiment_code"])):
+				# an enemy unit the crown sees: its men as the seers' estimate (Sighting)
+				pt["text"] = "≈" + Intel.num(Sighting.about(repo, Sighting.men_of(repo, ctx.state(),
+					String(r["regiment_code"])), int(repo.bal("player_sight_estimate_quality")), 0))
+			points.append(pt)
 	if points.is_empty():
 		return []
 	var keep_off: Array = ctx.settlement_rects()
@@ -175,8 +180,8 @@ func _draw_routes() -> void:
 	var shown := view.unit_positions()
 	for r: Dictionary in ctx.regiments():
 		var code := String(r["regiment_code"])
-		if ArmySystem.order_of(repo, st, code) != ArmySystem.ORDER_MARCH:
-			continue
+		if ctx.fogged(code) or ArmySystem.order_of(repo, st, code) != ArmySystem.ORDER_MARCH:
+			continue  # an enemy's road ahead is not the crown's to see
 		# along its route still ahead, the curve it walks (spec 2026-10-07-march-waypoints)
 		var prev: Vector2 = shown.get(code, ctx.to_world(ArmySystem.position_of(repo, st, r)))
 		var pts := PackedVector2Array()
@@ -204,7 +209,7 @@ func route_ends() -> Array:
 	var s := ctx.viewport_px_scale()
 	for r: Dictionary in ctx.regiments():
 		var code := String(r["regiment_code"])
-		if ArmySystem.order_of(ctx.repo, st, code) != ArmySystem.ORDER_MARCH:
+		if ctx.fogged(code) or ArmySystem.order_of(ctx.repo, st, code) != ArmySystem.ORDER_MARCH:
 			continue
 		var to: Variant = _screen_of(ArmySystem.destination_of(ctx.repo, st, code))
 		if to != null:

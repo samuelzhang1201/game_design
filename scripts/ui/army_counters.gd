@@ -35,7 +35,7 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var strength := MapObjects.regiment_size(repo, r)
 		var naval := String(r.get("is_naval", "0")) == "1"
 		var royal := String(r.get("is_royal", "0")) == "1"
-		var text := str(int(strength))
+		var text := String(p.get("text", str(int(strength))))  # a fogged foe's: an estimate (Map3DHudArmies)
 		var font_px := maxi(int(round(h * repo.bal("map_army_font_frac"))), 1)
 		var count_w := maxf(h, ManorBadges.text_width(font, text, font_px) + pad * 2.0)
 		var w := h + count_w

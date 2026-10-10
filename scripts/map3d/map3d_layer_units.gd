@@ -22,6 +22,9 @@ const MARCH := "MARCH"
 @export var blend_s := 0.3
 ## Degrees a second a piece turns (instant turning read as a glitch).
 @export var turn_deg_per_s := 220.0
+## How solid a GHOST's figures stand (spec 2026-10-10-player-sight-and-ghosts),
+## 1 opaque — see-through as a courier's fading piece (Map3DCourierRide.apply).
+@export_range(0.0, 1.0) var ghost_alpha := 0.35
 
 var ctx: Map3DContext
 ## Whether the pieces show; Map3DView sets it from set_military.
@@ -98,6 +101,18 @@ func refresh() -> void:
 		if not _shown_xz.has(code):
 			_shown_xz[code] = _target_xz(reg)
 		_place(code, piece)
+	# the GHOSTS (Map3DContext.ghosts): where the crown last knew a foe, its unit's
+	# piece (a host's: its first column's) at full strength, see-through, standing still
+	for g: Dictionary in ctx.ghosts():
+		var key := Sighting.GHOST_CODE + String(g["key"])
+		if not _pieces.has(key) and not _build(key, ArmySystem.regiment(ctx.repo, Sighting.model_unit(
+				ctx.state(), g), ctx.state()), Map3DFormation.tier_of(ctx.repo, 1000)).is_empty():
+			Map3DCourierRide.apply(_pieces[key], ghost_alpha)
+			play(key, STANDBY)
+		if _pieces.has(key):
+			live[key] = true
+			_shown_xz[key] = ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(int(g["x_m"]), int(g["y_m"]))))
+			_place(key, _pieces[key])
 	for code: String in _pieces.keys():
 		if not live.has(code):
 			show_piece(_pieces[code], false)
@@ -153,8 +168,8 @@ func step(delta: float) -> bool:
 	var moved := false
 	for code: String in _pieces:
 		var node: Node3D = _pieces[code]["node"]
-		if not _shown_xz.has(code):
-			continue
+		if not _shown_xz.has(code) or code.begins_with(Sighting.GHOST_CODE):
+			continue  # a ghost stands where it was last known
 		var now: Vector2 = _shown_xz[code]
 		var day := _day_of(code)
 		var want := Map3DUnits.along_day(day, ctx.day_share())
@@ -213,17 +228,8 @@ func drawn_count() -> int:
 
 ## Put a regiment's figures into an action by name; one without it keeps its own.
 func play(code: String, action: String) -> void:
-	if not _pieces.has(code):
-		return
-	var anims: Array = _pieces[code]["anims"]
-	for i in anims.size():
-		var anim: AnimationPlayer = anims[i]
-		var clip := Map3DUnits.clip_named(anim, action)
-		if clip == "" or anim.current_animation == clip:
-			continue
-		anim.play(clip, blend_s)  # blended, never a snap
-		if action != MARCH:  # men at rest are not clones; a column marches in step
-			anim.seek(fposmod(i * 0.37, anim.current_animation_length))
+	if _pieces.has(code):
+		Map3DUnitRig.play(_pieces[code]["anims"], action, blend_s)
 
 
 ## The piece for a regiment, built on first sight; {} for an arm with no model (a fleet).
@@ -238,33 +244,28 @@ func _piece_of(code: String) -> Dictionary:
 	if _pieces.has(code):  # its strength crossed a tier: the formation is built anew
 		(_pieces[code]["node"] as Node3D).queue_free()
 		_pieces.erase(code)
-	var piece := MapObjects.army_piece(ctx.repo, reg)
-	var art: Dictionary = ctx.repo.army_art.get(piece, {})
-	var path := GameArt.path(GameArt.ARMY_MODELS, piece)
-	var scene := _scene(path) if path != "" else null
-	if scene == null:
+	if _build(code, reg, tier).is_empty():
 		return {}
-	var one := scene.instantiate() as Node3D
-	if one == null:
-		return {}
-	# One figure measured, then its FORMATION by strength (Map3DFormation).
-	var span := Map3DUnits.model_size(one)
-	var ext := Map3DUnits.stand_extent(one)
-	var offs := Map3DFormation.offsets(tier, ext, formation_gap, Map3DFormation.rank_depth(art))
-	var node := Map3DFormation.build(scene, offs, one)
-	node.name = code
-	add_child(node)  # no owner: never saved into the authored scene
-	var anims := Map3DFormation.anims_of(node)
-	var half := Map3DFormation.half_extent(offs, ext)
-	var clip := Map3DUnits.clip_named(anims[0], MARCH) if not anims.is_empty() else ""
-	_pieces[code] = {"node": node, "anims": anims, "height_m": span.y,
-		"head_m": Map3DUnitRig.head_m(ctx.repo, one, span.y),
-		"half_w_m": maxf(half.x, half.y), "extent": half, "figures": offs.size(),
-		"stand_deg": float(art.get("stand_deg", "0")),
-		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
-		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
 	_sync_action(code)
 	return _pieces[code]
+
+
+## Builds the piece of `reg` in formation `tier` as `_pieces[key]`; {} when its
+## arm has no model.
+func _build(key: String, reg: Dictionary, tier: Dictionary) -> Dictionary:
+	if reg.is_empty():
+		return {}
+	var piece := MapObjects.army_piece(ctx.repo, reg)
+	var path := GameArt.path(GameArt.ARMY_MODELS, piece)
+	var scene := _scene(path) if path != "" else null
+	var built := Map3DFormation.piece(ctx.repo, scene, ctx.repo.army_art.get(piece, {}), tier,
+		formation_gap) if scene != null else {}
+	if built.is_empty():
+		return {}
+	(built["node"] as Node3D).name = key.replace(":", "_")
+	add_child(built["node"])  # no owner: never saved into the authored scene
+	_pieces[key] = built
+	return built
 
 
 ## A piece's day's march (Map3DUnits.day_march), remade when its row, the day
