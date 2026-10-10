@@ -2,9 +2,11 @@ extends GutTest
 ## Kingdom names on the 3D map (owner 2026-09-18, the migration list's
 ## second item): the 2D map's lettering — blackletter in the name's own case,
 ## the coast ink, faint — standing upright on the HUD over each kingdom's
-## LIVE label anchor, sized as a map_label_scale_px-pack-px-tall word on the
-## ground seen from the camera, and hidden below map_label_min_px. The built
-## scene is git-ignored, so the view loads a flat fixture world.
+## LIVE label anchor, pinned to it, sized as a map_label_scale_px-pack-px-tall
+## word on the ground seen from the camera, and shown only at the far zoom: it
+## fades out from map_label_fade_from_px to map_label_hide_px (owner
+## 2026-10-10: 国家名字无论我视角如何调整都会显示，很碍事). The built scene is
+## git-ignored, so the view loads a flat fixture world.
 
 const RunDir := preload("res://tests/run_dir.gd")
 var _fixture := RunDir.dir("map3d_labels").path_join("test_map3d_labels_world.tscn")
@@ -44,15 +46,25 @@ func _entry(v: Map3DView, code: String) -> Dictionary:
 # --- the size rule ---------------------------------------------------------------
 
 func test_a_label_is_its_ground_height_over_the_metres_per_pixel() -> void:
-	assert_almost_eq(Map3DGeometry.label_px(2250.0, 75.0, 16.0, 60.0), 30.0, 0.001)
+	assert_almost_eq(Map3DHudLabels.label_px(2250.0, 75.0, 16.0), 30.0, 0.001)
 
 
-func test_a_near_label_stops_at_the_largest_size() -> void:
-	assert_almost_eq(Map3DGeometry.label_px(2250.0, 10.0, 16.0, 60.0), 60.0, 0.001)
+func test_a_near_label_grows_with_the_ground() -> void:
+	assert_almost_eq(Map3DHudLabels.label_px(2250.0, 10.0, 16.0), 225.0, 0.001, "never held to one size")
 
 
 func test_a_far_label_is_hidden_below_the_smallest_size() -> void:
-	assert_eq(Map3DGeometry.label_px(2250.0, 200.0, 16.0, 60.0), 0.0)
+	assert_eq(Map3DHudLabels.label_px(2250.0, 200.0, 16.0), 0.0)
+
+
+## Whole to 80 px, gone at 110: at 95 px half, at 102.5 a quarter.
+func test_a_name_fades_out_as_the_camera_comes_in() -> void:
+	assert_eq(Map3DHudLabels.label_fade(40.0, 80.0, 110.0), 1.0)
+	assert_eq(Map3DHudLabels.label_fade(80.0, 80.0, 110.0), 1.0)
+	assert_almost_eq(Map3DHudLabels.label_fade(95.0, 80.0, 110.0), 0.5, 0.0001)
+	assert_almost_eq(Map3DHudLabels.label_fade(102.5, 80.0, 110.0), 0.25, 0.0001)
+	assert_eq(Map3DHudLabels.label_fade(110.0, 80.0, 110.0), 0.0)
+	assert_eq(Map3DHudLabels.label_fade(400.0, 80.0, 110.0), 0.0)
 
 
 # --- the view's labels ------------------------------------------------------------
@@ -68,23 +80,40 @@ func test_the_players_realm_is_lettered_over_its_live_anchor() -> void:
 	assert_almost_eq((e["pos"] as Vector2).x, v.size.x * 0.5, 2.0, "over the anchor")
 	assert_almost_eq((e["pos"] as Vector2).y, v.size.y * 0.5, 2.0)
 	var mpp := Map3DGeometry.metres_per_pixel(30000.0, Game.data.bal("map3d_fov_deg"), v.size.y)
-	assert_almost_eq(float(e["px"]), Map3DGeometry.label_px(
+	assert_almost_eq(float(e["px"]), Map3DHudLabels.label_px(
 		Game.data.bal("map_label_scale_px") * 50.0, mpp,
-		Game.data.bal("map_label_min_px"), Game.data.bal("map_label_max_px")), 0.5,
+		Game.data.bal("map_label_min_px")), 0.5,
 		"a word map_label_scale_px pack px tall, seen from the camera")
+	assert_almost_eq(float(e["fade"]), Map3DHudLabels.label_fade(float(e["px"]),
+		Game.data.bal("map_label_fade_from_px"), Game.data.bal("map_label_hide_px")), 0.0001,
+		"shown far out, faded by its size")
+	assert_gt(float(e["fade"]), 0.0)
 
 
-func test_zooming_out_far_enough_hides_the_names() -> void:
+func test_close_in_the_names_are_gone() -> void:
 	var v := _view()
 	var mine := Game.data.resolve_realm("player_realm")
-	v.look_at_pack(MapOwnership.label_anchor(Game.data, Game.state, mine),
-		Game.data.bal("map3d_zoom_min_m"))
-	var near := float(_entry(v, mine).get("px", 0.0))
-	assert_eq(near, Game.data.bal("map_label_max_px"), "capped up close")
-	v.look_at_pack(MapOwnership.label_anchor(Game.data, Game.state, mine),
-		Game.data.bal("map3d_zoom_max_m") * 4.0)
-	assert_true(_entry(v, mine).is_empty() or float(_entry(v, mine)["px"]) \
-		< Game.data.bal("map_label_max_px"), "smaller, or gone, far away")
+	for at_m: float in [Game.data.bal("map3d_zoom_min_m"), 5000.0]:
+		v.look_at_pack(MapOwnership.label_anchor(Game.data, Game.state, mine), at_m)
+		assert_true(_entry(v, mine).is_empty(), "no name at %d m" % int(at_m))
+		await wait_process_frames(2)
+		assert_false(v.drawn_labels().has(mine), "and none lettered at %d m" % int(at_m))
+
+
+## Pinned to its ground: once the view leaves the anchor the name goes with
+## it, never sliding back inside the frame.
+func test_a_name_is_pinned_to_its_anchor() -> void:
+	var v := _view()
+	var mine := Game.data.resolve_realm("player_realm")
+	var anchor := MapOwnership.label_anchor(Game.data, Game.state, mine)
+	v.look_at_pack(anchor, 30000.0)
+	var at := _entry(v, mine)["pos"] as Vector2
+	v.look_at_pack(anchor + Vector2(60.0, 0.0), 30000.0)
+	var moved := _entry(v, mine)
+	assert_false(moved.is_empty(), "premise: still on screen")
+	assert_lt((moved["pos"] as Vector2).x, at.x - 1.0, "it went with its ground")
+	v.look_at_pack(anchor + Vector2(1500.0, 0.0), 30000.0)
+	assert_true(_entry(v, mine).is_empty(), "its anchor off screen, no name")
 
 
 func test_a_conquest_moves_the_label() -> void:
@@ -111,27 +140,3 @@ func test_the_hud_letters_the_names() -> void:
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()
-
-
-# A name is lettered whole (visual review 2026-10-05: "gate" was cut by the
-# sheet's edge): a box hanging over an edge moves in by exactly its overhang
-# plus the margin, a box inside stays, a box wider than the frame centres.
-func test_a_name_over_the_left_edge_slides_in() -> void:
-	var shift := Map3DHudLabels.inward(Rect2(-30, 100, 120, 20), Rect2(0, 0, 800, 450), 10.0)
-	assert_eq(shift, Vector2(40, 0))
-
-
-func test_a_name_over_the_top_and_right_slides_in_on_both() -> void:
-	var shift := Map3DHudLabels.inward(Rect2(720, -5, 100, 20), Rect2(0, 0, 800, 450), 10.0)
-	assert_eq(shift, Vector2(-30, 15))
-
-
-func test_a_name_inside_stays() -> void:
-	assert_eq(Map3DHudLabels.inward(Rect2(100, 100, 120, 20), Rect2(0, 0, 800, 450), 10.0), Vector2.ZERO)
-
-
-func test_a_name_wider_than_the_view_is_centred() -> void:
-	var shift := Map3DHudLabels.inward(Rect2(-100, 100, 1000, 20), Rect2(0, 0, 800, 450), 10.0)
-	assert_eq(shift, Vector2(0, 0))
-	shift = Map3DHudLabels.inward(Rect2(0, 100, 1000, 20), Rect2(0, 0, 800, 450), 10.0)
-	assert_eq(shift, Vector2(-100, 0))

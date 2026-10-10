@@ -59,15 +59,20 @@ static func tracked_width(font: Font, text: String, font_px: int, tracking: floa
 
 
 ## Letter `text` centred on `at` (its x the word's middle, its y the anchor)
-## at `px`, unless its box misses `frame`. Returns whether it was drawn.
+## at `px`, its ink and halo at `fade` of their alpha, unless its box misses
+## `frame`. Returns whether it was drawn.
 static func draw_centred(ci: CanvasItem, repo: DataRepository, font: Font, text: String,
-		at: Vector2, px: float, frame: Rect2) -> bool:
+		at: Vector2, px: float, frame: Rect2, fade := 1.0) -> bool:
 	var font_px := int(px)
 	var tracking := px * repo.bal("map_label_tracking")
 	var box := box_centred(repo, font, text, at, px)
 	if not frame.intersects(box):
 		return false
-	draw_tracked(ci, font, text, box.position + Vector2(0, px), font_px, tracking, ink(repo), halo(repo),
+	var ink_c := ink(repo)
+	var halo_c := halo(repo)
+	ink_c.a *= fade
+	halo_c.a *= fade
+	draw_tracked(ci, font, text, box.position + Vector2(0, px), font_px, tracking, ink_c, halo_c,
 		int(round(px * repo.bal("map_label_halo_frac"))))
 	return true
 
