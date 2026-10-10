@@ -1015,6 +1015,7 @@ func load_map(id: String) -> bool:
 	ArmySplit.forget()
 	LawEffects.forget()
 	WarSheets.forget()
+	Forage.forget()
 	routes.clear()
 	rivers.clear()
 	markers.clear()

@@ -80,11 +80,13 @@ static func stripped_capacity(repo: DataRepository, state: GameState, province: 
 
 
 ## "home" (the crown's own), "enemy", "grey" (neutral, wary, unknown) or "none"
-## (a friend's land, or no province at all).
+## (a friend's land, a province nobody holds, or no province at all).
 static func land_kind(repo: DataRepository, state: GameState, province: String) -> String:
 	if province == "":
 		return NONE
 	var holder := MapOwnership.owner_of(repo, state, province)
+	if holder == "":
+		return NONE
 	if holder == repo.resolve_realm("player_realm"):
 		return HOME
 	match Intel.stance_of(repo, holder):
@@ -148,6 +150,8 @@ static func strip(repo: DataRepository, state: GameState, province: String, take
 		return
 	@warning_ignore("integer_division")  # whole per mille
 	var add := taken * int(repo.bal("forage_strip_k")) / cap
+	if add <= 0:
+		return   # no 0 entry: only non-zero stripping is kept
 	state.forage_stripped[province] = clampi(int(state.forage_stripped.get(province, 0)) + add, 0, 1000)
 
 

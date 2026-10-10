@@ -63,7 +63,7 @@ words in a new `data/conduct_words.csv` (`key,text`); laws in `laws.csv`,
 | `forage_share_permille` | 1000 | the share of a day's capacity one province lends the units in it |
 | `forage_strip_k` | 500 | ‰ stripped when a province's whole full monthly capacity is taken |
 | `forage_recover_permille` | 100 | ‰ a stripped province recovers at the month's end |
-| `forage_bare_permille` | 900 | past this, "stripped bare" news (once per crossing) |
+| `forage_bare_permille` | 900 | past this, the "stripped bare" letter fact (once per crossing) |
 | `forage_word_rich_permille` / `_fair_permille` | 750 / 400 | the slip's "rich" and "fair": today's yield per mille of a full summer day (above 0 but under "fair" is "thin", 0 is "stripped") |
 | `forage_hazard_strip_permille` / `_protected` | 500 / 750 | stripping past which the province gets the "Raided" hazard; the second with `protect_church` on |
 | `forage_morale_month` / `forage_training_month` | 4 / 3 | morale gained / training lost for 30 days foraging |
@@ -75,7 +75,7 @@ words in a new `data/conduct_words.csv` (`key,text`); laws in `laws.csv`,
 | `desert_morale` / `_training` / `_supply_days` | 20 / 3 / 0 | the lines a home unit deserts under (below / below / at) |
 | `desert_permille_per_day` | 3 | share of the fit men leaving a day, per condition met |
 | `desert_mult_fine` / `_lenient` / `_hanging` | 1000 / 2000 / 400 | the law's multiplier, ‰ |
-| `desert_news_cumulative_permille` | 50 | cumulative share of the original heads that earns its own news |
+| `desert_news_cumulative_permille` | 50 | cumulative share of the original heads that earns its own letter fact |
 
 ### 1.2 Laws
 
@@ -139,7 +139,7 @@ state.
 ### 3.3 `ArmyConduct.day_step(repo, state, day)`
 
 Runs once a day after the day's supply step (eating, the hungry morale loss),
-units in code order. Returns news and missive rows, applies state changes
+units in code order. Returns letter facts (the Marshal's report's events), applies state changes
 through the existing reasoned channels (legitimacy with a reason string,
 hazards through the call `RaidSystem` uses).
 
@@ -150,26 +150,26 @@ hazards through the call `RaidSystem` uses).
    start_morale, training < start_training (the `_obey` set with
    `obey_command` on); `desperate` → off when supply days ≥ stop_days AND
    morale ≥ stop_morale. A unit still under a start line restarts the next
-   day; the once-a-month marks keep the news and the legitimacy cost from
+   day; the once-a-month marks keep the letter fact and the legitimacy cost from
    repeating.
 4. **Grey:** off → `desperate` only at supply days 0 (stop as above); the
    start is an **incident**; **none** or no land: off.
 5. **An unlawful start** (`desperate` begins) is charged once per unit per
-   month: news; legitimacy −`forage_incident_legitimacy` ("{unit} plundered
+   month: a letter fact; legitimacy −`forage_incident_legitimacy` ("{unit} plundered
    {province} against the law"); a missive from the marshal. In grey land
    also: the "Raided" hazard on the province, and, once per kingdom per month
    (`grievance:<kingdom>`), `grievance[kingdom] += forage_grievance_month` (`_protected` with
    `protect_women` on).
 6. **Havoc:** if the start was unlawful and `no_havoc` is off, every other
    crown land unit in the same province with `forage = ""` becomes `desperate`
-   the same day, without its own legitimacy charge or news.
+   the same day, without its own legitimacy charge or letter fact.
 7. **Taking:** each unit with `forage != ""` takes its share (§3.1), its
    `supplies` rise, and `forage_days += 1` only when it took more than 0 (a
    day that took nothing, full stores or stripped land, is no foraging day). The province's stripping rises by
    `taken × forage_strip_k / monthly_capacity` per taker (floor). Past
    `forage_hazard_strip_permille` (or `_protected`) the province gets the
    "Raided" hazard once. Crossing `forage_bare_permille` files the "stripped
-   bare" news once per crossing.
+   bare" letter fact once per crossing.
 8. **The month's end:** for each unit with `forage_days = d > 0`: morale
    += `forage_morale_month × d / 30`, training −= `forage_training_month × d
    / 30` but never below `forage_training_floor` (a unit already under it
@@ -188,9 +188,10 @@ hazards through the call `RaidSystem` uses).
    `deserted` first exceeds `desert_news_cumulative_permille` of the unit's
    original heads.
 
-`Game` calls `ArmyConduct.day_step` from the same place it already calls the
-daily supply step, and surfaces the returned news and missives as it does for
-supply; the engine never names a UI class.
+`TickEngine._end_day` calls `ArmyConduct.day_step` right after the day's
+supply step and files the returned letter facts as ONE Marshal's report
+missive (`MissiveWriter.conduct_dispatch`), as it does for supply; the engine
+never names a UI class.
 
 ## 4. Presentation (text in existing places; no new scenes, no new art)
 
@@ -231,7 +232,7 @@ text (the kingdom, province and unit are filled at runtime).
   training and wounded for a partial month.
 - **Desertion:** the loss for 1, 2, 3 conditions; the three law
   multipliers; a 100-man unit loses its first man on the hand-computed day;
-  deserters are permanent and leave `fit_heads`; the news once a month and
+  deserters are permanent and leave `fit_heads`; the letter facts once a month and
   once past 5%.
 - **Save and determinism:** the new fields round-trip; an old save loads
   empty; 24 months twice from one seed give identical state.

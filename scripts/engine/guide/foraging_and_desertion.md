@@ -8,7 +8,7 @@ Spec `2026-10-10-foraging-and-desertion-design.md`. Integers only, no RNG, code 
 
 ## Land kinds (`Forage.land_kind`)
 
-By the holder of the unit's province: `home` (the crown's own), `enemy` (`Intel.stance_of` = Enemy), `grey` (Neutral, Suspicion, Unknown), `none` (Suzerain, Vassal, any other stance, or a blank province code such as the sea). A province nobody holds has owner "", which `Intel.stance_of` reads as Unknown, so it is grey. A unit on `none` land does not forage.
+By the holder of the unit's province: `home` (the crown's own), `enemy` (`Intel.stance_of` = Enemy), `grey` (Neutral, Suspicion, Unknown), `none` (Suzerain, Vassal, any other stance, a province nobody holds — owner "" — or a blank province code such as the sea). A unit on `none` land does not forage.
 
 ## The switch (`ArmyConduct.wants` / `switch`)
 
@@ -40,11 +40,11 @@ Conditions held: morale under `desert_morale`, training under `desert_training`,
 
 ## What is saved
 
-Regiment entry keys `forage`, `forage_days`, `deserted`, `desert_rem`; `GameState.forage_stripped` (province → per mille; non-zero after the day-30 settlement, a 0 entry can exist until then), `grievance` (kingdom → points), `conduct_marks` (key → the tick it was set; `mark_once` is true the first time in a tick; keys `incident:<code>`, `grievance:<kingdom>`, `desert_news:<code>`, `havoc:<province>:<day>`). An old save reads all of them as empty or zero.
+Regiment entry keys `forage`, `forage_days`, `deserted`, `desert_rem`; `GameState.forage_stripped` (province → per mille, non-zero entries only: a take that strips 0 writes nothing, and recovery erases an entry that reaches 0), `grievance` (kingdom → points), `conduct_marks` (key → the tick it was set; `mark_once` is true the first time in a tick; keys `incident:<code>`, `grievance:<kingdom>`, `desert_news:<code>`, `havoc:<province>:<day>`). An old save reads all of them as empty or zero.
 
 ## Where it shows
 
-Words from `repo.conduct_words`: the folio and unit card ("Foraging" row, "Deserted" row, `WarFolio.conduct_rows`; the card's supply tooltip repeats the state), the hover slip (`WarGround`: "Forage: <word> (N a day)", what the chosen unit would be fed, "Our own land, not foraged" at home), the kingdom card ("Grievance: N" when above 0), the war-room intel ink ("Stripped" at a province past `forage_bare_permille`), and the Marshal's report letter. The `day_conduct` events (unlawful start, incident, Havoc, stripped bare, deserting, deserting_big) are consumed only by `MissiveWriter.conduct_dispatch`: facts of that one letter a day, not news-bar lines.
+Words from `repo.conduct_words`: the folio and unit card ("Foraging" row, "Deserted" row, `WarFolio.conduct_rows`; the card's supply tooltip repeats the state), the hover slip (`WarGround`: "Forage: <word> (N a day)", what the chosen unit would be fed, "Our own land — not foraged" at home), the kingdom card ("Grievance: N" when above 0), the war-room intel ink ("Stripped" at a province past `forage_bare_permille`), and the Marshal's report letter. The `day_conduct` events (unlawful start, incident, Havoc, stripped bare, deserting, deserting_big) are consumed only by `MissiveWriter.conduct_dispatch`: facts of that one letter a day, not news-bar lines.
 
 ## Tests
 

@@ -53,6 +53,13 @@ func test_food_units_counts_only_food_tagged() -> void:
 	assert_eq(Forage.food_units(repo, prov), before + 7)
 
 
+func test_load_map_forgets_the_food_counts() -> void:
+	assert_eq(Forage.food_units(repo, prov), 9)
+	assert_false(Forage._cache.is_empty())
+	assert_true(repo.load_map(repo.map_id))
+	assert_true(Forage._cache.is_empty(), "a new pack's production is counted afresh")
+
+
 func test_monthly_capacity_by_season() -> void:
 	assert_eq(Forage.monthly_capacity(repo, state, prov), 270)
 	repo.balance["forage_spring_permille"] = 600.0
@@ -83,6 +90,10 @@ func test_daily_capacities_sum_to_the_month() -> void:
 func test_land_kind() -> void:
 	assert_eq(Forage.land_kind(repo, state, prov), "home")
 	assert_eq(Forage.land_kind(repo, state, ""), "none")
+	var unheld := H.foreign_province(repo, state)
+	state.province_owner[unheld] = ""
+	assert_eq(Forage.land_kind(repo, state, unheld), "none", "a province nobody holds (spec §3.1)")
+	state.province_owner.erase(unheld)
 	var foreign := H.foreign_province(repo, state)
 	assert_ne(foreign, "")
 	var holder := MapOwnership.owner_of(repo, state, foreign)
@@ -149,3 +160,11 @@ func test_strip_arithmetic() -> void:
 	state.forage_stripped.clear()
 	Forage.strip(repo, state, prov, 50)
 	assert_false(state.forage_stripped.has(prov))
+
+
+func test_strip_writes_no_zero_entry() -> void:
+	H.set_food(repo, prov, 90)   # 2700 a month: 1 taken x 500 / 2700 = 0
+	Forage.strip(repo, state, prov, 1)
+	assert_false(state.forage_stripped.has(prov))
+	Forage.strip(repo, state, prov, 6)   # 6 x 500 / 2700 = 1
+	assert_eq(int(state.forage_stripped[prov]), 1)

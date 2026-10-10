@@ -408,7 +408,7 @@ var law_cooldown: Dictionary = {}
 ## numbers and plain Strings only. province code -> per mille of its stores
 ## stripped by foragers (non-zero entries only).
 var forage_stripped: Dictionary = {}
-## kingdom slot -> grievance points the crown's foraging has stored there.
+## kingdom code -> grievance points the crown's foraging has stored there.
 var grievance: Dictionary = {}
 ## conduct news key -> the month index it was last told (once-only marks).
 var conduct_marks: Dictionary = {}
