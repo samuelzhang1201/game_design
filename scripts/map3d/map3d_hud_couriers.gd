@@ -70,7 +70,7 @@ func _draw_pending(c: Dictionary, ink: Color, w: float) -> void:
 ## A march order still on the road: {from, to, pts} in design px — the column,
 ## where it will go and the line between — or {} for any other order or one off the camera.
 func _pending_ends(c: Dictionary) -> Dictionary:
-	var order: Dictionary = c["order"]
+	var order := CourierSystem.march_order(c)
 	if String(order.get("action_code", "")) != "ARMY_MARCH":
 		return {}
 	var reg := ArmySystem.regiment(ctx.repo, String(c["target"]), ctx.state())

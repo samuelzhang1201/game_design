@@ -78,9 +78,9 @@ func test_a_province_law_sends_one_courier_to_each_held_province() -> void:
 	var keys: Array = []
 	for c: Dictionary in sent:
 		assert_true(String(c["target"]).begins_with("province:"), "his target is the place")
-		assert_eq(String(c["target"]), String(c["order"]["scope_key"]))
+		assert_eq(String(c["target"]), String(CourierSystem.first_order(c)["scope_key"]))
 		assert_eq(String(c["kind"]), CourierSystem.ORDINARY)
-		assert_eq(String(c["order"]["action_code"]), "LAW_SET")
+		assert_eq(String(CourierSystem.first_order(c)["action_code"]), "LAW_SET")
 		keys.append(String(c["target"]).trim_prefix("province:"))
 	keys.sort()
 	var want: Array = held.duplicate()
@@ -127,7 +127,7 @@ func test_a_camp_law_sends_one_per_camp_and_one_per_field_unit() -> void:
 	assert_eq(sent.size(), recips.size())
 	var to_marcher := sent.filter(func(c: Dictionary) -> bool: return String(c["target"]) == marcher)
 	assert_eq(to_marcher.size(), 1, "the marching unit gets its own courier")
-	assert_eq(String(to_marcher[0]["order"]["scope_key"]), "unit:" + marcher)
+	assert_eq(String(CourierSystem.first_order(to_marcher[0])["scope_key"]), "unit:" + marcher)
 	for c: Dictionary in sent:
 		var t := String(c["target"])
 		if t.begins_with("town:"):
@@ -144,7 +144,7 @@ func test_fleets_get_no_courier() -> void:
 	assert_gt(fleets.size(), 0, "the realm has a fleet in its roster, or this test proves nothing")
 	for c: Dictionary in LawSystem.decree(repo, s, "plunder", "allow"):
 		assert_false(String(c["target"]) in fleets, "no courier rides for a fleet")
-		assert_false(String(c["order"]["scope_key"]).trim_prefix("unit:") in fleets)
+		assert_false(String(CourierSystem.first_order(c)["scope_key"]).trim_prefix("unit:") in fleets)
 
 
 func test_delivery_writes_the_place_and_not_the_others() -> void:
@@ -187,7 +187,7 @@ func test_the_delivery_counts_riders_and_days() -> void:
 func test_a_newer_decree_beats_an_older_courier() -> void:
 	var older := LawSystem.decree(repo, s, "tax_rate", "6")
 	var newer := LawSystem.decree(repo, s, "tax_rate", "7")
-	assert_eq(int(newer[0]["order"]["decree_id"]), int(older[0]["order"]["decree_id"]) + 1)
+	assert_eq(int(CourierSystem.first_order(newer[0])["decree_id"]), int(CourierSystem.first_order(older[0])["decree_id"]) + 1)
 	# the newer couriers happen to arrive first; the older ones come after
 	s.couriers = newer.duplicate()
 	_ride_all()
@@ -286,7 +286,7 @@ func test_law_couriers_round_trip_the_save() -> void:
 	var back := GameState.from_dict(d)
 	assert_eq(SaveLoad.state_hash(back), before)
 	assert_eq(back.couriers.size(), s.couriers.size())
-	var o: Dictionary = back.couriers[0]["order"]
+	var o: Dictionary = CourierSystem.first_order(back.couriers[0])
 	assert_eq(typeof(o["decree_id"]), TYPE_INT)
 	assert_eq(typeof(o["value"]), TYPE_STRING)
 	assert_eq(String(o["value"]), "7")
@@ -338,11 +338,11 @@ func test_the_delivery_counts_each_kind_of_place_apart() -> void:
 ## sorted by scope key; empty once every courier is home.
 func test_the_untold_list_names_each_place_with_its_days_or_lost() -> void:
 	var sent := LawSystem.decree(repo, s, "tax_rate", "7")
-	var gone_key := String(sent[0]["order"]["scope_key"])
+	var gone_key := String(CourierSystem.first_order(sent[0])["scope_key"])
 	s.couriers.remove_at(0)
 	var days := {}
 	for c: Dictionary in s.couriers:
-		days[String(c["order"]["scope_key"])] = CourierSystem.days_left(repo, s, c)
+		days[String(CourierSystem.first_order(c)["scope_key"])] = CourierSystem.days_left(repo, s, c)
 	var rows := LawSystem.untold(repo, s, "tax_rate")
 	assert_eq(rows.size(), sent.size(), "every place is untold: one lost, the rest ridden for")
 	var keys: Array = rows.map(func(r: Dictionary) -> String: return String(r["scope_key"]))
@@ -369,7 +369,7 @@ func test_the_untold_list_names_each_place_with_its_days_or_lost() -> void:
 ## couriers set out for (`sent`), a re-send adds to them, the save keeps them.
 func test_a_place_gained_since_is_not_sent_not_lost() -> void:
 	var sent := LawSystem.decree(repo, s, "tax_rate", "7")
-	var gone_key := String(sent[0]["order"]["scope_key"])
+	var gone_key := String(CourierSystem.first_order(sent[0])["scope_key"])
 	s.couriers.remove_at(0)
 	var other := _another_kingdom()
 	var gained := ""

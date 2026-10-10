@@ -1,25 +1,25 @@
 class_name MissiveWriter
 extends RefCounted
 ## The routine letters (spec 2026-09-28 §1): a courier's delivery receipt
-## (highly credible — the regiment's state that day, exact) and the steward's
+## (ground truth — the crown's own orders received and the regiment's state
+## that day, exact; owner 2026-10-10) and the steward's
 ## monthly report on the provinces the crown controls (ground truth, exact),
 ## and the marshal's supply dispatch and month (spec 2026-10-07-army-supply-lines),
 ## and a decree's two letters (spec 2026-10-08-laws-tab §3).
 ## Builds missives; MissiveLog files them.
 
-static func receipt(repo: DataRepository, state: GameState, c: Dictionary, stale: bool) -> Dictionary:
+static func receipt(repo: DataRepository, state: GameState, c: Dictionary, said: Array) -> Dictionary:
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code, state)
 	var label := String(reg.get("label", code))
 	var at := ArmySystem.position_of(repo, state, reg) if not reg.is_empty() else Vector2.ZERO
 	var st := ArmySystem.state_of(repo, state, code)
-	var order := String((c["order"] as Dictionary).get("action_code", ""))
-	var said := "Newer orders stand: this one is set aside" if stale else \
-		("March" if order == "ARMY_MARCH" else "Take the seat" if order == "ARMY_SEAT" else "Stand")
-	if not stale and order == "ARMY_STANCE":
-		var stance := String((c["order"] as Dictionary).get("stance", ""))
-		said = "Stance: %s, from the next day" % String((repo.battle_stances.get(stance, {}) as Dictionary).get("label", stance))
-	var facts: Array = [MissiveLog.words("orders", "Orders", said)]
+	# a line an order: the first keyed `orders`, the next `orders_2`, …
+	var facts: Array = []
+	for t: String in said:
+		if t != "":
+			facts.append(MissiveLog.words("orders" if facts.is_empty() else "orders_%d" % (facts.size() + 1),
+				"Orders", t))
 	if not st.is_empty():
 		facts.append(MissiveLog.exact("morale", "Morale", int(st["morale"])))
 		facts.append(MissiveLog.exact("supplies", "Supplies", int(st["supplies"])))
@@ -27,8 +27,30 @@ static func receipt(repo: DataRepository, state: GameState, c: Dictionary, stale
 		facts.append(MissiveLog.words("ground", "Ground", ArmySystem.terrain_of(repo, reg, state).capitalize()))
 		facts.append(MissiveLog.words("weather", "Weather",
 			Weather.label_of(repo, Weather.at(repo, state, at, state.absolute_day()))))
-	return MissiveLog.make("receipt", "credible", state.absolute_day(),
+	# the crown's own orders received: ground truth (owner 2026-10-10)
+	return MissiveLog.make("receipt", "truth", state.absolute_day(),
 		MissiveLog.subject("regiment", code, -1, at), "Receipt — " + label, facts)
+
+
+## A receipt's line for one order carried out: what the column now does.
+static func order_said(repo: DataRepository, order: Dictionary) -> String:
+	match String(order.get("action_code", "")):
+		"ARMY_MARCH":
+			return "March"
+		"ARMY_SEAT":
+			return "Take the seat"
+		"ARMY_STANCE":
+			var stance := String(order.get("stance", ""))
+			return "Stance: %s, from the next day" % String((repo.battle_stances.get(stance, {}) as Dictionary).get("label", stance))
+		"SUPPLY_POINT_SET":
+			var town := String(order.get("town", order.get("to_town", "")))
+			return "Supply from %s at %.1f×" % [String((repo.burgs.get(town, {}) as Dictionary).get("label", town)),
+				float(int(order.get("rate", 1000))) / 1000.0]
+		"SUPPLY_POINT_CLEAR":
+			return "Supply point withdrawn"
+		"SUPPLY_CARRY_SET":
+			return "Carry %d days" % int(order.get("days", 0))
+	return "Stand"
 
 
 ## The settled month's report: each controlled province's tax, goods and
@@ -103,6 +125,10 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 				var key := "front_news" if String(e["type"]) == "front" else "front_cleared_news"
 				text = SupplyLines.event_words(repo, state, e, key) + "."
 				fact = SupplyLines.words(repo, key, {}, "label", fact)
+			"set_out":
+				# a supply warrant delivered: the wagons leave the town (owner 2026-10-10)
+				text = SupplyLines.event_words(repo, state, e, "set_out_news") + "."
+				fact = SupplyLines.words(repo, "set_out_news", {}, "label", fact)
 			"cut":
 				var near := "" if not e.has("at") else " near " + Intel.place_label(repo, state, e["at"])
 				text = _SUPPLY_WORDS["cut"] % [town, reg, near,
@@ -125,7 +151,7 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 		facts.append(MissiveLog.words("supply_%d" % i, fact, text))
 	var first := String((events[0] as Dictionary)["regiment"])
 	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, first, state))
-	return MissiveLog.make("supply", "credible", state.absolute_day(),
+	return MissiveLog.make("supply", "truth", state.absolute_day(),
 		MissiveLog.subject("regiment", first, -1, at), "Supply dispatch", facts)
 
 
@@ -166,13 +192,13 @@ static func marshal_report(repo: DataRepository, state: GameState, tick: int, ro
 	facts.push_front(MissiveLog.exact("supply_fee", "Cartage, all lines", fee))
 	var home := MapManors.home_province(repo, state)
 	var prov: Dictionary = repo.provinces.get(home, {})
-	return MissiveLog.make("supply_month", "credible", state.absolute_day(),
+	return MissiveLog.make("supply_month", "truth", state.absolute_day(),
 		MissiveLog.subject("province", home, -1, Vector2(float(prov.get("center_x", 0)), float(prov.get("center_y", 0)))),
 		"Marshal's supply report — %s, Year %d" % [Calendar.month_label(tick), Calendar.year_of(tick)], facts)
 
 
 ## A decree's letters (laws spec §3 "News and letters"): kind `law`, the
-## credible column, about the realm's home province (its capital town's
+## ground-truth column (the crown's own act, owner 2026-10-10), about the realm's home province (its capital town's
 ## point). Kept apart from the column's count (missive_keep_law).
 static func _law_subject(repo: DataRepository, state: GameState) -> Dictionary:
 	var home := MapManors.home_province(repo, state)
@@ -193,7 +219,7 @@ static func law_decree(repo: DataRepository, state: GameState, law: String, cour
 		MissiveLog.exact("couriers", "Couriers sent", couriers)]
 	if last_days >= 0:
 		facts.append(MissiveLog.exact("last_days", "The last arrives in (days)", last_days))
-	return MissiveLog.make("law", "credible", state.absolute_day(), _law_subject(repo, state),
+	return MissiveLog.make("law", "truth", state.absolute_day(), _law_subject(repo, state),
 		"Decree sent — " + label, facts)
 
 
@@ -215,7 +241,7 @@ static func law_reach(repo: DataRepository, state: GameState, law: String, reach
 	var title := "Decree in force — " + label
 	if reached < total:
 		title = "Decree reached %d of %d — %s" % [reached, total, label]
-	return MissiveLog.make("law", "credible", state.absolute_day(), _law_subject(repo, state), title, facts)
+	return MissiveLog.make("law", "truth", state.absolute_day(), _law_subject(repo, state), title, facts)
 
 
 ## --- The battle report (spec 2026-10-07-enemy-ai-and-battle §4.5) -------------

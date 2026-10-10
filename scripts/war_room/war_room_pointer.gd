@@ -233,7 +233,7 @@ func _pennant_waypoints(code: String, pen: Dictionary) -> Array:
 	if String(pen.get("status", "")) == "riding":
 		var c := CourierSystem.pending_for(state, code)
 		if not c.is_empty():
-			return CourierSystem.waypoints_px(_repo, c.get("order", {}))
+			return CourierSystem.waypoints_px(_repo, CourierSystem.march_order(c))
 		return []
 	return Array(ArmySystem.waypoints_of(_repo, state, code))
 

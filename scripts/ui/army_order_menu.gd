@@ -514,7 +514,7 @@ func _commit() -> void:
 	for reqs: Array in sends:
 		var ok := true
 		for req: ActionRequest in reqs.slice(0, reqs.size() - 1):
-			var out := Game.try_execute(req)   # its own courier; the march's news follows
+			var out := Game.try_execute(req)   # the first sends the courier, the rest ride with him; the march's news follows
 			if not bool(out.get("ok", false)):
 				Game.publish_news(String(out.get("error", "That order cannot be given.")))
 				ok = false
@@ -526,14 +526,18 @@ func _commit() -> void:
 ## A unit's Confirm: SUPPLY_POINT_SET when `town` is not its line's already
 ## (spec 2026-10-08-war-room-draw-orders ruling 15), SUPPLY_CARRY_SET when
 ## `carry` changes its load, then ARMY_MARCH to `to` through `pairs`
-## (waypoints as [x, y]).
+## (waypoints as [x, y]) — ONE courier to the regiment carrying them all
+## (owner 2026-10-10: the warrant rides `with_column`; the wagons leave the
+## town when he reaches the column).
 func _march_reqs(c: String, to: Vector2, pairs: Array, carry: int, town := "") -> Array:
 	var params := {"regiment": c, "x": to.x, "y": to.y}
 	if not pairs.is_empty():
 		params["waypoints"] = pairs.duplicate(true)
 	var out: Array = []
 	if town != "" and town != String(SupplyLines.line(Game.state, c).get("town", "")):
-		out.append(ActionRequest.make("SUPPLY_POINT_SET", {"regiment": c, "town": town, "rate": _rate_of(c)}))
+		# the warrant rides with the march's courier to the column (owner 2026-10-10)
+		out.append(ActionRequest.make("SUPPLY_POINT_SET", {"regiment": c, "town": town, "rate": _rate_of(c),
+			"with_column": true}))
 	if carry >= 0 and carry != ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, c)):
 		out.append(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": c, "days": carry}))
 	out.append(ActionRequest.make("ARMY_MARCH", params))
@@ -603,7 +607,7 @@ func _edit_route(code: String) -> void:
 	var wps: Array = Array(ArmySystem.waypoints_of(Game.data, Game.state, code))
 	var draft := WarDrafts.of(Game.state, code) if drafting else {}
 	var riding := CourierSystem.pending_for(Game.state, code)
-	var order: Dictionary = riding.get("order", {}) if not riding.is_empty() else {}
+	var order := CourierSystem.march_order(riding)
 	if String(draft.get("order", "")) == WarDrafts.MARCH:
 		dest = WarDrafts.dest_px(Game.data, draft)
 		wps = Array(WarDrafts.waypoints_px(Game.data, draft))

@@ -102,7 +102,7 @@ func _big() -> String:
 ## The courier a decree sent to a province.
 func _courier_for(sent: Array, code: String) -> Dictionary:
 	for c: Dictionary in sent:
-		if String(c["order"]["scope_key"]) == LawSystem.PROVINCE_PREFIX + code:
+		if String(CourierSystem.first_order(c)["scope_key"]) == LawSystem.PROVINCE_PREFIX + code:
 			return c
 	return {}
 
@@ -322,13 +322,13 @@ func test_a_resend_pays_nothing_for_a_province_that_already_has_the_value() -> v
 		if c != mine:
 			LawSystem.deliver(repo, s, c)
 	s.couriers = s.couriers.filter(func(c: Dictionary) -> bool:
-		return String((c.get("order", {}) as Dictionary).get("action_code", "")) != LawSystem.ACTION)
+		return String(CourierSystem.first_order(c).get("action_code", "")) != LawSystem.ACTION)
 	assert_true(LawSystem.is_resend(repo, s, "church_policy", "endow"))
 	var gold := _m("treasury")
 	var church := _m("church_opinion")
 	var resent := LawSystem.decree(repo, s, "church_policy", "endow")
 	assert_eq(resent.size(), 1, "a re-send rides only for the missing province")
-	assert_eq(int(resent[0]["order"]["decree_id"]), int(mine["order"]["decree_id"]), "the same decree")
+	assert_eq(int(CourierSystem.first_order(resent[0])["decree_id"]), int(CourierSystem.first_order(mine)["decree_id"]), "the same decree")
 	LawSystem.deliver(repo, s, resent[0])
 	assert_eq(_m("treasury") - gold, _share("treasury", -repo.bal("church_endow_cost"), code),
 		"the missing province pays its part once")

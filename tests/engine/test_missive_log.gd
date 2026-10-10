@@ -144,3 +144,20 @@ func test_the_tables() -> void:
 	assert_true(repo.courier_art.has("spy"))
 	for c: String in MissiveLog.COLUMNS:
 		assert_true(repo.palette.has("intel_" + c), c)
+
+
+## Owner 2026-10-10: receipts are ground truth, kept apart (missive_keep_receipt),
+## so a campaign of orders never pushes the steward's monthly report off.
+func test_receipts_never_push_the_monthly_report_off_the_truth_column() -> void:
+	repo.balance["missive_keep_per_column"] = 2.0
+	repo.balance["missive_keep_receipt"] = 3.0
+	var s := SuiteData.campaign(repo, 7)
+	s.missives = []
+	var subj := MissiveLog.subject("province", "x", -1, Vector2.ZERO)
+	var monthly := MissiveLog.add(repo, s, MissiveLog.make("monthly", "truth", 1, subj, "Steward", []))
+	for i in 6:
+		MissiveLog.add(repo, s, MissiveLog.make("receipt", "truth", 1, subj, "r%d" % i, []))
+	assert_false(MissiveLog.find(s, monthly).is_empty(), "the monthly report stays")
+	var kinds: Array = MissiveLog.column(s, "truth").map(func(m: Dictionary) -> String: return String(m["kind"]))
+	assert_eq(kinds.count("receipt"), 3, "missive_keep_receipt caps the receipts")
+	assert_true(repo.balance.has("missive_keep_receipt"))

@@ -186,7 +186,7 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 	# summed with the extra spend, is the fix), so an order the chest cannot
 	# cover in full is refused, not sent into the red.
 	if check_purse and CourierSystem.carries_orders(reg) and float(state.metrics["treasury"]) \
-			< OrderCosts.gold_of(data, req.action_code) + float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
+			< OrderCosts.gold_of(data, req.action_code) + float(_fee_for(state, code)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	if req.action_code == "ARMY_SEAT":
 		if not CourierSystem.carries_orders(reg):
@@ -250,7 +250,7 @@ func _validate_stance(req: ActionRequest, state: GameState) -> String:
 	if not data.battle_stances.has(stance):
 		return "No such stance: " + stance
 	if float(state.metrics["treasury"]) < OrderCosts.gold_of(data, req.action_code) \
-			+ float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
+			+ float(_fee_for(state, code)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	return ""
 
@@ -280,7 +280,7 @@ func _validate_supply(req: ActionRequest, state: GameState) -> String:
 	if String(reg.get("is_naval", "0")) == "1":
 		return "%s is a fleet: it carries no supply train" % String(reg["label"])
 	if float(state.metrics["treasury"]) < OrderCosts.gold_of(data, req.action_code) \
-			+ float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)):
+			+ float(_fee_for(state, code)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	match req.action_code:
 		"SUPPLY_POINT_SET":
@@ -666,19 +666,18 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"SUPPLY_POINT_SET":
 			var code := String(req.params["regiment"])
 			var town := String(req.params["town"])
-			var c := CourierSystem.dispatch_to(data, state, CourierSystem.ORDINARY, code,
-				{"action_code": "SUPPLY_POINT_SET", "to_town": town, "rate": int(req.params["rate"])},
-				Vector2(float(data.burgs[town]["x"]), float(data.burgs[town]["y"])))
+			var order := {"action_code": "SUPPLY_POINT_SET", "town": town, "rate": int(req.params["rate"])}
+			var c := _send_supply(state, effects, code, order, town, bool(req.params.get("with_column", false)),
+				"with a supply warrant from %s" % String(data.burgs[town]["label"]),
+				"to %s with a supply warrant" % String(data.burgs[town]["label"]))
 			SupplyLines.order_set(state, code, town, int(req.params["rate"]), int(c["id"]))
-			_courier_fee(state, effects, c, "to %s with a supply warrant" % String(data.burgs[town]["label"]))
 		"SUPPLY_POINT_CLEAR":
 			var code := String(req.params["regiment"])
 			var town := String(SupplyLines.line(state, code)["town"])
-			var c := CourierSystem.dispatch_to(data, state, CourierSystem.ORDINARY, code,
-				{"action_code": "SUPPLY_POINT_CLEAR", "to_town": town},
-				Vector2(float(data.burgs[town]["x"]), float(data.burgs[town]["y"])))
+			var c := _send_supply(state, effects, code, {"action_code": "SUPPLY_POINT_CLEAR", "town": town},
+				town, false, "with orders to stop the wagons from %s" % String(data.burgs[town]["label"]),
+				"to %s to stop the wagons" % String(data.burgs[town]["label"]))
 			SupplyLines.line(state, code)["order_id"] = int(c["id"])
-			_courier_fee(state, effects, c, "to %s to stop the wagons" % String(data.burgs[town]["label"]))
 		"SUPPLY_CARRY_SET":
 			var code := String(req.params["regiment"])
 			_send_courier(state, effects, code, {"action_code": "SUPPLY_CARRY_SET",
@@ -810,7 +809,8 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 ## fix round 1).
 func _file_audit(state: GameState, flow: String) -> void:
 	var label := String(data.ledger_governance[flow]["label"])
-	var letter := MissiveLog.make("audit", "credible", state.absolute_day(),
+	# the crown's own audit of its own flow: ground truth (owner 2026-10-10)
+	var letter := MissiveLog.make("audit", "truth", state.absolute_day(),
 		MissiveLog.subject("ledger", flow, -1, Vector2.ZERO), "Audit — " + label.capitalize(),
 		AuditWriter.facts(data, state, flow))
 	letter["tick"] = state.tick
@@ -858,14 +858,47 @@ func _apply(state: GameState, effects: Array, metric: String, delta: float, reas
 ## An order that rides (owner 2026-09-27, spec 2026-09-27-courier-core): one
 ## courier from the capital, his fee a ledger line, and the army line saying
 ## when he should get there. The regiment is untouched until he does.
-func _send_courier(state: GameState, effects: Array, code: String, order: Dictionary, what: String) -> void:
+## An order for a regiment whose courier has not yet set out rides WITH him
+## (owner 2026-10-10, CourierSystem.joinable): no second fee, and the army
+## line says he carries it too.
+func _send_courier(state: GameState, effects: Array, code: String, order: Dictionary, what: String) -> Dictionary:
 	var label := String(ArmySystem.regiment(data, code, state)["label"])
+	var before := state.next_courier_id
 	var c := CourierSystem.dispatch(data, state, CourierSystem.ORDINARY, code, order)
+	var days := CourierSystem.days_left(data, state, c)
+	if state.next_courier_id == before:
+		effects.append({"metric": "army", "delta": 0.0, "reason": "The courier for %s carries this too, %s; about %d day%s" % [
+			label, what, days, "" if days == 1 else "s"]})
+		return c
 	_apply(state, effects, "treasury", -float(CourierSystem.fee_gold(data, CourierSystem.ORDINARY)),
 		"a courier rides for " + label)
-	var days := CourierSystem.days_left(data, state, c)
 	effects.append({"metric": "army", "delta": 0.0, "reason": "A courier rides for %s %s; about %d day%s" % [
 		label, what, days, "" if days == 1 else "s"]})
+	return c
+
+## A supply order's courier (owner 2026-10-10): with the column's own when one
+## waits to set out for it (CourierSystem.joinable) or `with_column` asks for
+## one (the march's confirm and the war room's drafts: the warrant rides with
+## the march to the regiment, and the wagons leave the town when he arrives);
+## else to the supply TOWN as the order's own courier (spec
+## 2026-10-07-army-supply-lines §4).
+func _send_supply(state: GameState, effects: Array, code: String, order: Dictionary, town: String,
+		with_column: bool, to_column: String, to_town: String) -> Dictionary:
+	if with_column or not CourierSystem.joinable(state, CourierSystem.ORDINARY, code, order).is_empty():
+		return _send_courier(state, effects, code, order, to_column)
+	var o := order.duplicate()
+	o["to_town"] = town
+	var c := CourierSystem.dispatch_to(data, state, CourierSystem.ORDINARY, code, o,
+		Vector2(float(data.burgs[town]["x"]), float(data.burgs[town]["y"])))
+	_courier_fee(state, effects, c, to_town)
+	return c
+
+## The fee an order for `code` would pay its courier now: none when it would
+## ride with one already waiting to set out (CourierSystem.joinable).
+func _fee_for(state: GameState, code: String) -> int:
+	if not CourierSystem.joinable(state, CourierSystem.ORDINARY, code, {}).is_empty():
+		return 0
+	return CourierSystem.fee_gold(data, CourierSystem.ORDINARY)
 
 ## LAW_SET: the law's own gold and cost ops, the decree and its couriers
 ## (LawSystem.decree), one ordinary fee a courier as one ledger line, and a

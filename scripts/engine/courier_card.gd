@@ -24,12 +24,34 @@ static func title(repo: DataRepository, state: GameState, id: int) -> String:
 	if String(c["kind"]) == CourierSystem.SPY:
 		return "Spy bound for " + Intel.place_label(repo, state, ArmySystem.metres_to_pack(repo,
 			Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"]))))
-	if String((c["order"] as Dictionary).get("action_code", "")) == LawSystem.ACTION:
+	if String(CourierSystem.first_order(c).get("action_code", "")) == LawSystem.ACTION:
 		return "Decree to " + LawSystem.place_label(repo, state, String(c["target"]))
-	var to_town := String((c["order"] as Dictionary).get("to_town", ""))
+	var to_town := String(CourierSystem.first_order(c).get("to_town", ""))
 	if to_town != "":
 		return "Courier to " + String((repo.burgs.get(to_town, {}) as Dictionary).get("label", to_town))
 	return "Courier to " + String(ArmySystem.regiment(repo, String(c["target"]), state).get("label", c["target"]))
+
+
+## What a courier carries, an order after another in the sequence they run
+## ("Supply orders for … · Orders to carry 10 days · Orders to march").
+static func carrying_words(repo: DataRepository, state: GameState, c: Dictionary) -> String:
+	var out: PackedStringArray = []
+	for o: Dictionary in CourierSystem.orders_of(c):
+		var order := String(o.get("action_code", ""))
+		var said := "Orders to march" if order == "ARMY_MARCH" else "Orders to stand"
+		if order == "ARMY_STANCE":
+			var stance := String(o.get("stance", ""))
+			said = "Stance orders: " + String((repo.battle_stances.get(stance, {}) as Dictionary).get("label", stance))
+		elif order == "ARMY_SEAT":
+			said = "Orders to take the seat"
+		elif order == "SUPPLY_CARRY_SET":
+			said = "Orders to carry %d days" % int(o.get("days", 0))
+		elif order.begins_with("SUPPLY_"):
+			said = "Supply orders for " + String(ArmySystem.regiment(repo, String(c["target"]), state).get("label", c["target"]))
+		elif order == LawSystem.ACTION:
+			said = decree_words(repo, o)
+		out.append(said)
+	return " · ".join(out)
 
 
 ## What a decree's courier carries: "Decree: <law> → <value>".
@@ -74,25 +96,13 @@ static func card(repo: DataRepository, state: GameState, id: int) -> Dictionary:
 		return {}
 	var realm := repo.resolve_realm("player_realm")
 	var kind := String(c["kind"])
-	var order := String((c["order"] as Dictionary).get("action_code", ""))
 	var here := Vector2i(int(c["x_m"]), int(c["y_m"]))
 	var wx := Weather.at(repo, state, ArmySystem.metres_to_pack(repo, here), state.absolute_day())
 	var path: Array = c["path"]
 	var ground := String(path[0][2]) if not path.is_empty() else "offroad"
 	var days := CourierSystem.days_left(repo, state, c)
 	var is_spy := kind == CourierSystem.SPY
-	var carrying := "Orders to march" if order == "ARMY_MARCH" else "Orders to stand"
-	if order == "ARMY_STANCE":
-		var stance := String((c["order"] as Dictionary).get("stance", ""))
-		carrying = "Stance orders: " + String((repo.battle_stances.get(stance, {}) as Dictionary).get("label", stance))
-	if order == "ARMY_SEAT":
-		carrying = "Orders to take the seat"
-	if order.begins_with("SUPPLY_"):
-		var reg_label := String(ArmySystem.regiment(repo, String(c["target"]), state).get("label", c["target"]))
-		carrying = "Orders to carry %d days" % int((c["order"] as Dictionary).get("days", 0)) \
-			if order == "SUPPLY_CARRY_SET" else "Supply orders for " + reg_label
-	if order == LawSystem.ACTION:
-		carrying = decree_words(repo, c["order"])
+	var carrying := carrying_words(repo, state, c)
 	return {
 		"kind": "courier", "id": int(c["id"]), "title": title(repo, state, id),
 		"subtitle": ("Spy of %s" % String((repo.kingdoms.get(realm, {}) as Dictionary).get("label", ""))) if is_spy \

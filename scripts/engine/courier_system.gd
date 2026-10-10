@@ -2,7 +2,10 @@ class_name CourierSystem
 extends RefCounted
 ## Couriers (owner 2026-09-27, spec docs/superpowers/specs/2026-09-27-courier-core-design.md):
 ## an order to a regiment rides from the capital and takes effect only when
-## the courier reaches the column. One courier per order, gone on delivery.
+## the courier reaches the column. One courier per TARGET BATCH (owner
+## 2026-10-10: 如果信息传递的target是同一个object，只需要一个信使): an order for a
+## regiment whose courier has not yet set out rides with him (`orders`, run in
+## sequence on delivery, one fee, one receipt); gone on delivery.
 ## The route is the road network's fastest (RoadGraph); the pace each day is
 ## the stretch's kind, the height tier it starts on and the province's
 ## weather (Weather). Whole metres and whole per-mille throughout; couriers
@@ -153,8 +156,9 @@ static func days_for(repo: DataRepository, kind: String, need: int) -> int:
 	return maxi(1, (need + b - 1) / b)
 
 
-## Send a courier of `kind` with `order` for regiment `code`. Charges
-## nothing: the fee is ActionSystem's ledger line.
+## Send a courier of `kind` with `order` for regiment `code` — or hand it to
+## the courier already waiting to ride there (`joinable`). Charges nothing:
+## the fee is ActionSystem's ledger line, paid only for a new courier.
 static func dispatch(repo: DataRepository, state: GameState, kind: String, code: String,
 		order: Dictionary) -> Dictionary:
 	return dispatch_to(repo, state, kind, code, order,
@@ -169,13 +173,17 @@ static func dispatch_to(repo: DataRepository, state: GameState, kind: String, co
 		order: Dictionary, to_px: Vector2) -> Dictionary:
 	if ArmySystem.is_foe(state, code):
 		return {}   # a foe is nobody's to command: ArmySystem.state_of reads it, the crown's couriers never ride to it
+	var waiting := joinable(state, kind, code, order)
+	if not waiting.is_empty():
+		(waiting["orders"] as Array).append(order.duplicate(true))
+		return waiting
 	var from := origin(repo, state)
 	var home := ArmySystem.pack_to_metres(repo, from)
 	var aim := ArmySystem.pack_to_metres(repo, to_px)
 	state.next_courier_id += 1
 	var c := {
 		"id": state.next_courier_id, "kind": kind, "x_m": home.x, "y_m": home.y,
-		"path": path_between(repo, from, to_px), "target": code, "order": order.duplicate(true),
+		"path": path_between(repo, from, to_px), "target": code, "orders": [order.duplicate(true)],
 		"issued": state.absolute_day(), "aim_x_m": aim.x, "aim_y_m": aim.y,
 		"days": 0, "day_m": 0, "slow_spell": -1,
 	}
@@ -193,12 +201,56 @@ static func dispatch_spy(repo: DataRepository, state: GameState, to_px: Vector2)
 	var c := {
 		"id": state.next_courier_id, "kind": SPY, "x_m": home.x, "y_m": home.y,
 		"path": path_between(repo, from, to_px), "target": "",
-		"order": {"action_code": "SPY_SEND", "x_m": aim.x, "y_m": aim.y},
+		"orders": [{"action_code": "SPY_SEND", "x_m": aim.x, "y_m": aim.y}],
 		"issued": state.absolute_day(), "aim_x_m": aim.x, "aim_y_m": aim.y,
 		"days": 0, "day_m": 0, "slow_spell": -1,
 	}
 	state.couriers.append(c)
 	return c
+
+
+## A courier's orders, in the order they run on delivery.
+static func orders_of(c: Dictionary) -> Array:
+	return c.get("orders", [])
+
+
+## His first order ({} for none): a spy's, a decree's, a supply order riding
+## to its town — the couriers that never carry another.
+static func first_order(c: Dictionary) -> Dictionary:
+	var all := orders_of(c)
+	return all[0] if not all.is_empty() else {}
+
+
+## The LAST of his orders whose action is one of `codes` ({} for none): the
+## one that stands once he has delivered them all.
+static func order_with(c: Dictionary, codes: Array) -> Dictionary:
+	var all := orders_of(c)
+	for i in range(all.size() - 1, -1, -1):
+		if String((all[i] as Dictionary).get("action_code", "")) in codes:
+			return all[i]
+	return {}
+
+
+## The courier an order for `code` rides with instead of a courier of its own
+## ({} for none; owner 2026-10-10): the NEWEST courier for that regiment, of
+## the same kind, not yet set out (issued today, no day ridden), riding to the
+## column — never a spy, a decree, or a supply order riding to its town, and
+## never for a decree or an order bound for a town itself. The newest only,
+## so the orders a column receives keep the order they were given in.
+static func joinable(state: GameState, kind: String, code: String, order: Dictionary) -> Dictionary:
+	if kind == SPY or String(order.get("action_code", "")) == LawSystem.ACTION \
+			or String(order.get("to_town", "")) != "":
+		return {}
+	var newest: Dictionary = {}
+	for c: Dictionary in state.couriers:
+		if String(c.get("target", "")) == code and (newest.is_empty() or int(c["id"]) > int(newest["id"])):
+			newest = c
+	if newest.is_empty() or String(newest.get("kind", "")) != kind or _is_spy(newest) \
+			or int(newest.get("days", 0)) != 0 or int(newest.get("issued", -1)) != state.absolute_day() \
+			or not order_with(newest, [LawSystem.ACTION]).is_empty() \
+			or String(first_order(newest).get("to_town", "")) != "":
+		return {}
+	return newest
 
 
 ## The absolute day a courier rides next: the day now running, ridden as it
@@ -279,7 +331,7 @@ static func waypoints_px(repo: DataRepository, order: Dictionary) -> Array:
 ## the march its days out; 0 when it is bound nowhere.
 static func days_to_arrival(repo: DataRepository, state: GameState, code: String) -> int:
 	var c := pending_for(state, code)
-	var order: Dictionary = c.get("order", {}) if not c.is_empty() else {}
+	var order := march_order(c)
 	if String(order.get("action_code", "")) == "ARMY_MARCH":
 		var dest := ArmySystem.metres_to_pack(repo, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))
 		return arrival_days(repo, state, code, dest, Vector2(-1, -1), days_left(repo, state, c),
@@ -358,14 +410,14 @@ static func _is_spy(c: Dictionary) -> bool:
 ## A courier bound for a fixed point, never re-aimed at a column: a spy, a
 ## supply order riding to its town, or a decree riding to a place.
 static func _fixed_point(c: Dictionary) -> bool:
-	return _is_spy(c) or place_bound(c) or String((c.get("order", {}) as Dictionary).get("to_town", "")) != ""
+	return _is_spy(c) or place_bound(c) or String(first_order(c).get("to_town", "")) != ""
 
 
 ## A decree (LAW_SET) riding to a place — a province or a camp's town — not
 ## to a unit (laws plan ruling R6): his target is the place's scope key; he
 ## is never lost for want of a regiment and never re-aimed.
 static func place_bound(c: Dictionary) -> bool:
-	if String((c.get("order", {}) as Dictionary).get("action_code", "")) != LawSystem.ACTION:
+	if String(first_order(c).get("action_code", "")) != LawSystem.ACTION:
 		return false
 	var t := String(c.get("target", ""))
 	return t.begins_with(LawSystem.PROVINCE_PREFIX) or t.begins_with(LawSystem.TOWN_PREFIX)
@@ -523,23 +575,57 @@ static func _spy_placed(repo: DataRepository, state: GameState, c: Dictionary, e
 	return e
 
 
-## The order takes effect — unless the column already obeys a NEWER one (a
-## higher courier id), in which case this one is set aside.
+## His orders take effect in the sequence they were given — each unless the
+## column already obeys a NEWER one of its sort (a higher courier id), in
+## which case that one is set aside. A courier who reached the column files
+## ONE receipt naming them all; a supply order riding to its town files none
+## (the supply dispatch tells of it). His event is "delivered" when any order
+## was; a supply point that set its wagons rolling adds `supply` (SupplyLines'
+## set_out events, the day's dispatch).
 static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
-	var code := String(c["target"])
 	# a decree writes its place's law and touches no order of the column
-	if String((c["order"] as Dictionary).get("action_code", "")) == LawSystem.ACTION:
+	if String(first_order(c).get("action_code", "")) == LawSystem.ACTION:
 		return LawSystem.deliver(repo, state, c)
-	if String((c["order"] as Dictionary).get("action_code", "")).begins_with("SUPPLY_"):
-		return SupplyLines.deliver(repo, state, c)
+	var said: Array = []
+	var types: Array = []
+	var rolling: Array = []
+	for order: Dictionary in orders_of(c):
+		var r := _deliver_one(repo, state, c, order)
+		types.append(String(r["type"]))
+		said.append(String(r.get("said", "")))
+		if r.has("set_out"):
+			rolling.append(r["set_out"])
+	var type := "delivered" if "delivered" in types else (String(types.back()) if not types.is_empty() else "stale")
+	var ev := _event(type, c)
+	if not rolling.is_empty():
+		ev["supply"] = rolling
+	if String(first_order(c).get("to_town", "")) == "" and said.any(func(t: String) -> bool: return t != ""):
+		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, said))
+	return ev
+
+
+## Words for an order set aside (a receipt's line).
+const STALE_SAID := "Newer orders stand: this one is set aside"
+
+
+## One of a courier's orders: {type, said (the receipt's line, "" for none),
+## set_out (a supply line's wagons rolling)}.
+static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary) -> Dictionary:
+	var code := String(c["target"])
+	var action := String(order.get("action_code", ""))
+	if action.begins_with("SUPPLY_"):
+		var e := SupplyLines.deliver(repo, state, c, order)
+		var out := {"type": String(e["type"]), "said": STALE_SAID if String(e["type"]) == "stale"
+			else MissiveWriter.order_said(repo, order)}
+		if e.has("set_out"):
+			out["set_out"] = e["set_out"]
+		return out
 	var entry: Dictionary = state.regiments.get(code, {})
-	if String((c["order"] as Dictionary).get("action_code", "")) == "ARMY_STANCE":
-		return _deliver_stance(repo, state, c, entry)
+	if action == "ARMY_STANCE":
+		return _deliver_stance(repo, state, c, order, entry)
 	if int(entry.get("order_id", 0)) > int(c["id"]):
-		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, true))
-		return _event("stale", c)
-	var order: Dictionary = c["order"]
-	match String(order.get("action_code", "")):
+		return {"type": "stale", "said": STALE_SAID}
+	match action:
 		"ARMY_MARCH":
 			ArmySystem.set_march_m(repo, state, code, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])),
 				MarchRoute.from_pairs(order.get("waypoints_m", [])))
@@ -549,25 +635,22 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 			if not ArmyGround.take_seat(repo, state, code):
 				if state.regiments.has(code):
 					state.regiments[code]["order_id"] = int(c["id"])
-				return _event("lapsed", c)
+				return {"type": "lapsed", "said": ""}
 	if state.regiments.has(code):
 		state.regiments[code]["order_id"] = int(c["id"])
-	MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, false))
-	return _event("delivered", c)
+	return {"type": "delivered", "said": MissiveWriter.order_said(repo, order)}
 
 
 ## A standing battle order (ARMY_STANCE) has its own newest-wins count
 ## (`stance_order_id`), apart from the march's: it waits in `stance_next` and
 ## BattleSystem.settle_stances makes it the stance at the end of the day's
 ## battles, so it fights from the next day (spec 2026-10-07-enemy-ai-and-battle §4.4).
-static func _deliver_stance(repo: DataRepository, state: GameState, c: Dictionary, entry: Dictionary) -> Dictionary:
+static func _deliver_stance(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary, entry: Dictionary) -> Dictionary:
 	if entry.is_empty() or int(entry.get("stance_order_id", 0)) > int(c["id"]):
-		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, true))
-		return _event("stale", c)
-	entry["stance_next"] = String((c["order"] as Dictionary).get("stance", ArmySystem.STANCE_DEFAULT))
+		return {"type": "stale", "said": STALE_SAID}
+	entry["stance_next"] = String(order.get("stance", ArmySystem.STANCE_DEFAULT))
 	entry["stance_order_id"] = int(c["id"])
-	MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, false))
-	return _event("delivered", c)
+	return {"type": "delivered", "said": MissiveWriter.order_said(repo, order)}
 
 
 ## Whether he stands on the capital's own spot — where dispatch puts him when
@@ -580,7 +663,7 @@ static func _at_capital(repo: DataRepository, c: Dictionary) -> bool:
 
 
 static func _event(type: String, c: Dictionary, weather: String = "") -> Dictionary:
-	var order: Dictionary = c.get("order", {})
+	var order := first_order(c)
 	var e := {"type": type, "courier": int(c["id"]), "regiment": String(c["target"]), "weather": weather,
 		"town": String(order.get("to_town", ""))}
 	if String(order.get("action_code", "")) == LawSystem.ACTION:
@@ -590,23 +673,28 @@ static func _event(type: String, c: Dictionary, weather: String = "") -> Diction
 	return e
 
 
-## The newest MARCH / HALT courier riding for a regiment, {} when none. The
-## supply orders (SUPPLY_*), the battle stance (ARMY_STANCE), the seat order
-## (ARMY_SEAT) and a decree (LAW_SET) are not the march: they never move a
-## column's arrival day, so this reader (days_to_arrival, the regiment card,
-## the war folio) passes them by.
+## The newest courier riding for a regiment with a MARCH or a HALT among his
+## orders, {} when none. The supply orders (SUPPLY_*), the battle stance
+## (ARMY_STANCE), the seat order (ARMY_SEAT) and a decree (LAW_SET) are not
+## the march: they never move a column's arrival day, so this reader
+## (days_to_arrival, the regiment card, the war folio) passes a courier
+## carrying only those by. His march order is `march_order`.
 static func pending_for(state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	if state == null:
 		return best
 	for c: Dictionary in state.couriers:
-		var kind := String((c["order"] as Dictionary).get("action_code", ""))
-		if kind.begins_with("SUPPLY_") or kind == "ARMY_STANCE" or kind == "ARMY_SEAT" \
-				or kind == LawSystem.ACTION:
+		if march_order(c).is_empty():
 			continue
 		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c
 	return best
+
+
+## The march or halt a courier carries — the last of them, which stands
+## once he has delivered — {} for none (or no courier).
+static func march_order(c: Dictionary) -> Dictionary:
+	return order_with(c, ["ARMY_MARCH", "ARMY_GARRISON"])
 
 
 static func _town_label(repo: DataRepository, town: String) -> String:

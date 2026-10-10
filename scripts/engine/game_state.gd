@@ -555,6 +555,12 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.town_seat = (d.get("town_seat", {}) as Dictionary).duplicate(true)
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))
+	# Saves from before a courier carried several orders (owner 2026-10-10)
+	# hold one `order`: it becomes his `orders` of one.
+	for c: Dictionary in s.couriers:
+		if c.has("order") and not c.has("orders"):
+			c["orders"] = [c["order"]]
+		c.erase("order")
 	s.war_drafts = _decode_values(d.get("war_drafts", {}))
 	# Saves from before the plans carry none: an empty table.
 	s.war_plans = _whole(d.get("war_plans", WarPlans.empty()))

@@ -147,7 +147,7 @@ func test_the_tariff_event_moves_the_law() -> void:
 	assert_eq(String(line.get("law", "")), "tariff_rate")
 	assert_ne(String(line.get("reason", "")), "", "an event's law change carries its reason")
 	assert_true(s.couriers.filter(func(c: Dictionary) -> bool:
-		return String(c.get("order", {}).get("action_code", "")) == "LAW_SET").is_empty(),
+		return String(CourierSystem.first_order(c).get("action_code", "")) == "LAW_SET").is_empty(),
 		"an event is not a courier")
 	# Clamped to the law's range.
 	var top := int(LawSystem.def(repo, "tariff_rate")["values"][1])

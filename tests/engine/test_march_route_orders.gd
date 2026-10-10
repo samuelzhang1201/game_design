@@ -81,7 +81,7 @@ func test_the_courier_carries_the_waypoints_and_delivers_the_route() -> void:
 	var rt := _route(s, r)
 	actions.execute(_march(code, rt["to"], [rt["wp"]]), s)
 	assert_eq(s.couriers.size(), 1)
-	var order: Dictionary = s.couriers[0]["order"]
+	var order: Dictionary = CourierSystem.first_order(s.couriers[0])
 	var wm := ArmySystem.pack_to_metres(repo, rt["wp"])
 	assert_eq(order["waypoints_m"], [[wm.x, wm.y]], "whole metres on the courier")
 	var promised := CourierSystem.days_to_arrival(repo, s, code)
@@ -104,7 +104,7 @@ func test_a_march_without_waypoints_carries_none() -> void:
 	var code := String(r["regiment_code"])
 	var rt := _route(s, r)
 	actions.execute(ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": rt["to"].x, "y": rt["to"].y}), s)
-	assert_false((s.couriers[0]["order"] as Dictionary).has("waypoints_m"))
+	assert_false(CourierSystem.first_order(s.couriers[0]).has("waypoints_m"))
 
 
 func test_a_draft_keeps_its_waypoints_and_its_load() -> void:

@@ -82,7 +82,9 @@ func _end_day(state: GameState) -> Array:
 		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, fights))
 	# The supply lines' day (spec 2026-10-07-army-supply-lines §3.2): the towns
 	# refill their garrisons, the wagons roll, before the host eats.
-	day_supply = SupplyLines.day_step(data, state)
+	# a supply warrant a courier delivered today sets its wagons out: said first
+	day_supply = SupplyLines.set_out_events(day_couriers)
+	day_supply.append_array(SupplyLines.day_step(data, state))
 	# The host eats a day of its month (owner 2026-09-30).
 	ArmySystem.eat_day(data, state)
 	# A hungry host loses heart every day (spec 2026-10-07-army-supply-lines §3.7).

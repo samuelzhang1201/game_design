@@ -266,7 +266,7 @@ func test_one_march_sends_a_courier_to_each() -> void:
 	panel.confirm_button().pressed.emit()
 	var marches: Array = []
 	for c: Dictionary in Game.state.couriers:
-		if String((c["order"] as Dictionary).get("action_code", "")) == "ARMY_MARCH":
+		if String(CourierSystem.march_order(c).get("action_code", "")) == "ARMY_MARCH":
 			marches.append(c)
 	assert_eq(marches.size(), 2, "one courier per unit")
 	var targets: Array = marches.map(func(c: Dictionary) -> String: return String(c["target"]))
@@ -275,8 +275,8 @@ func test_one_march_sends_a_courier_to_each() -> void:
 	want.sort()
 	assert_eq(targets, want)
 	if marches.size() == 2:
-		assert_eq(int(marches[0]["order"]["dest_x_m"]), int(marches[1]["order"]["dest_x_m"]), "the same point")
-		assert_eq(int(marches[0]["order"]["dest_y_m"]), int(marches[1]["order"]["dest_y_m"]), "the same point")
+		assert_eq(int(CourierSystem.march_order(marches[0])["dest_x_m"]), int(CourierSystem.march_order(marches[1])["dest_x_m"]), "the same point")
+		assert_eq(int(CourierSystem.march_order(marches[0])["dest_y_m"]), int(CourierSystem.march_order(marches[1])["dest_y_m"]), "the same point")
 	var one := OrderCosts.gold_of(Game.data, "ARMY_MARCH") \
 		+ float(CourierSystem.fee_gold(Game.data, CourierSystem.ORDINARY))
 	assert_gt(one, 0.0)
@@ -336,7 +336,7 @@ func test_mixed_selection_sends_what_it_can() -> void:
 	_choose(menu, ArmyOrderMenu.RATE_BASE + 1)
 	var sets: Array = []
 	for c: Dictionary in Game.state.couriers:
-		if String((c["order"] as Dictionary).get("action_code", "")) == "SUPPLY_POINT_SET":
+		if not CourierSystem.order_with(c, ["SUPPLY_POINT_SET"]).is_empty():
 			sets.append(String(c["target"]))
 	assert_eq(sets, [land], "only the land unit's courier rides")
 	var label := String(ArmySystem.regiment(Game.data, fleet, Game.state)["label"])

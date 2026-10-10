@@ -74,14 +74,14 @@ func test_an_unchanged_value_is_allowed_while_places_are_missing() -> void:
 	var gone: Dictionary = s.couriers[0]
 	s.couriers.remove_at(0)
 	var missing: Array = LawSystem.delivery(repo, s, "tax_rate")["missing"]
-	assert_eq(missing, [String(gone["order"]["scope_key"])])
+	assert_eq(missing, [String(CourierSystem.first_order(gone)["scope_key"])])
 	assert_eq(actions.validate(_law("tax_rate", value), s), "", "the same decree may ride again")
 	var before := s.couriers.size()
 	actions.execute(_law("tax_rate", value), s)
 	assert_eq(s.couriers.size(), before + 1, "exactly one courier, to the missing place")
 	var again: Dictionary = s.couriers[s.couriers.size() - 1]
-	assert_eq(String(again["order"]["scope_key"]), String(gone["order"]["scope_key"]))
-	assert_eq(int(again["order"]["decree_id"]), id, "the same decree, not a new one")
+	assert_eq(String(CourierSystem.first_order(again)["scope_key"]), String(CourierSystem.first_order(gone)["scope_key"]))
+	assert_eq(int(CourierSystem.first_order(again)["decree_id"]), id, "the same decree, not a new one")
 	assert_eq(int(s.law_decree["tax_rate"]["decree_id"]), id)
 
 
@@ -249,7 +249,7 @@ func test_a_range_value_is_stored_in_plain_digits() -> void:
 	assert_eq(actions.validate(_law("tax_rate", padded), s), "")
 	actions.execute(_law("tax_rate", padded), s)
 	assert_eq(String(s.law_decree["tax_rate"]["value"]), str(to), "stored as its digits")
-	assert_eq(String(s.couriers[0]["order"]["value"]), str(to), "and carried so")
+	assert_eq(String(CourierSystem.first_order(s.couriers[0])["value"]), str(to), "and carried so")
 	assert_eq(actions.validate(_law("tax_rate", str(to)), s), "Tax rate is already %d" % to,
 		"the plain digits are the same value")
 	assert_eq(actions.validate(_law("tax_rate", "+%d" % to), s), "Tax rate is already %d" % to)

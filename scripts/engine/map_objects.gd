@@ -1027,7 +1027,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		var km := ArmySystem.speed_km_per_day(repo, state, code)
 		var marching := ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH
 		var riding := CourierSystem.pending_for(state, code)
-		if String((riding.get("order", {}) as Dictionary).get("action_code", "")) == "ARMY_MARCH":
+		if String(CourierSystem.march_order(riding).get("action_code", "")) == "ARMY_MARCH":
 			marching = true   # its march order is on the road: the arrival counts the courier too
 		if marching:
 			var days := CourierSystem.days_to_arrival(repo, state, code)

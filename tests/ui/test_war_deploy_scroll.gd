@@ -144,7 +144,8 @@ func test_cancelling_a_seal_puts_it_away_and_sends_nothing() -> void:
 
 ## A march drafted with a supply town (spec 2026-10-08-war-room-draw-orders
 ## ruling 15): the line names the town and counts the supply courier's gold,
-## and the seal runs the supply point, then the march — each its own courier.
+## and the seal runs the supply point, then the march — ONE courier to the
+## column carrying both (owner 2026-10-10).
 func test_a_draft_with_a_supply_town_counts_its_courier_and_sends_it_first() -> void:
 	var code := String(codes[0])
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
@@ -162,9 +163,11 @@ func test_a_draft_with_a_supply_town_counts_its_courier_and_sends_it_first() -> 
 	Game.plant_draft(code, "march", here + Vector2(12, 0), [], -1, town, 1000)
 	var line: Dictionary = Game.review_drafts()["lines"][0]
 	assert_eq(String(line["supply"]), String(Game.data.burgs[town]["label"]))
-	assert_gt(int(line["gold"]), plain, "the supply courier's fee is counted")
+	assert_gt(int(line["gold"]), plain, "the supply point's own order is counted")
 	var couriers := Game.state.couriers.size()
 	Game.deploy_drafts()
-	assert_eq(Game.state.couriers.size(), couriers + 2, "a courier to the town and one to the column")
+	assert_eq(Game.state.couriers.size(), couriers + 1, "one courier to the column carries both")
+	assert_eq(CourierSystem.orders_of(Game.state.couriers.back()).map(
+		func(o: Dictionary) -> String: return String(o["action_code"])), ["SUPPLY_POINT_SET", "ARMY_MARCH"])
 	assert_eq(String(SupplyLines.line(Game.state, code).get("town", "")), town, "the line waits ORDERED for its town")
 	scroll.refresh()

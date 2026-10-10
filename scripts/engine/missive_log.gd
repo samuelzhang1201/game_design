@@ -15,11 +15,17 @@ const BATTLE_KINDS := ["battle"]
 ## too (missive_keep_law), so a decree to every camp never pushes a spy's
 ## report or a receipt off a column.
 const LAW_KINDS := ["law"]
+## The couriers' receipts (owner 2026-10-10: the crown's own orders are ground
+## truth): capped apart too (missive_keep_receipt), so a campaign's orders
+## never push the steward's monthly report off the truth column.
+const RECEIPT_KINDS := ["receipt"]
 
 
-## Which cap a kind of letter counts against: "supply", "battle", "law", or ""
-## for the rest (missive_keep_per_column).
+## Which cap a kind of letter counts against: "supply", "battle", "law",
+## "receipt", or "" for the rest (missive_keep_per_column).
 static func keep_group(kind: String) -> String:
+	if kind in RECEIPT_KINDS:
+		return "receipt"
 	if kind in SUPPLY_KINDS:
 		return "supply"
 	if kind in BATTLE_KINDS:
@@ -37,6 +43,8 @@ static func _keep_key(group: String) -> String:
 			return "missive_keep_battle"
 		"law":
 			return "missive_keep_law"
+		"receipt":
+			return "missive_keep_receipt"
 	return "missive_keep_per_column"
 
 

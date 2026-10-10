@@ -205,6 +205,19 @@ Refused: an ineligible town, a fleet, a regiment of another kingdom. All
 three are paused-clock orders on the map, as a march is
 (`army_route_orders.csv` `paused_only`).
 
+**One courier with the march (owner 2026-10-10).** A supply point chosen on
+the march's confirm (or sealed with a war-room draft) does NOT ride to the
+town: its warrant (`with_column`) rides WITH the march's courier to the
+regiment, the load and the march after it — one courier, one fee. On his
+delivery the orders run in that sequence: the line goes `ordered` → `riding`
+and its first wagons leave the town that day (`ready_day` = the delivery day
++ the wagon days from the town to where the column stands, as for a
+town-bound warrant), said in the day's supply dispatch (`set_out_news`, a
+`set_out` event — every warrant delivered, town-bound or not, says so). A
+lone `SUPPLY_POINT_SET` / `CLEAR` from the supply menu still rides to the
+town, unless a courier for that same regiment waits to set out today: then it
+rides with him to the column (no second courier, no second fee).
+
 ## 5. What the player sees
 
 ### 5.1 The right-click menu (`ArmyOrderMenu`)

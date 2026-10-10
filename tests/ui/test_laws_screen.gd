@@ -274,7 +274,7 @@ func test_the_missing_places_list_names_each_with_days_left() -> void:
 	# one courier is lost on the road
 	var gone_key := ""
 	for i in Game.state.couriers.size():
-		var o: Dictionary = Game.state.couriers[i].get("order", {})
+		var o: Dictionary = CourierSystem.first_order(Game.state.couriers[i])
 		if String(o.get("law", "")) == "tax_rate":
 			gone_key = String(o["scope_key"])
 			Game.state.couriers.remove_at(i)
@@ -303,7 +303,7 @@ func test_the_missing_places_list_names_each_with_days_left() -> void:
 	assert_signal_emit_count(screen, "decreed", 1)
 	assert_eq(Game.state.couriers.size(), before + 1)
 	var again: Dictionary = Game.state.couriers[Game.state.couriers.size() - 1]
-	assert_eq(String(again["order"]["scope_key"]), gone_key)
+	assert_eq(String(CourierSystem.first_order(again)["scope_key"]), gone_key)
 
 
 func test_a_second_press_of_laws_closes_it() -> void:

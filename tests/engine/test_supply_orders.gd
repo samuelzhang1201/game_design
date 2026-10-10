@@ -161,7 +161,7 @@ func test_a_supply_courier_does_not_move_the_march_readers() -> void:
 	actions.execute(ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": dest.x, "y": dest.y}), s)
 	var before := CourierSystem.days_to_arrival(repo, s, code)
 	var march: Dictionary = CourierSystem.pending_for(s, code)
-	assert_eq(String(march["order"]["action_code"]), "ARMY_MARCH")
+	assert_eq(String(CourierSystem.first_order(march)["action_code"]), "ARMY_MARCH")
 	actions.execute(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": code, "days": 10}), s)
 	assert_eq(int(CourierSystem.pending_for(s, code)["id"]), int(march["id"]), "the carry courier is not the march's")
 	assert_eq(CourierSystem.days_to_arrival(repo, s, code), before)
