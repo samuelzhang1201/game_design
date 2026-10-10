@@ -607,6 +607,9 @@ func _ready() -> void:
 		# regiments) is overridden in memory, never written; --dev asks for it.
 		_root._dev_mode = _dev
 		Intel.dev_all = _dev
+		# the player's FPS row likewise: no counter in a shot
+		_root._show_fps = false
+		_root.fps_counter().visible = false
 	elif screen.has_method("enter_court"):
 		screen.call("enter_court", null)
 	if _event != "" and screen.has_method("enter_council"):

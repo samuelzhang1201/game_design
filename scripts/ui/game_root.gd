@@ -41,7 +41,8 @@ var _report_popup: MissiveReportPopup
 var _pending_reports: Array = []
 var _bottom_bar: BottomBar
 var _news_ticker: NewsTicker
-## DEV MODE's frame counter, top-right over every screen (owner 2026-09-30).
+## The frame counter, top-right over every screen (owner 2026-09-30), shown
+## by the menus' FPS row whatever DEV MODE says (owner 2026-10-10).
 var _fps_counter: FpsCounter
 var _info_screen: InfoScreen
 var _bgm: AudioStreamPlayer
@@ -51,7 +52,7 @@ var _bgm: AudioStreamPlayer
 static var settings_path := "user://settings.cfg"
 var _music_on := true
 ## Every live settings button — Music, Graphics (the 3D map's Map3DQuality
-## tier, cycled in place), Frame rate (FrameCap), Dev mode — of BOTH menus, the title screen's and
+## tier, cycled in place), Frame rate (FrameCap), FPS, Dev mode — of BOTH menus, the title screen's and
 ## the pause menu (owner 2026-09-30: 游戏开始的UI和游戏内的menu功能要一致):
 ## [{button, kind}], each relabelled whenever a setting turns.
 var _setting_buttons: Array = []
@@ -64,6 +65,9 @@ var _manor_view := false
 var _army_view := false
 ## DEV MODE (the pause menu's switch, owner 2026-09-27).
 var _dev_mode := false
+## The FPS row (owner 2026-10-10: 无论是不是dev模式，FPS都可以显示): the frame
+## counter on or off, apart from DEV MODE.
+var _show_fps := false
 ## Which map the panel shows (owner 2026-09-18: the 3D map is the default):
 ## the last result of _sync_map_view, never set by hand.
 var _map3d_view := false
@@ -138,7 +142,7 @@ func _ready() -> void:
 	add_child(_fps_counter)
 	_load_settings()
 	Intel.dev_all = _dev_mode
-	_fps_counter.visible = _dev_mode
+	_fps_counter.visible = _show_fps
 	_build_pause_menu()
 	_laws_screen.above = [_report_popup, _pause_menu]
 	_start_bgm()
@@ -408,6 +412,7 @@ func _load_settings() -> void:
 	if cfg.load(settings_path) == OK:
 		_music_on = bool(cfg.get_value("audio", "music", true))
 		_dev_mode = bool(cfg.get_value("game", "dev_mode", false))
+		_show_fps = bool(cfg.get_value("graphics", "show_fps", false))
 
 ## DEV MODE (owner 2026-09-27: "menu中新增一个dev模式，on/off"): the map shows
 ## every realm's regiments. Remembered in settings_path; the showing map
@@ -429,14 +434,30 @@ func _dev_label() -> String:
 
 func _apply_dev_mode() -> void:
 	Intel.dev_all = _dev_mode
-	if _fps_counter != null:
-		_fps_counter.visible = _dev_mode
 	if current_screen != null and current_screen.has_method("map3d_view"):
 		var v: Map3DView = current_screen.map3d_view()
 		if v != null:
 			v.set_dev_mode(_dev_mode)
 	if _ledger_screen != null:  # DEV MODE lifts the fog on the next snapshot
 		_ledger_screen.refresh()
+
+## The frame counter on or off (the menus' FPS row, owner 2026-10-10: 加一个
+## FPS on/off的按钮在menu), whatever DEV MODE says; remembered in settings_path.
+func set_show_fps(on: bool) -> void:
+	_show_fps = on
+	if _fps_counter != null:
+		_fps_counter.visible = on
+	_refresh_settings()
+	var cfg := ConfigFile.new()
+	cfg.load(settings_path)
+	cfg.set_value("graphics", "show_fps", on)
+	cfg.save(settings_path)
+
+func show_fps() -> bool:
+	return _show_fps
+
+func _fps_label() -> String:
+	return "FPS: On" if _show_fps else "FPS: Off"
 
 ## Test seam.
 func fps_counter() -> FpsCounter:
@@ -446,15 +467,15 @@ func fps_counter() -> FpsCounter:
 func bgm_player() -> AudioStreamPlayer:
 	return _bgm
 
-## A fresh set of the settings rows — Music, Graphics, Frame rate, Dev mode — for a menu
+## A fresh set of the settings rows — Music, Graphics, Frame rate, FPS, Dev mode — for a menu
 ## (the pause menu here, the title screen through MainMenu.add_settings); every
 ## one is relabelled whenever its setting turns, in whichever menu it stands.
 func settings_buttons() -> Array[Button]:
 	var out: Array[Button] = []
-	for kind: String in ["music", "quality", "frame_cap", "dev"]:
+	for kind: String in ["music", "quality", "frame_cap", "fps", "dev"]:
 		var b := _menu_button(_setting_label(kind), _setting_action(kind))
 		b.name = {"music": "MusicToggle", "quality": "GraphicsQuality", "frame_cap": "FrameCap",
-				"dev": "DevMode"}[kind]
+				"fps": "FpsToggle", "dev": "DevMode"}[kind]
 		_setting_buttons.append({"button": b, "kind": kind})
 		out.append(b)
 	return out
@@ -473,6 +494,8 @@ func _setting_label(kind: String) -> String:
 			return _quality_label()
 		"frame_cap":
 			return FrameCap.label(frame_cap_setting())
+		"fps":
+			return _fps_label()
 	return _dev_label()
 
 func _setting_action(kind: String) -> Callable:
@@ -483,6 +506,8 @@ func _setting_action(kind: String) -> Callable:
 			return _cycle_quality
 		"frame_cap":
 			return _cycle_frame_cap
+		"fps":
+			return func() -> void: set_show_fps(not _show_fps)
 	return func() -> void: set_dev_mode(not _dev_mode)
 
 func _refresh_settings() -> void:
