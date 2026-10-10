@@ -1,8 +1,9 @@
 class_name WarHud
 extends Control
 ## The war room's 2D overlay (spec 2026-10-01-war-room-design §3,
-## 2026-10-08-war-room-draw-orders rulings 13, 14, 16, 18), in screen px: the
-## selection's rings in its side's colour, Shift-drag's chalk marquee, every
+## 2026-10-08-war-room-draw-orders rulings 13, 14, 16, 18), in screen px: a
+## selected intel hint's ring (a selected piece glows on the table instead,
+## WarPieces.show_selected), Shift-drag's chalk marquee, every
 ## intel hint as a red ring of MARCHING ANTS (its dashes walk round as `phase`
 ## turns — redrawn each frame, never baked into a sheet's ink), the pending
 ## route's waypoint rings (the marches themselves are crayon arrows in
@@ -11,7 +12,7 @@ extends Control
 ## what WarRoomPointer hands it.
 
 var _repo: DataRepository
-var _rings: Array = []          # [{at, r, colour}]: the selection
+var _rings: Array = []          # [{at, r, colour}]: the selected intel hints
 var _marquee := Rect2()
 var _hints: Array = []          # screen px of each intel hint
 var _hint_c := Color.RED
