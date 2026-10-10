@@ -148,9 +148,8 @@ func _draw_exit() -> void:
 	var font: Font = _look.get("font") if _look.get("font") != null else ThemeDB.fallback_font
 	var text := String(_exit["text"])
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, _exit_px).x
-	var pos := back - d * 4.0 - Vector2(w * 0.5, 0.0) + Vector2(0.0, _exit_px * 0.35)
-	pos -= Vector2(d.x * (w * 0.5 + 2.0), 0.0)
-	pos.y += d.y * _exit_px * 0.6
+	# the name is ink lifted just above the road, running inward from the arrowhead
+	var pos := Vector2(back.x - d.x * 10.0 - (w if d.x > 0.0 else 0.0), back.y - _road_w * 2.2 - 2.0)
 	var colours: Dictionary = _look.get("colours", {})
 	var ink: Color = colours.get("ink", _gold.darkened(0.6))
 	var halo: Color = _look.get("halo", Color.WHITE)

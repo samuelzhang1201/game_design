@@ -286,6 +286,7 @@ var _war_plan_draw: Array = []   # --war-plan-draw [side:]kind,fx1,fy1,fx2,fy2[;
 var _war_spread := 0             # --war-spread N: N land regiments stood side by side near the focus
 var _war_box := false            # --war-box: a real Shift-drag box round them
 var _war_supply := false         # --war-supply: a real click on the nearest lit town while the confirm stands
+var _war_supply_town := ""        # --war-supply-town CODE|off: choose that town (off: the lit town nearest the laid sheet but off it) through the confirm's Supply from list
 var _war_supply_list := false    # --war-supply-list: a real click opening the confirm's Supply from list
 var _war_edit := false           # --war-edit: the draft pennant's Edit route… after the commit
 var _war_hint := false           # --war-hint: a spy report of foreign men seeded near the focus
@@ -465,6 +466,8 @@ func _ready() -> void:
 		elif args[i] == "--war-drag":
 			var dparts := args[i + 1].split(",")
 			_war_drag = Vector2(float(dparts[0]), float(dparts[1]))
+		elif args[i] == "--war-supply-town":
+			_war_supply_town = args[i + 1]
 		elif args[i] == "--war-hover":
 			var hparts := args[i + 1].split(",")
 			_war_hover = Vector2(float(hparts[0]), float(hparts[1]))
@@ -1361,6 +1364,8 @@ func _war_room_step() -> void:
 			print("war: bent from %s waypoints=%s" % [grab, menu.waypoints()])
 		if _war_supply and menu.shown_confirm() != null:
 			_war_click_supply(view, menu)
+		if _war_supply_town != "" and menu.shown_confirm() != null:
+			_war_pick_supply_town(view, menu)
 		if _war_supply_list and menu.shown_confirm() != null:
 			for o: Dictionary in menu.shown_confirm().shown_supply():
 				print("war: supply row %s%s%s" % [o["label"], " [pressed]" if bool(o["selected"]) else "",
@@ -1570,6 +1575,33 @@ func _war_draw_order(screen: WarRoomScreen, view: WarRoomView, roll: WarToolRoll
 	var menu := screen.orders()
 	print("war: drew the march for %s -> aiming=%s marching=%s waypoints=%s confirm=%s" % [view.plan_input().sel,
 		menu.aiming(), menu.marching(), menu.waypoints(), menu.shown_confirm() != null])
+
+
+## --war-supply-town: the town chosen from the confirm's Supply from list; "off"
+## takes the lit town nearest the laid sheet's rect yet off it (its road enters
+## the sheet at the exit mark).
+func _war_pick_supply_town(view: WarRoomView, menu: ArmyOrderMenu) -> void:
+	var town := _war_supply_town
+	if town == "off":
+		var best_d := INF
+		town = ""
+		var rect := view.sheet_rect()
+		for t: String in view.supply_pick:
+			if String(view.supply_pick[t]) != "":
+				continue
+			var b: Dictionary = Game.data.burgs[t]
+			var p := Vector2(float(b["x"]), float(b["y"]))
+			if rect.has_point(p):
+				continue
+			var d := p.distance_to(rect.get_center())
+			if d < best_d:
+				best_d = d
+				town = t
+	if town == "":
+		print("war: no lit town off the sheet")
+		return
+	menu.shown_confirm().select_supply(town)
+	print("war: supply town %s -> choice=%s road=%d pts" % [town, menu.supply_choice(), view.supply_preview.size()])
 
 
 ## --war-supply: a real click on the lit town nearest the march's end.
