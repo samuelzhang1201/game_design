@@ -64,6 +64,7 @@ words in a new `data/conduct_words.csv` (`key,text`); laws in `laws.csv`,
 | `forage_strip_k` | 500 | ‰ stripped when a province's whole full monthly capacity is taken |
 | `forage_recover_permille` | 100 | ‰ a stripped province recovers at the month's end |
 | `forage_bare_permille` | 900 | past this, "stripped bare" news (once per crossing) |
+| `forage_word_rich_permille` / `_fair_permille` | 750 / 400 | the slip's "rich" and "fair": today's yield per mille of a full summer day (above 0 but under "fair" is "thin", 0 is "stripped") |
 | `forage_hazard_strip_permille` / `_protected` | 500 / 750 | stripping past which the province gets the "Raided" hazard; the second with `protect_church` on |
 | `forage_morale_month` / `forage_training_month` | 4 / 3 | morale gained / training lost for 30 days foraging |
 | `forage_harass_permille` | 10 | share of the fit men wounded for 30 days foraging |
