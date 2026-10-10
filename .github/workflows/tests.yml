@@ -3,8 +3,15 @@ name: tests
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+    # Skip CI for changes that can't break a test: plain docs, and CSV value
+    # tweaks (tests read data/ through tests/suite_data.gd, not live CSVs).
+    # RANDOM_EVENTS.md and game_story/**/*.md are runtime content with their
+    # own id-resolution tests, so they're carved back out of the *.md skip.
+    paths-ignore:
+      - '**/*.md'
+      - '!RANDOM_EVENTS.md'
+      - '!game_story/**'
+      - 'data/**/*.csv'
   workflow_dispatch: {}
 
 permissions:

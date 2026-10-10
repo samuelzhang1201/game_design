@@ -39,7 +39,7 @@ This file holds only what holds EVERYWHERE. Each subsystem's rules live in a `CL
 - **OpenAI API via raw HTTP** (`HTTPRequest`). Model IDs and prices live in one config table (PRD §8).
 - **Run:** `/Applications/Godot.app/Contents/MacOS/Godot --path .` (macOS). `$GODOT`, when set, names the binary for `run_tests.sh` (the cloud SessionStart hook sets it).
 - **A fresh clone runs as it is**: every asset the game draws is committed (the Terrain3D build and its textures included). Steps: Godot 4.7, `git clone`, ONE import pass (`Godot --headless --path . --import`, or open the editor; `.godot/` is never committed) — the first pass prints font/theme load errors that are gone on the next run. No Blender, ComfyUI, Python or `build_pack.sh` is needed to play; those only REBUILD art. `.env` / `user://config.json` are optional (absent, the game runs offline).
-- **Test:** `./run_tests.sh` runs the full GUT suite headless (`CC_FORCE_OFFLINE=1`, so no live API call) and fails on any error count but the expected one: 2 while the git-ignored `gdai-mcp-plugin-godot` binaries are installed, 0 without them (a fresh clone, the cloud). `./run_tests.sh --fast` runs only `tests/engine`, `tests/ledger3d`, `tests/llm` for the edit-run loop; run the whole suite before a merge.
+- **Test:** `./run_tests.sh` runs the full GUT suite headless (`CC_FORCE_OFFLINE=1`, so no live API call) and fails on any error count but the expected one: 2 while the git-ignored `gdai-mcp-plugin-godot` binaries are installed, 0 without them (a fresh clone, the cloud). `./run_tests.sh --fast` runs only `tests/engine`, `tests/ledger3d`, `tests/llm` for the edit-run loop — this is the regression check to run while developing and before every commit. **GitHub Actions (`.github/workflows/tests.yml`) runs the whole suite on every PR against `main` before merge**, so don't run the full `./run_tests.sh` yourself on each commit — let CI do it; only run it locally when you need to debug a CI-reported failure or you touched `tests/ui`, `tests/map3d` or `tests/war_room` and want to check before pushing.
 - **A test takes its data from `tests/suite_data.gd`, never `DataRepository.load_all`**: `SuiteData.repo()` is a deep copy of data parsed once per run (change any table freely), `SuiteData.campaign(repo, seed)` a cached campaign copied through the save format; `tests/pre_run.gd` hands the same copier to `Game.campaign_maker`. Wait with `wait_process_frames` or `wait_until`, never `wait_frames` (a 60 Hz physics frame of real time in this GUT).
 - **Config** (`.env`, `user://config.json`) is optional and fails closed to offline: `scripts/llm/CLAUDE.md`.
 
@@ -87,7 +87,7 @@ docs/             # design/ (PRD, systems, chapter 0), references/, superpowers/
 
 ## Done means
 
-1. `./run_tests.sh --fast` while iterating; the whole `./run_tests.sh` (expected error count) before a commit that touches more than docs.
+1. `./run_tests.sh --fast` while iterating and before every commit — that's the regression check now. CI (`.github/workflows/tests.yml`) runs the whole `./run_tests.sh` on each PR before merge, so don't run the full suite locally as a matter of routine; reach for it only to reproduce a CI failure or before pushing a change under `tests/ui`, `tests/map3d` or `tests/war_room` (outside `--fast`'s scope).
 2. A new engine formula has its hand-computed GUT test; a new rule is written into the right nested `CLAUDE.md` (or its `guide/`), not here.
 3. A visual change has been through `visual-review` — or, in a cloud session, the final message says it still needs it.
 
