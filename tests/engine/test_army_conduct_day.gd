@@ -12,6 +12,7 @@ var a: String
 var b: String
 var home: String
 var foreign: String
+var _follower_before := 0
 
 
 func before_each() -> void:
@@ -196,6 +197,7 @@ func test_fleet_and_foe_untouched() -> void:
 		state.regiments[fleet]["forage"] = ""
 	else:
 		pending("no fleet in this pack's roster")
+		return
 	state.foes["foe_x"] = {"morale": 0, "training": 0, "supplies": 0, "forage": "", "deserted": 0,
 		"x_m": state.regiments[a]["x_m"], "y_m": state.regiments[a]["y_m"]}
 	var fleet_before: Dictionary = (state.regiments.get(fleet, {}) as Dictionary).duplicate(true)
@@ -277,8 +279,53 @@ func before_each_reset_for_mirror() -> void:
 		e["forage_days"] = 0
 
 
+## A starter (0 days, forbid) and a healthy follower in one enemy province.
+func _havoc_day(starter: String, follower: String, no_havoc: bool) -> Array:
+	for c: String in H.land_units(repo, state):
+		_place(c, home)
+		_put(c, 30, 90, 90)
+	for c: String in [starter, follower]:
+		_place(c, foreign)
+		_law(c, "plunder", "forbid")
+	_put(starter, 0, 50, 50)
+	_put(follower, 10, 80, 80)
+	state.regiments[follower]["carry_days"] = 30
+	_follower_before = int(state.regiments[follower]["supplies"])
+	if no_havoc:
+		_law(starter, "no_havoc", "on")
+	H.set_food(repo, foreign, 6)
+	return ArmyConduct.day_step(repo, state)
+
+
+func _check_havoc(starter: String, follower: String) -> void:
+	var ev := _havoc_day(starter, follower, false)
+	assert_gt(int(state.regiments[follower]["supplies"]), _follower_before, "the follower took today")
+	assert_eq(String(state.regiments[starter]["forage"]), "desperate")
+	assert_eq(String(state.regiments[follower]["forage"]), "desperate")
+	assert_eq(int(state.regiments[follower]["forage_days"]), 1)
+	assert_eq(int(state.regiments[starter]["forage_days"]), 1)
+	assert_true("forage_havoc" in _types(ev))
+	assert_almost_eq(float(state.metrics["legitimacy"]), 47.0, 0.001, "charged once, for the starter")
+
+
+func test_havoc_follower_takes_the_same_day_starter_first() -> void:
+	_check_havoc(a, b)
+
+
+func test_havoc_follower_takes_the_same_day_starter_last() -> void:
+	_check_havoc(b, a)
+
+
+func test_no_havoc_leaves_the_follower() -> void:
+	_havoc_day(a, b, true)
+	assert_eq(String(state.regiments[a]["forage"]), "desperate")
+	assert_eq(String(state.regiments[b]["forage"]), "")
+	assert_eq(int(state.regiments[b]["forage_days"]), 0)
+
+
 func test_twenty_four_months_twice_identical() -> void:
 	pending("needs Task 8: day_step is wired into TickEngine there")
+	return
 	var runs: Array = []
 	for i in range(2):
 		var s := SuiteData.campaign(repo, 11)

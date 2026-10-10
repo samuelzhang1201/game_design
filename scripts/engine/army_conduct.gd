@@ -82,8 +82,9 @@ static func _label(repo: DataRepository, state: GameState, code: String) -> Stri
 ## Apply `wants` to a unit on land of `kind` in `province`. Returns the events
 ## filed ({type, regiment, province, kingdom}; a havoc one {type, regiment,
 ## province}).
+## `converted`, when given, collects the codes Havoc turned desperate.
 static func switch(repo: DataRepository, state: GameState, code: String, province: String,
-		kind: String) -> Array:
+		kind: String, converted: Array = []) -> Array:
 	var out: Array = []
 	var entry: Dictionary = state.regiments.get(code, {})
 	if entry.is_empty():
@@ -107,14 +108,15 @@ static func switch(repo: DataRepository, state: GameState, code: String, provinc
 				if LawSystem.value(repo, state, "protect_women", code) == "on" else "forage_grievance_month"
 			state.grievance[kingdom] = int(state.grievance.get(kingdom, 0)) + int(repo.bal(key))
 	if LawSystem.value(repo, state, "no_havoc", code) != "on":
-		var spread := _havoc(repo, state, code, province)
+		var spread := _havoc(repo, state, code, province, converted)
 		if spread > 0 and mark_once(repo, state, "havoc:%s:%d" % [province, state.day]):
 			out.append({"type": EVENT_HAVOC, "regiment": code, "province": province})
 	return out
 
 
 ## Every other crown land unit in `province` that is off goes desperate; returns how many.
-static func _havoc(repo: DataRepository, state: GameState, starter: String, province: String) -> int:
+static func _havoc(repo: DataRepository, state: GameState, starter: String, province: String,
+		converted: Array = []) -> int:
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	var n := 0
@@ -130,6 +132,7 @@ static func _havoc(repo: DataRepository, state: GameState, starter: String, prov
 		if ArmySystem.province_of(repo, state, reg) != province:
 			continue
 		follower["forage"] = DESPERATE
+		converted.append(c)
 		n += 1
 	return n
 
@@ -217,7 +220,8 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
 	var codes: Array = state.regiments.keys()
 	codes.sort()
-	var foragers: Dictionary = {}   # province -> [codes]
+	var places: Dictionary = {}   # code -> province, for the units on land that is not home
+	var converted: Array = []     # the codes Havoc turned desperate today: they keep it today
 	for c: String in codes:
 		if state.foes.has(c):
 			continue
@@ -239,11 +243,17 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 			if was * 1000 <= line and line < int(entry.get("deserted", 0)) * 1000:
 				out.append({"type": "deserting_big", "regiment": c})
 			continue
-		out.append_array(switch(repo, state, c, province, kind))
-		if String(entry.get("forage", "")) != "":
-			if not foragers.has(province):
-				foragers[province] = []
-			(foragers[province] as Array).append(c)
+		places[c] = province
+		if c in converted:
+			continue
+		out.append_array(switch(repo, state, c, province, kind, converted))
+	var foragers: Dictionary = {}   # province -> [codes]
+	for c: String in codes:
+		if places.has(c) and String((state.regiments[c] as Dictionary).get("forage", "")) != "":
+			var p := String(places[c])
+			if not foragers.has(p):
+				foragers[p] = []
+			(foragers[p] as Array).append(c)
 	var provs: Array = foragers.keys()
 	provs.sort()
 	for p: String in provs:
