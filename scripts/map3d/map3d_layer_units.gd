@@ -33,8 +33,7 @@ var shown := false
 var _pieces: Dictionary = {}
 ## code -> the piece's box on screen, design px. What a click hits.
 var _rects: Dictionary = {}
-## code -> {at, up, r}: the ground under the piece, world (the selection's glow).
-var _rings: Dictionary = {}
+var _selected: Array = []  ## the selected codes: their pieces glow (Map3DUnitGlow)
 ## code -> {heading, trail}: the way it last ADVANCED (Map3DUnits.track).
 var _track: Dictionary = {}
 var _want_yaw: Dictionary = {}  ## code -> the yaw it turns toward
@@ -57,9 +56,8 @@ func set_shown(on: bool) -> void:
 	visible = on
 	if on:
 		refresh()
-	else:  # hidden: nothing to click or ring
+	else:  # hidden: nothing to click
 		_rects.clear()
-		_rings.clear()
 
 
 func set_preview(on: bool) -> void:
@@ -70,7 +68,6 @@ func set_preview(on: bool) -> void:
 		preview_build(Map3DPreview.context_for(self))
 	else:
 		_pieces.clear()
-		_rings.clear()
 		Map3DPreview.clear_generated(self)
 	Map3DPreview.sync_viewport(self)
 
@@ -90,7 +87,6 @@ func refresh() -> void:
 	if ctx == null or not shown or ctx.camera == null or not is_inside_tree():
 		return  # out of the tree: a view handed between screens (the title's)
 	var live: Dictionary = {}
-	_rings.clear()
 	_rects.clear()
 	for reg: Dictionary in ctx.regiments():
 		var code := String(reg["regiment_code"])
@@ -129,7 +125,6 @@ func _place(code: String, piece: Dictionary) -> void:
 	var repo := ctx.repo
 	var xz: Vector2 = _shown_xz[code]
 	var node: Node3D = piece["node"]
-	_rings.erase(code)
 	_rects.erase(code)
 	if ctx.camera.is_position_behind(Vector3(xz.x, ctx.height_at(xz), xz.y)):
 		show_piece(piece, false)
@@ -154,7 +149,7 @@ func _place(code: String, piece: Dictionary) -> void:
 	var up: Vector3 = sit["normal"]
 	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw))
 		.scaled(Vector3(k, k, k)), ground)
-	_rings[code] = {"at": Vector3(xz.x, float(sit["y"]), xz.y), "up": up, "r": float(piece["half_w_m"]) * k}
+	Map3DUnitGlow.place(repo, piece, _selected.has(code), ground.y - float(sit["y"]), k)
 	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, high,
 		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())
 
@@ -203,10 +198,10 @@ func show_piece(piece: Dictionary, on: bool) -> void: Map3DUnits.show_piece(piec
 func shown_positions() -> Dictionary: return _shown_xz
 
 
-## The ground under each piece standing before the camera, {code: {at (world),
-## up (its seat's normal), r (its half width, metres)}} — the selection's glow.
-func ground_rings() -> Dictionary:
-	return _rings
+## The selected units: each one's piece glows on the ground under it.
+func set_selected(codes: Array) -> void:
+	_selected = codes.duplicate()
+	refresh()
 
 
 func has_piece(code: String) -> bool: return _pieces.has(code)  ## a fleet has none: its counter

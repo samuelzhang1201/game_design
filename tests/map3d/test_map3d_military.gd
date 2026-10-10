@@ -163,27 +163,30 @@ func test_the_hud_draws_only_the_fleets_counters() -> void:
 
 
 ## A selected piece is shown by a glow on the ground under it, not a box or a
-## number (owner 2026-10-10); none while nothing is selected.
-func test_a_selected_piece_glows_on_the_ground() -> void:
+## number (owner 2026-10-10): a quad child of the piece lying on its seat
+## (Map3DUnitGlow), under the figures; none while nothing is selected.
+func test_a_selected_piece_glows_on_the_ground_under_it() -> void:
 	var v := _view()
 	v.set_military(true)
 	var r := _first_regiment()
 	var code := String(r["regiment_code"])
 	_look_at_regiment(v, r, 2500.0)
-	var hud := v._hud.piece("Armies") as Map3DHudArmies
-	await wait_process_frames(2)
-	assert_eq(hud.glow_count(), 0, "nothing selected, nothing glows")
+	var units := v._units as Map3DLayerUnits
+	var piece: Dictionary = units._pieces[code]
+	assert_false(Map3DUnitGlow.shown(piece), "nothing selected, nothing glows")
 	_click(v, (v.unit_rects()[code] as Rect2).get_center())
 	assert_eq(v.selected_armies(), [code])
-	hud.queue_redraw()
-	await wait_process_frames(2)
-	assert_eq(hud.glow_count(), 1, "the selected piece glows")
-	var g: Dictionary = v.unit_rings()[code]
-	var ring := Map3DHudArmies.ground_ring(v.camera(), g["at"], g["up"], float(g["r"]), 8,
-		hud.ctx.viewport_px_scale())
-	assert_eq(ring.size(), 8, "the ring lies before the camera")
-	var box := v.unit_rects()[code] as Rect2
-	assert_true(box.grow(box.size.length()).has_point(ring[0]), "and round the piece's feet")
+	assert_true(Map3DUnitGlow.shown(piece), "the selected piece glows")
+	var glow := (piece["node"] as Node3D).get_node(Map3DUnitGlow.NAME) as MeshInstance3D
+	assert_eq(glow.material_override, Map3DUnitGlow.MATERIAL, "its look is the .tres")
+	assert_lte(glow.position.y, 0.0, "it lies at the seat, at or under the figures' feet")
+	var half := float(piece["half_w_m"]) * Game.data.bal("map3d_unit_glow_ratio")
+	assert_almost_eq((glow.mesh as PlaneMesh).size.x, half * 2.0, 0.001, "the footprint's size")
+	for other: String in units._pieces:
+		if other != code:
+			assert_false(Map3DUnitGlow.shown(units._pieces[other]), "%s does not glow" % other)
+	v.clear_selection()
+	assert_false(Map3DUnitGlow.shown(piece), "let go, it goes out")
 
 
 ## A standing piece keeps its facing when the camera moves (owner 2026-10-10:

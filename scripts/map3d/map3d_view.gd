@@ -406,7 +406,9 @@ func _process(delta: float) -> void:
 
 func request_hover(pos: Vector2) -> void: _picker.request(pos)
 
-func refresh_hud() -> void: if _loaded: _hud.refresh()
+func refresh_hud() -> void:  # the selection changed: the HUD and the pieces' glow follow it
+	if _loaded:
+		_units.set_selected(_selection.armies); _hud.refresh()
 
 func compass_rect() -> Rect2: return _hud.compass_rect() if _loaded else Rect2()
 
@@ -443,8 +445,7 @@ func set_military(on: bool) -> void:
 		_units.set_shown(on)
 		_hud.refresh()
 
-# MILITARY's 3D pieces: the ground under them (the selection's glow), boxes (clicks), count, motion.
-func unit_rings() -> Dictionary: return _units.ground_rings() if _loaded else {}
+# MILITARY's 3D pieces: boxes (clicks), count, motion.
 func unit_has_piece(code: String) -> bool: return _units.has_piece(code) if _loaded else false
 func unit_positions() -> Dictionary: return _units.shown_positions() if _loaded else {}
 func unit_pack_positions() -> Dictionary:  # the WAR ROOM's pieces (Map3DGeometry.world_to_pack_all)

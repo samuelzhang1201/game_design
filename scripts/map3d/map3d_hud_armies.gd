@@ -2,8 +2,8 @@ class_name Map3DHudArmies
 extends Map3DHudPiece
 ## MILITARY on the 3D map's HUD: a land unit is its 3D piece (Map3DLayerUnits)
 ## with NOTHING drawn over it — no counter, chip, number, bar or leader line
-## (owner 2026-10-10: 请移除大地图上军事单位的所有标记和数字的mark) — and a
-## selected one is shown by a faint glow on the ground under it. A unit with
+## (owner 2026-10-10: 请移除大地图上军事单位的所有标记和数字的mark); a selected
+## one glows on the ground under it (Map3DUnitGlow, in 3D). A unit with
 ## no piece (a fleet) keeps its flat counter (ArmyCounters). Each march's road
 ## ahead and its end ring are drawn here too. Its sizes are edited on the node.
 
@@ -18,17 +18,7 @@ extends Map3DHudPiece
 ## §5.6), design px; edited on the node.
 @export var box_color := Color(1.0, 0.92, 0.6, 0.9)
 @export var box_width_px := 1.5
-## The selection's glow: a soft ring lying on the ground under each selected
-## piece, `glow_scale` × the piece's half width out; it rises from nothing at
-## `glow_inner` of that, is `glow_color` at `glow_peak` and fades out at the rim.
-@export var glow_color := Color(1.0, 0.8, 0.3, 0.55)
-@export var glow_scale := 0.95
-@export_range(0.0, 1.0) var glow_inner := 0.5
-@export_range(0.0, 1.0) var glow_peak := 0.8
-@export var glow_segments := 40
-
 var _drawn := 0
-var _glowed := 0
 ## markers()' cut and the pose it was cut for (see there).
 var _cache: Array = []
 var _key: Array = []
@@ -98,67 +88,15 @@ func drawn_count() -> int:
 	return _drawn
 
 
-## How many selected pieces the last draw laid a glow under (a test seam).
-func glow_count() -> int:
-	return _glowed
-
-
 func _draw() -> void:
 	if not bound():
 		return
-	_glowed = 0
 	var list := markers()
 	_drawn = list.size()
-	if view.military():
-		var rings := view.unit_rings()
-		for code: String in view.selected_armies():
-			if rings.has(code) and _draw_glow(rings[code]):
-				_glowed += 1
 	_draw_routes()
 	ArmyCounters.draw(self, ctx.repo, list, view.selected_armies())
 	if view.box_rect.has_area():
 		draw_rect(view.box_rect, box_color, false, box_width_px)
-
-
-## One piece's glow: three rings on its seat's plane (Map3DLayerUnits.
-## ground_rings), each band a strip of quads shaded from clear to `glow_color`
-## and back. false when any of it is behind the camera.
-func _draw_glow(g: Dictionary) -> bool:
-	var r := float(g["r"]) * glow_scale
-	var bands: Array = []
-	for share: float in [glow_inner, glow_peak, 1.0]:
-		var ring := ground_ring(ctx.camera, g["at"], g["up"], r * share, glow_segments,
-			ctx.viewport_px_scale())
-		if ring.is_empty():
-			return false
-		bands.append(ring)
-	var clear := Color(glow_color, 0.0)
-	for b in 2:
-		var inner: PackedVector2Array = bands[b]
-		var outer: PackedVector2Array = bands[b + 1]
-		var ci := glow_color if b == 1 else clear
-		var co := glow_color if b == 0 else clear
-		for i in glow_segments:
-			var k := (i + 1) % glow_segments
-			draw_polygon(PackedVector2Array([inner[i], inner[k], outer[k], outer[i]]),
-				PackedColorArray([ci, ci, co, co]))
-	return true
-
-
-## `n` points of a circle of `radius` metres about `at` on the plane of normal
-## `up`, projected to design px; [] when one lies behind the camera.
-static func ground_ring(camera: Camera3D, at: Vector3, up: Vector3, radius: float, n: int,
-		px_scale: float) -> PackedVector2Array:
-	var e1 := (Vector3.RIGHT - up * up.dot(Vector3.RIGHT)).normalized()
-	var e2 := up.cross(e1).normalized()
-	var out := PackedVector2Array()
-	for i in n:
-		var t := TAU * float(i) / float(n)
-		var p := at + (e1 * cos(t) + e2 * sin(t)) * radius
-		if camera.is_position_behind(p):
-			return PackedVector2Array()
-		out.append(camera.unproject_position(p) / px_scale)
-	return out
 
 
 ## Each marching regiment's road still ahead: a dashed line DRAPED on the
