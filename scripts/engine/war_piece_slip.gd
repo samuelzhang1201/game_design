@@ -5,8 +5,9 @@ extends RefCounted
 ## unit, spec 2026-10-07-army-split-and-ground §5.4; `lines` still lists several
 ## when given them) with its arm and heads, its defend and attack on the
 ## ground where it stands now (ArmySystem.power), its readiness and morale, and
-## its supplies with the days they last ("Supplies 1,240 (≈ 18 days)").
-## Pure and read-only; only the player's own regiments are pieces.
+## its supplies with the days they last ("Supplies 1,240 (≈ 18 days)") —
+## and a supply line broken because its town lies ahead of it, its name in
+## rubric (`SupplyLines.slip_words`, owner 2026-10-10). Pure and read-only; only the player's own regiments are pieces.
 
 
 ## One reading per regiment code, in the order given.
@@ -30,7 +31,8 @@ static func reading(repo: DataRepository, state: GameState, codes: Array) -> Arr
 			"attack": ArmySystem.power(repo, state, code, "attack"),
 			"readiness": ArmySystem.bars_of(repo, state, code).x,
 			"morale": int(st.get("morale", 0)), "supplies": supplies,
-			"days": ArmySystem.days_in_hand(supplies, use) if use > 0 else -1})
+			"days": ArmySystem.days_in_hand(supplies, use) if use > 0 else -1,
+			"line_broken": SupplyLines.slip_words(repo, state, code)})
 	return out
 
 
@@ -47,6 +49,10 @@ static func lines(repo: DataRepository, readings: Array, town := "") -> Array:
 			"kind": "line"})
 		out.append({"text": _readiness(r), "kind": "line"})
 		out.append({"text": supplies_text(r), "kind": "line"})
+		var broken: Dictionary = r.get("line_broken", {})
+		if not broken.is_empty():   # its supply town ahead of it (ruling 20 kept daily)
+			out.append({"text": String(broken["title"]), "kind": "rubric"})
+			out.append({"text": String(broken["text"]), "kind": "line"})
 		return out
 	var heads := 0
 	for r: Dictionary in readings:
@@ -60,6 +66,9 @@ static func lines(repo: DataRepository, readings: Array, town := "") -> Array:
 		out.append({"text": "%s · Defend %s · Attack %s" % [_strength(repo, r), Intel.num(int(r["defend"])),
 			Intel.num(int(r["attack"]))], "kind": "line"})
 		out.append({"text": "%s · %s" % [_readiness(r), supplies_text(r)], "kind": "line"})
+		var broken: Dictionary = r.get("line_broken", {})
+		if not broken.is_empty():
+			out.append({"text": "%s: %s" % [broken["title"], broken["text"]], "kind": "line"})
 	return out
 
 

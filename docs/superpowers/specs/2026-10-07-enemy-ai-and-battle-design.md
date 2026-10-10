@@ -43,7 +43,7 @@ Status: 设计已在 brainstorming 中逐段确认(2026-10-07),待 owner 审阅�
 
 `appear_day` 是战役的**绝对天数**,不挂在某个章节事件上。预警事件是固定散文(不由模型写),经现有章节链(`TriggerDsl`、`branch:`)接入。
 
-**迷雾对称:** AI 只看得见 `ai_sight_km` 内的玩家 regiment 和已知城镇;玩家这边敌军是"幽灵",数字永远是估计,来源与日期标明(`Intel`)。
+**迷雾对称:** AI 只看得见 `ai_sight_km` 内的玩家 regiment 和已知城镇;玩家这边敌军是"幽灵",数字永远是估计,来源与日期标明(`Intel`)。玩家的视野(`player_sight_km`)与幽灵(目击 / 斥候 / 传闻,`GameState.sightings`)见 `2026-10-10-player-sight-and-ghosts-design.md`。
 
 ## 3. 敌方 AI
 

@@ -27,11 +27,25 @@ uniform float edge_soft = 0.35;
 uniform float light_gain = 1.5;
 uniform vec4 glow_virtuous : source_color = vec4(0.95, 0.82, 0.48, 1.0);
 uniform vec4 glow_vicious : source_color = vec4(0.69, 0.2, 0.16, 1.0);
+// The generated STRAND (owner 2026-10-10, `L-04`..`L-06`,
+// tools/ledger/ledger_art_prep.py): a value texture across the link (v) and
+// along it (u, one repeat every strand_px screen px), tinted with the link's
+// colour, its hottest core going toward white. The link is drawn
+// strand_widen times wider so the strand's glow has room; strand_mix 0 is
+// the plain soft-edged line.
+uniform sampler2D strand : source_color, hint_default_white, repeat_enable, filter_linear_mipmap;
+uniform float strand_mix = 0.0;
+uniform float strand_widen = 1.0;
+uniform float strand_px = 64.0;
+uniform float strand_gain = 1.6;
+uniform float strand_white = 0.35;
+uniform float strand_power = 1.0;   // contrast: above 1 thins the glow toward the core
 
 varying float v_speed;
 varying float v_dashed;
 varying float v_glow;
 varying float v_len;
+varying float v_px_len;
 
 vec3 to_linear(vec3 c) {
 	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
@@ -60,7 +74,10 @@ void vertex() {
 	vec3 across = cross(dir, to_cam);
 	across = length(across) < 1e-4 ? vec3(0.0, 1.0, 0.0) : normalize(across);
 	float m_per_px = m_per_px_at(here, CAMERA_POSITION_WORLD);
-	VERTEX = here + across * (CUSTOM0.w * 0.5 * CUSTOM1.x + CUSTOM1.y) * m_per_px;
+	float widen = mix(1.0, strand_widen, strand_mix);
+	VERTEX = here + across * (CUSTOM0.w * 0.5 * CUSTOM1.x * widen + CUSTOM1.y) * m_per_px;
+	// the link's length in screen px, measured at this end
+	v_px_len = v_len / max(1e-6, m_per_px);
 	v_speed = UV2.x;
 	v_dashed = UV2.y;
 	v_glow = CUSTOM1.z;
@@ -84,6 +101,13 @@ void fragment() {
 		c = mix(c, g, 0.55 + 0.45 * sin(TIME * 1.6));
 	}
 	float edge = 1.0 - abs(UV.y * 2.0 - 1.0);
+	float a = (COLOR.a + light * 0.3 * COLOR.a) * smoothstep(0.0, edge_soft, edge);
+	if (strand_mix > 0.0) {
+		float s = pow(texture(strand, vec2(along * v_px_len / strand_px, UV.y)).r, strand_power);
+		vec3 sc = c * strand_gain + vec3(pow(s, 3.0)) * strand_white;
+		c = mix(c, sc, strand_mix);
+		a = mix(a, s * (COLOR.a + light * 0.3 * COLOR.a), strand_mix);
+	}
 	ALBEDO = c;
-	ALPHA = clamp((COLOR.a + light * 0.3 * COLOR.a) * smoothstep(0.0, edge_soft, edge), 0.0, 1.0);
+	ALPHA = clamp(a, 0.0, 1.0);
 }

@@ -174,6 +174,9 @@ func _init() -> void:
 		for m: Dictionary in s.missives:
 			if int(m["day"]) == today and String(m["kind"]) in ["rumour", "host_news"]:
 				lines.append("  LETTER %s (%s): %s" % [m["kind"], m["column"], m["title"]])
+		var sight := _sight(repo, s)
+		if sight != "":
+			lines.append(sight)
 		var dt := _metric(s, "treasury") - treasury
 		var dc := _metric(s, "peasant_contentment") - content
 		if dt != 0 or dc != 0:
@@ -257,6 +260,36 @@ func _hosts(repo: DataRepository, s: GameState) -> String:
 		var tgt := String(m.get("target_id", ""))
 		parts.append("%s %s%s %s" % [h.trim_prefix("raid_"), m["mode"], "->" + tgt if tgt != "" else "", where])
 	return " | ".join(parts)
+
+
+## What the crown SEES as the day ends (Sighting, spec 2026-10-10-player-sight-
+## and-ghosts): the enemy units in sight by host, and the ghosts the map would
+## draw by source with their places in km; "" when it knows of nothing.
+func _sight(repo: DataRepository, s: GameState) -> String:
+	var seen := Sighting.seen_foes(repo, s)
+	var ghosts := Sighting.ghosts(repo, s)
+	if seen.is_empty() and ghosts.is_empty():
+		return ""
+	var by_host: Dictionary = {}
+	for c: String in seen:
+		var h := String(s.foes[c]["host"]).trim_prefix("raid_")
+		by_host[h] = int(by_host.get(h, 0)) + 1
+	var parts: Array = []
+	for h: String in by_host:
+		parts.append("%s %d" % [h, int(by_host[h])])
+	var sources: Dictionary = {}
+	for g: Dictionary in ghosts:
+		var k := String(g["source"])
+		if not sources.has(k):
+			sources[k] = []
+		(sources[k] as Array).append("%dd (%d,%d)km%s" % [int(g["age"]), roundi(int(g["x_m"]) / 1000.0),
+			roundi(int(g["y_m"]) / 1000.0), " ~%d" % int(g["men"]) if int(g["men"]) > 0 else ""])
+	var gparts: Array = []
+	for k: String in sources:
+		var list: Array = sources[k]
+		gparts.append("%s %d [%s%s]" % [k, list.size(), ", ".join(list.slice(0, 3)), ", …" if list.size() > 3 else ""])
+	return "  SIGHT  seen %d%s; ghosts %d%s" % [seen.size(), " (" + ", ".join(parts) + ")" if not parts.is_empty() else "",
+		ghosts.size(), ": " + "; ".join(gparts) if not gparts.is_empty() else ""]
 
 
 ## +1 the player's side won the battle, −1 the foe's, 0 neither.

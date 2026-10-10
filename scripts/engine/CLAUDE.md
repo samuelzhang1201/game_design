@@ -8,6 +8,7 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 
 - `scripts/engine/guide/regiments.md` — regiments and their march (`ArmySystem`)
 - `scripts/engine/guide/battle_and_ai.md` — battles, stances and the enemy (`BattleSystem`, the foes, `ARMY_STANCE`, `EnemyAi`: the hosts' minds; the invasion's day order, rumour, scout facts and host news)
+- `scripts/engine/guide/sight_and_ghosts.md` — the crown's sight of the enemy and its ghosts (`Sighting`: `player_sight_km`, `GameState.sightings` seen / spy / rumour, forgetting, the estimate, the cards)
 - `scripts/engine/guide/siege.md` — the siege (`SiegeSystem`: progress, hunger and cut supply lines, assaults, the manor-level fall, liberation)
 - `scripts/engine/guide/raid_and_defeat.md` — raids, spoils and a lost town (`RaidSystem`: the take, the raiders' food, the crown's ledger line, the Raided hazard, a stripped manor, spoils; `DefeatSystem`: what a fallen town costs — treasury, contentment, the council, the `war_01` beat, once per loss)
 - `scripts/engine/guide/supply_and_workshop.md` — supply, morale and the war workshop (`SupplySystem`, `SupplyLines`, `TownStores`, `WorkshopSystem`)
