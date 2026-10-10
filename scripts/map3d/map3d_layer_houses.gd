@@ -29,20 +29,20 @@ extends Node3D
 @export var preview := false: set = set_preview
 
 @export_group("Colour variants")
-## The WALL tints (owner 2026-09-25: 房屋墙壁和房顶的颜色可以多样化一点，主色调
-## 不变，但可以有不同variant), each multiplied into a wall's own texture, one
-## per house (Map3DHouses.variant_of hashes its spot, so a house keeps it):
-## as built, a warmer ochre wash, cooler and greyer, older and darker, a
-## yellower ochre, a faintly rosy lime. Every tint is at most 1 in every
-## channel — warmer, cooler or darker than the mesh, never lighter (the owner
-## found limewash too bright twice).
+## The WALL tints (owner 2026-09-25, 2026-10-10: more variants), each
+## multiplied into a wall's own texture: `house_wall_palettes` palettes of
+## `house_wall_palette_size` colours (map3d_bake.csv), a settlement wearing one
+## (the bake's `wall` column). Every channel at most 1: never lighter than the
+## mesh (limewash read too bright twice).
 @export var wall_tints: PackedColorArray = [Color("FFFFFF"), Color("F7E9D2"), Color("E6E3DC"),
 	Color("DCD0BE"), Color("F4E0C0"), Color("EDE6E0")]
-## The ROOF tints (tile only: slate takes none): as fired, redder, weathered
-## and greyer, a warmer orange, a burnt red a shade deeper. Never lighter than
-## the mesh — a lighter tile reads PINK under the map's sun (taste.md).
+## The ROOF tints (tile only: slate takes none), palettes as the walls' (`roof`
+## column). Never lighter than the mesh: a lighter tile reads PINK (taste.md).
 @export var roof_tints: PackedColorArray = [Color("FFFFFF"), Color("FFE6D8"), Color("ECE6DE"),
 	Color("FFEFD2"), Color("F4E2D4")]
+## The TRIM tints: timber, slate and every untinted surface, hashed per house.
+@export var trim_tints: PackedColorArray = [Color("FFFFFF"), Color("EADFD0"), Color("D2BEA4"),
+	Color("BCA68C"), Color("F4EADB"), Color("DCCDB8")]
 @export_group("")
 
 ## Test seam: the baked houses, in place of the build's own houses.csv.
@@ -69,6 +69,7 @@ var _transforms: Dictionary = {}      # type -> Array[Transform3D], instance ord
 var _variants: Dictionary = {}        # type -> Array[Vector2i]
 var _wall_tints := PackedVector3Array()
 var _roof_tints := PackedVector3Array()
+var _trim_tints := PackedVector3Array()
 
 
 ## Fix round 1 (owner review): the layer self-connects to the rig's
@@ -148,6 +149,7 @@ func build() -> void:
 	ctx.houses()
 	_wall_tints = Map3DHouses.tints_of(wall_tints)
 	_roof_tints = Map3DHouses.tints_of(roof_tints)
+	_trim_tints = Map3DHouses.tints_of(trim_tints)
 	_far.clear()
 	for type: String in ctx.repo.map3d_houses:
 		var model := _model_of(type)
@@ -155,7 +157,7 @@ func build() -> void:
 			continue
 		var mesh: Mesh = model["mesh"]
 		var drawn := Map3DHouseMaterials.tinted(mesh, model["materials"], _wall_tints, _roof_tints,
-			weather, surface_mats)
+			weather, surface_mats, _trim_tints)
 		# Task 6 override 4: the type itself, not type.capitalize() — capitalize()
 		# turns an underscore into a space ("cottage_a" -> "Cottage A"), which is
 		# neither a legible node name nor round-trippable back to the CSV's type.
@@ -241,7 +243,8 @@ func _chunk(code: String, type: String, all_rows: Array) -> Dictionary:
 	var key := code + "|" + type
 	if not _chunks.has(key):
 		var rows: Array = all_rows.filter(func(h: Dictionary) -> bool: return h["type"] == type)
-		_chunks[key] = Map3DHouses.pack(rows, _seat.bind(type), _wall_tints.size(), _roof_tints.size())
+		_chunks[key] = Map3DHouses.pack(rows, _seat.bind(type), _wall_tints.size(), _roof_tints.size(),
+			_trim_tints.size())
 	return _chunks[key]
 
 

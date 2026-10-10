@@ -109,3 +109,43 @@ func _total(buckets: Dictionary) -> int:
 	for type: String in buckets:
 		n += (buckets[type] as Array).size()
 	return n
+
+
+## Owner 2026-10-10 (more house variants): the bake's width stretch and tint
+## indices load, and a blank cell means "no stretch, hash the tint".
+func test_the_bakes_stretch_and_tint_columns_load() -> void:
+	var path := RunDir.dir("map3d_houses").path_join("variants.csv")
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_line("burg_code,rank,x_m,z_m,yaw_deg,type,scale,height_scale,stretch,wall,roof")
+	f.store_line("a,0,0,0,0,cottage_a,1.0,1.0,1.2,9,14")
+	f.store_line("a,1,50,0,0,cottage_a,1.0,1.0,,,")
+	f.close()
+	var rows: Array = Map3DHouses.load_csv(path)["a"]
+	assert_almost_eq(float(rows[0]["stretch"]), 1.2, 0.0001)
+	assert_eq(int(rows[0]["wall"]), 9)
+	assert_eq(int(rows[0]["roof"]), 14)
+	assert_eq(float(rows[1]["stretch"]), 1.0)
+	assert_eq(int(rows[1]["wall"]), -1)
+
+
+func test_a_baked_tint_wins_over_the_position_hash() -> void:
+	var h := {"at": Vector2(123.4, 567.8), "wall": 9, "roof": 14}
+	assert_eq(Map3DHouses.variant_of(h, 16, 0), 9)
+	assert_eq(Map3DHouses.variant_of(h, 16, 1), 14 % 16)
+	assert_eq(Map3DHouses.variant_of(h, 8, 0), 1, "wrapped into a smaller table")
+	assert_eq(Map3DHouses.variant_of({"at": h["at"], "wall": -1}, 16, 0), Map3DHouses.variant_of({"at": h["at"]}, 16, 0))
+
+
+## The stretch widens the house along ITS OWN x (turned with the yaw), by
+## hand: yaw 90 degrees puts local x on world -z... the basis x column is
+## scale * stretch long, the z column scale long, the y scale * height_scale.
+func test_the_stretch_widens_the_house_along_its_own_x() -> void:
+	var h := {"at": Vector2.ZERO, "yaw_deg": 90.0, "scale": 2.0, "height_scale": 1.5, "stretch": 1.2}
+	var t := Map3DHouses.transform_of(h, 0.0)
+	assert_almost_eq(t.basis.x.length(), 2.4, 0.0001)
+	assert_almost_eq(t.basis.y.length(), 3.0, 0.0001)
+	assert_almost_eq(t.basis.z.length(), 2.0, 0.0001)
+	assert_almost_eq(absf(t.basis.x.z), 2.4, 0.0001, "yawed a quarter turn: local x along world z")
+	assert_gt(t.basis.determinant(), 0.0, "never mirrored")
+	var plain := Map3DHouses.transform_of({"at": Vector2.ZERO, "yaw_deg": 90.0, "scale": 2.0, "height_scale": 1.5}, 0.0)
+	assert_almost_eq(plain.basis.x.length(), 2.0, 0.0001)
