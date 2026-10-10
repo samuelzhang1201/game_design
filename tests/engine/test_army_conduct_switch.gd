@@ -222,6 +222,22 @@ func test_lay_hazard_is_idempotent() -> void:
 	assert_eq(int(state.hazards["forage_" + foreign]["start"]), state.tick - 1)
 
 
+func test_lay_hazard_again_after_it_ends() -> void:
+	# Hazards records are never erased: an ended "Raided" must be laid anew.
+	var id := ArmyConduct.HAZARD_PREFIX + foreign
+	var months := int(Hazards.kind_of(repo, "Raided").get("months"))
+	assert_gt(months, 0)
+	ArmyConduct.lay_hazard(repo, state, foreign)
+	state.tick = int(state.hazards[id]["end"])
+	assert_false(Hazards.is_active(state, id))
+	var rev := state.hazards_rev
+	ArmyConduct.lay_hazard(repo, state, foreign)
+	assert_true(Hazards.is_active(state, id))
+	assert_eq(int(state.hazards[id]["start"]), state.tick)
+	assert_eq(int(state.hazards[id]["end"]), state.tick + months)
+	assert_eq(state.hazards_rev, rev + 1)
+
+
 func _pair() -> String:
 	var all := H.land_units(repo, state)
 	assert_gte(all.size(), 2)

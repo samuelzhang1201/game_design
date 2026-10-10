@@ -64,10 +64,11 @@ static func mark_once(_repo: DataRepository, state: GameState, key: String) -> b
 	return true
 
 
-## The "Raided" hazard on a province's manors, once while it stands.
+## The "Raided" hazard on a province's manors, once while it stands; an ended
+## record (Hazards keeps them) is laid anew.
 static func lay_hazard(repo: DataRepository, state: GameState, province: String) -> void:
 	var id := HAZARD_PREFIX + province
-	if state.hazards.has(id):
+	if Hazards.is_active(state, id):
 		return
 	var months := int(Hazards.kind_of(repo, HAZARD_KIND).get("months", 0))
 	Hazards.add(state, id, HAZARD_KIND, "plundered by the crown's host",
