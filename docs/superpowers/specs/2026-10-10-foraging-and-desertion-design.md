@@ -90,7 +90,7 @@ multiplier is read by `Desertion` from the `desert_mult_<value>` keys through
 ## 2. State (the save)
 
 - `state.regiments[code]` gains: `forage` ("" | "law" | "desperate"),
-  `forage_days` (days foraging this month), `deserted` (men gone for good),
+  `forage_days` (days this month that took supplies), `deserted` (men gone for good),
   `desert_rem` (the rounding remainder, units of 1/100000 of the fit men).
   `ArmySystem.fit_heads` = heads − wounded − dead − `deserted`.
 - `GameState.forage_stripped`: province → ‰, only non-zero entries.
@@ -253,7 +253,7 @@ for the new rows; `data/CLAUDE.md` the new tables.
 ## 7. Order of work
 
 Data and laws → state and save → `Forage` → `Desertion` → `ArmyConduct` and
-its call in the daily loop → words, news and missives → interface lines →
+its call in the daily loop → words and the marshal's letter → interface lines →
 docs → whole-suite run → review and fix wave → visual review → land only on
 the owner's word.
 
