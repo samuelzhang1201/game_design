@@ -575,3 +575,15 @@ func test_a_stick_drag_out_and_back_is_no_click() -> void:
 		_motion(view, at + Vector2(80.0 - float(j) * 10.0, 4.0))
 	_button(view, at + Vector2(2.0, 2.0), false)
 	assert_false(view.plan_input().sel.is_empty(), "a drag out and back is not an open-table click")
+
+
+func test_a_resting_pointer_on_open_table_shows_the_slip() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var at := _open_land(screen)
+	assert_ne(at, Vector2(-1, -1))
+	var e := InputEventMouseMotion.new()   # no button: a pointer moving over the table
+	e.position = at
+	view._gui_input(e)
+	await wait_until(func() -> bool: return (screen.get_node("%HoverSlip") as Control).visible, 3.0)
+	assert_true((screen.get_node("%HoverSlip") as Control).visible, "a pointer at rest on open table raises the slip")

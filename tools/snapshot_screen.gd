@@ -818,10 +818,15 @@ func _real_path(c: Control, pts: Array, shift := false) -> void:
 	c.get_viewport().push_input(release, true)
 
 
+## A pointer enters the viewport before it moves in it: the viewport hands a
+## motion to the GUI only once it knows the mouse is inside (the window's
+## enter notification), so a lone `--war-hover` move needs it announced first.
 func _real_move(c: Control, local: Vector2) -> void:
+	c.get_viewport().notification(Node.NOTIFICATION_VP_MOUSE_ENTER)
 	var m := InputEventMouseMotion.new()
 	m.position = c.get_global_transform_with_canvas() * local
 	m.global_position = m.position
+	m.relative = Vector2(1.0, 0.0)
 	c.get_viewport().push_input(m, true)
 
 
