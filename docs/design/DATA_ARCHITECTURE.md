@@ -53,7 +53,7 @@ flowchart TB
 
 | 领域 | 主要表（行数） | 主键 | 主要读者 |
 | --- | --- | --- | --- |
-| 平衡总表 | `balance.csv`（874） | `key` | 几乎所有系统，`data.bal("key")` |
+| 平衡总表 | `balance.csv`（990） | `key` | 几乎所有系统，`data.bal("key")` |
 | 宫廷人物 | `founding_council`（5）、`roles`（16）、`character_traits`（45）、`council_seats`（9）、`relationships`（49）、`templates`（159） | `id` / `trait_code` / `seat_code` | `CharacterFactory`、`OpinionDrift`、`RelationshipGraph`、对白模板 |
 | 命令与成本 | `policy_actions_court_additions`（28）、`policy_actions_domain`（8）、`action_signatures`（34）、`order_costs`（38）、`metric_polarity`（17） | `action_code` / `metric` | `ActionSystem`、`OrderCosts`、`OrderPipeline` |
 | 世界账本与认知 | `world_schema`（44）、`world_rules`（8）、`claim_types`（7）、`facts`（9）、`intel_facts`（9） | `path` / `fact_code` | `WorldLedger`（LLM 能改什么、改多少）、`ClaimLedger`、`Intel` |

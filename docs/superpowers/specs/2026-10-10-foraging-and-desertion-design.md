@@ -60,7 +60,7 @@ words in a new `data/conduct_words.csv` (`key,text`); laws in `laws.csv`,
 | `forage_stop_days` / `forage_stop_morale` | 10 / 40 | an unlawful unit stops when BOTH are met |
 | `forage_supply_per_food_unit` | 30 | supply units a month per `food`-tagged production unit at full season |
 | `forage_spring_permille` … `_winter_permille` | 600 / 1000 / 1200 / 300 | the season's share of capacity |
-| `forage_share_permille` | 1000 | the most of a day's capacity one province lends the units in it |
+| `forage_share_permille` | 1000 | the share of a day's capacity one province lends the units in it |
 | `forage_strip_k` | 500 | ‰ stripped when a province's whole full monthly capacity is taken |
 | `forage_recover_permille` | 100 | ‰ a stripped province recovers at the month's end |
 | `forage_bare_permille` | 900 | past this, "stripped bare" news (once per crossing) |
@@ -97,7 +97,7 @@ multiplier is read by `Desertion` from the `desert_mult_<value>` keys through
   `forage_grievance_month`) the crown's armies earned in its land.
 - `GameState.conduct_marks`: "once per month" ledger, key → month index
   (`incident:<code>`, `grievance:<kingdom>`, `desert_news:<code>`,
-  `desert_big:<code>`); entries of an older month are dropped at the month's
+  `havoc:<province>:<day>`); entries of an older month are dropped at the month's
   end.
 - An old save loads with all of these empty / absent keys read as zero.
 
@@ -113,7 +113,7 @@ state.
   season's permille / 1000 (whole units, rounded once).
 - `day_capacity(repo, state, province, day) -> int`: with `C = monthly_capacity
   × (1000 − stripped) / 1000`, day `d` (1..30) gets `C×d/30 − C×(d−1)/30`, so
-  the thirty days sum exactly to `C`. Capped by `forage_share_permille`.
+  the thirty days sum exactly to `C`; the day is then scaled by `forage_share_permille`/1000.
 - `shares(...) -> {code: units}`: for the units foraging in a province that
   day, `min(need, day_capacity × need / Σ need)` in code order, remainder to
   none. `need` = the unit's carried-load order (days × its daily use) − its
@@ -174,8 +174,8 @@ hazards through the call `RaidSystem` uses).
    `forage_days` reset. Every province's stripping recovers by
    `forage_recover_permille` (sorted order, clamped 0..1000, zero entries
    erased). Old `conduct_marks` are dropped.
-9. **Desertion news** (only on home land): `desert_news:<code>` the first
-   time a unit loses men in a month; `desert_big:<code>` once when
+9. **Desertion letter facts** (only on home land): `desert_news:<code>` the first
+   time a unit loses men in a month; once (judged by the crossing, no mark) when
    `deserted` first exceeds `desert_news_cumulative_permille` of the unit's
    original heads.
 
@@ -188,9 +188,9 @@ supply; the engine never names a UI class.
 Words in `conduct_words.csv`, keys listed in a test; no kingdom named in the
 text (the kingdom, province and unit are filled at runtime).
 
-- **News** (the existing news feed): unlawful start; the incident in grey
+- **Letter facts** (of the Marshal's report; nothing goes to the news bar): unlawful start; the incident in grey
   land ("they will remember it"); Havoc; "stripped bare"; desertion (first
-  loss of the month; past 5%). Lawful daily foraging files no news.
+  loss of the month; past 5%). Lawful daily foraging files none.
 - **Missives:** the marshal's letters use the existing `supply` kind (so no
   new keep cap): one at an unlawful start, one at a unit's first desertion of
   the month.
