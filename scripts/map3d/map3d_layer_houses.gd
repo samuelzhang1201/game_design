@@ -60,14 +60,9 @@ var _far: Dictionary = {}             # type -> MultiMeshInstance3D, the rest (n
 var _aabbs: Dictionary = {}           # type -> its mesh's AABB, for the footprint
 ## Test seam (fix round 1): the Transform3D actually handed to
 ## set_instance_transform for each type's MultiMesh in the last refresh(),
-## in instance order. Debugging finding (task 6): under the headless dummy
-## renderer GUT runs the suite with, MultiMeshInstance3D's
-## get_instance_transform() never reflects anything written by
-## set_instance_transform() — proven even for a hand-built raw `buffer`
-## assignment, so it is the renderer's storage that is missing, not a bug
-## here. A test that needs to check what an instance was given must read
-## _transforms — what refresh() itself computed and handed to the
-## MultiMesh — rather than asking the MultiMesh what it was set to.
+## in instance order: under GUT's headless dummy renderer a MultiMesh's
+## get_instance_transform() never reflects set_instance_transform() (its
+## storage is missing), so a test reads what refresh() handed it here.
 var _transforms: Dictionary = {}      # type -> Array[Transform3D], instance order
 ## Test seam: the (wall, roof) variant given to each instance in the last
 ## refresh(), in instance order, like _transforms.
@@ -90,6 +85,11 @@ func bind(p_ctx: Map3DContext) -> void:
 ## Cut once per camera pose, never per frame — the rig's own ground target,
 ## not the camera's eye, which swings with the pitch (spec §3).
 func _on_camera_moved() -> void:
+	_lod_shown = Map3DGeometry.lod_shown(_lod_shown, ctx.distance, ctx.repo.bal("map3d_lod_houses_m"), ctx.repo.bal("map3d_lod_margin_m"))
+	for mmi: MultiMeshInstance3D in _instances.values() + _far.values():
+		mmi.visible = _lod_shown   # owner 2026-10-10 (LOD): past map3d_lod_houses_m no house is drawn
+	if not _lod_shown:
+		return
 	var shadows := ctx.distance <= ctx.repo.bal("map3d_house_shadow_view_m")
 	if shadows != _shadows:  # zoomed across the shadows' reach: rebuild at once
 		_shadows = shadows
@@ -99,6 +99,7 @@ func _on_camera_moved() -> void:
 
 ## Whether the camera is near enough for houses to cast (map3d_house_shadow_view_m).
 var _shadows := true
+var _lod_shown := true
 
 
 func set_preview(on: bool) -> void:

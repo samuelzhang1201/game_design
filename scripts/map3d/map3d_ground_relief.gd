@@ -35,7 +35,8 @@ const STAGE := """	if (relief_ao > 0.0) {
 			smoothstep(relief_ao_near_m, relief_ao_far_m, length(v_vertex - _camera_pos)));
 		base_albedo *= mix(1.0, sky_seen, ao_k);
 	}
-	if (meadow_mottle > 0.0) {
+	// past meadow_mottle_far_m the mottle is skipped, not faded to nothing
+	if (meadow_mottle > 0.0 && length(v_vertex - _camera_pos) < meadow_mottle_far_m) {
 		vec2 mfuv = (v_vertex.xz - pack_origin) / field_m_per_texel / vec2(textureSize(field_map, 0));
 		vec3 mft = texture(field_map, mfuv).rgb;
 		float m_open = (1.0 - clamp((1.0 - min(min(mft.r, mft.g), mft.b)) / 0.25, 0.0, 1.0))

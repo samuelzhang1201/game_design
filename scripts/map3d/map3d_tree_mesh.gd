@@ -174,24 +174,29 @@ static func _ico(subdiv: int) -> Array:
 ## tree_card.gdshader from the crown atlas. Every corner of a card sits at its
 ## crown's centre; CUSTOM0 carries (corner x, corner y, half size m, atlas
 ## cell), the cell drawn by the crown's own rng from `cells` (the atlas cells
-## of this kind, data/map3d_tree_crowns.csv). Two triangles a tree.
-static func cards(kind: int, variant: int, cells: PackedInt32Array) -> ArrayMesh:
+## of this kind, data/map3d_tree_crowns.csv). Two triangles a tree. `count`,
+## `spread` and `size` override the kind's own (a species row's crowns,
+## spread_m and size: species_cards).
+static func cards(kind: int, variant: int, cells: PackedInt32Array, count := -1,
+		spread := -1.0, size := 1.0) -> ArrayMesh:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7919 * (kind + 1) + 104729 * (variant + 1) + 31
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_custom_format(0, SurfaceTool.CUSTOM_RGBA_FLOAT)
-	var count := 3 if kind == LONE else 8
-	var spread := 7.0 if kind == LONE else 15.0
+	if count < 0:
+		count = 3 if kind == LONE else 8
+	if spread < 0.0:
+		spread = 7.0 if kind == LONE else 15.0
 	var placed: Array[Vector2] = []
 	var reach := 0.0
 	for i in count:
 		var at := Vector2.ZERO
-		for _t in 12:
-			at = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * spread
+		for _t in 12:   # in a disc, kept apart: a clump is trees side by side
+			at = Vector2.from_angle(rng.randf() * TAU) * sqrt(rng.randf()) * spread
 			var clear := true
 			for p in placed:
-				if p.distance_to(at) < 6.5:
+				if p.distance_to(at) < 6.5 * size:
 					clear = false
 			if clear:
 				break
@@ -199,12 +204,12 @@ static func cards(kind: int, variant: int, cells: PackedInt32Array) -> ArrayMesh
 		var half: float
 		var centre: Vector3
 		if kind == CONIFER:
-			var h := rng.randf_range(22.0, 32.0)
+			var h := rng.randf_range(22.0, 32.0) * size
 			half = h * 0.55
 			centre = Vector3(at.x, h * 0.5, at.y)
 		else:
-			var r := rng.randf_range(4.2, 7.4)
-			var trunk := rng.randf_range(4.0, 7.0)
+			var r := rng.randf_range(4.2, 7.4) * size
+			var trunk := rng.randf_range(4.0, 7.0) * size
 			half = (trunk + 2.0 * r) * 0.62
 			centre = Vector3(at.x, (trunk + 2.0 * r) * 0.5, at.y)
 		var cell := cells[rng.randi() % cells.size()] if not cells.is_empty() else 0
@@ -220,3 +225,15 @@ static func cards(kind: int, variant: int, cells: PackedInt32Array) -> ArrayMesh
 	# every vertex sits at its crown's centre: the box must hold the cards
 	mesh.custom_aabb = AABB(Vector3(-reach, -4.0, -reach), Vector3(reach * 2.0, 40.0 + reach, reach * 2.0))
 	return mesh
+
+
+## A species' clump (data/map3d_tree_species.csv row, owner 2026-10-10: 树木
+## 的品种过于单一): its form, atlas cells, crowns, spread and size; variant
+## `variant` of it, seeded by the species' kind so no two species share a layout.
+static func species_cards(row: Dictionary, variant: int) -> ArrayMesh:
+	var cells := PackedInt32Array()
+	for c: String in String(row["cells"]).split("|", false):
+		cells.append(int(c))
+	var form := CONIFER if String(row.get("form", "")) == "conifer" else BROADLEAF
+	return cards(form, variant + 64 * int(row["kind"]), cells, int(row["crowns"]),
+		float(row["spread_m"]), float(row["size"]))
