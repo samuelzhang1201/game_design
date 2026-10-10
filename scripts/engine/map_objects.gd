@@ -942,7 +942,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var st := ArmySystem.state_of(repo, state, code) if state != null and reg_known == "full" else {}
 	# the dead and the deserted are no longer under arms (the pack's headcount
 	# is immutable; ArmySystem.fit_heads' own count of them)
-	var under := maxi(0, total - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))))
+	var under := ArmySystem.under_arms(total, st)
 	if st.is_empty():
 		stats.append(_stat("army", total_text, "Under arms — %s" % total_text))
 	else:

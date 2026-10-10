@@ -139,7 +139,7 @@ static func report(repo: DataRepository, state: GameState, at: Vector2, q: int, 
 
 ## Men under arms within spy_radius_km of a point (PACK px), each regiment at
 ## its live place (ArmySystem.position_of: a foe where its host has marched
-## it): ours and foreign — headcount less the regiment's `dead`, never below
+## it): ours and foreign — headcount less the regiment's `dead` and `deserted`, never below
 ## 0, so beside an enemy host troops_foreign and foe_troops count the same men.
 static func troops_near(repo: DataRepository, state: GameState, at: Vector2) -> Dictionary:
 	var reach := repo.bal("spy_radius_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(repo))
@@ -153,7 +153,7 @@ static func troops_near(repo: DataRepository, state: GameState, at: Vector2) -> 
 		var reg: Dictionary = all[code]
 		if ArmySystem.position_of(repo, state, reg).distance_to(at) > reach:
 			continue
-		var men := maxi(0, ArmySystem.headcount(repo, reg) - int(ArmySystem.state_of(repo, state, code).get("dead", 0)))
+		var men := ArmySystem.under_arms(ArmySystem.headcount(repo, reg), ArmySystem.state_of(repo, state, code))
 		if String(reg.get("kingdom_code", "")) == realm:
 			own += men
 		else:

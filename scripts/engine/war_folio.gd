@@ -61,8 +61,7 @@ static func brief(repo: DataRepository, state: GameState, code: String) -> Dicti
 	var st := _state_of(repo, state, code, reg)
 	var wounded := clampi(int(st.get("wounded", 0)), 0, heads)
 	var dead := clampi(int(st.get("dead", 0)), 0, heads)
-	var deserted := clampi(int(st.get("deserted", 0)), 0, heads - dead)
-	var under := WarRoom.group(heads - dead - deserted)
+	var under := WarRoom.group(ArmySystem.under_arms(heads, st))
 	if wounded > 0:
 		under += " · %s fit" % WarRoom.group(ArmySystem.fit_heads(heads, st))
 	var arms: Array[String] = []
@@ -176,9 +175,7 @@ static func _composition(repo: DataRepository, state: GameState, code: String, r
 	var st := _state_of(repo, state, code, reg)
 	# the dead and the deserted are no longer under arms
 	var heads := ArmySystem.headcount(repo, reg)
-	var gone := clampi(int(st.get("dead", 0)), 0, heads)
-	gone += clampi(int(st.get("deserted", 0)), 0, heads - gone)
-	var rows: Array = [_row("Under arms", WarRoom.group(heads - gone))]
+	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.under_arms(heads, st)))]
 	for a: Dictionary in arms_of(repo, code):
 		rows.append(_row(_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))))
 	var wounded := int(st.get("wounded", 0))

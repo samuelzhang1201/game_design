@@ -334,7 +334,7 @@ func _draw_intel() -> void:
 	for st: Dictionary in ink.get("stripped", []):
 		var size := int(px["intel_label"])
 		var at := (st["at"] as Vector2) - Vector2(font.get_string_size(String(st["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, 0)
-		draw_string_outline(font, at, String(st["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, 3,
+		draw_string_outline(font, at, String(st["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, maxi(int(float(px.get("hazard", 3.0)) * 3.0), 1),
 			pal.get("parchment", pal.get("paper", Color.WHITE)))
 		draw_string(font, at, String(st["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, c)
 	for cr: Dictionary in ink["couriers"]:

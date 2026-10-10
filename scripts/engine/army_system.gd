@@ -46,6 +46,11 @@ static func ordered(repo: DataRepository, state: GameState, codes: Array) -> Arr
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
 	return int(MapObjects.regiment_size(repo, reg))
 
+## The men still under the banner: `heads` less the dead and the deserted of
+## a regiment's state `st`, never below 0.
+static func under_arms(heads: int, st: Dictionary) -> int:
+	return maxi(0, heads - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))))
+
 ## The men able to fight: `heads` less the wounded, the dead and the deserted
 ## of a regiment's state `st` (a state with no `dead` or `deserted`, an old
 ## save's, has none), never below 0.
