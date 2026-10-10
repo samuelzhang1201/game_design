@@ -46,11 +46,12 @@ static func ordered(repo: DataRepository, state: GameState, codes: Array) -> Arr
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
 	return int(MapObjects.regiment_size(repo, reg))
 
-## The men able to fight: `heads` less the wounded and the dead of a regiment's
-## state `st` (a state with no `dead`, an old save's, has none), never below 0.
+## The men able to fight: `heads` less the wounded, the dead and the deserted
+## of a regiment's state `st` (a state with no `dead` or `deserted`, an old
+## save's, has none), never below 0.
 ## The pack's headcount is immutable, so the dead are a count beside it.
 static func fit_heads(heads: int, st: Dictionary) -> int:
-	return maxi(0, heads - maxi(0, int(st.get("wounded", 0))) - maxi(0, int(st.get("dead", 0))))
+	return maxi(0, heads - maxi(0, int(st.get("wounded", 0))) - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))))
 
 ## A regiment's STRENGTH: its fit men (headcount less the wounded and the dead)
 ## per mille of its headcount — what its piece shows (owner 2026-09-30: 满员 / 减员 /
