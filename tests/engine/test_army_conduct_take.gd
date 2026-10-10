@@ -49,6 +49,15 @@ func _biggest(codes: Array) -> String:
 	return best
 
 
+## The unit's roster row pinned to `n` infantry (so fit is exactly n).
+func _men(n: int) -> void:
+	var row: Dictionary = state.army_roster[code]
+	for arm: String in repo.world_table("military", "unit_types"):
+		if row.has(arm):
+			row[arm] = "0"
+	row["infantry"] = str(n)
+
+
 func _law(c: String, law: String, value: String) -> void:
 	var key: String = LawSystem.UNIT_PREFIX + c
 	var row: Dictionary = state.law_in_force.get(key, {})
@@ -74,7 +83,7 @@ func test_take_never_past_the_carry_cap() -> void:
 	var cap := ArmySystem.max_units(repo, ArmySystem.supply_use(repo, reg, state))
 	entry["supplies"] = cap - 2
 	ArmyConduct.take_day(repo, state, prov, [code])
-	assert_lte(int(entry["supplies"]), cap)
+	assert_eq(int(entry["supplies"]), cap)
 	assert_eq(int(entry["forage_days"]), 1)
 
 
@@ -137,6 +146,7 @@ func test_bare_news_once_per_crossing() -> void:
 
 
 func _settle_with(d: int) -> Dictionary:
+	_men(1000)
 	state.day = Calendar.DAYS_PER_TICK
 	state.regiments[code]["forage_days"] = d
 	var reg := ArmySystem.regiment(repo, code, state)
@@ -150,7 +160,7 @@ func test_month_settlement_full_month() -> void:
 	var e: Dictionary = r["entry"]
 	assert_eq(int(e["morale"]), 54, "50 + 4 x 30 / 30")
 	assert_eq(int(e["training"]), 7, "10 - 3 x 30 / 30")
-	assert_eq(int(e["wounded"]), int(r["fit"]) * 10 * 30 / 30000, "fit x 10 x 30 / 30000 (1000 fit -> 10)")
+	assert_eq(int(e["wounded"]), 10, "1000 x 10 x 30 / 30000")
 	assert_eq(int(e["forage_days"]), 0)
 
 
@@ -159,7 +169,7 @@ func test_month_settlement_partial_month() -> void:
 	var e: Dictionary = r["entry"]
 	assert_eq(int(e["morale"]), 52, "4 x 15 / 30 = 2")
 	assert_eq(int(e["training"]), 9, "3 x 15 / 30 = 1")
-	assert_eq(int(e["wounded"]), int(r["fit"]) * 10 * 15 / 30000, "fit x 10 x 15 / 30000 (1000 fit -> 5)")
+	assert_eq(int(e["wounded"]), 5, "1000 x 10 x 15 / 30000")
 	assert_eq(int(e["forage_days"]), 0)
 
 
@@ -187,6 +197,7 @@ func test_settle_runs_after_marching_home() -> void:
 	assert_eq(int((r["entry"] as Dictionary)["morale"]), 51, "4 x 12 / 30 = 1")
 	assert_eq(int((r["entry"] as Dictionary)["training"]), 9, "3 x 12 / 30 = 1")
 	assert_eq(int((r["entry"] as Dictionary)["forage_days"]), 0)
+	assert_eq(int((r["entry"] as Dictionary)["wounded"]), 4, "1000 x 10 x 12 / 30000")
 
 
 func test_recovery_erases_zeros() -> void:
@@ -224,3 +235,47 @@ func test_hazard_drags_the_march_too() -> void:
 	var at := MapTerrain.cell_center(repo, repo.cells[int(cells[0])])
 	assert_eq(Hazards.at_cell(state, int(cells[0])).size(), 1)
 	assert_eq(Hazards.pace_permille(repo, state, at), 800)
+
+
+func test_stripping_is_floored_per_taker() -> void:
+	# Two takers of equal need 100; food 11 -> monthly 330, day capacity 11, each
+	# share 11 x 100 / 200 = 5. Per taker 5 x 500 / 330 = 7 (7.57), two = 14;
+	# summed it would be 10 x 500 / 330 = 15.
+	H.set_food(repo, prov, 11)
+	var two := H.land_units(repo, state)
+	var a := _biggest(two)
+	two.erase(a)
+	var b := _biggest(two)
+	var targets: Dictionary = {}
+	for c: String in [a, b]:
+		state.regiments[c]["carry_days"] = 30
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c, state), state)
+		targets[c] = mini(ArmySystem.max_units(repo, use), use)   # carry 30 days = a month's use
+	var n := mini(int(targets[a]), int(targets[b]))   # one need for both
+	assert_gte(n, 10, "needs of 10 or more: each share is cap x n / 2n = 5")
+	for c: String in [a, b]:
+		state.regiments[c]["supplies"] = int(targets[c]) - n
+		assert_eq(Forage.need_of(repo, state, c), n)
+	ArmyConduct.take_day(repo, state, prov, [a, b])
+	assert_eq(int(state.regiments[a]["supplies"]), int(targets[a]) - n + 5)
+	assert_eq(int(state.regiments[b]["supplies"]), int(targets[b]) - n + 5)
+	assert_eq(int(state.forage_stripped[prov]), 14)
+
+
+func test_hazard_laid_when_already_past_the_line() -> void:
+	H.set_food(repo, prov, 90)
+	state.forage_stripped[prov] = 600
+	assert_false(state.hazards.has(ArmyConduct.HAZARD_PREFIX + prov))
+	ArmyConduct.take_day(repo, state, prov, [code])
+	assert_true(state.hazards.has(ArmyConduct.HAZARD_PREFIX + prov))
+
+
+func test_bare_news_with_protect_church_on() -> void:
+	H.set_food(repo, prov, 90)
+	_law(code, "protect_church", "on")
+	# 899: day 1 = 9, x 900/1000 = 8, strip 8 x 500 / 2700 = 1 -> 900
+	state.forage_stripped[prov] = 899
+	var events := ArmyConduct.take_day(repo, state, prov, [code])
+	assert_eq(int(state.forage_stripped[prov]), 900)
+	assert_eq(events.size(), 1)
+	assert_eq(String(events[0]["type"]), "stripped_bare")

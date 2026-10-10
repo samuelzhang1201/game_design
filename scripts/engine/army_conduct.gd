@@ -138,8 +138,8 @@ static func _havoc(repo: DataRepository, state: GameState, starter: String, prov
 ## the day's shares go into their supplies (never past what they may hold), the
 ## land is stripped by what was taken, and a crossing is acted on. Returns the
 ## events filed: {type: "stripped_bare", province} when the stripping passes
-## forage_bare_permille. Passing forage_hazard_strip_permille (the _protected
-## line when any taker keeps protect_church) lays the "Raided" hazard.
+## forage_bare_permille. Standing at or past forage_hazard_strip_permille (the _protected
+## line when any taker keeps protect_church) lays (once) the "Raided" hazard.
 static func take_day(repo: DataRepository, state: GameState, province: String, codes: Array) -> Array:
 	var out: Array = []
 	if codes.is_empty():
@@ -148,7 +148,6 @@ static func take_day(repo: DataRepository, state: GameState, province: String, c
 	sorted.sort()
 	var before := int(state.forage_stripped.get(province, 0))
 	var shares := Forage.shares(repo, state, province, sorted, state.day)
-	var taken := 0
 	var protected := false
 	for c: String in sorted:
 		var entry: Dictionary = state.regiments.get(c, {})
@@ -160,13 +159,12 @@ static func take_day(repo: DataRepository, state: GameState, province: String, c
 		var got := maxi(0, mini(int(shares.get(c, 0)), cap - have))
 		entry["supplies"] = have + got
 		entry["forage_days"] = int(entry.get("forage_days", 0)) + 1
-		taken += got
+		Forage.strip(repo, state, province, got)   # per taker, floored each (spec §3.3 step 7)
 		if LawSystem.value(repo, state, "protect_church", c) == "on":
 			protected = true
-	Forage.strip(repo, state, province, taken)
 	var after := int(state.forage_stripped.get(province, 0))
 	var line := int(repo.bal("forage_hazard_strip_permille_protected" if protected else "forage_hazard_strip_permille"))
-	if before < line and line <= after:
+	if after >= line:
 		lay_hazard(repo, state, province)
 	var bare := int(repo.bal("forage_bare_permille"))
 	if before < bare and bare <= after:
