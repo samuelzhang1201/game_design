@@ -12,6 +12,8 @@ extends Control
 ## (TitleRealm.available) and the menu keeps its painted page.
 
 signal swept
+## The map is built and showing (its load ran a step a frame).
+signal opened
 
 ## The view handed to the game's first screen as the reign begins
 ## (`hand_over`), so the map the title showed IS the map laid on the table —
@@ -29,6 +31,7 @@ var _view_filter := Control.MOUSE_FILTER_STOP
 var _centre := Vector2.ZERO   # where the camera looks; the sweep carries it home
 var _sweep_home := Vector2.ZERO  # the sweep's start and end centres
 var _sweep_to := Vector2.ZERO
+var _open := false
 
 ## Whether the title can show the realm: the war table on, the 3D map on and
 ## the pack's world built.
@@ -48,7 +51,18 @@ func _ready() -> void:
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(view)
+
+## Whether the map is built and showing (a sweep needs it).
+func is_open() -> bool:
+	return _open
+
+## The map's load a step a frame (Map3DView.load_step; owner 2026-10-10: the
+## title never stalls for the whole of it), then shown as a picture.
+func _open_step() -> void:
+	if view.load_step():
+		return
 	view.activate()
+	_open = true
 	var ctx := view.context()
 	if ctx == null:
 		return  # the world would not open: the notice says why, the page shows
@@ -61,8 +75,12 @@ func _ready() -> void:
 	_yaw = Game.data.bal("ui_title_yaw_deg")
 	_centre = ctx.home()
 	_place()
+	opened.emit()
 
 func _process(delta: float) -> void:
+	if view != null and not _open:
+		_open_step()
+		return
 	var ctx := view.context() if view != null else null
 	if ctx == null:
 		return
@@ -82,7 +100,7 @@ func _place() -> void:
 ## `to` is the reign the game opens on — a loaded save (Continue the
 ## Chronicle), whose home the camera is carried to; null is the preview's own.
 func sweep(to: GameState = null) -> void:
-	var ctx := view.context() if view != null else null
+	var ctx := view.context() if view != null and _open else null
 	if ctx == null:
 		swept.emit.call_deferred()
 		return
@@ -107,7 +125,7 @@ func _step_sweep(delta: float) -> void:
 ## Map3DView.attach): out of the title, made a map again — the live reign's
 ## state and clock, its HUD, its picking. Nothing when the world never opened.
 func hand_over() -> void:
-	var ctx := view.context() if view != null else null
+	var ctx := view.context() if view != null and _open else null
 	if ctx == null:
 		return
 	set_process(false)
@@ -130,12 +148,15 @@ static func take_handed() -> Map3DView:
 ## The place the title shows, for its caption: the home province's capital
 ## town and the house that holds it.
 func caption() -> Dictionary:
+	return caption_of(preview)
+
+static func caption_of(reign: GameState) -> Dictionary:
 	var data := Game.data
-	var code := MapManors.home_province(data, preview)
+	var code := MapManors.home_province(data, reign)
 	var p: Dictionary = data.provinces.get(code, {})
 	var town := String(p.get("label", code))
 	var capital := String(p.get("capital_burg", ""))
 	if capital != "" and data.burgs.has(capital):
 		town = String(data.burgs[capital]["label"])
-	return {"place": town, "house": MapManors.crown(preview),
-		"season": Calendar.season_name(preview.tick)}
+	return {"place": town, "house": MapManors.crown(reign),
+		"season": Calendar.season_name(reign.tick)}
