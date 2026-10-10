@@ -61,7 +61,7 @@ flowchart TB
 | 庄园与经济 | `manor_focus`（12）、`manor_buildings`（23）、`building_inputs`（8）、`manor_estates`（36）、`goods_economy`（71）、`goods_economy_defaults`（16）、`workshop_rates`（3） | `focus_code` / `building_code` / `good_code` | `MapManors`、`ManorEconomy`、`RealmEconomy`、`IndustrySystem`、`WorkshopSystem` |
 | 治理（LEDGER） | `ledger_governance`（4）及 `ledger_*` 其余 9 张 | `flow_type` / `type_id` / `link_id` | `Governance`、`Ledger`、`LedgerResolvers` |
 | 军事、信使、天气 | `army_*`（11 张）、`unit_models`、`courier_kinds`、`road_speed`、`spy_difficulty`、`weather`、`weather_odds` | `arm` / `tier` / `kind` | `ArmySystem`、`SupplySystem`、`CourierSystem`、`SpySystem`、`Weather` |
-| 法律 | `laws`（17）、`law_effects`、`law_words` | `law_code` | `LawSystem`（状态：`law_decree`、`law_in_force`、`law_cooldown`） |
+| 法律 | `laws`（18）、`law_effects`、`law_words`、`conduct_words` | `law_code` | `LawSystem`（状态：`law_decree`、`law_in_force`、`law_cooldown`） |
 | 3D 地图外观 | `map3d_bake`（150）、`map3d_fields`（37）、`map3d_farm_zones`、`map3d_houses`（17）、`map3d_house_variants`、`map3d_trees`、`map3d_tree_crowns`、`map3d_settlements`、`graphics_quality`（4）、`terrain_palette`（68） | `key` / `type` / `tier` | 构建脚本 `tools/map3d/` 和 `scripts/map3d/` |
 | 界面外观 | `political_palette`（62）、`chart_palette`、`ui_table_palette`、`ui_bookmarks`、`ui_fonts`、`resource_icons`（104）、`manor_card_sections`、`goods_palette`、`goods_art`、`*_art.csv` | `key` | `UiPalette`、`MapPalette`、各面板 |
 | 地图包注册 | `maps.csv`（1） | `map_id` | `DataRepository.default_pack_id()`、`tools/packs.py` |
@@ -116,6 +116,7 @@ erDiagram
 | `workshop_rate`、`closed_routes` | — | 军工坊开工率、被关闭的贸易路线 | 命令 | 是 |
 | `governors`、`skims`、`caught`、`records` | — | 谁管哪条流、贪了多少（真相）、被审计抓到的记录、永久档案 | `Governance`、`LEDGER_AUDIT` | 是 |
 | `regiments` | code → {位置（整米）、目的地、命令、士气、伤员、补给（整单位）、`carry_days`（携带天数命令）、训练} | 玩家的部队 | `ArmySystem`、信使送达的命令 | 是 |
+| `forage_stripped`、`grievance`、`conduct_marks` | 省 → ‰ / 王国 → 点数 / 键 → 月份 | 被就地征粮刮薄的省、劫掠积下的怨恨（目前只显示）、每月一次的标记；部队另有 `forage`、`forage_days`、`deserted`、`desert_rem` | `ArmyConduct` | 是 |
 | `town_stock` | burg → {crown, lord, house}（整补给单位） | 各己方城镇自己的战略物资库存；`metrics.strategic` / `lord_strategic` 是 crown / lord 两项之和折成的金 | `TownStores`（月末存入、`reconcile`）、`SupplyLines`（每日扣减） | 是 |
 | `supply_lines` | regiment code → {town, rate, state, 月计数…} | 每支部队至多一条补给线（ordered / riding / flowing / cut） | `SupplyLines`、补给命令送达 | 是 |
 | `couriers` / `next_courier_id` | 数组 | 路上的信使（编号越大命令越新） | `CourierSystem` | 是 |
