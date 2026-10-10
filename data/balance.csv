@@ -869,6 +869,7 @@ army_morale_starving_day,3,"army supply §3.7: morale lost each day with no supp
 supply_wagon_km_per_day,25,"army supply §3.2: the supply wagons' road km a day — how long a new line takes to start flowing, and the reach of a supply point"
 supply_point_max_days,10,"army supply §3.5: the most wagon days a supply point may be from its regiment when it is chosen"
 supply_ahead_km,5,"WAR ROOM draw orders (owner 2026-10-08, ruling 20): a town is AHEAD of a column — never its supply town — when it is farther from the crown's capital than the column by more than this, whichever way the column marches; km"
+supply_front_resume_km,1,"owner 2026-10-10 (ruling 20 kept daily): a line broken because its town lies AHEAD of its column (state front) flows again only once the town is no farther than the column by supply_ahead_km less this — a small hysteresis so a column on the boundary does not flicker; km"
 supply_cut_reach_m,5000,"army supply §3.2: a supply line is cut on any day a hostile regiment stands within this many metres of its road"
 supply_cart_milligold_per_unit_km,1,"army supply §3.4: cartage, in thousandths of a gold, for each supply unit carried one km; charged daily in whole gold"
 supply_buy_markup_permille,200,"army supply §3.3: a house sells its stock to the crown at its value plus this per mille"
