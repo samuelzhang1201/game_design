@@ -6,8 +6,8 @@
 render_priority = 2
 shader = ExtResource("1_s3f85")
 shader_parameter/tint = Color(1, 0.86, 0.55, 1)
-shader_parameter/strength = 0.28
-shader_parameter/gain = 3.2
-shader_parameter/hot = 0.55
-shader_parameter/haze = 0.25
-shader_parameter/skirt = 0.25
+shader_parameter/strength = 0.3
+shader_parameter/gain = 2.4
+shader_parameter/hot = 0.2
+shader_parameter/haze = 0.35
+shader_parameter/skirt = 0.0
