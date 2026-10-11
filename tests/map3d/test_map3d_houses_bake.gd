@@ -206,17 +206,32 @@ func test_ships_ride_on_the_water_at_ports_one_or_two_by_size() -> void:
 	assert_gt(per_port.size(), 50, "the pack's ports moor ships")
 
 
-## Owner 2026-10-01 / 2026-10-04 (我的首都建在悬崖边上): a cliff harbour stands
-## at a port, its timber quay (+X) out over the water.
-func test_a_cliff_harbour_runs_its_quay_out_over_the_water() -> void:
+## Owner 2026-10-12 (R9: 不要使用带有悬崖高的码头，全部使用普通版码头): every port
+## that built houses takes exactly one timber `pier` — a cliff port is lowered
+## onto a plain landing by bake_houses.port_plain — and no `pier_cliff` or
+## `pier_stair` is laid (`pier_cliff_landings` 0).
+func test_every_port_has_one_normal_pier() -> void:
 	if _skip():
 		return
+	var piers: Dictionary = {}
+	var built: Dictionary = {}
+	var cliff := 0
 	for r: Dictionary in _rows:
-		if String(r["type"]) != "pier_cliff":
-			continue
 		var code := String(r["burg_code"])
-		assert_eq(int(Game.data.burgs[code].get("is_port", 0)), 1, code + " has a cliff harbour because it is a port")
-		var yaw := deg_to_rad(float(r["yaw_deg"]))
-		var along := Vector2(cos(yaw), -sin(yaw))
-		var head := Map3DGeometry.world_to_pack(_meta, Vector2(float(r["x_m"]), float(r["z_m"])) + along * 60.0)
-		assert_lt(_picker.cell_at(head), 0, code + "'s cliff harbour quay reaches the water")
+		var kind := String(r["type"])
+		if kind == "pier_cliff" or kind == "pier_stair":
+			cliff += 1
+		elif kind == "pier":
+			piers[code] = int(piers.get(code, 0)) + 1
+		elif not _laid(r):
+			built[code] = true
+	if cliff > 0:
+		pending("needs the T14 rebake (%d cliff landing rows in houses.csv)" % cliff)
+		return
+	var ports := 0
+	for code: String in built:
+		if int((Game.data.burgs[code] as Dictionary).get("is_port", 0)) != 1:
+			continue
+		ports += 1
+		assert_eq(int(piers.get(code, 0)), 1, code + " is a port with houses: one timber pier")
+	assert_gt(ports, 20, "the pack's ports built houses")

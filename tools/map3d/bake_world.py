@@ -865,6 +865,15 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
                 # of its own footing (owner 2026-09-25)
                 bake_houses.level_pad(height, cx, cy, bake_houses.half_extents(types[site[0]]), site[1],
                                       rules, land=land, wet=wet)
+                # a cliff port is lowered onto a plain landing so it takes the
+                # timber pier (owner 2026-10-12, R9: 不要使用带有悬崖高的码头)
+                cut = bake_houses.port_plain(b, height, cx, cy, rules, types, rules["sea_y_m"],
+                                             open_water, land=land, wet=wet)
+                if cut is None:
+                    print("bake_world: port %s left on its cliff — its landing needs more than "
+                          "port_plain_max_cut_m (%g m) cut" % (b["burg_code"], rules["port_plain_max_cut_m"]))
+                elif cut > 0.0:
+                    print("bake_world: port %s lowered onto a plain landing (cut %.1f m)" % (b["burg_code"], cut))
             burgs.append((b, cx, cy, site))
     foot = np.zeros((vh, vw), dtype=np.float32)
     for b, cx, cy, _site in burgs:
