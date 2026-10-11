@@ -80,6 +80,9 @@ existing one.
 - **A selection strengthens what is already there** instead of laying a new
   colour over it.
 - **Washes are tinctures, not highlighters** — the ground must read through.
+- **A failure is drawn where it fails, not hidden.** A line that no longer
+  works stays on the map in a still, dark, broken form that stops where it
+  breaks — never the working line's colour, never simply gone.
 
 ## The table and its objects
 - **The play screens are a war table by daylight.** Every element is a real
@@ -99,6 +102,8 @@ existing one.
 ## Words and information
 - **Read in a book face; shout only in titles.** Body text is lowercase and
   readable; display faces are kept for names and titles.
+- **A warning speaks in the page's own rubric, at the size of the facts round
+  it** — never a pale tint that reads quieter than the plain ink beside it.
 - **Name every reading.** Art + name + value; the icon anchors the word, never
   replaces it. Never truncate, never make the player hover to understand.
 - **Commands look like commands, speech like speech.**
