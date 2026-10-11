@@ -887,7 +887,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
                                                open_water, land=land, wet=wet)
                 if plain["cut"] is None:
                     print("bake_world: port %s left on its cliff — its landing needs %.0f m cut, more than "
-                          "port_plain_max_cut_m (%g m)" % (b["burg_code"], plain["need"],
+                          "port_plain_max_cut_m (%g m); it still takes a pier by pier_search_fallback_m" % (b["burg_code"], plain["need"],
                                                           rules["port_plain_max_cut_m"]))
                 elif plain["window"] is not None:
                     print("bake_world: port %s lowered onto a plain landing (cut %.1f m, blend %.0f m)"

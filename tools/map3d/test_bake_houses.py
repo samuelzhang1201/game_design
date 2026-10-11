@@ -1319,7 +1319,7 @@ def test_a_village_lets_a_town_type_stray_into_its_core_only():
 # -- port plains (owner 2026-10-12, R9 and R18: every cliff-edge port on plain ground) --------
 PLAIN_RULES = dict(SHIP_RULES, pier_cliff_landings=0, port_plain_rise_m=3, port_plain_blend_m=120,
                    port_plain_corridor_m=80, port_plain_max_cut_m=350, port_plain_max_grade=0.5,
-                   port_plain_keep_river_band=1)
+                   port_plain_keep_river_band=1, port_plain_lofty=1)
 
 
 def test_a_cliff_port_is_lowered_onto_a_plain_landing_and_takes_one_timber_pier():
@@ -1455,3 +1455,54 @@ def test_with_cliff_landings_off_a_cliff_port_never_takes_a_cliff_model():
                               K, VW, VH, 5.0, types=STAIR_TYPES)
     assert not [r for r in out if r["type"] in ("pier_cliff", "pier_stair")]
     assert out and all(STAIR_TYPES[r["type"]]["role"] == "ship" for r in out), "its ships ride off the shore"
+
+
+# -- every port gets the normal pier (owner 2026-10-12: a far landing before none) ------
+def _piers(out):
+    return [r for r in out if STAIR_TYPES[r["type"]]["role"] == "pier"]
+
+
+def test_a_port_with_only_a_far_low_shore_takes_one_normal_pier_by_the_fallback():
+    """The only sea is 520 m west, past pier_search_m (300): without the
+    fallback the port moors ships off its shore and has no pier; with
+    pier_search_fallback_m the normal timber pier lands there."""
+    sea, height = _west_sea()
+    sea[:, :] = 1.0
+    sea[:, :6] = 0.0
+    height[:, :6] = 0.0
+    height[:, 6:] = 6.0
+    rules = dict(PLAIN_RULES, pier_search_m=300, pier_search_fallback_m=0)
+    out = bake_houses.harbour(burg(port=1), _toy_town(), rules, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    assert _piers(out) == [], "no pier within pier_search_m"
+    out = bake_houses.harbour(burg(port=1), _toy_town(), dict(rules, pier_search_fallback_m=2000), sea, height,
+                              K, VW, VH, 5.0, water=sea < 0.5, types=STAIR_TYPES)
+    assert [r["type"] for r in _piers(out)] == ["pier"], "one normal timber pier, never a cliff landing"
+    assert _piers(out)[0]["x_m"] < -300.0, "it stands out at the far shore"
+
+
+def test_a_port_given_up_by_port_plain_still_gets_its_pier():
+    """A 400 m cliff to the west is more than port_plain_max_cut_m: the port
+    keeps its ground; a low strand far east still takes the normal pier."""
+    sea, height = _west_sea(shore_h=400.0)
+    sea[:, -6:] = 0.0
+    height[:, -6:] = 0.0
+    height[:, -8:-6] = 6.0
+    rules = dict(PLAIN_RULES, pier_search_m=300, pier_search_fallback_m=2000, port_plain_max_cut_m=45)
+    before = height.copy()
+    res = bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, rules, STAIR_TYPES, 5.0, sea < 0.5, land=sea)
+    assert res["cut"] is None
+    assert np.array_equal(height, before)
+    out = bake_houses.harbour(burg(port=1), _toy_town(), rules, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    assert [r["type"] for r in _piers(out)] == ["pier"]
+    assert _piers(out)[0]["x_m"] > 0.0, "on the far low east shore"
+
+
+def test_a_lofty_town_with_a_low_shore_in_reach_is_not_cut_while_port_plain_lofty_is_0():
+    sea, height = _west_sea(shore_h=40.0)
+    height[:, CENTRE_COL - 8: CENTRE_COL - 6] = 6.0
+    before = height.copy()
+    res = bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, dict(PLAIN_RULES, port_plain_lofty=0),
+                                 STAIR_TYPES, 5.0, sea < 0.5, land=sea)
+    assert res["cut"] == 0.0 and np.array_equal(height, before)

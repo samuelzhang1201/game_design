@@ -75,7 +75,7 @@ def main(argv=None):
     types = bw.house_types()
     wet = river_wet(json.load(open(os.path.join(bake, "rivers.json")))["rivers"], vw, vh, ox, oz, vm,
                     float(rules["river_wet_m"]))
-    homes, centre = {}, {}
+    homes, centre, town_rows = {}, {}, {}
     with open(os.path.join(bake, "houses.csv")) as f:
         for r in csv.DictReader(f):
             if types.get(r["type"], {}).get("role") in ("pier", "ship", "wall", "tower", "gate"):
@@ -85,9 +85,12 @@ def main(argv=None):
                 centre[r["burg_code"]] = (x, z)
             ix, iy = min(max(int(round(x)), 0), vw - 1), min(max(int(round(z)), 0), vh - 1)
             homes.setdefault(r["burg_code"], []).append(float(height0[iy, ix]))
+            town_rows.setdefault(r["burg_code"], []).append(
+                dict(r, rank=int(r["rank"]), x_m=float(r["x_m"]) - ox, z_m=float(r["z_m"]) - oz))
     rise_town = float(rules["pier_stair_town_rise_m"])
     max_shore = float(rules["pier_max_shore_m"])
     rows = []
+    piers_all = []
     with open(os.path.join(bw.ROOT, "data", "maps", pack, "political", "burgs.csv")) as f:
         for b in csv.DictReader(f):
             if not int(b["is_port"] or 0) or b["burg_code"] not in centre:
@@ -100,6 +103,14 @@ def main(argv=None):
             cliff = before is not None and (before[0] > 0.0 or med >= rise_town)
             h = height0.copy()
             res = bake_houses.port_plain(b, h, vx, vy, rules, types, sea_y, open_water, land=land, wet=wet)
+            # the harbour on the (possibly cut) heights: the pier each port ends with
+            lm = town_rows[b["burg_code"]][0]
+            rel = [dict(r, x_m=(r["x_m"] - lm["x_m"]), z_m=(r["z_m"] - lm["z_m"])) for r in town_rows[b["burg_code"]]]
+            bb = dict(b, x=vx / k, y=vy / k)
+            laid = bake_houses.harbour(bb, rel, rules, land, h, k, vw, vh, sea_y, water=open_water, types=types)
+            piers = [r for r in laid if types.get(r["type"], {}).get("role") == "pier"]
+            piers_all.append((b["burg_code"], res["cut"],
+                              [(r["type"], math.hypot(r["x_m"], r["z_m"])) for r in piers]))
             if not cliff and not res["cut"]:
                 continue
             after = bake_houses._port_bearing(vx, vy, rules, h, sea_y, open_water)
@@ -124,6 +135,14 @@ def main(argv=None):
             code, grp, med, "-" if shore is None else "%.0f" % shore,
             cut if isinstance(cut, str) else "%.0f" % cut, blend, "yes" if pier else "no", chan, band, near))
     print("%d ports caught" % len(rows))
+    print("\nEVERY PORT'S PIER (type, metres from the centre to the pier's middle)")
+    cut_n = 0
+    for code, cut, ps in sorted(piers_all, key=lambda r: -max([d for _t, d in r[2]] or [-1])):
+        cut_n += 1 if cut else 0
+        print("%-14s cut=%-6s %s" % (code, "GIVEUP" if cut is None else "%.0f" % cut,
+                                     ", ".join("%s %.0f m" % p for p in ps) or "NO PIER"))
+    print("%d ports, %d cut, %d with a pier, %d without" % (
+        len(piers_all), cut_n, sum(1 for r in piers_all if r[2]), sum(1 for r in piers_all if not r[2])))
 
 
 if __name__ == "__main__":
