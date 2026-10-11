@@ -16,6 +16,7 @@ extends RefCounted
 
 static var _pristine: DataRepository
 static var _campaigns := {}
+static var _grids := {}   # water_open -> the pristine pack's MarchPath (null: none)
 
 
 ## A deep copy of the game's data, parsed once per run.
@@ -23,7 +24,23 @@ static func repo() -> DataRepository:
 	if _pristine == null:
 		_pristine = DataRepository.load_all("res://data")
 	DataRepository.forget_derived()  # the last tests' copies' caches, else the run holds them all
-	return _copy(_pristine)
+	var out := _copy(_pristine)
+	_install_grids(out)
+	return out
+
+
+## The pack's two march grids (land and water-open) are read and their A*
+## built once per run, not once per test: forget_derived dropped them with the
+## rest, and each test that asks a courier for a road would read the PNG and
+## build the grid again (~200 ms). The grid is geometry only; the road graph
+## on it (costs from road_speed, which a test may tune) is built per test.
+static func _install_grids(data: DataRepository) -> void:
+	for water_open in [false, true]:
+		if not _grids.has(water_open):
+			_grids[water_open] = MarchPath.load_pack(_pristine, water_open) \
+				if int(_pristine.bal("army_march_grid_px")) > 0 else null
+		if _grids[water_open] != null:
+			MarchPath.use(data, _grids[water_open], water_open)
 
 
 ## A new campaign of `data` on `seed_value`, exactly as

@@ -364,6 +364,8 @@ func test_the_tick_warns_after_the_host_eats() -> void:
 	s.supply_lines.clear()
 	s.day = 5
 	s.regiments[code]["supplies"] = ArmySystem.day_bite(_use(), 5)
+	# the ground it stands on may feed it (foraging): that is not this test
+	repo.balance["forage_supply_per_food_unit"] = 0
 	var engine := TickEngine.new(repo)
 	engine.advance_day(s)
 	assert_eq(int(s.regiments[code]["supplies"]), 0)

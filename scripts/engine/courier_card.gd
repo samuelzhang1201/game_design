@@ -5,7 +5,7 @@ extends RefCounted
 ## fields. The painting is courier_art.csv's, omitted until sub-project D
 ## installs one.
 
-const GROUND := {"road": "On the road", "trail": "On a trail", "offroad": "Across country", "sea": "By sea"}
+const GROUND := {"road": "On the road", "trail": "On a trail", "offroad": "Across country", "river": "On the river", "sea": "By water"}
 
 
 static func courier(state: GameState, id: int) -> Dictionary:
