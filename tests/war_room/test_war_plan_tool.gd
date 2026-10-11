@@ -21,6 +21,17 @@ func _drag(points: Array, shift := false) -> Dictionary:
 	return tool.release(points[points.size() - 1], points[points.size() - 1] * 2.0, shift, 2.0)
 
 
+func test_clicking_the_lit_crayon_again_drops_to_the_hand() -> void:
+	tool.pick_stick("blue", false)
+	assert_eq(tool.side, "blue")
+	tool.pick_stick("blue", true)
+	assert_eq([tool.side, tool.kind], ["", ""], "the lit crayon, clicked again, drops to the hand")
+	tool.pick_stick("red", true)
+	assert_eq(tool.side, "red", "an unlit crayon lights its side")
+	tool.pick_stick("blue", true)
+	assert_eq(tool.side, "blue", "the other side's crayon is not a drop")
+
+
 func test_the_hand_holds_nothing() -> void:
 	assert_false(tool.in_hand())
 	tool.press(Vector2.ZERO, Vector2.ZERO)

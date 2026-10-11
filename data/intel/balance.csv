@@ -1,7 +1,7 @@
 key,value,notes
 spy_cost,15,
 spy_legitimacy_gain,1,
-spy_refuse_own_realm,1,"1 = a spy is never sent to a point inside the crown's own realm (it is known exactly); 0 allows it"
+spy_refuse_controlled,1,"1 = a spy is never sent to a point in a province the crown controls (it is known exactly); 0 allows it"
 source_trust_default,50,trust in a speaker with no relationship edge to the listener
 knowledge_sure_threshold,75,"credibility at/above which a persona sheet says ""You know"" (review finding 2026-09-01)"
 knowledge_doubt_threshold,50,credibility below which a persona sheet says the character doubts what they heard

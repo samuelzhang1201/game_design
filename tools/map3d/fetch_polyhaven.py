@@ -14,7 +14,7 @@ DEST = os.path.join(ROOT, "assets", "3D", "terrain", "model_wip", "polyhaven", "
 
 def get(url):
     # curl, not urllib: the python.org build here has no CA bundle.
-    return subprocess.run(["curl", "-sfL", "-A", "crown-and-council-spike", url],
+    return subprocess.run(["curl", "-sfL", "-A", "beyond-the-kings-words-spike", url],
                           check=True, capture_output=True).stdout
 
 

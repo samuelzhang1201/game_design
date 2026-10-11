@@ -596,6 +596,7 @@ func _ready() -> void:
 		_viewport.size = Vector2i(int(WIDTH * _scale), int(HEIGHT * _scale))
 		_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		add_child(_viewport)
+	GameRoot.stepwise_overlays = false   # a shot reads every overlay at once
 	var packed: PackedScene = load(String(SCENES[_screen]))
 	var screen: Control = packed.instantiate()
 	# GameRoot applies the theme itself; for a bare screen we stand in for it,

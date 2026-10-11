@@ -60,6 +60,9 @@ func test_continue_walks_every_page_then_the_reign_begins() -> void:
 		var btn: Button = replies[0]
 		await wait_until(func() -> bool: return btn.visible, 1.0)
 		assert_eq(btn.text, "I am ready. Let the reign begin." if i == pages - 1 else "Continue")
+		if scene.narration_left_frame != null:
+			assert_true(scene.narration_left_frame.visible and scene.narration_right_frame.visible,
+				"both busts up on page %d" % (i + 1))
 		var scroll: ScrollContainer = scene.speech_scroll()
 		await wait_process_frames(2)
 		var bar := scroll.get_v_scroll_bar()
@@ -67,3 +70,50 @@ func test_continue_walks_every_page_then_the_reign_begins() -> void:
 		btn.pressed.emit()
 		await wait_process_frames(2)
 	assert_true(r.current_screen is CourtScreen, "the table after the last page")
+
+func _scene_with_frames() -> Array:
+	var scene: ConversationScene = load("res://scenes/screens/conversation.tscn").instantiate()
+	add_child_autofree(scene)
+	var nodes: Array = []
+	for n in 4:
+		var c := Control.new()
+		c.custom_minimum_size = Vector2(150, 200)
+		scene.add_child(c)
+		nodes.append(c)
+	scene.narration_left_frame = nodes[0]
+	scene.narration_left = nodes[1]
+	scene.narration_right_frame = nodes[2]
+	scene.narration_right = nodes[3]
+	return [scene, nodes]
+
+func test_frames_show_on_a_narration_page_both_lit_and_hide_after() -> void:
+	var made := _scene_with_frames()
+	var scene: ConversationScene = made[0]
+	var nodes: Array = made[1]
+	var beat: Dictionary = OpeningNarration.beats(SuiteData.repo())[0]
+	scene._show_narration_busts(beat)
+	for n: Control in nodes:
+		assert_true(n.visible)
+	assert_eq(nodes[1].modulate, nodes[3].modulate, "both busts lit alike")
+	assert_eq(nodes[1].modulate, Color.WHITE, "the default dims nothing")
+	scene._show_narration_busts({"kind": "minister"})
+	for n: Control in nodes:
+		assert_false(n.visible, "gone on the first minister beat")
+
+func test_a_zero_sized_box_does_not_divide_by_zero() -> void:
+	var made := _scene_with_frames()
+	var scene: ConversationScene = made[0]
+	var box := Control.new()
+	box.custom_minimum_size = Vector2.ZERO
+	scene.add_child(box)
+	scene._fill_portrait(box, OpeningNarration.LEFT_ID)
+	assert_eq(box.get_child_count(), 0, "nothing drawn into a box with no size")
+
+func test_the_scene_busts_are_authored() -> void:
+	var scene: ConversationScene = load("res://scenes/screens/conversation.tscn").instantiate()
+	add_child_autofree(scene)
+	if scene.narration_left == null or scene.narration_left_frame == null:
+		pending("Phase E2: NarrationLeftFrame/NarrationRightFrame not yet authored in conversation.tscn")
+		return
+	assert_not_null(scene.narration_right)
+	assert_not_null(scene.narration_right_frame)

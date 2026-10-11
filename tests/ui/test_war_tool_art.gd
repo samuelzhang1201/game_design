@@ -33,8 +33,9 @@ func test_a_crayon_is_inked_in_its_own_colour_and_the_hand_in_the_pale_ink() -> 
 	assert_eq(red.glyph_colour(), red.stick_color)
 	assert_eq(blue.glyph_colour(), blue.stick_color)
 	assert_ne(red.inked_glyph(), blue.inked_glyph(), "each crayon is inked in its side's colour")
-	var hand := roll.slot("hand")
-	assert_eq(hand.glyph_colour(), hand.glyph_ink)
+	var hand := roll.slot("hand")   # R4: the roll needs no hand slot; if one stands, it is pale
+	if hand != null:
+		assert_eq(hand.glyph_colour(), hand.glyph_ink)
 	# the inking itself, on a drawing made here (CI's headless renderer reads no
 	# pixels back from an imported texture): a dark stroke on clear comes out
 	# in the crayon's colour at full alpha, the light fill at glyph_light_keep

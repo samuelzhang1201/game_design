@@ -148,8 +148,6 @@ ui_title_day_per_s,0.004,"TITLE: how fast the title's sun turns, day shares a se
 ui_title_sweep_s,1.8,TITLE: seconds the camera sweeps from the title's height down to the game's opening view when the reign begins
 ui_title_reveal_frames,3,"TITLE (owner 2026-10-11: a short black at launch, then the title over the living capital): the frames the black is shown before the living map is made behind it (it waits too for the boot's threaded loads, BootLoads.title_ready), so the window answers at once"
 ui_title_failsafe_s,8,"TITLE: seconds after launch the title enters over the bare table if the living map is not open yet (it then fades the table off the map when it opens); the entrance itself is data/title_entrance.csv"
-ui_load_gear_size_px,96,"LAUNCH (owner 2026-10-12): the box the turning wheel fills in the bottom-right corner of the launch black (MainMenu Curtain/LoadGear) so the player sees the game is loading; 0 hides it"
-ui_load_gear_margin_px,28,"LAUNCH: inset of the loading wheel from the black's bottom-right corner in px"
 map_compass_alpha_table,1.0,"WAR TABLE (2026-10-07, the critic of the move into the map): the compass on the map sheet is a solid object, the map never showing through its wood"
 ui_landing_lift_s,0.4,"LANDING (owner 2026-10-01: the map is picked up and laid on the table): seconds the title's frame is lifted like a sheet — drawing back, the vellum margin and a shadow appearing"
 ui_landing_carry_s,0.9,"LANDING: seconds it is carried down onto the table to the map sheet's place, turning square"

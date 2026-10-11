@@ -42,6 +42,9 @@ var campaign_maker: Callable = GameState.new_campaign
 var load_error := ""
 
 func _ready() -> void:
+	if OS.get_environment("CC_FORCE_OFFLINE") != "1":
+		UserDirMigration.copy_missing(UserDirMigration.legacy_dir(), OS.get_user_data_dir(),
+			PackedStringArray(["save.json", "config.json", "settings.cfg"]))
 	data = DataRepository.load_all("res://data")
 	assert(data != null, "data load failed: " + DataRepository.last_error)
 
