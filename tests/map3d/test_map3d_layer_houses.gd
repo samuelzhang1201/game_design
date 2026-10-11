@@ -189,12 +189,11 @@ func test_a_steep_site_still_buries_nothing() -> void:
 
 ## No box is laid under a house any more (owner 2026-09-25: ugly and strange):
 ## the layer's only children are the per-type MultiMeshes (each type's
-## shadowed and unshadowed pair, perf 2026-10-02) and the aprons (owner 2026-10-12).
+## shadowed and unshadowed pair, perf 2026-10-02).
 func test_no_foundation_box_is_laid() -> void:
 	_layer.refresh(_home())
 	for c in _layer.get_children():
-		assert_true(_layer._instances.values().has(c) or _layer._far.values().has(c) \
-				or _layer._aprons.values().has(c),
+		assert_true(_layer._instances.values().has(c) or _layer._far.values().has(c),
 			"%s is not a house type's MultiMesh" % c.name)
 
 

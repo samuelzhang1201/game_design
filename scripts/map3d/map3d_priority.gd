@@ -10,6 +10,9 @@ extends RefCounted
 ## rings by tier from RING_BASE up, and the gold selection ring over all.
 const SEA := -1
 const RIVERS := 0
+## The aprons at the houses' feet (Map3DLayerAprons): under the roads that run
+## through a town, in the rivers' row (a house never stands in a river).
+const APRONS := 0
 const ROADS := 1
 const MANOR_EDGES := 2
 ## A selected regiment's glow (Map3DUnitGlow): over the roads it stands on, so a
