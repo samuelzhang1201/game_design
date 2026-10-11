@@ -16,8 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_cavalry_v2 as v2  # TIERS, graph, run, call
 
 ROOT = Path(__file__).resolve().parents[2]
-DESIGNS = ROOT / "assets" / "flux" / "courier_design_prompts.csv"
-VIEWS = ROOT / "assets" / "flux" / "courier_sheet_prompts.csv"
+DESIGNS = ROOT / "assets" / "imagegen" / "courier_design_prompts.csv"
+VIEWS = ROOT / "assets" / "imagegen" / "courier_sheet_prompts.csv"
 OUT = ROOT / "assets" / "3D" / "units" / "courier" / "model_wip" / "sheet"
 SEED = 20260928
 TIERS = ["zimage", "qwenfast"]

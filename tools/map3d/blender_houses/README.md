@@ -4,7 +4,7 @@ Owner 2026-09-24: the fourteen house types in `data/map3d_houses.csv` are
 modelled by hand in Blender through the Blender MCP. They were first modelled
 looking at Hunyuan3D meshes as reference (no geometry or texture copied);
 those meshes and the whole Hunyuan3D pipeline were DELETED later that day
-over the licence (owner 2026-09-24). The references now are the Flux
+over the licence (owner 2026-09-24). The references now are the generated
 pictures `tools/map3d/gen_house_refs.py` renders into
 `assets/3D/buildings/<type>/model_wip/`.
 

@@ -3,10 +3,10 @@
 Workflows panel), filled with the current STYLE_CORE / NEGATIVE and a sample
 prompt, so what you open in ComfyUI matches what generate.py runs.
 
-    python3 assets/flux/export_ui_workflows.py            # writes both copies
-    python3 assets/flux/export_ui_workflows.py --no-install   # repo copy only
+    python3 assets/imagegen/export_ui_workflows.py            # writes both copies
+    python3 assets/imagegen/export_ui_workflows.py --no-install   # repo copy only
 
-Writes assets/flux/<name>.workflow.json and, unless --no-install,
+Writes assets/imagegen/<name>.workflow.json and, unless --no-install,
 <ComfyUI>/user/default/workflows/<name>.json. Widget order per node class is
 read from the running ComfyUI's /object_info, so the export follows whatever
 node schema the install has. Stdlib only.
@@ -35,21 +35,21 @@ EXPORTS = [
     ("CC Z-Image Turbo T2I", "zimage_turbo_template.json", {"model": "zimage", "id": "K-01"},
      "Z-Image Turbo (Tongyi-MAI, 6B, Apache 2.0) - the aerial ground, tree crowns and 3D references.\n"
      "8 steps, CFG 1, res_multistep; distilled, so no negative path (NEGATIVE.txt not applied).\n"
-     "Bulk: python3 assets/flux/generate.py --model zimage --ids K-01"),
+     "Bulk: python3 assets/imagegen/generate.py --model zimage --ids K-01"),
     ("CC Qwen-Image-2512 T2I", "qwen2512_template.json", {"model": "qwen2512fast", "id": "K-01"},
      "Qwen-Image-2512 Q6_K GGUF (Alibaba, 20B, Apache 2.0) - the game's main 2D model (owner 2026-09-30).\n"
      "Needs the ComfyUI-GGUF node. Lightning LoRA strength 1 = 8 steps CFG 1 (qwen2512fast);\n"
      "strength 0 + 50 steps + CFG 4 = full quality with NEGATIVE.txt (qwen2512). GGUF, not fp8: MPS upcasts fp8 to 16-bit.\n"
-     "Bulk: python3 assets/flux/generate.py --model qwen2512fast --ids K-01"),
+     "Bulk: python3 assets/imagegen/generate.py --model qwen2512fast --ids K-01"),
     ("CC Post Cutout", "post_cutout_template.json", {"width": 0, "height": 660},
      "A generated portrait becomes a game asset: BiRefNet mask -> InvertMask -> RGBA ->\n"
-     "lanczos resize (full: height 660; chip: 96x96). Driven by assets/flux/post.py."),
+     "lanczos resize (full: height 660; chip: 96x96). Driven by assets/imagegen/post.py."),
     ("CC Post Sepia Alpha", "sepia_alpha_template.json", {"width": 256, "height": 256},
      "A D- symbol becomes a transparent map sprite: blue channel (white paper 1.0, umber ink\n"
      "~0.15) -> InvertMask -> MaskComposite add with itself (coverage x2, clamped) -> InvertMask\n"
      "-> RGBA -> lanczos 256. No BiRefNet: a line drawing has no silhouette to cut, and the\n"
      "doubled coverage keeps brush edges soft while mid-tone fills go opaque.\n"
-     "Driven by assets/flux/post.py --tier mark."),
+     "Driven by assets/imagegen/post.py --tier mark."),
 ]
 
 
@@ -155,7 +155,7 @@ def to_ui(api: dict, note: str, title: str) -> dict:
     width = 420 * (max(depth.values()) + 1) + 60
     return {"id": str(uuid.uuid4()), "revision": 0, "last_node_id": len(ui_nodes), "last_link_id": len(links),
             "nodes": ui_nodes, "links": links,
-            "groups": [{"title": f"{title} — filled by assets/flux/generate.py / post.py",
+            "groups": [{"title": f"{title} — filled by assets/imagegen/generate.py / post.py",
                         "bounding": [-280, 0, width, 230 * max(len(c) for c in columns.values()) + 320],
                         "color": "#3f789e", "font_size": 20}],
             "config": {}, "extra": {"ds": {"scale": 0.6, "offset": [300, 80]}}, "version": 0.4}
@@ -172,7 +172,7 @@ def main() -> int:
         ui = to_ui(api, note, name)
         text = json.dumps(ui, indent=1, ensure_ascii=False)
         (HERE / f"{name}.workflow.json").write_text(text, encoding="utf-8")
-        print(f"wrote assets/flux/{name}.workflow.json ({len(ui['nodes'])} nodes)")
+        print(f"wrote assets/imagegen/{name}.workflow.json ({len(ui['nodes'])} nodes)")
         if not args.no_install:
             COMFY_WORKFLOWS.mkdir(parents=True, exist_ok=True)
             (COMFY_WORKFLOWS / f"{name}.json").write_text(text, encoding="utf-8")

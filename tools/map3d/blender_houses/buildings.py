@@ -1,6 +1,6 @@
 """The fourteen settlement buildings, one function each, run inside Blender
 after kit.py (see its docstring). Each was modelled looking at a reference
-(first a Hunyuan3D mesh, since deleted over its licence; now the Flux
+(first a Hunyuan3D mesh, since deleted over its licence; now the generated
 pictures in assets/3D/buildings/<type>/model_wip/) and at data/map3d_houses.csv's note,
 never from its geometry. Dimensions are game metres before export() fits
 the footprint."""

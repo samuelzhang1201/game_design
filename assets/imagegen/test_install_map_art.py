@@ -1,6 +1,6 @@
 """Plain-assert tests of install_map_art.py's pure image helpers (no pytest
 here, same convention as tools/map3d/test_bake_world.py):
-    python3 assets/flux/test_install_map_art.py
+    python3 assets/imagegen/test_install_map_art.py
 """
 import os
 import sys

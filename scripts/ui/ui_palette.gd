@@ -207,7 +207,7 @@ static func bar_bg() -> StyleBoxFlat:
 static var _art_cache: Dictionary = {}
 
 ## The vellum panel plate (owner request 2026-09-12): library U-01 rendered
-## through assets/flux and white-balanced onto the library's Cream Laid.
+## through assets/imagegen and white-balanced onto the library's Cream Laid.
 ## Drawn by VellumPanelStyle, not StyleBoxTexture, so the plate stays at its
 ## full 475 px while the corner draws at 20 design px — see that class for why
 ## the built-in one cannot. Off since the bright theme (ui_panel_art 0).

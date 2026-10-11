@@ -28,7 +28,7 @@ Crown and Council — Chapter 0 Design Doc
 | 51 行选项表 | `data/chapter_event_choices.csv` |
 | 16 行分支表 | `data/chapter_branches.csv` |
 | 51 行结果台词 | `data/templates.csv`（`event_c0_*`） |
-| 21 张插图的 prompt | `docs/references/art_prompt_library.md` §8.6（`V-35`~`V-55`）→ `assets/flux/event_art.csv` |
+| 21 张插图的 prompt | `docs/references/art_prompt_library.md` §8.6（`V-35`~`V-55`）→ `assets/imagegen/event_art.csv` |
 | 测试 | `tests/engine/test_chapter_zero.gd`（21 个用例） |
 
 **没有新的 ChapterRunner，也没有第二套事件格式。** 本作已经有一整套事件系统——`EventSystem` 取事件、`TriggerDsl` 判条件、`EventEffects` 执行效果、`StorySource` 读散文、会见窗显示、存档带着走。序章是**这套系统里的一条链**，不是它旁边的第二套东西。为此对引擎只加了三样小东西：
@@ -114,7 +114,7 @@ Crown and Council — Chapter 0 Design Doc
 | 灰麦镇 | **威克比** `Wickleby` 庄园 | 该郡两块谷物庄园之一，16,661 人，没有城镇——所以它是个**庄园**，正是游戏建模的那个单位，玩家在 MANORS 层点得到它 |
 | （第二块谷地） | **曼德福** `Mandfow` | 9,744 人，谷物 |
 | 郡治 | **比内特斯顿** 镇 | 12,299 人，有城墙的河港 |
-| 东马克 | `{neighbor_realm}` | 架构约束 5：散文永远不写王国名。北方女王的纹章是**红底银镰刀**（`assets/flux/arms_prompts.csv` A-005），本国是**红底金浑天仪**（A-004）——一把收割的镰刀盖在偷运粮食的账上，是地图包白送的象征 |
+| 东马克 | `{neighbor_realm}` | 架构约束 5：散文永远不写王国名。北方女王的纹章是**红底银镰刀**（`assets/imagegen/arms_prompts.csv` A-005），本国是**红底金浑天仪**（A-004）——一把收割的镰刀盖在偷运粮食的账上，是地图包白送的象征 |
 
 **托马斯是"王命总督"，不是领主。** `house_bindings.csv` 里 Valorin 只绑首都省；再绑一个省，`MapManors.controlled_provinces` 就会把它算成王室自己的（王室家族就是玩家家族），那和剧情正相反。所以他掌的是**粮仓钥匙这个官职**，不是土地所有权——这恰好就是 C0-06 那场戏在争的东西，一行数据都不用改。
 
@@ -219,10 +219,10 @@ lord_gold 861    unrest 0           legitimacy 50   contentment 50
 21 张事件插图 = `docs/references/art_prompt_library.md` §8.6 的 `V-35`~`V-55`，画布是新加的 `[C-EVENT]`（12:5 宽带，1536×640），因为图是画在会见窗顶端的横幅里的。
 
 ```bash
-python3 assets/flux/generate.py --build-csv          # 库 → prompts.csv（已做）
-python3 assets/flux/generate.py --ids V-35,V-36 --variants 3   # 先出两张看风格
-python3 assets/flux/generate.py --chapter V --variants 2       # 全章
-python3 assets/flux/install_map_art.py events        # → assets/2D/events/illustrations/<event_id>.png，1280×533
+python3 assets/imagegen/generate.py --build-csv          # 库 → prompts.csv（已做）
+python3 assets/imagegen/generate.py --ids V-35,V-36 --variants 3   # 先出两张看风格
+python3 assets/imagegen/generate.py --chapter V --variants 2       # 全章
+python3 assets/imagegen/install_map_art.py events        # → assets/2D/events/illustrations/<event_id>.png，1280×533
 ```
 
 装好之后不需要改任何代码：`ConversationScene._show_event_art` 按 `assets/2D/events/illustrations/<event_id>.png` 找图，找不到就不画那条横幅——所以新克隆的仓库不会因为缺图而坏掉。
@@ -264,6 +264,6 @@ python3 assets/flux/install_map_art.py events        # → assets/2D/events/illu
 4. **第四轮**（owner：手和脸很糟）：这是**构图问题，不是采样问题**——同 seed 下 32 步对 20 步几乎没差别。一条 12:5 的宽带里七张脸十四只手，4B 模型必崩。→ 画布规定"最多三个清晰人物、其余小而虚"，并且**手要有交代**：平放且手指并拢、交叠、握住一个点名的东西，或者干脆出画。七张重新构图（御前会议改成马尔文的背影、公爵的提议改成越肩、最后清算干脆不要脸只留两只手和一根蜡烛——那张成了全套最好的一张）。
 5. **第五轮**：剩下四张的个案。人物会被画两遍（→ 明写"画面里只有三个人"）；人多的场面焦点会丢（→ 把焦点人物点名，其余"小而虚"）；画面边缘那只手总是多一根指头（→ 让它出画，或者换一稿）。
 
-另外两条零碎：Flux 把 `corn` 画成玉米（麦田一律写 `wheat` + `no maize`）；公爵的 `parti-coloured cotehardie` 总被画成带肩章的轻骑兵制服（在事件图里改写成"黑袍+金绣襟边、无任何肩部装饰"）。
+另外两条零碎：图像模型会把 `corn` 画成玉米（麦田一律写 `wheat` + `no maize`）；公爵的 `parti-coloured cotehardie` 总被画成带肩章的轻骑兵制服（在事件图里改写成"黑袍+金绣襟边、无任何肩部装饰"）。
 
-`assets/flux/event_art.csv` 的 `seed` 列钉住了每张装进去的那一稿，想换稿只改那一列再跑一次 `install_map_art.py events`。
+`assets/imagegen/event_art.csv` 的 `seed` 列钉住了每张装进去的那一稿，想换稿只改那一列再跑一次 `install_map_art.py events`。

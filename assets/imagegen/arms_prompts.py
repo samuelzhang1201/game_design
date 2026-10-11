@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Coats of arms prompts from the map pack (owner 2026-09-15).
 
-    python3 assets/flux/arms_prompts.py            # data/maps.csv's default pack
-    python3 assets/flux/arms_prompts.py --pack ID
+    python3 assets/imagegen/arms_prompts.py            # data/maps.csv's default pack
+    python3 assets/imagegen/arms_prompts.py --pack ID
 
 Every house and every kingdom of the pack wears the Azgaar coat of arms of
-its seat, but the arms are GENERATED through the local Flux (klein 4B,
-Apache-2.0), not drawn from Azgaar's charge SVGs — most of those complex
+its seat, but the arms are GENERATED through the local image models
+(generate.py's presets), not drawn from Azgaar's charge SVGs — most of those complex
 charges are WappenWiki art under CC BY-NC-SA. So this script turns each
 `coa` into plain words and writes two tables beside it:
 

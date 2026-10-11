@@ -1,6 +1,6 @@
 # ComfyUI 锁定工作流
 
-由 `tools/art_kit/build_kit.py` 生成，不要手改：风格、画幅、负面词、模型、尺寸、步数、种子都来自 `assets/flux/` 的同一套文件。
+由 `tools/art_kit/build_kit.py` 生成，不要手改：风格、画幅、负面词、模型、尺寸、步数、种子都来自 `assets/imagegen/` 的同一套文件。
 
 把 `.json` 拖进 ComfyUI 画布即可打开。只改「② 主体（只改这里）」和「④ 文件名」里的「编号」；第一次打开时把采样节点种子下面的 control after generate 设为 increment。
 

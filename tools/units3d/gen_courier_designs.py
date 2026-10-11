@@ -1,5 +1,5 @@
 """Courier and spy design sheets (owner 2026-09-28, spec
-2026-09-28-courier-art §1): every row of assets/flux/courier_design_prompts.csv
+2026-09-28-courier-art §1): every row of assets/imagegen/courier_design_prompts.csv
 on BOTH Z-Image Turbo and Qwen-Image-2512 fast (never klein, owner
 2026-09-28), 2 seeds each, for the owner to compare and pick one courier (C*)
 and one spy (S*). The pick goes in the CSV's `picked` column as <tier>_s<n>.
@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_cavalry_v2 as v2  # the Z-Image graph, call / run
 
 ROOT = Path(__file__).resolve().parents[2]
-ROWS = ROOT / "assets" / "flux" / "courier_design_prompts.csv"
+ROWS = ROOT / "assets" / "imagegen" / "courier_design_prompts.csv"
 OUT = ROOT / "assets" / "3D" / "units" / "courier" / "model_wip" / "designs"
 SEED = 20260928
 TIERS = ["zimage", "qwenfast"]  # Z-Image Turbo first: its row is done in minutes

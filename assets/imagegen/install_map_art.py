@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """Turn a chapter's renders into game assets.
 
-    python3 assets/flux/install_map_art.py goods    # G-xx -> assets/2D/goods/marks/
-    python3 assets/flux/install_map_art.py ui       # post.py icon tier -> assets/2D/icons/resources/ (resource strip, realm card)
-    python3 assets/flux/install_map_art.py cast     # K-xx -> assets/2D/portraits/cast/
-    python3 assets/flux/install_map_art.py paintings  # B-xx -> assets/2D/paintings/estates/ (the manor card's painted estate)
-    python3 assets/flux/install_map_art.py buildings  # H-xx -> assets/2D/icons/buildings/bld_<code>.png (slots and the build menu)
-    python3 assets/flux/install_map_art.py goods_icons  # G-xx colour -> assets/2D/icons/goods/ (the manor card's output rows)
-    python3 assets/flux/install_map_art.py compass    # I-73 -> assets/2D/ui/compass/compass.png
-    python3 assets/flux/install_map_art.py arms       # A-xxx -> assets/2D/arms/<pack>/<key>.png (ARMS_PACK=id, default maps.csv) (house and kingdom arms)
-    python3 assets/flux/install_map_art.py army_paintings  # B-37..42 -> assets/2D/paintings/armies/<piece>.png (army card)
-    python3 assets/flux/install_map_art.py app_icon   # X-01 -> icon.png (the game's application icon)
-    python3 assets/flux/install_map_art.py events     # V-35..V-56 (event_art.csv) -> assets/2D/events/illustrations/<event_id>.png (the audience window's event band)
-    python3 assets/flux/install_map_art.py courier_paintings  # B-43..47 -> assets/2D/paintings/couriers/<key>.png (courier card, the desk's receipt)
-    python3 assets/flux/install_map_art.py missive  # U-20..26 -> assets/2D/ui/missive_board/<key>.png (the Missive board)
+    python3 assets/imagegen/install_map_art.py goods    # G-xx -> assets/2D/goods/marks/
+    python3 assets/imagegen/install_map_art.py ui       # post.py icon tier -> assets/2D/icons/resources/ (resource strip, realm card)
+    python3 assets/imagegen/install_map_art.py cast     # K-xx -> assets/2D/portraits/cast/
+    python3 assets/imagegen/install_map_art.py paintings  # B-xx -> assets/2D/paintings/estates/ (the manor card's painted estate)
+    python3 assets/imagegen/install_map_art.py buildings  # H-xx -> assets/2D/icons/buildings/bld_<code>.png (slots and the build menu)
+    python3 assets/imagegen/install_map_art.py goods_icons  # G-xx colour -> assets/2D/icons/goods/ (the manor card's output rows)
+    python3 assets/imagegen/install_map_art.py compass    # I-73 -> assets/2D/ui/compass/compass.png
+    python3 assets/imagegen/install_map_art.py arms       # A-xxx -> assets/2D/arms/<pack>/<key>.png (ARMS_PACK=id, default maps.csv) (house and kingdom arms)
+    python3 assets/imagegen/install_map_art.py army_paintings  # B-37..42 -> assets/2D/paintings/armies/<piece>.png (army card)
+    python3 assets/imagegen/install_map_art.py app_icon   # X-01 -> icon.png (the game's application icon)
+    python3 assets/imagegen/install_map_art.py events     # V-35..V-56 (event_art.csv) -> assets/2D/events/illustrations/<event_id>.png (the audience window's event band)
+    python3 assets/imagegen/install_map_art.py courier_paintings  # B-43..47 -> assets/2D/paintings/couriers/<key>.png (courier card, the desk's receipt)
+    python3 assets/imagegen/install_map_art.py missive  # U-20..26 -> assets/2D/ui/missive_board/<key>.png (the Missive board)
 
 MAP SYMBOLS (goods) are cut out LOCALLY — the whole chain is arithmetic on the
 blue channel (see sepia_alpha_template.json for the same steps as a ComfyUI

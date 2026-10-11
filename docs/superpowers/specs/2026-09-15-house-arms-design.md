@@ -27,7 +27,7 @@ Owner request 2026-09-15: 根据地图 json 家族文件，生成所有相应的
 - Generation is asked for batch by batch ([ask before queuing]): six samples
   first, then the full run.
 
-## Pipeline (assets/flux, stdlib Python)
+## Pipeline (assets/imagegen, stdlib Python)
 
 1. `arms_prompts.py` reads the pack JSON (`assets/maps/<id>/*Full*.json`) and
    the pack tables (`political/provinces.csv`, `kingdoms.csv`,

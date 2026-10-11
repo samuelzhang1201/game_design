@@ -2,7 +2,7 @@
 
 The sources of the 3D map's aerial terrain layers: pictures of the ground as
 seen from ~200 m up, generated locally (ComfyUI, Z-Image Turbo) from
-`assets/flux/terrain_aerial_prompts.csv` with `STYLE_CORE_aerial_ground.txt`
+`assets/imagegen/terrain_aerial_prompts.csv` with `STYLE_CORE_aerial_ground.txt`
 (`generate.py --prompts-file terrain_aerial_prompts.csv --model zimage
 --style-file STYLE_CORE_aerial_ground.txt --res 1024`). The Poly Haven sets
 they replace are ground-level photos of 1-2 m of ground, stretched to
