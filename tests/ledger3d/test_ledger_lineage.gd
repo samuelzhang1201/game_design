@@ -39,19 +39,20 @@ func _snap(ids: Array, links: Array) -> Dictionary:
 ## hops, the second FAR.
 func test_the_hybrid_by_hand() -> void:
 	var look := {"f": "flow", "s": "structure", "t": "tie"}
-	var snap := _snap(["x", "a", "b", "c", "d", "e", "u", "w", "sib", "sib2", "n", "m", "t1", "t2", "z"], [
+	var snap := _snap(["x", "a", "b", "c", "d", "e", "u", "w", "sib", "sib2", "n", "m", "t1", "t2", "z", "v", "v2"], [
 		["x", "a", "f"], ["a", "b", "f"], ["b", "c", "f"],   # downstream x -> a -> b -> c
 		["d", "b", "f"],                                     # flows INTO b: not walked back from b
 		["e", "a", "f"],                                     # flows into x's own outflow: not walked back
 		["w", "u", "f"], ["u", "x", "f"],                    # upstream w -> u -> x
 		["u", "sib", "f"], ["sib", "sib2", "f"],             # u's other outflow: x's sibling and its chain
 		["x", "n", "s"], ["n", "m", "s"],                    # structure: n lit, m not
-		["n", "z", "f"],                                     # a neighbour's own flow chain: not walked
+		["n", "z", "f"],                                     # a structure neighbour's downstream: not walked
+		["v2", "v", "f"], ["v", "n", "f"],                   # its upstream v2 -> v -> n: walked
 		["x", "t1", "t"], ["t1", "t2", "t"],                 # ties: t1 full, t2 far
 		["x", "g", "f", "planned"]])
 	var lin := LedgerLineage.of(snap, "x", _hand(look), 2)
 	var st: Dictionary = lin["stars"]
-	for id: String in ["x", "a", "b", "c", "u", "w", "n", "t1", "g"]:
+	for id: String in ["x", "a", "b", "c", "u", "w", "n", "v", "v2", "t1", "g"]:
 		assert_eq(int(st.get(id, 0)), LedgerLineage.FULL, id + " full")
 	assert_eq(int(st.get("t2", 0)), LedgerLineage.FAR, "a tie of a tie is far")
 	assert_false(st.has("d"), "the chain never turns back mid-walk")
@@ -59,7 +60,8 @@ func test_the_hybrid_by_hand() -> void:
 	assert_false(st.has("sib"), "an upstream star's other outflow (a sibling) is not lit")
 	assert_false(st.has("sib2"), "nor the sibling's chain")
 	assert_false(lin["links"].has("f|u|sib"), "nor the link to the sibling")
-	assert_false(st.has("z"), "a neighbour's own chain is not walked")
+	assert_false(st.has("z"), "a structure neighbour's downstream is not walked")
+	assert_eq(int(lin["links"]["f|v2|v"]), LedgerLineage.FULL, "a structure neighbour's upstream is")
 	assert_false(st.has("m"), "structure past the first hop is not followed")
 	assert_eq(int(lin["links"]["t|t1|t2"]), LedgerLineage.FAR)
 	assert_eq(int(lin["links"]["f|b|c"]), LedgerLineage.FULL)
@@ -108,6 +110,24 @@ func test_the_real_pack_anchors() -> void:
 	assert_eq(int(st.get(feeder, 0)), LedgerLineage.FULL, "the town it is fed from")
 	# the manors that stock a town fold into the same province: no link of their own in the galaxy
 	assert_gt(st.size(), 4, "more than its neighbours: %d" % st.size())
+	# a regiment stationed in a province lights what feeds that province,
+	# never the province's other regiments (owner 2026-10-11)
+	var fed := ""
+	for l: Dictionary in g["links"]:
+		if String(l["type"]) == "based_in" and (g["links"] as Array).any(func(m: Dictionary) -> bool:
+				return String(m["to"]) == String(l["to"]) and _look(m) == "flow" and String(m["status"]) == "live"):
+			fed = String(l["from"])
+			break
+	assert_ne(fed, "", "a regiment based in a province something flows into")
+	var fs: Dictionary = LedgerLineage.of(g, fed, _look, 2)["stars"]
+	for l: Dictionary in g["links"]:
+		if String(l["type"]) == "based_in" and String(l["from"]) == fed:
+			var prov := String(l["to"])
+			for m: Dictionary in g["links"]:
+				if String(m["to"]) == prov and _look(m) == "flow" and String(m["status"]) == "live":
+					assert_eq(int(fs.get(String(m["from"]), 0)), LedgerLineage.FULL, "what feeds its province: " + String(m["from"]))
+				if String(m["to"]) == prov and String(m["type"]) == "based_in" and String(m["from"]) != fed:
+					assert_false(fs.has(String(m["from"])), "a sibling regiment stays dark: " + String(m["from"]))
 	# siblings stay dark: a trade route lights its own chain, never the other
 	# routes that feed the same treasury
 	var types := {}
