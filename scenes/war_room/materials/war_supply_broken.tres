@@ -6,7 +6,7 @@
 render_priority = 0
 shader = ExtResource("1_y5285")
 shader_parameter/colour = Color(0.17, 0.11, 0.06, 0.9)
-shader_parameter/width_m = 0.003
+shader_parameter/width_m = 0.005
 shader_parameter/lift_m = 0.0006
-shader_parameter/dash_m = 0.012
-shader_parameter/gap_m = 0.007
+shader_parameter/dash_m = 0.015
+shader_parameter/gap_m = 0.005

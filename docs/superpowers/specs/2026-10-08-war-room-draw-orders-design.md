@@ -301,8 +301,10 @@ him and is listed for him to overturn one by one. Builds on
     (`MapGeometry.stop_outside`) with a short solid tick across the road where
     it breaks (`MapGeometry.tick_across`). Still, never flowing; never the
     gold. On the 3D map (`Map3DSupplyBroken`; `lines/supply_broken.tres`,
-    `supply_break.tres`) the dashes lie over a faint pale halo
-    (`supply_broken_halo.tres`) so they read on forest and shadow;
+    `supply_break.tres`) each dash lies over a faint pale halo dashed in
+    step with it (`supply_broken_halo.tres`; the gaps show the ground, the
+    tick has none) so it reads on forest and shadow — the critic ruled a
+    continuous halo a cream "track";
     `map3d_supply_broken_gap_m` / `_tick_m`. In the WAR ROOM (`%SupplyBroken`,
     `WarSupplyFlow.broken_lines`, `war_supply_broken.tres` +
     `war_supply_broken.gdshader`) on the parchment, no halo;

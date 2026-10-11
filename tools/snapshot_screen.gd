@@ -298,6 +298,7 @@ var _war_spread := 0             # --war-spread N: N land regiments stood side b
 var _hold_line := 0              # --hold-line N: N regiments stood in the field HOLDING a line facing south (front-line §2), the 3D map looked at them
 var _hold_stance := "hold"       # --hold-stance steady: the same stand in the block (the before shot)
 var _war_box := false            # --war-box: the blue crayon, then a real plain drag box round them
+var _war_box_hold := false       # --war-box-hold: the same drag, the button kept down (the marquee in the shot)
 var _war_supply := false         # --war-supply: a real click on the nearest lit town while the confirm stands
 var _war_supply_town := ""        # --war-supply-town CODE|off: choose that town (off: the lit town nearest the laid sheet but off it) through the confirm's select_supply (documented exception to real input)
 var _war_supply_list := false    # --war-supply-list: a real click opening the confirm's Supply from list
@@ -527,7 +528,8 @@ func _ready() -> void:
 		i += 1
 	_war_room = args.has("--war-room")
 	_war_commit = args.has("--war-commit")
-	_war_box = args.has("--war-box")
+	_war_box = args.has("--war-box") or args.has("--war-box-hold")
+	_war_box_hold = args.has("--war-box-hold")
 	_war_supply = args.has("--war-supply")
 	_war_supply_list = args.has("--war-supply-list")
 	_war_edit = args.has("--war-edit")
@@ -816,7 +818,7 @@ func _real_right_drag(c: Control, from: Vector2, to: Vector2) -> void:
 
 ## A real left drag along a PATH (each point a motion, eight between each
 ## two), Shift held when `shift` — a drawn stroke or a box, like a hand.
-func _real_path(c: Control, pts: Array, shift := false) -> void:
+func _real_path(c: Control, pts: Array, shift := false, hold := false) -> void:
 	_real_move(c, pts[0])
 	var origin := c.get_global_transform_with_canvas()
 	var press := InputEventMouseButton.new()
@@ -839,6 +841,8 @@ func _real_path(c: Control, pts: Array, shift := false) -> void:
 			m.relative = at - last
 			last = at
 			c.get_viewport().push_input(m, true)
+	if hold:
+		return   # the button still down: the shot shows the drag (a marquee) in flight
 	var release := InputEventMouseButton.new()
 	release.button_index = MOUSE_BUTTON_LEFT
 	release.pressed = false
@@ -1622,7 +1626,7 @@ func _war_box_select(view: WarRoomView, roll: WarToolRoll) -> void:
 		print("war: no corner of open table to start the box")
 		return
 	box = Rect2(from, Vector2.ZERO).expand(to)
-	_real_path(view, [from, from.lerp(to, 0.5), to])
+	_real_path(view, [from, from.lerp(to, 0.5), to], false, _war_box_hold)
 	print("war: boxed %s -> sel=%s" % [box, view.plan_input().sel])
 
 

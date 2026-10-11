@@ -301,10 +301,10 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 			var look := _view.supply_broken_look() if _view != null else null
 			var dark: Color = look.get_shader_parameter("colour") if look != null else ink
 			var stop := a.lerp(b, 0.78)
-			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([a, stop]), r.size.y * 0.45, r.size.y * 0.28):
-				draw_polyline(d, dark, line * 1.2, true)
-			var up := Vector2(0, r.size.y * 0.3)
-			draw_line(stop - up, stop + up, dark, line * 1.2, true)
+			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([a, stop]), r.size.y * 0.42, r.size.y * 0.26):
+				draw_polyline(d, dark, line * 2.0, true)
+			var up := Vector2(0, r.size.y * 0.32)
+			draw_line(stop - up, stop + up, dark, line * 2.0, true)
 		"courier":
 			var intel: Color = pal.get("intel_ink", ink)
 			var c := r.get_center()

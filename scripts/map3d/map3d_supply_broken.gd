@@ -5,9 +5,9 @@ extends RefCounted
 ## DASHED road from its town along the road toward the column, stopping
 ## `map3d_supply_broken_gap_m` short of the piece where it is drawn, with a
 ## solid tick across the road where it breaks (`map3d_supply_broken_tick_m`
-## each way), so the player sees where the supply fails; a pale halo under
-## both keeps them read on dark ground. Never the gold flowing line; a CUT
-## line stays undrawn (SupplyLines.drawn_broken). Looks:
+## each way), so the player sees where the supply fails; a pale halo dashed
+## in step under the dashes keeps them read on dark ground. Never the gold
+## flowing line; a CUT line stays undrawn (SupplyLines.drawn_broken). Looks:
 ## lines/supply_broken.tres (the dashes), lines/supply_break.tres (the tick),
 ## lines/supply_broken_halo.tres (the halo). Driven by Map3DSupplyLines (its
 ## step and redraw). Never the Game
@@ -109,7 +109,7 @@ func _lay() -> void:
 			if (m[1] as PackedVector2Array).size() >= 2:
 				ticks.append(m[1])
 	_laid_sig = _sig()
-	lines.set_lines("SupplyBrokenHalo", dashes + ticks, Map3DLayerLines.SUPPLY_BROKEN_HALO, Map3DPriority.SUPPLY_LINES)
+	lines.set_lines("SupplyBrokenHalo", dashes, Map3DLayerLines.SUPPLY_BROKEN_HALO, Map3DPriority.SUPPLY_LINES)
 	lines.set_lines("SupplyBroken", dashes, Map3DLayerLines.SUPPLY_BROKEN, Map3DPriority.SUPPLY_BROKEN)
 	lines.set_lines("SupplyBreak", ticks, Map3DLayerLines.SUPPLY_BREAK, Map3DPriority.SUPPLY_BROKEN)
 

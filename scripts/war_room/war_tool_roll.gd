@@ -79,7 +79,8 @@ func show_state(side: String, kind: String, action: String, why: Dictionary = {}
 		var on := mine == side
 		match s.group:
 			"stick":
-				s.chosen = (mine == "" and kind == "" and action == "") or (mine != "" and on and kind == "" and action == "")
+				# the hand: no row lit; a row's crayon: its side lit, nothing in hand
+				s.chosen = on and kind == "" and action == ""
 			"kind":
 				s.chosen = on and s.key == kind
 			_:
