@@ -70,6 +70,7 @@ def main():
         template = json.load(f)
     with open(PROMPTS, newline="") as f:
         rows = [r for r in csv.DictReader(f) if not only or r["type"] in only]
+    gen.switch_model(preset["unet"])
     jobs = []
     for row in rows:
         wip = os.path.join(OUT, row["type"], "model_wip")
@@ -89,9 +90,11 @@ def main():
                                 "client_id": str(uuid.uuid4())})["prompt_id"]
         jobs.append((pid, dest))
         print("queued", row["type"], pid, flush=True)
+    gen.mark_loaded(preset["unet"])
     for pid, dest in jobs:
         _fetch(gen.wait_for(pid, 1800)[0], dest)
         print("got", dest, flush=True)
+    gen.free_models()
 
 
 if __name__ == "__main__":
