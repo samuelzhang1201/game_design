@@ -12,8 +12,12 @@ extends RefCounted
 ##    upstream and downstream, never its SIBLINGS (owner 2026-10-11: 点击node
 ##    后还是应该完全显示所有上下游，但是如果上游node连接了其他同类node
 ##    （siblings），则不应该显示siblings): an upstream star's other outflows, a
-##    downstream star's other inflows and a neighbour's own chain are not
-##    walked;
+##    downstream star's other inflows are not walked;
+## b'. from a neighbour joined by a STRUCTURE link only (a regiment's town or
+##    province, a manor's province), its flow chain UPSTREAM to the end — what
+##    feeds the place the star stands in (owner 2026-10-11: 点击军队，再往上的
+##    lineage没出现) — FULL; never its downstream, whose other ends are the
+##    star's siblings;
 ## c. people's ties: links whose look is `tie` or `kin` walked `tie_hops` from
 ##    the selected star, the hops past the first FAR (drawn dimmer);
 ## d. structure is never followed past the first hop; everything else is not
@@ -61,14 +65,29 @@ static func of(snap: Dictionary, id: String, look_of: Callable, tie_hops: int = 
 			_push(ties, b, l)
 	stars[id] = FULL
 	# a. every link of the star itself
+	var flow_nb := {}     # neighbours joined by a live flow link
+	var struct_nb := {}   # neighbours joined by a live structure link
 	for l: Dictionary in touching:
 		links[String(l["id"])] = FULL
 		var other := String(l["to"]) if String(l["from"]) == id else String(l["from"])
 		stars[other] = FULL
+		if String(l.get("status", "live")) == "planned":
+			continue
+		match String(look_of.call(l)):
+			"flow":
+				flow_nb[other] = true
+			"structure":
+				struct_nb[other] = true
 	# b. the flow chain, down and up, from the star alone
 	var starts: Array[String] = [id]
 	_walk(starts, out_flow, "to", stars, links)
 	_walk(starts, in_flow, "from", stars, links)
+	# b'. upstream from each structure-only neighbour
+	var places: Array[String] = []
+	for nb: String in struct_nb:
+		if not flow_nb.has(nb):
+			places.append(nb)
+	_walk(places, in_flow, "from", stars, links)
 	# c. the ties, hop by hop; the hops past the first FAR
 	var ring: Array[String] = [id]
 	var seen := {id: true}

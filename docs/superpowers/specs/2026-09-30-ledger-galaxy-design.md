@@ -239,7 +239,9 @@ and tonemap, so the map's environment is untouched.
   part. Owner 2026-10-11: 点击node后还是应该完全显示所有上下游，但是如果上游
   node连接了其他同类node（siblings），则不应该显示siblings — so the chain is
   never walked from a neighbour: an upstream star's other outflows, a
-  downstream star's other inflows and a structure neighbour's chain stay dark.
+  downstream star's other inflows stay dark. Owner 2026-10-11 (a regiment
+  lit its town and nothing above it): a neighbour joined by structure only
+  has its flow chain walked UPSTREAM to the end, never downstream.
 - **Search** (owner 2026-10-01): a box in the top row finds a star, or an
   instance folded into a province's star, by its label (`LedgerSearch`);
   picking one does what a double click does, opening a folded one's
