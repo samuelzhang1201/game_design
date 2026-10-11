@@ -84,7 +84,7 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
-[node name="ConversationScene" type="Control" unique_id=1715265354]
+[node name="ConversationScene" type="Control" unique_id=1715265354 node_paths=PackedStringArray("narration_left_frame", "narration_right_frame", "narration_left", "narration_right")]
 editor_description = "Under balance ui_war_table 0 the screen strips the table, compass and seal and lays out the 2026-09-28 leather in code (_dress_leather)."
 layout_mode = 3
 anchors_preset = 15
@@ -93,6 +93,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_ovjs3")
+narration_left_frame = NodePath("AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationLeftFrame")
+narration_right_frame = NodePath("AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationRightFrame")
+narration_left = NodePath("AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationLeftFrame/NarrationLeft")
+narration_right = NodePath("AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationRightFrame/NarrationRight")
 
 [node name="Bg" type="ColorRect" parent="." unique_id=87825667]
 unique_name_in_owner = true
@@ -212,6 +216,19 @@ stretch_mode = 6
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 16
+
+[node name="NarrationLeftFrame" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody" unique_id=1980395176]
+visible = false
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("10_kdha7")
+
+[node name="NarrationLeft" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationLeftFrame" unique_id=2135733396]
+custom_minimum_size = Vector2(150, 200)
+clip_contents = true
+layout_mode = 2
+mouse_filter = 2
 
 [node name="PortraitSide" type="VBoxContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody" unique_id=21984348]
 unique_name_in_owner = true
@@ -458,6 +475,19 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_tu635")
 theme_override_styles/hover = SubResource("StyleBoxFlat_0ixgi")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_73ewc")
 text = "Wave them on"
+
+[node name="NarrationRightFrame" type="PanelContainer" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody" unique_id=759812131]
+visible = false
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("10_kdha7")
+
+[node name="NarrationRight" type="Control" parent="AudienceLayer/AudienceCenter/AudienceWindow/AudienceCol/AudienceBody/NarrationRightFrame" unique_id=481542770]
+custom_minimum_size = Vector2(150, 200)
+clip_contents = true
+layout_mode = 2
+mouse_filter = 2
 
 [node name="DialoguePanel" type="PanelContainer" parent="." unique_id=1370593479]
 unique_name_in_owner = true
