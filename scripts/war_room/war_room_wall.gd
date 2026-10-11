@@ -132,7 +132,8 @@ static func lay_arrows(parent: Node3D, repo: DataRepository, tray: WarTray, lead
 		n.queue_free()
 	var gap := repo.bal("war_arrow_gap_m")
 	var y := repo.bal("war_arrow_y_m")
-	var places := {"n": Vector3(0.0, y, -depth * 0.5 - gap), "s": Vector3(0.0, y, depth * 0.5 + gap),
+	# the north arrow keeps its own gap: beyond the north edge stands the leaning index chart and its column letters
+	var places := {"n": Vector3(0.0, y, -depth * 0.5 - repo.bal("war_arrow_gap_n_m")), "s": Vector3(0.0, y, depth * 0.5 + gap),
 		"e": Vector3(table_w * 0.5 + gap, y, 0.0), "w": Vector3(-table_w * 0.5 - gap, y, 0.0)}
 	var near := WarSheets.neighbours(repo, lead)
 	for side: String in near:

@@ -293,6 +293,8 @@ func _grid(wall: int) -> MarchPath:
 
 
 func test_one_barrier_bar_lies_across_a_march_over_a_scarp() -> void:
+	var pad: float = repo.bal("war_slope_bar_pad_cells")
+	repo.balance["war_slope_bar_pad_cells"] = 0.75   # the hand-computed lengths below
 	repo.balance["army_march_grid_px"] = 4
 	MarchPath.use(repo, _grid(150))
 	var from := ArmySystem.metres_to_pack(repo, Vector2i(1500, 2500))
@@ -308,9 +310,12 @@ func test_one_barrier_bar_lies_across_a_march_over_a_scarp() -> void:
 	assert_almost_eq(absf(float(b.y - a.y)), 2500.0, 3.0)
 	assert_eq(bars[0]["cells"], 1)
 	repo.balance["army_march_grid_px"] = 0
+	repo.balance["war_slope_bar_pad_cells"] = pad
 
 
 func test_a_bar_at_a_grazed_corner_sits_where_the_route_touches() -> void:
+	var pad: float = repo.bal("war_slope_bar_pad_cells")
+	repo.balance["war_slope_bar_pad_cells"] = 0.75   # the hand-computed lengths below
 	repo.balance["army_march_grid_px"] = 4
 	var bytes := PackedByteArray()
 	bytes.resize(45)
@@ -330,6 +335,7 @@ func test_a_bar_at_a_grazed_corner_sits_where_the_route_touches() -> void:
 	assert_almost_eq(float(b.x), 4884.0, 3.0)
 	assert_almost_eq(float(b.y), 2884.0, 3.0)
 	repo.balance["army_march_grid_px"] = 0
+	repo.balance["war_slope_bar_pad_cells"] = pad
 
 
 func test_no_bar_on_open_ground_water_or_a_gentle_slope() -> void:
