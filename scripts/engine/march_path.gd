@@ -26,12 +26,14 @@ var cols := 0
 var rows := 0
 var cell_m := 1          # metres of the pack's measure per cell
 var closed := PackedByteArray()
+var water := PackedByteArray()       # 1 per WATER cell (open to a courier's grid, closed to a column's)
+var water_open := false              # true: water is no barrier (couriers and wagons), a scarp still is
 var _snap := 0                       # army_march_snap_cells
 var _astar: _Grid = null
 var _piece := PackedInt32Array()     # per cell: its piece of open ground, -1 closed
 var _found: Dictionary = {}          # "start,goal" cell ids -> Array of Vector2i cells
 
-static var _cached: Dictionary = {}  # "map id:army_max_slope" -> MarchPath (null: no grid)
+static var _cached: Dictionary = {}  # "map id:army_max_slope:open|land" -> MarchPath (null: no grid)
 
 
 ## A* over the cells, eight ways (a diagonal only past two open sides): a
@@ -55,25 +57,30 @@ static func forget() -> void:
 ## has none (a fresh pack before its build) or army_march_grid_px is 0 (open
 ## country: a test of the march's own mechanics) — every march then walks the
 ## straight line.
-static func of_pack(repo: DataRepository) -> MarchPath:
+## `water_open` is the courier's and the supply wagon's grid (owner 2026-10-11:
+## crossing water is fine; only a scarp turns them): water cells are open.
+## Armies keep the land grid.
+static func of_pack(repo: DataRepository, water_open := false) -> MarchPath:
 	if int(repo.bal("army_march_grid_px")) <= 0:
 		return null
-	var key := _key(repo)
+	var key := _key(repo, water_open)
 	if not _cached.has(key):
-		_cached[key] = load_pack(repo)
+		_cached[key] = load_pack(repo, water_open)
 	return _cached[key]
 
 
-## Stand `grid` in for the pack's (tests: a grid built by hand).
-static func use(repo: DataRepository, grid: MarchPath) -> void:
-	_cached[_key(repo)] = grid
+## Stand `grid` in for the pack's (tests: a grid built by hand). The courier
+## road graph cached on the old grid is forgotten with it.
+static func use(repo: DataRepository, grid: MarchPath, water_open := false) -> void:
+	_cached[_key(repo, water_open)] = grid
+	RoadGraph.forget()
 
 
-static func _key(repo: DataRepository) -> String:
-	return "%s:%d" % [repo.map_id, int(repo.bal("army_max_slope"))]
+static func _key(repo: DataRepository, water_open: bool) -> String:
+	return "%s:%d:%s" % [repo.map_id, int(repo.bal("army_max_slope")), "open" if water_open else "land"]
 
 
-static func load_pack(repo: DataRepository) -> MarchPath:
+static func load_pack(repo: DataRepository, water_open := false) -> MarchPath:
 	var dir := String((repo.maps.get(repo.map_id, {}) as Dictionary).get("data_dir", ""))
 	var path := dir + "/geography/march_grid.png"
 	if dir == "" or not FileAccess.file_exists(path):
@@ -89,13 +96,15 @@ static func load_pack(repo: DataRepository) -> MarchPath:
 		push_warning("MarchPath: %s is %dx%d, the pack wants %dx%d — rerun bake_march_grid.py"
 			% [path, img.get_width(), img.get_height(), w, h])
 		return null
-	return build(repo, w, h, px * ArmySystem.metres_per_pack_px(repo), img.get_data())
+	return build(repo, w, h, px * ArmySystem.metres_per_pack_px(repo), img.get_data(), water_open)
 
 
 ## A grid of `cols` x `rows` cells of `cell_m` metres from its bytes (the
 ## bake's encoding, row-major; a test builds one by hand).
-static func build(repo: DataRepository, cols_: int, rows_: int, cell_m_: int, slopes: PackedByteArray) -> MarchPath:
+static func build(repo: DataRepository, cols_: int, rows_: int, cell_m_: int, slopes: PackedByteArray,
+		water_open_ := false) -> MarchPath:
 	var g := MarchPath.new()
+	g.water_open = water_open_
 	g.cols = cols_
 	g.rows = rows_
 	g.cell_m = maxi(1, cell_m_)
@@ -103,9 +112,14 @@ static func build(repo: DataRepository, cols_: int, rows_: int, cell_m_: int, sl
 	@warning_ignore("integer_division")  # hundredths of rise per run against per mille
 	var limit := int(repo.bal("army_max_slope")) / 10
 	g.closed.resize(cols_ * rows_)
+	g.water.resize(cols_ * rows_)
 	for i in g.closed.size():
 		var s := int(slopes[i]) if i < slopes.size() else WATER
-		g.closed[i] = 1 if s == WATER or s > limit else 0
+		g.water[i] = 1 if s == WATER else 0
+		if s == WATER:
+			g.closed[i] = 0 if water_open_ else 1
+		else:
+			g.closed[i] = 1 if s > limit else 0
 	return g
 
 
@@ -117,6 +131,10 @@ func cell_of(m: Vector2i) -> Vector2i:
 
 func is_closed(c: Vector2i) -> bool:
 	return closed[c.y * cols + c.x] == 1
+
+
+func is_water(c: Vector2i) -> bool:
+	return water[c.y * cols + c.x] == 1
 
 
 ## A cell's centre in whole metres.
@@ -164,6 +182,62 @@ func clear(a: Vector2i, b: Vector2i, open: Array = []) -> bool:
 			t_y += t_dy
 		c = Vector2i(clampi(c.x, 0, cols - 1), clampi(c.y, 0, rows - 1))
 	return true
+
+
+## The straight line a -> b cut into runs of one kind of ground:
+## [[end point (whole metres), over water?], ...], the last ending on b. The
+## same cell walk as clear(); a boundary is the point where the line leaves a
+## cell of the other kind (rounded), and through a corner the diagonal cell
+## decides. Zero-length runs are dropped.
+func water_runs(a: Vector2i, b: Vector2i) -> Array:
+	var x := float(a.x) / float(cell_m)
+	var y := float(a.y) / float(cell_m)
+	var dx := float(b.x - a.x) / float(cell_m)
+	var dy := float(b.y - a.y) / float(cell_m)
+	var c := cell_of(a)
+	var end := cell_of(b)
+	var sx := 1 if dx > 0.0 else -1
+	var sy := 1 if dy > 0.0 else -1
+	var t_dx := absf(1.0 / dx) if dx != 0.0 else INF
+	var t_dy := absf(1.0 / dy) if dy != 0.0 else INF
+	var t_x := ((floorf(x) + 1.0 - x) if dx > 0.0 else (x - floorf(x))) * t_dx if dx != 0.0 else INF
+	var t_y := ((floorf(y) + 1.0 - y) if dy > 0.0 else (y - floorf(y))) * t_dy if dy != 0.0 else INF
+	var out: Array = []
+	var state := is_water(c)
+	var guard := absi(end.x - c.x) + absi(end.y - c.y) + 2
+	while c != end and guard > 0:
+		guard -= 1
+		var next := c
+		var t_next := minf(t_x, t_y)
+		if t_x < t_y:
+			next.x += sx
+			t_x += t_dx
+		elif t_y < t_x:
+			next.y += sy
+			t_y += t_dy
+		else:   # through a corner: the diagonal cell decides
+			next += Vector2i(sx, sy)
+			t_x += t_dx
+			t_y += t_dy
+		next = Vector2i(clampi(next.x, 0, cols - 1), clampi(next.y, 0, rows - 1))
+		var now := is_water(next)
+		if now != state:
+			var p := Vector2i(roundi(float(a.x) + float(b.x - a.x) * minf(t_next, 1.0)),
+				roundi(float(a.y) + float(b.y - a.y) * minf(t_next, 1.0)))
+			out.append([p, state])
+			state = now
+		c = next
+	out.append([b, state])
+	# zero-length runs dropped (a boundary on the previous point or on b)
+	var kept: Array = []
+	var prev := a
+	for i in out.size():
+		var run: Array = out[i]
+		if run[0] == prev and i < out.size() - 1:
+			continue
+		kept.append(run)
+		prev = run[0]
+	return kept
 
 
 ## The road from `from` to `to` (whole metres): the corners after `from`,

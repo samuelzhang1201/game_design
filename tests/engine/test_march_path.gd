@@ -239,3 +239,84 @@ func test_the_pack_has_its_march_grid() -> void:
 	for c in g.closed:
 		shut += c
 	assert_between(shut, 1, g.closed.size() - 1)
+
+
+## Owner 2026-10-11: water is no barrier to a courier or a supply wagon, a
+## scarp still is. A column's grid (the default) closes water; the open grid
+## (water_open) does not.
+func _open(cols: int, rows: int, ground: int, walls: Array, wall: int) -> MarchPath:
+	var bytes := PackedByteArray()
+	bytes.resize(cols * rows)
+	bytes.fill(ground)
+	for c: Vector2i in walls:
+		bytes[c.y * cols + c.x] = wall
+	return MarchPath.build(repo, cols, rows, 1000, bytes, true)
+
+
+func _wall_cells() -> Array:
+	return [Vector2i(4, 0), Vector2i(4, 1), Vector2i(4, 2), Vector2i(4, 3)]
+
+
+func test_water_is_open_to_a_courier_and_closed_to_a_column() -> void:
+	var land := _gap_wall(255)
+	assert_true(land.is_closed(Vector2i(4, 2)))
+	assert_eq(land.road(Vector2i(1500, 2500), Vector2i(7500, 2500)), [Vector2i(4500, 4500), Vector2i(7500, 2500)])
+	var open := _open(9, 5, 20, _wall_cells(), 255)
+	assert_false(open.is_closed(Vector2i(4, 2)))
+	assert_true(open.is_water(Vector2i(4, 2)))
+	assert_true(open.water_open)
+	assert_eq(open.road(Vector2i(1500, 2500), Vector2i(7500, 2500)), [Vector2i(7500, 2500)])
+
+
+func test_a_scarp_still_closes_the_open_grid() -> void:
+	var open := _open(9, 5, 20, _wall_cells(), 150)
+	assert_true(open.is_closed(Vector2i(4, 2)))
+	assert_eq(open.road(Vector2i(1500, 2500), Vector2i(7500, 2500)), [Vector2i(4500, 4500), Vector2i(7500, 2500)])
+
+
+## Column 4 rows 1-4 a scarp, row 0 water: the column (water closed) has no
+## way round and walks straight; the courier goes through the water at (4, 0),
+## pulled taut to its centre (the line from (1500, 2500) enters column 4 at
+## y = 2500 - 2000 x 2500 / 3000 = 833 -- inside row 0).
+func test_a_courier_goes_through_water_where_the_land_is_walled() -> void:
+	var cells := [Vector2i(4, 1), Vector2i(4, 2), Vector2i(4, 3), Vector2i(4, 4)]
+	var bytes := PackedByteArray()
+	bytes.resize(45)
+	bytes.fill(20)
+	for c: Vector2i in cells:
+		bytes[c.y * 9 + c.x] = 150
+	bytes[4] = 255
+	var closed_land := MarchPath.build(repo, 9, 5, 1000, bytes)
+	var open := MarchPath.build(repo, 9, 5, 1000, bytes, true)
+	assert_eq(closed_land.road(Vector2i(1500, 2500), Vector2i(7500, 2500)), [Vector2i(7500, 2500)], "no way round for a column")
+	assert_eq(open.road(Vector2i(1500, 2500), Vector2i(7500, 2500)), [Vector2i(4500, 500), Vector2i(7500, 2500)])
+
+
+## 8 x 3 cells of 1 km, ground 20, water at (3, 1) and (4, 1): a line along
+## y = 1500 is land to x = 3000, water 3000..5000, land to the end.
+func test_water_runs_by_hand() -> void:
+	var g := _open(8, 3, 20, [Vector2i(3, 1), Vector2i(4, 1)], 255)
+	assert_eq(g.water_runs(Vector2i(500, 1500), Vector2i(7500, 1500)),
+		[[Vector2i(3000, 1500), false], [Vector2i(5000, 1500), true], [Vector2i(7500, 1500), false]])
+	assert_eq(g.water_runs(Vector2i(3500, 1500), Vector2i(7500, 1500)),
+		[[Vector2i(5000, 1500), true], [Vector2i(7500, 1500), false]], "starting in the water")
+	assert_eq(g.water_runs(Vector2i(500, 500), Vector2i(7500, 500)), [[Vector2i(7500, 500), false]], "all land")
+	assert_eq(g.water_runs(Vector2i(3500, 1500), Vector2i(3500, 1500)), [[Vector2i(3500, 1500), true]], "no length")
+
+
+func test_the_real_pack_s_open_grid_closes_no_water() -> void:
+	var land := MarchPath.of_pack(repo)
+	var open := MarchPath.of_pack(repo, true)
+	assert_not_null(land)
+	assert_not_null(open)
+	if land == null or open == null:
+		return
+	assert_ne(land, open)
+	var water := 0
+	for i in land.closed.size():
+		if open.water[i] == 1:
+			water += 1
+			assert_eq(int(open.closed[i]), 0, "water is open")
+		else:
+			assert_eq(int(open.closed[i]), int(land.closed[i]), "the rest is the same")
+	assert_gt(water, 0, "the pack has water")

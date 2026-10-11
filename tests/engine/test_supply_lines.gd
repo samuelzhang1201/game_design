@@ -232,7 +232,7 @@ func test_a_town_farther_from_the_capital_than_the_column_is_greyed_with_why() -
 ## An open grid over the whole pack with a scarp across the middle of the
 ## leg `a` -> `b` (whole metres): 13 cells square to it, the ends' own cells
 ## left open, so the straight leg is blocked and the way round is open.
-func _scarp_across(a: Vector2i, b: Vector2i) -> MarchPath:
+func _scarp_across(a: Vector2i, b: Vector2i, wall := 180) -> MarchPath:
 	var px := int(repo.bal("army_march_grid_px"))
 	var cols := int(ceil(float(repo.map_info["width"]) / float(px)))
 	var rows := int(ceil(float(repo.map_info["height"]) / float(px)))
@@ -246,16 +246,22 @@ func _scarp_across(a: Vector2i, b: Vector2i) -> MarchPath:
 	for i in range(-6 * 4, 6 * 4 + 1):
 		var c := Vector2i((mid + across * float(i) * float(cell_m) * 0.25) / float(cell_m))
 		if not ends.has(c):
-			bytes[c.y * cols + c.x] = 180
-	var g := MarchPath.build(repo, cols, rows, cell_m, bytes)
-	MarchPath.use(repo, g)
+			bytes[c.y * cols + c.x] = wall
+	var g := MarchPath.build(repo, cols, rows, cell_m, bytes, true)
+	MarchPath.use(repo, g, true)
 	return g
+
+
+## The courier's grid with no ground steeper than the limit anywhere.
+func _flat_grid() -> MarchPath:
+	return _scarp_across(Vector2i(0, 0), Vector2i(0, 0), 30)
 
 
 func test_the_off_road_leg_to_the_column_goes_round_a_scarp() -> void:
 	var code := _land()
 	var town: String = TownStores.realm_towns(repo, s)[0]
 	var far := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)) + Vector2(30, 10)
+	_flat_grid()
 	var before := SupplyLines.road_between_px(repo, town, far)
 	var last := ArmySystem.pack_to_metres(repo, before[before.size() - 2])
 	var end := ArmySystem.pack_to_metres(repo, far)
@@ -269,3 +275,24 @@ func test_the_off_road_leg_to_the_column_goes_round_a_scarp() -> void:
 		var p := ArmySystem.pack_to_metres(repo, route[i - 1])
 		var q := ArmySystem.pack_to_metres(repo, route[i])
 		assert_true(g.clear(p, q, ends + [g.cell_of(p), g.cell_of(q)]), "leg %d crosses no scarp" % i)
+
+
+## Water is no barrier to a wagon (owner 2026-10-11): the same strip as water
+## leaves the road as long as it was on flat ground.
+func test_water_across_the_leg_does_not_turn_the_wagons() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(repo, s)[0]
+	var far := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)) + Vector2(30, 10)
+	_flat_grid()
+	var before := SupplyLines.road_between_px(repo, town, far)
+	var last := ArmySystem.pack_to_metres(repo, before[before.size() - 2])
+	_scarp_across(last, ArmySystem.pack_to_metres(repo, far), MarchPath.WATER)
+	var route := SupplyLines.road_between_px(repo, town, far)
+	assert_almost_eq(_px_length(route), _px_length(before), 0.01)
+
+
+func _px_length(route: PackedVector2Array) -> float:
+	var total := 0.0
+	for i in range(1, route.size()):
+		total += route[i - 1].distance_to(route[i])
+	return total
