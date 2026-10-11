@@ -12,21 +12,21 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA = os.path.join(ROOT, "data")
 
 
-def _index() -> dict:
-    with open(os.path.join(DATA, "tables.csv"), encoding="utf-8", newline="") as f:
+def _index(data: str = DATA) -> dict:
+    with open(os.path.join(data, "tables.csv"), encoding="utf-8-sig", newline="") as f:
         return {r["table"]: r["folder"] for r in csv.DictReader(f)}
 
 
-def table_path(table: str) -> str:
+def table_path(table: str, data: str = DATA) -> str:
     """The absolute path of data/<folder>/<table>.csv."""
-    return os.path.join(DATA, _index()[table], table + ".csv")
+    return os.path.join(data, _index(data)[table], table + ".csv")
 
 
-def balance() -> dict:
+def balance(data: str = DATA) -> dict:
     """Every folder's balance.csv as key -> float; a key in two files raises."""
     out, where = {}, {}
-    for folder in sorted(set(_index().values())):
-        path = os.path.join(DATA, folder, "balance.csv")
+    for folder in sorted(set(_index(data).values())):
+        path = os.path.join(data, folder, "balance.csv")
         if not os.path.isfile(path):
             continue
         with open(path, encoding="utf-8-sig", newline="") as f:

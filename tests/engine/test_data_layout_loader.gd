@@ -29,11 +29,23 @@ func test_duplicate_key_fails_naming_both_files() -> void:
 	assert_string_contains(DataRepository.last_error, "k_one")
 
 func test_balance_reads_crlf_and_bom() -> void:
+	# both files of this fixture are saved as a spreadsheet saves them
+	assert_eq(DataRepository.table_path(CRLF, "things"), CRLF + "/alpha/things.csv")
 	assert_eq(DataRepository.load_balance(CRLF), {"k_one": 1.0})
 
 func test_missing_index_fails_naming_it() -> void:
 	assert_eq(DataRepository.load_balance("res://tests/fixtures/data_layout"), {})
 	assert_string_contains(DataRepository.last_error, "tables.csv")
+
+func test_index_passes_when_every_table_is_on_disk() -> void:
+	assert_true(DataRepository.check_index(OK), DataRepository.last_error)
+
+## A table moved by hand (Finder) without its tables.csv row must fail the
+## load by name, never load as an empty table.
+func test_index_row_without_its_file_fails_naming_it() -> void:
+	assert_false(DataRepository.check_index("res://tests/fixtures/data_layout/missing"))
+	assert_string_contains(DataRepository.last_error, "ghost")
+	assert_string_contains(DataRepository.last_error, "alpha/ghost.csv")
 
 func test_folder_without_balance_is_skipped() -> void:
 	# gamma is indexed but holds no balance.csv

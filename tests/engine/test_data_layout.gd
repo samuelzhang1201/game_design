@@ -102,7 +102,7 @@ func test_engine_reads_no_screen_key() -> void:
 ## Every `data/<…>/<table>.csv` a file names must be the indexed path, and no
 ## file may name the old flat balance file at the data root.
 func _stale_paths(root: String, rel_paths: Array[String], index: Dictionary) -> Array[String]:
-	var rx := RegEx.create_from_string("\\bdata/((?:[a-z_]+/)*)([a-z0-9_]+)\\.csv")
+	var rx := RegEx.create_from_string("\\bdata/((?:[a-z0-9_]+/)*)([a-z0-9_]+)\\.csv")
 	var out: Array[String] = []
 	for rel in rel_paths:
 		var text := FileAccess.get_file_as_string(root + "/" + rel)

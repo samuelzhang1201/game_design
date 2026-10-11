@@ -535,6 +535,22 @@ static func table_path(dir: String, table: String) -> String:
 		return dir + "/" + table + ".csv"
 	return dir + "/" + String(index[table]) + "/" + table + ".csv"
 
+## Every tables.csv row's file is on disk — a table moved by hand without its
+## row fails the load by name instead of loading empty (an optional table's
+## loader skips a missing file). False with last_error otherwise.
+static func check_index(dir: String) -> bool:
+	var index := _index(dir)
+	if index.is_empty():
+		last_error = "%s/tables.csv names no table (missing or empty)" % dir
+		return false
+	for table: String in index:
+		var path := table_path(dir, table)
+		if not FileAccess.file_exists(path):
+			last_error = "tables.csv lists %s but %s is missing" % [table, path.trim_prefix(dir + "/")]
+			return false
+	last_error = ""
+	return true
+
 ## The index's folders, distinct and sorted — the balance files' load order.
 static func table_folders(dir: String) -> Array[String]:
 	var out: Array[String] = []
@@ -577,6 +593,8 @@ static func load_balance(dir: String) -> Dictionary:
 ## paper, brass and seal, the icons) still draw their scenes. Null on failure.
 static func load_look(dir: String) -> DataRepository:
 	var repo := DataRepository.new()
+	if not check_index(dir):
+		return null
 	repo.balance = load_balance(dir)
 	if repo.balance.is_empty():
 		return null
@@ -612,6 +630,8 @@ static func load_all(dir: String) -> DataRepository:
 	return repo
 
 func _load(dir: String) -> bool:
+	if not check_index(dir):
+		return false
 	balance = load_balance(dir)
 	if balance.is_empty():
 		return false
