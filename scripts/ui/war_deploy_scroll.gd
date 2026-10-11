@@ -306,7 +306,7 @@ func _draw_rolled_art(b: Control, r: Rect2, art: Texture2D, _idle: bool, lift: f
 	for i: int in 3:   # a light shadow down-right, the war table's one light
 		var o := shadow_px * float(i + 1) * 0.5
 		b.draw_texture_rect(art, Rect2(box.position + Vector2(o, o), box.size), false,
-			Color(0, 0, 0, [0.10, 0.06, 0.03][i]))
+			Color(0, 0, 0, [0.16, 0.09, 0.04][i]))
 	b.draw_texture_rect(art, box, false, Color.WHITE)
 
 

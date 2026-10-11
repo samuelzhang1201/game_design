@@ -141,7 +141,9 @@ def install_war_tools() -> int:
     """The WAR ROOM's tool roll glyphs and the resolutions' rolled scroll
     (library W-61..W-68, U-61; prompts in war_tool_prompts.csv): post.py
     --tier icon cut-outs installed by assets/imagegen/war_tool_install.csv
-    (art_id, key, px, square) into assets/2D/war_room/tools/<key>.png, the
+    (art_id, key, px, square, fit — the share of the box the drawing fills,
+    so a tall glyph is not optically larger than a round one) into
+    assets/2D/war_room/tools/<key>.png, the
     ArtTable war_tool_art.tres there mapping each key. Sizes follow the use
     (asset-resolution-per-use): a slot glyph is 36 of a 44 design px slot x
     ~3 window scale -> 128 square; the rolled scroll fills a 115 x 72 design
@@ -154,6 +156,7 @@ def install_war_tools() -> int:
     done = 0
     for r in csv.DictReader((HERE / "war_tool_install.csv").open()):
         art_id, key, px, square = r["art_id"], r["key"], int(r["px"]), r["square"] == "1"
+        fit = float(r.get("fit") or 1.0)
         hits = sorted(src.glob("%s*.png" % art_id))
         if not hits:
             print("  (no cut-out for %s / %s — run post.py --tier icon first)" % (art_id, key))
@@ -163,7 +166,7 @@ def install_war_tools() -> int:
             print("  (%s is not RGBA — post.py --tier icon writes a cut-out)" % hits[-1].name)
             continue
         cw, chh, rgba = trim_alpha(w, h, bytearray(pxs))
-        scale = px / max(cw, chh)
+        scale = px * fit / max(cw, chh)
         tw, th = max(1, round(cw * scale)), max(1, round(chh * scale))
         small = resize_rgba(cw, chh, rgba, tw, th)
         if square:

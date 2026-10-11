@@ -41,7 +41,7 @@ signal pressed(key: String)
 		chosen = v
 		queue_redraw()
 ## How faint a slot that cannot be used is drawn.
-@export var faint := 0.45:
+@export var faint := 0.55:
 	set(v):
 		faint = v
 		queue_redraw()
