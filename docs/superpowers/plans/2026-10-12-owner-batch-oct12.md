@@ -69,6 +69,10 @@ Test state at the plan's writing: `./run_tests.sh --fast` on the first-pass tree
 | R11 | 7 | any held set whose bounding box is ≤ 4 cells (2×2, 1×3, 1×4); edge arrow shifts every marker one cell | 2×2 only; arrow resets to one |
 | R12 | 5 | slope bars only while a march is drawn/pending and on drafts | also on sealed marches |
 | R13 | 1 | repo root and `cc_art_check` module not renamed; Chinese 王冠与议会 left; app icon unchanged | new Chinese title; icon |
+| R17 | 6 | no table placement gives a bigger chart AND ≥ 9 px letters with the room's camera as it was; chosen: war room opening pitch 52° → 45°, chart w 0.915 m at 20° tilt, letters on the near margin, every 3rd cell lettered → ~457 px wide (was 426), caps ~9 px | camera unchanged: tilt 20°, w 0.64 → 341 px, caps 9.5 px; every cell named only via a hover readout |
+| R16 | 16 | the title preview's campaign (~266 ms) stays on the main thread: the wheel stalls once for ~0.27 s at launch; threading it risks races on the engine's static caches | build the preview on a worker thread behind a completion guard |
+| R15 | 7 | a toss refused past four cells gives no feedback beyond the marker staying in the tray; a margin-row lay that cannot fit sends every marker but the newest back | a refusal slip / sound |
+| R14 | 2 | (found in review, not in this batch) Space during the opening narration still starts the clock behind the pages — left as is | hold the clock / ignore Space while the narration is up |
 
 ## Global Constraints
 
@@ -260,8 +264,8 @@ Precondition: the owner's editor is on `/Users/samuelzhang/game_design` (main); 
 - E2 `conversation.tscn`: under `…/AudienceCol/AudienceBody`, first child `NarrationLeftFrame` (PanelContainer, `PortraitFrame` stylebox, shrink-begin, hidden) with child `NarrationLeft` (Control, min 150×200, clip, mouse ignore); same as last child `NarrationRightFrame/NarrationRight`; assign the four exports.
 - E3 Create `scenes/hud/load_wheel.tscn` (root `LoadWheel` TextureRect, `compass.png`, min 96, keep-aspect-centred, mouse ignore, script `load_wheel.gd`); instance as `Curtain/LoadWheel` in `main_menu.tscn`, anchored bottom-right, offsets (−124, −124, −28, −28); instance on GameRoot's pre-menu black.
 - E4 `war_tool_roll.tscn`: delete `Row/Hand` and `Row/Sep0`.
-- E5 `unit_select_glow.tres`: set `gain`, `hot`, `haze`, `peak`, `inner`, `render_priority` = `Map3DPriority.UNIT_GLOW`.
-- E6 Author `scenes/map3d/materials/apron_dirt.tres`, `apron_brick.tres` (ShaderMaterial on `house_apron.gdshader`, colours, `unit_m`, `fade_m`, `render_priority` = `APRONS`); add node `Aprons` (`Map3DLayerAprons`) to `map3d_world.tscn` with both materials assigned.
+- E5 `unit_select_glow.tres`: set `gain` 3.2, `hot` 0.55, `haze` 0.25, `skirt` 0.25, `render_priority` = `Map3DPriority.UNIT_GLOW` (2); the stale `inner`/`peak` lines drop on save (they are instance uniforms from data now); raise `strength` toward 0.5 only if Phase V finds the crest faint.
+- E6 Author `scenes/map3d/materials/apron_dirt.tres` (color_a #7A6446, color_b #5E4C34, style 0, unit_m 1.0, fade_m 1.6) and `apron_brick.tres` (color_a #9A6B55, color_b #6F6560, style 1, unit_m 1.1, fade_m 1.2), both ShaderMaterial on `house_apron.gdshader`, `render_priority` = `Map3DPriority.APRONS` (−2, below the sea), `mortar` left default; add node `Aprons` (Node3D, `map3d_layer_aprons.gd`) as a direct child of the `World` root of `map3d_world.tscn`, a sibling of `Houses`, assign `dirt_material` / `brick_material`, and set `Houses.aprons` to it. Then add both to `CODE_OWNED` in `test_map3d_editor_owned_look.gd` with `["lift_px", "px_per_dist"]` if that test checks them.
 - E7 `war_room.tscn`: `Marker2`–`Marker4` as siblings of `%Marker`; assign `tray_markers`.
 - E8 `war_room.tscn`: a simple oak reading stand under the index chart.
 - E9 `war_room.tscn`: delete `Candlestick2`, `Candlestick3`, `Candlestick4`.
