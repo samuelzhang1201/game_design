@@ -52,7 +52,10 @@ static func pose(p: Dictionary, t: float) -> Transform3D:
 	if t <= fly:
 		var u := clampf(t / maxf(fly, 0.0001), 0.0, 1.0)
 		var at := from.lerp(to, u) + Vector3.UP * 4.0 * float(p["apex"]) * u * (1.0 - u)
-		var spin := Quaternion(p["axis"] as Vector3, float(p["turns"]) * TAU * u) * upright
+		# the tray's marker rests upright on the oak (a turn about the vertical only): it leans into the
+		# chart's attitude over the flight instead of snapping to it on the first frame
+		var lean := Quaternion(Vector3.UP, float(p["yaw"])).slerp(upright, u)
+		var spin := Quaternion(p["axis"] as Vector3, float(p["turns"]) * TAU * u) * lean
 		return Transform3D(Basis(spin), at)
 	var left := t - fly
 	var hop := tumbled.slerp(upright, 0.5)   # half righted on its hops

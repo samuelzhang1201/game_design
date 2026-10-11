@@ -61,7 +61,7 @@ func sync(tray: WarTray) -> void:
 
 ## Where slot `slot`'s marker rests beside the chart's east edge.
 func rest_point(slot: int) -> Vector3:
-	return WarRoomWall.tray_point(_chart, slot, _repo.bal("war_tray_gap_m"))
+	return WarRoomWall.tray_point(_chart, slot, _repo.bal("war_tray_gap_m"), _repo.bal("war_tray_off_m"))
 
 
 ## Toss slot `slot`'s marker from its tray place onto sheet `index`'s cell (a

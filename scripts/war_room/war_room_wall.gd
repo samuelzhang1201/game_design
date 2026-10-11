@@ -9,8 +9,8 @@ const SIDES := {"n": "↑", "s": "↓", "e": "→", "w": "←"}
 
 
 ## Dress the chart quad: its size from the map's ratio, the picture, and the
-## graticule's column letters along its north edge and row numbers down its
-## west edge (v2 B: 76 sheet ids crowded the chart unread).
+## graticule's column letters along its NEAR (south) edge, the margin nearest the officer, and row
+## numbers down its west edge (v2 B: 76 sheet ids crowded the chart unread).
 static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font) -> void:
 	var w := float(repo.map_info.get("width", "1"))
 	var h := float(repo.map_info.get("height", "1"))
@@ -45,18 +45,28 @@ static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font)
 	var every := maxi(1, int(repo.bal("war_chart_label_every")))
 	for col in range(0, g.x, every):
 		var cx := (minf(MapCoords.cell_rect(repo, Vector2i(col, 0), deg).get_center().x, w) / w - 0.5) * size.x
-		var l := _label(WarSheets.column_letters(col), font, repo.war_palette["chart_label"], Vector3(cx, size.y * 0.5 + margin, lift),
-			font_px, pixel_m, false)
+		var letters := WarSheets.column_letters(col)
+		var l := _label(letters, font, repo.war_palette["chart_label"],
+			Vector3(cx, -(size.y * 0.5 + margin + _extent(font, letters, font_px, pixel_m).y * 0.5), lift), font_px, pixel_m, false)
 		l.set_meta("axis", "col")
 		l.set_meta("n", col)
 		chart.add_child(l)
 	for row in range(0, g.y, every):
 		var cy := (0.5 - minf(MapCoords.cell_rect(repo, Vector2i(0, row), deg).get_center().y, h) / h) * size.y
-		var l := _label(str(row + 1), font, repo.war_palette["chart_label"], Vector3(-size.x * 0.5 - margin, cy, lift),
-			font_px, pixel_m, false)
+		var figure := str(row + 1)
+		var l := _label(figure, font, repo.war_palette["chart_label"],
+			Vector3(-(size.x * 0.5 + margin + _extent(font, figure, font_px, pixel_m).x * 0.5), cy, lift), font_px, pixel_m, false)
 		l.set_meta("axis", "row")
 		l.set_meta("n", row)
 		chart.add_child(l)
+
+
+## A label's width and height on the chart, metres: the margin is the gap between the
+## map's edge and the label's own near edge, so a wide row figure never overlaps the map.
+static func _extent(font: Font, text: String, font_px: int, pixel_m: float) -> Vector2:
+	if font == null:
+		return Vector2(0.6 * float(text.length()), 1.0) * float(font_px) * pixel_m
+	return Vector2(font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x, font.get_height(font_px)) * pixel_m
 
 
 ## The map's own size on the chart: the quad less its parchment margin.
@@ -100,13 +110,13 @@ static func chart_normal(chart: MeshInstance3D) -> Vector3:
 
 
 ## Where resting war marker `slot` stands: a column beside the chart's east
-## edge, `gap` apart (the tray; owner 2026-10-12, item 7). The column runs down the
+## edge, `gap` apart and `off` off it (the tray; owner 2026-10-12, item 7). The column runs down the
 ## lean's footprint, and the markers stand on the OAK (the chart's foot height), not in
 ## the air along the leaning plane.
-static func tray_point(chart: MeshInstance3D, slot: int, gap: float) -> Vector3:
+static func tray_point(chart: MeshInstance3D, slot: int, gap: float, off := -1.0) -> Vector3:
 	var size := map_size(chart)
 	var pad := float(chart.get_meta("margin_m", 0.0))
-	var p := chart.global_transform * Vector3(size.x * 0.5 + pad + gap, size.y * 0.5 - gap * float(slot), 0.0)
+	var p := chart.global_transform * Vector3(size.x * 0.5 + pad + (gap if off < 0.0 else off), size.y * 0.5 - gap * float(slot), 0.0)
 	p.y = float(chart.get_meta("foot_y_m", p.y))
 	return p
 
