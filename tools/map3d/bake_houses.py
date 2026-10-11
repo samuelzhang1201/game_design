@@ -638,9 +638,9 @@ def level_pad(height, vx, vy, half, yaw_deg, rules, land=None, wet=None):
 def _port_bearing(vx, vy, rules, height, sea_y, water):
     """The bearing a port's pier would take from its centre (vertex coords
     `vx`, `vy`), walked as harbour() walks it: (rise, shore_m, dx, dz) of the
-    shore nearest the centre with pier_len_m of open `water` beyond it, or
-    None when no bearing within pier_search_m has one. `rise` is 0 when ANY
-    such bearing has a low shore (pier_max_shore_m or less over the sea)."""
+    NEAREST low shore (pier_max_shore_m or less over the sea, `rise` 0) with
+    pier_len_m of open `water` beyond it, else of the nearest high one, or
+    None when no bearing within pier_search_m has open water."""
     vh, vw = height.shape
     step, plen = float(rules["pier_step_m"]), float(rules["pier_len_m"])
     reach, max_shore = float(rules["pier_search_m"]), float(rules["pier_max_shore_m"])
@@ -651,7 +651,7 @@ def _port_bearing(vx, vy, rules, height, sea_y, water):
             return None
         return bool(water[iy, ix]), float(height[iy, ix])
 
-    nearest = None
+    low = high = None
     deg = 0.0
     while deg < 360.0:
         a = math.radians(deg)
@@ -677,64 +677,98 @@ def _port_bearing(vx, vy, rules, height, sea_y, water):
             if clear:
                 rise = last_h - sea_y
                 if rise <= max_shore:
-                    return (0.0, shore, dx, dz)
-                if nearest is None or shore < nearest[1]:
-                    nearest = (rise, shore, dx, dz)
+                    if low is None or shore < low[1]:
+                        low = (0.0, shore, dx, dz)
+                elif high is None or shore < high[1]:
+                    high = (rise, shore, dx, dz)
         deg += float(rules["pier_bearing_step_deg"])
-    return nearest
+    return low if low is not None else high
 
 
 def port_plain(burg, height, vx, vy, rules, types, sea_y, water, land=None, wet=None):
-    """Lower a cliff port onto a plain landing IN PLACE (owner 2026-10-12,
-    R9: 所有在悬崖边的定居点…改为非悬崖，平原即可 — every port takes the
-    timber pier). When the port's harbour bearing (_port_bearing) rises over
-    pier_max_shore_m, its built ground (cluster_radius_m / house_built_share
-    round its landmark at `vx`, `vy`) and a corridor port_plain_corridor_m
-    wide from there to that shore are cut down to sea_y + port_plain_rise_m,
-    the ground easing back over port_plain_blend_m. Cut only, never a fill;
-    the sea and a river's channel and banks (`land`, `wet`) are never
-    touched. A port whose cut would pass port_plain_max_cut_m is left as it
-    is. `water` is open water (bake_world's open_water). Returns the deepest
-    cut in metres (0.0: nothing to do), or None when the port was given up."""
+    """Lower a cliff port onto a coastal plain IN PLACE (owner 2026-10-12, R9
+    and R18: 所有在悬崖边的定居点…改为非悬崖，平原即可 — every cliff-edge
+    port stands on plain ground and takes the timber pier).
+
+    A port is lowered when its harbour bearing (_port_bearing) rises over
+    pier_max_shore_m, OR when its built ground (cluster_radius_m /
+    house_built_share round its landmark at `vx`, `vy`) stands, by its median,
+    pier_stair_town_rise_m or more over the sea though a low shore is in reach
+    (a town on a cliff top). Its built ground and a corridor from there to the
+    shore — port_plain_corridor_m wide, and never narrower than the built
+    ground, so the plain opens to the sea as a cove, not a bowl — are cut to
+    sea_y + port_plain_rise_m. The ground eases back over a blend of
+    max(port_plain_blend_m, 1.5 * cut / port_plain_max_grade) (smoothstep's
+    steepest is 1.5 / blend) and the cut there never passes the deepest cut,
+    so a hill behind the town is lowered with it, never sliced. Cut only,
+    never a fill; the sea and a river's channel (`land`, `wet`) are never
+    touched, nor its wet band while port_plain_keep_river_band is 1. A port whose cut would pass port_plain_max_cut_m is left.
+    `water` is open water (bake_world's open_water).
+
+    Returns {"cut", "blend", "window", "w"}: the deepest cut in metres (0.0
+    nothing to do, None given up — then "need" is the cut it would take), the blend used, the (y0, y1, x0, x1)
+    window cut and the cut's weight over it (the texture pass greens the cut
+    face by it); window and w are None when nothing was cut."""
+    none = {"cut": 0.0, "blend": 0.0, "window": None, "w": None}
     if not int(burg.get("is_port", 0) or 0):
-        return 0.0
+        return none
     bearing = _port_bearing(vx, vy, rules, height, sea_y, water)
-    if bearing is None or bearing[0] <= 0.0:
-        return 0.0
-    shore, dx, dz = bearing[1:]
+    if bearing is None:
+        return none
+    rise_m, shore, dx, dz = bearing
     target = sea_y + float(rules["port_plain_rise_m"])
-    blend = float(rules["port_plain_blend_m"])
+    grade = float(rules["port_plain_max_grade"])
+    max_cut = float(rules["port_plain_max_cut_m"])
     r_built = cluster_radius_m(burg, rules, types) / float(rules["house_built_share"])
-    half_w = 0.5 * float(rules["port_plain_corridor_m"])
+    half_w = max(0.5 * float(rules["port_plain_corridor_m"]), r_built)
     vh, vw = height.shape
-    reach = (max(r_built, shore + half_w) + blend) / VERTEX_M + 1
+    # the widest blend any allowed cut takes, so one window holds every case
+    blend_max = max(float(rules["port_plain_blend_m"]), 1.5 * max_cut / grade)
+    reach = (max(r_built, shore + half_w) + blend_max) / VERTEX_M + 1
     x0, x1 = max(int(vx - reach), 0), min(int(vx + reach) + 2, vw)
     y0, y1 = max(int(vy - reach), 0), min(int(vy + reach) + 2, vh)
     if x0 >= x1 or y0 >= y1:
-        return 0.0
+        return none
     yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
     px, pz = (xx - vx) * VERTEX_M, (yy - vy) * VERTEX_M
-    # metres outside the built disc, and outside the corridor (the segment
-    # from the centre to the shore, grown by half its width)
-    out_disc = np.maximum(np.hypot(px, pz) - r_built, 0.0)
-    t_seg = np.clip(px * dx + pz * dz, 0.0, shore)
-    out_lane = np.maximum(np.hypot(px - t_seg * dx, pz - t_seg * dz) - half_w, 0.0)
-    out = np.minimum(out_disc, out_lane)
     sub = height[y0:y1, x0:x1]
     keep = np.ones_like(sub)
     if land is not None:
         keep = keep * (land[y0:y1, x0:x1] >= 0.5)
     if wet is not None:
-        keep = keep * (1.0 - np.clip(wet[y0:y1, x0:x1], 0.0, 1.0))
-    over = np.maximum(sub - target, 0.0)
+        band = np.clip(wet[y0:y1, x0:x1], 0.0, 1.0)
+        # port_plain_keep_river_band 1: a river's channel AND its whole wet
+        # band stand untouched; 0: the band takes a cut eased by its wetness
+        keep = keep * ((band <= 0.0) if int(rules.get("port_plain_keep_river_band", 1)) else (1.0 - band))
+    disc = np.hypot(px, pz) - r_built
+    if rise_m <= 0.0:
+        # the town's median ground over all its land, the river's band too
+        dry = (disc <= 0.0) if land is None else (disc <= 0.0) & (land[y0:y1, x0:x1] >= 0.5)
+        ground = sub[dry]
+        lofty = ground.size and float(np.median(ground)) - sea_y >= float(rules["pier_stair_town_rise_m"])
+        if not lofty:
+            return none
+    # metres outside the built disc, and outside the corridor (the segment
+    # from the centre to the shore, grown by half its width)
+    out_disc = np.maximum(disc, 0.0)
+    t_seg = np.clip(px * dx + pz * dz, 0.0, shore)
+    out_lane = np.maximum(np.hypot(px - t_seg * dx, pz - t_seg * dz) - half_w, 0.0)
+    out = np.minimum(out_disc, out_lane)
+    raw = np.maximum(sub - target, 0.0)
     inside = (out <= 0.0) & (keep > 0.0)
-    deepest = float(over[inside].max()) if inside.any() else 0.0
-    if deepest > float(rules["port_plain_max_cut_m"]):
-        return None
+    deepest = float(raw[inside].max()) if inside.any() else 0.0
+    if deepest <= 0.0:
+        return none
+    if deepest > max_cut:
+        return {"cut": None, "blend": 0.0, "window": None, "w": None, "need": deepest}
+    blend = max(float(rules["port_plain_blend_m"]), 1.5 * deepest / grade)
+    # the rim's cut is capped at the deepest: a hill behind the town comes
+    # down with it, its added slope at most `grade`, never sliced flat
+    over = np.minimum(raw, deepest)
     t = np.clip(out / max(blend, 1e-6), 0.0, 1.0)
     w = (1.0 - t * t * (3.0 - 2.0 * t)) * keep
     height[y0:y1, x0:x1] = sub - over * w
-    return deepest
+    return {"cut": deepest, "blend": blend, "window": (y0, y1, x0, x1), "w": w}
 
 
 def _square_lane(a, c, yaw_deg, step):

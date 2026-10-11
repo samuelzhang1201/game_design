@@ -1316,9 +1316,10 @@ def test_a_village_lets_a_town_type_stray_into_its_core_only():
     assert rim.count("cottage_a") > core.count("cottage_a")   # rim_mul 1.5
 
 
-# -- port plains (owner 2026-10-12, R9: 全部使用普通版码头) ------------------------------
+# -- port plains (owner 2026-10-12, R9 and R18: every cliff-edge port on plain ground) --------
 PLAIN_RULES = dict(SHIP_RULES, pier_cliff_landings=0, port_plain_rise_m=3, port_plain_blend_m=120,
-                   port_plain_corridor_m=80, port_plain_max_cut_m=45)
+                   port_plain_corridor_m=80, port_plain_max_cut_m=350, port_plain_max_grade=0.5,
+                   port_plain_keep_river_band=1)
 
 
 def test_a_cliff_port_is_lowered_onto_a_plain_landing_and_takes_one_timber_pier():
@@ -1331,15 +1332,18 @@ def test_a_cliff_port_is_lowered_onto_a_plain_landing_and_takes_one_timber_pier(
     wet[CENTRE_COL + 4, :] = 1.0                  # a river 80 m south of the centre
     before = height.copy()
     b = burg(port=1, group="town")
-    cut = bake_houses.port_plain(b, height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES, 5.0, sea < 0.5,
+    res = bake_houses.port_plain(b, height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES, 5.0, sea < 0.5,
                                  land=sea, wet=wet)
-    assert cut == pytest.approx(32.0), "40 m ground cut to 5 + 3 m"
+    assert res["cut"] == pytest.approx(32.0), "40 m ground cut to 5 + 3 m"
+    assert res["blend"] == pytest.approx(120.0), "1.5 x 32 / 0.5 = 96 < port_plain_blend_m"
     assert np.all(height <= before + 1e-6), "a cut only, never a fill"
     assert np.array_equal(height[:, : CENTRE_COL - 8], before[:, : CENTRE_COL - 8]), "the sea is untouched"
     assert np.array_equal(height[CENTRE_COL + 4], before[CENTRE_COL + 4]), "the river is untouched"
     assert height[int(CENTRE), int(CENTRE)] == pytest.approx(8.0), "the built ground stands 3 m over the sea"
     assert (height[:, CENTRE_COL - 8] <= 8.0 + 1e-4).sum() >= 3, "the landing runs down to the shore"
     assert np.array_equal(height[:, -2:], before[:, -2:]), "past the blend the ground is as it was"
+    y0, y1, x0, x1 = res["window"]
+    assert res["w"].shape == (y1 - y0, x1 - x0) and res["w"].max() == pytest.approx(1.0)
     out = bake_houses.harbour(b, _toy_town(), PLAIN_RULES, sea, height, K, VW, VH, 5.0,
                               water=sea < 0.5, types=STAIR_TYPES)
     piers = [r["type"] for r in out if STAIR_TYPES[r["type"]]["role"] == "pier"]
@@ -1347,19 +1351,102 @@ def test_a_cliff_port_is_lowered_onto_a_plain_landing_and_takes_one_timber_pier(
     assert all(_hull_on_water(s, sea) for s in out[1:])
 
 
+def test_the_plain_opens_onto_the_sea_as_wide_as_the_town():
+    """A cove, not a bowl: the corridor is never narrower than the built
+    ground, so the shore is cut to the plain a built radius either side of
+    the bearing, not only port_plain_corridor_m wide."""
+    sea, height = _west_sea(shore_h=40.0)
+    b = burg(port=1, group="town")
+    r_built = bake_houses.cluster_radius_m(b, PLAIN_RULES, STAIR_TYPES) / PLAIN_RULES["house_built_share"]
+    assert r_built > 0.5 * PLAIN_RULES["port_plain_corridor_m"] + 2 * bake_houses.VERTEX_M
+    bake_houses.port_plain(b, height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES, 5.0, sea < 0.5, land=sea)
+    off = int(r_built / bake_houses.VERTEX_M) - 2                # (the bearing found may lean 5 deg)
+    for row in (int(CENTRE) - off, int(CENTRE) + off):
+        assert height[row, CENTRE_COL - 8] == pytest.approx(8.0), "the shore at the cove's sides is cut too"
+
+
+def test_a_cliff_top_town_with_a_low_shore_in_reach_is_lowered_too():
+    """R18: the old lofty test also triggers — a town whose built ground
+    stands pier_stair_town_rise_m or more over the sea is lowered though a low
+    shore (a 3 m strand under its cliff) is in reach; under that it is left."""
+    for top, cut in ((40.0, True), (20.0, False)):
+        sea, height = _west_sea(shore_h=top)
+        height[:, CENTRE_COL - 8: CENTRE_COL - 6] = 6.0         # a 40 m strand, 1 m over the shore limit
+        before = height.copy()
+        res = bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES,
+                                     5.0, sea < 0.5, land=sea)
+        if cut:
+            assert res["cut"] == pytest.approx(32.0)
+            assert height[int(CENTRE), int(CENTRE)] == pytest.approx(8.0)
+        else:
+            assert res["cut"] == 0.0 and res["window"] is None
+            assert np.array_equal(height, before), "a town under the lofty rise keeps its ground"
+
+
+def test_a_hill_behind_the_town_comes_down_with_it_never_sliced():
+    """The rim's cut is capped at the plain's deepest and the blend grows
+    with the cut (1.5 x cut / port_plain_max_grade): a hill behind a 100 m
+    town is lowered by at most the town's own cut, its added slope at most
+    the max grade, and beyond the blend it is untouched."""
+    n, c = 160, 80
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float32)
+    sea = np.ones((n, n), np.float32)
+    sea[:, : c - 20] = 0.0                                      # the shore 400 m west
+    b = burg(port=1, group="town")
+    r_built = bake_houses.cluster_radius_m(b, PLAIN_RULES, STAIR_TYPES) / PLAIN_RULES["house_built_share"]
+    d = np.hypot(xx - c, yy - c) * bake_houses.VERTEX_M
+    height = np.where(sea > 0, 100.0, -20.0).astype(np.float32)
+    hill = (xx - c) * bake_houses.VERTEX_M - (r_built + 40.0)   # a 1:1 hill east of the town, to 400 m
+    height = np.where((sea > 0) & (hill > 0), np.minimum(100.0 + hill, 400.0), height).astype(np.float32)
+    before = height.copy()
+    res = bake_houses.port_plain(b, height, float(c), float(c), PLAIN_RULES, STAIR_TYPES, 5.0, sea < 0.5,
+                                 land=sea)
+    assert res["cut"] == pytest.approx(92.0)
+    assert res["blend"] == pytest.approx(1.5 * 92.0 / 0.5), "a deep cut takes a wider blend"
+    drop = before - height
+    assert drop.max() <= 92.0 + 1e-3, "nothing is cut deeper than the plain"
+    far = (d > r_built + res["blend"] + bake_houses.VERTEX_M) & (xx > c)
+    assert np.array_equal(height[far], before[far]), "the hill beyond the blend is untouched"
+    gy, gx = np.gradient(drop, bake_houses.VERTEX_M)
+    on = (sea > 0) & (xx > c)
+    assert float(np.hypot(gx, gy)[on].max()) <= 0.5 * 1.05, "the rim adds no slope over the max grade"
+    ridge = int(c + (r_built + 40.0 + 100.0) / bake_houses.VERTEX_M)
+    assert height[c, ridge] > height[c, ridge - 3], "the hill still rises behind the town"
+
+
 def test_port_plain_leaves_low_ports_and_gives_up_past_its_max_cut():
-    sea, height = _west_sea()                      # a low shore: nothing to cut
+    sea, height = _west_sea()                      # a low shore, a low town: nothing to cut
     before = height.copy()
     assert bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES,
-                                  5.0, sea < 0.5, land=sea) == 0.0
+                                  5.0, sea < 0.5, land=sea)["cut"] == 0.0
     assert np.array_equal(height, before)
-    sea, height = _west_sea(shore_h=60.0)          # 52 m to cut > 45
+    sea, height = _west_sea(shore_h=400.0)         # 392 m to cut > 350
     before = height.copy()
-    assert bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES,
-                                  5.0, sea < 0.5, land=sea) is None
+    res = bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES,
+                                 5.0, sea < 0.5, land=sea)
+    assert res["cut"] is None and res["need"] == pytest.approx(392.0)
     assert np.array_equal(height, before), "a port given up keeps its ground"
     assert bake_houses.port_plain(burg(port=0), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES,
-                                  5.0, sea < 0.5, land=sea) == 0.0
+                                  5.0, sea < 0.5, land=sea)["cut"] == 0.0
+
+
+def test_a_river_band_stands_untouched_unless_the_switch_eases_it():
+    """port_plain_keep_river_band 1: the river's channel and its whole wet
+    band keep their ground; 0: the band takes the cut by its dryness, the
+    channel (wet 1) still untouched."""
+    sea, height = _west_sea(shore_h=40.0)
+    wet = np.zeros_like(sea)
+    wet[CENTRE_COL + 4, :] = 1.0
+    wet[CENTRE_COL + 3, :] = wet[CENTRE_COL + 5, :] = 0.5
+    before = height.copy()
+    bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES, 5.0, sea < 0.5,
+                           land=sea, wet=wet)
+    assert np.array_equal(height[wet > 0], before[wet > 0])
+    height = before.copy()
+    bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, dict(PLAIN_RULES, port_plain_keep_river_band=0),
+                           STAIR_TYPES, 5.0, sea < 0.5, land=sea, wet=wet)
+    assert np.array_equal(height[CENTRE_COL + 4], before[CENTRE_COL + 4])
+    assert height[CENTRE_COL + 3, CENTRE_COL] == pytest.approx(40.0 - 0.5 * 32.0)
 
 
 def test_with_cliff_landings_off_a_cliff_port_never_takes_a_cliff_model():

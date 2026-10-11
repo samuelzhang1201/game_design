@@ -388,3 +388,20 @@ def test_terrace_leaves_the_fringe_alone():
     ramp[:] = 0.5  # the shore fringe keeps its ramp through the water plane
     out = bw.terrace(h.copy(), ramp, land, coast, _terrace_rules(), 200, 4)
     assert np.array_equal(out, h)
+
+
+def test_green_cut_moves_cliff_rock_and_soil_to_grass_by_the_cut():
+    """A port plain's cut face (R18): over its window CLIFF, ROCKY and SOIL
+    weight moves to GRASS by the cut's weight; outside it nothing moves."""
+    tw = np.zeros((4, 6, bw.NT), np.float32)
+    tw[..., bw.CLIFF], tw[..., bw.ROCKY], tw[..., bw.SOIL], tw[..., bw.GRASS] = 0.6, 0.2, 0.1, 0.1
+    t_rock = np.ones((4, 6), np.float32)
+    w = np.array([[1.0, 0.5], [0.0, 0.25]], np.float32)
+    before = tw.copy()
+    bw.green_cut(tw, t_rock, (1, 3, 2, 4), w)
+    assert np.allclose(tw.sum(axis=2), before.sum(axis=2)), "weight moves, none is made"
+    assert np.allclose(tw[1, 2, [bw.CLIFF, bw.ROCKY, bw.SOIL]], 0.0) and np.isclose(tw[1, 2, bw.GRASS], 1.0)
+    assert np.isclose(tw[1, 3, bw.CLIFF], 0.3) and np.isclose(tw[1, 3, bw.GRASS], 0.55)
+    assert np.allclose(tw[2, 2], before[2, 2]), "w 0 moves nothing"
+    assert np.allclose(np.delete(tw, [1, 2], axis=0), np.delete(before, [1, 2], axis=0))
+    assert np.isclose(t_rock[2, 3], 0.75) and t_rock[0, 0] == 1.0
