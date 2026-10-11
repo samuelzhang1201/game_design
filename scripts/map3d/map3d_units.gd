@@ -276,8 +276,22 @@ static func clip_named(anim: AnimationPlayer, action: String) -> String:
 	for n: String in anim.get_animation_list():
 		if n.to_upper().ends_with(action):
 			return n
-	# a model with no STANDBY clip stands by in its GARRISON (owner 2026-09-29)
-	return clip_named(anim, "GARRISON") if action == "STANDBY" else ""
+	# a model with no STANDBY clip stands by in its GARRISON (owner 2026-09-29);
+	# one with no DEFEND holds in it too (front-line §2)
+	return clip_named(anim, "GARRISON") if action in ["STANDBY", "DEFEND"] else ""
+
+
+## The action a piece plays (pure; spec 2026-10-11-war-room-front-line-design
+## §2): MARCH while it walks on a running clock; else its stance's standing
+## clip (`stand_clip`, DEFEND for hold) when it is not marching; else GARRISON
+## under that order, else STANDBY.
+static func action_for(walking_now: bool, order: String, stance_row: Dictionary) -> String:
+	if walking_now:
+		return "MARCH"
+	var stand := String(stance_row.get("stand_clip", ""))
+	if stand != "" and order != ArmySystem.ORDER_MARCH:
+		return stand
+	return "GARRISON" if order == ArmySystem.ORDER_GARRISON else "STANDBY"
 
 
 static func meshes(node: Node) -> Array:

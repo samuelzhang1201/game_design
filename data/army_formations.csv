@@ -1,4 +1,4 @@
-figures,min_fit_permille,slots,notes
-3,0,0:-0.5|-0.5:0.5|0.5:0.5,"owner 2026-09-30 (单个军事模型的密度增加): a regiment's piece shows its STRENGTH, three tiers by its FIT men — headcount less the wounded — per mille of its headcount (ArmySystem.fit_permille). REMNANTS (残兵), under a third: three figures, one in front and two behind. Slots are x:z in spacing units (x to the figure's right, z toward its REAR), Map3DFormation. Replaced the six headcount tiers of 2026-09-27"
-6,334,0:-1|-0.5:0|0.5:0|-1:1|0:1|1:1,"DEPLETED (减员), a third or more: six, one, two and three from the front back"
-9,667,-1:-1|0:-1|1:-1|-1:0|0:0|1:0|-1:1|0:1|1:1,"FULL STRENGTH (满员), two thirds or more: nine, three ranks of three"
+figures,min_fit_permille,slots,line_slots,notes
+3,0,0:-0.5|-0.5:0.5|0.5:0.5,-1:0|0:0|1:0,"owner 2026-09-30 (单个军事模型的密度增加): a regiment's piece shows its STRENGTH, three tiers by its FIT men — headcount less the wounded — per mille of its headcount (ArmySystem.fit_permille). REMNANTS (残兵), under a third: three figures, one in front and two behind. Slots are x:z in spacing units (x to the figure's right, z toward its REAR), Map3DFormation. Replaced the six headcount tiers of 2026-09-27"
+6,334,0:-1|-0.5:0|0.5:0|-1:1|0:1|1:1,-2.5:0|-1.5:0|-0.5:0|0.5:0|1.5:0|2.5:0,"DEPLETED (减员), a third or more: six, one, two and three from the front back"
+9,667,-1:-1|0:-1|1:-1|-1:0|0:0|1:0|-1:1|0:1|1:1,-4:0|-3:0|-2:0|-1:0|0:0|1:0|2:0|3:0|4:0,"FULL STRENGTH (满员), two thirds or more: nine, three ranks of three"

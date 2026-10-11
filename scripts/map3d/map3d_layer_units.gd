@@ -240,13 +240,15 @@ func _piece_of(code: String) -> Dictionary:
 	if reg.is_empty():
 		return {}
 	var tier := Map3DFormation.tier_of(ctx.repo, ArmySystem.fit_permille(ctx.repo, ctx.state(), code))
-	if int(_pieces.get(code, {}).get("figures", -1)) == (tier["slots"] as Array).size():
+	var layout := Map3DFormation.layout_of(ctx.repo, ctx.state(), code)
+	if int(_pieces.get(code, {}).get("figures", -1)) == (tier["slots"] as Array).size() \
+			and String(_pieces.get(code, {}).get("layout", "")) == layout:
 		_sync_action(code)
 		return _pieces[code]
-	if _pieces.has(code):  # its strength crossed a tier: the formation is built anew
+	if _pieces.has(code):  # its strength crossed a tier or it formed a line: built anew
 		(_pieces[code]["node"] as Node3D).queue_free()
 		_pieces.erase(code)
-	if _build(code, reg, tier).is_empty():
+	if _build(code, reg, tier, layout).is_empty():
 		return {}
 	_sync_action(code)
 	return _pieces[code]
@@ -254,14 +256,14 @@ func _piece_of(code: String) -> Dictionary:
 
 ## Builds the piece of `reg` in formation `tier` as `_pieces[key]`; {} when its
 ## arm has no model.
-func _build(key: String, reg: Dictionary, tier: Dictionary) -> Dictionary:
+func _build(key: String, reg: Dictionary, tier: Dictionary, layout := Map3DFormation.BLOCK) -> Dictionary:
 	if reg.is_empty():
 		return {}
 	var piece := MapObjects.army_piece(ctx.repo, reg)
 	var path := GameArt.path(GameArt.ARMY_MODELS, piece)
 	var scene := _scene(path) if path != "" else null
 	var built := Map3DFormation.piece(ctx.repo, scene, ctx.repo.army_art.get(piece, {}), tier,
-		formation_gap) if scene != null else {}
+		formation_gap, layout) if scene != null else {}
 	if built.is_empty():
 		return {}
 	(built["node"] as Node3D).name = key.replace(":", "_")
@@ -283,11 +285,14 @@ func _day_of(code: String) -> Dictionary:
 
 
 ## The action follows the ORDER (owner 2026-09-29): MARCH while the clock runs and it walks;
-## GARRISON under that order; else STANDBY (the start, on arrival, ready on a stopped clock).
+## a held stance's standing clip (DEFEND, front-line §2); GARRISON under that
+## order; else STANDBY (the start, on arrival, ready on a stopped clock).
 func _sync_action(code: String) -> void:
 	var walking: bool = _days.has(code) and Map3DUnits.walking(_days[code], ctx.day_share())
-	var held := ctx.state() != null and ArmySystem.order_of(ctx.repo, ctx.state(), code) == ArmySystem.ORDER_GARRISON
-	play(code, MARCH if walking and ctx.clock_speed() > 0 else (GARRISON if held else STANDBY))
+	var st := ctx.state()
+	var order := ArmySystem.order_of(ctx.repo, st, code) if st != null else ArmySystem.ORDER_STANDBY
+	var row: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(st, code), {}) if st != null else {}
+	play(code, Map3DUnits.action_for(walking and ctx.clock_speed() > 0, order, row))
 
 
 func _scene(path: String) -> PackedScene:

@@ -18,14 +18,36 @@ static func tier_of(repo: DataRepository, fit_permille: int) -> Dictionary:
 	return best if not best.is_empty() else {"figures": 1, "slots": [Vector2.ZERO]}
 
 
+## A tier's slots for `layout`: "line" its line_slots (one rank abreast,
+## spec 2026-10-11-war-room-front-line-design §2), else its block.
+static func slots_of(row: Dictionary, layout: String) -> Array:
+	if layout == LINE and row.has("line_slots"):
+		return row["line_slots"]
+	return row.get("slots", [Vector2.ZERO])
+
+
+const BLOCK := "block"
+const LINE := "line"
+
+
+## The layout a regiment's piece stands in: its stance's `formation`
+## (data/battle_stances.csv) once it stands (not marching), else the block.
+static func layout_of(repo: DataRepository, state: GameState, code: String) -> String:
+	if state == null or ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
+		return BLOCK
+	var row: Dictionary = repo.battle_stances.get(BattleSystem.stance_of(state, code), {})
+	var layout := String(row.get("formation", BLOCK))
+	return layout if layout != "" else BLOCK
+
+
 ## The slots in the model's own metres (x right, z toward the rear): each
 ## slot's spacing units times the figure's own footprint — `extent` its half
 ## width and half length — times `gap`, so horses stand a horse apart and
 ## men a man apart; the ranks a further `depth` apart (army_art.csv
 ## rank_depth: a man seen from the front hides the man behind him).
-static func offsets(row: Dictionary, extent: Vector2, gap: float, depth := 1.0) -> PackedVector2Array:
+static func offsets(row: Dictionary, extent: Vector2, gap: float, depth := 1.0, layout := BLOCK) -> PackedVector2Array:
 	var out := PackedVector2Array()
-	for s: Vector2 in row.get("slots", [Vector2.ZERO]):
+	for s: Vector2 in slots_of(row, layout):
 		out.append(Vector2(s.x * extent.x * 2.0 * gap, s.y * extent.y * 2.0 * gap * depth))
 	return out
 
@@ -78,20 +100,20 @@ static func anims_of(root: Node) -> Array:
 ## tree, no owner), anims, height_m, head_m, half_w_m, extent, figures,
 ## stand_deg, size, stride_m, clip_s}; {} when the scene makes no Node3D.
 static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tier: Dictionary,
-		gap: float) -> Dictionary:
+		gap: float, layout := BLOCK) -> Dictionary:
 	var one := scene.instantiate() as Node3D
 	if one == null:
 		return {}
 	var span := Map3DUnits.model_size(one)
 	var ext := Map3DUnits.stand_extent(one)
-	var offs := offsets(tier, ext, gap, rank_depth(art))
+	var offs := offsets(tier, ext, gap, rank_depth(art), layout)
 	var node := build(scene, offs, one)
 	var anims := anims_of(node)
 	var half := half_extent(offs, ext)
 	var clip := Map3DUnits.clip_named(anims[0], "MARCH") if not anims.is_empty() else ""
 	return {"node": node, "anims": anims, "height_m": span.y,
 		"head_m": Map3DUnitRig.head_m(repo, one, span.y),
-		"half_w_m": maxf(half.x, half.y), "extent": half, "figures": offs.size(),
+		"half_w_m": maxf(half.x, half.y), "extent": half, "figures": offs.size(), "layout": layout,
 		"stand_deg": float(art.get("stand_deg", "0")),
 		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
 		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
