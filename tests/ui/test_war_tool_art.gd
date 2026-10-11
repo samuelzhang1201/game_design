@@ -14,6 +14,18 @@ func test_the_table_has_every_tool_and_the_scroll() -> void:
 		assert_true(t.of(k) is Texture2D, "%s is a texture in war_tool_art.tres" % k)
 
 
+## Owner item 15 (R4): the pale-yellow smear was the Hand slot's glyph; Phase E4
+## deletes Row/Hand and Row/Sep0 in the editor. Pending until then, so the step
+## is not forgotten.
+func test_the_roll_has_no_hand_slot() -> void:
+	var roll: WarToolRoll = load("res://scenes/war_room/war_tool_roll.tscn").instantiate()
+	add_child_autofree(roll)
+	if roll.slot("hand") != null:
+		pending("Phase E4: delete Row/Hand and Row/Sep0 in war_tool_roll.tscn")
+		return
+	assert_null(roll.get_node_or_null("Row/Sep0"), "the separator after the hand went with it")
+
+
 func test_every_slot_of_the_roll_inks_its_glyph() -> void:
 	var roll: WarToolRoll = load("res://scenes/war_room/war_tool_roll.tscn").instantiate()
 	add_child_autofree(roll)

@@ -935,6 +935,17 @@ func test_the_resting_markers_are_clear_of_the_leaning_chart() -> void:
 		assert_gte(hit.x - quad.x * 0.5, 0.03, "slot %d: the ray to the marker meets the chart's plane 3 cm outside its east edge" % slot)
 
 
+## Owner item 7 (R11): four markers stand by the chart. Phase E7 authors Marker2..4 as siblings of
+## %Marker and assigns tray_markers; pending until then, so the step is not forgotten.
+func test_four_tray_markers_are_authored() -> void:
+	if view.tray_markers.size() < 4:
+		pending("Phase E7: author Marker2-4 beside %%Marker and assign tray_markers (has %d)" % view.tray_markers.size())
+		return
+	assert_eq(view.tray_markers.size(), int(repo.bal("war_tray_max")), "one authored marker per tray slot")
+	for m: Node3D in view.tray_markers:
+		assert_not_null(m, "every tray slot names a marker node")
+
+
 ## R17: a marker's base fits inside one chart cell (hand values at w 0.86: the pack's 10 degree cell is
 ## 0.02016 of the map's width on its short side, 0.017338 m; k = 0.8 x 0.017338 / 0.022 = 0.63047; base 13.87 mm).
 func test_marker_fits_one_cell() -> void:

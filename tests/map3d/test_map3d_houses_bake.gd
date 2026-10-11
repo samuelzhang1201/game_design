@@ -231,9 +231,7 @@ func test_every_port_has_one_normal_pier() -> void:
 			piers[code] = int(piers.get(code, 0)) + 1
 		elif not _laid(r) and not centre.has(code):
 			centre[code] = Vector2(float(r["x_m"]), float(r["z_m"]))
-	if cliff > 0:
-		pending("needs the T14 rebake (%d cliff landing rows in houses.csv)" % cliff)
-		return
+	assert_eq(cliff, 0, "no pier_cliff / pier_stair (pier_cliff_landings 0)")
 	var ports := 0
 	var wet := 0
 	for code: String in centre:

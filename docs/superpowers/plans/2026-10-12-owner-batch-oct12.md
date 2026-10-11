@@ -280,4 +280,4 @@ One agent at a time (`$LOCK` around each `tools/snapshot_screen.gd --resolution 
 
 - [ ] `$LOCK` run `tests/ui`, `tests/map3d`, `tests/war_room` (the touched files and their folders) and `./run_tests.sh --fast`.
 - [ ] Opus whole-branch review; fix findings.
-- [ ] Push `feat/owner-batch-oct12`, `gh pr create` against `main` listing items, rulings R1–R13 and any editor step still open; ccd_pr `get_status`/`bind_pr`; merge only after `gut-tests` is green and the owner says so.
+- [ ] Push `feat/owner-batch-oct12`, `gh pr create` against `main` listing items, rulings R1–R18 and the editor steps E1–E9 still open; ccd_pr `get_status`/`bind_pr`; merge only after `gut-tests` is green and the owner says so.
