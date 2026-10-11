@@ -5,10 +5,10 @@
 
 [node name="LoadWheel" type="TextureRect" unique_id=1385513812]
 editor_description = "The launch black's loading wheel (owner 2026-10-12, item 16): the map's compass art, turned by load_wheel.gd at map_compass_turn_deg_per_s."
-custom_minimum_size = Vector2(96, 96)
-offset_right = 96.0
-offset_bottom = 96.0
-pivot_offset = Vector2(48, 48)
+custom_minimum_size = Vector2(72, 72)
+offset_right = 72.0
+offset_bottom = 72.0
+pivot_offset = Vector2(36, 36)
 mouse_filter = 2
 texture = ExtResource("1_0ama8")
 expand_mode = 1

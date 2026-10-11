@@ -108,7 +108,9 @@ func _lag_piece() -> Dictionary:
 
 func test_steady_lag_is_tau_over_max_times_cap() -> void:
 	# v limited to cap / max_s = 0.2 / 0.7 = 0.285714 m/s; steady -v*tau:
-	# tau 0.25 -> 0.0714286, tau 0.5 -> 0.142857 (a 3 m/s march alike)
+	# tau 0.25 -> 0.0714286, tau 0.5 -> 0.142857 (a 3 m/s march alike);
+	# max_s pinned here so the formula is checked, not the tuning
+	repo.balance["map3d_march_lag_max_s"] = 0.7
 	var piece := _lag_piece()
 	Map3DUnitRig.lag(repo, piece, "reg_a", Vector2(1, 0), 0.0)  # builds the caches
 	piece["taus"] = [0.25, 0.5]
