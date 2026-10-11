@@ -935,6 +935,26 @@ func test_the_resting_markers_are_clear_of_the_leaning_chart() -> void:
 		assert_gte(hit.x - quad.x * 0.5, 0.03, "slot %d: the ray to the marker meets the chart's plane 3 cm outside its east edge" % slot)
 
 
+## R10/R17 (Phase E8): the oak reading stand authored under the leaning chart stays under it — its near
+## edge on the chart's pivot, its far top just under the chart's far edge, no wider than the chart. The
+## stand is a static scene node while WarRoomWall lays the chart from war_chart_*, so a change of those
+## keys must move the stand too: this test says so.
+func test_the_chart_stand_sits_under_the_chart() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var room := view.get_node("%Room") as Node3D
+	var chart := view.get_node("%IndexChart") as MeshInstance3D
+	var stand := room.get_node("ChartStand") as MeshInstance3D
+	var quad := (chart.mesh as QuadMesh).size
+	var near := room.to_local(chart.global_transform * Vector3(0.0, -quad.y * 0.5, 0.0))
+	var far := room.to_local(chart.global_transform * Vector3(0.0, quad.y * 0.5, 0.0))
+	var box := stand.transform * stand.mesh.get_aabb()   # the stand in the room's frame
+	assert_almost_eq(box.end.z, near.z, 0.005, "the stand's near edge is the chart's pivot")
+	assert_gte(box.position.z, far.z - 0.005, "the stand ends under the chart's far edge")
+	assert_between(far.y - box.end.y, 0.0, 0.005, "its top stands just under the far edge")
+	assert_lte(box.size.x, quad.x, "no wider than the chart")
+
+
 ## Owner item 7 (R11): four markers stand by the chart. Phase E7 authors Marker2..4 as siblings of
 ## %Marker and assigns tray_markers; pending until then, so the step is not forgotten.
 func test_four_tray_markers_are_authored() -> void:
