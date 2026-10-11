@@ -2,7 +2,7 @@
 
   blender -b --factory-startup --python tools/units3d/make_units.py [-- CODE ...]
 
-Reads data/unit_models.csv and writes assets/3D/units/<code>/<code>.glb — one glTF
+Reads data/screens/map3d/unit_models.csv and writes assets/3D/units/<code>/<code>.glb — one glTF
 per unit holding TWO things:
 
   * the retopologised, texture-baked figure, skinned to a skeleton,

@@ -1,7 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## The game's own political colours (user ruling 2026-09-09): the render is
-## terrain only, so kingdoms are painted from data/political_palette.csv.
+## terrain only, so kingdoms are painted from data/screens/ui/political_palette.csv.
 
 var data: DataRepository
 

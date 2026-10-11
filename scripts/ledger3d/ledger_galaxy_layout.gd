@@ -47,7 +47,7 @@ static func size_of(repo: DataRepository, node: Dictionary, degree: int) -> floa
 	return clampf(r, repo.bal("ledger_star_min"), repo.bal("ledger_star_max"))
 
 
-## cluster -> its anchor (data/ledger_clusters.csv).
+## cluster -> its anchor (data/ledger/ledger_clusters.csv).
 static func anchors(repo: DataRepository) -> Dictionary:
 	var out := {}
 	for c: Dictionary in repo.ledger_clusters:

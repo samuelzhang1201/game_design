@@ -1,14 +1,14 @@
 extends SceneTree
 ## Bake world_biome_weights_N.png for a map pack from its biome index
 ## (BIOMES LAYER experiment 2026-09-14): per biome 1..12, its share of the
-## LAND within balance.csv map_biome_blur_px of every point, at 1/scale of
+## LAND within screens/map3d/balance.csv map_biome_blur_px of every point, at 1/scale of
 ## the index's resolution, four biomes per RGBA image
 ## (MapIndex.bake_biome_weights). biome_tiles.gdshader mixes the ground
 ## tiles by these, so one biome fades into the next with no cell edge.
 ## Re-run after changing map_biome_blur_px or re-importing the pack.
 ## No autoloads needed:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-##     -s tools/bake_biome_weights.gd -- [--map ID]  (default: data/maps.csv is_default) [--scale 4]
+##     -s tools/bake_biome_weights.gd -- [--map ID]  (default: data/world/maps.csv is_default) [--scale 4]
 ## A tool, not simulation: it reads the clock to report its own run time.
 
 const BIOMES := 16  # 13..15 are the high ground (MapIndex.raise_high_ground)
@@ -22,10 +22,7 @@ func _init() -> void:
 			map = args[i + 1]
 		elif args[i] == "--scale":
 			scale = maxi(int(args[i + 1]), 1)
-	var blur := 40.0
-	for row: Dictionary in DataRepository.parse_csv("res://data/balance.csv", ["key", "value"]):
-		if String(row["key"]) == "map_biome_blur_px":
-			blur = float(row["value"])
+	var blur := float(DataRepository.load_balance("res://data").get("map_biome_blur_px", 40.0))
 	var dir := "res://assets/maps/%s" % map
 	var src := ProjectSettings.globalize_path(dir + "/world_biome_index.png")
 	var img := Image.load_from_file(src)

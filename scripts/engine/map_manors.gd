@@ -656,7 +656,7 @@ static func slots_used(state: GameState, cell_id: int) -> int:
 static func free_slots(repo: DataRepository, state: GameState, cell_id: int) -> int:
 	return slots_of(repo, cell_id) - slots_used(state, cell_id)
 
-## Begin a building: it takes build_days (data/manor_buildings.csv) from
+## Begin a building: it takes build_days (data/economy/manor_buildings.csv) from
 ## today and a slot until it stands. Refuses an unknown manor or building,
 ## one already standing or begun, a full manor, and an empty reason; logs
 ## into manor_log with a "begun" field.
@@ -753,7 +753,7 @@ static func rush_work(repo: DataRepository, state: GameState, cell_id: int, buil
 ## M5): 1000 per mille a day, plus its townsfolk's bonus scaled by the master
 ## of works' efficiency (Governance flow "works"), exactly as every other
 ## governed flow reads it (WorkshopSystem, SupplySystem) — an empty Master of
-## Works seat (never filled by data/founding_council.csv on a fresh
+## Works seat (never filled by data/council/founding_council.csv on a fresh
 ## campaign) is not a special case: Governance.factors gives a vacant flow
 ## the row's min_permille (600) like any other, which is also the FLOOR a
 ## seated governor's efficiency clamps to — so appointing anyone, however

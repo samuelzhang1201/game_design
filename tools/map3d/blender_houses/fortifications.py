@@ -22,7 +22,7 @@ WALL_LEN long, its ends flat so modules meet; no weathering sag (a sagging
 top would dip between every pair of modules).
 """
 
-WALL_LEN = 24.0      # one wall module's length, metres (data/map3d_houses.csv footprint_m)
+WALL_LEN = 24.0      # one wall module's length, metres (data/screens/map3d/map3d_houses.csv footprint_m)
 WALL_T = 4.4         # its thickness
 WALL_H = 11.0        # the wall walk's height
 MERLON_W, MERLON_GAP = 1.5, 1.0

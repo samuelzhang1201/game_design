@@ -1,7 +1,7 @@
 class_name ArmyOrderMenu
 extends PopupMenu
 ## A regiment's orders on the right mouse button (owner 2026-09-22: "鼠标右
-## 键点击会有移动和驻防的选项激活动作"). Its rows are data — data/army_orders.csv,
+## 键点击会有移动和驻防的选项激活动作"). Its rows are data — data/army/army_orders.csv,
 ## in the order they are shown — so renaming or reordering them touches no code.
 ##
 ## MARCH is AIMED, not issued by the menu: choosing it arms the map, the next
@@ -26,7 +26,7 @@ extends PopupMenu
 ##
 ## Routes are planned only on a PAUSED clock (owner 2026-09-27: 兵人行进路线只能
 ## 在暂停模式下选择，时间流逝的时候不可以操作): while time runs MARCH, Edit and
-## Cancel march are greyed out with data/army_route_orders.csv's reason, and
+## Cancel march are greyed out with data/army/army_route_orders.csv's reason, and
 ## an aim or a waiting confirm is withdrawn the moment the clock starts.
 ##
 ## Every order goes through Game.try_execute, exactly as the manor card's

@@ -43,7 +43,7 @@ static func forget(state: GameState, cell: int) -> void:
 	state.workshop_rate.erase(str(cell))
 
 
-## The rates WORKSHOP_RATE accepts (data/workshop_rates.csv), lowest first.
+## The rates WORKSHOP_RATE accepts (data/economy/workshop_rates.csv), lowest first.
 static func rates(repo: DataRepository) -> Array:
 	var out: Array = []
 	for row: Dictionary in repo.workshop_rates:

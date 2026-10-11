@@ -6,7 +6,7 @@ extends RefCounted
 ## each other, and a fleet never does. Around a centre the camps lie on a hex
 ## lattice of army_slot_spacing_m, ring by ring (ring k has 6k slots, taken
 ## from the east counter-clockwise); a unit takes the first free slot at its
-## arm's ring (data/army_split.csv start_ring) or further out. Ring 0 is a
+## arm's ring (data/army/army_split.csv start_ring) or further out. Ring 0 is a
 ## town's SEAT, never a camp; in the field it goes to whoever comes first.
 ## Round a TOWN the camps stand outside the walls (R16, owner 2026-10-08: 城外):
 ## the arm's ring counts from the first past the town's reach.
@@ -37,7 +37,7 @@ static func slot_m(centre_m: Vector2i, axial: Vector2i, spacing: int) -> Vector2
 		int(round(spacing * axial.y * sqrt(3.0) / 2.0)))
 
 
-## The first ring an arm camps on (data/army_split.csv); 1 for an arm with no row.
+## The first ring an arm camps on (data/army/army_split.csv); 1 for an arm with no row.
 static func start_ring(repo: DataRepository, arm: String) -> int:
 	for row: Dictionary in repo.army_split:
 		if String(row["arm"]) == arm:
@@ -89,7 +89,7 @@ static func clear_rings(reach_m: float, pitch: int) -> int:
 	return maxi(ceili(reach_m / float(maxi(pitch, 1))), 1)
 
 
-## A town's reach in metres (data/army_town_reach.csv by its group).
+## A town's reach in metres (data/army/army_town_reach.csv by its group).
 static func town_reach_m(repo: DataRepository, town: String) -> float:
 	var b: Dictionary = repo.burgs.get(town, {})
 	return float(repo.army_town_reach.get(String(b.get("group", "")), 0.0)) * 1000.0

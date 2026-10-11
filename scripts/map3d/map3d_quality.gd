@@ -1,6 +1,6 @@
 class_name Map3DQuality
 extends RefCounted
-## The 3D map's graphics tiers (spec 2026-09-20 §4): data/graphics_quality.csv
+## The 3D map's graphics tiers (spec 2026-09-20 §4): data/screens/ui/graphics_quality.csv
 ## rows low / medium / high / ultra. A first run picks one from the GPU's name
 ## (detect); user://settings.cfg [graphics] quality — the pause menu's choice —
 ## overrides it; "auto" defers to the detection. Pure: no scene, no autoload.

@@ -202,4 +202,4 @@ func test_the_menu_offers_every_stance() -> void:
 	offered.sort()
 	var table: Array = repo.battle_stances.keys()
 	table.sort()
-	assert_eq(offered, table, "a row for each stance of data/battle_stances.csv")
+	assert_eq(offered, table, "a row for each stance of data/battle/battle_stances.csv")

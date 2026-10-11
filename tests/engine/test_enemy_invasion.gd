@@ -101,7 +101,7 @@ func test_rumour_arrives_before_the_invasion() -> void:
 
 func test_rumour_templates_spell_no_kingdom() -> void:
 	# the raw file: DataRepository fills the realm slots at load
-	var raw := FileAccess.get_file_as_string("res://data/templates.csv")
+	var raw := FileAccess.get_file_as_string("res://data/council/templates.csv")
 	var found := 0
 	for line: String in raw.split("\n"):
 		if line.begins_with("raid_rumour,") or line.begins_with("host_news_") and not line.begins_with("host_news_title"):

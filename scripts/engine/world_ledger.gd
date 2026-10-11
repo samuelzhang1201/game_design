@@ -4,7 +4,7 @@ extends RefCounted
 ## §2): the player's metrics, the court's opinions and attributes, and the
 ## pack's domain tables. Paths read `metrics.<name>`, `opinion.<id>`,
 ## `attribute.<id>.<name>`, or `<domain>.<area>.<code>.<field>`; a code may be
-## a realm slot. data/world_schema.csv says what each field is, its range,
+## a realm slot. data/realm/world_schema.csv says what each field is, its range,
 ## which way is good for the crown, and how far the model may move it.
 ##
 ## The pack ships starting values; GameState.world holds only what has moved

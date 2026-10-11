@@ -6,7 +6,7 @@ extends Resource
 ## scenes/map3d/weather_look.tres. The ground's weather stage is spliced into
 ## the shader Terrain3D generates, so it has no material of its own to save:
 ## its uniforms are these, handed over by Map3DLayerWeather (`weather_<name>`).
-## Which weather a province has is the engine's (Weather, data/weather.csv),
+## Which weather a province has is the engine's (Weather, data/world/weather.csv),
 ## never this.
 
 const PATH := "res://scenes/map3d/weather_look.tres"

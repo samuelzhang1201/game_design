@@ -15,7 +15,7 @@ Conventions:
     way bake_houses.half_extents and Map3DLayerHouses expect a house to face.
   * A building is modelled in GAME metres (the map draws houses at twice
     life size, taste.md 2026-09-21), and export() then scales it uniformly so
-    its longer ground span is data/map3d_houses.csv's footprint_m: the packer
+    its longer ground span is data/screens/map3d/map3d_houses.csv's footprint_m: the packer
     was measured against those footprints and keeps working.
   * Every part is a CLOSED solid (box, prism, extrusion); parts may
     interpenetrate. tests/map3d/test_map3d_houses_meshes.gd holds that no
@@ -662,10 +662,10 @@ def export(ob, type_):
     """Scale `ob` so its longer ground span is the type's footprint_m, centre
     it on its own footprint, stand it on z = 0, write
     assets/3D/buildings/<type>/<type>.glb and record its measured size in
-    houses.json and data/map3d_houses.csv."""
+    houses.json and data/screens/map3d/map3d_houses.csv."""
     import csv
     import io
-    rows = list(csv.DictReader(open(ROOT + "/data/map3d_houses.csv")))
+    rows = list(csv.DictReader(open(ROOT + "/data/screens/map3d/map3d_houses.csv")))
     row = next(r for r in rows if r["type"] == type_)
     foot = float(row["footprint_m"])
     exp = ob.copy()
@@ -700,7 +700,7 @@ def export(ob, type_):
     with open(man_path, "w") as f:
         json.dump(man, f, indent=1, sort_keys=True)
         f.write("\n")
-    lines = open(ROOT + "/data/map3d_houses.csv").read().split("\n")
+    lines = open(ROOT + "/data/screens/map3d/map3d_houses.csv").read().split("\n")
     for i, line in enumerate(lines):
         if line.startswith(type_ + ","):
             parts = next(csv.reader([line]))
@@ -708,7 +708,7 @@ def export(ob, type_):
             buf = io.StringIO()
             csv.writer(buf, lineterminator="").writerow(parts)
             lines[i] = buf.getvalue()
-    open(ROOT + "/data/map3d_houses.csv", "w").write("\n".join(lines))
+    open(ROOT + "/data/screens/map3d/map3d_houses.csv", "w").write("\n".join(lines))
     return {"type": type_, "scale": round(s, 3), "w": round(width, 2), "d": round(depth, 2),
             "h": round(height, 2), "tris": tris, "surfaces": len(ob.data.materials)}
 

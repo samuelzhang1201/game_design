@@ -26,5 +26,5 @@ const SELECTION := 8
 const CLOUDS := 9
 ## The lowest ring tier; the tiers (village lowest, capital highest — see
 ## Map3DLayerSettlements.build) and then the selection ring count up from here,
-## one step each (data/map3d_settlements.csv's groups).
+## one step each (data/screens/map3d/map3d_settlements.csv's groups).
 const RING_BASE := 10

@@ -371,7 +371,7 @@ def export(t):
     import csv
     import io
     ob = bpy.data.objects[t + "_game"]
-    rows = {r["type"]: r for r in csv.DictReader(open(ROOT + "/data/map3d_houses.csv"))}
+    rows = {r["type"]: r for r in csv.DictReader(open(ROOT + "/data/screens/map3d/map3d_houses.csv"))}
     foot = float(rows[t]["footprint_m"])
     exp = ob.copy()
     exp.data = ob.data.copy()
@@ -404,7 +404,7 @@ def export(t):
     with open(man_path, "w") as f:
         json.dump(man, f, indent=1, sort_keys=True)
         f.write("\n")
-    lines = open(ROOT + "/data/map3d_houses.csv").read().split("\n")
+    lines = open(ROOT + "/data/screens/map3d/map3d_houses.csv").read().split("\n")
     for i, line in enumerate(lines):
         if line.startswith(t + ","):
             parts = next(csv.reader([line]))
@@ -412,6 +412,6 @@ def export(t):
             buf = io.StringIO()
             csv.writer(buf, lineterminator="").writerow(parts)
             lines[i] = buf.getvalue()
-    open(ROOT + "/data/map3d_houses.csv", "w").write("\n".join(lines))
+    open(ROOT + "/data/screens/map3d/map3d_houses.csv", "w").write("\n".join(lines))
     return {"type": t, "scale": round(s, 3), "w": round(width, 2), "d": round(depth, 2),
             "h": round(height, 2), "below": round(-lo.z * s, 2), "tris": tris}

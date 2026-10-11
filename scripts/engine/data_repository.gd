@@ -14,7 +14,7 @@ var regions: Dictionary = {}
 var locations: Dictionary = {}
 var templates: Array[Dictionary] = []
 var signatures: Array[Dictionary] = []
-## data/world_schema.csv: every field the world ledger can address, its type,
+## data/realm/world_schema.csv: every field the world ledger can address, its type,
 ## range, polarity, and the cap the model may move it by (WorldLedger).
 var world_schema: Array[Dictionary] = []
 ## path -> the world_schema row governing it, memoised by
@@ -24,189 +24,189 @@ var world_schema: Array[Dictionary] = []
 ## schema and realm bindings are loaded once and never rewritten. Code
 ## that does rewrite `world_schema` after load must clear this.
 var schema_cache: Dictionary = {}
-## data/metric_polarity.csv: metric -> which direction is good for the crown
+## data/realm/metric_polarity.csv: metric -> which direction is good for the crown
 ## (1, -1, or 0 for neutral rates). OrderCosts reads it to tell a cost from a gain.
 var metric_polarity: Dictionary = {}
-## data/order_costs.csv: action_code -> {cost (EventEffects ops), always, notes}.
+## data/realm/order_costs.csv: action_code -> {cost (EventEffects ops), always, notes}.
 var order_costs: Dictionary = {}
-## data/political_palette.csv: key -> "#rrggbb". Realm slots, other_N for the
+## data/screens/ui/political_palette.csv: key -> "#rrggbb". Realm slots, other_N for the
 ## unbound kingdoms, and the named line colours (MapPalette). The render is
 ## terrain only; the game paints every political colour from this table.
 var palette: Dictionary = {}
-## data/chart_palette.csv: key -> "#rrggbb" for the dashboard's charts
+## data/screens/ui/chart_palette.csv: key -> "#rrggbb" for the dashboard's charts
 ## (cat_1.. in fixed order, sequential, track); validated CVD-safe.
 var chart_palette: Dictionary = {}
-## data/ui_table_palette.csv: key -> "#rrggbb[aa]" for the WAR TABLE chrome
+## data/screens/ui/ui_table_palette.csv: key -> "#rrggbb[aa]" for the WAR TABLE chrome
 ## (paper ink, brass, wax, the tally board, the table's light; owner 2026-10-01).
 var ui_table_palette: Dictionary = {}
-## data/ui_fonts.csv: role -> the row (size_scale, title_case); the faces
+## data/screens/ui/ui_fonts.csv: role -> the row (size_scale, title_case); the faces
 ## themselves are assets/fonts/roles/<role>.tres (owner 2026-10-02).
 var ui_fonts: Dictionary = {}
-## data/title_entrance.csv: the title's entrance after the black of launch,
+## data/screens/ui/title_entrance.csv: the title's entrance after the black of launch,
 ## in file order, each {node, kind, delay_ms, duration_ms, lift_px, ease,
 ## step_ms} (MainMenu._enter).
 var title_entrance: Array = []
-## data/manor_card_sections.csv: the manor card's named sections in order,
+## data/screens/ui/manor_card_sections.csv: the manor card's named sections in order,
 ## each {section, label, keys (Array), rates (bool), per_month (bool),
 ## drop_if_rates (Array)}.
 var manor_card_sections: Array = []
-## data/resource_icons.csv: key -> {label, icon, tooltip} for every resource
+## data/screens/ui/resource_icons.csv: key -> {label, icon, tooltip} for every resource
 ## and unit the UI shows as a glyph with a floating tooltip.
 var resource_icons: Dictionary = {}
-## data/map3d_settlements.csv rows keyed by burg group: the 3D MAP's
+## data/screens/map3d/map3d_settlements.csv rows keyed by burg group: the 3D MAP's
 ## placeholder marker for each settlement (Map3DView).
 var map3d_settlements: Dictionary = {}
-## data/map3d_houses.csv rows keyed by type: the 3D MAP's house types, their
+## data/screens/map3d/map3d_houses.csv rows keyed by type: the 3D MAP's house types, their
 ## role, weight, size and roof colour (spec 2026-09-20 §2); the mesh each is
 ## drawn with is GameArt's HOUSE_MODELS.
 var map3d_houses: Dictionary = {}
-## data/map3d_tree_crowns.csv rows (cell, kind, ...): which cell of the woods'
+## data/screens/map3d/map3d_tree_crowns.csv rows (cell, kind, ...): which cell of the woods'
 ## crown atlas shows which kind of tree (0 broadleaf, 1 conifer, 2 lone) —
 ## the photo cards of 2026-10-01 (tree_card.gdshader).
 var map3d_tree_crowns: Array = []
-## data/map3d_tree_species.csv rows (kind, name, enabled, habit, form, cells,
+## data/screens/map3d/map3d_tree_species.csv rows (kind, name, enabled, habit, form, cells,
 ## crowns, spread_m, size, tint_lo, tint_hi, ...): the woods' species, the
 ## kind column of the bake's trees.bin (tools/map3d/bake_trees.py picks one per
 ## clump by the ground; Map3DLayerTrees draws each by its own row).
 var map3d_tree_species: Array = []
-## data/map3d_bake.csv as key -> number: the 3D build's own tuning. The bake
+## data/screens/map3d/map3d_bake.csv as key -> number: the 3D build's own tuning. The bake
 ## (tools/map3d/bake_world.py) has always read this file; the runtime reads
 ## it too for the settlements' house clusters, so the two can never disagree
 ## about where a cluster ends.
 var map3d_bake: Dictionary = {}
-## data/graphics_quality.csv rows keyed by tier (low/medium/high/ultra): the
+## data/screens/ui/graphics_quality.csv rows keyed by tier (low/medium/high/ultra): the
 ## 3D map's graphics tiers (Map3DQuality, spec 2026-09-20 §4).
 var graphics_quality: Dictionary = {}
-## data/army_art.csv: piece -> {piece, stand_deg, size, stride_m, rank_depth} —
+## data/screens/map3d/army_art.csv: piece -> {piece, stand_deg, size, stride_m, rank_depth} —
 ## how a regiment's 3D piece stands and walks (MapObjects.army_piece); its
 ## model and its card's painting are GameArt's tables (owner 2026-10-02).
 var army_art: Dictionary = {}
-## data/army_terrain_biomes.csv: biome id -> the terrain a regiment on it
+## data/army/army_terrain_biomes.csv: biome id -> the terrain a regiment on it
 ## stands on (ArmySystem.terrain_of, owner 2026-09-17).
 var army_terrain_biomes: Dictionary = {}
-## data/army_terrain.csv: "terrain|arm" -> {defend, attack} per mille.
+## data/army/army_terrain.csv: "terrain|arm" -> {defend, attack} per mille.
 var army_terrain: Dictionary = {}
-## data/army_town_reach.csv: burg group -> km (float) a regiment stands IN a
+## data/army/army_town_reach.csv: burg group -> km (float) a regiment stands IN a
 ## town of that group within (ArmySystem.town_of).
 var army_town_reach: Dictionary = {}
-## data/war_marks.csv: marker type -> {glyph, layer, note} — which marks the
+## data/screens/war_room/war_marks.csv: marker type -> {glyph, layer, note} — which marks the
 ## WAR ROOM inks, how, and on which layer (spec 2026-10-07-war-room-p2 §1.1).
 var war_marks: Dictionary = {}
-## data/war_mark_hazards.csv: marker type -> {reach_km, permille} — the marks
+## data/army/war_mark_hazards.csv: marker type -> {reach_km, permille} — the marks
 ## that take a share of a supply line passing within their reach (§1.2).
 var war_mark_hazards: Dictionary = {}
-## data/war_works.csv: strategic good -> {family, glyph} — the goods that make
+## data/army/war_works.csv: strategic good -> {family, glyph} — the goods that make
 ## a town a war works on the WAR ROOM's sheet, by family (spec 2026-10-07-war-room-p3 §1.1).
 var war_works: Dictionary = {}
-## data/hazard_kinds.csv: zone kind -> {label, months, public, wounds_permille,
+## data/army/hazard_kinds.csv: zone kind -> {label, months, public, wounds_permille,
 ## morale, supply_loss_permille, pace_permille, ink} (spec 2026-10-07-war-room-p2 §2.2).
 var hazard_kinds: Dictionary = {}
-## data/army_town_defence.csv: "works|arm" -> {defend, attack} per mille, works
+## data/army/army_town_defence.csv: "works|arm" -> {defend, attack} per mille, works
 ## town / walls / citadel (ArmySystem.works_of).
 var army_town_defence: Dictionary = {}
-## data/army_ground_speed.csv: key -> per mille of a march's pace (road, trail,
+## data/army/army_ground_speed.csv: key -> per mille of a march's pace (road, trail,
 ## tier_<tier>, and each terrain of army_terrain_biomes).
 var army_ground_speed: Dictionary = {}
-## data/army_matchups.csv: arm -> [{vs, attack, defense}] per mille, in file order.
+## data/army/army_matchups.csv: arm -> [{vs, attack, defense}] per mille, in file order.
 var army_matchups: Dictionary = {}
-## data/army_training_grades.csv rows {above, label}, first match wins.
+## data/army/army_training_grades.csv rows {above, label}, first match wins.
 var army_training_grades: Array[Dictionary] = []
-## data/army_orders.csv, IN ORDER: the rows of a regiment's right-click menu
+## data/army/army_orders.csv, IN ORDER: the rows of a regiment's right-click menu
 ## on the map, [{action_code, label, hint, params}] (ArmyOrderMenu); params is
 ## the row's `key=value|key=value` as a Dictionary of strings, sent with the
 ## regiment (ARMY_STANCE's stance). A list, not a dictionary, because the
 ## order of the entries is the order they are shown in.
 var army_orders: Array = []
-## data/army_route_orders.csv: key -> {label, hint} — the rows of the march's
+## data/army/army_route_orders.csv: key -> {label, hint} — the rows of the march's
 ## confirm menu (commit / cancel) and route menu (edit / halt), and the
 ## paused-only reason (owner 2026-09-27, ArmyOrderMenu).
 var army_route_orders: Dictionary = {}
-## data/army_carry_loads.csv: [{days, pace_permille, label}], days ascending
+## data/army/army_carry_loads.csv: [{days, pace_permille, label}], days ascending
 ## (spec 2026-10-07-army-supply-lines §3.6).
 var army_carry_loads: Array = []
-## data/army_supply_orders.csv: key -> {label, hint} — the supply rows of the
+## data/army/army_supply_orders.csv: key -> {label, hint} — the supply rows of the
 ## regiment's right-click menu (spec 2026-10-07-army-supply-lines §5.1).
 var army_supply_orders: Dictionary = {}
-## data/army_hostile_stances.csv: the stances whose regiments cut supply lines.
+## data/army/army_hostile_stances.csv: the stances whose regiments cut supply lines.
 var army_hostile_stances: Array[String] = []
-## data/battle_outcomes.csv (spec 2026-10-07-enemy-ai-and-battle §4.3): the five
+## data/battle/battle_outcomes.csv (spec 2026-10-07-enemy-ai-and-battle §4.3): the five
 ## result tiers in ascending eff_min, {tier, eff_min, eff_max,
 ## attacker_loss_permille, defender_loss_permille, wounded_share_permille,
 ## attacker_morale, defender_morale, rout, siege} — whole numbers; rout is
 ## "attacker" / "defender" / "none"; siege (optional column) is what an
 ## assault's round of the tier does to the siege: "repulsed", "breach" or "".
 var battle_outcomes: Array[Dictionary] = []
-## data/battle_stances.csv (§4.4): stance -> {label, defence_permille,
+## data/battle/battle_stances.csv (§4.4): stance -> {label, defence_permille,
 ## morale_decay_permille, retreat_odds_permille, retreats_on_contact (bool)}.
 var battle_stances: Dictionary = {}
-## data/ai_doctrines.csv (§3.3): host role -> {greed_permille, caution_permille,
+## data/battle/ai_doctrines.csv (§3.3): host role -> {greed_permille, caution_permille,
 ## dist_cost, engage_odds_permille, retreat_morale, town_bonus}.
 var ai_doctrines: Dictionary = {}
 ## The pack's military/raid_hosts.csv (§2) in file order: [{host_code,
 ## regiments (Array of regiment codes), appear_day, role, start_x, start_y}].
 ## Cleared by load_map.
 var raid_hosts: Array[Dictionary] = []
-## data/event_presenters.csv: an event id or an event category -> the council
+## data/story/event_presenters.csv: an event id or an event category -> the council
 ## seat whose holder brings that event before the crown (owner 2026-10-02:
 ## every event waits on the table as a minister's matter); an id wins.
 var event_presenters: Dictionary = {}
-## data/army_formations.csv, by min_fit_permille: [{figures, min_fit_permille,
+## data/army/army_formations.csv, by min_fit_permille: [{figures, min_fit_permille,
 ## slots: [Vector2]}] — how many figures a regiment's piece shows by its
 ## strength (Map3DFormation).
 var army_formations: Array = []
-## data/army_split.csv (spec 2026-10-07-army-split-and-ground §3): the arms a
+## data/army/army_split.csv (spec 2026-10-07-army-split-and-ground §3): the arms a
 ## regiment splits into, in file order: [{arm, start_ring, code_word,
 ## label_word, pooled}]; a POOLED arm is one unit a kingdom, at its capital.
 var army_split: Array = []
-## data/army_camp_blocked.csv: terrain -> true where no unit makes camp (ArmyGround).
+## data/army/army_camp_blocked.csv: terrain -> true where no unit makes camp (ArmyGround).
 var army_camp_blocked: Dictionary = {}
-## data/army_speed.csv: arm -> km a day (int), the arm's own march
+## data/army/army_speed.csv: arm -> km a day (int), the arm's own march
 ## (owner 2026-09-19, ArmySystem.base_pace_km).
 var army_speed: Dictionary = {}
-## data/army_height_supply.csv: [{tier, min_height, supply_permille}],
+## data/army/army_height_supply.csv: [{tier, min_height, supply_permille}],
 ## highest min_height first (Elevation.tier_of reads the first it reaches).
 var army_height_supply: Array = []
-## data/army_morale_words.csv: [{min_score, word}], highest min_score first
+## data/army/army_morale_words.csv: [{min_score, word}], highest min_score first
 ## (ArmySystem.morale_word reads the first it reaches; spec
 ## 2026-09-30-ledger-supply-design §4).
 var army_morale_words: Array = []
-## data/war_plan_kinds.csv: kind -> {label, tool_key, gesture, head, teeth,
+## data/army/war_plan_kinds.csv: kind -> {label, tool_key, gesture, head, teeth,
 ## pen, name_default, cut} — the staff's stroke kinds (WAR ROOM plans, spec
 ## 2026-10-07-war-room-annotations-and-planning-pieces §2.1), in file order.
 var war_plan_kinds: Dictionary = {}
-## data/war_palette.csv: key -> Color (WAR ROOM, spec 2026-10-01 §5).
+## data/screens/war_room/war_palette.csv: key -> Color (WAR ROOM, spec 2026-10-01 §5).
 var war_palette: Dictionary = {}
-## data/war_drills.csv, file order: [{key, clip, label, arms: PackedStringArray}].
+## data/screens/war_room/war_drills.csv, file order: [{key, clip, label, arms: PackedStringArray}].
 var war_drills: Array = []
-## data/war_equipment.csv, file order: [{arm, part, label, note}].
+## data/screens/war_room/war_equipment.csv, file order: [{arm, part, label, note}].
 var war_equipment: Array = []
-## data/war_folio_sections.csv, file order: [{key, label}].
+## data/screens/war_room/war_folio_sections.csv, file order: [{key, label}].
 var war_folio_sections: Array = []
-## data/war_order_words.csv: order key (ArmySystem.ORDER_*) -> the folio's word for it.
+## data/army/war_order_words.csv: order key (ArmySystem.ORDER_*) -> the folio's word for it.
 var war_order_words: Dictionary = {}
-## data/workshop_rates.csv: [{rate_permille, word, ledger_label}], lowest
+## data/economy/workshop_rates.csv: [{rate_permille, word, ledger_label}], lowest
 ## rate first — the rates WORKSHOP_RATE accepts and how each is said
 ## (WorkshopSystem; spec 2026-09-30-ledger-supply-design §2).
 var workshop_rates: Array = []
-## data/building_inputs.csv: building code -> [{good, units}] in file order,
+## data/economy/building_inputs.csv: building code -> [{good, units}] in file order,
 ## what one standing building eats a month (IndustrySystem; spec
 ## 2026-09-30-ledger-industry-trade-design M5). A building with no rows eats
 ## nothing.
 var building_inputs: Dictionary = {}
-## data/courier_kinds.csv: kind -> {speed_permille, fee_gold, offered}
+## data/intel/courier_kinds.csv: kind -> {speed_permille, fee_gold, offered}
 ## (spec 2026-09-27-courier-core §3).
 var courier_kinds: Dictionary = {}
-## data/laws.csv (spec 2026-10-08-laws-tab-design §2.1): law_code -> {law_code,
+## data/realm/laws.csv (spec 2026-10-08-laws-tab-design §2.1): law_code -> {law_code,
 ## tab, group, label, kind, values (a range's is [min, max] ints), default,
 ## scope, gold_cost, cooldown_ticks, cost_ops}; `law_order` is the file order.
 var laws: Dictionary = {}
 var law_order: Array = []
-## data/law_effects.csv: rows as read, in file order (law_code, value, channel,
+## data/realm/law_effects.csv: rows as read, in file order (law_code, value, channel,
 ## target, amount, timing, share, reason).
 var law_effects: Array = []
-## data/law_words.csv: key -> the laws screen's fixed words.
+## data/realm/law_words.csv: key -> the laws screen's fixed words.
 var law_words: Dictionary = {}
-## data/conduct_words.csv: key -> the news / missive text of foraging and
+## data/army/conduct_words.csv: key -> the news / missive text of foraging and
 ## desertion (`%s` placeholders filled at runtime; names no kingdom).
 var conduct_words: Dictionary = {}
 ## The LEDGER's ontology (spec 2026-09-30-ledger-ontology-design §7.1):
@@ -216,13 +216,13 @@ var ledger_types: Array = []
 var ledger_links: Array = []
 var ledger_actions: Array = []
 var ledger_loops: Array = []
-## data/ledger_clusters.csv, in file order: {cluster, label, colour (a
+## data/ledger/ledger_clusters.csv, in file order: {cluster, label, colour (a
 ## ledger_palette.csv key), at (Vector3, the anchor), lens (the lens chip it
 ## answers to)}.
 var ledger_clusters: Array = []
-## key -> Color (data/ledger_palette.csv).
+## key -> Color (data/screens/ledger/ledger_palette.csv).
 var ledger_palette: Dictionary = {}
-## data/ledger_governance.csv: flow_type -> {seat, skill, base_permille,
+## data/ledger/ledger_governance.csv: flow_type -> {seat, skill, base_permille,
 ## skill_mid, skill_step_permille, min_permille, max_permille, label, books,
 ## ledger_type} (LEDGER M3, Governance; spec 2026-09-30-ledger-governors-design
 ## §2). `books`: whether the flow keeps books an audit can read (LEDGER_AUDIT
@@ -230,64 +230,64 @@ var ledger_palette: Dictionary = {}
 ## instances are drawn as (the flow's own name when empty; the works are
 ## drawn on the artisans).
 var ledger_governance: Dictionary = {}
-## data/ledger_static_nodes.csv (spec 2026-09-30-ledger-galaxy-design §3b):
+## data/ledger/ledger_static_nodes.csv (spec 2026-09-30-ledger-galaxy-design §3b):
 ## single nodes written down — {node_id, type_id, label, note}; the type's
 ## row names the instance list `static`.
 var ledger_static_nodes: Array = []
-## data/ledger_static_links.csv: single edges written down — {link_id, from,
+## data/ledger/ledger_static_links.csv: single edges written down — {link_id, from,
 ## to, flow (-1 when blank), note}; the link type's row names the reader `static`.
 var ledger_static_links: Array = []
-## data/courier_art.csv: kind -> its row (size, stride_m); its model and its
+## data/screens/map3d/courier_art.csv: kind -> its row (size, stride_m); its model and its
 ## painting are GameArt's tables.
 var courier_art: Dictionary = {}
-## data/intel_facts.csv: key -> {label, round_to, tiers} (spec 2026-09-28 §1).
+## data/intel/intel_facts.csv: key -> {label, round_to, tiers} (spec 2026-09-28 §1).
 var intel_facts: Dictionary = {}
-## data/spy_difficulty.csv: key -> per mille added to a spy's quality roll.
+## data/intel/spy_difficulty.csv: key -> per mille added to a spy's quality roll.
 var spy_difficulty: Dictionary = {}
-## data/road_speed.csv: key -> per mille (road, trail, offroad, sea, tier_<tier>).
+## data/economy/road_speed.csv: key -> per mille (road, trail, offroad, sea, tier_<tier>).
 var road_speed: Dictionary = {}
-## data/weather.csv: kind -> {speed_permille, icon, label, and the look: overcast,
+## data/world/weather.csv: kind -> {speed_permille, icon, label, and the look: overcast,
 ## wet, mud, snow, rainfall, snowfall (0..1)}, in the file's order.
 var weather_kinds: Dictionary = {}
-## data/weather_odds.csv: "season|tier" -> {kind: weight}, kinds in weather_kinds' order.
+## data/world/weather_odds.csv: "season|tier" -> {kind: weight}, kinds in weather_kinds' order.
 var weather_odds: Dictionary = {}
-## data/landmark_names.csv: kind ("high"|"low") -> patterns in file order.
+## data/world/landmark_names.csv: kind ("high"|"low") -> patterns in file order.
 var landmark_names: Dictionary = {}
-## data/manor_buildings.csv: building_code -> {label, cost_gold, civil_cost,
+## data/economy/manor_buildings.csv: building_code -> {label, cost_gold, civil_cost,
 ## build_days, tax_bonus, output_bonus, defence_bonus, church_bonus,
 ## *_per_tick, produce_good, produce_units} — what a manor can raise, what
 ## the work takes in civil goods, how long it takes and what it does once it
 ## stands.
 var manor_buildings: Dictionary = {}
-## data/goods_economy.csv: good_code -> {pool, price_gold, growth_permille}
+## data/economy/goods_economy.csv: good_code -> {pool, price_gold, growth_permille}
 ## (spec 2026-09-14 §3); goods_economy_defaults.csv: tag -> the same, for a
 ## good the table does not name.
 var goods_economy: Dictionary = {}
 var goods_economy_defaults: Dictionary = {}
-## data/manor_focus.csv: focus_code -> {label, good_code, biomes, coast,
+## data/economy/manor_focus.csv: focus_code -> {label, good_code, biomes, coast,
 ## yield_per_1000, switch_cost_gold, transition_ticks} — the
 ## chief goods a manor may work at (owner 2026-09-13), in file order.
 var manor_focus: Dictionary = {}
-## data/manor_estates.csv rows, in file order then ascending by min_people:
+## data/economy/manor_estates.csv rows, in file order then ascending by min_people:
 ## the estate a manor is by its industry (focus_code) and its people (owner
 ## 2026-09-14) — the manor card's size; its painting is GameArt's.
 var manor_estates: Array[Dictionary] = []
-## data/goods_palette.csv: a good's first tag -> the colour its province wears
+## data/screens/ui/goods_palette.csv: a good's first tag -> the colour its province wears
 ## in the ECONOMY view.
 var goods_palette: Dictionary = {}
-## data/terrain_palette.csv: key -> "#rrggbb" for the terrain the game draws
+## data/screens/ui/terrain_palette.csv: key -> "#rrggbb" for the terrain the game draws
 ## itself (MapTerrain): land tints per biome, sea, lake, and line colours.
 var terrain_palette: Dictionary = {}
 var events: Array[Dictionary] = []
 var events_by_id: Dictionary = {}
 var event_choices: Array[Dictionary] = []
-## The scripted chapters (data/chapter_events.csv). They are NOT in `events`
+## The scripted chapters (data/story/chapter_events.csv). They are NOT in `events`
 ## — the random roll samples that pool by weight and a chapter beat must
 ## never be sampled; it is fired by id, off the chain. `events_by_id` holds
 ## both, because EventSystem._fire looks a beat up by id either way.
 var chapter_events: Array[Dictionary] = []
 var chapter_event_choices: Array[Dictionary] = []
-## branch_id -> the ordered rules of data/chapter_branches.csv. The `branch:`
+## branch_id -> the ordered rules of data/story/chapter_branches.csv. The `branch:`
 ## effect op schedules the first rule whose `requires` holds.
 var chapter_branches: Dictionary = {}
 var world_rules: Dictionary = {}
@@ -338,32 +338,32 @@ var cells: Dictionary = {}
 ## geography/coasts.csv rows (kind land|lake, feature_id, loop, points) with
 ## polyline and bbox set at load, like routes and rivers.
 var coasts: Array[Dictionary] = []
-## Available map packs from data/maps.csv, keyed by map_id.
+## Available map packs from data/world/maps.csv, keyed by map_id.
 var maps: Dictionary = {}
 ## The currently loaded pack (load_map).
 var map_id: String = ""
 var index_texture_path: String = ""
 var province_texture_path: String = ""
 var biome_texture_path: String = ""
-## data/maps.csv sea_texture: world_sea_distance.png, every pixel its
+## data/world/maps.csv sea_texture: world_sea_distance.png, every pixel its
 ## distance to land in native px (MapIndex.bake_sea_distance); SeaLayer.
 var sea_texture_path: String = ""
-## BIOMES LAYER (experiment 2026-09-14). data/maps.csv biome_weights: the
+## BIOMES LAYER (experiment 2026-09-14). data/world/maps.csv biome_weights: the
 ## base path of world_biome_weights_N.png, each biome's blurred share of
 ## the land (MapIndex.bake_biome_weights); BiomeLayer. "" when unbaked.
 var biome_weights_path: String = ""
 
-## BIOMES LAYER (owner 2026-09-17, choice B). data/maps.csv relief_texture:
+## BIOMES LAYER (owner 2026-09-17, choice B). data/world/maps.csv relief_texture:
 ## the pack's baked height field (MapIndex.bake_relief, tools/bake_relief.gd);
 ## biome_tiles.gdshader lights the ground by its slope. "" when unbaked.
 var relief_path: String = ""
-## data/maps.csv settlement_texture: world_settlement_distance.png, every
+## data/world/maps.csv settlement_texture: world_settlement_distance.png, every
 ## pixel its distance in km to the nearest settlement's worked ground
 ## (tools/bake_settlements.gd). The ground shader fades to bare earth near
 ## a town so its art rises out of worked land instead of off green forest
 ## (owner 2026-09-17).
 var settlement_path: String = ""
-## data/maps.csv cell_texture: world_cell_index.png, R | G<<8 = the land
+## data/world/maps.csv cell_texture: world_cell_index.png, R | G<<8 = the land
 ## cell under a pixel (white = water) — how a click finds its manor.
 var cell_texture_path: String = ""
 ## realm slot -> this map's kingdom_code (maps/<id>/realm_bindings.csv).
@@ -446,10 +446,10 @@ func _register_table(domain: String, area: String, table: Dictionary) -> void:
 ## Parses a CSV with a header row into an Array of row Dictionaries.
 ## Returns [] and sets last_error if any row is shorter than required_cols
 ## or a file error occurs. Extra columns are kept; empty trailing lines skipped.
-## The default map pack's id straight from data/maps.csv (is_default = 1,
+## The default map pack's id straight from data/world/maps.csv (is_default = 1,
 ## else the first row) — for tools that run before any repository loads,
 ## so none of them names a pack.
-static func default_pack_id(maps_csv: String = "res://data/maps.csv") -> String:
+static func default_pack_id(maps_csv: String = "res://data/world/maps.csv") -> String:
 	var first := ""
 	for row: Dictionary in parse_csv(maps_csv, ["map_id"]):
 		if first == "":
@@ -481,9 +481,9 @@ static func map3d_scene_of(pack_id: String) -> String:
 	return MAP3D_WORLDS.path_join(pack_id + ".tscn")
 
 
-## map3d_dir straight from data/maps.csv, for tools that run before any
+## map3d_dir straight from data/world/maps.csv, for tools that run before any
 ## repository loads.
-static func map3d_dir_of(pack_id: String, maps_csv: String = "res://data/maps.csv") -> String:
+static func map3d_dir_of(pack_id: String, maps_csv: String = "res://data/world/maps.csv") -> String:
 	for row: Dictionary in parse_csv(maps_csv, ["map_id"]):
 		if String(row["map_id"]) == pack_id and String(row.get("map3d_dir", "")) != "":
 			return String(row["map3d_dir"])
@@ -521,6 +521,8 @@ static func _index(dir: String) -> Dictionary:
 		var index := {}
 		for r in parse_csv(dir + "/tables.csv", ["folder", "table"]):
 			index[String(r["table"])] = String(r["folder"])
+		if index.is_empty():
+			return index  # unreadable or empty: not cached, the caller reports it
 		_index_cache[dir] = index
 	return _index_cache[dir]
 
@@ -547,7 +549,11 @@ static func table_folders(dir: String) -> Array[String]:
 static func load_balance(dir: String) -> Dictionary:
 	var out := {}
 	var where := {}
-	for folder in table_folders(dir):
+	var folders := table_folders(dir)
+	if folders.is_empty():
+		last_error = "%s/tables.csv names no folder (missing or empty)" % dir
+		return {}
+	for folder in folders:
 		var path := dir + "/" + folder + "/balance.csv"
 		if not FileAccess.file_exists(path):
 			continue
@@ -571,32 +577,30 @@ static func load_balance(dir: String) -> Dictionary:
 ## paper, brass and seal, the icons) still draw their scenes. Null on failure.
 static func load_look(dir: String) -> DataRepository:
 	var repo := DataRepository.new()
-	var bal_rows := DataRepository.parse_csv(dir + "/balance.csv", ["key", "value"])
-	if bal_rows.is_empty():
+	repo.balance = load_balance(dir)
+	if repo.balance.is_empty():
 		return null
-	for r in bal_rows:
-		repo.balance[r["key"]] = float(r["value"])
 	if not repo._load_look_tables(dir):
 		return null
 	return repo
 
 func _load_look_tables(dir: String) -> bool:
-	if not _load_if_present(dir + "/political_palette.csv", ["key", "color"],
+	if not _load_if_present(table_path(dir, "political_palette"), ["key", "color"],
 			func(r): palette[r["key"]] = r["color"]):
 		return false
-	if not _load_if_present(dir + "/chart_palette.csv", ["key", "color"],
+	if not _load_if_present(table_path(dir, "chart_palette"), ["key", "color"],
 			func(r): chart_palette[r["key"]] = r["color"]):
 		return false
-	if not _load_if_present(dir + "/ui_table_palette.csv", ["key", "color"],
+	if not _load_if_present(table_path(dir, "ui_table_palette"), ["key", "color"],
 			func(r): ui_table_palette[r["key"]] = r["color"]):
 		return false
-	if not _load_if_present(dir + "/ui_fonts.csv", ["role", "size_scale", "title_case"],
+	if not _load_if_present(table_path(dir, "ui_fonts"), ["role", "size_scale", "title_case"],
 			func(r): ui_fonts[r["role"]] = r):
 		return false
-	if not _load_if_present(dir + "/title_entrance.csv", ["node", "kind", "delay_ms", "duration_ms", "lift_px", "ease", "step_ms"],
+	if not _load_if_present(table_path(dir, "title_entrance"), ["node", "kind", "delay_ms", "duration_ms", "lift_px", "ease", "step_ms"],
 			func(r): title_entrance.append(r)):
 		return false
-	if not _load_if_present(dir + "/resource_icons.csv", ["key", "label", "icon", "tooltip"],
+	if not _load_if_present(table_path(dir, "resource_icons"), ["key", "label", "icon", "tooltip"],
 			func(r): resource_icons[r["key"]] = r):
 		return false
 	return true
@@ -608,80 +612,78 @@ static func load_all(dir: String) -> DataRepository:
 	return repo
 
 func _load(dir: String) -> bool:
-	var bal_rows := DataRepository.parse_csv(dir + "/balance.csv", ["key", "value"])
-	if bal_rows.is_empty():
+	balance = load_balance(dir)
+	if balance.is_empty():
 		return false
-	for r in bal_rows:
-		balance[r["key"]] = float(r["value"])
-	var trait_rows := DataRepository.parse_csv(dir + "/character_traits.csv", ["trait_code"])
+	var trait_rows := DataRepository.parse_csv(table_path(dir, "character_traits"), ["trait_code"])
 	if trait_rows.is_empty():
 		return false
 	for r in trait_rows:
 		traits[r["trait_code"]] = r
-	var seat_rows := DataRepository.parse_csv(dir + "/council_seats.csv", ["seat_code"])
+	var seat_rows := DataRepository.parse_csv(table_path(dir, "council_seats"), ["seat_code"])
 	if seat_rows.is_empty():
 		return false
 	for r in seat_rows:
 		seats[r["seat_code"]] = r
-	var court_rows := DataRepository.parse_csv(dir + "/policy_actions_court_additions.csv", ["action_code"])
+	var court_rows := DataRepository.parse_csv(table_path(dir, "policy_actions_court_additions"), ["action_code"])
 	if court_rows.is_empty():
 		return false
 	for r in court_rows:
 		actions[r["action_code"]] = r
-	if not _load_if_present(dir + "/policy_actions_domain.csv", ["action_code"],
+	if not _load_if_present(table_path(dir, "policy_actions_domain"), ["action_code"],
 			func(r): actions[r["action_code"]] = r):
 		return false
-	if not _load_if_present(dir + "/founding_council.csv", ["id", "display_name", "seat"],
+	if not _load_if_present(table_path(dir, "founding_council"), ["id", "display_name", "seat"],
 			func(r): founding.append(r)):
 		return false
-	if not _load_if_present(dir + "/roles.csv", ["id", "display_name", "seat"],
+	if not _load_if_present(table_path(dir, "roles"), ["id", "display_name", "seat"],
 			func(r): roles.append(r)):
 		return false
-	if not _load_if_present(dir + "/relationships.csv",
+	if not _load_if_present(table_path(dir, "relationships"),
 			["from_id", "to_id", "rel_type", "sentiment", "reason"],
 			func(r): relationships.append(r)):
 		return false
-	if not _load_if_present(dir + "/world_rules.csv",
+	if not _load_if_present(table_path(dir, "world_rules"),
 			["rule_code", "kind", "verdict"],
 			func(r): world_rules[r["rule_code"]] = r):
 		return false
-	if not _load_if_present(dir + "/claim_types.csv", ["claim_type", "label"],
+	if not _load_if_present(table_path(dir, "claim_types"), ["claim_type", "label"],
 			func(r): claim_types[r["claim_type"]] = r):
 		return false
-	if not _load_if_present(dir + "/facts.csv",
+	if not _load_if_present(table_path(dir, "facts"),
 			["fact_code", "kind", "subject", "claim_type", "text", "truth"],
 			func(r): facts.append(r)):
 		return false
-	if not _load_if_present(dir + "/regions.csv", ["region_code", "label"],
+	if not _load_if_present(table_path(dir, "regions"), ["region_code", "label"],
 			func(r): regions[r["region_code"]] = r):
 		return false
-	if not _load_if_present(dir + "/locations.csv",
+	if not _load_if_present(table_path(dir, "locations"),
 			["location_code", "region_code", "label", "kind", "occupants"],
 			func(r): locations[r["location_code"]] = r):
 		return false
-	if not _load_if_present(dir + "/templates.csv", ["key", "trait", "text"],
+	if not _load_if_present(table_path(dir, "templates"), ["key", "trait", "text"],
 			func(r): templates.append(r)):
 		return false
-	if not _load_if_present(dir + "/action_signatures.csv",
+	if not _load_if_present(table_path(dir, "action_signatures"),
 			["action_code", "variant", "centralism", "militarism", "orthodoxy",
 			"tax_incidence", "expansionism"],
 			func(r): signatures.append(r)):
 		return false
-	if not _load_if_present(dir + "/events.csv",
+	if not _load_if_present(table_path(dir, "events"),
 			["event_id", "category", "trigger", "weight", "cooldown_ticks", "once",
 			"voice", "title_key"],
 			func(r): events.append(r)):
 		return false
 	for row in events:
 		events_by_id[row["event_id"]] = row
-	if not _load_if_present(dir + "/chapter_events.csv",
+	if not _load_if_present(table_path(dir, "chapter_events"),
 			["event_id", "category", "trigger", "weight", "cooldown_ticks", "once",
 			"voice", "title_key"],
 			func(r): chapter_events.append(r)):
 		return false
 	for row in chapter_events:
 		events_by_id[row["event_id"]] = row
-	if not _load_if_present(dir + "/maps.csv",
+	if not _load_if_present(table_path(dir, "maps"),
 			["map_id", "label", "index_texture", "data_dir"],
 			func(r): maps[r["map_id"]] = r):
 		return false
@@ -690,196 +692,196 @@ func _load(dir: String) -> bool:
 	event_scenes_authored = StorySource.load_all_scenes()
 	event_scenes = event_scenes_authored.duplicate()
 	event_titles = StorySource.load_all_titles()
-	if not _load_if_present(dir + "/event_choices.csv",
+	if not _load_if_present(table_path(dir, "event_choices"),
 			["event_id", "choice_id", "label", "centralism", "militarism", "orthodoxy",
 			"tax_incidence", "expansionism", "effects", "requires"],
 			func(r): event_choices.append(r)):
 		return false
-	if not _load_if_present(dir + "/chapter_event_choices.csv",
+	if not _load_if_present(table_path(dir, "chapter_event_choices"),
 			["event_id", "choice_id", "label", "centralism", "militarism", "orthodoxy",
 			"tax_incidence", "expansionism", "effects", "requires"],
 			func(r): chapter_event_choices.append(r)):
 		return false
-	if not _load_if_present(dir + "/chapter_branches.csv",
+	if not _load_if_present(table_path(dir, "chapter_branches"),
 			["branch_id", "order", "requires", "event_id", "ticks"],
 			func(r): (chapter_branches.get_or_add(r["branch_id"], []) as Array).append(r)):
 		return false
 	for id: String in chapter_branches:
 		(chapter_branches[id] as Array).sort_custom(
 			func(a: Dictionary, b: Dictionary) -> bool: return int(a["order"]) < int(b["order"]))
-	if not _load_if_present(dir + "/world_schema.csv",
+	if not _load_if_present(table_path(dir, "world_schema"),
 			["path", "type", "good_direction", "llm_cap"],
 			func(r): world_schema.append(r)):
 		return false
-	if not _load_if_present(dir + "/metric_polarity.csv", ["metric", "good_direction"],
+	if not _load_if_present(table_path(dir, "metric_polarity"), ["metric", "good_direction"],
 			func(r): metric_polarity[r["metric"]] = int(float(r["good_direction"]))):
 		return false
-	if not _load_if_present(dir + "/order_costs.csv", ["action_code", "cost", "always"],
+	if not _load_if_present(table_path(dir, "order_costs"), ["action_code", "cost", "always"],
 			func(r): order_costs[r["action_code"]] = r):
 		return false
 	if not _load_look_tables(dir):
 		return false
-	if not _load_if_present(dir + "/manor_card_sections.csv", ["section", "label", "keys", "rates"],
+	if not _load_if_present(table_path(dir, "manor_card_sections"), ["section", "label", "keys", "rates"],
 			func(r): manor_card_sections.append({"section": String(r["section"]),
 				"label": String(r["label"]), "keys": String(r["keys"]).split("|", false),
 				"rates": int(float(r["rates"])) == 1,
 				"per_month": int(float(r.get("per_month", "0"))) == 1,
 				"drop_if_rates": String(r.get("drop_if_rates", "")).split("|", false)})):
 		return false
-	if not _load_if_present("res://data/goods_palette.csv", ["tag", "color"],
+	if not _load_if_present(table_path("res://data", "goods_palette"), ["tag", "color"],
 			func(r): goods_palette[String(r["tag"])] = String(r["color"])):
 		return false
-	if not _load_if_present("res://data/goods_economy.csv",
+	if not _load_if_present(table_path("res://data", "goods_economy"),
 			["good_code", "pool", "price_gold", "growth_permille"],
 			func(r): goods_economy[String(r["good_code"])] = r):
 		return false
-	if not _load_if_present("res://data/goods_economy_defaults.csv",
+	if not _load_if_present(table_path("res://data", "goods_economy_defaults"),
 			["tag", "pool", "price_gold", "growth_permille"],
 			func(r): goods_economy_defaults[String(r["tag"])] = r):
 		return false
-	if not _load_if_present("res://data/manor_buildings.csv",
+	if not _load_if_present(table_path("res://data", "manor_buildings"),
 			["building_code", "label", "cost_gold", "civil_cost", "build_days", "tax_bonus", "output_bonus",
 			"defence_bonus", "church_bonus", "gold_per_tick", "grain_per_tick",
 			"contentment_per_tick", "unrest_per_tick", "produce_good", "produce_units"],
 			func(r): manor_buildings[String(r["building_code"])] = r):
 		return false
-	if not _load_if_present("res://data/manor_focus.csv",
+	if not _load_if_present(table_path("res://data", "manor_focus"),
 			["focus_code", "label", "good_code", "biomes", "coast", "yield_per_1000",
 			"switch_cost_gold", "transition_ticks"],
 			func(r): manor_focus[String(r["focus_code"])] = r):
 		return false
-	if not _load_if_present("res://data/manor_estates.csv",
+	if not _load_if_present(table_path("res://data", "manor_estates"),
 			["focus_code", "tier", "min_people"],
 			func(r): manor_estates.append(r)):
 		return false
-	if not _load_if_present("res://data/map3d_settlements.csv",
+	if not _load_if_present(table_path("res://data", "map3d_settlements"),
 			["group", "dot_px", "ring_px", "line_px", "color", "max_view_m"],
 			func(r): map3d_settlements[String(r["group"])] = r):
 		return false
-	if not _load_if_present("res://data/map3d_houses.csv",
+	if not _load_if_present(table_path("res://data", "map3d_houses"),
 			["type", "role", "weight", "footprint_m", "height_m", "roof", "min_group"],
 			func(r): map3d_houses[String(r["type"])] = r):
 		return false
-	if not _load_if_present("res://data/map3d_tree_crowns.csv", ["cell", "kind"],
+	if not _load_if_present(table_path("res://data", "map3d_tree_crowns"), ["cell", "kind"],
 			func(r): map3d_tree_crowns.append(r)):
 		return false
-	if not _load_if_present("res://data/map3d_tree_species.csv",
+	if not _load_if_present(table_path("res://data", "map3d_tree_species"),
 			["kind", "enabled", "form", "cells", "crowns", "spread_m", "size", "tint_lo", "tint_hi"],
 			func(r): map3d_tree_species.append(r)):
 		return false
-	if not _load_if_present("res://data/map3d_bake.csv", ["key", "value"],
+	if not _load_if_present(table_path("res://data", "map3d_bake"), ["key", "value"],
 			func(r): map3d_bake[String(r["key"])] = float(r["value"])):
 		return false
-	if not _load_if_present("res://data/graphics_quality.csv", ["tier", "render_scale"],
+	if not _load_if_present(table_path("res://data", "graphics_quality"), ["tier", "render_scale"],
 			func(r): graphics_quality[String(r["tier"])] = r):
 		return false
-	if not _load_if_present(dir + "/army_art.csv", ["piece", "stand_deg"],
+	if not _load_if_present(table_path(dir, "army_art"), ["piece", "stand_deg"],
 			func(r): army_art[String(r["piece"])] = r):
 		return false
-	if not _load_if_present(dir + "/army_terrain_biomes.csv", ["biome_id", "terrain"],
+	if not _load_if_present(table_path(dir, "army_terrain_biomes"), ["biome_id", "terrain"],
 			func(r): army_terrain_biomes[int(r["biome_id"])] = String(r["terrain"])):
 		return false
-	if not _load_if_present(dir + "/army_terrain.csv", ["terrain", "arm", "defend_permille", "attack_permille"],
+	if not _load_if_present(table_path(dir, "army_terrain"), ["terrain", "arm", "defend_permille", "attack_permille"],
 			func(r): army_terrain["%s|%s" % [r["terrain"], r["arm"]]] = {
 				"defend": int(r["defend_permille"]), "attack": int(r["attack_permille"])}):
 		return false
-	if not _load_if_present(dir + "/army_town_reach.csv", ["group", "reach_km"],
+	if not _load_if_present(table_path(dir, "army_town_reach"), ["group", "reach_km"],
 			func(r): army_town_reach[String(r["group"])] = float(r["reach_km"])):
 		return false
-	if not _load_if_present(dir + "/war_marks.csv", ["type", "glyph", "layer", "note"],
+	if not _load_if_present(table_path(dir, "war_marks"), ["type", "glyph", "layer", "note"],
 			func(r): war_marks[String(r["type"])] = {"glyph": String(r["glyph"]), "layer": String(r["layer"]),
 				"note": String(r["note"])}):
 		return false
-	if not _load_if_present(dir + "/war_plan_kinds.csv", ["kind", "label", "tool_key", "gesture", "head", "teeth",
+	if not _load_if_present(table_path(dir, "war_plan_kinds"), ["kind", "label", "tool_key", "gesture", "head", "teeth",
 			"pen", "name_default", "cut"],
 			func(r): war_plan_kinds[String(r["kind"])] = {"label": String(r["label"]), "tool_key": String(r["tool_key"]),
 				"gesture": String(r["gesture"]), "head": String(r["head"]) == "1", "teeth": String(r["teeth"]) == "1",
 				"pen": String(r["pen"]) == "1", "name_default": String(r["name_default"]), "cut": int(r["cut"])}):
 		return false
-	if not _load_if_present(dir + "/war_mark_hazards.csv", ["type", "reach_km", "supply_loss_permille"],
+	if not _load_if_present(table_path(dir, "war_mark_hazards"), ["type", "reach_km", "supply_loss_permille"],
 			func(r): war_mark_hazards[String(r["type"])] = {"reach_km": float(r["reach_km"]),
 				"permille": int(r["supply_loss_permille"])}):
 		return false
-	if not _load_if_present(dir + "/war_works.csv", ["good_code", "family", "glyph"],
+	if not _load_if_present(table_path(dir, "war_works"), ["good_code", "family", "glyph"],
 			func(r): war_works[String(r["good_code"])] = {"family": String(r["family"]), "glyph": String(r["glyph"])}):
 		return false
-	if not _load_if_present(dir + "/hazard_kinds.csv", ["kind", "label", "months", "public", "wounds_permille",
+	if not _load_if_present(table_path(dir, "hazard_kinds"), ["kind", "label", "months", "public", "wounds_permille",
 			"morale", "supply_loss_permille", "pace_permille", "ink"],
 			func(r): hazard_kinds[String(r["kind"])] = {"label": String(r["label"]), "months": int(r["months"]),
 				"public": String(r["public"]) == "1", "wounds_permille": int(r["wounds_permille"]),
 				"morale": int(r["morale"]), "supply_loss_permille": int(r["supply_loss_permille"]),
 				"pace_permille": int(r["pace_permille"]), "ink": String(r["ink"])}):
 		return false
-	if not _load_if_present(dir + "/army_town_defence.csv", ["works", "arm", "defend_permille", "attack_permille"],
+	if not _load_if_present(table_path(dir, "army_town_defence"), ["works", "arm", "defend_permille", "attack_permille"],
 			func(r): army_town_defence["%s|%s" % [r["works"], r["arm"]]] = {
 				"defend": int(r["defend_permille"]), "attack": int(r["attack_permille"])}):
 		return false
-	if not _load_if_present(dir + "/army_ground_speed.csv", ["key", "permille"],
+	if not _load_if_present(table_path(dir, "army_ground_speed"), ["key", "permille"],
 			func(r): army_ground_speed[String(r["key"])] = int(r["permille"])):
 		return false
-	if not _load_if_present(dir + "/army_matchups.csv", ["arm", "vs_arm", "attack_permille", "defense_permille"],
+	if not _load_if_present(table_path(dir, "army_matchups"), ["arm", "vs_arm", "attack_permille", "defense_permille"],
 			_add_matchup):
 		return false
-	if not _load_if_present(dir + "/army_training_grades.csv", ["above", "label"],
+	if not _load_if_present(table_path(dir, "army_training_grades"), ["above", "label"],
 			func(r): army_training_grades.append({"above": int(r["above"]), "label": String(r["label"])})):
 		return false
-	if not _load_if_present(dir + "/army_speed.csv", ["arm", "km_per_day"],
+	if not _load_if_present(table_path(dir, "army_speed"), ["arm", "km_per_day"],
 			func(r): army_speed[String(r["arm"])] = int(r["km_per_day"])):
 		return false
-	if not _load_if_present(dir + "/courier_kinds.csv", ["kind", "speed_permille", "fee_gold", "offered"],
+	if not _load_if_present(table_path(dir, "courier_kinds"), ["kind", "speed_permille", "fee_gold", "offered"],
 			func(r): courier_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
 				"fee_gold": int(r["fee_gold"]), "offered": int(r["offered"]) == 1}):
 		return false
-	if not _load_if_present(dir + "/laws.csv", ["law_code", "tab", "group", "label", "kind", "values", "default",
+	if not _load_if_present(table_path(dir, "laws"), ["law_code", "tab", "group", "label", "kind", "values", "default",
 			"scope", "gold_cost", "cooldown_ticks", "cost_ops"], _add_law):
 		return false
-	if not _load_if_present(dir + "/law_effects.csv", ["law_code", "value", "channel", "target", "amount",
+	if not _load_if_present(table_path(dir, "law_effects"), ["law_code", "value", "channel", "target", "amount",
 			"timing", "share", "reason"], func(r): law_effects.append(r)):
 		return false
-	if not _load_if_present(dir + "/law_words.csv", ["key", "text"],
+	if not _load_if_present(table_path(dir, "law_words"), ["key", "text"],
 			func(r): law_words[String(r["key"])] = String(r["text"])):
 		return false
-	if not _load_if_present(dir + "/conduct_words.csv", ["key", "text"],
+	if not _load_if_present(table_path(dir, "conduct_words"), ["key", "text"],
 			func(r): conduct_words[String(r["key"])] = String(r["text"])):
 		return false
-	if not _load_if_present(dir + "/ledger_lenses.csv", ["lens", "label", "instance_type"],
+	if not _load_if_present(table_path(dir, "ledger_lenses"), ["lens", "label", "instance_type"],
 			func(r): ledger_lenses.append(r)):
 		return false
-	if not _load_if_present(dir + "/ledger_clusters.csv", ["cluster", "label", "colour", "x", "y", "z", "lens"],
+	if not _load_if_present(table_path(dir, "ledger_clusters"), ["cluster", "label", "colour", "x", "y", "z", "lens"],
 			func(r): ledger_clusters.append({"cluster": String(r["cluster"]), "label": String(r["label"]),
 				"colour": String(r["colour"]), "lens": String(r["lens"]),
 				"at": Vector3(float(r["x"]), float(r["y"]), float(r["z"]))})):
 		return false
-	if not _load_if_present(dir + "/ledger_static_nodes.csv", ["node_id", "type_id", "label", "note"],
+	if not _load_if_present(table_path(dir, "ledger_static_nodes"), ["node_id", "type_id", "label", "note"],
 			func(r): ledger_static_nodes.append({"node_id": String(r["node_id"]), "type_id": String(r["type_id"]),
 				"label": String(r["label"]), "note": String(r["note"])})):
 		return false
-	if not _load_if_present(dir + "/ledger_static_links.csv", ["link_id", "from", "to", "flow", "note"],
+	if not _load_if_present(table_path(dir, "ledger_static_links"), ["link_id", "from", "to", "flow", "note"],
 			func(r): ledger_static_links.append({"link_id": String(r["link_id"]), "from": String(r["from"]),
 				"to": String(r["to"]), "flow": -1 if String(r["flow"]).strip_edges() == "" else int(r["flow"]),
 				"note": String(r["note"])})):
 		return false
-	if not _load_if_present(dir + "/ledger_object_types.csv",
+	if not _load_if_present(table_path(dir, "ledger_object_types"),
 			["type_id", "layer", "lenses", "label", "icon", "x", "z", "instances", "status", "milestone",
 				"cluster", "fold_to", "star"],
 			func(r): ledger_types.append(r)):
 		return false
-	if not _load_if_present(dir + "/ledger_link_types.csv",
+	if not _load_if_present(table_path(dir, "ledger_link_types"),
 			["link_id", "from_type", "to_type", "verb", "lenses", "status", "resolver",
 				"governor_seat", "governor_kind", "milestone", "planned_note", "look"],
 			func(r): ledger_links.append(r)):
 		return false
-	if not _load_if_present(dir + "/ledger_actions.csv",
+	if not _load_if_present(table_path(dir, "ledger_actions"),
 			["target", "action_code", "label", "params", "needs_map"],
 			func(r): ledger_actions.append(r)):
 		return false
-	if not _load_if_present(dir + "/ledger_loops.csv", ["loop_id", "links", "kind", "running", "label"],
+	if not _load_if_present(table_path(dir, "ledger_loops"), ["loop_id", "links", "kind", "running", "label"],
 			func(r): ledger_loops.append(r)):
 		return false
-	if not _load_if_present(dir + "/ledger_palette.csv", ["key", "color"],
+	if not _load_if_present(table_path(dir, "ledger_palette"), ["key", "color"],
 			func(r): ledger_palette[String(r["key"])] = Color(String(r["color"]))):
 		return false
-	if not _load_if_present(dir + "/ledger_governance.csv",
+	if not _load_if_present(table_path(dir, "ledger_governance"),
 			["flow_type", "seat", "skill", "base_permille", "skill_mid", "skill_step_permille", "min_permille",
 				"max_permille", "label", "books", "ledger_type"],
 			func(r): ledger_governance[String(r["flow_type"])] = {"seat": String(r["seat"]),
@@ -890,13 +892,13 @@ func _load(dir: String) -> bool:
 				"ledger_type": String(r["flow_type"]) if String(r["ledger_type"]) == "" \
 					else String(r["ledger_type"])}):
 		return false
-	if not _load_if_present(dir + "/courier_art.csv", ["kind", "size"],
+	if not _load_if_present(table_path(dir, "courier_art"), ["kind", "size"],
 			func(r): courier_art[String(r["kind"])] = r):
 		return false
-	if not _load_if_present(dir + "/road_speed.csv", ["key", "permille"],
+	if not _load_if_present(table_path(dir, "road_speed"), ["key", "permille"],
 			func(r): road_speed[String(r["key"])] = int(r["permille"])):
 		return false
-	if not _load_if_present(dir + "/weather.csv", ["kind", "speed_permille", "icon", "label"],
+	if not _load_if_present(table_path(dir, "weather"), ["kind", "speed_permille", "icon", "label"],
 			func(r): weather_kinds[String(r["kind"])] = {"speed_permille": int(r["speed_permille"]),
 				"icon": String(r["icon"]), "label": String(r["label"]),
 				"overcast": float(r.get("overcast", 0)), "wet": float(r.get("wet", 0)),
@@ -904,41 +906,41 @@ func _load(dir: String) -> bool:
 				"rainfall": float(r.get("rainfall", 0)), "snowfall": float(r.get("snowfall", 0)),
 				"gust": float(r.get("gust", 0))}):
 		return false
-	if not _load_if_present(dir + "/weather_odds.csv", ["season", "tier"], _add_weather_odds):
+	if not _load_if_present(table_path(dir, "weather_odds"), ["season", "tier"], _add_weather_odds):
 		return false
-	if not _load_if_present(dir + "/intel_facts.csv", ["key", "label", "round_to", "tiers"],
+	if not _load_if_present(table_path(dir, "intel_facts"), ["key", "label", "round_to", "tiers"],
 			func(r): intel_facts[String(r["key"])] = {"label": String(r["label"]),
 				"round_to": maxi(1, int(r["round_to"])),
 				"tiers": String(r["tiers"]).split("|", false)}):
 		return false
-	if not _load_if_present(dir + "/spy_difficulty.csv", ["key", "permille"],
+	if not _load_if_present(table_path(dir, "spy_difficulty"), ["key", "permille"],
 			func(r): spy_difficulty[String(r["key"])] = int(r["permille"])):
 		return false
-	if not _load_if_present(dir + "/army_orders.csv", ["action_code", "label", "hint"],
+	if not _load_if_present(table_path(dir, "army_orders"), ["action_code", "label", "hint"],
 			func(r): army_orders.append({"action_code": String(r["action_code"]),
 				"label": String(r["label"]), "hint": String(r["hint"]),
 				"params": _order_params(String(r.get("params", "")))})):
 		return false
-	if not _load_if_present(dir + "/event_presenters.csv", ["key", "seat"],
+	if not _load_if_present(table_path(dir, "event_presenters"), ["key", "seat"],
 			func(r): event_presenters[String(r["key"])] = String(r["seat"])):
 		return false
-	if not _load_if_present(dir + "/army_route_orders.csv", ["key", "label", "hint"],
+	if not _load_if_present(table_path(dir, "army_route_orders"), ["key", "label", "hint"],
 			func(r): army_route_orders[String(r["key"])] = {"label": String(r["label"]),
 				"hint": String(r["hint"])}):
 		return false
-	if not _load_if_present(dir + "/army_carry_loads.csv", ["days", "pace_permille", "label"],
+	if not _load_if_present(table_path(dir, "army_carry_loads"), ["days", "pace_permille", "label"],
 			func(r): army_carry_loads.append({"days": int(r["days"]),
 				"pace_permille": int(r["pace_permille"]), "label": String(r["label"])})):
 		return false
 	army_carry_loads.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["days"]) < int(b["days"]))
-	if not _load_if_present(dir + "/army_supply_orders.csv", ["key", "label", "hint"],
+	if not _load_if_present(table_path(dir, "army_supply_orders"), ["key", "label", "hint"],
 			func(r): army_supply_orders[String(r["key"])] = {"label": String(r["label"]),
 				"hint": String(r["hint"])}):
 		return false
-	if not _load_if_present(dir + "/army_hostile_stances.csv", ["stance"],
+	if not _load_if_present(table_path(dir, "army_hostile_stances"), ["stance"],
 			func(r): army_hostile_stances.append(String(r["stance"]))):
 		return false
-	if not _load_if_present(dir + "/battle_outcomes.csv",
+	if not _load_if_present(table_path(dir, "battle_outcomes"),
 			["tier", "eff_min", "eff_max", "attacker_loss_permille", "defender_loss_permille",
 			"wounded_share_permille", "attacker_morale", "defender_morale", "rout"],
 			func(r): battle_outcomes.append({"tier": String(r["tier"]),
@@ -952,7 +954,7 @@ func _load(dir: String) -> bool:
 		return false
 	battle_outcomes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["eff_min"]) < int(b["eff_min"]))
-	if not _load_if_present(dir + "/battle_stances.csv",
+	if not _load_if_present(table_path(dir, "battle_stances"),
 			["stance", "label", "defence_permille", "morale_decay_permille",
 			"retreat_odds_permille", "retreats_on_contact"],
 			func(r): battle_stances[String(r["stance"])] = {"label": String(r["label"]),
@@ -964,7 +966,7 @@ func _load(dir: String) -> bool:
 				"formation": String(r.get("formation", "")) if String(r.get("formation", "")) != "" else "block",
 				"stand_clip": String(r.get("stand_clip", ""))}):
 		return false
-	if not _load_if_present(dir + "/ai_doctrines.csv",
+	if not _load_if_present(table_path(dir, "ai_doctrines"),
 			["role", "greed_permille", "caution_permille", "dist_cost", "engage_odds_permille",
 			"retreat_morale", "town_bonus"],
 			func(r): ai_doctrines[String(r["role"])] = {"greed_permille": int(r["greed_permille"]),
@@ -972,7 +974,7 @@ func _load(dir: String) -> bool:
 				"engage_odds_permille": int(r["engage_odds_permille"]),
 				"retreat_morale": int(r["retreat_morale"]), "town_bonus": int(r["town_bonus"])}):
 		return false
-	if not _load_if_present(dir + "/army_formations.csv", ["figures", "min_fit_permille", "slots"],
+	if not _load_if_present(table_path(dir, "army_formations"), ["figures", "min_fit_permille", "slots"],
 			func(r):
 				var slots: Array = []
 				for part: String in String(r["slots"]).split("|"):
@@ -989,65 +991,65 @@ func _load(dir: String) -> bool:
 		return false
 	army_formations.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["min_fit_permille"]) < int(b["min_fit_permille"]))
-	if not _load_if_present(dir + "/army_split.csv", ["arm", "start_ring", "code_word", "label_word", "pooled"],
+	if not _load_if_present(table_path(dir, "army_split"), ["arm", "start_ring", "code_word", "label_word", "pooled"],
 			func(r): army_split.append({"arm": String(r["arm"]), "start_ring": int(r["start_ring"]),
 				"code_word": String(r["code_word"]), "label_word": String(r["label_word"]),
 				"pooled": String(r["pooled"]) == "1"})):
 		return false
-	if not _load_if_present(dir + "/army_camp_blocked.csv", ["terrain"],
+	if not _load_if_present(table_path(dir, "army_camp_blocked"), ["terrain"],
 			func(r): army_camp_blocked[String(r["terrain"])] = true):
 		return false
-	if not _load_if_present(dir + "/war_palette.csv", ["key", "color"],
+	if not _load_if_present(table_path(dir, "war_palette"), ["key", "color"],
 			func(r): war_palette[String(r["key"])] = Color(String(r["color"]))):
 		return false
-	if not _load_if_present(dir + "/war_drills.csv", ["key", "clip", "label", "arms"],
+	if not _load_if_present(table_path(dir, "war_drills"), ["key", "clip", "label", "arms"],
 			func(r): war_drills.append({"key": String(r["key"]), "clip": String(r["clip"]),
 				"label": String(r["label"]), "arms": PackedStringArray(String(r["arms"]).split("|", false))})):
 		return false
 	# war_equipment.csv: one row per piece of kit the folio's exploded view names;
 	# part = the object's name in assets/3D/units/<arm>/<arm>_parts.glb; note is
 	# SHOWN to the player, so it is a plain description, never empty, never a design note.
-	if not _load_if_present(dir + "/war_equipment.csv", ["arm", "part", "label", "note"],
+	if not _load_if_present(table_path(dir, "war_equipment"), ["arm", "part", "label", "note"],
 			func(r): war_equipment.append({"arm": String(r["arm"]), "part": String(r["part"]),
 				"label": String(r["label"]), "note": String(r["note"])})):
 		return false
-	if not _load_if_present(dir + "/war_folio_sections.csv", ["key", "label"],
+	if not _load_if_present(table_path(dir, "war_folio_sections"), ["key", "label"],
 			func(r): war_folio_sections.append({"key": String(r["key"]), "label": String(r["label"])})):
 		return false
-	if not _load_if_present(dir + "/war_order_words.csv", ["key", "word"],
+	if not _load_if_present(table_path(dir, "war_order_words"), ["key", "word"],
 			func(r): war_order_words[String(r["key"])] = String(r["word"])):
 		return false
-	if not _load_if_present(dir + "/army_height_supply.csv", ["tier", "min_height", "supply_permille"],
+	if not _load_if_present(table_path(dir, "army_height_supply"), ["tier", "min_height", "supply_permille"],
 			func(r): army_height_supply.append({"tier": String(r["tier"]),
 				"min_height": int(r["min_height"]), "supply_permille": int(r["supply_permille"])})):
 		return false
 	army_height_supply.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["min_height"]) > int(b["min_height"]))
-	if not _load_if_present(dir + "/army_morale_words.csv", ["min_score", "word"],
+	if not _load_if_present(table_path(dir, "army_morale_words"), ["min_score", "word"],
 			func(r): army_morale_words.append({"min_score": int(r["min_score"]), "word": String(r["word"])})):
 		return false
 	army_morale_words.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["min_score"]) > int(b["min_score"]))
-	if not _load_if_present(dir + "/workshop_rates.csv", ["rate_permille", "word", "ledger_label"],
+	if not _load_if_present(table_path(dir, "workshop_rates"), ["rate_permille", "word", "ledger_label"],
 			func(r): workshop_rates.append({"rate_permille": int(r["rate_permille"]), "word": String(r["word"]),
 				"ledger_label": String(r["ledger_label"])})):
 		return false
 	workshop_rates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["rate_permille"]) < int(b["rate_permille"]))
-	if not _load_if_present(dir + "/building_inputs.csv", ["building_code", "good_code", "units"],
+	if not _load_if_present(table_path(dir, "building_inputs"), ["building_code", "good_code", "units"],
 			func(r):
 				var code := String(r["building_code"])
 				if not building_inputs.has(code):
 					building_inputs[code] = []
 				(building_inputs[code] as Array).append({"good": String(r["good_code"]), "units": int(r["units"])})):
 		return false
-	if not _load_if_present(dir + "/landmark_names.csv", ["kind", "pattern"],
+	if not _load_if_present(table_path(dir, "landmark_names"), ["kind", "pattern"],
 			func(r):
 				var k := String(r["kind"])
 				if not landmark_names.has(k):
 					landmark_names[k] = []
 				(landmark_names[k] as Array).append(String(r["pattern"]))):
 		return false
-	if not _load_if_present(dir + "/terrain_palette.csv", ["key", "color"],
+	if not _load_if_present(table_path(dir, "terrain_palette"), ["key", "color"],
 			func(r): terrain_palette[r["key"]] = r["color"]):
 		return false
 	# A campaign always has a world under it; which one is data, not code.
@@ -1367,7 +1369,7 @@ func _fill_row_realms(r: Dictionary) -> void:
 	for col: String in authored:
 		r[col] = fill_realms(String(authored[col]))
 
-## Sink for data/army_matchups.csv: appends one {vs, attack, defense} row
+## Sink for data/army/army_matchups.csv: appends one {vs, attack, defense} row
 ## under its arm in army_matchups, in file order.
 func _add_matchup(r: Dictionary) -> void:
 	if not army_matchups.has(String(r["arm"])):

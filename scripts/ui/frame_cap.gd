@@ -4,7 +4,7 @@ extends RefCounted
 ## with no cap the game draws as many frames as the GPU can, up to the
 ## display's refresh (120 Hz on a ProMotion screen), so a GPU-bound view keeps
 ## the GPU at 100% however cheap a frame becomes. The menus' "Frame rate" row
-## cycles balance.csv ui_frame_cap_choice_1, _2, … (0 = unlimited), remembered
+## cycles screens/ui/balance.csv ui_frame_cap_choice_1, _2, … (0 = unlimited), remembered
 ## in user://settings.cfg [graphics] frame_cap; ui_frame_cap_default is a
 ## first run's. Pure but for apply(), which sets Engine.max_fps.
 

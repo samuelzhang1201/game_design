@@ -274,7 +274,7 @@ func test_the_letter_gives_no_exact_foe_figure() -> void:
 		return String(x["key"]).begins_with("loss@"))
 	assert_eq(facts.size(), 1, "one loss line: ours")
 	# the siege's words give no besieger strength
-	var raw := FileAccess.get_file_as_string("res://data/templates.csv")
+	var raw := FileAccess.get_file_as_string("res://data/council/templates.csv")
 	for line: String in raw.split("\n"):
 		if line.begins_with("siege_") or line.begins_with("battle_"):
 			assert_false(line.contains("{attack}") or line.contains("{att_power}") or line.contains("{def_power}")

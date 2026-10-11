@@ -13,7 +13,7 @@ const VIEW_SIZE := Vector2(256, 52)
 const SCENE_DIR := "res://scenes/locations/"
 const BASE_SCENE := SCENE_DIR + "base_location.tscn"
 
-## Banner tint per location kind (data/locations.csv `kind`). Dark tints for
+## Banner tint per location kind (data/story/locations.csv `kind`). Dark tints for
 ## the dark theme (owner 2026-09-15): the name is drawn in the gold accent.
 ## The same tint washes the audience window's backdrop (AudienceBackdrop).
 ## Bright-theme values: court f6e7bf, martial f7d6d2, home e5dcf5,

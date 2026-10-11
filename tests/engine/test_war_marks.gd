@@ -10,7 +10,7 @@ func before_each() -> void:
 
 
 func test_every_inked_type_is_an_admitted_marker_type_with_a_known_glyph() -> void:
-	var admitted := FileAccess.get_file_as_string("res://data/marker_types.csv")
+	var admitted := FileAccess.get_file_as_string("res://data/world/marker_types.csv")
 	assert_gt(repo.war_marks.size(), 0)
 	for type: String in repo.war_marks:
 		assert_true(admitted.contains("\n%s," % type), "%s is not in marker_types.csv" % type)

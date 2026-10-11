@@ -4,7 +4,7 @@ extends Node3D
 ## The 3D map's woods (look route 2026-09-30, node Viewport/Trees): the
 ## bake's tree clumps (tools/map3d/bake_trees.py → bake/trees.bin) drawn as
 ## MultiMeshes in fixed map_tree_chunk_m squares, one per species (the kind
-## column, data/map3d_tree_species.csv), variant and level of detail, each
+## column, data/screens/map3d/map3d_tree_species.csv), variant and level of detail, each
 ## square shown by Godot's own visibility range — the photo cards out to
 ## map3d_tree_card_far_m from the camera, then the same clumps thinned to
 ## map3d_tree_card_thin out to map3d_tree_card_thin_far_m (each switch faded

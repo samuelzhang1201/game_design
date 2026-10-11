@@ -6,7 +6,7 @@ Owner 2026-10-01 (树木一旦把标尺拉到20km以下就非常丑非常假): e
 map is a camera-facing PHOTO CARD (scripts/map3d/tree_card.gdshader) cut from
 an aerial photograph of one real tree on white, rendered by the art pipeline
 (assets/imagegen/tree_crown_prompts.csv, Z-Image and Qwen-Image-2512 side by
-side). data/map3d_tree_crowns.csv names each atlas cell's kind (0 broadleaf,
+side). data/screens/map3d/map3d_tree_crowns.csv names each atlas cell's kind (0 broadleaf,
 1 conifer, 2 lone) and its `source` render under assets/imagegen/out/ (git-
 ignored); this tool cuts each one out of its white ground, trims it to the
 crown, fits it into its CELL px cell of a COLS x ROWS atlas and floods the
@@ -21,7 +21,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-TABLE = os.path.join(ROOT, "data", "map3d_tree_crowns.csv")
+TABLE = os.path.join(ROOT, "data", "screens", "map3d", "map3d_tree_crowns.csv")
 OUT = os.path.join(ROOT, "assets", "3D", "vegetation", "crowns", "crowns_atlas.png")
 COLS, ROWS, CELL = 4, 4, 256
 ERODE = 1            # px the crown's alpha is pulled in by, past the white ground's fringe

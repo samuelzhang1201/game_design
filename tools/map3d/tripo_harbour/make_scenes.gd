@@ -17,7 +17,7 @@ extends SceneTree
 ## surface's roughness, are tuned in its scene afterwards.
 
 const SHADER := preload("res://scripts/map3d/house_surface.gdshader")
-const NOTE := "One house type of the 3D map. Map3DLayerHouses draws every house of this type as ONE MultiMesh of this mesh with these surface materials (house_surface.gdshader, edited here: texture, roughness, role 1 wall / 2 tile roof / 0 untinted). The Houses node adds its colour variants and the weather to its own copies at run time; its sizes are data/map3d_houses.csv."
+const NOTE := "One house type of the 3D map. Map3DLayerHouses draws every house of this type as ONE MultiMesh of this mesh with these surface materials (house_surface.gdshader, edited here: texture, roughness, role 1 wall / 2 tile roof / 0 untinted). The Houses node adds its colour variants and the weather to its own copies at run time; its sizes are data/screens/map3d/map3d_houses.csv."
 const SHIP_NOTE := " A SHIP: bob_on rocks it on the swell about its origin, the waterline, which the layer floats on the sea (role ship)."
 
 ## type: [category, kind, swell (roll deg, pitch deg, heave m, period s) for a ship]

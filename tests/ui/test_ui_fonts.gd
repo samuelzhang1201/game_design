@@ -1,6 +1,6 @@
 extends GutTest
 ## The faces are resources (owner 2026-10-02): one FontVariation per role in
-## assets/fonts/roles/, edited in the editor; data/ui_fonts.csv keeps each
+## assets/fonts/roles/, edited in the editor; data/screens/ui/ui_fonts.csv keeps each
 ## role's size_scale and title_case.
 
 const ROLES := ["title", "header", "body", "body_bold", "body_italic", "tab", "display", "figures"]

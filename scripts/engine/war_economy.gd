@@ -2,7 +2,7 @@ class_name WarEconomy
 extends RefCounted
 ## The war economy on the WAR ROOM's sheet (spec 2026-10-07-war-room-p3-economy-layer
 ## §1): the works — towns making war_works_min_gold of strategic goods a month,
-## marked by the family of their largest listed good (data/war_works.csv) — the
+## marked by the family of their largest listed good (data/army/war_works.csv) — the
 ## markets and their food price, and the pack's trade flows laid on the road
 ## network. Public, static facts of the pack (ruling 2); pure; cached per repo
 ## and map, as MapEconomy caches.

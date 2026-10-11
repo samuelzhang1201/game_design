@@ -5,10 +5,10 @@ extends Control
 ## in). There is no room painting yet, so the scene is drawn: the location
 ## kind's tint (LocationView.KIND_COLORS) washing down into the dark, a warm
 ## glow on the floor where the figure stands, and a vignette closing the
-## corners. A location that names a painting in data/locations.csv `backdrop`
+## corners. A location that names a painting in data/story/locations.csv `backdrop`
 ## gets the painting instead, cover-cropped, with the same vignette over it.
 
-## Where the audience is held (data/locations.csv); "" draws the fallback tint.
+## Where the audience is held (data/story/locations.csv); "" draws the fallback tint.
 var location_code := "":
 	set(value):
 		location_code = value

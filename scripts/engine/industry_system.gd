@@ -1,7 +1,7 @@
 class_name IndustrySystem
 extends RefCounted
 ## Buildings eat (spec 2026-09-30-ledger-industry-trade-design, M5): every
-## standing input building (data/building_inputs.csv) is fed from its own
+## standing input building (data/economy/building_inputs.csv) is fed from its own
 ## manor's units first — ManorEconomy.line_of nets them, still the only
 ## rounding in the economy — and the rest it buys from the LORD's pool of
 ## each good (goods_economy.csv `pool`, at its `price_gold`) at the month's

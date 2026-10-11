@@ -8,7 +8,7 @@ extends Control
 ## No HUD, no picking: it is a picture. Start sweeps the camera down to the
 ## game's own opening view (`sweep`) so the reign opens where the title left it;
 ## Continue the Chronicle sweeps the same way, to the loaded reign's home.
-## Every number is balance.csv ui_title_*; with no built world it is not made
+## Every number is screens/ui/balance.csv ui_title_*; with no built world it is not made
 ## (TitleRealm.available) and the menu keeps its painted page.
 
 signal swept

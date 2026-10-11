@@ -3,7 +3,7 @@ extends RefCounted
 ## The build's baked static layers (spec 2026-09-20 §2): rivers, roads,
 ## trails and bridges never move, so tools/map3d/bake_layers.gd saves their
 ## ArrayMeshes beside the world, one set per distinct step set of
-## data/graphics_quality.csv (Ruling 14), with layers/manifest.json naming the
+## data/screens/ui/graphics_quality.csv (Ruling 14), with layers/manifest.json naming the
 ## key each was baked under. The runtime uses a set only when it is complete
 ## and its key matches every input today; otherwise it builds as before.
 
@@ -24,7 +24,7 @@ const GEOMETRY_SOURCES := ["res://scripts/map3d/map3d_layer_rivers.gd",
 	"res://scripts/map3d/map3d_geometry.gd", "res://scripts/map3d/map3d_context.gd",
 	"res://scripts/engine/map_geometry.gd"]
 ## The md5 of GEOMETRY_SOURCES' text, concatenated in list order.
-const GEOMETRY_MD5 := "cd55ec9fe12c0d11699949fe687bd7da"
+const GEOMETRY_MD5 := "470ae51e5d426251e717342becb2ef0a"
 const LAYERS := ["rivers", "roads", "trails", "bridges"]
 const KEYS := ["map3d_road_step_m", "map3d_river_mesh_step_m", "map3d_river_split_rise_m",
 	"map3d_river_terrain_clear_m", "map3d_river_end_fade_m", "map3d_river_mouth_extend_w",

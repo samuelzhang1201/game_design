@@ -18,7 +18,7 @@ extends RefCounted
 
 const ALL_KNOWERS := "ALL"
 
-## Builds the starting knowledge from data/facts.csv. The ALL sentinel in
+## Builds the starting knowledge from data/intel/facts.csv. The ALL sentinel in
 ## initial_knowers seeds a fact to every character in the roster.
 static func init_from_data(data: DataRepository, state: GameState) -> Dictionary:
 	var out: Dictionary = {}

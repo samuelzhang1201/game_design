@@ -4,7 +4,7 @@ extends RefCounted
 var id: String = ""
 var display_name: String = ""
 var seat: String = ""
-## Role taxonomy (data/roles.csv): player|family|relative|council|officer|
+## Role taxonomy (data/council/roles.csv): player|family|relative|council|officer|
 ## noble|enemy|foreign|celebrity. Empty for pre-roster saves.
 var category: String = ""
 var family_name: String = ""

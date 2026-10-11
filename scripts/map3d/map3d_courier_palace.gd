@@ -16,7 +16,7 @@ const SAME_M := 2.0
 ## The town couriers ride from (`origin_px`, pack px) as its centre building:
 ## {centre: world XZ, half: half its side in metres, yaw_deg, town: the town's
 ## world XZ `town_xz`}; {} when no burg stands there or its rank-0 house is no
-## landmark (data/map3d_houses.csv `role`).
+## landmark (data/screens/map3d/map3d_houses.csv `role`).
 static func seat_of(repo: DataRepository, houses: Dictionary, origin_px: Vector2, town_xz: Vector2) -> Dictionary:
 	for code: String in repo.burgs:
 		var b: Dictionary = repo.burgs[code]

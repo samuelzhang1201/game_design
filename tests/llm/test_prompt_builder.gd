@@ -55,7 +55,7 @@ func test_parse_prompt_lists_event_choices_and_promise_rule() -> void:
 
 ## Negative counterpart: with no pending_event, the parse prompt must not
 ## mention EVENT_CHOICE at all (it isn't a legal action_code in the catalog —
-## see data/action_signatures.csv — so it can only ever appear via event_ctx,
+## see data/realm/action_signatures.csv — so it can only ever appear via event_ctx,
 ## which is built solely when state.pending_event is non-empty).
 func test_parse_prompt_omits_event_choice_when_no_pending_event() -> void:
 	var s := SuiteData.campaign(data, 42)

@@ -6,7 +6,7 @@ extends RefCounted
 ## that words were spoken, to whom, and in whose company.
 ##
 ## GameState.agent_memory maps character_id to an Array of exchanges, oldest
-## first, capped at balance.csv's memory_exchanges_kept:
+## first, capped at council/balance.csv's memory_exchanges_kept:
 ##   {"tick": int, "location": String, "speaker": String, "text": String,
 ##    "audience": Array[String]}
 ##

@@ -31,6 +31,10 @@ func test_duplicate_key_fails_naming_both_files() -> void:
 func test_balance_reads_crlf_and_bom() -> void:
 	assert_eq(DataRepository.load_balance(CRLF), {"k_one": 1.0})
 
+func test_missing_index_fails_naming_it() -> void:
+	assert_eq(DataRepository.load_balance("res://tests/fixtures/data_layout"), {})
+	assert_string_contains(DataRepository.last_error, "tables.csv")
+
 func test_folder_without_balance_is_skipped() -> void:
 	# gamma is indexed but holds no balance.csv
 	assert_false(FileAccess.file_exists(OK + "/gamma/balance.csv"))

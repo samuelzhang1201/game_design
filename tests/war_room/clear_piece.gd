@@ -3,7 +3,7 @@ extends RefCounted
 ## camped round one town are spread plinth to plinth on the table
 ## (WarPieces._spread), so a spread piece stands off its engine point and a
 ## neighbour in front may stand its figures over its base. Whatever the
-## camp's pitch (balance.csv army_slot_spacing_m), this finds a piece whose
+## camp's pitch (army/balance.csv army_slot_spacing_m), this finds a piece whose
 ## OWN drawn point the view's real pick (WarRoomView.piece_under) takes up,
 ## the few px round it included (a click may drift under war_rake_min_px);
 ## with none, the first land piece is stood apart from every other first.

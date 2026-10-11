@@ -39,7 +39,7 @@ static func facts(repo: DataRepository, state: GameState, flow: String) -> Array
 				said += int(row["claimed"])
 		_:
 			# `works` never reaches here: it keeps no books, and LEDGER_AUDIT
-			# refuses it (data/ledger_governance.csv `books`).
+			# refuses it (data/ledger/ledger_governance.csv `books`).
 			push_error("AuditWriter: no books for flow '%s'" % flow)
 			return []
 	out.append(_fact("total", "In all, this month", total, said))

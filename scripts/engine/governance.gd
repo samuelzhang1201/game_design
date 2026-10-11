@@ -12,7 +12,7 @@ static func flows(repo: DataRepository) -> Array:
 	return out
 
 
-## The LEDGER type a flow's instances are drawn as (data/ledger_governance.csv
+## The LEDGER type a flow's instances are drawn as (data/ledger/ledger_governance.csv
 ## `ledger_type`): the flow's own name, but the building works are drawn on
 ## the artisans who do them.
 static func type_of_flow(repo: DataRepository, flow: String) -> String:

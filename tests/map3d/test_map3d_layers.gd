@@ -202,7 +202,7 @@ func test_the_themes_are_one_layer_that_works_before_load() -> void:
 	assert_eq(Map3DView.load_field_map("user://nowhere/world.tscn"), null)
 
 
-## The capital's inner dot must come from data/map3d_settlements.csv's
+## The capital's inner dot must come from data/screens/map3d/map3d_settlements.csv's
 ## inner_px column, never a hardcoded group name (owner 2026-09-20).
 func test_the_inner_dot_is_data_driven_not_a_hardcoded_group_name() -> void:
 	var layer_src := FileAccess.get_file_as_string("res://scripts/map3d/map3d_layer_settlements.gd")

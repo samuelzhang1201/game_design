@@ -808,7 +808,7 @@ func _as_rows(card: Dictionary) -> bool:
 
 
 ## The manor's facts as NAMED rows in the sections of
-## data/manor_card_sections.csv: a muted small-capitals heading over a faint
+## data/screens/ui/manor_card_sections.csv: a muted small-capitals heading over a faint
 ## rule, then a row a fact — its art, its name, its value on the right, the
 ## whole fact in the tooltip — and the goods it makes under the section that
 ## asks for them. A fact no section names falls to the last.

@@ -11,7 +11,7 @@ extends RefCounted
 ## invariant 4); per-tick drift is ambient and intentionally unlogged so a
 ## 60-year campaign's save does not balloon.
 
-## Builds the starting graph from data/relationships.csv rows.
+## Builds the starting graph from data/council/relationships.csv rows.
 static func init_from_data(data: DataRepository) -> Array:
 	var out: Array = []
 	for row in data.relationships:

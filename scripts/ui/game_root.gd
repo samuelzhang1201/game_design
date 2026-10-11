@@ -274,7 +274,7 @@ func works_progress() -> Dictionary:
 			out["%s|%s" % [key, String(w["building"])]] = MapManors.work_progress(Game.state, int(key), String(w["building"]))
 	return out
 
-## A headline for every work that crossed a milestone (balance.csv
+## A headline for every work that crossed a milestone (screens/ui/balance.csv
 ## news_build_milestone_1 and _2, owner: 30% and 70%) between two readings;
 ## completion has its own line.
 func announce_milestones(before: Dictionary, now: Dictionary) -> void:

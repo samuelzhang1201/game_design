@@ -1,0 +1,3 @@
+key,value,notes
+ledger_instance_cap,24,LEDGER: neighbours shown per link type before the rest fold into one +N more sphere
+ledger_gauge_stock_months,12,"LEDGER M1 (spec 2026-09-30-ledger-ontology-design §6.3, a property): a goods pool's stock gauge reads full at this many months of the crown's and the lord's intake"

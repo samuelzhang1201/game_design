@@ -679,7 +679,7 @@ static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> D
 
 
 ## Who governs a link: for a link touching a governed flow (a type of
-## data/ledger_governance.csv — the workshops, the supply lines) the man who
+## data/ledger/ledger_governance.csv — the workshops, the supply lines) the man who
 ## governs it NOW, given or not (Governance.governor_of); otherwise its
 ## seat's holder.
 static func _governor(repo: DataRepository, state: GameState, r: Dictionary) -> String:
@@ -729,7 +729,7 @@ static func _loops(repo: DataRepository, state: GameState, out: Dictionary) -> v
 
 # --- orders ------------------------------------------------------------------
 
-## The orders a sphere or a thread offers (data/ledger_actions.csv). A type
+## The orders a sphere or a thread offers (data/ledger/ledger_actions.csv). A type
 ## with an instance list takes its orders per instance; a type without one
 ## (a pool) takes them on its type sphere; a thread takes its link's rows.
 ## A row whose params name `character=@council` is generated from the

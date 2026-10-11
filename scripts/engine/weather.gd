@@ -2,7 +2,7 @@ class_name Weather
 extends RefCounted
 ## Regional weather (owner 2026-09-27, spec 2026-09-27-courier-core §1): each
 ## province has one kind for a spell of weather_spell_days days, drawn from
-## data/weather_odds.csv by season and the province's height tier. STATELESS:
+## data/world/weather_odds.csv by season and the province's height tier. STATELESS:
 ## a hash of (campaign seed, province, spell) — never GameState.rng — so it
 ## costs the save nothing and cannot shift any other roll. It changes speed
 ## only: a courier's ride and a regiment's march.

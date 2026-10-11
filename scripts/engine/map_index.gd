@@ -120,7 +120,7 @@ static func _stamp_disc(mask: PackedByteArray, w: int, h: int, p: Vector2, r: fl
 ## below a cell are invented. Ridged, because a ridgeline is the feature a
 ## satellite view reads terrain by; domain-warped so the ridges run in
 ## coherent directions instead of as isotropic blobs. The seed is DATA
-## (balance.csv map_relief_detail_seed) — a look, never simulation. Pure.
+## (screens/map3d/balance.csv map_relief_detail_seed) — a look, never simulation. Pure.
 static func detail_field(w: int, h: int, seed_value: int, freq_px: float,
 		octaves: int, warp_px: float) -> PackedFloat32Array:
 	var noise := FastNoiseLite.new()

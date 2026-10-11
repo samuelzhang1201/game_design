@@ -34,7 +34,7 @@ var _starting := false
 ## 近景首都旋转的视角): the scene's Curtain holds the window black while the
 ## boot's threaded loads (BootLoads.title_ready) come in and the living map is
 ## made behind it a step a frame; then the black lifts off the turning capital
-## and the words come in one by one (data/title_entrance.csv, `_enter`).
+## and the words come in one by one (data/screens/ui/title_entrance.csv, `_enter`).
 var _realm_waiting := false
 var _frames_shown := 0
 var _waited := 0.0
@@ -262,7 +262,7 @@ func _curtain_s() -> float:
 			return float(row["duration_ms"]) / 1000.0
 	return 0.0
 
-## The entrance (data/title_entrance.csv, after the owner's web hero): the
+## The entrance (data/screens/ui/title_entrance.csv, after the owner's web hero): the
 ## black lifts, then each piece comes in at its delay — `fade` in place,
 ## `lift` up from `lift_px` below (a negative one from above), `ripple` each
 ## shown child of the node lifting `step_ms` after the last, `rise` a line of
