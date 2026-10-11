@@ -12,9 +12,9 @@ func before_each() -> void:
 	var base := RunDir.dir("migration")
 	_old = base.path_join("old")
 	_new = base.path_join("new")
-	for d in [_old, _new]:
+	for d: String in [_old, _new]:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(d))
-		for f in DirAccess.get_files_at(d):
+		for f: String in DirAccess.get_files_at(d):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(d.path_join(f)))
 
 
@@ -48,3 +48,12 @@ func test_no_old_dir_is_a_no_op() -> void:
 	var copied := UserDirMigration.copy_missing(_old.path_join("absent"), _new, PackedStringArray(["save.json"]))
 	assert_eq(copied.size(), 0)
 	assert_false(FileAccess.file_exists(_new.path_join("save.json")))
+
+
+func test_a_stale_part_file_does_not_block_the_copy() -> void:
+	_write(_old, "save.json", "old save")
+	_write(_new, "save.json.part", "truncated")
+	var copied := UserDirMigration.copy_missing(_old, _new, PackedStringArray(["save.json"]))
+	assert_eq(Array(copied), ["save.json"])
+	assert_eq(_read(_new, "save.json"), "old save")
+	assert_false(FileAccess.file_exists(_new.path_join("save.json.part")), "the temp file is renamed away")

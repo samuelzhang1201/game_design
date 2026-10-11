@@ -18,16 +18,25 @@ static func legacy_dir() -> String:
 ## returns the names copied. Absent `from_dir` copies nothing.
 static func copy_missing(from_dir: String, to_dir: String, files: PackedStringArray) -> PackedStringArray:
 	var copied := PackedStringArray()
-	for name in files:
+	for name: String in files:
 		var src := from_dir.path_join(name)
 		var dst := to_dir.path_join(name)
 		if not FileAccess.file_exists(src) or FileAccess.file_exists(dst):
 			continue
 		var bytes := FileAccess.get_file_as_bytes(src)
-		var out := FileAccess.open(dst, FileAccess.WRITE)
+		if FileAccess.get_open_error() != OK:
+			continue
+		# Through a temp file: a failed write must never leave a truncated
+		# target, which would block every later retry.
+		var tmp := dst + ".part"
+		var out := FileAccess.open(tmp, FileAccess.WRITE)
 		if out == null:
 			continue
-		out.store_buffer(bytes)
+		out.store_buffer(bytes)  # returns void in this build; the error is read off the file
+		var write_error := out.get_error()
 		out.close()
+		if write_error != OK or DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(dst)) != OK:
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+			continue
 		copied.append(name)
 	return copied
