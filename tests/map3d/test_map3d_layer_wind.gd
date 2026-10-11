@@ -35,4 +35,5 @@ func test_tilt_reaches_the_ground_shader() -> void:
 	assert_false(Map3DGroundWind.UNIFORMS.contains("wind_crop_gain"), "the first pass's gain is gone")
 	var wind := Map3DLayerWind.new()
 	autofree(wind)
-	assert_almost_eq(wind.tilt, 0.35, 0.0001)
+	assert_almost_eq(wind.tilt, 0.08, 0.0001, "a light touch: 0.35 hit the clamp on fields and grass (a highlighter band)")
+	assert_true(Map3DGroundWind.STAGE.contains("-0.35, 0.35) * wd_tilt_aa"), "clamped, and faded before it can shimmer")
