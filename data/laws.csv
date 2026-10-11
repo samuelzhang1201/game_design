@@ -12,6 +12,7 @@ no_havoc,military,conduct,No unauthorised Havoc,toggle,off|on,off,camp,0,2,,"own
 register_prisoners,military,discipline,Register prisoners,toggle,off|on,off,camp,0,2,,"owner 2026-10-07: register prisoners (俘虏登记)"
 wear_badges,military,discipline,Wear badges,toggle,off|on,off,camp,0,2,,"owner 2026-10-07: wear badges (佩戴标识)"
 no_feuds,military,discipline,No private feuds,toggle,off|on,off,camp,0,2,,"owner 2026-10-07: no private feuds (禁止私斗)"
+desertion_penalty,military,discipline,Desertion penalty,choice,fine|lenient|hanging,fine,camp,0,2,,"spec 2026-10-10-foraging-and-desertion §1.2"
 quarter,military,chivalry,Quarter,choice,give|refuse,give,camp,0,2,,"chivalry candidate added by the design (2026-10-08, answer A)"
 ransom,military,chivalry,Ransom,choice,ransom|execute,ransom,camp,0,2,,"chivalry candidate added by the design (2026-10-08, answer A)"
 truce_days,military,chivalry,Truce days,toggle,off|on,off,camp,0,2,,"chivalry candidate added by the design (2026-10-08, answer A)"
