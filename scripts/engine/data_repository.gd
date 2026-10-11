@@ -1001,22 +1001,7 @@ func load_map(id: String) -> bool:
 	borders.clear()
 	province_borders.clear()
 	provinces_by_id.clear()
-	MapOwnership.invalidate()
-	MapTerrain.invalidate()
-	MapEconomy.forget()
-	RealmEconomy.forget()
-	ManorEconomy.forget()
-	MapPalette.forget_colors()
-	HouseArms.forget()
-	Elevation.forget()
-	Weather.forget()
-	RoadGraph.forget()
-	MarchPath.forget()
-	ArmySystem.forget_grids()
-	ArmySplit.forget()
-	LawEffects.forget()
-	WarSheets.forget()
-	Forage.forget()
+	forget_derived()
 	routes.clear()
 	rivers.clear()
 	markers.clear()
@@ -1363,3 +1348,33 @@ static func _order_params(text: String) -> Dictionary:
 func bal(key: String) -> float:
 	assert(balance.has(key), "balance.csv missing key: " + key)
 	return balance[key]
+
+
+## Drop every static cache derived from a repository's tables (most keyed by
+## the repository's instance): a pack swap must not draw the old world, and a
+## run that makes many repositories (the suite's SuiteData.repo per test) must
+## not keep every one's derived tables alive.
+static func forget_derived() -> void:
+	MapOwnership.invalidate()
+	MapTerrain.invalidate()
+	MapManors.invalidate()
+	MapEconomy.forget()
+	RealmEconomy.forget()
+	ManorEconomy.forget()
+	MarketSystem.forget()
+	MapPalette.forget_colors()
+	ManorPalette.forget()
+	HouseArms.forget()
+	Elevation.forget()
+	Weather.forget()
+	RoadGraph.forget()
+	MarchPath.forget()
+	ArmySystem.forget_grids()
+	ArmySplit.forget()
+	LawEffects.forget()
+	WarSheets.forget()
+	WarEconomy.forget()
+	TownStores.forget()
+	MapObjects.forget()
+	EnemyAi.forget()
+	Forage.forget()

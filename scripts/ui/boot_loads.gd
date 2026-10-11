@@ -21,16 +21,18 @@ static var _held: Dictionary = {}
 static var _world := ""
 
 
-## Ask for everything: the world of `repo`'s pack when the 3D map is on and
-## built, the art tables, and `scenes` (the overlays GameRoot instances next,
+## Ask for everything: the world of `repo`'s pack and the art tables when the
+## 3D map is on (and the world built), and `scenes` (the overlays GameRoot instances next,
 ## whose own load() then waits on these threads instead of reading alone).
 static func start(repo: DataRepository, scenes: Array = []) -> void:
 	_world = ""
-	if repo.bal("map3d_default") > 0.0:
+	var tables: Array = []
+	if repo.bal("map3d_default") > 0.0:  # no 3D map (the suite): its models are never drawn
 		var world := Map3DView.scene_path_for(repo.map_id)
 		if Map3DWorldLoader.request(world):
 			_world = world
-	for path: String in TABLES + scenes:
+		tables = TABLES
+	for path: String in tables + scenes:
 		_ask(path)
 
 
