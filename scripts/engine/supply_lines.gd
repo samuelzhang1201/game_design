@@ -39,15 +39,23 @@ static func road_px(repo: DataRepository, state: GameState, code: String, town: 
 
 ## The road from `town` to any pack point (the courier's road), the town
 ## first and the point last — a march's end, for the supply town chosen on
-## its confirm (spec 2026-10-08-war-room-draw-orders ruling 13).
+## its confirm (spec 2026-10-08-war-room-draw-orders ruling 13). Its legs off
+## the road network go round ground a column cannot climb, as a march does
+## (MarchPath; owner 2026-10-11: 补给线也要遵守坡度绕道).
 static func road_between_px(repo: DataRepository, town: String, to: Vector2) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	if not repo.burgs.has(town):
 		return out
 	var from := _burg_px(repo, town)
 	out.append(from)
+	var grid := MarchPath.of_pack(repo)
+	var here := ArmySystem.pack_to_metres(repo, from)
 	for p: Array in CourierSystem.path_between(repo, from, to):
-		out.append(ArmySystem.metres_to_pack(repo, Vector2i(int(p[0]), int(p[1]))))
+		var at := Vector2i(int(p[0]), int(p[1]))
+		var leg: Array = [at] if grid == null or String(p[2]) != "offroad" else grid.road(here, at)
+		for q: Vector2i in leg:
+			out.append(ArmySystem.metres_to_pack(repo, q))
+		here = at
 	if out[out.size() - 1].distance_to(to) > 0.001:
 		out.append(to)
 	return out
