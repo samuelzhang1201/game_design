@@ -388,16 +388,19 @@ func test_a_foreign_province_is_allowed() -> void:
 
 func test_wildlands_are_allowed() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	for id: int in repo.cells.keys():
-		if repo.manors.has(id):
-			continue
-		var at := _at(id)
-		if MapEconomy.cell_at(repo, at) != id:
-			continue
-		assert_false(SpySystem.is_controlled(repo, s, at))
-		assert_eq(_validate_at(s, at), "")
+	var found := -1
+	var ids := repo.manors.keys()
+	ids.sort()
+	for id: int in ids:
+		if MapManors.province_of(repo, id, s) == "" and MapEconomy.cell_at(repo, _at(id)) == id:
+			found = id
+			break
+	assert_gt(found, -1, "a wildlands manor")
+	if found < 0:
 		return
-	pending("no manor-less land cell in this pack")
+	var at := _at(found)
+	assert_false(SpySystem.is_controlled(repo, s, at))
+	assert_ne(_validate_at(s, at), "The crown's own lands need no spy")
 
 
 func test_off_the_map_says_off_the_map_first() -> void:

@@ -1,6 +1,6 @@
 key,permille,notes
-foreign,-150,"spec §1: added to a spy's quality roll (0..999) when the point lies outside the player's realm"
-home,150,inside the player's realm
+foreign,-150,"spec §1: added to a spy's quality roll (0..999) outside the crown's controlled provinces"
+home,150,in a controlled province (reached only with spy_refuse_controlled 0)
 walled,-100,"a town with walls or a citadel in the point's cell (burg features)"
 weather_rain,-50,the weather at the point on the day he arrives
 weather_mud,-50,

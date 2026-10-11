@@ -23,7 +23,10 @@ func _land() -> Vector2:
 	ids.sort()
 	for id: int in ids:
 		if not SpySystem.province_controlled(Game.data, Game.state, MapManors.province_of(Game.data, id, Game.state)):
-			return MapTerrain.cell_center(Game.data, Game.data.cells[id])
+			var p := MapTerrain.cell_center(Game.data, Game.data.cells[id])
+			if CourierSystem.spy_eta_days(Game.data, Game.state, p) <= int(Game.data.bal("courier_max_days")):
+				return p
+	assert_true(false, "no reachable foreign point")
 	return Vector2(-1, -1)
 
 
