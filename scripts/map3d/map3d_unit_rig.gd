@@ -96,3 +96,21 @@ static func play(anims: Array, action: String, blend_s: float) -> void:
 		anim.play(clip, blend_s)  # blended, never a snap
 		if action != "MARCH":
 			anim.seek(fposmod(i * 0.37, anim.current_animation_length))
+
+
+## Seats `piece` at world `xz` facing `yaw` at scale `k` (Map3DUnits.seat; owner
+## 2026-09-24: 斜面上兵人的一部分会被地图盖住): tilted with its footprint's ground,
+## raised by a clearance that grows with it — far out the ground is DRAWN by a
+## coarser Terrain3D mesh than the heightmap sampled here. Keeps where it stands
+## (`ground`) and how far over its seat (`lift`) on the piece.
+static func seat(repo: DataRepository, height_at: Callable, piece: Dictionary, xz: Vector2,
+		yaw: float, k: float) -> void:
+	var sit := Map3DUnits.seat_at(repo, height_at, xz, piece["extent"], yaw, k)
+	var high := float(piece["height_m"]) * k
+	var ground := Vector3(xz.x, float(sit["y"]) + high * repo.bal("map3d_unit_seat_clear")
+		- repo.bal("map3d_unit_sink_m"), xz.y)
+	var up: Vector3 = sit["normal"]
+	(piece["node"] as Node3D).transform = Transform3D((Basis(Quaternion(Vector3.UP, up))
+		* Basis(Vector3.UP, yaw)).scaled(Vector3(k, k, k)), ground)
+	piece["ground"] = ground
+	piece["lift"] = ground.y - float(sit["y"])

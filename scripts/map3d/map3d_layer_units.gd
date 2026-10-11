@@ -38,10 +38,11 @@ var _selected: Array = []  ## the selected codes: their pieces glow (Map3DUnitGl
 var _track: Dictionary = {}
 var _want_yaw: Dictionary = {}  ## code -> the yaw it turns toward
 var _yaw: Dictionary = {}  ## code -> the yaw it is at
-var _scenes: Dictionary = {}
 var _shown_xz: Dictionary = {}  ## code -> where it is DRAWN, world XZ (step)
 var _days: Dictionary = {}  ## code -> {key, from, to, s0}: its day's march (Map3DUnits.along_day)
 var _moves := 0
+var _roster_was: Array = []  ## the state the drawn set was last cut for (_roster_key)
+var _live: Array = []  ## the codes drawn, in roster order
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -82,12 +83,30 @@ func preview_build(p_ctx: Map3DContext) -> void:
 	refresh()
 
 
-## Every piece placed and sized for the camera (never turned by it), cut once per pose.
+## Every piece placed for the camera (never turned by it), cut once per pose; the drawn SET
+## only when the state it reads moved (perf P0 2026-10-11: a pan re-cut the sight every frame).
 func refresh() -> void:
 	if ctx == null or not shown or ctx.camera == null or not is_inside_tree():
 		return  # out of the tree: a view handed between screens (the title's)
-	var live: Dictionary = {}
+	var key := _roster_key()
+	if key != _roster_was:
+		_roster_was = key
+		_roster()
 	_rects.clear()
+	for code: String in _live:
+		_place(code, _pieces[code])
+
+
+## What the drawn set reads: the state, its day, its rosters and sightings, DEV MODE.
+func _roster_key() -> Array:
+	var st := ctx.state()
+	return [st, st.absolute_day(), st.regiments.size(), st.foes.size(), st.sightings.size(), ctx.dev] \
+		if st != null else [null, ctx.dev]
+
+
+## The pieces to draw: every regiment the context gives, then the ghosts; the rest freed.
+func _roster() -> void:
+	var live: Dictionary = {}
 	for reg: Dictionary in ctx.regiments():
 		var code := String(reg["regiment_code"])
 		var piece := _piece_of(code)
@@ -96,7 +115,6 @@ func refresh() -> void:
 		live[code] = true
 		if not _shown_xz.has(code):
 			_shown_xz[code] = _target_xz(reg)
-		_place(code, piece)
 	# the GHOSTS (Map3DContext.ghosts): where the crown last knew a foe, its unit's
 	# piece (a host's: its first column's) at full strength, see-through, standing still
 	for g: Dictionary in ctx.ghosts():
@@ -108,9 +126,9 @@ func refresh() -> void:
 		if _pieces.has(key):
 			live[key] = true
 			_shown_xz[key] = ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(int(g["x_m"]), int(g["y_m"]))))
-			_place(key, _pieces[key])
 	for code: String in _pieces.keys():  # no longer drawn: FREED, not hidden (hidden ones piled up, perf P0 2026-10-11)
 		if not live.has(code): _drop(code)
+	_live = live.keys()
 
 
 ## Where the ENGINE has a regiment today, world XZ.
@@ -123,7 +141,6 @@ func _target_xz(reg: Dictionary) -> Vector2:
 func _place(code: String, piece: Dictionary) -> void:
 	var repo := ctx.repo
 	var xz: Vector2 = _shown_xz[code]
-	var node: Node3D = piece["node"]
 	_rects.erase(code)
 	if ctx.camera.is_position_behind(Vector3(xz.x, ctx.height_at(xz), xz.y)):
 		show_piece(piece, false)
@@ -139,17 +156,12 @@ func _place(code: String, piece: Dictionary) -> void:
 	_want_yaw[code] = Map3DUnits.facing_yaw(heading, piece.get("stand_deg", 0.0))
 	_yaw[code] = _yaw.get(code, _want_yaw[code])
 	var yaw := float(_yaw[code])
-	var sit := Map3DUnits.seat_at(repo, ctx.height_at, xz, piece["extent"], yaw, k)
-	var high := float(piece["height_m"]) * k
-	# The clearance grows with the piece: far out the ground is DRAWN by a
-	# coarser Terrain3D mesh than the heightmap it is sampled from.
-	var ground := Vector3(xz.x, float(sit["y"]) + high * repo.bal("map3d_unit_seat_clear")
-		- repo.bal("map3d_unit_sink_m"), xz.y)
-	var up: Vector3 = sit["normal"]
-	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw))
-		.scaled(Vector3(k, k, k)), ground)
-	Map3DUnitGlow.place(repo, piece, _selected.has(code), ground.y - float(sit["y"]), k)
-	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, high,
+	if piece.get("seat_key", []) != [xz, yaw, k]:  # a pan moves none of it: seated once per stand
+		piece["seat_key"] = [xz, yaw, k]
+		Map3DUnitRig.seat(repo, ctx.height_at, piece, xz, yaw, k)
+	var ground: Vector3 = piece["ground"]
+	Map3DUnitGlow.place(repo, piece, _selected.has(code), float(piece["lift"]), k)
+	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, float(piece["height_m"]) * k,
 		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())
 
 
@@ -158,6 +170,8 @@ func _place(code: String, piece: Dictionary) -> void:
 func step(delta: float) -> bool:
 	if ctx == null or not shown:
 		return false
+	if _roster_key() != _roster_was:
+		refresh()  # a day turned or a unit came or went: the drawn set follows with the camera still
 	var repo := ctx.repo
 	var moved := false
 	for code: String in _pieces:
@@ -176,8 +190,10 @@ func step(delta: float) -> bool:
 		var pace := Map3DUnitRig.march_rate(repo, Map3DUnitRig.walk_speed(day, repo.bal("time_day_seconds"),
 			ctx.clock_speed()), node.transform.basis.get_scale().x, float(_pieces[code]["clip_s"]),
 			float(_pieces[code]["stride_m"])) if Map3DUnits.walking(day, ctx.day_share()) else 1.0
-		for anim: AnimationPlayer in _pieces[code]["anims"]:
-			anim.speed_scale = pace
+		if _pieces[code].get("pace", -1.0) != pace:
+			_pieces[code]["pace"] = pace
+			for anim: AnimationPlayer in _pieces[code]["anims"]:
+				anim.speed_scale = pace
 		_sync_action(code)
 		if node.visible and float(_yaw.get(code, 0.0)) != float(_want_yaw.get(code, 0.0)):
 			var rate := deg_to_rad(turn_deg_per_s) * delta
@@ -223,6 +239,7 @@ func drawn_count() -> int:
 ## Put a regiment's figures into an action by name; one without it keeps its own.
 func play(code: String, action: String) -> void:
 	if _pieces.has(code):
+		_pieces[code]["action"] = action
 		Map3DUnitRig.play(_pieces[code]["anims"], action, blend_s)
 
 
@@ -251,13 +268,7 @@ func _drop(code: String) -> void:  ## frees `code`'s piece, forgets all kept abo
 ## Builds the piece of `reg` in formation `tier` as `_pieces[key]`; {} when its
 ## arm has no model.
 func _build(key: String, reg: Dictionary, tier: Dictionary) -> Dictionary:
-	if reg.is_empty():
-		return {}
-	var piece := MapObjects.army_piece(ctx.repo, reg)
-	var path := GameArt.path(GameArt.ARMY_MODELS, piece)
-	var scene := _scene(path) if path != "" else null
-	var built := Map3DFormation.piece(ctx.repo, scene, ctx.repo.army_art.get(piece, {}), tier,
-		formation_gap) if scene != null else {}
+	var built := Map3DFormation.of_regiment(ctx.repo, reg, tier, formation_gap)
 	if built.is_empty():
 		return {}
 	(built["node"] as Node3D).name = key.replace(":", "_")
@@ -266,8 +277,7 @@ func _build(key: String, reg: Dictionary, tier: Dictionary) -> Dictionary:
 	return built
 
 
-## A piece's day's march (Map3DUnits.day_march), remade when its row, the day
-## or the couriers turn.
+## A piece's day's march (Map3DUnits.day_march), remade when its row, the day or the couriers turn.
 func _day_of(code: String) -> Dictionary:
 	var st := ctx.state()
 	var key := [st.regiments.get(code, {}), st.absolute_day(), st.next_courier_id, st.couriers.size()] if st != null else []
@@ -283,16 +293,6 @@ func _day_of(code: String) -> Dictionary:
 func _sync_action(code: String) -> void:
 	var walking: bool = _days.has(code) and Map3DUnits.walking(_days[code], ctx.day_share())
 	var held := ctx.state() != null and ArmySystem.order_of(ctx.repo, ctx.state(), code) == ArmySystem.ORDER_GARRISON
-	play(code, MARCH if walking and ctx.clock_speed() > 0 else (GARRISON if held else STANDBY))
-
-
-func _scene(path: String) -> PackedScene:
-	if _scenes.has(path):
-		return _scenes[path]
-	var scene := Map3DAssetCache.scene(path)  # loaded once, kept between views
-	if scene == null:
-		Map3DWorldLoader.warn_once("units:" + path, "map3d units: no model at " + path)
-	_scenes[path] = scene
-	return scene
-
-
+	var action := MARCH if walking and ctx.clock_speed() > 0 else (GARRISON if held else STANDBY)
+	if String(_pieces[code].get("action", "")) != action:  # each figure's clip looked up only on a change
+		play(code, action)
