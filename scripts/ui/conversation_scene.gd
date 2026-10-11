@@ -23,15 +23,18 @@ signal audience_requested(id: String)
 
 var _beats: Array = []
 var _index := -1
-## The opening narration's two speakers (owner 2026-10-12): Lord Malvern's bust
-## in the window's upper left, the player's in the upper right, the speaking
-## side lit and the other dimmed. Both are boxes the editor places in the scene
-## (a Control each, custom_minimum_size set; _fill_portrait cuts the art to it);
-## unset, the pages still read, just without the busts.
+## The opening narration's two busts (owner 2026-10-12): Lord Malvern's in the
+## window's upper left, the player's in the upper right. Each is a frame the
+## editor places in the scene (shown only while the narration is up) holding a
+## box Control that _fill_portrait cuts the art to; unset, the pages still read,
+## just without the busts. The text is the narrator's, not a speaker's, so BOTH
+## are lit (R2); `narration_dim` is the tint of the side that is not speaking and
+## is white by default (an editor choice, never a colour in code).
+@export var narration_left_frame: Control
+@export var narration_right_frame: Control
 @export var narration_left: Control
 @export var narration_right: Control
-## How much the side that is not speaking is dimmed.
-const NARRATION_DIM := Color(0.55, 0.55, 0.55, 1.0)
+@export var narration_dim: Color = Color(1, 1, 1)
 ## Running transcript of the conversation, newest last — each entry
 ## {"speaker": name, "line": bbcode, "n": serial}. The right column's record
 ## shows the whole exchange, not just the latest line (user requirement
@@ -592,14 +595,18 @@ const EVENT_ART_DIR := "res://assets/2D/events/illustrations/"
 
 func _show_narration_busts(b: Dictionary) -> void:
 	var on := String(b.get("kind", "")) == "narration" and b.has("side")
-	for pair: Array in [[narration_left, "left", "left_id"], [narration_right, "right", "right_id"]]:
+	for pair: Array in [[narration_left, narration_left_frame, "left", "left_id"],
+			[narration_right, narration_right_frame, "right", "right_id"]]:
 		var box := pair[0] as Control
+		var frame := pair[1] as Control
+		if frame != null:
+			frame.visible = on
 		if box == null:
 			continue
 		box.visible = on
 		if on:
-			_fill_portrait(box, String(b[pair[2]]))
-			box.modulate = Color.WHITE if String(b["side"]) == pair[1] else NARRATION_DIM
+			_fill_portrait(box, String(b[pair[3]]))
+			box.modulate = Color.WHITE if String(b["side"]) == pair[2] else narration_dim
 
 func _show_event_art(b: Dictionary) -> void:
 	var art: Texture2D = null
@@ -925,7 +932,9 @@ func _advance() -> void:
 			_say("", String(b["text"]))
 			# one page a topic, a Continue turns it; the last one begins the reign
 			var last := int(b.get("page", 1)) >= int(b.get("pages", 1))
-			_add_reply("I am ready. Let the reign begin." if last else "Continue", _advance)
+			# a lone advance button is not a choice: no letter
+			_add_reply("I am ready. Let the reign begin." if last else "Continue", _advance,
+				"", null, false)
 		"minister":
 			_continue_btn.visible = true
 			_say(String(b["speaker"]), String(b["text"]))
@@ -977,10 +986,12 @@ func _option_tooltip(sug: Dictionary) -> String:
 ## wrapping inside their column, drawn as CK3 options. Buttons start hidden;
 ## _reveal_replies_staggered surfaces them one by one.
 func _add_reply(label: String, handler: Callable, tooltip: String = "",
-		into: Container = null) -> void:
+		into: Container = null, lettered: bool = true) -> void:
 	var btn := Button.new()
-	btn.text = "%s.  %s" % [char(65 + _next_reply_letter), label]
-	_next_reply_letter += 1
+	btn.text = label
+	if lettered:
+		btn.text = "%s.  %s" % [char(65 + _next_reply_letter), label]
+		_next_reply_letter += 1
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	btn.focus_mode = Control.FOCUS_NONE
@@ -1022,6 +1033,10 @@ func _fill_portrait(box: Control, portrait_id: String, whole: bool = false) -> v
 		child.name = "OutgoingPortrait"
 		child.queue_free()
 	var box_size: Vector2 = box.custom_minimum_size
+	if box_size.y <= 0.0 or box_size.x <= 0.0:
+		box_size = box.size
+	if box_size.y <= 0.0 or box_size.x <= 0.0:
+		return
 	var full := CharacterPortrait.full_texture_for(portrait_id)
 	if full != null:
 		var pic := TextureRect.new()
