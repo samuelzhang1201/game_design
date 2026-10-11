@@ -17,7 +17,11 @@ var _chalk := Color.WHITE
 var _handle_r := 7.0
 var _facing: Dictionary = {}   # {at, dir}: a chosen front's facing arrow, screen px
 var _facing_len := 14.0
-var _road := PackedVector2Array()
+var _road: Array = []   # runs of PackedVector2Array, screen px
+var _exit: Dictionary = {}   # {at, dir, text}: where the road leaves the sheet
+var _exit_px := 18
+var _exit_halo_px := 5
+var _exit_halo_alpha := 0.85
 var _orders: Dictionary = {}   # the marches' arrows, WarPlanInk's parts in screen px
 var _orders_look: Dictionary = {}
 var _gold := Color.GOLD
@@ -41,8 +45,13 @@ func show_live(ink: Dictionary, look: Dictionary, handles: PackedVector2Array, c
 
 ## The bold dashed gold supply road of a pending march, under its crayon
 ## (spec 2026-10-08-war-room-draw-orders ruling 14); empty: none.
-func show_road(road: PackedVector2Array, gold: Color, width: float, dash: float) -> void:
+func show_road(road: Array, gold: Color, width: float, dash: float, exit_mark: Dictionary = {},
+		font_px := 18, halo_px := 5, halo_alpha := 0.85) -> void:
 	_road = road
+	_exit = exit_mark
+	_exit_px = font_px
+	_exit_halo_px = halo_px
+	_exit_halo_alpha = halo_alpha
 	_gold = gold
 	_road_w = width
 	_road_dash = dash
@@ -66,8 +75,13 @@ func orders_ink() -> Dictionary:
 
 
 ## The road drawn now (tests read it).
-func road() -> PackedVector2Array:
+func runs() -> Array:
 	return _road
+
+
+## Where the road leaves the sheet ({} none; tests read it).
+func exit_mark() -> Dictionary:
+	return _exit
 
 
 ## The facing arrow drawn now ({} none; tests read it).
@@ -76,31 +90,36 @@ func facing() -> Dictionary:
 
 
 func clear_live() -> void:
-	if _ink.is_empty() and _handles.is_empty() and _facing.is_empty() and _road.is_empty():
+	if _ink.is_empty() and _handles.is_empty() and _facing.is_empty() and _road.is_empty() and _exit.is_empty():
 		return
 	_ink = {}
 	_handles = PackedVector2Array()
 	_facing = {}
-	_road = PackedVector2Array()
+	_road = []
+	_exit = {}
 	queue_redraw()
 
 
 ## True while anything is drawn (tests read it).
 func drawing() -> bool:
-	return not _ink.is_empty() or not _handles.is_empty() or not _facing.is_empty() or _road.size() >= 2 \
+	return not _ink.is_empty() or not _handles.is_empty() or not _facing.is_empty() or not _road.is_empty() \
 		or not (_orders.get("crayon", []) as Array).is_empty()
 
 
 func _draw() -> void:
 	if not _orders.is_empty() and not _orders_look.is_empty():
 		WarPlanDraw.paint(self, _orders, _orders_look)
-	if _road.size() >= 2:
+	if not _road.is_empty():
 		var edge := _gold.darkened(0.5)
-		var runs := WarPlanGeometry.dashes(_road, _road_dash, _road_dash * 0.5)
-		for run: PackedVector2Array in runs:
+		var dashed: Array = []
+		for road: PackedVector2Array in _road:
+			dashed.append_array(WarPlanGeometry.dashes(road, _road_dash, _road_dash * 0.5))
+		for run: PackedVector2Array in dashed:
 			draw_polyline(run, edge, _road_w + 2.0, true)
-		for run: PackedVector2Array in runs:
+		for run: PackedVector2Array in dashed:
 			draw_polyline(run, _gold, _road_w, true)
+	if not _exit.is_empty():
+		_draw_exit()
 	if not _ink.is_empty():
 		WarPlanDraw.paint(self, _ink, _look)
 	for h in _handles:
@@ -117,3 +136,26 @@ func _draw() -> void:
 		draw_circle(at, _facing_len * 0.75, Color(_chalk, 0.3))
 		draw_line(tail, tip - d * _facing_len * 0.3, _chalk, 2.5, true)
 		draw_colored_polygon(PackedVector2Array([tip, tip - d * _facing_len * 0.45 + side, tip - d * _facing_len * 0.45 - side]), _chalk)
+
+
+## The named exit: a small arrowhead at the sheet's edge pointing off it, and
+## "from TOWN · SHEET" in the edge arrows' lettering, inked as the plan is.
+func _draw_exit() -> void:
+	var at: Vector2 = _exit["at"]
+	var d: Vector2 = _exit["dir"]
+	var side := Vector2(-d.y, d.x) * _road_w * 1.1
+	var back := at - d * _road_w * 2.2
+	var tri := PackedVector2Array([at + d * _road_w * 0.4, back + side, back - side])
+	draw_colored_polygon(tri, _gold.darkened(0.5))
+	var inner := PackedVector2Array([at, back + side * 0.6, back - side * 0.6])
+	draw_colored_polygon(inner, _gold)
+	var font: Font = _look.get("font") if _look.get("font") != null else ThemeDB.fallback_font
+	var text := String(_exit["text"])
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, _exit_px).x
+	# the name is ink lifted just above the road, running inward from the arrowhead
+	var pos := Vector2(back.x - d.x * 10.0 - (w if d.x > 0.0 else 0.0), back.y - _road_w * 2.2 - 2.0)
+	var colours: Dictionary = _look.get("colours", {})
+	var ink: Color = colours.get("ink", _gold.darkened(0.6))
+	var halo: Color = _look.get("halo", Color.WHITE)
+	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, _exit_px, _exit_halo_px, Color(halo, _exit_halo_alpha))
+	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, _exit_px, ink)

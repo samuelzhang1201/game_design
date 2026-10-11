@@ -98,6 +98,30 @@ static func _parchment(repo: DataRepository, px: int, ih: int, paper: Color, age
 	return Image.create_from_data(px, ih, false, Image.FORMAT_RGBA8, out)
 
 
+## The chart's picture with a parchment margin of `margin_px` round the map's
+## own image, the letters and numbers printed on it: the map's pixels sit at
+## (margin_px, margin_px), the sheet picks (`sheet_at_uv`) stay in the map's UV.
+static func image_with_margin(repo: DataRepository, px: int, margin_px: int) -> Image:
+	var map := image(repo, px)
+	if margin_px <= 0:
+		return map
+	map.clear_mipmaps()
+	var pal: Dictionary = repo.war_palette
+	var paper: Color = pal.get("parchment", pal["paper"])
+	var age: Color = pal.get("parchment_age", pal["paper_age"])
+	var out := Image.create(px + 2 * margin_px, map.get_height() + 2 * margin_px, false, Image.FORMAT_RGBA8)
+	out.fill(paper.lerp(age, 0.35))
+	out.blit_rect(map, Rect2i(Vector2i.ZERO, map.get_size()), Vector2i(margin_px, margin_px))
+	var faint: Color = pal["ink_faint"]
+	var f := Rect2i(margin_px - 1, margin_px - 1, px + 2, map.get_height() + 2)
+	_blend_rect(out, Rect2i(f.position.x, f.position.y, f.size.x, 1), faint)
+	_blend_rect(out, Rect2i(f.position.x, f.end.y - 1, f.size.x, 1), faint)
+	_blend_rect(out, Rect2i(f.position.x, f.position.y + 1, 1, f.size.y - 2), faint)
+	_blend_rect(out, Rect2i(f.end.x - 1, f.position.y + 1, 1, f.size.y - 2), faint)
+	out.generate_mipmaps()
+	return out
+
+
 static func _relief(repo: DataRepository) -> Image:
 	if repo.relief_path.is_empty() or not ResourceLoader.exists(repo.relief_path):
 		return null

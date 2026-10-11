@@ -119,7 +119,14 @@ func _draw() -> void:
 		_draw_mark(String(LEGEND[i]["key"]), Rect2(x, y - row_h * 0.35, mark_w, row_h * 0.7), ink)
 		if font != null:
 			draw_string(font, Vector2(x + mark_w + _repo.bal("war_key_gap_px"), y + float(font_px) * 0.35),
-				String(LEGEND[i]["label"]), HORIZONTAL_ALIGNMENT_LEFT, col_w - mark_w, font_px, ink)
+				String(LEGEND[i]["label"]), HORIZONTAL_ALIGNMENT_LEFT, label_width(_repo, size.x), font_px, ink)
+
+
+## The width a legend word gets in a slip `slip_w` wide: its column less the
+## mark and the gap before the text (the text's x and this budget share both).
+static func label_width(repo: DataRepository, slip_w: float) -> float:
+	var cols := maxi(1, int(repo.bal("war_key_columns")))
+	return slip_w / float(cols) - repo.bal("war_key_mark_px") - repo.bal("war_key_gap_px")
 
 
 ## The legend's rows: its entries over war_key_columns columns, rounded up.

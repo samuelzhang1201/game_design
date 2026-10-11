@@ -102,3 +102,13 @@ func test_the_key_lists_every_works_family() -> void:
 	var keys := WarMarginKey.legend_keys()
 	for good: String in repo.war_works:
 		assert_true(keys.has("works_" + String(repo.war_works[good]["family"])), good)
+
+
+func test_every_legend_word_fits_its_column() -> void:
+	# the text starts at mark + gap and gets what is left of the column, so no word is clipped
+	var font := UiPalette.role_font("body")
+	var px := int(repo.bal("war_key_font_px"))
+	var budget := WarMarginKey.label_width(repo, repo.bal("war_key_width_px"))
+	for e: Dictionary in WarMarginKey.LEGEND:
+		var w := font.get_string_size(String(e["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+		assert_true(w <= budget, "%s is %.1f px, the slip gives %.1f" % [e["label"], w, budget])

@@ -80,6 +80,8 @@ var supply_pick: Dictionary = {}:
 	set(v):
 		supply_pick = v
 		_redraw_all()
+## The town the preview road starts from (ArmyOrderMenu sets it with the preview).
+var supply_town := ""
 var supply_preview := PackedVector2Array():
 	set(v):
 		supply_preview = v

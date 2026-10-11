@@ -575,3 +575,193 @@ func test_a_stick_drag_out_and_back_is_no_click() -> void:
 		_motion(view, at + Vector2(80.0 - float(j) * 10.0, 4.0))
 	_button(view, at + Vector2(2.0, 2.0), false)
 	assert_false(view.plan_input().sel.is_empty(), "a drag out and back is not an open-table click")
+
+
+func test_a_resting_pointer_on_open_table_shows_the_slip() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var at := _open_land(screen)
+	assert_ne(at, Vector2(-1, -1))
+	assert_false((screen.get_node("%HoverSlip") as Control).visible, "no slip before the pointer comes to rest")
+	var e := InputEventMouseMotion.new()   # no button: a pointer moving over the table
+	e.position = at
+	view._gui_input(e)
+	await wait_until(func() -> bool: return (screen.get_node("%HoverSlip") as Control).visible, 3.0)
+	assert_true((screen.get_node("%HoverSlip") as Control).visible, "a pointer at rest on open table raises the slip")
+
+
+## B1: the supply preview is clipped to the laid sheet in pack px; a road from a
+## town off the sheet ends at the sheet's edge with the town's name beside it.
+func _burg_off_sheet(view: WarRoomView) -> String:
+	var codes: Array = Game.data.burgs.keys()
+	codes.sort()
+	for t: String in codes:
+		var b: Dictionary = Game.data.burgs[t]
+		if WarSheets.sheet_of(Game.data, Vector2(float(b["x"]), float(b["y"]))) != view.sheet_index() \
+				and not view.sheet_rect().has_point(Vector2(float(b["x"]), float(b["y"]))):
+			return t
+	return ""
+
+
+func _in_quad(view: WarRoomView, p: Vector2) -> bool:
+	var r := view.sheet_rect()
+	var quad := PackedVector2Array()
+	for c: Vector2 in [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]:
+		quad.append(view.screen_pos_of_px(c))
+	var fat := Geometry2D.offset_polygon(quad, 3.0)
+	return not fat.is_empty() and Geometry2D.is_point_in_polygon(p, fat[0])
+
+
+func test_a_supply_road_inside_the_sheet_has_no_exit_mark() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var c := view.sheet_rect().get_center()
+	view.aiming = true
+	view.supply_preview = PackedVector2Array([c, c + Vector2(40, 20)])
+	view.plan_input().redraw_live()
+	var hud := view.get_node("%PlanHud") as WarPlanHud
+	assert_eq(hud.runs().size(), 1)
+	assert_true(hud.exit_mark().is_empty())
+
+
+func test_a_supply_road_from_off_the_sheet_ends_at_its_edge_with_the_towns_name() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var town := _burg_off_sheet(view)
+	assert_ne(town, "")
+	var b: Dictionary = Game.data.burgs[town]
+	var from := Vector2(float(b["x"]), float(b["y"]))
+	view.aiming = true
+	view.supply_town = town
+	view.supply_preview = PackedVector2Array([from, view.sheet_rect().get_center()])
+	view.plan_input().redraw_live()
+	var hud := view.get_node("%PlanHud") as WarPlanHud
+	assert_gt(hud.runs().size(), 0, "the part on the sheet is drawn")
+	for run: PackedVector2Array in hud.runs():
+		for p in run:
+			assert_true(_in_quad(view, p), "no gold on the oak: " + str(p))
+	var mark := hud.exit_mark()
+	assert_false(mark.is_empty())
+	assert_string_contains(String(mark["text"]), String(b["label"]))
+	assert_string_contains(String(mark["text"]), String(WarSheets.series(Game.data)[WarSheets.sheet_of(Game.data, from)]["id"]))
+
+
+func test_the_confirm_does_not_cover_the_margin_slip() -> void:
+	var screen := await _room()
+	_blue_drag_from_piece(screen)
+	var p := screen.orders().confirm_panel()
+	assert_true(p.visible, "the confirm is open")
+	var slip := screen.get_node("%Slip") as Control
+	# a route box swallowing every tip-adjacent spot sends the old placement to the top-left corner
+	var view_rect := screen.view().get_global_rect()
+	p.place_near(view_rect.get_center(), view_rect.grow(-40.0), view_rect, screen.blocked_rects())
+	# whatever the window (the suite's root size is shared): the slip steps aside or is put away
+	assert_true(not slip.visible or not p.get_global_rect().intersects(slip.get_global_rect()),
+		"the confirm never covers the margin slip")
+	p.global_position = view_rect.position + Vector2(8, 8)   # a confirm in the corner: the slip steps right of it, clear
+	screen._make_way()
+	assert_true(slip.visible, "the slip steps aside when there is room")
+	assert_false(p.get_global_rect().intersects(slip.get_global_rect()), "the confirm and the margin slip do not overlap")
+	screen.orders().withdraw_aim()
+
+
+func test_the_margin_slip_comes_back_when_the_confirm_closes() -> void:
+	var screen := await _room()
+	var slip := screen.get_node("%Slip") as Control
+	_blue_drag_from_piece(screen)
+	var p := screen.orders().confirm_panel()
+	var view_rect := screen.view().get_global_rect()
+	p.global_position = view_rect.position + Vector2(8, 8)   # over the slip's corner
+	screen._make_way()
+	assert_true(not slip.visible or slip.offset_left > 16.0, "the slip made way for the confirm")
+	screen.orders().withdraw_aim()
+	await wait_process_frames(2)
+	assert_false(p.visible, "the confirm closed")
+	assert_true(slip.visible, "the slip is back")
+	var folio := screen.get_node("%Folio") as WarFolioPanel
+	var home := folio.book_rect().end.x + 12.0 if folio.visible and not folio.is_full() else 16.0
+	assert_eq(slip.offset_left, home, "where the book (or the corner) leaves it")
+
+
+func test_the_open_book_is_a_blocked_rect_where_it_stands() -> void:
+	var screen := await _room()
+	var land := _land_piece(screen)
+	screen._on_piece(String(land["code"]))
+	await wait_process_frames(2)
+	var folio := screen.get_node("%Folio") as Control
+	var docket := folio.get_node("%Docket") as Control
+	var want := Rect2(docket.global_position, docket.size * docket.scale)
+	var found := false
+	for r: Rect2 in screen.blocked_rects():
+		if r.position.distance_to(want.position) < 2.0 and r.size.distance_to(want.size) < 2.0:
+			found = true
+	assert_true(found, "the docked book's rect %s is blocked (%s)" % [want, screen.blocked_rects()])
+
+
+func test_the_confirm_opens_somewhere_when_every_spot_is_blocked() -> void:
+	var p := load("res://scenes/panels/march_confirm_panel.tscn").instantiate() as MarchConfirmPanel
+	add_child_autofree(p)
+	await wait_process_frames(2)
+	var view := Rect2(Vector2.ZERO, p.get_viewport_rect().size)
+	var all: Array[Rect2] = [view]
+	p.place_near(view.get_center(), Rect2(), view, all)
+	var r := Rect2(p.global_position, p.get_combined_minimum_size())
+	assert_true(view.encloses(r), "still inside the window")
+	assert_false(r.grow(-1.0).has_point(view.get_center()), "never over the tip")
+
+
+func _covered(r: Rect2, blocked: Array[Rect2]) -> float:
+	var sum := 0.0
+	for b: Rect2 in blocked:
+		sum += r.intersection(b).get_area()
+	return sum
+
+
+func test_a_blocked_rect_over_the_winning_spot_moves_the_confirm() -> void:
+	var p := load("res://scenes/panels/march_confirm_panel.tscn").instantiate() as MarchConfirmPanel
+	add_child_autofree(p)
+	await wait_process_frames(2)
+	var view := Rect2(Vector2.ZERO, p.get_viewport_rect().size)
+	var tip := view.get_center()
+	p.place_near(tip, Rect2(), view, [])
+	var free_at := p.global_position
+	var box := p.size
+	var over: Array[Rect2] = [Rect2(free_at, box)]
+	p.place_near(tip, Rect2(), view, over)
+	assert_ne(p.global_position, free_at, "the blocked rect moved the winner")
+	assert_lt(_covered(Rect2(p.global_position, p.size), over), box.x * box.y, "and it covers less of it")
+
+
+func test_the_least_covered_spot_wins_among_blocked_rects() -> void:
+	var p := load("res://scenes/panels/march_confirm_panel.tscn").instantiate() as MarchConfirmPanel
+	add_child_autofree(p)
+	await wait_process_frames(2)
+	var view := Rect2(Vector2.ZERO, p.get_viewport_rect().size)
+	var left := Rect2(view.position, Vector2(view.size.x * 0.5, view.size.y))
+	var blocked: Array[Rect2] = [left, view]   # the left half is covered twice, the right once
+	p.place_near(view.get_center(), Rect2(), view, blocked)
+	var got := _covered(Rect2(p.global_position, p.size), blocked)
+	var at_left := _covered(Rect2(view.position, p.size), blocked)
+	assert_lt(got, at_left, "less covered than the left corner")
+	var best := INF
+	for spot: Vector2 in [view.position, Vector2(view.end.x - p.size.x, view.position.y),
+			Vector2(view.position.x, view.end.y - p.size.y), view.end - p.size]:
+		best = minf(best, _covered(Rect2(spot.clamp(view.position, (view.end - p.size).max(view.position)), p.size), blocked))
+	assert_lte(got, best + 1.0, "no corner is less covered")
+
+
+func test_a_held_up_book_is_blocked_whole() -> void:
+	var screen := await _room()
+	var land := _land_piece(screen)
+	screen._on_piece(String(land["code"]))
+	await wait_process_frames(2)
+	var folio := screen.get_node("%Folio") as WarFolioPanel
+	folio.set_full(true)
+	await wait_process_frames(2)
+	var folder := folio.get_node("%Folder") as Control
+	var want := Rect2(folder.global_position, folder.size * folder.scale)
+	var found := false
+	for r: Rect2 in screen.blocked_rects():
+		if r.position.distance_to(want.position) < 2.0 and r.size.distance_to(want.size) < 2.0:
+			found = true
+	assert_true(found, "the held-up book's rect %s is blocked (%s)" % [want, screen.blocked_rects()])

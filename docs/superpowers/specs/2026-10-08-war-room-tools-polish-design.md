@@ -89,14 +89,44 @@ A GUT test per item under `tests/war_room/` and `tests/ui/`, driven through
 the real input path (`WarPlanInput`, the desk's key handler, the view's
 pointer), then snapshot shots of select, box, draw and confirm.
 
-## Batch B — the sheet's layout and ink (to design)
+## Batch B — the sheet's layout and ink (owner-approved 2026-10-08)
 
-Supply preview drawn off the parchment onto the oak; the key slip clipped at
-the room's right edge; the index chart filling a third of the view and its
-column letters crowded; town names small, pale and hidden by pieces while the
-graticule figures are the loudest ink; sea hatching over most of a sheet;
-the march confirm over the margin slip, small type; intel-hint notes
-unreadable; the hover slip not seen in the shot (to check).
+Every item is a visual change and goes through the `visual-review` loop
+(before shot, 2–3 variants bracketed with `--bal` / `--set`, a zoomed crop,
+an independent critic). No new art. Rulings marked **[R]** were proposed by
+Claude and approved by the owner.
+
+- **B1 [R]. The supply preview stays on the sheet.** The bold dashed gold
+  road of a march's supply (`supply_preview`, drawn by `WarPlanHud.show_road`)
+  is clipped to the sheet's `rect` (neat line + collar); where it leaves, it
+  ends in a small arrow at the edge with "from <town> · <sheet id>" in the
+  edge arrows' hand — never drawn over the oak.
+- **B2. The key slip never truncates a word.** Its labels are laid out from
+  the width they really have (today the text starts `war_key_gap_px` after
+  the width budget assumes and `draw_string` clips), every legend word whole
+  at 1920×1080 and 2560×1440.
+- **B3 [R]. The index chart stays on the table's north band, smaller.** It
+  is narrowed and pushed north (`war_chart_w_m`, `war_chart_z_m`), its
+  letters and numbers shrunk until every column or every other one is
+  labelled (`war_chart_numeral_*`, `war_chart_label_every`) and inked in
+  sepia, not rubric. Variants: narrow, middle, unchanged.
+- **B4 [R]. The sheet's ink leads with what matters.** Town names larger and
+  darker on a parchment halo, laid clear of a standing piece's plinth; the
+  graticule's degree figures smaller and paler than the towns and roads; the
+  sea hatched only in a coastal band (`war_sea_hatch_reach_m`,
+  `war_sea_hatch_alpha`), the open sea a pale wash. Values bracketed and
+  chosen by the critic, kept in `balance.csv`.
+- **B5. The march's confirm never covers the room's slips.** Its placement
+  treats the margin slip, the key slip, the tool roll and the docked folio
+  as blocked.
+- **B6. A spy report's note is legible**: at the hazard labels' size on a
+  parchment halo.
+- **B7. The hover slip shows.** It did not appear in two real-window shots;
+  find whether the room or the snapshot tool is at fault, fix it, and pin it
+  with a test.
+- **B8. The sheet's title stays readable over the sheet** (leaning in, the
+  "Sheet R12 · Kelvarn" title sits on the map): it gets the margin slip's
+  paper behind it, made in the editor.
 
 ## Batch C — the tool roll (to design)
 

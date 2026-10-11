@@ -102,6 +102,11 @@ bg_color = Color(0, 0, 0, 0)
 border_width_bottom = 2
 border_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
 
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_p2c6e"]
+color = Color(0.42352942, 0.30588236, 0.19607843, 0.6)
+grow_begin = 0.0
+grow_end = 0.0
+
 [resource]
 CardFigure/base_type = &"Label"
 CardFigure/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
@@ -242,3 +247,10 @@ WarMarginRow/styles/hover = SubResource("StyleBoxFlat_32psp")
 WarMarginRow/styles/hover_pressed = SubResource("StyleBoxFlat_jkyxd")
 WarMarginRow/styles/normal = SubResource("StyleBoxFlat_kjki1")
 WarMarginRow/styles/pressed = SubResource("StyleBoxFlat_5qeic")
+WarSheetRule/base_type = &"HSeparator"
+WarSheetRule/constants/separation = 6
+WarSheetRule/styles/separator = SubResource("StyleBoxLine_p2c6e")
+WarSheetTitle/base_type = &"Label"
+WarSheetTitle/colors/font_color = Color(0.16862746, 0.12156863, 0.08235294, 1)
+WarSheetTitle/font_sizes/font_size = 22
+WarSheetTitle/fonts/font = ExtResource("4_fqusy")

@@ -498,3 +498,46 @@ func test_densify_bends_where_the_line_turns() -> void:
 		if p.x < 9.99 and p.x > 0.01:
 			off = maxf(off, absf(p.y))
 	assert_gt(off, 0.01, "the first leg curves into the turn: no ruled straight segment and a corner")
+
+
+func _circle_meets_rect(c: Vector2, r: float, box: Rect2) -> bool:
+	var nearest := Vector2(clampf(c.x, box.position.x, box.end.x), clampf(c.y, box.position.y, box.end.y))
+	return nearest.distance_to(c) < r
+
+
+func test_a_town_name_clears_its_seat_piece() -> void:
+	var s := _richest_sheet()
+	var ink := WarSheetInk.strokes(repo, state, s, int(repo.bal("war_sheet_texture_px")))
+	assert_gt((ink["towns"] as Array).size(), 0)
+	var plinth_r := WarSheetInk.plinth_radius_px(repo)
+	assert_gt(plinth_r, 0.0)
+	for t: Dictionary in ink["towns"]:
+		var nb := WarSheetInk.town_name_box(repo, t)
+		assert_false(_circle_meets_rect(t["at"], plinth_r, nb), "%s under its seat piece" % t["label"])
+		assert_gte(float(t["name_dx"]), plinth_r, "%s name ends inside the plinth" % t["label"])
+		assert_lt(nb.end.x, float(t["at"].x), "%s name stands west of its town" % t["label"])
+
+
+func test_the_plinth_footprint_in_ink_px_follows_the_table() -> void:
+	var want := repo.bal("war_piece_plinth_mm") / 1000.0 * 0.5 / repo.bal("war_table_w_m") * repo.bal("war_sheet_texture_px")
+	assert_almost_eq(WarSheetInk.plinth_radius_px(repo), want, 0.001)
+	assert_almost_eq(WarSheetInk.plinth_radius_px(repo, 2.0), want * 2.0, 0.001)
+
+
+func test_the_label_halo_and_graticule_alpha_are_data() -> void:
+	assert_true(repo.balance.has("war_ink_label_halo_px"))
+	assert_true(repo.balance.has("war_ink_label_clear_px"))
+	assert_true(repo.balance.has("war_grid_label_alpha"))
+	var s := _richest_sheet()
+	var ink := WarSheetInk.strokes(repo, state, s, 4096)
+	for g: Dictionary in ink["graticule"]:
+		assert_almost_eq(float(g["alpha"]), repo.bal("war_grid_label_alpha"), 0.0001)
+
+
+func test_the_graticule_figures_are_paler_than_full_rubric() -> void:
+	assert_true(repo.balance.has("war_grid_figure_alpha"))
+	assert_lt(repo.bal("war_grid_figure_alpha"), 1.0, "the figures step back from full rubric")
+	var ink := WarSheetInk.strokes(repo, state, _richest_sheet(), 4096)
+	assert_gt((ink["graticule"] as Array).size(), 0)
+	for g: Dictionary in ink["graticule"]:
+		assert_almost_eq(float(g["fig_alpha"]), repo.bal("war_grid_figure_alpha"), 0.0001)

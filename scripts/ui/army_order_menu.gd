@@ -84,6 +84,9 @@ var _waypoints: Array = []
 ## menu was opened, for an Edit route… that opens the panel there.
 var _panel: MarchConfirmPanel = null
 var _route_at := Vector2.ZERO
+## Set by a screen that has furniture over its map (the war room's slips and
+## book): returns the global rects the confirm keeps off. The 3D map sets none.
+var blocked_rects: Callable = Callable()
 ## The regiment whose supply point is being picked, "" when none; and the
 ## town clicked, whose rate the confirm asks.
 var _supply_for := ""
@@ -229,7 +232,10 @@ func _open_confirm(at: Vector2) -> void:
 	var map_rect := (_map as Control).get_global_rect() if _map is Control else Rect2()
 	if _map != null and _map.has_signal("hover_cleared"):
 		_map.emit_signal("hover_cleared")   # the WAR ROOM's slip at the tip goes: the confirm speaks now
-	p.place_near(origin + at, _route_rect(origin), map_rect)
+	var blocked: Array[Rect2] = []
+	if blocked_rects.is_valid():
+		blocked.assign(blocked_rects.call())
+	p.place_near(origin + at, _route_rect(origin), map_rect, blocked)
 
 
 ## The planned route's box on screen (global px): the piece, its waypoints and
@@ -842,6 +848,7 @@ func _on_supply_ground(pack_px: Vector2, at: Vector2) -> void:
 		return
 	_supply_town = town
 	var route := SupplyLines.road_px(Game.data, Game.state, _supply_for, town)
+	_map_set("supply_town", town)
 	_map_set("supply_preview", route)
 	_open_rates(town, route, at)
 
@@ -1081,6 +1088,7 @@ func _open_supply() -> void:
 		_supply_choice = ""
 	_panel.show_supply(options, _supply_choice, _supply_words(_supply_choice))
 	_map_set("supply_pick", _supply_ok)
+	_map_set("supply_town", _supply_choice)
 	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, _supply_choice, _pending) if _supply_choice != "" else PackedVector2Array())
 
 
@@ -1102,6 +1110,7 @@ func _rear_order(lead: String) -> Array:
 func _choose_supply(town: String) -> void:
 	_supply_choice = town
 	_supply_set = true
+	_map_set("supply_town", town)
 	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, town, _pending) if town != "" else PackedVector2Array())
 	if _panel != null:
 		_panel.set_supply_figures(_supply_words(town))
