@@ -21,12 +21,17 @@ static func bars(repo: DataRepository, chain: Array) -> Array:
 	for p: Vector2 in chain:
 		pts.append(ArmySystem.pack_to_metres(repo, p))
 	var wps: Array = pts.slice(1, pts.size() - 1)
+	var line: Array = [pts[0], pts[pts.size() - 1]]
+	if not wps.is_empty():   # the route the column walks: the sampled curve
+		line = [pts[0]]
+		for leg: Array in MarchRoute.legs(MarchRoute.distinct(pts), int(repo.bal("army_route_sample_m"))):
+			line.append_array(leg)
 	var half := (repo.bal("war_slope_bar_pad_cells") + 0.5) * float(grid.cell_m)   # metres
 	for run: Array in MarchPath.blocked_runs(repo, pts[0], wps, pts[pts.size() - 1]):
-		var entry := Vector2(grid.centre_m(run[0]))
-		var d := _dir_at(pts, entry)
+		var hit := _entry(line, run[0], float(grid.cell_m))
+		var d: Vector2 = hit["dir"]
 		var across := Vector2(-d.y, d.x)
-		var mid := entry - d * float(grid.cell_m) * 0.5   # the entry edge
+		var mid: Vector2 = hit["at"]   # where the route first touches the run's entry cell
 		var a := mid - across * half
 		var b := mid + across * half
 		var n := maxi(absi((run[1] as Vector2i).x - (run[0] as Vector2i).x),
@@ -36,20 +41,46 @@ static func bars(repo: DataRepository, chain: Array) -> Array:
 	return out
 
 
-## The travel direction (unit) of the chain's chord nearest `at` (metres).
-static func _dir_at(pts: Array, at: Vector2) -> Vector2:
-	var best := Vector2.RIGHT
-	var best_d := INF
-	for i in pts.size() - 1:
-		var p := Vector2(pts[i] as Vector2i)
-		var q := Vector2(pts[i + 1] as Vector2i)
+## Where the sampled route line first touches `cell`'s box (a corner touch
+## counts), clipped to the box: {at: the entry point, dir: that segment's unit
+## direction} in metres. Falls back to the cell's centre and the first chord.
+static func _entry(line: Array, cell: Vector2i, cell_m: float) -> Dictionary:
+	var lo := Vector2(cell) * cell_m
+	var hi := lo + Vector2(cell_m, cell_m)
+	var first := Vector2.RIGHT
+	for i in line.size() - 1:
+		var p := Vector2(line[i] as Vector2i)
+		var q := Vector2(line[i + 1] as Vector2i)
 		if p.distance_to(q) < 1.0:
 			continue
-		var d := at.distance_to(Geometry2D.get_closest_point_to_segment(at, p, q))
-		if d < best_d:
-			best_d = d
-			best = (q - p).normalized()
-	return best
+		if i == 0:
+			first = (q - p).normalized()
+		var t := _clip(p, q - p, lo, hi)
+		if t >= 0.0:
+			return {"at": p + (q - p) * t, "dir": (q - p).normalized()}
+	return {"at": (lo + hi) * 0.5, "dir": first}
+
+
+## Liang-Barsky: the parameter t (0..1) where p + t * d first enters the closed
+## box lo..hi, or -1.0 when the segment never touches it.
+static func _clip(p: Vector2, d: Vector2, lo: Vector2, hi: Vector2) -> float:
+	var t0 := 0.0
+	var t1 := 1.0
+	var ps := [-d.x, d.x, -d.y, d.y]
+	var qs := [p.x - lo.x, hi.x - p.x, p.y - lo.y, hi.y - p.y]
+	for k in 4:
+		if is_zero_approx(ps[k]):
+			if qs[k] < 0.0:
+				return -1.0
+		else:
+			var r: float = qs[k] / ps[k]
+			if ps[k] < 0.0:
+				t0 = maxf(t0, r)
+			else:
+				t1 = minf(t1, r)
+	if t0 > t1 + 1e-9:
+		return -1.0
+	return t0
 
 
 ## A bar's ends on the screen held to at least `min_px` long, grown about its

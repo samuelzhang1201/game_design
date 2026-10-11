@@ -263,6 +263,28 @@ func test_one_barrier_bar_lies_across_a_march_over_a_scarp() -> void:
 	repo.balance["army_march_grid_px"] = 0
 
 
+func test_a_bar_at_a_grazed_corner_sits_where_the_route_touches() -> void:
+	repo.balance["army_march_grid_px"] = 4
+	var bytes := PackedByteArray()
+	bytes.resize(45)
+	bytes.fill(20)
+	bytes[2 * 9 + 4] = 150   # only cell (4, 2)
+	MarchPath.use(repo, MarchPath.build(repo, 9, 5, 1000, bytes))
+	var from := ArmySystem.metres_to_pack(repo, Vector2i(2500, 3500))
+	var to := ArmySystem.metres_to_pack(repo, Vector2i(5500, 500))
+	var bars := WarSlopeBars.bars(repo, [from, to])
+	assert_eq(bars.size(), 1)
+	# x + y = 6000 touches (4, 2) at its corner (4000, 2000); the bar is centred there,
+	# across the (0.7071, -0.7071) march: 1250 m either way along (0.7071, 0.7071)
+	var a := ArmySystem.pack_to_metres(repo, bars[0]["a"])
+	var b := ArmySystem.pack_to_metres(repo, bars[0]["b"])
+	assert_almost_eq(float(a.x), 3116.0, 3.0)
+	assert_almost_eq(float(a.y), 1116.0, 3.0)
+	assert_almost_eq(float(b.x), 4884.0, 3.0)
+	assert_almost_eq(float(b.y), 2884.0, 3.0)
+	repo.balance["army_march_grid_px"] = 0
+
+
 func test_no_bar_on_open_ground_water_or_a_gentle_slope() -> void:
 	repo.balance["army_march_grid_px"] = 4
 	var from := ArmySystem.metres_to_pack(repo, Vector2i(1500, 2500))

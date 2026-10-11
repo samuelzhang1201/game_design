@@ -59,6 +59,18 @@ func test_a_line_through_the_cell_has_it() -> void:
 		[[Vector2i(4, 2), Vector2i(4, 2)]])
 
 
+func test_a_run_longer_than_one_cell_is_one_run() -> void:
+	_use([Vector2i(4, 2), Vector2i(5, 2)], 150)
+	assert_eq(MarchPath.blocked_runs(repo, Vector2i(1500, 2500), [], Vector2i(7500, 2500)),
+		[[Vector2i(4, 2), Vector2i(5, 2)]])
+
+
+func test_a_curved_leg_has_its_run_where_the_curve_crosses() -> void:
+	_use([Vector2i(3, 3)], 150)
+	var runs := MarchPath.blocked_runs(repo, Vector2i(1500, 2500), [Vector2i(4500, 3500)], Vector2i(7500, 2500))
+	assert_eq(runs, [[Vector2i(3, 3), Vector2i(3, 3)]])
+
+
 func test_adjacent_closed_cells_are_one_run() -> void:
 	_use([Vector2i(4, 1), Vector2i(4, 2), Vector2i(4, 3)], 150)
 	assert_eq(MarchPath.blocked_runs(repo, Vector2i(1500, 2500), [], Vector2i(7500, 2500)),
