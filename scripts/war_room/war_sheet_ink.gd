@@ -126,8 +126,11 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		# a works glyph stands above the ring, a market's scales below it — clear
 		# of a walled town's square and its corner towers
 		var ring := repo.bal("war_ink_town_px") * px_k * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
+		# a glyph clears the halo disk and a capital's OUTER ring, not only the inner ring
+		var clear := maxf(repo.bal("war_ink_town_halo_ratio"), 1.0 + (repo.bal("war_ink_town_outer_gap_ratio") if tier >= 3 else 0.0))
+		ring *= clear
 		if bool(t["walls"]):
-			ring *= repo.bal("war_ink_wall_ratio") * 1.22
+			ring = maxf(ring, ring / clear * repo.bal("war_ink_wall_ratio") * 1.22)
 		t["works_at"] = (t["at"] as Vector2) - Vector2(0.0, ring + repo.bal("war_ink_works_px") * px_k * 0.75)
 		t["market_at"] = (t["at"] as Vector2) + Vector2(0.0, ring + repo.bal("war_ink_market_px") * px_k * 0.75)
 		(out["towns"] as Array).append(t)

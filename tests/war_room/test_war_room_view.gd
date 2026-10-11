@@ -891,6 +891,10 @@ func test_markers_follow_the_leaning_chart() -> void:
 func test_one_key_candle_and_short_accents_from_the_balance_keys() -> void:
 	var lights := view.candles()
 	assert_between(lights.size(), 1, 4, "a light at each candlestick left (owner 2026-10-12: only the top-left one stays)")
+	if lights.size() > 1:
+		pending("Phase E9 (delete Candlestick2-4 in war_room.tscn) leaves exactly one candle")
+	else:
+		assert_eq(lights.size(), 1)
 	var key := lights[WarRoomLights.key_index(repo, lights.size())]
 	assert_almost_eq(key.light_energy, repo.bal("war_candle_key_energy"), 0.0001)
 	assert_almost_eq(key.omni_range, repo.bal("war_candle_key_range_m"), 0.0001)

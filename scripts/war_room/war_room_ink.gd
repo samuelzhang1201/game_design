@@ -13,7 +13,7 @@ extends RefCounted
 const INK_PX := ["road", "trail", "river", "coast", "border", "band", "seam", "town", "label", "dash", "gap",
 	"wood", "manor", "manor_label", "manor_dash", "manor_gap", "river_label", "bridge", "trade", "works", "market",
 	"river_feather", "label_halo"]
-const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_dot_ratio", "town_halo_ratio", "town_pip_ratio", "town_outer_gap_ratio", "label_gap_ratio",
+const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_dot_ratio", "town_halo_ratio", "town_halo_alpha", "town_pip_ratio", "town_outer_gap_ratio", "label_gap_ratio",
 	"label_drop_ratio", "peak_label_ratio", "peak_half_w", "peak_drop", "border_dot_ratio", "wall_ratio", "anchor_ratio", "char_w",
 	"river_label_lift"]
 ## The intelligence layer's widths (war_intel_<k>_px) and ratios (war_intel_<k>).

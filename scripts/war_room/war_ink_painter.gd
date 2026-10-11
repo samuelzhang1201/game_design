@@ -116,6 +116,7 @@ func _draw() -> void:
 	for t: Dictionary in ink["towns"]:
 		var r := float(px["town"]) * (1.0 + float(px["town_tier_growth"]) * float(int(t["tier"])))
 		var knock: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
+		knock.a = float(px.get("town_halo_alpha", 1.0))
 		draw_circle(t["at"], r * float(px.get("town_halo_ratio", 1.0)), knock)   # a parchment halo: the marker reads over road and contour
 		draw_arc(t["at"], r, 0.0, TAU, 32, c_ink, float(px["town"]) * float(px["town_ring_ratio"]), true)
 		if int(t["tier"]) >= 2:
