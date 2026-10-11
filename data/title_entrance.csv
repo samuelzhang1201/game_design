@@ -1,0 +1,14 @@
+node,kind,delay_ms,duration_ms,lift_px,ease,step_ms
+Curtain,curtain,0,1100,0,expo,0
+TopBar/Brand,fade,0,500,0,quart,0
+TopBar/Right/NavPill,lift,120,700,8,expo,0
+TopBar/Right/NavPill/Nav,ripple,260,700,4,expo,45
+TopBar/Right/Sound,lift,200,700,8,expo,0
+Hero/Tagline,lift,300,650,10,expo,0
+Hero/Head1/Title_Crown,rise,380,1050,115,expo,0
+Hero/Head2/Title_andCouncil,rise,470,1050,115,expo,0
+Hero/Lede1,lift,800,800,14,expo,0
+Hero/Lede2,lift,860,800,14,expo,0
+Hero/Actions/StartGame,lift,1000,800,12,expo,0
+Hero/Actions/LoadGame,lift,1100,600,8,quart,0
+Caption,ripple,1250,700,-6,expo,60

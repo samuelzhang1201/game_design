@@ -70,7 +70,7 @@ const CODE_OWNED := {
 	# the hovered kingdom's own colour
 	"Country/Head/Swatch": ["color"],
 	# the title's arms are the preview reign's crown's
-	"TitleColumn/Col/TitleArms": ["texture", "color"],
+	"TopBar/Brand/Row/ArmsDisc/TitleArms": ["texture", "color"],
 }
 
 func test_a_converted_ready_sets_no_look() -> void:
@@ -146,8 +146,8 @@ func test_the_title_keeps_its_scenes_look() -> void:
 	assert_true(r.current_screen is MainMenu)
 	_assert_scene_holds(r.current_screen, "res://scenes/screens/main_menu.tscn")
 	# the rows GameRoot hands in wear the scene's word look, not the pause menu's
-	var dev := (r.current_screen as MainMenu).menu_column().get_node("DevMode") as Button
-	assert_eq(dev.theme_type_variation, &"TitleWordSmall")
+	var dev := (r.current_screen as MainMenu).row("DevMode")
+	assert_eq(dev.theme_type_variation, &"TitleNav")
 	assert_false(dev.has_theme_font_override("font"), "the theme kind's face, not command_button's")
 
 ## The council column opening moves only the map's right edge, to the gap

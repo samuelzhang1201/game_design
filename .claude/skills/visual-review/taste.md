@@ -115,3 +115,9 @@ existing one.
   scale bar.
 - A ruling stands until the owner reverses it: do not bring back what was
   removed without being asked.
+
+## Screens and menus
+- **The title is a film still, not a menu page.** The living world fills the
+  screen; the words sit low in a darkened corner, light and few, and the one
+  way in is the brightest thing on them. The game opens from black onto that
+  picture, never onto a placeholder that is then swapped.

@@ -2,9 +2,12 @@
 
 [ext_resource type="Script" uid="uid://dag6kihdif3hf" path="res://scripts/ui/main_menu.gd" id="1"]
 [ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="2_8ln24"]
+[ext_resource type="Texture2D" uid="uid://bqffspnrmuwe5" path="res://assets/2D/ui/title/speaker_on.svg" id="2_vp5vp"]
+[ext_resource type="Texture2D" uid="uid://pmt8gp565nd2" path="res://assets/2D/ui/title/speaker_off.svg" id="3_gqnmn"]
 [ext_resource type="Script" uid="uid://nyp5bijocq8u" path="res://scripts/ui/war_table/title_shade.gd" id="3_rtw2f"]
 [ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="4_oa1go"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="5_tbmy8"]
+[ext_resource type="Texture2D" uid="uid://cnjo04qp4sone" path="res://assets/2D/ui/title/cta_disc.svg" id="7_31k40"]
 
 [node name="MainMenu" type="Control" unique_id=2024837821]
 layout_mode = 3
@@ -14,6 +17,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
+speaker_on = ExtResource("2_vp5vp")
+speaker_off = ExtResource("3_gqnmn")
 
 [node name="Backdrop" type="TextureRect" parent="." unique_id=1504743577]
 layout_mode = 0
@@ -30,103 +35,174 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 script = ExtResource("3_rtw2f")
+across = PackedFloat32Array(0.533, 0.445, 0.33, 0.16, 0.03, 0.05)
+down = PackedFloat32Array(0.06, 0.023, 0.152, 0.3, 0.394, 0.632)
+metadata/_edit_lock_ = true
 
-[node name="TitleColumn" type="MarginContainer" parent="." unique_id=833028538]
+[node name="TopBar" type="HBoxContainer" parent="." unique_id=1558050437]
 layout_mode = 0
-anchor_bottom = 1.0
-offset_left = 120.0
-offset_right = 640.0
+anchor_right = 1.0
+offset_left = 32.0
+offset_top = 24.0
+offset_right = -32.0
+offset_bottom = 72.0
+mouse_filter = 2
 
-[node name="Col" type="VBoxContainer" parent="TitleColumn" unique_id=402820989]
+[node name="Brand" type="PanelContainer" parent="TopBar" unique_id=1734494972]
 layout_mode = 2
-theme_override_constants/separation = 6
-alignment = 1
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"TitleGlass"
 
-[node name="TitleArms" type="Control" parent="TitleColumn/Col" unique_id=1496909237]
-custom_minimum_size = Vector2(54, 64)
+[node name="Row" type="HBoxContainer" parent="TopBar/Brand" unique_id=1305191336]
 layout_mode = 2
-size_flags_horizontal = 0
+theme_override_constants/separation = 12
+
+[node name="ArmsDisc" type="PanelContainer" parent="TopBar/Brand/Row" unique_id=284750111]
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+theme_type_variation = &"TitleDisc"
+
+[node name="TitleArms" type="Control" parent="TopBar/Brand/Row/ArmsDisc" unique_id=163700548]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(30, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 mouse_filter = 2
 script = ExtResource("4_oa1go")
 
-[node name="Pad_Crown" type="MarginContainer" parent="TitleColumn/Col" unique_id=237442581]
-layout_mode = 2
-theme_override_constants/margin_left = 0
-
-[node name="Title_Crown" type="Label" parent="TitleColumn/Col/Pad_Crown" unique_id=169265013]
-layout_mode = 2
-theme_type_variation = &"TitleLabel"
-theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 77
-text = "Crown"
-
-[node name="Pad_andCouncil" type="MarginContainer" parent="TitleColumn/Col" unique_id=1303503046]
-layout_mode = 2
-theme_override_constants/margin_left = 34
-
-[node name="Title_andCouncil" type="Label" parent="TitleColumn/Col/Pad_andCouncil" unique_id=119444568]
-layout_mode = 2
-theme_type_variation = &"TitleLabel"
-theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 77
-text = "and Council"
-
-[node name="Rule" type="ColorRect" parent="TitleColumn/Col" unique_id=1131074508]
-custom_minimum_size = Vector2(250, 1)
-layout_mode = 2
-size_flags_horizontal = 0
-color = Color(0.8784314, 0.73333335, 0.41568628, 0.45)
-
-[node name="Tagline" type="Label" parent="TitleColumn/Col" unique_id=574159722]
-layout_mode = 2
-theme_type_variation = &"HeaderLabel"
-theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 0.62)
-theme_override_font_sizes/font_size = 13
-text = "Sixty years · one crown · five seats at the table"
-
-[node name="Hook" type="Label" parent="TitleColumn/Col" unique_id=1000179717]
-custom_minimum_size = Vector2(440, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 0.62)
-theme_override_fonts/font = ExtResource("5_tbmy8")
-theme_override_font_sizes/font_size = 15
-text = "“The realm your father left you is intact, solvent and quietly rotten.”"
-autowrap_mode = 3
-
-[node name="Gap" type="Control" parent="TitleColumn/Col" unique_id=2016949228]
-custom_minimum_size = Vector2(0, 22)
-layout_mode = 2
-
-[node name="MenuCol" type="VBoxContainer" parent="TitleColumn/Col" unique_id=2123263563]
+[node name="House" type="Label" parent="TopBar/Brand/Row" unique_id=1355080765]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_type_variation = &"TitleTag"
+text = "House Valorin"
 
-[node name="StartGame" type="Button" parent="TitleColumn/Col/MenuCol" unique_id=540311565]
+[node name="Spacer" type="Control" parent="TopBar" unique_id=1898219793]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Right" type="HBoxContainer" parent="TopBar" unique_id=1476814453]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 10
+
+[node name="NavPill" type="PanelContainer" parent="TopBar/Right" unique_id=1708581189]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"TitleNavPill"
+
+[node name="Nav" type="HBoxContainer" parent="TopBar/Right/NavPill" unique_id=63834580]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Sound" type="Button" parent="TopBar/Right" unique_id=809443392]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme_type_variation = &"TitleRound"
+icon = ExtResource("2_vp5vp")
+icon_alignment = 1
+
+[node name="Hero" type="VBoxContainer" parent="." unique_id=894153746]
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 56.0
+offset_top = -48.0
+offset_right = 816.0
+offset_bottom = -48.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Tagline" type="Label" parent="Hero" unique_id=1279695431]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"TitleBrand"
+text = "Sixty years · one crown · nine seats at the table"
+
+[node name="TagGap" type="Control" parent="Hero" unique_id=199901246]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+
+[node name="Head1" type="MarginContainer" parent="Hero" unique_id=1051070826]
+clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 0
+theme_override_constants/margin_top = -14
+theme_override_constants/margin_bottom = -14
+
+[node name="Title_Crown" type="Label" parent="Hero/Head1" unique_id=546012911]
+layout_mode = 2
+theme_type_variation = &"TitleHeadline"
+text = "Crown"
+
+[node name="Head2" type="MarginContainer" parent="Hero" unique_id=1900125620]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/margin_top = -14
+theme_override_constants/margin_bottom = -14
+
+[node name="Title_andCouncil" type="Label" parent="Hero/Head2" unique_id=1470080607]
+layout_mode = 2
+theme_type_variation = &"TitleHeadline"
+text = "and Council"
+
+[node name="LedeGap" type="Control" parent="Hero" unique_id=1020941382]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+
+[node name="Lede1" type="Label" parent="Hero" unique_id=51458255]
+layout_mode = 2
+theme_type_variation = &"TitleLede"
+text = "“The realm your father left you is intact,"
+
+[node name="Lede2" type="Label" parent="Hero" unique_id=274518795]
+layout_mode = 2
+theme_type_variation = &"TitleLede"
+text = "solvent and quietly rotten.”"
+
+[node name="ActionGap" type="Control" parent="Hero" unique_id=81123569]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="Hero" unique_id=1907420151]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="StartGame" type="Button" parent="Hero/Actions" unique_id=1076264178]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+size_flags_vertical = 4
 tooltip_text = "Or press Space to take the throne"
 focus_mode = 0
-theme_type_variation = &"TitleWordPrimary"
+theme_type_variation = &"TitlePill"
 text = "Take the Throne"
-alignment = 0
+icon = ExtResource("7_31k40")
+icon_alignment = 2
 
-[node name="LoadGame" type="Button" parent="TitleColumn/Col/MenuCol" unique_id=1218681931]
+[node name="LoadGame" type="Button" parent="Hero/Actions" unique_id=98267735]
+unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_vertical = 4
 focus_mode = 0
-theme_type_variation = &"TitleWord"
+theme_type_variation = &"TitleLink"
 text = "Continue the Chronicle"
-alignment = 0
 
-[node name="Status" type="Label" parent="TitleColumn/Col/MenuCol" unique_id=1462626077]
+[node name="Status" type="Label" parent="Hero" unique_id=703608325]
+unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 0.62)
-theme_override_font_sizes/font_size = 15
+theme_type_variation = &"TitleLede"
 
 [node name="Caption" type="VBoxContainer" parent="." unique_id=2009890568]
 layout_mode = 0
@@ -134,8 +210,8 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = -56.0
-offset_bottom = -40.0
+offset_right = -48.0
+offset_bottom = -52.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
@@ -152,9 +228,18 @@ horizontal_alignment = 2
 
 [node name="When" type="Label" parent="Caption" unique_id=458146123]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 0.62)
+theme_override_colors/font_color = Color(0.9411765, 0.8901961, 0.76862746, 0.8)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.6)
 theme_override_fonts/font = ExtResource("5_tbmy8")
 theme_override_font_sizes/font_size = 14
 text = "Spring, the first year of the reign"
 horizontal_alignment = 2
+
+[node name="Curtain" type="ColorRect" parent="." unique_id=485044323]
+editor_description = "The black of launch: shown by MainMenu until the living map is open, then lifted by the entrance (data/title_entrance.csv). Off here so the editor shows the title."
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.012, 0.01, 0.008, 1)

@@ -327,16 +327,16 @@ func test_the_title_and_pause_menus_share_their_settings() -> void:
 	await wait_process_frames(2)
 	var title: MainMenu = r.current_screen
 	for n: String in ["MusicToggle", "GraphicsQuality", "FrameCap", "FpsToggle", "DevMode", "Quit"]:
-		var a := title.menu_column().get_node_or_null(n) as Button
+		var a := title.row(n)
 		var b := _menu_btn(r, n)
 		assert_not_null(a, "the title screen has " + n)
 		assert_not_null(b, "the pause menu has " + n)
 		if a != null and b != null:
 			assert_eq(a.text, b.text, n + " reads the same in both")
 	var was := r.dev_mode()
-	(title.menu_column().get_node("DevMode") as Button).pressed.emit()
+	title.row("DevMode").pressed.emit()
 	assert_eq(r.dev_mode(), not was)
-	assert_eq(_menu_btn(r, "DevMode").text, (title.menu_column().get_node("DevMode") as Button).text,
+	assert_eq(_menu_btn(r, "DevMode").text, title.row("DevMode").text,
 		"the pause menu's row follows")
 	r.set_dev_mode(was)
 
@@ -350,7 +350,7 @@ func test_the_fps_row_shows_the_counter_apart_from_dev_mode() -> void:
 	var was_dev := r.dev_mode()
 	r.set_dev_mode(false)
 	r.set_show_fps(false)
-	var row := (r.current_screen as MainMenu).menu_column().get_node("FpsToggle") as Button
+	var row := (r.current_screen as MainMenu).row("FpsToggle")
 	assert_eq(row.text, "FPS: Off")
 	row.pressed.emit()
 	assert_true(r.fps_counter().visible, "the row shows the counter without dev mode")

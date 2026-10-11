@@ -42,6 +42,10 @@ var ui_table_palette: Dictionary = {}
 ## data/ui_fonts.csv: role -> the row (size_scale, title_case); the faces
 ## themselves are assets/fonts/roles/<role>.tres (owner 2026-10-02).
 var ui_fonts: Dictionary = {}
+## data/title_entrance.csv: the title's entrance after the black of launch,
+## in file order, each {node, kind, delay_ms, duration_ms, lift_px, ease,
+## step_ms} (MainMenu._enter).
+var title_entrance: Array = []
 ## data/manor_card_sections.csv: the manor card's named sections in order,
 ## each {section, label, keys (Array), rates (bool), per_month (bool),
 ## drop_if_rates (Array)}.
@@ -536,6 +540,9 @@ func _load_look_tables(dir: String) -> bool:
 		return false
 	if not _load_if_present(dir + "/ui_fonts.csv", ["role", "size_scale", "title_case"],
 			func(r): ui_fonts[r["role"]] = r):
+		return false
+	if not _load_if_present(dir + "/title_entrance.csv", ["node", "kind", "delay_ms", "duration_ms", "lift_px", "ease", "step_ms"],
+			func(r): title_entrance.append(r)):
 		return false
 	if not _load_if_present(dir + "/resource_icons.csv", ["key", "label", "icon", "tooltip"],
 			func(r): resource_icons[r["key"]] = r):
