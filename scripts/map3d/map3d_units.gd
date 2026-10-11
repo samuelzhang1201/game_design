@@ -281,6 +281,12 @@ static func clip_named(anim: AnimationPlayer, action: String) -> String:
 	return clip_named(anim, "GARRISON") if action in ["STANDBY", "DEFEND"] else ""
 
 
+## The point `d` world metres BEHIND a piece at `xz` turned `yaw` (its +Z is
+## its rear): a camp pitched behind a line facing south lies north of it.
+static func behind(xz: Vector2, yaw: float, d: float) -> Vector2:
+	return xz + Vector2(sin(yaw), cos(yaw)) * d
+
+
 ## The action a piece plays (pure; spec 2026-10-11-war-room-front-line-design
 ## §2): MARCH while it walks on a running clock; else its stance's standing
 ## clip (`stand_clip`, DEFEND for hold) when it is not marching; else GARRISON

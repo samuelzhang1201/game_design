@@ -73,6 +73,9 @@ func _end_day(state: GameState) -> Array:
 	# sets out again. Its own events (TickEngine.day_raid); its news rides in
 	# the same battle letter, after the siege's.
 	day_raid = RaidSystem.settle_day(data, state, day_battles)
+	# A line held another day (spec 2026-10-11-war-room-front-line-design §3),
+	# read after the stances have settled.
+	ArmySystem.hold_day(data, state)
 	# the sieges' and the raids' mode changes (EnemyAi.set_mode's host_mode
 	# events) join the day's record of the hosts; their news is the battle letter's
 	day_ai.append_array(day_siege.filter(func(e: Dictionary) -> bool: return e.has("type")))

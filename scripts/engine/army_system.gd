@@ -875,6 +875,38 @@ static func piece_heading(repo: DataRepository, state: GameState, code: String) 
 	return h if h != Vector2.ZERO else facing_of(state, code)
 
 
+## One DAY of holding for every regiment of the crown, in code order (spec
+## 2026-10-11-war-room-front-line-design §3): settled in the hold stance, not
+## marching and in no battle, `hold_days` grows by one up to balance
+## camp_after_days; anything else (a march, another stance, a battle) erases
+## it. Run by TickEngine after the day's fights and settle_stances.
+static func hold_day(repo: DataRepository, state: GameState) -> void:
+	var cap := int(repo.bal("camp_after_days"))
+	var codes := state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var e: Dictionary = state.regiments[code]
+		var holding := cap > 0 and String(e.get("stance", STANCE_DEFAULT)) == WarFront.HOLD_STANCE \
+			and String(e.get("order", ORDER_STANDBY)) != ORDER_MARCH and BattleSystem.battle_of(state, code).is_empty()
+		if holding:
+			e["hold_days"] = mini(int(e.get("hold_days", 0)) + 1, cap)
+		else:
+			e.erase("hold_days")
+
+
+## Whether a regiment has held its line long enough for a camp: hold_days at
+## camp_after_days (> 0), in the field only — never one defending a town
+## (its seat, its camp, or halted within its reach; ArmyGround.garrison_town,
+## ruling 4).
+static func camped(repo: DataRepository, state: GameState, code: String) -> bool:
+	var cap := int(repo.bal("camp_after_days"))
+	var e: Dictionary = state.regiments.get(code, {})
+	if cap <= 0 or e.is_empty() or int(e.get("hold_days", 0)) < cap:
+		return false
+	return ArmyGround.garrison_town(repo, state, code) == ""
+
+
 ## The order a regiment is under: "march", "garrison" or "standby" (no order).
 static func order_of(repo: DataRepository, state: GameState, code: String) -> String:
 	var entry: Dictionary = state_of(repo, state, code)

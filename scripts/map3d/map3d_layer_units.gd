@@ -22,6 +22,10 @@ const MARCH := "MARCH"
 @export var blend_s := 0.3
 ## Degrees a second a piece turns (instant turning read as a glitch).
 @export var turn_deg_per_s := 220.0
+## How far behind a held line its camp is pitched, in the model's own metres
+## past the line's half depth (spec 2026-10-11-war-room-front-line-design §3).
+@export var camp_back_m := 6.0
+var _camps: Dictionary = {}  ## code -> the camp model pitched behind its line
 ## How solid a GHOST's figures stand (spec 2026-10-10-player-sight-and-ghosts),
 ## 1 opaque — see-through as a courier's fading piece (Map3DCourierRide.apply).
 @export_range(0.0, 1.0) var ghost_alpha := 0.35
@@ -155,6 +159,45 @@ func _place(code: String, piece: Dictionary) -> void:
 	Map3DUnitGlow.place(repo, piece, _selected.has(code), ground.y - float(sit["y"]), k)
 	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, high,
 		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())
+	_sync_camp(code, piece, xz, yaw, k)
+
+
+## The camp behind a line held camp_after_days (ArmySystem.camped): the
+## CAMP_MODELS table's `camp` scene, seated behind the piece; none while the
+## table or its file is missing (a warning once, never an error), struck when
+## the regiment moves on.
+func _sync_camp(code: String, piece: Dictionary, xz: Vector2, yaw: float, k: float) -> void:
+	var repo := ctx.repo
+	var wanted := ctx.state() != null and not code.begins_with(Sighting.GHOST_CODE) \
+		and ArmySystem.camped(repo, ctx.state(), code)
+	if not wanted:
+		if _camps.has(code):
+			(_camps[code] as Node3D).queue_free()
+			_camps.erase(code)
+		return
+	if not _camps.has(code):
+		var path := GameArt.path(GameArt.CAMP_MODELS, "camp")
+		var scene := _scene(path) if path != "" else null
+		var camp := scene.instantiate() as Node3D if scene != null else null
+		if camp == null:
+			return
+		camp.name = "Camp_" + code.replace(":", "_")
+		add_child(camp)   # no owner: never saved into the authored scene
+		_camps[code] = camp
+	var node: Node3D = _camps[code]
+	var at := Map3DUnits.behind(xz, yaw, (float((piece["extent"] as Vector2).y) + camp_back_m) * k)
+	var sit := Map3DUnits.seat_at(repo, ctx.height_at, at, Vector2(1.0, 1.0), yaw, k)
+	var up: Vector3 = sit["normal"]
+	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw)).scaled(Vector3(k, k, k)),
+		Vector3(at.x, float(sit["y"]), at.y))
+
+
+## Every camp whose regiment has no piece any more is struck.
+func _prune_camps() -> void:
+	for code: String in _camps.keys():
+		if not _pieces.has(code):
+			(_camps[code] as Node3D).queue_free()
+			_camps.erase(code)
 
 
 ## Per FRAME: draw every piece where the day's share has it on its march
@@ -192,6 +235,7 @@ func step(delta: float) -> bool:
 			_yaw[code] = rotate_toward(float(_yaw.get(code, 0.0)),
 				float(_want_yaw.get(code, 0.0)), rate)
 			_place(code, _pieces[code])  # re-seated: a long piece turned across a slope meets other ground
+	_prune_camps()
 	if moved:
 		_moves += 1
 	return moved

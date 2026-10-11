@@ -376,3 +376,13 @@ func test_a_held_facing_turns_the_piece_about() -> void:
 	assert_almost_eq(absf(Map3DUnits.facing_yaw(f)), PI, 0.01, "facing south: turned about")
 	e["order"] = ArmySystem.ORDER_MARCH
 	assert_eq(ArmySystem.facing_of(s, code), Vector2.ZERO, "a marching column shows no held facing")
+
+
+## A camp pitched behind a held line (spec 2026-10-11-war-room-front-line-
+## design §3, T3.3): behind a line facing south lies north; the +Z rear.
+func test_behind_a_south_facing_line_is_north() -> void:
+	var at := Map3DUnits.behind(Vector2(100, 200), PI, 28.0)
+	assert_almost_eq(at.x, 100.0, 0.001)
+	assert_almost_eq(at.y, 172.0, 0.001)
+	var east := Map3DUnits.behind(Vector2(0, 0), 0.0, 10.0)
+	assert_almost_eq(east.y, 10.0, 0.001, "yaw 0: the rear is +Z")
