@@ -157,9 +157,11 @@ var _title_click_frame := -1
 var _council_click := -1
 ## --click-reply N@F (with --screen root): at frame F a real left click on the
 ## conversation stage's Nth option (0 the first) — the opening narration's
-## "I am ready", an event's choice.
+## "I am ready", an event's choice. N@F1,F2,… clicks again at each later frame
+## (the opening narration's Continue, page after page).
 var _reply_click := -1
 var _reply_click_frame := -1
+var _reply_click_more: Array[int] = []
 var _council_click_frame := -1
 var _council_hover := false
 ## --look3d x,y,M,F (with --screen root) frames pack px (x,y) M metres away at
@@ -508,7 +510,10 @@ func _ready() -> void:
 		elif args[i] == "--click-reply":
 			var rcf := args[i + 1].split("@")
 			_reply_click = int(rcf[0])
-			_reply_click_frame = int(rcf[1]) if rcf.size() > 1 else 20
+			var rfs := rcf[1].split(",") if rcf.size() > 1 else PackedStringArray(["20"])
+			_reply_click_frame = int(rfs[0])
+			for k in range(1, rfs.size()):
+				_reply_click_more.append(int(rfs[k]))
 		elif args[i] == "--council-click" or args[i] == "--council-hover":
 			var cf := args[i + 1].split("@")
 			_council_click = int(cf[0])
@@ -897,6 +902,8 @@ func _process(_delta: float) -> void:
 		else:
 			var rb: Control = shown[_reply_click]
 			_real_click(rb, rb.size * 0.5)
+		if not _reply_click_more.is_empty():
+			_reply_click_frame = _reply_click_more.pop_front()
 	if _root != null and _frames == _council_click_frame and _root.current_screen != null \
 			and _root.current_screen.has_method("council_handle"):
 		var seal := _root.current_screen.council_handle() as WaxSeal
