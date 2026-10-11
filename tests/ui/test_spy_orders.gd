@@ -17,11 +17,14 @@ func before_each() -> void:
 	_menu.follow(_map)
 
 
+## A point on foreign ground on purpose: the crown's controlled provinces refuse a spy.
 func _land() -> Vector2:
 	var ids := Game.data.manors.keys()
 	ids.sort()
-	@warning_ignore("integer_division")
-	return MapTerrain.cell_center(Game.data, Game.data.cells[int(ids[ids.size() / 2])])
+	for id: int in ids:
+		if not SpySystem.province_controlled(Game.data, Game.state, MapManors.province_of(Game.data, id, Game.state)):
+			return MapTerrain.cell_center(Game.data, Game.data.cells[id])
+	return Vector2(-1, -1)
 
 
 func test_a_right_click_on_the_ground_offers_a_spy_and_sends_him() -> void:

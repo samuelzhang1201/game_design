@@ -148,8 +148,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			var h := float(data.map_info.get("height", "0"))
 			if to.x < 0.0 or to.y < 0.0 or (w > 0.0 and to.x > w) or (h > 0.0 and to.y > h):
 				return "That is off the map"
-			if data.bal("spy_refuse_own_realm") > 0.0 and SpySystem.is_home(data, state, to):
-				return "Your own realm needs no spy"
+			if data.bal("spy_refuse_controlled") > 0.0 and SpySystem.is_controlled(data, state, to):
+				return "The crown's own lands need no spy"
 			if float(state.metrics["treasury"]) < needs + float(CourierSystem.fee_gold(data, CourierSystem.SPY)):
 				return "The chancery cannot pay a spy to ride"
 			# A spy out past the fuse is lost with his fee (final review M15):
