@@ -217,6 +217,24 @@ func test_a_piece_no_longer_drawn_is_freed() -> void:
 	assert_true(units.has_piece(key), "back again, it is built anew")
 
 
+## The drawn set is cut once per change of the state it reads, not per camera
+## move (perf P0 2026-10-11) — but a stance set on a stopped clock, with the
+## camera still and the day unchanged, still re-forms the piece (front line §2).
+func test_a_stance_set_on_a_stopped_clock_reforms_the_piece_with_the_camera_still() -> void:
+	var v := _view()
+	v.set_military(true)
+	var r := _first_regiment()
+	var code := String(r["regiment_code"])
+	_look_at_regiment(v, r, 2500.0)
+	var units := v._units as Map3DLayerUnits
+	Game.state.regiments[code]["order"] = ArmySystem.ORDER_STANDBY
+	units.step(0.0)
+	assert_eq(String(units._pieces[code]["layout"]), Map3DFormation.BLOCK)
+	Game.state.regiments[code]["stance"] = "hold"
+	units.step(0.0)
+	assert_eq(String(units._pieces[code]["layout"]), Map3DFormation.LINE, "re-formed in line, no pan needed")
+
+
 ## A standing piece keeps its facing when the camera moves (owner 2026-10-10:
 ## 他会经常乱改变朝向): no camera term in its yaw.
 func test_a_standing_piece_does_not_turn_with_the_camera() -> void:

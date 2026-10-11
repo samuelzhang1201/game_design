@@ -98,6 +98,24 @@ static func play(anims: Array, action: String, blend_s: float) -> void:
 			anim.seek(fposmod(i * 0.37, anim.current_animation_length))
 
 
+## Seats `piece` at world `xz` facing `yaw` at scale `k` (Map3DUnits.seat; owner
+## 2026-09-24: 斜面上兵人的一部分会被地图盖住): tilted with its footprint's ground,
+## raised by a clearance that grows with it — far out the ground is DRAWN by a
+## coarser Terrain3D mesh than the heightmap sampled here. Keeps where it stands
+## (`ground`) and how far over its seat (`lift`) on the piece.
+static func seat(repo: DataRepository, height_at: Callable, piece: Dictionary, xz: Vector2,
+		yaw: float, k: float) -> void:
+	var sit := Map3DUnits.seat_at(repo, height_at, xz, piece["extent"], yaw, k)
+	var high := float(piece["height_m"]) * k
+	var ground := Vector3(xz.x, float(sit["y"]) + high * repo.bal("map3d_unit_seat_clear")
+		- repo.bal("map3d_unit_sink_m"), xz.y)
+	var up: Vector3 = sit["normal"]
+	(piece["node"] as Node3D).transform = Transform3D((Basis(Quaternion(Vector3.UP, up))
+		* Basis(Vector3.UP, yaw)).scaled(Vector3(k, k, k)), ground)
+	piece["ground"] = ground
+	piece["lift"] = ground.y - float(sit["y"])
+
+
 ## The action a piece plays (pure; spec 2026-10-11-war-room-front-line-design
 ## §2): MARCH while it walks on a running clock; else its stance's standing
 ## clip (`stand_clip`, DEFEND for hold) when it is not marching; else GARRISON
@@ -109,3 +127,25 @@ static func action_for(walking_now: bool, order: String, stance_row: Dictionary)
 	if stand != "" and order != ArmySystem.ORDER_MARCH:
 		return stand
 	return "GARRISON" if order == ArmySystem.ORDER_GARRISON else "STANDBY"
+
+
+## The way a piece faces: a front it holds wins (spec 2026-10-11-war-room-
+## front-line-design §1); else the way it last advanced (`track`,
+## Map3DUnits.track); a piece never moved, its order's way (else at rest).
+static func heading_for(repo: DataRepository, state: GameState, code: String, track: Dictionary) -> Vector2:
+	var heading := ArmySystem.facing_of(state, code)
+	if heading == Vector2.ZERO:
+		heading = track.get("heading", Vector2.ZERO)
+	return heading if heading != Vector2.ZERO else ArmySystem.heading_of(repo, state, code)
+
+
+## The feet keep pace with the ground, timed from the day's PLAN (walk_speed,
+## march_rate); 1 at rest. Each figure's speed_scale is set only when it changes.
+static func keep_pace(repo: DataRepository, piece: Dictionary, day: Dictionary, share: float, clock: int) -> void:
+	var pace := march_rate(repo, walk_speed(day, repo.bal("time_day_seconds"), clock),
+		(piece["node"] as Node3D).transform.basis.get_scale().x, float(piece["clip_s"]),
+		float(piece["stride_m"])) if Map3DUnits.walking(day, share) else 1.0
+	if piece.get("pace", -1.0) != pace:
+		piece["pace"] = pace
+		for anim: AnimationPlayer in piece["anims"]:
+			anim.speed_scale = pace
