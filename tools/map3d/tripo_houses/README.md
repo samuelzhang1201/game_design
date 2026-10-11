@@ -1,6 +1,6 @@
 # Settlement houses from Tripo 3D
 
-Since 2026-09-30 every house type in `data/map3d_houses.csv` is a Tripo 3D generation
+Since 2026-09-30 every house type in `data/screens/map3d/map3d_houses.csv` is a Tripo 3D generation
 (owner: 重构房屋3d模型), and the church and palace keep every version the owner exported
 as a variant (`church_b`, `palace_b`, `palace_c`). Generated on the owner's **paid** plan
 only — paid-plan outputs are ours (Tripo terms §5.2.2), free-tier ones are Tripo's.

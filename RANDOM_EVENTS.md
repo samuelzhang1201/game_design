@@ -1,6 +1,6 @@
 # Random Events — Crown and Council
 
-Status: Built — the 20 events below are live (`data/events.csv`, `data/event_choices.csv`, `EventSystem`). MVP scope (see `docs/design/PRD.md` §6, "Random events pool"). **This file is loaded at runtime:** `StorySource` reads each `### EV-NN` heading and the prose after the Scene label on that line, and the game shows that prose verbatim. Keep the headings and the Scene labels intact; the Trigger text on the same line is design description only (the implemented trigger is the CSV's). The heading's TITLE — between the `·` and the trailing `— \`tags\`` — is what the audience window's banner shows, so it is authored here too, not in `templates.csv`.
+Status: Built — the 20 events below are live (`data/story/events.csv`, `data/story/event_choices.csv`, `EventSystem`). MVP scope (see `docs/design/PRD.md` §6, "Random events pool"). **This file is loaded at runtime:** `StorySource` reads each `### EV-NN` heading and the prose after the Scene label on that line, and the game shows that prose verbatim. Keep the headings and the Scene labels intact; the Trigger text on the same line is design description only (the implemented trigger is the CSV's). The heading's TITLE — between the `·` and the trailing `— \`tags\`` — is what the audience window's banner shows, so it is authored here too, not in `templates.csv`.
 
 ---
 
@@ -23,15 +23,15 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 
 1. At most **one event per tick (month)**, rolled at the month's end after the concern scan and the suggestions, so events and council briefings can reference each other. A rolled event **stops the clock** and opens the council, where it plays in the audience window; while it waits, no further event is rolled.
 2. **Chains first:** a scheduled follow-up whose due tick has come fires before any roll.
-3. Base chance **35% per month** (`balance.csv` `event_base_chance`; ≈4–5 events a year with the pity timer). After **3 quiet months** (`event_pity_ticks`) the next roll is forced (pity timer, also deterministic).
+3. Base chance **35% per month** (`story/balance.csv` `event_base_chance`; ≈4–5 events a year with the pity timer). After **3 quiet months** (`event_pity_ticks`) the next roll is forced (pity timer, also deterministic).
 4. Build the **eligible set**: every event whose `trigger` holds, whose cooldown has elapsed, and whose `once` flag is unspent. Sample by `weight`.
 5. If the eligible set is empty, nothing fires — never pad with an ill-fitting event. An event whose every choice is gated off is skipped too.
 
-**Event anatomy** — `data/events.csv` (one row per event) and `data/event_choices.csv` (one row per choice):
+**Event anatomy** — `data/story/events.csv` (one row per event) and `data/story/event_choices.csv` (one row per choice):
 
 | Field | Meaning |
 |---|---|
-| `event_id` | `ev_NN`, matching the `### EV-NN` heading here. A scripted chapter's beats live in `data/chapter_events.csv` instead, with their own document — see `docs/design/CHAPTER_0.md`; they share this anatomy exactly, and only differ in being fired by id off a chain rather than sampled by weight |
+| `event_id` | `ev_NN`, matching the `### EV-NN` heading here. A scripted chapter's beats live in `data/story/chapter_events.csv` instead, with their own document — see `docs/design/CHAPTER_0.md`; they share this anatomy exactly, and only differ in being fired by id off a chain rather than sampled by weight |
 | `category` | `court` · `realm` · `folk` · `church` · `windfall` · `personal` |
 | `trigger` | `TriggerDsl` clauses joined by `&`, any of them negatable with a leading `!`: `always`, `never` (chained only — a scripted chapter beat), `season=<Season>`, `year>=N`, `trait_at_court=<trait>`, `trait_of=<seat or character id>:<trait>` (ONE person's), `seat_filled=<seat>`, `action_since=<ACTION>:<ticks>`, `flag=<flag>`, `<metric><N>` / `<metric>>N` |
 | `weight` | Relative sampling weight (a constant; state modifiers are not built) |
@@ -39,7 +39,7 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 | `once` | `1` = fires at most once per campaign |
 | `voice` | Every row is `template`: the Scene prose is shown as written. The `mini` / `flagship` tags in the headings below are the original draft's voicing plan, superseded 2026-08-31 (owner: every event story is fixed, authored text) |
 | `title_key` | The event's title string |
-| choice `effects` | `;`-joined ops, applied by `EventEffects`: `metric:<m>:<d>[:reason]`, `gold:<d>[:reason]`, `opinion:<seat or id>:<d>:<reason>`, `attribute:<who>:<attr>:<d>:<reason>`, `rel:<from>:<to>:<d>:<reason>`, `world:<path>:<d>:<reason>` (schema-listed deltas, clamped and logged), `flag:<name>`, `schedule:<event_id>:<ticks>` (a chain), `branch:<branch_id>` (a fork: the first rule of `data/chapter_branches.csv` whose `requires` holds, at that rule's own delay) |
+| choice `effects` | `;`-joined ops, applied by `EventEffects`: `metric:<m>:<d>[:reason]`, `gold:<d>[:reason]`, `opinion:<seat or id>:<d>:<reason>`, `attribute:<who>:<attr>:<d>:<reason>`, `rel:<from>:<to>:<d>:<reason>`, `world:<path>:<d>:<reason>` (schema-listed deltas, clamped and logged), `flag:<name>`, `schedule:<event_id>:<ticks>` (a chain), `branch:<branch_id>` (a fork: the first rule of `data/story/chapter_branches.csv` whose `requires` holds, at that rule's own delay) |
 | choice signature | The five ideology columns per choice — minister reactions come free through the opinion-drift math, no special code |
 | choice `requires` | Optional trigger expression gating the option (e.g. EV-17's "Stand and take it" needs `trait_at_court=bold`) |
 
@@ -143,4 +143,4 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 - **Chain-starters:** 7 events are drafted to schedule follow-ups. As built, one chain exists: EV-02 "Say nothing" schedules EV-18 in 24 months (`schedule:ev_18:24`). The follow-ups named above (EV-02b, EV-07b, …) have no entries or scenes yet — each needs a `### EV-NN` entry here and rows in the CSVs before it can fire.
 - **Triggers:** `events.csv` implements a simplified form of several triggers written above (e.g. EV-11 fires on `season=winter` with no coastal check; EV-14 on `seat_filled=steward&year>=2`, not on a `merchant_family` candidate). The CSV is what runs.
 - **Every seat gets events in its domain**; `venal`, `honest`, `bold`, `vain`, `wrathful`, `cynical`, `pious`, `merchant_family`, `noble_born` traits all have at least one moment to matter.
-- Implemented as `data/events.csv` + `data/event_choices.csv` with generic effect ops (`EventEffects`) rather than per-event handlers, per the data-driven convention in `CLAUDE.md`; a test asserts all 20 ids resolve to a Scene here.
+- Implemented as `data/story/events.csv` + `data/story/event_choices.csv` with generic effect ops (`EventEffects`) rather than per-event handlers, per the data-driven convention in `CLAUDE.md`; a test asserts all 20 ids resolve to a Scene here.

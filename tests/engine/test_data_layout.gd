@@ -122,3 +122,13 @@ func test_no_flat_data_paths_remain_in_code() -> void:
 		var files := _walk(root, CODE_EXTS).filter(func(p: String) -> bool: return not p.begins_with("fixtures/"))
 		stale.append_array(_stale_paths(root, files, index))
 	assert_true(stale.is_empty(), "\n".join(stale))
+
+## The guides Claude Code loads (and their topic guides) say where a table is.
+func test_no_flat_data_paths_remain_in_guides() -> void:
+	var index := _index()
+	var stale := _stale_paths("res:/", ["CLAUDE.md", "data/CLAUDE.md"], index)
+	for root in ["res://scripts", "res://tools"]:
+		var guides := _walk(root, ["md"]).filter(func(p: String) -> bool:
+			return p.get_file() == "CLAUDE.md" or p.get_base_dir().get_file() == "guide")
+		stale.append_array(_stale_paths(root, guides, index))
+	assert_true(stale.is_empty(), "\n".join(stale))

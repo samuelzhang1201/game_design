@@ -1,6 +1,6 @@
 # Chapter 0 — Beats the war fires
 
-Status: Built — the entry below is live (`data/chapter_events.csv`, `data/chapter_event_choices.csv`, `EventSystem`, `DefeatSystem`). Design: `docs/superpowers/specs/2026-10-07-enemy-ai-and-battle-design.md` §6.
+Status: Built — the entry below is live (`data/story/chapter_events.csv`, `data/story/chapter_event_choices.csv`, `EventSystem`, `DefeatSystem`). Design: `docs/superpowers/specs/2026-10-07-enemy-ai-and-battle-design.md` §6.
 
 **This file is loaded at runtime.** `StorySource` reads each `### W-NN` heading (id `war_NN`) — the title after the `·` and the prose after the `**Scene:**` label on the Trigger line — and the game shows both verbatim. Keep the headings and the labels intact. The `**Choices:**` line is design description only; the implemented choices are the CSV's.
 

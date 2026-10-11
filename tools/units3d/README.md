@@ -21,12 +21,12 @@ blender -b --factory-startup --python tools/units3d/measure_units.py -- OUTDIR
 
 | file | what it does |
 | --- | --- |
-| `data/unit_models.csv` | every tuning number: height, yaw, voxel, tri budget, the weapon and prop boxes |
+| `data/screens/map3d/unit_models.csv` | every tuning number: height, yaw, voxel, tri budget, the weapon and prop boxes |
 | `measure_units.py` | prints each source's slice profile and shoots four orthographic views — **run this first for a new source**; every number in the CSV is read off it |
 | `make_units.py` | the build: retopo → bake → skeleton → skin → lock the props → actions → `assets/3D/units/<code>/<code>.glb` |
 | `shoot_units.py` | photographs the BUILT glb (contact sheet + a strip per action), so a shot also proves the export round-trips |
 | `assets/3D/units/army_models.tres` | which .glb each arm wears in the game (an ArtTable, picked in the inspector) |
-| `data/army_orders.csv` | the rows of the right-click order menu |
+| `data/army/army_orders.csv` | the rows of the right-click order menu |
 | `unit_common.py` | import, place, measure |
 | `assets/3D/units/units3d.json` | what was built: tris, bones, which weighting was used, the action frame ranges |
 
