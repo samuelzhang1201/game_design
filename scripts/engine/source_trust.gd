@@ -51,7 +51,7 @@ static func adjust(data: DataRepository, state: GameState, speaker: String,
 	if not state.source_trust.has(k):
 		# Seed from the same derivation get_trust would have returned for this
 		# pair, so the two can never disagree — including after a designer
-		# retunes source_trust_default in balance.csv.
+		# retunes source_trust_default in intel/balance.csv.
 		state.source_trust[k] = {
 			"value": derive(data, state, speaker, listener), "log": [],
 		}

@@ -25,7 +25,7 @@ RULES = {
     # density v4 (owner 2026-09-21): the cluster's radius comes from the
     # group's own fixed house count and that group's per-house density,
     # never from population -- see house_radius_m's own note in
-    # bake_houses.py. The real data/map3d_bake.csv values, so this
+    # bake_houses.py. The real data/screens/map3d/map3d_bake.csv values, so this
     # fixture's magnitudes stand for something.
     "house_m2_each_capital": 340, "house_m2_each_city": 400, "house_m2_each_town": 480,
     "house_m2_each_fort": 480, "house_m2_each_village": 520,
@@ -679,7 +679,7 @@ def _load_real_rules():
     only shows up at real house_count_*/footprint_* scale (see the test's
     own docstring)."""
     rules = {}
-    with open(os.path.join(ROOT, "data", "map3d_bake.csv")) as f:
+    with open(os.path.join(ROOT, "data", "screens", "map3d", "map3d_bake.csv")) as f:
         for row in csv.DictReader(f):
             try:
                 rules[row["key"]] = float(row["value"])
@@ -690,7 +690,7 @@ def _load_real_rules():
 
 def _load_real_house_types():
     types = {}
-    with open(os.path.join(ROOT, "data", "map3d_houses.csv")) as f:
+    with open(os.path.join(ROOT, "data", "screens", "map3d", "map3d_houses.csv")) as f:
         for row in csv.DictReader(f):
             types[row["type"]] = {
                 "role": row["role"], "weight": float(row["weight"]),
@@ -874,9 +874,9 @@ def test_landmark_variants_of_one_rank_are_picked_per_settlement():
 
 
 def test_the_real_table_gives_every_capital_a_palace_variant():
-    """Over the real data/map3d_houses.csv every rank keeps its centrepiece
+    """Over the real data/screens/map3d/map3d_houses.csv every rank keeps its centrepiece
     kind: capital → a palace variant, fort/town → a church variant."""
-    with open(os.path.join(ROOT, "data", "map3d_houses.csv"), newline="") as f:
+    with open(os.path.join(ROOT, "data", "screens", "map3d", "map3d_houses.csv"), newline="") as f:
         types = {r["type"]: r for r in csv.DictReader(f)}
     caps = {bake_houses._pick_landmark(types, "capital", "c%d" % i) for i in range(200)}
     towns = {bake_houses._pick_landmark(types, "town", "t%d" % i) for i in range(200)}
@@ -892,7 +892,7 @@ def test_a_landmark_keeps_its_own_height_scale_when_its_row_names_one():
     assert bake_houses.landmark_height_scale({"landmark_height_scale": "1.0"}, RULES) == 1.0
     assert bake_houses.landmark_height_scale({"landmark_height_scale": ""}, RULES) == RULES["house_height_max"]
     assert bake_houses.landmark_height_scale({}, RULES) == RULES["house_height_max"]
-    with open(os.path.join(ROOT, "data", "map3d_houses.csv"), newline="") as f:
+    with open(os.path.join(ROOT, "data", "screens", "map3d", "map3d_houses.csv"), newline="") as f:
         types = {r["type"]: r for r in csv.DictReader(f)}
     for t in ("palace", "palace_b", "palace_c"):
         assert bake_houses.landmark_height_scale(types[t], RULES) == 1.0

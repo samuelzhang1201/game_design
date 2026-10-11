@@ -161,7 +161,7 @@ static func supply_dispatch(repo: DataRepository, state: GameState, events: Arra
 
 ## The marshal's report on foraging and desertion (spec
 ## 2026-10-10-foraging-and-desertion §4): ONE supply-kind letter for the day's
-## conduct events (each carries its regiment); words from data/conduct_words.csv.
+## conduct events (each carries its regiment); words from data/army/conduct_words.csv.
 static func conduct_dispatch(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
 	var facts: Array = []
 	for i in events.size():

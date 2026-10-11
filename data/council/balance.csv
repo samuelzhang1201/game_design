@@ -1,0 +1,37 @@
+key,value,notes
+promise_kept_opinion,15,
+promise_broken_opinion,-25,largest single penalty in the game by design
+promise_default_ticks,12,due when the parser omits tick_due (a year of months)
+concern_treasury_low,100,steward fires below this
+concern_grain_low,200,"steward: gold of civil goods below which the steward worries (spec 2026-09-14: the pools are whole gold a month, not the old grain units)"
+concern_unrest_high,40,chancellor
+concern_church_low,35,chaplain
+concern_army_low,45,marshal
+concern_legitimacy_low,40,spymaster (rumors)
+tone_delta_cap,3,
+reward_gold_cost,30,
+reward_opinion,8,
+reward_opinion_vain_bonus,4,
+punish_opinion,-10,
+confide_opinion,4,
+opinion_drift_scale,20,scales alignment x sensitivity x (1-pragmatism) into opinion points
+relationship_drift_per_tick,0.5,edges heal toward their founding value with time
+belief_threshold,55,claims at or above this belief are swallowed as fact
+belief_corroboration_bonus,8,per agreeing fact the listener already knows; also the penalty per contradicting fact
+belief_trait_paranoid,-10,paranoid listeners discount every claim
+belief_trait_trusting,10,trusting listeners inflate every claim
+truth_told_trust_gain,3,source trust gained when a claim is borne out
+lie_caught_trust_penalty,25,source trust lost when a lie is exposed
+lie_relationship_penalty,12,relationship sentiment lost when a lie is exposed
+memory_exchanges_kept,8,conversational exchanges each character remembers (oldest fall off)
+order_prompt_max_burgs,12,largest towns of the player's realm listed in the order prompt
+order_narrative_max_chars,600,longest narrative the validator keeps from an order reply
+gov_opinion_cooperate,0,"LEDGER M3 (spec 2026-09-30-ledger-governors-design §2): a governor's opinion of the king at and above which he gives all his skill"
+gov_opinion_step_permille,5,LEDGER M3: efficiency lost per point of opinion below gov_opinion_cooperate
+gov_skim_permille,200,LEDGER M3: the share a venal governor (special_flag skims_treasury) skims
+gov_skim_integrity_below,30,LEDGER M3: integrity under which a governor skims even without the trait
+gov_skim_low_integrity_permille,100,LEDGER M3: the share a governor of low integrity skims
+gov_caught_opinion,-12,LEDGER M3: a governor's opinion when an audit catches him skimming
+gov_audited_opinion,-3,LEDGER M3: a governor's opinion when the crown's clerks go through his books
+gov_passed_over_opinion,-8,LEDGER M3: the displaced governor's opinion when his flow is given to another
+gov_new_governor_opinion,4,LEDGER M3: the new governor's opinion when he is given a flow

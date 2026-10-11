@@ -824,7 +824,7 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 
 ## 2.6 本作角色 `K-`（2026-09-13 新增）
 
-> §2 的 `C-01`~`C-55` 是**泛型原型**（年迈的国王、算计的王后…），而游戏里实际存在的是 `data/founding_council.csv` 和 `data/roles.csv` 里这 **21 个有名有姓的人**。头像格和档案栏要的是后者，所以这里一人一条。
+> §2 的 `C-01`~`C-55` 是**泛型原型**（年迈的国王、算计的王后…），而游戏里实际存在的是 `data/council/founding_council.csv` 和 `data/council/roles.csv` 里这 **21 个有名有姓的人**。头像格和档案栏要的是后者，所以这里一人一条。
 >
 > **每条都有 `**外貌**` 行**（只写长相和衣着，不写道具）——这是 `[C-BUST]` 和 `[C-FULL]` 两档的必要条件，没有它脚本会退回用带道具的主 prompt，效果差。
 >
@@ -1357,7 +1357,7 @@ background, no numerals, no text [C-ICON]
 
 > 地图包里的标记类型比 6.5/6.6 多（Azgaar 的 markers：encounters、brigands、pirates、statues、necropolises、caves、volcanoes、waterfalls、circuses、jousts、fairs…）。具体类型到图标的映射在 `data/marker_art.csv`。
 >
-> **没有怪物、地牢和冒险小队**（owner 裁定 2026-09-12：这是中世纪写实硬核战略）。Azgaar 默认会生成 `hill-monsters` / `sea-monsters` / `lake-monsters` / `dungeons` / `party`，全部不收——`data/marker_types.csv` 列出这个世界承认的类型，导入器丢掉其余的，**所以重新导出地图也带不回来**（2026-09-12 重跑导入器验证：只有 markers.csv 变了，少 8 行，其余表逐字节不变）。同理删掉了 §6.9 的 `D-22 海怪`，`D-16` 从「童话城堡」改成一座真实石堡，`I-43` 从「插着骷髅的匪巢」改成一座普通的匪徒营地。
+> **没有怪物、地牢和冒险小队**（owner 裁定 2026-09-12：这是中世纪写实硬核战略）。Azgaar 默认会生成 `hill-monsters` / `sea-monsters` / `lake-monsters` / `dungeons` / `party`，全部不收——`data/world/marker_types.csv` 列出这个世界承认的类型，导入器丢掉其余的，**所以重新导出地图也带不回来**（2026-09-12 重跑导入器验证：只有 markers.csv 变了，少 8 行，其余表逐字节不变）。同理删掉了 §6.9 的 `D-22 海怪`，`D-16` 从「童话城堡」改成一座真实石堡，`I-43` 从「插着骷髅的匪巢」改成一座普通的匪徒营地。
 
 | ID | 对象 | Prompt 主体 |
 |---|---|---|
@@ -1376,7 +1376,7 @@ background, no numerals, no text [C-ICON]
 | `I-41` | 葡萄酒 | `an oak wine barrel on its side with an iron-banded rim, a wooden bung and a dark bunch of grapes on the vine leaf beside it` |
 | `I-42` | 羊毛 | `a tied fleece of raw cream wool with a pair of iron shears and a wooden drop spindle wound with yarn` |
 
-> **界面维度图标**（2026-09-13，owner：顶栏资源和国家卡的各维度全部改用图标，文字退到悬停提示）：同一画幅、同一风格核、同一静物片段，所以一整套读起来是一家的。对应关系在 `data/resource_icons.csv` 的 `texture` 列（谷物直接用 `I-40`）。图标在界面里只有 20 设计像素，主体要**一眼可辨的大剪影**，配件不超过两三样。
+> **界面维度图标**（2026-09-13，owner：顶栏资源和国家卡的各维度全部改用图标，文字退到悬停提示）：同一画幅、同一风格核、同一静物片段，所以一整套读起来是一家的。对应关系在 `data/screens/ui/resource_icons.csv` 的 `texture` 列（谷物直接用 `I-40`）。图标在界面里只有 20 设计像素，主体要**一眼可辨的大剪影**，配件不超过两三样。
 
 | ID | 维度 | Prompt 主体 |
 |---|---|---|
@@ -1542,7 +1542,7 @@ background, no numerals, no text [C-ICON]
 | `D-77` | 庄园·铁矿·中 | `an iron manor: a stone house with a bloomery furnace giving smoke, a timbered mine adit into the hill, ore carts and heaps of ore, drawn as one map symbol in flat side elevation, everything joined into one compact group with nothing scattered, the ground of the holding lying flat in the foreground` |
 | `D-78` | 庄园·铁矿·大 | `a great iron estate: a manor house with several bloomery furnaces giving smoke, mine adits into the hill, ore carts on rails, heaps of ore, a hamlet of cottages, drawn as one map symbol in flat side elevation, everything joined into one compact group with nothing scattered, the ground of the holding lying flat in the foreground` |
 
-> **产业庄园 `D-43`~`D-78`**（owner 2026-09-14）：庄园图例按 **产业 × 规模** 分——十二种主业（`data/manor_focus.csv`）各三档（小/中/大，人口三分位），一张里画齐主宅和该产业的作业场（粮田带风车、牧场带牛羊、林场带锯坑、渔村带码头、盐田带盐池、矿场带炉与坑道……）。地图上所有庄园图例**同一尺寸、居中**（owner：不再有大有小），人口升档或主业改换，图例随之换张。取代了 `D-32`~`D-41` 的十档纯粮田版。
+> **产业庄园 `D-43`~`D-78`**（owner 2026-09-14）：庄园图例按 **产业 × 规模** 分——十二种主业（`data/economy/manor_focus.csv`）各三档（小/中/大，人口三分位），一张里画齐主宅和该产业的作业场（粮田带风车、牧场带牛羊、林场带锯坑、渔村带码头、盐田带盐池、矿场带炉与坑道……）。地图上所有庄园图例**同一尺寸、居中**（owner：不再有大有小），人口升档或主业改换，图例随之换张。取代了 `D-32`~`D-41` 的十档纯粮田版。
 
 > **3D 试验 `D-42`**（owner 2026-09-13）：同一个首都主体配五套 3D 风格核 `STYLE_CORE_3d_lowpoly / 3d_painted / 3d_diorama / 3d_watercolour / 3d_toon`（负面词 `NEGATIVE_3d.txt`，画幅 `[C-ICON]`），owner 从中挑一种作为聚落 3D 化的方向。
 >
@@ -1552,7 +1552,7 @@ background, no numerals, no text [C-ICON]
 
 > **为什么另立一章**：地图包的 `economy/production.csv` 把产出记到每个市镇，按省汇总后，**199 个省里共有 38 种主导货物**——这就是 ECONOMY 视图要画的那批图标，数量由数据定，不是拍脑袋定的。`data/goods_art.csv` 把 `good_code` 映射到这里的 `G-` 编号。
 >
-> **风格**：和 `D-` 同一套——`STYLE_CORE_map_sepia.txt` + `[C-MAPMARK]`，出完**去色成灰度**，由引擎按货物类别染色（`data/goods_palette.csv`）。所以主体只写形状和质感，不写颜色。
+> **风格**：和 `D-` 同一套——`STYLE_CORE_map_sepia.txt` + `[C-MAPMARK]`，出完**去色成灰度**，由引擎按货物类别染色（`data/screens/ui/goods_palette.csv`）。所以主体只写形状和质感，不写颜色。
 >
 > **主体是静物**：`I-` 是建筑和地点，这里是**物**。追加片段由画幅负责，条目本身只描述摆在一起的几样东西。
 
@@ -1700,7 +1700,7 @@ background, no numerals, no text [C-ICON]
 
 ### 6.12 庄园建筑图标 `H-`（2026-09-14 新增）
 
-> **manor 建筑槽位与建造菜单里的建筑图标**（owner 2026-09-14）：风格与 manor 彩绘（§6.11 `B-`）和人物立绘一致——§1.1 的 v2 彩铅 `STYLE_CORE.txt`，画幅 `[C-ICON]`；每条只画**一座**建筑的完整剪影。出图经 `post.py --tier icon` 去底，`install_map_art.py buildings` 按 `assets/imagegen/building_art.csv` 装进 `assets/2D/icons/buildings/bld_<code>.png`（槽位格 34 设计像素 × 最大约 3 倍窗口缩放 → 128 px），由 `data/resource_icons.csv` 的 `bld_<code>` 行引用。建筑清单和地理约束见 `data/manor_buildings.csv`。
+> **manor 建筑槽位与建造菜单里的建筑图标**（owner 2026-09-14）：风格与 manor 彩绘（§6.11 `B-`）和人物立绘一致——§1.1 的 v2 彩铅 `STYLE_CORE.txt`，画幅 `[C-ICON]`；每条只画**一座**建筑的完整剪影。出图经 `post.py --tier icon` 去底，`install_map_art.py buildings` 按 `assets/imagegen/building_art.csv` 装进 `assets/2D/icons/buildings/bld_<code>.png`（槽位格 34 设计像素 × 最大约 3 倍窗口缩放 → 128 px），由 `data/screens/ui/resource_icons.csv` 的 `bld_<code>` 行引用。建筑清单和地理约束见 `data/economy/manor_buildings.csv`。
 
 | ID | 对象 | Prompt 主体 |
 |---|---|---|

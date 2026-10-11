@@ -109,7 +109,7 @@ static func card_ground(n: Node) -> Color:
 		p = p.get_parent()
 	return PANEL_BG
 
-## A WAR TABLE colour from data/ui_table_palette.csv (#rrggbb or #rrggbbaa).
+## A WAR TABLE colour from data/screens/ui/ui_table_palette.csv (#rrggbb or #rrggbbaa).
 static func table_color(key: String, fallback := Color.MAGENTA) -> Color:
 	if data() != null:
 		var hex := String(data().ui_table_palette.get(key, ""))
@@ -143,7 +143,7 @@ static func ink(role: String) -> Color:
 		"bad": return bad_color()
 	return TEXT_SOFT
 
-## A skill's colour: data/chart_palette.csv skill_<key> (owner 2026-09-28: the
+## A skill's colour: data/screens/ui/chart_palette.csv skill_<key> (owner 2026-09-28: the
 ## colours are data, muted to the heraldic set), SKILL_COLORS the fallback.
 static func skill_color(sk: String) -> Color:
 	return _chart_or("skill_" + sk, SKILL_COLORS.get(sk, TEXT_MUTED))
@@ -155,7 +155,7 @@ const TOOL_KINGDOM := GOLD
 const TOOL_PERSONAL := Color("4cc3b0")  # (bright: 13897b)
 
 ## OFL-licensed faces (assets/fonts/, licenses alongside), divided by job.
-## Which file plays which role is data/ui_fonts.csv (see role_font below); the
+## Which file plays which role is data/screens/ui/ui_fonts.csv (see role_font below); the
 ## owner's pick of 2026-09-28 is Crimson Pro for everything read, Alegreya SC
 ## for headers and tabs, and the blackletter only for titles. These paths are
 ## the 2026-09-13 set (scheme 0), used only when no table is loaded.
@@ -598,7 +598,7 @@ static func _keep_art(path: String, tex: Texture2D) -> void:
 ## transcript) with its bold and italic, tab, display (the scale bar, ruler,
 ## landmark metres, shield letters), figures — opened and changed in the
 ## editor (its base font, weight, slant, tracking, OpenType features). What
-## stays in data/ui_fonts.csv is a role's size_scale and title_case. The
+## stays in data/screens/ui/ui_fonts.csv is a role's size_scale and title_case. The
 ## constants above are the fallback when a role file is missing.
 const FONT_DIR := "res://assets/fonts/"
 const ROLE_FONT_DIR := "res://assets/fonts/roles/"
@@ -693,7 +693,7 @@ static func _load_font(path: String) -> Font:
 	_art_cache[path] = font
 	return font
 
-## A chart colour by key (data/chart_palette.csv); cat_N falls back to the
+## A chart colour by key (data/screens/ui/chart_palette.csv); cat_N falls back to the
 ## last categorical step rather than a made-up hue.
 static func chart_color(key: String) -> Color:
 	var hex := String(data().chart_palette.get(key, ""))

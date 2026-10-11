@@ -26,7 +26,7 @@ once, at the manor (invariant 11).
 | Manor id | the cell id (`cells.csv` `cell_id`), int; stable across runs and saves |
 | Which cells are manors | land cells only (`water == ""`); lakes and sea are not manors. The rows of `political/manors.csv` ARE the manors (`MapManors.is_manor`) |
 | Province of a manor | the pack's `political/manors.csv` `province_code` (27 beria manors in the wildlands have none), unless the manor was annexed (§5c): `MapManors.province_of(repo, cell_id, state)` reads `GameState.manor_province` first |
-| Hit-testing | a pack bitmap **`world_cell_index.png`** (R \| G<<8 = cell id, white = none), rasterised by the importer with the same `_rasterize` the province index uses (4 833 ids fit two bytes; the importer asserts `< 65536`). `tools/bake_manors.gd` bakes it — together with `manors.csv` — for a pack from its export, and must run AFTER the import (`tools/NEW_MAP.md` step 3: the importer's own index and names differ in a few cells, and the bake is what the game reads). Like every tool it takes `--map ID` and otherwise uses `data/maps.csv`'s `is_default` pack (`DataRepository.default_pack_id`). `data/maps.csv` `cell_texture`; `MapIndex.id_at` decodes it. |
+| Hit-testing | a pack bitmap **`world_cell_index.png`** (R \| G<<8 = cell id, white = none), rasterised by the importer with the same `_rasterize` the province index uses (4 833 ids fit two bytes; the importer asserts `< 65536`). `tools/bake_manors.gd` bakes it — together with `manors.csv` — for a pack from its export, and must run AFTER the import (`tools/NEW_MAP.md` step 3: the importer's own index and names differ in a few cells, and the bake is what the game reads). Like every tool it takes `--map ID` and otherwise uses `data/world/maps.csv`'s `is_default` pack (`DataRepository.default_pack_id`). `data/world/maps.csv` `cell_texture`; `MapIndex.id_at` decodes it. |
 | Name | **every manor has a proper, unique name, in the pack** (owner 2026-09-13: the player has to be able to say "buy Ashcombe"). Pack table `political/manors.csv` (`cell_id,manor_code,label,province_code,burg_code,culture_code`), written by the importer and by `tools/bake_manors.gd` (`ManorNames`). A cell with a burg is named after it ("Skipton Manor", `burg_code` set). Every other land cell gets a name **forged in its culture's style**: the Azgaar export carries `nameBases` (banks of real place names) and each culture's `base`; `NameForge` (engine-pure, tested) runs an order-2 letter Markov chain over the cell's culture's bank — the same method Azgaar named the burgs with, so manors and towns sound like one country — seeded from the map seed and the cell id, so a re-bake forges the same names; uniqueness is enforced across the pack, and the code is the label's slug. Hand corrections go in the hand-maintained `data/maps/<id>/manor_name_overrides.csv` (`cell_id,label`, optional) that the loader applies last, so a re-export cannot undo them. Orders and the model refer to a manor by `manor_code`; `MapManors.find` also accepts the label case-insensitively (with or without "Manor") and the cell id, so a typed "buy Ashcombe" resolves. |
 | Area | polygon area of the cell (native px², `MapManors.area_of`) × `distance_scale`² → km², shown as hectares/km² |
 
@@ -79,10 +79,10 @@ moves.
 | Terrain | biome label + height class + coast / river flags | `biomes.csv`, `cells.csv`, `rivers.csv` |
 | Land value | `MapEconomy.land_value` (habitability 0..1) | `biomes.csv` |
 | People | WHOLE people (spec 2026-09-14 §4.1): the province's **rural** population (ledger `economy.provinces.<p>.rural_population`) apportioned by weight `area × land_value` over the province's manors, plus its **urban** population apportioned over the manors that have a burg by the burgs' pack populations — both by the largest-remainder method (`MapManors.apportion`, `people_table`, `people_of`). Manors therefore always sum EXACTLY to the province — the tie to province data the owner asked for, and nothing to keep in sync. The earlier float share (`population_of`) is gone. | ledger |
-| Output | `ManorEconomy.line_of`'s `units`: the chief good (§5a), the buildings' `produce_good/units`, and, for a manor with a town, the pack's `production.csv` rows for its burg — each × the good's growth index, whole units a month, their worth split into the strategic and civil pools by `data/goods_economy.csv` | `production.csv`, `goods_economy.csv` |
-| Buildings | the list in `GameState.manor_buildings {cell_id: [building_code]}`, works in progress in `manor_works` (§5b); catalogue **`data/manor_buildings.csv`** (`building_code,label,tier,land,prereq,cost_gold,civil_cost,build_days,tax_bonus,output_bonus,defence_bonus,church_bonus,gold_per_tick,grain_per_tick,contentment_per_tick,unrest_per_tick,produce_good,produce_units,notes` — `civil_cost` is the one price the game charges and `cost_gold` is unused, kept for the library): 22 buildings in three tiers (§5d) | CSV |
+| Output | `ManorEconomy.line_of`'s `units`: the chief good (§5a), the buildings' `produce_good/units`, and, for a manor with a town, the pack's `production.csv` rows for its burg — each × the good's growth index, whole units a month, their worth split into the strategic and civil pools by `data/economy/goods_economy.csv` | `production.csv`, `goods_economy.csv` |
+| Buildings | the list in `GameState.manor_buildings {cell_id: [building_code]}`, works in progress in `manor_works` (§5b); catalogue **`data/economy/manor_buildings.csv`** (`building_code,label,tier,land,prereq,cost_gold,civil_cost,build_days,tax_bonus,output_bonus,defence_bonus,church_bonus,gold_per_tick,grain_per_tick,contentment_per_tick,unrest_per_tick,produce_good,produce_units,notes` — `civil_cost` is the one price the game charges and `cost_gold` is unused, kept for the library): 22 buildings in three tiers (§5d) | CSV |
 | Tax (rent) | A MONTH of whole gold, §4.2 of the spec (`../superpowers/specs/2026-09-14-economy-and-staging-design.md`): `round(people / 1000 × manor_tax_per_1000 × tax_rate / tax_rate_base × (1 + Σ tax_bonus))`, plus its town's tariff `round(town_goods_gold × tariff_rate × tariff_per_sales_tax / 100)`. `ManorEconomy.line_of` computes it (the only rounding in the economy), `RealmEconomy` sums it into provinces and the realm, and the month's end settles it into the two purses (§5c). Other houses' taxes are shown on the card as what the house earns (no house treasuries exist — the number is information and a price input, not a ledger). | `balance.csv` `manor_tax_per_1000`, `tax_rate_base`, `tariff_per_sales_tax` |
-| Defence | `manor_defence_base + Σ defence_bonus` — displayed now, for the seizure resolution later | `balance.csv` |
+| Defence | `manor_defence_base + Σ defence_bonus` — displayed now, for the seizure resolution later | `economy/balance.csv` |
 | Value (price) | see §5 | `balance.csv` |
 | Actions | BUY / SELL / BUILD / HURRY / DEMOLISH / WORK (focus) / SEIZE buttons, shown by legality (§5) | — |
 
@@ -95,7 +95,7 @@ buildings' `bld_*` art from `resource_icons.csv`, §5b) and an action row.
 `known == "basic"` for manors outside the player's realm, as for provinces;
 a `foreign` border manor's basic card still offers its one BUY (§5c).
 
-**The card's face** (owner 2026-09-14): over the card, a third of its height, the painting of the manor's estate (library `B-`, the same industry × size row as its map drawing, `data/manor_estates.csv` `painting`); below the title the attributes above as icons (`resource_icons.csv` `manor_*`) — owner, province, seat, terrain, land, area, people, tax, strategic and civil goods a month, chief good, estate size, defence, slots, value, price — a short value beside each and the full fact in its tooltip (`manor_card.stats`); then **Output a month**, one row per good the manor makes with `+N / mo` and, in the tooltip, what the units are worth and to which pool (`manor_card.rates`, from `ManorEconomy.line_of`).
+**The card's face** (owner 2026-09-14): over the card, a third of its height, the painting of the manor's estate (library `B-`, the same industry × size row as its map drawing, `data/economy/manor_estates.csv` `painting`); below the title the attributes above as icons (`resource_icons.csv` `manor_*`) — owner, province, seat, terrain, land, area, people, tax, strategic and civil goods a month, chief good, estate size, defence, slots, value, price — a short value beside each and the full fact in its tooltip (`manor_card.stats`); then **Output a month**, one row per good the manor makes with `+N / mo` and, in the tooltip, what the units are worth and to which pool (`manor_card.rates`, from `ManorEconomy.line_of`).
 
 ## 4. Province tie-in
 
@@ -112,8 +112,8 @@ a `foreign` border manor's basic card still offers its one BUY (§5c).
 
 ## 5. Orders
 
-Rows in `data/policy_actions_court_additions.csv`, fees in
-`data/order_costs.csv`, ideology in `data/action_signatures.csv`. All params
+Rows in `data/council/policy_actions_court_additions.csv`, fees in
+`data/realm/order_costs.csv`, ideology in `data/realm/action_signatures.csv`. All params
 are validated in `ActionSystem.validate` (`_validate_manor`: the manor must
 exist and — except a cross-border BUY (§5c) — lie in the player's realm; the
 crown must not already hold it / must hold it); execution in
@@ -169,7 +169,7 @@ ECONOMY column, the ledger paths the model may write
 The host stays the realm's. SEIZE works anywhere in the realm; BUY only
 where §5c allows; BUILD and FOCUS need a province the crown controls.
 
-Every manor works one **chief good** (`data/manor_focus.csv`, twelve rows):
+Every manor works one **chief good** (`data/economy/manor_focus.csv`, twelve rows):
 a focus is allowed by the cell's biome (and, for fisheries, a sea
 neighbour). The default **follows the terrain** (owner 2026-09-14,
 `MapManors.default_focus`): the focus whose `default_on` claims the cell —
@@ -244,7 +244,7 @@ every BUY button names the purse that pays.
 
 ### 5d. Where buildings may stand, and what they yield (owner 2026-09-14)
 
-Not every manor raises the same buildings. `data/manor_buildings.csv` holds
+Not every manor raises the same buildings. `data/economy/manor_buildings.csv` holds
 22 buildings in three `tier`s (14 / 5 / 3). Its `land` says where the ground
 takes one — tokens joined by `|` of which ONE must hold: `coast`, `high` /
 `peak`, `town`, `focus:<code>`, a biome id, or `any` (`MapManors.land_allows`
@@ -280,7 +280,7 @@ A tick that rolls an event stops the clock and opens the council; there is
 no End Turn (owner 2026-09-14: play is the only switch). Real time never
 enters the engine.
 
-**Building takes time and room.** `data/manor_buildings.csv` `build_days`
+**Building takes time and room.** `data/economy/manor_buildings.csv` `build_days`
 (from 20 — palisade, apiary — to 90 for a castle; granary 25, mill 30,
 chapel 40, market 45, manor house 60); `MANOR_BUILD` begins a work —
 `GameState.manor_works {cell: [{building, start, days}]}`, `start` the
@@ -330,7 +330,7 @@ metric lines in its drift, each as its own ledger line.
   ECONOMY; no realm tint on symbols (thematic rule). The town drawings wear
   their manor's colour (`map_manor_mark_alpha`), and every manor without a
   town wears ONE **estate** drawing by its industry and size
-  (`data/manor_estates.csv`, library `D-43`..`D-78`, `MapObjects.estate_tier`
+  (`data/economy/manor_estates.csv`, library `D-43`..`D-78`, `MapObjects.estate_tier`
   / `manor_estates`, one `MarkMesh` thinned by zoom through
   `estate_lod_ranks`; balance `map_manor_estate_*`) — see CLAUDE.md.
 - **Settlements grow with their manor** (owner 2026-09-15):
@@ -366,15 +366,15 @@ state (`GameState.regiments`, 2026-09-17) is saved the same way.
 | `data/maps/<id>/manor_name_overrides.csv` | optional, hand-maintained, never written by the importer |
 | `scripts/engine/name_forge.gd`, `manor_names.gd` | the Markov name forge over the export's `nameBases`, and the manor table built with it |
 | `scripts/engine/map_manors.gd`, `manor_economy.gd`, `realm_economy.gd` | the manor rules; one manor's month; the provinces' and realm's sums and the purses |
-| `data/maps.csv` | `cell_texture` column |
-| `data/manor_buildings.csv` | the catalogue: 22 buildings, `tier`, `land`, `prereq`, `build_days`, yields |
-| `data/manor_focus.csv` | the twelve chief goods (`biomes`, `coast`, `yield_per_1000`, `switch_cost_gold`, `transition_ticks`, `default_on`) |
-| `data/manor_estates.csv` | the estate drawing and painting per industry × size |
+| `data/world/maps.csv` | `cell_texture` column |
+| `data/economy/manor_buildings.csv` | the catalogue: 22 buildings, `tier`, `land`, `prereq`, `build_days`, yields |
+| `data/economy/manor_focus.csv` | the twelve chief goods (`biomes`, `coast`, `yield_per_1000`, `switch_cost_gold`, `transition_ticks`, `default_on`) |
+| `data/economy/manor_estates.csv` | the estate drawing and painting per industry × size |
 | `data/settlement_growth.csv` | a settlement's drawing promoted by its manor's people or buildings |
 | `data/balance.csv` | `manor_tax_per_1000`, `tax_rate_base`, `tariff_per_sales_tax`, `crown_share_permille`, `manor_price_per_1000`, `manor_price_per_unit`, `manor_price_building_ratio`, `manor_price_land_swing`, `manor_markup_max`, `manor_sell_ratio`, `manor_trade_goodwill`, `manor_trade_wealth`, `manor_defence_base`, `manor_seize_enabled`, `manor_seize_legitimacy`, `manor_seize_unrest`, `manor_seize_outrage`, `manor_master_max_rows`, `manor_slots_base`, `manor_slots_burg_bonus`, `manor_demolish_refund`, `build_rush_gold_per_day`, `manor_rush_days_per_click`, `manor_focus_high_height`, `manor_focus_peak_height`, `economy_check_full`, the clock's `time_*`, and the views' `map_manor_*` |
-| `data/policy_actions_court_additions.csv`, `order_costs.csv`, `action_signatures.csv` | seven orders: BUY, SELL, BUILD, SEIZE, FOCUS, DEMOLISH, RUSH |
-| `data/political_palette.csv` | `manor_pale`, `manor_rich`, `manor_line`, `manor_mark` (the ECONOMY view's `manor_badge` / `manor_label_*`); house hues come from `balance.csv` (`map_manor_house_*`), not palette rows |
-| `data/resource_icons.csv` | `bld_<code>` art for the 22 buildings and the card's `manor_*` stat icons |
+| `data/council/policy_actions_court_additions.csv`, `order_costs.csv`, `action_signatures.csv` | seven orders: BUY, SELL, BUILD, SEIZE, FOCUS, DEMOLISH, RUSH |
+| `data/screens/ui/political_palette.csv` | `manor_pale`, `manor_rich`, `manor_line`, `manor_mark` (the ECONOMY view's `manor_badge` / `manor_label_*`); house hues come from `balance.csv` (`map_manor_house_*`), not palette rows |
+| `data/screens/ui/resource_icons.csv` | `bld_<code>` art for the 22 buildings and the card's `manor_*` stat icons |
 
 ## 9. Tests (written before the code, hand-computed values)
 

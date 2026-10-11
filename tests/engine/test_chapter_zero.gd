@@ -1,7 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## Chapter 0 — the prologue tutorial (game_story/chapter_0/chapter_0_events.md,
-## data/chapter_events.csv, chapter_event_choices.csv, chapter_branches.csv).
+## data/story/chapter_events.csv, chapter_event_choices.csv, chapter_branches.csv).
 ##
 ## It runs on the ordinary event system: chapter beats are fired off a chain,
 ## never sampled by the random roll, so this file holds them to the same
@@ -70,7 +70,7 @@ func test_chapter_beats_are_not_in_the_random_pool() -> void:
 	for row in data.events:
 		pool[String(row["event_id"])] = true
 	for id: String in _all_ids():
-		assert_false(pool.has(id), id + " must not be in data/events.csv")
+		assert_false(pool.has(id), id + " must not be in data/story/events.csv")
 		assert_true(data.events_by_id.has(id), id + " must be findable by id")
 	assert_eq(data.event_choices_all().size(),
 		data.event_choices.size() + data.chapter_event_choices.size())

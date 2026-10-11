@@ -6,7 +6,7 @@ extends RefCounted
 ## GameState.regiments, moved once a month by settle_month — but for the
 ## supplies, eaten a DAY at a time by eat_day (owner 2026-09-30: 军事单位的补给
 ## 要每天都在以一定速率减少). Every number is a whole number and every rate is
-## data (balance.csv army_*).
+## data (army/balance.csv army_*).
 
 ## The army as it stands (spec 2026-10-07-army-split-and-ground §2.4): the
 ## campaign's roster, else — no state, or a state with none — the pack's split.
@@ -143,7 +143,7 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 ## Supplies a regiment uses in a month: the headcount's use times the height
 ## tier of the cell it stands on NOW (position_of; the pack's own quarters
 ## when `state` is null — a campaign's opening stores, a regiment with no
-## state) (data/army_height_supply.csv, spec 2026-09-19-map3d-heights §2) —
+## state) (data/army/army_height_supply.csv, spec 2026-09-19-map3d-heights §2) —
 ## a fleet is not scaled. ONE rounding, at the end (owner review
 ## 2026-09-19): two per-mille divisions in a row lost heads a first
 ## regiment's worth of supply to truncation twice.
@@ -240,7 +240,7 @@ static func max_units(repo: DataRepository, use: int) -> int:
 static func carry_of(repo: DataRepository, entry: Dictionary) -> int:
 	return int(entry.get("carry_days", int(repo.bal("army_carry_default_days"))))
 
-## The march's per-mille under a carried load (data/army_carry_loads.csv):
+## The march's per-mille under a carried load (data/army/army_carry_loads.csv):
 ## the row with the most days not above `carry_days`; 1000 with no rows.
 static func load_permille(repo: DataRepository, carry_days: int) -> int:
 	var out := 1000
@@ -301,7 +301,7 @@ static func drift_morale(morale: int, mark: int, step: int) -> int:
 	return maxi(morale - step, mark)
 
 ## "well fed" / "on short rations" / "starving" — the word a supply score
-## reads as (data/army_morale_words.csv, highest min_score first).
+## reads as (data/army/army_morale_words.csv, highest min_score first).
 static func morale_word(repo: DataRepository, score: int) -> String:
 	for row: Dictionary in repo.army_morale_words:
 		if score >= int(row["min_score"]):
@@ -343,7 +343,7 @@ static func forget_grids() -> void:
 	_town_grid_cache.clear()
 	_road_grid_cache.clear()
 
-## A burg's reach in pack px: its group's km (data/army_town_reach.csv) on
+## A burg's reach in pack px: its group's km (data/army/army_town_reach.csv) on
 ## the pack's own measure; 0 for a group with no row.
 static func town_reach_px(repo: DataRepository, burg: Dictionary) -> float:
 	var km := float(repo.army_town_reach.get(String(burg.get("group", "")), 0.0))
@@ -393,7 +393,7 @@ static func town_at(repo: DataRepository, at: Vector2) -> String:
 	return best
 
 ## The town a land regiment stands IN now (its live position inside the
-## town's reach, data/army_town_reach.csv); "" in the field and for a fleet.
+## town's reach, data/army/army_town_reach.csv); "" in the field and for a fleet.
 static func town_of(repo: DataRepository, reg: Dictionary, state: GameState = null) -> String:
 	if String(reg.get("is_naval", "0")) == "1":
 		return ""
@@ -426,7 +426,7 @@ static func works_of(repo: DataRepository, reg: Dictionary, state: GameState = n
 	return "town"
 
 ## An arm's modifier on a terrain, per mille (1000 when the table has no
-## row); the town's works (data/army_town_defence.csv) multiply onto it for
+## row); the town's works (data/army/army_town_defence.csv) multiply onto it for
 ## the defender only.
 static func terrain_factor(repo: DataRepository, terrain: String, arm: String, stance: String, works: String) -> int:
 	var f := int((repo.army_terrain.get("%s|%s" % [terrain, arm], {}) as Dictionary).get(stance, 1000))
@@ -614,7 +614,7 @@ static func strength_grade(repo: DataRepository, state: GameState, code: String)
 
 # --- the march (owner 2026-09-19) ----------------------------------------------
 
-## The km a day a regiment's SLOWEST arm marches (data/army_speed.csv): horse
+## The km a day a regiment's SLOWEST arm marches (data/army/army_speed.csv): horse
 ## waits for foot, and everyone waits for the guns. 0 for an empty banner.
 static func base_pace_km(repo: DataRepository, reg: Dictionary) -> int:
 	var slowest := 0
@@ -750,7 +750,7 @@ static func road_at(repo: DataRepository, at: Vector2) -> String:
 	return found
 
 ## A march's pace on the ground at a pack point, per mille of its base
-## (data/army_ground_speed.csv): on a road or trail, the road's row times its
+## (data/army/army_ground_speed.csv): on a road or trail, the road's row times its
 ## height tier's; off it, the terrain's (terrain_at). 1000 for a fleet.
 static func ground_permille(repo: DataRepository, reg: Dictionary, at: Vector2, state: GameState = null) -> int:
 	if String(reg.get("is_naval", "0")) == "1":
@@ -806,7 +806,7 @@ static func ground_word(repo: DataRepository, state: GameState, reg: Dictionary)
 const ORDER_STANDBY := "standby"
 const ORDER_GARRISON := "garrison"
 const ORDER_MARCH := "march"
-## The battle stance (data/battle_stances.csv) a regiment starts with and an
+## The battle stance (data/battle/battle_stances.csv) a regiment starts with and an
 ## old save's regiments read as; ARMY_STANCE changes it by courier.
 const STANCE_DEFAULT := "steady"
 

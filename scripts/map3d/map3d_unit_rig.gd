@@ -20,7 +20,7 @@ static func gait_rate(world_speed: float, k: float, clip_s: float, stride_m: flo
 ## The MARCH clip's playback rate (owner 2026-09-27: 马的腿移动的步幅和它实际移
 ## 动的距离不符): the ground the piece covers per second in its MODEL'S metres
 ## (world speed / its scale k) over what one loop of the clip walks
-## (`stride_m`, data/army_art.csv, the model metres a loop carries it) in the
+## (`stride_m`, data/screens/map3d/army_art.csv, the model metres a loop carries it) in the
 ## clip's `clip_s` — so the feet keep pace with the ground — held within
 ## map3d_unit_anim_min..max: a miniature crossing kilometres a second outruns
 ## any leg, and past the ceiling it slides rather than blurs.

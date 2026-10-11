@@ -5,7 +5,7 @@ extends VBoxContainer
 ## the realm as bars, the people as a pie, the host by unit type, and the
 ## largest provinces — all engine truth, refreshed on every state change.
 ## Charts follow the dataviz rules: thin marks, text in text ink, categorical
-## colours in fixed order from data/chart_palette.csv.
+## colours in fixed order from data/screens/ui/chart_palette.csv.
 
 const RESOURCES := ["treasury", "grain", "population", "army"]
 ## The army's drill joined the temper when the top bar gave up everything

@@ -300,7 +300,7 @@ LEDGER 星图（`Ledger.galaxy`）同样只画认知：官员报给你的数字�
 - **怎么传导**：一个补给单位的金价 × 1.5 → 战略指标（库存折金）、向房屋买粮的价格、元帅月报里的金额同步变化；补给线的运费按 `supply_cart_milligold_per_unit_km` 另算，不受影响。
 - **额外操作**：重启游戏即可，不用重建世界。相关的 GUT 测试如果写死了期望值，要更新。
 
-### 例 6：改房屋表 `data/map3d_houses.csv`（定义层，3D 外观）
+### 例 6：改房屋表 `data/screens/map3d/map3d_houses.csv`（定义层，3D 外观）
 
 - **改了什么**：把 `cottage_a` 的 `height_m` 改了，或者换了一个新的 GLB。
 - **怎么传导**：
@@ -365,7 +365,7 @@ LEDGER 星图（`Ledger.galaxy`）同样只画认知：官员报给你的数字�
 | `map3d_*.csv`、地图包位图 | `tools/map3d/build_pack.sh`；改位图烘焙参数时最后跑 `bake_relief.gd` |
 | `Map3DLayerBake.GEOMETRY_SOURCES` 里的脚本 | 提高 `FORMAT`、更新 `GEOMETRY_MD5`、重跑 `bake_layers.gd`（测试会提醒） |
 | `STYLE_CORE*`、`NEGATIVE*`、`canvas.json`、`generate.py` 预设 | `python3 tools/art_kit/build_kit.py`，同步手册的「工作流规格」页 |
-| `data/map3d_houses.csv`、兵种 GLB 的骨架 | `python3 tools/art_kit/extract_specs.py`，再 `build_kit.py` |
+| `data/screens/map3d/map3d_houses.csv`、兵种 GLB 的骨架 | `python3 tools/art_kit/extract_specs.py`，再 `build_kit.py` |
 | 地图包 | 按 `tools/NEW_MAP.md` 的顺序；只改 `realm_bindings.csv` 就能换名字；旧存档视为不兼容 |
 | 让 LLM 能改一个新字段 | 在 `world_schema.csv` 加一行（类型、范围、`llm_cap`），不要在代码里开口子 |
 

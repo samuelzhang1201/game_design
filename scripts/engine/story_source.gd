@@ -25,7 +25,7 @@ const ID_PREFIX := "ev_"
 
 ## Every story document the game loads, with the heading prefix that opens an
 ## entry and the id prefix its number becomes. Adding a chapter is adding a
-## row here plus its own `data/chapter_events.csv` rows.
+## row here plus its own `data/story/chapter_events.csv` rows.
 const DOCUMENTS: Array[Dictionary] = [
 	{"path": DEFAULT_PATH, "heading": HEADING_PREFIX, "id": ID_PREFIX},
 	{"path": "res://game_story/chapter_0/chapter_0_events.md",

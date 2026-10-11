@@ -6,7 +6,7 @@ extends SceneTree
 ## (MapIndex.bake_sea_distance); SeaLayer's shader turns that into the four
 ## sea bands. No autoloads needed:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-##     -s tools/bake_sea_distance.gd -- [--map ID]  (default: data/maps.csv is_default)
+##     -s tools/bake_sea_distance.gd -- [--map ID]  (default: data/world/maps.csv is_default)
 ## A tool, not simulation: it reads the clock to report its own run time.
 
 func _init() -> void:

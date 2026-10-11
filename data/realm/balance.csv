@@ -1,0 +1,30 @@
+key,value,notes
+start_treasury,500,gold at campaign start (a fallback: a pack with an economy row seeds the crown and the lord from their towns)
+start_lord_gold_scale,1.0,"the lord's purse at the start (owner 2026-09-14): what the towns of the player's own provinces hold, times pack_treasury_scale, times this"
+start_tax_rate,5,scale 1-10
+start_tariff_rate,3,scale 0-10
+start_metric_default,50,legitimacy/unrest-style baselines start here
+admin_base,5.0,before chancellor bonus
+chancellor_vacancy_penalty,3.0,
+unrest_tax_pressure,0.3,per point of tax_rate above 5
+unrest_decay,0.2,toward 0
+unrest_famine,2.0,per tick while grain <= 0
+contentment_drift,0.2,toward 50
+legitimacy_drift,0.1,toward 50
+church_drift,0.2,toward 50
+church_endow_cost,30,
+church_endow_gain,8,
+church_tithe_gain,25,
+church_tithe_opinion,-6,
+justice_unrest_per_point,-2.0,
+justice_contentment_per_point,-2.0,
+unrest_tax_pivot,5,tax_rate above this drives unrest pressure
+drift_baseline,50,peasant_contentment/legitimacy/church_opinion drift toward this
+pack_treasury_scale,1.0,gold per unit of the export's state treasury when seeding the player's realm (owner ruling 2026-09-09: one truth)
+tax_rate_per_poll_tax,36,tax_rate (1-10) = round(export pollTax x this); also the alias scale for the player's poll_tax row
+tariff_rate_per_sales_tax,60,tariff_rate (0-10) = round(export salesTax x this); also the alias scale for the player's sales_tax row
+tax_rate_base,5,"ECONOMY: the poll-tax level (metrics.tax_rate, 1..10) at which a manor's tax factor is 1; 10 doubles it, 1 fifths it"
+tariff_per_sales_tax,2,ECONOMY: a settlement's tariff = its town goods' gold x tariff_rate (0..10) x this / 100 — at 5 that is a tenth
+crown_share_permille,200,"ECONOMY (spec §5): the crown's share, per mille, of the tax, strategic and civil goods of the realm's provinces it does NOT control; its own provinces pay in full"
+start_strategic_months,2,ECONOMY: the strategic stock at the start = the crown's monthly strategic goods x this
+start_civil_months,3,ECONOMY: the civil stock at the start = the crown's monthly civil goods x this

@@ -43,7 +43,7 @@ little harder.
 
 ## Open
 
-* `size` 0.72 keeps the horse at the cavalry's scale (the knight has no lance to stand tall by). `stride_m` (`data/army_art.csv`) is the measured gallop stride times the factor the cavalry and the
+* `size` 0.72 keeps the horse at the cavalry's scale (the knight has no lance to stand tall by). `stride_m` (`data/screens/map3d/army_art.csv`) is the measured gallop stride times the factor the cavalry and the
   infantry were tuned by — judge it on a march.
 * No `royal_parts.glb`: the folio's Take apart stays hidden for the king. The art kit's
   `specs.json` (`tools/art_kit/extract_specs.py` `UNITS`) does not list the royal model yet.

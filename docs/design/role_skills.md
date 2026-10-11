@@ -3,15 +3,15 @@
 The skills vocabulary referenced by [role_player.md](role_player.md). Two
 layers, both canonical in CSV:
 
-1. **Numeric skills** — five 0–20 stats on every role (`data/roles.csv`,
-   `data/founding_council.csv`), meant for engine formulas
+1. **Numeric skills** — five 0–20 stats on every role (`data/council/roles.csv`,
+   `data/council/founding_council.csv`), meant for engine formulas
    ([COUNCIL_SYSTEM.md](COUNCIL_SYSTEM.md)). As built, only the
    Chancellor's `sk_admin` enters a formula (admin capacity, `admin_base` +
    `sk_admin` × `council_seats.csv` `capacity_bonus_per_skill`); all five
    reach the persona prompt ("admin 12/20") and the audience window's row of
    skill badges. The other uses in the table below are design intent.
 2. **Skill traits** — `ability`/`background` rows in
-   `data/character_traits.csv` that shift stats at build time
+   `data/council/character_traits.csv` that shift stats at build time
    (`CharacterFactory`, clamped to 0–20 / 0–100; the special effects in the
    CSV's `notes` are not built yet) and give the
    LLM a performable identity. This file is the prose the persona prompts

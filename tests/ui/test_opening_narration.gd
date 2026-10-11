@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## The opening background narration cut into pages (owner 2026-10-12): every
 ## page loads, none is empty or too long for one box, the sides name Malvern
 ## (left) and the player (right), and the player walks the pages with Continue

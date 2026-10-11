@@ -1,6 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
-## data/goods_economy.csv (spec §3): every good of the pack has a pool, a
+## data/economy/goods_economy.csv (spec §3): every good of the pack has a pool, a
 ## whole-gold price and an integer growth; a good the table does not name
 ## takes its first tag's default row.
 

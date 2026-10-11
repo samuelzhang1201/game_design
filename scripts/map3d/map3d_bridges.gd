@@ -13,7 +13,7 @@ extends RefCounted
 ## `mesh_arrays` builds the stone under them: spandrel walls pierced by
 ## arches, piers, the arches' soffits, the deck and a parapet each side.
 ##
-## `rules` (balance.csv map3d_bridge_*): abut_m, clear_m, clear_per_width,
+## `rules` (screens/map3d/balance.csv map3d_bridge_*): abut_m, clear_m, clear_per_width,
 ## hump_m, min_sin, merge_m, deck_step_m, deck_m, parapet_h_m, parapet_w_m,
 ## arch_max_m, pier_m, end_over_water_m.
 

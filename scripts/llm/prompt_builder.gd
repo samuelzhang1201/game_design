@@ -46,7 +46,7 @@ static func persona_context(id: String, state: GameState, data: DataRepository) 
 	return lines
 
 ## "- CODE: notes" for every legal action, then the laws LAW_SET may name
-## (the model cannot read data/laws.csv): each law's code, label, values and
+## (the model cannot read data/realm/laws.csv): each law's code, label, values and
 ## the value decreed now.
 static func action_catalog(state: GameState, data: DataRepository) -> String:
 	var catalog := ""

@@ -136,8 +136,8 @@ static func notice_text(state: String, map_id: String) -> String:
 	return String(NOTICES.get(state, NOTICES["bad"])) % map_id
 
 
-## The bake inputs' fingerprint: data/map3d_bake.csv, data/map3d_fields.csv
-## and data/map3d_houses.csv (Task 7: a changed house table must read stale,
+## The bake inputs' fingerprint: data/screens/map3d/map3d_bake.csv, data/screens/map3d/map3d_fields.csv
+## and data/screens/map3d/map3d_houses.csv (Task 7: a changed house table must read stale,
 ## not draw the old one). `tables` is a test seam: copies of the three.
 static func steps_hash(tables: Array = STEPS_TABLES) -> String:
 	var md5s := ""
@@ -148,8 +148,8 @@ static func steps_hash(tables: Array = STEPS_TABLES) -> String:
 
 ## The tables a build is baked from, in steps_hash's order (a test hashes
 ## copies of them, never writing data/).
-const STEPS_TABLES := ["res://data/map3d_bake.csv", "res://data/map3d_fields.csv",
-	"res://data/map3d_houses.csv"]
+const STEPS_TABLES := ["res://data/screens/map3d/map3d_bake.csv", "res://data/screens/map3d/map3d_fields.csv",
+	"res://data/screens/map3d/map3d_houses.csv"]
 
 
 ## Two map3d_world metas describe the same world (JSON turns 2560 into 2560.0).

@@ -15,7 +15,7 @@ func _row(id: String) -> Dictionary:
 
 func test_builds_full_roster_with_five_seated() -> void:
 	var s := SuiteData.campaign(data, 42)
-	# the founding council + the extended roles (data/roles.csv), each once
+	# the founding council + the extended roles (data/council/roles.csv), each once
 	assert_eq(s.characters.size(), data.founding.size() + data.roles.size())
 	assert_eq(s.council.size(), 5, "only seated ministers occupy council")
 	for seat in ["chancellor", "marshal", "steward", "spymaster", "chaplain"]:

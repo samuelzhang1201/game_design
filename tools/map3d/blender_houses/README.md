@@ -1,6 +1,6 @@
 # Hand-modelled settlement houses (Blender)
 
-Owner 2026-09-24: the fourteen house types in `data/map3d_houses.csv` are
+Owner 2026-09-24: the fourteen house types in `data/screens/map3d/map3d_houses.csv` are
 modelled by hand in Blender through the Blender MCP. They were first modelled
 looking at Hunyuan3D meshes as reference (no geometry or texture copied);
 those meshes and the whole Hunyuan3D pipeline were DELETED later that day

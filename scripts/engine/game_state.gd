@@ -26,7 +26,7 @@ var agent_memory: Dictionary = {}
 ## but an old save may carry it and HouseArms / MapManors still read
 ## house_was, the royal house's name before it was renamed.
 var player_setup: Dictionary = {}
-## Where the player stands (data/locations.csv). Moving within a region is
+## Where the player stands (data/story/locations.csv). Moving within a region is
 ## free (LocationSystem); saved with everything else.
 var current_location: String = LocationSystem.DEFAULT_LOCATION
 var cooldowns: Dictionary = {}
@@ -103,7 +103,7 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	# The prologue is a chain, not a pool: a chapter beat whose row names a
 	# start_tick is scheduled here, so a new reign opens on the first council
 	# rather than on whatever the random roll happens to pick
-	# (data/chapter_events.csv, game_story/chapter_0/chapter_0_events.md).
+	# (data/story/chapter_events.csv, game_story/chapter_0/chapter_0_events.md).
 	for row: Dictionary in data.chapter_events:
 		var start := String(row.get("start_tick", "")).strip_edges()
 		if start != "":
@@ -254,7 +254,7 @@ static func _decode_values(value):
 
 ## Bump when the save shape changes incompatibly; from_dict refuses saves
 ## newer than it knows (write the matching migration when bumping).
-## The map pack this campaign is played on (data/maps.csv). Part of the
+## The map pack this campaign is played on (data/world/maps.csv). Part of the
 ## world definition, so it is saved: reloading must restore the same world,
 ## not whichever map happens to be default.
 var map_id: String = ""
@@ -277,7 +277,7 @@ var world_log: Array = []
 ## holding it, ONLY for manors that changed hands — an absent manor still
 ## belongs to its province's house. Read through MapManors, never directly.
 var manor_owner: Dictionary = {}
-## cell id (String) -> [building codes] raised on it (data/manor_buildings.csv).
+## cell id (String) -> [building codes] raised on it (data/economy/manor_buildings.csv).
 var manor_buildings: Dictionary = {}
 ## cell id (String) -> [{building, start, days}]: works in progress on a
 ## manor (owner 2026-09-13: building takes time) — start is the absolute
@@ -285,7 +285,7 @@ var manor_buildings: Dictionary = {}
 ## a finished one into manor_buildings.
 var manor_works: Dictionary = {}
 ## cell id (String) -> {focus, since}: the chief good a manor was SET to
-## work at (data/manor_focus.csv) and the tick it was set, ONLY for manors
+## work at (data/economy/manor_focus.csv) and the tick it was set, ONLY for manors
 ## whose focus was chosen — an absent manor works its terrain's default.
 var manor_focus: Dictionary = {}
 ## cell id (String) -> permille (0 or 500) for each war workshop set away

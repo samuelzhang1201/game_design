@@ -1,7 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## A regiment's piece as three, six or nine figures by its strength (owner
-## 2026-09-30: 满员 3×3, 减员 前中后 1/2/3, 残兵 前后排 1/2), data/army_formations.csv.
+## 2026-09-30: 满员 3×3, 减员 前中后 1/2/3, 残兵 前后排 1/2), data/army/army_formations.csv.
 
 var repo: DataRepository
 

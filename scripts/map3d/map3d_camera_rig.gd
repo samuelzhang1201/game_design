@@ -97,7 +97,7 @@ func start_distance() -> float:
 		ctx.repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 
 
-## The farthest the rig may sit: balance.csv's ceiling, and never so far that
+## The farthest the rig may sit: screens/map3d/balance.csv's ceiling, and never so far that
 ## the SCALE BAR would read above map3d_zoom_max_scale of the pack's own
 ## measure (owner 2026-09-20: "设置zoom out标尺最多150km" — 150 km lands on the
 ## ladder's 100 km rung). Before the view has a size there is no bar to read,

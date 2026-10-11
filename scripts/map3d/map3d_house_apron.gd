@@ -3,7 +3,7 @@ extends RefCounted
 ## The skirt round a house's foot (owner 2026-10-12: 房子直接平放在地上，像贴上去的):
 ## a packed-dirt apron round a countryside house, a brick paving round a town's
 ## or city's, one flat quad per house in one MultiMesh per kind. Pure and static;
-## Map3DLayerHouses draws them. Every number is in data/map3d_aprons.csv; which
+## Map3DLayerHouses draws them. Every number is in data/screens/map3d/map3d_aprons.csv; which
 ## kind a settlement gets is `map3d_settlements.apron`, which types wear one
 ## `map3d_houses.apron`. Never reaches for the Game autoload.
 

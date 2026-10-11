@@ -243,7 +243,7 @@ def resign_builds(apply: bool) -> None:
     terrain = os.path.join(ROOT, "assets", "3D", "terrain")
     if not os.path.isdir(terrain):
         return
-    steps = hashlib.md5("".join(_md5_file(os.path.join(ROOT, "data", t)) for t in
+    steps = hashlib.md5("".join(_md5_file(os.path.join(ROOT, "data", "screens", "map3d", t)) for t in
                                 ("map3d_bake.csv", "map3d_fields.csv", "map3d_houses.csv")).encode()).hexdigest()
     for pack in sorted(os.listdir(terrain)):
         manifest = os.path.join(terrain, pack, "manifest.json")

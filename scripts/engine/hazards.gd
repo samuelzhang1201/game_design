@@ -2,7 +2,7 @@ class_name Hazards
 extends RefCounted
 ## Hazards as STATE (spec 2026-10-07-war-room-p2-tactical-layer §2): the pack's
 ## zones seeded at a new reign, each ending by its kind's months
-## (data/hazard_kinds.csv); what is known of one abroad (ruling 6); their
+## (data/army/hazard_kinds.csv); what is known of one abroad (ruling 6); their
 ## endings as news. Pure; ids and cells in sorted order.
 
 static var _index_key: Array = []
@@ -13,7 +13,7 @@ static func kind_of(repo: DataRepository, kind: String) -> Dictionary:
 	return repo.hazard_kinds.get(kind, {})
 
 
-## One hazard per pack zone whose kind data/hazard_kinds.csv lists, from
+## One hazard per pack zone whose kind data/army/hazard_kinds.csv lists, from
 ## `start_tick` for its kind's months (0: no end of itself).
 static func seed_pack(repo: DataRepository, state: GameState, start_tick: int) -> void:
 	var rows: Dictionary = repo.world_table("society", "zones")

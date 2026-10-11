@@ -1,7 +1,7 @@
 class_name MarchPlan
 extends RefCounted
 ## The march confirm's figures (spec 2026-10-07-march-waypoints ruling 6), read
-## only: for each carried load of data/army_carry_loads.csv, the day the column
+## only: for each carried load of data/army/army_carry_loads.csv, the day the column
 ## would arrive (the courier's ride, then the march at that load's pace along
 ## its route), the supplies a train of that load holds, the days they last, and
 ## how many days of the march its stores would not cover. It sets out with the

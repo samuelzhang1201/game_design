@@ -11,12 +11,12 @@ extends SceneTree
 ##                               15 peak (MapIndex.raise_high_ground), so the
 ##                               high ground cross-fades in like any biome
 ##
-## The bands and the smoothing come from balance.csv (map_biome_hill_height,
+## The bands and the smoothing come from screens/map3d/balance.csv (map_biome_hill_height,
 ## map_biome_mountain_height, map_biome_peak_height, map_biome_blur_px), so
 ## re-run this after changing any of them or re-importing the pack.
 ## No autoloads needed:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-##     -s tools/bake_relief.gd -- [--map ID]  (default: data/maps.csv is_default)
+##     -s tools/bake_relief.gd -- [--map ID]  (default: data/world/maps.csv is_default)
 ## The resolutions are data: map_relief_scale for the height field and
 ## map_biome_weights_scale for the weight maps, each with its own blur.
 ## A tool, not simulation: it reads the clock to report its own run time.
@@ -105,10 +105,7 @@ func _init() -> void:
 
 
 func _balance() -> Dictionary:
-	var out: Dictionary = {}
-	for row: Dictionary in DataRepository.parse_csv("res://data/balance.csv", ["key", "value"]):
-		out[String(row["key"])] = float(row["value"])
-	return out
+	return DataRepository.load_balance("res://data")
 
 
 ## The pack's cell heights, indexed by cell id.

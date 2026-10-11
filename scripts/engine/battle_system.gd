@@ -10,7 +10,7 @@ extends RefCounted
 ##   roll   = a hash of the two sides, the day and the round, 0..999 — never a
 ##            draw from GameState.rng, so a battle moves no other seeded roll
 ##   eff    = clamp(odds + (roll - 500) x battle_variance_permille / 1000)
-##   tier   = the data/battle_outcomes.csv row eff falls in
+##   tier   = the data/battle/battle_outcomes.csv row eff falls in
 ##
 ## A tier's losses first become WOUNDED (they return a share a month), the rest
 ## are DEAD. Both are counts beside the pack's immutable headcount
@@ -37,7 +37,7 @@ static func eff_permille(odds_permille_value: int, roll_value: int, variance_per
 	return clampi(odds_permille_value + (roll_value - 500) * variance_permille / 1000, 0, 1000)
 
 
-## The outcome row (`data/battle_outcomes.csv`) with eff_min <= eff < eff_max;
+## The outcome row (`data/battle/battle_outcomes.csv`) with eff_min <= eff < eff_max;
 ## 1000 belongs to the last row. {} with no table.
 static func tier_of(repo: DataRepository, eff: int) -> Dictionary:
 	var rows := repo.battle_outcomes
@@ -245,7 +245,7 @@ static func stance_words(repo: DataRepository, state: GameState, code: String) -
 	return "%s, %s from tomorrow" % [now, String(_stance_row(repo, next).get("label", next))]
 
 
-## A stance's row of data/battle_stances.csv; the default stance's for an
+## A stance's row of data/battle/battle_stances.csv; the default stance's for an
 ## unknown name.
 static func _stance_row(repo: DataRepository, stance: String) -> Dictionary:
 	return repo.battle_stances.get(stance, repo.battle_stances.get(ArmySystem.STANCE_DEFAULT, {}))
@@ -359,7 +359,7 @@ static func siege_town_of(state: GameState, code: String) -> String:
 
 
 ## The town a foe assaults when it stands within the reach
-## (data/army_town_reach.csv) of `town`, the held town a player unit
+## (data/army/army_town_reach.csv) of `town`, the held town a player unit
 ## garrisons (ArmyGround.garrison_town: its seat or camp); "" otherwise.
 static func _town_contact(repo: DataRepository, state: GameState, town: String, f: String) -> String:
 	if town == "":

@@ -1,7 +1,7 @@
 """Bake a map pack into Terrain3D import maps at campaign scale
 (owner 2026-09-18: 50 m per pack px, a 128 x 46 km world, vertex every 20 m).
 
-Writes <map3d_dir>/bake/ (data/maps.csv map3d_dir, default assets/3D/terrain/<map>):
+Writes <map3d_dir>/bake/ (data/world/maps.csv map3d_dir, default assets/3D/terrain/<map>):
   height.r32    float32 metres, row-major, padded onto whole regions
   height_war.r16  float16 metres over the pack's own vertices (no padding):
                 the WAR ROOM's heights (WarBake), small enough to commit
@@ -9,9 +9,9 @@ Writes <map3d_dir>/bake/ (data/maps.csv map3d_dir, default assets/3D/terrain/<ma
   color.rgba8   Terrain3D colour map: sRGB multiplier on the ground + roughness
   world.json    sizes, vertex spacing, world origin of pack px (0,0)
   rivers.json   each river's water line, source -> mouth, in world metres
-Its look rules live in data/map3d_bake.csv and in constants here;
+Its look rules live in data/screens/map3d/map3d_bake.csv and in constants here;
 build_terrain.gd only imports.
-  python3 tools/map3d/bake_world.py [--map ID]   (default: data/maps.csv is_default)
+  python3 tools/map3d/bake_world.py [--map ID]   (default: data/world/maps.csv is_default)
 
 HEIGHT does NOT read world_relief.png: its synthesized detail was tuned for
 the 2D canvas (16 px wavelength, 22 height units), which at 50 m/px is a
@@ -31,22 +31,19 @@ from PIL import Image, ImageDraw
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from packs import default_pack, map3d_dir  # noqa: E402
+import data_index  # noqa: E402
 import bake_houses  # noqa: E402
 
 TEX = os.path.join(ROOT, "assets", "3D", "terrain", "textures")
-RULES_PATH = os.path.join(ROOT, "data", "map3d_bake.csv")
+RULES_PATH = os.path.join(ROOT, "data", "screens", "map3d", "map3d_bake.csv")
 SEED = 954159497         # a look, never simulation: the same for every pack
 
 M_PER_PX = 50.0          # world metres per pack px
 VERTEX_M = 20.0          # Terrain3D vertex_spacing
 REGION = 2048            # Terrain3D region_size (vertices)
 def _balance(key):
-    """A balance.csv value — the engine's Elevation reads the same row."""
-    with open(os.path.join(ROOT, "data", "balance.csv"), newline="") as f:
-        for row in csv.DictReader(f):
-            if row["key"] == key:
-                return float(row["value"])
-    raise KeyError(key)
+    """A balance value — the engine's Elevation reads the same row."""
+    return data_index.balance()[key]
 
 
 SEA_LEVEL = _balance("elevation_sea_level")        # Azgaar height of the waterline
@@ -105,9 +102,9 @@ SLOPE_CLIFF = (0.96, 0.995)
 FAR_COLOR = {
     CLIFF: "#7E7B77", GRASS: "#747A40", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
     ROCKY: "#7A7656", SOIL: "#5E4A30", FOREST: "#5C6C36",
-}  # SAND's, SNOW's and CLIFF's are data/map3d_bake.csv far_color_sand / _snow / _cliff
+}  # SAND's, SNOW's and CLIFF's are data/screens/map3d/map3d_bake.csv far_color_sand / _snow / _cliff
 MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country
-# (their depth and the green-yellow drift are data/map3d_bake.csv macro_*)
+# (their depth and the green-yellow drift are data/screens/map3d/map3d_bake.csv macro_*)
 
 
 def box(a, r):
@@ -260,7 +257,7 @@ def hex_rgb(h):
 
 
 def load_rules(path=RULES_PATH):
-    """data/map3d_bake.csv as {key: float}; a value that is not a number
+    """data/screens/map3d/map3d_bake.csv as {key: float}; a value that is not a number
     (a "#RRGGBB" colour) stays text."""
     def value(v):
         try:
@@ -360,12 +357,8 @@ def blend_byte(w1, w2, dither):
 
 
 def taper_gamma():
-    """balance.csv map_river_taper_gamma: the 2D river's taper, shared."""
-    with open(os.path.join(ROOT, "data", "balance.csv")) as f:
-        for r in csv.DictReader(f):
-            if r["key"] == "map_river_taper_gamma":
-                return float(r["value"])
-    return 1.4
+    """screens/map3d/balance.csv map_river_taper_gamma: the 2D river's taper, shared."""
+    return data_index.balance().get("map_river_taper_gamma", 1.4)
 
 
 def smooth_open(pts, steps):
@@ -644,8 +637,8 @@ FARM_ZONES = ("croft", "arable", "meadow", "pasture", "bare")
 
 
 def load_fields(path, texture_keys, zones_path=None):
-    """The open fields (owner 2026-10-01): data/map3d_farm_zones.csv (each
-    focus's reach, croft ring and arable share) with data/map3d_fields.csv
+    """The open fields (owner 2026-10-01): data/screens/map3d/map3d_farm_zones.csv (each
+    focus's reach, croft ring and arable share) with data/screens/map3d/map3d_fields.csv
     (its crops, zone by zone) as {focus: {"reach": m, "croft": m, "arable":
     share, "zones": {zone: [(share, tex, tint, bare_share)]}}}; a crop's
     texture by its bake key (the first layer of that name)."""
@@ -733,7 +726,7 @@ def house_radius_m(burg, rules):
     slip between the two shows up as a test failure
     (test_footprint_radius_agrees_between_the_two_modules) rather than
     silently agreeing with itself. See that function's own note, and
-    house_m2_each_capital's in data/map3d_bake.csv, for why this replaced
+    house_m2_each_capital's in data/screens/map3d/map3d_bake.csv, for why this replaced
     the population-driven footprint formula (owner 2026-09-21, density v4)."""
     group = str(burg.get("group", "village"))
     n = float(rules.get("house_count_%s" % group, rules["house_count_village"]))
@@ -748,12 +741,12 @@ def footprint_radius_m(burg, rules):
 
 
 def house_types(path=None):
-    """data/map3d_houses.csv as the house bake reads it: each type's role,
+    """data/screens/map3d/map3d_houses.csv as the house bake reads it: each type's role,
     weight, footprint, measured rectangle, least group and — for a landmark
     that stands in true proportion (owner 2026-09-30, the palaces) — its own
     `landmark_height_scale` ("" takes house_height_max)."""
     types = {}
-    with open(path or os.path.join(ROOT, "data", "map3d_houses.csv")) as f:
+    with open(path or os.path.join(ROOT, "data", "screens", "map3d", "map3d_houses.csv")) as f:
         for r in csv.DictReader(f):
             types[r["type"]] = {"role": r["role"], "weight": float(r["weight"]),
                                 "footprint_m": float(r["footprint_m"]),
@@ -786,7 +779,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     Its own random stream, so the rest of the look is unchanged."""
     ORIGIN_X, ORIGIN_Y = origin
     prng = np.random.default_rng(SEED + 1)
-    fields = load_fields(os.path.join(ROOT, "data", "map3d_fields.csv"), TEXTURE_KEYS)
+    fields = load_fields(os.path.join(ROOT, "data", "screens", "map3d", "map3d_fields.csv"), TEXTURE_KEYS)
     focus_keys = sorted(fields)
     other = focus_keys.index("*")
     max_cell = int(cell_id.max()) + 1
@@ -835,8 +828,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     # a walled town's gates stand where they cross its wall (owner 2026-10-01)
     road_lines = []
     with open(os.path.join(ROOT, "data", "maps", MAP, "geography", "routes.csv")) as f:
-        steps = int(next(r["value"] for r in csv.DictReader(open(os.path.join(ROOT, "data", "balance.csv")))
-                         if r["key"] == "map_route_smoothing_steps"))
+        steps = int(data_index.balance()["map_route_smoothing_steps"])
         for r in csv.DictReader(f):
             pts = [tuple(float(v) for v in p.split()) for p in r["points"].split("|") if p.strip()]
             line = bake_houses.smooth_open(pts, steps)
@@ -1311,7 +1303,7 @@ def main(argv=None):
     # measured the uncut ground and ended up to 110 m over its river).
     wet = np.zeros((vh, vw), dtype=np.float32)
     rivers_out = []
-    gamma = taper_gamma()   # balance.csv map_river_taper_gamma, the 2D rule
+    gamma = taper_gamma()   # screens/map3d/balance.csv map_river_taper_gamma, the 2D rule
     floor = SEA_Y - rules["shore_m"] - rules["river_depth_m"]
     ox_m, oz_m = origin
     for r, course in reversed(courses):

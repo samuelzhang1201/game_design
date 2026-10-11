@@ -14,7 +14,7 @@ extends RefCounted
 ## bake/. The build is DATA only — no sun, sky, sea or cameras (2026-09-20).
 
 const TEX := "res://assets/3D/terrain/textures"
-## The pack to build (build_world.gd's --map); "" is data/maps.csv's default.
+## The pack to build (build_world.gd's --map); "" is data/world/maps.csv's default.
 static var map_id := ""
 
 # [key, metres per tile repeat, detiling rotation]; order is bake_world.py's
@@ -223,7 +223,7 @@ static func capital_xz(world: Dictionary) -> Vector2:
 ## numbers in balance / terrain_palette) and shoot.gd's, never baked here.
 static func build_scene() -> String:
 	var world := world_info()
-	# the water plane's height: bake_world.py's sea_y_m (data/map3d_bake.csv)
+	# the water plane's height: bake_world.py's sea_y_m (data/screens/map3d/map3d_bake.csv)
 	var sea_y := float(world.get("sea_y", 5.0))
 	var scene_root := Node3D.new()
 	scene_root.name = "Terrain_%s" % map()

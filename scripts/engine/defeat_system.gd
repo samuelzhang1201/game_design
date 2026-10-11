@@ -15,7 +15,7 @@ extends RefCounted
 ##  3. the council: each seat's opinion moves by
 ##     −round(battle_defeat_opinion x (1 + OpinionDrift.weight(BATTLE_LOST, seat)))
 ##     — the existing drift weight (ideology alignment x policy_sensitivity x
-##     (1 − pragmatism)) of the BATTLE_LOST signature (data/action_signatures.csv),
+##     (1 − pragmatism)) of the BATTLE_LOST signature (data/realm/action_signatures.csv),
 ##     so a seat that prizes arms and reach takes it harder; never a gain;
 ##     reason in OpinionDrift's form "lost <town> to the raiders (opposes, <axis>)";
 ##  4. the beat: the fixed-prose chapter beat EVENT_ID is scheduled for the

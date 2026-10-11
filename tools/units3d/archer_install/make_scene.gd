@@ -17,7 +17,7 @@ const GLB := "res://assets/3D/units/archers/archers.glb"
 const MAPS := "res://assets/3D/units/archers/archers_archers_atlas%s.jpg"
 ## the second surface: the bow, string, arrow and quiver, on their spots of the v1 atlas
 const PROPS_MAPS := "res://assets/3D/units/archers/archers_archers_props%s.jpg"
-const NOTE := "A longbowman, one FIGURE of an archers regiment's piece. The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/army_art.csv."
+const NOTE := "A longbowman, one FIGURE of an archers regiment's piece. The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/screens/map3d/army_art.csv."
 
 
 func _init() -> void:

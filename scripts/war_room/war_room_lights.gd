@@ -3,7 +3,7 @@ extends RefCounted
 ## The candles on the oak table (fix round 1 ruling): ONE key candle — a
 ## stronger, raking, shadow-casting light that models the sheet's relief — and
 ## the other candlesticks short warm accents with no shadow, so the slopes are
-## lit from one side and read. Every energy, range and offset is a balance.csv
+## lit from one side and read. Every energy, range and offset is a screens/war_room/balance.csv
 ## `war_candle_*` key; how many candles cast a shadow (the key first) and how
 ## is the graphics tier's (`graphics_quality.csv` `war_candle_shadows`,
 ## `war_candle_shadow_cube`).

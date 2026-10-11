@@ -1,0 +1,8 @@
+key,value,notes
+elevation_sea_level,20,"height (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §1): the Azgaar cell height of the waterline. Elevation.metres_of_cell and tools/map3d/bake_world.py both read it — one measure for the ground and the engine"
+elevation_m_per_unit,30,height: metres per Azgaar height unit above the waterline (100 -> 2400 m). Read by Elevation and bake_world.py
+landmark_ring,2,"landmarks (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §3): rings of neighbours a high or low point is measured against"
+landmark_min_prominence_m,100,landmarks: metres a point must stand above (or below) the mean of its rings to be marked
+landmark_lod_mid_m,300,landmarks: prominence at/above which a point still shows at the middle zooms (lod 1)
+landmark_lod_far_m,560,landmarks: prominence at/above which a point shows at every zoom (lod 0)
+weather_spell_days,3,"days a province's weather holds (Weather.spell_of) so it does not flicker daily"

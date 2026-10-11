@@ -1,7 +1,7 @@
 class_name LedgerOrderMenu
 extends PopupMenu
 ## The LEDGER's right-click orders (spec 2026-09-30 §5): one row per
-## data/ledger_actions.csv row, its gold cost written beside it. PopupMenu
+## data/ledger/ledger_actions.csv row, its gold cost written beside it. PopupMenu
 ## hides BEFORE it emits id_pressed, so the node and rows are kept past the
 ## hide and replaced only by the next open.
 

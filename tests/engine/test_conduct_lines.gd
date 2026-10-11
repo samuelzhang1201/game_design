@@ -3,7 +3,7 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const H := preload("res://tests/engine/conduct_helpers.gd")
 ## The lines of foraging and desertion (spec 2026-10-10-foraging-and-desertion
 ## §4): folio rows, the unit card, the hover slip, the kingdom card, the word
-## of a province, the bare list, and the guards on data/conduct_words.csv.
+## of a province, the bare list, and the guards on data/army/conduct_words.csv.
 ## High summer, day 1, a province of 100 food units: 100 x 30 supplies a month
 ## x 1000 per mille = 3000, 100 a day.
 

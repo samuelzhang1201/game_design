@@ -18,9 +18,7 @@ func before_all() -> void:
 func _tiny() -> DataRepository:
 	var repo := DataRepository.new()
 	repo.balance = {"map_lod_town_scale": 0.5, "map_lod_village_scale": 1.0,
-		"map_lod_marker_scale": 0.5, "map_lod_town_pop": 5000.0,
-		"map_pick_radius_px": 6.0, "map_line_pick_px": 4.0,
-		"map_show_markers": 0.0}
+		"map_lod_town_pop": 5000.0}
 	repo.map_info = {"distance_unit": "km", "distance_scale": "2", "width": "4", "height": "4"}
 	repo.kingdoms = {"k": {"kingdom_code": "k", "state_id": "6", "label": "Kingdom", "capital_burg": "cap",
 		"neighbor_codes": "", "population": "9000", "center_x": "0", "center_y": "0"}}

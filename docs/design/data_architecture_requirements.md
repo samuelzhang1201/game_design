@@ -656,7 +656,7 @@ res://
 
 | 本文 §6 | 代码库 | 说明 |
 |---|---|---|
-| `sim/defs/` | `scripts/engine/data_repository.gd` + `data/*.csv` + `data/maps/<id>/` | 启动加载、只读；CSV 直读（R-3 的烘焙为 P1）。Pack chosen by `data/maps.csv` (see 11.5) |
+| `sim/defs/` | `scripts/engine/data_repository.gd` + `data/*.csv` + `data/maps/<id>/` | 启动加载、只读；CSV 直读（R-3 的烘焙为 P1）。Pack chosen by `data/world/maps.csv` (see 11.5) |
 | `sim/state/` | `scripts/engine/game_state.gd` | 唯一可变状态持有者（见 11.3 第一项） |
 | `sim/state/army_state.gd` | `scripts/engine/army_system.gd` + `GameState.regiments` | Regiment state (2026-09-17): a Dictionary keyed by regiment code, not columns; see 11.5 |
 | `sim/command/` | `scripts/engine/action_system.gd`、`order_pipeline.gd`、`order_costs.gd`、`world_ledger.gd` | 校验 / clamp / 执行。The economy spec's staged list and `command_log` are **not yet built** (spec §7, the staging half) |
@@ -712,10 +712,10 @@ at its root, optional hand-maintained `manor_name_overrides.csv` and
 `political/` incl. the baked `manors.csv`, `economy/`, `military/`,
 `society/`). Generated bitmaps (`world_*_index.png`, sea distance, relief,
 biome weights, settlement distance) sit in `assets/maps/<id>/` and are named
-by `data/maps.csv`. `data/` carries a `.gdignore`; the CSVs are read with
+by `data/world/maps.csv`. `data/` carries a `.gdignore`; the CSVs are read with
 `FileAccess`, so an export preset must include `data/**`.
 
-**Which pack.** `data/maps.csv` lists the packs; its `is_default` row is the
+**Which pack.** `data/world/maps.csv` lists the packs; its `is_default` row is the
 game's map. No code, tool or test names a pack: `DataRepository.default_pack_id`
 (GDScript) and `tools/packs.py` `default_pack` (Python) read that row, and
 every tool takes `--map ID` (`--map-id` for the importer). `tools/NEW_MAP.md`
@@ -726,11 +726,11 @@ bindings, arms, 3D bake). The campaign saves its `map_id`.
 
 | Table | For |
 |---|---|
-| `data/army_matchups.csv`, `army_terrain.csv`, `army_terrain_biomes.csv`, `army_training_grades.csv`, `army_art.csv` | regiment power per arm, terrain and training grade (owner 2026-09-17, spec `../superpowers/specs/2026-09-17-regiment-state-design.md`); `balance.csv` `army_*` |
-| `data/goods_economy.csv`, `goods_economy_defaults.csv` | each good's pool, price and growth per mille (economy spec §3) |
-| `data/manor_buildings.csv`, `manor_focus.csv`, `manor_estates.csv` | see `MANOR_SYSTEM.md` |
+| `data/army/army_matchups.csv`, `army_terrain.csv`, `army_terrain_biomes.csv`, `army_training_grades.csv`, `army_art.csv` | regiment power per arm, terrain and training grade (owner 2026-09-17, spec `../superpowers/specs/2026-09-17-regiment-state-design.md`); `army/balance.csv` `army_*` |
+| `data/economy/goods_economy.csv`, `goods_economy_defaults.csv` | each good's pool, price and growth per mille (economy spec §3) |
+| `data/economy/manor_buildings.csv`, `manor_focus.csv`, `manor_estates.csv` | see `MANOR_SYSTEM.md` |
 | `data/settlement_growth.csv` | a settlement's drawing promoted by its manor's people or buildings (presentation reading state) |
-| `data/map3d_settlements.csv`, `balance.csv` `map3d_*` | the 3D MAP tab: settlement discs, camera and border lines — presentation only, no simulation reads them |
+| `data/screens/map3d/map3d_settlements.csv`, `balance.csv` `map3d_*` | the 3D MAP tab: settlement discs, camera and border lines — presentation only, no simulation reads them |
 | `data/maps/<id>/arms_bindings.csv` (optional) | pins a kingdom's or house's arms; otherwise `HouseArms` borrows other packs' installed arms in the pack's own order, deterministically |
 
 **New state** in `GameState` (all saved in the one JSON, all additive with

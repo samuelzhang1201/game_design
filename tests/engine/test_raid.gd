@@ -294,7 +294,7 @@ func test_hazard_added_once_and_known() -> void:
 
 func test_raided_kind_is_a_row_of_the_table() -> void:
 	var k := Hazards.kind_of(repo, "Raided")
-	assert_false(k.is_empty(), "data/hazard_kinds.csv has a Raided row")
+	assert_false(k.is_empty(), "data/army/hazard_kinds.csv has a Raided row")
 	assert_gt(int(k.get("months", 0)), 0, "it ends of itself")
 	assert_eq(int(k.get("wounds_permille", -1)), 0)
 	assert_lt(int(k.get("morale", 0)), 0, "it weighs on the men who stand in it")
@@ -462,7 +462,7 @@ func test_a_raid_on_the_day_loop_is_told_in_the_field_report() -> void:
 
 
 func test_raid_templates_spell_no_kingdom() -> void:
-	var raw := FileAccess.get_file_as_string("res://data/templates.csv")
+	var raw := FileAccess.get_file_as_string("res://data/council/templates.csv")
 	var found := 0
 	for line: String in raw.split("\n"):
 		if line.begins_with("raid_begin,") or line.begins_with("raid_spoils,"):

@@ -42,7 +42,7 @@ static func as_counters(repo: DataRepository, meta: Dictionary, camera_distance_
 
 
 ## That height as a scale on the model's own metres, times `size`
-## (data/army_art.csv): one arm may stand bigger than the rest (all 1 since
+## (data/screens/map3d/army_art.csv): one arm may stand bigger than the rest (all 1 since
 ## the owner's 2026-09-27 "1.5倍不合适").
 static func scale_for(repo: DataRepository, fov_deg: float, view_h_px: float, ref_m: float,
 		model_h_m: float, size: float = 1.0) -> float:
@@ -63,7 +63,7 @@ const TRACK_MIN_M := 0.5
 ## The yaw a figure stands at: the way it MARCHES (a heading in PACK space,
 ## which is world XZ), or — with none — toward `camera_xz` (a courier on the
 ## 3D map, a WAR ROOM piece toward the table's near edge), turned `stand_deg`
-## (data/army_art.csv) further, since a horse square to the view is nose-on,
+## (data/screens/map3d/army_art.csv) further, since a horse square to the view is nose-on,
 ## the narrowest thing it can show (owner 2026-09-27). The models are authored
 ## facing +Y in Blender, which the glTF exporter turns into -Z here, and -Z
 ## turned by a yaw is (-sin, -cos).

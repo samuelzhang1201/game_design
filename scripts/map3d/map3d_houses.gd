@@ -261,7 +261,7 @@ static func transform_of(h: Dictionary, height: float) -> Transform3D:
 
 
 ## Where a row of a type stands, Vector2(lowest, seat), by its table's `seat`
-## (data/map3d_houses.csv): "sea" a pier's deck `deck_m` over the sea, "water"
+## (data/screens/map3d/map3d_houses.csv): "sea" a pier's deck `deck_m` over the sea, "water"
 ## a moored ship's waterline on it, "ground" its centre's ground (a wall
 ## tower or gate, whose own masonry runs on down into the hill), "slope" the
 ## same and the row's `_rise` set to the ground's slope between its two ends

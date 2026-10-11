@@ -2,8 +2,8 @@
 
 Design/persona layer for every role in the game, grounded in the story
 background at [game_story/chapter_0/game_start.md](../../game_story/chapter_0/game_start.md).
-**Numeric truth lives in the CSVs** (`data/founding_council.csv`,
-`data/roles.csv`, `data/relationships.csv`, `data/character_traits.csv`) and is
+**Numeric truth lives in the CSVs** (`data/council/founding_council.csv`,
+`data/council/roles.csv`, `data/council/relationships.csv`, `data/council/character_traits.csv`) and is
 loaded by the engine; this document is the human-readable view and the source
 the LLM persona prompts are written from. Skills vocabulary:
 [role_skills.md](role_skills.md). Personality vocabulary:
@@ -97,7 +97,7 @@ Trait rows in `character_traits.csv` shift both at build time.
 
 ## Relationships
 
-Starting edges live in `data/relationships.csv` (directed:
+Starting edges live in `data/council/relationships.csv` (directed:
 `from_id,to_id,rel_type,sentiment,reason` — every edge carries a reason, the
 same rule as opinion deltas). At campaign start they are copied into the save
 (`GameState.relationships`) and from then on the graph is **dynamic**:
@@ -192,7 +192,7 @@ the live values are in the save and on the RELATIONS screen.)
 
 ## Locations and regions
 
-`data/regions.csv` and `data/locations.csv` place the roster in the world.
+`data/story/regions.csv` and `data/story/locations.csv` place the roster in the world.
 One region for now — **The Crown District**: Falconspire Keep (the royal
 home) and the capital around it. Its locations and who is found there:
 Council Chamber (the five ministers), War Room (Brandt, Hale), Falconspire
@@ -214,7 +214,7 @@ Street (Cassian, Corvin), The Mustering Field (Nora).
 
 ## Knowledge, belief, and deception
 
-`data/facts.csv` seeds what each character knows — public facts, secrets with
+`data/intel/facts.csv` seeds what each character knows — public facts, secrets with
 knower lists, and common sense everyone holds at credibility 100. Knowledge is
 per-character: the Chancellor's graft is one fact known only to Mirella and
 Quill. `KnowledgeBase.knows` is the single authority on who knows what, and the
@@ -225,7 +225,7 @@ never told.
 Anyone may assert anything. `Belief` scores an assertion from its plausibility,
 the listener's trust in the speaker (derived from how the listener feels about
 them), the listener's traits, and corroboration with what they already know.
-`data/world_rules.csv` vetoes the impossible outright — no one believes you are
+`data/intel/world_rules.csv` vetoes the impossible outright — no one believes you are
 a dragon, whatever else is true.
 
 A believed claim becomes a fact the listener knows, so a swallowed lie behaves
@@ -266,7 +266,7 @@ contains, in order:
    (`KnowledgeBase`).
 2. The realm facts (engine truth) — the model may quote only these numbers.
 3. The legal-options menu — action codes, event choice ids, the world fields
-   it may move with their caps (`data/world_schema.csv`), tone enum. The
+   it may move with their caps (`data/realm/world_schema.csv`), tone enum. The
    model *chooses among them* and writes dialogue; `ResponseValidator` rejects
    anything off-menu and clamps tone, and `WorldLedger` clamps world deltas. That is the whole extent of "LLM directs
    behaviour."

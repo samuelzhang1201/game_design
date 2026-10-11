@@ -10,7 +10,7 @@ read darker; it has no direction, so it never fights the turning sun.
 Reads the finished bake's bake/height_war.r16 (float16 metres over the pack's
 own vertices, bake_world.py) and world.json, and writes bake/relief_ao.png:
 one 8-bit texel per 2 x 2 vertices (40 m, as woods.png and fields.png), 255
-where the whole sky is seen. For each texel it walks data/map3d_bake.csv
+where the whole sky is seen. For each texel it walks data/screens/map3d/map3d_bake.csv
 `relief_ao_dirs` directions out to each `relief_ao_radii_m`, keeps the
 steepest rise toward the horizon, and averages sin(horizon angle) over the
 directions (horizon-based ambient occlusion). The sea is held at the water
@@ -69,8 +69,8 @@ def blur(img: np.ndarray, sigma: float) -> np.ndarray:
 
 
 def load_rules() -> dict:
-    """data/map3d_bake.csv as {key: text} (bake_world.load_rules' table)."""
-    with open(os.path.join(ROOT, "data", "map3d_bake.csv")) as f:
+    """data/screens/map3d/map3d_bake.csv as {key: text} (bake_world.load_rules' table)."""
+    with open(os.path.join(ROOT, "data", "screens", "map3d", "map3d_bake.csv")) as f:
         return {r["key"]: r["value"] for r in csv.DictReader(f)}
 
 

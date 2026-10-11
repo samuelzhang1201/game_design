@@ -1,7 +1,7 @@
 # Role Personality — Beyond the King's Words
 
 The personality vocabulary referenced by [role_player.md](role_player.md).
-Canonical data is `data/character_traits.csv` (personality/acquired/physical
+Canonical data is `data/council/character_traits.csv` (personality/acquired/physical
 rows) plus the nine 0–100 axes on every role row; this file is the prose the
 LLM persona prompts draw on. Add a new personality by adding a CSV row, then
 documenting its voice here.

@@ -2,7 +2,7 @@ class_name MapPalette
 extends RefCounted
 ## The game's own political colours (user ruling 2026-09-09: the render is
 ## terrain only, so every kingdom's colour is ours to choose). Read from
-## data/political_palette.csv: a realm slot's kingdom takes the slot's
+## data/screens/ui/political_palette.csv: a realm slot's kingdom takes the slot's
 ## colour, every other kingdom takes other_1, other_2, ... in state order,
 ## and the line colours (map3d_border, manor_line, ...) are named rows.
 ## Engine-pure.

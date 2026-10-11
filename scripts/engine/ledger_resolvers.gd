@@ -2,7 +2,7 @@
 class_name LedgerResolvers
 extends RefCounted
 ## The LEDGER's readers (spec 2026-09-30-ledger-ontology-design §7.2): one
-## per live link type of data/ledger_link_types.csv. Each reads the real
+## per live link type of data/ledger/ledger_link_types.csv. Each reads the real
 ## systems and returns the TRUTH; Ledger turns it into belief through Intel.
 ## They never write state and never draw RNG.
 ##
@@ -257,7 +257,7 @@ static func _rest(id: String) -> String:
 	return id.substr(id.get_slice(":", 0).length() + 1)
 
 
-## A link type whose links are written down (data/ledger_static_links.csv,
+## A link type whose links are written down (data/ledger/ledger_static_links.csv,
 ## spec 2026-09-30-ledger-galaxy-design §3b): the crown's own figure, no
 ## Intel subject. The type level is one link counting them.
 static func _static_links(row: Dictionary, repo: DataRepository, id: String, all: bool) -> Array:
@@ -273,7 +273,7 @@ static func _static_links(row: Dictionary, repo: DataRepository, id: String, all
 	return out
 
 
-## The written-down node `id` (data/ledger_static_nodes.csv), or {}.
+## The written-down node `id` (data/ledger/ledger_static_nodes.csv), or {}.
 static func static_node(repo: DataRepository, id: String) -> Dictionary:
 	for n: Dictionary in repo.ledger_static_nodes:
 		if String(n["node_id"]) == id:

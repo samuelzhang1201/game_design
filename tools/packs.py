@@ -8,8 +8,8 @@ import os
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
-def default_pack(maps_csv: str = os.path.join(ROOT, "data", "maps.csv")) -> str:
-    """data/maps.csv's is_default pack, else its first row, else ""."""
+def default_pack(maps_csv: str = os.path.join(ROOT, "data", "world", "maps.csv")) -> str:
+    """data/world/maps.csv's is_default pack, else its first row, else ""."""
     first = ""
     with open(maps_csv, encoding="utf-8") as f:
         for row in csv.DictReader(f):
@@ -19,7 +19,7 @@ def default_pack(maps_csv: str = os.path.join(ROOT, "data", "maps.csv")) -> str:
     return first
 
 
-def map3d_dir(map_id: str, maps_csv: str = os.path.join(ROOT, "data", "maps.csv")) -> str:
+def map3d_dir(map_id: str, maps_csv: str = os.path.join(ROOT, "data", "world", "maps.csv")) -> str:
     """Where map_id's 3D build lives, as a filesystem path: its maps.csv
     map3d_dir (res:// mapped to the repo root), else ROOT/assets/3D/terrain/<id>."""
     with open(maps_csv, encoding="utf-8") as f:

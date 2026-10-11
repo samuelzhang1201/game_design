@@ -3,7 +3,7 @@ extends PanelContainer
 ## The march's confirm (spec 2026-10-07-march-waypoints ruling 6; owner
 ## 2026-10-07: 在点击March并选择目的地之后，弹窗询问携带多少补给，并计算消耗的天数),
 ## authored in scenes/panels/march_confirm_panel.tscn: where the march goes, a
-## row for each carried load (data/army_carry_loads.csv) with its arrival day,
+## row for each carried load (data/army/army_carry_loads.csv) with its arrival day,
 ## its supplies and the days they last — "runs N days short" when the stores
 ## would not cover the march — the current load pressed, then Confirm, Add
 ## waypoint, Cancel. It does not close on a click away: the map stays live so

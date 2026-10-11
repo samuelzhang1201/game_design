@@ -1,6 +1,6 @@
 extends GutTest
 ## Graphics tiers for ordinary machines (spec 2026-09-20 §4):
-## data/graphics_quality.csv read by Map3DQuality — pure: the row, the GPU
+## data/screens/ui/graphics_quality.csv read by Map3DQuality — pure: the row, the GPU
 ## detection, the saved setting.
 
 const RunDir := preload("res://tests/run_dir.gd")

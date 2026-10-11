@@ -9,12 +9,12 @@ extends Control
 ## assets/2D/icons/resource_icons.tres (ResourceIconSet; owner 2026-10-02),
 ## and the art keeps its colour: it is looked at, not tinted. A key without
 ## art falls back to the drawn glyph, simple strokes in the UI's gold. The
-## glyph's name and the tooltip's words are data/resource_icons.csv.
+## glyph's name and the tooltip's words are data/screens/ui/resource_icons.csv.
 
 const SIDE := 24.0
 
 ## The resource-icon key: its art from ResourceIconSet (assets/2D/icons/
-## resource_icons.tres), its words from data/resource_icons.csv.
+## resource_icons.tres), its words from data/screens/ui/resource_icons.csv.
 @export var key := "":
 	set(v):
 		key = v
@@ -62,7 +62,7 @@ static func tooltip_of(resource_key: String) -> String:
 static func texture_of(resource_key: String) -> Texture2D:
 	return ResourceIconSet.texture_of(resource_key)
 
-## The key's row of data/resource_icons.csv, or {} (always {} in the editor).
+## The key's row of data/screens/ui/resource_icons.csv, or {} (always {} in the editor).
 static func _row(resource_key: String) -> Dictionary:
 	var repo := UiPalette.data()
 	return repo.resource_icons.get(resource_key, {}) if repo != null else {}

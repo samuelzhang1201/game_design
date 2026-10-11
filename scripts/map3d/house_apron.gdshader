@@ -2,7 +2,7 @@
 // scaled to its footprint plus margin (Map3DHouseApron). style 0 mottled packed
 // earth, 1 running-bond brick paving; the edge fades into the ground over
 // fade_m metres so the house grows out of it. Colours come from
-// data/map3d_aprons.csv (set by Map3DHouseApron.material_of).
+// data/screens/map3d/map3d_aprons.csv (set by Map3DHouseApron.material_of).
 shader_type spatial;
 render_mode cull_disabled, depth_draw_opaque, specular_disabled;
 

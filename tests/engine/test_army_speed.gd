@@ -4,7 +4,7 @@ const SuiteData := preload("res://tests/suite_data.gd")
 ## 多少km每天，速度需要有一套计算公式，取决于兵种，物资，士气，训练四方面按一定权重").
 ## Whole numbers throughout: the pace is kept in TENTHS of a km.
 ##
-##   base   = the slowest arm under the banner, data/army_speed.csv (km/day)
+##   base   = the slowest arm under the banner, data/army/army_speed.csv (km/day)
 ##   S      = supplies in hand over army_supply_low_days days of use,
 ##            per mille, capped at 1000
 ##   M      = morale x 10, T = training x 10 (both 0..100 -> 0..1000)

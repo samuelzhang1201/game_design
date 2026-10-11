@@ -12,7 +12,7 @@ import bake_world as bw  # noqa: E402
 
 
 def test_load_rules_reads_the_table():
-    rules = bw.load_rules(os.path.join(bw.ROOT, "data", "map3d_bake.csv"))
+    rules = bw.load_rules(os.path.join(bw.ROOT, "data", "screens", "map3d", "map3d_bake.csv"))
     assert rules["sea_y_m"] == 5.0 and rules["coast_supersample"] == 4.0
     assert rules["river_over_sea_m"] == 0.3
     assert rules["far_color_sand"].startswith("#")   # a colour stays text
@@ -255,7 +255,7 @@ def test_the_footprint_is_the_house_radius_over_the_built_share():
     square root of the people at all — it is downstream of the house
     cluster, which is sized from the burg's GROUP (a fixed house count and
     that group's own per-house density), never from population. See
-    house_m2_each_capital's note in data/map3d_bake.csv."""
+    house_m2_each_capital's note in data/screens/map3d/map3d_bake.csv."""
     rules = {"house_count_town": 40, "house_count_village": 20,
              "house_m2_each_town": 480.0, "house_m2_each_village": 520.0,
              "house_built_share": 0.53}
@@ -272,7 +272,7 @@ def test_the_footprint_is_the_house_radius_over_the_built_share():
 
 
 def test_the_fields_table_loads_with_its_textures():
-    f = bw.load_fields(os.path.join(bw.ROOT, "data", "map3d_fields.csv"), bw.TEXTURE_KEYS)
+    f = bw.load_fields(os.path.join(bw.ROOT, "data", "screens", "map3d", "map3d_fields.csv"), bw.TEXTURE_KEYS)
     assert "*" in f and "grain" in f, sorted(f)
     for focus, e in f.items():
         assert e["reach"] > e["croft"] > 0, focus
@@ -290,7 +290,7 @@ def test_the_fields_table_loads_with_its_textures():
 def test_the_arable_wears_the_crop_layer():
     """The crops read only on the pale crop ground (a tint can only darken:
     on the grass layer no crop could be gold)."""
-    f = bw.load_fields(os.path.join(bw.ROOT, "data", "map3d_fields.csv"), bw.TEXTURE_KEYS)
+    f = bw.load_fields(os.path.join(bw.ROOT, "data", "screens", "map3d", "map3d_fields.csv"), bw.TEXTURE_KEYS)
     for focus, e in f.items():
         for share, tex, tint, bare in e["zones"]["arable"]:
             assert tex == bw.CROP, focus

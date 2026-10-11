@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Map3DHouseApron: the dirt / brick skirt round a house's foot (owner
 ## 2026-10-12), its kind from data and its size from the mesh's footprint.
 

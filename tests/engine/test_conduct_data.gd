@@ -39,7 +39,7 @@ func _rows(law: String, value: String) -> Array:
 
 func test_balance_keys_exist() -> void:
 	for k in KEYS:
-		assert_true(repo.balance.has(k), "balance.csv has " + k)
+		assert_true(repo.balance.has(k), "army/balance.csv has " + k)
 	assert_eq(repo.bal("forage_start_days"), 3.0)
 	assert_eq(repo.bal("desert_mult_hanging"), 400.0)
 	assert_eq(repo.bal("forage_winter_permille"), 300.0)

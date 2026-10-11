@@ -481,7 +481,7 @@ static func decree(repo: DataRepository, state: GameState, law: String, val: Str
 			state.law_cooldown[law] = state.tick + cd
 		_mirror(state, law, val)
 		# what TriggerDsl's action_since=LAW_<law> reads (an event that
-		# follows a decree, data/events.csv)
+		# follows a decree, data/story/events.csv)
 		state.event_state["last_action_tick"]["LAW_" + law] = state.tick
 	var id := _decree_id(state, law)
 	var keys: Array = (state.law_decree[law] as Dictionary).get("sent", [])

@@ -96,7 +96,7 @@ static func apply(ops: String, state: GameState, data: DataRepository,
 				results.append({"kind": "schedule", "event_id": p[1]})
 			"branch":
 				# branch:<branch_id> — a scripted chapter's fork
-				# (data/chapter_branches.csv): schedule the FIRST rule whose
+				# (data/story/chapter_branches.csv): schedule the FIRST rule whose
 				# `requires` holds, in the table's own order. The rule
 				# carries its own delay, so the chapter's calendar lives in
 				# the table and not in every choice that reaches it. Every

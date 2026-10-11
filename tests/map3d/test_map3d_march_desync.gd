@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## A group's figures do not step off in lock-step (owner 2026-10-12): the start
 ## delay and gait jitter are hashed from regiment id + figure index, so they are
 ## reproducible, differ per figure, and stay inside the balance ranges.

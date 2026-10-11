@@ -6,7 +6,7 @@ as a handsome built object instead of flat-shaded primitives).
 
   blender -b --factory-startup --python tools/map3d/make_houses.py
 
-Reads data/map3d_houses.csv and writes one glTF per type into
+Reads data/screens/map3d/map3d_houses.csv and writes one glTF per type into
 assets/3D/buildings/, plus houses.json. Every mesh stands ON its origin
 (min y = 0, centred on its footprint) and faces +Z, because
 Map3DLayerHouses places it with a yaw and sinks it by map3d_house_sink_m —
@@ -69,9 +69,9 @@ import bpy
 from mathutils import Vector
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-TABLE = os.path.join(ROOT, "data", "map3d_houses.csv")
+TABLE = os.path.join(ROOT, "data", "screens", "map3d", "map3d_houses.csv")
 OUT = os.path.join(ROOT, "assets", "3D", "buildings")
-PALETTE = os.path.join(ROOT, "data", "terrain_palette.csv")
+PALETTE = os.path.join(ROOT, "data", "screens", "ui", "terrain_palette.csv")
 
 # Types with a daub/plaster wall get real timber framing; the grander,
 # stone-walled types get a plinth instead (a type never wants both — a

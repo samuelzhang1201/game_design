@@ -5,7 +5,7 @@ extends Control
 ## planks by daylight behind every panel of a main screen — the planks tiled at
 ## balance ui_table_tile_px, a warm tone laid over them, one broad soft shaft
 ## of window light falling from the upper left (ui_table_light_*), and the far
-## corners darkened. Every colour is data/ui_table_palette.csv. It takes no
+## corners darkened. Every colour is data/screens/ui/ui_table_palette.csv. It takes no
 ## input and draws only when resized.
 
 const ART_PATH := "res://assets/2D/ui/war_table/table_oak.jpg"

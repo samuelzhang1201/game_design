@@ -1,7 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## Regional weather (spec 2026-09-27-courier-core §1): stateless, hashed from
-## (seed, province, spell), drawn from data/weather_odds.csv.
+## (seed, province, spell), drawn from data/world/weather_odds.csv.
 
 var repo: DataRepository
 

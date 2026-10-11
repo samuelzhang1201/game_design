@@ -286,7 +286,7 @@ func test_an_assault_with_no_battle_is_tried_again_and_never_sticks() -> void:
 	assert_eq(int(s.ai_hosts[main].get("assault_due", 0)), 0)
 
 
-## A checked assault (data/battle_outcomes.csv `siege` repulsed: the pack's
+## A checked assault (data/battle/battle_outcomes.csv `siege` repulsed: the pack's
 ## attacker_checked) costs the besieger siege_assault_fail_permille — read
 ## from the REAL round the day's battle fought.
 func test_checked_assault_lowers_progress() -> void:
@@ -509,11 +509,11 @@ func test_save_and_load_mid_occupation_continues_identically() -> void:
 	assert_eq(SaveLoad.state_hash(c), SaveLoad.state_hash(s), "and the same state after")
 
 
-## The shipped data/battle_outcomes.csv (the file, not the loaded table) maps
+## The shipped data/battle/battle_outcomes.csv (the file, not the loaded table) maps
 ## SiegeSystem's two assault tiers: `breach` on defender_routed, `repulsed` on
 ## attacker_checked, and no other row moves a siege.
 func test_shipped_outcomes_map_breach_and_repulsed() -> void:
-	var f := FileAccess.open("res://data/battle_outcomes.csv", FileAccess.READ)
+	var f := FileAccess.open("res://data/battle/battle_outcomes.csv", FileAccess.READ)
 	assert_not_null(f, "the shipped table")
 	if f == null:
 		return
@@ -1046,7 +1046,7 @@ func test_siege_news_is_a_battle_letter_in_fixed_words() -> void:
 
 
 func test_siege_templates_spell_no_kingdom() -> void:
-	var raw := FileAccess.get_file_as_string("res://data/templates.csv")
+	var raw := FileAccess.get_file_as_string("res://data/council/templates.csv")
 	var found := 0
 	for line: String in raw.split("\n"):
 		if not line.begins_with("siege_"):

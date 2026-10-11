@@ -137,7 +137,7 @@ func opened() -> Dictionary:
 	return _opened
 
 
-## A tab chooses its cluster (data/ledger_clusters.csv `lens`); All is the
+## A tab chooses its cluster (data/ledger/ledger_clusters.csv `lens`); All is the
 ## whole galaxy. The camera flies; nothing is read again.
 func set_lens(lens_id: String) -> void:
 	_lens = lens_id
@@ -354,7 +354,7 @@ func _place_search_list() -> void:
 	_search_list.size.x = w
 
 
-## One flat tab per data/ledger_lenses.csv row, so a new lens needs no scene edit.
+## One flat tab per data/screens/ledger/ledger_lenses.csv row, so a new lens needs no scene edit.
 func _build_lenses() -> void:
 	for row: Dictionary in Game.data.ledger_lenses:
 		var b := Button.new()

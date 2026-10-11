@@ -41,7 +41,7 @@ static func burg_visible(b: Dictionary, min_pop: int) -> bool:
 ## The estate a manor wears in the MANORS view (owner 2026-09-13/14: ONE
 ## drawing per manor, its house and its INDUSTRY's workplace together —
 ## the scattered houses-and-fields marks it replaced were the owner's
-## veto). The rows of data/manor_estates.csv for the manor's focus (the
+## veto). The rows of data/economy/manor_estates.csv for the manor's focus (the
 ## first industry's rows when its focus has none), and among them the
 ## last whose min_people the manor's ledger people reach: {} for no rows.
 static func estate_tier(repo: DataRepository, focus_code: String, people: float) -> Dictionary:
@@ -678,7 +678,7 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 	card["slot_actions"] = slot_actions(repo, state, cell)
 	return card
 
-## One fact of a manor card: an icon key (data/resource_icons.csv), a short
+## One fact of a manor card: an icon key (data/screens/ui/resource_icons.csv), a short
 ## value for beside it, and the whole of it for the tooltip.
 ## A card's fact; `tone` "warn" asks the card for its warning ink (CardWarn).
 static func _stat(key: String, text: String, tooltip: String, tone := "") -> Dictionary:
@@ -898,7 +898,7 @@ static func regiment_arm(repo: DataRepository, regiment: Dictionary) -> String:
 	return best
 
 ## The painted piece a regiment is drawn with, whose painting heads its card
-## (owner 2026-09-15, data/army_art.csv): the fleet for a naval regiment, the
+## (owner 2026-09-15, data/screens/map3d/army_art.csv): the fleet for a naval regiment, the
 ## royal piece for the crown's household (the roster's `is_royal`), else its
 ## chief arm.
 static func army_piece(repo: DataRepository, regiment: Dictionary) -> String:
@@ -1033,7 +1033,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		if naval:
 			stats.append(_stat("army_morale", str(int(st["morale"])), "Morale — %d of 100" % int(st["morale"])))
 		else:
-			# the stores' word (data/army_morale_words.csv) is what morale is heading by
+			# the stores' word (data/army/army_morale_words.csv) is what morale is heading by
 			var word := ArmySystem.morale_word(repo, ArmySystem.supply_score(repo, int(st["supplies"]), use))
 			stats.append(_stat("army_morale", str(int(st["morale"])),
 				"Morale — %d of 100; the ranks are %s" % [int(st["morale"]), word]))

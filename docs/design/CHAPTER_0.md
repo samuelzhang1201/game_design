@@ -24,20 +24,20 @@ Beyond the King's Words — Chapter 0 Design Doc
 | 东西 | 在哪 |
 |---|---|
 | 21 段正文（场景散文 + 标题） | `game_story/chapter_0/chapter_0_events.md`，**运行时加载** |
-| 21 行事件表 | `data/chapter_events.csv` |
-| 51 行选项表 | `data/chapter_event_choices.csv` |
-| 16 行分支表 | `data/chapter_branches.csv` |
-| 51 行结果台词 | `data/templates.csv`（`event_c0_*`） |
+| 21 行事件表 | `data/story/chapter_events.csv` |
+| 51 行选项表 | `data/story/chapter_event_choices.csv` |
+| 16 行分支表 | `data/story/chapter_branches.csv` |
+| 51 行结果台词 | `data/council/templates.csv`（`event_c0_*`） |
 | 21 张插图的 prompt | `docs/references/art_prompt_library.md` §8.6（`V-35`~`V-55`）→ `assets/imagegen/event_art.csv` |
 | 测试 | `tests/engine/test_chapter_zero.gd`（21 个用例） |
 
 **没有新的 ChapterRunner，也没有第二套事件格式。** 本作已经有一整套事件系统——`EventSystem` 取事件、`TriggerDsl` 判条件、`EventEffects` 执行效果、`StorySource` 读散文、会见窗显示、存档带着走。序章是**这套系统里的一条链**，不是它旁边的第二套东西。为此对引擎只加了三样小东西：
 
 1. `TriggerDsl`：`never`（只走链、永不被随机抽到）、`!` 取反、`trait_of=<席位或角色>:<特质>`（原来只有"朝堂上任何人有某特质"，而这里要问的是"**门口这个人**是不是老兵"）。
-2. `EventEffects` 新增 `branch:<branch_id>` 算子：按 `data/chapter_branches.csv` 的顺序取**第一条成立的规则**，按该规则自己的 `ticks` 排期。整章的分叉都走它。
+2. `EventEffects` 新增 `branch:<branch_id>` 算子：按 `data/story/chapter_branches.csv` 的顺序取**第一条成立的规则**，按该规则自己的 `ticks` 排期。整章的分叉都走它。
 3. `GameState.new_campaign`：把 `chapter_events.csv` 里填了 `start_tick` 的那一拍排进日程。序章因此是每一局新游戏的开场，而不是随机抽到的。
 
-章节事件**不在 `data/events.csv` 里**（那是按权重抽样的随机池，抽到一个剧情拍就乱序了），但在 `events_by_id` 里——链按 id 点名触发。`EventSystem` 读 `DataRepository.event_choices_all()`，两张表都看得见。
+章节事件**不在 `data/story/events.csv` 里**（那是按权重抽样的随机池，抽到一个剧情拍就乱序了），但在 `events_by_id` 里——链按 id 点名触发。`EventSystem` 读 `DataRepository.event_choices_all()`，两张表都看得见。
 
 ---
 
@@ -59,7 +59,7 @@ Beyond the King's Words — Chapter 0 Design Doc
 
 ## 3. 人物 — 全部是游戏里已有的人
 
-一个新角色都没有加。序章的作用之一就是把 `data/roles.csv` 和 `data/founding_council.csv` 里已经存在、玩家在会见窗里会反复见到的那些人**介绍一遍**。
+一个新角色都没有加。序章的作用之一就是把 `data/council/roles.csv` 和 `data/council/founding_council.csv` 里已经存在、玩家在会见窗里会反复见到的那些人**介绍一遍**。
 
 | 原稿 | 本作角色 | id | 为什么是他 |
 |---|---|---|---|
@@ -149,7 +149,7 @@ lord_gold 861    unrest 0           legitimacy 50   contentment 50
 
 ## 7. 四个结局
 
-`data/chapter_branches.csv` 的 `c0_br_ending`，从上往下第一条成立的规则赢：
+`data/story/chapter_branches.csv` 的 `c0_br_ending`，从上往下第一条成立的规则赢：
 
 | 顺序 | 条件 | 结局 | 留下 |
 |---|---|---|---|

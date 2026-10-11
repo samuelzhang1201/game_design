@@ -9,8 +9,8 @@ extends StyleBox
 ## centre (the paper turns; the panel's content does not), over a soft shadow
 ## thrown down and to the right by the table's one light. `rules` draws that
 ## many ink rules round the content (the sheet's frame round the map); `pin`
-## a brass pin at the head. Every number is balance.csv ui_table_* / ui_paper_*,
-## every colour data/ui_table_palette.csv (see PaperStyle.make).
+## a brass pin at the head. Every number is screens/ui/balance.csv ui_table_* / ui_paper_*,
+## every colour data/screens/ui/ui_table_palette.csv (see PaperStyle.make).
 
 const PAPER_PATH := "res://assets/2D/ui/missive_board/letter_aged.png"
 

@@ -126,7 +126,7 @@ static func dry_runs(line_set: Array, heights: Array, at_sea: Callable) -> Dicti
 	return {"lines": out_l, "heights": out_h}
 
 
-## balance.csv map3d_bridge_* as Map3DBridges' rules.
+## screens/map3d/balance.csv map3d_bridge_* as Map3DBridges' rules.
 func bridge_rules() -> Dictionary:
 	return bridge_rules_of(ctx.repo)
 

@@ -194,7 +194,7 @@ func test_every_arm_that_should_have_a_model_names_one_that_exists() -> void:
 
 
 func test_the_menu_rows_are_data_and_every_one_is_a_real_order() -> void:
-	assert_gt(repo.army_orders.size(), 0, "data/army_orders.csv is the menu")
+	assert_gt(repo.army_orders.size(), 0, "data/army/army_orders.csv is the menu")
 	for row: Dictionary in repo.army_orders:
 		var code := String(row["action_code"])
 		assert_true(repo.actions.has(code), code + " is offered but is not an action")

@@ -306,7 +306,7 @@ def _clip_bones(arm, names):
 
 
 def _stride(arm, act):
-    """Metres of ground one loop carries the piece (data/army_art.csv stride_m):
+    """Metres of ground one loop carries the piece (data/screens/map3d/army_art.csv stride_m):
     how fast a planted foot slides back, times the loop's length — the same
     measure as tools/units3d/infantry_blueprint/export.py."""
     feet = _clip_bones(arm, ("foot",)) or _clip_bones(arm, ("fore_hoof", "hind_hoof", "hoof"))
@@ -686,7 +686,7 @@ def export_unit(props, report):
             bpy.data.objects.remove(o)
         for o, n in renamed:
             o.name = n
-    report += "\n导出：%s\n动作：%s\n%s 一个循环走 %.3f m（填进 data/army_art.csv 的 stride_m）\n" % (
+    report += "\n导出：%s\n动作：%s\n%s 一个循环走 %.3f m（填进 data/screens/map3d/army_art.csv 的 stride_m）\n" % (
         path, "、".join(a.name for a in acts), walk.name if walk else "行军", stride)
     path, rows = _verify(path, [spec["rig"]], [spec["mesh"]], [v for v in spec["images"].values() if v])
     report += "\n导出文件里的名字：\n" + _rows_text(rows)
