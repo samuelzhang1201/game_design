@@ -7,7 +7,7 @@ The artist's Blender add-on (tools/art_kit/blender/cc_art_check/) checks a
 model against the game's contract without reading the repository, so every
 number it needs is copied here from the repository's own sources:
 
-* houses — data/map3d_houses.csv (type, role, footprint, roof kind) and the
+* houses — data/screens/map3d/map3d_houses.csv (type, role, footprint, roof kind) and the
   triangle budget of each house group (the shipped meshes plus a margin,
   the numbers of the art handbook's spec table);
 * units  — each shipped assets/3D/units/<code>/<code>.glb: its skeleton (bone
@@ -64,7 +64,7 @@ UNITS = {
 
 def houses():
     out = {}
-    with open(os.path.join(ROOT, "data", "map3d_houses.csv"), newline="") as f:
+    with open(os.path.join(ROOT, "data", "screens", "map3d", "map3d_houses.csv"), newline="") as f:
         for r in csv.DictReader(f):
             t = r["type"]
             roof = "hh_slate_" if "slate" in r["roof"] or t in HD else "hh_roof_"

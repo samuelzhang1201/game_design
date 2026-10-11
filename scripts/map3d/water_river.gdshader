@@ -66,7 +66,7 @@ uniform float opacity = 0.92;
 uniform float emission_share = 0.85;
 uniform float emission_gamma = 1.3;
 // Near-zoom water (final review, owner 2026-09-18): the look numbers are
-// data (balance.csv map3d_river_*), the sky mix matches the sea's so both
+// data (screens/map3d/balance.csv map3d_river_*), the sky mix matches the sea's so both
 // read as one water, the ripples modulate the EMISSION as on the sea, and a
 // world-space noise wobbles the bank fade so a river's edge is soft and
 // irregular up close rather than ruled. The wobble and the ripple

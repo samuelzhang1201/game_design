@@ -5,7 +5,7 @@ extends Control
 ## never wears the series colour, a legend is the labels themselves).
 ## rows = [{label, value, color, text, icon?, dimension?}]; the bar runs to
 ## max_value. A row with an `icon` glyph name draws that glyph before its
-## label. A row with a `dimension` (a data/resource_icons.csv key) draws
+## label. A row with a `dimension` (a data/screens/ui/resource_icons.csv key) draws
 ## that key's art IN PLACE of the label, which becomes the row's floating
 ## tooltip (owner 2026-09-13: icons, not words, on the realm card), and the
 ## bar starts right after the art.

@@ -1,0 +1,3 @@
+key,value,notes
+event_base_chance,0.35,reserved for events slice
+event_pity_ticks,3,force an event after this many quiet months

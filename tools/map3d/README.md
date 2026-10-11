@@ -39,14 +39,14 @@ is a COORDINATOR over `Map3DContext` — what every piece shares — with one
 script per layer under `scenes/map3d/world_map_3d.tscn` and a rig, input,
 picker, selection and HUD piece beside them: lazy load, the SubViewport
 rendering only while shown, settlements placed from live data by
-`data/map3d_settlements.csv`. Tests are in `tests/map3d/` and use a fixture
+`data/screens/map3d/map3d_settlements.csv`. Tests are in `tests/map3d/` and use a fixture
 scene, never the built pack (which a test may not assume is current). Camera values are `balance.csv`
 `map3d_*`; the look assets are `scenes/map3d/materials/*.tres`.
 
 ## Rebuilding from a clean checkout
 
 **One pack, one command:** `tools/map3d/build_pack.sh [--map ID]` (default:
-`data/maps.csv`'s `is_default` pack) runs steps 3–5 below in order —
+`data/world/maps.csv`'s `is_default` pack) runs steps 3–5 below in order —
 `export_manor_land.gd`, `bake_world.py`, `build_world.gd` — then
 `bake_layers.gd` (see Baked layers), with `GDAI_MCP_SERVER_PORT=3999` set,
 stops at the first failure, and ends with `manifest.json` and `layers/`
@@ -75,7 +75,7 @@ shared by every pack and built once. The steps one by one:
    by the game's own `MapManors.default_focus`) for the bake's fields.
    Without it every manor is sown as `*` (kitchen gardens only).
 4. **Bake** — `python3 tools/map3d/bake_world.py [--map ID]` (~12 s), tuned by
-   `data/map3d_bake.csv` (coast supersample and edge warp, the beach mix,
+   `data/screens/map3d/map3d_bake.csv` (coast supersample and edge warp, the beach mix,
    river widths and carving — the numbers moved out of the script; the rest
    is still in `bake_world.py` itself, see Open items). Height comes from
    `cells.csv` plus its own ridges and, since 2026-09-24, TERRACES
@@ -90,15 +90,15 @@ shared by every pack and built once. The steps one by one:
    **The patchwork** (owner 2026-09-19, "make the ground read like a
    satellite map"; `sow_patchwork`): village footprints (built ground by
    the square root of the people, thinning outward), strip FIELDS round
-   every settlement within their chief good's reach (`data/map3d_fields.csv`:
+   every settlement within their chief good's reach (`data/screens/map3d/map3d_fields.csv`:
    crops by share, a bake texture and a darkening tint each), laid per
    manor in its own orientation, staggered like brickwork, noise-warped,
    sown densest near the village and thinning outward, soft hedges; and
    every manor cell its own slight shade. Its noise has its own random
    stream, so the rest of the look is untouched; `map3d_bake.csv`
-   `field_*`, `hedge_*`, `footprint_*`, `manor_jitter_*`. It also writes `bake/fields.png` (RGB each field's own colour multiplier, A its strip direction, `FIELD_MAP_STEP` vertices a texel), read at runtime — not imported — for the terrain shader's furrows and far fade (`Map3DGroundTint`, `scenes/map3d/ground_look.tres` `furrow_*` / `field_fade*`). **The same pass now also places every settlement's houses** (spec 2026-09-20 §1; `tools/map3d/bake_houses.py`, called from `sow_patchwork` right where the land mask, each burg's population and footprint radius already live, so "never in the sea" is structural) and writes `bake/houses.csv` (world metres, no `y`, plus `rank`, `height_scale`, `stretch` and the `wall` / `roof` tint indices of the settlement's palettes; tuned by `map3d_bake.csv`'s `house_*` keys and `data/map3d_houses.csv`'s type table) — see "House meshes" below for the models those rows place.
+   `field_*`, `hedge_*`, `footprint_*`, `manor_jitter_*`. It also writes `bake/fields.png` (RGB each field's own colour multiplier, A its strip direction, `FIELD_MAP_STEP` vertices a texel), read at runtime — not imported — for the terrain shader's furrows and far fade (`Map3DGroundTint`, `scenes/map3d/ground_look.tres` `furrow_*` / `field_fade*`). **The same pass now also places every settlement's houses** (spec 2026-09-20 §1; `tools/map3d/bake_houses.py`, called from `sow_patchwork` right where the land mask, each burg's population and footprint radius already live, so "never in the sea" is structural) and writes `bake/houses.csv` (world metres, no `y`, plus `rank`, `height_scale`, `stretch` and the `wall` / `roof` tint indices of the settlement's palettes; tuned by `map3d_bake.csv`'s `house_*` keys and `data/screens/map3d/map3d_houses.csv`'s type table) — see "House meshes" below for the models those rows place.
 5. **Scene** — `GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd [-- --map ID]`
-   (~2 s, no editor; every tool defaults to `data/maps.csv`'s `is_default` pack). Nothing visual is baked into the scene beyond the
+   (~2 s, no editor; every tool defaults to `data/world/maps.csv`'s `is_default` pack). Nothing visual is baked into the scene beyond the
    terrain: headless, a MultiMesh saves without its transforms, which is one
    reason settlements are placed at runtime.
    `-- --material-only` re-applies `build_terrain.gd`'s material (`apply_material`:
@@ -124,9 +124,9 @@ the bake places them (above): a headless Blender script, in the shape of
 blender -b --factory-startup --python tools/map3d/make_houses.py
 ```
 
-— reads `data/map3d_houses.csv` (the type table: mesh, role, weight,
+— reads `data/screens/map3d/map3d_houses.csv` (the type table: mesh, role, weight,
 footprint, height, roof key, min settlement group) and each type's roof/wall
-colours from `data/terrain_palette.csv` (converted sRGB → linear before
+colours from `data/screens/ui/terrain_palette.csv` (converted sRGB → linear before
 Blender's Principled BSDF, which treats Base Color as linear — the values
 render lifted to a near-white otherwise), and writes one low-poly `.glb` per
 type plus `houses.json` (each type's footprint and height in metres — echoed
@@ -136,8 +136,8 @@ items below for why that matters — and its triangle count) into
 committed** — see "Where things live" above — so a fresh clone shows
 settlements with no Blender install. It is NOT part of `build_pack.sh`
 (Blender is a separate dependency from the pipeline's headless Godot chain)
-and needs re-running only when `data/map3d_houses.csv` or the roof/wall
-colours in `data/terrain_palette.csv` change (~1 minute for all 14 types).
+and needs re-running only when `data/screens/map3d/map3d_houses.csv` or the roof/wall
+colours in `data/screens/ui/terrain_palette.csv` change (~1 minute for all 14 types).
 
 ### The shipped meshes are HAND-MODELLED in Blender (2026-09-24)
 
@@ -147,7 +147,7 @@ All 14 types are built by `tools/map3d/blender_houses/` (`kit.py` +
 `meshes/force_disable_compression=true` (multi-surface meshes; see that
 README). `scale_houses.py` scales a built mesh's vertices to the table's
 `footprint_m` and writes the measured `width_m` / `depth_m` / `height_m` /
-`tris` back into `data/map3d_houses.csv` and `houses.json`;
+`tris` back into `data/screens/map3d/map3d_houses.csv` and `houses.json`;
 `census_house_meshes.py` reports holes and flipped faces (read-only).
 
 **No AI 3D for the houses** (owner 2026-09-24): Hunyuan3D was removed over its licence
@@ -181,8 +181,8 @@ scene's materials as long as its surfaces keep their order.
 `build_world.gd` writes `manifest.json` into the data dir once the scene
 has saved: `format_version` (`Map3DWorldLoader.FORMAT_VERSION`, 2 = data
 only), `meta` (the root's `map3d_world`), `built_at` (UTC) and `steps_hash`
-(`Map3DWorldLoader.steps_hash()`, the md5 of `data/map3d_bake.csv` +
-`data/map3d_fields.csv` + `data/map3d_houses.csv`, joined 2026-09-20 so a
+(`Map3DWorldLoader.steps_hash()`, the md5 of `data/screens/map3d/map3d_bake.csv` +
+`data/screens/map3d/map3d_fields.csv` + `data/screens/map3d/map3d_houses.csv`, joined 2026-09-20 so a
 changed house type table reports the build stale too).
 `Map3DWorldLoader.status(scene_path)` reads it
 before the view loads anything, and the view's notice says honestly why
@@ -207,7 +207,7 @@ meshes (spec 2026-09-20 §2): `GDAI_MCP_SERVER_PORT=3999 Godot --headless
 --path . -s tools/map3d/bake_layers.gd [-- --map ID]`, run by `build_pack.sh`
 after `build_world.gd`, opens the built world and saves one `ArrayMesh` per
 layer into `<map3d_dir>/layers/<layer>_<step set>.res` — one set per
-distinct step set of `data/graphics_quality.csv` (`road_step_mul` and
+distinct step set of `data/screens/ui/graphics_quality.csv` (`road_step_mul` and
 `river_step_mul`, e.g. `r100_v100` for high/ultra, `r140_v150` medium,
 `r200_v250` low) — and `layers/manifest.json`, the key each set was baked
 under (`Map3DLayerBake`). The key covers `Map3DLayerBake.KEYS` (the balance
@@ -229,7 +229,7 @@ to any script in `Map3DLayerBake.GEOMETRY_SOURCES` fails
 
 ## `map3d_dir`
 
-`data/maps.csv`'s `map3d_dir` column says where a pack's 3D build DATA lives (a
+`data/world/maps.csv`'s `map3d_dir` column says where a pack's 3D build DATA lives (a
 `res://` path; empty means `res://assets/3D/terrain/<id>`). The game reads it
 through `DataRepository.map3d_dir(id)` (`Map3DView.scene_path_for`), the
 GDScript tools through the static `DataRepository.map3d_dir_of(id)`
@@ -273,7 +273,7 @@ move with it.
 
 ## Performance tiers
 
-`data/graphics_quality.csv` holds four rows — `low`, `medium`, `high`,
+`data/screens/ui/graphics_quality.csv` holds four rows — `low`, `medium`, `high`,
 `ultra` — each a render scale, shadow/cloud/mesh settings and the step
 multipliers for lines, roads and rivers (`Map3DQuality`). A first run
 detects a tier from the GPU's name (integrated Intel/AMD, llvmpipe → low;
@@ -382,7 +382,7 @@ by the same margin.
 ## Open items before the 3D map ships
 
 - `build_terrain.gd`'s look constants (textures, material, sky, sea) still
-  live in the script, not a CSV; `data/map3d_bake.csv` moved the bake's
+  live in the script, not a CSV; `data/screens/map3d/map3d_bake.csv` moved the bake's
   shore, coast-edge, beach and river numbers out of `bake_world.py`, but the
   remaining bake constants (ridges, biome mix, far colours) are still in
   `bake_world.py`.
@@ -435,7 +435,7 @@ by the same margin.
   types down in the first place.
   **RESOLVED 2026-09-21 (density v5), by the first of those two routes.**
   The meshes (then Hunyuan3D retopos; hand-modelled since 2026-09-24) are scaled uniformly to `footprint_m` on
-  their long horizontal axis, and `data/map3d_houses.csv` carries `width_m`
+  their long horizontal axis, and `data/screens/map3d/map3d_houses.csv` carries `width_m`
   and `depth_m` — the mesh's own measured spans, written back by
   `tools/map3d/scale_houses.py` exactly as `height_m` is.
   `bake_houses.half_extents()` packs against those, so a house reserves its
@@ -469,11 +469,11 @@ by the same margin.
   numpy, ~15 s; it reads `bake/height_war.r16` when the raw `height.r32` is
   older or absent, so it re-runs on any checkout): tree CLUMPS on a seeded
   blue-noise (Poisson-disk) set no two nearer than `poisson_r_m`, kept by each
-  biome's woodedness (`data/map3d_trees.csv`), gathered by a grove noise into
+  biome's woodedness (`data/screens/map3d/map3d_trees.csv`), gathered by a grove noise into
   woods with an edge, capped inside and opened by glades, never in water, on
   a sown field, a road, a river bank, a settlement, a cliff or above the tree
   line (`test_bake_trees.py` checks the built pack). Each clump is a SPECIES
-  of `data/map3d_tree_species.csv`, picked by the ground under it. It writes
+  of `data/screens/map3d/map3d_tree_species.csv`, picked by the ground under it. It writes
   `bake/trees.bin` (x, y, z, yaw, scale, species kind) and `bake/woods.png`
   (the canopy's share and its conifer share per 40 m texel). `Map3DLayerTrees`
   draws the clumps as photo cards, one MultiMesh per 2 km square, species
@@ -483,7 +483,7 @@ by the same margin.
   `wood_*`) carries the wood.
 - **Sky occlusion** (`bake_relief_ao.py`, visual review 2026-10-05): from
   `bake/height_war.r16`, how much of the sky each 40 m texel sees (horizon
-  search along `data/map3d_bake.csv` `relief_ao_dirs` directions out to
+  search along `data/screens/map3d/map3d_bake.csv` `relief_ao_dirs` directions out to
   `relief_ao_radii_m`, blurred by `relief_ao_blur_texels`), written to
   `bake/relief_ao.png` on the woods grid. `Map3DGroundRelief`'s stage
   darkens the ground by it (`ground_look.tres` `relief_ao`, 0 off): the

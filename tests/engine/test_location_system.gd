@@ -1,6 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
-## Regions/locations (data/regions.csv, data/locations.csv): free movement
+## Regions/locations (data/story/regions.csv, data/story/locations.csv): free movement
 ## within a region, occupant resolution, save persistence.
 
 var data: DataRepository

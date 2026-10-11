@@ -65,7 +65,7 @@ func _camera(cam_name: String) -> Camera3D:
 	return cam
 
 
-## --map ID, else data/maps.csv's default pack.
+## --map ID, else data/world/maps.csv's default pack.
 func _map_id() -> String:
 	var args := OS.get_cmdline_user_args()
 	var at := args.find("--map")

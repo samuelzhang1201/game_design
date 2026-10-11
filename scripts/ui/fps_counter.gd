@@ -5,7 +5,7 @@ extends CanvasLayer
 ## free stretch left of MENU, over every screen and popup. GameRoot shows it
 ## while the menus' FPS row is on (GameRoot.set_show_fps), whatever DEV MODE
 ## says; it reads, never writes.
-## balance.csv ui_fps_right_px (its right edge's inset from the window's),
+## screens/ui/balance.csv ui_fps_right_px (its right edge's inset from the window's),
 ## ui_fps_bar_px (the band it is centred in: the top bar's height),
 ## ui_fps_refresh_s (how often it rereads), ui_fps_good / ui_fps_poor (the
 ## rates it turns from good to gold to bad at).

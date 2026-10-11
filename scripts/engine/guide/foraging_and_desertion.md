@@ -1,6 +1,6 @@
 # Foraging and desertion (`Forage`, `Desertion`, `ArmyConduct`)
 
-Spec `2026-10-10-foraging-and-desertion-design.md`. Integers only, no RNG, code order; every number a `balance.csv` key (`forage_*`, `desert_*`: read the CSV for the value), every word `data/conduct_words.csv`. Only the crown's own LAND units take part: fleets, foes and units that eat nothing are skipped (no foreign regiment is simulated).
+Spec `2026-10-10-foraging-and-desertion-design.md`. Integers only, no RNG, code order; every number a `army/balance.csv` key (`forage_*`, `desert_*`: read the CSV for the value), every word `data/army/conduct_words.csv`. Only the crown's own LAND units take part: fleets, foes and units that eat nothing are skipped (no foreign regiment is simulated).
 
 ## Day order
 

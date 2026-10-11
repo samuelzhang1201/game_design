@@ -1,6 +1,6 @@
 # Chapter 0 — The Bond of the Louthton
 
-Status: Built — the 21 entries below are live (`data/chapter_events.csv`, `data/chapter_event_choices.csv`, `data/chapter_branches.csv`, `EventSystem`). Design doc: `docs/design/CHAPTER_0.md`.
+Status: Built — the 21 entries below are live (`data/story/chapter_events.csv`, `data/story/chapter_event_choices.csv`, `data/story/chapter_branches.csv`, `EventSystem`). Design doc: `docs/design/CHAPTER_0.md`.
 
 **This file is loaded at runtime.** `StorySource` reads each `### C0-NN` heading — the title after the `·` and the prose after the `**Scene:**` label on the Trigger line — and the game shows both verbatim. Keep the headings and the labels intact. The `**Choices:**` line is design description only; the implemented choices are the CSV's.
 
@@ -12,7 +12,7 @@ Chapter 0 is the tutorial. It is **entirely free of the model**: every scene is 
 
 ## How the chapter runs
 
-The chapter is a **chain**, not a pool. `GameState.new_campaign` schedules `c0_01` for tick 1; every choice either schedules the next entry a month or two out (`schedule:<id>:<ticks>`) or hands the decision to a branch table (`branch:<branch_id>:<ticks>`, `data/chapter_branches.csv`, first matching rule wins). Chained events fire before the monthly random roll, so a chapter beat always takes its month — and the months the chain leaves empty belong to the ordinary pool.
+The chapter is a **chain**, not a pool. `GameState.new_campaign` schedules `c0_01` for tick 1; every choice either schedules the next entry a month or two out (`schedule:<id>:<ticks>`) or hands the decision to a branch table (`branch:<branch_id>:<ticks>`, `data/story/chapter_branches.csv`, first matching rule wins). Chained events fire before the monthly random roll, so a chapter beat always takes its month — and the months the chain leaves empty belong to the ordinary pool.
 
 A tick is a month of 30 days (`Calendar`). The reign opens in **Spring, Year 1** and the chapter is settled at the **autumn harvest**, tick 9, with the last reckoning in the first month of winter.
 
@@ -48,7 +48,7 @@ Doing nothing for nine months leaves roughly 16,200 gold and 51,800 in stores (`
 
 ## Who is who
 
-Everyone in the chapter is a character the game already has (`data/roles.csv`, `data/founding_council.csv`); no one was invented for it.
+Everyone in the chapter is a character the game already has (`data/council/roles.csv`, `data/council/founding_council.csv`); no one was invented for it.
 
 | In the story | Character | Why them |
 |---|---|---|
@@ -178,7 +178,7 @@ Places are the pack's own: **Bineterston Department**, the small grain-and-river
 
 ## Branch tables
 
-`data/chapter_branches.csv`, evaluated top to bottom; the first rule whose `requires` holds wins. Every table ends in an `always` rule, so no branch can dead-end.
+`data/story/chapter_branches.csv`, evaluated top to bottom; the first rule whose `requires` holds wins. Every table ends in an `always` rule, so no branch can dead-end.
 
 | branch | rule | goes to |
 |---|---|---|

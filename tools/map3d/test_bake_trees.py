@@ -51,7 +51,7 @@ def test_no_clump_stands_among_the_houses():
 
 
 def test_kinds_are_known():
-    # the kind column is a species of data/map3d_tree_species.csv
+    # the kind column is a species of data/screens/map3d/map3d_tree_species.csv
     rows, _ = _load()
     assert set(np.unique(rows[:, 5]).astype(int)) <= {s["kind"] for s in bake_trees.load_species()}
 

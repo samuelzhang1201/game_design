@@ -1,0 +1,118 @@
+key,value,notes
+army_decay,0.3,per tick
+army_floor,20,
+levy_cost,40,
+levy_army_gain,8,
+levy_unrest,2,
+army_start_morale,70,"regiments (owner 2026-09-17, spec 2026-09-17-regiment-state): morale a regiment starts with, 0..100; it does not change yet"
+army_start_training,10,regiments: the hidden training value a regiment starts with — militia
+army_supply_per_head_permille,100,"regiments: supply units a head uses a month, per mille (5000 heads use 500 a month); eaten a day at a time (ArmySystem.eat_day), and the unit of every supply line and town store"
+army_supply_gold_permille,100,"a supply unit's gold value, per mille (spec 2026-09-30-ledger-supply-design §3, 2026-10-07-army-supply-lines): the metrics strategic and lord_strategic are the gold of the towns' units, a house's stock is bought at this x supply_buy_markup_permille, and the LEDGER and the marshal's report count a unit's gold by it"
+army_supply_loss_permille_per_100km,60,LEDGER M1: supplies lost on the road per mille for every 100 km of it
+army_supply_loss_cap_permille,600,LEDGER M1: the most a road can lose
+army_morale_starving,20,"LEDGER M1 (spec 2026-09-30-ledger-supply-design §4): the morale a regiment with no stores sinks toward"
+army_morale_fed,75,LEDGER M1: the morale a regiment with full stores climbs toward
+army_morale_garrison_bonus,5,LEDGER M1: a garrison's mark stands this much higher
+army_road_reach_m,1500,"owner 2026-10-06 (spec 2026-10-06-army-location-and-town-defence §6): a marching regiment within this many metres of a road or trail marches at the road's pace (data/army_ground_speed.csv)"
+army_march_days_cap,3650,"the most days ArmySystem.march_days_between walks a route before it gives the figure up (a guard, never reached on a pack: ten years)"
+army_route_sample_m,3000,"march waypoints (spec 2026-10-07-march-waypoints §1): a route through waypoints is sampled into a whole-metre point every this many metres of chord per leg (MarchRoute) — the line drawn and walked; a 3 km chord on a 50 km bend strays 20 m"
+army_march_waypoints_max,8,"march waypoints (spec §1, ruling 3): the most waypoints one ARMY_MARCH may name; Add waypoint and a bend stop there"
+army_march_grid_px,4,"march slope (owner 2026-10-10, spec 2026-10-10-march-slope-detour): the march grid's cell in pack px (4 px = 200 m of the 3D world, 10 Terrain3D vertices): tools/map3d/bake_march_grid.py bakes one cell per this many px into the pack's geography/march_grid.png and MarchPath reads it back by the same key"
+army_march_slope_smooth_m,40,"march slope (bake_march_grid.py): the heights are box-blurred over this radius in 3D-world metres before the slope is taken, so 20 m vertex noise and a house terrace do not read as a cliff"
+army_march_slope_run_m,120,"march slope (bake_march_grid.py): the slope is the rise across this run of 3D-world metres (a central difference), the scale a column climbs at; a cell keeps the steepest it holds"
+army_march_land_min_permille,500,"march slope (bake_march_grid.py): a cell with fewer of its vertices above the waterline than this per mille is water, impassable to a land column (rivers stay fordable: a 200 m cell is never mostly river)"
+army_march_snap_cells,8,"march slope (MarchPath.nearest_open): a march that starts or ends on a closed cell (a scarp, a shore) is routed from the nearest open cell within this many cells; none nearer and it walks the straight line"
+army_max_slope,1000,"march slope (owner 2026-10-10: 山坡斜度超过一定限制，军队必须走最近的绕道): a land column never crosses a march-grid cell steeper than this, rise per run in per mille as the 3D map draws it (1000 = 45 degrees: the terrace scarps block, the ridged mountains and every gentle hill do not); MarchPath routes round it"
+army_morale_drift_per_month,6,LEDGER M1: points morale moves toward its mark a month
+army_wound_recovery_permille,200,"regiments: share of the wounded who return to the ranks each month, per mille, at least 1 while any are wounded"
+army_training_per_month,0,regiments: training gained each month (placeholder: none)
+army_float_permille,150,"regiments: how far a regiment's hidden attack/defence against an arm floats round its base each month, per mille"
+army_training_base_permille,500,regiments: the training factor of power at training 0
+army_training_step_permille,10,regiments: the training factor gained per point of training (100 -> 1500)
+army_morale_base_permille,500,regiments: the morale factor of power at morale 0
+army_morale_step_permille,5,regiments: the morale factor gained per point of morale (100 -> 1000)
+army_strong_ratio_permille,1250,regiments: power over the mean of the player's regiments of the same kind at/above which a regiment reads Strong
+army_weak_ratio_permille,750,regiments: power over that mean at/below which a regiment reads Weak
+army_speed_w_arm,40,"regiments' march (owner 2026-09-19): the weight of the arm itself in a regiment's readiness — the base pace is its slowest arm's (data/army_speed.csv); this share of it is always kept, however hungry or beaten the regiment. readiness = (w_arm*1000 + w_supply*S + w_morale*M + w_training*T) / sum of weights, per mille"
+army_speed_w_supply,25,"regiments' march: the weight of supplies (S = the supply score: full at army_supply_low_days days in hand, falling linearly to 0, per mille)"
+army_speed_w_morale,20,regiments' march: the weight of morale (M = morale x 10)
+army_speed_w_training,15,regiments' march: the weight of training (T = training x 10)
+army_height_bonus_permille_per_100m,40,"height in war (owner 2026-09-19, spec 2026-09-19-map3d-heights-design §2): per mille a side gains for every 100 m it stands above the other in a fight, and the lower side loses; ArmySystem.height_factor"
+army_height_bonus_cap_permille,300,"height in war: the most a height difference moves a side's power either way, per mille (+-30%, reached at 750 m)"
+war_sheet_deg,10,"(2026-10-07, spec 2026-10-07-war-room-scale-hover §1: twice the scale — a sheet ~71 x 52 km, 36 x 18 cells) WAR ROOM v2 B (owner 2026-10-02, spec §2.2, ruling 6): a sheet's side in degrees of the pack's own graticule (MapCoords); every whole-degree cell is ~1.376:1 on beria, the table's 1.4:1 — 20 is 142 x 103 km, 18 x 9 cells"
+war_sheet_collar_km,6,"(2026-10-07 §1: the same collar on the table at twice the scale) WAR ROOM v2 B (spec §2.2): the faint collar of neighbouring ground beyond a sheet's neat line, in the pack's measure; a march over the edge stays in view (the old overlap's job)"
+war_grid_deg,1,"(2026-10-07 §1: ~7 x 5 km squares, 10 x 10 a sheet; set at the visual review) WAR ROOM v2 B (spec §2.2): the lettered grid inside a sheet, degrees a square (~14 x 10 km); places read D4 · c7"
+war_works_min_gold,60,"(visual review 2026-10-07: 40 / 60 / 90 bracketed; 60 marks ~53 towns, about one a land sheet) WAR ROOM P3-A (spec 2026-10-07-war-room-p3 §0 ruling 3): a town is marked as a war works when its strategic goods (pack units x goods_economy price_gold) reach this many gold a month"
+war_trade_tier1_gold,300,(visual review 2026-10-07: 40 made every road heavy — the road segments' median is ~270 gold; tiers now at ~p50 / p75 / p90) WAR ROOM P3-A ruling 5: a road segment carrying this much trade gold a month is drawn one weight heavier
+war_trade_tier2_gold,700,WAR ROOM P3-A ruling 5: ... two weights heavier
+war_trade_tier3_gold,1400,WAR ROOM P3-A ruling 5: ... three weights heavier
+war_mark_hover_km,6,"WAR ROOM P2 §1.3: the hover slip names the marks within this many km of the pointer"
+war_mark_hover_max,3,"WAR ROOM P2 §1.3: at most this many marks in the slip, nearest first"
+war_mark_legend_chars,90,"WAR ROOM P2 §1.3: the nearest mark's legend is cut to this many characters"
+war_hazard_sample_km,2,"WAR ROOM P2-B (spec 2026-10-07-war-room-p2 §2.3): a supply route is sampled every this many km for the hazards it crosses (a cell is ~20 km)"
+army_start_supply_days,20,"army supply (spec 2026-10-07-army-supply-lines §6): days of its own use a regiment starts a campaign with"
+army_supply_low_days,5,"army supply §3.6–3.7: below this many days in hand a regiment is hungry — morale falls daily and the march drags"
+army_supply_max_days,30,"army supply §1: the most days of supplies a regiment can carry (owner 2026-10-07: 最多携带30天)"
+army_carry_default_days,20,"army supply §2.1: the carried-load order a regiment starts with, and an old save's"
+army_morale_hungry_day,1,"army supply §3.7: morale lost each day under army_supply_low_days days in hand"
+army_morale_starving_day,3,"army supply §3.7: morale lost each day with no supplies at all (instead of the hungry loss)"
+supply_wagon_km_per_day,25,"army supply §3.2: the supply wagons' road km a day — how long a new line takes to start flowing, and the reach of a supply point"
+supply_point_max_days,10,"army supply §3.5: the most wagon days a supply point may be from its regiment when it is chosen"
+supply_ahead_km,5,"WAR ROOM draw orders (owner 2026-10-08, ruling 20): a town is AHEAD of a column — never its supply town — when it is farther from the crown's capital than the column by more than this, whichever way the column marches; km"
+supply_front_resume_km,1,"owner 2026-10-10 (ruling 20 kept daily): a line broken because its town lies AHEAD of its column (state front) flows again only once the town is no farther than the column by supply_ahead_km less this — a small hysteresis so a column on the boundary does not flicker; km"
+supply_cut_reach_m,5000,"army supply §3.2: a supply line is cut on any day a hostile regiment stands within this many metres of its road"
+supply_cart_milligold_per_unit_km,1,"army supply §3.4: cartage, in thousandths of a gold, for each supply unit carried one km; charged daily in whole gold"
+supply_buy_markup_permille,200,"army supply §3.3: a house sells its stock to the crown at its value plus this per mille"
+supply_warn_town_days,10,"army supply §5.5: a supply town whose stores hold fewer days of its lines' draw than this sends a warning"
+ghost_keep_days,20,"the crown's sight (spec 2026-10-10-player-sight-and-ghosts §2): a ghost — where an enemy unit was last seen or reported, or where the border rumour put a host — is forgotten once older than this many days (kept at exactly this age). 20 keeps the rumour's ghost until the hosts have crossed and been seen (Default)"
+army_split_cap_men,600,"owner 2026-10-07 (spec 2026-10-07-army-split-and-ground §3): the most men of one arm in one unit; an arm over it splits into ceil(men / cap) even units"
+army_slot_spacing_m,1500,"spec 2026-10-07-army-split-and-ground §4.2: the hex lattice's pitch in whole metres between two units' camps; set in the visual review (2026-10-08): the camp must read as a camp round the walls, units not standing on each other"
+army_slot_max_rings,12,"spec §4.2: the farthest ring searched for a free slot; past it the unit stands where it arrived. 12 (R16, 2026-10-08): round a town the rings start past its reach, so at a 600 m pitch the opening camps reach ring 12 before every unit finds unblocked ground"
+war_plan_pieces_max,40,"WAR ROOM plans (owner 2026-10-07, spec 2026-10-07-war-room-annotations-and-planning-pieces §1.1): supposed enemy pieces a campaign may hold"
+war_plan_heads_min,100,"WAR ROOM plans §1.1: the fewest heads a supposed piece may stand for"
+war_plan_heads_max,20000,"WAR ROOM plans §1.1: the most heads a supposed piece may stand for"
+war_plan_heads_step,100,"WAR ROOM plans §1.5: a supposed piece's heads are a whole number of these (the form's spin box steps by it)"
+war_plan_training,10,"WAR ROOM plans (ruling 6): a supposed host's ASSUMED training — what every regiment starts at; the hidden float is never applied"
+war_plan_morale,75,"WAR ROOM plans (ruling 6): a supposed host's ASSUMED morale — a fed regiment's (army_morale_fed)"
+war_plan_strokes_max,120,"WAR ROOM plans (§2.2): the staff's strokes a campaign may hold"
+war_plan_points_max,16,"WAR ROOM plans (ruling 16): the control points a drawn stroke keeps after smoothing"
+war_plan_name_chars,24,"WAR ROOM plans (§2.2): the longest name a phase line or an objective may carry"
+war_intel_hint_min_heads,1,"WAR ROOM draw orders (spec 2026-10-08-war-room-draw-orders ruling 18): a spy report counting at least this many foreign men (its span's high end) is an intel hint a red arrow may be drawn from"
+forage_start_days,3,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_morale,25,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_training,5,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_days_obey,2,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_morale_obey,20,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_training_obey,3,spec 2026-10-10-foraging-and-desertion §1.1
+forage_stop_days,10,spec 2026-10-10-foraging-and-desertion §1.1
+forage_stop_morale,40,spec 2026-10-10-foraging-and-desertion §1.1
+forage_supply_per_food_unit,30,spec 2026-10-10-foraging-and-desertion §1.1
+forage_spring_permille,600,spec 2026-10-10-foraging-and-desertion §1.1
+forage_summer_permille,1000,spec 2026-10-10-foraging-and-desertion §1.1
+forage_autumn_permille,1200,spec 2026-10-10-foraging-and-desertion §1.1
+forage_winter_permille,300,spec 2026-10-10-foraging-and-desertion §1.1
+forage_share_permille,1000,spec 2026-10-10-foraging-and-desertion §1.1
+forage_strip_k,500,spec 2026-10-10-foraging-and-desertion §1.1
+forage_recover_permille,100,spec 2026-10-10-foraging-and-desertion §1.1
+forage_bare_permille,900,spec 2026-10-10-foraging-and-desertion §1.1
+forage_word_rich_permille,750,spec 2026-10-10-foraging-and-desertion §1.1
+forage_word_fair_permille,400,spec 2026-10-10-foraging-and-desertion §1.1
+forage_hazard_strip_permille,500,spec 2026-10-10-foraging-and-desertion §1.1
+forage_hazard_strip_permille_protected,750,spec 2026-10-10-foraging-and-desertion §1.1
+forage_morale_month,4,spec 2026-10-10-foraging-and-desertion §1.1
+forage_training_month,3,spec 2026-10-10-foraging-and-desertion §1.1
+forage_training_floor,5,"spec 2026-10-10-foraging-and-desertion §1.1, §3.3 step 8 (ruling R7): the month's foraging never takes training below this (a unit already under it keeps what it has)"
+forage_harass_permille,10,spec 2026-10-10-foraging-and-desertion §1.1
+forage_protect_cut_permille,100,spec 2026-10-10-foraging-and-desertion §1.1
+forage_incident_legitimacy,3,spec 2026-10-10-foraging-and-desertion §1.1
+forage_grievance_month,10,spec 2026-10-10-foraging-and-desertion §1.1
+forage_grievance_month_protected,5,spec 2026-10-10-foraging-and-desertion §1.1
+desert_morale,20,spec 2026-10-10-foraging-and-desertion §1.1
+desert_training,3,spec 2026-10-10-foraging-and-desertion §1.1
+desert_supply_days,0,spec 2026-10-10-foraging-and-desertion §1.1
+desert_permille_per_day,3,spec 2026-10-10-foraging-and-desertion §1.1
+desert_mult_fine,1000,spec 2026-10-10-foraging-and-desertion §1.1
+desert_mult_lenient,2000,spec 2026-10-10-foraging-and-desertion §1.1
+desert_mult_hanging,400,spec 2026-10-10-foraging-and-desertion §1.1
+desert_news_cumulative_permille,50,spec 2026-10-10-foraging-and-desertion §1.1
+camp_after_days,5,"spec 2026-10-11-war-room-front-line-design §3: a regiment settled in the hold stance, not marching and in no battle, for this many days in the field gets its camp model behind its line on the 3D map (ArmySystem.hold_day / camped; the count is capped here and reset by a march, a stance change or a battle); 0 never"

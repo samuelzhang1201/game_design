@@ -98,7 +98,7 @@ static func wagon_days(repo: DataRepository, km: int) -> int:
 
 
 ## Every realm town -> "" when it may supply `code` now, else why not
-## (data/army_supply_orders.csv pick_far).
+## (data/army/army_supply_orders.csv pick_far).
 static func eligibility(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	var out: Dictionary = {}
 	var max_days := int(repo.bal("supply_point_max_days"))
@@ -169,7 +169,7 @@ static func front_of(repo: DataRepository, state: GameState, code: String, town:
 		_burg_px(repo, town), repo.bal("supply_front_resume_km") if broken else 0.0)
 
 
-## A row of data/army_supply_orders.csv, its `col` filled from `fields`
+## A row of data/army/army_supply_orders.csv, its `col` filled from `fields`
 ## ({town}, {regiment}); `fallback` when the row is missing.
 static func words(repo: DataRepository, key: String, fields: Dictionary, col := "hint", fallback := "") -> String:
 	var text := String((repo.army_supply_orders.get(key, {}) as Dictionary).get(col, ""))
@@ -273,7 +273,7 @@ static func rear_order(repo: DataRepository, state: GameState, code: String, why
 	return rear_sorted(why, km, to_capital)
 
 
-## The hostile regiments' positions (data/army_hostile_stances.csv), [[px, kingdom]].
+## The hostile regiments' positions (data/army/army_hostile_stances.csv), [[px, kingdom]].
 static func _hostiles(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
 	var realm := repo.resolve_realm("player_realm")

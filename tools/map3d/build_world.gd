@@ -3,7 +3,7 @@ extends SceneTree
 ## headless — no editor step.
 ##   python3 tools/map3d/bake_world.py
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/build_world.gd [-- --map ID]
-## (default: data/maps.csv's is_default pack)
+## (default: data/world/maps.csv's is_default pack)
 ## build_terrain.gd does the work: build_scene() packs the scene around an
 ## empty Terrain3D; its data only initialises inside a tree, so the scene is
 ## instanced under root, import_into() fills and saves the regions, and the

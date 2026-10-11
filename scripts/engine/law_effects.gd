@@ -1,7 +1,7 @@
 class_name LawEffects
 extends RefCounted
 ## What the laws do (spec 2026-10-08-laws-tab-design §4; rows in
-## data/law_effects.csv, columns law_code, value, channel, target, amount,
+## data/realm/law_effects.csv, columns law_code, value, channel, target, amount,
 ## timing, share, reason — plan ruling R11).
 ##
 ## A `once` row is a one-shot (spec §4.3, R7): paid when a province's courier
@@ -12,7 +12,7 @@ extends RefCounted
 ## per point of change (justice severity 3 → 5 pays it twice; 5 → 3 twice the
 ## other way). Its `channel` is the metric it moves.
 ##
-## `amount` is a number, or a balance.csv key (a leading "-" negates it), so
+## `amount` is a number, or a realm/balance.csv key (a leading "-" negates it), so
 ## the one-shots keep the old orders' keys (`church_endow_cost` …) as their
 ## one source.
 

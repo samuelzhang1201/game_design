@@ -236,7 +236,7 @@ func _place_refusal(reg: Dictionary, at: Vector2, off_map: String, into_sea: Str
 
 ## ARMY_STANCE (spec 2026-10-07-enemy-ai-and-battle §4.4): a land regiment
 ## of the realm (never a foe), a courier the chest can pay, and a stance of
-## data/battle_stances.csv.
+## data/battle/battle_stances.csv.
 func _validate_stance(req: ActionRequest, state: GameState) -> String:
 	var code := String(req.params.get("regiment", ""))
 	var reg := ArmySystem.regiment(data, code, state)
@@ -481,7 +481,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	if cost > 0.0:
 		_apply(state, effects, "treasury", -cost, "paid for " + String(row["label"]))
 	# what the opinion drift reads: the request's params, a law's with its
-	# direction (LAW_SET's signature variants, data/action_signatures.csv)
+	# direction (LAW_SET's signature variants, data/realm/action_signatures.csv)
 	var sig_params := req.params
 	match req.action_code:
 		"LEVY_RAISE":

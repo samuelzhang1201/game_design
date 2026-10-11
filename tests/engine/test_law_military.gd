@@ -1,7 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## The thirteen military laws pay their effects (spec 2026-10-08-laws-tab-design
-## §2.4, §4.1, §4.2, §4.4; rows in data/law_effects.csv).
+## §2.4, §4.1, §4.2, §4.4; rows in data/realm/law_effects.csv).
 ##
 ## - A UNIT channel (morale mark, pace) is paid by each land unit on its own
 ##   value in force (`LawSystem.value`).

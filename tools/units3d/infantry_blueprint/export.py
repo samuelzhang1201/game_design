@@ -6,7 +6,7 @@ The figure was built facing -Y; the game's contract (tools/units3d/README.md) is
 mesh and the armature are turned 180 degrees about Z in their DATA (an action's keys are in
 each bone's own frame, so they turn with it). GARRISON and MARCH go down onto muted NLA
 tracks, one glTF animation each (model_cavalry.export_glb). Prints the MARCH loop's stride —
-the ground a planted foot covers in one loop — for data/army_art.csv's stride_m, and with
+the ground a planted foot covers in one loop — for data/screens/map3d/army_art.csv's stride_m, and with
 --manifest writes assets/3D/units/units3d.json's entry.
 """
 import bpy, json, math, os, sys

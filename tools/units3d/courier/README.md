@@ -30,7 +30,7 @@ measures the stride, and writes `assets/3D/units/courier/courier.glb` and the `c
 `assets/3D/units/courier/courier.glb.import` is committed with `meshes/force_disable_compression=true`,
 `animation/fps=24` and both clips set to loop (`_subresources`); Godot extracts the embedded atlas
 as `assets/3D/units/courier/courier_courier_atlas*.jpg`, which are git-ignored like every unit's.
-`data/courier_art.csv`'s `stride_m` is the `STRIDE_M` the build prints (2.338).
+`data/screens/map3d/courier_art.csv`'s `stride_m` is the `STRIDE_M` the build prints (2.338).
 
 ## Sources and licences
 

@@ -1,0 +1,31 @@
+key,value,notes
+spy_cost,15,
+spy_legitimacy_gain,1,
+source_trust_default,50,trust in a speaker with no relationship edge to the listener
+knowledge_sure_threshold,75,"credibility at/above which a persona sheet says ""You know"" (review finding 2026-09-01)"
+knowledge_doubt_threshold,50,credibility below which a persona sheet says the character doubts what they heard
+courier_base_km_per_day,160,"owner 2026-09-27: an ordinary courier's km a day on a clear road on the plain — four times the cavalry's 40 (spec 2026-09-27-courier-core)"
+courier_graph_snap_px,2,"RoadGraph: route vertices within this many pack px merge into one node — routes join each other mid-line, so without it the network falls into dozens of pieces"
+courier_offroad_max_km,80,"a place farther than this from every road node is ridden to straight across country"
+courier_reaim_m,2000,"a courier re-aims his last leg once the column he rides for has moved this many metres"
+courier_max_days,60,"the fuse: a courier out this many days is lost and his orders undelivered"
+courier_slow_news_permille,500,"a day's weather slower than this raises one news line per courier per spell"
+courier_sea_sample_km,5,"a leg is sampled every this many km; any point off the land grid makes it a sea crossing"
+missive_keep_per_column,40,"spec 2026-09-28 §1: letters kept per board column; the oldest leaves when one more arrives"
+missive_keep_supply,20,"spec 2026-10-07-army-supply-lines §5.5: supply dispatches and the marshal's months (kinds supply, supply_month) are kept apart from missive_keep_per_column, so they never push a spy report or a receipt off the board"
+missive_keep_law,20,"spec 2026-10-08-laws-tab §3: a decree's letters (kind law: its sending and its reach) are kept apart from missive_keep_per_column, as the supply letters are, so a decree to every camp never pushes a spy report or a receipt off the board"
+missive_keep_battle,20,"spec 2026-10-07-enemy-ai-and-battle §4.5: battle reports (kind battle, a letter a day while a fight lasts) are kept apart from missive_keep_per_column and missive_keep_supply, so a siege never pushes a spy report, a receipt or a supply letter off the board"
+missive_keep_receipt,20,"owner 2026-10-10 (own actions are ground truth): the couriers' receipts (kind receipt) sit in the truth column but are kept apart from missive_keep_per_column, so a campaign of orders never pushes the steward's monthly report (or an audit) off the board"
+spy_radius_km,25,a spy counts the troops within this distance of his point
+spy_credible_threshold,500,a quality roll (0..999 after spy_difficulty) at or above this files the report as highly credible; below is rumour
+spy_text_threshold,300,below this the holder / stance / wealth read "unclear"
+spy_width_best,100,"per mille half-width of an estimate at the best quality"
+spy_width_worst,450,per mille half-width at the worst quality
+spy_bias_max,300,"per mille: a rumour's whole report is shifted by up to this much, one sign for every fact"
+intel_match_km,10,a report about a point counts for a subject within this distance
+intel_magnitude_hundreds,100,"Intel.magnitude: under this a figure reads 'a handful'"
+intel_magnitude_thousands,1000,under this 'hundreds'
+intel_magnitude_many,5000,"under this 'thousands', else 'many thousands'"
+courier_paint_foul_permille,700,"the courier card shows the foul-weather painting when the weather where he is slows a rider to this share or less (weather.csv speed_permille: mud 700, snow 650, blizzard 400)"
+player_sight_km,12,"the crown's sight (spec 2026-10-10-player-sight-and-ghosts §1, Sighting): an enemy unit is SEEN while it stands within this many km of a land unit of the crown's with men under arms or of a town the crown holds; its piece is then on the map at its true place. Under ai_sight_km (the host's scouts sweep ahead of it), well over battle_contact_km and every town reach, so a column sees a host about a day's march before contact; on the first pack the main host gathers ~29 km from the nearest held town (unseen: the rumour is all the crown has) and its leading columns are first seen the day after it crosses, all of it the next (Default)"
+player_sight_estimate_quality,1000,"the crown's sight (Sighting.about): how well those who SEE an enemy unit count its men, a spy quality 0..999+ for SpySystem.estimate (1000 = the narrowest span); the ghost keeps the span's middle rounded to intel_facts.csv foe_troops, never the exact men (Default)"

@@ -5,10 +5,10 @@ Reads a finished bake (bake_world.py's height.r32, world.json, fields.png,
 houses.csv, rivers.json) plus the pack's biome weights and roads, and writes
 bake/trees.bin: one tree CLUMP per row, float32 x_m, y_m, z_m, yaw_rad,
 scale, kind — world metres in the frame of world.json; kind is the clump's
-SPECIES, a row of data/map3d_tree_species.csv.
+SPECIES, a row of data/screens/map3d/map3d_tree_species.csv.
 
 A clump stands on a blue-noise (Poisson-disk) set no two of whose points are
-nearer than data/map3d_trees.csv `poisson_r_m` (about a clump's footprint;
+nearer than data/screens/map3d/map3d_trees.csv `poisson_r_m` (about a clump's footprint;
 owner 2026-10-10: 树木有点太密集了，请使用合理的算法), kept with the chance
 its ground is wooded: each biome's own share (`biome_<id>` rows), swung by a
 slow grove noise so woods gather and open into clearings (taste: clustered,
@@ -39,9 +39,9 @@ WOOD_MAP_STEP = 2   # vertices per woods.png texel (40 m), bake_world's FIELD_MA
 
 
 def load_rules():
-    """data/map3d_trees.csv: (rules {key: number}, {biome id: woodedness})."""
+    """data/screens/map3d/map3d_trees.csv: (rules {key: number}, {biome id: woodedness})."""
     rules, biome = {}, {}
-    with open(os.path.join(ROOT, "data", "map3d_trees.csv")) as f:
+    with open(os.path.join(ROOT, "data", "screens", "map3d", "map3d_trees.csv")) as f:
         for r in csv.DictReader(f):
             k = r["key"]
             if k.startswith("biome_"):
@@ -52,11 +52,11 @@ def load_rules():
 
 
 def load_species(path=None):
-    """data/map3d_tree_species.csv as a list of dicts: kind, habit (HABITS),
+    """data/screens/map3d/map3d_tree_species.csv as a list of dicts: kind, habit (HABITS),
     conifer, cells, crowns, spread_m, size, biome weights (16), h_gain, weight,
     enabled — every row, enabled or waiting for its art."""
     out = []
-    with open(path or os.path.join(ROOT, "data", "map3d_tree_species.csv")) as f:
+    with open(path or os.path.join(ROOT, "data", "screens", "map3d", "map3d_tree_species.csv")) as f:
         for r in csv.DictReader(f):
             w = np.zeros(16, np.float32)
             for part in r["biomes"].split("|"):

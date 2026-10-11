@@ -160,7 +160,7 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 
 
 ## Foraging at the point (spec 2026-10-10-foraging-and-desertion §4; words in
-## data/conduct_words.csv): in enemy or grey land the word and the day's yield,
+## data/army/conduct_words.csv): in enemy or grey land the word and the day's yield,
 ## at home that it is not foraged. With a unit chosen, what it would be fed.
 static func _forage_lines(repo: DataRepository, r: Dictionary, out: Array) -> void:
 	var f: Dictionary = r.get("forage", {})
@@ -206,7 +206,7 @@ static func _economy_lines(repo: DataRepository, r: Dictionary, out: Array) -> v
 		_add(out, "Market of %s (%s) — food at ×%s" % [String(m["label"]), whose,
 			String.num(float(int(m["food_permille"])) / 1000.0, 2)])
 
-## A kind's effects in words (data/hazard_kinds.csv).
+## A kind's effects in words (data/army/hazard_kinds.csv).
 static func hazard_words(repo: DataRepository, kind: String) -> String:
 	var k := Hazards.kind_of(repo, kind)
 	var parts: Array[String] = []

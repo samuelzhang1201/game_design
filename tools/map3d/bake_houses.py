@@ -385,7 +385,7 @@ def _rects_too_close(ax, az, ahalf, ayaw, bx, bz, bhalf, byaw, gap):
 
 def half_extents(row):
     """(half along the building's facing axis, half across it) for one type
-    of data/map3d_houses.csv. The mesh faces +Z and Map3DLayerHouses turns
+    of data/screens/map3d/map3d_houses.csv. The mesh faces +Z and Map3DLayerHouses turns
     it about the vertical by the row's yaw, so the mesh's own Z span lies
     along `_axes(yaw)`'s first axis and its X span along the second.
 
@@ -1014,9 +1014,9 @@ def place(burg, rules, types, foot, land, height, k, vw, vh, debug_counts=None, 
 # -- walls and piers ------------------------------------------------------------------
 # Owner 2026-10-01: 城镇里的feature如果有城墙我希望城镇的外围能增加城墙；城镇的feature里
 # 如果有码头，我希望城镇能够延伸出去一个码头到海里. Both are extra rows of the
-# settlement's houses.csv (roles `wall` / `pier` in data/map3d_houses.csv), so the
+# settlement's houses.csv (roles `wall` / `pier` in data/screens/map3d/map3d_houses.csv), so the
 # runtime's houses layer draws them with no new layer; every number is
-# data/map3d_bake.csv's wall_* / pier_*.
+# data/screens/map3d/map3d_bake.csv's wall_* / pier_*.
 
 def smooth_open(pts, steps):
     """MapGeometry.smooth_open, the runtime's road smoothing, in Python: a
@@ -1256,7 +1256,7 @@ def fortify(burg, rows, rules, types, land, wet, k, vw, vh, roads, height=None):
 # alongside it. A cliff harbour keeps its own proportions (2026-10-05: 这岩堡大小
 # 太不合理了) and a walled town's wall closes round its houses (有城墙必须要合拢:
 # fortify), a pier's quay gate in it (clear_under). Every number is
-# data/map3d_bake.csv's pier_*, pier_cliff_* / ship_*.
+# data/screens/map3d/map3d_bake.csv's pier_*, pier_cliff_* / ship_*.
 
 # A ship's berths in its pier's own frame — the model's Blender metres at
 # scale 1, +X out to sea, +Y the model's left: (point on the quay's face,

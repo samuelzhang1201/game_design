@@ -11,7 +11,7 @@ normals are used as downloaded. kit.py reads tinted/<key>.jpg and
 <source>_nor_gl_1k.jpg; every .glb embeds what it uses, so nothing here is
 committed.
 
-The targets sit a little DARKER than data/terrain_palette.csv's house_*
+The targets sit a little DARKER than data/screens/ui/terrain_palette.csv's house_*
 values: the 3D map's sun and Filmic tonemap lift a sunlit wall toward white
 (the first church read paper-white at the closest zoom, 2026-09-24; the
 first full set read pink-roofed and blue-white-walled in game, and every

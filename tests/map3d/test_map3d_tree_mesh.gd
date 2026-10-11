@@ -60,7 +60,7 @@ func test_a_photo_card_clump_is_two_triangles_a_crown_from_its_own_cells() -> vo
 
 
 func test_a_species_clump_wears_its_own_row() -> void:
-	# owner 2026-10-10 (树木的品种过于单一): data/map3d_tree_species.csv
+	# owner 2026-10-10 (树木的品种过于单一): data/screens/map3d/map3d_tree_species.csv
 	var repo := SuiteData.repo()
 	var drawn := 0
 	for r: Dictionary in repo.map3d_tree_species:

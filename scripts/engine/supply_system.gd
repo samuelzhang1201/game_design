@@ -19,7 +19,7 @@ static func total_loss(repo: DataRepository, km: int, mark_permille: int) -> int
 
 ## What the brigands and pirates along a route take (spec
 ## 2026-10-07-war-room-p2-tactical-layer §1.2): each hazard mark
-## (data/war_mark_hazards.csv) whose reach the route (pack px) passes through,
+## (data/army/war_mark_hazards.csv) whose reach the route (pack px) passes through,
 ## once per mark, in code order — {permille, hazards: [{code, label, permille}]}.
 ## Pirates need no water test: their marks stand at sea, so a road within their
 ## reach runs along the coast they raid.

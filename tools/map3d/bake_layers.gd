@@ -1,6 +1,6 @@
 extends SceneTree
 ## Bake the 3D map's static layers (spec 2026-09-20 §2) — rivers, roads,
-## trails, bridges — for every distinct step set in data/graphics_quality.csv,
+## trails, bridges — for every distinct step set in data/screens/ui/graphics_quality.csv,
 ## into <map3d_dir>/layers/. Run after build_world.gd (build_pack.sh does):
 ##   GDAI_MCP_SERVER_PORT=3999 Godot --headless --path . -s tools/map3d/bake_layers.gd [-- --map ID]
 

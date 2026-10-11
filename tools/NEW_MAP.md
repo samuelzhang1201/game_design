@@ -3,7 +3,7 @@
 A map pack is one Azgaar export (`*Full*.json`). Nothing in the code or the
 tests names a pack: every tool takes `--map ID` (`--map-id ID` for the
 importer, `--pack ID` for `arms_prompts.py`, `ARMS_PACK=ID` for
-`install_map_art.py arms`) and otherwise uses the row of `data/maps.csv`
+`install_map_art.py arms`) and otherwise uses the row of `data/world/maps.csv`
 whose `is_default` is 1. Re-running this list on `beria` reproduces the
 committed files byte for byte (checked 2026-09-18).
 
@@ -11,7 +11,7 @@ committed files byte for byte (checked 2026-09-18).
 
 ## 1. Import and bake — automatic, in this order
 
-1. Put the export in `assets/maps/<id>/` and add a `data/maps.csv` row
+1. Put the export in `assets/maps/<id>/` and add a `data/world/maps.csv` row
    (copy beria's, swap the id; set `is_default` to 1 to make it the game's map).
 2. `G --script res://tools/import_azgaar.gd -- --map-id <id>` — every pack
    table and the index bitmaps.

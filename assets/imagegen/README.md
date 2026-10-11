@@ -124,7 +124,7 @@ python3 assets/imagegen/generate.py --build-csv                      # after edi
 | `compass` | I-73 → `assets/2D/ui/compass/compass.png` (256 px) |
 | `cast` | K- → `assets/2D/portraits/cast/` (96 px chip) and `assets/2D/portraits/cast/full/` (1024 px tall) |
 | `biomes` | satellite T- tiles → `assets/biomes/<key>.png` (1024 px, seamless) |
-| `arms` | A- → `assets/2D/arms/<pack>/<key>.png` (256 px; `ARMS_PACK=<id>`, default the `data/maps.csv` default pack via `tools/packs.py`) |
+| `arms` | A- → `assets/2D/arms/<pack>/<key>.png` (256 px; `ARMS_PACK=<id>`, default the `data/world/maps.csv` default pack via `tools/packs.py`) |
 | `app_icon` | X-01 → `icon.png` (1024 px, full bleed) |
 | `title` | U-27 → `assets/2D/ui/panels/frame.png` (1792×1008, the render as it is) |
 

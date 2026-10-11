@@ -1,7 +1,7 @@
 """Bake a pack's MARCH GRID: how steep the ground is where a column would walk
 (owner 2026-10-10, spec 2026-10-10-march-slope-detour).
 
-  python3 tools/map3d/bake_march_grid.py [--map ID]   (default: data/maps.csv is_default)
+  python3 tools/map3d/bake_march_grid.py [--map ID]   (default: data/world/maps.csv is_default)
 
 Reads the heights the Terrain3D world was built from — <map3d_dir>/bake/
 height_war.r16 and world.json, written by bake_world.py — so the slope a
@@ -31,17 +31,14 @@ from PIL import Image
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from packs import default_pack, map3d_dir  # noqa: E402
+import data_index  # noqa: E402
 
 WATER = 255
 
 
 def balance(key):
-    """A data/balance.csv value (the engine's MarchPath reads the same rows)."""
-    with open(os.path.join(ROOT, "data", "balance.csv"), newline="") as f:
-        for row in csv.DictReader(f):
-            if row["key"] == key:
-                return float(row["value"])
-    raise KeyError(key)
+    """A balance value (the engine's MarchPath reads the same rows)."""
+    return data_index.balance()[key]
 
 
 def box(a, r):

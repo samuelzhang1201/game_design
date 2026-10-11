@@ -14,7 +14,7 @@ import os
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-TABLE = os.path.join(ROOT, "data", "unit_models.csv")
+TABLE = os.path.join(ROOT, "data", "screens", "map3d", "unit_models.csv")
 OUT = os.path.join(ROOT, "assets", "3D", "units")
 SRC = os.path.join(OUT, "model_wip")
 

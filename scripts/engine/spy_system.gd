@@ -2,7 +2,7 @@ class_name SpySystem
 extends RefCounted
 ## Spies (owner 2026-09-28, spec 2026-09-28-missive-board-and-spies §1): a
 ## spy courier's arrival becomes a report. One quality roll per mission from
-## GameState.rng, shifted by the place (data/spy_difficulty.csv), decides the
+## GameState.rng, shifted by the place (data/intel/spy_difficulty.csv), decides the
 ## column — highly credible or rumour — and how wide and how biased every
 ## estimate is. Two spies to one place draw different rolls: their reports differ.
 

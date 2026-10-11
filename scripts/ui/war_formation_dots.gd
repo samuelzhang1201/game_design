@@ -1,7 +1,7 @@
 class_name WarFormationDots
 extends Control
 ## The folio's formation diagram (spec 2026-10-01-war-room-design §4): one ink
-## dot per figure of the regiment's strength tier (data/army_formations.csv),
+## dot per figure of the regiment's strength tier (data/army/army_formations.csv),
 ## the front marked above the first rank.
 
 

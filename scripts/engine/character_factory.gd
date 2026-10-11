@@ -4,7 +4,7 @@ extends RefCounted
 const ATTRS := ["ambition","loyalty","integrity","boldness","piety","compassion","vanity","temper"]
 const SKILLS := ["sk_admin","sk_martial","sk_intrigue","sk_diplomacy","sk_steward"]
 const AXES := ["centralism","militarism","orthodoxy","tax_incidence","expansionism"]
-## Role-level 0-100 metrics (data/roles.csv columns; default 50 when a row
+## Role-level 0-100 metrics (data/council/roles.csv columns; default 50 when a row
 ## predates them). Live in `attributes` beside the personality axes so they
 ## serialize and clamp identically.
 const ROLE_METRICS := ["health","wealth","prestige","influence"]
@@ -15,7 +15,7 @@ static func build_founding(data: DataRepository) -> Dictionary:
 		out[row["id"]] = build(row, data)
 	return out
 
-## Founding council plus every extended role (data/roles.csv): player family,
+## Founding council plus every extended role (data/council/roles.csv): player family,
 ## relatives, officers, nobles, enemies, foreign courts, celebrities.
 static func build_roster(data: DataRepository) -> Dictionary:
 	var out := build_founding(data)

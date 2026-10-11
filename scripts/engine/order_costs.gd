@@ -4,7 +4,7 @@ extends RefCounted
 ## against its good direction, an opinion / relationship / attribute loss, or
 ## a world field moved against its good direction. Tone deltas and the kept
 ## promise pseudo-effect do not count. When an order carried none of its own,
-## the action's row in data/order_costs.csv is charged. Engine-pure.
+## the action's row in data/realm/order_costs.csv is charged. Engine-pure.
 
 const EXEMPT := "none"
 

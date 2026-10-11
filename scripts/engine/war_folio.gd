@@ -2,7 +2,7 @@
 class_name WarFolio
 extends RefCounted
 ## The WAR ROOM folio's right page and drill tabs (owner 2026-10-01, spec
-## 2026-10-01-war-room-design §4). Sections are data/war_folio_sections.csv
+## 2026-10-01-war-room-design §4). Sections are data/screens/war_room/war_folio_sections.csv
 ## rows, each with a builder here; every figure is gated by Intel (exact for
 ## the crown's own, so intel P2's blur reaches the folio unchanged). Training
 ## shows only as its grade word. No history: nothing stores it.
@@ -125,7 +125,7 @@ static func _state_of(repo: DataRepository, state: GameState, code: String, reg:
 
 
 ## The rows foraging and desertion add (spec 2026-10-10-foraging-and-desertion
-## §4; words in data/conduct_words.csv): how the unit is living, and its deserters.
+## §4; words in data/army/conduct_words.csv): how the unit is living, and its deserters.
 static func conduct_rows(repo: DataRepository, st: Dictionary) -> Array:
 	var rows: Array = []
 	var forage := String(st.get("forage", ""))
@@ -351,7 +351,7 @@ static func _march(repo: DataRepository, state: GameState, code: String, reg: Di
 	return rows
 
 
-## The folio's word for a standing order (data/war_order_words.csv).
+## The folio's word for a standing order (data/army/war_order_words.csv).
 static func order_word(repo: DataRepository, order: String) -> String:
 	return String(repo.war_order_words.get(order, order.capitalize()))
 

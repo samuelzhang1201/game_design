@@ -9,7 +9,7 @@ func before_all() -> void:
 	assert_not_null(data, DataRepository.last_error)
 
 func test_the_tables_load_in_file_order() -> void:
-	var f := FileAccess.open("res://data/ledger_lenses.csv", FileAccess.READ)
+	var f := FileAccess.open("res://data/screens/ledger/ledger_lenses.csv", FileAccess.READ)
 	f.get_csv_line()  # the header
 	assert_eq(String(data.ledger_lenses[0]["lens"]), String(f.get_csv_line()[0]), "the file's first row first")
 	assert_gt(data.ledger_types.size(), 20)

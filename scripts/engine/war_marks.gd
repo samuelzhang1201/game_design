@@ -2,10 +2,10 @@ class_name WarMarks
 extends RefCounted
 ## The map's points of interest the WAR ROOM inks (spec
 ## 2026-10-07-war-room-p2-tactical-layer §1): a geography/markers.csv row whose
-## type data/war_marks.csv lists, on the layer it names. Public geography: no
+## type data/screens/war_room/war_marks.csv lists, on the layer it names. Public geography: no
 ## intel gate. Pure; marks in code order.
 
-## Every glyph the WAR ROOM can draw (WarMarkGlyph); data/war_marks.csv may
+## Every glyph the WAR ROOM can draw (WarMarkGlyph); data/screens/war_room/war_marks.csv may
 ## name no other.
 const GLYPHS := ["crossed_swords", "galley", "pick", "tankard", "pennon", "broken_column",
 	"tower_light", "dot", "anvil", "horseshoe", "ingot", "keel", "scales"]

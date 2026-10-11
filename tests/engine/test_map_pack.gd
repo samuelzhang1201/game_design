@@ -1,6 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
-## Map packs (data/maps.csv + data/maps/<id>/). Authored content names realm
+## Map packs (data/world/maps.csv + data/maps/<id>/). Authored content names realm
 ## SLOTS, never the kingdom codes a particular Azgaar export generated, so a
 ## new map is a data drop rather than a content rewrite.
 
@@ -46,9 +46,9 @@ func test_authored_realms_resolve_through_the_pack() -> void:
 ## authored CSV, swapping maps silently orphans that row — catch it here.
 func test_no_authored_csv_names_a_map_kingdom_directly() -> void:
 	var repo := _fresh()
-	for spec in [["res://data/roles.csv", "kingdom"],
-			["res://data/founding_council.csv", "kingdom"],
-			["res://data/facts.csv", "subject"]]:
+	for spec in [["res://data/council/roles.csv", "kingdom"],
+			["res://data/council/founding_council.csv", "kingdom"],
+			["res://data/intel/facts.csv", "subject"]]:
 		var rows := DataRepository.parse_csv(String(spec[0]), [String(spec[1])])
 		for r in rows:
 			var v := String(r[String(spec[1])])
@@ -109,7 +109,7 @@ func test_authored_prose_reaches_the_engine_already_filled() -> void:
 ## shifted every column after it, silently reading the notes tail as the
 ## next column. Every row must parse to the full header width.
 func test_maps_csv_rows_parse_to_the_full_header() -> void:
-	var f := FileAccess.open("res://data/maps.csv", FileAccess.READ)
+	var f := FileAccess.open("res://data/world/maps.csv", FileAccess.READ)
 	assert_not_null(f, "maps.csv opens")
 	var header := f.get_csv_line()
 	var seen := 0
@@ -200,7 +200,7 @@ func test_the_crown_starts_with_the_capitals_province_only() -> void:
 	assert_almost_eq(state.metrics["treasury"],
 		roundf(WorldLedger.realm_share_town_treasury(repo, state) * repo.bal("pack_treasury_scale")), 0.001)
 
-## data/manor_focus.csv (owner 2026-09-13): every focus names a good the
+## data/economy/manor_focus.csv (owner 2026-09-13): every focus names a good the
 ## pack trades and biomes the pack has, and every manor of the capital's
 ## province can work something.
 func test_the_manor_focus_table_fits_the_pack() -> void:

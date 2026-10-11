@@ -174,7 +174,7 @@ static func _ico(subdiv: int) -> Array:
 ## tree_card.gdshader from the crown atlas. Every corner of a card sits at its
 ## crown's centre; CUSTOM0 carries (corner x, corner y, half size m, atlas
 ## cell), the cell drawn by the crown's own rng from `cells` (the atlas cells
-## of this kind, data/map3d_tree_crowns.csv). Two triangles a tree. `count`,
+## of this kind, data/screens/map3d/map3d_tree_crowns.csv). Two triangles a tree. `count`,
 ## `spread` and `size` override the kind's own (a species row's crowns,
 ## spread_m and size: species_cards).
 static func cards(kind: int, variant: int, cells: PackedInt32Array, count := -1,
@@ -227,7 +227,7 @@ static func cards(kind: int, variant: int, cells: PackedInt32Array, count := -1,
 	return mesh
 
 
-## A species' clump (data/map3d_tree_species.csv row, owner 2026-10-10: 树木
+## A species' clump (data/screens/map3d/map3d_tree_species.csv row, owner 2026-10-10: 树木
 ## 的品种过于单一): its form, atlas cells, crowns, spread and size; variant
 ## `variant` of it, seeded by the species' kind so no two species share a layout.
 static func species_cards(row: Dictionary, variant: int) -> ArrayMesh:

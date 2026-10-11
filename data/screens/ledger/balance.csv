@@ -1,0 +1,122 @@
+key,value,notes
+ledger_thread_flow_ref,5000,"LEDGER: the flow at which a thread reaches its widest (log scale)"
+ledger_tie_ref,80,"LEDGER (owner 2026-09-30: the court's 49 thick ties tangled): the strength of feeling (|sentiment|) at which a court tie reaches ledger_tie_max_px"
+ledger_tie_rest_fade,0.18,"LEDGER: opacity of a court tie that does not touch the player while nothing is selected (the court is read one person's web at a time; selecting anyone makes them the one)"
+ledger_light_speed,0.6,LEDGER: pulses per second along a thread at its widest
+ledger_light_pulses,4,LEDGER: pulses along one thread
+ledger_ink_general,0.6,LEDGER: ink of a figure the crown has in words (Intel general)
+ledger_ink_basic,0.35,LEDGER: ink of a figure the crown barely knows (Intel basic)
+ledger_age_full_days,90,LEDGER: days after which a report's thread has fully yellowed
+ledger_focus_fade,0.15,LEDGER: opacity of what is not linked to the selected sphere
+ledger_camera_distance,160,"LEDGER: the camera's distance when there is nothing to frame (metres); otherwise the opening view and Front frame the spheres and discs drawn (LedgerOrbit.frame)"
+ledger_camera_min_m,20,LEDGER: closest zoom
+ledger_camera_max_m,420,LEDGER: farthest zoom
+ledger_camera_pitch_deg,-24,LEDGER: the front view's pitch (negative looks down)
+ledger_turn_deg_per_px,0.3,LEDGER: degrees turned per pointer px of a right-drag
+ledger_zoom_factor,1.12,LEDGER: distance factor per wheel notch
+ledger_pan_gesture_px,12,LEDGER: pointer px per unit of a trackpad pan gesture
+ledger_label_px,14,LEDGER: sphere names' font size (design px)
+ledger_label_lift_px,12,LEDGER: how far above its sphere's centre a name stands (design px)
+ledger_label_halo_px,4,LEDGER: the dark halo under a sphere's name (design px)
+ledger_pick_min_px,4,"LEDGER galaxy: a link is picked within at least this many design px of its line, however thin it is drawn"
+ledger_frame_top_px,84,"LEDGER: design px at the top of the view the LEDGER screen's own chrome covers (its title, the lenses, the crumb and its Close button): no name or title is drawn in it, and the framing keeps a cluster title and a name line clear under it"
+ledger_frame_side_px,40,LEDGER: design px at each side of the view the framing keeps clear (half a long name beside the widest sphere)
+ledger_frame_bottom_px,28,LEDGER: design px at the bottom of the view the framing keeps clear (a name set under the lowest sphere)
+ledger_gauge_radius_px,7,LEDGER: a property gauge's ring radius (design px) under its sphere's name
+ledger_gauge_width_px,3,LEDGER: a property gauge's ring width (design px)
+ledger_gauge_gap_px,3,LEDGER: design px between a sphere's name and its row of gauges
+ledger_gauge_caption_px,12,LEDGER: font size of a gauge's caption (design px)
+ledger_galaxy_repel,3.5,"LEDGER galaxy (spec 2026-09-30-ledger-galaxy-design §4): repulsion between two stars, scaled by their sizes (2 until owner 2026-10-01: node更分散一点 — each cluster spreads ~30% wider, its stars' mean nearest neighbour 11-16 m → 14-21 m)"
+ledger_galaxy_cross_repel,0.2,"LEDGER galaxy (owner 2026-10-01: 3个cluster布局可以靠的再近一点): two stars of different clusters repel this share as hard as two of one — the long reach of every pair's repulsion, not the anchors, held the clusters ~110 m apart; 1 is the old chart"
+ledger_galaxy_spring,0.05,LEDGER galaxy: a link's spring within a cluster
+ledger_galaxy_cross_spring,0.15,LEDGER galaxy: a link's spring across clusters as a share of ledger_galaxy_spring
+ledger_galaxy_rest_m,7,"LEDGER galaxy: a link spring's rest length (metres; 4 until owner 2026-10-01, the nodes more spread)"
+ledger_galaxy_rest_per_link,4,"LEDGER galaxy (owner 2026-10-01, critic round 2: the King's inner ring crowded while the court's edge spread): a link's rest length grows by this many metres per square root of its busier end's links, so a hub's neighbours have room round it"
+ledger_galaxy_rest_busy_cap,16,"LEDGER galaxy: the most links ledger_galaxy_rest_per_link counts at a star (every province opened, a province's dozens of manors pushed its stars into the next cluster)"
+ledger_galaxy_gap_m,2,"LEDGER galaxy (owner 2026-10-01: node更分散一点): two stars whose layout radii come within this many metres of touching are pushed apart besides their repulsion"
+ledger_galaxy_gap_push,0.3,"LEDGER galaxy: the push apart, this share of the overlap a pass (with ledger_galaxy_gap_m; 0 none)"
+ledger_galaxy_home,0.06,LEDGER galaxy: the pull of a star toward its cluster's anchor (an opened manor's toward its province)
+ledger_galaxy_step_max_m,3,LEDGER galaxy: the most a star moves in one pass
+ledger_galaxy_passes,150,LEDGER galaxy: passes that settle the chart after a snapshot
+ledger_galaxy_ms_per_frame,4,LEDGER galaxy: milliseconds of layout a frame while settling
+ledger_galaxy_resettle_passes,40,"LEDGER galaxy (final review I1b): passes a redraw runs when its star set differs from the drawn one (a province opened, a courier gone) — the surviving stars keep their places and only the new ones are warm-started; an unchanged set runs none"
+ledger_galaxy_pin_share,0.3,"LEDGER galaxy: share of ledger_galaxy_passes a settled chart runs again when a star is dragged and pinned"
+ledger_galaxy_grid_min_stars,300,"LEDGER galaxy (final review I1c): at this many stars a pass repels only pairs nearer than ledger_galaxy_repel_cutoff_m, found through a uniform grid, so one pass fits ledger_galaxy_ms_per_frame (every pair of 629 stars cost ~9 ms a pass)"
+ledger_galaxy_repel_cutoff_m,12,"LEDGER galaxy (final review I1c): beyond this distance two stars do not repel (only at ledger_galaxy_grid_min_stars and above); the grid's cell size. Measured 2026-10-01, every realm province opened one by one (629 stars): worst pass 3.0 ms at 12, 3.6 at 16, 2.5 at 8"
+ledger_galaxy_fly_s,0.6,LEDGER galaxy: seconds the camera flies to a cluster
+ledger_galaxy_other_fade,0.25,LEDGER galaxy: perceived opacity of the other clusters while one is chosen
+ledger_near_fade_start,0.8,"LEDGER galaxy (critic, owner 2026-10-01 round 2): a DIMMED star nearer the camera than this share of the camera's distance to its target starts to fade (another cluster's star seen from inside the chosen one read as a blurred disc)"
+ledger_near_fade_end,0.5,"LEDGER galaxy: and is gone at this share"
+ledger_cross_rest_fade,0.3,LEDGER galaxy: perceived opacity of a link crossing clusters while nothing is selected (outside the Court tab)
+ledger_focus_width,1.25,"LEDGER galaxy: how much wider the selected star's links — and, at rest, the player's own web — are drawn (1.5 until owner 2026-10-01: the King's ties must read as part of the web around them, lit by opacity rather than set apart)"
+ledger_star_min,0.45,LEDGER galaxy: the smallest star's radius (metres)
+ledger_star_max,2.8,LEDGER galaxy: the largest star's radius (metres)
+ledger_star_pool,2.6,LEDGER galaxy: a goods pool's radius (gold / civil / strategic)
+ledger_star_per_link,0.22,LEDGER galaxy: radius added per square root of a star's links
+ledger_star_per_fold,0.27,LEDGER galaxy: radius added per square root of what a province folds
+ledger_star_emit,1.8,LEDGER galaxy: a star's glow
+ledger_star_rim,1.6,LEDGER galaxy: a star's rim light
+ledger_star_metallic,0.35,LEDGER galaxy: a star's metallic
+ledger_star_roughness,0.22,LEDGER galaxy: a star's roughness
+ledger_star_matcap_mix,1.0,"LEDGER galaxy (owner 2026-10-10: the art drawn by Comfy, the star-chart glass orb L-01): how much of a star is its generated matcap (star.tres matcap) rather than the plain shine; 0 is the plain shine"
+ledger_star_matcap_gain,3.5,LEDGER galaxy: the matcap's value times the cluster colour (the glass orb's brightness)
+ledger_star_matcap_white,1.0,LEDGER galaxy: how far the matcap's brightest highlights go toward white
+ledger_haze_strength,0.075,LEDGER galaxy: a cluster haze's brightness
+ledger_haze_scale,3.4,LEDGER galaxy: a cluster haze's size as a multiple of the cluster's mean radius
+ledger_link_min_px,1,LEDGER galaxy: a link's width at no flow (screen px)
+ledger_link_max_px,3,LEDGER galaxy: a link's width at ledger_thread_flow_ref and above (screen px)
+ledger_link_count_ref,30,"LEDGER galaxy: a link with no figure (words only, or a structure tie) is as wide as the links it stands for, log scale, ledger_link_max_px at this many"
+ledger_tie_min_px,1,LEDGER galaxy: a court tie's width at no feeling (screen px)
+ledger_tie_max_px,2.6,LEDGER galaxy: a court tie's width at ledger_tie_ref (screen px)
+ledger_strand_gap_px,2,LEDGER galaxy: screen px between two strands' edges
+ledger_pair_offset_px,3,LEDGER galaxy: screen px between two links joining the same stars both ways
+ledger_link_edge_soft,0.35,LEDGER galaxy: share of a link's half-width over which its sides soften
+ledger_link_strand_mix,1.0,"LEDGER galaxy (owner 2026-10-10: the braided gold cord L-05, '绞绳调细一点'): how much of a link is its generated strand (link.tres strand) rather than the plain soft line; 0 is the plain line"
+ledger_link_strand_widen,1.3,"LEDGER galaxy: a stranded link is drawn this many times its width, room for the cord's glints (2.0 read too heavy, 1.0 lost the twist)"
+ledger_link_strand_px,140,LEDGER galaxy: screen px along a link per repeat of the strand texture (shorter shimmered)
+ledger_link_strand_power,1.5,LEDGER galaxy: contrast on the strand texture (above 1 thins its glow toward the core)
+ledger_link_strand_gain,1.6,LEDGER galaxy: the strand's value times the link colour
+ledger_link_strand_white,0.35,LEDGER galaxy: how far the strand's brightest glints go toward white
+ledger_dashes_per_m,0.5,LEDGER galaxy: dashes per metre along a planned link
+ledger_glow_intensity,0.9,LEDGER galaxy: the view's glow intensity
+ledger_glow_threshold,0.8,LEDGER galaxy: the view's glow HDR threshold
+ledger_label_hubs,12,LEDGER galaxy: the largest stars in view that are always named
+ledger_label_strong_px,16,"LEDGER galaxy: the larger name size, for the selected star and the hubs (design px; spec §7)"
+ledger_title_px,20,LEDGER galaxy: a cluster title's font size (design px)
+ledger_ring_px,3,LEDGER galaxy: the selected star's ring width (screen px)
+ledger_light_gain,1.5,"LEDGER galaxy: how much a link's running light brightens its own colour (Task 11 fix round 1: a mix toward white read as grey chips)"
+ledger_star_draw_scale,0.7,"LEDGER galaxy: a star is drawn at this share of its layout radius (Task 11 fix round 1: small stars whose glow carries the size, not pearls; 0.6 until owner 2026-10-01 spread each cluster ~30% wider, which drew every star smaller in its own tab); the layout keeps the full radius"
+ledger_star_planned_max,0.9,"LEDGER galaxy: a planned (ghost) star's radius at most (metres, before ledger_star_draw_scale): an ordinary small star's, never a pool's (Task 11 fix round 1)"
+ledger_star_planned_sat,0.75,"LEDGER galaxy: a planned star wears its own cluster's colour at this share of its saturation"
+ledger_star_planned_fade,0.5,"LEDGER galaxy: a planned star's perceived opacity (faint: not yet built)"
+ledger_label_halo_soft_px,10,"LEDGER galaxy: the soft wide halo under every name and title (design px), so a link never cuts a letter"
+ledger_label_halo_soft_alpha,0.6,"LEDGER galaxy: the soft halo's opacity"
+ledger_star_pick_min_px,8,"LEDGER galaxy: a star is picked within its drawn disc or this many design px of it, whichever is larger (Task 11 fix round 2: a ghost star is a few px across)"
+ledger_star_max_px,14,"LEDGER galaxy: no star is drawn with a radius over this many design px, however close the camera (Task 11 fix round 2: about twice an ordinary hub)"
+ledger_star_wobble_share,0.45,"LEDGER galaxy: each star drifts in a Lissajous loop round its place, this share of its DRAWN radius (owner 2026-10-01: 轻微小幅度晃动 at 0.1, then the same day 晃动幅度也可以更大更明显，现在太小了像静止的 — 0.3 and 0.45 shot, 0.4 in round 1, 0.45 at the critic's preference, ~2-5 screen px each way at the Court tab; its links' ends move with it, link.gdshader); 0 holds every star still"
+ledger_star_wobble_selected,0.12,"LEDGER galaxy: the selected star's wobble, a share of its drawn radius — smaller, so it keeps inside its gold ring (the HUD draws the ring at its layout place)"
+ledger_star_wobble_period_min,3,"LEDGER galaxy: the shortest wobble loop (s, real time); each star's own between min and max, from its id's hash"
+ledger_star_wobble_period_max,6,"LEDGER galaxy: the longest wobble loop (s, real time)"
+ledger_star_wobble_ratio,1.3,"LEDGER galaxy: the wobble's up-down rate against its side-to-side rate (a Lissajous loop, never a line)"
+ledger_spark_strength,1.3,"LEDGER galaxy: the electric current round each star (owner 2026-10-01: 周边带有类似细微电流的感觉, 0.6; then owner 2026-10-01: 球体周边电流可以更大更明显一点 — 1.0 and 1.3 shot), its opacity; 0 draws none"
+ledger_spark_width,0.7,"LEDGER galaxy: the current's ring just outside the disc, a share of the star's drawn radius (0.35; 0.9 in round 1 of the owner's 更大更明显, narrowed after the critic's round 2)"
+ledger_spark_arcs,5,"LEDGER galaxy: the current's filaments round the rim (6 until 更大更明显: fewer, longer runs)"
+ledger_spark_speed,0.1,"LEDGER galaxy: how fast the filaments crawl round the rim (turns a second, real time)"
+ledger_spark_cover,0.5,"LEDGER galaxy: the share of the rim the filaments run along (0.45; 0.6 in round 1 of 更大更明显, which on a 10 px star closed into a ring — critic, round 2)"
+ledger_spark_max_cover,0.66,"LEDGER galaxy: the most of the rim the current ever lights — a dark sector of the rest turns with the filaments (critic, round 2: never a closed ring)"
+ledger_spark_flicker,0.6,"LEDGER galaxy: how deep the filaments flicker (0 steady, 1 out and in)"
+ledger_spark_flicker_hz,6,"LEDGER galaxy: how fast the filaments flicker"
+ledger_spark_lift,0.3,"LEDGER galaxy: a spark's bright CORE, the star's saturated hue this far toward white (its halo keeps the hue)"
+ledger_spark_selected,1.7,"LEDGER galaxy: the selected star's current, this many times a whole star's (1.6 under its ring was lost; 2.2 outside it reached across its threads: critic, fix rounds 1-2)"
+ledger_spark_dimmed,0.5,"LEDGER galaxy: a dimmed star's current, this share of a whole star's times the star's own perceived opacity (pow 2.2 of its fade: a ghost at 0.5 keeps ~1/9, a star off the web at 0.15 almost none)"
+ledger_spark_min_px,2,"LEDGER galaxy: a star drawn with a radius under this many SCREEN px wears no current (a hair on a speck reads as a grey smudge; 3 until 更大更明显, so the Court tab's small stars wear one)"
+ledger_spark_full_px,5,"LEDGER galaxy: from this drawn radius (screen px) a star wears its whole current, faded in from ledger_spark_min_px (8 until 更大更明显)"
+ledger_spark_saturation,1.6,"LEDGER galaxy: a spark's halo wears the star's colour pushed this far from grey, at full value (critic, fix round 1: a grey-white wire on the pale court stars)"
+ledger_spark_core_px,1,"LEDGER galaxy: a spark's bright core, its half width in screen px (0.6 until 更大更明显)"
+ledger_spark_glow_px,3.5,"LEDGER galaxy: a spark's soft additive halo, its falloff in screen px (the softest thing round the star, never a crisp line; 2 until 更大更明显), held to ledger_spark_glow_share of the star's own radius"
+ledger_spark_glow_share,0.25,"LEDGER galaxy: a spark's halo falloff at most this share of its star's drawn radius in screen px (critic, round 2: on a 10 px star a 3.5 px falloff fanned a radius wide and merged between neighbours)"
+ledger_spark_glow,0.8,"LEDGER galaxy: a spark's halo light against its core's 1 (0.55 until 更大更明显)"
+ledger_spark_jag,0.35,"LEDGER galaxy: how uneven a spark's straight jags run (0 even; critic, fix round 1: even steps read as a Greek-key meander)"
+ledger_spark_selected_out,1,"LEDGER galaxy: 1 lays the selected star's current just outside its gold selection ring, 0 at its disc like the rest"
+ledger_lineage_tie_hops,2,"LEDGER lineage (owner 2026-10-01: 我需要点击一个node的时候，highlight整个lineage — the hybrid): a selected star's tie and kin links walked this many hops (LedgerLineage); its own links and its flow chain are always lit, structure past the first hop never"
+ledger_lineage_far_fade,0.45,"LEDGER lineage: perceived opacity of the ties of its ties (the hops past the first) — dimmer than the lineage proper, brighter than ledger_focus_fade"

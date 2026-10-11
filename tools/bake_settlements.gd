@@ -21,9 +21,9 @@ extends SceneTree
 ## keep invented ridges out of real river valleys.
 ##
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-##     -s tools/bake_settlements.gd -- [--map ID]  (default: data/maps.csv is_default)
+##     -s tools/bake_settlements.gd -- [--map ID]  (default: data/world/maps.csv is_default)
 ##
-## The radii come from balance.csv (map_town_halo_*), so re-run after changing
+## The radii come from screens/map3d/balance.csv (map_town_halo_*), so re-run after changing
 ## them or re-importing the pack. A tool, not simulation: it reads the clock to
 ## report its own run time.
 
@@ -102,10 +102,7 @@ func _init() -> void:
 
 
 func _balance() -> Dictionary:
-	var out: Dictionary = {}
-	for row: Dictionary in DataRepository.parse_csv("res://data/balance.csv", ["key", "value"]):
-		out[String(row["key"])] = float(row["value"])
-	return out
+	return DataRepository.load_balance("res://data")
 
 
 func _info(dir: String) -> Dictionary:

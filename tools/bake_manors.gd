@@ -7,7 +7,7 @@ extends SceneTree
 ## Needs the export JSON in assets/maps/<id>/ for the name banks and the
 ## cell cultures; everything else comes from the pack.
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
-##     -s tools/bake_manors.gd -- [--map ID]  (default: data/maps.csv is_default)
+##     -s tools/bake_manors.gd -- [--map ID]  (default: data/world/maps.csv is_default)
 ## A tool, not simulation: it reads the clock to report its run time.
 
 func _init() -> void:

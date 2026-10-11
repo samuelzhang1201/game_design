@@ -303,7 +303,7 @@ func test_the_supply_row_names_a_brigand_on_the_road() -> void:
 	pass_test("no brigands on this pack")
 
 
-## The battle stance (data/battle_stances.csv, the regiment's `stance`) is on
+## The battle stance (data/battle/battle_stances.csv, the regiment's `stance`) is on
 ## the folio's march page for the crown's own regiments, by its table label,
 ## with one a courier has landed for tomorrow beside it; never for a foe.
 func test_the_battle_stance_is_on_the_march_page() -> void:

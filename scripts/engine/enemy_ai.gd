@@ -198,7 +198,7 @@ static func role_of(repo: DataRepository, host_code: String) -> String:
 	return String(_row_of(repo, host_code).get("role", ""))
 
 
-## The host's doctrine: its role's row of data/ai_doctrines.csv.
+## The host's doctrine: its role's row of data/battle/ai_doctrines.csv.
 static func doctrine_of(repo: DataRepository, host_code: String) -> Dictionary:
 	return repo.ai_doctrines.get(role_of(repo, host_code), {})
 
@@ -305,7 +305,7 @@ static func seen_by(repo: DataRepository, state: GameState, host_code: String) -
 ## other is kind "manor", id its cell id. value = MapManors.value_of_line,
 ## whole; distance_days = ArmySystem.march_days_between for the anchor;
 ## defence = the summed ArmySystem.power in the defend stance (the town's works,
-## data/army_town_defence.csv, in it) of the player's regiments the host SEES
+## data/army/army_town_defence.csv, in it) of the player's regiments the host SEES
 ## (seen_by) that stand at the target. A target more march days away than the
 ## host's supply_reach_days is none, and so is a manor a raid has stripped
 ## bare (RaidSystem.stripped). [] for a host with no live column.

@@ -3,7 +3,7 @@ extends RefCounted
 ## A regiment's piece as a FORMATION of figures by its STRENGTH (owner
 ## 2026-09-30: 满员 3×3; 减员 前中后 1/2/3; 残兵 前后排 1/2 — replacing the six
 ## headcount tiers of 2026-09-27). The tiers and their slots are
-## data/army_formations.csv; the maths is pure and the one scene-tree
+## data/army/army_formations.csv; the maths is pure and the one scene-tree
 ## function, build(), only instances and places figures. Never reaches for
 ## the Game autoload.
 
@@ -31,7 +31,7 @@ const LINE := "line"
 
 
 ## The layout a regiment's piece stands in: its stance's `formation`
-## (data/battle_stances.csv) once it stands (not marching), else the block.
+## (data/battle/battle_stances.csv) once it stands (not marching), else the block.
 static func layout_of(repo: DataRepository, state: GameState, code: String) -> String:
 	if state == null or ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
 		return BLOCK

@@ -11,7 +11,7 @@ extends Node3D
 ## inspector (owner 2026-10-02): the keyline, where a ring begins to fade
 ## (`fade_start`, which the picker reads too — fade_start()) and how far it
 ## floats over its ground (`lift_px`, design px). Each ring's colour, sizes,
-## view range and render priority are its group's (data/map3d_settlements.csv,
+## view range and render priority are its group's (data/screens/map3d/map3d_settlements.csv,
 ## which the picker reads as well) and are bound per group below.
 const RING_MAT := preload("res://scenes/map3d/materials/settlement_ring.tres")
 const SELECTION_RING_MAT := preload("res://scenes/map3d/materials/selection_ring.tres")

@@ -114,7 +114,7 @@ func test_the_house_table_is_in_the_steps_hash() -> void:
 		DirAccess.copy_absolute(ProjectSettings.globalize_path(path), ProjectSettings.globalize_path(copy))
 		copies.append(copy)
 	assert_eq(Map3DWorldLoader.steps_hash(copies), Map3DWorldLoader.steps_hash(), "the copies hash as the tables")
-	var houses: String = copies[Map3DWorldLoader.STEPS_TABLES.find("res://data/map3d_houses.csv")]
+	var houses: String = copies[Map3DWorldLoader.STEPS_TABLES.find("res://data/screens/map3d/map3d_houses.csv")]
 	var f := FileAccess.open(houses, FileAccess.WRITE_READ)
 	f.seek_end()
 	f.store_string("\n# probe\n")

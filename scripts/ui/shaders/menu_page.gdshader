@@ -1,7 +1,7 @@
 // The title screen's painted page by candlelight (owner 2026-09-28, second
 // critique): the pale, unsaturated PAPER darkens to a warm brown while the
 // inked, coloured figures keep most of their value — a flat multiply over the
-// whole page read as a muddy veil. Every number is balance.csv ui_menu_*.
+// whole page read as a muddy veil. Every number is screens/ui/balance.csv ui_menu_*.
 shader_type canvas_item;
 
 uniform float paper_dim = 0.4;

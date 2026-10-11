@@ -3,7 +3,7 @@ extends RefCounted
 ## The weather as the 3D map draws it (spec 2026-09-29-weather-visuals): a
 ## low-resolution FIELD over the pack, one texel per `field_step_px`
 ## pack px, each land texel the look of its cell's province's weather that
-## spell (data/weather.csv's overcast, wet, mud, snow, rainfall, snowfall),
+## spell (data/world/weather.csv's overcast, wet, mud, snow, rainfall, snowfall),
 ## blurred over land only (`field_blur_halvings` halvings) — the sea
 ## by a coast takes the coast's weather — so a front, not a province outline,
 ## is what the ground shows. Pure and look-only: Weather.of is read, nothing is written.

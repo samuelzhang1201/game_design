@@ -41,7 +41,7 @@ func test_adjust_creates_missing_edge_as_acquaintance() -> void:
 	assert_eq(float(e["baseline"]), 0.0)
 
 func test_drift_heals_toward_baseline_without_overshoot() -> void:
-	# relationship_drift_per_tick = 0.5 (balance.csv).
+	# relationship_drift_per_tick = 0.5 (council/balance.csv).
 	RelationshipGraph.adjust(state, "you", "char_queen", -25.0, "quarrel", 1)
 	var deltas := RelationshipGraph.drift(state, data)
 	# 30 -> 30.5, exactly one reported move for this edge.

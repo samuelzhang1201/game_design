@@ -45,7 +45,7 @@ static func _install_grids(data: DataRepository) -> void:
 
 ## A new campaign of `data` on `seed_value`, exactly as
 ## GameState.new_campaign(data, seed_value) would make it.
-## Every ground at the base pace (data/army_ground_speed.csv all 1000), for
+## Every ground at the base pace (data/army/army_ground_speed.csv all 1000), for
 ## a test of the march's own mechanics — readiness, weather, the even step —
 ## that must not depend on the road or the terrain the pack puts under it,
 ## nor bend round it (open_country); the ground's pace has its own tests

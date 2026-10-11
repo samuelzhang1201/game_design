@@ -50,7 +50,7 @@ static func place(repo: DataRepository, manors: Array, with_label: bool) -> Arra
 			tex = _textures[path]
 		var tag := MapEconomy.good_tag(repo, String(m["good"]))
 		# Not every good has a drawing yet (goods_marks.tres); those wear
-		# their category's glyph from data/resource_icons.csv instead.
+		# their category's glyph from data/screens/ui/resource_icons.csv instead.
 		var glyph := String((repo.resource_icons.get("tag_" + tag, {}) as Dictionary).get("icon", ""))
 		var entry := m.duplicate()
 		entry.merge({"text": text, "badge": badge, "label": null,
@@ -100,7 +100,7 @@ static func draw(ci: CanvasItem, repo: DataRepository, badges: Array) -> void:
 			draw_centered_text(ci, font, label, String(b["text"]), font_px, text_ink)
 
 
-## The colour a good's category wears (data/goods_palette.csv) — the badge's
+## The colour a good's category wears (data/screens/ui/goods_palette.csv) — the badge's
 ## ring, and the manor card's output icons.
 static func tag_color(data: DataRepository, tag: String) -> Color:
 	var hex := String(data.goods_palette.get(tag, ""))

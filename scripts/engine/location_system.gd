@@ -1,6 +1,6 @@
 class_name LocationSystem
 extends RefCounted
-## Regions and locations (data/regions.csv, data/locations.csv): where the
+## Regions and locations (data/story/regions.csv, data/story/locations.csv): where the
 ## player currently stands, who is found there, and where they may move.
 ## Movement within one region is FREE — no tick, no cost; travel between
 ## regions is post-MVP and will cost time. Deterministic, no RNG, no Nodes.

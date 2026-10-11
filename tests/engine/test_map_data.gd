@@ -49,7 +49,7 @@ func test_fiction_kingdoms_are_on_the_map() -> void:
 
 func test_index_bitmap_decodes_each_kingdom_at_its_center() -> void:
 	# Paths come from the loaded map pack, so this test follows whichever
-	# map data/maps.csv points at rather than pinning one export's filenames.
+	# map data/world/maps.csv points at rather than pinning one export's filenames.
 	var idx_tex: Texture2D = load(Game.data.index_texture_path)
 	assert_not_null(idx_tex)
 	var img: Image = idx_tex.get_image()

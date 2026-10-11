@@ -14,7 +14,7 @@ walks the built .glb instead and multiplies its POSITION data, so the
 silhouette, the UVs, the baked albedo/normal and the triangle count are
 bit-for-bit what the retopo produced, only bigger.
 
-It reads data/map3d_houses.csv (footprint_m, the authored input) against
+It reads data/screens/map3d/map3d_houses.csv (footprint_m, the authored input) against
 assets/3D/buildings/houses.json (the built mesh's measured size), scales any
 type whose two disagree, and writes the new measured height_m back into both
 — the same writeback contract retopo_houses.py has, which
@@ -29,7 +29,7 @@ import struct
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-TABLE = os.path.join(ROOT, "data", "map3d_houses.csv")
+TABLE = os.path.join(ROOT, "data", "screens", "map3d", "map3d_houses.csv")
 OUT = os.path.join(ROOT, "assets", "3D", "buildings")
 MANIFEST = os.path.join(OUT, "houses.json")
 

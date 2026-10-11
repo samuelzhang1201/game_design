@@ -351,7 +351,7 @@ func test_battle_ends_after_max_rounds_or_rout() -> void:
 	var ended_on := s.absolute_day()
 	var first_id := int(ends[0]["battle_id"])
 	var pause := int(repo.bal("battle_disengage_days"))
-	assert_gt(pause, 0, "balance.csv battle_disengage_days")
+	assert_gt(pause, 0, "battle/balance.csv battle_disengage_days")
 	assert_eq(int(s.regiments[p]["disengaged_until"]), ended_on + pause)
 	assert_eq(int(s.foes[f]["disengaged_until"]), ended_on + pause)
 	for n in pause:

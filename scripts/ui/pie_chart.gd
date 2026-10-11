@@ -3,7 +3,7 @@ extends Control
 ## A small pie for a part-to-whole with a few slices: the disc on the left,
 ## a legend of swatch + label + value on the right so no reading depends on
 ## colour alone. slices = [{label, value, color, dimension?}]. A slice with a
-## `dimension` (a data/resource_icons.csv key) shows that key's art in the
+## `dimension` (a data/screens/ui/resource_icons.csv key) shows that key's art in the
 ## legend instead of its label, which becomes the floating tooltip (owner
 ## 2026-09-13).
 

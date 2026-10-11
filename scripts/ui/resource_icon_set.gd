@@ -5,7 +5,7 @@ extends Resource
 ## picked in the editor, not written as a res:// path in a CSV). One saved
 ## resource, assets/2D/icons/resource_icons.tres: open it in the inspector and
 ## drop a texture on a key. The words a key carries — its label, its glyph
-## for when it has no art, its tooltip — stay in data/resource_icons.csv.
+## for when it has no art, its tooltip — stay in data/screens/ui/resource_icons.csv.
 
 const PATH := "res://assets/2D/icons/resource_icons.tres"
 

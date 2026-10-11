@@ -15,7 +15,7 @@ extends RefCounted
 ## siege_assault_days days of siege the host STORMS the town: the assault is the
 ## ordinary town battle (Ruling 3), let through BattleSystem by the mind's
 ## `assault` flag; each of its rounds moves the siege by its tier's `siege`
-## column (data/battle_outcomes.csv). At 1000, or with the garrison slain to the
+## column (data/battle/battle_outcomes.csv). At 1000, or with the garrison slain to the
 ## last man, the town falls — at the MANOR level (capture): the province, its
 ## border and its capital never move. Whole numbers, host code order, no random
 ## number.
@@ -106,7 +106,7 @@ static func occupier_of(state: GameState, cell: int) -> String:
 
 
 ## True when a foe stands at the town: within battle_contact_km of its point
-## or within its reach (data/army_town_reach.csv) — the ring arrival uses.
+## or within its reach (data/army/army_town_reach.csv) — the ring arrival uses.
 static func at_town(repo: DataRepository, state: GameState, code: String, town: String) -> bool:
 	var e: Dictionary = state.foes.get(code, {})
 	if e.is_empty():
@@ -511,7 +511,7 @@ static func _lifted(state: GameState, h: String, why: String, events: Array) -> 
 ## Today's assault on `town`, from the day's battle events: the battles at the
 ## town a column of the besieging hosts fought in. Each ROUND the besiegers
 ## fought as attackers moves the siege by its tier's `siege` column
-## (data/battle_outcomes.csv: `repulsed` a check, `breach` the walls taken); an
+## (data/battle/battle_outcomes.csv: `repulsed` a check, `breach` the walls taken); an
 ## assault that ENDED with the besiegers keeping the field is a breach too
 ## (the garrison broke or left). {fought, checks, breach}.
 static func _assault_day(repo: DataRepository, state: GameState, town: String, hosts: Array,

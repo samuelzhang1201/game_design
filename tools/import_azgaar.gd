@@ -61,7 +61,7 @@ extends SceneTree
 ## Usage:
 ##   /Applications/Godot.app/Contents/MacOS/Godot --headless --path . \
 ##     --script res://tools/import_azgaar.gd \\
-##       [-- --map-id ID --json PATH]   (default id: data/maps.csv is_default)
+##       [-- --map-id ID --json PATH]   (default id: data/world/maps.csv is_default)
 
 const MAPS := "res://assets/maps"
 const DATA := "res://data"
@@ -390,12 +390,12 @@ func _write_text(path: String, text: String) -> bool:
 	return true
 
 
-## The point-of-interest types data/marker_types.csv admits. Empty when the
+## The point-of-interest types data/world/marker_types.csv admits. Empty when the
 ## file is missing, which means "admit everything" rather than "admit
 ## nothing" — a missing table must not silently empty the map.
 func _admitted_marker_types() -> Dictionary:
 	var out: Dictionary = {}
-	var f := FileAccess.open("res://data/marker_types.csv", FileAccess.READ)
+	var f := FileAccess.open("res://data/world/marker_types.csv", FileAccess.READ)
 	if f == null:
 		return out
 	while not f.eof_reached():
@@ -429,7 +429,7 @@ func _bound_kingdoms(path: String) -> Array[String]:
 func _run() -> int:
 	# --- input selection --------------------------------------------------
 	var json_path := ""
-	# Which pack this import writes: --map-id, else data/maps.csv's default
+	# Which pack this import writes: --map-id, else data/world/maps.csv's default
 	# (a re-import). Authored content names realm slots, never Azgaar
 	# kingdoms, and the pack's realm_bindings.csv binds each slot to one of
 	# that map's kingdoms — so the check below is per map, not a global list.
@@ -984,7 +984,7 @@ func _run() -> int:
 			return 1
 		# Owner ruling 2026-09-12: this world is medieval and hard. Azgaar
 		# ships monsters, dungeons and an adventuring party by default, so a
-		# marker whose type is not in data/marker_types.csv never enters the
+		# marker whose type is not in data/world/marker_types.csv never enters the
 		# pack — and a re-export cannot bring it back.
 		if not admitted.is_empty() and not admitted.has(String(m.get("type", ""))):
 			dropped += 1
@@ -1001,7 +1001,7 @@ func _run() -> int:
 	if unnoted > 0:
 		print("WARNING: %d markers have no note; their type stands in as the label" % unnoted)
 	if dropped > 0:
-		print("dropped %d marker(s) whose type data/marker_types.csv does not admit" % dropped)
+		print("dropped %d marker(s) whose type data/world/marker_types.csv does not admit" % dropped)
 
 	# --- geography/biomes.csv ---------------------------------------------
 	out = _csv_line(["biome_id", "label", "color", "habitability"])

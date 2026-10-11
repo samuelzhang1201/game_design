@@ -96,7 +96,7 @@ def _scene():
 
 def _rows():
     import csv
-    return {r["type"]: r for r in csv.DictReader(open(ROOT + "/data/map3d_houses.csv"))}
+    return {r["type"]: r for r in csv.DictReader(open(ROOT + "/data/screens/map3d/map3d_houses.csv"))}
 
 
 def _source_path(src):
