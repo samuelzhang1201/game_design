@@ -285,11 +285,14 @@ var _war_piece := ""
 var _war_folio := ""
 var _war_folio_inner := false   # the held-up book's tab still to click
 var _war_drag := Vector2(-1, -1)
+var _war_drag_px := Vector2(-1, -1)
 var _war_focus_px := Vector2(-1, -1)   # --war-focus-px x,y: lean in on a pack point, not a piece
 var _war_hover := Vector2(-1, -1)   # --war-hover fx,fy: rest the pointer there for the slip
 var _war_zoom := -1.0
 var _war_turn := 0.0
 var _war_cell := ""
+var _war_cells_more: Array[String] = []
+var _war_piece_clicked := false
 var _war_board := false
 var _war_board_click := Vector2(-1, -1)
 var _war_phase := 0
@@ -487,7 +490,11 @@ func _ready() -> void:
 		elif args[i] == "--war-leave":
 			_war_leave = args[i + 1].to_upper()
 		elif args[i] == "--war-cell":
-			_war_cell = args[i + 1].to_upper()
+			# "D4" or "D4,E4,…": each cell clicked in turn once the last toss has landed
+			var cells := args[i + 1].to_upper().split(",")
+			_war_cell = cells[0]
+			for c in range(1, cells.size()):
+				_war_cells_more.append(cells[c])
 		elif args[i] == "--war-turn":
 			_war_turn = float(args[i + 1])
 		elif args[i] == "--war-board-click":
@@ -498,6 +505,11 @@ func _ready() -> void:
 		elif args[i] == "--war-drag":
 			var dparts := args[i + 1].split(",")
 			_war_drag = Vector2(float(dparts[0]), float(dparts[1]))
+		elif args[i] == "--war-drag-px":
+			# the march's end as a pack point (the view's share of it found at the shot)
+			var dpx := args[i + 1].split(",")
+			_war_drag_px = Vector2(float(dpx[0]), float(dpx[1]))
+			_war_drag = Vector2(0.5, 0.5)
 		elif args[i] == "--war-supply-town":
 			_war_supply_town = args[i + 1]
 		elif args[i] == "--war-hover":
@@ -1318,23 +1330,25 @@ func _war_room_step() -> void:
 	elif _war_phase == 1:
 		# the room is open and a sheet is laid and not rolling: ask for the other
 		if screen.visible and view.sheet_index() >= 0 and not view.rolling():
+			for st: Array in _sets:   # --set NODE:PROP=VALUE on a node of the room's screen
+				var node := screen.find_child(String(st[0]), true, false) if not String(st[0]).begins_with("res://") else null
+				if node != null:
+					node.set(String(st[1]), st[2])
+					print("set %s:%s = %s" % [st[0], st[1], node.get(String(st[1]))])
 			if _war_cell != "":
-				for s: Dictionary in WarSheets.series(Game.data):
-					if String(s["id"]) == _war_cell:
-						var cam := view.get_node("%Camera") as Camera3D
-						var chart := view.get_node("%IndexChart") as MeshInstance3D
-						var p := WarRoomWall.chart_point(chart, WarIndexChart.uv_of_cell(Game.data, s).get_center())
-						var at := cam.unproject_position(p) / view.window_scale()
-						_real_click(view, at)
-						_war_sheet = int(s["index"])
-						print("war: chart click on %s at %s tossing=%s" % [_war_cell, at, view.tossing()])
-				if _war_sheet < 0:
-					print("war: no sheet %s" % _war_cell)
+				_war_chart_click(view, _war_cell)
+				_war_sheet = -1   # a toss may lay a union: wait on the toss and the roll, not a lead cell
 			elif _war_sheet >= 0 and view.sheet_index() != _war_sheet:
 				view.swap_to(_war_sheet)
 				print("war: swapping to sheet %d" % _war_sheet)
 			_war_to(2)
 	elif _war_phase == 2:
+		if not _war_cells_more.is_empty():
+			# --war-cell D4,E4,…: the next cell once the last toss has landed and laid
+			if not view.rolling() and not view.tossing() and _frames - _war_at >= 12:
+				_war_chart_click(view, _war_cells_more.pop_front())
+				_war_at = _frames
+			return
 		# the requested sheet is laid, the roll is over; let its ink settle
 		var laid := _war_sheet < 0 or view.sheet_index() == _war_sheet
 		if laid and not view.rolling() and not view.tossing() and _frames - _war_at >= 12:
@@ -1366,7 +1380,8 @@ func _war_room_step() -> void:
 			var at := cam.unproject_position(panel.global_position) / view.window_scale()
 			_real_click(view, at)
 			print("war: board click at %s mode=%s" % [at, view.board_mode()])
-		if _war_piece != "":
+		if _war_piece != "" and not _war_piece_clicked:
+			_war_piece_clicked = true
 			var at: Variant = view.screen_pos_of_px(view.position_of(_war_piece))
 			if at == null:
 				push_error("war: piece %s not in view" % _war_piece)
@@ -1374,6 +1389,8 @@ func _war_room_step() -> void:
 				_real_click(view, at)
 			print("war: piece=%s sheet=%d at=%s selected=%s sel=%s" % [_war_piece, view.sheet_index(), at,
 				view.selected_army(), view.plan_input().sel])
+			_war_at = _frames   # the docked book lays itself out before the next real input
+			return
 		var roll := screen.get_node("%ToolRoll") as WarToolRoll
 		if _war_box:
 			_war_box_select(view, roll)
@@ -1671,6 +1688,7 @@ func _red_spot(view: WarRoomView) -> Vector2:
 func _war_draw_order(screen: WarRoomScreen, view: WarRoomView, roll: WarToolRoll) -> void:
 	var slot := roll.slot("arrow", "blue")
 	_real_click(slot, slot.size * 0.5)
+	print("war: arrow slot why=%s in hand=%s" % [slot.why, view.plan_input().tool.in_hand()])
 	var from := Vector2.ZERO
 	var n := 0
 	for c: Variant in view.plan_input().sel:
@@ -1683,7 +1701,11 @@ func _war_draw_order(screen: WarRoomScreen, view: WarRoomView, roll: WarToolRoll
 		return
 	from /= float(n)
 	var to := Vector2(view.size) * _war_drag
-	var bend := from.lerp(to, 0.5) + (to - from).orthogonal() * 0.15
+	if _war_drag_px.x >= 0.0:
+		var on: Variant = view.screen_pos_of_px(_war_drag_px)
+		if on != null:
+			to = on
+	var bend := from.lerp(to, 0.5) + (to - from).orthogonal() * (0.0 if _war_drag_px.x >= 0.0 else 0.15)   # a pack end: drawn straight
 	_real_path(view, [from, from.lerp(bend, 0.5), bend, bend.lerp(to, 0.5), to])
 	var menu := screen.orders()
 	print("war: drew the march for %s -> aiming=%s marching=%s waypoints=%s confirm=%s" % [view.plan_input().sel,
@@ -1856,3 +1878,18 @@ func _tooltipped(n: Node, out: Array[Control]) -> void:
 		out.append(n)
 	for c in n.get_children():
 		_tooltipped(c, out)
+
+
+## A real click on sheet `id`'s cell of the index chart (--war-cell); its index, -1 when none.
+func _war_chart_click(view: WarRoomView, id: String) -> int:
+	for s: Dictionary in WarSheets.series(Game.data):
+		if String(s["id"]) == id:
+			var cam := view.get_node("%Camera") as Camera3D
+			var chart := view.get_node("%IndexChart") as MeshInstance3D
+			var p := WarRoomWall.chart_point(chart, WarIndexChart.uv_of_cell(Game.data, s).get_center())
+			var at := cam.unproject_position(p) / view.window_scale()
+			_real_click(view, at)
+			print("war: chart click on %s at %s tossing=%s held=%s" % [id, at, view.tossing(), view.tray_sheets()])
+			return int(s["index"])
+	print("war: no sheet %s" % id)
+	return -1
