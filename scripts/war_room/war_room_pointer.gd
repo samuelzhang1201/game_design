@@ -82,7 +82,7 @@ func click(at: Vector2, shift: bool) -> bool:
 	elif piece != "" and not _view.aiming:
 		_view.select(piece, shift)
 	elif arrow >= 0:
-		_view.sheet_requested.emit(arrow)   # an edge arrow lays at once
+		_view.shift_toward(arrow)   # an edge arrow moves every marker one cell and lays at once
 	elif chart >= 0:
 		_view.toss_to(chart)                # a chart cell: the marker is tossed first
 	elif _view.aiming and _view.pack_at(at).x >= 0.0:
@@ -149,8 +149,8 @@ func _slope_bars(groups: Array) -> Array:
 	var chains: Array = []
 	if _view.rolling() or _view.sheet_index() < 0:
 		return []
-	for g: Dictionary in groups:
-		if g.has("chain"):
+	for g: Dictionary in groups:   # drafts only: a sealed march is the courier's now (R12)
+		if g.has("chain") and String(g["kind"]) == WarOrderArrows.DRAFT:
 			chains.append(g["chain"])
 	if _view.aiming and _view.aim_code != "" and _view.aim_dest.x >= 0.0:
 		var pend: Array = [_view.position_of(_view.aim_code)]
@@ -161,6 +161,7 @@ func _slope_bars(groups: Array) -> Array:
 	var rect := _view.sheet_rect()
 	var gap := _repo.bal("war_slope_hatch_gap_px")
 	var tick := _repo.bal("war_slope_hatch_px")
+	var min_px := _repo.bal("war_slope_bar_min_px")
 	for chain: Array in chains:
 		for bar: Dictionary in WarSlopeBars.bars(_repo, chain):
 			if not rect.has_point((bar["a"] as Vector2).lerp(bar["b"], 0.5)):
@@ -171,7 +172,8 @@ func _slope_bars(groups: Array) -> Array:
 			if a == null or b == null or m == null:
 				continue
 			var dir: Vector2 = ((m as Vector2) - (a as Vector2)).normalized()
-			out.append({"a": a, "b": b, "hatches": WarSlopeBars.hatches(a, b, dir, gap, tick)})
+			var ends := WarSlopeBars.at_least(a, b, min_px)
+			out.append({"a": ends[0], "b": ends[1], "hatches": WarSlopeBars.hatches(ends[0], ends[1], dir, gap, tick)})
 	return out
 
 
@@ -233,7 +235,7 @@ func orders() -> Array:
 	var rows: Array = []
 	var from := {}
 	var rect := _view.sheet_rect()
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
+	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.laid_sheet(), _view.drawn()):
 		var code := String(p["code"])
 		from[code] = p["at"]
 		var pen := WarRoom.pennant_of(_repo, state, code)

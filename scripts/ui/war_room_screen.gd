@@ -287,7 +287,7 @@ func lay_sheet(index: int) -> void:
 ## A sheet was laid (at once, or at the roll-up's midpoint): its title, and
 ## the margin of the regiments standing on the others.
 func _on_laid(index: int) -> void:
-	var s: Dictionary = WarSheets.series(Game.data)[index]
+	var s: Dictionary = _view.laid_sheet() if not _view.laid_sheet().is_empty() else WarSheets.series(Game.data)[index]
 	%Title.text = "Sheet %s · %s" % [s["id"], s["name"]] if String(s["name"]) != "" else "Sheet %s" % s["id"]
 	_fill_margin()
 	%Key.queue_redraw()   # a new sheet, a new scale
@@ -306,8 +306,8 @@ func _dress_leather() -> void:
 ## its sheet; an empty sheet says so (spec §6).
 func _fill_margin() -> void:
 	var series := WarSheets.series(Game.data)
-	var sheet := _view.sheet_index()
-	var split := WarRoom.partition(Game.data, Game.state, sheet, _drawn)
+	var sheet := _view.sheet_key()
+	var split := WarRoom.partition(Game.data, Game.state, _view.laid_sheet(), _drawn)
 	var off: Array = split["off"]
 	var sig: Array = [sheet, off.map(func(p: Dictionary) -> String: return "%s@%d" % [p["code"], int(p["sheet"])]),
 		(split["on"] as Array).is_empty()]

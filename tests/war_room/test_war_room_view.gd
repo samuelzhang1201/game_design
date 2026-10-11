@@ -815,8 +815,9 @@ func test_the_sheet_and_the_chart_lie_on_the_oak_table() -> void:
 		top = maxf(top, box.end.y)
 	assert_between(top, -0.006, 0.0025, "the oak top (its iron clamps) meets the sheet's sea at y 0")
 	var chart: MeshInstance3D = view.get_node("%IndexChart")
-	assert_between(chart.position.y, top - 0.004, top + 0.004, "the chart lies on the oak, not above it")
-	assert_almost_eq(chart.rotation_degrees.x, -90.0, 0.01, "flat")
+	# R10: the chart leans; its NEAR edge (the pivot) lies on the oak
+	var near_y := (chart.global_transform * Vector3(0.0, -(chart.mesh as QuadMesh).size.y * 0.5, 0.0)).y
+	assert_between(near_y, top - 0.004, top + 0.004, "the chart's near edge lies on the oak, not above it")
 	var feet := INF
 	for m: MeshInstance3D in Map3DUnits.meshes(oak):
 		feet = minf(feet, (oak.transform * (m.transform * m.get_aabb())).position.y)
@@ -827,10 +828,138 @@ func test_the_sheet_and_the_chart_lie_on_the_oak_table() -> void:
 	assert_almost_eq(feet, floor_y, 0.002, "and its feet still stand on the room's floor")
 
 
+## R10 (owner-approved 2026-10-12): the chart leans on a reading stand by the key.
+func test_chart_leans_by_the_key() -> void:
+	view.lay_sheet(0)
+	var chart := view.get_node("%IndexChart") as MeshInstance3D
+	var tilt := repo.bal("war_chart_tilt_deg")
+	assert_almost_eq(chart.rotation_degrees.x, -(90.0 - tilt), 0.01, "the basis pitch is the key's lean")
+	# the face turns toward the camera (south, up): its normal leans from straight up by the tilt
+	var n := WarRoomWall.chart_normal(chart)
+	assert_almost_eq(rad_to_deg(n.angle_to(Vector3.UP)), tilt, 0.01)
+	assert_gt(n.z, 0.0, "the face looks south")
+	# R17 literals: w 0.86, margin 0.047, tilt 20, near edge z -0.572, the pack's 2560 x 929 map
+	assert_almost_eq(tilt, 20.0, 0.0001)
+	var h := (chart.mesh as QuadMesh).size.y
+	assert_almost_eq(h, 0.40609, 0.0001, "the quad: 0.86 x 929/2560 + 2 x 0.047")
+	var far := chart.global_transform * Vector3(0.0, h * 0.5, 0.0)
+	var near := chart.global_transform * Vector3(0.0, -h * 0.5, 0.0)
+	assert_almost_eq(far.y - near.y, 0.13889, 0.0001, "the far edge rises h x sin 20")
+	assert_almost_eq(far.z, -0.95359, 0.0001, "and stands h x cos 20 further north")
+	assert_almost_eq(near.z, -0.572, 0.0001, "the pivot is war_chart_z_m")
+
+
+## The chart and its stand's footprint stay on the oak, north of the laid sheet's deepest
+## edge and its arrows, and clear of the candlesticks.
+func test_chart_stays_on_the_table() -> void:
+	view.lay_sheet(0)
+	var chart := view.get_node("%IndexChart") as MeshInstance3D
+	var oak := view.get_node("Viewport/Room/OakTable") as Node3D
+	var box := AABB()
+	var first := true
+	for m: MeshInstance3D in Map3DUnits.meshes(oak):
+		var b := oak.transform * (m.transform * m.get_aabb())
+		box = b if first else box.merge(b)
+		first = false
+	var h := (chart.mesh as QuadMesh).size.y
+	var far := chart.global_transform * Vector3(0.0, h * 0.5, 0.0)
+	var near := chart.global_transform * Vector3(0.0, -h * 0.5, 0.0)
+	assert_gte(far.z, box.position.z + 0.05, "the far edge stays on the oak with room for the stand's prop")
+	assert_lte(near.z, -repo.bal("war_table_max_depth_m") * 0.5 - repo.bal("war_arrow_gap_m") * 0.5, "north of the deepest laid sheet")
+	var half_w := (chart.mesh as QuadMesh).size.x * 0.5
+	for c in view.candles():
+		var stick := c.get_parent() as Node3D
+		assert_gt(absf(stick.position.x) - half_w, 0.1, "clear of %s" % stick.name)
+	# the opening view keeps the whole chart, letters included, and the far corners clear of the top edge
+	var cam: Camera3D = view.get_node("%Camera")
+	var quad := (chart.mesh as QuadMesh).size
+	for corner: Vector2 in [Vector2(-1, 1), Vector2(1, 1), Vector2(-1, -1), Vector2(1, -1)]:
+		var at := cam.unproject_position(chart.global_transform * Vector3(corner.x * quad.x * 0.5, corner.y * quad.y * 0.5, 0.0)) / view.window_scale()
+		assert_gte(at.y, 6.0, "the quad's corner %s is in the opening view" % corner)
+		assert_lte(at.y, view.size.y, "and above the bottom")
+	for l in chart.get_children():
+		var at := cam.unproject_position((l as Node3D).global_position) / view.window_scale()
+		assert_true(Rect2(Vector2.ZERO, view.size).has_point(at), "%s at %s" % [(l as Label3D).text, at])
+
+
+## R17: column letters stand on the NEAR margin and row figures on the west one, clear of the map.
+func test_the_chart_letters_stand_on_the_near_and_west_margins() -> void:
+	view.lay_sheet(0)
+	var chart := view.get_node("%IndexChart") as MeshInstance3D
+	var size := WarRoomWall.map_size(chart)
+	var quad := (chart.mesh as QuadMesh).size
+	var seen := {"col": 0, "row": 0}
+	for l in chart.get_children():
+		var lab := l as Label3D
+		var half := lab.font.get_string_size(lab.text, HORIZONTAL_ALIGNMENT_LEFT, -1, lab.font_size) * lab.pixel_size * 0.5
+		seen[String(lab.get_meta("axis"))] += 1
+		if lab.get_meta("axis") == "col":
+			assert_lt(lab.position.y + half.y, -size.y * 0.5, "%s clear of the map on the near margin" % lab.text)
+			# the line box carries a descender the capitals never use: the ink stays inside the quad
+			var ink := lab.position.y - half.y + lab.font.get_descent(lab.font_size) * lab.pixel_size
+			assert_gt(ink, -quad.y * 0.5, "%s inside the quad" % lab.text)
+		else:
+			assert_lt(lab.position.x + half.x, -size.x * 0.5, "%s clear of the map on the west margin" % lab.text)
+			assert_gt(lab.position.x - half.x, -quad.x * 0.5, "%s inside the quad" % lab.text)
+	assert_gt(int(seen["col"]), 0)
+	assert_gt(int(seen["row"]), 0)
+
+
+## A held marker lies on the leaning chart face, standing along its normal; a resting one on the oak.
+func test_markers_follow_the_leaning_chart() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var chart := view.get_node("%IndexChart") as MeshInstance3D
+	var m := view.marker_for(0)
+	var local := chart.global_transform.affine_inverse() * m.global_position
+	assert_almost_eq(local.z, 0.0, 0.0005, "on the chart's plane")
+	assert_almost_eq((m.global_transform.basis.y.normalized()).dot(WarRoomWall.chart_normal(chart)), 1.0, 0.0001, "standing along its normal")
+	var rest := WarRoomWall.tray_point(chart, 1, repo.bal("war_tray_gap_m"), repo.bal("war_tray_off_m"))
+	assert_almost_eq(rest.y, repo.bal("war_chart_y_m"), 0.0001, "a resting marker stands on the oak")
+
+
+## R17: the resting column is off the chart's east edge, so the camera's ray to each marker passes the
+## leaning quad's east edge by 3 cm or more (not behind it).
+func test_the_resting_markers_are_clear_of_the_leaning_chart() -> void:
+	view.lay_sheet(0)
+	var chart := view.get_node("%IndexChart") as MeshInstance3D
+	var cam: Camera3D = view.get_node("%Camera")
+	for slot in 4:
+		var rest := WarRoomWall.tray_point(chart, slot, repo.bal("war_tray_gap_m"), repo.bal("war_tray_off_m"))
+		var inv := chart.global_transform.affine_inverse()
+		var lo := inv * cam.global_position
+		var ld := (inv * rest - lo).normalized()
+		var t := -lo.z / ld.z   # where the ray meets the chart's plane
+		var hit := lo + ld * t
+		var quad := (chart.mesh as QuadMesh).size
+		assert_gte(hit.x - quad.x * 0.5, 0.03, "slot %d: the ray to the marker meets the chart's plane 3 cm outside its east edge" % slot)
+
+
+## R17: a marker's base fits inside one chart cell (hand values at w 0.86: the pack's 10 degree cell is
+## 0.02016 of the map's width on its short side, 0.017338 m; k = 0.8 x 0.017338 / 0.022 = 0.63047; base 13.87 mm).
+func test_marker_fits_one_cell() -> void:
+	view.lay_sheet(0)
+	await wait_process_frames(2)
+	var chart := view.get_node("%IndexChart") as MeshInstance3D
+	var cell := MapCoords.cell_rect(repo, Vector2i.ZERO, repo.bal("war_sheet_deg")).size
+	var size := WarRoomWall.map_size(chart)
+	var short_side := minf(cell.x / float(repo.map_info["width"]) * size.x, cell.y / float(repo.map_info["height"]) * size.y)
+	assert_almost_eq(short_side, 0.017338, 0.00002, "one cell's short side, metres")
+	var m := view.marker_for(0)
+	var k := m.global_transform.basis.x.length()
+	assert_almost_eq(k, 0.63047, 0.0005, "the marker's scale")
+	assert_almost_eq(k * 0.022 * 1000.0, 13.87, 0.02, "its base across, mm (radius 0.011 x 2 x k)")
+	assert_lt(k * 0.022, short_side, "and the base lies inside the cell")
+
+
 ## One KEY candle rakes the relief; the rest are short warm accents (fix round 1).
 func test_one_key_candle_and_short_accents_from_the_balance_keys() -> void:
 	var lights := view.candles()
 	assert_between(lights.size(), 1, 4, "a light at each candlestick left (owner 2026-10-12: only the top-left one stays)")
+	if lights.size() > 1:
+		pending("Phase E9 (delete Candlestick2-4 in war_room.tscn) leaves exactly one candle")
+	else:
+		assert_eq(lights.size(), 1)
 	var key := lights[WarRoomLights.key_index(repo, lights.size())]
 	assert_almost_eq(key.light_energy, repo.bal("war_candle_key_energy"), 0.0001)
 	assert_almost_eq(key.omni_range, repo.bal("war_candle_key_range_m"), 0.0001)
@@ -1052,29 +1181,6 @@ func test_a_chart_pick_tosses_then_lays_and_a_second_pick_mid_toss_is_ignored() 
 	var size := WarRoomWall.map_size(chart)
 	var uv := Vector2(local.x / size.x + 0.5, 0.5 - local.y / size.y)
 	assert_true(WarIndexChart.uv_of_cell(repo, WarSheets.series(repo)[other]).has_point(uv), "the marker stands on the chosen cell")
-
-
-func test_the_view_takes_at_most_four_markers_and_a_held_cell_gives_one_back() -> void:
-	var all := WarSheets.series(repo)
-	if all.size() < 5:
-		pass_test("the default pack has fewer than five sheets")
-		return
-	view.lay_sheet(0)
-	await wait_process_frames(2)
-	var flight := float(WarToss.plan(Vector3.ZERO, Vector3.ONE, 1, WarToss.rules(repo))["duration"]) + 0.2
-	for i in [1, 2, 3]:
-		view.toss_to(i)
-		await wait_seconds(flight)
-	assert_eq(view.tray_sheets(), [0, 1, 2, 3])
-	view.toss_to(4)
-	assert_false(view.tossing(), "a fifth is not taken")
-	assert_eq(view.tray_sheets().size(), 4)
-	view.toss_to(2)   # the cell holds a marker: it goes back
-	assert_eq(view.tray_sheets(), [0, 1, 3])
-	view.toss_to(4)
-	assert_true(view.tossing(), "a slot is free again")
-	await wait_seconds(flight)
-	assert_eq(view.tray_sheets(), [0, 1, 3, 4])
 
 
 func test_a_lay_by_another_route_mid_toss_waits_for_the_toss() -> void:

@@ -8,9 +8,10 @@ extends RefCounted
 ## its own texture once a day (cache_key).
 
 
-static func cache_key(state: GameState, sheet_index: int) -> int:
+## `sheet` is the laid sheet's key (WarSheets.union) or a sheet index.
+static func cache_key(state: GameState, sheet: Variant) -> int:
 	var couriers: Array = state.couriers.map(func(c: Dictionary) -> Array: return [c["id"], c["x_m"], c["y_m"]])
-	return hash([sheet_index, state.absolute_day(), couriers, state.next_missive_id, state.regiments.hash(),
+	return hash([sheet, state.absolute_day(), couriers, state.next_missive_id, state.regiments.hash(),
 		state.manor_owner.hash(), state.manor_province.hash(), state.hazards_rev, state.hazards.size(), state.forage_stripped.hash()])
 
 

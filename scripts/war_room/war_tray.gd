@@ -1,26 +1,39 @@
 class_name WarTray
 extends RefCounted
-## The war markers' tray beside the index chart (owner 2026-10-12, items 6-7): up
-## to `war_tray_max` markers the player takes out and lays on cells of the chart,
-## one cell each, and puts back. The strategic map covers the cells the markers
-## stand on: `extent_cells` is the bounding box of those cells in cells and
-## `zoom_factor` how many cells across the widest side of it runs, 1 for a lone
-## marker. Pure (no node, no state saved); the slot a marker holds is stable, so
-## the view keeps one node per slot.
+## The war markers' tray beside the index chart (owner 2026-10-12, items 6-7;
+## R11 owner-approved): a marker a slot, each standing on one cell of the chart
+## (a sheet index), the held cells laid as ONE sheet (WarSheets.union). The
+## bounding box of the held cells never spans more than `max_cells` cells
+## (2x2, 1x3, 1x4); a toss that would widen it is refused. Pure (no node, no
+## state saved): `cells` maps each sheet index to its Vector2i(col, row); the
+## slot a marker holds is stable, so the view keeps one node per slot.
 
-var max_slots := 4
+var max_slots := 1
+var max_cells := 4
 var _slots: Array = []   # slot -> sheet index, -1 free
-var _order: Array = []   # slots in the order they were taken, oldest first
+var _order: Array = []   # slots in the order they were placed, oldest first
+var _cells: Dictionary = {}   # sheet index -> Vector2i
+var _sheets: Dictionary = {}  # Vector2i -> sheet index
 
 
-func _init(p_max: int = 4) -> void:
-	max_slots = maxi(1, p_max)
+func _init(p_slots: int = 1, p_max_cells: int = 4, cells: Dictionary = {}) -> void:
+	max_slots = maxi(1, p_slots)
+	max_cells = maxi(1, p_max_cells)
 	_slots.resize(max_slots)
 	_slots.fill(-1)
+	_cells = cells
+	for s: int in cells:
+		_sheets[cells[s]] = s
 
 
-static func of(repo: DataRepository) -> WarTray:
-	return WarTray.new(int(repo.bal("war_tray_max")))
+## A tray of `slots` markers (the nodes the scene holds, at most war_tray_max)
+## over the pack's sheets.
+static func of(repo: DataRepository, slots: int) -> WarTray:
+	var cells: Dictionary = {}
+	for s: Dictionary in WarSheets.series(repo):
+		cells[int(s["index"])] = Vector2i(int(s["col"]), int(s["row"]))
+	var most := maxi(1, int(repo.bal("war_tray_max")))
+	return WarTray.new(clampi(slots, 1, most), most, cells)
 
 
 func count() -> int:
@@ -48,19 +61,51 @@ func held() -> Array:
 	return out
 
 
-## The most recently taken marker's sheet, -1 with none.
+## The most recently placed marker's sheet, -1 with none.
 func newest() -> int:
 	return -1 if _order.is_empty() else int(_slots[_order[-1]])
 
 
-## Take a marker out for `sheet`: its slot, or -1 when the tray is empty of
-## markers (full) or `sheet` already holds one.
-func take(sheet: int) -> int:
-	if full() or slot_of(sheet) >= 0:
+## True when `sheets` (indices) span at most max_cells cells of bounding box.
+func fits(sheets: Array) -> bool:
+	var cells: Array = []
+	for s: int in sheets:
+		if _cells.has(s):
+			cells.append(_cells[s])
+	return area_cells(cells) <= max_cells
+
+
+## The slot a toss onto `sheet` takes, -1 refused: a free marker when the box
+## still fits; with none free, the newest marker is picked up again when the
+## box fits without it (one marker: it always moves, as before the tray).
+## Nothing is changed; `place` puts it there.
+func toss_slot(sheet: int) -> int:
+	if slot_of(sheet) >= 0 or not _cells.has(sheet):
 		return -1
-	var slot := _slots.find(-1)
+	var with := held()
+	with.append(sheet)
+	if not full():
+		return _slots.find(-1) if fits(with) else -1
+	var without := held()
+	without.pop_back()
+	without.append(sheet)
+	return int(_order[-1]) if fits(without) else -1
+
+
+## Place the marker of `slot` on `sheet` (it becomes the newest).
+func place(slot: int, sheet: int) -> void:
+	if slot < 0 or slot >= max_slots:
+		return
 	_slots[slot] = sheet
+	_order.erase(slot)
 	_order.append(slot)
+
+
+## A toss onto `sheet`: its slot, placed now, or -1 refused (`toss_slot`).
+func take(sheet: int) -> int:
+	var slot := toss_slot(sheet)
+	if slot >= 0:
+		place(slot, sheet)
 	return slot
 
 
@@ -75,20 +120,57 @@ func put_back(sheet: int) -> bool:
 	return true
 
 
-## `sheet` becomes held: already held, nothing; a free marker, taken; a full
-## tray, the newest marker moved to it. Returns the slot.
+## `sheet` becomes held without a toss (the first lay, a margin row, the
+## snapshot tool): already held, nothing; a toss would take it, taken; else
+## every marker goes back but the newest, which stands on it. Its slot.
 func hold(sheet: int) -> int:
 	var at := slot_of(sheet)
-	if at >= 0:
+	if at >= 0 or not _cells.has(sheet):
 		return at
-	if not full():
-		return take(sheet)
-	var slot: int = _order[-1]
-	_slots[slot] = sheet
-	return slot
+	var slot := take(sheet)
+	if slot >= 0:
+		return slot
+	var keep: int = _order[-1]
+	_slots.fill(-1)
+	_order.clear()
+	place(keep, sheet)
+	return keep
 
 
-## The bounding box, in cells, of the cells (Vector2i col, row) the markers stand on.
+## True when every held cell moved one cell by `dir` (an edge arrow) still
+## stands on a sheet (not a sea cell, not off the map).
+func can_shift(dir: Vector2i) -> bool:
+	if _order.is_empty():
+		return false
+	for s: int in held():
+		if not _sheets.has((_cells[s] as Vector2i) + dir):
+			return false
+	return true
+
+
+## Every held marker moves one cell by `dir`; false and nothing changed when
+## `can_shift` says no. The count of markers never changes.
+func shift(dir: Vector2i) -> bool:
+	if not can_shift(dir):
+		return false
+	for slot: int in _order:
+		_slots[slot] = int(_sheets[(_cells[_slots[slot]] as Vector2i) + dir])
+	return true
+
+
+## The held sheets after a shift by `dir` (oldest first), [] when it cannot.
+func shifted(dir: Vector2i) -> Array:
+	if not can_shift(dir):
+		return []
+	return held().map(func(s: int) -> int: return int(_sheets[(_cells[s] as Vector2i) + dir]))
+
+
+## The cell (col, row) of sheet `sheet`, (-1, -1) for none.
+func cell_of(sheet: int) -> Vector2i:
+	return _cells.get(sheet, Vector2i(-1, -1))
+
+
+## The bounding box, in cells, of `cells` (Vector2i col, row).
 static func extent_cells(cells: Array) -> Vector2i:
 	if cells.is_empty():
 		return Vector2i.ZERO
@@ -100,38 +182,6 @@ static func extent_cells(cells: Array) -> Vector2i:
 	return hi - lo + Vector2i.ONE
 
 
-## The area that stays in view, in cells.
 static func area_cells(cells: Array) -> int:
 	var e := extent_cells(cells)
 	return e.x * e.y
-
-
-## How many cells across the covered area's widest side runs: the table's
-## camera backs off by this factor (1 for one cell).
-static func zoom_factor(cells: Array) -> float:
-	var e := extent_cells(cells)
-	return float(maxi(e.x, e.y))
-
-
-## The cells (col, row) of sheets `sheets`.
-static func cells_of(repo: DataRepository, sheets: Array) -> Array:
-	var all := WarSheets.series(repo)
-	var out: Array = []
-	for i: int in sheets:
-		if i >= 0 and i < all.size():
-			out.append(Vector2i(int(all[i]["col"]), int(all[i]["row"])))
-	return out
-
-
-## The pack-px rect of the cells the markers stand on (their neat lines united).
-static func span_rect(repo: DataRepository, sheets: Array) -> Rect2:
-	var all := WarSheets.series(repo)
-	var out := Rect2()
-	var first := true
-	for i: int in sheets:
-		if i < 0 or i >= all.size():
-			continue
-		var r: Rect2 = all[i]["cell"]
-		out = r if first else out.merge(r)
-		first = false
-	return out

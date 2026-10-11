@@ -109,7 +109,7 @@ func piece(code: String) -> Node3D:
 ## is (no push): a laid sheet, a changed regiment set.
 func rebuild(state: GameState) -> void:
 	_clear()
-	var entries := WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn())
+	var entries := WarRoom.on_sheet(_repo, state, _view.laid_sheet(), _view.drawn())
 	var spot := _spread(state, entries)
 	for p: Dictionary in entries:
 		var code := String(p["code"])
@@ -120,7 +120,7 @@ func rebuild(state: GameState) -> void:
 ## built and a gone one freed, a changed pose or figure count rebuilt in place.
 func update(state: GameState) -> void:
 	var keep: Dictionary = {}
-	var entries := WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn())
+	var entries := WarRoom.on_sheet(_repo, state, _view.laid_sheet(), _view.drawn())
 	var spot := _spread(state, entries)
 	for p: Dictionary in entries:
 		var code := String(p["code"])

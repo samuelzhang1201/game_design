@@ -10,8 +10,9 @@ extends RefCounted
 const RING_SEGMENTS := 72
 
 
-static func cache_key(state: GameState, sheet_index: int) -> int:
-	return hash([sheet_index, int(state.war_plans.get("rev", 0))])
+## `sheet` is the laid sheet's key (WarSheets.union) or a sheet index.
+static func cache_key(state: GameState, sheet: Variant) -> int:
+	return hash([sheet, int(state.war_plans.get("rev", 0))])
 
 
 ## {crayon: [{poly, colour}], pen: [{line, colour, width}], names: [{at, text,

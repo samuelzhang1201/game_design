@@ -82,32 +82,33 @@ static func pieces(repo: DataRepository, state: GameState, drawn: Dictionary = {
 
 
 ## The pieces split by a sheet, computed once: "on" those inside its rect (or
-## on no sheet at all and this the nearest), "off" the rest.
-static func partition(repo: DataRepository, state: GameState, sheet_index: int,
+## on no sheet at all and this the nearest), "off" the rest. `sheet` is a
+## sheet's index or a laid union (WarSheets.union: its rect, its indices).
+static func partition(repo: DataRepository, state: GameState, sheet: Variant,
 		drawn: Dictionary = {}) -> Dictionary:
 	var on: Array = []
 	var off: Array = []
 	var all := WarSheets.series(repo)
-	var rect := Rect2()
-	var valid := sheet_index >= 0 and sheet_index < all.size()
-	if valid:
-		rect = all[sheet_index]["rect"]
+	var laid: Dictionary = sheet if sheet is Dictionary else WarSheets.union(repo, [int(sheet)])
+	var valid := not laid.is_empty()
+	var rect: Rect2 = laid.get("rect", Rect2())
+	var held: Array = laid.get("indices", [])
 	for p: Dictionary in pieces(repo, state, drawn):
-		if valid and (rect.has_point(p["at"]) or (not _on_any(all, p["at"]) and int(p["sheet"]) == sheet_index)):
+		if valid and (rect.has_point(p["at"]) or (not _on_any(all, p["at"]) and held.has(int(p["sheet"])))):
 			on.append(p)
 		else:
 			off.append(p)
 	return {"on": on, "off": off}
 
 
-static func on_sheet(repo: DataRepository, state: GameState, sheet_index: int,
+static func on_sheet(repo: DataRepository, state: GameState, sheet: Variant,
 		drawn: Dictionary = {}) -> Array:
-	return partition(repo, state, sheet_index, drawn)["on"]
+	return partition(repo, state, sheet, drawn)["on"]
 
 
-static func off_sheet(repo: DataRepository, state: GameState, sheet_index: int,
+static func off_sheet(repo: DataRepository, state: GameState, sheet: Variant,
 		drawn: Dictionary = {}) -> Array:
-	return partition(repo, state, sheet_index, drawn)["off"]
+	return partition(repo, state, sheet, drawn)["off"]
 
 
 static func _on_any(all: Array, at: Vector2) -> bool:

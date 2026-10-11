@@ -35,6 +35,8 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	var out := {"notes": [], "routes": [], "marks": [], "figures": [], "places": []}
 	var note_px := repo.bal("war_fine_note_px")
 	var char_w := repo.bal("war_ink_char_w")
+	var name_tier := int(repo.bal("war_union_label_min_tier")) \
+		if int(sheet.get("cols", 1)) * int(sheet.get("rows", 1)) > 1 else 0
 	var codes: Array = repo.burgs.keys()
 	codes.sort()
 	for code: String in codes:
@@ -43,7 +45,9 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if not r.has_point(at):
 			continue
 		var tier := 3 if String(b.get("is_capital", "0")) == "1" else int(WarSheetInk.TOWN_TIERS.get(String(b.get("group", "")), 0))
-		var t := {"at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
+		if tier < name_tier:
+			continue   # a union drops this name, so it gets no second line either
+		var t := {"at": (at - r.position) * k, "tier": tier, "label": String(b["label"]), "name_dx": WarSheetInk.name_dx(repo, tier, 1.0, sheet),
 			"walls": String(b.get("features", "")).split("|").has("walls")}
 		var plain := WarSheetInk.town_label_box(repo, t)
 		t.merge(WarSheetInk.town_marks(repo, code))
