@@ -29,6 +29,7 @@ static func node_of(repo: DataRepository, piece: Dictionary) -> MeshInstance3D:
 	glow.mesh = quad
 	glow.material_override = MATERIAL
 	glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	glow.set_instance_shader_parameter("half_m", half)
 	glow.set_instance_shader_parameter("inner", repo.bal("map3d_unit_glow_inner"))
 	glow.set_instance_shader_parameter("peak", repo.bal("map3d_unit_glow_peak"))
 	glow.visible = false

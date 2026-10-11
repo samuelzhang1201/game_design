@@ -17,7 +17,10 @@ render_mode unshaded, cull_disabled, blend_premul_alpha, depth_draw_never, shado
 uniform vec4 tint : source_color = vec4(1.0, 0.88, 0.6, 1.0);
 // the glow's strength at its brightest
 uniform float strength : hint_range(0.0, 1.0) = 0.45;
-// the band's foot and crest, as shares of the quad's half (per piece)
+// the quad's half extent in metres (per piece): the band is a fixed width in
+// metres measured from the SHORT half, so it is as wide at a line's ends as on its sides
+instance uniform vec2 half_m = vec2(1.0, 1.0);
+// the band's foot and crest, as shares of the SHORT half (per piece)
 instance uniform float inner : hint_range(0.0, 1.0) = 0.75;
 instance uniform float peak : hint_range(0.0, 1.0) = 0.9;
 // brightness multiplier on `strength` (light can exceed 1)
@@ -31,14 +34,18 @@ uniform float skirt : hint_range(0.0, 1.0) = 0.25;
 
 void fragment() {
 	float r = length(UV - vec2(0.5)) * 2.0;
-	float rise = smoothstep(inner, peak, r);
-	float fall = 1.0 - smoothstep(peak, 1.0, r);
+	// s ~ 1 - (metres to the ellipse edge) / (short half): r over its gradient
+	vec2 p = (UV - 0.5) * 2.0 * half_m;
+	float g = length(p / (half_m * half_m)) / max(r, 1e-4);
+	float s = 1.0 - (1.0 - r) / max(g, 1e-6) / min(half_m.x, half_m.y);
+	float rise = smoothstep(inner, peak, s);
+	float fall = 1.0 - smoothstep(peak, 1.0, s);
 	float ring = rise * fall;
 	float body = max(ring, haze * (1.0 - smoothstep(0.0, peak, r)) * 0.5);
 	float crest = ring * ring;  // narrow bright line along the band's top
 	vec3 light = mix(tint.rgb, vec3(1.0), hot * crest);
 	ALBEDO = light * clamp(body * strength * gain * tint.a, 0.0, 1.0);
 	// a faint dark skirt just inside the band's foot, so the crest stands off
-	float dark = smoothstep(inner * 0.5, inner, r) * (1.0 - rise);
+	float dark = smoothstep(inner * 0.5, inner, s) * (1.0 - rise);
 	ALPHA = clamp(dark * skirt, 0.0, 1.0);
 }

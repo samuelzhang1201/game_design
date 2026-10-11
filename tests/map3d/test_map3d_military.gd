@@ -207,6 +207,19 @@ func test_glow_is_an_ellipse_from_the_extent() -> void:
 	assert_almost_eq(float(glow.get_instance_shader_parameter("inner")), repo.bal("map3d_unit_glow_inner"), 0.0001)
 
 
+## The band is metres from the short half: the shader gets the half extent.
+func test_glow_gets_its_half_extent_in_metres() -> void:
+	var repo := SuiteData.repo()
+	var host := Node3D.new()
+	add_child_autofree(host)
+	var piece := {"node": host, "extent": Vector2(8.0, 2.0), "half_w_m": 8.0, "height_m": 2.0}
+	var glow := Map3DUnitGlow.node_of(repo, piece)
+	var got: Vector2 = glow.get_instance_shader_parameter("half_m")
+	var want := Vector2(8.0, 2.0) * repo.bal("map3d_unit_glow_ratio")
+	assert_almost_eq(got.x, want.x, 0.001)
+	assert_almost_eq(got.y, want.y, 0.001)
+
+
 ## Over the roads it stands on (Phase E5: the .tres sets render_priority).
 func test_glow_draws_over_roads() -> void:
 	assert_gt(Map3DPriority.UNIT_GLOW, Map3DPriority.ROADS)
@@ -221,11 +234,14 @@ func test_glow_draws_over_roads() -> void:
 ## The look is authored in the .tres (Phase E5), not left to shader defaults.
 func test_glow_look_is_authored() -> void:
 	var mat := Map3DUnitGlow.MATERIAL as ShaderMaterial
-	for k: String in ["gain", "hot", "haze"]:
+	for k: String in ["gain", "hot", "haze", "skirt"]:
 		if mat.get_shader_parameter(k) == null:
 			pending("needs Phase E5: unit_select_glow.tres sets %s" % k)
 			return
-	assert_true(true)
+		assert_not_null(mat.get_shader_parameter(k), k)
+	# inner / peak are per-piece instance uniforms, never set on the material
+	assert_null(mat.get_shader_parameter("inner"))
+	assert_null(mat.get_shader_parameter("peak"))
 
 
 ## A piece no longer drawn is FREED, not hidden (perf P0 2026-10-11): hidden,
