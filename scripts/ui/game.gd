@@ -232,9 +232,9 @@ func clear_plans(kind: String, rect: Rect2) -> int:
 	return _plans(WarPlans.clear(data, state, kind, rect))
 
 
-func draw_plan(kind: String, colour: String, pts: PackedVector2Array, r_px: float, name: String, dashed: bool,
+func draw_plan(kind: String, colour: String, pts: PackedVector2Array, r_px: float, plan_name: String, dashed: bool,
 		flip := -1, of := "") -> String:
-	return _plans(WarPlans.draw(data, state, kind, colour, pts, r_px, name, dashed, flip, of))
+	return _plans(WarPlans.draw(data, state, kind, colour, pts, r_px, plan_name, dashed, flip, of))
 
 
 func reshape_plan(id: String, pts: PackedVector2Array, r_px := -1.0) -> bool:

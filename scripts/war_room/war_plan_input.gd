@@ -331,28 +331,28 @@ func _release(mb: InputEventMouseButton) -> bool:
 			return true
 		var pack := _view.pack_at(mb.position)
 		var per := px_per_pack(pack if pack.x >= 0.0 else _view.sheet_rect().get_center())
-		var d := tool.release(pack, mb.position, mb.shift_pressed, per)
+		var dr := tool.release(pack, mb.position, mb.shift_pressed, per)
 		var order := _order
 		_order = false
 		redraw_live()
-		if d.is_empty():
+		if dr.is_empty():
 			return true
 		if order:
 			_view.hover_cleared.emit()
 			var marching := sel.filter(func(c: Variant) -> bool: return not naval(String(c)))
 			if marching.is_empty():
 				return true
-			order_drawn.emit(marching, (d["samples"] as PackedVector2Array) if not mb.shift_pressed \
-				else PackedVector2Array([d["samples"][0], d["samples"][d["samples"].size() - 1]]), _repo.bal("war_order_fit_px") / maxf(per, 0.0001))
+			order_drawn.emit(marching, (dr["samples"] as PackedVector2Array) if not mb.shift_pressed \
+				else PackedVector2Array([dr["samples"][0], dr["samples"][dr["samples"].size() - 1]]), _repo.bal("war_order_fit_px") / maxf(per, 0.0001))
 			if _view.aiming:
 				tool.put_down()   # the blue arrow is laid down once its march is drawn
 				tool_changed.emit()
 		else:
 			var before: Array = _view.state().war_plans[WarPlans.STROKES].keys()
-			if String(d["kind"]) == "arrow" and not sel.is_empty():
+			if String(dr["kind"]) == "arrow" and not sel.is_empty():
 				for id: Variant in sel:   # a red arrow for each host selected, drawn from its own spot
-					var one := d.duplicate()
-					var pts: PackedVector2Array = (d["pts"] as PackedVector2Array).duplicate()
+					var one := dr.duplicate()
+					var pts: PackedVector2Array = (dr["pts"] as PackedVector2Array).duplicate()
 					var spot: Variant = _spot_of(String(id))
 					if spot != null:
 						pts[0] = spot
@@ -360,7 +360,7 @@ func _release(mb: InputEventMouseButton) -> bool:
 					one["of"] = String(id)
 					drawn.emit(one)
 			else:
-				drawn.emit(d)
+				drawn.emit(dr)
 			_keep_ghost_of(_view.state().war_plans[WarPlans.STROKES].keys().filter(
 				func(i: Variant) -> bool: return not i in before))
 		redraw_live()
@@ -450,7 +450,9 @@ func _spot_of(id: String) -> Variant:
 		var h := WarRoom.hint_of(_repo, st, id)
 		return h["at"] if not h.is_empty() else null
 	var p: Dictionary = st.war_plans[WarPlans.PIECES].get(id, {})
-	return WarPlans.at_px(_repo, p) if not p.is_empty() else null
+	if p.is_empty():
+		return null
+	return WarPlans.at_px(_repo, p)
 
 
 func _flip_of(id: String) -> int:
@@ -461,13 +463,13 @@ func _flip_of(id: String) -> int:
 ## land units first (at the spot they are DRAWN), else the supposed pieces and
 ## the intel hints; nothing in it, no change.
 func _box(box: Rect2) -> void:
-	var drawn: Dictionary = _view.piece_pack_positions()
+	var drawn_at: Dictionary = _view.piece_pack_positions()
 	var ours: Array = []
 	for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.sheet_index(), _view.drawn()):
 		if bool(q["naval"]):
 			continue
 		var code := String(q["code"])
-		var at: Variant = _view.screen_pos_of_px(drawn.get(code, q["at"]))
+		var at: Variant = _view.screen_pos_of_px(drawn_at.get(code, q["at"]))
 		if at != null and box.has_point(at):
 			ours.append(code)
 	if not ours.is_empty():

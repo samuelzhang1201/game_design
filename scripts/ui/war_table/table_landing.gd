@@ -173,12 +173,12 @@ func pose(t: float) -> Dictionary:
 	var held := _scaled(full, _num("ui_landing_lift_scale", 0.92))
 	var tilt := deg_to_rad(_num("ui_landing_tilt_deg", -2.5))
 	if t < lift_s:
-		var k := _smooth(t / lift_s)
-		return {"rect": _lerp_rect(full, held, k), "tilt": tilt * k, "lift": k, "margin": k}
+		var k_lift := _smooth(t / lift_s)
+		return {"rect": _lerp_rect(full, held, k_lift), "tilt": tilt * k_lift, "lift": k_lift, "margin": k_lift}
 	t -= lift_s
 	if t < carry_s:
-		var k := _smooth(t / carry_s)
-		return {"rect": _lerp_rect(held, _target, k), "tilt": tilt * (1.0 - k), "lift": 1.0 - k, "margin": 1.0}
+		var k_carry := _smooth(t / carry_s)
+		return {"rect": _lerp_rect(held, _target, k_carry), "tilt": tilt * (1.0 - k_carry), "lift": 1.0 - k_carry, "margin": 1.0}
 	t -= carry_s
 	var k := clampf(t / maxf(settle_s, 0.01), 0.0, 1.0)
 	# the moment it meets the wood: a touch past its place, then home

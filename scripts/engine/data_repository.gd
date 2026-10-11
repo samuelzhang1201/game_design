@@ -1321,7 +1321,7 @@ func _add_law(r: Dictionary) -> void:
 	var parts := String(r["values"]).split("|")
 	var values: Array = []
 	for p: String in parts:
-		values.append(int(p) if kind == "range" else p)
+		values.append((int(p) as Variant) if kind == "range" else p)
 	laws[code] = {"law_code": code, "tab": String(r["tab"]), "group": String(r["group"]),
 		"label": String(r["label"]), "kind": kind, "values": values,
 		"default": String(r["default"]), "scope": String(r["scope"]),

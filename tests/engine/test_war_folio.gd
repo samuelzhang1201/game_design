@@ -103,6 +103,7 @@ func test_figures_follow_the_strength_tiers() -> void:
 	@warning_ignore("integer_division")
 	state.regiments[code]["wounded"] = heads / 2   # 500 fit per mille -> depleted
 	assert_eq(WarFolio.figures(repo, state, code), 6)
+	@warning_ignore("integer_division")
 	state.regiments[code]["wounded"] = heads - heads / 10   # ~100 -> remnants
 	assert_eq(WarFolio.figures(repo, state, code), 3)
 
@@ -289,6 +290,7 @@ func test_the_supply_row_names_a_brigand_on_the_road() -> void:
 	if route.size() < 2:
 		pass_test("no realm town in reach of this regiment")
 		return
+	@warning_ignore("integer_division")
 	var mid := route[route.size() / 2]
 	var codes: Array = repo.markers.keys()
 	codes.sort()

@@ -379,6 +379,7 @@ func test_the_ribbon_faces_up() -> void:
 		for k in 3:
 			p.append(verts[index[t + k]] + normals[index[t + k]] * 5.0)
 		var wound: Vector3 = ((p[1] as Vector3) - (p[0] as Vector3)).cross((p[2] as Vector3) - (p[0] as Vector3))
+		@warning_ignore("integer_division")
 		assert_lt(wound.y, 0.0, "triangle %d is clockwise from above" % (t / 3))
 
 

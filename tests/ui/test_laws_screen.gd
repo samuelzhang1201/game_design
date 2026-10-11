@@ -498,8 +498,8 @@ func test_places_shows_only_while_a_place_is_untold() -> void:
 	for i in 60:
 		Game.advance_day()
 		await wait_process_frames(1)
-		var d := LawSystem.delivery(Game.data, Game.state, "tax_rate")
-		if int(d["riding"]) == 0:
+		var dl := LawSystem.delivery(Game.data, Game.state, "tax_rate")
+		if int(dl["riding"]) == 0:
 			break
 	await wait_process_frames(2)
 	var d := LawSystem.delivery(Game.data, Game.state, "tax_rate")

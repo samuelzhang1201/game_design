@@ -200,11 +200,11 @@ func test_the_roads_and_bridges_draw_what_their_tres_say() -> void:
 		var live := mesh.surface_get_material(0) as ShaderMaterial
 		var look := pair[1] as ShaderMaterial
 		for u: Dictionary in look.shader.get_shader_uniform_list():
-			var name := String(u["name"])
-			if name in ["width_m", "width_px", "lift_px", "px_per_dist", "surface", "surface_nrm"] \
-					or look.get_shader_parameter(name) == null:
+			var uname := String(u["name"])
+			if uname in ["width_m", "width_px", "lift_px", "px_per_dist", "surface", "surface_nrm"] \
+					or look.get_shader_parameter(uname) == null:
 				continue
-			assert_eq(live.get_shader_parameter(name), look.get_shader_parameter(name), "%s.%s" % [pair[0], name])
+			assert_eq(live.get_shader_parameter(uname), look.get_shader_parameter(uname), "%s.%s" % [pair[0], uname])
 	var bridges := v.world().get_node("Bridges") as MeshInstance3D
 	assert_not_null(bridges, "the world's own Bridges node")
 	assert_eq(bridges.get_parent(), v.world(), "never a node made beside it")
@@ -222,10 +222,10 @@ func test_the_lines_draw_what_their_tres_say() -> void:
 		var live := mesh.surface_get_material(0) as ShaderMaterial
 		var look := pair[1] as ShaderMaterial
 		for u: Dictionary in look.shader.get_shader_uniform_list():
-			var name := String(u["name"])
-			if name in Map3DLayerLines.PX_PARAMS or name == "px_per_dist" or look.get_shader_parameter(name) == null:
+			var uname := String(u["name"])
+			if uname in Map3DLayerLines.PX_PARAMS or uname == "px_per_dist" or look.get_shader_parameter(uname) == null:
 				continue
-			assert_eq(live.get_shader_parameter(name), look.get_shader_parameter(name), "%s.%s" % [pair[0], name])
+			assert_eq(live.get_shader_parameter(uname), look.get_shader_parameter(uname), "%s.%s" % [pair[0], uname])
 		var s := v.context().viewport_px_scale()
 		for k: String in Map3DLayerLines.PX_PARAMS:
 			assert_almost_eq(float(live.get_shader_parameter(k)), float(look.get_shader_parameter(k)) * s, 0.0001,
@@ -249,14 +249,14 @@ func _assert_material_holds(live: ShaderMaterial, key: String, at_least := 10) -
 	var prefix := String(CODE_OWNED_PREFIX.get(key, ""))
 	var checked := 0
 	for u: Dictionary in authored.shader.get_shader_uniform_list():
-		var name := String(u["name"])
-		if name in owned or (prefix != "" and name.begins_with(prefix)):
+		var uname := String(u["name"])
+		if uname in owned or (prefix != "" and uname.begins_with(prefix)):
 			continue
-		var want: Variant = authored.get_shader_parameter(name)
+		var want: Variant = authored.get_shader_parameter(uname)
 		if want == null:
 			continue
 		checked += 1
-		assert_eq(live.get_shader_parameter(name), want,
-			"%s.%s: the .tres says %s, the game drew %s — set in code?" % [key, name, want,
-				live.get_shader_parameter(name)])
+		assert_eq(live.get_shader_parameter(uname), want,
+			"%s.%s: the .tres says %s, the game drew %s — set in code?" % [key, uname, want,
+				live.get_shader_parameter(uname)])
 	assert_gte(checked, at_least, key + ": the guard compared the material's look")

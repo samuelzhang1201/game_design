@@ -124,7 +124,9 @@ func test_apply_round_conserves_heads() -> void:
 	var morale_before := int(s.regiments[code]["morale"])
 	var res := BattleSystem.apply_round(repo, s, [code], [], tier, "lost the field at the ford")
 	var st: Dictionary = s.regiments[code]
+	@warning_ignore("integer_division")
 	var lost := heads * 100 / 1000
+	@warning_ignore("integer_division")
 	var wounded := lost * 700 / 1000
 	assert_eq(int(st["wounded"]), wounded)
 	assert_eq(int(st["dead"]), lost - wounded)
@@ -150,8 +152,10 @@ func test_apply_round_spreads_a_side_by_fit_heads() -> void:
 		total += _heads(c)
 	var tier := {"attacker_loss_permille": 0, "defender_loss_permille": 130, "wounded_share_permille": 500,
 		"attacker_morale": 0, "defender_morale": -5}
+	@warning_ignore("integer_division")
 	var lost_total := total * 130 / 1000
 	var lost_each := BattleSystem.apportion(weights, lost_total)
+	@warning_ignore("integer_division")
 	var wounded_each := BattleSystem.apportion(lost_each, lost_total * 500 / 1000)
 	BattleSystem.apply_round(repo, s, [], codes, tier, "held the ridge")
 	var dead_sum := 0
@@ -190,8 +194,11 @@ func test_apply_round_hits_a_foe_in_its_own_state() -> void:
 	var tier := {"attacker_loss_permille": 0, "defender_loss_permille": 200, "wounded_share_permille": 600,
 		"attacker_morale": 0, "defender_morale": -20}
 	BattleSystem.apply_round(repo, s, [], [foe], tier, "broken at the ford")
+	@warning_ignore("integer_division")
 	var lost := heads * 200 / 1000
+	@warning_ignore("integer_division")
 	assert_eq(int(s.foes[foe]["wounded"]), lost * 600 / 1000)
+	@warning_ignore("integer_division")
 	assert_eq(int(s.foes[foe]["dead"]), lost - lost * 600 / 1000)
 	assert_false(s.regiments.has(foe), "a foe is never written into the player's regiments")
 

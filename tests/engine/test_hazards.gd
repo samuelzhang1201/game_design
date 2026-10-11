@@ -112,10 +112,10 @@ func test_known_abroad_only_if_public() -> void:
 		var prov := MapManors.province_of(repo, c, state)
 		if prov == "":
 			continue
-		var owner := MapOwnership.owner_of(repo, state, prov)
-		if owner == mine and home_cell < 0:
+		var holder := MapOwnership.owner_of(repo, state, prov)
+		if holder == mine and home_cell < 0:
 			home_cell = c
-		elif owner != mine and owner != "" and foreign_cell < 0:
+		elif holder != mine and holder != "" and foreign_cell < 0:
 			foreign_cell = c
 	Hazards.add(state, "r_abroad", "Rebels", "Far rebels", [foreign_cell], state.tick, -1, "test")
 	Hazards.add(state, "p_abroad", "Disease", "Far plague", [foreign_cell], state.tick, -1, "test")
@@ -137,8 +137,8 @@ func _crown_land_code(state: GameState) -> String:
 ## The news of `code`'s own toll: a unit shares its cell with its camp-mates,
 ## who take their own.
 func _toll_of(state: GameState, code: String, news: Array) -> Array:
-	var name := String(ArmySystem.regiment(repo, code, state)["label"])
-	return news.filter(func(n: String) -> bool: return n.begins_with("The %s loses " % name) and n.contains("Test Plague"))
+	var nm := String(ArmySystem.regiment(repo, code, state)["label"])
+	return news.filter(func(n: String) -> bool: return n.begins_with("The %s loses " % nm) and n.contains("Test Plague"))
 
 
 func _cell_of(state: GameState, code: String) -> int:

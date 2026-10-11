@@ -45,10 +45,10 @@ func setup(repo: DataRepository) -> void:
 		var b := buttons[i] as Button
 		b.visible = i < _arms.size()
 		if i < _arms.size():
-			var arm := String(_arms[i])
-			b.set_meta("arm", arm)
-			b.text = WarGround.arm_word(repo, arm).capitalize()
-			b.icon = ResourceIconSet.texture_of(arm)
+			var arm_code := String(_arms[i])
+			b.set_meta("arm", arm_code)
+			b.text = WarGround.arm_word(repo, arm_code).capitalize()
+			b.icon = ResourceIconSet.texture_of(arm_code)
 			if not b.toggled.is_connected(_on_arm):
 				b.toggled.connect(_on_arm)
 	_heads.min_value = repo.bal("war_plan_heads_min")
@@ -62,13 +62,13 @@ func setup(repo: DataRepository) -> void:
 
 ## Shows the form beside `pointer` inside `bounds`, chosen as given; `editing`
 ## titles it for an edit.
-func open_at(pointer: Vector2, bounds: Rect2, arm: String, heads: int, side: String, editing := false) -> void:
+func open_at(pointer: Vector2, bounds: Rect2, arm_code: String, head_count: int, side_code: String, editing := false) -> void:
 	_title.text = "The supposed host" if editing else "A supposed host"
 	_place.text = "Keep" if editing else "Place"
 	for b: Button in _arm_row.get_children():
-		b.set_pressed_no_signal(String(b.get_meta("arm", "")) == arm)
-	_heads.set_value_no_signal(float(heads))
-	_side.select(maxi(_sides.find(side), 0))
+		b.set_pressed_no_signal(String(b.get_meta("arm", "")) == arm_code)
+	_heads.set_value_no_signal(float(head_count))
+	_side.select(maxi(_sides.find(side_code), 0))
 	visible = true
 	reset_size()
 	_refresh()

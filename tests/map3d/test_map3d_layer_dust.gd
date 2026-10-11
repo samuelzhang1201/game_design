@@ -9,6 +9,7 @@ const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
 
 
 ## A units layer whose drawn spots the test sets.
+@warning_ignore("missing_tool")
 class FakeUnits extends Map3DLayerUnits:
 	var pos: Dictionary = {}
 

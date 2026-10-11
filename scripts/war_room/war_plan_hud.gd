@@ -30,7 +30,7 @@ var _road_dash := 16.0
 
 
 func show_live(ink: Dictionary, look: Dictionary, handles: PackedVector2Array, chalk: Color, handle_r: float,
-		facing: Dictionary = {}, facing_len := 14.0) -> void:
+		p_facing: Dictionary = {}, facing_len := 14.0) -> void:
 	# the wax tooth's UVs run past 1 across a stroke: it tiles (a sampling rule, not a look)
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	_ink = ink
@@ -38,17 +38,17 @@ func show_live(ink: Dictionary, look: Dictionary, handles: PackedVector2Array, c
 	_handles = handles
 	_chalk = chalk
 	_handle_r = handle_r
-	_facing = facing
+	_facing = p_facing
 	_facing_len = facing_len
 	queue_redraw()
 
 
 ## The bold dashed gold supply road of a pending march, under its crayon
 ## (spec 2026-10-08-war-room-draw-orders ruling 14); empty: none.
-func show_road(road: Array, gold: Color, width: float, dash: float, exit_mark: Dictionary = {},
+func show_road(road: Array, gold: Color, width: float, dash: float, p_exit_mark: Dictionary = {},
 		font_px := 18, halo_px := 5, halo_alpha := 0.85) -> void:
 	_road = road
-	_exit = exit_mark
+	_exit = p_exit_mark
 	_exit_px = font_px
 	_exit_halo_px = halo_px
 	_exit_halo_alpha = halo_alpha

@@ -40,11 +40,11 @@ func metres_per_px(fov_deg: float, view_h_px: float) -> float:
 ## (-1..1, +y up), seen from the orbit pose (target, distance, yaw, pitch)
 ## through a camera of vertical fov_deg at this aspect. A point at or behind
 ## the eye lands at INF.
-static func ndc_of(p: Vector3, target: Vector3, distance: float, yaw_deg: float, pitch_deg: float,
+static func ndc_of(p: Vector3, tgt: Vector3, dist: float, yaw_deg: float, pitch_deg: float,
 		fov_deg: float, aspect: float) -> Vector2:
 	var b := _basis(yaw_deg, pitch_deg)
-	var v := p - target
-	var depth := distance - v.dot(b.z)
+	var v := p - tgt
+	var depth := dist - v.dot(b.z)
 	if depth <= 1e-6:
 		return Vector2(INF, INF)
 	var tv := tan(deg_to_rad(fov_deg) * 0.5)
@@ -64,27 +64,27 @@ static func frame(points: Array, yaw_deg: float, pitch_deg: float, fov_deg: floa
 	var box := AABB(points[0], Vector3.ZERO)
 	for p: Vector3 in points:
 		box = box.expand(p)
-	var target := box.get_center()
+	var tgt := box.get_center()
 	var b := _basis(yaw_deg, pitch_deg)
 	var tv := tan(deg_to_rad(fov_deg) * 0.5)
 	var lo := Vector2(safe.position.x * 2.0 - 1.0, 1.0 - safe.end.y * 2.0)
 	var hi := Vector2(safe.end.x * 2.0 - 1.0, 1.0 - safe.position.y * 2.0)
-	var distance := 1.0
+	var dist := 1.0
 	# Fit, then slide the target so the content's middle meets the safe
 	# rect's middle, and fit again: perspective makes the slide approximate,
 	# so a few rounds, and the last word is a fit.
 	for _round in 4:
-		distance = _fit_distance(points, target, yaw_deg, pitch_deg, fov_deg, aspect, lo, hi)
+		dist = _fit_distance(points, tgt, yaw_deg, pitch_deg, fov_deg, aspect, lo, hi)
 		var mn := Vector2(INF, INF)
 		var mx := Vector2(-INF, -INF)
 		for p: Vector3 in points:
-			var s := ndc_of(p, target, distance, yaw_deg, pitch_deg, fov_deg, aspect)
+			var s := ndc_of(p, tgt, dist, yaw_deg, pitch_deg, fov_deg, aspect)
 			mn = mn.min(s)
 			mx = mx.max(s)
 		var off := (mn + mx) * 0.5 - (lo + hi) * 0.5
-		target += b.x * off.x * distance * tv * aspect + b.y * off.y * distance * tv
-	distance = _fit_distance(points, target, yaw_deg, pitch_deg, fov_deg, aspect, lo, hi)
-	return {"target": target, "distance": distance}
+		tgt += b.x * off.x * dist * tv * aspect + b.y * off.y * dist * tv
+	dist = _fit_distance(points, tgt, yaw_deg, pitch_deg, fov_deg, aspect, lo, hi)
+	return {"target": tgt, "distance": dist}
 
 
 static func _basis(yaw_deg: float, pitch_deg: float) -> Basis:
@@ -92,10 +92,10 @@ static func _basis(yaw_deg: float, pitch_deg: float) -> Basis:
 	return Basis.looking_at(-back, Vector3.UP)
 
 
-static func _fits(points: Array, target: Vector3, distance: float, yaw_deg: float, pitch_deg: float,
+static func _fits(points: Array, tgt: Vector3, dist: float, yaw_deg: float, pitch_deg: float,
 		fov_deg: float, aspect: float, lo: Vector2, hi: Vector2) -> bool:
 	for p: Vector3 in points:
-		var s := ndc_of(p, target, distance, yaw_deg, pitch_deg, fov_deg, aspect)
+		var s := ndc_of(p, tgt, dist, yaw_deg, pitch_deg, fov_deg, aspect)
 		if s.x < lo.x or s.x > hi.x or s.y < lo.y or s.y > hi.y:
 			return false
 	return true
@@ -109,14 +109,14 @@ static func _fits(points: Array, target: Vector3, distance: float, yaw_deg: floa
 ## greatest: one pass over the points, called on every frame a framed chart
 ## settles. When the safe rect does not straddle the screen's middle the
 ## closed form does not hold and a bisection finds it.
-static func _fit_distance(points: Array, target: Vector3, yaw_deg: float, pitch_deg: float,
+static func _fit_distance(points: Array, tgt: Vector3, yaw_deg: float, pitch_deg: float,
 		fov_deg: float, aspect: float, lo: Vector2, hi: Vector2) -> float:
 	if lo.x < 0.0 and hi.x > 0.0 and lo.y < 0.0 and hi.y > 0.0:
 		var b := _basis(yaw_deg, pitch_deg)
 		var tv := tan(deg_to_rad(fov_deg) * 0.5)
 		var need := 0.0
 		for p: Vector3 in points:
-			var v := p - target
+			var v := p - tgt
 			var vx := v.dot(b.x)
 			var vy := v.dot(b.y)
 			var vz := v.dot(b.z)
@@ -127,12 +127,12 @@ static func _fit_distance(points: Array, target: Vector3, yaw_deg: float, pitch_
 		return need
 	var near := 0.0
 	var far := 1.0
-	while not _fits(points, target, far, yaw_deg, pitch_deg, fov_deg, aspect, lo, hi) and far < 1e6:
+	while not _fits(points, tgt, far, yaw_deg, pitch_deg, fov_deg, aspect, lo, hi) and far < 1e6:
 		near = far
 		far *= 2.0
 	for _i in 40:
 		var mid := (near + far) * 0.5
-		if _fits(points, target, mid, yaw_deg, pitch_deg, fov_deg, aspect, lo, hi):
+		if _fits(points, tgt, mid, yaw_deg, pitch_deg, fov_deg, aspect, lo, hi):
 			far = mid
 		else:
 			near = mid

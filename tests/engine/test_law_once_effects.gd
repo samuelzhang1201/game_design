@@ -71,6 +71,7 @@ func _hand_split(units: int) -> Dictionary:
 	var given := 0
 	var rems: Array = []
 	for code: String in codes:
+		@warning_ignore("integer_division")
 		out[code] = units * _people(code) / total
 		given += int(out[code])
 		rems.append([units * _people(code) % total, code])

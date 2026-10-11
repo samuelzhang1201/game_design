@@ -182,21 +182,21 @@ func _process(delta: float) -> void:
 ## the `rect` its projected box covers — its footprint (`half`) from the table
 ## to its top (`top_m`), grown by nothing: pick() grows it — and its `depth`
 ## from the camera.
-func screen_hits(camera: Camera3D, scale: float) -> Array:
+func screen_hits(camera: Camera3D, scl: float) -> Array:
 	var out: Array = []
 	for c: Node3D in get_children():
 		if camera.is_position_behind(c.global_position):
 			continue
 		var half: Vector2 = c.get_meta("half", Vector2.ZERO)
 		var top := float(c.get_meta("top_m", 0.0))
-		var at := camera.unproject_position(c.global_position) / scale
+		var at := camera.unproject_position(c.global_position) / scl
 		var rect := Rect2(at, Vector2.ZERO)
 		for dx in [-half.x, half.x]:
 			for dz in [-half.y, half.y]:
 				for dy in [0.0, top * 0.5, top]:
 					var corner: Vector3 = c.global_position + Vector3(dx, dy, dz)
 					if not camera.is_position_behind(corner):
-						rect = rect.expand(camera.unproject_position(corner) / scale)
+						rect = rect.expand(camera.unproject_position(corner) / scl)
 		out.append({"code": String(c.get_meta("code")), "at": at, "rect": rect,
 			"depth": camera.global_position.distance_to(c.global_position)})
 	return out
@@ -207,8 +207,8 @@ func screen_hits(camera: Camera3D, scale: float) -> Array:
 ## overlap; only a click on none falls back to the rects grown by `radius`
 ## (camps stand plinth to plinth: a reach first would hand a click squarely on
 ## a back piece to the one in front). "" when none.
-func pick(camera: Camera3D, scale: float, at: Vector2, radius: float) -> String:
-	var hits := screen_hits(camera, scale)
+func pick(camera: Camera3D, scl: float, at: Vector2, radius: float) -> String:
+	var hits := screen_hits(camera, scl)
 	for grow: float in [0.0, radius]:
 		var best := ""
 		var best_depth := INF
@@ -430,17 +430,17 @@ func _tag(state: GameState, code: String, side: float, top: float, across: float
 func _fill_wood(reg: Dictionary, path: String, into: Node3D) -> float:
 	if not _scenes.has(path):
 		_scenes[path] = load(path)
-	var piece := (_scenes[path] as PackedScene).instantiate() as Node3D
-	piece.name = "Piece"
+	var wood := (_scenes[path] as PackedScene).instantiate() as Node3D
+	wood.name = "Piece"
 	var k := _repo.bal("war_piece_plinth_mm") / 1000.0
-	piece.scale = Vector3.ONE * k
+	wood.scale = Vector3.ONE * k
 	var lacquer := MapPalette.color_of(_repo, String(reg["kingdom_code"])).darkened(_repo.bal("war_base_darken"))
 	var top := 0.0
-	for m: MeshInstance3D in Map3DUnits.meshes(piece):
+	for m: MeshInstance3D in Map3DUnits.meshes(wood):
 		m.set_instance_shader_parameter("lacquer", lacquer)
 		if m.mesh != null:
 			top = maxf(top, (m.transform * m.mesh.get_aabb()).end.y * k)
-	into.add_child(piece)
+	into.add_child(wood)
 	return top
 
 

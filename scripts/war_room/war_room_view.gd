@@ -15,10 +15,13 @@ extends Control
 
 signal piece_selected(code: String)
 signal selection_cleared
+@warning_ignore("unused_signal")
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
+@warning_ignore("unused_signal")
 signal route_clicked(code: String, at: Vector2)
 ## A planned march's waypoints were bent on the table (WarRoomPointer; spec
 ## 2026-10-07-march-waypoints ruling 9): ArmyOrderMenu keeps or refuses them.
+@warning_ignore("unused_signal")
 signal route_bent(waypoints: PackedVector2Array)
 signal sheet_requested(index: int)
 ## A sheet starts rolling up: a march pending on its confirm is given up.
@@ -40,6 +43,7 @@ signal ground_hovered(pack_px: Vector2, screen_px: Vector2)
 signal piece_hovered(code: String, screen_px: Vector2)
 ## An order arrow being drawn has its tip at `pack_px`: the screen reads the
 ## destination for `code` (the selection's first regiment).
+@warning_ignore("unused_signal")
 signal order_aimed(code: String, pack_px: Vector2, screen_px: Vector2)
 ## The slip goes: the pointer moved, the arrow ended, the room got busy.
 signal hover_cleared
@@ -150,8 +154,8 @@ var _supply_routes: Array = []   # the flowing supply roads on this sheet (WarSu
 func hover_allowed() -> bool:
 	if _sheet < 0 or _board_mode != "table" or rolling() or tossing() or aiming or _plan_input.busy():
 		return false   # aiming: the order's confirm menu stands beside the tip; a stick in hand draws
-	var owner := get_viewport().gui_get_focus_owner()
-	return not (owner is LineEdit or owner is TextEdit)
+	var focus_owner := get_viewport().gui_get_focus_owner()
+	return not (focus_owner is LineEdit or focus_owner is TextEdit)
 
 
 func _ready() -> void:
@@ -668,13 +672,13 @@ func _paint_intel(mat: ShaderMaterial) -> void:
 	# the staff's plan layer after it, on the same viewport (spec
 	# 2026-10-07-war-room-annotations-and-planning-pieces §2.5)
 	var key := WarPlanInk.cache_key(state(), sheet)
-	var hidden := _plan_hidden
+	var plan_off := _plan_hidden
 	var plan := await _inks.plan_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(), _caps,
-		func() -> bool: return is_inside_tree() and sheet == _sheet, hidden)
+		func() -> bool: return is_inside_tree() and sheet == _sheet, plan_off)
 	_intel_busy = false
 	if plan != null and sheet == _sheet:
 		mat.set_shader_parameter("plan_tex", plan)
-	if sheet == _sheet and hidden == _plan_hidden:
+	if sheet == _sheet and plan_off == _plan_hidden:
 		_plan_key_shown = key   # this paint is done, a texture or not: the ghost has served
 		_plan_input.redraw_live()
 	if _intel_again:
@@ -743,15 +747,15 @@ func _update_detail() -> void:
 	var vp: SubViewport = %DetailViewport
 	var w := int(_repo.bal("war_detail_texture_px"))
 	vp.size = Vector2i(w, maxi(1, ceili(w * r.size.y / r.size.x)))
-	var scale := _rect.size.x / r.size.x * float(w) / float(WarRoomInk.tex_size(_repo, _rect).x)
+	var ink_k := _rect.size.x / r.size.x * float(w) / float(WarRoomInk.tex_size(_repo, _rect).x)
 	var widths := {}
 	for k: String in WarRoomInk.INK_PX:
-		widths[k] = _repo.bal("war_ink_%s_px" % k) * scale
+		widths[k] = _repo.bal("war_ink_%s_px" % k) * ink_k
 	for k: String in WarRoomInk.INK_RATIOS:
 		widths[k] = _repo.bal("war_ink_%s" % k)
-	widths["mark"] = _repo.bal("war_mark_px") * scale
+	widths["mark"] = _repo.bal("war_mark_px") * ink_k
 	widths["mark_reach_alpha"] = _repo.bal("war_mark_reach_alpha")
-	widths["mark_reach"] = _repo.bal("war_mark_reach_px") * scale
+	widths["mark_reach"] = _repo.bal("war_mark_reach_px") * ink_k
 	var row: Dictionary = WarSheets.series(_repo)[_sheet]
 	(%DetailInk as WarInkPainter).paint(WarSheetInk.strokes(_repo, state(), row, w, WarBake.of(_repo), r),
 		_repo.war_palette, widths, lettering())

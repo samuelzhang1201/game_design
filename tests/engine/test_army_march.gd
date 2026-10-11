@@ -53,6 +53,7 @@ func test_a_day_of_marching_covers_the_regiments_own_pace() -> void:
 	var step := ArmySystem.day_step_m(repo, s, code)
 	assert_gt(step, 0, "a banner with arms marches")
 	# pace_tenths is TENTHS of a km a day, so the step is that times 100 m, under the carried load.
+	@warning_ignore("integer_division")
 	assert_eq(step, ArmySystem.pace_tenths(repo, ArmySystem.base_pace_km(repo, r),
 		ArmySystem.supply_score(repo, int(s.regiments[code]["supplies"]),
 			ArmySystem.supply_use(repo, r)),

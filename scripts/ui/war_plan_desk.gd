@@ -84,6 +84,7 @@ func _write(f: Callable) -> Variant:
 	_input.tool.own(Game.state.get_instance_id())
 	var before: Dictionary = Game.state.war_plans.duplicate(true)
 	var done: Variant = f.call()
+	@warning_ignore("static_called_on_instance")
 	if Game.landed(done):
 		_input.tool.remember(before)
 	return done

@@ -65,15 +65,15 @@ func _init() -> void:
 		if uid == ResourceUID.INVALID_ID:
 			uid = ResourceUID.create_id()
 		var base: PackedScene = ResourceLoader.load(path, "PackedScene", ResourceLoader.CACHE_MODE_IGNORE)
-		var root := base.instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
-		if not _dress(root, type, spec):
-			root.free()
+		var scene_root := base.instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
+		if not _dress(scene_root, type, spec):
+			scene_root.free()
 			continue
 		for dep: String in [glb, SHADER.resource_path, "res://assets/3D/%s/%s/%s_%s_atlas.jpg" % [spec[0], type, type, type]]:
 			_register(dep)
 		var packed := PackedScene.new()
-		packed.pack(root)
-		root.free()
+		packed.pack(scene_root)
+		scene_root.free()
 		var err := ResourceSaver.save(packed, path)
 		ResourceSaver.set_uid(path, uid)   # a fresh PackedScene saves without one
 		print("%s -> %s (%s)" % [type, path, error_string(err)])
@@ -89,14 +89,14 @@ func _init() -> void:
 
 ## Every surface of the scene's mesh its house_surface material; false when
 ## the type's atlas is missing.
-func _dress(root: Node, type: String, spec: Array) -> bool:
+func _dress(scene_root: Node, type: String, spec: Array) -> bool:
 	var atlas_path := "res://assets/3D/%s/%s/%s_%s_atlas.jpg" % [spec[0], type, type, type]
 	if not ResourceLoader.exists(atlas_path):
 		push_error("%s: no atlas at %s" % [type, atlas_path])
 		return false
 	var atlas: Texture2D = load(atlas_path)
-	root.editor_description = NOTE + (SHIP_NOTE if spec[1] == "ship" else "")
-	var mi := Map3DHouses.first_mesh_instance(root)
+	scene_root.editor_description = NOTE + (SHIP_NOTE if spec[1] == "ship" else "")
+	var mi := Map3DHouses.first_mesh_instance(scene_root)
 	for i in mi.mesh.get_surface_count():
 		var src := mi.mesh.surface_get_material(i)
 		var mat := ShaderMaterial.new()

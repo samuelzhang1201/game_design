@@ -303,8 +303,8 @@ static func _town_px(repo: DataRepository, town: String) -> Vector2:
 ## province's name, `town:<code>` the town's, a unit code the unit's label.
 static func place_label(repo: DataRepository, state: GameState, target: String) -> String:
 	if target.begins_with(PROVINCE_PREFIX):
-		var code := target.trim_prefix(PROVINCE_PREFIX)
-		return String((repo.provinces.get(code, {}) as Dictionary).get("label", code))
+		var pcode := target.trim_prefix(PROVINCE_PREFIX)
+		return String((repo.provinces.get(pcode, {}) as Dictionary).get("label", pcode))
 	if target.begins_with(TOWN_PREFIX):
 		var town := target.trim_prefix(TOWN_PREFIX)
 		return String((repo.burgs.get(town, {}) as Dictionary).get("label", town))
@@ -373,8 +373,8 @@ static func _decree_id(state: GameState, law: String) -> int:
 
 ## Whether a decree of `value` re-sends the standing decree (R5): the same
 ## value, with places it has not reached and no courier riding for.
-static func _resend(repo: DataRepository, state: GameState, law: String, value: String) -> bool:
-	return decreed(repo, state, law) == value and not (_tally(repo, state, law)["missing"] as Array).is_empty()
+static func _resend(repo: DataRepository, state: GameState, law: String, val: String) -> bool:
+	return decreed(repo, state, law) == val and not (_tally(repo, state, law)["missing"] as Array).is_empty()
 
 
 ## Gold the law's own cost ops take, as a positive number.
@@ -398,15 +398,15 @@ static func order_gold(repo: DataRepository, law: String, resend := false) -> in
 
 
 ## Whether a decree of `value` would re-send the standing decree (R5).
-static func is_resend(repo: DataRepository, state: GameState, law: String, value: Variant) -> bool:
-	return _resend(repo, state, law, canonical(repo, law, value))
+static func is_resend(repo: DataRepository, state: GameState, law: String, val: Variant) -> bool:
+	return _resend(repo, state, law, canonical(repo, law, val))
 
 
 ## Why a decree of `law` to `value` (a law's String) is refused; "" when it
 ## may be sent. ActionSystem's LAW_SET validation (the model and the news bar
 ## read these words).
-static func refusal(repo: DataRepository, state: GameState, law: String, value: String) -> String:
-	return String(refusal_of(repo, state, law, value)["text"])
+static func refusal(repo: DataRepository, state: GameState, law: String, val: String) -> String:
+	return String(refusal_of(repo, state, law, val)["text"])
 
 
 ## The refusal as {text: `refusal`'s words, key: unchanged | cooldown | gold |
@@ -415,17 +415,17 @@ static func refusal(repo: DataRepository, state: GameState, law: String, value: 
 ## `refusal_<key>`; a cooldown's days count day-ends, the running day first,
 ## as every day count shown (the law may change again on the month the
 ## cooldown names, `law_cooldown`).
-static func refusal_of(repo: DataRepository, state: GameState, law: String, value: String) -> Dictionary:
-	value = canonical(repo, law, value)
+static func refusal_of(repo: DataRepository, state: GameState, law: String, val: String) -> Dictionary:
+	val = canonical(repo, law, val)
 	var d := def(repo, law)
 	if d.is_empty():
 		return {"text": "No such law: " + law, "key": "invalid", "days": 0}
 	var label := String(d["label"])
-	if not allowed(repo, law, value):
-		return {"text": "%s is not a value of %s" % [value, label], "key": "invalid", "days": 0}
-	var resend := _resend(repo, state, law, value)
-	if decreed(repo, state, law) == value and not resend:
-		return {"text": "%s is already %s" % [label, value], "key": "unchanged", "days": 0}
+	if not allowed(repo, law, val):
+		return {"text": "%s is not a value of %s" % [val, label], "key": "invalid", "days": 0}
+	var resend := _resend(repo, state, law, val)
+	if decreed(repo, state, law) == val and not resend:
+		return {"text": "%s is already %s" % [label, val], "key": "unchanged", "days": 0}
 	var until := int(state.law_cooldown.get(law, 0))
 	if not resend and until > state.tick:
 		var days := (until - state.tick - 1) * Calendar.DAYS_PER_TICK + Calendar.DAYS_PER_TICK - state.day + 1
@@ -444,14 +444,14 @@ static func refusal_of(repo: DataRepository, state: GameState, law: String, valu
 ## (`refusal_of`'s key and days)}. ActionSystem charges exactly gold + fee.
 ## An unchanged value (the decree's own, nothing missing — most rows of the
 ## screen) is refused before any ride is worked out: zeros, the same shape.
-static func preview(repo: DataRepository, state: GameState, law: String, value: String) -> Dictionary:
-	value = canonical(repo, law, value)
-	var no := refusal_of(repo, state, law, value)
+static func preview(repo: DataRepository, state: GameState, law: String, val: String) -> Dictionary:
+	val = canonical(repo, law, val)
+	var no := refusal_of(repo, state, law, val)
 	var why := String(no["text"])
-	if def(repo, law).is_empty() or not allowed(repo, law, value) or String(no["key"]) == "unchanged":
+	if def(repo, law).is_empty() or not allowed(repo, law, val) or String(no["key"]) == "unchanged":
 		return {"couriers": 0, "fee": 0, "gold": 0, "max_days": 0, "refusal": why,
 			"refusal_key": String(no["key"]), "wait_days": 0}
-	var resend := _resend(repo, state, law, value)
+	var resend := _resend(repo, state, law, val)
 	var to := recipients(repo, state, law, resend)
 	var longest := 0
 	for r: Dictionary in to:
@@ -469,17 +469,17 @@ static func preview(repo: DataRepository, state: GameState, law: String, value: 
 ## lost, or none sent — a place gained since). Returns the couriers sent, in
 ## scope-key order.
 ## Charges nothing: the fees are ActionSystem's ledger lines.
-static func decree(repo: DataRepository, state: GameState, law: String, value: String) -> Array:
-	value = canonical(repo, law, value)
-	var resend := _resend(repo, state, law, value)
+static func decree(repo: DataRepository, state: GameState, law: String, val: String) -> Array:
+	val = canonical(repo, law, val)
+	var resend := _resend(repo, state, law, val)
 	var to := recipients(repo, state, law, resend)
 	if not resend:
-		state.law_decree[law] = {"value": value, "decree_id": _decree_id(state, law) + 1,
+		state.law_decree[law] = {"value": val, "decree_id": _decree_id(state, law) + 1,
 			"day": state.absolute_day(), "sent": []}
 		var cd := int(def(repo, law).get("cooldown_ticks", 0))
 		if cd > 0:
 			state.law_cooldown[law] = state.tick + cd
-		_mirror(state, law, value)
+		_mirror(state, law, val)
 		# what TriggerDsl's action_since=LAW_<law> reads (an event that
 		# follows a decree, data/events.csv)
 		state.event_state["last_action_tick"]["LAW_" + law] = state.tick
@@ -492,7 +492,7 @@ static func decree(repo: DataRepository, state: GameState, law: String, value: S
 	state.law_decree[law]["sent"] = keys
 	var sent: Array = []
 	for r: Dictionary in to:
-		var order := {"action_code": ACTION, "law": law, "value": value, "decree_id": id,
+		var order := {"action_code": ACTION, "law": law, "value": val, "decree_id": id,
 			"scope_key": String(r["scope_key"])}
 		if String(r["kind"]) == "unit":
 			sent.append(CourierSystem.dispatch(repo, state, CourierSystem.ORDINARY, String(r["target"]), order))
@@ -536,10 +536,10 @@ static func close_rides(repo: DataRepository, state: GameState, events: Array) -
 
 
 ## The metric a law mirrors, set to the decreed value (ruling P1; spec §2.5).
-static func _mirror(state: GameState, law: String, value: String) -> void:
+static func _mirror(state: GameState, law: String, val: String) -> void:
 	if METRIC_OF.has(law):
-		state.metrics[String(METRIC_OF[law])] = (1.0 if value == "ration" else 0.0) \
-			if law == "grain_ration" else float(int(value))
+		state.metrics[String(METRIC_OF[law])] = (1.0 if val == "ration" else 0.0) \
+			if law == "grain_ration" else float(int(val))
 
 
 ## An event's change of law (EventEffects' `law:` op): no courier carries it,
@@ -592,20 +592,20 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 			return ev
 	var here: Dictionary = state.law_in_force.get(key, {})
 	var id := int(order["decree_id"])
-	var value := String(order["value"])
+	var val := String(order["value"])
 	if here.has(law):
 		var was: Dictionary = here[law]
-		if int(was["decree_id"]) > id or (int(was["decree_id"]) == id and String(was["value"]) == value):
+		if int(was["decree_id"]) > id or (int(was["decree_id"]) == id and String(was["value"]) == val):
 			ev["type"] = "stale"
 			return ev
 	# what the province followed until now (its entry, else the default, R13)
 	var before := LawSystem.value(repo, state, law, key.trim_prefix(PROVINCE_PREFIX)) \
 		if key.begins_with(PROVINCE_PREFIX) else ""
-	here[law] = {"value": value, "decree_id": id}
+	here[law] = {"value": val, "decree_id": id}
 	state.law_in_force[key] = here
 	# the one-shots (§4.3): paid here, once, only on a real change of value
 	if key.begins_with(PROVINCE_PREFIX):
-		LawEffects.apply_lines(repo, state, LawEffects.once_lines(repo, state, law, before, value,
+		LawEffects.apply_lines(repo, state, LawEffects.once_lines(repo, state, law, before, val,
 			key.trim_prefix(PROVINCE_PREFIX)))
 	return ev
 

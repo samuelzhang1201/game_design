@@ -327,9 +327,9 @@ func test_a_piece_moved_onto_a_slope_rests_on_its_highest_corner() -> void:
 		for iy in 40:
 			var px := rect.position + rect.size * Vector2((ix + 0.5) / 40.0, (iy + 0.5) / 40.0)
 			var xz := WarRoomTable.to_table(rect, repo.bal("war_table_w_m"), px)
-			var ys := _corner_ys(xz, false)
-			if ys.max() - view.y_at(xz) > gain:
-				gain = ys.max() - view.y_at(xz)
+			var cys := _corner_ys(xz, false)
+			if cys.max() - view.y_at(xz) > gain:
+				gain = cys.max() - view.y_at(xz)
 				found = px
 	assert_gt(gain, 0.0001, "the relief has a slope under a base")
 	_move_to(code, found)

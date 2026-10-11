@@ -32,6 +32,7 @@ func test_a_new_campaign_seeds_only_the_players_regiments() -> void:
 	assert_eq(int(entry["wounded"]), 0)
 	# heads x 100 / 1000 a month (scaled by the cell's height tier), times
 	# army_start_supply_days (20) of the 30 days of a month, in a 20-day load
+	@warning_ignore("integer_division")
 	assert_eq(int(entry["supplies"]), (ArmySystem.supply_use(repo, r) * 20 + 29) / 30)
 	assert_eq(int(entry["carry_days"]), 20)
 	assert_false(s.regiments.has(_other_code()))
@@ -113,6 +114,7 @@ func test_the_yellow_bar_falls_day_by_day() -> void:
 	var code := String(r["regiment_code"])
 	var use := ArmySystem.supply_use(repo, r)
 	# the carried days in whole units, rounded UP so the bar reads full
+	@warning_ignore("integer_division")
 	s.regiments[code]["supplies"] = (use * ArmySystem.carry_of(repo, s.regiments[code]) + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK
 	var bar := ArmySystem.bars_of(repo, s, code).y
 	assert_eq(bar, 1000, "a full load")

@@ -201,10 +201,10 @@ func test_supply_lines_and_ledger_do_not_see_foes() -> void:
 		var out := str(LedgerResolvers.run(row, repo, s, {}))
 		for rc: String in foes:
 			assert_false(out.contains(rc), "%s names %s" % [row["link_id"], rc])
-	for name: String in ["regiments"]:
-		var ids := str(LedgerResolvers.instances(name, repo, s))
+	for nm: String in ["regiments"]:
+		var ids := str(LedgerResolvers.instances(nm, repo, s))
 		for rc: String in foes:
-			assert_false(ids.contains(rc), "the LEDGER's %s omit %s" % [name, rc])
+			assert_false(ids.contains(rc), "the LEDGER's %s omit %s" % [nm, rc])
 
 
 func test_the_daily_meal_and_hunger_leave_foes_alone() -> void:
@@ -219,6 +219,7 @@ func test_the_daily_meal_and_hunger_leave_foes_alone() -> void:
 ## --- the host's mind -----------------------------------------------------
 
 func _at_day(s: GameState, absolute: int) -> void:
+	@warning_ignore("integer_division")
 	s.tick = 1 + (absolute - 1) / 30
 	s.day = 1 + (absolute - 1) % 30
 	assert_eq(s.absolute_day(), absolute)
@@ -279,6 +280,7 @@ func _march_foe(s: GameState, days_x10: int) -> String:
 		if ArmySystem.day_step_m(repo, s, rc) > 0:
 			var f: Dictionary = s.foes[rc]
 			var step := ArmySystem.day_step_m(repo, s, rc)
+			@warning_ignore("integer_division")
 			f["dest_x_m"] = int(f["x_m"]) + step * days_x10 / 10
 			f["dest_y_m"] = int(f["y_m"])
 			f["order"] = ArmySystem.ORDER_MARCH

@@ -274,12 +274,12 @@ static func _feed(repo: DataRepository, state: GameState, h: String, take: int) 
 		var free := maxi(0, ArmySystem.max_units(repo, use) - int(e["supplies"]))
 		rooms.append(free)
 		room += free
-	var load := mini(units, room)
-	var shares := BattleSystem.apportion(rooms, load)
+	var carried := mini(units, room)
+	var shares := BattleSystem.apportion(rooms, carried)
 	for i in live.size():
 		var e: Dictionary = state.foes[live[i]]
 		e["supplies"] = int(e["supplies"]) + int(shares[i])
-	return {"units": load, "gold": mini(take, food_gold(load, gp))}
+	return {"units": carried, "gold": mini(take, food_gold(carried, gp))}
 
 
 ## The crown's ledger line for the take (Ruling 4): the lord's purse the whole

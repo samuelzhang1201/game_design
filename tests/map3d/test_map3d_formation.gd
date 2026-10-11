@@ -75,6 +75,7 @@ func test_strength_is_fit_men_per_mille_of_the_headcount() -> void:
 	var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
 	assert_eq(ArmySystem.fit_permille(repo, state, code), 1000, "no state yet: as it would start")
 	ArmySystem.ensure(repo, state)
+	@warning_ignore("integer_division")
 	state.regiments[code]["wounded"] = heads / 2
 	@warning_ignore("integer_division")
 	assert_eq(ArmySystem.fit_permille(repo, state, code), (heads - heads / 2) * 1000 / heads)

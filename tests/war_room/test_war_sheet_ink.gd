@@ -432,9 +432,9 @@ func test_trade_roads_are_inked_by_tier_in_texture_px() -> void:
 	# a road leaving the sheet is drawn to its edge: the sheet grown 2 %, as strokes() asks
 	var segs := WarEconomy.trade_segments(repo, r.grow(r.size.x * 0.02))
 	assert_eq((ink["trade"] as Array).size(), segs.size())
-	for tr: Dictionary in ink["trade"]:
-		assert_between(int(tr["tier"]), 1, 3)
-		assert_eq((tr["poly"] as PackedVector2Array).size(), 2)
+	for seg: Dictionary in ink["trade"]:
+		assert_between(int(seg["tier"]), 1, 3)
+		assert_eq((seg["poly"] as PackedVector2Array).size(), 2)
 	var first: Dictionary = segs[0]
 	assert_almost_eq((ink["trade"][0]["poly"] as PackedVector2Array)[0], ((first["poly"] as PackedVector2Array)[0] - r.position) * k, Vector2.ONE * 0.01)
 
@@ -445,8 +445,8 @@ func test_a_window_keeps_the_trade_roads_in_its_own_px() -> void:
 	var window := Rect2(m["at"] - Vector2(8, 8), Vector2(16, 16))
 	var ink := WarSheetInk.strokes(repo, state, sheet, 2048, null, window)
 	var k := 2048.0 / window.size.x
-	for tr: Dictionary in ink["trade"]:
-		var poly: PackedVector2Array = tr["poly"]
+	for seg: Dictionary in ink["trade"]:
+		var poly: PackedVector2Array = seg["poly"]
 		var grown := Rect2(Vector2.ZERO, window.size * k).grow(window.size.x * k)
 		assert_true(grown.has_point(poly[0]) or grown.has_point(poly[1]), "an end in or beside the window")
 	for t: Dictionary in ink["towns"]:

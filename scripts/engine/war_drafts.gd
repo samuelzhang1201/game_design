@@ -14,9 +14,9 @@ const GARRISON := "garrison"
 ## should carry, `carry` days (spec 2026-10-07-march-waypoints ruling 8; -1
 ## leaves the load alone), and the town to supply it from at `supply_rate`
 ## (spec 2026-10-08-war-room-draw-orders ruling 15; "" none).
-static func plant(repo: DataRepository, state: GameState, code: String, order: String, dest_px: Vector2,
+static func plant(repo: DataRepository, state: GameState, code: String, order: String, target_px: Vector2,
 		waypoints: Array = [], carry := -1, supply_town := "", supply_rate := 0) -> void:
-	var m := ArmySystem.pack_to_metres(repo, dest_px) if order == MARCH else Vector2i.ZERO
+	var m := ArmySystem.pack_to_metres(repo, target_px) if order == MARCH else Vector2i.ZERO
 	var d := {"order": order, "dest_x_m": m.x, "dest_y_m": m.y,
 		"tick": state.tick, "day": state.day, "refused": ""}
 	if order == MARCH and not waypoints.is_empty():

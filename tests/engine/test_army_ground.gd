@@ -43,6 +43,7 @@ func _ring_of(c_m: Vector2i, p_m: Vector2i, pitch: int) -> int:
 	var d := Vector2(p_m - c_m)
 	var r := roundi(d.y / (float(pitch) * sqrt(3.0) / 2.0))
 	var q := roundi(d.x / float(pitch) - float(r) * 0.5)
+	@warning_ignore("integer_division")
 	return (absi(q) + absi(r) + absi(q + r)) / 2
 
 
@@ -51,6 +52,7 @@ func test_a_taken_point_blocks_half_a_pitch_round_it() -> void:
 	var p := _land_m()
 	assert_true(ArmyGround.is_free(repo, taken, p))
 	ArmyGround.take(taken, p)
+	@warning_ignore("integer_division")
 	var half := int(repo.bal("army_slot_spacing_m")) / 2
 	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(half - 1, 0)))
 	assert_true(ArmyGround.is_free(repo, taken, p + Vector2i(half, 0)) \
@@ -128,6 +130,7 @@ func test_two_slots_in_order_are_distinct() -> void:
 	ArmyGround.take(taken, a)
 	var b := ArmyGround.free_slot(repo, c, "infantry", taken, _cap())
 	assert_ne(a, b)
+	@warning_ignore("integer_division")
 	assert_gte(Vector2(a - b).length(), float(int(repo.bal("army_slot_spacing_m")) / 2))
 
 

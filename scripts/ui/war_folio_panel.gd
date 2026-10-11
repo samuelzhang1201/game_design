@@ -120,8 +120,8 @@ func code() -> String:
 	return _code
 
 
-func open_for(code: String) -> void:
-	_code = code
+func open_for(code_id: String) -> void:
+	_code = code_id
 	_shown = []
 	_brief = {}
 	_fill_brief()

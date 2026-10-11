@@ -60,7 +60,6 @@ static func brief(repo: DataRepository, state: GameState, code: String) -> Dicti
 		return {"title": title, "rows": [_row("Under arms", Intel.magnitude(repo, heads))]}
 	var st := _state_of(repo, state, code, reg)
 	var wounded := clampi(int(st.get("wounded", 0)), 0, heads)
-	var dead := clampi(int(st.get("dead", 0)), 0, heads)
 	var under := WarRoom.group(ArmySystem.under_arms(heads, st))
 	if wounded > 0:
 		under += " · %s fit" % WarRoom.group(ArmySystem.fit_heads(heads, st))

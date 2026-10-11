@@ -29,9 +29,9 @@ func _init() -> void:
 	if uid == ResourceUID.INVALID_ID:
 		uid = ResourceUID.create_id()
 	var base: PackedScene = ResourceLoader.load(SCENE, "PackedScene", ResourceLoader.CACHE_MODE_IGNORE)
-	var root := base.instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
-	root.editor_description = NOTE
-	var mi: MeshInstance3D = Map3DUnits.meshes(root)[0]
+	var scene_root := base.instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
+	scene_root.editor_description = NOTE
+	var mi: MeshInstance3D = Map3DUnits.meshes(scene_root)[0]
 	for i in mi.mesh.get_surface_count():
 		var maps := MAPS if i == 0 else PROPS_MAPS
 		mi.set_surface_override_material(i, _material(mi.mesh.surface_get_material(i) as BaseMaterial3D,
@@ -40,8 +40,8 @@ func _init() -> void:
 			_register(dep)
 	_register(GLB)
 	var packed := PackedScene.new()
-	packed.pack(root)
-	root.free()
+	packed.pack(scene_root)
+	scene_root.free()
 	print("archers.tscn: ", error_string(ResourceSaver.save(packed, SCENE)))
 	ResourceSaver.set_uid(SCENE, uid)
 	var table: ArtTable = load(GameArt.ARMY_MODELS)
