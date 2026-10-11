@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="4_oa1go"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="5_tbmy8"]
 [ext_resource type="Texture2D" uid="uid://cnjo04qp4sone" path="res://assets/2D/ui/title/cta_disc.svg" id="7_31k40"]
+[ext_resource type="PackedScene" uid="uid://2c4t42umilan" path="res://scenes/hud/load_wheel.tscn" id="9_gqnmn"]
 
 [node name="MainMenu" type="Control" unique_id=2024837821]
 layout_mode = 3
@@ -243,3 +244,14 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 color = Color(0.012, 0.01, 0.008, 1)
+
+[node name="LoadWheel" parent="Curtain" unique_id=1385513812 instance=ExtResource("9_gqnmn")]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -124.0
+offset_top = -124.0
+offset_right = -28.0
+offset_bottom = -28.0
