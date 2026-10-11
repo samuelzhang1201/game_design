@@ -60,7 +60,7 @@ func test_counters_on_one_point_spread_and_the_selected_stays_home() -> void:
 		points.append({"reg": r, "pos": Vector2(400.0, 300.0)})
 	assert_gt(points.size(), 2, "premise: the crown has several units")
 	var picked := String((points[points.size() - 1]["reg"] as Dictionary)["regiment_code"])
-	var marks := ArmyCounters.layout(repo, points, 20.0, [], {}, [picked])
+	var marks := ArmyCounters.layout(repo, points, 20.0, [], [picked])
 	assert_eq(marks.size(), points.size(), "no counter is hidden or merged")
 	for i in marks.size():
 		for j in range(i + 1, marks.size()):
@@ -69,21 +69,18 @@ func test_counters_on_one_point_spread_and_the_selected_stays_home() -> void:
 	for m: Dictionary in marks:
 		if String(m["code"]) == picked:
 			assert_eq(m["pos"], Vector2(400.0, 300.0), "the selected counter never moves")
-			assert_eq((m["count"] as Rect2).position.y, (m["rect"] as Rect2).position.y
-				+ ArmyCounters.bars_height(repo), "its parts follow its rect")
+			assert_eq((m["count"] as Rect2).position.y, (m["rect"] as Rect2).position.y,
+				"its parts follow its rect")
 
 
-## A chip over a 3D piece hides when it finds no clear place; a counter never.
-func test_a_chip_with_no_room_hides() -> void:
+## A counter with no clear place takes the clearest it found: never hidden.
+func test_a_counter_with_no_room_is_never_hidden() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 42)
 	var regs := MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state)
-	var a := String(regs[0]["regiment_code"])
 	var points := [{"reg": regs[0], "pos": Vector2(400.0, 300.0)}, {"reg": regs[1], "pos": Vector2(400.0, 300.0)}]
 	var wall := [Rect2(-1000, -1000, 3000, 3000)]
-	var marks := ArmyCounters.layout(repo, points, 20.0, wall, {a: true})
-	assert_eq(marks.size(), 1, "the chip hides")
-	assert_ne(String(marks[0]["code"]), a, "the counter stays")
+	assert_eq(ArmyCounters.layout(repo, points, 20.0, wall).size(), 2)
 
 
 ## place() tries the last blocker first and skips what lies out of reach;
@@ -115,7 +112,7 @@ func test_each_offset_is_the_first_clear_one_of_the_spiral() -> void:
 				placed.append(Rect2(b.position + (walked as Vector2), b.size))
 
 
-# --- the land, the leader and the gap (2026-10-08 visual review) -------------
+# --- the land and the gap (2026-10-08 visual review) -------------------------
 
 ## The first clear offset of the spiral that `ok` takes (or any, without it).
 func _walk(b: Rect2, placed: Array, step: float, reach: float, ok: Callable = Callable()) -> Variant:
@@ -199,37 +196,9 @@ func test_with_nowhere_allowed_no_box_is_lost() -> void:
 		assert_not_null(o, "a chip with room is never hidden for the sea")
 
 
-## A counter the spreading moved keeps where its unit truly is.
-func test_a_displaced_counter_carries_its_anchor() -> void:
-	var repo := SuiteData.repo()
-	var state := SuiteData.campaign(repo, 42)
-	var points: Array = []
-	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
-		points.append({"reg": r, "pos": Vector2(400.0, 300.0)})
-	var head := Vector2(400.0, 280.0)
-	points[0]["anchor"] = head
-	var marks := ArmyCounters.layout(repo, points, 20.0, [])
-	var moved := 0
-	for m: Dictionary in marks:
-		var want: Vector2 = head if String(m["code"]) == String(points[0]["reg"]["regiment_code"]) else Vector2(400.0, 300.0)
-		assert_eq(m["anchor"], want, String(m["code"]))
-		assert_eq(m["pos"], Vector2(400.0, 300.0) + (m["offset"] as Vector2), "offset is how far it moved")
-		if (m["offset"] as Vector2).length() > repo.bal("map3d_leader_min_px"):
-			moved += 1
-	assert_gt(moved, 0, "premise: some counter moved far enough to draw a leader")
-
-
-## The leader leaves the counter at its edge, on the line to the unit.
-func test_the_leader_starts_on_the_counters_edge() -> void:
-	var r := Rect2(0, 0, 40, 20)
-	assert_eq(ArmyCounters.edge_toward(r, Vector2(20, 100)), Vector2(20, 20), "straight down: the bottom edge")
-	assert_eq(ArmyCounters.edge_toward(r, Vector2(120, 10)), Vector2(40, 10), "east: the right edge")
-	assert_eq(ArmyCounters.edge_toward(r, Vector2(60, 50)), Vector2(30, 20), "a corner-ward line: the nearer edge")
-
-
 ## Two counters stand at least map_army_stack_gap_px apart, measured rim to
-## rim on what is drawn — the counter's rect (its bars on top included) grown
-## by its outline — not on the grown boxes the spreading used.
+## rim on what is drawn — the counter's rect grown by its outline — not on the
+## grown boxes the spreading used.
 func test_counters_keep_the_gap_between_them() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 42)
@@ -248,9 +217,6 @@ func test_counters_keep_the_gap_between_them() -> void:
 			var ra: Rect2 = (marks[a]["rect"] as Rect2).grow(rim)
 			var rb: Rect2 = (marks[b]["rect"] as Rect2).grow(rim)
 			assert_eq(ra.position.y + rim, (marks[a]["rect"] as Rect2).position.y, "premise")
-			assert_lte((marks[a]["rect"] as Rect2).position.y,
-				(marks[a]["count"] as Rect2).position.y - ArmyCounters.bars_height(repo) + 0.001,
-				"the bars lie inside the measured box")
 			var apart := maxf(maxf(rb.position.x - ra.end.x, ra.position.x - rb.end.x),
 				maxf(rb.position.y - ra.end.y, ra.position.y - rb.end.y))
 			assert_gte(apart, gap - 0.001, "%s and %s" % [marks[a]["code"], marks[b]["code"]])

@@ -56,6 +56,11 @@ static func estate_tier(repo: DataRepository, focus_code: String, people: float)
 ## the code has none. Cached per repo.
 static var _estate_rows_cache: Dictionary = {}
 
+
+## Drop the per-repo estate rows (DataRepository.forget_derived).
+static func forget() -> void:
+	_estate_rows_cache.clear()
+
 static func estate_rows(repo: DataRepository, focus_code: String) -> Array:
 	var rkey := repo.get_instance_id()
 	if not _estate_rows_cache.has(rkey):

@@ -22,6 +22,7 @@ static var _campaigns := {}
 static func repo() -> DataRepository:
 	if _pristine == null:
 		_pristine = DataRepository.load_all("res://data")
+	DataRepository.forget_derived()  # the last tests' copies' caches, else the run holds them all
 	return _copy(_pristine)
 
 
