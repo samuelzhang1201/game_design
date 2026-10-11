@@ -186,3 +186,37 @@ static func smooth_closed_through(pts: PackedVector2Array, steps: int,
 			out[k] = b1.lerp(b2, (t - t1) / (t2 - t1))
 			k += 1
 	return out
+
+
+## `pts` with its last `gap` of length taken off (the line stops short of its
+## end, along its own course); empty when the line is no longer than `gap`.
+## Used where a broken supply line stops short of its column.
+static func stop_short(pts: PackedVector2Array, gap: float) -> PackedVector2Array:
+	if pts.size() < 2:
+		return PackedVector2Array()
+	var left := gap
+	var out := pts.duplicate()
+	while out.size() >= 2:
+		var a := out[out.size() - 2]
+		var b := out[out.size() - 1]
+		var seg := a.distance_to(b)
+		if seg > left:
+			out[out.size() - 1] = b.move_toward(a, left)
+			return out
+		left -= seg
+		out.resize(out.size() - 1)
+	return PackedVector2Array()
+
+
+## A short bar ACROSS the end of `pts`, `half` each way of its last point,
+## square to its last segment: [one side, the other]; empty for a line of
+## fewer than two distinct points (the break mark of a broken supply line).
+static func tick_across(pts: PackedVector2Array, half: float) -> PackedVector2Array:
+	if pts.size() < 2:
+		return PackedVector2Array()
+	var end := pts[pts.size() - 1]
+	var dir := (end - pts[pts.size() - 2]).normalized()
+	if dir == Vector2.ZERO:
+		return PackedVector2Array()
+	var n := Vector2(-dir.y, dir.x) * half
+	return PackedVector2Array([end + n, end - n])

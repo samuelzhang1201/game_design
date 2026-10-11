@@ -217,3 +217,24 @@ func test_a_duplicated_last_point_carries_its_pin_into_index_0() -> void:
 	var back := (out[0] - out[out.size() - 1]).normalized()
 	assert_almost_eq(back.y, 0.0, 0.06, "arrives close to due east along 3->0")
 
+
+## A broken supply line stops short of its column (owner 2026-10-11): an L of
+## legs 10 (east) and 4 (south), 14 long. Short by 3: the last leg 4 -> 1, so
+## the end is (10, 1). Short by 6: the last leg (4) goes and 2 more of the
+## first, so the end is (8, 0). Short by 14 or more: nothing left.
+func test_stop_short_takes_the_gap_off_the_end_along_the_line() -> void:
+	var l := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 4)])
+	assert_eq(MapGeometry.stop_short(l, 3.0), PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 1)]))
+	assert_eq(MapGeometry.stop_short(l, 6.0), PackedVector2Array([Vector2(0, 0), Vector2(8, 0)]))
+	assert_eq(MapGeometry.stop_short(l, 14.0), PackedVector2Array())
+	assert_eq(MapGeometry.stop_short(l, 0.0), l, "no gap, the line as it was")
+	assert_eq(MapGeometry.stop_short(PackedVector2Array([Vector2(1, 1)]), 1.0), PackedVector2Array())
+
+## The break's tick: square to the last leg (east), half 2 each way of the end
+## (10, 0): (10, 2) and (10, -2).
+func test_tick_across_stands_square_to_the_last_leg() -> void:
+	var t := MapGeometry.tick_across(PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]), 2.0)
+	assert_eq(t.size(), 2)
+	assert_true(t[0].is_equal_approx(Vector2(10, 2)), str(t[0]))
+	assert_true(t[1].is_equal_approx(Vector2(10, -2)), str(t[1]))
+	assert_eq(MapGeometry.tick_across(PackedVector2Array([Vector2(3, 3), Vector2(3, 3)]), 2.0), PackedVector2Array())

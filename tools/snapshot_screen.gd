@@ -1045,6 +1045,13 @@ func _process(_delta: float) -> void:
 		if Game.state != null:
 			print("state at shot: day=%d clock=%d pending_event=%s couriers=%d" % [Game.state.absolute_day(),
 				Game.clock_speed, not Game.state.pending_event.is_empty(), Game.state.couriers.size()])
+			if _supply_front and _root != null and _root.current_screen != null and _root.current_screen.has_method("map3d_view"):
+				var mv: Map3DView = _root.current_screen.map3d_view()
+				for c: String in SupplyLines.drawn_broken(Game.state):
+					var rt := SupplySystem.route_px(Game.data, Game.state, c)
+					if rt.size() >= 2:
+						print("supply-front drawn broken: %s town %s at %s, column %s at %s" % [c, rt[0],
+							mv.screen_pos_of_px(rt[0]), rt[rt.size() - 1], mv.screen_pos_of_px(rt[rt.size() - 1])])
 		var err := _save_shot(_out)
 		var how := ("%dx%d window" % [_res.x, _res.y]) if _res != Vector2i.ZERO else ("x%.1f" % _scale)
 		print("snapshot %s -> %s (%s, %s, filter %d)" % [

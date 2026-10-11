@@ -283,3 +283,17 @@ func test_a_cut_road_wins_and_clears_into_front() -> void:
 	assert_eq(_of(ev, "front").size(), 1)
 	assert_eq(_of(ev, "restored").size(), 0)
 	assert_eq(String(_ln()["cut_by"]), "")
+
+
+## Drawn broken (owner 2026-10-11): a FRONT line is drawn as the dark dashed
+## road, a cut or flowing one is not (a flowing one is the gold line).
+func test_only_a_front_line_is_drawn_broken() -> void:
+	_place(6.0)
+	_no_cut()
+	SupplyLines.day_step(repo, s)
+	assert_eq(String(_ln()["state"]), SupplyLines.FRONT)
+	assert_eq(SupplyLines.drawn_broken(s), [code])
+	s.supply_lines[code]["state"] = SupplyLines.CUT
+	assert_eq(SupplyLines.drawn_broken(s), [], "a cut line is not drawn")
+	s.supply_lines[code]["state"] = SupplyLines.FLOWING
+	assert_eq(SupplyLines.drawn_broken(s), [], "a flowing line is the gold one")

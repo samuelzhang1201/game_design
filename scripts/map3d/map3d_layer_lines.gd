@@ -26,6 +26,12 @@ const SUPPLY_LINE := preload("res://scenes/map3d/materials/lines/supply_line.tre
 const SUPPLY_PICK := preload("res://scenes/map3d/materials/lines/supply_pick.tres")
 const SUPPLY_PICK_OFF := preload("res://scenes/map3d/materials/lines/supply_pick_off.tres")
 const SUPPLY_PREVIEW := preload("res://scenes/map3d/materials/lines/supply_preview.tres")
+## A broken (FRONT) supply line (Map3DSupplyBroken): its dark dashes and the
+## solid tick where it breaks short of the column, over a pale halo that keeps
+## them read on dark ground.
+const SUPPLY_BROKEN := preload("res://scenes/map3d/materials/lines/supply_broken.tres")
+const SUPPLY_BREAK := preload("res://scenes/map3d/materials/lines/supply_break.tres")
+const SUPPLY_BROKEN_HALO := preload("res://scenes/map3d/materials/lines/supply_broken_halo.tres")
 ## The px values a line's look gives in DESIGN px, scaled to the SubViewport.
 const PX_PARAMS := ["width_px", "dash_px", "gap_px", "lift_px"]
 

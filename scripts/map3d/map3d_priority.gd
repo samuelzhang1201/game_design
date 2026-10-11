@@ -15,6 +15,9 @@ const MANOR_EDGES := 2
 ## A flowing supply line (Map3DSupplyLines): faint, over the roads, under the borders.
 const SUPPLY_LINES := 2
 const KINGDOM_BAND := 3
+## A broken supply line's dark dashes and tick (Map3DSupplyBroken), over its
+## pale halo (SUPPLY_LINES); the realm band's row — a band is a faint wash.
+const SUPPLY_BROKEN := 3
 const SEAMS := 4
 const KINGDOM_HALO := 5
 const KINGDOMS := 6
