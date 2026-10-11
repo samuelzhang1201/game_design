@@ -26,7 +26,7 @@ func _begun() -> GameRoot:
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)
 	await wait_process_frames(2)
-	(r.current_screen as MainMenu).menu_column().get_node("StartGame").pressed.emit()
+	(r.current_screen as MainMenu).row("StartGame").pressed.emit()
 	await wait_process_frames(2)
 	return r
 

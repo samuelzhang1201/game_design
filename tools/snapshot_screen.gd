@@ -867,7 +867,7 @@ func _process(_delta: float) -> void:
 			and (_root.current_screen as MainMenu).realm_pending():
 		_title_click_frame += 1   # the living map is still opening (BootLoads, a step a frame)
 	elif _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu:
-		var row := (_root.current_screen as MainMenu).menu_column().get_node_or_null(_title_click) as Control
+		var row := (_root.current_screen as MainMenu).row(_title_click) as Control
 		if row == null:
 			push_error("--title-click: no title row %s" % _title_click)
 		else:
@@ -1019,6 +1019,9 @@ func _process(_delta: float) -> void:
 		get_viewport().push_input(ev)
 	if _trace_couriers and _root != null:
 		_trace_courier_frame()
+	if _title and _shot_on == "" and _frames == _shot_frame and _title_click == "" and _root != null \
+			and _root.current_screen is MainMenu and (_root.current_screen as MainMenu).realm_pending():
+		_shot_frame += 1   # the title is still coming in (the black, the map, the entrance)
 	if _also.has(_frames):
 		_save_shot(String(_also[_frames]))
 	if (_shot_on == "" and _frames == _shot_frame) or (_shot_at >= 0 and _frames == _shot_at):

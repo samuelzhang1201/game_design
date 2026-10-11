@@ -22,7 +22,7 @@ func test_a_real_click_on_start_game_begins_the_reign() -> void:
 	var r := _root()
 	await wait_process_frames(3)
 	var menu: MainMenu = r.current_screen
-	var start: Button = menu.menu_column().get_node("StartGame")
+	var start: Button = menu.row("StartGame")
 	var at := start.get_global_rect().get_center()
 	await _click(at)
 	await wait_process_frames(2)

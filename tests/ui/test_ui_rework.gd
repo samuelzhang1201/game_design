@@ -22,14 +22,13 @@ func test_main_menu_has_start_load_quit_and_starts_with_the_founding_names() -> 
 	var r := _root()
 	await wait_process_frames(2)
 	var menu: MainMenu = r.current_screen
-	var col := menu.menu_column()
-	assert_not_null(col.get_node("StartGame"))
-	assert_not_null(col.get_node("LoadGame"))
-	assert_not_null(col.get_node("Quit"))
+	assert_not_null(menu.row("StartGame"))
+	assert_not_null(menu.row("LoadGame"))
+	assert_not_null(menu.row("Quit"))
 	# The realm and the ruler are not customised (owner 2026-09-30): Start
 	# Game begins the reign at once, with no character creation.
 	assert_null(menu.find_child("SetupPanel", true, false))
-	col.get_node("StartGame").pressed.emit()
+	menu.row("StartGame").pressed.emit()
 	await wait_process_frames(2)
 	assert_false(r.current_screen is MainMenu, "the reign began")
 	assert_eq(Game.state.characters["you"].display_name, "King Aldric Valorin")
