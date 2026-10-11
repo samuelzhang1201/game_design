@@ -109,9 +109,13 @@ func refresh() -> void:
 			live[key] = true
 			_shown_xz[key] = ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(int(g["x_m"]), int(g["y_m"]))))
 			_place(key, _pieces[key])
+	# a piece no longer drawn (a ghost gone or its unit seen, a foe out of sight,
+	# a unit destroyed) is FREED, not hidden: hidden, every one kept its figures'
+	# skeletons in the tree and the pieces piled up over a campaign (perf P0
+	# 2026-10-11: ~0.1 ms a frame each). It is built anew if it comes back.
 	for code: String in _pieces.keys():
 		if not live.has(code):
-			show_piece(_pieces[code], false)
+			_drop(code)
 
 
 ## Where the ENGINE has a regiment today, world XZ.
@@ -243,6 +247,13 @@ func _piece_of(code: String) -> Dictionary:
 		return {}
 	_sync_action(code)
 	return _pieces[code]
+
+
+## Frees `code`'s piece and forgets everything kept about it.
+func _drop(code: String) -> void:
+	(_pieces[code]["node"] as Node3D).queue_free()
+	for kept: Dictionary in [_pieces, _rects, _shown_xz, _track, _want_yaw, _yaw, _days]:
+		kept.erase(code)
 
 
 ## Builds the piece of `reg` in formation `tier` as `_pieces[key]`; {} when its
