@@ -10,6 +10,11 @@ extends RefCounted
 ## The unique cell edges per repository (geometry, gathered once).
 static var _edges: Dictionary = {}
 
+## Drop the per-repo edges (DataRepository.forget_derived).
+static func forget() -> void:
+	_edges.clear()
+
+
 
 ## The province a cell lies in: an annexed manor's new province
 ## (state.manor_province), else the pack's (manors.csv, which agrees with the

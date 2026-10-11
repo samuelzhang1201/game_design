@@ -118,7 +118,7 @@ func test_battle_day_writes_one_missive() -> void:
 	assert_false(engine.day_battles.is_empty(), "the day's battle events are kept")
 	var letters := _battle_letters(s)
 	assert_eq(letters.size(), 1, "one letter")
-	assert_eq(String(letters[0]["column"]), "credible")
+	assert_eq(String(letters[0]["column"]), "credible", "a battle report carries estimates of the foe: never ground truth")
 	assert_eq(String(letters[0]["subject"]["kind"]), "regiment")
 	assert_eq(String(letters[0]["subject"]["code"]), String(m[1]))
 	# the next day the battle goes on: its own letter, still one
@@ -365,9 +365,9 @@ func test_battle_letters_are_capped_apart() -> void:
 	assert_eq(titles, ["b2", "b3", "b4"])
 	# and the other kinds still run on their own cap
 	for i in 4:
-		MissiveLog.add(repo, s, MissiveLog.make("receipt", "credible", 1, {}, "r%d" % i, []))
+		MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", 1, {}, "p%d" % i, []))
 	kinds = s.missives.map(func(x: Dictionary) -> String: return String(x["kind"]))
-	assert_eq(kinds.count("receipt"), 2)
+	assert_eq(kinds.count("spy"), 2)
 	assert_eq(kinds.count("battle"), 3)
 
 

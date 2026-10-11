@@ -600,7 +600,7 @@ func test_the_hud_draws_rings_hints_a_marquee_and_the_live_layer_the_supply_road
 	hud.set_supply([{"at": Vector2(5, 5), "lit": true}], pal["supply_route"])
 	assert_true(hud.drawing(), "a lit town")
 	var live := view.get_node("%PlanHud") as WarPlanHud
-	live.show_road(PackedVector2Array([Vector2(5, 5), Vector2(300, 40)]), pal["supply_route"], 6.0, 16.0)
+	live.show_road([PackedVector2Array([Vector2(5, 5), Vector2(300, 40)])], pal["supply_route"], 6.0, 16.0)
 	assert_true(live.drawing(), "the bold dashed road, under the march's crayon")
 
 
@@ -877,7 +877,7 @@ func test_a_chart_pick_tosses_then_lays_and_a_second_pick_mid_toss_is_ignored() 
 	var marker := view.get_node("%Marker") as Node3D
 	var chart := view.get_node("%IndexChart") as MeshInstance3D
 	var local := chart.global_transform.affine_inverse() * marker.global_position
-	var size := (chart.mesh as QuadMesh).size
+	var size := WarRoomWall.map_size(chart)
 	var uv := Vector2(local.x / size.x + 0.5, 0.5 - local.y / size.y)
 	assert_true(WarIndexChart.uv_of_cell(repo, WarSheets.series(repo)[other]).has_point(uv), "the marker stands on the chosen cell")
 
@@ -896,7 +896,7 @@ func test_a_lay_by_another_route_mid_toss_waits_for_the_toss() -> void:
 	var chart := view.get_node("%IndexChart") as MeshInstance3D
 	var marker := view.get_node("%Marker") as Node3D
 	var local := chart.global_transform.affine_inverse() * marker.global_position
-	var size := (chart.mesh as QuadMesh).size
+	var size := WarRoomWall.map_size(chart)
 	assert_true(WarIndexChart.uv_of_cell(repo, WarSheets.series(repo)[1]).has_point(
 		Vector2(local.x / size.x + 0.5, 0.5 - local.y / size.y)), "the marker stands on the laid sheet")
 

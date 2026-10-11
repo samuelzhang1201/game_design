@@ -44,11 +44,12 @@ func test_the_window_height_does_not_change_a_pieces_world_size() -> void:
 		Map3DUnits.height_m(repo, 45.0, 1080.0, 25000.0), 0.01)
 
 
-## By the piece's own px (owner 2026-09-30): 1 km per pack px, 50 m per pack
-## px, a 220 px bar, fov 45, a 600 px view, the opening bar 25 km — the
-## reference 25 / 220 / 0.02 x 600 / 0.828427 = 4115.1 m. At 12 px there and a
-## 14 px mark, the pieces go at 4115.1 x 12 / 14 = 3527.2 m.
-func test_far_out_the_pieces_become_marks() -> void:
+## A COURIER's mark by a rider's own px (a regiment piece has no mark, owner
+## 2026-10-10): 1 km per pack px, 50 m per pack px, a 220 px bar, fov 45, a
+## 600 px view, the opening bar 25 km — the reference 25 / 220 / 0.02 x 600 /
+## 0.828427 = 4115.1 m. At 12 px there and a 14 px mark, the riders go at
+## 4115.1 x 12 / 14 = 3527.2 m.
+func test_far_out_a_courier_becomes_his_mark() -> void:
 	repo.balance["map3d_unit_ref_px"] = 12.0
 	repo.balance["map3d_unit_mark_px"] = 14.0
 	repo.balance["map3d_zoom_start_scale"] = 25.0
@@ -65,7 +66,7 @@ func test_far_out_the_pieces_become_marks() -> void:
 ## A piece walks while it has somewhere to go and its start has come — not
 ## "it moved this frame" (owner 2026-09-30: 走路速度怎么时快时慢).
 ## Perf 2026-10-02: a figure's animation runs only while its piece is shown
-## (far out it is a mark; behind the camera it is hidden).
+## (behind the camera it is hidden).
 func test_a_hidden_piece_stops_animating() -> void:
 	var node := Node3D.new()
 	var anim := AnimationPlayer.new()
@@ -116,24 +117,41 @@ func test_a_marching_piece_faces_its_heading() -> void:
 		PI * 0.5, 0.0001)
 
 
-func test_a_standing_piece_turns_square_to_the_camera() -> void:
-	# No heading: it faces the camera, so a counter is never read edge-on.
-	var at := Vector2(100.0, 100.0)
-	var cam := Vector2(100.0, 40.0)          # due -Z of it
-	assert_almost_eq(Map3DUnits.yaw_for(Vector2.ZERO, cam, at), 0.0, 0.0001)
-	assert_almost_eq(absf(Map3DUnits.yaw_for(Vector2.ZERO, Vector2(100.0, 160.0), at)),
-		PI, 0.0001)
+## A regiment piece faces the way it last ADVANCED (owner 2026-10-10:
+## 应当固定向他们之前前进的方向前方): with no heading it stands at REST — south,
+## +Z, toward where the opening camera stands — a fixed world heading with no
+## camera term, so a pan never turns it.
+func test_a_piece_with_no_heading_stands_at_rest() -> void:
+	assert_almost_eq(absf(Map3DUnits.facing_yaw(Vector2.ZERO)), PI, 0.0001, "facing +Z")
+	assert_almost_eq(Map3DUnits.facing_yaw(Vector2(-1.0, 0.0)), PI * 0.5, 0.0001,
+		"a heading is its own facing")
 
 
-func test_a_standing_horse_turns_its_flank_to_the_camera() -> void:
-	# A horse square to the camera is nose-on — the narrowest thing it can
-	# show; army_art's stand_deg turns it that far off square, but only while
-	# it stands: a marching piece still faces its road.
-	var at := Vector2(100.0, 100.0)
-	var cam := Vector2(100.0, 40.0)
-	assert_almost_eq(Map3DUnits.yaw_for(Vector2.ZERO, cam, at, 55.0), deg_to_rad(55.0), 0.0001)
-	assert_almost_eq(Map3DUnits.yaw_for(Vector2(0.0, -1.0), cam, at, 55.0), 0.0, 0.0001,
-		"marching, it faces the way it goes")
+func test_a_resting_horse_turns_its_flank() -> void:
+	# stand_deg turns a piece at REST off square (a horse nose-on is a sliver);
+	# one that has advanced faces its road.
+	assert_almost_eq(wrapf(Map3DUnits.facing_yaw(Vector2.ZERO, 55.0) - PI - deg_to_rad(55.0), -PI, PI),
+		0.0, 0.0001)
+	assert_almost_eq(Map3DUnits.facing_yaw(Vector2(0.0, -1.0), 55.0), 0.0, 0.0001,
+		"it faces the way it went")
+
+
+## track(): the heading turns only once the drawn piece stands more than
+## TRACK_MIN_M (0.5 m) past where it was last taken.
+func test_standing_keeps_its_last_heading() -> void:
+	var t := Map3DUnits.track({}, Vector2(0.0, 0.0), Vector2(0.3, 0.0))
+	assert_eq(t["heading"], Vector2.ZERO, "0.3 m is no advance")
+	assert_eq(t["trail"], Vector2.ZERO, "the trail stays where it was")
+	t = Map3DUnits.track(t, Vector2(0.3, 0.0), Vector2(3.0, 4.0))
+	assert_almost_eq((t["heading"] as Vector2).x, 0.6, 0.0001, "(3, 4) / 5 from the trail")
+	assert_almost_eq((t["heading"] as Vector2).y, 0.8, 0.0001)
+	assert_eq(t["trail"], Vector2(3.0, 4.0))
+	t = Map3DUnits.track(t, Vector2(3.0, 4.0), Vector2(3.0, 4.0))
+	assert_almost_eq((t["heading"] as Vector2).x, 0.6, 0.0001, "halted, it keeps facing its march")
+	t = Map3DUnits.track(t, Vector2(3.0, 4.0), Vector2(3.2, 3.9))
+	assert_almost_eq((t["heading"] as Vector2).y, 0.8, 0.0001, "a sub-metre creep turns nothing")
+	t = Map3DUnits.track(t, Vector2(3.2, 3.9), Vector2(-7.0, 4.0))
+	assert_eq(t["heading"], Vector2(-1.0, 0.0), "a real step back west turns it")
 
 
 func test_a_model_is_measured_not_declared() -> void:

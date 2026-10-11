@@ -1,6 +1,14 @@
 key,value,notes
-spacing_m,28,"3D map woods (look route 2026-09-30): the grid a tree CLUMP is offered on, metres — one clump is 5-7 trees drawn larger than life like the houses, about 40 m across"
-jitter,0.9,woods: how far a candidate moves off its grid point as a share of spacing_m (1 = anywhere in its cell)
+poisson_r_m,25,"woods (owner 2026-10-10: 树木有点太密集了，请使用合理的算法): no two clumps nearer than this, metres — a blue-noise (Poisson-disk) set about a clump's footprint, so a wood is trees with room between them, never a carpet on a grid"
+poisson_trials,4,"woods: the darts thrown per empty cell of the Poisson-disk set (more: a fuller set, nearer the densest packing)"
+wood_cap,0.9,woods: the most a place's chance of a clump may reach after the edge squeeze — a wood keeps its edge but holds gaps inside
+glade_wave_m,420,woods: the wavelength of the noise that opens GLADES inside a wood
+glade_cut,0.6,woods: where that noise passes this a glade opens
+glade_soft,0.1,woods: ...over this much more of the noise to its full depth
+glade_depth,0.9,woods: how far a glade takes the chance down (1 = bare)
+crown_r_m,10,"woods: one crown's reach (radius, before its clump's scale; a photo card is ~16-26 m across) for woods.png's canopy share; a clump covers its crowns' discs, at most its footprint (data/map3d_tree_species.csv crowns and spread_m)"
+species_noise,1.0,woods: how far each species' own slow noise (species_wave_m) swings its score — patches of one species inside a mixed wood (bake_trees.pick_species)
+species_dither,0.3,woods: how far each clump's own draw blurs the edge between two species' patches (0 = a clean line)
 grove_wave_m,2400,woods: the wavelength of the noise that gathers woods and opens clearings (taste: clustered not scattered)
 grove_gain,1.1,woods: how far that noise swings a place's woodedness (0 = the biome's share everywhere)
 edge_sharp,2.4,"woods: how hard the chance is squeezed toward 0 or 1 round 0.5, so a wood has an edge instead of thinning out over kilometres (1 = no squeeze)"
@@ -13,21 +21,20 @@ river_clear_m,25,woods: a river keeps this many metres clear beyond its widest h
 house_clear_m,50,woods: no clump within this many metres of a house (the settlement and its yards)
 scale_min,0.6,woods: the smallest clump scale
 scale_max,1.5,woods: the largest
-biome_3,0.06|0.0,"woods by biome id: density|conifer share — savanna, a few copses"
-biome_4,0.04|0.0,grassland: a few copses
-biome_5,0.5|0.0,tropical seasonal forest
-biome_6,0.82|0.12,temperate deciduous forest
-biome_7,0.85|0.0,tropical rainforest
-biome_8,0.85|0.55,temperate rainforest
-biome_9,0.8|0.92,taiga
-biome_12,0.25|0.1,wetland: carr woods
-biome_13,0.32|0.4,hill band: woods on the hills
-biome_14,0.14|0.85,mountain band: pines on the lower mountains
-crown_reach_m,17,woods: a clump's crowns cover about a disc this wide in radius (before its scale) — woods.png's canopy share
-canopy_blur_texels,2,woods: woods.png is box-blurred this many 40 m texels each way so the canopy's edge is soft on the ground
-species_wave_m,900,"woods: the wavelength of the noise that gathers conifers and broadleaves into patches of one kind (critic: cones and spheres mixed tree by tree read as salt and pepper)"
+biome_3,0.06,"woods by biome id: density (the species are data/map3d_tree_species.csv) — savanna, a few copses"
+biome_4,0.04,grassland: a few copses
+biome_5,0.5,tropical seasonal forest
+biome_6,0.82,temperate deciduous forest
+biome_7,0.85,tropical rainforest
+biome_8,0.85,temperate rainforest
+biome_9,0.8,taiga
+biome_12,0.25,wetland: carr woods
+biome_13,0.32,hill band: woods on the hills
+biome_14,0.14,mountain band: pines on the lower mountains
+canopy_blur_texels,3,woods: woods.png is box-blurred this many 40 m texels each way so the canopy's edge is soft on the ground
+canopy_gain,1.35,"woods (critic 2026-10-11: with the trees hidden past map3d_lod_trees_m the far woods read barely darker than the grass): woods.png's canopy share is multiplied by this (clipped at 1) — seen from above a wood's crowns close over the gaps between them"
+species_wave_m,900,"woods: the wavelength of the noise each species scores by, which gathers each into patches inside a mixed wood (critic: cones and spheres mixed tree by tree read as salt and pepper)"
 sown_keep_chance,0.97,woods: a sown field is left clear unless the wood's chance there is at least this (deep woods cover the patchwork instead of showing it as a grid)
-species_edge_dither,0.3,"woods: how far each clump's own draw blurs the edge between a conifer patch and a broadleaf one (0 = a clean line)"
 fray_wave_m,260,"woods: the wavelength of a fine noise laid on the woodedness before the edge squeeze, so a wood's rim frays in tongues and outliers instead of following its cells' straight sides"
 fray_gain,0.35,woods: how far that noise swings the woodedness
 settled_clear,0.35,"woods (visual review 2026-10-05: the fields read scattered in the woods, not round the towns; 0.9 left the towns in bare country): how far the settled ground round each village (bake_world's settled.png — crofts, fields and meadow 1, the common pasture its pasture_open) takes the woods' chance down, before the edge squeeze"

@@ -72,4 +72,4 @@ Take the nearest one. For UI, that is Crusader Kings III, whose look the dark th
 - "The owner is busy, so one variant and no critic" → That is exactly when a miss costs most. See "quick".
 
 ## When the owner rules
-When the owner says it's ugly, or approves something, add the principle and its reason to `taste.md`. The file is the project's memory of taste.
+When the owner says it's ugly, or approves something, add the high-level aesthetic principle it teaches to `taste.md` (or sharpen an existing one) — one or two sentences on what looks right and why. The file is the project's memory of taste, not of implementation: numbers, keys, techniques and the ruling's history go in the subsystem's `CLAUDE.md`, its guide, or the feature's spec.

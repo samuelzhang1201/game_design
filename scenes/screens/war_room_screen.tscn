@@ -6,15 +6,15 @@
 [ext_resource type="Theme" uid="uid://clxhwl8aidiul" path="res://assets/2D/ui/theme/paper_theme.tres" id="4_mjjvv"]
 [ext_resource type="StyleBox" uid="uid://c4rntxxfax7n8" path="res://assets/2D/ui/war_table/styles/war_slip.tres" id="5_c0xm8"]
 [ext_resource type="Script" uid="uid://4r7bjqgxwvn5" path="res://scripts/ui/war_margin_key.gd" id="8_i8jnq"]
-[ext_resource type="PackedScene" path="res://scenes/war_room/war_tool_roll.tscn" id="9_0palb"]
+[ext_resource type="PackedScene" uid="uid://ct41acasji28f" path="res://scenes/war_room/war_tool_roll.tscn" id="9_0palb"]
 [ext_resource type="Script" uid="uid://d3hbtwaqgtjpc" path="res://scripts/ui/army_order_menu.gd" id="9_e6x4j"]
 [ext_resource type="PackedScene" uid="uid://c3s0yjcmu4nio" path="res://scenes/war_room/war_hover_slip.tscn" id="10_softr"]
 [ext_resource type="PackedScene" uid="uid://d0fhma2vbrkdx" path="res://scenes/war_room/war_folio.tscn" id="11_p22xw"]
 [ext_resource type="PackedScene" uid="uid://6mgact71qw5u" path="res://scenes/war_room/war_deploy_scroll.tscn" id="12_7osk2"]
 [ext_resource type="Script" uid="uid://buo18m7j8xhkt" path="res://scripts/ui/war_leave_prompt.gd" id="13_2sciq"]
 [ext_resource type="StyleBox" uid="uid://cb2lbhrj618ti" path="res://assets/2D/ui/panels/styles/leather_window_24.tres" id="14_s2b7v"]
-[ext_resource type="PackedScene" path="res://scenes/war_room/war_plan_form.tscn" id="15_lhnim"]
-[ext_resource type="PackedScene" path="res://scenes/war_room/war_plan_name.tscn" id="16_dm6fh"]
+[ext_resource type="PackedScene" uid="uid://gsj5vd22ynry" path="res://scenes/war_room/war_plan_form.tscn" id="15_lhnim"]
+[ext_resource type="PackedScene" uid="uid://covur443j5084" path="res://scenes/war_room/war_plan_name.tscn" id="16_dm6fh"]
 
 [node name="WarRoomScreen" type="Control" unique_id=166001307]
 layout_mode = 3
@@ -47,14 +47,7 @@ offset_bottom = 44.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/separation = 10
-
-[node name="Title" type="Label" parent="Top" unique_id=1035109976]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"TitleLabel"
-theme_override_colors/font_color = Color(0.8784314, 0.73333335, 0.41568628, 1)
-theme_override_font_sizes/font_size = 22
+alignment = 2
 
 [node name="BackToTable" type="Button" parent="Top" unique_id=1017474763]
 unique_name_in_owner = true
@@ -72,20 +65,36 @@ text = "×"
 unique_name_in_owner = true
 layout_mode = 1
 offset_left = 16.0
-offset_top = 46.0
+offset_top = 12.0
 offset_right = 252.0
-offset_bottom = 46.0
+offset_bottom = 12.0
 mouse_filter = 2
 theme = ExtResource("4_mjjvv")
 theme_override_styles/panel = ExtResource("5_c0xm8")
 
-[node name="MarginScroll" type="ScrollContainer" parent="Slip" unique_id=1939202220]
+[node name="SlipCol" type="VBoxContainer" parent="Slip" unique_id=1292243408]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Slip/SlipCol" unique_id=1035109976]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"WarSheetTitle"
+autowrap_mode = 3
+
+[node name="TitleRule" type="HSeparator" parent="Slip/SlipCol" unique_id=2010129697]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"WarSheetRule"
+
+[node name="MarginScroll" type="ScrollContainer" parent="Slip/SlipCol" unique_id=1939202220]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 horizontal_scroll_mode = 0
 
-[node name="Margin" type="VBoxContainer" parent="Slip/MarginScroll" unique_id=597996405]
+[node name="Margin" type="VBoxContainer" parent="Slip/SlipCol/MarginScroll" unique_id=597996405]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

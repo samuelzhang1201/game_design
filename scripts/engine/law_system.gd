@@ -578,7 +578,7 @@ static func impose(repo: DataRepository, state: GameState, law: String, raw: Str
 ## longer holds, or a town with no camp now, is "lost": nothing is written.
 ## A unit's courier was already lost by CourierSystem if the unit is gone.
 static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
-	var order: Dictionary = c["order"]
+	var order := CourierSystem.first_order(c)   # a decree's courier carries it alone
 	var key := String(order["scope_key"])
 	var law := String(order["law"])
 	var ev := CourierSystem._event("delivered", c)
@@ -632,7 +632,7 @@ static func delivery(repo: DataRepository, state: GameState, law: String) -> Dic
 static func _riders(state: GameState, law: String) -> Array:
 	var id := _decree_id(state, law)
 	return state.couriers.filter(func(c: Dictionary) -> bool:
-		var o: Dictionary = c.get("order", {})
+		var o := CourierSystem.first_order(c)
 		return String(o.get("action_code", "")) == ACTION and String(o.get("law", "")) == law \
 			and int(o.get("decree_id", -1)) == id)
 
@@ -645,7 +645,7 @@ static func _riders(state: GameState, law: String) -> Array:
 static func untold(repo: DataRepository, state: GameState, law: String) -> Array:
 	var days := {}
 	for c: Dictionary in _riders(state, law):
-		var key := String(c["order"]["scope_key"])
+		var key := String(CourierSystem.first_order(c)["scope_key"])
 		var left := CourierSystem.days_left(repo, state, c)
 		days[key] = mini(left, int(days[key])) if days.has(key) else left
 	var t := _tally(repo, state, law)
@@ -701,7 +701,7 @@ static func _tally(repo: DataRepository, state: GameState, law: String) -> Dicti
 	var id := _decree_id(state, law)
 	var riding := {}
 	for c: Dictionary in _riders(state, law):
-		riding[String(c["order"]["scope_key"])] = true
+		riding[String(CourierSystem.first_order(c)["scope_key"])] = true
 	var total := 0
 	var reached := 0
 	var on_road: Array = []

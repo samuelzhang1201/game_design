@@ -35,6 +35,11 @@ const ROLE_RESERVE := "reserve"
 ## repository and map.
 static var _town_cells: Dictionary = {}
 
+## Drop the per-repo town cells (DataRepository.forget_derived).
+static func forget() -> void:
+	_town_cells.clear()
+
+
 
 ## Puts `host` (a DataRepository.raid_hosts row) in the field: a foe for each of
 ## its UNITS (host_units), in the same shape as a player unit's state and keyed

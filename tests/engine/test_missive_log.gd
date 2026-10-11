@@ -96,6 +96,43 @@ func test_an_old_save_has_an_empty_board() -> void:
 	var old := GameState.from_dict(JSON.parse_string(JSON.stringify(d)))
 	assert_eq(old.missives, [])
 	assert_eq(MissiveLog.unread(old), 0)
+	assert_eq(MissiveLog.unseen(old), 0)
+
+
+## Owner 2026-10-10: the tab counts the letters not yet SEEN. The board shown
+## sees every letter so far; a spy's report opened alone sees itself only.
+func test_unseen_counts_letters_above_the_seen_mark() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	s.missives = []
+	s.missives_seen_id = s.next_missive_id
+	var a := MissiveLog.add(repo, s, _m("credible", 3))
+	var b := MissiveLog.add(repo, s, _m("rumour", 4))
+	assert_eq(MissiveLog.unseen(s), 2)
+	assert_true(MissiveLog.mark_seen(s, b), "one letter seen alone")
+	assert_eq(MissiveLog.unseen(s), 1)
+	assert_false(MissiveLog.mark_seen(s, b), "seen twice changes nothing")
+	assert_true(MissiveLog.mark_seen(s))
+	assert_eq(s.missives_seen_id, b)
+	assert_eq(MissiveLog.unseen(s), 0)
+	assert_false(bool(MissiveLog.find(s, a)["read"]), "seen is not read: the gold edge stays")
+	assert_false(MissiveLog.mark_seen(s), "nothing new to see")
+	MissiveLog.add(repo, s, _m("truth", 5))
+	assert_eq(MissiveLog.unseen(s), 1)
+	var copy := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	assert_eq(copy.missives_seen_id, b, "the mark is saved")
+	assert_eq(MissiveLog.unseen(copy), 1)
+
+
+func test_an_old_save_counts_every_letter_seen() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	MissiveLog.add(repo, s, _m("credible", 3))
+	MissiveLog.add(repo, s, _m("rumour", 4))
+	var d: Dictionary = s.to_dict()
+	d.erase("missives_seen_id")
+	var old := GameState.from_dict(JSON.parse_string(JSON.stringify(d)))
+	assert_eq(old.missives_seen_id, old.next_missive_id)
+	assert_eq(MissiveLog.unseen(old), 0)
+	assert_eq(MissiveLog.unread(old), MissiveLog.unread(s), "read flags untouched")
 
 
 func test_the_tables() -> void:
@@ -107,3 +144,20 @@ func test_the_tables() -> void:
 	assert_true(repo.courier_art.has("spy"))
 	for c: String in MissiveLog.COLUMNS:
 		assert_true(repo.palette.has("intel_" + c), c)
+
+
+## Owner 2026-10-10: receipts are ground truth, kept apart (missive_keep_receipt),
+## so a campaign of orders never pushes the steward's monthly report off.
+func test_receipts_never_push_the_monthly_report_off_the_truth_column() -> void:
+	repo.balance["missive_keep_per_column"] = 2.0
+	repo.balance["missive_keep_receipt"] = 3.0
+	var s := SuiteData.campaign(repo, 7)
+	s.missives = []
+	var subj := MissiveLog.subject("province", "x", -1, Vector2.ZERO)
+	var monthly := MissiveLog.add(repo, s, MissiveLog.make("monthly", "truth", 1, subj, "Steward", []))
+	for i in 6:
+		MissiveLog.add(repo, s, MissiveLog.make("receipt", "truth", 1, subj, "r%d" % i, []))
+	assert_false(MissiveLog.find(s, monthly).is_empty(), "the monthly report stays")
+	var kinds: Array = MissiveLog.column(s, "truth").map(func(m: Dictionary) -> String: return String(m["kind"]))
+	assert_eq(kinds.count("receipt"), 3, "missive_keep_receipt caps the receipts")
+	assert_true(repo.balance.has("missive_keep_receipt"))

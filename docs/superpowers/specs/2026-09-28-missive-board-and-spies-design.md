@@ -17,9 +17,12 @@ B makes information a resource:
 
 - **Four columns:**
   - **Ground truth**: the steward's monthly report on the provinces the crown
-    controls.
-  - **Highly credible**: an army order's delivery receipt, and spy reports of
-    good quality.
+    controls; and (owner 2026-10-10, "补给出发，信使送到信息让军队出发，行动
+    什么的，都是ground truth") every record of the crown's OWN actions — a
+    courier's delivery receipt, the supply dispatches (the wagons setting out
+    included) and the marshal's month, a decree's letters, an audit.
+  - **Highly credible**: spy reports of good quality, battle reports (they
+    carry estimates of the foe), close-seen host news.
   - **Worth consulting**: reserved for C's intercepted letters; empty in B.
   - **Rumour**: spy reports of poor quality.
 - **An ordinary courier's report is a delivery receipt plus the regiment's
@@ -92,7 +95,8 @@ read      bool
 
 ### The three sources
 
-**Receipt (`credible`).**
+**Receipt (`truth`, owner 2026-10-10; kept apart from the column's count,
+`missive_keep_receipt`, so orders never push the steward's report off).**
 - `CourierSystem._deliver` (A) now also calls `MissiveLog.add`.
 - It records that the order arrived, and the regiment's morale, supplies,
   wounded, ground (`ArmySystem.terrain_of`) and weather that day, all exact.
@@ -231,8 +235,17 @@ through `Intel`.
 ## 2. Presentation
 
 **The Missive tab.**
-- `BottomBar.TABS` gains `MISSIVE` after `RELATIONSHIP`, with an unread count
-  drawn on the button (`BottomBar.set_badge(tab, n)`).
+- `BottomBar.TABS` gains `MISSIVE` after `RELATIONSHIP`, with the count of
+  letters not yet SEEN drawn on the button (`BottomBar.set_badge(tab, n)`;
+  none, just "MISSIVE"). Owner 2026-10-10 ("玩家看过了信息就不算新的了，括号的
+  数字只显示玩家没看过的"): `GameState.missives_seen_id` (saved; an old save
+  takes `next_missive_id`, every letter seen) is the highest id seen and
+  `MissiveLog.unseen` counts the letters above it not marked `seen` alone.
+  `Game.mark_missives_seen()` sees them all whenever a board is in front of
+  the player — the overlay shown, the WAR ROOM's easel faced — and again as
+  letters land while it is; a spy's report opened in its dialog is seen alone
+  (`mark_missives_seen(id)`). `read` stays the note's own gold edge, set only
+  by selecting it.
 - `GameRoot` opens and closes `MissiveScreen` like the relations screen,
   stacked in `_switch_to`.
 
@@ -327,7 +340,8 @@ dark styles stand in; the art is referenced from a
 
 - **`MissiveLog`:** ids, the per-column cap, save round-trip.
 - **Receipts:**
-  - a delivery writes one `credible` receipt with exact regiment state;
+  - a delivery writes one `truth` receipt with exact regiment state, a line
+    per order the courier carried;
   - a stale order's receipt says so.
 - **Monthly report:** one `truth` missive a month, exact against
   `RealmEconomy`.

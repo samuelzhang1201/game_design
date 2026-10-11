@@ -83,7 +83,8 @@ map_pick_radius_px,12,world map: screen px within which a click/hover picks a pi
 map_line_pick_px,8,world map: screen px within which a click/hover picks a road or river
 map_label_scale_px,45.0,world map: kingdom label height in native map px — it scales with zoom like printed lettering
 map_label_min_px,16.0,world map: smallest kingdom label in screen px (below this the label is hidden)
-map_label_max_px,60.0,world map: largest kingdom label in screen px
+map_label_fade_from_px,80.0,"3D map (owner 2026-10-10: 国家名字无论我视角如何调整都会显示，很碍事): a kingdom name — a word map_label_scale_px pack px tall on the ground, so it grows as the camera comes in — shows whole up to this many screen px and fades out above it (Map3DGeometry.label_fade); ~20 km away at a 720 window"
+map_label_hide_px,110.0,"3D map: the screen px at which a kingdom name has faded out entirely and is hidden — nearer than ~15 km at a 720 window the names are gone, so they are the far, strategic view's lettering only"
 map_label_tracking,0.05,"world map: extra letter spacing on kingdom labels as a fraction of font size — 0.35 suited spaced Roman capitals; the names are blackletter now (owner 2026-09-13), which wants its letters close"
 map_label_alpha,0.72,world map: kingdom label opacity — faint enough to read as part of the map
 map_label_halo_alpha,0.35,"world map (2026-09-24, look route Phase 4): the kingdom names' parchment halo opacity — the ink sank into the darker Forward+ ground; 0 turns the halo off"
@@ -141,12 +142,10 @@ map_army_font_frac,0.5,military layer: the headcount's font size as a share of t
 map_army_count_pad_px,3.0,military layer: side padding inside the headcount box in screen px
 map_army_outline_px,1.0,military layer: width of the dark outline round a counter in screen px
 map_army_glyph_frac,0.8,military layer: the glyph's size as a fraction of its square
-map_army_stack_gap_px,8.0,"military layer: the least gap, design px, between two counters or chips once spread, rim to rim — the bars on a counter's top count as the counter (ArmyCounters.layout grows each box by its drawn rim and half of this for Map3DDeclutter; owner 2026-10-08 after the visual reviews: never edge to edge, 6 read as ~2 px at a 1280 window); also the headcount chip's lift over its unit's piece, past half the chip (Map3DHudArmies)"
+map_army_stack_gap_px,8.0,"military layer: the least gap, design px, between two flat counters (a unit with no 3D piece — a fleet) once spread, rim to rim (ArmyCounters.layout grows each box by its drawn rim and half of this for Map3DDeclutter; owner 2026-10-08 after the visual reviews: never edge to edge, 6 read as ~2 px at a 1280 window)"
 map_army_count_sat,0.35,military layer: the least saturation the headcount box's realm colour is pushed to
 map_army_count_sat_max,0.5,"military layer: the most saturation the headcount box's realm colour may keep (1 = no cap)"
 map_army_count_val,0.5,military layer: the brightness the headcount box's realm colour is set to
-map_army_bar_px,3.0,"military layer (owner 2026-09-27): the height in screen px of each of the two bars (red readiness, yellow supply) stacked over a regiment's headcount, as wide as the counter"
-map_army_bar_gap_px,1.0,military layer: the dark gap in screen px between the two bars and between them and the counter
 map_army_pick_px,24.0,military layer: screen px within which a click or hover picks a regiment
 map_relief_strength,0,terrain: shade change per unit of mean height difference to land neighbours (not distance-normalised) facing the light — 0 = no relief on the map (owner 2026-09-11); 0.02 was the tuned value
 map_relief_min,0.6,terrain: darkest relief factor
@@ -330,7 +329,7 @@ map3d_close_effects_m,8000,"3D MAP (owner 2026-10-02, 按缩放切换): with the
 map3d_house_shadow_m,3000,"3D MAP houses (perf 2026-10-02): a settlement within this of the camera's target casts its houses' shadows; past it they stand in the type's unshadowed MultiMesh — every house in map3d_house_view_m drawn into every shadow cascade was over half the geometry drawn, and past it a house is a few px tall"
 map3d_house_shadow_view_m,4000,"3D MAP houses (perf 2026-10-02): with the camera farther than this from its target no house casts a shadow at all (a house there is a few px tall, its shadow about one; at 5 and 12 km the frame matched the shadowed one pixel for pixel, independent critic); crossing it rebuilds the clusters once"
 map3d_tree_on,1,"3D MAP woods (look route 2026-09-30, owner: 树木也是可以3d建模吗): 1 draws the bake's tree clumps (tools/map3d/bake_trees.py, Map3DLayerTrees), 0 leaves the ground bare"
-map3d_tree_density,1.0,"3D MAP woods: the share of the baked clumps drawn (a stable thinning by row), times graphics_quality.csv tree_density"
+map3d_tree_density,1.0,"3D MAP woods: the share of the baked clumps drawn, times graphics_quality.csv tree_density — thinned EVENLY over the ground (Map3DGeometry.thin_rank over map3d_tree_thin_cell_m squares), never in random holes"
 map3d_tree_chunk_m,2000,"3D MAP woods: the side of one square of clumps, metres — one MultiMesh per square, kind, variant and level of detail, shown by Godot's own visibility range from the camera"
 map3d_tree_scale,1.2,"3D MAP woods: every clump's size against the mesh's own (Map3DTreeMesh builds crowns ~12-17 m across, drawn larger than life like the houses)"
 map3d_tree_near_m,2500,3D MAP woods: the near clump (LOD 0) is drawn out to this camera distance to its square
@@ -338,7 +337,16 @@ map3d_tree_far_m,12000,"3D MAP woods: the plain clump (LOD 1) out to this; past 
 map3d_tree_margin_m,400,3D MAP woods: the visibility ranges' hysteresis margin
 map3d_tree_size_spread,0.3,"3D MAP woods: each clump drawn up to this share bigger or smaller than its baked size, by its own row — old trees and young, not one even carpet"
 map3d_tree_cards,1,"3D MAP woods (owner 2026-10-01): 1 draws every crown as a PHOTO CARD (tree_card.gdshader over assets/3D/vegetation/crowns/crowns_atlas.png, cells by data/map3d_tree_crowns.csv), 0 the procedural 3D crowns; without the atlas or the table the 3D crowns stay"
-map3d_tree_card_far_m,20000,"3D MAP woods: the photo cards are drawn out to this camera distance to their square (two triangles a tree, so farther than the 3D crowns' 12 km)"
+map3d_tree_card_far_m,9000,"3D MAP woods (owner 2026-10-10: 镜头抬高到很高，不需要渲染树木 — LOD): the photo cards are drawn out to this camera distance to their square, fading over map3d_tree_card_fade_m; past it the ground's canopy tint (ground_look.tres wood_far_near_m..wood_far_far_m, full by 10 km) carries the wood"
+map3d_tree_card_fade_m,2000,"3D MAP woods: the photo cards fade out (Godot's visibility-range fade) over this many metres before map3d_tree_card_far_m"
+map3d_tree_card_thin,0.3,"3D MAP woods (LOD, critic 2026-10-11: with no tree past 9 km the woods at 16 km read as a flat tint): past map3d_tree_card_far_m the same clumps are drawn thinned to this share, evenly by place (Map3DGeometry.thin_rank), out to map3d_tree_card_thin_far_m"
+map3d_tree_card_thin_far_m,22000,"3D MAP woods: the thinned far level of the photo cards is drawn out to this camera distance to its square"
+map3d_lod_trees_m,30000,"3D MAP woods (owner 2026-10-10: 镜头抬高到很高，不需要渲染树木 — LOD like other games): with the camera farther than this from its target the whole wood is HIDDEN (its nodes not drawn, not just faded) and the ground's canopy tint carries it; under it the woods thin with distance instead (map3d_tree_card_thin), never vanish wholesale at the zooms the player plays (taste 2026-10-02: the far zoom stays the real 3D world)"
+map3d_lod_margin_m,1500,"3D MAP LOD gates (woods, houses, wind): a layer hidden past its map3d_lod_*_m shows again only once the camera is this much back under it, so a zoom resting at the line never flickers (Map3DGeometry.lod_shown)"
+map3d_tree_variants,4,"3D MAP woods: the clump layouts drawn per species (crowns and spread from data/map3d_tree_species.csv), a clump's by its row"
+map3d_tree_thin_cell_m,25,"3D MAP woods: the square a lower tree density thins by (an ordered dither, Map3DGeometry.thin_rank) — about the bake's poisson_r_m, one clump a square"
+map3d_lod_houses_m,26000,"3D MAP houses (owner 2026-10-10: LOD): with the camera farther than this from its target no house is drawn at all (a house there is a pixel; the settlement dots stand for the towns) — past the opening view's ~24 km, so the opening keeps its houses"
+map3d_lod_wind_m,30000,"3D MAP wind (owner 2026-10-10: LOD): with the camera farther than this from its target the ground's wind stage is off (wind_on 0); the owner wants the broad gusts at the opening view (~24 km), so the gate stands past it"
 map3d_house_rebuild_move_m,300,"3D MAP houses: the camera must move this far before the house MultiMeshes are rebuilt — cut once per camera pose, never per frame"
 map3d_house_seat_clear_m,0.1,"3D MAP houses (owner 2026-09-24: 要垂直于地面，不可以被地面遮住部分): a house stands this far above the HIGHEST ground sampled under its footprint (Map3DHouses.seat) — the drawn Terrain3D surface is triangles between 20 m vertices, the sampled one bilinear, and they part by centimetres on a slope. Replaced map3d_house_sink_m (0.5), which sank every house into the ground"
 map3d_pier_deck_m,1.6,"3D MAP piers (owner 2026-10-01: 码头延伸到海里): a pier's deck stands this far over the sea (Map3DLayerHouses seats a `pier` row at the water, not on the ground under it)"
@@ -346,7 +354,9 @@ map3d_house_ground_samples,5,"3D MAP houses (owner 2026-09-24): the ground under
 map3d_house_ground_inset,1.0,"3D MAP houses (owner 2026-09-24): the share of a mesh's own AABB the ground is sampled over — the WHOLE box, eaves included, so no wall or chimney foot can be below the ground it stands on"
 map3d_unit_ref_px,12,"MILITARY's 3D piece (owner 2026-09-30: 12, chosen over 30 and 20 from shots at 600 m / 1500 m / 5000 m — at 30 a horse stood bigger than a whole town close in; owner 2026-09-27 first): the height of its model box (lance tip included, so the figure reads ~3/4 of it, and less seen from above) DRAWN in design px at the opening view's distance (map3d_zoom_start_scale) — 26 read as a ~20 px figure as the game opens (owner: ~20 px); raised 15% the same day (owner: 骑兵和步兵的size稍微再调大一点点; 33 bracketed as too much). A real man is two px even at the closest zoom, so a piece is a wargame MINIATURE on a table map: ONE world height at every zoom, growing and shrinking with the camera like the ground (Map3DUnits.height_m; owner 2026-09-30: 比例缩放需要和游戏视角缩放一致 — the close-in cap map3d_unit_max_px is gone). Replaced map3d_unit_px 40 held constant at every zoom (the owner: 随着镜头的缩放，兵人大小没有变化这是不对的)"
 map3d_unit_head_top,0.14,"MILITARY's 3D piece (owner 2026-09-30: 兵人的icon和模型间隔太远了): the headcount chip hangs over the figure's HEAD — its head bone's rest height raised this share of itself for the helmet (Map3DUnits.head_m) — not over the model box, whose top is the upright spear's or lance's tip a third of a man higher. Replaced map3d_unit_max_px 41, the close-in cap on the piece's screen size (owner 2026-09-30: 比例缩放需要和游戏视角缩放一致 — a piece is now ONE world size at every zoom)"
-map3d_unit_mark_px,14,"MILITARY's 3D piece (owner 2026-09-30: zoom out最高处应该显示为一个标志即可; chose the piece at 12 px with a switch by px): once a piece — one world size at every zoom — would be drawn under this many design px tall at the camera's target, no piece is drawn and every regiment is its flat square counter, still clickable (Map3DUnits.as_counters; couriers too). Replaced map3d_unit_counter_scale 50, the scale bar's 50 km (owner 2026-09-27)"
+map3d_unit_mark_px,14,"COURIERS on the 3D map (owner 2026-09-30: zoom out最高处应该显示为一个标志即可): once a rider — one world size at every zoom, as a regiment piece — would be drawn under this many design px tall at the camera's target, he is drawn as his flat mark instead (Map3DUnits.as_counters, Map3DLayerCouriers). A regiment piece is drawn at every zoom with no mark (owner 2026-10-10)"
+map3d_unit_glow_ratio,1.0,"MILITARY's 3D piece (owner 2026-10-10: a selected unit glows faintly on the ground under it, never a box or a number): the selection glow's quad half-size as a multiple of the piece's half width (Map3DUnitGlow) — kept within the footprint the seat raised the piece clear of, so it never cuts into a slope; its look is scenes/map3d/materials/unit_select_glow.tres"
+map3d_unit_glow_lift,0.01,"MILITARY's 3D piece: how far the selection glow lies above the piece's seat, as a share of the piece's own height (Map3DUnitGlow) — just clear of the ground it lies on"
 map3d_unit_snap_days,3,"MILITARY's 3D piece: a drawn piece more than this many days' march behind its regiment jumps to it instead of walking (a load, a fast clock); within it, it WALKS each day's step over the day's real seconds (Map3DUnits.along_day)"
 map3d_supply_follow_s,0.25,"3D MAP supply lines (spec 2026-10-07-army-supply-lines §5.3): a flowing line's end follows its marching piece, re-laid from the day's road (no route search) at most once every this many real seconds"
 map3d_unit_seat_ring,8,"MILITARY's 3D piece (owner 2026-09-24: 斜面上兵人的一部分会被地图盖住): points on each of the two rings (half and full base) where the ground under a piece's base is sampled, besides its centre — Map3DUnits.footprint"
@@ -368,6 +378,7 @@ missive_keep_per_column,40,"spec 2026-09-28 §1: letters kept per board column; 
 missive_keep_supply,20,"spec 2026-10-07-army-supply-lines §5.5: supply dispatches and the marshal's months (kinds supply, supply_month) are kept apart from missive_keep_per_column, so they never push a spy report or a receipt off the board"
 missive_keep_law,20,"spec 2026-10-08-laws-tab §3: a decree's letters (kind law: its sending and its reach) are kept apart from missive_keep_per_column, as the supply letters are, so a decree to every camp never pushes a spy report or a receipt off the board"
 missive_keep_battle,20,"spec 2026-10-07-enemy-ai-and-battle §4.5: battle reports (kind battle, a letter a day while a fight lasts) are kept apart from missive_keep_per_column and missive_keep_supply, so a siege never pushes a spy report, a receipt or a supply letter off the board"
+missive_keep_receipt,20,"owner 2026-10-10 (own actions are ground truth): the couriers' receipts (kind receipt) sit in the truth column but are kept apart from missive_keep_per_column, so a campaign of orders never pushes the steward's monthly report (or an audit) off the board"
 spy_radius_km,25,a spy counts the troops within this distance of his point
 spy_credible_threshold,500,a quality roll (0..999 after spy_difficulty) at or above this files the report as highly credible; below is rumour
 spy_text_threshold,300,below this the holder / stance / wealth read "unclear"
@@ -448,7 +459,7 @@ war_collar_shade,0.12,"WAR ROOM v2 B (spec §2.2): the collar's paper darkened b
 war_neat_px,1.2,"WAR ROOM v2 B (spec §2.2): the neat line's rule, screen px — plan B Task 10, the critic of 2026-10-02: as heavy as a kingdom border at 1.6"
 war_neat_gap_px,5,"WAR ROOM v2 B (spec §2.2): the hairline inside the neat line, screen px from it; since 2026-10-02 the band between is chequered a degree at a time (4 until then)"
 war_neat_band_alpha,0.65,"WAR ROOM (owner 2026-10-02, the graticule): the ink of the degree band's dark squares between the neat line and its hairline"
-war_grid_label_px,64,"WAR ROOM (owner 2026-10-02, the graticule): a meridian's or parallel's degree figure along the inside of the neat line, ink-texture px"
+war_grid_label_px,44,"WAR ROOM (owner 2026-10-02, the graticule): a meridian's or parallel's degree figure along the inside of the neat line, ink-texture px (B4 pick v3: 64 -> 44, the figures step back)"
 war_grid_label_pad_px,52,"WAR ROOM (owner 2026-10-02): the degree figures stand this many ink-texture px in from the neat line (clear of its chequered degree band)"
 war_table_w_m,1.4,"WAR ROOM (owner 2026-10-01, spec §2): the laid sheet's width on the table in metres; its depth follows the sheet's own ratio"
 war_relief_grid,384,"WAR ROOM (owner 2026-10-01, spec §2; v2 B: the 142 km sheet at 2.5 bake vertices a pack px — 384 is ~370 m a vertex): vertices across the relief mesh; the depth gets the sheet's ratio of that"
@@ -499,7 +510,7 @@ war_ink_border_px,4,"WAR ROOM (owner 2026-10-01, spec §2): a kingdom border's d
 war_ink_band_px,28,"WAR ROOM (owner 2026-10-01, spec §2): the watercolour band inside a kingdom border"
 war_ink_seam_px,2,"WAR ROOM (owner 2026-10-01, spec §2): a province seam's fine dashes"
 war_ink_town_px,9,"WAR ROOM (owner 2026-10-01, spec §2): a village's ring radius; towns x1.5, cities x2, capitals x2.5"
-war_ink_label_px,44,"WAR ROOM (owner 2026-10-01, spec §2): a town name's lettering size on the texture — plan B Task 10, the critic of 2026-10-02: town names were ~7 px at the opening view"
+war_ink_label_px,56,"WAR ROOM (owner 2026-10-01, spec §2): a town name's lettering size on the texture — plan B Task 10, the critic of 2026-10-02: town names were ~7 px at the opening view (B4 pick v3: 44 -> 56, towns lead the sheet)"
 war_ink_dash_px,18,"WAR ROOM (owner 2026-10-01, spec §2): a dash's length"
 war_ink_gap_px,10,"WAR ROOM (owner 2026-10-01, spec §2): the gap between dashes"
 war_ink_band_alpha,0.28,"WAR ROOM (owner 2026-10-01, spec §1-2): the watercolour band inside a kingdom border: its opacity"
@@ -516,9 +527,9 @@ war_pan_drag_speed,0.0015,"WAR ROOM (owner 2026-10-01, spec §1-2): the middle-b
 war_pan_gesture_speed,0.01,"WAR ROOM (owner 2026-10-01, spec §1-2): a trackpad two-finger drag's pan: table metres per gesture unit per metre of camera distance"
 war_key_pan_screens_per_s,0.7,"WAR ROOM v2 (owner 2026-10-02, spec §1.1): WASD / arrows pan this many camera-distances a second (the 3D map's map3d_key_pan_screens_per_s)"
 war_click_slop_px,10,"WAR ROOM v2 (spec §1.1): a right press and release further apart than this, or one that turned the room, is a drag, not a click (Map3DInput.CLICK_SLOP)"
-war_sea_hatch_reach_m,0.30,"WAR ROOM (owner 2026-10-01, spec §1-2): the sea is hatched only in a coastal band: the hatching fades out this many table metres off the shore (the relief has no depth below the waterline — open sea is one value — so the reach is a distance, ~143 km of a 670 km sheet)"
+war_sea_hatch_reach_m,0.05,"WAR ROOM (owner 2026-10-01, spec §1-2): the sea is hatched only in a coastal band: the hatching fades out this many table metres off the shore (the relief has no depth below the waterline — open sea is one value — so the reach is a distance; 0.05 m ~24 km of a 670 km sheet, a coastal band only, B4 pick v3)"
 war_sea_hatch_per_m,90,"WAR ROOM (owner 2026-10-01, spec §1-2): sea hatch lines per table metre (a diagonal; table terms, so it holds at any sheet)"
-war_sea_hatch_alpha,0.9,"WAR ROOM (owner 2026-10-01, spec §1-2): the sea hatching's ink strength at the shore"
+war_sea_hatch_alpha,0.55,"WAR ROOM (owner 2026-10-01, spec §1-2): the sea hatching's ink strength at the shore (B4 pick v3: 0.9 -> 0.42; batch B critic 2026-10-11: 0.42 read as bare paper, now 0.55)"
 war_sea_hatch_px,1.5,"WAR ROOM (owner 2026-10-01, spec §1-2): the sea hatching's line width in screen px"
 war_contour_alpha,0.38,"WAR ROOM (owner 2026-10-01, spec §1-2): an ordinary contour line's ink strength — plan B Task 10, the critic of 2026-10-02: a step lighter than the roads"
 war_contour_index_alpha,0.8,"WAR ROOM (owner 2026-10-01, spec §1-2): an index contour's ink strength"
@@ -629,7 +640,7 @@ ledger_label_halo_soft_px,10,"LEDGER galaxy: the soft wide halo under every name
 ledger_label_halo_soft_alpha,0.6,"LEDGER galaxy: the soft halo's opacity"
 ledger_star_pick_min_px,8,"LEDGER galaxy: a star is picked within its drawn disc or this many design px of it, whichever is larger (Task 11 fix round 2: a ghost star is a few px across)"
 ledger_star_max_px,14,"LEDGER galaxy: no star is drawn with a radius over this many design px, however close the camera (Task 11 fix round 2: about twice an ordinary hub)"
-war_chart_w_m,0.8,"WAR ROOM (owner 2026-10-01, spec §2, Task 9): the sheet index chart's width on its apron, metres; its height follows the map's ratio. Sized so the WHOLE chart stands in the opening view (fix round 1: 0.8 x 0.29 m)"
+war_chart_w_m,0.61,"(2026-10-10, B3: 0.8 -> 0.61 - the MAP's width; the margin below comes on top) WAR ROOM (owner 2026-10-01, spec §2, Task 9): the sheet index chart's width on its apron, metres; its height follows the map's ratio. Sized so the WHOLE chart stands in the opening view (fix round 1: 0.8 x 0.29 m)"
 war_chart_px,1024,"WAR ROOM (Task 9): the side of the index chart's image across the map (dots of land cells, every sheet's frame)"
 war_chart_blotch_freq,5,"WAR ROOM (owner 2026-10-02: the index chart on parchment): parchment blotches across the chart's width"
 war_chart_sea_wash,0.15,"WAR ROOM (owner 2026-10-02): the index chart's sea washed this share toward sea_ink (the laid sheet's is war_sea_wash)"
@@ -639,6 +650,7 @@ war_chart_frame_alpha,0.65,"WAR ROOM (2026-10-02, the critic): the rubric frames
 war_chart_water_line_alpha,0.45,"WAR ROOM (owner 2026-10-02): the index chart's two water lines following the shore, their sea-ink strength"
 war_chart_water_near_px,6,"WAR ROOM (owner 2026-10-02): the nearer water line stands about this many chart px off the shore"
 war_chart_water_far_px,14,"WAR ROOM (owner 2026-10-02): the farther water line, chart px off the shore"
+war_chart_margin_m,0.026,"WAR ROOM (2026-10-10, B3): the parchment margin round the index chart's map, metres on every side: the column letters and row numbers are printed on it, not floated over the oak"
 war_chart_axis_margin_m,0.012,"WAR ROOM v2 B (spec §2.3): the chart's column letters and row numbers stand this far outside its edge, metres"
 war_toss_apex_m,0.18,"WAR ROOM v2 B (spec §2.3): the war marker's arc, metres over the straight line at its middle"
 war_toss_fly_s,0.55,"WAR ROOM v2 B (spec §2.3): seconds from the hand to the chart"
@@ -675,7 +687,7 @@ war_intel_supply_dash_px,6,"(2026-10-07: doubled with war_intel_texture_px) WAR 
 war_intel_supply_gap_px,14,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a supply road's gap, intel px — plan B Task 10, the critic of 2026-10-02: dotted"
 war_intel_courier_px,28,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a courier's mark, intel px"
 war_intel_weather_px,36,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a weather mark, intel px"
-war_intel_label_px,30,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a spy report's words, intel px"
+war_intel_label_px,48,"(2026-10-08 B6: 30 -> 48, a hazard name's size, on the same paper halo) WAR ROOM v2 B: a spy report's words, intel px"
 war_intel_spy_ring_px,52,"(2026-10-07: doubled with war_intel_texture_px) WAR ROOM v2 B: a spy report's ring, intel px, before its spread"
 war_intel_spy_spread_k,2,"WAR ROOM v2 B: the ring grows by the estimate's spread (hi-lo)/hi x this"
 war_intel_hazard_px,4,"WAR ROOM P2-B (spec 2026-10-07-war-room-p2 §2.4): a hazard's hatch lines and dots, intel px (the 4096 intel texture)"
@@ -691,16 +703,16 @@ war_ink_trade_px,3,"WAR ROOM P3-A §1.3: a trade road's extra width per tier ove
 war_ink_works_px,52,"(visual review 2026-10-07: 30 was the ring's own size; the anvil is wider than tall, so it stands larger than the scales) WAR ROOM P3-A §1.3: a works glyph's height above its town ring, sheet ink px"
 war_ink_market_px,44,"(visual review 2026-10-07: 30 -> 44, as war_mark_px) WAR ROOM P3-A §1.3: a market's scales below its town ring, sheet ink px"
 war_chart_numeral_font_px,48,"WAR ROOM (Task 9): a sheet numeral's lettering size on the index chart (Label3D font_size)"
-war_chart_numeral_pixel_m,0.0008,"WAR ROOM (Task 9): metres a numeral's font px covers on the chart (Label3D pixel_size): 48 px reads ~4 cm on a 1 m chart"
+war_chart_numeral_pixel_m,0.0004,"(batch B critic 2026-10-11: 0.00035 -> 0.0004; 2026-10-10, B3: 0.0008 -> 0.00035, an em of ~17 mm, a two-letter column fits the 34 mm pitch of every second column) WAR ROOM (Task 9): metres a numeral's font px covers on the chart (Label3D pixel_size): 48 px reads ~4 cm on a 1 m chart"
 war_arrow_font_px,48,"WAR ROOM (Task 9): an edge arrow's lettering size (Label3D font_size)"
 war_arrow_pixel_m,0.0006,"WAR ROOM (Task 9): metres an edge arrow's font px covers on the table (Label3D pixel_size)"
 war_arrow_gap_m,0.04,"WAR ROOM (Task 9): how far outside the laid sheet's edge an edge arrow stands, metres"
 war_arrow_y_m,0.01,"WAR ROOM (Task 9): an edge arrow's height over the table's plane, metres"
 war_chart_tilt_deg,0,"WAR ROOM (Ruling 24): the index chart's lean from flat; 0 since the room art: it lies flat on the oak table's north band, a sheet of paper, not a board on nothing (Task 9 fix 1 had 5, a lean held up by nothing)"
-war_chart_z_m,-0.725,"WAR ROOM (Task 9 fix 1): the index chart's centre, table metres north (negative z) of the table's middle; its near edge clears the north edge arrow, its far edge stays inside the opening view"
+war_chart_z_m,-0.775,"(2026-10-10, B3: -0.725 -> -0.775, 5 cm north so the smaller chart leaves no band of bare oak before the sheet) WAR ROOM (Task 9 fix 1): the index chart's centre, table metres north (negative z) of the table's middle; its near edge clears the north edge arrow, its far edge stays inside the opening view"
 war_chart_y_m,0.0005,"WAR ROOM (Ruling 24): the index chart's height over the table plane, metres: on the oak top (the table.glb is set in the scene with its top at -0.001, the sheet's sea at 0), half a millimetre proud of it against z-fighting (was 0.018, ~6 cm over the stand-in)"
 war_chart_numeral_lift_m,0.002,"WAR ROOM (Task 9 fix 3): how far a sheet numeral floats above the chart's face, metres (against z-fighting)"
-war_chart_label_every,3,"(2026-10-07 §1: 2 crowded the two-letter columns AA..AI into one another) WAR ROOM scale (spec 2026-10-07-war-room-scale-hover §1): the index chart letters a column and numbers a row every this many cells; 1 at 20° sheets, 2 once the series is 36 x 18"
+war_chart_label_every,2,"(2026-10-10, B3: 3 -> 2, ~18 letters over the narrower chart) (2026-10-07 §1: 2 crowded the two-letter columns AA..AI into one another) WAR ROOM scale (spec 2026-10-07-war-room-scale-hover §1): the index chart letters a column and numbers a row every this many cells; 1 at 20° sheets, 2 once the series is 36 x 18"
 war_candle_key,3,"WAR ROOM (fix round 1 ruling): which candlestick (Candlestick1..4 in war_room.tscn: far-left, far-right, near-left, near-right) holds the KEY candle — the one raking, shadowed light that models the sheet's relief; the others are short warm accents. 3 = near-left, where the stand-in's single candle stood"
 war_candle_key_energy,1.6,"WAR ROOM (fix round 1): the key candle's light energy (the stand-in's single candle's)"
 war_candle_key_range_m,3.0,"WAR ROOM (fix round 1): the key candle's omni range, metres (the stand-in's)"
@@ -918,9 +930,8 @@ raid_supply_permille,200,"raids (spec §5.3, RaidSystem): the share of a day's t
 army_split_cap_men,600,"owner 2026-10-07 (spec 2026-10-07-army-split-and-ground §3): the most men of one arm in one unit; an arm over it splits into ceil(men / cap) even units"
 army_slot_spacing_m,1500,"spec 2026-10-07-army-split-and-ground §4.2: the hex lattice's pitch in whole metres between two units' camps; set in the visual review (2026-10-08): the camp must read as a camp round the walls, units not standing on each other"
 army_slot_max_rings,12,"spec §4.2: the farthest ring searched for a free slot; past it the unit stands where it arrived. 12 (R16, 2026-10-08): round a town the rings start past its reach, so at a 600 m pitch the opening camps reach ring 12 before every unit finds unblocked ground"
-map3d_declutter_step_px,4,"spec 2026-10-07-army-split-and-ground §5.2: the spiral's grid, design px, that spreads the army counters and chips"
-map3d_declutter_max_px,160,"spec §5.2: how far a counter or chip may be pushed from its unit before a chip hides"
-map3d_leader_min_px,12,"spec §5.2 (2026-10-08 visual review): a counter or chip the spreading moved further than this, design px, draws a leader line to its unit (ArmyCounters.draw; its look is Map3DHudArmies' exports)"
+map3d_declutter_step_px,4,"spec 2026-10-07-army-split-and-ground §5.2: the spiral's grid, design px, that spreads the flat army counters (a unit with no 3D piece — a fleet)"
+map3d_declutter_max_px,160,"spec §5.2: how far a flat army counter may be pushed from its unit; with no clear place within it takes the clearest it found"
 war_spread_step_m,0.004,"spec §5.4: the war room's spread of the pieces on the table, metres"
 war_spread_max_m,0.12,"spec §5.4: how far a piece may be pushed on the table"
 war_plan_pieces_max,40,"WAR ROOM plans (owner 2026-10-07, spec 2026-10-07-war-room-annotations-and-planning-pieces §1.1): supposed enemy pieces a campaign may hold"
@@ -973,9 +984,17 @@ war_select_box_dash_px,6,"WAR ROOM draw orders (ruling 16): the chalk marquee's 
 war_plan_facing_px,14,"WAR ROOM draw orders (ruling 12): a chosen front's chalk facing handle (a small arrow at its middle), its length in design px"
 war_supply_route_px,5,"WAR ROOM draw orders (ruling 14): the bold dashed gold supply route from the chosen town to the march's end, its width in design px"
 war_supply_route_dash_px,16,"WAR ROOM draw orders (ruling 14): its dash, design px; the gap is half as long"
+war_supply_exit_font_px,18,"WAR ROOM tools polish (B1): the lettering of the supply road's exit mark (\"from TOWN · SHEET\"), where the road leaves the laid sheet, design px"
+war_supply_exit_halo_alpha,0.85,"WAR ROOM tools polish (B1): the parchment halo behind the supply exit mark's name, its alpha"
+war_supply_exit_halo_px,5,"WAR ROOM tools polish (B1): the parchment halo behind the supply exit mark's name, its outline width in design px"
 war_supply_lit_px,11,"WAR ROOM draw orders (ruling 13): a town that may supply the march, its lit ring's radius in design px"
 supply_rate_default,1000,"WAR ROOM draw orders (ruling 13): the rate (per mille, one of SupplyLines.RATES) a supply point chosen on the march's confirm runs at when the regiment has no line yet"
 war_order_feeder_mm,4,"WAR ROOM draw orders (ruling 10): a march drawn for several, each other regiment's crayon line joining the lead's arrow, its width in table mm"
+war_confirm_route_weight,1000,"WAR ROOM march confirm: the route box covered by the confirm costs this many times a blocked rect (the key slip, the tool roll, the docked folio) covered, so the march is never hidden while any spot avoids it; well below the 1e9 sentinel that bars the panel from the tip itself"
+war_ink_label_halo_px,4,"WAR ROOM (B4 ruling): a town name's parchment halo, ink px each side of the lettering; 0 none; 4 = B4 pick"
+war_ink_label_clear_px,40,"WAR ROOM (B4, implementer ruling; batch B critic 2026-10-11: 22 -> 40, the plinth still touched Walbover at the default view): air between a town's seat-piece plinth (war_piece_plinth_mm on a war_table_w_m sheet) and the town name, which stands WEST of the town (the room's spread, Map3DDeclutter, fills a camp from straight up clockwise, so north and east fill first); ink px"
+war_grid_label_alpha,0.5,"WAR ROOM (B4 ruling): the parchment knock-out behind a graticule figure, its opacity"
+war_grid_figure_alpha,0.7,"WAR ROOM (B4 ruling: the graticule figures paler): the rubric ink of a meridian's or parallel's degree figure, its opacity (1 full rubric)"
 forage_start_days,3,spec 2026-10-10-foraging-and-desertion §1.1
 forage_start_morale,25,spec 2026-10-10-foraging-and-desertion §1.1
 forage_start_training,5,spec 2026-10-10-foraging-and-desertion §1.1

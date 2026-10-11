@@ -1034,7 +1034,7 @@ func test_siege_news_is_a_battle_letter_in_fixed_words() -> void:
 		assert_eq(_of(news, k).size(), 1, k + " is")
 	var m := MissiveWriter.battle_report(repo, s, news)
 	assert_eq(String(m["kind"]), "battle")
-	assert_eq(String(m["column"]), "credible")
+	assert_eq(String(m["column"]), "credible", "battle news stays credible (owner 2026-10-10)")
 	var text := " ".join((m["facts"] as Array).map(func(f: Dictionary) -> String: return String(f["text"])))
 	assert_eq((m["facts"] as Array).size(), news.size(), "a line an event")
 	assert_false(text.contains("[missing template"), text)

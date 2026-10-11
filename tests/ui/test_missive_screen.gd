@@ -157,17 +157,31 @@ func test_every_plaque_reads_on_one_line_and_all_are_the_same_height() -> void:
 		await wait_process_frames(1)
 
 
-func test_selecting_a_letter_reads_it_and_the_badge_follows() -> void:
+## Owner 2026-10-10: the tab counts letters not yet SEEN — showing the board
+## sees them all (each note keeps its own unread gold edge until selected),
+## and a letter landing while the board is open is seen at once.
+func test_showing_the_board_sees_the_letters_and_selecting_reads_one() -> void:
 	Game.start_campaign(42)
 	var id := _letter("credible")
 	var r := _root()
 	await _enter(r)
 	r.refresh_missive_badge()
-	assert_eq(r.bottom_bar().badge("MISSIVE"), 1)
+	assert_eq(r.bottom_bar().badge("MISSIVE"), MissiveLog.unseen(Game.state))
+	assert_gt(r.bottom_bar().badge("MISSIVE"), 0)
 	r.toggle_missives()
+	assert_eq(r.bottom_bar().badge("MISSIVE"), 0, "the board shown: every letter seen")
+	assert_eq(r.bottom_bar().button("MISSIVE").text, "MISSIVE", "no count at none")
+	assert_false(bool(MissiveLog.find(Game.state, id)["read"]), "seen is not read")
+	var more := _letter("credible")
+	r.refresh_missive_badge()
+	assert_eq(r.bottom_bar().badge("MISSIVE"), 0, "a letter landing on the open board is seen")
+	assert_false(bool(MissiveLog.find(Game.state, more)["read"]))
 	r.missive_screen().select(id)
 	assert_true(bool(MissiveLog.find(Game.state, id)["read"]))
-	assert_eq(r.bottom_bar().badge("MISSIVE"), 0)
+	r.toggle_missives()
+	_letter("rumour")
+	r.refresh_missive_badge()
+	assert_eq(r.bottom_bar().badge("MISSIVE"), 1, "the board shut: a new letter counts")
 	assert_string_contains(r.missive_screen().desk_text(), "2,800–3,200")
 
 

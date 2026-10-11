@@ -65,7 +65,7 @@ func test_a_decree_files_a_letter_with_its_courier_count() -> void:
 	var letters := _law_letters()
 	assert_eq(letters.size(), 1, "one letter, at once")
 	var m: Dictionary = letters[0]
-	assert_eq(String(m["column"]), "credible")
+	assert_eq(String(m["column"]), "truth", "the crown's own decree: ground truth (owner 2026-10-10)")
 	assert_eq(int(_fact(m, "couriers")["exact"]), sent.size(), "it counts the couriers")
 	assert_string_contains(String(_fact(m, "decree")["text"]), "Tax rate")
 	assert_string_contains(String(_fact(m, "decree")["text"]), "7")
@@ -160,7 +160,8 @@ func test_law_letters_are_kept_apart_from_the_rest() -> void:
 	assert_eq(MissiveLog.keep_group("law"), "law")
 	assert_eq(MissiveLog.keep_group("supply_month"), "supply")
 	assert_eq(MissiveLog.keep_group("battle"), "battle")
-	assert_eq(MissiveLog.keep_group("receipt"), "")
+	assert_eq(MissiveLog.keep_group("receipt"), "receipt")
+	assert_eq(MissiveLog.keep_group("monthly"), "")
 
 
 func test_the_news_bar_is_told_once_when_all_have_arrived() -> void:
@@ -192,10 +193,10 @@ func test_a_stale_courier_of_an_older_decree_closes_nothing() -> void:
 	assert_eq(newer.size(), old.size())
 	assert_gt(old.size(), 1, "a realm of more than one province")
 	# the newer decree's couriers are delivered first, where they rode
-	var newer_id := int(newer[0]["order"]["decree_id"])
+	var newer_id := int(CourierSystem.first_order(newer[0])["decree_id"])
 	for c: Dictionary in newer:
 		assert_eq(String(LawSystem.deliver(repo, s, c)["type"]), "delivered")
-	s.couriers = s.couriers.filter(func(c: Dictionary) -> bool: return int(c["order"]["decree_id"]) != newer_id)
+	s.couriers = s.couriers.filter(func(c: Dictionary) -> bool: return int(CourierSystem.first_order(c)["decree_id"]) != newer_id)
 	assert_eq(s.couriers.size(), old.size(), "the older decree's couriers still ride")
 	# the ride's own events (a weather delay, "slow", is said by no one here)
 	var events := _ride_all().filter(func(e: Dictionary) -> bool: return String(e["type"]) != "slow")

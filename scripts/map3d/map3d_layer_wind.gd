@@ -98,6 +98,7 @@ const GROUND := ["speed_mps", "wave_m", "field_amp", "grass_amp", "near_m", "mid
 var ctx: Map3DContext
 var _trees: Map3DLayerTrees
 var _time := 0.0
+var _shown := true
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -125,9 +126,13 @@ func _process(delta: float) -> void:
 	if mat != null:
 		# Terrain3D drops unknown uniforms after a load: put them back when
 		# wind_on reads unset, as the weather does
+		# ...and off past map3d_lod_wind_m (owner 2026-10-10: LOD)
+		_shown = Map3DGeometry.lod_shown(_shown, ctx.distance, ctx.repo.bal("map3d_lod_wind_m"),
+			ctx.repo.bal("map3d_lod_margin_m"))
+		var want := 1.0 if _shown else 0.0
 		var on: Variant = mat.call("get_shader_param", "wind_on")
-		if not (on is float and is_equal_approx(on, 1.0)):
-			mat.call("set_shader_param", "wind_on", 1.0)
+		if not (on is float and is_equal_approx(on, want)):
+			mat.call("set_shader_param", "wind_on", want)
 			mat.call("set_shader_param", "wind_dir", dir)
 			for key: String in GROUND:
 				mat.call("set_shader_param", "wind_" + key, float(get(key)))

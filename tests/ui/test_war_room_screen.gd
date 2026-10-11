@@ -494,7 +494,7 @@ func test_the_margin_slip_is_a_scrolling_slip_of_at_most_war_margin_rows() -> vo
 	var rows := screen.get_node("%Margin").get_children().filter(func(n: Node) -> bool: return n is Button)
 	var row_h := (rows[0] as Control).get_combined_minimum_size().y if not rows.is_empty() else 0.0
 	assert_almost_eq(scroll.custom_minimum_size.y, row_h * minf(float(rows.size()), Game.data.bal("war_margin_rows")), 0.5)
-	# the slip hangs off the screen's top-left, under the title, never from the bottom
+	# the slip, headed by the sheet's title, hangs off the screen's top-left, never from the bottom
 	var slip := screen.get_node("%Slip") as Control
 	assert_lt(slip.position.y, screen.size.y * 0.25)
 	assert_lt(slip.position.x, screen.size.x * 0.2)

@@ -80,7 +80,7 @@ func bars() -> Array:
 		return []
 	var all := rows()
 	var key := [ctx.camera.global_transform, ctx.view_size, ctx.viewport_px_scale(), _rows_key,
-		view.unit_tops().size()]
+		view.unit_rects().size(), view.unit_moves()]
 	if key == _cut_key:
 		return _cut_cache
 	var badges: Array = []

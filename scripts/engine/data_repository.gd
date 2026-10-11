@@ -60,6 +60,11 @@ var map3d_houses: Dictionary = {}
 ## crown atlas shows which kind of tree (0 broadleaf, 1 conifer, 2 lone) —
 ## the photo cards of 2026-10-01 (tree_card.gdshader).
 var map3d_tree_crowns: Array = []
+## data/map3d_tree_species.csv rows (kind, name, enabled, habit, form, cells,
+## crowns, spread_m, size, tint_lo, tint_hi, ...): the woods' species, the
+## kind column of the bake's trees.bin (tools/map3d/bake_trees.py picks one per
+## clump by the ground; Map3DLayerTrees draws each by its own row).
+var map3d_tree_species: Array = []
 ## data/map3d_bake.csv as key -> number: the 3D build's own tuning. The bake
 ## (tools/map3d/bake_world.py) has always read this file; the runtime reads
 ## it too for the settlements' house clusters, so the two can never disagree
@@ -699,6 +704,10 @@ func _load(dir: String) -> bool:
 	if not _load_if_present("res://data/map3d_tree_crowns.csv", ["cell", "kind"],
 			func(r): map3d_tree_crowns.append(r)):
 		return false
+	if not _load_if_present("res://data/map3d_tree_species.csv",
+			["kind", "enabled", "form", "cells", "crowns", "spread_m", "size", "tint_lo", "tint_hi"],
+			func(r): map3d_tree_species.append(r)):
+		return false
 	if not _load_if_present("res://data/map3d_bake.csv", ["key", "value"],
 			func(r): map3d_bake[String(r["key"])] = float(r["value"])):
 		return false
@@ -1001,22 +1010,7 @@ func load_map(id: String) -> bool:
 	borders.clear()
 	province_borders.clear()
 	provinces_by_id.clear()
-	MapOwnership.invalidate()
-	MapTerrain.invalidate()
-	MapEconomy.forget()
-	RealmEconomy.forget()
-	ManorEconomy.forget()
-	MapPalette.forget_colors()
-	HouseArms.forget()
-	Elevation.forget()
-	Weather.forget()
-	RoadGraph.forget()
-	MarchPath.forget()
-	ArmySystem.forget_grids()
-	ArmySplit.forget()
-	LawEffects.forget()
-	WarSheets.forget()
-	Forage.forget()
+	forget_derived()
 	routes.clear()
 	rivers.clear()
 	markers.clear()
@@ -1363,3 +1357,33 @@ static func _order_params(text: String) -> Dictionary:
 func bal(key: String) -> float:
 	assert(balance.has(key), "balance.csv missing key: " + key)
 	return balance[key]
+
+
+## Drop every static cache derived from a repository's tables (most keyed by
+## the repository's instance): a pack swap must not draw the old world, and a
+## run that makes many repositories (the suite's SuiteData.repo per test) must
+## not keep every one's derived tables alive.
+static func forget_derived() -> void:
+	MapOwnership.invalidate()
+	MapTerrain.invalidate()
+	MapManors.invalidate()
+	MapEconomy.forget()
+	RealmEconomy.forget()
+	ManorEconomy.forget()
+	MarketSystem.forget()
+	MapPalette.forget_colors()
+	ManorPalette.forget()
+	HouseArms.forget()
+	Elevation.forget()
+	Weather.forget()
+	RoadGraph.forget()
+	MarchPath.forget()
+	ArmySystem.forget_grids()
+	ArmySplit.forget()
+	LawEffects.forget()
+	WarSheets.forget()
+	WarEconomy.forget()
+	TownStores.forget()
+	MapObjects.forget()
+	EnemyAi.forget()
+	Forage.forget()

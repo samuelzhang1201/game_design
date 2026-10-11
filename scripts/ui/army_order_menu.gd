@@ -84,6 +84,9 @@ var _waypoints: Array = []
 ## menu was opened, for an Edit route… that opens the panel there.
 var _panel: MarchConfirmPanel = null
 var _route_at := Vector2.ZERO
+## Set by a screen that has furniture over its map (the war room's slips and
+## book): returns the global rects the confirm keeps off. The 3D map sets none.
+var blocked_rects: Callable = Callable()
 ## The regiment whose supply point is being picked, "" when none; and the
 ## town clicked, whose rate the confirm asks.
 var _supply_for := ""
@@ -229,7 +232,10 @@ func _open_confirm(at: Vector2) -> void:
 	var map_rect := (_map as Control).get_global_rect() if _map is Control else Rect2()
 	if _map != null and _map.has_signal("hover_cleared"):
 		_map.emit_signal("hover_cleared")   # the WAR ROOM's slip at the tip goes: the confirm speaks now
-	p.place_near(origin + at, _route_rect(origin), map_rect)
+	var blocked: Array[Rect2] = []
+	if blocked_rects.is_valid():
+		blocked.assign(blocked_rects.call())
+	p.place_near(origin + at, _route_rect(origin), map_rect, blocked)
 
 
 ## The planned route's box on screen (global px): the piece, its waypoints and
@@ -518,7 +524,7 @@ func _commit() -> void:
 	for reqs: Array in sends:
 		var ok := true
 		for req: ActionRequest in reqs.slice(0, reqs.size() - 1):
-			var out := Game.try_execute(req)   # its own courier; the march's news follows
+			var out := Game.try_execute(req)   # the first sends the courier, the rest ride with him; the march's news follows
 			if not bool(out.get("ok", false)):
 				Game.publish_news(String(out.get("error", "That order cannot be given.")))
 				ok = false
@@ -530,14 +536,18 @@ func _commit() -> void:
 ## A unit's Confirm: SUPPLY_POINT_SET when `town` is not its line's already
 ## (spec 2026-10-08-war-room-draw-orders ruling 15), SUPPLY_CARRY_SET when
 ## `carry` changes its load, then ARMY_MARCH to `to` through `pairs`
-## (waypoints as [x, y]).
+## (waypoints as [x, y]) — ONE courier to the regiment carrying them all
+## (owner 2026-10-10: the warrant rides `with_column`; the wagons leave the
+## town when he reaches the column).
 func _march_reqs(c: String, to: Vector2, pairs: Array, carry: int, town := "") -> Array:
 	var params := {"regiment": c, "x": to.x, "y": to.y}
 	if not pairs.is_empty():
 		params["waypoints"] = pairs.duplicate(true)
 	var out: Array = []
 	if town != "" and town != String(SupplyLines.line(Game.state, c).get("town", "")):
-		out.append(ActionRequest.make("SUPPLY_POINT_SET", {"regiment": c, "town": town, "rate": _rate_of(c)}))
+		# the warrant rides with the march's courier to the column (owner 2026-10-10)
+		out.append(ActionRequest.make("SUPPLY_POINT_SET", {"regiment": c, "town": town, "rate": _rate_of(c),
+			"with_column": true}))
 	if carry >= 0 and carry != ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, c)):
 		out.append(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": c, "days": carry}))
 	out.append(ActionRequest.make("ARMY_MARCH", params))
@@ -607,7 +617,7 @@ func _edit_route(code: String) -> void:
 	var wps: Array = Array(ArmySystem.waypoints_of(Game.data, Game.state, code))
 	var draft := WarDrafts.of(Game.state, code) if drafting else {}
 	var riding := CourierSystem.pending_for(Game.state, code)
-	var order: Dictionary = riding.get("order", {}) if not riding.is_empty() else {}
+	var order := CourierSystem.march_order(riding)
 	if String(draft.get("order", "")) == WarDrafts.MARCH:
 		dest = WarDrafts.dest_px(Game.data, draft)
 		wps = Array(WarDrafts.waypoints_px(Game.data, draft))
@@ -842,6 +852,7 @@ func _on_supply_ground(pack_px: Vector2, at: Vector2) -> void:
 		return
 	_supply_town = town
 	var route := SupplyLines.road_px(Game.data, Game.state, _supply_for, town)
+	_map_set("supply_town", town)
 	_map_set("supply_preview", route)
 	_open_rates(town, route, at)
 
@@ -1081,6 +1092,7 @@ func _open_supply() -> void:
 		_supply_choice = ""
 	_panel.show_supply(options, _supply_choice, _supply_words(_supply_choice))
 	_map_set("supply_pick", _supply_ok)
+	_map_set("supply_town", _supply_choice)
 	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, _supply_choice, _pending) if _supply_choice != "" else PackedVector2Array())
 
 
@@ -1102,6 +1114,7 @@ func _rear_order(lead: String) -> Array:
 func _choose_supply(town: String) -> void:
 	_supply_choice = town
 	_supply_set = true
+	_map_set("supply_town", town)
 	_map_set("supply_preview", SupplyLines.road_between_px(Game.data, town, _pending) if town != "" else PackedVector2Array())
 	if _panel != null:
 		_panel.set_supply_figures(_supply_words(town))

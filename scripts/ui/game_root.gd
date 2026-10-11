@@ -126,6 +126,9 @@ func _ready() -> void:
 	_missive_screen.name = "MissiveScreen"
 	_missive_screen.visible = false
 	_missive_screen.show_requested.connect(_on_missive_show)
+	# the board shown marks every letter seen (owner 2026-10-10)
+	_missive_screen.visibility_changed.connect(_mark_seen_if_shown)
+	Game.missives_seen.connect(refresh_missive_badge.bind(false))
 	add_child(_missive_screen)
 	_laws_screen = load("res://scenes/screens/laws_screen.tscn").instantiate()
 	_laws_screen.name = "LawsScreen"
@@ -713,16 +716,30 @@ func _active_top_bar_height() -> float:
 			return tb.bar_height()
 	return 0.0
 
-## The MISSIVE tab's badge: how many letters are unread (owner 2026-09-28).
-## A letter landing calls it, so an OPEN board takes the letter in too
-## (final review M4) — unless the board itself asked, having just redrawn.
+## The MISSIVE tab's badge: how many letters the player has not yet SEEN
+## (owner 2026-10-10: 玩家看过了信息就不算新的了; MissiveLog.unseen). A letter
+## landing calls it, so an OPEN board takes the letter in too (final review
+## M4) and sees it — unless the board itself asked, having just redrawn.
 func refresh_missive_badge(and_board := true) -> void:
+	if Game.state != null and missive_board_shown():
+		Game.mark_missives_seen()   # its signal comes back here once, then finds nothing new
 	if _bottom_bar != null and Game.state != null:
-		_bottom_bar.set_badge("MISSIVE", MissiveLog.unread(Game.state))
+		_bottom_bar.set_badge("MISSIVE", MissiveLog.unseen(Game.state))
 	if and_board and _missive_screen != null and _missive_screen.visible and Game.state != null:
 		_missive_screen.refresh()
 	if and_board and _war_room_screen != null and _war_room_screen.visible:
 		_war_room_screen.refresh_board()
+
+## Whether a Missive board is in front of the player: the overlay, or the
+## WAR ROOM's easel faced (WarRoomScreen.facing_board).
+func missive_board_shown() -> bool:
+	if _missive_screen != null and _missive_screen.is_visible_in_tree():
+		return true
+	return _war_room_screen != null and _war_room_screen.facing_board()
+
+func _mark_seen_if_shown() -> void:
+	if _missive_screen.is_visible_in_tree():
+		Game.mark_missives_seen()
 
 ## A note on the WAR ROOM's easel (spec 2026-10-02-war-room-v2 §1.3): the
 ## Missive board opens on that letter OVER the room, which stays open, so
@@ -811,6 +828,7 @@ func _next_report() -> void:
 			Game.set_clock_speed(0)
 			_clock_acc = 0.0
 			_report_popup.open(m)
+			Game.mark_missives_seen(int(m["id"]))   # seen in its dialog (owner 2026-10-10)
 			return
 
 ## Seal (spec 2026-09-28 §2): the dialog shrinks into an envelope and flies to

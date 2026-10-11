@@ -104,11 +104,11 @@ func test_the_first_month_after_a_change_mixes_rates() -> void:
 			break
 	var reached := [home, other]
 	for courier: Dictionary in s.couriers.duplicate():
-		var key := String((courier.get("order", {}) as Dictionary).get("scope_key", ""))
+		var key := String(CourierSystem.first_order(courier).get("scope_key", ""))
 		if key.trim_prefix(LawSystem.PROVINCE_PREFIX) in reached:
 			LawSystem.deliver(data, s, courier)
 	s.couriers = s.couriers.filter(func(cc: Dictionary) -> bool:
-		return String((cc.get("order", {}) as Dictionary).get("action_code", "")) != LawSystem.ACTION)
+		return String(CourierSystem.first_order(cc).get("action_code", "")) != LawSystem.ACTION)
 	assert_eq(float(s.metrics["tax_rate"]), float(new_rate), "the mirror moved at the decree")
 	var mine := MapManors.controlled_provinces(data, s)
 	var lord := 0

@@ -35,8 +35,8 @@ var _plans := WarPlanDesk.new()
 
 
 func _ready() -> void:
-	# its look is scenes/screens/war_room_screen.tscn (owner 2026-10-02): the frame,
-	# the title and the paper slips (war_slip.tres), each under the paper's theme so their words write in its ink; the leather of
+	# its look is scenes/screens/war_room_screen.tscn (owner 2026-10-02): the frame and
+	# the paper slips (war_slip.tres; the margin slip headed by the sheet's title), each under the paper's theme so their words write in its ink; the leather of
 	# ui_war_table 0 is put on in code (_dress_leather)
 	visible = false
 	if not UiPalette.war_table():
@@ -100,6 +100,19 @@ func drawn() -> Dictionary:
 	return _drawn
 
 
+## The room's furniture the march's confirm keeps off, in global px: the key
+## slip and tool roll while shown, the docked book. (The margin slip is not
+## here: it makes way for the confirm, `_make_way`.)
+func blocked_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for c: Control in [%KeySlip, %ToolRoll]:
+		if c.visible:
+			out.append(c.get_global_rect())
+	if _folio.visible:
+		out.append(Rect2(_folio.get_global_rect().position + _folio.book_rect().position, _folio.book_rect().size))
+	return out
+
+
 func orders() -> ArmyOrderMenu:
 	return _orders
 
@@ -112,6 +125,10 @@ func open() -> void:
 		_view.set_font(UiPalette.role_font("body_italic"))
 		_build_board()
 		_orders.follow(_view)
+		_orders.blocked_rects = blocked_rects
+		var confirm := _orders.confirm_panel()
+		confirm.placed.connect(_make_way)
+		confirm.visibility_changed.connect(_make_way)
 		Game.state_changed.connect(refresh)
 		(%Key as WarMarginKey).setup(Game.data, _view)
 		_folio.set_tier(Game.data, Map3DQuality.resolve_here(GameRoot.settings_path))
@@ -150,10 +167,18 @@ func _show_board_chrome(on: bool) -> void:
 		# COMMIT) is given up: its arrow must not wait behind the board
 		_orders.withdraw_aim()
 		(%HoverSlip as WarHoverSlip).hide_slip()
+	if on:
+		Game.mark_missives_seen()   # the easel faced: its letters are seen
 	%BackToTable.visible = on
 	_make_way()   # the margin slip makes way for the board (and for a docked book)
 	%KeySlip.visible = not on
 	%ToolRoll.visible = not on
+
+
+## Whether the camera faces the easel's board (or is flying to it): the
+## letters on it count as seen (owner 2026-10-10, GameRoot.missive_board_shown).
+func facing_board() -> bool:
+	return visible and _view != null and _view.board_mode() in ["to_board", "board"]
 
 
 func board_screen() -> MissiveScreen:
@@ -482,6 +507,14 @@ func _make_way() -> void:
 	if _folio.visible and not _folio.is_full():
 		left = _folio.book_rect().end.x + 12.0
 		room = left + 236.0 <= (%KeySlip as Control).position.x - 8.0
+	var confirm := _orders.confirm_panel() if _orders != null else null
+	if room and confirm != null and confirm.visible:
+		var mine := get_global_rect().position
+		var c := Rect2(confirm.get_global_rect().position - mine, confirm.size)
+		var tall := maxf(slip.size.y, 1.0)
+		if Rect2(left, slip.offset_top, 236.0, tall).intersects(c):
+			left = c.end.x + 12.0
+			room = left + 236.0 <= (%KeySlip as Control).position.x - 8.0
 	slip.offset_left = left
 	slip.offset_right = left + 236.0
 	slip.visible = room and _view.board_mode() == "table"

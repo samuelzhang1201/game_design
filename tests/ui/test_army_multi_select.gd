@@ -4,7 +4,7 @@ extends GutTest
 ## order menu's orders riding to each of them — each its own action, its own
 ## courier and its own charge. Driven through the view's real input path
 ## (Map3DView._gui_input), the way tests/map3d/test_map3d_military.gd clicks
-## its counters, with the menu following the live view.
+## its pieces, with the menu following the live view.
 
 const RunDir := preload("res://tests/run_dir.gd")
 var _fixture := RunDir.dir("army_multi_select").path_join("test_army_multi_select_world.tscn")
@@ -73,8 +73,8 @@ func _is_land(code: String) -> bool:
 	return String(ArmySystem.regiment(Game.data, code, Game.state).get("is_naval", "0")) != "1"
 
 
-## A point on screen whose pick is the unit `code` (its piece or its counter);
-## (-1, -1) when it is not on screen.
+## A point on screen whose pick is the unit `code` (a land unit's piece, a
+## fleet's counter); (-1, -1) when it is not on screen.
 func _point_of(v: Map3DView, code: String) -> Vector2:
 	var tries: Array = []
 	if v.unit_rects().has(code):
@@ -179,15 +179,12 @@ func test_shift_click_adds_and_removes() -> void:
 	assert_eq(v.selected_armies(), [a], "a plain click selects one unit")
 
 
-## Every land unit of the realm whose piece or counter touches the box.
+## Every land unit of the realm whose piece touches the box.
 func _touched(v: Map3DView, box: Rect2) -> Array:
 	var out: Array = []
 	for code: String in v.unit_rects():
 		if (v.unit_rects()[code] as Rect2).intersects(box) and not out.has(code):
 			out.append(code)
-	for m: Dictionary in v.army_markers():
-		if (m["rect"] as Rect2).intersects(box) and not out.has(String(m["code"])):
-			out.append(String(m["code"]))
 	return out.filter(func(c: String) -> bool:
 		return String(ArmySystem.regiment(Game.data, c, Game.state).get("kingdom_code", "")) == _realm() \
 			and _is_land(c))
@@ -200,13 +197,15 @@ func test_shift_drag_box_selects_the_units_inside() -> void:
 	# two units whose joint box touches no third
 	var box := Rect2()
 	var pair: Array = []
-	var marks := v.army_markers()
+	var rects: Dictionary = v.unit_rects()
+	var marks: Array = rects.keys().filter(func(c: String) -> bool: return _is_land(c))
+	marks.sort()
 	for i in marks.size():
 		for j in range(i + 1, marks.size()):
-			var r := (marks[i]["rect"] as Rect2).merge(marks[j]["rect"] as Rect2).grow(2.0)
+			var r := (rects[marks[i]] as Rect2).merge(rects[marks[j]] as Rect2).grow(2.0)
 			var hit := _touched(v, r)
 			hit.sort()
-			var want := [String(marks[i]["code"]), String(marks[j]["code"])]
+			var want := [String(marks[i]), String(marks[j])]
 			want.sort()
 			if hit == want and r.size.length() > Map3DInput.CLICK_SLOP * 2.0:
 				box = r
@@ -266,7 +265,7 @@ func test_one_march_sends_a_courier_to_each() -> void:
 	panel.confirm_button().pressed.emit()
 	var marches: Array = []
 	for c: Dictionary in Game.state.couriers:
-		if String((c["order"] as Dictionary).get("action_code", "")) == "ARMY_MARCH":
+		if String(CourierSystem.march_order(c).get("action_code", "")) == "ARMY_MARCH":
 			marches.append(c)
 	assert_eq(marches.size(), 2, "one courier per unit")
 	var targets: Array = marches.map(func(c: Dictionary) -> String: return String(c["target"]))
@@ -275,8 +274,8 @@ func test_one_march_sends_a_courier_to_each() -> void:
 	want.sort()
 	assert_eq(targets, want)
 	if marches.size() == 2:
-		assert_eq(int(marches[0]["order"]["dest_x_m"]), int(marches[1]["order"]["dest_x_m"]), "the same point")
-		assert_eq(int(marches[0]["order"]["dest_y_m"]), int(marches[1]["order"]["dest_y_m"]), "the same point")
+		assert_eq(int(CourierSystem.march_order(marches[0])["dest_x_m"]), int(CourierSystem.march_order(marches[1])["dest_x_m"]), "the same point")
+		assert_eq(int(CourierSystem.march_order(marches[0])["dest_y_m"]), int(CourierSystem.march_order(marches[1])["dest_y_m"]), "the same point")
 	var one := OrderCosts.gold_of(Game.data, "ARMY_MARCH") \
 		+ float(CourierSystem.fee_gold(Game.data, CourierSystem.ORDINARY))
 	assert_gt(one, 0.0)
@@ -336,7 +335,7 @@ func test_mixed_selection_sends_what_it_can() -> void:
 	_choose(menu, ArmyOrderMenu.RATE_BASE + 1)
 	var sets: Array = []
 	for c: Dictionary in Game.state.couriers:
-		if String((c["order"] as Dictionary).get("action_code", "")) == "SUPPLY_POINT_SET":
+		if not CourierSystem.order_with(c, ["SUPPLY_POINT_SET"]).is_empty():
 			sets.append(String(c["target"]))
 	assert_eq(sets, [land], "only the land unit's courier rides")
 	var label := String(ArmySystem.regiment(Game.data, fleet, Game.state)["label"])

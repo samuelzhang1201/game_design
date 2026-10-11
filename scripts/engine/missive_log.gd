@@ -15,11 +15,17 @@ const BATTLE_KINDS := ["battle"]
 ## too (missive_keep_law), so a decree to every camp never pushes a spy's
 ## report or a receipt off a column.
 const LAW_KINDS := ["law"]
+## The couriers' receipts (owner 2026-10-10: the crown's own orders are ground
+## truth): capped apart too (missive_keep_receipt), so a campaign's orders
+## never push the steward's monthly report off the truth column.
+const RECEIPT_KINDS := ["receipt"]
 
 
-## Which cap a kind of letter counts against: "supply", "battle", "law", or ""
-## for the rest (missive_keep_per_column).
+## Which cap a kind of letter counts against: "supply", "battle", "law",
+## "receipt", or "" for the rest (missive_keep_per_column).
 static func keep_group(kind: String) -> String:
+	if kind in RECEIPT_KINDS:
+		return "receipt"
 	if kind in SUPPLY_KINDS:
 		return "supply"
 	if kind in BATTLE_KINDS:
@@ -37,6 +43,8 @@ static func _keep_key(group: String) -> String:
 			return "missive_keep_battle"
 		"law":
 			return "missive_keep_law"
+		"receipt":
+			return "missive_keep_receipt"
 	return "missive_keep_per_column"
 
 
@@ -102,6 +110,35 @@ static func unread(state: GameState) -> int:
 		if not bool(m.get("read", false)):
 			n += 1
 	return n
+
+
+## The letters the player has not yet SEEN (owner 2026-10-10: 括号的数字只显示
+## 玩家没看过的): ids above GameState.missives_seen_id not marked `seen` one by
+## one. The MISSIVE tab's count; `read` is the note's own gold edge, apart.
+static func unseen(state: GameState) -> int:
+	var n := 0
+	for m: Dictionary in state.missives:
+		if int(m["id"]) > state.missives_seen_id and not bool(m.get("seen", false)):
+			n += 1
+	return n
+
+
+## Mark letters seen: every letter so far (id < 0: the board was shown), or
+## one letter (a spy's report opened in its dialog). Returns whether the count
+## of unseen letters can have changed.
+static func mark_seen(state: GameState, id := -1) -> bool:
+	if id < 0:
+		if state.missives_seen_id >= state.next_missive_id:
+			return false
+		state.missives_seen_id = state.next_missive_id
+		for m: Dictionary in state.missives:
+			m.erase("seen")   # the mark covers them now
+		return true
+	var m := find(state, id)
+	if m.is_empty() or id <= state.missives_seen_id or bool(m.get("seen", false)):
+		return false
+	m["seen"] = true
+	return true
 
 
 static func mark_read(state: GameState, id: int) -> void:

@@ -56,6 +56,11 @@ static func estate_tier(repo: DataRepository, focus_code: String, people: float)
 ## the code has none. Cached per repo.
 static var _estate_rows_cache: Dictionary = {}
 
+
+## Drop the per-repo estate rows (DataRepository.forget_derived).
+static func forget() -> void:
+	_estate_rows_cache.clear()
+
 static func estate_rows(repo: DataRepository, focus_code: String) -> Array:
 	var rkey := repo.get_instance_id()
 	if not _estate_rows_cache.has(rkey):
@@ -1047,7 +1052,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		var km := ArmySystem.speed_km_per_day(repo, state, code)
 		var marching := ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH
 		var riding := CourierSystem.pending_for(state, code)
-		if String((riding.get("order", {}) as Dictionary).get("action_code", "")) == "ARMY_MARCH":
+		if String(CourierSystem.march_order(riding).get("action_code", "")) == "ARMY_MARCH":
 			marching = true   # its march order is on the road: the arrival counts the courier too
 		if marching:
 			var days := CourierSystem.days_to_arrival(repo, state, code)

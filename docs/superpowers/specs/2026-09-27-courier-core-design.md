@@ -18,8 +18,17 @@ courier later feeds RD-1's "warning heeded".
 
 - **Approach 1**: a courier is its own engine entity carrying the order. It
   is neither a delay field on the regiment nor a generic agent framework.
-- **Unlimited couriers**: one per order, gone on delivery. There is no stable
-  and no return ride.
+- **Unlimited couriers**: one per TARGET BATCH, gone on delivery. There is no
+  stable and no return ride. Owner 2026-10-10 ("军队出发的时候，同一个信使发送
+  目的地和补给信息，如果信息传递的target是同一个object，只需要一个信使即可以传达
+  多个信息"): a courier record carries `orders` (an Array, run in the sequence
+  given; an old save's single `order` becomes `orders` of one), and an order
+  for a regiment whose newest courier has not yet set out (same kind, issued
+  today, no day ridden, riding to the column — never a spy, a decree, or a
+  supply order bound for its town) rides WITH him (`CourierSystem.joinable`):
+  one fee, one courier id, so "a higher id is newer" holds order by order,
+  and ONE receipt naming every order. The march's confirm and the war room's
+  sealed drafts send supply point, load and march so.
 - **Couriers ride the road network**: roads are fast, trails slower, off-road
   slowest.
 - **Regional weather affects speed only**, for couriers AND regiments.
