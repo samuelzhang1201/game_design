@@ -283,6 +283,10 @@ def prune_images(graph: dict, template: dict, used: int) -> dict:
     return graph
 
 
+MODEL_LOADERS = ("UNETLoader", "UnetLoaderGGUF")  # the node that names a job's diffusion model
+LOADED_MARK = OUT_DIR / ".comfy_loaded"  # the diffusion model the last run left in ComfyUI
+
+
 def free_models() -> bool:
     """Unload ComfyUI's models when its queue is empty. On Apple unified memory
     ComfyUI otherwise keeps the last models (~44 GB after a Qwen-Image-Edit
@@ -299,8 +303,60 @@ def free_models() -> bool:
     except (urllib.error.URLError, OSError, ValueError) as e:
         print(f"could not unload ComfyUI's models: {e}", file=sys.stderr)
         return False
+    LOADED_MARK.unlink(missing_ok=True)
     print("models unloaded from ComfyUI (pass --keep-loaded between the runs of a batch)")
     return True
+
+
+def queued_unets(queue: dict) -> set[str]:
+    """The diffusion models named by the jobs in a /queue answer (running and pending)."""
+    found: set[str] = set()
+    for item in list(queue.get("queue_running", [])) + list(queue.get("queue_pending", [])):
+        graph = item[2] if isinstance(item, list) and len(item) > 2 and isinstance(item[2], dict) else {}
+        for node in graph.values():
+            if isinstance(node, dict) and node.get("class_type") in MODEL_LOADERS:
+                name = node.get("inputs", {}).get("unet_name")
+                if isinstance(name, str):
+                    found.add(name)
+    return found
+
+
+def switch_model(unet: str, poll: float = 10.0) -> None:
+    """Call before queueing jobs for `unet`: a model switch costs one unload.
+    Z-Image (19 GB) and Qwen-Image (31 GB) together exceed the Mac's 48 GB, and
+    ComfyUI never unloads one for the other on unified memory — two runs
+    queued side by side (2026-10-11, the studio logos) swapped 50 GB every job.
+    So: if ComfyUI's queue holds jobs of another model, wait until the queue
+    drains; then, unless the last run left this same model loaded
+    (LOADED_MARK), unload everything. The marker only ever skips a /free, so a
+    stale one costs one needless unload, never a thrashing pair."""
+    waited = False
+    while True:
+        try:
+            q = json.loads(_get("/queue"))
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            print(f"could not read ComfyUI's queue: {e}", file=sys.stderr)
+            return
+        others = queued_unets(q) - {unet}
+        busy = bool(q.get("queue_running") or q.get("queue_pending"))
+        if not others:
+            break
+        if not waited:
+            print(f"waiting: ComfyUI is still on {', '.join(sorted(others))} — queueing {unet} after it drains", flush=True)
+            waited = True
+        time.sleep(poll)
+    if busy:
+        return  # the queue is already on this model; join it
+    last = LOADED_MARK.read_text(encoding="utf-8").strip() if LOADED_MARK.exists() else ""
+    if last == unet:
+        return
+    if free_models():
+        print(f"model switch: {last or 'unknown'} -> {unet}")
+
+
+def mark_loaded(unet: str) -> None:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    LOADED_MARK.write_text(unet + "\n", encoding="utf-8")
 
 
 def make_graph(template: dict, values: dict) -> dict:
@@ -476,6 +532,8 @@ def main() -> int:
     # the hash keys the name to the whole instruction and the pictures.
     edit_key = hashlib.sha1("\n".join([args.instruction] + [p.name for p in images]).encode()).hexdigest()[:6]
     edit_label = re.sub(r"[^A-Za-z0-9_-]+", "-", args.tag).strip("-") if args.tag else slug("", args.instruction)
+    if not args.dry_run:
+        switch_model(preset["unet"])
     jobs = []
     for r in rows:
         prompt = "" if r["id"] == "EDIT" else assemble(r, canvas, style, args.small, fragments)
@@ -522,6 +580,7 @@ def main() -> int:
             print(f"queued {r['id']} seed {seed} -> {res['prompt_id'][:8]}")
     if args.dry_run:
         return 0
+    mark_loaded(preset["unet"])
 
     failures = 0
     for prompt_id, r, name in jobs:
