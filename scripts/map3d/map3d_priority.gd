@@ -12,6 +12,9 @@ const SEA := -1
 const RIVERS := 0
 const ROADS := 1
 const MANOR_EDGES := 2
+## A selected regiment's glow (Map3DUnitGlow): over the roads it stands on, so a
+## road never covers it; under the borders and every ring.
+const UNIT_GLOW := 2
 ## A flowing supply line (Map3DSupplyLines): faint, over the roads, under the borders.
 const SUPPLY_LINES := 2
 const KINGDOM_BAND := 3

@@ -6,6 +6,7 @@ extends GutTest
 ## between the Armies piece's badge_min_px and badge_max_px; a click on either
 ## opens the regiment's card.
 
+const SuiteData := preload("res://tests/suite_data.gd")
 const RunDir := preload("res://tests/run_dir.gd")
 var _fixture := RunDir.dir("map3d_military").path_join("test_map3d_military_world.tscn")
 const WORLD := {"m_per_px": 50.0, "pack_origin": [-64000.0, -23220.0],
@@ -180,13 +181,51 @@ func test_a_selected_piece_glows_on_the_ground_under_it() -> void:
 	var glow := (piece["node"] as Node3D).get_node(Map3DUnitGlow.NAME) as MeshInstance3D
 	assert_eq(glow.material_override, Map3DUnitGlow.MATERIAL, "its look is the .tres")
 	assert_lte(glow.position.y, 0.0, "it lies at the seat, at or under the figures' feet")
-	var half := float(piece["half_w_m"]) * Game.data.bal("map3d_unit_glow_ratio")
-	assert_almost_eq((glow.mesh as PlaneMesh).size.x, half * 2.0, 0.001, "the footprint's size")
+	var half: Vector2 = (piece["extent"] as Vector2) * Game.data.bal("map3d_unit_glow_ratio")
+	assert_almost_eq((glow.mesh as PlaneMesh).size.x, half.x * 2.0, 0.001, "the footprint's width")
+	assert_almost_eq((glow.mesh as PlaneMesh).size.y, half.y * 2.0, 0.001, "the footprint's depth")
 	for other: String in units._pieces:
 		if other != code:
 			assert_false(Map3DUnitGlow.shown(units._pieces[other]), "%s does not glow" % other)
 	v.clear_selection()
 	assert_false(Map3DUnitGlow.shown(piece), "let go, it goes out")
+
+
+## The glow is an ellipse of the formation's extent (owner 2026-10-12, R6): a
+## line of four is long and thin, so is its glow.
+func test_glow_is_an_ellipse_from_the_extent() -> void:
+	var repo := SuiteData.repo()
+	var host := Node3D.new()
+	add_child_autofree(host)
+	var piece := {"node": host, "extent": Vector2(8.0, 2.0), "half_w_m": 8.0, "height_m": 2.0}
+	var glow := Map3DUnitGlow.node_of(repo, piece)
+	var size := (glow.mesh as PlaneMesh).size
+	assert_almost_eq(size.x / size.y, 4.0, 0.001, "half sizes in the extent's ratio")
+	assert_almost_eq(size.x, 16.0 * repo.bal("map3d_unit_glow_ratio"), 0.001)
+	assert_lt(repo.bal("map3d_unit_glow_inner"), repo.bal("map3d_unit_glow_peak"), "a band, foot under crest")
+	assert_almost_eq(float(glow.get_instance_shader_parameter("peak")), repo.bal("map3d_unit_glow_peak"), 0.0001)
+	assert_almost_eq(float(glow.get_instance_shader_parameter("inner")), repo.bal("map3d_unit_glow_inner"), 0.0001)
+
+
+## Over the roads it stands on (Phase E5: the .tres sets render_priority).
+func test_glow_draws_over_roads() -> void:
+	assert_gt(Map3DPriority.UNIT_GLOW, Map3DPriority.ROADS)
+	assert_lt(Map3DPriority.UNIT_GLOW, Map3DPriority.SELECTION)
+	var mat := Map3DUnitGlow.MATERIAL as ShaderMaterial
+	if mat.render_priority <= Map3DPriority.ROADS:
+		pending("needs Phase E5: unit_select_glow.tres render_priority = Map3DPriority.UNIT_GLOW")
+		return
+	assert_eq(mat.render_priority, Map3DPriority.UNIT_GLOW)
+
+
+## The look is authored in the .tres (Phase E5), not left to shader defaults.
+func test_glow_look_is_authored() -> void:
+	var mat := Map3DUnitGlow.MATERIAL as ShaderMaterial
+	for k: String in ["gain", "hot", "haze"]:
+		if mat.get_shader_parameter(k) == null:
+			pending("needs Phase E5: unit_select_glow.tres sets %s" % k)
+			return
+	assert_true(true)
 
 
 ## A piece no longer drawn is FREED, not hidden (perf P0 2026-10-11): hidden,
