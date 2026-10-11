@@ -47,8 +47,9 @@ func test_the_reign_begins_over_two_frames() -> void:
 	assert_eq(r.state, GameRoot.State.CONVERSATION, "the first screen is laid the next frame")
 	assert_eq(Game.state.tick, 1, "a second Start began nothing more")
 
-## The boot asks for the overlays and the art tables on worker threads, so
-## the title's first frame comes at once (BootLoads); all of them come in.
+## The boot asks for the overlays (and, with the 3D map on, the world and the
+## art tables) on worker threads, so the title's first frame comes at once
+## (BootLoads); all of them come in.
 func test_the_boot_reads_the_heavy_art_on_threads() -> void:
 	var r := _root()
 	await wait_until(func() -> bool: return not BootLoads.loading(), 20.0)
