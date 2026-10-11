@@ -1168,6 +1168,27 @@ func test_a_flowing_supply_line_is_laid_and_follows_its_piece() -> void:
 	assert_ne(view.supply_mesh(), before, "laid again to the piece's new place")
 
 
+## Owner 2026-10-11: a FRONT line is drawn on its own dark dashed mesh, never
+## the gold ribbon; flowing again, the dashes go.
+func test_a_broken_supply_line_is_laid_dark_dashed() -> void:
+	var p := _first_land_piece_anywhere()
+	var code := String(p["code"])
+	state.supply_lines[code] = SupplyLines._new_record(TownStores.realm_towns(repo, state)[0], 1000, 1)
+	state.supply_lines[code]["state"] = SupplyLines.FRONT
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	if WarSupplyFlow.routes(repo, state, view.sheet_rect(), SupplyLines.FRONT).is_empty():
+		pass_test("this fixture's line does not reach the sheet")
+		return
+	assert_null(view.supply_mesh(), "no gold ribbon for a broken line")
+	assert_not_null(view.supply_broken_mesh(), "its dark dashes")
+	assert_not_null(view.supply_broken_look(), "worn from war_supply_broken.tres")
+	state.supply_lines[code]["state"] = SupplyLines.FLOWING
+	view.lay_sheet(int(p["sheet"]))
+	await wait_process_frames(2)
+	assert_null(view.supply_broken_mesh(), "flowing again: no dashes")
+
+
 func _first_land_piece_anywhere() -> Dictionary:
 	for p: Dictionary in WarRoom.pieces(repo, state):
 		if not bool(p["naval"]):

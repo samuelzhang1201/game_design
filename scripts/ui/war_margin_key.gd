@@ -23,7 +23,8 @@ const LEGEND := [
 	{"key": "wood", "label": "Woods"}, {"key": "manor", "label": "Manor"},
 	{"key": "walls", "label": "Walled town"}, {"key": "port", "label": "Port"},
 	{"key": "bridge", "label": "Bridge"}, {"key": "ford", "label": "Ford"},
-	{"key": "supply", "label": "Supply line"}, {"key": "courier", "label": "Courier"},
+	{"key": "supply", "label": "Supply line"}, {"key": "supply_broken", "label": "Line broken"},
+	{"key": "courier", "label": "Courier"},
 	{"key": "weather", "label": "Foul weather"}, {"key": "spy", "label": "Spy report"},
 	{"key": "mark_brigands", "label": "Brigands"}, {"key": "mark_pirates", "label": "Pirates"},
 	{"key": "mark_mines", "label": "Mine"}, {"key": "mark_battlefields", "label": "Battlefield"},
@@ -294,6 +295,16 @@ func _draw_mark(key: String, r: Rect2, ink: Color) -> void:
 			draw_line(a, b, edge, line * 2.4, true)
 			draw_line(a, b, gold, line * 1.4, true)
 			draw_line(a.lerp(b, 0.55), a.lerp(b, 0.8), glow, line * 1.4, true)
+		"supply_broken":
+			# a broken (FRONT) line as the table draws it (war_supply_broken.tres):
+			# dark dashes stopping short of the column, a tick across where it breaks
+			var look := _view.supply_broken_look() if _view != null else null
+			var dark: Color = look.get_shader_parameter("colour") if look != null else ink
+			var stop := a.lerp(b, 0.78)
+			for d: PackedVector2Array in WarSheetInk.dashed(PackedVector2Array([a, stop]), r.size.y * 0.45, r.size.y * 0.28):
+				draw_polyline(d, dark, line * 1.2, true)
+			var up := Vector2(0, r.size.y * 0.3)
+			draw_line(stop - up, stop + up, dark, line * 1.2, true)
 		"courier":
 			var intel: Color = pal.get("intel_ink", ink)
 			var c := r.get_center()

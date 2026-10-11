@@ -188,26 +188,6 @@ static func smooth_closed_through(pts: PackedVector2Array, steps: int,
 	return out
 
 
-## `pts` with its last `gap` of length taken off (the line stops short of its
-## end, along its own course); empty when the line is no longer than `gap`.
-## Used where a broken supply line stops short of its column.
-static func stop_short(pts: PackedVector2Array, gap: float) -> PackedVector2Array:
-	if pts.size() < 2:
-		return PackedVector2Array()
-	var left := gap
-	var out := pts.duplicate()
-	while out.size() >= 2:
-		var a := out[out.size() - 2]
-		var b := out[out.size() - 1]
-		var seg := a.distance_to(b)
-		if seg > left:
-			out[out.size() - 1] = b.move_toward(a, left)
-			return out
-		left -= seg
-		out.resize(out.size() - 1)
-	return PackedVector2Array()
-
-
 ## A short bar ACROSS the end of `pts`, `half` each way of its last point,
 ## square to its last segment: [one side, the other]; empty for a line of
 ## fewer than two distinct points (the break mark of a broken supply line).
@@ -220,3 +200,28 @@ static func tick_across(pts: PackedVector2Array, half: float) -> PackedVector2Ar
 		return PackedVector2Array()
 	var n := Vector2(-dir.y, dir.x) * half
 	return PackedVector2Array([end + n, end - n])
+
+
+## `pts` with its tail inside the circle (`centre`, `radius`) taken off: the
+## line stops where it last comes out of the circle, wherever along it the
+## centre lies (a broken supply line stops short of its column's piece even
+## when the road runs on past it). Unchanged when its end lies outside; empty
+## when the whole line lies inside.
+static func stop_outside(pts: PackedVector2Array, centre: Vector2, radius: float) -> PackedVector2Array:
+	var out := pts.duplicate()
+	var inside := Vector2.INF
+	while not out.is_empty() and out[out.size() - 1].distance_to(centre) < radius:
+		inside = out[out.size() - 1]
+		out.resize(out.size() - 1)
+	if out.is_empty() or inside == Vector2.INF:
+		return out if out.size() >= 2 else PackedVector2Array()
+	# where the leg from the last point outside to the first inside crosses the circle
+	var a := out[out.size() - 1]
+	var d := inside - a
+	var f := a - centre
+	var qa := d.dot(d)
+	var qb := 2.0 * f.dot(d)
+	var qc := f.dot(f) - radius * radius
+	var t := (-qb - sqrt(maxf(qb * qb - 4.0 * qa * qc, 0.0))) / (2.0 * maxf(qa, 0.000001))
+	out.append(a + d * clampf(t, 0.0, 1.0))
+	return out if out.size() >= 2 else PackedVector2Array()

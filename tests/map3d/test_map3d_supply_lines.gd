@@ -258,7 +258,9 @@ func test_the_tail_runs_on_from_the_body() -> void:
 ## (95, 30) to (105, 30).
 func test_a_broken_road_stops_short_with_a_tick() -> void:
 	var m := Map3DSupplyBroken.marks(PackedVector2Array([Vector2(0, 0), Vector2(100, 0), Vector2(100, 50)]), 20.0, 5.0)
-	assert_eq(m[0], PackedVector2Array([Vector2(0, 0), Vector2(100, 0), Vector2(100, 30)]))
+	var dashes: PackedVector2Array = m[0]
+	assert_eq(dashes.size(), 3)
+	assert_true(dashes[2].is_equal_approx(Vector2(100, 30)), str(dashes))
 	var tick: PackedVector2Array = m[1]
 	assert_true(tick[0].is_equal_approx(Vector2(95, 30)) and tick[1].is_equal_approx(Vector2(105, 30)), str(tick))
 

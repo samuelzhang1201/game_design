@@ -34,10 +34,11 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_units: Map3DLayerUnit
 
 
 ## The marks of one broken road (world XZ, town first): the road stopped
-## `gap` short of its end (where the column is drawn) and the tick across it
+## where it last comes within `gap` of its end (where the column is drawn;
+## MapGeometry.stop_outside) and the tick across it
 ## there, `tick` each way — [dashes, tick], either empty when too short.
 static func marks(road: PackedVector2Array, gap: float, tick: float) -> Array:
-	var dashes := MapGeometry.stop_short(road, gap)
+	var dashes := MapGeometry.stop_outside(road, road[road.size() - 1], gap) if road.size() >= 2 else PackedVector2Array()
 	return [dashes, MapGeometry.tick_across(dashes, tick)]
 
 

@@ -105,6 +105,7 @@ var supply_preview := PackedVector2Array():
 @onready var _board: MeshInstance3D = %BoardPanel
 @onready var _marker: Node3D = %Marker
 @onready var _supply: MeshInstance3D = %SupplyFlow
+@onready var _supply_broken: MeshInstance3D = %SupplyBroken   # FRONT lines, dark dashed (owner 2026-10-11)
 
 var _repo: DataRepository
 var _state_fn: Callable
@@ -147,6 +148,7 @@ var _toss_t := 0.0
 var _toss_to := -1
 var _toss_n := 0
 var _supply_routes: Array = []   # the flowing supply roads on this sheet (WarSupplyFlow.routes), read on a state change
+var _broken_routes: Array = []   # the broken (FRONT) ones, drawn dark dashed
 
 
 ## No slip while the camera or the sheet moves, in board mode, or while a
@@ -454,6 +456,7 @@ func _process(delta: float) -> void:
 	_pennants.visible = _pieces.visible
 	_plan_pieces.visible = _pieces.visible
 	_supply.visible = _pieces.visible
+	_supply_broken.visible = _pieces.visible
 
 
 func tossing() -> bool:
@@ -646,6 +649,7 @@ func _finish_swap() -> void:
 	_plan_pieces.visible = true
 	_pennants.visible = true
 	_supply.visible = true
+	_supply_broken.visible = true
 
 
 ## The laid sheet's intelligence layer onto the table's material (redrawn only
@@ -876,20 +880,22 @@ func redraw_marks() -> void:
 ## The flowing supply roads on the laid sheet, found again (the state moved).
 func _read_supply() -> void:
 	_supply_routes = WarSupplyFlow.routes(_repo, state(), _rect) if _sheet >= 0 else []
+	_broken_routes = WarSupplyFlow.routes(_repo, state(), _rect, SupplyLines.FRONT) if _sheet >= 0 else []
 	_lay_supply()
 
 
 ## The supply lines' gold ribbons, each ending where its piece stands NOW
-## (mid-push included; one piece a unit).
+## (mid-push included; one piece a unit), and the broken ones' dashes.
 func _lay_supply() -> void:
+	var at := piece_pack_positions()
+	var ends := {}
+	for r: Dictionary in _supply_routes + _broken_routes:
+		var code := String(r["code"])
+		ends[code] = at[code] if at.has(code) else position_of(code)
+	_lay_broken(ends)
 	if _supply_routes.is_empty():
 		_supply.mesh = null
 		return
-	var at := piece_pack_positions()
-	var ends := {}
-	for r: Dictionary in _supply_routes:
-		var code := String(r["code"])
-		ends[code] = at[code] if at.has(code) else position_of(code)
 	var lines: Array = []
 	for l: Dictionary in WarSupplyFlow.lines(_supply_routes, ends, _rect):
 		var pts := PackedVector3Array()
@@ -897,6 +903,36 @@ func _lay_supply() -> void:
 			pts.append(table_point(p))
 		lines.append(pts)
 	_supply.mesh = WarSupplyFlow.ribbon(lines)
+
+
+## A broken (FRONT) line (owner 2026-10-11): dark dashes from its town along
+## the road, stopping war_supply_broken_gap_mm of table short of its piece, a
+## solid tick war_supply_broken_tick_mm each way across where it breaks.
+func _lay_broken(ends: Dictionary) -> void:
+	if _broken_routes.is_empty():
+		_supply_broken.mesh = null
+		return
+	var px_per_m := _rect.size.x / maxf(_table_w, 0.0001)   # pack px a table metre
+	var lines: Array = []
+	var starts: Array = []
+	for l: Dictionary in WarSupplyFlow.broken_lines(_broken_routes, ends, _rect,
+			_repo.bal("war_supply_broken_gap_mm") / 1000.0 * px_per_m, _repo.bal("war_supply_broken_tick_mm") / 1000.0 * px_per_m):
+		var pts := PackedVector3Array()
+		for p: Vector2 in (l["tick"] if l.has("tick") else l["poly"]):
+			pts.append(table_point(p))
+		lines.append(pts)
+		starts.append(-1.0 if l.has("tick") else 0.0)   # the tick runs negative: drawn whole
+	_supply_broken.mesh = WarSupplyFlow.ribbon(lines, starts)
+
+
+## The broken supply lines' mesh now (tests read it).
+func supply_broken_mesh() -> ArrayMesh:
+	return _supply_broken.mesh as ArrayMesh
+
+
+## The broken lines' look (war_supply_broken.tres): the key slip draws its row from it.
+func supply_broken_look() -> ShaderMaterial:
+	return _supply_broken.material_override as ShaderMaterial
 
 
 ## The supply lines' look (war_supply_flow.tres): the key slip draws its line from it.

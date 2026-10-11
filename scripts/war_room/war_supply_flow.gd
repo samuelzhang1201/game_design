@@ -12,15 +12,17 @@ extends RefCounted
 
 ## Each FLOWING line of the player's realm whose road touches `rect` (pack
 ## px): [{code, route}], the route from its town to the column (the courier's
-## road, SupplySystem.route_px), in code order.
-static func routes(repo: DataRepository, state: GameState, rect: Rect2) -> Array:
+## road, SupplySystem.route_px), in code order. `want` FRONT: the broken
+## lines instead (SupplyLines.drawn_broken's, owner 2026-10-11).
+static func routes(repo: DataRepository, state: GameState, rect: Rect2, want := SupplyLines.FLOWING) -> Array:
 	var out: Array = []
 	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state).map(
 		func(x: Dictionary) -> String: return String(x["regiment_code"]))
 	ours.sort()
 	for code: String in ours:
-		# only the wagons rolling are a road (as the 3D map): no ordered, riding or cut line
-		if String(SupplyLines.line(state, code).get("state", "")) != SupplyLines.FLOWING:
+		# only the wagons rolling are a road (as the 3D map): no ordered, riding or cut
+		# line; a FRONT one is asked for apart (drawn broken)
+		if String(SupplyLines.line(state, code).get("state", "")) != want:
 			continue
 		var route := SupplySystem.route_px(repo, state, code)
 		if route.size() >= 2 and rect.grow(rect.size.x * 0.05).intersects(_box(route)):
@@ -36,35 +38,61 @@ static func lines(routes_: Array, ends: Dictionary, rect: Rect2) -> Array:
 	var box := PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), rect.end,
 		Vector2(rect.position.x, rect.end.y)])
 	for r: Dictionary in routes_:
-		var route: PackedVector2Array = (r["route"] as PackedVector2Array).duplicate()
 		var code := String(r["code"])
-		if ends.has(code):
-			var end: Vector2 = ends[code]
-			if route[route.size() - 1].distance_to(end) <= 0.01:
-				route[route.size() - 1] = end
-			else:
-				route.append(end)   # the road ends at the column; the piece may stand a step on
-		for piece: PackedVector2Array in Geometry2D.intersect_polyline_with_polygon(route, box):
+		for piece: PackedVector2Array in Geometry2D.intersect_polyline_with_polygon(_ended(r, ends), box):
 			if piece.size() >= 2:
 				out.append({"code": code, "poly": piece})
+	return out
+
+
+## A route `r` ({code, route}) ended where its piece is drawn (`ends`).
+static func _ended(r: Dictionary, ends: Dictionary) -> PackedVector2Array:
+	var route: PackedVector2Array = (r["route"] as PackedVector2Array).duplicate()
+	var code := String(r["code"])
+	if ends.has(code):
+		var end: Vector2 = ends[code]
+		if route[route.size() - 1].distance_to(end) <= 0.01:
+			route[route.size() - 1] = end
+		else:
+			route.append(end)   # the road ends at the column; the piece may stand a step on
+	return route
+
+
+## The BROKEN lines' marks (owner 2026-10-11): each route ended where its
+## piece is drawn (`ends`, as `lines`), stopped where it last comes within
+## `gap_px` of the piece (MapGeometry.stop_outside) and clipped to the sheet: [{code, poly}] the
+## dashes, and [{code, tick}] a bar `tick_px` each way across the road where it
+## breaks (MapGeometry.tick_across), only when that point lies on the sheet.
+static func broken_lines(routes_: Array, ends: Dictionary, rect: Rect2, gap_px: float, tick_px: float) -> Array:
+	var out: Array = []
+	for r: Dictionary in routes_:
+		var ended := _ended(r, ends)
+		var cut := MapGeometry.stop_outside(ended, ended[ended.size() - 1], gap_px)
+		if cut.size() < 2:
+			continue
+		out.append_array(lines([{"code": r["code"], "route": cut}], {}, rect))
+		if rect.has_point(cut[cut.size() - 1]):
+			out.append({"code": r["code"], "tick": MapGeometry.tick_across(cut, tick_px)})
 	return out
 
 
 ## A ribbon down each line (table metres, the town first): two vertices at
 ## each point ON the line, NORMAL the side each grows toward (the shader
 ## widens them by its own width_m), UV.x the metres run from the line's
-## start, UV.y 0 / 1 across. Null when there is nothing to draw.
-static func ribbon(lines_: Array) -> ArrayMesh:
+## start (from `starts`' entry for it when given: a broken line's tick runs
+## negative, drawn whole), UV.y 0 / 1 across. Null when there is nothing to draw.
+static func ribbon(lines_: Array, starts: Array = []) -> ArrayMesh:
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
 	var idx := PackedInt32Array()
-	for pts: PackedVector3Array in lines_:
+	for li in lines_.size():
+		var pts: PackedVector3Array = lines_[li]
 		var n := pts.size()
 		if n < 2:
 			continue
 		var base := verts.size()
-		var run := 0.0
+		var run := float(starts[li]) if li < starts.size() else 0.0
 		for i in n:
 			if i > 0:
 				run += pts[i].distance_to(pts[i - 1])

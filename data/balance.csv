@@ -990,6 +990,8 @@ war_supply_exit_font_px,18,"WAR ROOM tools polish (B1): the lettering of the sup
 war_supply_exit_halo_alpha,0.85,"WAR ROOM tools polish (B1): the parchment halo behind the supply exit mark's name, its alpha"
 war_supply_exit_halo_px,5,"WAR ROOM tools polish (B1): the parchment halo behind the supply exit mark's name, its outline width in design px"
 war_supply_lit_px,11,"WAR ROOM draw orders (ruling 13): a town that may supply the march, its lit ring's radius in design px"
+war_supply_broken_gap_mm,28,"WAR ROOM broken supply line (owner 2026-10-11): a FRONT line's dark dashes stop this many table millimetres short of its piece's centre (war_piece_plinth_mm is the plinth across), where the line breaks"
+war_supply_broken_tick_mm,5,"WAR ROOM broken supply line (owner 2026-10-11): the solid tick across the road where it breaks, table millimetres each way"
 supply_rate_default,1000,"WAR ROOM draw orders (ruling 13): the rate (per mille, one of SupplyLines.RATES) a supply point chosen on the march's confirm runs at when the regiment has no line yet"
 war_order_feeder_mm,4,"WAR ROOM draw orders (ruling 10): a march drawn for several, each other regiment's crayon line joining the lead's arrow, its width in table mm"
 war_confirm_route_weight,1000,"WAR ROOM march confirm: the route box covered by the confirm costs this many times a blocked rect (the key slip, the tool roll, the docked folio) covered, so the march is never hidden while any spot avoids it; well below the 1e9 sentinel that bars the panel from the tip itself"
