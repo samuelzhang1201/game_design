@@ -413,7 +413,7 @@ func _process(delta: float) -> void:
 	if _loaded:
 		_weather.step()
 		_clouds.step(delta)
-		if _units.step(delta): _hud.refresh()  # chips hang over walking pieces
+		if _units.step(delta): _hud.refresh()  # the routes and the glow follow walking pieces
 		_dust.step()  # behind them, the dust they raise
 		if _couriers.step(delta): _hud.refresh()  # the couriers' roads and counters follow them
 		_supply.step(delta)  # the flowing lines, to the pieces as drawn
@@ -429,7 +429,8 @@ func _process(delta: float) -> void:
 
 func request_hover(pos: Vector2) -> void: _picker.request(pos)
 
-func refresh_hud() -> void: if _loaded: _hud.refresh()
+func refresh_hud() -> void:  # the selection changed: the HUD and the pieces' glow follow it
+	if _loaded: _units.set_selected(_selection.armies); _hud.refresh()
 
 func compass_rect() -> Rect2: return _hud.compass_rect() if _loaded else Rect2()
 
@@ -466,8 +467,7 @@ func set_military(on: bool) -> void:
 		_units.set_shown(on)
 		_hud.refresh()
 
-# MILITARY's 3D pieces: heads (the chip hangs there), boxes (clicks), count, motion.
-func unit_tops() -> Dictionary: return _units.screen_tops() if _loaded else {}
+func unit_has_piece(code: String) -> bool: return _units.has_piece(code) if _loaded else false  # MILITARY's pieces
 func unit_positions() -> Dictionary: return _units.shown_positions() if _loaded else {}
 func unit_pack_positions() -> Dictionary:  # the WAR ROOM's pieces (Map3DGeometry.world_to_pack_all)
 	if _loaded: _units.step(0.0)

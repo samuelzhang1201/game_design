@@ -671,14 +671,6 @@ func _march3d_step(o: int) -> void:
 				target = c
 				break
 		if target.x < 0.0:
-			# every column quartered: a land regiment's counter, a town of one regiment
-			for m: Dictionary in mv.army_markers():
-				var r: Rect2 = m["rect"]
-				if not bool(m["naval"]) and (m.get("codes", [m.get("code", "")]) as Array).size() <= 1 \
-						and Rect2(Vector2.ZERO, mv.size).has_point(r.get_center()):
-					target = r.get_center()
-					break
-		if target.x < 0.0:
 			push_error("march3d: no piece on screen")
 		else:
 			_real_click(mv, target)

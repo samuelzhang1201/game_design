@@ -36,7 +36,7 @@ func test_the_picker_picks_what_the_view_picks() -> void:
 	var v := _view()
 	var picker := v.component("picker") as Map3DPicker
 	assert_not_null(picker)
-	# the counters spread round their towns (Map3DDeclutter) and one may cover
+	# the units' pieces stand round their towns and one may cover
 	# the view's middle: this asks about the town, so the layer is off
 	v.set_military(false)
 	var at := v.size * 0.5

@@ -44,14 +44,14 @@ func _same_pose() -> bool:
 	return false
 
 
-## One entry {code, text, pos (design px), px} per kingdom whose LIVE label
-## anchor (MapOwnership.label_anchor) is before the camera and whose word —
-## map_label_scale_px pack px tall on the ground, seen from its own distance —
-## reaches map_label_min_px; capped at map_label_max_px. A name is lettered
-## whole (visual review 2026-10-05: "gate" and half a "Kelvarn" were cut by
-## the sheet's edge): a word the view's edge would cut slides inside it —
-## never more than half its own size, since only a word that already
-## reaches into the view is shown — and stays over its own land.
+## One entry {code, text, pos (design px), px, fade} per kingdom whose LIVE
+## label anchor (MapOwnership.label_anchor) is ON SCREEN — a name is pinned to
+## its ground and goes with it when the view leaves it (owner 2026-10-10: 国家
+## 名不要总是跟随视角变动保持显示) — sized as a word map_label_scale_px pack px
+## tall on the ground seen from its own distance (label_px), so it
+## grows and shrinks with the land, and shown only at the far, strategic zoom:
+## whole up to map_label_fade_from_px, fading out to nothing at
+## map_label_hide_px (label_fade).
 func entries() -> Array:
 	if not bound():
 		return []
@@ -64,43 +64,44 @@ func entries() -> Array:
 	var s := ctx.viewport_px_scale()
 	var height_m := repo.bal("map_label_scale_px") * float(ctx.meta.get("m_per_px", 0.0))
 	var eye := camera.global_position
-	var font := UiPalette.map_label_font()
 	var frame := Rect2(Vector2.ZERO, ctx.view_size)
 	for code: String in repo.kingdoms:
 		var ground: Vector3 = anchors[code]
 		if camera.is_position_behind(ground):
 			continue
+		var pos := camera.unproject_position(ground) / s
+		if not frame.has_point(pos):
+			continue
 		var mpp := Map3DGeometry.metres_per_pixel(eye.distance_to(ground),
 			repo.bal("map3d_fov_deg"), maxf(ctx.view_size.y, 1.0))
-		var px := Map3DGeometry.label_px(height_m, mpp, repo.bal("map_label_min_px"),
-			repo.bal("map_label_max_px"))
-		if px <= 0.0:
+		var px := label_px(height_m, mpp, repo.bal("map_label_min_px"))
+		var fade := label_fade(px, repo.bal("map_label_fade_from_px"),
+			repo.bal("map_label_hide_px"))
+		if px <= 0.0 or fade <= 0.0:
 			continue
-		var text := String(repo.kingdoms[code]["label"])
-		var pos := camera.unproject_position(ground) / s
-		if font != null:
-			var box := MapLettering.box_centred(repo, font, text, pos, px)
-			if not frame.intersects(box):
-				continue
-			pos += inward(box, frame, px * 0.5)
-		out.append({"code": code, "text": text, "pos": pos, "px": px})
+		out.append({"code": code, "text": String(repo.kingdoms[code]["label"]), "pos": pos,
+			"px": px, "fade": fade})
 	_entries = out
 	return out
 
 
-## How far `box` must move to lie `margin` inside `frame` (ZERO when it
-## already does; a box wider than the frame is centred on it).
-static func inward(box: Rect2, frame: Rect2, margin: float) -> Vector2:
-	var inner := frame.grow(-margin)
-	var out := Vector2.ZERO
-	for axis: int in 2:
-		if box.size[axis] >= inner.size[axis]:
-			out[axis] = inner.get_center()[axis] - box.get_center()[axis]
-		elif box.position[axis] < inner.position[axis]:
-			out[axis] = inner.position[axis] - box.position[axis]
-		elif box.end[axis] > inner.end[axis]:
-			out[axis] = inner.end[axis] - box.end[axis]
-	return out
+## A kingdom name's size in screen px: a word `height_m` tall on the ground
+## seen at `m_per_px` — it scales with the ground, never held to one size —
+## and 0 (hidden) below `min_px`.
+static func label_px(height_m: float, m_per_px: float, min_px: float) -> float:
+	var px := height_m / maxf(m_per_px, 0.0001)
+	return 0.0 if px < min_px else px
+
+
+## How much of a kingdom name shows at `px` (label_px): whole up to
+## `fade_from_px`, fading out to nothing at `hide_px` — a name is the far,
+## strategic view's lettering and is gone close in.
+static func label_fade(px: float, fade_from_px: float, hide_px: float) -> float:
+	if px >= hide_px:
+		return 0.0
+	if px <= fade_from_px or hide_px <= fade_from_px:
+		return 1.0
+	return (hide_px - px) / (hide_px - fade_from_px)
 
 
 ## The boxes the names are lettered in, in design px (the weather marks keep
@@ -134,5 +135,5 @@ func _draw() -> void:
 	var frame := Rect2(Vector2.ZERO, ctx.view_size)
 	for e: Dictionary in entries():
 		if MapLettering.draw_centred(self, ctx.repo, font, String(e["text"]), e["pos"],
-				float(e["px"]), frame):
+				float(e["px"]), frame, float(e["fade"])):
 			_drawn.append(String(e["code"]))
