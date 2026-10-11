@@ -60,6 +60,9 @@ func test_continue_walks_every_page_then_the_reign_begins() -> void:
 		var btn: Button = replies[0]
 		await wait_until(func() -> bool: return btn.visible, 1.0)
 		assert_eq(btn.text, "I am ready. Let the reign begin." if i == pages - 1 else "Continue")
+		if scene.narration_left_frame != null:
+			assert_true(scene.narration_left_frame.visible and scene.narration_right_frame.visible,
+				"both busts up on page %d" % (i + 1))
 		var scroll: ScrollContainer = scene.speech_scroll()
 		await wait_process_frames(2)
 		var bar := scroll.get_v_scroll_bar()

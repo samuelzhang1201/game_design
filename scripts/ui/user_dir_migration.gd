@@ -35,8 +35,8 @@ static func copy_missing(from_dir: String, to_dir: String, files: PackedStringAr
 		out.store_buffer(bytes)  # returns void in this build; the error is read off the file
 		var write_error := out.get_error()
 		out.close()
-		if write_error != OK or DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(dst)) != OK:
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+		if write_error != OK or DirAccess.rename_absolute(tmp, dst) != OK:
+			DirAccess.remove_absolute(tmp)
 			continue
 		copied.append(name)
 	return copied
