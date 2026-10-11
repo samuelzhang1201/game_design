@@ -250,3 +250,38 @@ func test_the_tail_runs_on_from_the_body() -> void:
 	assert_eq((arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size(), 2 * (tail.size() - 1) * 6)
 	assert_eq((arrays[Mesh.ARRAY_INDEX] as PackedInt32Array)[(tail.size() - 1) * 6], tail.size() * 2,
 		"the second tail's triangles index its own vertices")
+
+
+## A BROKEN line (owner 2026-10-11): its marks stop short of the column with a
+## tick across. Road (0,0) -> (100,0) -> (100,50), gap 20, tick 5: the dashes
+## end at (100, 30) (the last leg 50 -> 30), the tick square to that leg (south):
+## (95, 30) to (105, 30).
+func test_a_broken_road_stops_short_with_a_tick() -> void:
+	var m := Map3DSupplyBroken.marks(PackedVector2Array([Vector2(0, 0), Vector2(100, 0), Vector2(100, 50)]), 20.0, 5.0)
+	var dashes: PackedVector2Array = m[0]
+	assert_eq(dashes.size(), 3)
+	assert_true(dashes[2].is_equal_approx(Vector2(100, 30)), str(dashes))
+	var tick: PackedVector2Array = m[1]
+	assert_true(tick[0].is_equal_approx(Vector2(95, 30)) and tick[1].is_equal_approx(Vector2(105, 30)), str(tick))
+
+
+## Only a FRONT line is drawn broken — its dashes, tick and halo, the dashes over
+## the halo; a cut or flowing one draws none of them.
+func test_the_layer_draws_a_front_line_dark_dashed() -> void:
+	_s.supply_lines[_code]["state"] = SupplyLines.FRONT
+	var got := _layer()
+	var layer: Map3DSupplyLines = got[0]
+	var lines: Map3DLayerLines = got[1]
+	layer.redraw()
+	assert_null(lines.line_mesh("SupplyLines"), "no gold line")
+	assert_not_null(lines.line_mesh("SupplyBroken"), "the dark dashes")
+	assert_not_null(lines.line_mesh("SupplyBreak"), "the tick where it breaks")
+	assert_not_null(lines.line_mesh("SupplyBrokenHalo"))
+	assert_gt((lines.line_mesh("SupplyBroken").surface_get_material(0) as ShaderMaterial).render_priority,
+		(lines.line_mesh("SupplyBrokenHalo").surface_get_material(0) as ShaderMaterial).render_priority, "dashes over the halo")
+	for st: String in [SupplyLines.CUT, SupplyLines.FLOWING]:
+		_s.supply_lines[_code]["state"] = st
+		layer.step(0.016)
+		assert_null(lines.line_mesh("SupplyBroken"), st)
+		assert_null(lines.line_mesh("SupplyBreak"), st)
+	await wait_process_frames(2)

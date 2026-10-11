@@ -67,14 +67,15 @@ func _motion(view: WarRoomView, at: Vector2, rel := Vector2.ZERO) -> void:
 	view._gui_input(e)
 
 
-## A real Shift-drag box round `spot` (screen px), `half` px each way.
-func _box_round(view: WarRoomView, spot: Vector2, half := 90.0) -> void:
+## A real drag box round `spot` (screen px), `half` px each way — Shift held
+## unless `shift` is false (then a row must be lit for it to box).
+func _box_round(view: WarRoomView, spot: Vector2, half := 90.0, shift := true) -> void:
 	var from := spot - Vector2(half, half)
 	var to := spot + Vector2(half, half)
-	_button(view, from, true, MOUSE_BUTTON_LEFT, true)
+	_button(view, from, true, MOUSE_BUTTON_LEFT, shift)
 	for i in range(1, 9):
 		_motion(view, from.lerp(to, float(i) / 8.0))
-	_button(view, to, false, MOUSE_BUTTON_LEFT, true)
+	_button(view, to, false, MOUSE_BUTTON_LEFT, shift)
 
 
 ## The DRAWN screen spot of one of our land pieces.
@@ -94,7 +95,9 @@ func test_a_box_over_our_units_selects_them_after_red_work() -> void:
 	_click(view, view.screen_pos_of_px(WarPlans.at_px(Game.data, Game.state.war_plans["pieces"][id])))
 	assert_eq(view.plan_input().sel_side, "red")
 	var code := String(_land_piece(screen)["code"])
-	_box_round(view, _drawn_spot(screen, code))
+	var roll := screen.get_node("%ToolRoll") as WarToolRoll
+	roll.slot("blue", "blue").pressed.emit("blue")   # ours lit: a plain drag boxes our units (owner 2026-10-11)
+	_box_round(view, _drawn_spot(screen, code), 90.0, false)
 	assert_eq(view.plan_input().sel_side, "blue")
 	assert_true(code in view.plan_input().sel, "the boxed unit is chosen")
 

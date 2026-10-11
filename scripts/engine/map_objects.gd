@@ -680,8 +680,12 @@ static func manor_card(repo: DataRepository, state: GameState, cell: int) -> Dic
 
 ## One fact of a manor card: an icon key (data/resource_icons.csv), a short
 ## value for beside it, and the whole of it for the tooltip.
-static func _stat(key: String, text: String, tooltip: String) -> Dictionary:
-	return {"key": key, "text": text, "tooltip": tooltip}
+## A card's fact; `tone` "warn" asks the card for its warning ink (CardWarn).
+static func _stat(key: String, text: String, tooltip: String, tone := "") -> Dictionary:
+	var st := {"key": key, "text": text, "tooltip": tooltip}
+	if tone != "":
+		st["tone"] = tone
+	return st
 
 ## The manor's price stat (owner 2026-09-14): what the crown could sell it
 ## for, or what its house is asking. Used by both the full card and the
@@ -997,6 +1001,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 			var refill := SupplyLines.refill_words(repo, state, code)
 			var ln := SupplyLines.line(state, code)
 			var text := "none"
+			var tone := ""   # "warn": the card writes it in CardWarn (a broken or cut line)
 			var tip := "No supply point — it eats what it carries%s" % ("" if refill == "" else "; " + refill)
 			match String(line["state"]):
 				SupplyLines.ORDERED:
@@ -1018,11 +1023,13 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 					# broken: its town now lies ahead of the column (ruling 20 kept daily)
 					text = SupplyLines.words(repo, "front_card", {}, "label", "Line broken")
 					tip = SupplyLines.front_words(repo, state, code)
+					tone = "warn"
 				SupplyLines.CUT:
 					text = "cut"
+					tone = "warn"
 					tip = "The road from %s is cut by %s" % [from,
 						String((repo.kingdoms.get(String(ln["cut_by"]), {}) as Dictionary).get("label", ln["cut_by"]))]
-			stats.append(_stat("army_supply_line", text, tip))
+			stats.append(_stat("army_supply_line", text, tip, tone))
 		if naval:
 			stats.append(_stat("army_morale", str(int(st["morale"])), "Morale — %d of 100" % int(st["morale"])))
 		else:

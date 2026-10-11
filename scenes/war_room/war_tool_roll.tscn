@@ -17,7 +17,7 @@ theme_override_constants/separation = 4
 [node name="Hand" type="Control" parent="Row" unique_id=2022221510]
 custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-tooltip_text = "The hand (Esc): choose and carry — click a piece, Shift-click to add, Shift-drag to box several"
+tooltip_text = "The hand: click a piece to choose it, Shift-click to add one; a drag pans the table (Space+drag and the middle button pan with any stick)"
 mouse_default_cursor_shape = 2
 script = ExtResource("4_xpj0i")
 glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
@@ -39,7 +39,7 @@ metadata/side = "red"
 [node name="Red" type="Control" parent="Row/Sides/Theirs" unique_id=2138504980]
 custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-tooltip_text = "Theirs — the minium red crayon: the enemy and the supposed enemy (Tab switches side)"
+tooltip_text = "Theirs — the minium red crayon: the enemy and the supposed enemy; a drag on open table boxes their pieces (Tab switches side)"
 mouse_default_cursor_shape = 2
 script = ExtResource("4_xpj0i")
 key = "red"
@@ -133,7 +133,7 @@ metadata/side = "blue"
 [node name="Blue" type="Control" parent="Row/Sides/Ours" unique_id=1185302153]
 custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-tooltip_text = "Ours — the woad blue crayon: our own regiments (Tab switches side)"
+tooltip_text = "Ours — the woad blue crayon: our own regiments; a drag on open table boxes them (Tab switches side)"
 mouse_default_cursor_shape = 2
 script = ExtResource("4_xpj0i")
 key = "blue"

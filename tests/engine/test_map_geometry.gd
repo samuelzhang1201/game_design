@@ -217,3 +217,29 @@ func test_a_duplicated_last_point_carries_its_pin_into_index_0() -> void:
 	var back := (out[0] - out[out.size() - 1]).normalized()
 	assert_almost_eq(back.y, 0.0, 0.06, "arrives close to due east along 3->0")
 
+
+## A broken supply line stops short of its column (owner 2026-10-11): an L
+## (0,0) -> (10,0) -> (10,4), the circle round its end (10,4). Radius 3: the
+## last leg leaves the circle at (10,1). Radius 5: the last leg lies inside, the
+## first leaves it where (x-10)^2 + 16 = 25, x = 7: (7,0). A circle round a
+## point the road passes ((5,1), radius 2): the tail from (5,0) on is inside
+## only near it — its end (10,4) lies outside, so nothing is taken.
+func test_stop_outside_takes_the_tail_inside_the_circle_off() -> void:
+	var l := PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(10, 4)])
+	var a := MapGeometry.stop_outside(l, Vector2(10, 4), 3.0)
+	assert_eq(a.size(), 3)
+	assert_true(a[2].is_equal_approx(Vector2(10, 1)), str(a[2]))
+	var b := MapGeometry.stop_outside(l, Vector2(10, 4), 5.0)
+	assert_eq(b.size(), 2)
+	assert_true(b[1].is_equal_approx(Vector2(7, 0)), str(b[1]))
+	assert_eq(MapGeometry.stop_outside(l, Vector2(5, 1), 2.0), l, "its end outside: unchanged")
+	assert_eq(MapGeometry.stop_outside(l, Vector2(5, 2), 50.0), PackedVector2Array(), "all inside: nothing")
+
+## The break's tick: square to the last leg (east), half 2 each way of the end
+## (10, 0): (10, 2) and (10, -2).
+func test_tick_across_stands_square_to_the_last_leg() -> void:
+	var t := MapGeometry.tick_across(PackedVector2Array([Vector2(0, 0), Vector2(10, 0)]), 2.0)
+	assert_eq(t.size(), 2)
+	assert_true(t[0].is_equal_approx(Vector2(10, 2)), str(t[0]))
+	assert_true(t[1].is_equal_approx(Vector2(10, -2)), str(t[1]))
+	assert_eq(MapGeometry.tick_across(PackedVector2Array([Vector2(3, 3), Vector2(3, 3)]), 2.0), PackedVector2Array())

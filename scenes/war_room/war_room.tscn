@@ -6,14 +6,15 @@
 [ext_resource type="PackedScene" uid="uid://bi50lh10t5vir" path="res://assets/3D/war_room/rake/rake.glb" id="4_bwuxm"]
 [ext_resource type="PackedScene" uid="uid://cw4xr6qb7ll1n" path="res://assets/3D/war_room/candlestick/candlestick.glb" id="5_13ru6"]
 [ext_resource type="Material" path="res://scenes/war_room/materials/war_table.tres" id="6_ycnr8"]
-[ext_resource type="Material" path="res://scenes/war_room/materials/war_supply_flow.tres" id="7_gdvur"]
+[ext_resource type="Material" uid="uid://bchvm38kygdud" path="res://scenes/war_room/materials/war_supply_flow.tres" id="7_gdvur"]
 [ext_resource type="Script" uid="uid://cb5ix87vpi32" path="res://scripts/war_room/war_pieces.gd" id="7_qefqx"]
-[ext_resource type="Script" path="res://scripts/war_room/war_plan_pieces.gd" id="8_72abi"]
+[ext_resource type="Script" uid="uid://c576m3msu8lfr" path="res://scripts/war_room/war_plan_pieces.gd" id="8_72abi"]
+[ext_resource type="Material" path="res://scenes/war_room/materials/war_supply_broken.tres" id="8_bw32x"]
 [ext_resource type="Script" uid="uid://d4ak510hs1jur" path="res://scripts/war_room/war_pennants.gd" id="8_g585r"]
 [ext_resource type="PackedScene" uid="uid://crhxjpb0voenb" path="res://assets/3D/war_room/pennant/pennant.glb" id="9_mbbr6"]
 [ext_resource type="Script" uid="uid://cfv64budsa2t3" path="res://scripts/war_room/war_ink_painter.gd" id="10_bfe1t"]
 [ext_resource type="Script" uid="uid://b2lueju2wrv3g" path="res://scripts/war_room/war_hud.gd" id="11_8tgs3"]
-[ext_resource type="Script" path="res://scripts/war_room/war_plan_hud.gd" id="12_54vep"]
+[ext_resource type="Script" uid="uid://dgf0b0v3604b5" path="res://scripts/war_room/war_plan_hud.gd" id="12_54vep"]
 
 [sub_resource type="Environment" id="Environment_room"]
 background_mode = 1
@@ -265,6 +266,12 @@ unique_name_in_owner = true
 unique_name_in_owner = true
 editor_description = "The crown's FLOWING supply lines (WarSupplyFlow): its mesh is laid in code from the state and the pieces; its look is war_supply_flow.tres."
 material_override = ExtResource("7_gdvur")
+cast_shadow = 0
+
+[node name="SupplyBroken" type="MeshInstance3D" parent="Viewport" unique_id=1954542723]
+unique_name_in_owner = true
+editor_description = "The crown's BROKEN (FRONT) supply lines (WarSupplyFlow.broken_lines): its mesh is laid in code from the state and the pieces; its look is war_supply_broken.tres."
+material_override = ExtResource("8_bw32x")
 cast_shadow = 0
 
 [node name="Pieces" type="Node3D" parent="Viewport" unique_id=1468745768]

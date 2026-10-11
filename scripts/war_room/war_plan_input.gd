@@ -12,7 +12,8 @@ extends RefCounted
 ## piece is carried by a drag (a click chooses and selects it), a stroke's
 ## handle reshapes it, its line moves it, a front's facing handle turns its
 ## teeth; a click on an intel hint selects it; Shift-click adds to the
-## selection, Shift-drag on open table boxes every piece of the side. Crown
+## selection; with a side's row lit and nothing in hand a drag on open table
+## boxes that side's pieces (Shift: adds them; owner 2026-10-11). Crown
 ## pieces are clicked through the view (`WarRoomPointer`), which hands them here.
 ## The live stroke is WarPlanHud's. It only says what was done; the screen
 ## writes it. Never reaches the autoload.
@@ -68,7 +69,7 @@ func setup(view: WarRoomView, repo: DataRepository, hud: WarPlanHud) -> void:
 ## arrow wants a selection of its side.
 func why_of(side: String, key: String) -> String:
 	if key == "arrow" and (sel_side != side or sel.is_empty()):
-		return "Select a unit first: one of ours (Shift-click adds, Shift-drag boxes)" if side == "blue" \
+		return "Select a unit first: one of ours (Shift-click adds; with a row lit, a drag on open table boxes)" if side == "blue" \
 			else "Select a unit first: a supposed host or an intel hint"
 	if key == "arrow" and side == "blue" and sel.all(func(c: Variant) -> bool: return naval(String(c))):
 		return "Fleets are ordered on the map"
@@ -119,12 +120,13 @@ func pick_kind(k: String, side := "") -> void:
 	tool_changed.emit()
 
 
-## A row's crayon or the hand.
+## A row's crayon (that side's select stick: nothing in hand, its row lit) or
+## the hand (no row lit).
 func pick_stick(s: String) -> void:
 	action = ""
-	var k := tool.last_kind(s) if s in WarPlanTool.SIDES else ""
-	tool.pick_stick(s, "front" if k != "" and why_of(s, k) != "" else "")
+	tool.pick_stick(s)
 	tool_changed.emit()
+	redraw_live()
 
 
 ## Tab: the other side, the same kind (nothing in hand: that side's last kind); a front when its arrow cannot be used.
@@ -269,7 +271,9 @@ func _press(mb: InputEventMouseButton) -> bool:
 		_drag = {"mode": "facing", "id": chosen_id, "from": pos, "from_pack": pack, "moved": false}
 		return true
 	var unchosen := not hit.is_empty() and int(hit["handle"]) < 0 and String(hit["id"]) != chosen_id
-	if unchosen and not mb.shift_pressed:
+	# a row lit (nothing in hand) or Shift: a drag from open table boxes (owner 2026-10-11)
+	var boxing := (mb.shift_pressed or tool.side != "") and pack.x >= 0.0
+	if unchosen and not boxing:
 		_pending_choose = String(hit["id"])   # only the chosen stroke is carried: the press pans, a click chooses
 		_pending_from = pos
 		return false
@@ -277,8 +281,10 @@ func _press(mb: InputEventMouseButton) -> bool:
 		_drag = {"mode": "handle" if int(hit["handle"]) >= 0 else "stroke", "id": String(hit["id"]),
 			"handle": int(hit["handle"]), "from": pos, "from_pack": pack, "moved": false, "to_pack": pack}
 		return true
-	if mb.shift_pressed and pack.x >= 0.0:
-		_drag = {"mode": "box", "from": pos, "to": pos, "moved": false}
+	if boxing:
+		# a click (no drag) chooses the stroke pressed, else is the open table's click
+		_drag = {"mode": "box", "from": pos, "to": pos, "moved": false, "add": mb.shift_pressed,
+			"side": tool.side, "choose": String(hit["id"]) if unchosen else ""}
 		return true
 	if chosen_id != "":
 		choose("")
@@ -387,7 +393,13 @@ func _release(mb: InputEventMouseButton) -> bool:
 	if String(d["mode"]) == "box":
 		_view.redraw_marks()
 		if bool(d["moved"]):
-			_box(Rect2(d["from"], Vector2.ZERO).expand(d["to"]))
+			_box(Rect2(d["from"], Vector2.ZERO).expand(d["to"]), String(d.get("side", "")), bool(d.get("add", false)))
+		elif String(d.get("choose", "")) != "":
+			choose(String(d["choose"]))
+		elif not bool(d.get("add", false)):
+			if chosen_id != "":
+				choose("")
+			_view.click_through(mb.position, false)   # a plain click on open table: the view's pick
 		return true
 	var id := String(d["id"])
 	if not bool(d["moved"]):
@@ -467,10 +479,12 @@ func _flip_of(id: String) -> int:
 	return int((_view.state().war_plans[WarPlans.STROKES].get(id, {}) as Dictionary).get("flip", 0))
 
 
-## Shift-drag's box (screen px): what lies in it replaces the selection — our
-## land units first (at the spot they are DRAWN), else the supposed pieces and
-## the intel hints; nothing in it, no change.
-func _box(box: Rect2) -> void:
+## A box (screen px) dragged on open table: what lies in it of `side` — "blue"
+## our land units (at the spot they are DRAWN), "red" the supposed pieces and
+## the intel hints, "" (no row lit, Shift) ours first, else theirs — replaces
+## the selection, or with `add` (Shift) joins it when of the same side;
+## nothing in it, no change.
+func _box(box: Rect2, side := "", add := false) -> void:
 	var drawn_at: Dictionary = _view.piece_pack_positions()
 	var ours: Array = []
 	for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.sheet_index(), _view.drawn()):
@@ -480,8 +494,10 @@ func _box(box: Rect2) -> void:
 		var at: Variant = _view.screen_pos_of_px(drawn_at.get(code, q["at"]))
 		if at != null and box.has_point(at):
 			ours.append(code)
-	if not ours.is_empty():
-		select("blue", ours, false)   # a box opens no book: the book is a click's
+	if side != "red" and not ours.is_empty():
+		_select_boxed("blue", ours, add)   # a box opens no book: the book is a click's
+		return
+	if side == "blue":
 		return
 	var theirs: Array = []
 	for p: Dictionary in WarPlans.pieces_in(_repo, _view.state(), _view.sheet_rect()):
@@ -493,7 +509,17 @@ func _box(box: Rect2) -> void:
 		if at != null and box.has_point(at):
 			theirs.append(String(h["id"]))
 	if not theirs.is_empty():
-		select("red", theirs, false)
+		_select_boxed("red", theirs, add)
+
+
+## The boxed `ids` of `side` as the selection: with `add`, joined to it when it
+## is of the same side (never toggled out, as a Shift-click would).
+func _select_boxed(side: String, ids: Array, add: bool) -> void:
+	var all := sel.duplicate() if add and sel_side == side else []
+	for i: Variant in ids:
+		if not i in all:
+			all.append(i)
+	select(side, all, false)
 
 
 ## The box being dragged (screen px), Rect2() when none.

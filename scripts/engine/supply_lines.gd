@@ -23,6 +23,19 @@ static func line(state: GameState, code: String) -> Dictionary:
 	return state.supply_lines.get(code, {}) if state != null else {}
 
 
+## The lines DRAWN broken (owner 2026-10-11): every FRONT line — its town
+## ahead of the column — in code order; a cut line is not drawn at all.
+static func drawn_broken(state: GameState) -> Array:
+	var out: Array = []
+	if state == null:
+		return out
+	for c: Variant in state.supply_lines.keys():
+		if String((state.supply_lines[c] as Dictionary).get("state", "")) == FRONT:
+			out.append(String(c))
+	out.sort()
+	return out
+
+
 static func _burg_px(repo: DataRepository, town: String) -> Vector2:
 	var b: Dictionary = repo.burgs.get(town, {})
 	return Vector2(float(b.get("x", 0)), float(b.get("y", 0)))

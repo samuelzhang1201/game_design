@@ -5,7 +5,8 @@ extends RefCounted
 ## ribbon per FLOWING line, flowing from its town to the column along the
 ## road, its end following the piece where Map3DLayerUnits draws it every
 ## frame (a body and a tail, Map3DSupplyRoad); an ordered, riding or
-## cut line is not drawn (the card and the missives say why), nor any while
+## cut line is not drawn (the card and the missives say why), a FRONT one is
+## Map3DSupplyBroken's dark dashed road, and none while
 ## the regiments are hidden. While a supply point is picked (the view's
 ## supply_pick, burg -> "" lit or the reason it is greyed), a ring round each
 ## realm town at its reach — the ground a click names it by (ArmySystem.town_at)
@@ -32,6 +33,8 @@ var _cut: Dictionary = {}
 ## Where the pieces were when the bodies, and the tails, were last laid.
 var _body_sig := 0
 var _tail_sig := 0
+## The FRONT lines' dark dashed roads (owner 2026-10-11).
+var broken := Map3DSupplyBroken.new()
 
 
 func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_view: Object, p_units: Map3DLayerUnits) -> void:
@@ -39,6 +42,7 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_view: Object, p_units
 	lines = p_lines
 	view = p_view
 	units = p_units
+	broken.bind(p_ctx, p_lines, p_units)
 	_line_sigs.clear()
 	_roads.clear()
 	_cut.clear()
@@ -218,6 +222,7 @@ func redraw() -> void:
 	if st != null:
 		_refresh_roads(st)
 	_draw_lines()
+	broken.redraw()
 	redraw_pick()
 
 
@@ -252,6 +257,7 @@ func step(delta: float) -> void:
 	if st == null or lines == null:
 		return
 	_since += delta
+	broken.step(delta)
 	var fresh := _refresh_roads(st)
 	var on := units == null or units.shown
 	var moved := _pieces_sig()

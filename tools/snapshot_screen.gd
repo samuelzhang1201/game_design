@@ -73,6 +73,10 @@ var _hover_target: Control
 ## --build <building> begins that building on the shot's manor (with
 ## --manor), so the slot row shows a work; --speed N lights the clock.
 var _build := ""
+## --idle BUILDING (with --manor; "first" names the crown's first manor): that
+## building is stood up and left IDLE (its inputs unpaid), so the slot shows
+## its "idle" word in CardWarn.
+var _idle := ""
 var _speed := -1
 ## --click3d fx,fy (with --screen root: the court opens on the 3D map when it
 ## is built) clicks the 3D map
@@ -235,7 +239,7 @@ var _ledger_select := ""
 ## --war-edit then clicks the regiment's draft pennant and its Edit route…,
 ## reopening the confirm with the pending blue arrow). --war-spread N stands
 ## N land regiments side by side in the field near the focus before the room
-## opens and --war-box Shift-drags a real box round them. --war-hint seeds a
+## opens and --war-box clicks the blue crayon and drags a real box round them. --war-hint seeds a
 ## spy report of foreign men near the focus (the red ants); --war-plan-select
 ## first|hint clicks the first supposed piece or intel hint (the red
 ## selection). --war-plan-draw takes "side:kind,fx1,fy1,fx2,fy2" (side red or
@@ -293,7 +297,8 @@ var _war_plan_draw: Array = []   # --war-plan-draw [side:]kind,fx1,fy1,fx2,fy2[;
 var _war_spread := 0             # --war-spread N: N land regiments stood side by side near the focus
 var _hold_line := 0              # --hold-line N: N regiments stood in the field HOLDING a line facing south (front-line §2), the 3D map looked at them
 var _hold_stance := "hold"       # --hold-stance steady: the same stand in the block (the before shot)
-var _war_box := false            # --war-box: a real Shift-drag box round them
+var _war_box := false            # --war-box: the blue crayon, then a real plain drag box round them
+var _war_box_hold := false       # --war-box-hold: the same drag, the button kept down (the marquee in the shot)
 var _war_supply := false         # --war-supply: a real click on the nearest lit town while the confirm stands
 var _war_supply_town := ""        # --war-supply-town CODE|off: choose that town (off: the lit town nearest the laid sheet but off it) through the confirm's select_supply (documented exception to real input)
 var _war_supply_list := false    # --war-supply-list: a real click opening the confirm's Supply from list
@@ -349,6 +354,8 @@ func _ready() -> void:
 			_hover_icon = int(args[i + 1])
 		elif args[i] == "--build":
 			_build = args[i + 1]
+		elif args[i] == "--idle":
+			_idle = args[i + 1]
 		elif args[i] == "--click3d":
 			var parts := args[i + 1].split(",")
 			_click3d = Vector2(float(parts[0]), float(parts[1]))
@@ -521,7 +528,8 @@ func _ready() -> void:
 		i += 1
 	_war_room = args.has("--war-room")
 	_war_commit = args.has("--war-commit")
-	_war_box = args.has("--war-box")
+	_war_box = args.has("--war-box") or args.has("--war-box-hold")
+	_war_box_hold = args.has("--war-box-hold")
 	_war_supply = args.has("--war-supply")
 	_war_supply_list = args.has("--war-supply-list")
 	_war_edit = args.has("--war-edit")
@@ -810,7 +818,7 @@ func _real_right_drag(c: Control, from: Vector2, to: Vector2) -> void:
 
 ## A real left drag along a PATH (each point a motion, eight between each
 ## two), Shift held when `shift` — a drawn stroke or a box, like a hand.
-func _real_path(c: Control, pts: Array, shift := false) -> void:
+func _real_path(c: Control, pts: Array, shift := false, hold := false) -> void:
 	_real_move(c, pts[0])
 	var origin := c.get_global_transform_with_canvas()
 	var press := InputEventMouseButton.new()
@@ -833,6 +841,8 @@ func _real_path(c: Control, pts: Array, shift := false) -> void:
 			m.relative = at - last
 			last = at
 			c.get_viewport().push_input(m, true)
+	if hold:
+		return   # the button still down: the shot shows the drag (a marquee) in flight
 	var release := InputEventMouseButton.new()
 	release.button_index = MOUSE_BUTTON_LEFT
 	release.pressed = false
@@ -913,7 +923,10 @@ func _process(_delta: float) -> void:
 			if _layer.to_upper() == "LAWS" and _laws_page != "":
 				_root._laws_screen.show_page(_laws_page)
 		if _manor != "" and _root.current_screen.has_method("detail_panel"):
-			var cell := MapManors.find(Game.data, _manor)
+			var cell := MapManors.find(Game.data, _manor) if _manor != "first" else int(MapManors.manors_of_house(
+				Game.data, Game.state, MapManors.crown(Game.state), Game.data.resolve_realm("player_realm"))[0])
+			if _idle != "" and cell >= 0 and MapManors.build(Game.data, Game.state, cell, _idle, "snapshot: an idle building"):
+				Game.state.idle_buildings[str(cell)] = [_idle]
 			if cell < 0:
 				push_error("no such manor: " + _manor)
 			else:
@@ -1036,6 +1049,13 @@ func _process(_delta: float) -> void:
 		if Game.state != null:
 			print("state at shot: day=%d clock=%d pending_event=%s couriers=%d" % [Game.state.absolute_day(),
 				Game.clock_speed, not Game.state.pending_event.is_empty(), Game.state.couriers.size()])
+			if _supply_front and _root != null and _root.current_screen != null and _root.current_screen.has_method("map3d_view"):
+				var mv: Map3DView = _root.current_screen.map3d_view()
+				for c: String in SupplyLines.drawn_broken(Game.state):
+					var rt := SupplySystem.route_px(Game.data, Game.state, c)
+					if rt.size() >= 2:
+						print("supply-front drawn broken: %s town %s at %s, column %s at %s" % [c, rt[0],
+							mv.screen_pos_of_px(rt[0]), rt[rt.size() - 1], mv.screen_pos_of_px(rt[rt.size() - 1])])
 		var err := _save_shot(_out)
 		var how := ("%dx%d window" % [_res.x, _res.y]) if _res != Vector2i.ZERO else ("x%.1f" % _scale)
 		print("snapshot %s -> %s (%s, %s, filter %d)" % [
@@ -1346,11 +1366,11 @@ func _war_room_step() -> void:
 				_real_click(view, at)
 			print("war: piece=%s sheet=%d at=%s selected=%s sel=%s" % [_war_piece, view.sheet_index(), at,
 				view.selected_army(), view.plan_input().sel])
+		var roll := screen.get_node("%ToolRoll") as WarToolRoll
 		if _war_box:
-			_war_box_select(view)
+			_war_box_select(view, roll)
 		if _war_plan_select != "":
 			_war_select_red(view)
-		var roll := screen.get_node("%ToolRoll") as WarToolRoll
 		if _war_drag.x >= 0.0:
 			_war_draw_order(screen, view, roll)
 		for spec: PackedStringArray in _war_plan_draw:
@@ -1576,8 +1596,12 @@ func _seed_war_hint() -> void:
 	print("war hint: report %d at %s" % [id, spot])
 
 
-## --war-box: a real Shift-drag round the spread regiments' pieces.
-func _war_box_select(view: WarRoomView) -> void:
+## --war-box: a real click on the blue row's crayon (ours lit, nothing in hand),
+## then a real plain drag round the spread regiments' pieces (owner 2026-10-11).
+func _war_box_select(view: WarRoomView, roll: WarToolRoll) -> void:
+	var stick := roll.slot("blue", "blue")
+	if stick != null:
+		_real_click(stick, stick.size * 0.5)
 	var box := Rect2()
 	var any := false
 	for c: String in (_war_spread_codes if not _war_spread_codes.is_empty() else [_war_piece]):
@@ -1602,7 +1626,7 @@ func _war_box_select(view: WarRoomView) -> void:
 		print("war: no corner of open table to start the box")
 		return
 	box = Rect2(from, Vector2.ZERO).expand(to)
-	_real_path(view, [from, from.lerp(to, 0.5), to], true)
+	_real_path(view, [from, from.lerp(to, 0.5), to], false, _war_box_hold)
 	print("war: boxed %s -> sel=%s" % [box, view.plan_input().sel])
 
 
