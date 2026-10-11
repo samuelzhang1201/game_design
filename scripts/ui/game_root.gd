@@ -1294,8 +1294,12 @@ func _land_on_table() -> void:
 ## 2026-10-01). A save of another pack swaps the world under the title, so
 ## that one goes straight in.
 func _on_menu_load_from_title() -> void:
+	if _beginning:   # a Start or another Continue is already waiting or running
+		return
 	if not _overlays_made:
+		_beginning = true   # the same guard as Start: one start or load per launch black
 		await overlays_ready
+		_beginning = false
 	var pack := Game.data.map_id
 	if not Game.load_campaign():
 		if current_screen is MainMenu:

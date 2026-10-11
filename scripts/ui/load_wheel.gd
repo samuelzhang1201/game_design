@@ -15,7 +15,9 @@ func _centre_pivot() -> void:
 	pivot_offset = size * 0.5
 
 func _process(delta: float) -> void:
+	if Engine.is_editor_hint():   # the editor neither loads the look data nor turns it (a save would keep the angle)
+		return
 	var repo := UiPalette.data()
-	if Engine.is_editor_hint() or repo == null or not is_visible_in_tree():   # the editor never turns it (a save would keep the angle)
+	if repo == null or not is_visible_in_tree():
 		return
 	rotation = fposmod(rotation + deg_to_rad(repo.bal("map_compass_turn_deg_per_s")) * delta, TAU)

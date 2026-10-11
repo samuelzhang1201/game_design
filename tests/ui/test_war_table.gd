@@ -188,8 +188,14 @@ func test_the_first_event_waits_with_its_presenter() -> void:
 	var stage := r.current_screen as ConversationScene
 	assert_not_null(stage, "the narration plays first")
 	assert_eq(String(stage.current_beat().get("kind", "")), "narration")
-	stage._advance()
-	await wait_process_frames(2)
+	# The narration is paged: press its lone Continue until the table is laid.
+	for _i in 40:
+		var st := r.current_screen as ConversationScene
+		if st == null or String(st.current_beat().get("kind", "")) != "narration":
+			break
+		await wait_until(func() -> bool: return st.continue_button().visible, 5.0)
+		st.continue_button().pressed.emit()
+		await wait_process_frames(2)
 	var court := r.current_screen as CourtScreen
 	assert_not_null(court, "after the narration, the table — not the event")
 	var presenter := ConversationBeats.event_presenter(Game.state, Game.data)

@@ -81,3 +81,39 @@ func test_wheel_hides_with_the_curtain() -> void:
 	curtain.visible = false
 	if wheel != null:
 		assert_false(wheel.is_visible_in_tree(), "no wheel without the black")
+
+func test_premenu_black_holds_the_wheel() -> void:
+	if not ResourceLoader.exists(WHEEL_SCENE):
+		pending("scenes/hud/load_wheel.tscn is Phase E3")
+		return
+	GameRoot.stepwise_overlays = true
+	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
+	add_child_autofree(r)
+	assert_null(r.current_screen, "the first frame is GameRoot's own black")
+	var wheel := r.find_child("LoadWheel", true, false) as Control
+	assert_not_null(wheel, "GameRoot's pre-menu black holds the wheel")
+	if wheel != null:
+		assert_true(wheel.is_visible_in_tree(), "turning before the title is up")
+
+func test_continue_twice_loads_once() -> void:
+	GameRoot.stepwise_overlays = true
+	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
+	add_child_autofree(r)
+	await wait_process_frames(1)
+	r.current_screen.load_requested.emit()
+	r.current_screen.load_requested.emit()
+	assert_true(r._beginning, "the first Continue holds the launch guard")
+	await wait_until(func() -> bool: return r.overlays_are_ready(), 10.0)
+	await wait_process_frames(3)
+	assert_false(r._beginning, "the guard is released once it ran")
+
+func test_start_then_continue_starts_once() -> void:
+	GameRoot.stepwise_overlays = true
+	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
+	add_child_autofree(r)
+	await wait_process_frames(1)
+	r.current_screen.start_requested.emit()
+	r.current_screen.load_requested.emit()
+	assert_true(r._beginning, "Start holds the guard; the Continue was dropped")
+	await wait_until(func() -> bool: return r.state != GameRoot.State.MENU, 10.0)
+	assert_true(r.current_screen is ConversationScene, "the opening plays, not a loaded court")
