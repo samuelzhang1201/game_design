@@ -189,6 +189,7 @@ func step(delta: float) -> bool:
 			_place(code, _pieces[code])
 			moved = true
 		Map3DUnitRig.keep_pace(repo, _pieces[code], day, ctx.day_share(), ctx.clock_speed(), code)
+		Map3DUnitRig.lag(repo, _pieces[code], code, (want - now) / maxf(delta, 0.0001), delta)
 		_sync_action(code)
 		# a facing set at the day's end turns the piece without a camera move
 		var facing := ArmySystem.facing_of(ctx.state(), code)
@@ -206,7 +207,6 @@ func step(delta: float) -> bool:
 
 
 func moves() -> int: return _moves  ## bumped each frame a piece moves
-
 func show_piece(piece: Dictionary, on: bool) -> void: Map3DUnits.show_piece(piece, on)
 
 ## Where each piece is DRAWN, {code: world XZ} — where its road ahead starts.
@@ -236,7 +236,7 @@ func drawn_count() -> int:
 func play(code: String, action: String) -> void:
 	if _pieces.has(code):
 		_pieces[code]["action"] = action
-		Map3DUnitRig.play(_pieces[code]["anims"], action, blend_s, ctx.repo, code)
+		Map3DUnitRig.play(_pieces[code]["anims"], action, blend_s, code)
 
 
 ## The piece for a regiment, built on first sight; {} for an arm with no model (a fleet).

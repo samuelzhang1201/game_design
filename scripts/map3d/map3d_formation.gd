@@ -114,6 +114,7 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 	return {"node": node, "anims": anims, "height_m": span.y,
 		"head_m": Map3DUnitRig.head_m(repo, one, span.y),
 		"half_w_m": maxf(half.x, half.y), "extent": half, "figures": offs.size(), "layout": layout,
+		"lag_cap": repo.bal("map3d_march_lag_cap_share") * minf(ext.x, ext.y),
 		"stand_deg": float(art.get("stand_deg", "0")),
 		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
 		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
