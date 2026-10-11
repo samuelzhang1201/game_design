@@ -1605,6 +1605,21 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
     def near_houses(x, z):
         return min((math.hypot(x - hx, z - hz) for hx, hz in homes), default=0.0)
 
+    def shores_along(dx, dz, limit):
+        """(distance, ground height of the last land cell) at each land-to-water
+        change along a bearing from the centre, out to `limit`, nearest first."""
+        d, last_h = 0.0, None
+        while d <= limit:
+            v = land_at(cx + dx * d, cz + dz * d)
+            if v is None:
+                return
+            if v[0]:
+                last_h = v[1]
+            elif last_h is not None:
+                yield d, last_h
+                last_h = None
+            d += step
+
     def head_clear(kind, at, d):
         # no ground under the head's footprint over its lowest course
         for x, z in _head_corners(kind, at, d, landings[kind][0]):
@@ -1655,20 +1670,15 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
         while deg < 360.0:
             a = math.radians(deg)
             dx, dz = math.cos(a), math.sin(a)
-            d, shore, last_h = 0.0, None, None
-            while d <= fallback:
-                v = land_at(cx + dx * d, cz + dz * d)
-                if v is None:
+            # every shore on the bearing, nearest first: a river or a lake
+            # edge with high banks is walked PAST (it is no sea), and the
+            # first shore that is low and open for the pier's length wins
+            for shore, last_h in shores_along(dx, dz, fallback):
+                if last_h - sea_y <= max_shore and clear(dx, dz, shore, plen):
+                    gap = near_houses(cx + dx * shore, cz + dz * shore) if types else shore
+                    if low is None or (gap, shore) < low[0]:
+                        low = ((gap, shore), shore - float(rules["pier_root_m"]) + plen / 2, dx, dz)
                     break
-                if not v[0]:
-                    shore = d
-                    break
-                last_h = v[1]
-                d += step
-            if shore is not None and last_h is not None and last_h - sea_y <= max_shore and clear(dx, dz, shore, plen):
-                gap = near_houses(cx + dx * shore, cz + dz * shore) if types else shore
-                if low is None or (gap, shore) < low[0]:
-                    low = ((gap, shore), shore - float(rules["pier_root_m"]) + plen / 2, dx, dz)
             deg += float(rules["pier_bearing_step_deg"])
     lofty = statistics.median([land_at(x, z)[1] if land_at(x, z) else sea_y for x, z in homes] or [sea_y]) \
         - sea_y >= float(rules.get("pier_stair_town_rise_m", 1e9))

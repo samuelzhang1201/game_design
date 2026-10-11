@@ -1481,6 +1481,25 @@ def test_a_port_with_only_a_far_low_shore_takes_one_normal_pier_by_the_fallback(
     assert _piers(out)[0]["x_m"] < -300.0, "it stands out at the far shore"
 
 
+def test_the_fallback_walks_past_a_high_banked_river_to_the_low_sea():
+    """Horsfield's cause: every bearing met inland water (a river, high banks)
+    first, and the fallback stopped there. The sea lies beyond, past a low
+    plain: the walk must continue past the river to it."""
+    sea, height = _west_sea()
+    sea[:, :] = 1.0
+    height[:, :] = 40.0
+    sea[:, :6] = 0.0                  # the sea, far west
+    height[:, :6] = 0.0
+    height[:, 6:22] = 6.0             # a low plain before it
+    sea[:, 22:24] = 0.0               # a river between the town and the plain
+    height[:, 22:24] = 0.0
+    rules = dict(PLAIN_RULES, pier_search_m=300, pier_search_fallback_m=2000)
+    out = bake_houses.harbour(burg(port=1), _toy_town(), rules, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    assert [r["type"] for r in _piers(out)] == ["pier"], "the river bank is no sea: the walk goes on"
+    assert _piers(out)[0]["x_m"] < -300.0, "the pier stands at the sea, beyond the river"
+
+
 def test_a_port_given_up_by_port_plain_still_gets_its_pier():
     """A 400 m cliff to the west is more than port_plain_max_cut_m: the port
     keeps its ground; a low strand far east still takes the normal pier."""
