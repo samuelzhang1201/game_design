@@ -335,6 +335,10 @@ func _draw_intel() -> void:
 		var size := int(px.get("hazard_label", px["intel_label"]))
 		var at := (h["at"] as Vector2) - Vector2(font.get_string_size(String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, 0)
 		_haloed_text(at, String(h["text"]), size, pal["intel_ink"], w)
+	for st: Dictionary in ink.get("stripped", []):
+		var size := int(px["intel_label"])
+		var at := (st["at"] as Vector2) - Vector2(font.get_string_size(String(st["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, 0)
+		_haloed_text(at, String(st["text"]), size, c, float(px.get("hazard", 3.0)))
 	for cr: Dictionary in ink["couriers"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], float(px["supply_dash"]) / 1.5, float(px["supply_gap"])):
 			draw_polyline(d, c, float(px["supply"]) * 0.7, true)
