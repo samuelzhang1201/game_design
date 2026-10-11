@@ -79,3 +79,58 @@ func test_lag_spring_by_hand() -> void:
 	assert_lt(o.x, 0.0, "behind its slot")
 	# standing: the offset relaxes by e^-1 a step
 	assert_almost_eq(Map3DMarchLag.step(Vector3(-1, 0, 0), Vector3.ZERO, 0.5, 0.5, 5.0).x, -0.367879, 0.00001)
+
+
+func test_blended_play_still_seeks_march_phase() -> void:
+	var anims: Array = [_anim(), _anim()]
+	Map3DUnitRig.play(anims, "MARCH", 0.2, "reg_a")
+	for i in 2:
+		var anim: AnimationPlayer = anims[i]
+		assert_almost_eq(anim.current_animation_position, Map3DMarchLag.phase("reg_a", i) * 2.0, 0.001)
+
+
+## A piece of two figures at x = -1 and +1, lag cap 0.2 m (tau range 0.25..0.7).
+func _lag_piece() -> Dictionary:
+	var node := Node3D.new()
+	add_child_autofree(node)
+	var figs: Array = []
+	for x in [-1.0, 1.0]:
+		var f := Node3D.new()
+		f.position = Vector3(x, 0, 0)
+		node.add_child(f)
+		figs.append(f)
+	var glow := Node3D.new()
+	glow.name = "Map3DUnitGlow"
+	node.add_child(glow)  # a selection quad, after the figures were taken
+	return {"node": node, "figs": figs, "lag_cap": 0.2,
+		"slots": [Vector3(-1, 0, 0), Vector3(1, 0, 0)]}
+
+
+func test_steady_lag_is_tau_over_max_times_cap() -> void:
+	# v limited to cap / max_s = 0.2 / 0.7 = 0.285714 m/s; steady -v*tau:
+	# tau 0.25 -> 0.0714286, tau 0.5 -> 0.142857 (a 3 m/s march alike)
+	var piece := _lag_piece()
+	Map3DUnitRig.lag(repo, piece, "reg_a", Vector2(1, 0), 0.0)  # builds the caches
+	piece["taus"] = [0.25, 0.5]
+	Map3DUnitRig.lag(repo, piece, "reg_a", Vector2(3, 0), 5.0)
+	var figs: Array = piece["figs"]
+	assert_almost_eq((figs[0] as Node3D).position.x, -1.0 - 0.0714286, 0.00001)
+	assert_almost_eq((figs[1] as Node3D).position.x, 1.0 - 0.142857, 0.00001)
+	var glow: Node3D = (piece["node"] as Node3D).get_child(2)
+	assert_eq(glow.position, Vector3.ZERO, "the glow is never a figure")
+
+
+func test_figures_settle_back_and_pause_freezes() -> void:
+	var piece := _lag_piece()
+	Map3DUnitRig.lag(repo, piece, "reg_a", Vector2(1, 0), 0.0)
+	piece["taus"] = [0.25, 0.5]
+	Map3DUnitRig.lag(repo, piece, "reg_a", Vector2(3, 0), 5.0)
+	var figs: Array = piece["figs"]
+	var held := (figs[1] as Node3D).position
+	Map3DUnitRig.lag(repo, piece, "reg_a", Vector2.ZERO, 0.0)
+	assert_eq((figs[1] as Node3D).position, held, "dt 0: a paused column keeps its offsets")
+	for _i in 6:
+		Map3DUnitRig.lag(repo, piece, "reg_a", Vector2.ZERO, 5.0)
+	assert_eq((figs[0] as Node3D).position, Vector3(-1, 0, 0), "settled in its slot")
+	assert_eq((figs[1] as Node3D).position, Vector3(1, 0, 0))
+	assert_eq((piece["node"] as Node3D).get_child(2).position, Vector3.ZERO, "glow put")

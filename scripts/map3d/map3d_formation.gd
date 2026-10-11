@@ -112,6 +112,7 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 	var half := half_extent(offs, ext)
 	var clip := Map3DUnits.clip_named(anims[0], "MARCH") if not anims.is_empty() else ""
 	return {"node": node, "anims": anims, "height_m": span.y,
+		"figs": node.get_children(), "slots": Array(Array(offs).map(func(o: Vector2) -> Vector3: return Vector3(o.x, 0.0, o.y))),
 		"head_m": Map3DUnitRig.head_m(repo, one, span.y),
 		"half_w_m": maxf(half.x, half.y), "extent": half, "figures": offs.size(), "layout": layout,
 		"lag_cap": repo.bal("map3d_march_lag_cap_share") * minf(ext.x, ext.y),

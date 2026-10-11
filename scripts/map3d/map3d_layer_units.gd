@@ -189,7 +189,7 @@ func step(delta: float) -> bool:
 			_place(code, _pieces[code])
 			moved = true
 		Map3DUnitRig.keep_pace(repo, _pieces[code], day, ctx.day_share(), ctx.clock_speed(), code)
-		Map3DUnitRig.lag(repo, _pieces[code], code, (want - now) / maxf(delta, 0.0001), delta)
+		Map3DUnitRig.lag(repo, _pieces[code], code, (want - now) / maxf(delta, 0.0001), delta if ctx.clock_speed() > 0 else 0.0)
 		_sync_action(code)
 		# a facing set at the day's end turns the piece without a camera move
 		var facing := ArmySystem.facing_of(ctx.state(), code)

@@ -109,18 +109,23 @@ static func lag(repo: DataRepository, piece: Dictionary, code: String, world_v: 
 	var node: Node3D = piece["node"]
 	if world_v == Vector2.ZERO and not piece.get("lagging", false):
 		return
-	var figs := node.get_children()
-	if not piece.has("slots"):
-		piece["slots"] = figs.map(func(f: Node) -> Vector3: return (f as Node3D).position)
+	var figs: Array = piece["figs"]  # taken at build, before any glow quad is a child
+	if not piece.has("lags"):
 		piece["lags"] = figs.map(func(_f: Node) -> Vector3: return Vector3.ZERO)
-	var v := node.transform.basis.inverse() * Vector3(world_v.x, 0.0, world_v.y)
+		piece["taus"] = range(figs.size()).map(func(i: int) -> float: return Map3DMarchLag.tau(
+			code, i, repo.bal("map3d_march_lag_min_s"), repo.bal("map3d_march_lag_max_s")))
+		piece["lag_vmax"] = float(piece.get("lag_cap", 0.0)) / maxf(repo.bal("map3d_march_lag_max_s"), 0.0001)
+	# a velocity past cap / max_s would pin every figure to the cap alike; limited,
+	# the steady lag is (tau / max_s) x cap: its own per figure, never past the cap
+	var v: Vector3 = (node.transform.basis.inverse() * Vector3(world_v.x, 0.0, world_v.y)).limit_length(
+		float(piece["lag_vmax"]))
 	var slots: Array = piece["slots"]
+	var taus: Array = piece["taus"]
 	var lags: Array = piece["lags"]
 	var cap := float(piece.get("lag_cap", 0.0))
 	var live := false
 	for i in mini(figs.size(), slots.size()):
-		var o := Map3DMarchLag.step(lags[i], v, Map3DMarchLag.tau(code, i,
-			repo.bal("map3d_march_lag_min_s"), repo.bal("map3d_march_lag_max_s")), dt, cap)
+		var o := Map3DMarchLag.step(lags[i], v, taus[i], dt, cap)
 		if world_v == Vector2.ZERO and o.length() < 0.002 * cap:
 			o = Vector3.ZERO
 		lags[i] = o
