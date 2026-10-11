@@ -5,6 +5,15 @@
     python3 assets/flux/generate.py --ids C-01,T-01,I-04  # generate a few entries
     python3 assets/flux/generate.py --chapter T --variants 5   # every tile, 5 seeds each
     python3 assets/flux/generate.py --ids C-01 --dry-run  # print the assembled prompt only
+    python3 assets/flux/generate.py --model qwenedit_fast --images out/cast/K-01_x.png \
+        --instruction "the same man seen from behind, full body"   # edit a picture
+
+Edit presets (qwenedit / qwenedit_fast, Qwen-Image-Edit-2511) take one to
+three pictures with --images: the first is edited, the others are references.
+The prompt is --instruction, followed by the assembled row prompt when --ids
+are given too; without --ids the output goes to out/edits/. An edit's file
+name carries --tag (or the instruction's first words) and a 6-character hash
+of the instruction and the input pictures, so two edits never share a name.
 
 Every prompt is assembled as  STYLE_CORE + subject + CANVAS  from the files
 beside this script, never typed by hand (prompt library §0.1 / §10.8). The
@@ -20,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 import sys
@@ -84,6 +94,9 @@ CANVAS_SIZE = {
 # Qwen-Image-2512 Q6_K GGUF (Apache 2.0, 20B; needs the ComfyUI-GGUF node) at
 # full quality, qwen2512fast = the same with the Lightning 8-step LoRA
 # (Apache 2.0), the owner's pick for the game's art since 2026-09-30.
+# qwenedit / qwenedit_fast = Qwen-Image-Edit-2511 Q6_K GGUF (Apache 2.0, 20B,
+# image editing with up to three input pictures; owner 2026-10-10) without and
+# with its own Lightning 8-step LoRA (Apache 2.0); "edit" presets need --images.
 # Models: assets/flux/download_models.sh.
 # NOT listed on purpose: every Flux model, Ideogram 4 open weights
 # (non-commercial), HunyuanImage (licence excludes EU/UK/KR), Qwen-Image-2.1
@@ -95,7 +108,14 @@ MODEL_PRESETS = {
                  "steps": 50, "guidance": 0.0, "cfg": 4.0, "lora_strength": 0.0},
     "qwen2512fast": {"template": "qwen2512_template.json", "unet": "qwen-image-2512-Q6_K.gguf",
                      "steps": 8, "guidance": 0.0, "cfg": 1.0, "lora_strength": 1.0},
+    "qwenedit": {"template": "qwen_edit2511_template.json", "unet": "qwen-image-edit-2511-Q6_K.gguf",
+                 "steps": 40, "guidance": 0.0, "cfg": 4.0, "lora_strength": 0.0, "edit": True},
+    "qwenedit_fast": {"template": "qwen_edit2511_template.json", "unet": "qwen-image-edit-2511-Q6_K.gguf",
+                      "steps": 8, "guidance": 0.0, "cfg": 1.0, "lora_strength": 1.0, "edit": True},
 }
+EDIT_SLOTS = ("image1", "image2", "image3")
+# The edit template's LoadImage node per input slot; an unused one is deleted.
+EDIT_PIXELS = 1024 * 1024
 
 
 # ---------------------------------------------------------------- parsing
@@ -222,6 +242,47 @@ def _get(path: str) -> bytes:
         return r.read()
 
 
+def upload(path: Path) -> str:
+    """Send a local picture to ComfyUI's input folder; returns the name LoadImage takes."""
+    boundary = uuid.uuid4().hex
+    body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"{path.name}\"\r\n"
+            f"Content-Type: application/octet-stream\r\n\r\n").encode() + path.read_bytes() + \
+        (f"\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"subfolder\"\r\n\r\ncc_edit"
+         f"\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"overwrite\"\r\n\r\ntrue"
+         f"\r\n--{boundary}--\r\n").encode()
+    req = urllib.request.Request(SERVER + "/upload/image", data=body,
+                                 headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        res = json.load(r)
+    return f"{res['subfolder']}/{res['name']}" if res.get("subfolder") else res["name"]
+
+
+def png_size(path: Path) -> tuple[int, int]:
+    head = path.read_bytes()[:24]
+    if head[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError(f"{path.name}: an edit input must be a PNG")
+    return int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")
+
+
+def edit_size(w: int, h: int) -> tuple[int, int]:
+    """The input's aspect at about one megapixel, both sides multiples of 16."""
+    k = (EDIT_PIXELS / float(w * h)) ** 0.5
+    return max(256, int(round(w * k / 16.0)) * 16), max(256, int(round(h * k / 16.0)) * 16)
+
+
+def prune_images(graph: dict, template: dict, used: int) -> dict:
+    """Delete the LoadImage nodes of the edit slots past `used`, and every
+    input that points at them (TextEncodeQwenImageEditPlus takes them optionally)."""
+    dead = {template["_slots"][s][0][0] for s in EDIT_SLOTS[used:] if s in template.get("_slots", {})}
+    for node_id in dead:
+        graph.pop(node_id, None)
+    for node in graph.values():
+        for name, value in list(node["inputs"].items()):
+            if isinstance(value, list) and value and value[0] in dead:
+                del node["inputs"][name]
+    return graph
+
+
 def make_graph(template: dict, values: dict) -> dict:
     """Fill the template's _slots (slot name -> [[node id, input name], ...])
     with `values`; slots the template does not declare are ignored, so one
@@ -284,6 +345,12 @@ def main() -> int:
                     help="sample resolution: scale the canvas so its longer side is N px (e.g. 512), keeping the aspect")
     ap.add_argument("--prompts-file", default="",
                     help="read entries from this CSV beside the script instead of prompts.csv, e.g. arms_prompts.csv")
+    ap.add_argument("--images", default="",
+                    help="edit presets: 1-3 comma-separated PNGs; the first is edited, the others are references")
+    ap.add_argument("--instruction", default="",
+                    help="edit presets: what to change, put before the row prompt (or alone without --ids)")
+    ap.add_argument("--tag", default="",
+                    help="edits: a readable name part, e.g. infantry_body_front (default: the instruction's first words)")
     ap.add_argument("--dry-run", action="store_true", help="print prompts, queue nothing")
     ap.add_argument("--front", action="store_true", help="queue ahead of jobs already waiting in ComfyUI")
     ap.add_argument("--timeout", type=float, default=900.0, help="seconds to wait per image")
@@ -318,13 +385,36 @@ def main() -> int:
     if args.chapter:
         rows = [r for r in rows if r["chapter"] == args.chapter.upper()]
     rows = [r for r in rows if r["canvas"]]
+    preset = dict(MODEL_PRESETS[args.model])
+    images = [Path(p.strip()).expanduser() for p in args.images.split(",") if p.strip()]
+    images = [p if p.is_absolute() else (Path.cwd() / p) for p in images]
+    if preset.get("edit"):
+        if not 1 <= len(images) <= len(EDIT_SLOTS):
+            print(f"{args.model} needs --images with 1-{len(EDIT_SLOTS)} pictures", file=sys.stderr)
+            return 2
+        for p in images:
+            if not p.exists():
+                print(f"no such picture: {p}", file=sys.stderr)
+                return 2
+        if not (wanted or args.chapter):
+            if not args.instruction:
+                print("an edit without --ids needs --instruction", file=sys.stderr)
+                return 2
+            w, h = CANVAS_SIZE[args.canvas.upper()] if args.canvas else edit_size(*png_size(images[0]))
+            rows = [{"id": "EDIT", "chapter": "", "dir": "edits", "title": images[0].stem,
+                     "canvas": "", "subject": "", "width": w, "height": h}]
+    elif images or args.instruction:
+        print(f"--images / --instruction need an edit preset (qwenedit, qwenedit_fast), not {args.model}",
+              file=sys.stderr)
+        return 2
     if args.canvas:
         code = args.canvas.upper()
         if code not in canvas or code not in CANVAS_SIZE:
             print(f"unknown canvas {code}; choose from {sorted(canvas)}", file=sys.stderr)
             return 2
         for r in rows:
-            r["canvas"] = code
+            if r["id"] != "EDIT":
+                r["canvas"] = code
             r["width"], r["height"] = CANVAS_SIZE[code]
     if args.res:
         # Sample passes run small and cheap. Both sides stay multiples of 16
@@ -340,7 +430,6 @@ def main() -> int:
         print("nothing selected (use --ids or --chapter; E/P rows are fragments)", file=sys.stderr)
         return 2
 
-    preset = dict(MODEL_PRESETS[args.model])
     if args.steps:
         preset["steps"] = args.steps
     if args.cfg:
@@ -356,9 +445,16 @@ def main() -> int:
         print(f"note: {preset['template']} has no negative-prompt path (distilled / guidance model); "
               "NEGATIVE.txt is not applied")
 
+    uploaded = [] if args.dry_run else [upload(p) for p in images]
+    # Same seed + same first words used to overwrite an earlier edit (2026-10-10):
+    # the hash keys the name to the whole instruction and the pictures.
+    edit_key = hashlib.sha1("\n".join([args.instruction] + [p.name for p in images]).encode()).hexdigest()[:6]
+    edit_label = re.sub(r"[^A-Za-z0-9_-]+", "-", args.tag).strip("-") if args.tag else slug("", args.instruction)
     jobs = []
     for r in rows:
-        prompt = assemble(r, canvas, style, args.small, fragments)
+        prompt = "" if r["id"] == "EDIT" else assemble(r, canvas, style, args.small, fragments)
+        if args.instruction:
+            prompt = f"{args.instruction}, {prompt}" if prompt else args.instruction
         for i in range(args.variants):
             seed = args.seed + i
             tag = f"_{args.canvas.lower()}" if args.canvas else ""
@@ -369,16 +465,25 @@ def main() -> int:
                 tag += "_" + Path(args.style_file).stem.replace("STYLE_CORE_", "").lower()
             if args.res:
                 tag += "_r%d" % args.res
-            name = f"{r['id']}_{slug(r['title'], r['subject'])}{tag}_{args.model}_s{seed}"
+            if preset.get("edit"):
+                tag += f"_{edit_label}_{edit_key}"
+            if r["id"] == "EDIT":
+                name = f"{r['title']}{tag}_{args.model}_s{seed}"
+            else:
+                name = f"{r['id']}_{slug(r['title'], r['subject'])}{tag}_{args.model}_s{seed}"
             prefix = f"flux/{r['dir']}/{name}"
             if args.dry_run:
                 print(f"\n[{r['id']}] {r['dir']}/{name}.png  {r['width']}x{r['height']}\n{prompt}")
                 continue
-            graph = make_graph(template, {
+            values = {
                 "unet": preset["unet"], "prompt": prompt, "negative": negative,
                 "guidance": preset["guidance"], "cfg": preset["cfg"], "steps": preset["steps"],
                 "lora_strength": preset.get("lora_strength", 0.0),
-                "width": int(r["width"]), "height": int(r["height"]), "seed": seed, "prefix": prefix})
+                "width": int(r["width"]), "height": int(r["height"]), "seed": seed, "prefix": prefix}
+            values.update(zip(EDIT_SLOTS, uploaded))
+            graph = make_graph(template, values)
+            if preset.get("edit"):
+                graph = prune_images(graph, template, len(uploaded))
             try:
                 payload = {"prompt": graph, "client_id": uuid.uuid4().hex}
                 if args.front:

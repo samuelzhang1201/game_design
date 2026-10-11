@@ -1,0 +1,113 @@
+{
+  "_comment": "ComfyUI API-format graph for Qwen-Image-Edit-2511 (Alibaba, 20B, Apache 2.0, commercial OK) as a Q6_K GGUF (same MPS reason as qwen2512_template.json; needs ComfyUI-GGUF). Edits one picture, or combines up to three: image1 is the picture being edited, image2 / image3 are optional references (generate.py deletes the LoadImage nodes it is not given, and the encoder inputs that point at them). It shares Qwen-Image-2512's text encoder and VAE. The Lightning LoRA (lightx2v Qwen-Image-Edit-2511-Lightning 8-step, Apache 2.0) is always wired, its strength a slot: preset qwenedit runs it at 0 (40 steps, CFG 4, the style's negative applied), qwenedit_fast at 1 (8 steps, CFG 1). The latent is an empty one at the output size (the template's VAEEncode at denoise 1 carries only the size), so an edit may change the canvas, e.g. a bust into a turnaround sheet. Node settings follow ComfyUI's image_qwen_image_edit_2511 template (ModelSamplingAuraFlow shift 3.1, CFGNorm 1, FluxKontextMultiReferenceLatentMethod index_timestep_zero, euler/simple).",
+  "_slots": {
+    "unet": [["1", "unet_name"]],
+    "lora_strength": [["4", "strength_model"]],
+    "image1": [["20", "image"]],
+    "image2": [["21", "image"]],
+    "image3": [["22", "image"]],
+    "prompt": [["10", "prompt"]],
+    "negative": [["11", "prompt"]],
+    "cfg": [["15", "cfg"]],
+    "steps": [["15", "steps"]],
+    "width": [["14", "width"]],
+    "height": [["14", "height"]],
+    "seed": [["15", "seed"]],
+    "prefix": [["17", "filename_prefix"]]
+  },
+  "1": {
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {"title": "Qwen-Image-Edit-2511 Q6_K GGUF (ComfyUI-GGUF)"},
+    "inputs": {"unet_name": "qwen-image-edit-2511-Q6_K.gguf"}
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "_meta": {"title": "Qwen2.5-VL 7B text encoder"},
+    "inputs": {"clip_name": "qwen_2.5_vl_7b.safetensors", "type": "qwen_image", "device": "default"}
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "_meta": {"title": "Qwen-Image VAE"},
+    "inputs": {"vae_name": "qwen_image_vae.safetensors"}
+  },
+  "5": {
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {"title": "Shift 3.1 (ComfyUI template)"},
+    "inputs": {"shift": 3.1, "model": ["1", 0]}
+  },
+  "6": {
+    "class_type": "CFGNorm",
+    "_meta": {"title": "CFGNorm 1 (ComfyUI template)"},
+    "inputs": {"strength": 1.0, "model": ["5", 0]}
+  },
+  "4": {
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {"title": "Lightning 8-step LoRA (strength 0 = off)"},
+    "inputs": {"lora_name": "Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors",
+               "strength_model": 0.0, "model": ["6", 0]}
+  },
+  "20": {
+    "class_type": "LoadImage",
+    "_meta": {"title": "image1: the picture being edited"},
+    "inputs": {"image": "{{IMAGE1}}"}
+  },
+  "21": {
+    "class_type": "LoadImage",
+    "_meta": {"title": "image2: optional reference"},
+    "inputs": {"image": "{{IMAGE2}}"}
+  },
+  "22": {
+    "class_type": "LoadImage",
+    "_meta": {"title": "image3: optional reference"},
+    "inputs": {"image": "{{IMAGE3}}"}
+  },
+  "23": {
+    "class_type": "FluxKontextImageScale",
+    "_meta": {"title": "image1 to a Kontext resolution"},
+    "inputs": {"image": ["20", 0]}
+  },
+  "10": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "_meta": {"title": "Instruction"},
+    "inputs": {"prompt": "{{PROMPT}}", "clip": ["2", 0], "vae": ["3", 0],
+               "image1": ["23", 0], "image2": ["21", 0], "image3": ["22", 0]}
+  },
+  "11": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "_meta": {"title": "Negative"},
+    "inputs": {"prompt": "{{NEGATIVE}}", "clip": ["2", 0], "vae": ["3", 0],
+               "image1": ["23", 0], "image2": ["21", 0], "image3": ["22", 0]}
+  },
+  "12": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "_meta": {"title": "Reference method (positive)"},
+    "inputs": {"reference_latents_method": "index_timestep_zero", "conditioning": ["10", 0]}
+  },
+  "13": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "_meta": {"title": "Reference method (negative)"},
+    "inputs": {"reference_latents_method": "index_timestep_zero", "conditioning": ["11", 0]}
+  },
+  "14": {
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {"title": "Output size"},
+    "inputs": {"width": 1024, "height": 1024, "batch_size": 1}
+  },
+  "15": {
+    "class_type": "KSampler",
+    "_meta": {"title": "Sampler"},
+    "inputs": {"seed": 0, "steps": 40, "cfg": 4.0, "sampler_name": "euler", "scheduler": "simple",
+               "denoise": 1.0, "model": ["4", 0], "positive": ["12", 0], "negative": ["13", 0],
+               "latent_image": ["14", 0]}
+  },
+  "16": {
+    "class_type": "VAEDecode",
+    "_meta": {"title": "Decode"},
+    "inputs": {"samples": ["15", 0], "vae": ["3", 0]}
+  },
+  "17": {
+    "class_type": "SaveImage",
+    "_meta": {"title": "Save"},
+    "inputs": {"filename_prefix": "{{PREFIX}}", "images": ["16", 0]}
+  }
+}

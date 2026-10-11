@@ -227,6 +227,8 @@ add it here as a principle with its why — not as a changelog entry.
 ## Shape and reading
 - **Read by width and fade, not by rule.** Roads are worn tracks with a soft
   shoulder, never ruled lines (2026-09-17).
+  A road grades into the ground through a worn verge of trodden earth, never
+  a sand band laid on the grass (owner 2026-10-11: 主路和背景的地面交界处太sharp了).
 - **Relief comes from height, not from texture.** Tiles carry material only;
   landform words in a texture prompt made a wallpaper of feathers.
 - **Houses are real meshes on the 3D map** (owner 2026-09-20: 推翻它，这次是真3D

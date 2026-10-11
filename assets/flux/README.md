@@ -19,6 +19,8 @@ klein / schnell templates and presets were deleted that day.
 | `qwen2512fast` (default) | Qwen-Image-2512 20B, `qwen-image-2512-Q6_K.gguf` + `qwen_2.5_vl_7b.safetensors` + `qwen_image_vae.safetensors` + `loras/Qwen-Image-2512-Lightning-8steps-V1.0-bf16.safetensors` at strength 1 | 8 / 1 | no effect at CFG 1 | ~34 GB | characters, events, estate / army / courier paintings, icons, arms, table props, house references |
 | `qwen2512` | the same without the LoRA | 50 / 4 | applied | ~33 GB | a full-quality re-render of a pick |
 | `zimage` | Z-Image Turbo 6B, `z_image_turbo_bf16.safetensors` + `qwen_3_4b.safetensors` (type `lumina2`) + `vae/ae.safetensors` | 8 / 1 | none (distilled) | ~20 GB | aerial ground (T-), tree crowns (TR-), unit references |
+| `qwenedit_fast` | Qwen-Image-Edit-2511 20B, `qwen-image-edit-2511-Q6_K.gguf` + the Qwen encoder and VAE above + `loras/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors` at strength 1 | 8 / 1 | no effect at CFG 1 | ~34 GB | EDITING a picture (`--images`, below) |
+| `qwenedit` | the same without the LoRA | 40 / 4 | applied | ~33 GB | a full-quality edit of a pick |
 
 Since 2026-09-30 the game's art is re-rendered on Qwen-Image-2512 (after
 comparing it with Z-Image on the 21 chapter events the owner picked Qwen, seed
@@ -34,6 +36,18 @@ would take ~41 GB. The GGUF loader is the ComfyUI-GGUF custom node
 (`custom_nodes/ComfyUI-GGUF`; its Python deps `gguf` and `protobuf` are
 installed by `download_models.sh`). Download with `bash
 assets/flux/download_models.sh` (~47 GB, resumable), then restart ComfyUI.
+**Editing** (owner 2026-10-10): the `qwenedit` presets change a picture
+instead of drawing one from words. `--images a.png[,b.png[,c.png]]` (PNG; the
+first is edited, the others are references, e.g. a costume or a material) and
+`--instruction "…"` (what to change). With `--ids` the row's assembled prompt
+follows the instruction and the row's canvas sets the size; without, the
+output keeps the first picture's aspect at about one megapixel (or takes
+`--canvas`) and lands in `out/edits/`. An edit's name is `<first picture>_<--tag or the instruction's first words>_<6-char hash of instruction + pictures>_<model>_s<seed>`, so edits never overwrite each other. Uses: a 3D structure view from the
+picked design (instead of keeping the design by words), a character's bust
+from its picked full figure, a local fix (a cloak's colour, a missing boot)
+without losing the pick, and variants of one piece of art. Download with
+`bash assets/flux/download_models.sh qwenedit` (~17 GB).
+
 **Not allowed:** every Flux model, Ideogram 4 open weights (non-commercial),
 HunyuanImage (licence excludes EU/UK/KR), Qwen-Image-2.1 (research licence),
 Krea 2 open weights and SD 3.5 (licences end at US$1M company revenue).
@@ -54,6 +68,7 @@ see `docs/art_team/README.md`.
 | `STYLE_CORE_<x>.txt` + `NEGATIVE_<x>.txt` | Other style cores; `--style-file` picks one and its negative pairs by name (`--negative-file` overrides). Present: `map_sepia` (greyscale D- map symbols; natural pieces — trees, hills, fields, marsh — need `--negative-file NEGATIVE_map_sepia_natural.txt` or churches creep in), `satellite_flat` (the biome ground tiles), `town_satblend` (the aerial settlements), `arms_matte` (house and kingdom arms, owner's pick 2026-09-15), `app_icon` (X-01), `ui_vellum` (the U- panel plate). The other experiments were deleted 2026-09-18. |
 | `*_prompts.csv` | Entry sheets outside the library, used with `--prompts-file`: `arms_prompts.csv` (generated, below), `app_icon_prompts.csv`, `terrain_prompts_v2.csv` (satellite biome tiles), `town_prompts_sat.csv` (aerial S-02..S-06), `town_prompts_v3.csv` (S-07, the unwalled capital), `town_prompts.csv` (the earlier painted tiers). |
 | `arms_prompts.py` | Writes `arms_prompts.csv` + `arms_art.csv` from the pack's Azgaar `coa` (see Arms). |
+| `qwen_edit2511_template.json` | The edit graph (ComfyUI's `image_qwen_image_edit_2511` settings): up to three `LoadImage` slots, of which `generate.py` deletes the unused; an empty latent at the output size. |
 | `zimage_turbo_template.json` / `qwen2512_template.json` | API-format graphs for the two models (above). Each declares the slots the script fills in `_slots`. Node settings follow ComfyUI's own `image_z_image_turbo` / `image_qwen_image_2512` templates; the Qwen graph adds a `lora_strength` slot. |
 | `download_models.sh` | Fetches the two models into `~/ComfyUI-Shared/models` (resumable, size-checked) and installs the GGUF node's Python deps. Run on the Mac: the Hugging Face host is not reachable from the agent's sandbox. |
 | `post.py` + `post_cutout_template.json` | Post-processing through ComfyUI: BiRefNet cut-out → alpha → lanczos resize. Tiers `full` (660 tall), `chip` (96²), `icon` (256²), `mark` (256 tall). Writes `out/game/<tier>/<ID>.png`. Needs `models/background_removal/birefnet.safetensors`. `--tone` white-balances to the paper colour `#EDE3CE` (measured on the source, applied to the result); `--no-trim` keeps empty margins. |
