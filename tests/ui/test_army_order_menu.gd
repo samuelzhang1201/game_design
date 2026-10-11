@@ -583,13 +583,13 @@ func test_add_waypoint_aims_on_and_confirm_sends_the_route() -> void:
 	_map.ground_clicked.emit(to)
 	assert_eq(_menu.pending(), to)
 	_commit()
-	var order: Dictionary = CourierSystem.pending_for(Game.state, code)["order"]
+	var order: Dictionary = CourierSystem.march_order(CourierSystem.pending_for(Game.state, code))
 	assert_eq((order["waypoints_m"] as Array).size(), 1, "the courier carries the route")
 	assert_eq(_map.aim_waypoints, PackedVector2Array(), "the plan is spent")
 
 
 ## Owner 2026-10-07 (item 7): the load is chosen on the confirm; a new one
-## rides as its own order before the march.
+## runs before the march — on the same courier (owner 2026-10-10).
 func test_a_load_chosen_on_the_confirm_rides_before_the_march() -> void:
 	var code := _marcher()
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
@@ -610,9 +610,9 @@ func test_a_load_chosen_on_the_confirm_rides_before_the_march() -> void:
 	assert_eq(panel.chosen_carry(), other)
 	panel.select_supply("")   # no supply point: the load and the march alone
 	_commit()
-	var kinds: Array = []
-	for c: Dictionary in Game.state.couriers:
-		kinds.append(String(c["order"]["action_code"]))
+	assert_eq(Game.state.couriers.size(), 1, "one courier carries both")
+	var kinds: Array = CourierSystem.orders_of(Game.state.couriers[0]).map(
+		func(o: Dictionary) -> String: return String(o["action_code"]))
 	assert_eq(kinds, ["SUPPLY_CARRY_SET", "ARMY_MARCH"])
 
 
@@ -639,7 +639,8 @@ func test_a_bend_into_the_sea_is_put_back() -> void:
 
 ## Spec 2026-10-08-war-room-draw-orders rulings 13-15: the confirm asks where
 ## to supply the march from; the towns are lit on the map, a click on a lit
-## one chooses it, and Confirm sends the supply point, then the march.
+## one chooses it, and Confirm sends the supply point, then the march — ONE
+## courier to the regiment carrying both (owner 2026-10-10).
 func test_a_supply_town_chosen_on_the_confirm_rides_before_the_march() -> void:
 	var code := _marcher()
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
@@ -667,10 +668,12 @@ func test_a_supply_town_chosen_on_the_confirm_rides_before_the_march() -> void:
 	assert_eq(_menu.supply_choice(), town, "the click chose it")
 	assert_eq(_menu.pending(), to, "and the march's end stayed")
 	_commit()
-	var kinds: Array = []
-	for c: Dictionary in Game.state.couriers:
-		kinds.append(String(c["order"]["action_code"]))
-	assert_eq(kinds, ["SUPPLY_POINT_SET", "ARMY_MARCH"], "the supply point rides first, its own courier")
+	assert_eq(Game.state.couriers.size(), 1, "one courier for the target")
+	var c: Dictionary = Game.state.couriers[0]
+	var kinds: Array = CourierSystem.orders_of(c).map(func(o: Dictionary) -> String: return String(o["action_code"]))
+	assert_eq(kinds, ["SUPPLY_POINT_SET", "ARMY_MARCH"], "the supply point runs first")
+	assert_eq(String(c["target"]), code, "he rides for the regiment, not the town")
+	assert_eq(String(CourierSystem.first_order(c).get("to_town", "")), "")
 
 
 ## Owner 2026-10-08 (spec 2026-10-08-war-room-draw-orders ruling 20): a town

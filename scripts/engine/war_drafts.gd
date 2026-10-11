@@ -75,14 +75,16 @@ static func waypoints_px(repo: DataRepository, draft: Dictionary) -> PackedVecto
 ## Every real order a draft stands for, in the order they run: the supply
 ## point (SUPPLY_POINT_SET, only for a town its line does not draw on
 ## already), the load (SUPPLY_CARRY_SET, only when it changes the
-## regiment's), then the march.
+## regiment's), then the march — one courier carrying all of them to the
+## regiment (owner 2026-10-10, CourierSystem.joinable).
 static func requests_from(repo: DataRepository, state: GameState, code: String, draft: Dictionary) -> Array:
 	var out: Array = []
 	var town := String(draft.get("supply_town", ""))
 	if String(draft.get("order", "")) == MARCH and town != "" \
 			and String(SupplyLines.line(state, code).get("town", "")) != town:
+		# the warrant rides with the march's courier to the column (owner 2026-10-10)
 		out.append(ActionRequest.make("SUPPLY_POINT_SET", {"regiment": code, "town": town,
-			"rate": int(draft.get("supply_rate", 1000))}))
+			"rate": int(draft.get("supply_rate", 1000)), "with_column": true}))
 	if String(draft.get("order", "")) == MARCH and draft.has("carry_days") \
 			and int(draft["carry_days"]) != ArmySystem.carry_of(repo, ArmySystem.state_of(repo, state, code)):
 		out.append(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": code, "days": int(draft["carry_days"])}))

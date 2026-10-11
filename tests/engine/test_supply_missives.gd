@@ -28,7 +28,7 @@ func test_one_dispatch_gathers_the_days_events() -> void:
 		{"type": "opened", "regiment": code, "town": town},
 		{"type": "low", "regiment": code, "town": town}])
 	assert_eq(String(m["kind"]), "supply")
-	assert_eq(String(m["column"]), "credible")
+	assert_eq(String(m["column"]), "truth", "the crown's own supply: ground truth (owner 2026-10-10)")
 	assert_eq((m["facts"] as Array).size(), 2)
 
 func test_every_event_kind_reads_as_a_sentence() -> void:
@@ -36,7 +36,7 @@ func test_every_event_kind_reads_as_a_sentence() -> void:
 	var town: String = TownStores.realm_towns(repo, s)[0]
 	var kingdom: String = String(repo.kingdoms.keys()[0])
 	var events: Array = []
-	for t: String in ["opened", "cut", "restored", "town_low", "low", "empty", "cancelled", "town_dry", "order_lost"]:
+	for t: String in ["set_out", "opened", "cut", "restored", "town_low", "low", "empty", "cancelled", "town_dry", "order_lost"]:
 		events.append({"type": t, "regiment": code, "town": town, "by": kingdom, "days": 3, "depot": town,
 			"at": Vector2(float(repo.burgs[town]["x"]), float(repo.burgs[town]["y"]))})
 	var m := MissiveWriter.supply_dispatch(repo, s, events)

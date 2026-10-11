@@ -88,8 +88,8 @@ func test_the_stance_rides_by_courier_and_waits_for_the_day_to_end() -> void:
 	var out: Dictionary = actions.execute(_stance(code, "hold"), s)
 	assert_eq(s.couriers.size(), 1, "one courier rides")
 	var c: Dictionary = s.couriers[0]
-	assert_eq(String(c["order"]["action_code"]), "ARMY_STANCE")
-	assert_eq(String(c["order"]["stance"]), "hold")
+	assert_eq(String(CourierSystem.first_order(c)["action_code"]), "ARMY_STANCE")
+	assert_eq(String(CourierSystem.first_order(c)["stance"]), "hold")
 	assert_lt(float(s.metrics["treasury"]), before)
 	var fee := false
 	for e: Dictionary in out.get("effects", []):

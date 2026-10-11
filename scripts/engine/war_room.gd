@@ -2,10 +2,12 @@
 class_name WarRoom
 extends RefCounted
 ## What the WAR ROOM's plotting table shows (owner 2026-10-01, spec
-## 2026-10-01-war-room-design §3). A piece stands where we KNOW the regiment
-## stands: believed_position is the one place the table reads, so intel P2's
-## blur (the last ARRIVED report's place) lands here and nowhere else. The
-## enemy's ghosts are believed_hosts — empty until the raid host exists.
+## 2026-10-01-war-room-design §3). A piece stands where the regiment stands:
+## believed_position is the one place the table reads. The crown's OWN hosts
+## are always drawn at their true state (owner 2026-10-10: the crown's own
+## moves are ground truth); intel P2's blur — the last ARRIVED report's
+## place — is for foreign hosts only: believed_hosts, empty until the raid
+## host exists.
 ##
 ## `drawn` (code -> pack px) is where the 3D map DRAWS each regiment — its
 ## piece walks the engine's next day by the day's share, so mid-day it stands
@@ -135,16 +137,25 @@ static func pose_action(order: String) -> String:
 ## absolute day the courier left (riding / countermanded).
 static func pennant_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	var delivered := int(ArmySystem.state_of(repo, state, code).get("order_id", 0))
+	# each order ranked by its courier's id, then its place among his orders
+	# (one courier may carry a march and the halt after it, owner 2026-10-10)
 	var march: Dictionary = {}
 	var halt: Dictionary = {}
+	var march_k := -1
+	var halt_k := -1
 	for c: Dictionary in state.couriers:
 		if String(c["target"]) != code or int(c["id"]) < delivered:
 			continue
-		var kind := String(c.get("order", {}).get("action_code", ""))
-		if kind == "ARMY_MARCH" and (march.is_empty() or int(c["id"]) > int(march["id"])):
-			march = c
-		elif kind == "ARMY_GARRISON" and (halt.is_empty() or int(c["id"]) > int(halt["id"])):
-			halt = c
+		var all := CourierSystem.orders_of(c)
+		for i in all.size():
+			var kind := String((all[i] as Dictionary).get("action_code", ""))
+			var k := int(c["id"]) * 1000 + i
+			if kind == "ARMY_MARCH" and k > march_k:
+				march = {"courier": c, "order": all[i]}
+				march_k = k
+			elif kind == "ARMY_GARRISON" and k > halt_k:
+				halt = {"courier": c}
+				halt_k = k
 	var at := Vector2(-1, -1)
 	var status := ""
 	var issued := 0
@@ -152,15 +163,15 @@ static func pennant_of(repo: DataRepository, state: GameState, code: String) -> 
 		var o: Dictionary = march["order"]
 		at = ArmySystem.metres_to_pack(repo, Vector2i(int(o["dest_x_m"]), int(o["dest_y_m"])))
 		status = "riding"
-		issued = int(march.get("issued", 0))
+		issued = int((march["courier"] as Dictionary).get("issued", 0))
 	elif ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
 		at = ArmySystem.destination_of(repo, state, code)
 		status = "received"
 	else:
 		return {}
-	if not halt.is_empty() and (march.is_empty() or int(halt["id"]) > int(march["id"])):
+	if not halt.is_empty() and halt_k > march_k:
 		status = "countermanded"
-		issued = int(halt.get("issued", 0))
+		issued = int((halt["courier"] as Dictionary).get("issued", 0))
 	return {"at": at, "status": status, "issued": issued}
 
 

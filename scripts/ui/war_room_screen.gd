@@ -167,10 +167,18 @@ func _show_board_chrome(on: bool) -> void:
 		# COMMIT) is given up: its arrow must not wait behind the board
 		_orders.withdraw_aim()
 		(%HoverSlip as WarHoverSlip).hide_slip()
+	if on:
+		Game.mark_missives_seen()   # the easel faced: its letters are seen
 	%BackToTable.visible = on
 	_make_way()   # the margin slip makes way for the board (and for a docked book)
 	%KeySlip.visible = not on
 	%ToolRoll.visible = not on
+
+
+## Whether the camera faces the easel's board (or is flying to it): the
+## letters on it count as seen (owner 2026-10-10, GameRoot.missive_board_shown).
+func facing_board() -> bool:
+	return visible and _view != null and _view.board_mode() in ["to_board", "board"]
 
 
 func board_screen() -> MissiveScreen:

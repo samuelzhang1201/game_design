@@ -372,6 +372,11 @@ var war_plans: Dictionary = WarPlans.empty()
 ## of Dictionaries, whole numbers and strings only.
 var missives: Array = []
 var next_missive_id := 0
+## The highest missive id the player has SEEN (owner 2026-10-10: the MISSIVE
+## tab counts only letters not yet seen): the board shown marks every letter
+## seen; a letter above it is new unless its own `seen` is set (a spy's report
+## opened in its dialog). MissiveLog.unseen reads it.
+var missives_seen_id := 0
 ## Each province's wealth tier, 0 poor / 1 middling / 2 rich (Ruling 15,
 ## 2026-09-28): settled by TickEngine right after the month's economy
 ## (Intel.settle_wealth_tiers), so a card opened mid-month can never decide
@@ -472,6 +477,7 @@ func to_dict() -> Dictionary:
 		"next_courier_id": _encode_values(next_courier_id),
 		"missives": _encode_values(missives.duplicate(true)),
 		"next_missive_id": _encode_values(next_missive_id),
+		"missives_seen_id": _encode_values(missives_seen_id),
 		"wealth_tiers": _encode_values(wealth_tiers.duplicate()),
 		"town_stock": _encode_values(town_stock.duplicate(true)),
 		"supply_lines": _encode_values(supply_lines.duplicate(true)),
@@ -569,6 +575,12 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.town_seat = (d.get("town_seat", {}) as Dictionary).duplicate(true)
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))
+	# Saves from before a courier carried several orders (owner 2026-10-10)
+	# hold one `order`: it becomes his `orders` of one.
+	for c: Dictionary in s.couriers:
+		if c.has("order") and not c.has("orders"):
+			c["orders"] = [c["order"]]
+		c.erase("order")
 	s.war_drafts = _decode_values(d.get("war_drafts", {}))
 	# Saves from before the plans carry none: an empty table.
 	s.war_plans = _whole(d.get("war_plans", WarPlans.empty()))
@@ -576,6 +588,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Saves from before the Missive board carry neither key: an empty board.
 	s.missives = _decode_values(d.get("missives", []))
 	s.next_missive_id = int(_decode_values(d.get("next_missive_id", 0)))
+	# Saves from before the seen mark: every letter they hold counts as seen.
+	s.missives_seen_id = int(_decode_values(d.get("missives_seen_id", s.next_missive_id)))
 	# Saves from before the tiers were state carry none: Game.load_campaign
 	# computes them once from the loaded state (Intel.ensure_wealth_tiers).
 	s.wealth_tiers = _decode_values(d.get("wealth_tiers", {}))

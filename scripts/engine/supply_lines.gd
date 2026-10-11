@@ -208,10 +208,21 @@ static func news(repo: DataRepository, state: GameState, events: Array) -> Array
 	return out
 
 
-## A front / front_cleared event in words (`key`: front_news, front_cleared_news).
+## The supply-point warrants delivered in a day's courier events whose
+## wagons now set out (CourierSystem._deliver's `supply`), for the day's
+## supply dispatch.
+static func set_out_events(courier_events: Array) -> Array:
+	var out: Array = []
+	for e: Dictionary in courier_events:
+		out.append_array(e.get("supply", []))
+	return out
+
+
+## A front / front_cleared / set_out event in words (`key`: front_news,
+## front_cleared_news, set_out_news).
 static func event_words(repo: DataRepository, state: GameState, e: Dictionary, key: String) -> String:
 	return words(repo, key, {"regiment": _reg_label(repo, state, String(e["regiment"])),
-		"town": _town_label(repo, String(e.get("town", "")))}, "hint",
+		"town": _town_label(repo, String(e.get("town", ""))), "days": int(e.get("days", 0))}, "hint",
 		"The supply line of {regiment} from {town} is broken" if key == "front_news"
 			else "The supply line of {regiment} from {town} flows again")
 
@@ -350,12 +361,16 @@ static func order_set(state: GameState, code: String, town: String, rate: int, o
 		ln["pending"] = {"town": town, "rate": rate, "order_id": order_id}
 
 
-## A supply courier delivered (CourierSystem._deliver). An older order than
-## the line's newest is set aside; a SET for the town a flowing or cut line
-## already draws on changes only its rate.
-static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
+## A supply order delivered (CourierSystem._deliver: `order`, one of the
+## courier's orders, his first when none is given) — at its town, or with the
+## column's own courier (owner 2026-10-10). An older order than the line's
+## newest is set aside; a SET for the town a flowing or cut line already
+## draws on changes only its rate. A SET that starts the wagons from the town
+## carries `set_out` (the day's supply dispatch: set_out_news).
+static func deliver(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary = {}) -> Dictionary:
 	var code := String(c["target"])
-	var order: Dictionary = c["order"]
+	if order.is_empty():
+		order = CourierSystem.first_order(c)
 	var id := int(c["id"])
 	var ev := CourierSystem._event("delivered", c)
 	match String(order["action_code"]):
@@ -384,7 +399,9 @@ static func deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Di
 				return ev
 			ln["state"] = RIDING
 			var km := road_km(repo, road_px(repo, state, code, String(ln["town"])))
-			ln["ready_day"] = state.absolute_day() + wagon_days(repo, km)
+			var days := wagon_days(repo, km)
+			ln["ready_day"] = state.absolute_day() + days
+			ev["set_out"] = {"type": "set_out", "regiment": code, "town": String(ln["town"]), "days": days}
 		"SUPPLY_POINT_CLEAR":
 			var ln := line(state, code)
 			if ln.is_empty() or int(ln["order_id"]) > id:
@@ -622,9 +639,9 @@ static func _still_ordered(state: GameState, code: String, ln: Dictionary, ridin
 		return rec
 	var newest := 0
 	for c: Dictionary in state.couriers:
-		var o: Dictionary = c.get("order", {})
-		if String(c.get("target", "")) == code and String(o.get("action_code", "")) == "SUPPLY_POINT_SET" \
-				and String(o.get("to_town", "")) == String(ln["town"]) and int(c["id"]) > newest:
+		var o := CourierSystem.order_with(c, ["SUPPLY_POINT_SET"])
+		if String(c.get("target", "")) == code and not o.is_empty() \
+				and String(o.get("town", o.get("to_town", ""))) == String(ln["town"]) and int(c["id"]) > newest:
 			newest = int(c["id"])
 	if newest > 0:
 		ln["order_id"] = newest

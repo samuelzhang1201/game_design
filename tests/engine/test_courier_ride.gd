@@ -47,7 +47,7 @@ func _marcher() -> String:
 func _courier(s: GameState, id: int, code: String, path: Array, order: Dictionary) -> Dictionary:
 	repo.balance["courier_reaim_m"] = 1.0e12
 	var c := {"id": id, "kind": "ordinary", "x_m": 0, "y_m": 0, "path": path, "target": code,
-		"order": order, "issued": 1, "aim_x_m": 0, "aim_y_m": 0, "days": 0, "day_m": 0, "slow_spell": -1}
+		"orders": [order], "issued": 1, "aim_x_m": 0, "aim_y_m": 0, "days": 0, "day_m": 0, "slow_spell": -1}
 	s.couriers.append(c)
 	s.next_courier_id = maxi(s.next_courier_id, id)
 	return c
@@ -349,6 +349,6 @@ func test_the_arrival_day_is_the_ride_and_then_the_march() -> void:
 	assert_eq(CourierSystem.days_to_arrival(repo, s, code), left + march,
 		"the card counts the courier still riding")
 	# a halt riding: bound nowhere
-	c["order"] = {"action_code": "ARMY_GARRISON"}
+	c["orders"] = [{"action_code": "ARMY_GARRISON"}]
 	assert_eq(CourierSystem.days_to_arrival(repo, s, code), 0)
 

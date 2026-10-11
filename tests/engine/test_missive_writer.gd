@@ -46,7 +46,7 @@ func test_a_delivery_files_one_credible_receipt_with_the_regiments_state() -> vo
 	assert_eq(s.missives.size(), 1)
 	var m: Dictionary = s.missives[0]
 	assert_eq(String(m["kind"]), "receipt")
-	assert_eq(String(m["column"]), "credible")
+	assert_eq(String(m["column"]), "truth", "the crown's own orders received: ground truth (owner 2026-10-10)")
 	assert_eq(String(m["subject"]["code"]), code)
 	var st := ArmySystem.state_of(repo, s, code)
 	assert_eq(int(_fact(m, "morale")["exact"]), int(st["morale"]))
@@ -58,8 +58,11 @@ func test_a_stale_order_writes_a_receipt_that_says_so() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := _marcher()
 	s.regiments[code]["order_id"] = 99
-	var m := MissiveWriter.receipt(repo, s, {"id": 3, "target": code, "order": {"action_code": "ARMY_GARRISON"},
-		"x_m": 0, "y_m": 0}, true)
+	var c := {"id": 3, "target": code, "orders": [{"action_code": "ARMY_GARRISON"}], "x_m": 0, "y_m": 0}
+	s.couriers.append(c)
+	var ev := CourierSystem._deliver(repo, s, c)
+	assert_eq(String(ev["type"]), "stale")
+	var m: Dictionary = s.missives.back()
 	assert_string_contains(String(_fact(m, "orders")["text"]), "set aside")
 
 

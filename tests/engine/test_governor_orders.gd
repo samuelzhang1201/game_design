@@ -68,7 +68,7 @@ func test_an_audit_catches_a_skimmer() -> void:
 	assert_eq(s.missives.size(), n + 1)
 	var m: Dictionary = s.missives[-1]
 	assert_eq(String(m["kind"]), "audit")
-	assert_eq(String(m["column"]), "credible")
+	assert_eq(String(m["column"]), "truth", "the crown's own audit is ground truth (owner 2026-10-10)")
 	assert_eq(int(s.caught[st.id][0]["amount"]), skimmed)
 	assert_eq(Governance.skimmed_on(s, st.id, "workshop"), 0, "the count starts again")
 	assert_string_contains(String(s.records[st.id][0]), "Caught skimming the war workshops")
