@@ -1803,6 +1803,28 @@ background, no numerals, no text [C-ICON]
 | `W-37` | 胜利 | `a laurel sprig curving upward with a small pennon flying from its tip, drawn in a single confident stroke` |
 | `W-38` | 败北 | `a broken staff snapped at the middle with a torn pennon hanging limp from the upper fragment` |
 
+### 7.5 WAR ROOM 工具卷与决议卷轴 `W-61` ~ `W-68`、`U-61`（2026-10-11）
+
+> **用途**：WAR ROOM 工具卷（`WarToolSlot`）每个槽位的墨线图标，和右下角"Resolutions of the Council"卷起时的按钮（`WarDeployScroll`）。prompt 表是 `assets/imagegen/war_tool_prompts.csv`（`--prompts-file`，arms 同一路子）；装图 `install_map_art.py war_tools` 按 `war_tool_install.csv` 进 `assets/2D/war_room/tools/`，键在 `war_tool_art.tres`（`GameArt.WAR_TOOL_ART`）。
+>
+> **风格核**：图标用 `STYLE_CORE_war_tool.txt` + `NEGATIVE_war_tool.txt`（单色深 umber 墨、粗钢笔线、一个大剪影、明写无框），画幅 `C-GLYPH`（纯白底、平视、无场景）。风格核里**不要写 brush / tool bar**：2026-10-11 Qwen 把 brush 画成一支毛笔和蜡笔交叉，把 tool bar 画成一圈外框。两个模型都跑，Qwen 的手绘质感好但每张约 2 分钟，Z-Image 偏矢量但十几秒一张。**不要用 `STYLE_CORE_map_sepia.txt` / `[C-MAPMARK]` / `[C-SYMBOL]`**——2026-10-11 实跑：那三处的 "map symbol" / "campaign map" 字样让两个模型都画出整张欧洲地图，把符号缩成角落一小块。主体句里也不许出现 map / staff map 字样。
+>
+> **上色在代码里**：出图是单色墨线；`WarToolSlot.inked_glyph` 用 `WarInkIcon.inked` 按槽位的颜色上墨（蜡笔槽用 `stick_color`，其余用 `glyph_ink`），所以蜡笔只出一张中性的。卷轴 `U-61` 是实物（`STYLE_CORE_table_prop.txt`，`[C-ICON]`），不上色。
+>
+> **尺寸**：槽位图标 44 设计 px 槽里画 36 px × ~3 倍窗口缩放 → 128 px 正方；卷轴按钮 115×72 设计 px × 3 → 384 px 宽，保留长宽比。
+
+| ID | key | 对象 | Prompt 主体 |
+|---|---|---|---|
+| `W-61` | `hand` | 手（选择与拖动） | `a manicule, a medieval pointing hand in a ruffled sleeve cuff, the index finger extended straight to the upper right, the other fingers folded, drawn large and simple` |
+| `W-62` | `crayon` | 蜡笔（红/蓝由代码染） | `one single crayon: a short thick cylinder with a conical sharpened tip, lying diagonally from lower left to upper right, the paper wrapper's torn edge drawn as a jagged ring around it near the tip, nothing else in the picture` |
+| `W-63` | `arrow` | 进军箭头 | `one thick sweeping arrow curving from lower left to upper right, a solid tapering shaft and a broad filled triangular head` |
+| `W-64` | `front` | 防线 | `a fortified line: one long low horizontal bar, much wider than tall, with a row of five bold solid triangular teeth standing up along its top edge, nothing else` |
+| `W-65` | `phase` | 阶段线（**裁切**：两个模型都不肯画一条光秃秃的虚线，每个 seed 都给它套一个盒子或人像；取 Z-Image 盒子里那排短划，`PIL` 量出短划的范围裁出来再垫白成方图，再过 `post.py`）| `five dashes of morse code written in one horizontal row across the middle, thick short strokes evenly spaced, like a dashed line, no dots, nothing else on the page` |
+| `W-66` | `objective` | 目标 | `a bold freehand double ring: a thick outer circle and a thinner inner circle sharing one centre, the centre left empty` |
+| `W-67` | `piece` | 假想敌棋子 | `a small carved wooden gaming piece of a foot soldier with a spear and a shield standing upright on a round plinth, seen from straight ahead` |
+| `W-68` | `scrape` | 刮刀 | `a scraper knife lying diagonally from lower left to upper right: a short broad curved steel blade at the upper right and a turned wooden handle at the lower left` |
+| `U-61` | `scroll` | 卷起的决议卷轴 | `a parchment scroll rolled tight around two turned dark wooden rods with small knobbed ends, one rod at each end, the roll lying horizontally and seen from straight above, the cream parchment showing between the rods, tied shut across its middle by a thin cord under one round blob of deep oxblood sealing wax pressed with a plain blank device, nothing written anywhere, the whole object filling the width of the frame` |
+
 ---
 
 ## 8. 事件插图 `V-`

@@ -2,7 +2,8 @@ key,permille,notes
 road,1000,"owner 2026-09-27: couriers ride the road network (RoadGraph); a road is the pace courier_base_km_per_day is quoted at"
 trail,800,a trail: narrower and rougher
 offroad,550,"across country: the legs from the capital to the network and from it to the column"
-sea,625,"a crossing to another landmass at the fleet's 100 km a day (data/army_speed.csv) over the courier's 160"
+river,800,"owner 2026-10-11: rivers are a route at 80% of road pace (a courier or wagon takes the river as a road)"
+sea,800,"open water, sea and lakes alike, 80% of road pace (owner 2026-10-11)"
 tier_plains,1000,"the Elevation tier of the ground a stretch starts on (data/army_height_supply.csv lines)"
 tier_hills,800,hills slow a horse
 tier_mountains,600,mountain passes

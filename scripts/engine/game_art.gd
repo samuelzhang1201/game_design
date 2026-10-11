@@ -17,6 +17,9 @@ const WAR_PLAN_ART := "res://assets/2D/war_room/plan/war_plan_art.tres"
 ## `camp`; spec 2026-10-11-war-room-front-line-design §3). The table and
 ## scene are made in the editor once the model exists; absent, no camp.
 const CAMP_MODELS := "res://assets/3D/buildings/camp_models.tres"
+## The WAR ROOM's tool roll: each slot's painted ink glyph by WarToolSlot.art_key
+## (library W-61..W-68), and the resolutions' rolled scroll (U-61).
+const WAR_TOOL_ART := "res://assets/2D/war_room/tools/war_tool_art.tres"
 ## The couriers' paintings by kind, and the scenes a courier's card or the
 ## Missive desk may wear (foul weather, delivered).
 const COURIER_PAINTINGS := "res://assets/2D/paintings/couriers/courier_paintings.tres"

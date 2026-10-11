@@ -93,38 +93,27 @@ static func _burg_px(b: Dictionary) -> Vector2:
 
 ## The waypoints from one point to another, [x_m, y_m, kind] each (the kind
 ## of the stretch INTO it): across country to the nearest road node, the
-## network's fastest route to the reached node nearest the target, across
-## country (or by sea) to the target. Farther than courier_offroad_max_km
-## from any node: one straight leg.
+## courier network's fastest route (roads, trails and rivers, gone round
+## ground too steep) to the reached node nearest the target, across country
+## (water open, at sea pace) to the target; the off-network legs go round
+## scarps by MarchPath's water-open grid (owner 2026-10-11). Farther than
+## courier_offroad_max_km from any node: one such leg.
 static func path_between(repo: DataRepository, from_px: Vector2, to_px: Vector2) -> Array:
 	var a := ArmySystem.pack_to_metres(repo, from_px)
 	var b := ArmySystem.pack_to_metres(repo, to_px)
-	var g := RoadGraph.of_pack(repo)
+	var g := RoadGraph.courier_of_pack(repo)
+	var grid := MarchPath.of_pack(repo, true)
 	var reach := float(repo.bal("courier_offroad_max_km")) * 1000.0
 	var start := g.nearest(a)
 	if start < 0 or Vector2(a).distance_to(Vector2(g.nodes[start])) > reach:
-		return [[b.x, b.y, _leg_kind(repo, a, b)]]
+		return RoadGraph.across(repo, grid, a, b)
 	var tree := g.shortest(start)
 	var goal := g.nearest(b, tree["dist"])
 	# a start ON the network (the capital is a road node) takes no leg to itself
-	var way: Array = [] if g.nodes[start] == a else \
-		[[g.nodes[start].x, g.nodes[start].y, _leg_kind(repo, a, g.nodes[start])]]
+	var way: Array = [] if g.nodes[start] == a else RoadGraph.across(repo, grid, a, g.nodes[start])
 	way.append_array(g.route(tree, goal))
-	way.append([b.x, b.y, _leg_kind(repo, g.nodes[goal], b)])
+	way.append_array(RoadGraph.across(repo, grid, g.nodes[goal], b))
 	return way
-
-
-## "offroad", or "sea" when any sample every courier_sea_sample_km along the
-## leg is off the land grid (MapEconomy.cell_at < 0, the land/sea test
-## ActionSystem uses).
-static func _leg_kind(repo: DataRepository, a: Vector2i, b: Vector2i) -> String:
-	var step := maxf(repo.bal("courier_sea_sample_km") * 1000.0, 1.0)
-	var length := Vector2(a).distance_to(Vector2(b))
-	for i in range(1, int(length / step) + 1):
-		var p := Vector2(a).lerp(Vector2(b), float(i) * step / length)
-		if MapEconomy.cell_at(repo, ArmySystem.metres_to_pack(repo, Vector2i(p))) < 0:
-			return "sea"
-	return "offroad"
 
 
 ## A stretch's pace as a product of per-milles out of 10^9: its kind x the
@@ -550,8 +539,9 @@ static func _advance(repo: DataRepository, state: GameState, c: Dictionary, toda
 
 
 ## The column has moved more than courier_reaim_m since his road was set:
-## his last leg now ends where it stands (a column is far slower than a
-## courier, so the road itself is not re-planned).
+## his off-road tail now runs to where it stands, round ground a horse cannot
+## climb (a column is far slower than a courier, so the network route itself
+## is not re-planned).
 static func _reaim(repo: DataRepository, state: GameState, c: Dictionary, reg: Dictionary) -> void:
 	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, reg))
 	if Vector2(at).distance_to(Vector2(int(c["aim_x_m"]), int(c["aim_y_m"]))) <= repo.bal("courier_reaim_m"):
@@ -559,10 +549,15 @@ static func _reaim(repo: DataRepository, state: GameState, c: Dictionary, reg: D
 	c["aim_x_m"] = at.x
 	c["aim_y_m"] = at.y
 	var path: Array = c["path"]
-	if path.is_empty():
-		path.append([at.x, at.y, "offroad"])
-	else:
-		path[path.size() - 1] = [at.x, at.y, String(path[path.size() - 1][2])]
+	# the off-road tail (stretches across country or water) is planned again
+	# from where it begins to the column's new place; the network before it stays
+	var keep := path.size()
+	while keep > 0 and RoadGraph.ACROSS.has(String(path[keep - 1][2])):
+		keep -= 1
+	var from := Vector2i(int(c["x_m"]), int(c["y_m"])) if keep == 0 \
+		else Vector2i(int(path[keep - 1][0]), int(path[keep - 1][1]))
+	path.resize(keep)
+	path.append_array(RoadGraph.across(repo, MarchPath.of_pack(repo, true), from, at))
 
 
 static func _note_slow(repo: DataRepository, state: GameState, c: Dictionary, weather: String,

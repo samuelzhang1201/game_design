@@ -73,7 +73,7 @@ func test_most_of_the_way_is_on_the_roads() -> void:
 	for p: Array in c["path"]:
 		kinds[String(p[2])] = true
 	for k: String in kinds:
-		assert_true(k in ["road", "trail", "offroad", "sea"], k)
+		assert_true(k in ["road", "trail", "offroad", "river", "sea"], k)
 
 
 func test_the_capital_lost_he_rides_from_the_most_populous_town_of_the_first_held_province() -> void:
@@ -145,7 +145,7 @@ func test_his_road_does_not_begin_where_he_stands() -> void:
 ## A pack point off the land grid farther than courier_offroad_max_km from
 ## every road node — the open sea, found by a coarse scan of the pack.
 func _open_sea_px() -> Vector2:
-	var g := RoadGraph.of_pack(repo)
+	var g := RoadGraph.courier_of_pack(repo)
 	var reach := float(repo.bal("courier_offroad_max_km")) * 1000.0
 	var w := int(float(repo.map_info.get("width", "0")))
 	var h := int(float(repo.map_info.get("height", "0")))
@@ -172,8 +172,8 @@ func test_a_leg_off_the_land_is_a_sea_crossing_by_hand() -> void:
 	assert_ne(sea, Vector2(-1, -1), "the pack has open sea far from the roads")
 	var cap := ArmySystem.pack_to_metres(repo, _capital_px())
 	var out := ArmySystem.pack_to_metres(repo, sea)
-	assert_eq(CourierSystem._leg_kind(repo, cap, out), "sea", "a leg ending off the land grid")
-	assert_eq(CourierSystem._leg_kind(repo, out, cap), "sea", "and one starting there")
+	assert_eq(RoadGraph.leg_kind(repo, cap, out), "sea", "a leg ending off the land grid")
+	assert_eq(RoadGraph.leg_kind(repo, out, cap), "sea", "and one starting there")
 	# the tier is 1000 at sea, even from a point on the land (every tier forced to 300‰)
 	assert_eq(CourierSystem.stretch_factor(repo, "sea", cap, "clear"), 625 * 1000 * 1000)
 	assert_eq(CourierSystem.stretch_factor(repo, "offroad", cap, "clear"), 500 * 300 * 1000,
@@ -185,10 +185,14 @@ func test_a_leg_off_the_land_is_a_sea_crossing_by_hand() -> void:
 	assert_eq(CourierSystem.need_along(repo, s, out, [[cap.x, cap.y, "sea"]], 10), by_hand)
 
 
-## Farther than courier_offroad_max_km from every road node: ONE straight leg,
-## and from the open sea that leg is a crossing.
-func test_far_from_the_network_he_rides_one_straight_leg() -> void:
+## Farther than courier_offroad_max_km from every road node: no network, one
+## off-road leg planned on the open grid -- from the open sea its first
+## stretch is a crossing, and every stretch is across country or water.
+func test_far_from_the_network_he_rides_off_road_to_the_capital() -> void:
 	var sea := _open_sea_px()
 	var path := CourierSystem.path_between(repo, sea, _capital_px())
 	var cap := ArmySystem.pack_to_metres(repo, _capital_px())
-	assert_eq(path, [[cap.x, cap.y, "sea"]])
+	assert_eq(Vector2i(int(path.back()[0]), int(path.back()[1])), cap, "ends on the capital")
+	assert_eq(String(path[0][2]), "sea", "the first stretch is the crossing")
+	for p: Array in path:
+		assert_true(RoadGraph.ACROSS.has(String(p[2])), "off the network: " + String(p[2]))
