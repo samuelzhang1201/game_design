@@ -140,10 +140,10 @@ size_flags_horizontal = 0
 theme_override_constants/margin_top = -14
 theme_override_constants/margin_bottom = -14
 
-[node name="Title_Crown" type="Label" parent="Hero/Head1" unique_id=546012911]
+[node name="Title_Line1" type="Label" parent="Hero/Head1" unique_id=546012911]
 layout_mode = 2
 theme_type_variation = &"TitleHeadline"
-text = "Crown"
+text = "Beyond the"
 
 [node name="Head2" type="MarginContainer" parent="Hero" unique_id=1900125620]
 clip_contents = true
@@ -152,10 +152,10 @@ size_flags_horizontal = 0
 theme_override_constants/margin_top = -14
 theme_override_constants/margin_bottom = -14
 
-[node name="Title_andCouncil" type="Label" parent="Hero/Head2" unique_id=1470080607]
+[node name="Title_Line2" type="Label" parent="Hero/Head2" unique_id=1470080607]
 layout_mode = 2
 theme_type_variation = &"TitleHeadline"
-text = "and Council"
+text = "King's Words"
 
 [node name="LedeGap" type="Control" parent="Hero" unique_id=1020941382]
 custom_minimum_size = Vector2(0, 18)

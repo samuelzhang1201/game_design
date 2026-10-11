@@ -15,7 +15,7 @@ func test_the_title_is_the_living_realm_layout() -> void:
 	await wait_process_frames(2)
 	var menu: MainMenu = r.current_screen
 	assert_not_null(menu.find_child("Hero", true, false), "the words stand bottom left")
-	assert_not_null(menu.find_child("Title_Crown", true, false))
+	assert_not_null(menu.find_child("Title_Line1", true, false))
 	assert_not_null(menu.find_child("TitleArms", true, false), "the crown's arms top left")
 	for row in ["StartGame", "LoadGame", "MusicToggle", "GraphicsQuality", "FrameCap", "FpsToggle", "DevMode", "Quit"]:
 		assert_not_null(menu.row(row), "the menu keeps the row " + row)
@@ -68,10 +68,10 @@ func test_the_title_enters_out_of_the_black() -> void:
 	var menu: MainMenu = r.current_screen
 	var curtain := menu.get_node("Curtain") as CanvasItem
 	assert_true(curtain.visible, "the window starts black")
-	assert_eq(menu.find_child("Title_Crown", true, false).modulate.a, 0.0, "the words wait")
+	assert_eq(menu.find_child("Title_Line1", true, false).modulate.a, 0.0, "the words wait")
 	await wait_until(func() -> bool: return not menu.realm_pending(), 10.0)
 	assert_false(curtain.visible, "the black has lifted")
-	assert_eq(menu.find_child("Title_Crown", true, false).modulate.a, 1.0, "the name is in")
+	assert_eq(menu.find_child("Title_Line1", true, false).modulate.a, 1.0, "the name is in")
 	assert_eq(menu.row("StartGame").modulate.a, 1.0)
 
 ## The speaker is the Music row's switch: a press turns the music and the
