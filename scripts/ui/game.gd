@@ -146,11 +146,11 @@ func advance_day() -> Dictionary:
 		var r := next_tick()
 		return {"ticked": true, "finished": r.finished_works, "arrived": engine.day_arrivals,
 			"couriers": engine.day_couriers, "idled": engine.newly_idle, "ended": ended,
-			"hazards": engine.month_hazard_news, "supply": engine.day_supply}
+			"hazards": engine.month_hazard_news, "supply": engine.day_supply, "raids": engine.day_raid}
 	var finished := engine.advance_day(state)
 	state_changed.emit()
 	return {"ticked": false, "finished": finished, "arrived": engine.day_arrivals,
-		"couriers": engine.day_couriers, "ended": ended, "supply": engine.day_supply}
+		"couriers": engine.day_couriers, "ended": ended, "supply": engine.day_supply, "raids": engine.day_raid}
 
 func next_tick() -> TickReport:
 	_prompts_this_tick = 0
