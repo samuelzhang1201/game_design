@@ -20,8 +20,13 @@ static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font)
 	quad.size = size + Vector2(pad, pad) * 2.0
 	chart.set_meta("margin_m", pad)
 	chart.mesh = quad
-	chart.position = Vector3(0.0, repo.bal("war_chart_y_m"), repo.bal("war_chart_z_m"))
+	var tilt := deg_to_rad(repo.bal("war_chart_tilt_deg"))
+	var half := quad.size.y * 0.5
+	# R10 (owner-approved 2026-10-12): the chart leans on a reading stand, pivoting about its NEAR
+	# (camera-side) edge, which stays on the oak at war_chart_z_m; the far edge rises up the lean
+	chart.position = Vector3(0.0, repo.bal("war_chart_y_m") + sin(tilt) * half, repo.bal("war_chart_z_m") - cos(tilt) * half)
 	chart.rotation_degrees = Vector3(-(90.0 - repo.bal("war_chart_tilt_deg")), 0.0, 0.0)
+	chart.set_meta("foot_y_m", repo.bal("war_chart_y_m"))   # the oak the tray's markers stand on
 	var mat := chart.material_override.duplicate() as StandardMaterial3D
 	mat.albedo_texture = ImageTexture.create_from_image(WarIndexChart.image_with_margin(repo, int(repo.bal("war_chart_px")),
 			int(round(pad / size.x * repo.bal("war_chart_px")))))
@@ -88,12 +93,22 @@ static func chart_point(chart: MeshInstance3D, uv: Vector2) -> Vector3:
 	return chart.global_transform * Vector3((uv.x - 0.5) * size.x, (0.5 - uv.y) * size.y, 0.0)
 
 
+## The unit normal of the chart's face (toward the camera): a marker laid on the
+## chart stands along it, not along the world's up.
+static func chart_normal(chart: MeshInstance3D) -> Vector3:
+	return chart.global_transform.basis.z.normalized()
+
+
 ## Where resting war marker `slot` stands: a column beside the chart's east
-## edge, `gap` apart (the tray; owner 2026-10-12, item 7).
+## edge, `gap` apart (the tray; owner 2026-10-12, item 7). The column runs down the
+## lean's footprint, and the markers stand on the OAK (the chart's foot height), not in
+## the air along the leaning plane.
 static func tray_point(chart: MeshInstance3D, slot: int, gap: float) -> Vector3:
 	var size := map_size(chart)
 	var pad := float(chart.get_meta("margin_m", 0.0))
-	return chart.global_transform * Vector3(size.x * 0.5 + pad + gap, size.y * 0.5 - gap * float(slot), 0.0)
+	var p := chart.global_transform * Vector3(size.x * 0.5 + pad + gap, size.y * 0.5 - gap * float(slot), 0.0)
+	p.y = float(chart.get_meta("foot_y_m", p.y))
+	return p
 
 
 ## Replace the arrows: one at each side the markers can all move toward

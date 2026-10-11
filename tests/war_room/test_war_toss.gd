@@ -45,3 +45,11 @@ func test_the_landing_lies_inside_the_cell_off_its_edges() -> void:
 		var at := WarToss.landing(r, s, 0.2)
 		assert_true(r.grow_individual(-0.02, -0.01, -0.02, -0.01).has_point(at) or
 			r.grow_individual(-0.02, -0.01, -0.02, -0.01).end.is_equal_approx(at), str(at))
+
+
+func test_a_toss_on_a_leaning_face_settles_along_its_normal() -> void:
+	var up := Vector3(0.0, 0.8192, 0.5736).normalized()
+	var p := WarToss.plan(Vector3(1, 0, 1), Vector3(0, 0.2, -0.5), 9, rules, up)
+	var end := WarToss.pose(p, float(p["duration"]) + 1.0)
+	assert_almost_eq(end.basis.y.normalized().dot(up), 1.0, 0.0001, "its up is the face's normal")
+	assert_almost_eq(end.origin.distance_to(Vector3(0, 0.2, -0.5)), 0.0, 0.0001)

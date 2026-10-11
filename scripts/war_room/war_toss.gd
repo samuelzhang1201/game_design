@@ -15,7 +15,14 @@ static func rules(repo: DataRepository) -> Dictionary:
 		"settle_s": repo.bal("war_toss_settle_s")}
 
 
-static func plan(from: Vector3, to: Vector3, seed_v: int, r: Dictionary) -> Dictionary:
+## The turn that stands a piece along `up` (the world's up lays it as it is): the
+## chart leans, so a marker on it stands along the chart's normal (R10).
+static func lay(up: Vector3) -> Quaternion:
+	return Quaternion.IDENTITY if up.is_equal_approx(Vector3.UP) else Quaternion(Vector3.UP, up.normalized())
+
+
+## `up` is the face the piece lands on (its normal); the flight itself is still lifted by gravity.
+static func plan(from: Vector3, to: Vector3, seed_v: int, r: Dictionary, up := Vector3.UP) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
 	var axis := Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-0.3, 0.3), rng.randf_range(-1.0, 1.0))
@@ -30,7 +37,7 @@ static func plan(from: Vector3, to: Vector3, seed_v: int, r: Dictionary) -> Dict
 	var total := float(r["fly_s"]) + float(r["settle_s"])
 	for b: Dictionary in bounces:
 		total += float(b["s"])
-	return {"from": from, "to": to, "apex": float(r["apex_m"]), "axis": axis,
+	return {"from": from, "to": to, "up": up.normalized(), "apex": float(r["apex_m"]), "axis": axis,
 		"turns": rng.randf_range(float(r["turns_min"]), float(r["turns_max"])), "yaw": rng.randf_range(0.0, TAU),
 		"fly_s": float(r["fly_s"]), "bounces": bounces, "settle_s": float(r["settle_s"]), "duration": total}
 
@@ -39,7 +46,8 @@ static func pose(p: Dictionary, t: float) -> Transform3D:
 	var from: Vector3 = p["from"]
 	var to: Vector3 = p["to"]
 	var fly := float(p["fly_s"])
-	var upright := Quaternion(Vector3.UP, float(p["yaw"]))
+	var up: Vector3 = p.get("up", Vector3.UP)
+	var upright := lay(up) * Quaternion(Vector3.UP, float(p["yaw"]))
 	var tumbled := Quaternion(p["axis"] as Vector3, float(p["turns"]) * TAU) * upright
 	if t <= fly:
 		var u := clampf(t / maxf(fly, 0.0001), 0.0, 1.0)
@@ -52,7 +60,7 @@ static func pose(p: Dictionary, t: float) -> Transform3D:
 		var s := float(b["s"])
 		if left <= s:
 			var u := left / maxf(s, 0.0001)
-			return Transform3D(Basis(hop), to + Vector3.UP * 4.0 * float(b["h"]) * u * (1.0 - u))
+			return Transform3D(Basis(hop), to + up * 4.0 * float(b["h"]) * u * (1.0 - u))
 		left -= s
 	var k := smoothstep(0.0, 1.0, clampf(left / maxf(float(p["settle_s"]), 0.0001), 0.0, 1.0))
 	return Transform3D(Basis(hop.slerp(upright, k)), to)

@@ -56,7 +56,7 @@ func sync(tray: WarTray) -> void:
 			_pose(slot, Transform3D(Basis.IDENTITY, rest_point(slot)))
 		else:
 			var uv := WarIndexChart.uv_of_cell(_repo, WarSheets.series(_repo)[sheet]).get_center()
-			_pose(slot, Transform3D(Basis.IDENTITY, WarRoomWall.chart_point(_chart, uv)))
+			_pose(slot, Transform3D(Basis(WarToss.lay(WarRoomWall.chart_normal(_chart))), WarRoomWall.chart_point(_chart, uv)))
 
 
 ## Where slot `slot`'s marker rests beside the chart's east edge.
@@ -73,7 +73,7 @@ func toss(slot: int, index: int) -> void:
 	var uv := WarToss.landing(WarIndexChart.uv_of_cell(_repo, WarSheets.series(_repo)[index]),
 		hash([index, _toss_n]), _repo.bal("war_toss_margin"))
 	_toss = WarToss.plan(rest_point(slot), WarRoomWall.chart_point(_chart, uv), hash([index, _toss_n, "toss"]),
-		WarToss.rules(_repo))
+		WarToss.rules(_repo), WarRoomWall.chart_normal(_chart))
 	_toss_t = 0.0
 	_toss_to = index
 	_toss_slot = slot

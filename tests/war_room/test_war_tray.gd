@@ -165,8 +165,7 @@ func test_union_table_fits_the_oak() -> void:
 	assert_lt(w, repo.bal("war_table_w_m"))
 	assert_almost_eq(WarRoomTable.depth_m(column, w), repo.bal("war_table_max_depth_m"), 0.0001)
 	# the deepest sheet still leaves the index chart its north band of the oak
-	var map_h := repo.bal("war_chart_w_m") * float(repo.map_info.get("height", "1")) / float(repo.map_info.get("width", "1"))
-	var chart_south := repo.bal("war_chart_z_m") + map_h * 0.5 + repo.bal("war_chart_margin_m")
+	var chart_south := repo.bal("war_chart_z_m")   # the leaning chart's near edge (R10)
 	assert_lte(chart_south, -repo.bal("war_table_max_depth_m") * 0.5, "the chart's south edge north of the sheet")
 	var row := MapCoords.cell_rect(repo, Vector2i(3, 2), deg).merge(MapCoords.cell_rect(repo, Vector2i(6, 2), deg)).grow(collar)
 	assert_almost_eq(WarRoomTable.width_for(repo, {"rect": row, "cols": 4, "rows": 1}), repo.bal("war_table_w_m"), 0.0001, "a 4 x 1 row is shallow")
