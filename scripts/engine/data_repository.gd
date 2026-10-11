@@ -513,6 +513,58 @@ static func parse_csv(path: String, required_cols: Array) -> Array[Dictionary]:
 		out.append(row)
 	return out
 
+## data dir -> {table: folder}, parsed once from <dir>/tables.csv.
+static var _index_cache: Dictionary = {}
+
+static func _index(dir: String) -> Dictionary:
+	if not _index_cache.has(dir):
+		var index := {}
+		for r in parse_csv(dir + "/tables.csv", ["folder", "table"]):
+			index[String(r["table"])] = String(r["folder"])
+		_index_cache[dir] = index
+	return _index_cache[dir]
+
+## A table's file: the folder <dir>/tables.csv names for it (the data is
+## sorted into scene folders, spec 2026-10-11-data-folders-by-scene).
+static func table_path(dir: String, table: String) -> String:
+	var index := _index(dir)
+	if not index.has(table):
+		last_error = "tables.csv has no row for " + table
+		return dir + "/" + table + ".csv"
+	return dir + "/" + String(index[table]) + "/" + table + ".csv"
+
+## The index's folders, distinct and sorted — the balance files' load order.
+static func table_folders(dir: String) -> Array[String]:
+	var out: Array[String] = []
+	for folder: String in _index(dir).values():
+		if not out.has(folder):
+			out.append(folder)
+	out.sort()
+	return out
+
+## Every indexed folder's balance.csv merged into one key -> value dict. A
+## key in two files is an error naming both; {} on any failure.
+static func load_balance(dir: String) -> Dictionary:
+	var out := {}
+	var where := {}
+	for folder in table_folders(dir):
+		var path := dir + "/" + folder + "/balance.csv"
+		if not FileAccess.file_exists(path):
+			continue
+		var rows := parse_csv(path, ["key", "value"])
+		if last_error != "":
+			return {}
+		for r in rows:
+			var key := String(r["key"])
+			if where.has(key):
+				last_error = "balance key %s is in both %s/balance.csv and %s/balance.csv" % [
+					key, where[key], folder]
+				return {}
+			where[key] = folder
+			out[key] = float(r["value"])
+	last_error = ""
+	return out
+
 ## Only what the interface's LOOK reads — balance, the palettes, the font
 ## roles' sizes, the resource icons' words — for the editor, where the Game
 ## autoload is a placeholder and the @tool look classes (the war table's
