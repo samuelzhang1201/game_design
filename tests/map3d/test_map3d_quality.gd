@@ -246,3 +246,21 @@ func test_the_finishing_effects_are_spent_up_close() -> void:
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()
+
+
+## The 3D view's px per design px is the tier's render_scale of the window's,
+## held under its max_px_scale (perf P0 2026-10-11): a Retina 3024x1964 window
+## (min(3024/1280, 1964/720) = 2.3625 per design px) renders high at 1.8, a
+## 1080p one (1.5) is untouched, ultra has no cap.
+func test_the_view_holds_its_pixels_under_the_tiers_cap() -> void:
+	var high := {"render_scale": "1.0", "max_px_scale": "1.8"}
+	assert_almost_eq(Map3DQuality.px_scale(high, 2.3625), 1.8, 0.0001, "Retina: capped")
+	assert_almost_eq(Map3DQuality.px_scale(high, 1.5), 1.5, 0.0001, "1080p: under the cap")
+	var low := {"render_scale": "0.67", "max_px_scale": "1.2"}
+	assert_almost_eq(Map3DQuality.px_scale(low, 1.5), 1.005, 0.0001, "1080p low: 1.5 x 0.67")
+	assert_almost_eq(Map3DQuality.px_scale(low, 2.3625), 1.2, 0.0001, "Retina low: capped")
+	assert_almost_eq(Map3DQuality.px_scale({"render_scale": "1.0", "max_px_scale": ""}, 2.3625), 2.3625,
+		0.0001, "no cap: the whole window")
+	for tier: String in ["low", "medium", "high"]:
+		assert_gt(Map3DQuality.num(Map3DQuality.row(Game.data, tier), "max_px_scale", 0.0), 0.0, tier + " is capped")
+	assert_eq(Map3DQuality.num(Map3DQuality.row(Game.data, "ultra"), "max_px_scale", 0.0), 0.0, "ultra renders every pixel")
