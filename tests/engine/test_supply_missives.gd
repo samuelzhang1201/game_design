@@ -1,4 +1,5 @@
 extends GutTest
+const ConductHelpers := preload("res://tests/engine/conduct_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## Supply missives (spec 2026-10-07-army-supply-lines §5.5).
 
@@ -90,11 +91,14 @@ func test_a_day_with_events_files_one_letter_and_a_quiet_day_none() -> void:
 			s.regiments[c]["supplies"] = ArmySystem.max_units(repo, use) + use
 	var before := s.missives.size()
 	s.regiments[code]["supplies"] = 0     # it goes hungry today: one "empty" event
+	# the land under it yields no food, or it would forage and not be empty
+	# (spec 2026-10-10-foraging-and-desertion §3.3: warnings read after foraging)
+	ConductHelpers.set_food(repo, ArmySystem.province_of(repo, s, ArmySystem.regiment(repo, code, s)), 0)
 	engine.advance_day(s)
-	var supply: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "supply")
+	var supply: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "supply" and String(m["title"]) == "Supply dispatch")
 	assert_eq(supply.size(), 1)
 	engine.advance_day(s)                 # nothing new to say
-	supply = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "supply")
+	supply = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "supply" and String(m["title"]) == "Supply dispatch")
 	assert_eq(supply.size(), 1)
 	assert_true(s.missives.size() >= before + 1)
 	var facts: Array = supply[0]["facts"]

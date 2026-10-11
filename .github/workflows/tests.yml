@@ -68,4 +68,16 @@ jobs:
           # one) so run_tests.sh's own import is the SECOND pass, same as a
           # known-green local/cloud run, not the only one.
           "$GODOT" --headless --path . --import > /dev/null 2>&1 || true
-          ./run_tests.sh
+          # The whole suite in ONE Godot process grows past the runner's
+          # ~7.9 GB (the test scripts keep allocating; measured 7.1 GB at
+          # minute 6 on main) and the runner kills the step with exit 143.
+          # So run it as SHARDS one after the other, each a fresh process
+          # (run_tests.sh --shard=I/N: every Nth test script). Every shard
+          # runs even if an earlier one failed, so a red run shows them all.
+          failed=0
+          for i in 1 2 3 4 5; do
+            echo "::group::shard $i/5"
+            ./run_tests.sh --shard=$i/5 || failed=1
+            echo "::endgroup::"
+          done
+          exit $failed

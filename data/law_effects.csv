@@ -30,6 +30,10 @@ wear_badges,on,morale_mark,,1,monthly,unit,the men wear the king's colours
 wear_badges,on,treasury,,-1,monthly,army,"cloth for the badges: per 1,000 men under the law"
 no_feuds,on,morale_mark,,1,monthly,unit,the camps are quiet
 no_feuds,on,unrest,,-0.1,monthly,army,no private quarrels spill into the villages
+desertion_penalty,lenient,morale_mark,,1,monthly,unit,the men know a runaway is forgiven
+desertion_penalty,hanging,peasant_contentment,,-0.3,monthly,army,the villages watch the gallows go up
+desertion_penalty,hanging,legitimacy,,-0.2,monthly,army,the crown hangs its own men
+desertion_penalty,hanging,morale_mark,,-1,monthly,unit,the men fear the rope
 quarter,refuse,morale_mark,,1,monthly,unit,the men fight without mercy
 quarter,refuse,legitimacy,,-0.3,monthly,army,the crown gives no quarter
 quarter,refuse,flag,,,monthly,flat,no enemy is spared who yields
