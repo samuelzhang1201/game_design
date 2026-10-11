@@ -14,19 +14,6 @@ script = ExtResource("3_hcqwt")
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Hand" type="Control" parent="Row" unique_id=2022221510]
-custom_minimum_size = Vector2(44, 44)
-layout_mode = 2
-tooltip_text = "The hand: click a piece to choose it, Shift-click to add one; a drag pans the table (Space+drag and the middle button pan with any stick)"
-mouse_default_cursor_shape = 2
-script = ExtResource("4_xpj0i")
-glyph_ink = Color(0.8862745, 0.80784315, 0.627451, 1)
-stick_color = Color(0.8862745, 0.80784315, 0.627451, 1)
-ring = Color(0.8392157, 0.69803923, 0.3764706, 1)
-
-[node name="Sep0" type="VSeparator" parent="Row" unique_id=286366263]
-layout_mode = 2
-
 [node name="Sides" type="VBoxContainer" parent="Row" unique_id=971343786]
 layout_mode = 2
 theme_override_constants/separation = 2
