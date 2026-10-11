@@ -9,6 +9,10 @@ func before_each() -> void:
 	repo = SuiteData.repo()
 	s = SuiteData.campaign(repo, 42)
 
+
+func after_each() -> void:
+	MarchPath.forget()
+
 func _land() -> String:
 	var codes: Array = s.regiments.keys()
 	codes.sort()
@@ -221,3 +225,48 @@ func test_a_town_farther_from_the_capital_than_the_column_is_greyed_with_why() -
 				assert_string_contains(String(e[town]), "frontier")
 		checked += 1
 	assert_gt(checked, 0)
+
+
+# --- the wagons go round ground a column cannot climb (owner 2026-10-11:
+# 补给线没有遵守坡度绕道; spec 2026-10-10-march-slope-detour)
+
+## An open grid over the whole pack with a scarp across the middle of the
+## leg `a` -> `b` (whole metres): 13 cells square to it, the ends' own cells
+## left open, so the straight leg is blocked and the way round is open.
+func _scarp_across(a: Vector2i, b: Vector2i) -> MarchPath:
+	var px := int(repo.bal("army_march_grid_px"))
+	var cols := int(ceil(float(repo.map_info["width"]) / float(px)))
+	var rows := int(ceil(float(repo.map_info["height"]) / float(px)))
+	var cell_m := px * ArmySystem.metres_per_pack_px(repo)
+	var bytes := PackedByteArray()
+	bytes.resize(cols * rows)
+	bytes.fill(30)
+	var mid := (Vector2(a) + Vector2(b)) * 0.5
+	var across := (Vector2(b) - Vector2(a)).normalized().orthogonal()
+	var ends := [Vector2i(a) / cell_m, Vector2i(b) / cell_m]
+	for i in range(-6 * 4, 6 * 4 + 1):
+		var c := Vector2i((mid + across * float(i) * float(cell_m) * 0.25) / float(cell_m))
+		if not ends.has(c):
+			bytes[c.y * cols + c.x] = 180
+	var g := MarchPath.build(repo, cols, rows, cell_m, bytes)
+	MarchPath.use(repo, g)
+	return g
+
+
+func test_the_off_road_leg_to_the_column_goes_round_a_scarp() -> void:
+	var code := _land()
+	var town: String = TownStores.realm_towns(repo, s)[0]
+	var far := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)) + Vector2(30, 10)
+	var before := SupplyLines.road_between_px(repo, town, far)
+	var last := ArmySystem.pack_to_metres(repo, before[before.size() - 2])
+	var end := ArmySystem.pack_to_metres(repo, far)
+	var g := _scarp_across(last, end)
+	assert_false(g.clear(last, end, [g.cell_of(last), g.cell_of(end)]), "the straight leg meets the scarp")
+	var route := SupplyLines.road_between_px(repo, town, far)
+	assert_almost_eq(route[route.size() - 1].distance_to(far), 0.0, 0.001, "it still ends ON the point")
+	assert_gt(route.size(), before.size(), "the leg is gone round")
+	var ends := [g.cell_of(ArmySystem.pack_to_metres(repo, route[0])), g.cell_of(end)]
+	for i in range(1, route.size()):
+		var p := ArmySystem.pack_to_metres(repo, route[i - 1])
+		var q := ArmySystem.pack_to_metres(repo, route[i])
+		assert_true(g.clear(p, q, ends + [g.cell_of(p), g.cell_of(q)]), "leg %d crosses no scarp" % i)
