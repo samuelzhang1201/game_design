@@ -131,7 +131,7 @@ theme_type_variation = &"TitleBrand"
 text = "Sixty years · one crown · nine seats at the table"
 
 [node name="TagGap" type="Control" parent="Hero" unique_id=199901246]
-custom_minimum_size = Vector2(0, 6)
+custom_minimum_size = Vector2(0, 14)
 layout_mode = 2
 
 [node name="Head1" type="MarginContainer" parent="Hero" unique_id=1051070826]
@@ -139,7 +139,7 @@ clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/margin_top = -14
-theme_override_constants/margin_bottom = -14
+theme_override_constants/margin_bottom = 0
 
 [node name="Title_Line1" type="Label" parent="Hero/Head1" unique_id=546012911]
 layout_mode = 2
@@ -151,12 +151,12 @@ clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/margin_top = -14
-theme_override_constants/margin_bottom = -14
+theme_override_constants/margin_bottom = 0
 
 [node name="Title_Line2" type="Label" parent="Hero/Head2" unique_id=1470080607]
 layout_mode = 2
 theme_type_variation = &"TitleHeadline"
-text = "King's Words"
+text = "King’s Words"
 
 [node name="LedeGap" type="Control" parent="Hero" unique_id=1020941382]
 custom_minimum_size = Vector2(0, 18)
