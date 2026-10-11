@@ -53,6 +53,7 @@ func _ready() -> void:
 	DisplayServer.window_set_size(size)
 	get_window().size = size
 	Game.start_campaign(42)
+	GameRoot.stepwise_overlays = false
 	var root := (load("res://scenes/game_root.tscn") as PackedScene).instantiate() as GameRoot
 	_root = root
 	add_child(root)
