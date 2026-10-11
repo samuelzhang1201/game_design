@@ -50,7 +50,7 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var strength := MapObjects.regiment_size(repo, r)
 		var naval := String(r.get("is_naval", "0")) == "1"
 		var royal := String(r.get("is_royal", "0")) == "1"
-		var text := str(int(strength))
+		var text := String(p.get("text", str(int(strength))))  # a fogged foe's: an estimate (Map3DHudArmies)
 		var solo := with_piece.has(code)
 		# a chip over a 3D piece is its tag, never bigger than the soldier
 		var ph: float = minf(h, float(p.get("h", h)))

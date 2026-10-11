@@ -8,7 +8,9 @@ var data: DataRepository
 var s: GameState
 
 func before_each() -> void:
-	data = SuiteData.repo()
+	# its marches are short hops between the capital and its towns, which the
+	# pack's bay and scarps would bend: walked straight (spec 2026-10-10-march-slope-detour)
+	data = SuiteData.open_country(SuiteData.repo())
 	s = SuiteData.campaign(data, 42)
 	_able_honest_governors()
 	RealmEconomy.forget()

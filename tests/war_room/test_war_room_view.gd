@@ -492,7 +492,10 @@ func test_shift_drag_boxes_every_land_piece_inside() -> void:
 	assert_eq(got, want)
 	assert_eq(view.plan_input().sel_side, "blue")
 	assert_false(view.plan_input().marquee().has_area())
-	assert_eq((view.get_node("%Hud") as WarHud).marks()["rings"].size() > 0, true, "rings round the selection")
+	var lit: Array = (view.get_node("%Pieces") as WarPieces).glowing()
+	lit.sort()
+	assert_eq(lit, want, "each selected piece glows on the table")
+	assert_eq((view.get_node("%Hud") as WarHud).marks()["rings"], [], "and no ring is drawn round it on the HUD")
 
 
 func test_the_blue_arrow_waits_for_a_selection_then_draws_its_march() -> void:
@@ -768,7 +771,9 @@ func test_the_huds_marks_are_put_away_while_the_board_holds_the_camera() -> void
 	view.aim_dest = (WarSheets.series(repo)[int(p["sheet"])]["rect"] as Rect2).get_center()
 	view.select(code)
 	var hud := view.get_node("%Hud") as WarHud
-	assert_true(hud.drawing(), "the pinned arrow and the chalk ring are drawn on the table")
+	# a selected piece glows on the table itself (no HUD ring): a lit town is the HUD's mark here
+	hud.set_supply([{"at": Vector2(5, 5), "lit": true}], repo.war_palette["supply_route"])
+	assert_true(hud.drawing(), "the HUD's marks are drawn over the table")
 	assert_true(hud.is_visible_in_tree())
 	view.enter_board()
 	assert_false(hud.is_visible_in_tree(), "flying to the board, the marks go")

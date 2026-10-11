@@ -417,6 +417,13 @@ add it here as a principle with its why — not as a changelog entry.
   colour and haze, not by empty space. Spread means the CORE the player
   reads (the King's own ring), not only the edge; and each view keeps its
   own ground — the flat chart's clusters must not bleed into one another.
+  Then (owner 2026-10-10: "ledger系统，美术太差了"): a flat emissive disc
+  and a flat line read as a placeholder. A star is a crafted object — a glass
+  orb with a star chart inside, lit, rimmed, a bright core (chosen over pearl,
+  clear glass and a soft glow) — and a link a braided gold cord (chosen over a
+  light filament and a stardust stream), both generated art tinted per
+  cluster. "绞绳调细一点": the cord stays thin beside its stars — at twice
+  the line's width it crowded the hub; at the line's own width it lost its twist.
 
 ## Colour and value
 - **Greyscale art takes the realm's hue; colour art keeps its own.** Symbols

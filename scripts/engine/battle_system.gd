@@ -672,9 +672,7 @@ static func _fall_back(repo: DataRepository, state: GameState, code: String, b: 
 		_halt(state, code)
 		_pause(repo, state, code)
 		return
-	e["dest_x_m"] = best_m.x
-	e["dest_y_m"] = best_m.y
-	e["order"] = ArmySystem.ORDER_MARCH
+	ArmySystem.aim_entry(repo, e, best_m, ArmySystem.is_naval(repo, state, code))
 	if not ArmySystem.is_foe(state, code):
 		# a unit of the crown's leaves its camp and, holding a seat, empties it
 		# (refilled from the camp; spec 2026-10-07-army-split-and-ground §4.4)

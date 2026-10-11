@@ -126,6 +126,10 @@ func bind(repo: DataRepository) -> void:
 		m.set_shader_parameter("rim_gain", repo.bal("ledger_star_rim"))
 		m.set_shader_parameter("metal", repo.bal("ledger_star_metallic"))
 		m.set_shader_parameter("rough", repo.bal("ledger_star_roughness"))
+		# the generated matcap (its texture is the .tres's; owner 2026-10-10)
+		m.set_shader_parameter("matcap_mix", repo.bal("ledger_star_matcap_mix"))
+		m.set_shader_parameter("matcap_gain", repo.bal("ledger_star_matcap_gain"))
+		m.set_shader_parameter("matcap_white", repo.bal("ledger_star_matcap_white"))
 		LedgerStarMotion.bind_wobble(m, repo)
 	_stars.material_override = _star_mat
 	_faint_stars.material_override = _faint_mat
@@ -137,6 +141,9 @@ func bind(repo: DataRepository) -> void:
 	_link_mat.set_shader_parameter("dashes_per_m", repo.bal("ledger_dashes_per_m"))
 	_link_mat.set_shader_parameter("edge_soft", repo.bal("ledger_link_edge_soft"))
 	_link_mat.set_shader_parameter("light_gain", repo.bal("ledger_light_gain"))
+	# the generated strand (its texture is the .tres's; owner 2026-10-10)
+	for key: String in ["mix", "widen", "px", "power", "gain", "white"]:
+		_link_mat.set_shader_parameter("strand_" + key, repo.bal("ledger_link_strand_" + key))
 	_link_mat.set_shader_parameter("glow_virtuous", _pal["loop_virtuous"])
 	_link_mat.set_shader_parameter("glow_vicious", _pal["loop_vicious"])
 	LedgerStarMotion.bind_wobble(_link_mat, repo)   # a link's ends move with its stars

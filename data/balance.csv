@@ -213,6 +213,12 @@ army_road_reach_m,1500,"owner 2026-10-06 (spec 2026-10-06-army-location-and-town
 army_march_days_cap,3650,"the most days ArmySystem.march_days_between walks a route before it gives the figure up (a guard, never reached on a pack: ten years)"
 army_route_sample_m,3000,"march waypoints (spec 2026-10-07-march-waypoints §1): a route through waypoints is sampled into a whole-metre point every this many metres of chord per leg (MarchRoute) — the line drawn and walked; a 3 km chord on a 50 km bend strays 20 m"
 army_march_waypoints_max,8,"march waypoints (spec §1, ruling 3): the most waypoints one ARMY_MARCH may name; Add waypoint and a bend stop there"
+army_march_grid_px,4,"march slope (owner 2026-10-10, spec 2026-10-10-march-slope-detour): the march grid's cell in pack px (4 px = 200 m of the 3D world, 10 Terrain3D vertices): tools/map3d/bake_march_grid.py bakes one cell per this many px into the pack's geography/march_grid.png and MarchPath reads it back by the same key"
+army_march_slope_smooth_m,40,"march slope (bake_march_grid.py): the heights are box-blurred over this radius in 3D-world metres before the slope is taken, so 20 m vertex noise and a house terrace do not read as a cliff"
+army_march_slope_run_m,120,"march slope (bake_march_grid.py): the slope is the rise across this run of 3D-world metres (a central difference), the scale a column climbs at; a cell keeps the steepest it holds"
+army_march_land_min_permille,500,"march slope (bake_march_grid.py): a cell with fewer of its vertices above the waterline than this per mille is water, impassable to a land column (rivers stay fordable: a 200 m cell is never mostly river)"
+army_march_snap_cells,8,"march slope (MarchPath.nearest_open): a march that starts or ends on a closed cell (a scarp, a shore) is routed from the nearest open cell within this many cells; none nearer and it walks the straight line"
+army_max_slope,1000,"march slope (owner 2026-10-10: 山坡斜度超过一定限制，军队必须走最近的绕道): a land column never crosses a march-grid cell steeper than this, rise per run in per mille as the 3D map draws it (1000 = 45 degrees: the terrace scarps block, the ridged mountains and every gentle hill do not); MarchPath routes round it"
 map3d_route_grab_px,10,"march waypoints (spec 2026-10-07-march-waypoints ruling 9): on the 3D map a left press this near (design px) a planned route's waypoint takes it, this near its line inserts one (Map3DRouteEdit)"
 map3d_route_handle_px,5,"march waypoints: the radius (design px) of the ring each waypoint of a planned route is drawn with on the 3D map (Map3DHudRuler)"
 war_route_grab_px,10,"march waypoints (ruling 9): the WAR ROOM's grab reach, screen px (WarRoomRake)"
@@ -292,7 +298,7 @@ map_ruler_font_px,22.0,MEASUREMENT ruler: the reading's font size (display_font)
 map_ruler_label_offset_px,10.0,"MEASUREMENT ruler: the reading's distance off the line's middle, on the side up the screen"
 map_ruler_label_outline_px,7.0,MEASUREMENT ruler: the halo outline round the reading's letters
 map3d_road_step_m,25.0,"3D MAP roads (owner 2026-09-19: a textured road): roads and trails are resampled to a point every this many metres — a road is now drawn at its real width up close, and at the borders' 150 m it cut into the relief between its samples"
-map3d_road_width_m,25.0,"3D MAP roads: a road's width in metres (14 until 2026-10-01, owner: 道路太细了，请加宽一点 — bracketed x1.4 and x1.8, the wider chosen), drawn wider than life as the rivers are (a 7 m road was 2-3 px at the closest zoom, ~3 m a px; bracketed 16 / 24 / 32; the critic: 24 read wider than the rivers, a highway); the ribbon is this wide, or map3d_road_width_px on screen when that is wider (far away)"
+map3d_road_width_m,38.0,"3D MAP roads: a road's width in metres (38 on the owner's ask for thicker main roads, trails stay 16 so the hierarchy reads; 14 until 2026-10-01, owner: 道路太细了，请加宽一点 — bracketed x1.4 and x1.8, the wider chosen), drawn wider than life as the rivers are (a 7 m road was 2-3 px at the closest zoom, ~3 m a px; bracketed 16 / 24 / 32; the critic: 24 read wider than the rivers, a highway); the ribbon is this wide, or map3d_road_width_px on screen when that is wider (far away)"
 map3d_trail_width_m,16.0,3D MAP roads: a trail's width in metres (wider than life like the roads'; 9 until 2026-10-01)
 map3d_bridge_abut_m,12.0,3D MAP bridges (owner 2026-09-19: a road crossing a river is a bridge): the span runs this far onto each bank past the water
 map3d_bridge_clear_m,5.0,3D MAP bridges: the crown stands at least this high over the water...
@@ -588,6 +594,9 @@ ledger_star_emit,1.8,LEDGER galaxy: a star's glow
 ledger_star_rim,1.6,LEDGER galaxy: a star's rim light
 ledger_star_metallic,0.35,LEDGER galaxy: a star's metallic
 ledger_star_roughness,0.22,LEDGER galaxy: a star's roughness
+ledger_star_matcap_mix,1.0,"LEDGER galaxy (owner 2026-10-10: the art drawn by Comfy, the star-chart glass orb L-01): how much of a star is its generated matcap (star.tres matcap) rather than the plain shine; 0 is the plain shine"
+ledger_star_matcap_gain,3.5,LEDGER galaxy: the matcap's value times the cluster colour (the glass orb's brightness)
+ledger_star_matcap_white,1.0,LEDGER galaxy: how far the matcap's brightest highlights go toward white
 ledger_haze_strength,0.075,LEDGER galaxy: a cluster haze's brightness
 ledger_haze_scale,3.4,LEDGER galaxy: a cluster haze's size as a multiple of the cluster's mean radius
 ledger_link_min_px,1,LEDGER galaxy: a link's width at no flow (screen px)
@@ -598,6 +607,12 @@ ledger_tie_max_px,2.6,LEDGER galaxy: a court tie's width at ledger_tie_ref (scre
 ledger_strand_gap_px,2,LEDGER galaxy: screen px between two strands' edges
 ledger_pair_offset_px,3,LEDGER galaxy: screen px between two links joining the same stars both ways
 ledger_link_edge_soft,0.35,LEDGER galaxy: share of a link's half-width over which its sides soften
+ledger_link_strand_mix,1.0,"LEDGER galaxy (owner 2026-10-10: the braided gold cord L-05, '绞绳调细一点'): how much of a link is its generated strand (link.tres strand) rather than the plain soft line; 0 is the plain line"
+ledger_link_strand_widen,1.3,"LEDGER galaxy: a stranded link is drawn this many times its width, room for the cord's glints (2.0 read too heavy, 1.0 lost the twist)"
+ledger_link_strand_px,140,LEDGER galaxy: screen px along a link per repeat of the strand texture (shorter shimmered)
+ledger_link_strand_power,1.5,LEDGER galaxy: contrast on the strand texture (above 1 thins its glow toward the core)
+ledger_link_strand_gain,1.6,LEDGER galaxy: the strand's value times the link colour
+ledger_link_strand_white,0.35,LEDGER galaxy: how far the strand's brightest glints go toward white
 ledger_dashes_per_m,0.5,LEDGER galaxy: dashes per metre along a planned link
 ledger_glow_intensity,0.9,LEDGER galaxy: the view's glow intensity
 ledger_glow_threshold,0.8,LEDGER galaxy: the view's glow HDR threshold
@@ -744,7 +759,6 @@ war_hud_reading_outline_px,6,"WAR ROOM (Task 11): the paper halo round the arrow
 war_hud_reading_gap_px,14,"WAR ROOM (Task 11): how far the arrow's reading stands to the side of the arrow's middle, design px"
 war_hud_halo_alpha,0.9,"WAR ROOM (Task 11): the opacity of the paper halo round the arrow's reading"
 war_hud_chalk_px,3,"WAR ROOM (Task 11): the chalk ring round a chosen piece, its line width, design px"
-war_hud_chalk_ratio,1.2,"WAR ROOM (Task 11): the chalk ring's radius as a multiple of war_pick_px"
 war_pennant_h_ratio,1.6,"WAR ROOM (Task 11): an order pennant's pole height as a multiple of a tin figure's (war_piece_figure_mm)"
 war_pennant_slip_y,1.15,"WAR ROOM (Task 11): where the slip stands over the pole's foot, as a share of the pole's height"
 war_pennant_font_px,26,"WAR ROOM (Task 11): a pennant slip's lettering size (Label3D font_size)"
@@ -826,6 +840,8 @@ ui_title_drift_deg_per_s,0.8,TITLE: degrees a second the camera drifts round the
 ui_title_day_share,0.62,"TITLE: the share of the day the title opens on (0.25 noon in the south, past 0.5 the north's dusk): a low warm sun"
 ui_title_day_per_s,0.004,"TITLE: how fast the title's sun turns, day shares a second (a slow sweep, not the game's clock)"
 ui_title_sweep_s,1.8,TITLE: seconds the camera sweeps from the title's height down to the game's opening view when the reign begins
+ui_title_reveal_frames,3,"TITLE (owner 2026-10-10: no black screen at launch): the frames the painted page is shown before the living map is made over it (it waits too for the boot's threaded loads, BootLoads.title_ready), so the window draws the title at once"
+ui_title_reveal_s,0.8,"TITLE: seconds the painted page fades off the living map once the map is made"
 map_compass_size_px_table,125,"WAR TABLE (owner 2026-10-07: 指南针挪到地图左上角里，放大1.2倍): the map's own compass at the map sheet's top-left, 1.2x the 104 px it had lying on the table below the report; it turns with the clock, its needle with the view, a click eases north"
 map_compass_alpha_table,1.0,"WAR TABLE (2026-10-07, the critic of the move into the map): the compass on the map sheet is a solid object, the map never showing through its wood"
 ui_landing_lift_s,0.4,"LANDING (owner 2026-10-01: the map is picked up and laid on the table): seconds the title's frame is lifted like a sheet — drawing back, the vellum margin and a shadow appearing"
@@ -861,6 +877,7 @@ army_morale_starving_day,3,"army supply §3.7: morale lost each day with no supp
 supply_wagon_km_per_day,25,"army supply §3.2: the supply wagons' road km a day — how long a new line takes to start flowing, and the reach of a supply point"
 supply_point_max_days,10,"army supply §3.5: the most wagon days a supply point may be from its regiment when it is chosen"
 supply_ahead_km,5,"WAR ROOM draw orders (owner 2026-10-08, ruling 20): a town is AHEAD of a column — never its supply town — when it is farther from the crown's capital than the column by more than this, whichever way the column marches; km"
+supply_front_resume_km,1,"owner 2026-10-10 (ruling 20 kept daily): a line broken because its town lies AHEAD of its column (state front) flows again only once the town is no farther than the column by supply_ahead_km less this — a small hysteresis so a column on the boundary does not flicker; km"
 supply_cut_reach_m,5000,"army supply §3.2: a supply line is cut on any day a hostile regiment stands within this many metres of its road"
 supply_cart_milligold_per_unit_km,1,"army supply §3.4: cartage, in thousandths of a gold, for each supply unit carried one km; charged daily in whole gold"
 supply_buy_markup_permille,200,"army supply §3.3: a house sells its stock to the crown at its value plus this per mille"
@@ -883,6 +900,9 @@ battle_defeat_morale,8,"defeat: the realm-wide morale lost when a town falls, wh
 battle_defeat_opinion,5,"defeat: opinion points each council seat loses on a lost town, before its ideology and temper scale it (first draft)"
 ai_think_days,3,"enemy AI (spec §3.2): a host chooses its target again every this many days (first draft)"
 ai_sight_km,40,"enemy AI (spec §3): a host sees the player's regiments and towns only this far (first draft)"
+player_sight_km,12,"the crown's sight (spec 2026-10-10-player-sight-and-ghosts §1, Sighting): an enemy unit is SEEN while it stands within this many km of a land unit of the crown's with men under arms or of a town the crown holds; its piece is then on the map at its true place. Under ai_sight_km (the host's scouts sweep ahead of it), well over battle_contact_km and every town reach, so a column sees a host about a day's march before contact; on the first pack the main host gathers ~29 km from the nearest held town (unseen: the rumour is all the crown has) and its leading columns are first seen the day after it crosses, all of it the next (Default)"
+player_sight_estimate_quality,1000,"the crown's sight (Sighting.about): how well those who SEE an enemy unit count its men, a spy quality 0..999+ for SpySystem.estimate (1000 = the narrowest span); the ghost keeps the span's middle rounded to intel_facts.csv foe_troops, never the exact men (Default)"
+ghost_keep_days,20,"the crown's sight (spec 2026-10-10-player-sight-and-ghosts §2): a ghost — where an enemy unit was last seen or reported, or where the border rumour put a host — is forgotten once older than this many days (kept at exactly this age). 20 keeps the rumour's ghost until the hosts have crossed and been seen (Default)"
 ai_target_reach_km,150,"enemy AI §3.3: candidate targets lie within this many km of the host (first draft)"
 ai_target_overlap_permille,1000,"enemy AI §3.3: the share of its score, per mille, a target loses when another (non-reserve) host has already chosen it; 1000 is a BAN: it scores 0 and EnemyAi.rank never takes a target at 0, so two hosts never share one (controller ruling, Task 7 review)"
 ai_retreat_supply_days,3,"enemy AI §3.4: a host with fewer days of supply than this retreats (first draft)"
@@ -945,8 +965,11 @@ war_intel_hint_speed_px,14,"WAR ROOM draw orders (ruling 18): how fast the hint'
 war_intel_hint_line_px,2.5,"WAR ROOM draw orders (ruling 18): the hint ring's line width, design px"
 war_order_fit_px,10,"WAR ROOM draw orders (ruling 7): the tolerance a drawn order arrow is smoothed to into waypoints, design px at the zoom it was drawn"
 war_order_join_km,2,"WAR ROOM draw orders (ruling 7): a regiment standing this near the drawn path's first point joins it there without a waypoint, in the pack's measure"
-war_select_ring_ratio,1.25,"WAR ROOM draw orders (ruling 16): a selected piece's ring in its side's colour, as a multiple of war_pick_px"
+war_select_ring_ratio,1.25,"WAR ROOM draw orders (ruling 16): a selected intel hint's ring in red, as a multiple of war_pick_px (a selected piece glows instead: war_select_glow_*)"
 war_select_ring_px,3,"WAR ROOM draw orders (ruling 16): the selection ring's line width, design px"
+war_select_glow_ratio,2.2,"WAR ROOM (owner 2026-10-10: 只要玩家点选的单位下方有一个淡淡的光圈即可): a selected piece's faint glow lying on the table, its quad across as a multiple of the piece's plinth (or base); the ring rises from the plinth's edge and fades over the table (its gap, softness and strength are war_select_glow.tres')"
+war_select_glow_lift_mm,0.3,"WAR ROOM: the selection glow's height over the piece's seat, table millimetres (clear of the sheet, under the plinth)"
+war_select_glow_lighten,0.3,"WAR ROOM: the selection glow's colour, the side's (plan_blue / plan_red) lightened by this share"
 war_select_box_dash_px,6,"WAR ROOM draw orders (ruling 16): the chalk marquee's dash, design px"
 war_plan_facing_px,14,"WAR ROOM draw orders (ruling 12): a chosen front's chalk facing handle (a small arrow at its middle), its length in design px"
 war_supply_route_px,5,"WAR ROOM draw orders (ruling 14): the bold dashed gold supply route from the chosen town to the march's end, its width in design px"

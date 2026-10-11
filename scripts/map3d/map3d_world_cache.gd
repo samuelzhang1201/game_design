@@ -65,6 +65,7 @@ static func give_back(scene_path: String, world: Node3D) -> void:
 
 
 static func clear() -> void:
+	Map3DWorldLoader.forget()
 	if not _lent:
 		_drop()
 	_path = ""

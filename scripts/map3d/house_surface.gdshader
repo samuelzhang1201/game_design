@@ -6,7 +6,7 @@
 // vertex colour, its role; double-sided. Map3DLayerHouses draws a copy that
 // multiplies a WALL or ROOF surface by one of its tints (edited on the node),
 // picked per house (Map3DHouses.variant_of) and handed over as the MultiMesh
-// instance's custom data: r the wall variant, g the roof's.
+// instance's custom data: r the wall variant, g the roof's, b the trim's.
 shader_type spatial;
 render_mode cull_disabled;
 
@@ -25,10 +25,14 @@ uniform int role = 0;
 // linear multipliers, already raised from the table's sRGB hexes; the layer
 // sets them on its own copy of each surface's material. A count of 0 (the
 // house's own scene, opened in the editor) draws the surface as built.
-uniform vec3 wall_tints[8];
-uniform vec3 roof_tints[8];
+uniform vec3 wall_tints[24];
+uniform vec3 roof_tints[24];
+uniform vec3 trim_tints[8];
 uniform int wall_count = 0;
 uniform int roof_count = 0;
+// the TRIM (timber, slate, every role 0 surface) takes one of these, hashed
+// per house into instance custom b; a count of 0 leaves it as built
+uniform int trim_count = 0;
 
 varying flat vec3 tint;
 // The weather (spec 2026-09-29-weather-visuals, Map3DLayerWeather): the
@@ -76,6 +80,8 @@ void vertex() {
 		tint = wall_tints[clamp(int(INSTANCE_CUSTOM.r + 0.5), 0, wall_count - 1)];
 	} else if (role == 2 && roof_count > 0) {
 		tint = roof_tints[clamp(int(INSTANCE_CUSTOM.g + 0.5), 0, roof_count - 1)];
+	} else if (role == 0 && trim_count > 0) {
+		tint = trim_tints[clamp(int(INSTANCE_CUSTOM.b + 0.5), 0, trim_count - 1)];
 	}
 }
 
