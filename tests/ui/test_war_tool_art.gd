@@ -35,24 +35,22 @@ func test_a_crayon_is_inked_in_its_own_colour_and_the_hand_in_the_pale_ink() -> 
 	assert_ne(red.inked_glyph(), blue.inked_glyph(), "each crayon is inked in its side's colour")
 	var hand := roll.slot("hand")
 	assert_eq(hand.glyph_colour(), hand.glyph_ink)
-	var ink := (red.inked_glyph() as ImageTexture).get_image()
-	if ink.get_width() < 16 or ink.get_height() < 16:
-		pass_test("a placeholder texture (a headless renderer): the colour cannot be read here")
-		return
-	# the darkest inked pixel carries the crayon's colour (WarInkIcon: alpha from
-	# the drawing's own alpha and darkness, the colour the ink's)
-	var best := 0.0
-	var best_c := Color.TRANSPARENT
-	for y: int in ink.get_height():
-		for x: int in ink.get_width():
-			var c := ink.get_pixel(x, y)
-			if c.a > best:
-				best = c.a
-				best_c = c
-	assert_gt(best, 0.3, "the inked crayon has ink somewhere")
-	if best > 0.3:
-		assert_almost_eq(best_c.r, red.stick_color.r, 0.02, "an inked pixel carries the crayon's colour")
-		assert_almost_eq(best_c.b, red.stick_color.b, 0.02, "an inked pixel carries the crayon's colour")
+	# the inking itself, on a drawing made here (CI's headless renderer reads no
+	# pixels back from an imported texture): a dark stroke on clear comes out
+	# in the crayon's colour at full alpha, the light fill at glyph_light_keep
+	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for x: int in range(4, 28):
+		img.set_pixel(x, 16, Color(0.05, 0.03, 0.02, 1.0))   # the stroke
+		img.set_pixel(x, 20, Color(0.95, 0.9, 0.8, 1.0))     # the pale fill
+	var inked := WarInkIcon.inked(ImageTexture.create_from_image(img), red.stick_color, red.glyph_light_keep).get_image()
+	var stroke := inked.get_pixel(16, 16)
+	var fill := inked.get_pixel(16, 20)
+	assert_almost_eq(stroke.r, red.stick_color.r, 0.02, "the stroke carries the crayon's red")
+	assert_almost_eq(stroke.b, red.stick_color.b, 0.02)
+	assert_gt(stroke.a, 0.95, "the stroke is opaque ink")
+	assert_almost_eq(fill.a, red.glyph_light_keep, 0.08, "the light fill keeps glyph_light_keep of its alpha")
+	assert_almost_eq(inked.get_pixel(0, 0).a, 0.0, 0.001, "clear stays clear")
 
 
 func test_an_unknown_key_falls_back_to_the_vector_glyph() -> void:
