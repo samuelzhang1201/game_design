@@ -149,6 +149,7 @@ var _toss_to := -1
 var _toss_n := 0
 var _supply_routes: Array = []   # the flowing supply roads on this sheet (WarSupplyFlow.routes), read on a state change
 var _broken_routes: Array = []   # the broken (FRONT) ones, drawn dark dashed
+var _space_drag := false   # the left press came with Space held: the drag pans, the plans never see it
 
 
 ## No slip while the camera or the sheet moves, in board mode, or while a
@@ -1064,7 +1065,11 @@ func _gui_input(event: InputEvent) -> void:
 	# the plans first: a stick in hand draws, a supposed piece is carried, a
 	# stroke is reshaped (spec 2026-10-07-war-room-annotations-and-planning-pieces §1.6);
 	# never while a march waits on its confirm — its route, waypoints and bends own the table
-	if not aiming and _plan_input.handle(event):
+	# Space held at a left press: that drag pans, whatever is in hand (owner 2026-10-11)
+	var left := event as InputEventMouseButton
+	if left != null and left.button_index == MOUSE_BUTTON_LEFT:
+		_space_drag = left.pressed and WarRoomGestures.space_held()
+	if not aiming and not _space_drag and _plan_input.handle(event):
 		if _dwell.clear():
 			hover_cleared.emit()
 		accept_event()

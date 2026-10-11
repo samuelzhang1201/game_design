@@ -1,9 +1,10 @@
 class_name WarRoomGestures
 extends RefCounted
 ## The room camera's gestures (spec 2026-10-02-war-room-v2 §1.1), the 3D map's
-## (Map3DInput): a right DRAG turns, a right CLICK is reported for the order
-## menu, a left drag on open table pans (the view says when: a press on a piece
-## is the rake's), the middle button and a two-finger drag pan, the wheel and a
+## (Map3DInput): a right DRAG turns, a right CLICK is reported for the plans'
+## menus, a left drag pans when the view says so (no row lit, a press on one of
+## our pieces, or Space held: owner 2026-10-11 — with a row lit a drag on open
+## table boxes), the middle button and a two-finger drag pan, the wheel and a
 ## pinch lean about the pointer, WASD / arrows pan. Moves the rig; the view
 ## applies it to the camera.
 
@@ -61,3 +62,8 @@ static func key_dir() -> Vector2:
 	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN):
 		dir.y += 1.0
 	return dir.normalized()
+
+
+## Space held: a left drag pans whatever is in hand (owner 2026-10-11).
+static func space_held() -> bool:
+	return Input.is_physical_key_pressed(KEY_SPACE)

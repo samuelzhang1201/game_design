@@ -44,8 +44,8 @@ him and is listed for him to overturn one by one. Builds on
    chosen. Keys: `1`–`4` the kinds ON THE CURRENT SIDE (with no side yet the
    news says to choose one), **Tab** switches side (taking the same kind on
    the other side; with nothing in hand it lights the other row and takes its
-   last kind), `Esc` lays the stick down. A row's stick picks that side with
-   its last kind.
+   last kind), `Esc` lays the stick down. A row's stick lights that side with
+   nothing in hand (its select stick, ruling 23); the hand lights no row.
 3. **The sepia pen is retired as a stick**: no new ink stroke is drawn. Ink
    strokes already saved keep rendering, keep their menu and can be recoloured
    to red or blue (the Colour rows offer only the two sides). Phase lines and
@@ -145,10 +145,9 @@ him and is listed for him to overturn one by one. Builds on
     regiments' codes; a town's garrison piece selects its every regiment) or
     theirs (red — supposed pieces and intel hints). A click selects (on our
     piece it also opens its folio docked, as before); Shift-click toggles; a
-    Shift-drag from open table boxes every piece of the lit side (ours with
-    none lit) in a dashed chalk marquee — Shift, because a plain left drag
-    must keep panning (WASD pans too); a box opens no book. A click on open
-    table or Escape lets it go. Selected pieces wear a ring in their side's
+    drag from open table boxes the pieces of the lit side in a dashed chalk
+    marquee (ruling 23); a box opens no book. A click on open table or
+    Escape lets it go. Selected pieces wear a ring in their side's
     colour over a chalk halo. Selecting lights that side's row.
 17. **The red arrow is drawn FOR something**: a selected supposed piece or
     intel hint; the stroke records it (`of`) and goes when its supposed piece
@@ -234,10 +233,8 @@ him and is listed for him to overturn one by one. Builds on
     f. The town refill of a unit camped by a realm town (`_refill_in_town`)
        is no line and is untouched; a unit both camped and holding a broken
        line is still topped up by its town.
-    g. Drawing: the 3D map's and the WAR ROOM's gold lines draw FLOWING lines
-       only, so a FRONT line vanishes like a cut one (the least intrusive
-       coherent look); the key slip shows no cut state, so no new legend.
-       The army card's supply stat reads "Line broken: town ahead" in
+    g. Drawing: the gold lines are FLOWING lines only; a FRONT line is drawn
+       broken (ruling 24), a cut one not at all. The army card's supply stat reads "Line broken: town ahead" in
        `CardWarn` with the `front_card` sentence as its tooltip (owner
        2026-10-11, ruling 21 below); the folio's Line rows (docked and
        open) read that sentence; the piece slip adds "Line broken" in rubric
@@ -270,6 +267,47 @@ him and is listed for him to overturn one by one. Builds on
     same red. `game_theme.tres`'s `CardWarn` (the dark leather: the march's
     confirm and other held-up windows) keeps its pale rose — a dark red is
     illegible on leather.
+23. **A plain left drag boxes; the table pans by other means** (owner
+    2026-10-11: plain left-drag box select replaces Shift+drag; the table
+    must still be pannable). The rule, by what is in hand:
+    - **No row lit** (the room opens so, and the HAND slot puts any row out):
+      a plain left drag on open table PANS, as before.
+    - **A side's row lit, nothing in hand** — its crayon (now that side's
+      select stick: a click selects, nothing draws), Esc with a stick in
+      hand, or a selection lighting its side: a plain left drag from open
+      table (or from a stroke not chosen) draws the chalk marquee and selects
+      every piece of THAT side inside it — blue: our land units where they
+      are drawn; red: the supposed pieces and intel hints — replacing the
+      selection; an empty box changes nothing; a press without a drag is the
+      open table's click (the selection goes) or chooses the stroke pressed.
+    - **Shift + drag** boxes too, with or without a row lit (none: ours first,
+      else theirs, as before) and ADDS to a selection of the same side
+      (never taking one out); Shift-click still toggles one piece.
+    - **A stick in hand** (arrow, front, phase, objective): a drag draws, as
+      before.
+    - **A drag that starts on a piece keeps its meaning**: from one of ours it
+      pans, from a supposed piece it carries it.
+    - **Panning** is always there: WASD / the arrow keys, the middle button
+      drag, a two-finger drag, and **Space + left drag** (Space held at the
+      press pans whatever is in hand — Space in the room starts no clock,
+      the clock is held).
+    The roll's tooltips (the hand, the two crayons) and the greyed arrow's
+    reason say so.
+24. **A broken supply line is drawn** (owner 2026-10-11: a FRONT line drawn as
+    a dark dashed line breaking at the column). A FRONT line
+    (`SupplyLines.drawn_broken`; a CUT line stays undrawn) is umber ink
+    dashes from its town along its road toward the column, stopping where the
+    road last comes within a gap of the column's drawn piece
+    (`MapGeometry.stop_outside`) with a short solid tick across the road where
+    it breaks (`MapGeometry.tick_across`). Still, never flowing; never the
+    gold. On the 3D map (`Map3DSupplyBroken`; `lines/supply_broken.tres`,
+    `supply_break.tres`) the dashes lie over a faint pale halo
+    (`supply_broken_halo.tres`) so they read on forest and shadow;
+    `map3d_supply_broken_gap_m` / `_tick_m`. In the WAR ROOM (`%SupplyBroken`,
+    `WarSupplyFlow.broken_lines`, `war_supply_broken.tres` +
+    `war_supply_broken.gdshader`) on the parchment, no halo;
+    `war_supply_broken_gap_mm` / `_tick_mm`; the key slip lists "Line broken"
+    beside "Supply line".
 22. **Unchanged, as recommended**: the supply route's ochre gold (#C08A22,
     palette `supply_route`) and the docked folio's size stay as they are.
 

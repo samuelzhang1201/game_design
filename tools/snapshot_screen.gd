@@ -239,7 +239,7 @@ var _ledger_select := ""
 ## --war-edit then clicks the regiment's draft pennant and its Edit route…,
 ## reopening the confirm with the pending blue arrow). --war-spread N stands
 ## N land regiments side by side in the field near the focus before the room
-## opens and --war-box Shift-drags a real box round them. --war-hint seeds a
+## opens and --war-box clicks the blue crayon and drags a real box round them. --war-hint seeds a
 ## spy report of foreign men near the focus (the red ants); --war-plan-select
 ## first|hint clicks the first supposed piece or intel hint (the red
 ## selection). --war-plan-draw takes "side:kind,fx1,fy1,fx2,fy2" (side red or
@@ -297,7 +297,7 @@ var _war_plan_draw: Array = []   # --war-plan-draw [side:]kind,fx1,fy1,fx2,fy2[;
 var _war_spread := 0             # --war-spread N: N land regiments stood side by side near the focus
 var _hold_line := 0              # --hold-line N: N regiments stood in the field HOLDING a line facing south (front-line §2), the 3D map looked at them
 var _hold_stance := "hold"       # --hold-stance steady: the same stand in the block (the before shot)
-var _war_box := false            # --war-box: a real Shift-drag box round them
+var _war_box := false            # --war-box: the blue crayon, then a real plain drag box round them
 var _war_supply := false         # --war-supply: a real click on the nearest lit town while the confirm stands
 var _war_supply_town := ""        # --war-supply-town CODE|off: choose that town (off: the lit town nearest the laid sheet but off it) through the confirm's select_supply (documented exception to real input)
 var _war_supply_list := false    # --war-supply-list: a real click opening the confirm's Supply from list
@@ -1362,11 +1362,11 @@ func _war_room_step() -> void:
 				_real_click(view, at)
 			print("war: piece=%s sheet=%d at=%s selected=%s sel=%s" % [_war_piece, view.sheet_index(), at,
 				view.selected_army(), view.plan_input().sel])
+		var roll := screen.get_node("%ToolRoll") as WarToolRoll
 		if _war_box:
-			_war_box_select(view)
+			_war_box_select(view, roll)
 		if _war_plan_select != "":
 			_war_select_red(view)
-		var roll := screen.get_node("%ToolRoll") as WarToolRoll
 		if _war_drag.x >= 0.0:
 			_war_draw_order(screen, view, roll)
 		for spec: PackedStringArray in _war_plan_draw:
@@ -1592,8 +1592,12 @@ func _seed_war_hint() -> void:
 	print("war hint: report %d at %s" % [id, spot])
 
 
-## --war-box: a real Shift-drag round the spread regiments' pieces.
-func _war_box_select(view: WarRoomView) -> void:
+## --war-box: a real click on the blue row's crayon (ours lit, nothing in hand),
+## then a real plain drag round the spread regiments' pieces (owner 2026-10-11).
+func _war_box_select(view: WarRoomView, roll: WarToolRoll) -> void:
+	var stick := roll.slot("blue", "blue")
+	if stick != null:
+		_real_click(stick, stick.size * 0.5)
 	var box := Rect2()
 	var any := false
 	for c: String in (_war_spread_codes if not _war_spread_codes.is_empty() else [_war_piece]):
@@ -1618,7 +1622,7 @@ func _war_box_select(view: WarRoomView) -> void:
 		print("war: no corner of open table to start the box")
 		return
 	box = Rect2(from, Vector2.ZERO).expand(to)
-	_real_path(view, [from, from.lerp(to, 0.5), to], true)
+	_real_path(view, [from, from.lerp(to, 0.5), to])
 	print("war: boxed %s -> sel=%s" % [box, view.plan_input().sel])
 
 

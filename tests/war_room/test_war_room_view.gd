@@ -498,6 +498,177 @@ func test_shift_drag_boxes_every_land_piece_inside() -> void:
 	assert_eq((view.get_node("%Hud") as WarHud).marks()["rings"], [], "and no ring is drawn round it on the HUD")
 
 
+## A box round every land piece of the laid sheet, from a corner on open
+## table: [want (codes), start, end] (screen px), [] when none fits.
+func _box_corners() -> Array:
+	var want: Array = []
+	var box := Rect2()
+	for q: Dictionary in _land_pieces():
+		var at: Variant = view.screen_pos_of_px(q["at"])
+		if at == null:
+			continue
+		box = Rect2(at, Vector2.ZERO) if want.is_empty() else box.expand(at)
+		want.append(String(q["code"]))
+	for g: float in [20.0, 35.0, 50.0, 70.0]:
+		var bx := box.grow(g)
+		var corners := [bx.position, Vector2(bx.end.x, bx.position.y), bx.end, Vector2(bx.position.x, bx.end.y)]
+		for i in 4:
+			var c: Vector2 = corners[i]
+			if view.pack_at(c).x >= 0.0 and view.piece_under(c) == "" and view.plan_input().hint_at(c) == "":
+				want.sort()
+				return [want, c, corners[(i + 2) % 4]]
+	return []
+
+
+## A real left drag `from` -> `to` (Shift when asked), in eight steps.
+func _drag(from: Vector2, to: Vector2, shift := false) -> void:
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.position = from
+	e.pressed = true
+	e.shift_pressed = shift
+	view._gui_input(e)
+	for i in range(1, 9):
+		var m := InputEventMouseMotion.new()
+		m.position = from.lerp(to, float(i) / 8.0)
+		m.relative = (to - from) / 8.0
+		m.button_mask = MOUSE_BUTTON_MASK_LEFT
+		m.shift_pressed = shift
+		view._gui_input(m)
+	var r := e.duplicate() as InputEventMouseButton
+	r.pressed = false
+	r.position = to
+	view._gui_input(r)
+
+
+## Owner 2026-10-11: with the blue row lit (its crayon: nothing in hand) a
+## PLAIN drag from open table draws the chalk box and selects our pieces in
+## it; the table does not pan.
+func test_a_plain_drag_with_the_blue_row_lit_boxes_our_pieces() -> void:
+	if not _lay_with(2):
+		pending("no sheet holds two land pieces")
+		return
+	await wait_process_frames(2)
+	var c := _box_corners()
+	assert_false(c.is_empty(), "the box starts on open table")
+	view.plan_input().pick_stick("blue")
+	assert_eq([view.plan_input().tool.side, view.plan_input().tool.kind], ["blue", ""], "the crayon: ours lit, nothing in hand")
+	var target := view.camera_rig().target
+	_drag(c[1], c[2])
+	var got: Array = view.plan_input().sel.duplicate()
+	got.sort()
+	assert_eq(got, c[0])
+	assert_eq(view.plan_input().sel_side, "blue")
+	assert_eq(view.camera_rig().target, target, "a box never pans")
+
+
+## The red row lit: the same drag takes only the supposed pieces, never ours.
+func test_a_plain_drag_with_the_red_row_lit_boxes_only_supposed_pieces() -> void:
+	if not _lay_with(2):
+		pending("no sheet holds two land pieces")
+		return
+	await wait_process_frames(2)
+	var c := _box_corners()
+	assert_false(c.is_empty())
+	var mid := view.pack_at((c[1] as Vector2).lerp(c[2], 0.5))
+	var id := WarPlans.place(repo, state, "cavalry", 2000, WarPlans.UNKNOWN, mid, 0)
+	view.refresh_plans()
+	await wait_process_frames(2)
+	view.plan_input().pick_stick("red")
+	_drag(c[1], c[2])
+	assert_eq([view.plan_input().sel_side, view.plan_input().sel], ["red", [id]], "theirs only")
+
+
+## No row lit (the hand, as the room opens): a plain drag on open table pans
+## and selects nothing; the HAND slot puts the row out again.
+func test_with_no_row_lit_a_plain_drag_pans() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_process_frames(2)
+	var at := _open_spot([])
+	assert_true(at.x >= 0.0)
+	view.plan_input().pick_stick("blue")
+	view.plan_input().pick_stick("hand")
+	assert_eq(view.plan_input().tool.side, "", "the hand lights no row")
+	var target := view.camera_rig().target
+	_drag(at, at + Vector2(90, 40))
+	assert_ne(view.camera_rig().target, target, "the drag panned the room")
+	assert_true(view.plan_input().sel.is_empty())
+
+
+## Space held: a plain drag pans whatever is in hand — a row lit, or a stick
+## that would draw — and boxes or draws nothing.
+func test_space_and_a_drag_pans_whatever_is_in_hand() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_process_frames(2)
+	var at := _open_spot([])
+	assert_true(at.x >= 0.0)
+	Input.parse_input_event(_key(KEY_SPACE, true))
+	await wait_process_frames(1)
+	assert_true(WarRoomGestures.space_held())
+	for pick: Array in [["blue", ""], ["red", "front"]]:
+		view.plan_input().pick_stick(String(pick[0]))
+		if String(pick[1]) != "":
+			view.plan_input().pick_kind(String(pick[1]), String(pick[0]))
+		var target := view.camera_rig().target
+		_drag(at, at + Vector2(90, 40))
+		assert_ne(view.camera_rig().target, target, "Space and a drag panned (%s)" % [pick])
+		assert_true(view.plan_input().sel.is_empty(), "no box (%s)" % [pick])
+		assert_true((state.war_plans[WarPlans.STROKES] as Dictionary).is_empty(), "no stroke (%s)" % [pick])
+		at = _open_spot([])
+	Input.parse_input_event(_key(KEY_SPACE, false))
+	await wait_process_frames(1)
+
+
+## A drag that starts on one of our pieces keeps its meaning with a row lit:
+## it pans, and the selection stays as it was.
+func test_a_drag_from_our_piece_with_a_row_lit_still_pans() -> void:
+	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
+	await wait_process_frames(2)
+	var p := _first_land_piece()
+	view.plan_input().pick_stick("blue")
+	var target := view.camera_rig().target
+	_drag(p["press"], (p["press"] as Vector2) + Vector2(80, 0))
+	assert_ne(view.camera_rig().target, target, "the drag panned the room")
+	assert_true(view.plan_input().sel.is_empty(), "nothing boxed")
+
+
+## Shift-click toggles one of our units in and out; a Shift-drag ADDS what it
+## boxes to the selection (never toggling it out).
+func test_shift_click_toggles_and_a_shift_box_adds() -> void:
+	if not _lay_with(2):
+		pending("no sheet holds two land pieces")
+		return
+	await wait_process_frames(2)
+	var p := _first_land_piece()
+	var code := String(p["code"])
+	var click := func(shift: bool) -> void:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.position = p["press"]
+		e.pressed = true
+		e.shift_pressed = shift
+		view._gui_input(e)
+		var r := e.duplicate() as InputEventMouseButton
+		r.pressed = false
+		view._gui_input(r)
+	click.call(false)
+	assert_eq(view.plan_input().sel, [code])
+	click.call(true)
+	assert_true(view.plan_input().sel.is_empty(), "Shift-click took it out")
+	click.call(true)
+	assert_eq(view.plan_input().sel, [code], "Shift-click put it back")
+	var c := _box_corners()
+	assert_false(c.is_empty())
+	_drag(c[1], c[2], true)
+	var got: Array = view.plan_input().sel.duplicate()
+	got.sort()
+	assert_eq(got, c[0], "the Shift-box added the rest, kept the first")
+	_drag(c[1], c[2], true)
+	got = view.plan_input().sel.duplicate()
+	got.sort()
+	assert_eq(got, c[0], "a second Shift-box takes nothing out")
+
+
 func test_the_blue_arrow_waits_for_a_selection_then_draws_its_march() -> void:
 	view.lay_sheet(int(WarRoom.pieces(repo, state)[0]["sheet"]))
 	await wait_process_frames(2)

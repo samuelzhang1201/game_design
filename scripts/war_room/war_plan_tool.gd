@@ -60,15 +60,18 @@ func pick_kind(k: String) -> bool:
 	return pick(side, k) if side != "" else false
 
 
-## A row's crayon: that side, its kind last in hand (`fallback` when that
-## one cannot be used now). The hand: nothing in hand, the side kept.
-func pick_stick(s: String, fallback := "") -> void:
+## A row's crayon: that side lit with NOTHING in hand — the side's select
+## stick (a click selects, a drag on open table boxes that side's pieces;
+## owner 2026-10-11). The hand: nothing in hand and no side lit (a drag pans).
+func pick_stick(s: String) -> void:
 	if s == HAND:
 		put_down()
+		side = ""
 		return
 	if not s in SIDES:
 		return
-	pick(s, fallback if fallback != "" else String(_last[s]))
+	put_down()
+	side = s
 
 
 ## Tab: the other side, the same kind in hand (`fallback` when the same
