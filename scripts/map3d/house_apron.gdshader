@@ -8,7 +8,10 @@
 // The brick and the mottle are antialiased by fwidth and settle to their mean
 // colour once a unit is smaller than a pixel. The weather is the houses' own
 // (house_surface.gdshader's weather_* uniforms, set by Map3DLayerWeather on
-// every house material): rain darkens it, snow covers it.
+// every house material): rain darkens it, snow buries it (it fades out so the
+// ground's own snow shows through, never the roofs' brighter white;
+// weather_snow_color stays declared because the layer sets it on every house
+// material).
 shader_type spatial;
 render_mode blend_mix, cull_disabled, depth_draw_opaque, specular_disabled;
 
@@ -74,7 +77,7 @@ void fragment() {
 		vec2 uv = ((p - weather_origin) / weather_m_per_px) / (weather_step_px * vec2(textureSize(weather_now, 0)));
 		vec4 wx = mix(texture(weather_now, uv), texture(weather_next, uv), weather_blend);
 		c *= 1.0 - wx.r * weather_wet_dark;
-		c = mix(c, weather_snow_color.rgb, clamp(wx.b * weather_roof_snow, 0.0, 1.0));
+		ALPHA *= 1.0 - clamp(wx.b * weather_roof_snow, 0.0, 1.0);
 	}
 	ALBEDO = c;
 	ROUGHNESS = 1.0;

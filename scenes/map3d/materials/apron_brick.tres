@@ -5,10 +5,10 @@
 [resource]
 render_priority = -2
 shader = ExtResource("1_viotd")
-shader_parameter/color_a = Color(0.6039216, 0.41960785, 0.33333334, 1)
-shader_parameter/color_b = Color(0.43529412, 0.39607844, 0.3764706, 1)
+shader_parameter/color_a = Color(0.38, 0.28, 0.22, 1)
+shader_parameter/color_b = Color(0.3, 0.27, 0.25, 1)
 shader_parameter/style = 1
-shader_parameter/fade_m = 1.2
+shader_parameter/fade_m = 3.0
 shader_parameter/unit_m = 1.1
 shader_parameter/mortar = Vector2(0.03, 0.05)
 shader_parameter/lift_px = 1.5

@@ -5,10 +5,10 @@
 [resource]
 render_priority = -2
 shader = ExtResource("1_elo6s")
-shader_parameter/color_a = Color(0.47843137, 0.39215687, 0.27450982, 1)
-shader_parameter/color_b = Color(0.36862746, 0.29803923, 0.20392157, 1)
+shader_parameter/color_a = Color(0.36, 0.29, 0.2, 1)
+shader_parameter/color_b = Color(0.28, 0.22, 0.15, 1)
 shader_parameter/style = 0
-shader_parameter/fade_m = 1.6
+shader_parameter/fade_m = 3.5
 shader_parameter/unit_m = 1.0
 shader_parameter/mortar = Vector2(0.03, 0.05)
 shader_parameter/lift_px = 1.5
