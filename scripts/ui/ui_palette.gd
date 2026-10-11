@@ -172,11 +172,6 @@ const DIALOGUE_FONT_SIZE := 18
 const TITLE_SIZE_SCALE := 1.2
 const LINE_SPACING := 0
 
-## Static 2D map placeholder shown behind the gameplay screens (user-provided
-## screenshot; the crop trims the foreign UI chrome baked into its edges).
-const MAP_BACKDROP_PATH := "res://assets/2D/portraits/cast/full/map_example.jpeg"
-const MAP_EDGE_CROP := 34.0
-
 ## Decorative screen frame (two kings at a chess game, user-provided art;
 ## tools/key_frame_interior.py produced the real-alpha PNG). Drawn above the
 ## map backdrop, below the UI panels, on every screen.
@@ -595,24 +590,6 @@ static func _keep_art(path: String, tex: Texture2D) -> void:
 		_art_total -= int(_art_bytes.get(old, 0))
 		_art_bytes.erase(old)
 		_art_cache.erase(old)
-
-## The shared map backdrop, edge-cropped. Null when the file is missing
-## (screens fall back to their flat ground color).
-static func backdrop() -> Texture2D:
-	var key := "backdrop:" + MAP_BACKDROP_PATH
-	if _art_cache.has(key):
-		return _art_cache[key]
-	var tex: Texture2D = null
-	var base := load_art(MAP_BACKDROP_PATH)
-	if base != null:
-		var atlas := AtlasTexture.new()
-		atlas.atlas = base
-		atlas.region = Rect2(MAP_EDGE_CROP, MAP_EDGE_CROP,
-			base.get_width() - 2.0 * MAP_EDGE_CROP,
-			base.get_height() - 2.0 * MAP_EDGE_CROP)
-		tex = atlas
-	_art_cache[key] = tex
-	return tex
 
 ## The faces are RESOURCES (owner 2026-10-02, after 2026-09-28's data
 ## table): one FontVariation per role in assets/fonts/roles/<role>.tres —
