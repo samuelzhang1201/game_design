@@ -8,9 +8,8 @@ set -e
 #                        view (FAST_DIRS): the engine, the LEDGER's pieces and
 #                        the model plumbing, for the edit-run loop
 # ./run_tests.sh --shard=I/N
-#                        every Nth test script (the I-th of N round-robin
-#                        slices of the sorted list of all test scripts), in
-#                        its own Godot process. The whole suite in ONE process
+#                        the I-th of N contiguous slices of the sorted list
+#                        of all test scripts, in its own Godot process. The whole suite in ONE process
 #                        grows past 7 GB on a Linux CI runner and the runner
 #                        kills it (exit 143); N slices run one after the
 #                        other each start from a fresh process (CI runs N=5).
@@ -35,8 +34,12 @@ case "$1" in
       echo "usage: ./run_tests.sh --shard=I/N (1 <= I <= N)" >&2
       exit 2
     fi
+    # Contiguous slices of the sorted list, not every Nth file: a test that
+    # leans on an earlier file of its own folder (test_map3d_picker.gd only
+    # passes after test_map3d_hover.gd has run) keeps its neighbours.
     SHARD_FILES=$(find tests -name "test_*.gd" | LC_ALL=C sort \
-      | awk -v i="$SHARD_IDX" -v n="$SHARD_N" '(NR - 1) % n == i - 1')
+      | awk -v i="$SHARD_IDX" -v n="$SHARD_N" '{ f[NR] = $0 }
+          END { for (k = int((i - 1) * NR / n) + 1; k <= int(i * NR / n); k++) print f[k] }')
     SELECT_ARG="-gtest=$(printf '%s\n' "$SHARD_FILES" | sed 's#^#res://#' | paste -sd, -)"
     SHARD_COUNT=$(printf '%s\n' "$SHARD_FILES" | wc -l | tr -d ' ')
     ;;
