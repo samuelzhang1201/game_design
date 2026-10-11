@@ -200,6 +200,7 @@ static func graticule(repo: DataRepository, sheet: Dictionary, k: float, px_k :=
 	var pad := repo.bal("war_grid_label_pad_px") * px_k
 	var size := int(round(repo.bal("war_grid_label_px") * px_k))
 	var alpha := repo.bal("war_grid_label_alpha")
+	var fig := repo.bal("war_grid_figure_alpha")
 	var out: Array = []
 	var x0 := ceili(cell.position.x / step.x + 0.001)
 	var x1 := floori(cell.end.x / step.x - 0.001)
@@ -207,16 +208,16 @@ static func graticule(repo: DataRepository, sheet: Dictionary, k: float, px_k :=
 		var x := (float(i) * step.x - r.position.x) * k
 		var lon := MapCoords.lon_lat(repo, Vector2(float(i) * step.x, 0.0)).x
 		var text := "%d°%s" % [absi(roundi(lon)), "W" if roundi(lon) < 0 else "E"]
-		out.append({"at": Vector2(x, (cell.position.y - r.position.y) * k + pad), "side": "n", "text": text, "size": size, "alpha": alpha})
-		out.append({"at": Vector2(x, (cell.end.y - r.position.y) * k - pad), "side": "s", "text": text, "size": size, "alpha": alpha})
+		out.append({"at": Vector2(x, (cell.position.y - r.position.y) * k + pad), "side": "n", "text": text, "size": size, "alpha": alpha, "fig_alpha": fig})
+		out.append({"at": Vector2(x, (cell.end.y - r.position.y) * k - pad), "side": "s", "text": text, "size": size, "alpha": alpha, "fig_alpha": fig})
 	var y0 := ceili(cell.position.y / step.y + 0.001)
 	var y1 := floori(cell.end.y / step.y - 0.001)
 	for j in range(y0, y1 + 1):
 		var y := (float(j) * step.y - r.position.y) * k
 		var lat := MapCoords.lon_lat(repo, Vector2(0.0, float(j) * step.y)).y
 		var text := "%d°%s" % [absi(roundi(lat)), "S" if roundi(lat) < 0 else "N"]
-		out.append({"at": Vector2((cell.position.x - r.position.x) * k + pad, y), "side": "w", "text": text, "size": size, "alpha": alpha})
-		out.append({"at": Vector2((cell.end.x - r.position.x) * k - pad, y), "side": "e", "text": text, "size": size, "alpha": alpha})
+		out.append({"at": Vector2((cell.position.x - r.position.x) * k + pad, y), "side": "w", "text": text, "size": size, "alpha": alpha, "fig_alpha": fig})
+		out.append({"at": Vector2((cell.end.x - r.position.x) * k - pad, y), "side": "e", "text": text, "size": size, "alpha": alpha, "fig_alpha": fig})
 	return out
 
 

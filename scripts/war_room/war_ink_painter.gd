@@ -291,6 +291,8 @@ func _draw_graticule(_c_ink: Color) -> void:
 	var ground: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
 	for g: Dictionary in ink.get("graticule", []):
 		ground.a = float(g.get("alpha", 0.6))
+		var fig := c_fig
+		fig.a *= float(g.get("fig_alpha", 1.0))
 		var fs := int(g["size"])
 		var text := String(g["text"])
 		var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
@@ -308,7 +310,7 @@ func _draw_graticule(_c_ink: Color) -> void:
 				pos = at + Vector2(-tw, -gap)
 		# a parchment knock-out, so no line runs through the figure
 		draw_rect(Rect2(pos + Vector2(-gap * 0.4, -float(fs) * 0.78), Vector2(tw + gap * 0.8, float(fs) * 0.98)), ground)
-		draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c_fig)
+		draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, fig)
 
 
 ## What we know (WarIntelInk), in the intel ink: couriers with their road ahead and a pennon (a spy's

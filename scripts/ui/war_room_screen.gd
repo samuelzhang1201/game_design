@@ -35,8 +35,8 @@ var _plans := WarPlanDesk.new()
 
 
 func _ready() -> void:
-	# its look is scenes/screens/war_room_screen.tscn (owner 2026-10-02): the frame,
-	# the title and the paper slips (war_slip.tres), each under the paper's theme so their words write in its ink; the leather of
+	# its look is scenes/screens/war_room_screen.tscn (owner 2026-10-02): the frame and
+	# the paper slips (war_slip.tres; the margin slip headed by the sheet's title), each under the paper's theme so their words write in its ink; the leather of
 	# ui_war_table 0 is put on in code (_dress_leather)
 	visible = false
 	if not UiPalette.war_table():

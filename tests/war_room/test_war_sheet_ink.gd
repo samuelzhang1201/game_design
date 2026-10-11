@@ -532,3 +532,12 @@ func test_the_label_halo_and_graticule_alpha_are_data() -> void:
 	var ink := WarSheetInk.strokes(repo, state, s, 4096)
 	for g: Dictionary in ink["graticule"]:
 		assert_almost_eq(float(g["alpha"]), repo.bal("war_grid_label_alpha"), 0.0001)
+
+
+func test_the_graticule_figures_are_paler_than_full_rubric() -> void:
+	assert_true(repo.balance.has("war_grid_figure_alpha"))
+	assert_lt(repo.bal("war_grid_figure_alpha"), 1.0, "the figures step back from full rubric")
+	var ink := WarSheetInk.strokes(repo, state, _richest_sheet(), 4096)
+	assert_gt((ink["graticule"] as Array).size(), 0)
+	for g: Dictionary in ink["graticule"]:
+		assert_almost_eq(float(g["fig_alpha"]), repo.bal("war_grid_figure_alpha"), 0.0001)

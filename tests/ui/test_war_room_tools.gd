@@ -582,6 +582,7 @@ func test_a_resting_pointer_on_open_table_shows_the_slip() -> void:
 	var view := screen.view()
 	var at := _open_land(screen)
 	assert_ne(at, Vector2(-1, -1))
+	assert_false((screen.get_node("%HoverSlip") as Control).visible, "no slip before the pointer comes to rest")
 	var e := InputEventMouseMotion.new()   # no button: a pointer moving over the table
 	e.position = at
 	view._gui_input(e)
@@ -654,8 +655,9 @@ func test_the_confirm_does_not_cover_the_margin_slip() -> void:
 	# a route box swallowing every tip-adjacent spot sends the old placement to the top-left corner
 	var view_rect := screen.view().get_global_rect()
 	p.place_near(view_rect.get_center(), view_rect.grow(-40.0), view_rect, screen.blocked_rects())
-	# in this layout the confirm stands mid-view, so there is no room right of it before the key slip
-	assert_false(slip.visible, "the slip is put away")
+	# whatever the window (the suite's root size is shared): the slip steps aside or is put away
+	assert_true(not slip.visible or not p.get_global_rect().intersects(slip.get_global_rect()),
+		"the confirm never covers the margin slip")
 	p.global_position = view_rect.position + Vector2(8, 8)   # a confirm in the corner: the slip steps right of it, clear
 	screen._make_way()
 	assert_true(slip.visible, "the slip steps aside when there is room")
