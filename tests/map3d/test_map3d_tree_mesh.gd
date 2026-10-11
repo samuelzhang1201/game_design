@@ -1,4 +1,5 @@
 extends GutTest
+const SuiteData := preload("res://tests/suite_data.gd")
 ## Map3DTreeMesh: the woods' clumps (look route 2026-09-30), built from
 ## numbers alone — the same (kind, variant) is always the same mesh.
 
@@ -56,3 +57,43 @@ func test_a_photo_card_clump_is_two_triangles_a_crown_from_its_own_cells() -> vo
 	# the vertex box only spans the centres: culling reads the custom box
 	assert_gt(m.custom_aabb.size.x, m.get_aabb().size.x + 8.0,
 		"the clump's culling box holds its cards, not just their centres")
+
+
+func test_a_species_clump_wears_its_own_row() -> void:
+	# owner 2026-10-10 (树木的品种过于单一): data/map3d_tree_species.csv
+	var repo := SuiteData.repo()
+	var drawn := 0
+	for r: Dictionary in repo.map3d_tree_species:
+		if int(r["enabled"]) != 1:
+			continue
+		drawn += 1
+		var cells := Array(String(r["cells"]).split("|", false)).map(func(c: String) -> int: return int(c))
+		assert_false(cells.is_empty(), "%s: an enabled species wears atlas cells" % r["name"])
+		var m := Map3DTreeMesh.species_cards(r, 0)
+		var arrays := m.surface_get_arrays(0)
+		var custom: PackedFloat32Array = arrays[Mesh.ARRAY_CUSTOM0]
+		assert_eq((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(), int(r["crowns"]) * 6, String(r["name"]))
+		for i in custom.size() / 4:
+			assert_true(cells.has(int(round(custom[i * 4 + 3]))), "%s wears its own cells" % r["name"])
+	assert_gt(drawn, 6, "more than a broadleaf, a conifer and a lone tree")
+
+
+func test_a_species_has_map3d_tree_variants_layouts_that_differ() -> void:
+	var repo := SuiteData.repo()
+	var row: Dictionary = repo.map3d_tree_species[0]
+	var seen := {}
+	for v in int(repo.bal("map3d_tree_variants")):
+		seen[_verts(Map3DTreeMesh.species_cards(row, v))] = true
+	assert_eq(seen.size(), int(repo.bal("map3d_tree_variants")))
+	assert_ne(_verts(Map3DTreeMesh.species_cards(repo.map3d_tree_species[1], 0)), _verts(Map3DTreeMesh.species_cards(row, 0)),
+		"two species never share a layout")
+
+
+func test_a_clump_tint_stays_in_its_species_range() -> void:
+	var lo := Color("#a0b0c0")
+	var hi := Color("#c0d0e0")
+	for i in 50:
+		var c := Map3DLayerTrees.tint_of([lo, hi], i * 7919)
+		assert_between(c.r, lo.r, hi.r)
+		assert_between(c.g, lo.g, hi.g)
+		assert_between(c.b, lo.b, hi.b)

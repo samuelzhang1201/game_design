@@ -7,7 +7,7 @@ The pack as a Terrain3D landscape at 50 m per pack px — the game's ONLY map. P
 These topics' rules live in `guide/` beside this file, which Claude Code does NOT load on its own — open the guide when the task touches its topic:
 
 - `scripts/map3d/guide/lines_and_water.md` — borders, roads, bridges, rivers, sea (`Map3DBorders`, `Map3DLayerRoads`, `Map3DBridges`, `Map3DRivers`, `Map3DLayerSea`, `border_line` / `road_line` / `water_*` shaders)
-- `scripts/map3d/guide/ground.md` — the ground: tint, relief, balks, edges, wind, march dust, trees, manor bars and badges (`Map3DGround*`, `Map3DLayerTrees`, `Map3DLayerDust`, `Map3DLayerWind`, `Manor*`, `tree_*` shaders)
+- `scripts/map3d/guide/ground.md` — the ground: tint, relief, balks, edges, wind, march dust, trees and their species, the LOD height gates, manor bars and badges (`Map3DGround*`, `Map3DLayerTrees`, `Map3DLayerDust`, `Map3DLayerWind`, `Manor*`, `tree_*` shaders)
 - `scripts/map3d/guide/sky_and_weather.md` — sky, sun, fill light, clouds and weather visuals (`Map3DSky`, `Map3DSun`, `Map3DEnvironment`, `Map3DLayerClouds`, `Map3DLayerWeather`, `Map3DLayerPrecip`, `cloud_*` shaders)
 - `scripts/map3d/guide/settlements_and_houses.md` — settlements and house models (`Map3DHouses`, `Map3DLayerHouses`, `Map3DHouseMaterials`, `Map3DAssetCache`, `house_surface.gdshader`)
 

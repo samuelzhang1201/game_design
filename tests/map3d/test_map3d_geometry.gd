@@ -240,3 +240,30 @@ func test_distance_for_scale_is_unbounded_when_there_is_nothing_to_measure() -> 
 	assert_eq(Map3DGeometry.distance_for_scale(0.0, 0.02, 220.0, 45.0, 600.0), INF)
 	assert_eq(Map3DGeometry.distance_for_scale(150.0, 0.0, 220.0, 45.0, 600.0), INF, "no measure")
 	assert_eq(Map3DGeometry.distance_for_scale(150.0, 0.02, 0.0, 45.0, 600.0), INF, "no bar")
+
+
+func test_a_height_gate_hides_past_its_line_and_shows_again_under_its_margin() -> void:
+	# owner 2026-10-10 (LOD like other games): hide 14000, margin 1500
+	assert_true(Map3DGeometry.lod_shown(true, 14000.0, 14000.0, 1500.0), "shown up to the line")
+	assert_false(Map3DGeometry.lod_shown(true, 14001.0, 14000.0, 1500.0), "hidden past it")
+	assert_false(Map3DGeometry.lod_shown(false, 13000.0, 14000.0, 1500.0), "still hidden inside the margin")
+	assert_false(Map3DGeometry.lod_shown(false, 12500.0, 14000.0, 1500.0), "the margin's own edge stays hidden")
+	assert_true(Map3DGeometry.lod_shown(false, 12499.0, 14000.0, 1500.0), "shown again under it")
+
+
+func test_the_thinning_rank_keeps_an_even_share_of_every_block() -> void:
+	# a 4x4 ordered dither over 25 m squares: rank (bayer + 0.5) / 16
+	assert_almost_eq(Map3DGeometry.thin_rank(0.0, 0.0, 25.0), 0.5 / 16.0, 1e-6)
+	assert_almost_eq(Map3DGeometry.thin_rank(30.0, 0.0, 25.0), 8.5 / 16.0, 1e-6)
+	assert_almost_eq(Map3DGeometry.thin_rank(-1.0, -1.0, 25.0), 5.5 / 16.0, 1e-6, "posmod below 0")
+	# density 0.4 keeps ranks under 0.4: bayer 0..5, six squares of every 16, in every block
+	for bx in 3:
+		for bz in 3:
+			var kept := 0
+			for ix in 4:
+				for iz in 4:
+					var x := (bx * 4 + ix) * 25.0 + 12.5
+					var z := (bz * 4 + iz) * 25.0 + 12.5
+					if Map3DGeometry.thin_rank(x, z, 25.0) < 0.4:
+						kept += 1
+			assert_eq(kept, 6, "block %d,%d" % [bx, bz])

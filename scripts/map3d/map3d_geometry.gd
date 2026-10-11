@@ -271,3 +271,18 @@ static func map_unit(map_info: Dictionary, meta: Dictionary) -> String:
 	if float(map_info.get("distance_scale", "0")) <= 0.0 or float(meta.get("m_per_px", 0.0)) <= 0.0:
 		return "km"
 	return String(map_info.get("distance_unit", ""))
+
+
+## A height-gated layer (owner 2026-10-10: LOD) is drawn within `hide_m` of
+## camera distance; once hidden it shows again only `margin_m` under that.
+static func lod_shown(was_shown: bool, distance: float, hide_m: float, margin_m: float) -> bool:
+	return distance <= hide_m if was_shown else distance < hide_m - margin_m
+
+
+## A place's rank in 0..1 for an EVEN thinning (the woods' graphics tier): a
+## 4x4 ordered dither over `cell_m` squares — ranks under d keep d of them.
+static func thin_rank(x: float, z: float, cell_m: float) -> float:
+	const BAYER := [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
+	var ix := posmod(floori(x / maxf(cell_m, 1.0)), 4)
+	var iz := posmod(floori(z / maxf(cell_m, 1.0)), 4)
+	return (float(BAYER[iz * 4 + ix]) + 0.5) / 16.0

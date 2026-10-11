@@ -466,19 +466,21 @@ by the same margin.
 ## Woods and aerial ground (look route, 2026-09-30)
 
 - **Woods** are `bake_trees.py` (run by `build_pack.sh` after `bake_world.py`;
-  numpy, ~2 s): tree CLUMPS on a jittered grid by each biome's woodedness
-  (`data/map3d_trees.csv`), gathered by a grove noise into woods with an edge,
-  conifers and broadleaves in patches of one kind, never in water, on a sown
-  field, a road, a river bank, a settlement, a cliff or above the tree line
-  (`test_bake_trees.py` checks the built pack). It writes `bake/trees.bin`
-  (x, y, z, yaw, scale, kind) and `bake/woods.png` (the canopy's share per
-  40 m texel). `Map3DLayerTrees` draws the clumps — `Map3DTreeMesh`'s
-  procedural low-poly crowns, two levels of detail — as one MultiMesh per 2 km
-  square, kind, variant and level, shown by Godot's own visibility ranges
-  (`map3d_tree_near_m` / `_far_m`): built once at load, nothing per frame.
-  Past the far range the ground's canopy tint (`Map3DGroundTint`'s woods
-  stage, `ground_look.tres` `wood_*`) carries the wood. Measured primitive cost on high:
-  ~+2.5 M near, ~+1.9 M mid.
+  numpy, ~15 s; it reads `bake/height_war.r16` when the raw `height.r32` is
+  older or absent, so it re-runs on any checkout): tree CLUMPS on a seeded
+  blue-noise (Poisson-disk) set no two nearer than `poisson_r_m`, kept by each
+  biome's woodedness (`data/map3d_trees.csv`), gathered by a grove noise into
+  woods with an edge, capped inside and opened by glades, never in water, on
+  a sown field, a road, a river bank, a settlement, a cliff or above the tree
+  line (`test_bake_trees.py` checks the built pack). Each clump is a SPECIES
+  of `data/map3d_tree_species.csv`, picked by the ground under it. It writes
+  `bake/trees.bin` (x, y, z, yaw, scale, species kind) and `bake/woods.png`
+  (the canopy's share and its conifer share per 40 m texel). `Map3DLayerTrees`
+  draws the clumps as photo cards, one MultiMesh per 2 km square, species
+  and variant, shown by Godot's own visibility ranges and hidden whole past
+  `map3d_lod_trees_m`: built once at load, nothing per frame. Past them the
+  ground's canopy tint (`Map3DGroundTint`'s woods stage, `ground_look.tres`
+  `wood_*`) carries the wood.
 - **Sky occlusion** (`bake_relief_ao.py`, visual review 2026-10-05): from
   `bake/height_war.r16`, how much of the sky each 40 m texel sees (horizon
   search along `data/map3d_bake.csv` `relief_ao_dirs` directions out to
