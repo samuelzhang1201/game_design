@@ -87,6 +87,8 @@ const REPLY_REVEAL_STEP := 0.3
 ## window that fits it less AUDIENCE_MARGIN on every side.
 const AUDIENCE_MAX := Vector2(780.0, 520.0)
 const AUDIENCE_MARGIN := 16.0
+## True while the opening narration is on stage (its window is shorter).
+var _narrating := false
 ## Tall figure art is cut to its upper part — head to waist, CK3's framing —
 ## rather than showing the whole figure small; these are shares of its height.
 const PORTRAIT_TOP := 0.03
@@ -291,12 +293,18 @@ func _layout() -> void:
 
 ## The window takes AUDIENCE_MAX, or what the map leaves it when the map is
 ## narrower (the council column open, a small window).
+## The opening narration holds one short page under two busts: its window is
+## the narration's own height (`ui_narration_window_h`, the same on every page
+## so the box never jumps), not an event's, which would leave most of it empty.
 func _fit_audience() -> void:
 	var room: Vector2 = %AudienceLayer.size - Vector2.ONE * AUDIENCE_MARGIN * 2.0
 	if room.x <= 0.0 or room.y <= 0.0:
 		return
+	var tall := AUDIENCE_MAX.y
+	if _narrating and Game.data != null and Game.data.bal("ui_narration_window_h") > 0.0:
+		tall = Game.data.bal("ui_narration_window_h")
 	%AudienceWindow.custom_minimum_size = Vector2(
-		minf(AUDIENCE_MAX.x, room.x), minf(AUDIENCE_MAX.y, room.y))
+		minf(AUDIENCE_MAX.x, room.x), minf(tall, room.y))
 
 func enter_council() -> void:
 	_set_right("council")
@@ -595,6 +603,9 @@ const EVENT_ART_DIR := "res://assets/2D/events/illustrations/"
 
 func _show_narration_busts(b: Dictionary) -> void:
 	var on := String(b.get("kind", "")) == "narration" and b.has("side")
+	if on != _narrating:
+		_narrating = on
+		_fit_audience()
 	for pair: Array in [[narration_left, narration_left_frame, "left", "left_id"],
 			[narration_right, narration_right_frame, "right", "right_id"]]:
 		var box := pair[0] as Control
