@@ -233,7 +233,8 @@ static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> 
 	var town := repo.bal("war_ink_town_px") * px_k
 	var r := town * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
 	var label := repo.bal("war_ink_label_px") * px_k
-	var nw := float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
+	var halo := repo.bal("war_ink_label_halo_px") * px_k
+	var nw := float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w") + halo
 	var w := r + float(t.get("name_dx", name_dx(repo, int(t["tier"]), px_k))) + nw
 	var h := maxf(r, label * 0.6)
 	var up := h
@@ -265,10 +266,11 @@ static func name_dx(repo: DataRepository, tier: int, px_k := 1.0) -> float:
 ## A town's name alone as a box, ink px (where the painter sets the lettering).
 static func town_name_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> Rect2:
 	var label := repo.bal("war_ink_label_px") * px_k
-	var w := float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
+	var halo := repo.bal("war_ink_label_halo_px") * px_k
+	var w := float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w") + halo * 2.0
 	var at: Vector2 = t["at"]
 	var dx := float(t.get("name_dx", name_dx(repo, int(t["tier"]), px_k)))
-	return Rect2(at.x - dx - w, at.y - label * 0.65, w, label)
+	return Rect2(at.x - dx - w + halo, at.y - label * 0.65 - halo, w, label + halo * 2.0)
 
 
 ## A manor's name as a box, ink px, centred where the painter sets it.
