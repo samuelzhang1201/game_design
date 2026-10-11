@@ -326,7 +326,7 @@ func _add(state: GameState, code: String, naval: bool, at: Vector3) -> Node3D:
 	node.position = at
 	add_child(node)
 	_pose(state, code, node)
-	_face(node, code, ArmySystem.heading_of(_repo, state, code))
+	_face(node, code, ArmySystem.piece_heading(_repo, state, code))   # its road, else the front it holds
 	_glow(node)
 	return node
 

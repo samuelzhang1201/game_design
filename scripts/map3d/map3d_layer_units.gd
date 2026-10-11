@@ -133,8 +133,11 @@ func _place(code: String, piece: Dictionary) -> void:
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), piece["size"])
+	# a front it holds wins (spec 2026-10-11-war-room-front-line-design §1); else
 	# the way it last advanced; a piece never moved its order's way, else at rest
-	var heading: Vector2 = _track.get(code, {}).get("heading", Vector2.ZERO)
+	var heading: Vector2 = ArmySystem.facing_of(ctx.state(), code)
+	if heading == Vector2.ZERO:
+		heading = _track.get(code, {}).get("heading", Vector2.ZERO)
 	if heading == Vector2.ZERO:
 		heading = ArmySystem.heading_of(repo, ctx.state(), code)
 	_want_yaw[code] = Map3DUnits.facing_yaw(heading, piece.get("stand_deg", 0.0))
@@ -180,6 +183,10 @@ func step(delta: float) -> bool:
 		for anim: AnimationPlayer in _pieces[code]["anims"]:
 			anim.speed_scale = pace
 		_sync_action(code)
+		# a facing set at the day's end turns the piece without a camera move
+		var facing := ArmySystem.facing_of(ctx.state(), code)
+		if facing != Vector2.ZERO:
+			_want_yaw[code] = Map3DUnits.facing_yaw(facing, _pieces[code].get("stand_deg", 0.0))
 		if node.visible and float(_yaw.get(code, 0.0)) != float(_want_yaw.get(code, 0.0)):
 			var rate := deg_to_rad(turn_deg_per_s) * delta
 			_yaw[code] = rotate_toward(float(_yaw.get(code, 0.0)),
