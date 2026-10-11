@@ -27,10 +27,6 @@ signal sheet_requested(index: int)
 ## A sheet starts rolling up: a march pending on its confirm is given up.
 signal sheet_rolling
 signal sheet_laid(index: int)
-## The markers on the index chart changed (taken out, put back or moved): how
-## many stand there and how many cells across the covered area runs (WarTray),
-## which the strategic map's zoom follows (owner 2026-10-12, item 7).
-signal tray_changed(count: int, zoom: float)
 signal camera_moved
 ## The easel's Missive board (spec 2026-10-02-war-room-v2 §1.3): the camera
 ## has flown to it / back to the table; a click or a hover on its panel, as a
@@ -95,6 +91,10 @@ var supply_preview := PackedVector2Array():
 		supply_preview = v
 		_redraw_all()
 
+## The war markers, one a tray slot (owner 2026-10-12, item 7): Marker,
+## Marker2..4 authored in the scene; empty, the scene's %Marker alone.
+@export var tray_markers: Array[Node3D] = []
+
 @onready var _viewport: SubViewport = %Viewport
 @onready var _display: TextureRect = %Display
 @onready var _camera: Camera3D = %Camera
@@ -147,14 +147,9 @@ var _board_dist := 1.0
 var _board_offset := Vector2.ZERO
 var _board_dragged := false
 var _board_press := Vector2.ZERO
-var _toss: Dictionary = {}
-var _toss_t := 0.0
-var _toss_to := -1
-var _toss_n := 0
-var _toss_slot := 0
-var _tray: WarTray
-var _markers: Array = []   # one node per tray slot; slot 0 is the authored %Marker
-var _marker_k := 1.0       # the markers' scale: a base fits inside one chart cell (war_marker_fit)
+var _tray: WarTray   # the markers' cells (R11), made at the first lay
+var _tray_nodes := WarTrayNodes.new()
+var _union: Dictionary = {}   # the laid sheet: WarSheets.union of the held cells
 var _supply_routes: Array = []   # the flowing supply roads on this sheet (WarSupplyFlow.routes), read on a state change
 var _broken_routes: Array = []   # the broken (FRONT) ones, drawn dark dashed
 var _space_drag := false   # the left press came with Space held: the drag pans, the plans never see it
@@ -369,13 +364,20 @@ func set_active(on: bool) -> void:
 			_update_detail()   # reopened at a near lean: the patch is drawn again
 
 
-## Lay sheet `index`: the relief, its ink, the camera framed on it.
+## Lay sheet `index` with the other cells the markers hold as ONE sheet
+## (WarSheets.union, R11): the relief, its ink, the camera framed on it.
+## `index` is the lead (sheet_index); a marker stands on it (WarTray.hold).
 func lay_sheet(index: int) -> void:
 	var all := WarSheets.series(_repo)
 	if index < 0 or index >= all.size():
 		return
+	_ensure_tray()
+	if not tossing():
+		_tray.hold(index)
 	_sheet = index
-	_rect = all[index]["rect"]
+	_union = WarSheets.union(_repo, _tray.held() if _tray.slot_of(index) >= 0 else [index])
+	_rect = _union["rect"]
+	_table_w = WarRoomTable.width_for(_repo, _rect)
 	_depth = WarRoomTable.depth_m(_rect, _table_w)
 	_nx = int(_repo.bal("war_relief_grid"))
 	_nz = WarRoomTable.rows_for(_rect, _nx)
@@ -386,7 +388,7 @@ func lay_sheet(index: int) -> void:
 		else (WarRoomTable.raw_heights(_repo, _relief, _rect, _nx, _nz) if _relief != null else WarRoomTable.flat(_nx, _nz))
 	# the relief stands on the tapered field (the collar lies flat); the contours
 	# and the shore keep the true one
-	_heights = WarRoomTable.clamp_sea(WarRoomTable.taper_collar(raw, _nx, _nz, _rect, all[index].get("cell", _rect)))
+	_heights = WarRoomTable.clamp_sea(WarRoomTable.taper_collar(raw, _nx, _nz, _rect, _union.get("cell", _rect)))
 	_y_scale = WarRoomTable.table_y(_repo, _rect, _table_w, 1.0)
 	var shore := WarRoomTable.shore_share(_repo, raw, _nx, _nz, _table_w, _depth)
 	_table.mesh = WarRoomTable.build_mesh(WarRoomTable.clamp_sea(raw), _nx, _nz, _table_w, _depth, _y_scale, raw, shore, _heights)
@@ -396,17 +398,17 @@ func lay_sheet(index: int) -> void:
 	mat.set_shader_parameter("fine_tex", null)
 	mat.set_shader_parameter("detail_on", 0.0)
 	_detail_state = {}
-	WarRoomMaterial.bind(mat, _repo, all[index], _table_w, _depth)
+	WarRoomMaterial.bind(mat, _repo, _union, _table_w, _depth)
 	_rig.bounds = Rect2(-_table_w * 0.5, -_depth * 0.5, _table_w, _depth)
 	_rig.target = Vector3.ZERO
 	_rig.yaw_deg = 0.0
-	_rig.distance = tray_distance()
+	_rig.distance = _repo.bal("war_cam_distance_m")
 	_apply_camera()
 	if not _chart_built:
 		_chart_built = true
 		WarRoomWall.build_chart(_chart, _repo, lettering())
-	WarRoomWall.lay_arrows(_arrows, _repo, index, _table_w, _depth, lettering())
-	_stand_marker(index)
+	WarRoomWall.lay_arrows(_arrows, _repo, _tray, index, _table_w, _depth, lettering())
+	_tray_nodes.sync(_tray)
 	_pieces.rebuild(state())
 	_plan_pieces.rebuild(state())
 	_pennants.rebuild(state(), true)
@@ -423,10 +425,16 @@ func lay_sheet(index: int) -> void:
 
 ## Roll the laid sheet up and lay `index` at the midpoint (spec §2). With no
 ## sheet laid yet, or the room not drawing, it is laid at once; a roll in
-## progress is not interrupted.
+## progress is not interrupted. A sheet no marker holds takes one first
+## (WarTray.hold); the same lead over the same cells lays nothing.
 func swap_to(index: int) -> void:
-	if index == _sheet or index < 0 or _swap.active() or tossing():
+	if index < 0 or index >= WarSheets.series(_repo).size() or _swap.active() or tossing():
 		return   # a toss in flight decides the next sheet (final review I1)
+	_ensure_tray()
+	_tray.hold(index)
+	_tray_nodes.sync(_tray)
+	if index == _sheet and sheet_key() == String(WarSheets.union(_repo, _tray.held()).get("key", "")):
+		return
 	sheet_rolling.emit()
 	if _sheet < 0 or not is_processing():
 		lay_sheet(index)
@@ -435,7 +443,9 @@ func swap_to(index: int) -> void:
 
 
 func _process(delta: float) -> void:
-	_step_toss(delta)
+	var landed := _tray_nodes.step(delta)
+	if landed >= 0:
+		sheet_requested.emit(landed)
 	if not hover_allowed():
 		if _dwell.clear():
 			hover_cleared.emit()
@@ -469,135 +479,55 @@ func _process(delta: float) -> void:
 
 
 func tossing() -> bool:
-	return not _toss.is_empty()
+	return _tray_nodes.tossing()
 
 
-## Take a marker out of the tray and toss it onto sheet `index`'s cell of the
-## index chart, then lay the sheet (spec 2026-10-02-war-room-v2 §2.3; owner
-## 2026-10-12, item 7: up to war_tray_max markers, one per cell). A cell that
-## already holds one gives it back to the tray (never the last one out); a
-## full tray takes no more. Ignored mid-toss or mid-roll.
+## A click on sheet `index`'s cell of the index chart (spec 2026-10-02-war-room-v2
+## §2.3; owner 2026-10-12, item 7, R11): a held cell gives its marker back to
+## the tray (never the last one out) and the rest are laid again; else a marker
+## is tossed from its tray slot onto it (WarTray.take: refused when the held
+## cells' box would pass war_tray_max cells) and the cells are laid once it
+## lands. Ignored mid-toss or mid-roll.
 func toss_to(index: int) -> void:
 	if tossing() or rolling() or index < 0 or index >= WarSheets.series(_repo).size():
 		return
 	_ensure_tray()
 	if _tray.slot_of(index) >= 0:
-		_put_back(index)
+		if _tray.put_back(index):
+			_tray_nodes.sync(_tray)
+			sheet_requested.emit(_tray.newest() if index == _sheet else _sheet)
 		return
 	var slot := _tray.take(index)
-	if slot < 0:
-		return   # the tray is empty of markers: a fifth cannot be taken
-	_toss_n += 1
-	var uv := WarToss.landing(WarIndexChart.uv_of_cell(_repo, WarSheets.series(_repo)[index]),
-		hash([index, _toss_n]), _repo.bal("war_toss_margin"))
-	var to := WarRoomWall.chart_point(_chart, uv)
-	var hand := to + (_camera.global_position - to).normalized() * _repo.bal("war_toss_hand_m")
-	_toss = WarToss.plan(hand, to, hash([index, _toss_n, "toss"]), WarToss.rules(_repo))
-	_toss_t = 0.0
-	_toss_to = index
-	_toss_slot = slot
-	(_markers[slot] as Node3D).visible = true
-	_set_marker(slot, WarToss.pose(_toss, 0.0))
-	tray_changed.emit(_tray.count(), covered_zoom())
+	if slot >= 0:
+		_tray_nodes.toss(slot, index)
 
 
-func _step_toss(delta: float) -> void:
-	if not tossing():
+## An edge arrow toward sheet `sheet` (the lead's neighbour): every marker
+## moves one cell that way (WarTray.shift, the count unchanged) and the cells
+## are laid. Ignored mid-toss or mid-roll.
+func shift_toward(sheet: int) -> void:
+	if tossing() or rolling() or _sheet < 0:
 		return
-	_toss_t += delta
-	_set_marker(_toss_slot, WarToss.pose(_toss, _toss_t))
-	if _toss_t >= float(_toss["duration"]):
-		var to := _toss_to
-		_toss = {}
-		sheet_requested.emit(to)
+	_ensure_tray()
+	if _tray.shift(_tray.cell_of(sheet) - _tray.cell_of(_sheet)):
+		_tray_nodes.sync(_tray)
+		sheet_requested.emit(sheet)
 
 
-## The marker on `index` goes back to its place in the tray; if that was the
-## laid sheet, the newest marker still out has its sheet laid.
-func _put_back(index: int) -> void:
-	var slot := _tray.slot_of(index)
-	if not _tray.put_back(index):
-		return
-	_rest_marker(slot)
-	tray_changed.emit(_tray.count(), covered_zoom())
-	if index == _sheet and _tray.newest() >= 0:
-		sheet_requested.emit(_tray.newest())
-
-
-## The tray and its marker nodes (slot 0 is the authored node; the others are
-## copies of it), the resting markers standing beside the chart.
-func _on_tray_changed(_count: int, _zoom: float) -> void:
-	if _sheet < 0 or _swap.active():
-		return
-	_rig.distance = tray_distance()
-	_apply_camera()
-
-
+## The tray (its slots the authored markers, at most war_tray_max) and its nodes.
 func _ensure_tray() -> void:
 	if _tray != null:
 		return
-	_tray = WarTray.of(_repo)
-	tray_changed.connect(_on_tray_changed)
-	_markers = [_marker]
-	for i in range(1, _tray.max_slots):
-		var m := _marker.duplicate() as Node3D
-		m.name = "Marker%d" % (i + 1)
-		_marker.get_parent().add_child(m)
-		_markers.append(m)
-	if _chart_built:
-		for i in _tray.max_slots:
-			_rest_marker(i)
-
-
-## Slot `slot`'s marker rests in its place beside the chart's east edge.
-func _rest_marker(slot: int) -> void:
-	var m := _markers[slot] as Node3D
-	m.visible = true
-	_set_marker(slot, Transform3D(Basis.IDENTITY, WarRoomWall.tray_point(_chart, slot, _repo.bal("war_tray_gap_m"))))
-
-
-## A marker's pose, scaled so its base fits inside one chart cell.
-func _set_marker(slot: int, t: Transform3D) -> void:
-	t.basis = t.basis.scaled(Vector3.ONE * _marker_scale())
-	(_markers[slot] as Node3D).global_transform = t
-
-
-func _marker_scale() -> float:
-	if not _chart_built:
-		return 1.0
-	var deg := _repo.bal("war_sheet_deg")
-	var cell := MapCoords.cell_rect(_repo, Vector2i.ZERO, deg).size
-	var map_px := Vector2(float(_repo.map_info.get("width", "1")), float(_repo.map_info.get("height", "1")))
-	var size := WarRoomWall.map_size(_chart)
-	var cell_m := Vector2(cell.x / map_px.x * size.x, cell.y / map_px.y * size.y)
-	var base := (_marker.get_node("Base") as MeshInstance3D).mesh as CylinderMesh
-	var diameter := maxf(base.bottom_radius, base.top_radius) * 2.0
-	return minf(1.0, _repo.bal("war_marker_fit") * minf(cell_m.x, cell_m.y) / maxf(diameter, 0.0001))
-
-
-## The marker for the laid sheet stands on its cell of the chart (no toss: the
-## first lay, a lay by an edge arrow or the margin); a sheet no marker holds
-## takes a free one, or moves the newest when the tray is empty of markers.
-func _stand_marker(index: int) -> void:
-	if tossing():
-		return
-	_ensure_tray()
-	var had := _tray.slot_of(index) >= 0
-	var slot := _tray.hold(index)
-	if had:
-		return   # its marker stands where it landed
-	var uv := WarIndexChart.uv_of_cell(_repo, WarSheets.series(_repo)[index]).get_center()
-	(_markers[slot] as Node3D).visible = true
-	_set_marker(slot, Transform3D(Basis.IDENTITY, WarRoomWall.chart_point(_chart, uv)))
-	tray_changed.emit(_tray.count(), covered_zoom())
-
-
-## The camera's opening distance for the markers out: war_cam_distance_m
-## backed off by (zoom - 1) x war_tray_zoom_gain, within the farthest step
-## (owner 2026-10-12, item 7; the table is not widened).
-func tray_distance() -> float:
-	var z := maxf(1.0, covered_zoom())
-	return minf(_repo.bal("war_cam_distance_m") * (1.0 + (z - 1.0) * _repo.bal("war_tray_zoom_gain")), _repo.bal("war_cam_max_m"))
+	var nodes: Array[Node3D] = []
+	for m: Node3D in tray_markers:
+		if m != null:
+			nodes.append(m)
+	if nodes.is_empty():
+		nodes.append(_marker)
+	_tray = WarTray.of(_repo, nodes.size())
+	for i in range(_tray.max_slots, nodes.size()):
+		nodes[i].visible = false   # more markers than war_tray_max: the extra stay put away
+	_tray_nodes.setup(_repo, _chart, nodes.slice(0, _tray.max_slots))
 
 
 ## The sheets the markers stand on, oldest first.
@@ -607,19 +537,22 @@ func tray_sheets() -> Array:
 
 ## The marker standing on sheet `index`'s cell, null when none.
 func marker_for(index: int) -> Node3D:
-	if _tray == null or _tray.slot_of(index) < 0:
-		return null
-	return _markers[_tray.slot_of(index)] as Node3D
+	return null if _tray == null else _tray_nodes.marker(_tray.slot_of(index))
 
 
-## The pack-px area the markers' cells cover (the strategic map's extent).
-func covered_rect() -> Rect2:
-	return WarTray.span_rect(_repo, tray_sheets())
+## The laid sheet (WarSheets.union of the held cells), {} before the first lay.
+func laid_sheet() -> Dictionary:
+	return _union
 
 
-## How many cells across the covered area runs: 1 for one marker (the zoom).
-func covered_zoom() -> float:
-	return WarTray.zoom_factor(WarTray.cells_of(_repo, tray_sheets()))
+## The laid sheet's key (WarSheets.union's): what its ink caches are keyed on.
+func sheet_key() -> String:
+	return String(_union.get("key", ""))
+
+
+## The laid sheet's width on the oak (WarRoomTable.width_for).
+func table_width() -> float:
+	return _table_w
 
 
 func board_mode() -> String:
@@ -763,8 +696,8 @@ func key_pan(delta: float) -> bool:
 func _finish_swap() -> void:
 	if _swap.active():
 		_swap.cancel()
-		if _swap.to != _sheet:
-			lay_sheet(_swap.to)
+		if _swap.to != _sheet or sheet_key() != String(WarSheets.union(_repo, _tray.held()).get("key", "")):
+			lay_sheet(_swap.to)   # cut before its midpoint
 	_table.scale = Vector3.ONE
 	_pieces.visible = true
 	_plan_pieces.visible = true
@@ -789,21 +722,22 @@ func _paint_intel(mat: ShaderMaterial) -> void:
 		_intel_again = true   # run again once the draw in flight is done
 		return
 	_intel_busy = true
-	var sheet := _sheet
-	var tex := await _inks.intel_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
-		func() -> bool: return is_inside_tree() and sheet == _sheet)
-	if tex != null and sheet == _sheet:
+	var laid := _union
+	var sheet := sheet_key()
+	var tex := await _inks.intel_for(_repo, state(), laid, _ink_viewport, _ink, lettering(),
+		func() -> bool: return is_inside_tree() and sheet == sheet_key())
+	if tex != null and sheet == sheet_key():
 		mat.set_shader_parameter("intel_tex", tex)
 	# the staff's plan layer after it, on the same viewport (spec
 	# 2026-10-07-war-room-annotations-and-planning-pieces §2.5)
 	var key := WarPlanInk.cache_key(state(), sheet)
 	var plan_off := _plan_hidden
-	var plan := await _inks.plan_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(), _caps,
-		func() -> bool: return is_inside_tree() and sheet == _sheet, plan_off)
+	var plan := await _inks.plan_for(_repo, state(), laid, _ink_viewport, _ink, lettering(), _caps,
+		func() -> bool: return is_inside_tree() and sheet == sheet_key(), plan_off)
 	_intel_busy = false
-	if plan != null and sheet == _sheet:
+	if plan != null and sheet == sheet_key():
 		mat.set_shader_parameter("plan_tex", plan)
-	if sheet == _sheet and plan_off == _plan_hidden:
+	if sheet == sheet_key() and plan_off == _plan_hidden:
 		_plan_key_shown = key   # this paint is done, a texture or not: the ghost has served
 		_plan_input.redraw_live()
 	if _intel_again:
@@ -813,16 +747,17 @@ func _paint_intel(mat: ShaderMaterial) -> void:
 
 ## The sheet's ink onto the table's material (WarRoomInk draws and keeps it).
 func _paint_ink(mat: ShaderMaterial) -> void:
-	var sheet := _sheet
+	var laid := _union
+	var sheet := sheet_key()
 	_ink_busy += 1
-	var tex := await _inks.texture_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
-		func() -> bool: return is_inside_tree() and sheet == _sheet)
+	var tex := await _inks.texture_for(_repo, state(), laid, _ink_viewport, _ink, lettering(),
+		func() -> bool: return is_inside_tree() and sheet == sheet_key())
 	if tex != null:
 		mat.set_shader_parameter("ink_tex", tex)
-	var fine := await _inks.fine_for(_repo, state(), sheet, _ink_viewport, _ink, lettering(),
-		func() -> bool: return is_inside_tree() and sheet == _sheet)
+	var fine := await _inks.fine_for(_repo, state(), laid, _ink_viewport, _ink, lettering(),
+		func() -> bool: return is_inside_tree() and sheet == sheet_key())
 	_ink_busy -= 1
-	if fine != null and sheet == _sheet:
+	if fine != null and sheet == sheet_key():
 		mat.set_shader_parameter("fine_tex", fine)
 	if _intel_again and _ink_busy == 0:
 		_intel_again = false
@@ -864,7 +799,7 @@ func _update_detail() -> void:
 	var view_px := Vector2(size) * units_per_px() / maxf(float(_repo.map_info.get("distance_scale", "1")), 0.0001)
 	var centre := WarRoomTable.from_table(_rect, _table_w, Vector2(_rig.target.x, _rig.target.z))
 	var now := {"level": lvl, "rect": WarDetailInk.patch_rect(_repo, _rect, centre, view_px),
-		"key": WarSheetInk.cache_key(state(), _sheet)}
+		"key": WarSheetInk.cache_key(state(), sheet_key())}
 	if not WarDetailInk.needs_redraw(_detail_state, now):
 		return
 	_detail_state = now
@@ -881,7 +816,7 @@ func _update_detail() -> void:
 	widths["mark"] = _repo.bal("war_mark_px") * ink_k
 	widths["mark_reach_alpha"] = _repo.bal("war_mark_reach_alpha")
 	widths["mark_reach"] = _repo.bal("war_mark_reach_px") * ink_k
-	var row: Dictionary = WarSheets.series(_repo)[_sheet]
+	var row := _union
 	(%DetailInk as WarInkPainter).paint(WarSheetInk.strokes(_repo, state(), row, w, WarBake.of(_repo), r),
 		_repo.war_palette, widths, lettering())
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE

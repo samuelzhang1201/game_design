@@ -88,7 +88,7 @@ func keep_on_sheet() -> void:
 		return
 	var here: Array = []
 	if sel_side == "blue":
-		for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.sheet_index(), _view.drawn()):
+		for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.laid_sheet(), _view.drawn()):
 			here.append(String(q["code"]))
 	else:
 		for p: Dictionary in WarPlans.pieces_in(_repo, _view.state(), _view.sheet_rect()):
@@ -444,7 +444,7 @@ func _keep_ghost_of(ids: Array) -> void:
 			rows.append({"s": s, "pts": WarPlans.points_px(_repo, s), "r": WarPlans.radius_px(_repo, s)})
 	if rows.is_empty():
 		return
-	_ghost = {"rows": rows, "sheet": _view.sheet_index(), "key": WarPlanInk.cache_key(_view.state(), _view.sheet_index())}
+	_ghost = {"rows": rows, "sheet": _view.sheet_key(), "key": WarPlanInk.cache_key(_view.state(), _view.sheet_key())}
 
 
 ## A click with a stick in hand: a supposed piece or an intel hint under it is
@@ -487,7 +487,7 @@ func _flip_of(id: String) -> int:
 func _box(box: Rect2, side := "", add := false) -> void:
 	var drawn_at: Dictionary = _view.piece_pack_positions()
 	var ours: Array = []
-	for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.sheet_index(), _view.drawn()):
+	for q: Dictionary in WarRoom.on_sheet(_repo, _view.state(), _view.laid_sheet(), _view.drawn()):
 		if bool(q["naval"]):
 			continue
 		var code := String(q["code"])
@@ -597,7 +597,7 @@ func px_per_pack(at: Vector2) -> float:
 ## Screen px a table millimetre at a pack point now.
 func px_per_mm(at: Vector2) -> float:
 	var rect := _view.sheet_rect()
-	return px_per_pack(at) * rect.size.x / (_repo.bal("war_table_w_m") * 1000.0)
+	return px_per_pack(at) * rect.size.x / (_view.table_width() * 1000.0)
 
 
 ## The laid sheet's strokes on the screen: {id, kind, ctrl, r} in screen px
@@ -650,8 +650,8 @@ func redraw_live() -> void:
 	_pending_order(ink, mm)
 	if not _ghost.is_empty():
 		var shown := _view.plan_key_shown()
-		if shown == int(_ghost["key"]) or _view.sheet_index() != int(_ghost["sheet"]) \
-				or (st != null and shown == WarPlanInk.cache_key(st, _view.sheet_index())):   # the plans moved on: the layer is current
+		if shown == int(_ghost["key"]) or _view.sheet_key() != String(_ghost["sheet"]) \
+				or (st != null and shown == WarPlanInk.cache_key(st, _view.sheet_key())):   # the plans moved on: the layer is current
 			_ghost = {}
 		else:
 			for g: Dictionary in _ghost["rows"]:

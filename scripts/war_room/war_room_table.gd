@@ -11,6 +11,15 @@ static func depth_m(sheet_rect: Rect2, table_w: float) -> float:
 	return table_w * sheet_rect.size.y / sheet_rect.size.x
 
 
+## The laid sheet's width on the oak (R11): war_table_w_m, narrowed so a deep
+## union (a 1 x 4 column of cells) is no deeper than war_table_max_depth_m.
+static func width_for(repo: DataRepository, sheet_rect: Rect2) -> float:
+	var w := repo.bal("war_table_w_m")
+	if sheet_rect.size.y <= 0.0:
+		return w
+	return minf(w, repo.bal("war_table_max_depth_m") * sheet_rect.size.x / sheet_rect.size.y)
+
+
 ## Table (x, z) metres of a pack px, the table's centre at 0.
 static func to_table(sheet_rect: Rect2, table_w: float, px: Vector2) -> Vector2:
 	var s := table_w / sheet_rect.size.x

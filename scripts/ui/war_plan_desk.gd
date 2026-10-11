@@ -135,7 +135,7 @@ func _show_tool() -> void:
 # --- menus -------------------------------------------------------------------
 
 func _open_ground_menu(pack: Vector2, at: Vector2) -> void:
-	var sheet := String(WarSheets.series(Game.data)[_view.sheet_index()]["id"])
+	var sheet := String(_view.laid_sheet().get("id", ""))
 	_for = {"what": "ground", "pack": pack, "at": at}
 	_menu.clear()
 	_menu.add_item("Place a supposed enemy here…", PLACE)
@@ -257,7 +257,7 @@ func _on_placed(arm: String, heads: int, side: String) -> void:
 		return
 	var facing := 0
 	var nearest := INF
-	for q: Dictionary in WarRoom.on_sheet(Game.data, Game.state, _view.sheet_index(), _view.drawn()):
+	for q: Dictionary in WarRoom.on_sheet(Game.data, Game.state, _view.laid_sheet(), _view.drawn()):
 		var d := (q["at"] as Vector2).distance_to(_form_at)
 		if d < nearest:
 			nearest = d

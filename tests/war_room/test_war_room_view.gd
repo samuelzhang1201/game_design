@@ -1054,29 +1054,6 @@ func test_a_chart_pick_tosses_then_lays_and_a_second_pick_mid_toss_is_ignored() 
 	assert_true(WarIndexChart.uv_of_cell(repo, WarSheets.series(repo)[other]).has_point(uv), "the marker stands on the chosen cell")
 
 
-func test_the_view_takes_at_most_four_markers_and_a_held_cell_gives_one_back() -> void:
-	var all := WarSheets.series(repo)
-	if all.size() < 5:
-		pass_test("the default pack has fewer than five sheets")
-		return
-	view.lay_sheet(0)
-	await wait_process_frames(2)
-	var flight := float(WarToss.plan(Vector3.ZERO, Vector3.ONE, 1, WarToss.rules(repo))["duration"]) + 0.2
-	for i in [1, 2, 3]:
-		view.toss_to(i)
-		await wait_seconds(flight)
-	assert_eq(view.tray_sheets(), [0, 1, 2, 3])
-	view.toss_to(4)
-	assert_false(view.tossing(), "a fifth is not taken")
-	assert_eq(view.tray_sheets().size(), 4)
-	view.toss_to(2)   # the cell holds a marker: it goes back
-	assert_eq(view.tray_sheets(), [0, 1, 3])
-	view.toss_to(4)
-	assert_true(view.tossing(), "a slot is free again")
-	await wait_seconds(flight)
-	assert_eq(view.tray_sheets(), [0, 1, 3, 4])
-
-
 func test_a_lay_by_another_route_mid_toss_waits_for_the_toss() -> void:
 	view.lay_sheet(0)
 	await wait_process_frames(2)

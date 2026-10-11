@@ -13,8 +13,9 @@ extends RefCounted
 const TOWN_TIERS := {"village": 0, "town": 1, "fort": 1, "city": 2, "capital": 3}
 
 
-static func cache_key(state: GameState, sheet_index: int) -> int:
-	return hash([sheet_index, state.province_owner.hash(), state.manor_province.hash()])
+## `sheet` is the laid sheet's key (WarSheets.union) or a sheet index.
+static func cache_key(state: GameState, sheet: Variant) -> int:
+	return hash([sheet, state.province_owner.hash(), state.manor_province.hash()])
 
 
 static func _to_tex(r: Rect2, k: float, poly: PackedVector2Array) -> PackedVector2Array:
@@ -40,8 +41,8 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	var r: Rect2 = sheet["rect"] if window.size.x <= 0.0 else window
 	var k := float(tex_px) / r.size.x
 	# px sizes grow with the window's magnification over the whole sheet's ink
-	var px_k := 1.0 if window.size.x <= 0.0 \
-		else k / (repo.bal("war_sheet_texture_px") / (sheet["rect"] as Rect2).size.x)
+	var sheet_k := float(WarRoomInk.tex_size(repo, sheet["rect"]).x) / (sheet["rect"] as Rect2).size.x
+	var px_k := 1.0 if window.size.x <= 0.0 else k / sheet_k
 	var out := {"roads": [], "trails": [], "rivers": [], "coasts": [], "borders": [], "seams": [],
 		"towns": [], "peaks": [], "hollows": [], "woods": [], "manor_edges": [], "manors": []}
 	var route_codes: Array = repo.routes.keys()
@@ -106,8 +107,10 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	# past its ring, so a patch never cuts a name the sheet draws
 	var keep := r
 	if window.size.x > 0.0:
-		var sheet_k := repo.bal("war_sheet_texture_px") / (sheet["rect"] as Rect2).size.x
 		keep = r.grow(repo.bal("war_ink_label_px") * 16.0 * repo.bal("war_ink_char_w") / sheet_k)
+	# a sheet laid over several cells (R11) is inked smaller: the lower tiers' names drop
+	var name_tier := int(repo.bal("war_union_label_min_tier")) \
+		if int(sheet.get("cols", 1)) * int(sheet.get("rows", 1)) > 1 else 0
 	var codes: Array = repo.burgs.keys()
 	codes.sort()
 	for code: String in codes:
@@ -116,7 +119,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if not keep.has_point(at):
 			continue
 		var tier := 3 if String(b.get("is_capital", "0")) == "1" else int(TOWN_TIERS.get(String(b.get("group", "")), 0))
-		var t := {"code": code, "at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
+		var t := {"code": code, "at": (at - r.position) * k, "tier": tier, "label": String(b["label"]) if tier >= name_tier else "",
 			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"}
 		t.merge(town_marks(repo, code))
 		t["name_dx"] = name_dx(repo, tier, px_k)

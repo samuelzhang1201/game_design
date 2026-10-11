@@ -8,7 +8,8 @@ extends RefCounted
 ## sheet's `cell` is its neat line; its `rect`, what the table shows, is the
 ## cell grown by a war_sheet_collar_km collar of the neighbouring ground. A
 ## place is written "D4 · c7 · 24°N 51°E". Generated from the pack alone; no
-## pack is named. Pure and cached per repository.
+## pack is named. Pure and cached per repository. Up to war_tray_max cells
+## held by the war markers are laid as ONE sheet (`union`, R11).
 
 static var _cache: Dictionary = {}
 
@@ -67,6 +68,48 @@ static func series(repo: DataRepository) -> Array:
 			"name": String((repo.kingdoms.get(best, {}) as Dictionary).get("label", best)),
 			"cell": cell, "rect": cell.grow(collar), "col": at.x, "row": at.y})
 	_cache[key] = out
+	return out
+
+
+## One sheet laid over the cells of sheets `indices` (owner 2026-10-12, item 7;
+## R11): its `cell` the bounding box of their neat lines (cells between them
+## with no land of their own included), its `rect` that grown by the
+## war_sheet_collar_km collar, `col` / `row` its north-west cell, `cols` /
+## `rows` its size in cells, `indices` the sheets it was laid from (sorted) and
+## `key` their indices joined by "+" — what the ink caches are keyed on. Its
+## `id` is the sheet's own for one cell, else "NW–SE"; its `name` and
+## `kingdom` those of the first index given. A one-index union is that sheet's
+## row plus these keys. {} when no index is a sheet.
+static func union(repo: DataRepository, indices: Array) -> Dictionary:
+	var all := series(repo)
+	var given: Array = []
+	for i: Variant in indices:
+		if int(i) >= 0 and int(i) < all.size() and not given.has(int(i)):
+			given.append(int(i))
+	if given.is_empty():
+		return {}
+	var sorted := given.duplicate()
+	sorted.sort()
+	var first: Dictionary = all[given[0]]
+	var lo := Vector2i(int(first["col"]), int(first["row"]))
+	var hi := lo
+	for i: int in sorted:
+		var at := Vector2i(int(all[i]["col"]), int(all[i]["row"]))
+		lo = Vector2i(mini(lo.x, at.x), mini(lo.y, at.y))
+		hi = Vector2i(maxi(hi.x, at.x), maxi(hi.y, at.y))
+	var out: Dictionary = first.duplicate()
+	if sorted.size() > 1:
+		var deg := repo.bal("war_sheet_deg")
+		var cell := MapCoords.cell_rect(repo, lo, deg).merge(MapCoords.cell_rect(repo, hi, deg))
+		out["cell"] = cell
+		out["rect"] = cell.grow(repo.bal("war_sheet_collar_km") * px_per_unit(repo))
+		out["col"] = lo.x
+		out["row"] = lo.y
+		out["id"] = "%s–%s" % [id_of(lo.x, lo.y), id_of(hi.x, hi.y)]
+	out["cols"] = hi.x - lo.x + 1
+	out["rows"] = hi.y - lo.y + 1
+	out["indices"] = sorted
+	out["key"] = "+".join(sorted.map(func(i: int) -> String: return str(i)))
 	return out
 
 

@@ -82,7 +82,7 @@ func click(at: Vector2, shift: bool) -> bool:
 	elif piece != "" and not _view.aiming:
 		_view.select(piece, shift)
 	elif arrow >= 0:
-		_view.sheet_requested.emit(arrow)   # an edge arrow lays at once
+		_view.shift_toward(arrow)   # an edge arrow moves every marker one cell and lays at once
 	elif chart >= 0:
 		_view.toss_to(chart)                # a chart cell: the marker is tossed first
 	elif _view.aiming and _view.pack_at(at).x >= 0.0:
@@ -235,7 +235,7 @@ func orders() -> Array:
 	var rows: Array = []
 	var from := {}
 	var rect := _view.sheet_rect()
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
+	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.laid_sheet(), _view.drawn()):
 		var code := String(p["code"])
 		from[code] = p["at"]
 		var pen := WarRoom.pennant_of(_repo, state, code)

@@ -96,20 +96,26 @@ static func tray_point(chart: MeshInstance3D, slot: int, gap: float) -> Vector3:
 	return chart.global_transform * Vector3(size.x * 0.5 + pad + gap, size.y * 0.5 - gap * float(slot), 0.0)
 
 
-## Replace the arrows: one at each side of the laid sheet that has a neighbour.
-static func lay_arrows(parent: Node3D, repo: DataRepository, sheet: int, table_w: float, depth: float, font: Font) -> void:
+## Replace the arrows: one at each side the markers can all move toward
+## (WarTray.can_shift: every held cell has a sheet beside it there; one marker,
+## each side with a neighbour), labelled with the sheet that move lays and
+## carrying, as `sheet`, the neighbour of `lead` on that side.
+static func lay_arrows(parent: Node3D, repo: DataRepository, tray: WarTray, lead: int, table_w: float, depth: float,
+		font: Font) -> void:
 	for n in parent.get_children():
 		parent.remove_child(n)
 		n.queue_free()
-	var series := WarSheets.series(repo)
 	var gap := repo.bal("war_arrow_gap_m")
 	var y := repo.bal("war_arrow_y_m")
 	var places := {"n": Vector3(0.0, y, -depth * 0.5 - gap), "s": Vector3(0.0, y, depth * 0.5 + gap),
 		"e": Vector3(table_w * 0.5 + gap, y, 0.0), "w": Vector3(-table_w * 0.5 - gap, y, 0.0)}
-	var near := WarSheets.neighbours(repo, sheet)
+	var near := WarSheets.neighbours(repo, lead)
 	for side: String in near:
 		var to := int(near[side])
-		var a := _label("%s %s" % [SIDES[side], series[to]["id"]], font, repo.war_palette["ink"],
+		var moved := tray.shifted(tray.cell_of(to) - tray.cell_of(lead))
+		if moved.is_empty():
+			continue
+		var a := _label("%s %s" % [SIDES[side], WarSheets.union(repo, moved)["id"]], font, repo.war_palette["ink"],
 			places[side], int(repo.bal("war_arrow_font_px")), repo.bal("war_arrow_pixel_m"), true)
 		a.set_meta("sheet", to)
 		parent.add_child(a)
