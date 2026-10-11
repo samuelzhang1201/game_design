@@ -107,12 +107,12 @@ func test_one_barrier_bar_lies_across_a_march_over_a_scarp() -> void:
 	var to := ArmySystem.metres_to_pack(repo, Vector2i(7500, 2500))
 	var bars := WarSlopeBars.bars(repo, [from, to])
 	assert_eq(bars.size(), 1, "one run of steep ground, one bar")
-	# the run is cell (4, 2) alone: centre (4500, 2500) m; the march runs east, so the
-	# bar runs north-south, (0.75 + 0.5) cells = 1250 m either side
+	# the run is cell (4, 2) alone, entered from the west: its entry edge is x = 4000 m;
+	# the march runs east, so the bar runs north-south, (0.75 + 0.5) cells = 1250 m either side
 	var a := ArmySystem.pack_to_metres(repo, bars[0]["a"])
 	var b := ArmySystem.pack_to_metres(repo, bars[0]["b"])
-	assert_almost_eq(float(a.x), 4500.0, 2.0)
-	assert_almost_eq(float(b.x), 4500.0, 2.0)
+	assert_almost_eq(float(a.x), 4000.0, 2.0)
+	assert_almost_eq(float(b.x), 4000.0, 2.0)
 	assert_almost_eq(absf(float(b.y - a.y)), 2500.0, 3.0)
 	assert_eq(bars[0]["cells"], 1)
 	repo.balance["army_march_grid_px"] = 0
@@ -136,3 +136,9 @@ func test_a_march_ending_on_the_scarp_has_no_bar_at_its_own_cell() -> void:
 	var to := ArmySystem.metres_to_pack(repo, Vector2i(4500, 2500))
 	assert_true(WarSlopeBars.bars(repo, [from, to]).is_empty(), "the end's own cell never blocks")
 	repo.balance["army_march_grid_px"] = 0
+
+
+func test_a_far_small_bar_is_held_to_the_minimum_length() -> void:
+	var e := WarSlopeBars.at_least(Vector2(100, 50), Vector2(110, 50), 40.0)
+	assert_eq(e, [Vector2(85, 50), Vector2(125, 50)])
+	assert_eq(WarSlopeBars.at_least(Vector2(0, 0), Vector2(0, 60), 40.0), [Vector2(0, 0), Vector2(0, 60)])

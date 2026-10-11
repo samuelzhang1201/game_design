@@ -300,6 +300,7 @@ war_slope_bar_pad_cells,0.75,"WAR ROOM (owner 2026-10-12, item 5): the barrier b
 war_slope_hatch_px,8,"WAR ROOM (owner 2026-10-12, item 5): the barrier's hachure ticks, their length in screen px, leaning toward the steep side"
 war_slope_hatch_gap_px,10,"WAR ROOM (owner 2026-10-12, item 5): screen px between the barrier's hachure ticks"
 war_slope_bar_alpha,0.95,"WAR ROOM (owner 2026-10-12, item 5): the barrier's opacity over the table"
+war_slope_bar_min_px,40,"WAR ROOM (owner 2026-10-12, item 5): a barrier bar is drawn at least this long on the screen, however far the camera stands, so the player sees where the column goes round"
 war_tray_max,4,"WAR ROOM (owner 2026-10-12, item 7): how many war markers the tray holds, and so how many cells of the index chart can be marked at once; the strategic map covers the cells they stand on"
 war_marker_fit,0.8,"WAR ROOM (owner 2026-10-12, item 6): a war marker's base fills at most this share of one index-chart cell's narrower side, so each token sits inside one cell"
 war_tray_gap_m,0.03,"WAR ROOM (owner 2026-10-12, item 7): the resting war markers stand in a column beside the index chart, this far apart and this far off its east edge, metres"

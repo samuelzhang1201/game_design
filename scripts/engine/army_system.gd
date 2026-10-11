@@ -1063,7 +1063,7 @@ static func route_m_of(repo: DataRepository, from: Vector2i, waypoints: Array, t
 	var legs := MarchRoute.legs(ctrl, int(repo.bal("army_route_sample_m")))
 	for i in legs.size():
 		var leg: Array = legs[i]
-		if grid != null and not _leg_clear(grid, ctrl[i], leg):
+		if grid != null and not leg_clear(grid, ctrl[i], leg):
 			leg = grid.road(ctrl[i], ctrl[i + 1])
 		out.append_array(leg)
 	return out
@@ -1071,7 +1071,7 @@ static func route_m_of(repo: DataRepository, from: Vector2i, waypoints: Array, t
 
 ## True when a leg's samples, from `start`, cross no closed cell of `grid`
 ## but its two ends'.
-static func _leg_clear(grid: MarchPath, start: Vector2i, leg: Array) -> bool:
+static func leg_clear(grid: MarchPath, start: Vector2i, leg: Array) -> bool:
 	var ends := [grid.cell_of(start), grid.cell_of(leg[leg.size() - 1])]
 	var prev := start
 	for p: Vector2i in leg:

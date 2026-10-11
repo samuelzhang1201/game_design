@@ -146,8 +146,21 @@ func centre_m(c: Vector2i) -> Vector2i:
 ## True when the straight line a -> b (whole metres) enters no closed cell but
 ## those in `open` (the ends' own: a column standing on a scarp may leave it,
 ## and one sent onto it may reach it). Every cell the line touches is walked
-## (Amanatides and Woo), corners included.
+## (cells_on), corners included.
 func clear(a: Vector2i, b: Vector2i, open: Array = []) -> bool:
+	for c: Vector2i in cells_on(a, b):
+		if is_closed(c) and not open.has(c):
+			return false
+	return true
+
+
+## Every cell the straight line a -> b (whole metres) touches, in travel order
+## (Amanatides and Woo), the ends' own included. Through a corner the two cells
+## beside it come before the diagonal one: a line that grazes a corner is as
+## blocked as one that crosses the cell. The one walk clear() and
+## blocked_runs() share.
+func cells_on(a: Vector2i, b: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
 	var x := float(a.x) / float(cell_m)
 	var y := float(a.y) / float(cell_m)
 	var dx := float(b.x - a.x) / float(cell_m)
@@ -162,10 +175,10 @@ func clear(a: Vector2i, b: Vector2i, open: Array = []) -> bool:
 	var t_y := ((floorf(y) + 1.0 - y) if dy > 0.0 else (y - floorf(y))) * t_dy if dy != 0.0 else INF
 	var guard := absi(end.x - c.x) + absi(end.y - c.y) + 2
 	while true:
-		if is_closed(c) and not open.has(c):
-			return false
+		if out.is_empty() or out[out.size() - 1] != c:
+			out.append(c)
 		if c == end or guard <= 0:
-			return true
+			return out
 		guard -= 1
 		if t_x < t_y:
 			c.x += sx
@@ -174,44 +187,63 @@ func clear(a: Vector2i, b: Vector2i, open: Array = []) -> bool:
 			c.y += sy
 			t_y += t_dy
 		else:   # through a corner: both cells beside it count
-			if (is_closed(Vector2i(c.x + sx, c.y)) and not open.has(Vector2i(c.x + sx, c.y))) \
-					or (is_closed(Vector2i(c.x, c.y + sy)) and not open.has(Vector2i(c.x, c.y + sy))):
-				return false
+			out.append(Vector2i(clampi(c.x + sx, 0, cols - 1), c.y))
+			out.append(Vector2i(c.x, clampi(c.y + sy, 0, rows - 1)))
 			c += Vector2i(sx, sy)
 			t_x += t_dx
 			t_y += t_dy
 		c = Vector2i(clampi(c.x, 0, cols - 1), clampi(c.y, 0, rows - 1))
-	return true
+	return out
 
 
-## The runs of SLOPE the straight line a -> b (whole metres) crosses, for the
-## war room's barrier marks: [[first cell, last cell], ...] in travel order,
-## each run the cells of closed, dry ground met one after another (water is
-## no scarp; the ends' own cells never count, as in clear()). The line is
-## sampled every half cell, whole-number maths on whole metres.
-func slope_runs(a: Vector2i, b: Vector2i) -> Array:
+## The runs of SLOPE a march meets where the router goes round them, for the
+## war room's barrier marks: [[entry cell, exit cell], ...] in travel order,
+## each run the closed, dry cells met one after another on a leg that
+## ArmySystem.route_m_of replaces by a detour (water is no scarp; the leg's own
+## end cells never count, as in clear()). A leg the router walks straight (it
+## is clear, or walled in with no way round) has none. `wps` and the ends are
+## whole metres; empty without a grid.
+static func blocked_runs(repo: DataRepository, from: Vector2i, wps: Array, to: Vector2i) -> Array:
 	var out: Array = []
-	var ends := [cell_of(a), cell_of(b)]
-	var len := Vector2(b - a).length()
-	var steps := maxi(1, int(ceil(len / (float(cell_m) * 0.5))))
-	var run: Array = []
-	var last := Vector2i(-1, -1)
-	for i in steps + 1:
-		var p := Vector2(a) + Vector2(b - a) * (float(i) / float(steps))
-		var c := cell_of(Vector2i(int(round(p.x)), int(round(p.y))))
-		if c == last:
+	var grid := of_pack(repo)
+	if grid == null:
+		return out
+	var pts: Array = [from]
+	pts.append_array(wps)
+	pts.append(to)
+	var ctrl := MarchRoute.distinct(pts)
+	var legs: Array = []
+	if ctrl.size() < 2:
+		return out
+	if wps.is_empty():
+		legs = [[to]]
+	else:
+		legs = MarchRoute.legs(ctrl, int(repo.bal("army_route_sample_m")))
+	for i in legs.size():
+		var leg: Array = legs[i]
+		if ArmySystem.leg_clear(grid, ctrl[i], leg):
 			continue
-		last = c
-		if is_closed(c) and not is_water(c) and not ends.has(c):
-			if run.is_empty():
-				run = [c, c]
-			else:
-				run[1] = c
-		elif not run.is_empty():
+		if grid.road(ctrl[i], ctrl[i + 1]) == [ctrl[i + 1]]:
+			continue   # walled in: the column walks the straight line
+		var ends := [grid.cell_of(ctrl[i]), grid.cell_of(leg[leg.size() - 1])]
+		var run: Array = []
+		var prev: Vector2i = ctrl[i]
+		for p: Vector2i in leg:
+			for c: Vector2i in grid.cells_on(prev, p):
+				if grid.is_closed(c) and not grid.is_water(c) and not ends.has(c):
+					if run.is_empty():
+						run = [c, c]
+					elif maxi(absi(c.x - run[1].x), absi(c.y - run[1].y)) <= 1:
+						run[1] = c
+					else:
+						out.append(run)
+						run = [c, c]
+				elif not run.is_empty():
+					out.append(run)
+					run = []
+			prev = p
+		if not run.is_empty():
 			out.append(run)
-			run = []
-	if not run.is_empty():
-		out.append(run)
 	return out
 
 
