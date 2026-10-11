@@ -2,7 +2,7 @@ extends SceneTree
 ## Where a map pack's coats of arms come from (HouseArms): its own installed
 ## art, arms_bindings.csv, or borrowed from the other packs' — and whether
 ## the pool ran short, which is the only case that needs new arms generated
-## (assets/flux/arms_prompts.py). Run after importing a new map:
+## (assets/imagegen/arms_prompts.py). Run after importing a new map:
 ##   Godot --headless --path . -s tools/arms_report.gd [-- --map ID --list]
 ## --list prints every key and the art it wears.
 

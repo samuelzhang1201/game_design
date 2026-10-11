@@ -156,8 +156,8 @@ nodes and workflows, the reference meshes and every tool of that pipeline
 (`retopo_houses.py`, `decimate_houses.py`, `dilate_house_atlas.py`,
 `align_house_source.py`, `project_house_texture.py`, `restart_comfy.sh`) are
 gone. ComfyUI's job ends at the IMAGE: `gen_house_refs.py` renders the
-photoreal reference pictures (`assets/flux/house_ref_prompts.csv`, Flux.2
-klein 4B, into `assets/3D/buildings/<type>/model_wip/<type>_ref.png`; `cottage_a`'s is the
+photoreal reference pictures (`assets/imagegen/house_ref_prompts.csv`, on
+`generate.py`'s presets, into `assets/3D/buildings/<type>/model_wip/<type>_ref.png`; `cottage_a`'s is the
 owner's own and is never overwritten without `--force`) that the houses are
 modelled against. A building is SIMPLE REALISM, never toy; roofs are tile or
 slate, never thatch.

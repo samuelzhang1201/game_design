@@ -2,7 +2,7 @@ class_name HouseArms
 extends RefCounted
 ## The coats of arms of houses and kingdoms (owner 2026-09-15, spec
 ## docs/superpowers/specs/2026-09-15-house-arms-design.md). The art is
-## generated from the map pack's Azgaar `coa` (assets/flux/arms_prompts.py)
+## generated from the map pack's Azgaar `coa` (assets/imagegen/arms_prompts.py)
 ## and installed as assets/2D/arms/<map_id>/<key>.png:
 ##   kingdom_<code>        a kingdom's state arms
 ##   seat_<capital burg>   a house's: the arms of its seat town

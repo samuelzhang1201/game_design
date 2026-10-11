@@ -717,7 +717,7 @@ done
 
 - [ ] **Step 3: Compare against the smeared baseline**
 
-The spike's before-shots are in `assets/flux/out/settlements/compare/` as `DARK_z1.png`, `DARK_z2.png`, `DARK_z4.png`. Put the new shots beside them. What you are looking for: the broad diagonal smears should have become ridgelines, and the plains should still read as plains.
+The spike's before-shots are in `assets/imagegen/out/settlements/compare/` as `DARK_z1.png`, `DARK_z2.png`, `DARK_z4.png`. Put the new shots beside them. What you are looking for: the broad diagonal smears should have become ridgelines, and the plains should still read as plains.
 
 - [ ] **Step 4: Retune `map_relief_shade_px` and re-render**
 

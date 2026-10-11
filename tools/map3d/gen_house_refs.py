@@ -1,12 +1,12 @@
 """Render the settlement buildings' photoreal REFERENCE images on the LOCAL
-ComfyUI from assets/flux/house_ref_prompts.csv, one picture per type per
+ComfyUI from assets/imagegen/house_ref_prompts.csv, one picture per type per
 model, into assets/3D/buildings/<type>/model_wip/<type>_ref_<model>.png.
 
   python3 tools/map3d/gen_house_refs.py [--set houses|ships] [--model zimage,qwen2512fast] [--only a,b] [--seed N] [--variants N] [--tag T] [--force] [--front]
 
 The models are Z-Image Turbo and Qwen-Image-2512 (owner 2026-09-30: no Flux
 any more; both side by side for the owner to pick), filled from
-assets/flux/generate.py's MODEL_PRESETS and templates with the SAME prompt
+assets/imagegen/generate.py's MODEL_PRESETS and templates with the SAME prompt
 every model gets. Z-Image has no negative path, so NEGATIVE reaches Qwen
 only (with a row's own `negative` column added). The old Flux.2 klein pictures stay as <type>_ref.png, the record the
 shipped meshes were modelled against. Every job is queued first and
@@ -17,7 +17,7 @@ collected after; it waits its turn in ComfyUI's one shared queue unless
 picture. --tag T names them <type>_ref_<model>_T[_vN].png, so a re-render
 with a changed prompt keeps the pictures already picked from. --set ships
 renders the harbours' SHIPS (owner 2026-10-02: 3-4 种中世纪的船) from
-assets/flux/ship_ref_prompts.csv into assets/3D/ships/<type>/model_wip/,
+assets/imagegen/ship_ref_prompts.csv into assets/3D/ships/<type>/model_wip/,
 worded as a ship, not a building.
 
 A file already there is kept unless --force. The pictures are what the
@@ -36,7 +36,7 @@ import urllib.request
 import uuid
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-PROMPTS = os.path.join(ROOT, "assets", "flux", "house_ref_prompts.csv")
+PROMPTS = os.path.join(ROOT, "assets", "imagegen", "house_ref_prompts.csv")
 BUILDINGS = os.path.join(ROOT, "assets", "3D", "buildings")
 HOST = os.environ.get("COMFY_HOST", "http://127.0.0.1:8188")
 COMFY = os.path.expanduser(os.environ.get(
@@ -51,7 +51,7 @@ PROMPT = ("a single {subject}, one building only, {features}, isolated on a "
 NEGATIVE = ("landscape, terrain, grass, trees, sky, multiple buildings, "
             "village, map, top-down, text, watermark, signature, cropped, "
             "out of frame, blurry, clutter, flags, banners, cartoon, toy")
-SHIP_PROMPTS = os.path.join(ROOT, "assets", "flux", "ship_ref_prompts.csv")
+SHIP_PROMPTS = os.path.join(ROOT, "assets", "imagegen", "ship_ref_prompts.csv")
 SHIP_PROMPT = ("a single {subject}, one ship only, {features}, the whole hull "
                "out of the water, isolated on a plain pure white background, "
                "centered, three-quarter side view, slightly elevated camera, "
@@ -62,11 +62,11 @@ SETS = {"houses": (PROMPTS, BUILDINGS, PROMPT),
         "ships": (SHIP_PROMPTS, os.path.join(ROOT, "assets", "3D", "ships"), SHIP_PROMPT)}
 SEED = 20260923
 MODELS = ["zimage", "qwen2512fast"]
-FLUX_DIR = os.path.join(ROOT, "assets", "flux")
+IMAGEGEN_DIR = os.path.join(ROOT, "assets", "imagegen")
 
 
 def _generate_module():
-    spec = importlib.util.spec_from_file_location("flux_generate", os.path.join(FLUX_DIR, "generate.py"))
+    spec = importlib.util.spec_from_file_location("imagegen_generate", os.path.join(IMAGEGEN_DIR, "generate.py"))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -105,7 +105,7 @@ def wait(pid, timeout_s):
 
 def image_graph(gen, model, row, seed, prompt=PROMPT):
     preset = gen.MODEL_PRESETS[model]
-    with open(os.path.join(FLUX_DIR, preset["template"])) as f:
+    with open(os.path.join(IMAGEGEN_DIR, preset["template"])) as f:
         template = json.load(f)
     values = {"unet": preset["unet"], "steps": preset["steps"], "cfg": preset["cfg"],
               "guidance": preset["guidance"], "width": 1024, "height": 1024, "seed": seed,

@@ -52,7 +52,7 @@ spec**. D replaces every stand-in the first two left behind:
 - `qwenfast`: Qwen-Image-2512 Q6_K with the Lightning LoRA, 8 steps,
   1584×1056.
 
-**Prompts.** `assets/flux/courier_design_prompts.csv`: `id, subject, prompt`.
+**Prompts.** `assets/imagegen/courier_design_prompts.csv`: `id, subject, prompt`.
 
 - **Courier ids** are `C1`..`C4`, one per courier direction.
 - **Spy ids** are `S1` (horse) and `S2` (pack pony).
@@ -76,7 +76,7 @@ spec**. D replaces every stand-in the first two left behind:
 
 - The batch takes about 30 minutes: 12 images at ~30 s on Z-Image and 12
   at ~2 min on Qwen.
-- It is written to `assets/flux/out/courier_designs/<model>_<id>_s<n>.png`,
+- It is written to `assets/imagegen/out/courier_designs/<model>_<id>_s<n>.png`,
   which is git-ignored.
 - It ends in a contact sheet `contact_sheet.png`: one row per model, each
   tile labelled.
@@ -216,7 +216,7 @@ art_prompt_library.md §6.11 beside the estate and army paintings:
   agree. The prompts are therefore written AFTER the design pick (§1).
 
 **Table and batch.**
-- `assets/flux/courier_paint_art.csv` maps art id → key: `ordinary`,
+- `assets/imagegen/courier_paint_art.csv` maps art id → key: `ordinary`,
   `secret`, `spy`, `foul`, `delivered`.
 - Two seeds each on both models: **20 images** (about 25 minutes). The
   owner picks per key.

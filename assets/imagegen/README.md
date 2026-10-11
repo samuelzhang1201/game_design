@@ -1,4 +1,4 @@
-# assets/flux — the 2D art pipeline (Z-Image and Qwen; no Flux)
+# assets/imagegen — the 2D art pipeline (Z-Image and Qwen; no Flux)
 
 Batch-renders the game's art on the local ComfyUI (`127.0.0.1:8188`) from the
 prompt library `docs/references/art_prompt_library.md`. **No prompt is typed by
@@ -10,9 +10,9 @@ git-ignored; nothing reaches the game until an installer copies it into
 ## Model
 
 **Two local models make the game's 2D art, and no Flux model at all** (owner
-2026-10-01: 我们不用flux模型 … 2D模型用Z_image 和Qwen跑本地模型). The folder keeps
-the name `flux/` only because every installer, table and test names it; the
-klein / schnell templates and presets were deleted that day.
+2026-10-01: 我们不用flux模型 … 2D模型用Z_image 和Qwen跑本地模型); the klein /
+schnell templates and presets were deleted that day, and the folder, once
+`assets/flux/`, was renamed `assets/imagegen/` on 2026-10-11 (owner: 不要再有flux元素).
 
 | `--model` | Model | Steps / CFG | Negative | Memory on MPS | For |
 |---|---|---|---|---|---|
@@ -35,7 +35,7 @@ Qwen runs as **GGUF, never fp8**: on Apple MPS ComfyUI upcasts fp8 weights to
 would take ~41 GB. The GGUF loader is the ComfyUI-GGUF custom node
 (`custom_nodes/ComfyUI-GGUF`; its Python deps `gguf` and `protobuf` are
 installed by `download_models.sh`). Download with `bash
-assets/flux/download_models.sh` (~47 GB, resumable), then restart ComfyUI.
+assets/imagegen/download_models.sh` (~47 GB, resumable), then restart ComfyUI.
 **Editing** (owner 2026-10-10): the `qwenedit` presets change a picture
 instead of drawing one from words. `--images a.png[,b.png[,c.png]]` (PNG; the
 first is edited, the others are references, e.g. a costume or a material) and
@@ -46,7 +46,7 @@ output keeps the first picture's aspect at about one megapixel (or takes
 picked design (instead of keeping the design by words), a character's bust
 from its picked full figure, a local fix (a cloak's colour, a missing boot)
 without losing the pick, and variants of one piece of art. Download with
-`bash assets/flux/download_models.sh qwenedit` (~17 GB).
+`bash assets/imagegen/download_models.sh qwenedit` (~17 GB).
 
 **Memory**: each run ends by unloading ComfyUI's models when its queue is
 empty (`POST /free`); on the Mac's unified memory ComfyUI otherwise holds the
@@ -85,15 +85,15 @@ see `docs/art_team/README.md`.
 ## Usage
 
 ```bash
-python3 assets/flux/generate.py --ids K-01,T-01 --dry-run        # print the assembled prompts
-python3 assets/flux/generate.py --chapter C --limit 5            # the first five of a chapter
-python3 assets/flux/generate.py --ids K-03 --canvas C-FULL --pose P-05        # full figure
-python3 assets/flux/generate.py --ids K-03 --canvas C-BUST --expression E-08  # bust
-python3 assets/flux/generate.py --prompts-file terrain_prompts_v2.csv --style-file STYLE_CORE_satellite_flat.txt
-python3 assets/flux/generate.py --prompts-file arms_prompts.csv --style-file STYLE_CORE_arms_matte.txt --res 640
-python3 assets/flux/post.py assets/flux/out/characters/K-03_*_c-full_*.png
-python3 assets/flux/install_map_art.py cast
-python3 assets/flux/generate.py --build-csv                      # after editing the library
+python3 assets/imagegen/generate.py --ids K-01,T-01 --dry-run        # print the assembled prompts
+python3 assets/imagegen/generate.py --chapter C --limit 5            # the first five of a chapter
+python3 assets/imagegen/generate.py --ids K-03 --canvas C-FULL --pose P-05        # full figure
+python3 assets/imagegen/generate.py --ids K-03 --canvas C-BUST --expression E-08  # bust
+python3 assets/imagegen/generate.py --prompts-file terrain_prompts_v2.csv --style-file STYLE_CORE_satellite_flat.txt
+python3 assets/imagegen/generate.py --prompts-file arms_prompts.csv --style-file STYLE_CORE_arms_matte.txt --res 640
+python3 assets/imagegen/post.py assets/imagegen/out/characters/K-03_*_c-full_*.png
+python3 assets/imagegen/install_map_art.py cast
+python3 assets/imagegen/generate.py --build-csv                      # after editing the library
 ```
 
 - Seeds are `--seed` (default 954159497, the map's own) + the variant index, so a rerun reproduces; lock the seed when making expression variants.

@@ -1,17 +1,17 @@
 cell,kind,source,notes
-0,0,assets/flux/out/trees/TR-01_oak_aerial_tree_zimage_s954159497.png,TR-01 oak (Z-Image)
-0,2,assets/flux/out/trees/TR-01_oak_aerial_tree_zimage_s954159497.png,TR-01 oak also stands alone in the fields
-1,0,assets/flux/out/trees/TR-01_oak_aerial_tree_zimage_s954159498.png,TR-01 oak (Z-Image)
-1,2,assets/flux/out/trees/TR-01_oak_aerial_tree_zimage_s954159498.png,TR-01 oak also stands alone in the fields
-2,0,assets/flux/out/trees/TR-02_beech_aerial_tree_zimage_s954159497.png,TR-02 beech (Z-Image)
-3,0,assets/flux/out/trees/TR-02_beech_aerial_tree_zimage_s954159498.png,TR-02 beech (Z-Image)
-4,0,assets/flux/out/trees/TR-03_lime_aerial_tree_zimage_s954159497.png,TR-03 lime (Z-Image)
-5,0,assets/flux/out/trees/TR-03_lime_aerial_tree_zimage_s954159498.png,TR-03 lime (Z-Image)
-6,0,assets/flux/out/trees/TR-04_hornbeam_aerial_tree_zimage_s954159497.png,TR-04 hornbeam (Z-Image)
-7,0,assets/flux/out/trees/TR-04_hornbeam_aerial_tree_zimage_s954159498.png,TR-04 hornbeam (Z-Image)
-8,2,assets/flux/out/trees/TR-05_birch_aerial_tree_zimage_s954159497.png,TR-05 birch (Z-Image)
-9,2,assets/flux/out/trees/TR-05_birch_aerial_tree_zimage_s954159498.png,TR-05 birch (Z-Image)
-10,1,assets/flux/out/trees/TR-06_pine_aerial_tree_zimage_s954159497.png,TR-06 pine (Z-Image)
-11,1,assets/flux/out/trees/TR-06_pine_aerial_tree_zimage_s954159498.png,TR-06 pine (Z-Image)
-12,1,assets/flux/out/trees/TR-07_spruce_aerial_tree_zimage_s954159497.png,TR-07 spruce (Z-Image)
-13,1,assets/flux/out/trees/TR-07_spruce_aerial_tree_zimage_s954159498.png,TR-07 spruce (Z-Image)
+0,0,assets/imagegen/out/trees/TR-01_oak_aerial_tree_zimage_s954159497.png,TR-01 oak (Z-Image)
+0,2,assets/imagegen/out/trees/TR-01_oak_aerial_tree_zimage_s954159497.png,TR-01 oak also stands alone in the fields
+1,0,assets/imagegen/out/trees/TR-01_oak_aerial_tree_zimage_s954159498.png,TR-01 oak (Z-Image)
+1,2,assets/imagegen/out/trees/TR-01_oak_aerial_tree_zimage_s954159498.png,TR-01 oak also stands alone in the fields
+2,0,assets/imagegen/out/trees/TR-02_beech_aerial_tree_zimage_s954159497.png,TR-02 beech (Z-Image)
+3,0,assets/imagegen/out/trees/TR-02_beech_aerial_tree_zimage_s954159498.png,TR-02 beech (Z-Image)
+4,0,assets/imagegen/out/trees/TR-03_lime_aerial_tree_zimage_s954159497.png,TR-03 lime (Z-Image)
+5,0,assets/imagegen/out/trees/TR-03_lime_aerial_tree_zimage_s954159498.png,TR-03 lime (Z-Image)
+6,0,assets/imagegen/out/trees/TR-04_hornbeam_aerial_tree_zimage_s954159497.png,TR-04 hornbeam (Z-Image)
+7,0,assets/imagegen/out/trees/TR-04_hornbeam_aerial_tree_zimage_s954159498.png,TR-04 hornbeam (Z-Image)
+8,2,assets/imagegen/out/trees/TR-05_birch_aerial_tree_zimage_s954159497.png,TR-05 birch (Z-Image)
+9,2,assets/imagegen/out/trees/TR-05_birch_aerial_tree_zimage_s954159498.png,TR-05 birch (Z-Image)
+10,1,assets/imagegen/out/trees/TR-06_pine_aerial_tree_zimage_s954159497.png,TR-06 pine (Z-Image)
+11,1,assets/imagegen/out/trees/TR-06_pine_aerial_tree_zimage_s954159498.png,TR-06 pine (Z-Image)
+12,1,assets/imagegen/out/trees/TR-07_spruce_aerial_tree_zimage_s954159497.png,TR-07 spruce (Z-Image)
+13,1,assets/imagegen/out/trees/TR-07_spruce_aerial_tree_zimage_s954159498.png,TR-07 spruce (Z-Image)

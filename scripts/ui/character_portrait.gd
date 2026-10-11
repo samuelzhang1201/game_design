@@ -13,7 +13,7 @@ extends Control
 ##      (24, 24) to sit inside the 48x48 portrait box.
 ##
 ## CHIP ART: assets/2D/portraits/cast/<id>.png are 96x96 chips, installed from the
-## library's K- renders by assets/flux/install_map_art.py cast (the old pixel
+## library's K- renders by assets/imagegen/install_map_art.py cast (the old pixel
 ## art is retired). Roles without art fall back to a seat-colored initial.
 ##
 ## Instantiate via CharacterPortrait.instantiate_for(id) - it picks the

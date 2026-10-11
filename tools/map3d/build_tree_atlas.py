@@ -5,9 +5,9 @@
 Owner 2026-10-01 (树木一旦把标尺拉到20km以下就非常丑非常假): every crown on the 3D
 map is a camera-facing PHOTO CARD (scripts/map3d/tree_card.gdshader) cut from
 an aerial photograph of one real tree on white, rendered by the art pipeline
-(assets/flux/tree_crown_prompts.csv, Z-Image and Qwen-Image-2512 side by
+(assets/imagegen/tree_crown_prompts.csv, Z-Image and Qwen-Image-2512 side by
 side). data/map3d_tree_crowns.csv names each atlas cell's kind (0 broadleaf,
-1 conifer, 2 lone) and its `source` render under assets/flux/out/ (git-
+1 conifer, 2 lone) and its `source` render under assets/imagegen/out/ (git-
 ignored); this tool cuts each one out of its white ground, trims it to the
 crown, fits it into its CELL px cell of a COLS x ROWS atlas and floods the
 crown's own colour out into the clear texels so no mip bleeds white or black,

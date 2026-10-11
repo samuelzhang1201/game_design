@@ -141,7 +141,7 @@ flowchart TD
   BK --> WP["world_relief / biome_weights / sea_distance .png"]
   WP & PT & M3["data/map3d_*.csv"] -->|"tools/map3d/build_pack.sh<br/>export_manor_land → bake_world.py → bake_trees.py → build_world.gd → bake_layers.gd"| W["assets/3D/terrain/{id}/<br/>Terrain3D + 房屋 + 树 + 河/路/桥网格 + manifest.json"]
   LIB["art_prompt_library.md"] -->|generate.py --build-csv| PR["prompts.csv"]
-  PR & STY["STYLE_CORE*.txt + canvas.json"] -->|generate.py / 美术锁定工作流| OUT["assets/flux/out/ 原图"]
+  PR & STY["STYLE_CORE*.txt + canvas.json"] -->|generate.py / 美术锁定工作流| OUT["assets/imagegen/out/ 原图"]
   OUT -->|install_map_art.py| A2["assets/2D/..."]
   A2 --> TAB["resource_icons.csv 等表的 texture 列"]
   REF["参考图"] --> TR["Tripo"] -->|"Blender + cc_art_check 插件"| A3["assets/3D/buildings、units"]
@@ -308,7 +308,7 @@ LEDGER 星图（`Ledger.galaxy`）同样只画认知：官员报给你的数字�
   - 美术插件的 `specs.json` 里存着这张表的副本（面数上限、占地），过期了会按旧规格检查。
 - **额外操作**：`tools/map3d/build_pack.sh`；`python3 tools/art_kit/extract_specs.py` 和 `python3 tools/art_kit/build_kit.py`；跑测试。
 
-### 例 7：改 2D 风格文字 `assets/flux/STYLE_CORE.txt`（美术定义）
+### 例 7：改 2D 风格文字 `assets/imagegen/STYLE_CORE.txt`（美术定义）
 
 - **改了什么**：风格核心里改了一个词。
 - **怎么传导**：只影响**以后**生成的图：`generate.py` 拼提示词时读它；美术锁定工作流里的①框是它的拷贝。已经装进游戏的图不会变。
@@ -383,4 +383,4 @@ LEDGER 星图（`Ledger.galaxy`）同样只画认知：官员报给你的数字�
 | 治理与 LEDGER | `governance.gd`、`audit_writer.gd`、`ledger.gd`、`ledger_resolvers.gd` |
 | 认知 | `intel.gd`、`missive_log.gd`、`knowledge.gd`、`claims.gd` |
 | 领土 | `map_ownership.gd` |
-| 构建管线 | `tools/import_azgaar.gd`、`tools/bake_*.gd`、`tools/map3d/build_pack.sh`、`assets/flux/generate.py`、`assets/flux/install_map_art.py`、`tools/art_kit/` |
+| 构建管线 | `tools/import_azgaar.gd`、`tools/bake_*.gd`、`tools/map3d/build_pack.sh`、`assets/imagegen/generate.py`、`assets/imagegen/install_map_art.py`、`tools/art_kit/` |

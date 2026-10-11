@@ -275,7 +275,7 @@ contains, in order:
 
 Portraits come from the art library's `K-` chapter (one entry per character
 id, looks and clothing from its `**外貌**` line), mapped by
-`assets/flux/cast_art.csv` and installed by `assets/flux/install_map_art.py
+`assets/imagegen/cast_art.csv` and installed by `assets/imagegen/install_map_art.py
 cast` into `assets/2D/portraits/cast/<id>.png` (96 px chip, `[C-BUST]`) and
 `assets/2D/portraits/cast/full/<id>.png` (660 px figure, `[C-FULL]`). They keep their
 colour. Roles without art render as seat-coloured initial chips. (Superseded:

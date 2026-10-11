@@ -130,7 +130,7 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | `[C-ESTATE]` | 庄园彩绘（`B-`，2026-09-14） | `a painted vignette of one rural holding seen from a gentle raised three-quarter view, the whole holding inside the frame with a little ground and sky around it, the edges fading softly into plain cream paper, no text, no border, no frame, 5:4 horizontal` |
 | `[C-COURIER]` | 信使彩绘（`B-43`~`B-47`，2026-09-28） | `a painted vignette of one rider on the road seen from a gentle raised three-quarter view, the whole rider and mount inside the frame with a little road, ground and sky around them, the edges fading softly into plain cream paper, no text, no border, no frame, 5:4 horizontal` |
 | `[C-WARPIECE]` | WAR ROOM 木质兵棋参考图（`W-41`~`W-58`，2026-10-06，`war_piece_prompts.csv`） | `one single wargame piece standing alone on its base, seen in three-quarter view from slightly above, the whole piece and its base inside the frame with a generous even margin, on a plain flat neutral grey ground, only a soft contact shadow under the base, no other objects, 1:1 square` |
-| `[C-ARMS]` | 家族与国家纹章（`A-`，2026-09-15；主体由 `assets/flux/arms_prompts.py` 从地图包的 `coa` 生成，不入本库） | `a single heraldic shield drawn flat and face-on with no perspective, the shield alone filling most of the frame, centred with an even margin, pure white background, nothing behind or around the shield, no helmet, no crest, no mantling, no supporters, no motto scroll, no text, no cast shadow, 1:1 square` |
+| `[C-ARMS]` | 家族与国家纹章（`A-`，2026-09-15；主体由 `assets/imagegen/arms_prompts.py` 从地图包的 `coa` 生成，不入本库） | `a single heraldic shield drawn flat and face-on with no perspective, the shield alone filling most of the frame, centred with an even margin, pure white background, nothing behind or around the shield, no helmet, no crest, no mantling, no supporters, no motto scroll, no text, no cast shadow, 1:1 square` |
 
 ### 1.4 调色板（写进美术规范，别让 AI 自由发挥）
 
@@ -149,7 +149,7 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 
 ### 1.5 生成参数建议
 
-**只用两个本地模型，不用任何 Flux 模型**（owner 2026-10-01）。参数锁在 `assets/flux/generate.py` 的预设和美术工具包的工作流里，不手调。
+**只用两个本地模型，不用任何 Flux 模型**（owner 2026-10-01）。参数锁在 `assets/imagegen/generate.py` 的预设和美术工具包的工作流里，不手调。
 
 | 模型 | 参数 | 用于 |
 |---|---|---|
@@ -1048,7 +1048,7 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 
 > **⚠️ 关键规则：表情差分绝对不要重新生成整张图。**
 >
-> 正确做法：拿 `C-xx` 已定稿的立绘作为输入，用**图生图 / 局部重绘**（Qwen-Image-Edit、Flux Kontext、Nano Banana），只重绘面部区域，锁定 seed。这样服装、发型、配饰、光照逐像素不变，只有表情变。
+> 正确做法：拿 `C-xx` 已定稿的立绘作为输入，用**图生图 / 局部重绘**（Qwen-Image-Edit-2511，`generate.py --model qwenedit_fast --images`），只重绘面部区域，锁定 seed。这样服装、发型、配饰、光照逐像素不变，只有表情变。
 >
 > 用法：`<C-xx 定稿图>` + `change only the facial expression to:` + `[E-xx 片段]` + `keep the clothing, hair, hands, lighting and background exactly unchanged`
 
@@ -1448,7 +1448,7 @@ background, no numerals, no text [C-ICON]
 
 > **这一组不属于 `I-`，风格核也不一样。** owner 2026-09-12 定的方向：地图上的符号走单色深褐的手绘故事书地图风，人物和事件插图继续用 §1.1 的 v2 彩铅风。所以 `D-` 用 `STYLE_CORE_map_sepia.txt`（附录 A 第二段）配 `NEGATIVE_map_sepia.txt`（附录 B 第二段），画幅用 `[C-MAPMARK]`（平侧立面、纯白底），不是 `[C-ICON]` 的正交俯视 3/4 角。
 >
-> **纯白底是硬要求**：白纸经 `assets/flux/sepia_alpha_template.json` 的亮度转 alpha 变成透明，褐色笔触的毛边天然保留半透明。生成时底一旦带羊皮纸色或画框，去底就会连着底一起留下。
+> **纯白底是硬要求**：白纸经 `assets/imagegen/sepia_alpha_template.json` 的亮度转 alpha 变成透明，褐色笔触的毛边天然保留半透明。生成时底一旦带羊皮纸色或画框，去底就会连着底一起留下。
 >
 > **自然件要另配一份负面词**（2026-09-12 踩到的坑）：第一批 `D-01`~`D-18` 跑出来，针叶林里长出教堂、山脚杵着城堡、连沼泽和岩堆都带塔楼。原因在风格核自己——它原来写着 `steep exaggerated roofs, tall slender towers and oversized doorways`，那是为聚落写的，套到树和山上模型就把被要求画的塔楼塞进来。风格核里那句已经换成不指定题材的措辞，另外给自然件配了 `NEGATIVE_map_sepia_natural.txt`（在通用负面词前面加禁掉一切建筑），跑 `D-01`~`D-12`、`D-17`~`D-26` 时用 `--negative-file NEGATIVE_map_sepia_natural.txt`；聚落五档 `D-27`~`D-31` 和 `D-13`~`D-16` 本来就是建筑，用通用那份。
 >
@@ -1632,7 +1632,7 @@ background, no numerals, no text [C-ICON]
 
 ### 6.11 庄园彩绘 `B-`（2026-09-14 新增）
 
-> **manor 信息卡顶部的建筑彩绘**（owner 2026-09-14）：点开一座 manor，左栏信息卡上方三分之一显示它的产业庄园画——和地图图例 `D-43`~`D-78` **一一对应**（十二种主业 × 小/中/大，同一 `key`，`assets/flux/estate_paint_art.csv`），但**风格与人物立绘一致**：§1.1 的 v2 彩铅 `STYLE_CORE.txt`（风格核本身就要求建筑与人物同样上色），画幅 `[C-ESTATE]`（5:4 横幅、边缘淡入奶油纸）。不去底、保留颜色，按用途装入 `assets/2D/paintings/estates/<key>.png`（信息卡画面约 216×190 设计像素 × 最大约 3 倍窗口缩放 → 720×576）。
+> **manor 信息卡顶部的建筑彩绘**（owner 2026-09-14）：点开一座 manor，左栏信息卡上方三分之一显示它的产业庄园画——和地图图例 `D-43`~`D-78` **一一对应**（十二种主业 × 小/中/大，同一 `key`，`assets/imagegen/estate_paint_art.csv`），但**风格与人物立绘一致**：§1.1 的 v2 彩铅 `STYLE_CORE.txt`（风格核本身就要求建筑与人物同样上色），画幅 `[C-ESTATE]`（5:4 横幅、边缘淡入奶油纸）。不去底、保留颜色，按用途装入 `assets/2D/paintings/estates/<key>.png`（信息卡画面约 216×190 设计像素 × 最大约 3 倍窗口缩放 → 720×576）。
 >
 > 主体沿用 `D-` 的内容（主宅 + 该产业的作业场），改成一幅上了色的乡间小景，允许几个劳作的小人物；不写"map symbol / flat side elevation"那类地图词。
 
@@ -1675,7 +1675,7 @@ background, no numerals, no text [C-ICON]
 | `B-35` | 庄园彩绘·铁矿·中 | `an iron manor: a stone house with a bloomery furnace giving smoke, a timbered mine adit into the hill, ore carts and heaps of dark ore, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
 | `B-36` | 庄园彩绘·铁矿·大 | `a great iron estate: a manor house with several bloomery furnaces giving smoke, mine adits into the hill, ore carts on wooden rails, heaps of ore and a hamlet of cottages, shown as one painted scene of the whole holding in its own countryside, a few small figures at work` |
 
-> **军队信息卡彩绘**（owner 2026-09-15："军队的 card info 还是 2D 彩绘风格"）：点地图上的军队棋子，左栏信息卡顶部显示这支军队主兵种的彩绘——与庄园彩绘同一风格核（v2 彩铅）、同一 `[C-ESTATE]` 画幅，装进 `assets/2D/paintings/armies/<arm>.png`（`assets/flux/army_paint_art.csv`）。
+> **军队信息卡彩绘**（owner 2026-09-15："军队的 card info 还是 2D 彩绘风格"）：点地图上的军队棋子，左栏信息卡顶部显示这支军队主兵种的彩绘——与庄园彩绘同一风格核（v2 彩铅）、同一 `[C-ESTATE]` 画幅，装进 `assets/2D/paintings/armies/<arm>.png`（`assets/imagegen/army_paint_art.csv`）。
 
 | ID | 主题 | Prompt 主体 |
 |---|---|---|
@@ -1686,7 +1686,7 @@ background, no numerals, no text [C-ICON]
 | `B-41` | 军队彩绘·舰队 | `a small fleet of medieval cogs with square sails and blue pennants sailing out of a harbour on a calm sea, shown as one painted scene on its own stretch of coast` |
 | `B-42` | 军队彩绘·王军 | `the king's own guard on parade: a mounted commander in a blue surcoat beneath a large royal banner, ranks of spearmen behind him before a castle gate, shown as one painted scene in its own countryside` |
 
-> **信使彩绘**（owner 2026-09-28，spec `2026-09-28-courier-art-design.md` §4）：信使卡顶部（B-43..45，按种类）与恶劣天气（B-46）、看板回执阅读台（B-47）的彩绘。v2 彩铅核，`[C-COURIER]` 画幅（`generate.py --canvas C-COURIER`），骑手的衣着取自 owner 选定的设计稿 C4（传令旗手）/ S2（行商驮马），与地图上的 3D 模型一致；Z-Image 与 Qwen 各出图对比（owner 2026-09-28，不用 klein），`install_map_art.py courier_paintings` 按 `assets/flux/courier_paint_art.csv` 装进 `assets/2D/paintings/couriers/<key>.png`。
+> **信使彩绘**（owner 2026-09-28，spec `2026-09-28-courier-art-design.md` §4）：信使卡顶部（B-43..45，按种类）与恶劣天气（B-46）、看板回执阅读台（B-47）的彩绘。v2 彩铅核，`[C-COURIER]` 画幅（`generate.py --canvas C-COURIER`），骑手的衣着取自 owner 选定的设计稿 C4（传令旗手）/ S2（行商驮马），与地图上的 3D 模型一致；Z-Image 与 Qwen 各出图对比（owner 2026-09-28，不用 klein），`install_map_art.py courier_paintings` 按 `assets/imagegen/courier_paint_art.csv` 装进 `assets/2D/paintings/couriers/<key>.png`。
 
 | ID | 主题 | Prompt 主体 |
 |---|---|---|
@@ -1698,7 +1698,7 @@ background, no numerals, no text [C-ICON]
 
 ### 6.12 庄园建筑图标 `H-`（2026-09-14 新增）
 
-> **manor 建筑槽位与建造菜单里的建筑图标**（owner 2026-09-14）：风格与 manor 彩绘（§6.11 `B-`）和人物立绘一致——§1.1 的 v2 彩铅 `STYLE_CORE.txt`，画幅 `[C-ICON]`；每条只画**一座**建筑的完整剪影。出图经 `post.py --tier icon` 去底，`install_map_art.py buildings` 按 `assets/flux/building_art.csv` 装进 `assets/2D/icons/buildings/bld_<code>.png`（槽位格 34 设计像素 × 最大约 3 倍窗口缩放 → 128 px），由 `data/resource_icons.csv` 的 `bld_<code>` 行引用。建筑清单和地理约束见 `data/manor_buildings.csv`。
+> **manor 建筑槽位与建造菜单里的建筑图标**（owner 2026-09-14）：风格与 manor 彩绘（§6.11 `B-`）和人物立绘一致——§1.1 的 v2 彩铅 `STYLE_CORE.txt`，画幅 `[C-ICON]`；每条只画**一座**建筑的完整剪影。出图经 `post.py --tier icon` 去底，`install_map_art.py buildings` 按 `assets/imagegen/building_art.csv` 装进 `assets/2D/icons/buildings/bld_<code>.png`（槽位格 34 设计像素 × 最大约 3 倍窗口缩放 → 128 px），由 `data/resource_icons.csv` 的 `bld_<code>` 行引用。建筑清单和地理约束见 `data/manor_buildings.csv`。
 
 | ID | 对象 | Prompt 主体 |
 |---|---|---|
@@ -2132,13 +2132,13 @@ above, cold slate blue with the comet in pale ochre [C-SCENE]
 
 ### 8.6 第零章 · 卢顿之约（`V-35`~`V-56`，2026-09-21）
 
-> 序章（`game_story/chapter_0/chapter_0_events.md`）21 个节拍 `V-35`~`V-55` 一图一条，一一对应；`V-56` 是战事节拍 `war_01`（`game_story/chapter_0/war_events.md`，由 `DefeatSystem` 在丢城时排期，不在序章链上）。`assets/flux/event_art.csv` 把编号接回 `event_id`。
+> 序章（`game_story/chapter_0/chapter_0_events.md`）21 个节拍 `V-35`~`V-55` 一图一条，一一对应；`V-56` 是战事节拍 `war_01`（`game_story/chapter_0/war_events.md`，由 `DefeatSystem` 在丢城时排期，不在序章链上）。`assets/imagegen/event_art.csv` 把编号接回 `event_id`。
 >
 > **画布是 `[C-EVENT]` 而不是 `[C-SCENE]`**：事件图在会见窗（`%AudienceWindow`，760×500 设计像素）顶端横幅里显示，所以构图是宽带，主体居中，上下留空。装进 `assets/2D/events/illustrations/<event_id>.png`，1280×533。
 >
 > **人物外貌必须照抄 §2.6 的 `**外貌**` 行**（这里为长度做了压缩，但发色、年龄、衣着颜色一个都不能改），否则同一个人在立绘和事件图里会是两个人。
 >
-> **纹章是地图包自己的**（架构约束 5，`assets/flux/arms_prompts.csv`）：本国是**红底金浑天仪**，北方女王是**红底银镰刀**，兄弟会的记号是**一捆麦子**。不要再画"蓝底银塔"或"红底白鹿"——那是外来设定，本作没有。
+> **纹章是地图包自己的**（架构约束 5，`assets/imagegen/arms_prompts.csv`）：本国是**红底金浑天仪**，北方女王是**红底银镰刀**，兄弟会的记号是**一捆麦子**。不要再画"蓝底银塔"或"红底白鹿"——那是外来设定，本作没有。
 >
 > 画面中绝对不能出现文字；账簿、petition、旗帜最容易诱发，出图后专门检查。
 
@@ -2485,7 +2485,7 @@ evening light as the first candles are lit [C-EVENT]
 
 | 项 | 建议 |
 |---|---|
-| 底模 | Flux.1 dev（彩铅质感表现最好）；备选 Qwen-Image |
+| 底模 | Qwen-Image-2512 或 Z-Image Turbo（Apache 2.0，可商用；不用任何 Flux 模型） |
 | 训练集 | 30–40 张，**必须覆盖所有资源类型**（人物 15 / 场景 8 / 地图 5 / 图标 7），否则地图和图标会被人物风格带偏 |
 | 分辨率 | 统一 1024×1024（长图先裁成方图） |
 | 触发词 | 起一个不会撞词的，如 `mdvlcp` |
@@ -2537,7 +2537,7 @@ evening light as the first candles are lit [C-EVENT]
 
 ### 10.7 技术规格（2026-09-11 按游戏实际改写）
 
-游戏的设计视口是 **640×360**，窗口 1280×720（2×，`canvas_items` 拉伸），像素字体、nearest 过滤。所有资源都按「Flux 原生 1024 级生成 → 去底 → 缩到游戏尺寸」走，缩放和去底由 `assets/flux/post.py` 做，不手工。数字是**交付给引擎的尺寸**，不是生成尺寸。
+游戏的设计视口是 **640×360**，窗口 1280×720（2×，`canvas_items` 拉伸），像素字体、nearest 过滤。所有资源都按「模型原生 1024 级生成 → 去底 → 缩到游戏尺寸」走，缩放和去底由 `assets/imagegen/post.py` 做，不手工。数字是**交付给引擎的尺寸**，不是生成尺寸。
 
 | 资源类型 | 生成 | 交付 | 格式 | 备注 |
 |---|---|---|---|---|

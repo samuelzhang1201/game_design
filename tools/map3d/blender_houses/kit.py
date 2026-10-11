@@ -1,7 +1,7 @@
 """The kit the hand-modelled settlement houses are built from, run INSIDE Blender.
 
 Owner 2026-09-24: every house type is modelled anew in Blender (through the
-Blender MCP), against the Flux reference pictures in
+Blender MCP), against the generated reference pictures in
 assets/3D/buildings/<type>/model_wip/ (no AI 3D: Hunyuan3D was removed over its
 licence). Load it in Blender with
 

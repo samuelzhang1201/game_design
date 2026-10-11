@@ -270,13 +270,13 @@ add it here as a principle with its why — not as a changelog entry.
   proportions, muted natural colour — no flags, no banners, no bright
   pennants, no shrubs, no little figures, and no ground slab under the
   building. **No AI 3D (owner 2026-09-24: Hunyuan3D removed over its
-  licence) — houses are hand-modelled in Blender against a photoreal Flux
+  licence) — houses are hand-modelled in Blender against a photoreal generated
   reference; ComfyUI stops at the image.** (Tripo 3D on the owner's paid plan
   is allowed for UNIT sources only, processed to budget in Blender.) For any
   prompt: **never ask for a "game asset" in words** — that phrase itself pulls
   the model toward a toy castle with flags and a grass base, and negatives do
   nothing. What works is IMAGE-to-3D from a photoreal reference rendered by
-  the project's own Flux pipeline (`STYLE_CORE_photoreal_building.txt` +
+  the project's own image pipeline (`assets/imagegen/`) (`STYLE_CORE_photoreal_building.txt` +
   `NEGATIVE_photoreal_building.txt`, canvas `C-ICON`): the reference carries
   the realism and the 3D step only has to follow it.
 - **Roofs are TILE, never thatch, and WARM orange-red** (owner 2026-09-24:

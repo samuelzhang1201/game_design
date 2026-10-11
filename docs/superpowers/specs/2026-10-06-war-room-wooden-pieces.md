@@ -17,7 +17,7 @@ round lacquered plinth, replacing the painted-tin figures on square bases.
 
 | step | where |
 | --- | --- |
-| references | `assets/flux/war_piece_prompts.csv` W-41..W-59 (`STYLE_CORE_war_piece.txt`, canvas `[C-WARPIECE]`), Qwen-Image-2512; the picks in each piece's `model_wip/REF_piece_<arm>.png` |
+| references | `assets/imagegen/war_piece_prompts.csv` W-41..W-59 (`STYLE_CORE_war_piece.txt`, canvas `[C-WARPIECE]`), Qwen-Image-2512; the picks in each piece's `model_wip/REF_piece_<arm>.png` |
 | Tripo | the owner's paid plan; the sources in `assets/3D/war_room/piece_<arm>/model_wip/tripo/` |
 | processing | `tools/war_room/blender/wr_pieces.py` in the owner's Blender: turned to face game −Z, the plinth's foot centred on the origin and scaled to a diameter of 1, collapsed to 15k triangles on Tripo's UVs, maps cut to 1024 |
 | lacquer | `piece_<arm>_lacquer.png`, read off the albedo's blue: R the lacquer's share, G its shade (V over twice its mean) |
