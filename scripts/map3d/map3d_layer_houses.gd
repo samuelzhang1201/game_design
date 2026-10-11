@@ -43,8 +43,7 @@ extends Node3D
 @export var trim_tints: PackedColorArray = [Color("FFFFFF"), Color("EADFD0"), Color("D2BEA4"),
 	Color("BCA68C"), Color("F4EADB"), Color("DCCDB8")]
 @export_group("")
-## The aprons at the houses' feet (World/Aprons, Map3DLayerAprons), fed every
-## settlement this shows; none assigned, no aprons.
+## The aprons at the houses' feet (World/Aprons), fed every settlement shown; none, no aprons.
 @export var aprons: Map3DLayerAprons
 
 ## Test seam: the baked houses, in place of the build's own houses.csv.
@@ -147,6 +146,7 @@ func build() -> void:
 	_chunks.clear()
 	_built_at = Vector2.INF
 	_built = true
+	if aprons: aprons.clear()
 	ctx.houses()
 	_wall_tints = Map3DHouses.tints_of(wall_tints)
 	_roof_tints = Map3DHouses.tints_of(roof_tints)

@@ -77,7 +77,7 @@ func test_setting_a_line_again_replaces_it() -> void:
 
 
 func test_the_priorities_keep_their_order() -> void:
-	var order := [Map3DPriority.SEA, Map3DPriority.RIVERS, Map3DPriority.ROADS,
+	var order := [Map3DPriority.APRONS, Map3DPriority.SEA, Map3DPriority.RIVERS, Map3DPriority.ROADS,
 		Map3DPriority.MANOR_EDGES, Map3DPriority.KINGDOM_BAND, Map3DPriority.SEAMS,
 		Map3DPriority.KINGDOM_HALO, Map3DPriority.KINGDOMS, Map3DPriority.HOVER,
 		Map3DPriority.SELECTION, Map3DPriority.CLOUDS, Map3DPriority.RING_BASE]

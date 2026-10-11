@@ -111,6 +111,7 @@ func test_aprons_hide_past_lod() -> void:
 
 
 func test_aprons_under_roads() -> void:
+	assert_lt(Map3DPriority.APRONS, Map3DPriority.SEA)
 	assert_lt(Map3DPriority.APRONS, Map3DPriority.ROADS)
 	_aprons.show_burgs([_village], {_village: [_cottage(0.0)]}, {"cottage_a": BOX})
 	var mat := _aprons.node_of(_village).mesh.surface_get_material(0)
