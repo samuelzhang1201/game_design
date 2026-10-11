@@ -113,6 +113,34 @@ func test_a_regiment_opens_its_painted_card() -> void:
 	# icon+value pair a row.
 	assert_eq(p.stats_grid().columns, 2, "one icon+value pair a row so its wide values fit")
 
+## A broken supply line (owner 2026-10-11): the card's Line row is written in
+## CardWarn, the paper's rubric red; a flowing line in the card's own ink.
+func test_a_broken_supply_line_is_written_in_the_warning_ink() -> void:
+	Game.start_campaign(42)
+	var p := _panel()
+	await wait_process_frames(1)
+	var mine := Game.data.resolve_realm("player_realm")
+	var code := ""
+	for r: Dictionary in MapObjects.regiments_of(Game.data, mine, Game.state):
+		if String(r.get("is_naval", "0")) != "1" and Game.state.regiments.has(String(r["regiment_code"])):
+			code = String(r["regiment_code"])
+			break
+	var town := String(TownStores.realm_towns(Game.data, Game.state)[0])
+	var rec := SupplyLines._new_record(town, 1000, 1)
+	rec["state"] = SupplyLines.FRONT
+	Game.state.supply_lines[code] = rec
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "army", "code": code}})
+	await wait_process_frames(1)
+	var cell: Label = p.stats_grid().find_child("Stat_army_supply_line", true, false)
+	assert_not_null(cell)
+	assert_eq(cell.theme_type_variation, &"CardWarn")
+	rec["state"] = SupplyLines.FLOWING
+	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "army", "code": code}})
+	await wait_process_frames(1)
+	cell = p.stats_grid().find_child("Stat_army_supply_line", true, false)
+	assert_eq(cell.theme_type_variation, &"CardValue", "a flowing line in the card's own ink")
+
+
 ## A courier's card flies his kingdom's arms, as his regiment's does (b0848aa;
 ## spec 2026-09-27-courier-core §2).
 func test_a_courier_flies_his_kingdoms_arms() -> void:

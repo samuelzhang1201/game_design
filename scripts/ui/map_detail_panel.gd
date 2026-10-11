@@ -786,7 +786,8 @@ func _fill_stats(stats: Array) -> void:
 		var value := Label.new()
 		value.name = "Stat_" + key
 		value.text = String(st["text"])
-		value.theme_type_variation = &"CardValue"
+		# a warning fact (a broken or cut supply line) in the card's warning ink
+		value.theme_type_variation = &"CardWarn" if String(st.get("tone", "")) == "warn" else &"CardValue"
 		value.clip_text = true
 		value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -893,7 +894,7 @@ func _stat_row(st: Dictionary, per_month := false) -> HBoxContainer:
 	var value := Label.new()
 	value.name = "Stat_" + key
 	value.text = String(st["text"]).trim_suffix("/mo") if per_month else String(st["text"])
-	value.theme_type_variation = &"CardFigure"
+	value.theme_type_variation = &"CardWarn" if String(st.get("tone", "")) == "warn" else &"CardFigure"
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	value.clip_text = true
 	value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

@@ -237,12 +237,9 @@ him and is listed for him to overturn one by one. Builds on
     g. Drawing: the 3D map's and the WAR ROOM's gold lines draw FLOWING lines
        only, so a FRONT line vanishes like a cut one (the least intrusive
        coherent look); the key slip shows no cut state, so no new legend.
-       The army card's supply stat reads "Line broken: town ahead" in the
-       card's ordinary ink with the `front_card` sentence as its tooltip
-       (the critic ruled `CardWarn`'s pale rose too faint on the paper
-       column — quieter than the facts round it; it waits for the owner to
-       retune `CardWarn`'s paper ink in the editor, which would also mend the
-       idle-building word); the folio's Line rows (docked and
+       The army card's supply stat reads "Line broken: town ahead" in
+       `CardWarn` with the `front_card` sentence as its tooltip (owner
+       2026-10-11, ruling 21 below); the folio's Line rows (docked and
        open) read that sentence; the piece slip adds "Line broken" in rubric
        and the sentence with its remedy in its book face (`front_slip`; a
        whole sentence in small capitals reads badly); the LEDGER's line card
@@ -251,9 +248,7 @@ him and is listed for him to overturn one by one. Builds on
        tooltip and the folio add "on the frontier side", and the news keeps
        the owner's brief's sentence.
        Left for the owner (critic, not done): the folio has no warning ink
-       of its own (a `FolioWarn` theme kind is an editor change), and the
-       map could draw the broken line instead of hiding it (a dashed, dimmed
-       line is a new look).
+       of its own (a `FolioWarn` theme kind is an editor change).
     h. `SUPPLY_POINT_SET` is refused when it RUNS (sent, deployed, or measured
        by `Game.review_drafts`) for a town ahead of the column where it stands
        then (`mark_ahead` in `ActionSystem._validate_supply`, the `pick_ahead`
@@ -262,6 +257,21 @@ him and is listed for him to overturn one by one. Builds on
        the daily rule breaks the line on its first flowing day and says so.
     i. A SET for the same town as a FRONT line is not a rate change (that is
        FLOWING / CUT only): its wagons set out again (RIDING).
+
+## Owner rulings 2026-10-11 (made in the owner's words: "按你的推荐" where not ruled)
+
+21. **CardWarn is the rubric red on paper.** `paper_theme.tres`'s `CardWarn`
+    takes the piece slip's rubric (`WarHoverRubric`, #9B2C1F) at the card's
+    figure size (13), so a warning reads as loud as the facts round it. A
+    card fact may carry `tone: "warn"` (`MapObjects._stat`); `MapDetailPanel`
+    writes such a value in `CardWarn` instead of `CardValue` / `CardFigure`.
+    The army card's supply stat is `warn` when its line is FRONT ("Line
+    broken: town ahead") or CUT ("cut"). The idle-building word takes the
+    same red. `game_theme.tres`'s `CardWarn` (the dark leather: the march's
+    confirm and other held-up windows) keeps its pale rose — a dark red is
+    illegible on leather.
+22. **Unchanged, as recommended**: the supply route's ochre gold (#C08A22,
+    palette `supply_route`) and the docked folio's size stay as they are.
 
 ## 1. Engine (pure, tested)
 

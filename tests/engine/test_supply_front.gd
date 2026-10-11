@@ -222,6 +222,7 @@ func test_the_cards_the_slip_and_the_news_say_it_plainly() -> void:
 		func(x: Dictionary) -> bool: return String(x["key"]) == "army_supply_line")[0]
 	assert_eq(String(stat["text"]), "Line broken: town ahead")
 	assert_eq(String(stat["tooltip"]), broken)
+	assert_eq(String(stat.get("tone", "")), "warn", "the card writes a broken line in its warning ink")
 	var brief: Array = (WarFolio.brief(repo, s, code)["rows"] as Array).filter(
 		func(r: Dictionary) -> bool: return String(r["label"]) == "Line")
 	assert_eq(String(brief[0]["text"]), broken)

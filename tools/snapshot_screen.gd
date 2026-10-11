@@ -73,6 +73,10 @@ var _hover_target: Control
 ## --build <building> begins that building on the shot's manor (with
 ## --manor), so the slot row shows a work; --speed N lights the clock.
 var _build := ""
+## --idle BUILDING (with --manor; "first" names the crown's first manor): that
+## building is stood up and left IDLE (its inputs unpaid), so the slot shows
+## its "idle" word in CardWarn.
+var _idle := ""
 var _speed := -1
 ## --click3d fx,fy (with --screen root: the court opens on the 3D map when it
 ## is built) clicks the 3D map
@@ -349,6 +353,8 @@ func _ready() -> void:
 			_hover_icon = int(args[i + 1])
 		elif args[i] == "--build":
 			_build = args[i + 1]
+		elif args[i] == "--idle":
+			_idle = args[i + 1]
 		elif args[i] == "--click3d":
 			var parts := args[i + 1].split(",")
 			_click3d = Vector2(float(parts[0]), float(parts[1]))
@@ -913,7 +919,10 @@ func _process(_delta: float) -> void:
 			if _layer.to_upper() == "LAWS" and _laws_page != "":
 				_root._laws_screen.show_page(_laws_page)
 		if _manor != "" and _root.current_screen.has_method("detail_panel"):
-			var cell := MapManors.find(Game.data, _manor)
+			var cell := MapManors.find(Game.data, _manor) if _manor != "first" else int(MapManors.manors_of_house(
+				Game.data, Game.state, MapManors.crown(Game.state), Game.data.resolve_realm("player_realm"))[0])
+			if _idle != "" and cell >= 0 and MapManors.build(Game.data, Game.state, cell, _idle, "snapshot: an idle building"):
+				Game.state.idle_buildings[str(cell)] = [_idle]
 			if cell < 0:
 				push_error("no such manor: " + _manor)
 			else:
