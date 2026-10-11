@@ -193,12 +193,15 @@ static func settle_units(repo: DataRepository, state: GameState) -> void:
 		var d := int(entry.get("forage_days", 0))
 		if d <= 0:
 			continue
+		@warning_ignore("integer_division")
 		entry["morale"] = mini(100, int(entry.get("morale", 0)) + int(repo.bal("forage_morale_month")) * d / Calendar.DAYS_PER_TICK)
 		# never below forage_training_floor; a unit already under it keeps what it has (ruling R7)
 		var training := int(entry.get("training", 0))
+		@warning_ignore("integer_division")
 		entry["training"] = maxi(training - int(repo.bal("forage_training_month")) * d / Calendar.DAYS_PER_TICK,
 			mini(training, int(repo.bal("forage_training_floor"))))
 		var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, c, state)), entry)
+		@warning_ignore("integer_division")
 		var hurt := mini(fit, fit * int(repo.bal("forage_harass_permille")) * d / (Calendar.DAYS_PER_TICK * 1000))
 		entry["wounded"] = int(entry.get("wounded", 0)) + hurt
 		entry["forage_days"] = 0

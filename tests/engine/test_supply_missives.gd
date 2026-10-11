@@ -188,6 +188,7 @@ func test_the_report_tells_the_road_loss_and_who_was_bought_from() -> void:
 	assert_eq(String(by_key["bought@House A"]["label"]), "Bought from House House A (units)")
 	var keys: Array = facts.map(func(f: Dictionary) -> String: return String(f["key"]))
 	assert_lt(keys.find("bought@House A"), keys.find("bought@House B"), "houses in order")
+	@warning_ignore("integer_division")
 	var pct := SupplySystem.loss_of(repo, 100) / 10
 	assert_gt(pct, 0)
 	var first := ""

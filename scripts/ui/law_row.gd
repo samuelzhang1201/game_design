@@ -40,10 +40,10 @@ func _ready() -> void:
 ## stands before it (`gapped`), its words, and the menu of its values. The
 ## menu's popup wears the CardMenuPopup kind (a popup is no scene node, so it
 ## cannot be authored; MapDetailPanel's build menu does the same).
-func setup(law: String, titled: bool, gapped := false) -> void:
-	_law = law
+func setup(law_id: String, titled: bool, gapped := false) -> void:
+	_law = law_id
 	var repo := Game.data
-	var d := LawSystem.def(repo, law)
+	var d := LawSystem.def(repo, law_id)
 	%Label.text = String(d["label"])
 	var group := String(d.get("group", ""))
 	%GroupTitle.visible = titled and group != ""

@@ -18,6 +18,7 @@ const PAPER_PATH := "res://assets/2D/ui/missive_board/letter_aged.png"
 @export var tint := Color.WHITE
 @export var deckle_px := 2.5
 @export var deckle_step := 11.0
+@warning_ignore("shadowed_global_identifier")
 @export var seed := 7
 @export var tilt_deg := 0.0
 @export var shadow_offset := Vector2(6, 10)

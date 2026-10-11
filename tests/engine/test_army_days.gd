@@ -44,6 +44,7 @@ func test_a_heavier_load_marches_slower() -> void:
 	var light := ArmySystem.day_step_m(repo, s, code)
 	s.regiments[code]["carry_days"] = 30
 	var heavy := ArmySystem.day_step_m(repo, s, code)
+	@warning_ignore("integer_division")
 	assert_eq(heavy, light * 850 / 1000)
 
 func test_a_new_regiment_starts_with_twenty_days_and_the_default_load() -> void:
@@ -68,12 +69,14 @@ func test_hunger_costs_morale_every_day_under_five_days() -> void:
 	var code := _land()
 	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), s)
 	s.regiments[code]["morale"] = 60
+	@warning_ignore("integer_division")
 	s.regiments[code]["supplies"] = use * 4 / 30          # 4 days: hungry
 	ArmySystem.hunger_day(repo, s)
 	assert_eq(int(s.regiments[code]["morale"]), 59)
 	s.regiments[code]["supplies"] = 0                     # starving
 	ArmySystem.hunger_day(repo, s)
 	assert_eq(int(s.regiments[code]["morale"]), 56)
+	@warning_ignore("integer_division")
 	s.regiments[code]["supplies"] = use * 6 / 30          # fed: no daily loss
 	ArmySystem.hunger_day(repo, s)
 	assert_eq(int(s.regiments[code]["morale"]), 56)

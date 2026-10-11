@@ -321,30 +321,30 @@ func _settle_economy(state: GameState, r: TickReport) -> void:
 
 ## The people of the provinces the crown controls — the mouths the court's
 ## ration feeds and the harvest is counted by. Also read by the LEDGER.
-static func court_people(data: DataRepository, state: GameState) -> int:
+static func court_people(repo: DataRepository, state: GameState) -> int:
 	var people := 0
-	for code: String in MapManors.controlled_provinces(data, state):
-		people += RealmEconomy._figure(data, state, "economy.provinces.%s.rural_population" % code)
-		people += RealmEconomy._figure(data, state, "economy.provinces.%s.urban_population" % code)
+	for code: String in MapManors.controlled_provinces(repo, state):
+		people += RealmEconomy._figure(repo, state, "economy.provinces.%s.rural_population" % code)
+		people += RealmEconomy._figure(repo, state, "economy.provinces.%s.urban_population" % code)
 	return people
 
 ## The province the court sits in, whose grain law rations its table: the
 ## realm's capital's province while the realm holds it, else the crown's
 ## home province (MapManors.home_province).
-static func court_province(data: DataRepository, state: GameState) -> String:
-	var realm := data.resolve_realm("player_realm")
-	var cap := String((data.kingdoms.get(realm, {}) as Dictionary).get("capital_burg", ""))
-	var code := String((data.burgs.get(cap, {}) as Dictionary).get("province_code", ""))
-	if code != "" and MapOwnership.owner_of(data, state, code) == realm:
+static func court_province(repo: DataRepository, state: GameState) -> String:
+	var realm := repo.resolve_realm("player_realm")
+	var cap := String((repo.kingdoms.get(realm, {}) as Dictionary).get("capital_burg", ""))
+	var code := String((repo.burgs.get(cap, {}) as Dictionary).get("province_code", ""))
+	if code != "" and MapOwnership.owner_of(repo, state, code) == realm:
 		return code
-	return MapManors.home_province(data, state)
+	return MapManors.home_province(repo, state)
 
 ## The court's ration of civil goods this month, halved while the grain law
 ## in force where the court sits is `ration` (`market` and `release` feed it
 ## in full; spec 2026-10-08-laws-tab-design §4.3). Whole gold (invariant 11).
-static func ration_of(data: DataRepository, state: GameState) -> int:
-	var ration := int(roundf(float(court_people(data, state)) / 1000.0 * data.bal("ration_gold_per_1000")))
-	if LawSystem.value(data, state, "grain_ration", court_province(data, state)) == "ration":
+static func ration_of(repo: DataRepository, state: GameState) -> int:
+	var ration := int(roundf(float(court_people(repo, state)) / 1000.0 * repo.bal("ration_gold_per_1000")))
+	if LawSystem.value(repo, state, "grain_ration", court_province(repo, state)) == "ration":
 		@warning_ignore("integer_division")  # whole gold (invariant 11)
 		ration = ration / 2
 	return ration

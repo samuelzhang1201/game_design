@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Bulk image generation for the art prompt library, through a local ComfyUI.
 
-    python3 assets/flux/generate.py --build-csv           # re-parse the library into prompts.csv
-    python3 assets/flux/generate.py --ids C-01,T-01,I-04  # generate a few entries
-    python3 assets/flux/generate.py --chapter T --variants 5   # every tile, 5 seeds each
-    python3 assets/flux/generate.py --ids C-01 --dry-run  # print the assembled prompt only
-    python3 assets/flux/generate.py --model qwenedit_fast --images out/cast/K-01_x.png \
+    python3 assets/imagegen/generate.py --build-csv           # re-parse the library into prompts.csv
+    python3 assets/imagegen/generate.py --ids C-01,T-01,I-04  # generate a few entries
+    python3 assets/imagegen/generate.py --chapter T --variants 5   # every tile, 5 seeds each
+    python3 assets/imagegen/generate.py --ids C-01 --dry-run  # print the assembled prompt only
+    python3 assets/imagegen/generate.py --model qwenedit_fast --images out/cast/K-01_x.png \
         --instruction "the same man seen from behind, full body"   # edit a picture
 
 Edit presets (qwenedit / qwenedit_fast, Qwen-Image-Edit-2511) take one to
@@ -20,8 +20,8 @@ beside this script, never typed by hand (prompt library §0.1 / §10.8). The
 ComfyUI graph is the chosen model's template (qwen2512_template.json or
 zimage_turbo_template.json); this script only fills its slots and talks to
 the server's HTTP API (queue, history, view). No Flux model is used (owner
-2026-10-01: 我们不用flux模型) — the folder keeps its old name only. Outputs are copied to
-assets/flux/out/<chapter dir>/<ID>_<slug>_<model>_s<seed>.png.
+2026-10-01: 我们不用flux模型). Outputs are copied to
+assets/imagegen/out/<chapter dir>/<ID>_<slug>_<model>_s<seed>.png.
 
 Stdlib only (json, csv, urllib); no ComfyUI SDK needed.
 """
@@ -97,7 +97,7 @@ CANVAS_SIZE = {
 # qwenedit / qwenedit_fast = Qwen-Image-Edit-2511 Q6_K GGUF (Apache 2.0, 20B,
 # image editing with up to three input pictures; owner 2026-10-10) without and
 # with its own Lightning 8-step LoRA (Apache 2.0); "edit" presets need --images.
-# Models: assets/flux/download_models.sh.
+# Models: assets/imagegen/download_models.sh.
 # NOT listed on purpose: every Flux model, Ideogram 4 open weights
 # (non-commercial), HunyuanImage (licence excludes EU/UK/KR), Qwen-Image-2.1
 # (research licence), Krea 2 open / SD3.5 (revenue cap).
@@ -283,6 +283,26 @@ def prune_images(graph: dict, template: dict, used: int) -> dict:
     return graph
 
 
+def free_models() -> bool:
+    """Unload ComfyUI's models when its queue is empty. On Apple unified memory
+    ComfyUI otherwise keeps the last models (~44 GB after a Qwen-Image-Edit
+    batch, 2026-10-11) until the Mac runs out of swap. The queue is shared by
+    every session, so a model another job still needs is never pulled away."""
+    try:
+        q = json.loads(_get("/queue"))
+        if q.get("queue_running") or q.get("queue_pending"):
+            print("models kept: other jobs are still in ComfyUI's queue")
+            return False
+        req = urllib.request.Request(SERVER + "/free", data=json.dumps({"unload_models": True, "free_memory": True}).encode(),
+                                     headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=60).read()  # answers 200 with an empty body
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        print(f"could not unload ComfyUI's models: {e}", file=sys.stderr)
+        return False
+    print("models unloaded from ComfyUI (pass --keep-loaded between the runs of a batch)")
+    return True
+
+
 def make_graph(template: dict, values: dict) -> dict:
     """Fill the template's _slots (slot name -> [[node id, input name], ...])
     with `values`; slots the template does not declare are ignored, so one
@@ -351,10 +371,16 @@ def main() -> int:
                     help="edit presets: what to change, put before the row prompt (or alone without --ids)")
     ap.add_argument("--tag", default="",
                     help="edits: a readable name part, e.g. infantry_body_front (default: the instruction's first words)")
+    ap.add_argument("--keep-loaded", action="store_true",
+                    help="leave the models loaded after this run (a script calling generate.py many times; end it with --free)")
+    ap.add_argument("--free", action="store_true", help="only unload ComfyUI's models (when its queue is empty), then exit")
     ap.add_argument("--dry-run", action="store_true", help="print prompts, queue nothing")
     ap.add_argument("--front", action="store_true", help="queue ahead of jobs already waiting in ComfyUI")
     ap.add_argument("--timeout", type=float, default=900.0, help="seconds to wait per image")
     args = ap.parse_args()
+    if args.free:
+        free_models()
+        return 0
 
     if args.build_csv:
         build_csv()
@@ -471,7 +497,7 @@ def main() -> int:
                 name = f"{r['title']}{tag}_{args.model}_s{seed}"
             else:
                 name = f"{r['id']}_{slug(r['title'], r['subject'])}{tag}_{args.model}_s{seed}"
-            prefix = f"flux/{r['dir']}/{name}"
+            prefix = f"imagegen/{r['dir']}/{name}"
             if args.dry_run:
                 print(f"\n[{r['id']}] {r['dir']}/{name}.png  {r['width']}x{r['height']}\n{prompt}")
                 continue
@@ -509,6 +535,8 @@ def main() -> int:
             dest = OUT_DIR / r["dir"] / (f"{name}.png" if k == 0 else f"{name}_{k}.png")
             download(img, dest)
             print(f"saved {dest.relative_to(ROOT)}")
+    if not args.keep_loaded:
+        free_models()
     return 1 if failures else 0
 
 

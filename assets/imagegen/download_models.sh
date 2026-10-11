@@ -4,10 +4,10 @@
 # models from (~/ComfyUI-Shared/models), and install the Python deps of the
 # ComfyUI-GGUF node (installed into custom_nodes/ComfyUI-GGUF on 2026-09-24).
 #
-#   bash assets/flux/download_models.sh           # everything, ~47 GB
-#   bash assets/flux/download_models.sh zimage    # Z-Image Turbo only, ~12 GB
-#   bash assets/flux/download_models.sh qwen      # Qwen-Image-2512 stack only, ~35 GB
-#   bash assets/flux/download_models.sh qwenedit  # Qwen-Image-Edit-2511 (+ the qwen stack's encoder/VAE), ~18 GB more
+#   bash assets/imagegen/download_models.sh           # everything, ~47 GB
+#   bash assets/imagegen/download_models.sh zimage    # Z-Image Turbo only, ~12 GB
+#   bash assets/imagegen/download_models.sh qwen      # Qwen-Image-2512 stack only, ~35 GB
+#   bash assets/imagegen/download_models.sh qwenedit  # Qwen-Image-Edit-2511 (+ the qwen stack's encoder/VAE), ~18 GB more
 #
 # Resumable: re-run after an interruption and curl continues each .part file.
 # Every model here is Apache 2.0 (checked 2026-09-24; see the Claude project doc
@@ -84,5 +84,5 @@ fi
 
 echo
 echo "Done. Restart ComfyUI (Comfy Desktop), then try:"
-echo "  python3 assets/flux/generate.py --ids K-01 --model zimage"
-echo "  python3 assets/flux/generate.py --ids K-01 --model qwen2512fast"
+echo "  python3 assets/imagegen/generate.py --ids K-01 --model zimage"
+echo "  python3 assets/imagegen/generate.py --ids K-01 --model qwen2512fast"

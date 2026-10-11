@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The WAR ROOM's reference pictures (owner 2026-10-01: Qwen-Image-2512 only),
-rendered on the local ComfyUI from assets/flux/war_room_ref_prompts.csv into
+rendered on the local ComfyUI from assets/imagegen/war_room_ref_prompts.csv into
 assets/3D/war_room/<type>/model_wip/<type>_ref_<model>.png — what the room,
 table, candlestick, rake and pennant in tools/war_room/blender/ were modelled
 against.
@@ -10,7 +10,7 @@ against.
 Each CSV row gives its own prompt template ({subject}, {features}), negative
 and canvas size. A file already there is kept unless --force. Ask the owner
 before queuing any generation (house rule). The graph and the model presets
-are assets/flux/generate.py's, as tools/map3d/gen_house_refs.py uses them.
+are assets/imagegen/generate.py's, as tools/map3d/gen_house_refs.py uses them.
 """
 import csv
 import importlib.util
@@ -23,8 +23,8 @@ import urllib.request
 import uuid
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-FLUX = os.path.join(ROOT, "assets", "flux")
-PROMPTS = os.path.join(FLUX, "war_room_ref_prompts.csv")
+IMAGEGEN = os.path.join(ROOT, "assets", "imagegen")
+PROMPTS = os.path.join(IMAGEGEN, "war_room_ref_prompts.csv")
 OUT = os.path.join(ROOT, "assets", "3D", "war_room")
 HOST = "http://127.0.0.1:8188"
 COMFY_OUTPUTS = [os.path.expanduser("~/ComfyUI-Installs/GameDev/ComfyUI/output"),
@@ -33,7 +33,7 @@ SEED = 20261001
 
 
 def _generate_module():
-    spec = importlib.util.spec_from_file_location("flux_generate", os.path.join(FLUX, "generate.py"))
+    spec = importlib.util.spec_from_file_location("imagegen_generate", os.path.join(IMAGEGEN, "generate.py"))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -66,7 +66,7 @@ def main():
     if model not in gen.MODEL_PRESETS or model in ("klein", "schnell"):
         sys.exit("not a model for the war room references: %s" % model)
     preset = gen.MODEL_PRESETS[model]
-    with open(os.path.join(FLUX, preset["template"])) as f:
+    with open(os.path.join(IMAGEGEN, preset["template"])) as f:
         template = json.load(f)
     with open(PROMPTS, newline="") as f:
         rows = [r for r in csv.DictReader(f) if not only or r["type"] in only]

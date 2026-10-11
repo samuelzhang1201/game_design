@@ -2,11 +2,11 @@
 # A/B the two text-to-image models (Z-Image Turbo, Qwen-Image-2512; no Flux) on the SAME
 # library entries and the SAME seed, one model after another, logging the
 # wall time of each. Output lands where generate.py always writes it:
-# assets/flux/out/<chapter dir>/<ID>_<slug>_<model>_s<seed>.png
+# assets/imagegen/out/<chapter dir>/<ID>_<slug>_<model>_s<seed>.png
 #
-#   bash assets/flux/ab_models.sh                      # K-01, V-35, V-47 x 3 presets
-#   IDS=K-03,V-43 bash assets/flux/ab_models.sh        # other entries
-#   MODELS="zimage qwen2512fast" bash assets/flux/ab_models.sh
+#   bash assets/imagegen/ab_models.sh                      # K-01, V-35, V-47 x 3 presets
+#   IDS=K-03,V-43 bash assets/imagegen/ab_models.sh        # other entries
+#   MODELS="zimage qwen2512fast" bash assets/imagegen/ab_models.sh
 #
 # Needs ComfyUI running with the ComfyUI-GGUF node loaded (restart ComfyUI
 # once after download_models.sh). Order is fastest first, so partial results

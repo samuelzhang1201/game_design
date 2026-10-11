@@ -172,9 +172,9 @@ static func take(state: GameState, burg: String, pool: String, units: int) -> in
 	return got
 
 
-## `total` split over `weights` (key -> int >= 0) by largest remainder, ties
+## `amount` split over `weights` (key -> int >= 0) by largest remainder, ties
 ## to the key that sorts first; all-zero weights share it evenly.
-static func apportion(total: int, weights: Dictionary) -> Dictionary:
+static func apportion(amount: int, weights: Dictionary) -> Dictionary:
 	var keys: Array = weights.keys()
 	keys.sort()
 	var out: Dictionary = {}
@@ -192,13 +192,13 @@ static func apportion(total: int, weights: Dictionary) -> Dictionary:
 	var rems: Array = []
 	for k in keys:
 		@warning_ignore("integer_division")
-		var whole: int = total * int(w[k]) / sum
+		var whole: int = amount * int(w[k]) / sum
 		out[k] = whole
 		given += whole
-		rems.append([total * int(w[k]) % sum, k])
+		rems.append([amount * int(w[k]) % sum, k])
 	rems.sort_custom(func(a: Array, b: Array) -> bool:
 		return int(a[0]) > int(b[0]) or (int(a[0]) == int(b[0]) and String(a[1]) < String(b[1])))
-	for i in range(total - given):
+	for i in range(amount - given):
 		var k: String = rems[i % rems.size()][1]
 		out[k] = int(out[k]) + 1
 	return out

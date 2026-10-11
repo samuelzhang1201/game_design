@@ -73,11 +73,11 @@ func _ready() -> void:
 
 ## A soft shadow cast by a piece lying on the board (drawn under it as its
 ## ScaledNineSlice.fill): nothing but the shadow — the art covers the rest.
-static func _shadow(size: int, offset: Vector2) -> StyleBoxFlat:
+static func _shadow(sz: int, offset: Vector2) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = Color(0, 0, 0, 0)
 	s.shadow_color = Color(0, 0, 0, 0.55)
-	s.shadow_size = size
+	s.shadow_size = sz
 	s.shadow_offset = offset
 	return s
 

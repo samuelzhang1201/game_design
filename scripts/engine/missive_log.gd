@@ -84,7 +84,7 @@ static func add(repo: DataRepository, state: GameState, m: Dictionary) -> int:
 	var group := keep_group(String(entry["kind"]))
 	var keep := maxi(1, int(repo.bal(_keep_key(group))))
 	var mine := column(state, String(entry["column"])).filter(
-		func(m: Dictionary) -> bool: return keep_group(String(m["kind"])) == group)
+		func(lt: Dictionary) -> bool: return keep_group(String(lt["kind"])) == group)
 	for i in range(keep, mine.size()):
 		state.missives.erase(mine[i])
 	return state.next_missive_id

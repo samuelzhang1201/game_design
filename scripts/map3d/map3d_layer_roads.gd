@@ -97,14 +97,14 @@ static func sea_test(p_ctx: Map3DContext) -> Callable:
 		return img.get_pixel(x, y).r * 255.0 > 1.0
 
 
-## `lines` (with their bridge `heights`, NAN on the ground) cut where they
+## `line_set` (with their bridge `heights`, NAN on the ground) cut where they
 ## run out over the sea (`at_sea`; visual review 2026-10-06: a road ran
 ## straight across a bay, draped on the seabed): the runs on land, 2+ points.
-static func dry_runs(lines: Array, heights: Array, at_sea: Callable) -> Dictionary:
+static func dry_runs(line_set: Array, heights: Array, at_sea: Callable) -> Dictionary:
 	var out_l: Array = []
 	var out_h: Array = []
-	for i in lines.size():
-		var line: PackedVector2Array = lines[i]
+	for i in line_set.size():
+		var line: PackedVector2Array = line_set[i]
 		var hs: PackedFloat32Array = heights[i] if i < heights.size() else PackedFloat32Array()
 		var run := PackedVector2Array()
 		var run_h := PackedFloat32Array()

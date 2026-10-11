@@ -3,7 +3,7 @@
 .env
 __pycache__/
 .superpowers/
-assets/flux/out/
+assets/imagegen/out/
 
 # macOS archive junk from unzipped asset packs
 assets/__MACOSX/

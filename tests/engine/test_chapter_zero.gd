@@ -277,14 +277,14 @@ const PENDING_INSTALL := ["war_01"]
 ## band — but the mapping must never rot.
 func test_every_beat_has_an_illustration_planned() -> void:
 	var art := {}
-	for r in DataRepository.parse_csv("res://assets/flux/event_art.csv",
+	for r in DataRepository.parse_csv("res://assets/imagegen/event_art.csv",
 			["event_id", "art_id"]):
 		art[String(r["event_id"])] = String(r["art_id"])
 	var prompts := {}
-	for r in DataRepository.parse_csv("res://assets/flux/prompts.csv", ["id", "canvas"]):
+	for r in DataRepository.parse_csv("res://assets/imagegen/prompts.csv", ["id", "canvas"]):
 		prompts[String(r["id"])] = String(r["canvas"])
 	for id: String in _all_ids():
-		assert_true(art.has(id), id + " has no row in assets/flux/event_art.csv")
+		assert_true(art.has(id), id + " has no row in assets/imagegen/event_art.csv")
 		var art_id: String = art.get(id, "")
 		assert_true(prompts.has(art_id),
 			"%s names %s, which is not in the prompt library" % [id, art_id])

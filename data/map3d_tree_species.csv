@@ -12,7 +12,7 @@ kind,name,enabled,habit,form,cells,crowns,spread_m,size,tint_lo,tint_hi,biomes,h
 10,hedge_hornbeam,1,hedge,broad,6|7,3,9,0.8,#b9c6b0,#dadfc0,3:1.0|4:1.0|5:1.0|6:1.0|7:1.0|8:1.0|12:1.0|13:1.0,-0.3,1.0,hedgerow trees along the field edges: hornbeam
 11,hedge_oak,1,hedge,broad,0|1,3,9,0.9,#c9cdb2,#f2e6c4,3:1.0|4:1.0|5:1.0|6:1.0|7:1.0|8:1.0|12:1.0|13:1.0,-0.3,0.8,hedgerow trees along the field edges: oaks standing out of the hedge
 12,bankside,1,bank,broad,8|9|4|5,3,8,0.85,#bccbbd,#dde4cc,1:1.0|2:1.0|3:1.0|4:1.0|5:1.0|6:1.0|7:1.0|8:1.0|9:1.0|10:1.0|12:1.0|13:1.0|14:1.0,0.0,1.0,"the bankside rows along every river: grey-green, birch and lime cells standing in for alder and willow until their art lands (rows 13 and 14)"
-13,willow,0,bank,broad,,3,8,0.9,#c4d2b2,#e2e8c4,1:1.0|3:1.0|4:1.0|5:1.0|6:1.0|7:1.0|8:1.0|12:1.0|13:1.0,-0.5,1.2,"waits for atlas art (TR-09 willow, assets/flux/tree_crown_prompts.csv): bankside willows, lowland"
+13,willow,0,bank,broad,,3,8,0.9,#c4d2b2,#e2e8c4,1:1.0|3:1.0|4:1.0|5:1.0|6:1.0|7:1.0|8:1.0|12:1.0|13:1.0,-0.5,1.2,"waits for atlas art (TR-09 willow, assets/imagegen/tree_crown_prompts.csv): bankside willows, lowland"
 14,alder,0,bank,broad,,3,8,0.9,#b4c4ae,#d4dcbe,6:1.0|8:1.0|9:1.0|12:1.0|13:1.0|14:1.0,0.2,1.2,waits for atlas art (TR-10 alder): bankside and carr alders
 15,poplar,0,hedge,broad,,2,6,1.1,#c8d8b0,#e8ecc0,3:1.0|4:1.0|5:1.0|6:1.0|7:1.0,-0.8,0.6,waits for atlas art (TR-11 poplar): tall poplars along the lowland field edges and lanes
 16,fir,0,wood,conifer,,6,11,1.0,#a4bcb4,#c0d4cc,8:0.8|13:0.5|14:0.9|15:0.6,1.2,0.8,waits for atlas art (TR-08 fir; its prompt is in the table): silver fir in the mountain woods

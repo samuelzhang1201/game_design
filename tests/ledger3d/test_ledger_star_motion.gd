@@ -98,8 +98,8 @@ func test_the_current_is_laid_as_its_stars() -> void:
 		assert_eq(LedgerStarMotion.colour_at(sparks, whole.size() + k), LedgerStarMotion.colour_at(dim, k))
 	# the seed is the star's own wherever it is dealt, and the weight its state
 	var c := LedgerStarMotion.custom_at(dim, 0)
-	var seed := LedgerStarMotion.seed_of(String(faint[0]))
-	assert_eq(Vector2(c.r, c.g), Vector2(seed.r, seed.g))
+	var sd := LedgerStarMotion.seed_of(String(faint[0]))
+	assert_eq(Vector2(c.r, c.g), Vector2(sd.r, sd.g))
 	assert_almost_eq(c.b, repo.bal("ledger_spark_dimmed") * pow(view.star_colour(String(faint[0])).a, 2.2)
 		* view.near_fade(String(faint[0])), 1e-6,
 		"a dimmed star's current is its share of its perceived opacity")
@@ -115,6 +115,7 @@ func test_a_camera_move_relays_the_current_with_the_stars() -> void:
 	view._place_stars()
 	var stars := view.instance_buffer("Stars")
 	var sparks := view.instance_buffer("Sparks")
+	@warning_ignore("integer_division")
 	for k in stars.size() / LedgerStarMotion.STRIDE:
 		assert_eq(LedgerStarMotion.transform_at(sparks, k), LedgerStarMotion.transform_at(stars, k))
 
@@ -122,12 +123,12 @@ func test_a_camera_move_relays_the_current_with_the_stars() -> void:
 ## Every star shader moves by the ONE shared wobble, called the same way, so a
 ## star and its current never part.
 func test_every_star_shader_wobbles_by_the_shared_formula() -> void:
-	var call := "star_wobble(INSTANCE_CUSTOM, length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX, TIME)"
+	var shader_call := "star_wobble(INSTANCE_CUSTOM, length(MODEL_MATRIX[0].xyz), INV_VIEW_MATRIX, TIME)"
 	for path: String in ["res://scenes/ledger/star.gdshader", "res://scenes/ledger/star_faint.gdshader",
 			"res://scenes/ledger/spark.gdshader"]:
 		var text := FileAccess.get_file_as_string(path)
 		assert_true(text.contains('#include "res://scenes/ledger/star_motion.gdshaderinc"'), path)
-		assert_true(text.contains(call), path + " calls " + call)
+		assert_true(text.contains(shader_call), path + " calls " + shader_call)
 
 
 ## Owner 2026-10-01 (晃动幅度也可以更大更明显): a link's two ends move by the
@@ -153,8 +154,8 @@ func test_the_links_wobble_with_their_stars() -> void:
 		for end: String in ["a", "b"]:
 			var id := String(seg[end + "_id"])
 			var st: Color = seg[end + "_star"]
-			var seed := LedgerStarMotion.seed_of(id)
-			assert_eq(Vector2(st.r, st.g), Vector2(seed.r, seed.g), "%s: its seed" % id)
+			var sd := LedgerStarMotion.seed_of(id)
+			assert_eq(Vector2(st.r, st.g), Vector2(sd.r, sd.g), "%s: its seed" % id)
 			assert_almost_eq(st.b, float(view._size[id]), 1e-5, "%s: its drawn radius" % id)
 			assert_eq(st.a, 1.0 if id == "character:you" else 0.0, "%s: selected or not" % id)
 

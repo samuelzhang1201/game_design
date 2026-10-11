@@ -21,7 +21,7 @@ compared, and critiqued by someone who did not make it**.
    - screen/UI: `Godot --path . res://scenes/tools/snapshot_screen.tscn -- --out B.png --resolution 2560x1600 [--screen …] [--layer …] [--manor …]`
    - map: `res://tools/snapshot_map.tscn -- --out B.png --size 2560 --zoom 1` and `--zoom 3`
    - 3D map: `--layer "3d map" --zoom3d M` at near and far
-   Output goes in the scratchpad or `assets/flux/out/` (git-ignored).
+   Output goes in the scratchpad or `assets/imagegen/out/` (git-ignored).
 3. **Make 2–3 variants**, not one. For tuning values, bracket them: less, proposed, more —
    with `--set res://…tres:prop=value` (or `NodeName:prop=value`) per shot, no file edited, and `--still`
    so a pointer resting on the window cannot hover or zoom the shot.

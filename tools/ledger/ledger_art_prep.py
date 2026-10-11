@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turns the LEDGER's generated art (assets/flux/out/ledger, the L- prompts)
+"""Turns the LEDGER's generated art (assets/imagegen/out/ledger, the L- prompts)
 into the textures the galaxy's shaders sample.
 
     python3 tools/ledger/ledger_art_prep.py orb    SRC.png DEST.png [--size 256]

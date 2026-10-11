@@ -20,16 +20,16 @@ func setup(repo: DataRepository) -> void:
 ## Below and right of the pointer by `gap` (`left`: below and LEFT, the rake's
 ## slip, so the order menu that opens right of the tip never covers it);
 ## flipped to the other side where it would leave `bounds`.
-static func place(pointer: Vector2, size: Vector2, bounds: Rect2, gap: float, left := false) -> Vector2:
+static func place(pointer: Vector2, sz: Vector2, bounds: Rect2, gap: float, left := false) -> Vector2:
 	var right_x := pointer.x + gap
-	var left_x := pointer.x - gap - size.x
+	var left_x := pointer.x - gap - sz.x
 	var at := Vector2(left_x if left else right_x, pointer.y + gap)
 	if left and at.x < bounds.position.x:
 		at.x = right_x
-	elif not left and at.x + size.x > bounds.end.x:
+	elif not left and at.x + sz.x > bounds.end.x:
 		at.x = left_x
-	if at.y + size.y > bounds.end.y:
-		at.y = pointer.y - gap - size.y
+	if at.y + sz.y > bounds.end.y:
+		at.y = pointer.y - gap - sz.y
 	return Vector2(maxf(at.x, bounds.position.x), maxf(at.y, bounds.position.y))
 
 

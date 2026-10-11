@@ -674,7 +674,7 @@ static func _account(repo: DataRepository, state: GameState, t: Dictionary) -> D
 		return {"value": flow, "text": Intel.num(flow), "source": "own records",
 			"day": state.absolute_day(), "level": "full"}
 	var f := _fact(repo, state, subj, String(t["key"]), flow)
-	return {"value": flow if lvl == "full" else null, "text": String(f["text"]),
+	return {"value": (flow as Variant) if lvl == "full" else null, "text": String(f["text"]),
 		"source": String(f["source"]), "day": int(f["day"]), "level": lvl}
 
 
@@ -786,7 +786,7 @@ static func params_of(row: Dictionary, node_id: String) -> Dictionary:
 		var k := pair.get_slice("=", 0)
 		var v := pair.get_slice("=", 1)
 		if v == "@id":
-			out[k] = int(own) if own.is_valid_int() else own  # a manor's cell is a number
+			out[k] = (int(own) as Variant) if own.is_valid_int() else own  # a manor's cell is a number
 		elif v.is_valid_int():
 			out[k] = int(v)
 		else:

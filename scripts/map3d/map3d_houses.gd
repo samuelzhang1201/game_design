@@ -222,14 +222,14 @@ const BUFFER_STRIDE := 16
 ## Houses placed and packed for a MultiMesh: {buf: its buffer (BUFFER_STRIDE
 ## floats each, the custom data the (wall, roof, trim) variant), xf: [Transform3D],
 ## picks: [Vector2i]}, in row order. `seat_of` gives a row's (lowest, seat).
-static func pack(rows: Array, seat_of: Callable, walls: int, roofs: int, trims: int = 1) -> Dictionary:
+static func pack(rows: Array, seat_fn: Callable, walls: int, roofs: int, trims: int = 1) -> Dictionary:
 	var buf := PackedFloat32Array()
 	buf.resize(rows.size() * BUFFER_STRIDE)
 	var xforms: Array[Transform3D] = []
 	var picks: Array[Vector2i] = []
 	for n in rows.size():
 		var h: Dictionary = rows[n]
-		var t := transform_of(h, (seat_of.call(h) as Vector2).y)
+		var t := transform_of(h, (seat_fn.call(h) as Vector2).y)
 		var pick := Vector2i(variant_of(h, walls, 0), variant_of(h, roofs, 1))
 		xforms.append(t)
 		picks.append(pick)

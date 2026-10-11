@@ -16,6 +16,7 @@ func before_each() -> void:
 func test_the_speed_grows_with_the_townsfolk_and_is_capped() -> void:
 	var home := MapManors.home_province(data, s)
 	var urban := RealmEconomy._figure(data, s, "economy.provinces.%s.urban_population" % home)
+	@warning_ignore("integer_division")
 	var bonus := mini(int(data.bal("artisan_speed_cap_permille")),
 		urban / int(data.bal("artisan_per_step")) * int(data.bal("artisan_step_permille")))
 	# The Master of Works seat is empty on a fresh campaign (controller
@@ -24,6 +25,7 @@ func test_the_speed_grows_with_the_townsfolk_and_is_capped() -> void:
 	# clamps to, so the expectation goes through the real formula rather
 	# than assuming 1000 (full, unscaled).
 	var eff := int(Governance.factors(data, s, "works")["efficiency"])
+	@warning_ignore("integer_division")
 	assert_eq(MapManors.work_speed_permille(data, s, home), 1000 + bonus * eff / 1000)
 
 ## Controller ruling 2026-09-30: appointing a Master of Works, at any skill

@@ -1,5 +1,5 @@
 """Cavalry redesign v2 (owner 2026-09-25): armoured rider WITH lance and
-shield, four designs (assets/flux/cavalry_v2_prompts.csv) rendered on three
+shield, four designs (assets/imagegen/cavalry_v2_prompts.csv) rendered on three
 local model tiers so the owner can compare and pick one (klein, a Flux
 model, was dropped 2026-10-01: no Flux).
 
@@ -19,8 +19,8 @@ import csv, json, os, sys, time, urllib.parse, urllib.request, uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-FLUX = ROOT / "assets" / "flux"
-OUT = FLUX.parent / "3D" / "units" / "cavalry" / "model_wip" / "cavalry_v2"
+IMAGEGEN = ROOT / "assets" / "imagegen"
+OUT = IMAGEGEN.parent / "3D" / "units" / "cavalry" / "model_wip" / "cavalry_v2"
 HOST = os.environ.get("COMFY_HOST", "http://127.0.0.1:8188")
 SEED = 20260925
 
@@ -51,7 +51,7 @@ def call(path, data=None):
 
 
 def graph(template_file, values):
-    t = json.loads((FLUX / template_file).read_text(encoding="utf-8"))
+    t = json.loads((IMAGEGEN / template_file).read_text(encoding="utf-8"))
     g = json.loads(json.dumps({k: v for k, v in t.items() if not k.startswith("_")}))
     for slot, targets in t.get("_slots", {}).items():
         if slot in values:
@@ -104,7 +104,7 @@ def main():
     tiers = arg("--tiers", ",".join(TIERS)).split(",")
     only = set(filter(None, arg("--only", "").split(",")))
     seeds = int(arg("--seeds", "1"))
-    with open(FLUX / "cavalry_v2_prompts.csv", newline="", encoding="utf-8") as f:
+    with open(IMAGEGEN / "cavalry_v2_prompts.csv", newline="", encoding="utf-8") as f:
         rows = [r for r in csv.DictReader(f) if not only or r["id"] in only]
     OUT.mkdir(parents=True, exist_ok=True)
     done = []

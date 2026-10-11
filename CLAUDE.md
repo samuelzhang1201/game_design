@@ -13,7 +13,7 @@ This file holds only what holds EVERYWHERE. Each subsystem's rules live in a `CL
 | `scripts/ui/CLAUDE.md` | screens and HUD: the look-in-editor conversion, theme kinds, fonts, the war table, the council row, cards, bars, title and landing, menus, window-size rules |
 | `scripts/war_room/CLAUDE.md` | the WAR ROOM plotting-room screen |
 | `scripts/ledger3d/CLAUDE.md` | the LEDGER galaxy view |
-| `tools/CLAUDE.md` | art and build pipelines: Flux / ComfyUI, installers, arms, portraits, house and unit models, bakes, `snapshot_screen`, benches |
+| `tools/CLAUDE.md` | art and build pipelines: ComfyUI image generation (`assets/imagegen/`), installers, arms, portraits, house and unit models, bakes, `snapshot_screen`, benches |
 | `data/CLAUDE.md` | the CSV tables and the map pack tables |
 | `scripts/llm/CLAUDE.md` | the OpenAI client, `.env` / `user://config.json`, prompts, validation, the voicers |
 
@@ -80,7 +80,7 @@ scripts/          # engine/ llm/ ui/ map3d/ war_room/ ledger3d/ — one nested C
 scenes/           # EVERY scene, by kind (screens/, hud/, panels/, models/, map3d/worlds/, tools/, …)
 tests/            # GUT, one folder per scripts/ folder, plus fixtures/
 tools/            # bakes, importers, snapshots, benches (Godot -s); every tool takes --map
-assets/           # art only: 3D/ 2D/ fonts/ audio/ maps/ flux/
+assets/           # art only: 3D/ 2D/ fonts/ audio/ maps/ imagegen/ (the image-generation pipeline)
 addons/           # gut, terrain_3d (committed); gdai-mcp-plugin-godot (binaries git-ignored)
 docs/             # design/ (PRD, systems, chapter 0), references/, superpowers/specs|plans/, art_team/
 ```

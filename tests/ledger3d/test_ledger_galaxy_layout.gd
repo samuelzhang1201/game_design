@@ -250,4 +250,5 @@ func test_the_grid_layout_still_separates_the_clusters() -> void:
 		for j in range(i + 1, ids.size()):
 			if (lay.pos[ids[i]] as Vector3).distance_to(lay.pos[ids[j]]) < repo.bal("ledger_star_min"):
 				close += 1
+	@warning_ignore("integer_division")
 	assert_lt(close, ids.size() / 20, "hardly any two stars on top of each other")

@@ -51,8 +51,8 @@ static func heads_of(repo: DataRepository, heads: int) -> int:
 
 ## The side the Place form offers first: the ground's holder when foreign,
 ## else the side chosen last, else Unknown.
-static func default_side(repo: DataRepository, state: GameState, at_px: Vector2, last: String) -> String:
-	var cell := MapEconomy.cell_at(repo, at_px)
+static func default_side(repo: DataRepository, state: GameState, pos: Vector2, last: String) -> String:
+	var cell := MapEconomy.cell_at(repo, pos)
 	var prov := MapManors.province_of(repo, cell, state) if cell >= 0 else ""
 	var holder := MapOwnership.owner_of(repo, state, prov) if prov != "" else ""
 	if holder != "" and holder != repo.resolve_realm("player_realm") and repo.kingdoms.has(holder):
@@ -60,18 +60,18 @@ static func default_side(repo: DataRepository, state: GameState, at_px: Vector2,
 	return last if last in sides(repo) else UNKNOWN
 
 
-static func _on_land(repo: DataRepository, at_px: Vector2) -> bool:
-	var cell := MapEconomy.cell_at(repo, at_px)
+static func _on_land(repo: DataRepository, pos: Vector2) -> bool:
+	var cell := MapEconomy.cell_at(repo, pos)
 	return cell >= 0 and not MapTerrain.is_water(repo.cells[cell])
 
 
 ## Why a supposed piece cannot stand there; "" when it can.
-static func refusal(repo: DataRepository, state: GameState, arm: String, _heads: int, side: String, at_px: Vector2) -> String:
+static func refusal(repo: DataRepository, state: GameState, arm: String, _heads: int, side: String, pos: Vector2) -> String:
 	if not arm in arms(repo):
 		return "A supposed host is foot, bows, horse or guns"
 	if not side in sides(repo):
 		return "No such side"
-	if not _on_land(repo, at_px):
+	if not _on_land(repo, pos):
 		return "A supposed host stands on land"
 	var cap := int(repo.bal("war_plan_pieces_max"))
 	if (state.war_plans[PIECES] as Dictionary).size() >= cap:
@@ -79,8 +79,8 @@ static func refusal(repo: DataRepository, state: GameState, arm: String, _heads:
 	return ""
 
 
-static func _metres(repo: DataRepository, at_px: Vector2) -> Vector2i:
-	return ArmySystem.pack_to_metres(repo, at_px)
+static func _metres(repo: DataRepository, pos: Vector2) -> Vector2i:
+	return ArmySystem.pack_to_metres(repo, pos)
 
 
 static func _next_id(state: GameState, prefix: String) -> String:
@@ -94,10 +94,10 @@ static func bump(state: GameState) -> void:
 
 ## Places a supposed piece; its id, "" when refused.
 static func place(repo: DataRepository, state: GameState, arm: String, heads: int, side: String,
-		at_px: Vector2, facing_deg := 0) -> String:
-	if refusal(repo, state, arm, heads, side, at_px) != "":
+		pos: Vector2, facing_deg := 0) -> String:
+	if refusal(repo, state, arm, heads, side, pos) != "":
 		return ""
-	var m := _metres(repo, at_px)
+	var m := _metres(repo, pos)
 	var id := _next_id(state, "p")
 	state.war_plans[PIECES][id] = {"arm": arm, "heads": heads_of(repo, heads), "side": side,
 		"x_m": m.x, "y_m": m.y, "facing_deg": posmod(facing_deg, 360)}

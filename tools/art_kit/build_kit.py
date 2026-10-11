@@ -10,7 +10,7 @@ Writes:
 * kit/comfyui/<名字>.json — one ComfyUI workflow per kind of asset, in API
   format (ComfyUI opens it when the file is dragged onto the canvas). The
   prompt is assembled INSIDE the graph from text boxes, exactly as
-  assets/flux/generate.py assembles it: the style core and the canvas
+  assets/imagegen/generate.py assembles it: the style core and the canvas
   fragment are boxes titled 锁定, the subject is the one box she edits
   (② 主体（只改这里）), and two core StringConcatenate nodes join them; the
   model files, size, steps, CFG, sampler, LoRA and seed come from
@@ -41,10 +41,10 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-FLUX = ROOT / "assets" / "flux"
+IMAGEGEN = ROOT / "assets" / "imagegen"
 OUT = ROOT / "docs" / "art_team" / "kit"
 ADDON = ROOT / "tools" / "art_kit" / "blender" / "cc_art_check"
-sys.path.insert(0, str(FLUX))
+sys.path.insert(0, str(IMAGEGEN))
 import generate as gen  # noqa: E402
 
 LIBRARY_SEED = 954159497
@@ -88,8 +88,8 @@ def _rows(name: str = "") -> dict:
 
 def library(key, title, model, style_file, canvas, row, note, size=None):
     """A workflow assembled the generate.py way: STYLE_CORE, subject, canvas."""
-    style_path = FLUX / style_file
-    canvases = json.loads((FLUX / "canvas.json").read_text(encoding="utf-8"))
+    style_path = IMAGEGEN / style_file
+    canvases = json.loads((IMAGEGEN / "canvas.json").read_text(encoding="utf-8"))
     subject = row["appearance"] if canvas in ("C-FULL", "C-BUST") and row.get("appearance") else row["subject"]
     w, h = size or gen.CANVAS_SIZE[canvas]
     return {"key": key, "title": title, "model": model, "note": note,
@@ -114,8 +114,8 @@ def kinds() -> list[dict]:
     arms = _rows("arms_prompts.csv")
     terrain = _rows("terrain_aerial_prompts.csv")
     trees = _rows("tree_crown_prompts.csv")
-    house = next(csv.DictReader((FLUX / "house_ref_prompts.csv").open(encoding="utf-8")))
-    rider = next(csv.DictReader((FLUX / "cavalry_v2_prompts.csv").open(encoding="utf-8")))
+    house = next(csv.DictReader((IMAGEGEN / "house_ref_prompts.csv").open(encoding="utf-8")))
+    rider = next(csv.DictReader((IMAGEGEN / "cavalry_v2_prompts.csv").open(encoding="utf-8")))
     q, z = "qwen2512fast", "zimage"
     return [
         library("人物_半身", "人物 · 半身（K-）", q, "STYLE_CORE.txt", "C-BUST", lib["K-01"],
@@ -159,7 +159,7 @@ def graph(k: dict) -> dict:
     """The model's template filled from generate.py's preset, its positive
     prompt re-wired to the locked text boxes."""
     preset = gen.MODEL_PRESETS[k["model"]]
-    template = json.loads((FLUX / preset["template"]).read_text(encoding="utf-8"))
+    template = json.loads((IMAGEGEN / preset["template"]).read_text(encoding="utf-8"))
     g = gen.make_graph(template, {
         "unet": preset["unet"], "prompt": "", "negative": k["negative"], "cfg": preset["cfg"],
         "steps": preset["steps"], "lora_strength": preset.get("lora_strength", 0.0),
@@ -226,7 +226,7 @@ def main() -> int:
         print("wrote kit/comfyui/%s.json (%s, %d steps)" % (k["key"], k["model"], preset["steps"]))
     (comfy / "README.md").write_text(
         "# ComfyUI 锁定工作流\n\n由 `tools/art_kit/build_kit.py` 生成，不要手改：风格、画幅、负面词、"
-        "模型、尺寸、步数、种子都来自 `assets/flux/` 的同一套文件。\n\n"
+        "模型、尺寸、步数、种子都来自 `assets/imagegen/` 的同一套文件。\n\n"
         "把 `.json` 拖进 ComfyUI 画布即可打开。只改「② 主体（只改这里）」和「④ 文件名」里的「编号」；"
         "第一次打开时把采样节点种子下面的 control after generate 设为 increment。\n\n"
         "| 工作流 | 模型 | 尺寸 | 起始种子 | 示例主体 | 说明 |\n| --- | --- | --- | --- | --- | --- |\n"

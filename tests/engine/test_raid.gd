@@ -275,15 +275,15 @@ func test_hazard_added_once_and_known() -> void:
 	assert_eq(added.size(), 1, "the first take marks the manor")
 	if added.is_empty():
 		return
-	var id := String(added[0])
-	assert_true(id.contains(str(cell)), "the hazard's id names the manor's cell: " + id)
-	var hz: Dictionary = s.hazards[id]
+	var hid := String(added[0])
+	assert_true(hid.contains(str(cell)), "the hazard's id names the manor's cell: " + hid)
+	var hz: Dictionary = s.hazards[hid]
 	assert_eq(String(hz["kind"]), "Raided")
 	assert_eq(hz["cells"], [cell])
 	assert_eq(int(hz["start"]), s.tick)
 	assert_eq(int(hz["end"]), s.tick + int(Hazards.kind_of(repo, "Raided")["months"]))
-	assert_true(Hazards.is_active(s, id), "in force now")
-	assert_true(Hazards.known(repo, s, id), "the crown knows its land is raided")
+	assert_true(Hazards.is_active(s, hid), "in force now")
+	assert_true(Hazards.known(repo, s, hid), "the crown knows its land is raided")
 	assert_true(bool(Hazards.kind_of(repo, "Raided")["public"]), "a public kind")
 	var rev := s.hazards_rev
 	RaidSystem.day_take(repo, s, h)

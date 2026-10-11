@@ -9,8 +9,8 @@ The rule:
                                         scans (git-ignored, .gdignore'd)
     assets/2D/{category}/{object}/      every 2D asset the game uses, one
                                         folder per SET (icons/resources, ...)
-Fonts, audio, the map packs' data bitmaps (assets/maps) and the Flux pipeline
-(assets/flux) are neither and stay outside.
+Fonts, audio, the map packs' data bitmaps (assets/maps) and the image-generation pipeline
+(assets/imagegen) are neither and stay outside.
 
 The tracked files moved with the branch that introduced this script; what git
 cannot move is each checkout's git-ignored files — the Terrain3D build, the
@@ -46,9 +46,9 @@ OLD_ROOTS = ("assets/units3d", "assets/map3d_houses", "assets/map3d_aerial", "as
              "assets/map3d", "assets/icons", "assets/goods", "assets/portraits", "assets/manors",
              "assets/armies", "assets/couriers", "assets/arms", "assets/events", "assets/missives",
              "assets/ui", "assets/BGM.mp3", "assets/BGM.mp3.import",
-             "assets/Sound FX Starter Pack Vol. 1", "assets/flux/out/house_ref",
-             "assets/flux/out/infantry_kit", "assets/flux/out/cavalry_v2",
-             "assets/flux/out/courier_designs", "assets/flux/out/courier_sheet")
+             "assets/Sound FX Starter Pack Vol. 1", "assets/imagegen/out/house_ref",
+             "assets/imagegen/out/infantry_kit", "assets/imagegen/out/cavalry_v2",
+             "assets/imagegen/out/courier_designs", "assets/imagegen/out/courier_sheet")
 
 
 def _unit_of(name: str) -> str:
@@ -94,15 +94,15 @@ def new_path(rel: str) -> str:
         rest = rel[len("assets/map3d_houses/"):]
         t = _house_of(rest)
         return "assets/3D/buildings/%s/%s" % (t, rest) if t else "assets/3D/buildings/" + rest
-    if rel.startswith("assets/flux/out/house_ref/"):
+    if rel.startswith("assets/imagegen/out/house_ref/"):
         name = rel.rsplit("/", 1)[1]
         stem, ext = os.path.splitext(name)
         t = stem if stem in HOUSE_TYPES else (_house_of(name) or stem)
         return "assets/3D/buildings/%s/model_wip/%s_ref%s" % (t, stem, ext)
-    for old, new in (("assets/flux/out/infantry_kit/", "assets/3D/units/infantry/model_wip/infantry_kit/"),
-                     ("assets/flux/out/cavalry_v2/", "assets/3D/units/cavalry/model_wip/cavalry_v2/"),
-                     ("assets/flux/out/courier_designs/", "assets/3D/units/courier/model_wip/designs/"),
-                     ("assets/flux/out/courier_sheet/", "assets/3D/units/courier/model_wip/sheet/"),
+    for old, new in (("assets/imagegen/out/infantry_kit/", "assets/3D/units/infantry/model_wip/infantry_kit/"),
+                     ("assets/imagegen/out/cavalry_v2/", "assets/3D/units/cavalry/model_wip/cavalry_v2/"),
+                     ("assets/imagegen/out/courier_designs/", "assets/3D/units/courier/model_wip/designs/"),
+                     ("assets/imagegen/out/courier_sheet/", "assets/3D/units/courier/model_wip/sheet/"),
                      ("assets/map3d_aerial/", "assets/3D/terrain/model_wip/aerial/"),
                      ("assets/map3d_preview/", "assets/3D/terrain/textures_preview/"),
                      ("assets/map3d/sources/polyhaven/houses/", "assets/3D/buildings/model_wip/polyhaven/"),
@@ -150,12 +150,12 @@ REFS = [
     ("assets/map3d_houses/*.glb", "assets/3D/buildings/*/*.glb"),
 ] + [("assets/map3d_houses/" + t, "assets/3D/buildings/%s/%s" % (t, t)) for t in HOUSE_TYPES] + [
     ("assets/map3d_houses", "assets/3D/buildings"),
-    ("assets/flux/out/house_ref/<type>.png", "assets/3D/buildings/<type>/model_wip/<type>_ref.png"),
-    ("assets/flux/out/house_ref", "assets/3D/buildings/<type>/model_wip"),
-    ("assets/flux/out/infantry_kit", "assets/3D/units/infantry/model_wip/infantry_kit"),
-    ("assets/flux/out/cavalry_v2", "assets/3D/units/cavalry/model_wip/cavalry_v2"),
-    ("assets/flux/out/courier_designs", "assets/3D/units/courier/model_wip/designs"),
-    ("assets/flux/out/courier_sheet", "assets/3D/units/courier/model_wip/sheet"),
+    ("assets/imagegen/out/house_ref/<type>.png", "assets/3D/buildings/<type>/model_wip/<type>_ref.png"),
+    ("assets/imagegen/out/house_ref", "assets/3D/buildings/<type>/model_wip"),
+    ("assets/imagegen/out/infantry_kit", "assets/3D/units/infantry/model_wip/infantry_kit"),
+    ("assets/imagegen/out/cavalry_v2", "assets/3D/units/cavalry/model_wip/cavalry_v2"),
+    ("assets/imagegen/out/courier_designs", "assets/3D/units/courier/model_wip/designs"),
+    ("assets/imagegen/out/courier_sheet", "assets/3D/units/courier/model_wip/sheet"),
     ("assets/map3d_aerial", "assets/3D/terrain/model_wip/aerial"),
     ("assets/map3d_preview", "assets/3D/terrain/textures_preview"),
     ("assets/map3d/sources/polyhaven/houses", "assets/3D/buildings/model_wip/polyhaven"),

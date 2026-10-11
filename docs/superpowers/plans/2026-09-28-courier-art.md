@@ -102,7 +102,7 @@ picks and reviews:
 
 **Files:**
 - Create: `tools/units3d/gen_courier_designs.py`
-- Create: `assets/flux/courier_design_prompts.csv`
+- Create: `assets/imagegen/courier_design_prompts.csv`
 
 **Interfaces:**
 - Consumes: `tools/units3d/gen_cavalry_v2.py`:
@@ -111,7 +111,7 @@ picks and reviews:
   - `run(g, timeout)`;
   - `call(path)`.
 - Produces:
-  - `assets/flux/out/courier_designs/<tier>_<id>_s<n>.png`, where `tier`
+  - `assets/imagegen/out/courier_designs/<tier>_<id>_s<n>.png`, where `tier`
     is `zimage` or `qwenfast`;
   - the contact sheet `contact_sheet.png`, one row per tier;
   - the CSV's `picked` column: exactly one `C*` row and one `S*` row get
@@ -119,7 +119,7 @@ picks and reviews:
 
 - [ ] **Step 1: Write the prompts CSV**
 
-`assets/flux/courier_design_prompts.csv` (header, then six rows, exact):
+`assets/imagegen/courier_design_prompts.csv` (header, then six rows, exact):
 
 ```csv
 id,name_zh,prompt,picked
@@ -137,7 +137,7 @@ S2,行商·驮马,"a travelling merchant riding a small shaggy dun pack pony at 
 
 ```python
 """Courier and spy design sheets (owner 2026-09-28, spec
-2026-09-28-courier-art §1): every row of assets/flux/courier_design_prompts.csv
+2026-09-28-courier-art §1): every row of assets/imagegen/courier_design_prompts.csv
 on BOTH Z-Image Turbo and Qwen-Image-2512 fast (never klein, owner
 2026-09-28), 2 seeds each, for the owner to compare and pick one courier (C*)
 and one spy (S*). The pick goes in the CSV's `picked` column as <tier>_s<n>.
@@ -146,7 +146,7 @@ and one spy (S*). The pick goes in the CSV's `picked` column as <tier>_s<n>.
   python3 tools/units3d/gen_courier_designs.py --tiers zimage --only C1,S2 --seeds 1
   python3 tools/units3d/gen_courier_designs.py --dry-run  # list the jobs, queue nothing
 
-Output: assets/flux/out/courier_designs/<tier>_<id>_s<n>.png and contact_sheet.png.
+Output: assets/imagegen/out/courier_designs/<tier>_<id>_s<n>.png and contact_sheet.png.
 Existing files are kept unless --force. Needs ComfyUI at COMFY_HOST.
 """
 import csv, sys, urllib.parse
@@ -156,8 +156,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_cavalry_v2 as v2  # the Z-Image graph, call / run
 
 ROOT = Path(__file__).resolve().parents[2]
-ROWS = ROOT / "assets" / "flux" / "courier_design_prompts.csv"
-OUT = ROOT / "assets" / "flux" / "out" / "courier_designs"
+ROWS = ROOT / "assets" / "imagegen" / "courier_design_prompts.csv"
+OUT = ROOT / "assets" / "imagegen" / "out" / "courier_designs"
 SEED = 20260928
 TIERS = ["zimage", "qwenfast"]  # Z-Image Turbo first: its row is done in minutes
 MINUTES = {"zimage": 0.5, "qwenfast": 2.0}
@@ -248,7 +248,7 @@ about 31 min on qwenfast, zimage`.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add tools/units3d/gen_courier_designs.py assets/flux/courier_design_prompts.csv
+git add tools/units3d/gen_courier_designs.py assets/imagegen/courier_design_prompts.csv
 git commit -m "tools(units3d): Z-Image design sheets for the courier and the spy"
 ```
 
@@ -258,7 +258,7 @@ git commit -m "tools(units3d): Z-Image design sheets for the courier and the spy
    about 30 minutes. Start?"
 2. On a yes, check ComfyUI is up (`curl -s http://127.0.0.1:8188/system_stats`).
 3. Run `python3 tools/units3d/gen_courier_designs.py`.
-4. Send the owner `assets/flux/out/courier_designs/contact_sheet.png`.
+4. Send the owner `assets/imagegen/out/courier_designs/contact_sheet.png`.
 
 - [ ] **Step 6: OWNER GATE — record the picks**
 
@@ -267,7 +267,7 @@ The owner names one C image and one S image, from either model. Write
 leave every other `picked` empty.
 
 ```bash
-git add assets/flux/courier_design_prompts.csv
+git add assets/imagegen/courier_design_prompts.csv
 git commit -m "data(flux): the owner's courier and spy design picks"
 ```
 
@@ -277,14 +277,14 @@ git commit -m "data(flux): the owner's courier and spy design picks"
 
 **Files:**
 - Create: `tools/units3d/gen_courier_sheet.py`
-- Create: `assets/flux/courier_sheet_prompts.csv`
+- Create: `assets/imagegen/courier_sheet_prompts.csv`
 
 **Interfaces:**
 - Consumes:
   - Task 1's picked rows (`picked` = `<tier>_s<n>`);
   - `tools/units3d/gen_cavalry_v2.py`: `TIERS["zimage"]`,
     `TIERS["qwenfast"]`, `graph`, `run`, `call`.
-- Produces: `assets/flux/out/courier_sheet/<tier>_<who>_<view>.png`,
+- Produces: `assets/imagegen/out/courier_sheet/<tier>_<who>_<view>.png`,
   where:
   - `tier` is `zimage` or `qwenfast`;
   - `who` is `courier` or `spy`;
@@ -297,7 +297,7 @@ Qwen-Image-Edit is installed, and klein is retired). So each view repeats
 the picked design's own words, and the contact sheet sets the two models
 side by side per view.
 
-- [ ] **Step 1: Write the views CSV** (`assets/flux/courier_sheet_prompts.csv`, exact)
+- [ ] **Step 1: Write the views CSV** (`assets/imagegen/courier_sheet_prompts.csv`, exact)
 
 ```csv
 view,parts,width,height,prompt
@@ -327,7 +327,7 @@ build, not game art.
 
   python3 tools/units3d/gen_courier_sheet.py [--who courier|spy] [--tiers zimage] [--only R1,M1] [--force] [--dry-run]
 
-Output: assets/flux/out/courier_sheet/<tier>_<who>_<view>.png and contact_sheet.png.
+Output: assets/imagegen/out/courier_sheet/<tier>_<who>_<view>.png and contact_sheet.png.
 """
 import csv, sys, urllib.parse
 from pathlib import Path
@@ -336,9 +336,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_cavalry_v2 as v2  # TIERS, graph, run, call
 
 ROOT = Path(__file__).resolve().parents[2]
-DESIGNS = ROOT / "assets" / "flux" / "courier_design_prompts.csv"
-VIEWS = ROOT / "assets" / "flux" / "courier_sheet_prompts.csv"
-OUT = ROOT / "assets" / "flux" / "out" / "courier_sheet"
+DESIGNS = ROOT / "assets" / "imagegen" / "courier_design_prompts.csv"
+VIEWS = ROOT / "assets" / "imagegen" / "courier_sheet_prompts.csv"
+OUT = ROOT / "assets" / "imagegen" / "out" / "courier_sheet"
 SEED = 20260928
 TIERS = ["zimage", "qwenfast"]
 MINUTES = {"zimage": 0.5, "qwenfast": 2.0}
@@ -450,7 +450,7 @@ Expected: 28 lines (2 tiers × 2 designs × 7 views), the qwenfast sizes at
 - [ ] **Step 4: Commit**
 
 ```bash
-git add tools/units3d/gen_courier_sheet.py assets/flux/courier_sheet_prompts.csv
+git add tools/units3d/gen_courier_sheet.py assets/imagegen/courier_sheet_prompts.csv
 git commit -m "tools(units3d): structure views of the picked courier and spy on Z-Image and Qwen"
 ```
 
@@ -715,9 +715,9 @@ git commit -m "feat(couriers): riders gallop while the clock runs and idle when 
 - Modify: `scripts/ui/missive_screen.gd` and `scenes/missive_screen.tscn`: a painting at the desk's top
 - Modify: `data/balance.csv`
 - Modify: `docs/references/art_prompt_library.md`: the `[C-COURIER]` canvas row in §1.3
-- Modify: `assets/flux/generate.py`: `CANVAS_SIZE["C-COURIER"]`
-- Modify: `assets/flux/install_map_art.py`: `courier_paintings` chapter
-- Create: `assets/flux/courier_paint_art.csv`
+- Modify: `assets/imagegen/generate.py`: `CANVAS_SIZE["C-COURIER"]`
+- Modify: `assets/imagegen/install_map_art.py`: `courier_paintings` chapter
+- Create: `assets/imagegen/courier_paint_art.csv`
 - Test: `tests/engine/test_courier_card.gd`
 - Test: `tests/ui/test_missive_screen.gd`
 
@@ -880,10 +880,10 @@ Library §1.3's canvas table: add the row below after `[C-ESTATE]`:
 | `[C-COURIER]` | 信使彩绘（`B-43`~`B-47`，2026-09-28） | `a painted vignette of one rider on the road seen from a gentle raised three-quarter view, the whole rider and mount inside the frame with a little road, ground and sky around them, the edges fading softly into plain cream paper, no text, no border, no frame, 5:4 horizontal` |
 ```
 
-`assets/flux/generate.py`: add `"C-COURIER": (1280, 1024)` to
+`assets/imagegen/generate.py`: add `"C-COURIER": (1280, 1024)` to
 `CANVAS_SIZE`.
 
-`assets/flux/courier_paint_art.csv`:
+`assets/imagegen/courier_paint_art.csv`:
 
 ```csv
 art_id,key,dest,seed,notes
@@ -894,8 +894,8 @@ B-46,foul,state,,a courier held up by foul weather (courier_paintings.csv)
 B-47,delivered,state,,a courier delivering to a camp (courier_paintings.csv)
 ```
 
-`assets/flux/install_map_art.py`: add to the docstring
-`python3 assets/flux/install_map_art.py courier_paintings  # B-43..47 -> assets/couriers/paint/<key>.png (courier card, the desk's receipt)`
+`assets/imagegen/install_map_art.py`: add to the docstring
+`python3 assets/imagegen/install_map_art.py courier_paintings  # B-43..47 -> assets/couriers/paint/<key>.png (courier card, the desk's receipt)`
 and:
 
 ```python
@@ -933,13 +933,13 @@ the army paintings do.
 
 1. Run the two test files. Expected: PASS.
 2. Run `./run_tests.sh`. Expected: exit 0.
-3. Run `python3 assets/flux/install_map_art.py courier_paintings`.
+3. Run `python3 assets/imagegen/install_map_art.py courier_paintings`.
    Expected: five `(no render for B-4x / …)` lines and `0 asset(s)
    installed`.
 4. Commit:
 
 ```bash
-git add data/courier_paintings.csv data/balance.csv scripts/engine/data_repository.gd scripts/engine/courier_card.gd scripts/ui/missive_screen.gd scenes/missive_screen.tscn docs/references/art_prompt_library.md assets/flux/generate.py assets/flux/install_map_art.py assets/flux/courier_paint_art.csv tests/engine/test_courier_card.gd tests/ui/test_missive_screen.gd
+git add data/courier_paintings.csv data/balance.csv scripts/engine/data_repository.gd scripts/engine/courier_card.gd scripts/ui/missive_screen.gd scenes/missive_screen.tscn docs/references/art_prompt_library.md assets/imagegen/generate.py assets/imagegen/install_map_art.py assets/imagegen/courier_paint_art.csv tests/engine/test_courier_card.gd tests/ui/test_missive_screen.gd
 git commit -m "feat(couriers): the card's painting by kind and weather, the receipt's on the desk"
 ```
 
@@ -953,8 +953,8 @@ git commit -m "feat(couriers): the card's painting by kind and weather, the rece
 - Create: `scripts/ui/missive_art.gd`: `class_name MissiveArt`, pure helpers turning a key into a StyleBox or a texture
 - Modify: `scripts/ui/missive_screen.gd`
 - Modify: `scripts/ui/missive_report_popup.gd`
-- Modify: `assets/flux/install_map_art.py`: `missive` chapter
-- Create: `assets/flux/missive_art_install.csv`: art id → key, size, cut-out flag
+- Modify: `assets/imagegen/install_map_art.py`: `missive` chapter
+- Create: `assets/imagegen/missive_art_install.csv`: art id → key, size, cut-out flag
 - Test: `tests/ui/test_missive_art.gd`
 
 **Interfaces:**
@@ -1135,7 +1135,7 @@ func test_the_board_wears_an_installed_frame() -> void:
 
 - [ ] **Step 6: The installer**
 
-`assets/flux/missive_art_install.csv` (sizes from library §9.1's table; `cut` = the piece stands on grey ground and is cut out to alpha):
+`assets/imagegen/missive_art_install.csv` (sizes from library §9.1's table; `cut` = the piece stands on grey ground and is cut out to alpha):
 
 ```csv
 art_id,key,width,height,cut,seed,notes
@@ -1148,7 +1148,7 @@ U-25,pin,48,48,1,,cut out
 U-26,plaque,576,144,0,,nine-slice margin 48
 ```
 
-`assets/flux/install_map_art.py`:
+`assets/imagegen/install_map_art.py`:
 
 ```python
 ## The Missive board's pieces (owner 2026-09-28, spec 2026-09-28-courier-art
@@ -1197,7 +1197,7 @@ def install_missive() -> int:
 
 Register `"missive": install_missive` in `main()`, and add the docstring
 line
-`python3 assets/flux/install_map_art.py missive  # U-20..26 -> assets/missives/<key>.png (the Missive board)`.
+`python3 assets/imagegen/install_map_art.py missive  # U-20..26 -> assets/missives/<key>.png (the Missive board)`.
 
 Two checks against the existing code:
 1. **Helper signatures.** `flood_ground`, `trim_alpha`, `pad_square`,
@@ -1208,7 +1208,7 @@ Two checks against the existing code:
    (`generate.py CHAPTER_DIR["U"]`). The paper tone is applied at
    generation by `post.py --tone` (Task 7).
 
-Run `python3 assets/flux/install_map_art.py missive`. Expected: seven `(no
+Run `python3 assets/imagegen/install_map_art.py missive`. Expected: seven `(no
 render …)` lines, `0 asset(s) installed`, and `data/missive_art.csv`
 unchanged (`git diff --stat data/missive_art.csv` shows only Step 3's
 edit).
@@ -1225,7 +1225,7 @@ edit).
 4. Commit:
 
 ```bash
-git add data/missive_art.csv scripts/engine/data_repository.gd scripts/ui/missive_art.gd scripts/ui/missive_art.gd.uid scripts/ui/missive_screen.gd scenes/missive_screen.tscn scripts/ui/missive_report_popup.gd assets/flux/install_map_art.py assets/flux/missive_art_install.csv tests/ui/test_missive_art.gd tests/ui/test_missive_art.gd.uid
+git add data/missive_art.csv scripts/engine/data_repository.gd scripts/ui/missive_art.gd scripts/ui/missive_art.gd.uid scripts/ui/missive_screen.gd scenes/missive_screen.tscn scripts/ui/missive_report_popup.gd assets/imagegen/install_map_art.py assets/imagegen/missive_art_install.csv tests/ui/test_missive_art.gd tests/ui/test_missive_art.gd.uid
 git commit -m "feat(missives): the board wears its art pieces when installed, flat until then"
 ```
 
@@ -1244,7 +1244,7 @@ git commit -m "feat(missives): the board wears its art pieces when installed, fl
 
 **Interfaces:**
 - Consumes:
-  - the structure views `assets/flux/out/courier_sheet/courier_*.png` and
+  - the structure views `assets/imagegen/out/courier_sheet/courier_*.png` and
     the picked design image (Task 2);
   - the cavalry build's rig and bake helpers in
     `tools/units3d/cavalry_scan.py`: `build_rig`, `bake_into`, `reduce`,
@@ -1409,7 +1409,7 @@ git commit -m "art(couriers): the courier rider, modelled from scratch — gallo
 
 **Files:**
 - Modify: `docs/references/art_prompt_library.md`: §6.11 rows `B-43`..`B-47`
-- Modify: `assets/flux/courier_paint_art.csv` and `assets/flux/missive_art_install.csv`: the `seed` column
+- Modify: `assets/imagegen/courier_paint_art.csv` and `assets/imagegen/missive_art_install.csv`: the `seed` column
 - Create: `assets/couriers/paint/*.png(.import)` and `assets/missives/*.png(.import)`
 - Modify: `data/courier_art.csv`: the `painting` column
 - Modify: `data/courier_paintings.csv` and `data/missive_art.csv`: the `texture` columns
@@ -1443,13 +1443,13 @@ Each subject describes the rider in the owner's PICKED design's own words
 
 Close every subject with "shown as one painted scene in its own
 countryside" as the army rows do. Then run `python3
-assets/flux/generate.py --build-csv` and check that `python3
-assets/flux/generate.py --ids B-43 --canvas C-COURIER --dry-run` prints
+assets/imagegen/generate.py --build-csv` and check that `python3
+assets/imagegen/generate.py --ids B-43 --canvas C-COURIER --dry-run` prints
 STYLE_CORE + the subject + the `[C-COURIER]` fragment.
 
 - [ ] **Step 2: Check the board pieces' prompts**
 
-Run `python3 assets/flux/generate.py --ids U-20,U-21,U-22,U-23,U-24,U-25,U-26 --dry-run`.
+Run `python3 assets/imagegen/generate.py --ids U-20,U-21,U-22,U-23,U-24,U-25,U-26 --dry-run`.
 
 Confirm each prints with its canvas from library §9.1:
 - `C-UIPIECE`: U-20, U-22, U-23;
@@ -1469,13 +1469,13 @@ explicit `--canvas` per group in Step 3.
 
 ```bash
 for M in zimage qwen2512fast; do
-  python3 assets/flux/generate.py --model $M --ids B-43,B-44,B-45,B-46,B-47 --canvas C-COURIER --variants 2
-  python3 assets/flux/generate.py --model $M --ids U-20,U-22,U-23 --canvas C-UIPIECE --variants 2
-  python3 assets/flux/generate.py --model $M --ids U-21 --canvas C-TILE --variants 2
-  python3 assets/flux/generate.py --model $M --ids U-24,U-25 --canvas C-ICON --variants 2
-  python3 assets/flux/generate.py --model $M --ids U-26 --canvas C-UIWIDE --variants 2
+  python3 assets/imagegen/generate.py --model $M --ids B-43,B-44,B-45,B-46,B-47 --canvas C-COURIER --variants 2
+  python3 assets/imagegen/generate.py --model $M --ids U-20,U-22,U-23 --canvas C-UIPIECE --variants 2
+  python3 assets/imagegen/generate.py --model $M --ids U-21 --canvas C-TILE --variants 2
+  python3 assets/imagegen/generate.py --model $M --ids U-24,U-25 --canvas C-ICON --variants 2
+  python3 assets/imagegen/generate.py --model $M --ids U-26 --canvas C-UIWIDE --variants 2
 done
-python3 assets/flux/post.py --tone assets/flux/out/ui/U-2*.png --out-dir assets/flux/out/ui
+python3 assets/imagegen/post.py --tone assets/imagegen/out/ui/U-2*.png --out-dir assets/imagegen/out/ui
 ```
 
    The `zimage` preset has no negative path, so `NEGATIVE.txt` only steers
@@ -1492,8 +1492,8 @@ python3 assets/flux/post.py --tone assets/flux/out/ui/U-2*.png --out-dir assets/
 2. Run:
 
 ```bash
-python3 assets/flux/install_map_art.py courier_paintings
-python3 assets/flux/install_map_art.py missive
+python3 assets/imagegen/install_map_art.py courier_paintings
+python3 assets/imagegen/install_map_art.py missive
 ```
 
 3. Then fill the texture paths by hand:
@@ -1529,7 +1529,7 @@ Send the owner the shots and revise until yes. Record any new ruling in
 2. Commit:
 
 ```bash
-git add docs/references/art_prompt_library.md assets/flux/prompts.csv assets/flux/courier_paint_art.csv assets/flux/missive_art_install.csv assets/couriers assets/missives data/courier_art.csv data/courier_paintings.csv data/missive_art.csv .claude/skills/visual-review/taste.md
+git add docs/references/art_prompt_library.md assets/imagegen/prompts.csv assets/imagegen/courier_paint_art.csv assets/imagegen/missive_art_install.csv assets/couriers assets/missives data/courier_art.csv data/courier_paintings.csv data/missive_art.csv .claude/skills/visual-review/taste.md
 git commit -m "art(missives): the courier paintings and the board's pieces"
 ```
 
@@ -1545,7 +1545,7 @@ git commit -m "art(missives): the courier paintings and the board's pieces"
 
 **Interfaces:**
 - Consumes: Task 6's `courier_build.py` and the spy structure views
-  `assets/flux/out/courier_sheet/spy_*.png`.
+  `assets/imagegen/out/courier_sheet/spy_*.png`.
 - Produces: `res://assets/units3d/spy.glb` with `GALLOP` and `IDLE`.
 
 - [ ] **Step 1: Scene**

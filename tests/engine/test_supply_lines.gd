@@ -70,6 +70,7 @@ func test_a_hostile_regiment_on_the_road_cuts_it() -> void:
 			foe = c
 			break
 	var foe_reg: Dictionary = army[foe]
+	@warning_ignore("integer_division")
 	var mid := route[route.size() / 2]
 	foe_reg["x"] = mid.x
 	foe_reg["y"] = mid.y

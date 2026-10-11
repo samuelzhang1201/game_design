@@ -21,7 +21,9 @@ func test_apportion_is_largest_remainder_with_ties_by_code() -> void:
 
 func test_units_and_gold_convert_at_the_supply_price() -> void:
 	# army_supply_gold_permille 100: a gold is 10 units
+	@warning_ignore("integer_division")
 	assert_eq(TownStores.units_per_gold(repo), 1000 / int(repo.bal("army_supply_gold_permille")))
+	@warning_ignore("integer_division")
 	assert_eq(TownStores.gold_of_units(repo, 129), 129 * int(repo.bal("army_supply_gold_permille")) / 1000)
 
 func test_every_realm_manor_feeds_the_nearest_town_of_its_province() -> void:

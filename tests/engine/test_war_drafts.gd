@@ -132,8 +132,8 @@ func test_a_quiet_copy_leaves_the_live_border_caches_alone() -> void:
 func test_a_march_draft_carries_its_supply_town_and_runs_it_first() -> void:
 	var town: String = TownStores.realm_towns(repo, state)[0]
 	var own := ArmySystem.carry_of(repo, ArmySystem.state_of(repo, state, code))
-	var load := 10 if own != 10 else 15
-	WarDrafts.plant(repo, state, code, "march", _somewhere(), [], load, town, 1200)
+	var carry := 10 if own != 10 else 15
+	WarDrafts.plant(repo, state, code, "march", _somewhere(), [], carry, town, 1200)
 	var d := WarDrafts.of(state, code)
 	assert_eq([String(d["supply_town"]), int(d["supply_rate"])], [town, 1200])
 	var reqs := WarDrafts.requests_from(repo, state, code, d)

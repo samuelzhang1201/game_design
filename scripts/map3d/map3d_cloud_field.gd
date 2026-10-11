@@ -34,12 +34,12 @@ func step(delta: float, running: bool, clock_speed: int, view: Rect2, p: Diction
 	# `wrap` (owner 2026-09-30: 稀疏的分布在大地图): the view is the whole map,
 	# and a cloud blown off its downwind side comes back in on the upwind
 	# side, so the sky stays spread over the map instead of thinning out
-	var wrap := bool(p.get("wrap", false))
+	var wrap_on := bool(p.get("wrap", false))
 	var span := absf(view.size.x * wind.x) + absf(view.size.y * wind.y) + margin * 2.0
 	for c: Dictionary in clouds:
 		c["pos"] = (c["pos"] as Vector2) + move
 		c["life"] = minf(float(c["life"]) + delta / fade_s, 1.0)
-		if wrap and not view.grow(margin).has_point(c["pos"]):
+		if wrap_on and not view.grow(margin).has_point(c["pos"]):
 			c["pos"] = (c["pos"] as Vector2) - wind * span
 			c["life"] = 0.0
 		if view.grow(margin).has_point(c["pos"]):

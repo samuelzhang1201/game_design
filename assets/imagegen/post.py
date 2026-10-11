@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Post-process generated portraits into game assets through ComfyUI.
 
-    python3 assets/flux/post.py assets/flux/out/characters/C-01_*_c-full_*.png
-    python3 assets/flux/post.py --tier chip assets/flux/out/characters/C-04_*_c-bust_*.png
+    python3 assets/imagegen/post.py assets/imagegen/out/characters/C-01_*_c-full_*.png
+    python3 assets/imagegen/post.py --tier chip assets/imagegen/out/characters/C-04_*_c-bust_*.png
 
 Each file is uploaded to ComfyUI's input folder, run through
 post_cutout_template.json (BiRefNet cutout -> alpha -> lanczos resize), and
-the RGBA PNG is saved under assets/flux/out/game/<tier>/<ID>.png — never
+the RGBA PNG is saved under assets/imagegen/out/game/<tier>/<ID>.png — never
 into assets/2D/portraits/cast/, so nothing in the game changes until you copy it.
 
 Tiers (sizes follow the game's existing art: scripts/ui/character_portrait.gd
@@ -284,7 +284,7 @@ def main() -> int:
             width, height = (0, args.size) if width == 0 else (args.size, args.size)
         name = upload(path)
         values = {"image": name, "width": width, "height": height,
-                  "prefix": f"flux/game/{tier}/{stem}"}
+                  "prefix": f"imagegen/game/{tier}/{stem}"}
         if tier == "mark":
             if args.no_trim:
                 w, h, _, _ = decode_png(path)

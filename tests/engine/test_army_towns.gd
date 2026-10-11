@@ -192,7 +192,7 @@ func test_the_works_follow_the_regiment() -> void:
 
 # --- the garrison -------------------------------------------------------------
 
-func _player_land(s: GameState) -> String:
+func _player_land(_s: GameState) -> String:
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")):
 		if String(r.get("is_naval", "0")) != "1":
 			return String(r["regiment_code"])

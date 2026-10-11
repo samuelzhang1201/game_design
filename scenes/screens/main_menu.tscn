@@ -1,14 +1,10 @@
 [gd_scene format=3 uid="uid://c5ekxrn7q3266"]
 
 [ext_resource type="Script" uid="uid://dag6kihdif3hf" path="res://scripts/ui/main_menu.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://clscgnol1f43q" path="res://assets/2D/portraits/cast/full/map_example.jpeg" id="2_8ln24"]
+[ext_resource type="Texture2D" uid="uid://dk1auxeop02pm" path="res://assets/2D/ui/war_table/table_oak.jpg" id="2_8ln24"]
 [ext_resource type="Script" uid="uid://nyp5bijocq8u" path="res://scripts/ui/war_table/title_shade.gd" id="3_rtw2f"]
 [ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="4_oa1go"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="5_tbmy8"]
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_jk1qb"]
-atlas = ExtResource("2_8ln24")
-region = Rect2(34, 34, 1516, 604)
 
 [node name="MainMenu" type="Control" unique_id=2024837821]
 layout_mode = 3
@@ -24,7 +20,7 @@ layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-texture = SubResource("AtlasTexture_jk1qb")
+texture = ExtResource("2_8ln24")
 expand_mode = 1
 stretch_mode = 6
 

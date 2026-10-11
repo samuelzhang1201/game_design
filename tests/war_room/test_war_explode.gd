@@ -34,8 +34,8 @@ func _parts_scene() -> PackedScene:
 	return ps
 
 
-func _part(name: String) -> MeshInstance3D:
-	return fig.parts_root().find_child(name, true, false) as MeshInstance3D
+func _part(part_name: String) -> MeshInstance3D:
+	return fig.parts_root().find_child(part_name, true, false) as MeshInstance3D
 
 
 func test_parts_fly_straight_out_from_the_centre() -> void:

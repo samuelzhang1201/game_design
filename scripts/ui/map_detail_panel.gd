@@ -224,13 +224,13 @@ func show_entry(entry: Dictionary) -> void:
 ## A clickable list in the left column (the LEDGER's instances of a type,
 ## spec 2026-09-30 §6.1): each row a flat button that ellipsises rather than
 ## widening the fixed column.
-func show_list(title: String, rows: Array) -> void:
+func show_list(title: String, entries: Array) -> void:
 	_shown_province = ""
 	_clear()
 	_shield.visible = false
 	_title.text = title
 	_subtitle.visible = false
-	for row: Dictionary in rows:
+	for row: Dictionary in entries:
 		var b := Button.new()
 		b.text = String(row["text"])
 		b.flat = true

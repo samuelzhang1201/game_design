@@ -477,7 +477,6 @@ func _commit() -> void:
 		params["waypoints"] = pairs
 	var march := ActionRequest.make("ARMY_MARCH", params)
 	var carry := _panel.chosen_carry() if _panel != null else -1
-	var own := ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, code))
 	var town := _supply_choice
 	if drafting:
 		# a draft costs nothing yet, but no seal could ever send one into the sea
@@ -573,11 +572,11 @@ func _add_waypoint() -> void:
 
 ## The map bent the pending route (a waypoint dragged or inserted): taken when
 ## every point is one the regiment could be sent to, else put back and why said.
-func _on_route_bent(waypoints: PackedVector2Array) -> void:
+func _on_route_bent(route: PackedVector2Array) -> void:
 	if _aiming == "" or _pending.x < 0.0:
 		return
 	var pairs: Array = []
-	for w: Vector2 in waypoints:
+	for w: Vector2 in route:
 		pairs.append([w.x, w.y])
 	var why := Game.engine.actions.validate_place(ActionRequest.make("ARMY_MARCH",
 		{"regiment": _aiming, "x": _pending.x, "y": _pending.y, "waypoints": pairs}), Game.state)
@@ -585,7 +584,7 @@ func _on_route_bent(waypoints: PackedVector2Array) -> void:
 		Game.publish_news(why)
 		_map_set("aim_waypoints", PackedVector2Array(_waypoints))
 		return
-	_waypoints = Array(waypoints)
+	_waypoints = Array(route)
 	if _group.size() > 1:
 		# the others join the bent path where they stand nearest (WarOrderSketch)
 		var path := PackedVector2Array(_waypoints)

@@ -123,6 +123,7 @@ func _pack_grid(s: GameState, code: String) -> MarchPath:
 	var bytes := PackedByteArray()
 	bytes.resize(cols * rows)
 	bytes.fill(30)
+	@warning_ignore("integer_division")
 	var c: Vector2i = _here_m(s, code) / cell_m
 	for y in range(c.y - 5, c.y + 6):
 		bytes[y * cols + c.x + 3] = 180

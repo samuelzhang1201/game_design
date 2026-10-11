@@ -223,12 +223,12 @@ static func tooth() -> Texture2D:
 
 
 ## WarPlanDraw's look at `mm` px a table millimetre.
-static func plan_look(repo: DataRepository, tooth: Texture2D, mm: float, font: Font, caps: Font) -> Dictionary:
+static func plan_look(repo: DataRepository, tooth_tex: Texture2D, mm: float, font: Font, caps: Font) -> Dictionary:
 	var pal := repo.war_palette
-	var cells := float(tooth.get_width()) if tooth != null else 1.0
+	var cells := float(tooth_tex.get_width()) if tooth_tex != null else 1.0
 	return {"colours": {"blue": pal["plan_blue"], "red": pal["plan_red"], "ink": pal["ink"],
 			"blue_draft": pal.get("plan_blue_draft", pal["plan_blue"])},
 		"edges": {"blue_draft": pal.get("pencil", Color.GRAY)},
-		"tooth": tooth, "tooth_uv": repo.bal("war_plan_tooth_scale") / maxf(mm, 0.0001) / cells,
+		"tooth": tooth_tex, "tooth_uv": repo.bal("war_plan_tooth_scale") / maxf(mm, 0.0001) / cells,
 		"edge_dark": repo.bal("war_plan_edge_dark"), "edge_px": maxf(repo.bal("war_plan_edge_mm") * mm, 1.0),
 		"font": font, "caps": caps, "halo": pal.get("parchment", Color.WHITE)}
