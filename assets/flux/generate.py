@@ -279,6 +279,26 @@ def prune_images(graph: dict, template: dict, used: int) -> dict:
     return graph
 
 
+def free_models() -> bool:
+    """Unload ComfyUI's models when its queue is empty. On Apple unified memory
+    ComfyUI otherwise keeps the last models (~44 GB after a Qwen-Image-Edit
+    batch, 2026-10-11) until the Mac runs out of swap. The queue is shared by
+    every session, so a model another job still needs is never pulled away."""
+    try:
+        q = json.loads(_get("/queue"))
+        if q.get("queue_running") or q.get("queue_pending"):
+            print("models kept: other jobs are still in ComfyUI's queue")
+            return False
+        req = urllib.request.Request(SERVER + "/free", data=json.dumps({"unload_models": True, "free_memory": True}).encode(),
+                                     headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=60).read()  # answers 200 with an empty body
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        print(f"could not unload ComfyUI's models: {e}", file=sys.stderr)
+        return False
+    print("models unloaded from ComfyUI (pass --keep-loaded between the runs of a batch)")
+    return True
+
+
 def make_graph(template: dict, values: dict) -> dict:
     """Fill the template's _slots (slot name -> [[node id, input name], ...])
     with `values`; slots the template does not declare are ignored, so one
@@ -347,10 +367,16 @@ def main() -> int:
                     help="edit presets: what to change, put before the row prompt (or alone without --ids)")
     ap.add_argument("--tag", default="",
                     help="edits: a readable name part, e.g. infantry_body_front (default: the instruction's first words)")
+    ap.add_argument("--keep-loaded", action="store_true",
+                    help="leave the models loaded after this run (a script calling generate.py many times; end it with --free)")
+    ap.add_argument("--free", action="store_true", help="only unload ComfyUI's models (when its queue is empty), then exit")
     ap.add_argument("--dry-run", action="store_true", help="print prompts, queue nothing")
     ap.add_argument("--front", action="store_true", help="queue ahead of jobs already waiting in ComfyUI")
     ap.add_argument("--timeout", type=float, default=900.0, help="seconds to wait per image")
     args = ap.parse_args()
+    if args.free:
+        free_models()
+        return 0
 
     if args.build_csv:
         build_csv()
@@ -505,6 +531,8 @@ def main() -> int:
             dest = OUT_DIR / r["dir"] / (f"{name}.png" if k == 0 else f"{name}_{k}.png")
             download(img, dest)
             print(f"saved {dest.relative_to(ROOT)}")
+    if not args.keep_loaded:
+        free_models()
     return 1 if failures else 0
 
 

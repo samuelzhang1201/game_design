@@ -48,6 +48,12 @@ from its picked full figure, a local fix (a cloak's colour, a missing boot)
 without losing the pick, and variants of one piece of art. Download with
 `bash assets/flux/download_models.sh qwenedit` (~17 GB).
 
+**Memory**: each run ends by unloading ComfyUI's models when its queue is
+empty (`POST /free`); on the Mac's unified memory ComfyUI otherwise holds the
+last models (44 GB after an edit batch) until swap runs out. A script that
+calls `generate.py` many times passes `--keep-loaded` and ends with
+`generate.py --free`.
+
 **Not allowed:** every Flux model, Ideogram 4 open weights (non-commercial),
 HunyuanImage (licence excludes EU/UK/KR), Qwen-Image-2.1 (research licence),
 Krea 2 open weights and SD 3.5 (licences end at US$1M company revenue).
