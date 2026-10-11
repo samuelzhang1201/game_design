@@ -122,7 +122,7 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		var t := {"code": code, "at": (at - r.position) * k, "tier": tier, "label": String(b["label"]) if tier >= name_tier else "",
 			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"}
 		t.merge(town_marks(repo, code))
-		t["name_dx"] = name_dx(repo, tier, px_k)
+		t["name_dx"] = name_dx(repo, tier, px_k, sheet)
 		# a works glyph stands above the ring, a market's scales below it — clear
 		# of a walled town's square and its corner towers
 		var ring := repo.bal("war_ink_town_px") * px_k * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
@@ -253,18 +253,22 @@ static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> 
 
 
 ## The foot of a seat piece's round plinth on the sheet, as a radius in ink px
-## (war_piece_plinth_mm on a sheet war_table_w_m wide, the texture war_sheet_texture_px across).
-static func plinth_radius_px(repo: DataRepository, px_k := 1.0) -> float:
-	return repo.bal("war_piece_plinth_mm") / 1000.0 * 0.5 / repo.bal("war_table_w_m") * repo.bal("war_sheet_texture_px") * px_k
+## (war_piece_plinth_mm over the sheet's ink px per table metre: its texture's
+## width over WarRoomTable.width_for; `sheet` empty = one cell).
+static func plinth_radius_px(repo: DataRepository, px_k := 1.0, sheet := {}) -> float:
+	var px_per_m := repo.bal("war_sheet_texture_px") / repo.bal("war_table_w_m")
+	if not sheet.is_empty():
+		px_per_m = float(WarRoomInk.tex_size(repo, sheet["rect"]).x) / WarRoomTable.width_for(repo, sheet)
+	return repo.bal("war_piece_plinth_mm") / 1000.0 * 0.5 * px_per_m * px_k
 
 
 ## How far WEST of its town's point a name ends: the ring and the gap, or
 ## clear of the plinth of the unit seated on the town's point (static: the
 ## seat's spot never moves, so the cached ink never redraws for a march).
-static func name_dx(repo: DataRepository, tier: int, px_k := 1.0) -> float:
+static func name_dx(repo: DataRepository, tier: int, px_k := 1.0, sheet := {}) -> float:
 	var town := repo.bal("war_ink_town_px") * px_k
 	var r := town * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
-	return maxf(r + town * repo.bal("war_ink_label_gap_ratio"), plinth_radius_px(repo, px_k) + repo.bal("war_ink_label_clear_px") * px_k)
+	return maxf(r + town * repo.bal("war_ink_label_gap_ratio"), plinth_radius_px(repo, px_k, sheet) + repo.bal("war_ink_label_clear_px") * px_k)
 
 
 ## A town's name alone as a box, ink px (where the painter sets the lettering).

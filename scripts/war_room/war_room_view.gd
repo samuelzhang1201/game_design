@@ -377,9 +377,10 @@ func lay_sheet(index: int) -> void:
 	_sheet = index
 	_union = WarSheets.union(_repo, _tray.held() if _tray.slot_of(index) >= 0 else [index])
 	_rect = _union["rect"]
-	_table_w = WarRoomTable.width_for(_repo, _rect)
+	_table_w = WarRoomTable.width_for(_repo, _union)
 	_depth = WarRoomTable.depth_m(_rect, _table_w)
-	_nx = int(_repo.bal("war_relief_grid"))
+	# the grid budget stands on the sheet's longer side, as the ink's does
+	_nx = maxi(2, roundi(_repo.bal("war_relief_grid") * minf(1.0, _rect.size.x / _rect.size.y)))
 	_nz = WarRoomTable.rows_for(_rect, _nx)
 	# the build's own heights (WarBake: what Terrain3D was built from), else the
 	# pack's relief bitmap, else flat (spec 2026-10-02-war-room-v2 §2.4)

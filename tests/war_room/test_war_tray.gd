@@ -122,16 +122,46 @@ func test_edge_arrow_moves_the_markers() -> void:
 	assert_eq(t.count(), 2)
 
 
+## Every direction an edge arrow can walk, with 1..4 markers: the count never
+## changes and no two markers share a sheet.
+func test_a_shift_never_loses_or_doubles_a_marker() -> void:
+	var c := _cells()
+	var order := [Vector2i(4, 4), Vector2i(5, 4), Vector2i(4, 5), Vector2i(5, 5)]
+	var walked := 0
+	for n in range(1, 5):
+		for dir: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var t := WarTray.new(4, 4, c)
+			for i in n:
+				t.take(_sheet_at(c, order[i]))
+			assert_eq(t.count(), n)
+			if not t.can_shift(dir):
+				continue
+			walked += 1
+			assert_true(t.shift(dir))
+			var held := t.held()
+			assert_eq(t.count(), n, "%d markers, shift %s: count unchanged" % [n, dir])
+			assert_eq(held.size(), n)
+			for i in held.size():
+				assert_gte(int(held[i]), 0)
+				for j in range(i + 1, held.size()):
+					assert_ne(held[i], held[j], "%d markers, shift %s: slots distinct" % [n, dir])
+	assert_gt(walked, 4, "the walk really shifted")
+
+
 ## 1 x 4 cells deep is laid narrower so it lies no deeper than
 ## war_table_max_depth_m; one cell is never narrowed.
 func test_union_table_fits_the_oak() -> void:
 	var deg := repo.bal("war_sheet_deg")
 	var collar := repo.bal("war_sheet_collar_km") * WarSheets.px_per_unit(repo)
 	var one := MapCoords.cell_rect(repo, Vector2i(3, 2), deg).grow(collar)
-	assert_almost_eq(WarRoomTable.width_for(repo, one), repo.bal("war_table_w_m"), 0.0001, "one cell: as wide as ever")
+	var one_sheet := {"rect": one, "cols": 1, "rows": 1}
+	assert_almost_eq(WarRoomTable.width_for(repo, one_sheet), repo.bal("war_table_w_m"), 0.0001, "one cell: as wide as ever")
+	# one cell is never narrowed, however deep its rect
+	assert_almost_eq(WarRoomTable.width_for(repo, {"rect": Rect2(0, 0, 100, 900), "cols": 1, "rows": 1}), repo.bal("war_table_w_m"), 0.0001)
 	assert_lte(WarRoomTable.depth_m(one, repo.bal("war_table_w_m")), repo.bal("war_table_max_depth_m"))
 	var column := MapCoords.cell_rect(repo, Vector2i(3, 2), deg).merge(MapCoords.cell_rect(repo, Vector2i(3, 5), deg)).grow(collar)
-	var w := WarRoomTable.width_for(repo, column)
+	var column_sheet := {"rect": column, "cols": 1, "rows": 4}
+	var w := WarRoomTable.width_for(repo, column_sheet)
 	assert_lt(w, repo.bal("war_table_w_m"))
 	assert_almost_eq(WarRoomTable.depth_m(column, w), repo.bal("war_table_max_depth_m"), 0.0001)
 	# the deepest sheet still leaves the index chart its north band of the oak
@@ -139,7 +169,19 @@ func test_union_table_fits_the_oak() -> void:
 	var chart_south := repo.bal("war_chart_z_m") + map_h * 0.5 + repo.bal("war_chart_margin_m")
 	assert_lte(chart_south, -repo.bal("war_table_max_depth_m") * 0.5, "the chart's south edge north of the sheet")
 	var row := MapCoords.cell_rect(repo, Vector2i(3, 2), deg).merge(MapCoords.cell_rect(repo, Vector2i(6, 2), deg)).grow(collar)
-	assert_almost_eq(WarRoomTable.width_for(repo, row), repo.bal("war_table_w_m"), 0.0001, "a 4 x 1 row is shallow")
+	assert_almost_eq(WarRoomTable.width_for(repo, {"rect": row, "cols": 4, "rows": 1}), repo.bal("war_table_w_m"), 0.0001, "a 4 x 1 row is shallow")
+	# the plinth keeps its true size on the oak: a 1 x 4 union's ink px per metre is its own
+	var per_m := float(WarRoomInk.tex_size(repo, column).x) / w
+	assert_almost_eq(WarSheetInk.plinth_radius_px(repo, 1.0, column_sheet), repo.bal("war_piece_plinth_mm") / 1000.0 * 0.5 * per_m, 0.001)
+	assert_gt(WarSheetInk.plinth_radius_px(repo, 1.0, column_sheet), WarSheetInk.plinth_radius_px(repo), "a deep union's ink is denser per metre")
+	assert_almost_eq(WarSheetInk.plinth_radius_px(repo, 1.0, one_sheet), WarSheetInk.plinth_radius_px(repo), 0.0001, "one cell: today's value")
+	assert_almost_eq(WarSheetInk.name_dx(repo, 0, 1.0, one_sheet), WarSheetInk.name_dx(repo, 0), 0.0001)
+	# the relief grid's budget stands on the longer side
+	var nx_one := maxi(2, roundi(repo.bal("war_relief_grid") * minf(1.0, one.size.x / one.size.y)))
+	assert_eq(nx_one, int(repo.bal("war_relief_grid")), "one cell keeps today's grid")
+	var nx_col := maxi(2, roundi(repo.bal("war_relief_grid") * minf(1.0, column.size.x / column.size.y)))
+	assert_lt(nx_col, int(repo.bal("war_relief_grid")))
+	assert_lte(WarRoomTable.rows_for(column, nx_col), int(repo.bal("war_relief_grid")) + 1)
 
 
 ## The ink stays war_sheet_texture_px across the LONGER side: a deep union
@@ -212,7 +254,7 @@ func test_the_view_lays_the_held_cells_and_its_arrows_move_every_marker() -> voi
 	var flight := float(WarToss.plan(Vector3.ZERO, Vector3.ONE, 1, WarToss.rules(repo))["duration"])
 	view.toss_to(b)
 	assert_true(view.tossing())
-	await wait_seconds(flight + repo.bal("war_sheet_swap_s") + 0.4)
+	await wait_until(func() -> bool: return view.sheet_key() == "%d+%d" % [mini(a, b), maxi(a, b)] and not view.tossing() and not view.rolling(), flight + repo.bal("war_sheet_swap_s") + 2.0)
 	assert_eq(view.tray_sheets(), [a, b])
 	assert_eq(view.sheet_key(), "%d+%d" % [mini(a, b), maxi(a, b)], "both cells laid as one")
 	assert_eq(view.sheet_rect(), WarSheets.union(repo, [a, b])["rect"])
@@ -221,7 +263,7 @@ func test_the_view_lays_the_held_cells_and_its_arrows_move_every_marker() -> voi
 	assert_gt(arrows.size(), 0, "a side both can move toward")
 	var to := int((arrows[0] as Node).get_meta("sheet"))
 	view.shift_toward(to)
-	await wait_seconds(repo.bal("war_sheet_swap_s") + 0.3)
+	await wait_until(func() -> bool: return view.sheet_index() == to, repo.bal("war_sheet_swap_s") + 2.0)
 	assert_eq(view.tray_sheets().size(), 2, "every marker moved, none added")
 	assert_eq(view.sheet_index(), to)
 	assert_eq(view.sheet_key(), String(WarSheets.union(repo, view.tray_sheets())["key"]))

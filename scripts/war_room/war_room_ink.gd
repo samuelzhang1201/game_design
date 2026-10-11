@@ -206,7 +206,7 @@ func plan_for(repo: DataRepository, state: GameState, row: Dictionary, viewport:
 	_gen += 1
 	var gen := _gen
 	viewport.size = size
-	var table_w := WarRoomTable.width_for(repo, rect)
+	var table_w := WarRoomTable.width_for(repo, row)
 	var mm := float(size.x) / (table_w * 1000.0)
 	painter.paint_plan(WarPlanInk.strokes(repo, state, row, size.x, table_w, hidden), plan_look(repo, tooth(), mm, font, caps))
 	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
