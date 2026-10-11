@@ -92,7 +92,8 @@ var _pal: Dictionary = {}
 ## a res:// resource (set before anything instances it: a .tres material or
 ## the world's Environment) or the name of a node in the 3D world (set as the
 ## camera is framed, so it needs --zoom3d); VALUE is parsed by str_to_var
-## ("0.5", "Color(0.2, 0.3, 0.4, 1)"). Material uniforms are
+## ("0.5", "Color(0.2, 0.3, 0.4, 1)"), or loaded when it is a res:// path
+## (a texture for a sampler uniform). Material uniforms are
 ## shader_parameter/NAME.
 var _sets: Array = []
 ## The resources --set changed, held so the cache keeps the changed copy
@@ -174,6 +175,12 @@ var _trace_couriers := false
 ## the realm's capital (the state set directly, for a shot of the line);
 ## prints where it stands, for --look3d.
 var _supply_flow := Vector2.INF
+## --supply-front (with --screen root): the player's first land regiment with a
+## realm town AHEAD of it gets a line from that town, and the engine's day step
+## breaks it (FRONT, ruling 20 kept daily) — the card, folio and slip words.
+var _supply_front := false
+var _supply_front_reg := ""   # --supply-front-reg CODE: that regiment instead of the first with a town ahead
+var _supply_front_before := false   # --supply-front-before: the same line left FLOWING (the shot before the rule)
 var _shot_frame := 40
 ## The Missive board and spies (2026-09-28), all with --screen root:
 ## --quiet drops the chapter's scheduled beats, rolls no random event and runs the
@@ -286,6 +293,7 @@ var _war_plan_draw: Array = []   # --war-plan-draw [side:]kind,fx1,fy1,fx2,fy2[;
 var _war_spread := 0             # --war-spread N: N land regiments stood side by side near the focus
 var _war_box := false            # --war-box: a real Shift-drag box round them
 var _war_supply := false         # --war-supply: a real click on the nearest lit town while the confirm stands
+var _war_supply_town := ""        # --war-supply-town CODE|off: choose that town (off: the lit town nearest the laid sheet but off it) through the confirm's select_supply (documented exception to real input)
 var _war_supply_list := false    # --war-supply-list: a real click opening the confirm's Supply from list
 var _war_edit := false           # --war-edit: the draft pennant's Edit route… after the commit
 var _war_hint := false           # --war-hint: a spy report of foreign men seeded near the focus
@@ -351,8 +359,10 @@ func _ready() -> void:
 			var colon := sv.rfind(":", sv.find("="))
 			var eq := sv.find("=")
 			if colon > 0 and eq > colon:
+				var raw := sv.substr(eq + 1)
+				# a res:// VALUE is a resource (a texture for a sampler uniform)
 				_sets.append([sv.substr(0, colon), sv.substr(colon + 1, eq - colon - 1),
-					str_to_var(sv.substr(eq + 1))])
+					load(raw) if raw.begins_with("res://") else str_to_var(raw)])
 			else:
 				push_error("--set wants TARGET:PROP=VALUE, got %s" % sv)
 		elif args[i] == "--bal":
@@ -397,6 +407,14 @@ func _ready() -> void:
 			_click_courier = int(args[i + 1])
 		elif args[i] == "--zoom3d":
 			_zoom3d = float(args[i + 1])
+		elif args[i] == "--supply-front":
+			_supply_front = true
+		elif args[i] == "--supply-front-reg":
+			_supply_front = true
+			_supply_front_reg = args[i + 1]
+		elif args[i] == "--supply-front-before":
+			_supply_front = true
+			_supply_front_before = true
 		elif args[i] == "--supply-flow":
 			var sf := args[i + 1].split(",")
 			_supply_flow = Vector2(float(sf[0]), float(sf[1]))
@@ -465,6 +483,8 @@ func _ready() -> void:
 		elif args[i] == "--war-drag":
 			var dparts := args[i + 1].split(",")
 			_war_drag = Vector2(float(dparts[0]), float(dparts[1]))
+		elif args[i] == "--war-supply-town":
+			_war_supply_town = args[i + 1]
 		elif args[i] == "--war-hover":
 			var hparts := args[i + 1].split(",")
 			_war_hover = Vector2(float(hparts[0]), float(hparts[1]))
@@ -551,6 +571,8 @@ func _ready() -> void:
 		Game.next_tick()
 	if _supply_flow != Vector2.INF:
 		_lay_supply_flow()
+	if _supply_front:
+		_lay_supply_front()
 	if _res != Vector2i.ZERO:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(_res)
@@ -588,6 +610,9 @@ func _ready() -> void:
 		# regiments) is overridden in memory, never written; --dev asks for it.
 		_root._dev_mode = _dev
 		Intel.dev_all = _dev
+		# the player's FPS row likewise: no counter in a shot
+		_root._show_fps = false
+		_root.fps_counter().visible = false
 	elif screen.has_method("enter_court"):
 		screen.call("enter_court", null)
 	if _event != "" and screen.has_method("enter_council"):
@@ -648,14 +673,6 @@ func _march3d_step(o: int) -> void:
 			if Rect2(Vector2.ZERO, mv.size).has_point(c):
 				target = c
 				break
-		if target.x < 0.0:
-			# every column quartered: a land regiment's counter, a town of one regiment
-			for m: Dictionary in mv.army_markers():
-				var r: Rect2 = m["rect"]
-				if not bool(m["naval"]) and (m["codes"] as Array).size() <= 1 \
-						and Rect2(Vector2.ZERO, mv.size).has_point(r.get_center()):
-					target = r.get_center()
-					break
 		if target.x < 0.0:
 			push_error("march3d: no piece on screen")
 		else:
@@ -818,10 +835,15 @@ func _real_path(c: Control, pts: Array, shift := false) -> void:
 	c.get_viewport().push_input(release, true)
 
 
+## A pointer enters the viewport before it moves in it: the viewport hands a
+## motion to the GUI only once it knows the mouse is inside (the window's
+## enter notification), so a lone `--war-hover` move needs it announced first.
 func _real_move(c: Control, local: Vector2) -> void:
+	c.get_viewport().notification(Node.NOTIFICATION_VP_MOUSE_ENTER)
 	var m := InputEventMouseMotion.new()
 	m.position = c.get_global_transform_with_canvas() * local
 	m.global_position = m.position
+	m.relative = Vector2(1.0, 0.0)
 	c.get_viewport().push_input(m, true)
 
 
@@ -840,7 +862,10 @@ func _process(_delta: float) -> void:
 	_frames += 1
 	if _root != null and _pause_menu and _frames == 20:
 		_root.toggle_pause_menu()
-	if _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu:
+	if _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu \
+			and (_root.current_screen as MainMenu).realm_pending():
+		_title_click_frame += 1   # the living map is still opening (BootLoads, a step a frame)
+	elif _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu:
 		var row := (_root.current_screen as MainMenu).menu_column().get_node_or_null(_title_click) as Control
 		if row == null:
 			push_error("--title-click: no title row %s" % _title_click)
@@ -1024,6 +1049,33 @@ func _lay_supply_flow() -> void:
 		Game.state.supply_lines[code] = rec
 		print("supply-flow: %s at %s marching to %s, fed from %s" % [code, at, at + _supply_flow, cap])
 		return
+
+
+## --supply-front: a FLOWING line from a realm town ahead of the first land
+## regiment that has one, then the engine's own day step (which breaks it).
+func _lay_supply_front() -> void:
+	var repo := Game.data
+	var rear := CourierSystem.origin(repo, Game.state)
+	var towns: Array = TownStores.realm_towns(repo, Game.state)
+	towns.sort()
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), Game.state):
+		var code := String(r["regiment_code"])
+		if String(r.get("is_naval", "0")) == "1" or not Game.state.regiments.has(code) \
+				or (_supply_front_reg != "" and code != _supply_front_reg):
+			continue
+		var at := ArmySystem.position_of(repo, Game.state, r)
+		for t: String in towns:
+			var b: Dictionary = repo.burgs[t]
+			if SupplyLines.is_ahead(repo, rear, at, Vector2(float(b["x"]), float(b["y"]))):
+				var rec := SupplyLines._new_record(t, 1000, 1)
+				rec["state"] = SupplyLines.FLOWING
+				Game.state.supply_lines[code] = rec
+				var ev: Array = [] if _supply_front_before else SupplyLines.day_step(repo, Game.state)
+				print("supply-front: %s at %s fed from %s at %s -> %s; news %s" % [code, at, t, Vector2(float(b["x"]), float(b["y"])),
+					String(rec["state"]), SupplyLines.news(repo, Game.state, ev)])
+				return
+	print("supply-front: no land regiment has a realm town ahead of it (%d towns); codes %s" % [towns.size(),
+		Game.state.regiments.keys().filter(func(c: String) -> bool: return _supply_front_reg == "" or c.begins_with(_supply_front_reg.left(12)))])
 
 
 ## One --trace-couriers line: the frame, day, share, and every courier's
@@ -1356,6 +1408,8 @@ func _war_room_step() -> void:
 			print("war: bent from %s waypoints=%s" % [grab, menu.waypoints()])
 		if _war_supply and menu.shown_confirm() != null:
 			_war_click_supply(view, menu)
+		if _war_supply_town != "" and menu.shown_confirm() != null:
+			_war_pick_supply_town(view, menu)
 		if _war_supply_list and menu.shown_confirm() != null:
 			for o: Dictionary in menu.shown_confirm().shown_supply():
 				print("war: supply row %s%s%s" % [o["label"], " [pressed]" if bool(o["selected"]) else "",
@@ -1565,6 +1619,38 @@ func _war_draw_order(screen: WarRoomScreen, view: WarRoomView, roll: WarToolRoll
 	var menu := screen.orders()
 	print("war: drew the march for %s -> aiming=%s marching=%s waypoints=%s confirm=%s" % [view.plan_input().sel,
 		menu.aiming(), menu.marching(), menu.waypoints(), menu.shown_confirm() != null])
+
+
+## --war-supply-town: the town chosen through the confirm's select_supply (a documented exception: the list's popup takes no pushed input); "off"
+## takes the lit town nearest the laid sheet's rect yet off it (its road enters
+## the sheet at the exit mark).
+func _war_pick_supply_town(view: WarRoomView, menu: ArmyOrderMenu) -> void:
+	var town := _war_supply_town
+	_war_supply_town = ""   # once: the caller runs every frame the confirm stands
+	if town == "off":
+		var best_d := INF
+		town = ""
+		var rect := view.sheet_rect()
+		for t: String in view.supply_pick:
+			if String(view.supply_pick[t]) != "":
+				continue
+			var b: Dictionary = Game.data.burgs[t]
+			var p := Vector2(float(b["x"]), float(b["y"]))
+			if rect.has_point(p):
+				continue
+			var d := p.distance_to(rect.get_center())
+			if d < best_d:
+				best_d = d
+				town = t
+	if town == "":
+		print("war: no lit town off the sheet")
+		return
+	# DOCUMENTED EXCEPTION to real input: the Supply from list's popup is an embedded PopupMenu window
+	# whose rows take no pushed pointer or key here (a click opens it, a sweep never hovers a row, keys
+	# never move its focus before the shot), so the row is taken through the panel's select_supply,
+	# the very call the list's item-selected signal ends in.
+	menu.shown_confirm().select_supply(town)
+	print("war: supply town %s -> choice=%s road=%d pts" % [town, menu.supply_choice(), view.supply_preview.size()])
 
 
 ## --war-supply: a real click on the lit town nearest the march's end.

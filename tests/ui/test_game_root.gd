@@ -32,6 +32,31 @@ func test_space_starts_campaign() -> void:
 	# begin_with, so campaign start lands on exactly tick 1.
 	assert_eq(Game.state.tick, 1)
 
+## Owner 2026-10-10 (no stall as the game opens): Start makes the reign and
+## its opening month in one frame, under the title, and lays the first screen
+## in the next; a second Start in between begins nothing more.
+func test_the_reign_begins_over_two_frames() -> void:
+	var r := _root()
+	await wait_process_frames(2)
+	r.current_screen.start_requested.emit()
+	assert_eq(r.state, GameRoot.State.MENU, "the title still stands this frame")
+	assert_not_null(Game.state, "but the reign is made")
+	assert_eq(Game.state.tick, 1, "with its opening month")
+	r.current_screen.start_requested.emit()
+	await wait_process_frames(2)
+	assert_eq(r.state, GameRoot.State.CONVERSATION, "the first screen is laid the next frame")
+	assert_eq(Game.state.tick, 1, "a second Start began nothing more")
+
+## The boot asks for the overlays (and, with the 3D map on, the world and the
+## art tables) on worker threads, so the title's first frame comes at once
+## (BootLoads); all of them come in.
+func test_the_boot_reads_the_heavy_art_on_threads() -> void:
+	var r := _root()
+	await wait_until(func() -> bool: return not BootLoads.loading(), 20.0)
+	assert_false(BootLoads.loading(), "every threaded load came in")
+	assert_true(BootLoads.title_ready())
+	assert_not_null(r.current_screen)
+
 func test_r_restarts_to_menu() -> void:
 	var r := _root()
 	await wait_process_frames(2)
@@ -301,7 +326,7 @@ func test_the_title_and_pause_menus_share_their_settings() -> void:
 	var r := _root()
 	await wait_process_frames(2)
 	var title: MainMenu = r.current_screen
-	for n: String in ["MusicToggle", "GraphicsQuality", "FrameCap", "DevMode", "Quit"]:
+	for n: String in ["MusicToggle", "GraphicsQuality", "FrameCap", "FpsToggle", "DevMode", "Quit"]:
 		var a := title.menu_column().get_node_or_null(n) as Button
 		var b := _menu_btn(r, n)
 		assert_not_null(a, "the title screen has " + n)
@@ -315,15 +340,32 @@ func test_the_title_and_pause_menus_share_their_settings() -> void:
 		"the pause menu's row follows")
 	r.set_dev_mode(was)
 
-## Owner 2026-09-30 (dev 模式下，右上角帮我加上游戏实时FPS): DEV MODE shows the
-## frame counter, and turning it off hides it again.
-func test_dev_mode_shows_the_fps_counter() -> void:
+## Owner 2026-10-10 (无论是不是dev模式，FPS都可以显示，加一个FPS on/off的按钮在
+## menu): the FPS row shows the frame counter whatever DEV MODE says, and
+## the choice is remembered.
+func test_the_fps_row_shows_the_counter_apart_from_dev_mode() -> void:
 	var r := _root()
 	await wait_process_frames(2)
-	var was := r.dev_mode()
-	r.set_dev_mode(true)
-	assert_true(r.fps_counter().visible, "dev mode shows the counter")
-	assert_true(r.fps_counter().text().ends_with(" FPS"), "it reads frames a second")
+	var was_fps := r.show_fps()
+	var was_dev := r.dev_mode()
 	r.set_dev_mode(false)
+	r.set_show_fps(false)
+	var row := (r.current_screen as MainMenu).menu_column().get_node("FpsToggle") as Button
+	assert_eq(row.text, "FPS: Off")
+	row.pressed.emit()
+	assert_true(r.fps_counter().visible, "the row shows the counter without dev mode")
+	assert_eq(row.text, "FPS: On")
+	assert_eq(_menu_btn(r, "FpsToggle").text, "FPS: On", "the pause menu's row follows")
+	assert_true(r.fps_counter().text().ends_with(" FPS"), "it reads frames a second")
+	var cfg := ConfigFile.new()
+	cfg.load(GameRoot.settings_path)
+	assert_true(bool(cfg.get_value("graphics", "show_fps", false)), "remembered in the settings")
+	r.set_dev_mode(true)
+	r.set_dev_mode(false)
+	assert_true(r.fps_counter().visible, "dev mode no longer drives it")
+	r.set_show_fps(false)
 	assert_false(r.fps_counter().visible, "off, it is gone")
-	r.set_dev_mode(was)
+	r.set_dev_mode(true)
+	assert_false(r.fps_counter().visible, "dev mode alone does not show it")
+	r.set_dev_mode(was_dev)
+	r.set_show_fps(was_fps)

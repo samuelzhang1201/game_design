@@ -57,6 +57,7 @@ func _cut() -> Array:
 	if armies != null:
 		for a: Dictionary in armies.markers():
 			taken.append(a["rect"])
+	taken.append_array(view.unit_rects().values())  # the regiment pieces
 	var legend := sibling("HeatLegend") as Map3DHudHeatLegend
 	if legend != null:
 		taken.append(legend.rect())

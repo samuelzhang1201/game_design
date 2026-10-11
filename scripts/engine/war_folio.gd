@@ -61,7 +61,7 @@ static func brief(repo: DataRepository, state: GameState, code: String) -> Dicti
 	var st := _state_of(repo, state, code, reg)
 	var wounded := clampi(int(st.get("wounded", 0)), 0, heads)
 	var dead := clampi(int(st.get("dead", 0)), 0, heads)
-	var under := WarRoom.group(heads - dead)
+	var under := WarRoom.group(ArmySystem.under_arms(heads, st))
 	if wounded > 0:
 		under += " · %s fit" % WarRoom.group(ArmySystem.fit_heads(heads, st))
 	var arms: Array[String] = []
@@ -77,12 +77,17 @@ static func brief(repo: DataRepository, state: GameState, code: String) -> Dicti
 	var rows: Array = [_row("Under arms", under), _row("Arms", " · ".join(arms)),
 		_row("Morale", "%d / 100 — %s" % [int(st["morale"]), ArmySystem.morale_word(repo, score)]),
 		_row("Supplies", stores)]
+	rows.append_array(conduct_rows(repo, st))
 	if state.regiments.has(code):
 		var line := SupplySystem.line_of(repo, state, code)
 		var town := String(line["town"])
-		rows.append(_row("Line", "no supply point" if town == "" else "%s from %s, %d km" % [
-			String(line["state"]), String((repo.burgs.get(town, {}) as Dictionary).get("label", "")),
-			int(line["length_km"])]))
+		var broken := SupplyLines.front_words(repo, state, code)   # its town ahead of the column
+		if broken != "":
+			rows.append(_row("Line", broken))
+		else:
+			rows.append(_row("Line", "no supply point" if town == "" else "%s from %s, %d km" % [
+				String(line["state"]), String((repo.burgs.get(town, {}) as Dictionary).get("label", "")),
+				int(line["length_km"])]))
 	rows.append(_row("Ground", "%s, %d m" % [ArmySystem.terrain_label(repo, reg, state),
 		ArmySystem.elevation_of(repo, reg, state)]))
 	var order := ArmySystem.order_of(repo, state, code)
@@ -118,6 +123,20 @@ static func _label_of(repo: DataRepository, key: String) -> String:
 static func _state_of(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Dictionary:
 	var st := ArmySystem.state_of(repo, state, code)
 	return st if not st.is_empty() else ArmySystem.starting_state(repo, reg)
+
+
+## The rows foraging and desertion add (spec 2026-10-10-foraging-and-desertion
+## §4; words in data/conduct_words.csv): how the unit is living, and its deserters.
+static func conduct_rows(repo: DataRepository, st: Dictionary) -> Array:
+	var rows: Array = []
+	var forage := String(st.get("forage", ""))
+	if forage != "":
+		var said := String(repo.conduct_words.get("state_law", "")) if forage == "law" \
+			else String(repo.conduct_words.get("state_desperate", ""))
+		rows.append(_row(String(repo.conduct_words.get("row_foraging", "")), said))
+	if int(st.get("deserted", 0)) > 0:
+		rows.append(_row(String(repo.conduct_words.get("row_deserted", "")), str(int(st["deserted"]))))
+	return rows
 
 
 static func _row(label: String, text: String) -> Dictionary:
@@ -158,8 +177,9 @@ static func _tier_word(n: int) -> String:
 
 static func _composition(repo: DataRepository, state: GameState, code: String, reg: Dictionary) -> Array:
 	var st := _state_of(repo, state, code, reg)
-	# the dead are no longer under arms
-	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.headcount(repo, reg) - maxi(0, int(st.get("dead", 0)))))]
+	# the dead and the deserted are no longer under arms
+	var heads := ArmySystem.headcount(repo, reg)
+	var rows: Array = [_row("Under arms", WarRoom.group(ArmySystem.under_arms(heads, st)))]
 	for a: Dictionary in arms_of(repo, code):
 		rows.append(_row(_arm_label(repo, String(a["arm"])), WarRoom.group(int(a["heads"]))))
 	var wounded := int(st.get("wounded", 0))
@@ -237,7 +257,10 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 		var from := String((repo.burgs.get(String(line["town"]), {}) as Dictionary).get("label", ""))
 		var refill := SupplyLines.refill_words(repo, state, code)
 		var text := "no supply point"
-		if String(line["town"]) != "":
+		var broken := SupplyLines.front_words(repo, state, code)   # its town ahead of the column
+		if broken != "":
+			text = broken
+		elif String(line["town"]) != "":
 			@warning_ignore("integer_division")
 			var lost := int(line["loss_permille"]) / 10
 			text = "%s from %s, %.1f×, %d km, %d%% lost" % [String(line["state"]), from,
@@ -250,6 +273,7 @@ static func _supply(repo: DataRepository, state: GameState, code: String, reg: D
 		if refill != "":
 			text += "; " + refill
 		rows.append(_row("Line", text))
+	rows.append_array(conduct_rows(repo, st))
 	var f := Governance.factors(repo, state, "supply_line")
 	var gid := String(f["governor"])
 	if gid == "":

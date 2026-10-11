@@ -9,6 +9,11 @@ extends RefCounted
 
 static var _cache: Dictionary = {}
 
+## Drop the per-repo cache (DataRepository.forget_derived).
+static func forget() -> void:
+	_cache.clear()
+
+
 
 static func _key(repo: DataRepository, what: String) -> String:
 	return "%d:%s:%s" % [repo.get_instance_id(), repo.map_id, what]

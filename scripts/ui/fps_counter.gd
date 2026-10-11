@@ -1,9 +1,10 @@
 class_name FpsCounter
 extends CanvasLayer
-## DEV MODE's frame counter (owner 2026-09-30: dev 模式下，右上角帮我加上游戏
-## 实时FPS): the engine's own frames per second at the screen's top-right, in
-## the top bar's free stretch left of MENU, over every screen and popup.
-## GameRoot shows it only while DEV MODE is on; it reads, never writes.
+## The frame counter (owner 2026-09-30: 右上角帮我加上游戏实时FPS): the
+## engine's own frames per second at the screen's top-right, in the top bar's
+## free stretch left of MENU, over every screen and popup. GameRoot shows it
+## while the menus' FPS row is on (GameRoot.set_show_fps), whatever DEV MODE
+## says; it reads, never writes.
 ## balance.csv ui_fps_right_px (its right edge's inset from the window's),
 ## ui_fps_bar_px (the band it is centred in: the top bar's height),
 ## ui_fps_refresh_s (how often it rereads), ui_fps_good / ui_fps_poor (the

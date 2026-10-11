@@ -1,22 +1,24 @@
 [gd_resource type="ShaderMaterial" format=3 uid="uid://e4k47qmygywv"]
 
-[ext_resource type="Shader" uid="uid://bi1d1n2agaect" path="res://scripts/map3d/road_line.gdshader" id="1_6o33f"]
-[ext_resource type="Texture2D" uid="uid://dgtw7yvgyp2r7" path="res://assets/3D/terrain/textures_preview/rocky_trail_02_alb_ht.png" id="2_nswfu"]
-[ext_resource type="Texture2D" uid="uid://ox113onk6ddf" path="res://assets/3D/terrain/textures_preview/rocky_trail_02_nrm_rgh.png" id="3_thhdt"]
+[ext_resource type="Shader" uid="uid://bi1d1n2agaect" path="res://scripts/map3d/road_line.gdshader" id="1_kxte7"]
+[ext_resource type="Texture2D" uid="uid://dgtw7yvgyp2r7" path="res://assets/3D/terrain/textures_preview/rocky_trail_02_alb_ht.png" id="2_sknaf"]
+[ext_resource type="Texture2D" uid="uid://ox113onk6ddf" path="res://assets/3D/terrain/textures_preview/rocky_trail_02_nrm_rgh.png" id="3_4lxlm"]
 
 [resource]
 render_priority = 1
-shader = ExtResource("1_6o33f")
+shader = ExtResource("1_kxte7")
 shader_parameter/colour = Color(0.6117647, 0.5019608, 0.34509805, 1)
-shader_parameter/surface = ExtResource("2_nswfu")
-shader_parameter/surface_nrm = ExtResource("3_thhdt")
+shader_parameter/surface = ExtResource("2_sknaf")
+shader_parameter/surface_nrm = ExtResource("3_4lxlm")
 shader_parameter/has_surface = true
 shader_parameter/surface_tint = Vector3(1.0223529, 0.96627456, 0.88862747)
-shader_parameter/width_px = 7.0
+shader_parameter/width_px = 11.0
 shader_parameter/width_m = 7.0
 shader_parameter/lift_px = 2.5
-shader_parameter/edge_soft = 0.8
+shader_parameter/edge_soft = 1.0
 shader_parameter/fray = 0.35
+shader_parameter/shoulder = 2.4
+shader_parameter/shoulder_alpha = 0.55
 shader_parameter/tile_m = 60.0
 shader_parameter/near_mpp = 2.5
 shader_parameter/far_mpp = 7.0

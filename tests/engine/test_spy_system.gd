@@ -171,6 +171,11 @@ func test_troops_near_count_men_under_arms() -> void:
 	s.regiments[mine]["dead"] = 200
 	var o1: Dictionary = SpySystem.troops_near(repo, s, here)
 	assert_eq(int(o1["troops_own"]), int(o0["troops_own"]) - 200, "our own less our dead")
+	# and the deserters have left the banner (hand: 200 dead + 40 deserted = 240 fewer, within its heads)
+	assert_gt(ArmySystem.headcount(repo, reg), 240)
+	s.regiments[mine]["deserted"] = 40
+	var o2: Dictionary = SpySystem.troops_near(repo, s, here)
+	assert_eq(int(o2["troops_own"]), int(o0["troops_own"]) - 240, "our own less our dead and deserted")
 
 
 func test_a_spy_at_sea_reports_troops_only() -> void:

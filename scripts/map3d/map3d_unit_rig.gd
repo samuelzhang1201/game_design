@@ -82,3 +82,17 @@ static func _local_to(root: Node3D, child: Node3D) -> Transform3D:
 			t = (n as Node3D).transform * t
 		n = n.get_parent()
 	return t
+
+
+## Puts a piece's figures (`anims`) into an action by name, blended over
+## `blend_s`; one without it keeps its own (Map3DLayerUnits.play). Men at rest
+## are not clones (each seeks its own phase); a column marches in step.
+static func play(anims: Array, action: String, blend_s: float) -> void:
+	for i in anims.size():
+		var anim: AnimationPlayer = anims[i]
+		var clip := Map3DUnits.clip_named(anim, action)
+		if clip == "" or anim.current_animation == clip:
+			continue
+		anim.play(clip, blend_s)  # blended, never a snap
+		if action != "MARCH":
+			anim.seek(fposmod(i * 0.37, anim.current_animation_length))

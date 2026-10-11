@@ -38,6 +38,9 @@ phrase_ransom_ransom,ransom captives
 phrase_ransom_execute,execute captives
 phrase_no_havoc_on,no unauthorised Havoc
 phrase_no_havoc_off,Havoc allowed
+phrase_desertion_penalty_fine,deserters fined
+phrase_desertion_penalty_lenient,deserters pardoned
+phrase_desertion_penalty_hanging,deserters hanged
 title,Laws
 law,Law
 places,Places

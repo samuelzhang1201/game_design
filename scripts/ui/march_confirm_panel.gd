@@ -208,11 +208,16 @@ func cancel_button() -> Button:
 	return _cancel
 
 
+## The panel has been put in its place.
+signal placed
+
+
 ## Stand beside `global_px` (the destination click) — or, when every spot
 ## beside it would cover the route (`route`, its box on screen), in a corner
 ## of the map (`map`) — kept inside the window: the place covering least of
-## the route wins, the nearest first on a tie.
-func place_near(global_px: Vector2, route := Rect2(), map := Rect2()) -> void:
+## the route wins, the nearest first on a tie. `blocked` (global rects: the
+## room's furniture) cost their overlap, the route `war_confirm_route_weight` times that.
+func place_near(global_px: Vector2, route := Rect2(), map := Rect2(), blocked: Array[Rect2] = []) -> void:
 	reset_size()
 	var box := get_combined_minimum_size()
 	var view := Rect2(Vector2.ZERO, get_viewport_rect().size)
@@ -223,19 +228,27 @@ func place_near(global_px: Vector2, route := Rect2(), map := Rect2()) -> void:
 	if map.has_area():
 		var inner := map.grow(-gap)
 		spots.append_array([inner.position, Vector2(inner.end.x - box.x, inner.position.y),
-			Vector2(inner.position.x, inner.end.y - box.y), inner.end - box])
+			Vector2(inner.position.x, inner.end.y - box.y), inner.end - box,
+			Vector2(inner.get_center().x - box.x * 0.5, inner.position.y),
+			Vector2(inner.get_center().x - box.x * 0.5, inner.end.y - box.y),
+			Vector2(inner.position.x, inner.get_center().y - box.y * 0.5),
+			Vector2(inner.end.x - box.x, inner.get_center().y - box.y * 0.5)])
 	var keep := route.grow(gap * 2.0)
+	var route_weight := Game.data.bal("war_confirm_route_weight")
 	var best := Vector2.ZERO
 	var best_cost := INF
 	for spot: Vector2 in spots:
 		var at := spot.clamp(view.position, (view.end - box).max(view.position))
-		var cost := Rect2(at, box).intersection(keep).get_area() if keep.has_area() else 0.0
+		var cost := route_weight * (Rect2(at, box).intersection(keep).get_area() if keep.has_area() else 0.0)
+		for b: Rect2 in blocked:
+			cost += Rect2(at, box).intersection(b).get_area() if b.has_area() else 0.0
 		if Rect2(at, box).grow(-1.0).has_point(global_px):
 			cost += 1e9   # never over the end itself
 		if cost < best_cost - 0.5:
 			best_cost = cost
 			best = at
 	global_position = best
+	placed.emit()
 
 
 func _fill(rows: Array) -> void:

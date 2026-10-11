@@ -72,6 +72,11 @@ existing one.
 - **Lines rank by pattern and weight, not by colour alone.** A tool never
   borrows the map's line language.
 - **A mark on the map is ink, not a badge.**
+- **The object is its own label.** Nothing floats over a piece on the map —
+  no counters, numbers or bars; what it is and how it fares live in its card.
+  Lettering shows only at the zoom where it helps.
+- **Pieces behave like objects in the world, not billboards.** They keep the
+  heading they last moved on; the camera never turns them.
 - **A selection strengthens what is already there** instead of laying a new
   colour over it.
 - **Washes are tinctures, not highlighters** — the ground must read through.
@@ -85,6 +90,9 @@ existing one.
 - **Things arrive the way their object would** — a sheet is laid down, a
   scroll unrolls; nothing simply cuts in.
 - **Every surface is a real material**, aged and lit, never a flat fill.
+- **Every element is a crafted object, never a placeholder.** A flat disc or
+  a bare line reads unfinished; even an abstract view is made of things —
+  and what connects stays finer than what it connects.
 - **Heraldic colour, not dashboard colour.** One muted family of tinctures,
   muted only as far as the distinctions it carries survive.
 

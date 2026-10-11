@@ -35,7 +35,7 @@ func _everywhere() -> Rect2:
 func test_only_our_flowing_lines_are_drawn() -> void:
 	var ours: Array = MapObjects.regiments_of(repo, repo.resolve_realm("player_realm")).map(
 		func(r: Dictionary) -> String: return String(r["regiment_code"]))
-	for st: String in [SupplyLines.ORDERED, SupplyLines.RIDING, SupplyLines.CUT, SupplyLines.FLOWING]:
+	for st: String in [SupplyLines.ORDERED, SupplyLines.RIDING, SupplyLines.CUT, SupplyLines.FRONT, SupplyLines.FLOWING]:
 		_supply_all(st)
 		var routes := WarSupplyFlow.routes(repo, state, _everywhere())
 		if st == SupplyLines.FLOWING:

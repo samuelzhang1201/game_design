@@ -197,6 +197,9 @@ var law_order: Array = []
 var law_effects: Array = []
 ## data/law_words.csv: key -> the laws screen's fixed words.
 var law_words: Dictionary = {}
+## data/conduct_words.csv: key -> the news / missive text of foraging and
+## desertion (`%s` placeholders filled at runtime; names no kingdom).
+var conduct_words: Dictionary = {}
 ## The LEDGER's ontology (spec 2026-09-30-ledger-ontology-design §7.1):
 ## rows as read, in file order.
 var ledger_lenses: Array = []
@@ -768,6 +771,9 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/law_words.csv", ["key", "text"],
 			func(r): law_words[String(r["key"])] = String(r["text"])):
 		return false
+	if not _load_if_present(dir + "/conduct_words.csv", ["key", "text"],
+			func(r): conduct_words[String(r["key"])] = String(r["text"])):
+		return false
 	if not _load_if_present(dir + "/ledger_lenses.csv", ["lens", "label", "instance_type"],
 			func(r): ledger_lenses.append(r)):
 		return false
@@ -995,20 +1001,7 @@ func load_map(id: String) -> bool:
 	borders.clear()
 	province_borders.clear()
 	provinces_by_id.clear()
-	MapOwnership.invalidate()
-	MapTerrain.invalidate()
-	MapEconomy.forget()
-	RealmEconomy.forget()
-	ManorEconomy.forget()
-	MapPalette.forget_colors()
-	HouseArms.forget()
-	Elevation.forget()
-	Weather.forget()
-	RoadGraph.forget()
-	ArmySystem.forget_grids()
-	ArmySplit.forget()
-	LawEffects.forget()
-	WarSheets.forget()
+	forget_derived()
 	routes.clear()
 	rivers.clear()
 	markers.clear()
@@ -1355,3 +1348,33 @@ static func _order_params(text: String) -> Dictionary:
 func bal(key: String) -> float:
 	assert(balance.has(key), "balance.csv missing key: " + key)
 	return balance[key]
+
+
+## Drop every static cache derived from a repository's tables (most keyed by
+## the repository's instance): a pack swap must not draw the old world, and a
+## run that makes many repositories (the suite's SuiteData.repo per test) must
+## not keep every one's derived tables alive.
+static func forget_derived() -> void:
+	MapOwnership.invalidate()
+	MapTerrain.invalidate()
+	MapManors.invalidate()
+	MapEconomy.forget()
+	RealmEconomy.forget()
+	ManorEconomy.forget()
+	MarketSystem.forget()
+	MapPalette.forget_colors()
+	ManorPalette.forget()
+	HouseArms.forget()
+	Elevation.forget()
+	Weather.forget()
+	RoadGraph.forget()
+	MarchPath.forget()
+	ArmySystem.forget_grids()
+	ArmySplit.forget()
+	LawEffects.forget()
+	WarSheets.forget()
+	WarEconomy.forget()
+	TownStores.forget()
+	MapObjects.forget()
+	EnemyAi.forget()
+	Forage.forget()

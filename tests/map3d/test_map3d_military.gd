@@ -1,9 +1,10 @@
 extends GutTest
-## MILITARY on the 3D map (owner 2026-09-19: "迁移军事地图。注意兵棋大小" /
-## "点击兵棋可以看到该部队信息"): the player's regiments as the 2D map's
-## counters (ArmyCounters) on the 3D HUD, sized by the view but held between
-## the Armies piece's badge_min_px and badge_max_px so they read at every
-## zoom and never swamp the map; a click on one opens the regiment's card.
+## MILITARY on the 3D map (owner 2026-09-19: "点击兵棋可以看到该部队信息";
+## 2026-10-10: 请移除大地图上军事单位的所有标记和数字的mark): a land regiment is
+## its 3D piece at every zoom with nothing drawn over it; a unit with no piece
+## (a fleet) keeps its flat counter (ArmyCounters), sized by the view but held
+## between the Armies piece's badge_min_px and badge_max_px; a click on either
+## opens the regiment's card.
 
 const RunDir := preload("res://tests/run_dir.gd")
 var _fixture := RunDir.dir("map3d_military").path_join("test_map3d_military_world.tscn")
@@ -38,6 +39,13 @@ func _first_regiment() -> Dictionary:
 	return MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state)[0]
 
 
+func _fleet() -> Dictionary:
+	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if String(r.get("is_naval", "0")) == "1":
+			return r
+	return {}
+
+
 func _look_at_regiment(v: Map3DView, r: Dictionary, at_m: float) -> void:
 	v.look_at_pack(Vector2(float(r["x"]), float(r["y"])), at_m)
 
@@ -62,18 +70,30 @@ func test_no_counters_while_the_layer_is_off() -> void:
 	assert_eq(v.army_markers().size(), 0)
 
 
-func test_the_players_regiments_stand_as_counters() -> void:
+func test_a_land_regiment_is_its_piece_at_every_zoom_with_no_counter() -> void:
 	var v := _view()
 	v.set_military(true)
 	var r := _first_regiment()
-	_look_at_regiment(v, r, 20000.0)
-	var mine: Dictionary = {}
-	for m: Dictionary in v.army_markers():
-		if String(m["code"]) == String(r["regiment_code"]):
-			mine = m
-	assert_false(mine.is_empty(), "the regiment under the camera has its counter")
-	assert_almost_eq((mine["pos"] as Vector2).x, v.size.x * 0.5, 2.0)
-	assert_eq(String(mine["text"]), str(int(MapObjects.regiment_size(Game.data, r))))
+	var code := String(r["regiment_code"])
+	assert_ne(String(r.get("is_naval", "0")), "1", "premise: a land regiment")
+	for at_m: float in [Game.data.bal("map3d_zoom_min_m"), 20000.0, 30000.0]:
+		_look_at_regiment(v, r, at_m)
+		assert_true(v.unit_rects().has(code), "its piece stands at %d m" % int(at_m))
+		for m: Dictionary in v.army_markers():
+			assert_true(v.unit_has_piece(String(m["code"])) == false, "a counter only for a unit with no piece")
+			assert_ne(String(m["code"]), code, "no counter over the piece at %d m" % int(at_m))
+
+
+func test_a_fleet_keeps_its_counter() -> void:
+	var v := _view()
+	v.set_military(true)
+	var f := _fleet()
+	assert_false(f.is_empty(), "premise: the crown has a fleet")
+	_look_at_regiment(v, f, 20000.0)
+	assert_false(v.unit_has_piece(String(f["regiment_code"])), "a fleet has no 3D piece")
+	var mine: Dictionary = _marker(v, String(f["regiment_code"]))
+	assert_false(mine.is_empty(), "the fleet under the camera has its counter")
+	assert_eq(String(mine["text"]), str(int(MapObjects.regiment_size(Game.data, f))))
 
 
 func test_a_counters_size_is_held_between_its_bounds() -> void:
@@ -103,18 +123,18 @@ func test_counters_never_overlap() -> void:
 		rects.append(m["rect"])
 
 
-func test_a_click_on_a_counter_opens_the_regiment() -> void:
+## Far out a piece is a few px: a click on it, or within map_army_pick_px of
+## it, still opens the regiment.
+func test_a_click_on_a_far_piece_opens_the_regiment() -> void:
 	var v := _view()
 	v.set_military(true)
 	var r := _first_regiment()
-	_look_at_regiment(v, r, 20000.0)
-	var mine: Dictionary = {}
-	for m: Dictionary in v.army_markers():
-		if String(m["code"]) == String(r["regiment_code"]):
-			mine = m
-	watch_signals(v)
-	_click(v, (mine["rect"] as Rect2).get_center())
 	var code := String(r["regiment_code"])
+	_look_at_regiment(v, r, 30000.0)
+	var box := v.unit_rects()[code] as Rect2
+	assert_eq(v.pick_at(box.get_center()), {"kind": "army", "code": code}, "on its box")
+	watch_signals(v)
+	_click(v, box.get_center())
 	assert_signal_emitted_with_parameters(v, "object_selected",
 		[{"title": String(r["label"]), "obj": {"kind": "army", "code": code}}])
 	assert_eq(v.selected_army(), code)
@@ -131,12 +151,57 @@ func test_hovering_a_counter_names_the_regiment() -> void:
 	assert_eq(v.hovered_kingdom(), Game.data.resolve_realm("player_realm"))
 
 
-func test_the_hud_draws_the_counters() -> void:
+func test_the_hud_draws_only_the_fleets_counters() -> void:
 	var v := _view()
 	v.set_military(true)
-	_look_at_regiment(v, _first_regiment(), 20000.0)
+	_look_at_regiment(v, _fleet(), 20000.0)
 	await wait_process_frames(2)
 	assert_gt(v.drawn_army_count(), 0)
+	assert_eq(v.drawn_army_count(), v.army_markers().size())
+	for m: Dictionary in v.army_markers():
+		assert_true(bool(m["naval"]), "%s is a fleet" % m["code"])
+
+
+## A selected piece is shown by a glow on the ground under it, not a box or a
+## number (owner 2026-10-10): a quad child of the piece lying on its seat
+## (Map3DUnitGlow), under the figures; none while nothing is selected.
+func test_a_selected_piece_glows_on_the_ground_under_it() -> void:
+	var v := _view()
+	v.set_military(true)
+	var r := _first_regiment()
+	var code := String(r["regiment_code"])
+	_look_at_regiment(v, r, 2500.0)
+	var units := v._units as Map3DLayerUnits
+	var piece: Dictionary = units._pieces[code]
+	assert_false(Map3DUnitGlow.shown(piece), "nothing selected, nothing glows")
+	_click(v, (v.unit_rects()[code] as Rect2).get_center())
+	assert_eq(v.selected_armies(), [code])
+	assert_true(Map3DUnitGlow.shown(piece), "the selected piece glows")
+	var glow := (piece["node"] as Node3D).get_node(Map3DUnitGlow.NAME) as MeshInstance3D
+	assert_eq(glow.material_override, Map3DUnitGlow.MATERIAL, "its look is the .tres")
+	assert_lte(glow.position.y, 0.0, "it lies at the seat, at or under the figures' feet")
+	var half := float(piece["half_w_m"]) * Game.data.bal("map3d_unit_glow_ratio")
+	assert_almost_eq((glow.mesh as PlaneMesh).size.x, half * 2.0, 0.001, "the footprint's size")
+	for other: String in units._pieces:
+		if other != code:
+			assert_false(Map3DUnitGlow.shown(units._pieces[other]), "%s does not glow" % other)
+	v.clear_selection()
+	assert_false(Map3DUnitGlow.shown(piece), "let go, it goes out")
+
+
+## A standing piece keeps its facing when the camera moves (owner 2026-10-10:
+## 他会经常乱改变朝向): no camera term in its yaw.
+func test_a_standing_piece_does_not_turn_with_the_camera() -> void:
+	var v := _view()
+	v.set_military(true)
+	var r := _first_regiment()
+	var code := String(r["regiment_code"])
+	_look_at_regiment(v, r, 2500.0)
+	var units := v._units as Map3DLayerUnits
+	var yaw := float(units._want_yaw[code])
+	v.look_at_pack(Vector2(float(r["x"]) + 40.0, float(r["y"]) - 30.0), 6000.0)
+	units.refresh()
+	assert_almost_eq(float(units._want_yaw[code]), yaw, 0.0001, "the pan turned nothing")
 
 
 # --- the rule ---------------------------------------------------------------------
@@ -167,7 +232,7 @@ func test_military_stays_on_the_3d_map() -> void:
 func test_counters_are_cut_once_per_pose() -> void:
 	var v := _view()
 	v.set_military(true)
-	var r := _first_regiment()
+	var r := _fleet()
 	_look_at_regiment(v, r, 20000.0)
 	var a := v.army_markers()
 	assert_gt(a.size(), 0)
@@ -209,23 +274,15 @@ func _marker(v: Map3DView, code: String) -> Dictionary:
 	return {}
 
 
-func test_every_unit_round_a_town_has_its_own_counter() -> void:
+func test_every_unit_round_a_town_stands_as_its_own_piece() -> void:
 	var v := _view()
 	v.set_military(true)
 	var codes := _capital_units()
 	assert_gt(codes.size(), 1, "more than one unit stands round the capital")
 	v.look_at_pack(_capital_xy(), 20000.0)
-	var seen: Dictionary = {}
-	for m: Dictionary in v.army_markers():
-		assert_false(m.has("garrison"), "no counter is a garrison's")
-		assert_false(m.has("codes"), "no counter stands for several units")
-		assert_false(seen.has(String(m["code"])), "%s is drawn once" % m["code"])
-		seen[String(m["code"])] = true
 	for c: String in codes:
-		var m := _marker(v, c)
-		assert_false(m.is_empty(), "%s has its own counter" % c)
-		assert_eq(String(m["text"]), str(int(MapObjects.regiment_size(Game.data,
-			ArmySystem.regiment(Game.data, c, Game.state)))), "%s counts only its own men" % c)
+		assert_true(v.unit_rects().has(c), "%s stands as its own piece" % c)
+		assert_true(_marker(v, c).is_empty(), "%s has no counter" % c)
 
 
 func test_only_the_household_wears_the_crown() -> void:
@@ -254,13 +311,12 @@ func test_the_seated_unit_stands_as_its_own_piece() -> void:
 	assert_true(v.unit_rects().has(seat), "the seat's unit stands in a piece of its own")
 
 
-func test_a_click_on_a_units_counter_selects_that_unit() -> void:
+func test_a_click_on_a_units_piece_selects_that_unit() -> void:
 	var v := _view()
 	v.set_military(true)
 	var seat := ArmyGround.seat_of(Game.data, Game.state, _capital())
-	v.look_at_pack(_capital_xy(), 20000.0)
-	var m := _marker(v, seat)
-	var at := (m["rect"] as Rect2).get_center()
+	v.look_at_pack(_capital_xy(), 2500.0)
+	var at := (v.unit_rects()[seat] as Rect2).get_center()
 	assert_eq(v.pick_at(at), {"kind": "army", "code": seat})
 	watch_signals(v)
 	_click(v, at)
@@ -268,45 +324,3 @@ func test_a_click_on_a_units_counter_selects_that_unit() -> void:
 	assert_eq(v.selected_armies(), [seat], "the one unit is selected")
 	v.clear_selection()
 	assert_eq(v.selected_armies(), [], "and let go")
-
-
-## A land unit's counter keeps off the sea (2026-10-08 visual review, a hard
-## rule): far out over the capital every land counter the spreading moved
-## stands over land, as the HUD's own land test reads it.
-func test_moved_land_counters_stand_on_land() -> void:
-	var v := _view()
-	v.set_military(true)
-	var hud := v._hud.piece("Armies") as Map3DHudArmies
-	var moved := 0
-	for d: float in [90000.0, 150000.0]:
-		v.look_at_pack(_capital_xy(), d)
-		for m: Dictionary in v.army_markers():
-			if bool(m["naval"]) or (m["offset"] as Vector2) == Vector2.ZERO:
-				continue
-			moved += 1
-			assert_true(hud._on_land((m["rect"] as Rect2).get_center()), "%s at %.0f m" % [m["code"], d])
-	assert_gt(moved, 0, "premise: some counter was moved")
-
-
-## The land test never gives up (wave 2: a cap of tests per cut let crowded
-## counters fall back to the sea): open sea reads as sea however many points
-## one cut asks about.
-func test_the_land_test_has_no_budget() -> void:
-	var v := _view()
-	v.set_military(true)
-	var hud := v._hud.piece("Armies") as Map3DHudArmies
-	v.look_at_pack(_capital_xy(), 150000.0)
-	v.army_markers()
-	var ctx: Map3DContext = hud.ctx
-	var wet := func(p: Vector2) -> bool:
-		var hit: Variant = ctx.ground_at(p)
-		return hit == null or MapEconomy.cell_at(ctx.repo, ctx.to_pack(Vector2((hit as Vector3).x, (hit as Vector3).z))) < 0
-	var sea: Array = []
-	for y in range(8, 450, 8):
-		for x in range(8, 800, 8):
-			var p := Vector2(x, y)
-			if [p, p + Vector2(8, 0), p - Vector2(8, 0), p + Vector2(0, 8), p - Vector2(0, 8)].all(wet):
-				sea.append(p)
-	assert_gt(sea.size(), 300, "premise: open sea in view")
-	for p: Vector2 in sea:
-		assert_false(hud._on_land(p), "open sea at %s" % p)

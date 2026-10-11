@@ -101,3 +101,22 @@ func test_hits() -> void:
 func test_the_curve_is_deterministic() -> void:
 	var ctrl := PackedVector2Array([Vector2(0, 0), Vector2(3, 7), Vector2(11, 2)])
 	assert_eq(WarPlanGeometry.curve(ctrl, 1.0), WarPlanGeometry.curve(ctrl, 1.0))
+
+
+func test_clip_to_rect_cuts_at_the_edge() -> void:
+	var runs := WarPlanGeometry.clip_to_rect(PackedVector2Array([Vector2(-10, 5), Vector2(10, 5)]), Rect2(0, 0, 20, 20))
+	assert_eq(runs.size(), 1)
+	assert_eq(runs[0], PackedVector2Array([Vector2(0, 5), Vector2(10, 5)]))
+
+
+func test_a_road_that_leaves_and_returns_draws_two_runs() -> void:
+	var pts := PackedVector2Array([Vector2(5, 5), Vector2(30, 5), Vector2(30, 15), Vector2(5, 15)])
+	var runs := WarPlanGeometry.clip_to_rect(pts, Rect2(0, 0, 20, 20))
+	assert_eq(runs.size(), 2)
+	assert_eq(runs[0], PackedVector2Array([Vector2(5, 5), Vector2(20, 5)]))
+	assert_eq(runs[1], PackedVector2Array([Vector2(20, 15), Vector2(5, 15)]))
+
+
+func test_a_road_wholly_inside_is_one_run_unchanged() -> void:
+	var pts := PackedVector2Array([Vector2(1, 1), Vector2(5, 9), Vector2(8, 2)])
+	assert_eq(WarPlanGeometry.clip_to_rect(pts, Rect2(0, 0, 20, 20)), [pts])

@@ -17,6 +17,12 @@ static var _catch_cache: Dictionary = {}
 static var _near_cache: Dictionary = {}
 
 
+## Drop the per-repo catchments (DataRepository.forget_derived).
+static func forget() -> void:
+	_catch_cache.clear()
+	_near_cache.clear()
+
+
 static func units_per_gold(repo: DataRepository) -> int:
 	@warning_ignore("integer_division")  # the permille divides 1000 (test_army_supply_data)
 	return 1000 / maxi(1, int(repo.bal("army_supply_gold_permille")))

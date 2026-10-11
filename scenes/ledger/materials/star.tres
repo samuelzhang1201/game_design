@@ -1,6 +1,8 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
 
 [ext_resource type="Shader" path="res://scenes/ledger/star.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" uid="uid://cmys16306cbb4" path="res://assets/2D/ledger/stars/orb_starglass_a.png" id="2_tex"]
 
 [resource]
 shader = ExtResource("1_shader")
+shader_parameter/matcap = ExtResource("2_tex")

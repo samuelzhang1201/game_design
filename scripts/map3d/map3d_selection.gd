@@ -126,16 +126,13 @@ func toggle_pick(picked: Dictionary) -> void:
 
 
 ## A Shift-drag box (design px): every LAND unit of the player's whose piece
-## or counter it touches (spec §5.6), sorted.
+## it touches (spec §5.6; a piece is drawn at every zoom), sorted.
 func select_box(r: Rect2) -> void:
 	var codes: Array = []
 	var rects: Dictionary = view.unit_rects()
 	for code: String in rects:
 		if (rects[code] as Rect2).intersects(r) and not codes.has(code):
 			codes.append(code)
-	for m: Dictionary in view.army_markers():
-		if (m["rect"] as Rect2).intersects(r) and not codes.has(String(m["code"])):
-			codes.append(String(m["code"]))
 	codes = codes.filter(func(c: String) -> bool: return _mine(c) and String(ArmySystem.regiment(
 		ctx.repo, c, ctx.state()).get("is_naval", "0")) != "1")
 	codes.sort()

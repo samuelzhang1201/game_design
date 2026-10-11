@@ -212,3 +212,52 @@ static func hit(path: PackedVector2Array, at: Vector2) -> float:
 ## How far `at` is from a ring's rim.
 static func ring_hit(centre: Vector2, radius: float, at: Vector2) -> float:
 	return absf(centre.distance_to(at) - radius)
+
+
+## The runs of `pts` lying inside `rect`, each cut exactly at the rect's edge
+## (Liang-Barsky per segment); a road that leaves and comes back gives two.
+static func clip_to_rect(pts: PackedVector2Array, rect: Rect2) -> Array:
+	var out: Array = []
+	var run := PackedVector2Array()
+	for i in range(1, pts.size()):
+		var a := pts[i - 1]
+		var b := pts[i]
+		var d := b - a
+		var t0 := 0.0
+		var t1 := 1.0
+		var ok := true
+		var ps := [-d.x, d.x, -d.y, d.y]
+		var qs := [a.x - rect.position.x, rect.end.x - a.x, a.y - rect.position.y, rect.end.y - a.y]
+		for k in 4:
+			var pk: float = ps[k]
+			var qk: float = qs[k]
+			if is_zero_approx(pk):
+				if qk < 0.0:
+					ok = false
+					break
+			else:
+				var r := qk / pk
+				if pk < 0.0:
+					t0 = maxf(t0, r)
+				else:
+					t1 = minf(t1, r)
+		if not ok or t0 > t1:
+			if run.size() >= 2:
+				out.append(run)
+			run = PackedVector2Array()
+			continue
+		var ca := a + d * t0
+		var cb := a + d * t1
+		if run.is_empty() or t0 > 0.0:
+			if run.size() >= 2:
+				out.append(run)
+			run = PackedVector2Array([ca])
+		elif run[run.size() - 1] != ca:
+			run.append(ca)
+		run.append(cb)
+		if t1 < 1.0:
+			out.append(run)
+			run = PackedVector2Array()
+	if run.size() >= 2:
+		out.append(run)
+	return out

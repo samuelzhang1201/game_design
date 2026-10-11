@@ -80,18 +80,15 @@ func _pending_ends(c: Dictionary) -> Dictionary:
 	var to: Variant = _screen_of_m(Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))
 	if from == null or to == null:
 		return {}
-	# through its waypoints, along the curve it will walk (spec 2026-10-07-march-waypoints)
-	var pts := PackedVector2Array([from])
-	var wps := CourierSystem.waypoints_px(ctx.repo, order)
-	if not wps.is_empty():
-		pts = PackedVector2Array()
-		for p: Vector2 in ArmySystem.curve_px(ctx.repo, ArmySystem.position_of(ctx.repo, ctx.state(), reg), wps,
-				ArmySystem.metres_to_pack(ctx.repo, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))):
-			var at: Variant = _screen_of(p)
-			if at != null:
-				pts.append(at)
-	else:
-		pts.append(to)
+	# through its waypoints and round any scarp, along the road it will walk
+	# (specs 2026-10-07-march-waypoints, 2026-10-10-march-slope-detour)
+	var pts := PackedVector2Array()
+	for p: Vector2 in ArmySystem.curve_px(ctx.repo, ArmySystem.position_of(ctx.repo, ctx.state(), reg),
+			CourierSystem.waypoints_px(ctx.repo, order),
+			ArmySystem.metres_to_pack(ctx.repo, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))):
+		var at: Variant = _screen_of(p)
+		if at != null:
+			pts.append(at)
 	return {"from": from, "to": to, "pts": pts}
 
 
