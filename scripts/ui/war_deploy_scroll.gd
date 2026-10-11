@@ -27,6 +27,13 @@ var _flight: EnvelopeFlight = null
 
 ## The photographed wax seal (library U-60), the wax itself.
 @export var wax: Texture2D = preload("res://assets/2D/ui/war_table/council_seal.png")
+## The photographed rolled scroll on the button (library U-61, GameArt.WAR_TOOL_ART
+## "scroll"): the table's own object, drawn with its shadow; the table without
+## it draws the vector scroll below.
+@export var rolled_key := "scroll"
+## How much of the button the photographed scroll fills (its finials must
+## clear the table's edge and the window's).
+@export var rolled_fit := 0.85
 ## The rolled scroll greyed while nothing is pencilled: its saturation and value.
 @export var idle_sat := 0.3
 @export var idle_value := 0.7
@@ -242,6 +249,10 @@ func _draw_rolled() -> void:
 	var r := Rect2(Vector2.ZERO, b.size)
 	var idle := b.disabled
 	var lift := 0.06 if b.is_hovered() and not idle else 0.0
+	var art := GameArt.table(GameArt.WAR_TOOL_ART).of(rolled_key) as Texture2D
+	if art != null:
+		_draw_rolled_art(b, r, art, idle, lift)
+		return
 	var roller := r.size.y * 0.24
 	var body := Rect2(r.position + Vector2(roller * 0.6, r.size.y * 0.2),
 		Vector2(r.size.x - roller * 1.2, r.size.y * 0.58))
@@ -279,6 +290,24 @@ func _draw_rolled() -> void:
 			grey.call(Color.WHITE) if not idle else Color(0.62, 0.6, 0.6))
 	else:
 		b.draw_circle(mid, seal_r, grey.call(UiPalette.table_color("wax_light", Color("a63a2f"))), true, -1.0, true)
+
+
+## The photographed scroll fitted inside the button (rolled_fit of it), its
+## own alpha the shape of a light shadow down-right, lifted a touch under the
+## pointer. Never greyed: a filter over a real object reads as dirt, not as
+## "nothing pencilled" (critic 2026-10-11) — the button's disabled state and
+## its tooltip say that.
+func _draw_rolled_art(b: Control, r: Rect2, art: Texture2D, _idle: bool, lift: float) -> void:
+	var ts := art.get_size()
+	if ts.x <= 0.0 or ts.y <= 0.0:
+		return
+	var k := minf(r.size.x / ts.x, r.size.y / ts.y) * rolled_fit * (1.0 + lift)
+	var box := Rect2(r.position + (r.size - ts * k) * 0.5, ts * k)
+	for i: int in 3:   # a light shadow down-right, the war table's one light
+		var o := shadow_px * float(i + 1) * 0.5
+		b.draw_texture_rect(art, Rect2(box.position + Vector2(o, o), box.size), false,
+			Color(0, 0, 0, [0.10, 0.06, 0.03][i]))
+	b.draw_texture_rect(art, box, false, Color.WHITE)
 
 
 ## The seal being made, over the unrolled resolutions: the wax spreads, then

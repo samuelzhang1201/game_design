@@ -137,6 +137,44 @@ def install_ui() -> int:
     return done
 
 
+def install_war_tools() -> int:
+    """The WAR ROOM's tool roll glyphs and the resolutions' rolled scroll
+    (library W-61..W-68, U-61; prompts in war_tool_prompts.csv): post.py
+    --tier icon cut-outs installed by assets/imagegen/war_tool_install.csv
+    (art_id, key, px, square) into assets/2D/war_room/tools/<key>.png, the
+    ArtTable war_tool_art.tres there mapping each key. Sizes follow the use
+    (asset-resolution-per-use): a slot glyph is 36 of a 44 design px slot x
+    ~3 window scale -> 128 square; the rolled scroll fills a 115 x 72 design
+    px button x 3 -> 384 wide, its aspect kept (square 0)."""
+    dest = ROOT / "assets" / "2D" / "war_room" / "tools"
+    dest.mkdir(parents=True, exist_ok=True)
+    # WAR_TOOLS_CUTOUTS names another folder of cut-outs (a candidate set
+    # shot for the visual review) instead of out/game/icon.
+    src = Path(os.environ.get("WAR_TOOLS_CUTOUTS", str(HERE / "out" / "game" / "icon")))
+    done = 0
+    for r in csv.DictReader((HERE / "war_tool_install.csv").open()):
+        art_id, key, px, square = r["art_id"], r["key"], int(r["px"]), r["square"] == "1"
+        hits = sorted(src.glob("%s*.png" % art_id))
+        if not hits:
+            print("  (no cut-out for %s / %s — run post.py --tier icon first)" % (art_id, key))
+            continue
+        w, h, ch, pxs = decode_png(hits[-1])
+        if ch != 4:
+            print("  (%s is not RGBA — post.py --tier icon writes a cut-out)" % hits[-1].name)
+            continue
+        cw, chh, rgba = trim_alpha(w, h, bytearray(pxs))
+        scale = px / max(cw, chh)
+        tw, th = max(1, round(cw * scale)), max(1, round(chh * scale))
+        small = resize_rgba(cw, chh, rgba, tw, th)
+        if square:
+            encode_png(dest / ("%s.png" % key), px, px, 4, bytes(pad_square(tw, th, small, px)))
+        else:
+            encode_png(dest / ("%s.png" % key), tw, th, 4, bytes(small))
+        print("  %-6s %-10s %dx%d%s" % (art_id, key, tw, th, " in %d" % px if square else ""))
+        done += 1
+    return done
+
+
 def trim_alpha(w: int, h: int, px: bytearray) -> tuple[int, int, bytearray]:
     """RGBA cropped to the pixels whose alpha clears UI_ALPHA_MIN."""
     x0, y0, x1, y1 = w, h, -1, -1
@@ -787,6 +825,7 @@ def install_app_icon(size: int = APP_ICON_PX) -> int:
 def main() -> int:
     chapters = {"goods": install_goods, "cast": install_cast,
                 "ui": install_ui,
+                "war_tools": install_war_tools,
                 "paintings": install_paintings, "compass": install_compass,
                 "buildings": install_buildings, "goods_icons": install_goods_icons,
                 "arms": install_arms, "army_paintings": install_army_paintings,

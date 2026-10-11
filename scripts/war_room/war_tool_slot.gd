@@ -6,6 +6,10 @@ extends Control
 ## an inked glyph of a side's crayon, a mark or an action, ringed in brass
 ## while chosen, faint while it cannot be used (`why`, its tooltip then). Its
 ## look is its exported fields, set in the scene; a click says `pressed(key)`.
+## The glyph is the painted ink drawing of `art_key` in GameArt.WAR_TOOL_ART
+## (library W-61..W-68), inked in the slot's colour by WarInkIcon (a stick in
+## its own colour, the rest in `glyph_ink`); a key the table lacks falls back
+## to the vector glyph drawn below.
 
 signal pressed(key: String)
 
@@ -37,10 +41,24 @@ signal pressed(key: String)
 		chosen = v
 		queue_redraw()
 ## How faint a slot that cannot be used is drawn.
-@export var faint := 0.3:
+@export var faint := 0.45:
 	set(v):
 		faint = v
 		queue_redraw()
+## How much of the painted glyph's light fill stays when it is inked (0 keeps
+## only the outline, 1 the whole drawing).
+@export var glyph_light_keep := 0.5:
+	set(v):
+		glyph_light_keep = v
+		_inked = null
+		queue_redraw()
+## The painted glyph's side within the 44 px slot.
+@export var glyph_px := 38.0:
+	set(v):
+		glyph_px = v
+		queue_redraw()
+var _inked: Texture2D = null   # the glyph inked in the current colour
+var _inked_for := ""           # which (art, colour, keep) _inked is
 ## Why it cannot be used now ("" it can): drawn faint, said by its tooltip,
 ## and a click does nothing.
 var why := "":
@@ -64,11 +82,42 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+## The art table's key for this slot: both crayons wear the one crayon
+## drawing, tinted by `stick_color`.
+func art_key() -> String:
+	return "crayon" if key in ["blue", "red", "ink"] else key
+
+
+## The colour the glyph is inked in: a stick its own, the rest the pale ink.
+func glyph_colour() -> Color:
+	return stick_color if group == "stick" and key != "hand" else glyph_ink
+
+
+## The painted glyph inked in this slot's colour, cached until the art or
+## the colour changes; null when the table has no drawing for `art_key`.
+func inked_glyph() -> Texture2D:
+	var art := GameArt.table(GameArt.WAR_TOOL_ART).of(art_key()) as Texture2D
+	if art == null:
+		return null
+	var ink := glyph_colour()
+	var stamp := "%s|%s|%.3f" % [art.resource_path, ink.to_html(), glyph_light_keep]
+	if _inked == null or _inked_for != stamp:
+		_inked = WarInkIcon.inked(art, ink, glyph_light_keep)
+		_inked_for = stamp
+	return _inked
+
+
 func _draw() -> void:
 	var c := size * 0.5
 	var s := minf(size.x, size.y) / 44.0   # the glyphs are drawn on a 44 px slot
 	if chosen:
 		draw_arc(c, 20.0 * s, 0.0, TAU, 32, ring, 2.5 * s, true)
+	var painted := inked_glyph()
+	if painted != null:
+		var box := Vector2(glyph_px, glyph_px) * s
+		draw_texture_rect(painted, Rect2(c - box * 0.5, box), false,
+			Color(1.0, 1.0, 1.0, faint if why != "" else 1.0))
+		return
 	var p := func(x: float, y: float) -> Vector2: return c + Vector2(x, y) * s
 	var ink := glyph_ink
 	if why != "":
