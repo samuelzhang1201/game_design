@@ -362,6 +362,7 @@ func test_a_regiment_on_the_hosts_road_is_fought_on_the_day_loop() -> void:
 	var to := EnemyAi.target_point_m(repo, String(mind["target_kind"]), String(mind["target_id"]))
 	# halfway along the straight road the host marches, standing (no garrison)
 	var mine: String = _mine()[0]
+	@warning_ignore("integer_division")
 	_place_mine(s, mine, (from + to) / 2, ArmySystem.ORDER_STANDBY)
 	var fought_on := -1
 	for n in 15:

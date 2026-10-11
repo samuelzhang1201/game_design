@@ -139,17 +139,17 @@ static func arrow(path: PackedVector2Array, tail_w: float, neck_w: float, head_l
 		var n := right_of(dirs[i])
 		left.append(body[i] - n * half)
 		right.append(body[i] + n * half)
-	var band := PackedVector2Array()
-	band.append_array(left)
+	var band_poly := PackedVector2Array()
+	band_poly.append_array(left)
 	right.reverse()
-	band.append_array(right)
-	band.append(body[0] + dirs[0] * tail_w * 0.55)   # the pennon's notch
+	band_poly.append_array(right)
+	band_poly.append(body[0] + dirs[0] * tail_w * 0.55)   # the pennon's notch
 	var tip := path[path.size() - 1]
 	var d := (tip - body[body.size() - 1]).normalized()
 	var base := tip - d * hl
 	var n2 := right_of(d)
 	var head := PackedVector2Array([base - n2 * hw * 0.5, tip, base + n2 * hw * 0.5, base + d * hl * 0.12])
-	return {"band": band, "head": head}
+	return {"band": band_poly, "head": head}
 
 
 ## The front's teeth: a triangle `base` along the line and `height` off it

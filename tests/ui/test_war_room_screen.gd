@@ -737,12 +737,12 @@ func test_every_door_out_asks() -> void:
 		"the close button": func(r: GameRoot) -> void: (r.war_room_screen().get_node("%Close") as Button).pressed.emit(),
 		"Quit to Desktop": func(r: GameRoot) -> void: r.leave_war_room(func() -> void: pass),
 	}
-	for name: String in doors:
+	for door: String in doors:
 		var r: GameRoot = await _room_with_a_draft()
-		(doors[name] as Callable).call(r)
+		(doors[door] as Callable).call(r)
 		await wait_process_frames(1)
-		assert_true(_prompt(r).visible, name + " asks")
-		assert_true(r.war_room_screen().visible, name + " leaves the room standing")
+		assert_true(_prompt(r).visible, door + " asks")
+		assert_true(r.war_room_screen().visible, door + " leaves the room standing")
 		r.queue_free()
 		await wait_process_frames(1)
 
@@ -953,18 +953,18 @@ func test_every_way_out_of_the_room_lets_the_clock_go() -> void:
 		"an event's switch": func(r: GameRoot) -> void: r._switch_to(GameRoot.State.COURT),
 		"Quit's door": func(r: GameRoot) -> void: r.leave_war_room(func() -> void: pass),
 	}
-	for name: String in doors:
+	for door: String in doors:
 		var r: GameRoot = await _court()
 		r.bottom_bar().button("WAR ROOM").pressed.emit()
 		await wait_process_frames(2)
-		assert_true(Game.holds_clock("war_room"), name + ": held on entering")
+		assert_true(Game.holds_clock("war_room"), door + ": held on entering")
 		watch_signals(Game)
-		(doors[name] as Callable).call(r)
+		(doors[door] as Callable).call(r)
 		await wait_process_frames(2)
-		assert_false(r.war_room_screen().visible, name + " leaves the room")
-		assert_false(Game.holds_clock("war_room"), name + " lets the room's hold go")
-		assert_eq(Game.clock_held, r.ledger_screen().visible, name + ": held only while the LEDGER is open")
-		assert_eq(Game.clock_speed, 0, name + " starts nothing")
+		assert_false(r.war_room_screen().visible, door + " leaves the room")
+		assert_false(Game.holds_clock("war_room"), door + " lets the room's hold go")
+		assert_eq(Game.clock_held, r.ledger_screen().visible, door + ": held only while the LEDGER is open")
+		assert_eq(Game.clock_speed, 0, door + " starts nothing")
 		if r.ledger_screen().visible:
 			r.ledger_screen().close()
 			assert_false(Game.clock_held, "the LEDGER opened from the room lets go on closing")
@@ -1045,15 +1045,15 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 	for reg: Dictionary in mine:
 		if String(reg.get("is_naval", "0")) == "1":
 			continue
-		var at := ArmySystem.position_of(Game.data, Game.state, reg)
-		var sheet := WarSheets.sheet_of(Game.data, at + Vector2(4.5, -1.25))
+		var reg_at := ArmySystem.position_of(Game.data, Game.state, reg)
+		var sheet := WarSheets.sheet_of(Game.data, reg_at + Vector2(4.5, -1.25))
 		var rect: Rect2 = WarSheets.series(Game.data)[sheet]["rect"]
 		var shared := mine.any(func(o: Dictionary) -> bool:
 			return String(o["regiment_code"]) != String(reg["regiment_code"]) \
 				and rect.has_point(ArmySystem.position_of(Game.data, Game.state, o)))
 		if shared:
 			code = String(reg["regiment_code"])
-			engine = at
+			engine = reg_at
 			break
 	assert_ne(code, "", "some sheet holds two of our regiments")
 	# on the march: a regiment quartered in a town stands as its garrison's piece

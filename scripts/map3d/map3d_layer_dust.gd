@@ -131,17 +131,17 @@ func _walk(code: String, xz: Vector2, h: float, running: bool, now: float) -> vo
 		col["emitted"] = -INF  # it jumped (a frame's walk is metres): no dust bridging the gap
 		return
 	var walked := float(col["walked"])
-	var step := maxf(h * step_share, 1.0)
+	var step_m := maxf(h * step_share, 1.0)
 	var puffs: Array = col["puffs"]
-	var at := maxf(float(col["emitted"]) + step, walked)
+	var at := maxf(float(col["emitted"]) + step_m, walked)
 	while at <= walked + d:
 		var p := from.lerp(xz, (at - walked) / d)
-		var sd := seed_of(code, puffs.size() + int(at / step))
+		var sd := seed_of(code, puffs.size() + int(at / step_m))
 		var ahead := (xz - from).normalized()
 		var side := ahead.orthogonal() * (sd - 0.5) * 2.0 * spread_share * h
 		puffs.append([p + side - ahead * back_share * h, now, sd, at])
 		col["emitted"] = at
-		at += step
+		at += step_m
 	col["walked"] = walked + d
 
 

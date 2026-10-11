@@ -684,6 +684,7 @@ func _march3d_step(o: int) -> void:
 		menu.id_pressed.emit(0)
 		print("march3d: aiming=%s" % menu.aiming())
 	elif o < _march_steps():
+		@warning_ignore("integer_division")
 		var k := (o - 4) / 6
 		var at: Vector2 = points[k]
 		match (o - 4) % 6:
@@ -1661,8 +1662,8 @@ func _war_click_supply(view: WarRoomView, menu: ArmyOrderMenu) -> void:
 	for t: String in view.supply_pick:
 		if String(view.supply_pick[t]) != "":
 			continue
-		var b: Dictionary = Game.data.burgs[t]
-		var at: Variant = view.screen_pos_of_px(Vector2(float(b["x"]), float(b["y"])))
+		var bg: Dictionary = Game.data.burgs[t]
+		var at: Variant = view.screen_pos_of_px(Vector2(float(bg["x"]), float(bg["y"])))
 		if at == null or end == null or not Rect2(Vector2.ZERO, view.size).grow(-30).has_point(at):
 			continue
 		var d := (at as Vector2).distance_to(end)

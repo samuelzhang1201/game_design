@@ -124,7 +124,7 @@ func test_a_rows_slot_draws_a_front_in_that_sides_colour_facing_the_other_side()
 	_drag(view, from, to)
 	assert_eq(view.camera_rig().target, target, "drawing never pans")
 	var fronts: Array = (Game.state.war_plans["strokes"] as Dictionary).values().filter(
-		func(s: Dictionary) -> bool: return String(s["kind"]) == "front")
+		func(st: Dictionary) -> bool: return String(st["kind"]) == "front")
 	assert_eq(fronts.size(), 1)
 	var s: Dictionary = fronts[0]
 	assert_eq(String(s["colour"]), "red")

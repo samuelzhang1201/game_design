@@ -655,7 +655,7 @@ static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, 
 ## (`stance_order_id`), apart from the march's: it waits in `stance_next` and
 ## BattleSystem.settle_stances makes it the stance at the end of the day's
 ## battles, so it fights from the next day (spec 2026-10-07-enemy-ai-and-battle §4.4).
-static func _deliver_stance(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary, entry: Dictionary) -> Dictionary:
+static func _deliver_stance(repo: DataRepository, _state: GameState, c: Dictionary, order: Dictionary, entry: Dictionary) -> Dictionary:
 	if entry.is_empty() or int(entry.get("stance_order_id", 0)) > int(c["id"]):
 		return {"type": "stale", "said": STALE_SAID}
 	entry["stance_next"] = String(order.get("stance", ArmySystem.STANCE_DEFAULT))

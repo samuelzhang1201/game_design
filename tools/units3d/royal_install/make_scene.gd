@@ -26,9 +26,9 @@ func _init() -> void:
 	if uid == ResourceUID.INVALID_ID:
 		uid = ResourceUID.create_id()
 	var base: PackedScene = ResourceLoader.load(SCENE, "PackedScene", ResourceLoader.CACHE_MODE_IGNORE)
-	var root := base.instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
-	root.editor_description = NOTE
-	var mi: MeshInstance3D = Map3DUnits.meshes(root)[0]
+	var scene_root := base.instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
+	scene_root.editor_description = NOTE
+	var mi: MeshInstance3D = Map3DUnits.meshes(scene_root)[0]
 	var src := mi.mesh.surface_get_material(0) as BaseMaterial3D
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = "royal_atlas"
@@ -46,8 +46,8 @@ func _init() -> void:
 	for dep: String in [GLB, MAPS % "", MAPS % "_mr", MAPS % "_n"]:
 		_register(dep)
 	var packed := PackedScene.new()
-	packed.pack(root)
-	root.free()
+	packed.pack(scene_root)
+	scene_root.free()
 	print("royal.tscn: ", error_string(ResourceSaver.save(packed, SCENE)))
 	ResourceSaver.set_uid(SCENE, uid)
 	var table: ArtTable = load(GameArt.ARMY_MODELS)

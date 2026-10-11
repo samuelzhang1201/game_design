@@ -429,10 +429,10 @@ func test_hold_host_leaving_liberates_the_manors() -> void:
 	var ev := SiegeSystem.settle_day(repo, s, [])
 	for c: int in cells:
 		assert_eq(MapManors.owner_of(repo, s, c), before[c], "manor %d back to its house" % c)
-		var log: Array = s.manor_log.filter(func(m: Dictionary) -> bool: return int(m["cell"]) == c)
-		assert_eq(log.size(), 2, "taken and given back")
-		if log.size() == 2:
-			assert_true(String(log[1]["reason"]).begins_with("liberated"), String(log[1]["reason"]))
+		var mlog: Array = s.manor_log.filter(func(m: Dictionary) -> bool: return int(m["cell"]) == c)
+		assert_eq(mlog.size(), 2, "taken and given back")
+		if mlog.size() == 2:
+			assert_true(String(mlog[1]["reason"]).begins_with("liberated"), String(mlog[1]["reason"]))
 	assert_true(EnemyAi.target_held(repo, s, "town", town), "the town is the crown's again")
 	assert_eq(_of(ev, "siege_liberated").size(), 1, "told")
 	assert_eq(_of(SiegeSystem.settle_day(repo, s, []), "siege_liberated").size(), 0, "once")
@@ -467,14 +467,14 @@ func test_liberation_restores_a_non_default_prior_holder() -> void:
 	EnemyAi.step_day(repo, s)
 	SiegeSystem.settle_day(repo, s, [])
 	assert_eq(MapManors.owner_of(repo, s, cell), buyer, "back to the house that held it, not " + default)
-	var log: Array = s.manor_log.filter(func(m: Dictionary) -> bool: return int(m["cell"]) == cell)
-	assert_eq(log.size(), 3, "bought, taken, liberated")
-	if log.size() == 3:
-		assert_eq(String(log[0]["to"]), buyer)
-		assert_true(String(log[1]["reason"]).begins_with("taken by "), String(log[1]["reason"]))
-		assert_eq(String(log[2]["from"]), String(log[1]["to"]), "from the raider's house")
-		assert_eq(String(log[2]["to"]), buyer, "to the buyer")
-		assert_true(String(log[2]["reason"]).begins_with("liberated"), String(log[2]["reason"]))
+	var mlog: Array = s.manor_log.filter(func(m: Dictionary) -> bool: return int(m["cell"]) == cell)
+	assert_eq(mlog.size(), 3, "bought, taken, liberated")
+	if mlog.size() == 3:
+		assert_eq(String(mlog[0]["to"]), buyer)
+		assert_true(String(mlog[1]["reason"]).begins_with("taken by "), String(mlog[1]["reason"]))
+		assert_eq(String(mlog[2]["from"]), String(mlog[1]["to"]), "from the raider's house")
+		assert_eq(String(mlog[2]["to"]), buyer, "to the buyer")
+		assert_true(String(mlog[2]["reason"]).begins_with("liberated"), String(mlog[2]["reason"]))
 
 
 ## An occupation saved to disk and loaded plays on exactly as the one that
@@ -851,7 +851,7 @@ func test_a_running_assault_is_called_off_the_day_its_host_turns_home() -> void:
 	s.tick = 1
 	s.day = 20
 	var g := String(_town_and_garrison(s)[1])
-	var town := _besiege(s, main, [g])
+	_besiege(s, main, [g])
 	s.ai_hosts[main]["siege_days"] = 3
 	var first := _storm(s, main, g)
 	assert_eq(_of(first[0], "round").size(), 1, "the assault fought its first round")
@@ -1145,10 +1145,10 @@ func test_a_siege_on_the_day_loop_wears_down_storms_and_takes_the_town() -> void
 	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD")
 	assert_false(EnemyAi.target_held(repo, s, "town", town), "the town is occupied")
 	var cell := EnemyAi.target_cell(repo, s, "town", town)
-	var log: Array = s.manor_log.filter(func(l: Dictionary) -> bool: return int(l["cell"]) == cell)
-	assert_eq(log.size(), 1, "its manor moved once, with its reason")
-	if log.size() == 1:
-		assert_true(String(log[0]["reason"]).contains("siege of"), String(log[0]["reason"]))
+	var mlog: Array = s.manor_log.filter(func(l: Dictionary) -> bool: return int(l["cell"]) == cell)
+	assert_eq(mlog.size(), 1, "its manor moved once, with its reason")
+	if mlog.size() == 1:
+		assert_true(String(mlog[0]["reason"]).contains("siege of"), String(mlog[0]["reason"]))
 	assert_eq(s.territory_log.size(), 0, "no border moved")
 	var letters: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "battle")
 	var said := false

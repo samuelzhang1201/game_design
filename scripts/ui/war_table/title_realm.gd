@@ -92,7 +92,7 @@ func _process(delta: float) -> void:
 	_place()
 
 func _place() -> void:
-	var ctx := view.context()
+	view.context()
 	(view.get_node("Viewport/World/CameraRig") as Map3DCameraRig).place(_centre, _distance, _yaw)
 
 ## Start: down from the title's height to the game's opening view (its scale

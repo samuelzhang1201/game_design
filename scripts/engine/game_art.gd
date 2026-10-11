@@ -31,10 +31,10 @@ const HOUSE_MODELS := "res://assets/3D/buildings/house_models.tres"
 static var _tables: Dictionary = {}
 
 
-static func table(path: String) -> ArtTable:
-	if not _tables.has(path):
-		_tables[path] = load(path) as ArtTable if ResourceLoader.exists(path) else ArtTable.new()
-	return _tables[path]
+static func table(table_path: String) -> ArtTable:
+	if not _tables.has(table_path):
+		_tables[table_path] = load(table_path) as ArtTable if ResourceLoader.exists(table_path) else ArtTable.new()
+	return _tables[table_path]
 
 
 ## `key`'s art path in the table at `path`, or "".

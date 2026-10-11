@@ -40,10 +40,10 @@ func _ready() -> void:
 	%DetailClose.pressed.connect(_close_detail)
 	%SendAgain.text = _word("send_again")
 	%SendAgain.pressed.connect(_send_again)
-	for page: String in PAGES:
-		var b := page_button(page)
-		b.text = _word("page_" + page)
-		b.pressed.connect(show_page.bind(page))
+	for pg: String in PAGES:
+		var b := page_button(pg)
+		b.text = _word("page_" + pg)
+		b.pressed.connect(show_page.bind(pg))
 	_build_rows()
 	visibility_changed.connect(func() -> void:
 		if visible:
@@ -56,18 +56,18 @@ func _ready() -> void:
 ## the first of its group.
 func _build_rows() -> void:
 	var repo := Game.data
-	for page: String in PAGES:
+	for pg: String in PAGES:
 		var last := ""
-		for law: String in LawSystem.codes_on(repo, page):
+		for law: String in LawSystem.codes_on(repo, pg):
 			var group := String(LawSystem.def(repo, law).get("group", ""))
-			var row: LawRow = ROW.instantiate()
-			row.name = "Law_" + law
-			%Rows.add_child(row)
-			row.setup(law, group != last, last != "")
+			var rw: LawRow = ROW.instantiate()
+			rw.name = "Law_" + law
+			%Rows.add_child(rw)
+			rw.setup(law, group != last, last != "")
 			last = group
-			row.decree_pressed.connect(_decree)
-			row.places_pressed.connect(_show_places)
-			_rows.append(row)
+			rw.decree_pressed.connect(_decree)
+			rw.places_pressed.connect(_show_places)
+			_rows.append(rw)
 
 
 func open() -> void:
@@ -79,19 +79,19 @@ func close() -> void:
 	if not visible:
 		return
 	_close_detail()
-	for row: LawRow in _rows:
-		row.reset()
+	for rw: LawRow in _rows:
+		rw.reset()
 	visible = false
 	closed.emit()
 
 
 ## Show `page`'s rows; the others hide.
-func show_page(page: String) -> void:
-	_page = page
+func show_page(pg: String) -> void:
+	_page = pg
 	for p: String in PAGES:
-		page_button(p).set_pressed_no_signal(p == page)
-	for row: LawRow in _rows:
-		row.visible = String(LawSystem.def(Game.data, row.law())["tab"]) == page
+		page_button(p).set_pressed_no_signal(p == pg)
+	for rw: LawRow in _rows:
+		rw.visible = String(LawSystem.def(Game.data, rw.law())["tab"]) == pg
 	_close_detail()
 	if visible:
 		_refresh()
@@ -111,12 +111,12 @@ func _refresh() -> void:
 		return
 	if Game.state.get_instance_id() != _reign:
 		_reign = Game.state.get_instance_id()
-		for row: LawRow in _rows:
-			row.reset()
+		for rw: LawRow in _rows:
+			rw.reset()
 	var places := _places_signature()
-	for row: LawRow in _rows:
-		if row.visible:
-			row.refresh(places)
+	for rw: LawRow in _rows:
+		if rw.visible:
+			rw.refresh(places)
 	if _detail_law != "":
 		_fill_detail()
 

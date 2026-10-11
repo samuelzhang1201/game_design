@@ -15,9 +15,9 @@ static func rules(repo: DataRepository) -> Dictionary:
 		"settle_s": repo.bal("war_toss_settle_s")}
 
 
-static func plan(from: Vector3, to: Vector3, seed: int, r: Dictionary) -> Dictionary:
+static func plan(from: Vector3, to: Vector3, seed_v: int, r: Dictionary) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = seed
+	rng.seed = seed_v
 	var axis := Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-0.3, 0.3), rng.randf_range(-1.0, 1.0))
 	axis = axis.normalized() if axis.length() > 0.2 else Vector3.RIGHT
 	var bounces: Array = []
@@ -59,8 +59,8 @@ static func pose(p: Dictionary, t: float) -> Transform3D:
 
 
 ## A point in `rect_uv`, `margin` of its size in from every edge.
-static func landing(rect_uv: Rect2, seed: int, margin: float) -> Vector2:
+static func landing(rect_uv: Rect2, seed_v: int, margin: float) -> Vector2:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = seed
+	rng.seed = seed_v
 	var m := rect_uv.size * margin
 	return rect_uv.position + m + Vector2(rng.randf(), rng.randf()) * (rect_uv.size - m * 2.0)

@@ -45,22 +45,22 @@ func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines, p_view: Object, p_units
 
 
 ## A road (pack px) in world XZ, laid on the drawn roads, a point every line step.
-static func _world(ctx: Map3DContext, route: PackedVector2Array) -> PackedVector2Array:
-	var step_px := ctx.line_step() / maxf(float(ctx.meta.get("m_per_px", 1.0)), 0.001)
+static func _world(p_ctx: Map3DContext, route: PackedVector2Array) -> PackedVector2Array:
+	var step_px := p_ctx.line_step() / maxf(float(p_ctx.meta.get("m_per_px", 1.0)), 0.001)
 	var pts := PackedVector2Array()
-	for p in Map3DSupplyRoad.on_roads(ctx.repo, Map3DGeometry.resample(route, step_px)):
-		pts.append(ctx.to_world(p))
+	for p in Map3DSupplyRoad.on_roads(p_ctx.repo, Map3DGeometry.resample(route, step_px)):
+		pts.append(p_ctx.to_world(p))
 	return pts
 
 
 ## Every FLOWING line's road in world XZ, {code: points}, the town first.
-static func roads_world(ctx: Map3DContext) -> Dictionary:
+static func roads_world(p_ctx: Map3DContext) -> Dictionary:
 	var out := {}
-	var st := ctx.state()
+	var st := p_ctx.state()
 	if st == null:
 		return out
 	for code: String in _flowing(st):
-		var road := _road_of(ctx, st, code)
+		var road := _road_of(p_ctx, st, code)
 		if road.size() >= 2:
 			out[code] = road
 	return out
@@ -77,41 +77,41 @@ static func _flowing(st: GameState) -> Array:
 
 
 ## One line's road in world XZ (its route searched now), or empty.
-static func _road_of(ctx: Map3DContext, st: GameState, code: String) -> PackedVector2Array:
-	var route := SupplySystem.route_px(ctx.repo, st, code)
-	return _world(ctx, route) if route.size() >= 2 else PackedVector2Array()
+static func _road_of(p_ctx: Map3DContext, st: GameState, code: String) -> PackedVector2Array:
+	var route := SupplySystem.route_px(p_ctx.repo, st, code)
+	return _world(p_ctx, route) if route.size() >= 2 else PackedVector2Array()
 
 
 ## Every FLOWING line's road in world XZ, code order; with `shown` ({code:
 ## world XZ}, where the pieces are drawn) each ends at its piece.
-static func lines_world(ctx: Map3DContext, shown: Dictionary = {}) -> Array:
-	var roads := roads_world(ctx)
+static func lines_world(p_ctx: Map3DContext, shown: Dictionary = {}) -> Array:
+	var roads := roads_world(p_ctx)
 	var out: Array = []
 	for code: String in roads:
-		out.append(_to_piece(ctx, code, roads[code], shown))
+		out.append(_to_piece(p_ctx, code, roads[code], shown))
 	return out
 
 
 ## `road` to where its regiment's piece is drawn — only within the distance a
 ## drawn piece may stand from the engine's spot (Map3DUnits.snap_m), so a
 ## piece no longer walking (quartered, gone) leaves the road as it was.
-static func _to_piece(ctx: Map3DContext, code: String, road: PackedVector2Array, shown: Dictionary) -> PackedVector2Array:
+static func _to_piece(p_ctx: Map3DContext, code: String, road: PackedVector2Array, shown: Dictionary) -> PackedVector2Array:
 	if not shown.has(code) or road.is_empty():
 		return road
 	var piece: Vector2 = shown[code]
-	if piece.distance_to(road[road.size() - 1]) > Map3DUnits.snap_m(ctx.repo, ctx.state(), code, ctx.meta):
+	if piece.distance_to(road[road.size() - 1]) > Map3DUnits.snap_m(p_ctx.repo, p_ctx.state(), code, p_ctx.meta):
 		return road
 	return Map3DSupplyRoad.follow(road, piece)
 
 
-static func _ring(ctx: Map3DContext, burg: Dictionary) -> PackedVector2Array:
+static func _ring(p_ctx: Map3DContext, burg: Dictionary) -> PackedVector2Array:
 	var c := Vector2(float(burg["x"]), float(burg["y"]))
-	var r := ArmySystem.town_reach_px(ctx.repo, burg)
+	var r := ArmySystem.town_reach_px(p_ctx.repo, burg)
 	var pts := PackedVector2Array()
 	for i in 49:
 		var a := TAU * float(i) / 48.0
-		pts.append(ctx.to_world(c + Vector2(cos(a), sin(a)) * r))
-	return Map3DGeometry.resample(pts, ctx.line_step())
+		pts.append(p_ctx.to_world(c + Vector2(cos(a), sin(a)) * r))
+	return Map3DGeometry.resample(pts, p_ctx.line_step())
 
 
 func _shown() -> Dictionary:
@@ -125,7 +125,9 @@ func _piece(code: String, shown: Dictionary) -> Variant:
 	if not shown.has(code) or road.size() < 2:
 		return null
 	var at: Vector2 = shown[code]
-	return at if at.distance_to(road[road.size() - 1]) <= Map3DUnits.snap_m(ctx.repo, ctx.state(), code, ctx.meta) else null
+	if at.distance_to(road[road.size() - 1]) <= Map3DUnits.snap_m(ctx.repo, ctx.state(), code, ctx.meta):
+		return at
+	return null
 
 
 ## Lay the bodies — each road up to its cut by its drawn piece, or whole —

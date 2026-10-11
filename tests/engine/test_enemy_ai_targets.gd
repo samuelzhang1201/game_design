@@ -27,6 +27,7 @@ func after_each() -> void:
 ## --- helpers ----------------------------------------------------------------
 
 func _at_day(s: GameState, absolute: int) -> void:
+	@warning_ignore("integer_division")
 	s.tick = 1 + (absolute - 1) / 30
 	s.day = 1 + (absolute - 1) % 30
 	assert_eq(s.absolute_day(), absolute)
@@ -273,6 +274,7 @@ func test_a_target_beyond_the_hosts_supplies_is_no_candidate() -> void:
 	# eight days in hand: only what lies within five days' march
 	for c: String in EnemyAi.regiments_of(s, host):
 		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), s)
+		@warning_ignore("integer_division")
 		s.foes[c]["supplies"] = (use * 8 + 29) / 30
 	assert_eq(EnemyAi.supply_reach_days(repo, s, host), 8 - floor_days)
 	var short := EnemyAi.candidates(repo, s, host)
@@ -492,6 +494,7 @@ func test_retreat_on_low_morale_and_on_hunger() -> void:
 	assert_eq(int(repo.bal("ai_retreat_supply_days")), 3)
 	var c0: String = live[0]
 	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c0), s)
+	@warning_ignore("integer_division")
 	var three := (3 * use + 29) / 30          # the fewest units that last 3 days
 	assert_eq(ArmySystem.days_in_hand(three, use), 3)
 	assert_eq(ArmySystem.days_in_hand(three - 1, use), 2)
@@ -503,8 +506,10 @@ func test_retreat_on_low_morale_and_on_hunger() -> void:
 	# step_day turns it about: RETREAT, every column marching for its start point
 	_place_host(s, host, _home(host) + Vector2i(30000, 0))
 	var use2 := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c0), s)
+	@warning_ignore("integer_division")
 	var bite := use2 * s.day / 30 - use2 * (s.day - 1) / 30
 	# the day's meal is eaten before the check: it leaves 2 days in hand
+	@warning_ignore("integer_division")
 	s.foes[c0]["supplies"] = (3 * use2 + 29) / 30 - 1 + bite
 	var events := EnemyAi.step_day(repo, s)
 	assert_eq(String(s.ai_hosts[host]["mode"]), "RETREAT")
@@ -867,6 +872,7 @@ func test_a_host_in_the_field_eats_a_day_and_an_assembling_one_does_not() -> voi
 	for c: String in EnemyAi.regiments_of(s, main):
 		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), s)
 		# day d of the month eats use x d / 30 - use x (d - 1) / 30, whole units
+		@warning_ignore("integer_division")
 		var bite := use * s.day / 30 - use * (s.day - 1) / 30
 		assert_eq(int(s.foes[c]["supplies"]), int(before[c]) - bite, c + " ate the day's share")
 	for c: String in EnemyAi.regiments_of(s, reserve):

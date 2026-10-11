@@ -90,13 +90,13 @@ func _draw() -> void:
 	for poly: PackedVector2Array in ink["trails"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(poly, float(px["dash"]), float(px["gap"])):
 			draw_polyline(d, c_ink, float(px["trail"]), true)
-	for tr: Dictionary in ink.get("trade", []):   # a trade road weighs more, by tier (spec P3 §1.3); a trail stays dashed
-		if String(tr.get("kind", "road")) == "trail":   # a pale band under the trail's own dashes
+	for tre: Dictionary in ink.get("trade", []):   # a trade road weighs more, by tier (spec P3 §1.3); a trail stays dashed
+		if String(tre.get("kind", "road")) == "trail":   # a pale band under the trail's own dashes
 			var band := c_ink
 			band.a *= 0.35
-			draw_polyline(tr["poly"], band, float(px["trail"]) + float(px.get("trade", 0.0)) * float(int(tr["tier"])) * 1.5, true)
+			draw_polyline(tre["poly"], band, float(px["trail"]) + float(px.get("trade", 0.0)) * float(int(tre["tier"])) * 1.5, true)
 		else:
-			draw_polyline(tr["poly"], c_ink, float(px["road"]) + float(px.get("trade", 0.0)) * float(int(tr["tier"])), true)
+			draw_polyline(tre["poly"], c_ink, float(px["road"]) + float(px.get("trade", 0.0)) * float(int(tre["tier"])), true)
 	for poly: PackedVector2Array in ink["roads"]:
 		draw_polyline(poly, c_ink, float(px["road"]), true)
 	for br: Dictionary in ink.get("bridges", []):   # two parapets across the river

@@ -365,15 +365,15 @@ func test_twenty_four_months_twice_identical() -> void:
 		_place(b, home)
 		_put(b, 30, 90, 90)
 		var engine := TickEngine.new(repo)
-		var log: Array = []
+		var run_log: Array = []
 		for m in range(24):
 			state.regiments[a]["supplies"] = 0
 			for d in range(Calendar.DAYS_PER_TICK - 1):
 				engine.advance_day(state)
 			engine.advance(state)
-			log.append(JSON.stringify([state.regiments, state.forage_stripped, state.grievance, state.conduct_marks]))
+			run_log.append(JSON.stringify([state.regiments, state.forage_stripped, state.grievance, state.conduct_marks]))
 			busy = busy or not state.forage_stripped.is_empty() or not state.conduct_marks.is_empty() \
 				or int(state.regiments[a].get("forage_days", 0)) > 0
-		runs.append(log)
+		runs.append(run_log)
 	assert_true(busy, "something happened during the 24 months")
 	assert_eq(runs[0], runs[1])

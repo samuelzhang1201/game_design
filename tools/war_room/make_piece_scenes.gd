@@ -44,16 +44,16 @@ func _init() -> void:
 		if uid == ResourceUID.INVALID_ID:
 			uid = ResourceUID.create_id()
 		var base: PackedScene = ResourceLoader.load(path, "PackedScene", ResourceLoader.CACHE_MODE_IGNORE)
-		var root := base.instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
-		root.editor_description = NOTE
-		var mi := _first_mesh(root)
+		var scene_root := base.instantiate(PackedScene.GEN_EDIT_STATE_MAIN)
+		scene_root.editor_description = NOTE
+		var mi := _first_mesh(scene_root)
 		for i in mi.mesh.get_surface_count():
 			mi.set_surface_override_material(i, mat)
 		for dep: String in [glb, mat_path]:
 			_register(dep)
 		var packed := PackedScene.new()
-		packed.pack(root)
-		root.free()
+		packed.pack(scene_root)
+		scene_root.free()
 		var err := ResourceSaver.save(packed, path)
 		ResourceSaver.set_uid(path, uid)   # a fresh PackedScene saves without one
 		print("%s -> %s (%s)" % [model, path, error_string(err)])

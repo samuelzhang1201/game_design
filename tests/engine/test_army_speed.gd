@@ -123,6 +123,7 @@ func test_the_bars_are_readiness_and_supply() -> void:
 	# (use*3/30 units), readiness
 	# (40*1000 + 25*600 + 20*500 + 15*200) / 100 = 680; the yellow bar is
 	# three days of the 20 carried (owner 2026-09-30: it falls every day) = 150.
+	@warning_ignore("integer_division")
 	st.regiments[code] = {"morale": 50, "training": 20, "supplies": use * 3 / 30, "wounded": 0,
 		"carry_days": 20}
 	assert_eq(ArmySystem.bars_of(repo, st, code), Vector2i(680, 150))

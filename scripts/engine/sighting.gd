@@ -101,7 +101,9 @@ static func about(repo: DataRepository, v: int, q: int, bias: int) -> int:
 		return 0
 	var r := maxi(1, int((repo.intel_facts.get("foe_troops", {}) as Dictionary).get("round_to", 1)))
 	var lh := SpySystem.estimate(repo, v, q, bias, r)
+	@warning_ignore("integer_division")
 	var mid := (int(lh[0]) + int(lh[1])) / 2
+	@warning_ignore("integer_division")
 	return maxi(r, (mid + r / 2) / r * r)
 
 

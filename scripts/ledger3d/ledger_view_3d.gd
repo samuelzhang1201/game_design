@@ -282,9 +282,9 @@ func frame_web(id: String) -> void:
 	if not _nodes.has(id):
 		return
 	var ids: Array = [id]
-	var stars: Dictionary = lineage(id, false)["stars"]
-	for s: String in stars:
-		if s != id and int(stars[s]) == LedgerLineage.FULL:
+	var star_set: Dictionary = lineage(id, false)["stars"]
+	for s: String in star_set:
+		if s != id and int(star_set[s]) == LedgerLineage.FULL:
 			ids.append(s)
 	_frame_on(ids, false)
 
@@ -433,7 +433,7 @@ func _build_stars() -> void:
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_colors = true
 		mm.use_custom_data = true   # the star's seed (and its current's weight)
-		mm.mesh = quad if mi == _sparks else sphere
+		mm.mesh = (quad as Mesh) if mi == _sparks else (sphere as Mesh)
 		mi.multimesh = mm
 
 

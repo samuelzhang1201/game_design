@@ -890,7 +890,7 @@ func _run() -> int:
 				ids.append(int(ci))
 		ids.sort()
 		out += _csv_line([_take_slug(zone_slugs, String(z.get("name", ""))),
-			String(z.get("name", "")), String(z.get("type", "")), "|".join(ids.map(func(i: int) -> String: return str(i))),
+			String(z.get("name", "")), String(z.get("type", "")), "|".join(ids.map(func(cell_id: int) -> String: return str(cell_id))),
 			_num2(sx / n), _num2(sy / n), "|".join(provs), "|".join(kings)])
 	if not _write_text(out_data + "/society/zones.csv", out):
 		return 1

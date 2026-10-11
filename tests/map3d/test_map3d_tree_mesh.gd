@@ -73,6 +73,7 @@ func test_a_species_clump_wears_its_own_row() -> void:
 		var arrays := m.surface_get_arrays(0)
 		var custom: PackedFloat32Array = arrays[Mesh.ARRAY_CUSTOM0]
 		assert_eq((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(), int(r["crowns"]) * 6, String(r["name"]))
+		@warning_ignore("integer_division")
 		for i in custom.size() / 4:
 			assert_true(cells.has(int(round(custom[i * 4 + 3]))), "%s wears its own cells" % r["name"])
 	assert_gt(drawn, 6, "more than a broadleaf, a conifer and a lone tree")

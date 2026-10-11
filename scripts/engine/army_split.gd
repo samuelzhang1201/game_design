@@ -51,9 +51,11 @@ static func split(repo: DataRepository) -> Dictionary:
 static func shares(men: int, cap: int) -> Array:
 	if men <= 0 or cap <= 0:
 		return []
+	@warning_ignore("integer_division")
 	var n := (men + cap - 1) / cap
 	var out: Array = []
 	for i in n:
+		@warning_ignore("integer_division")
 		out.append(men / n + (1 if i < men % n else 0))
 	return out
 

@@ -101,7 +101,6 @@ func test_flows_merge_only_within_one_level() -> void:
 
 
 func test_an_annexed_manor_folds_into_its_new_province() -> void:
-	var home := MapManors.home_province(data, s)
 	var cell := -1
 	var to := ""
 	for c: int in data.manors.keys():

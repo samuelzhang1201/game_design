@@ -42,8 +42,8 @@ func test_save_version_written_and_newer_save_refused() -> void:
 
 
 func test_roster_and_seats_round_trip() -> void:
-	var data := SuiteData.repo()
-	var s := SuiteData.campaign(data, 11)
+	var repo := SuiteData.repo()
+	var s := SuiteData.campaign(repo, 11)
 	var path := RunDir.dir("save_load").path_join("test_roster_round_trip.json")
 	assert_true(SaveLoad.save_game(s, path))
 	var back := SaveLoad.load_game(path)
@@ -54,8 +54,8 @@ func test_roster_and_seats_round_trip() -> void:
 
 
 func test_a_save_from_before_the_split_is_refused() -> void:
-	var data := SuiteData.repo()
-	var d := SuiteData.campaign(data, 11).to_dict()
+	var repo := SuiteData.repo()
+	var d := SuiteData.campaign(repo, 11).to_dict()
 	d["version"] = GameState.MIN_SAVE_VERSION - 1
 	var path := RunDir.dir("save_load").path_join("test_old_save.json")
 	var f := FileAccess.open(path, FileAccess.WRITE)

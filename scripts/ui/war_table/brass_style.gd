@@ -41,12 +41,12 @@ func _draw(ci: RID, rect: Rect2) -> void:
 
 ## A brass disc seen from above: its shadow down-right, the dark rim, the
 ## body, a lit spot upper left.
-static func draw_brass(ci: RID, c: Vector2, r: float, cols: Array, shadow_alpha: float,
+static func draw_brass(ci: RID, c: Vector2, r: float, cols: Array, shade_alpha: float,
 		spot := true) -> void:
 	# a soft shadow: three rings, each wider and fainter
 	for i in 3:
 		RenderingServer.canvas_item_add_circle(ci, c + Vector2(r, r) * 0.32, r * (1.0 + 0.14 * float(i)),
-			Color(0, 0, 0, shadow_alpha * [0.55, 0.3, 0.15][i]))
+			Color(0, 0, 0, shade_alpha * [0.55, 0.3, 0.15][i]))
 	RenderingServer.canvas_item_add_circle(ci, c, r, cols[2])
 	# the body, stepped from the lit upper left toward the shadowed rim
 	var steps := 7

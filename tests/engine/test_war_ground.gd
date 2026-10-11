@@ -285,8 +285,8 @@ func test_the_slip_never_names_an_unknown_hazard() -> void:
 	var ids: Array = repo.cells.keys()
 	ids.sort()
 	for c: int in ids:
-		var owner := MapOwnership.owner_of(repo, state, MapManors.province_of(repo, c, state))
-		if owner != "" and owner != mine and not MapTerrain.is_water(repo.cells[c]):
+		var holder := MapOwnership.owner_of(repo, state, MapManors.province_of(repo, c, state))
+		if holder != "" and holder != mine and not MapTerrain.is_water(repo.cells[c]):
 			Hazards.add(state, "sr", "Rebels", "Secret Rebels", [c], state.tick, -1, "test")
 			var r := WarGround.reading(repo, state, MapTerrain.cell_center(repo, repo.cells[c]), "")
 			var texts := WarGround.lines(repo, r).map(func(l: Dictionary) -> String: return String(l["text"]))

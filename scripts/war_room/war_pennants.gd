@@ -125,13 +125,13 @@ func _build(code: String, at: Vector2, status: String, issued: int, why := "") -
 ## Every pennant on the screen (the view's design px): `at` its foot, `rect`
 ## its pole, cloth and slip, `depth` from the camera (WarPieces.screen_hits'
 ## contract, so WarRoomPicks takes both the same way).
-func screen_hits(camera: Camera3D, scale: float) -> Array:
+func screen_hits(camera: Camera3D, scl: float) -> Array:
 	var out: Array = []
 	var h := _height()
 	for c: Node3D in get_children():
 		if camera.is_position_behind(c.global_position):
 			continue
-		var at := camera.unproject_position(c.global_position) / scale
+		var at := camera.unproject_position(c.global_position) / scl
 		var rect := Rect2(at, Vector2.ZERO)
 		var slip := c.get_node("Slip") as Label3D
 		var box := _model_box()
@@ -142,7 +142,7 @@ func screen_hits(camera: Camera3D, scale: float) -> Array:
 				Vector3(span, slip.position.y, 0.0)]:
 			var world: Vector3 = c.global_position + corner
 			if not camera.is_position_behind(world):
-				rect = rect.expand(camera.unproject_position(world) / scale)
+				rect = rect.expand(camera.unproject_position(world) / scl)
 		out.append({"code": String(c.get_meta("code")), "at": at, "rect": rect,
 			"depth": camera.global_position.distance_to(c.global_position)})
 	return out

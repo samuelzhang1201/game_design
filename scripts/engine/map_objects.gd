@@ -64,18 +64,18 @@ static func forget() -> void:
 static func estate_rows(repo: DataRepository, focus_code: String) -> Array:
 	var rkey := repo.get_instance_id()
 	if not _estate_rows_cache.has(rkey):
-		var grouped: Dictionary = {}
+		var by_focus: Dictionary = {}
 		var order: Array = []
 		for row: Dictionary in repo.manor_estates:
 			var code := String(row["focus_code"])
-			if not grouped.has(code):
-				grouped[code] = []
+			if not by_focus.has(code):
+				by_focus[code] = []
 				order.append(code)
-			(grouped[code] as Array).append(row)
-		for code: String in grouped:
-			(grouped[code] as Array).sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			(by_focus[code] as Array).append(row)
+		for code: String in by_focus:
+			(by_focus[code] as Array).sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 				return float(a["min_people"]) < float(b["min_people"]))
-		_estate_rows_cache[rkey] = {"by": grouped, "first": String(order[0]) if not order.is_empty() else ""}
+		_estate_rows_cache[rkey] = {"by": by_focus, "first": String(order[0]) if not order.is_empty() else ""}
 	var cache: Dictionary = _estate_rows_cache[rkey]
 	var by: Dictionary = cache["by"]
 	if by.has(focus_code):

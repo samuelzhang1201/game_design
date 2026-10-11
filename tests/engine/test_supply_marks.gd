@@ -139,6 +139,7 @@ func test_a_brigand_on_a_regiments_road_shows_in_its_line_and_robs_its_day() -> 
 	var target := String(fed[0])
 	var town := String(fed[1])
 	var route := SupplySystem.route_px(repo, state, target)
+	@warning_ignore("integer_division")
 	var mid := route[route.size() / 2]
 	var m := _mark_of("brigands")
 	repo.markers[m["code"]]["x"] = str(mid.x)
@@ -191,6 +192,7 @@ func test_a_line_through_rebels_pays_and_names_them_when_known() -> void:
 		return
 	var code := String(fed[0])
 	var route := SupplySystem.route_px(repo, state, code)
+	@warning_ignore("integer_division")
 	var cell := MapEconomy.cell_at(repo, route[route.size() / 2])
 	Hazards.add(state, "rb", "Rebels", "Road Rebels", [cell], state.tick, -1, "test")
 	var line := SupplySystem.line_of(repo, state, code)
@@ -209,8 +211,8 @@ func test_an_unknown_hazard_is_never_named() -> void:
 	var ids: Array = repo.cells.keys()
 	ids.sort()
 	for c: int in ids:
-		var owner := MapOwnership.owner_of(repo, state, MapManors.province_of(repo, c, state))
-		if owner != "" and owner != mine and not MapTerrain.is_water(repo.cells[c]):
+		var holder := MapOwnership.owner_of(repo, state, MapManors.province_of(repo, c, state))
+		if holder != "" and holder != mine and not MapTerrain.is_water(repo.cells[c]):
 			foreign = c
 			break
 	var at := MapTerrain.cell_center(repo, repo.cells[foreign])

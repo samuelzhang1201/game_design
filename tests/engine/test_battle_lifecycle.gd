@@ -178,6 +178,7 @@ func test_town_contact_needs_a_garrison() -> void:
 	var town_m := ArmySystem.pack_to_metres(repo, Vector2(float(b["x"]), float(b["y"])))
 	var reach_m := int(float(repo.army_town_reach[String(b["group"])]) * 1000.0)
 	_place(s, p, town_m)
+	@warning_ignore("integer_division")
 	_foe(s, f, town_m + Vector2i(reach_m / 2, 0))
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 0, "a column standing by in the town, off its seat and camp, is no garrison")
@@ -194,6 +195,7 @@ func test_town_contact_needs_a_garrison() -> void:
 	var s2 := _campaign(7)
 	_place(s2, p, town_m)
 	s2.town_seat[town] = p
+	@warning_ignore("integer_division")
 	_foe(s2, f, town_m + Vector2i(reach_m / 2, 0))
 	assert_eq(ArmyGround.garrison_town(repo, s2, p), town, "the seat is the garrison")
 	BattleSystem.settle_day(repo, s2)
@@ -203,6 +205,7 @@ func test_town_contact_needs_a_garrison() -> void:
 	var s3 := _campaign(7)
 	_place(s3, p, town_m + Vector2i(reach_m * 2, 0))
 	s3.regiments[p]["camp_town"] = town
+	@warning_ignore("integer_division")
 	_foe(s3, f, town_m + Vector2i(reach_m / 2, 0))
 	assert_eq(ArmyGround.garrison_town(repo, s3, p), town, "the camp is invested with its town")
 	BattleSystem.settle_day(repo, s3)
@@ -318,6 +321,7 @@ func test_hold_loses_heart_slower() -> void:
 	BattleSystem.settle_day(repo, s)
 	# -8 x morale_decay_permille / 1000, toward zero
 	var decay := int(repo.battle_stances["hold"]["morale_decay_permille"])
+	@warning_ignore("integer_division")
 	assert_eq(int(s.regiments[p]["morale"]), before + (-8 * decay / 1000))
 	assert_eq(int(s.regiments[p]["morale"]), before - 4, "hold: 500 per mille of the fall")
 

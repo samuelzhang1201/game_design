@@ -40,18 +40,18 @@ const TIER_BREACH := "breach"
 
 
 ## A day's wearing down: rate x attack / (attack + defend), rounded down.
-static func step(attack_power: int, defend_power: int, rate: int) -> int:
-	if attack_power + defend_power <= 0:
+static func step(atk: int, dfn: int, rate: int) -> int:
+	if atk + dfn <= 0:
 		return 0
 	@warning_ignore("integer_division")  # whole per-mille of the town
-	return rate * maxi(0, attack_power) / (attack_power + defend_power)
+	return rate * maxi(0, atk) / (atk + dfn)
 
 
 ## The day's gain: the step, and while the town starves the step's
 ## `bonus_permille` more (rounded down).
-static func day_gain(attack_power: int, defend_power: int, rate: int, starving: bool, bonus_permille: int) -> int:
-	var g := step(attack_power, defend_power, rate)
-	if starving:
+static func day_gain(atk: int, dfn: int, rate: int, hungry: bool, bonus_permille: int) -> int:
+	var g := step(atk, dfn, rate)
+	if hungry:
 		@warning_ignore("integer_division")  # whole per-mille
 		g += g * bonus_permille / 1000
 	return g

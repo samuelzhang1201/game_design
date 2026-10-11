@@ -14,6 +14,7 @@ class FakeView extends Node:
 
 
 ## A units layer whose drawn spots the test sets.
+@warning_ignore("missing_tool")
 class FakeUnits extends Map3DLayerUnits:
 	var pos: Dictionary = {}
 

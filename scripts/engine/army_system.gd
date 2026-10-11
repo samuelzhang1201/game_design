@@ -78,6 +78,7 @@ static func fit_permille(repo: DataRepository, state: GameState, code: String) -
 static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 	var home := pack_to_metres(repo, Vector2(float(reg.get("x", 0)), float(reg.get("y", 0))))
 	var start_days := int(repo.bal("army_start_supply_days"))
+	@warning_ignore("integer_division")
 	return {
 		"morale": int(repo.bal("army_start_morale")),
 		"wounded": 0,
@@ -250,7 +251,7 @@ static func load_permille(repo: DataRepository, carry_days: int) -> int:
 
 ## The map's yellow bar: days in hand over the carried load, per mille,
 ## capped at 1000 — it falls a little every day the column eats.
-static func stores_permille(repo: DataRepository, supplies: int, use_per_month: int, carry_days: int) -> int:
+static func stores_permille(_repo: DataRepository, supplies: int, use_per_month: int, carry_days: int) -> int:
 	if use_per_month <= 0:
 		return 1000
 	var full := maxi(1, carry_days)

@@ -73,10 +73,10 @@ static func _head(repo: DataRepository, state: GameState, kind: String, rest: St
 			if String(line["town"]) == "":
 				return ""
 			var from := String((repo.burgs.get(String(line["town"]), {}) as Dictionary).get("label", line["town"]))
-			@warning_ignore("integer_division")  # whole percent from per-mille
 			var said := String(line["state"])
 			if said == SupplyLines.FRONT:   # its town ahead of the column (ruling 20 kept daily)
 				said = SupplyLines.words(repo, "front_card", {}, "label", "Line broken")
+			@warning_ignore("integer_division")
 			return "from %s, %d km, %d%% lost on the way — %s" % [from, int(line["length_km"]),
 				int(line["loss_permille"]) / 10, said]
 		"workshop":

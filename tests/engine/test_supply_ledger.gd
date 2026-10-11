@@ -36,7 +36,9 @@ func test_a_line_is_one_row_projecting_its_month() -> void:
 	var rows := SupplySystem.plan(repo, s)
 	assert_eq(rows.size(), 1)
 	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code), s)
+	@warning_ignore("integer_division")
 	assert_eq(int(rows[0]["need"]), use * 1200 / 1000)
+	@warning_ignore("integer_division")
 	assert_eq(int(rows[0]["paid"]), TownStores.gold_of_units(repo, use * 1200 / 1000))
 	assert_eq(String(rows[0]["town"]), town)
 
@@ -192,6 +194,7 @@ func test_the_town_card_says_how_long_its_stores_last() -> void:
 	var rows := {}
 	for f: Array in MapObjects.burg_card(repo, s, town)["fields"]:
 		rows[String(f[0])] = String(f[1])
+	@warning_ignore("integer_division")
 	assert_eq(rows["Stores last"], "%d days at today's draw" % (1000 * Calendar.DAYS_PER_TICK / draw))
 	s.supply_lines.clear()
 	rows = {}

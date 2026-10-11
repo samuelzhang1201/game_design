@@ -60,8 +60,8 @@ static func odds_permille(attack_power: int, defend_power: int) -> int:
 ## stance on the ground it stands on, scaled by the height factor against the
 ## MEAN height of `enemy_codes` (none given: no height factor); a DEFENDING
 ## regiment's power is further scaled by its stance's defence_permille
-## (`stance_of` is a Callable code -> stance name; an unknown stance is 1000).
-static func side_power(repo: DataRepository, state: GameState, codes: Array, stance_of: Callable,
+## (`stance_fn` is a Callable code -> stance name; an unknown stance is 1000).
+static func side_power(repo: DataRepository, state: GameState, codes: Array, stance_fn: Callable,
 		attacking: bool, enemy_codes: Array = []) -> int:
 	var enemy_m := 0
 	for e: Variant in enemy_codes:
@@ -78,7 +78,7 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 			@warning_ignore("integer_division")  # whole power, per-mille height factor
 			p = p * ArmySystem.height_factor(repo, delta) / 1000
 		if not attacking:
-			var stance := String(stance_of.call(code))
+			var stance := String(stance_fn.call(code))
 			var def_permille := int((repo.battle_stances.get(stance, {}) as Dictionary).get("defence_permille", 1000))
 			@warning_ignore("integer_division")  # whole power, per-mille stance
 			p = p * def_permille / 1000
@@ -139,13 +139,13 @@ static func _entry_of(repo: DataRepository, state: GameState, code: String) -> D
 ## regiments by fit heads (a regiment with no fit men is spared), the wounded
 ## of it by what each lost; then morale moves by `morale_delta`, held to
 ## 0..100 — a FALL scaled by the regiment's stance's morale_decay_permille
-## when `stance_of` (code -> stance) is given, toward zero. Writes `wounded`,
+## when `stance_fn` (code -> stance) is given, toward zero. Writes `wounded`,
 ## `dead` and `morale` into each regiment's state and
 ## returns code -> {dead, wounded, morale (the change that really happened),
 ## reason}.
 static func _apply_side(repo: DataRepository, state: GameState, codes: Array, loss_permille: int,
 		wounded_share_permille: int, morale_delta: int, reason: String, out: Dictionary,
-		stance_of: Callable = Callable()) -> void:
+		stance_fn: Callable = Callable()) -> void:
 	var live: Array = []
 	var fits: Array = []
 	var total_fit := 0
@@ -176,9 +176,9 @@ static func _apply_side(repo: DataRepository, state: GameState, codes: Array, lo
 		entry["dead"] = int(entry.get("dead", 0)) + dead
 		var before := int(entry.get("morale", 0))
 		var fall := morale_delta
-		if fall < 0 and stance_of.is_valid():
+		if fall < 0 and stance_fn.is_valid():
 			@warning_ignore("integer_division")  # whole points, toward zero
-			fall = fall * int(_stance_row(repo, String(stance_of.call(code))).get("morale_decay_permille", 1000)) / 1000
+			fall = fall * int(_stance_row(repo, String(stance_fn.call(code))).get("morale_decay_permille", 1000)) / 1000
 		entry["morale"] = clampi(before + fall, 0, 100)
 		out[code] = {"dead": dead, "wounded": wounded, "morale": int(entry["morale"]) - before,
 			"reason": reason}
@@ -187,16 +187,16 @@ static func _apply_side(repo: DataRepository, state: GameState, codes: Array, lo
 ## Apply a tier to a round: the attackers take attacker_loss_permille and
 ## attacker_morale, the defenders the defender's. `reason` rides in each
 ## regiment's result (the battle report prints it, architecture invariant 4).
-## `stance_of` (code -> stance name), when given, slows each regiment's morale
+## `stance_fn` (code -> stance name), when given, slows each regiment's morale
 ## fall by its stance. Returns code -> {dead, wounded, morale, reason}.
 static func apply_round(repo: DataRepository, state: GameState, codes_att: Array, codes_def: Array,
-		tier: Dictionary, reason: String, stance_of: Callable = Callable()) -> Dictionary:
+		tier: Dictionary, reason: String, stance_fn: Callable = Callable()) -> Dictionary:
 	var out: Dictionary = {}
 	var share := int(tier.get("wounded_share_permille", 0))
 	_apply_side(repo, state, codes_att, int(tier.get("attacker_loss_permille", 0)), share,
-		int(tier.get("attacker_morale", 0)), reason, out, stance_of)
+		int(tier.get("attacker_morale", 0)), reason, out, stance_fn)
 	_apply_side(repo, state, codes_def, int(tier.get("defender_loss_permille", 0)), share,
-		int(tier.get("defender_morale", 0)), reason, out, stance_of)
+		int(tier.get("defender_morale", 0)), reason, out, stance_fn)
 	return out
 
 

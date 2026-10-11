@@ -7,7 +7,9 @@ extends GutTest
 ## A stand-in for the map: ArmyOrderMenu.follow connects by signal NAME, the
 ## same way MapDetailPanel.follow does, so a test needs no 3D view at all.
 class FakeMap extends Node:
+	@warning_ignore("unused_signal")
 	signal army_menu_requested(code: String, at: Vector2)
+	@warning_ignore("unused_signal")
 	signal ground_clicked(pack_px: Vector2)
 	signal route_clicked(code: String, at: Vector2)
 	signal route_bent(waypoints: PackedVector2Array)
@@ -25,7 +27,9 @@ class FakeMap extends Node:
 
 ## The 3D view's own signature: the click's point rides with it.
 class ClickMap extends Node:
+	@warning_ignore("unused_signal")
 	signal army_menu_requested(code: String, at: Vector2)
+	@warning_ignore("unused_signal")
 	signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 	var aiming := false
 	var aim_dest := Vector2(-1, -1)
@@ -502,7 +506,9 @@ func test_aim_for_then_ground_then_commit_runs_the_march() -> void:
 
 ## A map that is hidden never takes Escape (the closed WAR ROOM's view).
 class SelMap extends Control:
+	@warning_ignore("unused_signal")
 	signal army_menu_requested(code: String, at: Vector2)
+	@warning_ignore("unused_signal")
 	signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
 	var picked := "x"
 	func selected_army() -> String:
@@ -689,8 +695,8 @@ func test_a_town_ahead_is_greyed_and_the_nearest_rear_town_is_pressed() -> void:
 	var rear := CourierSystem.origin(Game.data, Game.state)
 	var tol := Game.data.bal("supply_ahead_km") * 1000.0 / float(ArmySystem.metres_per_pack_px(Game.data))
 	for t: String in towns:
-		var b: Dictionary = Game.data.burgs[t]
-		var at := Vector2(float(b["x"]), float(b["y"]))
+		var burg: Dictionary = Game.data.burgs[t]
+		var at := Vector2(float(burg["x"]), float(burg["y"]))
 		if String(now[t]) == "" and at.distance_to(rear) > here.distance_to(rear) + tol * 2.0 and Game.engine.actions.validate_place(
 				ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": at.x, "y": at.y}), Game.state) == "":
 			ahead = t
