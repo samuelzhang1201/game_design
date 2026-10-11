@@ -82,3 +82,47 @@ func test_strength_is_fit_men_per_mille_of_the_headcount() -> void:
 	assert_eq(int(Map3DFormation.tier_of(repo, ArmySystem.fit_permille(repo, state, code))["figures"]), 6)
 	state.regiments[code]["wounded"] = heads * 10
 	assert_eq(ArmySystem.fit_permille(repo, state, code), 0, "the wounded are held to the headcount")
+
+
+## A held regiment's piece stands in a LINE (spec 2026-10-11-war-room-front-
+## line-design §2, the architect's T2.1 / T2.2): one rank abreast from
+## army_formations.csv line_slots, picked by the stance's formation.
+func test_the_nine_figure_line_is_one_rank_abreast() -> void:
+	var nine := Map3DFormation.tier_of(repo, 1000)
+	assert_eq((nine["line_slots"] as Array).size(), 9)
+	var offs := Map3DFormation.offsets(nine, Vector2(0.5, 0.8), 1.6, 1.0, Map3DFormation.LINE)
+	assert_eq(offs.size(), 9)
+	var want := [-6.4, -4.8, -3.2, -1.6, 0.0, 1.6, 3.2, 4.8, 6.4]
+	for i in 9:
+		assert_almost_eq(offs[i].x, want[i], 0.0001, "figure %d across" % i)
+		assert_almost_eq(offs[i].y, 0.0, 0.0001, "figure %d in the one rank" % i)
+	var half := Map3DFormation.half_extent(offs, Vector2(0.5, 0.8))
+	assert_almost_eq(half.x, 6.9, 0.0001)
+	assert_almost_eq(half.y, 0.8, 0.0001)
+	for row: Dictionary in repo.army_formations:
+		assert_eq((row["line_slots"] as Array).size(), (row["slots"] as Array).size(), "a line slot a figure")
+	assert_eq(Map3DFormation.offsets(nine, Vector2(0.5, 0.8), 1.6).size(), 9, "the block is untouched")
+	assert_eq(int(Map3DFormation.tier_of(repo, 500)["figures"]), 6, "the tiers stay by fit")
+
+
+func test_the_layout_is_the_stance_s_once_the_column_stands() -> void:
+	assert_eq(String(repo.battle_stances["hold"]["formation"]), "line")
+	assert_eq(String(repo.battle_stances["hold"]["stand_clip"]), "DEFEND")
+	assert_eq(String(repo.battle_stances["steady"]["formation"]), "block")
+	assert_eq(String(repo.battle_stances["steady"]["stand_clip"]), "")
+	var s := SuiteData.campaign(repo, 7)
+	var code := ""
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), s):
+		if String(r.get("is_naval", "0")) != "1":
+			code = String(r["regiment_code"])
+			break
+	var e: Dictionary = s.regiments[code]
+	e["order"] = ArmySystem.ORDER_GARRISON
+	e["stance"] = "hold"
+	assert_eq(Map3DFormation.layout_of(repo, s, code), Map3DFormation.LINE)
+	e["order"] = ArmySystem.ORDER_MARCH
+	assert_eq(Map3DFormation.layout_of(repo, s, code), Map3DFormation.BLOCK, "a marching column is a block")
+	e["order"] = ArmySystem.ORDER_GARRISON
+	e["stance"] = "steady"
+	assert_eq(Map3DFormation.layout_of(repo, s, code), Map3DFormation.BLOCK)
+	assert_eq(Map3DFormation.layout_of(repo, null, code), Map3DFormation.BLOCK)

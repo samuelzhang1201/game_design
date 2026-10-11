@@ -22,6 +22,10 @@ const MARCH := "MARCH"
 @export var blend_s := 0.3
 ## Degrees a second a piece turns (instant turning read as a glitch).
 @export var turn_deg_per_s := 220.0
+## How far behind a held line its camp is pitched, in the model's own metres
+## past the line's half depth (spec 2026-10-11-war-room-front-line-design §3).
+@export var camp_back_m := 6.0
+var _camps := Map3DUnitCamps.new()  ## the camps pitched behind held lines
 ## How solid a GHOST's figures stand (spec 2026-10-10-player-sight-and-ghosts),
 ## 1 opaque — see-through as a courier's fading piece (Map3DCourierRide.apply).
 @export_range(0.0, 1.0) var ghost_alpha := 0.35
@@ -38,7 +42,6 @@ var _selected: Array = []  ## the selected codes: their pieces glow (Map3DUnitGl
 var _track: Dictionary = {}
 var _want_yaw: Dictionary = {}  ## code -> the yaw it turns toward
 var _yaw: Dictionary = {}  ## code -> the yaw it is at
-var _scenes: Dictionary = {}
 var _shown_xz: Dictionary = {}  ## code -> where it is DRAWN, world XZ (step)
 var _days: Dictionary = {}  ## code -> {key, from, to, s0}: its day's march (Map3DUnits.along_day)
 var _moves := 0
@@ -132,8 +135,11 @@ func _place(code: String, piece: Dictionary) -> void:
 	var ref_m := Map3DGeometry.distance_for_bar(repo, ctx.meta, repo.bal("map3d_zoom_start_scale"), ctx.view_size.y)
 	var k := Map3DUnits.scale_for(repo, repo.bal("map3d_fov_deg"), ctx.view_size.y, ref_m,
 		float(piece["height_m"]), piece["size"])
+	# a front it holds wins (spec 2026-10-11-war-room-front-line-design §1); else
 	# the way it last advanced; a piece never moved its order's way, else at rest
-	var heading: Vector2 = _track.get(code, {}).get("heading", Vector2.ZERO)
+	var heading: Vector2 = ArmySystem.facing_of(ctx.state(), code)
+	if heading == Vector2.ZERO:
+		heading = _track.get(code, {}).get("heading", Vector2.ZERO)
 	if heading == Vector2.ZERO:
 		heading = ArmySystem.heading_of(repo, ctx.state(), code)
 	_want_yaw[code] = Map3DUnits.facing_yaw(heading, piece.get("stand_deg", 0.0))
@@ -151,6 +157,7 @@ func _place(code: String, piece: Dictionary) -> void:
 	Map3DUnitGlow.place(repo, piece, _selected.has(code), ground.y - float(sit["y"]), k)
 	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, high,
 		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())
+	_camps.sync(self, ctx, code, piece, xz, yaw, k, camp_back_m)
 
 
 ## Per FRAME: draw every piece where the day's share has it on its march
@@ -179,11 +186,16 @@ func step(delta: float) -> bool:
 		for anim: AnimationPlayer in _pieces[code]["anims"]:
 			anim.speed_scale = pace
 		_sync_action(code)
+		# a facing set at the day's end turns the piece without a camera move
+		var facing := ArmySystem.facing_of(ctx.state(), code)
+		if facing != Vector2.ZERO:
+			_want_yaw[code] = Map3DUnits.facing_yaw(facing, _pieces[code].get("stand_deg", 0.0))
 		if node.visible and float(_yaw.get(code, 0.0)) != float(_want_yaw.get(code, 0.0)):
 			var rate := deg_to_rad(turn_deg_per_s) * delta
 			_yaw[code] = rotate_toward(float(_yaw.get(code, 0.0)),
 				float(_want_yaw.get(code, 0.0)), rate)
 			_place(code, _pieces[code])  # re-seated: a long piece turned across a slope meets other ground
+	_camps.prune(_pieces)
 	if moved:
 		_moves += 1
 	return moved
@@ -232,13 +244,15 @@ func _piece_of(code: String) -> Dictionary:
 	if reg.is_empty():
 		return {}
 	var tier := Map3DFormation.tier_of(ctx.repo, ArmySystem.fit_permille(ctx.repo, ctx.state(), code))
-	if int(_pieces.get(code, {}).get("figures", -1)) == (tier["slots"] as Array).size():
+	var layout := Map3DFormation.layout_of(ctx.repo, ctx.state(), code)
+	if int(_pieces.get(code, {}).get("figures", -1)) == (tier["slots"] as Array).size() \
+			and String(_pieces.get(code, {}).get("layout", "")) == layout:
 		_sync_action(code)
 		return _pieces[code]
-	if _pieces.has(code):  # its strength crossed a tier: the formation is built anew
+	if _pieces.has(code):  # its strength crossed a tier or it formed a line: built anew
 		(_pieces[code]["node"] as Node3D).queue_free()
 		_pieces.erase(code)
-	if _build(code, reg, tier).is_empty():
+	if _build(code, reg, tier, layout).is_empty():
 		return {}
 	_sync_action(code)
 	return _pieces[code]
@@ -250,14 +264,8 @@ func _drop(code: String) -> void:  ## frees `code`'s piece, forgets all kept abo
 
 ## Builds the piece of `reg` in formation `tier` as `_pieces[key]`; {} when its
 ## arm has no model.
-func _build(key: String, reg: Dictionary, tier: Dictionary) -> Dictionary:
-	if reg.is_empty():
-		return {}
-	var piece := MapObjects.army_piece(ctx.repo, reg)
-	var path := GameArt.path(GameArt.ARMY_MODELS, piece)
-	var scene := _scene(path) if path != "" else null
-	var built := Map3DFormation.piece(ctx.repo, scene, ctx.repo.army_art.get(piece, {}), tier,
-		formation_gap) if scene != null else {}
+func _build(key: String, reg: Dictionary, tier: Dictionary, layout := Map3DFormation.BLOCK) -> Dictionary:
+	var built := Map3DFormation.of_regiment(ctx.repo, reg, tier, formation_gap, layout)
 	if built.is_empty():
 		return {}
 	(built["node"] as Node3D).name = key.replace(":", "_")
@@ -266,8 +274,7 @@ func _build(key: String, reg: Dictionary, tier: Dictionary) -> Dictionary:
 	return built
 
 
-## A piece's day's march (Map3DUnits.day_march), remade when its row, the day
-## or the couriers turn.
+## A piece's day's march (Map3DUnits.day_march), remade when its row, the day or the couriers turn.
 func _day_of(code: String) -> Dictionary:
 	var st := ctx.state()
 	var key := [st.regiments.get(code, {}), st.absolute_day(), st.next_courier_id, st.couriers.size()] if st != null else []
@@ -279,20 +286,11 @@ func _day_of(code: String) -> Dictionary:
 
 
 ## The action follows the ORDER (owner 2026-09-29): MARCH while the clock runs and it walks;
-## GARRISON under that order; else STANDBY (the start, on arrival, ready on a stopped clock).
+## a held stance's standing clip (DEFEND, front-line §2); GARRISON under that
+## order; else STANDBY (the start, on arrival, ready on a stopped clock).
 func _sync_action(code: String) -> void:
 	var walking: bool = _days.has(code) and Map3DUnits.walking(_days[code], ctx.day_share())
-	var held := ctx.state() != null and ArmySystem.order_of(ctx.repo, ctx.state(), code) == ArmySystem.ORDER_GARRISON
-	play(code, MARCH if walking and ctx.clock_speed() > 0 else (GARRISON if held else STANDBY))
-
-
-func _scene(path: String) -> PackedScene:
-	if _scenes.has(path):
-		return _scenes[path]
-	var scene := Map3DAssetCache.scene(path)  # loaded once, kept between views
-	if scene == null:
-		Map3DWorldLoader.warn_once("units:" + path, "map3d units: no model at " + path)
-	_scenes[path] = scene
-	return scene
-
-
+	var st := ctx.state()
+	var order := ArmySystem.order_of(ctx.repo, st, code) if st != null else ArmySystem.ORDER_STANDBY
+	var row: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(st, code), {}) if st != null else {}
+	play(code, Map3DUnitRig.action_for(walking and ctx.clock_speed() > 0, order, row))

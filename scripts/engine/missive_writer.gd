@@ -41,7 +41,11 @@ static func order_said(repo: DataRepository, order: Dictionary) -> String:
 			return "Take the seat"
 		"ARMY_STANCE":
 			var stance := String(order.get("stance", ""))
-			return "Stance: %s, from the next day" % String((repo.battle_stances.get(stance, {}) as Dictionary).get("label", stance))
+			var label := String((repo.battle_stances.get(stance, {}) as Dictionary).get("label", stance))
+			if order.has("facing"):
+				return "Stance: %s %s, facing %s" % [label, "on arrival" if bool(order.get("on_arrival", false)) else "from the next day",
+					WarFront.compass_words(int(order["facing"]))]
+			return "Stance: %s, from the next day" % label
 		"SUPPLY_POINT_SET":
 			var town := String(order.get("town", order.get("to_town", "")))
 			return "Supply from %s at %.1f×" % [String((repo.burgs.get(town, {}) as Dictionary).get("label", town)),

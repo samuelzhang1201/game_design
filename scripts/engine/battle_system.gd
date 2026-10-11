@@ -388,6 +388,7 @@ static func _halt(state: GameState, code: String) -> void:
 	e["order"] = ArmySystem.ORDER_GARRISON
 	e["dest_x_m"] = int(e.get("x_m", 0))
 	e["dest_y_m"] = int(e.get("y_m", 0))
+	ArmySystem.drop_hold(e)   # caught on the road: no front (front-line ruling 3)
 
 
 ## The side of battle `b` that `code` would fight on: the side already

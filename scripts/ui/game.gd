@@ -146,11 +146,11 @@ func advance_day() -> Dictionary:
 		var r := next_tick()
 		return {"ticked": true, "finished": r.finished_works, "arrived": engine.day_arrivals,
 			"couriers": engine.day_couriers, "idled": engine.newly_idle, "ended": ended,
-			"hazards": engine.month_hazard_news, "supply": engine.day_supply}
+			"hazards": engine.month_hazard_news, "supply": engine.day_supply, "raids": engine.day_raid}
 	var finished := engine.advance_day(state)
 	state_changed.emit()
 	return {"ticked": false, "finished": finished, "arrived": engine.day_arrivals,
-		"couriers": engine.day_couriers, "ended": ended, "supply": engine.day_supply}
+		"couriers": engine.day_couriers, "ended": ended, "supply": engine.day_supply, "raids": engine.day_raid}
 
 func next_tick() -> TickReport:
 	_prompts_this_tick = 0
@@ -177,9 +177,45 @@ func try_execute(req: ActionRequest) -> Dictionary:
 ## The WAR ROOM's drafts (spec 2026-10-02-war-room-v2 §3): pencilled, not
 ## sent. Game is their only writer.
 func plant_draft(code: String, order: String, dest_px: Vector2, waypoints: Array = [], carry := -1,
-		supply_town := "", supply_rate := 0) -> void:
-	WarDrafts.plant(data, state, code, order, dest_px, waypoints, carry, supply_town, supply_rate)
+		supply_town := "", supply_rate := 0, hold: Dictionary = {}, front := "") -> void:
+	WarDrafts.plant(data, state, code, order, dest_px, waypoints, carry, supply_town, supply_rate, hold, front)
 	state_changed.emit()
+
+
+## A blue front drawn for `codes` (spec 2026-10-11-war-room-front-line-design
+## §1): each regiment's post along the stroke `stroke_id` (WarFront.assign, by
+## its place along the line) becomes its draft — a march to the post holding
+## `hold` facing the teeth on arrival, or a halt with the hold where it
+## already stands (within 1 pack px). {planted: [codes], refused: {code: why}}.
+func plant_front(stroke_id: String, codes: Array) -> Dictionary:
+	var out := {"planted": [], "refused": {}}
+	if state == null:
+		return out
+	var stroke: Dictionary = state.war_plans[WarPlans.STROKES].get(stroke_id, {})
+	if stroke.is_empty():
+		return out
+	var positions := {}
+	for c: Variant in codes:
+		var reg := ArmySystem.regiment(data, String(c), state)
+		positions[String(c)] = Vector2(ArmySystem.pack_to_metres(data, ArmySystem.position_of(data, state, reg)))
+	for a: Dictionary in WarFront.assign(data, stroke, codes, positions):
+		var code := String(a["code"])
+		var px := ArmySystem.metres_to_pack(data, a["dest_m"])
+		var hold := {"stance": WarFront.HOLD_STANCE, "facing": int(a["facing_deg"])}
+		var here := ArmySystem.position_of(data, state, ArmySystem.regiment(data, code, state))
+		if here.distance_to(px) <= 1.0:
+			WarDrafts.plant(data, state, code, WarDrafts.GARRISON, px, [], -1, "", 0, hold, stroke_id)
+			out["planted"].append(code)
+			continue
+		var why := engine.actions.validate_place(ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": px.x, "y": px.y}), state)
+		if why != "":
+			out["refused"][code] = why
+			continue
+		WarDrafts.plant(data, state, code, WarDrafts.MARCH, px, [], -1, "", 0, hold, stroke_id)
+		out["planted"].append(code)
+	if not out["planted"].is_empty():
+		state_changed.emit()
+	return out
 
 
 func restore_drafts(drafts: Dictionary) -> void:
@@ -273,6 +309,9 @@ func review_drafts() -> Dictionary:
 		# 2026-10-07-march-waypoints ruling 8), the line its gold and the march's
 		var reqs := WarDrafts.requests_from(data, state, code, d)
 		var req: ActionRequest = reqs.back()
+		for r: ActionRequest in reqs:   # the march, when a front's stance rides behind it
+			if r.action_code == "ARMY_MARCH":
+				req = r
 		var reg := ArmySystem.regiment(data, code, state)
 		# each order weighed after the one before it has spent; a draft of two
 		# runs on its own copy, kept only when both pass (nothing half-spent)
@@ -300,7 +339,8 @@ func review_drafts() -> Dictionary:
 		var town := String(d.get("supply_town", ""))
 		lines.append({"code": code, "label": String(reg.get("label", code)), "order": String(d["order"]),
 			"to": to, "days": days, "gold": gold, "refusal": refusal,
-			"supply": String((data.burgs.get(town, {}) as Dictionary).get("label", town)) if town != "" else ""})
+			"supply": String((data.burgs.get(town, {}) as Dictionary).get("label", town)) if town != "" else "",
+			"hold": WarFront.compass_words(int((d["hold"] as Dictionary).get("facing", 0))) if d.has("hold") else ""})
 	return {"lines": lines, "total": total}
 
 

@@ -212,3 +212,5 @@ defeat_town_lost_people,,"The fall of {town} empties no treasury that had anythi
 defeat_town_lost_bare,,"The fall of {town} finds the treasury empty and the people past caring: there is nothing more for it to take."
 raid_begin,,"{raider_realm}'s men are stripping {place}: they carry off its harvest and its stores, and the roads about it are unsafe."
 raid_spoils,,"{raider_realm}'s beaten host leaves its plunder on the field at {place}: {spoils} in strategic goods come into {player_realm}'s stores."
+raid_news_begin,,"{raider_realm}'s raiders are stripping {place}."
+raid_news_spoils,,"Spoils at {place}: {spoils} in strategic goods come into the stores."

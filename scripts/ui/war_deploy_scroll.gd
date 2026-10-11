@@ -113,6 +113,8 @@ func unroll() -> void:
 			else "%s halts where it stands" % l["label"]
 		if String(l.get("supply", "")) != "":
 			lab.text += ", supplied from %s" % String(l["supply"])   # its supply point rides with it (ruling 15)
+		if String(l.get("hold", "")) != "":
+			lab.text += " · then hold, facing %s" % String(l["hold"])   # a front's post (front-line §1)
 		if String(l["refusal"]) != "":
 			lab.text += "\n" + String(l["refusal"])   # no price: it cannot run
 			lab.theme_type_variation = &"DeployBad"

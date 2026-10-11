@@ -14,11 +14,19 @@ const GARRISON := "garrison"
 ## should carry, `carry` days (spec 2026-10-07-march-waypoints ruling 8; -1
 ## leaves the load alone), and the town to supply it from at `supply_rate`
 ## (spec 2026-10-08-war-room-draw-orders ruling 15; "" none).
+## A front's draft (spec 2026-10-11-war-room-front-line-design §1) carries
+## `hold` {stance, facing} — the stance taken where the march arrives (or at
+## once for a halt), facing a whole degree — and `front`, the stroke's id.
 static func plant(repo: DataRepository, state: GameState, code: String, order: String, target_px: Vector2,
-		waypoints: Array = [], carry := -1, supply_town := "", supply_rate := 0) -> void:
+		waypoints: Array = [], carry := -1, supply_town := "", supply_rate := 0,
+		hold: Dictionary = {}, front := "") -> void:
 	var m := ArmySystem.pack_to_metres(repo, target_px) if order == MARCH else Vector2i.ZERO
 	var d := {"order": order, "dest_x_m": m.x, "dest_y_m": m.y,
 		"tick": state.tick, "day": state.day, "refused": ""}
+	if not hold.is_empty():
+		d["hold"] = {"stance": String(hold.get("stance", WarFront.HOLD_STANCE)), "facing": int(hold.get("facing", 0))}
+	if front != "":
+		d["front"] = front
 	if order == MARCH and not waypoints.is_empty():
 		var wm: Array = []
 		for w: Vector2 in waypoints:
@@ -89,6 +97,15 @@ static func requests_from(repo: DataRepository, state: GameState, code: String, 
 			and int(draft["carry_days"]) != ArmySystem.carry_of(repo, ArmySystem.state_of(repo, state, code)):
 		out.append(ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": code, "days": int(draft["carry_days"])}))
 	out.append(request_from(repo, code, draft))
+	# a front's hold rides the same courier, taken where the march arrives
+	# (spec 2026-10-11-war-room-front-line-design §1); a halt's at once
+	if draft.has("hold"):
+		var hold: Dictionary = draft["hold"]
+		var params := {"regiment": code, "stance": String(hold.get("stance", WarFront.HOLD_STANCE)),
+			"facing": int(hold.get("facing", 0))}
+		if String(draft.get("order", "")) == MARCH:
+			params["on_arrival"] = true
+		out.append(ActionRequest.make("ARMY_STANCE", params))
 	return out
 
 

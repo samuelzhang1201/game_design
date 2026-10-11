@@ -134,6 +134,18 @@ static func news(events: Array) -> Array:
 		return String(e.get("kind", "")) in ["raid_begin", "raid_spoils"])
 
 
+## The day's raid headlines for the news bar (owner 2026-10-11: 加一行劫掠进
+## Log), one a letter line — templates.csv raid_news_begin (the place) and
+## raid_news_spoils (the place and the spoils) — in the events' order; the
+## quiet raid_day and the host_mode events make none.
+static func headlines(repo: DataRepository, events: Array, pick := 0) -> Array[String]:
+	var out: Array[String] = []
+	for e: Dictionary in news(events):
+		out.append(MissiveWriter.battle_words(repo, "raid_news_" + String(e["kind"]).trim_prefix("raid_"),
+			{"place": String(e.get("place", "")), "spoils": int(e.get("spoils", 0))}, pick))
+	return out
+
+
 ## The raids' day, run once a day right after SiegeSystem.settle_day (given the
 ## day's battle events). Host code order:
 ##  1. a host beaten by the crown today pays its spoils (raid_spoils {host,
