@@ -117,3 +117,18 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 		"stand_deg": float(art.get("stand_deg", "0")),
 		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
 		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
+
+
+## A regiment's piece (piece) from its arm's model (army_models.tres, loaded once
+## and kept between views) and army_art.csv row, laid out `layout`; {} for an
+## empty row or an arm with no model (a fleet).
+static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary, gap: float,
+		layout := BLOCK) -> Dictionary:
+	if reg.is_empty():
+		return {}
+	var model := MapObjects.army_piece(repo, reg)
+	var path := GameArt.path(GameArt.ARMY_MODELS, model)
+	var scene := Map3DAssetCache.scene(path) if path != "" else null
+	if path != "" and scene == null:
+		Map3DWorldLoader.warn_once("units:" + path, "map3d units: no model at " + path)
+	return piece(repo, scene, repo.army_art.get(model, {}), tier, gap, layout) if scene != null else {}

@@ -344,12 +344,12 @@ func test_the_head_is_below_the_spear_tip() -> void:
 func test_the_action_for_a_held_piece_is_its_standing_clip() -> void:
 	var hold := {"stand_clip": "DEFEND"}
 	var steady := {"stand_clip": ""}
-	assert_eq(Map3DUnits.action_for(true, ArmySystem.ORDER_MARCH, hold), "MARCH")
-	assert_eq(Map3DUnits.action_for(false, ArmySystem.ORDER_GARRISON, hold), "DEFEND")
-	assert_eq(Map3DUnits.action_for(false, ArmySystem.ORDER_MARCH, hold), "GARRISON" if false else "STANDBY", "a stopped column under a march order, not walking")
-	assert_eq(Map3DUnits.action_for(false, ArmySystem.ORDER_GARRISON, steady), "GARRISON")
-	assert_eq(Map3DUnits.action_for(false, ArmySystem.ORDER_STANDBY, steady), "STANDBY")
-	assert_eq(Map3DUnits.action_for(false, ArmySystem.ORDER_STANDBY, {}), "STANDBY")
+	assert_eq(Map3DUnitRig.action_for(true, ArmySystem.ORDER_MARCH, hold), "MARCH")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_GARRISON, hold), "DEFEND")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_MARCH, hold), "GARRISON" if false else "STANDBY", "a stopped column under a march order, not walking")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_GARRISON, steady), "GARRISON")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_STANDBY, steady), "STANDBY")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_STANDBY, {}), "STANDBY")
 	var anim := AnimationPlayer.new()
 	var lib := AnimationLibrary.new()
 	lib.add_animation("GARRISON", Animation.new())
@@ -381,8 +381,8 @@ func test_a_held_facing_turns_the_piece_about() -> void:
 ## A camp pitched behind a held line (spec 2026-10-11-war-room-front-line-
 ## design §3, T3.3): behind a line facing south lies north; the +Z rear.
 func test_behind_a_south_facing_line_is_north() -> void:
-	var at := Map3DUnits.behind(Vector2(100, 200), PI, 28.0)
+	var at := Map3DUnitCamps.behind(Vector2(100, 200), PI, 28.0)
 	assert_almost_eq(at.x, 100.0, 0.001)
 	assert_almost_eq(at.y, 172.0, 0.001)
-	var east := Map3DUnits.behind(Vector2(0, 0), 0.0, 10.0)
+	var east := Map3DUnitCamps.behind(Vector2(0, 0), 0.0, 10.0)
 	assert_almost_eq(east.y, 10.0, 0.001, "yaw 0: the rear is +Z")

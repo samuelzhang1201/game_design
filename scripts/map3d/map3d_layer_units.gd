@@ -25,7 +25,7 @@ const MARCH := "MARCH"
 ## How far behind a held line its camp is pitched, in the model's own metres
 ## past the line's half depth (spec 2026-10-11-war-room-front-line-design §3).
 @export var camp_back_m := 6.0
-var _camps: Dictionary = {}  ## code -> the camp model pitched behind its line
+var _camps := Map3DUnitCamps.new()  ## the camps pitched behind held lines
 ## How solid a GHOST's figures stand (spec 2026-10-10-player-sight-and-ghosts),
 ## 1 opaque — see-through as a courier's fading piece (Map3DCourierRide.apply).
 @export_range(0.0, 1.0) var ghost_alpha := 0.35
@@ -42,7 +42,6 @@ var _selected: Array = []  ## the selected codes: their pieces glow (Map3DUnitGl
 var _track: Dictionary = {}
 var _want_yaw: Dictionary = {}  ## code -> the yaw it turns toward
 var _yaw: Dictionary = {}  ## code -> the yaw it is at
-var _scenes: Dictionary = {}
 var _shown_xz: Dictionary = {}  ## code -> where it is DRAWN, world XZ (step)
 var _days: Dictionary = {}  ## code -> {key, from, to, s0}: its day's march (Map3DUnits.along_day)
 var _moves := 0
@@ -158,45 +157,7 @@ func _place(code: String, piece: Dictionary) -> void:
 	Map3DUnitGlow.place(repo, piece, _selected.has(code), ground.y - float(sit["y"]), k)
 	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, high,
 		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())
-	_sync_camp(code, piece, xz, yaw, k)
-
-
-## The camp behind a line held camp_after_days (ArmySystem.camped): the
-## CAMP_MODELS table's `camp` scene, seated behind the piece; none while the
-## table or its file is missing (a warning once, never an error), struck when
-## the regiment moves on.
-func _sync_camp(code: String, piece: Dictionary, xz: Vector2, yaw: float, k: float) -> void:
-	var repo := ctx.repo
-	var wanted := ctx.state() != null and not code.begins_with(Sighting.GHOST_CODE) \
-		and ArmySystem.camped(repo, ctx.state(), code)
-	if not wanted:
-		if _camps.has(code):
-			(_camps[code] as Node3D).queue_free()
-			_camps.erase(code)
-		return
-	if not _camps.has(code):
-		var path := GameArt.path(GameArt.CAMP_MODELS, "camp")
-		var scene := _scene(path) if path != "" else null
-		var camp := scene.instantiate() as Node3D if scene != null else null
-		if camp == null:
-			return
-		camp.name = "Camp_" + code.replace(":", "_")
-		add_child(camp)   # no owner: never saved into the authored scene
-		_camps[code] = camp
-	var node: Node3D = _camps[code]
-	var at := Map3DUnits.behind(xz, yaw, (float((piece["extent"] as Vector2).y) + camp_back_m) * k)
-	var sit := Map3DUnits.seat_at(repo, ctx.height_at, at, Vector2(1.0, 1.0), yaw, k)
-	var up: Vector3 = sit["normal"]
-	node.transform = Transform3D((Basis(Quaternion(Vector3.UP, up)) * Basis(Vector3.UP, yaw)).scaled(Vector3(k, k, k)),
-		Vector3(at.x, float(sit["y"]), at.y))
-
-
-## Every camp whose regiment has no piece any more is struck.
-func _prune_camps() -> void:
-	for code: String in _camps.keys():
-		if not _pieces.has(code):
-			(_camps[code] as Node3D).queue_free()
-			_camps.erase(code)
+	_camps.sync(self, ctx, code, piece, xz, yaw, k, camp_back_m)
 
 
 ## Per FRAME: draw every piece where the day's share has it on its march
@@ -234,7 +195,7 @@ func step(delta: float) -> bool:
 			_yaw[code] = rotate_toward(float(_yaw.get(code, 0.0)),
 				float(_want_yaw.get(code, 0.0)), rate)
 			_place(code, _pieces[code])  # re-seated: a long piece turned across a slope meets other ground
-	_prune_camps()
+	_camps.prune(_pieces)
 	if moved:
 		_moves += 1
 	return moved
@@ -304,13 +265,7 @@ func _drop(code: String) -> void:  ## frees `code`'s piece, forgets all kept abo
 ## Builds the piece of `reg` in formation `tier` as `_pieces[key]`; {} when its
 ## arm has no model.
 func _build(key: String, reg: Dictionary, tier: Dictionary, layout := Map3DFormation.BLOCK) -> Dictionary:
-	if reg.is_empty():
-		return {}
-	var piece := MapObjects.army_piece(ctx.repo, reg)
-	var path := GameArt.path(GameArt.ARMY_MODELS, piece)
-	var scene := _scene(path) if path != "" else null
-	var built := Map3DFormation.piece(ctx.repo, scene, ctx.repo.army_art.get(piece, {}), tier,
-		formation_gap, layout) if scene != null else {}
+	var built := Map3DFormation.of_regiment(ctx.repo, reg, tier, formation_gap, layout)
 	if built.is_empty():
 		return {}
 	(built["node"] as Node3D).name = key.replace(":", "_")
@@ -319,8 +274,7 @@ func _build(key: String, reg: Dictionary, tier: Dictionary, layout := Map3DForma
 	return built
 
 
-## A piece's day's march (Map3DUnits.day_march), remade when its row, the day
-## or the couriers turn.
+## A piece's day's march (Map3DUnits.day_march), remade when its row, the day or the couriers turn.
 func _day_of(code: String) -> Dictionary:
 	var st := ctx.state()
 	var key := [st.regiments.get(code, {}), st.absolute_day(), st.next_courier_id, st.couriers.size()] if st != null else []
@@ -339,16 +293,4 @@ func _sync_action(code: String) -> void:
 	var st := ctx.state()
 	var order := ArmySystem.order_of(ctx.repo, st, code) if st != null else ArmySystem.ORDER_STANDBY
 	var row: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(st, code), {}) if st != null else {}
-	play(code, Map3DUnits.action_for(walking and ctx.clock_speed() > 0, order, row))
-
-
-func _scene(path: String) -> PackedScene:
-	if _scenes.has(path):
-		return _scenes[path]
-	var scene := Map3DAssetCache.scene(path)  # loaded once, kept between views
-	if scene == null:
-		Map3DWorldLoader.warn_once("units:" + path, "map3d units: no model at " + path)
-	_scenes[path] = scene
-	return scene
-
-
+	play(code, Map3DUnitRig.action_for(walking and ctx.clock_speed() > 0, order, row))
