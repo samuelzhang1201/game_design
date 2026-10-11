@@ -331,6 +331,12 @@ func _draw_intel() -> void:
 		draw_string_outline(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, maxi(int(w * 3.0), 1),
 			pal.get("parchment", pal.get("paper", Color.WHITE)))
 		draw_string(font, at, String(h["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, pal["intel_ink"])
+	for st: Dictionary in ink.get("stripped", []):
+		var size := int(px["intel_label"])
+		var at := (st["at"] as Vector2) - Vector2(font.get_string_size(String(st["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, 0)
+		draw_string_outline(font, at, String(st["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, maxi(int(float(px.get("hazard", 3.0)) * 3.0), 1),
+			pal.get("parchment", pal.get("paper", Color.WHITE)))
+		draw_string(font, at, String(st["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, c)
 	for cr: Dictionary in ink["couriers"]:
 		for d: PackedVector2Array in WarSheetInk.dashed(cr["poly"], float(px["supply_dash"]) / 1.5, float(px["supply_gap"])):
 			draw_polyline(d, c, float(px["supply"]) * 0.7, true)

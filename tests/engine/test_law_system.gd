@@ -15,9 +15,9 @@ func before_each() -> void:
 func after_each() -> void:
 	RealmEconomy.forget()
 
-func test_the_tables_load_seventeen_laws_in_three_pages() -> void:
-	assert_eq(repo.law_order.size(), 17)
-	assert_eq(LawSystem.codes_on(repo, "military").size(), 12)
+func test_the_tables_load_eighteen_laws_in_three_pages() -> void:
+	assert_eq(repo.law_order.size(), 18)
+	assert_eq(LawSystem.codes_on(repo, "military").size(), 13)
 	assert_eq(LawSystem.codes_on(repo, "economy").size(), 3)
 	assert_eq(LawSystem.codes_on(repo, "politics").size(), 2)
 	assert_eq(LawSystem.codes_on(repo, "economy"), ["tax_rate", "tariff_rate", "grain_ration"], "file order")
@@ -90,9 +90,9 @@ func test_every_default_is_the_specs() -> void:
 		"justice_severity": "3", "church_policy": "none",
 		"plunder": "forbid", "obey_command": "off", "protect_church": "off",
 		"protect_women": "off", "no_havoc": "off", "register_prisoners": "off",
-		"wear_badges": "off", "no_feuds": "off", "quarter": "give", "ransom": "ransom",
+		"wear_badges": "off", "no_feuds": "off", "desertion_penalty": "fine", "quarter": "give", "ransom": "ransom",
 		"truce_days": "off", "envoys": "off"}
-	assert_eq(repo.law_order.size(), want.size(), "seventeen laws")
+	assert_eq(repo.law_order.size(), want.size(), "eighteen laws")
 	for law: String in repo.law_order:
 		assert_true(want.has(law), "%s is a law of the spec" % law)
 		assert_eq(String(LawSystem.def(repo, law)["default"]), String(want.get(law, "")), law)

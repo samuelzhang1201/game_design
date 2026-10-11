@@ -976,3 +976,40 @@ war_supply_route_dash_px,16,"WAR ROOM draw orders (ruling 14): its dash, design 
 war_supply_lit_px,11,"WAR ROOM draw orders (ruling 13): a town that may supply the march, its lit ring's radius in design px"
 supply_rate_default,1000,"WAR ROOM draw orders (ruling 13): the rate (per mille, one of SupplyLines.RATES) a supply point chosen on the march's confirm runs at when the regiment has no line yet"
 war_order_feeder_mm,4,"WAR ROOM draw orders (ruling 10): a march drawn for several, each other regiment's crayon line joining the lead's arrow, its width in table mm"
+forage_start_days,3,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_morale,25,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_training,5,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_days_obey,2,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_morale_obey,20,spec 2026-10-10-foraging-and-desertion §1.1
+forage_start_training_obey,3,spec 2026-10-10-foraging-and-desertion §1.1
+forage_stop_days,10,spec 2026-10-10-foraging-and-desertion §1.1
+forage_stop_morale,40,spec 2026-10-10-foraging-and-desertion §1.1
+forage_supply_per_food_unit,30,spec 2026-10-10-foraging-and-desertion §1.1
+forage_spring_permille,600,spec 2026-10-10-foraging-and-desertion §1.1
+forage_summer_permille,1000,spec 2026-10-10-foraging-and-desertion §1.1
+forage_autumn_permille,1200,spec 2026-10-10-foraging-and-desertion §1.1
+forage_winter_permille,300,spec 2026-10-10-foraging-and-desertion §1.1
+forage_share_permille,1000,spec 2026-10-10-foraging-and-desertion §1.1
+forage_strip_k,500,spec 2026-10-10-foraging-and-desertion §1.1
+forage_recover_permille,100,spec 2026-10-10-foraging-and-desertion §1.1
+forage_bare_permille,900,spec 2026-10-10-foraging-and-desertion §1.1
+forage_word_rich_permille,750,spec 2026-10-10-foraging-and-desertion §1.1
+forage_word_fair_permille,400,spec 2026-10-10-foraging-and-desertion §1.1
+forage_hazard_strip_permille,500,spec 2026-10-10-foraging-and-desertion §1.1
+forage_hazard_strip_permille_protected,750,spec 2026-10-10-foraging-and-desertion §1.1
+forage_morale_month,4,spec 2026-10-10-foraging-and-desertion §1.1
+forage_training_month,3,spec 2026-10-10-foraging-and-desertion §1.1
+forage_training_floor,5,"spec 2026-10-10-foraging-and-desertion §1.1, §3.3 step 8 (ruling R7): the month's foraging never takes training below this (a unit already under it keeps what it has)"
+forage_harass_permille,10,spec 2026-10-10-foraging-and-desertion §1.1
+forage_protect_cut_permille,100,spec 2026-10-10-foraging-and-desertion §1.1
+forage_incident_legitimacy,3,spec 2026-10-10-foraging-and-desertion §1.1
+forage_grievance_month,10,spec 2026-10-10-foraging-and-desertion §1.1
+forage_grievance_month_protected,5,spec 2026-10-10-foraging-and-desertion §1.1
+desert_morale,20,spec 2026-10-10-foraging-and-desertion §1.1
+desert_training,3,spec 2026-10-10-foraging-and-desertion §1.1
+desert_supply_days,0,spec 2026-10-10-foraging-and-desertion §1.1
+desert_permille_per_day,3,spec 2026-10-10-foraging-and-desertion §1.1
+desert_mult_fine,1000,spec 2026-10-10-foraging-and-desertion §1.1
+desert_mult_lenient,2000,spec 2026-10-10-foraging-and-desertion §1.1
+desert_mult_hanging,400,spec 2026-10-10-foraging-and-desertion §1.1
+desert_news_cumulative_permille,50,spec 2026-10-10-foraging-and-desertion §1.1
