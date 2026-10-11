@@ -120,17 +120,15 @@ func put_back(sheet: int) -> bool:
 	return true
 
 
-## `sheet` becomes held without a toss (the first lay, a margin row, the
-## snapshot tool): already held, nothing; a toss would take it, taken; else
-## every marker goes back but the newest, which stands on it. Its slot.
+## `sheet` becomes held without a toss (the first lay, a margin row, the Tab's
+## home sheet, the snapshot tool): already held, nothing; else every marker
+## goes back but the newest, which stands on it — only a TOSS adds a cell to the
+## laid union (R11), so a second lay supersedes the first. Its slot.
 func hold(sheet: int) -> int:
 	var at := slot_of(sheet)
 	if at >= 0 or not _cells.has(sheet):
 		return at
-	var slot := take(sheet)
-	if slot >= 0:
-		return slot
-	var keep: int = _order[-1]
+	var keep: int = _order[-1] if not _order.is_empty() else 0
 	_slots.fill(-1)
 	_order.clear()
 	place(keep, sheet)

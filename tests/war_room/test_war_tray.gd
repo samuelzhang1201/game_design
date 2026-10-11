@@ -94,14 +94,20 @@ func test_a_held_cell_gives_its_marker_back_but_never_the_last() -> void:
 	assert_eq(t.newest(), 3)
 
 
-## A lay without a toss (the first lay, a margin row): a free marker when the
-## box fits, else every marker back but the newest, which stands there.
-func test_hold_takes_a_marker_or_starts_over_on_one_cell() -> void:
+## A lay without a toss (the first lay, a margin row, the Tab's home sheet)
+## starts over on one cell: every marker back but the newest, which stands
+## there — only a TOSS adds a cell to the union (R11; a second lay supersedes).
+func test_hold_starts_over_on_one_cell_and_only_a_toss_adds_one() -> void:
 	var t := WarTray.new(4, 4, _cells())
 	assert_eq(t.hold(0), 0)
-	assert_eq(t.hold(4), 1, "(5,5): a 2 x 2 box")
-	assert_eq(t.hold(4), 1, "already held")
-	assert_eq(t.hold(9), 1, "(7,4) makes it 4 x 2: the newest stands there alone")
+	assert_eq(t.hold(4), 0, "(5,5) fits a 2 x 2 box, but a lay without a toss supersedes")
+	assert_eq(t.held(), [4])
+	assert_eq(t.hold(4), 0, "already held")
+	assert_eq(t.take(0), 1, "a toss onto (4,4) adds it: the 2 x 2 box")
+	assert_eq(t.count(), 2)
+	assert_eq(t.hold(0), 1, "a held cell stays held, the union kept")
+	assert_eq(t.count(), 2)
+	assert_eq(t.hold(9), 1, "a fresh cell without a toss: the newest marker stands there alone")
 	assert_eq(t.held(), [9])
 	assert_eq(t.count(), 1)
 
