@@ -1,4 +1,4 @@
-# Crown and Council
+# Beyond the King's Words
 
 Text-first, LLM-narrated grand strategy game: rule a kingdom for ~60 years through a council of ministers with real personalities, ideologies, and grudges. Godot 4 project. The campaign map is the **3D map** (Terrain3D, `scripts/map3d/`, built by `tools/map3d/`) — the ONLY map; there is no 2D map and none is ever added. A checkout with no built world shows the 3D view's notice naming `build_pack.sh`.
 

@@ -88,6 +88,14 @@ static func chart_point(chart: MeshInstance3D, uv: Vector2) -> Vector3:
 	return chart.global_transform * Vector3((uv.x - 0.5) * size.x, (0.5 - uv.y) * size.y, 0.0)
 
 
+## Where resting war marker `slot` stands: a column beside the chart's east
+## edge, `gap` apart (the tray; owner 2026-10-12, item 7).
+static func tray_point(chart: MeshInstance3D, slot: int, gap: float) -> Vector3:
+	var size := map_size(chart)
+	var pad := float(chart.get_meta("margin_m", 0.0))
+	return chart.global_transform * Vector3(size.x * 0.5 + pad + gap, size.y * 0.5 - gap * float(slot), 0.0)
+
+
 ## Replace the arrows: one at each side of the laid sheet that has a neighbour.
 static func lay_arrows(parent: Node3D, repo: DataRepository, sheet: int, table_w: float, depth: float, font: Font) -> void:
 	for n in parent.get_children():

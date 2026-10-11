@@ -320,6 +320,9 @@ func test_the_manor_card_offers_the_orders_the_crown_can_give() -> void:
 		if String(a["action_code"]) == "MANOR_BUILD" and not MapManors.building_prereqs(real,
 				String((a["params"] as Dictionary)["building"])).is_empty():
 			assert_string_contains(String(a["error"]), "standing first", String(a["label"]))
+		elif String(a["action_code"]) == "SPY_SEND":
+			# Owner 2026-10-12: no spy rides to the crown's own realm.
+			assert_eq(String(a["error"]), "Your own realm needs no spy")
 		elif String(a["action_code"]) != "MANOR_SELL":
 			assert_eq(String(a["error"]), "", "%s can be given: %s" % [a["label"], a["error"]])
 	assert_has(codes, "MANOR_SELL")

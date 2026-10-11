@@ -27,6 +27,8 @@ var _orders_look: Dictionary = {}
 var _gold := Color.GOLD
 var _road_w := 6.0
 var _road_dash := 16.0
+var _slope: Array = []   # barrier bars where the ground is too steep to climb: [{a, b, hatches}] screen px
+var _slope_look: Dictionary = {}   # {colour, width, hatch_w}
 
 
 func show_live(ink: Dictionary, look: Dictionary, handles: PackedVector2Array, chalk: Color, handle_r: float,
@@ -69,6 +71,22 @@ func show_orders(ink: Dictionary, look: Dictionary) -> void:
 	queue_redraw()
 
 
+## Barrier bars across the marches where the ground is too steep for a column
+## (owner 2026-10-12, item 5; WarSlopeBars): each a bar with hachure ticks,
+## under the pending crayon. `look`: {colour, width}. Empty clears.
+func show_slope(bars: Array, look: Dictionary) -> void:
+	if bars.is_empty() and _slope.is_empty():
+		return
+	_slope = bars
+	_slope_look = look
+	queue_redraw()
+
+
+## The barrier bars drawn now (tests read them).
+func slope_bars() -> Array:
+	return _slope
+
+
 ## The marches' arrows drawn now (tests read them).
 func orders_ink() -> Dictionary:
 	return _orders
@@ -103,12 +121,13 @@ func clear_live() -> void:
 ## True while anything is drawn (tests read it).
 func drawing() -> bool:
 	return not _ink.is_empty() or not _handles.is_empty() or not _facing.is_empty() or not _road.is_empty() \
-		or not (_orders.get("crayon", []) as Array).is_empty()
+		or not (_orders.get("crayon", []) as Array).is_empty() or not _slope.is_empty()
 
 
 func _draw() -> void:
 	if not _orders.is_empty() and not _orders_look.is_empty():
 		WarPlanDraw.paint(self, _orders, _orders_look)
+	_draw_slope()
 	if not _road.is_empty():
 		var edge := _gold.darkened(0.5)
 		var dashed: Array = []
@@ -136,6 +155,20 @@ func _draw() -> void:
 		draw_circle(at, _facing_len * 0.75, Color(_chalk, 0.3))
 		draw_line(tail, tip - d * _facing_len * 0.3, _chalk, 2.5, true)
 		draw_colored_polygon(PackedVector2Array([tip, tip - d * _facing_len * 0.45 + side, tip - d * _facing_len * 0.45 - side]), _chalk)
+
+
+func _draw_slope() -> void:
+	if _slope.is_empty() or _slope_look.is_empty():
+		return
+	var col: Color = _slope_look["colour"]
+	var w := float(_slope_look["width"])
+	for bar: Dictionary in _slope:
+		var a: Vector2 = bar["a"]
+		var b: Vector2 = bar["b"]
+		for h: Array in bar["hatches"]:
+			draw_line(h[0], h[1], col, maxf(1.5, w * 0.4), true)
+		draw_line(a, b, col.darkened(0.45), w + 2.0, true)
+		draw_line(a, b, col, w, true)
 
 
 ## The named exit: a small arrowhead at the sheet's edge pointing off it, and

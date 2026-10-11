@@ -67,6 +67,13 @@ func test_campaign_opens_with_nameless_background_narration() -> void:
 	assert_lt(btn_bottom, viewport_h, "button bottom on screen")
 	btn.pressed.emit()
 	await wait_process_frames(2)
+	# the story is paged (tests/ui/test_opening_narration.gd): turn the rest
+	while r.current_screen is ConversationScene \
+			and String(r.current_screen.current_beat().get("kind", "")) == "narration":
+		var next: Array = r.current_screen.reply_buttons()
+		await wait_until(func() -> bool: return next[0].visible, 1.0)
+		next[0].pressed.emit()
+		await wait_process_frames(2)
 	# The narration hands over to the table, not to the story (owner
 	# 2026-10-02: 背景介绍之后，不要立即开始剧情): the prologue's first council —
 	# the chapter opener GameState.new_campaign scheduled for tick 1, not

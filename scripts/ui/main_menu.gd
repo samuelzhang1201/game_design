@@ -103,7 +103,7 @@ func _build_menu() -> void:
 	_menu_col.add_theme_constant_override("separation", 12)
 	card.add_child(_menu_col)
 	var title := Label.new()
-	title.text = "Crown and Council"
+	title.text = "Beyond the King's Words"
 	UiPalette.style_title(title, 48)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_menu_col.add_child(title)
@@ -213,11 +213,29 @@ func _fill_living_title() -> void:
 	($Caption/When as Label).text = "%s, the first year of the reign" % cap["season"]
 	# black until the title enters (the scene keeps it off so the editor shows the title)
 	$Curtain.visible = true
+	_set_up_load_gear()
 	for row: Dictionary in Game.data.title_entrance:
 		var node := get_node_or_null(NodePath(String(row["node"]))) as CanvasItem
 		if node != null and String(row["kind"]) != "curtain":
 			for item: CanvasItem in _entrance_items(node, String(row["kind"])):
 				item.modulate.a = 0.0
+
+## The turning wheel in the launch black's bottom-right corner (owner
+## 2026-10-12): the scene's Curtain/LoadGear, a CompassLayer, is the map's own
+## wheel; it is a child of the Curtain, so it lifts and hides with the black.
+## Without that node the black stays bare.
+func _set_up_load_gear() -> void:
+	var gear := get_node_or_null("Curtain/LoadGear") as CompassLayer
+	if gear == null:
+		return
+	var size_px := Game.data.bal("ui_load_gear_size_px")
+	var margin := Game.data.bal("ui_load_gear_margin_px")
+	gear.always_turn = true
+	gear.setup()
+	gear.box = func() -> Rect2:
+		var corner := ($Curtain as Control).size
+		return Rect2(corner - Vector2(size_px + margin, size_px + margin), Vector2(size_px, size_px))
+	gear.visible = size_px > 0.0 and gear.has_art()
 
 ## The living map, made once the boot's loads are in and the black has been
 ## shown (ui_title_reveal_frames frames); the title enters once it is open,

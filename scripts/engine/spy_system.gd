@@ -6,6 +6,13 @@ extends RefCounted
 ## column — highly credible or rumour — and how wide and how biased every
 ## estimate is. Two spies to one place draw different rolls: their reports differ.
 
+## Whether the point lies in a province the crown holds right now.
+static func is_home(repo: DataRepository, state: GameState, at: Vector2) -> bool:
+	var cell := MapEconomy.cell_at(repo, at)
+	var prov := MapManors.province_of(repo, cell, state) if cell >= 0 else ""
+	return prov != "" and MapOwnership.owner_of(repo, state, prov) == repo.resolve_realm("player_realm")
+
+
 static func quality(repo: DataRepository, state: GameState, at: Vector2, roll: int) -> int:
 	var q := roll
 	var realm := repo.resolve_realm("player_realm")

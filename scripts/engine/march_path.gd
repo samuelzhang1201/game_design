@@ -184,6 +184,37 @@ func clear(a: Vector2i, b: Vector2i, open: Array = []) -> bool:
 	return true
 
 
+## The runs of SLOPE the straight line a -> b (whole metres) crosses, for the
+## war room's barrier marks: [[first cell, last cell], ...] in travel order,
+## each run the cells of closed, dry ground met one after another (water is
+## no scarp; the ends' own cells never count, as in clear()). The line is
+## sampled every half cell, whole-number maths on whole metres.
+func slope_runs(a: Vector2i, b: Vector2i) -> Array:
+	var out: Array = []
+	var ends := [cell_of(a), cell_of(b)]
+	var len := Vector2(b - a).length()
+	var steps := maxi(1, int(ceil(len / (float(cell_m) * 0.5))))
+	var run: Array = []
+	var last := Vector2i(-1, -1)
+	for i in steps + 1:
+		var p := Vector2(a) + Vector2(b - a) * (float(i) / float(steps))
+		var c := cell_of(Vector2i(int(round(p.x)), int(round(p.y))))
+		if c == last:
+			continue
+		last = c
+		if is_closed(c) and not is_water(c) and not ends.has(c):
+			if run.is_empty():
+				run = [c, c]
+			else:
+				run[1] = c
+		elif not run.is_empty():
+			out.append(run)
+			run = []
+	if not run.is_empty():
+		out.append(run)
+	return out
+
+
 ## The straight line a -> b cut into runs of one kind of ground:
 ## [[end point (whole metres), over water?], ...], the last ending on b. The
 ## same cell walk as clear(); a boundary is the point where the line leaves a

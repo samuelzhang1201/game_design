@@ -1,0 +1,3 @@
+kind,color,color_alt,style,margin_m,lift_m,fade_m,unit_m,notes
+dirt,#7A6446,#5E4C34,0,2.5,0.12,1.6,1.0,"owner 2026-10-12 (房子贴在地上): a packed-earth apron round the foot of a countryside house so it grows out of the ground; style 0 = mottled earth (two tones hashed per unit_m cell); margin_m is the strip beyond the mesh's own AABB, lift_m its height over the house's seat (clears the z-fight), fade_m the soft edge into the ground"
+brick,#9A6B55,#6F6560,1,2.0,0.12,1.2,1.1,"owner 2026-10-12: a brick paving apron round a town or city house; style 1 = running-bond bricks (unit_m long, half as tall) with grey mortar (color_alt) lines"

@@ -27,6 +27,10 @@ signal sheet_requested(index: int)
 ## A sheet starts rolling up: a march pending on its confirm is given up.
 signal sheet_rolling
 signal sheet_laid(index: int)
+## The markers on the index chart changed (taken out, put back or moved): how
+## many stand there and how many cells across the covered area runs (WarTray),
+## which the strategic map's zoom follows (owner 2026-10-12, item 7).
+signal tray_changed(count: int, zoom: float)
 signal camera_moved
 ## The easel's Missive board (spec 2026-10-02-war-room-v2 §1.3): the camera
 ## has flown to it / back to the table; a click or a hover on its panel, as a
@@ -147,6 +151,10 @@ var _toss: Dictionary = {}
 var _toss_t := 0.0
 var _toss_to := -1
 var _toss_n := 0
+var _toss_slot := 0
+var _tray: WarTray
+var _markers: Array = []   # one node per tray slot; slot 0 is the authored %Marker
+var _marker_k := 1.0       # the markers' scale: a base fits inside one chart cell (war_marker_fit)
 var _supply_routes: Array = []   # the flowing supply roads on this sheet (WarSupplyFlow.routes), read on a state change
 var _broken_routes: Array = []   # the broken (FRONT) ones, drawn dark dashed
 var _space_drag := false   # the left press came with Space held: the drag pans, the plans never see it
@@ -392,7 +400,7 @@ func lay_sheet(index: int) -> void:
 	_rig.bounds = Rect2(-_table_w * 0.5, -_depth * 0.5, _table_w, _depth)
 	_rig.target = Vector3.ZERO
 	_rig.yaw_deg = 0.0
-	_rig.distance = _repo.bal("war_cam_distance_m")
+	_rig.distance = tray_distance()
 	_apply_camera()
 	if not _chart_built:
 		_chart_built = true
@@ -464,11 +472,21 @@ func tossing() -> bool:
 	return not _toss.is_empty()
 
 
-## Toss the war marker onto sheet `index`'s cell of the index chart, then lay
-## the sheet (spec 2026-10-02-war-room-v2 §2.3). Ignored mid-toss or mid-roll.
+## Take a marker out of the tray and toss it onto sheet `index`'s cell of the
+## index chart, then lay the sheet (spec 2026-10-02-war-room-v2 §2.3; owner
+## 2026-10-12, item 7: up to war_tray_max markers, one per cell). A cell that
+## already holds one gives it back to the tray (never the last one out); a
+## full tray takes no more. Ignored mid-toss or mid-roll.
 func toss_to(index: int) -> void:
 	if tossing() or rolling() or index < 0 or index >= WarSheets.series(_repo).size():
 		return
+	_ensure_tray()
+	if _tray.slot_of(index) >= 0:
+		_put_back(index)
+		return
+	var slot := _tray.take(index)
+	if slot < 0:
+		return   # the tray is empty of markers: a fifth cannot be taken
 	_toss_n += 1
 	var uv := WarToss.landing(WarIndexChart.uv_of_cell(_repo, WarSheets.series(_repo)[index]),
 		hash([index, _toss_n]), _repo.bal("war_toss_margin"))
@@ -477,29 +495,131 @@ func toss_to(index: int) -> void:
 	_toss = WarToss.plan(hand, to, hash([index, _toss_n, "toss"]), WarToss.rules(_repo))
 	_toss_t = 0.0
 	_toss_to = index
-	_marker.visible = true
-	_marker.global_transform = WarToss.pose(_toss, 0.0)
+	_toss_slot = slot
+	(_markers[slot] as Node3D).visible = true
+	_set_marker(slot, WarToss.pose(_toss, 0.0))
+	tray_changed.emit(_tray.count(), covered_zoom())
 
 
 func _step_toss(delta: float) -> void:
 	if not tossing():
 		return
 	_toss_t += delta
-	_marker.global_transform = WarToss.pose(_toss, _toss_t)
+	_set_marker(_toss_slot, WarToss.pose(_toss, _toss_t))
 	if _toss_t >= float(_toss["duration"]):
 		var to := _toss_to
 		_toss = {}
 		sheet_requested.emit(to)
 
 
-## The marker stands on the laid sheet's cell of the chart (no toss: the first
-## lay, a lay by an edge arrow or the margin).
+## The marker on `index` goes back to its place in the tray; if that was the
+## laid sheet, the newest marker still out has its sheet laid.
+func _put_back(index: int) -> void:
+	var slot := _tray.slot_of(index)
+	if not _tray.put_back(index):
+		return
+	_rest_marker(slot)
+	tray_changed.emit(_tray.count(), covered_zoom())
+	if index == _sheet and _tray.newest() >= 0:
+		sheet_requested.emit(_tray.newest())
+
+
+## The tray and its marker nodes (slot 0 is the authored node; the others are
+## copies of it), the resting markers standing beside the chart.
+func _on_tray_changed(_count: int, _zoom: float) -> void:
+	if _sheet < 0 or _swap.active():
+		return
+	_rig.distance = tray_distance()
+	_apply_camera()
+
+
+func _ensure_tray() -> void:
+	if _tray != null:
+		return
+	_tray = WarTray.of(_repo)
+	tray_changed.connect(_on_tray_changed)
+	_markers = [_marker]
+	for i in range(1, _tray.max_slots):
+		var m := _marker.duplicate() as Node3D
+		m.name = "Marker%d" % (i + 1)
+		_marker.get_parent().add_child(m)
+		_markers.append(m)
+	if _chart_built:
+		for i in _tray.max_slots:
+			_rest_marker(i)
+
+
+## Slot `slot`'s marker rests in its place beside the chart's east edge.
+func _rest_marker(slot: int) -> void:
+	var m := _markers[slot] as Node3D
+	m.visible = true
+	_set_marker(slot, Transform3D(Basis.IDENTITY, WarRoomWall.tray_point(_chart, slot, _repo.bal("war_tray_gap_m"))))
+
+
+## A marker's pose, scaled so its base fits inside one chart cell.
+func _set_marker(slot: int, t: Transform3D) -> void:
+	t.basis = t.basis.scaled(Vector3.ONE * _marker_scale())
+	(_markers[slot] as Node3D).global_transform = t
+
+
+func _marker_scale() -> float:
+	if not _chart_built:
+		return 1.0
+	var deg := _repo.bal("war_sheet_deg")
+	var cell := MapCoords.cell_rect(_repo, Vector2i.ZERO, deg).size
+	var map_px := Vector2(float(_repo.map_info.get("width", "1")), float(_repo.map_info.get("height", "1")))
+	var size := WarRoomWall.map_size(_chart)
+	var cell_m := Vector2(cell.x / map_px.x * size.x, cell.y / map_px.y * size.y)
+	var base := (_marker.get_node("Base") as MeshInstance3D).mesh as CylinderMesh
+	var diameter := maxf(base.bottom_radius, base.top_radius) * 2.0
+	return minf(1.0, _repo.bal("war_marker_fit") * minf(cell_m.x, cell_m.y) / maxf(diameter, 0.0001))
+
+
+## The marker for the laid sheet stands on its cell of the chart (no toss: the
+## first lay, a lay by an edge arrow or the margin); a sheet no marker holds
+## takes a free one, or moves the newest when the tray is empty of markers.
 func _stand_marker(index: int) -> void:
 	if tossing():
 		return
+	_ensure_tray()
+	var had := _tray.slot_of(index) >= 0
+	var slot := _tray.hold(index)
+	if had:
+		return   # its marker stands where it landed
 	var uv := WarIndexChart.uv_of_cell(_repo, WarSheets.series(_repo)[index]).get_center()
-	_marker.global_transform = Transform3D(Basis.IDENTITY, WarRoomWall.chart_point(_chart, uv))
-	_marker.visible = true
+	(_markers[slot] as Node3D).visible = true
+	_set_marker(slot, Transform3D(Basis.IDENTITY, WarRoomWall.chart_point(_chart, uv)))
+	tray_changed.emit(_tray.count(), covered_zoom())
+
+
+## The camera's opening distance for the markers out: war_cam_distance_m
+## backed off by (zoom - 1) x war_tray_zoom_gain, within the farthest step
+## (owner 2026-10-12, item 7; the table is not widened).
+func tray_distance() -> float:
+	var z := maxf(1.0, covered_zoom())
+	return minf(_repo.bal("war_cam_distance_m") * (1.0 + (z - 1.0) * _repo.bal("war_tray_zoom_gain")), _repo.bal("war_cam_max_m"))
+
+
+## The sheets the markers stand on, oldest first.
+func tray_sheets() -> Array:
+	return [] if _tray == null else _tray.held()
+
+
+## The marker standing on sheet `index`'s cell, null when none.
+func marker_for(index: int) -> Node3D:
+	if _tray == null or _tray.slot_of(index) < 0:
+		return null
+	return _markers[_tray.slot_of(index)] as Node3D
+
+
+## The pack-px area the markers' cells cover (the strategic map's extent).
+func covered_rect() -> Rect2:
+	return WarTray.span_rect(_repo, tray_sheets())
+
+
+## How many cells across the covered area runs: 1 for one marker (the zoom).
+func covered_zoom() -> float:
+	return WarTray.zoom_factor(WarTray.cells_of(_repo, tray_sheets()))
 
 
 func board_mode() -> String:

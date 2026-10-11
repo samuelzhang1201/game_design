@@ -333,3 +333,19 @@ func test_a_spys_next_day_is_previewed_and_the_preview_files_nothing() -> void:
 	var reports: Array = CourierSystem.ride_day(repo, s).filter(
 		func(e: Dictionary) -> bool: return String(e["type"]) == "spy_report")
 	assert_eq(reports.size(), 1, "the real day files the report")
+
+
+## Owner 2026-10-12 (item 14): no spy rides to the crown's own realm (its facts are
+## exact); foreign land is still allowed, and balance spy_refuse_own_realm = 0 lifts it.
+func test_a_spy_is_refused_for_the_crowns_own_realm() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var actions := ActionSystem.new(repo)
+	var home := _at(_home_plain(s))
+	var far := _at(_foreign_manor(s))
+	assert_true(SpySystem.is_home(repo, s, home))
+	assert_false(SpySystem.is_home(repo, s, far))
+	assert_eq(actions.validate(ActionRequest.make("SPY_SEND", {"x": home.x, "y": home.y}), s),
+		"Your own realm needs no spy")
+	assert_eq(actions.validate(ActionRequest.make("SPY_SEND", {"x": far.x, "y": far.y}), s), "")
+	repo.balance["spy_refuse_own_realm"] = 0.0
+	assert_eq(actions.validate(ActionRequest.make("SPY_SEND", {"x": home.x, "y": home.y}), s), "")

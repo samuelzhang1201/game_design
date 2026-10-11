@@ -1,6 +1,6 @@
 # 序章设计文档 · 卢顿之约
 
-Crown and Council — Chapter 0 Design Doc
+Beyond the King's Words — Chapter 0 Design Doc
 版本 2.0 ｜ 状态：**已实现并接线**（2026-09-21）
 
 > 1.0 是一份外部交付的设计稿（`game_story/chapter_0/chapter_0/`，已归档在 commit `261f202`）。2.0 是把它**对齐到本作已有的人物、时间、地点和引擎**之后重写的版本，并且已经在游戏里跑起来了。哪些地方被改、为什么改，见 §9。

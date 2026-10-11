@@ -541,3 +541,23 @@ func test_the_graticule_figures_are_paler_than_full_rubric() -> void:
 	assert_gt((ink["graticule"] as Array).size(), 0)
 	for g: Dictionary in ink["graticule"]:
 		assert_almost_eq(float(g["fig_alpha"]), repo.bal("war_grid_figure_alpha"), 0.0001)
+
+
+## Owner 2026-10-12 (items 8, 10): every line reads, and the town markers are drawn large.
+func test_the_non_border_lines_are_at_least_as_heavy_as_the_border_and_the_seams_opaque() -> void:
+	for key: String in ["war_ink_road_px", "war_ink_trail_px", "war_ink_river_px", "war_ink_coast_px", "war_ink_seam_px", "war_ink_manor_px"]:
+		assert_gte(repo.bal(key), 2.0, key)
+	assert_gte(repo.bal("war_ink_road_px"), repo.bal("war_ink_border_px"), "a road is no thinner than the border")
+	assert_gte(repo.bal("war_ink_river_max_px"), repo.bal("war_ink_river_px"))
+	assert_gte((repo.war_palette["seam_ink"] as Color).a, 0.75, "a seam is near-opaque")
+	assert_gt((repo.war_palette["seam_ink"] as Color).a, (repo.war_palette["ink_faint"] as Color).a)
+
+
+func test_the_town_marker_keys_are_data_and_a_capital_differs_from_a_city() -> void:
+	assert_gte(repo.bal("war_ink_town_px"), 12.0, "a village's ring is drawn large")
+	assert_gt(repo.bal("war_ink_town_halo_ratio"), 1.0, "the halo clears the ring")
+	assert_gt(repo.bal("war_ink_town_pip_ratio"), 0.0)
+	assert_gt(repo.bal("war_ink_town_outer_gap_ratio"), 0.0)
+	assert_gt(repo.bal("war_ink_town_dot_ratio"), repo.bal("war_ink_town_pip_ratio"), "a city's dot outweighs a village's pip")
+	for k: String in ["town_halo_ratio", "town_pip_ratio", "town_outer_gap_ratio"]:
+		assert_true(k in WarRoomInk.INK_RATIOS, k)

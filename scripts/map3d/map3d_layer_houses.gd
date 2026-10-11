@@ -64,6 +64,10 @@ var _aabbs: Dictionary = {}           # type -> its mesh's AABB, for the footpri
 ## get_instance_transform() never reflects set_instance_transform() (its
 ## storage is missing), so a test reads what refresh() handed it here.
 var _transforms: Dictionary = {}      # type -> Array[Transform3D], instance order
+var _aprons: Dictionary = {}          # kind -> MultiMeshInstance3D, the skirts round the houses' feet
+## Test seam: the apron Transform3D handed to each kind's MultiMesh in the last
+## refresh(), in instance order.
+var _apron_transforms: Dictionary = {}  # kind -> Array[Transform3D]
 ## Test seam: the (wall, roof) variant given to each instance in the last
 ## refresh(), in instance order, like _transforms.
 var _variants: Dictionary = {}        # type -> Array[Vector2i]
@@ -87,7 +91,7 @@ func bind(p_ctx: Map3DContext) -> void:
 ## not the camera's eye, which swings with the pitch (spec §3).
 func _on_camera_moved() -> void:
 	_lod_shown = Map3DGeometry.lod_shown(_lod_shown, ctx.distance, ctx.repo.bal("map3d_lod_houses_m"), ctx.repo.bal("map3d_lod_margin_m"))
-	for mmi: MultiMeshInstance3D in _instances.values() + _far.values():
+	for mmi: MultiMeshInstance3D in _instances.values() + _far.values() + _aprons.values():
 		mmi.visible = _lod_shown   # owner 2026-10-10 (LOD): past map3d_lod_houses_m no house is drawn
 	if not _lod_shown:
 		return
@@ -112,6 +116,7 @@ func set_preview(on: bool) -> void:
 	else:
 		_instances.clear()
 		_far.clear()
+		_aprons.clear()
 		_transforms.clear()
 		_built = false
 		_built_at = Vector2.INF
@@ -151,6 +156,11 @@ func build() -> void:
 	_roof_tints = Map3DHouses.tints_of(roof_tints)
 	_trim_tints = Map3DHouses.tints_of(trim_tints)
 	_far.clear()
+	_aprons.clear()
+	_apron_transforms.clear()
+	for kind: String in ctx.repo.map3d_aprons:
+		_aprons[kind] = Map3DHouseApron.multimesh_instance(kind, ctx.repo.map3d_aprons[kind])
+		add_child(_aprons[kind])
 	for type: String in ctx.repo.map3d_houses:
 		var model := _model_of(type)
 		if model.is_empty():
@@ -206,7 +216,33 @@ func refresh(camera_xz: Vector2) -> bool:
 		_fill(_far[type], type, far, houses, xforms, picks)
 		_transforms[type] = xforms
 		_variants[type] = picks
+	_fill_aprons(shown, houses)
 	return true
+
+
+## Each kind's apron MultiMesh filled with the skirts of the shown settlements
+## whose group names that kind (map3d_settlements.apron), one quad per house of
+## a type that wears one; packed once per settlement and kept, like the houses.
+func _fill_aprons(codes: Array, houses: Dictionary) -> void:
+	for kind: String in _aprons:
+		var row: Dictionary = ctx.repo.map3d_aprons[kind]
+		var buf := PackedFloat32Array()
+		var xf: Array[Transform3D] = []
+		for code: String in codes:
+			var group := String(ctx.repo.burgs.get(code, {}).get("group", "village"))
+			if Map3DHouseApron.kind_of(group, ctx.repo) != kind:
+				continue
+			var key := code + "|apron"
+			if not _chunks.has(key):
+				_chunks[key] = Map3DHouseApron.pack(houses[code], _aabbs, _seat, float(row["margin_m"]),
+					float(row["lift_m"]), ctx.repo)
+			buf.append_array(_chunks[key]["buf"])
+			xf.append_array(_chunks[key]["xf"])
+		var mm: MultiMesh = (_aprons[kind] as MultiMeshInstance3D).multimesh
+		mm.instance_count = xf.size()
+		if not xf.is_empty():
+			mm.buffer = buf
+		_apron_transforms[kind] = xf
 
 
 ## One MultiMesh filled with `codes`' houses of `type`, in that order; their
@@ -276,6 +312,11 @@ func counts() -> Dictionary:
 ## supplied itself.
 func transforms_of(type: String) -> Array:
 	return _transforms.get(type, [])
+
+
+## Test seam: the apron transforms of `kind` in the last refresh().
+func apron_transforms_of(kind: String) -> Array:
+	return _apron_transforms.get(kind, [])
 
 
 ## Test seam: the (wall, roof) variant each instance of `type` wore in the

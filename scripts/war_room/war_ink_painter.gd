@@ -52,6 +52,7 @@ func _draw() -> void:
 		return
 	var c_ink: Color = pal["ink"]
 	var c_faint: Color = pal["ink_faint"]
+	var c_seam: Color = pal.get("seam_ink", c_faint)
 	for b: Dictionary in ink["borders"]:
 		var band: Color = (b["color"] as Color)
 		band.a = float(px["band_alpha"])
@@ -63,7 +64,7 @@ func _draw() -> void:
 		_draw_river(rv, pal["river_ink"])
 		_name_river(rv, pal["river_ink"])
 	for poly: PackedVector2Array in ink["seams"]:  # fine work: a hairline (the segments arrive two points apiece)
-		draw_polyline(poly, c_faint, float(px["seam"]), true)
+		draw_polyline(poly, c_seam, float(px["seam"]), true)
 	for b: Dictionary in ink["borders"]:
 		for loop: PackedVector2Array in b["loops"]:
 			var parts := WarSheetInk.dashed(_closed(loop), float(px["dash"]), float(px["gap"]))
@@ -82,7 +83,7 @@ func _draw() -> void:
 		draw_line(wat + Vector2(0, ws * 0.2), wat + Vector2(0, ws * 0.6), c_wood, maxf(ws * 0.15, 1.0), true)
 	for e: PackedVector2Array in ink.get("manor_edges", []):
 		for d: PackedVector2Array in WarSheetInk.dashed(e, float(px["manor_dash"]), float(px["manor_gap"])):
-			draw_polyline(d, c_faint, float(px["manor"]), true)
+			draw_polyline(d, c_seam, float(px["manor"]), true)
 	for mn: Dictionary in ink.get("manors", []):
 		var mw := float(String(mn["label"]).length()) * float(px["manor_label"]) * float(px["char_w"])
 		draw_string(font, (mn["at"] as Vector2) + Vector2(-mw * 0.5, float(px["manor_label"]) * 0.35), String(mn["label"]),
@@ -114,9 +115,16 @@ func _draw() -> void:
 			draw_polyline(d, c_ink, maxf(bs * 0.2, 1.0), true)
 	for t: Dictionary in ink["towns"]:
 		var r := float(px["town"]) * (1.0 + float(px["town_tier_growth"]) * float(int(t["tier"])))
+		var knock: Color = pal.get("parchment", pal.get("paper", Color.WHITE))
+		draw_circle(t["at"], r * float(px.get("town_halo_ratio", 1.0)), knock)   # a parchment halo: the marker reads over road and contour
 		draw_arc(t["at"], r, 0.0, TAU, 32, c_ink, float(px["town"]) * float(px["town_ring_ratio"]), true)
 		if int(t["tier"]) >= 2:
 			draw_circle(t["at"], r * float(px["town_dot_ratio"]), c_ink)
+		else:   # a village or town: a small pip in an open ring, apart from a city's solid dot
+			draw_circle(t["at"], r * float(px.get("town_pip_ratio", 0.0)), c_ink)
+		if int(t["tier"]) >= 3:   # a capital: a second ring outside
+			draw_arc(t["at"], r * (1.0 + float(px.get("town_outer_gap_ratio", 0.0))), 0.0, TAU, 40, c_ink,
+				float(px["town"]) * float(px["town_ring_ratio"]) * 0.6, true)
 		var ring_w := float(px["town"]) * float(px["town_ring_ratio"])
 		if bool(t.get("walls", false)):
 			var wr := r * float(px["wall_ratio"])

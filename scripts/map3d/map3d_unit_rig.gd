@@ -84,18 +84,51 @@ static func _local_to(root: Node3D, child: Node3D) -> Transform3D:
 	return t
 
 
+## A figure's start delay (seconds) when a march begins (owner 2026-10-12: a
+## group must not step off in lock-step): 0..map3d_march_desync_max_s, hashed
+## from the regiment's id and the figure's index, so the same ids give the same
+## delay on every run (no RNG, no clock). View-only: the simulation never sees it.
+static func march_delay_s(repo: DataRepository, code: String, index: int) -> float:
+	return _unit_hash("%s|delay|%d" % [code, index]) * repo.bal("map3d_march_desync_max_s")
+
+
+## A figure's gait-speed factor, 1 +/- map3d_march_desync_pace, hashed the same way.
+static func pace_jitter(repo: DataRepository, code: String, index: int) -> float:
+	return 1.0 + (_unit_hash("%s|pace|%d" % [code, index]) * 2.0 - 1.0) * repo.bal("map3d_march_desync_pace")
+
+
+## A stable 0..1 from a string (String.hash is deterministic across runs).
+static func _unit_hash(key: String) -> float:
+	return float(key.hash() % 10007) / 10006.0
+
+
 ## Puts a piece's figures (`anims`) into an action by name, blended over
 ## `blend_s`; one without it keeps its own (Map3DLayerUnits.play). Men at rest
-## are not clones (each seeks its own phase); a column marches in step.
-static func play(anims: Array, action: String, blend_s: float) -> void:
+## are not clones (each seeks its own phase); a column's figures step off one
+## after another by march_delay_s (`code` + index; "" = all at once).
+static func play(anims: Array, action: String, blend_s: float, repo: DataRepository = null,
+		code: String = "") -> void:
 	for i in anims.size():
 		var anim: AnimationPlayer = anims[i]
 		var clip := Map3DUnits.clip_named(anim, action)
+		anim.set_meta("want_action", action)
 		if clip == "" or anim.current_animation == clip:
 			continue
-		anim.play(clip, blend_s)  # blended, never a snap
-		if action != "MARCH":
-			anim.seek(fposmod(i * 0.37, anim.current_animation_length))
+		var delay := march_delay_s(repo, code, i) if action == "MARCH" and repo != null and code != "" else 0.0
+		if delay > 0.0 and anim.is_inside_tree():
+			anim.get_tree().create_timer(delay).timeout.connect(
+				_start.bind(anim, action, clip, blend_s, i))
+		else:
+			_start(anim, action, clip, blend_s, i)
+
+
+static func _start(anim: AnimationPlayer, action: String, clip: String, blend_s: float, i: int) -> void:
+	if not is_instance_valid(anim) or anim.get_meta("want_action", "") != action \
+			or anim.current_animation == clip:
+		return  # freed, or the order changed during the delay
+	anim.play(clip, blend_s)  # blended, never a snap
+	if action != "MARCH":
+		anim.seek(fposmod(i * 0.37, anim.current_animation_length))
 
 
 ## Seats `piece` at world `xz` facing `yaw` at scale `k` (Map3DUnits.seat; owner
@@ -141,11 +174,14 @@ static func heading_for(repo: DataRepository, state: GameState, code: String, tr
 
 ## The feet keep pace with the ground, timed from the day's PLAN (walk_speed,
 ## march_rate); 1 at rest. Each figure's speed_scale is set only when it changes.
-static func keep_pace(repo: DataRepository, piece: Dictionary, day: Dictionary, share: float, clock: int) -> void:
+static func keep_pace(repo: DataRepository, piece: Dictionary, day: Dictionary, share: float, clock: int,
+		code: String = "") -> void:
 	var pace := march_rate(repo, walk_speed(day, repo.bal("time_day_seconds"), clock),
 		(piece["node"] as Node3D).transform.basis.get_scale().x, float(piece["clip_s"]),
 		float(piece["stride_m"])) if Map3DUnits.walking(day, share) else 1.0
 	if piece.get("pace", -1.0) != pace:
 		piece["pace"] = pace
-		for anim: AnimationPlayer in piece["anims"]:
-			anim.speed_scale = pace
+		var anims: Array = piece["anims"]
+		for i in anims.size():
+			var anim: AnimationPlayer = anims[i]
+			anim.speed_scale = pace * pace_jitter(repo, code, i)

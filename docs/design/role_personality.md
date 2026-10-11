@@ -1,4 +1,4 @@
-# Role Personality — Crown and Council
+# Role Personality — Beyond the King's Words
 
 The personality vocabulary referenced by [role_player.md](role_player.md).
 Canonical data is `data/character_traits.csv` (personality/acquired/physical

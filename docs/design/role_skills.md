@@ -1,4 +1,4 @@
-# Role Skills — Crown and Council
+# Role Skills — Beyond the King's Words
 
 The skills vocabulary referenced by [role_player.md](role_player.md). Two
 layers, both canonical in CSV:

@@ -138,8 +138,47 @@ func redraw() -> void:
 		var mm := input.px_per_mm(_view.sheet_rect().get_center())
 		_plan_hud.show_orders(_order_ink(groups, mm),
 			WarRoomInk.plan_look(_repo, WarRoomInk.tooth(), mm, _view.lettering(), _view.caps_font()))
+	_plan_hud.show_slope(_slope_bars(groups), _slope_look())
 	_hud.set_route(_handles(_view.aim_code if _view.aiming else ""), pal["plan_blue"])
 	_hud.set_supply(_supply_rings(), pal["supply_route"])
+
+
+## The barrier bars (WarSlopeBars) across every march drawn and the pending
+## one, on the screen: [{a, b, hatches}] (owner 2026-10-12, item 5).
+func _slope_bars(groups: Array) -> Array:
+	var chains: Array = []
+	if _view.rolling() or _view.sheet_index() < 0:
+		return []
+	for g: Dictionary in groups:
+		if g.has("chain"):
+			chains.append(g["chain"])
+	if _view.aiming and _view.aim_code != "" and _view.aim_dest.x >= 0.0:
+		var pend: Array = [_view.position_of(_view.aim_code)]
+		pend.append_array(Array(_view.aim_waypoints))
+		pend.append(_view.aim_dest)
+		chains.append(pend)
+	var out: Array = []
+	var rect := _view.sheet_rect()
+	var gap := _repo.bal("war_slope_hatch_gap_px")
+	var tick := _repo.bal("war_slope_hatch_px")
+	for chain: Array in chains:
+		for bar: Dictionary in WarSlopeBars.bars(_repo, chain):
+			if not rect.has_point((bar["a"] as Vector2).lerp(bar["b"], 0.5)):
+				continue
+			var a: Variant = _view.screen_pos_of_px(bar["a"])
+			var b: Variant = _view.screen_pos_of_px(bar["b"])
+			var m: Variant = _view.screen_pos_of_px((bar["a"] as Vector2) + (bar["dir"] as Vector2) * 4.0)
+			if a == null or b == null or m == null:
+				continue
+			var dir: Vector2 = ((m as Vector2) - (a as Vector2)).normalized()
+			out.append({"a": a, "b": b, "hatches": WarSlopeBars.hatches(a, b, dir, gap, tick)})
+	return out
+
+
+func _slope_look() -> Dictionary:
+	var col: Color = _repo.war_palette["slope_bar"]
+	col.a = _repo.bal("war_slope_bar_alpha")
+	return {"colour": col, "width": _repo.bal("war_slope_bar_px")}
 
 
 ## Where each selected intel hint stands on the screen (a selected piece,
@@ -213,6 +252,11 @@ func orders() -> Array:
 			var row: Dictionary = rows.filter(func(r: Dictionary) -> bool:
 				return String(r["code"]) == c and String(r["kind"]) == String(g["kind"]))[0]
 			lines.append(WarOrderArrows.screen_line(_repo, _view, c, from[c], row["wps"], g["dest"]))
+			if not g.has("chain"):   # the barrier bars lie on the lead's chord (WarSlopeBars)
+				var chain: Array = [from[c]]
+				chain.append_array(Array(row["wps"]))
+				chain.append(g["dest"])
+				g["chain"] = chain
 		g["lines"] = lines
 		out.append(g)
 	return out

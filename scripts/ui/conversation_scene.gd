@@ -23,6 +23,15 @@ signal audience_requested(id: String)
 
 var _beats: Array = []
 var _index := -1
+## The opening narration's two speakers (owner 2026-10-12): Lord Malvern's bust
+## in the window's upper left, the player's in the upper right, the speaking
+## side lit and the other dimmed. Both are boxes the editor places in the scene
+## (a Control each, custom_minimum_size set; _fill_portrait cuts the art to it);
+## unset, the pages still read, just without the busts.
+@export var narration_left: Control
+@export var narration_right: Control
+## How much the side that is not speaking is dimmed.
+const NARRATION_DIM := Color(0.55, 0.55, 0.55, 1.0)
 ## Running transcript of the conversation, newest last — each entry
 ## {"speaker": name, "line": bbcode, "n": serial}. The right column's record
 ## shows the whole exchange, not just the latest line (user requirement
@@ -581,6 +590,17 @@ func _refresh_banner() -> void:
 ## a fresh checkout is never broken by a missing render.
 const EVENT_ART_DIR := "res://assets/2D/events/illustrations/"
 
+func _show_narration_busts(b: Dictionary) -> void:
+	var on := String(b.get("kind", "")) == "narration" and b.has("side")
+	for pair: Array in [[narration_left, "left", "left_id"], [narration_right, "right", "right_id"]]:
+		var box := pair[0] as Control
+		if box == null:
+			continue
+		box.visible = on
+		if on:
+			_fill_portrait(box, String(b[pair[2]]))
+			box.modulate = Color.WHITE if String(b["side"]) == pair[1] else NARRATION_DIM
+
 func _show_event_art(b: Dictionary) -> void:
 	var art: Texture2D = null
 	if String(b.get("kind", "")) == "event":
@@ -875,6 +895,7 @@ func _advance() -> void:
 	var kind := String(b["kind"])
 	# The narration has nobody to stand before you; everything else does.
 	%PortraitSide.visible = kind != "narration"
+	_show_narration_busts(b)
 	_refresh_banner()
 	# The move popup is no place to be while an event or narration is on stage
 	# (resolve or continue first).
@@ -902,7 +923,9 @@ func _advance() -> void:
 			# title, one continue option.
 			_continue_btn.visible = false
 			_say("", String(b["text"]))
-			_add_reply("I am ready. Let the reign begin.", _advance)
+			# one page a topic, a Continue turns it; the last one begins the reign
+			var last := int(b.get("page", 1)) >= int(b.get("pages", 1))
+			_add_reply("I am ready. Let the reign begin." if last else "Continue", _advance)
 		"minister":
 			_continue_btn.visible = true
 			_say(String(b["speaker"]), String(b["text"]))

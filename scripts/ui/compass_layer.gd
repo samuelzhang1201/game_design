@@ -15,6 +15,8 @@ const ART_PATH := "res://assets/2D/ui/compass/compass.png"
 var box: Callable = func() -> Rect2: return Rect2()
 var texture: Texture2D = null
 var angle := 0.0
+## Turns whatever the clock does (the launch black's loading wheel, MainMenu).
+@export var always_turn := false
 
 func setup() -> void:
 	texture = UiPalette.load_art(ART_PATH)
@@ -26,9 +28,10 @@ func has_art() -> bool:
 func _process(delta: float) -> void:
 	if texture == null or Game.data == null:
 		return
-	if Game.clock_speed > 0:
+	var speed := 1 if always_turn else Game.clock_speed
+	if speed > 0:
 		angle = fposmod(angle + deg_to_rad(Game.data.bal("map_compass_turn_deg_per_s"))
-			* float(Game.clock_speed) * delta, TAU)
+			* float(speed) * delta, TAU)
 		queue_redraw()
 
 func _draw() -> void:

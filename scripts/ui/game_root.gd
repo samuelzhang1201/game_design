@@ -1137,8 +1137,6 @@ func _switch_to(new_state: State) -> void:
 	if _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
 
-const BACKGROUND_STORY_PATH := "res://game_story/chapter_0/game_start.md"
-
 ## The reign begins over two frames (owner 2026-10-10: no stall as the game
 ## opens): the campaign and its opening month are made in this one, under the
 ## title as it lies; the title hands its map over and the screen is laid in
@@ -1162,11 +1160,10 @@ func _on_start_requested() -> void:
 	# council's matters, the chapter's first event among them, then wait on
 	# the table by the seal, each with its minister marked, until the player
 	# clicks that minister (audience_with).
-	var story := _load_background_story()
-	if story != "":
+	var story := OpeningNarration.beats(Game.data)
+	if not story.is_empty():
 		_switch_to(State.CONVERSATION)
-		current_screen.start([{"kind": "narration", "portrait_id": "round_table",
-			"speaker": "", "text": story}], _pending_report)
+		current_screen.start(story, _pending_report)
 	else:
 		_switch_to(State.COURT)
 		current_screen.enter_court(_pending_report)
@@ -1198,21 +1195,6 @@ func _land_on_table() -> void:
 	var landing := TableLanding.play(self, current_screen, frame, table_pieces)
 	if landing != null and _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
-
-## The story background (game_story/chapter_0/game_start.md) with markdown
-## chrome stripped for in-game narration and {player_realm}-style tokens
-## filled from the loaded pack. Empty when the file is absent.
-func _load_background_story() -> String:
-	if not FileAccess.file_exists(BACKGROUND_STORY_PATH):
-		return ""
-	var raw := FileAccess.get_file_as_string(BACKGROUND_STORY_PATH)
-	var lines: Array = []
-	for line in raw.split("\n"):
-		var l := String(line).strip_edges()
-		if l.begins_with("#"):
-			continue
-		lines.append(l.replace("**", ""))
-	return Game.data.fill_realms("\n".join(lines).strip_edges())
 
 ## Load Game from the title screen: same resume rules as the pause menu. On
 ## the living title the save is read first (a missing one says so and the

@@ -56,6 +56,10 @@ var resource_icons: Dictionary = {}
 ## data/map3d_settlements.csv rows keyed by burg group: the 3D MAP's
 ## placeholder marker for each settlement (Map3DView).
 var map3d_settlements: Dictionary = {}
+## data/map3d_aprons.csv rows keyed by kind (dirt / brick): the ground skirt
+## round a house's foot (owner 2026-10-12). `map3d_settlements.apron` names the
+## kind a burg group gets; `map3d_houses.apron` 1 marks the types that wear one.
+var map3d_aprons: Dictionary = {}
 ## data/map3d_houses.csv rows keyed by type: the 3D MAP's house types, their
 ## role, weight, size and roof colour (spec 2026-09-20 §2); the mesh each is
 ## drawn with is GameArt's HOUSE_MODELS.
@@ -703,6 +707,10 @@ func _load(dir: String) -> bool:
 	if not _load_if_present("res://data/map3d_settlements.csv",
 			["group", "dot_px", "ring_px", "line_px", "color", "max_view_m"],
 			func(r): map3d_settlements[String(r["group"])] = r):
+		return false
+	if not _load_if_present("res://data/map3d_aprons.csv",
+			["kind", "color", "color_alt", "style", "margin_m", "lift_m", "fade_m", "unit_m"],
+			func(r): map3d_aprons[String(r["kind"])] = r):
 		return false
 	if not _load_if_present("res://data/map3d_houses.csv",
 			["type", "role", "weight", "footprint_m", "height_m", "roof", "min_group"],
