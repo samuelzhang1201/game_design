@@ -206,15 +206,21 @@ func test_ships_ride_on_the_water_at_ports_one_or_two_by_size() -> void:
 	assert_gt(per_port.size(), 50, "the pack's ports moor ships")
 
 
-## Owner 2026-10-12 (R9: 不要使用带有悬崖高的码头，全部使用普通版码头): every port
-## that built houses takes exactly one timber `pier` — a cliff port is lowered
-## onto a plain landing by bake_houses.port_plain — and no `pier_cliff` or
-## `pier_stair` is laid (`pier_cliff_landings` 0).
+## Owner 2026-10-12 (R9: 不要使用带有悬崖高的码头，全部使用普通版码头): no
+## `pier_cliff` or `pier_stair` is laid (`pier_cliff_landings` 0), and every
+## port with sea in reach takes exactly one timber `pier`. Sea in reach: the
+## game's sea (the picker's cells, the bake's own water) within
+## `pier_search_fallback_m` of the settlement's centre along a bearing; a port
+## whose nearest sea lies beyond it has no sea to build on and never had a pier
+## (at most one is allowed there). Pending until the rebake while cliff rows
+## remain in the committed houses.csv.
 func test_every_port_has_one_normal_pier() -> void:
 	if _skip():
 		return
+	var rules: Dictionary = Game.data.map3d_bake
+	var reach := float(rules.get("pier_search_fallback_m", 2000.0))
 	var piers: Dictionary = {}
-	var built: Dictionary = {}
+	var centre: Dictionary = {}
 	var cliff := 0
 	for r: Dictionary in _rows:
 		var code := String(r["burg_code"])
@@ -223,15 +229,36 @@ func test_every_port_has_one_normal_pier() -> void:
 			cliff += 1
 		elif kind == "pier":
 			piers[code] = int(piers.get(code, 0)) + 1
-		elif not _laid(r):
-			built[code] = true
+		elif not _laid(r) and not centre.has(code):
+			centre[code] = Vector2(float(r["x_m"]), float(r["z_m"]))
 	if cliff > 0:
 		pending("needs the T14 rebake (%d cliff landing rows in houses.csv)" % cliff)
 		return
 	var ports := 0
-	for code: String in built:
+	var wet := 0
+	for code: String in centre:
 		if int((Game.data.burgs[code] as Dictionary).get("is_port", 0)) != 1:
 			continue
 		ports += 1
-		assert_eq(int(piers.get(code, 0)), 1, code + " is a port with houses: one timber pier")
+		var n := int(piers.get(code, 0))
+		if _sea_within(centre[code], reach):
+			wet += 1
+			assert_eq(n, 1, code + " has sea in reach: one timber pier")
+		else:
+			assert_lte(n, 1, code + " has no sea in reach: at most one pier")
 	assert_gt(ports, 20, "the pack's ports built houses")
+	assert_gt(wet, 20, "the pack's ports have sea in reach")
+
+
+## True when the game's sea lies within `reach_m` of `at` (a 50 m walk along
+## 72 bearings, the bake's own search).
+func _sea_within(at: Vector2, reach_m: float) -> bool:
+	for deg in range(0, 360, 5):
+		var a := deg_to_rad(float(deg))
+		var d := 0.0
+		while d <= reach_m:
+			var p := Map3DGeometry.world_to_pack(_meta, at + Vector2(cos(a), sin(a)) * d)
+			if _picker.cell_at(p) < 0:
+				return true
+			d += 50.0
+	return false
