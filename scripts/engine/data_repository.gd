@@ -783,7 +783,7 @@ func _load(dir: String) -> bool:
 			func(r): map3d_settlements[String(r["group"])] = r):
 		return false
 	if not _load_if_present(table_path("res://data", "map3d_aprons"),
-			["kind", "color", "color_alt", "style", "margin_m", "lift_m", "fade_m", "unit_m"],
+			["kind", "margin_m", "lift_px", "grid_n"],
 			func(r): map3d_aprons[String(r["kind"])] = r):
 		return false
 	if not _load_if_present(table_path("res://data", "map3d_houses"),

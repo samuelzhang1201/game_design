@@ -13,7 +13,7 @@ extends Node3D
 ## its own to save — each export below is the uniform `wind_<name>`.
 
 ## The ground's wind uniforms, each an export of the same name.
-const GROUND := ["speed_mps", "wave_m", "field_amp", "grass_amp", "crop_gain", "near_m", "mid_m", "far_m",
+const GROUND := ["speed_mps", "wave_m", "field_amp", "grass_amp", "tilt", "near_m", "mid_m", "far_m",
 	"storm_gain", "far_scale", "far_amp", "sheen_amp", "sheen_sat", "sheen_lift", "sheen_facing",
 	"trough_sat", "streak_amp", "streak_m", "streak_across", "sheen_warm", "band_rise", "band_fall",
 	"band_warp", "gust_len", "gust_width", "gust_cover", "dash_len", "dash_cover"]
@@ -39,8 +39,8 @@ const GROUND := ["speed_mps", "wave_m", "field_amp", "grass_amp", "crop_gain", "
 @export var field_amp := 0.25
 ## The same over open, level grass away from the woods.
 @export var grass_amp := 0.12
-## One multiplier on both amplitudes above (owner 2026-10-12: wheat and grass should sway like the trees); 1 = as authored. Shader-side only, so no extra cost; storm_gain still scales it.
-@export_range(0.0, 4.0, 0.05) var crop_gain := 1.7
+## How far the wave bends the ground's shading normal along the wind (0 = colour waves only): crests catch the sun, lees shade (owner 2026-10-12, R8). ALU only; scaled by the same crop/grass masks, storm and distance fade as the amplitudes above.
+@export_range(0.0, 1.0, 0.01) var tilt := 0.08
 ## The crop's own waves out to about this distance from the camera, giving way to the broad gusts by `mid_m`.
 @export var near_m := 1500.0
 ## How much harder the waves run in a wet or overcast province (0 = the same everywhere).
