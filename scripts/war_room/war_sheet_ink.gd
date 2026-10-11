@@ -228,12 +228,13 @@ static func town_marks(repo: DataRepository, burg: String) -> Dictionary:
 
 
 ## A town's ring and name as one box, ink px (the painter's own layout: the
-## ring at `at`, the name to its right), for keeping other names off it.
+## ring at `at`, the name WEST of it), for keeping other names off it.
 static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> Rect2:
 	var town := repo.bal("war_ink_town_px") * px_k
 	var r := town * (1.0 + repo.bal("war_ink_town_tier_growth") * float(int(t["tier"])))
 	var label := repo.bal("war_ink_label_px") * px_k
-	var w := float(t.get("name_dx", name_dx(repo, int(t["tier"]), px_k))) + float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
+	var nw := float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
+	var w := r + float(t.get("name_dx", name_dx(repo, int(t["tier"]), px_k))) + nw
 	var h := maxf(r, label * 0.6)
 	var up := h
 	var down := h
@@ -243,7 +244,7 @@ static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> 
 	if bool(t.get("market", false)):
 		down = maxf(down, clear + repo.bal("war_ink_market_px") * px_k * 1.25)
 	var at: Vector2 = t["at"]
-	return Rect2(at.x - r, at.y - up, r + w, up + down)
+	return Rect2(at.x - float(t.get("name_dx", name_dx(repo, int(t["tier"]), px_k))) - nw, at.y - up, w, up + down)
 
 
 ## The foot of a seat piece's round plinth on the sheet, as a radius in ink px
@@ -252,7 +253,7 @@ static func plinth_radius_px(repo: DataRepository, px_k := 1.0) -> float:
 	return repo.bal("war_piece_plinth_mm") / 1000.0 * 0.5 / repo.bal("war_table_w_m") * repo.bal("war_sheet_texture_px") * px_k
 
 
-## How far right of its town's point a name starts: the ring and the gap, or
+## How far WEST of its town's point a name ends: the ring and the gap, or
 ## clear of the plinth of the unit seated on the town's point (static: the
 ## seat's spot never moves, so the cached ink never redraws for a march).
 static func name_dx(repo: DataRepository, tier: int, px_k := 1.0) -> float:
@@ -267,7 +268,7 @@ static func town_name_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> R
 	var w := float(String(t["label"]).length()) * label * repo.bal("war_ink_char_w")
 	var at: Vector2 = t["at"]
 	var dx := float(t.get("name_dx", name_dx(repo, int(t["tier"]), px_k)))
-	return Rect2(at.x + dx, at.y - label * 0.65, w, label)
+	return Rect2(at.x - dx - w, at.y - label * 0.65, w, label)
 
 
 ## A manor's name as a box, ink px, centred where the painter sets it.

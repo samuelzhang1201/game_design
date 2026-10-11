@@ -514,7 +514,8 @@ func test_a_town_name_clears_its_seat_piece() -> void:
 	for t: Dictionary in ink["towns"]:
 		var nb := WarSheetInk.town_name_box(repo, t)
 		assert_false(_circle_meets_rect(t["at"], plinth_r, nb), "%s under its seat piece" % t["label"])
-		assert_gte(float(t["name_dx"]), plinth_r, "%s name starts inside the plinth" % t["label"])
+		assert_gte(float(t["name_dx"]), plinth_r, "%s name ends inside the plinth" % t["label"])
+		assert_lt(nb.end.x, float(t["at"].x), "%s name stands west of its town" % t["label"])
 
 
 func test_the_plinth_footprint_in_ink_px_follows_the_table() -> void:
