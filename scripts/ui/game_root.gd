@@ -144,6 +144,10 @@ func _ready() -> void:
 		if not is_inside_tree():
 			return
 	_switch_to(State.MENU)
+	# the title's own curtain (and its wheel) takes the black over from here
+	var black := get_node_or_null("PreMenuBlack")
+	if black != null:
+		black.queue_free()
 	for step: StringName in OVERLAY_STEPS:
 		if stepwise_overlays:
 			await get_tree().process_frame
