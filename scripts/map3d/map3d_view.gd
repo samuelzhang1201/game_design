@@ -95,6 +95,7 @@ var _input := Map3DInput.new()
 var _meta: Dictionary = {}
 var _loaded := false
 var _tried := false
+var _step := 0  # the load's steps taken (load_step)
 var _hovered := false
 var _border_clock := 0.0
 ## The regiments (owner 2026-09-19; always on since 2026-09-27, when the
@@ -211,10 +212,29 @@ func deactivate() -> void:
 ## Put the built world (Map3DWorldCache's kept one when free) under WorldSlot and
 ## bind the layers to it; a build it cannot open leaves the notice saying why.
 func _load() -> void:
+	while load_step():
+		pass
+
+## The load one heavy step a call (world, houses, woods, lines, the rest; owner
+## 2026-10-10: the title opens its map a step a frame), true while steps remain;
+## activate() shows it. The SubViewport's processing is off meanwhile.
+func load_step() -> bool:
+	_tried = true
+	_step += 1
+	match _step:
+		1: return _load_world()
+		2: _houses.build()  # warm here (~91 ms), not on the first refresh() mid-play
+		3: _trees.build(_ctx)  # once: fixed chunks, Godot's visibility ranges do the rest
+		4: _load_lines()
+		5: _load_finish()
+	return _step < 5
+
+func _load_world() -> bool:
+	_viewport.process_mode = Node.PROCESS_MODE_DISABLED  # activate() turns it on
 	var got: Variant = Map3DWorldCache.lend(_scene_path)
 	if got is String:
 		_notice.text = Map3DWorldLoader.notice_text(got, _repo.map_id)
-		return
+		return false
 	_world = got
 	_meta = _world.get_meta("map3d_world")
 	_ctx = Map3DContext.new(_repo, _meta, _world)
@@ -238,8 +258,9 @@ func _load() -> void:
 	_units.set_shown(_military)
 	_ctx.settle_ground()
 	_markers.build()
-	_houses.build()  # warm here (~91 ms), not on the first refresh() mid-play
-	_trees.build(_ctx)  # once: fixed chunks, Godot's visibility ranges do the rest
+	return true
+
+func _load_lines() -> void:
 	($Viewport/World/Wind as Map3DLayerWind).bind(_ctx)  # the waves and the sway; steps itself
 	_sea.build(_ctx)
 	# The sky and sun are the world scene's, edited in the editor (owner
@@ -257,6 +278,8 @@ func _load() -> void:
 	_picker.bind(_ctx, self, _tooltip, _borders)
 	_selection.bind(_ctx, _lines, _markers, self)
 	_supply.bind(_ctx, _lines, self, _units)
+
+func _load_finish() -> void:
 	_loaded = true
 	_rig.place(_home(), _rig.start_distance(), 0.0)
 	_update_line_scale()

@@ -197,6 +197,9 @@ var law_order: Array = []
 var law_effects: Array = []
 ## data/law_words.csv: key -> the laws screen's fixed words.
 var law_words: Dictionary = {}
+## data/conduct_words.csv: key -> the news / missive text of foraging and
+## desertion (`%s` placeholders filled at runtime; names no kingdom).
+var conduct_words: Dictionary = {}
 ## The LEDGER's ontology (spec 2026-09-30-ledger-ontology-design §7.1):
 ## rows as read, in file order.
 var ledger_lenses: Array = []
@@ -768,6 +771,9 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(dir + "/law_words.csv", ["key", "text"],
 			func(r): law_words[String(r["key"])] = String(r["text"])):
 		return false
+	if not _load_if_present(dir + "/conduct_words.csv", ["key", "text"],
+			func(r): conduct_words[String(r["key"])] = String(r["text"])):
+		return false
 	if not _load_if_present(dir + "/ledger_lenses.csv", ["lens", "label", "instance_type"],
 			func(r): ledger_lenses.append(r)):
 		return false
@@ -1005,10 +1011,12 @@ func load_map(id: String) -> bool:
 	Elevation.forget()
 	Weather.forget()
 	RoadGraph.forget()
+	MarchPath.forget()
 	ArmySystem.forget_grids()
 	ArmySplit.forget()
 	LawEffects.forget()
 	WarSheets.forget()
+	Forage.forget()
 	routes.clear()
 	rivers.clear()
 	markers.clear()

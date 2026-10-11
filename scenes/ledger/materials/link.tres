@@ -1,7 +1,9 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
 
 [ext_resource type="Shader" path="res://scenes/ledger/link.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" uid="uid://d3lf3w472jplx" path="res://assets/2D/ledger/links/strand_cord.png" id="2_tex"]
 
 [resource]
 render_priority = 0
 shader = ExtResource("1_shader")
+shader_parameter/strand = ExtResource("2_tex")

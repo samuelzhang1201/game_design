@@ -139,6 +139,8 @@ What the code has today:
 
 ## 2. Sub-project B — foraging
 
+> **Superseded 2026-10-10** by `2026-10-10-foraging-and-desertion-design.md`: foraging is now daily, tied to the `plunder` law, and the supply plan / settlement parts below no longer exist. Its capacity and stripping model carries over.
+
 ### 2.1 Data
 
 `data/balance.csv` (first draft, owner to tune): `forage_supply_per_food_unit`

@@ -156,6 +156,53 @@ func test_the_sky_and_sun_are_the_scenes() -> void:
 	assert_almost_eq(sea.global_position.y, 5.0, 0.001)
 
 
+## Owner 2026-10-10 (no stall as the game opens): the title opens its map a
+## step a frame (Map3DView.load_step) — the world, the houses, the woods, the
+## lines, the rest — and stepped it is the same map activate() loads at once,
+## its SubViewport's processing off until it is shown.
+func test_the_load_steps_one_heavy_piece_a_call() -> void:
+	Map3DWorldCache.clear()
+	var v := Map3DView.create(Game.data, _fixture)
+	add_child_autofree(v)
+	v.size = Vector2(800, 450)
+	var steps := 1
+	while v.load_step():
+		steps += 1
+		assert_eq((v.get_node("Viewport") as SubViewport).process_mode, Node.PROCESS_MODE_DISABLED,
+			"nothing in the map runs while it is stepped in")
+	assert_eq(steps, 5, "world, houses, woods, lines, the rest")
+	assert_false(v.load_step(), "a finished load takes no more steps")
+	v.activate()
+	assert_not_null(v.context(), "the stepped world is the view's")
+	assert_eq((v.get_node("Viewport") as SubViewport).render_target_update_mode, SubViewport.UPDATE_ALWAYS)
+	assert_eq((v.get_node("Viewport") as SubViewport).process_mode, Node.PROCESS_MODE_INHERIT)
+	v.refresh_borders()
+	for path: String in BUILT:
+		assert_not_null(v.get_node_or_null(path), path)
+
+
+## The boot reads the world on worker threads (Map3DWorldLoader.request, for
+## BootLoads): is_ready says when it is in, and status / instance take that
+## load, kept, without reading the file again; Map3DWorldCache.clear lets it go.
+func test_a_requested_world_loads_on_a_thread_and_is_kept() -> void:
+	Map3DWorldCache.clear()
+	assert_false(Map3DWorldLoader.request("res://no/such/world.tscn"), "nothing to read")
+	assert_true(Map3DWorldLoader.request(_fixture))
+	assert_true(Map3DWorldLoader.request(_fixture), "asking twice is one load")
+	await wait_until(func() -> bool: return Map3DWorldLoader.is_ready(_fixture), 10.0)
+	assert_true(Map3DWorldLoader.is_ready(_fixture))
+	var ps := Map3DWorldLoader.packed(_fixture)
+	assert_not_null(ps, "the thread's PackedScene")
+	assert_same(Map3DWorldLoader.packed(_fixture), ps, "kept: the same one again")
+	assert_eq(Map3DWorldLoader.status(_fixture)["state"], "legacy")
+	var w := Map3DWorldLoader.instance(_fixture)
+	assert_not_null(w)
+	assert_eq(w.get_meta("map3d_world"), Map3DWorldLoader.scene_meta(_fixture))
+	w.free()
+	Map3DWorldCache.clear()
+	assert_ne(Map3DWorldLoader.packed(_fixture), null, "read again, plainly, after it was let go")
+
+
 ## The kept world (Map3DWorldCache) must not leak into the next file.
 func after_all() -> void:
 	Map3DWorldCache.clear()

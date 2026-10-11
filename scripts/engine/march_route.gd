@@ -13,7 +13,7 @@ const ALPHA := 0.5
 
 
 ## The control points with each repeat of the one before it dropped.
-static func _distinct(points: Array) -> Array:
+static func distinct(points: Array) -> Array:
 	var out: Array = []
 	for p: Vector2i in points:
 		if out.is_empty() or out[out.size() - 1] != p:
@@ -25,7 +25,7 @@ static func _distinct(points: Array) -> Array:
 ## control point i + 1 (inclusive): ceil(chord / step_m) of them, at least one,
 ## evenly spaced in the curve's own parameter.
 static func legs(points: Array, step_m: int) -> Array:
-	var pts := _distinct(points)
+	var pts := distinct(points)
 	var out: Array = []
 	var n := pts.size()
 	for i in range(n - 1):
@@ -47,7 +47,7 @@ static func legs(points: Array, step_m: int) -> Array:
 
 ## The whole curve, first control point to last.
 static func curve(points: Array, step_m: int) -> Array:
-	var pts := _distinct(points)
+	var pts := distinct(points)
 	if pts.is_empty():
 		return []
 	var out: Array = [pts[0]]
@@ -115,12 +115,27 @@ static func walk(here: Vector2i, path: Array, metres: int) -> Dictionary:
 	return {"at": Vector2i(h), "path": [], "passed": passed}
 
 
+## The point `f` (0..1) of the way along a polyline by length (the map's piece
+## walking its day along the route, not across the chord).
+static func along(pts: PackedVector2Array, f: float) -> Vector2:
+	var total := 0.0
+	for i in range(1, pts.size()):
+		total += pts[i - 1].distance_to(pts[i])
+	var left := total * clampf(f, 0.0, 1.0)
+	for i in range(1, pts.size()):
+		var seg := pts[i - 1].distance_to(pts[i])
+		if left <= seg and seg > 0.0:
+			return pts[i - 1].lerp(pts[i], left / seg)
+		left -= seg
+	return pts[pts.size() - 1] if not pts.is_empty() else Vector2.ZERO
+
+
 ## The index of the leg whose samples pass nearest `at` (metres): where a
 ## waypoint grabbed off the line is inserted among the waypoints.
 static func nearest_leg(points: Array, step_m: int, at: Vector2) -> int:
 	var best := 0
 	var best_d := INF
-	var pts := _distinct(points)
+	var pts := distinct(points)
 	var all := legs(pts, step_m)
 	for i in all.size():
 		var prev := Vector2(pts[i])

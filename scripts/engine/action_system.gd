@@ -288,7 +288,11 @@ func _validate_supply(req: ActionRequest, state: GameState) -> String:
 			if not rate in SupplyLines.RATES:
 				return "The wagons run at 0.8×, 1× or 1.2×"
 			var town := String(req.params.get("town", ""))
-			var why := String(SupplyLines.eligibility(data, state, code).get(town, "That is no town of the realm"))
+			# never a town AHEAD of the column where it stands as the order is
+			# run (ruling 20; a stale draft or a column that has moved since the
+			# pick): such a line would break the day it flowed
+			var why := String(SupplyLines.mark_ahead(data, state, code,
+				SupplyLines.eligibility(data, state, code)).get(town, "That is no town of the realm"))
 			if why != "":
 				return why
 		"SUPPLY_POINT_CLEAR":

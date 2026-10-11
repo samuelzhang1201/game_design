@@ -46,7 +46,7 @@ func _ctx() -> Map3DContext:
 
 func test_only_flowing_lines_are_drawn() -> void:
 	var ctx := _ctx()
-	for st: String in [SupplyLines.ORDERED, SupplyLines.RIDING, SupplyLines.CUT]:
+	for st: String in [SupplyLines.ORDERED, SupplyLines.RIDING, SupplyLines.CUT, SupplyLines.FRONT]:
 		_s.supply_lines[_code]["state"] = st
 		assert_eq(Map3DSupplyLines.lines_world(ctx).size(), 0, st)
 	_s.supply_lines[_code]["state"] = SupplyLines.FLOWING

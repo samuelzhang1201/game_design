@@ -1,0 +1,83 @@
+name: tests
+
+on:
+  pull_request:
+    branches: [main]
+    # Skip CI for changes that can't break a test: plain docs, and CSV value
+    # tweaks (tests read data/ through tests/suite_data.gd, not live CSVs).
+    # RANDOM_EVENTS.md and game_story/**/*.md are runtime content with their
+    # own id-resolution tests, so they're carved back out of the *.md skip.
+    paths-ignore:
+      - '**/*.md'
+      - '!RANDOM_EVENTS.md'
+      - '!game_story/**'
+      - 'data/**/*.csv'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gut-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GODOT_VERSION: 4.7-stable
+      GODOT_DIR: ${{ github.workspace }}/.godot-bin
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Cache Godot binary
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GODOT_DIR }}
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$GODOT_DIR"
+          curl -fsSL --retry 3 --retry-delay 2 -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip /tmp/godot.zip -d "$GODOT_DIR"
+
+      # Cache the asset import output (not committed to git) so the import
+      # pass doesn't reimport the whole ~2.6GB art tree on every run.
+      - name: Cache Godot import cache
+        uses: actions/cache@v4
+        with:
+          path: .godot
+          key: godot-import-${{ hashFiles('**/*.import', 'project.godot') }}
+          restore-keys: |
+            godot-import-
+
+      - name: Run full GUT suite
+        env:
+          GODOT: ${{ env.GODOT_DIR }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
+        run: |
+          chmod +x "$GODOT"
+          # Mirror the cloud session's two-pass import (CLAUDE.md: the first
+          # pass prints font/theme load errors that are gone on the next
+          # one) so run_tests.sh's own import is the SECOND pass, same as a
+          # known-green local/cloud run, not the only one.
+          "$GODOT" --headless --path . --import > /dev/null 2>&1 || true
+          # The whole suite in ONE Godot process grows past the runner's
+          # ~7.9 GB (the test scripts keep allocating; measured 7.1 GB at
+          # minute 6 on main) and the runner kills the step with exit 143.
+          # So run it as SHARDS one after the other, each a fresh process
+          # (run_tests.sh --shard=I/N: every Nth test script). Every shard
+          # runs even if an earlier one failed, so a red run shows them all.
+          failed=0
+          for i in 1 2 3 4 5; do
+            echo "::group::shard $i/5"
+            ./run_tests.sh --shard=$i/5 || failed=1
+            echo "::endgroup::"
+          done
+          exit $failed

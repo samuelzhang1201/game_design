@@ -48,6 +48,15 @@ static func reading(repo: DataRepository, state: GameState, at: Vector2, code: S
 			if state != null else [],
 		"regiment": {},
 	}
+	# what the land would feed a column (spec 2026-10-10-foraging-and-desertion §4)
+	out["forage"] = {}
+	if state != null and not sea and prov != "":
+		var kind := Forage.land_kind(repo, state, prov)
+		if kind == Forage.HOME:
+			out["forage"] = {"kind": kind}
+		elif kind != Forage.NONE:
+			out["forage"] = {"kind": kind, "province": prov, "word": Forage.word_of(repo, state, prov),
+				"day": Forage.day_capacity(repo, state, prov, state.day)}
 	# the war economy at the point (spec 2026-10-07-war-room-p3 §1.3): public,
 	# save a home works' live month
 	out["trade"] = 0 if sea or String(out["road"]) == "" else WarEconomy.trade_at(repo, at)
@@ -90,6 +99,11 @@ static func _for_regiment(repo: DataRepository, state: GameState, at: Vector2, c
 	var step := ArmySystem.day_march_at(repo, state, code, at)
 	out["km_day"] = float(maxi(step, 0)) / 1000.0
 	out["days"] = ArmySystem.march_days_between(repo, state, code, ArmySystem.position_of(repo, state, reg), at) if step > 0 else 0
+	var forage: Dictionary = g.get("forage", {})
+	if forage.has("province"):
+		@warning_ignore("integer_division")  # whole supplies a day
+		out["feeds"] = {"got": int(Forage.shares(repo, state, String(forage["province"]), [code], state.day).get(code, 0)),
+			"use": ArmySystem.supply_use(repo, reg, state) / Calendar.DAYS_PER_TICK}
 	return out
 
 
@@ -137,11 +151,28 @@ static func lines(repo: DataRepository, r: Dictionary, raking := false) -> Array
 		elif camp > 0:
 			_add(out, "No garrison · %d camped round it" % camp)
 	_economy_lines(repo, r, out)
+	_forage_lines(repo, r, out)
 	_add(out, "Weather: " + Weather.describe_kind(repo, String(r["weather"])))
 	_hazard_lines(repo, r, out)
 	_place_lines(repo, r, out)
 	_regiment_lines(repo, r, raking, out)
 	return out
+
+
+## Foraging at the point (spec 2026-10-10-foraging-and-desertion §4; words in
+## data/conduct_words.csv): in enemy or grey land the word and the day's yield,
+## at home that it is not foraged. With a unit chosen, what it would be fed.
+static func _forage_lines(repo: DataRepository, r: Dictionary, out: Array) -> void:
+	var f: Dictionary = r.get("forage", {})
+	if f.is_empty():
+		return
+	if String(f["kind"]) == Forage.HOME:
+		_add(out, String(repo.conduct_words.get("slip_home", "")))
+		return
+	_add(out, String(repo.conduct_words.get("slip_forage", "")) % [String(f["word"]), int(f["day"])])
+	var feeds: Dictionary = (r.get("regiment", {}) as Dictionary).get("feeds", {})
+	if not feeds.is_empty():
+		_add(out, String(repo.conduct_words.get("slip_feeds", "")) % [int(feeds["got"]), int(feeds["use"])])
 
 
 ## A known hazard at the point: its name, months left and what it does.

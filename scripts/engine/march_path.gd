@@ -1,0 +1,295 @@
+class_name MarchPath
+extends RefCounted
+## The way round ground a land column cannot climb (owner 2026-10-10: 如果山坡
+## 斜度超过一定限制，军队必须走最近的绕道; spec 2026-10-10-march-slope-detour).
+##
+## The grid is the pack's geography/march_grid.png (tools/map3d/
+## bake_march_grid.py, from the heights the 3D world is built from): a cell
+## every army_march_grid_px pack px holding the steepest rise per run in it, in
+## hundredths, or WATER. A cell steeper than army_max_slope, or water, is
+## CLOSED. A march whose straight line crosses no closed cell walks it as ever;
+## one that does takes the SHORTEST way round them (最近的绕道: distance alone;
+## the ground's pace is the march's own, day by day, never the choice): A*
+## eight ways over the open cells, then the cells pulled taut into a few
+## straight legs by line of sight. Every cost and estimate is a whole number,
+## so the engine's float search adds them exactly: the same grid and ends give
+## the same road on every machine. Cached per pack (forgotten by load_map); a
+## grid's A* is built the first time a road is needed.
+
+const WATER := 255
+## A step's cost: straight, and diagonal (7 / 5 ~ the root of two). Whole
+## and small, so the engine's float A* adds them exactly (far below 2^24).
+const STEP := 5
+const DIAGONAL := 7
+
+var cols := 0
+var rows := 0
+var cell_m := 1          # metres of the pack's measure per cell
+var closed := PackedByteArray()
+var _snap := 0                       # army_march_snap_cells
+var _astar: _Grid = null
+var _piece := PackedInt32Array()     # per cell: its piece of open ground, -1 closed
+var _found: Dictionary = {}          # "start,goal" cell ids -> Array of Vector2i cells
+
+static var _cached: Dictionary = {}  # "map id:army_max_slope" -> MarchPath (null: no grid)
+
+
+## A* over the cells, eight ways (a diagonal only past two open sides): a
+## straight step costs STEP, a diagonal DIAGONAL (7 / 5 for the root of two),
+## the estimate the octile distance in the same units — all whole numbers.
+class _Grid extends AStarGrid2D:
+	func _estimate_cost(a: Vector2i, b: Vector2i) -> float:
+		var dx := absi(a.x - b.x)
+		var dy := absi(a.y - b.y)
+		return float(DIAGONAL * mini(dx, dy) + STEP * absi(dx - dy))
+
+	func _compute_cost(a: Vector2i, b: Vector2i) -> float:
+		return float(DIAGONAL if a.x != b.x and a.y != b.y else STEP)
+
+
+static func forget() -> void:
+	_cached.clear()
+
+
+## The pack's grid, read once per pack and army_max_slope; null when the pack
+## has none (a fresh pack before its build) or army_march_grid_px is 0 (open
+## country: a test of the march's own mechanics) — every march then walks the
+## straight line.
+static func of_pack(repo: DataRepository) -> MarchPath:
+	if int(repo.bal("army_march_grid_px")) <= 0:
+		return null
+	var key := _key(repo)
+	if not _cached.has(key):
+		_cached[key] = load_pack(repo)
+	return _cached[key]
+
+
+## Stand `grid` in for the pack's (tests: a grid built by hand).
+static func use(repo: DataRepository, grid: MarchPath) -> void:
+	_cached[_key(repo)] = grid
+
+
+static func _key(repo: DataRepository) -> String:
+	return "%s:%d" % [repo.map_id, int(repo.bal("army_max_slope"))]
+
+
+static func load_pack(repo: DataRepository) -> MarchPath:
+	var dir := String((repo.maps.get(repo.map_id, {}) as Dictionary).get("data_dir", ""))
+	var path := dir + "/geography/march_grid.png"
+	if dir == "" or not FileAccess.file_exists(path):
+		return null
+	var img := Image.new()
+	if img.load_png_from_buffer(FileAccess.get_file_as_bytes(path)) != OK:
+		return null
+	img.convert(Image.FORMAT_L8)
+	var px := maxi(1, int(repo.bal("army_march_grid_px")))
+	var w := int(ceil(float(repo.map_info.get("width", "0")) / float(px)))
+	var h := int(ceil(float(repo.map_info.get("height", "0")) / float(px)))
+	if img.get_width() != w or img.get_height() != h:
+		push_warning("MarchPath: %s is %dx%d, the pack wants %dx%d — rerun bake_march_grid.py"
+			% [path, img.get_width(), img.get_height(), w, h])
+		return null
+	return build(repo, w, h, px * ArmySystem.metres_per_pack_px(repo), img.get_data())
+
+
+## A grid of `cols` x `rows` cells of `cell_m` metres from its bytes (the
+## bake's encoding, row-major; a test builds one by hand).
+static func build(repo: DataRepository, cols_: int, rows_: int, cell_m_: int, slopes: PackedByteArray) -> MarchPath:
+	var g := MarchPath.new()
+	g.cols = cols_
+	g.rows = rows_
+	g.cell_m = maxi(1, cell_m_)
+	g._snap = int(repo.bal("army_march_snap_cells"))
+	@warning_ignore("integer_division")  # hundredths of rise per run against per mille
+	var limit := int(repo.bal("army_max_slope")) / 10
+	g.closed.resize(cols_ * rows_)
+	for i in g.closed.size():
+		var s := int(slopes[i]) if i < slopes.size() else WATER
+		g.closed[i] = 1 if s == WATER or s > limit else 0
+	return g
+
+
+## The cell holding a point (whole metres), held to the grid.
+func cell_of(m: Vector2i) -> Vector2i:
+	var c := Vector2i(floori(float(m.x) / float(cell_m)), floori(float(m.y) / float(cell_m)))
+	return Vector2i(clampi(c.x, 0, cols - 1), clampi(c.y, 0, rows - 1))
+
+
+func is_closed(c: Vector2i) -> bool:
+	return closed[c.y * cols + c.x] == 1
+
+
+## A cell's centre in whole metres.
+func centre_m(c: Vector2i) -> Vector2i:
+	@warning_ignore("integer_division")
+	return Vector2i(c.x * cell_m + cell_m / 2, c.y * cell_m + cell_m / 2)
+
+
+## True when the straight line a -> b (whole metres) enters no closed cell but
+## those in `open` (the ends' own: a column standing on a scarp may leave it,
+## and one sent onto it may reach it). Every cell the line touches is walked
+## (Amanatides and Woo), corners included.
+func clear(a: Vector2i, b: Vector2i, open: Array = []) -> bool:
+	var x := float(a.x) / float(cell_m)
+	var y := float(a.y) / float(cell_m)
+	var dx := float(b.x - a.x) / float(cell_m)
+	var dy := float(b.y - a.y) / float(cell_m)
+	var c := cell_of(a)
+	var end := cell_of(b)
+	var sx := 1 if dx > 0.0 else -1
+	var sy := 1 if dy > 0.0 else -1
+	var t_dx := absf(1.0 / dx) if dx != 0.0 else INF
+	var t_dy := absf(1.0 / dy) if dy != 0.0 else INF
+	var t_x := ((floorf(x) + 1.0 - x) if dx > 0.0 else (x - floorf(x))) * t_dx if dx != 0.0 else INF
+	var t_y := ((floorf(y) + 1.0 - y) if dy > 0.0 else (y - floorf(y))) * t_dy if dy != 0.0 else INF
+	var guard := absi(end.x - c.x) + absi(end.y - c.y) + 2
+	while true:
+		if is_closed(c) and not open.has(c):
+			return false
+		if c == end or guard <= 0:
+			return true
+		guard -= 1
+		if t_x < t_y:
+			c.x += sx
+			t_x += t_dx
+		elif t_y < t_x:
+			c.y += sy
+			t_y += t_dy
+		else:   # through a corner: both cells beside it count
+			if (is_closed(Vector2i(c.x + sx, c.y)) and not open.has(Vector2i(c.x + sx, c.y))) \
+					or (is_closed(Vector2i(c.x, c.y + sy)) and not open.has(Vector2i(c.x, c.y + sy))):
+				return false
+			c += Vector2i(sx, sy)
+			t_x += t_dx
+			t_y += t_dy
+		c = Vector2i(clampi(c.x, 0, cols - 1), clampi(c.y, 0, rows - 1))
+	return true
+
+
+## The road from `from` to `to` (whole metres): the corners after `from`,
+## ending exactly on `to`. [to] when the straight line is clear — and when
+## there is no way round (an end walled in, another shore): the column then
+## walks the straight line, as every march did before.
+func road(from: Vector2i, to: Vector2i) -> Array:
+	var fc := cell_of(from)
+	var tc := cell_of(to)
+	var ends := [fc, tc]
+	if clear(from, to, ends):
+		return [to]
+	var s := nearest_open(fc)
+	var g := nearest_open(tc)
+	if s.x < 0 or g.x < 0:
+		return [to]
+	var cells := _cells(s, g)
+	if cells.is_empty():
+		return [to]
+	var pts: Array = [from]
+	for c: Vector2i in cells:
+		pts.append(centre_m(c))
+	pts.append(to)
+	return _taut(pts, ends).slice(1)
+
+
+## The nearest open cell to `c` (itself when open), ring by ring out to
+## army_march_snap_cells, the nearest centre first and the lowest index on a
+## tie; (-1, -1) when none.
+func nearest_open(c: Vector2i) -> Vector2i:
+	if not is_closed(c):
+		return c
+	for r in range(1, int(_snap) + 1):
+		var best := Vector2i(-1, -1)
+		var best_d := -1
+		for y in range(c.y - r, c.y + r + 1):
+			for x in range(c.x - r, c.x + r + 1):
+				if maxi(absi(x - c.x), absi(y - c.y)) != r or x < 0 or y < 0 or x >= cols or y >= rows:
+					continue
+				if is_closed(Vector2i(x, y)):
+					continue
+				var d := (x - c.x) * (x - c.x) + (y - c.y) * (y - c.y)
+				if best_d < 0 or d < best_d:
+					best_d = d
+					best = Vector2i(x, y)
+		if best_d >= 0:
+			return best
+	return Vector2i(-1, -1)
+
+
+## The A* cells from `s` to `g`, both open; [] when none joins them.
+func _cells(s: Vector2i, g: Vector2i) -> Array:
+	var key := "%d,%d" % [s.y * cols + s.x, g.y * cols + g.x]
+	if _found.has(key):
+		return _found[key]
+	_ensure_astar()
+	var out: Array = []
+	if _piece[s.y * cols + s.x] != _piece[g.y * cols + g.x]:
+		return out
+	for c: Vector2i in _astar.get_id_path(s, g):
+		out.append(c)
+	if _found.size() >= 512:
+		_found.clear()
+	_found[key] = out
+	return out
+
+
+func _ensure_astar() -> void:
+	if _astar != null:
+		return
+	_astar = _Grid.new()
+	_astar.region = Rect2i(0, 0, cols, rows)
+	_astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+	_astar.update()
+	for y in rows:
+		for x in cols:
+			if closed[y * cols + x] == 1:
+				_astar.set_point_solid(Vector2i(x, y), true)
+	# the open cells' pieces (four ways: a diagonal needs both sides open, so
+	# it joins nothing four ways do not), so a road to another piece is known
+	# to be none without searching the whole of this one
+	_piece.resize(cols * rows)
+	_piece.fill(-1)
+	var queue := PackedInt32Array()
+	queue.resize(cols * rows)
+	var n := 0
+	for i in cols * rows:
+		if closed[i] == 1 or _piece[i] >= 0:
+			continue
+		_piece[i] = n
+		var head := 0
+		var tail := 1
+		queue[0] = i
+		while head < tail:
+			var at := queue[head]
+			head += 1
+			var x := at % cols
+			for j: int in [at - 1 if x > 0 else -1, at + 1 if x < cols - 1 else -1, at - cols, at + cols]:
+				if j >= 0 and j < cols * rows and closed[j] == 0 and _piece[j] < 0:
+					_piece[j] = n
+					queue[tail] = j
+					tail += 1
+		n += 1
+
+
+## `pts` pulled taut: from each corner kept, the farthest point still in a
+## clear line (found by doubling, then halving), so a staircase of cells
+## becomes a few straight legs. The first and last points stay.
+func _taut(pts: Array, ends: Array) -> Array:
+	var out: Array = [pts[0]]
+	var at := 0
+	var last := pts.size() - 1
+	while at < last:
+		var ok := at + 1
+		var step := 1
+		while ok + step <= last and clear(pts[at], pts[ok + step], ends):
+			ok += step
+			step *= 2
+		var bad := mini(ok + step, last + 1)
+		while bad - ok > 1:
+			@warning_ignore("integer_division")
+			var mid := (ok + bad) / 2
+			if clear(pts[at], pts[mid], ends):
+				ok = mid
+			else:
+				bad = mid
+		out.append(pts[ok])
+		at = ok
+	return out

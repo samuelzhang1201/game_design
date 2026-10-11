@@ -88,7 +88,11 @@ static func yaw_for(heading: Vector2, camera_xz: Vector2, at_xz: Vector2,
 static func along_day(day: Dictionary, share: float) -> Vector2:
 	var s0 := float(day["s0"])
 	var f := clampf((share - s0) / maxf(1.0 - s0, 0.001), 0.0, 1.0)
-	return (day["from"] as Vector2).lerp(day["to"], f)
+	if (day.get("via", PackedVector2Array()) as PackedVector2Array).is_empty():
+		return (day["from"] as Vector2).lerp(day["to"], f)
+	# along the route's corners it passes today, never across them (a scarp)
+	var pts := PackedVector2Array([day["from"]]) + (day["via"] as PackedVector2Array) + PackedVector2Array([day["to"]])
+	return MarchRoute.along(pts, f)
 
 
 ## Whether a piece WALKS its day's march at the day's `share`: it has somewhere
@@ -103,7 +107,7 @@ static func walking(day: Dictionary, share: float) -> bool:
 
 ## A piece's day's march for along_day, reckoned at the day's `share`: from
 ## where it is `drawn` — or the engine's spot `here`, when farther than the
-## snap — to where the engine's next day leaves it (CourierSystem.day_ahead_of;
+## snap — to where the engine's next day leaves it, by its route's corners (CourierSystem.day_path_of;
 ## a courier delivering that day changes nothing until the day ends, owner
 ## 2026-10-02). World XZ.
 static func day_march(repo: DataRepository, state: GameState, code: String, meta: Dictionary,
@@ -111,9 +115,11 @@ static func day_march(repo: DataRepository, state: GameState, code: String, meta
 	if state == null:
 		return {"from": here, "to": here, "s0": 0.0}
 	var from := here if drawn.distance_to(here) > snap_m(repo, state, code, meta) else drawn
-	var to := CourierSystem.day_ahead_of(repo, state, code)
-	return {"from": from, "s0": share,
-		"to": Map3DGeometry.pack_to_world(meta, ArmySystem.metres_to_pack(repo, to))}
+	var via := PackedVector2Array()
+	for p: Vector2i in CourierSystem.day_path_of(repo, state, code):
+		via.append(Map3DGeometry.pack_to_world(meta, ArmySystem.metres_to_pack(repo, p)))
+	var to := via[via.size() - 1]
+	return {"from": from, "s0": share, "to": to, "via": via.slice(0, via.size() - 1)}
 
 
 ## A day's march in the built world's metres.

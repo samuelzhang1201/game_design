@@ -89,7 +89,11 @@ static func label_of(repo: DataRepository, obj: Dictionary, state: GameState = n
 		"river":
 			return String(repo.rivers.get(obj["code"], {}).get("label", ""))
 		"army":
-			return String(ArmySystem.regiment(repo, String(obj["code"]), state).get("label", ""))
+			var code := String(obj["code"])
+			if code.begins_with(Sighting.GHOST_CODE) and state != null:
+				var g: Dictionary = state.sightings.get(code.trim_prefix(Sighting.GHOST_CODE), {})
+				return "" if g.is_empty() else Sighting.label_of(repo, state, g)
+			return String(ArmySystem.regiment(repo, code, state).get("label", ""))
 		"manor":
 			return MapManors.label_of(repo, int(obj.get("cell", -1)))
 		"landmark":
@@ -195,6 +199,9 @@ static func _kingdom_lines(repo: DataRepository, row: Dictionary,
 		lines.append("Stance: %s" % Intel.stance_of(repo, code))
 		if state != null:
 			lines.append("Wealth: %s" % Intel.wealth_word(repo, Intel.kingdom_wealth_tier(repo, state, code)))
+	# the grievance the crown's foraging has stored there (spec 2026-10-10 §4)
+	if state != null and int(state.grievance.get(code, 0)) > 0:
+		lines.append("%s: %d" % [String(repo.conduct_words.get("row_grievance", "")), int(state.grievance[code])])
 	if not court.is_empty():
 		lines.append("Court: %s" % ", ".join(court))
 	return lines
@@ -907,6 +914,9 @@ static func grouped(n: int) -> String:
 ## the player's own regiment with a state, its terrain, morale, wounded,
 ## supplies, training and strength (ArmySystem, owner 2026-09-17).
 static func army_card(repo: DataRepository, code: String, state: GameState = null) -> Dictionary:
+	# a ghost's piece (spec 2026-10-10-player-sight-and-ghosts): what the crown knows
+	if code.begins_with(Sighting.GHOST_CODE):
+		return Sighting.ghost_card(repo, state, code.trim_prefix(Sighting.GHOST_CODE))
 	var r: Dictionary = ArmySystem.regiment(repo, code, state)
 	if r.is_empty():
 		return {}
@@ -937,9 +947,9 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	# state exists, and is the fog's to keep: the exact men, the morale, the
 	# stores and the rest stay behind the words).
 	var st := ArmySystem.state_of(repo, state, code) if state != null and reg_known == "full" else {}
-	# the dead are no longer under arms (the pack's headcount is immutable;
-	# ArmySystem.fit_heads' own count of them)
-	var under := total - maxi(0, int(st.get("dead", 0)))
+	# the dead and the deserted are no longer under arms (the pack's headcount
+	# is immutable; ArmySystem.fit_heads' own count of them)
+	var under := ArmySystem.under_arms(total, st)
 	if st.is_empty():
 		stats.append(_stat("army", total_text, "Under arms — %s" % total_text))
 	else:
@@ -956,6 +966,10 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var stance := BattleSystem.stance_words(repo, state, code) if reg_known == "full" else ""
 	if stance != "":
 		fields.append(["Battle stance", stance])
+	# a foe: when the crown saw it, or what last told of it (Sighting)
+	var sighted := Sighting.card_line(repo, state, code)
+	if sighted != "":
+		fields.append(["Sighted", sighted])
 	if not st.is_empty():
 		# The ground, the height and the supply tier are the ground the
 		# regiment is on NOW, not the one the pack quartered it on: a column
@@ -995,6 +1009,10 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 					text = "%s %.1f×" % [from, float(int(line["rate"])) / 1000.0]
 					tip = "Supply point: %s · %.1f× · about %s gold a day · %d km, %d%% lost on the road" % [
 						from, float(int(line["rate"])) / 1000.0, fee, int(line["length_km"]), lost]
+				SupplyLines.FRONT:
+					# broken: its town now lies ahead of the column (ruling 20 kept daily)
+					text = SupplyLines.words(repo, "front_card", {}, "label", "Line broken")
+					tip = SupplyLines.front_words(repo, state, code)
 				SupplyLines.CUT:
 					text = "cut"
 					tip = "The road from %s is cut by %s" % [from,
@@ -1013,9 +1031,15 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 		var in_hand := mini(ArmySystem.days_in_hand(int(st["supplies"]), use), 999)
 		var carry := ArmySystem.carry_of(repo, st)
 		var held := grouped(int(st["supplies"]))
+		var living := ""
+		for row: Dictionary in WarFolio.conduct_rows(repo, st):
+			fields.append([String(row["label"]), String(row["text"])])
+			if String(row["text"]) != "" and living == "":
+				living = String(row["text"])
 		stats.append(_stat("army_supply", "%s (≈ %d day%s)" % [held, in_hand, "" if in_hand == 1 else "s"],
-			"Supplies — %s, about %d days in hand; it carries %d days; under %d days morale falls every day" % [
-				held, in_hand, carry, int(repo.bal("army_supply_low_days"))]))
+			"Supplies — %s, about %d days in hand; it carries %d days; under %d days morale falls every day%s" % [
+				held, in_hand, carry, int(repo.bal("army_supply_low_days")),
+				"" if String(st.get("forage", "")) == "" else "; " + living]))
 		var drill := ArmySystem.training_grade(repo, int(st["training"]))
 		stats.append(_stat("army_training", drill, "Training — %s" % drill))
 		var might := ArmySystem.strength_grade(repo, state, code)
