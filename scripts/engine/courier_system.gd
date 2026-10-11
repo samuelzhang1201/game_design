@@ -655,11 +655,23 @@ static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, 
 ## (`stance_order_id`), apart from the march's: it waits in `stance_next` and
 ## BattleSystem.settle_stances makes it the stance at the end of the day's
 ## battles, so it fights from the next day (spec 2026-10-07-enemy-ai-and-battle §4.4).
+## A front's `on_arrival` stance (spec 2026-10-11-war-room-front-line-design
+## §1) is parked as `hold_after` {stance, facing, id} while its march (the
+## same courier's, delivered just before) runs, and ArmySystem.march_day gives
+## it on the day the column arrives; a stale march (a newer order_id) makes
+## it stale too, and a column not marching takes it at once.
 static func _deliver_stance(repo: DataRepository, _state: GameState, c: Dictionary, order: Dictionary, entry: Dictionary) -> Dictionary:
 	if entry.is_empty() or int(entry.get("stance_order_id", 0)) > int(c["id"]):
 		return {"type": "stale", "said": STALE_SAID}
-	entry["stance_next"] = String(order.get("stance", ArmySystem.STANCE_DEFAULT))
-	entry["stance_order_id"] = int(c["id"])
+	var stance := String(order.get("stance", ArmySystem.STANCE_DEFAULT))
+	var facing := int(order.get("facing", -1))
+	if bool(order.get("on_arrival", false)):
+		if int(entry.get("order_id", 0)) != int(c["id"]):
+			return {"type": "stale", "said": STALE_SAID}
+		if String(entry.get("order", "")) == ArmySystem.ORDER_MARCH:
+			entry["hold_after"] = {"stance": stance, "facing": maxi(facing, 0), "id": int(c["id"])}
+			return {"type": "delivered", "said": MissiveWriter.order_said(repo, order)}
+	ArmySystem.apply_hold(entry, stance, facing, int(c["id"]))
 	return {"type": "delivered", "said": MissiveWriter.order_said(repo, order)}
 
 

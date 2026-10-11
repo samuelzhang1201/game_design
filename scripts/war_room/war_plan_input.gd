@@ -349,6 +349,14 @@ func _release(mb: InputEventMouseButton) -> bool:
 				tool_changed.emit()
 		else:
 			var before: Array = _view.state().war_plans[WarPlans.STROKES].keys()
+			if String(dr["kind"]) == "front" and String(dr.get("colour", "")) == "blue" and not sel.is_empty():
+				# a blue front with our regiments chosen posts them along it
+				# (spec 2026-10-11-war-room-front-line-design §1); fleets alone: the mark only
+				var land := sel.filter(func(c: Variant) -> bool: return not naval(String(c)))
+				if land.is_empty():
+					refused.emit("Fleets are ordered on the map")
+				else:
+					dr["codes"] = land.duplicate()
 			if String(dr["kind"]) == "arrow" and not sel.is_empty():
 				for id: Variant in sel:   # a red arrow for each host selected, drawn from its own spot
 					var one := dr.duplicate()
