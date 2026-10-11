@@ -111,11 +111,14 @@ By who reads it, not by its prefix:
 
 ## Out of scope
 
-- Deleting the 17 keys no code reads (`war_hud_*`, `map_show_markers`,
-  `map_pick_radius_px`, `map_line_pick_px`, `map_lod_marker_scale`,
-  `map_compass_*_table`, `war_hover_budget_ms` — a test budget,
-  `raid_appear_day` — a test reads it, `war_plan_ring_min_mm`). They move with
-  their folder and are listed for a later ruling.
+- Deleting the 15 keys no game code reads: the 8 `war_hud_*`,
+  `war_plan_ring_min_mm`, `map_show_markers`, `map_lod_marker_scale`,
+  `map_pick_radius_px`, `map_line_pick_px` (only a test's stand-in dict names
+  these four), `raid_appear_day` (a test only checks it exists; each host's
+  day is `raid_hosts.csv`'s `appear_day`) and `war_hover_budget_ms` (a test's
+  performance budget). They move with their folder and wait for a ruling.
+  (`map_compass_*_table` are live: `MapPalette.table_key` reads them on the
+  war table.)
 - Renaming any table or key; difficulty presets; the map pack layout.
 
 ## Testing and landing
