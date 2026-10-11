@@ -767,6 +767,21 @@ def house_types(path=None):
     return types
 
 
+def green_cut(tw, t_rock, window, w):
+    """A port plain's cut ground is grass, not the cliff it was (owner
+    2026-10-12, R18): the ground weights were read from the slope BEFORE
+    bake_houses.port_plain cut it, so over its `window` (y0, y1, x0, x1) the
+    CLIFF, ROCKY and SOIL weight moves to GRASS by the cut's weight `w`, and
+    `t_rock` (the fields' slope test) falls with it. In place."""
+    y0, y1, x0, x1 = window
+    sub = tw[y0:y1, x0:x1]
+    for t in (CLIFF, ROCKY, SOIL):
+        moved = sub[..., t] * w
+        sub[..., t] -= moved
+        sub[..., GRASS] += moved
+    t_rock[y0:y1, x0:x1] *= 1.0 - w
+
+
 def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn, t_rock,
                   beach, wet, k, vw, vh, pw, ph, origin):
     """Village footprints, the fields round them, each manor's own shade
@@ -865,6 +880,19 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
                 # of its own footing (owner 2026-09-25)
                 bake_houses.level_pad(height, cx, cy, bake_houses.half_extents(types[site[0]]), site[1],
                                       rules, land=land, wet=wet)
+                # a cliff port is lowered onto a plain landing so it takes the
+                # timber pier (owner 2026-10-12, R9: 不要使用带有悬崖高的码头)
+                # (R18: a cliff-top town too, though a low shore is in reach)
+                plain = bake_houses.port_plain(b, height, cx, cy, rules, types, rules["sea_y_m"],
+                                               open_water, land=land, wet=wet)
+                if plain["cut"] is None:
+                    print("bake_world: port %s left on its cliff — its landing needs %.0f m cut, more than "
+                          "port_plain_max_cut_m (%g m); it still takes a pier by pier_search_fallback_m" % (b["burg_code"], plain["need"],
+                                                          rules["port_plain_max_cut_m"]))
+                elif plain["window"] is not None:
+                    print("bake_world: port %s lowered onto a plain landing (cut %.1f m, blend %.0f m)"
+                          % (b["burg_code"], plain["cut"], plain["blend"]))
+                    green_cut(tw, t_rock, plain["window"], plain["w"])
             burgs.append((b, cx, cy, site))
     foot = np.zeros((vh, vw), dtype=np.float32)
     for b, cx, cy, _site in burgs:
