@@ -49,6 +49,21 @@ func before_each() -> void:
 	_menu.follow(_map)
 
 
+var _max_days_kept := -1.0
+
+
+func _set_max_days(days: float) -> void:
+	if _max_days_kept < 0.0:
+		_max_days_kept = Game.data.bal("supply_point_max_days")
+	Game.data.balance["supply_point_max_days"] = days
+
+
+func after_each() -> void:
+	if _max_days_kept >= 0.0:
+		Game.data.balance["supply_point_max_days"] = _max_days_kept
+		_max_days_kept = -1.0
+
+
 func _marcher() -> String:
 	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
 		if ArmySystem.base_pace_km(Game.data, r) > 0 and String(r.get("is_naval", "0")) != "1":
@@ -686,6 +701,9 @@ func test_a_supply_town_chosen_on_the_confirm_rides_before_the_march() -> void:
 ## AHEAD of the column is greyed with its reason; the town pressed is the
 ## nearest allowed one on our side, listed first after the current point.
 func test_a_town_ahead_is_greyed_and_the_nearest_rear_town_is_pressed() -> void:
+	# the wagons go round slopes now (owner 2026-10-11), their roads are
+	# longer, and a town ahead of this column was no longer in reach of ten days
+	_set_max_days(20.0)
 	var code := _marcher()
 	var here := ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state))
 	var now := SupplyLines.eligibility(Game.data, Game.state, code)

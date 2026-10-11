@@ -189,6 +189,34 @@ func test_a_selected_piece_glows_on_the_ground_under_it() -> void:
 	assert_false(Map3DUnitGlow.shown(piece), "let go, it goes out")
 
 
+## A piece no longer drawn is FREED, not hidden (perf P0 2026-10-11): hidden,
+## every ghost gone and every foe out of sight kept its figures' skeletons in
+## the tree, and the pieces piled up over a campaign. It is built anew if it
+## comes back.
+func test_a_piece_no_longer_drawn_is_freed() -> void:
+	var v := _view()
+	v.set_military(true)
+	var foes: Array = Game.state.foes.keys()
+	foes.sort()
+	var foe := String(foes[0])
+	var e: Dictionary = Game.state.foes[foe]
+	Sighting.record(Game.state, "unit:" + foe, Sighting._unit_entry(Game.state, foe, "spy", 100))
+	var key := Sighting.GHOST_CODE + "unit:" + foe
+	v.look_at_pack(ArmySystem.metres_to_pack(Game.data, Vector2i(int(e["x_m"]), int(e["y_m"]))), 6000.0)
+	var units := v._units as Map3DLayerUnits
+	units.refresh()
+	assert_true(units.has_piece(key), "the ghost stands as a piece")
+	var node: Node3D = units._pieces[key]["node"]
+	Game.state.sightings.clear()
+	units.refresh()
+	assert_false(units.has_piece(key), "its ghost gone, the piece is let go")
+	assert_true(node.is_queued_for_deletion(), "freed, not merely hidden")
+	assert_false(units.shown_positions().has(key), "nothing kept about it")
+	Sighting.record(Game.state, "unit:" + foe, Sighting._unit_entry(Game.state, foe, "spy", 100))
+	units.refresh()
+	assert_true(units.has_piece(key), "back again, it is built anew")
+
+
 ## A standing piece keeps its facing when the camera moves (owner 2026-10-10:
 ## 他会经常乱改变朝向): no camera term in its yaw.
 func test_a_standing_piece_does_not_turn_with_the_camera() -> void:

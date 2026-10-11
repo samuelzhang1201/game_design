@@ -4,6 +4,12 @@ const SuiteData := preload("res://tests/suite_data.gd")
 ## The realm as one galaxy (spec 2026-09-30-ledger-galaxy-design §3): every
 ## instance once, in its cluster; the economy counted by province.
 
+## Spec 2026-09-30-ledger-galaxy-design §3: a warm galaxy read on the default
+## pack after play is at most this.
+const GALAXY_BUDGET_MS := 60.0
+const LOCAL_TRIPWIRE_FACTOR := 2.0
+const CI_TRIPWIRE_FACTOR := 4.0
+
 var data: DataRepository
 var s: GameState
 
@@ -228,10 +234,19 @@ func test_the_galaxy_is_read_within_its_budget() -> void:
 		links = (g["links"] as Array).size()
 	gut.p("galaxy: %d stars, %d links, %.1f/%.1f/%.1f ms" % [stars, links, times[0], times[1], times[2]])
 	var ms: float = minf(minf(times[0], times[1]), times[2])
-	# A regression tripwire at twice spec §3's 60 ms budget; the true budget
-	# is measured on a quiet machine (Task 11).
-	assert_lt(ms, 2.0 * 60.0, "a regression tripwire at twice spec §3's 60 ms budget; " +
+	# A regression tripwire, not the budget: spec §3's budget is 60 ms warm,
+	# measured on a quiet machine (Task 11; a dev Mac reads ~46 ms). Locally
+	# the wire sits at twice it; a shared CI runner (GitHub Actions sets CI
+	# and GITHUB_ACTIONS) reads the same code at 84–126 ms, so there it sits
+	# at four times and trips on a read that roughly doubles.
+	var factor := CI_TRIPWIRE_FACTOR if _on_ci() else LOCAL_TRIPWIRE_FACTOR
+	assert_lt(ms, factor * GALAXY_BUDGET_MS, "a regression tripwire at %.0f× spec §3's %.0f ms budget%s; " % [
+		factor, GALAXY_BUDGET_MS, " (CI runner)" if _on_ci() else ""] +
 		"the true budget is measured on a quiet machine (Task 11)")
+
+
+func _on_ci() -> bool:
+	return OS.get_environment("GITHUB_ACTIONS") == "true" or OS.get_environment("CI") != ""
 
 
 ## Task 11 fix round 1 (F7): the readers remembered within one read give what

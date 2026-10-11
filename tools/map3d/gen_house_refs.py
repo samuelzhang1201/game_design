@@ -138,6 +138,7 @@ def main():
     prompts, out_root, prompt = SETS[args[args.index("--set") + 1] if "--set" in args else "houses"]
     jobs = []
     for model in (list(reversed(models)) if front else models):
+        gen.switch_model(gen.MODEL_PRESETS[model]["unet"])  # one unload per model, never two models thrashing
         for row in rows(only, prompts):
             t = row["type"]
             wip = os.path.join(out_root, t, "model_wip")
@@ -154,12 +155,14 @@ def main():
                                        "client_id": str(uuid.uuid4()), "front": front})["prompt_id"]
                 jobs.append((pid, ref))
                 print("queued", model, t, v + 1, pid, flush=True)
+        gen.mark_loaded(gen.MODEL_PRESETS[model]["unet"])
     t0 = time.time()
     for pid, ref in jobs:
         hist = wait(pid, 4 * 3600)
         img = [i for out in hist["outputs"].values() for i in out.get("images", [])][0]
         fetch(img, ref)
         print("%.0fs -> %s" % (time.time() - t0, ref), flush=True)
+    gen.free_models()
 
 
 if __name__ == "__main__":

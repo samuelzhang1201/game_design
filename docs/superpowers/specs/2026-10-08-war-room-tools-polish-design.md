@@ -128,12 +128,39 @@ Claude and approved by the owner.
   "Sheet R12 · Kelvarn" title sits on the map): it gets the margin slip's
   paper behind it, made in the editor.
 
-## Batch C — the tool roll (to design)
+## Batch C — the tool roll
 
-Smaller roll; painted glyphs (ComfyUI, both models, Claude picks); hover ring
-on slots; a cursor per tool on the table; a click on a faint slot and a
-scraper miss say why in the news; the side in hand made obvious; a preview
-while turning a front's facing.
+### C1 — painted glyphs and the rolled scroll (landed 2026-10-11)
+
+Owner 2026-10-11: 工具栏太简陋，用 comfy 画出一眼就能看出作用的 icon；右下角的
+"信封"（the rolled resolutions scroll）太丑，画 game art 替换.
+
+- **Each slot is a painted ink glyph** (library §7.5, `W-61`..`W-68`;
+  prompts `assets/imagegen/war_tool_prompts.csv`, style core
+  `STYLE_CORE_war_tool.txt`, canvas `C-GLYPH`), installed by
+  `install_map_art.py war_tools` into `assets/2D/war_room/tools/` and keyed in
+  `war_tool_art.tres` (`GameArt.WAR_TOOL_ART`). `WarToolSlot.inked_glyph`
+  inks the cut-out in the slot's colour through `WarInkIcon` — a crayon in
+  its `stick_color` (both crayons wear the one neutral `crayon` drawing),
+  everything else in `glyph_ink` — and caches it; a key the table lacks
+  draws the old vector glyph, so the roll never goes blank. One medium on
+  the leather: monochrome ink, never a coloured sticker.
+- **The rolled scroll is a photographed object** (`U-61`, the table-prop
+  core, cut out): `WarDeployScroll._draw_rolled_art` fits it in the button
+  with the three-step shadow; idle darkens it by `idle_value` (no alpha).
+- **Generation lessons** (in the library's §7.5 note too): any "map symbol"
+  / "campaign map" wording makes both models draw a whole map of Europe;
+  "brush" and "tool bar" in the style core make Qwen draw a paintbrush and a
+  frame; neither model draws a bare dashed line — the phase glyph is the
+  dashes cropped out of a boxed render. Qwen-Image-2512 gives the hand-drawn
+  manicule, arrow, front and ring; Z-Image the crayon, piece and scraper.
+
+### C2 — still to design
+
+Smaller roll; hover ring on slots; a cursor per tool on the table; a click on
+a faint slot and a scraper miss say why in the news; the side in hand made
+obvious; a preview while turning a front's facing; the scroll button's rect
+widened to the object's 3.3:1 so it is not fitted small.
 
 ## Batch D — performance and cleanup (to design)
 

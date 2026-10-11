@@ -21,10 +21,13 @@ func test_the_courier_kinds() -> void:
 
 
 func test_the_road_speeds() -> void:
-	for key in ["road", "trail", "offroad", "sea", "tier_plains", "tier_hills", "tier_mountains", "tier_peak"]:
+	for key in ["road", "trail", "offroad", "river", "sea", "tier_plains", "tier_hills", "tier_mountains", "tier_peak"]:
 		assert_gt(int(repo.road_speed.get(key, 0)), 0, key)
 	assert_gt(int(repo.road_speed["road"]), int(repo.road_speed["trail"]), "a road beats a trail")
 	assert_gt(int(repo.road_speed["trail"]), int(repo.road_speed["offroad"]), "a trail beats open country")
+	assert_eq(int(repo.road_speed["river"]), 800, "a river is 80% of road pace (owner 2026-10-11)")
+	assert_eq(int(repo.road_speed["sea"]), 800, "open water is 80% of road pace")
+	assert_eq(int(repo.road_speed["river"]), int(repo.road_speed["sea"]), "water, river or sea, one pace")
 
 
 func test_every_season_and_tier_has_odds() -> void:
