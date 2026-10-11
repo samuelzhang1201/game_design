@@ -24,6 +24,17 @@ static func num(r: Dictionary, key: String, fallback: float = 1.0) -> float:
 	return float(r[key]) if r.has(key) and String(r[key]) != "" else fallback
 
 
+## SubViewport px per design px for a window `window_scale` design px wide per
+## design px: the tier's render_scale of it, held under its max_px_scale (empty:
+## no cap). A Retina window is ~2.4x the 1280x720 design, so it renders at
+## most max_px_scale there, while a 1080p one (1.5x) is untouched (perf P0
+## 2026-10-11: the near zoom is pixel-bound).
+static func px_scale(r: Dictionary, window_scale: float) -> float:
+	var s := window_scale * num(r, "render_scale")
+	var cap := num(r, "max_px_scale", 0.0)
+	return minf(s, cap) if cap > 0.0 else s
+
+
 ## The tier a GPU starts at (spec §4): integrated Intel, AMD APUs and software
 ## GL low; the base Apple M chips, GTX 10xx and older, and MX parts medium;
 ## everything else — and an unknown adapter — high.

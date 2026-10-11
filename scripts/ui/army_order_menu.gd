@@ -97,6 +97,7 @@ var _supply_town := ""
 var _group: Array = []
 var _group_wps: Dictionary = {}
 var _group_why: Dictionary = {}
+var _edit_hold: Dictionary = {}   # code -> {hold, front} kept through Edit route… (front-line §1)
 var _group_off: Dictionary = {}
 ## The supply town chosen on the confirm ("" no new point) and every realm
 ## town's answer for this march (town -> "" or why not).
@@ -492,8 +493,11 @@ func _commit() -> void:
 		drafts_planting.emit(many)
 		for c: String in many:
 			var mine := ArmySystem.carry_of(Game.data, ArmySystem.state_of(Game.data, Game.state, c))
+			var kept: Dictionary = _edit_hold.get(c, {})
 			Game.plant_draft(c, WarDrafts.MARCH, to, dests[c], carry if carry >= 0 and carry != mine else -1,
-				town if town != String(SupplyLines.line(Game.state, c).get("town", "")) else "", _rate_of(c))
+				town if town != String(SupplyLines.line(Game.state, c).get("town", "")) else "", _rate_of(c),
+				kept.get("hold", {}), String(kept.get("front", "")))
+		_edit_hold = {}
 		drafts_planted.emit(many)
 		Game.publish_news("%s's march is pencilled in." % _name_of(code) if many.size() <= 1 \
 			else "The march of %d units is pencilled in." % many.size())
@@ -617,9 +621,12 @@ func _edit_route(code: String) -> void:
 	var draft := WarDrafts.of(Game.state, code) if drafting else {}
 	var riding := CourierSystem.pending_for(Game.state, code)
 	var order := CourierSystem.march_order(riding)
+	_edit_hold = {}
 	if String(draft.get("order", "")) == WarDrafts.MARCH:
 		dest = WarDrafts.dest_px(Game.data, draft)
 		wps = Array(WarDrafts.waypoints_px(Game.data, draft))
+		if draft.has("hold"):   # a front's post keeps its hold through Edit route… (front-line §1)
+			_edit_hold = {code: {"hold": (draft["hold"] as Dictionary).duplicate(), "front": String(draft.get("front", ""))}}
 	elif String(order.get("action_code", "")) == "ARMY_MARCH":
 		dest = ArmySystem.metres_to_pack(Game.data, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])))
 		wps = CourierSystem.waypoints_px(Game.data, order)
@@ -902,6 +909,7 @@ func plan_group(codes: Array, routes: Dictionary, dest: Vector2, at: Vector2) ->
 	if Game.state == null:
 		return "No reign is under way."
 	_end_supply_pick()
+	_edit_hold = {}   # a new arrow drawn for the selection drops a front's hold
 	var why := {}
 	var wps := {}
 	var ok: Array = []

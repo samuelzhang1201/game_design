@@ -233,10 +233,13 @@ and tonemap, so the map's environment is untouched.
   The choice is remembered for the session only. *The flat 2D view was
   removed (owner 2026-10-01).*
 - **Lineage** (owner 2026-10-01: highlight整个lineage, the hybrid): a
-  selected star lights its own links, its flow chain down and up from it and
-  its neighbours, and its ties two hops, the second dimmer
+  selected star lights its own links, its whole flow chain down and up from
+  it alone, and its ties two hops, the second dimmer
   (`LedgerLineage`, `ledger_lineage_*`); the camera frames the full-strength
-  part.
+  part. Owner 2026-10-11: 点击node后还是应该完全显示所有上下游，但是如果上游
+  node连接了其他同类node（siblings），则不应该显示siblings — so the chain is
+  never walked from a neighbour: an upstream star's other outflows, a
+  downstream star's other inflows and a structure neighbour's chain stay dark.
 - **Search** (owner 2026-10-01): a box in the top row finds a star, or an
   instance folded into a province's star, by its label (`LedgerSearch`);
   picking one does what a double click does, opening a folded one's

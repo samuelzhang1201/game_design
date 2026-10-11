@@ -6,10 +6,14 @@ extends RefCounted
 ## clicked, not only its neighbours. Pure: a snapshot in, levels out.
 ##
 ## a. every link of the selected star itself (any look) — FULL;
-## b. the FLOW chain: from the selected star AND each of its neighbours, the
-##    links whose look is `flow` followed in one direction to the end —
-##    downstream from → to, upstream to → from, never turning back mid-walk —
-##    FULL;
+## b. the FLOW chain: from the selected star itself, the links whose look is
+##    `flow` followed in one direction to the end — downstream from → to,
+##    upstream to → from, never turning back mid-walk — FULL. Its whole
+##    upstream and downstream, never its SIBLINGS (owner 2026-10-11: 点击node
+##    后还是应该完全显示所有上下游，但是如果上游node连接了其他同类node
+##    （siblings），则不应该显示siblings): an upstream star's other outflows, a
+##    downstream star's other inflows and a neighbour's own chain are not
+##    walked;
 ## c. people's ties: links whose look is `tie` or `kin` walked `tie_hops` from
 ##    the selected star, the hops past the first FAR (drawn dimmer);
 ## d. structure is never followed past the first hop; everything else is not
@@ -56,15 +60,13 @@ static func of(snap: Dictionary, id: String, look_of: Callable, tie_hops: int = 
 			_push(ties, a, l)
 			_push(ties, b, l)
 	stars[id] = FULL
-	var starts: Array[String] = [id]
 	# a. every link of the star itself
 	for l: Dictionary in touching:
 		links[String(l["id"])] = FULL
 		var other := String(l["to"]) if String(l["from"]) == id else String(l["from"])
-		if not stars.has(other):
-			stars[other] = FULL
-			starts.append(other)
-	# b. the flow chain, down and up, from the star and each neighbour
+		stars[other] = FULL
+	# b. the flow chain, down and up, from the star alone
+	var starts: Array[String] = [id]
 	_walk(starts, out_flow, "to", stars, links)
 	_walk(starts, in_flow, "from", stars, links)
 	# c. the ties, hop by hop; the hops past the first FAR

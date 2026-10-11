@@ -907,7 +907,10 @@ func _load(dir: String) -> bool:
 				"defence_permille": int(r["defence_permille"]),
 				"morale_decay_permille": int(r["morale_decay_permille"]),
 				"retreat_odds_permille": int(r["retreat_odds_permille"]),
-				"retreats_on_contact": int(r["retreats_on_contact"]) == 1}):
+				"retreats_on_contact": int(r["retreats_on_contact"]) == 1,
+				# the 3D piece's layout and standing clip (front-line §2; optional)
+				"formation": String(r.get("formation", "")) if String(r.get("formation", "")) != "" else "block",
+				"stand_clip": String(r.get("stand_clip", ""))}):
 		return false
 	if not _load_if_present(dir + "/ai_doctrines.csv",
 			["role", "greed_permille", "caution_permille", "dist_cost", "engage_odds_permille",
@@ -923,8 +926,14 @@ func _load(dir: String) -> bool:
 				for part: String in String(r["slots"]).split("|"):
 					var xy := part.split(":")
 					slots.append(Vector2(float(xy[0]), float(xy[1])))
+				# line_slots (front-line §2): the same figures one rank abreast; blank = slots
+				var line_slots: Array = []
+				for part: String in String(r.get("line_slots", "")).split("|", false):
+					var xy := part.split(":")
+					line_slots.append(Vector2(float(xy[0]), float(xy[1])))
 				army_formations.append({"figures": int(r["figures"]),
-					"min_fit_permille": int(r["min_fit_permille"]), "slots": slots})):
+					"min_fit_permille": int(r["min_fit_permille"]), "slots": slots,
+					"line_slots": line_slots if line_slots.size() == slots.size() else slots})):
 		return false
 	army_formations.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["min_fit_permille"]) < int(b["min_fit_permille"]))

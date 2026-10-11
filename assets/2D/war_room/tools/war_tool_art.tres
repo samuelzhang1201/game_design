@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://bq7w3kt2mvx5n"]
+
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/tools/hand.png" id="1_hand"]
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/tools/crayon.png" id="2_crayon"]
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/tools/arrow.png" id="3_arrow"]
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/tools/front.png" id="4_front"]
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/tools/phase.png" id="5_phase"]
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/tools/objective.png" id="6_objective"]
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/tools/piece.png" id="7_piece"]
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/tools/scrape.png" id="8_scrape"]
+[ext_resource type="Texture2D" path="res://assets/2D/war_room/tools/scroll.png" id="9_scroll"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="art_table"]
+
+[resource]
+script = ExtResource("art_table")
+art = Dictionary[String, Resource]({
+"hand": ExtResource("1_hand"),
+"crayon": ExtResource("2_crayon"),
+"arrow": ExtResource("3_arrow"),
+"front": ExtResource("4_front"),
+"phase": ExtResource("5_phase"),
+"objective": ExtResource("6_objective"),
+"piece": ExtResource("7_piece"),
+"scrape": ExtResource("8_scrape"),
+"scroll": ExtResource("9_scroll")
+})

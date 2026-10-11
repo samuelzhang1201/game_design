@@ -291,6 +291,8 @@ var _war_plan_menu := Vector2(-1, -1)   # --war-plan-menu fx,fy: a REAL right cl
 var _war_plan_place := false            # --war-plan-place: then its Place row (the form)
 var _war_plan_draw: Array = []   # --war-plan-draw [side:]kind,fx1,fy1,fx2,fy2[;…]: the roll's slot, then a real drag
 var _war_spread := 0             # --war-spread N: N land regiments stood side by side near the focus
+var _hold_line := 0              # --hold-line N: N regiments stood in the field HOLDING a line facing south (front-line §2), the 3D map looked at them
+var _hold_stance := "hold"       # --hold-stance steady: the same stand in the block (the before shot)
 var _war_box := false            # --war-box: a real Shift-drag box round them
 var _war_supply := false         # --war-supply: a real click on the nearest lit town while the confirm stands
 var _war_supply_town := ""        # --war-supply-town CODE|off: choose that town (off: the lit town nearest the laid sheet but off it) through the confirm's select_supply (documented exception to real input)
@@ -457,6 +459,10 @@ func _ready() -> void:
 				_war_plan_draw.append(one.split(","))
 		elif args[i] == "--war-spread":
 			_war_spread = int(args[i + 1])
+		elif args[i] == "--hold-line":
+			_hold_line = int(args[i + 1])
+		elif args[i] == "--hold-stance":
+			_hold_stance = args[i + 1]
 		elif args[i] == "--war-plan-select":
 			_war_plan_select = args[i + 1]
 		elif args[i] == "--war-wait":
@@ -954,6 +960,8 @@ func _process(_delta: float) -> void:
 			var title := _root.current_screen.detail_panel().find_child("Title", true, false) as Label
 			print("click-courier: at=%s picked=%s card=%s" % [hit, cv.pick_at(hit),
 				title.text if title != null else "?"])
+	if _root != null and _frames == 6 and _hold_line > 0 and Game.state != null:
+		_seed_hold_line()
 	if _root != null and _frames == 8 and _zoom3d > 0.0 \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
@@ -1526,6 +1534,31 @@ func _seed_war_spread() -> void:
 		_war_sheet = WarSheets.sheet_of(Game.data, ArmySystem.position_of(Game.data, Game.state,
 			ArmySystem.regiment(Game.data, String(_war_spread_codes[0]), Game.state)))
 	print("war spread: ", _war_spread_codes)
+
+
+## --hold-line N (spec 2026-10-11-war-room-front-line-design §2): N land
+## regiments stood in the field (the --war-spread seeding), each holding its
+## ground in the hold stance facing south, held camp_after_days already, and
+## the 3D map pointed at their middle (--at3d unless given).
+func _seed_hold_line() -> void:
+	_war_spread = _hold_line
+	_seed_war_spread()
+	var mid := Vector2.ZERO
+	for c: String in _war_spread_codes:
+		var e: Dictionary = Game.state.regiments[c]
+		e["order"] = ArmySystem.ORDER_GARRISON
+		e["dest_x_m"] = int(e["x_m"])
+		e["dest_y_m"] = int(e["y_m"])
+		e["stance"] = _hold_stance
+		e["facing_deg"] = 90
+		e["hold_days"] = int(Game.data.bal("camp_after_days"))
+		mid += ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, c, Game.state))
+	if not _war_spread_codes.is_empty():
+		mid /= float(_war_spread_codes.size())
+		if _at3d.x < 0.0:
+			_at3d = mid
+	Game.state_changed.emit()
+	print("hold line: ", _war_spread_codes, " at ", mid)
 
 
 ## --war-hint: a spy report of foreign men a few km off the focus, come in.

@@ -276,8 +276,8 @@ static func clip_named(anim: AnimationPlayer, action: String) -> String:
 	for n: String in anim.get_animation_list():
 		if n.to_upper().ends_with(action):
 			return n
-	# a model with no STANDBY clip stands by in its GARRISON (owner 2026-09-29)
-	return clip_named(anim, "GARRISON") if action == "STANDBY" else ""
+	# no STANDBY clip: stands by in GARRISON (owner 2026-09-29); no DEFEND: holds in it (front-line §2)
+	return clip_named(anim, "GARRISON") if action in ["STANDBY", "DEFEND"] else ""
 
 
 static func meshes(node: Node) -> Array:

@@ -237,6 +237,10 @@ func _process(delta: float) -> void:
 				IndustrySystem.idle_words(w["missing"] as Array)])
 		for line: String in out.get("hazards", []):   # a plague's toll, a flood's end (spec 2026-10-07-war-room-p2 §2.3)
 			Game.publish_news(line)
+		# A raid begun or a beaten raider's spoils (owner 2026-10-11): the letter
+		# carries the whole story, the bar its one line.
+		for line: String in RaidSystem.headlines(Game.data, out.get("raids", []), int(out["ended"])):
+			Game.publish_news(line)
 		var new_ids: Array = []
 		for id in range(missives_before + 1, Game.state.next_missive_id + 1):
 			new_ids.append(id)

@@ -336,3 +336,53 @@ func test_the_head_is_below_the_spear_tip() -> void:
 	assert_eq(Map3DUnitRig.head_m(repo, bare, 3.0), 3.0, "no head bone: the box's top")
 	bare.free()
 	node.free()
+
+
+## The clip a held piece plays (spec 2026-10-11-war-room-front-line-design
+## §2, the architect's T2.3 / T2.4): DEFEND standing in hold, GARRISON when
+## the model has no DEFEND, and the held facing's yaw.
+func test_the_action_for_a_held_piece_is_its_standing_clip() -> void:
+	var hold := {"stand_clip": "DEFEND"}
+	var steady := {"stand_clip": ""}
+	assert_eq(Map3DUnitRig.action_for(true, ArmySystem.ORDER_MARCH, hold), "MARCH")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_GARRISON, hold), "DEFEND")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_MARCH, hold), "GARRISON" if false else "STANDBY", "a stopped column under a march order, not walking")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_GARRISON, steady), "GARRISON")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_STANDBY, steady), "STANDBY")
+	assert_eq(Map3DUnitRig.action_for(false, ArmySystem.ORDER_STANDBY, {}), "STANDBY")
+	var anim := AnimationPlayer.new()
+	var lib := AnimationLibrary.new()
+	lib.add_animation("GARRISON", Animation.new())
+	anim.add_animation_library("", lib)
+	add_child_autofree(anim)
+	assert_eq(Map3DUnits.clip_named(anim, "DEFEND"), "GARRISON", "no DEFEND: it holds in GARRISON")
+	assert_eq(Map3DUnits.clip_named(anim, "ATTACK"), "", "other missing clips stay missing")
+
+
+func test_a_held_facing_turns_the_piece_about() -> void:
+	var repo := SuiteData.repo()
+	var s := SuiteData.campaign(repo, 7)
+	var code := ""
+	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), s):
+		if String(r.get("is_naval", "0")) != "1":
+			code = String(r["regiment_code"])
+			break
+	var e: Dictionary = s.regiments[code]
+	e["order"] = ArmySystem.ORDER_GARRISON
+	e["facing_deg"] = 90
+	var f := ArmySystem.facing_of(s, code)
+	assert_almost_eq(f.x, 0.0, 0.0001)
+	assert_almost_eq(f.y, 1.0, 0.0001)
+	assert_almost_eq(absf(Map3DUnits.facing_yaw(f)), PI, 0.01, "facing south: turned about")
+	e["order"] = ArmySystem.ORDER_MARCH
+	assert_eq(ArmySystem.facing_of(s, code), Vector2.ZERO, "a marching column shows no held facing")
+
+
+## A camp pitched behind a held line (spec 2026-10-11-war-room-front-line-
+## design §3, T3.3): behind a line facing south lies north; the +Z rear.
+func test_behind_a_south_facing_line_is_north() -> void:
+	var at := Map3DUnitCamps.behind(Vector2(100, 200), PI, 28.0)
+	assert_almost_eq(at.x, 100.0, 0.001)
+	assert_almost_eq(at.y, 172.0, 0.001)
+	var east := Map3DUnitCamps.behind(Vector2(0, 0), 0.0, 10.0)
+	assert_almost_eq(east.y, 10.0, 0.001, "yaw 0: the rear is +Z")

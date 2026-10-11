@@ -842,6 +842,71 @@ static func position_of(repo: DataRepository, state: GameState, reg: Dictionary)
 	return metres_to_pack(repo, Vector2i(int(entry["x_m"]), int(entry["y_m"])))
 
 
+## A battle stance taking hold (spec 2026-10-07-enemy-ai-and-battle §4.4,
+## 2026-10-11-war-room-front-line-design §1): `stance_next` and its
+## newest-wins `stance_order_id`; BattleSystem.settle_stances makes it the
+## stance at the day's end. `facing` >= 0 is a whole degree the regiment faces
+## (WarFront's frame); < 0 leaves the facing alone.
+static func apply_hold(entry: Dictionary, stance: String, facing: int, order_id: int) -> void:
+	entry["stance_next"] = stance
+	entry["stance_order_id"] = order_id
+	if facing >= 0:
+		entry["facing_deg"] = posmod(facing, 360)
+
+
+## A hold parked for a march's arrival (`hold_after`) is dropped by any new
+## order or a halt: a column caught on the road takes no front (ruling 3).
+static func drop_hold(entry: Dictionary) -> void:
+	entry.erase("hold_after")
+
+
+## The way a regiment of the crown FACES where it stands (WarFront's frame,
+## a unit vector in pack px): ZERO while marching, a foe's, or with none set.
+static func facing_of(state: GameState, code: String) -> Vector2:
+	var entry: Dictionary = state.regiments.get(code, {})
+	if entry.is_empty() or String(entry.get("order", ORDER_STANDBY)) == ORDER_MARCH or not entry.has("facing_deg"):
+		return Vector2.ZERO
+	return WarFront.facing_vector(int(entry["facing_deg"]))
+
+
+## The way its piece is turned: its road while marching, else its facing.
+static func piece_heading(repo: DataRepository, state: GameState, code: String) -> Vector2:
+	var h := heading_of(repo, state, code)
+	return h if h != Vector2.ZERO else facing_of(state, code)
+
+
+## One DAY of holding for every regiment of the crown, in code order (spec
+## 2026-10-11-war-room-front-line-design §3): settled in the hold stance, not
+## marching and in no battle, `hold_days` grows by one up to balance
+## camp_after_days; anything else (a march, another stance, a battle) erases
+## it. Run by TickEngine after the day's fights and settle_stances.
+static func hold_day(repo: DataRepository, state: GameState) -> void:
+	var cap := int(repo.bal("camp_after_days"))
+	var codes := state.regiments.keys()
+	codes.sort()
+	for c in codes:
+		var code := String(c)
+		var e: Dictionary = state.regiments[code]
+		var holding := cap > 0 and String(e.get("stance", STANCE_DEFAULT)) == WarFront.HOLD_STANCE \
+			and String(e.get("order", ORDER_STANDBY)) != ORDER_MARCH and BattleSystem.battle_of(state, code).is_empty()
+		if holding:
+			e["hold_days"] = mini(int(e.get("hold_days", 0)) + 1, cap)
+		else:
+			e.erase("hold_days")
+
+
+## Whether a regiment has held its line long enough for a camp: hold_days at
+## camp_after_days (> 0), in the field only — never one defending a town
+## (its seat, its camp, or halted within its reach; ArmyGround.garrison_town,
+## ruling 4).
+static func camped(repo: DataRepository, state: GameState, code: String) -> bool:
+	var cap := int(repo.bal("camp_after_days"))
+	var e: Dictionary = state.regiments.get(code, {})
+	if cap <= 0 or e.is_empty() or int(e.get("hold_days", 0)) < cap:
+		return false
+	return ArmyGround.garrison_town(repo, state, code) == ""
+
+
 ## The order a regiment is under: "march", "garrison" or "standby" (no order).
 static func order_of(repo: DataRepository, state: GameState, code: String) -> String:
 	var entry: Dictionary = state_of(repo, state, code)
@@ -942,6 +1007,8 @@ static func set_march_m(repo: DataRepository, state: GameState, code: String, de
 	entry["dest_x_m"] = dest.x
 	entry["dest_y_m"] = dest.y
 	entry["order"] = ORDER_MARCH
+	drop_hold(entry)
+	entry.erase("facing_deg")   # a column on the march faces its road
 	_clear_route(entry)
 	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
 	var route := route_m_of(repo, here, waypoints, dest, is_naval(repo, state, code))
@@ -956,6 +1023,7 @@ static func set_march_m(repo: DataRepository, state: GameState, code: String, de
 ## on the road set_march_m would give it, through no waypoints: the route it
 ## already walks is kept when it ends there (the hosts re-aim every day).
 static func aim_entry(repo: DataRepository, entry: Dictionary, to: Vector2i, naval := false) -> void:
+	drop_hold(entry)
 	var same := String(entry.get("order", "")) == ORDER_MARCH and int(entry.get("dest_x_m", 0)) == to.x \
 		and int(entry.get("dest_y_m", 0)) == to.y
 	entry["dest_x_m"] = to.x
@@ -1082,6 +1150,7 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 	entry["order"] = ORDER_GARRISON
 	entry["dest_x_m"] = int(entry["x_m"])
 	entry["dest_y_m"] = int(entry["y_m"])
+	drop_hold(entry)
 	_clear_route(entry)
 	if marching:
 		ArmyGround.settle(repo, state, code)
@@ -1104,9 +1173,21 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 		if _march_one(repo, state, code, state.regiments[code], state.absolute_day()):
 			ArmyGround.settle(repo, state, code)
 			arrived.append(code)
+			# a front's hold parked for the arrival takes effect now (spec
+			# 2026-10-11-war-room-front-line-design §1): the facing always, the
+			# stance only when no newer stance order has come since
+			var entry: Dictionary = state.regiments[code]
+			if entry.has("hold_after"):
+				var hold: Dictionary = entry["hold_after"]
+				entry.erase("hold_after")
+				entry["facing_deg"] = posmod(int(hold.get("facing", 0)), 360)
+				if int(hold.get("id", 0)) >= int(entry.get("stance_order_id", 0)):
+					apply_hold(entry, String(hold.get("stance", STANCE_DEFAULT)), -1, int(hold.get("id", 0)))
 			# the column holds its ground: a halt pencilled in the war room has
-			# nothing left to stop (a pencilled new march still stands)
-			if String(WarDrafts.of(state, code).get("order", "")) == WarDrafts.GARRISON:
+			# nothing left to stop (a pencilled new march still stands; a halt
+			# with a hold of its own still has its stance to give)
+			var draft := WarDrafts.of(state, code)
+			if String(draft.get("order", "")) == WarDrafts.GARRISON and not draft.has("hold"):
 				WarDrafts.strike(state, code)
 	# The foes' second pass (spec 2026-10-07-enemy-ai-and-battle §2), in code
 	# order and by the same even step: a column in a battle stands; one that

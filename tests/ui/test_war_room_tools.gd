@@ -765,3 +765,37 @@ func test_a_held_up_book_is_blocked_whole() -> void:
 		if r.position.distance_to(want.position) < 2.0 and r.size.distance_to(want.size) < 2.0:
 			found = true
 	assert_true(found, "the held-up book's rect %s is blocked (%s)" % [want, screen.blocked_rects()])
+
+
+## A blue FRONT drawn with our piece chosen (spec 2026-10-11-war-room-front-
+## line-design §1): the stroke is written as any mark, and the regiment gets a
+## march draft to its post on the line carrying a hold facing the teeth; the
+## front stays in hand.
+func test_a_blue_front_with_our_piece_chosen_pencils_a_hold_draft() -> void:
+	var screen := await _room()
+	var view := screen.view()
+	var p := _land_piece(screen)
+	var code := String(p["code"])
+	_click(view, p["press"])
+	assert_true(code in view.plan_input().sel)
+	var roll := screen.get_node("%ToolRoll") as WarToolRoll
+	roll.slot("front", "blue").pressed.emit("front")
+	var a := _open_land(screen)
+	assert_ne(a, Vector2(-1, -1))
+	var before: int = (Game.state.war_plans["strokes"] as Dictionary).size()
+	_button(view, a, true)
+	for j in range(1, 9):
+		_motion(view, a + Vector2(float(j) * 12.0, 0.0))
+	_button(view, a + Vector2(96.0, 0.0), false)
+	await wait_process_frames(2)
+	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), before + 1, "the front was written")
+	var d := WarDrafts.of(Game.state, code)
+	assert_false(d.is_empty(), "a draft was pencilled")
+	assert_true(d.has("hold"), "it carries the hold")
+	assert_eq(String(d["hold"]["stance"]), "hold")
+	assert_true(int(d["hold"]["facing"]) >= 0 and int(d["hold"]["facing"]) < 360)
+	assert_true(d.has("front"), "it names its front")
+	assert_true(view.plan_input().tool.in_hand(), "the front stays in hand")
+	var lines: Array = Game.review_drafts()["lines"]
+	assert_eq(lines.size(), 1)
+	assert_ne(String(lines[0]["hold"]), "", "the resolutions say the hold")

@@ -91,7 +91,7 @@ func render_scale() -> float:
 
 ## SubViewport px per design px: every projection, ray and px uniform uses it.
 func viewport_px_scale() -> float:
-	return window_scale() * render_scale()
+	return Map3DQuality.px_scale(q(), window_scale())
 
 
 ## Ground height at a world XZ: the terrain's where it has data, never below

@@ -48,11 +48,17 @@ from its picked full figure, a local fix (a cloak's colour, a missing boot)
 without losing the pick, and variants of one piece of art. Download with
 `bash assets/imagegen/download_models.sh qwenedit` (~17 GB).
 
-**Memory**: each run ends by unloading ComfyUI's models when its queue is
-empty (`POST /free`); on the Mac's unified memory ComfyUI otherwise holds the
-last models (44 GB after an edit batch) until swap runs out. A script that
-calls `generate.py` many times passes `--keep-loaded` and ends with
-`generate.py --free`.
+**Memory**: on the Mac's unified memory ComfyUI never unloads a model on its
+own, and Z-Image (19 GB) plus Qwen-Image (31 GB) together exceed the 48 GB,
+so a model switch costs one unload (`POST /free`): before queueing, a run
+whose model differs from the jobs already in ComfyUI's queue waits for the
+queue to drain, then unloads unless the last run left the same model loaded
+(`out/.comfy_loaded`); each run also ends by unloading when the queue is
+empty. Two runs on different models therefore follow each other instead of
+swapping 50 GB every job. A script that calls `generate.py` many times on ONE
+model passes `--keep-loaded` and ends with `generate.py --free`;
+`gen_house_refs.py` and `gen_room_refs.py` do the same through
+`switch_model` / `mark_loaded` / `free_models`.
 
 **Not allowed:** every Flux model, Ideogram 4 open weights (non-commercial),
 HunyuanImage (licence excludes EU/UK/KR), Qwen-Image-2.1 (research licence),

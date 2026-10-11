@@ -273,11 +273,27 @@ func _on_drawn(d: Dictionary) -> void:
 	if id == "":
 		Game.publish_news(WarPlans.stroke_refusal(Game.data, Game.state, kind, String(d["colour"]), d["pts"], float(d["r"]), name))
 		return
+	if d.has("codes") and not (d["codes"] as Array).is_empty():
+		_plant_front(id, d["codes"])
 	if name != "":
 		var pts: PackedVector2Array = d["pts"]
 		var at: Variant = _view.screen_pos_of_px(pts[pts.size() - 1])
 		if at != null:
 			_name.open_at(id, name, _origin() + (at as Vector2), _bounds(), int(Game.data.bal("war_plan_name_chars")))
+
+
+## A blue front's drafts (spec 2026-10-11-war-room-front-line-design §1): one
+## per chosen regiment, its own undo step after the stroke's; the news counts
+## them and names each refusal.
+func _plant_front(id: String, codes: Array) -> void:
+	_on_drafts_planting(codes)
+	var out := Game.plant_front(id, codes)
+	_on_drafts_planted(codes)
+	var n: int = (out["planted"] as Array).size()
+	if n > 0:
+		Game.publish_news("The front of %d unit%s is pencilled in." % [n, "" if n == 1 else "s"])
+	for c: String in out["refused"]:
+		Game.publish_news("%s: %s" % [String(ArmySystem.regiment(Game.data, c, Game.state).get("label", c)), String(out["refused"][c])])
 
 
 ## A front's facing: toward the nearest of the other side's marks and pieces

@@ -249,6 +249,8 @@ func _validate_stance(req: ActionRequest, state: GameState) -> String:
 	var stance := String(req.params.get("stance", ""))
 	if not data.battle_stances.has(stance):
 		return "No such stance: " + stance
+	if req.params.has("facing") and (int(req.params["facing"]) < 0 or int(req.params["facing"]) > 359):
+		return "No such facing: %s" % str(req.params["facing"])   # a whole degree 0..359 (WarFront)
 	if float(state.metrics["treasury"]) < OrderCosts.gold_of(data, req.action_code) \
 			+ float(_fee_for(state, code)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
@@ -658,8 +660,15 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"ARMY_STANCE":
 			var code := String(req.params["regiment"])
 			var stance := String(req.params["stance"])
-			_send_courier(state, effects, code, {"action_code": "ARMY_STANCE", "stance": stance},
-				"with a new battle stance (%s)" % String(data.battle_stances[stance]["label"]))
+			var order := {"action_code": "ARMY_STANCE", "stance": stance}
+			var what := "with a new battle stance (%s)" % String(data.battle_stances[stance]["label"])
+			if req.params.has("facing"):   # a front's post (spec 2026-10-11-war-room-front-line-design §1)
+				order["facing"] = int(req.params["facing"])
+				what = "to hold %sfacing %s" % ["where it arrives, " if bool(req.params.get("on_arrival", false)) else "",
+					WarFront.compass_words(int(req.params["facing"]))]
+			if bool(req.params.get("on_arrival", false)):
+				order["on_arrival"] = true
+			_send_courier(state, effects, code, order, what)
 		"ARMY_SEAT":
 			var code := String(req.params["regiment"])
 			_send_courier(state, effects, code, {"action_code": "ARMY_SEAT"}, "with orders to take the seat")
