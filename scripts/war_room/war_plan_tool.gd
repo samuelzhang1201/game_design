@@ -62,9 +62,10 @@ func pick_kind(k: String) -> bool:
 
 ## A row's crayon: that side lit with NOTHING in hand — the side's select
 ## stick (a click selects, a drag on open table boxes that side's pieces;
-## owner 2026-10-11). The hand: nothing in hand and no side lit (a drag pans).
-func pick_stick(s: String) -> void:
-	if s == HAND:
+## owner 2026-10-11). The hand (no slot of its own; R4): nothing in hand and no
+## side lit (a drag pans) — also what the lit crayon, clicked again, drops to.
+func pick_stick(s: String, lit := false) -> void:
+	if s == HAND or (lit and s == side and kind == ""):
 		put_down()
 		side = ""
 		return

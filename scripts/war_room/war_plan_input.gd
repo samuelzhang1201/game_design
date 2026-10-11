@@ -121,10 +121,11 @@ func pick_kind(k: String, side := "") -> void:
 
 
 ## A row's crayon (that side's select stick: nothing in hand, its row lit) or
-## the hand (no row lit).
+## the hand (no row lit); the lit crayon clicked again drops to the hand.
 func pick_stick(s: String) -> void:
+	var lit := action == "" and tool.kind == ""
 	action = ""
-	tool.pick_stick(s)
+	tool.pick_stick(s, lit)
 	tool_changed.emit()
 	redraw_live()
 
