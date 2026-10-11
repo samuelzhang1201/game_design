@@ -27,11 +27,12 @@ func test_a_running_clock_blows_at_real_time_whatever_its_speed() -> void:
 	assert_almost_eq(wind.time(), 1.0, 0.0001, "a 4x clock is not a gale")
 
 
-func test_crop_gain_reaches_the_ground_shader_and_scales_its_amplitude() -> void:
-	assert_true(Map3DLayerWind.GROUND.has("crop_gain"), "handed to the ground material")
-	assert_true(Map3DGroundWind.UNIFORMS.contains("uniform float wind_crop_gain"))
-	assert_true(Map3DGroundWind.STAGE.contains("* wind_crop_gain *"), "scales the amp, storm gain stays")
+func test_tilt_reaches_the_ground_shader() -> void:
+	assert_true(Map3DLayerWind.GROUND.has("tilt"), "handed to the ground material")
+	assert_true(Map3DGroundWind.UNIFORMS.contains("uniform float wind_tilt"))
+	assert_true(Map3DGroundWind.STAGE.contains("wind_tilt"), "the stage reads it")
+	assert_true(Map3DGroundWind.STAGE.contains("mat.normal_rough.xyz = normalize("), "bends the shading normal, kept unit")
+	assert_false(Map3DGroundWind.UNIFORMS.contains("wind_crop_gain"), "the first pass's gain is gone")
 	var wind := Map3DLayerWind.new()
 	autofree(wind)
-	assert_gt(wind.crop_gain, 1.0, "stronger than before")
-	assert_lte(wind.crop_gain, 4.0)
+	assert_almost_eq(wind.tilt, 0.35, 0.0001)

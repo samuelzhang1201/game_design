@@ -31,7 +31,7 @@ uniform float wind_speed_mps = 6.0;
 uniform float wind_wave_m = 60.0;
 uniform float wind_field_amp = 0.12;
 uniform float wind_grass_amp = 0.05;
-uniform float wind_crop_gain = 1.0;
+uniform float wind_tilt = 0.0;
 uniform float wind_near_m = 1500.0;
 uniform float wind_far_m = 9000.0;
 uniform float wind_storm_gain = 1.2;
@@ -94,10 +94,12 @@ const STAGE := """	if (wind_on > 0.0) {
 			float wd_across = dot(v_vertex.xz, vec2(-wind_dir.y, wind_dir.x));
 			float wd_pa = dot(v_vertex.xz, wind_dir);
 			float wd_wmf = wind_wave_m * wind_far_scale;
-			vec2 wd_n = wd_waves(wd_pa - wind_time * wind_speed_mps, wd_across, wind_wave_m,
-				fwidth(wd_pa / wind_wave_m));
-			vec2 wd_f = wd_waves(wd_pa - wind_time * wind_speed_mps * wind_far_scale, wd_across, wd_wmf,
-				fwidth(wd_pa / wd_wmf));
+			float wd_fwn = fwidth(wd_pa / wind_wave_m);
+			float wd_fwf = fwidth(wd_pa / wd_wmf);
+			float wd_an = wd_pa - wind_time * wind_speed_mps;
+			float wd_af = wd_pa - wind_time * wind_speed_mps * wind_far_scale;
+			vec2 wd_n = wd_waves(wd_an, wd_across, wind_wave_m, wd_fwn);
+			vec2 wd_f = wd_waves(wd_af, wd_across, wd_wmf, wd_fwf);
 			float wd_val = mix(wd_n.x, wd_f.x, wd_far);
 			float wd_gust = mix(wd_n.y, wd_f.y, wd_far);
 			vec2 wd_fuv = (v_vertex.xz - pack_origin) / field_m_per_texel / vec2(textureSize(field_map, 0));
@@ -114,8 +116,26 @@ const STAGE := """	if (wind_on > 0.0) {
 				vec4 wd_wx = mix(texture(weather_now, wd_uv), texture(weather_next, wd_uv), weather_blend);
 				wd_storm += wind_storm_gain * clamp(max(wd_wx.r, wd_wx.a * 0.7), 0.0, 1.0) * (1.0 - wd_wx.b);
 			}
-			float wd_amp = max(wind_field_amp * wd_sown, wind_grass_amp * wd_grass) * wind_crop_gain * wd_k * wd_storm * mix(1.0, wind_far_amp, wd_far);
+			float wd_amp = max(wind_field_amp * wd_sown, wind_grass_amp * wd_grass) * wd_k * wd_storm * mix(1.0, wind_far_amp, wd_far);
 			float wd_t = wd_amp * wd_val;
+			if (wind_tilt > 0.0) {
+				// the TILT: the same wave's slope along the wind (a forward
+				// difference of wd_waves, a twentieth of a wavelength, ALU
+				// only), bent into the terrain's tangent-space normal that
+				// NORMAL_MAP packs just below, so a crest catches the sun and
+				// its lee shades. Same masks, storm and distance fade as wd_t.
+				float wd_e = 0.05;
+				vec2 wd_n2 = wd_waves(wd_an + wd_e * wind_wave_m, wd_across, wind_wave_m, wd_fwn);
+				vec2 wd_f2 = wd_waves(wd_af + wd_e * wd_wmf, wd_across, wd_wmf, wd_fwf);
+				float wd_slope = (mix(wd_n2.x, wd_f2.x, wd_far) - wd_val) / wd_e;
+				float wd_bend = clamp(wd_amp * wd_slope * wind_tilt, -0.6, 0.6);
+				vec3 wd_tg = normalize(cross(w_normal, vec3(0.0, 0.0, 1.0)));
+				vec3 wd_bn = cross(w_normal, wd_tg);
+				vec3 wd_w3 = vec3(wind_dir.x, 0.0, wind_dir.y);
+				// normal_rough.xyz is (tangent, up, binormal); .a (roughness) stays
+				mat.normal_rough.xyz = normalize(mat.normal_rough.xyz
+					+ vec3(dot(wd_w3, wd_tg), 0.0, dot(wd_w3, wd_bn)) * wd_bend);
+			}
 			if (wind_sheen_amp <= 0.0) {
 				base_albedo *= 1.0 + wd_t;
 			} else {
