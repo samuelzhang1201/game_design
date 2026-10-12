@@ -1,17 +1,33 @@
 cell,kind,source,notes
-0,0,assets/imagegen/out/trees/TR-01_oak_aerial_tree_zimage_s954159497.png,TR-01 oak (Z-Image)
-0,2,assets/imagegen/out/trees/TR-01_oak_aerial_tree_zimage_s954159497.png,TR-01 oak also stands alone in the fields
-1,0,assets/imagegen/out/trees/TR-01_oak_aerial_tree_zimage_s954159498.png,TR-01 oak (Z-Image)
-1,2,assets/imagegen/out/trees/TR-01_oak_aerial_tree_zimage_s954159498.png,TR-01 oak also stands alone in the fields
-2,0,assets/imagegen/out/trees/TR-02_beech_aerial_tree_zimage_s954159497.png,TR-02 beech (Z-Image)
-3,0,assets/imagegen/out/trees/TR-02_beech_aerial_tree_zimage_s954159498.png,TR-02 beech (Z-Image)
-4,0,assets/imagegen/out/trees/TR-03_lime_aerial_tree_zimage_s954159497.png,TR-03 lime (Z-Image)
-5,0,assets/imagegen/out/trees/TR-03_lime_aerial_tree_zimage_s954159498.png,TR-03 lime (Z-Image)
-6,0,assets/imagegen/out/trees/TR-04_hornbeam_aerial_tree_zimage_s954159497.png,TR-04 hornbeam (Z-Image)
-7,0,assets/imagegen/out/trees/TR-04_hornbeam_aerial_tree_zimage_s954159498.png,TR-04 hornbeam (Z-Image)
-8,2,assets/imagegen/out/trees/TR-05_birch_aerial_tree_zimage_s954159497.png,TR-05 birch (Z-Image)
-9,2,assets/imagegen/out/trees/TR-05_birch_aerial_tree_zimage_s954159498.png,TR-05 birch (Z-Image)
-10,1,assets/imagegen/out/trees/TR-06_pine_aerial_tree_zimage_s954159497.png,TR-06 pine (Z-Image)
-11,1,assets/imagegen/out/trees/TR-06_pine_aerial_tree_zimage_s954159498.png,TR-06 pine (Z-Image)
-12,1,assets/imagegen/out/trees/TR-07_spruce_aerial_tree_zimage_s954159497.png,TR-07 spruce (Z-Image)
-13,1,assets/imagegen/out/trees/TR-07_spruce_aerial_tree_zimage_s954159498.png,TR-07 spruce (Z-Image)
+0,0,atlas:0,TR-01 oak (Z-Image)
+0,2,atlas:0,TR-01 oak also stands alone in the fields
+1,0,atlas:1,TR-01 oak (Z-Image)
+1,2,atlas:1,TR-01 oak also stands alone in the fields
+2,0,atlas:2,TR-02 beech (Z-Image)
+3,0,atlas:3,TR-02 beech (Z-Image)
+4,0,atlas:4,TR-03 lime (Z-Image)
+5,0,atlas:5,TR-03 lime (Z-Image)
+6,0,atlas:6,TR-04 hornbeam (Z-Image)
+7,0,atlas:7,TR-04 hornbeam (Z-Image)
+8,2,atlas:8,TR-05 birch (Z-Image)
+9,2,atlas:9,TR-05 birch (Z-Image)
+10,1,atlas:10,TR-06 pine (Z-Image)
+11,1,atlas:11,TR-06 pine (Z-Image)
+12,1,atlas:12,TR-07 spruce (Z-Image)
+13,1,atlas:13,TR-07 spruce (Z-Image)
+16,0,assets/imagegen/out/trees/TR-09_willow_aerial_tree_zimage_s954159498.png,TR-09 pollarded willow (Z-Image)
+17,0,assets/imagegen/out/trees/TR-09_willow_aerial_tree_zimage_s954159499.png,TR-09 pollarded willow (Z-Image)
+18,0,assets/imagegen/out/trees/TR-10_poplar_aerial_tree_qwen2512fast_s954159499_white.png,"TR-10 Lombardy poplar (Qwen, ground whitened)"
+19,0,assets/imagegen/out/trees/TR-10_poplar_aerial_tree_qwen2512fast_s954159500_white.png,"TR-10 Lombardy poplar (Qwen, ground whitened)"
+20,0,assets/imagegen/out/trees/TR-11_chestnut_aerial_tree_zimage_s954159497.png,TR-11 sweet chestnut (Z-Image)
+21,0,assets/imagegen/out/trees/TR-11_chestnut_aerial_tree_zimage_s954159500.png,TR-11 sweet chestnut (Z-Image)
+22,1,assets/imagegen/out/trees/TR-08_fir_aerial_tree_qwen2512fast_s954159497_white.png,"TR-08 silver fir (Qwen, ground whitened)"
+23,1,assets/imagegen/out/trees/TR-08_fir_aerial_tree_qwen2512fast_s954159500_white.png,"TR-08 silver fir (Qwen, ground whitened)"
+24,2,assets/imagegen/out/trees/TR-12_pine-wind_aerial_tree_zimage_s954159497.png,TR-12 wind-bent lone pine (Z-Image)
+25,2,assets/imagegen/out/trees/TR-12_pine-wind_aerial_tree_zimage_s954159499.png,TR-12 wind-bent lone pine (Z-Image)
+26,2,assets/imagegen/out/trees/SC-01_scrub_aerial_prop_qwen2512fast_s954159499_white.png,"SC-01 gorse and bramble scrub (Qwen, ground whitened)"
+27,2,assets/imagegen/out/trees/SC-01_scrub_aerial_prop_qwen2512fast_s954159500_white.png,"SC-01 gorse and bramble scrub (Qwen, ground whitened)"
+28,2,assets/imagegen/out/trees/SC-02_boulders_aerial_prop_qwen2512fast_s954159500_white.png,"SC-02 boulder cluster (Qwen, ground whitened)"
+29,2,assets/imagegen/out/trees/SC-02_boulders_aerial_prop_qwen2512fast_s954159500_white.png,"SC-02 boulder cluster (Qwen, ground whitened)"
+30,2,assets/imagegen/out/trees/SC-03_heather_aerial_prop_qwen2512fast_s954159499_white.png,"SC-03 heather clump (Qwen, ground whitened)"
+31,2,assets/imagegen/out/trees/SC-03_heather_aerial_prop_qwen2512fast_s954159500_white.png,"SC-03 heather clump (Qwen, ground whitened)"
