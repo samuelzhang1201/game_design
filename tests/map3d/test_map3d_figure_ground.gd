@@ -31,8 +31,9 @@ func _piece(yaw: float) -> Dictionary:
 			node.add_child(f)
 			figs.append(f)
 			slots.append(f.position)
-	var piece := {"node": node, "figs": figs, "slots": slots, "height_m": 1.8, "extent": Vector2(4.5, 4.5)}
-	Map3DUnitRig.seat(repo, _hill, piece, Vector2(100.0, 50.0), yaw, 2.0)
+	var piece := {"node": node, "slots": slots, "height_m": 1.8, "extent": Vector2(4.5, 4.5)}
+	Map3DUnitRig.seat(repo, _hill, piece, Vector2(100.0, 50.0), yaw, 2.0)  # no "figs" yet: the bare plane
+	piece["figs"] = figs
 	return piece
 
 
@@ -79,7 +80,7 @@ func test_planted_after_a_lag_offset_still_on_the_ground() -> void:
 
 func test_lag_never_lifts_a_figure_off_its_plane() -> void:
 	# a tilted piece walking uphill: the world velocity has a component along the
-	# piece's own up axis; the lag spring must stay in the plane (y untouched)
+	# piece's own up axis; the lag spring must stay in the plane (no height_at: y untouched)
 	var piece := _piece(0.0)
 	var node: Node3D = piece["node"]
 	assert_gt(absf(node.transform.basis.y.x), 0.01, "the piece is tilted")
@@ -89,3 +90,23 @@ func test_lag_never_lifts_a_figure_off_its_plane() -> void:
 	for f: Node3D in piece["figs"]:
 		assert_eq(f.position.y, 0.0, "the lag offset is in-plane")
 	node.free()
+
+
+func test_seat_plants_the_figures_of_a_piece_that_has_them() -> void:
+	var piece := _piece(0.7)
+	Map3DUnitRig.seat(repo, _hill, piece, Vector2(100.0, 50.0), 0.7, 2.0)
+	var clear := 1.8 * 2.0 * repo.bal("map3d_unit_seat_clear") - repo.bal("map3d_unit_sink_m")
+	for gap: float in _feet_over_ground(piece):
+		assert_almost_eq(gap, clear, 0.002)
+	(piece["node"] as Node3D).free()
+
+
+func test_lag_with_the_ground_replants_the_trailing_figures() -> void:
+	var piece := _piece(0.7)
+	var clear := 1.8 * 2.0 * repo.bal("map3d_unit_seat_clear") - repo.bal("map3d_unit_sink_m")
+	piece["lag_cap"] = 0.5
+	for _i in 30:
+		Map3DUnitRig.lag(repo, piece, "reg_a", Vector2(30.0, 5.0), 0.05, _hill)
+	for gap: float in _feet_over_ground(piece):
+		assert_almost_eq(gap, clear, 0.002, "a trailing figure still stands on its ground")
+	(piece["node"] as Node3D).free()

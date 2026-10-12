@@ -103,9 +103,10 @@ static func play(anims: Array, action: String, blend_s: float, code: String = ""
 ## Each figure trails its slot by a lag spring in the piece's own frame: the
 ## piece moved `world_v` (world metres/s) this frame; the figure's offset follows
 ## Map3DMarchLag.step with its hashed tau, held to the piece's `lag_cap` and
-## relaxing to its slot once the piece stands. View-only; nothing is stored in state.
+## relaxing to its slot once the piece stands; with `height_at` each moved figure is
+## planted again on its ground (`plant`). View-only; nothing is stored in state.
 static func lag(repo: DataRepository, piece: Dictionary, code: String, world_v: Vector2,
-		dt: float) -> void:
+		dt: float, height_at: Callable = Callable()) -> void:
 	var node: Node3D = piece["node"]
 	if world_v == Vector2.ZERO and not piece.get("lagging", false):
 		return
@@ -133,6 +134,8 @@ static func lag(repo: DataRepository, piece: Dictionary, code: String, world_v: 
 		live = live or o != Vector3.ZERO
 		(figs[i] as Node3D).position = slots[i] + o
 	piece["lagging"] = live or world_v != Vector2.ZERO
+	if height_at.is_valid():
+		plant(repo, height_at, piece)
 
 
 ## Stands every figure of `piece` on the ground UNDER IT (owner 2026-10-12: 走在
@@ -141,7 +144,7 @@ static func lag(repo: DataRepository, piece: Dictionary, code: String, world_v: 
 ## by the slope's fall across the formation; each figure's local y is solved so its
 ## foot is at the heightmap under its own (x, z) plus the seat's clearance. The lift
 ## moves a foot sideways on a tilted piece, so it is solved three times. Call after
-## `seat` and after `lag` (it reads the figures' own x, z, the slot and its trail).
+## `seat` (which calls it) and `lag` (it reads the figures' own x, z, the slot and its trail).
 static func plant(repo: DataRepository, height_at: Callable, piece: Dictionary) -> void:
 	var node: Node3D = piece["node"]
 	var t := node.transform
@@ -176,6 +179,8 @@ static func seat(repo: DataRepository, height_at: Callable, piece: Dictionary, x
 		* Basis(Vector3.UP, yaw)).scaled(Vector3(k, k, k)), ground)
 	piece["ground"] = ground
 	piece["lift"] = ground.y - float(sit["y"])
+	if piece.has("figs"):
+		plant(repo, height_at, piece)  # the plane moved: every figure back on its own ground
 
 
 ## The action a piece plays (pure; spec 2026-10-11-war-room-front-line-design

@@ -160,7 +160,6 @@ func _place(code: String, piece: Dictionary) -> void:
 	if piece.get("seat_key", []) != [xz, yaw, k]:  # a pan moves none of it: seated once per stand
 		piece["seat_key"] = [xz, yaw, k]
 		Map3DUnitRig.seat(repo, ctx.height_at, piece, xz, yaw, k)
-	Map3DUnitRig.plant(repo, ctx.height_at, piece)
 	var ground: Vector3 = piece["ground"]
 	Map3DUnitGlow.place(repo, piece, _selected.has(code), float(piece["lift"]), k)
 	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, float(piece["height_m"]) * k,
@@ -190,10 +189,7 @@ func step(delta: float) -> bool:
 			_place(code, _pieces[code])
 			moved = true
 		Map3DUnitRig.keep_pace(repo, _pieces[code], day, ctx.day_share(), ctx.clock_speed(), code)
-		var was_lagging: bool = _pieces[code].get("lagging", false)
-		Map3DUnitRig.lag(repo, _pieces[code], code, (want - now) / maxf(delta, 0.0001), delta if ctx.clock_speed() > 0 else 0.0)
-		if was_lagging or _pieces[code].get("lagging", false):
-			Map3DUnitRig.plant(repo, ctx.height_at, _pieces[code])  # the trail moved a foot: back on its ground
+		Map3DUnitRig.lag(repo, _pieces[code], code, (want - now) / maxf(delta, 0.0001), delta if ctx.clock_speed() > 0 else 0.0, ctx.height_at)
 		_sync_action(code)
 		# a facing set at the day's end turns the piece without a camera move
 		var facing := ArmySystem.facing_of(ctx.state(), code)
