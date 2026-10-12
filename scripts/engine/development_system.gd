@@ -152,6 +152,62 @@ static func law_drift(repo: DataRepository, state: GameState, axis: String) -> A
 	return out
 
 
+## A ruler's lean on an axis: the sum of his traits' `dev_<axis>` columns,
+## -100..100. Derived from the trait rows, never stored.
+static func preference(repo: DataRepository, character: Character, axis: String) -> int:
+	var total := 0
+	for code in character.traits:
+		total += int(repo.traits.get(String(code), {}).get(LawEffects.DEV_PREFIX + axis, 0))
+	return clampi(total, -100, 100)
+
+
+## The sign (-1, 0, 1) a decree of `law` = `value` pushes `axis`: the sum of the
+## monthly drift amounts of that value's rows (a range law's blank-value row
+## counts amount x (value - default)).
+static func decree_sign(repo: DataRepository, law: String, value: String, axis: String) -> int:
+	var d := LawSystem.def(repo, law)
+	if d.is_empty():
+		return 0
+	var channel := LawEffects.DEV_PREFIX + axis
+	var sum := 0.0
+	for row: Dictionary in repo.law_effects:
+		if String(row["law_code"]) != law or String(row["channel"]) != channel \
+				or String(row["timing"]) != LawEffects.MONTHLY:
+			continue
+		var amount := LawEffects.amount_of(repo, String(row["amount"]))
+		if String(row["value"]) == "" and String(d["kind"]) == "range":
+			sum += amount * float(int(value) - int(String(d["default"])))
+		elif String(row["value"]) == value:
+			sum += amount
+	return signi(roundi(sum))
+
+
+## The opinion every council minister takes from a decree that shifts an axis:
+## roundi(preference x sign x dev_decree_opinion_per_100 / 100), one reasoned
+## line per axis, applied now. Returns [{character_id, delta, reason}].
+static func decree_opinions(repo: DataRepository, state: GameState, law: String, value: String) -> Array:
+	var out: Array = []
+	var label := String(LawSystem.def(repo, law).get("label", law)).to_lower()
+	var per_100 := repo.bal("dev_decree_opinion_per_100")
+	for axis: String in AXES:
+		var s := decree_sign(repo, law, value, axis)
+		if s == 0:
+			continue
+		for seat in state.council:
+			var id := String(state.council[seat])
+			if not state.characters.has(id):
+				continue
+			var c: Character = state.characters[id]
+			var delta := roundi(preference(repo, c, axis) * s * per_100 / 100.0)
+			if delta == 0:
+				continue
+			var reason := "decreed %s (%s %s development)" % [
+				label, "favours" if delta > 0 else "opposes", axis]
+			c.change_opinion(delta, reason, state.tick)
+			out.append({"character_id": id, "delta": delta, "reason": reason})
+	return out
+
+
 static func _signed(n: float) -> String:
 	var text := ("%+d" % roundi(n)) if is_equal_approx(n, roundf(n)) else ("%+.1f" % n)
 	return text.replace("-", "−")
