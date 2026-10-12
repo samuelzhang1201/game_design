@@ -35,7 +35,7 @@ const TEXTURES := [
 	["excavated_soil_wall", 240.0, 0.1, 0.0],
 	["sand_03", 120.0, 0.2, 0.0],
 	["aerial_canopy", 170.0, 0.22, 0.5],
-	["aerial_snow", 180.0, 0.14, 0.0],
+	["p2_snow", 220.0, 0.14, 0.0],   # snow with rock ribs (spec 2026-10-13-map-art-phase2, B; T-88)
 	["g2_crop_a", 140.0, 0.18, 0.5],  # the crops (owner 2026-10-01: open fields): a pale straw ground the bake's colour map darkens to gold, green or tan — tools/map3d/pack_aerial.py  # the snow line — an aerial snow picture since 2026-09-30 (山顶雪帽, tools/map3d/pack_aerial.py); was (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
 	# the variant sets bake_world.split_variants spreads the grass and the crops over
 	["g2_meadow_b", 240.0, 0.16, 0.5],
@@ -43,6 +43,9 @@ const TEXTURES := [
 	["g2_upturf_a", 320.0, 0.16, 0.5],   # the grass on high ground
 	["g2_upturf_b", 320.0, 0.16, 0.5],
 	["g2_crop_b", 140.0, 0.18, 0.5],
+	# the high ground (phase 2 B): scree under the caps, ridges on the plateaus
+	["p2_scree", 200.0, 0.2, 0.5],
+	["p2_ridge", 300.0, 0.25, 0.5],
 ]
 
 # Terrain3D material: demo/Demo.tscn's parameters, every one of them — a

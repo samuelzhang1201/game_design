@@ -72,17 +72,22 @@ CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST, SNOW, CROP = range(10)
 # on slow noise so no two neighbouring tiles repeat one picture; the grass on high
 # ground takes the upland turfs.
 GRASS_B, GRASS_C, UPTURF_A, UPTURF_B, CROP_B = range(10, 15)
-NT = 15
+# The high ground (spec 2026-10-13-map-art-phase2, B): grey scree under the snow
+# caps and broken ridges and gullies on the high plateaus.
+SCREE, RIDGE = 15, 16
+NT = 17
 TEXTURE_KEYS = ["aerial_cliff", "g2_meadow_a", "dry_decay_leaves", "dirt_floor", "aerial_upland",
                 "excavated_soil_wall", "sand_03", "aerial_canopy",
                 # the snow line (owner 2026-09-19): Poly Haven snow_02 since the
                 # same day (snow_field_aerial read blue-grey and blotchy)
-                "aerial_snow",
+                "p2_snow",   # snow with rock ribs (phase 2 B, T-88)
                 # the crops (owner 2026-10-01, open fields): a pale straw ground
                 # each field's tint darkens to its crop's colour
                 "g2_crop_a",
                 # the variant sets (split_variants)
-                "g2_meadow_b", "g2_meadow_c", "g2_upturf_a", "g2_upturf_b", "g2_crop_b"]
+                "g2_meadow_b", "g2_meadow_c", "g2_upturf_a", "g2_upturf_b", "g2_crop_b",
+                # the high ground (phase 2 B: T-86 scree, T-87 ridge and gully)
+                "p2_scree", "p2_ridge"]
 BIOME_MIX = {
     1: {SAND: 1.0},
     2: {DIRT: 0.8, ROCKY: 0.2},
@@ -112,7 +117,8 @@ FAR_COLOR = {
 }
 # a variant reaches its class's far colour, so the far view is the same whichever is drawn
 FAR_COLOR.update({GRASS_B: FAR_COLOR[GRASS], GRASS_C: FAR_COLOR[GRASS],
-                  UPTURF_A: FAR_COLOR[GRASS], UPTURF_B: FAR_COLOR[GRASS]})
+                  UPTURF_A: FAR_COLOR[GRASS], UPTURF_B: FAR_COLOR[GRASS],
+                  SCREE: "#85827A", RIDGE: FAR_COLOR[ROCKY]})   # the scree a grey margin under the caps (critic 2026-10-13)
 CROP_TEXTURES = (CROP, CROP_B)   # the crops wear their own tint (sow_patchwork), never a far colour
 # each class's pictures (split_variants), the class the control map ranks
 VARIANT_SETS = ((GRASS, GRASS_B, GRASS_C, UPTURF_A, UPTURF_B), CROP_TEXTURES)  # SAND's, SNOW's and CLIFF's are data/screens/map3d/map3d_bake.csv far_color_sand / _snow / _cliff
@@ -1561,7 +1567,13 @@ def main(argv=None):
     # a mountain's snow ends above a grey margin, not on a lawn
     band = np.clip((hn_snow - (rules["snow_line_lo"] - rules["snow_scree_band"]))
                    / max(rules["snow_scree_band"], 1e-6), 0, 1) * (1.0 - snow)
-    tw[..., ROCKY] += rules["snow_scree_weight"] * band
+    tw[..., SCREE] += rules["snow_scree_weight"] * band
+    # the high plateaus break into ridges and gullies below the snow (phase 2 B):
+    # a band of height share ridge_lo..ridge_hi, frayed by the snow edge noise
+    ridge = np.clip((hn_snow - rules["ridge_lo"]) / max(rules["ridge_hi"] - rules["ridge_lo"], 1e-6), 0, 1) \
+        * (1.0 - snow) * (1.0 - t_cliff)
+    tw[..., RIDGE] += rules["ridge_weight"] * ridge
+    del ridge
     del snow_n, hn_snow, band
     tw[..., SNOW] += rules["snow_weight"] * snow * (1.0 - rules["snow_steep_cut"] * t_cliff) \
         * (1.0 - rules["snow_scree_cut"] * t_rock)
