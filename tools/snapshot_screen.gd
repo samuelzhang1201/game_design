@@ -1688,7 +1688,6 @@ func _red_spot(view: WarRoomView) -> Vector2:
 func _war_draw_order(screen: WarRoomScreen, view: WarRoomView, roll: WarToolRoll) -> void:
 	var slot := roll.slot("arrow", "blue")
 	_real_click(slot, slot.size * 0.5)
-	print("war: arrow slot why=%s in hand=%s" % [slot.why, view.plan_input().tool.in_hand()])
 	var from := Vector2.ZERO
 	var n := 0
 	for c: Variant in view.plan_input().sel:
