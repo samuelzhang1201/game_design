@@ -86,6 +86,53 @@ This may remove much of the repeat on its own. Whatever is still visible tells P
 3. Run the bake's variant mix.
 4. Rebuild the pack (`build_pack.sh`).
 
+### Phase 1 as built (2026-10-12/13)
+
+**Generation.** 56 candidates: Z-Image on the Windows desktop, Qwen on the Mac.
+- Qwen drew blade and ear close-ups, with radial and circular centres, as it has before on aerials. None were taken.
+- Z-Image drew the low-feature aerials asked for.
+- T-78, T-81 and T-82 were re-prompted and run again (12 more, Z-Image only).
+- T-81 failed twice: Z-Image draws ploughed soil with rows. The crops' second variant is T-80's other good seed instead.
+
+**The owner's picks** (all Z-Image):
+
+| Layer | Prompt | Seed |
+|---|---|---|
+| `g2_meadow_a` | T-77 | 954159497 |
+| `g2_meadow_b` | T-79 | 954159500 |
+| `g2_meadow_c` | T-78 | 954160100 |
+| `g2_upturf_a` | T-82 | 954160102 |
+| `g2_upturf_b` | T-83 | 954159498 |
+| `g2_crop_a` | T-80 | 954159497 |
+| `g2_crop_b` | T-80 | 954159498 |
+
+**Packing and layers.**
+- The pictures are packed with the incumbent meadow's and crop's `pack_aerial.py` settings and mean colours (`assets/3D/terrain/model_wip/aerial/README.md`).
+- `g2_meadow_a` and `g2_crop_a` take the old meadow's and crop's ids (1 and 9); the other five are ids 10–14. That is 15 layers.
+- The upland class is not the scree layer. `aerial_upland` (ROCKY, the owner's T-74) stays as it was; the two upland turfs are where GRASS goes on high ground.
+
+**The bake.** `bake_world.split_variants`, after `sharpen_weights`, moves each class's weight between its pictures. Weight never moves between classes, so the colour map does not change. It has three parts:
+- Low ground's grass goes to three meadows by a softmax of three slow noises (`variant_wave_m`, `variant_sharp`).
+- Grass above `variant_upland_lo_m` .. `_hi_m` goes to the two turfs.
+- The crops go to two crop variants (`crop_variant_wave_m`).
+
+`map3d_fields.csv` names the new keys.
+
+**Dual scaling.** Only one layer can be dual-scaled (`dual_scale_texture` 1, `g2_meadow_a`). The other variants keep their tile far out; check it at 5 km and 30 km.
+
+### Phase 1 tuning (2026-10-13, independent critics, implementer's rulings pending the owner)
+
+**A bug, fixed.** The first bake split each class's weight thin over its pictures. Each picture then lost the vertex to dirt, crops or rock, and tan patches appeared over the grass. `lead_variants` now ranks the leading picture at its whole class's weight.
+
+**Upland band.** The turfs started at 220 m, which gave them half the island's grass; they now start at 400–650 m.
+
+**Opening zoom.** The first result was airbrushed flat at 5 km: the critic measured fine detail falling from 6.8 to 2.2.
+- Raising the contrast of the meadow-A and turf pictures (`pack_aerial --contrast 2.2 --normal-strength 0.8`) gave grain.
+- A larger tile (meadows 240 m, turfs 320 m) brought back mid-scale grain at the opening zoom.
+- The meadow mottle carries the field-scale patches: `ground_look.tres` `meadow_mottle` 0.4, 260 m, out to 16 km.
+
+**Close zoom.** The critics ranked this set first: no grid repeat. At the opening zoom the old meadow's tufted grain was still judged a little richer.
+
 ## Acceptance
 
 - **At 600 m and 1500 m:** an independent critic, shown a shot with a 3×3-tile window marked, cannot point to the same patch twice.

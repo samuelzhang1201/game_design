@@ -241,3 +241,8 @@ river_estuary_power,2.0,"3D bake: ...opening as s^power down the stretch, so it 
 river_estuary_town_m,400,"3D bake: within this far of a settlement the estuary does not open, fully by twice this — a port keeps the river its quays and houses were laid along (the full funnel displaced ~330 houses)"
 river_estuary_wobble,0.45,"3D bake (critic 2026-10-06: the funnel read as a ruler-straight wedge): the estuary's opening swings by up to this share with a slow noise along it, so its banks wander"
 river_estuary_wobble_m,400,3D bake: ...that noise's wavelength along the river
+variant_wave_m,600,"3D bake (spec 2026-10-12-ground-detail-textures, Phase 1): the wavelength of the slow noises that pick each grass vertex's picture among its variant set — patches of one picture a few tiles across"
+variant_sharp,10,"3D bake: how sharply a vertex goes to its leading variant (a softmax of this x the noises): high is patches with narrow blends between them, low a wash of all of them"
+variant_upland_lo_m,400,"3D bake (2026-10-13: 220 gave half the island's grass to the turfs — the hills round the capital stand at ~400 m): grass above this many metres begins to take the upland turfs instead of the meadows"
+variant_upland_hi_m,650,"3D bake: ...and is all upland turf above this many metres"
+crop_variant_wave_m,900,"3D bake: the wavelength of the noise that picks a crop vertex's picture between the two crop variants"

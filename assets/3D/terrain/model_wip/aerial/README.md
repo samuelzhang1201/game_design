@@ -119,3 +119,29 @@ crosses every tile), T-76 (white boulders again), T-74's other seeds (patches
 crowded in one corner), every Qwen-2512 tile. Known limits: at 6 km the patches
 dissolve and the snow still meets brown ground with no scree band — that is the
 bake's snow margin, not this picture.
+
+## Variant sets (spec 2026-10-12-ground-detail-textures, Phase 1)
+
+Seven low-feature pictures from `assets/imagegen/ground_v2_prompts.csv` with
+`STYLE_CORE_aerial_ground_v2.txt` (Z-Image Turbo on the Windows desktop,
+`COMFYUI_URL=http://192.168.4.85:8188 generate.py --prompts-file ground_v2_prompts.csv
+--style-file STYLE_CORE_aerial_ground_v2.txt --model zimage`), the owner's picks:
+
+| file | prompt | seed | layer |
+|---|---|---|---|
+| `g2_meadow_a.png` | T-77 | 954159497 | GRASS (id 1) |
+| `g2_meadow_b.png` | T-79 | 954159500 | GRASS_B |
+| `g2_meadow_c.png` | T-78 | 954160100 | GRASS_C |
+| `g2_upturf_a.png` | T-82 | 954160102 | UPTURF_A |
+| `g2_upturf_b.png` | T-83 | 954159498 | UPTURF_B |
+| `g2_crop_a.png` | T-80 | 954159497 | CROP (id 9) |
+| `g2_crop_b.png` | T-80 | 954159498 | CROP_B |
+
+Packed with the meadow's and the crop's settings above:
+
+    for k in g2_meadow_b g2_meadow_c; do python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/$k.png $k --match-mean '#666A35' --normal-strength 0.25 --rough 0.95 --fill-spots 0.2; done
+    for k in g2_meadow_a g2_upturf_a g2_upturf_b; do python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/$k.png $k --match-mean '#666A35' --normal-strength 0.8 --rough 0.95 --fill-spots 0.2 --contrast 2.2; done
+
+(the flattest three at contrast 2.2: at 1.0 the hills read airbrushed at the opening zoom)
+    for k in g2_crop_a g2_crop_b; do python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/$k.png $k --saturation 0.25 --contrast 1.8 --flatten-keep 0.0 --fill-spots 0.12 --fill-dark-only --match-mean '#D4C89C' --normal-strength 0.6 --rough 0.95; done
+

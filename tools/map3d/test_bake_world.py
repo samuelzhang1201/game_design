@@ -405,3 +405,45 @@ def test_green_cut_moves_cliff_rock_and_soil_to_grass_by_the_cut():
     assert np.allclose(tw[2, 2], before[2, 2]), "w 0 moves nothing"
     assert np.allclose(np.delete(tw, [1, 2], axis=0), np.delete(before, [1, 2], axis=0))
     assert np.isclose(t_rock[2, 3], 0.75) and t_rock[0, 0] == 1.0
+
+
+def test_split_variants_moves_weight_only_within_a_class():
+    """Spec 2026-10-12-ground-detail-textures: the grass's weight goes to its
+    meadows below variant_upland_lo_m and to the upland turfs above
+    variant_upland_hi_m, the crops' to the two crops; each class keeps its
+    total, so the colour map is unchanged, and every other layer is untouched."""
+    rules = bw.load_rules()
+    h, w = 40, 60
+    tw = np.zeros((h, w, bw.NT), np.float32)
+    tw[..., bw.GRASS] = 0.7
+    tw[..., bw.CROP] = 0.2
+    tw[..., bw.CLIFF] = 0.1
+    height = np.zeros((h, w), np.float32)
+    height[:, w // 2:] = rules["variant_upland_hi_m"] + 50.0
+    bw.split_variants(tw, height, rules)
+    meadows = tw[..., [bw.GRASS, bw.GRASS_B, bw.GRASS_C]].sum(axis=2)
+    turfs = tw[..., [bw.UPTURF_A, bw.UPTURF_B]].sum(axis=2)
+    assert np.allclose(meadows + turfs, 0.7, atol=1e-5)
+    assert np.allclose(turfs[:, : w // 2], 0.0) and np.allclose(meadows[:, w // 2:], 0.0, atol=1e-6)
+    assert np.allclose(tw[..., bw.CROP] + tw[..., bw.CROP_B], 0.2, atol=1e-5)
+    assert np.allclose(tw[..., bw.CLIFF], 0.1)
+    # each picture leads somewhere: the noise makes patches, not an even wash
+    lead = np.argmax(tw[:, : w // 2, [bw.GRASS, bw.GRASS_B, bw.GRASS_C]], axis=2)
+    assert len(np.unique(lead)) >= 2
+
+
+def test_a_split_class_still_wins_its_vertex():
+    """The control map ranks a variant set's leading picture at its whole
+    class's weight (lead_variants): grass at 0.6 split over five pictures
+    still beats dirt at 0.3, and the true weights are left as they were."""
+    s = np.zeros((1, 1, bw.NT), np.float32)
+    for t in (bw.GRASS, bw.GRASS_B, bw.GRASS_C, bw.UPTURF_A, bw.UPTURF_B):
+        s[0, 0, t] = 0.12
+    s[0, 0, bw.GRASS] = 0.2
+    s[0, 0, bw.GRASS_B] = 0.04
+    s[0, 0, bw.DIRT] = 0.3
+    ranked = bw.lead_variants(s)
+    assert np.isclose(ranked[0, 0, bw.GRASS], 0.6)
+    assert np.argmax(ranked[0, 0]) == bw.GRASS
+    assert np.isclose(ranked[0, 0, bw.DIRT], 0.3)
+    assert np.isclose(s[0, 0, bw.GRASS], 0.2)

@@ -67,15 +67,22 @@ BEACH_MAX_M = 40.0       # and no higher
 
 # Texture ids = build_terrain.gd TEXTURES order.
 CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST, SNOW, CROP = range(10)
-NT = 10
-TEXTURE_KEYS = ["aerial_cliff", "aerial_meadow", "dry_decay_leaves", "dirt_floor", "aerial_upland",
+# Variant sets (spec 2026-10-12-ground-detail-textures, Phase 1): the grass and the
+# crops wear several interchangeable low-feature pictures, mixed by split_variants
+# on slow noise so no two neighbouring tiles repeat one picture; the grass on high
+# ground takes the upland turfs.
+GRASS_B, GRASS_C, UPTURF_A, UPTURF_B, CROP_B = range(10, 15)
+NT = 15
+TEXTURE_KEYS = ["aerial_cliff", "g2_meadow_a", "dry_decay_leaves", "dirt_floor", "aerial_upland",
                 "excavated_soil_wall", "sand_03", "aerial_canopy",
                 # the snow line (owner 2026-09-19): Poly Haven snow_02 since the
                 # same day (snow_field_aerial read blue-grey and blotchy)
                 "aerial_snow",
                 # the crops (owner 2026-10-01, open fields): a pale straw ground
                 # each field's tint darkens to its crop's colour
-                "aerial_crop"]
+                "g2_crop_a",
+                # the variant sets (split_variants)
+                "g2_meadow_b", "g2_meadow_c", "g2_upturf_a", "g2_upturf_b", "g2_crop_b"]
 BIOME_MIX = {
     1: {SAND: 1.0},
     2: {DIRT: 0.8, ROCKY: 0.2},
@@ -102,7 +109,13 @@ SLOPE_CLIFF = (0.96, 0.995)
 FAR_COLOR = {
     CLIFF: "#7E7B77", GRASS: "#747A40", LEAVES: "#4E4A2C", DIRT: "#9A7A55",
     ROCKY: "#7A7656", SOIL: "#5E4A30", FOREST: "#5C6C36",
-}  # SAND's, SNOW's and CLIFF's are data/screens/map3d/map3d_bake.csv far_color_sand / _snow / _cliff
+}
+# a variant reaches its class's far colour, so the far view is the same whichever is drawn
+FAR_COLOR.update({GRASS_B: FAR_COLOR[GRASS], GRASS_C: FAR_COLOR[GRASS],
+                  UPTURF_A: FAR_COLOR[GRASS], UPTURF_B: FAR_COLOR[GRASS]})
+CROP_TEXTURES = (CROP, CROP_B)   # the crops wear their own tint (sow_patchwork), never a far colour
+# each class's pictures (split_variants), the class the control map ranks
+VARIANT_SETS = ((GRASS, GRASS_B, GRASS_C, UPTURF_A, UPTURF_B), CROP_TEXTURES)  # SAND's, SNOW's and CLIFF's are data/screens/map3d/map3d_bake.csv far_color_sand / _snow / _cliff
 MACRO_WAVE_M = 9000.0    # large patches of lighter and darker country
 # (their depth and the green-yellow drift are data/screens/map3d/map3d_bake.csv macro_*)
 
@@ -129,6 +142,64 @@ def box(a, r):
 def resize(a, w, h):
     return np.asarray(Image.fromarray(a.astype(np.float32), mode="F").resize((w, h), Image.BICUBIC),
                       dtype=np.float32)
+
+
+def variant_shares(noises, sharp):
+    """Soft one-hot shares of len(noises) variants: each vertex goes mostly to
+    the variant whose noise is highest there, fading into its neighbour over
+    a band `sharp` narrows (a softmax of sharp x the noises), so a change of
+    picture is a blend across a few vertices, never a 20 m step."""
+    e = [np.exp(sharp * (n - 1.0)) for n in noises]
+    total = sum(e)
+    return [x / total for x in e]
+
+
+def split_variants(tw, height, rules):
+    """Spread the grass and the crops over their variant sets (spec
+    2026-10-12-ground-detail-textures): the grass on low ground over
+    GRASS / GRASS_B / GRASS_C, on high ground (variant_upland_lo_m ..
+    _hi_m) over the two upland turfs; the crops over CROP / CROP_B. Each
+    set by its own slow noises (variant_wave_m, crop_variant_wave_m) and
+    variant_sharp; weights only move between pictures of one class, so the
+    colour map and the far view do not change. In place."""
+    vh, vw = tw.shape[:2]
+    wave = rules["variant_wave_m"] / VERTEX_M
+    sharp = rules["variant_sharp"]
+    rngs = [np.random.default_rng(SEED + 61 + i) for i in range(6)]
+    up = np.clip((height - rules["variant_upland_lo_m"])
+                 / max(rules["variant_upland_hi_m"] - rules["variant_upland_lo_m"], 1e-6), 0, 1)
+    grass = tw[..., GRASS].copy()
+    low, high = grass * (1.0 - up), grass * up
+    del up, grass
+    for t, s in zip((GRASS, GRASS_B, GRASS_C),
+                    variant_shares([value_noise(rngs[i], vw, vh, wave) for i in range(3)], sharp)):
+        tw[..., t] = low * s
+    for t, s in zip((UPTURF_A, UPTURF_B),
+                    variant_shares([value_noise(rngs[3 + i], vw, vh, wave) for i in range(2)], sharp)):
+        tw[..., t] = high * s
+    del low, high
+    crop = tw[..., CROP].copy()
+    cwave = rules["crop_variant_wave_m"] / VERTEX_M
+    for t, s in zip(CROP_TEXTURES,
+                    variant_shares([value_noise(rngs[5], vw, vh, cwave),
+                                    1.0 - value_noise(rngs[5], vw, vh, cwave)], sharp)):
+        tw[..., t] = crop * s
+
+
+def lead_variants(s):
+    """The weights the control map ranks: in each variant set the leading
+    picture stands for its whole class (the set's total) and the others keep
+    their share of it, so a class split over its pictures competes with the
+    other layers exactly as it did whole — split thin it lost the vertex to
+    dirt, crops or rock (found 2026-10-13: tan patches over the grass). The
+    colour map keeps the true weights. A copy."""
+    s = s.copy()
+    for idx in VARIANT_SETS:
+        fam = s[..., list(idx)]
+        top = fam.max(axis=2, keepdims=True)
+        tot = fam.sum(axis=2, keepdims=True)
+        s[..., list(idx)] = np.where(top > 0, fam * (tot / np.maximum(top, 1e-12)), 0.0)
+    return s
 
 
 def value_noise(rng, w, h, wave):
@@ -1547,11 +1618,12 @@ def main(argv=None):
     # the wet soil beside the water is dirt_floor (land only)
     tw[..., DIRT] += rules["river_wet_weight"] * wet
     tw = sharpen_weights(tw, rules)
+    split_variants(tw, height, rules)
 
     # --- control: top two per vertex --------------------------------------------------
     control = np.zeros((vh, vw), dtype=np.uint32)
     for y0 in range(0, vh, 256):
-        s = tw[y0:y0 + 256]
+        s = lead_variants(tw[y0:y0 + 256])
         order = np.argsort(-s, axis=2)
         b1, b2 = order[..., 0], order[..., 1]
         w1 = np.take_along_axis(s, b1[..., None], 2)[..., 0]
@@ -1568,7 +1640,7 @@ def main(argv=None):
     for t, key in enumerate(TEXTURE_KEYS):
         a = np.asarray(Image.open(os.path.join(TEX, f"{key}_alb_ht.png")).convert("RGB").resize((64, 64)), dtype=np.float64) / 255.0
         mean_lin = srgb_to_lin(a).reshape(-1, 3).mean(0)
-        if t == CROP:
+        if t in CROP_TEXTURES:
             mult_lin[t] = 1.0   # the crops wear their own tint (sow_patchwork)
             continue
         far = rules["far_color_sand"] if t == SAND else rules["far_color_snow"] if t == SNOW \
