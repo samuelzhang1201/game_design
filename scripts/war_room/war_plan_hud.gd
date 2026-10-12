@@ -127,7 +127,6 @@ func drawing() -> bool:
 func _draw() -> void:
 	if not _orders.is_empty() and not _orders_look.is_empty():
 		WarPlanDraw.paint(self, _orders, _orders_look)
-	_draw_slope()
 	if not _road.is_empty():
 		var edge := _gold.darkened(0.5)
 		var dashed: Array = []
@@ -141,6 +140,7 @@ func _draw() -> void:
 		_draw_exit()
 	if not _ink.is_empty():
 		WarPlanDraw.paint(self, _ink, _look)
+	_draw_slope()   # over every crayon, the pending one too: one stacking for draft and pending (R19)
 	for h in _handles:
 		draw_circle(h, _handle_r, Color(_chalk, 0.35))
 		draw_arc(h, _handle_r, 0.0, TAU, 20, _chalk, 1.5, true)

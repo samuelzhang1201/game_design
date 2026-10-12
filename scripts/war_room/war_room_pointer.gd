@@ -144,36 +144,79 @@ func redraw() -> void:
 
 
 ## The barrier bars (WarSlopeBars) across every march drawn and the pending
-## one, on the screen: [{a, b, hatches}] (owner 2026-10-12, item 5).
+## one, on the screen: [{a, b, hatches}] (owner 2026-10-12, item 5). The runs
+## come from the regiment's true spot, each bar lies on the crayon drawn from
+## the piece's displayed one, and none lies over a standing piece or a town's
+## name by the march (R19).
 func _slope_bars(groups: Array) -> Array:
-	var chains: Array = []
+	var marches: Array = []   # [{chain: true pack px, shown: the displayed start}]
 	if _view.rolling() or _view.sheet_index() < 0:
 		return []
+	var spots := _view.piece_pack_positions()
 	for g: Dictionary in groups:   # drafts only: a sealed march is the courier's now (R12)
 		if g.has("chain") and String(g["kind"]) == WarOrderArrows.DRAFT:
-			chains.append(g["chain"])
+			marches.append({"chain": g["chain"], "shown": spots.get(String(g["lead"]), Vector2(-1, -1))})
 	if _view.aiming and _view.aim_code != "" and _view.aim_dest.x >= 0.0:
 		var pend: Array = [_view.position_of(_view.aim_code)]
 		pend.append_array(Array(_view.aim_waypoints))
 		pend.append(_view.aim_dest)
-		chains.append(pend)
+		marches.append({"chain": pend, "shown": spots.get(_view.aim_code, Vector2(-1, -1))})
 	var out: Array = []
 	var rect := _view.sheet_rect()
 	var gap := _repo.bal("war_slope_hatch_gap_px")
 	var tick := _repo.bal("war_slope_hatch_px")
 	var min_px := _repo.bal("war_slope_bar_min_px")
-	for chain: Array in chains:
-		for bar: Dictionary in WarSlopeBars.bars(_repo, chain):
-			if not rect.has_point((bar["a"] as Vector2).lerp(bar["b"], 0.5)):
+	var pieces: Array = []
+	for h: Dictionary in _pieces.screen_hits(_view.camera(), _view.window_scale()):
+		pieces.append(h["rect"])
+	var grid := MarchPath.of_pack(_repo)
+	var cell_px := 0.0 if grid == null else float(grid.cell_m) / float(ArmySystem.metres_per_pack_px(_repo))
+	for m: Dictionary in marches:
+		var chain: Array = m["chain"]
+		var bars := WarSlopeBars.bars(_repo, chain, m["shown"])
+		if bars.is_empty():
+			continue
+		var around := Rect2(chain[0], Vector2.ZERO)
+		for bar: Dictionary in bars:
+			around = around.expand(bar["a"]).expand(bar["b"])
+		var keep_off: Array = pieces.duplicate()
+		for box: Rect2 in WarSlopeBars.town_boxes(_repo, _view.laid_sheet(), around.grow(cell_px * 2.0)):
+			var on := _screen_box(box)
+			if on.size.x > 0.0:
+				keep_off.append(on)
+		for bar: Dictionary in bars:
+			var mid_px: Vector2 = (bar["a"] as Vector2).lerp(bar["b"], 0.5)
+			if not rect.has_point(mid_px):
 				continue
 			var a: Variant = _view.screen_pos_of_px(bar["a"])
 			var b: Variant = _view.screen_pos_of_px(bar["b"])
-			var m: Variant = _view.screen_pos_of_px((bar["a"] as Vector2) + (bar["dir"] as Vector2) * 4.0)
-			if a == null or b == null or m == null:
+			var mid: Variant = _view.screen_pos_of_px(mid_px)
+			var far: Variant = _view.screen_pos_of_px(mid_px + (bar["dir"] as Vector2) * cell_px * float(bar["cells"]))
+			if a == null or b == null or mid == null or far == null:
 				continue
-			var dir: Vector2 = ((m as Vector2) - (a as Vector2)).normalized()
+			var dir: Vector2 = ((far as Vector2) - (mid as Vector2)).normalized()
 			var ends := WarSlopeBars.at_least(a, b, min_px)
+			ends = WarSlopeBars.clear_of(ends[0], ends[1], dir, keep_off,
+				(far as Vector2).distance_to(mid), _repo.bal("war_slope_bar_clear_step_px"), min_px)
+			if ends.is_empty():
+				continue
 			out.append({"a": ends[0], "b": ends[1], "hatches": WarSlopeBars.hatches(ends[0], ends[1], dir, gap, tick)})
+	return out
+
+
+## A pack-px box as the screen rect round its four corners; Rect2() when it is
+## empty or a corner is behind the camera.
+func _screen_box(box: Rect2) -> Rect2:
+	if box.size.x <= 0.0:
+		return Rect2()
+	var out := Rect2()
+	var first := true
+	for c: Vector2 in [box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)]:
+		var at: Variant = _view.screen_pos_of_px(c)
+		if at == null:
+			return Rect2()
+		out = Rect2(at, Vector2.ZERO) if first else out.expand(at)
+		first = false
 	return out
 
 

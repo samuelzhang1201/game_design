@@ -299,21 +299,27 @@ func test_one_barrier_bar_lies_across_a_march_over_a_scarp() -> void:
 	MarchPath.use(repo, _grid(150))
 	var from := ArmySystem.metres_to_pack(repo, Vector2i(1500, 2500))
 	var to := ArmySystem.metres_to_pack(repo, Vector2i(7500, 2500))
+	# the router goes round the wall's foot: (1500, 2500) -> (4500, 4500) -> (7500, 2500)
+	assert_eq(Array(ArmySystem.curve_px(repo, from, [], to)).map(func(p: Vector2) -> Vector2i:
+		return ArmySystem.pack_to_metres(repo, p)), [Vector2i(1500, 2500), Vector2i(4500, 4500), Vector2i(7500, 2500)])
 	var bars := WarSlopeBars.bars(repo, [from, to])
 	assert_eq(bars.size(), 1, "one run of steep ground, one bar")
-	# the run is cell (4, 2) alone, entered from the west: its entry edge is x = 4000 m;
-	# the march runs east, so the bar runs north-south, (0.75 + 0.5) cells = 1250 m either side
+	# the meant line enters the run, cell (4, 2), at (4000, 2500); the crayon's nearest point
+	# to it, on its first stretch (3000, 2000): t = 7.5e6 / 13e6 -> (3230.8, 3653.8), 1387 m
+	# off (the second stretch's best is 1941 m). Across (0.832, 0.5547), 1250 m either way
+	# along (-0.5547, 0.832): (3924.2, 2613.7) and (2537.4, 4693.9)
 	var a := ArmySystem.pack_to_metres(repo, bars[0]["a"])
 	var b := ArmySystem.pack_to_metres(repo, bars[0]["b"])
-	assert_almost_eq(float(a.x), 4000.0, 2.0)
-	assert_almost_eq(float(b.x), 4000.0, 2.0)
-	assert_almost_eq(absf(float(b.y - a.y)), 2500.0, 3.0)
+	assert_almost_eq(float(a.x), 3924.0, 3.0)
+	assert_almost_eq(float(a.y), 2614.0, 3.0)
+	assert_almost_eq(float(b.x), 2537.0, 3.0)
+	assert_almost_eq(float(b.y), 4694.0, 3.0)
 	assert_eq(bars[0]["cells"], 1)
 	repo.balance["army_march_grid_px"] = 0
 	repo.balance["war_slope_bar_pad_cells"] = pad
 
 
-func test_a_bar_at_a_grazed_corner_sits_where_the_route_touches() -> void:
+func test_a_bar_at_a_grazed_corner_sits_on_the_crayon_by_the_graze() -> void:
 	var pad: float = repo.bal("war_slope_bar_pad_cells")
 	repo.balance["war_slope_bar_pad_cells"] = 0.75   # the hand-computed lengths below
 	repo.balance["army_march_grid_px"] = 4
@@ -324,16 +330,19 @@ func test_a_bar_at_a_grazed_corner_sits_where_the_route_touches() -> void:
 	MarchPath.use(repo, MarchPath.build(repo, 9, 5, 1000, bytes))
 	var from := ArmySystem.metres_to_pack(repo, Vector2i(2500, 3500))
 	var to := ArmySystem.metres_to_pack(repo, Vector2i(5500, 500))
+	assert_eq(Array(ArmySystem.curve_px(repo, from, [], to)).map(func(p: Vector2) -> Vector2i:
+		return ArmySystem.pack_to_metres(repo, p)), [Vector2i(2500, 3500), Vector2i(4500, 500), Vector2i(5500, 500)])
 	var bars := WarSlopeBars.bars(repo, [from, to])
 	assert_eq(bars.size(), 1)
-	# x + y = 6000 touches (4, 2) at its corner (4000, 2000); the bar is centred there,
-	# across the (0.7071, -0.7071) march: 1250 m either way along (0.7071, 0.7071)
+	# x + y = 6000 grazes (4, 2) at its corner (4000, 2000); the crayon's nearest point, on
+	# (2000, -3000): t = 7.5e6 / 13e6 -> (3653.8, 1769.2). Across (0.5547, -0.8321),
+	# 1250 m either way along (0.8321, 0.5547): (2613.7, 1075.8) and (4693.9, 2462.6)
 	var a := ArmySystem.pack_to_metres(repo, bars[0]["a"])
 	var b := ArmySystem.pack_to_metres(repo, bars[0]["b"])
-	assert_almost_eq(float(a.x), 3116.0, 3.0)
-	assert_almost_eq(float(a.y), 1116.0, 3.0)
-	assert_almost_eq(float(b.x), 4884.0, 3.0)
-	assert_almost_eq(float(b.y), 2884.0, 3.0)
+	assert_almost_eq(float(a.x), 2614.0, 3.0)
+	assert_almost_eq(float(a.y), 1076.0, 3.0)
+	assert_almost_eq(float(b.x), 4694.0, 3.0)
+	assert_almost_eq(float(b.y), 2463.0, 3.0)
 	repo.balance["army_march_grid_px"] = 0
 	repo.balance["war_slope_bar_pad_cells"] = pad
 
@@ -356,6 +365,65 @@ func test_a_march_ending_on_the_scarp_has_no_bar_at_its_own_cell() -> void:
 	var to := ArmySystem.metres_to_pack(repo, Vector2i(4500, 2500))
 	assert_true(WarSlopeBars.bars(repo, [from, to]).is_empty(), "the end's own cell never blocks")
 	repo.balance["army_march_grid_px"] = 0
+
+
+func test_a_bar_lies_on_the_crayon_from_the_nudged_piece_not_the_true_spot() -> void:
+	repo.balance["army_march_grid_px"] = 4
+	MarchPath.use(repo, _grid(150))
+	var from := ArmySystem.metres_to_pack(repo, Vector2i(1500, 2500))   # the regiment's true spot
+	var shown := ArmySystem.metres_to_pack(repo, Vector2i(1500, 1000))  # its piece, spread 1.5 cells north
+	var to := ArmySystem.metres_to_pack(repo, Vector2i(7500, 2500))
+	var bars := WarSlopeBars.bars(repo, [from, to], shown)
+	assert_eq(bars.size(), 1, "the blocked run is still the true line's: cell (4, 2)")
+	# the crayon the player sees: (1500, 1000) -> (4500, 4500) -> (7500, 2500); its nearest
+	# point to the run's entry (4000, 2500), on (3000, 3500): t = 12.75e6 / 21.25e6 = 0.6
+	# -> (3300, 3100), 922 m off (the second stretch: 1941 m)
+	var a := Vector2(ArmySystem.pack_to_metres(repo, bars[0]["a"]))
+	var b := Vector2(ArmySystem.pack_to_metres(repo, bars[0]["b"]))
+	var mid := a.lerp(b, 0.5)
+	assert_almost_eq(mid.x, 3300.0, 3.0)
+	assert_almost_eq(mid.y, 3100.0, 3.0)
+	var on_shown := Geometry2D.get_closest_point_to_segment(mid, Vector2(1500, 1000), Vector2(4500, 4500))
+	assert_lt(on_shown.distance_to(mid), 3.0, "the bar's middle lies on the crayon the player sees")
+	# the true spot's crayon (1500, 2500) -> (4500, 4500) passes 1800 * 0.5547 - 600 * 0.8321 = 499 m off
+	var on_true := Geometry2D.get_closest_point_to_segment(mid, Vector2(1500, 2500), Vector2(4500, 4500))
+	assert_almost_eq(on_true.distance_to(mid), 499.0, 3.0, "not on the crayon from the true spot")
+	assert_almost_eq((b - a).normalized().dot(Vector2(3000, 3500).normalized()), 0.0, 0.01, "across the crayon")
+	repo.balance["army_march_grid_px"] = 0
+
+
+func test_a_bar_over_the_start_plinth_moves_along_the_march_or_is_dropped() -> void:
+	var plinth := Rect2(90, 40, 30, 30)
+	# a bar from (100, 20) to (100, 80) crosses the plinth (x 90..120); 4 px a step, the
+	# nearest clear spot first: back to x = 88 (12 px) before ahead to x = 124 (24 px)
+	var e := WarSlopeBars.clear_of(Vector2(100, 20), Vector2(100, 80), Vector2.RIGHT, [plinth], 40.0, 4.0)
+	assert_eq(e, [Vector2(88, 20), Vector2(88, 80)])
+	assert_false(plinth.intersects(Rect2(e[0], Vector2.ZERO).expand(e[1]), true), "no bar over the plinth")
+	var name := Rect2(70, 40, 20, 30)   # a town's name west of it: only ahead clears
+	e = WarSlopeBars.clear_of(Vector2(100, 20), Vector2(100, 80), Vector2.RIGHT, [plinth, name], 40.0, 4.0)
+	assert_eq(e, [Vector2(124, 20), Vector2(124, 80)])
+	assert_eq(WarSlopeBars.clear_of(Vector2(100, 20), Vector2(100, 80), Vector2.RIGHT, [plinth, name], 10.0, 4.0), [],
+		"no clear spot within the steep run: no bar")
+	assert_eq(WarSlopeBars.clear_of(Vector2(10, 20), Vector2(10, 80), Vector2.RIGHT, [plinth], 40.0, 4.0),
+		[Vector2(10, 20), Vector2(10, 80)], "a clear bar stays where it is")
+	# no room to move (reach 0): the longest clear stretch, y 20..40, when at least 15 px long
+	assert_eq(WarSlopeBars.clear_of(Vector2(100, 20), Vector2(100, 80), Vector2.RIGHT, [plinth], 0.0, 4.0, 15.0),
+		[Vector2(100, 20), Vector2(100, 40)])
+	assert_eq(WarSlopeBars.clear_of(Vector2(100, 20), Vector2(100, 80), Vector2.RIGHT, [plinth], 0.0, 4.0, 25.0), [],
+		"a stretch shorter than the minimum is no bar")
+
+
+func test_the_town_names_by_the_march_are_found() -> void:
+	var codes: Array = repo.burgs.keys()
+	codes.sort()
+	var b: Dictionary = repo.burgs[codes[0]]
+	var at := Vector2(float(b["x"]), float(b["y"]))
+	var sheet := {"rect": Rect2(at - Vector2(200, 150), Vector2(400, 300))}
+	var boxes := WarSlopeBars.town_boxes(repo, sheet, Rect2(at, Vector2.ZERO))
+	var held := boxes.filter(func(r: Rect2) -> bool: return r.grow(0.01).has_point(at))
+	assert_eq(held.size() >= 1, true, "the town's own box holds its ring")
+	assert_lt((held[0] as Rect2).get_center().x, at.x, "the name stands west of the ring")
+	assert_eq(WarSlopeBars.town_boxes(repo, sheet, Rect2(at + Vector2(10000, 10000), Vector2.ZERO)), [], "no town near")
 
 
 func test_a_far_small_bar_is_held_to_the_minimum_length() -> void:
