@@ -1,6 +1,8 @@
 folder,table
 realm,laws
 realm,law_effects
+realm,development_axes
+realm,development_tier_effects
 realm,law_words
 realm,order_costs
 realm,metric_polarity

@@ -1,0 +1,9 @@
+axis,tier,min_score,hysteresis,label
+renaissance,0,0,20,Budding
+renaissance,1,250,20,Rising
+renaissance,2,500,20,Flourishing
+renaissance,3,750,20,Zenith
+chivalry,0,0,20,Budding
+chivalry,1,250,20,Rising
+chivalry,2,500,20,Flourishing
+chivalry,3,750,20,Zenith

@@ -1,0 +1,48 @@
+axis,tier,channel,target,amount,timing,reason
+renaissance,1,arm_power_permille,artillery,20,permanent,Renaissance tier 1: cannon founders and gunnery manuals
+renaissance,1,treasury,,10,monthly,Renaissance tier 1: a freer market fills the coffers
+renaissance,1,church_opinion,,-1,monthly,Renaissance tier 1: new learning chafes the church
+renaissance,1,peasant_contentment,,-0.3,monthly,Renaissance tier 1: the old customs are loosened
+renaissance,1,adopt_permille,,-30,permanent,Renaissance tier 1: new things are adopted more cheaply
+renaissance,1,unlock,bombard,1,permanent,Renaissance tier 1: the bombard is cast
+renaissance,2,arm_power_permille,artillery,40,permanent,Renaissance tier 2: cannon founders and gunnery manuals
+renaissance,2,treasury,,25,monthly,Renaissance tier 2: a freer market fills the coffers
+renaissance,2,church_opinion,,-2,monthly,Renaissance tier 2: new learning chafes the church
+renaissance,2,peasant_contentment,,-0.6,monthly,Renaissance tier 2: the old customs are loosened
+renaissance,2,unrest,,0.5,monthly,Renaissance tier 2: novelty unsettles the villages
+renaissance,2,adopt_permille,,-60,permanent,Renaissance tier 2: new things are adopted more cheaply
+renaissance,2,unlock,arquebus,1,permanent,Renaissance tier 2: the arquebus is issued
+renaissance,3,arm_power_permille,artillery,60,permanent,Renaissance tier 3: cannon founders and gunnery manuals
+renaissance,3,treasury,,45,monthly,Renaissance tier 3: a freer market fills the coffers
+renaissance,3,church_opinion,,-3,monthly,Renaissance tier 3: new learning chafes the church
+renaissance,3,peasant_contentment,,-0.9,monthly,Renaissance tier 3: the old customs are loosened
+renaissance,3,unrest,,1,monthly,Renaissance tier 3: novelty unsettles the villages
+renaissance,3,adopt_permille,,-100,permanent,Renaissance tier 3: new things are adopted more cheaply
+chivalry,1,arm_power_permille,cavalry,20,permanent,Chivalry tier 1: knightly drill and honour in the cavalry
+chivalry,1,arm_power_permille,infantry,20,permanent,Chivalry tier 1: knightly drill and honour in the infantry
+chivalry,1,arm_power_permille,archers,-10,permanent,Chivalry tier 1: contempt for the archers
+chivalry,1,arm_power_permille,artillery,-10,permanent,Chivalry tier 1: contempt for the artillery
+chivalry,1,treasury,,10,monthly,Chivalry tier 1: dues are collected in good faith
+chivalry,1,church_opinion,,1,monthly,Chivalry tier 1: the church blesses the knights
+chivalry,1,peasant_contentment,,0.3,monthly,Chivalry tier 1: the old order comforts the people
+chivalry,1,adopt_permille,,30,permanent,Chivalry tier 1: new things are adopted more dearly
+chivalry,1,cavalry_upkeep_permille,,20,permanent,Chivalry tier 1: knights and warhorses cost more
+chivalry,2,arm_power_permille,cavalry,40,permanent,Chivalry tier 2: knightly drill and honour in the cavalry
+chivalry,2,arm_power_permille,infantry,40,permanent,Chivalry tier 2: knightly drill and honour in the infantry
+chivalry,2,arm_power_permille,archers,-25,permanent,Chivalry tier 2: contempt for the archers
+chivalry,2,arm_power_permille,artillery,-25,permanent,Chivalry tier 2: contempt for the artillery
+chivalry,2,treasury,,20,monthly,Chivalry tier 2: dues are collected in good faith
+chivalry,2,church_opinion,,2,monthly,Chivalry tier 2: the church blesses the knights
+chivalry,2,peasant_contentment,,0.6,monthly,Chivalry tier 2: the old order comforts the people
+chivalry,2,adopt_permille,,60,permanent,Chivalry tier 2: new things are adopted more dearly
+chivalry,2,cavalry_upkeep_permille,,40,permanent,Chivalry tier 2: knights and warhorses cost more
+chivalry,2,flag,honour_bound,1,permanent,Chivalry tier 2: the knights are honour bound
+chivalry,3,arm_power_permille,cavalry,60,permanent,Chivalry tier 3: knightly drill and honour in the cavalry
+chivalry,3,arm_power_permille,infantry,60,permanent,Chivalry tier 3: knightly drill and honour in the infantry
+chivalry,3,arm_power_permille,archers,-45,permanent,Chivalry tier 3: contempt for the archers
+chivalry,3,arm_power_permille,artillery,-45,permanent,Chivalry tier 3: contempt for the artillery
+chivalry,3,treasury,,35,monthly,Chivalry tier 3: dues are collected in good faith
+chivalry,3,church_opinion,,3,monthly,Chivalry tier 3: the church blesses the knights
+chivalry,3,peasant_contentment,,0.9,monthly,Chivalry tier 3: the old order comforts the people
+chivalry,3,adopt_permille,,100,permanent,Chivalry tier 3: new things are adopted more dearly
+chivalry,3,cavalry_upkeep_permille,,70,permanent,Chivalry tier 3: knights and warhorses cost more
