@@ -34,7 +34,7 @@ river_ridge_fade_m,1000.0,"3D bake (2026-09-18): the synthetic ridges fade to no
 river_join_m,400.0,3D bake (2026-09-18): a river ending inland is carried on to the nearest point of another river's course within this distance (the pack stops its tributaries 60-290 m short of their confluence)
 snow_line_lo,0.72,"3D bake (critic 2026-10-13, ranked blind first against 0.62 and 0.80 (0.76 read as 0.80): at 0.62 the range wore one white plaster sheet down to its foothills, at 0.80 caps sat on a lawn; owner 2026-09-19: a snow texture on the peaks, Poly Haven snow_02 — first snow_field_aerial): the share of the highest ground where snow starts to come in on the 3D map's own relief — the 2D map's peak band (biome 15) and glaciers wear it too, through the bake's biome mix"
 snow_line_hi,0.84,3D bake: the share of the highest ground where the snow is full
-snow_weight,1.2,3D bake (critic 2026-10-13, phase 2 B: at 2.0 the snow laid one white ribbon over the range): the snow line's weight against the other grounds (the grass is 1); thinned by snow_steep_cut on the steepest cliff faces
+snow_weight,1.2,"3D bake (critic 2026-10-13, phase 2 B: at 2.0 the snow laid one white ribbon over the range): the snow line's weight against the other grounds (the grass is 1); thinned by snow_steep_cut on the steepest cliff faces"
 snow_steep_cut,0.75,"3D bake: how much of the snow the steepest faces shed (was a fixed 0.6)"
 snow_scree_cut,0.4,"3D bake (2026-09-30): how much of the snow the scree slopes shed, so ribs of crag show through the cap"
 snow_edge_noise,0.05,"3D bake (2026-09-30, owner: 山顶雪帽): how far a slow noise moves the snow line up and down, as a share of the highest ground — the rim breaks into tongues and patches instead of ruling a contour (0 = the old line)"
