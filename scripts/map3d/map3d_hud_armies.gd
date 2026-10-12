@@ -81,6 +81,11 @@ func _cut() -> Array:
 		return []
 	var keep_off: Array = ctx.settlement_rects()
 	keep_off.append_array(view.unit_rects().values())
+	# the names: the kingdoms' and the capital's (review 2026-10-12: a fleet in
+	# port lay over the capital's, then dodged onto the kingdom's)
+	var labels := sibling("Labels") as Map3DHudLabels
+	if labels != null:
+		keep_off.append_array(labels.rects())
 	return ArmyCounters.layout(repo, points, h, keep_off, view.selected_armies())
 
 

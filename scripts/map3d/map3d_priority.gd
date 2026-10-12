@@ -22,6 +22,9 @@ const MANOR_EDGES := 2
 const UNIT_GLOW := 2
 ## A flowing supply line (Map3DSupplyLines): faint, over the roads, under the borders.
 const SUPPLY_LINES := 2
+## The player's realm rim (Map3DLayerBorders, lines/realm_glow.tres): a pale
+## wash under the realm bands, so the kingdom's own colour reads over it.
+const REALM_GLOW := 2
 const KINGDOM_BAND := 3
 ## A broken supply line's dark dashes and tick (Map3DSupplyBroken), over its
 ## pale halo (SUPPLY_LINES); the realm band's row — a band is a faint wash.

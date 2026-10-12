@@ -17,6 +17,8 @@ const KINGDOM_HALO := preload("res://scenes/map3d/materials/lines/kingdom_halo.t
 const KINGDOM_INK := preload("res://scenes/map3d/materials/lines/kingdom_ink.tres")
 const SEAM := preload("res://scenes/map3d/materials/lines/seam.tres")
 const HOVER := preload("res://scenes/map3d/materials/lines/hover.tres")
+## The player's own realm: a soft light rim inside its land border (review 2026-10-12).
+const REALM_GLOW := preload("res://scenes/map3d/materials/lines/realm_glow.tres")
 const SELECTION_MANOR := preload("res://scenes/map3d/materials/lines/selection_manor.tres")
 const SELECTION_PROVINCE := preload("res://scenes/map3d/materials/lines/selection_province.tres")
 const MANOR_EDGE := preload("res://scenes/map3d/materials/lines/manor_edge.tres")
