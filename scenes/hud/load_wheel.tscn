@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://2c4t42umilan"]
+
+[ext_resource type="Texture2D" uid="uid://bd7f6xayv2ffr" path="res://assets/2D/ui/compass/compass.png" id="1_0ama8"]
+[ext_resource type="Script" uid="uid://cuwqxg2ny0638" path="res://scripts/ui/load_wheel.gd" id="2_qj31s"]
+
+[node name="LoadWheel" type="TextureRect" unique_id=1385513812]
+editor_description = "The launch black's loading wheel (owner 2026-10-12, item 16): the map's compass art, turned by load_wheel.gd at map_compass_turn_deg_per_s."
+custom_minimum_size = Vector2(72, 72)
+offset_right = 72.0
+offset_bottom = 72.0
+pivot_offset = Vector2(36, 36)
+mouse_filter = 2
+texture = ExtResource("1_0ama8")
+expand_mode = 1
+stretch_mode = 5
+script = ExtResource("2_qj31s")

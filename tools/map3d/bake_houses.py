@@ -635,6 +635,143 @@ def level_pad(height, vx, vy, half, yaw_deg, rules, land=None, wet=None):
     height[y0:y1, x0:x1] = sub + (target - sub) * w
 
 
+def _port_bearing(vx, vy, rules, height, sea_y, water):
+    """The bearing a port's pier would take from its centre (vertex coords
+    `vx`, `vy`), walked as harbour() walks it: (rise, shore_m, dx, dz) of the
+    NEAREST low shore (pier_max_shore_m or less over the sea, `rise` 0) with
+    pier_len_m of open `water` beyond it, else of the nearest high one, or
+    None when no bearing within pier_search_m has open water."""
+    vh, vw = height.shape
+    step, plen = float(rules["pier_step_m"]), float(rules["pier_len_m"])
+    reach, max_shore = float(rules["pier_search_m"]), float(rules["pier_max_shore_m"])
+
+    def at(d, dx, dz):
+        ix, iy = int(round(vx + dx * d / VERTEX_M)), int(round(vy + dz * d / VERTEX_M))
+        if ix < 0 or iy < 0 or ix >= vw or iy >= vh:
+            return None
+        return bool(water[iy, ix]), float(height[iy, ix])
+
+    low = high = None
+    deg = 0.0
+    while deg < 360.0:
+        a = math.radians(deg)
+        dx, dz = math.cos(a), math.sin(a)
+        d, shore, last_h = 0.0, None, None
+        while d <= reach:
+            v = at(d, dx, dz)
+            if v is None:
+                break
+            if v[0]:
+                shore = d
+                break
+            last_h = v[1]
+            d += step
+        if shore is not None and last_h is not None:
+            s, clear = shore, True
+            while s <= shore + plen:
+                v = at(s, dx, dz)
+                if v is None or not v[0]:
+                    clear = False
+                    break
+                s += step
+            if clear:
+                rise = last_h - sea_y
+                if rise <= max_shore:
+                    if low is None or shore < low[1]:
+                        low = (0.0, shore, dx, dz)
+                elif high is None or shore < high[1]:
+                    high = (rise, shore, dx, dz)
+        deg += float(rules["pier_bearing_step_deg"])
+    return low if low is not None else high
+
+
+def port_plain(burg, height, vx, vy, rules, types, sea_y, water, land=None, wet=None):
+    """Lower a cliff port onto a coastal plain IN PLACE (owner 2026-10-12, R9
+    and R18: 所有在悬崖边的定居点…改为非悬崖，平原即可 — every cliff-edge
+    port stands on plain ground and takes the timber pier).
+
+    A port is lowered when its harbour bearing (_port_bearing) rises over
+    pier_max_shore_m, OR when its built ground (cluster_radius_m /
+    house_built_share round its landmark at `vx`, `vy`) stands, by its median,
+    pier_stair_town_rise_m or more over the sea though a low shore is in reach
+    (a town on a cliff top). Its built ground and a corridor from there to the
+    shore — port_plain_corridor_m wide, and never narrower than the built
+    ground, so the plain opens to the sea as a cove, not a bowl — are cut to
+    sea_y + port_plain_rise_m. The ground eases back over a blend of
+    max(port_plain_blend_m, 1.5 * cut / port_plain_max_grade) (smoothstep's
+    steepest is 1.5 / blend) and the cut there never passes the deepest cut,
+    so a hill behind the town is lowered with it, never sliced. Cut only,
+    never a fill; the sea and a river's channel (`land`, `wet`) are never
+    touched, nor its wet band while port_plain_keep_river_band is 1. A port whose cut would pass port_plain_max_cut_m is left.
+    `water` is open water (bake_world's open_water).
+
+    Returns {"cut", "blend", "window", "w"}: the deepest cut in metres (0.0
+    nothing to do, None given up — then "need" is the cut it would take), the blend used, the (y0, y1, x0, x1)
+    window cut and the cut's weight over it (the texture pass greens the cut
+    face by it); window and w are None when nothing was cut."""
+    none = {"cut": 0.0, "blend": 0.0, "window": None, "w": None}
+    if not int(burg.get("is_port", 0) or 0):
+        return none
+    bearing = _port_bearing(vx, vy, rules, height, sea_y, water)
+    if bearing is None:
+        return none
+    rise_m, shore, dx, dz = bearing
+    target = sea_y + float(rules["port_plain_rise_m"])
+    grade = float(rules["port_plain_max_grade"])
+    max_cut = float(rules["port_plain_max_cut_m"])
+    r_built = cluster_radius_m(burg, rules, types) / float(rules["house_built_share"])
+    half_w = max(0.5 * float(rules["port_plain_corridor_m"]), r_built)
+    vh, vw = height.shape
+    # the widest blend any allowed cut takes, so one window holds every case
+    blend_max = max(float(rules["port_plain_blend_m"]), 1.5 * max_cut / grade)
+    reach = (max(r_built, shore + half_w) + blend_max) / VERTEX_M + 1
+    x0, x1 = max(int(vx - reach), 0), min(int(vx + reach) + 2, vw)
+    y0, y1 = max(int(vy - reach), 0), min(int(vy + reach) + 2, vh)
+    if x0 >= x1 or y0 >= y1:
+        return none
+    yy, xx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    px, pz = (xx - vx) * VERTEX_M, (yy - vy) * VERTEX_M
+    sub = height[y0:y1, x0:x1]
+    keep = np.ones_like(sub)
+    if land is not None:
+        keep = keep * (land[y0:y1, x0:x1] >= 0.5)
+    if wet is not None:
+        band = np.clip(wet[y0:y1, x0:x1], 0.0, 1.0)
+        # port_plain_keep_river_band 1: a river's channel AND its whole wet
+        # band stand untouched; 0: the band takes a cut eased by its wetness
+        keep = keep * ((band <= 0.0) if int(rules.get("port_plain_keep_river_band", 1)) else (1.0 - band))
+    disc = np.hypot(px, pz) - r_built
+    if rise_m <= 0.0:
+        # the town's median ground over all its land, the river's band too
+        dry = (disc <= 0.0) if land is None else (disc <= 0.0) & (land[y0:y1, x0:x1] >= 0.5)
+        ground = sub[dry]
+        lofty = ground.size and float(np.median(ground)) - sea_y >= float(rules["pier_stair_town_rise_m"])
+        # port_plain_lofty 0: a port with a low shore in reach is never cut
+        if not lofty or not int(rules.get("port_plain_lofty", 0)):
+            return none
+    # metres outside the built disc, and outside the corridor (the segment
+    # from the centre to the shore, grown by half its width)
+    out_disc = np.maximum(disc, 0.0)
+    t_seg = np.clip(px * dx + pz * dz, 0.0, shore)
+    out_lane = np.maximum(np.hypot(px - t_seg * dx, pz - t_seg * dz) - half_w, 0.0)
+    out = np.minimum(out_disc, out_lane)
+    raw = np.maximum(sub - target, 0.0)
+    inside = (out <= 0.0) & (keep > 0.0)
+    deepest = float(raw[inside].max()) if inside.any() else 0.0
+    if deepest <= 0.0:
+        return none
+    if deepest > max_cut:
+        return {"cut": None, "blend": 0.0, "window": None, "w": None, "need": deepest}
+    blend = max(float(rules["port_plain_blend_m"]), 1.5 * deepest / grade)
+    # the rim's cut is capped at the deepest: a hill behind the town comes
+    # down with it, its added slope at most `grade`, never sliced flat
+    over = np.minimum(raw, deepest)
+    t = np.clip(out / max(blend, 1e-6), 0.0, 1.0)
+    w = (1.0 - t * t * (3.0 - 2.0 * t)) * keep
+    height[y0:y1, x0:x1] = sub - over * w
+    return {"cut": deepest, "blend": blend, "window": (y0, y1, x0, x1), "w": w}
+
+
 def _square_lane(a, c, yaw_deg, step):
     """A closed lane round a landmark's square: a rectangle `a` out along
     the landmark's facing axis and `c` across it, turned with it, as
@@ -1387,7 +1524,7 @@ def _head_mid(kind, at, d, sc):
     return (at[0] + d[0] * 0.5 * (x0 + x1), at[1] + d[1] * 0.5 * (x0 + x1))
 
 
-def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types=None):
+def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types=None, sea_cells=None):
     """A port's pier and its moored ships as house rows. From the
     settlement's centre every bearing (pier_bearing_step_deg) is walked to
     its shore within pier_search_m. A LOW shore — its ground no more than
@@ -1408,11 +1545,15 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
     pier_stair_town_rise_m or more over the sea — a town on a cliff top (owner
     2026-10-05: 建在崖顶的小城…配一个更小的崖边码头) — takes the small cliff
     landing `pier_stair` off its cliff instead of a timber pier below it,
-    placed the same way (pier_stair_root_*), its gate nearest the houses. Then 1-2 ships (_moor) alongside the pier
+    placed the same way (pier_stair_root_*), its gate nearest the houses.
+    pier_cliff_landings 0 turns both cliff landings off (a cliff port is
+    lowered first by port_plain and takes the timber pier). Then 1-2 ships (_moor) alongside the pier
     or, for a port that found none, off its nearest open shore. `water`, when
     given, is where BOTH the coastline and the game's cell index say water;
-    without it, water is wherever `land` is not. [] for a settlement that is
-    not a port."""
+    without it, water is wherever `land` is not. `sea_cells`, when given, is
+    the game's own cell index at pack resolution (True: no cell, the sea),
+    which a timber pier's head must stand over; without it, `water`. [] for a
+    settlement that is not a port."""
     if not int(burg.get("is_port", 0) or 0) or not rows:
         return []
     types = types or {}
@@ -1429,7 +1570,11 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
     # each cliff landing the group allows: its scale, height scale, the roots
     # walked out to sea, its half length, its head's lowest course
     landings = {}
-    for kind, (s_k, h_k) in (("pier_cliff", (sc, hs)), ("pier_stair", (1.0, 1.0))):
+    # pier_cliff_landings 0 (owner 2026-10-12, R9: 全部使用普通版码头): never a
+    # cliff landing — bake_world's port_plain pass lowers a cliff port instead
+    cliff_kinds = (("pier_cliff", (sc, hs)), ("pier_stair", (1.0, 1.0))) \
+        if int(rules.get("pier_cliff_landings", 1)) else ()
+    for kind, (s_k, h_k) in cliff_kinds:
         if kind not in types or not _group_allows(group, types[kind]["min_group"]):
             continue
         r0 = float(rules.get(kind + "_root_m", 0.0))
@@ -1439,6 +1584,15 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
                           sea_y + _HEADS[kind][4] * s_k * h_k)
     open_reach = float(rules.get("ship_anchor_m", 0.0)) + 2.0 * float(rules.get("ship_step_m", 0.0))
     homes = _houses_of(rows, types)
+    root_m = float(rules["pier_root_m"])
+    scan = float(rules.get("pier_root_scan_m", step))
+    back = float(rules.get("pier_root_back_m", 0.0))
+    out_max = float(rules.get("pier_root_out_max_m", 0.0))
+    side = float(rules.get("pier_side_clear_m", 0.0))
+    skew_max = float(rules.get("pier_max_skew_deg", 180.0))
+    # the highest ground a pier's deck may meet: none without the deck's height
+    deck_top = sea_y + float(rules["map3d_pier_deck_m"]) + float(rules.get("pier_root_rise_m", 0.0)) \
+        if "map3d_pier_deck_m" in rules else None
 
     def land_at(x, z):
         ix, iy = int(round(bx + x / VERTEX_M)), int(round(bz + z / VERTEX_M))
@@ -1451,6 +1605,14 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
         v = land_at(x, z)
         return v is not None and not v[0]
 
+    def head_at_sea(x, z):
+        """A pier's head stands where the game's cell index has no cell (what
+        MapManors.cell_at reads), else where `water` is."""
+        if sea_cells is None:
+            return water_at(x, z)
+        px, py = int(math.floor(bx / k + x / (VERTEX_M * k))), int(math.floor(bz / k + z / (VERTEX_M * k)))
+        return 0 <= py < sea_cells.shape[0] and 0 <= px < sea_cells.shape[1] and bool(sea_cells[py, px])
+
     def clear(dx, dz, shore, length):
         s = shore
         while s <= shore + length:
@@ -1461,6 +1623,107 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
 
     def near_houses(x, z):
         return min((math.hypot(x - hx, z - hz) for hx, hz in homes), default=0.0)
+
+    def shores_along(dx, dz, limit):
+        """(distance, ground height of the last land cell, where that run of
+        land began) at each land-to-water change along a bearing from the
+        centre, out to `limit`, nearest first."""
+        d, last_h, run = 0.0, None, 0.0
+        while d <= limit:
+            v = land_at(cx + dx * d, cz + dz * d)
+            if v is None:
+                return
+            if v[0]:
+                if last_h is None:
+                    run = d
+                last_h = v[1]
+            elif last_h is not None:
+                yield d, last_h, run
+                last_h = None
+            d += step
+
+    def ground(x, z):
+        """The ground's height at (x, z), bilinear between the vertices (what
+        the terrain draws), or None off the map."""
+        fx, fz = bx + x / VERTEX_M, bz + z / VERTEX_M
+        i, j = int(math.floor(fx)), int(math.floor(fz))
+        if i < 0 or j < 0 or i + 1 >= vw or j + 1 >= vh:
+            return None
+        a, b = fx - i, fz - j
+        return float(height[j, i] * (1 - a) * (1 - b) + height[j, i + 1] * a * (1 - b)
+                     + height[j + 1, i] * (1 - a) * b + height[j + 1, i + 1] * a * b)
+
+    def pier_root(dx, dz, shore, run):
+        """Where a timber pier found on a bearing stands: (landward end x,
+        z, deck direction ux, uz), or None. The masks' shore is a cell edge,
+        not the drawn waterline: walking landward from it (no further than
+        the run of land it ends, `run`), the first ground at or over the sea
+        IS the waterline — a run of "land" that never rises out of the sea
+        (a shoal the coarse cell index calls land) has none and is no shore.
+        The end stands pier_root_m inland of it. The deck runs on the bearing
+        unless that is more than pier_max_skew_deg off the ground's fall
+        there (the bearing met the shore obliquely: a deck along the beach),
+        when it is turned down the fall. Then the end walks out along the
+        deck by pier_root_scan_m (at most pier_root_m + pier_root_out_max_m)
+        until no ground from pier_root_back_m behind it to its head stands
+        over its deck (map3d_pier_deck_m over the sea) by more than
+        pier_root_rise_m — the deck never runs into the bank — and the
+        ground pier_side_clear_m either side of its outer half is under the
+        sea."""
+        s, s_w = shore, None
+        while s >= run - 1e-6:
+            g = ground(cx + dx * s, cz + dz * s)
+            if g is None:
+                return None
+            if g >= sea_y:
+                s_w = s
+                break
+            s -= scan
+        if s_w is None:
+            return None
+        px, pz = cx + dx * (s_w - root_m), cz + dz * (s_w - root_m)
+        if deck_top is None:
+            return px, pz, dx, dz
+        ux, uz = dx, dz
+        if skew_max < 180.0:
+            e = max(back, scan)
+            g = [ground(px + e, pz), ground(px - e, pz), ground(px, pz + e), ground(px, pz - e)]
+            if None in g:
+                return None
+            fx, fz = g[1] - g[0], g[3] - g[2]   # the fall: minus the gradient
+            n = math.hypot(fx, fz)
+            if n > 1e-6 and (fx * dx + fz * dz) / n < math.cos(math.radians(skew_max)):
+                ux, uz = fx / n, fz / n
+
+        def under_deck(x, z):
+            t = -back
+            while t <= plen + 1e-6:
+                g = ground(x + ux * t, z + uz * t)
+                if g is None or g > deck_top:
+                    return False
+                t += scan
+            # its head over the game's own open water (both masks: the cell
+            # index calls it sea), its outer half over the drawn water, with
+            # water either side (pier_side_clear_m off its axis)
+            if not head_at_sea(x + ux * (plen - scan), z + uz * (plen - scan)):
+                return False
+            t = plen / 2
+            while t <= plen + 1e-6:
+                g = ground(x + ux * t, z + uz * t)
+                if g is None or g >= sea_y:
+                    return False
+                for sgn in ((-1.0, 1.0) if side > 0.0 else ()):
+                    g = ground(x + ux * t - uz * sgn * side, z + uz * t + ux * sgn * side)
+                    if g is None or g >= sea_y:
+                        return False
+                t += scan
+            return True
+        k = 0.0
+        while not under_deck(px + ux * k, pz + uz * k):
+            k += scan
+            if k > root_m + out_max + 1e-6:
+                return None
+        return px + ux * k, pz + uz * k, ux, uz
 
     def head_clear(kind, at, d):
         # no ground under the head's footprint over its lowest course
@@ -1490,8 +1753,10 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
         if shore is not None and last_h is not None:
             rise = last_h - sea_y
             gap = near_houses(cx + dx * shore, cz + dz * shore) if types else shore
-            if rise <= max_shore and (low is None or (gap, shore) < low[0]) and clear(dx, dz, shore, plen):
-                low = ((gap, shore), shore - float(rules["pier_root_m"]) + plen / 2, dx, dz)
+            if rise <= max_shore and clear(dx, dz, shore, plen):
+                root = pier_root(dx, dz, shore, 0.0)
+                if root is not None and (low is None or (gap, shore) < low[0]):
+                    low = ((gap, shore), (root[0] + root[2] * plen / 2, root[1] + root[3] * plen / 2)) + root[2:]
             for kind, (s_k, _h, roots, front, _f) in landings.items() if rise >= cliff_min else ():
                 for root in roots:
                     mid = shore - root * s_k
@@ -1504,6 +1769,26 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
             if (anywhere is None or shore < anywhere[1]) and clear(dx, dz, shore, open_reach):
                 anywhere = ((gap, shore), shore, dx, dz)
         deg += float(rules["pier_bearing_step_deg"])
+    fallback = float(rules.get("pier_search_fallback_m", 0.0))
+    if low is None and fallback > reach:
+        # no low shore within pier_search_m: look further out for one, so the
+        # port still takes the normal timber pier (never a cliff landing)
+        deg = 0.0
+        while deg < 360.0:
+            a = math.radians(deg)
+            dx, dz = math.cos(a), math.sin(a)
+            # every shore on the bearing, nearest first: a river or a lake
+            # edge with high banks is walked PAST (it is no sea), and the
+            # first shore that is low and open for the pier's length wins
+            for shore, last_h, run in shores_along(dx, dz, fallback):
+                root = pier_root(dx, dz, shore, run) \
+                    if last_h - sea_y <= max_shore and clear(dx, dz, shore, plen) else None
+                if root is not None:
+                    gap = near_houses(cx + dx * shore, cz + dz * shore) if types else shore
+                    if low is None or (gap, shore) < low[0]:
+                        low = ((gap, shore), (root[0] + root[2] * plen / 2, root[1] + root[3] * plen / 2)) + root[2:]
+                    break
+            deg += float(rules["pier_bearing_step_deg"])
     lofty = statistics.median([land_at(x, z)[1] if land_at(x, z) else sea_y for x, z in homes] or [sea_y]) \
         - sea_y >= float(rules.get("pier_stair_town_rise_m", 1e9))
     pick = None
@@ -1520,7 +1805,9 @@ def harbour(burg, rows, rules, land, height, k, vw, vh, sea_y, water=None, types
     out = []
     if pick is not None:
         kind, s, h, mid, dx, dz = pick
-        at = (cx + dx * mid, cz + dz * mid)
+        # a timber pier's spot is its own (pier_root); a cliff landing's a
+        # distance on its bearing
+        at = mid if isinstance(mid, tuple) else (cx + dx * mid, cz + dz * mid)
         out.append({"burg_code": str(burg["burg_code"]), "rank": rank,
                     "x_m": float(round(at[0], 2)), "z_m": float(round(at[1], 2)),
                     # the pier runs along the mesh's +X: yaw turns +X onto (dx, dz)

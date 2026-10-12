@@ -31,6 +31,7 @@ uniform float wind_speed_mps = 6.0;
 uniform float wind_wave_m = 60.0;
 uniform float wind_field_amp = 0.12;
 uniform float wind_grass_amp = 0.05;
+uniform float wind_tilt = 0.0;
 uniform float wind_near_m = 1500.0;
 uniform float wind_far_m = 9000.0;
 uniform float wind_storm_gain = 1.2;
@@ -93,10 +94,12 @@ const STAGE := """	if (wind_on > 0.0) {
 			float wd_across = dot(v_vertex.xz, vec2(-wind_dir.y, wind_dir.x));
 			float wd_pa = dot(v_vertex.xz, wind_dir);
 			float wd_wmf = wind_wave_m * wind_far_scale;
-			vec2 wd_n = wd_waves(wd_pa - wind_time * wind_speed_mps, wd_across, wind_wave_m,
-				fwidth(wd_pa / wind_wave_m));
-			vec2 wd_f = wd_waves(wd_pa - wind_time * wind_speed_mps * wind_far_scale, wd_across, wd_wmf,
-				fwidth(wd_pa / wd_wmf));
+			float wd_fwn = fwidth(wd_pa / wind_wave_m);
+			float wd_fwf = fwidth(wd_pa / wd_wmf);
+			float wd_an = wd_pa - wind_time * wind_speed_mps;
+			float wd_af = wd_pa - wind_time * wind_speed_mps * wind_far_scale;
+			vec2 wd_n = wd_waves(wd_an, wd_across, wind_wave_m, wd_fwn);
+			vec2 wd_f = wd_waves(wd_af, wd_across, wd_wmf, wd_fwf);
 			float wd_val = mix(wd_n.x, wd_f.x, wd_far);
 			float wd_gust = mix(wd_n.y, wd_f.y, wd_far);
 			vec2 wd_fuv = (v_vertex.xz - pack_origin) / field_m_per_texel / vec2(textureSize(field_map, 0));
@@ -115,6 +118,24 @@ const STAGE := """	if (wind_on > 0.0) {
 			}
 			float wd_amp = max(wind_field_amp * wd_sown, wind_grass_amp * wd_grass) * wd_k * wd_storm * mix(1.0, wind_far_amp, wd_far);
 			float wd_t = wd_amp * wd_val;
+			if (wind_tilt > 0.0) {
+				// the TILT: the stalks a crest lays over LEAN down the wind, as
+				// far as the crest lays them (the wave itself, so the light
+				// travels with it and fades with wd_waves' own AA; ALU only),
+				// bent into the tangent-space normal NORMAL_MAP packs just
+				// below: the laid-over grass turns toward or away from the sun.
+				// Same masks, storm and distance fade as wd_t, not its colour
+				// amplitudes. (The wave's slope instead was a thin line at
+				// each crest front, a few pixels: never seen, 2026-10-12.)
+				float wd_lay = max(wd_sown, wd_grass) * wd_k * wd_storm * mix(1.0, wind_far_amp, wd_far);
+				float wd_bend = clamp(wd_lay * max(wd_val, 0.0) * wind_tilt, 0.0, 0.6);
+				vec3 wd_tg = normalize(cross(w_normal, vec3(0.0, 0.0, 1.0)));
+				vec3 wd_bn = cross(w_normal, wd_tg);
+				vec3 wd_w3 = vec3(wind_dir.x, 0.0, wind_dir.y);
+				// normal_rough.xyz is (tangent, up, binormal); .a (roughness) stays
+				mat.normal_rough.xyz = normalize(mat.normal_rough.xyz
+					+ vec3(dot(wd_w3, wd_tg), 0.0, dot(wd_w3, wd_bn)) * wd_bend);
+			}
 			if (wind_sheen_amp <= 0.0) {
 				base_albedo *= 1.0 + wd_t;
 			} else {

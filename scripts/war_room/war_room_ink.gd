@@ -13,7 +13,7 @@ extends RefCounted
 const INK_PX := ["road", "trail", "river", "coast", "border", "band", "seam", "town", "label", "dash", "gap",
 	"wood", "manor", "manor_label", "manor_dash", "manor_gap", "river_label", "bridge", "trade", "works", "market",
 	"river_feather", "label_halo"]
-const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_dot_ratio", "label_gap_ratio",
+const INK_RATIOS := ["band_alpha", "town_tier_growth", "town_ring_ratio", "town_dot_ratio", "town_halo_ratio", "town_halo_alpha", "town_pip_ratio", "town_outer_gap_ratio", "label_gap_ratio",
 	"label_drop_ratio", "peak_label_ratio", "peak_half_w", "peak_drop", "border_dot_ratio", "wall_ratio", "anchor_ratio", "char_w",
 	"river_label_lift"]
 ## The intelligence layer's widths (war_intel_<k>_px) and ratios (war_intel_<k>).
@@ -26,11 +26,13 @@ const KEEP := 2
 ## The ink viewport's size at rest (the smallest a viewport takes).
 const REST := Vector2i(2, 2)
 
-var cache: Dictionary = {}   # sheet index -> {key, tex}
-var intel: Dictionary = {}
+## Every cache is keyed by the laid sheet's `key` (WarSheets.union: "12", or
+## "12+13" for a sheet laid over two cells).
+var cache: Dictionary = {}   # sheet key -> {key, tex}
+var intel: Dictionary = {}   # the laid sheet's intelligence layer: {sheet, key, tex}
 var plan: Dictionary = {}    # the laid sheet's plan layer (WarPlanInk): {sheet, key, tex}
-var fine: Dictionary = {}    # sheet index -> {key, tex}: the fine print (WarFinePrint)   # the laid sheet's intelligence layer: {sheet, key, tex}
-var _order: Array[int] = []  # cached sheets, least recently laid first
+var fine: Dictionary = {}    # sheet key -> {key, tex}: the fine print (WarFinePrint)
+var _order: Array = []       # cached sheet keys, least recently laid first
 ## The frame the draw is read back after (a headless run never draws, so a
 ## test hands in the tree's process_frame).
 var frame_done: Signal = RenderingServer.frame_post_draw
@@ -40,8 +42,16 @@ var _gen := 0                # the latest draw; an older one awaiting its frame 
 ## The ink texture's size for a sheet: war_sheet_texture_px across, its
 ## height at the same scale (not square: the sheet is wider than it is deep).
 static func tex_size(repo: DataRepository, rect: Rect2) -> Vector2i:
-	var w := int(repo.bal("war_sheet_texture_px"))
-	return Vector2i(w, maxi(1, ceili(w * rect.size.y / rect.size.x)))
+	return fit_size(int(repo.bal("war_sheet_texture_px")), rect)
+
+
+## `px` across a sheet's LONGER side, the other at the same scale: one cell
+## (wider than deep) is `px` wide as ever; a union deeper than wide (1 x 3,
+## 1 x 4; R11) is `px` deep, so no texture outgrows one cell's.
+static func fit_size(px: int, rect: Rect2) -> Vector2i:
+	if rect.size.y > rect.size.x:
+		return Vector2i(maxi(1, floori(px * rect.size.x / rect.size.y)), px)   # floored: the sheet's rows never pass px
+	return Vector2i(px, maxi(1, ceili(px * rect.size.y / rect.size.x)))
 
 
 ## The share of the texture's height the sheet's own height fills (the
@@ -54,12 +64,12 @@ static func used_share(repo: DataRepository, rect: Rect2) -> float:
 ## The sheet's ink texture (drawn now if its key changed), null when none is
 ## to be had. `still_wanted` is asked after the draw's frame: false when the
 ## view left the tree or laid another sheet meanwhile.
-func texture_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubViewport,
+func texture_for(repo: DataRepository, state: GameState, row: Dictionary, viewport: SubViewport,
 		painter: WarInkPainter, font: Font, still_wanted: Callable) -> Texture2D:
+	var sheet := String(row["key"])
 	var key := WarSheetInk.cache_key(state, sheet)
 	var held: Dictionary = cache.get(sheet, {})
 	if held.get("key", -1) != key:
-		var row: Dictionary = WarSheets.series(repo)[sheet]
 		var size := tex_size(repo, row["rect"])
 		_gen += 1
 		var gen := _gen
@@ -88,7 +98,7 @@ func texture_for(repo: DataRepository, state: GameState, sheet: int, viewport: S
 	return held.get("tex") as Texture2D
 
 
-func store(sheet: int, key: int, img: Image) -> void:
+func store(sheet: Variant, key: int, img: Image) -> void:
 	if img == null or img.is_empty():
 		return
 	img.generate_mipmaps()
@@ -97,7 +107,7 @@ func store(sheet: int, key: int, img: Image) -> void:
 
 
 ## `sheet` becomes the most recent; the oldest beyond KEEP are let go.
-func _touch(sheet: int) -> void:
+func _touch(sheet: Variant) -> void:
 	if not cache.has(sheet):
 		return
 	_order.erase(sheet)
@@ -110,20 +120,20 @@ func _touch(sheet: int) -> void:
 func trim(count: int) -> void:
 	while _order.size() > count:
 		cache.erase(_order.pop_front())
-	for s: int in fine.keys():
+	for s: Variant in fine.keys():
 		if not cache.has(s):
 			fine.erase(s)
 
 
 ## The sheet's fine print as a texture, the ink's size, drawn when the same
 ## key turns as the ink's; null headless or when a later draw took over.
-func fine_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubViewport,
+func fine_for(repo: DataRepository, state: GameState, row: Dictionary, viewport: SubViewport,
 		painter: WarInkPainter, font: Font, still_wanted: Callable) -> Texture2D:
+	var sheet := String(row["key"])
 	var key := WarSheetInk.cache_key(state, sheet)
 	var held: Dictionary = fine.get(sheet, {})
 	if held.get("key", -1) == key:
 		return held.get("tex") as Texture2D
-	var row: Dictionary = WarSheets.series(repo)[sheet]
 	var size := tex_size(repo, row["rect"])
 	_gen += 1
 	var gen := _gen
@@ -150,15 +160,13 @@ func fine_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubV
 ## The laid sheet's intelligence layer (WarIntelInk), redrawn when its key
 ## turns (a new day, a courier moved, a report came in); null when none is to
 ## be had (headless) or a later draw took the viewport over.
-func intel_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubViewport,
+func intel_for(repo: DataRepository, state: GameState, row: Dictionary, viewport: SubViewport,
 		painter: WarInkPainter, font: Font, still_wanted: Callable) -> Texture2D:
+	var sheet := String(row["key"])
 	var key := WarIntelInk.cache_key(state, sheet)
-	if int(intel.get("key", -1)) == key and int(intel.get("sheet", -1)) == sheet:
+	if int(intel.get("key", -1)) == key and String(intel.get("sheet", "")) == sheet:
 		return intel.get("tex") as Texture2D
-	var row: Dictionary = WarSheets.series(repo)[sheet]
-	var rect: Rect2 = row["rect"]
-	var w := int(repo.bal("war_intel_texture_px"))
-	var size := Vector2i(w, maxi(1, ceili(w * rect.size.y / rect.size.x)))
+	var size := fit_size(int(repo.bal("war_intel_texture_px")), row["rect"])
 	_gen += 1
 	var gen := _gen
 	viewport.size = size
@@ -187,20 +195,19 @@ func intel_for(repo: DataRepository, state: GameState, sheet: int, viewport: Sub
 ## plans' revision turns; null when none is to be had (headless) or a later
 ## draw took the viewport over. An empty layer is still drawn (it clears).
 ## The stroke `hidden` (being dragged) is left out.
-func plan_for(repo: DataRepository, state: GameState, sheet: int, viewport: SubViewport,
+func plan_for(repo: DataRepository, state: GameState, row: Dictionary, viewport: SubViewport,
 		painter: WarInkPainter, font: Font, caps: Font, still_wanted: Callable, hidden := "") -> Texture2D:
+	var sheet := String(row["key"])
 	var key := WarPlanInk.cache_key(state, sheet)
-	if int(plan.get("key", -1)) == key and int(plan.get("sheet", -1)) == sheet and String(plan.get("hidden", "")) == hidden:
+	if int(plan.get("key", -1)) == key and String(plan.get("sheet", "")) == sheet and String(plan.get("hidden", "")) == hidden:
 		return plan.get("tex") as Texture2D
-	var row: Dictionary = WarSheets.series(repo)[sheet]
 	var rect: Rect2 = row["rect"]
-	var w := int(repo.bal("war_plan_texture_px"))
-	var size := Vector2i(w, maxi(1, ceili(w * rect.size.y / rect.size.x)))
+	var size := fit_size(int(repo.bal("war_plan_texture_px")), rect)
 	_gen += 1
 	var gen := _gen
 	viewport.size = size
-	var table_w := repo.bal("war_table_w_m")
-	var mm := float(w) / (table_w * 1000.0)
+	var table_w := WarRoomTable.width_for(repo, row)
+	var mm := float(size.x) / (table_w * 1000.0)
 	painter.paint_plan(WarPlanInk.strokes(repo, state, row, size.x, table_w, hidden), plan_look(repo, tooth(), mm, font, caps))
 	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	await frame_done

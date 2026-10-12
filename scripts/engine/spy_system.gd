@@ -6,12 +6,22 @@ extends RefCounted
 ## column — highly credible or rumour — and how wide and how biased every
 ## estimate is. Two spies to one place draw different rolls: their reports differ.
 
+## Whether the point lies in a province the crown CONTROLS right now
+## (MapManors.controlled_provinces): its facts are exact, so no spy rides there.
+## ONE predicate for ActionSystem.validate and quality().
+static func is_controlled(repo: DataRepository, state: GameState, at: Vector2) -> bool:
+	var cell := MapEconomy.cell_at(repo, at)
+	return cell >= 0 and province_controlled(repo, state, MapManors.province_of(repo, cell, state))
+
+
+static func province_controlled(repo: DataRepository, state: GameState, province: String) -> bool:
+	return province != "" and province in MapManors.controlled_provinces(repo, state)
+
+
 static func quality(repo: DataRepository, state: GameState, at: Vector2, roll: int) -> int:
 	var q := roll
-	var realm := repo.resolve_realm("player_realm")
 	var cell := MapEconomy.cell_at(repo, at)
-	var prov := MapManors.province_of(repo, cell, state) if cell >= 0 else ""
-	if prov != "" and MapOwnership.owner_of(repo, state, prov) == realm:
+	if is_controlled(repo, state, at):
 		q += int(repo.spy_difficulty.get("home", 0))
 	else:
 		q += int(repo.spy_difficulty.get("foreign", 0))

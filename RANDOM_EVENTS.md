@@ -1,4 +1,4 @@
-# Random Events — Crown and Council
+# Random Events — Beyond the King's Words
 
 Status: Built — the 20 events below are live (`data/story/events.csv`, `data/story/event_choices.csv`, `EventSystem`). MVP scope (see `docs/design/PRD.md` §6, "Random events pool"). **This file is loaded at runtime:** `StorySource` reads each `### EV-NN` heading and the prose after the Scene label on that line, and the game shows that prose verbatim. Keep the headings and the Scene labels intact; the Trigger text on the same line is design description only (the implemented trigger is the CSV's). The heading's TITLE — between the `·` and the trailing `— \`tags\`` — is what the audience window's banner shows, so it is authored here too, not in `templates.csv`.
 

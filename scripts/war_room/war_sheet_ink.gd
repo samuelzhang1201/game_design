@@ -13,8 +13,9 @@ extends RefCounted
 const TOWN_TIERS := {"village": 0, "town": 1, "fort": 1, "city": 2, "capital": 3}
 
 
-static func cache_key(state: GameState, sheet_index: int) -> int:
-	return hash([sheet_index, state.province_owner.hash(), state.manor_province.hash()])
+## `sheet` is the laid sheet's key (WarSheets.union) or a sheet index.
+static func cache_key(state: GameState, sheet: Variant) -> int:
+	return hash([sheet, state.province_owner.hash(), state.manor_province.hash()])
 
 
 static func _to_tex(r: Rect2, k: float, poly: PackedVector2Array) -> PackedVector2Array:
@@ -40,8 +41,8 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	var r: Rect2 = sheet["rect"] if window.size.x <= 0.0 else window
 	var k := float(tex_px) / r.size.x
 	# px sizes grow with the window's magnification over the whole sheet's ink
-	var px_k := 1.0 if window.size.x <= 0.0 \
-		else k / (repo.bal("war_sheet_texture_px") / (sheet["rect"] as Rect2).size.x)
+	var sheet_k := float(WarRoomInk.tex_size(repo, sheet["rect"]).x) / (sheet["rect"] as Rect2).size.x
+	var px_k := 1.0 if window.size.x <= 0.0 else k / sheet_k
 	var out := {"roads": [], "trails": [], "rivers": [], "coasts": [], "borders": [], "seams": [],
 		"towns": [], "peaks": [], "hollows": [], "woods": [], "manor_edges": [], "manors": []}
 	var route_codes: Array = repo.routes.keys()
@@ -106,8 +107,10 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 	# past its ring, so a patch never cuts a name the sheet draws
 	var keep := r
 	if window.size.x > 0.0:
-		var sheet_k := repo.bal("war_sheet_texture_px") / (sheet["rect"] as Rect2).size.x
 		keep = r.grow(repo.bal("war_ink_label_px") * 16.0 * repo.bal("war_ink_char_w") / sheet_k)
+	# a sheet laid over several cells (R11) is inked smaller: the lower tiers' names drop
+	var name_tier := int(repo.bal("war_union_label_min_tier")) \
+		if int(sheet.get("cols", 1)) * int(sheet.get("rows", 1)) > 1 else 0
 	var codes: Array = repo.burgs.keys()
 	codes.sort()
 	for code: String in codes:
@@ -116,15 +119,18 @@ static func strokes(repo: DataRepository, state: GameState, sheet: Dictionary, t
 		if not keep.has_point(at):
 			continue
 		var tier := 3 if String(b.get("is_capital", "0")) == "1" else int(TOWN_TIERS.get(String(b.get("group", "")), 0))
-		var t := {"code": code, "at": (at - r.position) * k, "tier": tier, "label": String(b["label"]),
+		var t := {"code": code, "at": (at - r.position) * k, "tier": tier, "label": String(b["label"]) if tier >= name_tier else "",
 			"walls": String(b.get("features", "")).split("|").has("walls"), "port": String(b.get("is_port", "0")) == "1"}
 		t.merge(town_marks(repo, code))
-		t["name_dx"] = name_dx(repo, tier, px_k)
+		t["name_dx"] = name_dx(repo, tier, px_k, sheet)
 		# a works glyph stands above the ring, a market's scales below it — clear
 		# of a walled town's square and its corner towers
 		var ring := repo.bal("war_ink_town_px") * px_k * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
+		# a glyph clears the halo disk and a capital's OUTER ring, not only the inner ring
+		var clear := maxf(repo.bal("war_ink_town_halo_ratio"), 1.0 + (repo.bal("war_ink_town_outer_gap_ratio") if tier >= 3 else 0.0))
+		ring *= clear
 		if bool(t["walls"]):
-			ring *= repo.bal("war_ink_wall_ratio") * 1.22
+			ring = maxf(ring, ring / clear * repo.bal("war_ink_wall_ratio") * 1.22)
 		t["works_at"] = (t["at"] as Vector2) - Vector2(0.0, ring + repo.bal("war_ink_works_px") * px_k * 0.75)
 		t["market_at"] = (t["at"] as Vector2) + Vector2(0.0, ring + repo.bal("war_ink_market_px") * px_k * 0.75)
 		(out["towns"] as Array).append(t)
@@ -250,18 +256,22 @@ static func town_label_box(repo: DataRepository, t: Dictionary, px_k := 1.0) -> 
 
 
 ## The foot of a seat piece's round plinth on the sheet, as a radius in ink px
-## (war_piece_plinth_mm on a sheet war_table_w_m wide, the texture war_sheet_texture_px across).
-static func plinth_radius_px(repo: DataRepository, px_k := 1.0) -> float:
-	return repo.bal("war_piece_plinth_mm") / 1000.0 * 0.5 / repo.bal("war_table_w_m") * repo.bal("war_sheet_texture_px") * px_k
+## (war_piece_plinth_mm over the sheet's ink px per table metre: its texture's
+## width over WarRoomTable.width_for; `sheet` empty = one cell).
+static func plinth_radius_px(repo: DataRepository, px_k := 1.0, sheet := {}) -> float:
+	var px_per_m := repo.bal("war_sheet_texture_px") / repo.bal("war_table_w_m")
+	if not sheet.is_empty():
+		px_per_m = float(WarRoomInk.tex_size(repo, sheet["rect"]).x) / WarRoomTable.width_for(repo, sheet)
+	return repo.bal("war_piece_plinth_mm") / 1000.0 * 0.5 * px_per_m * px_k
 
 
 ## How far WEST of its town's point a name ends: the ring and the gap, or
 ## clear of the plinth of the unit seated on the town's point (static: the
 ## seat's spot never moves, so the cached ink never redraws for a march).
-static func name_dx(repo: DataRepository, tier: int, px_k := 1.0) -> float:
+static func name_dx(repo: DataRepository, tier: int, px_k := 1.0, sheet := {}) -> float:
 	var town := repo.bal("war_ink_town_px") * px_k
 	var r := town * (1.0 + repo.bal("war_ink_town_tier_growth") * float(tier))
-	return maxf(r + town * repo.bal("war_ink_label_gap_ratio"), plinth_radius_px(repo, px_k) + repo.bal("war_ink_label_clear_px") * px_k)
+	return maxf(r + town * repo.bal("war_ink_label_gap_ratio"), plinth_radius_px(repo, px_k, sheet) + repo.bal("war_ink_label_clear_px") * px_k)
 
 
 ## A town's name alone as a box, ink px (where the painter sets the lettering).

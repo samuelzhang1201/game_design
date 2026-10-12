@@ -1,4 +1,4 @@
-"""Crown and Council · 美术自检 — the artist's Blender add-on.
+"""Beyond the King's Words · 美术自检 — the artist's Blender add-on.
 
 The artist (owner 2026-10-01: a non-coding artist makes the 3D models in Tripo
 and Blender and exports them to the owner) checks and exports a house or a
@@ -23,8 +23,8 @@ of the repository. Built into a zip by tools/art_kit/build_kit.py.
 """
 
 bl_info = {
-    "name": "Crown and Council · 美术自检",
-    "author": "Crown and Council",
+    "name": "Beyond the King's Words · 美术自检",
+    "author": "Beyond the King's Words",
     "version": (1, 1, 0),
     "blender": (4, 2, 0),
     "location": "3D 视图 › 侧栏（N）› 王冠与议会",

@@ -3,13 +3,13 @@ extends PanelContainer
 ## The staff's tool roll (spec 2026-10-07-war-room-annotations-and-planning-
 ## pieces ruling 15, 2026-10-08-war-room-draw-orders rulings 1-2): a leather
 ## strip at the view's lower left, authored in scenes/war_room/war_tool_roll.tscn
-## — the HAND on the left the height of both rows, then two ROWS, each a
+## — two ROWS (a HAND slot on the left is optional), each a
 ## side (its `side` meta: red theirs above, blue ours below): its crayon, the
 ## kinds of mark and its actions. The row a slot stands in is the side it
 ## draws for. The side in hand lights its row and dims the other. It only says
 ## what was picked and shows what is in hand.
 
-signal stick_picked(side: String)               # "hand", or a row's crayon: that side
+signal stick_picked(side: String)               # a row's crayon: that side ("hand" from a hand slot, if any)
 signal kind_picked(side: String, kind: String)
 signal action_picked(side: String, action: String)
 
@@ -33,7 +33,7 @@ func slots() -> Array[WarToolSlot]:
 	return out
 
 
-## The side a slot draws for: its row's `side` meta ("" the hand).
+## The side a slot draws for: its row's `side` meta ("" outside a row).
 static func side_of(s: Node) -> String:
 	var n := s.get_parent()
 	while n != null and not n is WarToolRoll:
@@ -43,7 +43,7 @@ static func side_of(s: Node) -> String:
 	return ""
 
 
-## The slot of `key` on `side` ("" the hand's).
+## The slot of `key` on `side` (any side when ""); null when there is none, e.g. no hand slot.
 func slot(key: String, side := "") -> WarToolSlot:
 	for s: WarToolSlot in slots():
 		if s.key == key and (side == "" or side_of(s) == side):
@@ -79,7 +79,7 @@ func show_state(side: String, kind: String, action: String, why: Dictionary = {}
 		var on := mine == side
 		match s.group:
 			"stick":
-				# the hand: no row lit; a row's crayon: its side lit, nothing in hand
+				# a row's crayon: its side lit, nothing in hand (a hand slot, if any: rung when no side is lit)
 				s.chosen = on and kind == "" and action == ""
 			"kind":
 				s.chosen = on and s.key == kind

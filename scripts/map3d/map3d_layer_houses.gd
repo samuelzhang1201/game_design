@@ -6,9 +6,8 @@ extends Node3D
 ## it, rebuilt only when the camera has moved map3d_house_rebuild_move_m — cut
 ## once per camera pose, never per frame.
 ##
-## The bake decided where every house stands (tools/map3d/bake_houses.py);
-## this only instances them. Takes everything from Map3DContext — never the
-## Game autoload.
+## The bake placed every house (tools/map3d/bake_houses.py); this only
+## instances them, from Map3DContext alone — never the Game autoload.
 ##
 ## Each type is a SCENE, scenes/models/buildings/<type>.tscn (GameArt's
 ## HOUSE_MODELS; owner 2026-10-04: 每个房屋的模型为什么不是一个场景), which
@@ -44,6 +43,8 @@ extends Node3D
 @export var trim_tints: PackedColorArray = [Color("FFFFFF"), Color("EADFD0"), Color("D2BEA4"),
 	Color("BCA68C"), Color("F4EADB"), Color("DCCDB8")]
 @export_group("")
+## The aprons at the houses' feet (World/Aprons), fed every settlement shown; none, no aprons.
+@export var aprons: Map3DLayerAprons
 
 ## Test seam: the baked houses, in place of the build's own houses.csv.
 var houses_override: Dictionary = {}
@@ -81,6 +82,7 @@ func bind(p_ctx: Map3DContext) -> void:
 	ctx = p_ctx
 	if not ctx.camera_moved.is_connected(_on_camera_moved):
 		ctx.camera_moved.connect(_on_camera_moved)
+	if aprons: aprons.bind(ctx, self)
 
 
 ## Cut once per camera pose, never per frame — the rig's own ground target,
@@ -116,6 +118,7 @@ func set_preview(on: bool) -> void:
 		_built = false
 		_built_at = Vector2.INF
 		Map3DPreview.clear_generated(self)
+		if aprons: aprons.clear()
 	Map3DPreview.sync_viewport(self)
 
 
@@ -132,11 +135,8 @@ func preview_build(p_ctx: Map3DContext) -> void:
 
 ## Build the empty per-type MultiMeshes; refresh() fills them.
 ##
-## Task 6 override 2: this also WARMS the house data — ctx.houses() parses
-## the real houses.csv (18,414 rows) in ~91 ms, measured. build() runs at map
-## load, where the player is already waiting on the terrain and the bakes;
-## paying the parse here keeps it off the first camera move mid-play, which
-## would otherwise read as a stutter.
+## It also WARMS the house data (Task 6 override 2): ctx.houses() parses the
+## real houses.csv in ~91 ms, paid at map load, not on a camera move mid-play.
 func build() -> void:
 	Map3DPreview.clear_generated(self)
 	_instances.clear()
@@ -146,6 +146,7 @@ func build() -> void:
 	_chunks.clear()
 	_built_at = Vector2.INF
 	_built = true
+	if aprons: aprons.clear()
 	ctx.houses()
 	_wall_tints = Map3DHouses.tints_of(wall_tints)
 	_roof_tints = Map3DHouses.tints_of(roof_tints)
@@ -158,9 +159,7 @@ func build() -> void:
 		var mesh: Mesh = model["mesh"]
 		var drawn := Map3DHouseMaterials.tinted(mesh, model["materials"], _wall_tints, _roof_tints,
 			weather, surface_mats, _trim_tints)
-		# Task 6 override 4: the type itself, not type.capitalize() — capitalize()
-		# turns an underscore into a space ("cottage_a" -> "Cottage A"), which is
-		# neither a legible node name nor round-trippable back to the CSV's type.
+		# Named by the type itself (never capitalize()d: Task 6 override 4).
 		# Each type twice: near settlements cast shadows, the rest do not (refresh).
 		_instances[type] = Map3DHouseMaterials.multimesh_instance(type, drawn, true)
 		_far[type] = Map3DHouseMaterials.multimesh_instance(type + "__far", drawn, false)
@@ -206,6 +205,7 @@ func refresh(camera_xz: Vector2) -> bool:
 		_fill(_far[type], type, far, houses, xforms, picks)
 		_transforms[type] = xforms
 		_variants[type] = picks
+	if aprons: aprons.show_burgs(shown, houses, _aabbs)
 	return true
 
 

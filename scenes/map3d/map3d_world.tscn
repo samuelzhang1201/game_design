@@ -13,9 +13,12 @@
 [ext_resource type="Material" uid="uid://dfvtylmtrbc4v" path="res://scenes/map3d/materials/cloud_shadow.tres" id="11_jstgw"]
 [ext_resource type="Script" uid="uid://bdbdtbw8fi2va" path="res://scripts/map3d/map3d_layer_settlements.gd" id="12_1hxxb"]
 [ext_resource type="Script" uid="uid://ef76stqaenwo" path="res://scripts/map3d/map3d_layer_houses.gd" id="13_tgy70"]
+[ext_resource type="Script" uid="uid://cogeypeirspwl" path="res://scripts/map3d/map3d_layer_aprons.gd" id="14_4rkuw"]
 [ext_resource type="Script" uid="uid://c1powtnrolur2" path="res://scripts/map3d/map3d_layer_trees.gd" id="14_n42ie"]
 [ext_resource type="Script" uid="uid://dc5gcghnvvyf6" path="res://scripts/map3d/map3d_layer_wind.gd" id="15_mih2w"]
+[ext_resource type="Material" uid="uid://5tifwrnvspya" path="res://scenes/map3d/materials/apron_dirt.tres" id="15_qhspj"]
 [ext_resource type="Environment" uid="uid://c3ufh1051rmw3" path="res://scenes/map3d/world_environment.tres" id="16_6gvy5"]
+[ext_resource type="Material" uid="uid://depmmfj3m1u3h" path="res://scenes/map3d/materials/apron_brick.tres" id="16_jxnve"]
 [ext_resource type="Script" uid="uid://dw4nycj86fxmj" path="res://scripts/map3d/map3d_sky.gd" id="17_8svap"]
 [ext_resource type="Script" uid="uid://xi5cbfr3ejwl" path="res://scripts/map3d/map3d_sun.gd" id="18_mgwnk"]
 [ext_resource type="Script" uid="uid://bjo6rt75kqwum" path="res://scripts/map3d/map3d_layer_units.gd" id="19_5bcyi"]
@@ -77,10 +80,17 @@ extra_cull_margin = 16384.0
 [node name="Markers" type="Node3D" parent="." unique_id=1753765991]
 script = ExtResource("12_1hxxb")
 
-[node name="Houses" type="Node3D" parent="." unique_id=1359289226]
+[node name="Houses" type="Node3D" parent="." unique_id=1359289226 node_paths=PackedStringArray("aprons")]
 script = ExtResource("13_tgy70")
 wall_tints = PackedColorArray(1, 1, 1, 1, 0.96862745, 0.9137255, 0.8235294, 1, 0.9019608, 0.8901961, 0.8627451, 1, 0.95686275, 0.8784314, 0.7529412, 1, 0.92156863, 0.827451, 0.627451, 1, 0.8666667, 0.7490196, 0.57254905, 1, 0.9411765, 0.8117647, 0.6431373, 1, 0.8862745, 0.79607844, 0.65882355, 1, 0.85490197, 0.87058824, 0.8745098, 1, 0.78431374, 0.8, 0.8, 1, 0.9019608, 0.9019608, 0.87058824, 1, 0.74509805, 0.7607843, 0.7490196, 1, 0.9411765, 0.8235294, 0.76862746, 1, 0.8980392, 0.7490196, 0.6745098, 1, 0.9529412, 0.87058824, 0.8235294, 1, 0.85490197, 0.7372549, 0.65882355, 1)
 roof_tints = PackedColorArray(1, 1, 1, 1, 1, 0.9019608, 0.84705883, 1, 0.9490196, 0.83137256, 0.7529412, 1, 0.9254902, 0.9019608, 0.87058824, 1, 0.85490197, 0.80784315, 0.7607843, 1, 0.79607844, 0.75686276, 0.7176471, 1, 1, 0.9372549, 0.8235294, 1, 0.9647059, 0.8745098, 0.7058824, 1, 1, 0.85490197, 0.6666667, 1, 0.92156863, 0.7372549, 0.6431373, 1, 0.85882354, 0.6666667, 0.57254905, 1, 0.9490196, 0.79607844, 0.7137255, 1)
+trim_tints = PackedColorArray(1, 1, 1, 1, 0.91764706, 0.8745098, 0.8156863, 1, 0.8235294, 0.74509805, 0.6431373, 1, 0.7372549, 0.6509804, 0.54901963, 1, 0.95686275, 0.91764706, 0.85882354, 1, 0.8627451, 0.8039216, 0.72156864, 1)
+aprons = NodePath("../Aprons")
+
+[node name="Aprons" type="Node3D" parent="." unique_id=645220186]
+script = ExtResource("14_4rkuw")
+dirt_material = ExtResource("15_qhspj")
+brick_material = ExtResource("16_jxnve")
 
 [node name="Trees" type="Node3D" parent="." unique_id=1359289300]
 script = ExtResource("14_n42ie")

@@ -23,6 +23,18 @@ signal audience_requested(id: String)
 
 var _beats: Array = []
 var _index := -1
+## The opening narration's two busts (owner 2026-10-12): Lord Malvern's in the
+## window's upper left, the player's in the upper right. Each is a frame the
+## editor places in the scene (shown only while the narration is up) holding a
+## box Control that _fill_portrait cuts the art to; unset, the pages still read,
+## just without the busts. The text is the narrator's, not a speaker's, so BOTH
+## are lit (R2); `narration_dim` is the tint of the side that is not speaking and
+## is white by default (an editor choice, never a colour in code).
+@export var narration_left_frame: Control
+@export var narration_right_frame: Control
+@export var narration_left: Control
+@export var narration_right: Control
+@export var narration_dim: Color = Color(1, 1, 1)
 ## Running transcript of the conversation, newest last — each entry
 ## {"speaker": name, "line": bbcode, "n": serial}. The right column's record
 ## shows the whole exchange, not just the latest line (user requirement
@@ -75,6 +87,8 @@ const REPLY_REVEAL_STEP := 0.3
 ## window that fits it less AUDIENCE_MARGIN on every side.
 const AUDIENCE_MAX := Vector2(780.0, 520.0)
 const AUDIENCE_MARGIN := 16.0
+## True while the opening narration is on stage (its window is shorter).
+var _narrating := false
 ## Tall figure art is cut to its upper part — head to waist, CK3's framing —
 ## rather than showing the whole figure small; these are shares of its height.
 const PORTRAIT_TOP := 0.03
@@ -279,12 +293,18 @@ func _layout() -> void:
 
 ## The window takes AUDIENCE_MAX, or what the map leaves it when the map is
 ## narrower (the council column open, a small window).
+## The opening narration holds one short page under two busts: its window is
+## the narration's own height (`ui_narration_window_h`, the same on every page
+## so the box never jumps), not an event's, which would leave most of it empty.
 func _fit_audience() -> void:
 	var room: Vector2 = %AudienceLayer.size - Vector2.ONE * AUDIENCE_MARGIN * 2.0
 	if room.x <= 0.0 or room.y <= 0.0:
 		return
+	var tall := AUDIENCE_MAX.y
+	if _narrating and Game.data != null and Game.data.bal("ui_narration_window_h") > 0.0:
+		tall = Game.data.bal("ui_narration_window_h")
 	%AudienceWindow.custom_minimum_size = Vector2(
-		minf(AUDIENCE_MAX.x, room.x), minf(AUDIENCE_MAX.y, room.y))
+		minf(AUDIENCE_MAX.x, room.x), minf(tall, room.y))
 
 func enter_council() -> void:
 	_set_right("council")
@@ -581,6 +601,24 @@ func _refresh_banner() -> void:
 ## a fresh checkout is never broken by a missing render.
 const EVENT_ART_DIR := "res://assets/2D/events/illustrations/"
 
+func _show_narration_busts(b: Dictionary) -> void:
+	var on := String(b.get("kind", "")) == "narration" and b.has("side")
+	if on != _narrating:
+		_narrating = on
+		_fit_audience()
+	for pair: Array in [[narration_left, narration_left_frame, "left", "left_id"],
+			[narration_right, narration_right_frame, "right", "right_id"]]:
+		var box := pair[0] as Control
+		var frame := pair[1] as Control
+		if frame != null:
+			frame.visible = on
+		if box == null:
+			continue
+		box.visible = on
+		if on:
+			_fill_portrait(box, String(b[pair[3]]))
+			box.modulate = Color.WHITE if String(b["side"]) == pair[2] else narration_dim
+
 func _show_event_art(b: Dictionary) -> void:
 	var art: Texture2D = null
 	if String(b.get("kind", "")) == "event":
@@ -875,6 +913,7 @@ func _advance() -> void:
 	var kind := String(b["kind"])
 	# The narration has nobody to stand before you; everything else does.
 	%PortraitSide.visible = kind != "narration"
+	_show_narration_busts(b)
 	_refresh_banner()
 	# The move popup is no place to be while an event or narration is on stage
 	# (resolve or continue first).
@@ -902,7 +941,11 @@ func _advance() -> void:
 			# title, one continue option.
 			_continue_btn.visible = false
 			_say("", String(b["text"]))
-			_add_reply("I am ready. Let the reign begin.", _advance)
+			# one page a topic, a Continue turns it; the last one begins the reign
+			var last := int(b.get("page", 1)) >= int(b.get("pages", 1))
+			# a lone advance button is not a choice: no letter
+			_add_reply("I am ready. Let the reign begin." if last else "Continue", _advance,
+				"", null, false)
 		"minister":
 			_continue_btn.visible = true
 			_say(String(b["speaker"]), String(b["text"]))
@@ -954,10 +997,12 @@ func _option_tooltip(sug: Dictionary) -> String:
 ## wrapping inside their column, drawn as CK3 options. Buttons start hidden;
 ## _reveal_replies_staggered surfaces them one by one.
 func _add_reply(label: String, handler: Callable, tooltip: String = "",
-		into: Container = null) -> void:
+		into: Container = null, lettered: bool = true) -> void:
 	var btn := Button.new()
-	btn.text = "%s.  %s" % [char(65 + _next_reply_letter), label]
-	_next_reply_letter += 1
+	btn.text = label
+	if lettered:
+		btn.text = "%s.  %s" % [char(65 + _next_reply_letter), label]
+		_next_reply_letter += 1
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	btn.focus_mode = Control.FOCUS_NONE
@@ -999,6 +1044,10 @@ func _fill_portrait(box: Control, portrait_id: String, whole: bool = false) -> v
 		child.name = "OutgoingPortrait"
 		child.queue_free()
 	var box_size: Vector2 = box.custom_minimum_size
+	if box_size.y <= 0.0 or box_size.x <= 0.0:
+		box_size = box.size
+	if box_size.y <= 0.0 or box_size.x <= 0.0:
+		return
 	var full := CharacterPortrait.full_texture_for(portrait_id)
 	if full != null:
 		var pic := TextureRect.new()

@@ -161,6 +161,8 @@ ui_landing_ui_stagger_s,0.09,LANDING: seconds between one piece coming and the n
 ui_landing_ui_s,0.45,LANDING: seconds each piece takes to come (a fade and a slide)
 ui_landing_ui_slide_px,48,"LANDING: design px each piece slides in from (the report from the left, the board from above, the bookmarks from below)"
 ui_landing_voice_after_s,0.3,LANDING: seconds after the sheet is down before the window that speaks comes (the landing seen first)
+opening_segment_max_chars,360,the most characters one page of the opening narration may hold so it fits the audience window with no scrolling (tests/ui/test_opening_narration.gd)
+ui_narration_window_h,340,"OPENING NARRATION (owner 2026-10-12, item 2): design px tall the audience window stands while the narration plays, the same on every page so the box never jumps; 0 keeps the event window's height. It must hold the longest page (opening_segment_max_chars) beside the busts with no scrolling (tests/ui/test_opening_narration.gd)"
 ledger_search_width_px,180,"LEDGER search (owner 2026-10-01: 在ledger界面新增一个搜索栏，可以搜索node): design px wide the search box in the LEDGER's top row"
 ledger_search_list_width_px,300,LEDGER search: design px wide the list of matches under the box
 ledger_search_max_matches,8,LEDGER search: at most this many matches listed (a label that begins with the text first)

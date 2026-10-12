@@ -22,6 +22,8 @@ func run() -> void:
 	# run's own directory (tests/run_dir.gd), which no other suite running
 	# at the same time can delete.
 	RunDir.sweep()  # a crashed run with this pid may have left it
+	# the overlays are made in _ready, not a frame apiece (a test reads them at once)
+	GameRoot.stepwise_overlays = false
 	GameRoot.settings_path = RunDir.dir("suite").path_join("test_settings.cfg")
 	# the pause menu's Save / Load Game, never the player's own save
 	Game.save_path = RunDir.dir("suite").path_join("save.json")

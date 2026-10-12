@@ -82,7 +82,7 @@ func click(at: Vector2, shift: bool) -> bool:
 	elif piece != "" and not _view.aiming:
 		_view.select(piece, shift)
 	elif arrow >= 0:
-		_view.sheet_requested.emit(arrow)   # an edge arrow lays at once
+		_view.shift_toward(arrow)   # an edge arrow moves every marker one cell and lays at once
 	elif chart >= 0:
 		_view.toss_to(chart)                # a chart cell: the marker is tossed first
 	elif _view.aiming and _view.pack_at(at).x >= 0.0:
@@ -138,8 +138,92 @@ func redraw() -> void:
 		var mm := input.px_per_mm(_view.sheet_rect().get_center())
 		_plan_hud.show_orders(_order_ink(groups, mm),
 			WarRoomInk.plan_look(_repo, WarRoomInk.tooth(), mm, _view.lettering(), _view.caps_font()))
+	_plan_hud.show_slope(_slope_bars(groups), _slope_look())
 	_hud.set_route(_handles(_view.aim_code if _view.aiming else ""), pal["plan_blue"])
 	_hud.set_supply(_supply_rings(), pal["supply_route"])
+
+
+## The barrier bars (WarSlopeBars) across every march drawn and the pending
+## one, on the screen: [{a, b, hatches}] (owner 2026-10-12, item 5). The runs
+## come from the regiment's true spot, each bar lies on the crayon drawn from
+## the piece's displayed one, and none lies over a standing piece or a town's
+## name by the march (R19).
+func _slope_bars(groups: Array) -> Array:
+	var marches: Array = []   # [{chain: true pack px, shown: the displayed start}]
+	if _view.rolling() or _view.sheet_index() < 0:
+		return []
+	var spots := _view.piece_pack_positions()
+	for g: Dictionary in groups:   # drafts only: a sealed march is the courier's now (R12)
+		if g.has("chain") and String(g["kind"]) == WarOrderArrows.DRAFT:
+			marches.append({"chain": g["chain"], "shown": spots.get(String(g["lead"]), Vector2(-1, -1))})
+	if _view.aiming and _view.aim_code != "" and _view.aim_dest.x >= 0.0:
+		var pend: Array = [_view.position_of(_view.aim_code)]
+		pend.append_array(Array(_view.aim_waypoints))
+		pend.append(_view.aim_dest)
+		marches.append({"chain": pend, "shown": spots.get(_view.aim_code, Vector2(-1, -1))})
+	var out: Array = []
+	var rect := _view.sheet_rect()
+	var gap := _repo.bal("war_slope_hatch_gap_px")
+	var tick := _repo.bal("war_slope_hatch_px")
+	var min_px := _repo.bal("war_slope_bar_min_px")
+	var pieces: Array = []
+	for h: Dictionary in _pieces.screen_hits(_view.camera(), _view.window_scale()):
+		pieces.append(h["rect"])
+	var grid := MarchPath.of_pack(_repo)
+	var cell_px := 0.0 if grid == null else float(grid.cell_m) / float(ArmySystem.metres_per_pack_px(_repo))
+	for m: Dictionary in marches:
+		var chain: Array = m["chain"]
+		var bars := WarSlopeBars.bars(_repo, chain, m["shown"])
+		if bars.is_empty():
+			continue
+		var around := Rect2(chain[0], Vector2.ZERO)
+		for bar: Dictionary in bars:
+			around = around.expand(bar["a"]).expand(bar["b"])
+		var keep_off: Array = pieces.duplicate()
+		for box: Rect2 in WarSlopeBars.town_boxes(_repo, _view.laid_sheet(), around.grow(cell_px * 2.0)):
+			var on := _screen_box(box)
+			if on.size.x > 0.0:
+				keep_off.append(on)
+		for bar: Dictionary in bars:
+			var mid_px: Vector2 = (bar["a"] as Vector2).lerp(bar["b"], 0.5)
+			if not rect.has_point(mid_px):
+				continue
+			var a: Variant = _view.screen_pos_of_px(bar["a"])
+			var b: Variant = _view.screen_pos_of_px(bar["b"])
+			var mid: Variant = _view.screen_pos_of_px(mid_px)
+			var far: Variant = _view.screen_pos_of_px(mid_px + (bar["dir"] as Vector2) * cell_px * float(bar["cells"]))
+			if a == null or b == null or mid == null or far == null:
+				continue
+			var dir: Vector2 = ((far as Vector2) - (mid as Vector2)).normalized()
+			var ends := WarSlopeBars.at_least(a, b, min_px)
+			ends = WarSlopeBars.clear_of(ends[0], ends[1], dir, keep_off,
+				(far as Vector2).distance_to(mid), _repo.bal("war_slope_bar_clear_step_px"), min_px)
+			if ends.is_empty():
+				continue
+			out.append({"a": ends[0], "b": ends[1], "hatches": WarSlopeBars.hatches(ends[0], ends[1], dir, gap, tick)})
+	return out
+
+
+## A pack-px box as the screen rect round its four corners; Rect2() when it is
+## empty or a corner is behind the camera.
+func _screen_box(box: Rect2) -> Rect2:
+	if box.size.x <= 0.0:
+		return Rect2()
+	var out := Rect2()
+	var first := true
+	for c: Vector2 in [box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)]:
+		var at: Variant = _view.screen_pos_of_px(c)
+		if at == null:
+			return Rect2()
+		out = Rect2(at, Vector2.ZERO) if first else out.expand(at)
+		first = false
+	return out
+
+
+func _slope_look() -> Dictionary:
+	var col: Color = _repo.war_palette["slope_bar"]
+	col.a = _repo.bal("war_slope_bar_alpha")
+	return {"colour": col, "width": _repo.bal("war_slope_bar_px")}
 
 
 ## Where each selected intel hint stands on the screen (a selected piece,
@@ -194,7 +278,7 @@ func orders() -> Array:
 	var rows: Array = []
 	var from := {}
 	var rect := _view.sheet_rect()
-	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.sheet_index(), _view.drawn()):
+	for p: Dictionary in WarRoom.on_sheet(_repo, state, _view.laid_sheet(), _view.drawn()):
 		var code := String(p["code"])
 		from[code] = p["at"]
 		var pen := WarRoom.pennant_of(_repo, state, code)
@@ -213,6 +297,11 @@ func orders() -> Array:
 			var row: Dictionary = rows.filter(func(r: Dictionary) -> bool:
 				return String(r["code"]) == c and String(r["kind"]) == String(g["kind"]))[0]
 			lines.append(WarOrderArrows.screen_line(_repo, _view, c, from[c], row["wps"], g["dest"]))
+			if not g.has("chain"):   # the barrier bars lie on the lead's chord (WarSlopeBars)
+				var chain: Array = [from[c]]
+				chain.append_array(Array(row["wps"]))
+				chain.append(g["dest"])
+				g["chain"] = chain
 		g["lines"] = lines
 		out.append(g)
 	return out

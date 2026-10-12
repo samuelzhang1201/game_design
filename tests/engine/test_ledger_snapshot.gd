@@ -195,3 +195,18 @@ func test_a_spy_report_on_a_manors_tax_reaches_its_taxed_thread() -> void:
 		"taxed")["accounts"][0]
 	assert_eq(String(acc["source"]), "spy", "the report's own kind")
 	assert_string_contains(String(acc["text"]), "40")
+
+
+func test_no_spy_row_for_a_controlled_node() -> void:
+	var held := String(MapManors.controlled_provinces(data, s)[0])
+	var foreign := ""
+	for code: String in data.provinces:
+		if not SpySystem.province_controlled(data, s, code):
+			foreign = code
+			break
+	var codes := func(id: String) -> Array:
+		return Ledger.actions_for(data, id, s).map(func(a: Dictionary) -> String: return String(a["code"]))
+	assert_false("SPY_SEND" in codes.call("province:" + held), "the crown's own province needs no spy")
+	assert_has(codes.call("province:" + foreign), "SPY_SEND")
+	var capital := String(data.kingdoms[data.resolve_realm("player_realm")]["capital_burg"])
+	assert_false("SPY_SEND" in codes.call("town:" + capital), "nor its towns")

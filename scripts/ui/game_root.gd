@@ -98,6 +98,29 @@ func _exit_tree() -> void:
 		(current_screen.map3d_view() as Map3DView).release_world()
 	Map3DWorldCache.clear()
 
+## Whether the overlays are made one per process frame after the title shows
+## (the launch black's loading wheel turns over the wait). The suite's pre-run
+## hook and the tools clear it, so a test or a shot finds every overlay made by
+## the end of _ready.
+static var stepwise_overlays := true
+
+## The overlays are all made (the title shows before they are).
+signal overlays_ready
+
+var _overlays_made := false
+
+## The overlay steps in the order they were always made; each is one frame
+## when stepwise. Heavy ones stand alone (measured, see the spec's Task 4).
+const OVERLAY_STEPS: Array[StringName] = [&"_make_ledger", &"_make_war_room", &"_make_missive",
+	&"_make_laws", &"_make_report_popup", &"_make_info", &"_make_bottom_bar", &"_make_news_ticker",
+	&"_make_fps_counter", &"_build_pause_menu", &"_finish_overlays"]
+
+## The step -> its scene, for the steps that read a big one (BootLoads asked for it).
+const OVERLAY_SCENE_OF := {&"_make_ledger": "res://scenes/screens/ledger_screen.tscn",
+	&"_make_war_room": "res://scenes/screens/war_room_screen.tscn",
+	&"_make_missive": "res://scenes/screens/missive_screen.tscn",
+	&"_make_laws": "res://scenes/screens/laws_screen.tscn"}
+
 func _ready() -> void:
 	# the heavy art on worker threads first (BootLoads): the overlays' load()
 	# below then waits on threads running side by side, and the title's living
@@ -111,17 +134,55 @@ func _ready() -> void:
 	# One game-wide Theme, inherited by every screen (see UiPalette).
 	theme = UiPalette.build_theme()
 	Game.menu_requested.connect(toggle_pause_menu)
+	_load_settings()
+	Intel.dev_all = _dev_mode
+	# the title first, a frame after the black has been drawn (the launch
+	# black's loading wheel turns over the wait), then the overlays one per
+	# frame; the suite and the tools make everything at once
+	if stepwise_overlays:
+		await get_tree().process_frame
+		if not is_inside_tree():
+			return
+	_switch_to(State.MENU)
+	# the title's own curtain (and its wheel) takes the black over from here
+	var black := get_node_or_null("PreMenuBlack")
+	if black != null:
+		black.queue_free()
+	for step: StringName in OVERLAY_STEPS:
+		if stepwise_overlays:
+			await get_tree().process_frame
+			# a scene still on its worker thread is waited for in frames, not in one
+			while is_inside_tree() and OVERLAY_SCENE_OF.has(step) \
+					and ResourceLoader.load_threaded_get_status(OVERLAY_SCENE_OF[step]) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				await get_tree().process_frame
+			if not is_inside_tree():
+				return
+		call(step)
+	_overlays_made = true
+	overlays_ready.emit()
+
+## Whether every overlay is made (they come one per frame after the title shows).
+func overlays_are_ready() -> bool:
+	return _overlays_made
+
+func _make_ledger() -> void:
 	_ledger_screen = load("res://scenes/screens/ledger_screen.tscn").instantiate()
 	_ledger_screen.name = "LedgerScreen"
 	_ledger_screen.show_requested.connect(_on_ledger_show)
 	_ledger_screen.closed.connect(_sync_map_view)
 	add_child(_ledger_screen)
 	get_viewport().size_changed.connect(_fit_ledger)
+	_settle_overlay(_ledger_screen, state)
+
+func _make_war_room() -> void:
 	_war_room_screen = load("res://scenes/screens/war_room_screen.tscn").instantiate()
 	_war_room_screen.name = "WarRoomScreen"
 	_war_room_screen.closed.connect(_sync_map_view)
 	add_child(_war_room_screen)
 	get_viewport().size_changed.connect(_fit_war_room)
+	_settle_overlay(_war_room_screen, state)
+
+func _make_missive() -> void:
 	_missive_screen = load("res://scenes/screens/missive_screen.tscn").instantiate()
 	_missive_screen.name = "MissiveScreen"
 	_missive_screen.visible = false
@@ -130,23 +191,38 @@ func _ready() -> void:
 	_missive_screen.visibility_changed.connect(_mark_seen_if_shown)
 	Game.missives_seen.connect(refresh_missive_badge.bind(false))
 	add_child(_missive_screen)
+	_settle_overlay(_missive_screen, state)
+
+func _make_laws() -> void:
 	_laws_screen = load("res://scenes/screens/laws_screen.tscn").instantiate()
 	_laws_screen.name = "LawsScreen"
 	_laws_screen.visible = false
 	add_child(_laws_screen)
+	_settle_overlay(_laws_screen, state)
+
+func _make_report_popup() -> void:
 	_report_popup = load("res://scenes/panels/missive_report_popup.tscn").instantiate()
 	_report_popup.name = "MissiveReportPopup"
 	_report_popup.visible = false
 	_report_popup.sealed.connect(_on_report_sealed)
 	add_child(_report_popup)
+	_settle_overlay(_report_popup, state)
+
+func _make_info() -> void:
 	_info_screen = load("res://scenes/screens/info_screen.tscn").instantiate()
 	_info_screen.name = "InfoScreen"
 	add_child(_info_screen)
+	_settle_overlay(_info_screen, state)
+
+func _make_bottom_bar() -> void:
 	_bottom_bar = load("res://scenes/hud/bottom_bar.tscn").instantiate()
 	_bottom_bar.name = "BottomBar"
 	_bottom_bar.visible = false
 	_bottom_bar.tab_selected.connect(_on_bottom_tab)
 	add_child(_bottom_bar)
+	_settle_overlay(_bottom_bar, state)
+
+func _make_news_ticker() -> void:
 	# The persistent transparent news strip (user request 2026-08-31): pinned
 	# just above the bottom tab bar on every gameplay screen.
 	_news_ticker = load("res://scenes/hud/news_ticker.tscn").instantiate()
@@ -155,15 +231,18 @@ func _ready() -> void:
 	add_child(_news_ticker)
 	# THE WAR TABLE: the news slip lies between the bookmark groups.
 	_bottom_bar.slip_moved.connect(_news_ticker.place_on_table)
+	_settle_overlay(_news_ticker, state)
+
+func _make_fps_counter() -> void:
 	_fps_counter = load("res://scenes/hud/fps_counter.tscn").instantiate()
 	add_child(_fps_counter)
-	_load_settings()
-	Intel.dev_all = _dev_mode
 	_fps_counter.visible = _show_fps
-	_build_pause_menu()
+
+## The last step: what needs several overlays, the music, the canonical order.
+func _finish_overlays() -> void:
 	_laws_screen.above = [_report_popup, _pause_menu]
 	_start_bgm()
-	_switch_to(State.MENU)
+	_raise_overlays()
 
 ## The clock (owner 2026-09-13): at Game.clock_speed, a day passes every
 ## time_day_seconds / speed. Works finish, the thirtieth day runs the tick,
@@ -331,6 +410,8 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if state == State.MENU:
 		return
+	if not _overlays_made:
+		return
 	if event.is_action_pressed("restart") and not _pause_menu.visible:
 		_on_menu_restart()
 	elif event.is_action_pressed("ui_cancel"):
@@ -354,6 +435,7 @@ func _build_pause_menu() -> void:
 		col.add_child(b)
 		col.move_child(b, _pause_status.get_index())
 	add_child(_pause_menu)
+	_settle_overlay(_pause_menu, state)
 
 ## Background music from app start, looping across every screen (GameRoot
 ## outlives all screen swaps, so the track never restarts on navigation).
@@ -550,7 +632,7 @@ func _menu_button(label: String, handler: Callable) -> Button:
 	return btn
 
 func toggle_pause_menu() -> void:
-	if state == State.MENU:
+	if state == State.MENU or _pause_menu == null:
 		return
 	_pause_status.text = ""
 	_pause_menu.visible = not _pause_menu.visible
@@ -1100,30 +1182,41 @@ func _switch_to(new_state: State) -> void:
 	_sync_map_view()
 	# Overlays stay above screens across swaps: bottom bar, then info and
 	# the LEDGER, with the pause menu topmost.
-	if _bottom_bar != null:
+	for o: Node in _overlays_in_order():
+		_settle_overlay(o, new_state)
+
+func _overlays_in_order() -> Array[Node]:
+	return [_bottom_bar, _news_ticker, _info_screen, _ledger_screen, _war_room_screen,
+		_missive_screen, _laws_screen, _report_popup, _pause_menu]
+
+## The overlays in their stacking order, topmost last.
+func _raise_overlays() -> void:
+	for o: Node in _overlays_in_order():
+		if o != null:
+			move_child(o, get_child_count() - 1)
+
+## One overlay as a screen switch leaves it (shut or hidden, the bar shown off
+## the title), raised over the screens. A null overlay (not made yet) is skipped.
+func _settle_overlay(o: Node, new_state: State) -> void:
+	if o == null:
+		return
+	if o == _bottom_bar:
 		_bottom_bar.visible = new_state != State.MENU
-		move_child(_bottom_bar, get_child_count() - 1)
-	if _news_ticker != null:
+	elif o == _news_ticker:
 		_news_ticker.visible = new_state != State.MENU
-		move_child(_news_ticker, get_child_count() - 1)
-	if _info_screen != null:
+	elif o == _info_screen:
 		_info_screen.hide()
-		move_child(_info_screen, get_child_count() - 1)
-	if _ledger_screen != null:
+	elif o == _ledger_screen:
 		_ledger_screen.close()
-		move_child(_ledger_screen, get_child_count() - 1)
-	if _war_room_screen != null:
+	elif o == _war_room_screen:
 		if _war_room_screen.visible and Game.state != null and WarDrafts.any(Game.state):
 			Game.publish_news("The war room's drafts are kept on the table.")   # an event's switch never asks
 		_war_room_screen.close(false)   # the old column is gone: nothing to unroll over the new screen
-		move_child(_war_room_screen, get_child_count() - 1)
-	if _missive_screen != null:
+	elif o == _missive_screen:
 		_missive_screen.visible = false
-		move_child(_missive_screen, get_child_count() - 1)
-	if _laws_screen != null:
+	elif o == _laws_screen:
 		_laws_screen.close()
-		move_child(_laws_screen, get_child_count() - 1)
-	if _report_popup != null:
+	elif o == _report_popup:
 		# Only a switch to MENU forces it shut (a reset already emptied
 		# _pending_reports there, or the campaign is being left outright):
 		# any other target (fix round 2) keeps an actively-open report
@@ -1133,11 +1226,7 @@ func _switch_to(new_state: State) -> void:
 		# in _pending_reports to reopen it.
 		if new_state == State.MENU:
 			_report_popup.visible = false
-		move_child(_report_popup, get_child_count() - 1)
-	if _pause_menu != null:
-		move_child(_pause_menu, get_child_count() - 1)
-
-const BACKGROUND_STORY_PATH := "res://game_story/chapter_0/game_start.md"
+	move_child(o, get_child_count() - 1)
 
 ## The reign begins over two frames (owner 2026-10-10: no stall as the game
 ## opens): the campaign and its opening month are made in this one, under the
@@ -1147,6 +1236,10 @@ var _beginning := false
 func _on_start_requested() -> void:
 	if _beginning:
 		return
+	if not _overlays_made:   # a click in the first frames of the launch waits for the overlays
+		_beginning = true
+		await overlays_ready
+		_beginning = false
 	_beginning = true
 	_reset_reports()
 	Game.start_campaign(44)
@@ -1162,11 +1255,10 @@ func _on_start_requested() -> void:
 	# council's matters, the chapter's first event among them, then wait on
 	# the table by the seal, each with its minister marked, until the player
 	# clicks that minister (audience_with).
-	var story := _load_background_story()
-	if story != "":
+	var story := OpeningNarration.beats(Game.data)
+	if not story.is_empty():
 		_switch_to(State.CONVERSATION)
-		current_screen.start([{"kind": "narration", "portrait_id": "round_table",
-			"speaker": "", "text": story}], _pending_report)
+		current_screen.start(story, _pending_report)
 	else:
 		_switch_to(State.COURT)
 		current_screen.enter_court(_pending_report)
@@ -1199,21 +1291,6 @@ func _land_on_table() -> void:
 	if landing != null and _pause_menu != null:
 		move_child(_pause_menu, get_child_count() - 1)
 
-## The story background (game_story/chapter_0/game_start.md) with markdown
-## chrome stripped for in-game narration and {player_realm}-style tokens
-## filled from the loaded pack. Empty when the file is absent.
-func _load_background_story() -> String:
-	if not FileAccess.file_exists(BACKGROUND_STORY_PATH):
-		return ""
-	var raw := FileAccess.get_file_as_string(BACKGROUND_STORY_PATH)
-	var lines: Array = []
-	for line in raw.split("\n"):
-		var l := String(line).strip_edges()
-		if l.begins_with("#"):
-			continue
-		lines.append(l.replace("**", ""))
-	return Game.data.fill_realms("\n".join(lines).strip_edges())
-
 ## Load Game from the title screen: same resume rules as the pause menu. On
 ## the living title the save is read first (a missing one says so and the
 ## title stays), then the title leaves exactly as Take the Throne does — the
@@ -1221,6 +1298,12 @@ func _load_background_story() -> String:
 ## 2026-10-01). A save of another pack swaps the world under the title, so
 ## that one goes straight in.
 func _on_menu_load_from_title() -> void:
+	if _beginning:   # a Start or another Continue is already waiting or running
+		return
+	if not _overlays_made:
+		_beginning = true   # the same guard as Start: one start or load per launch black
+		await overlays_ready
+		_beginning = false
 	var pack := Game.data.map_id
 	if not Game.load_campaign():
 		if current_screen is MainMenu:

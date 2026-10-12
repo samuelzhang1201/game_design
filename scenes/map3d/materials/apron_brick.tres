@@ -1,0 +1,23 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://depmmfj3m1u3h"]
+
+[ext_resource type="Shader" uid="uid://l71fayuvp37t" path="res://scripts/map3d/house_apron.gdshader" id="1_viotd"]
+
+[resource]
+render_priority = -2
+shader = ExtResource("1_viotd")
+shader_parameter/color_a = Color(0.38, 0.28, 0.22, 1)
+shader_parameter/color_b = Color(0.3, 0.27, 0.25, 1)
+shader_parameter/style = 1
+shader_parameter/fade_m = 3.0
+shader_parameter/unit_m = 1.1
+shader_parameter/mortar = Vector2(0.03, 0.05)
+shader_parameter/lift_px = 1.5
+shader_parameter/px_per_dist = 0.001
+shader_parameter/weather_on = 0.0
+shader_parameter/weather_blend = 0.0
+shader_parameter/weather_origin = Vector2(0, 0)
+shader_parameter/weather_m_per_px = 50.0
+shader_parameter/weather_step_px = 8.0
+shader_parameter/weather_snow_color = Color(0.91, 0.93, 0.94, 1)
+shader_parameter/weather_roof_snow = 0.85
+shader_parameter/weather_wet_dark = 0.22

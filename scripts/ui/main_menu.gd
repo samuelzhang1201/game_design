@@ -103,7 +103,7 @@ func _build_menu() -> void:
 	_menu_col.add_theme_constant_override("separation", 12)
 	card.add_child(_menu_col)
 	var title := Label.new()
-	title.text = "Crown and Council"
+	title.text = "Beyond the King's Words"
 	UiPalette.style_title(title, 48)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_menu_col.add_child(title)

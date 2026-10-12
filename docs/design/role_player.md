@@ -1,4 +1,4 @@
-# Roles of the Court — Crown and Council
+# Roles of the Court — Beyond the King's Words
 
 Design/persona layer for every role in the game, grounded in the story
 background at [game_story/chapter_0/game_start.md](../../game_story/chapter_0/game_start.md).

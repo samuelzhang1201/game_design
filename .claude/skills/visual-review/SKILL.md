@@ -1,6 +1,6 @@
 ---
 name: visual-review
-description: Use when changing anything the player sees in Crown and Council — map look, UI layout, icons, colours, fonts, installed art, shaders, the 3D map — or when the owner says something looks ugly, muddy, cluttered, rough, wrong, blurry, or asks to make it look better.
+description: Use when changing anything the player sees in Beyond the King's Words — map look, UI layout, icons, colours, fonts, installed art, shaders, the 3D map — or when the owner says something looks ugly, muddy, cluttered, rough, wrong, blurry, or asks to make it look better.
 ---
 
 # Visual review

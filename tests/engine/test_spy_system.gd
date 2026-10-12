@@ -333,3 +333,82 @@ func test_a_spys_next_day_is_previewed_and_the_preview_files_nothing() -> void:
 	var reports: Array = CourierSystem.ride_day(repo, s).filter(
 		func(e: Dictionary) -> bool: return String(e["type"]) == "spy_report")
 	assert_eq(reports.size(), 1, "the real day files the report")
+
+
+## Owner 2026-10-12 (item 14, R1): the crown's CONTROLLED provinces need no spy
+## (their facts are exact); every other point may be sent to.
+func _validate_at(s: GameState, at: Vector2) -> String:
+	return ActionSystem.new(repo).validate(ActionRequest.make("SPY_SEND", {"x": at.x, "y": at.y}), s)
+
+
+## A manor of a province the realm still owns but the crown no longer controls:
+## every manor of the home province is given to a rival house.
+func _uncontrolled_realm_cell(s: GameState) -> int:
+	var home := MapManors.home_province(repo, s)
+	var rival := ""
+	for province: String in repo.house_bindings:
+		if String(repo.house_bindings[province]) != MapManors.crown(s):
+			rival = String(repo.house_bindings[province])
+			break
+	assert_ne(rival, "", "a rival house exists")
+	var towns := _town_cells()
+	var pick := -1
+	for id in MapManors.manors_of_province(repo, home):
+		MapManors.set_owner(repo, s, int(id), rival, "test: the province slips from the crown")
+		if pick < 0 and not towns.has(int(id)):
+			pick = int(id)
+	if MapManors.controlled_provinces(repo, s).has(home):
+		return -1
+	return pick
+
+
+func test_a_controlled_province_is_refused_with_the_reason() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var home := _at(_home_plain(s))
+	assert_true(SpySystem.is_controlled(repo, s, home))
+	assert_eq(_validate_at(s, home), "The crown's own lands need no spy")
+
+
+func test_an_uncontrolled_province_of_the_realm_is_allowed() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var id := _uncontrolled_realm_cell(s)
+	assert_gt(id, -1, "the fixture found a province the crown lost")
+	var at := _at(id)
+	assert_false(SpySystem.is_controlled(repo, s, at))
+	assert_eq(_validate_at(s, at), "")
+	assert_eq(SpySystem.quality(repo, s, at, 600), 600 + int(repo.spy_difficulty["foreign"]), "rolled as foreign ground")
+
+
+func test_a_foreign_province_is_allowed() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var far := _at(_foreign_manor(s))
+	assert_false(SpySystem.is_controlled(repo, s, far))
+	assert_eq(_validate_at(s, far), "")
+
+
+func test_wildlands_are_allowed() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var found := -1
+	var ids := repo.manors.keys()
+	ids.sort()
+	for id: int in ids:
+		if MapManors.province_of(repo, id, s) == "" and MapEconomy.cell_at(repo, _at(id)) == id:
+			found = id
+			break
+	assert_gt(found, -1, "a wildlands manor")
+	if found < 0:
+		return
+	var at := _at(found)
+	assert_false(SpySystem.is_controlled(repo, s, at))
+	assert_ne(_validate_at(s, at), "The crown's own lands need no spy")
+
+
+func test_off_the_map_says_off_the_map_first() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	assert_eq(_validate_at(s, Vector2(-5, -5)), "That is off the map")
+
+
+func test_the_key_at_zero_lifts_the_refusal() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	repo.balance["spy_refuse_controlled"] = 0.0
+	assert_eq(_validate_at(s, _at(_home_plain(s))), "")

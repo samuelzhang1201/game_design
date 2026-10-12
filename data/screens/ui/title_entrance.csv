@@ -5,8 +5,8 @@ TopBar/Right/NavPill,lift,120,700,8,expo,0
 TopBar/Right/NavPill/Nav,ripple,260,700,4,expo,45
 TopBar/Right/Sound,lift,200,700,8,expo,0
 Hero/Tagline,lift,300,650,10,expo,0
-Hero/Head1/Title_Crown,rise,380,1050,115,expo,0
-Hero/Head2/Title_andCouncil,rise,470,1050,115,expo,0
+Hero/Head1/Title_Line1,rise,380,1050,115,expo,0
+Hero/Head2/Title_Line2,rise,470,1050,115,expo,0
 Hero/Lede1,lift,800,800,14,expo,0
 Hero/Lede2,lift,860,800,14,expo,0
 Hero/Actions/StartGame,lift,1000,800,12,expo,0

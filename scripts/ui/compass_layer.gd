@@ -26,9 +26,10 @@ func has_art() -> bool:
 func _process(delta: float) -> void:
 	if texture == null or Game.data == null:
 		return
-	if Game.clock_speed > 0:
+	var speed := Game.clock_speed
+	if speed > 0:
 		angle = fposmod(angle + deg_to_rad(Game.data.bal("map_compass_turn_deg_per_s"))
-			* float(Game.clock_speed) * delta, TAU)
+			* float(speed) * delta, TAU)
 		queue_redraw()
 
 func _draw() -> void:

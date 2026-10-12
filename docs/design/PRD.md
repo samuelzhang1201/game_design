@@ -1,4 +1,4 @@
-# Crown and Council — PRD (Chapter 1 MVP)
+# Beyond the King's Words — PRD (Chapter 1 MVP)
 
 | | |
 |---|---|

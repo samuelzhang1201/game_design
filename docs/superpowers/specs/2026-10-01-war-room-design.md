@@ -409,7 +409,7 @@ where they said otherwise.
   their kit rows (sallet, jack, buckler) would label a spearman's close helm
   and heater; `WarExplode.parts_path` no longer maps archers to the
   infantry's file (§4).
-- **Ruling 24**: the oak table's top is 1.8 × 1.7 m and carries the index
+- **Ruling 24** (the flat chart SUPERSEDED by R10, owner 2026-10-12: the chart leans 35 deg on a reading stand, `war_chart_tilt_deg`; the table and its size stand): the oak table's top is 1.8 × 1.7 m and carries the index
   chart on its north band beyond the laid sheet: the chart lies FLAT on the
   oak (`war_chart_tilt_deg` 0, `war_chart_y_m` 0.0005), not ~6 cm over it on
   nothing; the table is set in the scene with its top just under the sheet's

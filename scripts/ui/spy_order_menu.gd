@@ -37,6 +37,12 @@ func _open_at(pack_px: Vector2, at: Vector2) -> void:
 	var days := CourierSystem.spy_eta_days(Game.data, Game.state, pack_px)
 	add_item("Send a spy here — ≈%d day%s · %d gold" % [days, "" if days == 1 else "s", fee], SEND)
 	set_item_tooltip(0, Intel.place_label(Game.data, Game.state, pack_px))
+	# The engine decides (ActionSystem.validate): a refused spy shows greyed, with its reason.
+	var why := ActionSystem.new(Game.data).validate(
+			ActionRequest.make("SPY_SEND", {"x": pack_px.x, "y": pack_px.y}), Game.state)
+	if why != "":
+		set_item_disabled(0, true)
+		set_item_tooltip(0, why)
 	_pop(at)
 
 

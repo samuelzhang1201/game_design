@@ -1,9 +1,30 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://bm412i32xxmku"]
 
-[ext_resource type="Script" path="res://scripts/ui/game_root.gd" id="1"]
+[ext_resource type="Script" uid="uid://br0jhmcn648oj" path="res://scripts/ui/game_root.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://2c4t42umilan" path="res://scenes/hud/load_wheel.tscn" id="2_ni5ms"]
 
-[node name="GameRoot" type="Control"]
+[node name="GameRoot" type="Control" unique_id=1342953500]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("1")
+
+[node name="PreMenuBlack" type="ColorRect" parent="." unique_id=1552063452]
+editor_description = "The launch black's first frames, before the title exists (owner 2026-10-12, item 16): GameRoot frees it once the title is switched in; the title's Curtain and its wheel take over."
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.012, 0.01, 0.008, 1)
+
+[node name="LoadWheel" parent="PreMenuBlack" unique_id=1385513812 instance=ExtResource("2_ni5ms")]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -100.0
+offset_right = -28.0
+offset_bottom = -28.0

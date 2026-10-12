@@ -138,6 +138,7 @@ func _ready() -> void:
 			var kv := args[i + 1].split("=")
 			if kv.size() == 2:
 				Game.data.balance[kv[0]] = float(kv[1])
+	GameRoot.stepwise_overlays = false
 	var root := (load("res://scenes/game_root.tscn") as PackedScene).instantiate() as GameRoot
 	_root = root
 	add_child(root)

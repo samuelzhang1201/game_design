@@ -45,3 +45,19 @@ func test_the_landing_lies_inside_the_cell_off_its_edges() -> void:
 		var at := WarToss.landing(r, s, 0.2)
 		assert_true(r.grow_individual(-0.02, -0.01, -0.02, -0.01).has_point(at) or
 			r.grow_individual(-0.02, -0.01, -0.02, -0.01).end.is_equal_approx(at), str(at))
+
+
+func test_a_toss_on_a_leaning_face_settles_along_its_normal() -> void:
+	var up := Vector3(0.0, 0.8192, 0.5736).normalized()
+	var p := WarToss.plan(Vector3(1, 0, 1), Vector3(0, 0.2, -0.5), 9, rules, up)
+	var end := WarToss.pose(p, float(p["duration"]) + 1.0)
+	assert_almost_eq(end.basis.y.normalized().dot(up), 1.0, 0.0001, "its up is the face's normal")
+	assert_almost_eq(end.origin.distance_to(Vector3(0, 0.2, -0.5)), 0.0, 0.0001)
+
+
+func test_a_tray_marker_does_not_snap_to_the_chart_lean_on_its_first_frame() -> void:
+	var up := Vector3(0.0, 0.9397, 0.3420).normalized()   # the 20 degree lean
+	var p := WarToss.plan(Vector3(1, 0, 1), Vector3(0, 0.2, -0.5), 9, rules, up)
+	assert_almost_eq(WarToss.pose(p, 0.0).basis.y.normalized().dot(Vector3.UP), 1.0, 0.0001, "it leaves the tray upright on the oak")
+	var half := WarToss.pose(p, float(p["fly_s"]) * 0.5).basis.y.normalized()
+	assert_true(half.is_finite(), "and the flight stays a rotation")

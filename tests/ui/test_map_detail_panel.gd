@@ -238,8 +238,15 @@ func test_a_towns_spy_button_is_disabled_when_the_treasury_cannot_pay() -> void:
 	Game.state.metrics["treasury"] = 0.0
 	var p := _panel()
 	await wait_process_frames(1)
-	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
-	var code := String(realm["capital_burg"])
+	# A town outside the crown's controlled provinces (those are refused before the purse is asked).
+	var code := ""
+	var burgs := Game.data.burgs.keys()
+	burgs.sort()
+	for b: String in burgs:
+		if not SpySystem.province_controlled(Game.data, Game.state, String(Game.data.burgs[b].get("province_code", ""))):
+			code = b
+			break
+	assert_ne(code, "", "a town the crown does not control")
 	p.show_entry({"title": "x", "lines": [], "ask": "?", "obj": {"kind": "burg", "code": code}})
 	await wait_process_frames(1)
 	var spy: Button = null

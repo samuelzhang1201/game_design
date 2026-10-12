@@ -34,7 +34,7 @@ func setup(repo: DataRepository, view: WarRoomView) -> void:
 ## Plant what the state holds on the laid sheet; unchanged, nothing is rebuilt
 ## (`force`: a sheet was laid anew, the relief under the poles changed).
 func rebuild(state: GameState, force := false) -> void:
-	var rect: Rect2 = WarSheets.series(_repo)[_view.sheet_index()]["rect"] if _view.sheet_index() >= 0 else Rect2()
+	var rect: Rect2 = _view.sheet_rect() if _view.sheet_index() >= 0 else Rect2()
 	var want: Array = []
 	for p: Dictionary in WarRoom.pieces(_repo, state, _view.drawn()):
 		var code := String(p["code"])
@@ -51,7 +51,7 @@ func rebuild(state: GameState, force := false) -> void:
 			var to := WarDrafts.dest_px(_repo, draft)
 			if rect.has_point(to):
 				want.append([code + "_draft", to, "draft" if why == "" else "refused", 0, why])
-	var sig: Array = [_view.sheet_index(), want]
+	var sig: Array = [_view.sheet_key(), want]
 	if not force and sig == _sig:
 		return
 	_sig = sig

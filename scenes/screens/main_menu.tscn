@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://c8yt5sqfl0t3h" path="res://scripts/ui/heraldic_shield.gd" id="4_oa1go"]
 [ext_resource type="FontVariation" path="res://assets/fonts/roles/body_italic.tres" id="5_tbmy8"]
 [ext_resource type="Texture2D" uid="uid://cnjo04qp4sone" path="res://assets/2D/ui/title/cta_disc.svg" id="7_31k40"]
+[ext_resource type="PackedScene" uid="uid://2c4t42umilan" path="res://scenes/hud/load_wheel.tscn" id="9_gqnmn"]
 
 [node name="MainMenu" type="Control" unique_id=2024837821]
 layout_mode = 3
@@ -130,7 +131,7 @@ theme_type_variation = &"TitleBrand"
 text = "Sixty years · one crown · nine seats at the table"
 
 [node name="TagGap" type="Control" parent="Hero" unique_id=199901246]
-custom_minimum_size = Vector2(0, 6)
+custom_minimum_size = Vector2(0, 14)
 layout_mode = 2
 
 [node name="Head1" type="MarginContainer" parent="Hero" unique_id=1051070826]
@@ -138,24 +139,24 @@ clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/margin_top = -14
-theme_override_constants/margin_bottom = -14
+theme_override_constants/margin_bottom = 0
 
-[node name="Title_Crown" type="Label" parent="Hero/Head1" unique_id=546012911]
+[node name="Title_Line1" type="Label" parent="Hero/Head1" unique_id=546012911]
 layout_mode = 2
 theme_type_variation = &"TitleHeadline"
-text = "Crown"
+text = "Beyond the"
 
 [node name="Head2" type="MarginContainer" parent="Hero" unique_id=1900125620]
 clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/margin_top = -14
-theme_override_constants/margin_bottom = -14
+theme_override_constants/margin_bottom = 0
 
-[node name="Title_andCouncil" type="Label" parent="Hero/Head2" unique_id=1470080607]
+[node name="Title_Line2" type="Label" parent="Hero/Head2" unique_id=1470080607]
 layout_mode = 2
 theme_type_variation = &"TitleHeadline"
-text = "and Council"
+text = "King’s Words"
 
 [node name="LedeGap" type="Control" parent="Hero" unique_id=1020941382]
 custom_minimum_size = Vector2(0, 18)
@@ -243,3 +244,14 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 color = Color(0.012, 0.01, 0.008, 1)
+
+[node name="LoadWheel" parent="Curtain" unique_id=1385513812 instance=ExtResource("9_gqnmn")]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -100.0
+offset_right = -28.0
+offset_bottom = -28.0

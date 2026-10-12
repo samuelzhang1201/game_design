@@ -746,6 +746,8 @@ static func actions_for(repo: DataRepository, node_id: String, state: GameState 
 			continue
 		if not node_id.contains("|") and on_type == has_list:
 			continue  # an instance order on a type sphere, or a pool order on an instance
+		if state != null and String(a["action_code"]) == "SPY_SEND" and _spy_needless(repo, state, node_id):
+			continue  # the crown's controlled lands are known exactly
 		var row := {"code": String(a["action_code"]), "label": String(a["label"]),
 			"params": String(a["params"]), "needs_map": String(a["needs_map"]) == "1",
 			"hint": String(a.get("hint", ""))}
@@ -755,6 +757,17 @@ static func actions_for(repo: DataRepository, node_id: String, state: GameState 
 			continue
 		out.append(row)
 	return out
+
+
+## Whether a province or town node lies in a province the crown controls.
+static func _spy_needless(repo: DataRepository, state: GameState, node_id: String) -> bool:
+	var own := node_id.substr(node_id.get_slice(":", 0).length() + 1)
+	if type_of(node_id) == "province":
+		return SpySystem.province_controlled(repo, state, own)
+	var cells := MapEconomy.burg_cells(repo)
+	if not cells.has(own):
+		return false
+	return SpySystem.province_controlled(repo, state, MapManors.province_of(repo, int(cells[own]), state))
 
 
 static func _per_councillor(repo: DataRepository, state: GameState, row: Dictionary) -> Array:

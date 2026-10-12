@@ -1034,7 +1034,7 @@ SHIP_RULES = dict(WALL_RULES, pier_cliff_min_shore_m=20, pier_cliff_root_m=-25,
                   pier_stair_town_rise_m=30, pier_stair_root_m=-10, pier_stair_root_max_m=-40,
                   pier_stair_root_step_m=10,
                   ship_count_village=1, ship_count_fort=1, ship_count_town=1,
-                  ship_count_city=2, ship_count_capital=2, ship_gap_m=1.5, ship_step_m=8, ship_tries=4,
+                  ship_count_city=2, ship_count_capital=2, ship_gap_m=1.5, ship_step_m=8, ship_tries=5,
                   ship_anchor_m=30, ship_margin_m=3)
 SHIP_TYPES = dict(WALL_TYPES,
                   pier={"role": "pier", "weight": 1.0, "footprint_m": 60.0, "width_m": 60.0, "depth_m": 15.4, "min_group": "village"},
@@ -1314,3 +1314,342 @@ def test_a_village_lets_a_town_type_stray_into_its_core_only():
     rim = [bake_houses._pick(rng, VARIANT_TYPES, "house", "village", 0.9, VARIANT_RULES) for _ in range(400)]
     assert "workshop" in core and "workshop" not in rim
     assert rim.count("cottage_a") > core.count("cottage_a")   # rim_mul 1.5
+
+
+# -- port plains (owner 2026-10-12, R9 and R18: every cliff-edge port on plain ground) --------
+PLAIN_RULES = dict(SHIP_RULES, pier_cliff_landings=0, port_plain_rise_m=3, port_plain_blend_m=120,
+                   port_plain_corridor_m=80, port_plain_max_cut_m=350, port_plain_max_grade=0.5,
+                   port_plain_keep_river_band=1, port_plain_lofty=1)
+
+
+def test_a_cliff_port_is_lowered_onto_a_plain_landing_and_takes_one_timber_pier():
+    """A port whose only shore is a 35 m cliff: port_plain cuts its built
+    ground and a corridor to that shore down to sea + port_plain_rise_m (cut
+    only, the sea and a river untouched), and harbour then lays exactly one
+    timber pier — never pier_cliff or pier_stair, though the types exist."""
+    sea, height = _west_sea(shore_h=40.0)
+    wet = np.zeros_like(sea)
+    wet[CENTRE_COL + 4, :] = 1.0                  # a river 80 m south of the centre
+    before = height.copy()
+    b = burg(port=1, group="town")
+    res = bake_houses.port_plain(b, height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES, 5.0, sea < 0.5,
+                                 land=sea, wet=wet)
+    assert res["cut"] == pytest.approx(32.0), "40 m ground cut to 5 + 3 m"
+    assert res["blend"] == pytest.approx(120.0), "1.5 x 32 / 0.5 = 96 < port_plain_blend_m"
+    assert np.all(height <= before + 1e-6), "a cut only, never a fill"
+    assert np.array_equal(height[:, : CENTRE_COL - 8], before[:, : CENTRE_COL - 8]), "the sea is untouched"
+    assert np.array_equal(height[CENTRE_COL + 4], before[CENTRE_COL + 4]), "the river is untouched"
+    assert height[int(CENTRE), int(CENTRE)] == pytest.approx(8.0), "the built ground stands 3 m over the sea"
+    assert (height[:, CENTRE_COL - 8] <= 8.0 + 1e-4).sum() >= 3, "the landing runs down to the shore"
+    assert np.array_equal(height[:, -2:], before[:, -2:]), "past the blend the ground is as it was"
+    y0, y1, x0, x1 = res["window"]
+    assert res["w"].shape == (y1 - y0, x1 - x0) and res["w"].max() == pytest.approx(1.0)
+    out = bake_houses.harbour(b, _toy_town(), PLAIN_RULES, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    piers = [r["type"] for r in out if STAIR_TYPES[r["type"]]["role"] == "pier"]
+    assert piers == ["pier"], "exactly one timber pier, no cliff landing"
+    assert all(_hull_on_water(s, sea) for s in out[1:])
+
+
+def test_the_plain_opens_onto_the_sea_as_wide_as_the_town():
+    """A cove, not a bowl: the corridor is never narrower than the built
+    ground, so the shore is cut to the plain a built radius either side of
+    the bearing, not only port_plain_corridor_m wide."""
+    sea, height = _west_sea(shore_h=40.0)
+    b = burg(port=1, group="town")
+    r_built = bake_houses.cluster_radius_m(b, PLAIN_RULES, STAIR_TYPES) / PLAIN_RULES["house_built_share"]
+    assert r_built > 0.5 * PLAIN_RULES["port_plain_corridor_m"] + 2 * bake_houses.VERTEX_M
+    bake_houses.port_plain(b, height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES, 5.0, sea < 0.5, land=sea)
+    off = int(r_built / bake_houses.VERTEX_M) - 2                # (the bearing found may lean 5 deg)
+    for row in (int(CENTRE) - off, int(CENTRE) + off):
+        assert height[row, CENTRE_COL - 8] == pytest.approx(8.0), "the shore at the cove's sides is cut too"
+
+
+def test_a_cliff_top_town_with_a_low_shore_in_reach_is_lowered_too():
+    """R18: the old lofty test also triggers — a town whose built ground
+    stands pier_stair_town_rise_m or more over the sea is lowered though a low
+    shore (a 3 m strand under its cliff) is in reach; under that it is left."""
+    for top, cut in ((40.0, True), (20.0, False)):
+        sea, height = _west_sea(shore_h=top)
+        height[:, CENTRE_COL - 8: CENTRE_COL - 6] = 6.0         # a 40 m strand, 1 m over the shore limit
+        before = height.copy()
+        res = bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES,
+                                     5.0, sea < 0.5, land=sea)
+        if cut:
+            assert res["cut"] == pytest.approx(32.0)
+            assert height[int(CENTRE), int(CENTRE)] == pytest.approx(8.0)
+        else:
+            assert res["cut"] == 0.0 and res["window"] is None
+            assert np.array_equal(height, before), "a town under the lofty rise keeps its ground"
+
+
+def test_a_hill_behind_the_town_comes_down_with_it_never_sliced():
+    """The rim's cut is capped at the plain's deepest and the blend grows
+    with the cut (1.5 x cut / port_plain_max_grade): a hill behind a 100 m
+    town is lowered by at most the town's own cut, its added slope at most
+    the max grade, and beyond the blend it is untouched."""
+    n, c = 160, 80
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float32)
+    sea = np.ones((n, n), np.float32)
+    sea[:, : c - 20] = 0.0                                      # the shore 400 m west
+    b = burg(port=1, group="town")
+    r_built = bake_houses.cluster_radius_m(b, PLAIN_RULES, STAIR_TYPES) / PLAIN_RULES["house_built_share"]
+    d = np.hypot(xx - c, yy - c) * bake_houses.VERTEX_M
+    height = np.where(sea > 0, 100.0, -20.0).astype(np.float32)
+    hill = (xx - c) * bake_houses.VERTEX_M - (r_built + 40.0)   # a 1:1 hill east of the town, to 400 m
+    height = np.where((sea > 0) & (hill > 0), np.minimum(100.0 + hill, 400.0), height).astype(np.float32)
+    before = height.copy()
+    res = bake_houses.port_plain(b, height, float(c), float(c), PLAIN_RULES, STAIR_TYPES, 5.0, sea < 0.5,
+                                 land=sea)
+    assert res["cut"] == pytest.approx(92.0)
+    assert res["blend"] == pytest.approx(1.5 * 92.0 / 0.5), "a deep cut takes a wider blend"
+    drop = before - height
+    assert drop.max() <= 92.0 + 1e-3, "nothing is cut deeper than the plain"
+    far = (d > r_built + res["blend"] + bake_houses.VERTEX_M) & (xx > c)
+    assert np.array_equal(height[far], before[far]), "the hill beyond the blend is untouched"
+    gy, gx = np.gradient(drop, bake_houses.VERTEX_M)
+    on = (sea > 0) & (xx > c)
+    assert float(np.hypot(gx, gy)[on].max()) <= 0.5 * 1.05, "the rim adds no slope over the max grade"
+    ridge = int(c + (r_built + 40.0 + 100.0) / bake_houses.VERTEX_M)
+    assert height[c, ridge] > height[c, ridge - 3], "the hill still rises behind the town"
+
+
+def test_port_plain_leaves_low_ports_and_gives_up_past_its_max_cut():
+    sea, height = _west_sea()                      # a low shore, a low town: nothing to cut
+    before = height.copy()
+    assert bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES,
+                                  5.0, sea < 0.5, land=sea)["cut"] == 0.0
+    assert np.array_equal(height, before)
+    sea, height = _west_sea(shore_h=400.0)         # 392 m to cut > 350
+    before = height.copy()
+    res = bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES,
+                                 5.0, sea < 0.5, land=sea)
+    assert res["cut"] is None and res["need"] == pytest.approx(392.0)
+    assert np.array_equal(height, before), "a port given up keeps its ground"
+    assert bake_houses.port_plain(burg(port=0), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES,
+                                  5.0, sea < 0.5, land=sea)["cut"] == 0.0
+
+
+def test_a_river_band_stands_untouched_unless_the_switch_eases_it():
+    """port_plain_keep_river_band 1: the river's channel and its whole wet
+    band keep their ground; 0: the band takes the cut by its dryness, the
+    channel (wet 1) still untouched."""
+    sea, height = _west_sea(shore_h=40.0)
+    wet = np.zeros_like(sea)
+    wet[CENTRE_COL + 4, :] = 1.0
+    wet[CENTRE_COL + 3, :] = wet[CENTRE_COL + 5, :] = 0.5
+    before = height.copy()
+    bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, PLAIN_RULES, STAIR_TYPES, 5.0, sea < 0.5,
+                           land=sea, wet=wet)
+    assert np.array_equal(height[wet > 0], before[wet > 0])
+    height = before.copy()
+    bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, dict(PLAIN_RULES, port_plain_keep_river_band=0),
+                           STAIR_TYPES, 5.0, sea < 0.5, land=sea, wet=wet)
+    assert np.array_equal(height[CENTRE_COL + 4], before[CENTRE_COL + 4])
+    assert height[CENTRE_COL + 3, CENTRE_COL] == pytest.approx(40.0 - 0.5 * 32.0)
+
+
+def test_with_cliff_landings_off_a_cliff_port_never_takes_a_cliff_model():
+    sea, height = _west_sea(shore_h=40.0)
+    out = bake_houses.harbour(burg(port=1, group="capital"), _toy_town(), PLAIN_RULES, sea, height,
+                              K, VW, VH, 5.0, types=STAIR_TYPES)
+    assert not [r for r in out if r["type"] in ("pier_cliff", "pier_stair")]
+    assert out and all(STAIR_TYPES[r["type"]]["role"] == "ship" for r in out), "its ships ride off the shore"
+
+
+# -- every port gets the normal pier (owner 2026-10-12: a far landing before none) ------
+def _piers(out):
+    return [r for r in out if STAIR_TYPES[r["type"]]["role"] == "pier"]
+
+
+def test_a_port_with_only_a_far_low_shore_takes_one_normal_pier_by_the_fallback():
+    """The only sea is 520 m west, past pier_search_m (300): without the
+    fallback the port moors ships off its shore and has no pier; with
+    pier_search_fallback_m the normal timber pier lands there."""
+    sea, height = _west_sea()
+    sea[:, :] = 1.0
+    sea[:, :6] = 0.0
+    height[:, :6] = 0.0
+    height[:, 6:] = 6.0
+    rules = dict(PLAIN_RULES, pier_search_m=300, pier_search_fallback_m=0)
+    out = bake_houses.harbour(burg(port=1), _toy_town(), rules, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    assert _piers(out) == [], "no pier within pier_search_m"
+    out = bake_houses.harbour(burg(port=1), _toy_town(), dict(rules, pier_search_fallback_m=2000), sea, height,
+                              K, VW, VH, 5.0, water=sea < 0.5, types=STAIR_TYPES)
+    assert [r["type"] for r in _piers(out)] == ["pier"], "one normal timber pier, never a cliff landing"
+    assert _piers(out)[0]["x_m"] < -300.0, "it stands out at the far shore"
+
+
+def test_the_fallback_walks_past_a_high_banked_river_to_the_low_sea():
+    """Horsfield's cause: every bearing met inland water (a river, high banks)
+    first, and the fallback stopped there. The sea lies beyond, past a low
+    plain: the walk must continue past the river to it."""
+    sea, height = _west_sea()
+    sea[:, :] = 1.0
+    height[:, :] = 40.0
+    sea[:, :6] = 0.0                  # the sea, far west
+    height[:, :6] = 0.0
+    height[:, 6:22] = 6.0             # a low plain before it
+    sea[:, 22:24] = 0.0               # a river between the town and the plain
+    height[:, 22:24] = 0.0
+    rules = dict(PLAIN_RULES, pier_search_m=300, pier_search_fallback_m=2000)
+    out = bake_houses.harbour(burg(port=1), _toy_town(), rules, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    assert [r["type"] for r in _piers(out)] == ["pier"], "the river bank is no sea: the walk goes on"
+    assert _piers(out)[0]["x_m"] < -300.0, "the pier stands at the sea, beyond the river"
+
+
+def test_a_port_given_up_by_port_plain_still_gets_its_pier():
+    """A 400 m cliff to the west is more than port_plain_max_cut_m: the port
+    keeps its ground; a low strand far east still takes the normal pier."""
+    sea, height = _west_sea(shore_h=400.0)
+    sea[:, -6:] = 0.0
+    height[:, -6:] = 0.0
+    height[:, -8:-6] = 6.0
+    rules = dict(PLAIN_RULES, pier_search_m=300, pier_search_fallback_m=2000, port_plain_max_cut_m=45)
+    before = height.copy()
+    res = bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, rules, STAIR_TYPES, 5.0, sea < 0.5, land=sea)
+    assert res["cut"] is None
+    assert np.array_equal(height, before)
+    out = bake_houses.harbour(burg(port=1), _toy_town(), rules, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    assert [r["type"] for r in _piers(out)] == ["pier"]
+    assert _piers(out)[0]["x_m"] > 0.0, "on the far low east shore"
+
+
+def test_a_lofty_town_with_a_low_shore_in_reach_is_not_cut_while_port_plain_lofty_is_0():
+    sea, height = _west_sea(shore_h=40.0)
+    height[:, CENTRE_COL - 8: CENTRE_COL - 6] = 6.0
+    before = height.copy()
+    res = bake_houses.port_plain(burg(port=1), height, CENTRE, CENTRE, dict(PLAIN_RULES, port_plain_lofty=0),
+                                 STAIR_TYPES, 5.0, sea < 0.5, land=sea)
+    assert res["cut"] == 0.0 and np.array_equal(height, before)
+
+
+# -- a pier's root on the drawn shore (visual review 2026-10-12) -------------------------
+ROOT_RULES = dict(PLAIN_RULES, map3d_pier_deck_m=1.6, pier_root_scan_m=2, pier_root_back_m=10,
+                  pier_root_rise_m=1.0, pier_root_out_max_m=20)
+
+
+def _ground(height, x, z):
+    fx, fz = CENTRE + x / bake_houses.VERTEX_M, CENTRE + z / bake_houses.VERTEX_M
+    i, j = int(math.floor(fx)), int(math.floor(fz))
+    a, b = fx - i, fz - j
+    return float(height[j, i] * (1 - a) * (1 - b) + height[j, i + 1] * a * (1 - b)
+                 + height[j + 1, i] * (1 - a) * b + height[j + 1, i + 1] * a * b)
+
+
+def _root_and_axis(p):
+    yaw = math.radians(p["yaw_deg"])
+    d = (math.cos(yaw), -math.sin(yaw))
+    return (p["x_m"] - d[0] * 30.0, p["z_m"] - d[1] * 30.0), d
+
+
+def test_a_fallback_pier_never_roots_on_a_shoal_out_in_the_strait():
+    """Horsfield: the fallback walked past the town's cliff and the strait to
+    a SHOAL the coarse cell index calls land (its ground under the sea) and
+    rooted the pier there, afloat. A run of land that never rises out of the
+    sea is no shore: the pier lands on the real low shore, its root on ground
+    at or over the sea."""
+    sea, height = _west_sea()
+    sea[:, :] = 1.0
+    height[:, :] = 40.0               # the town on a cliff-top plateau
+    sea[:, 22:25] = 0.0               # a strait under the cliff
+    height[:, 22:25] = 0.0
+    height[:, 16:22] = 4.0            # a shoal: "land" in the mask, 1 m under the sea
+    sea[:, :16] = 0.0                 # open sea beyond it
+    height[:, :16] = 0.0
+    height[:, 50:56] = 6.0            # a real low strand far east
+    sea[:, 56:] = 0.0
+    height[:, 56:] = 0.0
+    rules = dict(ROOT_RULES, pier_search_m=300, pier_search_fallback_m=2000)
+    out = bake_houses.harbour(burg(port=1), _toy_town(), rules, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    piers = _piers(out)
+    assert [r["type"] for r in piers] == ["pier"]
+    (rx, rz), _d = _root_and_axis(piers[0])
+    assert rx > 0.0, "the pier lands on the east strand, not on the shoal in the west"
+    assert _ground(height, rx, rz) >= 5.0, "its landward end stands on the shore, not out over the water"
+
+
+def test_a_pier_deck_never_runs_into_the_bank_behind_its_shore():
+    """Malton: the shore's ground was low enough (pier_max_shore_m) but the
+    bank behind it rose steeply, and the deck — 1.6 m over the sea — ran
+    into it. No ground from pier_root_back_m behind the landward end out to
+    the head stands over the deck by more than pier_root_rise_m, and the end
+    stays within pier_root_out_max_m of the drawn waterline."""
+    sea, height = _west_sea()
+    height[:, :] = 40.0               # a steep bank ...
+    height[:, CENTRE_COL - 8] = 11.0  # ... over a low shore vertex (6 m over the sea)
+    height[:, : CENTRE_COL - 8] = 4.8  # a shallow sea, just under the plane
+    out = bake_houses.harbour(burg(port=1), _toy_town(), ROOT_RULES, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    piers = _piers(out)
+    assert [r["type"] for r in piers] == ["pier"]
+    (rx, rz), d = _root_and_axis(piers[0])
+    top = 5.0 + 1.6 + 1.0
+    for t in range(-10, 61, 2):
+        g = _ground(height, rx + d[0] * t, rz + d[1] * t)
+        assert g <= top + 1e-6, f"ground {g:.1f} m {t} m along the pier stands over its deck"
+    behind = [_ground(height, rx - d[0] * t, rz - d[1] * t) for t in range(0, 27, 2)]
+    assert max(behind) >= 5.0, "the landward end stands at the waterline, not afloat"
+
+
+def test_a_pier_never_runs_along_a_beach():
+    """Walbover: the bearing from the town met its beach obliquely and the
+    deck ran along the shore, not out from it. The ground pier_side_clear_m
+    either side of a pier's outer half lies under the sea."""
+    sea, height = _west_sea()
+    height[:, : CENTRE_COL - 8] = 4.0
+    # a spit runs west out to sea 80 m north, beside the bearing the houses pick
+    sea[CENTRE_COL - 4, CENTRE_COL - 16: CENTRE_COL - 8] = 1.0
+    height[CENTRE_COL - 4, CENTRE_COL - 16: CENTRE_COL - 8] = 11.0
+    rules = dict(ROOT_RULES, pier_side_clear_m=16)
+    out = bake_houses.harbour(burg(port=1), _toy_town(), rules, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    piers = _piers(out)
+    assert [r["type"] for r in piers] == ["pier"]
+    (rx, rz), d = _root_and_axis(piers[0])
+    for t in range(30, 61, 2):
+        for sgn in (-1.0, 1.0):
+            x, z = rx + d[0] * t - d[1] * sgn * 16.0, rz + d[1] * t + d[0] * sgn * 16.0
+            assert _ground(height, x, z) < 5.0, f"land {16} m beside the pier's outer half at {t} m"
+
+
+def test_a_pier_runs_down_the_shore_not_across_it():
+    """Walbover, cambrid_2: the houses' nearest shore met its bearing
+    obliquely. The ground here falls to the west and +z; the pier runs out
+    within pier_max_skew_deg of that fall."""
+    sea, height = _west_sea()
+    yy, xx = np.mgrid[0:VH, 0:VW].astype(np.float32)
+    # the masks' coast runs north-south (_west_sea), the ground falls to -x, +z
+    height[:] = np.clip(5.0 + 0.5 * ((xx - (CENTRE_COL - 8)) - (yy - CENTRE)), 0.0, 40.0)
+    rules = dict(ROOT_RULES, pier_max_skew_deg=35)
+    out = bake_houses.harbour(burg(port=1), _toy_town(), rules, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES)
+    piers = _piers(out)
+    assert [r["type"] for r in piers] == ["pier"]
+    _root, d = _root_and_axis(piers[0])
+    fall = (-math.sqrt(0.5), math.sqrt(0.5))
+    skew = math.degrees(math.acos(d[0] * fall[0] + d[1] * fall[1]))
+    assert skew <= 35.0 + 1e-6, f"the pier runs {skew:.0f} deg off the ground's fall"
+
+
+def test_a_pier_head_stands_over_the_games_own_sea_cells():
+    """The game reads its cell index (MapManors.cell_at) at pack resolution:
+    a pier's head must stand where that index has no cell, though the
+    vertex masks call the water open nearer in."""
+    sea, height = _west_sea()
+    height[:, : CENTRE_COL - 8] = 4.0
+    cells = np.ones((int(VH / K) + 1, int(VW / K) + 1), dtype=bool)
+    cells[:, int((CENTRE_COL - 8) / K) - 1:] = False   # one pack px of cells off the shore
+    out = bake_houses.harbour(burg(port=1), _toy_town(), ROOT_RULES, sea, height, K, VW, VH, 5.0,
+                              water=sea < 0.5, types=STAIR_TYPES, sea_cells=cells)
+    piers = _piers(out)
+    assert [r["type"] for r in piers] == ["pier"]
+    (rx, rz), d = _root_and_axis(piers[0])
+    hx, hz = rx + d[0] * 58.0, rz + d[1] * 58.0
+    px, py = int(math.floor(CENTRE / K + hx / (bake_houses.VERTEX_M * K))), \
+        int(math.floor(CENTRE / K + hz / (bake_houses.VERTEX_M * K)))
+    assert cells[py, px], "its head stands over a pack pixel with no cell"

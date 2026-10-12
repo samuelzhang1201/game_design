@@ -423,7 +423,7 @@ func test_a_released_stroke_stays_drawn_until_its_layer_is_painted() -> void:
 	_drag(view, Vector2(view.size) * Vector2(0.4, 0.3), Vector2(view.size) * Vector2(0.45, 0.7))
 	assert_eq((Game.state.war_plans["strokes"] as Dictionary).size(), 1, "the front was written")
 	assert_true(hud.drawing(), "the ghost is drawn right after release")
-	var key := WarPlanInk.cache_key(Game.state, view.sheet_index())
+	var key := WarPlanInk.cache_key(Game.state, view.sheet_key())
 	await wait_until(func() -> bool: return view.plan_key_shown() == key, 5.0)
 	assert_eq(view.plan_key_shown(), key, "its layer was painted")
 	assert_false(hud.drawing(), "the ghost is gone once the layer is painted")
@@ -541,8 +541,8 @@ func test_a_ghost_goes_once_the_layer_is_current_after_an_undo() -> void:
 	assert_true(hud.drawing(), "the ghost is drawn right after release")
 	_cmd_z(screen)   # before the paint ends: the ghost's own key is never painted
 	assert_true((Game.state.war_plans["strokes"] as Dictionary).is_empty(), "the front is undone")
-	await wait_until(func() -> bool: return view.plan_key_shown() == WarPlanInk.cache_key(Game.state, view.sheet_index()), 5.0)
-	assert_eq(view.plan_key_shown(), WarPlanInk.cache_key(Game.state, view.sheet_index()), "the layer is current")
+	await wait_until(func() -> bool: return view.plan_key_shown() == WarPlanInk.cache_key(Game.state, view.sheet_key()), 5.0)
+	assert_eq(view.plan_key_shown(), WarPlanInk.cache_key(Game.state, view.sheet_key()), "the layer is current")
 	assert_false(hud.drawing(), "the ghost went with it")
 
 
