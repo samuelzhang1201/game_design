@@ -57,6 +57,7 @@ normal_depth = 1.0
 ao_strength = 1.5
 uv_scale = 0.008333334
 detiling_rotation = 0.16
+detiling_shift = 0.5
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_1xcd1"]
 name = "dry_decay_leaves"
@@ -67,6 +68,7 @@ normal_depth = 1.0
 ao_strength = 1.5
 uv_scale = 0.00625
 detiling_rotation = 0.2
+detiling_shift = 0.5
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_em0uc"]
 name = "dirt_floor"
@@ -77,6 +79,7 @@ normal_depth = 1.0
 ao_strength = 1.5
 uv_scale = 0.0055555557
 detiling_rotation = 0.16
+detiling_shift = 0.5
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_8kopf"]
 name = "aerial_upland"
@@ -87,6 +90,7 @@ normal_depth = 1.0
 ao_strength = 1.5
 uv_scale = 0.0028571428
 detiling_rotation = 0.12
+detiling_shift = 0.5
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_dwnd7"]
 name = "excavated_soil_wall"
@@ -117,6 +121,7 @@ normal_depth = 1.0
 ao_strength = 1.5
 uv_scale = 0.005882353
 detiling_rotation = 0.22
+detiling_shift = 0.5
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_4u186"]
 name = "aerial_snow"
@@ -137,6 +142,7 @@ normal_depth = 1.0
 ao_strength = 1.5
 uv_scale = 0.007142857
 detiling_rotation = 0.18
+detiling_shift = 0.5
 
 [resource]
 mesh_list = Array[Terrain3DMeshAsset]([SubResource("Terrain3DMeshAsset_mwgjc")])

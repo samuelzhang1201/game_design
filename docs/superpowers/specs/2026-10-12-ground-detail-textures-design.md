@@ -36,6 +36,18 @@ Terrain3D 1.0.2's texture asset has `detiling_shift` (a random per-cell offset) 
 
 This may remove much of the repeat on its own. Whatever is still visible tells Phase 1 which ground classes need new pictures.
 
+**Result (2026-10-12).** Bracketed at 600 m, 1500 m and 5000 m, three settings, judged by an independent critic shown blind labels:
+
+| Setting | What the critic saw |
+|---|---|
+| A: today | no shift; low-contrast banding in the wheat, an even mottle in the meadow |
+| B: shift 0.5, rotation unchanged | the wheat's banding broken, no seams, no new defect; at 1500 m barely different from A |
+| C: rotation ×2, shift 1.0 | neighbouring cells' crop rows point different ways, a CG checker; breaks "Nothing ends on a hard cut" and "Hand-built, not machined" |
+
+- **B is kept** (shift 0.5 on the ground layers, rotation as it was) as a free, harmless step.
+- **No setting fixes the repeat.** What remains comes from each picture having one grain direction and one patch scale, so Phase 1 is needed for every class it lists.
+- **Rotation stays small:** larger rotation makes the crops' rows disagree.
+
 ### Phase 1: variant sets (new art, needs the owner's go-ahead)
 
 - **Variants per ground class.** Each repeated class gets 2–3 interchangeable pictures, all low-feature: nothing distinct larger than about 3 m.
