@@ -117,8 +117,9 @@ static func lag(repo: DataRepository, piece: Dictionary, code: String, world_v: 
 		piece["lag_vmax"] = float(piece.get("lag_cap", 0.0)) / maxf(repo.bal("map3d_march_lag_max_s"), 0.0001)
 	# a velocity past cap / max_s would pin every figure to the cap alike; limited,
 	# the steady lag is (tau / max_s) x cap: its own per figure, never past the cap
-	var v: Vector3 = (node.transform.basis.inverse() * Vector3(world_v.x, 0.0, world_v.y)).limit_length(
-		float(piece["lag_vmax"]))
+	var v: Vector3 = node.transform.basis.inverse() * Vector3(world_v.x, 0.0, world_v.y)
+	v.y = 0.0  # on a slope the walk has a part along the piece's up; the trail is IN its plane
+	v = v.limit_length(float(piece["lag_vmax"]))
 	var slots: Array = piece["slots"]
 	var taus: Array = piece["taus"]
 	var lags: Array = piece["lags"]
@@ -132,6 +133,31 @@ static func lag(repo: DataRepository, piece: Dictionary, code: String, world_v: 
 		live = live or o != Vector3.ZERO
 		(figs[i] as Node3D).position = slots[i] + o
 	piece["lagging"] = live or world_v != Vector2.ZERO
+
+
+## Stands every figure of `piece` on the ground UNDER IT (owner 2026-10-12: 走在
+## 斜坡上飘, 不同模型所处的高度是不同的). The piece is one plane, raised until no
+## ground under its footprint stands above it, so on a slope the low figures hover
+## by the slope's fall across the formation; each figure's local y is solved so its
+## foot is at the heightmap under its own (x, z) plus the seat's clearance. The lift
+## moves a foot sideways on a tilted piece, so it is solved three times. Call after
+## `seat` and after `lag` (it reads the figures' own x, z, the slot and its trail).
+static func plant(repo: DataRepository, height_at: Callable, piece: Dictionary) -> void:
+	var node: Node3D = piece["node"]
+	var t := node.transform
+	var up := t.basis.y.y  # world metres per local metre of height
+	if up <= 0.0001:
+		return
+	var clear := float(piece["height_m"]) * t.basis.get_scale().x * repo.bal("map3d_unit_seat_clear") \
+		- repo.bal("map3d_unit_sink_m")
+	for fig: Node3D in piece["figs"]:
+		var p := Vector3(fig.position.x, 0.0, fig.position.z)
+		var flat := (t * p).y
+		var w := t * p
+		for _pass in 3:
+			p.y = (float(height_at.call(Vector2(w.x, w.z))) + clear - flat) / up
+			w = t * p
+		fig.position = p
 
 
 ## Seats `piece` at world `xz` facing `yaw` at scale `k` (Map3DUnits.seat; owner
