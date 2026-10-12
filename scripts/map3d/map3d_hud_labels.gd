@@ -1,7 +1,9 @@
 class_name Map3DHudLabels
 extends Map3DHudPiece
 ## The kingdom names on the 3D map's HUD (owner 2026-09-18, the 2D map's
-## lettering — MapLettering), under the compass, the scale bar and the ruler.
+## lettering — MapLettering), under the compass, the scale bar and the ruler,
+## and the player's capital named under its mark at the far view (owner
+## 2026-10-12: 远景时让国都名字更突出 — capital_entry).
 
 ## The kingdoms lettered on the last draw (a test seam).
 var _drawn: PackedStringArray = []
@@ -85,6 +87,64 @@ func entries() -> Array:
 	return out
 
 
+## The player's capital named under its mark {code: "capital:<burg>", text,
+## pos, px, fade}, or {} — while the realm still holds its province, its mark
+## on screen and the view far enough out. Unlike a kingdom name it keeps ONE
+## screen size, map_capital_label_px (a word the ground's size would be a
+## giant at the opening view and a speck far out), and is the far view's
+## lettering by the camera's metres per px: whole down to
+## map_capital_label_fade_mpp, gone at map_capital_label_hide_mpp
+## (capital_fade); set map_capital_label_drop of its own height off the mark
+## (above it, clear of a fleet's counter in the harbour), or
+## map_capital_label_drop_clear when a kingdom's name already stands there.
+func capital_entry() -> Dictionary:
+	if not bound():
+		return {}
+	var repo := ctx.repo
+	var realm := repo.resolve_realm("player_realm")
+	var burg: Dictionary = repo.burgs.get(String((repo.kingdoms.get(realm, {}) as Dictionary)
+		.get("capital_burg", "")), {})
+	if burg.is_empty() \
+			or MapOwnership.owner_of(repo, ctx.state(), String(burg.get("province_code", ""))) != realm:
+		return {}
+	var xz := Map3DGeometry.pack_to_world(ctx.meta, Vector2(float(burg["x"]), float(burg["y"])))
+	var ground := Vector3(xz.x, ctx.height_at(xz), xz.y)
+	var camera := ctx.camera
+	if camera.is_position_behind(ground):
+		return {}
+	var at := camera.unproject_position(ground) / ctx.viewport_px_scale()
+	if not Rect2(Vector2.ZERO, ctx.view_size).has_point(at):
+		return {}
+	var mpp := Map3DGeometry.metres_per_pixel(camera.global_position.distance_to(ground),
+		repo.bal("map3d_fov_deg"), maxf(ctx.view_size.y, 1.0))
+	var px := repo.bal("map_capital_label_px")
+	var fade := capital_fade(mpp, repo.bal("map_capital_label_fade_mpp"),
+		repo.bal("map_capital_label_hide_mpp"))
+	if px <= 0.0 or fade <= 0.0:
+		return {}
+	var text := String(burg["label"])
+	var pos := at + Vector2(0.0, px * repo.bal("map_capital_label_drop"))
+	var box := MapLettering.box_centred(repo, UiPalette.header_font(), text, pos, px)
+	var font := UiPalette.map_label_font()
+	for e: Dictionary in entries():
+		if font != null and box.intersects(MapLettering.box_centred(repo, font, String(e["text"]),
+				e["pos"], float(e["px"]))):
+			pos = at + Vector2(0.0, px * repo.bal("map_capital_label_drop_clear"))
+			break
+	return {"code": "capital:" + String(burg["burg_code"]), "text": text, "pos": pos, "px": px,
+		"fade": fade}
+
+
+## How much of the capital's name shows with the camera at `m_per_px`: whole
+## at or above `fade_mpp`, fading to nothing at `hide_mpp` as the view comes in.
+static func capital_fade(m_per_px: float, fade_mpp: float, hide_mpp: float) -> float:
+	if m_per_px >= fade_mpp:
+		return 1.0
+	if m_per_px <= hide_mpp or fade_mpp <= hide_mpp:
+		return 0.0
+	return (m_per_px - hide_mpp) / (fade_mpp - hide_mpp)
+
+
 ## A kingdom name's size in screen px: a word `height_m` tall on the ground
 ## seen at `m_per_px` — it scales with the ground, never held to one size —
 ## and 0 (hidden) below `min_px`.
@@ -117,7 +177,19 @@ func rects() -> Array:
 		return []
 	for e: Dictionary in list:
 		_rects.append(MapLettering.box_centred(ctx.repo, font, String(e["text"]), e["pos"], float(e["px"])))
+	if capital_rect().has_area():
+		_rects.append(capital_rect())
 	return _rects
+
+
+## The box the capital's name is lettered in, in design px, or an empty Rect2
+## (a fleet's counter in its harbour keeps off it — Map3DHudArmies).
+func capital_rect() -> Rect2:
+	var cap := capital_entry()
+	if cap.is_empty():
+		return Rect2()
+	return MapLettering.box_centred(ctx.repo, UiPalette.header_font(), String(cap["text"]),
+		cap["pos"], float(cap["px"]))
 
 
 func drawn() -> PackedStringArray:
@@ -137,3 +209,8 @@ func _draw() -> void:
 		if MapLettering.draw_centred(self, ctx.repo, font, String(e["text"]), e["pos"],
 				float(e["px"]), frame, float(e["fade"])):
 			_drawn.append(String(e["code"]))
+	# the capital in the names' small capitals, not the kingdoms' blackletter
+	var cap := capital_entry()
+	if not cap.is_empty() and MapLettering.draw_centred(self, ctx.repo, UiPalette.header_font(),
+			String(cap["text"]), cap["pos"], float(cap["px"]), frame, float(cap["fade"])):
+		_drawn.append(String(cap["code"]))

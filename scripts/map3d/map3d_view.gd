@@ -440,6 +440,7 @@ func map_unit() -> String: return Map3DGeometry.map_unit(_repo.map_info, _meta)
 
 # --- the HUD's pieces (Map3DHud: one per job) -------------------------------------
 func label_entries() -> Array: return (_hud.piece("Labels") as Map3DHudLabels).entries() if _loaded else []
+func capital_label() -> Dictionary: return (_hud.piece("Labels") as Map3DHudLabels).capital_entry() if _loaded else {}
 func drawn_labels() -> PackedStringArray:
 	return (_hud.piece("Labels") as Map3DHudLabels).drawn() if _loaded else PackedStringArray()
 func manor_badges() -> Array: return (_hud.piece("Badges") as Map3DHudBadges).badges() if _loaded else []

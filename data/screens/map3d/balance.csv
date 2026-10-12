@@ -9,6 +9,11 @@ map_label_scale_px,45.0,world map: kingdom label height in native map px — it 
 map_label_min_px,16.0,world map: smallest kingdom label in screen px (below this the label is hidden)
 map_label_fade_from_px,80.0,"3D map (owner 2026-10-10: 国家名字无论我视角如何调整都会显示，很碍事): a kingdom name — a word map_label_scale_px pack px tall on the ground, so it grows as the camera comes in — shows whole up to this many screen px and fades out above it (Map3DGeometry.label_fade); ~20 km away at a 720 window"
 map_label_hide_px,110.0,"3D map: the screen px at which a kingdom name has faded out entirely and is hidden — nearer than ~15 km at a 720 window the names are gone, so they are the far, strategic view's lettering only"
+map_capital_label_px,22.0,"3D map (owner 2026-10-12: 远景时让国都名字更突出): the player's capital name's size in design px, ONE size at every zoom it shows (Map3DHudLabels.capital_entry), in the names' small capitals under the capital's mark"
+map_capital_label_fade_mpp,10.0,"3D map: the capital's name is whole while the camera shows at least this many metres per screen px at the capital, fading as the view comes in (critic 2026-10-12: at the opening view, ~5.8, it covered the town it names — so it is gone there)"
+map_capital_label_hide_mpp,6.5,"3D map: the metres per screen px at which the capital's name has faded out entirely — from the opening view in, the town itself is the mark"
+map_capital_label_drop,-1.3,"3D map: where the capital's name stands off its mark, as a share of the name's own height — negative is above, clear of a fleet's counter lying in the harbour (review 2026-10-12: below, the counter covered it at the middle zoom)"
+map_capital_label_drop_clear,0.9,"3D map: where the capital's name stands instead (below its mark) when a kingdom's name already stands above it — the far view, where the realm's name is lettered over its capital"
 map_scale_bar_max_px,220.0,world map: the longest the scale bar may run in screen px — the bar takes the biggest round distance that fits inside it
 map_compass_size_px,88.0,"world map: the box the compass rose in the top-right corner fills, in screen px (owner request 2026-09-13); 0 hides it"
 map_compass_margin_px,20.0,world map: inset of the compass rose from the top-right corner in screen px

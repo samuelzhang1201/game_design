@@ -2,7 +2,8 @@ class_name Map3DLayerBorders
 extends RefCounted
 ## The kingdom borders, the province seams and the hovered kingdom's outline
 ## (spec 2026-09-20 §1), drawn as ribbons through Map3DLayerLines
-## (Lines/KingdomBand, KingdomHalo, Kingdoms, Seams, Hover) from the live
+## (Lines/KingdomBand, KingdomHalo, Kingdoms, Seams, Hover, and RealmGlow round
+## the player's own realm) from the live
 ## MapOwnership outlines, and rebuilt only when ownership moves — the same
 ## signature WorldMapView keys its rings on.
 
@@ -73,6 +74,19 @@ func _build(st: GameState) -> void:
 	lines.set_lines("Kingdoms", rings, Map3DLayerLines.KINGDOM_INK, Map3DPriority.KINGDOMS)
 	lines.set_lines("Seams", Map3DBorders.seam_lines(repo, st, ctx.meta, step),
 		Map3DLayerLines.SEAM, Map3DPriority.SEAMS)
+	lines.set_lines("RealmGlow", realm_glow_lines(st, step), Map3DLayerLines.REALM_GLOW,
+		Map3DPriority.REALM_GLOW)
+
+
+## The player's own realm, lit (owner 2026-10-12: 王国疆域加一圈淡淡的亮边 —
+## the far view's focal point): its outline's inward rings on land only, which
+## lines/realm_glow.tres draws as a pale rim fading inward.
+func realm_glow_lines(st: GameState, step: float) -> Array:
+	var code := ctx.repo.resolve_realm("player_realm")
+	if not ctx.repo.kingdoms.has(code):
+		return []
+	var inward := Map3DBorders.inward_rings(Map3DBorders.kingdom_lines(ctx.repo, st, ctx.meta, code, step))
+	return _land_only(inward) if _skips_coast() else inward
 
 
 ## Whether the coast is left to the shore (map3d_border_skip_coast; without a
