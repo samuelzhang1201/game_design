@@ -73,3 +73,20 @@ func test_the_war_rooms_tin_reads_the_scenes_material() -> void:
 	var scene_mat := m.get_surface_override_material(0) as BaseMaterial3D
 	assert_eq(m.get_active_material(0), scene_mat, "the active material is the scene's")
 	assert_ne(scene_mat, m.mesh.surface_get_material(0), "not the .glb's imported one")
+
+
+## The glTF importer loops nothing by itself: a MARCH that does not loop plays one
+## stride and freezes, so the column glides (owner 2026-10-12: 步兵走路很飘, 腿没在动).
+## The resting and walking clips of every model are set to LOOP in its .import.
+func test_every_walking_and_resting_clip_loops() -> void:
+	for path in _scenes():
+		var model: Node = load(path).instantiate()
+		var players := model.find_children("*", "AnimationPlayer", true, false)
+		assert_gt(players.size(), 0, path + " has an AnimationPlayer")
+		for player: AnimationPlayer in players:
+			for clip in ["MARCH", "GARRISON", "STANDBY", "GALLOP", "IDLE"]:
+				var named := Map3DUnits.clip_named(player, clip)
+				if named != "":
+					assert_eq(player.get_animation(named).loop_mode, Animation.LOOP_LINEAR,
+						"%s's %s loops (its .glb.import)" % [path, clip])
+		model.free()
