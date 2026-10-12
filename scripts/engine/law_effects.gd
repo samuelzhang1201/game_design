@@ -144,6 +144,10 @@ static func apply_lines(repo: DataRepository, state: GameState, lines: Array) ->
 const MONTHLY := "monthly"
 const ARMY := "army"
 const UNIT := "unit"
+const FLAT := "flat"
+## A law-effect channel with this prefix moves a development axis, never a
+## metric (DevelopmentSystem.law_drift pays it).
+const DEV_PREFIX := "dev_"
 const CHANNEL_MARK := "morale_mark"
 const CHANNEL_PACE := "pace"
 const CHANNEL_FLAG := "flag"
@@ -304,10 +308,26 @@ static func month_lines(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
 	var hosts := {}
 	for row: Dictionary in repo.law_effects:
-		if String(row["timing"]) != MONTHLY or String(row["share"]) != ARMY:
+		if String(row["timing"]) != MONTHLY:
 			continue
 		var law := String(row["law_code"])
 		var v := String(row["value"])
+		if String(row["share"]) == FLAT:
+			# A civil law's metric row (tolerance's church): the whole amount a month
+			# while the decreed value is the row's. A flag and a `dev_*` row (paid
+			# by DevelopmentSystem, never a metric) are skipped.
+			var ch := String(row["channel"])
+			if ch == CHANNEL_FLAG or ch.begins_with(DEV_PREFIX) or LawSystem.def(repo, law).is_empty() \
+					or LawSystem.decreed(repo, state, law) != v:
+				continue
+			var amt := amount_of(repo, String(row["amount"]))
+			if is_zero_approx(amt):
+				continue
+			out.append({"metric": ch, "delta": amt, "reason": "%s: %s %s (%s)" % [
+				phrase(repo, law, v), channel_word(repo, ch), _signed(amt, false), String(row["reason"])]})
+			continue
+		if String(row["share"]) != ARMY:
+			continue
 		if LawSystem.def(repo, law).is_empty() or v == "":
 			continue
 		if not hosts.has(law):

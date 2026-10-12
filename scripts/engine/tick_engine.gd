@@ -238,6 +238,9 @@ func advance(state: GameState) -> TickReport:
 	# share of the host's men under its value.
 	for l: Dictionary in LawEffects.month_lines(data, state):
 		_apply(r, state.metrics, String(l["metric"]), float(l["delta"]), String(l["reason"]))
+	# The development axes' month (spec 2026-10-12-development-axes §5): the
+	# laws' drift and the untended decay, one DEVELOPMENT outcome.
+	DevelopmentSystem.settle_month(data, state)
 	# The marshal's month (spec 2026-10-07-army-supply-lines §5.5): his
 	# report, his skims banked, the lines' counters reset.
 	var supply_rows := SupplyLines.settle_month(data, state)

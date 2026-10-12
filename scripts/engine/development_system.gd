@@ -112,3 +112,103 @@ static func _flag(repo: DataRepository, state: GameState, realm: String, axis: S
 		if not flags.has(name):
 			flags.append(name)
 	state.event_state["flags"] = flags
+
+
+## The player realm's drift lines on `axis` from the laws (spec §5): every
+## law_effects row whose channel is `dev_<axis>`, monthly, whose value is the
+## one the crown has DECREED (decree_id above 0) (`LawSystem.decreed`), in file order. A row of a
+## range law has a blank value and pays amount x (decreed value - the law's
+## default). Each {delta: int, reason: String}; a row that pays nothing is
+## skipped.
+static func law_drift(repo: DataRepository, state: GameState, axis: String) -> Array:
+	var out: Array = []
+	var channel := LawEffects.DEV_PREFIX + axis
+	for row: Dictionary in repo.law_effects:
+		if String(row["channel"]) != channel or String(row["timing"]) != LawEffects.MONTHLY:
+			continue
+		var law := String(row["law_code"])
+		var d := LawSystem.def(repo, law)
+		if d.is_empty():
+			continue
+		var v := String(row["value"])
+		# Only a law the crown has actually decreed counts: a law at its seeded
+		# default (decree_id 0) is no policy yet, so a fresh reign drifts nothing.
+		if int(state.law_decree.get(law, {}).get("decree_id", 0)) <= 0:
+			continue
+		var held := LawSystem.decreed(repo, state, law)
+		var amount := LawEffects.amount_of(repo, String(row["amount"]))
+		var delta := 0
+		var reason := ""
+		if v == "" and String(d["kind"]) == "range":
+			var steps := int(held) - int(String(d["default"]))
+			delta = roundi(amount * float(steps))
+			reason = "%s %s (%d from the usual %s, %s per point): %s" % [
+				String(d["label"]).to_lower(), held, steps, String(d["default"]), _signed(amount), String(row["reason"])]
+		elif v == held:
+			delta = roundi(amount)
+			reason = "%s: %s" % [LawEffects.phrase(repo, law, v), String(row["reason"])]
+		if delta != 0:
+			out.append({"delta": delta, "reason": reason})
+	return out
+
+
+static func _signed(n: float) -> String:
+	var text := ("%+d" % roundi(n)) if is_equal_approx(n, roundf(n)) else ("%+.1f" % n)
+	return text.replace("-", "−")
+
+
+## The untended line: `score` moves toward `dev_start_<axis>` by
+## min(dev_decay_per_month, distance). {delta, reason}, {} when it does not move.
+static func decay_line(repo: DataRepository, state: GameState, realm: String, axis: String) -> Dictionary:
+	var start := clampi(int(repo.bal("dev_start_" + axis)), 0, SCORE_MAX)
+	var gap := start - score(state, realm, axis)
+	var step := mini(maxi(int(repo.bal("dev_decay_per_month")), 0), absi(gap))
+	if step == 0:
+		return {}
+	return {"delta": step if gap > 0 else -step, "reason": "untended: the old ways return"}
+
+
+## The month's settlement of the axes (TickEngine.advance, once a month):
+## for the player's realm and each axis, the laws' drift lines in file order via
+## `move`, then the decay line. Returns the applied lines
+## {metric, axis, realm, delta, reason}, and files the player's under one
+## DEVELOPMENT outcome in `state.recent_outcomes` (the shape of
+## LawEffects.apply_lines' LAW_EFFECTS one: effects {metric: axis, delta, reason}).
+static func settle_month(repo: DataRepository, state: GameState) -> Array:
+	DevelopmentSystem.seed(repo, state)
+	var out: Array = []
+	var player := repo.resolve_realm("player_realm")
+	for axis: String in AXES:
+		var lines: Array = DevelopmentSystem.law_drift(repo, state, axis)
+		# The decay is read AFTER the drift has moved the score, so it never
+		# overshoots the start.
+		for l: Dictionary in lines:
+			DevelopmentSystem._apply_line(repo, state, player, axis, l, out)
+		DevelopmentSystem._apply_line(repo, state, player, axis, decay_line(repo, state, player, axis), out)
+	# SEAM (Task 6): foreign realms' lines are appended to `out` here, before
+	# the player's lines are filed; they are never filed as the player's outcome.
+	_file(repo, state, out.filter(func(l: Dictionary) -> bool: return String(l["realm"]) == player))
+	return out
+
+
+const OUTCOME := "DEVELOPMENT"
+
+
+static func _apply_line(repo: DataRepository, state: GameState, realm: String, axis: String,
+		line: Dictionary, out: Array) -> void:
+	if line.is_empty():
+		return
+	var applied := DevelopmentSystem.move(repo, state, realm, axis, int(line["delta"]), String(line["reason"]))
+	if not applied.is_empty():
+		out.append({"metric": axis, "axis": axis, "realm": realm,
+			"delta": int(applied["delta"]), "reason": String(line["reason"])})
+
+
+static func _file(repo: DataRepository, state: GameState, lines: Array) -> void:
+	if lines.is_empty():
+		return
+	var effects: Array = []
+	for l: Dictionary in lines:
+		effects.append({"metric": String(l["axis"]), "delta": float(l["delta"]), "reason": String(l["reason"])})
+	state.recent_outcomes.append({"action_code": OUTCOME, "ok": true, "effects": effects,
+		"notes": String(repo.law_words.get("development_moved", "")), "target": "", "params": {}, "drift": []})

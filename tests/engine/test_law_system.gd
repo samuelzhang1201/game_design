@@ -15,12 +15,12 @@ func before_each() -> void:
 func after_each() -> void:
 	RealmEconomy.forget()
 
-func test_the_tables_load_eighteen_laws_in_three_pages() -> void:
-	assert_eq(repo.law_order.size(), 18)
-	assert_eq(LawSystem.codes_on(repo, "military").size(), 13)
-	assert_eq(LawSystem.codes_on(repo, "economy").size(), 3)
-	assert_eq(LawSystem.codes_on(repo, "politics").size(), 2)
-	assert_eq(LawSystem.codes_on(repo, "economy"), ["tax_rate", "tariff_rate", "grain_ration"], "file order")
+func test_the_tables_load_twenty_five_laws_in_three_pages() -> void:
+	assert_eq(repo.law_order.size(), 25)
+	assert_eq(LawSystem.codes_on(repo, "military").size(), 17)
+	assert_eq(LawSystem.codes_on(repo, "economy").size(), 5)
+	assert_eq(LawSystem.codes_on(repo, "politics").size(), 3)
+	assert_eq(LawSystem.codes_on(repo, "economy"), ["tax_rate", "tariff_rate", "grain_ration", "patronage", "guild_charter"], "file order")
 	assert_true(repo.law_words.has("page_military"))
 
 ## A military law's `group` is a key whose title is law_words' `group_<key>`
@@ -39,7 +39,7 @@ func test_each_military_group_is_a_key_titled_in_the_words() -> void:
 			assert_false(group in seen, group + " stands together")
 			seen.append(group)
 			last = group
-	assert_eq(seen, ["conduct", "discipline", "chivalry"])
+	assert_eq(seen, ["conduct", "discipline", "chivalry", "arms"])
 
 ## Every law_effects.csv row (R11) names a known law and one of its values —
 ## blank only for a range law's once-row, which is paid per point of change —
@@ -91,8 +91,10 @@ func test_every_default_is_the_specs() -> void:
 		"plunder": "forbid", "obey_command": "off", "protect_church": "off",
 		"protect_women": "off", "no_havoc": "off", "register_prisoners": "off",
 		"wear_badges": "off", "no_feuds": "off", "desertion_penalty": "fine", "quarter": "give", "ransom": "ransom",
-		"truce_days": "off", "envoys": "off"}
-	assert_eq(repo.law_order.size(), want.size(), "eighteen laws")
+		"truce_days": "off", "envoys": "off",
+		"knightly_orders": "off", "tournaments": "off", "heavy_levy": "off", "arsenal_decree": "none",
+		"patronage": "none", "guild_charter": "none", "tolerance": "none"}
+	assert_eq(repo.law_order.size(), want.size(), "twenty-five laws")
 	for law: String in repo.law_order:
 		assert_true(want.has(law), "%s is a law of the spec" % law)
 		assert_eq(String(LawSystem.def(repo, law)["default"]), String(want.get(law, "")), law)
