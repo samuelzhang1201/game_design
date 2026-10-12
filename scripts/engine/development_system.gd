@@ -212,3 +212,86 @@ static func _file(repo: DataRepository, state: GameState, lines: Array) -> void:
 		effects.append({"metric": String(l["axis"]), "delta": float(l["delta"]), "reason": String(l["reason"])})
 	state.recent_outcomes.append({"action_code": OUTCOME, "ok": true, "effects": effects,
 		"notes": String(repo.law_words.get("development_moved", "")), "target": "", "params": {}, "drift": []})
+
+
+# --- tier effects (spec §4) ---------------------------------------------------
+
+## The rows of both axes at the realm's CONFIRMED tier, only that tier's own
+## (the table lists each tier's full modifier, so tiers do not add up), for one
+## channel, in file order.
+static func effect_rows(repo: DataRepository, state: GameState, realm: String, channel: String) -> Array:
+	var out: Array = []
+	for r: Dictionary in repo.development_tier_effects:
+		if String(r["channel"]) != channel:
+			continue
+		if int(r["tier"]) == tier(state, realm, String(r["axis"])):
+			out.append(r)
+	return out
+
+
+static func _sum_permille(repo: DataRepository, state: GameState, realm: String, channel: String,
+		target: String) -> int:
+	var sum := 0
+	for r: Dictionary in effect_rows(repo, state, realm, channel):
+		if target == "" or String(r["target"]) == target:
+			sum += roundi(LawEffects.amount_of(repo, String(r["amount"])))
+	return sum
+
+
+## arm -> 1000 + the sum of the realm's arm_power_permille rows (never below 0),
+## for every arm in unit_types.
+static func arm_permille(repo: DataRepository, state: GameState, realm: String) -> Dictionary:
+	var out: Dictionary = {}
+	for arm: String in repo.world_table("military", "unit_types"):
+		out[arm] = maxi(0, 1000 + _sum_permille(repo, state, realm, "arm_power_permille", arm))
+	return out
+
+
+## Whether the realm's confirmed tiers carry a `flag` row of that name.
+static func flag(repo: DataRepository, state: GameState, realm: String, name: String) -> bool:
+	for r: Dictionary in effect_rows(repo, state, realm, "flag"):
+		if String(r["target"]) == name:
+			return true
+	return false
+
+
+## The ids of the `unlock` rows at tiers up to the confirmed tier, per axis.
+static func unlocked(repo: DataRepository, state: GameState, realm: String) -> Array:
+	var out: Array = []
+	for r: Dictionary in repo.development_tier_effects:
+		if String(r["channel"]) == "unlock" and int(r["tier"]) <= tier(state, realm, String(r["axis"])) \
+				and not out.has(String(r["target"])):
+			out.append(String(r["target"]))
+	return out
+
+
+## The cavalry heads of the player realm's regiments.
+static func cavalry_heads(repo: DataRepository, state: GameState) -> int:
+	var heads := 0
+	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
+		heads += int(float(reg.get("cavalry", 0)))
+	return heads
+
+
+## The month's ledger lines of the player realm {metric, delta: float, reason}:
+## every monthly metric-channel row at the confirmed tiers (one rounding, to
+## tenths), then the cavalry upkeep on the treasury (whole gold, one rounding;
+## no line without cavalry or at 0 gold). TickEngine.advance calls this AFTER
+## settle_month, so a tier reached this month pays this month.
+static func month_lines(repo: DataRepository, state: GameState) -> Array:
+	var player := repo.resolve_realm("player_realm")
+	var out: Array = []
+	for r: Dictionary in repo.development_tier_effects:
+		if String(r["timing"]) != LawEffects.MONTHLY or int(r["tier"]) != tier(state, player, String(r["axis"])):
+			continue
+		var delta := roundf(LawEffects.amount_of(repo, String(r["amount"])) * 10.0) / 10.0
+		if delta != 0.0:
+			out.append({"metric": String(r["channel"]), "delta": delta, "reason": String(r["reason"])})
+	var heads := cavalry_heads(repo, state)
+	if heads > 0:
+		var milli := _sum_permille(repo, state, player, "cavalry_upkeep_permille", "")
+		var gold := roundi(repo.bal("dev_cavalry_upkeep_per_head") * float(heads) * float(milli) / 1000.0)
+		if gold != 0:
+			out.append({"metric": "treasury", "delta": -float(gold),
+				"reason": "knights and warhorses cost more (%d horse)" % heads})
+	return out

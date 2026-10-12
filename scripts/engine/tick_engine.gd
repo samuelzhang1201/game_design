@@ -241,6 +241,10 @@ func advance(state: GameState) -> TickReport:
 	# The development axes' month (spec 2026-10-12-development-axes §5): the
 	# laws' drift and the untended decay, one DEVELOPMENT outcome.
 	DevelopmentSystem.settle_month(data, state)
+	# Their tier effects pay AFTER the settlement, so a tier reached this month
+	# pays this month.
+	for l: Dictionary in DevelopmentSystem.month_lines(data, state):
+		_apply(r, state.metrics, String(l["metric"]), float(l["delta"]), String(l["reason"]))
 	# The marshal's month (spec 2026-10-07-army-supply-lines §5.5): his
 	# report, his skims banked, the lines' counters reset.
 	var supply_rows := SupplyLines.settle_month(data, state)
