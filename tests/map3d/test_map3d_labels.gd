@@ -144,6 +144,11 @@ func after_all() -> void:
 
 # --- the capital's name (owner 2026-10-12: 远景时让国都名字更突出) -----------------
 
+## The view's capital entry, from its HUD's Labels piece (the view itself is
+## held to its line cap by test_map3d_shape.gd).
+func _capital(v: Map3DView) -> Dictionary:
+	return (v.find_child("Labels", true, false) as Map3DHudLabels).capital_entry()
+
 ## Whole from 3 m per px out, gone at 2: at 2.5 half, at 2.25 a quarter.
 func test_the_capitals_name_fades_as_the_camera_comes_in() -> void:
 	assert_eq(Map3DHudLabels.capital_fade(40.0, 3.0, 2.0), 1.0)
@@ -159,13 +164,13 @@ func test_the_players_capital_is_named_far_out_at_one_size() -> void:
 	var realm: Dictionary = Game.data.kingdoms[Game.data.resolve_realm("player_realm")]
 	var burg: Dictionary = Game.data.burgs[String(realm["capital_burg"])]
 	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])), 30000.0)
-	var e := v.capital_label()
+	var e := _capital(v)
 	assert_false(e.is_empty(), "far out the capital is named")
 	assert_eq(String(e["text"]), String(burg["label"]))
 	assert_eq(float(e["px"]), Game.data.bal("map_capital_label_px"), "one size, not the ground's")
 	assert_almost_eq((e["pos"] as Vector2).x, v.size.x * 0.5, 2.0, "over its mark")
 	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])), Game.data.bal("map3d_zoom_min_m"))
-	assert_true(v.capital_label().is_empty(), "close in the town itself is the mark")
+	assert_true(_capital(v).is_empty(), "close in the town itself is the mark")
 
 
 func test_a_lost_capital_is_not_named() -> void:
@@ -176,4 +181,4 @@ func test_a_lost_capital_is_not_named() -> void:
 	MapOwnership.set_owner(Game.data, Game.state, province, Game.data.resolve_realm("raider_realm"),
 		"test: the capital falls")
 	v.look_at_pack(Vector2(float(burg["x"]), float(burg["y"])), 30000.0)
-	assert_true(v.capital_label().is_empty(), "the realm no longer holds it")
+	assert_true(_capital(v).is_empty(), "the realm no longer holds it")
