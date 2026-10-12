@@ -185,8 +185,8 @@ Threshold events for the development axes (`docs/superpowers/specs/2026-10-12-de
 
 ## Coverage notes
 
-- **Voicing:** as drafted, 3 template, 15 mini, 2 flagship (EV-10 debate, EV-19 orphan). As built, all 20 are `template` — authored prose, no API call (owner 2026-08-31), consistent with the cost posture in PRD §8.
+- **Voicing:** as drafted, 3 template, 15 mini, 2 flagship (EV-10 debate, EV-19 orphan). As built, all 30 are `template` — authored prose, no API call (owner 2026-08-31), consistent with the cost posture in PRD §8.
 - **Chain-starters:** 7 events are drafted to schedule follow-ups. As built, one chain exists: EV-02 "Say nothing" schedules EV-18 in 24 months (`schedule:ev_18:24`). The follow-ups named above (EV-02b, EV-07b, …) have no entries or scenes yet — each needs a `### EV-NN` entry here and rows in the CSVs before it can fire.
 - **Triggers:** `events.csv` implements a simplified form of several triggers written above (e.g. EV-11 fires on `season=winter` with no coastal check; EV-14 on `seat_filled=steward&year>=2`, not on a `merchant_family` candidate). The CSV is what runs.
 - **Every seat gets events in its domain**; `venal`, `honest`, `bold`, `vain`, `wrathful`, `cynical`, `pious`, `merchant_family`, `noble_born` traits all have at least one moment to matter.
-- Implemented as `data/story/events.csv` + `data/story/event_choices.csv` with generic effect ops (`EventEffects`) rather than per-event handlers, per the data-driven convention in `CLAUDE.md`; a test asserts all 20 ids resolve to a Scene here.
+- Implemented as `data/story/events.csv` + `data/story/event_choices.csv` with generic effect ops (`EventEffects`) rather than per-event handlers, per the data-driven convention in `CLAUDE.md`; a test asserts all 30 ids resolve to a Scene here.

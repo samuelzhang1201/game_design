@@ -426,6 +426,8 @@ static func refusal_of(repo: DataRepository, state: GameState, law: String, val:
 	var resend := _resend(repo, state, law, val)
 	if decreed(repo, state, law) == val and not resend:
 		return {"text": "%s is already %s" % [label, val], "key": "unchanged", "days": 0}
+	if _honour_bound(repo, state, law, val):
+		return {"text": String(repo.law_words.get("honour_bound_refusal", "Honour forbids it.")), "key": "honour_bound", "days": 0}
 	var until := int(state.law_cooldown.get(law, 0))
 	if not resend and until > state.tick:
 		var days := (until - state.tick - 1) * Calendar.DAYS_PER_TICK + Calendar.DAYS_PER_TICK - state.day + 1
@@ -436,6 +438,18 @@ static func refusal_of(repo: DataRepository, state: GameState, law: String, val:
 	if float(state.metrics.get("treasury", 0.0)) < float(order_gold(repo, law, resend) + n * CourierSystem.fee_gold(repo, CourierSystem.ORDINARY)):
 		return {"text": "The chancery cannot pay the couriers", "key": "gold", "days": 0}
 	return {"text": "", "key": "", "days": 0}
+
+
+## Whether the player's realm, at a tier carrying the `honour_bound` flag, may
+## not decree this option: the two ways of denying a beaten foe mercy
+## (HONOUR_BOUND_OPTIONS, law -> value).
+const HONOUR_BOUND_OPTIONS := {"ransom": "execute", "quarter": "refuse"}
+
+
+static func _honour_bound(repo: DataRepository, state: GameState, law: String, val: String) -> bool:
+	if String(HONOUR_BOUND_OPTIONS.get(law, "")) != val:
+		return false
+	return DevelopmentSystem.flag(repo, state, repo.resolve_realm("player_realm"), "honour_bound")
 
 
 ## What a decree would cost and take, for the screen (§5): {couriers, fee

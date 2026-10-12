@@ -240,6 +240,7 @@ static func decay_line(repo: DataRepository, state: GameState, realm: String, ax
 ## {metric, axis, realm, delta, reason}, and files the player's under one
 ## DEVELOPMENT outcome in `state.recent_outcomes` (the shape of
 ## LawEffects.apply_lines' LAW_EFFECTS one: effects {metric: axis, delta, reason}).
+## The foreign realms' lines are returned too but never filed as the player's.
 static func settle_month(repo: DataRepository, state: GameState) -> Array:
 	DevelopmentSystem.seed(repo, state)
 	var out: Array = []

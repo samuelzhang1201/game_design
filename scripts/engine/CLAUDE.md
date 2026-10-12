@@ -13,6 +13,7 @@ These topics' rules live in `guide/` beside this file, which Claude Code does NO
 - `scripts/engine/guide/raid_and_defeat.md` — raids, spoils and a lost town (`RaidSystem`: the take, the raiders' food, the crown's ledger line, the Raided hazard, a stripped manor, spoils; `DefeatSystem`: what a fallen town costs — treasury, contentment, the council, the `war_01` beat, once per loss)
 - `scripts/engine/guide/supply_and_workshop.md` — supply, morale and the war workshop (`SupplySystem`, `SupplyLines`, `TownStores`, `WorkshopSystem`)
 - `scripts/engine/guide/foraging_and_desertion.md` — living off the land and desertion (`Forage`, `Desertion`, `ArmyConduct`: the day order, the switch, Havoc, stripping, the month's settlement, which laws are read)
+- `scripts/engine/guide/development.md` — the development axes (`DevelopmentSystem`: Renaissance and Chivalry scores, tiers, law drift, tier effects, preference, foreign steps, honour bound)
 - `scripts/engine/guide/ledger_model.md` — the LEDGER's model (`ledger.gd`, `ledger_resolvers.gd`, `ledger_cards.gd`)
 - `scripts/engine/guide/governors_and_audit.md` — governors, skimming and the audit (`Governance`, `AuditWriter`)
 - `scripts/engine/guide/industry_and_trade.md` — industry and trade (`IndustrySystem`, `MarketSystem`, `WarEconomy`)
