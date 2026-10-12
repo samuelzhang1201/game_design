@@ -15,14 +15,12 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SRC = os.path.join(ROOT, "assets", "3D", "terrain", "model_wip", "polyhaven")
 OUT = os.path.join(ROOT, "assets", "3D", "terrain", "textures")
 SIZE = 2048
-DEFAULT_ROUGH = 0.85  # rocky_trail ships no roughness map
-SETS = ["leafy_grass", "dry_decay_leaves", "dirt_floor", "rocky_trail",
-        "excavated_soil_wall", "sand_03",
-        # The snow line: Poly Haven snow_02 (2026-09-19, replacing the owner's
-        # first snow_field_aerial, which read blue-grey and blotchy). Sets
-        # fetched as JPEGs (the Blender MCP's Poly Haven download, or the
-        # Poly Haven API) — hence first(), below.
-        "snow_02",
+DEFAULT_ROUGH = 0.85  # for a set that ships no roughness map
+# The grass, upland and snow layers are aerial pictures now (pack_aerial.py);
+# their old Poly Haven sets (leafy_grass, rocky_trail, snow_02) were deleted
+# with their sources on 2026-10-01. Sets fetched as JPEGs (the Blender MCP's
+# Poly Haven download, or the Poly Haven API) — hence first(), below.
+SETS = ["dry_decay_leaves", "dirt_floor", "excavated_soil_wall", "sand_03",
         # Not terrain layers: the roads' surface (road_line.gdshader) and the
         # bridges' stone, both loaded by Map3DLayerRoads (ROAD_TEXTURE /
         # BRIDGE_TEXTURE); without them it draws flat palette colours.

@@ -31,6 +31,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import re
 import sys
 import time
@@ -47,7 +48,27 @@ PROMPTS_CSV = HERE / "prompts.csv"
 STYLE_CORE = HERE / "STYLE_CORE.txt"
 NEGATIVE = HERE / "NEGATIVE.txt"
 OUT_DIR = HERE / "out"
-SERVER = "http://127.0.0.1:8188"
+# Which ComfyUI to talk to: the owner's Comfy Desktop window (owner 2026-10-11:
+# every art job goes to THAT window, never to a headless comfy-cli server, so
+# nothing is ever launched from here). The Desktop takes 8188, or 8189 when
+# 8188 was busy at its start, so the first port that answers wins; COMFYUI_URL
+# overrides.
+
+
+def _find_server() -> str:
+    env = os.environ.get("COMFYUI_URL", "").rstrip("/")
+    if env:
+        return env
+    for port in (8188, 8189, 8000):
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/system_stats", timeout=2):
+                return f"http://127.0.0.1:{port}"
+        except (urllib.error.URLError, OSError):
+            continue
+    return "http://127.0.0.1:8188"
+
+
+SERVER = _find_server()
 
 # Prompt library §0.3: where each ID prefix is filed.
 CHAPTER_DIR = {
@@ -86,6 +107,7 @@ CANVAS_SIZE = {
     "C-TOWNFLAT": (1024, 1024),
     "C-WARPIECE": (1024, 1024),
     "C-ORB": (1024, 1024), "C-STRAND": (1536, 512),
+    "C-LOGO": (1024, 1024),
 }
 # One preset per model: which template graph to fill and its sampler values.
 # Only two models make the game's 2D art (owner 2026-10-01: no Flux at all —

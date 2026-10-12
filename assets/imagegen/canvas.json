@@ -19,5 +19,6 @@
   "C-STRAND": "one single straight horizontal strand running the full width of the frame edge to edge through its vertical middle, perfectly level, even thickness along its whole length, on a pure flat black ground, nothing else in the frame, 3:1 horizontal",
   "C-ARMS": "a single heraldic shield drawn flat and face-on with no perspective, the shield alone filling most of the frame, centred with an even margin, pure white background, nothing behind or around the shield, no helmet, no crest, no mantling, no supporters, no motto scroll, no text, no cast shadow, 1:1 square",
   "C-TITLE": "a full-bleed title screen illustration in a wide 16:9 frame, a gilded ornamental border of scrolling gold foliage with red enamel bands running round all four edges, the two figures drawn large at opposite corners and the broad middle of the page left as plain unmarked cream paper for the menu to sit on, no text, no lettering, 16:9 horizontal",
-  "C-GLYPH": "a single flat icon pictogram isolated on a pure white background, no scene, no perspective, no cast shadow, nothing beneath it, centred and filling the frame with an even margin, 1:1 square"
+  "C-GLYPH": "a single flat icon pictogram isolated on a pure white background, no scene, no perspective, no cast shadow, nothing beneath it, centred and filling the frame with an even margin, 1:1 square",
+  "C-LOGO": "logo presentation, the emblem and wordmark centred with generous even margins, plain solid background filling the whole square, no scene, no perspective, no mockup, 1:1 square"
 }
