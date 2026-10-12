@@ -40,3 +40,11 @@ LAW_SET,law=church_policy&value=tithe,10,0,-50,0,0,
 LAW_SET,law=justice_severity&delta_pos,30,0,10,-10,0,
 LAW_SET,law=justice_severity&delta_neg,-20,0,-5,10,0,
 LAW_SET,,0,0,0,0,0,"a law with no signature of its own: the decree drifts no one"
+LAW_SET,law=knightly_orders&value=on,0,30,20,0,0,sworn orders of knighthood
+LAW_SET,law=tournaments&value=on,0,20,10,-10,0,the lists cost money and glory
+LAW_SET,law=heavy_levy&value=on,0,40,0,-10,10,the heavy horse
+LAW_SET,law=patronage&value=scholars,10,0,-10,0,0,
+LAW_SET,law=patronage&value=court,20,0,-20,-10,0,a learned court
+LAW_SET,law=guild_charter&value=granted,-10,0,0,0,-10,charters cede royal authority
+LAW_SET,law=arsenal_decree&value=bombards,20,20,0,0,10,
+LAW_SET,law=tolerance&value=edict,0,0,-60,0,0,the church is angered

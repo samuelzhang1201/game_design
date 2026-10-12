@@ -775,6 +775,9 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	var drift := OpinionDrift.apply(data, state,
 		OpinionDrift.signature_for(data, req.action_code, sig_params),
 		String(row["label"]))
+	if req.action_code == "LAW_SET" and not sig_params.has("resend"):
+		drift.append_array(DevelopmentSystem.decree_opinions(data, state,
+			String(sig_params["law"]), String(sig_params["value"])))
 	for pr in state.promises:
 		if String(pr["status"]) != "open":
 			continue

@@ -532,8 +532,15 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 		return 0
 	var heads := headcount(repo, reg)
 	var fit := fit_heads(heads, st)
+	var realm := realm_of(repo, code, state)
 	return power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
-		code, 0 if state == null else state.tick)
+		code, 0 if state == null else state.tick, DevelopmentSystem.arm_permille(repo, state, realm))
+
+
+## The realm a unit serves: its row's kingdom ("" for an unknown unit). The
+## crown's regiments are the player realm's, the raider's the raider realm's.
+static func realm_of(repo: DataRepository, code: String, state: GameState = null) -> String:
+	return String(regiment(repo, code, state).get("kingdom_code", ""))
 
 
 ## The power of a host of `arms` (arm -> heads, a regiment's row will do) with
@@ -541,8 +548,12 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 ## of power_on, for a host with no state: the WAR ROOM's supposed enemy (spec
 ## 2026-10-07-war-room-annotations-and-planning-pieces §1.2). `float_code`
 ## names whose hidden monthly float to apply at `tick`; "" applies none.
+## `dev_permille` (arm -> per mille, DevelopmentSystem.arm_permille) scales each
+## arm's term inside the same pipeline, rounded once at the end; an arm it does
+## not name, or {}, is 1000 (unchanged).
 static func power_of_arms(repo: DataRepository, arms: Dictionary, fit: int, training: int, morale: int,
-		stance: String, terrain: String, works: String, float_code := "", tick := 0) -> int:
+		stance: String, terrain: String, works: String, float_code := "", tick := 0,
+		dev_permille: Dictionary = {}) -> int:
 	var heads := 0
 	for arm: String in repo.world_table("military", "unit_types"):
 		heads += int(float(arms.get(arm, 0)))
@@ -576,8 +587,11 @@ static func power_of_arms(repo: DataRepository, arms: Dictionary, fit: int, trai
 		p = p * morale_f / 1000
 		@warning_ignore("integer_division")  # whole per-mille
 		p = p * terrain_factor(repo, terrain, arm, stance, works) / 1000
-		@warning_ignore("integer_division")  # the ceiling of the milli-head digit
-		total += (p + 999) / 1000
+		# The development factor joins here, so the one ceiling below rounds it
+		# with the milli-head digit (1000 changes nothing).
+		var dev := maxi(0, int(dev_permille.get(arm, 1000)))
+		@warning_ignore("integer_division")  # the ceiling of the milli-head digit and the per-mille
+		total += (p * dev + 999999) / 1000000
 	return total
 
 ## The training grade a hidden training value shows as.

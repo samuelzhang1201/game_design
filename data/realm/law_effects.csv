@@ -46,3 +46,16 @@ truce_days,on,church_opinion,,0.3,monthly,army,the host keeps the truce of God
 truce_days,on,pace,,-50,monthly,unit,no march on the holy days
 envoys,on,legitimacy,,0.1,monthly,army,heralds pass unharmed
 envoys,on,flag,,,monthly,flat,an envoy is never touched
+quarter,give,dev_chivalry,,1,monthly,flat,mercy to the yielding is the knightly way
+ransom,ransom,dev_chivalry,,1,monthly,flat,captives ransomed by custom are the knightly way
+truce_days,on,dev_chivalry,,1,monthly,flat,the truce of God is kept
+envoys,on,dev_chivalry,,1,monthly,flat,heralds pass unharmed
+knightly_orders,on,dev_chivalry,,3,monthly,flat,sworn orders of knighthood ride under the crown
+tournaments,on,dev_chivalry,,2,monthly,flat,the lists are held
+heavy_levy,on,dev_chivalry,,2,monthly,flat,the heavy horse is called to the banner
+patronage,scholars,dev_renaissance,,4,monthly,flat,the crown keeps scholars
+patronage,court,dev_renaissance,,8,monthly,flat,the court is a school of the arts
+guild_charter,granted,dev_renaissance,,2,monthly,flat,chartered guilds teach their crafts
+arsenal_decree,bombards,dev_renaissance,,3,monthly,flat,founders cast bombards for the crown
+tolerance,edict,dev_renaissance,,3,monthly,flat,free minds are let to speak
+tolerance,edict,church_opinion,,-0.3,monthly,flat,the church resents the edict of tolerance

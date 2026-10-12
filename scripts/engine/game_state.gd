@@ -97,6 +97,7 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	TownStores.seed_from_pools(data, s)
 	# The laws start as the metrics and the pack's economy row left them.
 	LawSystem.seed(data, s)
+	DevelopmentSystem.seed(data, s)
 	for id in s.characters:
 		if s.characters[id].seat != "":
 			s.council[s.characters[id].seat] = id
@@ -403,6 +404,11 @@ var hazards_rev := 0
 ## Strings ("on", a choice's name, a range's digits).
 ## law_code -> {value, decree_id, day}: what the crown has decreed.
 var law_decree: Dictionary = {}
+## The development axes (spec 2026-10-12-development-axes-design §2,
+## DevelopmentSystem): realm code -> {renaissance, chivalry, tier_renaissance,
+## tier_chivalry}, whole numbers; and every move with its reason.
+var development: Dictionary = {}
+var development_log: Array = []
 ## scope_key ("province:<code>", "town:<code>", "unit:<code>") -> {law_code ->
 ## {value, decree_id}}: what each place or unit follows. A place with no entry
 ## follows the law's default. Read it through LawSystem.value.
@@ -484,6 +490,8 @@ func to_dict() -> Dictionary:
 		"hazards": _encode_values(hazards.duplicate(true)),
 		"hazards_seeded": hazards_seeded,
 		"law_decree": _encode_values(law_decree.duplicate(true)),
+		"development": _encode_values(development.duplicate(true)),
+		"development_log": _encode_values(development_log.duplicate(true)),
 		"law_in_force": _encode_values(law_in_force.duplicate(true)),
 		"law_cooldown": _encode_values(law_cooldown.duplicate(true)),
 		"forage_stripped": _encode_values(forage_stripped.duplicate(true)),
@@ -605,6 +613,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	# Saves from before the laws carry none: Game.load_campaign seeds them from
 	# the metrics (LawSystem.ensure).
 	s.law_decree = _decode_values(d.get("law_decree", {}))
+	s.development = _decode_values(d.get("development", {}))
+	s.development_log = _decode_values(d.get("development_log", []))
 	s.law_in_force = _decode_values(d.get("law_in_force", {}))
 	s.law_cooldown = _decode_values(d.get("law_cooldown", {}))
 	s.forage_stripped = _decode_values(d.get("forage_stripped", {}))

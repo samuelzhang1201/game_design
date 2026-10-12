@@ -1,6 +1,6 @@
 # Random Events — Beyond the King's Words
 
-Status: Built — the 20 events below are live (`data/story/events.csv`, `data/story/event_choices.csv`, `EventSystem`). MVP scope (see `docs/design/PRD.md` §6, "Random events pool"). **This file is loaded at runtime:** `StorySource` reads each `### EV-NN` heading and the prose after the Scene label on that line, and the game shows that prose verbatim. Keep the headings and the Scene labels intact; the Trigger text on the same line is design description only (the implemented trigger is the CSV's). The heading's TITLE — between the `·` and the trailing `— \`tags\`` — is what the audience window's banner shows, so it is authored here too, not in `templates.csv`.
+Status: Built — the 30 events below are live (`data/story/events.csv`, `data/story/event_choices.csv`, `EventSystem`). MVP scope (see `docs/design/PRD.md` §6, "Random events pool"). **This file is loaded at runtime:** `StorySource` reads each `### EV-NN` heading and the prose after the Scene label on that line, and the game shows that prose verbatim. Keep the headings and the Scene labels intact; the Trigger text on the same line is design description only (the implemented trigger is the CSV's). The heading's TITLE — between the `·` and the trailing `— \`tags\`` — is what the audience window's banner shows, so it is authored here too, not in `templates.csv`.
 
 ---
 
@@ -137,10 +137,56 @@ All event selection is **engine math on the seeded RNG stream — the LLM never 
 
 ---
 
+## Development pool (10)
+
+Threshold events for the development axes (`docs/superpowers/specs/2026-10-12-development-axes-design.md` §7): each fires off the crossing flag `DevelopmentSystem.move` raises, once per campaign, and is authored prose like the rest. A foreign crossing is named by the neighbour's SLOT (`dev_foreign_neighbor_realm_<axis>_up_1`).
+
+### EV-21 · A Bombard at the Arsenal — `realm · template · once`
+**Trigger:** Renaissance tier 1 reached. weight 50. **Scene:** The master smith at the arsenal has cast a bombard, a great bronze throat that took three tries and a ruined furnace to pour. He asks you to come and see it fired. The Marshal is already there, walking round it twice; the Steward has brought a ledger and is not looking at the gun at all.
+**Choices:** ① Fire it before the court. ② Fund a second foundry. ③ Call it a costly toy.
+
+### EV-22 · Scholars at Court — `realm · template · once`
+**Trigger:** Renaissance tier 2 reached. weight 50. **Scene:** Three scholars have come to your hall unasked, with books under their arms and a quarrel between them over the shape of the world. They want a room, a stipend, and leave to teach the sons of the burghers. The Chancellor finds them tiresome and useful in about equal measure.
+**Choices:** ① Take them under your patronage. ② Let them teach at the cathedral school. ③ Send them on their way.
+
+### EV-23 · The Guilds Ask for a Charter — `realm · template · once`
+**Trigger:** Renaissance tier 3 reached. weight 50. **Scene:** The masters of the great guilds come to the hall in their best gowns and ask for a charter: their own courts, their own measures, their own seal. They have counted the gold they bring the treasury and mention it twice. The older lords at the back of the hall have counted it too, and say nothing.
+**Choices:** ① Grant the charter. ② Grant it at a price. ③ Refuse; the seal is the crown's.
+
+### EV-24 · The Bread Riots — `realm · template · once`
+**Trigger:** The realm has fallen out of Renaissance tier 1. weight 50. **Scene:** The new looms are idle, the founders have gone, and the clever men who kept the town's accounts have taken their books elsewhere. The market runs short on a Tuesday and by Wednesday there are bakers' windows broken in the lower town. The realm has lost what it had learned, and the crowd knows only that bread is dear.
+**Choices:** ① Open the granaries. ② Send the watch in. ③ Say it will pass.
+
+### EV-25 · A Tournament on the Green — `realm · template · once`
+**Trigger:** Chivalry tier 1 reached. weight 50. **Scene:** The young knights of the shire have asked leave to hold a tournament on the green below the castle. They have found banners from somewhere and each has a lady whose favour he claims to wear. The Marshal says it will train the lances. The Steward says it will eat the pantry.
+**Choices:** ① Host it and give the prize. ② Allow it, at their own cost. ③ Forbid it as idle waste.
+
+### EV-26 · A Ransom in the Old Way — `realm · template · once`
+**Trigger:** Chivalry tier 2 reached. weight 50. **Scene:** A knight of yours is taken in a border skirmish. His captor does not threaten him; he sends word politely that a ransom of the customary size will do, and that your man dines at his own table in the meantime. The Marshal says that is how it is done. The Steward asks how much 'customary' is.
+**Choices:** ① Pay the ransom in full. ② Haggle, as one gentleman to another. ③ Let him stay where he is.
+
+### EV-27 · The Knights Renew Their Oaths — `realm · template · once`
+**Trigger:** Chivalry tier 3 reached. weight 50. **Scene:** At midsummer the knights of the realm ask to renew their oaths in a body, kneeling in the great hall with their swords laid across their palms. It is a handsome sight and an expensive one: each will want a gift of horse or harness, and each will remember what he gets.
+**Choices:** ① Give each a gift of harness. ② Take the oaths and give your thanks. ③ Bind them to the muster-roll.
+
+### EV-28 · The Archers Go Unpaid — `realm · template · once`
+**Trigger:** The realm has fallen out of Chivalry tier 1. weight 50. **Scene:** Fewer of the young men ride, and fewer of the old ones can afford to. The knights complain of the price of a charger; the archers, who were sneered at on the green last spring, complain louder because they were not paid. The heavy horse is thinner than it was and the Marshal is counting heads again.
+**Choices:** ① Pay the archers their arrears. ② Subsidise the heavy horse. ③ Accept a lighter host.
+
+### EV-29 · An Embassy of Learned Men — `realm · template · once`
+**Trigger:** {neighbor_realm} crosses into Renaissance tier 1. weight 50. **Scene:** An embassy from {neighbor_realm} arrives with a train of carts and, among the carts, a printing-press wrapped in oilcloth, which they present with every courtesy as a gift between friends. The envoy speaks well of their new schools. The Spymaster, at your elbow, murmurs that he would like to know who taught the envoy to speak so well.
+**Choices:** ① Accept the gift and the friendship. ② Accept it, and take it apart. ③ Thank them and send it back.
+
+### EV-30 · A Herald from the Warchief — `realm · template · once`
+**Trigger:** {raider_realm} crosses into Chivalry tier 1. weight 50. **Scene:** A herald in a borrowed tabard rides up to your border post with a challenge from the warchief of {raider_realm}, who has taken knightly vows and wishes the world told so. He names a field, a day and a ransom for a captive he has no use for. The Marshal says the man means it. The Steward asks who taught a raider to write so politely.
+**Choices:** ① Meet the challenge at the border. ② Offer a ransom for the captive. ③ Send the herald away unanswered.
+
+---
+
 ## Coverage notes
 
-- **Voicing:** as drafted, 3 template, 15 mini, 2 flagship (EV-10 debate, EV-19 orphan). As built, all 20 are `template` — authored prose, no API call (owner 2026-08-31), consistent with the cost posture in PRD §8.
+- **Voicing:** as drafted, 3 template, 15 mini, 2 flagship (EV-10 debate, EV-19 orphan). As built, all 30 are `template` — authored prose, no API call (owner 2026-08-31), consistent with the cost posture in PRD §8.
 - **Chain-starters:** 7 events are drafted to schedule follow-ups. As built, one chain exists: EV-02 "Say nothing" schedules EV-18 in 24 months (`schedule:ev_18:24`). The follow-ups named above (EV-02b, EV-07b, …) have no entries or scenes yet — each needs a `### EV-NN` entry here and rows in the CSVs before it can fire.
 - **Triggers:** `events.csv` implements a simplified form of several triggers written above (e.g. EV-11 fires on `season=winter` with no coastal check; EV-14 on `seat_filled=steward&year>=2`, not on a `merchant_family` candidate). The CSV is what runs.
 - **Every seat gets events in its domain**; `venal`, `honest`, `bold`, `vain`, `wrathful`, `cynical`, `pious`, `merchant_family`, `noble_born` traits all have at least one moment to matter.
-- Implemented as `data/story/events.csv` + `data/story/event_choices.csv` with generic effect ops (`EventEffects`) rather than per-event handlers, per the data-driven convention in `CLAUDE.md`; a test asserts all 20 ids resolve to a Scene here.
+- Implemented as `data/story/events.csv` + `data/story/event_choices.csv` with generic effect ops (`EventEffects`) rather than per-event handlers, per the data-driven convention in `CLAUDE.md`; a test asserts all 30 ids resolve to a Scene here.

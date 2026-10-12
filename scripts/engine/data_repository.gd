@@ -208,8 +208,17 @@ var law_order: Array = []
 ## data/realm/law_effects.csv: rows as read, in file order (law_code, value, channel,
 ## target, amount, timing, share, reason).
 var law_effects: Array = []
+## data/realm/development_axes.csv (spec 2026-10-12-development-axes §3): rows
+## as read (axis, tier, min_score, hysteresis, label).
+var development_axes: Array = []
+## data/realm/development_tier_effects.csv (spec §4): rows as read (axis, tier,
+## channel, target, amount, timing, reason); `amount` as `LawEffects.amount_of`.
+var development_tier_effects: Array = []
 ## data/realm/law_words.csv: key -> the laws screen's fixed words.
 var law_words: Dictionary = {}
+## data/realm/honour_bound_options.csv: law_code -> [values] a realm at the
+## `honour_bound` flag may not decree.
+var honour_bound_options: Dictionary = {}
 ## data/army/conduct_words.csv: key -> the news / missive text of foraging and
 ## desertion (`%s` placeholders filled at runtime; names no kingdom).
 var conduct_words: Dictionary = {}
@@ -866,8 +875,17 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(table_path(dir, "law_effects"), ["law_code", "value", "channel", "target", "amount",
 			"timing", "share", "reason"], func(r): law_effects.append(r)):
 		return false
+	if not _load_if_present(table_path(dir, "development_axes"), ["axis", "tier", "min_score", "hysteresis",
+			"label"], func(r): development_axes.append(r)):
+		return false
+	if not _load_if_present(table_path(dir, "development_tier_effects"), ["axis", "tier", "channel", "target",
+			"amount", "timing", "reason"], func(r): development_tier_effects.append(r)):
+		return false
 	if not _load_if_present(table_path(dir, "law_words"), ["key", "text"],
 			func(r): law_words[String(r["key"])] = String(r["text"])):
+		return false
+	if not _load_if_present(table_path(dir, "honour_bound_options"), ["law_code", "value", "notes"],
+			func(r): honour_bound_options[String(r["law_code"])] = honour_bound_options.get(String(r["law_code"]), []) + [String(r["value"])]):
 		return false
 	if not _load_if_present(table_path(dir, "conduct_words"), ["key", "text"],
 			func(r): conduct_words[String(r["key"])] = String(r["text"])):

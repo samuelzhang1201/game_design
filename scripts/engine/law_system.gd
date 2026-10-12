@@ -423,6 +423,8 @@ static func refusal_of(repo: DataRepository, state: GameState, law: String, val:
 	var label := String(d["label"])
 	if not allowed(repo, law, val):
 		return {"text": "%s is not a value of %s" % [val, label], "key": "invalid", "days": 0}
+	if _honour_bound(repo, state, law, val):
+		return {"text": String(repo.law_words.get("refusal_honour_bound", "")), "key": "honour_bound", "days": 0}
 	var resend := _resend(repo, state, law, val)
 	if decreed(repo, state, law) == val and not resend:
 		return {"text": "%s is already %s" % [label, val], "key": "unchanged", "days": 0}
@@ -436,6 +438,14 @@ static func refusal_of(repo: DataRepository, state: GameState, law: String, val:
 	if float(state.metrics.get("treasury", 0.0)) < float(order_gold(repo, law, resend) + n * CourierSystem.fee_gold(repo, CourierSystem.ORDINARY)):
 		return {"text": "The chancery cannot pay the couriers", "key": "gold", "days": 0}
 	return {"text": "", "key": "", "days": 0}
+
+
+## Whether the player's realm, at a tier carrying the `honour_bound` flag, may
+## not decree this option (data/realm/honour_bound_options.csv).
+static func _honour_bound(repo: DataRepository, state: GameState, law: String, val: String) -> bool:
+	if not (repo.honour_bound_options.get(law, []) as Array).has(val):
+		return false
+	return DevelopmentSystem.flag(repo, state, repo.resolve_realm("player_realm"), "honour_bound")
 
 
 ## What a decree would cost and take, for the screen (§5): {couriers, fee

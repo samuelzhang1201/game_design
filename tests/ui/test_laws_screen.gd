@@ -124,9 +124,9 @@ func test_three_pages_show_their_laws() -> void:
 		var shown: Array = screen.rows().filter(func(row: LawRow) -> bool: return row.is_visible_in_tree())
 		var laws: Array = shown.map(func(row: LawRow) -> String: return row.law())
 		assert_eq(laws, LawSystem.codes_on(Game.data, page), page + "'s laws, in file order")
-	assert_eq(LawSystem.codes_on(Game.data, "economy").size(), 3)
-	assert_eq(LawSystem.codes_on(Game.data, "politics").size(), 2)
-	assert_eq(LawSystem.codes_on(Game.data, "military").size(), 13)
+	assert_eq(LawSystem.codes_on(Game.data, "economy").size(), 5)
+	assert_eq(LawSystem.codes_on(Game.data, "politics").size(), 3)
+	assert_eq(LawSystem.codes_on(Game.data, "military").size(), 17)
 	# the military page: a title over the first row of each group, in order
 	var titles: Array = []
 	var last := ""
@@ -140,8 +140,8 @@ func test_three_pages_show_their_laws() -> void:
 		if group != last:
 			titles.append(row.group_title().text)
 			last = group
-	assert_eq(titles, [_word("group_conduct"), _word("group_discipline"), _word("group_chivalry")])
-	# twelve rows and three titles overflow the frame: the page scrolls
+	assert_eq(titles, [_word("group_conduct"), _word("group_discipline"), _word("group_chivalry"), _word("group_arms")])
+	# seventeen rows and four titles overflow the frame: the page scrolls
 	var scroll := screen.get_node("%Scroll") as ScrollContainer
 	await wait_process_frames(2)
 	assert_gt(scroll.get_v_scroll_bar().max_value, scroll.size.y + 1.0, "the military page scrolls")

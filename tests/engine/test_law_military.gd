@@ -515,6 +515,6 @@ func test_the_summary_spells_the_rows() -> void:
 	assert_eq(LawEffects.summary(repo, "plunder", "forbid"), "")
 	assert_eq(LawEffects.summary(repo, "register_prisoners", "on"),
 		"Treasury −2/month per 1,000 men · Legitimacy +0.1/month · A standing order")
-	assert_eq(LawEffects.summary(repo, "truce_days", "on"), "Church +0.3/month · Pace −50‰")
+	assert_eq(LawEffects.summary(repo, "truce_days", "on"), "Church +0.3/month · Pace −50‰ · Chivalry +1/month")
 	assert_eq(LawEffects.summary(repo, "justice_severity", "4"),
 		"Unrest −2 per point, once · Contentment −2 per point, once")

@@ -451,6 +451,7 @@ func load_campaign(path: String = "") -> bool:
 	TownStores.ensure(data, state)  # a save from before the town stores
 	Hazards.ensure(data, state)
 	LawSystem.ensure(data, state)  # a save from before the laws
+	DevelopmentSystem.ensure(data, state)  # a save from before the development axes
 	state_changed.emit()
 	return true
 
