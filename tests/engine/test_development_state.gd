@@ -60,7 +60,13 @@ func test_move_sets_crossing_flag_once_per_crossing() -> void:
 	var f := _foreign()
 	s.development[f]["chivalry"] = 240
 	DevelopmentSystem.move(repo, s, f, "chivalry", 20, "a tourney")
-	assert_true(_flags().has("dev_foreign_%s_chivalry_up_1" % f))
+	var slot := ""
+	for sl: String in ["raider_realm", "neighbor_realm", "empire_realm"]:
+		if repo.resolve_realm(sl) == f:
+			slot = sl
+			break
+	assert_ne(slot, "")
+	assert_true(_flags().has("dev_foreign_%s_chivalry_up_1" % slot), "foreign flags name the slot")
 	assert_eq(s.development_log.size(), 3)
 	assert_eq(String(s.development_log[0]["reason"]), "a school")
 

@@ -7,7 +7,7 @@ func before_each() -> void:
 	data = SuiteData.repo()
 
 func test_pool_inventory() -> void:
-	assert_eq(data.events.size(), 20)
+	assert_eq(data.events.size(), 30)
 	for row in data.events:
 		var id := String(row["event_id"])
 		var n := 0

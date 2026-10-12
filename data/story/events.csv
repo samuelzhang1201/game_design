@@ -19,3 +19,13 @@ ev_17,personal,season=autumn&seat_filled=marshal,2,120,1,template,event_ev_17
 ev_18,realm,treasury<150,4,96,0,template,event_ev_18
 ev_19,personal,year>=3&legitimacy<60,2,999,1,template,event_ev_19
 ev_20,court,season=winter,2,96,0,template,event_ev_20
+ev_21,realm,flag=dev_renaissance_up_1,50,999,1,template,event_ev_21
+ev_22,realm,flag=dev_renaissance_up_2,50,999,1,template,event_ev_22
+ev_23,realm,flag=dev_renaissance_up_3,50,999,1,template,event_ev_23
+ev_24,realm,flag=dev_renaissance_down_1,50,999,1,template,event_ev_24
+ev_25,realm,flag=dev_chivalry_up_1,50,999,1,template,event_ev_25
+ev_26,realm,flag=dev_chivalry_up_2,50,999,1,template,event_ev_26
+ev_27,realm,flag=dev_chivalry_up_3,50,999,1,template,event_ev_27
+ev_28,realm,flag=dev_chivalry_down_1,50,999,1,template,event_ev_28
+ev_29,realm,flag=dev_foreign_neighbor_realm_renaissance_up_1,50,999,1,template,event_ev_29
+ev_30,realm,flag=dev_foreign_neighbor_realm_chivalry_up_1,50,999,1,template,event_ev_30

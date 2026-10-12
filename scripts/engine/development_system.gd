@@ -101,16 +101,26 @@ static func _flag(repo: DataRepository, state: GameState, realm: String, axis: S
 		from_tier: int, to_tier: int) -> void:
 	var flags: Array = state.event_state.get("flags", [])
 	var up := to_tier > from_tier
-	var prefix := "dev_%s" % axis
-	if realm != repo.resolve_realm("player_realm"):
-		prefix = "dev_foreign_%s_%s" % [realm, axis]
+	var prefixes: Array = []
+	if realm == repo.resolve_realm("player_realm"):
+		prefixes.append("dev_%s" % axis)
+	else:
+		# A foreign crossing is named by the SLOT the realm fills (authored
+		# triggers name slots, never a pack's kingdom codes); a realm in two
+		# slots raises both flags.
+		for slot: String in SLOTS:
+			if slot != "player_realm" and repo.resolve_realm(slot) == realm:
+				prefixes.append("dev_foreign_%s_%s" % [slot, axis])
+		if prefixes.is_empty():
+			prefixes.append("dev_foreign_%s_%s" % [realm, axis])
 	# Every tier crossed gets its flag (a score may jump several tiers).
-	var n := from_tier
-	while n != to_tier:
-		n += 1 if up else -1
-		var name := "%s_%s_%d" % [prefix, "up" if up else "down", n if up else n + 1]
-		if not flags.has(name):
-			flags.append(name)
+	for prefix: String in prefixes:
+		var n := from_tier
+		while n != to_tier:
+			n += 1 if up else -1
+			var name := "%s_%s_%d" % [prefix, "up" if up else "down", n if up else n + 1]
+			if not flags.has(name):
+				flags.append(name)
 	state.event_state["flags"] = flags
 
 
