@@ -31,7 +31,8 @@ start_civil_months,3,ECONOMY: the civil stock at the start = the crown's monthly
 dev_start_renaissance,100,DEVELOPMENT AXES: the realm's Renaissance score at the start (0-1000)
 dev_start_chivalry,100,DEVELOPMENT AXES: the realm's Chivalry score at the start (0-1000)
 dev_decay_per_month,1,DEVELOPMENT AXES: points each score loses a month toward its dev_start_<axis>
-dev_ai_target_per_pref,5,DEVELOPMENT AXES: a foreign ruler's target score per point of trait preference
-dev_ai_step,5,DEVELOPMENT AXES: points a foreign ruler's score moves toward its target each month
+dev_ai_target_per_pref,15,DEVELOPMENT AXES: a foreign ruler's target score per point of trait preference
+dev_ai_step,15,DEVELOPMENT AXES: points a foreign ruler's score moves toward its target each month
 dev_decree_opinion_per_100,6,DEVELOPMENT AXES: opinion a minister gains or loses per 100 points of a decree's axis shift
 dev_cavalry_upkeep_per_head,2,DEVELOPMENT AXES: gold a month per cavalry head before the Chivalry upkeep permille
+dev_log_keep,600,DEVELOPMENT AXES: the newest development_log entries kept (older ones are dropped)

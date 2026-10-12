@@ -94,6 +94,9 @@ static func move(repo: DataRepository, state: GameState, realm: String, axis: St
 	var entry := result.duplicate()
 	entry["tick"] = state.tick
 	state.development_log.append(entry)
+	var keep := maxi(int(repo.bal("dev_log_keep")), 1)
+	if state.development_log.size() > keep:
+		state.development_log = state.development_log.slice(state.development_log.size() - keep)
 	return result
 
 

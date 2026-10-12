@@ -5,7 +5,7 @@ Spec: `docs/superpowers/specs/2026-10-12-development-axes-design.md`. Every real
 ## State
 
 - `GameState.development[realm]` holds, per axis, a whole score (0..`SCORE_MAX`) and the CONFIRMED tier (`tier_<axis>`). `DevelopmentSystem.seed` fills missing entries (start from `dev_start_<axis>`, tier 0); `ensure` does it for an old save.
-- `GameState.development_log` records every move with its reason. A score changes only through `DevelopmentSystem.move(repo, state, realm, axis, delta, reason)`, clamped to the range; a move of 0 returns `{}` and logs nothing.
+- `GameState.development_log` records every move with its reason, keeping the newest `dev_log_keep` entries. A score changes only through `DevelopmentSystem.move(repo, state, realm, axis, delta, reason)`, clamped to the range; a move of 0 returns `{}` and logs nothing.
 - Realms are keyed by kingdom code. Authored text and flags name the SLOT, never a code.
 
 ## Tiers
@@ -16,7 +16,7 @@ Spec: `docs/superpowers/specs/2026-10-12-development-axes-design.md`. Every real
 
 `TickEngine.advance` runs, once a month: law drift, then decay, then the foreign realms' steps (all in `settle_month`), then `month_lines` (the tier rows' monthly metric lines and cavalry upkeep, so a tier reached this month pays this month).
 
-- **Law drift** (`law_drift`): a `law_effects.csv` row on channel `dev_<axis>` (monthly) moves the player's score by its amount while that value is in force. Only a law the crown has DECREED counts (`decree_id` above 0); an undecreed default drifts nothing. Renaissance is fed by the laws `patronage`, `guild_charter`, `arsenal_decree` and `tolerance`; Chivalry by `quarter`, `ransom`, `truce_days`, `envoys`, `knightly_orders`, `tournaments` and `heavy_levy`.
+- **Law drift** (`law_drift`): a `law_effects.csv` row on channel `dev_<axis>` (monthly) moves the player's score by its amount while that value is the DECREED one (not the delivered one). Only a law the crown has DECREED counts (`decree_id` above 0); an undecreed default drifts nothing. Renaissance is fed by the laws `patronage`, `guild_charter`, `arsenal_decree` and `tolerance`; Chivalry by `quarter`, `ransom`, `truce_days`, `envoys`, `knightly_orders`, `tournaments` and `heavy_levy`.
 - **Decay** (`decay_line`): after the drift, each score moves toward `dev_start_<axis>` (not toward 0) by at most `dev_decay_per_month`, never past the start.
 - **Foreign steps** (`ai_lines`): per realm in sorted code order, then axis order, a realm with a ruler (`ruler_of`) steps toward clamp(`dev_start_<axis>` + preference x `dev_ai_target_per_pref`) by at most `dev_ai_step`. `ruler_of` is the lowest-id `crowned_head` whose `kingdom` is the realm's code OR a slot that resolves to it (the roster stores slots). A realm with no ruler does not move. The player's realm has no ruler and never steps.
 - `settle_month` returns the player's and the foreign lines alike; only the player's are filed as the one `DEVELOPMENT` outcome in `recent_outcomes`.
@@ -29,11 +29,11 @@ The numeric channels list each tier's FULL modifier (rows of other tiers do not 
 - `cavalry_upkeep_permille` -> `month_lines`: a treasury line, whole gold, one rounding, scaled by `dev_cavalry_upkeep_per_head` and the player's cavalry heads.
 - Monthly metric channels (`treasury`, `church_opinion`, `peasant_contentment`, `unrest` ...) -> `month_lines` -> the ledger with the row's reason.
 - `adopt_permille` and `unlock` -> nothing reads them yet; they are left for the equipment system (`unlocked` lists the unlock targets reached).
-- `flag` (`honour_bound`) -> `DevelopmentSystem.flag` -> `LawSystem.refusal_of`: at a tier carrying the flag, a decree of `ransom` = `execute` or `quarter` = `refuse` is refused (key `honour_bound`, words `refusal_honour_bound` in `law_words.csv`). No other option is bound.
+- `flag` (`honour_bound`) -> `DevelopmentSystem.flag` -> `LawSystem.refusal_of`: at a tier carrying the flag, a decree of `ransom` = `execute` or `quarter` = `refuse` is refused (key `honour_bound`, words `refusal_honour_bound` in `law_words.csv`). No other option is bound; the options are the rows of `honour_bound_options.csv`. A re-send of a bound decree is refused too.
 
 ## Preference (hidden)
 
-A ruler's lean is the sum of his traits' `dev_<axis>` columns in `traits.csv`, clamped to -100..100, DERIVED on every read (`preference`), never stored and never shown. It sets a foreign target and a minister's reaction.
+A ruler's lean is the sum of his traits' `dev_<axis>` columns in `data/council/character_traits.csv`, clamped to -100..100, DERIVED on every read (`preference`), never stored and never shown. It sets a foreign target and a minister's reaction.
 
 ## Decree opinions
 
@@ -50,4 +50,4 @@ A jump over several tiers sets a flag for each tier crossed.
 
 ## Events
 
-`ev_21`..`ev_30` (`data/story/events.csv`, scenes in `RANDOM_EVENTS.md`) trigger on those flags: ev_21..ev_24 Renaissance up 1..3 and down 1, ev_25..ev_28 Chivalry the same, ev_29 and ev_30 the neighbour crossing into tier 1 of each axis. All are authored `template` prose; nothing is model-written.
+`ev_21`..`ev_30` (`data/story/events.csv`, scenes in `RANDOM_EVENTS.md`) trigger on those flags: ev_21..ev_24 Renaissance up 1..3 and down 1, ev_25..ev_28 Chivalry the same, ev_29 the neighbour slot crossing into Renaissance tier 1 and ev_30 the raider slot crossing into Chivalry tier 1. All are authored `template` prose; nothing is model-written.

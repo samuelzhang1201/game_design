@@ -1,7 +1,7 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 ## Foreign realms follow their ruler (spec 2026-10-12-development-axes §6).
-## Hand values: start 100, target = 100 + preference x 5, step 5 a month.
+## Hand values: start 100, target = 100 + preference x 15, step 15 a month.
 
 var repo: DataRepository
 var s: GameState
@@ -40,10 +40,10 @@ func test_ai_steps_toward_target() -> void:
 	_lean(80, 0)
 	s.development[realm]["renaissance"] = 100
 	var l := _line(DevelopmentSystem.ai_lines(repo, s), "renaissance")
-	assert_eq(int(l["delta"]), 5, "target 500, step 5")
-	s.development[realm]["renaissance"] = 497
+	assert_eq(int(l["delta"]), 15, "target 1000 (clamped), step 15")
+	s.development[realm]["renaissance"] = 997
 	l = _line(DevelopmentSystem.ai_lines(repo, s), "renaissance")
-	assert_eq(int(l["delta"]), 3, "497 -> 500, not 502")
+	assert_eq(int(l["delta"]), 3, "997 -> 1000, not 1012")
 
 
 func test_step_follows_the_balance_key() -> void:
@@ -56,7 +56,7 @@ func test_step_follows_the_balance_key() -> void:
 func test_negative_preference_steps_down() -> void:
 	_lean(-20, 0)
 	var l := _line(DevelopmentSystem.ai_lines(repo, s), "renaissance")
-	assert_eq(int(l["delta"]), -5, "target 0, from 100 one step down")
+	assert_eq(int(l["delta"]), -15, "target 0, from 100 one step down")
 	s.development[realm]["renaissance"] = 2
 	l = _line(DevelopmentSystem.ai_lines(repo, s), "renaissance")
 	assert_eq(int(l["delta"]), -2)

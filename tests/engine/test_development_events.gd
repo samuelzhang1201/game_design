@@ -76,7 +76,7 @@ func test_every_dev_event_resolves_in_random_events_md() -> void:
 func test_each_event_has_a_reachable_trigger_flag() -> void:
 	# Drive a realm up through every tier and back down, and collect the flags.
 	var made := {}
-	for realm: String in [player, neighbor]:
+	for realm: String in [player, neighbor, repo.resolve_realm("raider_realm")]:
 		for axis: String in DevelopmentSystem.AXES:
 			s.event_state["flags"] = []
 			DevelopmentSystem.move(repo, s, realm, axis, 1000, "up")
@@ -142,13 +142,17 @@ func test_monthly_foreign_step_raises_the_flag_and_the_event() -> void:
 	assert_not_null(ruler)
 	repo.traits["t_lean"] = {"trait_code": "t_lean", "dev_renaissance": 80, "dev_chivalry": 80}
 	ruler.traits = ["crowned_head", "t_lean"]
-	for axis: String in DevelopmentSystem.AXES:
-		s.development[neighbor][axis] = 248
+	var raider := repo.resolve_realm("raider_realm")
+	var warchief := DevelopmentSystem.ruler_of(repo, s, raider)
+	assert_not_null(warchief)
+	warchief.traits = ["crowned_head", "t_lean"]
+	s.development[neighbor]["renaissance"] = 248
+	s.development[raider]["chivalry"] = 248
 	DevelopmentSystem.settle_month(repo, s)
-	assert_eq(DevelopmentSystem.score(s, neighbor, "renaissance"), 253, "one step of dev_ai_step")
+	assert_eq(DevelopmentSystem.score(s, neighbor, "renaissance"), 263, "one step of dev_ai_step (15)")
 	assert_eq(DevelopmentSystem.tier(s, neighbor, "renaissance"), 1)
 	assert_true(_flags().has("dev_foreign_neighbor_realm_renaissance_up_1"))
-	assert_true(_flags().has("dev_foreign_neighbor_realm_chivalry_up_1"))
+	assert_true(_flags().has("dev_foreign_raider_realm_chivalry_up_1"))
 	var fired := [_roll(), _roll()]
 	fired.sort()
 	assert_eq(fired, ["ev_29", "ev_30"])
@@ -178,3 +182,24 @@ func test_no_prose_names_a_kingdom() -> void:
 			for n: String in names:
 				if n != "":
 					assert_eq(authored.to_lower().find(n), -1, "%s names %s" % [t["key"], n])
+
+
+## The shipped roster, no injected traits: twelve real months lift the
+## neighbour's Renaissance and the raider's Chivalry to tier 1. Hand values:
+## start 100, step dev_ai_step a month, so min(100 + 12 x step, target).
+func test_shipped_roster_reaches_tier_one_in_a_year() -> void:
+	var raider := repo.resolve_realm("raider_realm")
+	var step := int(repo.bal("dev_ai_step"))
+	var per := int(repo.bal("dev_ai_target_per_pref"))
+	var eng := TickEngine.new(repo)
+	for i in 12:
+		eng.advance(s)
+	var n_pref := DevelopmentSystem.preference(repo, DevelopmentSystem.ruler_of(repo, s, neighbor), "renaissance")
+	var r_pref := DevelopmentSystem.preference(repo, DevelopmentSystem.ruler_of(repo, s, raider), "chivalry")
+	assert_eq(DevelopmentSystem.score(s, neighbor, "renaissance"), mini(100 + 12 * step, 100 + n_pref * per))
+	assert_eq(DevelopmentSystem.score(s, raider, "chivalry"), mini(100 + 12 * step, 100 + r_pref * per))
+	assert_gte(DevelopmentSystem.score(s, neighbor, "renaissance"), 250)
+	assert_gte(DevelopmentSystem.score(s, raider, "chivalry"), 250)
+	assert_true(_flags().has("dev_foreign_neighbor_realm_renaissance_up_1"))
+	assert_true(_flags().has("dev_foreign_raider_realm_chivalry_up_1"))
+

@@ -65,3 +65,17 @@ func test_other_laws_unaffected() -> void:
 	var now := int(LawSystem.decreed(repo, s, "tax_rate"))
 	assert_eq(actions.validate(_law("tax_rate", str(now + 1 if now < 10 else now - 1)), s), "")
 	assert_eq(actions.validate(_law("tolerance", "edict"), s), "")
+
+
+func test_resend_of_a_bound_decree_is_refused() -> void:
+	_tier(1)
+	actions.execute(_law("ransom", "execute"), s)
+	assert_eq(LawSystem.decreed(repo, s, "ransom"), "execute")
+	_tier(2)
+	assert_eq(actions.validate(_law("ransom", "execute"), s), _word())
+
+
+func test_bound_options_come_from_data() -> void:
+	assert_eq(repo.honour_bound_options.get("ransom"), ["execute"])
+	assert_eq(repo.honour_bound_options.get("quarter"), ["refuse"])
+

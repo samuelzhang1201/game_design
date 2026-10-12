@@ -423,11 +423,11 @@ static func refusal_of(repo: DataRepository, state: GameState, law: String, val:
 	var label := String(d["label"])
 	if not allowed(repo, law, val):
 		return {"text": "%s is not a value of %s" % [val, label], "key": "invalid", "days": 0}
+	if _honour_bound(repo, state, law, val):
+		return {"text": String(repo.law_words.get("refusal_honour_bound", "")), "key": "honour_bound", "days": 0}
 	var resend := _resend(repo, state, law, val)
 	if decreed(repo, state, law) == val and not resend:
 		return {"text": "%s is already %s" % [label, val], "key": "unchanged", "days": 0}
-	if _honour_bound(repo, state, law, val):
-		return {"text": String(repo.law_words.get("refusal_honour_bound", "Honour forbids it.")), "key": "honour_bound", "days": 0}
 	var until := int(state.law_cooldown.get(law, 0))
 	if not resend and until > state.tick:
 		var days := (until - state.tick - 1) * Calendar.DAYS_PER_TICK + Calendar.DAYS_PER_TICK - state.day + 1
@@ -441,13 +441,9 @@ static func refusal_of(repo: DataRepository, state: GameState, law: String, val:
 
 
 ## Whether the player's realm, at a tier carrying the `honour_bound` flag, may
-## not decree this option: the two ways of denying a beaten foe mercy
-## (HONOUR_BOUND_OPTIONS, law -> value).
-const HONOUR_BOUND_OPTIONS := {"ransom": "execute", "quarter": "refuse"}
-
-
+## not decree this option (data/realm/honour_bound_options.csv).
 static func _honour_bound(repo: DataRepository, state: GameState, law: String, val: String) -> bool:
-	if String(HONOUR_BOUND_OPTIONS.get(law, "")) != val:
+	if not (repo.honour_bound_options.get(law, []) as Array).has(val):
 		return false
 	return DevelopmentSystem.flag(repo, state, repo.resolve_realm("player_realm"), "honour_bound")
 

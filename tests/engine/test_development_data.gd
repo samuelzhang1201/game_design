@@ -59,4 +59,4 @@ func test_balance_keys_exist() -> void:
 	for k in BALANCE_KEYS:
 		assert_true(repo.balance.has(k), k)
 	assert_eq(repo.bal("dev_start_renaissance"), 100.0)
-	assert_eq(repo.bal("dev_ai_step"), 5.0)
+	assert_eq(repo.bal("dev_ai_step"), 15.0)

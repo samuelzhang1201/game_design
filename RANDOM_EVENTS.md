@@ -177,9 +177,9 @@ Threshold events for the development axes (`docs/superpowers/specs/2026-10-12-de
 **Trigger:** {neighbor_realm} crosses into Renaissance tier 1. weight 50. **Scene:** An embassy from {neighbor_realm} arrives with a train of carts and, among the carts, a printing-press wrapped in oilcloth, which they present with every courtesy as a gift between friends. The envoy speaks well of their new schools. The Spymaster, at your elbow, murmurs that he would like to know who taught the envoy to speak so well.
 **Choices:** ① Accept the gift and the friendship. ② Accept it, and take it apart. ③ Thank them and send it back.
 
-### EV-30 · A Border Incident at the Joust — `realm · template · once`
-**Trigger:** {neighbor_realm} crosses into Chivalry tier 1. weight 50. **Scene:** A tourney at the court of {neighbor_realm} ends badly: one of your knights, a guest, is unhorsed and calls the blow foul, and the host's champion calls him a liar. Word of it has crossed the border faster than the knights have. A marriage is hinted at in the same letter, as a way of making it all graceful.
-**Choices:** ① Let your knight demand satisfaction. ② Answer with a marriage offer. ③ Recall your knight quietly.
+### EV-30 · A Herald from the Warchief — `realm · template · once`
+**Trigger:** {raider_realm} crosses into Chivalry tier 1. weight 50. **Scene:** A herald in a borrowed tabard rides up to your border post with a challenge from the warchief of {raider_realm}, who has taken knightly vows and wishes the world told so. He names a field, a day and a ransom for a captive he has no use for. The Marshal says the man means it. The Steward asks who taught a raider to write so politely.
+**Choices:** ① Meet the challenge at the border. ② Offer a ransom for the captive. ③ Send the herald away unanswered.
 
 ---
 

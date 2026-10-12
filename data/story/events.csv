@@ -28,4 +28,4 @@ ev_26,realm,flag=dev_chivalry_up_2,50,999,1,template,event_ev_26
 ev_27,realm,flag=dev_chivalry_up_3,50,999,1,template,event_ev_27
 ev_28,realm,flag=dev_chivalry_down_1,50,999,1,template,event_ev_28
 ev_29,realm,flag=dev_foreign_neighbor_realm_renaissance_up_1,50,999,1,template,event_ev_29
-ev_30,realm,flag=dev_foreign_neighbor_realm_chivalry_up_1,50,999,1,template,event_ev_30
+ev_30,realm,flag=dev_foreign_raider_realm_chivalry_up_1,50,999,1,template,event_ev_30

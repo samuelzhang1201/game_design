@@ -85,3 +85,14 @@ func test_old_save_without_development_loads_seeded() -> void:
 	assert_true(back.development.is_empty())
 	DevelopmentSystem.ensure(repo, back)
 	assert_eq(back.development, s.development)
+
+
+func test_development_log_is_capped_and_keeps_the_newest() -> void:
+	var keep := int(repo.bal("dev_log_keep"))
+	var realm := repo.resolve_realm("player_realm")
+	for i in keep + 25:
+		s.tick = i
+		DevelopmentSystem.move(repo, s, realm, "chivalry", 1 if i % 2 == 0 else -1, "test %d" % i)
+	assert_eq(s.development_log.size(), keep)
+	assert_eq(int(s.development_log[keep - 1]["tick"]), keep + 24, "the newest is kept")
+	assert_eq(int(s.development_log[0]["tick"]), 25, "the oldest 25 were dropped")
