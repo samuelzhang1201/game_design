@@ -161,7 +161,7 @@ func _place(code: String, piece: Dictionary) -> void:
 		piece["seat_key"] = [xz, yaw, k]
 		Map3DUnitRig.seat(repo, ctx.height_at, piece, xz, yaw, k)
 	var ground: Vector3 = piece["ground"]
-	Map3DUnitGlow.place(repo, piece, _selected.has(code), float(piece["lift"]), k)
+	Map3DUnitGlow.place(repo, ctx.height_at, piece, _selected.has(code), k)
 	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, float(piece["height_m"]) * k,
 		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())
 	_camps.sync(self, ctx, code, piece, xz, yaw, k, camp_back_m)

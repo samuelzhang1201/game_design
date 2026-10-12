@@ -8,7 +8,7 @@ extends RefCounted
 ## (+ `unit_select_glow.gdshader`); its size is balance map3d_unit_glow_ratio ×
 ## the formation's half EXTENT, an ellipse (a line of four is long and thin),
 ## so it stays inside the footprint the seat raised the piece clear of and
-## never cuts into a slope. The band is narrow: `map3d_unit_glow_inner` to
+## never cuts into a slope (the grid is draped on the heightmap, see `place`). The band is narrow: `map3d_unit_glow_inner` to
 ## `map3d_unit_glow_peak`, set per piece as instance uniforms.
 
 const MATERIAL := preload("res://scenes/map3d/materials/unit_select_glow.tres")
@@ -37,10 +37,12 @@ static func node_of(repo: DataRepository, piece: Dictionary) -> MeshInstance3D:
 	return glow
 
 
-## Shown or hidden, and laid on the seat: `drop_m` is how far (world metres)
-## the piece's origin stands above its seat, `k` its scale; the quad sits
-## map3d_unit_glow_lift of the piece's height over the seat.
-static func place(repo: DataRepository, piece: Dictionary, on: bool, drop_m: float, k: float) -> void:
+## Shown or hidden, and DRAPED on the ground: the quad's grid is laid over the
+## heightmap under the piece (`height_at`, world XZ -> metres), so on a slope
+## the ring lies on the slope's own face, never a flat plane floating over its
+## low side. Each point sits map3d_unit_glow_lift of the piece's height over the
+## ground; `k` is the piece's scale. Re-draped only when the piece is re-seated.
+static func place(repo: DataRepository, height_at: Callable, piece: Dictionary, on: bool, k: float) -> void:
 	var host: Node3D = piece["node"]
 	var glow := host.get_node_or_null(NAME) as MeshInstance3D
 	if not on:
@@ -48,8 +50,48 @@ static func place(repo: DataRepository, piece: Dictionary, on: bool, drop_m: flo
 			glow.visible = false
 		return
 	glow = node_of(repo, piece)
-	glow.position.y = -drop_m / maxf(k, 0.0001) + float(piece["height_m"]) * repo.bal("map3d_unit_glow_lift")
+	var key := [piece.get("seat_key", []), host.transform]
+	if not glow.visible or piece.get("glow_key", []) != key:
+		piece["glow_key"] = key
+		glow.position = Vector3.ZERO
+		glow.mesh = draped(repo, height_at, host.transform, piece["extent"] * repo.bal("map3d_unit_glow_ratio"),
+			float(piece["height_m"]) * k * repo.bal("map3d_unit_glow_lift"))
 	glow.visible = true
+
+
+## The glow's mesh in the piece's local frame: a GRID x GRID lattice over the
+## quad (local half extent `half`), each vertex dropped onto the ground under
+## its world position plus `lift_m`; UV 0..1 across the quad (the shader's).
+static func draped(repo: DataRepository, height_at: Callable, host_xf: Transform3D, half: Vector2,
+		lift_m: float) -> ArrayMesh:
+	var n := int(repo.bal("map3d_unit_glow_grid"))
+	var inv := host_xf.affine_inverse()
+	var verts := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var normals := PackedVector3Array()
+	var idx := PackedInt32Array()
+	for j in n + 1:
+		for i in n + 1:
+			var u := float(i) / n
+			var v := float(j) / n
+			var local := Vector3((u * 2.0 - 1.0) * half.x, 0.0, (v * 2.0 - 1.0) * half.y)
+			var w := host_xf * local
+			verts.append(inv * Vector3(w.x, float(height_at.call(Vector2(w.x, w.z))) + lift_m, w.z))
+			uvs.append(Vector2(u, v))
+			normals.append(Vector3.UP)
+	for j in n:
+		for i in n:
+			var a := j * (n + 1) + i
+			idx.append_array([a, a + 1, a + n + 1, a + 1, a + n + 2, a + n + 1])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
 
 
 ## Whether the piece's glow shows (tests).
