@@ -17,7 +17,7 @@ const TEX := "res://assets/3D/terrain/textures"
 ## The pack to build (build_world.gd's --map); "" is data/world/maps.csv's default.
 static var map_id := ""
 
-# [key, metres per tile repeat, detiling rotation]; order is bake_world.py's
+# [key, metres per tile repeat, detiling rotation, detiling shift]; order is bake_world.py's
 # texture ids. No per-texture tint: bake_world.py's colour map carries every
 # colour, so the far view and the near view agree.
 const TEXTURES := [
@@ -25,18 +25,18 @@ const TEXTURES := [
 	# tools/map3d/pack_aerial.py) at 200 m: its blocks against the houses and
 	# fields — at 260 m the critic read them 2-3x too big, and the old crag's
 	# 533 m only suited that picture's own larger forms
-	["aerial_cliff", 200.0, 0.1],
-	["aerial_meadow", 120.0, 0.16],   # look route 2026-09-30: aerial pictures, tools/map3d/pack_aerial.py
-	["dry_decay_leaves", 160.0, 0.2],
-	["dirt_floor", 180.0, 0.16],
+	["aerial_cliff", 200.0, 0.1, 0.0],
+	["aerial_meadow", 120.0, 0.16, 0.5],   # look route 2026-09-30: aerial pictures, tools/map3d/pack_aerial.py
+	["dry_decay_leaves", 160.0, 0.2, 0.5],
+	["dirt_floor", 180.0, 0.16, 0.5],
 	# the upland (owner 2026-10-06: T-74, scree patches tens of metres across)
 	# at 350 m: at 200 m its patches read as specks and their repeat showed
-	["aerial_upland", 350.0, 0.12],
-	["excavated_soil_wall", 240.0, 0.1],
-	["sand_03", 120.0, 0.2],
-	["aerial_canopy", 170.0, 0.22],
-	["aerial_snow", 180.0, 0.14],
-	["aerial_crop", 140.0, 0.18],  # the crops (owner 2026-10-01: open fields): a pale straw ground the bake's colour map darkens to gold, green or tan — tools/map3d/pack_aerial.py  # the snow line — an aerial snow picture since 2026-09-30 (山顶雪帽, tools/map3d/pack_aerial.py); was (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
+	["aerial_upland", 350.0, 0.12, 0.5],
+	["excavated_soil_wall", 240.0, 0.1, 0.0],
+	["sand_03", 120.0, 0.2, 0.0],
+	["aerial_canopy", 170.0, 0.22, 0.5],
+	["aerial_snow", 180.0, 0.14, 0.0],
+	["aerial_crop", 140.0, 0.18, 0.5],  # the crops (owner 2026-10-01: open fields): a pale straw ground the bake's colour map darkens to gold, green or tan — tools/map3d/pack_aerial.py  # the snow line — an aerial snow picture since 2026-09-30 (山顶雪帽, tools/map3d/pack_aerial.py); was (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
 ]
 
 # Terrain3D material: demo/Demo.tscn's parameters, every one of them — a
@@ -125,6 +125,9 @@ static func apply_tiles(textures: Array) -> void:
 		var ta: Terrain3DTextureAsset = textures[t]
 		ta.uv_scale = 1.0 / float(TEXTURES[t][1])
 		ta.detiling_rotation = TEXTURES[t][2]
+		# a random offset per detiling cell (spec 2026-10-12-ground-detail-textures,
+		# Phase 0): the same picture never lines up with its neighbour
+		ta.detiling_shift = float(TEXTURES[t][3]) if TEXTURES[t].size() > 3 else 0.0
 
 
 ## Step 2, on the Terrain3D node of a scene IN THE TREE (its data only
