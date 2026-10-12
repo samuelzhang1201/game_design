@@ -108,6 +108,19 @@ python3 assets/imagegen/generate.py --build-csv                      # after edi
 - `E-` / `P-` rows are fragments (expression / pose), not assets; the script skips them.
 - Characters use the library's `K-` entries (one per cast member, with a `**外貌**` looks line); `C-` entries are generic archetypes.
 
+## Two machines (`split_batch.py`)
+
+A batch runs on the Mac and the Windows desktop at once, split by image count
+20:80 (owner 2026-10-12). Every id x seed still gets both Z-Image and Qwen;
+Z-Image runs on the desktop only, so the Mac's 20% are Qwen jobs (Q6_K +
+Lightning) spread over the ids, and the desktop's Qwen jobs use its fp8 2-step
+build. `--dry-run` prints the plan; a run writes `out/split/<tag>/` with
+`plan.json`, a log per machine, `summary.md` (images and s/image per machine
+and preset) and `sheet.png` (one row per id, each picture labelled model ·
+machine · seed) for the joint comparison. `--mac-share` changes the split,
+`ZIMAGE_URL` the desktop's address; other flags pass through to generate.py.
+Edits stay on the Mac (Qwen-Image-Edit-2511 is installed there only).
+
 ## Install chapters (`install_map_art.py <chapter>`)
 
 | Chapter | From → to |
