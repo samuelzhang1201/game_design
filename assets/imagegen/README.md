@@ -43,7 +43,7 @@ first is edited, the others are references, e.g. a costume or a material) and
 follows the instruction and the row's canvas sets the size; without, the
 output keeps the first picture's aspect at about one megapixel (or takes
 `--canvas`) and lands in `out/edits/`. An edit's name is `<first picture>_<--tag or the instruction's first words>_<6-char hash of instruction + pictures>_<model>_s<seed>`, so edits never overwrite each other. Uses: a 3D structure view from the
-picked design (instead of keeping the design by words), a character's bust
+picked design (a unit figure's front / side / back T-pose sheet and its separate gear: `tools/guide/unit_reference_sheets.md`) (instead of keeping the design by words), a character's bust
 from its picked full figure, a local fix (a cloak's colour, a missing boot)
 without losing the pick, and variants of one piece of art. Download with
 `bash assets/imagegen/download_models.sh qwenedit` (~17 GB).
