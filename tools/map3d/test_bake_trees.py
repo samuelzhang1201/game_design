@@ -161,3 +161,18 @@ def test_waiting_species_are_never_planted():
     rows, _ = _load()
     enabled = {s["kind"] for s in bake_trees.load_species() if s["enabled"]}
     assert set(np.unique(rows[:, 5]).astype(int)) <= enabled
+
+
+def test_lone_clumps_gather_into_patches():
+    """lone_chance (critic 2026-10-13): lone clumps on open land keep to
+    parkland patches of a slow noise, lone_gain times as dense there, the
+    land between them left open; lone_gain 0 is the old even scatter."""
+    rules = {"lone_chance": 0.04, "lone_gain": 2.5, "lone_wave_m": 700.0,
+             "lone_cut": 0.55, "lone_soft": 0.15}
+    open_land = np.ones((120, 160), np.float32)
+    c = bake_trees.lone_chance(rules, open_land, 160, 120, 20.0)
+    assert c.max() <= 0.04 * 2.5 + 1e-6
+    assert (c == 0).mean() > 0.3, "open pasture between the patches"
+    assert (c > 0.09).any(), "dense parkland in the patches"
+    even = bake_trees.lone_chance(dict(rules, lone_gain=0.0), open_land, 160, 120, 20.0)
+    assert np.allclose(even, 0.04)
