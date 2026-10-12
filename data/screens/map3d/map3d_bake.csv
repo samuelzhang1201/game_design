@@ -174,6 +174,12 @@ pier_search_fallback_m,2000,"piers: a port with no low shore (pier_max_shore_m) 
 pier_step_m,10,piers: the march step along a bearing
 pier_bearing_step_deg,5,piers: the bearings tried
 pier_max_shore_m,6,piers: the shore's ground at most this far over the sea (a pier never runs off a cliff)
+pier_root_scan_m,2,"piers (visual review 2026-10-12: horsfield's pier floated in the strait, malton's deck ran into the slope): the fine step a pier's landward end is found by — the drawn waterline walked landward from the masks' shore, then the end walked seaward off a bank"
+pier_root_back_m,10,"piers: the ground this far behind a pier's landward end, and under its whole deck, must stand no higher than its deck (map3d_pier_deck_m) plus pier_root_rise_m — else the end walks seaward"
+pier_root_rise_m,1.0,piers: how far the ground under and behind a pier's landward end may stand over its deck (the bank it steps onto)
+pier_root_out_max_m,20,"piers: the furthest a pier's landward end may walk out along its deck past the waterline (beyond its pier_root_m) to clear a steep bank or reach open water; past it the bearing is passed over (a root never floats)"
+pier_side_clear_m,16,"piers (visual review 2026-10-12): the ground this far either side of a pier's outer half must lie under the sea, as must the ground under that half"
+pier_max_skew_deg,35,"piers (visual review 2026-10-12: walbover's and cambrid_2's decks ran along the beach): a pier whose bearing is more than this many degrees off the ground's fall at its landward end (probed pier_root_back_m either side) is turned down the fall, its root kept where the bearing found it"
 pier_cliff_landings,0,"cliff landings (owner 2026-10-12, R9: 不要使用带有悬崖高的码头，全部使用普通版码头): 1 = a cliff port may take pier_cliff / pier_stair (pier_cliff_*, pier_stair_*); 0 = never — every port takes the timber pier, a cliff port lowered onto a plain landing first (port_plain_*). The cliff models stay in the repo unused"
 port_plain_rise_m,3,"3D bake PORT PLAINS (owner 2026-10-12, R9 and R18: 所有在悬崖边的定居点的地图数据改为非悬崖，平原即可 — every cliff-edge port on plain ground, inland steep towns untouched): a port whose harbour bearing rises over pier_max_shore_m, or whose built ground stands (median) pier_stair_town_rise_m or more over the sea, has that ground and a corridor to its nearest shore cut down to sea_y_m + this (bake_houses.port_plain, beside level_pad) — cut only, never a fill, never the sea or a river's channel and banks; bake_world greens the cut face (cliff, rocky and soil weight moved to grass)"
 port_plain_blend_m,120,"port plains: the cut ground eases back to the land round it over at least this many metres — more for a deep cut (1.5 x cut / port_plain_max_grade), the rim's cut never deeper than the plain's, so a hill behind the town comes down with it, never sliced"
@@ -204,7 +210,7 @@ ship_count_city,2,ships: at a city's port
 ship_count_capital,2,ships: at a capital's port
 ship_gap_m,1.5,ships: water between a moored hull and its quay's face (owner 2026-10-04: 船要规整的贴着码头停留)
 ship_step_m,8,ships: how far a berth slides along its quay (or an anchored ship out to sea) when its hull is not all water
-ship_tries,4,ships: at most this many steps out before a ship is left out
+ship_tries,5,"ships: at most this many steps out before a ship is left out (5 since 2026-10-12: a pier's landward end stands at the drawn waterline, so its berths reach one step less far out)"
 ship_anchor_m,30,ships: at a port with no pier the ships ride this far off its nearest open shore
 ship_margin_m,3,ships: a hull's water is tested this much wider all round (the bake's water is a 20 m vertex)
 relief_ao_dirs,12,"3D bake (visual review 2026-10-05, bake_relief_ao.py): the sky occlusion looks along this many directions round each 40 m texel"

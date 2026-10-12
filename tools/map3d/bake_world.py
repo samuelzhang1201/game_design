@@ -959,7 +959,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
             roads = [[(x - ox, z - oz) for x, z in line] for line in road_lines
                      if any(abs(x - ox) < near and abs(z - oz) < near for x, z in line)]
             laid = bake_houses.harbour(b, rows, rules, land_gate, height, k, vw, vh, rules["sea_y_m"],
-                                       water=open_water, types=types)
+                                       water=open_water, types=types, sea_cells=~has_cell)
             rows = rows + bake_houses.fortify(b, rows, rules, types, land_gate, wet, k, vw, vh, roads,
                                               height=height)
             rows = bake_houses.clear_under(rows, laid, types, rules)
@@ -1210,6 +1210,9 @@ def main(argv=None):
     CELLS = os.path.join(ROOT, "data", "maps", MAP, "geography", "cells.csv")
     OUT = os.path.join(map3d_dir(MAP), "bake")
     rules = load_rules()
+    # a pier's deck height is the runtime's (Map3DLayerHouses seats a pier
+    # this far over the sea): harbour keeps the ground under it lower
+    rules["map3d_pier_deck_m"] = float(data_index.balance()["map3d_pier_deck_m"])
     SEA_Y = rules["sea_y_m"]
     os.makedirs(OUT, exist_ok=True)
     # raw bake files and previews are read by build_terrain.gd, never imported
