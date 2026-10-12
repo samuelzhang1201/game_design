@@ -39,8 +39,8 @@ const GROUND := ["speed_mps", "wave_m", "field_amp", "grass_amp", "tilt", "near_
 @export var field_amp := 0.25
 ## The same over open, level grass away from the woods.
 @export var grass_amp := 0.12
-## How far the wave bends the ground's shading normal along the wind (0 = colour waves only): crests catch the sun, lees shade (owner 2026-10-12, R8). ALU only; scaled by the same crop/grass masks, storm and distance fade as the amplitudes above.
-@export_range(0.0, 1.0, 0.01) var tilt := 0.08
+## How far the stalks a crest lays over lean the ground's shading normal down the wind, per unit of the crest (0 = colour waves only; the lean is clamped at 0.6): the laid-over grass turns toward or away from the sun as the crest passes (owner 2026-10-12, R8). ALU only; the same crop/grass masks, storm and distance fade as the waves.
+@export_range(0.0, 1.0, 0.01) var tilt := 0.5
 ## The crop's own waves out to about this distance from the camera, giving way to the broad gusts by `mid_m`.
 @export var near_m := 1500.0
 ## How much harder the waves run in a wet or overcast province (0 = the same everywhere).
@@ -101,6 +101,8 @@ var ctx: Map3DContext
 var _trees: Map3DLayerTrees
 var _time := 0.0
 var _shown := true
+## The values last handed to the ground material (_look()).
+var _pushed := PackedFloat32Array()
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -111,6 +113,15 @@ func bind(p_ctx: Map3DContext) -> void:
 ## Seconds of wind so far (a test seam, and what the shaders are handed).
 func time() -> float:
 	return _time
+
+
+## The ground's uniforms as they stand: GROUND's exports, then `deg`.
+func _look() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	for key: String in GROUND:
+		out.append(float(get(key)))
+	out.append(deg)
+	return out
 
 
 ## The way the wind blows over the ground, a unit vector in world XZ.
@@ -133,11 +144,16 @@ func _process(delta: float) -> void:
 			ctx.repo.bal("map3d_lod_margin_m"))
 		var want := 1.0 if _shown else 0.0
 		var on: Variant = mat.call("get_shader_param", "wind_on")
-		if not (on is float and is_equal_approx(on, want)):
+		# ...and again whenever an export changes (the inspector, a shot's
+		# --set): pushed only on a reset, a later value never reached the
+		# ground (the tilt bracket's frames could not be told apart)
+		var look := _look()
+		if not (on is float and is_equal_approx(on, want)) or look != _pushed:
 			mat.call("set_shader_param", "wind_on", want)
 			mat.call("set_shader_param", "wind_dir", dir)
-			for key: String in GROUND:
-				mat.call("set_shader_param", "wind_" + key, float(get(key)))
+			for i: int in GROUND.size():
+				mat.call("set_shader_param", "wind_" + GROUND[i], look[i])
+			_pushed = look
 		mat.call("set_shader_param", "wind_time", _time)
 	if _trees != null and _trees.material != null:
 		var tm := _trees.material

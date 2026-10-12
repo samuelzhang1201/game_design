@@ -119,19 +119,16 @@ const STAGE := """	if (wind_on > 0.0) {
 			float wd_amp = max(wind_field_amp * wd_sown, wind_grass_amp * wd_grass) * wd_k * wd_storm * mix(1.0, wind_far_amp, wd_far);
 			float wd_t = wd_amp * wd_val;
 			if (wind_tilt > 0.0) {
-				// the TILT: the same wave's slope along the wind (a forward
-				// difference of wd_waves, a twentieth of a wavelength, ALU
-				// only), bent into the terrain's tangent-space normal that
-				// NORMAL_MAP packs just below, so a crest catches the sun and
-				// its lee shades. Same masks, storm and distance fade as wd_t.
-				float wd_e = 0.05;
-				vec2 wd_n2 = wd_waves(wd_an + wd_e * wind_wave_m, wd_across, wind_wave_m, wd_fwn);
-				vec2 wd_f2 = wd_waves(wd_af + wd_e * wd_wmf, wd_across, wd_wmf, wd_fwf);
-				float wd_slope = (mix(wd_n2.x, wd_f2.x, wd_far) - wd_val) / wd_e;
-				// the tilt band is narrower than the crest, so it fades out sooner
-				// than wd_waves' own AA or it shimmers from afar
-				float wd_tilt_aa = mix(1.0 - smoothstep(0.03, 0.08, wd_fwn), 1.0 - smoothstep(0.03, 0.08, wd_fwf), wd_far);
-				float wd_bend = clamp(wd_amp * wd_slope * wind_tilt, -0.35, 0.35) * wd_tilt_aa;
+				// the TILT: the stalks a crest lays over LEAN down the wind, as
+				// far as the crest lays them (the wave itself, so the light
+				// travels with it and fades with wd_waves' own AA; ALU only),
+				// bent into the tangent-space normal NORMAL_MAP packs just
+				// below: the laid-over grass turns toward or away from the sun.
+				// Same masks, storm and distance fade as wd_t, not its colour
+				// amplitudes. (The wave's slope instead was a thin line at
+				// each crest front, a few pixels: never seen, 2026-10-12.)
+				float wd_lay = max(wd_sown, wd_grass) * wd_k * wd_storm * mix(1.0, wind_far_amp, wd_far);
+				float wd_bend = clamp(wd_lay * max(wd_val, 0.0) * wind_tilt, 0.0, 0.6);
 				vec3 wd_tg = normalize(cross(w_normal, vec3(0.0, 0.0, 1.0)));
 				vec3 wd_bn = cross(w_normal, wd_tg);
 				vec3 wd_w3 = vec3(wind_dir.x, 0.0, wind_dir.y);
