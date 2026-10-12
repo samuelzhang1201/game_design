@@ -243,7 +243,8 @@ static func _sum_permille(repo: DataRepository, state: GameState, realm: String,
 static func arm_permille(repo: DataRepository, state: GameState, realm: String) -> Dictionary:
 	var out: Dictionary = {}
 	for arm: String in repo.world_table("military", "unit_types"):
-		out[arm] = maxi(0, 1000 + _sum_permille(repo, state, realm, "arm_power_permille", arm))
+		# No state (a state-less host): no development, every arm at 1000.
+		out[arm] = 1000 if state == null else maxi(0, 1000 + _sum_permille(repo, state, realm, "arm_power_permille", arm))
 	return out
 
 
@@ -289,9 +290,13 @@ static func month_lines(repo: DataRepository, state: GameState) -> Array:
 			out.append({"metric": String(r["channel"]), "delta": delta, "reason": String(r["reason"])})
 	var heads := cavalry_heads(repo, state)
 	if heads > 0:
+		var rows := effect_rows(repo, state, player, "cavalry_upkeep_permille")
 		var milli := _sum_permille(repo, state, player, "cavalry_upkeep_permille", "")
-		var gold := roundi(repo.bal("dev_cavalry_upkeep_per_head") * float(heads) * float(milli) / 1000.0)
+		# Whole integers, one rounding at the end, half away from zero.
+		var num := roundi(repo.bal("dev_cavalry_upkeep_per_head")) * heads * milli
+		@warning_ignore("integer_division")  # whole gold, rounded half away from zero
+		var gold := (absi(num) + 500) / 1000 * (1 if num >= 0 else -1)
 		if gold != 0:
 			out.append({"metric": "treasury", "delta": -float(gold),
-				"reason": "knights and warhorses cost more (%d horse)" % heads})
+				"reason": "%s (%d horse)" % [String(rows[0]["reason"]), heads]})
 	return out
