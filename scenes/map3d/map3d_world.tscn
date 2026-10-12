@@ -118,7 +118,9 @@ shadow_opacity = 0.45
 shadow_blur = 2.0
 directional_shadow_max_distance = 60000.0
 script = ExtResource("18_mgwnk")
-day_shadow_opacity = 0.72
+day_shadow_opacity = 0.5
+high_deg = -48.0
+low_deg = -42.0
 fill = NodePath("../FillLight")
 
 [node name="FillLight" type="DirectionalLight3D" parent="." unique_id=1733042906]
