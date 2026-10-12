@@ -23,13 +23,13 @@ Spec: `docs/superpowers/specs/2026-10-12-development-axes-design.md`. Every real
 
 ## Tier effects (`development_tier_effects.csv`)
 
-The table lists each tier's FULL modifier (rows of other tiers do not add). A row is `permanent` or `monthly`. Channels and who consumes each:
+The numeric channels list each tier's FULL modifier (rows of other tiers do not add); `flag` and `unlock` rows instead persist upward from the tier they appear at. A row is `permanent` or `monthly`. Channels and who consumes each:
 
 - `arm_power_permille` (target = arm) -> `DevelopmentSystem.arm_permille` -> `ArmySystem.power_of_arms`; a state-less host gets 1000 for every arm.
 - `cavalry_upkeep_permille` -> `month_lines`: a treasury line, whole gold, one rounding, scaled by `dev_cavalry_upkeep_per_head` and the player's cavalry heads.
 - Monthly metric channels (`treasury`, `church_opinion`, `peasant_contentment`, `unrest` ...) -> `month_lines` -> the ledger with the row's reason.
 - `adopt_permille` and `unlock` -> nothing reads them yet; they are left for the equipment system (`unlocked` lists the unlock targets reached).
-- `flag` (`honour_bound`) -> `DevelopmentSystem.flag` -> `LawSystem.refusal_of`: at a tier carrying the flag, a decree of `ransom` = `execute` or `quarter` = `refuse` is refused (key `honour_bound`, words `honour_bound_refusal` in `law_words.csv`). No other option is bound.
+- `flag` (`honour_bound`) -> `DevelopmentSystem.flag` -> `LawSystem.refusal_of`: at a tier carrying the flag, a decree of `ransom` = `execute` or `quarter` = `refuse` is refused (key `honour_bound`, words `refusal_honour_bound` in `law_words.csv`). No other option is bound.
 
 ## Preference (hidden)
 

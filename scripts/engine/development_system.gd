@@ -366,10 +366,12 @@ static func arm_permille(repo: DataRepository, state: GameState, realm: String) 
 	return out
 
 
-## Whether the realm's confirmed tiers carry a `flag` row of that name.
+## Whether the realm's confirmed tiers carry a `flag` row of that name: a flag
+## row holds from the tier it appears at upward (like `unlock`).
 static func flag(repo: DataRepository, state: GameState, realm: String, name: String) -> bool:
-	for r: Dictionary in effect_rows(repo, state, realm, "flag"):
-		if String(r["target"]) == name:
+	for r: Dictionary in repo.development_tier_effects:
+		if String(r["channel"]) == "flag" and String(r["target"]) == name \
+				and int(r["tier"]) <= tier(state, realm, String(r["axis"])):
 			return true
 	return false
 

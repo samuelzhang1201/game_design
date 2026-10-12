@@ -28,7 +28,7 @@ func _tier(t: int) -> void:
 
 
 func _word() -> String:
-	return String(repo.law_words["honour_bound_refusal"])
+	return String(repo.law_words["refusal_honour_bound"])
 
 
 func test_flag_off_below_tier() -> void:
@@ -38,6 +38,9 @@ func test_flag_off_below_tier() -> void:
 	assert_false(DevelopmentSystem.flag(repo, s, realm, "honour_bound"))
 	_tier(2)
 	assert_true(DevelopmentSystem.flag(repo, s, realm, "honour_bound"))
+	_tier(3)
+	assert_true(DevelopmentSystem.flag(repo, s, realm, "honour_bound"), "holds from tier 2 upward")
+	assert_eq(actions.validate(_law("ransom", "execute"), s), _word())
 
 
 func test_executing_prisoners_refused_at_honour_bound() -> void:

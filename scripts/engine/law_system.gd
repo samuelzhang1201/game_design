@@ -427,7 +427,7 @@ static func refusal_of(repo: DataRepository, state: GameState, law: String, val:
 	if decreed(repo, state, law) == val and not resend:
 		return {"text": "%s is already %s" % [label, val], "key": "unchanged", "days": 0}
 	if _honour_bound(repo, state, law, val):
-		return {"text": String(repo.law_words.get("honour_bound_refusal", "Honour forbids it.")), "key": "honour_bound", "days": 0}
+		return {"text": String(repo.law_words.get("refusal_honour_bound", "Honour forbids it.")), "key": "honour_bound", "days": 0}
 	var until := int(state.law_cooldown.get(law, 0))
 	if not resend and until > state.tick:
 		var days := (until - state.tick - 1) * Calendar.DAYS_PER_TICK + Calendar.DAYS_PER_TICK - state.day + 1
