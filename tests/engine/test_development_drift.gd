@@ -36,7 +36,7 @@ func test_drift_sums_law_rows_in_file_order() -> void:
 	s.development[player]["renaissance"] = 140
 	_decree("patronage", "scholars")
 	_decree("guild_charter", "granted")
-	var lines := DevelopmentSystem.settle_month(repo, s)
+	var lines := _settle()
 	assert_eq(_score("renaissance"), 144)
 	assert_eq(lines.size(), 3)
 	assert_eq(int(lines[0]["delta"]), 4)
@@ -49,7 +49,7 @@ func test_drift_sums_law_rows_in_file_order() -> void:
 func test_decay_never_overshoots_start() -> void:
 	_undefault()
 	s.development[player]["renaissance"] = 101
-	var lines := DevelopmentSystem.settle_month(repo, s)
+	var lines := _settle()
 	assert_eq(_score("renaissance"), 100)
 	assert_eq(lines.size(), 1)
 	assert_eq(int(lines[0]["delta"]), -1)
@@ -57,7 +57,7 @@ func test_decay_never_overshoots_start() -> void:
 
 func test_untouched_realm_at_start_logs_nothing() -> void:
 	_undefault()
-	assert_eq(DevelopmentSystem.settle_month(repo, s).size(), 0)
+	assert_eq(_settle().size(), 0)
 	assert_eq(s.recent_outcomes.size(), 0)
 
 
@@ -67,7 +67,7 @@ func test_pinned_at_bounds_logs_no_zero_line() -> void:
 	s.development[player]["renaissance"] = 1000
 	_decree("patronage", "court")
 	_decree("guild_charter", "granted")
-	var lines := DevelopmentSystem.settle_month(repo, s)
+	var lines := _settle()
 	assert_eq(_score("renaissance"), 1000)
 	assert_eq(lines.size(), 0, "a clamped move logs no zero line")
 	# Below the start, decay pulls up (start above the floor).
@@ -79,10 +79,16 @@ func test_pinned_at_bounds_logs_no_zero_line() -> void:
 	assert_eq(_score("renaissance"), 2)
 
 
+## The month's lines of the player's realm (the foreign realms' follow theirs).
+func _settle() -> Array:
+	return DevelopmentSystem.settle_month(repo, s).filter(
+		func(l: Dictionary) -> bool: return String(l["realm"]) == player)
+
+
 func test_default_laws_drift_nothing() -> void:
 	for axis: String in DevelopmentSystem.AXES:
 		assert_eq(DevelopmentSystem.law_drift(repo, s, axis).size(), 0, axis)
-	assert_eq(DevelopmentSystem.settle_month(repo, s).size(), 0)
+	assert_eq(_settle().size(), 0)
 
 
 func test_settle_month_runs_in_tick() -> void:

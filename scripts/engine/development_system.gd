@@ -241,13 +241,64 @@ static func settle_month(repo: DataRepository, state: GameState) -> Array:
 		for l: Dictionary in lines:
 			DevelopmentSystem._apply_line(repo, state, player, axis, l, out)
 		DevelopmentSystem._apply_line(repo, state, player, axis, decay_line(repo, state, player, axis), out)
-	# SEAM (Task 6): foreign realms' lines are appended to `out` here, before
-	# the player's lines are filed; they are never filed as the player's outcome.
+	# The foreign realms follow their rulers; their lines join the returned list
+	# but are never filed as the player's DEVELOPMENT outcome.
 	_file(repo, state, out.filter(func(l: Dictionary) -> bool: return String(l["realm"]) == player))
+	for l: Dictionary in ai_lines(repo, state):
+		DevelopmentSystem._apply_line(repo, state, String(l["realm"]), String(l["axis"]), l, out)
 	return out
 
 
 const OUTCOME := "DEVELOPMENT"
+
+
+## The ruler of a foreign realm: the lowest-id character with trait
+## `crowned_head` whose `kingdom` names the realm. The roster's `kingdom` column
+## holds the SLOT (`raider_realm`), not the kingdom code, so a character matches
+## when `kingdom` is the realm's code or a slot that resolves to it. null for
+## the player's realm or when nobody rules it.
+static func ruler_of(repo: DataRepository, state: GameState, realm: String) -> Character:
+	if realm == "" or realm == repo.resolve_realm("player_realm"):
+		return null
+	var keys: Array = [realm]
+	for slot: String in SLOTS:
+		if repo.resolve_realm(slot) == realm and not keys.has(slot):
+			keys.append(slot)
+	var ids: Array = state.characters.keys()
+	ids.sort()
+	for id in ids:
+		var c: Character = state.characters[id]
+		if c.traits.has("crowned_head") and keys.has(c.kingdom):
+			return c
+	return null
+
+
+## Each foreign realm's monthly lines {realm, axis, delta, reason}: the score
+## steps toward clamp(start + preference x dev_ai_target_per_pref, 0, 1000) by
+## at most dev_ai_step. Realms in sorted order, then AXES order; a realm without
+## a ruler, or already at its target, gives no line.
+static func ai_lines(repo: DataRepository, state: GameState) -> Array:
+	DevelopmentSystem.seed(repo, state)
+	var out: Array = []
+	var player := repo.resolve_realm("player_realm")
+	var per_pref := int(repo.bal("dev_ai_target_per_pref"))
+	var step_max := maxi(int(repo.bal("dev_ai_step")), 0)
+	for realm: String in realms(repo, state):
+		if realm == player:
+			continue
+		var ruler := ruler_of(repo, state, realm)
+		if ruler == null:
+			continue
+		for axis: String in AXES:
+			var pref := preference(repo, ruler, axis)
+			var target := clampi(int(repo.bal("dev_start_" + axis)) + pref * per_pref, 0, SCORE_MAX)
+			var gap := target - score(state, realm, axis)
+			var step := mini(step_max, absi(gap))
+			if step == 0:
+				continue
+			out.append({"realm": realm, "axis": axis, "delta": step if gap > 0 else -step,
+				"reason": "%s %s %s" % [ruler.display_name, "favours" if gap > 0 else "turns from", axis]})
+	return out
 
 
 static func _apply_line(repo: DataRepository, state: GameState, realm: String, axis: String,

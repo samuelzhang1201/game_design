@@ -10,18 +10,18 @@ cautious,personality,Cautious,-5,5,5,-30,0,5,-5,-10,1,0,0,1,1,,,bold,0.30,Advice
 pious,personality,Pious,-5,5,15,0,35,10,-5,0,0,0,-1,1,0,,,cynical,0.35,Opposes taxing or seizing from the church. Improves clergy opinion.,-15,15
 cynical,personality,Worldly,5,-5,-5,5,-30,-5,5,0,1,0,2,0,0,,,pious,0.20,Indifferent to religious concerns. Better at realpolitik.,5,0
 compassionate,personality,Compassionate,-10,10,15,-5,5,35,-5,-5,0,-1,-1,2,0,,,cruel,0.25,Pushes hard for famine relief. Opposes harsh justice.,0,0
-cruel,personality,Cruel,10,-5,-10,10,-5,-35,5,15,0,2,1,-2,0,,,compassionate,0.25,Suppression is more effective under them. Peasant contentment suffers.,0,0
+cruel,personality,Cruel,10,-5,-10,10,-5,-35,5,15,0,2,1,-2,0,,,compassionate,0.25,Suppression is more effective under them. Peasant contentment suffers.,-10,0
 vain,personality,Vain,15,-5,-5,5,0,0,35,10,0,0,0,1,0,honour_hungry,,humble,0.20,Responds strongly to titles and public honours. Cheap to buy off.,-5,0
 humble,personality,Humble,-15,10,10,-5,10,10,-30,-10,1,0,-1,0,1,,,vain,0.20,Honours have little effect. Harder to appease without real concessions.,0,0
 wrathful,personality,Wrathful,5,-10,0,15,0,-10,5,35,-1,1,0,-2,0,duel_prone,,patient,0.30,May escalate a council argument into a personal feud.,0,0
-patient,personality,Patient,0,5,5,-10,5,5,-5,-30,2,0,1,2,1,,,wrathful,0.25,Slow to form grievances. Grudges last far longer once formed.,0,0
+patient,personality,Patient,0,5,5,-10,5,5,-5,-30,2,0,1,2,1,,,wrathful,0.25,Slow to form grievances. Grudges last far longer once formed.,5,0
 paranoid,personality,Paranoid,10,-10,0,-10,0,-10,0,15,0,0,3,-2,0,detects_plots,,trusting,0.20,Higher chance to uncover conspiracies. Also invents ones that do not exist.,0,0
 trusting,personality,Trusting,-5,10,10,5,0,10,0,-5,0,0,-3,2,0,,,paranoid,0.20,Vulnerable to being recruited by a faction without realising it.,0,0
 brilliant,ability,Brilliant,5,0,0,5,0,0,10,0,4,2,3,3,4,,,slow_witted,0.10,Exceptional across the board. Rare. Dangerous if disloyal.,10,0
 slow_witted,ability,Slow,-10,5,5,-5,0,0,-5,0,-3,-2,-3,-2,-3,,,brilliant,0.15,Loyal but ineffective. Cheap to keep. Costs you outcomes.,-5,0
 gifted_admin,ability,Gifted Administrator,0,0,5,-5,0,0,0,0,5,-1,0,0,2,,,,0.20,Plus admin capacity when seated as Chancellor.,10,0
 born_soldier,ability,Born Soldier,5,5,0,15,0,-5,5,5,-1,5,0,0,-1,,,,0.25,Large battle bonus when commanding personally.,0,15
-schemer,ability,Schemer,15,-10,-10,0,0,-5,0,-5,0,-1,5,1,0,,,forthright,0.20,Excellent spymaster. Will eventually plot against someone.,0,0
+schemer,ability,Schemer,15,-10,-10,0,0,-5,0,-5,0,-1,5,1,0,,,forthright,0.20,Excellent spymaster. Will eventually plot against someone.,15,0
 forthright,ability,Forthright,-5,10,15,10,0,5,0,5,0,1,-4,1,0,,,schemer,0.20,Terrible at intrigue. Impossible to bribe.,0,0
 silver_tongued,ability,Silver Tongued,5,0,-5,5,0,0,10,-5,0,-1,1,5,0,,,blunt,0.20,Major bonus to diplomacy and to swaying council debates.,5,0
 blunt,ability,Blunt,0,5,10,10,0,-5,-5,10,0,1,-1,-4,1,,,silver_tongued,0.20,Offends foreign envoys. Never lies to you.,0,0
