@@ -103,8 +103,8 @@ environment = ExtResource("16_6gvy5")
 script = ExtResource("17_8svap")
 fog_depth_begin = 0.9
 fog_depth_end = 3.0
-fog_depth_density = 0.45
-fog_near_share = 0.25
+fog_depth_density = 0.7
+fog_near_share = 0.4
 fog_near_full_m = 7000.0
 dof_far_ramp = 1.2
 
