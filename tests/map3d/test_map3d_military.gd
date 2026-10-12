@@ -180,15 +180,29 @@ func test_a_selected_piece_glows_on_the_ground_under_it() -> void:
 	assert_true(Map3DUnitGlow.shown(piece), "the selected piece glows")
 	var glow := (piece["node"] as Node3D).get_node(Map3DUnitGlow.NAME) as MeshInstance3D
 	assert_eq(glow.material_override, Map3DUnitGlow.MATERIAL, "its look is the .tres")
-	assert_lte(glow.position.y, 0.0, "it lies at the seat, at or under the figures' feet")
 	var half: Vector2 = (piece["extent"] as Vector2) * Game.data.bal("map3d_unit_glow_ratio")
-	assert_almost_eq((glow.mesh as PlaneMesh).size.x, half.x * 2.0, 0.001, "the footprint's width")
-	assert_almost_eq((glow.mesh as PlaneMesh).size.y, half.y * 2.0, 0.001, "the footprint's depth")
+	assert_almost_eq(glow.mesh.get_aabb().size.x, half.x * 2.0, 0.05, "the footprint's width")
+	assert_almost_eq(glow.mesh.get_aabb().size.z, half.y * 2.0, 0.05, "the footprint's depth")
 	for other: String in units._pieces:
 		if other != code:
 			assert_false(Map3DUnitGlow.shown(units._pieces[other]), "%s does not glow" % other)
 	v.clear_selection()
 	assert_false(Map3DUnitGlow.shown(piece), "let go, it goes out")
+
+
+## The glow is DRAPED on the ground (owner 2026-10-12: it floated shin-high on
+## slopes): every vertex of its mesh, back in world space, is the heightmap
+## under it plus the lift, on a 30% slope as on the flat.
+func test_the_glow_is_draped_on_a_slope() -> void:
+	var repo: DataRepository = Game.data
+	var slope := func(xz: Vector2) -> float: return 0.3 * xz.x
+	var xf := Transform3D(Basis.IDENTITY, Vector3(10.0, 3.0, -4.0))
+	var mesh := Map3DUnitGlow.draped(repo, slope, xf, Vector2(4.0, 2.0), 0.1)
+	var verts: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	assert_gt(verts.size(), 0)
+	for v in verts:
+		var w := xf * v
+		assert_almost_eq(w.y, 0.3 * w.x + 0.1, 0.001, "on the slope's face, a hair over it")
 
 
 ## The glow is an ellipse of the formation's extent (owner 2026-10-12, R6): a
