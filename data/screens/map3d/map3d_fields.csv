@@ -1,38 +1,38 @@
 focus,zone,crop,share,texture,tint,bare_share,notes
-grain,arable,winter_corn,1,aerial_crop,#D8BA70,0.0,"3D bake fields (owner 2026-10-01: 田地的布局要更合理真实 — chose crops that READ, option 2): the crops of each zone (data/map3d_farm_zones.csv). ARABLE rows are the ROTATION: each great field round a settlement is in one of them (in turn, a settlement's own start), its furlongs all that crop but for bare_share of them freshly ploughed (the focus's bare row). aerial_crop is a pale straw ground the tint darkens to the crop's colour (a tint can only darken: on the grass layer a crop could never be gold). Other zones pick a crop per close or field by share. Tints re-set in the visual review of 2026-10-05 so the crops read gold, green and olive, the plough a mid brown (was near black) and the crofts near the grass's own value (dark blocks once the woods round them were cleared)"
-grain,arable,spring_corn,1,aerial_crop,#82984E,0.2,green barley and oats; part of the field still bare after the spring plough
-grain,arable,fallow,1,aerial_crop,#AC9060,0.15,"fallow, grazed and weedy; some furlongs ploughed for the next sowing"
+grain,arable,winter_corn,1,g2_crop_a,#D8BA70,0.0,"3D bake fields (owner 2026-10-01: 田地的布局要更合理真实 — chose crops that READ, option 2): the crops of each zone (data/map3d_farm_zones.csv). ARABLE rows are the ROTATION: each great field round a settlement is in one of them (in turn, a settlement's own start), its furlongs all that crop but for bare_share of them freshly ploughed (the focus's bare row). aerial_crop is a pale straw ground the tint darkens to the crop's colour (a tint can only darken: on the grass layer a crop could never be gold). Other zones pick a crop per close or field by share. Tints re-set in the visual review of 2026-10-05 so the crops read gold, green and olive, the plough a mid brown (was near black) and the crofts near the grass's own value (dark blocks once the woods round them were cleared)"
+grain,arable,spring_corn,1,g2_crop_a,#82984E,0.2,green barley and oats; part of the field still bare after the spring plough
+grain,arable,fallow,1,g2_crop_a,#AC9060,0.15,"fallow, grazed and weedy; some furlongs ploughed for the next sowing"
 grain,bare,ploughed,1,dirt_floor,#E1E5D1,0.0,freshly ploughed furlongs
-grain,croft,garden,40,aerial_meadow,#DDE6C4,0.0,"kitchen gardens and closes behind the houses — each close its own shade, so the crofts read as small plots (a near-white tint on the grass read as plain grass, a gap round every village)"
-grain,croft,orchard,30,aerial_meadow,#CCD8B4,0.0,
-grain,croft,plot,30,aerial_crop,#A0985E,0.0,small strips of corn behind the tofts
-grain,meadow,hay_meadow,1,aerial_meadow,#E2E8BC,0.0,"lush hay meadow by the water, mown in summer"
-grain,pasture,common,1,aerial_meadow,#F4F2DC,0.0,the common grazing beyond the fields
-cattle,arable,winter_corn,1,aerial_crop,#D8BA70,0.0,
-cattle,arable,spring_corn,1,aerial_crop,#82984E,0.2,
+grain,croft,garden,40,g2_meadow_a,#DDE6C4,0.0,"kitchen gardens and closes behind the houses — each close its own shade, so the crofts read as small plots (a near-white tint on the grass read as plain grass, a gap round every village)"
+grain,croft,orchard,30,g2_meadow_a,#CCD8B4,0.0,
+grain,croft,plot,30,g2_crop_a,#A0985E,0.0,small strips of corn behind the tofts
+grain,meadow,hay_meadow,1,g2_meadow_a,#E2E8BC,0.0,"lush hay meadow by the water, mown in summer"
+grain,pasture,common,1,g2_meadow_a,#F4F2DC,0.0,the common grazing beyond the fields
+cattle,arable,winter_corn,1,g2_crop_a,#D8BA70,0.0,
+cattle,arable,spring_corn,1,g2_crop_a,#82984E,0.2,
 cattle,bare,ploughed,1,dirt_floor,#E1E5D1,0.0,
-cattle,croft,paddock,60,aerial_meadow,#D8E2C0,0.0,small paddocks by the byres
-cattle,croft,garden,40,aerial_meadow,#DDE6C4,0.0,
-cattle,meadow,hay_meadow,1,aerial_meadow,#E2E8BC,0.0,
-cattle,pasture,grazing,1,aerial_meadow,#E6EED0,0.0,
-sheep,arable,winter_corn,1,aerial_crop,#D8BA70,0.0,
-sheep,arable,fallow,1,aerial_crop,#AC9060,0.15,
+cattle,croft,paddock,60,g2_meadow_a,#D8E2C0,0.0,small paddocks by the byres
+cattle,croft,garden,40,g2_meadow_a,#DDE6C4,0.0,
+cattle,meadow,hay_meadow,1,g2_meadow_a,#E2E8BC,0.0,
+cattle,pasture,grazing,1,g2_meadow_a,#E6EED0,0.0,
+sheep,arable,winter_corn,1,g2_crop_a,#D8BA70,0.0,
+sheep,arable,fallow,1,g2_crop_a,#AC9060,0.15,
 sheep,bare,ploughed,1,dirt_floor,#E1E5D1,0.0,
-sheep,croft,fold,50,aerial_meadow,#E0DCC4,0.0,sheepfolds and closes
-sheep,croft,garden,50,aerial_meadow,#DDE6C4,0.0,
-sheep,meadow,hay_meadow,1,aerial_meadow,#E2E8BC,0.0,
-sheep,pasture,downland,1,aerial_meadow,#F2F0DA,0.0,pale open downland
-fish,arable,winter_corn,1,aerial_crop,#D8BA70,0.0,
-fish,arable,spring_corn,1,aerial_crop,#82984E,0.2,
+sheep,croft,fold,50,g2_meadow_a,#E0DCC4,0.0,sheepfolds and closes
+sheep,croft,garden,50,g2_meadow_a,#DDE6C4,0.0,
+sheep,meadow,hay_meadow,1,g2_meadow_a,#E2E8BC,0.0,
+sheep,pasture,downland,1,g2_meadow_a,#F2F0DA,0.0,pale open downland
+fish,arable,winter_corn,1,g2_crop_a,#D8BA70,0.0,
+fish,arable,spring_corn,1,g2_crop_a,#82984E,0.2,
 fish,bare,ploughed,1,dirt_floor,#E1E5D1,0.0,
-fish,croft,garden,60,aerial_meadow,#DDE6C4,0.0,
-fish,croft,plot,40,aerial_crop,#A0985E,0.0,
-fish,meadow,hay_meadow,1,aerial_meadow,#E2E8BC,0.0,
-fish,pasture,common,1,aerial_meadow,#F4F2DC,0.0,
-*,arable,winter_corn,1,aerial_crop,#D8BA70,0.0,
-*,arable,spring_corn,1,aerial_crop,#82984E,0.2,
+fish,croft,garden,60,g2_meadow_a,#DDE6C4,0.0,
+fish,croft,plot,40,g2_crop_a,#A0985E,0.0,
+fish,meadow,hay_meadow,1,g2_meadow_a,#E2E8BC,0.0,
+fish,pasture,common,1,g2_meadow_a,#F4F2DC,0.0,
+*,arable,winter_corn,1,g2_crop_a,#D8BA70,0.0,
+*,arable,spring_corn,1,g2_crop_a,#82984E,0.2,
 *,bare,ploughed,1,dirt_floor,#E1E5D1,0.0,
-*,croft,garden,60,aerial_meadow,#DDE6C4,0.0,
-*,croft,plot,40,aerial_crop,#A0985E,0.0,
-*,meadow,hay_meadow,1,aerial_meadow,#E2E8BC,0.0,
-*,pasture,common,1,aerial_meadow,#F4F2DC,0.0,
+*,croft,garden,60,g2_meadow_a,#DDE6C4,0.0,
+*,croft,plot,40,g2_crop_a,#A0985E,0.0,
+*,meadow,hay_meadow,1,g2_meadow_a,#E2E8BC,0.0,
+*,pasture,common,1,g2_meadow_a,#F4F2DC,0.0,

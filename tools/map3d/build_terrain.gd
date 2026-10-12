@@ -26,7 +26,7 @@ const TEXTURES := [
 	# fields — at 260 m the critic read them 2-3x too big, and the old crag's
 	# 533 m only suited that picture's own larger forms
 	["aerial_cliff", 200.0, 0.1, 0.0],
-	["aerial_meadow", 120.0, 0.16, 0.5],   # look route 2026-09-30: aerial pictures, tools/map3d/pack_aerial.py
+	["g2_meadow_a", 240.0, 0.16, 0.5],   # the meadow (spec 2026-10-12-ground-detail-textures: low-feature variant sets; aerial pictures since the look route 2026-09-30, tools/map3d/pack_aerial.py)
 	["dry_decay_leaves", 160.0, 0.2, 0.5],
 	["dirt_floor", 180.0, 0.16, 0.5],
 	# the upland (owner 2026-10-06: T-74, scree patches tens of metres across)
@@ -36,7 +36,13 @@ const TEXTURES := [
 	["sand_03", 120.0, 0.2, 0.0],
 	["aerial_canopy", 170.0, 0.22, 0.5],
 	["aerial_snow", 180.0, 0.14, 0.0],
-	["aerial_crop", 140.0, 0.18, 0.5],  # the crops (owner 2026-10-01: open fields): a pale straw ground the bake's colour map darkens to gold, green or tan — tools/map3d/pack_aerial.py  # the snow line — an aerial snow picture since 2026-09-30 (山顶雪帽, tools/map3d/pack_aerial.py); was (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
+	["g2_crop_a", 140.0, 0.18, 0.5],  # the crops (owner 2026-10-01: open fields): a pale straw ground the bake's colour map darkens to gold, green or tan — tools/map3d/pack_aerial.py  # the snow line — an aerial snow picture since 2026-09-30 (山顶雪帽, tools/map3d/pack_aerial.py); was (owner 2026-09-19; snow_02 at 110 m, not snow_field_aerial: at 260 m its dark marks read as ink worms)
+	# the variant sets bake_world.split_variants spreads the grass and the crops over
+	["g2_meadow_b", 240.0, 0.16, 0.5],
+	["g2_meadow_c", 240.0, 0.16, 0.5],
+	["g2_upturf_a", 320.0, 0.16, 0.5],   # the grass on high ground
+	["g2_upturf_b", 320.0, 0.16, 0.5],
+	["g2_crop_b", 140.0, 0.18, 0.5],
 ]
 
 # Terrain3D material: demo/Demo.tscn's parameters, every one of them — a
