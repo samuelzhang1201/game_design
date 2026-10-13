@@ -266,6 +266,6 @@ erosion_iters,10,3D bake erosion: rounds of routing + stream power + talus
 erosion_k,3.0,3D bake erosion: the stream-power coefficient (F = k * drained cells^m / cell metres per round)
 erosion_m_exp,0.5,3D bake erosion: the drained area's exponent
 erosion_talus,0.9,3D bake erosion: the steepest slope (rise over run) that holds; steeper sheds half its excess downhill
-erosion_max_cut_m,150,"3D bake erosion: the most it may cut (and a third of it, deposit) — the engine's cell heights (landmarks' N m) stay within this of the drawn ground (owner 2026-10-13: up to 100-150 m allowed)"
+erosion_max_cut_m,100,"3D bake erosion: the most it may cut (and a third of it, deposit), softly — the engine cell heights (landmarks N m) stay within this of the drawn ground (owner ruling 2026-10-13: at most 100 m)"
 erosion_from_m,150,3D bake erosion: below this height the land keeps its shape (plains and coasts)
 erosion_full_m,600,3D bake erosion: ...and is fully eroded from here
