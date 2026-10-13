@@ -128,3 +128,11 @@ Each round was ranked blind by an independent critic at 1.5 km, the 5 km opening
 **Not reached:** the 0.35 slope spike stays (32.7%). The critic preferred the even banks to the jittered ones at the opening zoom, so the spike was a measure and not the look.
 
 **Remaining**, named by every round: a dark wall and bowl under the range's cloud, a saw-tooth escarpment, stretched texture on the vertical faces (Terrain3D projection), and soft ridgelines. These need either a stronger erosion with more rounds (perf: the bake now runs about 3 s) or the terrace scarps reworked.
+
+## Later the same night
+
+- **Erosion cap 150 → 100 m**, per ruling 3. Stronger erosion (k 6, 16 rounds) was dropped: under the cap it lowers the whole upland evenly instead of cutting gullies.
+- **Terrace faces softened** (`terrace_face` 0.6 / 0.75, gully 400 / 600): no visible gain, and more march cells closed (9.2–10.8%). Reverted.
+- **Terrain3D projection.** At threshold 0.97 the grass slopes were raked; switched off, the cliffs streaked pale. 0.87 is kept. The stretched cliff look comes from an aerial picture laid on a vertical face, which needs frontal rock-face art.
+- **Finer erosion (shipped):** `erosion_cell_m` 100 → 50, `erosion_k` 3 → 2.5, `erosion_from_m` / `_full_m` 150 / 600 → 300 / 700 (the lowland fields stay as they were). The critic ranked it first on both mountain views: the gullies branch like a tree and the crests are sharper. Fine detail under 500 m rises 13.6 → 15.7 m std. Closed march cells 3,763 (8.2%); houses 32,224.
+
