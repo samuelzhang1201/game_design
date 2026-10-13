@@ -6,7 +6,9 @@ extends RefCounted
 ## lit from one side and read. Every energy, range and offset is a screens/war_room/balance.csv
 ## `war_candle_*` key; how many candles cast a shadow (the key first) and how
 ## is the graphics tier's (`graphics_quality.csv` `war_candle_shadows`,
-## `war_candle_shadow_cube`).
+## `war_candle_shadow_cube`). The SUN through the west window (spec
+## 2026-10-13-war-room-sunlit-chamber) is the scene's `%Sun`: its look is the
+## inspector's, only whether it casts and whether the fog lights are the tier's.
 
 
 ## The candlesticks' lights in the scene's order (Candlestick1..N under `room`).
@@ -69,3 +71,14 @@ static func apply_tier(repo: DataRepository, lights: Array[OmniLight3D], row: Di
 	for i in order.size():
 		order[i].shadow_enabled = i < n
 		order[i].omni_shadow_mode = OmniLight3D.SHADOW_CUBE if cube else OmniLight3D.SHADOW_DUAL_PARABOLOID
+
+
+## The tier's sun: `war_sun_shadows` 1 lets the sun cast (the lattice and the
+## room's own shadow; without it the sun is a plain warm light), `war_fog` 1
+## lets the environment's volumetric fog draw its beam — only when the scene
+## gives the fog a density at all, so the look stays the inspector's.
+static func apply_sun_tier(sun: DirectionalLight3D, env: Environment, row: Dictionary) -> void:
+	if sun != null:
+		sun.shadow_enabled = Map3DQuality.num(row, "war_sun_shadows", 1.0) >= 1.0
+	if env != null:
+		env.volumetric_fog_enabled = env.volumetric_fog_density > 0.0 and Map3DQuality.num(row, "war_fog", 0.0) >= 1.0

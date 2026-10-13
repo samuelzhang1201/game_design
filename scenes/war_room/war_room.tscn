@@ -2,27 +2,54 @@
 
 [ext_resource type="Script" uid="uid://d0ommxn1jrh5x" path="res://scripts/war_room/war_room_view.gd" id="1_ekiw7"]
 [ext_resource type="PackedScene" uid="uid://bn505ar3wnw6v" path="res://assets/3D/war_room/room/room.glb" id="2_22yi6"]
+[ext_resource type="Material" uid="uid://tl8q0mq2imvy" path="res://scenes/war_room/materials/war_window_glass.tres" id="3_l4rby"]
 [ext_resource type="PackedScene" uid="uid://h61e1pu42bvq" path="res://assets/3D/war_room/table/table.glb" id="3_sqtjg"]
 [ext_resource type="PackedScene" uid="uid://bi50lh10t5vir" path="res://assets/3D/war_room/rake/rake.glb" id="4_bwuxm"]
 [ext_resource type="PackedScene" uid="uid://cw4xr6qb7ll1n" path="res://assets/3D/war_room/candlestick/candlestick.glb" id="5_13ru6"]
+[ext_resource type="PackedScene" uid="uid://b66ftjiigwd6d" path="res://assets/3D/war_room/easel/easel.glb" id="6_6onlh"]
 [ext_resource type="Material" path="res://scenes/war_room/materials/war_table.tres" id="6_ycnr8"]
 [ext_resource type="Material" uid="uid://bchvm38kygdud" path="res://scenes/war_room/materials/war_supply_flow.tres" id="7_gdvur"]
 [ext_resource type="Script" uid="uid://cb5ix87vpi32" path="res://scripts/war_room/war_pieces.gd" id="7_qefqx"]
 [ext_resource type="Script" uid="uid://c576m3msu8lfr" path="res://scripts/war_room/war_plan_pieces.gd" id="8_72abi"]
 [ext_resource type="Material" uid="uid://r85rhispqi7e" path="res://scenes/war_room/materials/war_supply_broken.tres" id="8_bw32x"]
 [ext_resource type="Script" uid="uid://d4ak510hs1jur" path="res://scripts/war_room/war_pennants.gd" id="8_g585r"]
+[ext_resource type="Material" uid="uid://cycle4e3ffy1l" path="res://scenes/war_room/materials/war_window_lattice.tres" id="8_tg8as"]
+[ext_resource type="PackedScene" uid="uid://babvht1dx5p4h" path="res://assets/3D/war_room/rack/rack.glb" id="9_gv1wf"]
 [ext_resource type="PackedScene" uid="uid://crhxjpb0voenb" path="res://assets/3D/war_room/pennant/pennant.glb" id="9_mbbr6"]
+[ext_resource type="PackedScene" uid="uid://cof82lnqud3iu" path="res://assets/3D/war_room/map_chest/map_chest.glb" id="10_3ls73"]
 [ext_resource type="Script" uid="uid://cfv64budsa2t3" path="res://scripts/war_room/war_ink_painter.gd" id="10_bfe1t"]
 [ext_resource type="Script" uid="uid://b2lueju2wrv3g" path="res://scripts/war_room/war_hud.gd" id="11_8tgs3"]
+[ext_resource type="PackedScene" uid="uid://cb4vuirlbf8aq" path="res://assets/3D/war_room/lectern/lectern.glb" id="11_x33b3"]
 [ext_resource type="Script" uid="uid://dgf0b0v3604b5" path="res://scripts/war_room/war_plan_hud.gd" id="12_54vep"]
+[ext_resource type="PackedScene" uid="uid://csl7vxme2lirj" path="res://assets/3D/war_room/side_table/side_table.glb" id="12_w6njr"]
+[ext_resource type="PackedScene" uid="uid://bqwkp0cgtcsod" path="res://assets/3D/war_room/floor_candle/floor_candle.glb" id="13_gkb8d"]
+[ext_resource type="PackedScene" uid="uid://bdpdeen1nxfkw" path="res://assets/3D/war_room/rug/rug.glb" id="14_bnyqp"]
+[ext_resource type="PackedScene" uid="uid://ycqpr7o4ac66" path="res://assets/3D/war_room/tapestry/tapestry.glb" id="15_3nr07"]
+[ext_resource type="PackedScene" uid="uid://ctv4rfnfa4gf6" path="res://assets/3D/war_room/map_rods/map_rods.glb" id="16_o52u3"]
+[ext_resource type="Material" uid="uid://cnirw2ykq3m6v" path="res://scenes/war_room/materials/war_wall_map.tres" id="17_57ey8"]
+[ext_resource type="PackedScene" uid="uid://suhrgmmis8o6" path="res://assets/3D/war_room/strongbox/strongbox.glb" id="18_gv1wf"]
+[ext_resource type="PackedScene" uid="uid://b63noenhi0ehk" path="res://assets/3D/war_room/scroll_basket/scroll_basket.glb" id="19_3ls73"]
+[ext_resource type="PackedScene" uid="uid://ccrv2fk0y3t3a" path="res://assets/3D/war_room/window_cushion/window_cushion.glb" id="20_x33b3"]
 
 [sub_resource type="Environment" id="Environment_room"]
 background_mode = 1
 background_color = Color(0.078, 0.063, 0.047, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.85, 0.72, 0.55, 1)
-ambient_light_energy = 0.35
+ambient_light_color = Color(0.62, 0.68, 0.8, 1)
+ambient_light_energy = 0.32
 tonemap_mode = 4
+glow_enabled = true
+glow_intensity = 0.6
+glow_bloom = 0.05
+glow_blend_mode = 2
+glow_hdr_threshold = 1.2
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.02
+volumetric_fog_albedo = Color(1, 0.93, 0.82, 1)
+volumetric_fog_anisotropy = 0.55
+volumetric_fog_length = 9.0
+volumetric_fog_detail_spread = 1.5
+volumetric_fog_sky_affect = 0.0
 
 [sub_resource type="StandardMaterial3D" id="Mat_marker"]
 albedo_color = Color(0.608, 0.173, 0.122, 1)
@@ -37,13 +64,6 @@ height = 0.02
 top_radius = 0.01
 bottom_radius = 0.011
 height = 0.006
-
-[sub_resource type="StandardMaterial3D" id="Mat_easel"]
-albedo_color = Color(0.36, 0.24, 0.14, 1)
-roughness = 0.8
-
-[sub_resource type="BoxMesh" id="Box_easel_leg"]
-size = Vector3(0.05, 1.5, 0.05)
 
 [sub_resource type="StandardMaterial3D" id="Mat_board"]
 roughness = 0.85
@@ -67,9 +87,16 @@ roughness = 0.9
 [sub_resource type="QuadMesh" id="Quad_chart"]
 size = Vector2(0.8, 0.29)
 
+[sub_resource type="StandardMaterial3D" id="Mat_easel"]
+albedo_color = Color(0.36, 0.24, 0.14, 1)
+roughness = 0.8
+
 [sub_resource type="PrismMesh" id="PrismMesh_cxbpb"]
 left_to_right = 1.0
 size = Vector3(0.3816, 0.137, 0.93)
+
+[sub_resource type="QuadMesh" id="QuadMesh_3wlrw"]
+size = Vector2(2.1, 0.83)
 
 [node name="WarRoomView" type="Control" unique_id=631495206 node_paths=PackedStringArray("tray_markers")]
 clip_contents = true
@@ -94,8 +121,8 @@ environment = SubResource("Environment_room")
 [node name="Window" type="DirectionalLight3D" parent="Viewport" unique_id=34029074]
 transform = Transform3D(0.819152, -0.469846, 0.32899, 0, 0.573576, 0.819152, -0.573576, -0.67101, 0.469846, 0, 2, 0)
 light_color = Color(0.749, 0.827, 1, 1)
-light_energy = 0.6
-shadow_enabled = true
+light_energy = 0.3
+light_volumetric_fog_energy = 0.0
 
 [node name="Camera" type="Camera3D" parent="Viewport" unique_id=1901342266]
 unique_name_in_owner = true
@@ -108,8 +135,17 @@ unique_name_in_owner = true
 
 [node name="Chamber" parent="Viewport/Room" unique_id=609828230 instance=ExtResource("2_22yi6")]
 
-[node name="room" parent="Viewport/Room/Chamber" index="0" unique_id=1184762955]
+[node name="glass" parent="Viewport/Room/Chamber" index="0" unique_id=1276117135]
+material_override = ExtResource("3_l4rby")
 cast_shadow = 0
+
+[node name="lattice" parent="Viewport/Room/Chamber" index="1" unique_id=1024864207]
+editor_description = "Shadow only: the lead cames of the west window cut out of the sun (spec 2026-10-13-war-room-sunlit-chamber). The glass itself casts nothing."
+material_override = ExtResource("8_tg8as")
+cast_shadow = 3
+
+[node name="room" parent="Viewport/Room/Chamber" index="2" unique_id=309837984]
+cast_shadow = 2
 
 [node name="OakTable" parent="Viewport/Room" unique_id=198636563 instance=ExtResource("3_sqtjg")]
 transform = Transform3D(1, 0, 0, 0, 1.05828, 0, 0, 0, 1, 0, 0.04662, 0)
@@ -174,21 +210,14 @@ mesh = SubResource("Marker_base")
 unique_name_in_owner = true
 transform = Transform3D(0.70710677, 0.21850802, -0.6724985, 0, 0.95105654, 0.309017, 0.70710677, -0.21850802, 0.6724985, 1.65, -0.9, -1.2)
 
-[node name="LegL" type="MeshInstance3D" parent="Viewport/Room/Easel" unique_id=1220550194]
-transform = Transform3D(0.996, 0.087, 0, -0.087, 0.996, 0, 0, 0, 1, -0.5, 0.75, -0.05)
-material_override = SubResource("Mat_easel")
-mesh = SubResource("Box_easel_leg")
-
-[node name="LegR" type="MeshInstance3D" parent="Viewport/Room/Easel" unique_id=157191522]
-transform = Transform3D(0.996, -0.087, 0, 0.087, 0.996, 0, 0, 0, 1, 0.5, 0.75, -0.05)
-material_override = SubResource("Mat_easel")
-mesh = SubResource("Box_easel_leg")
-
 [node name="BoardPanel" type="MeshInstance3D" parent="Viewport/Room/Easel" unique_id=509709145]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0.02)
 material_override = SubResource("Mat_board")
 mesh = SubResource("Quad_board")
+
+[node name="Stand" parent="Viewport/Room/Easel" unique_id=1815351783 instance=ExtResource("6_6onlh")]
+transform = Transform3D(1, 0, 0, 0, 0.95105654, -0.309017, 0, 0.309017, 0.95105654, 0, 0.095105655, 0.0309017)
 
 [node name="Candlestick1" parent="Viewport/Room" unique_id=796630572 instance=ExtResource("5_13ru6")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.8, -0.001, -0.9)
@@ -197,6 +226,7 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.8, -0.001, -0.9)
 cast_shadow = 0
 
 [node name="Light" type="OmniLight3D" parent="Viewport/Room/Candlestick1" unique_id=2055452440]
+light_volumetric_fog_energy = 0.0
 
 [node name="FlameC" type="MeshInstance3D" parent="Viewport/Room/Candlestick1" unique_id=946833995]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.441, 0)
@@ -226,6 +256,49 @@ editor_description = "The index chart's oak reading stand (owner 2026-10-12, R10
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 0.069, -0.7628)
 material_override = SubResource("Mat_easel")
 mesh = SubResource("PrismMesh_cxbpb")
+
+[node name="RackEast" parent="Viewport/Room" unique_id=1165258512 instance=ExtResource("9_gv1wf")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.78, -0.8, 1.1)
+
+[node name="RackSouth" parent="Viewport/Room" unique_id=112967308 instance=ExtResource("9_gv1wf")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -1.4, -0.8, 2.78)
+
+[node name="MapChest" parent="Viewport/Room" unique_id=299015004 instance=ExtResource("10_3ls73")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.63, -0.8, -0.1)
+
+[node name="Lectern" parent="Viewport/Room" unique_id=760409089 instance=ExtResource("11_x33b3")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.3, -0.8, 1.2)
+
+[node name="SideTable" parent="Viewport/Room" unique_id=1815433028 instance=ExtResource("12_w6njr")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.6, -0.8, -1.55)
+
+[node name="FloorCandle" parent="Viewport/Room" unique_id=1738962069 instance=ExtResource("13_gkb8d")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.45, -0.8, -1.85)
+
+[node name="Rug" parent="Viewport/Room" unique_id=202924336 instance=ExtResource("14_bnyqp")]
+transform = Transform3D(1.25, 0, 0, 0, 1.25, 0, 0, 0, 1.25, 0, -0.8, -0.15)
+
+[node name="Tapestry" parent="Viewport/Room" unique_id=981063313 instance=ExtResource("15_3nr07")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 1.4, 2, 2.985)
+
+[node name="MapRods" parent="Viewport/Room" unique_id=1783276389 instance=ExtResource("16_o52u3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -1.985)
+
+[node name="WallMap" type="MeshInstance3D" parent="Viewport/Room" unique_id=1330134287]
+unique_name_in_owner = true
+editor_description = "The realm's map on the north wall between the rods (MapRods): its picture is the pack's continent on parchment, drawn at runtime (WarRoomWall.build_wall_map)."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.835, -1.982)
+material_override = ExtResource("17_57ey8")
+mesh = SubResource("QuadMesh_3wlrw")
+
+[node name="Strongbox" type="Node3D" parent="Viewport/Room" unique_id=328245882 instance=ExtResource("18_gv1wf")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 2.1, -0.8, 2.66)
+
+[node name="ScrollBasket" type="Node3D" parent="Viewport/Room" unique_id=1211005200 instance=ExtResource("19_3ls73")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, -0.8, 2.68)
+
+[node name="SeatBench" type="Node3D" parent="Viewport/Room" unique_id=2137630749 instance=ExtResource("20_x33b3")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.7, -0.8, 2.7)
 
 [node name="Table" type="MeshInstance3D" parent="Viewport" unique_id=423369737]
 unique_name_in_owner = true
@@ -258,6 +331,20 @@ script = ExtResource("8_72abi")
 unique_name_in_owner = true
 script = ExtResource("8_g585r")
 model = ExtResource("9_mbbr6")
+
+[node name="Sun" type="DirectionalLight3D" parent="Viewport" unique_id=860095026]
+unique_name_in_owner = true
+editor_description = "The sun through the west window (spec 2026-10-13-war-room-sunlit-chamber): warm, 26 deg high (low enough that the lattice crosses the table's west third through the deep reveal), from the west a little south. Whether it casts and whether the fog draws its beam are the tier's (graphics_quality.csv war_sun_shadows, war_fog; WarRoomLights.apply_sun_tier)."
+transform = Transform3D(-0.14834046, 0.47944584, -0.86494327, 0, 0.8746198, 0.4848096, 0.98893636, 0.07191688, -0.12974149, -2, 2.2, 0)
+light_color = Color(1, 0.86, 0.66, 1)
+light_energy = 3.0
+light_volumetric_fog_energy = 6.0
+light_angular_distance = 0.1
+shadow_enabled = true
+shadow_opacity = 0.85
+shadow_blur = 0.3
+directional_shadow_mode = 0
+directional_shadow_max_distance = 6.0
 
 [node name="Display" type="TextureRect" parent="." unique_id=131899261]
 unique_name_in_owner = true

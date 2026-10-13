@@ -39,6 +39,30 @@ static func image(repo: DataRepository, px: int) -> Image:
 	return img
 
 
+## The WALL MAP (spec 2026-10-13-war-room-sunlit-chamber): the same continent
+## on parchment with no cells, `px` across, filling a sheet of `aspect` (w / h)
+## — a pack of another shape is centred on the parchment, never stretched.
+static func wall_image(repo: DataRepository, px: int, aspect: float) -> Image:
+	var w := float(repo.map_info.get("width", "1"))
+	var h := float(repo.map_info.get("height", "1"))
+	var pal: Dictionary = repo.war_palette
+	var paper: Color = pal.get("parchment", pal["paper"])
+	var age: Color = pal.get("parchment_age", pal["paper_age"])
+	var ch := maxi(1, int(round(float(px) / aspect)))
+	var mw := px
+	var mh := int(round(float(px) * h / w))
+	if mh > ch:   # a taller pack: fit its height
+		mh = ch
+		mw = int(round(float(ch) * w / h))
+	var sheet := _parchment(repo, px, ch, paper, age) if mw != px or mh != ch else null
+	var map := _parchment(repo, mw, mh, paper, age)
+	if sheet != null:
+		sheet.blit_rect(map, Rect2i(Vector2i.ZERO, map.get_size()), Vector2i((px - mw) / 2, (ch - mh) / 2))
+		map = sheet
+	map.generate_mipmaps()
+	return map
+
+
 ## The chart's ground (owner 2026-10-02: 选择地图的格子那个纸也换成羊皮纸，然后画
 ## 上整个大陆地图的形状): parchment blotched toward its aged colour and darker at
 ## the rim, the sea washed in sea ink with two water lines following the

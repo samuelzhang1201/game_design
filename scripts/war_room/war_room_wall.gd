@@ -11,6 +11,19 @@ const SIDES := {"n": "↑", "s": "↓", "e": "→", "w": "←"}
 ## Dress the chart quad: its size from the map's ratio, the picture, and the
 ## graticule's column letters along its NEAR (south) edge, the margin nearest the officer, and row
 ## numbers down its west edge (v2 B: 76 sheet ids crowded the chart unread).
+## The wall map on the north wall (spec 2026-10-13-war-room-sunlit-chamber):
+## its quad's size is the scene's (the rods hold it); the picture is the pack's
+## continent on parchment, `war_wall_map_px` across.
+static func build_wall_map(node: MeshInstance3D, repo: DataRepository) -> void:
+	var quad := node.mesh as QuadMesh
+	if quad == null:
+		return
+	var mat := node.material_override.duplicate() as StandardMaterial3D
+	mat.albedo_texture = ImageTexture.create_from_image(WarIndexChart.wall_image(repo, int(repo.bal("war_wall_map_px")),
+			quad.size.x / maxf(quad.size.y, 0.001)))
+	node.material_override = mat
+
+
 static func build_chart(chart: MeshInstance3D, repo: DataRepository, font: Font) -> void:
 	var w := float(repo.map_info.get("width", "1"))
 	var h := float(repo.map_info.get("height", "1"))
