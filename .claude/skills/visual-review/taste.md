@@ -27,6 +27,9 @@ existing one.
 - **Places are systems, not decorations.** A town grows round its centre with
   lanes and open space, fields belong to a settlement, a wall closes, a
   harbour belongs to its town.
+- **The land is of one age.** Open fields are parted by grass balks and
+  headlands; hedges stand only where they stood then — round closes, the
+  great fields' outside, meadows and lanes — never as a net over every field.
 - **The ground remembers, briefly.** What crosses the land leaves a mark that
   answers the ground it lies on, then fades.
 

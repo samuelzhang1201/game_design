@@ -34,7 +34,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from packs import default_pack, map3d_dir  # noqa: E402
 SEED = 20260930
-HABITS = {"wood": 0, "lone": 1, "hedge": 2, "bank": 3}
+HABITS = {"wood": 0, "lone": 1, "hedge": 2, "bank": 3, "hedgerow": 4}
+EDGE_ZERO, EDGE_PER_M = 128.0, 2.0   # bake_world EDGE_MAP_ZERO / _PER_M (field_edges.png, hedge_lines.png)
 WOOD_MAP_STEP = 2   # vertices per woods.png texel (40 m), bake_world's FIELD_MAP_STEP
 
 
@@ -267,6 +268,79 @@ def riparian(courses, ok, run, rng, rules, vm):
     return np.concatenate(out) if out else np.zeros((0, 2))
 
 
+def bilinear(a, x, y):
+    """`a` (h x w) sampled bilinearly at the float cells (x, y)."""
+    h, w = a.shape
+    x0 = np.clip(np.floor(x).astype(int), 0, w - 2)
+    y0 = np.clip(np.floor(y).astype(int), 0, h - 2)
+    tx, ty = np.clip(x - x0, 0, 1), np.clip(y - y0, 0, 1)
+    return (a[y0, x0] * (1 - tx) * (1 - ty) + a[y0, x0 + 1] * tx * (1 - ty)
+            + a[y0 + 1, x0] * (1 - tx) * ty + a[y0 + 1, x0 + 1] * tx * ty)
+
+
+def resample(line, spacing, phase):
+    """Points every `spacing` along a polyline (n x 2, metres), the first at
+    `phase` x spacing, and the line's unit tangent at each."""
+    seg = np.hypot(*np.diff(line, axis=0).T)
+    s = np.concatenate([[0.0], np.cumsum(seg)])
+    if s[-1] < spacing * 0.5:
+        return np.zeros((0, 2)), np.zeros((0, 2))
+    t = np.arange(phase * spacing, s[-1], spacing)
+    p = np.stack([np.interp(t, s, line[:, 0]), np.interp(t, s, line[:, 1])], axis=1)
+    i = np.clip(np.searchsorted(s, t) - 1, 0, len(seg) - 1)
+    d = (line[i + 1] - line[i]) / np.maximum(seg[i], 1e-6)[:, None]
+    return p, d
+
+
+def hedge_line_points(sd, vm, spacing, rng):
+    """The hedgerow's clumps (spec 2026-10-13-open-field-layout §3c): every
+    `spacing` metres along each hedge line of bake_world's hedge_lines.png
+    (`sd`: h x w x levels, signed metres per level), as (x, z, yaw) in metres
+    — the zero contours of each level, resampled evenly, a line that a lower
+    level already draws (a croft against the pasture is every level's edge)
+    kept once. yaw turns a clump's local x along the line
+    (Basis(UP, yaw) * X = (cos, 0, -sin))."""
+    from skimage.measure import find_contours
+    xs, zs, yaws = [], [], []
+    for c in range(sd.shape[2]):
+        for line in find_contours(sd[..., c], 0.0):
+            pts = line[:, ::-1] * vm            # (row, col) -> (x, z) metres
+            p, d = resample(pts, spacing, rng.random())
+            if len(p) == 0:
+                continue
+            keep = np.ones(len(p), bool)
+            for j in range(c):
+                keep &= np.abs(bilinear(sd[..., j], p[:, 0] / vm, p[:, 1] / vm)) > spacing * 0.5
+            xs.append(p[keep, 0])
+            zs.append(p[keep, 1])
+            yaws.append(np.arctan2(-d[keep, 1], d[keep, 0]))
+    if not xs:
+        return np.zeros(0), np.zeros(0), np.zeros(0)
+    return np.concatenate(xs), np.concatenate(zs), np.concatenate(yaws)
+
+
+def lane_points(roads_m, spacing, off_m, rng):
+    """Both verges of each lane (polylines in metres), `off_m` out from its
+    middle, every `spacing` metres, as (x, z, yaw)."""
+    xs, zs, yaws = [], [], []
+    for line in roads_m:
+        line = np.asarray(line, np.float64)
+        if len(line) < 2:
+            continue
+        p, d = resample(line, spacing, rng.random())
+        if len(p) == 0:
+            continue
+        n = np.stack([-d[:, 1], d[:, 0]], axis=1)
+        for side in (-1.0, 1.0):
+            q = p + side * off_m * n
+            xs.append(q[:, 0])
+            zs.append(q[:, 1])
+            yaws.append(np.arctan2(-d[:, 1], d[:, 0]))
+    if not xs:
+        return np.zeros(0), np.zeros(0), np.zeros(0)
+    return np.concatenate(xs), np.concatenate(zs), np.concatenate(yaws)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--map", default="")
@@ -342,10 +416,12 @@ def main(argv=None):
         sv = np.repeat(np.repeat(sm, step, axis=0), step, axis=1)[:vh, :vw]
         settled[:sv.shape[0], :sv.shape[1]] = sv
         del sm, sv
-    roads = []
+    roads, road_off, road_keep = [], [], []
     with open(os.path.join(ROOT, "data", "maps", MAP, "geography", "routes.csv")) as f:
         for r in csv.DictReader(f):
             if r["group"] in ("roads", "trails"):
+                road_off.append(rules.get("lane_hedge_off_%s_m" % r["group"][:-1], 0.0))
+                road_keep.append(rules.get("hedge_road_clear_%s_m" % r["group"][:-1], 0.0))
                 roads.append([(float(a) * m_per_px / vm, float(b) * m_per_px / vm)
                               for a, b in (p.split() for p in r["points"].split("|") if p.strip())])
     stamp_lines(bad, roads, rules["road_clear_m"] / vm)
@@ -367,6 +443,39 @@ def main(argv=None):
             xi, zi, rr = int(x), int(z), int(np.ceil(near))
             bad[max(zi - rr, 0):zi + rr + 1, max(xi - rr, 0):xi + rr + 1] = True
     bank_ok = ~bad & ~water   # the bankside rows' ground: everything else's "never" holds
+    # a HEDGE's own "never" (spec 2026-10-13-open-field-layout §3c): the woods'
+    # ground mask cut 40% of the hedge lines — a croft's hedge stands by the
+    # houses, a lane's on its verge, a hedge on a bank steeper than a wood
+    # would take — so a hedge clump is tested at its own spot: off the water,
+    # the cliffs and the snow, `hedge_house_clear_m` from a house, off the road
+    # itself (`hedge_road_clear_<group>_m` from its middle)
+    from scipy.spatial import cKDTree
+    with open(os.path.join(OUT, "houses.csv")) as f:
+        hxz = np.array([((float(r["x_m"]) - ox), (float(r["z_m"]) - oz)) for r in csv.DictReader(f)]).reshape(-1, 2)
+    house_tree = cKDTree(hxz) if len(hxz) else None
+    rsp, rpts, rkeep = 5.0, [], []
+    for line, keep_m in zip(roads, road_keep):
+        p, _ = resample(np.asarray(line, np.float64) * vm, rsp, 0.0) if len(line) > 1 else (np.zeros((0, 2)), None)
+        rpts.append(p)
+        rkeep.append(np.full(len(p), keep_m))
+    rpts = np.concatenate(rpts) if rpts else np.zeros((0, 2))
+    rkeep = np.concatenate(rkeep) if rkeep else np.zeros(0)
+    road_tree = cKDTree(rpts) if len(rpts) else None
+    ground_bad = (height < sea_y + rules["min_above_sea_m"]) | (slope > rules["hedge_max_slope"]) \
+        | (height > top * rules["max_height_share"]) | water
+
+    def hedge_bad(x, z):
+        xi_ = np.clip((x / vm).astype(int), 0, vw - 1)
+        zi_ = np.clip((z / vm).astype(int), 0, vh - 1)
+        out = ground_bad[zi_, xi_].copy()
+        q = np.stack([x, z], axis=1)
+        if house_tree is not None:
+            out |= house_tree.query(q, distance_upper_bound=rules["hedge_house_clear_m"])[0] < np.inf
+        if road_tree is not None:
+            d, i = road_tree.query(q, distance_upper_bound=float(rkeep.max(initial=0.0)) + rsp)
+            hit = d < np.inf
+            out[hit] |= d[hit] < rkeep[i[hit]]
+        return out
     bad |= river_clear
     del water, river_clear
 
@@ -401,32 +510,74 @@ def main(argv=None):
     c = chance[zi, xi]
     keep = rng.random(c.shape) < c
     X, Z, xi, zi = X[keep], Z[keep], xi[keep], zi[keep]
-    # HEDGEROW trees (visual review 2026-10-06: the fields read as flat fills
-    # laid on the land): along the balks and croft hedges of bake_world's
-    # field_edges.png, in runs (a slow noise) — their own stream, so the woods
-    # above are unchanged
+    # HEDGES where history put them (spec 2026-10-13-open-field-layout §3,
+    # owner 2026-10-13 按历史): along bake_world's hedge_lines.png — round
+    # the crofts, the open field's outside, the meadows — a CONTINUOUS row of
+    # hedge bushes (habit hedgerow, a row of cards turned along the line),
+    # broken only in gateways and short gaps (hedge_run_m below
+    # hedge_gap_cut), a hedge tree standing out of it every hedge_tree_every_m;
+    # the closes inside the crofts on field_edges.png as before; both verges of
+    # the lanes within a village's reach. Their own streams: the woods above
+    # are unchanged.
     hedge = np.zeros(len(X), bool)
     bank = np.zeros(len(X), bool)
-    ep = os.path.join(OUT, "field_edges.png")
-    if rules.get("hedge_chance", 0.0) > 0.0 and os.path.exists(ep):
+    row = np.zeros(len(X), bool)
+    yaw_of = np.full(len(X), np.nan)
+    hp = os.path.join(OUT, "hedge_lines.png")
+    if rules.get("hedge_line_spacing_m", 0.0) > 0.0 and os.path.exists(hp):
         hrng = np.random.default_rng(SEED + 31)
-        em = np.asarray(Image.open(ep).convert("L"), dtype=np.float32)
-        hsp = rules["hedge_spacing_m"]
-        hx, hz = np.meshgrid(np.arange(hsp * 0.5, vw * vm, hsp), np.arange(hsp * 0.5, vh * vm, hsp))
-        hx = (hx + hrng.uniform(-0.5, 0.5, hx.shape) * hsp).ravel()
-        hz = (hz + hrng.uniform(-0.5, 0.5, hz.shape) * hsp).ravel()
+        hm = np.asarray(Image.open(hp).convert("RGBA"), dtype=np.float32)
+        sd = (hm[..., :3] - EDGE_ZERO) / EDGE_PER_M
+        rank = np.round(hm[..., 3] / 85.0).astype(np.int8)   # bake_world HEDGE_RANK_BYTE
+        del hm
+        runs = value_noise(np.random.default_rng(SEED + 32), vw, vh, rules["hedge_run_m"] / vm)
+        sp = rules["hedge_line_spacing_m"]
+        hx, hz, hyaw = hedge_line_points(sd, vm, sp, hrng)
+        infield_sd = sd[..., 0].copy()   # bake_world.hedge_map R: the in-field, inside positive
+        del sd
+        # the closes inside the crofts: short hedges along their own edges
+        em = np.asarray(Image.open(os.path.join(OUT, "field_edges.png")).convert("L"), dtype=np.float32)
+        csp = rules["hedge_spacing_m"]
+        cx_, cz_ = np.meshgrid(np.arange(csp * 0.5, vw * vm, csp), np.arange(csp * 0.5, vh * vm, csp))
+        cx_ = (cx_ + hrng.uniform(-0.5, 0.5, cx_.shape) * csp).ravel()
+        cz_ = (cz_ + hrng.uniform(-0.5, 0.5, cz_.shape) * csp).ravel()
+        dm = (bilinear(em, cx_ / vm, cz_ / vm) - EDGE_ZERO) / EDGE_PER_M
+        close = (rank[np.clip((cz_ / vm).astype(int), 0, vh - 1), np.clip((cx_ / vm).astype(int), 0, vw - 1)] == 3) \
+            & (dm >= 0.0) & (dm < rules["hedge_band_m"]) & (hrng.random(cx_.shape) < rules["hedge_chance"])
+        hx, hz = np.concatenate([hx, cx_[close]]), np.concatenate([hz, cz_[close]])
+        hyaw = np.concatenate([hyaw, hrng.uniform(0, 2 * np.pi, int(close.sum()))])
+        n_line = len(hx)
+        del em, cx_, cz_, dm, close
+        # the lanes' verges within a village's reach (never in the built ground)
+        lx = lz = lyaw = np.zeros(0)
+        if rules.get("lane_hedge_chance", 0.0) > 0.0:
+            parts = [lane_points([[(a * vm, b * vm) for a, b in r]], sp, off, hrng)
+                     for r, off in zip(roads, road_off) if off > 0.0]
+            if parts:
+                lx, lz, lyaw = (np.concatenate([q[i] for q in parts]) for i in range(3))
+            lxi = np.clip((lx / vm).astype(int), 0, vw - 1)
+            lzi = np.clip((lz / vm).astype(int), 0, vh - 1)
+            # ...outside the in-field: a lane through the open field ran unhedged
+            lane = (settled[lzi, lxi] > 0.0) & (bilinear(infield_sd, lx / vm, lz / vm) < 0.0) \
+                & (hrng.random(lx.shape) < rules["lane_hedge_chance"])
+            lx, lz, lyaw = lx[lane], lz[lane], lyaw[lane]
+        hx, hz, hyaw = np.concatenate([hx, lx]), np.concatenate([hz, lz]), np.concatenate([hyaw, lyaw])
         hxi = np.clip((hx / vm).astype(int), 0, vw - 1)
         hzi = np.clip((hz / vm).astype(int), 0, vh - 1)
-        eb = em[hzi, hxi]
-        runs = value_noise(np.random.default_rng(SEED + 32), vw, vh, rules["hedge_run_m"] / vm)[hzi, hxi]
-        dm = (eb - 128.0) / 2.0   # bake_world EDGE_MAP_ZERO / _PER_M: metres inside a field's edge
-        take = (dm >= 0.0) & (dm < rules["hedge_band_m"]) & ~bad[hzi, hxi] \
-            & (hrng.random(hx.shape) < rules["hedge_chance"] * np.clip((runs - 0.35) / 0.3, 0, 1))
-        X, Z = np.concatenate([X, hx[take]]), np.concatenate([Z, hz[take]])
-        xi, zi = np.concatenate([xi, hxi[take]]), np.concatenate([zi, hzi[take]])
-        hedge = np.concatenate([hedge, np.ones(int(take.sum()), bool)])
-        bank = np.concatenate([bank, np.zeros(int(take.sum()), bool)])
-        del em, hx, hz, hxi, hzi, eb, runs, take
+        gap = np.clip((runs[hzi, hxi] - rules["hedge_gap_cut"]) / 0.1, 0, 1)
+        take = (hrng.random(hx.shape) < gap) & ~hedge_bad(hx, hz)
+        # a hedge tree out of the row now and then; the rest the row itself
+        tree = hrng.random(hx.shape) < sp / max(rules["hedge_tree_every_m"], sp)
+        hx, hz, hyaw, hxi, hzi, tree = hx[take], hz[take], hyaw[take], hxi[take], hzi[take], tree[take]
+        X, Z = np.concatenate([X, hx]), np.concatenate([Z, hz])
+        xi, zi = np.concatenate([xi, hxi]), np.concatenate([zi, hzi])
+        hedge = np.concatenate([hedge, np.ones(len(hx), bool)])
+        bank = np.concatenate([bank, np.zeros(len(hx), bool)])
+        row = np.concatenate([row, ~tree])
+        yaw_of = np.concatenate([yaw_of, np.where(tree, np.nan, hyaw)])
+        print("bake_trees: hedges — %d row clumps (~%.0f km of hedge), %d hedge trees" % (
+            int((~tree).sum()), (~tree).sum() * sp / 1000.0, int(tree.sum())))
+        del runs, rank, infield_sd, hx, hz, hyaw, hxi, hzi, take, tree
     # BANKSIDE rows along every river (their own stream)
     if rules.get("riparian_chance", 0.0) > 0.0:
         rrun = value_noise(np.random.default_rng(SEED + 42), vw, vh, rules["riparian_run_m"] / vm)
@@ -438,6 +589,8 @@ def main(argv=None):
         xi, zi = np.concatenate([xi, rxi]), np.concatenate([zi, rzi])
         hedge = np.concatenate([hedge, np.ones(len(rip), bool)])
         bank = np.concatenate([bank, np.ones(len(rip), bool)])
+        row = np.concatenate([row, np.zeros(len(rip), bool)])
+        yaw_of = np.concatenate([yaw_of, np.full(len(rip), np.nan)])
         print("bake_trees: %d bankside clumps" % len(rip))
     # the ground's height under the clump, bilinear
     fx, fz = X / vm, Z / vm
@@ -448,8 +601,8 @@ def main(argv=None):
          + height[z0 + 1, x0] * (1 - tx) * tz + height[z0 + 1, x0 + 1] * tx * tz)
     # the species by the ground under each clump: its habit first (a bank
     # row, a hedgerow, a lone clump on open land, else a wood)
-    habit = np.where(bank, HABITS["bank"], np.where(hedge, HABITS["hedge"],
-                     np.where(dens[zi, xi] < 0.05, HABITS["lone"], HABITS["wood"])))
+    habit = np.where(bank, HABITS["bank"], np.where(row, HABITS["hedgerow"], np.where(hedge, HABITS["hedge"],
+                     np.where(dens[zi, xi] < 0.05, HABITS["lone"], HABITS["wood"]))))
     sh_h, sh_w = shares.shape[:2]
     bx = np.clip((X / (vw * vm) * sh_w).astype(int), 0, sh_w - 1)
     bz = np.clip((Z / (vh * vm) * sh_h).astype(int), 0, sh_h - 1)
@@ -462,9 +615,14 @@ def main(argv=None):
     # the ground under the clump itself
     dry = y >= sea_y + rules["min_above_sea_m"]
     X, Z, y, kind, xi, zi, hedge, bank = X[dry], Z[dry], y[dry], kind[dry], xi[dry], zi[dry], hedge[dry], bank[dry]
+    row, yaw_of = row[dry], yaw_of[dry]
     yaw = rng.uniform(0, 2 * np.pi, len(X))
+    # a hedgerow's row of cards turned along its line (Map3DTreeMesh: a row species' crowns lie along x)
+    yaw = np.where(np.isnan(yaw_of), yaw, yaw_of)
     scale = rng.uniform(rules["scale_min"], rules["scale_max"], len(X))
     scale = np.where(hedge, scale * np.where(bank, rules["riparian_scale"], rules["hedge_scale"]), scale)
+    # a hedge is kept to one height: its row's scale varies little
+    scale = np.where(row, rules["hedgerow_scale"] * rng.uniform(0.85, 1.15, len(X)), scale)
     rows = np.stack([X + ox, y, Z + oz, yaw, scale, kind.astype(np.float32)], axis=1).astype(np.float32)
     rows.tofile(os.path.join(OUT, "trees.bin"))
     # the woods' canopy for the ground shader (Map3DGroundTint): one texel per

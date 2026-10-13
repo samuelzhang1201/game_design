@@ -43,11 +43,22 @@ sown_keep_chance,0.97,woods: a sown field is left clear unless the wood's chance
 fray_wave_m,260,"woods: the wavelength of a fine noise laid on the woodedness before the edge squeeze, so a wood's rim frays in tongues and outliers instead of following its cells' straight sides"
 fray_gain,0.35,woods: how far that noise swings the woodedness
 settled_clear,0.35,"woods (visual review 2026-10-05: the fields read scattered in the woods, not round the towns; 0.9 left the towns in bare country): how far the settled ground round each village (bake_world's settled.png — crofts, fields and meadow 1, the common pasture its pasture_open) takes the woods' chance down, before the edge squeeze"
-hedge_chance,0.65,"woods (visual review 2026-10-06: the fields read as flat fills laid on the land): HEDGEROW trees — the chance of a clump at each hedge candidate within hedge_band_m of a field's edge (bake_world field_edges.png), times the run noise"
-hedge_spacing_m,22,woods: the jittered grid hedgerow candidates are offered on
-hedge_band_m,9,woods: how near a field's edge (metres) a hedgerow clump stands
-hedge_run_m,500,"woods: the wavelength of the noise that makes hedgerows run in stretches, some full, some bare (under 0.35 none)"
+hedge_chance,0,"woods (spec 2026-10-13-open-field-layout §3c): the chance of a hedge clump at each candidate along the closes INSIDE the crofts (field_edges.png within hedge_band_m, where hedge_lines.png ranks the ground a croft). 0 since 2026-10-13: scattered on a jittered grid they read as beads over the croft plots, never a line; the crofts' hedge is the continuous row round their outside (hedge_line_spacing_m) and the closes keep their darker rims (map3d_bake.csv croft_hedge_depth)"
+hedge_spacing_m,22,woods: the jittered grid the croft closes' hedge candidates are offered on
+hedge_band_m,9,woods: how near a croft close's edge (metres) its hedge clump stands
+hedge_run_m,500,"woods: the wavelength of the noise that breaks the hedges (under hedge_gap_cut a gap: a gateway, a gappy stretch)"
 hedge_scale,0.7,woods: a hedgerow clump's scale against a wood's
+hedge_line_spacing_m,10,"woods (spec 2026-10-13-open-field-layout §3c, owner 2026-10-13: hedges where they stood, 按历史): a hedge clump every this many metres along each hedge line of bake_world's hedge_lines.png — round the crofts, the open field's outside, the meadows, never between furlongs; each clump a row of cards turned along the line (hedgerow species, Map3DTreeMesh row layout) so the hedge reads continuous. 0: none"
+hedge_gap_cut,0.2,"woods: where the hedge_run_m noise falls under this, the hedge has a gap (over 0.1 more of it, whole again) — a few gateways a field, not the long bare stretches of 2026-10-13's per-field hedges"
+hedge_tree_every_m,60,"woods: on average one clump in this many metres of hedge is a hedge TREE (an oak or hornbeam of habit hedge) standing out of the row"
+hedgerow_scale,0.8,"woods: a hedge row clump's scale (x 0.85..1.15: a hedge is kept to one height), against a wood's"
+lane_hedge_chance,1,"woods: the share of the lanes' verges within a village's reach (settled.png) and outside its in-field (hedge_lines.png R: a lane through the open field ran unhedged) that are hedged (0: none)"
+lane_hedge_off_road_m,24,woods: how far out from a road's middle its verge hedge stands (the drawn road is map3d_road_width_m 38 wide)
+lane_hedge_off_trail_m,12,woods: how far out from a trail's middle its verge hedge stands (map3d_trail_width_m 16)
+hedge_max_slope,0.9,"woods (spec 2026-10-13-open-field-layout §3c): a hedge clump stands on ground up to this rise over run (a hedge runs along a bank a wood would not take: max_slope cut a tenth of the hedge lines)"
+hedge_house_clear_m,12,"woods: no hedge clump within this many metres of a house (house_clear_m, the woods' 50, cut every croft's hedge)"
+hedge_road_clear_road_m,21,woods: no hedge clump within this many metres of a road's middle (the drawn road is map3d_road_width_m 38 wide)
+hedge_road_clear_trail_m,10,woods: ...and of a trail's (map3d_trail_width_m 16)
 riparian_chance,0.7,"woods (critic 2026-10-06: the rivers read as ribbons laid on the land): BANKSIDE trees — the chance of a clump at each offer along a river's bank, times the run noise (bake_trees.riparian); 0 plants none"
 riparian_spacing_m,16,woods: how far apart along the river the bankside clumps are offered (each bank)
 riparian_gap_m,22,woods: how far out from the water's edge the bankside row begins

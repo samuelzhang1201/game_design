@@ -67,13 +67,21 @@ const PATH := "res://scenes/map3d/ground_look.tres"
 @export var edge_fray_from_m := 2500.0
 @export var edge_fray_full_m := 6000.0
 
-## The balks between furlongs and hedges round crofts (Map3DGroundBalk): a
-## line `balk_m` wide inside each field's edge, mixed toward `balk_color` by
-## `balk` (0 off), gone by a camera `balk_far_m` away.
+## The grass balks between furlongs (Map3DGroundBalk): a line `balk_m` wide
+## inside each field's edge, mixed toward `balk_color` by `balk` (0 off), gone
+## by a camera `balk_far_m` away.
 @export var balk := 0.0
 @export var balk_m := 6.0
 @export var balk_color := Color("6B7340")
 @export var balk_far_m := 9000.0
+## The hedges (Map3DGroundBalk, bake/hedge_lines.png): a line `hedge_m` wide
+## centred on each hedge line — round the crofts, the open field's outside,
+## the meadows — mixed toward `hedge_color` by `hedge` (0 off), gone by a
+## camera `hedge_far_m` away; the hedge's own bushes stand on it.
+@export var hedge := 0.0
+@export var hedge_m := 9.0
+@export var hedge_color := Color(0.22, 0.28, 0.12)
+@export var hedge_far_m := 16000.0
 ## How far a field's rim is drawn per pixel along its edge, not in 20 m steps
 ## (Map3DGroundBalk.RIM; 0 off, 1 full).
 @export var field_rim := 0.0

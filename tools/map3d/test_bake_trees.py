@@ -33,6 +33,12 @@ def test_no_clump_stands_among_the_houses():
     rows, _ = _load()
     rules, _ = bake_trees.load_rules()
     clear = rules["house_clear_m"] - 25.0   # the house mask is a square of vertices
+    # a hedge is tested at its own spot, nearer (hedge_house_clear_m: a croft's
+    # hedge stands by the houses, spec 2026-10-13-open-field-layout §3c)
+    by = {s["kind"]: s for s in bake_trees.load_species()}
+    hedged = np.array([by[int(k)]["habit"] in (bake_trees.HABITS["hedge"], bake_trees.HABITS["hedgerow"])
+                       for k in rows[:, 5]])
+    hedge_clear = rules["hedge_house_clear_m"] - 0.05
     cell = 100.0
     grid = {}
     with open(os.path.join(BAKE, "houses.csv")) as f:
@@ -40,12 +46,13 @@ def test_no_clump_stands_among_the_houses():
             x, z = float(r["x_m"]), float(r["z_m"])
             grid.setdefault((int(x // cell), int(z // cell)), []).append((x, z))
     bad = 0
-    for x, z in rows[:, [0, 2]]:
+    for (x, z), h in zip(rows[:, [0, 2]], hedged):
         gx, gz = int(x // cell), int(z // cell)
+        c = hedge_clear if h else clear
         for dx in (-1, 0, 1):
             for dz in (-1, 0, 1):
                 for hx, hz in grid.get((gx + dx, gz + dz), ()):
-                    if (hx - x) ** 2 + (hz - z) ** 2 < clear * clear:
+                    if (hx - x) ** 2 + (hz - z) ** 2 < c * c:
                         bad += 1
     assert bad == 0, "%d clumps inside a settlement" % bad
 
@@ -176,3 +183,33 @@ def test_lone_clumps_gather_into_patches():
     assert (c > 0.09).any(), "dense parkland in the patches"
     even = bake_trees.lone_chance(dict(rules, lone_gain=0.0), open_land, 160, 120, 20.0)
     assert np.allclose(even, 0.04)
+
+
+def test_a_hedge_row_runs_evenly_along_its_line():
+    """hedge_line_points (spec 2026-10-13-open-field-layout §3c): one clump
+    every `spacing` metres ON a straight hedge line (the zero of a signed
+    distance), turned along it."""
+    vm, sp = 20.0, 10.0
+    sd = np.zeros((30, 40, 1), np.float32)
+    sd[..., 0] = (np.arange(30)[:, None] - 14.5) * vm   # a line along x at row 14.5
+    x, z, yaw = bake_trees.hedge_line_points(sd, vm, sp, np.random.default_rng(1))
+    assert len(x) > 0.9 * (39 * vm / sp), len(x)
+    assert np.allclose(z, 14.5 * vm, atol=0.5)
+    gaps = np.diff(np.sort(x))
+    assert np.allclose(gaps, sp, atol=0.5), gaps.min()
+    assert np.allclose(np.abs(np.cos(yaw)), 1.0, atol=1e-3)   # local x along the line
+
+
+def test_a_line_a_lower_level_draws_is_kept_once():
+    vm, sp = 20.0, 10.0
+    one = (np.arange(30)[:, None] - 14.5) * vm * np.ones((1, 40))
+    sd = np.stack([one, one], axis=-1).astype(np.float32)   # both levels end on the same line
+    x, _, _ = bake_trees.hedge_line_points(sd, vm, sp, np.random.default_rng(1))
+    single, _, _ = bake_trees.hedge_line_points(sd[..., :1], vm, sp, np.random.default_rng(1))
+    assert len(x) == len(single)
+
+
+def test_a_lane_is_hedged_on_both_verges():
+    x, z, yaw = bake_trees.lane_points([[(0.0, 0.0), (200.0, 0.0)]], 10.0, 24.0, np.random.default_rng(2))
+    assert set(np.round(z).astype(int)) == {-24, 24}
+    assert np.allclose(np.abs(np.cos(yaw)), 1.0, atol=1e-6)
