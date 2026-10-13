@@ -273,11 +273,21 @@ static func screen_box(camera: Camera3D, ground: Vector3, high: float, wide: flo
 ## "ATTACK"); "" when it has none. The glTF importer may prefix a library
 ## name, so the match is on the tail, not the whole name.
 static func clip_named(anim: AnimationPlayer, action: String) -> String:
+	var clip := _clip_tail(anim, action)
+	if clip != "" or not action in ["STANDBY", "DEFEND", "GARRISON"]:
+		return clip
+	# no STANDBY clip: stands by in GARRISON (owner 2026-09-29); no DEFEND: holds in it (front-line §2);
+	# no GARRISON (a model with no guard yet, owner 2026-10-13): both stand by in STANDBY
+	if action != "GARRISON":
+		clip = _clip_tail(anim, "GARRISON")
+	return clip if clip != "" or action == "STANDBY" else _clip_tail(anim, "STANDBY")
+
+
+static func _clip_tail(anim: AnimationPlayer, action: String) -> String:
 	for n: String in anim.get_animation_list():
 		if n.to_upper().ends_with(action):
 			return n
-	# no STANDBY clip: stands by in GARRISON (owner 2026-09-29); no DEFEND: holds in it (front-line §2)
-	return clip_named(anim, "GARRISON") if action in ["STANDBY", "DEFEND"] else ""
+	return ""
 
 
 static func meshes(node: Node) -> Array:
