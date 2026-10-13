@@ -100,6 +100,7 @@ war_sea_wash,0.2,"WAR ROOM (owner 2026-10-02): the sea on the flat parchment was
 war_crease_alpha,0.12,"WAR ROOM (owner 2026-10-01, spec §1-2): the strength of the two fold creases (sheet's vertical and horizontal middle)"
 war_crease_px,1.5,"WAR ROOM (owner 2026-10-01, spec §1-2): the fold creases' width in screen px"
 war_chart_w_m,0.86,"(2026-10-12, R17: 0.5 -> 0.86 at the 20 deg lean and the 45 deg opening look, a ~424 px map at its near edge; 0.915 would put the far edge past the oak's prop room and under 6 px from the view's top) (2026-10-12, R10: 0.85 -> 0.5) (2026-10-12, owner item 6: 0.61 -> 0.85 so each city/region letter is legible) WAR ROOM (owner 2026-10-01, spec §2, Task 9): the MAP width on the index chart, metres; its height follows the map's ratio. Sized so the WHOLE chart stands in the opening view"
+war_wall_map_px,1024,"WAR ROOM (spec 2026-10-13-war-room-sunlit-chamber): the side of the north wall map's picture across (the pack's continent on parchment, no cells)"
 war_chart_px,1024,"WAR ROOM (Task 9): the side of the index chart's image across the map (dots of land cells, every sheet's frame)"
 war_chart_blotch_freq,5,"WAR ROOM (owner 2026-10-02: the index chart on parchment): parchment blotches across the chart's width"
 war_chart_sea_wash,0.15,"WAR ROOM (owner 2026-10-02): the index chart's sea washed this share toward sea_ink (the laid sheet's is war_sea_wash)"

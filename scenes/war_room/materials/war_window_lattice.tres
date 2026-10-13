@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://cycle4e3ffy1l"]
+
+[ext_resource type="Shader" uid="uid://hgjbwose2lso" path="res://scripts/war_room/war_window_lattice.gdshader" id="1_r0snr"]
+[ext_resource type="Texture2D" uid="uid://bno2wd21npcts" path="res://assets/3D/war_room/room/leaded_glass.png" id="2_c5up1"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_r0snr")
+shader_parameter/lead = ExtResource("2_c5up1")
+shader_parameter/cut = 0.15

@@ -100,6 +100,11 @@ var _pal: Dictionary = {}
 ## (a texture for a sampler uniform). Material uniforms are
 ## shader_parameter/NAME.
 var _sets: Array = []
+## --war-exec res://x.gd: a scratch script for a room variant that a property
+## cannot express (a light added, a mesh laid): `X.new().apply(view)` once the
+## room is open and its sheet laid, before the --set values. Variants only —
+## what the owner picks is then authored in the scene through the editor.
+var _war_execs: Array[String] = []
 ## The resources --set changed, held so the cache keeps the changed copy
 ## (a resource nothing holds is freed, and the next load reads the file).
 var _held: Array[Resource] = []
@@ -368,6 +373,8 @@ func _ready() -> void:
 			var pv := args[i + 1].split("=")
 			if pv.size() == 2:
 				_pal[pv[0]] = pv[1]
+		elif args[i] == "--war-exec":
+			_war_execs.append(args[i + 1])
 		elif args[i] == "--set":
 			var sv := args[i + 1]
 			var colon := sv.rfind(":", sv.find("="))
@@ -1330,6 +1337,9 @@ func _war_room_step() -> void:
 	elif _war_phase == 1:
 		# the room is open and a sheet is laid and not rolling: ask for the other
 		if screen.visible and view.sheet_index() >= 0 and not view.rolling():
+			for path: String in _war_execs:
+				(load(path) as GDScript).new().apply(view)
+				print("war exec %s" % path)
 			for st: Array in _sets:   # --set NODE:PROP=VALUE on a node of the room's screen
 				var node := screen.find_child(String(st[0]), true, false) if not String(st[0]).begins_with("res://") else null
 				if node != null:

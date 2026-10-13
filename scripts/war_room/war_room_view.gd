@@ -220,6 +220,7 @@ func set_tier(tier: String) -> void:
 	if is_node_ready():
 		Map3DEnvironment.apply_viewport_quality(_viewport, row)
 		WarRoomLights.apply_tier(_repo, candles(), row)
+		WarRoomLights.apply_sun_tier(get_node_or_null(^"%Sun") as DirectionalLight3D, (%Env as WorldEnvironment).environment, row)
 		_fit_viewport()
 
 
@@ -408,6 +409,9 @@ func lay_sheet(index: int) -> void:
 	if not _chart_built:
 		_chart_built = true
 		WarRoomWall.build_chart(_chart, _repo, lettering())
+		var wall_map := get_node_or_null(^"%WallMap") as MeshInstance3D
+		if wall_map != null:
+			WarRoomWall.build_wall_map(wall_map, _repo)
 	WarRoomWall.lay_arrows(_arrows, _repo, _tray, index, _table_w, _depth, lettering())
 	_tray_nodes.sync(_tray)
 	_pieces.rebuild(state())
