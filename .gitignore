@@ -28,6 +28,8 @@ assets/3D/**/model_wip/**
 assets/3D/terrain/*/bake/height.r32
 assets/3D/terrain/*/bake/control.r32
 assets/3D/terrain/*/bake/color.rgba8
+# the downloaded originals the game's loops are cut from (assets/audio/units/SOURCES.md)
+assets/audio/units/source/
 # purchased audio pack, not yet used by the game
 assets/audio/Sound FX Starter Pack Vol. 1/
 # The houses' and the units' textures are NOT ignored: since 2026-10-04 each

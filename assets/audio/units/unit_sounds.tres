@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3]
+
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="1_table"]
+[ext_resource type="AudioStream" uid="uid://cgeh65ketxtmo" path="res://assets/audio/units/march_armour.wav" id="2_armour"]
+[ext_resource type="AudioStream" uid="uid://crqyfvk01bgty" path="res://assets/audio/units/march_horses.wav" id="3_horses"]
+
+[resource]
+script = ExtResource("1_table")
+art = Dictionary[String, Resource]({
+"archers": ExtResource("2_armour"),
+"artillery": ExtResource("2_armour"),
+"cavalry": ExtResource("3_horses"),
+"infantry": ExtResource("2_armour"),
+"royal": ExtResource("3_horses")
+})
