@@ -115,16 +115,18 @@ python3 assets/imagegen/generate.py --build-csv                      # after edi
 
 ## Two machines (`split_batch.py`)
 
-A batch runs on the Mac and the Windows desktop at once, split by image count
-20:80 (owner 2026-10-12). Every id x seed still gets both Z-Image and Qwen;
-Z-Image runs on the desktop only, so the Mac's 20% are Qwen jobs (Q6_K +
-Lightning) spread over the ids, and the desktop's Qwen jobs use its fp8 2-step
-build. `--dry-run` prints the plan; a run writes `out/split/<tag>/` with
-`plan.json`, a log per machine, `summary.md` (images and s/image per machine
-and preset) and `sheet.png` (one row per id, each picture labelled model ·
-machine · seed) for the joint comparison. `--mac-share` changes the split,
-`ZIMAGE_URL` the desktop's address; other flags pass through to generate.py.
-Edits stay on the Mac (Qwen-Image-Edit-2511 is installed there only).
+**Every batch runs on the Windows desktop; the Mac is the backup** (owner
+2026-10-13: 默认全部用desktop跑，mac只做为backup生图机器，或者我明确要求使用mac跑).
+`split_batch.py` therefore defaults to `--mac-share 0`: every id x seed gets both
+Z-Image and Qwen (`qwen2512desk4`) on the desktop. Only when the owner asks for
+the Mac does a batch split (the 2026-10-12 split was 20:80, `--mac-share 0.2`):
+the Mac's share are Qwen jobs (`qwen2512fast`, Q6_K + Lightning 8 steps) spread
+over the ids, run at the same time as the desktop's. `--dry-run` prints the
+plan; a run writes `out/split/<tag>/` with `plan.json`, a log per machine,
+`summary.md` (images and s/image per machine and preset) and `sheet.png` (one
+row per id, each picture labelled model · machine · seed). `ZIMAGE_URL` is the
+desktop's address; other flags pass through to generate.py. Edits are not split:
+`generate.py --images` runs them on the desktop (`qwenedit_desk`).
 
 ## Install chapters (`install_map_art.py <chapter>`)
 

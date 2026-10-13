@@ -1,26 +1,33 @@
 #!/usr/bin/env python3
-"""Run one art batch on BOTH machines at once — the Mac and the Windows desktop —
-split by image count (owner 2026-10-12: macbook 和 desktop 出图比例控制在 20:80，
-最后在一起比较分析), then lay every result on one comparison sheet.
+"""Run one art batch on the Windows desktop — and, when asked, part of it on the Mac
+at the same time — then lay every result on one comparison sheet.
+
+Owner 2026-10-13 (默认全部用desktop跑，mac只做为backup生图机器，或者我明确要求使用mac跑):
+the default --mac-share is 0, every image on the desktop. A split (the 2026-10-12 ruling,
+macbook 和 desktop 出图比例 20:80, 最后在一起比较分析) runs only when the owner asks
+for the Mac: --mac-share 0.2.
 
     python3 assets/imagegen/split_batch.py --ids K-01,V-35 --variants 3 --dry-run   # the plan only
     python3 assets/imagegen/split_batch.py --ids K-01,V-35 --variants 3 --tag knight
+    python3 assets/imagegen/split_batch.py --ids K-01 --variants 5 --mac-share 0.2   # owner asked for the Mac
     python3 assets/imagegen/split_batch.py --ids R-01 --variants 4 \
         --prompts-file unit_ref_prompts.csv --style-file STYLE_CORE_unit_ref.txt   # passed through
 
 The batch is every id x variant (seed + i) x model family (Z-Image, Qwen-Image-2512),
 so both models still run on every entry ([[art-image-pipeline]]). Z-Image never runs on
-the Mac, so the Mac's share is taken from the Qwen jobs, spread evenly over the ids and
-seeds; the desktop draws every Z-Image job and the rest of the Qwen ones. The Mac draws
-Qwen with --mac-qwen (qwen2512fast, Q6_K + Lightning 8 steps), the desktop with
---desk-qwen (qwen2512desk, fp8 + 2-step LoRA), so the sheet also shows the two Qwen
-builds side by side. Both machines run at the same time, each through generate.py
-(COMFYUI_URL points each call at its machine); any other argument is passed through.
+the Mac, so a Mac share is taken from the Qwen jobs, spread evenly over the ids and
+seeds; the desktop draws every Z-Image job and the rest of the Qwen ones. The desktop
+draws Qwen with --desk-qwen (qwen2512desk4, fp8 + Lightning 4 steps; qwen2512desk, the
+Wuli 2-step build, drifts photoreal), the Mac with --mac-qwen (qwen2512fast, Q6_K +
+Lightning 8 steps), so a split sheet also shows the two Qwen builds side by side. Both
+machines run at the same time, each through generate.py (COMFYUI_URL points each call
+at its machine); any other argument is passed through.
 
 Output: generate.py's usual files under out/<chapter dir>/, plus out/split/<tag>/ with
 plan.json, one log per machine, summary.md (images and seconds per machine and preset)
 and sheet.png (one row per id, every picture labelled model · machine · seed).
-Edits (qwenedit*) are not split: Qwen-Image-Edit-2511 is installed on the Mac only.
+Edits are not split: run them through generate.py --images, which defaults to
+qwenedit_desk on the desktop (qwenedit_fast on the Mac when asked for).
 """
 from __future__ import annotations
 
@@ -177,9 +184,10 @@ def main() -> int:
     ap.add_argument("--ids", required=True, help="comma-separated library ids")
     ap.add_argument("--variants", type=int, default=1, help="seeds per entry; variant i uses seed + i")
     ap.add_argument("--seed", type=int, default=954159497)
-    ap.add_argument("--mac-share", type=float, default=0.2, help="the Mac's share of the batch's images")
+    ap.add_argument("--mac-share", type=float, default=0.0,
+                    help="the Mac's share of the batch's images: 0 = all on the desktop (default); 0.2 when the owner asks for the Mac")
     ap.add_argument("--mac-qwen", default="qwen2512fast", help="the Mac's Qwen preset")
-    ap.add_argument("--desk-qwen", default="qwen2512desk", help="the desktop's Qwen preset")
+    ap.add_argument("--desk-qwen", default="qwen2512desk4", help="the desktop's Qwen preset")
     ap.add_argument("--desk-zimage", default="zimage", help="the desktop's Z-Image preset")
     ap.add_argument("--tag", default="", help="names out/split/<tag>/ (default: date and time)")
     ap.add_argument("--dry-run", action="store_true", help="print the plan, queue nothing")
@@ -193,7 +201,7 @@ def main() -> int:
     from generate import MODEL_PRESETS  # noqa: E402 (probes the Mac's port; harmless)
     missing = [p for p in (args.mac_qwen, args.desk_qwen, args.desk_zimage) if p not in MODEL_PRESETS]
     if missing:
-        print(f"generate.py has no preset {missing} (qwen2512desk arrives with feat/unit-ref-tpose)",
+        print(f"generate.py has no preset {missing}",
               file=sys.stderr)
         return 2
     ids = [i.strip() for i in args.ids.split(",") if i.strip()]
