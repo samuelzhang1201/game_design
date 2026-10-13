@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """The WAR ROOM's reference pictures (owner 2026-10-01: Qwen-Image-2512 only),
-rendered on the local ComfyUI from assets/imagegen/war_room_ref_prompts.csv into
+rendered on ComfyUI (the Windows desktop for the default
+qwen2512desk4, the Mac for qwen2512fast) from assets/imagegen/war_room_ref_prompts.csv into
 assets/3D/war_room/<type>/model_wip/<type>_ref_<model>.png — what the room,
 table, candlestick, rake and pennant in tools/war_room/blender/ were modelled
 against.
 
-  python3 tools/war_room/gen_room_refs.py [--model qwen2512fast] [--only a,b] [--seed N] [--force]
+  python3 tools/war_room/gen_room_refs.py [--model qwen2512desk4] [--only a,b] [--seed N] [--force]
 
 Each CSV row gives its own prompt template ({subject}, {features}), negative
 and canvas size. A file already there is kept unless --force. Ask the owner
@@ -16,19 +17,15 @@ import csv
 import importlib.util
 import json
 import os
-import shutil
 import sys
-import time
 import urllib.request
 import uuid
+from pathlib import Path
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 IMAGEGEN = os.path.join(ROOT, "assets", "imagegen")
 PROMPTS = os.path.join(IMAGEGEN, "war_room_ref_prompts.csv")
 OUT = os.path.join(ROOT, "assets", "3D", "war_room")
-HOST = "http://127.0.0.1:8188"
-COMFY_OUTPUTS = [os.path.expanduser("~/ComfyUI-Installs/GameDev/ComfyUI/output"),
-                 os.path.expanduser("~/ComfyUI-Shared/output")]
 SEED = 20261001
 
 
@@ -39,33 +36,24 @@ def _generate_module():
     return mod
 
 
-def _post(path, data):
-    req = urllib.request.Request(HOST + path, data=json.dumps(data).encode(),
+def _post(host, path, data):
+    req = urllib.request.Request(host + path, data=json.dumps(data).encode(),
                                  headers={"Content-Type": "application/json"})
     body = urllib.request.urlopen(req).read()
     return json.loads(body) if body.strip() else {}
 
 
-def _fetch(img, dest):
-    for base in COMFY_OUTPUTS:
-        src = os.path.join(base, img["subfolder"], img["filename"])
-        if os.path.exists(src):
-            shutil.copyfile(src, dest)
-            return
-    url = HOST + "/view?filename=%s&subfolder=%s&type=output" % (img["filename"], img["subfolder"])
-    with open(dest, "wb") as f:
-        f.write(urllib.request.urlopen(url).read())
-
-
 def main():
     args = sys.argv[1:]
-    model = args[args.index("--model") + 1] if "--model" in args else "qwen2512fast"
+    gen = _generate_module()
+    model = args[args.index("--model") + 1] if "--model" in args else gen.DEFAULT_MODEL
     only = set(args[args.index("--only") + 1].split(",")) if "--only" in args else set()
     seed = int(args[args.index("--seed") + 1]) if "--seed" in args else SEED
-    gen = _generate_module()
-    if model not in gen.MODEL_PRESETS or model in ("klein", "schnell"):
+    if model not in gen.MODEL_PRESETS or gen.MODEL_PRESETS[model].get("edit"):
         sys.exit("not a model for the war room references: %s" % model)
     preset = gen.MODEL_PRESETS[model]
+    host = gen.use_model_server(model)  # the desktop for a "remote" preset, else the Mac
+    print(model, "on", host, flush=True)
     with open(os.path.join(IMAGEGEN, preset["template"])) as f:
         template = json.load(f)
     with open(PROMPTS, newline="") as f:
@@ -84,20 +72,19 @@ def main():
                   "seed": seed, "negative": row["negative"],
                   "prompt": row["prompt_template"].format(subject=row["subject"], features=row["features"]),
                   "prefix": "war_room_ref/%s_%s" % (row["type"], model)}
-        if "lora_strength" in preset:
-            values["lora_strength"] = preset["lora_strength"]
-        pid = _post("/prompt", {"prompt": gen.make_graph(template, values),
-                                "client_id": str(uuid.uuid4())})["prompt_id"]
+        for key in ("lora_strength", "lora"):
+            if key in preset:
+                values[key] = preset[key]
+        pid = _post(host, "/prompt", {"prompt": gen.make_graph(template, values),
+                                      "client_id": str(uuid.uuid4())})["prompt_id"]
         jobs.append((pid, dest))
         print("queued", row["type"], pid, flush=True)
     gen.mark_loaded(preset["unet"])
     for pid, dest in jobs:
-        _fetch(gen.wait_for(pid, 1800)[0], dest)
+        gen.download(gen.wait_for(pid, 1800)[0], Path(dest))  # over HTTP: the desktop's files are not on this disk
         print("got", dest, flush=True)
     gen.free_models()
 
 
 if __name__ == "__main__":
-    t0 = time.time()
     main()
-    print("done in %.0fs" % (time.time() - t0))

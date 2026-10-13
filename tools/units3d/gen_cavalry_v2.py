@@ -3,17 +3,21 @@ shield, four designs (assets/imagegen/cavalry_v2_prompts.csv) rendered on three
 local model tiers so the owner can compare and pick one (klein, a Flux
 model, was dropped 2026-10-01: no Flux).
 
-  python3 tools/units3d/gen_cavalry_v2.py                 # all tiers, all designs
+  python3 tools/units3d/gen_cavalry_v2.py                 # the desktop tiers, all designs
   python3 tools/units3d/gen_cavalry_v2.py --tiers zimage,qwenfast --only A,C
   python3 tools/units3d/gen_cavalry_v2.py --seeds 2       # 2 seeds per cell
 
 Tiers (all Apache-2.0, see claude/t2i-model-evaluation-2026-09.md):
-  zimage  Z-Image Turbo, 8 steps              ~31 s / image
-  qwenfast Qwen-Image-2512 Q6_K + Lightning LoRA, 8 steps  ~2 min / image
-  qwen    Qwen-Image-2512 Q6_K full, 50 steps ~18 min / image (run overnight)
+  zimage   Z-Image Turbo, 8 steps                          desktop, ~10 s / image
+  qwendesk Qwen-Image-2512 fp8 + Lightning 4-step LoRA      desktop, ~15 s / image
+  qwenfast Qwen-Image-2512 Q6_K + Lightning LoRA, 8 steps  Mac,    ~2 min / image
+  qwen     Qwen-Image-2512 Q6_K full, 50 steps             Mac,    ~18 min / image (run overnight)
+Each tier runs on its machine (owner 2026-10-12/13: Z-Image only on the Windows desktop,
+Qwen there by default): the desktop at ZIMAGE_URL, the Mac at COMFY_HOST.
 Output: assets/3D/units/cavalry/model_wip/cavalry_v2/<tier>_<id>_s<n>.png, then a contact sheet
 contact_sheet.png if Pillow is importable. Existing files are kept unless --force.
-Needs ComfyUI running at COMFY_HOST (default http://127.0.0.1:8188).
+Needs the desktop's ComfyUI at ZIMAGE_URL (default http://192.168.4.85:8188) for the desktop
+tiers and the Mac's at COMFY_HOST (default http://127.0.0.1:8188) for the Mac tiers.
 """
 import csv, json, os, sys, time, urllib.parse, urllib.request, uuid
 from pathlib import Path
@@ -21,7 +25,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 IMAGEGEN = ROOT / "assets" / "imagegen"
 OUT = IMAGEGEN.parent / "3D" / "units" / "cavalry" / "model_wip" / "cavalry_v2"
-HOST = os.environ.get("COMFY_HOST", "http://127.0.0.1:8188")
+HOST = os.environ.get("COMFY_HOST", "http://127.0.0.1:8188")  # the Mac
+DESK_HOST = os.environ.get("ZIMAGE_URL", "http://192.168.4.85:8188").rstrip("/")  # the Windows desktop
 SEED = 20260925
 
 WRAP = ("Photograph of {p}. Three-quarter side view from eye level, the entire horse and "
@@ -38,13 +43,22 @@ NEGATIVE = ("cartoon, anime, toy, miniature, figurine, chibi, big head, stylised
             "five legs, broken lance, two lances")
 TIERS = {  # name: (template, values)
     "zimage": ("zimage_turbo_template.json", dict(unet="z_image_turbo_bf16.safetensors", steps=8, cfg=1.0, width=1344, height=896)),
+    "qwendesk": ("qwen2512_desktop_template.json", dict(unet="qwen_image_2512_fp8_e4m3fn.safetensors", lora="Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors", steps=4, cfg=1.0, lora_strength=1.0, width=1584, height=1056)),
     "qwenfast": ("qwen2512_template.json", dict(unet="qwen-image-2512-Q6_K.gguf", steps=8, cfg=1.0, lora_strength=1.0, width=1584, height=1056)),
     "qwen": ("qwen2512_template.json", dict(unet="qwen-image-2512-Q6_K.gguf", steps=50, cfg=4.0, lora_strength=0.0, width=1584, height=1056)),
 }
 
 
-def call(path, data=None):
-    req = urllib.request.Request(HOST + path, data=json.dumps(data).encode() if data is not None else None,
+DESK_TIERS = {"zimage", "qwendesk"}
+DEFAULT_TIERS = ["zimage", "qwendesk"]  # the Mac tiers (qwenfast, qwen) only when asked for
+
+
+def host_of(tier):
+    return DESK_HOST if tier in DESK_TIERS else HOST
+
+
+def call(path, data=None, host=HOST):
+    req = urllib.request.Request(host + path, data=json.dumps(data).encode() if data is not None else None,
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=60) as r:
         return r.read()
@@ -60,11 +74,11 @@ def graph(template_file, values):
     return g
 
 
-def run(g, timeout):
-    pid = json.loads(call("/prompt", {"prompt": g, "client_id": str(uuid.uuid4())}))["prompt_id"]
+def run(g, timeout, host=HOST):
+    pid = json.loads(call("/prompt", {"prompt": g, "client_id": str(uuid.uuid4())}, host))["prompt_id"]
     t0 = time.time()
     while time.time() - t0 < timeout:
-        h = json.loads(call("/history/" + pid))
+        h = json.loads(call("/history/" + pid, host=host))
         if pid in h:
             st = h[pid].get("status", {})
             if st.get("status_str") == "error":
@@ -101,7 +115,7 @@ def sheet(files):
 
 
 def main():
-    tiers = arg("--tiers", ",".join(TIERS)).split(",")
+    tiers = arg("--tiers", ",".join(DEFAULT_TIERS)).split(",")
     only = set(filter(None, arg("--only", "").split(",")))
     seeds = int(arg("--seeds", "1"))
     with open(IMAGEGEN / "cavalry_v2_prompts.csv", newline="", encoding="utf-8") as f:
@@ -117,9 +131,9 @@ def main():
                     print("keep", dst.name); done.append(dst); continue
                 v = dict(vals, prompt=WRAP.format(p=r["prompt"]), negative=NEGATIVE,
                          seed=SEED + s - 1, prefix=f"cavalry_v2/{t}_{r['id']}_s{s}")
-                img, dt = run(graph(tpl, v), 3600)
+                img, dt = run(graph(tpl, v), 3600, host_of(t))
                 q = urllib.parse.urlencode({"filename": img["filename"], "subfolder": img.get("subfolder", ""), "type": img.get("type", "output")})
-                dst.write_bytes(call("/view?" + q))
+                dst.write_bytes(call("/view?" + q, host=host_of(t)))
                 print(f"{dst.name}  {dt:.0f}s", flush=True); done.append(dst)
     sheet(done)
 

@@ -12,7 +12,7 @@ The image step of every 3D unit (infantry, archers, cavalry rider, royal, courie
 ## How (generate.py, both models, owner picks)
 
 - Design first (Z-Image + Qwen, the usual batch); the owner picks.
-- Views from the PICK, never re-drawn from words: `generate.py --model qwenedit_fast --images <picked design> --instruction "<…>"` (see `assets/imagegen/README.md`, edit mode). One edit per view, same seed family, the previous accepted view passed as a second `--images` reference so proportions and clothing stay locked:
+- Views from the PICK, never re-drawn from words: `generate.py --images <picked design> --instruction "<…>"` (see `assets/imagegen/README.md`, edit mode). One edit per view, same seed family, the previous accepted view passed as a second `--images` reference so proportions and clothing stay locked:
   - front: "the same person in a T-pose, arms straight out to the sides, palms down, empty hands, bare head, no weapons or carried equipment, front view, orthographic, plain grey background"
   - side: "… the same person …, right-side profile …"
   - back: "… the same person …, back view …"

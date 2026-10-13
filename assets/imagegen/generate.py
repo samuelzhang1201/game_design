@@ -5,10 +5,12 @@
     python3 assets/imagegen/generate.py --ids C-01,T-01,I-04  # generate a few entries
     python3 assets/imagegen/generate.py --chapter T --variants 5   # every tile, 5 seeds each
     python3 assets/imagegen/generate.py --ids C-01 --dry-run  # print the assembled prompt only
-    python3 assets/imagegen/generate.py --model qwenedit_fast --images out/cast/K-01_x.png \
+    python3 assets/imagegen/generate.py --images out/cast/K-01_x.png \
         --instruction "the same man seen from behind, full body"   # edit a picture
 
-Edit presets (qwenedit / qwenedit_fast, Qwen-Image-Edit-2511) take one to
+The default preset is qwen2512desk4 (qwenedit_desk with --images), Qwen on the
+Windows desktop; --model qwen2512fast / qwenedit_fast run it on the Mac instead.
+Edit presets (qwenedit_desk / qwenedit / qwenedit_fast, Qwen-Image-Edit-2511) take one to
 three pictures with --images: the first is edited, the others are references.
 The prompt is --instruction, followed by the assembled row prompt when --ids
 are given too; without --ids the output goes to out/edits/. An edit's file
@@ -69,6 +71,21 @@ def _find_server() -> str:
 
 
 SERVER = _find_server()
+# Z-Image never runs on the Mac (owner 2026-10-12: 以后不要用这台mac使用Z_image模型，
+# 全部z_image模型处理请远程丢给windows的desktop; its weights were removed from the
+# Mac that day). Every preset marked "remote" goes to the Windows desktop's Comfy
+# Desktop on the LAN; ZIMAGE_URL overrides the address (a DHCP move). There is no
+# fallback to the Mac: if the desktop does not answer, the run fails.
+ZIMAGE_SERVER = os.environ.get("ZIMAGE_URL", "http://192.168.4.85:8188").rstrip("/")
+
+
+def _use_server(url: str) -> None:
+    """Point every request of this run at `url`, with its own loaded-model marker."""
+    global SERVER, LOADED_MARK
+    SERVER = url
+    if url != ZIMAGE_SERVER:
+        return
+    LOADED_MARK = OUT_DIR / ".comfy_loaded_remote"
 
 # Prompt library §0.3: where each ID prefix is filed.
 CHAPTER_DIR = {
@@ -125,16 +142,36 @@ CANVAS_SIZE = {
 # (research licence), Krea 2 open / SD3.5 (revenue cap).
 MODEL_PRESETS = {
     "zimage": {"template": "zimage_turbo_template.json", "unet": "z_image_turbo_bf16.safetensors",
-               "steps": 8, "guidance": 0.0, "cfg": 1.0},
+               "steps": 8, "guidance": 0.0, "cfg": 1.0, "remote": True},
     "qwen2512": {"template": "qwen2512_template.json", "unet": "qwen-image-2512-Q6_K.gguf",
                  "steps": 50, "guidance": 0.0, "cfg": 4.0, "lora_strength": 0.0},
     "qwen2512fast": {"template": "qwen2512_template.json", "unet": "qwen-image-2512-Q6_K.gguf",
                      "steps": 8, "guidance": 0.0, "cfg": 1.0, "lora_strength": 1.0},
+    # The same model on the Windows desktop: fp8 safetensors + the Wuli 2-step
+    # Turbo LoRA (Apache 2.0), ComfyUI's own 2512 2-step template settings.
+    "qwen2512desk": {"template": "qwen2512_desktop_template.json", "unet": "qwen_image_2512_fp8_e4m3fn.safetensors",
+                     "steps": 2, "guidance": 0.0, "cfg": 1.0, "lora_strength": 1.0, "remote": True},
+    # The desktop graph with lightx2v's Lightning 4-step LoRA (Apache 2.0, the
+    # Mac's LoRA family) instead, for the colour-pencil look (the 2-step LoRA
+    # pulls it towards photoreal).
+    "qwen2512desk4": {"template": "qwen2512_desktop_template.json", "unet": "qwen_image_2512_fp8_e4m3fn.safetensors",
+                      "lora": "Qwen-Image-2512-Lightning-4steps-V1.0-fp32.safetensors",
+                      "steps": 4, "guidance": 0.0, "cfg": 1.0, "lora_strength": 1.0, "remote": True},
     "qwenedit": {"template": "qwen_edit2511_template.json", "unet": "qwen-image-edit-2511-Q6_K.gguf",
                  "steps": 40, "guidance": 0.0, "cfg": 4.0, "lora_strength": 0.0, "edit": True},
     "qwenedit_fast": {"template": "qwen_edit2511_template.json", "unet": "qwen-image-edit-2511-Q6_K.gguf",
                       "steps": 8, "guidance": 0.0, "cfg": 1.0, "lora_strength": 1.0, "edit": True},
+    # Qwen-Image-Edit-2511 on the Windows desktop (owner 2026-10-13: side and back views
+    # made there): Comfy-Org's int8_convrot safetensors + the Lightning 4-step LoRA.
+    "qwenedit_desk": {"template": "qwen_edit2511_desktop_template.json",
+                      "unet": "qwen_image_edit_2511_int8_convrot.safetensors",
+                      "steps": 4, "guidance": 0.0, "cfg": 1.0, "lora_strength": 1.0, "edit": True, "remote": True},
 }
+# Qwen runs on the Windows desktop by default (owner 2026-10-13, after a same-seed
+# bench: ~8x faster than the Mac at matching quality); the Mac's GGUF presets
+# (qwen2512fast, qwenedit_fast, qwen2512, qwenedit) stay as the fallback.
+DEFAULT_MODEL = "qwen2512desk4"
+DEFAULT_EDIT_MODEL = "qwenedit_desk"
 EDIT_SLOTS = ("image1", "image2", "image3")
 # The edit template's LoadImage node per input slot; an unused one is deleted.
 EDIT_PIXELS = 1024 * 1024
@@ -381,6 +418,23 @@ def mark_loaded(unet: str) -> None:
     LOADED_MARK.write_text(unet + "\n", encoding="utf-8")
 
 
+def server_for(model: str) -> str:
+    """The ComfyUI a preset runs on: the desktop for a "remote" preset, else the Mac's."""
+    return ZIMAGE_SERVER if MODEL_PRESETS[model].get("remote") else _find_server()
+
+
+def use_model_server(model: str) -> str:
+    """Point every helper here (switch_model, wait_for, download, free_models, …) at the
+    ComfyUI `model` runs on and return its address — for the tools that post their own
+    graphs (tools/map3d/gen_house_refs.py, tools/war_room/gen_room_refs.py), which call
+    it before each model's jobs and again before waiting on them."""
+    global LOADED_MARK
+    _use_server(server_for(model))
+    if not MODEL_PRESETS[model].get("remote"):
+        LOADED_MARK = OUT_DIR / ".comfy_loaded"
+    return SERVER
+
+
 def make_graph(template: dict, values: dict) -> dict:
     """Fill the template's _slots (slot name -> [[node id, input name], ...])
     with `values`; slots the template does not declare are ignored, so one
@@ -430,7 +484,8 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=0, help="stop after N entries")
     ap.add_argument("--variants", type=int, default=1, help="seeds per entry (tiles want 4-6)")
     ap.add_argument("--seed", type=int, default=954159497, help="base seed; variant i uses seed + i")
-    ap.add_argument("--model", choices=MODEL_PRESETS, default="qwen2512fast")
+    ap.add_argument("--model", choices=MODEL_PRESETS, default="",
+                    help=f"preset; default {DEFAULT_MODEL} ({DEFAULT_EDIT_MODEL} with --images), both on the Windows desktop")
     ap.add_argument("--steps", type=int, default=0, help="override the preset's steps")
     ap.add_argument("--cfg", type=float, default=0.0, help="override the preset's CFG")
     ap.add_argument("--small", action="store_true", help="icons: add the §6 small-tier suffix")
@@ -456,7 +511,11 @@ def main() -> int:
     ap.add_argument("--front", action="store_true", help="queue ahead of jobs already waiting in ComfyUI")
     ap.add_argument("--timeout", type=float, default=900.0, help="seconds to wait per image")
     args = ap.parse_args()
+    if not args.model:
+        args.model = DEFAULT_EDIT_MODEL if args.images else DEFAULT_MODEL
     if args.free:
+        if MODEL_PRESETS[args.model].get("remote"):
+            _use_server(ZIMAGE_SERVER)
         free_models()
         return 0
 
@@ -490,6 +549,9 @@ def main() -> int:
         rows = [r for r in rows if r["chapter"] == args.chapter.upper()]
     rows = [r for r in rows if r["canvas"]]
     preset = dict(MODEL_PRESETS[args.model])
+    if preset.get("remote"):
+        _use_server(ZIMAGE_SERVER)
+        print(f"{args.model} runs on the Windows desktop only: {SERVER}")
     images = [Path(p.strip()).expanduser() for p in args.images.split(",") if p.strip()]
     images = [p if p.is_absolute() else (Path.cwd() / p) for p in images]
     if preset.get("edit"):
@@ -508,7 +570,7 @@ def main() -> int:
             rows = [{"id": "EDIT", "chapter": "", "dir": "edits", "title": images[0].stem,
                      "canvas": "", "subject": "", "width": w, "height": h}]
     elif images or args.instruction:
-        print(f"--images / --instruction need an edit preset (qwenedit, qwenedit_fast), not {args.model}",
+        print(f"--images / --instruction need an edit preset (qwenedit_desk, qwenedit, qwenedit_fast), not {args.model}",
               file=sys.stderr)
         return 2
     if args.canvas:
@@ -586,6 +648,8 @@ def main() -> int:
                 "guidance": preset["guidance"], "cfg": preset["cfg"], "steps": preset["steps"],
                 "lora_strength": preset.get("lora_strength", 0.0),
                 "width": int(r["width"]), "height": int(r["height"]), "seed": seed, "prefix": prefix}
+            if "lora" in preset:
+                values["lora"] = preset["lora"]
             values.update(zip(EDIT_SLOTS, uploaded))
             graph = make_graph(template, values)
             if preset.get("edit"):

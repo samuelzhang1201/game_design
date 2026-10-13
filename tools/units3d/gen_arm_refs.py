@@ -5,12 +5,12 @@ look of the pieces already built -- plain matte steel, dark green cloth, a plain
 in one three-quarter view, on Z-Image and Qwen-Image-2512 side by side, for the owner to pick
 the one to feed Tripo.
 
-  python3 tools/units3d/gen_arm_refs.py                      # every arm, 2 seeds, both tiers
+  python3 tools/units3d/gen_arm_refs.py                      # every arm, 2 seeds, the desktop tiers
   python3 tools/units3d/gen_arm_refs.py --only royal --tiers zimage --seeds 1
 
 Output: assets/3D/units/<arm>/model_wip/tripo_kit/<tier>_<arm>_s<n>.png and one
 contact_sheet.png per run in assets/3D/units/model_wip/arm_refs/ (git-ignored). Existing files
-are kept unless --force. Needs ComfyUI at COMFY_HOST (default http://127.0.0.1:8188).
+are kept unless --force. Each tier runs on its machine (gen_cavalry_v2.host_of).
 """
 import sys
 import urllib.parse
@@ -142,7 +142,7 @@ WRAP = ("{v}. Orthographic technical reference photograph for 3D modelling of {d
         "photorealistic real steel, bronze, wood, leather and cloth, no text, no labels, no watermark")
 NEGATIVE = (G.NEGATIVE.replace("flags, banners, ", "").replace(", broken lance, two lances", "")
             + ", gilding, engraving, ground, shadow on the floor, motion blur, close-up, cropped")
-TIERS = {"zimage": G.TIERS["zimage"], "qwenfast": G.TIERS["qwenfast"]}
+TIERS = {t: G.TIERS[t] for t in ("zimage", "qwendesk", "qwenfast")}  # qwenfast: the Mac fallback
 
 
 def out_of(arm: str) -> Path:
@@ -155,7 +155,7 @@ def stem(tier: str, arm: str, seed: int) -> str:
 
 
 def main():
-    tiers = G.arg("--tiers", ",".join(TIERS)).split(",")
+    tiers = G.arg("--tiers", ",".join(G.DEFAULT_TIERS)).split(",")
     only = set(filter(None, G.arg("--only", "").split(",")))
     seeds = int(G.arg("--seeds", "2"))
     done = []
@@ -175,10 +175,10 @@ def main():
                     print("keep", dst.name); done.append(dst); continue
                 v = dict(vals, **size, prompt=WRAP.format(d=subject, v=words), negative=NEGATIVE + neg,
                          seed=SEED + s - 1, prefix=f"arm_refs/{stem(t, arm, s)}")
-                img, dt = G.run(G.graph(tpl, v), 3600)
+                img, dt = G.run(G.graph(tpl, v), 3600, G.host_of(t))
                 q = urllib.parse.urlencode({"filename": img["filename"], "subfolder": img.get("subfolder", ""),
                                             "type": img.get("type", "output")})
-                dst.write_bytes(G.call("/view?" + q))
+                dst.write_bytes(G.call("/view?" + q, host=G.host_of(t)))
                 print(f"{dst.name}  {dt:.0f}s", flush=True); done.append(dst)
     sheet(done, seeds)
 

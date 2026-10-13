@@ -1,8 +1,9 @@
-"""Render the settlement buildings' photoreal REFERENCE images on the LOCAL
-ComfyUI from assets/imagegen/house_ref_prompts.csv, one picture per type per
+"""Render the settlement buildings' photoreal REFERENCE images on ComfyUI (each
+model on its machine: the Windows desktop for zimage / qwen2512desk4, the Mac for
+qwen2512fast) from assets/imagegen/house_ref_prompts.csv, one picture per type per
 model, into assets/3D/buildings/<type>/model_wip/<type>_ref_<model>.png.
 
-  python3 tools/map3d/gen_house_refs.py [--set houses|ships] [--model zimage,qwen2512fast] [--only a,b] [--seed N] [--variants N] [--tag T] [--force] [--front]
+  python3 tools/map3d/gen_house_refs.py [--set houses|ships] [--model zimage,qwen2512desk4] [--only a,b] [--seed N] [--variants N] [--tag T] [--force] [--front]
 
 The models are Z-Image Turbo and Qwen-Image-2512 (owner 2026-09-30: no Flux
 any more; both side by side for the owner to pick), filled from
@@ -29,18 +30,15 @@ import csv
 import importlib.util
 import json
 import os
-import shutil
 import sys
 import time
 import urllib.request
+from pathlib import Path
 import uuid
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROMPTS = os.path.join(ROOT, "assets", "imagegen", "house_ref_prompts.csv")
 BUILDINGS = os.path.join(ROOT, "assets", "3D", "buildings")
-HOST = os.environ.get("COMFY_HOST", "http://127.0.0.1:8188")
-COMFY = os.path.expanduser(os.environ.get(
-    "COMFY_ROOT", "~/ComfyUI-Installs/GameDev/ComfyUI"))
 
 # The owner's workflow, word for word around the subject.
 PROMPT = ("a single {subject}, one building only, {features}, isolated on a "
@@ -61,7 +59,7 @@ SHIP_PROMPT = ("a single {subject}, one ship only, {features}, the whole hull "
 SETS = {"houses": (PROMPTS, BUILDINGS, PROMPT),
         "ships": (SHIP_PROMPTS, os.path.join(ROOT, "assets", "3D", "ships"), SHIP_PROMPT)}
 SEED = 20260923
-MODELS = ["zimage", "qwen2512fast"]
+MODELS = ["zimage", "qwen2512desk4"]  # both on the desktop; qwen2512fast = the Mac fallback
 IMAGEGEN_DIR = os.path.join(ROOT, "assets", "imagegen")
 
 
@@ -78,29 +76,11 @@ def rows(only, path=PROMPTS):
     return [r for r in out if not only or r["type"] in only]
 
 
-def post(path, data):
-    req = urllib.request.Request(HOST + path, data=json.dumps(data).encode(),
+def post(host, path, data):
+    req = urllib.request.Request(host + path, data=json.dumps(data).encode(),
                                  headers={"Content-Type": "application/json"})
     body = urllib.request.urlopen(req).read()
     return json.loads(body) if body.strip() else {}
-
-
-def get(path):
-    return json.loads(urllib.request.urlopen(HOST + path).read())
-
-
-def wait(pid, timeout_s):
-    t0 = time.time()
-    while time.time() - t0 < timeout_s:
-        h = get("/history/" + pid)
-        if pid in h:
-            st = h[pid].get("status", {})
-            if st.get("status_str") == "error":
-                raise RuntimeError(json.dumps(st.get("messages"))[-2000:])
-            if st.get("completed"):
-                return h[pid]
-        time.sleep(3)
-    raise TimeoutError(pid)
 
 
 def image_graph(gen, model, row, seed, prompt=PROMPT):
@@ -111,16 +91,10 @@ def image_graph(gen, model, row, seed, prompt=PROMPT):
               "guidance": preset["guidance"], "width": 1024, "height": 1024, "seed": seed,
               "prompt": prompt.format(subject=row["subject"], features=row["features"]),
               "negative": ", ".join(x for x in (NEGATIVE, row.get("negative", "")) if x), "prefix": "house_ref/%s_%s" % (row["type"], model)}
-    if "lora_strength" in preset:
-        values["lora_strength"] = preset["lora_strength"]
+    for key in ("lora_strength", "lora"):
+        if key in preset:
+            values[key] = preset[key]
     return gen.make_graph(template, values)
-
-
-def fetch(img, dest):
-    src = os.path.join(COMFY, "output", img["subfolder"], img["filename"])
-    if not os.path.exists(src):
-        src = os.path.join(os.path.expanduser("~/ComfyUI-Shared/output"), img["subfolder"], img["filename"])
-    shutil.copyfile(src, dest)
 
 
 def main():
@@ -130,7 +104,7 @@ def main():
     models = args[args.index("--model") + 1].split(",") if "--model" in args else MODELS
     gen = _generate_module()
     for m in models:
-        if m not in gen.MODEL_PRESETS:
+        if m not in gen.MODEL_PRESETS or gen.MODEL_PRESETS[m].get("edit"):
             sys.exit("not a model for the house references: %s" % m)
     variants = int(args[args.index("--variants") + 1]) if "--variants" in args else 1
     front = "--front" in args
@@ -138,6 +112,7 @@ def main():
     prompts, out_root, prompt = SETS[args[args.index("--set") + 1] if "--set" in args else "houses"]
     jobs = []
     for model in (list(reversed(models)) if front else models):
+        host = gen.use_model_server(model)  # the desktop for a "remote" preset, else the Mac
         gen.switch_model(gen.MODEL_PRESETS[model]["unet"])  # one unload per model, never two models thrashing
         for row in rows(only, prompts):
             t = row["type"]
@@ -151,18 +126,19 @@ def main():
                 if os.path.exists(ref) and "--force" not in args:
                     print("keep", ref)
                     continue
-                pid = post("/prompt", {"prompt": image_graph(gen, model, row, seed + v, prompt),
+                pid = post(host, "/prompt", {"prompt": image_graph(gen, model, row, seed + v, prompt),
                                        "client_id": str(uuid.uuid4()), "front": front})["prompt_id"]
-                jobs.append((pid, ref))
+                jobs.append((pid, ref, model))
                 print("queued", model, t, v + 1, pid, flush=True)
         gen.mark_loaded(gen.MODEL_PRESETS[model]["unet"])
     t0 = time.time()
-    for pid, ref in jobs:
-        hist = wait(pid, 4 * 3600)
-        img = [i for out in hist["outputs"].values() for i in out.get("images", [])][0]
-        fetch(img, ref)
+    for pid, ref, model in jobs:
+        gen.use_model_server(model)
+        gen.download(gen.wait_for(pid, 4 * 3600)[0], Path(ref))  # over HTTP: the desktop's files are not on this disk
         print("%.0fs -> %s" % (time.time() - t0, ref), flush=True)
-    gen.free_models()
+    for model in dict.fromkeys(m for _, _, m in jobs):  # unload on every machine this run used
+        gen.use_model_server(model)
+        gen.free_models()
 
 
 if __name__ == "__main__":
