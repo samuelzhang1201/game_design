@@ -25,6 +25,9 @@ const WAR_TOOL_ART := "res://assets/2D/war_room/tools/war_tool_art.tres"
 const COURIER_PAINTINGS := "res://assets/2D/paintings/couriers/courier_paintings.tres"
 ## The model each kind of courier rides.
 const COURIER_MODELS := "res://assets/3D/units/courier_models.tres"
+## The loop each arm's piece marches to on the 3D map (Map3DUnitSound), by
+## army_art.csv `piece`; an arm with none marches silent.
+const UNIT_SOUNDS := "res://assets/audio/units/unit_sounds.tres"
 
 ## Each estate's painting by its industry and size, "<focus>_<tier>"
 ## (library B-01..B-36; manor_estates.csv keeps the tiers' numbers).
