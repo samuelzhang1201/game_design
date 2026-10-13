@@ -359,6 +359,24 @@ func test_the_action_for_a_held_piece_is_its_standing_clip() -> void:
 	assert_eq(Map3DUnits.clip_named(anim, "ATTACK"), "", "other missing clips stay missing")
 
 
+## A model with no guard clip (MARCH and STANDBY only) garrisons and holds
+## standing by, never frozen in its march.
+func test_a_model_with_no_garrison_stands_by_instead() -> void:
+	var anim := AnimationPlayer.new()
+	var lib := AnimationLibrary.new()
+	lib.add_animation("MARCH", Animation.new())
+	lib.add_animation("STANDBY", Animation.new())
+	anim.add_animation_library("", lib)
+	add_child_autofree(anim)
+	assert_eq(Map3DUnits.clip_named(anim, "GARRISON"), "STANDBY")
+	assert_eq(Map3DUnits.clip_named(anim, "DEFEND"), "STANDBY", "no DEFEND, no GARRISON: it holds standing by")
+	assert_eq(Map3DUnits.clip_named(anim, "STANDBY"), "STANDBY")
+	var bare := AnimationPlayer.new()
+	bare.add_animation_library("", AnimationLibrary.new())
+	add_child_autofree(bare)
+	assert_eq(Map3DUnits.clip_named(bare, "STANDBY"), "", "no standing clip at all: no clip, no endless fallback")
+
+
 func test_a_held_facing_turns_the_piece_about() -> void:
 	var repo := SuiteData.repo()
 	var s := SuiteData.campaign(repo, 7)

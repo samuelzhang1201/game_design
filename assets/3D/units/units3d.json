@@ -98,28 +98,28 @@
  },
  "infantry": {
   "actions": {
-   "GARRISON": [
-    1,
-    121
-   ],
    "MARCH": [
-    1,
-    33
+    0,
+    56
    ],
    "STANDBY": [
-    1,
-    121
+    0,
+    422
+   ],
+   "GARRISON": [
+    0,
+    119
    ]
   },
-  "bones": 30,
-  "fps": 30,
+  "bones": 67,
+  "fps": 24,
   "height_m": 1.85,
   "kind": "humanoid",
   "label": "Man-at-arms",
-  "source": "Tripo 3D generation on the owner's paid plan (assets/3D/units/infantry/model_wip/tripo/: the textured export baked onto the 51-part segmented export), tools/units3d/infantry_tripo/tripo.py",
-  "stride_m": 1.207,
-  "tris": 19480,
-  "weights": "rigid parts + distance"
+  "source": "Tripo 3D knight, spear and shield on the owner's paid plan (Tripo's Mixamo-named rig and walk / standing_relax clips), fitted and baked in the owner's Blender: assets/3D/units/model_wip/knight_spear_shield_game.blend, tools/units3d/infantry_knight/README.md",
+  "stride_m": 2.81,
+  "tris": 20195,
+  "weights": "Tripo skin; spear and shield rigid on their own bones"
  },
  "royal": {
   "actions": {
