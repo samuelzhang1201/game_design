@@ -231,6 +231,9 @@ static func keep_pace(repo: DataRepository, piece: Dictionary, day: Dictionary, 
 		piece["pace_key"] = key
 		var anims: Array = piece["anims"]
 		var spread := 0.0 if exact else repo.bal("map3d_march_desync_pace")
+		var statures: Array = piece.get("statures", [])
 		for i in anims.size():
-			(anims[i] as AnimationPlayer).speed_scale = Map3DMarchLag.pace(code, i, pace,
+			# a figure at stature s strides s times as far: s times slower keeps its feet
+			var own := pace / float(statures[i]) if exact and i < statures.size() else pace
+			(anims[i] as AnimationPlayer).speed_scale = Map3DMarchLag.pace(code, i, own,
 				spread, lo, hi) if walking else 1.0

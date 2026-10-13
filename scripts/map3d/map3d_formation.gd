@@ -134,5 +134,14 @@ static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary,
 	var scene := Map3DAssetCache.scene(path) if path != "" else null
 	if path != "" and scene == null:
 		Map3DWorldLoader.warn_once("units:" + path, "map3d units: no model at " + path)
-	return piece(repo, scene, repo.army_art.get(model, {}), tier, gap, layout).merged({"model": model}) \
-		if scene != null else {}  # `model` keys its march's sound (Map3DUnitSound)
+	if scene == null:
+		return {}
+	var built := piece(repo, scene, repo.army_art.get(model, {}), tier, gap, layout)
+	built["model"] = model  # keys its march's sound (Map3DUnitSound)
+	if bool(built.get("exact_pace", false)):  # each man his own height and cadence (Map3DMarchLag.stature)
+		var spread := repo.bal("map3d_march_stature_spread")
+		built["statures"] = range(built["figs"].size()).map(func(i: int) -> float:
+			return Map3DMarchLag.stature(String(reg.get("regiment_code", "")), i, spread))
+		for i in built["figs"].size():
+			(built["figs"][i] as Node3D).scale = Vector3.ONE * float(built["statures"][i])
+	return built
