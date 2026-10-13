@@ -21,3 +21,4 @@ kind,name,enabled,habit,form,cells,crowns,spread_m,size,tint_lo,tint_hi,biomes,h
 19,scrub,1,lone,broad,26|27,3,7,0.45,#dfe4c8,#f6f6dc,3:1.0|4:1.0|6:0.6|12:0.6|13:0.9,0.0,0.7,"gorse and bramble scrub on open land (map art phase 2 C, SC-01; critic 2026-10-13: the ground had no life between the trees)"
 20,boulders,1,lone,broad,28|29,2,8,0.45,#eeece4,#ffffff,4:0.4|13:1.0|14:1.0|15:0.6,1.5,1.2,"boulder clusters on the hills and the mountains (map art phase 2 C, SC-02)"
 21,heather,1,lone,broad,30|31,3,8,0.45,#cbbfb4,#e8dcd0,10:1.0|12:0.7|13:0.8|14:0.7,0.8,1.2,"heather on the heath and the high moor (map art phase 2 C, SC-03)"
+22,hedge_bush,1,hedge,broad,14|15,3,6,0.55,#c4ccb2,#e2e6c8,3:1.0|4:1.0|5:1.0|6:1.0|7:1.0|8:1.0|12:1.0|13:1.0,-0.3,1.0,"the hedgerow itself — low hawthorn and blackthorn between the hedge trees, so a field reads bounded (owner-approved art 2026-10-13, SC-04; critic: fields read as decals with no hedges)"

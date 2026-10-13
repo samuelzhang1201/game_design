@@ -152,7 +152,7 @@ def test_species_follow_the_ground():
     bank = pick(6, 0.1, np.full(n, bake_trees.HABITS["bank"]))
     assert set(bank) <= {"bankside", "willow"} and "bankside" in bank   # willow landed 2026-10-13
     hedge = pick(6, 0.1, np.full(n, bake_trees.HABITS["hedge"]))
-    assert set(hedge) <= {"hedge_hornbeam", "hedge_oak", "poplar"}   # poplar landed 2026-10-13
+    assert set(hedge) <= {"hedge_hornbeam", "hedge_oak", "poplar", "hedge_bush"}   # poplar, hedge_bush landed 2026-10-13
     # the same call is the same pick
     assert pick(6, 0.1) == lowland
 

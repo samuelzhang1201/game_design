@@ -43,7 +43,7 @@ sown_keep_chance,0.97,woods: a sown field is left clear unless the wood's chance
 fray_wave_m,260,"woods: the wavelength of a fine noise laid on the woodedness before the edge squeeze, so a wood's rim frays in tongues and outliers instead of following its cells' straight sides"
 fray_gain,0.35,woods: how far that noise swings the woodedness
 settled_clear,0.35,"woods (visual review 2026-10-05: the fields read scattered in the woods, not round the towns; 0.9 left the towns in bare country): how far the settled ground round each village (bake_world's settled.png — crofts, fields and meadow 1, the common pasture its pasture_open) takes the woods' chance down, before the edge squeeze"
-hedge_chance,0.55,"woods (visual review 2026-10-06: the fields read as flat fills laid on the land): HEDGEROW trees — the chance of a clump at each hedge candidate within hedge_band_m of a field's edge (bake_world field_edges.png), times the run noise"
+hedge_chance,0.65,"woods (visual review 2026-10-06: the fields read as flat fills laid on the land): HEDGEROW trees — the chance of a clump at each hedge candidate within hedge_band_m of a field's edge (bake_world field_edges.png), times the run noise"
 hedge_spacing_m,22,woods: the jittered grid hedgerow candidates are offered on
 hedge_band_m,9,woods: how near a field's edge (metres) a hedgerow clump stands
 hedge_run_m,500,"woods: the wavelength of the noise that makes hedgerows run in stretches, some full, some bare (under 0.35 none)"

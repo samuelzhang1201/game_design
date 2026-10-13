@@ -160,3 +160,13 @@ Owner-approved 2026-10-13 ("同意 A/B/C"), Z-Image on the Windows desktop
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p2_scree.png p2_scree --height-gain 1.2 --saturation 0.35 --match-mean '#8E8B84'
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p2_ridge.png p2_ridge --height-gain 1.4 --saturation 0.7 --lift-darks 0.6 --match-mean '#7A7060'
     python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p2_snow.png p2_snow --flatten-keep 0.0 --contrast 0.7 --saturation 0.3 --height-gain 0.9 --rough 0.75
+
+## The frontal rock face (owner-approved 2026-10-13, "批准")
+
+`p3_rock_face.png` is R-01 (seed 954159498, Z-Image, `rock_face_prompts.csv` /
+`STYLE_CORE_rock_face.txt`): a weathered sandstone face photographed straight on,
+blocky and fractured with no strata. It replaces `aerial_cliff` as the CLIFF layer:
+Terrain3D projects the steep faces vertically (projection_threshold 0.87), where the
+top-down crag read as pale vertical streaks.
+
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p3_rock_face.png p3_rock_face --height-gain 1.3 --saturation 0.8 --match-mean '#8A7A64'
