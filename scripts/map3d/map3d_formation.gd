@@ -98,7 +98,7 @@ static func anims_of(root: Node) -> Array:
 ## `art`, in formation `tier` with `gap` (Map3DLayerUnits' formation_gap): one
 ## figure measured, then the FORMATION built round it — {node (not yet in the
 ## tree, no owner), anims, height_m, head_m, half_w_m, extent, figures,
-## stand_deg, size, stride_m, clip_s}; {} when the scene makes no Node3D.
+## stand_deg, size, stride_m, exact_pace, clip_s}; {} when the scene makes no Node3D.
 static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tier: Dictionary,
 		gap: float, layout := BLOCK) -> Dictionary:
 	var one := scene.instantiate() as Node3D
@@ -118,6 +118,7 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 		"lag_cap": repo.bal("map3d_march_lag_cap_share") * minf(ext.x, ext.y),
 		"stand_deg": float(art.get("stand_deg", "0")),
 		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
+		"exact_pace": String(art.get("exact_pace", "0")) == "1",
 		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
 
 
