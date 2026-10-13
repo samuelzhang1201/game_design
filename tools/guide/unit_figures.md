@@ -40,6 +40,17 @@
 - **The steel is matte and warm, like the cavalry's**: Tripo's delit silver
   read white on the map; toned down, roughness at least 0.55.
 
+## The Tripo knight on foot (owner 2026-10-13, the infantry since PR #56)
+
+- **On the march the shield hangs, the spear is shouldered**: the kite shield on the left
+  forearm, wide edge DOWN, point up, swinging with the arm (盾牌挂在小臂上，宽边向下，尖边朝上，
+  随着手臂摆动而摆动), turned to the front-left so its colour faces the camera; the spear thin with a
+  small head (矛改的细一点，矛的箭头小一点), shouldered tip up (把矛扛在肩上，矛尖向上).
+- **The guard is the owner's own clip** (驻防的动作我这里有了): crouched, the shield held before the
+  left side LOW ENOUGH TO SHOW THE EYES (露出士兵的眼睛), the spear braced from the right hip RESTING
+  ON THE SHIELD'S EDGE and aimed where he looks (矛靠上盾牌边缘，指向视线前方), the wrist as straight
+  as the grip allows (手腕弯曲的角度再小一点). It replaces the standing lunge of the man-at-arms.
+
 ## The Tripo knight (owner 2026-09-30, the cavalry remade the infantry's way)
 
 - **Keep the design; change the maker**: the Tripo knight wears the in-game
