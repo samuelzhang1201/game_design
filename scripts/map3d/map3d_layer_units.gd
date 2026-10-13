@@ -26,6 +26,7 @@ const MARCH := "MARCH"
 ## past the line's half depth (spec 2026-10-11-war-room-front-line-design §3).
 @export var camp_back_m := 6.0
 var _camps := Map3DUnitCamps.new()  ## the camps pitched behind held lines
+var _sound := Map3DUnitSound.new()  ## the marching pieces' loops
 ## How solid a GHOST's figures stand (spec 2026-10-10-player-sight-and-ghosts),
 ## 1 opaque — see-through as a courier's fading piece (Map3DCourierRide.apply).
 @export_range(0.0, 1.0) var ghost_alpha := 0.35
@@ -59,10 +60,9 @@ func bind(p_ctx: Map3DContext) -> void:
 func set_shown(on: bool) -> void:
 	shown = on
 	visible = on
-	if on:
-		refresh()
-	else:  # hidden: nothing to click
-		_rects.clear()
+	if on: refresh()
+	else:  # hidden: nothing to click, nothing heard
+		_rects.clear(); _sound.silence()
 
 
 func set_preview(on: bool) -> void:
@@ -200,7 +200,7 @@ func step(delta: float) -> bool:
 			_yaw[code] = rotate_toward(float(_yaw.get(code, 0.0)),
 				float(_want_yaw.get(code, 0.0)), rate)
 			_place(code, _pieces[code])  # re-seated: a long piece turned across a slope meets other ground
-	_camps.prune(_pieces)
+	_camps.prune(_pieces); _sound.sync(repo, ctx.camera, _pieces, delta)  # the march's sound
 	if moved:
 		_moves += 1
 	return moved

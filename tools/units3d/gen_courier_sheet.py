@@ -20,8 +20,8 @@ DESIGNS = ROOT / "assets" / "imagegen" / "courier_design_prompts.csv"
 VIEWS = ROOT / "assets" / "imagegen" / "courier_sheet_prompts.csv"
 OUT = ROOT / "assets" / "3D" / "units" / "courier" / "model_wip" / "sheet"
 SEED = 20260928
-TIERS = ["zimage", "qwenfast"]
-MINUTES = {"zimage": 0.5, "qwenfast": 2.0}
+TIERS = ["zimage", "qwendesk", "qwenfast"]
+MINUTES = {"zimage": 0.2, "qwendesk": 0.3, "qwenfast": 2.0}
 QWEN_SCALE = 1.18  # Qwen-Image's native class is ~1584x1056 against Z-Image's 1344x896
 TEXT = ("Photograph. {view}. {desc}. Technical reference for a 3D modeller, realistic "
         "replica medieval dress, realistic proportions, everything asked for fully inside "
@@ -51,7 +51,7 @@ def picked():
 
 
 def size_for(tier, w, h):
-    if tier != "qwenfast":
+    if not tier.startswith("qwen"):
         return w, h
     return int(round(w * QWEN_SCALE / 16)) * 16, int(round(h * QWEN_SCALE / 16)) * 16
 
@@ -71,7 +71,7 @@ def describe(row, parts):
 def main():
     only = set(filter(None, arg("--only", "").split(",")))
     whos = [arg("--who", "")] if "--who" in sys.argv else ["courier", "spy"]
-    tiers = arg("--tiers", ",".join(TIERS)).split(",")
+    tiers = arg("--tiers", ",".join(v2.DEFAULT_TIERS)).split(",")
     with open(VIEWS, newline="", encoding="utf-8") as f:
         views = [v for v in csv.DictReader(f) if not only or v["view"] in only]
     picks = picked()
@@ -91,10 +91,10 @@ def main():
         text = TEXT.format(view=v["prompt"][0].upper() + v["prompt"][1:], desc=describe(picks[w], v["parts"]))
         g = v2.graph(tpl, dict(vals, prompt=text, negative=NEGATIVE, seed=SEED + views.index(v),
                                width=width, height=height, prefix=f"courier_sheet/{t}_{w}_{v['view']}"))
-        img, dt = v2.run(g, 4 * 3600)  # the wait includes other jobs queued ahead
+        img, dt = v2.run(g, 4 * 3600, v2.host_of(t))  # the wait includes other jobs queued ahead
         q = urllib.parse.urlencode({"filename": img["filename"], "subfolder": img.get("subfolder", ""),
                                     "type": img.get("type", "output")})
-        dst.write_bytes(v2.call("/view?" + q))
+        dst.write_bytes(v2.call("/view?" + q, host=v2.host_of(t)))
         print(f"{dst.name}  {dt:.0f}s", flush=True)
     sheet()
 
@@ -104,7 +104,8 @@ def sheet():
     from PIL import Image, ImageDraw
     views = ["R1", "R2", "R3", "M1", "M2", "M3", "A1"]
     cw, ch = 360, 360
-    rows = [(t, w) for w in ("courier", "spy") for t in TIERS]
+    rows = [(t, w) for w in ("courier", "spy") for t in TIERS
+            if any((OUT / f"{t}_{w}_{v}.png").exists() for v in views)]
     im = Image.new("RGB", (cw * len(views), (ch + 24) * len(rows)), "white")
     d = ImageDraw.Draw(im)
     for r, (t, w) in enumerate(rows):

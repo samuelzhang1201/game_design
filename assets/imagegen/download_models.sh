@@ -4,8 +4,7 @@
 # models from (~/ComfyUI-Shared/models), and install the Python deps of the
 # ComfyUI-GGUF node (installed into custom_nodes/ComfyUI-GGUF on 2026-09-24).
 #
-#   bash assets/imagegen/download_models.sh           # everything, ~47 GB
-#   bash assets/imagegen/download_models.sh zimage    # Z-Image Turbo only, ~12 GB
+#   bash assets/imagegen/download_models.sh           # the Qwen stacks, ~35 GB
 #   bash assets/imagegen/download_models.sh qwen      # Qwen-Image-2512 stack only, ~35 GB
 #   bash assets/imagegen/download_models.sh qwenedit  # Qwen-Image-Edit-2511 (+ the qwen stack's encoder/VAE), ~18 GB more
 #
@@ -14,6 +13,9 @@
 # claude/t2i-model-evaluation-2026-09.md). Restart ComfyUI afterwards so it
 # loads the GGUF node. Runs on macOS (uses BSD stat).
 set -euo pipefail
+# Z-Image never runs on the Mac (owner 2026-10-12): its weights live on the
+# Windows desktop's Comfy Desktop, where generate.py sends every --model zimage
+# job (ZIMAGE_URL). This script no longer fetches them.
 MODELS="${COMFY_MODELS:-$HOME/ComfyUI-Shared/models}"
 # Comfy Desktop runs ComfyUI from ComfyUI/.venv (created by uv from
 # standalone-env, include-system-site-packages = false), so node deps must go
@@ -39,7 +41,11 @@ fetch() {  # <models subdir> <file name> <url>
   mv "$out.part" "$out"; echo "ok    $1/$2 ($got bytes)"
 }
 
-if [[ "$WHAT" == all || "$WHAT" == zimage ]]; then
+if [[ "$WHAT" == zimage ]]; then
+  echo "Z-Image is not installed on the Mac (owner 2026-10-12); it runs on the Windows desktop." >&2
+  exit 1
+fi
+if false; then  # kept for the record: the Windows desktop's Z-Image files
   # Z-Image Turbo (Tongyi-MAI): the model, its text encoder and its VAE.
   # fetch skips files that already exist.
   fetch diffusion_models z_image_turbo_bf16.safetensors \
@@ -84,5 +90,5 @@ fi
 
 echo
 echo "Done. Restart ComfyUI (Comfy Desktop), then try:"
-echo "  python3 assets/imagegen/generate.py --ids K-01 --model zimage"
+echo "  python3 assets/imagegen/generate.py --ids K-01 --model zimage   # runs on the Windows desktop"
 echo "  python3 assets/imagegen/generate.py --ids K-01 --model qwen2512fast"

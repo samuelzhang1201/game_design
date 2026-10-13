@@ -133,4 +133,5 @@ static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary,
 	var scene := Map3DAssetCache.scene(path) if path != "" else null
 	if path != "" and scene == null:
 		Map3DWorldLoader.warn_once("units:" + path, "map3d units: no model at " + path)
-	return piece(repo, scene, repo.army_art.get(model, {}), tier, gap, layout) if scene != null else {}
+	return piece(repo, scene, repo.army_art.get(model, {}), tier, gap, layout).merged({"model": model}) \
+		if scene != null else {}  # `model` keys its march's sound (Map3DUnitSound)
