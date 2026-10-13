@@ -887,7 +887,7 @@ def hash01(a, salt=0):
     return (x >> np.uint64(11)).astype(np.float64) / float(1 << 53)
 
 
-def field_cells(xs, ys, cell_v, stretch, angle):
+def field_cells(xs, ys, cell_v, stretch, angle, centres=False):
     """Strip fields (critic 2026-09-19: Voronoi outlines read as cells, not
     fields): rows of long strips, `cell_v` across on average and `stretch`
     times as long as wide, laid in a frame turned by `angle` (per point),
@@ -909,10 +909,17 @@ def field_cells(xs, ys, cell_v, stretch, angle):
     cut = 0.35 + 0.3 * hash01(key, 10)
     fu = uu - col
     far = fu > cut + 0.5
-    key = np.where(far & (hash01(key, 11) < 0.5), key + 1, key)
+    merged = far & (hash01(key, 11) < 0.5)
+    key = np.where(merged, key + 1, key)
     du = np.minimum(fu, 1.0 - fu) * ls
     dv = np.minimum(v - row, 1.0 - (v - row)) * ws
-    return key, np.minimum(du, dv)
+    if not centres:
+        return key, np.minimum(du, dv)
+    # each field's middle (`centres`: a close decided WHOLE at it) — a merged
+    # far end takes the middle of the strip it joined, so one key, one middle
+    uc = (col + merged + 0.5 - hash01(row & 0xFFFFFF, 9)) * ls
+    vc = (row + 0.5) * ws
+    return key, np.minimum(du, dv), uc * ca - vc * sa, uc * sa + vc * ca
 
 
 FARM_ZONES = ("croft", "arable", "meadow", "pasture", "bare")
@@ -1275,6 +1282,9 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     # draws the balks and hedges along it, smooth where the ground's own
     # texture change can only step from vertex to vertex
     edge_in = np.full((vh, vw), -1.0, dtype=np.float32)   # metres to a field's edge inside it, -1 outside
+    # each vertex's HEDGE RANK (spec 2026-10-13-open-field-layout §3): a hedge
+    # stands where two ranks meet, never between two furlongs of one rank
+    hrank = np.zeros((vh, vw), dtype=np.uint8)
     # THE OPEN FIELDS (owner 2026-10-01: 田地的布局要更合理真实). Each
     # vertex belongs to its NEAREST settlement (a Voronoi of their centres,
     # cut at a coarse step and read back), and lies in one of its zones:
@@ -1348,21 +1358,27 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         sxi = np.clip(fsx.astype(np.int64), 0, vw - 1)
         syi = np.clip(fsy.astype(np.int64), 0, vh - 1)
         seed_reach = reach_of[fi] / VERTEX_M * (1.0 + rules["field_edge_noise"] * (2.0 * edge_n[syi, sxi] - 1.0))
-        # the crofts' edge frays like the farmland's: never a ring round the village
-        croft_r = built_r[bid] + croft_of[fi] / VERTEX_M * (1.0 + rules["croft_edge_noise"] * (2.0 * fray2[y0:y1] - 1.0))
-        arable = (seed_r < seed_reach * arable_of[fi]) & (r_v > croft_r)
+        # croft closes: small hedged plots behind the houses, each decided
+        # WHOLE at its middle (spec 2026-10-13-open-field-layout §3: a croft
+        # cut at a radius drew its hedge as a circle round every village); the
+        # crofts' reach frays like the farmland's: never a ring round the village
+        cfid, cedge, ccx, ccy = field_cells(wxs, wys, croft_v, 1.3, hash01(bid, 27) * np.pi, centres=True)
+        cxi = np.clip(ccx.astype(np.int64), 0, vw - 1)
+        cyi = np.clip(ccy.astype(np.int64), 0, vh - 1)
+        croft_r = built_r[bid] + croft_of[fi] / VERTEX_M * (1.0 + rules["croft_edge_noise"] * (2.0 * fray2[cyi, cxi] - 1.0))
+        in_croft = np.hypot(ccx - bcx[bid], ccy - bcy[bid]) <= croft_r if nb else np.zeros(xs.shape, bool)
+        arable = (seed_r < seed_reach * arable_of[fi]) & ~in_croft
         nrot = np.array([len(zr["arable"]) for zr in zone_rows])[fi]
         g = great_field(fsx + gwx[syi, sxi], fsy + gwy[syi, sxi], bid, nrot, seed_reach)
         state = (g + (hash01(bid, 24) * np.maximum(nrot, 1)).astype(np.int64)) % np.maximum(nrot, 1)
         fh = hash01(fid ^ (bid << 48), 25)
         waste = hash01(fid ^ (bid << 48), 26) < rules["furlong_waste_share"]
-        croft = (r_v <= croft_r) & ~arable
+        croft = in_croft & ~arable
         # its edge frays with the crofts' noise: the blurred river drew it as a
         # straight smooth band either side of the water
         meadow = (meadow_n[y0:y1] + rules["meadow_fray"] * (fray2[y0:y1] - 0.5) > 0.35) & ~croft
+        open_field = arable & ~meadow          # the waste furlongs lie inside the open field, unhedged
         arable &= ~meadow & ~waste
-        # croft closes: small hedged plots behind the houses
-        cfid, cedge = field_cells(wxs, wys, croft_v, 1.3, hash01(bid, 27) * np.pi)
         tex = np.full(xs.shape, GRASS, dtype=np.int8)
         tt = np.ones(xs.shape + (3,), dtype=np.float32)
         sown = np.zeros(xs.shape, dtype=bool)          # arable: strips and furrows, far-fade
@@ -1404,6 +1420,11 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         reach[y0:y1] = within * land[y0:y1]
         drawn = (sown | croft) & (m > 0)
         edge_in[y0:y1] = np.where(drawn, edge, -1.0)
+        # the village's own ground is the crofts' (no hedge rings the houses)
+        farmed = ok * within > 0
+        hrank[y0:y1] = np.where(croft & land[y0:y1] & (cid >= 0), HEDGE_CROFT,
+                                np.where(meadow & (m > 0), HEDGE_MEADOW,
+                                         np.where(open_field & farmed, HEDGE_ARABLE, HEDGE_NONE)))
         settled[y0:y1] = reach[y0:y1] * np.where(pasture, rules["pasture_open"], 1.0)
         # a hedge round each croft close; a grass balk between furlongs
         hedge = np.where(croft, 1.0 - rules["croft_hedge_depth"] * np.clip(1.0 - edge / rules["croft_hedge_m"], 0, 1) ** 2, 1.0)
@@ -1455,7 +1476,9 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     tint = tint * (1.0 - foot[..., None]) + blocks * foot[..., None]
     print("bake_world: patchwork %.1f%% of the land sown, %.2f%% built" % (
         100.0 * float(farm[land].mean()), 100.0 * float(foot[land].mean())))
-    return tint, field_map(ftint, fangle), house_rows, settled_map(settled), edge_map(edge_in)
+    return tint, field_map(ftint, fangle), house_rows, settled_map(settled), edge_map(edge_in), \
+        hedge_map(hrank, rules["hedge_line_smooth_m"] / VERTEX_M, rules["hedge_infield_close_m"] / VERTEX_M,
+                  rules["hedge_infield_min_km2"] * 1e6 / VERTEX_M ** 2)
 
 
 EDGE_MAP_ZERO = 128    # bake/field_edges.png: the byte of a field's edge...
@@ -1473,6 +1496,72 @@ def edge_map(edge_in):
     out_m = (ndimage.distance_transform_edt(~inside) - 0.5) * VERTEX_M
     d = np.where(inside, edge_in, -np.maximum(out_m, 0.0))
     return np.clip(np.round(EDGE_MAP_ZERO + d * EDGE_MAP_PER_M), 0, 255).astype(np.uint8)
+
+
+HEDGE_NONE, HEDGE_ARABLE, HEDGE_MEADOW, HEDGE_CROFT = 0, 1, 2, 3
+HEDGE_RANK_BYTE = 85   # bake/hedge_lines.png A: the rank x this
+
+
+def infield(hrank, close_v, min_v):
+    """The township's IN-FIELD (its open field, meadows and crofts) as one
+    hedged whole: closed over `close_v` vertices, its holes filled and
+    islands under `min_v` vertices dropped — the ring fence of the township,
+    not the outline of every patch of meadow (a hedge round each wet blob
+    snaked along the rivers)."""
+    from scipy import ndimage
+    region = hrank >= HEDGE_ARABLE
+    r = int(round(close_v))
+    if r > 0:
+        yy, xx = np.mgrid[-r:r + 1, -r:r + 1]
+        disk = xx * xx + yy * yy <= r * r
+        region = ndimage.binary_closing(np.pad(region, r), structure=disk)[r:-r, r:-r] | region
+    region = ndimage.binary_fill_holes(region)
+    lab, n = ndimage.label(region)
+    if n:
+        size = ndimage.sum(np.ones_like(lab), lab, np.arange(1, n + 1))
+        region &= (size >= min_v)[np.maximum(lab - 1, 0)] & (lab > 0)
+    return region
+
+
+def hedge_map(hrank, smooth_v, close_v=0.0, min_v=0.0):
+    """bake/hedge_lines.png (spec 2026-10-13-open-field-layout §3a), RGBA8 at
+    the vertices. The hedges stand where history put them (owner 2026-10-13,
+    按历史): round the township's in-field — its open field, meadows and
+    crofts against the common pasture and the woods (`infield`) — and round
+    the crofts; inside the open field no hedge parts two furlongs, and the
+    meadows, shared and mown like the open field, are open too.
+
+    R the in-field, G the crofts: each region's SIGNED metres to its own edge
+    (inside positive), encoded as field_edges.png (EDGE_MAP_ZERO,
+    EDGE_MAP_PER_M), taken on the vertex grid and blurred over `smooth_v`
+    vertices so the line runs as a soft curve through the 20 m staircase. B is
+    unused (far). A hedge is where ANY channel crosses zero: the reader takes
+    the least |distance| AFTER each channel's bilinear sample (one channel
+    holding the nearest line's distance would cross zero midway between two
+    lines, and an unsigned one never reaches zero between two vertices).
+    A: the vertex's rank x HEDGE_RANK_BYTE."""
+    from scipy import ndimage
+    out = np.empty(hrank.shape + (4,), dtype=np.uint8)
+    far = min(EDGE_MAP_ZERO + 64.0 * EDGE_MAP_PER_M, 255)
+    out[..., 2] = np.uint8(far)
+    for c, region in enumerate((infield(hrank, close_v, min_v), hrank >= HEDGE_CROFT)):
+        if not region.any() or region.all():
+            out[..., c] = np.uint8(far if region.all() else 0)
+            continue
+        sd = np.where(region, ndimage.distance_transform_edt(region) - 0.5,
+                      -(ndimage.distance_transform_edt(~region) - 0.5)).astype(np.float32) * VERTEX_M
+        if smooth_v > 0:
+            sd = ndimage.gaussian_filter(sd, smooth_v)
+        out[..., c] = np.clip(np.round(EDGE_MAP_ZERO + sd * EDGE_MAP_PER_M), 0, 255)
+    out[..., 3] = np.minimum(hrank.astype(np.int32) * HEDGE_RANK_BYTE, 255)
+    return out
+
+
+def hedge_distance(hmap):
+    """Metres to the nearest hedge line per texel of a hedge_map (the least
+    |distance| of its three levels)."""
+    d = (hmap[..., :3].astype(np.float32) - EDGE_MAP_ZERO) / EDGE_MAP_PER_M
+    return np.abs(d).min(axis=-1)
 
 
 def settled_map(settled, step=FIELD_MAP_STEP):
@@ -1822,14 +1911,17 @@ def main(argv=None):
     tw[..., DIRT] += 2.0 * beach * (1.0 - grain)
     tw[..., SAND] += 2.0 * beach * grain
     del grain
-    tint, fmap, house_rows, smap, emap = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
+    tint, fmap, house_rows, smap, emap, hmap = sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn,
                                t_rock, beach, wet, k, vw, vh, pw, ph, origin)
     # read by Map3DView for the patched terrain shader (Map3DGroundTint):
     # FIELD_MAP_STEP vertices to a texel, from the pack's own corner
     Image.fromarray(fmap, "RGBA").save(os.path.join(OUT, "fields.png"))
     Image.fromarray(smap, "L").save(os.path.join(OUT, "settled.png"))
     Image.fromarray(emap, "L").save(os.path.join(OUT, "field_edges.png"))
-    del fmap, smap, emap
+    Image.fromarray(hmap, "RGBA").save(os.path.join(OUT, "hedge_lines.png"))
+    print("bake_world: %.2f%% of the vertices within 10 m of a hedge line" % (
+        100.0 * float((hedge_distance(hmap) < 10.0).mean())))
+    del fmap, smap, emap, hmap
     del t_rock, t_cliff, keep, beach
     depth = np.clip(-height / 150.0, 0, 1)
     tw[~land] = 0.0

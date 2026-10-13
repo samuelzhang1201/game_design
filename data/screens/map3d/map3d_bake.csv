@@ -150,6 +150,9 @@ great_warp_wave_m,1500,3D bake open fields: the wavelength of that bending
 croft_close_m,90,"3D bake open fields: the size of a croft close — the small hedged plots and gardens behind the houses (data/map3d_farm_zones.csv croft_m is how far they reach); 70 was under four vertices and read as noise"
 croft_hedge_m,20,3D bake open fields: the width of the hedge round a croft close (12 was under a vertex and never showed)
 croft_hedge_depth,0.2,3D bake open fields: how far a croft's hedge darkens the ground
+hedge_line_smooth_m,20,"3D bake hedges (spec 2026-10-13-open-field-layout §3a, owner 2026-10-13: hedges where they stood, 按历史 — round the township's in-field and its crofts; never between furlongs, and the shared meadows open): bake/hedge_lines.png's signed metres to each hedge line are blurred over this many metres, so the line runs as a soft curve through the 20 m vertex staircase"
+hedge_infield_close_m,100,"3D bake hedges: the in-field (open field, meadows, crofts) is closed over this many metres before its ring fence is drawn, so the hedge runs round the township, not into every notch between its patches"
+hedge_infield_min_km2,0.15,"3D bake hedges: an in-field patch smaller than this (km2) gets no ring fence (a stray meadow by the water drew a hedge loop of its own)"
 meadow_reach_m,300,"3D bake open fields: the wet ground (the river's wet band, blurred this far) that is hay MEADOW rather than arable"
 meadow_gain,1.6,3D bake open fields: the gain on that blurred wetness before it passes 0.35 and becomes meadow
 zone_weight_croft,1.0,"3D bake open fields: each zone's texture weight against the natural ground (x field_strength): the crofts"

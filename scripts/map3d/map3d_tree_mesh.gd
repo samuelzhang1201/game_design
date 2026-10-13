@@ -176,9 +176,10 @@ static func _ico(subdiv: int) -> Array:
 ## cell), the cell drawn by the crown's own rng from `cells` (the atlas cells
 ## of this kind, data/screens/map3d/map3d_tree_crowns.csv). Two triangles a tree. `count`,
 ## `spread` and `size` override the kind's own (a species row's crowns,
-## spread_m and size: species_cards).
+## spread_m and size: species_cards); `in_row` lays the crowns in a row along
+## local x instead of a disc (a hedge: the species row's `row` 1).
 static func cards(kind: int, variant: int, cells: PackedInt32Array, count := -1,
-		spread := -1.0, size := 1.0) -> ArrayMesh:
+		spread := -1.0, size := 1.0, in_row := false) -> ArrayMesh:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7919 * (kind + 1) + 104729 * (variant + 1) + 31
 	var st := SurfaceTool.new()
@@ -192,7 +193,13 @@ static func cards(kind: int, variant: int, cells: PackedInt32Array, count := -1,
 	var reach := 0.0
 	for i in count:
 		var at := Vector2.ZERO
-		for _t in 12:   # in a disc, kept apart: a clump is trees side by side
+		# a ROW species (a hedge, spec 2026-10-13-open-field-layout §3c): its
+		# crowns evenly along local x, -spread..spread, a little off the line;
+		# the bake turns the clump along its hedge line
+		if in_row:
+			at = Vector2(spread * ((i + 0.5) / count * 2.0 - 1.0) + rng.randf_range(-0.2, 0.2) * spread / count,
+				rng.randf_range(-0.12, 0.12) * spread)
+		for _t in (0 if in_row else 12):   # in a disc, kept apart: a clump is trees side by side
 			at = Vector2.from_angle(rng.randf() * TAU) * sqrt(rng.randf()) * spread
 			var clear := true
 			for p in placed:
@@ -236,4 +243,4 @@ static func species_cards(row: Dictionary, variant: int) -> ArrayMesh:
 		cells.append(int(c))
 	var form := CONIFER if String(row.get("form", "")) == "conifer" else BROADLEAF
 	return cards(form, variant + 64 * int(row["kind"]), cells, int(row["crowns"]),
-		float(row["spread_m"]), float(row["size"]))
+		float(row["spread_m"]), float(row["size"]), int(row.get("row", 0)) == 1)

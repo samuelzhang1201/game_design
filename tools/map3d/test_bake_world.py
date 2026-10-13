@@ -319,6 +319,62 @@ def test_the_field_map_packs_colour_and_direction():
     assert m[0, 0, 3] == 0 and m[0, 2, 3] == 191, "the direction sampled, not averaged"
 
 
+def test_hedge_lines_stand_where_two_ranks_meet():
+    # Two furlongs of one open field side by side, a croft close inside the
+    # first: the line between the furlongs is no hedge (one rank), the open
+    # field's outside and the croft's edge are, each crossing zero there.
+    r = np.zeros((40, 60), np.uint8)
+    r[5:35, 5:55] = bw.HEDGE_ARABLE
+    r[10:20, 10:20] = bw.HEDGE_CROFT
+    m = bw.hedge_map(r, 1.0)
+    sd = (m[..., :3].astype(np.float64) - bw.EDGE_MAP_ZERO) / bw.EDGE_MAP_PER_M
+    near = bw.hedge_distance(m)
+    assert near[20, 30] > 40.0, near[20, 30]                      # mid field: far from any hedge
+    assert sd[4, 30, 0] < 0.0 < sd[5, 30, 0]                       # the in-field's outside
+    assert abs(sd[4, 30, 0] + sd[5, 30, 0]) < 1.0                  # midway between the vertices
+    assert sd[15, 9, 1] < 0.0 < sd[15, 10, 1], sd[15, 9:11, 1]     # the croft's edge, croft side positive
+    assert near[15, 9] <= 10.0 and near[15, 10] <= 10.0
+    assert m[15, 15, 3] == 3 * bw.HEDGE_RANK_BYTE and m[25, 25, 3] == bw.HEDGE_RANK_BYTE
+
+
+def test_no_hedge_midway_between_two_hedge_lines():
+    # An open-field band between a croft and the pasture: each channel keeps
+    # its sign across the band, so no line crosses its middle.
+    r = np.zeros((20, 80), np.uint8)
+    r[:, 10:70] = bw.HEDGE_ARABLE
+    r[:, 10:20] = bw.HEDGE_CROFT
+    sd = (bw.hedge_map(r, 1.0)[..., :3].astype(np.float64) - bw.EDGE_MAP_ZERO) / bw.EDGE_MAP_PER_M
+    row = sd[10]
+    for c in range(3):
+        crossings = np.nonzero(np.sign(row[1:, c]) != np.sign(row[:-1, c]))[0]
+        assert all(x in (9, 19, 69) for x in crossings), (c, crossings)
+
+
+def test_a_meadow_is_open_to_the_open_field_and_the_in_field_is_one_whole():
+    # A meadow beside the open field: no hedge between them; a notch in the
+    # in-field's edge is closed over, a stray meadow island is no in-field.
+    r = np.zeros((60, 80), np.uint8)
+    r[10:50, 10:40] = bw.HEDGE_ARABLE
+    r[10:50, 40:60] = bw.HEDGE_MEADOW
+    r[28:32, 10:14] = bw.HEDGE_NONE          # a notch 4 vertices deep
+    r[2:5, 70:73] = bw.HEDGE_MEADOW          # a stray meadow, 9 vertices
+    m = bw.hedge_map(r, 1.0, close_v=3.0, min_v=20.0)
+    near = bw.hedge_distance(m)
+    assert near[30, 40] > 30.0, near[30, 40]   # open field | meadow: no hedge
+    assert near[30, 12] > 20.0, near[30, 12]   # the notch is closed over
+    assert near[3, 71] > 20.0, near[3, 71]     # the stray meadow has no ring
+    assert near[9, 30] < 15.0 and near[30, 59] < 15.0   # the in-field's own edge is hedged
+
+
+def test_a_close_is_decided_whole_at_its_middle():
+    ys, xs = np.mgrid[0:200, 0:200].astype(np.float64)
+    fid, _, cx, cy = bw.field_cells(xs, ys, 20.0, 1.3, np.full(xs.shape, 0.4), centres=True)
+    for k in np.unique(fid)[:40]:
+        one = fid == k
+        assert np.ptp(cx[one]) < 1e-6 and np.ptp(cy[one]) < 1e-6   # one middle per close
+        assert abs(cx[one][0] - xs[one].mean()) < 20.0 and abs(cy[one][0] - ys[one].mean()) < 20.0
+
+
 def test_footprint_radius_agrees_between_the_two_modules():
     """bake_houses keeps its own copy so it can stand alone; the two must
     never drift (density v4: house_radius_m too, the primitive the footprint

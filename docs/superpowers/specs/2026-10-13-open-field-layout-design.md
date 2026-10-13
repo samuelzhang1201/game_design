@@ -1,6 +1,6 @@
 # Open-field layout, meadow interiors, hedges with volume
 
-**Status:** directions chosen by the owner (2026-10-13); this spec waits for the go-ahead before any code. Stacked on PR #57 (`feat/rock-hedge`).
+**Status:** directions chosen by the owner (2026-10-13); phase 1 built on the owner's go-ahead (按默认做第 1 阶段). Stacked on PR #57 (`feat/rock-hedge`).
 
 **Trigger.** PR #57's critic left three things open:
 - the fields' outlines are still regular;
@@ -152,6 +152,45 @@ Each phase is its own commit series and goes through `visual-review`: 600 m, 1.5
 | 2 | the open-field layout: effort reach, furlong regions by the fall line, brick furlongs, headlands, road / stream edges, assarts | — |
 | 3 | meadow and pasture interiors | phase 2's zones |
 | 4 | reverse-S strips (optional, judged and kept only if it reads) | phase 2 |
+
+## Phase 1 as built (2026-10-13)
+
+What changed against §3, and why:
+
+- **Where.** The hedge lines are two levels, not three:
+  - R is the township's **in-field**: open field, meadows and crofts as one whole, closed over `hedge_infield_close_m`, holes filled, islands under `hedge_infield_min_km2` dropped.
+  - G is the **crofts**.
+  - The meadows are NOT hedged: they were shared and mown like the open field. Hedged as their own level, every wet blob drew a hedge snaking along the rivers.
+- **No circles.** A croft is decided per close (at its middle), not by a radius. The croft cut at a radius drew its hedge as a ring round every village, and a second ring round the houses; the village's own ground now counts as croft.
+- **The encoding.** One channel per level, and the reader takes the least |distance| after each channel's own sample. A single channel holding the nearest line's distance crossed zero midway between two lines and drew a false hedge there.
+- **Lanes.** Lanes are hedged only outside the in-field: a lane through the open field ran unhedged, and its clumps read as scattered beads.
+- **No ground band** (`hedge` 0 in the look, the stage kept). 20% of the line has no bushes on it (gateways, roads, houses), and there the dark band read as a painted path. The blind critic ranked "no band" first at 600 m and 1.5 km. While it is off, the map is never loaded.
+- **No shadow stage.** The cards cast real shadows out to `map3d_tree_card_far_m`, so the shadow stage in §3b was not built.
+- **The hedge's own "never".** The woods' ground mask cut 26% of the hedge points, mostly the 50 m house clearance (every croft hedge) and the woods' slope limit. A hedge clump is tested at its own spot instead: `hedge_max_slope`, `hedge_house_clear_m`, and `hedge_road_clear_*` from the road's middle.
+- **The croft closes' own hedges are off** (`hedge_chance` 0). Scattered on a jittered grid, they read as beads over the croft plots. The closes keep their darker rims.
+- **The row.** `hedge_bush` has 5 crowns over 7 m, laid in a row along the line (`row` 1); a clump stands every 10 m. With 3 crowns the line read as beads.
+
+**Numbers.**
+- About 2,160 km of hedge: 216k row clumps and 43k hedge trees.
+- `trees.bin` holds 498k clumps; it held 297k before.
+
+**Bench** (`--pan`, ComfyUI open on the Mac, so the GPU was not idle). Both sides were over budget before this change too.
+
+| Tier, zoom | Before (ms) | After (ms) |
+|---|---|---|
+| high, near | 17.3 | 17.6 |
+| high, mid | 14.8 | 14.9 |
+| high, far | 21.4 | 20.3 |
+| low, near | 8.4 | 8.4 |
+| low, mid | 10.3 | 10.7 |
+| low, far | 12.0 | 14.7 |
+
+The `- Trees` rows of the same runs move by ±2 ms, so the far rows are within noise. Re-run on an idle GPU before merge.
+
+**The critic's open points** (blind, after phase 1):
+- At 5 km, the opening zoom, the hedges read as thin dark dotted lines. #57's dark balks made a clearer patchwork there, because the open field's inside is now one sheet. Phase 2's furlongs and headlands are the answer, not a darker balk.
+- A long in-field ring winds round a hill and reads like a contour line.
+- The field rim's pale balk band is a little strong at 600 m.
 
 ## Tests
 
