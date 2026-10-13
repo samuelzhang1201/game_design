@@ -62,6 +62,13 @@ The working scenes are in `assets/3D/units/model_wip/` (git-ignored, `.gdignore`
    (`record` in the kneel file, `apply` in the game file; the docstring has the method). 120
    frames, 4.96 s.
 
+10. **The rest pose is STANDBY's first frame**, not Tripo's T-pose: the game measures a piece off its
+   rest mesh (`Map3DUnits.model_size` / `stand_extent`), and the T-pose's outstretched arms and
+   sideways shield gave a 0.8 m half width — the formation spread out and the pieces' screen boxes
+   overlapped (`test_army_multi_select`). Every clip was recorded in armature space, the mesh's
+   armature applied at STANDBY frame 0, the pose applied as rest, and the clips re-keyed from the
+   record (max error 6e-6 m). Half width now 0.53 m (the hung shield), height 2.68 m.
+
 ## Measured
 
 MARCH stride 2.81 m per 56-frame loop (each foot's planted frames move 0.050 m/frame), written to

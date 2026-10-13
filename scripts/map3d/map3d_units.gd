@@ -269,24 +269,14 @@ static func screen_box(camera: Camera3D, ground: Vector3, high: float, wide: flo
 	return box
 
 
-## The clip on `anim` whose name ends in `action` ("GARRISON", "MARCH",
-## "ATTACK"); "" when it has none. The glTF importer may prefix a library
-## name, so the match is on the tail, not the whole name.
+## The clip on `anim` whose name ENDS in `action` (the glTF importer may prefix a library), else a stand-in
+## (no STANDBY: GARRISON, owner 2026-09-29; no DEFEND: GARRISON, front-line §2; no guard: STANDBY); "" if none.
 static func clip_named(anim: AnimationPlayer, action: String) -> String:
-	var clip := _clip_tail(anim, action)
-	if clip != "" or not action in ["STANDBY", "DEFEND", "GARRISON"]:
-		return clip
-	# no STANDBY clip: stands by in GARRISON (owner 2026-09-29); no DEFEND: holds in it (front-line §2);
-	# no GARRISON (a model with no guard clip): both stand by in STANDBY
-	if action != "GARRISON":
-		clip = _clip_tail(anim, "GARRISON")
-	return clip if clip != "" or action == "STANDBY" else _clip_tail(anim, "STANDBY")
-
-
-static func _clip_tail(anim: AnimationPlayer, action: String) -> String:
-	for n: String in anim.get_animation_list():
-		if n.to_upper().ends_with(action):
-			return n
+	var tries: Dictionary = {"STANDBY": ["STANDBY", "GARRISON"], "DEFEND": ["DEFEND", "GARRISON", "STANDBY"], "GARRISON": ["GARRISON", "STANDBY"]}
+	for want: String in tries.get(action, [action]):
+		for n: String in anim.get_animation_list():
+			if n.to_upper().ends_with(want):
+				return n
 	return ""
 
 
