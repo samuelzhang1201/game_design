@@ -150,9 +150,9 @@ def test_species_follow_the_ground():
     wet = pick(12, 0.05)
     assert wet.count("birch") > n * 0.5, "birch carr in the wetland"
     bank = pick(6, 0.1, np.full(n, bake_trees.HABITS["bank"]))
-    assert set(bank) == {"bankside"}
+    assert set(bank) <= {"bankside", "willow"} and "bankside" in bank   # willow landed 2026-10-13
     hedge = pick(6, 0.1, np.full(n, bake_trees.HABITS["hedge"]))
-    assert set(hedge) <= {"hedge_hornbeam", "hedge_oak"}
+    assert set(hedge) <= {"hedge_hornbeam", "hedge_oak", "poplar", "hedge_bush"}   # poplar, hedge_bush landed 2026-10-13
     # the same call is the same pick
     assert pick(6, 0.1) == lowland
 
@@ -161,3 +161,18 @@ def test_waiting_species_are_never_planted():
     rows, _ = _load()
     enabled = {s["kind"] for s in bake_trees.load_species() if s["enabled"]}
     assert set(np.unique(rows[:, 5]).astype(int)) <= enabled
+
+
+def test_lone_clumps_gather_into_patches():
+    """lone_chance (critic 2026-10-13): lone clumps on open land keep to
+    parkland patches of a slow noise, lone_gain times as dense there, the
+    land between them left open; lone_gain 0 is the old even scatter."""
+    rules = {"lone_chance": 0.04, "lone_gain": 2.5, "lone_wave_m": 700.0,
+             "lone_cut": 0.55, "lone_soft": 0.15}
+    open_land = np.ones((120, 160), np.float32)
+    c = bake_trees.lone_chance(rules, open_land, 160, 120, 20.0)
+    assert c.max() <= 0.04 * 2.5 + 1e-6
+    assert (c == 0).mean() > 0.3, "open pasture between the patches"
+    assert (c > 0.09).any(), "dense parkland in the patches"
+    even = bake_trees.lone_chance(dict(rules, lone_gain=0.0), open_land, 160, 120, 20.0)
+    assert np.allclose(even, 0.04)

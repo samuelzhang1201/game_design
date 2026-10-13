@@ -17,6 +17,8 @@ extends DirectionalLight3D
 ## midday; dusk scales each down.
 @export var day_energy := 1.4
 @export var day_specular := 0.5
+## The light's colour by day (dusk warms it toward `dusk_color`).
+@export var day_color := Color.WHITE
 @export var day_shadow_opacity := 0.45
 ## Off: the sun stands where the node is turned, all day.
 @export var day_sweep := true
@@ -88,7 +90,7 @@ func sweep(day_share: float) -> void:
 	light_energy = day_energy * lerpf(1.0, dusk_energy, d)
 	shadow_opacity = day_shadow_opacity * lerpf(1.0, dusk_shadow, d)
 	light_specular = day_specular * lerpf(1.0, dusk_specular, d)
-	light_color = Color.WHITE.lerp(dusk_color, d)
+	light_color = day_color.lerp(dusk_color, d)
 	if fill != null:
 		fill.light_energy = lerpf(fill_day, fill_dusk, d)
 		fill.visible = fill.light_energy > 0.0

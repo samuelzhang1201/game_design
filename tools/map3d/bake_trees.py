@@ -161,6 +161,22 @@ def pick_species(species, habit, shares, hshare, x, z, rules, seed):
     return kinds
 
 
+def lone_chance(rules, open_land, vw, vh, vm):
+    """The lone clumps on open land, GATHERED (critic 2026-10-13: trees
+    sprinkled evenly over the pasture read as stamped copies; taste: nature
+    clusters): a slow noise of its own stream (lone_wave_m) keeps them to
+    parkland patches where it passes lone_cut, lone_gain times as dense
+    there, and leaves the pasture between them open. lone_gain 0 keeps the
+    old even scatter."""
+    base = rules["lone_chance"] * open_land
+    gain = rules.get("lone_gain", 0.0)
+    if gain <= 0.0:
+        return base
+    n = value_noise(np.random.default_rng(SEED + 17), vw, vh, rules["lone_wave_m"] / vm)
+    patch = np.clip((n - rules["lone_cut"]) / max(rules["lone_soft"], 1e-3), 0, 1)
+    return base * gain * patch
+
+
 def value_noise(rng, w, h, wave):
     """Smooth value noise in 0..1 on a w x h grid, one lattice cell per `wave` cells."""
     gw, gh = int(w / wave) + 3, int(h / wave) + 3
@@ -299,6 +315,9 @@ def main(argv=None):
     for bid, d in biome.items():
         dens += shares[..., bid - 1] * d
     open_land = shares[..., 2] + shares[..., 3]   # savanna, grassland
+    # ...and the open high ground — heath, hills, mountains — where the lone
+    # pines, boulders and heather stand (map art phase 2 C, 2026-10-13)
+    open_land = open_land + rules.get("lone_upland", 0.0) * (shares[..., 9] + shares[..., 12] + shares[..., 13])
     to_v = lambda a: np.asarray(Image.fromarray(a.astype(np.float32)).resize((vw, vh), Image.BILINEAR))
     dens, open_land = to_v(dens), to_v(open_land)
     del wts, ws, total, safe
@@ -369,7 +388,7 @@ def main(argv=None):
     chance *= rules["wood_cap"] * (1.0 - rules["glade_depth"] * np.clip(
         (glade - rules["glade_cut"]) / max(rules["glade_soft"], 1e-3), 0, 1))
     del glade
-    chance = np.maximum(chance, rules["lone_chance"] * open_land)
+    chance = np.maximum(chance, lone_chance(rules, open_land, vw, vh, vm))
     chance[bad] = 0.0
     chance[sown_mask & (chance < rules["sown_keep_chance"])] = 0.0
 

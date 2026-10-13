@@ -51,15 +51,12 @@ LAND_M_PER_UNIT = _balance("elevation_m_per_unit")  # ~2400 m for the highest ce
 SEA_M_PER_UNIT = 15.0    # ~300 m for the deepest sea
 BASE_BLUR_PX = 7         # box radius (pack px, twice) turning cells (~26 px) into landforms
 
-# Ridges at campaign scale: ridged value noise, octave wavelengths in metres,
-# faded in with the ground's height so plains stay plains, held down near the
-# coast so the shoreline keeps the pack's shape.
-RIDGE_WAVES_M = (6000.0, 3000.0, 1500.0, 750.0, 380.0)
-RIDGE_GAIN = 0.5         # amplitude falloff per octave
-RIDGE_M = 520.0          # full amplitude where the ground is highest
-RIDGE_FROM_M = 150.0     # below this the ridges fade to nothing...
-RIDGE_FULL_M = 1600.0    # ...and reach full strength here
-RIDGE_COAST_M = 1200.0   # fade-in distance from the shore
+# Ridges at campaign scale: ridged value noise, values in map3d_bake.csv
+# relief_ridge_* (spec 2026-10-13-landform-rework moved them out of code).
+def relief_waves(rules):
+    """The ridged noise's octave wavelengths in metres (relief_ridge_waves_m,
+    a | list), coarse to fine."""
+    return tuple(float(w) for w in str(rules["relief_ridge_waves_m"]).split("|") if w.strip())
 
 WEIGHT_BLUR_PX = 5       # box radius (pack px) softening biome weights (3 left 50 m stair-steps on forest edges)
 BEACH_M = 100.0          # sand reaches this far inland
@@ -72,17 +69,23 @@ CLIFF, GRASS, LEAVES, DIRT, ROCKY, SOIL, SAND, FOREST, SNOW, CROP = range(10)
 # on slow noise so no two neighbouring tiles repeat one picture; the grass on high
 # ground takes the upland turfs.
 GRASS_B, GRASS_C, UPTURF_A, UPTURF_B, CROP_B = range(10, 15)
-NT = 15
-TEXTURE_KEYS = ["aerial_cliff", "g2_meadow_a", "dry_decay_leaves", "dirt_floor", "aerial_upland",
+# The high ground (spec 2026-10-13-map-art-phase2, B): grey scree under the snow
+# caps and broken ridges and gullies on the high plateaus.
+SCREE, RIDGE = 15, 16
+NT = 17
+TEXTURE_KEYS = ["p3_rock_face",   # a FRONTAL rock face (owner-approved 2026-10-13, R-01): Terrain3D projects it on the steep faces, where the aerial crag streaked
+                "g2_meadow_a", "dry_decay_leaves", "dirt_floor", "aerial_upland",
                 "excavated_soil_wall", "sand_03", "aerial_canopy",
                 # the snow line (owner 2026-09-19): Poly Haven snow_02 since the
                 # same day (snow_field_aerial read blue-grey and blotchy)
-                "aerial_snow",
+                "p2_snow",   # snow with rock ribs (phase 2 B, T-88)
                 # the crops (owner 2026-10-01, open fields): a pale straw ground
                 # each field's tint darkens to its crop's colour
                 "g2_crop_a",
                 # the variant sets (split_variants)
-                "g2_meadow_b", "g2_meadow_c", "g2_upturf_a", "g2_upturf_b", "g2_crop_b"]
+                "g2_meadow_b", "g2_meadow_c", "g2_upturf_a", "g2_upturf_b", "g2_crop_b",
+                # the high ground (phase 2 B: T-86 scree, T-87 ridge and gully)
+                "p2_scree", "p2_ridge"]
 BIOME_MIX = {
     1: {SAND: 1.0},
     2: {DIRT: 0.8, ROCKY: 0.2},
@@ -112,7 +115,8 @@ FAR_COLOR = {
 }
 # a variant reaches its class's far colour, so the far view is the same whichever is drawn
 FAR_COLOR.update({GRASS_B: FAR_COLOR[GRASS], GRASS_C: FAR_COLOR[GRASS],
-                  UPTURF_A: FAR_COLOR[GRASS], UPTURF_B: FAR_COLOR[GRASS]})
+                  UPTURF_A: FAR_COLOR[GRASS], UPTURF_B: FAR_COLOR[GRASS],
+                  SCREE: "#85827A", RIDGE: FAR_COLOR[ROCKY]})   # the scree a grey margin under the caps (critic 2026-10-13)
 CROP_TEXTURES = (CROP, CROP_B)   # the crops wear their own tint (sow_patchwork), never a far colour
 # each class's pictures (split_variants), the class the control map ranks
 VARIANT_SETS = ((GRASS, GRASS_B, GRASS_C, UPTURF_A, UPTURF_B), CROP_TEXTURES)  # SAND's, SNOW's and CLIFF's are data/screens/map3d/map3d_bake.csv far_color_sand / _snow / _cliff
@@ -254,7 +258,8 @@ def terrace(height, ramp, land, from_coast, rules, vw, vh, courses=()):
     mask *= np.clip((local_top(height, rules["terrace_top_reach_m"] / VERTEX_M) - base)
                     / (rules["terrace_min_steps"] * rules["terrace_step_m"]) - 1.0, 0, 1)
     if len(courses):
-        mask *= river_fade(courses, vw, vh, rules["terrace_river_fade_m"] / VERTEX_M)
+        mask *= river_fade(courses, vw, vh, rules["terrace_river_fade_m"] / VERTEX_M,
+                           rules["river_head_m"] / VERTEX_M, rules["river_head_share"])
     level = (value_noise(trng, vw, vh, rules["terrace_level_wave_m"] / VERTEX_M) * 2.0 - 1.0) \
         * rules["terrace_level_jitter"] * step
     # the rim broken (visual review 2026-10-06: one unbroken scarp ringed the
@@ -551,18 +556,198 @@ def join_water(water, start):
     return w
 
 
-def river_fade(courses, vw, vh, reach):
-    """0 on every course (vertex-unit polylines), easing up to 1 at `reach`
-    vertices (4-neighbour steps, smoothstep): the ridges are multiplied by
-    it, so no ridge is thrown across a river's valley for the carve to cut a
-    gorge through (the 2D relief detail holds itself down near rivers too,
-    docs/superpowers/specs/2026-09-17-relief-detail-design.md)."""
-    img = Image.new("L", (vw, vh), 0)
-    draw = ImageDraw.Draw(img)
+# --- stream-power erosion (spec 2026-10-13-landform-rework, option A) ------------
+# On a coarse grid: flow is routed down the steepest of the 8 neighbours (D8),
+# each cell's drained area accumulated, and the ground cut by an implicit
+# Braun-Willett stream-power step (n = 1), then slopes over the repose angle
+# shed half their excess downhill. No randomness: the same heights always give
+# the same valleys.
+
+_D8 = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
+
+
+def fill_pits(h, outlet):
+    """Priority-flood (Barnes 2014): every cell raised to the lowest spill
+    height reachable from an `outlet` cell (bool mask), plus a hair per step so
+    the filled flats still drain. A copy."""
+    import heapq
+    H, W = h.shape
+    out = h.astype(np.float64).copy()
+    done = outlet.copy()
+    heap = [(float(out[y, x]), int(y), int(x)) for y, x in zip(*np.nonzero(outlet))]
+    heapq.heapify(heap)
+    while heap:
+        z, y, x = heapq.heappop(heap)
+        for dy, dx in _D8:
+            ny, nx = y + dy, x + dx
+            if 0 <= ny < H and 0 <= nx < W and not done[ny, nx]:
+                done[ny, nx] = True
+                if out[ny, nx] <= z:
+                    out[ny, nx] = z + 1e-3
+                heapq.heappush(heap, (float(out[ny, nx]), ny, nx))
+    return out
+
+
+def d8_receivers(h, dx):
+    """Each cell's receiver (flat index) down its steepest drop over the 8
+    neighbours (a diagonal is dx*sqrt2 away); a cell with no lower neighbour
+    receives itself."""
+    H, W = h.shape
+    idx = np.arange(H * W).reshape(H, W)
+    best = np.zeros((H, W))
+    rcv = idx.copy()
+    pad = np.pad(h, 1, mode="edge")
+    pidx = np.pad(idx, 1, mode="edge")
+    for dy, dx_ in _D8:
+        nb = pad[1 + dy:1 + dy + H, 1 + dx_:1 + dx_ + W]
+        drop = (h - nb) / (dx * (1.4142135623730951 if dy and dx_ else 1.0))
+        take = drop > best
+        best = np.where(take, drop, best)
+        rcv = np.where(take, pidx[1 + dy:1 + dy + H, 1 + dx_:1 + dx_ + W], rcv)
+    return rcv.ravel()
+
+
+def drainage_area(h, rcv):
+    """Cells drained through each cell (itself included), accumulated from the
+    highest down; the order is a STABLE sort of the heights, so ties fall the
+    same way on every run. Returns (area, order low -> high)."""
+    order = np.argsort(h.ravel(), kind="stable")
+    area = np.ones(h.size)
+    for i in order[::-1]:
+        r = rcv[i]
+        if r != i:
+            area[r] += area[i]
+    return area, order
+
+
+def stream_power(h, rcv, order, area, k, dx, m):
+    """One implicit stream-power step (n = 1), worked from the outlets up:
+    h_i <- (h_i + F h_rcv) / (1 + F), F = k * area^m / dx. A copy."""
+    z = h.ravel().astype(np.float64).copy()
+    f = k * area ** m / dx
+    for i in order:
+        r = rcv[i]
+        if r != i:
+            z[i] = (z[i] + f[i] * z[r]) / (1.0 + f[i])
+    return z.reshape(h.shape)
+
+
+def thermal(h, dx, talus):
+    """Slopes steeper than `talus` (rise over run) toward their lowest of the
+    4 neighbours shed half the excess onto it — once, all cells at once."""
+    z = h.astype(np.float64)
+    out = z.copy()
+    pad = np.pad(z, 1, mode="edge")
+    low = np.full(z.shape, np.inf)
+    arg = np.zeros(z.shape, np.int8)
+    for n, (dy, dx_) in enumerate(((-1, 0), (1, 0), (0, -1), (0, 1))):
+        nb = pad[1 + dy:1 + dy + z.shape[0], 1 + dx_:1 + dx_ + z.shape[1]]
+        take = nb < low
+        low = np.where(take, nb, low)
+        arg = np.where(take, n, arg)
+    move = np.maximum(z - low - talus * dx, 0.0) * 0.5
+    out -= move
+    for n, (dy, dx_) in enumerate(((-1, 0), (1, 0), (0, -1), (0, 1))):
+        part = np.where(arg == n, move, 0.0)
+        out += _shift(part, dy, dx_)
+    return out
+
+
+def _shift(a, dy, dx):
+    """`a` moved by (dy, dx) cells, edges dropped (the mass lands on the
+    neighbour each cell sent it to)."""
+    out = np.zeros_like(a)
+    H, W = a.shape
+    yd = slice(max(dy, 0), H + min(dy, 0))
+    ys = slice(max(-dy, 0), H + min(-dy, 0))
+    xd = slice(max(dx, 0), W + min(dx, 0))
+    xs = slice(max(-dx, 0), W + min(-dx, 0))
+    out[yd, xd] = a[ys, xs]
+    return out
+
+
+def erode(height, land, rules):
+    """The landform carved by running water (option A): the vertex heights
+    averaged onto an erosion_cell_m grid, pits filled to the sea, then
+    erosion_iters rounds of D8 routing + stream power + talus; only the
+    CHANGE is brought back to the vertices (bilinear), capped by
+    erosion_max_cut_m, faded in from erosion_from_m to erosion_full_m, times
+    erosion_strength. Returns the new heights."""
+    if rules.get("erosion_strength", 0.0) <= 0.0:
+        return height
+    vh, vw = height.shape
+    f = max(int(round(rules["erosion_cell_m"] / VERTEX_M)), 1)
+    ch, cw = vh // f, vw // f
+    dx = f * VERTEX_M
+    coarse = height[:ch * f, :cw * f].reshape(ch, f, cw, f).mean(axis=(1, 3)).astype(np.float64)
+    wet = ~(land[:ch * f, :cw * f].reshape(ch, f, cw, f).mean(axis=(1, 3)) > 0.5)
+    edge = np.zeros_like(wet)
+    edge[0, :] = edge[-1, :] = True
+    edge[:, 0] = edge[:, -1] = True
+    z0 = fill_pits(coarse, wet | edge)
+    z = z0.copy()
+    for _ in range(int(rules["erosion_iters"])):
+        rcv = d8_receivers(z, dx)
+        area, order = drainage_area(z, rcv)
+        z = stream_power(z, rcv, order, area, rules["erosion_k"], dx, rules["erosion_m_exp"])
+        z = thermal(z, dx, rules["erosion_talus"])
+        z[wet] = z0[wet]
+    # saturated softly, never clipped flat (a clipped cut leaves a level floor)
+    cap = rules["erosion_max_cut_m"]
+    delta = z - z0
+    delta = np.where(delta < 0, -cap * np.tanh(-delta / cap), cap * 0.3 * np.tanh(delta / (cap * 0.3)))
+    up = np.asarray(Image.fromarray(delta.astype(np.float32)).resize((cw * f, ch * f), Image.BILINEAR))
+    full = np.zeros((vh, vw), np.float32)
+    full[:ch * f, :cw * f] = up
+    lift = np.clip((height - rules["erosion_from_m"])
+                   / max(rules["erosion_full_m"] - rules["erosion_from_m"], 1.0), 0, 1)
+    return np.where(land, height + rules["erosion_strength"] * lift * full, height).astype(np.float32)
+
+
+def river_fade(courses, vw, vh, reach, head_v=0.0, head_share=1.0):
+    """0 on every course (vertex-unit polylines, source -> mouth), easing up to
+    1 at `reach` vertices (4-neighbour steps, smoothstep): the ridges are
+    multiplied by it, so no ridge is thrown across a river's valley for the
+    carve to cut a gorge through (the 2D relief detail holds itself down near
+    rivers too, docs/superpowers/specs/2026-09-17-relief-detail-design.md).
+    The first `head_v` vertices of each course hold only `head_share` of the
+    reach (spec 2026-10-13-landform-rework, phase 0): a valley starts in a
+    narrow notch, never a round bowl cleared round its source."""
+    body = Image.new("L", (vw, vh), 0)
+    head = Image.new("L", (vw, vh), 0)
+    db, dh = ImageDraw.Draw(body), ImageDraw.Draw(head)
     for c in courses:
-        draw.line([(float(x), float(y)) for x, y in c], fill=255, width=1)
-    t = distance_steps(np.asarray(img) > 0, int(reach)) / float(reach)
-    return (t * t * (3.0 - 2.0 * t)).astype(np.float32)
+        pts = [(float(x), float(y)) for x, y in c]
+        if len(pts) < 2:
+            continue
+        if head_v <= 0.0 or head_share >= 1.0:
+            db.line(pts, fill=255, width=1)
+            continue
+        run, split = 0.0, None
+        for i in range(1, len(pts)):
+            seg = float(np.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]))
+            if run + seg >= head_v:
+                f = (head_v - run) / max(seg, 1e-9)
+                at = (pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f,
+                      pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f)
+                split = (i, at)
+                break
+            run += seg
+        if split is None:
+            dh.line(pts, fill=255, width=1)
+            continue
+        i, at = split
+        dh.line(pts[:i] + [at], fill=255, width=1)
+        db.line([at] + pts[i:], fill=255, width=1)
+
+    def eased(img, r):
+        m = np.asarray(img) > 0
+        if not m.any():
+            return np.ones((vh, vw), np.float32)
+        r = max(int(r), 1)
+        t = distance_steps(m, r) / float(r)
+        return (t * t * (3.0 - 2.0 * t)).astype(np.float32)
+    return np.minimum(eased(body, reach), eased(head, reach * head_share))
 
 
 def river_bed(ground, depth, drop, floor, restart=None):
@@ -626,6 +811,20 @@ def estuary(n, n_est, to_sea, widen, power, wobble=0.0, wave=1.0, salt=0):
     return 1.0 + widen * s ** power * swing
 
 
+def bank_jitter(i, wave, amount, salt=0):
+    """1 +- `amount`: a slow wave along a course, sample `i` of it, `wave`
+    samples between its knots (hash01 at each knot, smoothstep between), so
+    a bank is steeper in one reach and gentler in the next; the same course
+    always draws the same wave."""
+    if amount <= 0.0:
+        return 1.0
+    k = int(i // wave)
+    t = (i - k * wave) / wave
+    t = t * t * (3.0 - 2.0 * t)
+    a, b = hash01(np.array([k, k + 1]) + salt * 7919, 31)
+    return 1.0 + amount * ((a * (1.0 - t) + b * t) - 0.5) * 2.0
+
+
 def carve(height, wet, pts, bed, widths_v, rules):
     """Cut each sample's valley into `height` (vertex units, in place): a flat
     bed across the water, then banks easing out over the valley's width
@@ -636,9 +835,19 @@ def carve(height, wet, pts, bed, widths_v, rules):
     rises to one side the bank climbs with it (a slope sized from the centre
     alone stopped short of it and left a wall), and nothing past L is
     touched (a slope out to where it met the ground planed whole hillsides).
-    `wet` takes the band beside the water (0..1)."""
+    `wet` takes the band beside the water (0..1).
+    Spec 2026-10-13-landform-rework, phase 0: the bank is CONCAVE
+    (river_bank_profile p: the floor rises as slope * s^p / L^(p-1), gentle by
+    the water and steepening out to the same height at L), and its slope swings
+    along the course by river_bank_slope_jitter on a slow wave of
+    river_bank_jitter_m — one even 0.35 trench everywhere read as smooth
+    gutters (a third of the land at that one slope)."""
     H, W = height.shape
-    slope_v = rules["river_bank_slope"] * VERTEX_M      # metres per vertex
+    slope0_v = rules["river_bank_slope"] * VERTEX_M      # metres per vertex
+    prof = max(rules.get("river_bank_profile", 1.0), 1.0)
+    jit = rules.get("river_bank_slope_jitter", 0.0)
+    jwave = max(rules.get("river_bank_jitter_m", 1.0) / VERTEX_M, 1.0)
+    salt = int(abs(sum(float(x) for x, _ in pts[:4])) * 1000) if len(pts) else 0
     bank_max_v = rules["river_bank_max_m"] / VERTEX_M
     wet_v = rules["river_wet_m"] / VERTEX_M
     # every centre's ground read BEFORE any stamp: each sample lies inside
@@ -646,8 +855,9 @@ def carve(height, wet, pts, bed, widths_v, rules):
     # and the valley collapses to a wall a vertex wide
     ci = np.clip(np.round(np.asarray(pts)).astype(np.int64), 0, [W - 1, H - 1]) if len(pts) else None
     grounds = height[ci[:, 1], ci[:, 0]].copy() if len(pts) else []
-    for (x, y), b, w, g in zip(pts, bed, widths_v, grounds):
+    for i, ((x, y), b, w, g) in enumerate(zip(pts, bed, widths_v, grounds)):
         xi, yi = int(round(x)), int(round(y))
+        slope_v = slope0_v * bank_jitter(i, jwave, jit, salt)
         ease = min(max(g - b, 0.0) / slope_v + 1.0, bank_max_v)
         r = int(np.ceil(w * 0.5 + max(ease, wet_v))) + 1
         x0, x1 = max(xi - r, 0), min(xi + r + 1, W)
@@ -657,8 +867,9 @@ def carve(height, wet, pts, bed, widths_v, rules):
         yy, xx = np.mgrid[y0:y1, x0:x1]
         s = np.maximum(np.hypot(xx - x, yy - y) - w * 0.5, 0.0)   # out from the water's edge
         sub = height[y0:y1, x0:x1]
-        eased = sub - np.maximum(sub - b, 0.0) * np.clip(1.0 - s / ease, 0.0, 1.0)
-        np.minimum(sub, np.maximum(b + s * slope_v, eased), out=sub)
+        eased = sub - np.maximum(sub - b, 0.0) * (1.0 - np.clip(s / ease, 0.0, 1.0) ** prof)
+        floor_s = b + slope_v * s ** prof / max(ease, 1.0) ** (prof - 1.0)
+        np.minimum(sub, np.maximum(floor_s, eased), out=sub)
         wsub = wet[y0:y1, x0:x1]
         np.maximum(wsub, np.clip(1.0 - s / wet_v, 0.0, 1.0), out=wsub)
 
@@ -1378,22 +1589,27 @@ def main(argv=None):
     # --- ridges -------------------------------------------------------------------
     ridge = np.zeros((vh, vw), dtype=np.float32)
     amp, norm = 1.0, 0.0
-    for wave_m in RIDGE_WAVES_M:
+    for wave_m in relief_waves(rules):
         n = value_noise(rng, vw, vh, wave_m / VERTEX_M)
         ridge += amp * (1.0 - np.abs(2.0 * n - 1.0)) ** 2
         norm += amp
-        amp *= RIDGE_GAIN
+        amp *= rules["relief_ridge_gain"]
     ridge /= norm
     ridge -= ridge[land].mean()
-    ridge *= river_fade([c for _, c in courses], vw, vh, rules["river_ridge_fade_m"] / VERTEX_M)
-    coast_steps = int(RIDGE_COAST_M / VERTEX_M)
+    ridge *= river_fade([c for _, c in courses], vw, vh, rules["river_ridge_fade_m"] / VERTEX_M,
+                        rules["river_head_m"] / VERTEX_M, rules["river_head_share"])
+    coast_steps = int(rules["relief_ridge_coast_m"] / VERTEX_M)
     from_coast = distance_steps(~land, coast_steps) / coast_steps
-    lift = np.clip((height - RIDGE_FROM_M) / (RIDGE_FULL_M - RIDGE_FROM_M), 0, 1)
+    lift = np.clip((height - rules["relief_ridge_from_m"])
+                   / (rules["relief_ridge_full_m"] - rules["relief_ridge_from_m"]), 0, 1)
     # the fringe (0 < ramp < 1) keeps its ramp through the water plane
-    height = np.where(ramp >= 1.0, np.maximum(height + RIDGE_M * lift * from_coast * ridge * 2.0,
+    height = np.where(ramp >= 1.0, np.maximum(height + rules["relief_ridge_m"] * lift * from_coast * ridge * 2.0,
                                              SEA_Y + rules["shore_m"]), height)
     del ridge, lift
     height = terrace(height, ramp, land, from_coast, rules, vw, vh, [c for _, c in courses])
+    # the landform carved by running water (spec 2026-10-13-landform-rework,
+    # option A), before the rivers cut their own beds into it
+    height = erode(height, land, rules)
 
     # --- rivers -------------------------------------------------------------------
     # Carved after the ridges and the shore (so a bed is measured from the
@@ -1561,7 +1777,13 @@ def main(argv=None):
     # a mountain's snow ends above a grey margin, not on a lawn
     band = np.clip((hn_snow - (rules["snow_line_lo"] - rules["snow_scree_band"]))
                    / max(rules["snow_scree_band"], 1e-6), 0, 1) * (1.0 - snow)
-    tw[..., ROCKY] += rules["snow_scree_weight"] * band
+    tw[..., SCREE] += rules["snow_scree_weight"] * band
+    # the high plateaus break into ridges and gullies below the snow (phase 2 B):
+    # a band of height share ridge_lo..ridge_hi, frayed by the snow edge noise
+    ridge = np.clip((hn_snow - rules["ridge_lo"]) / max(rules["ridge_hi"] - rules["ridge_lo"], 1e-6), 0, 1) \
+        * (1.0 - snow) * (1.0 - t_cliff)
+    tw[..., RIDGE] += rules["ridge_weight"] * ridge
+    del ridge
     del snow_n, hn_snow, band
     tw[..., SNOW] += rules["snow_weight"] * snow * (1.0 - rules["snow_steep_cut"] * t_cliff) \
         * (1.0 - rules["snow_scree_cut"] * t_rock)
