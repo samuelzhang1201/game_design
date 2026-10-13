@@ -184,8 +184,15 @@ var _trace_couriers := false
 ## --supply-flow DX,DY (with --screen root): the player's first land regiment
 ## marches DX,DY pack px from where it stands with a FLOWING supply line from
 ## the realm's capital (the state set directly, for a shot of the line);
-## prints where it stands, for --look3d.
+## prints where it stands, for --look3d. --supply-flow-piece PIECE takes the
+## first whose 3D piece (army_art.csv) is PIECE instead, e.g. infantry.
 var _supply_flow := Vector2.INF
+var _supply_flow_piece := ""
+var _supply_flow_code := ""
+## --follow3d M,F (with --supply-flow) frames that regiment's DRAWN piece M
+## metres away every frame from frame F, so the ground runs under a held
+## piece and its feet can be judged against it.
+var _follow3d := PackedFloat32Array()
 ## --supply-front (with --screen root): the player's first land regiment with a
 ## realm town AHEAD of it gets a line from that town, and the engine's day step
 ## breaks it (FRONT, ruling 20 kept daily) — the card, folio and slip words.
@@ -439,6 +446,11 @@ func _ready() -> void:
 		elif args[i] == "--supply-flow":
 			var sf := args[i + 1].split(",")
 			_supply_flow = Vector2(float(sf[0]), float(sf[1]))
+		elif args[i] == "--supply-flow-piece":
+			_supply_flow_piece = args[i + 1]
+		elif args[i] == "--follow3d":
+			for part in args[i + 1].split(","):
+				_follow3d.append(float(part))
 		elif args[i] == "--speed":
 			_speed = int(args[i + 1])
 		elif args[i] == "--spy3d":
@@ -983,6 +995,14 @@ func _process(_delta: float) -> void:
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
 		_root.current_screen.map3d_view().look_at_pack(Vector2(_look3d[0], _look3d[1]), _look3d[2])
+	if _root != null and _follow3d.size() == 2 and _frames >= int(_follow3d[1]) and _supply_flow_code != "" \
+			and _root.current_screen.has_method("map3d_view") \
+			and _root.current_screen.map3d_view() != null:
+		var shown: Dictionary = _root.current_screen.map3d_view().unit_pack_positions()
+		if shown.has(_supply_flow_code):
+			_root.current_screen.map3d_view().look_at_pack(shown[_supply_flow_code], _follow3d[0])
+		if _frames % 40 == 0:
+			print("follow3d f%d: %s" % [_frames, shown.get(_supply_flow_code, "not shown (%d)" % shown.size())])
 	if _root != null and _frames == _click_courier \
 			and _root.current_screen.has_method("map3d_view") \
 			and _root.current_screen.map3d_view() != null:
@@ -1101,8 +1121,11 @@ func _lay_supply_flow() -> void:
 		var code := String(r["regiment_code"])
 		if String(r.get("is_naval", "0")) == "1" or not Game.state.regiments.has(code):
 			continue
+		if _supply_flow_piece != "" and MapObjects.army_piece(repo, r) != _supply_flow_piece:
+			continue
 		var at := ArmySystem.position_of(repo, Game.state, r)
 		ArmySystem.set_march(repo, Game.state, code, at + _supply_flow)
+		_supply_flow_code = code
 		var rec := SupplyLines._new_record(cap, 1000, 1)
 		rec["state"] = SupplyLines.FLOWING
 		Game.state.supply_lines[code] = rec

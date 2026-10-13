@@ -57,6 +57,10 @@ existing one.
 - **Kinds of the same family part at a glance**, even with the clock paused.
 - **Motion must be seen, and be the right motion.** Wind is a travelling
   crest, not a drifting veil; a shimmer too small to see is stillness.
+- **A walking figure's feet hold the ground, and a group never moves as
+  clones.** A foot that glides reads as floating, at every clock speed; men
+  in one file step out of time with each other — the variety comes from the
+  men themselves (height, stride, phase), never from feet that slip.
 - **Sharp up close, clean from far, at any window size.**
 
 ## Light and atmosphere

@@ -324,6 +324,45 @@ func test_the_walk_speed_is_the_days_plan() -> void:
 	assert_eq(Map3DUnitRig.walk_speed(day, 8.0, 0), 0.0, "a stopped clock walks nowhere")
 
 
+## The piece walks the day's ROUTE (along_day by its corners), so the plan's
+## speed is the route's length, not the chord: 0 -> (300,0) -> (300,400) is
+## 700 m (the chord 500) over an 8 s day at 1x, 87.5 m/s.
+func test_the_walk_speed_follows_the_route_corners() -> void:
+	var day := {"from": Vector2.ZERO, "to": Vector2(300.0, 400.0), "s0": 0.0,
+		"via": PackedVector2Array([Vector2(300.0, 0.0)])}
+	assert_almost_eq(Map3DUnitRig.walk_speed(day, 8.0, 1), 87.5, 0.001)
+
+
+## An exact-pace arm (army_art.csv exact_pace, owner 2026-10-14: 步伐和移动能够
+## 完全匹配): its feet keep the ground at ANY speed — no anim bounds, no
+## per-figure jitter. By hand: 100 m/s world at k 10 is 10 model m/s; a 2 s
+## loop over 4 m is 2 m/s natural, so x5 — past anim_max 2.0, every figure alike.
+func test_an_exact_pace_piece_plays_the_true_rate_on_every_figure() -> void:
+	var node := Node3D.new()
+	node.scale = Vector3.ONE * 10.0
+	var anims: Array = []
+	for i in 3:
+		var a := AnimationPlayer.new()
+		node.add_child(a)
+		anims.append(a)
+	var piece := {"node": node, "anims": anims, "clip_s": 2.0, "stride_m": 4.0, "exact_pace": true}
+	var day := {"from": Vector2.ZERO, "to": Vector2(800.0, 0.0), "s0": 0.0}
+	Map3DUnitRig.keep_pace(repo, piece, day, 0.1, 1, "R1")
+	for a: AnimationPlayer in anims:
+		assert_almost_eq(a.speed_scale, 5.0, 0.0001)
+	piece["exact_pace"] = false
+	piece.erase("pace_key")
+	Map3DUnitRig.keep_pace(repo, piece, day, 0.1, 1, "R1")
+	assert_lte((anims[0] as AnimationPlayer).speed_scale, repo.bal("map3d_unit_anim_max"),
+		"an arm without it is still held to the bound")
+	node.free()
+
+
+## The infantry is an exact-pace arm (owner 2026-10-14), and the piece carries it.
+func test_the_infantry_keeps_exact_pace() -> void:
+	assert_eq(String(repo.army_art["infantry"].get("exact_pace", "")), "1")
+
+
 ## The chip hangs over the HEAD (owner 2026-09-30: 兵人的icon和模型间隔太远了):
 ## the infantry's head bone stands ~1.56 m, its box's top is the spear's 2.66.
 func test_the_head_is_below_the_spear_tip() -> void:

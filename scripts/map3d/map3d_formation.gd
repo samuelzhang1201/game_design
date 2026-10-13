@@ -98,7 +98,7 @@ static func anims_of(root: Node) -> Array:
 ## `art`, in formation `tier` with `gap` (Map3DLayerUnits' formation_gap): one
 ## figure measured, then the FORMATION built round it — {node (not yet in the
 ## tree, no owner), anims, height_m, head_m, half_w_m, extent, figures,
-## stand_deg, size, stride_m, clip_s}; {} when the scene makes no Node3D.
+## stand_deg, size, stride_m, exact_pace, clip_s}; {} when the scene makes no Node3D.
 static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tier: Dictionary,
 		gap: float, layout := BLOCK) -> Dictionary:
 	var one := scene.instantiate() as Node3D
@@ -118,6 +118,7 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 		"lag_cap": repo.bal("map3d_march_lag_cap_share") * minf(ext.x, ext.y),
 		"stand_deg": float(art.get("stand_deg", "0")),
 		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
+		"exact_pace": String(art.get("exact_pace", "0")) == "1",
 		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
 
 
@@ -133,5 +134,14 @@ static func of_regiment(repo: DataRepository, reg: Dictionary, tier: Dictionary,
 	var scene := Map3DAssetCache.scene(path) if path != "" else null
 	if path != "" and scene == null:
 		Map3DWorldLoader.warn_once("units:" + path, "map3d units: no model at " + path)
-	return piece(repo, scene, repo.army_art.get(model, {}), tier, gap, layout).merged({"model": model}) \
-		if scene != null else {}  # `model` keys its march's sound (Map3DUnitSound)
+	if scene == null:
+		return {}
+	var built := piece(repo, scene, repo.army_art.get(model, {}), tier, gap, layout)
+	built["model"] = model  # keys its march's sound (Map3DUnitSound)
+	if bool(built.get("exact_pace", false)):  # each man his own height and cadence (Map3DMarchLag.stature)
+		var spread := repo.bal("map3d_march_stature_spread")
+		built["statures"] = range(built["figs"].size()).map(func(i: int) -> float:
+			return Map3DMarchLag.stature(String(reg.get("regiment_code", "")), i, spread))
+		for i in built["figs"].size():
+			(built["figs"][i] as Node3D).scale = Vector3.ONE * float(built["statures"][i])
+	return built

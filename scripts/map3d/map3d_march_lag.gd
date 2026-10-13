@@ -7,9 +7,17 @@ extends RefCounted
 ## RNG, no clock) and view-only: the simulation never sees it. Pure.
 
 
-## A stable 0..1 (never 1) from a key.
+## A stable 0..1 (never 1) from a key. String.hash alone gives keys that differ
+## only in their last character (figure 0, 1, 2 …) CONSECUTIVE hashes, so every
+## figure drew the same share; murmur3's fmix32 spreads them over 0..1.
 static func _unit(key: String) -> float:
-	return float(key.hash() % 10007) / 10007.0
+	var h := key.hash() & 0xFFFFFFFF
+	h ^= h >> 16
+	h = (h * 0x85ebca6b) & 0xFFFFFFFF
+	h ^= h >> 13
+	h = (h * 0xc2b2ae35) & 0xFFFFFFFF
+	h ^= h >> 16
+	return float(h) / 4294967296.0
 
 
 ## Where in its MARCH clip figure `index` of `code` starts, as a share of the clip.
@@ -27,6 +35,13 @@ static func tau(code: String, index: int, min_s: float, max_s: float) -> float:
 static func pace(code: String, index: int, base: float, spread: float, lo: float, hi: float) -> float:
 	var jitter := 1.0 + (_unit("%s|pace|%d" % [code, index]) * 2.0 - 1.0) * spread
 	return clampf(base * jitter, lo, hi)
+
+
+## A figure's stature, 1 +/- `spread` (owner 2026-10-14: 步伐要参差不齐): an
+## exact-pace arm stands each figure at it and plays the piece's rate over it
+## (Map3DUnitRig.keep_pace), so its cadence is its own and its feet still hold.
+static func stature(code: String, index: int, spread: float) -> float:
+	return 1.0 + (_unit("%s|stature|%d" % [code, index]) * 2.0 - 1.0) * spread
 
 
 ## One step of a figure's offset `o` from its slot (the piece's local metres)

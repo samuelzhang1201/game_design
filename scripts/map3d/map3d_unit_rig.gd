@@ -54,13 +54,19 @@ static func head_m(repo: DataRepository, node: Node3D, fallback: float) -> float
 ## second): the `day` from `from` to `to` over the part of the day left after
 ## `s0`, at `clock` times the day's `day_s` seconds. The gait is timed from
 ## this PLAN, never from a frame's own step, which a frame that happened not to
-## move read as a standstill (owner 2026-09-30: 走路速度怎么时快时慢). 0 on a
+## move read as a standstill (owner 2026-09-30: 走路速度怎么时快时慢). The
+## distance is the ROUTE's, by its `via` corners, as along_day walks it. 0 on a
 ## stopped clock.
 static func walk_speed(day: Dictionary, day_s: float, clock: int) -> float:
 	if clock <= 0 or day_s <= 0.0:
 		return 0.0
 	var span := (1.0 - float(day["s0"])) * day_s / float(clock)
-	return (day["from"] as Vector2).distance_to(day["to"]) / maxf(span, 0.001)
+	var pts := PackedVector2Array([day["from"]]) + (day.get("via", PackedVector2Array()) as PackedVector2Array) \
+		+ PackedVector2Array([day["to"]])
+	var dist := 0.0
+	for i in range(1, pts.size()):
+		dist += pts[i - 1].distance_to(pts[i])
+	return dist / maxf(span, 0.001)
 
 
 static func _skeleton(node: Node) -> Skeleton3D:
@@ -212,14 +218,22 @@ static func heading_for(repo: DataRepository, state: GameState, code: String, tr
 static func keep_pace(repo: DataRepository, piece: Dictionary, day: Dictionary, share: float, clock: int,
 		code: String = "") -> void:
 	var walking := Map3DUnits.walking(day, share)
-	var pace := march_rate(repo, walk_speed(day, repo.bal("time_day_seconds"), clock),
+	# an exact-pace arm (army_art.csv exact_pace, owner 2026-10-14: 步伐和移动能够完全匹配)
+	# plays the true rate at any speed, every figure alike: no bounds, no jitter
+	var exact := bool(piece.get("exact_pace", false))
+	var lo := 0.0 if exact else repo.bal("map3d_unit_anim_min")
+	var hi := INF if exact else repo.bal("map3d_unit_anim_max")
+	var pace := gait_rate(walk_speed(day, repo.bal("time_day_seconds"), clock),
 		(piece["node"] as Node3D).transform.basis.get_scale().x, float(piece["clip_s"]),
-		float(piece["stride_m"])) if walking else 1.0
+		float(piece["stride_m"]), lo, hi) if walking else 1.0
 	var key := [pace, walking]
 	if piece.get("pace_key", []) != key:
 		piece["pace_key"] = key
 		var anims: Array = piece["anims"]
+		var spread := 0.0 if exact else repo.bal("map3d_march_desync_pace")
+		var statures: Array = piece.get("statures", [])
 		for i in anims.size():
-			(anims[i] as AnimationPlayer).speed_scale = Map3DMarchLag.pace(code, i, pace,
-				repo.bal("map3d_march_desync_pace"), repo.bal("map3d_unit_anim_min"),
-				repo.bal("map3d_unit_anim_max")) if walking else 1.0
+			# a figure at stature s strides s times as far: s times slower keeps its feet
+			var own := pace / float(statures[i]) if exact and i < statures.size() else pace
+			(anims[i] as AnimationPlayer).speed_scale = Map3DMarchLag.pace(code, i, own,
+				spread, lo, hi) if walking else 1.0
