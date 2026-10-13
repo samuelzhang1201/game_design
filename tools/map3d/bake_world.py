@@ -73,7 +73,8 @@ GRASS_B, GRASS_C, UPTURF_A, UPTURF_B, CROP_B = range(10, 15)
 # caps and broken ridges and gullies on the high plateaus.
 SCREE, RIDGE = 15, 16
 NT = 17
-TEXTURE_KEYS = ["aerial_cliff", "g2_meadow_a", "dry_decay_leaves", "dirt_floor", "aerial_upland",
+TEXTURE_KEYS = ["p3_rock_face",   # a FRONTAL rock face (owner-approved 2026-10-13, R-01): Terrain3D projects it on the steep faces, where the aerial crag streaked
+                "g2_meadow_a", "dry_decay_leaves", "dirt_floor", "aerial_upland",
                 "excavated_soil_wall", "sand_03", "aerial_canopy",
                 # the snow line (owner 2026-09-19): Poly Haven snow_02 since the
                 # same day (snow_field_aerial read blue-grey and blotchy)

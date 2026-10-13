@@ -25,7 +25,7 @@ const TEXTURES := [
 	# tools/map3d/pack_aerial.py) at 200 m: its blocks against the houses and
 	# fields — at 260 m the critic read them 2-3x too big, and the old crag's
 	# 533 m only suited that picture's own larger forms
-	["aerial_cliff", 200.0, 0.1, 0.0],
+	["p3_rock_face", 120.0, 0.1, 0.0],   # a frontal rock face (owner-approved 2026-10-13, R-01): projected on the steep faces; the aerial crag (T-73) laid on a vertical face read as streaks
 	["g2_meadow_a", 240.0, 0.16, 0.5],   # the meadow (spec 2026-10-12-ground-detail-textures: low-feature variant sets; aerial pictures since the look route 2026-09-30, tools/map3d/pack_aerial.py)
 	["dry_decay_leaves", 160.0, 0.2, 0.5],
 	["dirt_floor", 180.0, 0.16, 0.5],
