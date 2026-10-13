@@ -13,6 +13,11 @@ grove_wave_m,2400,woods: the wavelength of the noise that gathers woods and open
 grove_gain,1.1,woods: how far that noise swings a place's woodedness (0 = the biome's share everywhere)
 edge_sharp,2.4,"woods: how hard the chance is squeezed toward 0 or 1 round 0.5, so a wood has an edge instead of thinning out over kilometres (1 = no squeeze)"
 lone_chance,0.035,woods: the chance of a lone clump on open land (savanna and grassland) — hedgerow and field trees; 0.006 left the open pasture featureless felt (visual review 2026-10-06)
+lone_gain,2.5,"woods (critic 2026-10-13: lone trees sprinkled evenly over the pasture read as stamped copies; taste: nature clusters): the lone clumps gather into parkland patches this many times as dense, the pasture between left open (bake_trees.lone_chance; 0 = the old even scatter)"
+lone_wave_m,700,woods: the wavelength of the noise that gathers the lone clumps
+lone_cut,0.55,woods: where that noise passes this a parkland patch begins
+lone_soft,0.15,woods: ...and over how much more of it the patch reaches full density
+lone_upland,0.6,"woods (map art phase 2 C, 2026-10-13): how much of the open high ground (heath, hills, mountains) counts as open land for the lone clumps — where the wind-bent pines, boulders and heather stand (0: lowland only, which left them none)"
 min_above_sea_m,3,woods: no clump lower than this over the water plane (the shore and every lake)
 max_slope,0.55,woods: no clump on ground steeper than this rise over run (cliff faces stay bare rock)
 max_height_share,0.62,woods: no clump above this share of the highest ground (bake snow_line_lo — the tree line)

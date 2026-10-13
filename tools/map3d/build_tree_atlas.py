@@ -23,7 +23,7 @@ from PIL import Image, ImageFilter
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TABLE = os.path.join(ROOT, "data", "screens", "map3d", "map3d_tree_crowns.csv")
 OUT = os.path.join(ROOT, "assets", "3D", "vegetation", "crowns", "crowns_atlas.png")
-COLS, ROWS, CELL = 4, 4, 256
+COLS, ROWS, CELL = 4, 8, 256
 ERODE = 1            # px the crown's alpha is pulled in by, past the white ground's fringe
 PAD = 6              # px of clear margin inside a cell, so a mip never reaches the neighbour
 WHITE_LO, WHITE_HI = 10.0, 48.0   # how far below white a pixel must be to start / finish being crown
@@ -111,8 +111,22 @@ def main():
     with open(TABLE, newline="") as f:
         rows = list(csv.DictReader(f))
     atlas = np.zeros((ROWS * CELL, COLS * CELL, 4), dtype=np.uint8)
+    # "atlas:<cell>" keeps a finished cell of the committed atlas (its render
+    # under assets/imagegen/out/ is git-ignored and may be gone), read before
+    # the new atlas overwrites it
+    old = np.asarray(Image.open(OUT).convert("RGBA")) if os.path.exists(OUT) else None
     for r in rows:
         cell = int(r["cell"])
+        if r["source"].startswith("atlas:"):
+            if old is None:
+                sys.exit("cell %d keeps an atlas cell but there is no atlas at %s" % (cell, OUT))
+            oc = int(r["source"][6:])
+            oy, ox = (oc // COLS) * CELL, (oc % COLS) * CELL
+            tile = old[oy:oy + CELL, ox:ox + CELL]
+            y, x = (cell // COLS) * CELL, (cell % COLS) * CELL
+            atlas[y:y + CELL, x:x + CELL] = tile
+            print("cell %2d  kind %s  kept from atlas cell %d" % (cell, r["kind"], oc))
+            continue
         src = os.path.join(ROOT, r["source"])
         if not os.path.exists(src):
             sys.exit("missing source for cell %d: %s" % (cell, src))
