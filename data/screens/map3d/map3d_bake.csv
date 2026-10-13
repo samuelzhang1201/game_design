@@ -24,7 +24,7 @@ river_fill,0.7,3D bake: the water stands this share of the depth over the bed
 river_over_sea_m,0.3,"3D bake (final review, owner 2026-09-18: was SEA_Y + 0.3 in bake_world.py): a river's water line never stands lower than this far over the water plane it runs to, so the line keeps falling to the sea without ever dipping under it"
 river_min_drop_m,0.04,"3D bake: the bed falls at least this much per 20 m step, so every river runs downhill to the sea"
 river_bank_slope,0.35,3D bake: the banks rise this many metres per metre out from the water's edge (a valley)
-river_bank_max_m,1500.0,3D bake: a bank never reaches further out than this
+river_bank_max_m,1500.0,"3D bake (2026-10-13 landform rework: 600 forced steep dark walls, critic ranked it below 1500 — the even trench is broken by the slope jitter instead): a bank never reaches further out than this"
 river_wet_m,120.0,3D bake: the wet-soil band beside the water reaches this far
 river_wet_weight,0.4,3D bake: how strongly that band pulls dirt_floor in
 river_wet_darken,0.4,"3D bake: how much it darkens the colour map (bracketed 0.15 / 0.35 / 0.55 on 2026-09-18: dirt_floor reads lighter than grass, so below ~0.5 the band read as a sand road, not wet earth)"
@@ -110,7 +110,7 @@ house_edge_scale_min,0.75,"3D bake houses fix round 1, finding 2: the horizontal
 house_frontage_share,0.45,"3D bake houses fix round 2, finding 1: lane frontage was supplying essentially the whole per-group target before block fill ever got a slot (measured: 399 of a capital's 400), so the town read as a starburst of strings with empty wedges between the lanes. Caps what the frontage pass may take of EACH ring's own quota to this share, reserving the rest for block fill — most of a medieval town's buildings sit behind the street frontage, not on it. Applied within the ring-quota system (a share of quotas[ring], not of the flat total) so the edge feathering is unaffected; if capping frontage leaves a ring's remainder unfillable by infill (small blocks, refusing terrain), the leftover pass lets frontage take it back rather than lose it"
 house_small_site_grid_ratio,0.35,"3D bake houses fix round 2, finding 2: a small or narrow site (a harbour village whose buildable land is a sliver, most of its r_house being open water) can leave a settlement at just its landmark plus one house — not from lack of room, but because the plot_step_m infill grid never happens to land a candidate in the sliver that IS buildable (measured on one such village: 4 of 96 candidates passed at the normal 10 m step, 49 of ~1500 at a third of it). Only spent as a last-resort top up once every other pass has left the settlement short of its target, so it changes nothing for a settlement that already reaches its target"
 house_small_site_foot_min_ratio,0.7,"3D bake houses fix round 2, finding 2: a second, separate cause found on a real settlement (chawbigdon, a city) -- not water, not slope (both clear everywhere in its disc), but the footprint/built-ground mask itself sat at ~0.48 at the settlement's OWN centre and fell further outward, on land otherwise flat and dry (bake_world.py's own footprint_edge_noise fraying low across this one disc, out of this module's reach). The absolute last resort: house_foot_min scaled by this ratio, tried only once the fine grid above has ALSO failed. Never touches the shore or slope tests, so a genuinely steep or wet site (verified separately: apton, aringham -- 100% slope failures well past the threshold) is still correctly left at its landmark"
-terrace_strength,0.8,"3D bake TERRACES (owner 2026-09-24, look route Phase 2): how far the high ground is folded into plateaus and escarpments, 0 (off) .. 1 — look only, the engine's heights are the cells'"
+terrace_strength,0.8,"3D bake TERRACES (2026-10-13 landform rework: 0.5 tried, ranked below 0.8 at the opening zoom) (owner 2026-09-24, look route Phase 2): how far the high ground is folded into plateaus and escarpments, 0 (off) .. 1 — look only, the engine's heights are the cells'"
 terrace_seed,907,3D bake terraces: the terraces' own random stream (nothing sown after them moves)
 terrace_from_m,260,3D bake terraces: ground above this many metres is stepped
 terrace_fade_m,200,3D bake terraces: ...fading in over this many metres above terrace_from_m
@@ -249,3 +249,23 @@ crop_variant_wave_m,900,"3D bake: the wavelength of the noise that picks a crop 
 ridge_lo,0.45,"3D bake (spec 2026-10-13-map-art-phase2, B): the share of the highest ground where the broken ridge-and-gully rock (p2_ridge, T-87) begins to come in on the high plateaus"
 ridge_hi,0.62,3D bake: ...and is full here (the snow and its scree band take over above)
 ridge_weight,1.4,3D bake: the ridge rock's weight against the grounds under it (the grass is 1)
+river_head_m,2500,"3D bake (spec 2026-10-13-landform-rework, phase 0): over this many metres from a river's source its ridge and terrace fade holds only river_head_share of its reach — a valley starts in a narrow notch, never a round bowl cleared round its source"
+river_head_share,0.25,3D bake: ...that share of the fade's reach at the head
+river_bank_profile,1.0,"3D bake: the bank's concavity (1 straight, as before): the floor rises as slope * s^p / L^(p-1), gentle by the water and steepening outward"
+river_bank_slope_jitter,0.0,3D bake: how far the bank slope swings along a course (a share of river_bank_slope) — no single even slope for every valley
+river_bank_jitter_m,1500,3D bake: the wavelength of that swing along the course
+relief_ridge_waves_m,6000|3000|1500|750|380,"3D bake (moved from bake_world.RIDGE_WAVES_M, 2026-10-13): the ridged noise's octave wavelengths in metres, coarse to fine"
+relief_ridge_gain,0.5,3D bake: the ridged noise's amplitude falloff per octave
+relief_ridge_m,520,3D bake: the ridges' full amplitude in metres where the ground is highest
+relief_ridge_from_m,150,3D bake: below this height the ridges fade to nothing
+relief_ridge_full_m,1600,3D bake: ...and reach full strength here
+relief_ridge_coast_m,1200,3D bake: the ridges' fade-in distance from the shore
+erosion_strength,1.0,"3D bake (spec 2026-10-13-landform-rework, option A): how much of the stream-power erosion's change is laid on the land (0 = off): branching gullies and continuous crests instead of smooth trenches and noise blobs"
+erosion_cell_m,100,3D bake erosion: the coarse grid the water is routed on (metres a cell)
+erosion_iters,10,3D bake erosion: rounds of routing + stream power + talus
+erosion_k,3.0,3D bake erosion: the stream-power coefficient (F = k * drained cells^m / cell metres per round)
+erosion_m_exp,0.5,3D bake erosion: the drained area's exponent
+erosion_talus,0.9,3D bake erosion: the steepest slope (rise over run) that holds; steeper sheds half its excess downhill
+erosion_max_cut_m,150,"3D bake erosion: the most it may cut (and a third of it, deposit) — the engine's cell heights (landmarks' N m) stay within this of the drawn ground (owner 2026-10-13: up to 100-150 m allowed)"
+erosion_from_m,150,3D bake erosion: below this height the land keeps its shape (plains and coasts)
+erosion_full_m,600,3D bake erosion: ...and is fully eroded from here

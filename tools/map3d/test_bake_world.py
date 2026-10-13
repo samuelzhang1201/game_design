@@ -447,3 +447,75 @@ def test_a_split_class_still_wins_its_vertex():
     assert np.argmax(ranked[0, 0]) == bw.GRASS
     assert np.isclose(ranked[0, 0, bw.DIRT], 0.3)
     assert np.isclose(s[0, 0, bw.GRASS], 0.2)
+
+
+def test_a_valley_starts_in_a_notch():
+    """river_fade (spec 2026-10-13-landform-rework): the first head_v
+    vertices of a course hold only head_share of the reach, so 20 vertices
+    beside the source is already full (reach 40 x 0.25 = 10) while beside the
+    body 20 vertices is still mid-fade."""
+    course = [(10.0, 50.0), (190.0, 50.0)]
+    f = bw.river_fade([course], 200, 100, 40, head_v=60, head_share=0.25)
+    assert f[50, 30] == 0.0 and f[50, 150] == 0.0
+    assert f[70, 30] == 1.0, "beside the head the notch is narrow"
+    assert 0.0 < f[70, 150] < 1.0, "beside the body the valley is wide"
+    plain = bw.river_fade([course], 200, 100, 40)
+    assert 0.0 < plain[70, 30] < 1.0
+
+
+def test_bank_jitter_is_a_fixed_slow_wave():
+    assert bw.bank_jitter(7, 75, 0.0) == 1.0
+    a = [bw.bank_jitter(i, 75, 0.45, 3) for i in range(0, 300)]
+    assert a == [bw.bank_jitter(i, 75, 0.45, 3) for i in range(0, 300)]
+    assert min(a) >= 0.55 - 1e-9 and max(a) <= 1.45 + 1e-9
+    assert max(abs(a[i + 1] - a[i]) for i in range(299)) < 0.05, "slow, never a step"
+
+
+def test_a_concave_bank_is_gentle_by_the_water():
+    """carve with river_bank_profile 2: on flat ground 100 m over the bed the
+    floor at s vertices out is bed + slope * s^2 / L, L = 100 / slope_v + 1."""
+    rules = {"river_bank_slope": 0.25, "river_bank_max_m": 2000.0, "river_wet_m": 40.0,
+             "river_bank_profile": 2.0, "river_bank_slope_jitter": 0.0}
+    h = np.full((60, 60), 100.0, np.float32)
+    wet = np.zeros_like(h)
+    bw.carve(h, wet, [(30.0, 30.0)], [0.0], [0.0], rules)
+    slope_v = 0.25 * bw.VERTEX_M
+    L = 100.0 / slope_v + 1.0
+    assert abs(h[30, 35] - slope_v * 25.0 / L) < 1e-3
+    assert h[30, 35] < 5 * slope_v, "gentler than the straight bank by the water"
+
+
+def test_stream_power_one_implicit_step():
+    """Architect's hand values (spec 2026-10-13-landform-rework): a chain of 4
+    cells, dx 100, k 10, m 0.5, heights [300, 200, 100, 0], the outlet held,
+    drained area [1, 2, 3, 4]: F = k sqrt(A) / dx, worked from the outlet."""
+    h = np.array([[300.0, 200.0, 100.0, 0.0]])
+    rcv = np.array([1, 2, 3, 3])
+    order = np.array([3, 2, 1, 0])
+    area = np.array([1.0, 2.0, 3.0, 4.0])
+    z = bw.stream_power(h, rcv, order, area, 10.0, 100.0, 0.5)
+    assert np.allclose(z[0], [289.616, 185.781, 85.237, 0.0], atol=1e-3)
+
+
+def test_thermal_sheds_half_the_excess():
+    z = bw.thermal(np.array([[100.0, 0.0]]), 100.0, 0.5)
+    assert np.allclose(z, [[75.0, 25.0]])
+
+
+def test_drainage_area_down_a_tilted_plane():
+    """A 3x3 plane falling east: every cell drains east, so along each row the
+    areas are [1, 2, 3]."""
+    h = np.array([[2.0, 1.0, 0.0]] * 3) + np.array([[0.0], [0.001], [0.002]]) * 0
+    rcv = bw.d8_receivers(h, 100.0)
+    area, _ = bw.drainage_area(h, rcv)
+    assert np.allclose(area.reshape(3, 3), [[1, 2, 3]] * 3)
+
+
+def test_fill_pits_lets_a_hollow_drain():
+    """A hollow walled in at 5 except one 4 m gap toward the outlet fills to
+    the gap (plus the drain hair) and the outlet stays."""
+    h = np.array([[5.0, 5.0, 5.0, 5.0], [5.0, 1.0, 5.0, 5.0],
+                  [5.0, 5.0, 4.0, 5.0], [5.0, 5.0, 5.0, 0.0]])
+    out = np.zeros_like(h, bool); out[3, 3] = True
+    f = bw.fill_pits(h, out)
+    assert 4.0 < f[1, 1] < 4.01 and f[3, 3] == 0.0 and f[0, 0] == 5.0
