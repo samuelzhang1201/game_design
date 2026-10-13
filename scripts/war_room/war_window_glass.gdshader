@@ -9,6 +9,7 @@ uniform sampler2D lead : filter_linear_mipmap;   // white where glass, dark on t
 uniform vec3 day : source_color = vec3(1.0, 0.93, 0.8);   // the outside's light
 uniform vec3 field : source_color = vec3(0.62, 0.7, 0.5);  // the land low in the panes
 uniform float horizon = 0.28;      // UV.y from the bottom where sky meets land
+uniform float field_dim = 0.55;    // the land seen through the panes against the sky (1 = as bright)
 uniform float bright = 4.5;        // panes' brightness, over the glow threshold
 uniform vec3 green : source_color = vec3(0.86, 0.94, 0.82);   // crown glass at its thickest
 uniform float uneven = 0.35;       // how much the panes vary
@@ -30,7 +31,12 @@ void fragment() {
 	vec3 tint = mix(green, vec3(1.0), mix(1.0, w, uneven));
 	// the outside, out of focus: day above the horizon, the land below, a soft seam
 	float up = 1.0 - UV.y;
-	vec3 view = mix(field, day, smoothstep(horizon - 0.08, horizon + 0.08, up + (w - 0.5) * 0.06));
+	// two ridges against the sky: a far blue range, a near wooded one whose crown is ragged
+	float far_h = horizon + 0.16 + 0.10 * noise(vec2(UV.x * 2.5, 5.0));
+	float near_h = horizon + 0.05 + 0.08 * noise(vec2(UV.x * 3.0, 1.0)) + 0.03 * noise(vec2(UV.x * 38.0, 2.0));
+	vec3 view = day;
+	view = mix(view, mix(day, vec3(0.5, 0.62, 0.72), 0.7), 1.0 - smoothstep(far_h - 0.008, far_h + 0.008, up));
+	view = mix(view, field * field_dim, 1.0 - smoothstep(near_h - 0.008, near_h + 0.008, up));
 	float toward = clamp(up + (0.5 - UV.x) * sun_side, 0.0, 1.0);
 	vec3 pane = view * tint * bright * mix(0.8, 1.15, toward) * (0.85 + 0.3 * w);
 	ALBEDO = mix(came, pane, glass);

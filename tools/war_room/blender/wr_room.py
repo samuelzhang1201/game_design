@@ -208,6 +208,26 @@ m_plank = mat_tex("WR_ceiling", TEX + "/weathered_planks_diffuse_2k.jpg", TEX + 
 ob = new_obj("room", bm, "WR_room", [m_stone, m_floor, m_iron, m_wax, m_beam, m_plank])
 finish_mesh(ob, hard_deg=40)
 box_uv(ob, {STONE: 2.5, FLOOR: 2.0, IRON: 0.25, WAX: 0.25, BEAM: 1.5, PLANK: 2.0}, rot90_mats=(BEAM,))
+# stains as a vertex colour (Godot multiplies it into the albedo): damp and grime at the
+# foot of the walls, smoke under the ceiling, the floor dark toward its walls
+me = ob.data
+ca = me.color_attributes.get("Col") or me.color_attributes.new("Col", 'BYTE_COLOR', 'CORNER')
+def _sm(t):
+    t = max(0.0, min(1.0, t))
+    return t * t * (3.0 - 2.0 * t)
+for poly in me.polygons:
+    for li in poly.loop_indices:
+        co = me.vertices[me.loops[li].vertex_index].co
+        f = 1.0
+        if poly.material_index == STONE:
+            f = 0.5 + 0.5 * _sm((co.z - ZF) / 1.1)                     # damp and grime at the foot
+            f *= 1.0 - 0.18 * _sm((co.z - (ZC - 0.7)) / 0.7)           # smoke under the ceiling
+        elif poly.material_index == FLOOR:
+            wall = min(abs(abs(co.x) - XW), abs(co.y - YF), abs(co.y - YN))
+            f = 0.62 + 0.38 * _sm(wall / 1.2)
+        elif poly.material_index in (BEAM, PLANK):
+            f = 0.78
+        ca.data[li].color = (f, f * 0.97, f * 0.93, 1.0)
 print("room tris", tris_of(ob), "dims", tuple(round(d, 3) for d in ob.dimensions))
 
 # --- the glass: two lancets, UV 0..1 over each, facing the room (+x) ---
