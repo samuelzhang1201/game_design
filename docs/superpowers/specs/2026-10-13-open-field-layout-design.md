@@ -192,6 +192,39 @@ The `- Trees` rows of the same runs move by ±2 ms, so the far rows are within n
 - A long in-field ring winds round a hill and reads like a contour line.
 - The field rim's pale balk band is a little strong at 600 m.
 
+## Phase 2 trials (2026-10-14): not kept
+
+The owner's ruling, after the trials: drop the layout and fix the near strips instead (放弃布局，改修近景垄条).
+
+**What was tried.** §1 was built in full, on the branch `feat/open-field-phase2-trials` (local, not merged): the effort reach, furlong regions, brick furlongs, headlands, lanes parting the furlongs, and assarts. Variants:
+
+| Variant | What a blind critic saw |
+|---|---|
+| 600 m regions, headlands 2× | big tan sheets: a region's furlongs share a crop and a grain and run together |
+| 400 m regions | a crazy-paving net of headlands and lane balks at 5 km |
+| 350 m regions, ±0.25 rad per furlong | still muddy sheets at 5 km |
+| phase 1's Voronoi blocks, strips down the fall line | neighbours on one slope agree and merge again |
+
+Two critics ranked phase 1's Voronoi furlongs first at every zoom.
+
+**Why it failed.** The historical rules, one grain per furlong region and strips down the fall line, make neighbouring blocks agree. The patchwork the opening zoom reads by is a contrast between neighbours.
+
+**Measured on the way.**
+- The effort reach costs farmland: k = 10 halved it, k = 2 took a fifth.
+- The climb pushed the capital's fields off its hill.
+
+## Near strips (2026-10-14)
+
+Every critic named the same defect: at 600 m the arable round the capital was a flat straw sheet.
+
+- **The crofts' corn plots are sown.** Most of what the 600 m view shows by the capital is its crofts, not arable. Their "plot" closes were never sown, so no strips were drawn on them. They are now sown, with their strips along the close.
+- **The strip direction is read per texel (`Map3DGroundStrips`).**
+  - Blending the direction across a 40 m texel swung the strips into arcs.
+  - The nearest texel's direction cut the strip ends in 40 m steps.
+  - The pattern is now drawn for each of the four texels round a pixel and blended. Each texel's own sown share weighs its pattern.
+- **`strip_m` is 15**, down from 22. The critic: the strips read as house-row-wide painted bands.
+- **Critic.** Blind, the croft strips came first at 600 m and 1.5 km, and tied at 5 km.
+
 ## Tests
 
 - `tools/map3d/test_bake_world.py`:

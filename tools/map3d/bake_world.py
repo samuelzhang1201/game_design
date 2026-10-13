@@ -1415,6 +1415,12 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
                 tex[sel] = np.array([r_[1] for r_ in rows])[ci]
                 tt[sel] = np.array([r_[2] for r_ in rows], dtype=np.float32)[ci]
                 weight[sel] = rules["zone_weight_" + zone]
+        # the crofts' corn plots are strips too (map3d_fields.csv croft "plot":
+        # small strips of corn behind the tofts; the visual review of 2026-10-14
+        # found the capital's crofts a flat straw sheet at 600 m): sown, their
+        # strips along the close
+        plot = croft & np.isin(tex, CROP_TEXTURES)
+        sown |= plot
         m = ok * within * (weight > 0)
         pasture = ~croft & ~arable & ~meadow
         reach[y0:y1] = within * land[y0:y1]
@@ -1444,6 +1450,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         # each furlong's strips run along or across the line to its village
         ang = np.arctan2(fsy - bcy[bid], fsx - bcx[bid]) + np.where(hash01(fid, 29) < 0.5, 0.0, np.pi / 2) \
             + (hash01(fid, 32) - 0.5) * 0.6
+        ang = np.where(plot, hash01(bid, 27) * np.pi, ang)   # field_cells' frame: a close's long axis
         fangle[y0:y1] = np.mod(ang, np.pi) / np.pi
         # each manor's own shade: a patchwork even where nothing is sown
         jv = (2.0 * hash01(cz, 5) - 1.0) * rules["manor_jitter_value"] * (cid >= 0)

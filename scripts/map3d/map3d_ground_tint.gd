@@ -22,14 +22,6 @@ uniform ivec2 lut_size = ivec2(128, 1);
 // multiplier, A its strip direction; furrows up close, eased back far out.
 uniform highp sampler2D field_map : filter_linear, repeat_disable;
 uniform float field_m_per_texel = 40.0;
-uniform float furrow_m = 9.0;
-uniform float furrow_depth = 0.0;
-// The open fields' STRIPS (owner 2026-10-01), each its own shade; strip_far_* far out.
-uniform float furrow_sharp = 1.0;
-uniform float strip_m = 22.0;
-uniform float strip_shade = 0.0;
-uniform float strip_far_m = 80.0;
-uniform float strip_far_shade = 0.0;
 uniform float field_fade = 0.0;
 uniform float field_far_value = 1.0;
 uniform float field_fade_near_m = 15000.0;
@@ -120,25 +112,8 @@ const TINTED_ALBEDO := """vec3 base_albedo = mat.albedo_height.rgb * color_map.r
 			length(v_vertex - _camera_pos)) * field_fade;
 		base_albedo /= mix(vec3(1.0), ftint, far_k);
 		base_albedo *= mix(1.0, field_far_value, far_k * clamp((1.0 - min(min(ftint.r, ftint.g), ftint.b)) / 0.25, 0.0, 1.0));
-		// up close, furrows on sown ground, gone before they shrink to a pixel
-		float sown = clamp((1.0 - min(min(ftint.r, ftint.g), ftint.b)) / 0.25, 0.0, 1.0);
-		float ang = fm.a * 3.14159265;
-		float ph = dot(v_vertex.xz, vec2(-sin(ang), cos(ang))) / furrow_m;
-		float aa = 1.0 - smoothstep(0.3, 0.6, fwidth(ph));
-		float stripe = pow(0.5 + 0.5 * sin(ph * 6.2831853), furrow_sharp);
-		base_albedo *= 1.0 - furrow_depth * sown * aa * stripe;
-		if (strip_shade > 0.0) {
-			float sp = dot(v_vertex.xz, vec2(-sin(ang), cos(ang))) / strip_m;
-			float sa = dot(v_vertex.xz, vec2(cos(ang), sin(ang))) / (strip_m * 9.0);
-			float sh = wx_hash(vec2(floor(sp), floor(sa + wx_hash(vec2(floor(sp), 3.7)))));
-			float saa = 1.0 - smoothstep(0.15, 0.4, fwidth(sp));
-			base_albedo *= 1.0 + strip_shade * sown * saa * (sh - 0.5) * 2.0;
-			// farther out, broader bands of its strips carry the furlong's grain
-			float sp2 = sp * strip_m / strip_far_m;
-			float sh2 = wx_hash(vec2(floor(sp2), floor(sa * strip_m / strip_far_m + 7.3)));
-			base_albedo *= 1.0 + strip_far_shade * sown * (1.0 - smoothstep(0.2, 0.5, fwidth(sp2)))
-				* (1.0 - saa) * (sh2 - 0.5) * 2.0;
-		}
+		// furrows and strips on sown ground (Map3DGroundStrips.STAGE)
+		// @STRIPS
 	}
 	float canopy_k = 0.0;  // the wood's share here, for the snow below
 	if (wood_on > 0.0) {
@@ -283,8 +258,10 @@ static func patch(code: String) -> String:
 			at = i
 	if at < 0:
 		return ""
-	lines.insert(at + 1, UNIFORMS + Map3DGroundWind.UNIFORMS + Map3DGroundRelief.UNIFORMS + Map3DGroundBalk.UNIFORMS)
+	lines.insert(at + 1, UNIFORMS + Map3DGroundWind.UNIFORMS + Map3DGroundRelief.UNIFORMS + Map3DGroundBalk.UNIFORMS
+		+ Map3DGroundStrips.UNIFORMS)
 	return "\n".join(lines).replace(ALBEDO_LINE, Map3DGroundBalk.RIM + TINTED_ALBEDO.replace(
+		"\t\t// @STRIPS\n", Map3DGroundStrips.STAGE).replace(
 		"\t// @WIND (Map3DGroundWind.STAGE, then Map3DGroundRelief.STAGE)\n",
 		Map3DGroundBalk.STAGE + Map3DGroundWind.STAGE + Map3DGroundRelief.STAGE))
 

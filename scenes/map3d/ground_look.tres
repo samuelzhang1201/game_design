@@ -8,6 +8,7 @@ heat_ramp = PackedColorArray(0.42745098, 0.74509805, 0.41568628, 1, 0.76862746, 
 furrow_m = 14.0
 furrow_depth = 0.15
 furrow_sharp = 3.0
+strip_m = 15.0
 strip_shade = 0.5
 strip_far_shade = 0.5
 strip_far_m = 110.0
