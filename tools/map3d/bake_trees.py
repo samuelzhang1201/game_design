@@ -315,6 +315,9 @@ def main(argv=None):
     for bid, d in biome.items():
         dens += shares[..., bid - 1] * d
     open_land = shares[..., 2] + shares[..., 3]   # savanna, grassland
+    # ...and the open high ground — heath, hills, mountains — where the lone
+    # pines, boulders and heather stand (map art phase 2 C, 2026-10-13)
+    open_land = open_land + rules.get("lone_upland", 0.0) * (shares[..., 9] + shares[..., 12] + shares[..., 13])
     to_v = lambda a: np.asarray(Image.fromarray(a.astype(np.float32)).resize((vw, vh), Image.BILINEAR))
     dens, open_land = to_v(dens), to_v(open_land)
     del wts, ws, total, safe

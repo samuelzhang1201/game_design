@@ -122,7 +122,7 @@ day_shadow_opacity = 0.5
 high_deg = -48.0
 low_deg = -42.0
 fill_day = 0.55
-day_color = Color(1, 0.92, 0.78, 1)
+day_color = Color(1, 0.96, 0.89, 1)
 day_energy = 1.55
 fill = NodePath("../FillLight")
 

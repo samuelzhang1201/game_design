@@ -145,3 +145,18 @@ Packed with the meadow's and the crop's settings above:
 (the flattest three at contrast 2.2: at 1.0 the hills read airbrushed at the opening zoom)
     for k in g2_crop_a g2_crop_b; do python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/$k.png $k --saturation 0.25 --contrast 1.8 --flatten-keep 0.0 --fill-spots 0.12 --fill-dark-only --match-mean '#D4C89C' --normal-strength 0.6 --rough 0.95; done
 
+
+## The high ground (spec 2026-10-13-map-art-phase2, B)
+
+Owner-approved 2026-10-13 ("同意 A/B/C"), Z-Image on the Windows desktop
+(`map_art_phase2_prompts.csv`, `STYLE_CORE_aerial_ground.txt`):
+
+| file | prompt | seed | layer |
+|---|---|---|---|
+| `p2_scree.png` | T-86 | 954159498 | SCREE (the band under the snow caps) |
+| `p2_ridge.png` | T-87 | 954159500 | RIDGE (the high plateaus, ridge_lo..ridge_hi) |
+| `p2_snow.png` | T-88 | 954159497 | SNOW (replaces aerial_snow) |
+
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p2_scree.png p2_scree --height-gain 1.2 --saturation 0.35 --match-mean '#8E8B84'
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p2_ridge.png p2_ridge --height-gain 1.4 --saturation 0.7 --lift-darks 0.6 --match-mean '#7A7060'
+    python3 tools/map3d/pack_aerial.py assets/3D/terrain/model_wip/aerial/p2_snow.png p2_snow --flatten-keep 0.0 --contrast 0.7 --saturation 0.3 --height-gain 0.9 --rough 0.75
