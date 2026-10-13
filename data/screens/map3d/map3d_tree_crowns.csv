@@ -31,3 +31,5 @@ cell,kind,source,notes
 29,2,assets/imagegen/out/trees/SC-02_boulders_aerial_prop_qwen2512fast_s954159500_white.png,"SC-02 boulder cluster (Qwen, ground whitened)"
 30,2,assets/imagegen/out/trees/SC-03_heather_aerial_prop_qwen2512fast_s954159499_white.png,"SC-03 heather clump (Qwen, ground whitened)"
 31,2,assets/imagegen/out/trees/SC-03_heather_aerial_prop_qwen2512fast_s954159500_white.png,"SC-03 heather clump (Qwen, ground whitened)"
+14,2,assets/imagegen/out/trees/SC-04_hedge-bush_aerial_prop_zimage_s954159497.png,SC-04 hawthorn hedge section (Z-Image; the empty cell 14)
+15,2,assets/imagegen/out/trees/SC-04_hedge-bush_aerial_prop_zimage_s954159498.png,SC-04 hawthorn hedge section (Z-Image; the empty cell 15)
