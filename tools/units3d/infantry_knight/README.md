@@ -31,7 +31,7 @@ The working scenes are in `assets/3D/units/model_wip/` (git-ignored, `.gdignore`
    the fingers' keys deleted and a fist posed instead.
 3. **STANDBY**: `standing_relax` with the same fists, the right hand at the side holding the spear
    upright, its butt on the ground (a damped track from the butt to the grip).
-4. **Bake**: both clips baked with visual keying; `spear` and `shield` are bones of their own
+4. **Bake**: MARCH and STANDBY baked with visual keying; `spear` and `shield` are bones of their own
    (children of `RightHand` / `LeftForeArm`) so each clip holds the spear its own way. The spear
    bone's rest stands upright beside the right foot, so the rest box is the spear's 2.67 m, as before.
 5. **Reduce**: the knight collapsed to 15.5k tris, the shield to 3.5k; the spear rebuilt (a
@@ -43,14 +43,26 @@ The working scenes are in `assets/3D/units/model_wip/` (git-ignored, `.gdignore`
    (1, 0.95, 0.88) but NOT darkened: this knight's steel is already mid-grey, and darkened to 0.32 it
    was a black silhouette on the map. Metallic capped at 0.25, metal roughness ≥ 0.55 (Tripo's
    metallic ~0.6 also read black).
-8. **Godot keeps extracted textures**: a re-exported `.glb` does NOT overwrite the
-   `infantry_infantry_atlas*.jpg` beside it, and Blender's glTF exporter reuses an image it already
-   wrote this session — write the `.jpg`s from the `.glb`'s embedded images after each export and
-   rebuild the image datablocks before re-exporting.
 7. **Export frame**: bones' `mixamorig:` prefix stripped, `Head` → `head` (`Map3DUnitRig.head_m`);
    the rig `inf_rig`, the mesh `infantry` (the scene's override path); scale applied (helmet crown
    1.85 m, location keys scaled with it); turned 180° about Z to face +Y in Blender (−Z in Godot).
    Exported with `model_cavalry.export_glb`'s settings (NLA tracks per clip, JPEG 92).
+8. **Godot keeps extracted textures**: a re-exported `.glb` does NOT overwrite the
+   `infantry_infantry_atlas*.jpg` beside it, and Blender's glTF exporter reuses an image it already
+   wrote this session — write the `.jpg`s from the `.glb`'s embedded images after each export and
+   rebuild the image datablocks before re-exporting. The rig re-hides itself; unhide it before
+   exporting `use_selection` or the `.glb` comes out with no skin and no clips.
+9. **GARRISON** (`garrison.py`, every number its `P`; made after the export frame, so +Y is forward,
+   the knight's left −X), the guard of `tools/guide/unit_figures.md`: a 96-frame (4 s) loop keyed at
+   0 / 48 / 96, a breath at 48. The hips 23 cm lower and turned −25° (left side on), the spine
+   leaning ~18° forward; neck and head back to face +Y. Legs on two-bone IK to ankle targets — the
+   left forward, knee ~118° over the foot; the right back, toes 40° out, knee ~145°. The shield's
+   bone copies a target the left hand holds: upright, face +Y, wide edge UP (a kite held to fight
+   is point down), its top at the chin; the left forearm across behind it. The spear overhand,
+   level at the eyes, gripped 1.1 m from the butt, its tip turned 40° in across the body: aimed at
+   the camera a level spear foreshortened to an upright stick and read as STANDBY (critic, 0 / 25 /
+   40 bracketed in game). The right elbow is set square to the shaft and the fist turned about it
+   to the straightest wrist. Baked with visual keying; fists from STANDBY.
 
 ## Measured
 
@@ -59,6 +71,5 @@ MARCH stride 2.81 m per 56-frame loop (each foot's planted frames move 0.050 m/f
 
 ## Open
 
-* **No GARRISON** (the fighting guard) yet: `Map3DUnits.clip_named` stands a garrisoned piece by.
 * `infantry_parts.glb` (the folio's Take apart) is still the old man-at-arms.
-* `tools/art_kit/extract_specs.py` still requires GARRISON for infantry; `specs.json` not rerun.
+* `tools/art_kit/specs.json` not rerun for the new skeleton (`extract_specs.py`, then `build_kit.py`).

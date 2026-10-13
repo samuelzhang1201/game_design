@@ -359,8 +359,8 @@ func test_the_action_for_a_held_piece_is_its_standing_clip() -> void:
 	assert_eq(Map3DUnits.clip_named(anim, "ATTACK"), "", "other missing clips stay missing")
 
 
-## A model with no guard yet (the Tripo knight, owner 2026-10-13: MARCH and
-## STANDBY only) garrisons and holds standing by, never frozen in its march.
+## A model with no guard clip (MARCH and STANDBY only) garrisons and holds
+## standing by, never frozen in its march.
 func test_a_model_with_no_garrison_stands_by_instead() -> void:
 	var anim := AnimationPlayer.new()
 	var lib := AnimationLibrary.new()

@@ -277,7 +277,7 @@ static func clip_named(anim: AnimationPlayer, action: String) -> String:
 	if clip != "" or not action in ["STANDBY", "DEFEND", "GARRISON"]:
 		return clip
 	# no STANDBY clip: stands by in GARRISON (owner 2026-09-29); no DEFEND: holds in it (front-line §2);
-	# no GARRISON (a model with no guard yet, owner 2026-10-13): both stand by in STANDBY
+	# no GARRISON (a model with no guard clip): both stand by in STANDBY
 	if action != "GARRISON":
 		clip = _clip_tail(anim, "GARRISON")
 	return clip if clip != "" or action == "STANDBY" else _clip_tail(anim, "STANDBY")
