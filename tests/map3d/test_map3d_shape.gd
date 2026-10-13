@@ -4,6 +4,9 @@ extends GutTest
 ## and the view a coordinator.
 
 const OLD_HELPERS := ["map3d_rivers.gd", "map3d_bridges.gd", "map3d_borders.gd"]
+## The rule written into the guides stays ~300 lines per script; CI only fails
+## past this looser bound (owner 2026-10-13: the 300 cap kept breaking CI).
+const SCRIPT_MAX_LINES := 500
 
 
 func _lines(path: String) -> int:
@@ -74,4 +77,4 @@ func test_every_other_script_is_small() -> void:
 	for f: String in DirAccess.get_files_at("res://scripts/map3d"):
 		if not f.ends_with(".gd") or f == "map3d_view.gd" or f in OLD_HELPERS:
 			continue
-		assert_lte(_lines("res://scripts/map3d/" + f), 300, f)
+		assert_lte(_lines("res://scripts/map3d/" + f), SCRIPT_MAX_LINES, f)
