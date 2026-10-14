@@ -393,6 +393,13 @@ def test_a_grass_field_answers_its_ground_and_never_lightens():
     # a cloud darkens evenly
     assert np.allclose(out[3], tt[3] * 0.9, atol=1e-6)
     assert np.allclose(bw.grass_interior(tt, z, z, z, z, rules), tt)
+    # the broad noise: 0.5 neutral, 0 lusher (red x0.888, blue x0.86), 1 drier (green x0.965, blue x0.86)
+    rules["grass_broad"] = 0.14
+    b = bw.grass_interior(tt[:3], z[:3], z[:3], z[:3], z[:3], rules, np.array([0.5, 0.0, 1.0]))
+    assert np.allclose(b[0], tt[0])
+    assert np.allclose(b[1], [0.8 * 0.888, 0.9, 0.6 * 0.86], atol=1e-6)
+    assert np.allclose(b[2], [0.8, 0.9 * 0.965, 0.6 * 0.86], atol=1e-6)
+    assert (b <= tt[:3] + 1e-7).all()
 
 
 def test_footprint_radius_agrees_between_the_two_modules():

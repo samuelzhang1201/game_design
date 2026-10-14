@@ -249,6 +249,14 @@ All keys are `grass_*` in `map3d_bake.csv`.
 
 **Open:** at 5 km the grass fields' inner variety nearly vanishes. The critic asks for a larger, lower-frequency variation to survive the opening zoom.
 
+## Far view (2026-10-14)
+
+- **The hedges' dark ink line at 3–5 km was the woods' canopy map.** `bake/woods.png` carries the wood where no tree is drawn. Hedge rows and hedge trees, smeared over 40 m texels, drew a dark line round every field. Now they count `hedgerow_canopy` (0) of themselves; the bankside rows keep theirs.
+- **The rows' cards end at their own distance.** `map3d_tree_species.csv` has a new `far_m` column: `hedge_bush` ends at 2,000 m and fades over half of that. Godot fades an object after its end distance and measures to the 2 km chunk's middle, so with the woods' 2 km margin the rows stayed solid past 3 km.
+- **A broad grass variation that reads at 5 km.** `grass_broad` (0.25) at `grass_broad_m` (900) turns the grass lusher or drier across several fields.
+- **Blind critic.** The hedges fade into a soft texture of trees at 3 km, with no seam. The broad grass variation came first at 5 km, ahead of 0.14 and of none.
+- **Open:** where the pale-green fields meet the pasture, the edge steps in 20 m stairs (a hard cut). A dark smudged band lies below the central fields.
+
 ## Tests
 
 - `tools/map3d/test_bake_world.py`:
