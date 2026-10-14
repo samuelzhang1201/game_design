@@ -131,12 +131,9 @@ static func visible_burgs(houses: Dictionary, burg_pos: Dictionary, camera_xz: V
 ## plumb — so it stands on the HIGHEST ground anywhere under its footprint and
 ## no part of it is ever under the ground; the downhill side, which that
 ## leaves in the air, shows the stone footing every house mesh carries under
-## its walls (tools/map3d/blender_houses/kit.py FOOT_M), as a house on a real
-## hillside does. The ground is sampled over
-## an n x n grid (footprint_grid), not just the corners: a crest running
-## between the corners came up through the floor. Returns
-## Vector3(lowest, highest, the centre's). Pure: `height_at` is world XZ ->
-## metres.
+## its walls (tools/map3d/blender_houses/kit.py FOOT_M), as on a real hillside.
+## Sampled over an n x n grid (footprint_grid): a crest between the corners came
+## up through the floor. Vector3(lowest, highest, centre's); `height_at` world XZ -> m.
 static func ground_under(h: Dictionary, box: AABB, inset: float, samples: int,
 		height_at: Callable) -> Vector3:
 	var lo := INF
@@ -247,13 +244,15 @@ static func pack(rows: Array, seat_fn: Callable, walls: int, roofs: int, trims: 
 
 ## The world transform of one baked row: yaw, scaled by `scale` (x also by
 ## its `stretch`, along the house's own x) and vertically by `scale *
-## height_scale`, upright at `height` (Map3DHouses.seat). Pure.
+## height_scale`, upright at `height` (Map3DHouses.seat), its type's wide / thick /
+## tall_scale (`_wide` / `_thick` / `_tall`, seat_of) along its x, z and up. Pure.
 static func transform_of(h: Dictionary, height: float) -> Transform3D:
 	var at: Vector2 = h["at"]
 	var s: float = float(h["scale"])
 	var height_scale: float = float(h["height_scale"])
 	var turn := Basis(Vector3.UP, deg_to_rad(float(h["yaw_deg"])))
-	turn = turn * Basis.from_scale(Vector3(s * float(h.get("stretch", 1.0)), s * height_scale, s))
+	turn = turn * Basis.from_scale(Vector3(s * float(h.get("stretch", 1.0)) * float(h.get("_wide", 1.0)),
+		s * height_scale * float(h.get("_tall", 1.0)), s * float(h.get("_thick", 1.0))))
 	# a wall module SHEARED along its length onto the ground's slope (seat_of
 	# "slope"): its verticals stay plumb, its foot and crest follow the hill
 	turn.x += Vector3(0.0, float(h.get("_rise", 0.0)) * s, 0.0)
@@ -267,9 +266,11 @@ static func transform_of(h: Dictionary, height: float) -> Transform3D:
 ## same and the row's `_rise` set to the ground's slope between its two ends
 ## (a wall module: owner 2026-10-04, 城墙…应当就是连续的根据地形铺在地面上 — each
 ## module seated on its highest ground stepped the wall into a sawtooth), and
-## anything else its highest ground (seat()). `box` is the mesh's AABB.
+## anything else its highest ground (seat()); keeps wide / thick / tall on the row. `box`: the AABB.
 static func seat_of(h: Dictionary, row: Dictionary, box: AABB, sea_y: float, deck_m: float,
 		inset: float, samples: int, clear: float, height_at: Callable) -> Vector2:
+	for k: String in ["wide", "thick", "tall"]:
+		h["_" + k] = float(row[k + "_scale"]) if String(row.get(k + "_scale", "")).strip_edges() != "" else 1.0
 	match String(row.get("seat", "")):
 		"sea":
 			return Vector2(sea_y, sea_y + deck_m)
