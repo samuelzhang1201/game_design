@@ -375,6 +375,26 @@ def test_a_close_is_decided_whole_at_its_middle():
         assert abs(cx[one][0] - xs[one].mean()) < 20.0 and abs(cy[one][0] - ys[one].mean()) < 20.0
 
 
+def test_a_grass_field_answers_its_ground_and_never_lightens():
+    rules = {"grass_hollow": 0.12, "grass_hollow_green": 0.08, "grass_knoll": 0.1,
+             "grass_wear": 0.12, "grass_cloud": 0.1}
+    tt = np.array([[0.8, 0.9, 0.6]] * 5, np.float32)
+    z = np.zeros(5)
+    one = lambda i: np.eye(5)[i]
+    out = bw.grass_interior(tt, one(0), one(1), one(2), one(3), rules)
+    assert (out <= tt + 1e-7).all()                                  # never lighter
+    assert np.allclose(out[4], tt[4])                                # no term: unchanged
+    # a hollow: 0.88 everywhere, red and blue 0.92 more -> greener
+    assert np.allclose(out[0], [0.8 * 0.88 * 0.92, 0.9 * 0.88, 0.6 * 0.88 * 0.92], atol=1e-6)
+    # a knoll: blue x0.9, green x0.97 -> warmer
+    assert np.allclose(out[1], [0.8, 0.9 * 0.97, 0.6 * 0.9], atol=1e-6)
+    # wear: red x0.976, green x0.928, blue x0.88 -> browner
+    assert np.allclose(out[2], [0.8 * 0.976, 0.9 * 0.928, 0.6 * 0.88], atol=1e-6)
+    # a cloud darkens evenly
+    assert np.allclose(out[3], tt[3] * 0.9, atol=1e-6)
+    assert np.allclose(bw.grass_interior(tt, z, z, z, z, rules), tt)
+
+
 def test_footprint_radius_agrees_between_the_two_modules():
     """bake_houses keeps its own copy so it can stand alone; the two must
     never drift (density v4: house_radius_m too, the primitive the footprint

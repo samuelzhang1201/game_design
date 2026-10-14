@@ -225,6 +225,30 @@ Every critic named the same defect: at 600 m the arable round the capital was a 
 - **`strip_m` is 15**, down from 22. The critic: the strips read as house-row-wide painted bands.
 - **Critic.** Blind, the croft strips came first at 600 m and 1.5 km, and tied at 5 km.
 
+## Phase 3 as built (2026-10-14)
+
+`bake_world.grass_interior` is applied to every grass field: croft grass, meadow and pasture. Every term only darkens or turns a channel down:
+
+| Term | Driven by | Effect |
+|---|---|---|
+| Hollow | the height against its mean over `grass_relief_m`, or the river's wet band | darker and greener |
+| Knoll | a rise over the same mean | warmer |
+| Wear | nearness to the village, pasture and crofts only | browner |
+| Cloud | two field-scale noises mixed by the field's own hash | a soft dark veil |
+
+All keys are `grass_*` in `map3d_bake.csv`.
+
+**Blind critic.** Three variants were shot:
+- **×1**, the values above;
+- **×2.5 in patches** (`grass_cloud_cut` 0.45);
+- **before**.
+
+×1 came first at all three zooms.
+- ×2.5 read as a dark veil laid over the land.
+- "Before" read as a khaki grade, duller, and the pasture no longer parted from the stubble.
+
+**Open:** at 5 km the grass fields' inner variety nearly vanishes. The critic asks for a larger, lower-frequency variation to survive the opening zoom.
+
 ## Tests
 
 - `tools/map3d/test_bake_world.py`:

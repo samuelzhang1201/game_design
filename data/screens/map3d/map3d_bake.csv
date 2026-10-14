@@ -58,6 +58,18 @@ field_warp_wave_m,420,3D bake fields: the wavelength of that displacement
 field_shade,0.11,"3D bake fields: each field its own brightness, +- this share"
 field_grain,0.1,"3D bake fields: a fine grain of light and dark inside every field, +- this share"
 field_grain_m,140,3D bake fields: the wavelength of that grain
+grass_relief_m,300,"3D bake grass fields (spec 2026-10-13-open-field-layout §2, owner 2026-10-13: the pale meadows and pastures read flat inside — the safe option, bake only): a vertex's height against its mean over this many metres tells a hollow from a rise"
+grass_hollow_m,6,3D bake grass fields: this many metres under its surroundings a hollow is fully a hollow
+grass_hollow,0.12,"3D bake grass fields: a hollow (or wet ground) darkens a grass field's colour by this share — the lusher sward where the water gathers"
+grass_hollow_green,0.08,3D bake grass fields: ...and turns its red and blue down by this share more (greener)
+grass_wet_gain,0.6,3D bake grass fields: the river's blurred wet band (meadow_reach_m) counts as a hollow times this
+grass_knoll_m,8,3D bake grass fields: this many metres over its surroundings a rise is fully a knoll
+grass_knoll,0.1,"3D bake grass fields: a knoll turns a grass field's blue down by this share (green by 0.3 of it): the drier, warmer sward — warmer, never lighter"
+grass_wear,0.12,"3D bake grass fields: the pasture and the crofts' grass by the village, grazed and trodden, turn browner by this share (blue fully, green 0.6, red 0.2 of it)"
+grass_wear_share,0.35,3D bake grass fields: the wear fades out over this share of the village's reach
+grass_cloud_m,120,"3D bake grass fields: the wavelength of a soft dark cloud inside each grass field (two noises, mixed by the field's own hash, so neighbours differ)"
+grass_cloud,0.1,3D bake grass fields: how far that cloud darkens
+grass_cloud_cut,0,"3D bake grass fields: the cloud darkens only where its noise passes this (0..1). 0, a soft veil over the whole field, since the visual review of 2026-10-14: a blind critic ranked it over 0.45 patches at 2.5x the strength (a dark veil) and over none"
 footprint_fade,0.7,3D bake village footprints (critic round 1: a dark disc with a halo): the share of its radius over which the built ground thins out
 river_bank_rock_hold,2.5,"3D bake (2026-09-19): how strongly the band beside a river (the carve's wet, 0..1) holds the cliff and scree textures off its banks — a carved bank is steep by construction, and the cliff texture drew a pixelated scar at the capital's river mouth"
 low_rock_free_m,60,"3D bake (2026-09-19): below this many metres over the sea no ground wears cliff or scree (fading out over the 30 m above): on this map a low steep bank is a carved river mouth meeting the shore ramp, and the cliff texture drew a pixelated blue-grey scar there"

@@ -978,6 +978,25 @@ def jitter_cells(xs, ys, cell, salt=0):
     return best, bx, by, 0.5 * (d2 - d1)
 
 
+def grass_interior(tt, hollow, knoll, wear, cloud, rules):
+    """The inside of a grass field (spec 2026-10-13-open-field-layout §2: the
+    pale meadows and pastures read flat): `tt` (n x 3, the field's linear
+    tint multiplier) answered by its ground, every term only DARKENING or
+    turning a channel down (taste: richer than true, never lighter) —
+    `hollow` (0..1: low or wet ground) darker and greener, `knoll` (0..1: a
+    rise) warmer, `wear` (0..1: grazed hard by the village) browner, and
+    `cloud` (0..1: a field-scale noise) a soft dark cloud. Returns a new
+    array."""
+    out = np.array(tt, dtype=np.float32, copy=True)
+    h, k, w, c = (np.asarray(a, dtype=np.float32)[..., None] for a in (hollow, knoll, wear, cloud))
+    out *= 1.0 - rules["grass_hollow"] * h
+    out *= 1.0 - rules["grass_hollow_green"] * h * np.array([1.0, 0.0, 1.0], np.float32)
+    out *= 1.0 - rules["grass_knoll"] * k * np.array([0.0, 0.3, 1.0], np.float32)
+    out *= 1.0 - rules["grass_wear"] * w * np.array([0.2, 0.6, 1.0], np.float32)
+    out *= 1.0 - rules["grass_cloud"] * c
+    return out
+
+
 def pick_crop(h, crops):
     """The crop a field with hash `h` (0..1) sows: by the crops' shares."""
     total = sum(c[0] for c in crops)
@@ -1314,6 +1333,13 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     fray2 = value_noise(prng, vw, vh, rules["croft_edge_wave_m"] / VERTEX_M)
     furlong_v = rules["furlong_m"] / VERTEX_M
     croft_v = rules["croft_close_m"] / VERTEX_M
+    # the grass fields' insides (§2): the ground's own hollows and rises
+    # against its mean over grass_relief_m, and two field-scale clouds mixed
+    # per field — their own stream, so the rest of the look is unchanged
+    grng = np.random.default_rng(SEED + 9)
+    g_rel = height.astype(np.float32) - box(height.astype(np.float32), int(rules["grass_relief_m"] / VERTEX_M))
+    g_cloud_a = value_noise(grng, vw, vh, rules["grass_cloud_m"] / VERTEX_M)
+    g_cloud_b = value_noise(grng, vw, vh, rules["grass_cloud_m"] * 0.7 / VERTEX_M)
     zone_rows = [{z: fields[f]["zones"][z] for z in FARM_ZONES} for f in focus_keys]
 
     def great_field(px, py, b, nrot, reach_v):
@@ -1437,6 +1463,18 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         own = 1.0 + rules["field_shade"] * (2.0 * hash01(np.where(croft, cfid, fid) ^ (bid << 48), 7) - 1.0)
         grain = 1.0 + rules["field_grain"] * (2.0 * grain_n[y0:y1] - 1.0)
         tt *= (hedge * own * grain)[..., None].astype(np.float32)
+        grassy = ((croft & ~plot) | meadow | pasture) & (m > 0)
+        if grassy.any():
+            gh = np.maximum(np.clip(-g_rel[y0:y1] / rules["grass_hollow_m"], 0, 1),
+                            np.clip(meadow_n[y0:y1] * rules["grass_wet_gain"], 0, 1))
+            gk = np.clip(g_rel[y0:y1] / rules["grass_knoll_m"], 0, 1)
+            gw = np.where(pasture | croft, np.clip(1.0 - r_v / np.maximum(reach_v * rules["grass_wear_share"], 1e-6), 0, 1), 0.0)
+            fk = hash01(np.where(croft, cfid, fid) ^ (bid << 48), 61)
+            gc = g_cloud_a[y0:y1] * (1.0 - fk) + g_cloud_b[y0:y1] * fk
+            # patches, not a veil: only past grass_cloud_cut (the mean of a
+            # noise darkened every field as a whole, visual review 2026-10-14)
+            gc = np.clip((gc - rules["grass_cloud_cut"]) / (1.0 - rules["grass_cloud_cut"]), 0, 1)
+            tt[grassy] = grass_interior(tt[grassy], gh[grassy], gk[grassy], gw[grassy], gc[grassy], rules)
         soft = np.where(sown, np.clip(edge / rules["field_edge_soft_m"], 0, 1), 1.0)
         farm[y0:y1] = m * soft * weight
         crop[y0:y1] = tex
@@ -1458,7 +1496,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         tint[y0:y1] *= (1.0 + jv)[..., None].astype(np.float32)
         tint[y0:y1, :, 0] *= (1.0 + jh).astype(np.float32)
         tint[y0:y1, :, 2] *= (1.0 - jh).astype(np.float32)
-    del edge_n, snow, warp_x, warp_y, grain_n, gwx, gwy, near_burg, meadow_n, fray2
+    del edge_n, snow, warp_x, warp_y, grain_n, gwx, gwy, near_burg, meadow_n, fray2, g_rel, g_cloud_a, g_cloud_b
 
     # the grounds: a field's crop over what grew there, the footprint's
     # trodden earth over both
