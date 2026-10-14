@@ -420,8 +420,89 @@ def build_all():
     return out
 
 
+def build_rug(name="rug", w=2.4, h=1.72, seed=5):
+    """The floor rug with a worn, rippled edge of real thickness and a fringe at its
+    two short ends: a flat plane flush on the planks read as a hard cut."""
+    rng = random.Random(seed)
+    im = img(TEX + "/rug.png")
+    m = bpy.data.materials.get("WR_rug") or bpy.data.materials.new("WR_rug")
+    m.use_nodes = True
+    nt = m.node_tree
+    for nd in list(nt.nodes):
+        nt.nodes.remove(nd)
+    out = nt.nodes.new("ShaderNodeOutputMaterial"); bs = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    nt.links.new(bs.outputs[0], out.inputs[0])
+    t = nt.nodes.new("ShaderNodeTexImage"); t.image = im
+    nt.links.new(t.outputs["Color"], bs.inputs["Base Color"])
+    bs.inputs["Roughness"].default_value = 0.95
+    cord = mats()["cord"]
+    bm = bmesh.new()
+    uvl = bm.loops.layers.uv.new("UVMap")
+    nx, ny = 36, 26
+    ph = [rng.uniform(0, 6.28) for _ in range(4)]
+    def wob(u, v):   # a slow ripple, stronger toward the rim
+        edge = max(abs(u - 0.5), abs(v - 0.5)) * 2.0
+        return 0.004 + 0.011 * (edge ** 3) * (0.5 + 0.5 * math.sin(u * 9.0 + ph[0]) * math.cos(v * 7.0 + ph[1])) + 0.002 * math.sin(u * 23.0 + v * 17.0 + ph[2])
+    grid = []
+    for j in range(ny + 1):
+        row = []
+        for i in range(nx + 1):
+            u, v = i / nx, j / ny
+            x, y = (u - 0.5) * w, (v - 0.5) * h
+            if i in (0, nx) or j in (0, ny):   # the rim is not a ruled line
+                x += rng.uniform(-0.008, 0.008) * (0 if i in (0, nx) and j in (0, ny) else 1)
+                y += rng.uniform(-0.008, 0.008) * (0 if i in (0, nx) and j in (0, ny) else 1)
+            row.append(bm.verts.new((x, y, wob(u, v))))
+        grid.append(row)
+    for j in range(ny):
+        for i in range(nx):
+            f = bm.faces.new((grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]))
+            for l, (ii, jj) in zip(f.loops, ((i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1))):
+                l[uvl].uv = (ii / nx, jj / ny)
+            f.material_index = 0
+    # the thickness: a skirt down from the rim to the floor
+    ring = [(i, 0) for i in range(nx)] + [(nx, j) for j in range(ny)] + [(i, ny) for i in range(nx, 0, -1)] + [(0, j) for j in range(ny, 0, -1)]
+    for k in range(len(ring)):
+        (i0, j0), (i1, j1) = ring[k], ring[(k + 1) % len(ring)]
+        a, b = grid[j0][i0], grid[j1][i1]
+        a2 = bm.verts.new((a.co.x * 0.997, a.co.y * 0.997, 0.0))
+        b2 = bm.verts.new((b.co.x * 0.997, b.co.y * 0.997, 0.0))
+        f = bm.faces.new((a, a2, b2, b))
+        for l in f.loops:
+            l[uvl].uv = (min(max(l.vert.co.x / w + 0.5, 0.0), 1.0) if False else 0.0, 0.0)
+        f.material_index = 0
+        # the skirt samples the dark rim pixel of the picture beside its edge
+        for l, (ii, jj) in zip(f.loops, ((i0, j0), (i0, j0), (i1, j1), (i1, j1))):
+            l[uvl].uv = (min(max(ii / nx, 0.012), 0.988), min(max(jj / ny, 0.012), 0.988))
+    # the fringe: undyed wool cords along both short ends
+    fr = []
+    for sx in (-1, 1):
+        n = 70
+        for k in range(n):
+            v = (k + 0.5) / n
+            y = (v - 0.5) * h
+            ln = rng.uniform(0.045, 0.085)
+            ang = rng.uniform(-0.28, 0.28)
+            x0 = sx * w / 2
+            x1 = x0 + sx * ln * math.cos(ang)
+            y1 = y + ln * math.sin(ang)
+            wd = 0.0035
+            q = [bm.verts.new(p) for p in ((x0 - sx * 0.004, y - wd, 0.003), (x1, y1 - wd, 0.002), (x1, y1 + wd, 0.002), (x0 - sx * 0.004, y + wd, 0.003))]
+            f = bm.faces.new(q if sx > 0 else list(reversed(q)))
+            f.material_index = 1
+            for l in f.loops:
+                l[uvl].uv = (0.5, 0.5)
+    for f in bm.faces:
+        f.normal_update()
+        if f.material_index == 0 and f.normal.z < 0 and f.calc_center_median().z > 0.0015 and abs(f.normal.z) > 0.5:
+            f.normal_flip()
+    ob = new_obj(name, bm, COL, [m, cord])
+    finish_mesh(ob, hard_deg=80)
+    return ob
+
+
 def build_textiles():
-    rug = textile("rug", TEX + "/rug.png", 2.4, 1.72, lying=True)
+    rug = build_rug()
     tap = textile("tapestry", TEX + "/tapestry.png", 1.2, 1.6, lying=False)
     return rug, tap
 

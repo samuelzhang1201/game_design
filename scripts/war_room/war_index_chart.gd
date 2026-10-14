@@ -59,8 +59,23 @@ static func wall_image(repo: DataRepository, px: int, aspect: float) -> Image:
 	if sheet != null:
 		sheet.blit_rect(map, Rect2i(Vector2i.ZERO, map.get_size()), Vector2i((px - mw) / 2, (ch - mh) / 2))
 		map = sheet
+	_burn_rim(map, pal["ink"], int(repo.bal("war_wall_map_rim_px")), repo.bal("war_wall_map_rim_alpha"))
 	map.generate_mipmaps()
 	return map
+
+
+## A hung map is darkest at its rim (handled, smoked, damp): `reach` px of
+## ink laid on every edge, strongest at the edge and fading inward.
+static func _burn_rim(img: Image, ink: Color, reach: int, alpha: float) -> void:
+	var w := img.get_width()
+	var h := img.get_height()
+	for k in reach:
+		var t := 1.0 - float(k) / float(reach)
+		var c := Color(ink.r, ink.g, ink.b, alpha * t * t)
+		_blend_rect(img, Rect2i(0, k, w, 1), c)
+		_blend_rect(img, Rect2i(0, h - 1 - k, w, 1), c)
+		_blend_rect(img, Rect2i(k, 0, 1, h), c)
+		_blend_rect(img, Rect2i(w - 1 - k, 0, 1, h), c)
 
 
 ## The chart's ground (owner 2026-10-02: 选择地图的格子那个纸也换成羊皮纸，然后画
