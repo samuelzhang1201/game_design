@@ -13,6 +13,27 @@ import numpy as np
 COL = "WR_dressing"
 
 
+def tinted_paper(name, rgb):
+    """The parchment map multiplied by a tint: the rack's scrolls are not all one paper."""
+    m = bpy.data.materials.get(name)
+    if m is not None:
+        return m
+    base = parchment()
+    m = base.copy()
+    m.name = name
+    nt = m.node_tree
+    tex = next(n for n in nt.nodes if n.type == 'TEX_IMAGE')
+    bs = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED')
+    mix = nt.nodes.new("ShaderNodeMix")
+    mix.data_type = 'RGBA'
+    mix.blend_type = 'MULTIPLY'
+    mix.inputs[0].default_value = 1.0
+    mix.inputs[7].default_value = (*rgb, 1.0)
+    nt.links.new(tex.outputs["Color"], mix.inputs[6])
+    nt.links.new(mix.outputs[2], bs.inputs["Base Color"])
+    return m
+
+
 def mats():
     oak = bpy.data.materials.get("WR_table_oak") or mat_tex(
         "WR_table_oak", TEX + "/dark_wooden_planks_diffuse_2k_oak.jpg", TEX + "/dark_wooden_planks_nor_gl_2k.jpg",
@@ -22,6 +43,8 @@ def mats():
     return {
         "oak": oak, "iron": iron, "wax": wax,
         "paper": parchment(),
+        "paper_b": tinted_paper("WR_parchment_b", (0.80, 0.72, 0.60)),
+        "paper_c": tinted_paper("WR_parchment_c", (0.62, 0.60, 0.56)),
         "seal": bpy.data.materials.get("WR_seal") or mat_flat("WR_seal", (0.38, 0.05, 0.04), rough=0.4),
         "leather": bpy.data.materials.get("WR_leather") or mat_flat("WR_leather", (0.16, 0.08, 0.045), rough=0.7),
         "horn": bpy.data.materials.get("WR_horn") or mat_flat("WR_horn", (0.12, 0.09, 0.06), rough=0.35),
@@ -78,7 +101,7 @@ def cyl(bm, c, axis, r, length, seg, mi, caps=True, phase=0.0):
     tag(quad_strip(bm, rows, True, caps, caps), mi)
 
 
-def cyl_front(bm, c, r, length, mi, phase):
+def cyl_front(bm, c, r, length, mi, phase):  # mi: a material index
     """A 6-sided scroll along +y from c, capped only at its front (-y) end."""
     rows = [[Vector(c) + Vector((math.cos(2 * math.pi * k / 6 + phase) * r, d, math.sin(2 * math.pi * k / 6 + phase) * r))
              for k in range(6)] for d in (0.0, length)]
@@ -88,7 +111,7 @@ def cyl_front(bm, c, r, length, mi, phase):
 # ---------------------------------------------------------------- WP-01 rack
 def build_rack(name="rack", seed=1):
     M = mats()
-    OAK, PAPER, SEAL, CORD = 0, 1, 2, 3
+    OAK, PAPER, SEAL, CORD, PAPER_B, PAPER_C = 0, 1, 2, 3, 4, 5
     bm = bmesh.new()
     W, D, H = 1.0, 0.38, 1.95
     T, BASE = 0.03, 0.09
@@ -141,7 +164,7 @@ def build_rack(name="rack", seed=1):
                     ln = rng.uniform(0.24, D - 0.05)
                     y0 = -D / 2 + rng.uniform(-0.035, 0.03)
                     sag = rng.uniform(-0.004, 0.004)
-                    cyl_front(bm, (x + rr, y0, z + rr + sag), rr, ln, PAPER, rng.uniform(0, 1))
+                    cyl_front(bm, (x + rr, y0, z + rr + sag), rr, ln, rng.choice((PAPER, PAPER, PAPER_B, PAPER_C)), rng.uniform(0, 1))
                     rmax = max(rmax, rr)
                     x += 2 * rr + rng.uniform(0.0, 0.006)
                     placed = True
@@ -149,7 +172,7 @@ def build_rack(name="rack", seed=1):
                     break
                 z += rmax * 1.7
                 course += 1
-    ob = obj_from(name, bm, [M["oak"], M["paper"], M["seal"], M["cord"]], {OAK: 1.0, PAPER: 0.3, SEAL: 0.1, CORD: 0.2})
+    ob = obj_from(name, bm, [M["oak"], M["paper"], M["seal"], M["cord"], M["paper_b"], M["paper_c"]], {OAK: 1.0, PAPER: 0.3, SEAL: 0.1, CORD: 0.2, PAPER_B: 0.3, PAPER_C: 0.3})
     return ob
 
 
@@ -403,7 +426,7 @@ def build_textiles():
     return rug, tap
 
 
-def export(names, folder=None, max_px=1024):
+def export(names, folder=None, max_px=1024, vcol=False):
     """Export the named objects ALONE as assets/3D/war_room/<folder>/<folder>.glb
     (+Y up, modifiers applied, images embedded at most max_px — the 1k rule)."""
     folder = folder or names[0]
@@ -411,7 +434,14 @@ def export(names, folder=None, max_px=1024):
         if im.size[0] > max_px or im.size[1] > max_px:
             s = max_px / max(im.size[0], im.size[1])
             im.scale(int(im.size[0] * s), int(im.size[1] * s))
-    bpy.ops.object.select_all(action='DESELECT')
+    for sc in bpy.data.scenes:           # a selection left in another scene's layer is exported too
+        for vl in sc.view_layers:
+            vl.update()
+            for o in list(vl.objects):
+                try:
+                    o.select_set(False, view_layer=vl)
+                except (AttributeError, RuntimeError):
+                    pass             # an object just replaced is still a stale base here
     keep = {}
     for n in names:
         ob = bpy.data.objects[n]
@@ -421,8 +451,9 @@ def export(names, folder=None, max_px=1024):
         bpy.context.view_layer.objects.active = ob
     os.makedirs(EXP + "/" + folder, exist_ok=True)
     path = EXP + "/" + folder + "/" + folder + ".glb"
-    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True,
-                              export_yup=True, export_animations=False, export_skins=False)
+    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, use_active_scene=True, export_apply=True,
+                              export_yup=True, export_animations=False, export_skins=False,
+                              export_vertex_color='ACTIVE' if vcol else 'NONE')
     for n, loc in keep.items():
         bpy.data.objects[n].location = loc
     return path

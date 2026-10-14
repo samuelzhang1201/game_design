@@ -35,8 +35,8 @@
 background_mode = 1
 background_color = Color(0.078, 0.063, 0.047, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.62, 0.68, 0.8, 1)
-ambient_light_energy = 0.32
+ambient_light_color = Color(0.4, 0.52, 0.78, 1)
+ambient_light_energy = 0.17
 tonemap_mode = 4
 glow_enabled = true
 glow_intensity = 0.6
@@ -44,7 +44,7 @@ glow_bloom = 0.05
 glow_blend_mode = 2
 glow_hdr_threshold = 1.2
 volumetric_fog_enabled = true
-volumetric_fog_density = 0.02
+volumetric_fog_density = 0.007
 volumetric_fog_albedo = Color(1, 0.93, 0.82, 1)
 volumetric_fog_anisotropy = 0.55
 volumetric_fog_length = 9.0
@@ -121,7 +121,7 @@ environment = SubResource("Environment_room")
 [node name="Window" type="DirectionalLight3D" parent="Viewport" unique_id=34029074]
 transform = Transform3D(0.819152, -0.469846, 0.32899, 0, 0.573576, 0.819152, -0.573576, -0.67101, 0.469846, 0, 2, 0)
 light_color = Color(0.749, 0.827, 1, 1)
-light_energy = 0.3
+light_energy = 0.28
 light_volumetric_fog_energy = 0.0
 
 [node name="Camera" type="Camera3D" parent="Viewport" unique_id=1901342266]
@@ -135,16 +135,16 @@ unique_name_in_owner = true
 
 [node name="Chamber" parent="Viewport/Room" unique_id=609828230 instance=ExtResource("2_22yi6")]
 
-[node name="glass" parent="Viewport/Room/Chamber" index="0" unique_id=1276117135]
+[node name="glass" parent="Viewport/Room/Chamber" index="0" unique_id=413560576]
 material_override = ExtResource("3_l4rby")
 cast_shadow = 0
 
-[node name="lattice" parent="Viewport/Room/Chamber" index="1" unique_id=1024864207]
+[node name="lattice" parent="Viewport/Room/Chamber" index="1" unique_id=734930614]
 editor_description = "Shadow only: the lead cames of the west window cut out of the sun (spec 2026-10-13-war-room-sunlit-chamber). The glass itself casts nothing."
 material_override = ExtResource("8_tg8as")
 cast_shadow = 3
 
-[node name="room" parent="Viewport/Room/Chamber" index="2" unique_id=309837984]
+[node name="room" parent="Viewport/Room/Chamber" index="2" unique_id=1809396127]
 cast_shadow = 2
 
 [node name="OakTable" parent="Viewport/Room" unique_id=198636563 instance=ExtResource("3_sqtjg")]
@@ -291,13 +291,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.835, -1.982)
 material_override = ExtResource("17_57ey8")
 mesh = SubResource("QuadMesh_3wlrw")
 
-[node name="Strongbox" type="Node3D" parent="Viewport/Room" unique_id=328245882 instance=ExtResource("18_gv1wf")]
+[node name="Strongbox" parent="Viewport/Room" unique_id=328245882 instance=ExtResource("18_gv1wf")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 2.1, -0.8, 2.66)
 
-[node name="ScrollBasket" type="Node3D" parent="Viewport/Room" unique_id=1211005200 instance=ExtResource("19_3ls73")]
+[node name="ScrollBasket" parent="Viewport/Room" unique_id=1211005200 instance=ExtResource("19_3ls73")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, -0.8, 2.68)
 
-[node name="SeatBench" type="Node3D" parent="Viewport/Room" unique_id=2137630749 instance=ExtResource("20_x33b3")]
+[node name="SeatBench" parent="Viewport/Room" unique_id=2137630749 instance=ExtResource("20_x33b3")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.7, -0.8, 2.7)
 
 [node name="Table" type="MeshInstance3D" parent="Viewport" unique_id=423369737]
@@ -335,14 +335,14 @@ model = ExtResource("9_mbbr6")
 [node name="Sun" type="DirectionalLight3D" parent="Viewport" unique_id=860095026]
 unique_name_in_owner = true
 editor_description = "The sun through the west window (spec 2026-10-13-war-room-sunlit-chamber): warm, 26 deg high (low enough that the lattice crosses the table's west third through the deep reveal), from the west a little south. Whether it casts and whether the fog draws its beam are the tier's (graphics_quality.csv war_sun_shadows, war_fog; WarRoomLights.apply_sun_tier)."
-transform = Transform3D(-0.14834046, 0.47944584, -0.86494327, 0, 0.8746198, 0.4848096, 0.98893636, 0.07191688, -0.12974149, -2, 2.2, 0)
+transform = Transform3D(-0.14834045, 0.43352115, -0.88885015, 0, 0.89879405, 0.43837115, 0.9889363, 0.065028176, -0.13332753, -2, 2.2, 0)
 light_color = Color(1, 0.86, 0.66, 1)
 light_energy = 3.0
-light_volumetric_fog_energy = 6.0
-light_angular_distance = 0.1
+light_volumetric_fog_energy = 11.0
+light_angular_distance = 0.3
 shadow_enabled = true
 shadow_opacity = 0.85
-shadow_blur = 0.3
+shadow_blur = 0.6
 directional_shadow_mode = 0
 directional_shadow_max_distance = 6.0
 
