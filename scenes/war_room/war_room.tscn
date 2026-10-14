@@ -270,7 +270,7 @@ transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.63
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.3, -0.8, 1.2)
 
 [node name="SideTable" parent="Viewport/Room" unique_id=1815433028 instance=ExtResource("12_w6njr")]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.6, -0.8, -1.55)
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.6, -0.8, -0.95)
 
 [node name="FloorCandle" parent="Viewport/Room" unique_id=1738962069 instance=ExtResource("13_gkb8d")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.45, -0.8, -1.85)
@@ -292,13 +292,19 @@ material_override = ExtResource("17_57ey8")
 mesh = SubResource("QuadMesh_3wlrw")
 
 [node name="Strongbox" parent="Viewport/Room" unique_id=328245882 instance=ExtResource("18_gv1wf")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 2.1, -0.8, 2.66)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.8, -1.72)
 
 [node name="ScrollBasket" parent="Viewport/Room" unique_id=1211005200 instance=ExtResource("19_3ls73")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, -0.8, 2.68)
 
 [node name="SeatBench" parent="Viewport/Room" unique_id=2137630749 instance=ExtResource("20_x33b3")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.7, -0.8, 2.7)
+
+[node name="RackNorth" type="Node3D" parent="Viewport/Room" unique_id=2074378036 instance=ExtResource("9_gv1wf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -0.8, -1.78)
+
+[node name="TapestryNorth" type="Node3D" parent="Viewport/Room" unique_id=515407232 instance=ExtResource("15_3nr07")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.05, 1.8, -1.985)
 
 [node name="Table" type="MeshInstance3D" parent="Viewport" unique_id=423369737]
 unique_name_in_owner = true
