@@ -3,12 +3,14 @@ extends RefCounted
 ## The open fields' FURROWS and STRIPS in the patched Terrain3D shader (owner
 ## 2026-10-01), spliced in by Map3DGroundTint.patch: up close fine furrow
 ## lines, then each strip its own shade, farther out broader bands of them,
-## along each field's strip direction (bake/fields.png A). A 40 m texel holds
-## one direction, so the pattern is drawn for each of the four texels round
-## the pixel and blended bilinearly: blending the DIRECTION swung the strips
-## into arcs, and the nearest texel's cut their ends in 40 m steps (visual
-## review 2026-10-14). A texel's own sown share weighs its pattern, so the
-## strips fade out at a field's rim instead of turning to another field's way.
+## along each field's strip direction. Where the ground blends its vertices
+## the direction is the one of the field the pixel lies in, read at the 20 m
+## vertices (bake/field_edges.png G, picked by Map3DGroundBalk.RIM): the 40 m
+## field map's directions, blended between two furlongs, drew 40 m stairs
+## (visual review 2026-10-14). Otherwise (no edge map) the pattern is drawn
+## for each of the four 40 m texels of bake/fields.png round the pixel and
+## blended — blending the DIRECTION swung the strips into arcs — each texel's
+## sown share weighing its pattern.
 
 const UNIFORMS := """
 // Map3DGroundStrips: furrows and strips over the field map's directions.
@@ -51,11 +53,16 @@ float field_strip_at(vec2 p, ivec2 t) {
 
 ## Replaces the stage's marker in Map3DGroundTint.TINTED_ALBEDO (`fuv` the
 ## pixel's field-map uv there).
-const STAGE := """		vec2 ftx = fuv * vec2(textureSize(field_map, 0)) - 0.5;
-		ivec2 f0 = ivec2(floor(ftx));
-		vec2 ff = ftx - floor(ftx);
-		base_albedo *= mix(
-			mix(field_strip_at(v_vertex.xz, f0), field_strip_at(v_vertex.xz, f0 + ivec2(1, 0)), ff.x),
-			mix(field_strip_at(v_vertex.xz, f0 + ivec2(0, 1)), field_strip_at(v_vertex.xz, f0 + ivec2(1, 1)), ff.x),
-			ff.y);
+const STAGE := """		if (strip_ang >= 0.0) {
+			// the field the pixel lies in, at the vertices (Map3DGroundBalk.RIM)
+			base_albedo *= field_strip_k(v_vertex.xz, strip_ang, strip_sown);
+		} else {
+			vec2 ftx = fuv * vec2(textureSize(field_map, 0)) - 0.5;
+			ivec2 f0 = ivec2(floor(ftx));
+			vec2 ff = ftx - floor(ftx);
+			base_albedo *= mix(
+				mix(field_strip_at(v_vertex.xz, f0), field_strip_at(v_vertex.xz, f0 + ivec2(1, 0)), ff.x),
+				mix(field_strip_at(v_vertex.xz, f0 + ivec2(0, 1)), field_strip_at(v_vertex.xz, f0 + ivec2(1, 1)), ff.x),
+				ff.y);
+		}
 """
