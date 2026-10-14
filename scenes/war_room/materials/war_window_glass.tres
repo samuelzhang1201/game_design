@@ -7,7 +7,7 @@
 render_priority = 0
 shader = ExtResource("1_bg0x4")
 shader_parameter/lead = ExtResource("2_5sngn")
-shader_parameter/day = Color(0.86, 0.93, 1, 1)
+shader_parameter/day = Color(0.78, 0.9, 1, 1)
 shader_parameter/field = Color(0.36, 0.5, 0.3, 1)
 shader_parameter/horizon = 0.3
 shader_parameter/field_dim = 0.55

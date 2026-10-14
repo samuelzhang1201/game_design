@@ -227,7 +227,13 @@ for poly in me.polygons:
             f = 0.62 + 0.38 * _sm(wall / 1.2)
         elif poly.material_index in (BEAM, PLANK):
             f = 0.78
-        ca.data[li].color = (f, f * 0.97, f * 0.93, 1.0)
+        if poly.material_index == STONE:
+            tint = (0.94, 0.98, 1.0)       # the stone a little cooler against the warm floor
+        elif poly.material_index == FLOOR:
+            tint = (0.9, 0.84, 0.78)       # the planks darker and browner
+        else:
+            tint = (1.0, 0.97, 0.93)
+        ca.data[li].color = (f * tint[0], f * tint[1], f * tint[2], 1.0)
 print("room tris", tris_of(ob), "dims", tuple(round(d, 3) for d in ob.dimensions))
 
 # --- the glass: two lancets, UV 0..1 over each, facing the room (+x) ---
