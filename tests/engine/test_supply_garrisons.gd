@@ -19,7 +19,14 @@ func _check(repo: DataRepository, s: GameState, low: int) -> String:
 		# camped by a town of the realm (ArmyGround.camped_by, spec
 		# 2026-10-07-army-split-and-ground §4.1): every camped unit, the seat's
 		# and the camp's beyond the town's reach alike, is fed by its town
-		if ArmyGround.camped_by(repo, s, String(c)) == "":
+		var town := ArmyGround.camped_by(repo, s, String(c))
+		if town == "":
+			continue
+		# a BESIEGED town feeds its camp from its own stores alone and its supply
+		# lines are cut by design (guide/siege.md): the invasion's siege, which the
+		# unit clearance now lets run longer before the town falls, is not this
+		# test's premise (the home garrisons in peace)
+		if SiegeSystem.besieged(s, town):
 			continue
 		var days := ArmySystem.days_in_hand(int(s.regiments[c]["supplies"]), ArmySystem.supply_use(repo, reg, s))
 		if days < low:

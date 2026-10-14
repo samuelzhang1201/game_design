@@ -9,6 +9,9 @@ var repo: DataRepository
 
 func before_all() -> void:
 	repo = SuiteData.flat_ground(SuiteData.repo())
+	# the march's own arithmetic, from a camp slot with neighbours round it: no
+	# clearance (spec 2026-10-14), whose halts and detours have test_army_clearance.gd
+	SuiteData.no_clearance(repo)
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
 	Weather.forget()

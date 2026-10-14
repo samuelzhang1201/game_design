@@ -226,8 +226,10 @@ func test_candidates_are_the_players_within_reach() -> void:
 	var cands := EnemyAi.candidates(repo, s, host)
 	assert_gt(cands.size(), 0, "the pack puts some of the realm within reach of the main host")
 	var player := repo.resolve_realm("player_realm")
-	var from := Vector2i(int(s.foes[EnemyAi.regiments_of(s, host)[0]]["x_m"]),
-		int(s.foes[EnemyAi.regiments_of(s, host)[0]]["y_m"]))
+	# reach is measured for the host's anchor column (the units are spread round
+	# the assembly point by the clearance, so not all stand on it)
+	var anchor := EnemyAi.anchor_of(repo, s, host)
+	var from := Vector2i(int(s.foes[anchor]["x_m"]), int(s.foes[anchor]["y_m"]))
 	var towns := 0
 	for c: Dictionary in cands:
 		for k: String in ["kind", "id", "value", "distance_days", "defence"]:

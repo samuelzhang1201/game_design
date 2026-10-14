@@ -366,7 +366,13 @@ static func _town_contact(repo: DataRepository, state: GameState, town: String, 
 		return ""
 	var b: Dictionary = repo.burgs[town]
 	var at := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, f, state))
-	if at.distance_to(Vector2(float(b["x"]), float(b["y"]))) <= ArmySystem.town_reach_px(repo, b):
+	var away := at.distance_to(Vector2(float(b["x"]), float(b["y"])))
+	if away <= ArmySystem.town_reach_px(repo, b):
+		return town
+	# a column halted before a village (or a unit at it) stands army_clearance_m
+	# off its point, outside the village's reach: it touches within a few metres of that
+	var c := int(repo.bal("army_clearance_m"))
+	if c > 0 and roundi(away * float(ArmySystem.metres_per_pack_px(repo))) <= c + int(repo.bal("army_clearance_touch_m")):
 		return town
 	return ""
 
@@ -380,8 +386,10 @@ static func _battle_at(state: GameState, town: String) -> Dictionary:
 	return out
 
 
-## Halt a regiment where it stands: a column in a battle does not march.
-static func _halt(state: GameState, code: String) -> void:
+## Halt a regiment where it stands: a column in a battle does not march. With
+## `toward` (whole metres) a unit that faces nowhere yet turns to it (a halt
+## in front of the enemy already faces it, and a held front keeps its own).
+static func _halt(state: GameState, code: String, toward := Vector2i(-1, -1)) -> void:
 	var e := _stored(state, code)
 	if e.is_empty():
 		return
@@ -389,6 +397,8 @@ static func _halt(state: GameState, code: String) -> void:
 	e["dest_x_m"] = int(e.get("x_m", 0))
 	e["dest_y_m"] = int(e.get("y_m", 0))
 	ArmySystem.drop_hold(e)   # caught on the road: no front (front-line ruling 3)
+	if toward != Vector2i(-1, -1) and not e.has("facing_deg"):
+		e["facing_deg"] = WarFront.facing_deg(Vector2(toward - Vector2i(int(e.get("x_m", 0)), int(e.get("y_m", 0)))))
 
 
 ## The side of battle `b` that `code` would fight on: the side already
@@ -484,7 +494,12 @@ static func _join_event(repo: DataRepository, state: GameState, b: Dictionary, c
 ## else the foe. Fought where the defender stands (the town's point at a town).
 static func _start(repo: DataRepository, state: GameState, p: String, f: String, town: String,
 		events: Array) -> void:
-	var player_attacks := town == "" and String(_stored(state, p).get("order", "")) == ArmySystem.ORDER_MARCH \
+	var pe := _stored(state, p)
+	# the side that marched into a standing enemy attacks: a column that halted
+	# in front of one today (halt_day, ArmySystem._halt_before) did exactly that
+	var marched := String(pe.get("order", "")) == ArmySystem.ORDER_MARCH \
+		or (pe.has("halt_day") and int(pe["halt_day"]) == state.absolute_day())
+	var player_attacks := town == "" and marched \
 		and String(_stored(state, f).get("order", "")) != ArmySystem.ORDER_MARCH
 	var att: Array = [p] if player_attacks else [f]
 	var def: Array = [f] if player_attacks else [p]
@@ -496,8 +511,9 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 	var b := {"id": state.foe_next_id, "att": att, "def": def, "start_day": state.absolute_day(),
 		"rounds": 0, "place_x_m": place.x, "place_y_m": place.y, "town": town}
 	state.battles.append(b)
-	_halt(state, p)
-	_halt(state, f)
+	var turn := ArmyGround.clearance_on(repo)   # the clearance's facing; none with the rule off
+	_halt(state, p, _at_m(repo, state, f) if turn else Vector2i(-1, -1))
+	_halt(state, f, _at_m(repo, state, p) if turn else Vector2i(-1, -1))
 	events.append({"kind": "start", "battle_id": int(b["id"]), "att": att.duplicate(), "def": def.duplicate(),
 		"town": town, "place_x_m": place.x, "place_y_m": place.y})
 

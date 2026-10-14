@@ -47,17 +47,32 @@ func _ring_of(c_m: Vector2i, p_m: Vector2i, pitch: int) -> int:
 	return (absi(q) + absi(r) + absi(q + r)) / 2
 
 
-func test_a_taken_point_blocks_half_a_pitch_round_it() -> void:
+func test_a_taken_point_blocks_the_clearance_round_it() -> void:
+	# army_clearance_m 1400 (spec 2026-10-14-unit-clearance-and-scouting-design):
+	# no centre within it of a held one, the metre at it free
 	var taken := ArmyGround.new_taken(repo)
 	var p := _land_m()
+	var c := int(repo.bal("army_clearance_m"))
+	assert_eq(c, 1400)
 	assert_true(ArmyGround.is_free(repo, taken, p))
 	ArmyGround.take(taken, p)
-	@warning_ignore("integer_division")
-	var half := int(repo.bal("army_slot_spacing_m")) / 2
-	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(half - 1, 0)))
-	assert_true(ArmyGround.is_free(repo, taken, p + Vector2i(half, 0)) \
-		or not ArmyGround.is_free(repo, ArmyGround.new_taken(repo), p + Vector2i(half, 0)),
+	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(c - 1, 0)))
+	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(0, c - 1)))
+	assert_true(ArmyGround.is_free(repo, taken, p + Vector2i(c, 0)) \
+		or not ArmyGround.is_free(repo, ArmyGround.new_taken(repo), p + Vector2i(c, 0)),
 		"free unless that ground is itself water or blocked")
+
+
+func test_with_no_clearance_a_taken_point_blocks_half_a_pitch() -> void:
+	var r2 := SuiteData.no_clearance(SuiteData.repo())
+	var taken := ArmyGround.new_taken(r2)
+	var p := ArmyGround.town_point_m(r2, String(r2.kingdoms[r2.resolve_realm("player_realm")]["capital_burg"]))
+	ArmyGround.take(taken, p)
+	@warning_ignore("integer_division")
+	var half := int(r2.bal("army_slot_spacing_m")) / 2
+	assert_false(ArmyGround.is_free(r2, taken, p + Vector2i(half - 1, 0)))
+	assert_true(ArmyGround.is_free(r2, taken, p + Vector2i(half, 0)) \
+		or not ArmyGround.is_free(r2, ArmyGround.new_taken(r2), p + Vector2i(half, 0)))
 
 
 func test_the_sea_is_never_free() -> void:
@@ -174,18 +189,25 @@ func test_works_and_morale_go_to_the_seat_supply_to_the_camp() -> void:
 	assert_eq(SupplyLines.home_town(repo, s, String(camper["regiment_code"])), String(cap["town"]))
 
 
-func test_marching_out_empties_the_seat_and_the_camp_refills_it() -> void:
+func test_marching_out_empties_the_seat_and_the_camp_refills_it_once_clear() -> void:
 	var s := _state()
 	var cap := _capital(s)
 	var old := String(cap["seat"])
 	var here := ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, old, s))
 	ArmySystem.set_march(repo, s, old, here + Vector2(5.0, 0.0))
+	var point := ArmyGround.town_point_m(repo, String(cap["town"]))
+	assert_eq(ArmyGround.seat_of(repo, s, String(cap["town"])), "", "the seat stands empty as it leaves")
+	assert_eq(ArmyGround.camped_by(repo, s, old), "", "on the march it camps nowhere")
+	ArmyGround.reconcile(repo, s)
+	assert_eq(ArmyGround.seat_of(repo, s, String(cap["town"])), "",
+		"the leaver still stands on the town's point, within clearance: nobody steps onto it")
+	ArmySystem.march_day(repo, s)          # a day carries it out of the way
+	ArmyGround.reconcile(repo, s)
 	var now := ArmyGround.seat_of(repo, s, String(cap["town"]))
 	assert_ne(now, old)
-	assert_ne(now, "", "a camped unit steps in the same day")
+	assert_ne(now, "", "a camped unit steps in once the point is clear")
 	assert_eq(ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, now, s)),
-		ArmySystem.metres_to_pack(repo, ArmyGround.town_point_m(repo, String(cap["town"]))))
-	assert_eq(ArmyGround.camped_by(repo, s, old), "", "on the march it camps nowhere")
+		ArmySystem.metres_to_pack(repo, point))
 
 
 ## March `code` to pack point `to` and run days until it arrives.

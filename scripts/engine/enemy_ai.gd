@@ -44,7 +44,9 @@ static func forget() -> void:
 ## Puts `host` (a DataRepository.raid_hosts row) in the field: a foe for each of
 ## its UNITS (host_units), in the same shape as a player unit's state and keyed
 ## by the unit's code, standing at the host's assembly point (whole metres of
-## the pack's measure) with no order, and a mind in ASSEMBLE. A unit leaves its
+## the pack's measure) with no order — the first unit ON it, the rest spread
+## round it on the camp lattice in code order (ArmyGround.free_slot: no two
+## within army_clearance_m; stacked on it when that is 0) — and a mind in ASSEMBLE. A unit leaves its
 ## camp: a seat it held is emptied and refilled from the camp it left
 ## (ArmyGround.refill), so no foe holds a town. Run it after the split (the
 ## roster in `state`).
@@ -52,12 +54,26 @@ static func spawn(repo: DataRepository, state: GameState, host: Dictionary) -> v
 	var code := String(host["host_code"])
 	var start := ArmySystem.pack_to_metres(repo,
 		Vector2(float(host.get("start_x", 0)), float(host.get("start_y", 0))))
+	var taken := ArmyGround.new_taken(repo)
+	var first := true
 	for unit: String in host_units(repo, state, host):
-		var st := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, unit, state))
-		st["x_m"] = start.x
-		st["y_m"] = start.y
-		st["dest_x_m"] = start.x
-		st["dest_y_m"] = start.y
+		var reg := ArmySystem.regiment(repo, unit, state)
+		var st := ArmySystem.starting_state(repo, reg)
+		var at := start
+		if ArmyGround.clearance_on(repo):
+			if not first:
+				var arm := MapObjects.regiment_arm(repo, reg)
+				at = ArmyGround.free_slot(repo, start, arm, taken, "")
+				if at == ArmyGround.NONE:
+					at = ArmyGround.free_slot(repo, start, arm, taken, "", true)
+				if at == ArmyGround.NONE:
+					at = start
+			ArmyGround.take(taken, at)
+			first = false
+		st["x_m"] = at.x
+		st["y_m"] = at.y
+		st["dest_x_m"] = at.x
+		st["dest_y_m"] = at.y
 		st["order"] = ArmySystem.ORDER_STANDBY
 		st["camp_town"] = ""
 		st["host"] = code

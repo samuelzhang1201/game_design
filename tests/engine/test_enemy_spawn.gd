@@ -78,13 +78,21 @@ func test_new_campaign_spawns_every_host() -> void:
 		assert_eq(s.ai_hosts[code], {"mode": "ASSEMBLE", "target_kind": "", "target_id": "",
 			"think_day": 0, "plunder": 0, "siege_progress": 0}, "the mind of " + code)
 		var start := ArmySystem.pack_to_metres(repo, Vector2(float(h["start_x"]), float(h["start_y"])))
+		var first := true
 		for rc: String in EnemyAi.host_units(repo, s, h):
 			seen += 1
 			assert_true(s.foes.has(rc), rc)
 			var f: Dictionary = s.foes[rc]
 			assert_eq(String(f["host"]), code)
-			assert_eq(Vector2i(int(f["x_m"]), int(f["y_m"])), start, "stands at the assembly point")
-			assert_eq(Vector2i(int(f["dest_x_m"]), int(f["dest_y_m"])), start)
+			var at := Vector2i(int(f["x_m"]), int(f["y_m"]))
+			if first:
+				# unit clearance (spec 2026-10-14): the first unit stands ON the
+				# assembly point, the rest are spread round it (test_army_clearance.gd)
+				assert_eq(at, start, "the first unit stands at the assembly point")
+				first = false
+			else:
+				assert_lte(Vector2(at - start).length(), 6000.0, "the rest camp round the assembly point")
+			assert_eq(Vector2i(int(f["dest_x_m"]), int(f["dest_y_m"])), at)
 			assert_eq(String(f["order"]), ArmySystem.ORDER_STANDBY)
 			# the shape of a regiment's state, plus the host
 			var shape := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, rc, s))
@@ -159,7 +167,7 @@ func test_a_foe_is_seated_once_at_its_foe_position() -> void:
 	var reg := ArmySystem.regiment(repo, rc, s)
 	var at := ArmySystem.position_of(repo, s, reg)
 	var start := ArmySystem.pack_to_metres(repo, Vector2(float(h["start_x"]), float(h["start_y"])))
-	assert_eq(ArmySystem.pack_to_metres(repo, at), start, "every reader finds it at the assembly point")
+	assert_eq(ArmySystem.pack_to_metres(repo, at), start, "every reader finds the first unit at the assembly point")
 	# no town of the raider realm keeps a raised unit on its seat or in its
 	# camp: a seat one held went to the camp it left (ArmyGround.refill)
 	var raider := repo.resolve_realm("raider_realm")
@@ -176,10 +184,15 @@ func test_a_foe_is_seated_once_at_its_foe_position() -> void:
 	var hostiles := SupplyLines._hostiles(repo, s)
 	diplomacy[key]["stance"] = was
 	var here := 0
+	var on_point := 0
 	for hs: Array in hostiles:
-		if ArmySystem.pack_to_metres(repo, hs[0]) == start:
+		var m := ArmySystem.pack_to_metres(repo, hs[0])
+		if m == start:
+			on_point += 1
+		if Vector2(m - start).length() <= 6000.0:   # the units are spread round the point (clearance)
 			here += 1
-	assert_gte(here, EnemyAi.host_units(repo, s, h).size(), "the host is at its point")
+	assert_eq(on_point, 1, "the first unit stands on its point")
+	assert_gte(here, EnemyAi.host_units(repo, s, h).size(), "the host is round its point")
 	var old_home := ArmySystem.pack_to_metres(repo, Vector2(float(reg["x"]), float(reg["y"])))
 	if old_home != start:
 		for hs: Array in hostiles:
