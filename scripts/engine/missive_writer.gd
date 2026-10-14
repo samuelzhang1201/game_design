@@ -409,6 +409,66 @@ static func _siege_fact(repo: DataRepository, e: Dictionary, pick: int) -> Dicti
 		battle_words(repo, kind, vars, pick))
 
 
+## --- Scouts and contact (spec 2026-10-14-unit-clearance-and-scouting-design §c) ---
+
+## A scouts' letter: each of `rows` ({foe, unit}: a foe unit in one of our marching
+## units' sectors, and that unit) as a fact (templates.csv `scout_line`) — which
+## of ours saw it, the foe's unit and arm, where, what it is doing, and ABOUT
+## how many men (Sighting.about). Kind `scout`, column `credible`: our own men's
+## word from a distance. About the first foe's place.
+static func scout_report(repo: DataRepository, state: GameState, rows: Array) -> Dictionary:
+	return _sighting_letter(repo, state, rows, "scout", "credible", "Scouts")
+
+
+## A contact letter: the same facts for a foe within contact of one of ours, seen
+## at close range with our own eyes — kind `contact`, column `truth` (the one
+## truth letter that is not the crown's own act); the men still ABOUT.
+static func contact_report(repo: DataRepository, state: GameState, rows: Array) -> Dictionary:
+	return _sighting_letter(repo, state, rows, "contact", "truth", "Contact")
+
+
+static func _sighting_letter(repo: DataRepository, state: GameState, rows: Array, kind: String, column: String,
+		label: String) -> Dictionary:
+	var pick := state.absolute_day()
+	var q := int(repo.bal("player_sight_estimate_quality"))
+	var facts: Array = []
+	var first_at := Vector2.ZERO
+	for row: Dictionary in rows:
+		var foe := String(row["foe"])
+		var unit := String(row["unit"])
+		var e: Dictionary = state.foes.get(foe, {})
+		if e.is_empty():
+			continue
+		var at := ArmySystem.metres_to_pack(repo, Vector2i(int(e["x_m"]), int(e["y_m"])))
+		if facts.is_empty():
+			first_at = at
+		var doing := battle_words(repo, "scout_doing_stand", {}, pick)
+		if ArmySystem.order_of(repo, state, foe) == ArmySystem.ORDER_MARCH:
+			var heading := ArmySystem.heading_of(repo, state, foe)
+			if heading != Vector2.ZERO:
+				doing = battle_words(repo, "scout_doing_march",
+					{"compass": WarFront.compass_words(WarFront.facing_deg(heading))}, pick)
+		facts.append(MissiveLog.words("%s@%s" % [kind, foe], label, battle_words(repo, kind + "_line", {
+			"unit": _unit_label(repo, unit), "arm": _arm_word(repo, unit),
+			"foe": _unit_label(repo, foe), "foe_arm": _arm_word(repo, foe),
+			"place": Intel.place_label(repo, state, at), "doing": doing,
+			"men": Intel.num(Sighting.about(repo, Sighting.men_of(repo, state, foe), q, 0))}, pick)))
+	if facts.is_empty():
+		return {}
+	return MissiveLog.make(kind, column, state.absolute_day(), MissiveLog.subject("point", "", -1, first_at),
+		battle_words(repo, kind + "_title", {}, pick), facts)
+
+
+## A unit's arm as a word: army_split.csv's label_word, lower case ("foot", "horse");
+## the pooled train's "guns".
+static func _arm_word(repo: DataRepository, code: String) -> String:
+	var arm := MapObjects.regiment_arm(repo, ArmySystem.regiment(repo, code))
+	for row: Dictionary in repo.army_split:
+		if String(row["arm"]) == arm:
+			return "guns" if bool(row["pooled"]) else String(row["label_word"]).to_lower()
+	return arm
+
+
 ## --- Word of the enemy (spec 2026-10-07-enemy-ai-and-battle §2) ---------------
 
 ## The border rumour (EnemyAi.warnings): men gathering beyond the border near

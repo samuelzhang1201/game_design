@@ -66,13 +66,15 @@ static func viewers_m(repo: DataRepository, state: GameState) -> Array:
 
 
 ## The foe units the crown SEES now, in code order: each with men under arms
-## standing within player_sight_km (inclusive) of a point of viewers_m.
+## standing within player_sight_km (inclusive) of a point of viewers_m, or in
+## the scouting sector of a marching unit (`sectors`).
 static func seen_foes(repo: DataRepository, state: GameState) -> Array:
 	var out: Array = []
 	if state == null or state.foes.is_empty():
 		return out
 	var r := sight_m(repo)
 	var viewers := viewers_m(repo, state)
+	var fans := sectors(repo, state)
 	var codes: Array = state.foes.keys()
 	codes.sort()
 	for c: Variant in codes:
@@ -80,15 +82,192 @@ static func seen_foes(repo: DataRepository, state: GameState) -> Array:
 		if men_of(repo, state, code) <= 0:
 			continue
 		var e: Dictionary = state.foes[code]
-		var x := int(e["x_m"])
-		var y := int(e["y_m"])
+		var at := Vector2i(int(e["x_m"]), int(e["y_m"]))
+		var found := false
 		for v: Vector2i in viewers:
-			var dx := x - v.x
-			var dy := y - v.y
+			var dx := at.x - v.x
+			var dy := at.y - v.y
 			if dx * dx + dy * dy <= r * r:
-				out.append(code)
+				found = true
+				break
+		if not found:
+			for fan: Dictionary in fans:
+				if in_sector(at, fan):
+					found = true
+					break
+		if found:
+			out.append(code)
+	return out
+
+
+## --- Scouting (spec 2026-10-14-unit-clearance-and-scouting-design §c) ----------
+
+## The sector a crown land unit scouts as it marches: {r_m (whole metres), arc_deg
+## (the whole sweep)} from data/army/army_scouting.csv by its chief arm (a royal
+## unit reads its own); {} for any unit that scouts none — a standing one, one
+## with no man under arms, a fleet, a foe, a unit of another realm.
+static func scout_shape(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	if state == null or not state.regiments.has(code):
+		return {}
+	var reg := ArmySystem.regiment(repo, code, state)
+	if reg.is_empty() or String(reg.get("kingdom_code", "")) != repo.resolve_realm("player_realm") \
+			or String(reg.get("is_naval", "0")) == "1":
+		return {}
+	if String((state.regiments[code] as Dictionary).get("order", "")) != ArmySystem.ORDER_MARCH \
+			or men_of(repo, state, code) <= 0:
+		return {}
+	var row: Dictionary = repo.army_scouting.get(MapObjects.regiment_arm(repo, reg), {})
+	var km := int(row.get("scout_km", 0))
+	var arc := int(row.get("arc_deg", 0))
+	if km <= 0 or arc <= 0:
+		return {}
+	return {"r_m": km * 1000, "arc_deg": arc}
+
+
+## The sectors the crown's marching units sweep now, in code order: {code, at
+## (whole metres), heading (a unit vector, ArmySystem.heading_of), r_m, arc_deg}.
+## A column with no heading (it stands on its end) sweeps none.
+static func sectors(repo: DataRepository, state: GameState) -> Array:
+	var out: Array = []
+	if state == null:
+		return out
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c: Variant in codes:
+		var code := String(c)
+		var shape := scout_shape(repo, state, code)
+		if shape.is_empty():
+			continue
+		var heading := ArmySystem.heading_of(repo, state, code)
+		if heading == Vector2.ZERO:
+			continue
+		var e: Dictionary = state.regiments[code]
+		out.append({"code": code, "at": Vector2i(int(e["x_m"]), int(e["y_m"])), "heading": heading,
+			"r_m": int(shape["r_m"]), "arc_deg": int(shape["arc_deg"])})
+	return out
+
+
+## Whether `p` (whole metres) lies in the sector `fan` (one of `sectors`): within
+## its radius and within half its arc either side of its heading, both
+## inclusive; the apex itself is in it.
+static func in_sector(p: Vector2i, fan: Dictionary) -> bool:
+	var d: Vector2i = p - (fan["at"] as Vector2i)
+	var r := int(fan["r_m"])
+	var d2 := d.x * d.x + d.y * d.y
+	if d2 > r * r:
+		return false
+	if d2 == 0:
+		return true
+	var way := Vector2(d).normalized()
+	var half := deg_to_rad(float(fan["arc_deg"]) / 2.0)
+	return way.dot(fan["heading"] as Vector2) >= cos(half) - 1.0e-9
+
+
+## The crown's land units with men under arms: [{code, at}] in code order.
+static func _land_units(repo: DataRepository, state: GameState) -> Array:
+	var out: Array = []
+	var realm := repo.resolve_realm("player_realm")
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for c: Variant in codes:
+		var code := String(c)
+		var reg := ArmySystem.regiment(repo, code, state)
+		if reg.is_empty() or String(reg.get("kingdom_code", "")) != realm or String(reg.get("is_naval", "0")) == "1":
+			continue
+		if men_of(repo, state, code) <= 0:
+			continue
+		var e: Dictionary = state.regiments[code]
+		out.append({"code": code, "at": Vector2i(int(e["x_m"]), int(e["y_m"]))})
+	return out
+
+
+## The foe units in CONTACT — within battle_contact_km of a land unit of the
+## crown's with men, marching or standing — each with the first (code order)
+## unit of ours that has it so: {foe code -> our unit's code}, foe code order.
+static func contacts(repo: DataRepository, state: GameState) -> Dictionary:
+	var out: Dictionary = {}
+	var reach := int(round(repo.bal("battle_contact_km") * 1000.0))
+	var mine := _land_units(repo, state)
+	var codes: Array = state.foes.keys()
+	codes.sort()
+	for c: Variant in codes:
+		var code := String(c)
+		if men_of(repo, state, code) <= 0:
+			continue
+		var e: Dictionary = state.foes[code]
+		var at := Vector2i(int(e["x_m"]), int(e["y_m"]))
+		for u: Dictionary in mine:
+			var d: Vector2i = at - (u["at"] as Vector2i)
+			if d.x * d.x + d.y * d.y <= reach * reach:
+				out[code] = String(u["code"])
 				break
 	return out
+
+
+## The foe units inside a marching unit's sector, not in contact: {foe code -> the
+## first (code order) unit whose sector holds it}.
+static func scouted(repo: DataRepository, state: GameState, in_contact: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	var fans := sectors(repo, state)
+	var codes: Array = state.foes.keys()
+	codes.sort()
+	for c: Variant in codes:
+		var code := String(c)
+		if in_contact.has(code) or men_of(repo, state, code) <= 0:
+			continue
+		var e: Dictionary = state.foes[code]
+		var at := Vector2i(int(e["x_m"]), int(e["y_m"]))
+		for fan: Dictionary in fans:
+			if in_sector(at, fan):
+				out[code] = String(fan["code"])
+				break
+	return out
+
+
+## The day's scouting, once a day after the hosts have moved and before the
+## battles (TickEngine._end_day): a foe in CONTACT of a crown land unit gets a
+## contact letter (kind `contact`, the truth column) unless one was sent within
+## scout_report_gap_days; a foe in a marching unit's SECTOR but not in contact a
+## scout letter (kind `scout`, credible) on the same footing. The day of the last
+## sight is kept fresh while it lasts, so a foe in view all along is written of
+## once, an episode. A foe in contact counts as scouted too (a scout letter is not
+## owed after a contact one); a foe gone or with no man under arms is dropped
+## from `GameState.scout_log`. At most one
+## letter of each kind a day, a fact per newly reported foe, in foe code order.
+## No random number.
+static func scout_day(repo: DataRepository, state: GameState) -> void:
+	if state == null:
+		return
+	var today := state.absolute_day()
+	var gap := int(repo.bal("scout_report_gap_days"))
+	for k: Variant in state.scout_log.keys():
+		var code := String(k)
+		if not state.foes.has(code) or men_of(repo, state, code) <= 0:
+			state.scout_log.erase(k)
+	var touching := contacts(repo, state)
+	var sighted := scouted(repo, state, touching)
+	var contact_rows: Array = []
+	var scout_rows: Array = []
+	var codes: Array = state.foes.keys()
+	codes.sort()
+	for c: Variant in codes:
+		var code := String(c)
+		var seen_on: Dictionary = state.scout_log.get(code, {})
+		if touching.has(code):
+			if not seen_on.has("contact") or today - int(seen_on["contact"]) > gap:
+				contact_rows.append({"foe": code, "unit": String(touching[code])})
+			seen_on["contact"] = today      # kept fresh while it lasts: one letter an episode
+			seen_on["scout"] = today
+			state.scout_log[code] = seen_on
+		elif sighted.has(code):
+			if not seen_on.has("scout") or today - int(seen_on["scout"]) > gap:
+				scout_rows.append({"foe": code, "unit": String(sighted[code])})
+			seen_on["scout"] = today
+			state.scout_log[code] = seen_on
+	if not contact_rows.is_empty():
+		MissiveLog.add(repo, state, MissiveWriter.contact_report(repo, state, contact_rows))
+	if not scout_rows.is_empty():
+		MissiveLog.add(repo, state, MissiveWriter.scout_report(repo, state, scout_rows))
 
 
 ## "About how many": the middle of SpySystem.estimate's span for `v` at
