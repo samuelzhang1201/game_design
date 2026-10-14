@@ -978,15 +978,17 @@ def jitter_cells(xs, ys, cell, salt=0):
     return best, bx, by, 0.5 * (d2 - d1)
 
 
-def grass_interior(tt, hollow, knoll, wear, cloud, rules):
+def grass_interior(tt, hollow, knoll, wear, cloud, rules, broad=None):
     """The inside of a grass field (spec 2026-10-13-open-field-layout §2: the
     pale meadows and pastures read flat): `tt` (n x 3, the field's linear
     tint multiplier) answered by its ground, every term only DARKENING or
     turning a channel down (taste: richer than true, never lighter) —
     `hollow` (0..1: low or wet ground) darker and greener, `knoll` (0..1: a
     rise) warmer, `wear` (0..1: grazed hard by the village) browner, and
-    `cloud` (0..1: a field-scale noise) a soft dark cloud. Returns a new
-    array."""
+    `cloud` (0..1: a field-scale noise) a soft dark cloud, and `broad`
+    (0..1, 0.5 neutral: a noise of several fields' size) lusher below the
+    middle (red and blue down) and drier above it (blue down) — the
+    variety that still reads at the opening zoom. Returns a new array."""
     out = np.array(tt, dtype=np.float32, copy=True)
     h, k, w, c = (np.asarray(a, dtype=np.float32)[..., None] for a in (hollow, knoll, wear, cloud))
     out *= 1.0 - rules["grass_hollow"] * h
@@ -994,6 +996,10 @@ def grass_interior(tt, hollow, knoll, wear, cloud, rules):
     out *= 1.0 - rules["grass_knoll"] * k * np.array([0.0, 0.3, 1.0], np.float32)
     out *= 1.0 - rules["grass_wear"] * w * np.array([0.2, 0.6, 1.0], np.float32)
     out *= 1.0 - rules["grass_cloud"] * c
+    if broad is not None:
+        d = (np.asarray(broad, dtype=np.float32)[..., None] - 0.5) * 2.0
+        out *= 1.0 - rules["grass_broad"] * np.maximum(-d, 0.0) * np.array([0.8, 0.0, 1.0], np.float32)
+        out *= 1.0 - rules["grass_broad"] * np.maximum(d, 0.0) * np.array([0.0, 0.25, 1.0], np.float32)
     return out
 
 
@@ -1340,6 +1346,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     g_rel = height.astype(np.float32) - box(height.astype(np.float32), int(rules["grass_relief_m"] / VERTEX_M))
     g_cloud_a = value_noise(grng, vw, vh, rules["grass_cloud_m"] / VERTEX_M)
     g_cloud_b = value_noise(grng, vw, vh, rules["grass_cloud_m"] * 0.7 / VERTEX_M)
+    g_broad = value_noise(grng, vw, vh, rules["grass_broad_m"] / VERTEX_M)
     zone_rows = [{z: fields[f]["zones"][z] for z in FARM_ZONES} for f in focus_keys]
 
     def great_field(px, py, b, nrot, reach_v):
@@ -1474,7 +1481,8 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
             # patches, not a veil: only past grass_cloud_cut (the mean of a
             # noise darkened every field as a whole, visual review 2026-10-14)
             gc = np.clip((gc - rules["grass_cloud_cut"]) / (1.0 - rules["grass_cloud_cut"]), 0, 1)
-            tt[grassy] = grass_interior(tt[grassy], gh[grassy], gk[grassy], gw[grassy], gc[grassy], rules)
+            tt[grassy] = grass_interior(tt[grassy], gh[grassy], gk[grassy], gw[grassy], gc[grassy], rules,
+                                        g_broad[y0:y1][grassy])
         soft = np.where(sown, np.clip(edge / rules["field_edge_soft_m"], 0, 1), 1.0)
         farm[y0:y1] = m * soft * weight
         crop[y0:y1] = tex
@@ -1496,7 +1504,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         tint[y0:y1] *= (1.0 + jv)[..., None].astype(np.float32)
         tint[y0:y1, :, 0] *= (1.0 + jh).astype(np.float32)
         tint[y0:y1, :, 2] *= (1.0 - jh).astype(np.float32)
-    del edge_n, snow, warp_x, warp_y, grain_n, gwx, gwy, near_burg, meadow_n, fray2, g_rel, g_cloud_a, g_cloud_b
+    del edge_n, snow, warp_x, warp_y, grain_n, gwx, gwy, near_burg, meadow_n, fray2, g_rel, g_cloud_a, g_cloud_b, g_broad
 
     # the grounds: a field's crop over what grew there, the footprint's
     # trodden earth over both

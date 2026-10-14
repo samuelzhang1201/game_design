@@ -642,6 +642,12 @@ def main(argv=None):
                       * by_kind[k]["size"] for k in range(max(by_kind) + 1)])
     conifer = np.array([by_kind[k]["conifer"] for k in range(max(by_kind) + 1)])
     area = (reach[kind] * scale) ** 2 * np.pi / (step * vm) ** 2
+    # a hedge's row is a few metres wide: smeared over a 40 m texel and drawn as
+    # canopy far out it read as a dark ink line round the fields at the opening
+    # zoom (visual review 2026-10-14), so it counts hedgerow_canopy of itself —
+    # and so do the hedge trees standing out of it (one every ~60 m, blurred
+    # over the texels they joined into the same line); the bankside rows keep theirs
+    area = np.where(hedge & ~bank, area * rules.get("hedgerow_canopy", 1.0), area)
     np.add.at(cover, (tz, tx), area)
     np.add.at(con, (tz, tx), area * conifer[kind])
     blur = max(int(rules["canopy_blur_texels"]), 0)

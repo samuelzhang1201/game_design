@@ -52,6 +52,7 @@ hedge_line_spacing_m,10,"woods (spec 2026-10-13-open-field-layout §3c, owner 20
 hedge_gap_cut,0.2,"woods: where the hedge_run_m noise falls under this, the hedge has a gap (over 0.1 more of it, whole again) — a few gateways a field, not the long bare stretches of 2026-10-13's per-field hedges"
 hedge_tree_every_m,60,"woods: on average one clump in this many metres of hedge is a hedge TREE (an oak or hornbeam of habit hedge) standing out of the row"
 hedgerow_scale,0.8,"woods: a hedge row clump's scale (x 0.85..1.15: a hedge is kept to one height), against a wood's"
+hedgerow_canopy,0,"woods (visual review 2026-10-14): how much of a hedge row clump counts in woods.png's canopy (the wood carried far out where no tree is drawn); 1 smeared every hedge over its 40 m texels into a dark ink line round the fields at the opening zoom. The hedge trees standing out of the row count the same: whole, they still joined into the line at 3 km"
 lane_hedge_chance,1,"woods: the share of the lanes' verges within a village's reach (settled.png) and outside its in-field (hedge_lines.png R: a lane through the open field ran unhedged) that are hedged (0: none)"
 lane_hedge_off_road_m,24,woods: how far out from a road's middle its verge hedge stands (the drawn road is map3d_road_width_m 38 wide)
 lane_hedge_off_trail_m,12,woods: how far out from a trail's middle its verge hedge stands (map3d_trail_width_m 16)

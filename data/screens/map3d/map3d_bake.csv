@@ -70,6 +70,8 @@ grass_wear_share,0.35,3D bake grass fields: the wear fades out over this share o
 grass_cloud_m,120,"3D bake grass fields: the wavelength of a soft dark cloud inside each grass field (two noises, mixed by the field's own hash, so neighbours differ)"
 grass_cloud,0.1,3D bake grass fields: how far that cloud darkens
 grass_cloud_cut,0,"3D bake grass fields: the cloud darkens only where its noise passes this (0..1). 0, a soft veil over the whole field, since the visual review of 2026-10-14: a blind critic ranked it over 0.45 patches at 2.5x the strength (a dark veil) and over none"
+grass_broad_m,900,"3D bake grass fields (visual review 2026-10-14: at the 5 km opening zoom the grass fields' own variety vanished into an even olive sheet): the wavelength of a noise of several fields' size, lusher below its middle and drier above it"
+grass_broad,0.25,"3D bake grass fields: how far that broad noise turns the grass lusher (red and blue down) or drier (blue down, green a quarter of it) at its ends"
 footprint_fade,0.7,3D bake village footprints (critic round 1: a dark disc with a halo): the share of its radius over which the built ground thins out
 river_bank_rock_hold,2.5,"3D bake (2026-09-19): how strongly the band beside a river (the carve's wet, 0..1) holds the cliff and scree textures off its banks — a carved bank is steep by construction, and the cliff texture drew a pixelated scar at the capital's river mouth"
 low_rock_free_m,60,"3D bake (2026-09-19): below this many metres over the sea no ground wears cliff or scree (fading out over the 30 m above): on this map a low steep bank is a carved river mouth meeting the shore ramp, and the cliff texture drew a pixelated blue-grey scar there"
