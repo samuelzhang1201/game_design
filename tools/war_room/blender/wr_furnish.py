@@ -101,9 +101,10 @@ def cyl(bm, c, axis, r, length, seg, mi, caps=True, phase=0.0):
     tag(quad_strip(bm, rows, True, caps, caps), mi)
 
 
-def cyl_front(bm, c, r, length, mi, phase):  # mi: a material index
-    """A 6-sided scroll along +y from c, capped only at its front (-y) end."""
-    rows = [[Vector(c) + Vector((math.cos(2 * math.pi * k / 6 + phase) * r, d, math.sin(2 * math.pi * k / 6 + phase) * r))
+def cyl_front(bm, c, r, length, mi, phase, yaw=0.0):  # mi: a material index
+    """A 6-sided scroll along +y from c, capped only at its front (-y) end; `yaw`
+    (radians) leans its far end sideways, so a heap is not a ruled grid."""
+    rows = [[Vector(c) + Vector((math.cos(2 * math.pi * k / 6 + phase) * r + d * math.tan(yaw), d, math.sin(2 * math.pi * k / 6 + phase) * r))
              for k in range(6)] for d in (0.0, length)]
     tag(quad_strip(bm, rows, True, True, False), mi)
 
@@ -148,7 +149,7 @@ def build_rack(name="rack", seed=1):
             # scrolls lying along the depth, their ends to the front, heaped course on
             # course to most of the hole's height (only the front end is capped: the
             # back one is never seen)
-            fill = zf + (ch - 0.024) * rng.uniform(0.72, 0.88)
+            fill = zf + (ch - 0.024) * (rng.uniform(0.14, 0.4) if rng.random() < 0.32 else rng.uniform(0.6, 0.9))
             course = 0
             z = zf
             while True:
@@ -164,7 +165,7 @@ def build_rack(name="rack", seed=1):
                     ln = rng.uniform(0.24, D - 0.05)
                     y0 = -D / 2 + rng.uniform(-0.035, 0.03)
                     sag = rng.uniform(-0.004, 0.004)
-                    cyl_front(bm, (x + rr, y0, z + rr + sag), rr, ln, rng.choice((PAPER, PAPER, PAPER_B, PAPER_C)), rng.uniform(0, 1))
+                    cyl_front(bm, (x + rr + rng.uniform(-0.004, 0.004), y0, z + rr + sag), rr, ln, rng.choice((PAPER, PAPER, PAPER_B, PAPER_C)), rng.uniform(0, 1), rng.uniform(-0.1, 0.1))
                     rmax = max(rmax, rr)
                     x += 2 * rr + rng.uniform(0.0, 0.006)
                     placed = True

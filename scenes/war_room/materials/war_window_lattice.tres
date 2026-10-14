@@ -7,4 +7,4 @@
 render_priority = 0
 shader = ExtResource("1_r0snr")
 shader_parameter/lead = ExtResource("2_c5up1")
-shader_parameter/cut = 0.3
+shader_parameter/cut = 0.2

@@ -39,12 +39,12 @@ ambient_light_color = Color(0.4, 0.52, 0.78, 1)
 ambient_light_energy = 0.17
 tonemap_mode = 4
 glow_enabled = true
-glow_intensity = 0.6
+glow_intensity = 0.2
 glow_bloom = 0.05
 glow_blend_mode = 2
 glow_hdr_threshold = 1.2
 volumetric_fog_enabled = true
-volumetric_fog_density = 0.007
+volumetric_fog_density = 0.004
 volumetric_fog_albedo = Color(1, 0.93, 0.82, 1)
 volumetric_fog_anisotropy = 0.55
 volumetric_fog_length = 9.0
@@ -135,16 +135,16 @@ unique_name_in_owner = true
 
 [node name="Chamber" parent="Viewport/Room" unique_id=609828230 instance=ExtResource("2_22yi6")]
 
-[node name="glass" parent="Viewport/Room/Chamber" index="0" unique_id=413560576]
+[node name="glass" parent="Viewport/Room/Chamber" index="0" unique_id=90102372]
 material_override = ExtResource("3_l4rby")
 cast_shadow = 0
 
-[node name="lattice" parent="Viewport/Room/Chamber" index="1" unique_id=734930614]
+[node name="lattice" parent="Viewport/Room/Chamber" index="1" unique_id=1678827129]
 editor_description = "Shadow only: the lead cames of the west window cut out of the sun (spec 2026-10-13-war-room-sunlit-chamber). The glass itself casts nothing."
 material_override = ExtResource("8_tg8as")
 cast_shadow = 3
 
-[node name="room" parent="Viewport/Room/Chamber" index="2" unique_id=1809396127]
+[node name="room" parent="Viewport/Room/Chamber" index="2" unique_id=240995469]
 cast_shadow = 2
 
 [node name="OakTable" parent="Viewport/Room" unique_id=198636563 instance=ExtResource("3_sqtjg")]
@@ -292,19 +292,28 @@ material_override = ExtResource("17_57ey8")
 mesh = SubResource("QuadMesh_3wlrw")
 
 [node name="Strongbox" parent="Viewport/Room" unique_id=328245882 instance=ExtResource("18_gv1wf")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.8, -1.72)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.8, -1.8)
 
 [node name="ScrollBasket" parent="Viewport/Room" unique_id=1211005200 instance=ExtResource("19_3ls73")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, -0.8, 2.68)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, -0.8, 2.55)
 
 [node name="SeatBench" parent="Viewport/Room" unique_id=2137630749 instance=ExtResource("20_x33b3")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.7, -0.8, 2.7)
 
-[node name="RackNorth" type="Node3D" parent="Viewport/Room" unique_id=2074378036 instance=ExtResource("9_gv1wf")]
+[node name="RackNorth" parent="Viewport/Room" unique_id=2074378036 instance=ExtResource("9_gv1wf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -0.8, -1.78)
 
-[node name="TapestryNorth" type="Node3D" parent="Viewport/Room" unique_id=515407232 instance=ExtResource("15_3nr07")]
+[node name="TapestryNorth" parent="Viewport/Room" unique_id=515407232 instance=ExtResource("15_3nr07")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.05, 1.8, -1.985)
+
+[node name="StrongboxSouth" parent="Viewport/Room" unique_id=1735614968 instance=ExtResource("18_gv1wf")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 2.15, -0.8, 2.62)
+
+[node name="FloorCandleSouth" parent="Viewport/Room" unique_id=128225587 instance=ExtResource("13_gkb8d")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.55, -0.8, 2.5)
+
+[node name="ScrollBasketEast" parent="Viewport/Room" unique_id=1988639625 instance=ExtResource("19_3ls73")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.55, -0.8, 2)
 
 [node name="Table" type="MeshInstance3D" parent="Viewport" unique_id=423369737]
 unique_name_in_owner = true
@@ -344,11 +353,11 @@ editor_description = "The sun through the west window (spec 2026-10-13-war-room-
 transform = Transform3D(-0.14834045, 0.43352115, -0.88885015, 0, 0.89879405, 0.43837115, 0.9889363, 0.065028176, -0.13332753, -2, 2.2, 0)
 light_color = Color(1, 0.86, 0.66, 1)
 light_energy = 3.0
-light_volumetric_fog_energy = 11.0
+light_volumetric_fog_energy = 8.0
 light_angular_distance = 0.3
 shadow_enabled = true
 shadow_opacity = 0.85
-shadow_blur = 0.6
+shadow_blur = 0.4
 directional_shadow_mode = 0
 directional_shadow_max_distance = 6.0
 
