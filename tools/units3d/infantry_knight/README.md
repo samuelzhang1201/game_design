@@ -69,10 +69,24 @@ The working scenes are in `assets/3D/units/model_wip/` (git-ignored, `.gdignore`
    armature applied at STANDBY frame 0, the pose applied as rest, and the clips re-keyed from the
    record (max error 6e-6 m). Half width now 0.53 m (the hung shield), height 2.68 m.
 
+11. **Loop seam** (owner 2026-10-14: 驻防动画会有跳帧卡顿): GARRISON's last frame stood 11° and 3 cm
+   off its first, a jump every loop. `tools/units3d/loop_seam.py infantry.glb GARRISON --blend-s 1.0`
+   (and `STANDBY`, 1.5° off) cuts the clip 1 s shorter and crossfades its head from the lost tail,
+   so first and last frames meet (GARRISON 3.96 s, STANDBY 16.58 s); `--report` prints every clip's
+   seam. Rerun after every re-export of a clip (`test_map3d_unit_settle.gd` holds both seams).
+12. **Crisp atlas** (owner 2026-10-14: 步兵的游戏中的建模有点模糊，不够精细): at play size a
+   figure covers ~150 px and the armour read as one flat grey band, so `tools/units3d/crisp_atlas.py
+   infantry.glb` bakes cavity shading (the normal map's divergence at two scales) into the extracted
+   albedo and lowers the steel's roughness ×0.7 for small highlights — texture only, no cost at run
+   time. Albedo sharpening and BC7 instead of Basis were tried and changed nothing visible; the
+   softness left is the figure's few screen pixels. It reads the `.glb`'s embedded maps, so rerun it
+   after every export (step 8: the extracted `.jpg`s are what Godot draws).
+
 ## Measured
 
 MARCH stride 2.81 m per 56-frame loop (each foot's planted frames move 0.050 m/frame), written to
-`data/screens/map3d/army_art.csv` `stride_m`. Head bone at 1.58 m.
+`data/screens/map3d/army_art.csv` `stride_m`. Footfalls (a toe at the ground, its speed turning to the
+ground's) at shares 0.14 / 0.43 / 0.64 / 0.90 of the clip, written to `army_art.csv` `steps`. Head bone at 1.58 m.
 
 ## Open
 

@@ -82,6 +82,33 @@ static func sound_of(piece: Dictionary) -> AudioStream:
 	return table.of(String(piece.get("model", ""))) as AudioStream if table != null else null
 
 
+## The sound `piece`'s arm settles into its guard with (Map3DUnitSettle), or null.
+static func settle_sound_of(piece: Dictionary) -> AudioStream:
+	var table := GameArt.table(GameArt.UNIT_SETTLE_SOUNDS)
+	return table.of(String(piece.get("model", ""))) as AudioStream if table != null else null
+
+
+## Plays `stream` once from `piece`'s node at the camera distance's loudness
+## (gain_db + map3d_unit_settle_db); nothing for a hidden piece, past far, or no
+## stream. The player frees itself when the sound ends.
+static func one_shot(repo: DataRepository, camera: Camera3D, piece: Dictionary, stream: AudioStream) -> void:
+	var node: Node3D = piece.get("node")
+	if stream == null or camera == null or node == null or not node.visible or not node.is_inside_tree():
+		return
+	var db := gain_db(repo, camera.global_position.distance_to(node.global_position))
+	if db <= SILENT_DB:
+		return
+	var player := AudioStreamPlayer3D.new()
+	player.name = "SettleSound"
+	player.stream = stream
+	player.attenuation_model = AudioStreamPlayer3D.ATTENUATION_DISABLED  # the loudness is gain_db's
+	player.volume_db = db + repo.bal("map3d_unit_settle_db")
+	player.finished.connect(player.queue_free)
+	node.add_child(player)  # no owner: never saved
+	player.get_viewport().audio_listener_enable_3d = true
+	player.play()
+
+
 func _player_for(code: String, piece: Dictionary) -> AudioStreamPlayer3D:
 	var player: AudioStreamPlayer3D = _players.get(code)
 	if player != null and is_instance_valid(player):
