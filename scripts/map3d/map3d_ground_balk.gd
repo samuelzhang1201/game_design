@@ -35,42 +35,73 @@ uniform float hedge_far_m = 16000.0;
 """
 
 ## The fields' RIM per pixel (visual review 2026-10-06: field edges stepped
-## every 20 m): in a cell whose corners lie on both sides of a field's edge,
+## every 20 m): in a cell whose corners belong to more than one ground —
+## a field and the land outside it, or two fields side by side (the edge map's
+## A, each field's id; 2026-10-14: the edges between furlongs still stepped) —
 ## Terrain3D's own accumulate_material runs again with each corner weighted by
-## the pixel's coverage (the signed edge map) — its sampling, detiling and
-## height blend unchanged, only the edge drawn as the curve the map holds.
-## Spliced before the tint's first line, where mat is already normalised.
+## how far the pixel lies on that corner's side: for corner k, the corners'
+## distances to their own edges summed bilinearly, plus for corners of k's
+## ground and minus for the rest, crosses zero along the edge as a curve. Its
+## sampling, detiling and height blend unchanged. Spliced before the tint's
+## first line, where mat is already normalised.
 const RIM := """	vec2 rxz = v_vertex.xz + (uv - UV) * _vertex_spacing;
 	vec2 ruv = ((rxz - pack_origin) / balk_vertex_m + 0.5) / vec2(textureSize(field_edges, 0));
 	float rd = (texture(field_edges, ruv).r * 255.0 - balk_zero) / balk_per_m;
 	float raa = max(fwidth(rd), 0.3);  // derivatives outside every branch
-	if (field_rim > 0.0 && bilerp) {
-		float rk[4];
-		bool r_in = false;
-		bool r_out = false;
+	// the strips' direction and sown share at this pixel, by the field it lies
+	// in (Map3DGroundStrips; -1: read the field map instead)
+	float strip_ang = -1.0;
+	float strip_sown = 0.0;
+	if (bilerp && field_rim > 0.0) {   // field_rim 0: no edge map (Map3DGroundBalk.apply)
+		float rk[4];   // each corner's metres to its own ground's edge
+		float rg[4];   // each corner's ground: its field's id, 0 outside every field
+		float ra[4];   // each corner's strip direction byte, 0 unsown
+		bool r_mixed = false;
 		for (int k = 0; k < 4; k++) {
 			vec2 ip = fma(_region_locations[index[k].z], vec2(_region_size), vec2(index[k].xy)) * _vertex_spacing;
-			rk[k] = texelFetch(field_edges, ivec2(round((ip - pack_origin) / balk_vertex_m)), 0).r * 255.0 - balk_zero;
-			r_in = r_in || rk[k] >= 0.0;
-			r_out = r_out || rk[k] < 0.0;
+			vec4 rt = texelFetch(field_edges, ivec2(round((ip - pack_origin) / balk_vertex_m)), 0);
+			float sk = (rt.r * 255.0 - balk_zero) / balk_per_m;
+			rk[k] = abs(sk);
+			rg[k] = sk >= 0.0 ? round(rt.a * 255.0) : 0.0;
+			ra[k] = sk >= 0.0 ? round(rt.g * 255.0) : 0.0;
+			r_mixed = r_mixed || rg[k] != rg[0];
 		}
-		if (r_in && r_out) {
-			float rcov = smoothstep(-raa, raa, rd);
+		float wk[4];
+		for (int k = 0; k < 4; k++) {
+			float side = 0.0;
+			for (int j = 0; j < 4; j++) {
+				side += weights[j] * (rg[j] == rg[k] ? rk[j] : -rk[j]);
+			}
+			wk[k] = r_mixed ? weights[k] * smoothstep(-raa, raa, side) : weights[k];
+		}
+		float w_all = 0.0;
+		float w_sown = 0.0;
+		float w_best = -1.0;
+		for (int k = 0; k < 4; k++) {
+			w_all += wk[k];
+			if (ra[k] > 0.0) {
+				w_sown += wk[k];
+				if (wk[k] > w_best) {
+					w_best = wk[k];
+					strip_ang = (ra[k] - 1.0) / 254.0 * 3.14159265;
+				}
+			}
+		}
+		strip_ang = max(strip_ang, 0.0);
+		strip_sown = w_sown / max(w_all, 1e-5);
+		if (r_mixed) {
 			material rm = material(vec4(0.0), vec4(0.0), 0., 0., 0.);
 			vec4 rcm = vec4(0.0);  // the colour map (each field's tint) weighted alike
-			float rcw = 0.0;
 			for (int k = 0; k < 4; k++) {
-				float wk = weights[k] * (rk[k] >= 0.0 ? rcov : 1.0 - rcov);
-				accumulate_material(base_ddx, base_ddy, wk, index[k],
+				accumulate_material(base_ddx, base_ddy, wk[k], index[k],
 					control[k], t_weights[k], texture_ids[k], index_normal[k], h[k], rm);
-				rcm += (index[k].z > -1 ? texelFetch(_color_maps, index[k], 0) : COLOR_MAP_DEF) * wk;
-				rcw += wk;
+				rcm += (index[k].z > -1 ? texelFetch(_color_maps, index[k], 0) : COLOR_MAP_DEF) * wk[k];
 			}
 			if (rm.total_weight > 0.0) {
 				mat.albedo_height = mix(mat.albedo_height, rm.albedo_height / rm.total_weight, field_rim);
 			}
-			if (rcw > 0.0) {
-				color_map = mix(color_map, rcm / rcw, field_rim);
+			if (w_all > 0.0) {
+				color_map = mix(color_map, rcm / w_all, field_rim);
 			}
 		}
 	}

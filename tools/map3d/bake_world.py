@@ -1307,6 +1307,8 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     # draws the balks and hedges along it, smooth where the ground's own
     # texture change can only step from vertex to vertex
     edge_in = np.full((vh, vw), -1.0, dtype=np.float32)   # metres to a field's edge inside it, -1 outside
+    edge_id = np.zeros((vh, vw), dtype=np.uint8)          # each field's own id byte (1..255), 0 outside
+    edge_ang = np.zeros((vh, vw), dtype=np.uint8)         # a sown field's strip direction (1..255), 0 unsown
     # each vertex's HEDGE RANK (spec 2026-10-13-open-field-layout §3): a hedge
     # stands where two ranks meet, never between two furlongs of one rank
     hrank = np.zeros((vh, vw), dtype=np.uint8)
@@ -1459,6 +1461,8 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
         reach[y0:y1] = within * land[y0:y1]
         drawn = (sown | croft) & (m > 0)
         edge_in[y0:y1] = np.where(drawn, edge, -1.0)
+        fkey = np.where(croft, cfid, fid) ^ (bid << 48)
+        edge_id[y0:y1] = np.where(drawn, 1 + (hash01(fkey, 71) * 254.999).astype(np.int64), 0).astype(np.uint8)
         # the village's own ground is the crofts' (no hedge rings the houses)
         farmed = ok * within > 0
         hrank[y0:y1] = np.where(croft & land[y0:y1] & (cid >= 0), HEDGE_CROFT,
@@ -1498,6 +1502,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
             + (hash01(fid, 32) - 0.5) * 0.6
         ang = np.where(plot, hash01(bid, 27) * np.pi, ang)   # field_cells' frame: a close's long axis
         fangle[y0:y1] = np.mod(ang, np.pi) / np.pi
+        edge_ang[y0:y1] = np.where(sown & (m > 0), 1 + np.round(fangle[y0:y1] * 254.0), 0).astype(np.uint8)
         # each manor's own shade: a patchwork even where nothing is sown
         jv = (2.0 * hash01(cz, 5) - 1.0) * rules["manor_jitter_value"] * (cid >= 0)
         jh = (2.0 * hash01(cz, 6) - 1.0) * rules["manor_jitter_hue"] * (cid >= 0)
@@ -1529,7 +1534,7 @@ def sow_patchwork(tw, rules, MAP, OUT, PACK, has_cell, cell_id, land, height, hn
     tint = tint * (1.0 - foot[..., None]) + blocks * foot[..., None]
     print("bake_world: patchwork %.1f%% of the land sown, %.2f%% built" % (
         100.0 * float(farm[land].mean()), 100.0 * float(foot[land].mean())))
-    return tint, field_map(ftint, fangle), house_rows, settled_map(settled), edge_map(edge_in), \
+    return tint, field_map(ftint, fangle), house_rows, settled_map(settled), edge_map(edge_in, edge_id, edge_ang), \
         hedge_map(hrank, rules["hedge_line_smooth_m"] / VERTEX_M, rules["hedge_infield_close_m"] / VERTEX_M,
                   rules["hedge_infield_min_km2"] * 1e6 / VERTEX_M ** 2)
 
@@ -1538,17 +1543,31 @@ EDGE_MAP_ZERO = 128    # bake/field_edges.png: the byte of a field's edge...
 EDGE_MAP_PER_M = 2.0   # ...and bytes per metre: inside a field above it, outside below
 
 
-def edge_map(edge_in):
+def edge_map(edge_in, edge_id=None, edge_ang=None):
     """bake/field_edges.png from each vertex's metres to its field's edge
     (-1 outside every field): a SIGNED distance — outside, minus the metres
     to the nearest field — so a bilinear sample runs smooth across a field's
     rim (an unsigned map with a "no field" byte drew the balk along the
-    20 m grid, visual review 2026-10-06)."""
+    20 m grid, visual review 2026-10-06). With `edge_id` (each field's id
+    byte, 0 outside) it is two channels, L the distance and A the id: where a
+    pixel's four vertices belong to two FIELDS the shader parts them by the
+    same distances (Map3DGroundBalk.RIM; the edge between two furlongs
+    stepped every 20 m, visual review 2026-10-14). With `edge_ang` too it is
+    RGBA: R the distance, G a sown field's strip direction (1 + 254 x its
+    share of a half turn, 0 unsown: Map3DGroundStrips reads it per vertex, the
+    40 m field map's directions blending into 40 m stairs), B 0, A the id."""
     from scipy import ndimage
     inside = edge_in >= 0.0
     out_m = (ndimage.distance_transform_edt(~inside) - 0.5) * VERTEX_M
     d = np.where(inside, edge_in, -np.maximum(out_m, 0.0))
-    return np.clip(np.round(EDGE_MAP_ZERO + d * EDGE_MAP_PER_M), 0, 255).astype(np.uint8)
+    dist = np.clip(np.round(EDGE_MAP_ZERO + d * EDGE_MAP_PER_M), 0, 255).astype(np.uint8)
+    if edge_id is None:
+        return dist
+    ids = np.where(inside, edge_id, 0).astype(np.uint8)
+    if edge_ang is None:
+        return np.stack([dist, ids], axis=-1)
+    angs = np.where(inside, edge_ang, 0).astype(np.uint8)
+    return np.stack([dist, angs, np.zeros_like(dist), ids], axis=-1)
 
 
 HEDGE_NONE, HEDGE_ARABLE, HEDGE_MEADOW, HEDGE_CROFT = 0, 1, 2, 3
@@ -1970,7 +1989,7 @@ def main(argv=None):
     # FIELD_MAP_STEP vertices to a texel, from the pack's own corner
     Image.fromarray(fmap, "RGBA").save(os.path.join(OUT, "fields.png"))
     Image.fromarray(smap, "L").save(os.path.join(OUT, "settled.png"))
-    Image.fromarray(emap, "L").save(os.path.join(OUT, "field_edges.png"))
+    Image.fromarray(emap, "RGBA").save(os.path.join(OUT, "field_edges.png"))
     Image.fromarray(hmap, "RGBA").save(os.path.join(OUT, "hedge_lines.png"))
     print("bake_world: %.2f%% of the vertices within 10 m of a hedge line" % (
         100.0 * float((hedge_distance(hmap) < 10.0).mean())))

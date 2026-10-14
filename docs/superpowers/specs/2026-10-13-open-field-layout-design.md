@@ -257,6 +257,29 @@ All keys are `grass_*` in `map3d_bake.csv`.
 - **Blind critic.** The hedges fade into a soft texture of trees at 3 km, with no seam. The broad grass variation came first at 5 km, ahead of 0.14 and of none.
 - **Open:** where the pale-green fields meet the pasture, the edge steps in 20 m stairs (a hard cut). A dark smudged band lies below the central fields.
 
+## Field edges (2026-10-14)
+
+The critic's stair-steps had two sources, found by switching layers off one at a time and painting debug colours into the shader.
+
+**1. Two furlongs side by side.**
+- The rim only told a field from the land outside it. Where two furlongs met, both corners read as "inside", so the colour and texture still blended across the 20 m vertices.
+- `field_edges.png` now carries each field's id (A). The rim weighs every corner by which side of the edge the pixel lies on: the corners' distances to their own edges, summed bilinearly, plus for the corner's own ground and minus for the rest.
+
+**2. The strip pattern.**
+- It took its direction from the 40 m field map. Blended between two furlongs, that drew 40 m blocks.
+- `field_edges.png` G now holds a sown field's direction at each vertex. The strips use the direction of the field the pixel lies in.
+
+**Tried and dropped:**
+- loosening Terrain3D's bilinear threshold (`region_mip`): the opening zoom is already inside it;
+- SMAA;
+- a wider rim smoothstep.
+
+A blind critic saw no difference from any of them.
+
+**Blind critic, the fix:** decisively better at 600 m (continuous strips, a smooth field edge), slightly better at 1.5 km and 5 km.
+
+**Open:** at 5 km the field's edge against the pasture still shows single-pixel aliasing, and a field's inside is cut into hard-edged shards by its furlongs' shades.
+
 ## Tests
 
 - `tools/map3d/test_bake_world.py`:

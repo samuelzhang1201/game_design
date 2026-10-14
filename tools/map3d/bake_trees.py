@@ -536,7 +536,8 @@ def main(argv=None):
         infield_sd = sd[..., 0].copy()   # bake_world.hedge_map R: the in-field, inside positive
         del sd
         # the closes inside the crofts: short hedges along their own edges
-        em = np.asarray(Image.open(os.path.join(OUT, "field_edges.png")).convert("L"), dtype=np.float32)
+        em = np.asarray(Image.open(os.path.join(OUT, "field_edges.png")), dtype=np.float32)
+        em = em[..., 0] if em.ndim == 3 else em   # R / L: the distance (bake_world.edge_map)
         csp = rules["hedge_spacing_m"]
         cx_, cz_ = np.meshgrid(np.arange(csp * 0.5, vw * vm, csp), np.arange(csp * 0.5, vh * vm, csp))
         cx_ = (cx_ + hrng.uniform(-0.5, 0.5, cx_.shape) * csp).ravel()

@@ -402,6 +402,21 @@ def test_a_grass_field_answers_its_ground_and_never_lightens():
     assert (b <= tt[:3] + 1e-7).all()
 
 
+def test_the_edge_map_carries_each_fields_id():
+    edge_in = np.full((10, 10), -1.0, np.float32)
+    edge_in[2:8, 2:5] = 10.0
+    edge_in[2:8, 5:8] = 10.0
+    ids = np.zeros((10, 10), np.uint8)
+    ids[:, :5], ids[:, 5:] = 7, 9
+    m = bw.edge_map(edge_in, ids)
+    assert m.shape == (10, 10, 2)
+    assert m[4, 3, 1] == 7 and m[4, 6, 1] == 9 and m[0, 0, 1] == 0   # outside: no id
+    assert (m[..., 0] == bw.edge_map(edge_in)).all()
+    ang = np.full((10, 10), 40, np.uint8)
+    m4 = bw.edge_map(edge_in, ids, ang)
+    assert m4.shape == (10, 10, 4) and m4[4, 3, 1] == 40 and m4[0, 0, 1] == 0 and m4[4, 6, 3] == 9
+
+
 def test_footprint_radius_agrees_between_the_two_modules():
     """bake_houses keeps its own copy so it can stand alone; the two must
     never drift (density v4: house_radius_m too, the primitive the footprint

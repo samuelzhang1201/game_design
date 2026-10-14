@@ -24,7 +24,13 @@ func test_the_balk_reads_the_warped_position() -> void:
 func test_the_rim_reaccumulates_before_the_tint() -> void:
 	var out := Map3DGroundTint.patch(SAMPLE)
 	assert_string_contains(out, "uniform float field_rim")
-	assert_string_contains(out, "float wk = weights[k] * (rk[k] >= 0.0 ? rcov : 1.0 - rcov)")
-	assert_string_contains(out, "color_map = mix(color_map, rcm / rcw, field_rim)", "the field's tint weighted alike")
-	assert_lt(out.find("if (field_rim > 0.0 && bilerp)"), out.find("vec3 base_albedo ="), "before the tint reads mat")
-	assert_lt(out.find("fwidth(rd)"), out.find("if (field_rim > 0.0"), "derivatives outside every branch")
+	# each corner weighed by the side of the edge the pixel lies on — its own
+	# ground's distances plus, the others' minus (fields told apart by the edge
+	# map's id, visual review 2026-10-14)
+	assert_string_contains(out, "side += weights[j] * (rg[j] == rg[k] ? rk[j] : -rk[j])")
+	assert_string_contains(out, "wk[k] = r_mixed ? weights[k] * smoothstep(-raa, raa, side) : weights[k]")
+	assert_string_contains(out, "color_map = mix(color_map, rcm / w_all, field_rim)", "the field's tint weighted alike")
+	assert_string_contains(out, "strip_ang = (ra[k] - 1.0) / 254.0 * 3.14159265", "the strips take the field's own direction")
+	assert_lt(out.find("if (bilerp && field_rim > 0.0)"), out.find("vec3 base_albedo ="), "before the tint reads mat")
+	assert_lt(out.find("float strip_ang = -1.0"), out.find("if (strip_ang >= 0.0)"), "declared before the strips read it")
+	assert_lt(out.find("fwidth(rd)"), out.find("if (bilerp && field_rim > 0.0)"), "derivatives outside every branch")
