@@ -52,10 +52,10 @@ func sync(repo: DataRepository, camera: Camera3D, pieces: Dictionary, delta: flo
 	for code: String in _players.keys():
 		if loud.has(code):
 			continue
-		var player: AudioStreamPlayer3D = _players[code]
-		if not is_instance_valid(player):
+		if not is_instance_valid(_players[code]):  # freed with its piece's node
 			_players.erase(code)
 			continue
+		var player: AudioStreamPlayer3D = _players[code]
 		player.volume_db = move_toward(player.volume_db, SILENT_DB, step_db)
 		if player.volume_db <= repo.bal("map3d_unit_sound_floor_db") - 20.0 or not pieces.has(code):
 			player.queue_free()
@@ -110,12 +110,14 @@ static func one_shot(repo: DataRepository, camera: Camera3D, piece: Dictionary, 
 
 
 func _player_for(code: String, piece: Dictionary) -> AudioStreamPlayer3D:
-	var player: AudioStreamPlayer3D = _players.get(code)
-	if player != null and is_instance_valid(player):
-		if not player.playing:  # stopped while the view was put away (its subtree disabled)
-			player.play(_start_of(code, player.stream))
-		return player
-	player = AudioStreamPlayer3D.new()
+	# a piece's node rebuilt under the same code frees the old player with it: check
+	# the dictionary's value before a typed variable takes it (a freed one errors)
+	if is_instance_valid(_players.get(code)):
+		var held: AudioStreamPlayer3D = _players[code]
+		if not held.playing:  # stopped while the view was put away (its subtree disabled)
+			held.play(_start_of(code, held.stream))
+		return held
+	var player := AudioStreamPlayer3D.new()
 	player.name = "MarchSound"
 	player.stream = sound_of(piece)
 	player.attenuation_model = AudioStreamPlayer3D.ATTENUATION_DISABLED  # the loudness is gain_db's

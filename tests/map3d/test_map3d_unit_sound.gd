@@ -72,3 +72,33 @@ func test_marching_pieces_sound_and_fall_silent_when_they_halt() -> void:
 	sound.silence()
 	await wait_process_frames(1)
 	assert_eq(sound.playing_count(), 0)
+
+
+func test_a_piece_rebuilt_under_its_code_gets_a_fresh_loop() -> void:
+	# The piece's node is freed (its model swapped, the layer rebuilt) while the
+	# march goes on: the old player went with it, the next sync must not trip on it.
+	var repo := _repo()
+	var root := Node3D.new()
+	add_child_autofree(root)
+	var cam := Camera3D.new()
+	root.add_child(cam)
+	var old := Node3D.new()
+	root.add_child(old)
+	old.position = Vector3(0, 0, -500.0)
+	var gone := Node3D.new()  # a second piece, disbanded the same frame
+	root.add_child(gone)
+	var pieces := {"r0": {"node": old, "model": "infantry", "action": Map3DLayerUnits.MARCH},
+		"r1": {"node": gone, "model": "infantry", "action": Map3DLayerUnits.MARCH}}
+	var sound := Map3DUnitSound.new()
+	sound.sync(repo, cam, pieces, 1.0)
+	assert_eq(sound.playing_count(), 2)
+	old.free()
+	gone.free()
+	var fresh := Node3D.new()
+	root.add_child(fresh)
+	fresh.position = Vector3(0, 0, -500.0)
+	pieces = {"r0": {"node": fresh, "model": "infantry", "action": Map3DLayerUnits.MARCH}}
+	sound.sync(repo, cam, pieces, 1.0)
+	assert_true(fresh.has_node("MarchSound"), "a new loop on the new node")
+	assert_eq(sound.playing_count(), 1)
+	sound.silence()
