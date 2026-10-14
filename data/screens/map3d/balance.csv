@@ -164,3 +164,5 @@ map3d_unit_sound_db,-4,"MILITARY's 3D piece: a marching piece's loop's loudness 
 map3d_unit_sound_floor_db,-30,"MILITARY's 3D piece: a marching piece's loudness at map3d_unit_sound_far_m, dB, the faintest it is heard before it falls silent"
 map3d_unit_sound_voices,4,"MILITARY's 3D piece: at most this many marching pieces sound at once, the nearest the camera (Map3DUnitSound.voiced) — a whole host on the march would be a din"
 map3d_unit_sound_fade_db_s,40,"MILITARY's 3D piece: how fast a march loop eases toward its loudness, dB a second — a piece that starts, halts or leaves the nearest few fades in and out instead of clicking"
+map3d_unit_settle_hit_s,0.25,"MILITARY's 3D piece (owner 2026-10-14: 步兵行进结束后转驻防的时候，加入Equip.wav的音效，注意节奏要和步伐相符): where the settle sound's main clank falls in its file, seconds (garrison_equip.wav: two light clinks, then the clank at 0.25 s) — Map3DUnitSettle starts the sound this long before the footfall the piece halts on, so the clank lands on the step"
+map3d_unit_settle_db,0,"MILITARY's 3D piece: the settle sound's loudness over a marching loop's at the same camera distance (Map3DUnitSound.gain_db), dB"

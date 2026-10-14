@@ -28,6 +28,9 @@ const COURIER_MODELS := "res://assets/3D/units/courier_models.tres"
 ## The loop each arm's piece marches to on the 3D map (Map3DUnitSound), by
 ## army_art.csv `piece`; an arm with none marches silent.
 const UNIT_SOUNDS := "res://assets/audio/units/unit_sounds.tres"
+## The sound each arm's piece settles into its GARRISON with, on its last
+## step off the march (Map3DUnitSettle); an arm with none settles silent.
+const UNIT_SETTLE_SOUNDS := "res://assets/audio/units/settle_sounds.tres"
 
 ## Each estate's painting by its industry and size, "<focus>_<tier>"
 ## (library B-01..B-36; manor_estates.csv keeps the tiers' numbers).

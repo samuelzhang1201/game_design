@@ -27,6 +27,7 @@ const MARCH := "MARCH"
 @export var camp_back_m := 6.0
 var _camps := Map3DUnitCamps.new()  ## the camps pitched behind held lines
 var _sound := Map3DUnitSound.new()  ## the marching pieces' loops
+var _settle := Map3DUnitSettle.new()  ## a halt into GARRISON held to the next footfall
 ## How solid a GHOST's figures stand (spec 2026-10-10-player-sight-and-ghosts),
 ## 1 opaque — see-through as a courier's fading piece (Map3DCourierRide.apply).
 @export_range(0.0, 1.0) var ghost_alpha := 0.35
@@ -201,6 +202,7 @@ func step(delta: float) -> bool:
 				float(_want_yaw.get(code, 0.0)), rate)
 			_place(code, _pieces[code])  # re-seated: a long piece turned across a slope meets other ground
 	_camps.prune(_pieces); _sound.sync(repo, ctx.camera, _pieces, delta)  # the march's sound
+	_settle.step(self, delta)  # held halts drop into their guard on the footfall
 	if moved:
 		_moves += 1
 	return moved
@@ -220,6 +222,7 @@ func set_selected(codes: Array) -> void:
 
 
 func has_piece(code: String) -> bool: return _pieces.has(code)  ## a fleet has none: its counter
+func built_piece(code: String) -> Dictionary: return _pieces.get(code, {})  ## its piece ({} none)
 
 ## The pieces' boxes on screen, {code: Rect2} in design px — what a click on
 ## the SOLDIER hits (Map3DPicker), before the province under him.
@@ -295,5 +298,8 @@ func _sync_action(code: String) -> void:
 	var order := ArmySystem.order_of(ctx.repo, st, code) if st != null else ArmySystem.ORDER_STANDBY
 	var row: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(st, code), {}) if st != null else {}
 	var action := Map3DUnitRig.action_for(walking and ctx.clock_speed() > 0, order, row)
-	if String(_pieces[code].get("action", "")) != action:  # each figure's clip looked up only on a change
-		play(code, action)
+	var piece: Dictionary = _pieces[code]
+	if String(piece.get("action", "")) == action:
+		_settle.cancel(code, piece)  # marching on: a held halt is dropped
+	elif not _settle.holds(ctx.repo, code, piece, action):  # a halt into GARRISON waits for the footfall
+		play(code, action)  # each figure's clip looked up only on a change

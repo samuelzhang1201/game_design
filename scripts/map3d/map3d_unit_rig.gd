@@ -217,6 +217,8 @@ static func heading_for(repo: DataRepository, state: GameState, code: String, tr
 ## speed_scale gets its own hashed jitter, clamped after it. Set only on a change.
 static func keep_pace(repo: DataRepository, piece: Dictionary, day: Dictionary, share: float, clock: int,
 		code: String = "") -> void:
+	if piece.get("settling", false):
+		return  # a halt held to its next footfall walks on at its pace (Map3DUnitSettle)
 	var walking := Map3DUnits.walking(day, share)
 	# an exact-pace arm (army_art.csv exact_pace, owner 2026-10-14: 步伐和移动能够完全匹配)
 	# plays the true rate at any speed, every figure alike: no bounds, no jitter
