@@ -116,3 +116,5 @@ desert_mult_lenient,2000,spec 2026-10-10-foraging-and-desertion §1.1
 desert_mult_hanging,400,spec 2026-10-10-foraging-and-desertion §1.1
 desert_news_cumulative_permille,50,spec 2026-10-10-foraging-and-desertion §1.1
 camp_after_days,5,"spec 2026-10-11-war-room-front-line-design §3: a regiment settled in the hold stance, not marching and in no battle, for this many days in the field gets its camp model behind its line on the 3D map (ArmySystem.hold_day / camped; the count is capped here and reset by a march, a stance change or a battle); 0 never"
+army_clearance_m,1400,"owner 2026-10-14 (spec 2026-10-14-unit-clearance-and-scouting-design): two land units never stand nearer than this many metres (MarchClearance, ArmyGround.is_free); below army_slot_spacing_m so a camp lattice slot is always legal; 0 turns the rule off"
+army_clearance_touch_m,10,"clearance (same spec): a column halted in front of a village or a unit counts as touching it within army_clearance_m plus this many metres (BattleSystem._town_contact)"

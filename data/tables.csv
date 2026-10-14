@@ -44,6 +44,7 @@ army,army_matchups
 army,army_morale_words
 army,army_orders
 army,army_route_orders
+army,army_scouting
 army,army_speed
 army,army_split
 army,army_supply_orders

@@ -1,0 +1,6 @@
+arm,scout_km,arc_deg,notes
+infantry,15,120,"owner 2026-10-14 (spec 2026-10-14-unit-clearance-and-scouting-design §c): a marching crown land unit sees a sector this many km long and arc_deg wide ahead of it (Sighting.scout_shape); a royal unit reads its chief arm; the map draws it as a faint sweeping fan"
+archers,18,120,
+cavalry,30,120,"cavalry reach farthest"
+artillery,12,120,
+fleet,0,0,"a fleet never scouts"
