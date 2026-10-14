@@ -107,7 +107,12 @@ func build(p_ctx: Map3DContext) -> void:
 	var far := repo.bal("map3d_tree_card_thin_far_m") if cards else repo.bal("map3d_tree_far_m")
 	var margin := repo.bal("map3d_tree_card_fade_m") if cards else repo.bal("map3d_tree_margin_m")
 	var fade := margin
+	var far_of: Dictionary = _kept["far_of"]
 	for one: Array in _kept["chunks"]:
+		# a species with its own far_m (a hedge's row) ends there, and has no far level
+		var own_far: float = far_of.get(int(one[3]), 0.0)
+		if own_far > 0.0 and int(one[2]) == 1:
+			continue
 		var node := MultiMeshInstance3D.new()
 		node.multimesh = one[0]
 		node.position = one[1]
@@ -118,8 +123,10 @@ func build(p_ctx: Map3DContext) -> void:
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if cards and int(one[2]) == 1 \
 			else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		if int(one[2]) == 0:
-			node.visibility_range_end = near
-			node.visibility_range_end_margin = fade
+			node.visibility_range_end = minf(near, own_far) if own_far > 0.0 else near
+			# a species' own far_m fades over half of it: the woods' margin kept
+			# a hedge solid kilometres past its end (Godot fades after the end)
+			node.visibility_range_end_margin = minf(fade, own_far * 0.5) if own_far > 0.0 else fade
 		else:
 			node.visibility_range_begin = near
 			node.visibility_range_begin_margin = margin
@@ -137,7 +144,7 @@ static var _kept: Dictionary = {}
 
 
 ## The woods' MultiMeshes from the bake's rows: {material, count, chunks: [[the
-## MultiMesh, its square's centre, its level]]}.
+## MultiMesh, its square's centre, its level, its species kind]], far_of: kind -> far_m}.
 func _plan(data: PackedFloat32Array, density: float, cards: bool) -> Dictionary:
 	var repo := ctx.repo
 	@warning_ignore("integer_division")
@@ -219,11 +226,15 @@ func _plan(data: PackedFloat32Array, density: float, cards: bool) -> Dictionary:
 					far_rows[kind] = (far_rows.get(kind, PackedInt32Array()) as PackedInt32Array) \
 						+ _thinned(data, rows, thin, thin_cell)
 					continue
-				chunks.append([fill.call(rows, meshes["%s:%d" % [sub, lod]], centre), centre, lod])
+				chunks.append([fill.call(rows, meshes["%s:%d" % [sub, lod]], centre), centre, lod,
+					int(sub.get_slice(":", 0))])
 		for kind: String in far_rows:
 			if not (far_rows[kind] as PackedInt32Array).is_empty():
-				chunks.append([fill.call(far_rows[kind], meshes["%s:0:1" % kind], centre), centre, 1])
-	return {"material": mat, "count": count, "chunks": chunks}
+				chunks.append([fill.call(far_rows[kind], meshes["%s:0:1" % kind], centre), centre, 1, int(kind)])
+	var far_of := {}   # kind -> its own far_m (map3d_tree_species.csv; 0: the woods')
+	for r: Dictionary in repo.map3d_tree_species:
+		far_of[int(r["kind"])] = float(r.get("far_m", 0.0))
+	return {"material": mat, "count": count, "chunks": chunks, "far_of": far_of}
 
 
 ## `rows` kept where Map3DGeometry.thin_rank (on a 2x coarser square, so the
