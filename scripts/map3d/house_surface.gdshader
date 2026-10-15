@@ -62,6 +62,33 @@ uniform float bob_pitch_deg = 1.0;
 uniform float bob_heave_m = 0.3;
 uniform float bob_period_s = 7.0;
 
+// A fortification's weathering, per pixel (owner 2026-10-14: 墙面污迹 — the
+// grime baked into the vertex colour is off on the walls, and a few vertices
+// a 24 m module could not carry it): a damp stain rising from the ground to
+// about stain_foot_m of the model's own height, its top edge ragged, and rain
+// streaks running down stain_streak_len_m from stain_streak_top_m. Its noise
+// runs on the world position, so identical modules do not repeat it. 0: off.
+uniform float stain_foot = 0.0;
+uniform float stain_foot_m = 5.0;
+uniform vec4 stain_foot_color : source_color = vec4(0.55, 0.52, 0.40, 1.0);
+uniform float stain_streak = 0.0;
+uniform float stain_streak_m = 1.4;
+uniform float stain_streak_top_m = 12.0;
+uniform float stain_streak_len_m = 7.0;
+varying float l_up;   // the vertex's own height over the model's ground (z = 0 in the bake)
+
+float stain_hash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float stain_noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(stain_hash(i), stain_hash(i + vec2(1.0, 0.0)), u.x),
+		mix(stain_hash(i + vec2(0.0, 1.0)), stain_hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
 void vertex() {
 	if (bob_on > 0.0) {
 		vec2 at = MODEL_MATRIX[3].xz;
@@ -73,6 +100,7 @@ void vertex() {
 		VERTEX = rx * rz * VERTEX + vec3(0.0, bob_heave_m * bob_on * sin(t * 1.23 + 0.4), 0.0);
 		NORMAL = rx * rz * NORMAL;
 	}
+	l_up = VERTEX.y;
 	w_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	w_up = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	tint = vec3(1.0);
@@ -89,6 +117,28 @@ void fragment() {
 	vec3 c = texture(albedo_tex, UV).rgb * albedo_color.rgb * tint;
 	if (use_vertex_color) {
 		c *= COLOR.rgb;
+	}
+	if (stain_foot > 0.0 || stain_streak > 0.0) {
+		// one horizontal coordinate that runs along any face: the world's x + z
+		float along = w_pos.x * 0.7071 + w_pos.z * 0.7071;
+		// the footing below the ground line (bared on a downhill side) is its
+		// lowest course stretched 8 m: the texture's blurred mean there, not its
+		// stretched stripes (critic 2026-10-14: a near-black barcode skirt)
+		// mottled like rubble and earth banked against it, darker as it goes down
+		float rubble = 0.62 + 0.45 * stain_noise(vec2(along / 1.1, l_up / 0.8))
+			+ 0.25 * (stain_noise(vec2(along / 0.35, l_up / 0.3)) - 0.5);
+		vec3 bank = textureLod(albedo_tex, UV, 7.0).rgb * albedo_color.rgb * tint * rubble
+			* mix(0.55, 0.8, smoothstep(-6.0, 0.0, l_up));
+		c = mix(c, bank, smoothstep(0.5, -1.0, l_up) * step(0.0, stain_foot - 0.001));
+		float edge = stain_foot_m * (0.45 + 1.1 * stain_noise(vec2(along / 6.0, 3.1))
+			+ 0.3 * (stain_noise(vec2(along / 1.8, 7.7)) - 0.5));
+		// the damp climbs unevenly: its top edge broken in height as well
+		float rise = l_up + (stain_noise(vec2(along / 1.3, l_up / 0.9)) - 0.5) * 1.6;
+		float foot = 1.0 - smoothstep(edge * 0.2, edge, rise);
+		c = mix(c, c * stain_foot_color.rgb, clamp(foot * stain_foot, 0.0, 1.0));
+		float col = stain_noise(vec2(along / stain_streak_m, 11.3)) * stain_noise(vec2(along / (stain_streak_m * 3.7), 5.9));
+		float down = clamp((l_up - (stain_streak_top_m - stain_streak_len_m * (0.5 + col))) / stain_streak_len_m, 0.0, 1.0);
+		c *= 1.0 - stain_streak * smoothstep(0.18, 0.45, col) * down * step(l_up, stain_streak_top_m + 0.5);
 	}
 	if (weather_on > 0.0) {
 		vec2 uv = ((w_pos.xz - weather_origin) / weather_m_per_px) / (weather_step_px * vec2(textureSize(weather_now, 0)));

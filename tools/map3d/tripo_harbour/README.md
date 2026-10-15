@@ -69,3 +69,5 @@ A new type's `.glb.import` needs `meshes/force_disable_compression=true` and its
   the jetty in `_BERTHS`.
 * **A ship rocks** in `house_surface.gdshader` (`bob_on` and the roll / pitch / heave /
   period set per ship in its scene), its phase hashed from where it is moored.
+
+* **Gate passage**: the gate job's `passage` profile is cut through the high and low meshes after closure and before baking. The exact boolean keeps the arch interior closed and bakes its stone colour into the atlas. Run the mesh census after rebuilding; the exported gate must retain a clear through opening.
