@@ -57,6 +57,11 @@ func _end_day(state: GameState) -> Array:
 	var news := MissiveWriter.host_news(data, state, day_ai)
 	if not news.is_empty():
 		MissiveLog.add(data, state, news)
+	# The scouts' and contact letters (spec 2026-10-14-unit-clearance-and-scouting-
+	# design §c), once a day after the hosts have moved and before the battles: a
+	# foe at hand of a column of ours is told BEFORE the battle letter that its
+	# contact may start.
+	Sighting.scout_day(data, state)
 	# The day's battles, AFTER the couriers (spec 2026-10-07-enemy-ai-and-battle
 	# §4): an order a courier lands today (a stance, a march) is in the
 	# regiment's state before the round, and a stance he delivers takes hold at

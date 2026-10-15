@@ -1,0 +1,6 @@
+arm,clear_m,notes
+infantry,1140,"owner 2026-10-15 (spec 2026-10-14-unit-clearance-and-scouting-design, R-A): a land unit's clearance radius in whole metres of the pack's measure, sized to its drawn piece (the measured full-strength half extent at the opening zoom: foot 1132.8, archers 1845.6, horse 2197.2, guns 1132.8, rounded up); two units' centres stay at least the sum of their radii apart; a royal unit reads its chief arm"
+archers,1850,
+cavalry,2200,
+artillery,1140,
+fleet,0,"a fleet holds no ground"

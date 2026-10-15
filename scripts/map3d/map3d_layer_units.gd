@@ -25,6 +25,15 @@ const MARCH := "MARCH"
 ## How far behind a held line its camp is pitched, in the model's own metres
 ## past the line's half depth (spec 2026-10-11-war-room-front-line-design §3).
 @export var camp_back_m := 6.0
+## The scouting fan of a marching crown unit (Map3DUnitScout): the polar grid's
+## rings and spokes, its metres over the ground, and how far the piece moves
+## (metres) or turns (degrees) before the fan is draped afresh.
+@export var scout_rings := 6
+@export var scout_spokes := 24
+@export var scout_lift_m := 4.0
+@export var scout_redrape_m := 150.0
+@export var scout_redrape_deg := 3.0
+var _scouts := Map3DUnitScout.new()  ## the fans of the marching crown units
 var _camps := Map3DUnitCamps.new()  ## the camps pitched behind held lines
 var _sound := Map3DUnitSound.new()  ## the marching pieces' loops
 var _settle := Map3DUnitSettle.new()  ## a halt into GARRISON held to the next footfall
@@ -63,7 +72,7 @@ func set_shown(on: bool) -> void:
 	visible = on
 	if on: refresh()
 	else:  # hidden: nothing to click, nothing heard
-		_rects.clear(); _sound.silence()
+		_rects.clear(); _sound.silence(); _scouts.clear()
 
 
 func set_preview(on: bool) -> void:
@@ -203,6 +212,7 @@ func step(delta: float) -> bool:
 			_place(code, _pieces[code])  # re-seated: a long piece turned across a slope meets other ground
 	_camps.prune(_pieces); _sound.sync(repo, ctx.camera, _pieces, delta)  # the march's sound
 	_settle.step(self, delta)  # held halts drop into their guard on the footfall
+	_sync_scouts()
 	if moved:
 		_moves += 1
 	return moved
@@ -264,6 +274,7 @@ func _piece_of(code: String) -> Dictionary:
 
 func _drop(code: String) -> void:  ## frees `code`'s piece, forgets all kept about it; rebuilt if it returns
 	(_pieces[code]["node"] as Node3D).queue_free()
+	_scouts.drop(code)
 	for kept: Dictionary in [_pieces, _rects, _shown_xz, _track, _want_yaw, _yaw, _days]: kept.erase(code)
 
 ## Builds the piece of `reg` in formation `tier` as `_pieces[key]`; {} when its
@@ -303,3 +314,27 @@ func _sync_action(code: String) -> void:
 		_settle.cancel(code, piece)  # marching on: a held halt is dropped
 	elif not _settle.holds(ctx.repo, code, piece, action):  # a halt into GARRISON waits for the footfall
 		play(code, action)  # each figure's clip looked up only on a change
+
+
+## The fans: one for each crown unit with a piece that is marching with men
+## (`Sighting.scout_shape` says which; a foe, a ghost, a fleet has none), at
+## where the piece is drawn, turned as it is drawn.
+func _sync_scouts() -> void:
+	var wanted: Dictionary = {}
+	var st := ctx.state()
+	if st != null:
+		for code: String in _pieces:
+			if code.begins_with(Sighting.GHOST_CODE) or not _shown_xz.has(code) \
+					or not (_pieces[code]["node"] as Node3D).visible:
+				continue
+			var shape := Sighting.scout_shape(ctx.repo, st, code)
+			if shape.is_empty():
+				continue
+			wanted[code] = {"at": _shown_xz[code], "yaw": float(_yaw.get(code, 0.0)),
+				"r_m": shape["r_m"], "arc_deg": shape["arc_deg"]}
+	_scouts.sync(self, ctx.height_at, ctx.repo, ctx.meta, wanted,
+		scout_rings, scout_spokes, scout_lift_m, scout_redrape_m, scout_redrape_deg)
+
+
+## The codes whose scouting fan stands (tests).
+func scout_codes() -> Array: return _scouts.codes()

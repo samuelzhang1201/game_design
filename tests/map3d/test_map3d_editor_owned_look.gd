@@ -38,6 +38,8 @@ const CODE_OWNED := {
 		"sway_m_s", "strength", "fall_now", "fall_next", "blend", "pack_origin", "m_per_px", "step_px"],
 	"precip_drop_rain": ["kind", "length_m", "width_m"],
 	"precip_drop_snow": ["kind", "length_m", "width_m"],
+	# the sweep's sector shape and phase are the fan's own (Map3DUnitScout)
+	"unit_scout_fan": ["half_arc", "phase"],
 	"selection_ring": ["dot_px", "inner_px", "ring_px", "line_px", "lift_px", "px_per_dist",
 		"max_view_m", "min_view_m"],
 }

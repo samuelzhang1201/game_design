@@ -875,9 +875,10 @@ static func drop_hold(entry: Dictionary) -> void:
 
 
 ## The way a regiment of the crown FACES where it stands (WarFront's frame,
-## a unit vector in pack px): ZERO while marching, a foe's, or with none set.
+## a unit vector in pack px): ZERO while marching or with none set; a foe's too
+## (a column halted before a unit faces it, spec 2026-10-14-unit-clearance).
 static func facing_of(state: GameState, code: String) -> Vector2:
-	var entry: Dictionary = state.regiments.get(code, {})
+	var entry: Dictionary = state.regiments.get(code, state.foes.get(code, {}))
 	if entry.is_empty() or String(entry.get("order", ORDER_STANDBY)) == ORDER_MARCH or not entry.has("facing_deg"):
 		return Vector2.ZERO
 	return WarFront.facing_vector(int(entry["facing_deg"]))
@@ -1023,6 +1024,8 @@ static func set_march_m(repo: DataRepository, state: GameState, code: String, de
 	entry["order"] = ORDER_MARCH
 	drop_hold(entry)
 	entry.erase("facing_deg")   # a column on the march faces its road
+	for k: String in ["halted_by", "halt_day", "halt_aim_m", "road_blocked_by", "waited", "wait_on"]:
+		entry.erase(k)          # a new march is no halt before anyone
 	_clear_route(entry)
 	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
 	var route := route_m_of(repo, here, waypoints, dest, is_naval(repo, state, code))
@@ -1038,6 +1041,8 @@ static func set_march_m(repo: DataRepository, state: GameState, code: String, de
 ## already walks is kept when it ends there (the hosts re-aim every day).
 static func aim_entry(repo: DataRepository, entry: Dictionary, to: Vector2i, naval := false) -> void:
 	drop_hold(entry)
+	for k: String in ["halted_by", "halt_day", "halt_aim_m", "road_blocked_by"]:
+		entry.erase(k)
 	var same := String(entry.get("order", "")) == ORDER_MARCH and int(entry.get("dest_x_m", 0)) == to.x \
 		and int(entry.get("dest_y_m", 0)) == to.y
 	entry["dest_x_m"] = to.x
@@ -1045,6 +1050,7 @@ static func aim_entry(repo: DataRepository, entry: Dictionary, to: Vector2i, nav
 	entry["order"] = ORDER_MARCH
 	if same:
 		return
+	entry.erase("facing_deg")   # a new destination: no halt's facing
 	_clear_route(entry)
 	if not entry.has("x_m"):
 		return
@@ -1180,17 +1186,29 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 static func march_day(repo: DataRepository, state: GameState) -> Array:
 	ensure(repo, state)
 	var arrived: Array = []
+	# who stands where, the clearance's discs (spec 2026-10-14-unit-clearance-and-
+	# scouting-design §a): each unit walks its day against the places the units
+	# before it have left theirs at, and writes its own back
+	var blockers := clearance_blockers(repo, state)
 	var codes := state.regiments.keys()
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		if _march_one(repo, state, code, state.regiments[code], state.absolute_day()):
-			ArmyGround.settle(repo, state, code)
+		if _march_one(repo, state, code, state.regiments[code], state.absolute_day(), blockers):
+			var entry: Dictionary = state.regiments[code]
+			var halted_by := String(entry.get("halted_by", ""))
+			if halted_by == "" or not _enemies(blockers, code, halted_by):
+				# a column halted before a unit it is not at war with camps on the
+				# side it came from; before an enemy it stands where it halted
+				ArmyGround.settle(repo, state, code,
+					Vector2i(int(entry["x_m"]), int(entry["y_m"])) if halted_by != "" else ArmyGround.NONE)
+			if halted_by != "" and blockers.has("pos") and (blockers["pos"] as Dictionary).has(halted_by):
+				entry["facing_deg"] = _facing_to(Vector2i(int(entry["x_m"]), int(entry["y_m"])),
+					(blockers["pos"] as Dictionary)[halted_by])
 			arrived.append(code)
 			# a front's hold parked for the arrival takes effect now (spec
 			# 2026-10-11-war-room-front-line-design §1): the facing always, the
 			# stance only when no newer stance order has come since
-			var entry: Dictionary = state.regiments[code]
 			if entry.has("hold_after"):
 				var hold: Dictionary = entry["hold_after"]
 				entry.erase("hold_after")
@@ -1203,6 +1221,7 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 			var draft := WarDrafts.of(state, code)
 			if String(draft.get("order", "")) == WarDrafts.GARRISON and not draft.has("hold"):
 				WarDrafts.strike(state, code)
+		_note_place(blockers, code, state.regiments[code])
 	# The foes' second pass (spec 2026-10-07-enemy-ai-and-battle §2), in code
 	# order and by the same even step: a column in a battle stands; one that
 	# arrives holds its ground, and a foreign column's arrival is not news, so
@@ -1212,8 +1231,172 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	for c in foes:
 		var code := String(c)
 		if BattleSystem.battle_of(state, code).is_empty():
-			_march_one(repo, state, code, state.foes[code], state.absolute_day())
+			var fe: Dictionary = state.foes[code]
+			var aim := Vector2i(int(fe.get("dest_x_m", 0)), int(fe.get("dest_y_m", 0)))
+			if _march_one(repo, state, code, fe, state.absolute_day(), blockers):
+				var hb := String(fe.get("halted_by", ""))
+				if hb != "" and not _enemies(blockers, code, hb):
+					_spread_foe(repo, state, code, fe, aim, blockers)
+			_note_place(blockers, code, state.foes[code])
 	return arrived
+
+
+## A host column halted by a FRIENDLY unit near its target (owner 2026-10-15,
+## R-B) does not queue down the road: it takes the nearest free camp-lattice
+## slot round the target (ArmyGround.free_slot from ring 1, `near_m` its halt
+## point, held_taken), so the whole host stands at the town. Further than
+## army_spread_reach_m from the target it stays where it halted.
+static func _spread_foe(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
+		aim: Vector2i, blockers: Dictionary) -> void:
+	var at := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	if blockers.is_empty() or MarchClearance.dist2(at, aim) > int(repo.bal("army_spread_reach_m")) ** 2:
+		return
+	var arm := MapObjects.regiment_arm(repo, regiment(repo, code, state))
+	var taken := ArmyGround.held_taken(repo, state, code)
+	var slot := ArmyGround.free_slot(repo, aim, arm, taken, "", false, at, 1)
+	if slot == ArmyGround.NONE:
+		slot = ArmyGround.free_slot(repo, aim, arm, taken, "", true, at, 1)
+	if slot == ArmyGround.NONE:
+		return
+	entry["x_m"] = slot.x
+	entry["y_m"] = slot.y
+	entry["dest_x_m"] = slot.x
+	entry["dest_y_m"] = slot.y
+	entry["facing_deg"] = _facing_to(slot, aim)
+
+
+## The whole-metre place of `entry` written into the clearance's record (a unit
+## that moved, settled or halted), when it is in the record.
+static func _note_place(blockers: Dictionary, code: String, entry: Dictionary) -> void:
+	if blockers.is_empty() or not (blockers["pos"] as Dictionary).has(code) or not entry.has("x_m"):
+		return
+	var at := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	blockers["pos"][code] = at
+	blockers["moving"][code] = String(entry.get("order", ORDER_STANDBY)) == ORDER_MARCH
+	var i := int((blockers["index"] as Dictionary)[code])
+	(blockers["xs"] as Array)[i] = at.x
+	(blockers["ys"] as Array)[i] = at.y
+
+
+## The units that hold ground for clearance, in code order: every land unit
+## with men under arms — the crown's, the foes', and the roster's others at
+## their pack places — {codes, pos (code -> whole metres), r (code -> its
+## clearance radius, ArmyGround.unit_radius), realm (code -> kingdom), side
+## (code -> "crown" | "foe" | "other"), maxr, hostile (a cache of kingdom pairs
+## at war)}. {} when the rule is off (army_clearance_on 0). A fleet holds none.
+static func clearance_blockers(repo: DataRepository, state: GameState) -> Dictionary:
+	if not ArmyGround.clearance_on(repo) or state == null:
+		return {}
+	var all := roster(repo, state)
+	var info := _unit_info(repo, all)
+	var keys: Array = info["codes"]
+	if not state.foes.is_empty():
+		for f: Variant in state.foes:
+			if not all.has(f):
+				keys = keys + [f]
+		keys.sort()
+	var codes: Array = []
+	var pos: Dictionary = {}
+	var side: Dictionary = {}
+	var rad: Dictionary = {}
+	var realm: Dictionary = {}
+	var xs: Array = []
+	var ys: Array = []
+	var rs: Array = []
+	var moving: Dictionary = {}
+	var maxr := 0
+	var rows: Dictionary = info["rows"]
+	for k: Variant in keys:
+		var code := String(k)
+		var row: Array = rows.get(code, [])
+		if row.is_empty():
+			continue                       # a fleet, or no such unit
+		var st: Dictionary = {}
+		var kind := "other"
+		if state.foes.has(code):
+			st = state.foes[code]
+			kind = "foe"
+		elif state.regiments.has(code):
+			st = state.regiments[code]
+			kind = "crown"
+		if under_arms(int(row[0]), st) <= 0:
+			continue
+		codes.append(code)
+		side[code] = kind
+		moving[code] = String(st.get("order", ORDER_STANDBY)) == ORDER_MARCH
+		realm[code] = row[2]
+		rad[code] = row[1]
+		maxr = maxi(maxr, int(row[1]))
+		var at: Vector2i = Vector2i(int(st["x_m"]), int(st["y_m"])) if st.has("x_m") \
+			else pack_to_metres(repo, position_of(repo, state, all[code]))
+		pos[code] = at
+		xs.append(at.x)
+		ys.append(at.y)
+		rs.append(int(row[1]))
+	var index: Dictionary = {}
+	for i in codes.size():
+		index[codes[i]] = i
+	return {"codes": codes, "pos": pos, "r": rad, "realm": realm, "side": side, "maxr": maxr, "hostile": {},
+		"moving": moving,
+		"xs": xs, "ys": ys, "rs": rs, "index": index,
+		"player": repo.resolve_realm("player_realm"), "raider": repo.resolve_realm("raider_realm"),
+		"diplomacy": repo.world_table("political", "diplomacy")}
+
+
+## What never changes about a roster unit: [headcount, clearance radius, kingdom]
+## by code (a fleet has no row), with the sorted codes — kept for the roster it
+## was made from (the roster's rows are immutable; a changed size rebuilds).
+static var _unit_cache: Dictionary = {}
+
+
+static func _unit_info(repo: DataRepository, all: Dictionary) -> Dictionary:
+	var key := [all.size(), repo.get_instance_id(), int(repo.bal("army_clearance_on"))]
+	if _unit_cache.get("key", []) == key and is_same(_unit_cache.get("all"), all):
+		return _unit_cache
+	var rows: Dictionary = {}
+	var codes: Array = all.keys()
+	codes.sort()
+	for code: String in codes:
+		var reg: Dictionary = all[code]
+		if String(reg.get("is_naval", "0")) == "1":
+			continue
+		rows[code] = [headcount(repo, reg), ArmyGround.unit_radius(repo, reg), String(reg.get("kingdom_code", ""))]
+	_unit_cache = {"key": key, "all": all, "rows": rows, "codes": codes}
+	return _unit_cache
+
+
+## Whether two kingdoms are at war with each other for clearance: the player's
+## and the raider's, or a pair whose diplomacy row says Enemy (cached).
+static func _hostile(blockers: Dictionary, ka: String, kb: String) -> bool:
+	if ka == kb:
+		return false
+	var key := ka + "|" + kb
+	var cache: Dictionary = blockers["hostile"]
+	if cache.has(key):
+		return bool(cache[key])
+	var player := String(blockers["player"])
+	var raider := String(blockers["raider"])
+	var war := (ka == player and kb == raider) or (ka == raider and kb == player)
+	if not war:
+		var dip: Dictionary = blockers["diplomacy"]
+		war = String((dip.get("%s>%s" % [ka, kb], {}) as Dictionary).get("stance", "")) == "Enemy" \
+			or String((dip.get("%s>%s" % [kb, ka], {}) as Dictionary).get("stance", "")) == "Enemy"
+	cache[key] = war
+	return war
+
+
+## Whether two of the record's units are at war: their kingdoms are (the raider
+## realm's standing units too, not only its hosts, owner 2026-10-15 R-D).
+static func _enemies(blockers: Dictionary, a: String, b: String) -> bool:
+	if blockers.is_empty():
+		return false
+	var realm: Dictionary = blockers["realm"]
+	return _hostile(blockers, String(realm.get(a, "")), String(realm.get(b, "")))
+
+
+## The facing from `at` toward `target` (whole metres): WarFront's whole degree.
+static func _facing_to(at: Vector2i, target: Vector2i) -> int:
+	return WarFront.facing_deg(Vector2(target - at))
 
 
 ## The news bar's line for a regiment that arrived today (owner 2026-10-06:
@@ -1223,6 +1406,16 @@ static func arrival_headline(repo: DataRepository, state: GameState, code: Strin
 	var reg := regiment(repo, code, state)
 	if reg.is_empty() or String(reg.get("kingdom_code", "")) != repo.resolve_realm("player_realm"):
 		return ""
+	var blocked := String((state.regiments.get(code, {}) as Dictionary).get("road_blocked_by", ""))
+	if blocked != "":
+		return MissiveWriter.battle_words(repo, "army_road_blocked", {"unit": String(reg.get("label", code)),
+			"blocker": String(regiment(repo, blocked, state).get("label", blocked)),
+			"place": Intel.place_label(repo, state, position_of(repo, state, reg))}, state.absolute_day())
+	var halted_by := String((state.regiments.get(code, {}) as Dictionary).get("halted_by", ""))
+	if halted_by != "":
+		return MissiveWriter.battle_words(repo, "army_halt_short", {"unit": String(reg.get("label", code)),
+			"blocker": String(regiment(repo, halted_by, state).get("label", halted_by)),
+			"place": Intel.place_label(repo, state, position_of(repo, state, reg))}, state.absolute_day())
 	return "%s reaches %s." % [String(reg.get("label", code)),
 		Intel.place_label(repo, state, position_of(repo, state, reg))]
 
@@ -1232,11 +1425,30 @@ static func arrival_headline(repo: DataRepository, state: GameState, code: Strin
 ## as the day ends, owner 2026-10-02), in whole metres; the map draws the piece
 ## walking it as the day runs (owner 2026-09-28: it lagged a day behind).
 ## Nothing is written but `entry`.
-static func march_ahead(repo: DataRepository, state: GameState, code: String, entry: Dictionary) -> Vector2i:
+static func march_ahead(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
+		passed: Array = []) -> Vector2i:
 	if entry.has("x_m"):
-		_march_one(repo, state, code, entry, state.absolute_day())
+		_march_one(repo, state, code, entry, state.absolute_day(), _ahead_blockers(repo, state), passed)
 		return Vector2i(int(entry["x_m"]), int(entry["y_m"]))
 	return pack_to_metres(repo, position_of(repo, state, regiment(repo, code, state)))
+
+
+## The clearance record the day's previews share (the map asks for every piece
+## when a day turns): built once per state, day and set of places, not per piece.
+static var _ahead: Dictionary = {}
+
+
+static func _ahead_blockers(repo: DataRepository, state: GameState) -> Dictionary:
+	var sig := 0
+	for table: Dictionary in [state.regiments, state.foes]:
+		for c: Variant in table:
+			var e: Dictionary = table[c]
+			sig = hash([sig, int(e.get("x_m", 0)), int(e.get("y_m", 0)), int(e.get("dead", 0))])
+	var key := hash([state.get_instance_id(), repo.get_instance_id(), state.absolute_day(), sig,
+		state.regiments.size(), state.foes.size(), int(repo.bal("army_clearance_on"))])
+	if int(_ahead.get("key", 0)) != key or not _ahead.has("blockers"):
+		_ahead = {"key": key, "blockers": clearance_blockers(repo, state)}
+	return _ahead["blockers"]
 
 
 ## One regiment's day on the road, written to `entry`; true when it arrives.
@@ -1246,7 +1458,7 @@ static func march_ahead(repo: DataRepository, state: GameState, code: String, en
 ## the day's pace (march_days), rounded up — so an N-day march is covered at
 ## one pace over all N and ends exactly as the Nth day ends.
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
-		abs_day: int) -> bool:
+		abs_day: int, blockers: Dictionary = {}, passed_out: Array = []) -> bool:
 	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code, state).is_empty():
 		return false
 	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
@@ -1257,27 +1469,229 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 	# along its route when it has one (spec 2026-10-07-march-waypoints), else
 	# the straight line to the end — the same sums either way
 	var path := _path_of(entry)
+	# the clearance (spec 2026-10-14-unit-clearance-and-scouting-design §a): the
+	# day's walk stops short of an enemy or an occupied end (a halt, which is an
+	# arrival), goes round any other unit it would meet, or waits behind it
+	var detoured := false
+	var wait_m := -1
+	var waiting_on := ""
+	if not blockers.is_empty() and (blockers["pos"] as Dictionary).has(code):
+		var passes := 0
+		var seed_names: Array = []     # the units it has gone round: later passes keep them in the clump
+		while true:
+			var left_p := MarchRoute.length_from(here, path)
+			var days_p := int(ceil(left_p / float(full)))
+			var walk_p := left_p if days_p <= 1 else float(mini(full, int(ceil(left_p / float(maxi(days_p, 1))))))
+			var verdict := _clearance(repo, state, code, entry, here, path, walk_p, blockers, seed_names)
+			var kind := String(verdict["kind"])
+			if kind == "free":
+				break
+			if kind == "halt":
+				passed_out.append_array(path.slice(0, int(verdict["leg"])))
+				_halt_before(entry, verdict["at"], String(verdict["blocker"]), blockers, abs_day)
+				return true
+			waiting_on = String(verdict["blocker"])
+			if kind == "wait":
+				wait_m = int(verdict["dist"])
+				break
+			path = verdict["path"]
+			seed_names.append_array(verdict["members"])
+			detoured = true
+			passes += 1
+			if passes >= 4:
+				wait_m = 0   # the way round meets one unit after another: it waits
+				break
+	if wait_m >= 0:
+		# a column that waits two days running for a road that does not clear
+		# stops where it stands (R-C): of two waiting on each other, the later
+		# code; the crown is told (arrival_headline), the AI simply re-plans
+		entry["waited"] = int(entry.get("waited", 0)) + 1
+		entry["wait_on"] = waiting_on
+		if int(entry["waited"]) >= 2 and _gives_way(state, code, waiting_on):
+			_stop_blocked(entry, here, waiting_on)
+			return true
+	else:
+		entry.erase("waited")
+		entry.erase("wait_on")
 	var left := MarchRoute.length_from(here, path)
 	var days := int(ceil(left / float(full)))
 	var step := mini(full, int(ceil(left / float(maxi(days, 1)))))
+	if wait_m >= 0:
+		step = mini(step, wait_m)
+		days = maxi(days, 2)    # waiting behind a unit never arrives
 	if days <= 1:
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
 		entry["order"] = ORDER_GARRISON          # arrived: it holds the ground it was sent to
 		_clear_route(entry)
+		passed_out.append_array(path)
 		return true
 	var walked := MarchRoute.walk(here, path, step)
 	entry["x_m"] = (walked["at"] as Vector2i).x
 	entry["y_m"] = (walked["at"] as Vector2i).y
-	if entry.has("route_m"):
+	passed_out.append_array(walked["passed"])
+	if entry.has("route_m") or detoured:
 		# new arrays, never the old ones cut: a preview walks a shallow copy
 		entry["route_m"] = MarchRoute.to_pairs(walked["path"])
 		var wps := MarchRoute.from_pairs(entry.get("waypoints_m", []))
+		if detoured:
+			wps = wps.filter(func(p: Vector2i) -> bool: return p in path)   # one the way round skipped is gone
 		for p: Vector2i in walked["passed"]:
 			if not wps.is_empty() and wps[0] == p:
 				wps = wps.slice(1)
-		entry["waypoints_m"] = MarchRoute.to_pairs(wps)
+		if entry.has("waypoints_m") or not wps.is_empty():
+			entry["waypoints_m"] = MarchRoute.to_pairs(wps)
 	return false
+
+
+## Whether a column waiting on `blocker` is the one to stop: always unless the
+## blocker waits on it too and has the later code.
+static func _gives_way(state: GameState, code: String, blocker: String) -> bool:
+	var other: Dictionary = state.foes.get(blocker, state.regiments.get(blocker, {}))
+	var mutual := String(other.get("wait_on", "")) == code and int(other.get("waited", 0)) >= 1
+	return not mutual or code > blocker
+
+
+## A column that gave way: halted where it stands, its road dropped, marked
+## `road_blocked_by` (the news bar's "road blocked").
+static func _stop_blocked(entry: Dictionary, at: Vector2i, blocker: String) -> void:
+	entry["dest_x_m"] = at.x
+	entry["dest_y_m"] = at.y
+	entry["order"] = ORDER_GARRISON
+	_clear_route(entry)
+	drop_hold(entry)
+	entry.erase("waited")
+	entry.erase("wait_on")
+	entry["road_blocked_by"] = blocker
+
+
+## The clearance's verdict on a day's walk of `walk` metres along `here` ->
+## `path` (whole metres): the first unit whose disc (the two arms' radii, plus a
+## metre) the walk enters within today's reach; a unit already inside the disc
+## stops it only if the leg closes on it. {kind "free", path} when none;
+## {kind "halt", at, blocker} before a unit AT WAR with it (anywhere on the
+## road), or before a unit standing within clearance of the destination, or
+## one whose clump's hull holds the destination; else {kind "detour", path,
+## members, blocker} round the clump of the other units (MarchClearance.detour,
+## each leg checked against the march grid) or {kind "wait", dist, blocker}
+## (the metres up to where it must stand) when neither side of it is open.
+## `seed_names` are the units an earlier pass of the day went round: kept in the clump.
+static func _clearance(repo: DataRepository, state: GameState, code: String, entry: Dictionary, here: Vector2i,
+		path: Array, walk: float, blockers: Dictionary, seed_names: Array = []) -> Dictionary:
+	var rs := int((blockers["r"] as Dictionary)[code])
+	var dest := Vector2i(int(entry["dest_x_m"]), int(entry["dest_y_m"]))
+	# only the units near today's walk can matter: a box round the part of the
+	# road it can cover (wide enough for a clump's octagons once something is hit)
+	var box_lo := here
+	var box_hi := here
+	var acc := 0.0
+	var prev := here
+	for p: Vector2i in path:
+		box_lo = Vector2i(mini(box_lo.x, p.x), mini(box_lo.y, p.y))
+		box_hi = Vector2i(maxi(box_hi.x, p.x), maxi(box_hi.y, p.y))
+		acc += Vector2(prev).distance_to(Vector2(p))
+		prev = p
+		if acc > walk:
+			break
+	var near := _near_units(code, blockers, box_lo, box_hi, rs + int(blockers["maxr"]) + 8, rs)
+	var hit := MarchClearance.first_entry(here, path, near["centres"], near["ds"])
+	if hit.is_empty() or float(hit["dist"]) > walk:
+		return {"kind": "free", "path": path}
+	var margin := 3 * (rs + int(blockers["maxr"])) + 8
+	near = _near_units(code, blockers, box_lo, box_hi, margin, rs)
+	var names: Array = near["names"]
+	var centres: Array = near["centres"]
+	var ds: Array = near["ds"]
+	hit = MarchClearance.first_entry(here, path, centres, ds)
+	if hit.is_empty() or float(hit["dist"]) > walk:
+		return {"kind": "free", "path": path}
+	var bi := int(hit["index"])
+	var blocker := String(names[bi])
+	var dm := int(ds[bi]) + 1
+	if _enemies(blockers, code, blocker) or MarchClearance.dist2(dest, centres[bi]) < dm * dm:
+		return {"kind": "halt", "at": hit["at"], "leg": hit["leg"], "blocker": blocker}
+	# go round: the units not at war with it whose octagons touch the first's, and each other's
+	var friends: Array = []
+	var friend_centres: Array = []
+	var friend_ds: Array = []
+	var first := 0
+	for i in names.size():
+		if i == bi:
+			first = friends.size()
+		# a clump is the first unit and the units STANDING round it; a column on the
+		# march is its own obstacle (a host strung out on a road is not one wall)
+		if i == bi or (not _enemies(blockers, code, String(names[i])) and not bool((blockers["moving"] as Dictionary)[names[i]])):
+			friends.append(i)
+			friend_centres.append(centres[i])
+			friend_ds.append(ds[i])
+	var members: Array = MarchClearance.clump(first, friend_centres, friend_ds, margin)
+	for fi in friends.size():     # and the units an earlier pass went round
+		if not fi in members and String(names[friends[fi]]) in seed_names:
+			members.append(fi)
+	var round_centres: Array = []
+	var round_ds: Array = []
+	var round_names: Array = []
+	for m: int in members:
+		round_centres.append(friend_centres[m])
+		round_ds.append(friend_ds[m])
+		round_names.append(names[friends[m]])
+	var round_hull := MarchClearance.hull_of(round_centres, round_ds)
+	if MarchClearance.in_hull(round_hull, dest):
+		return {"kind": "halt", "at": hit["at"], "leg": hit["leg"], "blocker": blocker}
+	var grid: MarchPath = null if is_naval(repo, state, code) else MarchPath.of_pack(repo)
+	var leg_ok := Callable()
+	if grid != null:
+		leg_ok = func(a: Vector2i, b: Vector2i) -> bool:
+			return grid.clear(a, b, [grid.cell_of(a), grid.cell_of(b)])
+	var d := MarchClearance.detour(here, path, round_centres, round_ds, leg_ok, round_hull)
+	if String(d["kind"]) == "wait":
+		return {"kind": "wait", "dist": int(d["dist"]), "blocker": blocker}
+	return {"kind": "detour", "path": d["path"], "members": round_names, "blocker": blocker}
+
+
+## The units standing in the box round a walk, widened by `margin`: {names,
+## centres, ds} with ds the pair clearance to a mover of radius `rs`.
+static func _near_units(code: String, blockers: Dictionary, lo: Vector2i, hi: Vector2i, margin: int, rs: int) -> Dictionary:
+	var names: Array = []
+	var centres: Array = []
+	var ds: Array = []
+	var all_codes: Array = blockers["codes"]
+	var xs: Array = blockers["xs"]
+	var ys: Array = blockers["ys"]
+	var rr: Array = blockers["rs"]
+	var x0 := lo.x - margin
+	var y0 := lo.y - margin
+	var x1 := hi.x + margin
+	var y1 := hi.y + margin
+	for i in all_codes.size():
+		var qx: int = xs[i]
+		var qy: int = ys[i]
+		if qx < x0 or qx > x1 or qy < y0 or qy > y1:
+			continue
+		var o: String = all_codes[i]
+		if o == code:
+			continue
+		names.append(o)
+		centres.append(Vector2i(qx, qy))
+		ds.append(rs + int(rr[i]))
+	return {"names": names, "centres": centres, "ds": ds}
+
+
+## A column halted at `at` before `blocker`: an ARRIVAL there (order garrison,
+## the destination here, the road and any hold parked for it dropped), marked
+## `halted_by` and `halt_day`, and facing the unit.
+static func _halt_before(entry: Dictionary, at: Vector2i, blocker: String, blockers: Dictionary, abs_day: int) -> void:
+	entry["halt_aim_m"] = [int(entry.get("dest_x_m", at.x)), int(entry.get("dest_y_m", at.y))]   # where it was bound
+	entry["x_m"] = at.x
+	entry["y_m"] = at.y
+	entry["dest_x_m"] = at.x
+	entry["dest_y_m"] = at.y
+	entry["order"] = ORDER_GARRISON
+	_clear_route(entry)
+	drop_hold(entry)
+	entry["halted_by"] = blocker
+	entry["halt_day"] = abs_day
+	entry["facing_deg"] = _facing_to(at, (blockers["pos"] as Dictionary)[blocker])
 
 
 ## Days still on the road, rounded up; 0 for a regiment that is not marching.

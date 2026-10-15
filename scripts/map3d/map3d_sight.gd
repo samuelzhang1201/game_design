@@ -40,5 +40,6 @@ static func places_key(st: GameState) -> int:
 	for book: Dictionary in [st.regiments, st.foes]:
 		for c: Variant in book:
 			var e: Dictionary = book[c]
-			h = (h * 31 + int(e.get("x_m", 0)) * 7 + int(e.get("y_m", 0)) * 13 + int(e.get("dead", 0))) % 1000000007
+			h = (h * 31 + int(e.get("x_m", 0)) * 7 + int(e.get("y_m", 0)) * 13 + int(e.get("dead", 0))
+				+ String(e.get("order", "")).hash() % 9973 * 17 + int(e.get("dest_x_m", 0)) * 19 + int(e.get("dest_y_m", 0)) * 23) % 1000000007
 	return h + st.province_owner.size() * 1000003 + st.manor_owner.size()

@@ -65,6 +65,15 @@ static func open_country(data: DataRepository) -> DataRepository:
 	data.balance["army_march_grid_px"] = 0
 	return data
 
+## No clearance between units (army_clearance_on 0), for a test that stacks
+## units on one point on purpose (a siege, a battle fixture) or walks a column
+## through another's place. The clearance has its own tests
+## (test_army_clearance.gd). Returns `data`.
+static func no_clearance(data: DataRepository) -> DataRepository:
+	data.balance["army_clearance_on"] = 0
+	return data
+
+
 static func campaign(data: DataRepository, seed_value: int) -> GameState:
 	var key := "%d:%d" % [content_hash(data), seed_value]
 	if not _campaigns.has(key):

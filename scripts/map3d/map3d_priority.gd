@@ -17,6 +17,10 @@ const RIVERS := 0
 const APRONS := -2
 const ROADS := 1
 const MANOR_EDGES := 2
+## A marching unit's scouting fan (Map3DUnitScout): a faint wash on the ground,
+## under everything else on the ground (the aprons, the roads, the glow, the
+## borders, the rings): a faint wash the lines read over; the pieces are opaque.
+const SCOUT_FAN := -3
 ## A selected regiment's glow (Map3DUnitGlow): over the roads it stands on, so a
 ## road never covers it; under the borders and every ring.
 const UNIT_GLOW := 2

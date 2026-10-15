@@ -44,7 +44,9 @@ static func forget() -> void:
 ## Puts `host` (a DataRepository.raid_hosts row) in the field: a foe for each of
 ## its UNITS (host_units), in the same shape as a player unit's state and keyed
 ## by the unit's code, standing at the host's assembly point (whole metres of
-## the pack's measure) with no order, and a mind in ASSEMBLE. A unit leaves its
+## the pack's measure) with no order — the first unit ON it, the rest spread
+## round it on the camp lattice in code order (ArmyGround.free_slot: no two
+## within army_clearance_m; stacked on it when that is 0) — and a mind in ASSEMBLE. A unit leaves its
 ## camp: a seat it held is emptied and refilled from the camp it left
 ## (ArmyGround.refill), so no foe holds a town. Run it after the split (the
 ## roster in `state`).
@@ -52,12 +54,26 @@ static func spawn(repo: DataRepository, state: GameState, host: Dictionary) -> v
 	var code := String(host["host_code"])
 	var start := ArmySystem.pack_to_metres(repo,
 		Vector2(float(host.get("start_x", 0)), float(host.get("start_y", 0))))
+	var taken := ArmyGround.new_taken(repo)
+	var first := true
 	for unit: String in host_units(repo, state, host):
-		var st := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, unit, state))
-		st["x_m"] = start.x
-		st["y_m"] = start.y
-		st["dest_x_m"] = start.x
-		st["dest_y_m"] = start.y
+		var reg := ArmySystem.regiment(repo, unit, state)
+		var st := ArmySystem.starting_state(repo, reg)
+		var at := start
+		if ArmyGround.clearance_on(repo):
+			if not first:
+				var arm := MapObjects.regiment_arm(repo, reg)
+				at = ArmyGround.free_slot(repo, start, arm, taken, "")
+				if at == ArmyGround.NONE:
+					at = ArmyGround.free_slot(repo, start, arm, taken, "", true)
+				if at == ArmyGround.NONE:
+					at = start
+			ArmyGround.take(taken, at, ArmyGround.unit_radius(repo, reg))
+			first = false
+		st["x_m"] = at.x
+		st["y_m"] = at.y
+		st["dest_x_m"] = at.x
+		st["dest_y_m"] = at.y
 		st["order"] = ArmySystem.ORDER_STANDBY
 		st["camp_town"] = ""
 		st["host"] = code
@@ -738,8 +754,39 @@ static func _march_host(repo: DataRepository, state: GameState, host_code: Strin
 			continue
 		if int(e["x_m"]) == to.x and int(e["y_m"]) == to.y:
 			continue
+		if _stands_halted(repo, state, c, e, to):
+			continue      # a standoff before the crown (or a slot round the target) holds while its aim does
 		# round ground it cannot climb, as the crown's columns go (MarchPath)
 		ArmySystem.aim_entry(repo, e, to, ArmySystem.is_naval(repo, state, c))
+
+
+## Whether a column halted before a unit (ArmySystem._halt_before) is still in
+## its standoff: bound for the same `to` it was, its enemy still obstructing
+## the onward road, or its friendly blocker beside the target camp.
+## Such a column is not re-aimed (a new aim_entry would wipe
+## its halt and facing); a changed target, or a blocker gone, releases it.
+static func _stands_halted(repo: DataRepository, state: GameState, code: String, e: Dictionary, to: Vector2i) -> bool:
+	if not e.has("halted_by") or not e.has("halt_aim_m"):
+		return false
+	var aim: Array = e["halt_aim_m"]
+	if int(aim[0]) != to.x or int(aim[1]) != to.y:
+		return false
+	var b := String(e["halted_by"])
+	var be: Dictionary = state.foes.get(b, state.regiments.get(b, {}))
+	if be.is_empty() or ArmySystem.under_arms(ArmySystem.headcount(repo, ArmySystem.regiment(repo, b, state)), be) <= 0:
+		return false
+	var reach := int(repo.bal("army_spread_reach_m"))
+	var here := Vector2i(int(e["x_m"]), int(e["y_m"]))
+	if not _within(here, Vector2i(int(be["x_m"]), int(be["y_m"])), reach):
+		return false
+	# A displaced enemy releases the march; friendly camps hold their target slot.
+	var theirs := String(ArmySystem.regiment(repo, b, state).get("kingdom_code", ""))
+	if theirs != repo.resolve_realm("raider_realm"):
+		var radius := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, code, state)) \
+			+ ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, b, state))
+		return not MarchClearance.first_entry(here, [to],
+			[Vector2i(int(be["x_m"]), int(be["y_m"]))], [radius]).is_empty()
+	return _within(here, Vector2i(aim[0], aim[1]), reach)
 
 
 ## A regiment's place in whole metres: its stored state's, else the pack's.

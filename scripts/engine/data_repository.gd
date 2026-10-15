@@ -162,6 +162,12 @@ var army_formations: Array = []
 ## regiment splits into, in file order: [{arm, start_ring, code_word,
 ## label_word, pooled}]; a POOLED arm is one unit a kingdom, at its capital.
 var army_split: Array = []
+## data/army/army_scouting.csv (spec 2026-10-14-unit-clearance-and-scouting-design §c):
+## arm -> {scout_km, arc_deg}, the sector a marching crown unit sees ahead of it
+## (Sighting.scout_shape).
+var army_scouting: Dictionary = {}
+## data/army/army_clearance.csv (R-A): arm -> the clearance radius in whole metres.
+var army_clearance: Dictionary = {}
 ## data/army/army_camp_blocked.csv: terrain -> true where no unit makes camp (ArmyGround).
 var army_camp_blocked: Dictionary = {}
 ## data/army/army_speed.csv: arm -> km a day (int), the arm's own march
@@ -1041,6 +1047,12 @@ func _load(dir: String) -> bool:
 			func(r): army_split.append({"arm": String(r["arm"]), "start_ring": int(r["start_ring"]),
 				"code_word": String(r["code_word"]), "label_word": String(r["label_word"]),
 				"pooled": String(r["pooled"]) == "1"})):
+		return false
+	if not _load_if_present(table_path(dir, "army_scouting"), ["arm", "scout_km", "arc_deg"],
+			func(r): army_scouting[String(r["arm"])] = {"scout_km": int(r["scout_km"]), "arc_deg": int(r["arc_deg"])}):
+		return false
+	if not _load_if_present(table_path(dir, "army_clearance"), ["arm", "clear_m"],
+			func(r): army_clearance[String(r["arm"])] = int(r["clear_m"])):
 		return false
 	if not _load_if_present(table_path(dir, "army_camp_blocked"), ["terrain"],
 			func(r): army_camp_blocked[String(r["terrain"])] = true):
