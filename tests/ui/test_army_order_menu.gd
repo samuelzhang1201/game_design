@@ -92,7 +92,7 @@ func _deliver_all() -> void:
 func _supply_ids(menu: ArmyOrderMenu) -> Array:
 	var out: Array = []
 	for i in range(Game.data.army_orders.size(), menu.item_count):
-		if not menu.is_item_separator(i) and menu.get_item_id(i) != ArmyOrderMenu.SEAT:
+		if not menu.is_item_separator(i):
 			out.append(menu.get_item_id(i))
 	return out
 
@@ -130,64 +130,26 @@ func _ids(menu: ArmyOrderMenu) -> Array:
 	return out
 
 
-## Spec 2026-10-07-army-split-and-ground §4.5: a camped unit may take its
-## town's seat; the unit already inside has no such row; a draft never does.
-func test_a_camped_unit_is_offered_the_seat_and_the_seated_one_is_not() -> void:
+## The map offers movement and logistics; automatic behaviour has no button.
+func test_camped_and_seated_units_offer_only_march_and_supply() -> void:
 	var camper := _camper()
 	assert_ne(camper, "")
-	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
-	assert_true(ArmyOrderMenu.SEAT in _ids(_menu), "the seat row")
-	var i := _menu.get_item_index(ArmyOrderMenu.SEAT)
-	assert_eq(_menu.get_item_text(i), String(Game.data.army_route_orders["seat"]["label"]))
 	var town := ArmyGround.camped_by(Game.data, Game.state, camper)
 	var seated := ArmyGround.seat_of(Game.data, Game.state, town)
-	_map.army_menu_requested.emit(seated, Vector2(10.0, 10.0))
-	assert_false(ArmyOrderMenu.SEAT in _ids(_menu), "the holder is inside already")
-	Game.state.town_seat.erase(town)
-	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
-	i = _menu.get_item_index(ArmyOrderMenu.SEAT)
-	assert_eq(_menu.get_item_text(i), String(Game.data.army_route_orders["seat_empty"]["label"]), "an empty seat reads Garrison the town")
-	_menu.drafting = true
-	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
-	assert_false(ArmyOrderMenu.SEAT in _ids(_menu), "the war room's drafts never take the seat")
+	var before := Game.state.to_dict()
+	for code: String in [camper, seated]:
+		_map.army_menu_requested.emit(code, Vector2(10.0, 10.0))
+		assert_eq(_ids(_menu).filter(func(id: int) -> bool: return id >= 0),
+			[0, ArmyOrderMenu.SUPPLY_ADD], "only March and supply, plus a separator")
+	assert_eq(Game.state.to_dict(), before, "opening the menu gives no order")
 
 
-func test_choosing_the_seat_row_sends_a_courier() -> void:
-	var camper := _camper()
-	_map.army_menu_requested.emit(camper, Vector2(10.0, 10.0))
-	_menu.hide()
-	_menu.id_pressed.emit(ArmyOrderMenu.SEAT)
-	assert_eq(Game.state.couriers.size(), 1, "a courier rides with the seat order")
-	_deliver_all()
-	assert_eq(ArmyGround.seat_of(Game.data, Game.state, ArmyGround.camped_by(Game.data, Game.state, camper)), camper)
-
-
-## A battle stance row (spec 2026-10-07-enemy-ai-and-battle §4.4) sends its
-## row's `params` stance with every selected unit: one ARMY_STANCE courier each,
-## and each unit holds the stance once its courier has landed.
-func test_a_stance_row_rides_to_every_selected_unit() -> void:
-	var units: Array = []
-	for r: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
-		if units.size() < 2 and String(r.get("is_naval", "0")) != "1" and CourierSystem.carries_orders(r):
-			units.append(String(r["regiment_code"]))
-	assert_eq(units.size(), 2)
-	_map.selection = units
-	_map.army_menu_requested.emit(units[0], Vector2(10.0, 10.0))
-	assert_eq(_menu.selected_codes(), units, "the menu orders the selection")
-	var hold := -1
-	for i in Game.data.army_orders.size():
-		var row: Dictionary = Game.data.army_orders[i]
-		if String(row["action_code"]) == "ARMY_STANCE" and String((row["params"] as Dictionary).get("stance", "")) == "hold":
-			hold = i
-	assert_gte(hold, 0, "a Hold row")
-	assert_false(_menu.is_item_disabled(_menu.get_item_index(hold)), "the stance is an order the engine takes")
-	_menu.hide()
-	_menu.id_pressed.emit(hold)
-	assert_eq(Game.state.couriers.size(), 2, "a courier for each unit")
-	_deliver_all()
-	Game.advance_day()
-	for c: String in units:
-		assert_eq(BattleSystem.stance_of(Game.state, c), "hold", c + " holds")
+func test_removed_behaviour_menu_ids_cannot_send_orders() -> void:
+	_map.army_menu_requested.emit(_camper(), Vector2(10.0, 10.0))
+	var before := Game.state.to_dict()
+	for id: int in [1, 2, 3, 500]:
+		_menu.id_pressed.emit(id)
+	assert_eq(Game.state.to_dict(), before, "old stance and seat buttons have no effect")
 
 
 func test_choosing_march_only_AIMS_it_and_gives_the_map_the_word() -> void:

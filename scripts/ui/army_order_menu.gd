@@ -1,8 +1,8 @@
 class_name ArmyOrderMenu
 extends PopupMenu
-## A regiment's orders on the right mouse button (owner 2026-09-22: "鼠标右
-## 键点击会有移动和驻防的选项激活动作"). Its rows are data — data/army/army_orders.csv,
-## in the order they are shown — so renaming or reordering them touches no code.
+## A regiment's movement and supply orders. Automatic behaviour has no menu
+## button; the engine derives it from conditions and delivered royal orders.
+## The movement rows live in data/army/army_orders.csv, in display order.
 ##
 ## MARCH is AIMED, not issued by the menu: choosing it arms the map, the next
 ## left click on the ground is the destination, and the CONFIRM PANEL
@@ -12,8 +12,6 @@ extends PopupMenu
 ## and aims on from it; while the panel stands the route can be bent on the map
 ## (its `route_bent`), each waypoint checked as the end is. That is why its
 ## label ends in an ellipsis. Escape, Cancel or a right click give it up.
-## A STANCE row (ARMY_STANCE) runs at once, its row's `params` (the stance)
-## sent with the regiment; the war room's menu leaves stances off.
 ## A committed march's end ring opens the ROUTE menu: Edit route… loads its
 ## waypoints and end into the panel, Cancel march halts it (an ARMY_GARRISON).
 ## The confirm also asks where to SUPPLY the march from (spec 2026-10-08-war-
@@ -55,9 +53,6 @@ const STRIKE := 202
 const SUPPLY_ADD := 400
 const SUPPLY_WITHDRAW := 401
 const RATE_BASE := 420
-## The seat row (spec 2026-10-07-army-split-and-ground §4.5): Take the seat /
-## Garrison the town, for a unit camped by a town of the realm.
-const SEAT := 500
 
 ## The march's confirm, authored (spec 2026-10-07-march-waypoints ruling 6).
 const CONFIRM_SCENE := preload("res://scenes/panels/march_confirm_panel.tscn")
@@ -144,20 +139,13 @@ func _open_for(code: String, at: Vector2) -> void:
 	clear()
 	for i in Game.data.army_orders.size():
 		var row: Dictionary = Game.data.army_orders[i]
-		# a battle stance is the map's order: the war room drafts only marches
+		# the war room drafts only marches
 		if drafting and String(row["action_code"]) != "ARMY_MARCH":
 			continue
 		add_item(String(row["label"]), i)
 		var why := _refusal_any(String(row["action_code"]), row.get("params", {}))
 		set_item_disabled(i, why != "")
 		set_item_tooltip(i, why if why != "" else String(row["hint"]))
-	# the seat (spec 2026-10-07-army-split-and-ground §4.5): only a unit camped
-	# by a town of the realm and not inside it; the map's orders, never a draft
-	if not drafting:
-		var town := ArmyGround.camped_by(Game.data, Game.state, code)
-		if town != "" and ArmyGround.seat_of(Game.data, Game.state, town) != code:
-			var empty := ArmyGround.seat_of(Game.data, Game.state, town) == ""
-			_add_row("seat_empty" if empty else "seat", SEAT, _refusal("ARMY_SEAT", code))
 	_add_supply_rows(code)
 	if item_count == 0:
 		return
@@ -414,10 +402,6 @@ func _on_chosen(id: int) -> void:
 			elif _code != "":
 				_run(ActionRequest.make("ARMY_GARRISON", {"regiment": _code}))
 			return
-		SEAT:
-			if _code != "":
-				_run(ActionRequest.make("ARMY_SEAT", {"regiment": _code}))
-			return
 		STRIKE:
 			if _code != "":
 				Game.strike_draft(_code)
@@ -430,8 +414,6 @@ func _on_chosen(id: int) -> void:
 		_set_aim(_code)
 		Game.publish_news("%s awaits its orders — click where to send it." % _name_of(_code))
 		return
-	# a stance row's params (the stance) ride with each unit (ARMY_STANCE)
-	_run_each(String(row["action_code"]), row.get("params", {}))
 
 
 ## The aimed march's destination: held, drawn to, and asked about — the

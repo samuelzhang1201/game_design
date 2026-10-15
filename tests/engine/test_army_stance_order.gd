@@ -188,18 +188,6 @@ func test_an_old_save_regiment_is_steady() -> void:
 	assert_eq(String(back.regiments[code]["stance"]), "steady", "and seeded steady")
 
 
-func test_the_menu_offers_every_stance() -> void:
-	var s := SuiteData.campaign(repo, 7)
-	var actions := ActionSystem.new(repo)
-	var offered: Array = []
-	for row: Dictionary in repo.army_orders:
-		if String(row["action_code"]) != "ARMY_STANCE":
-			continue
-		var params: Dictionary = row["params"]
-		offered.append(String(params["stance"]))
-		var req := ActionRequest.make("ARMY_STANCE", params.merged({"regiment": _mine()}))
-		assert_eq(actions.validate(req, s), "", String(row["label"]) + " is an order the engine takes")
-	offered.sort()
-	var table: Array = repo.battle_stances.keys()
-	table.sort()
-	assert_eq(offered, table, "a row for each stance of data/battle/battle_stances.csv")
+func test_stance_orders_are_not_manual_map_menu_choices() -> void:
+	assert_eq(repo.army_orders.size(), 1)
+	assert_eq(String(repo.army_orders[0]["action_code"]), "ARMY_MARCH")

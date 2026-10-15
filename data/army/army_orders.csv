@@ -1,5 +1,2 @@
 action_code,label,hint,params,notes
 ARMY_MARCH,March…,Then click where on the map to send it,,"the ellipsis says a second click follows: the order is AIMED, not issued by the menu"
-ARMY_STANCE,Stance: Hold,"Stand fast whatever the odds",stance=hold,"spec 2026-10-07-enemy-ai-and-battle §4.4: params are key=value joined by |, passed with the regiment (ArmyOrderMenu); the stance fights from the day after the courier arrives"
-ARMY_STANCE,Stance: Steady,"Fight on, falling back when the odds turn bad",stance=steady,
-ARMY_STANCE,Stance: Evade,"Slip away on the first day of contact",stance=evade,
