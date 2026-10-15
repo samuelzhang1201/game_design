@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const ClearPiece := preload("res://tests/war_room/clear_piece.gd")
 ## The pieces (spec 2026-10-01-war-room-design §3): a land regiment is one
 ## wooden piece on a lacquered plinth (spec 2026-10-06-war-room-wooden-pieces),
 ## a fleet a flat tin token on its base.
@@ -216,9 +217,15 @@ func test_a_moved_regiment_is_pushed_to_its_new_place() -> void:
 	view.lay_sheet(_home_sheet())
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
-	var p: Dictionary = WarRoom.on_sheet(repo, state, _home_sheet())[0]
-	var code := String(p["code"])
+	var code := String(WarRoom.on_sheet(repo, state, _home_sheet())[0]["code"])
 	ArmySystem.ensure(repo, state)
+	# stood in open ground: units camped nearer than the table's plinths are spread apart
+	# (WarPieces._spread), and the camp pitch (4400 m) puts a neighbour under a 5 px push
+	ClearPiece.stand_alone(view, repo, state, code)
+	var p: Dictionary = {}
+	for q: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
+		if String(q["code"]) == code:
+			p = q
 	var to: Vector2 = (p["at"] as Vector2) + Vector2(5.0, 0.0)
 	var m := ArmySystem.pack_to_metres(repo, to)
 	state.regiments[code]["x_m"] = m.x
@@ -423,6 +430,7 @@ func test_a_push_in_flight_to_the_same_place_is_not_restarted() -> void:
 	await wait_process_frames(2)
 	var pieces: WarPieces = view.get_node("%Pieces")
 	var code := _land_code()
+	ClearPiece.stand_alone(view, repo, state, code)    # open ground, as above
 	var at: Vector2 = WarRoom.on_sheet(repo, state, _home_sheet())[0]["at"]
 	for p: Dictionary in WarRoom.on_sheet(repo, state, _home_sheet()):
 		if String(p["code"]) == code:

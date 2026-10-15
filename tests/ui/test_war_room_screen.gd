@@ -1051,7 +1051,12 @@ func test_the_pieces_stand_where_the_map_draws_them() -> void:
 		var shared := mine.any(func(o: Dictionary) -> bool:
 			return String(o["regiment_code"]) != String(reg["regiment_code"]) \
 				and rect.has_point(ArmySystem.position_of(Game.data, Game.state, o)))
-		if shared:
+		# and in open ground: a neighbour within a plinth's reach of the drawn point
+		# would spread this piece off it (the 4400 m camp pitch, spec 2026-10-14-unit-clearance)
+		var crowded := mine.any(func(o: Dictionary) -> bool:
+			return String(o["regiment_code"]) != String(reg["regiment_code"]) \
+				and ArmySystem.position_of(Game.data, Game.state, o).distance_to(reg_at + Vector2(4.5, -1.25)) < 6.0)
+		if shared and not crowded:
 			code = String(reg["regiment_code"])
 			engine = reg_at
 			break
