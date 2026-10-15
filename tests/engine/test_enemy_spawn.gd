@@ -91,7 +91,7 @@ func test_new_campaign_spawns_every_host() -> void:
 				assert_eq(at, start, "the first unit stands at the assembly point")
 				first = false
 			else:
-				assert_lte(Vector2(at - start).length(), 6000.0, "the rest camp round the assembly point")
+				assert_lte(Vector2(at - start).length(), 3.0 * float(repo.bal("army_slot_spacing_m")) + 100.0, "the rest camp round the assembly point (three rings at most)")
 			assert_eq(Vector2i(int(f["dest_x_m"]), int(f["dest_y_m"])), at)
 			assert_eq(String(f["order"]), ArmySystem.ORDER_STANDBY)
 			# the shape of a regiment's state, plus the host
@@ -189,7 +189,7 @@ func test_a_foe_is_seated_once_at_its_foe_position() -> void:
 		var m := ArmySystem.pack_to_metres(repo, hs[0])
 		if m == start:
 			on_point += 1
-		if Vector2(m - start).length() <= 6000.0:   # the units are spread round the point (clearance)
+		if Vector2(m - start).length() <= 3.0 * float(repo.bal("army_slot_spacing_m")) + 100.0:   # the units are spread round the point (clearance)
 			here += 1
 	assert_eq(on_point, 1, "the first unit stands on its point")
 	assert_gte(here, EnemyAi.host_units(repo, s, h).size(), "the host is round its point")

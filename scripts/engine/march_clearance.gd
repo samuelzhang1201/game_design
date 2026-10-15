@@ -1,8 +1,10 @@
 class_name MarchClearance
 extends RefCounted
 ## The geometry of unit clearance (spec docs/superpowers/specs/2026-10-14-unit-
-## clearance-and-scouting-design.md §a, §b): every land unit is a disc of
-## radius C (balance `army_clearance_m`) that no other unit's centre may enter.
+## clearance-and-scouting-design.md §a, §b): every land unit is a disc whose
+## radius is its arm's (`data/army/army_clearance.csv`); two units' centres stay
+## at least D = r_a + r_b apart. Every function takes D per blocker, and works
+## on the disc of D + 1 (the metre's margin that whole-metre rounding cannot eat).
 ## Pure whole-metre geometry: where a march first comes within C of a unit
 ## (`first_entry`), the halt point in front of it (`halt_point`), and the way
 ## round a clump of units (`detour`: an octagon round each, their convex hull,
@@ -16,20 +18,21 @@ const _DIRS := [Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1), Vector2i(-1, 1),
 const _TOL := 1e-9
 
 
-## The octagon's radius: ceil(C / cos 22.5 degrees), so every edge stands at
-## least C from the centre.
-static func r8(c: int) -> int:
-	return int(ceil(float(c) / cos(deg_to_rad(22.5))))
+## The octagon's radius: ceil(D / cos 22.5 degrees) + 1, so every edge stands
+## more than D from the centre even where a whole-metre stop rounds it.
+static func r8(d: int) -> int:
+	return int(ceil(float(d) / cos(deg_to_rad(22.5)))) + 1
 
 
-## The eight corners of the octagon round `q` for clearance `c`.
-static func octagon(q: Vector2i, c: int) -> Array:
-	var r := r8(c)
-	var diag := int(round(float(r) * sqrt(0.5)))
+## The eight corners of the octagon round `q` for clearance `d`; the diagonal
+## corners round UP.
+static func octagon(q: Vector2i, d: int) -> Array:
+	var r := r8(d)
+	var diag := int(ceil(float(r) * sqrt(0.5)))
 	var out: Array = []
-	for d: Vector2i in _DIRS:
-		var k := diag if d.x != 0 and d.y != 0 else r
-		out.append(q + Vector2i(d.x * k, d.y * k))
+	for dir: Vector2i in _DIRS:
+		var k := diag if dir.x != 0 and dir.y != 0 else r
+		out.append(q + Vector2i(dir.x * k, dir.y * k))
 	return out
 
 
@@ -65,11 +68,11 @@ static func _cross(o: Vector2i, b: Vector2i, p: Vector2i) -> int:
 	return (b.x - o.x) * (p.y - o.y) - (b.y - o.y) * (p.x - o.x)
 
 
-## The hull round the octagons of `centres`.
-static func hull_of(centres: Array, c: int) -> Array:
+## The hull round the octagons of `centres` (`ds[i]` the clearance to centre i).
+static func hull_of(centres: Array, ds: Array) -> Array:
 	var pts: Array = []
-	for q: Vector2i in centres:
-		pts.append_array(octagon(q, c))
+	for i in centres.size():
+		pts.append_array(octagon(centres[i], int(ds[i])))
 	return hull(pts)
 
 
@@ -83,25 +86,30 @@ static func in_hull(h: Array, p: Vector2i) -> bool:
 	return true
 
 
-## The indices of `centres` that make a clump with `first`: every centre within
-## 2C of a member, transitively (ascending order).
-static func clump(first: int, centres: Array, c: int) -> Array:
-	var members := [first]
-	var limit := 4 * c * c
+## The indices of `centres` that make a clump with `first`: every centre whose
+## octagon touches a member's (the centres within r8 + r8 of each other),
+## transitively, but none further than `limit_m` from the first (a whole host
+## strung out along a road is not ONE obstacle; the later passes take the rest)
+## (ascending order).
+static func clump(first: int, centres: Array, ds: Array, limit_m := 1 << 30) -> Array:
+	var members := {first: true}
+	var cap2 := limit_m * limit_m
 	var grew := true
 	while grew:
 		grew = false
 		for i in centres.size():
-			if i in members:
+			if members.has(i) or dist2(centres[i], centres[first]) > cap2:
 				continue
 			for m: int in members:
+				var reach := r8(int(ds[i])) + r8(int(ds[m]))
 				var d: Vector2i = centres[i] - centres[m]
-				if d.x * d.x + d.y * d.y <= limit:
-					members.append(i)
+				if d.x * d.x + d.y * d.y <= reach * reach:
+					members[i] = true
 					grew = true
 					break
-	members.sort()
-	return members
+	var out := members.keys()
+	out.sort()
+	return out
 
 
 ## Squared distance in whole numbers.
@@ -110,12 +118,13 @@ static func dist2(a: Vector2i, b: Vector2i) -> int:
 	return d.x * d.x + d.y * d.y
 
 
-## Where the segment a->b first comes within `c` of `q`: the smaller root of
-## |a + t(b - a) - q| = c in [0, 1], rounded to whole metres and, were the
-## rounding to leave it inside c, stepped back along the path one metre at a
-## time until it stands at least c away. `a` itself when the segment never
-## enters the disc (or `a` is already inside it).
-static func halt_point(a: Vector2i, b: Vector2i, q: Vector2i, c: int) -> Vector2i:
+## Where the segment a->b first comes within D + 1 of `q`: the smaller root of
+## |a + t(b - a) - q| = D + 1 in [0, 1], rounded to whole metres and, were the
+## rounding to leave it inside, stepped back along the path one metre at a time
+## until it stands at least D + 1 away. `a` itself when the segment never
+## enters the disc, or `a` is already inside it.
+static func halt_point(a: Vector2i, b: Vector2i, q: Vector2i, pair: int) -> Vector2i:
+	var c := pair + 1
 	var t := _entry_t(a, b, q, c)
 	if t < 0.0:
 		return a
@@ -133,17 +142,22 @@ static func halt_point(a: Vector2i, b: Vector2i, q: Vector2i, c: int) -> Vector2
 
 
 ## The segment parameter at which a->b enters the disc (centre q, radius c) in
-## [0, 1]; -1.0 when it does not, or `a` already stands inside.
+## [0, 1]; -1.0 when it does not. From a point already INSIDE the disc: 0.0 when
+## the leg closes on the centre (it is stopped on the spot), -1.0 when it only
+## walks away from it.
 static func _entry_t(a: Vector2i, b: Vector2i, q: Vector2i, c: int) -> float:
 	if dist2(a, q) < c * c:
-		return -1.0
-	var d := Vector2(b - a)
-	var f := Vector2(a - q)
-	var qa := d.dot(d)
+		return 0.0 if (b.x - a.x) * (q.x - a.x) + (b.y - a.y) * (q.y - a.y) > 0 else -1.0
+	# 64-bit scalars (a Vector2 is 32-bit and loses the tangent)
+	var dx := float(b.x - a.x)
+	var dy := float(b.y - a.y)
+	var fx := float(a.x - q.x)
+	var fy := float(a.y - q.y)
+	var qa := dx * dx + dy * dy
 	if qa <= 0.0:
 		return -1.0
-	var qb := 2.0 * f.dot(d)
-	var qc := f.dot(f) - float(c) * float(c)
+	var qb := 2.0 * (fx * dx + fy * dy)
+	var qc := fx * fx + fy * fy - float(c) * float(c)
 	var disc := qb * qb - 4.0 * qa * qc
 	if disc <= 0.0:
 		return -1.0   # a pass at exactly c touches, never enters
@@ -154,9 +168,9 @@ static func _entry_t(a: Vector2i, b: Vector2i, q: Vector2i, c: int) -> float:
 ## The first disc a walk along `here` -> `path` enters: {index (into `centres`),
 ## leg (the index into `path` of the leg's end; the leg starts at `here` or the
 ## point before), at (the halt point, whole metres), dist (metres along the
-## path to it)}; {} when none is entered. Within one leg the disc entered at
+## path to it)}; `ds[i]` is the clearance to centre i. {} when none is entered. Within one leg the disc entered at
 ## the smallest parameter wins, ties to the lower index.
-static func first_entry(here: Vector2i, path: Array, centres: Array, c: int) -> Dictionary:
+static func first_entry(here: Vector2i, path: Array, centres: Array, ds: Array) -> Dictionary:
 	var prev := here
 	var walked := 0.0
 	for i in path.size():
@@ -164,12 +178,12 @@ static func first_entry(here: Vector2i, path: Array, centres: Array, c: int) -> 
 		var best_t := 2.0
 		var best := -1
 		for k in centres.size():
-			var t := _entry_t(prev, p, centres[k], c)
+			var t := _entry_t(prev, p, centres[k], int(ds[k]) + 1)
 			if t >= 0.0 and t < best_t:
 				best_t = t
 				best = k
 		if best >= 0:
-			var at := halt_point(prev, p, centres[best], c)
+			var at := halt_point(prev, p, centres[best], int(ds[best]))
 			return {"index": best, "leg": i, "at": at, "dist": walked + Vector2(prev).distance_to(Vector2(at))}
 		walked += Vector2(prev).distance_to(Vector2(p))
 		prev = p
@@ -218,8 +232,8 @@ static func length_of(pts: Array) -> int:
 ## points after X), entry E, exit X} or {kind "wait", at E} when both sides are
 ## closed (or the walk has no clean crossing: it starts inside the hull, `dist` 0);
 ## `dist` is the metres of the road up to E, where the column stands. `leg_ok` unset: every leg is open.
-static func detour(here: Vector2i, path: Array, centres: Array, c: int, leg_ok := Callable()) -> Dictionary:
-	var h := hull_of(centres, c)
+static func detour(here: Vector2i, path: Array, centres: Array, ds: Array, leg_ok := Callable(), hull_in := []) -> Dictionary:
+	var h: Array = hull_in if not hull_in.is_empty() else hull_of(centres, ds)
 	var n := h.size()
 	var inside := in_hull(h, here)
 	var first := {}
@@ -290,8 +304,7 @@ static func detour(here: Vector2i, path: Array, centres: Array, c: int, leg_ok :
 	back = MarchRoute.distinct(back)
 	var sides: Array = []
 	for side: Array in [fwd, back]:
-		sides.append({"pts": side, "len": length_of(side), "right": _rightness(e_pt, x_pt, side),
-			"open": _open(side, leg_ok)})
+		sides.append({"pts": side, "len": length_of(side), "right": _rightness(e_pt, x_pt, side)})
 	var order := [0, 1]
 	var l0 := int(sides[0]["len"])
 	var l1 := int(sides[1]["len"])
@@ -299,7 +312,7 @@ static func detour(here: Vector2i, path: Array, centres: Array, c: int, leg_ok :
 		order = [1, 0]
 	for k2: int in order:
 		var s: Dictionary = sides[k2]
-		if bool(s["open"]):
+		if _open(s["pts"], leg_ok):
 			var out: Array = path.slice(0, first_leg)
 			out.append_array(s["pts"])
 			out.append_array(path.slice(last_leg))

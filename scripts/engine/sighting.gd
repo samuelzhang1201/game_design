@@ -181,6 +181,39 @@ static func _land_units(repo: DataRepository, state: GameState) -> Array:
 	return out
 
 
+## The units the crown's contact and scouting letters may name, in code order,
+## all with men under arms: the foes (the raiders' hosts in the field) and the
+## raider realm's STANDING roster units at their pack places (owner 2026-10-15
+## R-D: they are the crown's enemies too).
+static func hostile_units(repo: DataRepository, state: GameState) -> Array:
+	var out: Array = []
+	var raider := repo.resolve_realm("raider_realm")
+	var all := ArmySystem.roster(repo, state)
+	var codes: Array = all.keys()
+	for f: Variant in state.foes:
+		if not all.has(f):
+			codes.append(f)
+	codes.sort()
+	for c: Variant in codes:
+		var code := String(c)
+		var reg: Dictionary = all.get(code, {})
+		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		if not state.foes.has(code) and String(reg.get("kingdom_code", "")) != raider:
+			continue
+		if men_of(repo, state, code) > 0:
+			out.append(code)
+	return out
+
+
+## Where a hostile unit stands, whole metres: a foe's live place, else its pack place.
+static func unit_at_m(repo: DataRepository, state: GameState, code: String) -> Vector2i:
+	if state.foes.has(code):
+		var e: Dictionary = state.foes[code]
+		return Vector2i(int(e["x_m"]), int(e["y_m"]))
+	return ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code, state)))
+
+
 ## The foe units in CONTACT — within battle_contact_km of a land unit of the
 ## crown's with men, marching or standing — each with the first (code order)
 ## unit of ours that has it so: {foe code -> our unit's code}, foe code order.
@@ -188,14 +221,8 @@ static func contacts(repo: DataRepository, state: GameState) -> Dictionary:
 	var out: Dictionary = {}
 	var reach := int(round(repo.bal("battle_contact_km") * 1000.0))
 	var mine := _land_units(repo, state)
-	var codes: Array = state.foes.keys()
-	codes.sort()
-	for c: Variant in codes:
-		var code := String(c)
-		if men_of(repo, state, code) <= 0:
-			continue
-		var e: Dictionary = state.foes[code]
-		var at := Vector2i(int(e["x_m"]), int(e["y_m"]))
+	for code: String in hostile_units(repo, state):
+		var at := unit_at_m(repo, state, code)
 		for u: Dictionary in mine:
 			var d: Vector2i = at - (u["at"] as Vector2i)
 			if d.x * d.x + d.y * d.y <= reach * reach:
@@ -209,14 +236,10 @@ static func contacts(repo: DataRepository, state: GameState) -> Dictionary:
 static func scouted(repo: DataRepository, state: GameState, in_contact: Dictionary) -> Dictionary:
 	var out: Dictionary = {}
 	var fans := sectors(repo, state)
-	var codes: Array = state.foes.keys()
-	codes.sort()
-	for c: Variant in codes:
-		var code := String(c)
-		if in_contact.has(code) or men_of(repo, state, code) <= 0:
+	for code: String in hostile_units(repo, state):
+		if in_contact.has(code):
 			continue
-		var e: Dictionary = state.foes[code]
-		var at := Vector2i(int(e["x_m"]), int(e["y_m"]))
+		var at := unit_at_m(repo, state, code)
 		for fan: Dictionary in fans:
 			if in_sector(at, fan):
 				out[code] = String(fan["code"])
@@ -240,18 +263,15 @@ static func scout_day(repo: DataRepository, state: GameState) -> void:
 		return
 	var today := state.absolute_day()
 	var gap := int(repo.bal("scout_report_gap_days"))
+	var hostile := hostile_units(repo, state)
 	for k: Variant in state.scout_log.keys():
-		var code := String(k)
-		if not state.foes.has(code) or men_of(repo, state, code) <= 0:
+		if not String(k) in hostile:
 			state.scout_log.erase(k)
 	var touching := contacts(repo, state)
 	var sighted := scouted(repo, state, touching)
 	var contact_rows: Array = []
 	var scout_rows: Array = []
-	var codes: Array = state.foes.keys()
-	codes.sort()
-	for c: Variant in codes:
-		var code := String(c)
+	for code: String in hostile:
 		var seen_on: Dictionary = state.scout_log.get(code, {})
 		if touching.has(code):
 			if not seen_on.has("contact") or today - int(seen_on["contact"]) > gap:

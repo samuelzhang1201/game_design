@@ -103,6 +103,8 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 					if int(seen["siege_begin"]) < 0:
 						seen["siege_begin"] = today
 				"siege_day":
+					if String(e.get("town", seen["town"])) != String(seen["town"]):
+						continue      # another host's siege of another town (the claims are the chosen town's)
 					var d := e.duplicate()
 					d["on"] = today
 					seen["siege_days"].append(d)

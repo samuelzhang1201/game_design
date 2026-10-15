@@ -91,6 +91,12 @@ func test_a_garrison_stands_in_its_town() -> void:
 	var b: Dictionary = data.burgs[town]
 	var at := Vector2(float(b["x"]), float(b["y"]))
 	ArmySystem.set_march(data, s, code, at)
+	# the seat is emptied for it: the holder that stood on the town's point leaves it (a seat
+	# is taken only while no unit stands within clearance of the point)
+	var holder := ArmyGround.seat_of(data, s, town)
+	if holder != "" and holder != code and s.regiments.has(holder):
+		s.regiments[holder]["x_m"] = int(s.regiments[holder]["x_m"]) + 40000
+		s.regiments[holder]["dest_x_m"] = int(s.regiments[holder]["x_m"])
 	s.town_seat.erase(town)
 	var m := ArmySystem.pack_to_metres(data, at)
 	s.regiments[code]["x_m"] = m.x

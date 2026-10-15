@@ -436,10 +436,9 @@ static func _sighting_letter(repo: DataRepository, state: GameState, rows: Array
 	for row: Dictionary in rows:
 		var foe := String(row["foe"])
 		var unit := String(row["unit"])
-		var e: Dictionary = state.foes.get(foe, {})
-		if e.is_empty():
+		if ArmySystem.regiment(repo, foe, state).is_empty():
 			continue
-		var at := ArmySystem.metres_to_pack(repo, Vector2i(int(e["x_m"]), int(e["y_m"])))
+		var at := ArmySystem.metres_to_pack(repo, Sighting.unit_at_m(repo, state, foe))
 		if facts.is_empty():
 			first_at = at
 		var doing := battle_words(repo, "scout_doing_stand", {}, pick)
@@ -450,13 +449,19 @@ static func _sighting_letter(repo: DataRepository, state: GameState, rows: Array
 					{"compass": WarFront.compass_words(WarFront.facing_deg(heading))}, pick)
 		facts.append(MissiveLog.words("%s@%s" % [kind, foe], label, battle_words(repo, kind + "_line", {
 			"unit": _unit_label(repo, unit), "arm": _arm_word(repo, unit),
-			"foe": _unit_label(repo, foe), "foe_arm": _arm_word(repo, foe),
+			"foe": _unit_label(repo, foe), "foe_arm": _arm_word(repo, foe), "realm": _realm_word(repo, foe),
 			"place": Intel.place_label(repo, state, at), "doing": doing,
 			"men": Intel.num(Sighting.about(repo, Sighting.men_of(repo, state, foe), q, 0))}, pick)))
 	if facts.is_empty():
 		return {}
 	return MissiveLog.make(kind, column, state.absolute_day(), MissiveLog.subject("point", "", -1, first_at),
 		battle_words(repo, kind + "_title", {}, pick), facts)
+
+
+## The label of the kingdom a unit serves (its own realm slot, not a fixed one).
+static func _realm_word(repo: DataRepository, code: String) -> String:
+	var k := String(ArmySystem.regiment(repo, code).get("kingdom_code", ""))
+	return String((repo.kingdoms.get(k, {}) as Dictionary).get("label", k))
 
 
 ## A unit's arm as a word: army_split.csv's label_word, lower case ("foot", "horse");

@@ -106,7 +106,10 @@ static func occupier_of(state: GameState, cell: int) -> String:
 
 
 ## True when a foe stands at the town: within battle_contact_km of its point
-## or within its reach (data/army/army_town_reach.csv) — the ring arrival uses.
+## or within its reach (data/army/army_town_reach.csv) — the ring arrival uses —
+## or, with the clearance on, within army_spread_reach_m: a host's columns are
+## spread round their target on the camp lattice (ArmySystem._spread_foe), the
+## outer rings further than the contact, and the whole host is at the town.
 static func at_town(repo: DataRepository, state: GameState, code: String, town: String) -> bool:
 	var e: Dictionary = state.foes.get(code, {})
 	if e.is_empty():
@@ -114,6 +117,8 @@ static func at_town(repo: DataRepository, state: GameState, code: String, town: 
 	var at := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
 	var reach := maxi(int(round(repo.bal("battle_contact_km") * 1000.0)),
 		int(round(float(repo.army_town_reach.get(String((repo.burgs.get(town, {}) as Dictionary).get("group", "")), 0.0)) * 1000.0)))
+	if ArmyGround.clearance_on(repo):
+		reach = maxi(reach, int(repo.bal("army_spread_reach_m")))
 	var dx := int(e["x_m"]) - at.x
 	var dy := int(e["y_m"]) - at.y
 	return dx * dx + dy * dy <= reach * reach

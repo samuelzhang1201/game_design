@@ -4,7 +4,7 @@ extends RefCounted
 ## 2026-10-07-army-split-and-ground-design.md §4; clearance, owner 2026-10-14,
 ## spec 2026-10-14-unit-clearance-and-scouting-design): every land unit holds
 ## ground — a column on the march too (`held_taken`), a fleet never — and no
-## two stand within army_clearance_m (C) of each other (MarchClearance, the
+## two stand within the sum of their arms' clearance radii (army_clearance.csv) of each other (MarchClearance, the
 ## march's side of the rule). Around a centre the camps lie on a hex
 ## lattice of army_slot_spacing_m, ring by ring (ring k has 6k slots, taken
 ## from the east counter-clockwise); a unit takes the first free slot at its
@@ -47,21 +47,43 @@ static func start_ring(repo: DataRepository, arm: String) -> int:
 	return 1
 
 
-## Whether the clearance rule is on (army_clearance_m > 0).
+## Whether the clearance rule is on (army_clearance_on).
 static func clearance_on(repo: DataRepository) -> bool:
-	return int(repo.bal("army_clearance_m")) > 0
+	return int(repo.bal("army_clearance_on")) > 0
+
+
+## An arm's clearance radius in whole metres (data/army/army_clearance.csv); 0 off.
+static func arm_radius(repo: DataRepository, arm: String) -> int:
+	return int(repo.army_clearance.get(arm, 0)) if clearance_on(repo) else 0
+
+
+## A unit's clearance radius: its chief arm's (a royal unit too); a fleet's 0.
+static func unit_radius(repo: DataRepository, reg: Dictionary) -> int:
+	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+		return 0
+	return arm_radius(repo, MapObjects.regiment_arm(repo, reg))
+
+
+## The largest radius of any arm.
+static func max_radius(repo: DataRepository) -> int:
+	var best := 0
+	for arm: String in repo.army_clearance:
+		best = maxi(best, arm_radius(repo, arm))
+	return best
 
 
 ## An empty record of held ground: points bucketed by the pitch.
 static func new_taken(repo: DataRepository) -> Dictionary:
-	return {"cell": maxi(int(repo.bal("army_slot_spacing_m")), 1), "grid": {}}
+	return {"cell": maxi(int(repo.bal("army_slot_spacing_m")), 1), "grid": {}, "max_r": 0}
 
 
-static func take(taken: Dictionary, p_m: Vector2i) -> void:
+## Hold the ground at `p_m` with a unit of clearance radius `radius`.
+static func take(taken: Dictionary, p_m: Vector2i, radius := 0) -> void:
 	var key := _bucket(taken, p_m)
 	if not (taken["grid"] as Dictionary).has(key):
 		taken["grid"][key] = []
-	(taken["grid"][key] as Array).append(p_m)
+	(taken["grid"][key] as Array).append(Vector3i(p_m.x, p_m.y, radius))
+	taken["max_r"] = maxi(int(taken["max_r"]), radius)
 
 
 static func _bucket(taken: Dictionary, p_m: Vector2i) -> Vector2i:
@@ -69,25 +91,28 @@ static func _bucket(taken: Dictionary, p_m: Vector2i) -> Vector2i:
 	return Vector2i(floori(float(p_m.x) / cell), floori(float(p_m.y) / cell))
 
 
-## Ground a unit may camp on: land, not a blocked terrain, and no unit held
-## within army_clearance_m (half a pitch when that is 0). `any_terrain` waives the blocked terrains, for a
+## Ground a unit of clearance `radius` may camp on: land, not a blocked terrain,
+## and no unit held within the sum of the two radii (half a pitch with the rule
+## off). `any_terrain` waives the blocked terrains, for a
 ## town that stands among them (a mountain hold): its camps lie on the
 ## mountain, the one ground it has.
 static func is_free(repo: DataRepository, taken: Dictionary, p_m: Vector2i,
-		any_terrain := false) -> bool:
+		any_terrain := false, radius := 0) -> bool:
 	var px := ArmySystem.metres_to_pack(repo, p_m)
 	if MapEconomy.cell_at(repo, px) < 0:
 		return false
 	if not any_terrain and repo.army_camp_blocked.has(ArmySystem.terrain_at(repo, px)):
 		return false
-	var c := int(repo.bal("army_clearance_m"))
-	var limit := float(c) if c > 0 else float(int(taken["cell"])) / 2.0
-	var reach := maxi(1, ceili(limit / float(int(taken["cell"]))))   # buckets either side
+	var on := clearance_on(repo)
+	var cell := int(taken["cell"])
+	var half := float(cell) / 2.0
+	var reach := maxi(1, ceili(float(radius + int(taken["max_r"])) / float(cell))) if on else 1
 	var home := _bucket(taken, p_m)
 	for dy in range(-reach, reach + 1):
 		for dx in range(-reach, reach + 1):
-			for q: Vector2i in (taken["grid"] as Dictionary).get(home + Vector2i(dx, dy), []):
-				if Vector2(q - p_m).length() < limit:
+			for q: Vector3i in (taken["grid"] as Dictionary).get(home + Vector2i(dx, dy), []):
+				var limit := float(radius + q.z) if on else half
+				if Vector2(q.x - p_m.x, q.y - p_m.y).length() < limit:
 					return false
 	return true
 
@@ -126,20 +151,21 @@ static func in_reach(repo: DataRepository, town: String, p_m: Vector2i) -> bool:
 ## NONE past army_slot_max_rings. With `near_m` (not NONE) the slot taken is the
 ## nearest to that point among the FREE slots of the first ring that has any (a
 ## column halted before a unit camps on the side it came from), the ring's own
-## order breaking ties.
+## order breaking ties. `from_ring` > 0 starts the search at that ring whatever the arm.
 static func free_slot(repo: DataRepository, centre_m: Vector2i, arm: String, taken: Dictionary,
-		town: String, any_terrain := false, near_m := NONE) -> Vector2i:
-	if town == "" and is_free(repo, taken, centre_m, any_terrain):
+		town: String, any_terrain := false, near_m := NONE, from_ring := 0) -> Vector2i:
+	var radius := arm_radius(repo, arm)
+	if town == "" and is_free(repo, taken, centre_m, any_terrain, radius):
 		return centre_m
 	var spacing := int(repo.bal("army_slot_spacing_m"))
-	for k in range(first_ring(repo, arm, town), int(repo.bal("army_slot_max_rings")) + 1):
+	for k in range(from_ring if from_ring > 0 else first_ring(repo, arm, town), int(repo.bal("army_slot_max_rings")) + 1):
 		var best := NONE
 		var best_d := -1
 		for ax: Vector2i in ring(k):
 			var p := slot_m(centre_m, ax, spacing)
 			if town != "" and in_reach(repo, town, p):
 				continue
-			if is_free(repo, taken, p, any_terrain):
+			if is_free(repo, taken, p, any_terrain, radius):
 				if near_m == NONE:
 					return p
 				var d := MarchClearance.dist2(p, near_m)
@@ -251,7 +277,7 @@ static func held_taken(repo: DataRepository, state: GameState, except_code: Stri
 		var r: Dictionary = all[c]
 		if c == except_code or String(r.get("is_naval", "0")) == "1":
 			continue
-		take(taken, ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, r)))
+		take(taken, ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, r)), unit_radius(repo, r))
 	return taken
 
 
@@ -283,11 +309,13 @@ static func settle(repo: DataRepository, state: GameState, code: String, near_m 
 	# it takes the newer of its own laws and the camp's (laws spec §2.4)
 	LawSystem.on_settle(repo, state, code)
 	var centre := town_point_m(repo, town) if town != "" else here
-	if town != "" and seat_of(repo, state, town) == "":
+	var taken := held_taken(repo, state, code)
+	# the seat is the town's point: taken only while no other unit stands within clearance of it
+	if town != "" and seat_of(repo, state, town) == "" \
+			and (not clearance_on(repo) or is_free(repo, taken, centre, true, unit_radius(repo, reg))):
 		state.town_seat[town] = code
 		_put(entry, centre)
 		return
-	var taken := held_taken(repo, state, code)
 	var arm := MapObjects.regiment_arm(repo, reg)
 	var slot := free_slot(repo, centre, arm, taken, town, false, near_m)
 	if slot == NONE:
@@ -367,7 +395,7 @@ static func take_seat(repo: DataRepository, state: GameState, code: String) -> b
 
 ## A seat whose town its holder's kingdom no longer holds is cleared, and an
 ## empty seat of a town with units camped by it is refilled (`refill`) once no
-## unit stands within army_clearance_m of the town's point (the column that
+## unit stands within clearance of the town's point (the column that
 ## left it has marched clear; a day, after the march; spec §4.4).
 static func reconcile(repo: DataRepository, state: GameState) -> void:
 	var towns := state.town_seat.keys()
@@ -389,5 +417,5 @@ static func reconcile(repo: DataRepository, state: GameState) -> void:
 	var empty := camps.keys()
 	empty.sort()
 	for town: String in empty:
-		if is_free(repo, held_taken(repo, state, ""), town_point_m(repo, town), true):
+		if is_free(repo, held_taken(repo, state, ""), town_point_m(repo, town), true, max_radius(repo)):
 			refill(repo, state, town)

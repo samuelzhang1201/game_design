@@ -369,12 +369,25 @@ static func _town_contact(repo: DataRepository, state: GameState, town: String, 
 	var away := at.distance_to(Vector2(float(b["x"]), float(b["y"])))
 	if away <= ArmySystem.town_reach_px(repo, b):
 		return town
-	# a column halted before a village (or a unit at it) stands army_clearance_m
-	# off its point, outside the village's reach: it touches within a few metres of that
-	var c := int(repo.bal("army_clearance_m"))
-	if c > 0 and roundi(away * float(ArmySystem.metres_per_pack_px(repo))) <= c + int(repo.bal("army_clearance_touch_m")):
-		return town
+	# a column halted before the unit on a village's point stands the two arms'
+	# radii off it, outside the village's reach: it touches within a few metres of that
+	if ArmyGround.clearance_on(repo):
+		var seat := ArmySystem.regiment(repo, ArmyGround.seat_of(repo, state, town), state)
+		var r_seat := ArmyGround.max_radius(repo) if seat.is_empty() else ArmyGround.unit_radius(repo, seat)
+		var limit := r_seat + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, f, state)) \
+			+ int(repo.bal("army_clearance_touch_m"))
+		if roundi(away * float(ArmySystem.metres_per_pack_px(repo))) <= limit:
+			return town
 	return ""
+
+
+## Whether foe `f`'s host has the assault on `town` up (SIEGE, the flag raised).
+static func _assaults(state: GameState, f: String, town: String) -> bool:
+	if town == "":
+		return false
+	var host := String((state.foes.get(f, {}) as Dictionary).get("host", ""))
+	var h: Dictionary = state.ai_hosts.get(host, {})
+	return String(h.get("mode", "")) == "SIEGE" and int(h.get("assault", 0)) == 1 and String(h.get("target_id", "")) == town
 
 
 ## The battle fought at `town` (the earliest id), {} when none.
@@ -465,6 +478,9 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 				continue    # a besieged town's garrison waits for the assault
 			# read fresh: a column halted in a town's reach today is its garrison now
 			var town := _town_contact(repo, state, ArmyGround.garrison_town(repo, state, p), f)
+			if town == "" and _assaults(state, f, String(garrisons[pc])) \
+					and _within(_at_m(repo, state, f), _at_m(repo, state, p), reach):
+				town = String(garrisons[pc])   # the assault is up: a besieger at hand of the garrison storms it, never a field battle
 			if town == "" and not _within(_at_m(repo, state, f), _at_m(repo, state, p), reach):
 				continue
 			var bf := battle_of(state, f)

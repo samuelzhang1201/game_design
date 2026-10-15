@@ -55,6 +55,12 @@ func _arrive_at_home(code: String, seated: bool) -> Dictionary:
 	var at := Vector2(float(b["x"]), float(b["y"]))
 	ArmySystem.set_march(data, s, code, at)
 	if seated:
+		# the seat is emptied for it: the holder that stood on the town's point leaves it
+		# (a seat is taken only while no unit stands within clearance of the point)
+		var holder := ArmyGround.seat_of(data, s, town)
+		if holder != "" and holder != code and s.regiments.has(holder):
+			s.regiments[holder]["x_m"] = int(s.regiments[holder]["x_m"]) + 40000
+			s.regiments[holder]["dest_x_m"] = int(s.regiments[holder]["x_m"])
 		s.town_seat.erase(town)
 	assert_true(seated or ArmyGround.seat_of(data, s, town) != "", "another holds the seat")
 	_place(code, at)

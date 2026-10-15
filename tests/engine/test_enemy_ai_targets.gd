@@ -688,7 +688,8 @@ func test_siege_begins_with_the_first_column_and_no_lone_battle() -> void:
 	assert_gt(siege_day, 0, "the host sat down to the siege")
 	for c: String in cols:
 		var e: Dictionary = s.foes[c]
-		assert_eq(Vector2i(int(e["dest_x_m"]), int(e["dest_y_m"])), at, c + " came on for the town")
+		# the first column is on the town's point, the others spread round it on the camp lattice (clearance)
+		assert_lte(Vector2(Vector2i(int(e["dest_x_m"]), int(e["dest_y_m"])) - at).length(), float(repo.bal("army_spread_reach_m")), c + " came on for the town")
 
 
 ## I2: a target another host holds is BANNED (ai_target_overlap_permille is

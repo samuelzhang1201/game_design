@@ -47,20 +47,23 @@ func _ring_of(c_m: Vector2i, p_m: Vector2i, pitch: int) -> int:
 	return (absi(q) + absi(r) + absi(q + r)) / 2
 
 
-func test_a_taken_point_blocks_the_clearance_round_it() -> void:
-	# army_clearance_m 1400 (spec 2026-10-14-unit-clearance-and-scouting-design):
-	# no centre within it of a held one, the metre at it free
+func test_a_taken_point_blocks_the_sum_of_the_two_radii_round_it() -> void:
+	# army_clearance.csv (spec 2026-10-14-unit-clearance-and-scouting-design, R-A):
+	# no centre within r_a + r_b of a held one, the metre at it free
 	var taken := ArmyGround.new_taken(repo)
 	var p := _land_m()
-	var c := int(repo.bal("army_clearance_m"))
-	assert_eq(c, 1400)
-	assert_true(ArmyGround.is_free(repo, taken, p))
-	ArmyGround.take(taken, p)
-	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(c - 1, 0)))
-	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(0, c - 1)))
-	assert_true(ArmyGround.is_free(repo, taken, p + Vector2i(c, 0)) \
-		or not ArmyGround.is_free(repo, ArmyGround.new_taken(repo), p + Vector2i(c, 0)),
+	var foot := ArmyGround.arm_radius(repo, "infantry")
+	var horse := ArmyGround.arm_radius(repo, "cavalry")
+	assert_eq([foot, horse], [1140, 2200])
+	assert_true(ArmyGround.is_free(repo, taken, p, false, foot))
+	ArmyGround.take(taken, p, foot)
+	var c := foot + horse
+	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(c - 1, 0), false, horse))
+	assert_false(ArmyGround.is_free(repo, taken, p + Vector2i(0, c - 1), false, horse))
+	assert_true(ArmyGround.is_free(repo, taken, p + Vector2i(c, 0), false, horse) \
+		or not ArmyGround.is_free(repo, ArmyGround.new_taken(repo), p + Vector2i(c, 0), false, horse),
 		"free unless that ground is itself water or blocked")
+	assert_gte(int(repo.bal("army_slot_spacing_m")), 2 * horse, "the camp pitch holds two of the widest units")
 
 
 func test_with_no_clearance_a_taken_point_blocks_half_a_pitch() -> void:

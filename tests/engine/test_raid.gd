@@ -478,7 +478,9 @@ func test_raid_templates_spell_no_kingdom() -> void:
 ## --- the tutorial, no orders (the T8 finding: every host went home hungry
 ## about day 33) ---------------------------------------------------------------------
 
-## The bound is three months: a host whose last manor is stripped may come on
+## The bound is four months (it was three before the unit clearance, spec
+## 2026-10-14: the hosts no longer share one stacked point, a raid on a manor
+## runs its own thirty days and the town falls near day 99): a host whose last manor is stripped may come on
 ## a town the crown's camp holds (its garrison, ArmyGround.garrison_town) and
 ## sit down to a siege on what it carries until hunger turns it home.
 func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
@@ -487,7 +489,7 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 	engine.advance(s)
 	var raiding_late := ""
 	var home_by := -1
-	while s.absolute_day() <= 90:
+	while s.absolute_day() <= 120:
 		var today := s.absolute_day()
 		if s.day >= Calendar.DAYS_PER_TICK:
 			engine.advance(s)
@@ -507,7 +509,7 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 			home_by = today
 	assert_ne(raiding_late, "", "plunder feeds a raiding host: one still raids after day 33")
 	assert_gt(home_by, 33, "the invasion outlasts the hosts' own stores")
-	assert_true(home_by > 0 and home_by <= 90, "and every host has turned for home or holds what it took by day 90 (%d)" % home_by)
+	assert_true(home_by > 0 and home_by <= 120, "and every host has turned for home or holds what it took by day 120 (%d)" % home_by)
 	gut.p("raiding past day 33: %s; every host homeward from day %d" % [raiding_late, home_by])
 
 
@@ -566,7 +568,7 @@ func test_a_town_is_raided_through_its_own_manor_from_inside_its_reach() -> void
 	# a column further out than the reach takes nothing
 	var s2 := SuiteData.campaign(repo, 11)
 	for c: String in EnemyAi.regiments_of(s2, h):
-		_place(s2, c, EnemyAi.target_point_m(repo, "town", town) + Vector2i(int(reach_km * 1000.0) + 500, 0),
+		_place(s2, c, EnemyAi.target_point_m(repo, "town", town) + Vector2i(maxi(int(reach_km * 1000.0), int(repo.bal("army_spread_reach_m"))) + 500, 0),
 			ArmySystem.ORDER_GARRISON)
 	s2.ai_hosts[h]["mode"] = "RAID"
 	s2.ai_hosts[h]["target_kind"] = "town"

@@ -130,7 +130,7 @@ static func _place(repo: DataRepository, unit: Dictionary, centre: Vector2i, arm
 		slot = ArmyGround.free_slot(repo, centre, arm, taken, town, true)
 	if slot == ArmyGround.NONE:
 		slot = centre
-	ArmyGround.take(taken, slot)
+	ArmyGround.take(taken, slot, ArmyGround.arm_radius(repo, arm))
 	_put(repo, unit, slot)
 
 
