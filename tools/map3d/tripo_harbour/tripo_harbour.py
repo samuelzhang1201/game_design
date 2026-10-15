@@ -54,8 +54,11 @@ JOBS = {
                  px=1024, voxel=0.12, kind="fort", trim=24.0, squeeze=0.7),
     "wall_tower": dict(cat="buildings", src="wall_tower_tripo.glb", yaw=0, fit=18.0, z0=0.0,
                        budget=2500, px=1024, voxel=0.08, kind="fort"),
+    # passage: (width, springing height) of an arched way cut through it along y
+    # (owner 2026-10-14: 加城门洞 — the voxel shell filled Tripo's door in, so the
+    # gate read as a tower on an unbroken curtain)
     "wall_gate": dict(cat="buildings", src="wall_gate_tripo.glb", yaw=0, fit=23.0, z0=0.0,
-                      budget=4000, px=2048, voxel=0.1, kind="fort"),
+                      budget=4000, px=2048, voxel=0.1, kind="fort", passage=(5.0, 5.5)),
     "pier": dict(cat="buildings", src="pier_tripo.glb", yaw=-90, fit=60.0, z0=5.9, budget=3000,
                  px=2048, voxel=0.1, kind="pier"),
     # the capital's cliff harbour (owner 2026-10-01: 适合那种我的首都建在悬崖边上的那种风格):
@@ -253,6 +256,51 @@ def _scrub(ob, rounds=6):
     return c
 
 
+PASSAGE_STONE = (0.34, 0.31, 0.27, 1.0)   # (0.20 read as a flat black hole, critic 2026-10-14)   # the passage's own masonry, baked as the atlas colour inside it
+
+
+def _passage(ob, width, spring):
+    """An arched way cut through `ob` along y: `width` wide, its arch springing
+    at `spring` (a half circle over it), from under the ground through both
+    faces. The cutter's faces carry a dark stone material, so a bake from a
+    cut source reads masonry inside the arch. EXACT boolean: both meshes are
+    closed shells, and so is the result (the census's holes stay 0)."""
+    lo, hi = T["_bounds"](ob)
+    bm = bmesh.new()
+    r, steps = width / 2.0, 12
+    y0, y1 = lo.y - 2.0, hi.y + 2.0
+    prof = [(-r, -2.0)] + [(-r * math.cos(math.pi * i / steps), spring + r * math.sin(math.pi * i / steps))
+                           for i in range(steps + 1)] + [(r, -2.0)]
+    front = [bm.verts.new((x, y0, z)) for x, z in prof]
+    back = [bm.verts.new((x, y1, z)) for x, z in prof]
+    n = len(prof)
+    bm.faces.new(front[::-1])
+    bm.faces.new(back)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((front[i], front[j], back[j], back[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(ob.name + "_passage")
+    bm.to_mesh(me)
+    bm.free()
+    cut = bpy.data.objects.new(ob.name + "_passage", me)
+    bpy.context.scene.collection.objects.link(cut)
+    cut.location = ob.location
+    mat = bpy.data.materials.get("passage_stone") or bpy.data.materials.new("passage_stone")
+    mat.use_nodes = True
+    bsdf = next(nd for nd in mat.node_tree.nodes if nd.type == "BSDF_PRINCIPLED")
+    bsdf.inputs["Base Color"].default_value = PASSAGE_STONE
+    me.materials.append(mat)
+    mod = ob.modifiers.new("passage", "BOOLEAN")
+    mod.operation = "DIFFERENCE"
+    mod.solver = "EXACT"
+    mod.object = cut
+    T["_select"](ob)
+    bpy.ops.object.modifier_apply(modifier=mod.name)
+    bpy.data.objects.remove(cut, do_unlink=True)
+    return sum(len(p.vertices) - 2 for p in ob.data.polygons)
+
+
 SPECK_M = 1.2   # a loose piece smaller than this across is dropped
 BASE_M = 8.0    # a fortification's own foot runs this far below z = 0
 
@@ -332,6 +380,9 @@ def build(t):
         T["SHEETS"].add(t)
         T["_reduce"](low, j["budget"], j["fit"])
     T["_reclose"](low)
+    if j.get("passage"):
+        _passage(high, *j["passage"])
+        _passage(low, *j["passage"])
     img = bpy.data.images.get(t + "_atlas")
     if img is not None:
         bpy.data.images.remove(img)
