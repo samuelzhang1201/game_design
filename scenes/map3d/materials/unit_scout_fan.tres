@@ -1,15 +1,17 @@
 [gd_resource type="ShaderMaterial" format=3 uid="uid://wpxmhlg7jn4j"]
 
-[ext_resource type="Shader" path="res://scripts/map3d/unit_scout_fan.gdshader" id="1_kvm4o"]
+[ext_resource type="Shader" uid="uid://da066ii3u66v3" path="res://scripts/map3d/unit_scout_fan.gdshader" id="1_kvm4o"]
 
 [resource]
 render_priority = -3
 shader = ExtResource("1_kvm4o")
 shader_parameter/colour = Color(1, 0.93, 0.75, 1)
-shader_parameter/fill_alpha = 0.06
-shader_parameter/wedge_alpha = 0.18
-shader_parameter/wedge_width_deg = 5.0
+shader_parameter/fill_alpha = 0.02000000095
+shader_parameter/wedge_alpha = 0.06000000285
+shader_parameter/wedge_width_deg = 15.00000068875
 shader_parameter/apex_feather = 0.12
-shader_parameter/rim_feather = 0.3
-shader_parameter/edge_feather = 0.1
+shader_parameter/rim_feather = 0.450000021375
+shader_parameter/edge_feather = 0.250000011875
+shader_parameter/rim_alpha = 0.0800000038
+shader_parameter/rim_width = 0.012000000569999999
 shader_parameter/period_s = 3.5

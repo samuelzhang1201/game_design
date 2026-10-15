@@ -134,6 +134,9 @@ sky_mode = 1
 
 [node name="Units" type="Node3D" parent="." unique_id=157155689]
 script = ExtResource("19_5bcyi")
+scout_rings = 32
+scout_spokes = 96
+scout_lift_m = 8.0
 
 [node name="Dust" type="Node3D" parent="." unique_id=1688739781]
 script = ExtResource("20_cqcm7")

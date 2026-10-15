@@ -20,6 +20,9 @@ uniform float apex_feather : hint_range(0.0, 1.0) = 0.12;
 uniform float rim_feather : hint_range(0.0, 1.0) = 0.3;
 // the share of the arc, at either side, over which the fill falls off
 uniform float edge_feather : hint_range(0.0, 1.0) = 0.1;
+// A soft outer arc keeps the coverage readable over patterned terrain.
+uniform float rim_alpha : hint_range(0.0, 1.0) = 0.0;
+uniform float rim_width : hint_range(0.001, 0.2) = 0.04;
 // seconds for the wedge to sweep there and back
 uniform float period_s : hint_range(0.5, 20.0) = 3.5;
 
@@ -35,6 +38,8 @@ void fragment() {
 	float theta = half_arc * sin(6.2831853 * (TIME / period_s + phase));
 	float off = abs(u * half_arc - theta);
 	float wedge = 1.0 - smoothstep(0.0, radians(wedge_width_deg), off);
+	float rim = smoothstep(1.0 - rim_width, 1.0 - rim_width * 0.5, v)
+		* (1.0 - smoothstep(1.0 - rim_width * 0.5, 1.0, v));
 	ALBEDO = colour.rgb;
-	ALPHA = clamp((fill_alpha + wedge_alpha * wedge) * shape * colour.a, 0.0, 1.0);
+	ALPHA = clamp(((fill_alpha + wedge_alpha * wedge) * shape + rim_alpha * rim * side) * colour.a, 0.0, 1.0);
 }
