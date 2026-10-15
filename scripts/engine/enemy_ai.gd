@@ -754,17 +754,18 @@ static func _march_host(repo: DataRepository, state: GameState, host_code: Strin
 			continue
 		if int(e["x_m"]) == to.x and int(e["y_m"]) == to.y:
 			continue
-		if _stands_halted(repo, state, e, to):
+		if _stands_halted(repo, state, c, e, to):
 			continue      # a standoff before the crown (or a slot round the target) holds while its aim does
 		# round ground it cannot climb, as the crown's columns go (MarchPath)
 		ArmySystem.aim_entry(repo, e, to, ArmySystem.is_naval(repo, state, c))
 
 
 ## Whether a column halted before a unit (ArmySystem._halt_before) is still in
-## its standoff: bound for the same `to` it was, its blocker still within
-## army_spread_reach_m. Such a column is not re-aimed (a new aim_entry would wipe
+## its standoff: bound for the same `to` it was, its enemy still obstructing
+## the onward road, or its friendly blocker beside the target camp.
+## Such a column is not re-aimed (a new aim_entry would wipe
 ## its halt and facing); a changed target, or a blocker gone, releases it.
-static func _stands_halted(repo: DataRepository, state: GameState, e: Dictionary, to: Vector2i) -> bool:
+static func _stands_halted(repo: DataRepository, state: GameState, code: String, e: Dictionary, to: Vector2i) -> bool:
 	if not e.has("halted_by") or not e.has("halt_aim_m"):
 		return false
 	var aim: Array = e["halt_aim_m"]
@@ -778,10 +779,14 @@ static func _stands_halted(repo: DataRepository, state: GameState, e: Dictionary
 	var here := Vector2i(int(e["x_m"]), int(e["y_m"]))
 	if not _within(here, Vector2i(int(be["x_m"]), int(be["y_m"])), reach):
 		return false
-	# a standoff before an enemy holds wherever it is; a halt before a friend only
-	# at a slot round the target (further out it marches on and halts again)
+	# A displaced enemy releases the march; friendly camps hold their target slot.
 	var theirs := String(ArmySystem.regiment(repo, b, state).get("kingdom_code", ""))
-	return theirs != repo.resolve_realm("raider_realm") or _within(here, Vector2i(aim[0], aim[1]), reach)
+	if theirs != repo.resolve_realm("raider_realm"):
+		var radius := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, code, state)) \
+			+ ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, b, state))
+		return not MarchClearance.first_entry(here, [to],
+			[Vector2i(int(be["x_m"]), int(be["y_m"]))], [radius]).is_empty()
+	return _within(here, Vector2i(aim[0], aim[1]), reach)
 
 
 ## A regiment's place in whole metres: its stored state's, else the pack's.

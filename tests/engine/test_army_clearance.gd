@@ -388,10 +388,12 @@ func test_a_foe_standoff_survives_the_hosts_daily_reaim() -> void:
 	s.foes[f]["host"] = "h_test"
 	s.ai_hosts["h_test"] = {"mode": "ADVANCE", "target_kind": "town", "target_id": "", "think_day": 0,
 		"plunder": 0, "siege_progress": 0}
-	assert_true(EnemyAi._stands_halted(repo, s, s.foes[f], aim), "same aim, the blocker in front: it holds")
-	assert_false(EnemyAi._stands_halted(repo, s, s.foes[f], aim + Vector2i(500, 0)), "a new target releases it")
+	assert_true(EnemyAi._stands_halted(repo, s, f, s.foes[f], aim), "same aim, the blocker in front: it holds")
+	assert_false(EnemyAi._stands_halted(repo, s, f, s.foes[f], aim + Vector2i(500, 0)), "a new target releases it")
+	_stand(s, r, held + Vector2i(0, 10000))
+	assert_false(EnemyAi._stands_halted(repo, s, f, s.foes[f], aim), "a blocker moved sideways off the road releases it")
 	s.regiments[r]["x_m"] = held.x + 200000
-	assert_false(EnemyAi._stands_halted(repo, s, s.foes[f], aim), "the blocker gone, it is released")
+	assert_false(EnemyAi._stands_halted(repo, s, f, s.foes[f], aim), "the blocker gone, it is released")
 	assert_eq(_at(s, f), held)
 
 
@@ -640,3 +642,21 @@ func test_a_besieging_host_stands_at_the_town_within_days_of_sitting_down() -> v
 				break
 		checked += seed_checked
 	assert_gt(checked, 0, "a host sat down to a siege on one of the seeds")
+
+
+func test_a_detour_then_an_enemy_halt_keeps_the_drawn_corners() -> void:
+	_pace(100)
+	var ids := _mine()
+	var f: String = _foe_codes()[0]
+	var s := _alone([ids[0], ids[1], f])
+	var o := _o()
+	_stand(s, ids[0], o + Vector2i(10000, 0))
+	_stand(s, ids[1], o)
+	_foe(s, f, o + Vector2i(24000, 0))
+	_march(s, ids[1], o + Vector2i(35000, 0))
+	var path := CourierSystem.day_path_of(repo, s, ids[1])
+	assert_true(path.has(o + Vector2i(10000, MarchClearance.r8(_d(ids[0], ids[1])))),
+		"halting after a detour preserves the corner around the standing friendly unit")
+	var copy: Dictionary = s.regiments[ids[1]].duplicate(true)
+	assert_eq(path.back(), ArmySystem.march_ahead(repo, s, ids[1], copy))
+	assert_eq(String(copy.get("halted_by", "")), f)

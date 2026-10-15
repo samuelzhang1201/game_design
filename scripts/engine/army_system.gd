@@ -1487,6 +1487,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 			if kind == "free":
 				break
 			if kind == "halt":
+				passed_out.append_array(path.slice(0, int(verdict["leg"])))
 				_halt_before(entry, verdict["at"], String(verdict["blocker"]), blockers, abs_day)
 				return true
 			waiting_on = String(verdict["blocker"])
@@ -1608,7 +1609,7 @@ static func _clearance(repo: DataRepository, state: GameState, code: String, ent
 	var blocker := String(names[bi])
 	var dm := int(ds[bi]) + 1
 	if _enemies(blockers, code, blocker) or MarchClearance.dist2(dest, centres[bi]) < dm * dm:
-		return {"kind": "halt", "at": hit["at"], "blocker": blocker}
+		return {"kind": "halt", "at": hit["at"], "leg": hit["leg"], "blocker": blocker}
 	# go round: the units not at war with it whose octagons touch the first's, and each other's
 	var friends: Array = []
 	var friend_centres: Array = []
@@ -1636,7 +1637,7 @@ static func _clearance(repo: DataRepository, state: GameState, code: String, ent
 		round_names.append(names[friends[m]])
 	var round_hull := MarchClearance.hull_of(round_centres, round_ds)
 	if MarchClearance.in_hull(round_hull, dest):
-		return {"kind": "halt", "at": hit["at"], "blocker": blocker}
+		return {"kind": "halt", "at": hit["at"], "leg": hit["leg"], "blocker": blocker}
 	var grid: MarchPath = null if is_naval(repo, state, code) else MarchPath.of_pack(repo)
 	var leg_ok := Callable()
 	if grid != null:
