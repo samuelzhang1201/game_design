@@ -135,68 +135,90 @@ static func _entry_of(repo: DataRepository, state: GameState, code: String) -> D
 	return state.regiments.get(code, {})
 
 
-## One side's round: `loss_permille` of its fit heads lost, spread over its
-## regiments by fit heads (a regiment with no fit men is spared), the wounded
-## of it by what each lost; then morale moves by `morale_delta`, held to
-## 0..100 — a FALL scaled by the regiment's stance's morale_decay_permille
-## when `stance_fn` (code -> stance) is given, toward zero. Writes `wounded`,
-## `dead` and `morale` into each regiment's state and
-## returns code -> {dead, wounded, morale (the change that really happened),
-## reason}.
-static func _apply_side(repo: DataRepository, state: GameState, codes: Array, loss_permille: int,
+## Plan both sides before committing any casualties or morale. A failed
+## originating population write leaves the entire round untouched.
+static func _plan_side(repo: DataRepository, state: GameState, codes: Array, loss_permille: int,
 		wounded_share_permille: int, morale_delta: int, reason: String, out: Dictionary,
-		stance_fn: Callable = Callable()) -> void:
-	var live: Array = []
+		orders: Array, stance_fn: Callable) -> Dictionary:
 	var fits: Array = []
 	var total_fit := 0
-	# code order, not the order the caller listed them in: a tie in the spread
-	# goes to the earlier code whatever dictionary the side came from
-	var ordered: Array = []
-	for c: Variant in codes:
-		ordered.append(String(c))
-	ordered.sort()
-	for c: Variant in ordered:
-		var code := String(c)
-		var entry := _entry_of(repo, state, code)
-		if entry.is_empty():
-			continue
-		var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, code, state)), entry)
-		live.append(code)
+	for code: String in codes:
+		var entry := _stored(state, code)
+		if entry.is_empty() or not state.military_rosters.has(code):
+			return {"error": "Battle participant has no active personnel record: " + code}
+		var ids: Array = state.military_rosters[code].get("cohort_ids", [])
+		if ids.is_empty():
+			return {"error": "Battle participant has no personnel cohorts: " + code}
+		for id: String in ids:
+			if not state.military_cohorts.has(id):
+				return {"error": "Battle participant is missing personnel cohort: " + id}
+		var fit := MilitaryRoster.fit(state, code)
 		fits.append(fit)
 		total_fit += fit
 	var split := split_losses(total_fit, loss_permille, wounded_share_permille)
 	var lost_each := apportion(fits, int(split["lost"]))
 	var wounded_each := apportion(lost_each, int(split["wounded"]))
-	for i in live.size():
-		var code := String(live[i])
-		var entry := _entry_of(repo, state, code)
+	for i: int in codes.size():
+		var code := String(codes[i])
+		var entry := _stored(state, code)
 		var wounded := int(wounded_each[i])
 		var dead := int(lost_each[i]) - wounded
-		entry["wounded"] = int(entry.get("wounded", 0)) + wounded
-		entry["dead"] = int(entry.get("dead", 0)) + dead
+		if wounded > 0:
+			orders.append({"unit_code": code, "from": "fit", "to": "wounded", "count": wounded})
+		if dead > 0:
+			orders.append({"unit_code": code, "from": "fit", "to": "dead", "count": dead})
 		var before := int(entry.get("morale", 0))
 		var fall := morale_delta
 		if fall < 0 and stance_fn.is_valid():
-			@warning_ignore("integer_division")  # whole points, toward zero
+			@warning_ignore("integer_division")
 			fall = fall * int(_stance_row(repo, String(stance_fn.call(code))).get("morale_decay_permille", 1000)) / 1000
-		entry["morale"] = clampi(before + fall, 0, 100)
-		out[code] = {"dead": dead, "wounded": wounded, "morale": int(entry["morale"]) - before,
-			"reason": reason}
+		out[code] = {"dead": dead, "wounded": wounded,
+			"morale": clampi(before + fall, 0, 100) - before, "reason": reason}
+	return {"status": "planned"}
 
 
-## Apply a tier to a round: the attackers take attacker_loss_permille and
-## attacker_morale, the defenders the defender's. `reason` rides in each
-## regiment's result (the battle report prints it, architecture invariant 4).
-## `stance_fn` (code -> stance name), when given, slows each regiment's morale
-## fall by its stance. Returns code -> {dead, wounded, morale, reason}.
+## The round token is stable across saves, independent of surviving headcount.
+## An exact retry returns its original result; conflicting reuse is refused.
 static func apply_round(repo: DataRepository, state: GameState, codes_att: Array, codes_def: Array,
-		tier: Dictionary, reason: String, stance_fn: Callable = Callable()) -> Dictionary:
+		tier: Dictionary, reason: String, stance_fn: Callable = Callable(), event_id: String = "") -> Dictionary:
+	if event_id.strip_edges().is_empty() or reason.strip_edges().is_empty():
+		return {"error": "A battle round needs a stable event ID and a reason."}
+	var att := codes_att.duplicate()
+	var def := codes_def.duplicate()
+	att.sort()
+	def.sort()
+	var seen: Dictionary = {}
+	for code: String in att + def:
+		if seen.has(code):
+			return {"error": "A unit cannot participate twice in the same battle round."}
+		seen[code] = true
+	var request := {"kind": "battle_round", "att": att, "def": def,
+		"tier": tier.duplicate(true), "reason": reason}
+	if state.military_events.has(event_id):
+		var previous: Dictionary = state.military_events[event_id]
+		if previous["request"] != request:
+			return {"error": "Battle round ID was already used for a different outcome."}
+		return previous["result"].duplicate(true)
 	var out: Dictionary = {}
+	var orders: Array = []
 	var share := int(tier.get("wounded_share_permille", 0))
-	_apply_side(repo, state, codes_att, int(tier.get("attacker_loss_permille", 0)), share,
-		int(tier.get("attacker_morale", 0)), reason, out, stance_fn)
-	_apply_side(repo, state, codes_def, int(tier.get("defender_loss_permille", 0)), share,
-		int(tier.get("defender_morale", 0)), reason, out, stance_fn)
+	var planned := _plan_side(repo, state, att, int(tier.get("attacker_loss_permille", 0)), share,
+		int(tier.get("attacker_morale", 0)), reason, out, orders, stance_fn)
+	if planned.has("error"):
+		return planned
+	planned = _plan_side(repo, state, def, int(tier.get("defender_loss_permille", 0)), share,
+		int(tier.get("defender_morale", 0)), reason, out, orders, stance_fn)
+	if planned.has("error"):
+		return planned
+	if not orders.is_empty():
+		var applied := MilitaryRoster.transfer_units(repo, state, event_id + ":personnel", orders, reason)
+		if applied.has("error"):
+			return applied
+	for code: String in out:
+		var entry := _stored(state, code)
+		entry["morale"] = int(entry.get("morale", 0)) + int(out[code]["morale"])
+	# Zero-loss rounds still consume their morale effect exactly once.
+	state.military_events[event_id] = {"request": request, "result": out.duplicate(true)}
 	return out
 
 
@@ -298,7 +320,7 @@ static func _can_fight(repo: DataRepository, state: GameState, code: String) -> 
 		return false
 	if int(e.get("disengaged_until", 0)) >= state.absolute_day():
 		return false
-	return ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), e) > 0
+	return ArmySystem.fit_count(repo, state, code) > 0
 
 
 ## True for a foe whose host (GameState.ai_hosts) is going home — mode RETREAT
@@ -343,17 +365,17 @@ static func _withdraw_homeward(repo: DataRepository, state: GameState, events: A
 
 
 ## The town a foe's host besieges while it waits for its assault: its host
-## (GameState.ai_hosts) in mode "SIEGE" with the `assault` flag down; "" any
+## (GameState.ai_hosts) deploying or in an active siege without an assault; "" any
 ## other time. Such a foe does not fight that town's GARRISON (the garrison
 ## waits behind its walls for the assault, the ordinary town battle that
 ## SiegeSystem lets through with the flag), but meets any other regiment of
 ## the player's as ever — a relief force in the open is fought in the field.
-static func siege_town_of(state: GameState, code: String) -> String:
+static func siege_town_of(repo: DataRepository, state: GameState, code: String) -> String:
 	var host := String((state.foes.get(code, {}) as Dictionary).get("host", ""))
 	if host == "" or not state.ai_hosts.has(host):
 		return ""
 	var h: Dictionary = state.ai_hosts[host]
-	if String(h.get("mode", "")) != "SIEGE" or int(h.get("assault", 0)) == 1:
+	if String(h.get("mode", "")) not in ["DEPLOYING", "SIEGE"] or (SiegeSystem.active(repo, state, host) and SiegeSystem.deployed_at(repo, state, code, String(h.get("target_id", ""))) and int(h.get("assault", 0)) == 1):
 		return ""
 	return String(h.get("target_id", ""))
 
@@ -361,7 +383,7 @@ static func siege_town_of(state: GameState, code: String) -> String:
 ## The town a foe assaults when it stands within the reach
 ## (data/army/army_town_reach.csv) of `town`, the held town a player unit
 ## garrisons (ArmyGround.garrison_town: its seat or camp); "" otherwise.
-static func _town_contact(repo: DataRepository, state: GameState, town: String, f: String) -> String:
+static func town_contact(repo: DataRepository, state: GameState, town: String, f: String) -> String:
 	if town == "":
 		return ""
 	var b: Dictionary = repo.burgs[town]
@@ -379,15 +401,6 @@ static func _town_contact(repo: DataRepository, state: GameState, town: String, 
 		if roundi(away * float(ArmySystem.metres_per_pack_px(repo))) <= limit:
 			return town
 	return ""
-
-
-## Whether foe `f`'s host has the assault on `town` up (SIEGE, the flag raised).
-static func _assaults(state: GameState, f: String, town: String) -> bool:
-	if town == "":
-		return false
-	var host := String((state.foes.get(f, {}) as Dictionary).get("host", ""))
-	var h: Dictionary = state.ai_hosts.get(host, {})
-	return String(h.get("mode", "")) == "SIEGE" and int(h.get("assault", 0)) == 1 and String(h.get("target_id", "")) == town
 
 
 ## The battle fought at `town` (the earliest id), {} when none.
@@ -471,16 +484,13 @@ static func _detect(repo: DataRepository, state: GameState, events: Array) -> vo
 		garrisons[pc] = ArmyGround.garrison_town(repo, state, String(pc))
 	for fc: Variant in theirs:
 		var f := String(fc)
-		var held_off := siege_town_of(state, f)
+		var held_off := siege_town_of(repo, state, f)
 		for pc: Variant in mine:
 			var p := String(pc)
 			if held_off != "" and String(garrisons[pc]) == held_off:
 				continue    # a besieged town's garrison waits for the assault
 			# read fresh: a column halted in a town's reach today is its garrison now
-			var town := _town_contact(repo, state, ArmyGround.garrison_town(repo, state, p), f)
-			if town == "" and _assaults(state, f, String(garrisons[pc])) \
-					and _within(_at_m(repo, state, f), _at_m(repo, state, p), reach):
-				town = String(garrisons[pc])   # the assault is up: a besieger at hand of the garrison storms it, never a field battle
+			var town := town_contact(repo, state, ArmyGround.garrison_town(repo, state, p), f)
 			if town == "" and not _within(_at_m(repo, state, f), _at_m(repo, state, p), reach):
 				continue
 			var bf := battle_of(state, f)
@@ -555,8 +565,12 @@ static func prepare_day(repo: DataRepository, state: GameState) -> Array:
 static func step_battle(repo: DataRepository, state: GameState, battle_id: int) -> Dictionary:
 	var events: Array = []
 	var battle := battle_by_id(state, battle_id)
-	if not battle.is_empty() and _fight(repo, state, battle, events):
-		state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != battle_id)
+	if not battle.is_empty():
+		var result := _fight(repo, state, battle, events)
+		if result.has("error"):
+			return {"status": "error", "error": result["error"], "events": []}
+		if bool(result["ended"]):
+			state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != battle_id)
 	return {"status": "complete", "events": events}
 
 
@@ -573,7 +587,11 @@ static func settle_day(repo: DataRepository, state: GameState) -> Array:
 	var order: Array = state.battles.map(func(b: Dictionary) -> int: return int(b["id"]))
 	order.sort()
 	for id: int in order:
-		events.append_array(step_battle(repo, state, id)["events"])
+		var result := step_battle(repo, state, id)
+		if result["status"] != "complete":
+			events.append({"kind": "error", "battle_id": id, "reason": result.get("error", "Battle did not complete.")})
+			return events
+		events.append_array(result["events"])
 	finish_day(repo, state)
 	return events
 
@@ -598,17 +616,16 @@ static func place_label(repo: DataRepository, state: GameState, b: Dictionary) -
 		Vector2i(int(b["place_x_m"]), int(b["place_y_m"]))))
 
 
-## One battle's day; true when it is over.
-static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events: Array) -> bool:
+## One battle's day; errors preserve the round and the daily cursor.
+static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events: Array) -> Dictionary:
 	# a regiment whose state is gone (a host taken off the map) is no longer in it
-	for side: String in SIDES:
-		b[side] = (b[side] as Array).filter(func(c: Variant) -> bool:
-			return not _stored(state, String(c)).is_empty())
-	var att: Array = b["att"]
-	var def: Array = b["def"]
+	var att: Array = (b["att"] as Array).filter(func(c: Variant) -> bool:
+		return not _stored(state, String(c)).is_empty())
+	var def: Array = (b["def"] as Array).filter(func(c: Variant) -> bool:
+		return not _stored(state, String(c)).is_empty())
 	if att.is_empty() or def.is_empty():
 		_end(repo, state, b, "emptied", events)
-		return true
+		return {"ended": true}
 	var n := int(b["rounds"]) + 1
 	var stance := func(c: String) -> String: return stance_of(state, c)
 	var a_pow := side_power(repo, state, att, stance, true, def)
@@ -619,7 +636,12 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 	var tier := tier_of(repo, eff)
 	var reason := "%s at %s, the battle's day %d" % [String(tier.get("tier", "")).replace("_", " "),
 		place_label(repo, state, b), n]
-	var results := apply_round(repo, state, att, def, tier, reason, stance)
+	var results := apply_round(repo, state, att, def, tier, reason, stance,
+		"battle:%d:round:%d" % [int(b["id"]), n])
+	if results.has("error"):
+		return results
+	b["att"] = att
+	b["def"] = def
 	b["rounds"] = n
 	var left := _exits(repo, state, b, String(tier.get("rout", "none")), odds)
 	events.append({"kind": "round", "battle_id": int(b["id"]), "round": n, "att_power": a_pow,
@@ -629,14 +651,14 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 	var rout := String(tier.get("rout", "none"))
 	if rout == "attacker" or rout == "defender":
 		_end(repo, state, b, "rout_" + rout, events)
-		return true
+		return {"ended": true}
 	if (b["att"] as Array).is_empty() or (b["def"] as Array).is_empty():
 		_end(repo, state, b, "emptied", events)
-		return true
+		return {"ended": true}
 	if n >= int(repo.bal("battle_max_rounds")):
 		_end(repo, state, b, "rounds", events)
-		return true
-	return false
+		return {"ended": true}
+	return {"ended": false}
 
 
 ## Why a regiment leaves the battle after today's round, "" when it stays:
@@ -648,7 +670,7 @@ static func _exit_why(repo: DataRepository, state: GameState, code: String, side
 	var e := _stored(state, code)
 	if String(e.get("order", "")) == ArmySystem.ORDER_MARCH:
 		return "ordered"
-	if ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, code, state)), e) <= 0:
+	if ArmySystem.fit_count(repo, state, code) <= 0:
 		return "broken"
 	if rout == ("attacker" if side == "att" else "defender"):
 		return "rout"

@@ -22,17 +22,18 @@ func test_bound_realms_take_their_slots_colour() -> void:
 			assert_eq(MapPalette.color_of(data, data.resolve_realm(slot)), MapPalette.named(data, slot),
 				"%s wears the %s colour" % [data.resolve_realm(slot), slot])
 
-func test_unbound_kingdoms_take_other_colours_in_state_order() -> void:
+func test_realms_without_a_named_palette_take_other_colours_in_state_order() -> void:
 	var n := 0
 	var codes: Array = data.kingdoms.keys()
 	codes.sort_custom(func(a: String, b: String) -> bool:
 		return int(data.kingdoms[a]["state_id"]) < int(data.kingdoms[b]["state_id"]))
 	for code: String in codes:
-		if MapPalette.slot_of(data, code) != "":
+		var slot := MapPalette.slot_of(data, code)
+		if slot != "" and data.palette.has(slot):
 			continue
 		n += 1
 		assert_eq(MapPalette.color_of(data, code), MapPalette.named(data, "other_%d" % n))
-	assert_gt(n, 0, "some kingdom is unbound")
+	assert_gt(n, 0, "structural realm bindings do not claim a named palette")
 
 func test_line_colours_are_named() -> void:
 	for key in ["manor_line"]:
@@ -50,3 +51,17 @@ func test_a_house_colour_is_fixed_by_its_name() -> void:
 	assert_ne(a, MapPalette.house_color(r, "Valorin"))
 	assert_almost_eq(a.v, 0.9, 0.001, "the value is data")
 	assert_almost_eq(a.s, 0.5, 0.001, "so is the saturation")
+
+func test_structural_bindings_without_palette_do_not_recolour_the_map() -> void:
+	var structural: Dictionary = {}
+	for slot: String in data.realm_bindings:
+		if not data.palette.has(slot): structural[slot] = data.realm_bindings[slot]
+	assert_gt(structural.size(), 0, "military realm slots exist without custom palette colours")
+	for slot: String in structural: data.realm_bindings.erase(slot)
+	MapPalette.forget_colors()
+	var before: Dictionary = {}
+	for code: String in data.kingdoms: before[code] = MapPalette.color_of(data, code)
+	data.realm_bindings.merge(structural)
+	MapPalette.forget_colors()
+	for code: String in data.kingdoms:
+		assert_eq(MapPalette.color_of(data, code), before[code], "structural binding preserves colour: " + code)

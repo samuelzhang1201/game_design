@@ -69,18 +69,18 @@ static func clear(mind: Dictionary) -> void:
 
 
 ## True while any host sits in SIEGE before `town`.
-static func besieged(state: GameState, town: String) -> bool:
+static func besieged(repo: DataRepository, state: GameState, town: String) -> bool:
 	for h: Variant in state.ai_hosts:
-		if _sits_before(state.ai_hosts[h], town):
+		if _sits_before(repo, state, String(h), town):
 			return true
 	return false
 
 
 ## The hosts in SIEGE before `town`, in code order.
-static func besiegers(state: GameState, town: String) -> Array:
+static func besiegers(repo: DataRepository, state: GameState, town: String) -> Array:
 	var out: Array = []
 	for h: String in EnemyAi.host_codes(state):
-		if _sits_before(state.ai_hosts[h], town):
+		if _sits_before(repo, state, String(h), town):
 			out.append(h)
 	return out
 
@@ -88,7 +88,7 @@ static func besiegers(state: GameState, town: String) -> Array:
 ## The host that keeps a town's siege: the first non-reserve host before it
 ## (code order), else the first; "" when none sits there.
 static func lead_of(repo: DataRepository, state: GameState, town: String) -> String:
-	var hosts := besiegers(state, town)
+	var hosts := besiegers(repo, state, town)
 	for h: String in hosts:
 		if EnemyAi.role_of(repo, h) != EnemyAi.ROLE_RESERVE:
 			return h
@@ -124,14 +124,38 @@ static func at_town(repo: DataRepository, state: GameState, code: String, town: 
 	return dx * dx + dy * dy <= reach * reach
 
 
+## Only a column actually stationed here contributes to investment or assault.
+static func deployed_at(repo: DataRepository, state: GameState, code: String, town: String) -> bool:
+	var e: Dictionary = state.foes.get(code, {})
+	return String(e.get("order", "")) == ArmySystem.ORDER_GARRISON and int(e.get("disengaging", 0)) == 0 \
+		and at_town(repo, state, code, town)
+
+
 ## The besiegers' power: every live column of every host in SIEGE before the
 ## town that stands at it (at_town), ArmySystem.power "attack".
 static func attack_power(repo: DataRepository, state: GameState, town: String) -> int:
 	var total := 0
-	for h: String in besiegers(state, town):
+	for h: String in besiegers(repo, state, town):
 		for c: String in EnemyAi.live_regiments(repo, state, h):
-			if at_town(repo, state, c, town):
+			if deployed_at(repo, state, c, town):
 				total += ArmySystem.power(repo, state, c, "attack")
+	return total
+
+
+## Occupation uses the same physical gate reach as a real town assault.
+static func _at_gate(repo: DataRepository, state: GameState, town: String, hosts: Array) -> bool:
+	for h: String in hosts:
+		for c: String in EnemyAi.live_regiments(repo, state, h):
+			if deployed_at(repo, state, c, town) and BattleSystem.town_contact(repo, state, town, c) == town:
+				return true
+	return false
+
+
+## Fit defenders of the entire town, including its seat and outer camps.
+static func garrison_fit(repo: DataRepository, state: GameState, town: String) -> int:
+	var total := 0
+	for p: String in EnemyAi.garrison_of(repo, state, town):
+		total += ArmySystem.fit_count(repo, state, p)
 	return total
 
 
@@ -183,8 +207,8 @@ static func news(events: Array) -> Array:
 ##     crown's → the besiegers WITHDRAW (no progress, no capture); today's
 ##     assault rounds (a tier `repulsed`: less siege_assault_fail_permille,
 ##     never below 0; `breach`, or the besiegers keeping the field: 1000); the
-##     town falls at 1000 or with its garrison slain to the last fit man; a
-##     town with no garrison left is RAIDed (no progress); else the day's gain,
+##     a defended town falls at 1000; with no fit defenders left a real
+##     column must reach its gate to occupy it (no progress); else the day's gain,
 ##     and every siege_assault_days days an assault is owed, armed for
 ##     tomorrow's battles (the flag stands while the assault's battle lasts,
 ##     and an owed assault that found no battle is tried again the next day);
@@ -201,6 +225,7 @@ static func news(events: Array) -> Array:
 ## after a siege_fallen, its cost (DefeatSystem.on_town_lost: defeat_town_lost).
 static func settle_day(repo: DataRepository, state: GameState, battle_events: Array = []) -> Array:
 	var events: Array = []
+	EnemyAi.ensure_deployments(repo, state, events)
 	if state.ai_hosts.is_empty():
 		return events
 	follow_main(repo, state, events)
@@ -211,13 +236,15 @@ static func settle_day(repo: DataRepository, state: GameState, battle_events: Ar
 			var town := String(mind.get("target_id", ""))
 			if lead_of(repo, state, town) == h or String(mind.get("target_kind", "")) != EnemyAi.KIND_TOWN:
 				_siege_day(repo, state, h, battle_events, events)
+		elif mode == EnemyAi.MODE_DEPLOYING:
+			continue
 		elif mode == HOLD:
 			_hold_day(repo, state, h, events)
 		else:
 			if not (mind.get("occupied", {}) as Dictionary).is_empty():
 				_liberate(repo, state, h, mode.to_lower(), events)
 			if String(mind.get("siege_town", "")) != "":
-				_lifted(state, h, mode.to_lower(), events)
+				_lifted(repo, state, h, mode.to_lower(), events)
 	return events
 
 
@@ -239,15 +266,17 @@ static func capture(repo: DataRepository, state: GameState, host_code: String, e
 		return {}
 	var mind: Dictionary = state.ai_hosts[host_code]
 	var town := String(mind.get("target_id", ""))
-	if String(mind["mode"]) != SIEGE or String(mind.get("target_kind", "")) != EnemyAi.KIND_TOWN \
+	if not active(repo, state, host_code) or String(mind.get("target_kind", "")) != EnemyAi.KIND_TOWN \
 			or not EnemyAi.target_held(repo, state, EnemyAi.KIND_TOWN, town):
+		return {}
+	if garrison_fit(repo, state, town) == 0 and not _at_gate(repo, state, town, besiegers(repo, state, town)):
 		return {}
 	var b: Dictionary = repo.burgs[town]
 	var label := String(b.get("label", town))
 	var reason := "taken by %s: siege of %s" % [host_label(repo, host_code), label]
 	var days := int(mind.get("siege_days", 0))
 	var progress := int(mind.get("siege_progress", 0))
-	var hosts := besiegers(state, town)
+	var hosts := besiegers(repo, state, town)
 	# the assault under way ends with the town
 	for bt: Dictionary in state.battles.duplicate():
 		if String(bt["town"]) == town and _holds_hosts(state, bt, hosts):
@@ -265,7 +294,7 @@ static func capture(repo: DataRepository, state: GameState, host_code: String, e
 	var at := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
 	var out := 0
 	for p: String in garrison:
-		if ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, p, state)), state.regiments[p]) > 0:
+		if ArmySystem.fit_count(repo, state, p) > 0:
 			BattleSystem.march_out(repo, state, p, at)
 			out += 1
 	for h: String in hosts:
@@ -279,18 +308,22 @@ static func capture(repo: DataRepository, state: GameState, host_code: String, e
 
 ## The manors a capture of `town` takes: its own manor (EnemyAi.target_cell)
 ## and its province's manors whose centre lies within siege_capture_radius_km
-## of the town's point, in cell order.
+## of the town's point, excluding other towns' own manors, in cell order.
 static func taken_cells(repo: DataRepository, state: GameState, town: String) -> Array:
 	var b: Dictionary = repo.burgs.get(town, {})
 	var at := EnemyAi.target_point_m(repo, EnemyAi.KIND_TOWN, town)
 	var r := int(round(repo.bal("siege_capture_radius_km") * 1000.0))
 	var own := EnemyAi.target_cell(repo, state, EnemyAi.KIND_TOWN, town)
+	var other_towns := {}
+	for other: String in repo.burgs:
+		if other != town:
+			other_towns[EnemyAi.target_cell(repo, state, EnemyAi.KIND_TOWN, other)] = true
 	var out: Array = []
 	for cell: int in MapManors.manors_of_province(repo, String(b.get("province_code", "")), state):
 		var m := ArmySystem.pack_to_metres(repo, MapTerrain.cell_center(repo, repo.cells[cell]))
 		var dx := m.x - at.x
 		var dy := m.y - at.y
-		if cell == own or dx * dx + dy * dy <= r * r:
+		if cell == own or (not other_towns.has(cell) and dx * dx + dy * dy <= r * r):
 			out.append(cell)
 	if own >= 0 and not own in out:
 		out.append(own)
@@ -306,9 +339,21 @@ static func host_label(repo: DataRepository, host_code: String) -> String:
 
 ## --- inside ------------------------------------------------------------------
 
-static func _sits_before(mind: Dictionary, town: String) -> bool:
-	return String(mind.get("mode", "")) == SIEGE and String(mind.get("target_kind", "")) == EnemyAi.KIND_TOWN \
-		and String(mind.get("target_id", "")) == town
+static func active(repo: DataRepository, state: GameState, host: String) -> bool:
+	var mind: Dictionary = state.ai_hosts.get(host, {})
+	if String(mind.get("mode", "")) != SIEGE or not bool((mind.get("deployment", {}) as Dictionary).get("complete", false)):
+		return false
+	var town := String(mind.get("target_id", ""))
+	if String(mind.get("target_kind", "")) != EnemyAi.KIND_TOWN or town.is_empty():
+		return false
+	for c: String in EnemyAi.live_regiments(repo, state, host):
+		if deployed_at(repo, state, c, town):
+			return true
+	return false
+
+
+static func _sits_before(repo: DataRepository, state: GameState, host: String, town: String) -> bool:
+	return active(repo, state, host) and String(state.ai_hosts[host].get("target_id", "")) == town
 
 
 ## A reserve follows its main host: out of a SIEGE when the main host goes
@@ -328,7 +373,7 @@ static func follow_main(repo: DataRepository, state: GameState, events: Array) -
 		if mode == SIEGE and main_mode == HOLD:
 			EnemyAi.set_mode(state, h, HOLD, "holds the town with the main host", events)
 			state.ai_hosts[h]["siege_town"] = ""
-		elif mode in [SIEGE, HOLD] and main_mode in [WITHDRAW, RETREAT]:
+		elif mode in [EnemyAi.MODE_DEPLOYING, SIEGE, HOLD] and main_mode in [WITHDRAW, RETREAT]:
 			_go_home(repo, state, h, main_mode, "the main host is going home", events)
 
 
@@ -366,7 +411,7 @@ static func _adopt(state: GameState, lead: String, hosts: Array) -> void:
 static func _siege_day(repo: DataRepository, state: GameState, h: String, battle_events: Array, events: Array) -> void:
 	var mind: Dictionary = state.ai_hosts[h]
 	var town := String(mind.get("target_id", ""))
-	var hosts := besiegers(state, town)
+	var hosts := besiegers(repo, state, town)
 	if hosts.is_empty():
 		hosts = [h]
 	var today := state.absolute_day()
@@ -375,7 +420,7 @@ static func _siege_day(repo: DataRepository, state: GameState, h: String, battle
 		# the town is no longer the crown's: nothing to besiege, nothing to take
 		for x: String in hosts:
 			_go_home(repo, state, x, WITHDRAW, "the town is no longer the enemy's to take", events)
-		_lifted(state, h, "lost", events)
+		_lifted(repo, state, h, "lost", events)
 		for x: String in hosts:
 			state.ai_hosts[x]["siege_town"] = ""
 		return
@@ -395,20 +440,18 @@ static func _siege_day(repo: DataRepository, state: GameState, h: String, battle
 		events.append({"kind": "siege_repulsed", "host": h, "town": town, "day": today, "progress": progress,
 			"lost": lost})
 	mind["siege_progress"] = progress
-	var garrison := EnemyAi.garrison_of(repo, state, town)
-	var fit := 0
-	for p: String in garrison:
-		fit += ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, p, state)), state.regiments[p])
-	if progress >= 1000 or (not garrison.is_empty() and fit <= 0):
-		_fall(repo, state, h, hosts, events)
-		return
-	if garrison.is_empty():
-		# no one holds the walls: no siege, and nothing taken by one — the town
-		# is raided as an open town is on arrival
+	if garrison_fit(repo, state, town) == 0:
+		# An established siege remains an occupation order when its defenders
+		# depart. A camp in the outer ring has not yet occupied the town.
+		if _at_gate(repo, state, town, hosts):
+			_fall(repo, state, h, hosts, events)
+			return
 		for x: String in hosts:
-			EnemyAi.set_mode(state, x, RAID, "the town has no garrison", events)
-			state.ai_hosts[x]["siege_town"] = ""
-		events.append({"kind": "siege_undefended", "host": h, "town": town, "day": today, "progress": 0})
+			state.ai_hosts[x]["assault"] = 0
+			EnemyAi.march_host(repo, state, x)
+		return
+	if progress >= 1000:
+		_fall(repo, state, h, hosts, events)
 		return
 	var att := attack_power(repo, state, town)
 	var def := defend_power(repo, state, town)
@@ -498,13 +541,13 @@ static func _liberate(repo: DataRepository, state: GameState, h: String, why: St
 
 ## A siege that ended otherwise (the host beaten, hungry, gone home) told once:
 ## siege_lifted {why}, one line a town a day.
-static func _lifted(state: GameState, h: String, why: String, events: Array) -> void:
+static func _lifted(repo: DataRepository, state: GameState, h: String, why: String, events: Array) -> void:
 	var mind: Dictionary = state.ai_hosts[h]
 	var town := String(mind.get("siege_town", ""))
 	if town == "":
 		town = String(mind.get("target_id", ""))
 	mind["siege_town"] = ""
-	if town == "" or besieged(state, town):
+	if town == "" or besieged(repo, state, town):
 		return
 	for e: Dictionary in events:
 		if String(e.get("kind", "")) == "siege_lifted" and String(e["town"]) == town:

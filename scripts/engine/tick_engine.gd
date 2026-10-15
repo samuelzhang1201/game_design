@@ -61,6 +61,8 @@ func resolve_day(state: GameState, close_month := false) -> Dictionary:
 		while int(tx["battle_index"]) < tx["battle_ids"].size():
 			var id := int(tx["battle_ids"][int(tx["battle_index"])])
 			var step := BattleSystem.step_battle(data, state, id)
+			if step["status"] == "error":
+				return {"status": "error", "error": step["error"], "battle_id": id}
 			if step["status"] == "blocked":
 				tx["pending_decision"] = step["decision"]
 				return {"status": "blocked", "decision": step["decision"].duplicate(true)}

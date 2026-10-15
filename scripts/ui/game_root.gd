@@ -311,7 +311,7 @@ func _process(delta: float) -> void:
 		var before := works_progress()
 		var missives_before := Game.state.next_missive_id
 		var out := Game.advance_day()
-		if out["status"] == "blocked":
+		if out["status"] in ["blocked", "error"]:
 			_clock_acc = 0.0
 			break
 		# what the day's end brings is dated the day that ended, not the one begun
@@ -1273,8 +1273,12 @@ func _on_start_requested() -> void:
 		await overlays_ready
 		_beginning = false
 	_beginning = true
+	if not Game.start_campaign(44):
+		_beginning = false
+		if current_screen is MainMenu:
+			current_screen.show_load_failed(Game.load_error)
+		return
 	_reset_reports()
-	Game.start_campaign(44)
 	refresh_missive_badge()
 	_pending_report = Game.next_tick()
 	await get_tree().process_frame

@@ -35,8 +35,14 @@ static func _clause(c: String, state: GameState, data: DataRepository) -> bool:
 		return state.year() >= int(c.substr(6))
 	if c.begins_with("trait_at_court="):
 		var t := c.substr(15)
-		for id in state.characters:
-			if t in state.characters[id].traits:
+		var present: Dictionary = {"you": true}
+		for id: String in state.council.values():
+			present[id] = true
+		var ids: Array = present.keys()
+		ids.sort()
+		for id: String in ids:
+			var person: Character = state.characters.get(id) as Character
+			if person != null and t in person.traits:
 				return true
 		return false
 	if c.begins_with("trait_of="):

@@ -337,8 +337,7 @@ static func plan_reading(repo: DataRepository, state: GameState, piece: Dictiona
 	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 		return out
 	var delta := ArmySystem.elevation_of(repo, reg, state) - int(out["metres"])
-	var heads_ours := ArmySystem.headcount(repo, reg)
-	var fit := ArmySystem.fit_heads(heads_ours, ArmySystem.state_of(repo, state, code))
+	var fit := ArmySystem.fit_count(repo, state, code)
 	@warning_ignore("integer_division")  # whole men, per-mille factors
 	var ours := fit * _factor(repo, state, code, "attack", terrain, "") / 1000 * ArmySystem.height_factor(repo, delta) / 1000
 	@warning_ignore("integer_division")  # whole men, per-mille height

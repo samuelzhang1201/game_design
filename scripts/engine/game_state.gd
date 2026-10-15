@@ -73,7 +73,14 @@ static func default_metrics(data: DataRepository = null) -> Dictionary:
 		"grain_ration": 0.0,
 	}
 
+static var campaign_error := ""
+
 static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
+	campaign_error = ""
+	var split := ArmySplit.split(data)
+	if split.has("error"):
+		campaign_error = String(split["error"])
+		return null
 	var s := GameState.new()
 	s.map_id = data.map_id
 	s.rng = Rng.new(seed_value)
@@ -84,10 +91,13 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	# roster, because the chest is the crown's own provinces' (2026-09-13)
 	# and the crown is the player character's house.
 	WorldLedger.seed_metrics(data, s)
-	# The army as its units (spec 2026-10-07-army-split-and-ground §3).
-	var split := ArmySplit.split(data)
+	# The validated army as its units (spec 2026-10-07-army-split-and-ground §3).
 	s.army_roster = split["roster"]
 	s.town_seat = split["seats"]
+	var personnel := MilitaryBootstrap.initialize(data, s)
+	if personnel.has("error"):
+		campaign_error = String(personnel["error"])
+		return null
 	ArmySystem.ensure(data, s)
 	# The raid hosts stand at their assembly points until their day (spec
 	# 2026-10-07-enemy-ai-and-battle §2): foes, not regiments.
@@ -360,6 +370,12 @@ var foe_next_id := 0
 ## the pack once, as the campaign starts (ArmySplit); read through
 ## ArmySystem.roster / regiment, never directly.
 var army_roster: Dictionary = {}
+## One personnel ledger: projects and prisoner batches reference these cohorts.
+var military_rosters: Dictionary = {}
+var military_cohorts: Dictionary = {}
+var military_events: Dictionary = {}
+var recruitment_projects: Dictionary = {}
+var military_migration: Dictionary = {}
 ## town code -> the one unit holding its seat (ArmyGround, spec §4.4).
 var town_seat: Dictionary = {}
 ## The couriers on the road (owner 2026-09-27, CourierSystem): an Array of
@@ -480,6 +496,11 @@ func to_dict() -> Dictionary:
 		"ai_hosts": _encode_values(ai_hosts.duplicate(true)),
 		"battles": _encode_values(battles.duplicate(true)),
 		"day_resolution": _encode_values(day_resolution.duplicate(true)),
+		"military_rosters": military_rosters.duplicate(true),
+		"military_cohorts": military_cohorts.duplicate(true),
+		"military_events": military_events.duplicate(true),
+		"recruitment_projects": recruitment_projects.duplicate(true),
+		"military_migration": military_migration.duplicate(true),
 		"town_losses": _encode_values(town_losses.duplicate(true)),
 		"sightings": _encode_values(sightings.duplicate(true)),
 		"scout_log": _encode_values(scout_log.duplicate(true)),
@@ -522,6 +543,11 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 		return null
 	var s := GameState.new()
 	s.day_resolution = _decode_values(d.get("day_resolution", {}))
+	s.military_rosters = _whole(d.get("military_rosters", {}))
+	s.military_cohorts = _whole(d.get("military_cohorts", {}))
+	s.military_events = _whole(d.get("military_events", {}))
+	s.recruitment_projects = _whole(d.get("recruitment_projects", {}))
+	s.military_migration = _whole(d.get("military_migration", {}))
 	s.map_id = String(d.get("map_id", ""))
 	s.tick = int(_decode_values(d["tick"]))
 	s.day = clampi(int(_decode_values(d.get("day", 1))), 1, Calendar.DAYS_PER_TICK)
@@ -591,7 +617,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.sightings = _decode_values(d.get("sightings", {}))
 	s.scout_log = _decode_values(d.get("scout_log", {}))
 	s.foe_next_id = int(_decode_values(d.get("foe_next_id", 0)))
-	s.army_roster = (d.get("army_roster", {}) as Dictionary).duplicate(true)
+	# CSV fields remain strings; provenance counts are whole save facts.
+	s.army_roster = _whole(d.get("army_roster", {}))
 	s.town_seat = (d.get("town_seat", {}) as Dictionary).duplicate(true)
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))

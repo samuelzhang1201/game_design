@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const RunDir := preload("res://tests/run_dir.gd")
 const Play := preload("res://tests/invasion_play.gd")
@@ -70,6 +71,7 @@ func _besiege(s: GameState, host: String, garrison: Array) -> String:
 	mind["mode"] = "SIEGE"
 	mind["target_kind"] = "town"
 	mind["target_id"] = town
+	EnemyAi.ensure_deployments(repo, s)
 	assert_eq(EnemyAi.garrison_of(repo, s, town), garrison, "the garrison is the test's")
 	return town
 
@@ -121,12 +123,16 @@ func _taken_cells(s: GameState, town: String) -> Array:
 	var prov := String(repo.burgs[town]["province_code"])
 	var r := int(round(repo.bal("siege_capture_radius_km") * 1000.0))
 	var own := EnemyAi.target_cell(repo, s, "town", town)
+	var protected: Array = []
+	for other: String in repo.burgs:
+		if other != town:
+			protected.append(EnemyAi.target_cell(repo, s, "town", other))
 	var out: Array = []
 	for c: int in MapManors.manors_of_province(repo, prov, s):
 		var m := ArmySystem.pack_to_metres(repo, MapTerrain.cell_center(repo, repo.cells[c]))
 		var dx := m.x - at.x
 		var dy := m.y - at.y
-		if c == own or dx * dx + dy * dy <= r * r:
+		if c == own or (c not in protected and dx * dx + dy * dy <= r * r):
 			out.append(c)
 	out.sort()
 	return out
@@ -222,8 +228,8 @@ func test_a_besieged_garrison_is_fed_only_by_its_town() -> void:
 	s.regiments[g]["supplies"] = 0
 	var free := GameState.from_dict(s.to_dict())
 	free.ai_hosts[main]["mode"] = "ADVANCE"
-	assert_true(SiegeSystem.besieged(s, town))
-	assert_false(SiegeSystem.besieged(free, town))
+	assert_true(SiegeSystem.besieged(repo, s, town))
+	assert_false(SiegeSystem.besieged(repo, free, town))
 	SupplyLines.day_step(repo, free)
 	SupplyLines.day_step(repo, s)
 	assert_gt(int(free.regiments[g]["supplies"]), 0, "unbesieged, the depot feeds a dry town's garrison")
@@ -541,7 +547,7 @@ func test_hold_host_with_no_column_left_frees_the_town() -> void:
 	s.ai_hosts[main]["siege_progress"] = 1000
 	SiegeSystem.settle_day(repo, s, [])
 	for c: String in EnemyAi.regiments_of(s, main):
-		s.foes[c]["dead"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, c))
+		assert_false(People.move(repo, s, c, "fit", "dead", MilitaryRoster.fit(s, c), "slain:" + c).has("error"))
 	var ev := SiegeSystem.settle_day(repo, s, [])
 	assert_eq(String(s.ai_hosts[main]["mode"]), "RETREAT", "no column left to hold it")
 	assert_eq(_modes(ev, main, "RETREAT").size(), 1)
@@ -553,7 +559,7 @@ func test_garrison_slain_to_the_last_man_loses_the_town() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var g := String(_town_and_garrison(s)[1])
 	var town := _besiege(s, main, [g])
-	s.regiments[g]["dead"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, g))
+	assert_false(People.move(repo, s, g, "fit", "dead", MilitaryRoster.fit(s, g), "garrison-slain:" + g).has("error"))
 	var ev := SiegeSystem.settle_day(repo, s, [])
 	assert_false(EnemyAi.target_held(repo, s, "town", town), "no fit man left: the town is taken")
 	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD")
@@ -639,21 +645,35 @@ func test_no_double_capture_and_no_progress_after_loss() -> void:
 	assert_eq(_modes(ev, main, "WITHDRAW").size(), 1, "told as a host_mode")
 
 
-func test_garrison_marched_off_ends_the_siege_without_progress() -> void:
+func test_departed_garrison_keeps_siege_intent_until_an_actual_column_reaches_the_gate() -> void:
 	var main := _host("main")
 	var s := SuiteData.campaign(repo, 7)
 	var g := String(_town_and_garrison(s)[1])
 	var town := _besiege(s, main, [g])
+	for code: String in EnemyAi.live_regiments(repo, s, main):
+		Play.place(repo, s, code, _town_m(town) + Vector2i(15000, 0), ArmySystem.ORDER_GARRISON)
 	s.ai_hosts[main]["siege_progress"] = 300
 	s.regiments[g]["order"] = ArmySystem.ORDER_MARCH
+	assert_true(SiegeSystem.capture(repo, s, main).is_empty(), "capture itself refuses a remote occupation")
 	var ev := SiegeSystem.settle_day(repo, s, [])
-	assert_eq(_of(ev, "siege_day").size(), 0, "no progress on an empty town")
-	assert_eq(s.manor_log.size(), 0, "and no capture: no siege took it")
-	assert_eq(String(s.ai_hosts[main]["mode"]), "RAID", "an open town is raided, as on arrival")
-	assert_eq(_modes(ev, main, "RAID").size(), 1, "told as a host_mode")
+	assert_eq(_of(ev, "siege_day").size(), 0, "no engineering progress on an empty town")
+	assert_eq(s.manor_log.size(), 0, "no remote occupation")
+	assert_eq(String(s.ai_hosts[main]["mode"]), "SIEGE")
 	assert_eq(String(s.ai_hosts[main]["target_id"]), town)
-	assert_eq(int(s.ai_hosts[main]["siege_progress"]), 0)
-	assert_eq(_of(ev, "siege_undefended").size(), 1)
+	assert_eq(int(s.ai_hosts[main]["siege_progress"]), 300)
+	var moving: Array[String] = []
+	for code: String in EnemyAi.live_regiments(repo, s, main):
+		if String(s.foes[code]["order"]) == ArmySystem.ORDER_MARCH:
+			moving.append(code)
+	assert_eq(moving.size(), 1, "one closest available column approaches; other camps hold")
+	if moving.is_empty():
+		return
+	var deployment: Dictionary = s.ai_hosts[main]["deployment"].duplicate(true)
+	Play.place(repo, s, moving[0], _town_m(town), ArmySystem.ORDER_GARRISON)
+	ev = SiegeSystem.settle_day(repo, s, [])
+	assert_eq(_of(ev, "siege_fallen").size(), 1)
+	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD")
+	assert_true(bool(deployment["complete"]))
 
 
 func test_retaken_town_sends_hold_host_retreating() -> void:
@@ -732,7 +752,7 @@ func test_relief_force_joins_battle_and_can_lift_siege() -> void:
 	s.ai_hosts[main]["siege_progress"] = 400
 	# a battered host: fifty fit men a column
 	for c: String in EnemyAi.regiments_of(s, main):
-		s.foes[c]["dead"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, c)) - 50
+		assert_false(People.move(repo, s, c, "fit", "dead", MilitaryRoster.fit(s, c) - 50, "battered:" + c).has("error"))
 	# the relief: three km off the town's point, in the open (no garrison)
 	var relief: Array = _mine().filter(func(c: String) -> bool: return c != g).slice(0, 3)
 	var at := _town_m(town) + Vector2i(3000, 0)
@@ -781,7 +801,7 @@ func test_a_supply_line_into_a_besieged_town_is_cut() -> void:
 	s.day = 20
 	var g := String(_town_and_garrison(s)[1])
 	var town := _besiege(s, main, [g])
-	assert_true(SiegeSystem.besieged(s, town), "besieged")
+	assert_true(SiegeSystem.besieged(repo, s, town), "besieged")
 	var dep := TownStores.depot(repo, s)
 	TownStores.add(s, dep, "crown", 100000)
 	for k: String in ["crown", "lord", "house"]:
@@ -856,7 +876,7 @@ func test_a_running_assault_is_called_off_the_day_its_host_turns_home() -> void:
 	var first := _storm(s, main, g)
 	assert_eq(_of(first[0], "round").size(), 1, "the assault fought its first round")
 	assert_eq(s.battles.size(), 1, "and runs on")
-	var dead := int(s.regiments[g].get("dead", 0))
+	var dead := People.count(s, g, "dead")
 	assert_gt(dead, 0, "the first round cost the garrison")
 	# the besiegers' food runs out: the hosts' minds turn them home
 	for c: String in EnemyAi.regiments_of(s, main):
@@ -876,7 +896,7 @@ func test_a_running_assault_is_called_off_the_day_its_host_turns_home() -> void:
 		var words := MissiveWriter.battle_words(repo, "battle_end_withdrawn", {"place": "X", "rounds": 1}, 0)
 		assert_false(words.contains("[missing") or words.contains("{"), words)
 	assert_eq(s.battles, [], "no battle kept")
-	assert_eq(int(s.regiments[g].get("dead", 0)), dead, "the garrison's casualties stop")
+	assert_eq(People.count(s, g, "dead"), dead, "the garrison's casualties stop")
 	var pause := s.absolute_day() + int(repo.bal("battle_disengage_days"))
 	assert_eq(int(s.regiments[g].get("disengaged_until", 0)), pause, "the garrison draws breath")
 	for c: String in EnemyAi.regiments_of(s, main):
@@ -888,7 +908,7 @@ func test_a_running_assault_is_called_off_the_day_its_host_turns_home() -> void:
 		EnemyAi.step_day(repo, s)
 		ArmySystem.march_day(repo, s)
 		assert_eq(_fighting(BattleSystem.settle_day(repo, s)), [], "no battle on its way home, day %d" % n)
-	assert_eq(int(s.regiments[g].get("dead", 0)), dead, "still no more dead")
+	assert_eq(People.count(s, g, "dead"), dead, "still no more dead")
 
 
 ## Regression: a host BEATEN in a battle still turns RETREAT the next day,
@@ -943,6 +963,7 @@ func _with_reserve(s: GameState) -> Array:
 	m["mode"] = "SIEGE"
 	m["target_kind"] = "town"
 	m["target_id"] = town
+	EnemyAi.ensure_deployments(repo, s)
 	return [main, reserve, town, g]
 
 
@@ -1098,11 +1119,13 @@ func _invaded(engine: TickEngine, n: int, weakest: bool) -> Array:
 func _siege_run(engine: TickEngine, s: GameState, days: int) -> Dictionary:
 	var main := _host("main")
 	var out := {"begun": -1, "fell": -1, "lifted": -1, "events": []}
+	var town := String(s.ai_hosts[main]["target_id"])
 	for n in days:
 		var today := s.absolute_day()
 		_day(engine, s)
-		(out["events"] as Array).append_array(engine.day_siege)
-		for e: Dictionary in engine.day_siege:
+		var own_events: Array = engine.day_siege.filter(func(e: Dictionary) -> bool: return String(e.get("town", "")) == town)
+		(out["events"] as Array).append_array(own_events)
+		for e: Dictionary in own_events:
 			var k := String(e.get("kind", ""))
 			if k == "siege_begin" and int(out["begun"]) < 0:
 				out["begun"] = today
@@ -1182,8 +1205,10 @@ func test_a_strongly_held_walled_town_outlasts_the_besiegers_supplies() -> void:
 	assert_eq(int(run["fell"]), -1, "the town does not fall")
 	assert_gt(int(run["lifted"]), 0, "the siege is lifted")
 	assert_true(String(s.ai_hosts[main]["mode"]) in ["RETREAT", "WITHDRAW"], "the host goes home")
+	assert_true(EnemyAi.should_retreat(repo, s, main).begins_with("supplies for "), "the withdrawal is caused by exhausted supplies")
 	assert_true(EnemyAi.target_held(repo, s, "town", town), "the town is still the crown's")
-	assert_eq(s.manor_log.size(), 0, "no manor taken")
+	assert_true(s.manor_log.filter(func(e: Dictionary) -> bool:
+		return String(e["reason"]).contains("siege of " + String(repo.burgs[town]["label"]))).is_empty(), "this siege took no manor")
 	var best := 0
 	var hungry := 0
 	for e: Dictionary in run["events"]:
@@ -1247,3 +1272,45 @@ func test_siege_draws_no_random_number() -> void:
 	SiegeSystem.settle_day(repo, s, [])
 	assert_eq(s.rng.to_dict(), before, "GameState.rng untouched")
 	assert_eq(String(s.ai_hosts[main]["target_id"]), town)
+
+func test_capturing_one_town_does_not_take_a_nearby_towns_manor() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var towns := TownStores.realm_towns(repo, s)
+	towns.sort()
+	var pair: Array[String] = []
+	var radius := int(repo.bal("siege_capture_radius_km") * 1000)
+	for a: String in towns:
+		for b: String in towns:
+			if a >= b or repo.burgs[a]["province_code"] != repo.burgs[b]["province_code"]:
+				continue
+			if _town_m(a).distance_to(_town_m(b)) <= radius and EnemyAi.target_cell(repo, s, "town", a) != EnemyAi.target_cell(repo, s, "town", b):
+				pair = [a, b]
+				break
+		if not pair.is_empty():
+			break
+	assert_eq(pair.size(), 2, "the fixture derives two separate nearby town manors")
+	if pair.size() != 2:
+		return
+	var town := pair[0]
+	var protected_town := pair[1]
+	var own := EnemyAi.target_cell(repo, s, "town", town)
+	var other := EnemyAi.target_cell(repo, s, "town", protected_town)
+	var old_owner := MapManors.owner_of(repo, s, other)
+	var main := _host("main")
+	var mind: Dictionary = s.ai_hosts[main]
+	mind["mode"] = "SIEGE"
+	mind["target_kind"] = "town"
+	mind["target_id"] = town
+	mind["siege_progress"] = 1000
+	for code: String in EnemyAi.live_regiments(repo, s, main):
+		Play.place(repo, s, code, _town_m(town), ArmySystem.ORDER_GARRISON)
+	EnemyAi.ensure_deployments(repo, s)
+	var guards := _mine()
+	Play.arrive(repo, s, guards[0], _town_m(town))
+	Play.arrive(repo, s, guards[1], _town_m(protected_town))
+	assert_true(SiegeSystem.taken_cells(repo, s, town).has(own))
+	assert_false(SiegeSystem.taken_cells(repo, s, town).has(other))
+	assert_false(SiegeSystem.capture(repo, s, main).is_empty())
+	assert_eq(MapManors.owner_of(repo, s, other), old_owner)
+	assert_true(EnemyAi.target_held(repo, s, "town", protected_town))
+	assert_true(s.manor_log.filter(func(e: Dictionary) -> bool: return int(e["cell"]) == other).is_empty())

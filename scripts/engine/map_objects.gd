@@ -933,7 +933,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var kingdom := String(r["kingdom_code"])
 	var naval := String(r.get("is_naval", "0")) == "1"
 	var province := ArmySystem.province_of(repo, state, r)
-	var total := int(regiment_size(repo, r))
+	var total := ArmySystem.headcount(repo, r)
 	var piece := army_piece(repo, r)
 	var stats: Array = []
 	# Only a regiment Intel.level calls "full" — the player's own for now,
@@ -958,11 +958,11 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var st := ArmySystem.state_of(repo, state, code) if state != null and reg_known == "full" else {}
 	# the dead and the deserted are no longer under arms (the pack's headcount
 	# is immutable; ArmySystem.fit_heads' own count of them)
-	var under := ArmySystem.under_arms(total, st)
+	var under := ArmySystem.living_count(repo, state, code)
 	if st.is_empty():
 		stats.append(_stat("army", total_text, "Under arms — %s" % total_text))
 	else:
-		var wounded := int(st["wounded"])
+		var wounded := ArmySystem.wounded_count(repo, state, code)
 		stats.append(_stat("army", "%d (%d wounded)" % [under, wounded],
 			"Under arms — %d, of whom %d are wounded" % [under, wounded]))
 	var fields: Array = [["Under arms", str(under) if reg_known == "full" and not st.is_empty() else total_text]]
@@ -1037,14 +1037,14 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 			var word := ArmySystem.morale_word(repo, ArmySystem.supply_score(repo, int(st["supplies"]), use))
 			stats.append(_stat("army_morale", str(int(st["morale"])),
 				"Morale — %d of 100; the ranks are %s" % [int(st["morale"]), word]))
-		var back := ArmySystem.wound_recovery(repo, int(st["wounded"]))
+		var back := ArmySystem.wound_recovery(repo, ArmySystem.wounded_count(repo, state, code))
 		stats.append(_stat("army_wounded", "+%d / mo" % back,
 			"%d wounded return to the ranks each month" % back))
 		var in_hand := mini(ArmySystem.days_in_hand(int(st["supplies"]), use), 999)
 		var carry := ArmySystem.carry_of(repo, st)
 		var held := grouped(int(st["supplies"]))
 		var living := ""
-		for row: Dictionary in WarFolio.conduct_rows(repo, st):
+		for row: Dictionary in WarFolio.conduct_rows(repo, state, code):
 			fields.append([String(row["label"]), String(row["text"])])
 			if String(row["text"]) != "" and living == "":
 				living = String(row["text"])

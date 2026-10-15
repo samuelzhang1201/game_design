@@ -143,7 +143,7 @@ func test_overrides_survive_a_save_round_trip() -> void:
 func test_prompt_catalog_lists_writable_fields_with_caps() -> void:
 	var cat := WorldLedger.prompt_catalog(data, state)
 	assert_string_contains(cat, "metrics.grain")
-	assert_string_contains(cat, "economy.kingdoms.player_realm.rural_population")
+	assert_false(cat.contains("economy.kingdoms.player_realm.rural_population"), "derived population cannot be written by the model")
 	assert_string_contains(cat, "cap")
 	assert_false(cat.contains("metrics.tax_rate"), "engine-only fields are not offered")
 	assert_string_contains(cat, "Your provinces:")

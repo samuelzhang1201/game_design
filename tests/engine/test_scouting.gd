@@ -1,5 +1,7 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
+const Personnel := preload("res://scripts/engine/military_roster.gd")
 const Play := preload("res://tests/invasion_play.gd")
 ## The scouting fan and the contact and scout letters (spec 2026-10-14-unit-
 ## clearance-and-scouting-design §c, owner 2026-10-14): a MARCHING crown land unit
@@ -20,6 +22,8 @@ var other := ""               # another, left far away
 
 
 func before_each() -> void:
+	horse = ""
+	foot = ""
 	repo = SuiteData.open_country(SuiteData.repo())
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
@@ -44,7 +48,7 @@ func before_each() -> void:
 	var realm := repo.resolve_realm("player_realm")
 	for code: String in s.regiments.keys():
 		var reg := ArmySystem.regiment(repo, code, s)
-		if String(reg.get("is_naval", "0")) == "1" or ArmySystem.headcount(repo, reg) < 400:
+		if String(reg.get("is_naval", "0")) == "1" or Personnel.personnel_capacity(repo, reg) < 400:
 			continue
 		var arm := MapObjects.regiment_arm(repo, reg)
 		if arm == "cavalry" and (horse == "" or code < horse):
@@ -199,7 +203,7 @@ func test_a_foe_without_men_is_dropped_from_the_log() -> void:
 	_put_foe(far + Vector2i(3000, 0))
 	Sighting.scout_day(repo, s)
 	assert_true(s.scout_log.has(foe))
-	s.foes[foe]["dead"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, foe))
+	assert_false(People.move(repo, s, foe, "fit", "dead", ArmySystem.fit_count(repo, s, foe), "scouted_unit_destroyed").has("error"))
 	Sighting.scout_day(repo, s)
 	assert_false(s.scout_log.has(foe))
 

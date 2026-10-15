@@ -42,18 +42,19 @@ static func composition(total: int, noble_permille: int, cap_permille: int) -> D
 static func living(state: GameState, code: String) -> int
 static func fit(state: GameState, code: String) -> int
 static func personnel_capacity(repo: DataRepository, equipment: Dictionary) -> int
-static func assign_commander(repo: DataRepository, state: GameState, code: String, character_id: String) -> Dictionary
-static func transition(repo: DataRepository, state: GameState, cohort_id: String, from_status: String, to_status: String, count: int, event_id: String, reason: String) -> Dictionary
+static func assign_commander(repo: DataRepository, state: GameState, code: String, character_id: String, reason: String) -> Dictionary
+static func transition(repo: DataRepository, state: GameState, event_id: String, changes: Array, reason: String) -> Dictionary
+static func mobilize(repo: DataRepository, state: GameState, event_id: String, recruits: Array, reason: String) -> Dictionary
 # MilitaryPopulation：总居民数不等于可征平民；源省只能认领一次。
-static func available(repo: DataRepository, state: GameState, province: String) -> int
-static func mobilize(repo: DataRepository, state: GameState, cohort_id: String, count: int, token: String, reason: String) -> Dictionary
-static func record_death(repo: DataRepository, state: GameState, cohort_id: String, count: int, token: String, reason: String) -> Dictionary
-static func release(repo: DataRepository, state: GameState, cohort_id: String, count: int, token: String, reason: String) -> Dictionary
+static func available(repo: DataRepository, state: GameState, province: String, field: String = "") -> int
+static func occupied(state: GameState, province: String, field: String = "") -> int
+# changes为cohort_id/from/to/count的批次，先整体校验，再同步提交。
+# mobilize与transition是唯一人员写入；人口读数从同一份cohort派生。
 # BattleCommand：ids 是已合法筛选的本战场人物；nominee 必须在 ids 内且可任职。
 static func select(state: GameState, ids: Array[String], nominee: String) -> String
 ```
 
-每队 `military_rosters[code]` 保存 commander_id、原籍 cohorts、已参战人数及任职记录。cohort 含 `id/source_province/source_population_field/identity/family_name/fit/wounded/dead/captured/released`；来源字段必须明确城市或农村人口。具名指挥官标识其所在 cohort 中的一人，不能额外加人数。P5 的在押 batch 指向源 cohort；captured 是该 cohort 的累计离队数，当前持有与获释人数另外核对，不能把 released 再次加进原始参战人数。
+每队 `military_rosters[code]` 保存 commander_id、cohort_ids及任职记录；cohort本体只存在 `military_cohorts[id]`。cohort含 `id/unit_code/source_province/source_population_field/identity/family_name/stage/initial/fit/wounded/captured_current/dead/released`。来源字段必须明确城市或农村人口；stage区分集结与现役。五种人数互斥，`initial=fit+wounded+captured_current+dead+released`。具名指挥官使用带person_id的单人贵族cohort，任命只引用该记录，不额外加人数；死亡、负伤、被俘或退伍后解除任命，获释需重新征募。P5持有批次只引用源cohort；历史累计被俘人数保存在不可变战报/事件中。人口占用只从fit+wounded+captured_current派生，集结项目不重复占人。released表示已成为平民的明确去向，不能直接转回fit；重征创建新cohort与新费用。
 
 装备／编制元素与人员分开保存。人数容量按当前包 `unit_types` 的 `crew` 计算；现有一艘舰船不能当作一名军人。人员伤亡不直接删除同数量舰船或炮；装备毁损另记且影响可投入战力。身份比例始终按人计算，不能按武器、马匹或舰船计算。
 
@@ -72,13 +73,14 @@ func test_commander_is_in_noble_total() -> void:
 ```
 
 - [ ] composition 在合法输入上以 `nobles=max(1,total*noble_permille/1000)` 取整，commoners=total−nobles，noble_troops=nobles−1；再检查 `nobles * 1000 <= total * cap_permille`。生产调用从 CSV 传入普通单位上限100‰，不把上限藏进函数常数；上面的100仅为测试输入。百分比目标与最终整数比例同时显示，不能承诺600人能表达任意小数比例。
-- [ ] 先写人员换算测试：夹具 1 艘船×100 crew=100 人，贵族5%为95平民+4骨干+1指挥官；2门炮×8 crew=16人，无骨干时15平民+1指挥官。重复初始化及旧档迁移不得再次乘 crew；装备仍是1艘、2门。旧伤亡按旧计数单位迁移为人员，记录换算来源，不复活已损失者；旧装备毁损无法精确还原时保留旧装备记录与迁移说明，不伪造历史。
+- [ ] 先写人员换算测试：夹具 1 艘船×100 crew=100 人，贵族5%为95平民+4骨干+1指挥官；2门炮×8 crew=16人，无骨干时15平民+1指挥官。重复初始化及旧档迁移不得再次乘 crew；装备仍是1艘、2门。旧dead/wounded/deserted保存值按已记录人员事实保留，不随crew再乘一次；例如200骑兵元素、crew2、10死/20伤/5逃兵迁移为365可战/20伤/10死/5平民，记录换算口径，不复活已损失者；旧装备毁损无法精确还原时保留旧装备记录与迁移说明，不伪造历史。
 - [ ] 人员换算与既有拆分上限一起迁移：`army_split_cap_men` 约束人员，普通陆军的装备元素上限为 `floor(cap_men / crew)`，再按既有均分算法拆分。crew必须为正整数；单元素所需人数超过cap时给出数据错误，不静默造超限单位。舰队和一国一支royal train保留现有组织例外。该口径不把crew=2臆解为某种已确认的历史兵种配置。
 - [ ] 增加拆分手算：1268个骑兵编制元素、crew=2、cap=600，元素为[254,254,254,253,253]，人数[508,508,508,506,506]，总人数2536；301个元素分[151,150]，人数302/300；7个元素、crew=8、cap=25，分[3,2,2]，人数24/16/16。枪炮和舰船总数量始终守恒。
 - [ ] 旧存档从已保存的现存部队迁移，不从开局包重建。拆分时首个子队保留旧ID，其他子队用稳定派生ID；装备、各身份人员状态、库存和战利品按整数守恒分配，保存旧ID到子队列表。军令、信使收件人、战斗参与者逐项映射，同一命令费用不因拆分重复支付；驻防席位只有一个子队继承，其余使用合法相邻驻地。
 - [ ] 若旧档处在未完成日事务，先保存待重组标记，保持原事务参与者和游标，待该事务完成后的安全边界再重组。写两条迁移分支：普通存档立即升级；第二战场阻塞存档先续跑再升级。两次加载后的组织版本、ID映射、人数、库存、命令费用及结果hash一致，不重组第二次。P7重新执行端到端迁移矩阵。
 - [ ] 所有初始真实单位逐一绑定 Character，覆盖陆军、舰队及 royal train；玩家国家和开局入侵国家均取完整名册，不只取已越境的敌军。`commanders.csv` 保存 `character_id/realm_slot/eligible/unit_kinds/portrait_key/reserve_priority`，人物完整字段继续由 `roles.csv` 和 CharacterFactory 读取。明确排除国王、外国君主、无资格及存在任职冲突的人物；排序稳定，不能占用已绑定者。
-- [ ] ArmySplit 合并 royal train 前保留原 regiment 的来源省与人口类别，不能把全部炮组人员记成首都居民。新增人物使用既有家族绑定与角色字段，不从 cavalry 或 Character.category 单独推断贵族身份。
+- [ ] ArmySplit 在拆分与合并 royal train 前保存 `source_parts`，每项含原 regiment_code、province_code、arm、equipment_count 和 crew_per_element；所有数量为整数。原始省只是开局驻地，不冒充已经记录的历史征募地。首次初始化使用该省作为明确的原籍分配策略，再按省人口×兵种 rural_rate/urban_rate 的权重做整数分配并保存来源；不能把全部炮组人员记成首都居民。零权重、未知来源或人口不足给出明确冲突，不默认全属农村。夹具农村1000/城市500、征募率120‰/30‰，180人分160农村/20城市；拆分子队只认领自己的份额，JSON往返保留整数与总数。
+- [ ] 新增人物使用既有家族绑定与角色字段，不从 cavalry 或 Character.category 单独推断贵族身份。具名指挥官使用带 person_id 的一人贵族 cohort，计入原有总人数；任职记录必须包含 reason。被俘、阵亡或失去任职资格时解除任职，恢复或获释后不自动复任；同一人重新征募时产生新 cohort，旧服役记录仍可追溯。
 - [ ] 实现主将：合法玩家提名优先，否则按 sk_martial 降序、prestige 降序、id 升序；已有主将仍有效则援军不重选。主将阵亡/被俘/退出战场才按规则接替。
 - [ ] 在 test_battle_command 用三名人物：A技能16威望40、B技能15威望90、C技能16威望40，A/C按id取A；指定合法B取B；新人技能20加入既有战场不夺主将。失效提名返回空ID，由调用方显示明确错误，不偷偷改为另一人。
 - [ ] 再测试唯一指挥、同家族多成员可分任、无合格人选不能出征、舰队和两个国家的 royal train 全覆盖。迁移保留原有伤亡事实，人物按稳定ID生成一次；不重新支付初始编制费用。
@@ -105,8 +107,8 @@ static func step_day(repo: DataRepository, state: GameState) -> Array
 
 - [ ] 用 SuiteData 复制数据，给夹具平民单价2、贵族单价10、指挥官任职费0、可征人口1000、国库2000。600人5%报价为570×2+30×10=1440；成功后钱560、可征400、总人口仍1000，600人处于集结状态，尚无新增可执行部队。资金1439或可征599均完全不变；同 request_id 重送不二次执行。
 - [ ] 运行 test_recruitment/test_military_population 见红。
-- [ ] quote 同时返回人数构成、招募钱粮、集结完成日、日消耗、战力/军纪变化及拒绝原因；recruit 同步检查资金、人口、装备与任职资格，足够才付款并预留人员、装备和人物。保存 recruitment_projects 的 request_id、cohorts、commander_id、equipment、start_day、completion_day、status；step_day 在 P1 日事务内完成集结，一次性加入部队。集结中不能出征或重复任命；存档恢复不缩短等待。费用经 OrderCosts、人口经 MilitaryPopulation、财政经 WorldLedger，均附原因。
-- [ ] 在 ActionSystem 注册 `ARMY_RECRUIT`，与已有抽象训练动作分开；拒绝直接修改人数或跳过集结的旧入口。
+- [ ] quote 同时返回人数构成、招募钱粮、集结完成日、日消耗、战力/军纪变化及拒绝原因；recruit 同步检查资金、人口、装备与任职资格，足够才付款并预留人员、装备和人物。保存 recruitment_projects 的 request_id、cohorts、commander_id、equipment、start_day、completion_day、status；step_day 在 P1 日事务内完成集结，一次性加入部队。集结中不能出征或重复任命；存档恢复不缩短等待。费用经 OrderCosts核算、可征人口经MilitaryPopulation查询、人员占用经MilitaryRoster.mobilize提交、财政经 WorldLedger，均附原因。
+- [ ] 在 ActionSystem 注册 `ARMY_RECRUIT`，与已有抽象训练动作分开；拒绝直接修改人数或跳过集结的旧入口。MilitaryPopulation只派生可征与占用读数；实际动员、阵亡、退伍与释放统一通过MilitaryRoster的批次接口提交，不能另设一份可写人口占用账。
 
 - [ ] 集结夹具用两整日：完成日前仍零新增可战者；第二日日末得到600人含30贵族，之后重复 step_day 无变化。完成前存档往返结果一致；来源易主、集结点失效或指挥官失去资格时暂停项目并给出原因，不继续从失效来源自动补人，也不丢失已付款与占用记录。
 - [ ] 贵族战力和供给用身份分组加权，训练/士气/军纪分别只应用一次。把修正分解保存为可读解释。fixture 中平民质量1000、贵族2000，570×1000+30×2000=630000，除1000得到630基础等效兵力；相同部队贵族每人粮3、平民1，则每日660粮。此数值只验证算法，生产值由表与P4调校决定。

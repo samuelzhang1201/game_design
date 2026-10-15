@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## The day's supply step (spec 2026-10-07-army-supply-lines §3.2–3.4).
 
@@ -30,7 +31,7 @@ func before_each() -> void:
 			break
 	if code != "":
 		town = _eligible_town()
-	else:   # every regiment stands in a town: march one out into the open field
+	if town == "":   # no usable field line: place one on reachable open ground
 		_march_one_out(codes)
 	assert_ne(town, "", "a regiment in the field with a town in reach")
 	s.supply_lines[code] = SupplyLines._new_record(town, 1000, 1)
@@ -47,11 +48,11 @@ func after_each() -> void:
 	RealmEconomy.forget()
 
 func _eligible_town() -> String:
-	var e := SupplyLines.eligibility(repo, s, code)
+	var e := SupplyLines.mark_ahead(repo, s, code, SupplyLines.eligibility(repo, s, code))
 	var towns: Array = e.keys()
 	towns.sort()
 	for t: String in towns:
-		if String(e[t]) == "":
+		if String(e[t]) == "" and SupplyLines.cut_point(repo, s, SupplyLines.road_px(repo, s, code, t)).is_empty():
 			return t
 	return ""
 
@@ -136,6 +137,7 @@ func test_crown_then_lord_then_the_house_is_bought() -> void:
 	var row: Dictionary = s.army_roster[code]
 	for arm: String in repo.world_table("military", "unit_types"):
 		row[arm] = str(int(float(row.get(arm, 0))) * 4)
+	assert_false(People.enlist(repo, s, code, MilitaryRoster.fit(s, code) * 3, "fourfold-supply").has("error"))
 	var send := ArmySystem.day_bite(_use(), 5)
 	assert_gt(send, 2)
 	_stock(town, 1, 1, 100)

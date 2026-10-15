@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const Play := preload("res://tests/invasion_play.gd")
 ## The battle report and the day hook (spec 2026-10-07-enemy-ai-and-battle-design
@@ -204,7 +205,7 @@ func test_report_numbers_come_from_the_engine() -> void:
 	assert_string_contains(text, "%d–%d" % [int(span[0]), int(span[1])], "the enemy's losses as a span")
 	# and the state agrees with what the letter says (the dead are the state's dead)
 	for code: String in results:
-		assert_eq(int(ArmySystem.state_of(repo, s, code)["dead"]), int(results[code]["dead"]))
+		assert_eq(People.count(s, code, "dead"), int(results[code]["dead"]))
 
 
 func test_every_morale_change_carries_a_reason() -> void:
@@ -383,8 +384,8 @@ func test_under_arms_does_not_count_the_dead() -> void:
 	var code: String = _mine()[0]
 	var reg := ArmySystem.regiment(repo, code)
 	var heads := ArmySystem.headcount(repo, reg)
-	s.regiments[code]["dead"] = 123
-	s.regiments[code]["wounded"] = 45
+	assert_false(People.move(repo, s, code, "fit", "dead", 123, "reported_dead").has("error"))
+	assert_false(People.move(repo, s, code, "fit", "wounded", 45, "reported_wounded").has("error"))
 	var card := MapObjects.army_card(repo, code, s)
 	var under := ""
 	for st: Dictionary in card["stats"]:

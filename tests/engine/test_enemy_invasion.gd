@@ -392,11 +392,12 @@ func test_a_garrisoned_target_is_besieged_on_arrival_without_a_battle() -> void:
 			return String(e["type"]) == "host_mode" and String(e["host"]) == main and String(e["mode"]) == "SIEGE")
 		if not siege.is_empty():
 			arrived = today
-			assert_eq(engine.day_battles, [], "no battle the day the siege begins")
+			assert_eq(engine.day_battles, [], "no battle the day deployment begins")
 			assert_eq(s.battles, [], "no assault before SiegeSystem (Task 9)")
 			break
 		assert_eq(engine.day_battles, [], "no battle on the road, day %d" % today)
-	assert_gt(arrived, 0, "the host reached the town and sat down before it")
+	assert_gt(arrived, 0, "the leading columns reached the town and began deployment")
 	assert_eq(String(s.ai_hosts[main]["mode"]), "SIEGE")
-	gut.p("siege of %s begun on day %d" % [town, arrived])
+	assert_true(SiegeSystem.besieged(repo, s, town))
+	gut.p("deployment before %s begun on day %d" % [town, arrived])
 

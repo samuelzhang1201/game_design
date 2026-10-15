@@ -41,14 +41,19 @@ static func ray_segment(o: Vector3, d: Vector3, a: Vector3, b: Vector3) -> Vecto
 
 ## The sphere a ray meets first ({"kind": "sphere", "id": ...}), or {}.
 static func pick(o: Vector3, d: Vector3, spheres: Array) -> Dictionary:
-	var best := INF
-	var hit := {}
-	for sp: Dictionary in spheres:
-		var t := ray_sphere(o, d, sp["pos"], float(sp["radius"]))
-		if t >= 0.0 and t < best:
-			best = t
-			hit = {"kind": "sphere", "id": String(sp["id"])}
-	return hit
+	# Visible surfaces have priority over invisible accessibility padding.
+	for field: String in ["draw_radius", "radius"]:
+		var best := INF
+		var hit := {}
+		for sp: Dictionary in spheres:
+			var radius := float(sp.get(field, sp["radius"]))
+			var t := ray_sphere(o, d, sp["pos"], radius)
+			if t >= 0.0 and t < best:
+				best = t
+				hit = {"kind": "sphere", "id": String(sp["id"])}
+		if not hit.is_empty():
+			return hit
+	return {}
 
 
 ## A pointer position in the control's design px, in the SubViewport's px

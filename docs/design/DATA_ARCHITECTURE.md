@@ -385,3 +385,11 @@ LEDGER 星图（`Ledger.galaxy`）同样只画认知：官员报给你的数字�
 | 认知 | `intel.gd`、`missive_log.gd`、`knowledge.gd`、`claims.gd` |
 | 领土 | `map_ownership.gd` |
 | 构建管线 | `tools/import_azgaar.gd`、`tools/bake_*.gd`、`tools/map3d/build_pack.sh`、`assets/imagegen/generate.py`、`assets/imagegen/install_map_art.py`、`tools/art_kit/` |
+
+## Military personnel ledger
+
+Equipment elements and personnel are separate: `unit_types.crew` converts capacity; ordinary `ArmySplit` land units respect the personnel cap. Military cohorts retain source province and urban/rural population field. `MilitaryRoster` owns atomic enlistment and status transitions; `MilitaryPopulation` derives reservation and available civilians. Recruitment projects and prisoner records reference cohorts rather than copying their people. Cohort partitions are fit, wounded, currently captive, dead and released civilians; their sum stays equal to the cohort's initial population.
+
+Province population includes living mobilized residents and captives. Enlistment reserves, death subtracts from the explicit origin through `WorldLedger`, release removes reservation without creating population. Kingdom urban/rural totals are derived from currently held provinces and reject direct writes. Historical kingdom overrides no longer shadow those totals. `LEVY_RAISE` trains the existing abstract force and pays gold/material costs; only actual recruitment creates personnel.
+
+`military_rosters`, `military_cohorts`, `military_events`, `recruitment_projects`, and `military_migration` are saved as plain integer JSON. Old saves receive empty fields at decode; repository-aware migration is responsible for populating them without re-seeding existing armies. Event tokens and request payloads survive save/load so retries cannot duplicate losses or reservations.

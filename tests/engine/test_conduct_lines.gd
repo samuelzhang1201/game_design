@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const H := preload("res://tests/engine/conduct_helpers.gd")
 ## The lines of foraging and desertion (spec 2026-10-10-foraging-and-desertion
 ## §4): folio rows, the unit card, the hover slip, the kingdom card, the word
@@ -134,7 +135,7 @@ func test_folio_rows_only_when_set() -> void:
 	assert_false(_supply_rows().has(_words("row_deserted")))
 	assert_false(_brief_rows().has(_words("row_foraging")))
 	state.regiments[code]["forage"] = "law"
-	state.regiments[code]["deserted"] = 12
+	_desert(12)
 	assert_eq(_supply_rows()[_words("row_foraging")], _words("state_law"))
 	assert_eq(_supply_rows()[_words("row_deserted")], "12")
 	assert_eq(_brief_rows()[_words("row_foraging")], _words("state_law"))
@@ -144,9 +145,8 @@ func test_folio_rows_only_when_set() -> void:
 
 func test_under_arms_excludes_the_deserted() -> void:
 	var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, code, state))
-	state.regiments[code]["dead"] = 10
-	state.regiments[code]["deserted"] = 20
-	state.regiments[code]["wounded"] = 0
+	assert_false(Personnel.move(repo, state, code, "fit", "dead", 10).has("error"))
+	_desert(20)
 	var want := WarRoom.group(heads - 30)
 	assert_eq(_brief_rows()["Under arms"], want)
 	var comp := {}
@@ -164,8 +164,8 @@ func test_under_arms_excludes_the_deserted() -> void:
 
 
 func test_under_arms_never_below_nothing() -> void:
-	state.regiments[code]["dead"] = 0
-	state.regiments[code]["deserted"] = 99999999
+	_desert(ArmySystem.fit_count(repo, state, code))
+	assert_true(Personnel.move(repo, state, code, "fit", "released", 1).has("error"), "cannot release more than remain")
 	assert_eq(_brief_rows()["Under arms"], "0")
 
 
@@ -175,7 +175,7 @@ func test_the_card_names_the_state_and_the_deserted() -> void:
 	assert_false(labels.has(_words("row_foraging")))
 	assert_false(labels.has(_words("row_deserted")))
 	state.regiments[code]["forage"] = "desperate"
-	state.regiments[code]["deserted"] = 7
+	_desert(7)
 	card = MapObjects.army_card(repo, code, state)
 	assert_has(card["fields"], [_words("row_foraging"), _words("state_desperate")])
 	assert_has(card["fields"], [_words("row_deserted"), "7"])
@@ -230,6 +230,7 @@ func test_slip_with_a_unit_chosen() -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = "9000"
+	assert_false(Personnel.replace(repo, state, code, 9000).has("error"))
 	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code, state), state)
 	assert_gt(Forage.need_of(repo, state, code), 100)
 	assert_eq(Forage.cut_permille(repo, state, code), 1000)
@@ -263,3 +264,9 @@ func _scripts(dir: String) -> Array:
 	for d: String in DirAccess.get_directories_at(dir):
 		out.append_array(_scripts(dir.path_join(d)))
 	return out
+
+
+func _desert(n: int) -> void:
+	var result := MilitaryRoster.transfer_units(repo, state, "desertion:%d:%s" % [state.absolute_day(), code],
+		[{"unit_code": code, "from": "fit", "to": "released", "count": n}], "Test desertion for displayed history")
+	assert_false(result.has("error"), str(result))

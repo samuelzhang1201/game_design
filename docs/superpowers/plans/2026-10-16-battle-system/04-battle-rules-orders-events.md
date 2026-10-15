@@ -125,4 +125,4 @@ static func snapshot(repo: DataRepository, state: GameState, realm: String) -> D
 - [ ] 制作六类事件插图到 `assets/2D/events/battle/`，Qwen手绘，动作和人数符合prompt规范；每图经ArtTable资源映射。战斗卡显示命令效果、费用、送达状态、冷却和法律禁用原因；红旗和传令官资产在地图真实展示，接战最少具备驻防/走位/攻击/格挡。
 - [ ] 验证国王到/离场、事件选择前存档、余额变化、零合法进攻、报告延迟、多战场同时触发；跑battle_events/presentation、event_content、UI、fast并完成真实窗口审查，提交 `feat: add authored battle events and informed command views`。
 
-**阶段放行：** 能部署、自动逐条交涉、发五类命令、收到六类事件的对应结果；正常野战基准达目标，长战斗不中断编号；费用/军法/自动决策/暂停均有可复现证据。投降和俘虏最终闭环以P5放行为准。
+**阶段放行：** 能部署、自动逐条交涉、发五类命令；五类野战事件具备真实触发与结果。六类事件的正文、选项和插图在本阶段完成，地道事件的真实工程触发在P6.2验收。正常野战基准达目标，长战斗不中断编号；费用/军法/自动决策/暂停均有可复现证据。投降和俘虏最终闭环以P5放行为准。

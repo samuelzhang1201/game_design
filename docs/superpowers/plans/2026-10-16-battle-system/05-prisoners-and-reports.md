@@ -45,7 +45,7 @@ static func holder_defeated(repo: DataRepository, state: GameState, holder: Stri
 static func snapshot(repo: DataRepository, state: GameState, battle_id: int) -> Dictionary
 ```
 
-batch保存 id/source_cohort/origin_realm/holder_code/commoners/nobles/named_ids/wounded_subset/capture_id/disposition。具名人物属于人数子集；同一capture_id不能再建第二批。存活伤兵计入captured后从原队wounded移除。状态不存在missing字段。
+batch保存 id/source_cohort/origin_realm/holder_code/commoners/nobles/named_ids/wounded_subset/capture_id/disposition。具名人物属于人数子集；同一capture_id不能再建第二批。存活伤兵计入源cohort的captured_current后从原队wounded移除；全部有效在押批次的人数合计必须等于对应captured_current。历史累计被俘人数只读事件或战报，不拿它充当当前在押人数。状态不存在missing字段。
 
 - [ ] 写分配测试见红；按code稳定排序后复用最大余数法：
 
@@ -78,9 +78,9 @@ static func propose(repo: DataRepository, state: GameState, proposal: Dictionary
 static func settle(repo: DataRepository, state: GameState, proposal_id: String) -> Dictionary
 ```
 
-- [ ] fixture：持有60人，赎回10贵族成交价100金，法定俘获方份额300‰，王室收到70、俘获方分账30（具体身份映射现有财产账户），在押变50、原籍可征平民+10、军队不变，历史captured仍60。份额只测试分账算法，生产比例取收到军法；不硬编码三分之一。
+- [ ] fixture：持有60人，赎回10贵族成交价100金，法定俘获方份额300‰，王室收到70、俘获方分账30（具体身份映射现有财产账户），在押与源cohort的captured_current均变50、released增加10、原籍可征平民增加10、军队不变；历史战报仍记被俘60。份额只测试分账算法，生产比例取收到军法；不硬编码三分之一。
 - [ ] 测试提案未履行时零付款零释放；拒绝、买方余额不足、名单已转移/释放都不得部分扣款。交换双方各10人，必须同一次同步事务检查并同时释放，不能先把一边清空。运行test_prisoner_disposition见红。
-- [ ] propose冻结名单与条件但不立即收钱/放人；settle重验当前持有权、法律、资金、名单与承诺。全部有效后财政一次转账、PrisonerSystem更新、MilitaryPopulation.release去动员、记录civilian disposition。重复proposal_id返回原结果。
+- [ ] propose冻结名单与条件但不立即收钱/放人；settle重验当前持有权、法律、资金、名单与承诺。全部有效后财政一次转账、PrisonerSystem更新、MilitaryRoster.transition把captured_current转released并解除动员占用、记录civilian disposition。重复proposal_id返回原结果。
 - [ ] 原籍不再属于原国家时，按实际原籍人口账归档与当前所有权展示；不能凭当前领主变化重复加人口。具名贵族保留Character/family但command assignment清除；受不参战承诺约束的civilian在RecruitmentSystem中拒绝，给出条款/到期原因。
 - [ ] 所有赎金/家族关系/放弃收益附reason，并记批次原主与俘获单位功劳；钱怎么分不改变held_by。操作菜单不含押送后方、上缴重要俘虏或点击即复员。
 - [ ] 跑disposition/population/recruitment/law_guard/save_load和fast；更新regiments与battle指南，提交 `feat: release ransomed and exchanged captives as civilians`。

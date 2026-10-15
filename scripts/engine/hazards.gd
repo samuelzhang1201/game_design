@@ -140,22 +140,28 @@ static func settle_regiments(repo: DataRepository, state: GameState) -> Array[St
 	for c in codes:
 		var code := String(c)
 		var reg := ArmySystem.regiment(repo, code, state)
-		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1" or not state.military_rosters.has(code):
 			continue
 		var entry: Dictionary = state.regiments[code]
-		var heads := ArmySystem.headcount(repo, reg)
 		var name := String(reg.get("label", code))
 		for id: String in at_point(repo, state, ArmySystem.position_of(repo, state, reg)):
+			var marker := "hazard:" + code + ":" + id
+			if int(state.conduct_marks.get(marker, -1)) == state.tick:
+				continue
 			var h: Dictionary = state.hazards[id]
 			var k := kind_of(repo, String(h["kind"]))
-			var fit := ArmySystem.fit_heads(heads, entry)
+			var fit := ArmySystem.fit_count(repo, state, code)
 			@warning_ignore("integer_division")  # whole heads
 			var lost := fit * int(k.get("wounds_permille", 0)) / 1000
 			if lost > 0:
-				entry["wounded"] = clampi(int(entry["wounded"]) + lost, 0, heads)
+				var result := MilitaryRoster.transfer_units(repo, state, "hazard:%d:%s:%s" % [state.tick, code, id],
+					[{"unit_code": code, "from": "fit", "to": "wounded", "count": lost}], "Hazard wounds: " + String(h["label"]))
+				if result.has("error"):
+					continue
 				# ruling 6: a hazard we do not know is felt, never named
 				var what := "the " + String(h["label"]) if known(repo, state, id) else "trouble in the country"
 				news.append("The %s loses %d to %s." % [name, lost, what])
+			state.conduct_marks[marker] = state.tick
 			# the month's drift toward the supply mark gives back more than this
 			# takes, so the regiment is HELD lower while it stands here: no news
 			entry["morale"] = clampi(int(entry["morale"]) + int(k.get("morale", 0)), 0, 100)

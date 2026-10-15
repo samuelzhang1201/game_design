@@ -78,3 +78,24 @@ func test_a_foe_that_moves_out_of_sight_leaves_the_map_and_becomes_a_ghost() -> 
 	assert_eq([String(gs[0]["key"]), int(gs[0]["x_m"]), int(gs[0]["y_m"]), String(gs[0]["source"])],
 		[foes[0], was.x, was.y, "seen"])
 	assert_eq(String(gs[0]["label"]), String(ArmySystem.regiment(repo, foes[0], s)["label"]))
+
+
+func test_same_day_personnel_loss_removes_a_seen_foe_without_a_move() -> void:
+	var foes := _two_foes()
+	assert_has(_codes(ctx.regiments()), foes[0])
+	var count := MilitaryRoster.fit(s, foes[0])
+	var result := MilitaryRoster.transfer_units(repo, s, "sight:foe-gone", [{
+		"unit_code": foes[0], "from": "fit", "to": "released", "count": count}], "Disband the observed column")
+	assert_false(result.has("error"))
+	assert_false(foes[0] in _codes(ctx.regiments()), "same-day personnel changes invalidate cached sight")
+
+
+func test_same_day_loss_of_last_viewer_hides_the_enemy() -> void:
+	var foes := _two_foes()
+	assert_has(_codes(ctx.regiments()), foes[0])
+	var viewer := String(Play.land_regiments(repo)[0])
+	var count := MilitaryRoster.fit(s, viewer)
+	var result := MilitaryRoster.transfer_units(repo, s, "sight:viewer-gone", [{
+		"unit_code": viewer, "from": "fit", "to": "released", "count": count}], "Disband the observing column")
+	assert_false(result.has("error"))
+	assert_false(foes[0] in _codes(ctx.regiments()), "the old observer no longer reveals a foe while the clock is paused")

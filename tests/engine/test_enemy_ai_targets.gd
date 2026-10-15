@@ -646,9 +646,9 @@ func test_raid_begins_when_the_first_column_reaches_the_manor() -> void:
 
 
 ## I1: the columns come on at their own paces from their own places; the
-## first to touch the garrisoned town puts the HOST in SIEGE before the day's
+## first to touch the garrisoned town puts the HOST in DEPLOYING before the day's
 ## battles, so no lone column ever starts a town battle of its own.
-func test_siege_begins_with_the_first_column_and_no_lone_battle() -> void:
+func test_siege_begins_with_the_first_deployed_column_and_no_lone_battle() -> void:
 	var host := _host("main")
 	var s := _field(_appear(host))
 	var town := _empty_town(s)
@@ -680,12 +680,15 @@ func test_siege_begins_with_the_first_column_and_no_lone_battle() -> void:
 				var e: Dictionary = s.foes[c]
 				var dx := int(e["x_m"]) - at.x
 				near += 1 if dx * dx < 5000 * 5000 * 4 else 0
-			assert_lt(near, cols.size(), "the siege began before the last column came up")
+			assert_lt(near, cols.size(), "the siege uses deployed columns while the other columns are still approaching")
+		if String(s.ai_hosts[host]["mode"]) == "DEPLOYING":
+			assert_false(SiegeSystem.besieged(repo, s, town))
+			assert_eq(int(s.ai_hosts[host].get("siege_progress", 0)), 0)
 		var fought := BattleSystem.settle_day(repo, s)
 		assert_false(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
 			"day %d: no lone column fights the town" % n)
 		assert_eq(s.battles, [], "day %d: no battle stands" % n)
-	assert_gt(siege_day, 0, "the host sat down to the siege")
+	assert_gt(siege_day, 0, "the first column deployed and established the siege")
 	for c: String in cols:
 		var e: Dictionary = s.foes[c]
 		# the first column is on the town's point, the others spread round it on the camp lattice (clearance)

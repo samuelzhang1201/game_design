@@ -351,3 +351,22 @@ func test_a_state_with_no_roster_reads_the_packs_seats() -> void:
 	var town := String(towns[0])
 	assert_eq(ArmyGround.seat_of(repo, s, town), String(seats[town]))
 	assert_eq(ArmyGround.seated_in(repo, s, String(seats[town])), town)
+
+## Ring two has corners farther out than its side midpoints. The closest
+## unbounded slot may lie outside the limit while another legal slot exists.
+func test_bounded_slot_search_finds_inner_side_slots_and_refuses_overflow() -> void:
+	var r := SuiteData.flat_ground(SuiteData.repo())
+	var centre := _land_m()
+	var taken := ArmyGround.new_taken(r)
+	var pitch := int(r.bal("army_slot_spacing_m"))
+	ArmyGround.take(taken, centre)
+	for ax: Vector2i in ArmyGround.ring(1):
+		ArmyGround.take(taken, ArmyGround.slot_m(centre, ax, pitch))
+	var near := centre + Vector2i(pitch * 3, 0)
+	var bound := pitch * 2 - 1
+	var unbounded := ArmyGround.free_slot(r, centre, "infantry", taken, "", true, near, 1)
+	assert_gt(Vector2(unbounded - centre).length(), float(bound), "premise: nearest free corner is outside")
+	var bounded := ArmyGround.free_slot(r, centre, "infantry", taken, "", true, near, 1, bound)
+	assert_ne(bounded, ArmyGround.NONE, "a side slot within the same ring is still available")
+	assert_lte(Vector2(bounded - centre).length(), float(bound))
+	assert_eq(ArmyGround.free_slot(r, centre, "infantry", taken, "", true, near, 1, pitch - 1), ArmyGround.NONE)

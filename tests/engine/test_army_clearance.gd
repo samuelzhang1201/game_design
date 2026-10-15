@@ -487,11 +487,11 @@ func test_a_village_is_touched_a_few_metres_past_clearance() -> void:
 	var limit := ArmyGround.max_radius(repo) + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, f)) \
 		+ int(repo.bal("army_clearance_touch_m"))
 	_foe(s, f, at + Vector2i(limit, 0))
-	assert_eq(BattleSystem._town_contact(repo, s, village, f), village, "within the radii + touch")
+	assert_eq(BattleSystem.town_contact(repo, s, village, f), village, "within the radii + touch")
 	_stand(s, f, at + Vector2i(limit + 1, 0))
-	assert_eq(BattleSystem._town_contact(repo, s, village, f), "", "a metre out of touch")
+	assert_eq(BattleSystem.town_contact(repo, s, village, f), "", "a metre out of touch")
 	_stand(s, f, at + Vector2i(900, 0))
-	assert_eq(BattleSystem._town_contact(repo, s, village, f), village, "inside the reach as ever")
+	assert_eq(BattleSystem.town_contact(repo, s, village, f), village, "inside the reach as ever")
 
 
 func test_battle_contact_still_holds_two_adjacent_cavalry() -> void:
@@ -613,35 +613,45 @@ func _within_at_start(r: DataRepository, s: GameState) -> Array:
 
 ## --- a host at its target is spread round it, not queued down the road (R-B) -------
 
-func test_a_besieging_host_stands_at_the_town_within_days_of_sitting_down() -> void:
-	var checked := 0
+func test_each_seed_establishes_a_siege_with_only_physically_deployed_columns() -> void:
 	for seed_value in [11, 42, 7]:
 		var repo2 := SuiteData.repo()
+		repo2.balance["ai_think_days"] = 999.0
 		Weather.forget()
 		var engine := TickEngine.new(repo2)
 		var s := Play.opened(repo2, engine, seed_value)
-		var sat := {}              # host -> the day it sat down
-		var seed_checked := 0
-		for d in 150:
+		while s.absolute_day() <= Play.first_appear(repo2):
 			Play.day(engine, s, true)
-			for h: String in EnemyAi.host_codes(s):
-				var mind: Dictionary = s.ai_hosts[h]
-				if String(mind["mode"]) != "SIEGE":
-					sat.erase(h)
-					continue
-				if not sat.has(h):
-					sat[h] = s.absolute_day()
-				if s.absolute_day() - int(sat[h]) < 3:
-					continue
-				var town := String(mind["target_id"])
+		var main := Play.host(repo2, "main")
+		var town := String(s.ai_hosts[main]["target_id"])
+		assert_eq(String(s.ai_hosts[main]["target_kind"]), "town")
+		# Defend the actual selected target: an unguarded town is raided,
+		# so natural seed variation cannot substitute a raid for this test.
+		for c: String in Play.regiment_units(repo2, false, 3):
+			Play.arrive(repo2, s, c, Play.town_m(repo2, town))
+		var checked := 0
+		var saw_remote_column := false
+		for d in 60:
+			Play.day(engine, s, true)
+			if not SiegeSystem.active(repo2, s, main):
+				continue
+			var expected_attack := 0
+			for h: String in SiegeSystem.besiegers(repo2, s, town):
 				for c: String in EnemyAi.live_regiments(repo2, s, h):
-					assert_true(SiegeSystem.at_town(repo2, s, c, town),
-						"seed %d: %s of %s stands at %s three days into the siege" % [seed_value, c, h, town])
-				seed_checked += 1
-			if seed_checked >= 3:
+					var e: Dictionary = s.foes[c]
+					if SiegeSystem.deployed_at(repo2, s, c, town):
+						assert_true(SiegeSystem.at_town(repo2, s, c, town))
+						assert_true((e.get("route_m", []) as Array).is_empty(), "stationed columns have no stale march route")
+						expected_attack += ArmySystem.power(repo2, s, c, "attack")
+					elif not SiegeSystem.at_town(repo2, s, c, town) and int(e.get("disengaging", 0)) == 0:
+						saw_remote_column = true
+						assert_eq(String(e["order"]), ArmySystem.ORDER_MARCH, "remote columns continue their independent march")
+			assert_eq(SiegeSystem.attack_power(repo2, s, town), expected_attack, "only actual stationed strength contributes")
+			checked += 1
+			if checked >= 3:
 				break
-		checked += seed_checked
-	assert_gt(checked, 0, "a host sat down to a siege on one of the seeds")
+		assert_eq(checked, 3, "seed %d genuinely establishes a siege" % seed_value)
+		assert_true(saw_remote_column, "seed %d begins before the remote columns arrive" % seed_value)
 
 
 func test_a_detour_then_an_enemy_halt_keeps_the_drawn_corners() -> void:
@@ -660,3 +670,31 @@ func test_a_detour_then_an_enemy_halt_keeps_the_drawn_corners() -> void:
 	var copy: Dictionary = s.regiments[ids[1]].duplicate(true)
 	assert_eq(path.back(), ArmySystem.march_ahead(repo, s, ids[1], copy))
 	assert_eq(String(copy.get("halted_by", "")), f)
+
+## A real friendly contact just outside the spread circle can enter an empty
+## inner camp slot. Historical halt metadata alone grants no displacement.
+func test_spreading_accepts_actual_boundary_contact_but_not_a_remote_old_halt() -> void:
+	var codes: Array = _foe_codes().filter(func(c: String) -> bool:
+		return MapObjects.regiment_arm(repo, ArmySystem.regiment(repo, c)) == "infantry").slice(0, 3)
+	assert_eq(codes.size(), 3)
+	var s := _alone(codes)
+	var o := _o()
+	var reach := int(repo.bal("army_spread_reach_m"))
+	_foe(s, codes[0], o)
+	_foe(s, codes[1], o + Vector2i(reach, 0))
+	var touching := o + Vector2i(reach + _d(codes[1], codes[2]) + 1, 0)
+	_foe(s, codes[2], touching)
+	var e: Dictionary = s.foes[codes[2]]
+	e["halted_by"] = codes[1]
+	e["halt_aim_m"] = [o.x, o.y]
+	ArmySystem._spread_foe(repo, s, codes[2], e, o, ArmySystem.clearance_blockers(repo, s))
+	assert_ne(_at(s, codes[2]), touching)
+	assert_lte(_dist(_at(s, codes[2]), o), float(reach))
+	for other: String in codes.slice(0, 2):
+		assert_gte(_dist(_at(s, codes[2]), _at(s, other)), float(_d(codes[2], other)))
+	var far := o + Vector2i(30000, 0)
+	_stand(s, codes[2], far)
+	e["halted_by"] = codes[1]
+	e["halt_aim_m"] = [o.x, o.y]
+	ArmySystem._spread_foe(repo, s, codes[2], e, o, ArmySystem.clearance_blockers(repo, s))
+	assert_eq(_at(s, codes[2]), far, "a remote stale halt cannot teleport into camp")

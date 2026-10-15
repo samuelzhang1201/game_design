@@ -42,9 +42,23 @@ static func ordered(repo: DataRepository, state: GameState, codes: Array) -> Arr
 	out.sort_custom(func(a: String, b: String) -> bool: return key.call(a) < key.call(b))
 	return out
 
-## Heads under a regiment's banner, as a whole number.
+## Equipment capacity is a preview, never the current personnel balance.
+static func personnel_capacity(repo: DataRepository, reg: Dictionary) -> int:
+	return MilitaryRoster.personnel_capacity(repo, reg)
+
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
-	return int(MapObjects.regiment_size(repo, reg))
+	return personnel_capacity(repo, reg)
+
+## Null state explicitly previews full equipment capacity. A real state with
+## no personnel record has no available troops; legacy counters cannot refill it.
+static func fit_count(repo: DataRepository, state: GameState, code: String) -> int:
+	return personnel_capacity(repo, regiment(repo, code)) if state == null else MilitaryRoster.fit(state, code)
+
+static func living_count(repo: DataRepository, state: GameState, code: String) -> int:
+	return personnel_capacity(repo, regiment(repo, code)) if state == null else MilitaryRoster.living(state, code)
+
+static func wounded_count(_repo: DataRepository, state: GameState, code: String) -> int:
+	return 0 if state == null else MilitaryRoster.living(state, code) - MilitaryRoster.fit(state, code)
 
 ## The men still under the banner: `heads` less the dead and the deserted of
 ## a regiment's state `st`, never below 0.
@@ -67,9 +81,8 @@ static func fit_permille(repo: DataRepository, state: GameState, code: String) -
 	var heads := headcount(repo, reg)
 	if heads <= 0:
 		return 0
-	var st := state_of(repo, state, code)
 	@warning_ignore("integer_division")  # whole per-mille
-	return fit_heads(heads, st) * 1000 / heads
+	return fit_count(repo, state, code) * 1000 / heads
 
 ## What a regiment starts a campaign with: army_start_supply_days of its use,
 ## in whole supplies rounded UP, so the days in hand read the days it was given
@@ -148,9 +161,15 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 ## 2026-09-19): two per-mille divisions in a row lost heads a first
 ## regiment's worth of supply to truncation twice.
 static func supply_use(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
-	@warning_ignore("integer_division")  # whole supplies, one rounding at the end
-	return headcount(repo, reg) * int(repo.bal("army_supply_per_head_permille")) \
-		* int(height_tier(repo, reg, state)["supply_permille"]) / 1_000_000
+	var people := personnel_capacity(repo, reg) if state == null else living_count(repo, state, String(reg.get("regiment_code", "")))
+	var per_head := int(repo.bal("army_supply_per_head_permille"))
+	var terrain := int(height_tier(repo, reg, state)["supply_permille"])
+	if people <= 0 or per_head <= 0 or terrain <= 0:
+		return 0
+	# One final rounding, with one grain unit as the minimum positive ration:
+	# living remnants cannot become exempt from hunger through truncation.
+	@warning_ignore("integer_division")
+	return maxi(1, people * per_head * terrain / 1_000_000)
 
 ## Wounded who return to the ranks in a month: a share, at least one while
 ## any are wounded.
@@ -165,6 +184,7 @@ static func wound_recovery(repo: DataRepository, wounded: int) -> int:
 ## grows. The supplies are not spent here: eat_day eats the month a day at a
 ## time, so the stores fall under the player's eyes.
 static func settle_month(repo: DataRepository, state: GameState) -> void:
+	_recover_month(repo, state)
 	ensure(repo, state)
 	var codes := state.regiments.keys()
 	codes.sort()
@@ -173,10 +193,11 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 		var reg := regiment(repo, code, state)
 		if reg.is_empty():
 			continue
+		var marker := "army_month:" + code
+		if not state.military_rosters.has(code) or int(state.conduct_marks.get(marker, -1)) == state.tick:
+			continue
 		var entry: Dictionary = state.regiments[code]
-		var heads := headcount(repo, reg)
-		var wounded := clampi(int(entry["wounded"]), 0, heads)
-		entry["wounded"] = clampi(wounded - wound_recovery(repo, wounded), 0, heads)
+		state.conduct_marks[marker] = state.tick
 		var use := supply_use(repo, reg, state)
 		if String(reg.get("is_naval", "0")) != "1":
 			# Morale reads the stores in hand as the month turns, after the
@@ -189,6 +210,23 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 				ArmyGround.seated_in(repo, state, code) != "") + LawEffects.unit_mark(repo, state, code), 0, 100)
 			entry["morale"] = drift_morale(int(entry["morale"]), mark, int(repo.bal("army_morale_drift_per_month")))
 		entry["training"] = mini(100, int(entry["training"]) + int(repo.bal("army_training_per_month")))
+
+## Recovery includes personnel not deployed into regiments/foes. A zero-wound
+## month is consumed too, so later wounds cannot be healed by replaying it.
+static func _recover_month(repo: DataRepository, state: GameState) -> void:
+	var codes := state.military_rosters.keys()
+	codes.sort()
+	for code: String in codes:
+		var marker := "recovery:" + code
+		if int(state.conduct_marks.get(marker, -1)) == state.tick:
+			continue
+		var restored := wound_recovery(repo, wounded_count(repo, state, code))
+		if restored > 0:
+			var result := MilitaryRoster.transfer_units(repo, state, "recovery:%d:%s" % [state.tick, code],
+				[{"unit_code": code, "from": "wounded", "to": "fit", "count": restored}], "Monthly wound recovery: " + code)
+			if result.has("error"):
+				continue
+		state.conduct_marks[marker] = state.tick
 
 ## The supplies a regiment eats on day `day` (1..DAYS_PER_TICK) of a month
 ## whose use is `use`: the month spread over its days in whole supplies, so
@@ -530,8 +568,7 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0
-	var heads := headcount(repo, reg)
-	var fit := fit_heads(heads, st)
+	var fit := fit_count(repo, state, code)
 	var realm := realm_of(repo, code, state)
 	return power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
 		code, 0 if state == null else state.tick, DevelopmentSystem.arm_permille(repo, state, realm))
@@ -554,9 +591,7 @@ static func realm_of(repo: DataRepository, code: String, state: GameState = null
 static func power_of_arms(repo: DataRepository, arms: Dictionary, fit: int, training: int, morale: int,
 		stance: String, terrain: String, works: String, float_code := "", tick := 0,
 		dev_permille: Dictionary = {}) -> int:
-	var heads := 0
-	for arm: String in repo.world_table("military", "unit_types"):
-		heads += int(float(arms.get(arm, 0)))
+	var heads := personnel_capacity(repo, arms)
 	if heads <= 0:
 		return 0
 	var training_f := int(repo.bal("army_training_base_permille")) + training * int(repo.bal("army_training_step_permille"))
@@ -1245,18 +1280,34 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 ## R-B) does not queue down the road: it takes the nearest free camp-lattice
 ## slot round the target (ArmyGround.free_slot from ring 1, `near_m` its halt
 ## point, held_taken), so the whole host stands at the town. Further than
-## army_spread_reach_m from the target it stays where it halted.
+## army_spread_reach_m from the target it stays where it halted unless its
+## actual friendly blocker is inside that circle and touching within the
+## two clearance radii plus army_clearance_touch_m. Slots remain inside the circle.
 static func _spread_foe(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		aim: Vector2i, blockers: Dictionary) -> void:
 	var at := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
-	if blockers.is_empty() or MarchClearance.dist2(at, aim) > int(repo.bal("army_spread_reach_m")) ** 2:
+	if blockers.is_empty():
 		return
+	var reach := int(repo.bal("army_spread_reach_m"))
+	if MarchClearance.dist2(at, aim) > reach * reach:
+		var blocker := String(entry.get("halted_by", ""))
+		var old_aim: Array = entry.get("halt_aim_m", [])
+		var positions: Dictionary = blockers.get("pos", {})
+		var radii: Dictionary = blockers.get("r", {})
+		if old_aim.size() != 2 or Vector2i(old_aim[0], old_aim[1]) != aim \
+				or not positions.has(blocker) or not radii.has(code) or not radii.has(blocker) \
+				or _enemies(blockers, code, blocker):
+			return
+		var near: Vector2i = positions[blocker]
+		var touch := int(radii[code]) + int(radii[blocker]) + int(repo.bal("army_clearance_touch_m"))
+		if MarchClearance.dist2(near, aim) > reach * reach or MarchClearance.dist2(at, near) > touch * touch:
+			return
 	var arm := MapObjects.regiment_arm(repo, regiment(repo, code, state))
 	var taken := ArmyGround.held_taken(repo, state, code)
-	var slot := ArmyGround.free_slot(repo, aim, arm, taken, "", false, at, 1)
+	var slot := ArmyGround.free_slot(repo, aim, arm, taken, "", false, at, 1, reach)
 	if slot == ArmyGround.NONE:
-		slot = ArmyGround.free_slot(repo, aim, arm, taken, "", true, at, 1)
-	if slot == ArmyGround.NONE:
+		slot = ArmyGround.free_slot(repo, aim, arm, taken, "", true, at, 1, reach)
+	if slot == ArmyGround.NONE or MarchClearance.dist2(slot, aim) > reach * reach:
 		return
 	entry["x_m"] = slot.x
 	entry["y_m"] = slot.y
@@ -1319,7 +1370,7 @@ static func clearance_blockers(repo: DataRepository, state: GameState) -> Dictio
 		elif state.regiments.has(code):
 			st = state.regiments[code]
 			kind = "crown"
-		if under_arms(int(row[0]), st) <= 0:
+		if living_count(repo, state, code) <= 0:
 			continue
 		codes.append(code)
 		side[code] = kind
@@ -1443,7 +1494,9 @@ static func _ahead_blockers(repo: DataRepository, state: GameState) -> Dictionar
 	for table: Dictionary in [state.regiments, state.foes]:
 		for c: Variant in table:
 			var e: Dictionary = table[c]
-			sig = hash([sig, int(e.get("x_m", 0)), int(e.get("y_m", 0)), int(e.get("dead", 0))])
+			sig = hash([sig, int(e.get("x_m", 0)), int(e.get("y_m", 0))])
+	for code: String in state.military_rosters:
+		sig = hash([sig, code, living_count(repo, state, code)])
 	var key := hash([state.get_instance_id(), repo.get_instance_id(), state.absolute_day(), sig,
 		state.regiments.size(), state.foes.size(), int(repo.bal("army_clearance_on"))])
 	if int(_ahead.get("key", 0)) != key or not _ahead.has("blockers"):

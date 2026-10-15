@@ -179,6 +179,31 @@ func test_the_first_name_stands_when_every_place_is_on_another_star() -> void:
 		"never in a wall")
 
 
+func test_selected_name_stays_near_even_when_an_outer_ring_is_clear() -> void:
+	var selected := {"text": "Selected", "at": Vector2(200, 160), "strong": true, "keep": true,
+		"first": true, "beside": [Vector2(200, 200), 10.0]}
+	# Thin neighbouring discs block every nearest place, but leave the next ring clear.
+	var discs := [Rect2(0, 180, 400, 2), Rect2(0, 218, 400, 2),
+		Rect2(185, 190, 2, 20), Rect2(213, 190, 2, 20)]
+	var bounds := Rect2(0, 0, 400, 400)
+	var another := {"text": "Another", "at": Vector2(200, 176.7), "strong": false, "keep": true}
+	var kept := LedgerHud.cull([selected, another], 14.0, null, LedgerHud.DEFAULT_GAUGE, discs, null, [], bounds)
+	assert_eq(kept.size(), 1, "the selected name remains a wall for later kept labels")
+	assert_almost_eq((kept[0]["at"] as Vector2).y, 176.7, 0.001, "cross a neighbouring disc at the nearest ring")
+	var ordinary := selected.duplicate()
+	ordinary.erase("first")
+	var outer := LedgerHud.cull([ordinary], 14.0, null, LedgerHud.DEFAULT_GAUGE, discs, null, [], bounds)
+	assert_eq(outer.size(), 1, "ordinary names still find an unobstructed outer ring")
+	assert_lt((outer[0]["at"] as Vector2).y, 176.7)
+	var wall := Rect2(0, 0, 400, 200)
+	var below := LedgerHud.cull([selected], 14.0, null, LedgerHud.DEFAULT_GAUGE, discs, null, [wall], bounds)
+	assert_eq(below.size(), 1)
+	assert_almost_eq((below[0]["at"] as Vector2).y, 221.2, 0.001, "nearest placement still avoids chrome")
+	var clipped := LedgerHud.cull([selected], 14.0, null, LedgerHud.DEFAULT_GAUGE, discs, null, [], Rect2(0, 200, 400, 200))
+	assert_eq(clipped.size(), 1)
+	assert_almost_eq((clipped[0]["at"] as Vector2).y, 221.2, 0.001, "nearest placement still stays inside bounds")
+
+
 ## Task 11 fix round 2 (R6): a dimmed name's halo and gauges fade with it.
 func test_a_dim_names_gauges_fade_with_it() -> void:
 	assert_almost_eq(LedgerHud.fade_of(Color(1, 1, 1, 0.8)), 1.0, 0.001)

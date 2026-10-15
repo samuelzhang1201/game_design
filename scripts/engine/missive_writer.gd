@@ -23,7 +23,7 @@ static func receipt(repo: DataRepository, state: GameState, c: Dictionary, said:
 	if not st.is_empty():
 		facts.append(MissiveLog.exact("morale", "Morale", int(st["morale"])))
 		facts.append(MissiveLog.exact("supplies", "Supplies", int(st["supplies"])))
-		facts.append(MissiveLog.exact("wounded", "Wounded", int(st["wounded"])))
+		facts.append(MissiveLog.exact("wounded", "Wounded", ArmySystem.wounded_count(repo, state, code)))
 		facts.append(MissiveLog.words("ground", "Ground", ArmySystem.terrain_of(repo, reg, state).capitalize()))
 		facts.append(MissiveLog.words("weather", "Weather",
 			Weather.label_of(repo, Weather.at(repo, state, at, state.absolute_day()))))
@@ -506,11 +506,11 @@ static func host_news(repo: DataRepository, state: GameState, events: Array) -> 
 		var mode := "ADVANCE" if String(e["type"]) == "host_advance" else String(e.get("mode", ""))
 		if String(e["type"]) == "host_mode" and mode == "ADVANCE":
 			continue                    # setting out again from a stripped manor is no crossing
-		if not mode in ["ADVANCE", "SIEGE", "RAID", "WITHDRAW", "RETREAT"]:
+		if not mode in ["ADVANCE", "DEPLOYING", "SIEGE", "RAID", "WITHDRAW", "RETREAT"]:
 			continue
 		var mind: Dictionary = state.ai_hosts.get(host, {})
 		var at_m := _host_at_m(repo, state, host)
-		if mode in ["SIEGE", "RAID"] and String(mind.get("target_id", "")) != "":
+		if mode in ["DEPLOYING", "SIEGE", "RAID"] and String(mind.get("target_id", "")) != "":
 			at_m = EnemyAi.target_point_m(repo, String(mind["target_kind"]), String(mind["target_id"]))
 			seen_close = true
 		var at := ArmySystem.metres_to_pack(repo, at_m)

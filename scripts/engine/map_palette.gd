@@ -60,7 +60,9 @@ static func _resolve_color(data: DataRepository, kingdom_code: String) -> Color:
 		return named(data, slot)
 	var n := 0
 	for code: String in _in_state_order(data):
-		if slot_of(data, code) != "":
+		var other_slot := slot_of(data, code)
+		# A structural realm binding need not define a visual identity.
+		if other_slot != "" and data.palette.has(other_slot):
 			continue
 		n += 1
 		if code == kingdom_code:

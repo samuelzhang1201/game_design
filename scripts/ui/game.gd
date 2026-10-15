@@ -49,11 +49,17 @@ func _ready() -> void:
 	data = DataRepository.load_all("res://data")
 	assert(data != null, "data load failed: " + DataRepository.last_error)
 
-func start_campaign(seed_value: int = 42) -> void:
+func start_campaign(seed_value: int = 42) -> bool:
+	var candidate: GameState = campaign_maker.call(data, seed_value)
+	if candidate == null:
+		load_error = GameState.campaign_error
+		return false
 	_reset_llm()
 	release_clock_holds()  # a reign never begins held (each hold is its screen's viewing's)
-	state = campaign_maker.call(data, seed_value)
+	state = candidate
 	engine = TickEngine.new(data)
+	load_error = ""
+	return true
 
 ## The clock (owner 2026-09-13): 0 is paused, 1 a day per time_day_seconds,
 ## 2 and 4 that many times faster. Only GameRoot's _process reads it, on
@@ -147,6 +153,12 @@ func hold_day_before_month_end(day_ceiling: int) -> bool:
 func advance_day() -> Dictionary:
 	var ended := state.absolute_day()
 	var result := engine.resolve_day(state)
+	if result["status"] == "error":
+		hold_clock(true, "simulation_error")
+		publish_news("The day's resolution stopped: " + String(result["error"]))
+		state_changed.emit()
+		return {"status": "error", "error": result["error"], "ticked": false,
+			"ended": ended, "finished": [], "arrived": [], "couriers": [], "supply": [], "raids": []}
 	if result["status"] == "blocked":
 		_sync_battle_decision()
 		state_changed.emit()
@@ -474,12 +486,18 @@ func load_campaign(path: String = "") -> bool:
 				% loaded.map_id)
 			load_error = "No saved realm found."
 			return false
+	var personnel := MilitaryBootstrap.migrate(data, loaded)
+	if personnel.has("error"):
+		load_error = "Cannot restore the army's personnel: " + String(personnel["error"])
+		return false
 	load_error = ""
+	hold_clock(false, "simulation_error")
 	state = loaded
 	# A save from before the wealth tiers were state computes them once, from
 	# the state it loaded (Ruling 15).
 	Intel.ensure_wealth_tiers(data, state)
 	ArmySystem.ensure(data, state)  # a save from before the carried load: its load and cap now
+	EnemyAi.ensure_deployments(data, state)  # restore actual siege deployment without replaying the day
 	TownStores.ensure(data, state)  # a save from before the town stores
 	Hazards.ensure(data, state)
 	LawSystem.ensure(data, state)  # a save from before the laws

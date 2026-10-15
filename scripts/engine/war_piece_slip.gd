@@ -21,12 +21,12 @@ static func reading(repo: DataRepository, state: GameState, codes: Array) -> Arr
 		var st := ArmySystem.state_of(repo, state, code)
 		if st.is_empty():
 			st = ArmySystem.starting_state(repo, reg)
-		var heads := ArmySystem.headcount(repo, reg)
+		var heads := ArmySystem.living_count(repo, state, code)
 		var supplies := int(st.get("supplies", 0))
 		var use := ArmySystem.supply_use(repo, reg, state)
 		out.append({"code": code, "label": String(reg.get("label", code)),
 			"arm": MapObjects.regiment_arm(repo, reg), "naval": String(reg.get("is_naval", "0")) == "1",
-			"heads": heads, "fit": ArmySystem.fit_heads(heads, st),
+			"heads": heads, "fit": ArmySystem.fit_count(repo, state, code),
 			"defend": ArmySystem.power(repo, state, code, "defend"),
 			"attack": ArmySystem.power(repo, state, code, "attack"),
 			"readiness": ArmySystem.bars_of(repo, state, code).x,

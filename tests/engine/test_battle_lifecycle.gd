@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const Play := preload("res://tests/invasion_play.gd")
 ## A battle's life (spec 2026-10-07-enemy-ai-and-battle-design §4.1, §4.4):
@@ -225,10 +226,16 @@ func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
 	_place(s, p, town_m)
 	s.regiments[p]["order"] = ArmySystem.ORDER_GARRISON
 	assert_eq(ArmyGround.garrison_town(repo, s, p), town, "the town's garrison")
-	_foe(s, f, town_m + Vector2i(500, 0), "raid_main")
+	s.town_seat[town] = p
+	var gate_distance := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, p, s)) + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, f, s))
+	var besieger := _foe(s, f, town_m + Vector2i(gate_distance, 0), "raid_main")
+	besieger["order"] = ArmySystem.ORDER_GARRISON
+	assert_eq(BattleSystem.town_contact(repo, s, town, f), town, "the deployed column stands at the physical gate")
 	s.ai_hosts["raid_main"] = {"mode": "SIEGE", "assault": 0, "target_kind": "town", "target_id": town}
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 0, "a host sitting down to a siege does not fight its garrison every day")
+	EnemyAi.ensure_deployments(repo, s)
+	assert_true(SiegeSystem.active(repo, s, "raid_main"), "the assault requires a deployed host")
 	s.ai_hosts["raid_main"]["assault"] = 1
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 1, "its assault is an ordinary battle")
@@ -260,20 +267,20 @@ func test_round_matches_hand_computed_tier() -> void:
 	_place(s, p, _spot(s))
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
 	# exactly 400 fit men a side (a unit is at most army_split_cap_men)
-	s.regiments[p]["dead"] = _heads(p) - 400
-	s.foes[f]["dead"] = _heads(f) - 400
+	assert_false(People.move(repo, s, p, "fit", "dead", _heads(p) - 400, "prior_player_loss").has("error"))
+	assert_false(People.move(repo, s, f, "fit", "dead", _heads(f) - 400, "prior_foe_loss").has("error"))
 	var morale_p := int(s.regiments[p]["morale"])
 	var morale_f := int(s.foes[f]["morale"])
 	BattleSystem.settle_day(repo, s)
 	# neither marched: the foe attacks
 	assert_eq(s.battles[0]["att"], [f])
 	# the foe: lost 400 x 100 / 1000 = 40, wounded 40 x 600 / 1000 = 24, dead 16
-	assert_eq(int(s.foes[f]["wounded"]), 24)
-	assert_eq(int(s.foes[f]["dead"]), _heads(f) - 400 + 16)
+	assert_eq(People.count(s, f, "wounded"), 24)
+	assert_eq(People.count(s, f, "dead"), _heads(f) - 400 + 16)
 	assert_eq(int(s.foes[f]["morale"]), morale_f - 5)
 	# the player: lost 400 x 50 / 1000 = 20, wounded 12, dead 8
-	assert_eq(int(s.regiments[p]["wounded"]), 12)
-	assert_eq(int(s.regiments[p]["dead"]), _heads(p) - 400 + 8)
+	assert_eq(People.count(s, p, "wounded"), 12)
+	assert_eq(People.count(s, p, "dead"), _heads(p) - 400 + 8)
 	assert_eq(int(s.regiments[p]["morale"]), morale_p - 2)
 
 
@@ -291,8 +298,8 @@ func test_round_uses_the_outcome_table_tier_of_the_odds() -> void:
 	var d := BattleSystem.side_power(repo, s, [p], steady, false, [f])
 	var odds := BattleSystem.odds_permille(a, d)
 	var tier := BattleSystem.tier_of(repo, odds)
-	var fit_f := ArmySystem.fit_heads(_heads(f), s.foes[f])
-	var fit_p := ArmySystem.fit_heads(_heads(p), s.regiments[p])
+	var fit_f := ArmySystem.fit_count(repo, s, f)
+	var fit_p := ArmySystem.fit_count(repo, s, p)
 	var lost_f := BattleSystem.split_losses(fit_f, int(tier["attacker_loss_permille"]), int(tier["wounded_share_permille"]))
 	var lost_p := BattleSystem.split_losses(fit_p, int(tier["defender_loss_permille"]), int(tier["wounded_share_permille"]))
 	var events := BattleSystem.settle_day(repo, s)
@@ -302,10 +309,10 @@ func test_round_uses_the_outcome_table_tier_of_the_odds() -> void:
 	assert_eq(String(round_ev["tier"]), String(tier["tier"]))
 	assert_eq(int(round_ev["att_power"]), a)
 	assert_eq(int(round_ev["def_power"]), d)
-	assert_eq(int(s.foes[f]["wounded"]), int(lost_f["wounded"]))
-	assert_eq(int(s.foes[f]["dead"]), int(lost_f["dead"]))
-	assert_eq(int(s.regiments[p]["wounded"]), int(lost_p["wounded"]))
-	assert_eq(int(s.regiments[p]["dead"]), int(lost_p["dead"]))
+	assert_eq(People.count(s, f, "wounded"), int(lost_f["wounded"]))
+	assert_eq(People.count(s, f, "dead"), int(lost_f["dead"]))
+	assert_eq(People.count(s, p, "wounded"), int(lost_p["wounded"]))
+	assert_eq(People.count(s, p, "dead"), int(lost_p["dead"]))
 	assert_ne(String((round_ev["results"] as Dictionary)[p]["reason"]), "", "every loss carries its reason")
 
 
@@ -420,7 +427,7 @@ func test_evade_stance_leaves_on_first_contact() -> void:
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
 	s.regiments[p]["stance"] = "evade"
 	var events := BattleSystem.settle_day(repo, s)
-	assert_gt(int(s.regiments[p]["wounded"]), 0, "it fought the first day's round")
+	assert_gt(People.count(s, p, "wounded"), 0, "it fought the first day's round")
 	assert_false(_in_battle(s, p), "and left the field after it")
 	assert_true(_in_battle(s, q), "its steady neighbour stays")
 	assert_eq(ArmySystem.order_of(repo, s, p), ArmySystem.ORDER_MARCH, "falling back to a town")
@@ -449,7 +456,7 @@ func test_hold_stance_never_retreats() -> void:
 		var f: String = _theirs()[0]
 		_place(s, p, _spot(s))
 		_foe(s, f, _spot(s) + Vector2i(1000, 0))
-		s.regiments[p]["dead"] = _heads(p) - 20   # a handful left: hopeless odds
+		assert_false(People.move(repo, s, p, "fit", "dead", _heads(p) - 20, "hopeless_odds").has("error"))   # a handful left: hopeless odds
 		s.regiments[p]["stance"] = stance
 		BattleSystem.settle_day(repo, s)
 		if stance == "hold":

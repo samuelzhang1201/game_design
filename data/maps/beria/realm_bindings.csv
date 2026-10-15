@@ -3,3 +3,6 @@ player_realm,kelvarn,The throne the player inherits. Central; borders all three 
 raider_realm,corwyn,Musters for raids eastward; Warchief Osric's seat. West of the player.
 neighbor_realm,brackmoor,Sends envoys; Queen Isabeau's seat. North of the player.
 empire_realm,farhold,The Emperor's realm. Largest on the map; borders the neighbor.
+march_realm,irongate,Additional military roster realm; named officers need no portrait assets in the first release.
+highland_realm,yorwald,Additional military roster realm; named officers need no portrait assets in the first release.
+coast_realm,valmoor,Additional military roster realm; named officers need no portrait assets in the first release.
