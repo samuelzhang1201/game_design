@@ -584,7 +584,7 @@ func test_the_invasion_keeps_every_pair_clear_each_day_across_a_save() -> void:
 	var worst := 1.0e9
 	var escaped := _within_at_start(repo2, s)
 	for d in 70:
-		Play.day(engine, s)
+		Play.day(engine, s, true)
 		if d == 25:
 			s = GameState.from_dict(s.to_dict())      # a save and a load in the middle
 			engine = TickEngine.new(repo2)
@@ -623,7 +623,7 @@ func test_a_besieging_host_stands_at_the_town_within_days_of_sitting_down() -> v
 		var sat := {}              # host -> the day it sat down
 		var seed_checked := 0
 		for d in 150:
-			Play.day(engine, s)
+			Play.day(engine, s, true)
 			for h: String in EnemyAi.host_codes(s):
 				var mind: Dictionary = s.ai_hosts[h]
 				if String(mind["mode"]) != "SIEGE":

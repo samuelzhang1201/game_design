@@ -429,7 +429,10 @@ var grievance: Dictionary = {}
 ## conduct news key -> the month index it was last told (once-only marks).
 var conduct_marks: Dictionary = {}
 
-const SAVE_VERSION := 6
+## An unfinished day, including its output journal and pending decision.
+var day_resolution: Dictionary = {}
+
+const SAVE_VERSION := 7
 ## The oldest save this build loads (spec 2026-10-07-army-split-and-ground
 ## §2.3): a save from before the split names regiments that no longer exist.
 const MIN_SAVE_VERSION := 6
@@ -476,6 +479,7 @@ func to_dict() -> Dictionary:
 		"foes": _encode_values(foes.duplicate(true)),
 		"ai_hosts": _encode_values(ai_hosts.duplicate(true)),
 		"battles": _encode_values(battles.duplicate(true)),
+		"day_resolution": _encode_values(day_resolution.duplicate(true)),
 		"town_losses": _encode_values(town_losses.duplicate(true)),
 		"sightings": _encode_values(sightings.duplicate(true)),
 		"scout_log": _encode_values(scout_log.duplicate(true)),
@@ -517,6 +521,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 			% [int(d.get("version", 1)), SAVE_VERSION])
 		return null
 	var s := GameState.new()
+	s.day_resolution = _decode_values(d.get("day_resolution", {}))
 	s.map_id = String(d.get("map_id", ""))
 	s.tick = int(_decode_values(d["tick"]))
 	s.day = clampi(int(_decode_values(d.get("day", 1))), 1, Calendar.DAYS_PER_TICK)

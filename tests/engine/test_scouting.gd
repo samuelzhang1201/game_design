@@ -224,12 +224,17 @@ func test_the_contact_letter_comes_before_the_battle_it_leads_to() -> void:
 	Play.place(repo, s, horse, far, ArmySystem.ORDER_GARRISON)
 	_put_foe(far + Vector2i(3000, 0))
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	var blocked := engine.resolve_day(s)
+	assert_eq(blocked["status"], "blocked")
 	var contact := _letters("contact")
-	var battle := _letters("battle")
 	assert_eq(contact.size(), 1, "contact told")
+	assert_eq(_letters("battle").size(), 0, "the encounter pauses before fighting")
+	engine.resolve_decision(s, String(blocked["decision"]["token"]), "continue")
+	assert_eq(engine.resolve_day(s)["status"], "complete")
+	var battle := _letters("battle")
 	assert_gt(battle.size(), 0, "and a battle fought")
-	assert_lt(int(contact[0]["id"]), int(battle[0]["id"]), "the contact letter first")
+	if not contact.is_empty() and not battle.is_empty():
+		assert_lt(int(contact[0]["id"]), int(battle[0]["id"]), "the contact letter first")
 
 
 func test_a_scout_letter_is_kept_apart_from_the_columns_cap() -> void:

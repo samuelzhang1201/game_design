@@ -38,7 +38,7 @@ func before_each() -> void:
 func _chosen_town() -> String:
 	var engine := TickEngine.new(repo)
 	var s := Play.opened(repo, engine)
-	Play.play_through(engine, s, Play.first_appear(repo))
+	Play.play_through(engine, s, Play.first_appear(repo), true)
 	var mind: Dictionary = s.ai_hosts[Play.host(repo, "main")]
 	assert_eq(String(mind["mode"]), "ADVANCE", "the main host has crossed")
 	assert_eq(String(mind["target_kind"]), "town", "the main host goes for a town")
@@ -85,7 +85,7 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 		var today := s.absolute_day()
 		var before := {"treasury": float(s.metrics["treasury"]),
 			"content": float(s.metrics["peasant_contentment"])}
-		Play.day(engine, s)
+		Play.day(engine, s, true)
 		if int(seen["rumour"]) < 0 and not Play.letters(s, "rumour").is_empty():
 			seen["rumour"] = today
 		for h: String in EnemyAi.host_codes(s):
@@ -247,7 +247,7 @@ func test_weak_defence_loses_the_town_and_the_campaign_plays_on() -> void:
 	var events := EventSystem.new(repo)
 	var presented: Array = []
 	while s.absolute_day() <= 3 * Calendar.DAYS_PER_TICK:
-		Play.day(engine, s)
+		Play.day(engine, s, true)
 		if not s.pending_event.is_empty():
 			presented.append(String(s.pending_event["event_id"]))
 			var first: Dictionary = (s.pending_event["choices"] as Array)[0]

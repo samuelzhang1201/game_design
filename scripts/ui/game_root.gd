@@ -38,6 +38,7 @@ var _said_set_out := 0
 var _said_state: GameState  # the reign _said_set_out counts in (a new one starts again)
 var _pause_menu: Control
 var _pause_status: Label
+var _battle_encounter: BattleEncounterPanel
 var _ledger_screen: LedgerScreen
 var _war_room_screen: WarRoomScreen
 var _missive_screen: MissiveScreen
@@ -240,9 +241,30 @@ func _make_fps_counter() -> void:
 
 ## The last step: what needs several overlays, the music, the canonical order.
 func _finish_overlays() -> void:
+	_battle_encounter = load("res://scenes/panels/battle_encounter_panel.tscn").instantiate()
+	add_child(_battle_encounter)
+	_battle_encounter.decision_selected.connect(_on_battle_decision_selected)
+	Game.battle_decision_requested.connect(_show_battle_decision)
 	_laws_screen.above = [_report_popup, _pause_menu]
 	_start_bgm()
 	_raise_overlays()
+
+func _show_battle_decision(decision: Dictionary) -> void:
+	if state == State.MENU or _battle_encounter == null or Game.state == null:
+		return
+	var battle := BattleSystem.battle_by_id(Game.state, int(decision["battle_id"]))
+	var place := BattleSystem.place_label(Game.data, Game.state, battle) if not battle.is_empty() else "the field"
+	_battle_encounter.show_decision(decision, place)
+	_raise_overlays()
+
+func _on_battle_decision_selected(token: String, choice: String) -> void:
+	var result := Game.resolve_battle_decision(token, choice)
+	if result["status"] in ["accepted", "duplicate", "stale"]:
+		var pending: Dictionary = Game.state.day_resolution.get("pending_decision", {}) if Game.state != null else {}
+		if not pending.is_empty() and String(pending.get("selected", "")) == "":
+			_show_battle_decision(pending)
+		else:
+			_battle_encounter.hide()
 
 ## The clock (owner 2026-09-13): at Game.clock_speed, a day passes every
 ## time_day_seconds / speed. Works finish, the thirtieth day runs the tick,
@@ -275,19 +297,23 @@ func _process(delta: float) -> void:
 	for e: Dictionary in leaving:
 		_said_set_out = maxi(_said_set_out, int(e["courier"]))
 	var per_day := maxf(Game.data.bal("time_day_seconds") / float(Game.clock_speed), 0.001)
-	_clock_acc += delta
+	_clock_acc = _clock_acc + delta if Game.state.day_resolution.is_empty() else 0.0
 	var steps := 0
 	# A spy's arrival (on_new_missives) can stop the clock or leave a report
 	# waiting mid-loop; the condition is re-checked every iteration so no
 	# further day runs in the same stepped frame once one does (spec
 	# 2026-09-28 §2 — the review focus's two-spies-in-one-frame case).
-	while _clock_acc >= per_day and steps < 8 and Game.clock_speed > 0 \
+	while (_clock_acc >= per_day or not Game.state.day_resolution.is_empty()) and steps < 8 and Game.clock_speed > 0 \
 			and _pending_reports.is_empty() and not _report_popup.visible:
-		_clock_acc -= per_day
+		if Game.state.day_resolution.is_empty():
+			_clock_acc -= per_day
 		steps += 1
 		var before := works_progress()
 		var missives_before := Game.state.next_missive_id
 		var out := Game.advance_day()
+		if out["status"] == "blocked":
+			_clock_acc = 0.0
+			break
 		# what the day's end brings is dated the day that ended, not the one begun
 		Game.news_dated_to(int(out["ended"]))
 		# The news bar (owner 2026-09-14): a work's progress at each milestone,
@@ -321,7 +347,7 @@ func _process(delta: float) -> void:
 		for line: String in RaidSystem.headlines(Game.data, out.get("raids", []), int(out["ended"])):
 			Game.publish_news(line)
 		var new_ids: Array = []
-		for id in range(missives_before + 1, Game.state.next_missive_id + 1):
+		for id in range(int(out.get("missives_from", missives_before)) + 1, Game.state.next_missive_id + 1):
 			new_ids.append(id)
 		on_new_missives(new_ids)
 		if bool(out["ticked"]):
@@ -341,7 +367,7 @@ func _process(delta: float) -> void:
 						seal.nudge()
 		Game.news_dated_to(-1)
 
-	Game.day_progress = clampf(_clock_acc / per_day, 0.0, 1.0)
+	Game.day_progress = 1.0 if not Game.state.day_resolution.is_empty() else clampf(_clock_acc / per_day, 0.0, 1.0)
 
 ## Every work in progress's share done: "cell|building" -> 0..1.
 func works_progress() -> Dictionary:
@@ -1187,7 +1213,7 @@ func _switch_to(new_state: State) -> void:
 
 func _overlays_in_order() -> Array[Node]:
 	return [_bottom_bar, _news_ticker, _info_screen, _ledger_screen, _war_room_screen,
-		_missive_screen, _laws_screen, _report_popup, _pause_menu]
+		_missive_screen, _laws_screen, _battle_encounter, _report_popup, _pause_menu]
 
 ## The overlays in their stacking order, topmost last.
 func _raise_overlays() -> void:
@@ -1216,6 +1242,12 @@ func _settle_overlay(o: Node, new_state: State) -> void:
 		_missive_screen.visible = false
 	elif o == _laws_screen:
 		_laws_screen.close()
+	elif o == _battle_encounter:
+		_battle_encounter.hide()
+		if new_state != State.MENU and Game.state != null:
+			var decision: Dictionary = Game.state.day_resolution.get("pending_decision", {})
+			if not decision.is_empty() and String(decision.get("selected", "")) == "":
+				_show_battle_decision(decision)
 	elif o == _report_popup:
 		# Only a switch to MENU forces it shut (a reset already emptied
 		# _pending_reports there, or the campaign is being left outright):

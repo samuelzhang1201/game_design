@@ -1,0 +1,90 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/battle_encounter_panel.gd" id="1_wi1ww"]
+[ext_resource type="Texture2D" uid="uid://p1jqgjgkq1pm" path="res://assets/2D/ui/panels/leather_grain_light.png" id="2_7sg37"]
+[ext_resource type="Texture2D" uid="uid://cnctm0nndn0qh" path="res://assets/2D/ui/panels/leather_grain_dark.png" id="3_iacn4"]
+[ext_resource type="Script" uid="uid://c44j2v837vlnv" path="res://scripts/ui/vellum_panel_style.gd" id="4_cdvg2"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1y278"]
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+bg_color = Color(0.12156863, 0.101960786, 0.08235294, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.65882355, 0.5411765, 0.29803923, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 8
+shadow_offset = Vector2(0, 3)
+
+[sub_resource type="StyleBox" id="StyleBox_i5kou"]
+resource_local_to_scene = false
+resource_name = "Encounter leather; single brass edge"
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+script = ExtResource("4_cdvg2")
+base = SubResource("StyleBoxFlat_1y278")
+grain = ExtResource("2_7sg37")
+grain_dark = ExtResource("3_iacn4")
+grain_alpha = 0.1
+shade_top = 0.05
+shade_bottom = 0.14
+
+[node name="BattleEncounterPanel" type="Control" unique_id=1178064614]
+editor_description = "Battle encounter; static layout and theme owned here. Code only fills known place and connects Continue."
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_wi1ww")
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=962515608]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.0
+offset_top = -95.0
+offset_right = 270.0
+offset_bottom = 95.0
+theme_override_styles/panel = SubResource("StyleBox_i5kou")
+
+[node name="Body" type="VBoxContainer" parent="Panel" unique_id=229456838]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Panel/Body" unique_id=1960147969]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "Enemy contact"
+autowrap_mode = 3
+
+[node name="Summary" type="Label" parent="Panel/Body" unique_id=285019470]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"CardText"
+text = "Our army has halted before the enemy. Review the field and your orders before resuming time."
+autowrap_mode = 3
+
+[node name="Continue" type="Button" parent="Panel/Body" unique_id=443067945]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Dismiss this notice. The clock remains paused."
+theme_type_variation = &"CardCommand"
+text = "Review the battlefield"

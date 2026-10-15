@@ -16,7 +16,8 @@ const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversa
 	"res://scripts/ui/ledger_screen.gd", "res://scripts/ui/war_room_screen.gd",
 	"res://scripts/ui/war_folio_panel.gd", "res://scripts/ui/war_deploy_scroll.gd",
 	"res://scripts/ui/war_leave_prompt.gd", "res://scripts/ui/info_screen.gd",
-	"res://scripts/ui/laws_screen.gd", "res://scripts/ui/law_row.gd"]
+	"res://scripts/ui/laws_screen.gd", "res://scripts/ui/law_row.gd",
+	"res://scripts/ui/battle_encounter_panel.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -179,6 +180,13 @@ func test_each_screen_has_its_own_report_paper() -> void:
 	var c := (b.get_node("%MinisterPanel") as Control).get_theme_stylebox("panel")
 	assert_true(a is PaperStyle and c is PaperStyle)
 	assert_ne(a, c, "local to each scene, so fit_report on one never moves the other")
+
+func test_the_battle_encounter_keeps_its_scenes_look() -> void:
+	var path := "res://scenes/panels/battle_encounter_panel.tscn"
+	var panel: BattleEncounterPanel = load(path).instantiate()
+	add_child_autofree(panel)
+	panel.show_decision({"token": "1:encounter:1"}, "the field")
+	_assert_scene_holds(panel, path, "", 14)
 
 func _root() -> GameRoot:
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()

@@ -2,6 +2,7 @@ extends Node
 ## Autoload "Game": owns the sim; UI talks only to this.
 
 signal report_ready(report: TickReport)
+signal battle_decision_requested(decision: Dictionary)
 ## A letter was read on the Missive board (final review M7): the read flag
 ## is saved state, so it changes only here.
 signal missive_read(id: int)
@@ -145,22 +146,53 @@ func hold_day_before_month_end(day_ceiling: int) -> bool:
 ## the buildings newly idle for want of inputs (M5).
 func advance_day() -> Dictionary:
 	var ended := state.absolute_day()
-	if state.day >= Calendar.DAYS_PER_TICK:
-		var r := next_tick()
-		return {"ticked": true, "finished": r.finished_works, "arrived": engine.day_arrivals,
-			"couriers": engine.day_couriers, "idled": engine.newly_idle, "ended": ended,
-			"hazards": engine.month_hazard_news, "supply": engine.day_supply, "raids": engine.day_raid}
-	var finished := engine.advance_day(state)
+	var result := engine.resolve_day(state)
+	if result["status"] == "blocked":
+		_sync_battle_decision()
+		state_changed.emit()
+		return {"status": "blocked", "decision": result["decision"], "ticked": false,
+			"ended": ended, "finished": [], "arrived": [], "couriers": [], "supply": [], "raids": []}
+	if bool(result["ticked"]):
+		_publish_tick(result["report"])
 	state_changed.emit()
-	return {"ticked": false, "finished": finished, "arrived": engine.day_arrivals,
-		"couriers": engine.day_couriers, "ended": ended, "supply": engine.day_supply, "raids": engine.day_raid}
+	var journal: Dictionary = result["journal"]
+	return {"status": "complete", "ticked": result["ticked"], "finished": journal["works"],
+		"arrived": journal["arrivals"], "couriers": journal["couriers"], "ended": result["ended"],
+		"missives_from": journal["missive_start"],
+		"supply": journal["supply"], "raids": journal["raids"],
+		"idled": engine.newly_idle if result["ticked"] else [],
+		"hazards": engine.month_hazard_news if result["ticked"] else []}
 
 func next_tick() -> TickReport:
-	_prompts_this_tick = 0
-	current_report = engine.advance(state)
-	report_ready.emit(current_report)
+	var report := engine.advance(state)
+	if report == null:
+		_sync_battle_decision()
+		state_changed.emit()
+		return null
+	_publish_tick(report)
 	state_changed.emit()
-	return current_report
+	return report
+
+func _publish_tick(report: TickReport) -> void:
+	_prompts_this_tick = 0
+	current_report = report
+	report_ready.emit(current_report)
+
+func resolve_battle_decision(token: String, choice: String) -> Dictionary:
+	if state == null or engine == null:
+		return {"status": "stale"}
+	var result := engine.resolve_decision(state, token, choice)
+	if result["status"] == "accepted":
+		hold_clock(false, "battle_decision")
+		state_changed.emit()
+	return result
+
+func _sync_battle_decision() -> void:
+	var pending: Dictionary = state.day_resolution.get("pending_decision", {})
+	var waiting := not pending.is_empty() and String(pending.get("selected", "")) == ""
+	hold_clock(waiting, "battle_decision")
+	if waiting:
+		battle_decision_requested.emit(pending.duplicate(true))
 
 func apply_event_choice(choice_id: String) -> Dictionary:
 	var out := engine.events.apply_choice(choice_id, state)
@@ -452,6 +484,7 @@ func load_campaign(path: String = "") -> bool:
 	Hazards.ensure(data, state)
 	LawSystem.ensure(data, state)  # a save from before the laws
 	DevelopmentSystem.ensure(data, state)  # a save from before the development axes
+	_sync_battle_decision()
 	state_changed.emit()
 	return true
 

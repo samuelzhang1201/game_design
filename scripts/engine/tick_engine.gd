@@ -14,19 +14,105 @@ func _init(d: DataRepository) -> void:
 
 ## One day (owner 2026-09-13: the smallest unit of time): the day now
 ## running (`state.day`) ENDS, and the next one begins. The thirtieth day's
-## end is a tick, which the caller (Game.advance_day) runs through advance()
-## instead. Returns the works finished today, [{cell, building}].
+## end is a tick. This compatibility adapter leaves an unstarted thirtieth
+## day for advance(); production Game uses resolve_day for every boundary.
+## Returns the works finished today, [{cell, building}], or [] when blocked.
 func advance_day(state: GameState) -> Array:
-	var done := _end_day(state)
-	state.day = mini(state.day + 1, Calendar.DAYS_PER_TICK)
-	return done
+	if state.day >= Calendar.DAYS_PER_TICK and state.day_resolution.is_empty():
+		return []
+	var out := resolve_day(state)
+	return out["journal"]["works"] if out["status"] == "complete" else []
+
+
+func resolve_decision(state: GameState, token: String, choice: String) -> Dictionary:
+	return DayResolution.acknowledge(state.day_resolution, token, choice)
+
+
+## close_month retains advance()'s one-day-plus-month snapshot contract.
+## Once begun, the saved transaction decides whether this day closes a month.
+func resolve_day(state: GameState, close_month := false) -> Dictionary:
+	if state.day_resolution.is_empty():
+		state.day_resolution = DayResolution.begin(state.absolute_day(),
+			close_month or state.day >= Calendar.DAYS_PER_TICK)
+	var tx := state.day_resolution
+	var journal: Dictionary = tx["journal"]
+	if not journal.has("missive_start"):
+		journal["missive_start"] = state.next_missive_id
+	if tx["phase"] == "prepare":
+		journal["works"] = _before_battles(state)
+		_capture_day(journal)
+		journal["battles"] = BattleSystem.prepare_day(data, state)
+		tx["battle_ids"] = state.battles.map(func(b: Dictionary) -> int: return int(b["id"]))
+		tx["battle_ids"].sort()
+		tx["phase"] = "encounters"
+	if tx["phase"] == "encounters":
+		for event: Dictionary in journal["battles"]:
+			if event["kind"] != "start":
+				continue
+			var token := "%d:encounter:%d" % [int(tx["day"]), int(event["battle_id"])]
+			if token in tx["consumed_tokens"]:
+				continue
+			tx["pending_decision"] = {"token": token, "kind": "encounter",
+				"battle_id": int(event["battle_id"]), "choices": ["continue"], "selected": ""}
+			return {"status": "blocked", "decision": tx["pending_decision"].duplicate(true)}
+		tx["pending_decision"] = {}
+		tx["phase"] = "battles"
+	if tx["phase"] == "battles":
+		while int(tx["battle_index"]) < tx["battle_ids"].size():
+			var id := int(tx["battle_ids"][int(tx["battle_index"])])
+			var step := BattleSystem.step_battle(data, state, id)
+			if step["status"] == "blocked":
+				tx["pending_decision"] = step["decision"]
+				return {"status": "blocked", "decision": step["decision"].duplicate(true)}
+			journal["battles"].append_array(step["events"])
+			tx["battle_index"] = int(tx["battle_index"]) + 1
+		BattleSystem.finish_day(data, state)
+		tx["phase"] = "finish"
+	_restore_day(journal)
+	_after_battles(state)
+	_capture_day(journal)
+	var report: TickReport = null
+	if bool(tx["month_end"]):
+		report = _settle_month(state)
+		report.finished_works = journal["works"].duplicate(true)
+	else:
+		state.day += 1
+	var out := {"status": "complete", "journal": journal.duplicate(true),
+		"ended": int(tx["day"]), "ticked": bool(tx["month_end"]), "report": report}
+	state.day_resolution = {}
+	return out
+
+
+func _capture_day(journal: Dictionary) -> void:
+	journal["arrivals"] = day_arrivals.duplicate(true)
+	journal["couriers"] = day_couriers.duplicate(true)
+	journal["supply"] = day_supply.duplicate(true)
+	journal["conduct"] = day_conduct.duplicate(true)
+	journal["ai"] = day_ai.duplicate(true)
+	journal["sieges"] = day_siege.duplicate(true)
+	journal["raids"] = day_raid.duplicate(true)
+
+
+func _restore_day(journal: Dictionary) -> void:
+	day_arrivals = journal["arrivals"].duplicate(true)
+	day_couriers = journal["couriers"].duplicate(true)
+	day_battles = journal["battles"].duplicate(true)
+	day_supply = journal["supply"].duplicate(true)
+	day_conduct = journal["conduct"].duplicate(true)
+	day_ai = journal["ai"].duplicate(true)
+	day_siege = journal["sieges"].duplicate(true)
+	day_raid = journal["raids"].duplicate(true)
 
 
 ## The day `state.day` ends (owner 2026-10-06: 顶栏日期滞后一天 — the date shown
 ## is the day being played, and all of it happens as that day ends): works
 ## step, the columns march, the couriers ride, the host eats. Returns the
 ## works finished.
-func _end_day(state: GameState) -> Array:
+func _before_battles(state: GameState) -> Array:
+	day_supply = []
+	day_conduct = []
+	day_siege = []
+	day_raid = []
 	var done := MapManors.advance_works(data, state)
 	# A day on the road for every regiment under a march order (owner
 	# 2026-09-22). The arrivals go on day_arrivals rather than into the
@@ -62,12 +148,10 @@ func _end_day(state: GameState) -> Array:
 	# foe at hand of a column of ours is told BEFORE the battle letter that its
 	# contact may start.
 	Sighting.scout_day(data, state)
-	# The day's battles, AFTER the couriers (spec 2026-10-07-enemy-ai-and-battle
-	# §4): an order a courier lands today (a stance, a march) is in the
-	# regiment's state before the round, and a stance he delivers takes hold at
-	# the end of this very settlement. ONE letter for all of the day's
-	# fighting, when there is any.
-	day_battles = BattleSystem.settle_day(data, state)
+	return done
+
+
+func _after_battles(state: GameState) -> void:
 	# The sieges' day (spec §5.1-5.2) right AFTER the battles, once: an
 	# assault is that day's town battle, and its outcome moves the siege. The
 	# siege's news rides in the same battle letter, after the fighting.
@@ -115,7 +199,6 @@ func _end_day(state: GameState) -> Array:
 		MissiveLog.add(data, state, MissiveWriter.supply_dispatch(data, state, day_supply))
 	if not day_conduct.is_empty():
 		MissiveLog.add(data, state, MissiveWriter.conduct_dispatch(data, state, day_conduct))
-	return done
 
 ## The regiments that reached their destination in the last advance_day, in
 ## code order — read by Game for the news bar and by nothing else.
@@ -172,22 +255,15 @@ func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
 
 
 func advance(state: GameState) -> TickReport:
+	if state.tick == 0 and state.day_resolution.is_empty():
+		_restore_day(DayResolution.begin(state.absolute_day(), false)["journal"])
+		return _settle_month(state)
+	var out := resolve_day(state, true)
+	return out["report"] if out["status"] == "complete" else null
+
+
+func _settle_month(state: GameState) -> TickReport:
 	var r := TickReport.new()
-	# The month's last day ends first, as every day does (owner 2026-09-24:
-	# 行进速度必须和给定的速度相符 — the tick IS a day on the road too), so its
-	# march, its couriers and its works are the month's. The reign's OPENING
-	# tick (tick 0) closes no day: the first day is played, not skipped.
-	if state.tick > 0:
-		r.finished_works = _end_day(state)
-	else:
-		day_arrivals = []
-		day_couriers = []
-		day_battles = []
-		day_siege = []
-		day_raid = []
-		day_ai = []
-		day_supply = []
-		day_conduct = []
 	# The month that just ended is settled BEFORE the tick moves: its lines
 	# are the month's own (growth of tick t), and the ledger reasons carry
 	# its tick.

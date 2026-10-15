@@ -443,7 +443,7 @@ func test_a_raid_on_the_day_loop_is_told_in_the_field_report() -> void:
 	var cell := _manor(s, false, 100, 40.0)
 	assert_gt(cell, 0, "a manor out of every regiment's way")
 	_raid(s, h, cell)
-	engine.advance_day(s)
+	Play.day(engine, s, true)
 	assert_eq(_of(engine.day_raid, "raid_begin").size(), 1, "the raid begins: TickEngine.day_raid")
 	assert_gt(int(s.ai_hosts[h]["plunder"]) + _supplies(s, h), 0, "it took something")
 	var letters: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "battle")
@@ -457,7 +457,7 @@ func test_a_raid_on_the_day_loop_is_told_in_the_field_report() -> void:
 	assert_false(text.contains("[missing template"), text)
 	assert_false(text.contains("{"), "every slot filled: " + text)
 	assert_true(text.contains(repo.realm_label("raider_realm")), "the raider realm through its slot")
-	engine.advance_day(s)
+	Play.day(engine, s, true)
 	assert_eq(_of(engine.day_raid, "raid_begin").size(), 0, "told once")
 
 
@@ -491,10 +491,7 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 	var home_by := -1
 	while s.absolute_day() <= 120:
 		var today := s.absolute_day()
-		if s.day >= Calendar.DAYS_PER_TICK:
-			engine.advance(s)
-		else:
-			engine.advance_day(s)
+		Play.day(engine, s, true)
 		for h: String in EnemyAi.host_codes(s):
 			var m: Dictionary = s.ai_hosts[h]
 			if today > 33 and String(m["mode"]) == "RAID" and int(m["plunder"]) > 0 and raiding_late == "":

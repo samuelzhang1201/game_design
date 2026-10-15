@@ -1067,7 +1067,7 @@ func _opened(engine: TickEngine) -> GameState:
 
 
 func _day(engine: TickEngine, s: GameState) -> void:
-	Play.day(engine, s)
+	Play.day(engine, s, true)
 
 
 func _first_appear() -> int:

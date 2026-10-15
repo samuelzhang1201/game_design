@@ -545,19 +545,36 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 ## {kind: "end", battle_id, why ("rout_attacker" / "rout_defender" / "emptied" /
 ##  "rounds" / "withdrawn": the foes' host went home), winner ("att" / "def" / ""), att, def (the survivors), rounds,
 ##  town, place_x_m, place_y_m}.
-static func settle_day(repo: DataRepository, state: GameState) -> Array:
+static func prepare_day(repo: DataRepository, state: GameState) -> Array:
 	var events: Array = []
 	_withdraw_homeward(repo, state, events)
 	_detect(repo, state, events)
-	var order: Array = state.battles.duplicate()
-	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["id"]) < int(b["id"]))
-	var over: Array = []
-	for b: Dictionary in order:
-		if _fight(repo, state, b, events):
-			over.append(int(b["id"]))
-	if not over.is_empty():
-		state.battles = state.battles.filter(func(b: Dictionary) -> bool: return not int(b["id"]) in over)
+	return events
+
+
+static func step_battle(repo: DataRepository, state: GameState, battle_id: int) -> Dictionary:
+	var events: Array = []
+	var battle := battle_by_id(state, battle_id)
+	if not battle.is_empty() and _fight(repo, state, battle, events):
+		state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != battle_id)
+	return {"status": "complete", "events": events}
+
+
+static func finish_day(_repo: DataRepository, state: GameState) -> void:
 	settle_stances(state)
+
+
+## Non-interactive battle arithmetic helper. The game uses TickEngine's
+## transaction and confirms all contacts before invoking step_battle.
+static func settle_day(repo: DataRepository, state: GameState) -> Array:
+	if not state.day_resolution.is_empty():
+		return []  # an active daily transaction exclusively owns battle stepping
+	var events := prepare_day(repo, state)
+	var order: Array = state.battles.map(func(b: Dictionary) -> int: return int(b["id"]))
+	order.sort()
+	for id: int in order:
+		events.append_array(step_battle(repo, state, id)["events"])
+	finish_day(repo, state)
 	return events
 
 

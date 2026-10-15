@@ -27,12 +27,12 @@ func _opened(engine: TickEngine) -> GameState:
 
 ## One day, exactly as Game.advance_day plays it: the thirtieth is the tick.
 func _day(engine: TickEngine, s: GameState) -> void:
-	Play.day(engine, s)
+	Play.day(engine, s, true)
 
 
 ## Plays days until the absolute day `last` has ended.
 func _play_through(engine: TickEngine, s: GameState, last: int) -> void:
-	Play.play_through(engine, s, last)
+	Play.play_through(engine, s, last, true)
 
 
 func _host(role: String) -> String:
