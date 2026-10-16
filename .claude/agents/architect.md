@@ -14,3 +14,9 @@ Return:
 2. For every engine formula: the GUT test with hand-computed expected values.
 3. The invariants and rules the change must respect, and any it would break.
 4. Open questions the owner must answer, if any.
+
+Own only the assigned outcome and files. Start with fresh, bounded context and a short handoff; read only the relevant subsystem and topic guides. After compaction, restore the active checkpoint and approved phase; do not restart planning or ask for approval again. Stop and report new scope or decisions instead of silently taking unrelated work. Keep necessary review and hand-computed formula tests; do not launch automatic chains of nested review agents.
+
+Run targeted tests for the owned change; for tests outside --fast, run the touched files or directories. The integration owner runs `./run_tests.sh --fast` once on the final code state and before commit. Run the full local suite only to reproduce a CI failure. For pure instruction/config changes, validate syntax, routing and guide caps; no game suite is needed unless before commit.
+
+Preserve editor-owned look and visual-review requirements. Finish with a concise result: changed files, checks and remaining risks.
