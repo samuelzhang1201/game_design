@@ -1,6 +1,7 @@
 {
   "source_session_id": "01a144e5-35e4-7ab0-a971-22436041c065",
-  "status": "ready",
+  "status": "handed_off",
   "summary_path": "/Users/samuelzhang/.codex/worktrees/battle-system/game_design/HANDOVER.md",
-  "next_task": "Implement battle-system P3.2 field camp state in the existing approved worktree, test and commit that bounded phase."
+  "next_task": "Implement battle-system P3.2 field camp state in the existing approved worktree, test and commit that bounded phase.",
+  "next_session_id": "01a146dc-25b4-73d2-bda0-0436e2b12153"
 }
