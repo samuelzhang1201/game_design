@@ -1,7 +1,7 @@
 class_name CourierSystem
 extends RefCounted
 ## Couriers (owner 2026-09-27, spec docs/superpowers/specs/2026-09-27-courier-core-design.md):
-## an order to a regiment rides from the capital and takes effect only when
+## an order to a regiment rides from the king's physical position and takes effect only when
 ## the courier reaches the column. One courier per TARGET BATCH (owner
 ## 2026-10-10: 如果信息传递的target是同一个object，只需要一个信使): an order for a
 ## regiment whose courier has not yet set out rides with him (`orders`, run in
@@ -47,6 +47,8 @@ static func day_budget(repo: DataRepository, kind: String) -> int:
 ## realm holds, in order: the crown's home province, its controlled provinces,
 ## then any province by code.
 static func origin(repo: DataRepository, state: GameState) -> Vector2:
+	if not state.king_state.is_empty():
+		return ArmySystem.metres_to_pack(repo, KingSystem.position(state))
 	var realm := repo.resolve_realm("player_realm")
 	var cap := String((repo.kingdoms.get(realm, {}) as Dictionary).get("capital_burg", ""))
 	if repo.burgs.has(cap) and _holds(repo, state, String(repo.burgs[cap]["province_code"]), realm):

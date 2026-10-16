@@ -494,6 +494,7 @@ func load_campaign(path: String = "") -> bool:
 	if organization.get("status", "error") == "error":
 		load_error = "Cannot restore the army's organization: " + String(organization.get("error", "invalid organization"))
 		return false
+	KingSystem.ensure(data, loaded)
 	load_error = ""
 	hold_clock(false, "simulation_error")
 	state = loaded

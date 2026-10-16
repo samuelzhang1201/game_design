@@ -26,6 +26,9 @@ var agent_memory: Dictionary = {}
 ## but an old save may carry it and HouseArms / MapManors still read
 ## house_was, the royal house's name before it was renamed.
 var player_setup: Dictionary = {}
+## The king's physical position and current journey (battle-system spec §11).
+## This is separate from the royal regiment's piece and the prose location.
+var king_state: Dictionary = {}
 ## Where the player stands (data/story/locations.csv). Moving within a region is
 ## free (LocationSystem); saved with everything else.
 var current_location: String = LocationSystem.DEFAULT_LOCATION
@@ -83,6 +86,7 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 		return null
 	var s := GameState.new()
 	s.map_id = data.map_id
+	s.king_state = KingSystem.initial_state(data)
 	s.rng = Rng.new(seed_value)
 	s.metrics = default_metrics(data)
 	s.characters = CharacterFactory.build_roster(data)
@@ -468,6 +472,7 @@ func to_dict() -> Dictionary:
 		"claims": _encode_values(claims.duplicate(true)),
 		"agent_memory": _encode_values(agent_memory.duplicate(true)),
 		"player_setup": player_setup.duplicate(true),
+		"king_state": _encode_values(king_state.duplicate(true)),
 		"current_location": current_location,
 		"cooldowns": _encode_values(cooldowns.duplicate()),
 		"recent_outcomes": _encode_values(recent_outcomes.duplicate(true)),
@@ -568,6 +573,9 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.claims = _decode_values(d.get("claims", []))
 	s.agent_memory = _decode_values(d.get("agent_memory", {}))
 	s.player_setup = d.get("player_setup", {}).duplicate(true)
+	# Saves before the king's physical journey carry no location; Game.load_campaign
+	# seeds that missing state from the saved world's bound capital.
+	s.king_state = _decode_values(d.get("king_state", {}))
 	s.current_location = String(d.get("current_location", LocationSystem.DEFAULT_LOCATION))
 	var decoded_cooldowns = _decode_values(d["cooldowns"])
 	for k in decoded_cooldowns:
