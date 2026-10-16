@@ -232,9 +232,9 @@ static func joinable(state: GameState, kind: String, code: String, order: Dictio
 		return {}
 	var newest: Dictionary = {}
 	for c: Dictionary in state.couriers:
-		if String(c.get("target", "")) == code and (newest.is_empty() or int(c["id"]) > int(newest["id"])):
+		if has_recipient(c, code) and (newest.is_empty() or int(c["id"]) > int(newest["id"])):
 			newest = c
-	if newest.is_empty() or String(newest.get("kind", "")) != kind or _is_spy(newest) \
+	if newest.is_empty() or not (newest.get("recipient_queue", []) as Array).is_empty() or String(newest.get("kind", "")) != kind or _is_spy(newest) \
 			or int(newest.get("days", 0)) != 0 or int(newest.get("issued", -1)) != state.absolute_day() \
 			or not order_with(newest, [LawSystem.ACTION]).is_empty() \
 			or String(first_order(newest).get("to_town", "")) != "":
@@ -251,8 +251,20 @@ static func _ride_day_of(state: GameState) -> int:
 ## Days a courier still has to ride — the day now running the first, his last
 ## ending as he delivers — the weather of his next day held.
 static func days_left(repo: DataRepository, state: GameState, c: Dictionary) -> int:
-	return days_for(repo, String(c["kind"]), need_along(repo, state,
+	var days := days_for(repo, String(c["kind"]), need_along(repo, state,
 		Vector2i(int(c["x_m"]), int(c["y_m"])), c["path"], _ride_day_of(state)))
+	var recipient := String(c.get("pending_recipient", c["target"]))
+	if recipient == String(c["target"]):
+		return days
+	var from := ArmySystem.metres_to_pack(repo, Vector2i(int(c["aim_x_m"]), int(c["aim_y_m"])))
+	for next: Dictionary in c.get("recipient_queue", []):
+		var to := ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, String(next["target"]), state))
+		days += days_for(repo, String(c["kind"]), need_along(repo, state,
+			ArmySystem.pack_to_metres(repo, from), path_between(repo, from, to), _ride_day_of(state) + days))
+		if String(next["target"]) == recipient:
+			break
+		from = to
+	return days
 
 
 ## Days a spy sent now would ride to reach `to_px`, the route and today's
@@ -356,7 +368,7 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 	if _chases(c) and (reg.is_empty() or ArmySystem.is_foe(state, code)
 			or ArmySystem.state_of(repo, state, code).is_empty()):
 		events.append(_event("lost", c))
-		return false
+		return _next_recipient(repo, state, c)
 	c["days"] = int(c.get("days", 0)) + 1
 	if int(c["days"]) > int(repo.bal("courier_max_days")):
 		events.append(_spy_placed(repo, state, c, _event("fuse", c)))
@@ -367,8 +379,38 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 	_advance(repo, state, c, today, events)
 	if (c["path"] as Array).is_empty():
 		events.append(SpySystem.observe(repo, state, c) if _is_spy(c) else _deliver(repo, state, c))
-		return false
+		return _next_recipient(repo, state, c)
 	return true
+
+
+## A saved reorganization keeps one rider and fee. A delivery starts the
+## next leg here, but that leg cannot be ridden until the next day-end.
+static func _next_recipient(repo: DataRepository, state: GameState, c: Dictionary) -> bool:
+	var queue: Array = c.get("recipient_queue", [])
+	if queue.is_empty():
+		return false
+	var next: Dictionary = queue.pop_front()
+	c["target"] = String(next["target"])
+	c["orders"] = next["orders"].duplicate(true)
+	var reg := ArmySystem.regiment(repo, String(c["target"]), state)
+	var to := ArmySystem.position_of(repo, state, reg)
+	var aim := ArmySystem.pack_to_metres(repo, to)
+	c["aim_x_m"] = aim.x
+	c["aim_y_m"] = aim.y
+	c["path"] = path_between(repo, ArmySystem.metres_to_pack(repo,
+		Vector2i(int(c["x_m"]), int(c["y_m"]))), to)
+	return true
+
+
+static func has_recipient(c: Dictionary, code: String) -> bool:
+	if code in c.get("delivery_targets", []):
+		return true
+	if String(c.get("target", "")) == code:
+		return true
+	for recipient: Dictionary in c.get("recipient_queue", []):
+		if String(recipient.get("target", "")) == code:
+			return true
+	return false
 
 
 ## The news bar's "he leaves" lines for the couriers whose FIRST day is the
@@ -434,7 +476,7 @@ static func ride_ahead(repo: DataRepository, state: GameState, c: Dictionary) ->
 		return {"points": [], "share": 1.0, "ends": false}
 	return {"points": passed_points(before, (copy["path"] as Array).size(),
 		Vector2i(int(copy["x_m"]), int(copy["y_m"]))), "share": float(copy["ride_share"]),
-		"ends": (copy["path"] as Array).is_empty()}
+		"ends": (copy["path"] as Array).is_empty() and (copy.get("recipient_queue", []) as Array).is_empty()}
 
 
 ## `c` after his next day, on a copy ({} when he will not ride), its
@@ -589,6 +631,21 @@ static func _spy_placed(repo: DataRepository, state: GameState, c: Dictionary, e
 ## was; a supply point that set its wagons rolling adds `supply` (SupplyLines'
 ## set_out events, the day's dispatch).
 static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
+	# Town warrants are one physical arrival, with independent newest-order checks.
+	if c.has("delivery_targets") and String(first_order(c).get("to_town", "")) != "":
+		var deliveries: Array = []
+		var rolling: Array = []
+		for target: String in c["delivery_targets"]:
+			var recipient := c.duplicate(true)
+			recipient.erase("delivery_targets")
+			recipient["target"] = target
+			var event := _deliver(repo, state, recipient)
+			deliveries.append(event["type"])
+			rolling.append_array(event.get("supply", []))
+		var result := _event("delivered" if "delivered" in deliveries else "stale", c)
+		if not rolling.is_empty():
+			result["supply"] = rolling
+		return result
 	# a decree writes its place's law and touches no order of the column
 	if String(first_order(c).get("action_code", "")) == LawSystem.ACTION:
 		return LawSystem.deliver(repo, state, c)
@@ -704,8 +761,11 @@ static func pending_for(state: GameState, code: String) -> Dictionary:
 	for c: Dictionary in state.couriers:
 		if march_order(c).is_empty():
 			continue
-		if String(c["target"]) == code and (best.is_empty() or int(c["id"]) > int(best["id"])):
+		if has_recipient(c, code) and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c
+	if not best.is_empty() and String(best["target"]) != code:
+		best = best.duplicate(true)
+		best["pending_recipient"] = code
 	return best
 
 

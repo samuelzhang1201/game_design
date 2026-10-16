@@ -490,6 +490,10 @@ func load_campaign(path: String = "") -> bool:
 	if personnel.has("error"):
 		load_error = "Cannot restore the army's personnel: " + String(personnel["error"])
 		return false
+	var organization := MilitaryReorganization.reconcile(data, loaded)
+	if organization.get("status", "error") == "error":
+		load_error = "Cannot restore the army's organization: " + String(organization.get("error", "invalid organization"))
+		return false
 	load_error = ""
 	hold_clock(false, "simulation_error")
 	state = loaded

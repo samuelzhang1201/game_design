@@ -248,7 +248,7 @@ func test_a_regiment_card_shows_its_state() -> void:
 	assert_eq(text["army"], "%d (120 wounded)" % heads)
 	assert_eq(text["army_morale"], str(int(s.regiments[code]["morale"])))
 	assert_eq(text["army_wounded"], "+%d / mo" % ArmySystem.wound_recovery(Game.data, 120))
-	var use := ArmySystem.supply_use(Game.data, r)
+	var use := ArmySystem.supply_use(Game.data, r, s)
 	var held := ArmySystem.days_in_hand(int(s.regiments[code]["supplies"]), use)
 	var in_hand := mini(held, 999)
 	assert_eq(text["army_supply"], "%s (≈ %d day%s)" % [MapObjects.grouped(int(s.regiments[code]["supplies"])),

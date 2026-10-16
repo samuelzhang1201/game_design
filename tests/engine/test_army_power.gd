@@ -265,6 +265,9 @@ func test_power_of_arms_is_worked_by_hand() -> void:
 
 
 func test_power_on_is_power_of_arms_with_the_regiments_own_state() -> void:
+	# This checks the caller wiring; identity advantages have their own hand cases.
+	var noble_power: Variant = repo.noble_quality["noble"]["power_permille"]
+	repo.noble_quality["noble"]["power_permille"] = repo.noble_quality["commoner"]["power_permille"]
 	var s := SuiteData.campaign(repo, 7)
 	for code: String in _land_codes():
 		var reg := ArmySystem.regiment(repo, code, s)
@@ -272,3 +275,4 @@ func test_power_on_is_power_of_arms_with_the_regiments_own_state() -> void:
 		var fit := ArmySystem.fit_count(repo, s, code)
 		assert_eq(ArmySystem.power_on(repo, s, code, "attack", "hills", "walls"),
 			ArmySystem.power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), "attack", "hills", "walls", code, s.tick))
+	repo.noble_quality["noble"]["power_permille"] = noble_power

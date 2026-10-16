@@ -16,6 +16,19 @@ const PROVINCE_PREFIX := "province:"
 const TOWN_PREFIX := "town:"
 const UNIT_PREFIX := "unit:"
 
+## Publish the law scopes prepared on an atomic military transaction.
+static func commit_scopes(state: GameState, candidate: GameState) -> void:
+	state.law_in_force = candidate.law_in_force
+
+## Organization changes inherit delivered law versions without issuing a
+## new decree or replaying its effects. Every child's entry is independent.
+static func inherit_unit_scopes(state: GameState, source: String, children: Array) -> void:
+	var key := UNIT_PREFIX + source
+	if not state.law_in_force.has(key):
+		return
+	for child: String in children:
+		state.law_in_force[UNIT_PREFIX + child] = state.law_in_force[key].duplicate(true)
+
 ## The three laws that mirror a realm-wide metric: law -> metric key. The
 ## metric is the law's initial value and its display mirror (spec §2.5).
 const METRIC_OF := {"tax_rate": "tax_rate", "tariff_rate": "tariff_rate", "grain_ration": "grain_ration"}
@@ -641,10 +654,22 @@ static func delivery(repo: DataRepository, state: GameState, law: String) -> Dic
 ## The couriers of the standing decree of `law` still on the road.
 static func _riders(state: GameState, law: String) -> Array:
 	var id := _decree_id(state, law)
-	return state.couriers.filter(func(c: Dictionary) -> bool:
-		var o := CourierSystem.first_order(c)
-		return String(o.get("action_code", "")) == ACTION and String(o.get("law", "")) == law \
-			and int(o.get("decree_id", -1)) == id)
+	var out: Array = []
+	for c: Dictionary in state.couriers:
+		var recipients: Array = [{"target": c.get("target", ""), "orders": CourierSystem.orders_of(c)}]
+		recipients.append_array(c.get("recipient_queue", []))
+		for recipient: Dictionary in recipients:
+			var orders: Array = recipient.get("orders", [])
+			if orders.is_empty():
+				continue
+			var order: Dictionary = orders[0]
+			if String(order.get("action_code", "")) != ACTION or String(order.get("law", "")) != law or int(order.get("decree_id", -1)) != id:
+				continue
+			var rider := c.duplicate(true)
+			rider["orders"] = orders.duplicate(true)
+			rider["pending_recipient"] = String(recipient["target"])
+			out.append(rider)
+	return out
 
 
 ## The places the standing decree of `law` has not reached (the laws

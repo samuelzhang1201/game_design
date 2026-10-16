@@ -32,6 +32,9 @@ func resolve_decision(state: GameState, token: String, choice: String) -> Dictio
 ## Once begun, the saved transaction decides whether this day closes a month.
 func resolve_day(state: GameState, close_month := false) -> Dictionary:
 	if state.day_resolution.is_empty():
+		var organization := MilitaryReorganization.reconcile(data, state)
+		if organization.get("status", "error") == "error":
+			return {"status": "error", "error": organization.get("error", "Cannot reconcile military organization.")}
 		state.day_resolution = DayResolution.begin(state.absolute_day(),
 			close_month or state.day >= Calendar.DAYS_PER_TICK)
 	var tx := state.day_resolution
@@ -191,6 +194,8 @@ func _after_battles(state: GameState) -> void:
 	# Living off the land and desertion (spec 2026-10-10-foraging-and-desertion
 	# §3.3): after the meal, so the warnings below read what foraging left.
 	day_conduct = ArmyConduct.day_step(data, state)
+	# Assembly completes at the day-end; the new unit first acts tomorrow.
+	RecruitmentSystem.step_day(data, state)
 	# The day's supply warnings, read off what the host has left after eating.
 	day_supply.append_array(SupplyLines.warn_day(data, state))
 	# The month's economy is computed a bucket a day (spec §11.2).

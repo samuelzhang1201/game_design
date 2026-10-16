@@ -35,7 +35,7 @@ func test_a_new_campaign_seeds_only_the_players_regiments() -> void:
 	# heads x 100 / 1000 a month (scaled by the cell's height tier), times
 	# army_start_supply_days (20) of the 30 days of a month, in a 20-day load
 	@warning_ignore("integer_division")
-	assert_eq(int(entry["supplies"]), (ArmySystem.supply_use(repo, r) * 20 + 29) / 30)
+	assert_eq(int(entry["supplies"]), (ArmySystem.supply_use(repo, r, s) * 20 + 29) / 30)
 	assert_eq(int(entry["carry_days"]), 20)
 	assert_false(s.regiments.has(_other_code()))
 
@@ -46,7 +46,7 @@ func test_a_fresh_regiment_has_the_days_it_was_given() -> void:
 	var n := 0
 	for r: Dictionary in _mine():
 		var code := String(r["regiment_code"])
-		var use := ArmySystem.supply_use(repo, r)
+		var use := ArmySystem.supply_use(repo, r, s)
 		if String(r.get("is_naval", "0")) == "1" or use < 30:
 			continue
 		n += 1
@@ -62,7 +62,7 @@ func test_the_month_returns_wounded_and_the_days_eat_the_supplies() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var r: Dictionary = _mine()[0]
 	var code := String(r["regiment_code"])
-	var use := ArmySystem.supply_use(repo, r)
+	var use := ArmySystem.supply_use(repo, r, s)
 	assert_false(Personnel.move(repo, s, code, "fit", "wounded", 250).has("error"))
 	s.regiments[code]["supplies"] = use + 5
 	# Morale follows the stores in hand as the month turns (spec
@@ -115,7 +115,7 @@ func test_the_yellow_bar_falls_day_by_day() -> void:
 			break
 	assert_false(r.is_empty(), "the realm has a unit that eats every day")
 	var code := String(r["regiment_code"])
-	var use := ArmySystem.supply_use(repo, r)
+	var use := ArmySystem.supply_use(repo, r, s)
 	# the carried days in whole units, rounded UP so the bar reads full
 	@warning_ignore("integer_division")
 	s.regiments[code]["supplies"] = (use * ArmySystem.carry_of(repo, s.regiments[code]) + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK

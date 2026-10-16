@@ -1,5 +1,6 @@
 class_name ArmySystem
 extends RefCounted
+const Quality := preload("res://scripts/engine/military_quality.gd")
 ## The player's regiments as more than a headcount (owner 2026-09-17, spec
 ## docs/superpowers/specs/2026-09-17-regiment-state-design.md): morale,
 ## wounded, supplies and a hidden training value, stored in
@@ -88,7 +89,7 @@ static func fit_permille(repo: DataRepository, state: GameState, code: String) -
 ## in whole supplies rounded UP, so the days in hand read the days it was given
 ## (rounded down, a fresh regiment showed 19 of its 20).
 @warning_ignore("integer_division")  # whole supplies
-static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
+static func starting_state(repo: DataRepository, reg: Dictionary, state: GameState = null) -> Dictionary:
 	var home := pack_to_metres(repo, Vector2(float(reg.get("x", 0)), float(reg.get("y", 0))))
 	var start_days := int(repo.bal("army_start_supply_days"))
 	@warning_ignore("integer_division")
@@ -96,7 +97,7 @@ static func starting_state(repo: DataRepository, reg: Dictionary) -> Dictionary:
 		"morale": int(repo.bal("army_start_morale")),
 		"wounded": 0,
 		"dead": 0,
-		"supplies": (supply_use(repo, reg) * start_days + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK,
+		"supplies": (supply_use(repo, reg, state) * start_days + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK,
 		"carry_days": int(repo.bal("army_carry_default_days")),
 		"training": int(repo.bal("army_start_training")),
 		"x_m": home.x,
@@ -114,7 +115,7 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		var code := String(reg["regiment_code"])
 		if not state.regiments.has(code):
-			state.regiments[code] = starting_state(repo, reg)
+			state.regiments[code] = starting_state(repo, reg, state)
 			continue
 		# A save written before the march existed has morale but no position:
 		# seat it where the pack put it, standing.
@@ -153,7 +154,8 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 		return state.regiments[code]
 	return starting_state(repo, reg)
 
-## Supplies a regiment uses in a month: the headcount's use times the height
+## Supplies a regiment uses in a month: living personnel weighted by identity
+## (noble_quality.csv) times the per-head use and height
 ## tier of the cell it stands on NOW (position_of; the pack's own quarters
 ## when `state` is null — a campaign's opening stores, a regiment with no
 ## state) (data/army/army_height_supply.csv, spec 2026-09-19-map3d-heights §2) —
@@ -161,15 +163,16 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 ## 2026-09-19): two per-mille divisions in a row lost heads a first
 ## regiment's worth of supply to truncation twice.
 static func supply_use(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
-	var people := personnel_capacity(repo, reg) if state == null else living_count(repo, state, String(reg.get("regiment_code", "")))
+	var supply_milli := personnel_capacity(repo, reg) * 1000 if state == null else int(
+		Quality.profile(repo, state, String(reg.get("regiment_code", "")))["supply_milli"])
 	var per_head := int(repo.bal("army_supply_per_head_permille"))
 	var terrain := int(height_tier(repo, reg, state)["supply_permille"])
-	if people <= 0 or per_head <= 0 or terrain <= 0:
+	if supply_milli <= 0 or per_head <= 0 or terrain <= 0:
 		return 0
 	# One final rounding, with one grain unit as the minimum positive ration:
 	# living remnants cannot become exempt from hunger through truncation.
 	@warning_ignore("integer_division")
-	return maxi(1, people * per_head * terrain / 1_000_000)
+	return maxi(1, supply_milli * per_head * terrain / 1_000_000_000)
 
 ## Wounded who return to the ranks in a month: a share, at least one while
 ## any are wounded.
@@ -184,6 +187,7 @@ static func wound_recovery(repo: DataRepository, wounded: int) -> int:
 ## grows. The supplies are not spent here: eat_day eats the month a day at a
 ## time, so the stores fall under the player's eyes.
 static func settle_month(repo: DataRepository, state: GameState) -> void:
+	Quality.settle_month(repo, state)
 	_recover_month(repo, state)
 	ensure(repo, state)
 	var codes := state.regiments.keys()
@@ -570,8 +574,12 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 		return 0
 	var fit := fit_count(repo, state, code)
 	var realm := realm_of(repo, code, state)
-	return power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
+	var base := power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
 		code, 0 if state == null else state.tick, DevelopmentSystem.arm_permille(repo, state, realm))
+	# Identity modifies the equipment-based result once, never the crew count.
+	var quality := 1000 if state == null else int(Quality.profile(repo, state, code)["power_permille"])
+	@warning_ignore("integer_division")
+	return base * quality / 1000
 
 
 ## The realm a unit serves: its row's kingdom ("" for an unknown unit). The

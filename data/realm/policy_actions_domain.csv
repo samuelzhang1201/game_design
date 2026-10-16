@@ -1,4 +1,5 @@
 action_code,domain,label,target_type,admin_cost,gold_cost_formula,cooldown_ticks,min_era,unlock_req,effect_handler,max_per_turn,reversible,notes
+ARMY_RECRUIT,military,Recruit and equip a unit,none,0,none,0,0,,army_recruit,0,no,"Paid assembling cohorts; params request_id mode arm unit_code total source_province source_population_field assembly_town noble_permille commander_id."
 LEVY_RAISE,military,Raise fresh levies,none,1.5,levy_cost,4,0,,levy_raise,1,no,"Improves army quality; costs gold and goodwill."
 BUILD_ECONOMIC,economy,Commission a public work,none,1.5,build_cost,6,0,,build_economic,1,no,"params: project (granary|road)."
 SPY_MISSION,intrigue,Send out the whisperers,none,1.0,spy_cost,4,0,,spy_mission,1,no,"Quiets rumors; costs gold."

@@ -34,6 +34,12 @@ func gold_cost(row: Dictionary) -> float:
 func validate(req: ActionRequest, state: GameState) -> String:
 	if not data.actions.has(req.action_code):
 		return "Unknown action: " + req.action_code
+	if req.action_code == "ARMY_RECRUIT":
+		if req.target != "":
+			return "Recruitment has no separate target character."
+		var previous := RecruitmentSystem.replay(state, req.params)
+		if not previous.is_empty():
+			return String(previous.get("error", ""))
 	var row: Dictionary = data.actions[req.action_code]
 	if state.cooldowns.get(req.action_code, 0) > state.tick:
 		return "%s is on cooldown until tick %d" % [req.action_code, state.cooldowns[req.action_code]]
@@ -55,6 +61,11 @@ func validate(req: ActionRequest, state: GameState) -> String:
 	if row.get("target_type", "none") == "character" and not state.characters.has(req.target):
 		return "No such target character for " + req.action_code
 	match req.action_code:
+		"ARMY_RECRUIT":
+			if req.target != "":
+				return "Recruitment has no separate target character."
+			var offer := RecruitmentSystem.quote(data, state, req.params)
+			return String(offer.get("error", ""))
 		"BUILD_ECONOMIC":
 			if not req.params.get("project", "") in ["granary", "road"]:
 				return "project must be granary|road"
@@ -228,8 +239,9 @@ func _place_refusal(reg: Dictionary, at: Vector2, off_map: String, into_sea: Str
 	if at.x < 0.0 or at.y < 0.0 or (w > 0.0 and at.x > w) or (h > 0.0 and at.y > h):
 		return off_map
 	var naval := String(reg.get("is_naval", "0")) == "1"
-	# cell_at reads the LAND grid, so a land cell is exactly what it finds.
-	var on_land := MapEconomy.cell_at(data, at) >= 0
+	# Columns retain the settlement shoreline tolerance; fleets need the
+	# exact boundary so a port's nearby sea remains a legal destination.
+	var on_land := MapEconomy.contains_land(data, at) if naval else MapEconomy.cell_at(data, at) >= 0
 	if naval and on_land:
 		return "%s is a fleet and cannot be sent inland" % String(reg["label"])
 	if not naval and not on_land:
@@ -472,7 +484,18 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 	return ""
 
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
+	# A paid retry must not replay opinion drift, promises, history or fallback fees.
+	if req.action_code == "ARMY_RECRUIT" and req.target == "":
+		var previous := RecruitmentSystem.replay(state, req.params)
+		if previous.has("error"):
+			return {"action_code": req.action_code, "ok": false, "error": previous["error"]}
+		if not previous.is_empty():
+			var id := String(req.params["request_id"])
+			return (state.recruitment_projects[id]["action_outcome"] as Dictionary).duplicate(true) \
+				if state.recruitment_projects[id].has("action_outcome") else previous
 	var err := validate(req, state)
+	if req.action_code == "ARMY_RECRUIT" and err != "":
+		return {"action_code": req.action_code, "ok": false, "error": err}
 	assert(err == "", "execute called with invalid request: " + err)
 	var row: Dictionary = data.actions[req.action_code]
 	# Opinions before, so a direct loss (a punishment) counts as this order's
@@ -486,6 +509,11 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	# direction (LAW_SET's signature variants, data/realm/action_signatures.csv)
 	var sig_params := req.params
 	match req.action_code:
+		"ARMY_RECRUIT":
+			var paid := RecruitmentSystem.recruit(data, state, req.params)
+			if paid.has("error"):
+				return {"action_code": req.action_code, "ok": false, "error": paid["error"]}
+			effects.append_array(paid["effects"])
 		"LEVY_RAISE":
 			_apply(state, effects, "army_quality", data.bal("levy_army_gain"), "fresh levies drilled")
 			_apply(state, effects, "unrest", data.bal("levy_unrest"), "villages resent the levy")
@@ -814,6 +842,8 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),
 		"drift": drift}
 	state.recent_outcomes.append(outcome)
+	if req.action_code == "ARMY_RECRUIT":
+		state.recruitment_projects[String(req.params["request_id"])]["action_outcome"] = outcome.duplicate(true)
 	return outcome
 
 ## An audit's letter, filed LAST, once every opinion the order moves has

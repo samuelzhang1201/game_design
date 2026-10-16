@@ -11,6 +11,8 @@ var founding: Array[Dictionary] = []
 var roles: Array[Dictionary] = []
 ## Explicit military eligibility, separate from a character's presentation category.
 var commanders: Dictionary = {}
+var recruitment: Dictionary = {}
+var noble_quality: Dictionary = {}
 var relationships: Array[Dictionary] = []
 var regions: Dictionary = {}
 var locations: Dictionary = {}
@@ -683,6 +685,14 @@ func _load(dir: String) -> bool:
 	if not _load_if_present(table_path(dir, "commanders"),
 			["character_id", "realm_slot", "eligible", "unit_kinds", "portrait_key", "reserve_priority"],
 			func(r): commanders[r["character_id"]] = r):
+		return false
+	if not _load_if_present(table_path(dir, "recruitment"),
+			["arm", "commoner_gold", "noble_gold", "commander_gold", "equipment_gold_per_element", "build_days", "requires_port"],
+			func(r): recruitment[r["arm"]] = r):
+		return false
+	if not _load_if_present(table_path(dir, "noble_quality"),
+			["identity", "power_permille", "discipline_permille", "supply_permille", "wage_per_1000_per_month"],
+			func(r): noble_quality[r["identity"]] = r):
 		return false
 	if not _load_if_present(table_path(dir, "relationships"),
 			["from_id", "to_id", "rel_type", "sentiment", "reason"],

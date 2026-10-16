@@ -233,6 +233,24 @@ static func _apply_transition(repo: DataRepository, state: GameState, event_id: 
 static func assign_commander(repo: DataRepository, state: GameState, code: String, character_id: String, reason: String) -> Dictionary:
 	return Commanders.assign(repo, state, code, character_id, reason)
 
+## Complete a paid assembly without creating people or reversing casualties.
+static func activate(state: GameState, event_id: String, ids: Array, reason: String) -> Dictionary:
+	var request := {"kind": "activate", "cohort_ids": ids.duplicate(), "reason": reason}
+	var replay := _replay(state, event_id, request, reason)
+	if not replay.is_empty():
+		return replay
+	if ids.is_empty():
+		return {"error": "Activation needs assembling personnel."}
+	var seen: Dictionary = {}
+	for id: Variant in ids:
+		if not id is String or seen.has(id) or not state.military_cohorts.has(id) \
+				or state.military_cohorts[id].get("stage", "") != "assembling":
+			return {"error": "Activation needs unique assembling cohorts."}
+		seen[id] = true
+	for id: String in ids:
+		state.military_cohorts[id]["stage"] = "active"
+	return _record(state, event_id, request, {"status": "active", "cohort_ids": ids.duplicate()})
+
 ## Captives and released civilians never remain in their original fighting unit.
 static func living(state: GameState, code: String) -> int:
 	return _count(state, code, true)

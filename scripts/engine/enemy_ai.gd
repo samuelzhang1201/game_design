@@ -59,7 +59,6 @@ static func spawn(repo: DataRepository, state: GameState, host: Dictionary) -> v
 	var first := true
 	for unit: String in host_units(repo, state, host):
 		var reg := ArmySystem.regiment(repo, unit, state)
-		var st := ArmySystem.starting_state(repo, reg)
 		var at := start
 		if ArmyGround.clearance_on(repo):
 			if not first:
@@ -71,6 +70,12 @@ static func spawn(repo: DataRepository, state: GameState, host: Dictionary) -> v
 					at = start
 			ArmyGround.take(taken, at, ArmyGround.unit_radius(repo, reg))
 			first = false
+		# Initial rations use the live personnel and actual assembly terrain.
+		var opening_reg := reg.duplicate()
+		var opening_px := ArmySystem.metres_to_pack(repo, at)
+		opening_reg["x"] = opening_px.x
+		opening_reg["y"] = opening_px.y
+		var st := ArmySystem.starting_state(repo, opening_reg, state)
 		st["x_m"] = at.x
 		st["y_m"] = at.y
 		st["dest_x_m"] = at.x

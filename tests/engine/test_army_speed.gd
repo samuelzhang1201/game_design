@@ -71,7 +71,7 @@ func test_a_real_regiment_of_the_player_has_a_speed() -> void:
 	assert_gt(km, 0.0)
 	var st := ArmySystem.state_of(Game.data, Game.state, code)
 	var expect := ArmySystem.pace_tenths(Game.data, ArmySystem.base_pace_km(Game.data, reg),
-		ArmySystem.supply_score(Game.data, int(st["supplies"]), ArmySystem.supply_use(Game.data, reg)),
+		ArmySystem.supply_score(Game.data, int(st["supplies"]), ArmySystem.supply_use(Game.data, reg, Game.state)),
 		int(st["morale"]), int(st["training"]))
 	# on the ground it stands on (spec 2026-10-06 §6)
 	var ground := ArmySystem.ground_permille(Game.data, reg, ArmySystem.position_of(Game.data, Game.state, reg))
@@ -113,12 +113,12 @@ func test_the_bars_are_readiness_and_supply() -> void:
 	# so the hand sums below take a whole number of units a day
 	var reg: Dictionary = {}
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), st):
-		if ArmySystem.supply_use(repo, r) > 0 and ArmySystem.supply_use(repo, r) % 10 == 0:
+		if ArmySystem.supply_use(repo, r, st) > 0 and ArmySystem.supply_use(repo, r, st) % 10 == 0:
 			reg = r
 			break
 	assert_false(reg.is_empty(), "the realm has a unit whose use is a multiple of ten")
 	var code := String(reg["regiment_code"])
-	var use := ArmySystem.supply_use(repo, reg)
+	var use := ArmySystem.supply_use(repo, reg, st)
 	# three days in hand, a 20-day load: the supply score is 3 of the 5-day low mark = 600
 	# (use*3/30 units), readiness
 	# (40*1000 + 25*600 + 20*500 + 15*200) / 100 = 680; the yellow bar is

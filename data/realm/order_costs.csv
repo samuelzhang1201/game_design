@@ -1,4 +1,5 @@
 action_code,cost,always,notes
+ARMY_RECRUIT,gold:-1:military recruitment filing,0,dynamic whole personnel and equipment price supplies the real cost; no second fee
 generic_order,gold:-5:the chancery's clerks and couriers,0,an order that executes no action and whose impacts carried no cost
 LEVY_RAISE,metric:strategic:-20:the baggage train of the levy,1,training materials beside the gold; personnel recruitment is separate
 BUILD_ECONOMIC,opinion:steward:-1:the treasury frets over the outlay,0,

@@ -42,6 +42,7 @@ var _battle_encounter: BattleEncounterPanel
 var _ledger_screen: LedgerScreen
 var _war_room_screen: WarRoomScreen
 var _missive_screen: MissiveScreen
+var _recruitment_panel: Control
 ## The laws (spec 2026-10-08-laws-tab-design §5): toggled by its tab; it never
 ## holds the clock.
 var _laws_screen: LawsScreen
@@ -1203,6 +1204,8 @@ func _switch_to(new_state: State) -> void:
 			current_screen = COURT_SCENE.instantiate()
 			current_screen.audience_requested.connect(audience_with)
 	add_child(current_screen)
+	if current_screen.has_method("military_panel"):
+		current_screen.military_panel().recruitment_requested.connect(open_recruitment)
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(_army_view)
 	_sync_map_view()
@@ -1213,7 +1216,7 @@ func _switch_to(new_state: State) -> void:
 
 func _overlays_in_order() -> Array[Node]:
 	return [_bottom_bar, _news_ticker, _info_screen, _ledger_screen, _war_room_screen,
-		_missive_screen, _laws_screen, _battle_encounter, _report_popup, _pause_menu]
+		_missive_screen, _laws_screen, _recruitment_panel, _battle_encounter, _report_popup, _pause_menu]
 
 ## The overlays in their stacking order, topmost last.
 func _raise_overlays() -> void:
@@ -1240,6 +1243,8 @@ func _settle_overlay(o: Node, new_state: State) -> void:
 		_war_room_screen.close(false)   # the old column is gone: nothing to unroll over the new screen
 	elif o == _missive_screen:
 		_missive_screen.visible = false
+	elif o == _recruitment_panel:
+		_recruitment_panel.close()
 	elif o == _laws_screen:
 		_laws_screen.close()
 	elif o == _battle_encounter:
@@ -1404,3 +1409,18 @@ func _on_conversation_finished() -> void:
 	_switch_to(State.COURT)
 	current_screen.enter_court(_pending_report)
 	_pending_report = null
+
+
+## The paid recruitment window is created only when the host asks for it.
+func open_recruitment() -> void:
+	if _recruitment_panel == null:
+		_recruitment_panel = load("res://scenes/panels/army_recruitment_panel.tscn").instantiate()
+		add_child(_recruitment_panel)
+		_recruitment_panel.above.append(_report_popup)
+		_recruitment_panel.above.append(_pause_menu)
+		_laws_screen.above.append(_recruitment_panel)
+	_recruitment_panel.open()
+	_raise_overlays()
+
+func recruitment_panel() -> Control:
+	return _recruitment_panel

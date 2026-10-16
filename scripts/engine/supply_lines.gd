@@ -655,7 +655,7 @@ static func _still_ordered(state: GameState, code: String, ln: Dictionary, ridin
 	var newest := 0
 	for c: Dictionary in state.couriers:
 		var o := CourierSystem.order_with(c, ["SUPPLY_POINT_SET"])
-		if String(c.get("target", "")) == code and not o.is_empty() \
+		if CourierSystem.has_recipient(c, code) and not o.is_empty() \
 				and String(o.get("town", o.get("to_town", ""))) == String(ln["town"]) and int(c["id"]) > newest:
 			newest = int(c["id"])
 	if newest > 0:

@@ -120,5 +120,6 @@ army_clearance_on,1,"owner 2026-10-14 (spec 2026-10-14-unit-clearance-and-scouti
 army_clearance_touch_m,10,"clearance (same spec): a column halted in front of a village or a unit counts as touching it within the two radii plus this many metres (BattleSystem._town_contact)"
 army_spread_reach_m,17600,"owner 2026-10-15 (R-B): a host column halted by a friendly unit within this many metres of its target takes the nearest free camp slot round the target (four pitches reach past the crown's outer camp ring, where a column facing an enemy camp halts) (ArmySystem.march_day), so the whole host stands at the town instead of queueing down the road"
 recruitment_eligible_permille,250,"Initial recruitment eligibility share of each urban/rural origin; tune with the military economy, occupied cohorts deducted once"
+recruitment_port_reach_m,4400,"Fleet crew reinforcements require a stationary receiving fleet within this radius of its assembly port's adjacent-water berth"
 army_noble_start_permille,50,"Opening noble personnel share including each named commander; initial calibration for the military ledger"
 army_noble_cap_permille,100,"Maximum noble share of a recruited ordinary unit including its commander; casualty survivors are not deleted to enforce this cap"

@@ -104,7 +104,12 @@ func test_new_campaign_spawns_every_host() -> void:
 			var shape := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, rc, s))
 			for k: String in shape:
 				assert_true(f.has(k), "%s has %s" % [rc, k])
-			assert_eq(int(f["supplies"]), int(shape["supplies"]))
+			# Live personnel (including nobles) eat at their actual assembly
+			# ground, which can differ from the regiment's pack quarters.
+			var monthly_use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, rc, s), s)
+			@warning_ignore("integer_division")
+			var opening_load := (monthly_use * int(repo.bal("army_start_supply_days")) + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK
+			assert_eq(int(f["supplies"]), opening_load, rc + ": whole grain rounded up for the live assembly demand")
 			assert_eq(int(f["morale"]), int(shape["morale"]))
 	assert_eq(s.foes.size(), seen, "no foe but the hosts'")
 	# a raised unit left its camp and seat: no foe holds a town
