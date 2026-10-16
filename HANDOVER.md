@@ -7,7 +7,7 @@ Continue the already-approved autonomous implementation of the battle-system pla
 - Worktree: `/Users/samuelzhang/.codex/worktrees/battle-system/game_design`
 - Branch: `codex/battle-system`
 - Base before P3.1: `ffacff09` (`feat: seed king position for courier dispatch`)
-- P3.1 commit: fill in after commit.
+- P3.1 commit: `ba3de2c4` (`feat: add physical king movement and battle presence`).
 - Original checkout `/Users/samuelzhang/game_design` is not a target for game edits.
 
 ## P3.1 delivered
