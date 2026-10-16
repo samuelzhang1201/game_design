@@ -92,11 +92,18 @@ docs/             # design/ (PRD, systems, chapter 0), references/, superpowers/
 3. A new engine formula has its hand-computed GUT test; a new rule is written into the right nested `CLAUDE.md` (or its `guide/`), not here.
 4. A visual change has been through `visual-review` — or, in a cloud session, the final message says it still needs it.
 
+## Execution discipline
+
+- **Resume execution, not planning.** For multi-stage work, update a short checkpoint in the existing plan before compaction/handoff: approval, phase, done, next, file owners, checks and tested code state. On resume, reconcile it with the diff and continue the first unfinished step. Compaction/goal continuation are not new requests: do not restart brainstorming, rewrite approved plans or seek approval again without changed requirements or a contradiction. Do not reread unchanged skills already available in context.
+- **Bound delegation.** Give each child one outcome, owned files, inputs, checks and a stop condition. Prefer `fork_turns="none"` with relevant spec paths and a short handoff. Report files/checks/risks, then finish; new work gets a new bounded task. Report scope/ownership conflicts; do not silently expand. Do trivial edits inline when delegation adds no value.
+- **Keep verification and independent review.** Children run targeted checks; one integration owner runs `./run_tests.sh --fast` on the final code state and before each commit, plus affected directories outside fast. Reuse passing checks only for unchanged inputs; rerun after relevant edits or failures. Preserve hand-computed formula tests, required independent reviews and visual-review; reviewers stay read-only and return findings. During pure guidance/config editing, check syntax, routing and guide size. Full local GUT runs are for reproducing CI failures.
+- Batch independent reads; bound output. Prefer completion events to short polling. Avoid unchanged status requests and nested reviewers without a distinct question.
+
 ## Model routing
 
-The main conversation runs on the session's model (project default: Sonnet, `.claude/settings.json`); there is no automatic per-task switch, so delegate by kind:
+The main conversation runs on the session's model (project default: Sonnet, `.claude/settings.json`); there is no automatic per-task switch, so choose a bounded role only when delegation adds value:
 - **`architect` subagent (Opus)** — engine formulas, determinism / save bugs, anything spanning two or more subsystems or touching a numbered invariant; it returns a plan and expected test values, the main loop implements.
-- **`implementer` subagent (Sonnet, medium effort)** — well-specified work whose design is decided: a GUT test from given numbers, a change across a few files, applying an architect plan.
+- **`implementer` subagent (Sonnet, medium effort)** — well-specified work whose design is decided: a GUT test from given numbers, a change across a few files, applying an architect plan. Codex equivalents are pinned in `.codex/agents/` (Sol for implementation, Astra for design).
 - **`quickfix` subagent (Sonnet, low effort)** — trivial edits: one CSV value, a rename, a typo, moving text between guides.
 - **`deep-solver` subagent (Fable)** — reserved for the hardest problems: a determinism / save bug that survived a first attempt, a redesign across several invariants, a rebalance that ripples through many systems, or when the architect's plan was not enough. It may edit and test; it is costly, so never routine.
 - **Explore** (built in) — finding files and call sites across the tree.
