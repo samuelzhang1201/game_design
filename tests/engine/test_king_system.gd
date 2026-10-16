@@ -1,5 +1,217 @@
 extends GutTest
 
+func test_route_advances_by_saved_day_and_stops_at_destination() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 991)
+	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	var result := KingSystem.set_route(repo, state, [Vector2i(21000, 2000)], "the king rides east")
+	assert_eq(result.get("status"), "ok")
+	var before := KingSystem.position(state)
+	KingSystem.step_day(repo, state)
+	assert_ne(KingSystem.position(state), before)
+	assert_eq(state.king_state.get("last_advanced_day"), state.absolute_day())
+	var moved := KingSystem.position(state)
+	KingSystem.step_day(repo, state)
+	assert_eq(KingSystem.position(state), moved, "the same day cannot advance twice")
+	for i in 100:
+		state.day += 1
+		KingSystem.step_day(repo, state)
+	assert_eq(KingSystem.position(state), Vector2i(21000, 2000))
+	assert_eq(state.king_state.get("travel_state"), "stationary")
+
+
+func test_follow_requires_rendezvous_and_then_tracks_actual_unit() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 992)
+	var code := String(state.regiments.keys()[0])
+	var target_m := ArmySystem.pack_to_metres(repo, Vector2(31.0, 2.0))
+	state.regiments[code]["x_m"] = target_m.x
+	state.regiments[code]["y_m"] = target_m.y
+	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	var result := KingSystem.follow(repo, state, code)
+	assert_eq(result.get("status"), "ok")
+	assert_eq(state.king_state.get("travel_state"), "rendezvous")
+	var army_position := ArmySystem.pack_to_metres(repo,
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code, state)))
+	assert_ne(KingSystem.position(state), army_position)
+	for i in 100:
+		state.day += 1
+		KingSystem.step_day(repo, state)
+		if state.king_state.get("travel_state") == "following":
+			break
+	assert_eq(state.king_state.get("travel_state"), "following")
+	state.regiments[code]["x_m"] += 5000
+	state.day += 1
+	KingSystem.step_day(repo, state)
+	army_position = ArmySystem.pack_to_metres(repo,
+		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code, state)))
+	assert_eq(KingSystem.position(state), army_position)
+
+
+func test_presence_uses_only_actual_battle_distance() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 993)
+	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	state.battles = [{"id": 73, "place_x_m": 2000, "place_y_m": 2000}]
+	assert_true(KingSystem.present(repo, state, 73), "the configured radius includes its edge")
+	state.battles[0]["place_x_m"] = 2001
+	assert_false(KingSystem.present(repo, state, 73), "one metre outside the radius is absent")
+	assert_false(KingSystem.present(repo, state, 74), "screen selection cannot invent presence")
+
+
+func test_king_report_courier_tracks_king_and_survives_save_restore() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 995)
+	var battle_id := 77
+	var battle_place := Vector2i(120000, 85000)
+	state.king_state["x_m"] = 0
+	state.king_state["y_m"] = 0
+	var report := CourierSystem.dispatch_king_report(repo, state, battle_id,
+		{"battle_id": battle_id, "place_x_m": battle_place.x, "place_y_m": battle_place.y})
+	assert_eq(Vector2i(report["x_m"], report["y_m"]), battle_place)
+	assert_eq(report["kind"], CourierSystem.KING_REPORT)
+	var first_route: Array = report["path"].duplicate(true)
+	CourierSystem.ride_day(repo, state)
+	assert_gt(state.couriers.size(), 0)
+	var courier: Dictionary = state.couriers[0]
+	var current := Vector2i(int(courier["x_m"]), int(courier["y_m"]))
+	assert_ne(current, battle_place, "the report rides from the battle point")
+	state.king_state["x_m"] = 480000
+	state.king_state["y_m"] = 310000
+	var expected := CourierSystem.path_between(repo,
+		ArmySystem.metres_to_pack(repo, current),
+		ArmySystem.metres_to_pack(repo, Vector2i(480000, 310000)))
+	courier["aim_x_m"] = -1
+	courier["aim_y_m"] = -1
+	CourierSystem.ride_day(repo, state)
+	if not state.couriers.is_empty():
+		courier = state.couriers[0]
+		assert_eq(courier["aim_x_m"], 480000)
+		assert_eq(courier["aim_y_m"], 310000)
+		assert_ne(courier["path"], first_route, "a moved king causes a new route from the rider")
+		assert_eq(courier["path"], expected, "the route starts at the rider's actual position")
+		var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())))
+		assert_eq(restored.couriers, state.couriers)
+		assert_eq(restored.king_state, state.king_state)
+	else:
+		assert_true(MissiveLog.column(state, "credible").any(
+			func(m: Dictionary) -> bool: return String(m["kind"]) == "king_report"),
+			"a courier arriving during retarget still files the report")
+
+
+func test_king_report_dispatch_uses_battle_event_after_battle_is_removed() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 996)
+	var battle_id := 78
+	var place := Vector2i(180000, 90000)
+	state.battles = []
+	var courier := CourierSystem.dispatch_king_report(repo, state, battle_id,
+		{"battle_id": battle_id, "place_x_m": place.x, "place_y_m": place.y})
+	assert_eq(Vector2i(int(courier.get("x_m", -1)), int(courier.get("y_m", -1))), place,
+		"finished battle coordinates carried by the day's events remain usable")
+	assert_eq(state.couriers.size(), 1)
+
+
+func test_tick_transaction_does_not_repeat_king_movement_after_encounter_pause() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 994)
+	state.day = 16
+	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	var dest := Vector2i(21000, 2000)
+	KingSystem.set_route(repo, state, [dest], "a test journey")
+	var engine := TickEngine.new(repo)
+	var host: Dictionary = repo.raid_hosts[0]
+	var mine := String(state.regiments.keys()[0])
+	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state,
+		ArmySystem.regiment(repo, mine, state)))
+	var home_px := ArmySystem.metres_to_pack(repo, at)
+	var foe_px := Vector2(home_px.x + 0.2, home_px.y)
+	var foe_m := ArmySystem.pack_to_metres(repo, foe_px)
+	host["appear_day"] = state.absolute_day() - 10
+	host["start_x"] = int(round(foe_px.x))
+	host["start_y"] = int(round(foe_px.y))
+	EnemyAi.spawn(repo, state, host)
+	for code: String in state.foes:
+		state.foes[code]["x_m"] = foe_m.x
+		state.foes[code]["y_m"] = foe_m.y
+		state.foes[code]["dest_x_m"] = foe_m.x
+		state.foes[code]["dest_y_m"] = foe_m.y
+		state.foes[code]["camp_town"] = ""
+	var pos := KingSystem.position(state)
+	var blocked := engine.resolve_day(state)
+	assert_eq(blocked.get("status"), "blocked")
+	assert_ne(KingSystem.position(state), pos, "the king advances during prepare")
+	var after_prepare := KingSystem.position(state)
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())))
+	state = restored
+	engine = TickEngine.new(repo)
+	engine.resolve_decision(state, String(restored.day_resolution["pending_decision"]["token"]), "continue")
+	engine.resolve_day(state)
+	assert_eq(KingSystem.position(state), after_prepare, "resume cannot apply the saved journey twice")
+
+
+func test_actions_validate_cost_and_execute_physical_king_orders() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 995)
+	var actions := ActionSystem.new(repo)
+	var target := Vector2i(21000, 2000)
+	var request := ActionRequest.make("KING_MOVE", {"x_m": target.x, "y_m": target.y})
+	var treasury := int(state.metrics["treasury"])
+	assert_eq(actions.validate(request, state), "")
+	var moved := actions.execute(request, state)
+	assert_true(moved["ok"])
+	assert_eq(int(state.metrics["treasury"]), treasury - 1)
+	assert_eq(state.king_state.get("travel_state"), "travelling")
+	assert_ne(actions.validate(ActionRequest.make("KING_MOVE", {"x_m": 1.5, "y_m": 2000}), state), "")
+	var code := String(state.regiments.keys()[0])
+	assert_eq(actions.validate(ActionRequest.make("KING_FOLLOW", {"regiment": code}), state), "")
+
+
+func test_safe_departure_routes_king_without_altering_battle_or_troops() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 996)
+	var battle_at := ArmySystem.pack_to_metres(repo, Vector2(31.0, 2.0))
+	state.king_state = {"x_m": battle_at.x, "y_m": battle_at.y, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	var code := String(state.regiments.keys()[0])
+	var army_before: Dictionary = state.regiments[code].duplicate(true)
+	state.battles = [{"id": 97, "att": [code], "def": [], "start_day": state.absolute_day(),
+		"rounds": 0, "place_x_m": battle_at.x, "place_y_m": battle_at.y, "town": ""}]
+	var battle_before := state.battles.duplicate(true)
+	var result := KingSystem.safe_departure(repo, state, 97)
+	assert_eq(result.get("status"), "ok")
+	assert_eq(state.regiments[code], army_before)
+	assert_eq(state.battles, battle_before)
+	assert_eq(String(state.king_state.get("travel_state")), "safe_departure")
+	assert_gt((state.king_state["route"] as Array).size(), 0, "the king takes a real route to safety")
+
+
+func test_passive_king_support_is_derived_and_disappears_when_out_of_range() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 997)
+	var code := String(state.regiments.keys()[0])
+	var pos := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state,
+		ArmySystem.regiment(repo, code, state)))
+	state.king_state = {"x_m": pos.x, "y_m": pos.y, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	state.battles = [{"id": 98, "att": [code], "def": [], "start_day": state.absolute_day(),
+		"rounds": 0, "place_x_m": pos.x, "place_y_m": pos.y, "town": ""}]
+	var base := ArmySystem.power(repo, state, code, "attack")
+	var before_morale := int(state.regiments[code]["morale"])
+	var with_king := BattleSystem.side_power(repo, state, [code], func(_c: String) -> String: return "steady", true)
+	assert_gt(with_king, base)
+	assert_eq(int(state.regiments[code]["morale"]), before_morale, "support is not accumulated in saved morale")
+	for i in 10:
+		assert_gt(BattleSystem.side_power(repo, state, [code], func(_c: String) -> String: return "steady", true), base)
+	assert_eq(int(state.regiments[code]["morale"]), before_morale)
+	state.king_state["x_m"] += int(repo.bal("king_command_radius_m")) + 1
+	assert_eq(KingSystem.morale_support(repo, state, code), 0)
+	assert_eq(BattleSystem.side_power(repo, state, [code], func(_c: String) -> String: return "steady", true), base)
+
 const SuiteData := preload("res://tests/suite_data.gd")
 
 func test_new_campaign_saves_the_kings_capital_position_in_metres() -> void:

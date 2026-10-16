@@ -61,6 +61,12 @@ func validate(req: ActionRequest, state: GameState) -> String:
 	if row.get("target_type", "none") == "character" and not state.characters.has(req.target):
 		return "No such target character for " + req.action_code
 	match req.action_code:
+		"KING_MOVE":
+			return _validate_king_move(req)
+		"KING_FOLLOW":
+			return _validate_king_follow(req, state)
+		"KING_SAFE_DEPARTURE":
+			return _validate_king_safe_departure(req, state)
 		"ARMY_RECRUIT":
 			if req.target != "":
 				return "Recruitment has no separate target character."
@@ -183,6 +189,45 @@ func validate(req: ActionRequest, state: GameState) -> String:
 ## place no seal could ever send it to.
 func validate_place(req: ActionRequest, state: GameState) -> String:
 	return _validate_army(req, state, false)
+
+
+func _validate_king_move(req: ActionRequest) -> String:
+	if not req.params.has("x_m") or not req.params.has("y_m"):
+		return "KING_MOVE needs whole metre x_m and y_m coordinates"
+	for key: String in ["x_m", "y_m"]:
+		var value: Variant = req.params[key]
+		if not value is int:
+			return "%s must be a whole metre coordinate" % key
+	var route: Array = req.params.get("route_m", [])
+	if route.size() > int(data.bal("army_march_waypoints_max")) + 1:
+		return "The king's route has too many waypoints"
+	var points: Array = route.duplicate()
+	if points.is_empty() or points.back() != Vector2i(int(req.params["x_m"]), int(req.params["y_m"])):
+		points.append(Vector2i(int(req.params["x_m"]), int(req.params["y_m"])))
+	for p: Variant in points:
+		if not p is Vector2i:
+			return "King route points must be whole metre coordinates"
+		var px := ArmySystem.metres_to_pack(data, p)
+		if px.x < 0.0 or px.y < 0.0 or px.x >= float(data.map_info.get("width", 0)) \
+				or px.y >= float(data.map_info.get("height", 0)):
+			return "The king's route leaves the map"
+	return ""
+
+
+func _validate_king_follow(req: ActionRequest, state: GameState) -> String:
+	var code := String(req.params.get("regiment", ""))
+	var reg := ArmySystem.regiment(data, code, state)
+	if reg.is_empty() or ArmySystem.is_foe(state, code) \
+			or String(reg.get("kingdom_code", "")) != data.resolve_realm("player_realm"):
+		return "The king can only follow a friendly regiment"
+	if ArmySystem.base_pace_km(data, reg) <= 0:
+		return "A regiment without troops cannot be followed"
+	return ""
+
+
+func _validate_king_safe_departure(req: ActionRequest, state: GameState) -> String:
+	var battle_id := int(req.params.get("battle_id", -1))
+	return "The king is not present at that battle" if not KingSystem.present(data, state, battle_id) else ""
 
 
 func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -> String:
@@ -509,6 +554,19 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	# direction (LAW_SET's signature variants, data/realm/action_signatures.csv)
 	var sig_params := req.params
 	match req.action_code:
+		"KING_MOVE":
+			var route: Array = req.params.get("route_m", []).duplicate()
+			var destination := Vector2i(int(req.params["x_m"]), int(req.params["y_m"]))
+			if route.is_empty() or route.back() != destination:
+				route.append(destination)
+			KingSystem.set_route(data, state, route, "the king's movement order")
+			effects.append({"metric": "army", "delta": 0.0, "reason": "the king begins a journey from his present position"})
+		"KING_FOLLOW":
+			KingSystem.follow(data, state, String(req.params["regiment"]))
+			effects.append({"metric": "army", "delta": 0.0, "reason": "the king rides to join %s" % String(req.params["regiment"])})
+		"KING_SAFE_DEPARTURE":
+			KingSystem.safe_departure(data, state, int(req.params["battle_id"]))
+			effects.append({"metric": "army", "delta": 0.0, "reason": "the king withdraws safely; the battle continues unchanged"})
 		"ARMY_RECRUIT":
 			var paid := RecruitmentSystem.recruit(data, state, req.params)
 			if paid.has("error"):

@@ -72,7 +72,19 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 	var total := 0
 	for c: Variant in codes:
 		var code := String(c)
+		var reg := ArmySystem.regiment(repo, code, state)
 		var p := ArmySystem.power(repo, state, code, "attack" if attacking else "defend")
+		var support := KingSystem.morale_support(repo, state, code)
+		if support > 0 and not ArmySystem.is_foe(state, code):
+			var entry: Dictionary = state.regiments.get(code, {})
+			var morale := clampi(int(entry.get("morale", 0)) + support, 0, 100)
+			var terrain := ArmySystem.terrain_of(repo, reg, state)
+			var works := ArmySystem.works_of(repo, reg, state)
+			p = ArmySystem.power_of_arms(repo, reg, ArmySystem.fit_count(repo, state, code),
+				int(entry.get("training", 0)), morale, "attack" if attacking else "defend",
+				terrain, works, code, state.tick, DevelopmentSystem.arm_permille(repo, state, ArmySystem.realm_of(repo, code)))
+			@warning_ignore("integer_division")
+			p = p * int(MilitaryQuality.profile(repo, state, code)["power_permille"]) / 1000
 		if not enemy_codes.is_empty():
 			var delta := ArmySystem.elevation_of(repo, ArmySystem.regiment(repo, code, state), state) - enemy_m
 			@warning_ignore("integer_division")  # whole power, per-mille height factor

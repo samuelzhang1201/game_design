@@ -42,6 +42,12 @@ func resolve_day(state: GameState, close_month := false) -> Dictionary:
 	if not journal.has("missive_start"):
 		journal["missive_start"] = state.next_missive_id
 	if tx["phase"] == "prepare":
+		if not journal.has("king_advanced"):
+			KingSystem.step_day(data, state)
+			journal["king_advanced"] = true
+			journal["king_state"] = state.king_state.duplicate(true)
+		if state.king_state.is_empty() and journal.has("king_state"):
+			state.king_state = journal["king_state"].duplicate(true)
 		journal["works"] = _before_battles(state)
 		_capture_day(journal)
 		journal["battles"] = BattleSystem.prepare_day(data, state)
@@ -177,6 +183,20 @@ func _after_battles(state: GameState) -> void:
 	var fights: Array = day_battles + SiegeSystem.news(day_siege) + RaidSystem.news(day_raid)
 	if not fights.is_empty():
 		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, fights))
+		var battle_event: Dictionary = {}
+		for fight: Dictionary in fights:
+			if int(fight.get("battle_id", -1)) >= 0 and fight.has("place_x_m"):
+				battle_event = fight
+				break
+		var battle_id := int(battle_event.get("battle_id", -1))
+		if battle_id >= 0 and not KingSystem.present(data, state, battle_id):
+			var report_courier := CourierSystem.dispatch_king_report(data, state, battle_id, battle_event)
+			if not report_courier.is_empty():
+				var fee := CourierSystem.fee_gold(data, CourierSystem.ORDINARY)
+				state.metrics["treasury"] = maxf(0.0, float(state.metrics["treasury"]) - fee)
+				state.king_state["last_report_fee_reason"] = "an ordinary courier carries the battle report to the king"
+				state.king_state["last_report_dispatched"] = {"courier_id": int(report_courier["id"]),
+					"battle_id": battle_id, "day": state.absolute_day(), "fee_gold": fee}
 	# The crown's sight (spec 2026-10-10-player-sight-and-ghosts), once a day
 	# when every column has marched and fought: the rumour's host ghost on its
 	# day, each foe the crown sees refreshed where it stands, the stale and

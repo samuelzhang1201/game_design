@@ -24,6 +24,7 @@ extends RefCounted
 const ORDINARY := "ordinary"
 const SECRET := "secret"
 const SPY := "spy"
+const KING_REPORT := "king_report"
 
 
 ## Whether a regiment's orders ride by courier: every land regiment; a fleet
@@ -196,6 +197,28 @@ static func dispatch_spy(repo: DataRepository, state: GameState, to_px: Vector2)
 		"issued": state.absolute_day(), "aim_x_m": aim.x, "aim_y_m": aim.y,
 		"days": 0, "day_m": 0, "slow_spell": -1,
 	}
+	state.couriers.append(c)
+	return c
+
+
+## A battle report rides from the battle to the king's current position. Its
+## route is refreshed at each day-end from the courier's actual current point.
+static func dispatch_king_report(repo: DataRepository, state: GameState, battle_id: int,
+		battle_event: Dictionary = {}) -> Dictionary:
+	var battle := BattleSystem.battle_by_id(state, battle_id)
+	var place := battle_event if battle_event.has("place_x_m") else battle
+	if place.is_empty():
+		return {}
+	var from_m := Vector2i(int(place.get("place_x_m", 0)), int(place.get("place_y_m", 0)))
+	var from := ArmySystem.metres_to_pack(repo, from_m)
+	var to := ArmySystem.metres_to_pack(repo, KingSystem.position(state))
+	state.next_courier_id += 1
+	var c := {"id": state.next_courier_id, "kind": KING_REPORT,
+		"x_m": from_m.x, "y_m": from_m.y, "path": path_between(repo, from, to),
+		"target": "", "orders": [{"action_code": "KING_REPORT", "battle_id": battle_id}],
+		"issued": state.absolute_day(), "aim_x_m": KingSystem.position(state).x,
+		"aim_y_m": KingSystem.position(state).y, "days": 0, "day_m": 0, "slow_spell": -1,
+		"tracking_king": true}
 	state.couriers.append(c)
 	return c
 
@@ -375,7 +398,9 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 	if int(c["days"]) > int(repo.bal("courier_max_days")):
 		events.append(_spy_placed(repo, state, c, _event("fuse", c)))
 		return false
-	if not _fixed_point(c):
+	if _is_king_report(c):
+		_reaim_king_report(repo, state, c)
+	elif not _fixed_point(c):
 		_reaim(repo, state, c, reg)
 	@warning_ignore("return_value_discarded")  # the budget left matters only to the preview
 	_advance(repo, state, c, today, events)
@@ -443,7 +468,7 @@ static func _is_spy(c: Dictionary) -> bool:
 ## A courier bound for a fixed point, never re-aimed at a column: a spy, a
 ## supply order riding to its town, or a decree riding to a place.
 static func _fixed_point(c: Dictionary) -> bool:
-	return _is_spy(c) or place_bound(c) or String(first_order(c).get("to_town", "")) != ""
+	return _is_spy(c) or _is_king_report(c) or place_bound(c) or String(first_order(c).get("to_town", "")) != ""
 
 
 ## A decree (LAW_SET) riding to a place — a province or a camp's town — not
@@ -459,7 +484,11 @@ static func place_bound(c: Dictionary) -> bool:
 ## Whether a courier rides for a unit, and so is lost when it is gone: every
 ## courier but a spy and a decree to a place.
 static func _chases(c: Dictionary) -> bool:
-	return not _is_spy(c) and not place_bound(c)
+	return not _is_spy(c) and not _is_king_report(c) and not place_bound(c)
+
+
+static func _is_king_report(c: Dictionary) -> bool:
+	return String(c.get("kind", "")) == KING_REPORT
 
 
 ## Where a courier's NEXT day on the road takes him: the engine's own ride run
@@ -493,7 +522,9 @@ static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, be
 			or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}
 	var copy: Dictionary = c.duplicate(true)
-	if not _fixed_point(c):
+	if _is_king_report(c):
+		_reaim_king_report(repo, state, copy)
+	elif not _fixed_point(c):
 		_reaim(repo, state, copy, reg)
 	before.append_array((copy["path"] as Array).duplicate(true))
 	var day := _ride_day_of(state)
@@ -605,6 +636,17 @@ static func _reaim(repo: DataRepository, state: GameState, c: Dictionary, reg: D
 	path.append_array(RoadGraph.across(repo, MarchPath.of_pack(repo, true), from, at))
 
 
+static func _reaim_king_report(repo: DataRepository, state: GameState, c: Dictionary) -> void:
+	var target := KingSystem.position(state)
+	if target.x == int(c["aim_x_m"]) and target.y == int(c["aim_y_m"]):
+		return
+	c["aim_x_m"] = target.x
+	c["aim_y_m"] = target.y
+	var from := Vector2i(int(c["x_m"]), int(c["y_m"]))
+	c["path"] = path_between(repo, ArmySystem.metres_to_pack(repo, from),
+		ArmySystem.metres_to_pack(repo, target))
+
+
 static func _note_slow(repo: DataRepository, state: GameState, c: Dictionary, weather: String,
 		today: int, events: Array) -> void:
 	if Weather.speed_permille(repo, weather) >= int(repo.bal("courier_slow_news_permille")):
@@ -633,6 +675,14 @@ static func _spy_placed(repo: DataRepository, state: GameState, c: Dictionary, e
 ## was; a supply point that set its wagons rolling adds `supply` (SupplyLines'
 ## set_out events, the day's dispatch).
 static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> Dictionary:
+	if _is_king_report(c):
+		state.king_state["last_report"] = {"courier_id": int(c["id"]),
+			"battle_id": int(first_order(c).get("battle_id", -1)), "received_day": state.absolute_day()}
+		var report := MissiveLog.make("king_report", "credible", state.absolute_day(),
+			MissiveLog.subject("king", "you", -1, ArmySystem.metres_to_pack(repo, KingSystem.position(state))),
+			"Battle report", [MissiveLog.words("battle_report", "Report", "A battle report reaches the king.")])
+		MissiveLog.add(repo, state, report)
+		return _event("delivered", c)
 	# Town warrants are one physical arrival, with independent newest-order checks.
 	if c.has("delivery_targets") and String(first_order(c).get("to_town", "")) != "":
 		var deliveries: Array = []

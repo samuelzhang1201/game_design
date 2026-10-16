@@ -123,3 +123,6 @@ recruitment_eligible_permille,250,"Initial recruitment eligibility share of each
 recruitment_port_reach_m,4400,"Fleet crew reinforcements require a stationary receiving fleet within this radius of its assembly port's adjacent-water berth"
 army_noble_start_permille,50,"Opening noble personnel share including each named commander; initial calibration for the military ledger"
 army_noble_cap_permille,100,"Maximum noble share of a recruited ordinary unit including its commander; casualty survivors are not deleted to enforce this cap"
+king_travel_km_per_day,30,"Battle-system spec 2026-10-16 §11: physical royal travel pace in clear metres per day"
+king_command_radius_m,1000,"Battle-system spec 2026-10-16 §11: the king is present at a battle within this actual distance; never based on the open screen"
+king_battle_morale_support,5,"Battle-system spec 2026-10-16 §11: derived morale support for a friendly regiment in a battle while the king is physically present"

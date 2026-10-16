@@ -12,14 +12,14 @@ The tables are sorted by the part of the game they tune, so a balance pass opens
 | `ledger/` | the LEDGER's model: object and link types, static nodes and links, loops, clusters, governance, actions |
 | `council/` | seats, the founding council, roles, traits, relationships, faction escalation, court policies, line templates; the model caps (`prompt_*`, `order_*`, `tone_delta_cap`) |
 | `economy/` | manors (buildings, estates, focus), building inputs, goods, workshops, road speed |
-| `army/` | every `army_*` table, foraging and desertion words, march hazards, war plan kinds and order words, war works; the war sheet's rules |
+| `army/` | every `army_*` table, foraging and desertion words, march hazards, war plan kinds and order words, war works; the war sheet's rules and royal movement |
 | `battle/` | battle outcomes and stances, the enemy's doctrines; sieges and raids |
 | `intel/` | spies, couriers, intel facts, facts, claim types, world rules |
 | `story/` | random events and choices, the prologue's events, choices and branches, presenters, locations, regions |
 | `world/` | weather and its odds, landmark names, marker types, `maps.csv` |
 | `screens/ui/`, `screens/map3d/`, `screens/war_room/`, `screens/ledger/` | the LOOK only — palettes, fonts, the title, the 3D map's bake, houses, trees and pieces, the WAR ROOM's marks and folio, the LEDGER's lenses; nothing here changes an outcome |
 
-- **Each folder's `balance.csv`** (`key,value,notes`) holds the numbers of what that folder tunes; `DataRepository.load_balance` merges them into the one `balance` dict read by `bal()`, and a key in two files fails the load naming both. A new number goes into the folder of the thing it tunes; a number only a screen reads goes under `screens/<screen>/`. A new table gets a `tables.csv` row in its scene's folder.
+- **Each indexed folder's `balance.csv`** (`key,value,notes`) holds the numbers of what that folder tunes; `DataRepository.load_balance` merges them into the one `balance` dict read by `bal()`, and a key in two files fails the load naming both. A new number goes into the folder of the thing it tunes; a number only a screen reads goes under `screens/<screen>/`. Each folder with a balance file must have at least one table row in `tables.csv`.
 - **Guards** (`tests/engine/test_data_layout.gd`): the index and the disk agree, no key repeats, the engine reads no `screens/` key but the named look-helper keys (`ENGINE_LOOK_KEYS`), and no code or guide names a table by a path the index does not give.
 - WAR ROOM tables: `war_marks` / `war_mark_hazards` (the marks the WAR ROOM inks and the two that take a share of a supply line), `hazard_kinds` (what each pack zone type does as a hazard — its months, whether it is public, its toll and its ink), `war_works` (the strategic goods that make a town a war works on the sheet, by family and glyph).
 - Army supply tables: `army_carry_loads.csv` (carried-load days → march pace), `army_supply_orders.csv` (the supply rows of the regiment menu), `army_hostile_stances.csv` (stances whose regiments cut supply lines).
