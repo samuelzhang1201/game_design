@@ -101,6 +101,39 @@ static func received(repo: DataRepository, state: GameState, law: String, code: 
 		"decree_id": int(entry.get("decree_id", 0))}
 
 
+## The captor follows the division delivered to its own column.
+static func prisoner_share(repo: DataRepository, state: GameState, holder: String) -> Dictionary:
+	var row := def(repo, "ransom_captor_share")
+	if String(row.get("kind", "")) != "range" or String(row.get("scope", "")) != "camp" \
+			or row.get("values", []) != [0, 1000] or not allowed(repo, "ransom_captor_share", String(row.get("default", ""))):
+		return {"error": "The received ransom share has no valid camp range law."}
+	var entry := received(repo, state, "ransom_captor_share", holder)
+	if not allowed(repo, "ransom_captor_share", String(entry["value"])):
+		return {"error": "The received ransom share is outside the lawful range."}
+	return {"permille": int(entry["value"]), "received": entry}
+
+
+## Execution is never a disposition; an accepted ransom protection remains binding.
+static func prisoner_refusal(repo: DataRepository, state: GameState, batch: Dictionary, kind: String) -> String:
+	if not kind in ["ransom", "exchange", "release"]:
+		return "That prisoner disposition is not available."
+	if kind != "ransom":
+		return ""
+	if int(batch.get("commoners", 0)) > 0 or int(batch.get("nobles", 0)) <= 0:
+		return "Only noble prisoners may be ransomed."
+	if bool(batch.get("ransom_protected", false)):
+		return ""
+	var battle_id := int(batch.get("battle_id", -1))
+	var battle := BattleSystem.battle_by_id(state, battle_id)
+	if battle.is_empty():
+		battle = state.battle_records.get(str(battle_id), {})
+	if BattleRules._policy(battle, "noble_ransom", state.absolute_day()) == "allow":
+		return ""
+	if String(received(repo, state, "ransom", String(batch.get("holder_code", "")))["value"]) != "ransom":
+		return "The holder's received military law does not permit ransom."
+	return ""
+
+
 ## `law`'s entry in the place `key` ({value, decree_id}), {} for none.
 static func _entry_of(state: GameState, key: String, law: String) -> Dictionary:
 	return (state.law_in_force.get(key, {}) as Dictionary).get(law, {})

@@ -34,6 +34,8 @@ func gold_cost(row: Dictionary) -> float:
 func validate(req: ActionRequest, state: GameState) -> String:
 	if not data.actions.has(req.action_code):
 		return "Unknown action: " + req.action_code
+	if req.action_code in ["PRISONER_PROPOSE", "PRISONER_RESPOND", "PRISONER_SETTLE"]:
+		return String(_prisoner_action(req, state, false).get("error", ""))
 	if req.action_code == "BATTLE_ORDER":
 		var previous := _battle_replay(req, state)
 		if not previous.is_empty():
@@ -607,7 +609,75 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 				return "The war workshop at %s already runs %s" % [label, WorkshopSystem.rate_word(data, rate)]
 	return ""
 
+## Fee and negotiated transfers commit together; paid retries return before all action side effects.
+func _prisoner_action(req: ActionRequest, state: GameState, commit: bool) -> Dictionary:
+	var failed := {"action_code": req.action_code, "ok": false}
+	var command := req.action_code.trim_prefix("PRISONER_").to_lower()
+	var id: Variant = req.params.get("id" if command == "propose" else "proposal_id")
+	if not data.actions.has(req.action_code) or req.target != "" or not id is String or String(id).is_empty():
+		failed["error"] = "Prisoner commands need a proposal ID and no character target."
+		return failed
+	var player := data.resolve_realm("player_realm")
+	if command == "propose":
+		if not req.params.get("parties") is Dictionary or req.params.parties.get("proposer") != player:
+			failed["error"] = "Only the player's realm can propose its prisoner disposition."
+			return failed
+	else:
+		if not state.prisoner_proposals.has(id) or not player in state.prisoner_proposals[id].frozen.required_parties:
+			failed["error"] = "The player's realm is not a party to this proposal."
+			return failed
+		if command == "respond" and not req.params.get("accepted") is bool:
+			failed["error"] = "A prisoner response needs a boolean acceptance."
+			return failed
+	var previous: Dictionary = state.prisoner_proposals.get(id, {}).get("action_outcomes", {}).get(command, {})
+	if not previous.is_empty():
+		if previous.request != req.to_dict():
+			failed["error"] = "This proposal command already freezes a different request."
+			return failed
+		return previous.outcome.duplicate(true)
+	var fee := int(OrderCosts.gold_of(data, req.action_code))
+	if BattleOrders.available_gold(state) < fee:
+		failed["error"] = "The treasury cannot afford the prisoner clerk's fee."
+		return failed
+	var candidate := GameState.from_dict(state.to_dict(), false)
+	var reason := String(data.order_costs[req.action_code].cost).split(":", true, 2)[2]
+	var paid := WorldLedger.apply(data, candidate, "metrics.treasury", -fee, reason, req.action_code)
+	if paid.has("error") or float(paid.get("delta", 0)) != -fee:
+		failed["error"] = "The complete prisoner clerk's fee could not be paid."
+		return failed
+	var result: Dictionary
+	match command:
+		"propose": result = PrisonerDisposition.propose(data, candidate, req.params)
+		"respond": result = PrisonerDisposition.respond(data, candidate, id, player, req.params.accepted)
+		"settle": result = PrisonerDisposition.settle(data, candidate, id)
+	if result.has("error"):
+		failed["error"] = result.error
+		return failed
+	var effects: Array = [{"kind": "world", "path": "metrics.treasury", "delta": -fee, "reason": reason}]
+	effects.append_array(result.get("effects", []))
+	var outcome := GameState._whole({"action_code": req.action_code, "ok": true, "effects": effects,
+		"notes": data.actions[req.action_code].label, "target": req.target, "params": req.params.duplicate(true),
+		"drift": [], "prisoner_result": result}) as Dictionary
+	if not candidate.prisoner_proposals[id].has("action_outcomes"):
+		candidate.prisoner_proposals[id]["action_outcomes"] = {}
+	candidate.prisoner_proposals[id].action_outcomes[command] = {"request": req.to_dict().duplicate(true), "outcome": outcome.duplicate(true)}
+	if not commit:
+		return outcome
+	for field: String in ["prisoner_batches", "prisoner_events", "prisoner_proposals", "unit_prize_gold",
+			"military_cohorts", "military_rosters", "military_events", "metrics", "world", "world_log", "relationships"]:
+		state.set(field, candidate.get(field))
+	for person: String in state.characters:
+		(state.characters[person] as Character).opinion = (candidate.characters[person] as Character).opinion
+		(state.characters[person] as Character).opinion_log = (candidate.characters[person] as Character).opinion_log
+	if not state.event_state.has("last_action_tick"):
+		state.event_state["last_action_tick"] = {}
+	state.event_state.last_action_tick[req.action_code] = state.tick
+	state.recent_outcomes.append(outcome.duplicate(true))
+	return outcome
+
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
+	if req.action_code in ["PRISONER_PROPOSE", "PRISONER_RESPOND", "PRISONER_SETTLE"]:
+		return _prisoner_action(req, state, true)
 	if req.action_code == "BATTLE_ORDER":
 		var replay := _battle_replay(req, state)
 		if replay.has("error"):

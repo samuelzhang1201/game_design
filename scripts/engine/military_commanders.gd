@@ -51,7 +51,7 @@ static func candidate_error(repo: DataRepository, state: GameState, person: Stri
 		return "Commander eligibility belongs to another realm."
 	if person in state.council.values() or not character.seat.is_empty() or int(character.attributes.get("health", 0)) <= 0:
 		return "This person has a conflicting office or cannot serve."
-	return ""
+	return MilitaryPopulation.service_refusal(state, person)
 
 ## A casualty cannot remain in command. Recovery or release never silently
 ## restores the appointment; selection is a separate legal decision.

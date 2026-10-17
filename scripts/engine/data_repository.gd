@@ -148,6 +148,7 @@ var battle_outcomes: Array[Dictionary] = []
 ## morale_decay_permille, retreat_odds_permille, retreats_on_contact (bool)}.
 var battle_stances: Dictionary = {}
 var parley_clauses: Dictionary = {}
+var prisoner_terms: Dictionary = {}
 var battle_formations: Dictionary = {}
 var battle_orders: Dictionary = {}
 var battle_events: Dictionary = {}
@@ -1064,6 +1065,14 @@ func _load(dir: String) -> bool:
 				for key: String in ["gold", "morale", "power_permille", "duration_days", "amount", "score", "boldness", "martial", "compassion", "material_units", "progress_loss", "risk_permille"]:
 					row[key] = int(row[key])
 				battle_event_choices.append(row)):
+		return false
+	if not _load_if_present(table_path(dir, "prisoner_terms"),
+			["kind", "label", "family_opinion", "reason", "base_gold", "wealth_gold_per_point", "unnamed_wealth"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for field: String in ["family_opinion", "base_gold", "wealth_gold_per_point", "unnamed_wealth"]:
+					row[field] = int(row[field])
+				prisoner_terms[String(row["kind"])] = row):
 		return false
 	if not _load_if_present(table_path(dir, "parley_clauses"),
 			["clause", "label", "law", "scope", "policy_map"],

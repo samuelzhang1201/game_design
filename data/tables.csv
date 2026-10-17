@@ -114,6 +114,7 @@ screens/war_room,war_drills
 screens/war_room,war_equipment
 screens/ledger,ledger_lenses
 screens/ledger,ledger_palette
+battle,prisoner_terms
 battle,parley_clauses
 battle,formations
 battle,orders

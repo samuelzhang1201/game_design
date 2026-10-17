@@ -384,6 +384,9 @@ var military_cohorts: Dictionary = {}
 var military_events: Dictionary = {}
 var prisoner_batches: Dictionary = {}
 var prisoner_events: Dictionary = {}
+var prisoner_proposals: Dictionary = {}
+## Whole gold earned by the actual capturing unit, separate from crown funds.
+var unit_prize_gold: Dictionary = {}
 var battle_records: Dictionary = {}
 var recruitment_projects: Dictionary = {}
 var military_migration: Dictionary = {}
@@ -515,6 +518,8 @@ func to_dict() -> Dictionary:
 		"military_events": military_events.duplicate(true),
 		"prisoner_batches": prisoner_batches.duplicate(true),
 		"prisoner_events": prisoner_events.duplicate(true),
+		"prisoner_proposals": prisoner_proposals.duplicate(true),
+		"unit_prize_gold": unit_prize_gold.duplicate(true),
 		"battle_records": battle_records.duplicate(true),
 		"recruitment_projects": recruitment_projects.duplicate(true),
 		"military_migration": military_migration.duplicate(true),
@@ -565,6 +570,8 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.military_events = _whole(d.get("military_events", {}))
 	s.prisoner_batches = _whole(d.get("prisoner_batches", {}))
 	s.prisoner_events = _whole(d.get("prisoner_events", {}))
+	s.prisoner_proposals = _whole(d.get("prisoner_proposals", {}))
+	s.unit_prize_gold = _whole(d.get("unit_prize_gold", {}))
 	s.battle_records = _whole(d.get("battle_records", {}))
 	s.recruitment_projects = _whole(d.get("recruitment_projects", {}))
 	s.military_migration = _whole(d.get("military_migration", {}))

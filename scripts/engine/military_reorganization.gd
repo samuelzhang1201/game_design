@@ -377,6 +377,26 @@ static func _personnel(repo: DataRepository, state: GameState, code: String, chi
 				pieces[i][count] = int(allocation[i])
 				pieces[i]["initial"] += int(allocation[i])
 				targets[count][i] -= int(allocation[i])
+		if source.has("civilian_promises"):
+			var released_room: Array = []
+			for piece: Dictionary in pieces:
+				piece["civilian_promises"] = []
+				released_room.append(int(piece["released"]))
+			for promise: Dictionary in source.civilian_promises:
+				var promised := int(promise["count"])
+				var room := 0
+				for count: int in released_room:
+					room += count
+				if promised < 0 or promised > room:
+					return "Civilian promises exceed their released personnel: " + id
+				var shares := BattleSystem.apportion(released_room, promised)
+				for i: int in pieces.size():
+					if int(shares[i]) <= 0:
+						continue
+					var slice := promise.duplicate(true)
+					slice["count"] = int(shares[i])
+					pieces[i].civilian_promises.append(slice)
+					released_room[i] -= int(shares[i])
 		var fragment_ids: Array = []
 		for i: int in children.size():
 			if int(pieces[i]["initial"]) == 0:
@@ -466,6 +486,7 @@ static func _appoint_existing(repo: DataRepository, state: GameState, code: Stri
 			if state.military_cohorts.has(officer_id):
 				continue
 			var officer := cohort.duplicate(true)
+			officer.erase("civilian_promises")
 			officer["id"] = officer_id
 			officer["person_id"] = person
 			officer["initial"] = 1

@@ -579,3 +579,29 @@ func test_new_paid_officer_stays_with_first_child_when_second_has_assembly_headr
 	assert_eq(int(state.army_roster[children[0]]["cavalry"]), 300)
 	assert_eq(int(state.army_roster[children[1]]["cavalry"]), 300)
 	assert_eq(state.recruitment_projects["headroom"]["result"], receipt)
+
+func test_reorganization_conserves_released_promise_slices_without_binding_new_officers() -> void:
+	var origin := String(state.military_cohorts.common.source_province)
+	for id: String in ["common", "nobles"]:
+		var cohort: Dictionary = state.military_cohorts[id]
+		if id == "nobles":
+			cohort.initial += 10
+			cohort.released += 10
+		cohort.civilian_promises = [
+			{"count": 6, "until_day": 0, "proposal_id": "promise1", "reason": "Released under an indefinite pledge"},
+			{"count": 4, "until_day": state.absolute_day() + 1, "proposal_id": "promise2", "reason": "Released under a brief pledge"}]
+	var available := MilitaryPopulation.available(repo, state, origin, "rural_population")
+	assert_eq(MilitaryPopulation.restricted(state, origin, "rural_population"), 20)
+	assert_eq(_reconcile().get("status"), "complete")
+	assert_eq(MilitaryPopulation.restricted(state, origin, "rural_population"), 20)
+	assert_eq(MilitaryPopulation.available(repo, state, origin, "rural_population"), available)
+	var slices := {}
+	for cohort: Dictionary in state.military_cohorts.values():
+		var promised := 0
+		for promise: Dictionary in cohort.get("civilian_promises", []):
+			promised += int(promise.count)
+			slices[promise.proposal_id] = int(slices.get(promise.proposal_id, 0)) + int(promise.count)
+		assert_lte(promised, int(cohort.released), "A serving named officer must not inherit civilians' pledges")
+	assert_eq(slices, {"promise1": 12, "promise2": 8})
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())), false)
+	assert_eq(MilitaryPopulation.restricted(restored, origin, "rural_population"), 20)

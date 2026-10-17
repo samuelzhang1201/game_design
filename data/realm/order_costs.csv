@@ -44,3 +44,6 @@ ARMY_SEAT,gold:-1:the change of the watch,1,"spec 2026-10-07-army-split-and-grou
 LAW_SET,gold:-1:the chancery drafts the decree,1,"spec 2026-10-08-laws-tab §3; the law's own gold_cost and cost_ops (data/laws.csv) and one ordinary courier fee a courier are charged by the order itself"
 BATTLE_FORMATION,gold:-1:the marshal prepares a formation warrant,1,Reforming also incurs saved disorder
 BATTLE_ORDER,gold:-1:the marshal prepares a battlefield warrant,0,A remote courier or delivered bounty supplies the cost; otherwise the marshal fee applies
+PRISONER_PROPOSE,gold:-1:the prisoner agreement clerk,1,Charged once per successful proposal command
+PRISONER_RESPOND,gold:-1:the prisoner agreement clerk,1,Charged once per successful proposal command
+PRISONER_SETTLE,gold:-1:the prisoner agreement clerk,1,Charged once per successful proposal command

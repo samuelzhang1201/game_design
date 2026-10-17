@@ -127,12 +127,13 @@ static func capture(repo: DataRepository, state: GameState, raw: Dictionary) -> 
 				return {"error": "Capture batch ID already exists."}
 			var wounded := mini(wounds, count)
 			batches[batch_id] = {"id": batch_id, "source_cohort": cohort_id,
-				"origin_realm": source["origin_realm"], "holder_code": code,
+				"origin_realm": source["origin_realm"], "holder_code": code, "captor_code": code,
 				"commoners": count if cohort["identity"] == "commoner" else 0,
 				"nobles": count if cohort["identity"] == "noble" else 0,
 				"named_ids": [person] if person != "" else [], "wounded_subset": wounded,
 				"initial_count": count, "capture_id": id, "battle_id": request["battle_id"], "round": request["round"],
-				"disposition": "held", "reason": request["reason"]}
+				"disposition": "held", "ransom_protected": BattleRules._policy(battle, "noble_ransom", state.absolute_day()) == "allow",
+				"reason": request["reason"]}
 			left -= count
 			wounds -= wounded
 		if left != 0 or wounds != 0:
@@ -208,6 +209,7 @@ static func holder_defeated(repo: DataRepository, state: GameState, holder: Stri
 		var count := int(batch["commoners"]) + int(batch["nobles"])
 		if rescued:
 			changes.append({"cohort_id": batch["source_cohort"], "from": "captured_current", "to": "released", "count": count})
+			batch["released_count"] = int(batch.get("released_count", 0)) + count
 			batch["disposition"] = "released"
 			batch["civilian"] = true
 			batch["holder_code"] = ""
@@ -230,6 +232,57 @@ static func holder_defeated(repo: DataRepository, state: GameState, holder: Stri
 	request["after"] = after
 	return _record(state, event_id, request, {"status": "applied", "released": released,
 		"transferred": transferred, "batch_ids": held})
+
+## One personnel transition releases every agreed slice, including both sides
+## of an exchange. initial_count remains the immutable capture quantity.
+static func release(repo: DataRepository, state: GameState, event_id: String, selections: Array, reason: String) -> Dictionary:
+	var request := {"kind": "release", "selections": selections.duplicate(true), "reason": reason}
+	var replay := _replay(state, event_id, request)
+	if not replay.is_empty():
+		return replay
+	var changes: Array = []
+	var updated := {}
+	var total := 0
+	for selection: Dictionary in selections:
+		var id := String(selection["batch_id"])
+		var batch: Dictionary = state.prisoner_batches.get(id, {}).duplicate(true)
+		var count := int(selection["count"])
+		var wounds := int(selection["wounded_count"])
+		var held := int(batch.get("commoners", 0)) + int(batch.get("nobles", 0))
+		if updated.has(id) or batch.get("disposition", "") != "held" or count <= 0 or count > held \
+				or wounds < 0 or wounds > count or wounds > int(batch.get("wounded_subset", 0)) \
+				or count - wounds > held - int(batch.get("wounded_subset", 0)):
+			return {"error": "A release needs unique currently held personnel and valid wound subsets."}
+		changes.append({"cohort_id": batch["source_cohort"], "from": "captured_current", "to": "released", "count": count})
+		var identity := "nobles" if int(batch["nobles"]) > 0 else "commoners"
+		batch[identity] = int(batch[identity]) - count
+		batch["wounded_subset"] = int(batch["wounded_subset"]) - wounds
+		batch["released_count"] = int(batch.get("released_count", 0)) + count
+		batch["named_ids"] = [] if count == held else batch.get("named_ids", [])
+		if count == held:
+			batch["disposition"] = "released"
+			batch["civilian"] = true
+			batch["holder_code"] = ""
+		batch["reason"] = reason
+		updated[id] = batch
+		total += count
+	var result := MilitaryRoster.transition(repo, state, event_id, changes, reason)
+	if result.has("error"):
+		return result
+	state.prisoner_batches.merge(updated, true)
+	return _record(state, event_id, request, {"status": "applied", "released": total})
+
+## Older batches encode the actual captor in their stable capture identity.
+static func captor_of(batch: Dictionary) -> String:
+	if String(batch.get("captor_code", "")) != "":
+		return String(batch.captor_code)
+	var id := String(batch.get("id", ""))
+	if id.begins_with("prisoner:"):
+		var parts: Variant = JSON.parse_string(id.trim_prefix("prisoner:"))
+		if parts is Array and parts.size() == 3 and parts[0] == batch.get("capture_id", "") \
+				and parts[1] == batch.get("source_cohort", "") and parts[2] is String:
+			return String(parts[2])
+	return String(batch.get("holder_code", ""))
 
 static func held_counts(state: GameState, holder: String) -> Dictionary:
 	var counts := {"commoners": 0, "nobles": 0, "wounded": 0, "total": 0}
@@ -403,7 +456,7 @@ static func migrate_legacy(repo: DataRepository, state: GameState) -> Dictionary
 			if state.prisoner_batches.has(batch_id):
 				return {"error": "Legacy capture batch ID conflicts with existing custody."}
 			additions[batch_id] = {"id": batch_id, "source_cohort": id, "origin_realm": String(unit.get("kingdom_code", "")),
-				"holder_code": holder, "commoners": count if cohort["identity"] == "commoner" else 0,
+				"holder_code": holder, "captor_code": holder, "commoners": count if cohort["identity"] == "commoner" else 0,
 				"nobles": count if cohort["identity"] == "noble" else 0, "named_ids": [person] if person != "" else [],
 				"wounded_subset": int(sources[id]["wounded"]), "initial_count": count, "capture_id": capture_id,
 				"battle_id": int(handoff.get("battle_id", 0)), "round": 0, "disposition": "held", "reason": reason}

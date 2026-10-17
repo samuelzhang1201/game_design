@@ -343,3 +343,62 @@ func test_paid_reinforcement_keeps_its_people_after_later_casualties_and_reports
 	assert_false(quote.has("error"), str(quote))
 	assert_eq(quote.get("composition"), {"commoners": 270, "noble_troops": 0, "commander": 0}, "next independent contract rechecks the actual survivors")
 	assert_eq(quote.get("equipment"), {"infantry": 0}, "the empty places already have equipment")
+
+func test_released_commander_is_civilian_and_reenlists_only_after_promise_and_new_payment() -> void:
+	var disposition: Script = load("res://scripts/engine/prisoner_disposition.gd")
+	var realm := repo.resolve_realm("player_realm")
+	var enemy := repo.resolve_realm("raider_realm")
+	for code: String in ["captured_unit", "captor"]:
+		state.army_roster[code] = {"regiment_code": code, "kingdom_code": realm if code == "captured_unit" else enemy, "is_naval": "0"}
+		state.regiments[code] = {}
+	var person: Character = state.characters[officer]
+	var enlisted := MilitaryRoster.mobilize(repo, state, "old_service", [
+		{"id": "old_officer", "unit_code": "captured_unit", "source_province": province,
+			"source_population_field": "rural_population", "identity": "noble", "stage": "active", "count": 1,
+			"person_id": officer, "family_name": person.family_name},
+		{"id": "old_troops", "unit_code": "captured_unit", "source_province": province,
+			"source_population_field": "rural_population", "identity": "commoner", "stage": "active", "count": 59},
+		{"id": "guards", "unit_code": "captor", "source_province": province,
+			"source_population_field": "rural_population", "identity": "commoner", "stage": "active", "count": 10}], "Previous paid service")
+	assert_false(enlisted.has("error"), str(enlisted))
+	state.military_rosters.captured_unit.commander_id = officer
+	state.military_rosters.captured_unit.commander_cohort_id = "old_officer"
+	var captured := PrisonerSystem.capture(repo, state, {"capture_id": "named", "participants": {"captor": 1},
+		"reason": "Accepted surrender", "changes": [
+			{"cohort_id": "old_officer", "from": "fit", "to": "captured_current", "count": 1},
+			{"cohort_id": "old_troops", "from": "fit", "to": "captured_current", "count": 59}]})
+	assert_false(captured.has("error"), str(captured))
+	var selections: Array = []
+	for id: String in captured.batch_ids:
+		var batch: Dictionary = state.prisoner_batches[id]
+		selections.append({"batch_id": id, "count": int(batch.commoners) + int(batch.nobles), "named_ids": batch.named_ids})
+	var proposal := {"id": "named_release", "kind": "release", "money": 0,
+		"batches": selections, "parties": {"proposer": enemy, "payer": ""},
+		"terms": {"no_fighting_until_day": state.absolute_day()}, "reason": "Released on a noncombat undertaking"}
+	assert_false(disposition.propose(repo, state, proposal).has("error"))
+	assert_false(disposition.respond(repo, state, proposal.id, realm, true).has("error"))
+	var old_opinion := person.opinion
+	var result: Dictionary = disposition.settle(repo, state, proposal.id)
+	assert_eq(result.get("released"), 60, str(result))
+	assert_eq(person.opinion, old_opinion, "Enemy release must not credit the player ruler")
+	var enemy_ruler := DevelopmentSystem.ruler_of(repo, state, enemy)
+	assert_not_null(enemy_ruler)
+	assert_eq(int(RelationshipGraph.edge(state, officer, enemy_ruler.id).get("sentiment", 0)), 2)
+	assert_eq(state.military_rosters.captured_unit.commander_id, "")
+	assert_eq(state.military_cohorts.old_officer.released, 1)
+	assert_eq(MilitaryRoster.living(state, "captured_unit"), 0)
+	assert_eq(MilitaryPopulation.restricted(state, province, "rural_population"), 60)
+	assert_true(RecruitmentSystem.quote(repo, state, request).has("error"))
+	var before := state.to_dict()
+	assert_eq(disposition.settle(repo, state, proposal.id), result)
+	assert_eq(state.to_dict(), before)
+	state.day += 1
+	assert_eq(MilitaryPopulation.restricted(state, province, "rural_population"), 0)
+	var quote := RecruitmentSystem.quote(repo, state, request)
+	assert_false(quote.has("error"), str(quote))
+	var gold := int(state.metrics.treasury)
+	assert_false(RecruitmentSystem.recruit(repo, state, request).has("error"))
+	assert_eq(int(state.metrics.treasury), gold - int(quote.gold))
+	assert_eq(state.military_cohorts.old_officer.released, 1)
+	assert_eq(MilitaryRoster.living(state, "captured_unit"), 0)
+	assert_eq(person.family_name, (state.characters[officer] as Character).family_name)

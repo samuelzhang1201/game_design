@@ -65,8 +65,8 @@ static func tally(state: GameState, battle: Dictionary, identity := "") -> Dicti
 		for batch: Dictionary in state.prisoner_batches.values():
 			if batch.get("source_cohort", "") == id and int(batch.get("battle_id", -1)) == int(battle["id"]):
 				captured_here += int(batch.get("initial_count", int(batch.commoners) + int(batch.nobles)))
-				if batch.get("disposition", "") == "released":
-					released_captives += int(batch.get("initial_count", int(batch.commoners) + int(batch.nobles)))
+				released_captives += int(batch.get("released_count",
+					batch.get("initial_count", int(batch.commoners) + int(batch.nobles)) if batch.get("disposition", "") == "released" else 0))
 		counts.captured += captured_here
 		counts.released += maxi(0, int(cohort.released) - int(baseline.released) - released_captives)
 	return out

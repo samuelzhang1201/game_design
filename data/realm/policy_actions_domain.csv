@@ -4,3 +4,6 @@ LEVY_RAISE,military,Raise fresh levies,none,1.5,levy_cost,4,0,,levy_raise,1,no,"
 BUILD_ECONOMIC,economy,Commission a public work,none,1.5,build_cost,6,0,,build_economic,1,no,"params: project (granary|road)."
 SPY_MISSION,intrigue,Send out the whisperers,none,1.0,spy_cost,4,0,,spy_mission,1,no,"Quiets rumors; costs gold."
 BATTLE_ORDER,military,Issue a battlefield warrant,none,0,none,0,0,,battle_order,0,no,"params: regiment battle_id kind request_id; paid once and revalidated on arrival"
+PRISONER_PROPOSE,military,Propose a prisoner disposition,none,0,none,0,0,,prisoner_propose,0,no,params: raw proposal dictionary
+PRISONER_RESPOND,military,Respond to a prisoner proposal,none,0,none,0,0,,prisoner_respond,0,no,params: proposal_id accepted
+PRISONER_SETTLE,military,Fulfill a prisoner agreement,none,0,none,0,0,,prisoner_settle,0,no,params: proposal_id
