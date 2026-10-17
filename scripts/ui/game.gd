@@ -49,11 +49,18 @@ func _ready() -> void:
 	data = DataRepository.load_all("res://data")
 	assert(data != null, "data load failed: " + DataRepository.last_error)
 
-func start_campaign(seed_value: int = 42) -> void:
+func start_campaign(seed_value: int = 42) -> bool:
 	_reset_llm()
 	state = campaign_maker.call(data, seed_value)
+	if state == null:
+		load_error = GameState.last_campaign_error
+		engine = null
+		set_clock_speed(0)
+		return false
+	load_error = ""
 	release_clock_holds()
 	engine = TickEngine.new(data)
+	return true
 
 ## The clock (owner 2026-09-13): 0 is paused, 1 a day per time_day_seconds,
 ## 2 and 4 that many times faster. Only GameRoot's _process reads it, on
@@ -484,12 +491,19 @@ func load_campaign(path: String = "") -> bool:
 	# The save names its world. Swap the pack in before the state goes live,
 	# and refuse rather than silently drop the player into a different map
 	# than the one they saved in. Pre-map_id saves ("") keep the default.
+	var previous_map := data.map_id
 	if loaded.map_id != "" and loaded.map_id != data.map_id:
 		if not data.load_map(loaded.map_id):
 			push_error("load_campaign: save needs map '%s' which is not installed"
 				% loaded.map_id)
 			load_error = "No saved realm found."
 			return false
+	var military := MilitaryMigration.ensure(data, loaded)
+	if military.has("error"):
+		if data.map_id != previous_map:
+			data.load_map(previous_map)
+		load_error = "Saved military organization needs resolution: " + String(military["error"])
+		return false
 	load_error = ""
 	state = loaded
 	engine = TickEngine.new(data)

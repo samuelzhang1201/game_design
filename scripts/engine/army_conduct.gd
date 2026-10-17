@@ -200,10 +200,14 @@ static func settle_units(repo: DataRepository, state: GameState) -> void:
 		@warning_ignore("integer_division")
 		entry["training"] = maxi(training - int(repo.bal("forage_training_month")) * d / Calendar.DAYS_PER_TICK,
 			mini(training, int(repo.bal("forage_training_floor"))))
-		var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, ArmySystem.regiment(repo, c, state)), entry)
+		var fit := ArmySystem.personnel_fit(repo, state, c)
 		@warning_ignore("integer_division")
 		var hurt := mini(fit, fit * int(repo.bal("forage_harass_permille")) * d / (Calendar.DAYS_PER_TICK * 1000))
-		entry["wounded"] = int(entry.get("wounded", 0)) + hurt
+		var moved := ArmySystem.move_personnel(repo, state, c,
+			[{"from": "fit", "to": "wounded", "count": hurt}],
+			"forage-wounds:%s:%d" % [c, state.tick], "wounded while foraging")
+		if moved.has("error"):
+			continue
 		entry["forage_days"] = 0
 
 
@@ -246,7 +250,7 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 		var reg := ArmySystem.regiment(repo, c, state)
 		if entry.is_empty() or reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
-		if ArmySystem.supply_use(repo, reg, state) <= 0:
+		if ArmySystem.personnel_fit(repo, state, c) <= 0:
 			continue
 		var province := ArmySystem.province_of(repo, state, reg)
 		var kind := Forage.land_kind(repo, state, province)

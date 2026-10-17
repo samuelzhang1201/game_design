@@ -413,7 +413,7 @@ func test_raising_levies_spends_strategic_goods() -> void:
 	for e in out["effects"]:
 		if String(e.get("metric", "")) == "strategic":
 			reasons.append(String(e.get("reason", "")))
-	assert_true("the baggage train of the levy" in reasons,
+	assert_true("supplies for training the standing ranks" in reasons,
 		"the charge names itself: %s" % str(reasons))
 
 ## A pool a cost row draws on cannot go below empty: the order is refused

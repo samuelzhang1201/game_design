@@ -1238,14 +1238,19 @@ func _pick(pos: Vector2) -> Dictionary:
 	var o: Vector3 = ray[0]
 	var d: Vector3 = ray[1]
 	var spheres: Array = []
+	var discs: Array = []
 	# a star is picked within its drawn disc or ledger_star_pick_min_px of
 	# screen, whichever is larger (Task 11 fix round 2, R1: a ghost star is a
 	# few px across)
 	var least_px := _repo.bal("ledger_star_pick_min_px") * _window_scale()
 	for id: String in _order:
+		discs.append({"id": id, "pos": _drawn[id], "radius": _draw_r(id)})
 		spheres.append({"id": id, "pos": _drawn[id],
 			"radius": maxf(_draw_r(id), least_px * _m_per_px_at(_drawn[id]))})
-	var hit := LedgerPick.pick(o, d, spheres)
+	# A nearby star's invisible click halo must not steal another star's visible disc.
+	var hit := LedgerPick.pick(o, d, discs)
+	if hit.is_empty():
+		hit = LedgerPick.pick(o, d, spheres)
 	if not hit.is_empty():
 		return hit
 	var best := INF

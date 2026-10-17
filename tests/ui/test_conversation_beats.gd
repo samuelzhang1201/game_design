@@ -85,7 +85,7 @@ func test_summary_reflects_outcomes_without_numbers() -> void:
 	assert_eq(beats[-1]["kind"], "summary")
 	assert_false(beats[-1].has("text"), "summary text is composed at display time now")
 	var summary := ConversationBeats.summary_text(r2, s, data)
-	assert_string_contains(summary, "Raise fresh levies")
+	assert_string_contains(summary, "Train the standing army")
 	for ch in ["0","1","2","3","4","5","6","7","8","9"]:
 		assert_false(ch in summary, "no digits in summary (R7): " + summary)
 

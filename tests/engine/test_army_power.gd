@@ -55,7 +55,7 @@ func test_power_follows_training_morale_and_wounds() -> void:
 	assert_gt(drilled, base)
 	# training factor 500+10*10=600 -> 500+10*90=1400
 	assert_almost_eq(float(drilled) / float(base), 1400.0 / 600.0, 0.01)
-	s.regiments[code]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
+	SuiteData.set_losses(s, code, {"wounded": ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))})
 	assert_eq(ArmySystem.power(repo, s, code, "defend"), 0, "a regiment of wounded has no power")
 
 ## Regression (owner 2026-09-17 review): power's n * fit / heads step used
@@ -88,7 +88,7 @@ func test_strength_grades_against_the_mean_of_its_kind() -> void:
 	s.regiments[code]["morale"] = 100
 	assert_eq(ArmySystem.strength_grade(repo, s, code), "Strong")
 	var weak: String = codes[1]
-	s.regiments[weak]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, weak))
+	SuiteData.set_losses(s, weak, {"wounded": ArmySystem.headcount(repo, ArmySystem.regiment(repo, weak))})
 	assert_eq(ArmySystem.strength_grade(repo, s, weak), "Weak")
 
 func test_a_lone_kind_is_average() -> void:
@@ -188,6 +188,7 @@ func test_archers_alone_on_hills_by_the_terrain_table() -> void:
 	for arm in ["infantry", "cavalry", "artillery", "fleet"]:
 		row[arm] = "0"
 	row["archers"] = "800"
+	SuiteData.set_headcount(s, code, 800)
 	var plains_d := ArmySystem.power_on(r, s, code, "defend", "plains", "")
 	var plains_a := ArmySystem.power_on(r, s, code, "attack", "plains", "")
 	# army_terrain.csv: hills,archers,1150,1050
@@ -216,18 +217,16 @@ func test_fit_permille_and_power_count_the_dead() -> void:
 			kept = true
 		else:
 			reg[arm] = 0
+	SuiteData.set_headcount(s, code, 1000)
 	var heads := ArmySystem.headcount(repo, reg)
 	assert_eq(heads, 1000)
-	s.regiments[code]["wounded"] = 100
-	s.regiments[code]["dead"] = 50
+	SuiteData.set_losses(s, code, {"wounded": 100, "dead": 50})
 	assert_eq(ArmySystem.fit_permille(repo, s, code), 850)   # (1000 - 100 - 50) x 1000 / 1000
 	# 150 dead is as many fewer men as 150 wounded: the same power
 	var by_both := ArmySystem.power(repo, s, code, "defend")
-	s.regiments[code]["wounded"] = 150
-	s.regiments[code]["dead"] = 0
+	SuiteData.set_losses(s, code, {"wounded": 150, "dead": 0})
 	assert_eq(ArmySystem.power(repo, s, code, "defend"), by_both)
-	s.regiments[code]["wounded"] = 0
-	s.regiments[code]["dead"] = heads
+	SuiteData.set_losses(s, code, {"wounded": 0, "dead": heads})
 	assert_eq(ArmySystem.power(repo, s, code, "defend"), 0, "a regiment of dead has no power")
 	assert_eq(ArmySystem.fit_permille(repo, s, code), 0)
 
@@ -243,8 +242,7 @@ func test_a_fresh_regiment_has_no_dead_and_old_saves_default_to_none() -> void:
 func test_the_dead_never_recover() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code: String = _land_codes()[0]
-	s.regiments[code]["wounded"] = 100
-	s.regiments[code]["dead"] = 50
+	SuiteData.set_losses(s, code, {"wounded": 100, "dead": 50})
 	ArmySystem.settle_month(repo, s)
 	assert_eq(int(s.regiments[code]["dead"]), 50)
 	assert_lt(int(s.regiments[code]["wounded"]), 100)

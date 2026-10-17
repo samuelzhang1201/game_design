@@ -179,7 +179,7 @@ static func foes_near(repo: DataRepository, state: GameState, at: Vector2) -> Di
 	var men := 0
 	for c: String in foe_codes_near(repo, state, at):
 		cols += 1
-		men += ArmySystem.headcount(repo, ArmySystem.regiment(repo, c, state)) - int(state.foes[c].get("dead", 0))
+		men += ArmySystem.under_arms(ArmySystem.headcount(repo, ArmySystem.regiment(repo, c, state)), state.foes[c])
 	return {"foe_columns": cols, "foe_troops": men}
 
 
@@ -198,7 +198,7 @@ static func foe_codes_near(repo: DataRepository, state: GameState, at: Vector2) 
 		var dy := int(e["y_m"]) - here.y
 		if dx * dx + dy * dy > reach * reach:
 			continue
-		if ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c), state)) - int(e.get("dead", 0)) <= 0:
+		if ArmySystem.under_arms(ArmySystem.headcount(repo, ArmySystem.regiment(repo, String(c), state)), e) <= 0:
 			continue
 		out.append(String(c))
 	return out

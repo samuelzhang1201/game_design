@@ -34,7 +34,7 @@ func before_each() -> void:
 	entry["forage_days"] = 0
 	entry["morale"] = 50
 	entry["training"] = 10
-	entry["wounded"] = 0
+	SuiteData.set_losses(state, code, {"wounded": 0})
 
 
 ## The unit that eats the most (so its need is far over a day's take).
@@ -56,6 +56,7 @@ func _men(n: int) -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = str(n)
+	SuiteData.set_headcount(state, code, n)
 
 
 func _law(c: String, law: String, value: String) -> void:

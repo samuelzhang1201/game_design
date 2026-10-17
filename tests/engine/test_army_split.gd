@@ -45,7 +45,7 @@ func test_every_unit_is_one_arm_and_within_the_cap() -> void:
 			if int(float(r.get(arm, 0))) > 0:
 				armed += 1
 		assert_eq(armed, 1, code)
-		assert_lte(int(MapObjects.regiment_size(repo, r)), cap, code)
+		assert_lte(ArmySystem.headcount(repo, r), cap, code)
 
 
 func test_the_count_is_the_packs_own() -> void:
@@ -57,7 +57,7 @@ func test_the_count_is_the_packs_own() -> void:
 			want += 1
 			continue
 		for arm: String in _arms():
-			want += ArmySplit.shares(int(float(r.get(arm, 0))), cap).size()
+			want += ArmySplit.element_shares(int(float(r.get(arm, 0))), int(repo.world_table("military", "unit_types")[arm]["crew"]), cap).size()
 		if int(float(r.get("artillery", 0))) > 0:
 			gunned[String(r["kingdom_code"])] = true
 	assert_eq(roster.size(), want + gunned.size())
@@ -88,7 +88,7 @@ func test_codes_and_labels() -> void:
 		for row: Dictionary in repo.army_split:
 			if bool(row["pooled"]) or not armed.has(String(row["arm"])):
 				continue
-			var n := ArmySplit.shares(int(float(r[String(row["arm"])])), int(repo.bal("army_split_cap_men"))).size()
+			var n := ArmySplit.element_shares(int(float(r[String(row["arm"])])), int(repo.world_table("military", "unit_types")[String(row["arm"])]["crew"]), int(repo.bal("army_split_cap_men"))).size()
 			var base := "%s_%s" % [r["regiment_code"], row["code_word"]]
 			var code := base if n == 1 else base + "_1"
 			assert_true(roster.has(code), code)

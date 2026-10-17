@@ -57,12 +57,10 @@ func refresh() -> void:
 	# By arm: one bar per unit type, its glyph in front, categorical colours in
 	# the unit_types order.
 	var units: Array = data.world_table("military", "unit_types").keys()
-	var counts: Dictionary = {}
+	var counts := ArmySystem.personnel_by_arm(data, state, mine)
 	var total := 0.0
 	var top := 1.0
 	for u: String in units:
-		var v: Variant = WorldLedger.value_of(data, state, "military.kingdoms.%s.%s" % [mine, u])
-		counts[u] = float(v) if v != null else 0.0
 		total += counts[u]
 		top = maxf(top, counts[u])
 	var arm_rows: Array = []
@@ -84,7 +82,7 @@ func refresh() -> void:
 		var r := ArmySystem.regiment(data, code, state)
 		# The same arithmetic the map's markers use, so the bar here and the
 		# bar under the marker read the same regiment the same way.
-		var reg_size := MapObjects.regiment_size(data, r)
+		var reg_size := ArmySystem.under_arms(ArmySystem.headcount(data, r), ArmySystem.state_of(data, state, code))
 		var main_arm := MapObjects.regiment_arm(data, r)
 		reg_top = maxf(reg_top, reg_size)
 		reg_rows.append({"label": _short(String(r["label"])), "value": reg_size, "icon": _glyph(main_arm),

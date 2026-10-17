@@ -24,7 +24,7 @@ func test_new_maps_round_trip() -> void:
 	s.conduct_marks["mark_a"] = 11
 	s.regiments[code]["forage"] = "law"
 	s.regiments[code]["forage_days"] = 4
-	s.regiments[code]["deserted"] = 12
+	SuiteData.set_losses(s, code, {"deserted": 12})
 	s.regiments[code]["desert_rem"] = 3
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	assert_eq(back.forage_stripped, {prov: 250})

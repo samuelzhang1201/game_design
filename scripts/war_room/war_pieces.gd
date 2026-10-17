@@ -250,7 +250,7 @@ func _spread(state: GameState, entries: Array) -> Dictionary:
 		var reg := ArmySystem.regiment(_repo, code, state)
 		rows.append({"code": code, "half": half, "at": at,
 			"royal": String(reg.get("is_royal", "0")) == "1",
-			"men": MapObjects.regiment_size(_repo, reg)})
+			"men": MapObjects.regiment_personnel(_repo, reg)})
 	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		if bool(a["royal"]) != bool(b["royal"]):
 			return bool(a["royal"])

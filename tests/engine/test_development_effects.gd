@@ -97,10 +97,10 @@ func test_ranged_penalty_hits_archers_only() -> void:
 	# 925,000 -> *750/1000 = 693,750; at 900: ceil(693750*900/1e6) =
 	# ceil(624.375) = 625. Cavalry base (850+1250+1000+1200)/4 = 1075: p ->
 	# 1,075,000 -> 806,250; ceil(806.25) = 807. Hit host = 807 + 625 = 1432.
-	var arms := {"archers": 1000, "cavalry": 1000}
-	var hit := ArmySystem.power_of_arms(repo, arms, 2000, 50, 50, "defend", "", "", "", 0, {"archers": 900})
-	var only_cav := ArmySystem.power_of_arms(repo, {"cavalry": 1000}, 1000, 50, 50, "defend", "", "")
-	var scaled_archers := ArmySystem.power_of_arms(repo, {"archers": 1000}, 1000, 50, 50, "defend", "", "", "", 0, {"archers": 900})
+	var people := {"archers": 1000, "cavalry": 1000}
+	var hit := ArmySystem.power_of_personnel(repo, people, 2000, 50, 50, "defend", "", "", "", 0, {"archers": 900})
+	var only_cav := ArmySystem.power_of_personnel(repo, {"cavalry": 1000}, 1000, 50, 50, "defend", "", "")
+	var scaled_archers := ArmySystem.power_of_personnel(repo, {"archers": 1000}, 1000, 50, 50, "defend", "", "", "", 0, {"archers": 900})
 	assert_eq(only_cav, 807)
 	assert_eq(scaled_archers, 625)
 	assert_eq(hit, 1432)

@@ -1,0 +1,20 @@
+{
+  "actual_pick": {
+    "id": "character:char_merek_stonehelm",
+    "kind": "sphere"
+  },
+  "drawn_pick": {
+    "id": "character:you",
+    "kind": "sphere"
+  },
+  "stars": {
+    "character:char_merek_stonehelm": {
+      "drawn_t": -1.0,
+      "pick_t": 172.911544978367
+    },
+    "character:you": {
+      "drawn_t": 186.08972262183,
+      "pick_t": 184.972966338597
+    }
+  }
+}

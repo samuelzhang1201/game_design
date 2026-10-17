@@ -340,9 +340,8 @@ func test_second_battle_does_not_replay_first() -> void:
 			var arm := MapObjects.regiment_arm(repo, row)
 			for unit: String in repo.world_table("military", "unit_types"):
 				row[unit] = "100" if unit == arm else "0"
-			table[code]["wounded"] = 0
-			table[code]["dead"] = 0
-			table[code]["deserted"] = 0
+			SuiteData.set_headcount(state, code, ArmySystem.headcount(repo, row))
+			SuiteData.set_losses(state, code, {"wounded": 0, "dead": 0, "deserted": 0})
 	# One pair fights in substep zero; the other still marches to later contact.
 	var player := String(Play.land_regiments(repo, 1)[0])
 	var foe := String(state.foes.keys()[0])

@@ -1,4 +1,4 @@
 action_code,domain,label,target_type,admin_cost,gold_cost_formula,cooldown_ticks,min_era,unlock_req,effect_handler,max_per_turn,reversible,notes
-LEVY_RAISE,military,Raise fresh levies,none,1.5,levy_cost,4,0,,levy_raise,1,no,"Improves army quality; costs gold and goodwill."
+LEVY_RAISE,military,Train the standing army,none,1.5,levy_cost,4,0,,levy_raise,1,no,"Trains existing troops; costs gold and supplies."
 BUILD_ECONOMIC,economy,Commission a public work,none,1.5,build_cost,6,0,,build_economic,1,no,"params: project (granary|road)."
 SPY_MISSION,intrigue,Send out the whisperers,none,1.0,spy_cost,4,0,,spy_mission,1,no,"Quiets rumors; costs gold."

@@ -24,5 +24,5 @@ func test_outcomes_narrated_deterministically() -> void:
 	var a := TemplateVoicer.render_outcomes(r, s, data)
 	var b := TemplateVoicer.render_outcomes(r, s, data)
 	assert_eq(a.size(), 1)
-	assert_string_contains(a[0]["text"], "muster")
+	assert_string_contains(a[0]["text"], "drill")
 	assert_eq(a, b)

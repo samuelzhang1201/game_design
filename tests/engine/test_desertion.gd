@@ -25,6 +25,7 @@ func _men(n: int) -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = str(n)
+	SuiteData.set_headcount(state, code, n)
 
 
 ## Morale and training as given; supplies for 30 days in hand (fed) or none.
@@ -34,9 +35,7 @@ func _cond(morale: int, training: int, fed: bool) -> void:
 	entry["morale"] = morale
 	entry["training"] = training
 	entry["supplies"] = ArmySystem.supply_use(repo, reg, state) if fed else 0
-	entry["wounded"] = 0
-	entry["dead"] = 0
-	entry["deserted"] = 0
+	SuiteData.set_losses(state, code, {"wounded": 0, "dead": 0, "deserted": 0})
 	entry["desert_rem"] = 0
 
 
@@ -60,11 +59,13 @@ func test_loss_by_conditions_and_law() -> void:
 	assert_eq(Desertion.multiplier_permille(repo, state, code), 1000)
 	assert_eq(Desertion.daily_loss(repo, state, code), 3)
 	assert_eq(int(state.regiments[code]["deserted"]), 3)
+	state.day += 1
 	_cond(10, 1, true)
 	_men(1000)
 	_law("lenient")
 	assert_eq(Desertion.multiplier_permille(repo, state, code), 2000)
 	assert_eq(Desertion.daily_loss(repo, state, code), 12)
+	state.day += 1
 	_cond(10, 1, false)
 	_law("hanging")
 	assert_eq(Desertion.multiplier_permille(repo, state, code), 400)
@@ -87,16 +88,17 @@ func test_small_unit_remainder() -> void:
 
 func test_no_fit_men() -> void:
 	_cond(10, 1, false)
-	state.regiments[code]["wounded"] = 1000
+	SuiteData.set_losses(state, code, {"wounded": 1000})
 	_law("lenient")
 	assert_eq(Desertion.daily_loss(repo, state, code), 0)
 	assert_eq(int(state.regiments[code]["deserted"]), 0)
 	assert_eq(int(state.regiments[code]["desert_rem"]), 0)
 	# many days at a huge rate never desert more than the fit men
-	state.regiments[code]["wounded"] = 0
+	SuiteData.set_losses(state, code, {"wounded": 0})
 	_men(10)
 	repo.balance["desert_permille_per_day"] = 1000.0
 	for i in 5:
+		state.day = i + 1
 		Desertion.daily_loss(repo, state, code)
 	assert_lte(int(state.regiments[code]["deserted"]), 10)
 	assert_eq(ArmySystem.fit_heads(10, state.regiments[code]), 10 - int(state.regiments[code]["deserted"]))
@@ -115,7 +117,7 @@ func test_fleet_untouched() -> void:
 	entry["morale"] = 0
 	entry["training"] = 0
 	entry["supplies"] = 0
-	entry["deserted"] = 0
+	SuiteData.set_losses(state, fleet, {"deserted": 0})
 	entry["desert_rem"] = 0
 	assert_eq(Desertion.daily_loss(repo, state, fleet), 0)
 	assert_eq(int(entry["deserted"]), 0)

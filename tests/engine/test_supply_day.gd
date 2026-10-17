@@ -136,6 +136,7 @@ func test_crown_then_lord_then_the_house_is_bought() -> void:
 	var row: Dictionary = s.army_roster[code]
 	for arm: String in repo.world_table("military", "unit_types"):
 		row[arm] = str(int(float(row.get(arm, 0))) * 4)
+	SuiteData.set_headcount(s, code, ArmySystem.headcount(repo, row))
 	var send := ArmySystem.day_bite(_use(), 5)
 	assert_gt(send, 2)
 	_stock(town, 1, 1, 100)
