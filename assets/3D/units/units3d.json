@@ -1,39 +1,42 @@
 {
  "archers": {
   "actions": {
+   "STANDBY": [
+    1,
+    154
+   ],
    "MARCH": [
-    0,
-    24
+    1,
+    37
+   ],
+   "SPRINT": [
+    1,
+    16
+   ],
+   "DRAW": [
+    1,
+    31
    ],
    "GARRISON": [
-    0,
-    150
+    1,
+    114
    ],
-   "ATTACK": [
-    0,
-    48
-   ],
-   "DEFEND": [
-    0,
-    80
-   ],
-   "STANDBY": [
-    0,
-    150
+   "DEATH": [
+    1,
+    72
    ]
   },
-  "bones": 67,
+  "bones": 73,
   "fps": 30,
-  "height_m": 1.853,
+  "height_m": 1.85,
   "kind": "humanoid",
   "label": "Archer",
-  "source": "Tripo 3D (owner, paid plan): the v2 T-pose generation auto-rigged by Tripo, the v1 bow and quiver put on; tools/units3d/archer_tripo/",
-  "stride_m": 2.0,
-  "tris": 21328,
+  "source": "Owner-provided ARP soldier and six FBX clips; tools/units3d/archer_arp/. Equipment exported separately and assembled in scenes/models/units/archers.tscn.",
+  "stride_m": 1.184335,
+  "tris": 381626,
   "weights": {
-   "body": "tripo",
-   "props": "rigid",
-   "bow": "graded"
+   "body": "corrected ARP skin, all six influences retained",
+   "equipment": "named skin binds; bow string sampled to DEF-string"
   }
  },
  "cavalry": {
