@@ -1,0 +1,3167 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Started Project initialization (5 steps)[39m[0m
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Scanning file structure...[39m[0m
+[  16% ] [90m[1mfirst_scan_filesystem[22m | Loading global class names...[39m[0m
+[  33% ] [90m[1mfirst_scan_filesystem[22m | Verifying GDExtensions...[39m[0m
+[  50% ] [90m[1mfirst_scan_filesystem[22m | Creating autoload scripts...[39m[0m
+[  66% ] [90m[1mfirst_scan_filesystem[22m | Initializing plugins...[39m[0m
+[38;2;255;99;71m[1mGDAIMCP::ERROR::[22m Binary files for GDAI MCP plugin are missing, so the plugin wont be loaded. Please re-install the plugin from [url=https://gdaimcp.com]https://gdaimcp.com or disable the plugin in Project Settings.[39m[0m
+[  83% ] [90m[1mfirst_scan_filesystem[22m | Starting file scan...[39m[0m
+[92m[ DONE ][39m [1mfirst_scan_filesystem[22m
+[0m
+[   0% ] [90m[1m_update_scan_actions[22m | Started Scanning actions... (7 steps)[39m[0m
+[   0% ] [90m[1m_update_scan_actions[22m | balance.csv[39m[0m
+[  12% ] [90m[1m_update_scan_actions[22m | character_traits.csv[39m[0m
+[  25% ] [90m[1m_update_scan_actions[22m | council_seats.csv[39m[0m
+[  37% ] [90m[1m_update_scan_actions[22m | founding_council.csv[39m[0m
+[  50% ] [90m[1m_update_scan_actions[22m | policy_actions_court_additions.csv[39m[0m
+[  62% ] [90m[1m_update_scan_actions[22m | tables.csv[39m[0m
+[  75% ] [90m[1m_update_scan_actions[22m | bad_balance.csv[39m[0m
+[92m[ DONE ][39m [1m_update_scan_actions[22m
+[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Started Loading editor (5 steps)[39m[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Loading editor layout...[39m[0m
+[  16% ] [90m[1mloading_editor_layout[22m | Loading docks...[39m[0m
+[  33% ] [90m[1mloading_editor_layout[22m | Reopening scenes...[39m[0m
+[  50% ] [90m[1mloading_editor_layout[22m | Loading central editor layout...[39m[0m
+[  66% ] [90m[1mloading_editor_layout[22m | Loading plugin window layout...[39m[0m
+[  83% ] [90m[1mloading_editor_layout[22m | Editor layout ready.[39m[0m
+[92m[ DONE ][39m [1mloading_editor_layout[22m
+[0m
+WARNING: 1 RID of type "CanvasItem" was leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2733)
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: 1 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[1m[INFO]:  [0musing [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+[4m
+
+res://tests/engine/test_action_system.gd
+[0m* test_unknown_action_rejected
+* test_unaffordable_rejected
+* test_cooldown_enforced
+* test_tax_adjust_moves_rate_with_reason
+* test_reward_changes_opinion_with_reason
+* test_bad_params_rejected
+* test_execute_applies_ideology_drift
+* test_the_pack_gives_the_crown_a_demesne_and_others_to_buy
+* test_buying_a_manor_needs_a_real_one_in_the_realm_and_the_gold
+* test_buying_moves_the_manor_pays_the_house_and_warms_it
+* test_selling_and_building_need_a_crown_manor
+* test_seizing_is_gated_and_costs_legitimacy_unrest_and_the_houses_regard
+* test_building_needs_a_province_the_crown_controls
+* test_turning_a_manor_to_a_chief_good
+* test_building_needs_a_free_slot_and_can_be_pulled_down
+* test_buying_goods_costs_the_spread_and_selling_pays_under_it
+* test_goods_orders_are_validated
+* test_building_spends_civil_goods_and_rushing_spends_gold
+* test_raising_levies_spends_strategic_goods
+* test_a_levy_on_an_empty_strategic_stock_is_refused
+* test_metric_cost_of_reads_the_rows_pool_charge
+* test_buildings_need_their_land_and_their_prerequisites
+[1m22/22 passed.
+[0m[4m
+
+res://tests/engine/test_agent_memory.gd
+[0m* test_new_campaign_starts_with_no_memories
+* test_remember_stores_what_was_said_and_who_heard_it
+* test_memory_is_per_character
+* test_memory_caps_at_the_balance_value_keeping_the_newest
+* test_remember_ignores_an_unknown_character
+* test_remember_ignores_empty_text
+* test_describe_for_is_prompt_ready_and_names_the_company
+* test_describe_for_is_empty_when_nothing_was_said
+* test_describe_for_renders_replies_and_other_speakers
+* test_memory_survives_save_round_trip
+* test_pre_feature_save_loads_with_no_memory
+[1m11/11 passed.
+[0m[4m
+
+res://tests/engine/test_army_clearance.gd
+[0m* test_halts_in_front_of_the_occupant_facing_it
+* test_halt_facing_on_a_slant
+* test_two_columns_to_one_point_the_second_halts_before_the_first
+* test_a_passer_by_goes_round_a_standing_unit
+* test_a_unit_inside_the_disc_is_let_go_only_while_it_walks_away
+* test_a_unit_walking_at_an_enemy_it_stands_inside_of_halts_on_the_spot
+* test_a_column_that_waits_two_days_stops_and_says_the_road_is_blocked
+* test_of_two_columns_waiting_on_each_other_the_later_code_gives_way
+* test_an_enemy_mid_road_halts_the_column_in_front_of_it
+* test_the_raiders_standing_units_are_enemies_too
+* test_a_foe_column_halts_before_a_crown_unit_and_faces_it
+* test_a_foe_standoff_survives_the_hosts_daily_reaim
+* test_a_crown_column_halting_at_a_standing_foe_attacks
+* test_a_new_march_clears_the_halt
+* test_march_ahead_shows_the_halt_without_writing
+* test_the_days_path_carries_the_corners_a_detour_splices_in
+* test_clearance_off_walks_through
+* test_a_village_is_touched_a_few_metres_past_clearance
+* test_battle_contact_still_holds_two_adjacent_cavalry
+* test_no_day_ends_nearer_than_the_pairs_clearance_over_many_approaches
+* test_the_opening_campaign_has_every_land_unit_clear_of_the_rest
+* test_a_raised_host_is_spread_round_its_assembly_point
+* test_spawn_stacks_when_the_rule_is_off
+* test_the_invasion_keeps_every_pair_clear_each_day_across_a_save
+* test_a_besieging_host_stands_at_the_town_within_days_of_sitting_down
+* test_a_detour_then_an_enemy_halt_keeps_the_drawn_corners
+[1m26/26 passed.
+[0m[4m
+
+res://tests/engine/test_army_conduct_day.gd
+[0m* test_day_order_and_events
+* test_desertion_news_once_a_month_and_big_once
+* test_desertion_clamp_end_to_end
+* test_fleet_and_foe_untouched
+* test_units_settle_apart_from_day_30
+* test_tick_settles_foraging_after_the_regiments_month
+* test_two_units_same_province_share_by_need
+* test_havoc_follower_takes_the_same_day_starter_first
+* test_havoc_follower_takes_the_same_day_starter_last
+* test_no_havoc_leaves_the_follower
+* test_twenty_four_months_twice_identical
+[1m11/11 passed.
+[0m[4m
+
+res://tests/engine/test_army_conduct_switch.gd
+[0m* test_allow_is_on_in_enemy_land
+* test_each_line_starts_a_forbid_unit
+* test_stop_needs_both
+* test_law_unit_under_forbid_is_rejudged
+* test_obey_command_lowers_the_lines
+* test_grey_land_only_at_zero_supply
+* test_grey_grievance_halves_with_protect_women
+* test_enemy_start_files_unlawful_no_grievance_no_hazard
+* test_none_and_home_never
+* test_incident_once_per_unit_per_month
+* test_mark_once
+* test_lay_hazard_is_idempotent
+* test_lay_hazard_again_after_it_ends
+* test_havoc_spreads_unless_forbidden
+* test_follower_not_restarted
+[1m15/15 passed.
+[0m[4m
+
+res://tests/engine/test_army_conduct_take.gd
+[0m* test_take_adds_supplies_and_strips
+* test_take_never_past_the_carry_cap
+* test_stripped_land_yields_less
+* test_hazard_past_half_stripped
+* test_hazard_waits_for_the_protected_line
+* test_bare_news_once_per_crossing
+* test_month_settlement_full_month
+* test_month_settlement_partial_month
+* test_settle_caps_morale_and_floors_training
+* test_training_loss_stops_at_the_floor
+* test_training_under_the_floor_is_kept
+* test_a_day_that_takes_nothing_is_no_forage_day
+* test_province_recovery_waits_for_the_month_end
+* test_settle_runs_after_marching_home
+* test_recovery_erases_zeros
+* test_settle_drops_old_marks
+* test_hazard_drags_the_march_too
+* test_stripping_is_floored_per_taker
+* test_hazard_laid_when_already_past_the_line
+* test_bare_news_with_protect_church_on
+[1m20/20 passed.
+[0m[4m
+
+res://tests/engine/test_army_data.gd
+[0m* test_every_biome_of_the_pack_names_a_terrain
+* test_every_arm_has_matchups
+* test_training_grades_run_from_elite_to_militia
+* test_balance_and_icons_are_present
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_army_days.gd
+[0m* test_days_in_hand_is_supplies_over_a_thirtieth_of_the_month
+* test_the_supply_score_is_full_from_the_low_mark_up
+* test_the_stores_bar_reads_days_against_the_carried_load
+* test_a_heavier_load_marches_slower
+* test_a_new_regiment_starts_with_twenty_days_and_the_default_load
+* test_an_old_entry_gets_a_load_and_is_clamped_to_thirty_days
+* test_hunger_costs_morale_every_day_under_five_days
+* test_a_regiment_that_eats_nothing_never_starves
+* test_ensure_twice_is_ensure_once
+[1m9/9 passed.
+[0m[4m
+
+res://tests/engine/test_army_ground.gd
+[0m* test_rings_have_six_k_slots_starting_east_counter_clockwise
+* test_slot_metres_on_the_lattice
+* test_start_rings_are_the_tables
+* test_a_taken_point_blocks_the_sum_of_the_two_radii_round_it
+* test_with_no_clearance_a_taken_point_blocks_half_a_pitch
+* test_the_sea_is_never_free
+* test_free_slot_starts_at_the_arms_ring
+* test_the_rings_a_reach_clears
+* test_the_first_camp_round_the_capital_is_outside_its_reach
+* test_the_field_centre_goes_to_the_first
+* test_a_town_centre_is_never_a_camp_slot
+* test_no_free_slot_returns_none
+* test_two_slots_in_order_are_distinct
+* test_the_seat_and_the_camp_at_the_start
+* test_works_and_morale_go_to_the_seat_supply_to_the_camp
+* test_marching_out_empties_the_seat_and_the_camp_refills_it_once_clear
+* test_first_come_first_in
+* test_a_foreign_town_is_the_field
+* test_a_unit_with_no_free_slot_stands_where_it_arrived
+* test_a_town_among_blocked_ground_still_camps_its_arrivals
+* test_a_halt_in_a_towns_reach_camps_by_it
+* test_a_lost_town_loses_its_seat
+* test_a_state_with_no_roster_reads_the_packs_seats
+[1m23/23 passed.
+[0m[4m
+
+res://tests/engine/test_army_height.gd
+[0m* test_height_factor
+* test_elevation_of_reads_the_cell_and_a_fleet_is_at_zero
+* test_supply_use_goes_up_by_tier
+* test_terrain_follows_the_tier_lines
+* test_battle_odds_swap_symmetrically_with_the_ground
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_army_hold_days.gd
+[0m* test_five_days_held_make_a_camp_and_the_count_is_capped
+* test_a_march_a_stance_or_a_battle_resets_the_count
+* test_no_camp_beside_a_town_and_the_count_saves_as_an_int
+[1m3/3 passed.
+[0m[4m
+
+res://tests/engine/test_army_march.gd
+[0m* test_a_new_campaign_seats_every_regiment_where_the_pack_put_it
+* test_the_pack_measure_is_what_a_metre_means
+* test_a_day_of_marching_covers_the_regiments_own_pace
+* test_it_stops_dead_on_the_spot_it_was_sent_to_and_garrisons
+* test_garrison_halts_a_column_where_it_has_got_to
+* test_the_clock_marches_it_a_day_at_a_time
+* test_a_march_is_even_and_ends_as_its_last_day_ends
+* test_an_arrival_has_its_headline
+* test_the_months_last_day_is_a_day_on_the_road_too
+* test_the_same_orders_from_the_same_save_give_the_same_march
+* test_an_old_save_with_no_position_is_seated_where_the_pack_put_it
+* test_the_orders_validate_against_the_regiment_and_the_ground
+* test_marching_into_the_sea_is_refused
+* test_the_order_runs_and_charges_its_cost
+* test_the_weather_where_it_stands_scales_its_day
+* test_in_rain_the_card_the_days_out_and_the_ruler_agree
+[1m16/16 passed.
+[0m[4m
+
+res://tests/engine/test_army_morale.gd
+[0m* test_the_mark_rises_with_the_stores
+* test_morale_drifts_toward_its_mark_and_stops_there
+* test_a_fed_regiment_climbs_a_starving_one_sinks
+* test_the_words_name_the_stores
+* test_the_morale_row_names_the_stores
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_army_power.gd
+[0m* test_the_float_is_deterministic_bounded_and_monthly
+* test_training_grades_at_their_edges
+* test_power_follows_training_morale_and_wounds
+* test_the_smallest_fleet_has_power_and_training_still_raises_it
+* test_strength_grades_against_the_mean_of_its_kind
+* test_a_lone_kind_is_average
+* test_battle_odds_placeholder
+* test_power_reads_the_ground_the_regiment_stands_on_now
+* test_power_is_power_on_its_own_ground
+* test_archers_alone_on_hills_by_the_terrain_table
+* test_fit_heads_takes_the_dead_and_the_wounded
+* test_fit_permille_and_power_count_the_dead
+* test_a_fresh_regiment_has_no_dead_and_old_saves_default_to_none
+* test_the_dead_never_recover
+* test_power_of_arms_is_worked_by_hand
+* test_power_on_is_power_of_arms_with_the_regiments_own_state
+[1m16/16 passed.
+[0m[4m
+
+res://tests/engine/test_army_route.gd
+[0m* test_a_march_without_waypoints_keeps_no_route
+* test_a_march_through_waypoints_keeps_the_sampled_curve_ahead
+* test_the_column_walks_its_route_leg_by_leg
+* test_march_days_along_a_route_are_the_days_it_walks
+* test_the_day_ahead_preview_never_touches_the_live_route
+* test_a_load_marches_at_its_own_pace
+* test_a_halt_drops_the_route
+* test_a_route_survives_a_save_and_walks_on_the_same
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_army_seat.gd
+[0m* test_a_camped_unit_may_take_the_seat
+* test_the_seated_unit_and_a_field_unit_are_refused
+* test_the_courier_swaps_the_two
+* test_seat_order_on_an_empty_seat_takes_it
+* test_it_lapses_when_the_unit_has_left
+* test_a_seat_courier_never_moves_the_arrival
+* test_take_seat_swaps_and_refuses_a_field_unit
+* test_refill_prefers_infantry_then_the_earlier_code_then_the_larger
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_army_speed.gd
+[0m* test_every_arm_has_a_pace
+* test_readiness_is_the_weighted_mean_of_the_four_scores
+* test_supplies_score_by_days_in_hand
+* test_a_regiment_marches_at_its_slowest_arm
+* test_the_pace_in_tenths_of_a_km
+* test_a_real_regiment_of_the_player_has_a_speed
+* test_hunger_and_low_morale_slow_the_march
+* test_the_regiments_detail_card_carries_its_march
+* test_the_bars_are_readiness_and_supply
+* test_a_foreign_regiment_reads_as_it_would_start
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_army_split.gd
+[0m* test_shares_are_even_and_larger_first
+* test_every_unit_is_one_arm_and_within_the_cap
+* test_the_count_is_the_packs_own
+* test_men_are_conserved_per_arm_and_kingdom
+* test_codes_and_labels
+* test_one_royal_train_a_gunned_kingdom_at_its_capital
+* test_one_royal_household_a_kingdom_from_the_regiment_nearest_the_capital
+* test_no_two_standing_units_share_ground
+* test_only_the_seat_stands_within_its_towns_reach
+* test_at_most_one_seat_a_town_held_by_its_holder
+* test_the_seat_goes_to_the_most_infantry
+* test_deterministic_and_copied
+* test_a_new_campaign_carries_the_roster_and_seats
+* test_lists_put_the_crown_first_then_group_by_regiment
+* test_a_kingdom_with_no_capital_keeps_its_guns
+[1m15/15 passed.
+[0m[4m
+
+res://tests/engine/test_army_stance_order.gd
+[0m* test_the_order_is_a_real_order_with_a_cost
+* test_a_stance_must_be_a_row_of_the_table
+* test_a_foe_takes_no_stance
+* test_the_chest_must_pay_the_courier
+* test_the_stance_rides_by_courier_and_waits_for_the_day_to_end
+* test_stance_order_lands_after_day_end_and_applies_next_day
+* test_an_old_save_regiment_is_steady
+* test_stance_orders_are_not_manual_map_menu_choices
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_army_supply_data.gd
+[0m* test_the_new_balance_keys_exist
+* test_a_gold_of_goods_is_a_whole_number_of_units
+* test_the_carry_loads_run_10_to_30_and_slow_as_they_grow
+* test_the_supply_menu_rows_and_the_hostile_stances_load
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_army_system.gd
+[0m* test_a_new_campaign_seeds_only_the_players_regiments
+* test_a_fresh_regiment_has_the_days_it_was_given
+* test_wound_recovery_is_a_share_with_a_floor_of_one
+* test_the_month_returns_wounded_and_the_days_eat_the_supplies
+* test_a_day_bites_its_share_and_the_month_sums_exactly
+* test_the_yellow_bar_falls_day_by_day
+* test_supply_use_is_the_base_scaled_by_the_cells_height_tier
+* test_wounded_never_exceed_the_headcount
+* test_training_is_capped_at_100
+* test_state_of_reads_without_writing
+* test_the_state_survives_a_save
+* test_the_tick_settles_the_regiments
+[1m12/12 passed.
+[0m[4m
+
+res://tests/engine/test_army_terrain.gd
+[0m* test_cell_at_finds_the_cell_it_stands_in
+* test_cell_at_agrees_with_an_uncached_search_everywhere
+* test_height_makes_mountains_and_hills
+* test_low_ground_takes_its_biomes_terrain
+* test_a_fleet_is_at_sea
+* test_the_modifier_table
+* test_a_regiment_is_in_the_province_it_marched_into
+* test_a_fleet_keeps_its_home_province
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_army_towns.gd
+[0m* test_a_regiment_is_in_a_town_within_its_reach
+* test_a_capital_reaches_further_than_a_village
+* test_the_nearer_town_wins_where_two_reaches_meet
+* test_a_fleet_is_in_no_town
+* test_the_works_are_the_best_the_town_has
+* test_only_the_side_that_holds_the_town_gets_its_works
+* test_a_town_follows_its_province_when_it_changes_hands
+* test_town_defence_by_works_and_arm
+* test_the_works_follow_the_regiment
+* test_a_garrison_is_the_held_town_it_stands_in
+* test_a_halt_in_the_open_is_a_field_camp
+* test_a_road_is_found_within_its_reach_and_not_beyond
+* test_the_ground_sets_the_pace
+* test_a_column_on_a_road_marches_faster_than_one_off_it
+* test_the_days_out_are_the_days_it_takes
+* test_every_land_regiment_starts_in_a_town_its_kingdom_holds
+* test_every_live_land_unit_starts_camped_by_a_town_its_kingdom_holds
+* test_the_household_camps_by_the_capital
+[1m18/18 passed.
+[0m[4m
+
+res://tests/engine/test_artisans.gd
+[0m* test_the_speed_grows_with_the_townsfolk_and_is_capped
+* test_a_master_of_works_never_slows_the_artisans_below_the_empty_seat
+* test_an_uncontrolled_province_builds_at_the_plain_pace
+* test_a_work_finishes_sooner_with_artisans
+* test_an_old_work_keeps_its_days
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_battle_data.gd
+[0m* test_outcomes_tile_the_whole_range
+* test_every_stance_row_complete
+* test_doctrines_cover_every_host_role
+* test_balance_keys_present
+* test_raid_hosts_name_real_regiments
+* test_state_of_reads_foes
+* test_foes_never_in_player_iteration
+* test_foe_fields_survive_the_save
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_battle_lifecycle.gd
+[0m* test_field_contact_starts_one_battle
+* test_no_contact_no_battle
+* test_town_contact_needs_a_garrison
+* test_a_sieging_host_fights_only_on_its_assault_day
+* test_round_matches_hand_computed_tier
+* test_round_uses_the_outcome_table_tier_of_the_odds
+* test_hold_loses_heart_slower
+* test_battle_ends_after_max_rounds_or_rout
+* test_the_pause_is_exactly_battle_disengage_days
+* test_evade_stance_leaves_on_first_contact
+* test_hold_stance_never_retreats
+* test_steady_retreats_below_retreat_odds
+* test_a_fall_back_with_no_town_is_not_caught_again_next_day
+* test_reinforcement_joins_and_is_capped
+* test_march_away_mid_battle_removes_unit
+* test_battle_with_one_side_emptied_ends
+* test_battle_state_is_deterministic
+* test_the_battle_path_leaves_game_rng_alone
+* test_a_battle_saves_whole_numbers_and_loads_back
+[1m19/19 passed.
+[0m[4m
+
+res://tests/engine/test_battle_report.gd
+[0m* test_battle_day_writes_one_missive
+* test_two_battles_in_a_day_are_one_letter
+* test_calm_day_writes_nothing
+* test_a_delivered_stance_takes_hold_the_day_the_courier_lands
+* test_report_numbers_come_from_the_engine
+* test_every_morale_change_carries_a_reason
+* test_a_regiment_that_leaves_is_named_with_why
+* test_the_letter_gives_no_exact_foe_figure
+* test_report_text_uses_templates_and_no_realm_names
+* test_the_ending_is_told_from_the_players_side
+* test_battle_letters_are_capped_apart
+* test_the_cap_key_exists
+* test_under_arms_does_not_count_the_dead
+[1m13/13 passed.
+[0m[4m
+
+res://tests/engine/test_battle_resolve.gd
+[0m* test_odds_permille
+* test_eff_permille
+* test_tier_edges
+* test_split_losses
+* test_largest_remainder
+* test_roll_is_deterministic_and_order_free
+* test_roll_leaves_game_rng_alone
+* test_side_power_sums_and_stance_scales_the_defender_only
+* test_apply_round_conserves_heads
+* test_apply_round_spreads_a_side_by_fit_heads
+* test_apply_round_zero_heads_no_divide
+* test_apply_round_hits_a_foe_in_its_own_state
+* test_morale_stays_within_bounds
+* test_a_foe_stands_where_its_own_state_says
+* test_side_power_scales_by_height_against_the_mean_of_the_enemy
+* test_a_tie_goes_to_the_earlier_code_whatever_order_the_side_is_listed_in
+[1m16/16 passed.
+[0m[4m
+
+res://tests/engine/test_battle_save.gd
+[0m* test_foes_ai_hosts_battles_round_trip
+* test_no_float_in_the_values_or_the_encoding
+* test_save_is_stable
+* test_blocked_day_transaction_round_trip_preserves_cursor_and_journal
+* test_real_substep_encounter_save_resumes_the_same_round_once
+* test_old_save_without_keys_loads
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_belief.gd
+[0m* test_impossible_claim_scores_zero_whatever_the_plausibility
+* test_trusted_listener_believes_a_plausible_claim
+* test_paranoid_listener_discounts_the_same_claim
+* test_corroboration_raises_belief
+* test_contradiction_lowers_belief
+* test_belief_is_clamped_to_the_range
+* test_result_always_carries_a_reason
+* test_trusting_listener_inflates_the_same_claim
+* test_repetition_does_not_corroborate
+[1m9/9 passed.
+[0m[4m
+
+res://tests/engine/test_calendar.gd
+[0m* test_first_day_of_campaign
+* test_season_blocks_are_three_ticks
+* test_year_boundary
+* test_day_within_tick_advances
+* test_month_label_is_unique_within_a_season
+* test_date_of_day_names_an_absolute_day
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_chapter_zero.gd
+[0m* test_the_chapter_is_all_there
+* test_no_chapter_beat_is_model_voiced
+* test_chapter_beats_are_not_in_the_random_pool
+* test_every_beat_has_an_authored_scene_a_title_and_an_outcome_line
+* test_no_scene_names_a_kingdom
+* test_effect_ops_are_known_and_of_the_right_arity
+* test_world_paths_are_schema_listed
+* test_opinion_and_relationship_targets_resolve
+* test_triggers_and_requires_parse
+* test_every_schedule_and_branch_target_exists
+* test_every_branch_table_ends_in_an_always_rule
+* test_every_beat_is_reachable_from_the_opener
+* test_no_beat_can_gate_every_choice_off
+* test_hush_money_cannot_buy_the_bond
+* test_every_beat_has_an_illustration_planned
+* test_a_new_reign_opens_on_the_first_council
+* test_both_sides_of_every_fork_are_reachable
+* test_the_chain_keeps_the_seasons_it_says_it_keeps
+* test_the_unobstructed_chain_counts_the_year_in_autumn
+* test_the_branch_op_takes_the_first_matching_rule
+* test_the_ending_follows_the_four_figures
+* test_every_path_terminates_in_one_of_the_four_endings
+[1m22/22 passed.
+[0m[4m
+
+res://tests/engine/test_character_factory.gd
+[0m* test_builds_full_roster_with_five_seated
+* test_roster_roles_carry_taxonomy_and_role_metrics
+* test_trait_modifiers_applied
+* test_opinion_change_logs_reason_and_clamps
+* test_character_round_trip
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_character_tools.gd
+[0m* test_marshal_kingdom_tools_are_his_seats_implemented_actions
+* test_unimplemented_advises_on_codes_are_not_listed
+* test_unseated_courtier_has_personal_tools_only
+* test_personal_tools_never_repeat_a_kingdom_tool
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_claims.gd
+[0m* test_believed_claim_is_recorded_open_and_becomes_a_known_fact
+* test_disbelieved_claim_is_recorded_but_teaches_nothing
+* test_impossible_claim_is_disbelieved_and_never_open
+* test_open_claims_lists_only_believed_unresolved_ones
+* test_fact_codes_are_unique_across_claims
+* test_claims_survive_save_round_trip
+* test_pre_feature_save_loads_with_no_claims
+* test_nothing_resolves_while_the_truth_stays_hidden
+* test_lie_is_caught_when_the_listener_learns_the_truth
+* test_caught_lie_costs_relationship_sentiment_with_a_reason
+* test_caught_lie_mints_a_betrayal_fact_the_wronged_character_knows
+* test_truth_told_is_rewarded_and_mints_nothing
+* test_a_claim_resolves_only_once
+* test_repeated_true_claims_from_the_same_speaker_do_not_resolve_each_other
+* test_caught_lie_is_unlearned
+* test_tick_engine_resolves_claims_and_reports_them
+* test_reckoning_is_deterministic_across_identical_states
+[1m17/17 passed.
+[0m[4m
+
+res://tests/engine/test_claude_md_size.gd
+[0m* test_root_guide_stays_short
+* test_root_names_its_nested_guides
+* test_each_nested_guide_exists_and_stays_short
+* test_each_topic_guide_a_nested_guide_names_exists
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_concerns_suggestions.gd
+[0m* test_no_concerns_when_healthy
+* test_low_grain_flags_steward_sorted_by_severity
+* test_suggestions_valid_and_bounded
+* test_quiet_tick_still_offers_something
+* test_suggestions_carry_their_source
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_conduct_data.gd
+[0m* test_balance_keys_exist
+* test_law_is_the_thirteenth_military_law
+* test_effect_rows
+* test_every_conduct_word_has_its_placeholders
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_conduct_lines.gd
+[0m* test_word_of_at_its_thresholds
+* test_word_of_a_province_with_no_food_is_stripped
+* test_word_of_winter_is_thin
+* test_stripped_bare_list
+* test_the_intel_ink_names_a_stripped_province
+* test_folio_rows_only_when_set
+* test_under_arms_excludes_the_deserted
+* test_under_arms_never_below_nothing
+* test_the_card_names_the_state_and_the_deserted
+* test_kingdom_card_grievance_only_when_above_nothing
+* test_slip_in_enemy_land
+* test_slip_in_grey_land
+* test_slip_at_home
+* test_slip_with_a_unit_chosen
+* test_words_all_used
+* test_words_name_no_kingdom
+[1m16/16 passed.
+[0m[4m
+
+res://tests/engine/test_conduct_missives.gd
+[0m* test_letter_for_each_event_type
+* test_stripped_bare_event_names_the_last_taker
+* test_engine_files_one_letter_a_day
+* test_old_save_plays_a_month
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_conduct_state.gd
+[0m* test_fit_heads_takes_the_deserted
+* test_new_maps_round_trip
+* test_old_save_loads_empty
+[1m3/3 passed.
+[0m[4m
+
+res://tests/engine/test_courier_batch.gd
+[0m* test_the_march_batch_is_one_courier_one_fee
+* test_a_courier_on_the_road_takes_no_more_orders
+* test_a_lone_supply_point_rides_to_the_town_unless_a_courier_waits
+* test_a_multi_order_courier_survives_the_save
+* test_an_old_save_courier_loads_with_orders_of_one
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_courier_card.gd
+[0m* test_the_card_says_what_he_carries_and_when
+* test_the_weather_reads_short_on_his_card
+* test_a_gone_courier_has_no_card
+* test_province_and_manor_cards_carry_the_weather
+* test_every_weather_icon_has_a_row
+* test_the_card_wears_its_kinds_painting_or_the_foul_weather_one
+* test_every_courier_painting_is_installed
+[1m7/7 passed.
+[0m[4m
+
+res://tests/engine/test_courier_data.gd
+[0m* test_the_courier_kinds
+* test_the_road_speeds
+* test_every_season_and_tier_has_odds
+* test_every_weather_kind_has_a_speed
+* test_the_balance_keys
+* test_the_seed_is_readable_and_survives_a_save
+* test_the_season_of_an_absolute_day
+[1m7/7 passed.
+[0m[4m
+
+res://tests/engine/test_courier_dispatch.gd
+[0m* test_a_courier_rides_from_the_capital_to_the_regiment
+* test_most_of_the_way_is_on_the_roads
+* test_the_capital_lost_he_rides_from_the_most_populous_town_of_the_first_held_province
+* test_need_along_a_path_by_hand
+* test_the_estimate_is_the_dispatched_couriers
+* test_a_fleet_takes_no_courier
+* test_his_road_does_not_begin_where_he_stands
+* test_a_leg_off_the_land_is_a_sea_crossing_by_hand
+* test_far_from_the_network_he_rides_off_road_to_the_capital
+[1m9/9 passed.
+[0m[4m
+
+res://tests/engine/test_courier_orders.gd
+[0m* test_the_order_rides_and_the_regiment_waits
+* test_garrison_rides_too
+* test_the_garrison_window_is_the_fee_and_the_orders_own_cost
+* test_the_march_window_is_the_fee_and_the_orders_own_cost
+* test_a_fleets_orders_apply_at_once
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_courier_ride.gd
+[0m* test_a_days_ride_by_hand
+* test_delivery_applies_the_order_on_that_day_and_not_before
+* test_an_older_order_arriving_late_is_set_aside
+* test_a_vanished_regiment_leaves_the_orders_undelivered
+* test_the_fuse
+* test_bad_weather_slows_him_and_is_announced_once_a_spell
+* test_a_courier_catches_a_column_on_the_march
+* test_a_ride_survives_a_save_mid_road
+* test_he_is_seen_to_leave_the_capital_once
+* test_a_courier_not_from_the_capital_just_rides
+* test_headlines
+* test_ride_ahead_previews_the_day_exactly_and_writes_nothing
+* test_ride_ahead_on_the_delivery_day_ends_on_the_column
+* test_an_order_delivered_today_is_marched_on_from_tomorrow
+* test_day_ahead_of_a_garrison_is_where_it_stands
+* test_the_shown_days_are_day_ends_through_the_tick_engine
+* test_a_redirect_delivered_on_a_march_day_keeps_the_old_walk_for_today
+* test_a_redirect_rebuilds_tomorrows_waypoint_route_from_todays_final_position
+* test_the_arrival_day_is_the_ride_and_then_the_march
+[1m19/19 passed.
+[0m[4m
+
+res://tests/engine/test_courier_ways.gd
+[0m* test_a_leg_over_water_rides_at_the_water_s_pace
+* test_a_courier_rides_the_river
+* test_his_last_leg_goes_round_a_scarp_to_the_moved_column
+[1m3/3 passed.
+[0m[4m
+
+res://tests/engine/test_data_csv_shape.gd
+[0m* test_every_data_csv_row_matches_its_header_column_count
+* test_no_data_csv_names_a_res_path_but_the_packs
+[1m2/2 passed.
+[0m[4m
+
+res://tests/engine/test_data_layout.gd
+[0m* test_every_csv_on_disk_is_indexed
+* test_balance_files_sit_in_indexed_folders
+* test_no_balance_key_repeats
+* test_engine_reads_no_screen_key
+* test_no_flat_data_paths_remain_in_code
+* test_no_flat_data_paths_remain_in_guides
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_data_layout_loader.gd
+[0m* test_table_path_resolves_through_the_index
+* test_unknown_table_sets_last_error
+* test_table_folders_are_sorted_and_distinct
+* test_balance_merges_every_folder
+* test_duplicate_key_fails_naming_both_files
+* test_balance_reads_crlf_and_bom
+* test_missing_index_fails_naming_it
+* test_index_passes_when_every_table_is_on_disk
+* test_index_row_without_its_file_fails_naming_it
+* test_folder_without_balance_is_skipped
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_data_repository.gd
+[0m* test_loads_real_data_dir
+* test_malformed_row_fails_loud_with_location
+* test_founding_council_truncated_row_fails_loud
+[1m3/3 passed.
+[0m[4m
+
+res://tests/engine/test_day_resolution.gd
+[0m* test_acknowledge_is_idempotent
+* test_begin_has_durable_transaction_defaults
+* test_saved_protocol_is_validated_before_resume
+* test_substep_movement_conserves_daily_metres
+* test_non_divisible_substep_budgets_use_the_entire_daily_allowance
+* test_saved_movement_cursor_accumulates_and_survives_json
+* test_a_last_day_arrival_waits_for_its_final_fixed_substep
+* test_short_diagonal_arrival_settles_instead_of_stalling
+* test_zero_daily_pace_does_not_move_in_substeps
+* test_encounter_blocks_before_losses_and_resumes_after_roundtrip
+* test_second_battle_does_not_replay_first
+* test_later_substep_reinforcement_joins_after_round_and_fights_next_day
+* test_month_end_blocks_before_settlement
+* test_legacy_advance_saves_its_month_compatibility_intent_once
+* test_legacy_advance_blocked_transaction_keeps_month_intent_across_json
+* test_ordinary_day_transaction_keeps_its_boundary_when_advance_resumes_it
+[1m16/16 passed.
+[0m[4m
+
+res://tests/engine/test_deals_table.gd
+[0m* test_deals_csv_exists_and_parses_with_expected_columns
+* test_every_deal_resolves_its_good_and_its_market_or_burg_party
+* test_the_repository_loads_every_deal_in_file_order
+[1m3/3 passed.
+[0m[4m
+
+res://tests/engine/test_defeat.gd
+[0m* test_treasury_hit
+* test_treasury_hit_is_whole_gold_rounded_down
+* test_treasury_never_goes_negative_from_a_loss
+* test_morale_hit_has_a_reason
+* test_every_councillor_opinion_change_has_a_reason
+* test_loss_event_is_scheduled_and_text_names_no_realm
+* test_every_war_beat_is_one_the_engine_schedules
+* test_a_lost_town_never_delays_the_chain
+* test_triggers_once_per_loss
+* test_capture_pays_the_cost_of_the_loss
+* test_letter_line_drops_a_zero_figure
+* test_recapture_refunds_nothing
+* test_campaign_continues_after_losing_a_town
+* test_old_save_has_no_losses
+[1m14/14 passed.
+[0m[4m
+
+res://tests/engine/test_desertion.gd
+[0m* test_conditions_counts_each_line
+* test_loss_by_conditions_and_law
+* test_small_unit_remainder
+* test_no_fit_men
+* test_fleet_untouched
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_determinism.gd
+[0m* test_twin_runs_identical
+* test_save_load_mid_run_changes_nothing
+* test_different_seeds_diverge
+[1m3/3 passed.
+[0m[4m
+
+res://tests/engine/test_development_ai.gd
+[0m* test_ai_steps_toward_target
+* test_step_follows_the_balance_key
+* test_negative_preference_steps_down
+* test_zero_preference_holds_at_start
+* test_realm_without_ruler_holds_and_does_not_error
+* test_ruler_lookup_uses_kingdom_and_crowned_head
+* test_the_three_rulers_differ
+* test_same_seed_same_scores_after_twelve_months
+* test_ai_lines_carry_reasons
+* test_foreign_lines_are_not_the_players_outcome
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_development_data.gd
+[0m* test_axes_cover_both_axes_and_four_tiers
+* test_tier_effect_rows_are_well_formed
+* test_trait_columns_present
+* test_balance_keys_exist
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_development_drift.gd
+[0m* test_drift_sums_law_rows_in_file_order
+* test_decay_never_overshoots_start
+* test_untouched_realm_at_start_logs_nothing
+* test_pinned_at_bounds_logs_no_zero_line
+* test_default_laws_drift_nothing
+* test_settle_month_runs_in_tick
+* test_dev_channel_does_not_touch_metrics
+[1m7/7 passed.
+[0m[4m
+
+res://tests/engine/test_development_effects.gd
+[0m* test_month_lines_follow_confirmed_tier
+* test_cavalry_upkeep_whole_gold
+* test_no_cavalry_no_upkeep_line
+* test_arm_permille_sums_and_floors
+* test_power_of_arms_scales_one_arm
+* test_ranged_penalty_hits_archers_only
+* test_arm_permille_without_state_is_all_1000
+* test_flag_and_unlocked_by_tier
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_development_events.gd
+[0m* test_ten_events_with_the_agreed_shape
+* test_every_dev_event_resolves_in_random_events_md
+* test_each_event_has_a_reachable_trigger_flag
+* test_crossing_makes_the_event_eligible_once
+* test_each_tier_up_event_follows_its_own_flag
+* test_oscillation_inside_hysteresis_does_not_refire
+* test_decline_event_fires_on_fall
+* test_monthly_foreign_step_raises_the_flag_and_the_event
+* test_no_prose_names_a_kingdom
+* test_shipped_roster_reaches_tier_one_in_a_year
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_development_honour.gd
+[0m* test_flag_off_below_tier
+* test_executing_prisoners_refused_at_honour_bound
+* test_quarter_refuse_refused_at_honour_bound
+* test_other_laws_unaffected
+* test_resend_of_a_bound_decree_is_refused
+* test_bound_options_come_from_data
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_development_preference.gd
+[0m* test_preference_sums_and_clamps
+* test_decree_opinion_for_favouring_and_opposing_ministers
+* test_decree_reason_is_nonempty
+* test_undecreed_or_neutral_law_changes_no_opinion
+* test_preference_is_not_in_save_state
+* test_law_set_orders_carry_the_opinion_in_drift
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_development_state.gd
+[0m* test_seed_gives_every_realm_start_scores_and_tier_zero
+* test_tier_for_hysteresis
+* test_move_clamps_and_returns_applied_delta
+* test_move_sets_crossing_flag_once_per_crossing
+* test_save_round_trip_keeps_development
+* test_old_save_without_development_loads_seeded
+* test_development_log_is_capped_and_keeps_the_newest
+[1m7/7 passed.
+[0m[4m
+
+res://tests/engine/test_elevation.gd
+[0m* test_metres_from_the_cell_height
+* test_metres_of_a_cell_reads_its_height
+* test_tier_edges
+* test_the_table_is_read_highest_first
+* test_the_tiers_match_the_biome_bands
+* test_extremes_on_a_strip
+* test_a_plateau_keeps_one_high_point
+* test_landmarks_on_the_pack
+* test_the_lod_follows_prominence
+* test_an_empty_result_is_cached_too
+* test_a_name_override_wins
+* test_local_edge
+* test_an_override_never_collides_with_a_more_prominent_name
+[1m13/13 passed.
+[0m[4m
+
+res://tests/engine/test_enemy_ai_targets.gd
+[0m* test_score_formula
+* test_overlap_is_a_share_of_the_score_before_it
+* test_target_value_adds_the_town_bonus_of_the_doctrine
+* test_rich_weak_beats_rich_strong
+* test_raider_prefers_undefended_manor_main_prefers_town
+* test_rank_ties_go_to_the_earlier_id_and_nothing_positive_is_no_target
+* test_a_target_another_host_holds_is_discounted
+* test_candidates_are_the_players_within_reach
+* test_a_target_beyond_the_hosts_supplies_is_no_candidate
+* test_ai_sees_only_what_is_in_sight
+* test_think_sets_a_target_and_marches_the_whole_host_at_once
+* test_think_picks_what_rank_picks_over_every_candidate
+* test_two_hosts_do_not_pick_the_same_target
+* test_no_candidates_withdraws
+* test_think_interval
+* test_same_save_same_target
+* test_reserve_follows_main
+* test_engage_threshold
+* test_retreat_on_low_morale_and_on_hunger
+* test_a_beaten_host_retreats
+* test_arrival_at_a_garrisoned_town_sits_down_to_a_siege
+* test_arrival_at_an_undefended_manor_raids_it
+* test_arrival_at_an_ungarrisoned_town_raids_it
+* test_arrival_at_a_lost_target_chooses_again
+* test_no_arrival_while_every_column_is_still_on_the_road
+* test_raid_begins_when_the_first_column_reaches_the_manor
+* test_siege_begins_with_the_first_column_and_no_lone_battle
+* test_a_taken_target_is_banned_however_rich
+* test_a_host_reaching_a_town_another_besieges_rethinks
+* test_a_rethinking_host_halts_and_fights_nothing_that_day
+* test_reserve_joins_its_main_hosts_siege
+* test_think_never_takes_a_target_another_host_holds
+* test_town_cells_follow_the_map
+* test_reserve_follows_main_every_day
+* test_a_halted_column_of_an_advancing_host_marches_on
+* test_a_host_in_the_field_eats_a_day_and_an_assembling_one_does_not
+* test_a_month_in_the_field_eats_exactly_the_months_use
+* test_the_minds_are_deterministic
+* test_think_withdraw_is_an_event
+* test_the_march_walk_stops_at_the_cap
+[1m40/40 passed.
+[0m[4m
+
+res://tests/engine/test_enemy_invasion.gd
+[0m* test_rumour_arrives_before_the_invasion
+* test_rumour_templates_spell_no_kingdom
+* test_warnings_are_once_and_only_for_a_campaign_with_hosts
+* test_scout_report_names_a_credible_estimate
+* test_the_minds_run_once_a_day_through_the_tick
+* test_foes_withdraw_when_nothing_is_worth_it
+* test_invasion_runs_headless_for_thirty_five_days
+    invasion: modes ["ASSEMBLE", "ADVANCE", "RAID", "RETREAT"], targets { "raid_main": "redckingin", "raid_raiders": "maldock_2", "raid_reserve": "redckingin" }, battles 2, moved 42
+* test_two_runs_from_one_save_are_identical
+* test_save_and_load_mid_invasion_changes_nothing
+* test_the_minds_and_their_letters_draw_no_random_number
+* test_a_regiment_on_the_hosts_road_is_fought_on_the_day_loop
+* test_a_garrisoned_target_is_besieged_on_arrival_without_a_battle
+    siege of redckingin begun on day 17
+[1m12/12 passed.
+[0m[4m
+
+res://tests/engine/test_enemy_spawn.gd
+[0m* test_a_pack_regiment_raises_its_land_units
+* test_new_campaign_spawns_every_host
+* test_host_codes_and_regiments_of
+* test_spawn_is_deterministic_and_leaves_the_rng_alone
+* test_foes_survive_the_save
+* test_foes_are_not_in_player_regiments
+* test_a_foe_is_seated_once_at_its_foe_position
+* test_supply_lines_and_ledger_do_not_see_foes
+* test_the_daily_meal_and_hunger_leave_foes_alone
+* test_assemble_waits_until_appear_day
+* test_only_the_hosts_whose_day_it_is_set_out
+* test_step_day_never_moves_or_orders_a_foe_by_itself_before_its_day
+* test_foe_marches_with_the_same_even_step
+* test_a_foe_in_a_battle_does_not_march
+* test_a_foe_that_fell_back_is_walked_home
+* test_a_standing_foe_does_not_move
+* test_foes_march_in_code_order_and_the_player_still_arrives_in_the_news
+[1m17/17 passed.
+[0m[4m
+
+res://tests/engine/test_engine_isolation.gd
+[0m* test_the_engine_names_no_ui_or_llm_class_and_no_autoload
+* test_the_war_classes_are_engine_pure
+[1m2/2 passed.
+[0m[4m
+
+res://tests/engine/test_event_content.gd
+[0m* test_pool_inventory
+* test_no_event_is_model_voiced
+* test_every_event_has_authored_scene_and_outcome_lines
+* test_effects_and_triggers_parse
+* test_schedule_targets_exist
+* test_every_event_reachable_or_chained
+* test_effect_op_arity_and_colon_safety
+* test_opinion_and_promise_targets_resolve
+* test_every_event_has_unconditional_choice
+* test_requires_clauses_parse_without_unknown_clause_errors
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_event_effects.gd
+[0m* test_metric_gold_and_opinion_ops
+* test_schedule_flag_promise_ops
+* test_reason_label_stamps_metric_and_gold_results
+* test_no_reason_label_omits_reason_key
+* test_unknown_op_is_loud_but_safe
+ERROR: EventEffects: unknown op: frobnicate:9
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] apply (res://scripts/engine/event_effects.gd:131)
+       [1] test_unknown_op_is_loud_but_safe (res://tests/engine/test_event_effects.gd:50)
+       [2] _run_test (res://addons/gut/gut.gd:587)
+       [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_event_state_round_trip
+* test_world_and_attribute_ops_go_through_the_ledger
+* test_gold_and_metric_ops_take_an_optional_reason
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_event_system.gd
+[0m* test_pity_forces_event_within_window
+* test_trigger_gates_eligibility
+* test_once_fires_at_most_once
+* test_apply_choice_runs_effects_and_signature_drift
+* test_apply_choice_metric_effect_carries_choice_label_as_reason
+* test_scheduled_event_fires_regardless_of_roll
+* test_reload_with_pending_event_is_bit_identical
+* test_no_eligible_choices_returns_empty
+EventSystem: event ev_no_choice fired with no eligible choices — skipped
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_export_paths.gd
+[0m* test_game_code_reads_through_res_never_a_path_on_disk
+[1m1/1 passed.
+[0m[4m
+
+res://tests/engine/test_float_precision.gd
+[0m* test_hex_round_trip_is_bit_exact_for_10k_random_doubles
+* test_save_load_bit_exact_for_adversarial_metric_values
+[1m2/2 passed.
+[0m[4m
+
+res://tests/engine/test_foe_orders.gd
+[0m* test_orders_aimed_at_a_foe_are_refused
+* test_no_courier_is_dispatched_to_a_foe
+* test_a_courier_whose_target_became_a_foe_is_lost
+[1m3/3 passed.
+[0m[4m
+
+res://tests/engine/test_fog_cards.gd
+[0m* test_a_foreign_manor_card_shows_no_true_figures
+* test_a_foreign_burg_card_is_fogged
+* test_a_foreign_regiments_army_card_carries_no_exact_headcount
+* test_a_foes_army_card_shows_words_not_figures
+* test_a_report_shows_up_on_the_card_with_its_tag
+* test_our_own_land_is_still_exact
+* test_a_foreign_kingdoms_population_is_a_word
+* test_our_own_kingdoms_population_is_grouped
+* test_dev_mode_lifts_the_fog
+* test_a_spy_sent_to_a_town_answers_its_card
+* test_a_fogged_town_card_shows_its_population_once
+* test_the_cards_output_is_the_chief_good_the_spy_reports
+[1m12/12 passed.
+[0m[4m
+
+res://tests/engine/test_forage.gd
+[0m* test_food_units_counts_only_food_tagged
+* test_load_map_forgets_the_food_counts
+* test_monthly_capacity_by_season
+* test_daily_capacities_sum_to_the_month
+* test_land_kind
+* test_shares_proportional_to_need
+* test_protect_laws_cut_the_yield
+* test_strip_arithmetic
+* test_strip_writes_no_zero_entry
+[1m9/9 passed.
+[0m[4m
+
+res://tests/engine/test_game_state.gd
+[0m* test_new_campaign_seeds_from_the_pack_and_balance
+* test_a_pack_without_an_economy_row_falls_back_to_balance
+* test_seasons_and_years
+* test_round_trip
+* test_a_save_from_before_the_pools_loads_with_them_empty
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_goods_economy.gd
+[0m* test_every_pack_good_resolves_to_a_pool_and_a_price
+* test_an_unnamed_good_takes_its_tags_default
+[1m2/2 passed.
+[0m[4m
+
+res://tests/engine/test_governance.gd
+[0m* test_the_seat_holder_governs_by_default
+* test_a_gone_governor_falls_back_to_the_seat
+* test_a_governor_who_leaves_the_council_loses_the_flow
+* test_skill_sets_the_ceiling
+* test_a_sour_governor_gives_less
+* test_the_venal_skim_the_low_skim_less_the_honest_never
+* test_an_empty_seat_runs_at_the_floor
+* test_the_new_state_survives_a_save
+* test_an_old_save_keeps_a_skim_under_unknown
+* test_held_back_only_when_his_opinion_costs_something
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_governed_flows.gd
+[0m* test_a_venal_steward_skims_the_workshops_and_reports_them_whole
+* test_a_clumsy_steward_makes_less_and_says_so
+* test_a_man_of_low_integrity_skims_less
+* test_an_ungoverned_workshop_runs_at_the_floor_and_skims_for_nobody
+* test_a_venal_marshal_skims_the_supply_gold
+* test_an_honest_able_marshal_delivers_what_he_says
+* test_a_clumsy_marshal_delivers_less_and_says_so
+* test_a_clumsy_venal_steward_skims_what_he_made
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_governor_orders.gd
+[0m* test_giving_a_flow_to_another_councillor
+* test_giving_it_refusals
+* test_an_audit_catches_a_skimmer
+* test_an_audit_of_an_honest_man_finds_nothing
+* test_no_governor_no_audit
+* test_an_audit_letter_is_no_estimate_of_a_place
+* test_an_audit_catches_a_skimmer_the_flow_was_taken_from
+* test_a_man_holding_two_flows_is_caught_per_flow
+* test_an_audit_catches_every_skimmer_of_the_flow
+* test_a_missing_character_cannot_govern_or_be_audited
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_hazards.gd
+[0m* test_every_zone_lists_its_cells
+* test_every_zone_type_has_a_kind
+* test_a_new_reign_seeds_every_zone_with_its_end
+* test_the_hazards_survive_the_save
+* test_an_old_save_is_seeded_once_at_its_own_tick
+* test_a_hazard_is_active_until_its_end_and_its_ending_is_news_once
+* test_at_cell_finds_only_the_active
+* test_known_abroad_only_if_public
+* test_a_plague_wounds_a_regiment_standing_in_it_and_says_so
+* test_two_hazards_both_take_their_toll_once
+* test_no_fit_men_no_toll_and_no_news
+* test_the_month_is_deterministic
+* test_a_flood_slows_the_march_through_it
+* test_a_morale_toll_is_held_not_announced_every_month
+* test_a_toll_from_a_hazard_we_do_not_know_does_not_name_it
+[1m15/15 passed.
+[0m[4m
+
+res://tests/engine/test_house_arms.gd
+[0m* test_every_house_resolves_arms_that_exist
+* test_every_kingdom_resolves_arms_that_exist
+* test_a_house_is_seated_in_its_first_province
+* test_a_province_without_a_town_keys_its_arms_by_its_code
+* test_the_crown_keeps_its_arms_when_renamed
+* test_a_family_with_no_province_has_no_arms
+* test_a_texture_is_loaded_once
+* test_the_founding_pack_wears_its_own_arms
+* test_a_pack_without_arms_borrows_them_all_without_repeats
+* test_borrowing_is_the_same_every_time
+* test_a_binding_pins_a_key_and_leaves_the_pool
+* test_more_houses_than_the_pool_repeat_and_say_so
+[1m12/12 passed.
+[0m[4m
+
+res://tests/engine/test_industry.gd
+[0m* test_a_fed_smithy_makes_tools
+* test_its_own_iron_feeds_it_first
+* test_the_plan_row
+* test_the_rest_is_bought_from_the_lords_stores
+* test_unfed_it_idles_and_eats_and_makes_nothing
+* test_a_short_pool_feeds_the_first_forge_in_cell_order
+* test_a_paid_month_wakes_an_idle_forge
+* test_two_buildings_on_one_manor_wanting_the_same_good_idle_and_wake_together
+* test_a_civil_input_is_bought_from_the_civil_stores
+* test_idling_a_building_moves_the_province_sums
+* test_the_realm_signature_sees_idling
+* test_the_tick_buys_after_the_economy_and_idles_the_unpaid
+* test_the_plan_is_deterministic
+* test_idle_state_survives_a_save
+* test_a_demolished_building_leaves_no_idle_mark
+* test_an_idle_smithy_lifts_nothing
+* test_an_idle_armoury_does_not_defend
+* test_an_idle_brewery_cheers_no_one
+* test_what_an_idle_building_lacks
+* test_the_card_says_a_building_is_idle
+* test_the_tick_names_a_newly_idle_building_once
+* test_a_waking_forge_pays_only_what_its_manor_cannot_give
+* test_an_iron_manor_forge_wakes_on_empty_stores
+* test_only_the_crowns_manors_buy_through_the_lord
+* test_the_idle_words
+[1m25/25 passed.
+[0m[4m
+
+res://tests/engine/test_intel.gd
+[0m* test_three_levels
+* test_basic_says_little_and_general_says_words
+* test_the_newest_report_wins_and_says_where_it_came_from
+* test_estimate_wraps_latest_and_text_of
+* test_a_report_counts_by_distance_for_a_nearby_point
+* test_full_knowledge_beats_a_report
+* test_words_and_numbers
+* test_the_stance_comes_from_the_packs_diplomacy
+* test_a_report_never_answers_a_different_nearby_province
+* test_a_report_never_answers_a_different_manor_of_the_same_province
+* test_tercile_of_ties_take_the_middle_rank
+* test_place_label_names_the_manor_and_its_province
+* test_place_label_names_the_open_sea
+* test_an_estimate_with_no_width_reads_as_one_number
+* test_a_manor_report_answers_the_same_manor
+* test_a_point_report_answers_a_manor_query_by_distance_alone
+* test_a_manor_report_answers_its_province_only_for_stance_and_wealth
+* test_an_unclear_word_never_overrides_what_is_always_given
+* test_opening_a_card_mid_month_never_changes_a_report
+* test_the_tick_settles_the_wealth_tiers_into_the_state
+* test_an_old_save_computes_its_wealth_tiers_once_on_load
+* test_place_label_drops_empty_parentheses
+* test_a_foreign_kingdoms_card_gives_its_wealth
+[1m23/23 passed.
+[0m[4m
+
+res://tests/engine/test_invasion_end_to_end.gd
+[0m* test_weak_defence_loses_the_town_and_the_campaign_plays_on
+    weak: rumour d8, cross { "raid_main": 15, "raid_raiders": 15, "raid_reserve": 18 }, siege d17, stormed d22, fell d24 (2 manors), gold -595, content -8, 5 opinions; then events ["c0_01", "c0_02", "c0_03s"]
+* test_strong_walled_defence_holds_and_forces_supply_retreat
+    strong: siege d17, assaults 3, repulsed rounds 2, best progress 583, lifted d32, home d32 (RETREAT), garrison dead 367 (first assault 5379)
+* test_weak_defence_is_deterministic_and_saves_mid_run
+    weak: fell 24, home -1, hash 7e0accdae119
+* test_strong_defence_is_deterministic_and_saves_mid_run
+    strong: fell -1, home 32, hash 95317f902eee
+* test_the_war_draws_no_random_number
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_knowledge.gd
+[0m* test_seed_facts_load_into_state
+* test_every_seed_knower_exists_in_the_roster
+* test_secret_is_known_only_to_its_knowers
+* test_common_sense_is_known_by_everyone_at_full_credibility
+* test_learn_adds_a_knower_at_the_given_credibility
+* test_credibility_of_unknown_fact_is_zero
+* test_add_fact_creates_a_runtime_fact
+* test_facts_about_filters_by_type_and_subject_for_one_knower
+* test_describe_for_speaks_confidence_never_truth
+* test_describe_for_confidence_bands_follow_balance_thresholds
+* test_describe_for_marks_a_believed_claim_as_hearsay
+* test_knowledge_survives_save_round_trip
+* test_pre_feature_save_loads_with_empty_knowledge
+[1m13/13 passed.
+[0m[4m
+
+res://tests/engine/test_landmark_card.gd
+[0m* test_the_lines_of_the_highest_landmark
+* test_the_hover_text_starts_with_the_name
+* test_the_where_line_collapses_a_shared_name
+* test_the_where_line_never_doubles_on_the_pack
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_law_couriers.gd
+[0m* test_a_province_law_sends_one_courier_to_each_held_province
+* test_a_province_courier_ends_at_its_capital
+* test_a_camp_law_sends_one_per_camp_and_one_per_field_unit
+* test_fleets_get_no_courier
+* test_delivery_writes_the_place_and_not_the_others
+* test_the_delivery_counts_riders_and_days
+* test_a_newer_decree_beats_an_older_courier
+* test_a_courier_to_a_lost_province_is_dropped
+* test_a_law_courier_never_moves_a_columns_arrival
+* test_no_recipients_is_refused
+* test_the_headline_words_a_law_courier
+* test_the_card_says_decree_not_stand_and_no_receipt_is_filed
+* test_law_couriers_round_trip_the_save
+* test_a_law_courier_is_no_regiment_edge_in_the_ledger
+* test_the_delivery_counts_each_kind_of_place_apart
+* test_the_untold_list_names_each_place_with_its_days_or_lost
+* test_a_place_gained_since_is_not_sent_not_lost
+[1m17/17 passed.
+[0m[4m
+
+res://tests/engine/test_law_economy.gd
+[0m* test_a_province_pays_its_own_rate
+* test_the_first_month_after_a_change_mixes_rates
+* test_the_cache_key_follows_a_provinces_law
+* test_the_unrest_pressure_reads_the_weighted_rate
+* test_ration_halves_the_courts_bread_only_where_the_court_sits
+* test_older_fixtures_still_work
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_law_guard.gd
+[0m* test_the_scan_reads_the_scripts
+* test_no_script_reads_the_rate_mirrors_as_the_rate_in_force
+* test_no_script_reads_law_in_force_but_the_law_layer
+* test_the_exemption_is_one_function
+* test_a_metric_op_on_a_law_mirror_is_refused
+ERROR: EventEffects: metric:tax_rate moves a law's mirror alone; a law changes by law:<code>:<value>
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] apply (res://scripts/engine/event_effects.gd:27)
+       [1] test_a_metric_op_on_a_law_mirror_is_refused (res://tests/engine/test_law_guard.gd:125)
+       [2] _run_test (res://addons/gut/gut.gd:587)
+       [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+ERROR: EventEffects: metric:tariff_rate moves a law's mirror alone; a law changes by law:<code>:<value>
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] apply (res://scripts/engine/event_effects.gd:27)
+       [1] test_a_metric_op_on_a_law_mirror_is_refused (res://tests/engine/test_law_guard.gd:125)
+       [2] _run_test (res://addons/gut/gut.gd:587)
+       [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+ERROR: EventEffects: metric:grain_ration moves a law's mirror alone; a law changes by law:<code>:<value>
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] apply (res://scripts/engine/event_effects.gd:27)
+       [1] test_a_metric_op_on_a_law_mirror_is_refused (res://tests/engine/test_law_guard.gd:125)
+       [2] _run_test (res://addons/gut/gut.gd:587)
+       [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_no_data_op_moves_a_law_mirror
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_law_migration.gd
+[0m* test_no_old_policy_code_remains
+* test_the_old_signatures_survive_as_law_variants
+* test_a_suggestion_is_a_law_set
+* test_a_typed_order_for_an_unknown_law_is_rejected
+* test_the_tariff_event_moves_the_law
+* test_the_trigger_reads_the_law_stamp
+* test_an_event_law_change_prints_its_ledger_line
+* test_a_typed_decree_prints_its_reason_not_a_zero
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_law_military.gd
+[0m* test_a_unit_pays_the_mark_of_its_own_value
+* test_a_fresh_host_carries_no_law_mark
+* test_the_conduct_laws_add_their_marks_rounded_once
+* test_pace_follows_truce_days
+* test_a_realm_channel_is_scaled_by_the_share_of_men
+* test_the_default_rows_pay_too
+* test_the_treasury_rows_are_whole_gold
+* test_no_land_men_no_share
+* test_a_year_of_a_law_is_visible_against_the_drift
+* test_the_flags_are_readable
+* test_a_units_entering_a_camp_takes_the_higher_decree
+* test_an_older_town_entry_does_not_beat_a_newer_unit_entry
+* test_take_seat_takes_the_higher_decree
+* test_leaving_a_camp_copies_what_it_read
+* test_reconcile_forgets_a_lost_province_and_a_campless_town
+* test_reconcile_drops_a_gone_units_entry_and_gives_none_to_a_foreign_one
+* test_a_camp_whose_units_all_carry_the_decree_is_told
+* test_a_day_reconciles_the_laws
+* test_the_summary_spells_the_rows
+[1m19/19 passed.
+[0m[4m
+
+res://tests/engine/test_law_missives.gd
+[0m* test_a_decree_files_a_letter_with_its_courier_count
+* test_the_last_delivery_files_the_reach_letter_once
+* test_a_lost_last_courier_files_the_reach_letter_with_the_short_count
+* test_law_letters_are_kept_apart_from_the_rest
+* test_the_news_bar_is_told_once_when_all_have_arrived
+* test_a_stale_courier_of_an_older_decree_closes_nothing
+* test_an_event_over_a_riding_decree_is_said_once_a_day
+[1m7/7 passed.
+[0m[4m
+
+res://tests/engine/test_law_once_effects.gd
+[0m* test_the_shares_sum_to_the_old_total_exactly
+* test_the_apportionment_by_literal_weights
+* test_justice_effect_is_the_old_total_times_the_provinces_people_share
+* test_delivered_everywhere_the_sum_is_the_old_effect
+* test_church_endow_and_tithe_pay_their_old_numbers_in_shares
+* test_release_pays_once_and_a_second_release_needs_a_change_between
+* test_a_stale_courier_pays_nothing
+* test_a_resend_pays_nothing_for_a_province_that_already_has_the_value
+* test_a_month_of_law_effects_survives_a_save
+* test_a_law_with_no_once_row_pays_nothing
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_law_orders.gd
+[0m* test_law_set_is_refused_for_an_unknown_law_value_or_unchanged_value
+* test_cooldown_is_per_law
+* test_an_unchanged_value_is_allowed_while_places_are_missing
+* test_the_cost_is_the_order_the_law_and_the_couriers
+* test_the_preview_counts_a_military_laws_couriers
+* test_an_unchanged_laws_preview_rides_nothing
+* test_the_chest_must_pay_every_courier
+* test_a_decree_mirrors_its_metric_at_once
+* test_the_outcome_says_what_was_decreed
+* test_every_executed_law_set_leaves_a_cost
+* test_a_raised_tax_drifts_as_the_old_order_did
+* test_a_resend_of_a_choice_law_drifts_no_one
+* test_a_resend_of_a_range_law_drifts_no_one
+* test_a_wrong_typed_law_param_is_refused_not_a_crash
+* test_a_range_value_is_stored_in_plain_digits
+* test_each_refusal_has_its_key_and_a_cooldown_its_days
+[1m16/16 passed.
+[0m[4m
+
+res://tests/engine/test_law_system.gd
+[0m* test_the_tables_load_twenty_five_laws_in_three_pages
+* test_each_military_group_is_a_key_titled_in_the_words
+* test_every_effect_row_names_a_law_and_an_allowed_value
+* test_every_default_is_an_allowed_value
+* test_every_default_is_the_specs
+* test_a_fresh_campaign_follows_the_defaults_and_the_metrics
+* test_value_falls_back_to_metrics_without_law_state
+* test_a_province_without_an_entry_reads_the_default
+* test_the_law_state_round_trips_the_save
+* test_an_older_save_is_seeded_from_the_metrics
+* test_weighted_number_is_the_people_weighted_mean
+[1m11/11 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_cards.gd
+[0m* test_a_thing_the_map_knows_opens_the_maps_own_card
+* test_a_type_card_lists_its_threads_with_their_sources
+* test_a_type_not_yet_built_says_so
+* test_a_thread_card_names_its_governor
+* test_a_planned_thread_names_its_milestone
+* test_show_on_map_has_a_place_for_places_only
+* test_a_provinces_card_names_what_it_folds
+* test_a_merged_thread_names_how_many_it_stands_for
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_data.gd
+[0m* test_the_tables_load_in_file_order
+* test_a_type_row_carries_its_place_and_layer
+* test_every_court_relation_type_has_a_link_row
+* test_the_palette_is_colours
+* test_the_look_numbers_are_balance
+* test_an_order_that_needs_the_map_says_it_shows_the_map
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_galaxy.gd
+[0m* test_every_listed_instance_stands_once_in_its_cluster
+* test_no_manor_town_or_building_stands_unless_its_province_is_opened
+* test_opening_a_province_shows_exactly_its_manors
+* test_a_merged_link_counts_what_it_stands_for
+* test_no_link_joins_a_star_to_itself
+* test_flows_merge_only_within_one_level
+* test_an_annexed_manor_folds_into_its_new_province
+* test_every_unfolded_ego_link_is_in_the_galaxy
+* test_the_house_index_gives_the_scans_manors
+* test_the_regiment_province_index_matches_the_scan
+* test_the_manor_subject_cache_matches_the_build
+* test_the_intel_level_cache_matches_the_call
+* test_planned_links_touch_a_ghost_end
+* test_the_galaxy_is_read_within_its_budget
+    galaxy: 147 stars, 181 links, 52.1/51.7/52.2 ms
+* test_the_read_memos_give_what_the_readers_give
+* test_the_opened_galaxys_governors_are_the_readers
+* test_a_merge_takes_the_worse_accounts_words_and_source
+[1m17/17 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_governors.gd
+[0m* test_an_honest_marshal_is_one_strand_with_both_sources
+* test_a_venal_marshal_splits_the_thread
+* test_an_audit_stands_only_for_its_own_month
+* test_a_same_day_audit_agrees_with_the_regiments_count
+* test_an_honest_successor_merges_the_thread
+* test_an_audit_that_agrees_merges_into_the_claim
+* test_skims_are_drawn_only_once_caught
+* test_a_caught_skim_survives_a_handover
+* test_the_governor_is_drawn
+* test_a_given_flow_draws_its_new_governor
+* test_a_given_flows_thread_names_its_new_governor
+* test_the_type_level_counts_the_regiments_in_the_plural
+* test_cards_say_the_accounts_differ
+* test_the_governs_card_reads_a_percentage
+* test_a_snapshot_leaves_no_plan_memo_behind
+* test_the_thread_offers_the_audit_and_every_other_councillor
+* test_a_give_row_reads_and_runs
+* test_without_a_state_no_give_row_is_offered
+* test_a_characters_card_carries_his_record
+* test_an_audit_of_an_honest_man_drops_once_his_claim_moves
+* test_an_audit_of_an_honest_marshal_drops_once_the_line_moves
+* test_an_audit_of_a_venal_man_stands_beside_his_word
+* test_the_type_level_carries_the_audits_total
+* test_an_audit_speaks_only_for_its_own_flow
+* test_a_governors_card_has_one_line_per_flow
+* test_the_governs_tie_offers_audit_and_give
+* test_an_empty_seat_draws_a_vacant_tie
+* test_an_unknown_flow_has_no_instances_and_no_books
+ERROR: LedgerResolvers: no instances for flow 'moat'
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] _instances_of_flow (res://scripts/engine/ledger_resolvers.gd:766)
+       [1] test_an_unknown_flow_has_no_instances_and_no_books (res://tests/engine/test_ledger_governors.gd:348)
+       [2] _run_test (res://addons/gut/gut.gd:587)
+       [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+ERROR: AuditWriter: no books for flow 'moat'
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] facts (res://scripts/engine/audit_writer.gd:43)
+       [1] test_an_unknown_flow_has_no_instances_and_no_books (res://tests/engine/test_ledger_governors.gd:349)
+       [2] _run_test (res://addons/gut/gut.gd:587)
+       [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_begin_memo_clears_a_stale_memo
+[1m29/29 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_open_schema.gd
+[0m* test_a_type_and_its_nodes_written_down_appear_with_no_code
+* test_changing_a_row_changes_the_node_and_the_edge
+* test_removing_the_rows_removes_them
+* test_an_edge_to_someone_who_no_longer_exists_is_not_drawn
+* test_validate_names_a_row_pointing_at_nothing
+* test_a_static_node_has_a_card
+* test_validate_refuses_what_cannot_fold
+* test_validate_names_a_clusters_unknown_colour_and_lens
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_resolvers.gd
+[0m* test_every_live_link_has_a_reader_that_runs_at_type_level
+* test_type_level_yields_are_the_crowns_own_intake
+* test_the_ration_reader_is_the_ticks_ration
+* test_a_manor_yields_its_own_line
+* test_a_province_lists_its_manors
+* test_the_court_relations_are_every_edge_of_their_type
+* test_a_characters_ties_touch_him
+* test_a_regiment_stands_in_the_province_it_has_reached
+* test_trade_is_a_lever_with_no_magnitude
+* test_instances_come_most_strained_first
+* test_what_is_gone_has_no_label
+* test_a_building_that_no_longer_stands_has_no_name
+* test_artisans_and_a_foreign_market_have_no_name
+* test_the_memoised_burg_province_is_the_scan
+[1m14/14 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_schema.gd
+[0m* test_the_shipped_ontology_is_clean
+* test_a_live_link_needs_a_reader
+* test_a_planned_link_names_its_milestone
+* test_a_live_link_cannot_touch_a_planned_type
+* test_an_action_must_exist_and_carry_a_cost
+* test_unknown_lenses_layers_and_seats_are_caught
+* test_type_of_reads_every_id_shape
+* test_every_type_has_a_known_cluster
+* test_the_economy_folds_manors_buildings_and_towns_into_provinces
+* test_every_type_says_how_its_star_is_sized_and_every_link_how_it_is_drawn
+* test_a_cluster_anchor_is_read_as_vectors
+* test_validate_names_an_unknown_cluster
+[1m12/12 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_snapshot.gd
+[0m* test_the_type_level_draws_every_type_of_its_lens_built_or_not
+* test_no_link_joins_a_sphere_to_itself
+* test_the_court_lens_is_the_web_of_the_court
+* test_the_ego_network_of_a_regiment_touches_it
+* test_a_vanished_focus_falls_back_to_the_type_level
+* test_the_cap_folds_the_rest_into_one_more_sphere
+* test_a_fresh_reign_with_no_letters_still_draws
+* test_the_intel_gate_blurs_what_the_crown_does_not_control
+* test_a_tie_is_never_a_belief_word
+* test_the_type_level_is_the_crowns_own_record
+* test_the_same_state_gives_the_same_picture
+* test_a_loop_runs_by_its_condition
+* test_a_loop_with_a_planned_link_never_runs
+* test_orders_follow_the_node
+* test_an_order_names_what_it_spends_and_its_fee
+* test_a_spy_report_on_a_manors_tax_reaches_its_taxed_thread
+* test_no_spy_row_for_a_controlled_node
+[1m17/17 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_supply.gd
+[0m* test_the_workshop_threads_carry_its_plan
+* test_a_regiments_supply_line_is_its_plan
+* test_a_garrison_stands_in_its_town
+* test_a_workshop_takes_its_rate_orders
+* test_the_hungry_host_loop_runs_when_the_ranks_go_hungry
+* test_labels
+* test_the_instances_are_the_plans_rows
+* test_a_regiment_carries_its_supplies_and_morale
+* test_a_pool_carries_its_stock_against_a_year_of_intake
+* test_a_sphere_without_a_property_carries_none
+* test_a_foreign_regiment_shows_no_gauge_unless_in_dev_mode
+* test_a_supply_lines_card_states_its_road
+* test_a_workshops_card_names_its_rate
+[1m13/13 passed.
+[0m[4m
+
+res://tests/engine/test_ledger_trade.gd
+[0m* test_a_type_is_live_exactly_when_a_live_link_reads_it
+* test_a_route_is_its_toll
+* test_the_type_level_route_is_every_toll
+* test_an_honest_stewards_route_is_one_account_naming_both_sources
+* test_a_venal_steward_splits_the_route
+* test_a_same_month_audit_stands_beside_the_venal_stewards_word
+* test_the_audit_letter_has_one_fact_per_route_and_the_total
+* test_a_caught_steward_skims_the_trade_on_his_ego
+* test_the_steward_governs_every_route
+* test_closing_and_reopening_a_route
+* test_a_route_that_is_not_there_or_a_bad_flag_is_refused
+* test_closing_a_route_angers_the_guildmaster_with_a_reason
+* test_a_closed_route_pays_nothing_on_the_ledger
+* test_the_route_offers_close_audit_and_give
+* test_closing_a_route_says_it_only_stops_the_tolls
+* test_a_route_and_a_market_are_named_by_the_live_labels
+* test_a_market_trades_its_value
+* test_a_market_offers_buying_and_not_selling_there
+* test_a_forge_eats_on_the_ledger
+* test_the_artisans_build_their_provinces_buildings
+* test_an_uncontrolled_provinces_artisans_have_no_card_head
+* test_a_work_in_hand_is_a_building_the_artisans_raise
+* test_the_works_are_governed_and_vacant_at_the_start
+* test_the_works_keep_no_books_to_audit
+* test_the_works_offer_no_audit
+* test_the_instances_are_listed
+* test_the_plans_are_memoised_for_one_snapshot_only
+* test_the_order_has_its_catalogue_rows
+[1m28/28 passed.
+[0m[4m
+
+res://tests/engine/test_location_system.gd
+[0m* test_data_loads_and_every_occupant_exists_in_roster
+* test_campaign_starts_at_council_chamber
+* test_move_within_region_is_free_no_tick
+* test_unknown_location_rejected
+* test_reachable_lists_whole_region
+* test_location_survives_save_round_trip
+* test_pre_location_save_defaults_to_council_chamber
+[1m7/7 passed.
+[0m[4m
+
+res://tests/engine/test_manor_bars.gd
+[0m* test_every_manor_of_a_controlled_province_shows_exactly
+* test_a_foreign_manor_shows_only_after_a_credible_report_on_it
+* test_a_spy_report_on_a_manor_carries_its_worth
+[1m3/3 passed.
+[0m[4m
+
+res://tests/engine/test_manor_economy.gd
+[0m* test_growth_is_an_integer_table
+* test_a_country_manor_pays_tax_and_grows_its_chief_good
+* test_a_town_manor_earns_its_towns_lines_and_a_tariff
+* test_growth_and_buildings_raise_the_line
+* test_a_buildings_produce_grows_but_takes_no_output_bonus
+* test_the_tax_levels_scale_the_lines
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_manor_palette.gd
+[0m* test_water_wears_nothing
+* test_a_conquest_recolours_the_manor
+* test_the_theme_is_the_house_colour
+[1m3/3 passed.
+[0m[4m
+
+res://tests/engine/test_manor_purchase.gd
+[0m* test_a_bordering_province_is_bought_from_the_lords_purse
+* test_your_own_province_is_bought_from_the_lords_purse_too
+* test_a_province_that_borders_none_of_yours_is_refused
+* test_a_foreign_manor_off_the_border_is_refused
+* test_buying_across_the_border_pays_from_the_treasury_and_annexes_the_manor
+* test_an_annexation_survives_a_save
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_map_coords.gd
+[0m* test_the_corners_and_the_middle
+* test_cells_count_from_the_north_west_corner
+* test_format_rounds_to_whole_degrees
+* test_a_pack_without_coordinates_spans_the_globe
+WARNING: map_info.csv has no lat_n / lat_s / lon_w / lon_e: the graticule spans the globe (re-import, tools/NEW_MAP.md)
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] bounds (res://scripts/engine/map_coords.gd:16)
+         [1] test_a_pack_without_coordinates_spans_the_globe (res://tests/engine/test_map_coords.gd:42)
+         [2] _run_test (res://addons/gut/gut.gd:587)
+         [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_the_pack_carries_its_coordinates
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_map_data.gd
+[0m* test_every_province_kingdom_resolves
+* test_every_burg_reference_resolves
+* test_every_kingdom_capital_and_neighbors_resolve
+* test_fiction_kingdoms_are_on_the_map
+* test_index_bitmap_decodes_each_kingdom_at_its_center
+* test_every_kingdom_has_border_loops
+* test_border_points_hug_their_kingdom_in_the_bitmap
+* test_map_object_tables_load
+* test_burgs_carry_type_and_features
+* test_route_and_river_references_resolve
+* test_every_route_has_a_label
+* test_roads_snap_their_endpoints_to_real_towns
+* test_markers_lie_inside_the_map_and_carry_legends
+* test_province_bitmap_decodes_each_province_at_its_center
+* test_biome_bitmap_marks_land_with_a_real_biome
+* test_terrain_tables_load_and_cross_reference
+* test_coast_loops_match_the_packs_features
+* test_terrain_palette_names_every_colour_the_map_draws
+* test_terrain_cells_share_the_bitmaps_coordinate_space
+[1m19/19 passed.
+[0m[4m
+
+res://tests/engine/test_map_economy.gd
+[0m* test_a_province_sums_the_burgs_inside_it
+* test_production_from_a_burg_with_no_province_is_dropped
+* test_the_dominant_good_carries_its_share_of_the_province
+* test_a_realm_sums_the_provinces_it_holds_now
+* test_a_good_is_filed_under_its_first_tag
+* test_a_burg_stands_in_the_land_cell_that_holds_its_point
+* test_a_manor_gathers_what_its_settlements_make
+* test_a_manors_land_value_is_its_biomes_habitability
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_map_geometry.gd
+[0m* test_parse_points_reads_space_and_pipe_separated_pairs
+* test_parse_points_of_empty_string_is_empty
+* test_bounds_wraps_every_point
+* test_bounds_of_nothing_is_empty
+* test_nice_step_falls_to_the_ladder_below_the_raw_value
+* test_nice_step_holds_the_ladder_at_every_magnitude
+* test_nice_step_of_nothing_is_nothing
+* test_smooth_open_keeps_both_endpoints
+* test_smooth_open_of_a_straight_line_stays_straight
+* test_smooth_open_rounds_a_corner_inward
+* test_smooth_open_leaves_a_line_too_short_to_bend_alone
+* test_ribbon_offsets_each_point_by_its_own_half_width
+* test_ribbon_turns_the_corner_on_the_bisector
+* test_ribbon_of_a_mismatched_or_degenerate_line_is_empty
+* test_smooth_closed_through_keeps_every_control_point
+* test_smooth_closed_through_of_a_degenerate_ring_is_itself
+* test_a_short_edge_between_long_ones_makes_no_curl
+* test_near_duplicate_points_are_dropped_first
+* test_a_pinned_point_leaves_along_its_own_edge
+* test_a_duplicated_last_point_carries_its_pin_into_index_0
+* test_stop_outside_takes_the_tail_inside_the_circle_off
+* test_tick_across_stands_square_to_the_last_leg
+[1m22/22 passed.
+[0m[4m
+
+res://tests/engine/test_map_index.gd
+[0m* test_decode_small_id
+* test_decode_two_byte_id
+* test_decode_white_is_no_state
+* test_state_at_samples_and_bounds_checks
+* test_id_at_is_the_generic_two_byte_decoder
+* test_biome_at_reads_the_red_channel
+* test_distance_to_land_is_a_chamfer_from_the_land
+* test_bake_sea_distance_writes_capped_bytes
+* test_box_sum_is_the_clipped_window_sum
+* test_bake_biome_weights_ramps_one_biome_into_the_next
+* test_bake_biome_weights_normalises_over_land_only
+* test_bake_biome_weights_counts_blocks_at_scale
+* test_rasterize_fills_a_polygon_with_its_id
+* test_raise_high_ground_promotes_a_pixel_by_its_cell_height
+* test_raise_high_ground_leaves_water_alone
+* test_raise_high_ground_prefers_the_detailed_field
+* test_raise_high_ground_without_a_field_uses_the_cell
+* test_bake_relief_writes_cell_height_as_grey
+* test_bake_relief_smooths_across_cells
+* test_bake_relief_without_gain_is_unchanged
+* test_bake_relief_adds_detail_weighted_by_height
+* test_bake_relief_suppression_holds_detail_down
+* test_bake_relief_suppression_is_visible_below_the_clamp
+* test_stamp_polylines_marks_the_segment
+* test_stamp_polylines_honours_the_radius
+* test_stamp_polylines_clips_to_the_field
+* test_detail_field_is_deterministic
+* test_detail_field_changes_with_the_seed
+* test_detail_field_stays_in_unit_range
+* test_detail_field_domain_warp_changes_the_field
+[1m30/30 passed.
+[0m[4m
+
+res://tests/engine/test_map_manors.gd
+[0m* test_a_manor_is_named_and_placed_by_the_pack
+* test_find_takes_a_code_a_label_or_a_number
+* test_an_unmoved_manor_belongs_to_its_provinces_house
+* test_set_owner_needs_a_manor_a_known_house_a_change_and_a_reason
+* test_provinces_that_touch_take_different_shades
+* test_a_houses_manors_follow_every_change_they_depend_on
+* test_a_renamed_royal_house_keeps_its_manors
+* test_people_are_the_provinces_shared_by_land_and_town
+* test_buildings_rent_and_defence
+* test_the_price_is_the_value_marked_up_by_the_houses_coolness
+* test_manor_state_survives_a_save
+* test_the_house_with_most_manors_controls_the_province
+* test_a_manor_works_a_chief_good_its_land_allows
+* test_works_take_days_and_slots_and_can_be_pulled_down
+* test_finished_buildings_add_to_the_crowns_metrics_each_tick
+* test_the_default_focus_follows_the_terrain
+* test_apportion_hands_the_remainder_to_the_largest_fractions
+* test_rushing_cuts_days_off_a_work
+* test_work_days_left_follows_the_artisans_pace
+[1m19/19 passed.
+[0m[4m
+
+res://tests/engine/test_map_objects.gd
+[0m* test_lod_rule_from_balance
+* test_burg_visible_respects_capitals_and_population
+* test_label_of_each_kind
+* test_house_of_uses_the_binding_then_the_capital_town
+* test_burg_card_carries_the_towns_facts_and_goods
+* test_burg_card_offers_a_spy_at_its_point
+* test_province_card_is_full_at_home_and_basic_abroad
+* test_goods_are_shown_under_a_tag_with_a_glyph
+* test_a_regiment_card_paints_its_piece_and_lists_its_arms
+* test_a_regiment_card_names_its_battle_stance
+* test_a_regiment_card_shows_its_state
+* test_grouped_puts_commas_between_thousands
+* test_the_manor_card_offers_the_orders_the_crown_can_give
+* test_the_manor_card_prices_a_build_in_civil_goods_and_offers_to_hurry_it
+* test_the_province_card_counts_its_manors_by_house
+* test_the_province_card_lists_only_active_known_hazards
+* test_the_crown_is_the_household
+[1m17/17 passed.
+[0m[4m
+
+res://tests/engine/test_map_ownership.gd
+[0m* test_untouched_campaign_reports_the_packs_own_owners
+* test_merged_outline_reproduces_the_packs_border
+* test_transfer_moves_the_province_and_says_why
+* test_transfer_redraws_both_borders
+* test_a_no_op_transfer_changes_nothing
+* test_ownership_survives_the_save
+* test_a_pre_territory_save_loads_as_the_packs_map
+* test_the_label_anchor_moves_with_the_territory
+* test_describe_counts_follow_ownership
+* test_seams_are_shared_edges_inside_the_kingdom
+* test_a_transfer_removes_the_moved_provinces_seams_from_the_old_owner
+[1m11/11 passed.
+[0m[4m
+
+res://tests/engine/test_map_pack.gd
+[0m* test_default_pack_loads_with_its_world_and_art
+* test_authored_realms_resolve_through_the_pack
+* test_no_authored_csv_names_a_map_kingdom_directly
+* test_reloading_a_pack_re_resolves_from_the_authored_slot
+* test_realm_tokens_in_prose_fill_from_the_pack
+* test_authored_prose_reaches_the_engine_already_filled
+* test_maps_csv_rows_parse_to_the_full_header
+* test_unknown_map_fails_loudly
+* test_save_carries_the_map_id
+* test_the_pack_names_every_land_cell_as_a_manor
+* test_the_cell_index_finds_each_land_cell_under_its_centre
+* test_the_crown_starts_with_the_capitals_province_only
+* test_the_manor_focus_table_fits_the_pack
+* test_default_focuses_follow_the_packs_terrain
+[1m14/14 passed.
+[0m[4m
+
+res://tests/engine/test_map_palette.gd
+[0m* test_every_kingdom_has_a_distinct_colour
+* test_bound_realms_take_their_slots_colour
+* test_unbound_kingdoms_take_other_colours_in_state_order
+* test_line_colours_are_named
+* test_a_house_colour_is_fixed_by_its_name
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_map_terrain.gd
+[0m* test_cell_center_is_the_mean_of_its_vertices
+* test_gradient_points_uphill
+* test_slopes_facing_the_light_brighten_and_those_facing_away_darken
+* test_the_light_direction_is_normalised
+* test_shade_clamps_to_the_relief_bounds
+* test_altitude_brightens_a_flat_cell
+* test_land_colour_is_the_biome_tint_times_the_shade
+* test_unlisted_biome_falls_back_to_the_pack_colour
+* test_water_colours
+* test_vertex_cells_lists_every_cell_touching_a_vertex
+* test_build_fans_each_cell_and_blends_ring_vertices_within_their_class
+* test_lakes_stay_in_the_mesh_and_the_sea_leaves_it
+* test_to_mesh_builds_a_triangle_surface
+* test_shared_mesh_is_built_once_per_repo
+* test_the_pack_builds_a_mesh_inside_the_canvas_that_covers_the_land
+* test_blend_off_keeps_each_cell_flat
+[1m16/16 passed.
+[0m[4m
+
+res://tests/engine/test_march_blocked_runs.gd
+[0m* test_cells_on_counts_the_cells_beside_a_corner
+* test_a_line_grazing_a_closed_corner_has_the_graze_for_its_run
+* test_a_line_through_the_cell_has_it
+* test_a_run_longer_than_one_cell_is_one_run
+* test_a_curved_leg_has_its_run_where_the_curve_crosses
+* test_adjacent_closed_cells_are_one_run
+* test_no_run_when_the_march_ends_on_the_wall
+* test_no_run_over_water
+* test_no_run_where_the_router_is_walled_in_and_walks_straight
+* test_no_run_on_open_ground
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_march_clearance.gd
+[0m* test_octagon_round_a_blocker
+* test_right_detour_round_one_blocker
+* test_a_clump_is_gone_round_as_one
+* test_the_shorter_side_wins
+* test_both_sides_closed_waits
+* test_one_side_closed_takes_the_other
+* test_halt_point_is_clear_of_the_disc
+* test_first_entry_names_the_disc_and_the_distance
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_march_path.gd
+[0m* test_a_march_across_a_scarp_goes_round_by_its_gap
+* test_a_gentle_slope_is_walked_straight
+* test_the_limit_itself_is_climbed_and_one_past_it_is_not
+* test_no_way_round_walks_the_straight_line
+* test_the_ends_own_cells_never_block
+* test_the_same_ends_give_the_same_road_on_a_new_grid
+* test_every_leg_of_the_road_is_clear
+* test_a_straight_order_across_a_scarp_keeps_the_road_round_it
+* test_the_days_promised_are_the_days_walked_round_it
+* test_the_road_round_survives_the_save
+* test_a_waypoint_leg_across_a_scarp_goes_round_it
+* test_aim_entry_keeps_the_road_to_the_same_end
+* test_along_walks_a_polyline_by_length
+* test_the_pack_has_its_march_grid
+* test_water_is_open_to_a_courier_and_closed_to_a_column
+* test_a_scarp_still_closes_the_open_grid
+* test_a_courier_goes_through_water_where_the_land_is_walled
+* test_water_runs_by_hand
+* test_the_real_pack_s_open_grid_closes_no_water
+[1m19/19 passed.
+[0m[4m
+
+res://tests/engine/test_march_plan.gd
+[0m* test_one_row_a_load_in_the_tables_order
+* test_a_loads_supplies_and_their_days_are_the_refills_own_sums
+* test_the_arrival_is_the_ride_and_the_march_at_the_loads_pace
+* test_short_counts_the_days_the_stores_will_not_cover
+* test_a_march_of_several_reads_the_last_arrival_the_trains_together_and_the_worst_shortfall
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_march_route.gd
+[0m* test_a_turn_is_sampled_through_every_point_on_hand_computed_middles
+* test_legs_split_the_same_samples_by_the_leg_they_lie_on
+* test_a_leg_shorter_than_a_sample_is_one_point_its_end
+* test_points_in_a_line_stay_on_the_line
+* test_a_repeated_point_is_dropped_before_the_curve_is_drawn
+* test_the_length_is_the_sum_of_the_chords
+* test_a_walk_stops_partway_along_its_first_leg
+* test_a_walk_turns_the_corner_and_drops_the_point_it_passed
+* test_a_walk_that_lands_on_a_point_drops_it_and_stands_on_it
+* test_a_walk_never_changes_the_path_it_was_given
+* test_the_saved_form_is_pairs_of_whole_metres
+* test_the_nearest_leg_names_where_a_grabbed_waypoint_goes
+[1m12/12 passed.
+[0m[4m
+
+res://tests/engine/test_march_route_orders.gd
+[0m* test_waypoints_are_checked_as_the_end_is
+* test_the_courier_carries_the_waypoints_and_delivers_the_route
+* test_a_march_without_waypoints_carries_none
+* test_a_draft_keeps_its_waypoints_and_its_load
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_markets.gd
+[0m* test_the_deals_are_loaded
+* test_the_deals_are_cleared_with_the_pack
+* test_the_realms_markets_are_those_its_towns_centre
+* test_markets_follow_live_ownership
+* test_a_market_party_is_its_centre_towns_kingdom
+* test_an_annexed_town_trades_as_the_realms
+* test_a_route_sums_its_deals_by_buyer_kingdom
+* test_routes_follow_a_conquest
+* test_losing_a_province_and_its_market_never_raises_the_tolls
+* test_taking_a_foreign_market_can_raise_the_tolls
+* test_the_toll_and_closing
+* test_a_toll_line_names_the_buyer_by_its_label
+* test_a_venal_steward_skims_the_tolls_into_his_own_books
+* test_the_tick_takes_the_tolls
+* test_tolls_are_a_modest_share_of_the_crowns_tax
+    tolls 240 a month against 1961 of tax
+* test_closed_routes_survive_a_save
+* test_routes_are_deterministic
+* test_market_value_sums_its_pool
+* test_basket_price_is_stock_weighted_against_the_catalogue
+* test_buying_at_a_realm_market_pays_its_basket_price
+* test_an_unaffordable_buy_at_a_market_does_not_blame_the_factors_cut
+* test_selling_at_a_realm_market_pays_its_basket_less_the_spread
+* test_no_round_trip_between_markets_pays
+* test_a_market_outside_the_realm_is_refused
+[1m24/24 passed.
+[0m[4m
+
+res://tests/engine/test_missive_log.gd
+[0m* test_add_gives_ids_and_starts_unread
+* test_a_column_lists_newest_first
+* test_each_column_is_capped_on_its_own
+* test_supply_letters_never_evict_a_spy_report
+* test_other_letters_are_capped_without_counting_supply
+* test_the_log_survives_a_save
+* test_an_old_save_has_an_empty_board
+* test_unseen_counts_letters_above_the_seen_mark
+* test_an_old_save_counts_every_letter_seen
+* test_the_tables
+* test_receipts_never_push_the_monthly_report_off_the_truth_column
+[1m11/11 passed.
+[0m[4m
+
+res://tests/engine/test_missive_writer.gd
+[0m* test_a_delivery_files_one_credible_receipt_with_the_regiments_state
+* test_a_stale_order_writes_a_receipt_that_says_so
+* test_every_settled_month_files_one_steward_report_exact_to_the_economy
+* test_three_months_of_one_season_get_distinct_report_titles
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_name_forge.gd
+[0m* test_the_chain_records_what_follows_each_pair
+* test_forged_names_use_only_the_banks_letters_and_lengths
+* test_the_same_seed_forges_the_same_name
+* test_forge_unique_never_repeats_and_lengthens_when_the_bank_runs_dry
+* test_pretty_and_slug
+* test_forge_table_names_every_cell_once
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_opinion_drift.gd
+[0m* test_variant_matching
+* test_odo_hates_the_tithe_worked_example
+* test_pragmatist_barely_notices
+* test_zero_signature_applies_nothing
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_order_costs.gd
+[0m* test_every_catalog_action_has_a_cost_row
+* test_polarity_covers_every_metric
+* test_cost_detection_reads_polarity
+* test_direct_opinion_losses_count_through_the_snapshot
+* test_charge_applies_the_row_with_its_reason
+* test_charge_resolves_target_for_punishments
+* test_ensure_charges_only_when_nothing_else_did
+* test_always_rows_apply_beside_intrinsic_costs
+* test_every_handled_action_leaves_a_cost
+* test_affordability_counts_the_cost_rows_gold
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_order_pipeline.gd
+[0m* test_actions_and_impacts_apply_and_print
+* test_a_pure_impact_order_without_a_cost_is_charged_the_generic_cost
+* test_a_pure_impact_order_with_a_cost_is_not_charged_twice
+* test_rejected_impacts_and_actions_are_reported
+* test_event_choice_rides_through_the_pipeline
+* test_world_impacts_are_logged_with_their_source
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_promises.gd
+[0m* test_kept_when_action_executes_before_due
+* test_targeted_promise_needs_matching_target
+* test_broken_when_due_passes
+* test_flags_survive_round_trip
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_raid.gd
+[0m* test_daily_take_is_whole_gold_and_capped
+* test_the_take_reads_the_manors_own_month_on_the_campaign
+* test_no_take_off_the_target_or_in_a_battle_or_out_of_raid
+* test_plunder_feeds_the_host
+* test_the_take_is_a_ledger_line_off_the_controlling_purse
+* test_hazard_added_once_and_known
+* test_raided_kind_is_a_row_of_the_table
+* test_spoils_into_strategic_with_reason
+* test_routed_raider_pays_spoils_once_on_the_day
+* test_routed_raider_with_no_plunder_yields_nothing
+* test_a_host_that_stripped_its_manor_chooses_again
+* test_raid_is_deterministic_and_draws_no_random_number
+* test_a_raid_on_the_day_loop_is_told_in_the_field_report
+* test_raid_templates_spell_no_kingdom
+* test_raiding_keeps_a_host_in_the_field_but_not_for_ever
+    raiding past day 33: raid_main; every host homeward from day 103
+* test_a_town_is_raided_through_its_own_manor_from_inside_its_reach
+* test_two_hosts_on_one_manor_never_take_more_than_its_share
+[1m17/17 passed.
+[0m[4m
+
+res://tests/engine/test_raid_headlines.gd
+[0m* test_a_raid_begun_and_spoils_make_one_line_each
+* test_no_raid_event_makes_no_line
+[1m2/2 passed.
+[0m[4m
+
+res://tests/engine/test_realm_economy.gd
+[0m* test_a_province_is_the_sum_of_its_manors_lines
+* test_the_realm_is_the_sum_of_its_provinces_and_the_crown_of_its_own
+* test_the_cache_recomputes_only_what_changed
+* test_the_day_buckets_spread_the_months_work
+* test_the_full_recompute_agrees_with_the_cache
+* test_a_conquest_moves_a_province_into_the_realms_sum
+* test_a_provinces_lines_come_out_together
+* test_the_tax_table_groups_its_cells_by_province
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_relationship_graph.gd
+[0m* test_campaign_starts_with_csv_graph
+* test_adjust_shocks_clamp_and_log_reason
+* test_adjust_creates_missing_edge_as_acquaintance
+* test_drift_heals_toward_baseline_without_overshoot
+* test_edges_at_baseline_do_not_drift_or_report
+* test_tick_engine_reports_relationship_deltas
+* test_describe_for_orders_by_strength_and_caps
+* test_event_rel_op_applies_shock
+* test_persona_context_carries_sheet_and_relations
+* test_relationships_survive_save_round_trip
+* test_pre_roster_save_loads_with_empty_graph
+[1m11/11 passed.
+[0m[4m
+
+res://tests/engine/test_rng.gd
+[0m* test_same_seed_same_sequence
+* test_round_trip_preserves_stream
+* test_pick_weighted_is_deterministic_and_in_range
+* test_a_seed_above_2_to_the_53_survives_the_save
+* test_an_old_saves_numeric_seed_still_loads
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_road_graph.gd
+[0m* test_the_snap_merges_a_mid_line_join
+* test_the_fastest_route_and_its_cost_by_hand
+* test_a_separate_network_is_unreached
+* test_a_start_s_tree_is_run_once_and_kept
+* test_stretch_need_rounds_up
+* test_the_capital_reaches_nearly_the_whole_pack
+* test_a_river_joins_at_a_snapped_vertex_and_is_a_route
+* test_a_road_over_a_scarp_goes_round
+* test_no_way_round_keeps_the_drawn_edge
+* test_a_route_is_a_copy
+* test_the_real_pack_courier_network
+    steep edges detoured 211, kept for no way round 27, nodes 2118 (drawn 1459)
+    river-only nodes reached from the capital: 552 of 659
+* test_installing_a_grid_rebuilds_the_courier_network
+[1m12/12 passed.
+[0m[4m
+
+res://tests/engine/test_roster_guard.gd
+[0m* test_no_reader_of_the_pack_regiments
+[1m1/1 passed.
+[0m[4m
+
+res://tests/engine/test_save_load.gd
+[0m* test_save_load_round_trip_hash_equal
+* test_save_version_written_and_newer_save_refused
+WARNING: GameState: save version 7 is newer than this build's 6
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] from_dict (res://scripts/engine/game_state.gd:518)
+         [1] test_save_version_written_and_newer_save_refused (res://tests/engine/test_save_load.gd:40)
+         [2] _run_test (res://addons/gut/gut.gd:587)
+         [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_roster_and_seats_round_trip
+* test_a_save_from_before_the_split_is_refused
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_scene_layout.gd
+[0m* test_no_scene_lies_under_assets
+* test_every_packs_built_world_scene_is_under_scenes
+[1m2/2 passed.
+[0m[4m
+
+res://tests/engine/test_scouting.gd
+[0m* test_the_shapes_are_the_table
+* test_a_standing_unit_sweeps_no_sector
+* test_the_cavalry_sector_reaches_30_km_inclusive
+* test_the_infantry_sector_reaches_15_km
+* test_the_sector_is_60_degrees_either_side
+* test_a_scout_letter_once_an_episode
+* test_a_foe_at_hand_is_a_contact_letter_in_the_truth_column
+* test_a_foe_without_men_is_dropped_from_the_log
+* test_scouting_draws_no_random_number_and_the_log_saves
+* test_the_contact_letter_comes_before_the_battle_it_leads_to
+* test_a_scout_letter_is_kept_apart_from_the_columns_cap
+[1m11/11 passed.
+[0m[4m
+
+res://tests/engine/test_siege.gd
+[0m* test_siege_step
+* test_day_gain_with_hunger
+* test_progress_accumulates_daily
+    attack 4108, defence 227: 94 a day
+* test_starving_town_speeds_the_siege
+* test_a_besieged_garrison_is_fed_only_by_its_town
+* test_assault_cadence
+* test_an_assault_with_no_battle_is_tried_again_and_never_sticks
+* test_checked_assault_lowers_progress
+* test_a_standoff_assault_changes_nothing
+* test_routed_defender_adds_the_rest
+* test_routed_besiegers_go_home
+* test_capture_at_1000_takes_the_towns_manors_with_a_reason
+* test_hold_host_leaving_liberates_the_manors
+* test_liberation_restores_a_non_default_prior_holder
+* test_save_and_load_mid_occupation_continues_identically
+* test_shipped_outcomes_map_breach_and_repulsed
+* test_hold_host_with_no_column_left_frees_the_town
+* test_garrison_slain_to_the_last_man_loses_the_town
+* test_hold_host_stays_and_is_not_rethought
+* test_other_hosts_skip_an_occupied_town
+* test_no_double_capture_and_no_progress_after_loss
+* test_garrison_marched_off_ends_the_siege_without_progress
+* test_retaken_town_sends_hold_host_retreating
+* test_capture_mid_assault_ends_the_assault
+* test_starving_besieger_retreats
+* test_relief_force_joins_battle_and_can_lift_siege
+* test_a_garrison_waits_for_the_assault
+* test_a_supply_line_into_a_besieged_town_is_cut
+* test_a_homeward_host_starts_no_battle_with_the_garrison
+* test_a_running_assault_is_called_off_the_day_its_host_turns_home
+* test_a_beaten_holding_host_still_pays_spoils_and_frees_the_town
+* test_one_siege_a_town_with_the_reserve_beside_its_main_host
+* test_progress_follows_the_lead_host
+* test_siege_reserve_follows_its_main_host_home
+* test_siege_news_is_a_battle_letter_in_fixed_words
+* test_siege_templates_spell_no_kingdom
+* test_a_siege_on_the_day_loop_wears_down_storms_and_takes_the_town
+    weak garrison: siege from day 17, fell day 24 (8 days), assaults 0
+* test_a_strongly_held_walled_town_outlasts_the_besiegers_supplies
+    strong walled town, unstocked: siege from day 17, lifted day 32, best progress 583, starving days 0, checked assault rounds 2
+* test_siege_is_deterministic
+* test_siege_draws_no_random_number
+[1m40/40 passed.
+[0m[4m
+
+res://tests/engine/test_sighting.gd
+[0m* test_a_foe_at_exactly_the_reach_is_seen_and_a_metre_beyond_is_not
+* test_the_nearest_of_several_units_counts
+* test_a_unit_with_no_man_under_arms_sees_nothing_and_is_not_seen
+* test_a_fleet_sees_nothing
+* test_a_held_town_sees
+* test_about_is_the_middle_of_the_estimate_rounded
+* test_a_seen_unit_is_refreshed_and_left_behind_as_a_ghost
+* test_a_spy_leaves_a_ghost_with_his_estimate_and_day
+* test_a_sight_beats_a_spy_the_same_day_and_a_newer_spy_beats_an_old_sight
+* test_the_rumour_leaves_a_host_ghost_at_its_assembly_point
+* test_a_units_ghost_takes_its_hosts_rumour_away
+* test_a_ghost_is_kept_until_exactly_ghost_keep_days_old
+* test_a_destroyed_unit_takes_its_ghost_with_it
+* test_the_ghosts_survive_a_save_and_an_old_save_has_none
+* test_each_sources_line
+* test_a_seen_foes_card_has_the_line_and_never_its_exact_men
+* test_a_ghosts_card_stands_at_the_ghost
+[1m17/17 passed.
+[0m[4m
+
+res://tests/engine/test_sighting_invasion.gd
+[0m* test_the_no_orders_run_sees_the_invasion
+* test_the_sight_is_deterministic_across_a_save
+[1m2/2 passed.
+[0m[4m
+
+res://tests/engine/test_source_trust.gd
+[0m* test_trust_is_derived_from_how_the_listener_feels_about_the_speaker
+* test_trust_is_directional
+* test_pair_with_no_edge_uses_the_default
+* test_adjust_clamps_and_logs_a_reason
+* test_adjust_on_an_underived_pair_starts_from_default
+* test_trust_survives_save_round_trip
+* test_pre_feature_save_falls_back_to_derivation
+[1m7/7 passed.
+[0m[4m
+
+res://tests/engine/test_spy_system.gd
+[0m* test_an_estimate_by_hand
+* test_quality_follows_the_place
+* test_quality_is_shifted_by_walls
+* test_the_column_and_the_facts
+* test_troops_near_the_point_split_own_and_foreign
+* test_troops_near_count_men_under_arms
+* test_a_spy_at_sea_reports_troops_only
+* test_two_spies_can_disagree
+* test_send_ride_arrive_file
+* test_a_thin_chest_cannot_send_a_spy
+* test_observe_draws_the_same_report_from_the_same_state
+* test_the_report_names_the_chief_good
+* test_a_spys_news_lines_name_his_place
+* test_a_spy_is_refused_beyond_the_fuse
+* test_a_spys_next_day_is_previewed_and_the_preview_files_nothing
+* test_a_controlled_province_is_refused_with_the_reason
+* test_an_uncontrolled_province_of_the_realm_is_allowed
+* test_a_foreign_province_is_allowed
+* test_wildlands_are_allowed
+* test_off_the_map_says_off_the_map_first
+* test_the_key_at_zero_lifts_the_refusal
+[1m21/21 passed.
+[0m[4m
+
+res://tests/engine/test_story_source.gd
+[0m* test_every_event_in_events_csv_has_a_scene
+* test_ev_08_is_the_documents_scene_as_displayed
+* test_parses_a_minimal_document
+* test_entry_without_a_scene_field_is_omitted_not_faked
+* test_missing_document_yields_no_scenes_rather_than_crashing
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_supply_day.gd
+[0m* test_a_flowing_line_draws_from_its_town_and_delivers_less_the_road
+* test_the_rate_scales_the_draw
+* test_the_draw_stops_at_thirty_days
+* test_crown_then_lord_then_the_house_is_bought
+* test_an_empty_treasury_buys_nothing_from_the_house
+* test_a_purchase_never_overdraws_the_treasury
+* test_cartage_is_charged_in_whole_gold_and_the_rest_carried
+* test_a_riding_line_flows_on_its_ready_day
+* test_a_line_whose_town_leaves_the_realm_is_cancelled
+* test_a_cut_line_draws_nothing_and_says_so
+* test_a_regiment_in_a_realm_town_is_topped_up_free
+* test_a_line_follows_a_marching_column
+* test_an_ordered_line_waits_while_its_courier_rides
+* test_an_ordered_line_whose_courier_is_lost_says_the_orders_never_came
+* test_a_pending_point_still_riding_is_waited_on_when_the_first_is_lost
+* test_a_lost_clear_leaves_the_set_awaited
+* test_a_pending_point_whose_courier_is_lost_is_dropped
+* test_low_and_empty_are_said_once
+* test_the_tick_warns_after_the_host_eats
+* test_a_town_running_short_is_said_once
+* test_a_cleared_road_restores_the_line_once
+* test_a_month_of_small_draws_comes_to_the_plan
+* test_a_refill_that_buys_from_a_house_is_counted_on_the_regiment
+* test_the_tick_engine_runs_the_day_and_keeps_its_events
+* test_a_regiment_whose_town_is_dry_is_fed_from_the_depot
+* test_a_regiment_its_town_fills_is_fed_by_that_town
+* test_a_dry_town_and_depot_draw_the_crowns_stores_nearest_first
+[1m27/27 passed.
+[0m[4m
+
+res://tests/engine/test_supply_front.gd
+[0m* test_a_town_ahead_breaks_the_line_once_and_it_delivers_nothing
+* test_it_flows_again_past_the_hysteresis_with_one_event
+* test_a_flowing_line_inside_the_tolerance_does_not_break
+* test_wagons_reaching_a_column_behind_their_town_say_only_the_break
+* test_the_home_town_refill_is_not_touched
+* test_an_old_save_line_loads_and_breaks
+* test_the_order_refuses_a_town_ahead_where_the_column_stands_when_run
+* test_the_cards_the_slip_and_the_news_say_it_plainly
+* test_a_cut_road_wins_and_clears_into_front
+* test_only_a_front_line_is_drawn_broken
+[1m10/10 passed.
+[0m[4m
+
+res://tests/engine/test_supply_garrisons.gd
+[0m* test_a_year_with_no_orders_starves_no_home_garrison
+[1m1/1 passed.
+[0m[4m
+
+res://tests/engine/test_supply_ledger.gd
+[0m* test_no_line_no_plan_row
+* test_a_line_is_one_row_projecting_its_month
+* test_the_link_types_are_the_new_chain
+* test_the_regiment_card_names_the_supply_point
+* test_dispatches_runs_town_to_line
+* test_stocks_runs_manor_to_town
+* test_sells_to_reads_the_month_counters
+* test_the_supply_line_is_named_from_its_town
+* test_the_town_card_shows_its_stores
+* test_no_card_or_node_still_names_a_stronghold
+* test_sells_to_counts_a_retired_lines_and_a_towns_topups
+* test_sells_to_skips_a_regiment_in_the_open_with_no_line
+* test_the_town_card_says_how_long_its_stores_last
+[1m13/13 passed.
+[0m[4m
+
+res://tests/engine/test_supply_lines.gd
+[0m* test_the_road_runs_from_the_town_to_the_column
+* test_wagon_days_round_up_and_are_at_least_one
+* test_a_town_within_reach_is_eligible_and_a_far_one_says_why
+* test_no_hostile_regiment_no_cut
+* test_a_hostile_regiment_on_the_road_cuts_it
+* test_the_lines_survive_the_save
+* test_day_fee_milli_is_the_months_draw_over_the_road_a_day
+* test_the_three_rates_read_three_fees_on_a_long_road
+* test_gold_words_read_tenths
+* test_the_road_between_a_town_and_any_point
+* test_a_march_supply_town_must_reach_the_column_now_and_the_end
+* test_a_town_nearer_the_rear_or_within_the_tolerance_is_not_ahead
+* test_a_town_farther_from_the_rear_than_the_tolerance_is_ahead
+* test_a_retreat_is_supplied_from_the_home_side
+* test_the_rear_order_puts_the_nearest_allowed_town_first_ties_toward_the_capital
+* test_a_town_farther_from_the_capital_than_the_column_is_greyed_with_why
+* test_the_off_road_leg_to_the_column_goes_round_a_scarp
+* test_water_across_the_leg_does_not_turn_the_wagons
+[1m18/18 passed.
+[0m[4m
+
+res://tests/engine/test_supply_marks.gd
+[0m* test_a_route_through_a_brigand_mark_pays_its_share_once
+* test_a_route_out_of_reach_pays_nothing
+* test_a_mark_that_is_no_hazard_takes_nothing
+* test_the_total_never_passes_the_cap
+* test_every_line_names_its_hazards_and_no_line_has_none
+* test_a_brigand_on_a_regiments_road_shows_in_its_line_and_robs_its_day
+* test_a_fleet_pays_no_mark_toll
+* test_a_line_through_rebels_pays_and_names_them_when_known
+* test_an_unknown_hazard_is_never_named
+[1m9/9 passed.
+[0m[4m
+
+res://tests/engine/test_supply_missives.gd
+[0m* test_one_dispatch_gathers_the_days_events
+* test_every_event_kind_reads_as_a_sentence
+* test_a_dry_town_names_the_depot_that_feeds_the_regiment
+* test_a_dry_town_fed_by_the_realm_says_so
+* test_a_low_event_with_no_town_reads_whole
+* test_a_day_with_events_files_one_letter_and_a_quiet_day_none
+* test_the_marshals_report_has_a_row_per_land_regiment_and_resets_the_month
+* test_the_row_adds_the_regiments_own_refill_purchases_and_keeps_the_remainders
+* test_a_regiment_without_a_line_still_has_a_row
+* test_the_skim_is_banked_to_the_governor
+* test_a_month_turn_files_the_marshals_report
+* test_the_opening_tick_files_no_marshals_report
+* test_the_report_tells_the_road_loss_and_who_was_bought_from
+* test_a_line_cancelled_mid_month_still_reports_its_fee_and_banks_its_skim
+* test_the_skims_odd_units_carry_to_next_month
+* test_the_report_names_the_robbers_of_a_line
+* test_the_marshals_purchases_say_units_and_gold
+* test_the_cut_letter_says_where
+[1m18/18 passed.
+[0m[4m
+
+res://tests/engine/test_supply_orders.gd
+[0m* test_set_rides_to_the_town_and_opens_the_line_on_delivery
+* test_refusals
+* test_carry_rides_to_the_regiment_and_sets_the_load
+* test_clear_ends_the_line_when_its_courier_reaches_the_town
+* test_a_newer_set_survives_an_older_clear
+* test_an_older_clear_arriving_first_leaves_the_new_point_waiting
+* test_a_clear_issued_before_the_set_arrives_leaves_no_line
+* test_a_replacing_point_keeps_the_months_counters
+* test_a_supply_courier_does_not_move_the_march_readers
+* test_a_town_bound_courier_is_named_by_its_town
+* test_a_new_rate_from_the_same_town_keeps_the_line_flowing
+* test_a_new_town_rides_afresh
+* test_the_town_estimate_is_the_supply_couriers_ride
+[1m13/13 passed.
+[0m[4m
+
+res://tests/engine/test_supply_system.gd
+[0m* test_the_loss_grows_with_the_road_and_is_capped
+* test_line_of_reads_the_line
+* test_a_garrison_in_a_crown_town_reads_its_town
+* test_a_garrison_reads_in_garrison_at_its_town
+* test_a_standing_regiment_reads_that_its_town_tops_it_up
+* test_a_regiment_whose_town_is_dry_reads_the_depot_that_feeds_it
+* test_a_month_in_a_stocked_town_leaves_the_ranks_well_fed
+* test_a_regiment_on_the_mountains_uses_more_than_at_home
+* test_only_the_seat_earns_the_garrison_morale
+[1m9/9 passed.
+[0m[4m
+
+res://tests/engine/test_tick_engine.gd
+[0m* test_the_months_end_settles_the_three_pools
+* test_the_civil_pool_cannot_fall_below_empty
+* test_the_harvest_is_civil_goods_in_autumn
+* test_the_day_step_warms_a_bucket
+* test_the_pools_start_with_months_of_the_crowns_own_production
+* test_outcomes_drain_into_next_report
+* test_the_crowns_provinces_pay_their_taxes_each_month
+* test_days_step_works_and_the_thirtieth_is_a_tick
+* test_a_work_longer_than_a_month_survives_the_tick
+* test_the_crowns_buildings_pay_each_tick
+* test_the_running_day_is_the_day_shown_and_ends_at_advance_day
+* test_the_month_reports_its_hazard_news
+[1m12/12 passed.
+[0m[4m
+
+res://tests/engine/test_town_stores.gd
+[0m* test_apportion_is_largest_remainder_with_ties_by_code
+* test_units_and_gold_convert_at_the_supply_price
+* test_every_realm_manor_feeds_the_nearest_town_of_its_province
+* test_apportion_with_unequal_weights_and_a_small_total
+* test_take_from_no_town_creates_nothing
+* test_a_lost_town_takes_its_stores_with_it
+* test_the_catchment_follows_a_province_lost
+* test_a_fall_is_taken_in_proportion_to_stock
+* test_take_never_goes_below_empty
+* test_reconcile_follows_a_metric_moved_elsewhere
+* test_the_stores_survive_the_save
+* test_days_of_stock_is_the_month_over_the_draw
+[1m12/12 passed.
+[0m[4m
+
+res://tests/engine/test_town_stores_month.gd
+[0m* test_the_inflow_sums_to_the_purses
+* test_a_new_campaign_seeds_the_towns_from_the_pools
+* test_the_months_settlement_keeps_the_pools_equal_to_the_towns
+* test_the_house_stock_is_capped_at_its_months
+* test_an_old_save_seeds_on_ensure
+* test_a_months_deposit_lands_in_the_towns_that_earned_it
+* test_a_workshops_make_is_stored_in_its_own_town
+* test_ensure_leaves_existing_stores_alone
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_trigger_dsl.gd
+[0m* test_always_and_metrics
+* test_season_year_seat_trait
+* test_action_since_and_flags
+* test_host_hungry_reads_the_regiments
+* test_host_hungry_is_under_the_low_days
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_war_drafts.gd
+[0m* test_a_draft_is_planted_in_whole_metres_and_replaces_the_last
+* test_strike_and_any
+* test_a_draft_stands_for_its_real_order
+* test_drafts_survive_a_save_and_a_load
+* test_an_old_save_has_no_drafts
+* test_a_real_order_sets_the_draft_aside_and_says_so
+* test_an_order_with_no_draft_says_nothing_of_drafts
+* test_a_pencilled_halt_is_struck_when_its_column_arrives
+* test_a_march_draft_survives_its_column_arriving
+* test_the_place_check_ignores_the_purse
+* test_a_quiet_copy_leaves_the_live_border_caches_alone
+* test_a_march_draft_carries_its_supply_town_and_runs_it_first
+* test_the_line_it_has_already_is_no_new_order
+* test_restore_puts_back_and_erases
+[1m14/14 passed.
+[0m[4m
+
+res://tests/engine/test_war_economy.gd
+[0m* test_every_works_row_is_a_strategic_good_and_a_family_has_one_glyph
+* test_a_work_reaches_the_floor_and_takes_its_largest_listed_goods_family
+* test_no_floor_marks_every_town_with_a_listed_good_and_a_high_one_none
+* test_a_town_with_no_listed_good_is_not_a_work
+* test_the_markets_in_numeric_order_at_their_centre_towns
+* test_a_markets_food_price_by_hand
+* test_a_pairs_gold_lies_on_every_segment_of_its_path_and_nowhere_else
+* test_a_towns_sale_to_its_market_runs_the_same_road
+* test_a_market_to_market_deal_runs_between_their_centres
+* test_towns_off_the_roads_add_nothing
+* test_the_flows_are_built_once_per_pack
+* test_tiers_by_the_thresholds
+* test_the_trade_at_a_point_on_and_off_the_road
+* test_segments_are_the_drawn_tiers_touching_the_rect
+* test_a_segment_says_whether_it_is_a_road_or_a_trail
+[1m15/15 passed.
+[0m[4m
+
+res://tests/engine/test_war_folio.gd
+[0m* test_every_section_in_the_table_has_a_builder
+* test_the_page_carries_the_six_sections_in_order
+* test_composition_counts_each_arm_and_the_figures
+* test_morale_names_its_mark_and_the_months_drift
+* test_ground_gives_the_grid_reference
+* test_a_foreign_regiment_gets_only_its_headcount_word
+* test_drills_are_only_the_clips_the_model_has
+* test_a_defend_clip_gets_its_own_tab
+* test_figures_follow_the_strength_tiers
+* test_dev_mode_foreign_regiment_gets_all_six_sections
+* test_supply_gives_stores_and_line
+* test_march_under_orders_names_destination_and_arrival
+* test_garrison_adds_its_morale_row
+* test_a_standing_regiment_reads_the_town_that_tops_it_up
+* test_the_order_row_tells_the_seat_from_the_camp_and_the_field
+* test_matchups_are_named_per_arm
+* test_a_piece_of_kit_two_arms_share_is_shown_once
+* test_the_readiness_row_gives_its_four_parts_and_hides_training
+* test_every_order_has_a_word
+* test_the_line_row_names_its_supply_point
+* test_in_hand_reads_days_of_the_carry
+* test_the_archers_kit_is_not_hidden_by_the_infantrys_names
+* test_the_supply_row_names_a_brigand_on_the_road
+* test_the_battle_stance_is_on_the_march_page
+* test_the_brief_names_the_regiment_and_carries_its_glance_rows_in_order
+* test_the_brief_counts_heads_by_arm_and_the_fit
+* test_the_brief_gives_morale_and_the_stores_days
+* test_the_briefs_order_names_a_march_with_its_end_and_days
+* test_a_foreign_regiments_brief_is_only_its_headcount_word
+[1m29/29 passed.
+[0m[4m
+
+res://tests/engine/test_war_front.gd
+[0m* test_a_straight_east_front_for_three
+* test_a_straight_south_front_for_two
+* test_an_l_shaped_front_faces_each_chord
+* test_a_diagonal_front_for_one
+* test_nothing_for_no_regiment_or_no_length
+* test_facing_round_trips_and_reads_as_a_compass_point
+* test_assign_takes_the_stroke_in_pack_px_and_orders_by_place_along_it
+* test_assign_breaks_a_tie_by_code
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_war_front_drafts.gd
+[0m* test_the_draft_stands_for_a_march_and_a_hold_on_one_courier
+* test_a_halt_with_a_hold_takes_it_at_once
+* test_the_hold_waits_for_the_arrival
+* test_a_newer_march_drops_the_hold_and_a_newer_stance_wins
+* test_a_facing_must_be_a_whole_degree_and_it_all_saves
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_war_ground.gd
+[0m* test_the_ground_alone_with_no_regiment_chosen
+* test_the_sea_reads_as_open_sea
+* test_a_chosen_regiment_reads_its_factors_against_open_plains
+* test_a_fleet_cannot_go_ashore
+* test_an_empty_banner_reads_no_power_no_pace_and_no_days
+* test_a_foreign_town_never_shows_a_garrison
+* test_the_garrison_is_the_seat_and_the_camp_a_count
+* test_only_the_seat_reads_the_towns_works
+* test_raking_leaves_the_days_out
+* test_a_reading_stays_inside_its_budget
+* test_a_land_regiment_cannot_march_into_the_sea
+* test_the_slip_names_the_marks_near_the_pointer_nearest_first
+* test_a_brigand_mark_states_its_toll
+* test_no_marks_far_from_everything
+* test_a_legend_is_plain_words_cut_at_a_word
+* test_a_pointer_inside_a_hazards_reach_names_it
+* test_the_slip_names_a_known_hazard_with_its_months_and_effect
+* test_the_slip_never_names_an_unknown_hazard
+* test_hazard_words_by_kind
+* test_a_road_carrying_trade_names_it
+* test_a_work_names_its_goods_and_at_home_its_month
+* test_a_market_town_names_its_market_and_food_price
+* test_a_market_won_reads_ours
+* test_the_open_sea_has_no_economy_lines
+[1m24/24 passed.
+[0m[4m
+
+res://tests/engine/test_war_marks.gd
+[0m* test_every_inked_type_is_an_admitted_marker_type_with_a_known_glyph
+* test_inked_marks_by_layer_in_code_order
+* test_a_type_not_in_the_table_is_never_inked
+* test_near_is_nearest_first_and_capped
+* test_the_slips_words_are_for_the_player_not_the_designer
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_war_piece_slip.gd
+[0m* test_a_regiments_reading_is_its_own_figures_and_days_in_hand
+* test_supplies_are_a_figure_with_the_days_in_brackets
+* test_one_regiments_slip_names_it_and_says_its_figures
+* test_a_garrisons_slip_lists_each_regiment_briefly
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_war_plan_ground.gd
+[0m* test_men_on_this_ground_by_hand
+* test_the_slip_writes_men_and_factors
+* test_works_only_in_a_town_its_side_holds
+* test_with_a_regiment_both_sides_side_by_side_and_no_odds
+* test_the_reading_writes_nothing
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_war_plans.gd
+[0m* test_the_sides_are_the_foreign_kingdoms_then_unknown
+* test_a_piece_is_placed_in_whole_metres
+* test_heads_are_clamped_and_stepped
+* test_refusals
+* test_the_cap_holds
+* test_move_edit_and_remove_each_raise_the_revision
+* test_the_default_side
+* test_clear_takes_only_what_lies_in_the_rect
+* test_a_stroke_is_drawn_in_whole_metres
+* test_stroke_refusals
+* test_default_names_count_on
+* test_reshape_shift_and_restyle
+* test_strokes_in_reads_bounds_so_a_crossing_stroke_shows_on_both_rects
+* test_plans_survive_the_json_save_whole
+* test_an_old_save_loads_with_no_plans
+* test_restore_puts_a_snapshot_back
+* test_no_engine_rule_reads_the_plans
+* test_the_piece_nearest_a_point_within_reach
+* test_a_front_faces_the_side_its_nearest_target_lies_on
+* test_the_opposing_points_are_the_other_sides
+* test_a_front_drawn_with_a_facing_keeps_it
+* test_a_red_arrow_drawn_for_a_supposed_piece_goes_with_it
+[1m22/22 passed.
+[0m[4m
+
+res://tests/engine/test_war_room.gd
+[0m* test_the_table_believes_the_truth_until_intel_p2
+* test_every_crown_regiment_is_a_piece_on_exactly_one_side_of_each_sheet
+* test_a_piece_on_no_sheet_goes_to_the_nearest
+* test_the_pose_follows_the_order
+* test_no_order_no_pennant_then_riding_then_received
+* test_a_newer_garrison_courier_countermands_a_riding_march_and_a_received_one
+* test_a_march_older_than_a_delivered_order_plants_no_pennant
+* test_a_garrison_courier_alone_strikes_no_pennant
+* test_the_tag_reads_heads_and_months_of_stores
+* test_grouping
+* test_a_riding_pennant_carries_the_day_its_courier_left
+* test_a_regiment_in_a_sheets_collar_is_on_that_sheet_and_off_no_other_twice
+* test_a_drawn_spot_is_where_the_piece_stands
+* test_the_sheets_split_by_the_drawn_spot
+* test_every_unit_round_a_town_is_its_own_piece
+* test_a_spy_report_of_foreign_men_is_a_hint_where_it_saw_them
+* test_a_report_below_the_threshold_hints_nothing
+[1m17/17 passed.
+[0m[4m
+
+res://tests/engine/test_war_room_data.gd
+[0m* test_every_balance_key_the_room_reads_is_there
+* test_the_palette_has_every_ink_the_room_draws
+* test_every_drill_names_a_known_clip_and_real_arms
+* test_every_equipment_row_names_a_real_arm
+* test_the_folio_sections_are_the_six_of_the_spec_in_order
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_war_sheets.gd
+[0m* test_every_sheet_is_a_graticule_cell_grown_by_the_collar
+* test_ids_are_column_letters_and_row_numbers_from_the_north_west
+* test_columns_past_z_are_lettered_like_a_ledger
+* test_only_cells_with_land_are_sheets_and_every_land_cell_is_on_one
+* test_a_point_belongs_to_the_cell_it_lies_in_not_a_neighbours_collar
+* test_the_place_names_sheet_square_and_degrees
+* test_neighbours_are_the_grid_cells_beside_it
+* test_the_series_is_cut_at_ten_degrees_and_its_ids_are_unique
+[1m8/8 passed.
+[0m[4m
+
+res://tests/engine/test_war_sheets_union.gd
+[0m* test_one_cell_union_is_todays_sheet
+* test_union_rect
+* test_a_diagonal_pair_spans_its_whole_box
+* test_no_sheet_no_union
+* test_the_pieces_split_by_a_union
+[1m5/5 passed.
+[0m[4m
+
+res://tests/engine/test_weather.gd
+[0m* test_the_same_seed_province_and_day_give_the_same_weather
+* test_weather_holds_across_a_spell
+* test_the_odds_decide
+* test_no_province_is_clear
+* test_a_seasons_frequencies_follow_its_odds
+* test_speeds_and_words
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_workshop_orders.gd
+[0m* test_the_rate_is_set_and_costs_the_stewards_goodwill
+* test_refusals
+* test_refused_on_a_manor_the_crown_does_not_hold
+* test_the_order_reads_the_rate_table
+[1m4/4 passed.
+[0m[4m
+
+res://tests/engine/test_workshop_system.gd
+[0m* test_the_building_row_exists
+* test_one_workshop_at_full_takes_its_capacity
+* test_half_rate_halves_it
+* test_the_lords_civil_goods_run_out_in_cell_order
+* test_settlement_moves_the_goods_with_reasons
+* test_the_tick_runs_the_workshops
+* test_a_workshop_sold_away_works_for_nobody
+* test_workshop_rates_survive_a_save
+* test_a_demolished_workshop_forgets_its_rate
+* test_a_cell_without_a_workshop_reads_in_full
+* test_the_rates_are_a_table
+[1m11/11 passed.
+[0m[4m
+
+res://tests/engine/test_world_ledger.gd
+[0m* test_slots_resolve_to_the_bound_kingdom
+* test_the_most_specific_schema_row_wins
+* test_reads_fall_through_from_override_to_pack
+* test_alias_reads_and_writes_the_metric
+* test_the_treasury_has_room_for_the_new_scale
+* test_writes_clamp_to_the_schema_range
+* test_unlisted_path_and_empty_reason_are_refused
+* test_opinion_and_attribute_paths_go_through_the_character_logs
+* test_set_enum_accepts_only_listed_values
+* test_polarity_and_caps_read_from_the_schema
+* test_only_the_crowns_own_land_belongs_to_them
+* test_overrides_survive_a_save_round_trip
+* test_prompt_catalog_lists_writable_fields_with_caps
+[1m13/13 passed.
+[0m[4m
+
+res://tests/engine/test_world_rules.gd
+[0m* test_impossible_claims_are_vetoed_by_their_rule
+* test_ontology_match_is_case_insensitive
+* test_magnitude_beyond_bound_is_vetoed
+* test_magnitude_within_bound_passes
+* test_plausible_claim_is_not_vetoed
+* test_magnitude_rule_ignores_other_claim_types
+[1m6/6 passed.
+[0m[4m
+
+res://tests/engine/test_world_tables.gd
+[0m* test_every_domain_table_loads
+* test_named_tables_share_rows_with_world_tables
+* test_kingdoms_carry_form_culture_and_religion
+* test_economy_rows_reference_real_places
+* test_player_realm_has_economy_and_military_rows
+* test_military_totals_equal_the_sum_of_regiments
+* test_diplomacy_lists_every_ordered_pair_once
+* test_zones_name_real_provinces_and_kingdoms
+* test_burgs_carry_group_and_culture
+* test_absent_table_reads_as_empty
+* test_house_bindings_name_real_land_of_the_realm_and_real_houses
+* test_regiments_stand_in_a_province_of_their_kingdom
+* test_provinces_carry_a_majority_biome
+[1m13/13 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_court_look.gd
+[0m* test_a_court_tie_is_a_thin_cord_by_its_feeling
+* test_selecting_someone_makes_them_the_lit_one
+* test_a_court_tie_wears_its_clusters_colours_not_a_feeling
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_galaxy_layout.gd
+[0m* test_one_snapshot_always_lays_out_the_same_way
+* test_a_star_keeps_its_place_across_a_snapshot
+* test_a_new_star_starts_round_its_home
+* test_a_pinned_star_stays_where_it_is_held
+* test_the_clusters_settle_apart
+* test_other_clusters_push_less_and_no_court_discs_touch
+* test_a_star_is_sized_by_its_kind
+* test_a_frame_never_starts_a_pass_past_its_budget
+* test_a_changed_redraw_keeps_the_survivors_and_settles_briefly
+* test_a_pin_on_a_settled_chart_runs_a_share_of_the_settle
+* test_the_grid_pass_is_the_all_pairs_pass_within_its_reach
+* test_the_grid_layout_is_deterministic
+* test_the_grid_layout_still_separates_the_clusters
+[1m13/13 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_hud.gd
+[0m* test_an_overlapping_name_is_dropped_and_order_kept
+* test_nothing_to_draw_is_nothing_kept
+* test_a_crowded_name_takes_its_place_under_the_sphere
+* test_a_gauge_caption_reads_its_value
+* test_a_gauge_fills_by_its_share_and_never_past_full
+* test_a_names_gauges_take_room_in_the_cull
+* test_a_name_set_under_its_sphere_carries_its_gauges_under_it
+* test_a_name_never_sits_on_a_star
+* test_a_name_on_a_star_takes_its_other_place
+* test_an_entry_keeps_its_own_size_colour_and_ring
+* test_a_bigger_name_takes_more_room
+* test_a_title_is_measured_in_the_title_font
+* test_a_kept_name_never_lies_on_another_star
+* test_the_first_name_stands_when_every_place_is_on_another_star
+* test_a_dim_names_gauges_fade_with_it
+* test_a_name_stands_beside_its_star_when_over_and_under_are_taken
+* test_a_name_wears_a_soft_halo_under_its_outline
+* test_a_name_takes_the_nearest_ring_and_is_never_clipped
+* test_the_first_label_walls_off_lit_avoids_dashes_dim_stays_near
+* test_the_disc_grid_answers_as_the_scan
+* test_the_name_grid_covers_as_the_scan
+[1m21/21 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_lineage.gd
+[0m* test_the_hybrid_by_hand
+* test_the_real_pack_anchors
+[1m2/2 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_link_mesh.gd
+[0m* test_a_link_is_one_quad_coloured_end_to_end
+* test_each_vertex_knows_the_other_end_and_its_side
+* test_width_shift_speed_dash_and_glow_travel_with_the_vertex
+* test_the_mesh_carries_both_custom_channels
+* test_each_vertex_carries_both_ends_stars
+* test_no_segments_is_an_empty_mesh
+* test_moving_the_ends_rewrites_only_the_positions
+[1m7/7 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_look_assets.gd
+[0m* test_each_material_is_its_shader_and_nothing_else
+* test_the_dimmed_stars_draw_over_the_links
+* test_the_current_draws_over_the_dimmed_stars_and_the_links
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_math.gd
+[0m* test_a_ray_meets_a_sphere_at_its_near_side
+* test_a_ray_passes_a_segment_at_its_closest
+* test_a_zero_length_thread_is_a_point
+* test_a_ray_picks_the_nearest_star
+* test_screen_to_viewport_uses_the_window_scale
+* test_the_orbit_looks_at_its_target
+* test_turning_clamps_the_pitch_and_zoom_clamps_the_distance
+* test_panning_moves_the_target_across_the_screen
+* test_no_script_under_the_ledger_view_reads_game
+* test_framing_puts_every_point_inside_the_safe_rect_and_fills_it
+* test_framing_is_a_pure_function_of_the_points
+[1m11/11 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_search.gd
+[0m* test_a_star_is_found_by_its_label_in_any_case
+* test_a_folded_manor_is_found_with_its_province
+* test_a_prefix_ranks_before_a_substring_and_the_limit_holds
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_star_motion.gd
+[0m* test_every_key_binds_to_its_uniform
+* test_the_current_is_laid_as_its_stars
+* test_a_camera_move_relays_the_current_with_the_stars
+* test_every_star_shader_wobbles_by_the_shared_formula
+* test_the_links_wobble_with_their_stars
+* test_the_selected_star_wobbles_less
+* test_the_current_never_closes_a_ring
+* test_a_dimmed_star_at_the_camera_fades_out
+* test_the_current_is_rebuilt_with_the_stars
+* test_strength_zero_draws_no_current
+* test_share_zero_holds_every_star_still
+* test_a_stars_seed_is_its_ids_and_its_weight_its_state
+* test_the_selected_stars_current_is_stronger
+* test_the_selected_current_clears_its_ring
+[1m14/14 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_strands.gd
+[0m* test_two_accounts_are_two_strands_a_gap_apart
+* test_a_strand_is_picked_by_its_own_id
+* test_a_fractional_window_scale_draws_in_window_px
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ledger3d/test_ledger_view_galaxy.gd
+[0m* test_every_node_is_one_star_and_every_link_is_drawn
+* test_a_star_wears_its_clusters_colour
+* test_choosing_a_cluster_dims_the_others
+* test_selecting_a_star_lights_its_lineage_and_fades_the_rest
+* test_a_regiment_lights_and_frames_its_supply_chain
+* test_the_lineage_reads_whole_in_any_tab
+* test_a_vanished_selection_clears
+* test_a_star_is_picked
+* test_link_width_uniform_follows_the_viewport
+* test_a_drag_pins_the_star_and_moves_only_its_links
+* test_a_node_and_an_edge_written_down_are_drawn
+* test_a_pin_survives_a_redraw
+* test_a_drag_survives_its_star_vanishing
+* test_a_lens_snapshot_draws_without_error
+* test_the_opening_view_holds_every_star_once_settled
+* test_a_camera_gesture_ends_the_framing
+* test_every_cluster_title_stands_at_the_opening_view
+* test_every_cluster_title_stands_at_the_opening_view_at_real_density
+[33m    [Pending]:  [0mowner ruling pending: LEDGER War density after the army split (spec 2026-10-07-army-split-and-ground): one title per cluster (3 of 4): ["Economy  ·  36", "War  ·  88", "Court  ·  54"]
+* test_only_stars_in_view_count
+* test_a_merged_link_is_as_wide_as_its_count
+* test_the_selected_star_and_hubs_are_named_larger
+* test_no_name_stands_in_the_top_chrome
+* test_the_selected_star_is_always_named
+* test_the_hubs_are_always_named_at_the_opening_view
+[33m    [Pending]:  [0mowner ruling pending: LEDGER hubs after the clearance pitch: unnamed at the opening view: ["type:strategic_goods", "province:axbrigh"]
+* test_a_dimmed_hub_never_stands_on_a_star
+* test_a_dimmed_star_fades_toward_the_sky
+* test_at_rest_the_players_cluster_is_read_one_web_at_a_time
+* test_a_planned_star_is_small_faint_and_its_clusters
+* test_the_light_brightens_its_own_hue_and_stars_are_drawn_small
+* test_a_chosen_clusters_hubs_are_its_own_and_dim_names_dim
+* test_a_snapshot_can_be_drawn_with_its_selection
+* test_a_small_star_is_picked_a_few_px_off_its_centre
+* test_a_supply_line_is_drawn_short_and_is_no_hub
+* test_no_name_lies_on_another_star
+* test_ghosts_wear_their_hue_stars_are_capped_and_dealt_right
+* test_the_war_names_are_short_near_and_only_the_selected_has_gauges
+* test_the_war_names_are_short_near_and_only_the_selected_has_gauges_at_real_density
+[33m    [Pending]:  [0mowner ruling pending: LEDGER War density after the army split (spec 2026-10-07-army-split-and-ground): most names sit at the nearest ring (7 of 12)
+* test_the_selected_label_sits_at_its_ring_and_nothing_touches_it
+* test_an_unchanged_redraw_keeps_every_place_and_the_camera
+* test_a_changed_redraw_keeps_the_survivors_and_the_camera
+* test_a_cluster_with_an_unknown_colour_draws
+* test_leaving_the_view_clears_the_hover
+* test_a_short_name_that_leaves_nothing_keeps_the_label
+* test_the_hubs_are_the_largest_in_view
+[1m41/44 passed.
+[0m[4m
+
+res://tests/llm/test_llm_config.gd
+[0m* test_env_overlay_sets_key_and_models
+* test_json_overrides_env_per_field
+* test_force_offline_env_var_wins
+* test_missing_files_yield_offline_defaults
+* test_reasoning_effort_sent_only_to_reasoning_models
+* test_prompt_cap_refuses_without_api_call
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_order_tier_reads_its_own_key_and_falls_back_to_llm_model
+[1m7/7 passed.
+[0m[4m
+
+res://tests/llm/test_openai_client.gd
+[0m* test_extract_text_choice_missing_message_returns_empty
+* test_extract_text_empty_choices_array_returns_empty
+* test_extract_text_missing_choices_key_returns_empty
+* test_extract_text_valid_shape_returns_content
+[1m4/4 passed.
+[0m[4m
+
+res://tests/llm/test_prompt_builder.gd
+[0m* test_parse_prompt_lists_actions_and_schema
+* test_order_prompt_carries_only_the_speakers_knowledge
+* test_order_prompt_carries_the_characters_own_replies
+* test_parse_prompt_lists_event_choices_and_promise_rule
+* test_parse_prompt_omits_event_choice_when_no_pending_event
+* test_order_prompt_carries_persona_catalog_and_the_correlation_rule
+* test_order_prompt_with_no_speaker_uses_the_herald
+[1m7/7 passed.
+[0m[4m
+
+res://tests/llm/test_response_validator.gd
+[0m* test_valid_payload
+* test_malformed_json_fails
+ERROR: Parse JSON failed. Error at line 0: Expected 'true', 'false', or 'null', got 'the'
+   at: parse_string (core/io/json.cpp:629)
+   GDScript backtrace (most recent call first):
+       [0] parse (res://scripts/llm/response_validator.gd:10)
+       [1] test_malformed_json_fails (res://tests/llm/test_response_validator.gd:21)
+       [2] _run_test (res://addons/gut/gut.gd:587)
+       [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_unknown_action_fails
+* test_bad_tone_fails_and_extra_keys_dropped
+* test_missing_court_reaction_defaults_neutral
+* test_tone_applied_clamped_with_reason
+* test_missing_action_code_fails
+* test_court_reaction_as_string_fails
+* test_addressed_as_string_fails
+* test_promises_as_string_fails
+* test_promise_code_must_be_real_action
+* test_event_choice_pseudo_action_accepted
+* test_order_parses_narrative_actions_and_world_impacts
+* test_order_impacts_need_a_reason_a_listed_path_and_your_own_land
+* test_order_clamps_a_delta_beyond_the_cap
+* test_order_empty_reply_is_ok_but_carries_nothing_and_long_ones_are_capped
+* test_order_accepts_the_flat_legacy_shape
+[1m17/17 passed.
+[0m[4m
+
+res://tests/llm/test_template_voicer.gd
+[0m* test_trait_variant_preferred
+* test_outcomes_narrated_deterministically
+[1m2/2 passed.
+[0m[4m
+
+res://tests/llm/test_voicer_fallback.gd
+[0m* test_parse_path_validates_model_output
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_parse_bad_model_output_reports_error_not_crash
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0mERROR: Parse JSON failed. Error at line 0: Expected 'true', 'false', or 'null', got 'I'
+   at: parse_string (core/io/json.cpp:629)
+   GDScript backtrace (most recent call first):
+       [0] parse (res://scripts/llm/response_validator.gd:10)
+       [1] <anonymous lambda> (res://scripts/llm/voicer.gd:66)
+* test_submit_free_text_conversational_ride_along_replies
+[33m    -- Awaiting 4 idle frame(s) -- 
+[0m* test_submit_free_text_consult_gets_in_character_reply
+[33m    -- Awaiting 4 idle frame(s) -- 
+[0m* test_voice_event_never_calls_the_model_whatever_the_voice_value
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_voice_event_serves_the_authored_scene
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_voice_event_marks_an_unauthored_scene_rather_than_inventing_one
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_order_returns_both_parts_through_one_call
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[1m8/8 passed.
+[0m
+
+
+
+[33m==============================================
+[0m[33m= Run Summary
+[0m[33m==============================================
+[0m[4m
+res://tests/ledger3d/test_ledger_view_galaxy.gd
+[0m- test_every_cluster_title_stands_at_the_opening_view_at_real_density
+[33m    [Pending]:  [0mowner ruling pending: LEDGER War density after the army split (spec 2026-10-07-army-split-and-ground): one title per cluster (3 of 4): ["Economy  ·  36", "War  ·  88", "Court  ·  54"]
+- test_the_hubs_are_always_named_at_the_opening_view
+[33m    [Pending]:  [0mowner ruling pending: LEDGER hubs after the clearance pitch: unnamed at the opening view: ["type:strategic_goods", "province:axbrigh"]
+- test_the_war_names_are_short_near_and_only_the_selected_has_gauges_at_real_density
+[33m    [Pending]:  [0mowner ruling pending: LEDGER War density after the army split (spec 2026-10-07-army-split-and-ground): most names sit at the nearest ring (7 of 12)
+
+---- Totals ----
+Scripts           205
+Tests             2165
+  Passing         2162
+  Risky/Pending   3
+Asserts           794388
+Time              1155.512s
+
+
+[33m---- 3 pending/risky tests. ----
+[0m

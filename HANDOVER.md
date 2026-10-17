@@ -1,21 +1,17 @@
-# Battle system — active handover
+# Battle system — P1.2 WORKING, final visual verification
 
-## Authorization and checkout
+Current owner/session: `01a14a45-9b76-7bf0-a115-5d3d5a97519f`. Full approved P1–P7 execution remains authorized. Same task, no handoff yet.
+Only worktree: `/Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design`; branch `codex/p11-resumable-day-transaction`; HEAD `25c22fb22e098e2ab78ae893dcbea8d950a7f7c7`. P1.1 accepted at `ff9ad15c579923fc5eda16a040c03680dac2f6df`.
 
-- Approved: immediate combat within each fixed movement/contact substep, encounter confirmation before losses, at most one round per battle/day. Later-substep reinforcements fight next day. Full P1–P7 authorization remains active; do not ask again.
-- Only worktree: `/Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design`, branch `codex/p11-resumable-day-transaction`.
-- P1.1 implementation: `801860b6079f426bc88a9ec0f912700b3a543b09`; reviewed correction: `ff9ad15c579923fc5eda16a040c03680dac2f6df`. Old `0b35c15e` is superseded.
+## Current work
+- Saved day/clock bridge and root overlay/deployment/return/load wiring implemented. Real `scenes/panels/battle_encounter_panel.tscn` now authored through isolated Godot editor MCP, no text scene editing.
+- Read-only Sol complete-code review found no actionable issues. Real-window inspection then found first-frame wrapped-label minimum height pushing Center offscreen; panel now refits on minimum_size_changed, and real-scene root regression checks containment. Corrected layout screenshot verified. Full1x/4x recording/variants in progress.
+- Own files: scripts/ui/{game,game_root,battle_encounter_panel}.gd, panel UID, scenes/panels/battle_encounter_panel.tscn, tests/ui/{test_game_root,test_editor_owned_look}.gd, scripts/ui/CLAUDE.md; P1.2 review/evidence/checkpoints.
+- Preserve inherited root CLAUDE.md, untracked AGENTS.md and unrelated .codex files. No balance/engine/runner edits or committed stage work.
 
-## P1.1 accepted — 2026-10-18
-
-- Fresh independent read-only review found three issues; all resolved and independently re-reviewed: stale redirected routes, ineffective daily-round uniqueness check, and missing paid second-interruption/JSON acceptance. Correction changes four files; no balance/runner/allow-list edits.
-- Corrected-source focused: 8 scripts, 115/115 tests, 1,288 assertions, actual exit 0. Final `./run_tests.sh --fast`: 205 scripts, 2,165 tests, 2,162 passing, exactly 3 existing LEDGER owner-ruling pending, zero failures, 794,267 assertions, 1194.12s, actual exit 0. Source stayed frozen. Existing error gates re-audited unchanged, exit 0.
-- Evidence/source/scope/verdict/limits: `docs/reviews/battle-system/P1.1-final-acceptance.md`; complete retained logs, commands, exits and hashes: `docs/reviews/battle-system/evidence/P1.1/`. Original `/tmp/p11-final-fast.log` is superseded by the corrected-source run `/tmp/p11-review-final-fast.log`.
-- This accepts P1.1 only, not UI/P1.2 or the whole system. Synthetic seven-gold handler is test-only; P4.3 must repeat it with real event/finance code.
-
-## Next: fresh P1.2 (unique handed-off chain)
-
-- Handoff id: `4a1fad7a-8169-4d50-a054-f4dbe7b6d209`. `.codex/working-marker.md` is `handed_off` to a fresh P1.2 chat; the P1.1 verification owner stops writing shared files after dispatch. No history fork, duplicate suite, or routine diagnostic handoff.
-- First confirm absolute checkout, current HEAD and handoff id, then execute P1.2 in `docs/superpowers/plans/2026-10-16-battle-system/01-clock-and-save.md`. Bridge saved day transactions to Game/GameRoot and request-only encounter panel; stop catch-up, clear accumulator, independent decision lock, manual resume at saved speed, JSON restore.
-- Run affected UI tests and one fast on final frozen P1.2 code, independent read-only review and real-window 1×/4× evidence. Editor-owned look must be made in the correct worktree's Godot editor, never text-edited or saved from main checkout's stale buffers.
-- Preserve inherited modified `CLAUDE.md`, untracked `AGENTS.md` and other `.codex/` config. Do not wait for or kill main-checkout PID80967. Only current-stage owned files may be committed.
+## Final local verification and next action
+- All owned visual/editor processes stopped. Exact project baseline restored; own native files/private config removed; all persistent MCP config hashes unchanged; main listener untouched. Isolation manifest records rollback.
+- Final source hashes: docs/reviews/battle-system/evidence/P1.2-working/final-source.sha256. UI55scripts/540tests/540pass/9982asserts/283.633s,exit0. Fast205scripts/2165tests/2162pass/3existingLEDGERpending/794440asserts/1065.079s,exit0. Strict gates retained. Final combined session71011 completed. No active owned process.
+- Actual real-window1x/4x Continue+Space passed before-losses pause and no catch-up. Independent visual review passed2560x1600 and1280x720 after simplifying frame/raising hint contrast. Independent code follow-up found no issues.
+- Next: owned commit and PR against main, inspect CI gate and resolve concrete failures. Only then mark task ready and create a fresh session for P2.1. The approved P2 plan is currently present at /Users/samuelzhang/game_design/docs/superpowers/plans/2026-10-16-battle-system/02-roster-and-recruitment.md; do not re-plan the approved chain or edit the main checkout. Preserve inherited dirty/untracked files.
+- Current-source acceptance: docs/reviews/battle-system/P1.2-final-acceptance.md. Historical failures and routing diagnosis remain P1.2-working-checkpoint.md. No native compaction claimed. Status remains working until PR acceptance.

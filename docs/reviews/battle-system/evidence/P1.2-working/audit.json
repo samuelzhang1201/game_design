@@ -1,0 +1,56 @@
+{
+  "p12-final-partial-root.log": {
+    "script_errors": [
+      "SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.\n          at: _static_init (res://addons/gut/gut_loader.gd:35)"
+    ],
+    "unexpected_script_errors": [],
+    "ignored_scripts": 0,
+    "fatal_lines": []
+  },
+  "p12-ui-partial.log": {
+    "script_errors": [
+      "SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.\n          at: _static_init (res://addons/gut/gut_loader.gd:35)"
+    ],
+    "unexpected_script_errors": [],
+    "ignored_scripts": 0,
+    "fatal_lines": []
+  },
+  "p12-supply-load.log": {
+    "script_errors": [
+      "SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.\n          at: _static_init (res://addons/gut/gut_loader.gd:35)"
+    ],
+    "unexpected_script_errors": [],
+    "ignored_scripts": 0,
+    "fatal_lines": []
+  },
+  "p12-partial-fast.log": {
+    "script_errors": [
+      "SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.\n          at: _static_init (res://addons/gut/gut_loader.gd:35)"
+    ],
+    "unexpected_script_errors": [],
+    "ignored_scripts": 0,
+    "fatal_lines": []
+  },
+  "final_source_sha256": {
+    "scripts/ui/game.gd": "342f4aabc3359c76d9b5136a3fa7aea8614880bed0cba46dcd23a0394b61583f",
+    "scripts/ui/game_root.gd": "44b0b5f55b40324b342c20fa50a61cee4804e5fdf0bb1f2723e476f57eb72c17",
+    "scripts/ui/battle_encounter_panel.gd": "d51abaf1b6eea365831f8e00fec5c335bb25985645b02493ba6dc0bbc2fea59d",
+    "tests/ui/test_game_root.gd": "0a4de1042af5493c7c020ed3c05e626099f34444c37cac9dfc140e282fd9a1ac",
+    "scripts/ui/CLAUDE.md": "32832aa3e909740c6e0279bfe65e9e8f6d2de0a0c1de00c0473d17ef2f0664de"
+  },
+  "ui_directory_source_before_speed_fix": {
+    "scripts/ui/game.gd": "a639d51f00069ead2f153bc17369ed1c618b4406e44d138f344cb2de18e96bdd",
+    "scripts/ui/game_root.gd": "44b0b5f55b40324b342c20fa50a61cee4804e5fdf0bb1f2723e476f57eb72c17",
+    "tests/ui/test_game_root.gd": "a44aa296e1ad67301d7a2b7ea0e4d950db26a33d4442ad0c8cb535e8b07942d7"
+  },
+  "gdai_probe": {
+    "tool": "mcp__gdai_mcp__execute_editor_script",
+    "code": "func run():\n\treturn ProjectSettings.globalize_path(\"res://\")",
+    "actual": "/Users/samuelzhang/game_design/",
+    "required": "/Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design/",
+    "missing": [
+      "addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension",
+      "addons/gdai-mcp-plugin-godot/bin/macos/libgdai-mcp-plugin-godot.macos.template_release.dylib"
+    ]
+  }
+}

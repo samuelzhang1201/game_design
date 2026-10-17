@@ -1,0 +1,75 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[1m[INFO]:  [0musing [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+[4m
+
+res://tests/ui/test_game_root.gd
+[0m* test_encounter_controller_routes_requests_and_restores_confirmation
+[31m    [Failed]:  [0mroot owns encounter overlay routing
+      at line 250
+[1m0/1 passed.
+[0m
+
+
+
+[33m==============================================
+[0m[33m= Run Summary
+[0m[33m==============================================
+[0m[4m
+res://tests/ui/test_game_root.gd
+[0m- test_encounter_controller_routes_requests_and_restores_confirmation
+[31m    [Failed]:  [0mroot owns encounter overlay routing
+          at line 250
+
+---- Totals ----
+Scripts           1
+Tests             1
+  Passing         none
+  Failing         1
+Asserts           1
+Time              1.126s
+
+
+[33m[Orphans]:  [0mTotal orphans in run 1.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 2.0
+
+Ran Tests matching "test_encounter_controller_routes_requests_and_restores_confirmation"
+[31m---- 1 failing tests ----
+[0m
+ERROR: Bug in ResourceLoader logic, please report.
+   at: _load_complete_inner (core/io/resource_loader.cpp:1041)
+ERROR: res://assets/2D/ui/panels/styles/folio_book.tres:56 - Parse Error: [ext_resource] referenced non-existent resource at: res://scripts/ui/vellum_panel_style.gd.
+   at: _printerr (scene/resources/resource_format_text.cpp:41)
+ERROR: res://assets/2D/ui/panels/styles/folio_book.tres:56 - Parse Error: [ext_resource] referenced non-existent resource at: res://scripts/ui/vellum_panel_style.gd.
+   at: _printerr (scene/resources/resource_format_text.cpp:41)
+ERROR: Failed loading resource: res://assets/2D/ui/panels/styles/folio_book.tres.
+   at: _load (core/io/resource_loader.cpp:317)
+
+================================================================
+handle_crash: Program crashed with signal 11
+Engine version: Godot Engine v4.7.2.stable.official (ed1daf0bf001b61586d9930840f2f1394092c079)
+Dumping the backtrace. Please include this when reporting the bug on: https://github.com/godotengine/godot/issues
+Load address: 1003bc000
+
+[1] 19a2f4144 (libsystem_platform.dylib+4144) - _sigtramp + 56
+[2] 104d9a468 (main+49de468) - ZSTD_decompressStream_simpleArgs + 2679812
+[3] 104d9a468 (main+49de468) - ZSTD_decompressStream_simpleArgs + 2679812
+[4] 10519b9a0 (main+4ddf9a0) - ZSTD_decompressStream_simpleArgs + 6879548
+[5] 1069cc1ac (main+66101ac) - GL_ShadingRateQCOM + 22837192
+[6] 101e167f8 (main+1a5a7f8) - WebPGetColorPalette + 542628
+[7] 19a2e9d00 (libsystem_pthread.dylib+6d00) - _pthread_start + 136
+[8] 19a2e4cec (libsystem_pthread.dylib+1cec) - thread_start + 8
+-- END OF C++ BACKTRACE --
+================================================================
