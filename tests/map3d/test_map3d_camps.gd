@@ -107,6 +107,11 @@ func test_saved_site_stays_put_and_facilities_stand_plumb_on_their_own_slope() -
 	share[0] = 0.875
 	presenter.sync(layer, ctx, "u", {"extent": Vector2.ZERO}, Vector2.ZERO, 0.0, 1.0, 0.0)
 	assert_almost_eq(a.scale.y, 0.25, 0.001, "attack cannot rebuild dismantled facilities")
+	# A suspended day's save can be loaded with a fresh UI clock fraction.
+	presenter.apply_snapshot({"absolute_day": 10, "day_committed": true, "camps": {"u": camp}})
+	share[0] = 0.0
+	presenter.sync(layer, ctx, "u", {}, Vector2.ZERO, 0.0, 1.0, 0.0)
+	assert_false(a.visible, "the resolved packing day cannot rebuild on a blocked encounter")
 
 
 func test_rigid_facilities_are_removed_without_squashing_people_or_carts() -> void:

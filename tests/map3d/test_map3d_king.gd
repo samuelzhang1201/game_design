@@ -71,6 +71,23 @@ func test_runtime_king_scene_has_all_actions_without_capture_or_death() -> void:
 	for clip: String in anim.get_animation_list():
 		assert_false("CAPTURE" in clip.to_upper() or "DEATH" in clip.to_upper(), clip)
 
+func test_empty_click_or_box_closes_the_selected_king_card() -> void:
+	var repo := preload("res://tests/suite_data.gd").repo()
+	var view := Map3DView.new()
+	autofree(view)
+	var selection := Map3DSelection.new()
+	selection.bind(Map3DContext.new(repo, {}), null, null, view)
+	watch_signals(selection)
+	selection.select({"kind": "king"})
+	selection.select({})
+	assert_signal_emit_count(selection, "object_selected", 2)
+	assert_signal_emitted_with_parameters(selection, "object_selected", [{}], 1)
+	selection.select({"kind": "king"})
+	selection._select_armies([])
+	assert_signal_emit_count(selection, "object_selected", 4)
+	assert_signal_emitted_with_parameters(selection, "object_selected", [{}], 3)
+	assert_false(selection.king)
+
 func test_midday_destination_change_preserves_the_drawn_position() -> void:
 	var layer := Map3DKing.new()
 	add_child_autofree(layer)

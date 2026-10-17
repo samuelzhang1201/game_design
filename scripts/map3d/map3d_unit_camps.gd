@@ -88,7 +88,8 @@ func sync(layer: Node3D, ctx: Map3DContext, code: String, _piece: Dictionary, _x
 		node.transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * k), Vector3(anchor.x, 0.0, anchor.y))
 		_layout(ctx, node)
 		node.set_meta("layout_key", layout_key)
-	var standing := progress(state, int(_snapshot.get("absolute_day", 0)), ctx.day_share(),
+	var share := 1.0 if bool(_snapshot.get("day_committed", false)) else ctx.day_share()
+	var standing := progress(state, int(_snapshot.get("absolute_day", 0)), share,
 		int(ctx.repo.bal("army_camp_build_days")))
 	var facilities: Array = node.get_meta("facilities", [])
 	for i: int in facilities.size():

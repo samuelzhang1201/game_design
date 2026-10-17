@@ -49,6 +49,9 @@ func click(picked: Dictionary, pos: Vector2) -> void:
 ## manor under a theme), the sea clears — exactly the signals WorldMapView
 ## sends.
 func select(picked: Dictionary) -> void:
+	if picked.is_empty():
+		clear()
+		return
 	king = String(picked.get("kind", "")) == "king"
 	view.select_king(king)
 	match String(picked.get("kind", "")):
@@ -159,9 +162,9 @@ func _mine(code: String) -> bool:
 
 ## The selection becomes `codes`; the card shows the first, or closes on none.
 func _select_armies(codes: Array) -> void:
+	var had := king or burg != "" or province != "" or manor >= 0 or army != ""
 	king = false
 	view.select_king(false)
-	var had := burg != "" or province != "" or manor >= 0 or army != ""   # as clear() counts it
 	armies = codes
 	army = String(armies[0]) if not armies.is_empty() else ""
 	burg = ""
