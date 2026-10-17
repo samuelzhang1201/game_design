@@ -184,8 +184,13 @@ static func _surrender(repo: DataRepository, state: GameState, battle: Dictionar
 		return {"accepted": false}
 	var changes: Array = []
 	var evidence: Array = []
-	var captors: Array = battle[enemy].duplicate()
-	captors.sort()
+	var captors: Array = battle[enemy].filter(func(code: String) -> bool:
+		return MilitaryRoster.fit(state, code) > 0 and not bool(ArmySystem.state_of(repo, state, code).get("captured", false)))
+	captors.sort_custom(func(a: String, b: String) -> bool:
+		var origin := BattleSystem._at_m(repo, state, String(battle[side][0]))
+		var da := origin.distance_squared_to(BattleSystem._at_m(repo, state, a))
+		var db := origin.distance_squared_to(BattleSystem._at_m(repo, state, b))
+		return a < b if da == db else da < db)
 	if captors.is_empty():
 		return {"error": "No opposing army can accept surrender."}
 	var captor := String(captors[0])
@@ -210,11 +215,37 @@ static func _surrender(repo: DataRepository, state: GameState, battle: Dictionar
 	if changes.is_empty():
 		return {"error": "There are no surviving personnel to surrender."}
 	var reason := "The opposing commander accepts surrender; all surviving fit and wounded personnel are captured."
-	var moved := MilitaryRoster.transition(repo, state, "battle_surrender:" + id, changes, reason)
+	# Surrender and custody of previously held people commit together.
+	var candidate := GameState.from_dict(state.to_dict(), false)
+	var candidate_battle := BattleSystem.battle_by_id(candidate, int(battle["id"]))
+	for entry_side: String in BattleSystem.SIDES:
+		for member: String in battle[entry_side]:
+			BattleReport.enroll(candidate, candidate_battle, member, entry_side)
+	var moved := PrisonerSystem.capture(repo, candidate, {"capture_id": "battle_surrender:" + id,
+		"battle_id": int(battle["id"]), "round": int(battle.get("rounds", 0)),
+		"participants": {captor: 1}, "changes": changes, "reason": reason})
 	if moved.has("error"):
 		return moved
+	var controllers: Array[String] = [captor]
+	for code: String in codes:
+		var custody := PrisonerSystem.holder_defeated(repo, candidate, code, controllers, "surrender_custody:" + id + ":" + code)
+		if custody.has("error"):
+			return custody
+	var king_departure := {}
+	if KingSystem.present(repo, candidate, int(battle["id"])) and side == BattleRules.side_of(battle, String(codes[0])) \
+			and ArmySystem.realm_of(repo, String(codes[0]), state) == repo.resolve_realm("player_realm"):
+		king_departure = KingSystem.safe_departure(repo, candidate, int(battle["id"]))
+	state.military_cohorts = candidate.military_cohorts
+	state.military_rosters = candidate.military_rosters
+	state.military_events = candidate.military_events
+	state.prisoner_batches = candidate.prisoner_batches
+	state.prisoner_events = candidate.prisoner_events
+	state.king_state = candidate.king_state
+	battle["personnel_entries"] = candidate_battle.get("personnel_entries", {}).duplicate(true)
 	for code: String in codes:
 		ArmySystem.state_of(repo, state, code)["captured"] = true
+		BattleReport.leave(state, battle, code)
 		battle[side].erase(code)
 	return {"accepted": true, "battle_id": int(battle["id"]), "captor_side": enemy,
-		"captor_unit": captor, "captor_commander": commander, "units": evidence, "personnel": changes, "reason": reason}
+		"captor_unit": captor, "captor_commander": commander, "units": evidence, "personnel": changes,
+		"batch_ids": moved["batch_ids"], "king_departure": king_departure, "reason": reason}

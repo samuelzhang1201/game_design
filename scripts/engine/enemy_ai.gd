@@ -126,8 +126,7 @@ static func host_units(repo: DataRepository, state: GameState, host: Dictionary)
 ## A host assembled until its appear_day (the campaign's absolute day, the
 ## pack's row) sets out on that day's end: ASSEMBLE becomes ADVANCE. A host in
 ## the field then
-##  1. eats a day (ArmySystem.eat_one on each of its foes; an assembling host is
-##     fed at home);
+##  1. reserves its day-end meal (assembling and town-holding hosts are fed locally);
 ##  2. in a TARGETING mode, turns to RETREAT when should_retreat gives a reason;
 ##  3. in ADVANCE, once its FIRST column reaches the target (arrival_mode),
 ##     starts DEPLOYING, RAIDs, or WITHDRAWs — or, at a town another host
@@ -155,9 +154,9 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 			events.append({"type": "host_advance", "host": code, "day": today})
 			continue
 		if mode != MODE_HOLD:
-			_eat(repo, state, code)          # a host holding a town lives off it
+			mind["meal_due_day"] = today
 		if mode in TARGETING:
-			var why := should_retreat(repo, state, code)
+			var why := should_retreat(repo, state, code, true)
 			if why != "":
 				set_mode(state, code, MODE_RETREAT, why, events)
 				_march_host(repo, state, code)
@@ -359,11 +358,14 @@ static func supply_reach_days(repo: DataRepository, state: GameState, host_code:
 
 
 ## The hungriest live column's whole days in hand; -1 with none.
-static func _least_days(repo: DataRepository, state: GameState, host_code: String) -> int:
+static func _least_days(repo: DataRepository, state: GameState, host_code: String, after_meal := false) -> int:
 	var least := -1
 	for c: String in live_regiments(repo, state, host_code):
-		var days := ArmySystem.days_in_hand(int((state.foes[c] as Dictionary)["supplies"]),
-			ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c, state), state))
+		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c, state), state)
+		var supplies := int(state.foes[c]["supplies"])
+		if after_meal:
+			supplies = maxi(0, supplies - ArmySystem.day_bite(use, state.day))
+		var days := ArmySystem.days_in_hand(supplies, use)
 		least = days if least < 0 else mini(least, days)
 	return least
 
@@ -565,7 +567,7 @@ static func engages(repo: DataRepository, state: GameState, host_code: String, s
 ## morale below the doctrine's retreat_morale; or its hungriest live column's
 ## days in hand (ArmySystem.days_in_hand) below ai_retreat_supply_days — but a
 ## host that HOLDs a town it took lives off the town and never goes home hungry.
-static func should_retreat(repo: DataRepository, state: GameState, host_code: String) -> String:
+static func should_retreat(repo: DataRepository, state: GameState, host_code: String, after_meal := false) -> String:
 	for c: String in regiments_of(state, host_code):
 		if int((state.foes[c] as Dictionary).get("disengaging", 0)) == 1:
 			return "beaten: %s fell back from the battle" % c
@@ -575,7 +577,7 @@ static func should_retreat(repo: DataRepository, state: GameState, host_code: St
 	var morale := 0
 	for c: String in live:
 		morale += int((state.foes[c] as Dictionary)["morale"])
-	var least := _least_days(repo, state, host_code)
+	var least := _least_days(repo, state, host_code, after_meal)
 	@warning_ignore("integer_division")  # whole points
 	morale /= live.size()
 	var floor_morale := int(doctrine_of(repo, host_code).get("retreat_morale", 0))
@@ -729,6 +731,16 @@ static func _arrival_why(mode: String) -> String:
 			return "reached an undefended target"
 	return "the target is no longer the enemy's"
 
+
+## Deduct after all battles, from the current custody holders, once per day.
+static func eat_day(repo: DataRepository, state: GameState) -> void:
+	for code: String in host_codes(state):
+		var mind: Dictionary = state.ai_hosts[code]
+		if int(mind.get("meal_due_day", -1)) != state.absolute_day() \
+				or int(mind.get("meal_eaten_day", -1)) == state.absolute_day():
+			continue
+		_eat(repo, state, code)
+		mind["meal_eaten_day"] = state.absolute_day()
 
 ## A day's meal for every foe of the host (ArmySystem.eat_one).
 static func _eat(repo: DataRepository, state: GameState, host_code: String) -> void:

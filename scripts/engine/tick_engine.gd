@@ -38,6 +38,12 @@ func resolve_decision(state: GameState, token: String, choice: String) -> Dictio
 ## close_month retains advance()'s one-day-plus-month snapshot contract.
 ## Once begun, the saved transaction decides whether this day closes a month.
 func resolve_day(state: GameState, close_month := false) -> Dictionary:
+	var custody := PrisonerSystem.migrate_legacy(data, state)
+	if custody.has("error"):
+		return {"status": "error", "error": custody["error"]}
+	custody = PrisonerSystem.settle_unguarded(data, state)
+	if custody.has("error"):
+		return {"status": "error", "error": custody["error"]}
 	if state.day_resolution.is_empty():
 		var organization := MilitaryReorganization.reconcile(data, state)
 		if organization.get("status", "error") == "error":
@@ -215,6 +221,7 @@ func _after_battles(state: GameState) -> void:
 	day_supply.append_array(SupplyLines.day_step(data, state))
 	# The host eats a day of its month (owner 2026-09-30).
 	ArmySystem.eat_day(data, state)
+	EnemyAi.eat_day(data, state)
 	# A hungry host loses heart every day (spec 2026-10-07-army-supply-lines §3.7).
 	ArmySystem.hunger_day(data, state)
 	# Living off the land and desertion (spec 2026-10-10-foraging-and-desertion

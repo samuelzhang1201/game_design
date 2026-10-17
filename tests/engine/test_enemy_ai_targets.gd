@@ -510,7 +510,7 @@ func test_retreat_on_low_morale_and_on_hunger() -> void:
 	var use2 := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c0), s)
 	@warning_ignore("integer_division")
 	var bite := use2 * s.day / 30 - use2 * (s.day - 1) / 30
-	# the day's meal is eaten before the check: it leaves 2 days in hand
+	# The check anticipates the day-end meal: it will leave 2 days in hand
 	@warning_ignore("integer_division")
 	s.foes[c0]["supplies"] = (3 * use2 + 29) / 30 - 1 + bite
 	var events := EnemyAi.step_day(repo, s)
@@ -879,6 +879,7 @@ func test_a_host_in_the_field_eats_a_day_and_an_assembling_one_does_not() -> voi
 		before[c] = int(s.foes[c]["supplies"])
 	_at_day(s, _appear(main) + 1)
 	EnemyAi.step_day(repo, s)
+	EnemyAi.eat_day(repo, s)
 	for c: String in EnemyAi.regiments_of(s, main):
 		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), s)
 		# day d of the month eats use x d / 30 - use x (d - 1) / 30, whole units
@@ -900,6 +901,7 @@ func test_a_month_in_the_field_eats_exactly_the_months_use() -> void:
 		s.tick = 2
 		s.day = d
 		EnemyAi.step_day(repo, s)
+		EnemyAi.eat_day(repo, s)
 	assert_eq(int(s.foes[c0]["supplies"]), use * 4, "thirty days eat one month's use, to the unit")
 
 

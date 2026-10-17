@@ -54,6 +54,13 @@ func _reconcile() -> Dictionary:
 		return {"status": "error"}
 	return load(path).call("reconcile", repo, state)
 
+func test_live_custody_defers_legacy_cohort_splitting() -> void:
+	state.military_cohorts.common.fit -= 10
+	state.military_cohorts.common.captured_current = 10
+	var before: Dictionary = state.military_cohorts.duplicate(true)
+	assert_eq(_reconcile().status, "deferred")
+	assert_eq(state.military_cohorts, before, "Custody source IDs must survive pending organization")
+
 func test_conserves_equipment_people_stores_and_rates_and_repeats_stably() -> void:
 	assert_eq(_reconcile().get("status"), "complete")
 	if state.army_roster.size() != 2:

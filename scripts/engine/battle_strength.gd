@@ -56,7 +56,7 @@ static func unit(repo: DataRepository, state: GameState, code: String,
 	if reg.is_empty() or entry.is_empty():
 		return {"error": "Unknown battle unit: " + code}
 	var capacity := ArmySystem.personnel_capacity(repo, reg)
-	var fit := ArmySystem.fit_count(repo, state, code)
+	var fit := ArmySystem.fit_count(repo, state, code) - PrisonerBurden.guard_count(repo, state, code)
 	var quality := MilitaryQuality.profile(repo, state, code)
 	var development := DevelopmentSystem.arm_permille(repo, state, ArmySystem.realm_of(repo, code, state))
 	var equipment := 0

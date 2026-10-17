@@ -47,7 +47,7 @@ static func snapshot(repo: DataRepository, state: GameState, battle_id: int) -> 
 
 batch保存 id/source_cohort/origin_realm/holder_code/commoners/nobles/named_ids/wounded_subset/capture_id/disposition。具名人物属于人数子集；同一capture_id不能再建第二批。存活伤兵计入源cohort的captured_current后从原队wounded移除；全部有效在押批次的人数合计必须等于对应captured_current。历史累计被俘人数只读事件或战报，不拿它充当当前在押人数。状态不存在missing字段。
 
-- [ ] 写分配测试见红；按code稳定排序后复用最大余数法：
+- [x] 写分配测试见红；按code稳定排序后复用最大余数法：
 
 ```gdscript
 func test_capture_has_one_holder() -> void:
@@ -57,12 +57,12 @@ func test_capture_has_one_holder() -> void:
         {"u_a": 1, "u_b": 0})
 ```
 
-- [ ] participants来源只能是实际负责拦截/看守/接收的部队，不能按全王国军队比例瓜分。具名者先服从其实际抓获部队；未单独确定的按分配剩余槽位与人物稳定id放入，人数不变。无人可合法持有则捕获动作失败或按战局明确释放，不能写空holder后遗失。
-- [ ] 实现capture原子更新源队人数和批次；投降先核验对方接受，再把全部可战与伤兵转俘虏，不仅可战者；国王单独由KingSystem安全退离，绝不加入source_cohort。被拒投降保持原action。
-- [ ] 写600人守恒：430可战+70己方伤+40死+60俘=600；俘虏中20伤仍总计60。再加入100援军，总参战700；确保增援离开再返回不重复算同一人。按平民/贵族/具名逐项核对。
-- [ ] holder_defeated不先删除部队：现场控制者清点，属于获救方的俘虏释放为平民；其他俘虏转到明确接管部队。重放同一结算幂等，无场外押送路径。测试贵族指挥官被救不自动任职、先前不参战承诺不消失。
-- [ ] 国王同场、100军人含10贵族/20伤兵全体投降：捕获100、俘虏伤20、国王0、部队可战0，不因国王安全退离改成军队撤退成功；已驻营不绕过拔营变成全军脱离。
-- [ ] 补给按存活士兵/伤兵/俘虏和贵族权重计，死亡0粮；看守人数降低可战投入而不复制/消灭看守者，俘虏负重影响移动。捕获与转移后原持有者不继续扣这批粮。跑prisoner/conservation、battle_resolve、army_supply和fast，提交 `feat: account for surrender and unique prisoner custody`。
+- [x] participants来源只能是实际负责拦截/看守/接收的部队，不能按全王国军队比例瓜分。具名者先服从其实际抓获部队；未单独确定的按分配剩余槽位与人物稳定id放入，人数不变。无人可合法持有则捕获动作失败或按战局明确释放，不能写空holder后遗失。
+- [x] 实现capture原子更新源队人数和批次；投降先核验对方接受，再把全部可战与伤兵转俘虏，不仅可战者；国王单独由KingSystem安全退离，绝不加入source_cohort。被拒投降保持原action。
+- [x] 写600人守恒：430可战+70己方伤+40死+60俘=600；俘虏中20伤仍总计60。再加入100援军，总参战700；确保增援离开再返回不重复算同一人。按平民/贵族/具名逐项核对。
+- [x] holder_defeated不先删除部队：现场控制者清点，属于获救方的俘虏释放为平民；其他俘虏转到明确接管部队。重放同一结算幂等，无场外押送路径。测试贵族指挥官被救不自动任职、先前不参战承诺不消失。
+- [x] 国王同场、100军人含10贵族/20伤兵全体投降：捕获100、俘虏伤20、国王0、部队可战0，不因国王安全退离改成军队撤退成功；已驻营不绕过拔营变成全军脱离。
+- [x] 补给按存活士兵/伤兵/俘虏和贵族权重计，死亡0粮；看守人数降低可战投入而不复制/消灭看守者，俘虏负重影响移动。捕获与转移后原持有者不继续扣这批粮。跑prisoner/conservation、battle_resolve、army_supply和fast，提交 `feat: account for surrender and unique prisoner custody`。
 
 ## P5.2 赎金、交换、释放与平民身份
 

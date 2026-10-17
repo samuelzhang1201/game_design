@@ -165,6 +165,8 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 static func supply_use(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
 	var supply_milli := personnel_capacity(repo, reg) * 1000 if state == null else int(
 		Quality.profile(repo, state, String(reg.get("regiment_code", "")))["supply_milli"])
+	if state != null:
+		supply_milli += PrisonerBurden.supply_milli(repo, state, String(reg.get("regiment_code", "")))
 	var per_head := int(repo.bal("army_supply_per_head_permille"))
 	var terrain := int(height_tier(repo, reg, state)["supply_permille"])
 	if supply_milli <= 0 or per_head <= 0 or terrain <= 0:
@@ -572,7 +574,7 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0
-	var fit := fit_count(repo, state, code)
+	var fit := fit_count(repo, state, code) - PrisonerBurden.guard_count(repo, state, code)
 	var realm := realm_of(repo, code, state)
 	var base := power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
 		code, 0 if state == null else state.tick, DevelopmentSystem.arm_permille(repo, state, realm))
@@ -751,7 +753,8 @@ static func speed_km_per_day(repo: DataRepository, state: GameState, code: Strin
 		int(st["morale"]), int(st["training"])) / 10.0 \
 		* float(load_permille(repo, carry_of(repo, st))) / 1000.0 \
 		* float(ground_permille(repo, reg, position_of(repo, state, reg), state)) / 1000.0 \
-		* float(LawEffects.unit_pace_permille(repo, state, code)) / 1000.0
+		* float(LawEffects.unit_pace_permille(repo, state, code)) / 1000.0 \
+		* float(PrisonerBurden.pace_permille(repo, state, code)) / 1000.0
 
 
 ## --- The ground's pace (spec 2026-10-06-army-location-and-town-defence §6)
@@ -991,7 +994,9 @@ static func day_step_m(repo: DataRepository, state: GameState, code: String, car
 		int(st["morale"]), int(st["training"])) * 100 \
 		* load_permille(repo, carry if carry >= 0 else carry_of(repo, st)) / 1000
 	@warning_ignore("integer_division")  # whole metres
-	return step * LawEffects.unit_pace_permille(repo, state, code) / 1000
+	step = step * LawEffects.unit_pace_permille(repo, state, code) / 1000
+	@warning_ignore("integer_division")
+	return step * PrisonerBurden.pace_permille(repo, state, code) / 1000
 
 
 ## Metres a regiment covers TODAY (spec 2026-09-27-courier-core §1): its
@@ -1127,6 +1132,10 @@ static func route_m_of(repo: DataRepository, from: Vector2i, waypoints: Array, t
 ## True when a leg's samples, from `start`, cross no closed cell of `grid`
 ## but its two ends'.
 static func leg_clear(grid: MarchPath, start: Vector2i, leg: Array) -> bool:
+	if grid == null:
+		return true
+	if leg.is_empty():
+		return false
 	var ends := [grid.cell_of(start), grid.cell_of(leg[leg.size() - 1])]
 	var prev := start
 	for p: Vector2i in leg:

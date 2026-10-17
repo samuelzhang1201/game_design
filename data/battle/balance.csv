@@ -34,3 +34,5 @@ battle_retreat_supply_loss_permille,100,Carried stores abandoned when withdrawal
 battle_event_vanity_threshold,50,Vanity above which refusing a noble charge causes resentment
 battle_event_refused_charge_opinion,-2,Opinion for refusing a vain commander's requested charge
 battle_event_capture_reach_m,1000,Actual distance required to seize abandoned food
+prisoner_guard_permille,100,Fit guards required per thousand held captives (provisional)
+prisoner_load_permille,250,Captive march load per head relative to own living personnel (provisional)

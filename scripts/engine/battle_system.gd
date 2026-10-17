@@ -429,6 +429,7 @@ static func join(repo: DataRepository, state: GameState, battle_id: int, code: S
 	if list.size() >= int(repo.bal("battle_max_units")):
 		return false
 	list.append(code)
+	BattleReport.enroll(state, b, code, side)
 	if not b.has("event_reinforcements"):
 		b["event_reinforcements"] = []
 	b.event_reinforcements.append(code)
@@ -532,6 +533,9 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 	BattleRules.freeze(repo, state, b)
 	BattleFormation.ensure(b)
 	state.battles.append(b)
+	for entry_side: String in SIDES:
+		for member: String in b[entry_side]:
+			BattleReport.enroll(state, b, member, entry_side)
 	for side: String in SIDES:
 		var actor := String(b[side][0])
 		if ArmySystem.is_foe(state, actor):
@@ -630,11 +634,17 @@ static func place_label(repo: DataRepository, state: GameState, b: Dictionary) -
 
 ## One battle's day; errors preserve the round and the daily cursor.
 static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events: Array) -> Dictionary:
+	for side: String in SIDES:
+		for code: String in b[side]:
+			BattleReport.enroll(state, b, code, side)
 	var today := state.absolute_day()
 	if int(b.get("last_resolved_day", -1)) == today:
 		return {"ended": false}
 	for side: String in SIDES:
 		b[side] = (b[side] as Array).filter(func(c: String) -> bool: return not _stored(state, c).is_empty())
+	var custody := _settle_defeated_holders(repo, state, b)
+	if custody.has("error"):
+		return custody
 	var left := _exits(repo, state, b, "none", 500)
 	if (b["att"] as Array).is_empty() or (b["def"] as Array).is_empty():
 		_end(repo, state, b, "rout_" + ("attacker" if b["routed_side"] == "att" else "defender") if b.has("routed_side") else "emptied", events, left)
@@ -705,6 +715,9 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		"battle:%d:round:%d" % [int(b["id"]), n])
 	if results.has("error"):
 		return results
+	custody = _settle_defeated_holders(repo, state, b)
+	if custody.has("error"):
+		return custody
 	for cost: Dictionary in pending["costs"]:
 		var entry := _stored(state, String(cost["code"]))
 		entry["supplies"] = maxi(0, int(entry["supplies"]) - int(cost["supplies"]))
@@ -727,6 +740,33 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		_end(repo, state, b, "rout_" + ("attacker" if b["routed_side"] == "att" else "defender") if b.has("routed_side") else "emptied", events, left)
 		return {"ended": true}
 	return {"ended": false}
+
+
+## Resolve custody while the defeated unit still has its battlefield context.
+static func _settle_defeated_holders(repo: DataRepository, state: GameState, battle: Dictionary) -> Dictionary:
+	for side: String in SIDES:
+		var codes: Array = battle[side].duplicate()
+		codes.sort()
+		for code: String in codes:
+			if MilitaryRoster.fit(state, code) > 0 or int(PrisonerSystem.held_counts(state, code)["total"]) == 0:
+				continue
+			var other := "def" if side == "att" else "att"
+			var receivers: Array = battle[other].filter(func(member: String) -> bool: return MilitaryRoster.fit(state, member) > 0)
+			if receivers.is_empty():
+				receivers = battle[side].filter(func(member: String) -> bool: return member != code and MilitaryRoster.fit(state, member) > 0)
+			receivers.sort_custom(func(a: String, b: String) -> bool:
+				var origin := _at_m(repo, state, code)
+				var da := origin.distance_squared_to(_at_m(repo, state, a))
+				var db := origin.distance_squared_to(_at_m(repo, state, b))
+				return a < b if da == db else da < db)
+			var controllers: Array[String] = []
+			if not receivers.is_empty():
+				controllers.append(String(receivers[0]))
+			var result := PrisonerSystem.holder_defeated(repo, state, code, controllers,
+				"battle_holder:%d:%d:%s" % [int(battle["id"]), int(battle.get("rounds", 0)), code])
+			if result.has("error"):
+				return result
+	return {"status": "applied"}
 
 
 static func _broken(repo: DataRepository, state: GameState, codes: Array) -> bool:
@@ -894,6 +934,7 @@ static func _exits(repo: DataRepository, state: GameState, b: Dictionary, rout: 
 			else:
 				_stored(state, code).erase("battle_retreat")
 				_stored(state, code).erase("withdrawal_cause")
+				BattleReport.leave(state, b, code)
 				left.append({"code": code, "side": side, "why": why})
 		b[side] = keep
 	return left
@@ -966,12 +1007,14 @@ static func march_out(repo: DataRepository, state: GameState, code: String, plac
 ## the town it was fought for fell under it); its regiments stay where they
 ## stand, halted.
 static func call_off(state: GameState, id: int, repo: DataRepository = null) -> void:
+	BattleReport.snapshot(repo, state, id)
 	BattleOrders.end_battle(repo, state, id, "The battle is called off")
 	state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != id)
 
 
 ## Preserve terminal warrant receipts while releasing every unspent reservation.
 static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: String, events: Array, left: Array = []) -> void:
+	BattleReport.snapshot(repo, state, int(b["id"]))
 	BattleOrders.end_battle(repo, state, int(b["id"]), "Battle ended: " + why)
 	var att: Array = b["att"]
 	var def: Array = b["def"]

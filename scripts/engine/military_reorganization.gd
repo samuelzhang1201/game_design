@@ -23,6 +23,16 @@ static func reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 	LawSystem.commit_scopes(state, candidate)
 	return result
 
+## Splitting a live custody source would invalidate its unique batch references.
+static func _has_custody(state: GameState, code: String) -> bool:
+	if int(PrisonerSystem.held_counts(state, code)["total"]) > 0:
+		return true
+	for id: String in state.military_rosters.get(code, {}).get("cohort_ids", []):
+		if int(state.military_cohorts.get(id, {}).get("captured_current", 0)) > 0:
+			return true
+	return false
+
+
 static func _reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 	var mapping: Dictionary = state.military_migration.get("unit_mapping", {}).duplicate(true)
 	var cohorts: Dictionary = state.military_migration.get("cohort_mapping", {}).duplicate(true)
@@ -38,7 +48,7 @@ static func _reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 			return {"status": "error", "error": plan["error"]}
 		if (plan["units"] as Array).size() <= 1:
 			continue
-		if _in_battle(state, code):
+		if _in_battle(state, code) or _has_custody(state, code):
 			deferred.append(code)
 			continue
 		var error := _split(repo, state, code, plan, mapping, cohorts)

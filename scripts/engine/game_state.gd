@@ -382,6 +382,9 @@ var army_roster: Dictionary = {}
 var military_rosters: Dictionary = {}
 var military_cohorts: Dictionary = {}
 var military_events: Dictionary = {}
+var prisoner_batches: Dictionary = {}
+var prisoner_events: Dictionary = {}
+var battle_records: Dictionary = {}
 var recruitment_projects: Dictionary = {}
 var military_migration: Dictionary = {}
 ## town code -> the one unit holding its seat (ArmyGround, spec §4.4).
@@ -510,6 +513,9 @@ func to_dict() -> Dictionary:
 		"military_rosters": military_rosters.duplicate(true),
 		"military_cohorts": military_cohorts.duplicate(true),
 		"military_events": military_events.duplicate(true),
+		"prisoner_batches": prisoner_batches.duplicate(true),
+		"prisoner_events": prisoner_events.duplicate(true),
+		"battle_records": battle_records.duplicate(true),
 		"recruitment_projects": recruitment_projects.duplicate(true),
 		"military_migration": military_migration.duplicate(true),
 		"town_losses": _encode_values(town_losses.duplicate(true)),
@@ -557,6 +563,9 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.military_rosters = _whole(d.get("military_rosters", {}))
 	s.military_cohorts = _whole(d.get("military_cohorts", {}))
 	s.military_events = _whole(d.get("military_events", {}))
+	s.prisoner_batches = _whole(d.get("prisoner_batches", {}))
+	s.prisoner_events = _whole(d.get("prisoner_events", {}))
+	s.battle_records = _whole(d.get("battle_records", {}))
 	s.recruitment_projects = _whole(d.get("recruitment_projects", {}))
 	s.military_migration = _whole(d.get("military_migration", {}))
 	s.map_id = String(d.get("map_id", ""))
