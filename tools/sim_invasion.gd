@@ -21,7 +21,7 @@ extends SceneTree
 
 const SIDE := {"att": "attacker", "def": "defender", "": "none"}
 const VALUE_FLAGS := ["--map", "--seed", "--defence", "--days", "--bal"]
-const USAGE := "usage: Godot --headless --path . -s tools/sim_invasion.gd -- [--map ID] [--seed N] [--defence none|weak|strong] [--days N] [--walls] [--bal key=value ...]"
+const USAGE := "usage: Godot --headless --path . -s tools/sim_invasion.gd -- [--map ID] [--seed N] [--defence none|weak|strong] [--days N] [--walls] [--acknowledge-encounters] [--bal key=value ...]"
 
 
 ## A wrong argument stops the run (a typo such as --defense must never run
@@ -38,6 +38,7 @@ func _init() -> void:
 	var defence := "weak"
 	var days := 45
 	var walls := false
+	var acknowledge_encounters := false
 	var bal := {}
 	var args := OS.get_cmdline_user_args()
 	var i := 0
@@ -45,6 +46,9 @@ func _init() -> void:
 		var flag := args[i]
 		var next := args[i + 1] if i + 1 < args.size() else ""
 		i += 1
+		if flag == "--acknowledge-encounters":
+			acknowledge_encounters = true
+			continue
 		if flag == "--walls":
 			walls = true
 			continue
@@ -112,10 +116,17 @@ func _init() -> void:
 		var treasury := _metric(s, "treasury")
 		var content := _metric(s, "peasant_contentment")
 		var t1 := Time.get_ticks_usec()
-		if s.day >= Calendar.DAYS_PER_TICK:
-			engine.advance(s)
-		else:
-			engine.advance_day(s)
+		var result := engine.resolve_day(s)
+		while result["status"] == "blocked" and acknowledge_encounters:
+			var decision: Dictionary = result["decision"]
+			if decision["kind"] != "encounter":
+				break
+			engine.resolve_decision(s, String(decision["token"]), "continue")
+			result = engine.resolve_day(s)
+		if result["status"] == "blocked":
+			print("Simulation paused at decision: ", result["decision"], "; use --acknowledge-encounters for unattended encounters.")
+			quit(0)
+			return
 		day_us.append(Time.get_ticks_usec() - t1)
 		var lines: Array = []
 		if today == cross:

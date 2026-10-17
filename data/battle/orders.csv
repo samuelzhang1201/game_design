@@ -1,0 +1,6 @@
+kind,label,reserve_gold_per_1000,morale_gain,king_morale_bonus,cooldown_days,attack_permille,defence_permille,extra_supply_permille,morale_decay_permille,inspire_duration_days,inspire_morale_decay_permille
+attack,All-out attack,0,0,0,0,1200,850,250,1000,0,1000
+hold,Hold position,0,0,0,0,1000,1150,0,800,0,1000
+inspire,Reward and inspire,7,8,4,3,1000,1000,0,1000,2,800
+retreat,Organized retreat,0,0,0,0,850,850,0,1000,0,1000
+surrender,Request surrender,0,0,0,0,1000,1000,0,1000,0,1000

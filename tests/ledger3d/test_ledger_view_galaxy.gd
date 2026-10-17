@@ -741,7 +741,7 @@ func test_a_supply_line_is_drawn_short_and_is_no_hub() -> void:
 
 ## Task 11 fix round 2 (R3): no drawn name lies on ANOTHER star's disc — the
 ## court with the player selected and his web framed (court+you).
-func test_no_name_lies_on_another_star() -> void:
+func test_ordinary_names_avoid_stars_and_the_selected_name_stays_nearby() -> void:
 	view.show_snapshot(Ledger.galaxy(repo, s, {}), false)
 	_settle_by_frames()
 	view.focus_cluster("court")
@@ -764,6 +764,15 @@ func test_no_name_lies_on_another_star() -> void:
 		var px := float(e["px"])
 		var w := font.get_string_size(String(e["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(px)).x
 		var box := Rect2((e["at"] as Vector2) - Vector2(w * 0.5, px * 0.45), Vector2(w, px * 1.05))
+		if bool(e.get("first", false)):
+			assert_eq(String(e["id"]), "character:you")
+			assert_true(Rect2(Vector2.ZERO, view.size).encloses(box), "selection remains within the view")
+			assert_gte(box.position.y, repo.bal("ledger_frame_top_px"), "selection stays below chrome")
+			var centre: Vector2 = e["ring_at"]
+			var dx := maxf(0.0, absf(centre.x - box.get_center().x) - box.size.x * 0.5)
+			var dy := maxf(0.0, absf(centre.y - box.get_center().y) - box.size.y * 0.5)
+			assert_lte(Vector2(dx, dy).length() - float(e["ring"]), px * 1.05, "selected label remains at its nearest ring")
+			continue
 		for id: String in discs:
 			if id != String(e["id"]):
 				assert_false((discs[id] as Rect2).intersects(box), "%s lies on %s" % [e["text"], id])

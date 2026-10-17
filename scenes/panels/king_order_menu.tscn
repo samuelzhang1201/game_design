@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://dxr64vatye1j8"]
+
+[ext_resource type="Theme" uid="uid://b4xbt0npqul2u" path="res://assets/2D/ui/theme/game_theme.tres" id="1_n0w6p"]
+[ext_resource type="Script" uid="uid://d2erke0dadw8a" path="res://scripts/ui/king_order_menu.gd" id="1_sxnp1"]
+[ext_resource type="StyleBox" uid="uid://dqadyp0wbwm2i" path="res://assets/2D/ui/panels/styles/leather_popup.tres" id="2_do7mi"]
+
+[node name="KingOrders" type="PopupMenu" unique_id=757356626]
+oversampling_override = 1.0
+visible = true
+theme = ExtResource("1_n0w6p")
+theme_type_variation = &"CardMenuPopup"
+theme_override_styles/panel = ExtResource("2_do7mi")
+script = ExtResource("1_sxnp1")

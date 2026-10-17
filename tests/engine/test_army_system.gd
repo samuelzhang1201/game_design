@@ -1,7 +1,9 @@
 extends GutTest
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## ArmySystem (owner 2026-09-17, spec 2026-09-17-regiment-state §2-3): the
-## player's regiments carry morale, wounded, supplies and training; the
+## player's regiments carry morale, supplies and training; personnel cohorts
+## hold the wounded, and the
 ## month's end returns wounded to the ranks; each day eats its share of supplies.
 
 var repo: DataRepository
@@ -29,11 +31,11 @@ func test_a_new_campaign_seeds_only_the_players_regiments() -> void:
 	var entry: Dictionary = s.regiments[String(r["regiment_code"])]
 	assert_eq(int(entry["morale"]), 70)
 	assert_eq(int(entry["training"]), 10)
-	assert_eq(int(entry["wounded"]), 0)
+	assert_eq(ArmySystem.wounded_count(repo, s, String(r["regiment_code"])), 0)
 	# heads x 100 / 1000 a month (scaled by the cell's height tier), times
 	# army_start_supply_days (20) of the 30 days of a month, in a 20-day load
 	@warning_ignore("integer_division")
-	assert_eq(int(entry["supplies"]), (ArmySystem.supply_use(repo, r) * 20 + 29) / 30)
+	assert_eq(int(entry["supplies"]), (ArmySystem.supply_use(repo, r, s) * 20 + 29) / 30)
 	assert_eq(int(entry["carry_days"]), 20)
 	assert_false(s.regiments.has(_other_code()))
 
@@ -44,7 +46,7 @@ func test_a_fresh_regiment_has_the_days_it_was_given() -> void:
 	var n := 0
 	for r: Dictionary in _mine():
 		var code := String(r["regiment_code"])
-		var use := ArmySystem.supply_use(repo, r)
+		var use := ArmySystem.supply_use(repo, r, s)
 		if String(r.get("is_naval", "0")) == "1" or use < 30:
 			continue
 		n += 1
@@ -60,8 +62,8 @@ func test_the_month_returns_wounded_and_the_days_eat_the_supplies() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var r: Dictionary = _mine()[0]
 	var code := String(r["regiment_code"])
-	var use := ArmySystem.supply_use(repo, r)
-	s.regiments[code]["wounded"] = 250
+	var use := ArmySystem.supply_use(repo, r, s)
+	assert_false(Personnel.move(repo, s, code, "fit", "wounded", 250).has("error"))
 	s.regiments[code]["supplies"] = use + 5
 	# Morale follows the stores in hand as the month turns (spec
 	# 2026-09-30-ledger-supply-design §4); the month itself is eaten a day at
@@ -72,7 +74,7 @@ func test_the_month_returns_wounded_and_the_days_eat_the_supplies() -> void:
 	var mark2 := ArmySystem.morale_mark(repo, ArmySystem.supply_score(repo, 5, use), false)
 	var expected := morale1 if naval else ArmySystem.drift_morale(morale1, mark2, int(repo.bal("army_morale_drift_per_month")))
 	ArmySystem.settle_month(repo, s)
-	assert_eq(int(s.regiments[code]["wounded"]), 200)
+	assert_eq(ArmySystem.wounded_count(repo, s, code), 200)
 	assert_eq(int(s.regiments[code]["supplies"]), use + 5, "the month's end spends nothing itself")
 	var last := use + 5
 	for d in range(1, Calendar.DAYS_PER_TICK + 1):
@@ -82,6 +84,7 @@ func test_the_month_returns_wounded_and_the_days_eat_the_supplies() -> void:
 		assert_true(now <= last, "day %d eats, never adds" % d)
 		last = now
 	assert_eq(int(s.regiments[code]["supplies"]), 5, "the thirty days eat exactly a month")
+	s.tick += 1
 	ArmySystem.settle_month(repo, s)
 	for d in range(1, Calendar.DAYS_PER_TICK + 1):
 		s.day = d
@@ -112,7 +115,7 @@ func test_the_yellow_bar_falls_day_by_day() -> void:
 			break
 	assert_false(r.is_empty(), "the realm has a unit that eats every day")
 	var code := String(r["regiment_code"])
-	var use := ArmySystem.supply_use(repo, r)
+	var use := ArmySystem.supply_use(repo, r, s)
 	# the carried days in whole units, rounded UP so the bar reads full
 	@warning_ignore("integer_division")
 	s.regiments[code]["supplies"] = (use * ArmySystem.carry_of(repo, s.regiments[code]) + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK
@@ -135,10 +138,13 @@ func test_wounded_never_exceed_the_headcount() -> void:
 	var r: Dictionary = _mine()[0]
 	var code := String(r["regiment_code"])
 	var heads := int(MapObjects.regiment_size(repo, r))
-	s.regiments[code]["wounded"] = heads * 10
+	var before := s.military_cohorts.duplicate(true)
+	assert_true(Personnel.move(repo, s, code, "fit", "wounded", heads * 10).has("error"))
+	assert_eq(s.military_cohorts, before, "an impossible loss is rejected atomically")
+	assert_false(Personnel.move(repo, s, code, "fit", "wounded", heads).has("error"))
 	ArmySystem.settle_month(repo, s)
-	assert_lte(int(s.regiments[code]["wounded"]), heads)
-	assert_gte(int(s.regiments[code]["wounded"]), 0)
+	assert_lte(ArmySystem.wounded_count(repo, s, code), heads)
+	assert_gte(ArmySystem.wounded_count(repo, s, code), 0)
 
 func test_training_is_capped_at_100() -> void:
 	var s := SuiteData.campaign(repo, 7)
@@ -164,14 +170,14 @@ func test_state_of_reads_without_writing() -> void:
 func test_the_state_survives_a_save() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := String(_mine()[0]["regiment_code"])
-	s.regiments[code]["wounded"] = 12
+	assert_false(Personnel.move(repo, s, code, "fit", "wounded", 12).has("error"))
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
-	assert_eq(int(back.regiments[code]["wounded"]), 12)
+	assert_eq(ArmySystem.wounded_count(repo, back, code), 12)
 	assert_eq(int(back.regiments[code]["morale"]), 70)
 
 func test_the_tick_settles_the_regiments() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := String(_mine()[0]["regiment_code"])
-	s.regiments[code]["wounded"] = 250
+	assert_false(Personnel.move(repo, s, code, "fit", "wounded", 250).has("error"))
 	TickEngine.new(repo).advance(s)
-	assert_eq(int(s.regiments[code]["wounded"]), 200)
+	assert_eq(ArmySystem.wounded_count(repo, s, code), 200)

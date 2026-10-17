@@ -76,6 +76,55 @@ func test_carry_rides_to_the_regiment_and_sets_the_load() -> void:
 	_run_until_no_couriers()
 	assert_eq(ArmySystem.carry_of(repo, s.regiments[code]), 30)
 
+func test_king_in_command_range_sets_supply_load_without_courier_fee() -> void:
+	var code := _land()
+	var pos := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code)))
+	s.regiments[code]["x_m"] = pos.x
+	s.regiments[code]["y_m"] = pos.y
+	s.regiments[code]["camp_town"] = ""
+	s.king_state["x_m"] = pos.x
+	s.king_state["y_m"] = pos.y
+	var req := ActionRequest.make("SUPPLY_CARRY_SET", {"regiment": code, "days": 30})
+	assert_eq(actions.validate(req, s), "")
+	var before := float(s.metrics["treasury"])
+	actions.execute(req, s)
+	assert_eq(ArmySystem.carry_of(repo, s.regiments[code]), 30)
+	assert_true(s.couriers.is_empty())
+	assert_eq(before - float(s.metrics["treasury"]), OrderCosts.gold_of(repo, "SUPPLY_CARRY_SET"))
+
+func test_local_column_warrant_starts_the_supply_line_immediately() -> void:
+	var code := ""
+	var town := ""
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	for candidate: String in codes:
+		var reg := ArmySystem.regiment(repo, candidate, s)
+		if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
+			continue
+		var pos := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, reg))
+		s.king_state["x_m"] = pos.x
+		s.king_state["y_m"] = pos.y
+		var ahead := SupplyLines.mark_ahead(repo, s, candidate, SupplyLines.eligibility(repo, s, candidate))
+		var towns: Array = ahead.keys()
+		towns.sort()
+		for possible: String in towns:
+			if String(ahead[possible]) == "":
+				code = candidate
+				town = possible
+				break
+		if town != "":
+			break
+	assert_ne(town, "", "an eligible town lies behind the column")
+	var req := ActionRequest.make("SUPPLY_POINT_SET", {"regiment": code, "town": town,
+		"rate": 1000, "with_column": true})
+	assert_eq(actions.validate(req, s), "")
+	var before := float(s.metrics["treasury"])
+	actions.execute(req, s)
+	assert_true(s.couriers.is_empty())
+	assert_eq(String(SupplyLines.line(s, code)["state"]), SupplyLines.RIDING)
+	assert_eq(String(SupplyLines.line(s, code)["town"]), town)
+	assert_eq(before - float(s.metrics["treasury"]), OrderCosts.gold_of(repo, "SUPPLY_POINT_SET"))
+
 func test_clear_ends_the_line_when_its_courier_reaches_the_town() -> void:
 	var code := _land()
 	actions.execute(ActionRequest.make("SUPPLY_POINT_SET", {"regiment": code, "town": _eligible(code), "rate": 1000}), s)

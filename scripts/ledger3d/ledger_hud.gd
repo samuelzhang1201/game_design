@@ -168,7 +168,7 @@ static func _font_of(e: Dictionary, font: Font, title_font: Font) -> Font:
 ## screen's top chrome) are never entered by anything.
 ## Task 11 fix round 4 (T1): an entry with `first: true` (the selected star,
 ## put first by the view) becomes a wall once placed, so no later name touches
-## its label, and with every place on another star takes its nearest anyway;
+## its label; it only tries the nearest ring, crossing another star if needed;
 ## a `lit: true` entry prefers, within each ring, a place no planned link's
 ## dashes (`dashes`: screen segments [a, b]) cross; a `dim:
 ## true` (ghost) entry only tries its nearest ring and is dropped rather than
@@ -223,9 +223,10 @@ static func cull(entries: Array, font_px: float, font: Font = null, gauge: Dicti
 		# the places in the order they are tried — no lambda here: the cull
 		# runs once a camera move over every named star (final wave I1d)
 		var dim := bool(e.get("dim", false))
+		var first := bool(e.get("first", false))
 		var order: Array[int] = []
 		for k in boxes.size():
-			if not dim or int(places[k][2]) == 0:
+			if not (dim or first) or int(places[k][2]) == 0:
 				order.append(k)
 		if bool(e.get("lit", false)) and not dashes.is_empty():
 			# by ring, a place no planned link's dashes cross first in each,

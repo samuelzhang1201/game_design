@@ -27,6 +27,9 @@ const SCENES := {
 	"root": "res://scenes/game_root.tscn",
 }
 
+## --battle-case encounter: real contact and its saved first-encounter pause.
+var _battle_case := ""
+
 var _out := "user://screen_snapshot.png"
 var _screen := "court"
 var _seed := 42
@@ -345,6 +348,8 @@ func _ready() -> void:
 	while i < args.size() - 1:
 		if args[i] == "--out":
 			_out = args[i + 1]
+		elif args[i] == "--battle-case":
+			_battle_case = args[i + 1]
 		elif args[i] == "--screen":
 			_screen = args[i + 1]
 		elif args[i] == "--seed":
@@ -914,6 +919,8 @@ func _minister_beat(id: String) -> Dictionary:
 
 func _process(_delta: float) -> void:
 	_frames += 1
+	if _battle_case == "encounter" and _frames == 20 and _root != null:
+		_stage_battle_encounter()
 	if _root != null and _pause_menu and _frames == 20:
 		_root.toggle_pause_menu()
 	if _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu \
@@ -1925,3 +1932,26 @@ func _war_chart_click(view: WarRoomView, id: String) -> int:
 			return int(s["index"])
 	print("war: no sheet %s" % id)
 	return -1
+
+
+## Put one real hostile column within contact range, then use the game day
+## entry point. No fake panel or hand-written battle result in a screenshot.
+func _stage_battle_encounter() -> void:
+	var ours: Array = []
+	for code: String in Game.state.regiments:
+		if not ArmySystem.is_naval(Game.data, Game.state, code):
+			ours.append(code)
+	ours.sort()
+	var foes := Game.state.foes.keys()
+	foes.sort()
+	if ours.is_empty() or foes.is_empty():
+		push_error("battle encounter showcase needs two real armies")
+		return
+	var own: Dictionary = Game.state.regiments[ours[0]]
+	var foe: Dictionary = Game.state.foes[foes[0]]
+	foe["x_m"] = int(own["x_m"]) + 1000
+	foe["y_m"] = int(own["y_m"])
+	foe["dest_x_m"] = foe["x_m"]
+	foe["dest_y_m"] = foe["y_m"]
+	foe["order"] = ArmySystem.ORDER_STANDBY
+	Game.advance_day()

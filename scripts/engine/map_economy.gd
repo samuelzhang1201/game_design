@@ -115,6 +115,18 @@ static func cell_at(repo: DataRepository, p: Vector2) -> int:
 					nearest = id
 	return nearest
 
+## Navigation needs exact coastline containment; the economy's nearest-land
+## fallback is deliberately unsuitable for a fleet in its coastal berth.
+static func contains_land(repo: DataRepository, p: Vector2) -> bool:
+	var lg := _land_grid(repo)
+	var home := Vector2i((p / float(lg["bucket"])).floor())
+	for dy: int in range(-1, 2):
+		for dx: int in range(-1, 2):
+			for id: int in (lg["grid"] as Dictionary).get(home + Vector2i(dx, dy), []):
+				if (lg["boxes"][id] as Rect2).has_point(p) and Geometry2D.is_point_in_polygon(p, lg["polys"][id]):
+					return true
+	return false
+
 static func cell_polygon(repo: DataRepository, cell: Dictionary) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for v in (cell["vertex_ids"] as PackedInt32Array):

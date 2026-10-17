@@ -75,3 +75,24 @@ func test_the_capital_seat_is_its_palace() -> void:
 	houses[cap][0]["type"] = "cottage_a"
 	assert_eq(Map3DCourierPalace.seat_of(repo, houses, px, Vector2.ZERO), {}, "no landmark at its centre: no seat")
 	assert_eq(Map3DCourierPalace.seat_of(repo, {}, px, Vector2.ZERO), {}, "no bake: no seat")
+
+
+func test_physical_departure_and_arrival_find_their_own_town() -> void:
+	var repo := SuiteData.repo()
+	var realm := repo.resolve_realm("player_realm")
+	var cap := String(repo.kingdoms[realm]["capital_burg"])
+	var b: Dictionary = repo.burgs[cap]
+	var town := Vector2(float(b["x"]), float(b["y"]))
+	var houses := {cap: [{"rank": 0, "type": "palace", "at": town,
+		"yaw_deg": 0.0, "scale": 1.0}]}
+	var identity := func(p: Vector2) -> Vector2: return p
+	var far := town + Vector2(1000, 0)
+	var departure := Map3DCourierPalace.dress_physical(repo, houses, town, [far], [], 10.0, identity, true)
+	assert_ne(departure["from"], town, "a real town departure uses its palace")
+	var field := town + Vector2(2000, 3000)
+	var field_road := Map3DCourierPalace.dress_physical(repo, houses, field, [far], [], 10.0, identity, true)
+	assert_eq(field_road["from"], field, "a field departure cannot be moved to a palace")
+	var arrival := Map3DCourierPalace.dress_physical(repo, houses, far, [town], [], 10.0, identity, false)
+	assert_ne((arrival["ahead"] as Array)[-1], town, "a route physically ending at town rides into the door")
+	var passing := Map3DCourierPalace.dress_physical(repo, houses, town, [far], [], 10.0, identity, false)
+	assert_eq(passing["from"], town, "passing a town later in the journey does not restart at its palace")

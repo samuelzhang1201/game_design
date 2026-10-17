@@ -18,7 +18,7 @@ func test_the_months_end_settles_the_three_pools() -> void:
 	# The regiments stand fully supplied, so the month's refill draws on no
 	# stock and the pools move only by what is settled here.
 	for rc: String in s.regiments:
-		s.regiments[rc]["supplies"] = ArmySystem.supply_use(data, ArmySystem.regiment(data, rc)) * 6
+		s.regiments[rc]["supplies"] = ArmySystem.supply_use(data, ArmySystem.regiment(data, rc, s), s) * 6
 	# Two purses (owner 2026-09-14): the lord's own provinces in full, the
 	# crown's treasury its share of the rest (RealmEconomy.purses).
 	var p := RealmEconomy.purses(data, s)
@@ -26,6 +26,20 @@ func test_the_months_end_settles_the_three_pools() -> void:
 	for seat: String in s.council:
 		salaries += int(float(data.seats[seat].get("salary_gold", 0)))
 	assert_gt(salaries, 0, "ministers are paid")
+	# Wages pay every active fit or wounded person of the player's realm,
+	# including reserves. Sum milli-gold from the source cohorts and round
+	# once over the realm, independently of MilitaryQuality.profile.
+	var wage_milli := 0
+	for cohort: Dictionary in s.military_cohorts.values():
+		if String(cohort.get("stage", "")) != "active":
+			continue
+		if ArmySystem.realm_of(data, String(cohort["unit_code"]), s) != data.resolve_realm("player_realm"):
+			continue
+		var living := int(cohort["fit"]) + int(cohort["wounded"])
+		wage_milli += living * int(data.noble_quality[String(cohort["identity"])]["wage_per_1000_per_month"])
+	@warning_ignore("integer_division")
+	var military_wages := wage_milli / 1000
+	assert_gt(military_wages, 0, "active military personnel are paid separately from ministers")
 	var people := 0
 	for code: String in MapManors.controlled_provinces(data, s):
 		people += int(roundf(float(WorldLedger.value_of(data, s, "economy.provinces.%s.rural_population" % code))))
@@ -48,8 +62,13 @@ func test_the_months_end_settles_the_three_pools() -> void:
 	for d in r.metric_deltas:
 		assert_ne(d["reason"], "", "every line has its reason")
 	# The crown: its share of the realm and its tolls, less the court's
-	# salaries and table.
-	assert_eq(int(s.metrics["treasury"]), before["treasury"] + int(p["realm_share"]["tax"]) + tolls - salaries)
+	# salaries, military wages and table.
+	assert_eq(int(s.metrics["treasury"]), before["treasury"] + int(p["realm_share"]["tax"]) + tolls - salaries - military_wages)
+	var wage_event: Dictionary = s.military_events["military_wages:0"]["result"]
+	assert_eq(int(wage_event["monthly_wages"]), military_wages)
+	assert_eq((wage_event["lines"] as Array).size(), 1, "one whole-realm military wage debit")
+	assert_eq(int(wage_event["lines"][0]["delta"]), -military_wages)
+	assert_ne(String(wage_event["lines"][0]["reason"]), "", "the wage debit explains its cause")
 	assert_eq(int(s.metrics["strategic"]), before["strategic"] + int(p["realm_share"]["strategic"]))
 	assert_eq(int(s.metrics["grain"]), before["grain"] + int(p["realm_share"]["civil"]) - ration)
 	# The lord: his own provinces in full, and his buildings.
@@ -197,6 +216,9 @@ func test_days_step_works_and_the_thirtieth_is_a_tick() -> void:
 ## so a building started in one tick can finish in the next.
 func test_a_work_longer_than_a_month_survives_the_tick() -> void:
 	var s := SuiteData.campaign(data, 42)
+	# Keep construction pace independent of invasion casualties in its source province.
+	s.ai_hosts.clear()
+	s.foes.clear()
 	engine.advance(s)
 	assert_eq(s.tick, 1)
 	assert_eq(s.day, 1)

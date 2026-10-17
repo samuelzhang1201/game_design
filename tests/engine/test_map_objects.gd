@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## MapObjects: what lies under a map point (pin > line > land > water), the
 ## zoom-based LOD rule for town pins, and the text each info card shows.
@@ -188,7 +189,7 @@ func test_a_regiment_card_paints_its_piece_and_lists_its_arms() -> void:
 			assert_eq(keys.has(unit), n > 0, "%s: %s shown only when mustered" % [code, unit])
 			if n > 0:
 				assert_eq(keys[unit], str(n))
-		assert_eq(keys["army"], str(int(MapObjects.regiment_size(Game.data, r))), "the host under arms")
+		assert_eq(keys["army"], str(ArmySystem.personnel_capacity(Game.data, r)), "the host under arms")
 		checked += 1
 	assert_gt(checked, 0)
 	assert_true(MapObjects.army_card(Game.data, "no_such_regiment").is_empty())
@@ -232,7 +233,7 @@ func test_a_regiment_card_shows_its_state() -> void:
 	var r: Dictionary = MapObjects.regiments_of(Game.data, mine, Game.state)[0]
 	var code := String(r["regiment_code"])
 	var heads := int(MapObjects.regiment_size(Game.data, r))
-	s.regiments[code]["wounded"] = 120
+	assert_false(People.move(Game.data, s, code, "fit", "wounded", 120, "card_wounded").has("error"))
 	var card := MapObjects.army_card(Game.data, code, s)
 	var order: Array = []
 	var text: Dictionary = {}
@@ -247,7 +248,7 @@ func test_a_regiment_card_shows_its_state() -> void:
 	assert_eq(text["army"], "%d (120 wounded)" % heads)
 	assert_eq(text["army_morale"], str(int(s.regiments[code]["morale"])))
 	assert_eq(text["army_wounded"], "+%d / mo" % ArmySystem.wound_recovery(Game.data, 120))
-	var use := ArmySystem.supply_use(Game.data, r)
+	var use := ArmySystem.supply_use(Game.data, r, s)
 	var held := ArmySystem.days_in_hand(int(s.regiments[code]["supplies"]), use)
 	var in_hand := mini(held, 999)
 	assert_eq(text["army_supply"], "%s (≈ %d day%s)" % [MapObjects.grouped(int(s.regiments[code]["supplies"])),

@@ -11,6 +11,8 @@ extends RefCounted
 ## (the province_owner pattern), and an aliased row (the player's treasury)
 ## has no copy at all — it reads and writes the metric. Engine-pure.
 
+const Population := preload("res://scripts/engine/military_population.gd")
+
 const SEP := "."
 const WILDCARD := "*"
 
@@ -80,6 +82,16 @@ static func value_of(data: DataRepository, state: GameState, path: String) -> Va
 			return null
 		var key := String(row.get("alias_scale_key", ""))
 		return float(truth) / data.bal(key) if key != "" else truth
+	var population := resolved.split(SEP)
+	if population.size() == 4 and population[0] == "economy" and population[1] == "kingdoms" and population[3] in Population.FIELDS:
+		if not data.kingdoms.has(population[2]):
+			return null
+		var total := 0
+		var provinces := MapOwnership.provinces_of(data, state, population[2])
+		provinces.sort()
+		for province: String in provinces:
+			total += int(value_of(data, state, Population.path(province, population[3])))
+		return total
 	if state != null and state.world.has(resolved):
 		return state.world[resolved]
 	return _base_value(data, state, resolved, row)
@@ -125,6 +137,9 @@ static func apply(data: DataRepository, state: GameState, path: String, delta: f
 		return {"error": "no such field: " + path}
 	if reason.strip_edges() == "":
 		return {"error": "a change needs a reason: " + path}
+	var population := resolved.split(SEP)
+	if population.size() == 4 and population[0] == "economy" and population[1] == "kingdoms" and population[3] in Population.FIELDS:
+		return {"error": "Kingdom population is derived; change an explicit province origin."}
 	var t := String(row.get("type", "float"))
 	if t == "enum":
 		return {"error": "%s is not numeric" % path}
@@ -147,6 +162,9 @@ static func apply(data: DataRepository, state: GameState, path: String, delta: f
 	var target := clampf(float(current) + delta, lo, hi)
 	if t == "int":
 		target = roundf(target)
+	if population.size() == 4 and population[0] == "economy" and population[1] == "provinces" and population[3] in Population.FIELDS:
+		if int(target) < Population.occupied(state, population[2], population[3]):
+			return {"error": "Population change would remove reserved military personnel."}
 	var applied := target - float(current)
 	_write(state, resolved, target, applied, reason)
 	state.world_log.append({"tick": state.tick, "path": resolved, "delta": applied,

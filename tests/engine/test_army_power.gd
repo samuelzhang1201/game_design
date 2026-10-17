@@ -1,4 +1,5 @@
 extends GutTest
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## Hidden strength (owner 2026-09-17, spec §5-6): a float round each arm's
 ## base, power from heads, training, morale and terrain, grades that show only
@@ -55,7 +56,7 @@ func test_power_follows_training_morale_and_wounds() -> void:
 	assert_gt(drilled, base)
 	# training factor 500+10*10=600 -> 500+10*90=1400
 	assert_almost_eq(float(drilled) / float(base), 1400.0 / 600.0, 0.01)
-	s.regiments[code]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
+	assert_false(Personnel.move(repo, s, code, "fit", "wounded", ArmySystem.fit_count(repo, s, code)).has("error"))
 	assert_eq(ArmySystem.power(repo, s, code, "defend"), 0, "a regiment of wounded has no power")
 
 ## Regression (owner 2026-09-17 review): power's n * fit / heads step used
@@ -88,7 +89,7 @@ func test_strength_grades_against_the_mean_of_its_kind() -> void:
 	s.regiments[code]["morale"] = 100
 	assert_eq(ArmySystem.strength_grade(repo, s, code), "Strong")
 	var weak: String = codes[1]
-	s.regiments[weak]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, weak))
+	assert_false(Personnel.move(repo, s, weak, "fit", "wounded", ArmySystem.fit_count(repo, s, weak)).has("error"))
 	assert_eq(ArmySystem.strength_grade(repo, s, weak), "Weak")
 
 func test_a_lone_kind_is_average() -> void:
@@ -188,6 +189,7 @@ func test_archers_alone_on_hills_by_the_terrain_table() -> void:
 	for arm in ["infantry", "cavalry", "artillery", "fleet"]:
 		row[arm] = "0"
 	row["archers"] = "800"
+	assert_false(Personnel.replace(r, s, code, 800).has("error"))
 	var plains_d := ArmySystem.power_on(r, s, code, "defend", "plains", "")
 	var plains_a := ArmySystem.power_on(r, s, code, "attack", "plains", "")
 	# army_terrain.csv: hills,archers,1150,1050
@@ -209,27 +211,22 @@ func test_fit_permille_and_power_count_the_dead() -> void:
 	# a regiment of exactly 1000 heads, whatever the pack gave it (the
 	# campaign's own roster row: the engine reads the state's)
 	var reg := ArmySystem.regiment(repo, code, s)
-	var kept := false
 	for arm: String in repo.world_table("military", "unit_types"):
-		if not kept and int(float(reg.get(arm, 0))) > 0:
-			reg[arm] = 1000
-			kept = true
-		else:
-			reg[arm] = 0
-	var heads := ArmySystem.headcount(repo, reg)
-	assert_eq(heads, 1000)
-	s.regiments[code]["wounded"] = 100
-	s.regiments[code]["dead"] = 50
-	assert_eq(ArmySystem.fit_permille(repo, s, code), 850)   # (1000 - 100 - 50) x 1000 / 1000
-	# 150 dead is as many fewer men as 150 wounded: the same power
+		reg[arm] = 0
+	reg["infantry"] = 1000
+	assert_false(Personnel.replace(repo, s, code, 1000).has("error"))
+	assert_eq(ArmySystem.personnel_capacity(repo, reg), 1000)
+	var other := GameState.from_dict(s.to_dict(), false)
+	var dead := GameState.from_dict(s.to_dict(), false)
+	assert_false(Personnel.move(repo, s, code, "fit", "wounded", 100).has("error"))
+	assert_false(Personnel.move(repo, s, code, "fit", "dead", 50).has("error"))
+	assert_eq(ArmySystem.fit_permille(repo, s, code), 850)
 	var by_both := ArmySystem.power(repo, s, code, "defend")
-	s.regiments[code]["wounded"] = 150
-	s.regiments[code]["dead"] = 0
-	assert_eq(ArmySystem.power(repo, s, code, "defend"), by_both)
-	s.regiments[code]["wounded"] = 0
-	s.regiments[code]["dead"] = heads
-	assert_eq(ArmySystem.power(repo, s, code, "defend"), 0, "a regiment of dead has no power")
-	assert_eq(ArmySystem.fit_permille(repo, s, code), 0)
+	assert_false(Personnel.move(repo, other, code, "fit", "wounded", 150).has("error"))
+	assert_eq(ArmySystem.power(repo, other, code, "defend"), by_both)
+	assert_false(Personnel.move(repo, dead, code, "fit", "dead", 1000).has("error"))
+	assert_eq(ArmySystem.power(repo, dead, code, "defend"), 0, "a regiment of dead has no power")
+	assert_eq(ArmySystem.fit_permille(repo, dead, code), 0)
 
 func test_a_fresh_regiment_has_no_dead_and_old_saves_default_to_none() -> void:
 	var code: String = _land_codes()[0]
@@ -243,11 +240,11 @@ func test_a_fresh_regiment_has_no_dead_and_old_saves_default_to_none() -> void:
 func test_the_dead_never_recover() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code: String = _land_codes()[0]
-	s.regiments[code]["wounded"] = 100
-	s.regiments[code]["dead"] = 50
+	assert_false(Personnel.move(repo, s, code, "fit", "wounded", 100).has("error"))
+	assert_false(Personnel.move(repo, s, code, "fit", "dead", 50).has("error"))
 	ArmySystem.settle_month(repo, s)
-	assert_eq(int(s.regiments[code]["dead"]), 50)
-	assert_lt(int(s.regiments[code]["wounded"]), 100)
+	assert_eq(Personnel.count(s, code, "dead"), 50)
+	assert_lt(ArmySystem.wounded_count(repo, s, code), 100)
 
 
 ## power_of_arms (spec 2026-10-07-war-room-annotations-and-planning-pieces
@@ -268,10 +265,14 @@ func test_power_of_arms_is_worked_by_hand() -> void:
 
 
 func test_power_on_is_power_of_arms_with_the_regiments_own_state() -> void:
+	# This checks the caller wiring; identity advantages have their own hand cases.
+	var noble_power: Variant = repo.noble_quality["noble"]["power_permille"]
+	repo.noble_quality["noble"]["power_permille"] = repo.noble_quality["commoner"]["power_permille"]
 	var s := SuiteData.campaign(repo, 7)
 	for code: String in _land_codes():
 		var reg := ArmySystem.regiment(repo, code, s)
 		var st: Dictionary = s.regiments[code]
-		var fit := ArmySystem.headcount(repo, reg) - int(st["wounded"])
+		var fit := ArmySystem.fit_count(repo, s, code)
 		assert_eq(ArmySystem.power_on(repo, s, code, "attack", "hills", "walls"),
 			ArmySystem.power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), "attack", "hills", "walls", code, s.tick))
+	repo.noble_quality["noble"]["power_permille"] = noble_power

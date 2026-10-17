@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const H := preload("res://tests/engine/conduct_helpers.gd")
 ## ArmyConduct.day_step (spec 2026-10-10-foraging-and-desertion §3.3), hand-
 ## computed from the balance defaults: desertion 3 per mille a day per line
@@ -40,10 +41,7 @@ func before_each() -> void:
 		var e: Dictionary = state.regiments[c]
 		e["forage"] = ""
 		e["forage_days"] = 0
-		e["deserted"] = 0
 		e["desert_rem"] = 0
-		e["wounded"] = 0
-		e["dead"] = 0
 
 
 ## Stand `c` in the first manor cell of `province`.
@@ -63,6 +61,7 @@ func _men(c: String, n: int) -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = str(n)
+	assert_false(Personnel.replace(repo, state, c, n).has("error"))
 
 
 func _law(c: String, law: String, value: String) -> void:
@@ -146,7 +145,7 @@ func test_desertion_news_once_a_month_and_big_once() -> void:
 				deserting += 1
 			elif e["type"] == "deserting_big":
 				big_days.append(d)
-		gone.append(int(state.regiments[a]["deserted"]))
+		gone.append(Desertion.total(state, a))
 	assert_eq(gone.slice(0, 6), [9, 17, 26, 35, 44, 52])
 	assert_eq(deserting, 1, "told once in the month")
 	assert_eq(big_days, [6], "the 5% line is crossed once, on day 6")
@@ -169,18 +168,22 @@ func test_desertion_clamp_end_to_end() -> void:
 			state.regiments[c]["y_m"] = state.regiments[a]["y_m"]
 			_put(c, 30, 90, 90)
 	var guard := 0
-	while ArmySystem.fit_heads(10, state.regiments[a]) > 0 and guard < 4000:
-		state.day = 1 + guard % 29
+	var start_tick := state.tick
+	while ArmySystem.fit_count(repo, state, a) > 0 and guard < 4000:
+		@warning_ignore("integer_division")  # real months advance along with day
+		state.tick = start_tick + guard / Calendar.DAYS_PER_TICK
+		state.day = 1 + guard % Calendar.DAYS_PER_TICK
 		ArmyConduct.day_step(repo, state)
 		guard += 1
 	assert_lt(guard, 4000)
-	assert_eq(int(state.regiments[a]["deserted"]), 10)
-	assert_eq(ArmySystem.fit_heads(10, state.regiments[a]), 0)
+	assert_eq(Desertion.total(state, a), 10)
+	assert_eq(ArmySystem.fit_count(repo, state, a), 0)
 	assert_eq(int(state.regiments[a]["desert_rem"]), 0)
 	var snap: Dictionary = (state.regiments[a] as Dictionary).duplicate(true)
-	state.day = 3
+	var people_before: Dictionary = state.military_cohorts.duplicate(true)
 	var ev := ArmyConduct.day_step(repo, state)
 	assert_eq(state.regiments[a], snap)
+	assert_eq(state.military_cohorts, people_before)
 	assert_false("deserting" in _types(ev))
 
 
@@ -198,7 +201,7 @@ func test_fleet_and_foe_untouched() -> void:
 	else:
 		pending("no fleet in this pack's roster")
 		return
-	state.foes["foe_x"] = {"morale": 0, "training": 0, "supplies": 0, "forage": "", "deserted": 0,
+	state.foes["foe_x"] = {"morale": 0, "training": 0, "supplies": 0, "forage": "",
 		"x_m": state.regiments[a]["x_m"], "y_m": state.regiments[a]["y_m"]}
 	var fleet_before: Dictionary = (state.regiments.get(fleet, {}) as Dictionary).duplicate(true)
 	var foes_before: Dictionary = state.foes.duplicate(true)
@@ -218,7 +221,7 @@ func test_units_settle_apart_from_day_30() -> void:
 	state.day = 29
 	ArmyConduct.day_step(repo, state)
 	assert_eq(int(state.regiments[a]["morale"]), 50)
-	assert_eq(int(state.regiments[a]["wounded"]), 0)
+	assert_eq(ArmySystem.wounded_count(repo, state, a), 0)
 	assert_eq(int(state.regiments[a]["forage_days"]), 30)
 	state.day = 30
 	ArmyConduct.day_step(repo, state)
@@ -226,7 +229,7 @@ func test_units_settle_apart_from_day_30() -> void:
 	ArmyConduct.settle_units(repo, state)
 	assert_eq(int(state.regiments[a]["morale"]), 54, "50 + 4 x 30 / 30")
 	assert_eq(int(state.regiments[a]["training"]), 7, "10 - 3")
-	assert_eq(int(state.regiments[a]["wounded"]), 10, "1000 x 10 x 30 / 30000")
+	assert_eq(ArmySystem.wounded_count(repo, state, a), 10, "1000 x 10 x 30 / 30000")
 	assert_eq(int(state.regiments[a]["forage_days"]), 0)
 
 
@@ -255,7 +258,7 @@ func test_tick_settles_foraging_after_the_regiments_month() -> void:
 	assert_eq(ArmySystem.supply_score(repo, int(e["supplies"]), use), 1000, "the mark held")
 	assert_eq(int(e["morale"]), mark + 4, "drift(mark -> mark) = mark, then + 4 x 30 / 30")
 	assert_eq(int(e["training"]), 7, "10 - 3 x 30 / 30 (army_training_per_month 0)")
-	assert_eq(int(e["wounded"]), 10, "1000 x 10 x 30 / 30000, after the month's recovery of 0")
+	assert_eq(ArmySystem.wounded_count(repo, state, a), 10, "1000 x 10 x 30 / 30000, after the month's recovery of 0")
 	assert_eq(int(e["forage_days"]), 0)
 
 
@@ -371,7 +374,7 @@ func test_twenty_four_months_twice_identical() -> void:
 			for d in range(Calendar.DAYS_PER_TICK - 1):
 				engine.advance_day(state)
 			engine.advance(state)
-			run_log.append(JSON.stringify([state.regiments, state.forage_stripped, state.grievance, state.conduct_marks]))
+			run_log.append(JSON.stringify([state.regiments, state.military_cohorts, state.forage_stripped, state.grievance, state.conduct_marks]))
 			busy = busy or not state.forage_stripped.is_empty() or not state.conduct_marks.is_empty() \
 				or int(state.regiments[a].get("forage_days", 0)) > 0
 		runs.append(run_log)

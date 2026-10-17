@@ -2,6 +2,9 @@ extends Node
 ## Autoload "Game": owns the sim; UI talks only to this.
 
 signal report_ready(report: TickReport)
+signal battle_decision_requested(decision: Dictionary)
+@warning_ignore("unused_signal")
+signal battle_view_requested(regiment: String)
 ## A letter was read on the Missive board (final review M7): the read flag
 ## is saved state, so it changes only here.
 signal missive_read(id: int)
@@ -48,11 +51,17 @@ func _ready() -> void:
 	data = DataRepository.load_all("res://data")
 	assert(data != null, "data load failed: " + DataRepository.last_error)
 
-func start_campaign(seed_value: int = 42) -> void:
+func start_campaign(seed_value: int = 42) -> bool:
+	var candidate: GameState = campaign_maker.call(data, seed_value)
+	if candidate == null:
+		load_error = GameState.campaign_error
+		return false
 	_reset_llm()
 	release_clock_holds()  # a reign never begins held (each hold is its screen's viewing's)
-	state = campaign_maker.call(data, seed_value)
+	state = candidate
 	engine = TickEngine.new(data)
+	load_error = ""
+	return true
 
 ## The clock (owner 2026-09-13): 0 is paused, 1 a day per time_day_seconds,
 ## 2 and 4 that many times faster. Only GameRoot's _process reads it, on
@@ -145,22 +154,62 @@ func hold_day_before_month_end(day_ceiling: int) -> bool:
 ## the buildings newly idle for want of inputs (M5).
 func advance_day() -> Dictionary:
 	var ended := state.absolute_day()
-	if state.day >= Calendar.DAYS_PER_TICK:
-		var r := next_tick()
-		return {"ticked": true, "finished": r.finished_works, "arrived": engine.day_arrivals,
-			"couriers": engine.day_couriers, "idled": engine.newly_idle, "ended": ended,
-			"hazards": engine.month_hazard_news, "supply": engine.day_supply, "raids": engine.day_raid}
-	var finished := engine.advance_day(state)
+	var result := engine.resolve_day(state)
+	if result["status"] == "error":
+		hold_clock(true, "simulation_error")
+		publish_news("The day's resolution stopped: " + String(result["error"]))
+		state_changed.emit()
+		return {"status": "error", "error": result["error"], "ticked": false,
+			"ended": ended, "finished": [], "arrived": [], "couriers": [], "supply": [], "raids": []}
+	if result["status"] == "blocked":
+		_sync_battle_decision()
+		state_changed.emit()
+		return {"status": "blocked", "decision": BattlePresentation.decision(data, state, result["decision"]), "ticked": false,
+			"ended": ended, "finished": [], "arrived": [], "couriers": [], "supply": [], "raids": []}
+	if bool(result["ticked"]):
+		_publish_tick(result["report"])
 	state_changed.emit()
-	return {"ticked": false, "finished": finished, "arrived": engine.day_arrivals,
-		"couriers": engine.day_couriers, "ended": ended, "supply": engine.day_supply, "raids": engine.day_raid}
+	var journal: Dictionary = result["journal"]
+	return {"status": "complete", "ticked": result["ticked"], "finished": journal["works"],
+		"arrived": journal["arrivals"], "couriers": journal["couriers"], "ended": result["ended"],
+		"missives_from": journal["missive_start"],
+		"supply": journal["supply"], "raids": journal["raids"],
+		"idled": engine.newly_idle if result["ticked"] else [],
+		"hazards": engine.month_hazard_news if result["ticked"] else []}
 
 func next_tick() -> TickReport:
-	_prompts_this_tick = 0
-	current_report = engine.advance(state)
-	report_ready.emit(current_report)
+	var report := engine.advance(state)
+	if report == null:
+		_sync_battle_decision()
+		state_changed.emit()
+		return null
+	_publish_tick(report)
 	state_changed.emit()
-	return current_report
+	return report
+
+func _publish_tick(report: TickReport) -> void:
+	_prompts_this_tick = 0
+	current_report = report
+	report_ready.emit(current_report)
+
+func resolve_battle_decision(token: String, choice: String) -> Dictionary:
+	if state == null or engine == null:
+		return {"status": "stale"}
+	var result := engine.resolve_decision(state, token, choice)
+	if result["status"] == "accepted":
+		hold_clock(false, "battle_decision")
+		state_changed.emit()
+	return result
+
+func _sync_battle_decision() -> void:
+	var pending: Dictionary = state.day_resolution.get("pending_decision", {})
+	var waiting := not pending.is_empty() and String(pending.get("selected", "")) == ""
+	hold_clock(waiting, "battle_decision")
+	if waiting:
+		battle_decision_requested.emit(BattlePresentation.decision(data, state, pending))
+
+func battle_view() -> Dictionary:
+	return BattlePresentation.snapshot(data, state, data.resolve_realm("player_realm"))
 
 func apply_event_choice(choice_id: String) -> Dictionary:
 	var out := engine.events.apply_choice(choice_id, state)
@@ -442,16 +491,28 @@ func load_campaign(path: String = "") -> bool:
 				% loaded.map_id)
 			load_error = "No saved realm found."
 			return false
+	var personnel := MilitaryBootstrap.migrate(data, loaded)
+	if personnel.has("error"):
+		load_error = "Cannot restore the army's personnel: " + String(personnel["error"])
+		return false
+	var organization := MilitaryReorganization.reconcile(data, loaded)
+	if organization.get("status", "error") == "error":
+		load_error = "Cannot restore the army's organization: " + String(organization.get("error", "invalid organization"))
+		return false
+	KingSystem.ensure(data, loaded)
 	load_error = ""
+	hold_clock(false, "simulation_error")
 	state = loaded
 	# A save from before the wealth tiers were state computes them once, from
 	# the state it loaded (Ruling 15).
 	Intel.ensure_wealth_tiers(data, state)
 	ArmySystem.ensure(data, state)  # a save from before the carried load: its load and cap now
+	EnemyAi.ensure_deployments(data, state)  # restore actual siege deployment without replaying the day
 	TownStores.ensure(data, state)  # a save from before the town stores
 	Hazards.ensure(data, state)
 	LawSystem.ensure(data, state)  # a save from before the laws
 	DevelopmentSystem.ensure(data, state)  # a save from before the development axes
+	_sync_battle_decision()
 	state_changed.emit()
 	return true
 

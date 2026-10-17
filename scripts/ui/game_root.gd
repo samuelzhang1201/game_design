@@ -38,9 +38,13 @@ var _said_set_out := 0
 var _said_state: GameState  # the reign _said_set_out counts in (a new one starts again)
 var _pause_menu: Control
 var _pause_status: Label
+var _battle_encounter: BattleEncounterPanel
+var _battle_panel: BattlePanel
+var _battle_view_revision := 0
 var _ledger_screen: LedgerScreen
 var _war_room_screen: WarRoomScreen
 var _missive_screen: MissiveScreen
+var _recruitment_panel: Control
 ## The laws (spec 2026-10-08-laws-tab-design §5): toggled by its tab; it never
 ## holds the clock.
 var _laws_screen: LawsScreen
@@ -240,9 +244,67 @@ func _make_fps_counter() -> void:
 
 ## The last step: what needs several overlays, the music, the canonical order.
 func _finish_overlays() -> void:
+	_battle_encounter = load("res://scenes/panels/battle_encounter_panel.tscn").instantiate()
+	add_child(_battle_encounter)
+	_battle_encounter.decision_selected.connect(_on_battle_decision_selected)
+	_battle_encounter.formation_requested.connect(func(code: String, id: int, formation: String) -> void:
+		var result := Game.try_execute(ActionRequest.make("BATTLE_FORMATION", {"regiment": code, "battle_id": id, "formation": formation}))
+		_battle_encounter.show_order_result(result))
+	_battle_panel = load("res://scenes/panels/battle_panel.tscn").instantiate()
+	add_child(_battle_panel)
+	_battle_panel.decision_selected.connect(_on_battle_decision_selected)
+	_battle_panel.order_requested.connect(_on_battle_order)
+	Game.battle_view_requested.connect(_open_battle_for)
+	Game.state_changed.connect(_refresh_battle_panel)
+	Game.battle_decision_requested.connect(_show_battle_decision)
 	_laws_screen.above = [_report_popup, _pause_menu]
 	_start_bgm()
 	_raise_overlays()
+
+func _show_battle_decision(decision: Dictionary) -> void:
+	if state == State.MENU or _battle_encounter == null or Game.state == null:
+		return
+	var view := Game.battle_view()
+	if String(decision.get("kind", "")) == "battle_event":
+		_battle_encounter.hide()
+		_battle_panel.show_view(view, int(decision["battle_id"]))
+	else:
+		for battle: Dictionary in view["battles"]:
+			if int(battle["id"]) == int(decision["battle_id"]):
+				_battle_panel.hide()
+				_battle_encounter.show_decision(decision, String(battle["place"]), battle["formation_view"])
+	_raise_overlays()
+
+func _on_battle_decision_selected(token: String, choice: String) -> void:
+	var result := Game.resolve_battle_decision(token, choice)
+	var view := Game.battle_view()
+	var pending: Dictionary = view["decision"]
+	if not pending.is_empty():
+		_show_battle_decision(pending)
+		if result["status"] == "invalid": _battle_panel.show_result(result)
+	else:
+		_battle_encounter.hide()
+		_battle_panel.hide()
+
+func _open_battle_for(code: String) -> void:
+	var view := Game.battle_view()
+	for battle: Dictionary in view["battles"]:
+		for unit: Dictionary in battle["units"]:
+			if unit["code"] == code:
+				_battle_panel.show_view(view, int(battle["id"]))
+				_raise_overlays()
+				return
+
+func _refresh_battle_panel() -> void:
+	_battle_view_revision += 1
+	if _battle_panel != null and _battle_panel.visible and Game.state != null:
+		_battle_panel.show_view(Game.battle_view(), _battle_panel.battle_id())
+
+func _on_battle_order(code: String, id: int, kind: String) -> void:
+	var request_id := "battle-ui:%d:%d:%s" % [id, Game.state.next_courier_id + 1, kind]
+	var result := Game.try_execute(ActionRequest.make("BATTLE_ORDER", {"regiment": code, "battle_id": id, "kind": kind, "request_id": request_id}))
+	_refresh_battle_panel()
+	_battle_panel.show_result(result)
 
 ## The clock (owner 2026-09-13): at Game.clock_speed, a day passes every
 ## time_day_seconds / speed. Works finish, the thirtieth day runs the tick,
@@ -252,7 +314,29 @@ func _finish_overlays() -> void:
 ## PLAY IS THE ONLY SWITCH (owner 2026-09-14): the clock runs on the council
 ## stage as well as the court, so nobody has to wave the ministers on before
 ## time will move.
+var _king_bridge := KingMapBridge.new()
+
+func _refresh_king_map() -> void:
+	if Game.state == null or current_screen == null or not current_screen.has_method("map3d_view"):
+		return
+	var view: Map3DView = current_screen.map3d_view()
+	if view == null: return
+	if not view.has_meta("king_orders_bound"):
+		var menu := load("res://scenes/panels/king_order_menu.tscn").instantiate() as KingOrderMenu
+		current_screen.add_child(menu)
+		menu.follow(view, current_screen.find_child("ArmyOrders", true, false) as ArmyOrderMenu,
+			current_screen.find_child("SpyOrders", true, false) as SpyOrderMenu)
+		view.set_meta("king_orders_bound", true)
+	if int(view.get_meta("battle_snapshot_revision", -1)) != _battle_view_revision:
+		view.apply_battle_snapshot(BattlePresentation.map_snapshot(Game.data, Game.state, Game.data.resolve_realm("player_realm")))
+		view.set_meta("battle_snapshot_revision", _battle_view_revision)
+	var snapshot := _king_bridge.make(Game.data, Game.state, dev_mode())
+	if int(view.get_meta("king_snapshot_revision", -1)) != _king_bridge.revision:
+		view.call("apply_snapshot", snapshot)
+		view.set_meta("king_snapshot_revision", _king_bridge.revision)
+
 func _process(delta: float) -> void:
+	_refresh_king_map()
 	if not state in [State.COURT, State.CONVERSATION] or Game.state == null or Game.clock_speed <= 0:
 		return
 	if _pause_menu != null and _pause_menu.visible:
@@ -275,19 +359,23 @@ func _process(delta: float) -> void:
 	for e: Dictionary in leaving:
 		_said_set_out = maxi(_said_set_out, int(e["courier"]))
 	var per_day := maxf(Game.data.bal("time_day_seconds") / float(Game.clock_speed), 0.001)
-	_clock_acc += delta
+	_clock_acc = _clock_acc + delta if Game.state.day_resolution.is_empty() else 0.0
 	var steps := 0
 	# A spy's arrival (on_new_missives) can stop the clock or leave a report
 	# waiting mid-loop; the condition is re-checked every iteration so no
 	# further day runs in the same stepped frame once one does (spec
 	# 2026-09-28 §2 — the review focus's two-spies-in-one-frame case).
-	while _clock_acc >= per_day and steps < 8 and Game.clock_speed > 0 \
+	while (_clock_acc >= per_day or not Game.state.day_resolution.is_empty()) and steps < 8 and Game.clock_speed > 0 \
 			and _pending_reports.is_empty() and not _report_popup.visible:
-		_clock_acc -= per_day
+		if Game.state.day_resolution.is_empty():
+			_clock_acc -= per_day
 		steps += 1
 		var before := works_progress()
 		var missives_before := Game.state.next_missive_id
 		var out := Game.advance_day()
+		if out["status"] in ["blocked", "error"]:
+			_clock_acc = 0.0
+			break
 		# what the day's end brings is dated the day that ended, not the one begun
 		Game.news_dated_to(int(out["ended"]))
 		# The news bar (owner 2026-09-14): a work's progress at each milestone,
@@ -321,7 +409,7 @@ func _process(delta: float) -> void:
 		for line: String in RaidSystem.headlines(Game.data, out.get("raids", []), int(out["ended"])):
 			Game.publish_news(line)
 		var new_ids: Array = []
-		for id in range(missives_before + 1, Game.state.next_missive_id + 1):
+		for id in range(int(out.get("missives_from", missives_before)) + 1, Game.state.next_missive_id + 1):
 			new_ids.append(id)
 		on_new_missives(new_ids)
 		if bool(out["ticked"]):
@@ -341,7 +429,7 @@ func _process(delta: float) -> void:
 						seal.nudge()
 		Game.news_dated_to(-1)
 
-	Game.day_progress = clampf(_clock_acc / per_day, 0.0, 1.0)
+	Game.day_progress = 1.0 if not Game.state.day_resolution.is_empty() else clampf(_clock_acc / per_day, 0.0, 1.0)
 
 ## Every work in progress's share done: "cell|building" -> 0..1.
 func works_progress() -> Dictionary:
@@ -1177,6 +1265,8 @@ func _switch_to(new_state: State) -> void:
 			current_screen = COURT_SCENE.instantiate()
 			current_screen.audience_requested.connect(audience_with)
 	add_child(current_screen)
+	if current_screen.has_method("military_panel"):
+		current_screen.military_panel().recruitment_requested.connect(open_recruitment)
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(_army_view)
 	_sync_map_view()
@@ -1187,7 +1277,7 @@ func _switch_to(new_state: State) -> void:
 
 func _overlays_in_order() -> Array[Node]:
 	return [_bottom_bar, _news_ticker, _info_screen, _ledger_screen, _war_room_screen,
-		_missive_screen, _laws_screen, _report_popup, _pause_menu]
+		_missive_screen, _laws_screen, _recruitment_panel, _battle_encounter, _battle_panel, _report_popup, _pause_menu]
 
 ## The overlays in their stacking order, topmost last.
 func _raise_overlays() -> void:
@@ -1214,8 +1304,19 @@ func _settle_overlay(o: Node, new_state: State) -> void:
 		_war_room_screen.close(false)   # the old column is gone: nothing to unroll over the new screen
 	elif o == _missive_screen:
 		_missive_screen.visible = false
+	elif o == _recruitment_panel:
+		_recruitment_panel.close()
 	elif o == _laws_screen:
 		_laws_screen.close()
+	elif o == _battle_panel:
+		var pending: Dictionary = Game.battle_view()["decision"]
+		if pending.is_empty(): _battle_panel.hide()
+	elif o == _battle_encounter:
+		_battle_encounter.hide()
+		if new_state != State.MENU and Game.state != null:
+			var decision: Dictionary = Game.state.day_resolution.get("pending_decision", {})
+			if not decision.is_empty() and String(decision.get("selected", "")) == "":
+				_show_battle_decision(decision)
 	elif o == _report_popup:
 		# Only a switch to MENU forces it shut (a reset already emptied
 		# _pending_reports there, or the campaign is being left outright):
@@ -1241,8 +1342,12 @@ func _on_start_requested() -> void:
 		await overlays_ready
 		_beginning = false
 	_beginning = true
+	if not Game.start_campaign(44):
+		_beginning = false
+		if current_screen is MainMenu:
+			current_screen.show_load_failed(Game.load_error)
+		return
 	_reset_reports()
-	Game.start_campaign(44)
 	refresh_missive_badge()
 	_pending_report = Game.next_tick()
 	await get_tree().process_frame
@@ -1368,3 +1473,18 @@ func _on_conversation_finished() -> void:
 	_switch_to(State.COURT)
 	current_screen.enter_court(_pending_report)
 	_pending_report = null
+
+
+## The paid recruitment window is created only when the host asks for it.
+func open_recruitment() -> void:
+	if _recruitment_panel == null:
+		_recruitment_panel = load("res://scenes/panels/army_recruitment_panel.tscn").instantiate()
+		add_child(_recruitment_panel)
+		_recruitment_panel.above.append(_report_popup)
+		_recruitment_panel.above.append(_pause_menu)
+		_laws_screen.above.append(_recruitment_panel)
+	_recruitment_panel.open()
+	_raise_overlays()
+
+func recruitment_panel() -> Control:
+	return _recruitment_panel

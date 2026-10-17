@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## The day's supply step (spec 2026-10-07-army-supply-lines §3.2–3.4).
 
@@ -30,7 +31,7 @@ func before_each() -> void:
 			break
 	if code != "":
 		town = _eligible_town()
-	else:   # every regiment stands in a town: march one out into the open field
+	if town == "":   # no usable field line: place one on reachable open ground
 		_march_one_out(codes)
 	assert_ne(town, "", "a regiment in the field with a town in reach")
 	s.supply_lines[code] = SupplyLines._new_record(town, 1000, 1)
@@ -47,11 +48,11 @@ func after_each() -> void:
 	RealmEconomy.forget()
 
 func _eligible_town() -> String:
-	var e := SupplyLines.eligibility(repo, s, code)
+	var e := SupplyLines.mark_ahead(repo, s, code, SupplyLines.eligibility(repo, s, code))
 	var towns: Array = e.keys()
 	towns.sort()
 	for t: String in towns:
-		if String(e[t]) == "":
+		if String(e[t]) == "" and SupplyLines.cut_point(repo, s, SupplyLines.road_px(repo, s, code, t)).is_empty():
 			return t
 	return ""
 
@@ -113,6 +114,44 @@ func test_a_flowing_line_draws_from_its_town_and_delivers_less_the_road() -> voi
 	assert_eq(int(s.regiments[code]["supplies"]), send * keep / 1000)
 	assert_eq(int(s.supply_lines[code]["arrive_milli"]), send * keep % 1000)
 
+func test_camp_reduces_real_delivery_loss_without_creating_food() -> void:
+	s.day = 5
+	var reg := ArmySystem.regiment(repo, code, s)
+	var per_head := -1
+	for candidate in range(1, 2001):
+		repo.balance["army_supply_per_head_permille"] = float(candidate)
+		if ArmySystem.supply_use(repo, reg, s) == 300:
+			per_head = candidate
+			break
+	assert_gt(per_head, 0, "fixture can make today's meal exactly 10")
+	repo.balance["army_supply_loss_permille_per_100km"] = 100000.0
+	repo.balance["army_supply_loss_cap_permille"] = 200.0
+	repo.balance["army_camp_supply_loss_reduction_permille"] = 100.0
+	s.regiments[code]["supplies"] = 10
+	var at := Vector2i(int(s.regiments[code]["x_m"]), int(s.regiments[code]["y_m"]))
+	s.regiments[code]["camp_state"] = {"phase": CampSystem.CAMPED,
+		"site": {"x_m": at.x, "y_m": at.y}}
+	_stock(town, 90, 0, 0)
+	assert_eq(ArmySystem.day_bite(ArmySystem.supply_use(repo, reg, s), s.day), 10)
+	var km := SupplyLines.road_km(repo, SupplyLines.road_px(repo, s, code, town))
+	assert_gt(km, 0)
+	assert_eq(SupplySystem.loss_of(repo, km), 200)
+	SupplyLines.day_step(repo, s)
+	ArmySystem.eat_one(repo, s, reg, s.regiments[code])
+	assert_eq(int(TownStores.stock_of(s, town)["crown"]), 80)
+	assert_eq(int(s.regiments[code]["supplies"]), 9)
+	assert_eq(int(TownStores.stock_of(s, town)["crown"]) + int(s.regiments[code]["supplies"]), 89)
+
+func test_camp_never_creates_stores_without_a_supply_line() -> void:
+	s.supply_lines.erase(code)
+	s.regiments[code]["supplies"] = 0
+	var at := Vector2i(int(s.regiments[code]["x_m"]), int(s.regiments[code]["y_m"]))
+	s.regiments[code]["camp_state"] = {"phase": CampSystem.CAMPED,
+		"site": {"x_m": at.x, "y_m": at.y}}
+	SupplyLines.day_step(repo, s)
+	ArmySystem.eat_one(repo, s, ArmySystem.regiment(repo, code, s), s.regiments[code])
+	assert_eq(int(s.regiments[code]["supplies"]), 0)
+
 func test_the_rate_scales_the_draw() -> void:
 	s.day = 5
 	s.regiments[code]["supplies"] = 0
@@ -136,6 +175,7 @@ func test_crown_then_lord_then_the_house_is_bought() -> void:
 	var row: Dictionary = s.army_roster[code]
 	for arm: String in repo.world_table("military", "unit_types"):
 		row[arm] = str(int(float(row.get(arm, 0))) * 4)
+	assert_false(People.enlist(repo, s, code, MilitaryRoster.fit(s, code) * 3, "fourfold-supply").has("error"))
 	var send := ArmySystem.day_bite(_use(), 5)
 	assert_gt(send, 2)
 	_stock(town, 1, 1, 100)

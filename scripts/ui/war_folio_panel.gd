@@ -318,7 +318,8 @@ func _fill_left() -> void:
 ## count (the formation) and the arms with their heads (the row).
 func _left_state() -> Array:
 	return [ArmySystem.order_of(Game.data, Game.state, _code),
-		WarFolio.figures(Game.data, Game.state, _code), WarFolio.arms_of(Game.data, _code)]
+		WarFolio.figures(Game.data, Game.state, _code), WarFolio.arms_of(Game.data, _code),
+		Map3DFormation.layout_of(Game.data, Game.state, _code)]
 
 
 ## The clock runs under the folio: a new order replays the current drill, a new
@@ -363,6 +364,10 @@ func _fill_arms() -> void:
 func _fill_formation() -> void:
 	var form: Control = %Formation
 	form.set_meta("figures", WarFolio.figures(Game.data, Game.state, _code))
+	var layout := Map3DFormation.layout_of(Game.data, Game.state, _code).split(":")
+	var formation := BattleFormation.of_unit(Game.state, _code)
+	form.set_meta("formation", formation)
+	form.set_meta("frontage_permille", int(layout[1]) if layout.size() == 2 else 1000)
 	form.queue_redraw()
 
 

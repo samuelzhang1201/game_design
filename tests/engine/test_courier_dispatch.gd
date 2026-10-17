@@ -76,7 +76,7 @@ func test_most_of_the_way_is_on_the_roads() -> void:
 		assert_true(k in ["road", "trail", "offroad", "river", "sea"], k)
 
 
-func test_the_capital_lost_he_rides_from_the_most_populous_town_of_the_first_held_province() -> void:
+func test_losing_the_capital_does_not_teleport_the_king_or_courier_origin() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var realm := repo.resolve_realm("player_realm")
 	var cap_code := String(repo.kingdoms[realm]["capital_burg"])
@@ -90,12 +90,7 @@ func test_the_capital_lost_he_rides_from_the_most_populous_town_of_the_first_hel
 			break
 	MapOwnership.set_owner(repo, s, prov, other, "test: the capital falls")
 	var from := CourierSystem.origin(repo, s)
-	assert_ne(from, _capital_px(), "not from a capital the realm no longer holds")
-	var held := false
-	for b: Dictionary in repo.burgs.values():
-		if Vector2(float(b["x"]), float(b["y"])) == from:
-			held = MapOwnership.owner_of(repo, s, String(b["province_code"])) == realm
-	assert_true(held, "from a town of the realm")
+	assert_eq(from, _capital_px(), "the king and his courier stay where the saved king state puts them")
 
 
 func test_need_along_a_path_by_hand() -> void:

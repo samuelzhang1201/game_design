@@ -996,7 +996,7 @@ func _update_hud() -> void:
 		var r: float = seen[id][1]
 		obstacles.append(Rect2(at - Vector2(r, r), Vector2(r, r) * 2.0))
 	# The selected star first (spec §7: always named, as a `keep` entry: never
-	# on another star's disc, and crowded by names it takes the least-covered
+	# pushed away from its own ring; when crowded it takes the least-covered
 	# place round its own star), then the titles, the hubs (`keep` while not
 	# dimmed), its neighbours and the hovered star.
 	var named: Array[String] = []
@@ -1238,12 +1238,11 @@ func _pick(pos: Vector2) -> Dictionary:
 	var o: Vector3 = ray[0]
 	var d: Vector3 = ray[1]
 	var spheres: Array = []
-	# a star is picked within its drawn disc or ledger_star_pick_min_px of
-	# screen, whichever is larger (Task 11 fix round 2, R1: a ghost star is a
-	# few px across)
+	# A real surface wins before any expanded click area. Small stars still
+	# receive ledger_star_pick_min_px assistance when the ray hits no surface.
 	var least_px := _repo.bal("ledger_star_pick_min_px") * _window_scale()
 	for id: String in _order:
-		spheres.append({"id": id, "pos": _drawn[id],
+		spheres.append({"id": id, "pos": _drawn[id], "draw_radius": _draw_r(id),
 			"radius": maxf(_draw_r(id), least_px * _m_per_px_at(_drawn[id]))})
 	var hit := LedgerPick.pick(o, d, spheres)
 	if not hit.is_empty():

@@ -73,3 +73,8 @@ phrase_tournaments_on,the lists held
 phrase_heavy_levy_on,the heavy levy called
 phrase_truce_days_on,the truce of God kept
 phrase_envoys_on,heralds protected
+value_protect,Protect
+value_execute,Execute
+value_deny,Deny
+value_unrestricted,Unrestricted
+value_restrained,No charge or pursuit

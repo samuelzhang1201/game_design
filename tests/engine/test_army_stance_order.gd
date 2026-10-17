@@ -14,6 +14,10 @@ func before_all() -> void:
 
 func before_each() -> void:
 	repo = SuiteData.repo()
+	# Isolate stance delivery timing from the separate tactical deployment factors.
+	for formation: Dictionary in repo.battle_formations.values():
+		for key: String in ["attack_permille", "defence_permille", "flank_permille", "missile_permille"]:
+			formation[key] = 1000
 	Weather.forget()
 
 
@@ -134,7 +138,6 @@ func test_stance_order_lands_after_day_end_and_applies_next_day() -> void:
 		"attacker_loss_permille": 0, "defender_loss_permille": 0, "wounded_share_permille": 600,
 		"attacker_morale": 0, "defender_morale": 0, "rout": "none"})
 	repo.balance["battle_variance_permille"] = 0.0
-	repo.balance["battle_max_rounds"] = 60.0
 	for k: String in repo.battle_stances:
 		repo.battle_stances[k]["retreat_odds_permille"] = 0
 	var p := _mine()
@@ -149,7 +152,9 @@ func test_stance_order_lands_after_day_end_and_applies_next_day() -> void:
 	st["y_m"] = at.y
 	st["dest_x_m"] = at.x + 1000
 	st["dest_y_m"] = at.y
+	st["battle_plan"] = "attack"
 	s.foes[f] = st
+	BattleSystem.detect_contacts(repo, s)
 	actions.execute(_stance(p, "hold"), s)
 	var steady := func(_c: String) -> String: return "steady"
 	var hold := func(_c: String) -> String: return "hold"

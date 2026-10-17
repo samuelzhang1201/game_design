@@ -189,6 +189,7 @@ func test_a_pin_on_a_settled_chart_runs_a_share_of_the_settle() -> void:
 func test_the_grid_pass_is_the_all_pairs_pass_within_its_reach() -> void:
 	var s := SuiteData.campaign(repo, 42)
 	var g := Ledger.galaxy(repo, s, {})
+	repo.balance["ledger_galaxy_grid_min_stars"] = float(g["nodes"].size() + 1)
 	var a := LedgerGalaxyLayout.new()
 	a.setup(repo, g)
 	a.step(20)

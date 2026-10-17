@@ -81,6 +81,30 @@ func test_the_draft_stands_for_a_march_and_a_hold_on_one_courier() -> void:
 		"the march's 2, the stance's 1 and ONE fee")
 
 
+func test_local_arrival_hold_keeps_its_march_link_and_new_stance_order_id() -> void:
+	var s := SuiteData.campaign(repo, 71)
+	var code := _mine()
+	var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, ArmySystem.regiment(repo, code, s)))
+	s.king_state["x_m"] = at.x
+	s.king_state["y_m"] = at.y
+	s.metrics["treasury"] = 1000.0
+	var actions := ActionSystem.new(repo)
+	for req: ActionRequest in WarDrafts.requests_from(repo, s, code, _front_draft(s, code, 20.0)):
+		assert_eq(actions.validate(req, s), "")
+		actions.execute(req, s)
+	actions.execute(ActionRequest.make("ARMY_STANCE", {"regiment": code, "stance": "evade"}), s)
+	actions.execute(ActionRequest.make("ARMY_STANCE", {"regiment": code, "stance": "hold",
+		"facing": 90, "on_arrival": true}), s)
+	assert_true(s.couriers.is_empty(), "all commands are delivered locally")
+	assert_true(s.regiments[code].has("hold_after"))
+	assert_gt(int(s.regiments[code]["hold_after"]["id"]), int(s.regiments[code]["stance_order_id"]))
+	assert_eq(int(s.regiments[code]["hold_after"]["id"]), s.next_courier_id)
+	assert_eq(String(s.regiments[code]["stance_next"]), "evade", "the new hold waits for arrival")
+	_arrive(s, code)
+	BattleSystem.settle_stances(s)
+	assert_eq(String(s.regiments[code]["stance"]), "hold", "the newer arrival hold activates")
+
+
 func test_a_halt_with_a_hold_takes_it_at_once() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := _mine()

@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## The fog on the cards (spec 2026-09-28 §1 "Closing the leaks").
 
@@ -100,8 +101,8 @@ func test_a_foes_army_card_shows_words_not_figures() -> void:
 	var r: Dictionary = ArmySystem.regiment(repo, code, s)
 	var total := int(MapObjects.regiment_size(repo, r))
 	assert_true(s.foes.has(code), "a spawned foe")
-	s.foes[code]["dead"] = 123
-	s.foes[code]["wounded"] = 321
+	assert_false(People.move(repo, s, code, "fit", "dead", 123, "fog_dead").has("error"))
+	assert_false(People.move(repo, s, code, "fit", "wounded", 321, "fog_wounded").has("error"))
 	var card := MapObjects.army_card(repo, code, s)
 	var army := ""
 	for st: Dictionary in card["stats"]:

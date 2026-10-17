@@ -1,0 +1,215 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/battle_panel.gd" id="1_tuw1c"]
+[ext_resource type="Texture2D" uid="uid://p1jqgjgkq1pm" path="res://assets/2D/ui/panels/leather_grain_light.png" id="2_3ahsx"]
+[ext_resource type="Texture2D" uid="uid://cnctm0nndn0qh" path="res://assets/2D/ui/panels/leather_grain_dark.png" id="3_ldvyw"]
+[ext_resource type="Script" uid="uid://c44j2v837vlnv" path="res://scripts/ui/vellum_panel_style.gd" id="4_brr81"]
+[ext_resource type="Texture2D" uid="uid://j7yuhn4h33wi" path="res://assets/2D/ui/panels/panel_ornament.png" id="5_sjsvi"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c4m0k"]
+content_margin_left = 20.0
+content_margin_top = 20.0
+content_margin_right = 20.0
+content_margin_bottom = 20.0
+bg_color = Color(0.12156863, 0.101960786, 0.08235294, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.65882355, 0.5411765, 0.29803923, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 8
+shadow_offset = Vector2(0, 3)
+
+[sub_resource type="StyleBox" id="StyleBox_iuvg4"]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+script = ExtResource("4_brr81")
+texture = ExtResource("5_sjsvi")
+draw_inset = 40.0
+base = SubResource("StyleBoxFlat_c4m0k")
+tint = Color(0.7882353, 0.6431373, 0.3529412, 1)
+grain = ExtResource("2_3ahsx")
+grain_dark = ExtResource("3_ldvyw")
+grain_alpha = 0.1
+shade_top = 0.05
+shade_bottom = 0.14
+
+[node name="BattlePanel" type="Control" unique_id=615217487]
+editor_description = "Editor owns layout, theme and all authored choice slots; code fills projected facts and visibility."
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_tuw1c")
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=742838999]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -390.0
+offset_top = -285.0
+offset_right = 390.0
+offset_bottom = 285.0
+theme_override_styles/panel = SubResource("StyleBox_iuvg4")
+
+[node name="Body" type="VBoxContainer" parent="Panel" unique_id=770864022]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Panel/Body" unique_id=236753784]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "Battlefield command"
+autowrap_mode = 3
+
+[node name="Battle" type="OptionButton" parent="Panel/Body" unique_id=751845273]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardMenu"
+
+[node name="Scroll" type="ScrollContainer" parent="Panel/Body" unique_id=1333777153]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Content" type="VBoxContainer" parent="Panel/Body/Scroll" unique_id=1335689573]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Illustration" type="TextureRect" parent="Panel/Body/Scroll/Content" unique_id=1683191264]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Summary" type="Label" parent="Panel/Body/Scroll/Content" unique_id=1953491857]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardText"
+text = "Received reports and orders appear here."
+autowrap_mode = 3
+
+[node name="Choices" type="VBoxContainer" parent="Panel/Body/Scroll/Content" unique_id=1054761716]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Row1" type="VBoxContainer" parent="Panel/Body/Scroll/Content/Choices" unique_id=568867237]
+layout_mode = 2
+
+[node name="Choice1" type="Button" parent="Panel/Body/Scroll/Content/Choices/Row1" unique_id=892211786]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "Authored choice"
+alignment = 0
+autowrap_mode = 3
+
+[node name="ChoiceDetails1" type="Label" parent="Panel/Body/Scroll/Content/Choices/Row1" unique_id=1628473132]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardText"
+autowrap_mode = 3
+
+[node name="Row2" type="VBoxContainer" parent="Panel/Body/Scroll/Content/Choices" unique_id=4650345]
+layout_mode = 2
+
+[node name="Choice2" type="Button" parent="Panel/Body/Scroll/Content/Choices/Row2" unique_id=1704530515]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "Authored choice"
+alignment = 0
+autowrap_mode = 3
+
+[node name="ChoiceDetails2" type="Label" parent="Panel/Body/Scroll/Content/Choices/Row2" unique_id=1753749158]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardText"
+autowrap_mode = 3
+
+[node name="Row3" type="VBoxContainer" parent="Panel/Body/Scroll/Content/Choices" unique_id=186420760]
+layout_mode = 2
+
+[node name="Choice3" type="Button" parent="Panel/Body/Scroll/Content/Choices/Row3" unique_id=605573977]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "Authored choice"
+alignment = 0
+autowrap_mode = 3
+
+[node name="ChoiceDetails3" type="Label" parent="Panel/Body/Scroll/Content/Choices/Row3" unique_id=719089322]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardText"
+autowrap_mode = 3
+
+[node name="Row4" type="VBoxContainer" parent="Panel/Body/Scroll/Content/Choices" unique_id=522609310]
+layout_mode = 2
+
+[node name="Choice4" type="Button" parent="Panel/Body/Scroll/Content/Choices/Row4" unique_id=1773368988]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "Authored choice"
+alignment = 0
+autowrap_mode = 3
+
+[node name="ChoiceDetails4" type="Label" parent="Panel/Body/Scroll/Content/Choices/Row4" unique_id=1395997132]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardText"
+autowrap_mode = 3
+
+[node name="Orders" type="VBoxContainer" parent="Panel/Body/Scroll/Content" unique_id=1778038505]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Order" type="OptionButton" parent="Panel/Body/Scroll/Content/Orders" unique_id=74794051]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardMenu"
+
+[node name="OrderDetails" type="Label" parent="Panel/Body/Scroll/Content/Orders" unique_id=1994524940]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardText"
+autowrap_mode = 3
+
+[node name="Send" type="Button" parent="Panel/Body/Scroll/Content/Orders" unique_id=1935104088]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Issue this order"
+
+[node name="Status" type="Label" parent="Panel/Body" unique_id=2095137443]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardWarn"
+autowrap_mode = 3
+
+[node name="Close" type="Button" parent="Panel/Body" unique_id=206315855]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommandSmall"
+text = "Return to the map"

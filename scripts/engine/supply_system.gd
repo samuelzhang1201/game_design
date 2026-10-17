@@ -119,7 +119,8 @@ static func line_of(repo: DataRepository, state: GameState, code: String) -> Dic
 	out["state"] = String(ln["state"])
 	out["rate"] = int(ln["rate"])
 	out["length_km"] = km
-	out["loss_permille"] = total_loss(repo, km, int(robbed["permille"]))
+	out["loss_permille"] = CampSystem.reduced_supply_loss(repo, state, code,
+		total_loss(repo, km, int(robbed["permille"])))
 	out["hazards"] = robbed["hazards"]
 	return out
 

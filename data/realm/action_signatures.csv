@@ -16,6 +16,9 @@ GOODS_BUY,,0,0,0,0,0,
 GOODS_SELL,,0,0,0,0,0,
 MANOR_RUSH,,10,0,0,0,0,the crown hurries its own works
 ARMY_MARCH,,0,15,0,0,5,the host takes the road
+KING_MOVE,,0,0,0,0,0,the king travels across his realm
+KING_FOLLOW,,0,5,0,0,0,the king rides to join the host
+KING_SAFE_DEPARTURE,,0,0,0,0,0,the king withdraws from danger
 ARMY_GARRISON,,5,5,0,0,0,the host holds its ground
 ARMY_STANCE,,0,5,0,0,0,the host is told how to stand in battle
 SPY_SEND,,0,5,0,0,0,eyes on another's land
@@ -48,3 +51,5 @@ LAW_SET,law=patronage&value=court,20,0,-20,-10,0,a learned court
 LAW_SET,law=guild_charter&value=granted,-10,0,0,0,-10,charters cede royal authority
 LAW_SET,law=arsenal_decree&value=bombards,20,20,0,0,10,
 LAW_SET,law=tolerance&value=edict,0,0,-60,0,0,the church is angered
+BATTLE_FORMATION,,0,5,0,0,0,the army is told how to deploy
+BATTLE_ORDER,,0,5,0,0,0,the army receives a lawful battlefield warrant

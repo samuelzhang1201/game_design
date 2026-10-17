@@ -1,6 +1,6 @@
 # The development axes (`DevelopmentSystem`)
 
-Spec: `docs/superpowers/specs/2026-10-12-development-axes-design.md`. Every realm that fills a slot (`DevelopmentSystem.SLOTS`) has a Renaissance and a Chivalry score. All numbers named below live in `data/realm/balance.csv` (keys `dev_*`), `development_axes.csv`, `development_tier_effects.csv` and `law_effects.csv`.
+Spec: `docs/superpowers/specs/2026-10-12-development-axes-design.md`. Every realm that fills a slot (`DevelopmentSystem.SLOTS`) has a Renaissance and a Chivalry score. All numbers named below live in the realm balance table (keys `dev_*`), `development_axes.csv`, `development_tier_effects.csv` and `law_effects.csv`. King travel and command radii are army balance keys.
 
 ## State
 

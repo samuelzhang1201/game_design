@@ -178,6 +178,11 @@ func test_a_regiment_on_the_mountains_uses_more_than_at_home() -> void:
 	var code: String = _land_codes()[0]
 	var reg := ArmySystem.regiment(data, code)
 	var at_home := ArmySystem.supply_use(data, reg, s)
+	# A null-state preview has full commoner crews at the pack quarters;
+	# it deliberately has neither live noble demand nor the moving unit's ground.
+	var preview_tier := ArmySystem.height_tier(data, reg)
+	@warning_ignore("integer_division")
+	var pack_preview := maxi(1, ArmySystem.personnel_capacity(data, reg) * int(data.bal("army_supply_per_head_permille")) * int(preview_tier["supply_permille"]) / 1_000_000)
 	var home_tier := ArmySystem.height_tier(data, reg, s)
 	var id := _mountain_cell()
 	assert_gte(id, 0, "the pack has mountains")
@@ -186,7 +191,7 @@ func test_a_regiment_on_the_mountains_uses_more_than_at_home() -> void:
 	assert_gt(int(there["supply_permille"]), int(home_tier["supply_permille"]), "the mountains cost more than home")
 	var up_there := ArmySystem.supply_use(data, reg, s)
 	assert_gt(up_there, at_home)
-	assert_eq(ArmySystem.supply_use(data, reg), at_home, "no state: the pack's own quarters")
+	assert_eq(ArmySystem.supply_use(data, reg), pack_preview, "no state: commoner-capacity preview at the pack's own quarters")
 	var height_text := ""
 	for st: Dictionary in MapObjects.army_card(data, code, s)["stats"]:
 		if String(st["key"]) == "army_height":

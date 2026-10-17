@@ -23,7 +23,7 @@ static func receipt(repo: DataRepository, state: GameState, c: Dictionary, said:
 	if not st.is_empty():
 		facts.append(MissiveLog.exact("morale", "Morale", int(st["morale"])))
 		facts.append(MissiveLog.exact("supplies", "Supplies", int(st["supplies"])))
-		facts.append(MissiveLog.exact("wounded", "Wounded", int(st["wounded"])))
+		facts.append(MissiveLog.exact("wounded", "Wounded", ArmySystem.wounded_count(repo, state, code)))
 		facts.append(MissiveLog.words("ground", "Ground", ArmySystem.terrain_of(repo, reg, state).capitalize()))
 		facts.append(MissiveLog.words("weather", "Weather",
 			Weather.label_of(repo, Weather.at(repo, state, at, state.absolute_day()))))
@@ -347,6 +347,13 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 		var id := int(e["battle_id"])
 		var place := battle_place(repo, state, at.get(id, {}))
 		match String(e["kind"]):
+			"battle_event":
+				var receipt: Dictionary = e.get("receipt", {})
+				var text := String(receipt.get("reason", ""))
+				for effect: Dictionary in receipt.get("effects", []):
+					if effect.has("metric"):
+						text += " %s: %+d." % [String(effect.metric).capitalize(), int(effect.get("delta", 0))]
+				facts.append(MissiveLog.words(String(e.token), String(repo.event_titles.get(String(e.event_id), "Battlefield decision")), text))
 			"start":
 				facts.append(MissiveLog.words("start@%d" % id, "Contact", battle_words(repo, "battle_start",
 					{"att": _battle_names(repo, e["att"]), "def": _battle_names(repo, e["def"]),
@@ -358,6 +365,9 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 			"round":
 				_round_facts(repo, state, e, place, pick, facts)
 			"end":
+				for departure: Dictionary in e.get("left", []):
+					facts.append(MissiveLog.words("left@%d.%d.%s" % [id, int(e["rounds"]), departure["code"]], "Left the field",
+						battle_words(repo, "battle_left_" + String(departure["why"]), {"unit": _unit_label(repo, String(departure["code"]))}, pick)))
 				facts.append(MissiveLog.words("end@%d" % id, "Result",
 					battle_words(repo, _end_key(state, e, rounds.get(id, {})),
 						{"place": place, "rounds": int(e["rounds"])}, pick)))
@@ -374,6 +384,12 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 		else MissiveLog.subject("point", "", -1, pack)
 	return MissiveLog.make("battle", "credible", state.absolute_day(), subject,
 		battle_words(repo, "battle_title", {"place": battle_place(repo, state, head)}, pick), facts)
+
+
+## The courier carries the authored battle facts, not a second empty report.
+static func king_report_payload(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
+	var letter := battle_report(repo, state, events)
+	return {"facts": letter.get("facts", []).duplicate(true), "title": String(letter.get("title", "Battle report"))}
 
 
 ## One line of a fall's cost (DefeatSystem.on_town_lost): templates.csv
@@ -506,11 +522,11 @@ static func host_news(repo: DataRepository, state: GameState, events: Array) -> 
 		var mode := "ADVANCE" if String(e["type"]) == "host_advance" else String(e.get("mode", ""))
 		if String(e["type"]) == "host_mode" and mode == "ADVANCE":
 			continue                    # setting out again from a stripped manor is no crossing
-		if not mode in ["ADVANCE", "SIEGE", "RAID", "WITHDRAW", "RETREAT"]:
+		if not mode in ["ADVANCE", "DEPLOYING", "SIEGE", "RAID", "WITHDRAW", "RETREAT"]:
 			continue
 		var mind: Dictionary = state.ai_hosts.get(host, {})
 		var at_m := _host_at_m(repo, state, host)
-		if mode in ["SIEGE", "RAID"] and String(mind.get("target_id", "")) != "":
+		if mode in ["DEPLOYING", "SIEGE", "RAID"] and String(mind.get("target_id", "")) != "":
 			at_m = EnemyAi.target_point_m(repo, String(mind["target_kind"]), String(mind["target_id"]))
 			seen_close = true
 		var at := ArmySystem.metres_to_pack(repo, at_m)
@@ -604,6 +620,8 @@ static func _first_mine(state: GameState, e: Dictionary) -> String:
 	var seen: Array = []
 	for k: String in ["att", "def"]:
 		seen.append_array(e.get(k, []))
+	for departure: Dictionary in e.get("left", []):
+		seen.append(departure["code"])
 	if e.has("code"):
 		seen.append(e["code"])
 	for c: Variant in seen:

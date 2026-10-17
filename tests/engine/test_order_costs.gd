@@ -70,18 +70,18 @@ func test_ensure_charges_only_when_nothing_else_did() -> void:
 	assert_eq(charged.size(), 1)
 	assert_eq(free.size(), 1, "the charge rides on the outcome's effects")
 
-func test_always_rows_apply_beside_intrinsic_costs() -> void:
+func test_training_keeps_a_real_cost_without_mobilizing_fictitious_people() -> void:
 	var pop_before := int(WorldLedger.value_of(data, state,
 		"economy.kingdoms.player_realm.rural_population"))
 	var out := sys.execute(ActionRequest.make("LEVY_RAISE"), state)
-	assert_lt(int(WorldLedger.value_of(data, state,
+	assert_eq(int(WorldLedger.value_of(data, state,
 		"economy.kingdoms.player_realm.rural_population")), pop_before,
-		"levies draw down the villages every time")
+		"training is not a second personnel recruitment path")
 	var seen := false
 	for e in out["effects"]:
-		if String(e.get("kind", "")) == "world":
+		if String(e.get("metric", "")) == "strategic" and float(e.get("delta", 0)) < 0:
 			seen = true
-	assert_true(seen, "the population cost is on the outcome")
+	assert_true(seen, "training materials remain an explicit cost beside gold")
 
 ## The guarantee itself: every handled action, executed from a fresh
 ## campaign, leaves a cost on the record.

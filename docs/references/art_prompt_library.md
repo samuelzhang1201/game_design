@@ -1044,6 +1044,1426 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 [S], a European guildmaster of thirty-nine, broad-shouldered and capable, plaited brown hair under a linen cap, in a sober fur-collared brown gown with a guild badge, one hand resting on her purse, direct and businesslike, [C-PORTRAIT]
 ```
 
+
+### P2 指挥官样张：由角色表核对年龄、身份和家族
+
+> K-22–K-24 为新指挥官首批样张；外貌细节为美术设定，年龄和称谓来自角色表。人物不携带王冠、旗帜或文字。
+
+#### `K-22` Dame Delphine O-kala
+
+**角色 id**：`char_player_delphine_o_kala`
+
+**外貌**：`a 24-year-old European woman with warm brown skin, strong straight eyebrows, close-cropped black curls, a rounded jaw and alert dark eyes, a lean athletic build, wearing a well-used moss-green wool riding tunic over a plain quilted linen arming coat, a short muted ochre shoulder cloak fastened with a simple bronze clasp, a narrow brown leather belt, dark hose and worn calf-high leather boots`
+
+```
+[S], a 24-year-old European woman with warm brown skin, strong straight eyebrows, close-cropped black curls, a rounded jaw and alert dark eyes, a lean athletic build, wearing a well-used moss-green wool riding tunic over a plain quilted linen arming coat, a short muted ochre shoulder cloak fastened with a simple bronze clasp, a narrow brown leather belt, dark hose and worn calf-high leather boots, calm and attentive, standing with her weight settled evenly, her hands loosely clasped at her waist with fingers together, one person only, bare-headed, empty hands, no text, no lettering, no crown, no flag, [C-FULL]
+```
+
+#### `K-23` Ser Berengar Ashvale
+
+**角色 id**：`char_player_berengar_ashvale`
+
+**外貌**：`a 36-year-old European man, narrow long face with an aquiline nose, light olive skin, wavy dark brown hair cut at the ears, clean-shaven with thoughtful grey eyes, a slim upright build, wearing a sober slate-blue wool surcoat over a worn mail shirt and a padded brown arming coat, a plain leather belt, dark wool hose and scuffed leather riding boots`
+
+```
+[S], a 36-year-old European man, narrow long face with an aquiline nose, light olive skin, wavy dark brown hair cut at the ears, clean-shaven with thoughtful grey eyes, a slim upright build, wearing a sober slate-blue wool surcoat over a worn mail shirt and a padded brown arming coat, a plain leather belt, dark wool hose and scuffed leather riding boots, reserved and observant, standing quietly in three-quarter view, both hands relaxed together at his belt with fingers closed, one person only, bare-headed, empty hands, no text, no lettering, no crown, no flag, [C-FULL]
+```
+
+#### `K-24` Dame Beatrice Reedmere
+
+**角色 id**：`char_raider_beatrice_reedmere`
+
+**外貌**：`a 55-year-old European woman with a broad weather-beaten face, pale freckled skin, visible lines around the mouth and eyes, steel-grey hair braided close to the head with a few loose wisps, a sturdy build, wearing a faded oxblood wool tunic beneath a sleeveless matte dark brown wool surcoat with an unbroken closed front over a padded linen coat, its short neck slit tied with two simple linen cords, hand-sewn hems and no metal chest fasteners or pockets, a short drab olive wool cloak clasped at the shoulder, a wide plain belt, dark hose and patched leather boots`
+
+```
+[S], a 55-year-old European woman with a broad weather-beaten face, pale freckled skin, visible lines around the mouth and eyes, steel-grey hair braided close to the head with a few loose wisps, a sturdy build, wearing a faded oxblood wool tunic beneath a sleeveless matte dark brown wool surcoat with an unbroken closed front over a padded linen coat, its short neck slit tied with two simple linen cords, hand-sewn hems and no metal chest fasteners or pockets, a short drab olive wool cloak clasped at the shoulder, a wide plain belt, dark hose and patched leather boots, patient and steady-eyed, standing in an unhurried three-quarter pose, hands folded at her waist with fingers together, one person only, bare-headed, empty hands, no text, no lettering, no crown, no flag, [C-FULL]
+```
+
+
+### P2 指挥官肖像生产清单
+
+> 本国与入侵国候选含预备人员；年龄、称谓和家族按角色表记录。面部细节为区分人物而设定，生成后逐批审阅，不能以清单条目冒充图片已完成。
+
+#### `K-25` Ser Alaric Fenwick
+
+**角色 id**：`char_player_alaric_fenwick`
+
+**外貌**：`a 52-year-old man with a very long narrow bony face, a high forehead and visibly hollow cheeks, light olive skin, a long aquiline nose, narrow dark brown eyes, receding silver-grey hair cropped close above the ears, a bald crown, a clean-shaven face, pronounced age lines around his deep-set eyes and thin mouth, a tall lean narrow-shouldered build, wearing a deep olive wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 52-year-old man with a very long narrow bony face, a high forehead and visibly hollow cheeks, light olive skin, a long aquiline nose, narrow dark brown eyes, receding silver-grey hair cropped close above the ears, a bald crown, a clean-shaven face, pronounced age lines around his deep-set eyes and thin mouth, a tall lean narrow-shouldered build, wearing a deep olive wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-26` Ser Ansel Harrow
+
+**角色 id**：`char_player_ansel_harrow`
+
+**外貌**：`a 57-year-old man, a broad weathered face and low cheekbones, ruddy pale skin, a straight narrow nose, calm pale blue eyes, straight black streaked with grey hair to the jaw, smooth bare cheeks and a smooth bare chin, no beard or moustache, deep crow feet and pronounced lines around the mouth, a noticeably tall thin build with narrow shoulders and long limbs, wearing a smoky grey wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 57-year-old man, a broad weathered face and low cheekbones, ruddy pale skin, a straight narrow nose, calm pale blue eyes, straight black streaked with grey hair to the jaw, smooth bare cheeks and a smooth bare chin, no beard or moustache, deep crow feet and pronounced lines around the mouth, a noticeably tall thin build with narrow shoulders and long limbs, wearing a smoky grey wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-27` Ser Cedric Valorin
+
+**角色 id**：`char_player_cedric_valorin`
+
+**外貌**：`a 44-year-old man, a compact face and a small cleft chin, light olive skin, a slightly crooked nose, wide grey eyes, straight chestnut hair to the jaw, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a deep olive wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 44-year-old man, a compact face and a small cleft chin, light olive skin, a slightly crooked nose, wide grey eyes, straight chestnut hair to the jaw, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a deep olive wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-28` Ser Dorian Malvern
+
+**角色 id**：`char_player_dorian_malvern`
+
+**外貌**：`a 41-year-old man, a long narrow face with high cheekbones, warm tan skin, a broad blunt nose, narrow dark brown eyes, visibly receding sparse sandy brown hair cut short, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a faded russet wool pullover tunic made from one unbroken cloth panel over a padded linen shirt with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 41-year-old man, a long narrow face with high cheekbones, warm tan skin, a broad blunt nose, narrow dark brown eyes, visibly receding sparse sandy brown hair cut short, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a faded russet wool pullover tunic made from one unbroken cloth panel over a padded linen shirt with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-29` Ser Edric O-kala
+
+**角色 id**：`char_player_edric_o_kala`
+
+**外貌**：`a 28-year-old brown-skinned man of the O-kala family, a visibly youthful round face with a wide forehead and full cheeks, deep warm brown complexion, a slightly crooked nose, narrow dark brown eyes, tightly curled black hair cropped close, clean-shaven cheeks and chin, a youthful unlined complexion, a broad sturdy build, wearing a muted oxblood red wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 28-year-old brown-skinned man of the O-kala family, a visibly youthful round face with a wide forehead and full cheeks, deep warm brown complexion, a slightly crooked nose, narrow dark brown eyes, tightly curled black hair cropped close, clean-shaven cheeks and chin, a youthful unlined complexion, a broad sturdy build, wearing a muted oxblood red wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-30` Ser Emrys Reeve
+
+**角色 id**：`char_player_emrys_reeve`
+
+**外貌**：`a 54-year-old man, a long narrow face with high cheekbones, warm tan skin, a broad blunt nose, hooded green eyes, sandy brown streaked with grey close-cut curls, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a dark umber wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 54-year-old man, a long narrow face with high cheekbones, warm tan skin, a broad blunt nose, hooded green eyes, sandy brown streaked with grey close-cut curls, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a dark umber wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-31` Ser Florian Weighhouse
+
+**角色 id**：`char_player_florian_weighhouse`
+
+**外貌**：`a 31-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, ruddy pale skin, a wide nose with a low bridge, deep-set hazel eyes, wavy black hair cut at the ears, rough stubble, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a smoky grey wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 31-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, ruddy pale skin, a wide nose with a low bridge, deep-set hazel eyes, wavy black hair cut at the ears, rough stubble, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a smoky grey wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-32` Ser Gareth Fenwick
+
+**角色 id**：`char_player_gareth_fenwick`
+
+**外貌**：`a 41-year-old man, a long face with a rounded jaw, light olive skin, a long aquiline nose, wide grey eyes, wavy chestnut hair cut at the ears, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a deep olive wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 41-year-old man, a long face with a rounded jaw, light olive skin, a long aquiline nose, wide grey eyes, wavy chestnut hair cut at the ears, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a deep olive wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-33` Ser Hadrian Harrow
+
+**角色 id**：`char_player_hadrian_harrow`
+
+**外貌**：`a 43-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, ruddy pale skin, a wide nose with a low bridge, calm pale blue eyes, visibly receding sparse black hair cut short, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a smoky grey wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 43-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, ruddy pale skin, a wide nose with a low bridge, calm pale blue eyes, visibly receding sparse black hair cut short, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a smoky grey wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-34` Ser Ivo Ashvale
+
+**角色 id**：`char_player_ivo_ashvale`
+
+**外貌**：`a 50-year-old man, a very long narrow bony face with visibly hollow cheeks, light olive skin, a gently curved prominent nose, narrow dark brown eyes, wavy chestnut streaked with grey hair cut at the ears, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a muted oxblood red wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 50-year-old man, a very long narrow bony face with visibly hollow cheeks, light olive skin, a gently curved prominent nose, narrow dark brown eyes, wavy chestnut streaked with grey hair cut at the ears, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a muted oxblood red wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-35` Ser Jasper Valorin
+
+**角色 id**：`char_player_jasper_valorin`
+
+**外貌**：`a 45-year-old man with a broad round face, full cheeks, a double chin and a small flat forehead, light olive skin, a broad blunt nose, calm pale blue eyes, short straight dark chestnut hair cropped above the ears, a very short broad nose, clean-shaven cheeks and chin, natural fine lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a deep olive wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 45-year-old man with a broad round face, full cheeks, a double chin and a small flat forehead, light olive skin, a broad blunt nose, calm pale blue eyes, short straight dark chestnut hair cropped above the ears, a very short broad nose, clean-shaven cheeks and chin, natural fine lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a deep olive wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-36` Ser Leofric Malvern
+
+**角色 id**：`char_player_leofric_malvern`
+
+**外貌**：`a 57-year-old man, a very long narrow bony face with visibly hollow cheeks, warm tan skin, a wide nose with a low bridge, deep-set hazel eyes, straight sandy brown streaked with grey hair to the jaw, a short neat beard, deep crow feet and pronounced lines around the mouth, a noticeably tall thin build with narrow shoulders and long limbs, wearing a faded russet wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets`
+
+```
+[S], a 57-year-old man, a very long narrow bony face with visibly hollow cheeks, warm tan skin, a wide nose with a low bridge, deep-set hazel eyes, straight sandy brown streaked with grey hair to the jaw, a short neat beard, deep crow feet and pronounced lines around the mouth, a noticeably tall thin build with narrow shoulders and long limbs, wearing a faded russet wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, no chest zipper, no machine-made fasteners, no patch pockets, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-37` Ser Lucan O-kala
+
+**角色 id**：`char_player_lucan_o_kala`
+
+**外貌**：`a 46-year-old brown-skinned man of the O-kala family with a deep warm brown complexion, a long face with a rounded jaw, deep warm brown skin, a slightly crooked nose, calm pale blue eyes, rough black hair brushed back from the forehead, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a muted oxblood red wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 46-year-old brown-skinned man of the O-kala family with a deep warm brown complexion, a long face with a rounded jaw, deep warm brown skin, a slightly crooked nose, calm pale blue eyes, rough black hair brushed back from the forehead, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a muted oxblood red wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-38` Ser Merek Reeve
+
+**角色 id**：`char_player_merek_reeve`
+
+**外貌**：`a 42-year-old man, a broad weathered face and low cheekbones, warm tan skin, a gently curved prominent nose, alert amber-brown eyes, wavy sandy brown hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a dark umber wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 42-year-old man, a broad weathered face and low cheekbones, warm tan skin, a gently curved prominent nose, alert amber-brown eyes, wavy sandy brown hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a dark umber wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-39` Ser Odo Weighhouse
+
+**角色 id**：`char_player_odo_weighhouse`
+
+**外貌**：`a 54-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, ruddy pale skin, a slightly crooked nose, calm pale blue eyes, visibly receding sparse black streaked with grey hair cut short, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a smoky grey wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 54-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, ruddy pale skin, a slightly crooked nose, calm pale blue eyes, visibly receding sparse black streaked with grey hair cut short, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a smoky grey wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-40` Ser Percival Fenwick
+
+**角色 id**：`char_player_percival_fenwick`
+
+**外貌**：`a 35-year-old man, an oval face with a wide forehead, light olive skin, a broad blunt nose, hooded green eyes, short cropped chestnut hair, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a deep olive wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 35-year-old man, an oval face with a wide forehead, light olive skin, a broad blunt nose, hooded green eyes, short cropped chestnut hair, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a deep olive wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-41` Ser Quentin Harrow
+
+**角色 id**：`char_player_quentin_harrow`
+
+**外貌**：`a 47-year-old man, a long narrow face with high cheekbones, ruddy pale skin, a wide nose with a low bridge, narrow dark brown eyes, visibly receding sparse black hair cut short, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 47-year-old man, a long narrow face with high cheekbones, ruddy pale skin, a wide nose with a low bridge, narrow dark brown eyes, visibly receding sparse black hair cut short, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-42` Ser Roderic Ashvale
+
+**角色 id**：`char_player_roderic_ashvale`
+
+**外貌**：`a 59-year-old man, a long narrow face with high cheekbones, light olive skin, a long aquiline nose, hooded green eyes, chestnut streaked with grey close-cut curls, a long thin moustache above a completely bare smooth chin, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 59-year-old man, a long narrow face with high cheekbones, light olive skin, a long aquiline nose, hooded green eyes, chestnut streaked with grey close-cut curls, a long thin moustache above a completely bare smooth chin, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-43` Ser Silas Valorin
+
+**角色 id**：`char_player_silas_valorin`
+
+**外貌**：`a 22-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, light olive skin, a slightly crooked nose, narrow dark brown eyes, short cropped chestnut hair, a long thin moustache above a completely bare smooth chin, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 22-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, light olive skin, a slightly crooked nose, narrow dark brown eyes, short cropped chestnut hair, a long thin moustache above a completely bare smooth chin, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-44` Ser Theobald Malvern
+
+**角色 id**：`char_player_theobald_malvern`
+
+**外貌**：`a 44-year-old man, a long face with a rounded jaw, warm tan skin, a straight narrow nose, alert amber-brown eyes, straight sandy brown hair to the jaw, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 44-year-old man, a long face with a rounded jaw, warm tan skin, a straight narrow nose, alert amber-brown eyes, straight sandy brown hair to the jaw, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-45` Ser Tristan O-kala
+
+**角色 id**：`char_player_tristan_o_kala`
+
+**外貌**：`a 52-year-old brown-skinned man of the O-kala family with a deep warm brown complexion, a long face with a rounded jaw, deep warm brown skin, a short rounded nose, calm pale blue eyes, rough silver-grey and black tightly curled hair brushed back from the forehead, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 52-year-old brown-skinned man of the O-kala family with a deep warm brown complexion, a long face with a rounded jaw, deep warm brown skin, a short rounded nose, calm pale blue eyes, rough silver-grey and black tightly curled hair brushed back from the forehead, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-46` Ser Ulric Reeve
+
+**角色 id**：`char_player_ulric_reeve`
+
+**外貌**：`a 62-year-old man, a long face with a rounded jaw, warm tan skin, a wide nose with a low bridge, wide grey eyes, wavy silver-grey hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, deep crow feet and pronounced lines around the mouth, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 62-year-old man, a long face with a rounded jaw, warm tan skin, a wide nose with a low bridge, wide grey eyes, wavy silver-grey hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, deep crow feet and pronounced lines around the mouth, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-47` Ser Valerian Weighhouse
+
+**角色 id**：`char_player_valerian_weighhouse`
+
+**外貌**：`a 54-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, ruddy pale skin, a gently curved prominent nose, narrow dark brown eyes, short cropped black streaked with grey hair, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 54-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, ruddy pale skin, a gently curved prominent nose, narrow dark brown eyes, short cropped black streaked with grey hair, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-48` Ser Wulfric Fenwick
+
+**角色 id**：`char_player_wulfric_fenwick`
+
+**外貌**：`a 53-year-old man with a bald crown,  a very broad rounded face and a broad downturned moustache over a bare chin, light olive skin, a short rounded nose, narrow dark brown eyes, sparse short grey hair around the sides of the bald crown, smooth bare chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 53-year-old man with a bald crown,  a very broad rounded face and a broad downturned moustache over a bare chin, light olive skin, a short rounded nose, narrow dark brown eyes, sparse short grey hair around the sides of the bald crown, smooth bare chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-49` Ser Ysarn Harrow
+
+**角色 id**：`char_player_ysarn_harrow`
+
+**外貌**：`a 53-year-old man, an oval face with a wide forehead, ruddy pale skin, a broad blunt nose, deep-set hazel eyes, visibly receding sparse black streaked with grey hair cut short, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 53-year-old man, an oval face with a wide forehead, ruddy pale skin, a broad blunt nose, deep-set hazel eyes, visibly receding sparse black streaked with grey hair cut short, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-50` Dame Adelina Ashvale
+
+**角色 id**：`char_player_adelina_ashvale`
+
+**外貌**：`a 45-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, light olive skin, a slightly crooked nose, narrow dark brown eyes, chestnut hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 45-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, light olive skin, a slightly crooked nose, narrow dark brown eyes, chestnut hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-51` Dame Beatrice Valorin
+
+**角色 id**：`char_player_beatrice_valorin`
+
+**外貌**：`a 42-year-old woman, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, light olive skin, a straight narrow nose, calm pale blue eyes, chestnut hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 42-year-old woman, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, light olive skin, a straight narrow nose, calm pale blue eyes, chestnut hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-52` Dame Cecily Malvern
+
+**角色 id**：`char_player_cecily_malvern`
+
+**外貌**：`a 44-year-old woman, a long narrow face with high cheekbones, warm tan skin, a short rounded nose, deep-set hazel eyes, sandy brown hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 44-year-old woman, a long narrow face with high cheekbones, warm tan skin, a short rounded nose, deep-set hazel eyes, sandy brown hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-53` Dame Eleanor Reeve
+
+**角色 id**：`char_player_eleanor_reeve`
+
+**外貌**：`a 45-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a short rounded nose, deep-set hazel eyes, sandy brown short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 45-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a short rounded nose, deep-set hazel eyes, sandy brown short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-54` Dame Freya Weighhouse
+
+**角色 id**：`char_player_freya_weighhouse`
+
+**外貌**：`a 24-year-old woman, a broad weathered face and low cheekbones, ruddy pale skin, a straight narrow nose, alert amber-brown eyes, black hair in a single thick plait over one shoulder, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 24-year-old woman, a broad weathered face and low cheekbones, ruddy pale skin, a straight narrow nose, alert amber-brown eyes, black hair in a single thick plait over one shoulder, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-55` Dame Gisela Fenwick
+
+**角色 id**：`char_player_gisela_fenwick`
+
+**外貌**：`a 38-year-old woman, a long face with a rounded jaw, light olive skin, a wide nose with a low bridge, calm pale blue eyes, short uneven chestnut hair tucked behind the ears, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 38-year-old woman, a long face with a rounded jaw, light olive skin, a wide nose with a low bridge, calm pale blue eyes, short uneven chestnut hair tucked behind the ears, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-56` Dame Helena Harrow
+
+**角色 id**：`char_player_helena_harrow`
+
+**外貌**：`a 48-year-old woman, a very long narrow bony face with visibly hollow cheeks, ruddy pale skin, a slightly crooked nose, narrow dark brown eyes, black streaked with grey hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 48-year-old woman, a very long narrow bony face with visibly hollow cheeks, ruddy pale skin, a slightly crooked nose, narrow dark brown eyes, black streaked with grey hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-57` Dame Isolde Ashvale
+
+**角色 id**：`char_player_isolde_ashvale`
+
+**外貌**：`a 32-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, light olive skin, a broad blunt nose, narrow dark brown eyes, chestnut hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 32-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, light olive skin, a broad blunt nose, narrow dark brown eyes, chestnut hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-58` Dame Johanna Valorin
+
+**角色 id**：`char_player_johanna_valorin`
+
+**外貌**：`a 21-year-old woman, a long narrow face with high cheekbones, light olive skin, a long aquiline nose, hooded green eyes, chestnut short curls above the jaw, a youthful unlined complexion, a broad sturdy build, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 21-year-old woman, a long narrow face with high cheekbones, light olive skin, a long aquiline nose, hooded green eyes, chestnut short curls above the jaw, a youthful unlined complexion, a broad sturdy build, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-59` Dame Kateryn Malvern
+
+**角色 id**：`char_player_kateryn_malvern`
+
+**外貌**：`a 37-year-old woman, a long narrow face with high cheekbones, warm tan skin, a short rounded nose, narrow dark brown eyes, sandy brown hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 37-year-old woman, a long narrow face with high cheekbones, warm tan skin, a short rounded nose, narrow dark brown eyes, sandy brown hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-60` Dame Leonora O-kala
+
+**角色 id**：`char_player_leonora_o_kala`
+
+**外貌**：`a 53-year-old brown-skinned woman of the O-kala family with a deep warm brown complexion, a visibly broad round face with full cheeks and a heavy rounded chin, deep warm brown skin, a broad blunt nose, narrow dark brown eyes, black streaked with grey hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 53-year-old brown-skinned woman of the O-kala family with a deep warm brown complexion, a visibly broad round face with full cheeks and a heavy rounded chin, deep warm brown skin, a broad blunt nose, narrow dark brown eyes, black streaked with grey hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-61` Dame Maelis Reeve
+
+**角色 id**：`char_player_maelis_reeve`
+
+**外貌**：`a 50-year-old woman, a long face with a rounded jaw, warm tan skin, a slightly crooked nose, wide grey eyes, sandy brown streaked with grey hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 50-year-old woman, a long face with a rounded jaw, warm tan skin, a slightly crooked nose, wide grey eyes, sandy brown streaked with grey hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-62` Dame Nerissa Weighhouse
+
+**角色 id**：`char_player_nerissa_weighhouse`
+
+**外貌**：`a 42-year-old woman, a broad weathered face and low cheekbones, ruddy pale skin, a broad blunt nose, alert amber-brown eyes, black hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 42-year-old woman, a broad weathered face and low cheekbones, ruddy pale skin, a broad blunt nose, alert amber-brown eyes, black hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-63` Dame Odette Fenwick
+
+**角色 id**：`char_player_odette_fenwick`
+
+**外貌**：`a 38-year-old woman, a broad weathered face and low cheekbones, light olive skin, a straight narrow nose, alert amber-brown eyes, chestnut hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 38-year-old woman, a broad weathered face and low cheekbones, light olive skin, a straight narrow nose, alert amber-brown eyes, chestnut hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-64` Dame Philippa Harrow
+
+**角色 id**：`char_player_philippa_harrow`
+
+**外貌**：`a 35-year-old woman, an oval face with a wide forehead, ruddy pale skin, a short rounded nose, deep-set hazel eyes, black hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 35-year-old woman, an oval face with a wide forehead, ruddy pale skin, a short rounded nose, deep-set hazel eyes, black hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-65` Dame Rosamund Ashvale
+
+**角色 id**：`char_player_rosamund_ashvale`
+
+**外貌**：`a 63-year-old woman, a long narrow face with high cheekbones, light olive skin, a gently curved prominent nose, narrow dark brown eyes, silver-grey hair braided back from a high forehead, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 63-year-old woman, a long narrow face with high cheekbones, light olive skin, a gently curved prominent nose, narrow dark brown eyes, silver-grey hair braided back from a high forehead, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-66` Dame Sabina Valorin
+
+**角色 id**：`char_player_sabina_valorin`
+
+**外貌**：`a 34-year-old woman, an oval face with a wide forehead, light olive skin, a short rounded nose, deep-set hazel eyes, chestnut hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 34-year-old woman, an oval face with a wide forehead, light olive skin, a short rounded nose, deep-set hazel eyes, chestnut hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-67` Dame Sybilla Malvern
+
+**角色 id**：`char_player_sybilla_malvern`
+
+**外貌**：`a 35-year-old woman, an oval face with a wide forehead, warm tan skin, a short rounded nose, narrow dark brown eyes, sandy brown short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 35-year-old woman, an oval face with a wide forehead, warm tan skin, a short rounded nose, narrow dark brown eyes, sandy brown short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-68` Dame Theodora O-kala
+
+**角色 id**：`char_player_theodora_o_kala`
+
+**外貌**：`a 54-year-old brown-skinned woman of the O-kala family with a deep warm brown complexion, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, deep warm brown skin, a wide nose with a low bridge, alert amber-brown eyes, black streaked with grey short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 54-year-old brown-skinned woman of the O-kala family with a deep warm brown complexion, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, deep warm brown skin, a wide nose with a low bridge, alert amber-brown eyes, black streaked with grey short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-69` Dame Ursula Reeve
+
+**角色 id**：`char_player_ursula_reeve`
+
+**外貌**：`a 46-year-old woman, a very broad square jaw, a low forehead and thick heavy eyebrows, warm tan skin, a slightly crooked nose, deep-set hazel eyes, sandy brown hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 46-year-old woman, a very broad square jaw, a low forehead and thick heavy eyebrows, warm tan skin, a slightly crooked nose, deep-set hazel eyes, sandy brown hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-70` Dame Verena Weighhouse
+
+**角色 id**：`char_player_verena_weighhouse`
+
+**外貌**：`a 27-year-old woman, a broad weathered face and low cheekbones, ruddy pale skin, a long aquiline nose, calm pale blue eyes, black hair swept back into a plain low bun, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 27-year-old woman, a broad weathered face and low cheekbones, ruddy pale skin, a long aquiline nose, calm pale blue eyes, black hair swept back into a plain low bun, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-71` Dame Wilhelma Fenwick
+
+**角色 id**：`char_player_wilhelma_fenwick`
+
+**外貌**：`a 38-year-old woman, a blunt wide face with prominent cheekbones, light olive skin, a slightly crooked nose, alert amber-brown eyes, chestnut hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 38-year-old woman, a blunt wide face with prominent cheekbones, light olive skin, a slightly crooked nose, alert amber-brown eyes, chestnut hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-72` Dame Ysabel Harrow
+
+**角色 id**：`char_player_ysabel_harrow`
+
+**外貌**：`a 22-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, ruddy pale skin, a wide nose with a low bridge, narrow dark brown eyes, black hair braided close around the head, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 22-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, ruddy pale skin, a wide nose with a low bridge, narrow dark brown eyes, black hair braided close around the head, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a smoky grey wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-73` Ser Alaric Valorin
+
+**角色 id**：`char_player_alaric_valorin`
+
+**外貌**：`a 48-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, light olive skin, a broad blunt nose, hooded green eyes, visibly receding sparse chestnut streaked with grey hair cut short, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 48-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, light olive skin, a broad blunt nose, hooded green eyes, visibly receding sparse chestnut streaked with grey hair cut short, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a deep olive wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-74` Ser Ansel Malvern
+
+**角色 id**：`char_player_ansel_malvern`
+
+**外貌**：`a 63-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a gently curved prominent nose, narrow dark brown eyes, short cropped silver-grey hair, a broad close-trimmed beard, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 63-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a gently curved prominent nose, narrow dark brown eyes, short cropped silver-grey hair, a broad close-trimmed beard, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-75` Ser Berengar O-kala
+
+**角色 id**：`char_player_berengar_o_kala`
+
+**外貌**：`a 58-year-old brown-skinned man of the O-kala family with a deep warm brown complexion, a long face with a rounded jaw, deep warm brown skin, a short rounded nose, wide grey eyes, wavy black streaked with grey hair cut at the ears, a long thin moustache above a completely bare smooth chin, deep crow feet and pronounced lines around the mouth, a short visibly stout heavyset build with a round waist and broad chest, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 58-year-old brown-skinned man of the O-kala family with a deep warm brown complexion, a long face with a rounded jaw, deep warm brown skin, a short rounded nose, wide grey eyes, wavy black streaked with grey hair cut at the ears, a long thin moustache above a completely bare smooth chin, deep crow feet and pronounced lines around the mouth, a short visibly stout heavyset build with a round waist and broad chest, wearing a muted oxblood red wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-76` Ser Cedric Reeve
+
+**角色 id**：`char_player_cedric_reeve`
+
+**外貌**：`a 57-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, warm tan skin, a broad blunt nose, deep-set hazel eyes, wavy sandy brown streaked with grey hair cut at the ears, a short neat beard, deep crow feet and pronounced lines around the mouth, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 57-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, warm tan skin, a broad blunt nose, deep-set hazel eyes, wavy sandy brown streaked with grey hair cut at the ears, a short neat beard, deep crow feet and pronounced lines around the mouth, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-77` Ser Dorian Weighhouse
+
+**角色 id**：`char_player_dorian_weighhouse`
+
+**外貌**：`a 33-year-old man, a compact face and a small cleft chin, ruddy pale skin, a wide nose with a low bridge, wide grey eyes, straight black hair to the jaw, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a short smoky grey wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 33-year-old man, a compact face and a small cleft chin, ruddy pale skin, a wide nose with a low bridge, wide grey eyes, straight black hair to the jaw, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a short smoky grey wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-78` Ser Edric Fenwick
+
+**角色 id**：`char_player_edric_fenwick`
+
+**外貌**：`a 21-year-old man, a very long narrow bony face with visibly hollow cheeks, light olive skin, a long aquiline nose, deep-set hazel eyes, straight chestnut hair to the jaw, a long thin moustache above a completely bare smooth chin, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a short deep olive wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 21-year-old man, a very long narrow bony face with visibly hollow cheeks, light olive skin, a long aquiline nose, deep-set hazel eyes, straight chestnut hair to the jaw, a long thin moustache above a completely bare smooth chin, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a short deep olive wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-79` Ser Emrys Harrow
+
+**角色 id**：`char_player_emrys_harrow`
+
+**外貌**：`a 40-year-old man, a very long narrow bony face with visibly hollow cheeks, ruddy pale skin, a long aquiline nose, hooded green eyes, rough black hair brushed back from the forehead, rough stubble, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a smoky grey wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 40-year-old man, a very long narrow bony face with visibly hollow cheeks, ruddy pale skin, a long aquiline nose, hooded green eyes, rough black hair brushed back from the forehead, rough stubble, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a smoky grey wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-80` Ser Florian Ashvale
+
+**角色 id**：`char_player_florian_ashvale`
+
+**外貌**：`a 59-year-old man, a long face with a rounded jaw, light olive skin, a gently curved prominent nose, alert amber-brown eyes, straight chestnut streaked with grey hair to the jaw, a broad close-trimmed beard, deep crow feet and pronounced lines around the mouth, a short visibly stout heavyset build with a round waist and broad chest, wearing a muted oxblood red wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 59-year-old man, a long face with a rounded jaw, light olive skin, a gently curved prominent nose, alert amber-brown eyes, straight chestnut streaked with grey hair to the jaw, a broad close-trimmed beard, deep crow feet and pronounced lines around the mouth, a short visibly stout heavyset build with a round waist and broad chest, wearing a muted oxblood red wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-81` Ser Gareth Valorin
+
+**角色 id**：`char_player_gareth_valorin`
+
+**外貌**：`a 28-year-old man, an oval face with a wide forehead, light olive skin, a wide nose with a low bridge, narrow dark brown eyes, chestnut close-cut curls, a long thin moustache above a completely bare smooth chin, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a deep olive wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 28-year-old man, an oval face with a wide forehead, light olive skin, a wide nose with a low bridge, narrow dark brown eyes, chestnut close-cut curls, a long thin moustache above a completely bare smooth chin, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a deep olive wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-82` Ser Hadrian Malvern
+
+**角色 id**：`char_player_hadrian_malvern`
+
+**外貌**：`a 44-year-old man, a long narrow face with high cheekbones, warm tan skin, a straight narrow nose, narrow dark brown eyes, visibly receding sparse sandy brown hair cut short, rough stubble, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a faded russet wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 44-year-old man, a long narrow face with high cheekbones, warm tan skin, a straight narrow nose, narrow dark brown eyes, visibly receding sparse sandy brown hair cut short, rough stubble, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a faded russet wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-83` Ser Alaric Blackreed
+
+**角色 id**：`char_raider_alaric_blackreed`
+
+**外貌**：`a 45-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, ruddy pale skin, a straight narrow nose, deep-set hazel eyes, wavy black hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 45-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, ruddy pale skin, a straight narrow nose, deep-set hazel eyes, wavy black hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-84` Ser Ansel Thornmere
+
+**角色 id**：`char_raider_ansel_thornmere`
+
+**外貌**：`a 37-year-old man, an oval face with a wide forehead, fair freckled skin, a broad blunt nose, deep-set hazel eyes, visibly receding sparse dark brown hair cut short, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 37-year-old man, an oval face with a wide forehead, fair freckled skin, a broad blunt nose, deep-set hazel eyes, visibly receding sparse dark brown hair cut short, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-85` Ser Berengar Duskfen
+
+**角色 id**：`char_raider_berengar_duskfen`
+
+**外貌**：`a 48-year-old man, an oval face with a wide forehead, fair freckled skin, a wide nose with a low bridge, narrow dark brown eyes, dark brown streaked with grey close-cut curls, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 48-year-old man, an oval face with a wide forehead, fair freckled skin, a wide nose with a low bridge, narrow dark brown eyes, dark brown streaked with grey close-cut curls, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-86` Ser Cedric Wychford
+
+**角色 id**：`char_raider_cedric_wychford`
+
+**外貌**：`a 56-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, warm tan skin, a short rounded nose, deep-set hazel eyes, wavy sandy brown streaked with grey hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a faded russet wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 56-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, warm tan skin, a short rounded nose, deep-set hazel eyes, wavy sandy brown streaked with grey hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a faded russet wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-87` Ser Dorian Merewick
+
+**角色 id**：`char_raider_dorian_merewick`
+
+**外貌**：`a 34-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, fair freckled skin, a straight narrow nose, wide grey eyes, short cropped dark brown hair, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 34-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, fair freckled skin, a straight narrow nose, wide grey eyes, short cropped dark brown hair, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-88` Ser Edric Crowhurst
+
+**角色 id**：`char_raider_edric_crowhurst`
+
+**外貌**：`a 61-year-old man, a long narrow face with high cheekbones, warm tan skin, a gently curved prominent nose, hooded green eyes, silver-grey close-cut curls, rough stubble, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a dark umber wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 61-year-old man, a long narrow face with high cheekbones, warm tan skin, a gently curved prominent nose, hooded green eyes, silver-grey close-cut curls, rough stubble, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a dark umber wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-89` Ser Emrys Reedmere
+
+**角色 id**：`char_raider_emrys_reedmere`
+
+**外貌**：`a 39-year-old man, a long face with a rounded jaw, ruddy pale skin, a long aquiline nose, alert amber-brown eyes, straight black hair to the jaw, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 39-year-old man, a long face with a rounded jaw, ruddy pale skin, a long aquiline nose, alert amber-brown eyes, straight black hair to the jaw, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-90` Ser Florian Ashenholt
+
+**角色 id**：`char_raider_florian_ashenholt`
+
+**外貌**：`a 23-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, fair freckled skin, a long aquiline nose, wide grey eyes, short cropped dark brown hair, rough stubble, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 23-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, fair freckled skin, a long aquiline nose, wide grey eyes, short cropped dark brown hair, rough stubble, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-91` Ser Gareth Blackreed
+
+**角色 id**：`char_raider_gareth_blackreed`
+
+**外貌**：`a 32-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, ruddy pale skin, a long aquiline nose, hooded green eyes, visibly receding sparse black hair cut short, rough stubble, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 32-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, ruddy pale skin, a long aquiline nose, hooded green eyes, visibly receding sparse black hair cut short, rough stubble, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-92` Ser Hadrian Thornmere
+
+**角色 id**：`char_raider_hadrian_thornmere`
+
+**外貌**：`a 52-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a wide nose with a low bridge, wide grey eyes, rough dark brown streaked with grey hair brushed back from the forehead, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 52-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a wide nose with a low bridge, wide grey eyes, rough dark brown streaked with grey hair brushed back from the forehead, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-93` Ser Ivo Duskfen
+
+**角色 id**：`char_raider_ivo_duskfen`
+
+**外貌**：`a 49-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a straight narrow nose, calm pale blue eyes, straight dark brown streaked with grey hair to the jaw, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 49-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a straight narrow nose, calm pale blue eyes, straight dark brown streaked with grey hair to the jaw, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-94` Ser Jasper Wychford
+
+**角色 id**：`char_raider_jasper_wychford`
+
+**外貌**：`a 44-year-old man, a long face with a rounded jaw, warm tan skin, a gently curved prominent nose, wide grey eyes, wavy sandy brown hair cut at the ears, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a faded russet wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 44-year-old man, a long face with a rounded jaw, warm tan skin, a gently curved prominent nose, wide grey eyes, wavy sandy brown hair cut at the ears, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a faded russet wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-95` Ser Leofric Merewick
+
+**角色 id**：`char_raider_leofric_merewick`
+
+**外貌**：`a 21-year-old man, an oval face with a wide forehead, fair freckled skin, a broad blunt nose, hooded green eyes, short cropped dark brown hair, a long thin moustache above a completely bare smooth chin, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 21-year-old man, an oval face with a wide forehead, fair freckled skin, a broad blunt nose, hooded green eyes, short cropped dark brown hair, a long thin moustache above a completely bare smooth chin, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-96` Ser Lucan Crowhurst
+
+**角色 id**：`char_raider_lucan_crowhurst`
+
+**外貌**：`a 54-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a long aquiline nose, deep-set hazel eyes, sandy brown streaked with grey close-cut curls, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 54-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a long aquiline nose, deep-set hazel eyes, sandy brown streaked with grey close-cut curls, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-97` Ser Merek Reedmere
+
+**角色 id**：`char_raider_merek_reedmere`
+
+**外貌**：`a 56-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, ruddy pale skin, a gently curved prominent nose, narrow dark brown eyes, short cropped black streaked with grey hair, a broad close-trimmed beard, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 56-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, ruddy pale skin, a gently curved prominent nose, narrow dark brown eyes, short cropped black streaked with grey hair, a broad close-trimmed beard, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-98` Ser Odo Ashenholt
+
+**角色 id**：`char_raider_odo_ashenholt`
+
+**外貌**：`a 35-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, fair freckled skin, a straight narrow nose, calm pale blue eyes, visibly receding sparse dark brown hair cut short, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 35-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, fair freckled skin, a straight narrow nose, calm pale blue eyes, visibly receding sparse dark brown hair cut short, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-99` Ser Percival Blackreed
+
+**角色 id**：`char_raider_percival_blackreed`
+
+**外貌**：`a 32-year-old man, a long face with a rounded jaw, ruddy pale skin, a wide nose with a low bridge, calm pale blue eyes, rough black hair brushed back from the forehead, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 32-year-old man, a long face with a rounded jaw, ruddy pale skin, a wide nose with a low bridge, calm pale blue eyes, rough black hair brushed back from the forehead, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-100` Ser Quentin Thornmere
+
+**角色 id**：`char_raider_quentin_thornmere`
+
+**外貌**：`a 38-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a long aquiline nose, calm pale blue eyes, straight dark brown hair to the jaw, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 38-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a long aquiline nose, calm pale blue eyes, straight dark brown hair to the jaw, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-101` Ser Roderic Duskfen
+
+**角色 id**：`char_raider_roderic_duskfen`
+
+**外貌**：`a 44-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a gently curved prominent nose, calm pale blue eyes, straight dark brown hair to the jaw, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 44-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a gently curved prominent nose, calm pale blue eyes, straight dark brown hair to the jaw, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-102` Ser Silas Wychford
+
+**角色 id**：`char_raider_silas_wychford`
+
+**外貌**：`a 42-year-old man, a long face with a rounded jaw, warm tan skin, a straight narrow nose, wide grey eyes, wavy sandy brown hair cut at the ears, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a faded russet wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 42-year-old man, a long face with a rounded jaw, warm tan skin, a straight narrow nose, wide grey eyes, wavy sandy brown hair cut at the ears, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a faded russet wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-103` Ser Theobald Merewick
+
+**角色 id**：`char_raider_theobald_merewick`
+
+**外貌**：`a 46-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a slightly crooked nose, wide grey eyes, rough dark brown hair brushed back from the forehead, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 46-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a slightly crooked nose, wide grey eyes, rough dark brown hair brushed back from the forehead, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-104` Ser Tristan Crowhurst
+
+**角色 id**：`char_raider_tristan_crowhurst`
+
+**外貌**：`a 32-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a long aquiline nose, hooded green eyes, visibly receding sparse sandy brown hair cut short, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a dark umber wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 32-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a long aquiline nose, hooded green eyes, visibly receding sparse sandy brown hair cut short, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a dark umber wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-105` Ser Ulric Reedmere
+
+**角色 id**：`char_raider_ulric_reedmere`
+
+**外貌**：`a 50-year-old man, a broad weathered face and low cheekbones, ruddy pale skin, a short rounded nose, wide grey eyes, rough black streaked with grey hair brushed back from the forehead, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 50-year-old man, a broad weathered face and low cheekbones, ruddy pale skin, a short rounded nose, wide grey eyes, rough black streaked with grey hair brushed back from the forehead, smooth bare cheeks and a smooth bare chin, no beard or moustache, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-106` Ser Valerian Ashenholt
+
+**角色 id**：`char_raider_valerian_ashenholt`
+
+**外貌**：`a 50-year-old man, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a slightly crooked nose, deep-set hazel eyes, straight dark brown streaked with grey hair to the jaw, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 50-year-old man, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a slightly crooked nose, deep-set hazel eyes, straight dark brown streaked with grey hair to the jaw, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-107` Ser Wulfric Blackreed
+
+**角色 id**：`char_raider_wulfric_blackreed`
+
+**外貌**：`a 55-year-old man, a compact face and a small cleft chin, ruddy pale skin, a straight narrow nose, wide grey eyes, straight black streaked with grey hair to the jaw, rough stubble, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 55-year-old man, a compact face and a small cleft chin, ruddy pale skin, a straight narrow nose, wide grey eyes, straight black streaked with grey hair to the jaw, rough stubble, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-108` Ser Ysarn Thornmere
+
+**角色 id**：`char_raider_ysarn_thornmere`
+
+**外貌**：`a 48-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, fair freckled skin, a broad blunt nose, hooded green eyes, visibly receding sparse dark brown streaked with grey hair cut short, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 48-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, fair freckled skin, a broad blunt nose, hooded green eyes, visibly receding sparse dark brown streaked with grey hair cut short, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-109` Dame Adelina Duskfen
+
+**角色 id**：`char_raider_adelina_duskfen`
+
+**外貌**：`a 53-year-old woman, a long narrow face with high cheekbones, fair freckled skin, a long aquiline nose, hooded green eyes, dark brown streaked with grey short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 53-year-old woman, a long narrow face with high cheekbones, fair freckled skin, a long aquiline nose, hooded green eyes, dark brown streaked with grey short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-110` Dame Beatrice Wychford
+
+**角色 id**：`char_raider_beatrice_wychford`
+
+**外貌**：`a 32-year-old woman, a long face with a rounded jaw, warm tan skin, a wide nose with a low bridge, alert amber-brown eyes, sandy brown hair swept back into a plain low bun, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a faded russet wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 32-year-old woman, a long face with a rounded jaw, warm tan skin, a wide nose with a low bridge, alert amber-brown eyes, sandy brown hair swept back into a plain low bun, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a faded russet wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-111` Dame Cecily Merewick
+
+**角色 id**：`char_raider_cecily_merewick`
+
+**外貌**：`a 41-year-old woman, an oval face with a wide forehead, fair freckled skin, a broad blunt nose, hooded green eyes, dark brown hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 41-year-old woman, an oval face with a wide forehead, fair freckled skin, a broad blunt nose, hooded green eyes, dark brown hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-112` Dame Delphine Crowhurst
+
+**角色 id**：`char_raider_delphine_crowhurst`
+
+**外貌**：`a 29-year-old woman, a blunt wide face with prominent cheekbones, warm tan skin, a long aquiline nose, alert amber-brown eyes, sandy brown hair braided back from a high forehead, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a dark umber wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 29-year-old woman, a blunt wide face with prominent cheekbones, warm tan skin, a long aquiline nose, alert amber-brown eyes, sandy brown hair braided back from a high forehead, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a dark umber wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-113` Dame Eleanor Reedmere
+
+**角色 id**：`char_raider_eleanor_reedmere`
+
+**外貌**：`a 34-year-old woman, a compact face and a small cleft chin, ruddy pale skin, a broad blunt nose, calm pale blue eyes, black hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 34-year-old woman, a compact face and a small cleft chin, ruddy pale skin, a broad blunt nose, calm pale blue eyes, black hair in a single thick plait over one shoulder, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-114` Dame Freya Ashenholt
+
+**角色 id**：`char_raider_freya_ashenholt`
+
+**外貌**：`a 38-year-old woman, an oval face with a wide forehead, fair freckled skin, a short rounded nose, narrow dark brown eyes, dark brown short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 38-year-old woman, an oval face with a wide forehead, fair freckled skin, a short rounded nose, narrow dark brown eyes, dark brown short curls above the jaw, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-115` Dame Gisela Blackreed
+
+**角色 id**：`char_raider_gisela_blackreed`
+
+**外貌**：`a 31-year-old woman, an oval face with a wide forehead, ruddy pale skin, a slightly crooked nose, hooded green eyes, black hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 31-year-old woman, an oval face with a wide forehead, ruddy pale skin, a slightly crooked nose, hooded green eyes, black hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-116` Dame Helena Thornmere
+
+**角色 id**：`char_raider_helena_thornmere`
+
+**外貌**：`a 50-year-old woman, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a wide nose with a low bridge, hooded green eyes, short uneven dark brown streaked with grey hair tucked behind the ears, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 50-year-old woman, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a wide nose with a low bridge, hooded green eyes, short uneven dark brown streaked with grey hair tucked behind the ears, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-117` Dame Isolde Duskfen
+
+**角色 id**：`char_raider_isolde_duskfen`
+
+**外貌**：`a 29-year-old woman, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a slightly crooked nose, hooded green eyes, short uneven dark brown hair tucked behind the ears, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 29-year-old woman, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a slightly crooked nose, hooded green eyes, short uneven dark brown hair tucked behind the ears, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-118` Dame Johanna Wychford
+
+**角色 id**：`char_raider_johanna_wychford`
+
+**外貌**：`a 45-year-old woman, a long narrow face with high cheekbones, warm tan skin, a gently curved prominent nose, narrow dark brown eyes, sandy brown hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a faded russet wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 45-year-old woman, a long narrow face with high cheekbones, warm tan skin, a gently curved prominent nose, narrow dark brown eyes, sandy brown hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a faded russet wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-119` Dame Kateryn Merewick
+
+**角色 id**：`char_raider_kateryn_merewick`
+
+**外貌**：`a 26-year-old woman, a very broad square jaw, a low forehead and thick heavy eyebrows, fair freckled skin, a broad blunt nose, deep-set hazel eyes, dark brown hair in a single thick plait over one shoulder, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 26-year-old woman, a very broad square jaw, a low forehead and thick heavy eyebrows, fair freckled skin, a broad blunt nose, deep-set hazel eyes, dark brown hair in a single thick plait over one shoulder, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-120` Dame Leonora Crowhurst
+
+**角色 id**：`char_raider_leonora_crowhurst`
+
+**外貌**：`a 55-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a gently curved prominent nose, hooded green eyes, sandy brown streaked with grey hair braided back from a high forehead, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a dark umber wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 55-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, warm tan skin, a gently curved prominent nose, hooded green eyes, sandy brown streaked with grey hair braided back from a high forehead, deep crow feet and pronounced lines around the mouth, a short lean wiry build with thin arms and a narrow waist, wearing a dark umber wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-121` Dame Maelis Reedmere
+
+**角色 id**：`char_raider_maelis_reedmere`
+
+**外貌**：`a 24-year-old woman, a compact face and a small cleft chin, ruddy pale skin, a gently curved prominent nose, wide grey eyes, black hair swept back into a plain low bun, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 24-year-old woman, a compact face and a small cleft chin, ruddy pale skin, a gently curved prominent nose, wide grey eyes, black hair swept back into a plain low bun, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-122` Dame Nerissa Ashenholt
+
+**角色 id**：`char_raider_nerissa_ashenholt`
+
+**外貌**：`a 26-year-old woman, a broad weathered face and low cheekbones, fair freckled skin, a straight narrow nose, wide grey eyes, short uneven dark brown hair tucked behind the ears, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 26-year-old woman, a broad weathered face and low cheekbones, fair freckled skin, a straight narrow nose, wide grey eyes, short uneven dark brown hair tucked behind the ears, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-123` Dame Odette Blackreed
+
+**角色 id**：`char_raider_odette_blackreed`
+
+**外貌**：`a 43-year-old woman, a long face with a rounded jaw, ruddy pale skin, a short rounded nose, alert amber-brown eyes, black hair swept back into a plain low bun, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 43-year-old woman, a long face with a rounded jaw, ruddy pale skin, a short rounded nose, alert amber-brown eyes, black hair swept back into a plain low bun, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a slate blue wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-124` Dame Philippa Thornmere
+
+**角色 id**：`char_raider_philippa_thornmere`
+
+**外貌**：`a 46-year-old woman, a long face with a rounded jaw, fair freckled skin, a wide nose with a low bridge, alert amber-brown eyes, dark brown hair swept back into a plain low bun, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 46-year-old woman, a long face with a rounded jaw, fair freckled skin, a wide nose with a low bridge, alert amber-brown eyes, dark brown hair swept back into a plain low bun, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-125` Dame Rosamund Duskfen
+
+**角色 id**：`char_raider_rosamund_duskfen`
+
+**外貌**：`a 22-year-old woman, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a straight narrow nose, narrow dark brown eyes, dark brown hair in a single thick plait over one shoulder, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 22-year-old woman, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a straight narrow nose, narrow dark brown eyes, dark brown hair in a single thick plait over one shoulder, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-126` Dame Sabina Wychford
+
+**角色 id**：`char_raider_sabina_wychford`
+
+**外貌**：`a 25-year-old woman, a long face with a rounded jaw, warm tan skin, a gently curved prominent nose, alert amber-brown eyes, sandy brown hair swept back into a plain low bun, a youthful unlined complexion, a short compact muscular build with thick neck and broad forearms, wearing a faded russet wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 25-year-old woman, a long face with a rounded jaw, warm tan skin, a gently curved prominent nose, alert amber-brown eyes, sandy brown hair swept back into a plain low bun, a youthful unlined complexion, a short compact muscular build with thick neck and broad forearms, wearing a faded russet wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-127` Dame Sybilla Merewick
+
+**角色 id**：`char_raider_sybilla_merewick`
+
+**外貌**：`a 23-year-old woman, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, fair freckled skin, a broad blunt nose, alert amber-brown eyes, dark brown short curls above the jaw, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 23-year-old woman, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, fair freckled skin, a broad blunt nose, alert amber-brown eyes, dark brown short curls above the jaw, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool knee-length tunic over a quilted linen coat, close-fitting sleeves, a narrow leather belt, dark hose and worn leather ankle boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-128` Dame Theodora Crowhurst
+
+**角色 id**：`char_raider_theodora_crowhurst`
+
+**外貌**：`a 52-year-old woman, an oval face with a wide forehead, warm tan skin, a long aquiline nose, hooded green eyes, sandy brown streaked with grey hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 52-year-old woman, an oval face with a wide forehead, warm tan skin, a long aquiline nose, hooded green eyes, sandy brown streaked with grey hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-129` Dame Ursula Reedmere
+
+**角色 id**：`char_raider_ursula_reedmere`
+
+**外貌**：`a 26-year-old woman, a long face with a rounded jaw, ruddy pale skin, a straight narrow nose, calm pale blue eyes, short uneven black hair tucked behind the ears, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 26-year-old woman, a long face with a rounded jaw, ruddy pale skin, a straight narrow nose, calm pale blue eyes, short uneven black hair tucked behind the ears, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-130` Dame Verena Ashenholt
+
+**角色 id**：`char_raider_verena_ashenholt`
+
+**外貌**：`a 39-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, fair freckled skin, a broad blunt nose, hooded green eyes, dark brown hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 39-year-old woman, a visibly broad round face with full cheeks and a heavy rounded chin, fair freckled skin, a broad blunt nose, hooded green eyes, dark brown hair braided back from a high forehead, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-131` Dame Wilhelma Blackreed
+
+**角色 id**：`char_raider_wilhelma_blackreed`
+
+**外貌**：`a 30-year-old woman, an oval face with a wide forehead, ruddy pale skin, a slightly crooked nose, hooded green eyes, black hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 30-year-old woman, an oval face with a wide forehead, ruddy pale skin, a slightly crooked nose, hooded green eyes, black hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-132` Dame Ysabel Thornmere
+
+**角色 id**：`char_raider_ysabel_thornmere`
+
+**外貌**：`a 63-year-old woman, a very broad square jaw, a low forehead and thick heavy eyebrows, fair freckled skin, a straight narrow nose, narrow dark brown eyes, short uneven silver-grey hair tucked behind the ears, deep crow feet and pronounced lines around the mouth, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 63-year-old woman, a very broad square jaw, a low forehead and thick heavy eyebrows, fair freckled skin, a straight narrow nose, narrow dark brown eyes, short uneven silver-grey hair tucked behind the ears, deep crow feet and pronounced lines around the mouth, a short compact muscular build with thick neck and broad forearms, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-133` Ser Alaric Wychford
+
+**角色 id**：`char_raider_alaric_wychford`
+
+**外貌**：`a 22-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, warm tan skin, a gently curved prominent nose, wide grey eyes, short cropped sandy brown hair, a short neat beard, a youthful unlined complexion, a short compact muscular build with thick neck and broad forearms, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 22-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, warm tan skin, a gently curved prominent nose, wide grey eyes, short cropped sandy brown hair, a short neat beard, a youthful unlined complexion, a short compact muscular build with thick neck and broad forearms, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-134` Ser Ansel Merewick
+
+**角色 id**：`char_raider_ansel_merewick`
+
+**外貌**：`a 23-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a gently curved prominent nose, alert amber-brown eyes, wavy dark brown hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 23-year-old man, a broad weathered face and low cheekbones, fair freckled skin, a gently curved prominent nose, alert amber-brown eyes, wavy dark brown hair cut at the ears, smooth bare cheeks and a smooth bare chin, no beard or moustache, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-135` Ser Berengar Crowhurst
+
+**角色 id**：`char_raider_berengar_crowhurst`
+
+**外貌**：`a 32-year-old man, a broad weathered face and low cheekbones, warm tan skin, a broad blunt nose, alert amber-brown eyes, wavy sandy brown hair cut at the ears, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 32-year-old man, a broad weathered face and low cheekbones, warm tan skin, a broad blunt nose, alert amber-brown eyes, wavy sandy brown hair cut at the ears, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-136` Ser Cedric Reedmere
+
+**角色 id**：`char_raider_cedric_reedmere`
+
+**外貌**：`a 33-year-old man, a blunt wide face with prominent cheekbones, ruddy pale skin, a short rounded nose, wide grey eyes, black close-cut curls, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 33-year-old man, a blunt wide face with prominent cheekbones, ruddy pale skin, a short rounded nose, wide grey eyes, black close-cut curls, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-137` Ser Dorian Ashenholt
+
+**角色 id**：`char_raider_dorian_ashenholt`
+
+**外貌**：`a 21-year-old man, an oval face with a wide forehead, fair freckled skin, a wide nose with a low bridge, deep-set hazel eyes, visibly receding sparse dark brown hair cut short, a short neat beard, a youthful unlined complexion, a broad sturdy build, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 21-year-old man, an oval face with a wide forehead, fair freckled skin, a wide nose with a low bridge, deep-set hazel eyes, visibly receding sparse dark brown hair cut short, a short neat beard, a youthful unlined complexion, a broad sturdy build, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-138` Ser Edric Blackreed
+
+**角色 id**：`char_raider_edric_blackreed`
+
+**外貌**：`a 51-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, ruddy pale skin, a long aquiline nose, calm pale blue eyes, visibly receding sparse black streaked with grey hair cut short, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 51-year-old man, a triangular heart-shaped face, wide forehead and a markedly pointed narrow chin, ruddy pale skin, a long aquiline nose, calm pale blue eyes, visibly receding sparse black streaked with grey hair cut short, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-139` Ser Emrys Thornmere
+
+**角色 id**：`char_raider_emrys_thornmere`
+
+**外貌**：`a 25-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, fair freckled skin, a broad blunt nose, hooded green eyes, straight dark brown hair to the jaw, a broad close-trimmed beard, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 25-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, fair freckled skin, a broad blunt nose, hooded green eyes, straight dark brown hair to the jaw, a broad close-trimmed beard, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-140` Ser Florian Duskfen
+
+**角色 id**：`char_raider_florian_duskfen`
+
+**外貌**：`a 25-year-old man, a long face with a rounded jaw, fair freckled skin, a long aquiline nose, alert amber-brown eyes, straight dark brown hair to the jaw, smooth bare cheeks and a smooth bare chin, no beard or moustache, a youthful unlined complexion, a broad sturdy build, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 25-year-old man, a long face with a rounded jaw, fair freckled skin, a long aquiline nose, alert amber-brown eyes, straight dark brown hair to the jaw, smooth bare cheeks and a smooth bare chin, no beard or moustache, a youthful unlined complexion, a broad sturdy build, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-141` Ser Gareth Wychford
+
+**角色 id**：`char_raider_gareth_wychford`
+
+**外貌**：`a 29-year-old man, a compact face and a small cleft chin, warm tan skin, a gently curved prominent nose, alert amber-brown eyes, rough sandy brown hair brushed back from the forehead, a broad close-trimmed beard, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 29-year-old man, a compact face and a small cleft chin, warm tan skin, a gently curved prominent nose, alert amber-brown eyes, rough sandy brown hair brushed back from the forehead, a broad close-trimmed beard, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-142` Ser Hadrian Merewick
+
+**角色 id**：`char_raider_hadrian_merewick`
+
+**外貌**：`a 33-year-old man, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a straight narrow nose, hooded green eyes, rough dark brown hair brushed back from the forehead, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 33-year-old man, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a straight narrow nose, hooded green eyes, rough dark brown hair brushed back from the forehead, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a short compact muscular build with thick neck and broad forearms, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-143` Ser Ivo Crowhurst
+
+**角色 id**：`char_raider_ivo_crowhurst`
+
+**外貌**：`a 25-year-old man, a very long narrow bony face with visibly hollow cheeks, warm tan skin, a straight narrow nose, deep-set hazel eyes, straight sandy brown hair to the jaw, a broad close-trimmed beard, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 25-year-old man, a very long narrow bony face with visibly hollow cheeks, warm tan skin, a straight narrow nose, deep-set hazel eyes, straight sandy brown hair to the jaw, a broad close-trimmed beard, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-144` Ser Jasper Reedmere
+
+**角色 id**：`char_raider_jasper_reedmere`
+
+**外貌**：`a 36-year-old man, a very long narrow bony face with visibly hollow cheeks, ruddy pale skin, a wide nose with a low bridge, deep-set hazel eyes, straight black hair to the jaw, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 36-year-old man, a very long narrow bony face with visibly hollow cheeks, ruddy pale skin, a wide nose with a low bridge, deep-set hazel eyes, straight black hair to the jaw, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-145` Ser Leofric Ashenholt
+
+**角色 id**：`char_raider_leofric_ashenholt`
+
+**外貌**：`a 41-year-old man, a long narrow face with high cheekbones, fair freckled skin, a gently curved prominent nose, deep-set hazel eyes, short cropped dark brown hair, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 41-year-old man, a long narrow face with high cheekbones, fair freckled skin, a gently curved prominent nose, deep-set hazel eyes, short cropped dark brown hair, a long thin moustache above a completely bare smooth chin, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-146` Ser Lucan Blackreed
+
+**角色 id**：`char_raider_lucan_blackreed`
+
+**外貌**：`a 29-year-old man, a long narrow face with high cheekbones, ruddy pale skin, a broad blunt nose, deep-set hazel eyes, short cropped black hair, a short neat beard, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 29-year-old man, a long narrow face with high cheekbones, ruddy pale skin, a broad blunt nose, deep-set hazel eyes, short cropped black hair, a short neat beard, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-147` Ser Merek Thornmere
+
+**角色 id**：`char_raider_merek_thornmere`
+
+**外貌**：`a 59-year-old man, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a gently curved prominent nose, hooded green eyes, rough dark brown streaked with grey hair brushed back from the forehead, a short neat beard, deep crow feet and pronounced lines around the mouth, a short visibly stout heavyset build with a round waist and broad chest, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 59-year-old man, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a gently curved prominent nose, hooded green eyes, rough dark brown streaked with grey hair brushed back from the forehead, a short neat beard, deep crow feet and pronounced lines around the mouth, a short visibly stout heavyset build with a round waist and broad chest, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-148` Ser Odo Duskfen
+
+**角色 id**：`char_raider_odo_duskfen`
+
+**外貌**：`a 24-year-old man, an oval face with a wide forehead, fair freckled skin, a broad blunt nose, narrow dark brown eyes, dark brown close-cut curls, rough stubble, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 24-year-old man, an oval face with a wide forehead, fair freckled skin, a broad blunt nose, narrow dark brown eyes, dark brown close-cut curls, rough stubble, a youthful unlined complexion, a short visibly stout heavyset build with a round waist and broad chest, wearing a ochre brown wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-149` Ser Percival Wychford
+
+**角色 id**：`char_raider_percival_wychford`
+
+**外貌**：`a 32-year-old man, a compact face and a small cleft chin, warm tan skin, a slightly crooked nose, alert amber-brown eyes, rough sandy brown hair brushed back from the forehead, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 32-year-old man, a compact face and a small cleft chin, warm tan skin, a slightly crooked nose, alert amber-brown eyes, rough sandy brown hair brushed back from the forehead, a broad close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a faded russet wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-150` Ser Quentin Merewick
+
+**角色 id**：`char_raider_quentin_merewick`
+
+**外貌**：`a 37-year-old man, an oval face with a wide forehead, fair freckled skin, a short rounded nose, narrow dark brown eyes, dark brown close-cut curls, rough stubble, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 37-year-old man, an oval face with a wide forehead, fair freckled skin, a short rounded nose, narrow dark brown eyes, dark brown close-cut curls, rough stubble, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-151` Ser Roderic Crowhurst
+
+**角色 id**：`char_raider_roderic_crowhurst`
+
+**外貌**：`a 40-year-old man, a blunt wide face with prominent cheekbones, warm tan skin, a slightly crooked nose, calm pale blue eyes, short cropped sandy brown hair, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 40-year-old man, a blunt wide face with prominent cheekbones, warm tan skin, a slightly crooked nose, calm pale blue eyes, short cropped sandy brown hair, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a dark umber wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-152` Ser Silas Reedmere
+
+**角色 id**：`char_raider_silas_reedmere`
+
+**外貌**：`a 52-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, ruddy pale skin, a long aquiline nose, narrow dark brown eyes, rough black streaked with grey hair brushed back from the forehead, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 52-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, ruddy pale skin, a long aquiline nose, narrow dark brown eyes, rough black streaked with grey hair brushed back from the forehead, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-153` Ser Theobald Ashenholt
+
+**角色 id**：`char_raider_theobald_ashenholt`
+
+**外貌**：`a 54-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, fair freckled skin, a wide nose with a low bridge, deep-set hazel eyes, wavy dark brown streaked with grey hair cut at the ears, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 54-year-old man, a very broad square jaw, a low forehead and thick heavy eyebrows, fair freckled skin, a wide nose with a low bridge, deep-set hazel eyes, wavy dark brown streaked with grey hair cut at the ears, rough stubble, visible fine forehead wrinkles and lines around the eyes, a short lean wiry build with thin arms and a narrow waist, wearing a moss green wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-154` Ser Tristan Blackreed
+
+**角色 id**：`char_raider_tristan_blackreed`
+
+**外貌**：`a 63-year-old man, a broad weathered face and low cheekbones, ruddy pale skin, a straight narrow nose, wide grey eyes, rough silver-grey hair brushed back from the forehead, a broad close-trimmed beard, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 63-year-old man, a broad weathered face and low cheekbones, ruddy pale skin, a straight narrow nose, wide grey eyes, rough silver-grey hair brushed back from the forehead, a broad close-trimmed beard, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a slate blue wool riding surcoat over a quilted linen arming coat, a plain mail collar at the throat, a narrow leather belt, dark wool hose and worn calf-high riding boots, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-155` Ser Ulric Thornmere
+
+**角色 id**：`char_raider_ulric_thornmere`
+
+**外貌**：`a 25-year-old man, a long narrow face with high cheekbones, fair freckled skin, a wide nose with a low bridge, deep-set hazel eyes, short cropped dark brown hair, rough stubble, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 25-year-old man, a long narrow face with high cheekbones, fair freckled skin, a wide nose with a low bridge, deep-set hazel eyes, short cropped dark brown hair, rough stubble, a youthful unlined complexion, a noticeably tall thin build with narrow shoulders and long limbs, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-156` Ser Valerian Duskfen
+
+**角色 id**：`char_raider_valerian_duskfen`
+
+**外貌**：`a 33-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, fair freckled skin, a gently curved prominent nose, hooded green eyes, visibly receding sparse dark brown hair cut short, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a short ochre brown wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 33-year-old man, a visibly broad round face with full cheeks and a heavy rounded chin, fair freckled skin, a gently curved prominent nose, hooded green eyes, visibly receding sparse dark brown hair cut short, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a short visibly stout heavyset build with a round waist and broad chest, wearing a short ochre brown wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a short muted ochre wool shoulder cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-157` Ser Wulfric Wychford
+
+**角色 id**：`char_raider_wulfric_wychford`
+
+**外貌**：`a 22-year-old man, an oval face with a wide forehead, warm tan skin, a broad blunt nose, narrow dark brown eyes, sandy brown close-cut curls, rough stubble, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a short faded russet wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 22-year-old man, an oval face with a wide forehead, warm tan skin, a broad blunt nose, narrow dark brown eyes, sandy brown close-cut curls, rough stubble, a youthful unlined complexion, a short lean wiry build with thin arms and a narrow waist, wearing a short faded russet wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-158` Ser Ysarn Merewick
+
+**角色 id**：`char_raider_ysarn_merewick`
+
+**外貌**：`a 49-year-old man, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a straight narrow nose, narrow dark brown eyes, wavy dark brown streaked with grey hair cut at the ears, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a short moss green wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 49-year-old man, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a straight narrow nose, narrow dark brown eyes, wavy dark brown streaked with grey hair cut at the ears, a short neat beard, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a short moss green wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-159` Dame Adelina Crowhurst
+
+**角色 id**：`char_raider_adelina_crowhurst`
+
+**外貌**：`a 36-year-old woman, a long face with a rounded jaw, warm tan skin, a long aquiline nose, calm pale blue eyes, short uneven sandy brown hair tucked behind the ears, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a short dark umber wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 36-year-old woman, a long face with a rounded jaw, warm tan skin, a long aquiline nose, calm pale blue eyes, short uneven sandy brown hair tucked behind the ears, visible fine forehead wrinkles and lines around the eyes, a noticeably tall thin build with narrow shoulders and long limbs, wearing a short dark umber wool hooded cape laid back from the head over a simple brown wool tunic, a plain cord belt, dark hose and soft weathered leather shoes, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-160` Dame Cecily Ashenholt
+
+**角色 id**：`char_raider_cecily_ashenholt`
+
+**外貌**：`a 21-year-old woman, a long face with a rounded jaw, fair freckled skin, a slightly crooked nose, wide grey eyes, dark brown hair in a single thick plait over one shoulder, a youthful unlined complexion, a broad sturdy build, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 21-year-old woman, a long face with a rounded jaw, fair freckled skin, a slightly crooked nose, wide grey eyes, dark brown hair in a single thick plait over one shoulder, a youthful unlined complexion, a broad sturdy build, wearing a moss green wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-161` Dame Delphine Blackreed
+
+**角色 id**：`char_raider_delphine_blackreed`
+
+**外貌**：`a 25-year-old woman, a long face with a rounded jaw, ruddy pale skin, a long aquiline nose, wide grey eyes, black hair in a single thick plait over one shoulder, a youthful unlined complexion, a broad sturdy build, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 25-year-old woman, a long face with a rounded jaw, ruddy pale skin, a long aquiline nose, wide grey eyes, black hair in a single thick plait over one shoulder, a youthful unlined complexion, a broad sturdy build, wearing a slate blue wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a short faded olive wool cloak fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-162` Dame Eleanor Thornmere
+
+**角色 id**：`char_raider_eleanor_thornmere`
+
+**外貌**：`a 60-year-old woman, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a gently curved prominent nose, deep-set hazel eyes, silver-grey hair swept back into a plain low bun, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest`
+
+```
+[S], a 60-year-old woman, a very long narrow bony face with visibly hollow cheeks, fair freckled skin, a gently curved prominent nose, deep-set hazel eyes, silver-grey hair swept back into a plain low bun, deep crow feet and pronounced lines around the mouth, a broad sturdy build, wearing a ochre brown wool surcoat over a padded linen coat with a modest mail collar, a simple brown leather belt, dark wool hose and worn leather boots, a plain dark brown wool mantle fastened by two plain linen cords, the outer tunic front made as continuous matte woven cloth with a short laced neck slit and hand-sewn seams, bare-headed, all clothing pulled over the head, a single small neck opening tied shut with two thick natural linen cords, entirely plain cloth across the chest, one standing figure with empty hands, [C-FULL]
+```
+
 ---
 
 ## 3. 表情与姿态差分 `E-` / `P-`

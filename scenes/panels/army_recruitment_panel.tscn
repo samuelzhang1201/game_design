@@ -1,0 +1,184 @@
+[gd_scene format=3]
+
+[ext_resource type="Theme" uid="uid://b4xbt0npqul2u" path="res://assets/2D/ui/theme/game_theme.tres" id="1_j3wj8"]
+[ext_resource type="Script" path="res://scripts/ui/army_recruitment_panel.gd" id="2_j4a83"]
+[ext_resource type="StyleBox" uid="uid://cb2lbhrj618ti" path="res://assets/2D/ui/panels/styles/leather_window_24.tres" id="3_2gcdy"]
+
+[node name="ArmyRecruitmentPanel" type="Control" unique_id=1113004638]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_j3wj8")
+script = ExtResource("2_j4a83")
+
+[node name="Shade" type="ColorRect" parent="." unique_id=1873068285]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.62)
+
+[node name="Frame" type="PanelContainer" parent="." unique_id=1257479358]
+layout_mode = 0
+anchor_left = 0.21
+anchor_top = 0.04
+anchor_right = 0.79
+anchor_bottom = 0.96
+theme_override_styles/panel = ExtResource("3_2gcdy")
+
+[node name="Col" type="VBoxContainer" parent="Frame" unique_id=1169073839]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Head" type="HBoxContainer" parent="Frame/Col" unique_id=1291316242]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Frame/Col/Head" unique_id=989705967]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardTitle"
+text = "RECRUIT & REINFORCE"
+
+[node name="Close" type="Button" parent="Frame/Col/Head" unique_id=1907083966]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCross"
+text = "×"
+
+[node name="Scroll" type="ScrollContainer" parent="Frame/Col" unique_id=951674450]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Body" type="VBoxContainer" parent="Frame/Col/Scroll" unique_id=1024416291]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Fields" type="GridContainer" parent="Frame/Col/Scroll/Body" unique_id=1596812974]
+layout_mode = 2
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="TownLabel" type="Label" parent="Frame/Col/Scroll/Body/Fields" unique_id=1022596003]
+layout_mode = 2
+theme_type_variation = &"CardLabel"
+text = "Assembly town"
+
+[node name="Town" type="OptionButton" parent="Frame/Col/Scroll/Body/Fields" unique_id=1333197044]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardMenu"
+fit_to_longest_item = false
+
+[node name="OriginLabel" type="Label" parent="Frame/Col/Scroll/Body/Fields" unique_id=1051542101]
+layout_mode = 2
+theme_type_variation = &"CardLabel"
+text = "People drawn from"
+
+[node name="Origin" type="OptionButton" parent="Frame/Col/Scroll/Body/Fields" unique_id=846582098]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardMenu"
+fit_to_longest_item = false
+
+[node name="TargetLabel" type="Label" parent="Frame/Col/Scroll/Body/Fields" unique_id=671960571]
+layout_mode = 2
+theme_type_variation = &"CardLabel"
+text = "Receiving unit"
+
+[node name="Target" type="OptionButton" parent="Frame/Col/Scroll/Body/Fields" unique_id=1623398825]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardMenu"
+fit_to_longest_item = false
+
+[node name="ArmLabel" type="Label" parent="Frame/Col/Scroll/Body/Fields" unique_id=1231617223]
+layout_mode = 2
+theme_type_variation = &"CardLabel"
+text = "Arm"
+
+[node name="Arm" type="OptionButton" parent="Frame/Col/Scroll/Body/Fields" unique_id=169807749]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardMenu"
+fit_to_longest_item = false
+
+[node name="PeopleLabel" type="Label" parent="Frame/Col/Scroll/Body/Fields" unique_id=992240062]
+layout_mode = 2
+theme_type_variation = &"CardLabel"
+text = "People to enlist"
+
+[node name="People" type="SpinBox" parent="Frame/Col/Scroll/Body/Fields" unique_id=2141592172]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 2147483647.0
+value = 1.0
+
+[node name="CommanderLabel" type="Label" parent="Frame/Col/Scroll/Body/Fields" unique_id=1646252791]
+layout_mode = 2
+theme_type_variation = &"CardLabel"
+text = "Commander · family"
+
+[node name="Commander" type="OptionButton" parent="Frame/Col/Scroll/Body/Fields" unique_id=598765252]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardMenu"
+fit_to_longest_item = false
+
+[node name="Share" type="Label" parent="Frame/Col/Scroll/Body" unique_id=2088492018]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardLabel"
+text = "Final noble share (commander included)"
+
+[node name="Nobles" type="HSlider" parent="Frame/Col/Scroll/Body" unique_id=923322568]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Quote" type="Label" parent="Frame/Col/Scroll/Body" unique_id=1292347889]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardText"
+text = "Choose the terms above."
+autowrap_mode = 3
+
+[node name="Refusal" type="Label" parent="Frame/Col/Scroll/Body" unique_id=1834796341]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"CardWarn"
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3
+
+[node name="ProjectsTitle" type="Label" parent="Frame/Col/Scroll/Body" unique_id=299885814]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardSection"
+text = "PAID ASSEMBLIES"
+autowrap_mode = 3
+
+[node name="Projects" type="Label" parent="Frame/Col/Scroll/Body" unique_id=1285835028]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardText"
+text = "No paid assemblies in progress."
+autowrap_mode = 3
+
+[node name="Confirm" type="Button" parent="Frame/Col" unique_id=315254384]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Pay & begin assembly"

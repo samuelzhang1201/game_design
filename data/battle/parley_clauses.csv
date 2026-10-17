@@ -1,0 +1,8 @@
+clause,label,law,scope,policy_map
+herald_safety,Herald safety,envoys,heralds,off:unprotected|on:protect
+noble_ransom,Noble ransom,ransom,noble_prisoners,ransom:allow|execute:deny
+ordinary_prisoners,Ordinary prisoners,prisoner_treatment,common_prisoners,protect:protect|execute:execute
+surrender,Surrender acceptance,quarter,yielding,give:accept|refuse:reject
+wounded_evacuation,Wounded evacuation,wounded_evacuation,wounded,protect:protect|deny:deny
+safe_withdrawal,Agreed safe withdrawal,safe_withdrawal,withdrawing,deny:deny|protect:protect
+tactics,Permitted tactics,battle_tactics,combatants,unrestricted:unrestricted|restrained:restrained

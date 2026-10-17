@@ -21,6 +21,9 @@ static func tier_of(repo: DataRepository, fit_permille: int) -> Dictionary:
 ## A tier's slots for `layout`: "line" its line_slots (one rank abreast,
 ## spec 2026-10-11-war-room-front-line-design §2), else its block.
 static func slots_of(row: Dictionary, layout: String) -> Array:
+	var parts := layout.split(":")
+	if parts[0] in ["wedge", "diamond", "double_rank"] or parts.size() == 2:
+		return BattleFormation.slots(parts[0], int(row.get("figures", 1)), int(parts[1]) if parts.size() == 2 else 1000)
 	if layout == LINE and row.has("line_slots"):
 		return row["line_slots"]
 	return row.get("slots", [Vector2.ZERO])
@@ -35,6 +38,15 @@ const LINE := "line"
 static func layout_of(repo: DataRepository, state: GameState, code: String) -> String:
 	if state == null or ArmySystem.order_of(repo, state, code) == ArmySystem.ORDER_MARCH:
 		return BLOCK
+	var battle := BattleSystem.battle_of(state, code)
+	var formation := BattleFormation.of_unit(state, code)
+	if formation != "":
+		var side := BattleRules.side_of(battle, code)
+		var effects := BattleFormation.evaluate(repo, formation, BattleFormation.context(repo, state, battle, side), false)
+		if formation == LINE and int(effects["frontage_m"]) < int(repo.battle_formations[formation]["frontage_m"]):
+			@warning_ignore("integer_division")
+			return "line:%d" % (int(effects["frontage_m"]) * 1000 / int(repo.battle_formations[formation]["frontage_m"]))
+		return formation
 	var row: Dictionary = repo.battle_stances.get(BattleSystem.stance_of(state, code), {})
 	var layout := String(row.get("formation", BLOCK))
 	return layout if layout != "" else BLOCK

@@ -33,6 +33,11 @@ layout_mode = 2
 theme_type_variation = &"CardText"
 autowrap_mode = 3
 
+[node name="Recruit" type="Button" parent="." unique_id=898332895]
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Recruit & reinforce"
+
 [node name="ArmsHead" type="Label" parent="." unique_id=1260987171]
 layout_mode = 2
 theme_type_variation = &"DashSection"

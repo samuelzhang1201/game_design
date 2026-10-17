@@ -1,4 +1,9 @@
 key,value,notes
+army_camp_idle_days,2,"P3.2 provisional: full idle field days before camp construction begins; tune after play review"
+army_camp_build_days,2,"P3.2 provisional: completed field days to build camp; tune after play review"
+army_camp_defence_permille,200,"P3.2 provisional full camp defence over base defending power; tune after play review"
+army_camp_pack_defence_permille,100,"P3.2 provisional packing-stage defence over base power; tune after play review"
+army_camp_supply_loss_reduction_permille,100,"P3.2 provisional reduction to existing incoming transport loss while camped; never grants food"
 army_decay,0.3,per tick
 army_floor,20,
 levy_cost,40,
@@ -119,3 +124,10 @@ camp_after_days,5,"spec 2026-10-11-war-room-front-line-design §3: a regiment se
 army_clearance_on,1,"owner 2026-10-14 (spec 2026-10-14-unit-clearance-and-scouting-design): 1 = no two land units stand nearer than the sum of their arms' radii (data/army/army_clearance.csv; MarchClearance, ArmyGround.is_free); 0 turns the rule off (SuiteData.no_clearance)"
 army_clearance_touch_m,10,"clearance (same spec): a column halted in front of a village or a unit counts as touching it within the two radii plus this many metres (BattleSystem._town_contact)"
 army_spread_reach_m,17600,"owner 2026-10-15 (R-B): a host column halted by a friendly unit within this many metres of its target takes the nearest free camp slot round the target (four pitches reach past the crown's outer camp ring, where a column facing an enemy camp halts) (ArmySystem.march_day), so the whole host stands at the town instead of queueing down the road"
+recruitment_eligible_permille,250,"Initial recruitment eligibility share of each urban/rural origin; tune with the military economy, occupied cohorts deducted once"
+recruitment_port_reach_m,4400,"Fleet crew reinforcements require a stationary receiving fleet within this radius of its assembly port's adjacent-water berth"
+army_noble_start_permille,50,"Opening noble personnel share including each named commander; initial calibration for the military ledger"
+army_noble_cap_permille,100,"Maximum noble share of a recruited ordinary unit including its commander; casualty survivors are not deleted to enforce this cap"
+king_travel_km_per_day,30,"Battle-system spec 2026-10-16 §11: physical royal travel pace in clear metres per day"
+king_command_radius_m,1000,"Battle-system spec 2026-10-16 §11: the king is present at a battle within this actual distance; never based on the open screen"
+king_battle_morale_support,5,"Battle-system spec 2026-10-16 §11: derived morale support for a friendly regiment in a battle while the king is physically present"

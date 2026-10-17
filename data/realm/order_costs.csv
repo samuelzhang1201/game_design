@@ -1,6 +1,7 @@
 action_code,cost,always,notes
+ARMY_RECRUIT,gold:-1:military recruitment filing,0,dynamic whole personnel and equipment price supplies the real cost; no second fee
 generic_order,gold:-5:the chancery's clerks and couriers,0,an order that executes no action and whose impacts carried no cost
-LEVY_RAISE,world:economy.kingdoms.player_realm.rural_population:-2000:levies drawn from the villages;metric:strategic:-20:the baggage train of the levy,1,explicit population cost beside the gold
+LEVY_RAISE,metric:strategic:-20:the baggage train of the levy,1,training materials beside the gold; personnel recruitment is separate
 BUILD_ECONOMIC,opinion:steward:-1:the treasury frets over the outlay,0,
 SPY_MISSION,attribute:you:prestige:-1:whispers about the crown's whisperers,0,
 COUNCIL_CONSULT,none,0,a question is not an order
@@ -26,6 +27,9 @@ GOODS_BUY,gold:-1:the factor's fee,1,the spread is the cost; this is the paperwo
 GOODS_SELL,gold:-1:the factor's fee,1,
 MANOR_RUSH,gold:-1:the foreman's bonus,1,
 ARMY_MARCH,gold:-2:the column's provisions on the road,1,a regiment on the march eats off the chest
+KING_MOVE,gold:-1:the king's road provisions,1,one journey order carries its explicit provisioning cost
+KING_FOLLOW,gold:-1:the king's road provisions,1,one journey order carries its explicit provisioning cost
+KING_SAFE_DEPARTURE,none,0,the king's protected withdrawal does not change the battle's result
 ARMY_GARRISON,gold:-1:the quartermaster's billets,1,
 ARMY_STANCE,gold:-1:the marshal's standing orders,1,
 SPY_SEND,gold:-1:the spy's purse for the road,1,his fee is the courier_kinds spy row
@@ -38,3 +42,8 @@ SUPPLY_POINT_CLEAR,gold:-1:the quartermaster's letter recalling the wagons,1,
 SUPPLY_CARRY_SET,gold:-1:the wagon-master's tally,1,
 ARMY_SEAT,gold:-1:the change of the watch,1,"spec 2026-10-07-army-split-and-ground §4.5"
 LAW_SET,gold:-1:the chancery drafts the decree,1,"spec 2026-10-08-laws-tab §3; the law's own gold_cost and cost_ops (data/laws.csv) and one ordinary courier fee a courier are charged by the order itself"
+BATTLE_FORMATION,gold:-1:the marshal prepares a formation warrant,1,Reforming also incurs saved disorder
+BATTLE_ORDER,gold:-1:the marshal prepares a battlefield warrant,0,A remote courier or delivered bounty supplies the cost; otherwise the marshal fee applies
+PRISONER_PROPOSE,gold:-1:the prisoner agreement clerk,1,Charged once per successful proposal command
+PRISONER_RESPOND,gold:-1:the prisoner agreement clerk,1,Charged once per successful proposal command
+PRISONER_SETTLE,gold:-1:the prisoner agreement clerk,1,Charged once per successful proposal command

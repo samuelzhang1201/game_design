@@ -126,3 +126,17 @@ func test_the_layout_is_the_stance_s_once_the_column_stands() -> void:
 	e["stance"] = "steady"
 	assert_eq(Map3DFormation.layout_of(repo, s, code), Map3DFormation.BLOCK)
 	assert_eq(Map3DFormation.layout_of(repo, null, code), Map3DFormation.BLOCK)
+
+func test_tactical_shapes_and_narrow_line_use_shared_slots() -> void:
+	var tier := Map3DFormation.tier_of(repo, 1000)
+	assert_eq(Map3DFormation.slots_of(tier, "wedge"), BattleFormation.slots("wedge", 9))
+	assert_eq(Map3DFormation.slots_of(tier, "diamond"), BattleFormation.slots("diamond", 9))
+	var line := Map3DFormation.slots_of(tier, "line:500")
+	var xs := {}
+	var ys := {}
+	for slot: Vector2 in line:
+		xs[slot.x] = true
+		ys[slot.y] = true
+	assert_eq(line.size(), 9)
+	assert_eq(xs.size(), 5, "narrow front folds into ranks")
+	assert_eq(ys.size(), 2)

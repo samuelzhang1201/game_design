@@ -11,6 +11,7 @@ extends VBoxContainer
 
 ## CLOSE (owner 2026-09-27: opened from a regiment's card now the tab is gone).
 signal closed
+signal recruitment_requested
 
 var _title: Label
 var _summary: Label
@@ -35,6 +36,7 @@ static func create() -> MilitaryPanel:
 	return (load("res://scenes/panels/military_panel.tscn") as PackedScene).instantiate()
 
 func _ready() -> void:
+	$Recruit.pressed.connect(func() -> void: recruitment_requested.emit())
 	_title = $Head/Title
 	($Head/Close as Button).pressed.connect(func() -> void: closed.emit())
 	_summary = $Summary
@@ -61,10 +63,13 @@ func refresh() -> void:
 	var total := 0.0
 	var top := 1.0
 	for u: String in units:
-		var v: Variant = WorldLedger.value_of(data, state, "military.kingdoms.%s.%s" % [mine, u])
-		counts[u] = float(v) if v != null else 0.0
-		total += counts[u]
-		top = maxf(top, counts[u])
+		counts[u] = 0
+	for row: Dictionary in _regiments_of(mine):
+		var count := ArmySystem.living_count(data, state, String(row["regiment_code"]))
+		counts[MapObjects.regiment_arm(data, row)] += count
+		total += count
+	for u: String in units:
+		top = maxf(top, float(counts[u]))
 	var arm_rows: Array = []
 	for i in units.size():
 		var u: String = units[i]
@@ -84,12 +89,12 @@ func refresh() -> void:
 		var r := ArmySystem.regiment(data, code, state)
 		# The same arithmetic the map's markers use, so the bar here and the
 		# bar under the marker read the same regiment the same way.
-		var reg_size := MapObjects.regiment_size(data, r)
+		var reg_size := ArmySystem.living_count(data, state, code)
 		var main_arm := MapObjects.regiment_arm(data, r)
 		reg_top = maxf(reg_top, reg_size)
 		reg_rows.append({"label": _short(String(r["label"])), "value": reg_size, "icon": _glyph(main_arm),
 			"color": UiPalette.chart_color("cat_%d" % (units.find(main_arm) + 1)),
-			"text": RealmDashboard._compact(reg_size)})
+			"text": RealmDashboard._compact(reg_size) + " people" + _equipment_note(data, r, main_arm)})
 	_regiments.set_rows(reg_rows, reg_top)
 	# Neighbours: only what may be SAID of them (Intel) — their strength in
 	# common talk, and beneath it the newest spy sighting inside the kingdom
@@ -185,3 +190,12 @@ func regiments_chart() -> BarChart:
 
 func neighbours_chart() -> VBoxContainer:
 	return _neighbours
+
+
+## Ships and guns remain equipment, separately named from their crews.
+func _equipment_note(repo: DataRepository, row: Dictionary, arm: String) -> String:
+	if arm == "fleet":
+		return " · %s ships" % UiPalette.format_int(int(row.get(arm, 0)))
+	if int(repo.world_table("military", "unit_types").get(arm, {}).get("crew", 1)) > 1:
+		return " · %s equipment" % UiPalette.format_int(int(row.get(arm, 0)))
+	return ""

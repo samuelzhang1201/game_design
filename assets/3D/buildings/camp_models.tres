@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3 uid="uid://qj6rl628qa02"]
+
+[ext_resource type="PackedScene" uid="uid://bnar3oj80r21n" path="res://scenes/models/buildings/field_camp.tscn" id="1_ngxtt"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="2_ki5gm"]
+
+[resource]
+script = ExtResource("2_ki5gm")
+art = Dictionary[String, Resource]({
+"building": ExtResource("1_ngxtt"),
+"camped": ExtResource("1_ngxtt"),
+"packing": ExtResource("1_ngxtt")
+})

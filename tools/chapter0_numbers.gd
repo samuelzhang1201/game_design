@@ -68,7 +68,15 @@ func _init() -> void:
 		for t in ticks:
 			for d in Calendar.DAYS_PER_TICK - 1:
 				engine.advance_day(state)
+				if not state.day_resolution.is_empty():
+					print("Day paused for a battle decision: ", state.day_resolution["pending_decision"])
+					quit(0)
+					return
 			var rep := engine.advance(state)
+			if rep == null:
+				print("Month paused for a battle decision: ", state.day_resolution["pending_decision"])
+				quit(0)
+				return
 			if not rep.event.is_empty():
 				state.pending_event = {}  # nobody is at the table to answer it
 			print("  %-16s %10d %10d %10d %10d %8.1f %8.1f" % [

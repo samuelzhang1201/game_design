@@ -69,8 +69,10 @@ func _lines(path: String) -> int:
 ## 603 since the load runs a step at a time (owner 2026-10-10: the title's map
 ## opens a frame a step, no long stall): load_step's match and the three
 ## step functions' heads — the layers still do the work.
+## The independent king adds snapshot dispatch, selection/menu forwarding and one layer step.
+## Its geometry, interpolation, animation and card prose remain in Map3DKing.
 func test_the_view_is_a_coordinator() -> void:
-	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 603)
+	assert_lte(_lines("res://scripts/map3d/map3d_view.gd"), 636)
 
 
 func test_every_other_script_is_small() -> void:

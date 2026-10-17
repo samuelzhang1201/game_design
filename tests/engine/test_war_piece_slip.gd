@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## The slip over a WAR ROOM piece (owner 2026-10-07: 棋子的tooltip显示基本战斗数据).
 
@@ -23,7 +24,7 @@ func test_a_regiments_reading_is_its_own_figures_and_days_in_hand() -> void:
 	var reg := ArmySystem.regiment(repo, code)
 	ArmySystem.ensure(repo, state)
 	state.regiments[code]["supplies"] = 600
-	state.regiments[code]["wounded"] = 10
+	assert_false(People.move(repo, state, code, "fit", "wounded", 10, "slip_wounded").has("error"))
 	var r: Dictionary = WarPieceSlip.reading(repo, state, [code])[0]
 	var use := ArmySystem.supply_use(repo, reg, state)
 	assert_gt(use, 0)

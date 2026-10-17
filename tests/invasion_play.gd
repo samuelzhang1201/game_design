@@ -17,17 +17,22 @@ static func opened(repo: DataRepository, engine: TickEngine, seed_value: int = 1
 
 
 ## One day, exactly as Game.advance_day plays it: the thirtieth is the tick.
-static func day(engine: TickEngine, s: GameState) -> void:
-	if s.day >= Calendar.DAYS_PER_TICK:
-		engine.advance(s)
-	else:
-		engine.advance_day(s)
+static func day(engine: TickEngine, s: GameState, acknowledge_encounters := false) -> Dictionary:
+	var out := engine.resolve_day(s)
+	while out["status"] == "blocked" and acknowledge_encounters:
+		var decision: Dictionary = out["decision"]
+		if decision["kind"] != "encounter":
+			break
+		engine.resolve_decision(s, String(decision["token"]), "continue")
+		out = engine.resolve_day(s)
+	return out
 
 
-## Plays days until the absolute day `last` has ended.
-static func play_through(engine: TickEngine, s: GameState, last: int) -> void:
+## The caller explicitly chooses whether these unattended trials acknowledge encounters.
+static func play_through(engine: TickEngine, s: GameState, last: int, acknowledge_encounters := false) -> void:
 	while s.absolute_day() <= last:
-		day(engine, s)
+		if day(engine, s, acknowledge_encounters)["status"] == "blocked":
+			return
 
 
 ## The first raid host of `role` in the pack's table; "" for none.
