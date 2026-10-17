@@ -150,3 +150,141 @@ func test_battle_keeps_due_departure_packing_and_saved() -> void:
 	assert_eq(Vector2i(int(e["x_m"]), int(e["y_m"])), origin)
 	assert_eq(e["camp_state"]["phase"], CampSystem.PACKING)
 	assert_true(e.has("departure"))
+
+func _march_fixture() -> Dictionary:
+	var repo: DataRepository = SuiteData.flat_ground(SuiteData.repo())
+	var s := SuiteData.campaign(repo, 3)
+	s.foes.clear()
+	for arm: String in repo.army_speed:
+		repo.army_speed[arm] = 1
+	for ground: String in repo.army_ground_speed:
+		repo.army_ground_speed[ground] = 1000
+	repo.balance["army_clearance_on"] = 0.0
+	var codes: Array = s.regiments.keys()
+	codes.sort()
+	var code := ""
+	for c: String in codes:
+		if not ArmySystem.is_naval(repo, s, c):
+			code = c
+			break
+	var e: Dictionary = s.regiments[code]
+	e["x_m"] = 1000000
+	e["y_m"] = 1000000
+	e["dest_x_m"] = 1000000
+	e["dest_y_m"] = 1000000
+	return {"repo": repo, "state": s, "code": code, "entry": e}
+
+func test_march_preview_does_not_release_the_live_camp() -> void:
+	var f := _march_fixture()
+	var repo: DataRepository = f["repo"]
+	var s: GameState = f["state"]
+	var code := String(f["code"])
+	var e: Dictionary = f["entry"]
+	var origin := Vector2i(int(e["x_m"]), int(e["y_m"]))
+	e["camp_state"] = {"phase": CampSystem.CAMPED, "build_progress": 1000,
+		"pack_start_day": -1, "move_not_before_day": -1, "last_updated_day": -1,
+		"site": {"x_m": origin.x, "y_m": origin.y}}
+	ArmySystem.set_march_m(repo, s, code, origin + Vector2i(3000, 0), [], true)
+	s.day = int(e["camp_state"]["move_not_before_day"])
+	var preview: Dictionary = e.duplicate(true)
+	var ahead := ArmySystem.march_ahead(repo, s, code, preview)
+	assert_ne(ahead, origin, "the preview exercised departure movement")
+	assert_eq(e["camp_state"]["phase"], CampSystem.PACKING)
+	assert_true(e.has("departure"), "forecasting never erases the saved order")
+	assert_eq(Vector2i(int(e["x_m"]), int(e["y_m"])), origin)
+
+func test_stationary_camp_estimate_includes_two_late_packing_days() -> void:
+	var f := _march_fixture()
+	var repo: DataRepository = f["repo"]
+	var s: GameState = f["state"]
+	var code := String(f["code"])
+	var e: Dictionary = f["entry"]
+	var origin := Vector2i(int(e["x_m"]), int(e["y_m"]))
+	var dest := origin + Vector2i(3000, 0)
+	e["camp_state"] = {"phase": CampSystem.NONE, "build_progress": 0,
+		"pack_start_day": -1, "move_not_before_day": -1,
+		"site": {"x_m": origin.x, "y_m": origin.y}}
+	var walking_days := ArmySystem.march_days_between(repo, s, code,
+		ArmySystem.metres_to_pack(repo, origin), ArmySystem.metres_to_pack(repo, dest), s.absolute_day() + 2)
+	e["camp_state"]["phase"] = CampSystem.CAMPED
+	var camp_days := ArmySystem.march_days_between(repo, s, code,
+		ArmySystem.metres_to_pack(repo, origin), ArmySystem.metres_to_pack(repo, dest))
+	assert_eq(camp_days, walking_days + 2)
+
+func test_garrison_cancels_pending_departure_without_resetting_pack_deadline() -> void:
+	var f := _march_fixture()
+	var repo: DataRepository = f["repo"]
+	var s: GameState = f["state"]
+	var code := String(f["code"])
+	var e: Dictionary = f["entry"]
+	var origin := Vector2i(int(e["x_m"]), int(e["y_m"]))
+	e["camp_state"] = {"phase": CampSystem.CAMPED, "build_progress": 1000,
+		"pack_start_day": -1, "move_not_before_day": -1,
+		"site": {"x_m": origin.x, "y_m": origin.y}}
+	ArmySystem.set_march_m(repo, s, code, origin + Vector2i(3000, 0), [], true)
+	var deadline := int(e["camp_state"]["move_not_before_day"])
+	ArmySystem.set_garrison(repo, s, code)
+	assert_false(e.has("departure"))
+	assert_eq(int(e["camp_state"]["move_not_before_day"]), deadline)
+	s.day = deadline
+	ArmySystem.march_day(repo, s)
+	assert_eq(String(e["order"]), ArmySystem.ORDER_GARRISON)
+	assert_eq(Vector2i(int(e["x_m"]), int(e["y_m"])), origin)
+	assert_eq(String(e["camp_state"]["phase"]), CampSystem.PACKING)
+
+func test_reaim_replaces_pending_destination_and_keeps_pack_deadline() -> void:
+	var f := _march_fixture()
+	var repo: DataRepository = f["repo"]
+	var s: GameState = f["state"]
+	var code := String(f["code"])
+	var e: Dictionary = f["entry"]
+	var origin := Vector2i(int(e["x_m"]), int(e["y_m"]))
+	var old_dest := origin + Vector2i(3000, 0)
+	var new_dest := origin + Vector2i(0, 3000)
+	e["camp_state"] = {"phase": CampSystem.CAMPED, "build_progress": 1000,
+		"pack_start_day": -1, "move_not_before_day": -1,
+		"site": {"x_m": origin.x, "y_m": origin.y}}
+	ArmySystem.set_march_m(repo, s, code, old_dest, [], true)
+	var deadline := int(e["camp_state"]["move_not_before_day"])
+	ArmySystem.aim_entry(repo, e, new_dest)
+	assert_eq(int(e["departure"]["dest_x_m"]), new_dest.x)
+	assert_eq(int(e["departure"]["dest_y_m"]), new_dest.y)
+	assert_eq(int(e["camp_state"]["move_not_before_day"]), deadline)
+
+func test_clearance_halt_does_not_resume_the_departure_order() -> void:
+	var f := _march_fixture()
+	var repo: DataRepository = f["repo"]
+	var s: GameState = f["state"]
+	var code := String(f["code"])
+	var e: Dictionary = f["entry"]
+	repo.balance["army_clearance_on"] = 1.0
+	for arm: String in repo.army_speed:
+		repo.army_speed[arm] = 100
+	var foe := String(EnemyAi.host_units(repo, s, repo.raid_hosts[0])[0])
+	s.foes[foe] = ArmySystem.starting_state(repo, ArmySystem.regiment(repo, foe))
+	for other: String in s.regiments:
+		if other != code:
+			s.regiments[other]["x_m"] = -1000000
+			s.regiments[other]["y_m"] = -1000000
+	var origin := Vector2i(1000000, 1000000)
+	e["x_m"] = origin.x
+	e["y_m"] = origin.y
+	var blocker: Dictionary = s.foes[foe]
+	blocker["x_m"] = origin.x + 10000
+	blocker["y_m"] = origin.y
+	blocker["dest_x_m"] = origin.x + 10000
+	blocker["dest_y_m"] = origin.y
+	blocker["order"] = ArmySystem.ORDER_STANDBY
+	e["camp_state"] = {"phase": CampSystem.CAMPED, "build_progress": 1000,
+		"pack_start_day": -1, "move_not_before_day": -1,
+		"site": {"x_m": origin.x, "y_m": origin.y}}
+	var destination := origin + Vector2i(30000, 0)
+	ArmySystem.set_march_m(repo, s, code, destination)
+	s.day = int(e["camp_state"]["move_not_before_day"])
+	ArmySystem.march_day(repo, s)
+	assert_eq(String(e["order"]), ArmySystem.ORDER_GARRISON)
+	assert_ne(Vector2i(int(e["x_m"]), int(e["y_m"])), origin)
+	assert_false(e.has("departure"), "a clearance halt ends the deferred march intent")
+	s.day += 1
+	ArmySystem.march_day(repo, s)
+	assert_eq(String(e["order"]), ArmySystem.ORDER_GARRISON)

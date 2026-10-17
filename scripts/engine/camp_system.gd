@@ -21,7 +21,14 @@ static func _camp(state: GameState, code: String) -> Dictionary:
 	return entry["camp_state"]
 
 static func request_departure(state: GameState, code: String, effective_day: int, march_already_done: bool) -> void:
-	var camp := _camp(state, code)
+	_request_departure(_camp(state, code), effective_day, march_already_done)
+
+static func forecast_departure(camp: Dictionary, effective_day: int, march_already_done: bool) -> Dictionary:
+	var forecast := camp.duplicate(true)
+	_request_departure(forecast, effective_day, march_already_done)
+	return forecast
+
+static func _request_departure(camp: Dictionary, effective_day: int, march_already_done: bool) -> void:
 	if camp.is_empty() or String(camp.get("phase", NONE)) in [NONE, PACKING]:
 		return
 	var start := effective_day + (1 if march_already_done else 0)
@@ -50,14 +57,17 @@ static func can_march(state: GameState, code: String, day: int) -> bool:
 	var table := _table(state, code)
 	if not table.has(code):
 		return true
-	var camp: Dictionary = table[code].get("camp_state", {})
+	return can_march_entry(table[code], day)
+
+static func can_march_entry(entry: Dictionary, day: int) -> bool:
+	var camp: Dictionary = entry.get("camp_state", {})
 	var phase := String(camp.get("phase", NONE))
 	if phase == PACKING:
 		return day >= int(camp.get("move_not_before_day", 2147483647))
 	return phase not in [BUILDING, CAMPED]
 
-static func departure_started(state: GameState, code: String) -> void:
-	var camp := _camp(state, code)
+static func departure_started(entry: Dictionary) -> void:
+	var camp: Dictionary = entry.get("camp_state", {})
 	if camp.is_empty():
 		return
 	camp["phase"] = NONE
@@ -65,8 +75,7 @@ static func departure_started(state: GameState, code: String) -> void:
 	camp["build_progress"] = 0
 	camp["pack_start_day"] = -1
 	camp["move_not_before_day"] = -1
-	var e: Dictionary = _table(state, code)[code]
-	camp["site"] = {"x_m": int(e.get("x_m", 0)), "y_m": int(e.get("y_m", 0))}
+	camp["site"] = {"x_m": int(entry.get("x_m", 0)), "y_m": int(entry.get("y_m", 0))}
 
 static func defence_factor(repo: DataRepository, state: GameState, code: String) -> int:
 	var entry: Dictionary = _table(state, code).get(code, {})

@@ -159,3 +159,33 @@ func test_month_end_roundtrip_settles_once_with_same_report() -> void:
 	assert_eq(SaveLoad.state_hash(loaded), SaveLoad.state_hash(s))
 	assert_eq(loaded.tick, 2)
 	assert_eq(loaded.day, 1)
+
+func test_camp_pack_deadline_survives_blocked_json_resume() -> void:
+	var repo := SuiteData.flat_ground(SuiteData.repo())
+	var state: GameState = Scenario.contact(repo, 10)
+	var code := ""
+	for candidate: String in state.regiments:
+		if BattleSystem.battle_of(state, candidate).is_empty():
+			code = candidate
+			break
+	assert_ne(code, "", "fixture leaves a regiment outside the encounter")
+	var entry: Dictionary = state.regiments[code]
+	var origin := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	entry["camp_state"] = {"phase": CampSystem.CAMPED, "idle_days": 2,
+		"build_progress": 1000, "pack_start_day": -1, "move_not_before_day": -1,
+		"last_updated_day": -1, "site": {"x_m": origin.x, "y_m": origin.y}}
+	ArmySystem.set_march_m(repo, state, code, origin + Vector2i(3000, 0), [], true)
+	var start_day := int(entry["camp_state"]["pack_start_day"])
+	var move_day := int(entry["camp_state"]["move_not_before_day"])
+	var engine := TickEngine.new(repo)
+	assert_eq(engine.resolve_day(state)["status"], "blocked")
+	var before_retry := SaveLoad.state_hash(state)
+	assert_eq(engine.resolve_day(state)["status"], "blocked")
+	assert_eq(SaveLoad.state_hash(state), before_retry, "blocked retry is idempotent")
+	var restored: GameState = Scenario.roundtrip(state)
+	var tx: Dictionary = restored.day_resolution
+	DayResolution.acknowledge(restored.day_resolution,
+		String(tx["pending_decision"]["token"]), "continue")
+	assert_eq(TickEngine.new(repo).resolve_day(restored)["status"], "complete")
+	assert_eq(int(restored.regiments[code]["camp_state"]["pack_start_day"]), start_day)
+	assert_eq(int(restored.regiments[code]["camp_state"]["move_not_before_day"]), move_day)

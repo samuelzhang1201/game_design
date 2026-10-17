@@ -1077,6 +1077,12 @@ static func aim_entry(repo: DataRepository, entry: Dictionary, to: Vector2i, nav
 	entry["dest_x_m"] = to.x
 	entry["dest_y_m"] = to.y
 	entry["order"] = ORDER_MARCH
+	if entry.has("departure"):
+		var departure: Dictionary = entry["departure"]
+		departure["dest_x_m"] = to.x
+		departure["dest_y_m"] = to.y
+		if not same:
+			departure["waypoints_m"] = []
 	if same:
 		return
 	entry.erase("facing_deg")   # a new destination: no halt's facing
@@ -1199,6 +1205,7 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 	entry["order"] = ORDER_GARRISON
 	entry["dest_x_m"] = int(entry["x_m"])
 	entry["dest_y_m"] = int(entry["y_m"])
+	entry.erase("departure")
 	drop_hold(entry)
 	_clear_route(entry)
 	if marching:
@@ -1225,8 +1232,16 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 		var code := String(c)
 		if BattleSystem.battle_of(state, code).is_empty():
 			_resume_departure(repo, state, code, state.regiments[code])
-		if _march_one(repo, state, code, state.regiments[code], state.absolute_day(), blockers):
-			var entry: Dictionary = state.regiments[code]
+		var entry: Dictionary = state.regiments[code]
+		var origin := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+		var had_departure := entry.has("departure")
+		var was_packing := String(entry.get("camp_state", {}).get("phase", CampSystem.NONE)) == CampSystem.PACKING
+		var arrived_today := _march_one(repo, state, code, entry, state.absolute_day(), blockers)
+		if had_departure and was_packing \
+				and String(entry.get("camp_state", {}).get("phase", CampSystem.NONE)) != CampSystem.PACKING \
+				and Vector2i(int(entry["x_m"]), int(entry["y_m"])) != origin:
+			ArmyGround.leave(repo, state, code)
+		if arrived_today:
 			var halted_by := String(entry.get("halted_by", ""))
 			if halted_by == "" or not _enemies(blockers, code, halted_by):
 				# a column halted before a unit it is not at war with camps on the
@@ -1535,7 +1550,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 			or String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH \
 			or regiment(repo, code, state).is_empty():
 		return false
-	if not CampSystem.can_march(state, code, abs_day):
+	if not CampSystem.can_march_entry(entry, abs_day):
 		return false
 	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
 	var full := day_march_at(repo, state, code, metres_to_pack(repo, here), abs_day,
@@ -1565,8 +1580,9 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 			if kind == "halt":
 				passed_out.append_array(path.slice(0, int(verdict["leg"])))
 				_halt_before(entry, verdict["at"], String(verdict["blocker"]), blockers, abs_day)
-				if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != here:
-					_release_camp_on_movement(repo, state, code)
+				if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != here \
+						and String(entry.get("camp_state", {}).get("phase", CampSystem.NONE)) == CampSystem.PACKING:
+					_release_camp_on_movement(entry)
 				return true
 			waiting_on = String(verdict["blocker"])
 			if kind == "wait":
@@ -1601,7 +1617,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
 		if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != here:
-			_release_camp_on_movement(repo, state, code)
+			_release_camp_on_movement(entry)
 		entry["moved_day"] = abs_day
 		entry["order"] = ORDER_GARRISON          # arrived: it holds the ground it was sent to
 		_clear_route(entry)
@@ -1611,7 +1627,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 	entry["x_m"] = (walked["at"] as Vector2i).x
 	entry["y_m"] = (walked["at"] as Vector2i).y
 	if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != here:
-		_release_camp_on_movement(repo, state, code)
+		_release_camp_on_movement(entry)
 	entry["moved_day"] = abs_day
 	passed_out.append_array(walked["passed"])
 	if entry.has("route_m") or detoured:
@@ -1627,14 +1643,11 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 			entry["waypoints_m"] = MarchRoute.to_pairs(wps)
 	return false
 
-static func _release_camp_on_movement(repo: DataRepository, state: GameState, code: String) -> void:
-	if String(state.regiments.get(code, state.foes.get(code, {})).get("camp_state", {}).get("phase", CampSystem.NONE)) != CampSystem.PACKING:
+static func _release_camp_on_movement(entry: Dictionary) -> void:
+	if String(entry.get("camp_state", {}).get("phase", CampSystem.NONE)) != CampSystem.PACKING:
 		return
-	CampSystem.departure_started(state, code)
-	var entry: Dictionary = state.regiments[code] if state.regiments.has(code) else state.foes[code]
+	CampSystem.departure_started(entry)
 	entry.erase("departure")
-	if state.regiments.has(code):
-		ArmyGround.leave(repo, state, code)
 
 
 ## Whether a column waiting on `blocker` is the one to stop: always unless the
@@ -1797,6 +1810,10 @@ static func days_out(repo: DataRepository, state: GameState, code: String) -> in
 		"dest_y_m": int(st["dest_y_m"]), "order": ORDER_MARCH}
 	if st.has("route_m"):
 		entry["route_m"] = (st["route_m"] as Array).duplicate(true)
+	if st.has("camp_state"):
+		entry["camp_state"] = (st["camp_state"] as Dictionary).duplicate(true)
+	if st.has("departure"):
+		entry["departure"] = (st["departure"] as Dictionary).duplicate(true)
 	if MarchRoute.length_from(Vector2i(int(st["x_m"]), int(st["y_m"])), _path_of(entry)) <= 0.0:
 		return 0
 	return _days_walking(repo, state, code, entry, state.absolute_day() if state != null else 0)
@@ -1830,6 +1847,9 @@ static func march_days_between(repo: DataRepository, state: GameState, code: Str
 	if not waypoints.is_empty() or route.size() > 1:
 		entry["route_m"] = MarchRoute.to_pairs(route)
 	var day := (state.absolute_day() if state != null else 0) if start_day < 0 else start_day
+	var unit: Dictionary = state.regiments.get(code, state.foes.get(code, {}))
+	if unit.has("camp_state") and int(unit.get("x_m", a.x)) == a.x and int(unit.get("y_m", a.y)) == a.y:
+		entry["camp_state"] = CampSystem.forecast_departure(unit["camp_state"], day, true)
 	return _days_walking(repo, state, code, entry, day, max_days)
 
 
