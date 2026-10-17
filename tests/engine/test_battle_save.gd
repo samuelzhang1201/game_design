@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const BattleScenario := preload("res://tests/fixtures/battle_scenario.gd")
 ## The foe / AI-host / battle state in the save (spec
 ## 2026-10-07-enemy-ai-and-battle-design §2, §4, §7): a filled state round-trips
 ## item for item, holds no float anywhere (invariant 2: whole metres, whole
@@ -99,6 +100,42 @@ func test_save_is_stable() -> void:
 	assert_eq(a, b, "the same state writes the same text twice")
 	var back := GameState.from_dict(JSON.parse_string(a))
 	assert_eq(JSON.stringify(back.to_dict(), "", true), a, "and a load then a save changes nothing")
+
+func test_blocked_day_transaction_round_trip_preserves_cursor_and_journal() -> void:
+	var s := _filled()
+	s.day_resolution = DayResolution.begin(16, false)
+	s.day_resolution["phase"] = "FIXED_TACTICAL_SUBSTEPS"
+	s.day_resolution["substep_index"] = 2
+	s.day_resolution["battle_ids"] = [3, 4]
+	s.day_resolution["battle_index"] = 1
+	s.day_resolution["journal"]["works"] = [{"cell": 7, "building": "manor_house"}]
+	DayResolution.block_on_encounter(s.day_resolution, 4)
+	var packed := JSON.stringify(s.to_dict(), "", true)
+	var back := GameState.from_dict(JSON.parse_string(packed))
+	assert_eq(back.day_resolution, s.day_resolution)
+	assert_eq(JSON.stringify(back.to_dict(), "", true), packed)
+
+
+func test_real_substep_encounter_save_resumes_the_same_round_once() -> void:
+	var state := BattleScenario.contact(repo, 10)
+	var blocked := TickEngine.new(repo).resolve_day(state)
+	assert_eq(blocked["status"], "blocked")
+	var cursor := int(state.day_resolution["substep_index"])
+	assert_lt(cursor, int(state.day_resolution["substep_count"]), "the save pauses inside the movement substeps")
+	var pending: Dictionary = state.day_resolution["pending_decision"]
+	var battle_id := int(pending["battle_id"])
+	assert_eq(int(BattleSystem.battle_by_id(state, battle_id)["rounds"]), 0, "no losses before confirmation")
+	var back := BattleScenario.roundtrip(state)
+	assert_eq(DayResolution.acknowledge(state.day_resolution, String(pending["token"]), "continue")["status"], "accepted")
+	var live_result := TickEngine.new(repo).resolve_day(state)
+	assert_eq(live_result["status"], "complete")
+	assert_eq(DayResolution.acknowledge(back.day_resolution, String(pending["token"]), "continue")["status"], "accepted")
+	var resumed := TickEngine.new(repo).resolve_day(back)
+	assert_eq(resumed["status"], "complete")
+	var rounds: Array = (resumed["journal"]["battles"] as Array) \
+			.filter(func(e: Dictionary) -> bool: return String(e.get("kind", "")) == "round" and int(e["battle_id"]) == battle_id)
+	assert_eq(rounds.size(), 1, "the acknowledged contact substep resolves one battle round")
+	assert_eq(SaveLoad.state_hash(state), SaveLoad.state_hash(back), "save/resume matches uninterrupted continuation")
 
 
 func test_old_save_without_keys_loads() -> void:

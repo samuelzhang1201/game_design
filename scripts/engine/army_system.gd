@@ -1183,7 +1183,8 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 ## walks at its own pace along its route (spec 2026-10-07-march-waypoints), else
 ## the straight line. The route goes round ground a column cannot climb and
 ## round water (MarchPath, set when the march is ordered); a fleet's does not.
-static func march_day(repo: DataRepository, state: GameState) -> Array:
+static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1, substep_index := 0,
+		restrict_to_codes := false, allowed_codes: Array = [], daily_budgets: Dictionary = {}) -> Array:
 	ensure(repo, state)
 	var arrived: Array = []
 	# who stands where, the clearance's discs (spec 2026-10-14-unit-clearance-and-
@@ -1194,7 +1195,11 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		if _march_one(repo, state, code, state.regiments[code], state.absolute_day(), blockers):
+		if restrict_to_codes and not code in allowed_codes:
+			_note_place(blockers, code, state.regiments[code])
+			continue
+		if _march_one(repo, state, code, state.regiments[code], state.absolute_day(), blockers, [], pace_divisor,
+				substep_index, int(daily_budgets.get(code, -1))):
 			var entry: Dictionary = state.regiments[code]
 			var halted_by := String(entry.get("halted_by", ""))
 			if halted_by == "" or not _enemies(blockers, code, halted_by):
@@ -1230,10 +1235,14 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	foes.sort()
 	for c in foes:
 		var code := String(c)
+		if restrict_to_codes and not code in allowed_codes:
+			_note_place(blockers, code, state.foes[code])
+			continue
 		if BattleSystem.battle_of(state, code).is_empty():
 			var fe: Dictionary = state.foes[code]
 			var aim := Vector2i(int(fe.get("dest_x_m", 0)), int(fe.get("dest_y_m", 0)))
-			if _march_one(repo, state, code, fe, state.absolute_day(), blockers):
+			if _march_one(repo, state, code, fe, state.absolute_day(), blockers, [], pace_divisor,
+					substep_index, int(daily_budgets.get(code, -1))):
 				var hb := String(fe.get("halted_by", ""))
 				if hb != "" and not _enemies(blockers, code, hb):
 					_spread_foe(repo, state, code, fe, aim, blockers)
@@ -1457,13 +1466,173 @@ static func _ahead_blockers(repo: DataRepository, state: GameState) -> Dictionar
 ## share of what is left — the metres ahead over the whole days they take at
 ## the day's pace (march_days), rounded up — so an N-day march is covered at
 ## one pace over all N and ends exactly as the Nth day ends.
+static func day_walk_budget(repo: DataRepository, state: GameState, code: String) -> int:
+	var entry: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
+	if entry.is_empty() or String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH:
+		return 0
+	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	var pace := day_march_at(repo, state, code, metres_to_pack(repo, here), state.absolute_day(),
+		int(entry.get("carry_days", -1)))
+	if pace <= 0:
+		return 0
+	var left := MarchRoute.length_from(here, _path_of(entry))
+	var days := int(ceil(float(left) / float(pace)))
+	if days <= 1:
+		return mini(pace, int(ceil(left)))
+	return int(ceil(float(left) / float(days)))
+
+
+## March only the entries saved when this day's movement phase began. A courier
+## or AI route change later in the day must not replace today's order.
+static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor: int,
+		substep_index: int, saved_entries: Dictionary, daily_budgets: Dictionary) -> Array:
+	ensure(repo, state)
+	var arrived: Array = []
+	var blockers := clearance_blockers(repo, state)
+	for table: Dictionary in [state.regiments, state.foes]:
+		var codes: Array = table.keys().filter(func(c: Variant) -> bool: return saved_entries.has(String(c)))
+		codes.sort()
+		for value: Variant in codes:
+			var code := String(value)
+			var current := _entry_of(state, code)
+			if current.is_empty():
+				_note_place(blockers, code, current)
+				continue
+			var saved: Dictionary = saved_entries[code].duplicate(true)
+			if not BattleSystem.battle_of(state, code).is_empty():
+				saved["x_m"] = int(current["x_m"])
+				saved["y_m"] = int(current["y_m"])
+				saved["order"] = ORDER_GARRISON
+				saved_entries[code] = saved
+				_note_place(blockers, code, current)
+				continue
+			var command_changed := int(current.get("order_id", 0)) != int(saved.get("order_id", 0)) \
+				or String(current.get("order", "")) != String(saved.get("order", "")) \
+				or int(current.get("dest_x_m", 0)) != int(saved.get("dest_x_m", 0)) \
+				or int(current.get("dest_y_m", 0)) != int(saved.get("dest_y_m", 0))
+			var budget := int(daily_budgets.get(code, 0))
+			if budget <= 0:
+				_note_place(blockers, code, current)
+				continue
+			var walked_today := int(saved.get("day_walked_m", 0))
+			@warning_ignore("integer_division")
+			var step_budget := budget / maxi(pace_divisor, 1)
+			if substep_index < budget % maxi(pace_divisor, 1):
+				step_budget += 1
+			if substep_index == pace_divisor - 1:
+				step_budget = maxi(step_budget, budget - walked_today)
+			var travelled: Array = []
+			var walked := _march_one(repo, state, code, saved, state.absolute_day(), blockers, [],
+				pace_divisor, substep_index, budget, step_budget, travelled)
+			saved["day_walked_m"] = walked_today + (int(travelled[0]) if not travelled.is_empty() else 0)
+			saved_entries[code] = saved.duplicate(true)
+			if walked:
+				if state.regiments.has(code):
+					var halted_by := String(saved.get("halted_by", ""))
+					if command_changed:
+						current["x_m"] = int(saved["x_m"])
+						current["y_m"] = int(saved["y_m"])
+						if String(current.get("order", "")) == ORDER_GARRISON:
+							current["dest_x_m"] = int(current["x_m"])
+							current["dest_y_m"] = int(current["y_m"])
+							ArmyGround.settle(repo, state, code)
+					else:
+						_publish_march_state(current, saved)
+						if halted_by == "" or not _enemies(blockers, code, halted_by):
+							ArmyGround.settle(repo, state, code,
+								Vector2i(int(saved["x_m"]), int(saved["y_m"])) if halted_by != "" else ArmyGround.NONE)
+						if halted_by != "" and (blockers.get("pos", {}) as Dictionary).has(halted_by):
+							current["facing_deg"] = _facing_to(Vector2i(int(saved["x_m"]), int(saved["y_m"])),
+								(blockers["pos"] as Dictionary)[halted_by])
+						if current.has("hold_after"):
+							var hold: Dictionary = current["hold_after"]
+							current.erase("hold_after")
+							current["facing_deg"] = posmod(int(hold.get("facing", 0)), 360)
+							if int(hold.get("id", 0)) >= int(current.get("stance_order_id", 0)):
+								apply_hold(current, String(hold.get("stance", STANCE_DEFAULT)), -1, int(hold.get("id", 0)))
+						var draft := WarDrafts.of(state, code)
+						if String(draft.get("order", "")) == WarDrafts.GARRISON and not draft.has("hold"):
+							WarDrafts.strike(state, code)
+				else:
+					var aim := Vector2i(int(saved.get("dest_x_m", 0)), int(saved.get("dest_y_m", 0)))
+					var halted_by := String(saved.get("halted_by", ""))
+					if halted_by != "" and not _enemies(blockers, code, halted_by):
+						_spread_foe(repo, state, code, saved, aim, blockers)
+					if command_changed:
+						current["x_m"] = int(saved["x_m"])
+						current["y_m"] = int(saved["y_m"])
+					else:
+						_publish_march_state(current, saved)
+				if state.regiments.has(code):
+					arrived.append(code)
+				if command_changed:
+					_retire_saved_march(saved, current)
+				else:
+					_publish_march_state(saved, current)
+				saved_entries[code] = saved
+			else:
+				if command_changed:
+					current["x_m"] = int(saved["x_m"])
+					current["y_m"] = int(saved["y_m"])
+					if substep_index >= pace_divisor - 1 and String(current.get("order", "")) == ORDER_GARRISON:
+						current["dest_x_m"] = int(current["x_m"])
+						current["dest_y_m"] = int(current["y_m"])
+						ArmyGround.settle(repo, state, code)
+						_retire_saved_march(saved, current)
+				else:
+					_publish_march_state(current, saved)
+			_note_place(blockers, code, current)
+	return arrived
+
+
+static func _entry_of(state: GameState, code: String) -> Dictionary:
+	if state.regiments.has(code):
+		return state.regiments[code]
+	return state.foes.get(code, {})
+
+
+static func _publish_march_state(current: Dictionary, marched: Dictionary) -> void:
+	for key: String in ["x_m", "y_m", "dest_x_m", "dest_y_m", "order", "route_m", "waypoints_m",
+			"waited", "waited_day", "wait_on", "halted_by", "halt_day", "halt_aim_m", "road_blocked_by"]:
+		if marched.has(key):
+			current[key] = marched[key]
+		else:
+			current.erase(key)
+
+
+static func _retire_saved_march(saved: Dictionary, current: Dictionary) -> void:
+	saved["x_m"] = int(current["x_m"])
+	saved["y_m"] = int(current["y_m"])
+	saved["dest_x_m"] = int(current["x_m"])
+	saved["dest_y_m"] = int(current["y_m"])
+	saved["order"] = ORDER_GARRISON
+	_clear_route(saved)
+
+
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
-		abs_day: int, blockers: Dictionary = {}, passed_out: Array = []) -> bool:
+		abs_day: int, blockers: Dictionary = {}, passed_out: Array = [], pace_divisor := 1,
+		substep_index := 0, daily_budget := -1, step_budget := -1, travelled_out: Array = []) -> bool:
 	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code, state).is_empty():
 		return false
 	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
-	var full := day_march_at(repo, state, code, metres_to_pack(repo, here), abs_day,
-		int(entry.get("carry_days", -1)))
+	var divisor := maxi(pace_divisor, 1)
+	var full := 0
+	if step_budget >= 0:
+		full = step_budget
+	elif daily_budget >= 0:
+		@warning_ignore("integer_division") # split the day's route budget over fixed substeps
+		full = daily_budget / divisor
+		if substep_index == divisor - 1:
+			full += daily_budget % divisor
+	else:
+		var daily_pace := day_march_at(repo, state, code, metres_to_pack(repo, here), abs_day,
+			int(entry.get("carry_days", -1)))
+		if daily_pace <= 0:
+			return false
+		@warning_ignore("integer_division") # legacy one-call day movement, or direct substep callers
+		full = daily_pace / divisor
+		if substep_index < daily_pace % divisor:
+			full += 1
 	if full <= 0:
 		return false
 	# along its route when it has one (spec 2026-10-07-march-waypoints), else
@@ -1481,7 +1650,8 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		while true:
 			var left_p := MarchRoute.length_from(here, path)
 			var days_p := int(ceil(left_p / float(full)))
-			var walk_p := left_p if days_p <= 1 else float(mini(full, int(ceil(left_p / float(maxi(days_p, 1))))))
+			var walk_p: int = mini(full, int(ceil(left_p / float(maxi(days_p, 1))))) \
+				if daily_budget < 0 else mini(left_p, full)
 			var verdict := _clearance(repo, state, code, entry, here, path, walk_p, blockers, seed_names)
 			var kind := String(verdict["kind"])
 			if kind == "free":
@@ -1497,6 +1667,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 			path = verdict["path"]
 			seed_names.append_array(verdict["members"])
 			detoured = true
+			entry["day_detoured"] = true
 			passes += 1
 			if passes >= 4:
 				wait_m = 0   # the way round meets one unit after another: it waits
@@ -1505,9 +1676,11 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		# a column that waits two days running for a road that does not clear
 		# stops where it stands (R-C): of two waiting on each other, the later
 		# code; the crown is told (arrival_headline), the AI simply re-plans
-		entry["waited"] = int(entry.get("waited", 0)) + 1
+		if int(entry.get("waited_day", -1)) != abs_day:
+			entry["waited"] = int(entry.get("waited", 0)) + 1
+			entry["waited_day"] = abs_day
 		entry["wait_on"] = waiting_on
-		if int(entry["waited"]) >= 2 and _gives_way(state, code, waiting_on):
+		if int(entry.get("waited", 0)) >= 2 and _gives_way(state, code, waiting_on):
 			_stop_blocked(entry, here, waiting_on)
 			return true
 	else:
@@ -1515,20 +1688,27 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		entry.erase("wait_on")
 	var left := MarchRoute.length_from(here, path)
 	var days := int(ceil(left / float(full)))
-	var step := mini(full, int(ceil(left / float(maxi(days, 1)))))
+	var step: int = mini(full, int(ceil(left / float(maxi(days, 1))))) \
+		if daily_budget < 0 else mini(full, left)
 	if wait_m >= 0:
 		step = mini(step, wait_m)
 		days = maxi(days, 2)    # waiting behind a unit never arrives
-	if days <= 1:
+	var walked := MarchRoute.walk(here, path, step)
+	var at: Vector2i = walked["at"]
+	var after_walk := MarchRoute.length_from(at, walked["path"])
+	travelled_out.append(maxi(0, int(ceil(left - after_walk))))
+	var final_rounding_arrival := daily_budget >= 0 and substep_index == divisor - 1 \
+		and bool(entry.get("finish_today", false)) and not bool(entry.get("day_detoured", false)) \
+		and String(entry.get("halted_by", "")).is_empty() and after_walk <= float(divisor)
+	if wait_m < 0 and (left <= full or after_walk <= 1.0 or final_rounding_arrival):
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
 		entry["order"] = ORDER_GARRISON          # arrived: it holds the ground it was sent to
 		_clear_route(entry)
 		passed_out.append_array(path)
 		return true
-	var walked := MarchRoute.walk(here, path, step)
-	entry["x_m"] = (walked["at"] as Vector2i).x
-	entry["y_m"] = (walked["at"] as Vector2i).y
+	entry["x_m"] = at.x
+	entry["y_m"] = at.y
 	passed_out.append_array(walked["passed"])
 	if entry.has("route_m") or detoured:
 		# new arrays, never the old ones cut: a preview walks a shallow copy

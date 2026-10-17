@@ -328,6 +328,38 @@ func test_the_shown_days_are_day_ends_through_the_tick_engine() -> void:
 	assert_ne(ArmySystem.position_of(repo, s, reg), home, "it marches from the next day")
 
 
+func test_a_redirect_delivered_on_a_march_day_keeps_the_old_walk_for_today() -> void:
+	var s := SuiteData.campaign(repo, 7)
+	var engine := TickEngine.new(repo)
+	engine.advance(s)
+	repo.balance["army_clearance_on"] = 0.0
+	var code := _marcher()
+	var reg := ArmySystem.regiment(repo, code)
+	var home := ArmySystem.position_of(repo, s, reg)
+	var old_dest := home + Vector2(500.0, 0.0)
+	ArmySystem.set_march(repo, s, code, old_dest)
+	var control := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	var at := ArmySystem.pack_to_metres(repo, home)
+	var new_dest := at + Vector2i(0, 500000)
+	repo.balance["courier_base_km_per_day"] = 100000.0
+	var courier := _courier(s, s.next_courier_id + 100, code, [[at.x, at.y, "road"]], {"action_code": "ARMY_MARCH",
+		"dest_x_m": new_dest.x, "dest_y_m": new_dest.y})
+	courier["x_m"] = at.x - 10000
+	courier["y_m"] = at.y
+	s.couriers = [courier]
+	var report := engine.advance(s)
+	var control_engine := TickEngine.new(repo)
+	control_engine.advance(control)
+	assert_eq(report.status, "complete")
+	assert_true(s.couriers.is_empty(), "the one-day courier has delivered")
+	var entry: Dictionary = s.regiments[code]
+	assert_eq(Vector2i(int(entry["x_m"]), int(entry["y_m"])),
+		Vector2i(int(control.regiments[code]["x_m"]), int(control.regiments[code]["y_m"])),
+		"today uses the route saved at phase start")
+	assert_eq(Vector2i(int(entry["dest_x_m"]), int(entry["dest_y_m"])), new_dest,
+		"the courier's redirected order is in force for tomorrow")
+
+
 ## Owner 2026-10-02 (显示一个总的到达日): ONE arrival figure — the courier's
 ## ride, then the march at today's pace — wherever days are shown.
 func test_the_arrival_day_is_the_ride_and_then_the_march() -> void:
