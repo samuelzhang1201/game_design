@@ -280,7 +280,7 @@ static func capture(repo: DataRepository, state: GameState, host_code: String, e
 	# the assault under way ends with the town
 	for bt: Dictionary in state.battles.duplicate():
 		if String(bt["town"]) == town and _holds_hosts(state, bt, hosts):
-			BattleSystem.call_off(state, int(bt["id"]))
+			BattleSystem.call_off(state, int(bt["id"]), repo)
 	var garrison := EnemyAi.garrison_of(repo, state, town)
 	var house := _house_of(repo, _kingdom_of(repo, state, host_code))
 	var occupied: Dictionary = {}

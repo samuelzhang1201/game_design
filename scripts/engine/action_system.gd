@@ -34,6 +34,10 @@ func gold_cost(row: Dictionary) -> float:
 func validate(req: ActionRequest, state: GameState) -> String:
 	if not data.actions.has(req.action_code):
 		return "Unknown action: " + req.action_code
+	if req.action_code == "BATTLE_ORDER":
+		var previous := _battle_replay(req, state)
+		if not previous.is_empty():
+			return String(previous.get("error", ""))
 	if req.action_code == "ARMY_RECRUIT":
 		if req.target != "":
 			return "Recruitment has no separate target character."
@@ -41,12 +45,17 @@ func validate(req: ActionRequest, state: GameState) -> String:
 		if not previous.is_empty():
 			return String(previous.get("error", ""))
 	var row: Dictionary = data.actions[req.action_code]
+	var regiment := String(req.params.get("regiment", ""))
+	if bool(state.regiments.get(regiment, {}).get("captured", false)):
+		return "This regiment has surrendered and is no longer yours to command."
 	if state.cooldowns.get(req.action_code, 0) > state.tick:
 		return "%s is on cooldown until tick %d" % [req.action_code, state.cooldowns[req.action_code]]
 	# The cost row's gold counts too (RECRUIT_COURTIER's retainer, the dowry...),
 	# so an order never leaves the chest below zero.
 	var needs := gold_cost(row) + OrderCosts.gold_of(data, req.action_code)
-	if state.metrics["treasury"] < needs:
+	if req.action_code == "BATTLE_ORDER" and req.params.get("kind", "") == "surrender":
+		needs = 0
+	if BattleOrders.available_gold(state) < needs:
 		return "Cannot afford %s (needs %d gold)" % [req.action_code, int(needs)]
 	# A pool the cost row draws on cannot be spent below empty (the levy's
 	# baggage train, spec §5): EventEffects adds the row straight into
@@ -71,6 +80,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			if req.target != "":
 				return "Recruitment has no separate target character."
 			var offer := RecruitmentSystem.quote(data, state, req.params)
+			if BattleOrders.available_gold(state) < int(offer.get("gold", 0)):
+				return "The recruitment price would spend reserved battlefield rewards."
 			return String(offer.get("error", ""))
 		"BUILD_ECONOMIC":
 			if not req.params.get("project", "") in ["granary", "road"]:
@@ -82,6 +93,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			return _validate_manor(req, state, needs)
 		"ARMY_MARCH", "ARMY_GARRISON", "ARMY_SEAT":
 			return _validate_army(req, state)
+		"BATTLE_ORDER":
+			return _validate_battle_order(req, state)
 		"BATTLE_FORMATION":
 			return _validate_formation(req, state)
 		"ARMY_STANCE":
@@ -150,7 +163,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 				return "No market of the realm is market %s" % MarketSystem.market_key(req.params["market"])
 			if req.action_code == "GOODS_BUY":
 				var price := goods_trade_gold(req, state)
-				if state.metrics["treasury"] < price + needs:
+				if BattleOrders.available_gold(state) < price + needs:
 					# A market's price is its own basket, not the factor's flat
 					# rate (final fix wave, Minor9): the refusal must not name
 					# a cut the market never takes.
@@ -169,7 +182,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 				return "That is off the map"
 			if data.bal("spy_refuse_controlled") > 0.0 and SpySystem.is_controlled(data, state, to):
 				return "The crown's own lands need no spy"
-			if float(state.metrics["treasury"]) < needs + float(CourierSystem.fee_gold(data, CourierSystem.SPY)):
+			if BattleOrders.available_gold(state) < needs + float(CourierSystem.fee_gold(data, CourierSystem.SPY)):
 				return "The chancery cannot pay a spy to ride"
 			# A spy out past the fuse is lost with his fee (final review M15):
 			# refuse the ride he could never finish.
@@ -248,7 +261,7 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 	# order could still drive it negative — MANOR_BUY's own pattern, gold_of
 	# summed with the extra spend, is the fix), so an order the chest cannot
 	# cover in full is refused, not sent into the red.
-	if check_purse and CourierSystem.carries_orders(reg) and float(state.metrics["treasury"]) \
+	if check_purse and CourierSystem.carries_orders(reg) and BattleOrders.available_gold(state) \
 			< OrderCosts.gold_of(data, req.action_code) + float(_fee_for(state, code)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	if req.action_code == "ARMY_SEAT":
@@ -298,6 +311,41 @@ func _place_refusal(reg: Dictionary, at: Vector2, off_map: String, into_sea: Str
 		return into_sea % String(reg["label"])
 	return ""
 
+func _battle_warrant(req: ActionRequest, state: GameState) -> Dictionary:
+	var battle := BattleSystem.battle_by_id(state, int(req.params.get("battle_id", -1)))
+	return {"id": String(req.params.get("request_id", "")), "battle_id": int(req.params.get("battle_id", -1)),
+		"side": BattleRules.side_of(battle, String(req.params.get("regiment", ""))),
+		"kind": String(req.params.get("kind", "")), "issued_day": state.absolute_day(),
+		"params": req.params.duplicate(true)}
+
+func _battle_replay(req: ActionRequest, state: GameState) -> Dictionary:
+	var id := String(req.params.get("request_id", ""))
+	if not state.battle_orders.has(id):
+		return {}
+	var record: Dictionary = state.battle_orders[id]
+	if req.target != "" or record["request"]["params"] != req.params:
+		return {"error": "This request id already names another battlefield warrant."}
+	return {"outcome": record.get("action_outcome", {}).duplicate(true)}
+
+func _validate_battle_order(req: ActionRequest, state: GameState) -> String:
+	if req.target != "":
+		return "A battlefield warrant has no separate character target."
+	var code := String(req.params.get("regiment", ""))
+	var reg := ArmySystem.regiment(data, code, state)
+	if reg.is_empty() or not state.regiments.has(code) or ArmySystem.is_foe(state, code) or ArmySystem.realm_of(data, code, state) != data.resolve_realm("player_realm"):
+		return "This army is not yours to command."
+	if not CourierSystem.carries_orders(reg):
+		return "A fleet cannot receive a field battle warrant."
+	var quote := BattleOrders.preview(data, state, _battle_warrant(req, state))
+	if quote["reason"] != "":
+		return String(quote["reason"])
+	var fee := _fee_for(state, code)
+	var reserve := int(quote["reserved_gold"])
+	var filing := OrderCosts.gold_of(data, req.action_code) if fee == 0 and reserve == 0 and req.params.get("kind", "") != "surrender" else 0.0
+	if BattleOrders.available_gold(state) < reserve + fee + filing:
+		return "The treasury cannot pay this warrant and reserve its battlefield reward."
+	return ""
+
 func _validate_formation(req: ActionRequest, state: GameState) -> String:
 	var code := String(req.params.get("regiment", ""))
 	var reg := ArmySystem.regiment(data, code, state)
@@ -310,7 +358,7 @@ func _validate_formation(req: ActionRequest, state: GameState) -> String:
 	var why := BattleFormation.refusal(data, state, id, side, String(req.params.get("formation", "")))
 	if why != "":
 		return why
-	if float(state.metrics.get("treasury", 0)) < OrderCosts.gold_of(data, req.action_code) + _fee_for(state, code):
+	if BattleOrders.available_gold(state) < OrderCosts.gold_of(data, req.action_code) + _fee_for(state, code):
 		return "The chancery cannot pay for this formation order."
 	return ""
 
@@ -332,7 +380,7 @@ func _validate_stance(req: ActionRequest, state: GameState) -> String:
 		return "No such stance: " + stance
 	if req.params.has("facing") and (int(req.params["facing"]) < 0 or int(req.params["facing"]) > 359):
 		return "No such facing: %s" % str(req.params["facing"])   # a whole degree 0..359 (WarFront)
-	if float(state.metrics["treasury"]) < OrderCosts.gold_of(data, req.action_code) \
+	if BattleOrders.available_gold(state) < OrderCosts.gold_of(data, req.action_code) \
 			+ float(_fee_for(state, code)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	return ""
@@ -364,7 +412,7 @@ func _validate_supply(req: ActionRequest, state: GameState) -> String:
 		return "%s is a fleet: it carries no supply train" % String(reg["label"])
 	var local_ok := (req.action_code == "SUPPLY_CARRY_SET" or (req.action_code == "SUPPLY_POINT_SET"
 		and bool(req.params.get("with_column", false)))) and KingSystem.can_command(data, state, code)
-	if float(state.metrics["treasury"]) < OrderCosts.gold_of(data, req.action_code) \
+	if BattleOrders.available_gold(state) < OrderCosts.gold_of(data, req.action_code) \
 			+ float(_fee_for(state, code, local_ok)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	match req.action_code:
@@ -396,7 +444,14 @@ func _validate_supply(req: ActionRequest, state: GameState) -> String:
 func _validate_law(req: ActionRequest, state: GameState) -> String:
 	# str(), not String(): a model may send a number or null for either
 	var law := str(req.params.get("law", ""))
-	return LawSystem.refusal(data, state, law, LawSystem.canonical(data, law, req.params.get("value", "")))
+	var value := LawSystem.canonical(data, law, req.params.get("value", ""))
+	var why := LawSystem.refusal(data, state, law, value)
+	if why != "":
+		return why
+	var quote := LawSystem.preview(data, state, law, value)
+	if BattleOrders.available_gold(state) < int(quote.get("gold", 0)) + int(quote.get("fee", 0)):
+		return "The treasury cannot spend the reserved battlefield rewards on this decree."
+	return ""
 
 ## The manor an order names: params.manor (a code, a label in any case, or
 ## a cell id) or params.cell. -1 for none.
@@ -455,7 +510,7 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 		var price := MapManors.price_of(data, state, cell)
 		var asks := "House %s asks %d gold" % [MapManors.owner_of(data, state, cell), int(price)]
 		if String(how["kind"]) == "foreign":
-			if state.metrics["treasury"] < price + needs:
+			if BattleOrders.available_gold(state) < price + needs:
 				return "The crown's treasury cannot afford %s (%s)" % [label, asks]
 		elif float(state.metrics.get("lord_gold", 0.0)) < price:
 			return "Your own purse cannot afford %s (%s)" % [label, asks]
@@ -553,6 +608,12 @@ func _validate_manor(req: ActionRequest, state: GameState, needs: float) -> Stri
 	return ""
 
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
+	if req.action_code == "BATTLE_ORDER":
+		var replay := _battle_replay(req, state)
+		if replay.has("error"):
+			return {"action_code": req.action_code, "ok": false, "error": replay["error"]}
+		if not replay.is_empty():
+			return replay["outcome"]
 	# A paid retry must not replay opinion drift, promises, history or fallback fees.
 	if req.action_code == "ARMY_RECRUIT" and req.target == "":
 		var previous := RecruitmentSystem.replay(state, req.params)
@@ -563,7 +624,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			return (state.recruitment_projects[id]["action_outcome"] as Dictionary).duplicate(true) \
 				if state.recruitment_projects[id].has("action_outcome") else previous
 	var err := validate(req, state)
-	if req.action_code == "ARMY_RECRUIT" and err != "":
+	if req.action_code in ["ARMY_RECRUIT", "BATTLE_ORDER"] and err != "":
 		return {"action_code": req.action_code, "ok": false, "error": err}
 	assert(err == "", "execute called with invalid request: " + err)
 	var row: Dictionary = data.actions[req.action_code]
@@ -775,6 +836,15 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				effects.append({"metric": "army", "delta": 0.0,
 					"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
 						else "%s stands to its post") % String(reg["label"])})
+		"BATTLE_ORDER":
+			var warrant := _battle_warrant(req, state)
+			var issued := BattleOrders.issue(data, state, warrant)
+			assert(issued["status"] == "pending")
+			var c := _send_courier(state, effects, String(req.params["regiment"]),
+				{"action_code": "BATTLE_ORDER", "battle_order_id": String(warrant["id"])},
+				"with a battlefield warrant to " + String(req.params["kind"]))
+			if bool(c.get("local_delivered", false)):
+				effects.append_array(state.battle_orders[String(warrant["id"])].get("result", {}).get("effects", []))
 		"BATTLE_FORMATION":
 			var code := String(req.params["regiment"])
 			var formation := String(req.params["formation"])
@@ -934,7 +1004,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	# every time, the fallback row only when nothing above cost anything.
 	if OrderCosts.always(data, req.action_code):
 		effects.append_array(OrderCosts.charge(data, state, req.action_code, req.target))
-	else:
+	elif not (req.action_code == "BATTLE_ORDER" and req.params.get("kind", "") == "surrender"):
 		OrderCosts.ensure(data, state, effects, drift, before, req.action_code, req.target)
 	if req.action_code == "LEDGER_AUDIT":
 		_file_audit(state, String(req.params["flow"]))
@@ -942,7 +1012,11 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),
 		"drift": drift}
+	if req.action_code == "BATTLE_ORDER":
+		outcome = GameState._whole(outcome)
 	state.recent_outcomes.append(outcome)
+	if req.action_code == "BATTLE_ORDER":
+		state.battle_orders[String(req.params["request_id"])]["action_outcome"] = outcome.duplicate(true)
 	if req.action_code == "ARMY_RECRUIT":
 		state.recruitment_projects[String(req.params["request_id"])]["action_outcome"] = outcome.duplicate(true)
 	return outcome

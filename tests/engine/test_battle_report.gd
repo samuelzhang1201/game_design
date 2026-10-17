@@ -66,6 +66,7 @@ func _foe(s: GameState, code: String, at: Vector2i) -> void:
 	st["y_m"] = at.y
 	st["dest_x_m"] = at.x
 	st["dest_y_m"] = at.y
+	st["battle_plan"] = "attack"
 	s.foes[code] = st
 
 
@@ -230,18 +231,21 @@ func test_every_morale_change_carries_a_reason() -> void:
 
 
 func test_a_regiment_that_leaves_is_named_with_why() -> void:
-	_one_tier(100, 100, 500, -10, -10, "attacker")
+	_one_tier(1000, 100, 500, -10, -10)
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
 	Play.day(engine, s, true)
 	var ends: Array = engine.day_battles.filter(func(e: Dictionary) -> bool: return String(e["kind"]) == "end")
-	assert_eq(ends.size(), 1, "a rout ends it")
+	assert_eq(ends.size(), 1, "a side with no fit personnel ends the battle")
 	var text := _text_of(_battle_letters(s)[0])
 	var round_ev: Dictionary = _round_events(engine.day_battles)[0]
 	assert_false((round_ev["left"] as Array).is_empty())
 	for l: Dictionary in round_ev["left"]:
 		assert_string_contains(text, String(ArmySystem.regiment(repo, String(l["code"]))["label"]))
+		assert_eq(String(l["why"]), "broken")
+		assert_string_contains(text, MissiveWriter.battle_words(repo, "battle_left_broken",
+			{"unit": String(ArmySystem.regiment(repo, String(l["code"]))["label"])}, s.absolute_day()))
 	assert_false(text.contains("[missing template"), text)
 
 
@@ -319,15 +323,30 @@ func test_report_text_uses_templates_and_no_realm_names() -> void:
 	assert_string_contains(String(((letter["facts"] as Array)[0] as Dictionary)["text"]), p_label)
 
 
+## Finish the route by placing the real routed unit beyond contact with every opponent.
+func _separate_routed_side(s: GameState, engine: TickEngine, meeting: Array, rout: String) -> void:
+	assert_eq(s.battles.size(), 1, "rout starts withdrawal; the battle persists while in contact")
+	var code := String(meeting[2] if rout == "attacker" else meeting[1])
+	var entry := ArmySystem.state_of(repo, s, code)
+	var reach := int(repo.bal("battle_contact_km")) * 1000
+	entry["x_m"] = int(s.battles[0]["place_x_m"]) + reach * 3
+	entry["y_m"] = int(s.battles[0]["place_y_m"])
+	entry["dest_x_m"] = entry["x_m"]
+	entry["dest_y_m"] = entry["y_m"]
+	entry["order"] = ArmySystem.ORDER_STANDBY
+	Play.day(engine, s, true)
+
+
 func _ending_text(rout: String) -> Array:
 	_one_tier(100, 100, 500, -10, -10, rout)
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
 	Play.day(engine, s, true)
+	_separate_routed_side(s, engine, m, rout)
 	var end: Dictionary = engine.day_battles.filter(func(e: Dictionary) -> bool: return String(e["kind"]) == "end")[0]
 	var place := BattleSystem.place_label(repo, s, end)
-	return [_text_of(_battle_letters(s)[0]), place, int(end["rounds"])]
+	return [_text_of(_battle_letters(s).back()), place, int(end["rounds"])]
 
 
 func test_the_ending_is_told_from_the_players_side() -> void:

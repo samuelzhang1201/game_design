@@ -67,31 +67,12 @@ func test_largest_remainder() -> void:
 	assert_eq(BattleSystem.apportion([4, 6], 0), [0, 0])
 
 
-func test_roll_is_deterministic_and_order_free() -> void:
-	var a := ["b_reg", "a_reg", "c_reg"]
-	var b := ["y_reg", "x_reg"]
-	var r := BattleSystem.roll(7, a, b, 100, 1)
-	assert_between(r, 0, 999)
-	assert_eq(BattleSystem.roll(7, a, b, 100, 1), r)
-	assert_eq(BattleSystem.roll(7, ["c_reg", "b_reg", "a_reg"], ["x_reg", "y_reg"], 100, 1), r,
-		"the order the codes come in does not matter")
-	assert_eq(a, ["b_reg", "a_reg", "c_reg"], "the caller's array is left as it was")
-	var seen := {}
-	for day in range(100, 112):
-		seen[BattleSystem.roll(7, a, b, day, 1)] = true
-	assert_gt(seen.size(), 1, "another day, another roll")
-	var rounds := {}
-	for n in range(1, 8):
-		rounds[BattleSystem.roll(7, a, b, 100, n)] = true
-	assert_gt(rounds.size(), 1, "another round, another roll")
-
-
-func test_roll_leaves_game_rng_alone() -> void:
+func test_strength_preview_leaves_saved_rng_unchanged() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var before := s.rng.to_dict().duplicate(true)
-	for day in range(1, 10):
-		BattleSystem.roll(7, ["a"], ["b"], day, 1)
-	assert_eq(s.rng.to_dict(), before, "the dice are a hash, never a draw")
+	var steady := func(_c: String) -> String: return "steady"
+	BattleSystem.side_power(repo, s, _land_codes().slice(0, 2), steady, true)
+	assert_eq(s.rng.to_dict(), before, "only an engaged combat round draws randomness")
 
 
 func test_side_power_sums_and_stance_scales_the_defender_only() -> void:
@@ -99,11 +80,15 @@ func test_side_power_sums_and_stance_scales_the_defender_only() -> void:
 	var codes := _land_codes().slice(0, 2)
 	var steady := func(_c: String) -> String: return "steady"
 	var hold := func(_c: String) -> String: return "hold"
+	repo.army_terrain.clear()
+	repo.army_town_defence.clear()
+	for c: String in codes:
+		s.regiments[c]["camp_state"] = {}
 	var sum_def := 0
 	var sum_att := 0
 	for c: String in codes:
-		sum_def += ArmySystem.power(repo, s, c, "defend")
-		sum_att += ArmySystem.power(repo, s, c, "attack")
+		sum_def += int(BattleStrength.unit(repo, s, c, false)["power"])
+		sum_att += int(BattleStrength.unit(repo, s, c, true)["power"])
 	assert_gt(sum_def, 0)
 	assert_eq(BattleSystem.side_power(repo, s, codes, steady, false), sum_def)
 	assert_eq(BattleSystem.side_power(repo, s, codes, steady, true), sum_att)
@@ -111,7 +96,7 @@ func test_side_power_sums_and_stance_scales_the_defender_only() -> void:
 	var held := 0
 	for c: String in codes:
 		@warning_ignore("integer_division")
-		held += ArmySystem.power(repo, s, c, "defend") * int(repo.battle_stances["hold"]["defence_permille"]) / 1000
+		held += int(BattleStrength.unit(repo, s, c, false)["power"]) * int(repo.battle_stances["hold"]["defence_permille"]) / 1000
 	assert_eq(BattleSystem.side_power(repo, s, codes, hold, false), held)
 	assert_eq(BattleSystem.side_power(repo, s, codes, hold, true), sum_att, "the attacker's power ignores the stance")
 
@@ -243,12 +228,14 @@ func test_side_power_scales_by_height_against_the_mean_of_the_enemy() -> void:
 		return
 	var a: String = pair[0]
 	var b: String = pair[1]
+	repo.army_terrain.clear()
+	repo.army_town_defence.clear()
 	var factor := ArmySystem.height_factor(repo, int(pair[2]))
 	assert_ne(factor, 1000)
 	@warning_ignore("integer_division")
-	var want := ArmySystem.power(repo, s, a, "attack") * factor / 1000
+	var want := int(BattleStrength.unit(repo, s, a, true)["power"]) * factor / 1000
 	assert_eq(BattleSystem.side_power(repo, s, [a], steady, true, [b]), want)
-	assert_eq(BattleSystem.side_power(repo, s, [a], steady, true), ArmySystem.power(repo, s, a, "attack"),
+	assert_eq(BattleSystem.side_power(repo, s, [a], steady, true), int(BattleStrength.unit(repo, s, a, true)["power"]),
 		"with no enemy named there is no height factor")
 
 

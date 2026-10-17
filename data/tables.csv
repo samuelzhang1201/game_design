@@ -116,3 +116,4 @@ screens/ledger,ledger_lenses
 screens/ledger,ledger_palette
 battle,parley_clauses
 battle,formations
+battle,orders

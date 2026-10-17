@@ -52,3 +52,4 @@ LAW_SET,law=guild_charter&value=granted,-10,0,0,0,-10,charters cede royal author
 LAW_SET,law=arsenal_decree&value=bombards,20,20,0,0,10,
 LAW_SET,law=tolerance&value=edict,0,0,-60,0,0,the church is angered
 BATTLE_FORMATION,,0,5,0,0,0,the army is told how to deploy
+BATTLE_ORDER,,0,5,0,0,0,the army receives a lawful battlefield warrant

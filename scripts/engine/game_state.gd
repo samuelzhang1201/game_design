@@ -351,6 +351,8 @@ var ai_hosts: Dictionary = {}
 ## The battles being fought (§4, BattleSystem): an Array of {id, att, def
 ## (regiment codes), start_day, rounds, place_x_m, place_y_m, town}.
 var battles: Array = []
+## Stable paid warrants and terminal results, retained after battlefield removal.
+var battle_orders: Dictionary = {}
 ## The towns lost to a siege (spec 2026-10-07-enemy-ai-and-battle §6,
 ## DefeatSystem): an Array of {town, host, day (absolute)}, one per loss; the
 ## key that makes a loss cost the crown once.
@@ -500,6 +502,7 @@ func to_dict() -> Dictionary:
 		"foes": _encode_values(foes.duplicate(true)),
 		"ai_hosts": _encode_values(ai_hosts.duplicate(true)),
 		"battles": _encode_values(battles.duplicate(true)),
+		"battle_orders": battle_orders.duplicate(true),
 		"day_resolution": _encode_values(day_resolution.duplicate(true)),
 		"military_rosters": military_rosters.duplicate(true),
 		"military_cohorts": military_cohorts.duplicate(true),
@@ -619,6 +622,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.foes = _decode_values(d.get("foes", {}))
 	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
 	s.battles = _decode_values(d.get("battles", []))
+	s.battle_orders = _whole(d.get("battle_orders", {}))
 	# Saves from before defeat carry no losses.
 	s.town_losses = _decode_values(d.get("town_losses", []))
 	# Saves from before the crown's sight carry no ghosts.

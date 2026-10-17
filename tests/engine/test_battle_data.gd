@@ -49,7 +49,7 @@ func test_doctrines_cover_every_host_role() -> void:
 			assert_true(row.has(k), "%s has %s" % [role, k])
 
 func test_balance_keys_present() -> void:
-	for k: String in ["battle_contact_km", "battle_max_rounds", "battle_max_units",
+	for k: String in ["battle_contact_km", "battle_break_morale", "battle_max_units",
 			"battle_variance_permille", "battle_spoils_permille", "battle_defeat_treasury_permille",
 			"battle_defeat_morale", "battle_defeat_opinion", "ai_think_days", "ai_sight_km", "ai_target_reach_km",
 			"ai_target_overlap_permille", "ai_retreat_supply_days", "ai_supply_margin_days", "siege_rate", "siege_assault_days",

@@ -549,6 +549,7 @@ static func rumoured_host(repo: DataRepository, state: GameState) -> String:
 ## defending, each against the other's height) at least the doctrine's
 ## engage_odds_permille. Nothing seen is a fight it takes; a host with no live
 ## column takes none.
+## Contact calls this gate against the host's visible opposition.
 static func engages(repo: DataRepository, state: GameState, host_code: String, seen_player_codes: Array) -> bool:
 	var live := live_regiments(repo, state, host_code)
 	if live.is_empty():

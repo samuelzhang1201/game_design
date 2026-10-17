@@ -729,10 +729,8 @@ func test_a_host_reaching_a_town_another_besieges_rethinks() -> void:
 	assert_ne(String(mind["target_id"]), town, "it chooses again, and not the besieged town")
 
 
-## N2: a host that finds its town besieged by another halts and stands aside
-## that day: none of its columns, though in reach of the garrison, starts a
-## battle of its own.
-func test_a_rethinking_host_halts_and_fights_nothing_that_day() -> void:
+## A dropped target halts the advance; physical proximity still permits contact.
+func test_a_rethinking_host_halts_but_remains_contactable_until_separated() -> void:
 	var host := _host("main")
 	var other := _host("raider")
 	var s := _field(_appear(host))
@@ -753,10 +751,16 @@ func test_a_rethinking_host_halts_and_fights_nothing_that_day() -> void:
 		var e: Dictionary = s.foes[c]
 		assert_ne(String(e["order"]), ArmySystem.ORDER_MARCH, c + " halts")
 		assert_eq(Vector2i(int(e["dest_x_m"]), int(e["dest_y_m"])), Vector2i(int(e["x_m"]), int(e["y_m"])))
+	var positions := {}
+	for c: String in EnemyAi.regiments_of(s, host):
+		positions[c] = Vector2i(int(s.foes[c]["x_m"]), int(s.foes[c]["y_m"]))
+		assert_true(BattleSystem._can_fight(repo, s, c), "dropping a target grants no contact immunity")
 	var fought := BattleSystem.settle_day(repo, s)
-	assert_false(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
-		"no column of it fights the besieged town alone")
-	assert_eq(s.battles, [])
+	assert_true(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
+		"the halted columns remain exposed within physical contact range")
+	for c: String in positions:
+		assert_eq(Vector2i(int(s.foes[c]["x_m"]), int(s.foes[c]["y_m"])), positions[c],
+			"a battle resolution cannot teleport a rethinking column away")
 
 
 ## N1: the reserve follows the main host to its siege and SITS DOWN to it (the

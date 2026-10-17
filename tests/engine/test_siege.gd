@@ -274,17 +274,20 @@ func test_an_assault_with_no_battle_is_tried_again_and_never_sticks() -> void:
 	_stocked(s, town)
 	SiegeSystem.settle_day(repo, s, [])
 	assert_eq(int(s.ai_hosts[main]["assault"]), 1, "armed")
-	# a draw's pause: the garrison makes no contact for two days
-	s.regiments[g]["disengaged_until"] = s.absolute_day() + 2
-	assert_eq(BattleSystem.settle_day(repo, s), [], "no battle while it draws breath")
+	# An owed assault waits for physical contact, without an immunity timer.
+	for code: String in EnemyAi.regiments_of(s, main):
+		_place(s, code, _town_m(town) + Vector2i(0, 1000000), ArmySystem.ORDER_GARRISON)
+	assert_eq(BattleSystem.settle_day(repo, s), [], "no battle while attackers remain outside contact")
 	SiegeSystem.settle_day(repo, s, [])
 	assert_eq(int(s.ai_hosts[main]["assault_due"]), 1, "the assault is still owed")
 	for n in 2:
 		s.day += 1
-		assert_eq(BattleSystem.settle_day(repo, s), [], "day %d of the pause: still none" % (n + 1))
+		assert_eq(BattleSystem.settle_day(repo, s), [], "day %d outside contact: still none" % (n + 1))
 	s.day += 1
+	for code: String in EnemyAi.regiments_of(s, main):
+		_place(s, code, _town_m(town), ArmySystem.ORDER_GARRISON)
 	var fight := BattleSystem.settle_day(repo, s)
-	assert_eq(_of(fight, "start").size(), 1, "tried again once the pause is over")
+	assert_eq(_of(fight, "start").size(), 1, "tried again once attackers reach the garrison")
 	# the siege ends: no flag outlives it
 	EnemyAi.set_mode(s, main, "RETREAT", "test: gone home", [])
 	SiegeSystem.settle_day(repo, s, fight)
@@ -321,6 +324,7 @@ func test_checked_assault_lowers_progress() -> void:
 		assert_eq(int(rep[0]["lost"]), fail)
 	# a check never takes the progress below 0
 	s.ai_hosts[main]["siege_progress"] = 10
+	s.day += 1
 	var r2 := _storm(s, main, g)
 	gain = SiegeSystem.step(SiegeSystem.attack_power(repo, s, town), SiegeSystem.defend_power(repo, s, town), 100)
 	assert_eq(_of(r2[0], "round").size(), 1)
@@ -708,13 +712,15 @@ func test_capture_mid_assault_ends_the_assault() -> void:
 	var fight := BattleSystem.settle_day(repo, s)
 	assert_eq(_of(fight, "round").size(), 1)
 	assert_false(BattleSystem.battle_of(s, g).is_empty(), "the assault goes on")
+	var assault_id := int(BattleSystem.battle_of(s, g)["id"])
 	s.ai_hosts[main]["siege_progress"] = 1000
 	SiegeSystem.settle_day(repo, s, fight)
 	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD")
 	for b: Dictionary in s.battles:
 		assert_ne(String(b["town"]), town, "no assault goes on in a fallen town")
 	assert_true(BattleSystem.battle_of(s, g).is_empty(), "the garrison is out of it")
-	assert_eq(_of(BattleSystem.settle_day(repo, s), "round").size(), 0, "no further round")
+	assert_true(_of(BattleSystem.settle_day(repo, s), "round").filter(func(event: Dictionary) -> bool:
+		return int(event["battle_id"]) == assault_id).is_empty(), "the ended assault never resolves another round")
 
 
 ## --- the besieger lifts the siege (§5.1 relief, §3.4) ---------------------------
@@ -837,34 +843,30 @@ func _fighting(events: Array) -> Array:
 	return events.filter(func(e: Dictionary) -> bool: return String(e.get("kind", "")) in ["start", "round"])
 
 
-## A host turned home before a garrisoned town, its columns standing in the
-## town's reach and free to fight, starts no battle there, day after day.
-func test_a_homeward_host_starts_no_battle_with_the_garrison() -> void:
+## Homeward intent leaves columns contactable until they physically separate.
+func test_a_homeward_host_remains_exposed_at_the_garrison() -> void:
 	var main := _host("main")
-	var s := SuiteData.campaign(repo, 7)
-	s.tick = 1
-	s.day = 20
-	var g := String(_town_and_garrison(s)[1])
-	var town := _besiege(s, main, [g])
 	for mode: String in ["RETREAT", "WITHDRAW"]:
+		var s := SuiteData.campaign(repo, 7)
+		s.tick = 1
+		s.day = 20
+		var g := String(_town_and_garrison(s)[1])
+		_besiege(s, main, [g])
 		EnemyAi.set_mode(s, main, mode, "test", [])
-		for n in 3:
-			s.day = 20 + n
-			var fight := BattleSystem.settle_day(repo, s)
-			assert_eq(_fighting(fight), [], "%s day %d: no battle at %s" % [mode, n, town])
-			assert_eq(s.battles, [], "none kept")
-		# a column of it that is no garrison's business: in the open, the same
-		var mine := String(_mine()[0]) if String(_mine()[0]) != g else String(_mine()[1])
-		_place(s, mine, _town_m(town) + Vector2i(500, 0), ArmySystem.ORDER_STANDBY)
-		assert_eq(_fighting(BattleSystem.settle_day(repo, s)), [], mode + ": nor in the open")
-		_place(s, mine, _town_m(TownStores.depot(repo, s)), ArmySystem.ORDER_STANDBY)
+		var fight := BattleSystem.settle_day(repo, s)
+		assert_eq(_of(fight, "start").size(), 1, mode + " does not prevent physical contact")
+		var battle := BattleSystem.battle_of(s, g)
+		assert_false(battle.is_empty(), "the withdrawing columns remain in contact")
+		if battle.is_empty():
+			continue
+		assert_eq(BattleOrders.kind(battle, "att"), "retreat")
+		for code: String in battle["att"]:
+			assert_true(BattleSystem._can_fight(repo, s, code), "a homeward survivor is still contactable")
+			assert_false(BattleSystem._separated(repo, s, code, battle["def"]), "retained until actual separation")
 
 
-## An assault under way when its host turns home is called off THAT day,
-## before its round: no more blows, the garrison's dead stay as they were,
-## the battle ends with the crown's men holding the field and every survivor
-## draws breath (battle_disengage_days); the siege is lifted.
-func test_a_running_assault_is_called_off_the_day_its_host_turns_home() -> void:
+## Lifting a siege requests withdrawal without erasing a running field contact.
+func test_a_running_assault_withdraws_without_immediate_contact_immunity() -> void:
 	_only_tier("stalemate")
 	var main := _host("main")
 	var s := SuiteData.campaign(repo, 7)
@@ -876,45 +878,34 @@ func test_a_running_assault_is_called_off_the_day_its_host_turns_home() -> void:
 	var first := _storm(s, main, g)
 	assert_eq(_of(first[0], "round").size(), 1, "the assault fought its first round")
 	assert_eq(s.battles.size(), 1, "and runs on")
+	var battle_id := int(s.battles[0]["id"])
 	var dead := People.count(s, g, "dead")
 	assert_gt(dead, 0, "the first round cost the garrison")
-	# the besiegers' food runs out: the hosts' minds turn them home
-	for c: String in EnemyAi.regiments_of(s, main):
-		s.foes[c]["supplies"] = 0
+	for code: String in EnemyAi.regiments_of(s, main):
+		s.foes[code]["supplies"] = 0
 	s.day = 21
 	var ai := EnemyAi.step_day(repo, s)
 	assert_eq(_modes(ai, main, "RETREAT").size(), 1, "hungry: home")
 	var fight := BattleSystem.settle_day(repo, s)
-	assert_eq(_of(fight, "round"), [], "no round the day it turns home")
-	var ends := _of(fight, "end")
-	assert_eq(ends.size(), 1, "the assault ends")
-	if ends.size() == 1:
-		assert_eq(String(ends[0]["why"]), "withdrawn", "the host withdrew from it")
-		assert_eq(String(ends[0]["winner"]), "def", "the garrison holds the field")
-		assert_eq(String(MissiveWriter._end_key(s, ends[0], {})), "battle_end_withdrawn",
-			"told as the enemy drawing off, not a fought win")
-		var words := MissiveWriter.battle_words(repo, "battle_end_withdrawn", {"place": "X", "rounds": 1}, 0)
-		assert_false(words.contains("[missing") or words.contains("{"), words)
-	assert_eq(s.battles, [], "no battle kept")
-	assert_eq(People.count(s, g, "dead"), dead, "the garrison's casualties stop")
-	var pause := s.absolute_day() + int(repo.bal("battle_disengage_days"))
-	assert_eq(int(s.regiments[g].get("disengaged_until", 0)), pause, "the garrison draws breath")
-	for c: String in EnemyAi.regiments_of(s, main):
-		assert_eq(BattleSystem.battle_of(s, c), {}, c + " is out of it")
+	assert_eq(_of(fight, "end").size(), 0, "homeward intent cannot end contact")
+	var battle := BattleSystem.battle_by_id(s, battle_id)
+	assert_false(battle.is_empty(), "the same battlefield remains until separation")
+	if battle.is_empty():
+		return
+	assert_eq(BattleOrders.kind(battle, "att"), "retreat")
+	for code: String in battle["att"]:
+		assert_false(BattleSystem._separated(repo, s, code, battle["def"]), "no withdrawing survivor teleports out")
 	assert_eq(_of(SiegeSystem.settle_day(repo, s, fight), "siege_lifted").size(), 1, "the siege is lifted")
-	# and the next days: its columns march home, no battle
-	for n in 3:
-		s.day = 22 + n
-		EnemyAi.step_day(repo, s)
-		ArmySystem.march_day(repo, s)
-		assert_eq(_fighting(BattleSystem.settle_day(repo, s)), [], "no battle on its way home, day %d" % n)
-	assert_eq(People.count(s, g, "dead"), dead, "still no more dead")
+	assert_eq(_of(SiegeSystem.settle_day(repo, s, []), "siege_lifted").size(), 0, "the lift is reported once")
+	assert_gte(People.count(s, g, "dead"), dead, "lifting the siege does not roll back casualties")
 
 
 ## Regression: a host BEATEN in a battle still turns RETREAT the next day,
-## pays its spoils on the day it is beaten (RaidSystem) and gives the town it
-## held back (liberation, SiegeSystem).
+## gives the town back on withdrawal, then pays spoils once after physical
+## separation ends the routed battle (RaidSystem).
 func test_a_beaten_holding_host_still_pays_spoils_and_frees_the_town() -> void:
+	# This hand-made siege stacks every column on one point; clearance has separate movement tests.
+	SuiteData.no_clearance(repo)
 	repo.balance["battle_spoils_permille"] = 500.0
 	var main := _host("main")
 	var s := SuiteData.campaign(repo, 7)
@@ -937,17 +928,43 @@ func test_a_beaten_holding_host_still_pays_spoils_and_frees_the_town() -> void:
 	s.day = 21
 	var fight := BattleSystem.settle_day(repo, s)
 	assert_gt(_of(fight, "round").size(), 0, "a battle")
+	var battle := BattleSystem.battle_of(s, mine)
+	assert_false(battle.is_empty(), "the routed host remains in physical contact")
+	if battle.is_empty():
+		return
+	var battle_id := int(battle["id"])
+	assert_eq(String(battle["routed_side"]), "att")
+	assert_eq(BattleOrders.kind(battle, "att"), "retreat")
 	var strategic := float(s.metrics["strategic"])
-	var raid := RaidSystem.settle_day(repo, s, fight)
-	assert_eq(_of(raid, "raid_spoils").size(), 1, "the beaten host's spoils, the day it is beaten")
+	assert_eq(_of(RaidSystem.settle_day(repo, s, fight), "raid_spoils").size(), 0, "spoils wait for the routed host to leave")
+	var spoils: Array = []
+	var endings: Array = []
+	var liberated: Array = []
+	for n in 12:
+		var absolute := 22 + n
+		@warning_ignore("integer_division")
+		s.tick = 1 + (absolute - 1) / Calendar.DAYS_PER_TICK
+		s.day = 1 + (absolute - 1) % Calendar.DAYS_PER_TICK
+		ArmySystem.march_day(repo, s)
+		var ai := EnemyAi.step_day(repo, s)
+		if n == 0:
+			assert_eq(_modes(ai, main, "RETREAT").size(), 1, "beaten: home")
+		fight = BattleSystem.settle_day(repo, s)
+		endings.append_array(_of(fight, "end").filter(func(event: Dictionary) -> bool: return int(event["battle_id"]) == battle_id))
+		liberated.append_array(_of(SiegeSystem.settle_day(repo, s, fight), "siege_liberated"))
+		spoils.append_array(_of(RaidSystem.settle_day(repo, s, fight), "raid_spoils"))
+		if BattleSystem.battle_by_id(s, battle_id).is_empty():
+			break
+	assert_eq(endings.size(), 1, "the original battlefield ends after actual separation")
+	if not endings.is_empty():
+		assert_eq(String(endings[0]["why"]), "rout_attacker", "the saved rout cause survives until separation")
+	assert_eq(spoils.size(), 1, "the beaten host pays spoils exactly once when it leaves combat")
 	assert_eq(float(s.metrics["strategic"]), strategic + 300.0, "600 x 500 / 1000")
-	s.day = 22
-	var ai := EnemyAi.step_day(repo, s)
-	assert_eq(_modes(ai, main, "RETREAT").size(), 1, "beaten: home")
-	var ev := SiegeSystem.settle_day(repo, s, BattleSystem.settle_day(repo, s))
-	assert_eq(_of(ev, "siege_liberated").size(), 1, "the town freed")
+	assert_eq(_of(RaidSystem.settle_day(repo, s, fight), "raid_spoils").size(), 0, "replaying the terminal battle cannot pay spoils again")
+	assert_eq(liberated.size(), 1, "the town is freed once when the holding host withdraws")
 	for c: int in before:
 		assert_eq(MapManors.owner_of(repo, s, c), before[c], "manor %d back to its house" % c)
+
 
 
 ## --- the reserve and several hosts ----------------------------------------------
@@ -1118,11 +1135,14 @@ func _invaded(engine: TickEngine, n: int, weakest: bool) -> Array:
 ## {begun (absolute day), fell (day), lifted (day), events}.
 func _siege_run(engine: TickEngine, s: GameState, days: int) -> Dictionary:
 	var main := _host("main")
-	var out := {"begun": -1, "fell": -1, "lifted": -1, "events": []}
+	var out := {"begun": -1, "fell": -1, "lifted": -1, "events": [], "homeward_reasons": []}
 	var town := String(s.ai_hosts[main]["target_id"])
 	for n in days:
 		var today := s.absolute_day()
 		_day(engine, s)
+		for event: Dictionary in engine.day_ai:
+			if event.get("type", "") == "host_mode" and event.get("host", "") == main and event.get("mode", "") in EnemyAi.HOMEWARD:
+				out["homeward_reasons"].append(String(event["why"]))
 		var own_events: Array = engine.day_siege.filter(func(e: Dictionary) -> bool: return String(e.get("town", "")) == town)
 		(out["events"] as Array).append_array(own_events)
 		for e: Dictionary in own_events:
@@ -1184,6 +1204,13 @@ func test_a_siege_on_the_day_loop_wears_down_storms_and_takes_the_town() -> void
 
 
 func test_a_strongly_held_walled_town_outlasts_the_besiegers_supplies() -> void:
+	# Isolate the food horizon; combat collapse and physical routs have separate duration fixtures.
+	for stance: Dictionary in repo.battle_stances.values():
+		stance["retreat_odds_permille"] = 0
+	for outcome: Dictionary in repo.battle_outcomes:
+		outcome["rout"] = "none"
+		for key: String in ["attacker_loss_permille", "defender_loss_permille", "attacker_morale", "defender_morale"]:
+			outcome[key] = 0
 	var engine := TickEngine.new(repo)
 	repo.balance["ai_think_days"] = 999.0
 	# the main host's town, given walls and a citadel before the campaign starts
@@ -1205,7 +1232,8 @@ func test_a_strongly_held_walled_town_outlasts_the_besiegers_supplies() -> void:
 	assert_eq(int(run["fell"]), -1, "the town does not fall")
 	assert_gt(int(run["lifted"]), 0, "the siege is lifted")
 	assert_true(String(s.ai_hosts[main]["mode"]) in ["RETREAT", "WITHDRAW"], "the host goes home")
-	assert_true(EnemyAi.should_retreat(repo, s, main).begins_with("supplies for "), "the withdrawal is caused by exhausted supplies")
+	assert_true((run["homeward_reasons"] as Array).any(func(reason: String) -> bool: return reason.begins_with("supplies for ")),
+		"the actual decision to withdraw is caused by exhausted supplies: " + str(run["homeward_reasons"]))
 	assert_true(EnemyAi.target_held(repo, s, "town", town), "the town is still the crown's")
 	assert_true(s.manor_log.filter(func(e: Dictionary) -> bool:
 		return String(e["reason"]).contains("siege of " + String(repo.burgs[town]["label"]))).is_empty(), "this siege took no manor")

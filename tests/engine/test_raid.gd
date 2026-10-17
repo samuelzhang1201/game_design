@@ -345,7 +345,15 @@ func _rout_the_raiders(s: GameState, h: String) -> Array:
 	for c: String in EnemyAi.regiments_of(s, h):
 		_place(s, c, at + Vector2i(500, 0), ArmySystem.ORDER_GARRISON)
 	s.ai_hosts[h]["mode"] = "RAID"
-	return BattleSystem.settle_day(repo, s)
+	for c: String in EnemyAi.regiments_of(s, h):
+		s.foes[c]["battle_plan"] = "attack"
+	var events := BattleSystem.settle_day(repo, s)
+	# Spoils pass only after this routed host physically yields the field.
+	for c: String in EnemyAi.regiments_of(s, h):
+		_place(s, c, at + Vector2i(100000, 0), ArmySystem.ORDER_STANDBY)
+	s.day += 1
+	events.append_array(BattleSystem.settle_day(repo, s))
+	return events
 
 
 func test_routed_raider_pays_spoils_once_on_the_day() -> void:

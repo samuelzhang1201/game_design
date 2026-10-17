@@ -66,7 +66,7 @@ static func quote(repo: DataRepository, state: GameState, request: Dictionary) -
 		if state.army_roster.has(code) or state.military_rosters.has(code):
 			return {"error": "The new unit identity is already in use."}
 	else:
-		if unit.is_empty() or String(unit.get("kingdom_code", "")) != realm or not state.regiments.has(code):
+		if unit.is_empty() or String(unit.get("kingdom_code", "")) != realm or not state.regiments.has(code) or bool(state.regiments.get(code, {}).get("captured", false)):
 			return {"error": "Reinforcements need an existing unit of the crown."}
 		arm = MapObjects.regiment_arm(repo, unit)
 		if String(req["arm"]) != "" and req["arm"] != arm:
@@ -148,7 +148,7 @@ static func quote(repo: DataRepository, state: GameState, request: Dictionary) -
 	var refusals: Array[String] = []
 	if available < total:
 		refusals.append("There are not enough eligible civilians at this origin (%d available)." % available)
-	if int(state.metrics.get("treasury", 0)) < gold:
+	if BattleOrders.available_gold(state) < gold:
 		refusals.append("The treasury cannot pay the full recruitment price (%d gold)." % gold)
 	if not refusals.is_empty():
 		offer["error"] = " ".join(refusals)

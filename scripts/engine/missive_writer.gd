@@ -358,6 +358,9 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 			"round":
 				_round_facts(repo, state, e, place, pick, facts)
 			"end":
+				for departure: Dictionary in e.get("left", []):
+					facts.append(MissiveLog.words("left@%d.%d.%s" % [id, int(e["rounds"]), departure["code"]], "Left the field",
+						battle_words(repo, "battle_left_" + String(departure["why"]), {"unit": _unit_label(repo, String(departure["code"]))}, pick)))
 				facts.append(MissiveLog.words("end@%d" % id, "Result",
 					battle_words(repo, _end_key(state, e, rounds.get(id, {})),
 						{"place": place, "rounds": int(e["rounds"])}, pick)))
@@ -610,6 +613,8 @@ static func _first_mine(state: GameState, e: Dictionary) -> String:
 	var seen: Array = []
 	for k: String in ["att", "def"]:
 		seen.append_array(e.get(k, []))
+	for departure: Dictionary in e.get("left", []):
+		seen.append(departure["code"])
 	if e.has("code"):
 		seen.append(e["code"])
 	for c: Variant in seen:

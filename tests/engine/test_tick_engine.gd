@@ -216,6 +216,9 @@ func test_days_step_works_and_the_thirtieth_is_a_tick() -> void:
 ## so a building started in one tick can finish in the next.
 func test_a_work_longer_than_a_month_survives_the_tick() -> void:
 	var s := SuiteData.campaign(data, 42)
+	# Keep construction pace independent of invasion casualties in its source province.
+	s.ai_hosts.clear()
+	s.foes.clear()
 	engine.advance(s)
 	assert_eq(s.tick, 1)
 	assert_eq(s.day, 1)

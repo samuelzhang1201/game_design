@@ -80,10 +80,10 @@ static func invalidate(repo: DataRepository, state: GameState, order_id: String,
 static func combine(base: int, factors: Array[Dictionary]) -> Dictionary
 ```
 
-- [ ] 写系数手算：base630，训练800‰、士气900‰、军纪1000‰，结果453（逐层整数舍去规则固定）；传入重复source必须报错而不是乘两次；factor说明随结果返回。运行test_battle_strength见红。
-- [ ] 实现 combine 的确定顺序：身份装备基础 → 训练 → 士气 → 军纪 → 补给 → 阵型/地形 → 当前行动；同类修正先合成一次，顺序固定，CSV上下限夹紧。保留原可复用 odds/split_losses/apportion 并补齐每一新公式的手算测试，不能把贵族装备、纪律加成和旧army_quality再重复计算。
-- [ ] 战斗日按近战/远程/冲击/撤离/追击情境计算真实损失，原子更新人员账、士气与本轮号。初步复用现有outcomes表，移除五轮强制结束；用规则推导撤离/溃败/失能终止。战斗随机由唯一保存的引擎种子流取值并在该轮记录，移除会旁路该流的旧战斗随机入口；阻塞重试不重抽，存读档完全一致。
-- [ ] 实现命令表中的具体效果和成本：
+- [x] 写系数手算：base630，训练800‰、士气900‰、军纪1000‰，结果453（逐层整数舍去规则固定）；传入重复source必须报错而不是乘两次；factor说明随结果返回。运行test_battle_strength见红。
+- [x] 实现 combine 的确定顺序：身份装备基础 → 训练 → 士气 → 军纪 → 补给 → 阵型/地形 → 当前行动；同类修正先合成一次，顺序固定，CSV上下限夹紧。保留原可复用 odds/split_losses/apportion 并补齐每一新公式的手算测试，不能把贵族装备、纪律加成和旧army_quality再重复计算。
+- [x] 战斗日按近战/远程/冲击/撤离/追击情境计算真实损失，原子更新人员账、士气与本轮号。初步复用现有outcomes表，移除五轮强制结束；用规则推导撤离/溃败/失能终止。战斗随机由唯一保存的引擎种子流取值并在该轮记录，移除会旁路该流的旧战斗随机入口；阻塞重试不重抽，存读档完全一致。
+- [x] 实现命令表中的具体效果和成本：
 
 | 命令 | 执行效果 | 必付成本/限制 | 失败与终止 |
 |---|---|---|---|
@@ -93,12 +93,12 @@ static func combine(base: int, factors: Array[Dictionary]) -> Dictionary
 | 撤退 | 后卫掩护、走真实退出路 | 让出阵地、士气/装备损失、可能被追击；营地gate仍生效 | 约定安全撤离阻止违规追击；无路不能瞬移 |
 | 投降 | 请求接纳，接受后全体存活军人含伤兵/贵族交P5俘获 | 失去部队控制和装备 | 拒绝则维持原行动；国王不入俘虏 |
 
-- [ ] 对峙阶段照常供给、收信、接纳援军；只有主将依据合法预案/局势决定交锋或收到合法进攻令才进入伤亡阶段。测试双方保持距离时连续3日轮数不增但粮减少；随后进攻只开始同一battle_id的交战，不重新弹首次遭遇。对峙不能因用户按“继续时间”就被强制解释成全军进攻。
+- [x] 对峙阶段照常供给、收信、接纳援军；只有主将依据合法预案/局势决定交锋或收到合法进攻令才进入伤亡阶段。测试双方保持距离时连续3日轮数不增但粮减少；随后进攻只开始同一battle_id的交战，不重新弹首次遭遇。对峙不能因用户按“继续时间”就被强制解释成全军进攻。
 
-- [ ] 写命令fixture：总金100，信使费2，鼓舞赏金7。派发总金98、保留7、可支配91；执行总金91、保留0；取消则总金98、保留0。重复送达/读档重送/战斗结束后的旧信均不重扣、不重鼓舞、不复活战斗。所有财政操作附可读原因。
-- [ ] 相互覆盖用最后实际送达合法行动，而不是最后点击；鼓舞不清除attack/hold；同一order_id幂等；会违反已达成协议的命令发送前及送达时都校验。用king现场/远程相同动作对比仅延迟不同。
-- [ ] `test_battle_duration.gd` 建立固定种子基准组（均势、较大军队、充足补给、第三天增援、压倒性优势），明确首遇/结束日。普通基准校准3–5日；至少一个补给/增援案例持续超过5日且battle_id不变；一个优势案例更快。不要用硬上限“修到测试通过”。模拟记录原始日数、伤亡、粮与理由，改表后同时重算手算测试。
-- [ ] 跑orders/strength/duration及旧battle生命周期/存档/撤退用例和fast，更新battle指南后提交 `feat: resolve costly battle orders over game days`。
+- [x] 写命令fixture：总金100，信使费2，鼓舞赏金7。派发总金98、保留7、可支配91；执行总金91、保留0；取消则总金98、保留0。重复送达/读档重送/战斗结束后的旧信均不重扣、不重鼓舞、不复活战斗。所有财政操作附可读原因。
+- [x] 相互覆盖用最后实际送达合法行动，而不是最后点击；鼓舞不清除attack/hold；同一order_id幂等；会违反已达成协议的命令发送前及送达时都校验。用king现场/远程相同动作对比仅延迟不同。
+- [x] `test_battle_duration.gd` 建立固定种子基准组（均势、较大军队、充足补给、第三天增援、压倒性优势），明确首遇/结束日。普通基准校准3–5日；至少一个补给/增援案例持续超过5日且battle_id不变；一个优势案例更快。不要用硬上限“修到测试通过”。模拟记录原始日数、伤亡、粮与理由，改表后同时重算手算测试。
+- [x] 跑orders/strength/duration及旧battle生命周期/存档/撤退用例和fast，更新battle指南后提交 `feat: resolve costly battle orders over game days`。
 
 ## P4.3 事件、合法自动决策与展示数据
 
@@ -140,3 +140,13 @@ Ruling: the existing LAW scene and row already enumerate policy data, so adding 
 Ruling: legacy lifecycle and stance-timing fixtures neutralize the new deployment factors to keep testing their original arithmetic; the new formation suite separately pins hand-calculated deployment values and real-context flanking. The known empty-roster map fixture and prior LEDGER performance failure remain outside this unit.
 
 Checks: targeted 12 scripts / 133 tests passed before the final two UI wording changes and flank-origin repair; affected UI checks passed after wording, and the final battle/stance/courier check passed 5 scripts / 46 tests / 311 assertions after the repair. Final `./run_tests.sh --fast`: 226 scripts, 2356 tests, 2354 passed, one existing pending and the existing LEDGER galaxy performance failure (121.296 ms against 120 ms); two expected GDAI errors, exit 1. Do not claim a green suite. Final battle/stance/courier check: 46/46; affected new UI: 3/3; shared map-shape test: 1/1. Final code state was unchanged during the completed fast run. Next after this unit's acceptance: P4.2 in a fresh session, reading HANDOVER.md rather than this conversation.
+
+## P4.2 execution checkpoint
+
+Authorization remains automatic continuation of the existing plan, one bounded unit per fresh session; placeholder art is excluded. Worktree `/Users/samuelzhang/.codex/worktrees/battle-system/game_design`, branch `codex/battle-system`, base `f0ea2e0bd28218adc49c0553859a97f83886a75a`.
+
+Phase: implementation, fresh Sol review, fixes and required verification complete. Orders, reservations, local/courier replay, strength categories, shared RNG, daily contexts, standoff, physical retreat/rout, full-survivor surrender handoff and terminal spoils are implemented. The review's four substantive findings and the later blocked-route/all-wounded cases have failed-then-passed regressions. Owners have delivered and stopped. File list: `.superpowers/reviews/p42/owned-files.txt`; report and rulings: `docs/reviews/battle-system/P4.2.md`.
+
+Rulings: same-category factors merge before one clamp/truncation; rewards scale to issued living beneficiaries and surviving delivery counts; local surrender has personnel/equipment cost with no fictitious filing fee. A routed side retains its battle until actual separation. Terminal departures retain their original cause for reports and spoils. Legacy fixtures explicitly authorize attack and isolate their original formula from unrelated battle/food effects. These choices carry balance and behavior risk if revised; their numeric and lifecycle tests pin the current contract.
+
+Checks: final fast229 scripts /2391 tests,2389 passed,1 existing pending,1 existing LEDGER performance failure123.979ms against120ms;2 expected GDAI errors,exit1. Final executable/data/test state stayed unchanged throughout this completed run. Focused final integration97/97,1042 assertions; siege41/41; AI/invasion45/45; guide/data/isolation12/12. Full CI is still required; no local full suite or visual pass. Next: deliver this unit on PR76, then P4.3 in a fresh session through HANDOVER.md without reloading the old conversation. P4.3 and P5 were not implemented here.

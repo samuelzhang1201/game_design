@@ -1230,7 +1230,7 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		if BattleSystem.battle_of(state, code).is_empty():
+		if BattleSystem.may_withdraw(state, code):
 			_resume_departure(repo, state, code, state.regiments[code])
 		var entry: Dictionary = state.regiments[code]
 		var origin := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
@@ -1276,7 +1276,7 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	foes.sort()
 	for c in foes:
 		var code := String(c)
-		if BattleSystem.battle_of(state, code).is_empty():
+		if BattleSystem.may_withdraw(state, code):
 			var fe: Dictionary = state.foes[code]
 			_resume_departure(repo, state, code, fe)
 			var aim := Vector2i(int(fe.get("dest_x_m", 0)), int(fe.get("dest_y_m", 0)))
@@ -1546,7 +1546,9 @@ static func _ahead_blockers(repo: DataRepository, state: GameState) -> Dictionar
 ## one pace over all N and ends exactly as the Nth day ends.
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		abs_day: int, blockers: Dictionary = {}, passed_out: Array = []) -> bool:
-	if not BattleSystem.battle_of(state, code).is_empty() \
+	if bool(entry.get("captured", false)):
+		return false
+	if not BattleSystem.may_withdraw(state, code) \
 			or String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH \
 			or regiment(repo, code, state).is_empty():
 		return false

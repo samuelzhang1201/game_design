@@ -3,3 +3,4 @@ ARMY_RECRUIT,military,Recruit and equip a unit,none,0,none,0,0,,army_recruit,0,n
 LEVY_RAISE,military,Raise fresh levies,none,1.5,levy_cost,4,0,,levy_raise,1,no,"Improves army quality; costs gold and goodwill."
 BUILD_ECONOMIC,economy,Commission a public work,none,1.5,build_cost,6,0,,build_economic,1,no,"params: project (granary|road)."
 SPY_MISSION,intrigue,Send out the whisperers,none,1.0,spy_cost,4,0,,spy_mission,1,no,"Quiets rumors; costs gold."
+BATTLE_ORDER,military,Issue a battlefield warrant,none,0,none,0,0,,battle_order,0,no,"params: regiment battle_id kind request_id; paid once and revalidated on arrival"

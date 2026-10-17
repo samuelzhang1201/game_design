@@ -265,7 +265,9 @@ func test_passive_king_support_is_derived_and_disappears_when_out_of_range() -> 
 		"travel_state": "stationary", "last_advanced_day": 0}
 	state.battles = [{"id": 98, "att": [code], "def": [], "start_day": state.absolute_day(),
 		"rounds": 0, "place_x_m": pos.x, "place_y_m": pos.y, "town": ""}]
-	var base := ArmySystem.power(repo, state, code, "attack")
+	state.king_state["x_m"] += int(repo.bal("king_command_radius_m")) + 1
+	var base := BattleSystem.side_power(repo, state, [code], func(_c: String) -> String: return "steady", true)
+	state.king_state["x_m"] = pos.x
 	var before_morale := int(state.regiments[code]["morale"])
 	var with_king := BattleSystem.side_power(repo, state, [code], func(_c: String) -> String: return "steady", true)
 	assert_gt(with_king, base)

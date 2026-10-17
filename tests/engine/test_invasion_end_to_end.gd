@@ -20,7 +20,7 @@ const Play := preload("res://tests/invasion_play.gd")
 ##      town never falls, the garrison never starves, the host goes home.
 ## Both are deterministic: the same save played twice is the same state, and
 ## a save on day SAVE_DAY played on equals the run that never stopped. The
-## war's state holds no float, and the war's systems draw no random number.
+## war's state holds no float; each battle round records its one saved-stream draw.
 
 const DAYS := 45
 const SAVE_DAY := 20
@@ -77,7 +77,8 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 		"assaults": [], "battle_letters": [], "fell": -1, "fallen": {}, "defeat": {}, "before": {},
 		"home": -1, "lifted": -1, "beat_scheduled": false, "hungry": 0, "garrison": [], "dead": {},
 		"fought": [], "main_fought": [], "target_contacts": [], "target_battles": {},
-		"garrison_battle_dead": 0, "gate_at_fall": false, "occupied_at_fall": [], "first_assault_over": -1}
+		"garrison_battle_dead": 0, "gate_at_fall": false, "occupied_at_fall": [], "first_assault_over": -1,
+		"homeward_motion": [], "main_withdrawals": []}
 	for k: String in blank:
 		if not seen.has(k):
 			seen[k] = blank[k]
@@ -87,7 +88,18 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 		var today := s.absolute_day()
 		var before := {"treasury": float(s.metrics["treasury"]),
 			"content": float(s.metrics["peasant_contentment"])}
+		var homeward_before := {}
+		if String(s.ai_hosts[main]["mode"]) in EnemyAi.HOMEWARD:
+			for code: String in EnemyAi.regiments_of(s, main):
+				var entry: Dictionary = s.foes[code]
+				homeward_before[code] = {"at": Vector2i(int(entry["x_m"]), int(entry["y_m"])),
+					"can_march": CampSystem.can_march(s, code, today)}
 		Play.day(engine, s, true)
+		for code: String in homeward_before:
+			var entry: Dictionary = s.foes[code]
+			var at := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+			seen["homeward_motion"].append({"code": code, "day": today,
+				"can_march": homeward_before[code]["can_march"], "moved": at != homeward_before[code]["at"]})
 		if int(seen["rumour"]) < 0 and not Play.letters(s, "rumour").is_empty():
 			seen["rumour"] = today
 		for h: String in EnemyAi.host_codes(s):
@@ -130,6 +142,12 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 				"siege_lifted":
 					seen["lifted"] = today
 		for e: Dictionary in engine.day_battles:
+			for left: Dictionary in e.get("left", []):
+				var code := String(left["code"])
+				if String(left["why"]) == "withdrawn" and String(s.foes.get(code, {}).get("host", "")) == main:
+					var enemy_side := "def" if left["side"] == "att" else "att"
+					seen["main_withdrawals"].append({"code": code, "day": today,
+						"separated": BattleSystem._separated(repo, s, code, e.get(enemy_side, []))})
 			var k := String(e.get("kind", ""))
 			var participants: Array = (e.get("att", []) as Array) + (e.get("def", []) as Array)
 			var main_present := participants.any(func(c: String) -> bool:
@@ -311,10 +329,17 @@ func test_strong_walled_defence_holds_and_the_host_goes_home() -> void:
 	for c: String in garrison:
 		assert_gt(ArmySystem.fit_count(repo, s, c), 0,
 			c + " still stands")
-	# Only the main host is leaving; another host's fighting continues independently.
 	var home := int(seen["home"])
-	assert_eq((seen["main_fought"] as Array).filter(func(d: int) -> bool: return d >= home), [],
-		"the main host strikes no blow from its homeward day %d" % home)
+	assert_gt((seen["main_fought"] as Array).filter(func(d: int) -> bool: return d >= home).size(), 0,
+		"the main host remains exposed while withdrawing through physical contact")
+	assert_gt((seen["homeward_motion"] as Array).filter(func(e: Dictionary) -> bool: return e["moved"]).size(), 0,
+		"surviving homeward columns leave by marching")
+	for motion: Dictionary in seen["homeward_motion"]:
+		if not bool(motion["can_march"]):
+			assert_false(motion["moved"], "%s waits for its camp departure gate on day %d" % [motion["code"], motion["day"]])
+	assert_gt((seen["main_withdrawals"] as Array).size(), 0, "columns actually disengage before the trial ends")
+	for left: Dictionary in seen["main_withdrawals"]:
+		assert_true(left["separated"], "%s leaves combat only after physical separation" % left["code"])
 	var total := int(seen["dead"][DAYS])
 	assert_gt(total, 0, "the real encounters cost the garrison")
 	assert_eq(total, int(seen["garrison_battle_dead"]),
@@ -361,19 +386,14 @@ func test_strong_defence_is_deterministic_and_saves_mid_run() -> void:
 	_deterministic("strong")
 
 
-## --- the war draws no random number ---------------------------------------------------
-
-## Every day of scenario A — the crossing, the march, the siege, the storm, the
-## fall and its cost — the war's systems run on a copy of the day's state in
-## TickEngine's order (march, couriers, then the minds, the battles, the
-## siege with the defeat inside it, the raids) and leave GameState.rng's
-## STATE as it found it. The rest of the day loop may draw; not asserted.
-func test_the_war_draws_no_random_number() -> void:
+## The AI, siege and raids draw nothing; each completed battle round consumes
+## exactly its recorded draw from the one saved engine stream.
+func test_war_randomness_is_exactly_the_recorded_battle_rounds() -> void:
 	_prepare("weak")
 	var garrison := _garrison("weak")
 	var engine := TickEngine.new(repo)
 	var s := Play.opened(repo, engine)
-	var drawn: Array = []
+	var rounds := 0
 	var kinds := {}
 	var cross := Play.first_appear(repo)
 	while s.absolute_day() <= DAYS:
@@ -386,16 +406,24 @@ func test_the_war_draws_no_random_number() -> void:
 		ai.append_array(EnemyAi.think_day(repo, copy))
 		EnemyAi.warnings(repo, copy)
 		MissiveWriter.host_news(repo, copy, ai)
+		assert_eq(copy.rng.to_dict(), before, "AI and host news do not draw randomness on day %d" % today)
+		var expected_rng := Rng.from_dict(before)
 		var fights := BattleSystem.settle_day(repo, copy)
+		for event: Dictionary in fights:
+			if event.get("kind", "") == "round":
+				assert_eq(int(event["roll"]), expected_rng.randi_range(0, 999),
+					"battle %d round %d records the next saved draw" % [event["battle_id"], event["round"]])
+				rounds += 1
+		assert_eq(copy.rng.to_dict(), expected_rng.to_dict(), "one draw per battle round on day %d" % today)
+		var after_battles := copy.rng.to_dict()
 		var siege := SiegeSystem.settle_day(repo, copy, fights)
 		var raid := RaidSystem.settle_day(repo, copy, fights)
 		for e: Dictionary in fights + siege + raid:
 			kinds[String(e.get("kind", e.get("type", "")))] = true
-		if copy.rng.to_dict() != before:
-			drawn.append(today)
+		assert_eq(copy.rng.to_dict(), after_battles, "siege and raids do not draw randomness on day %d" % today)
 		_run(engine, s, today, garrison if today == cross else [], {"rumour": 0, "left": {}, "town": "",
 			"siege_begin": 0, "siege_days": [], "repulsed": [], "assaults": [], "battle_letters": [], "fell": 0,
 			"fallen": {}, "defeat": {}, "before": {}, "home": 0, "lifted": 0, "beat_scheduled": false, "hungry": 0})
 	for k: String in ["start", "round", "siege_begin", "siege_fallen", "defeat_town_lost"]:
 		assert_true(kinds.has(k), "the copies played a " + k)
-	assert_eq(drawn, [], "no day of the war drew from GameState.rng")
+	assert_gt(rounds, 0, "the seeded invasion exercised real battle draws")

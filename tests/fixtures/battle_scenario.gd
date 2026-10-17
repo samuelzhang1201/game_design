@@ -20,6 +20,7 @@ static func contact(repo: DataRepository, day: int) -> GameState:
 	foes.sort()
 	var code := String(foes[0])
 	s.foes[code] = ArmySystem.starting_state(repo, ArmySystem.regiment(repo, code))
+	s.foes[code]["battle_plan"] = "attack"
 	Play.place(repo, s, code, at + Vector2i(1000, 0), ArmySystem.ORDER_STANDBY)
 	repo.battle_outcomes = [{"tier": "fixture", "eff_min": 0, "eff_max": 1000,
 		"attacker_loss_permille": 100, "defender_loss_permille": 100,
@@ -42,6 +43,7 @@ static func two_battles(repo: DataRepository, day: int) -> GameState:
 		for code: String in EnemyAi.host_units(repo, null, host):
 			if not s.foes.has(code):
 				s.foes[code] = ArmySystem.starting_state(repo, ArmySystem.regiment(repo, code))
+				s.foes[code]["battle_plan"] = "attack"
 				Play.place(repo, s, code, at + Vector2i(1000, 0), ArmySystem.ORDER_STANDBY)
 				return s
 	return s

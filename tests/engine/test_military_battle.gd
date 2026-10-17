@@ -96,15 +96,25 @@ func test_failed_round_keeps_day_transaction_at_same_battle() -> void:
 	tier["rout"] = "none"
 	repo.battle_outcomes = [tier]
 	state.battles = [{"id": 1, "att": ["a"], "def": ["b"], "rounds": 0,
-		"town": "", "place_x_m": 0, "place_y_m": 0, "start_day": state.absolute_day()}]
+		"town": "", "place_x_m": 0, "place_y_m": 0, "start_day": state.absolute_day(),
+		"actions": {"att": {"kind": "attack"}, "def": {"kind": "hold"}}}]
 	state.day_resolution = DayResolution.begin(state.absolute_day(), false)
 	state.day_resolution["phase"] = "battles"
 	state.day_resolution["battle_ids"] = [1]
 	state.day_resolution["journal"]["missive_start"] = state.next_missive_id
-	var before := SaveLoad.state_hash(state)
+	var before := GameState.from_dict(state.to_dict())
 	var result := TickEngine.new(repo).resolve_day(state)
 	assert_eq(result["status"], "error")
-	assert_eq(SaveLoad.state_hash(state), before, "failed personnel commit cannot advance rounds, cursor or calendar")
+	assert_eq(int(state.battles[0]["rounds"]), 0)
+	assert_eq(state.day_resolution, before.day_resolution, "failed commit cannot advance the day cursor")
+	assert_eq(state.day, int(before.day))
+	assert_eq(state.military_cohorts, before.military_cohorts)
+	assert_eq(state.metrics, before.metrics)
+	assert_eq(state.world, before.world)
+	assert_true(state.battles[0].has("pending_round"), "the failed round retains its one saved RNG draw")
+	var held := SaveLoad.state_hash(state)
+	assert_eq(TickEngine.new(repo).resolve_day(state)["status"], "error")
+	assert_eq(SaveLoad.state_hash(state), held, "retry draws and charges nothing")
 
 func test_visible_unit_readers_use_survivors_and_wounds_from_cohorts() -> void:
 	assert_false(_round().has("error"))
