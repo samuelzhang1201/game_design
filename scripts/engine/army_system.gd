@@ -1581,6 +1581,16 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 						_retire_saved_march(saved, current)
 				else:
 					_publish_march_state(current, saved)
+			if command_changed and String(current.get("order", "")) == ORDER_MARCH:
+				# Today's saved walk moved the start of tomorrow's newly ordered road.
+				var here := Vector2i(int(current["x_m"]), int(current["y_m"]))
+				var dest := Vector2i(int(current["dest_x_m"]), int(current["dest_y_m"]))
+				var waypoints := MarchRoute.from_pairs(current.get("waypoints_m", []))
+				var route := route_m_of(repo, here, waypoints, dest, is_naval(repo, state, code))
+				if not waypoints.is_empty() or route.size() > 1:
+					current["route_m"] = MarchRoute.to_pairs(route)
+				else:
+					current.erase("route_m")
 			_note_place(blockers, code, current)
 	return arrived
 

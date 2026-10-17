@@ -360,6 +360,52 @@ func test_a_redirect_delivered_on_a_march_day_keeps_the_old_walk_for_today() -> 
 		"the courier's redirected order is in force for tomorrow")
 
 
+func test_a_redirect_rebuilds_tomorrows_waypoint_route_from_todays_final_position() -> void:
+	for old_distance: int in [750, 2300]:
+		var s := SuiteData.campaign(repo, 7)
+		s.tick = 1
+		s.day = 10
+		s.foes.clear()
+		s.ai_hosts.clear()
+		repo.balance["army_clearance_on"] = 0.0
+		for arm: String in repo.army_speed:
+			repo.army_speed[arm] = 1
+		for ground: String in repo.army_ground_speed:
+			repo.army_ground_speed[ground] = 1000
+		var code := _marcher()
+		var entry: Dictionary = s.regiments[code]
+		entry["morale"] = 100
+		entry["training"] = 100
+		entry["carry_days"] = 10
+		entry["supplies"] = ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code, s), s) * 6
+		var start := Vector2i(1000000, 1000000) # away from town settlement slots
+		entry["x_m"] = start.x
+		entry["y_m"] = start.y
+		ArmySystem.set_march_m(repo, s, code, start + Vector2i(old_distance, 0))
+		var moved := 750 if old_distance == 750 else 767 # ceil(2300 / 3)
+		var today_end := start + Vector2i(moved, 0)
+		var waypoint := today_end + Vector2i(0, 3000)
+		var dest := today_end + Vector2i(0, 5000)
+		var courier := _courier(s, s.next_courier_id + 100, code, [[start.x, start.y, "road"]],
+			{"action_code": "ARMY_MARCH", "dest_x_m": dest.x, "dest_y_m": dest.y,
+			"waypoints_m": [[waypoint.x, waypoint.y]]})
+		courier["x_m"] = start.x - 10
+		courier["y_m"] = start.y
+		s.couriers = [courier]
+		assert_eq(TickEngine.new(repo).resolve_day(s)["status"], "complete")
+		assert_true(s.couriers.is_empty(), "the redirect was delivered")
+		assert_eq(Vector2i(int(entry["x_m"]), int(entry["y_m"])), today_end,
+			"both an arrival and an unfinished old march keep today's old movement")
+		assert_eq(entry.get("waypoints_m"), [[waypoint.x, waypoint.y]], "tomorrow still visits the ordered waypoint")
+		# JSON must preserve the pending order, with its road starting at today's actual finish.
+		s = GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+		assert_eq(TickEngine.new(repo).resolve_day(s)["status"], "complete")
+		entry = s.regiments[code]
+		assert_eq(Vector2i(int(entry["x_m"]), int(entry["y_m"])), today_end + Vector2i(0, 1000),
+			"the new straight north route starts here, never via yesterday's curve samples")
+		assert_eq(entry.get("waypoints_m"), [[waypoint.x, waypoint.y]])
+
+
 ## Owner 2026-10-02 (显示一个总的到达日): ONE arrival figure — the courier's
 ## ride, then the march at today's pace — wherever days are shown.
 func test_the_arrival_day_is_the_ride_and_then_the_march() -> void:

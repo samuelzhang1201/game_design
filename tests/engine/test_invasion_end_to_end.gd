@@ -317,7 +317,10 @@ func test_strong_walled_defence_holds_and_forces_supply_retreat() -> void:
 	assert_lte(total, starting_heads, "deaths cannot exceed the committed garrison")
 	var round_keys: Array = (seen["battle_rounds"] as Array).map(
 		func(row: Dictionary) -> String: return "%d:%d" % [int(row["battle_id"]), int(row["day"])])
-	assert_eq(round_keys.size(), round_keys.duplicate().size(), "at most one round per battle per day")
+	var unique_round_keys: Dictionary = {}
+	for key: String in round_keys:
+		assert_false(unique_round_keys.has(key), "at most one round per battle per day: " + key)
+		unique_round_keys[key] = true
 	assert_true((seen["fought"] as Array).any(func(d: int) -> bool: return d >= first_storm),
 		"the garrison fights during the storm")
 	assert_eq(_war_floats(s), [], "no float in the war's state")

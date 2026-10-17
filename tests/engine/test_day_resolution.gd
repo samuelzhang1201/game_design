@@ -309,9 +309,51 @@ func test_encounter_blocks_before_losses_and_resumes_after_roundtrip() -> void:
 		"JSON continuation matches the uninterrupted live transaction")
 
 
+## P1's synthetic paid handler uses the real saved token protocol; P4 owns
+## the production event/finance handler and must repeat this acceptance.
+func _paid_fixture_continue(state: GameState, token: String) -> Dictionary:
+	var tx: Dictionary = state.day_resolution
+	if token == String(tx.get("pending_decision", {}).get("token", "")) \
+			and int(state.metrics["treasury"]) < 7:
+		return {"status": "unaffordable"}
+	var result := DayResolution.acknowledge(tx, token, "continue")
+	if String(result["status"]) == "accepted":
+		state.metrics["treasury"] -= 7
+		(tx["journal"]["reports"] as Array).append({"kind": "fixture_fee", "token": token, "gold": -7})
+	return result
+
+
 func test_second_battle_does_not_replay_first() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	var state := BattleScenario.two_battles(repo, 10)
+	repo.battle_outcomes.assign([{"tier": "hand_made", "eff_min": 0, "eff_max": 1000,
+		"attacker_loss_permille": 100, "defender_loss_permille": 100,
+		"wounded_share_permille": 500, "attacker_morale": 0, "defender_morale": 0, "rout": "none"}])
+	for stance: String in repo.battle_stances:
+		repo.battle_stances[stance]["retreat_odds_permille"] = 0
+		repo.battle_stances[stance]["retreats_on_contact"] = false
+	for table: Dictionary in [state.regiments, state.foes]:
+		for code: String in table:
+			if String(table[code].get("order", "")) != ArmySystem.ORDER_MARCH:
+				continue
+			var row: Dictionary = state.army_roster[code]
+			var arm := MapObjects.regiment_arm(repo, row)
+			for unit: String in repo.world_table("military", "unit_types"):
+				row[unit] = "100" if unit == arm else "0"
+			table[code]["wounded"] = 0
+			table[code]["dead"] = 0
+			table[code]["deserted"] = 0
+	# One pair fights in substep zero; the other still marches to later contact.
+	var player := String(Play.land_regiments(repo, 1)[0])
+	var foe := String(state.foes.keys()[0])
+	var spot := Vector2i(int(state.regiments[player]["x_m"]), int(state.regiments[player]["y_m"]))
+	for entry: Dictionary in [state.regiments[player], state.foes[foe]]:
+		entry["x_m"] = spot.x
+		entry["y_m"] = spot.y
+		entry["dest_x_m"] = spot.x
+		entry["dest_y_m"] = spot.y
+		entry["order"] = ArmySystem.ORDER_GARRISON
+	state.metrics["treasury"] = 100.0
 	var engine := TickEngine.new(repo)
 	var first := engine.resolve_day(state)
 	assert_eq(first["status"], "blocked")
@@ -321,20 +363,54 @@ func test_second_battle_does_not_replay_first() -> void:
 	var second := engine.resolve_day(state)
 	assert_eq(second["status"], "blocked")
 	var second_id := int(state.day_resolution["pending_decision"]["battle_id"])
+	var second_token := String(state.day_resolution["pending_decision"]["token"])
 	assert_ne(second_id, first_id)
-	assert_lte(int(BattleSystem.battle_by_id(state, first_id)["rounds"]), 1,
-		"the first battle has not been replayed before the second encounter pauses")
-	assert_eq(int(BattleSystem.battle_by_id(state, second_id)["rounds"]), 0,
-		"the second battle has not fought before its own confirmation")
-	DayResolution.acknowledge(state.day_resolution, String(state.day_resolution["pending_decision"]["token"]), "continue")
-	var complete := engine.resolve_day(state)
-	assert_eq(complete["status"], "complete")
-	var rounds: Array = (complete["journal"]["battles"] as Array).filter(
-		func(event: Dictionary) -> bool: return String(event.get("kind", "")) == "round")
-	assert_eq(rounds.filter(func(event: Dictionary) -> bool: return int(event["battle_id"]) == first_id).size(), 1,
-		"the first battle resolves once within its substep after encountered decisions are acknowledged")
-	assert_eq(rounds.filter(func(event: Dictionary) -> bool: return int(event["battle_id"]) == second_id).size(), 1,
-		"the second battle resolves once within its substep after its decision is acknowledged")
+	assert_gt(int(second["decision"]["substep_index"]), int(first["decision"]["substep_index"]))
+	var first_battle := BattleSystem.battle_by_id(state, first_id)
+	var second_battle := BattleSystem.battle_by_id(state, second_id)
+	assert_eq(int(first_battle["rounds"]), 1, "the earlier battle already fought before the later encounter")
+	for code: String in first_battle["att"] + first_battle["def"]:
+		var entry := ArmySystem.state_of(repo, state, code)
+		assert_eq(ArmySystem.fit_heads(100, entry), 90)
+		assert_eq(int(entry["wounded"]), 5)
+		assert_eq(int(entry["dead"]), 5)
+	assert_eq(int(second_battle["rounds"]), 0, "the pending battle has not fought")
+	for code: String in second_battle["att"] + second_battle["def"]:
+		var entry := ArmySystem.state_of(repo, state, code)
+		assert_eq(ArmySystem.fit_heads(100, entry), 100)
+	assert_eq(state.metrics["treasury"], 100.0)
+	var loaded := BattleScenario.roundtrip(state)
+	var results: Array = []
+	for branch: GameState in [state, loaded]:
+		var pending_hash := SaveLoad.state_hash(branch)
+		assert_eq(TickEngine.new(repo).resolve_day(branch)["status"], "blocked")
+		assert_eq(SaveLoad.state_hash(branch), pending_hash, "polling the second pause changes nothing")
+		assert_eq(_paid_fixture_continue(branch, "stale-token")["status"], "stale")
+		assert_eq(branch.metrics["treasury"], 100.0)
+		branch.metrics["treasury"] = 6.0
+		var poor_hash := SaveLoad.state_hash(branch)
+		assert_eq(_paid_fixture_continue(branch, second_token)["status"], "unaffordable")
+		assert_eq(SaveLoad.state_hash(branch), poor_hash, "failed payment does not consume the decision")
+		branch.metrics["treasury"] = 100.0
+		assert_eq(_paid_fixture_continue(branch, second_token)["status"], "accepted")
+		assert_eq(branch.metrics["treasury"], 93.0)
+		var paid_hash := SaveLoad.state_hash(branch)
+		assert_eq(_paid_fixture_continue(branch, second_token)["status"], "duplicate")
+		assert_eq(SaveLoad.state_hash(branch), paid_hash, "retrying a paid choice charges nothing")
+		var complete := TickEngine.new(repo).resolve_day(branch)
+		assert_eq(complete["status"], "complete")
+		assert_eq(branch.metrics["treasury"], 93.0)
+		var rounds: Array = (complete["journal"]["battles"] as Array).filter(
+			func(event: Dictionary) -> bool: return String(event.get("kind", "")) == "round")
+		for id: int in [first_id, second_id]:
+			assert_eq(rounds.filter(func(event: Dictionary) -> bool: return int(event["battle_id"]) == id).size(), 1)
+		var fees: Array = (complete["journal"]["reports"] as Array).filter(
+			func(event: Dictionary) -> bool: return String(event.get("kind", "")) == "fixture_fee")
+		assert_eq(fees.size(), 1, "the paid decision has one durable fee record")
+		results.append(complete)
+	assert_eq(results[0]["journal"], results[1]["journal"], "second-pause JSON preserves battle and fee journals")
+	assert_eq(state.rng.to_dict(), loaded.rng.to_dict())
+	assert_eq(SaveLoad.state_hash(state), SaveLoad.state_hash(loaded))
 
 
 func test_later_substep_reinforcement_joins_after_round_and_fights_next_day() -> void:
