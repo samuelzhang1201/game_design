@@ -220,6 +220,9 @@ func _validate_king_follow(req: ActionRequest, state: GameState) -> String:
 	if reg.is_empty() or ArmySystem.is_foe(state, code) \
 			or String(reg.get("kingdom_code", "")) != data.resolve_realm("player_realm"):
 		return "The king can only follow a friendly regiment"
+	var live_entry: Dictionary = state.regiments.get(code, {})
+	if not state.army_roster.has(code) or String(live_entry.get("camp_town", reg.get("camp_town", ""))) != "":
+		return "The king can only follow a regiment in the field"
 	if ArmySystem.base_pace_km(data, reg) <= 0:
 		return "A regiment without troops cannot be followed"
 	return ""
@@ -562,10 +565,16 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			KingSystem.set_route(data, state, route, "the king's movement order")
 			effects.append({"metric": "army", "delta": 0.0, "reason": "the king begins a journey from his present position"})
 		"KING_FOLLOW":
-			KingSystem.follow(data, state, String(req.params["regiment"]))
+			var follow_result := KingSystem.follow(data, state, String(req.params["regiment"]))
+			if follow_result.get("status") != "ok":
+				return {"action_code": req.action_code, "ok": false,
+					"error": String(follow_result.get("error", "The king cannot follow that regiment."))}
 			effects.append({"metric": "army", "delta": 0.0, "reason": "the king rides to join %s" % String(req.params["regiment"])})
 		"KING_SAFE_DEPARTURE":
-			KingSystem.safe_departure(data, state, int(req.params["battle_id"]))
+			var departure_result := KingSystem.safe_departure(data, state, int(req.params["battle_id"]))
+			if departure_result.get("status") != "ok":
+				return {"action_code": req.action_code, "ok": false,
+					"error": String(departure_result.get("error", "The king cannot leave safely."))}
 			effects.append({"metric": "army", "delta": 0.0, "reason": "the king withdraws safely; the battle continues unchanged"})
 		"ARMY_RECRUIT":
 			var paid := RecruitmentSystem.recruit(data, state, req.params)

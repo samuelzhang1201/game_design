@@ -189,14 +189,13 @@ func _after_battles(state: GameState) -> void:
 				battle_event = fight
 				break
 		var battle_id := int(battle_event.get("battle_id", -1))
+		if battle_id >= 0:
+			battle_event["report"] = MissiveWriter.king_report_payload(data, state, fights)
 		if battle_id >= 0 and not KingSystem.present(data, state, battle_id):
 			var report_courier := CourierSystem.dispatch_king_report(data, state, battle_id, battle_event)
 			if not report_courier.is_empty():
-				var fee := CourierSystem.fee_gold(data, CourierSystem.ORDINARY)
-				state.metrics["treasury"] = maxf(0.0, float(state.metrics["treasury"]) - fee)
-				state.king_state["last_report_fee_reason"] = "an ordinary courier carries the battle report to the king"
 				state.king_state["last_report_dispatched"] = {"courier_id": int(report_courier["id"]),
-					"battle_id": battle_id, "day": state.absolute_day(), "fee_gold": fee}
+					"battle_id": battle_id, "day": state.absolute_day(), "fee_gold": 0}
 	# The crown's sight (spec 2026-10-10-player-sight-and-ghosts), once a day
 	# when every column has marched and fought: the rumour's host ghost on its
 	# day, each foe the crown sees refreshed where it stands, the stale and

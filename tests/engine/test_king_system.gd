@@ -28,6 +28,7 @@ func test_follow_requires_rendezvous_and_then_tracks_actual_unit() -> void:
 	var target_m := ArmySystem.pack_to_metres(repo, Vector2(31.0, 2.0))
 	state.regiments[code]["x_m"] = target_m.x
 	state.regiments[code]["y_m"] = target_m.y
+	state.regiments[code]["camp_town"] = ""
 	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [], "follow_code": "",
 		"travel_state": "stationary", "last_advanced_day": 0}
 	var result := KingSystem.follow(repo, state, code)
@@ -48,6 +49,24 @@ func test_follow_requires_rendezvous_and_then_tracks_actual_unit() -> void:
 	army_position = ArmySystem.pack_to_metres(repo,
 		ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, code, state)))
 	assert_eq(KingSystem.position(state), army_position)
+
+
+func test_follow_rejects_a_unit_in_town_and_clears_when_target_is_removed() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 998)
+	var code := String(state.regiments.keys()[0])
+	state.regiments[code]["x_m"] = 30000
+	state.regiments[code]["y_m"] = 2000
+	state.regiments[code]["camp_town"] = "some_town"
+	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	assert_eq(KingSystem.follow(repo, state, code).get("status"), "error")
+	state.regiments[code]["camp_town"] = ""
+	assert_eq(KingSystem.follow(repo, state, code).get("status"), "ok")
+	state.army_roster.erase(code)
+	state.day += 1
+	KingSystem.step_day(repo, state)
+	assert_eq(String(state.king_state.get("follow_code", "")), "")
 
 
 func test_presence_uses_only_actual_battle_distance() -> void:
@@ -115,6 +134,24 @@ func test_king_report_dispatch_uses_battle_event_after_battle_is_removed() -> vo
 	assert_eq(state.couriers.size(), 1)
 
 
+func test_king_report_carries_authored_facts_without_dispatch_fee() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 999)
+	var facts := [MissiveLog.exact("casualties", "Our losses", 3)]
+	var courier := CourierSystem.dispatch_king_report(repo, state, 82,
+		{"battle_id": 82, "place_x_m": 100000, "place_y_m": 100000,
+		"report": {"title": "Battle of the Ford", "facts": facts}})
+	assert_eq(courier["orders"][0]["report"]["facts"], facts)
+	var treasury := float(state.metrics["treasury"])
+	CourierSystem._deliver(repo, state, courier)
+	assert_eq(float(state.metrics["treasury"]), treasury, "report delivery has no automatic fee")
+	var letters := MissiveLog.column(state, "credible")
+	var received: Dictionary = letters.filter(func(m: Dictionary) -> bool:
+		return String(m["kind"]) == "king_report")[0]
+	assert_eq(received["title"], "Battle of the Ford")
+	assert_eq(received["facts"], facts)
+
+
 func test_tick_transaction_does_not_repeat_king_movement_after_encounter_pause() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 994)
@@ -168,26 +205,28 @@ func test_actions_validate_cost_and_execute_physical_king_orders() -> void:
 	assert_eq(state.king_state.get("travel_state"), "travelling")
 	assert_ne(actions.validate(ActionRequest.make("KING_MOVE", {"x_m": 1.5, "y_m": 2000}), state), "")
 	var code := String(state.regiments.keys()[0])
+	state.regiments[code]["camp_town"] = ""
 	assert_eq(actions.validate(ActionRequest.make("KING_FOLLOW", {"regiment": code}), state), "")
 
 
-func test_safe_departure_routes_king_without_altering_battle_or_troops() -> void:
+func test_safe_departure_keeps_existing_route_when_no_reachable_refuge_exists() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 996)
 	var battle_at := ArmySystem.pack_to_metres(repo, Vector2(31.0, 2.0))
-	state.king_state = {"x_m": battle_at.x, "y_m": battle_at.y, "route": [], "follow_code": "",
+	state.king_state = {"x_m": battle_at.x, "y_m": battle_at.y, "route": [[9000, 2000]], "follow_code": "",
 		"travel_state": "stationary", "last_advanced_day": 0}
+	var route_before: Array = state.king_state["route"].duplicate(true)
+	repo.burgs.clear()
 	var code := String(state.regiments.keys()[0])
 	var army_before: Dictionary = state.regiments[code].duplicate(true)
 	state.battles = [{"id": 97, "att": [code], "def": [], "start_day": state.absolute_day(),
 		"rounds": 0, "place_x_m": battle_at.x, "place_y_m": battle_at.y, "town": ""}]
 	var battle_before := state.battles.duplicate(true)
 	var result := KingSystem.safe_departure(repo, state, 97)
-	assert_eq(result.get("status"), "ok")
+	assert_eq(result.get("status"), "error")
+	assert_eq(state.king_state["route"], route_before)
 	assert_eq(state.regiments[code], army_before)
 	assert_eq(state.battles, battle_before)
-	assert_eq(String(state.king_state.get("travel_state")), "safe_departure")
-	assert_gt((state.king_state["route"] as Array).size(), 0, "the king takes a real route to safety")
 
 
 func test_passive_king_support_is_derived_and_disappears_when_out_of_range() -> void:

@@ -215,7 +215,8 @@ static func dispatch_king_report(repo: DataRepository, state: GameState, battle_
 	state.next_courier_id += 1
 	var c := {"id": state.next_courier_id, "kind": KING_REPORT,
 		"x_m": from_m.x, "y_m": from_m.y, "path": path_between(repo, from, to),
-		"target": "", "orders": [{"action_code": "KING_REPORT", "battle_id": battle_id}],
+		"target": "", "orders": [{"action_code": "KING_REPORT", "battle_id": battle_id,
+			"report": battle_event.get("report", {})}],
 		"issued": state.absolute_day(), "aim_x_m": KingSystem.position(state).x,
 		"aim_y_m": KingSystem.position(state).y, "days": 0, "day_m": 0, "slow_spell": -1,
 		"tracking_king": true}
@@ -678,9 +679,14 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 	if _is_king_report(c):
 		state.king_state["last_report"] = {"courier_id": int(c["id"]),
 			"battle_id": int(first_order(c).get("battle_id", -1)), "received_day": state.absolute_day()}
+		var report_data: Dictionary = first_order(c).get("report", {}).duplicate(true)
+		var title := String(report_data.get("title", "Battle report"))
+		var facts: Array = report_data.get("facts", []).duplicate(true)
+		if facts.is_empty():
+			facts.append(MissiveLog.words("battle_report", "Report", "A battle report reaches the king."))
 		var report := MissiveLog.make("king_report", "credible", state.absolute_day(),
 			MissiveLog.subject("king", "you", -1, ArmySystem.metres_to_pack(repo, KingSystem.position(state))),
-			"Battle report", [MissiveLog.words("battle_report", "Report", "A battle report reaches the king.")])
+			title, facts)
 		MissiveLog.add(repo, state, report)
 		return _event("delivered", c)
 	# Town warrants are one physical arrival, with independent newest-order checks.

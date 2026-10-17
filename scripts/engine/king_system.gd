@@ -53,8 +53,11 @@ static func set_route(repo: DataRepository, state: GameState, route: Array, reas
 ## Travel to a field regiment, then follow its actual position each day.
 static func follow(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	var reg := ArmySystem.regiment(repo, code, state)
-	if reg.is_empty() or ArmySystem.is_foe(state, code) or not state.regiments.has(code):
+	if reg.is_empty() or ArmySystem.is_foe(state, code) or not state.army_roster.has(code):
 		return {"status": "error", "error": "The king can only follow a friendly regiment."}
+	var entry: Dictionary = state.regiments.get(code, {})
+	if String(entry.get("camp_town", reg.get("camp_town", ""))) != "":
+		return {"status": "error", "error": "The king can only follow a regiment in the field."}
 	var target := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, reg))
 	var king := state.king_state
 	var points := ArmySystem.route_m_of(repo, position(state), [], target)
@@ -74,9 +77,10 @@ static func step_day(repo: DataRepository, state: GameState) -> void:
 		return
 	king["last_advanced_day"] = today
 	var follow_code := String(king.get("follow_code", ""))
-	if follow_code != "" and not ArmySystem.regiment(repo, follow_code, state).is_empty():
+	var follow_reg := ArmySystem.regiment(repo, follow_code, state) if follow_code != "" else {}
+	if follow_code != "" and not follow_reg.is_empty() and state.army_roster.has(follow_code):
 		var target := ArmySystem.pack_to_metres(repo,
-			ArmySystem.position_of(repo, state, ArmySystem.regiment(repo, follow_code, state)))
+			ArmySystem.position_of(repo, state, follow_reg))
 		if String(king.get("travel_state", "")) == "following":
 			king["x_m"] = target.x
 			king["y_m"] = target.y
@@ -146,6 +150,7 @@ static func safe_departure(repo: DataRepository, state: GameState, battle_id: in
 	var battle_position := Vector2i(int(battle.get("place_x_m", position(state).x)),
 		int(battle.get("place_y_m", position(state).y)))
 	var candidates: Array = []
+	var march_grid := MarchPath.of_pack(repo)
 	var realm := repo.resolve_realm("player_realm")
 	var burgs: Array = repo.burgs.keys()
 	burgs.sort()
@@ -155,27 +160,28 @@ static func safe_departure(repo: DataRepository, state: GameState, battle_id: in
 			continue
 		var px := Vector2(float(burg.get("x", 0.0)), float(burg.get("y", 0.0)))
 		var metres := ArmySystem.pack_to_metres(repo, px)
-		var route := ArmySystem.route_m_of(repo, battle_position, [], metres)
-		var length := MarchRoute.length_from(battle_position, route)
-		if length > 0.0:
+		var route := ArmySystem.route_m_of(repo, position(state), [], metres)
+		var length := MarchRoute.length_from(position(state), route)
+		if length > 0.0 and not route.is_empty() \
+				and Vector2i(route.back()) == metres \
+				and ArmySystem.leg_clear(march_grid, position(state), route):
 			candidates.append({"distance": int(ceil(length)), "code": code, "route": route})
 	var king: Dictionary = state.king_state
-	king["x_m"] = battle_position.x
-	king["y_m"] = battle_position.y
+	if candidates.is_empty():
+		return {"status": "error", "error": "No reachable safe refuge can be found from this battle."}
 	king["follow_code"] = ""
 	king["route"] = []
 	king["travel_state"] = "safe_departure"
 	king["reason"] = "the king withdraws safely from battle"
-	if not candidates.is_empty():
-		candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-			if int(a["distance"]) != int(b["distance"]):
-				return int(a["distance"]) < int(b["distance"])
-			return String(a["code"]) < String(b["code"]))
-		king["route"] = MarchRoute.to_pairs(candidates[0]["route"])
-		king["travel_state"] = "safe_departure"
-		king["safe_battle_id"] = battle_id
-		king["safe_destination"] = String(candidates[0]["code"])
-		king["safe_origin_m"] = [battle_position.x, battle_position.y]
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if int(a["distance"]) != int(b["distance"]):
+			return int(a["distance"]) < int(b["distance"])
+		return String(a["code"]) < String(b["code"]))
+	king["route"] = MarchRoute.to_pairs(candidates[0]["route"])
+	king["travel_state"] = "safe_departure"
+	king["safe_battle_id"] = battle_id
+	king["safe_destination"] = String(candidates[0]["code"])
+	king["safe_origin_m"] = [position(state).x, position(state).y]
 	return {"status": "ok"}
 
 

@@ -376,6 +376,12 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 		battle_words(repo, "battle_title", {"place": battle_place(repo, state, head)}, pick), facts)
 
 
+## The courier carries the authored battle facts, not a second empty report.
+static func king_report_payload(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
+	var letter := battle_report(repo, state, events)
+	return {"facts": letter.get("facts", []).duplicate(true), "title": String(letter.get("title", "Battle report"))}
+
+
 ## One line of a fall's cost (DefeatSystem.on_town_lost): templates.csv
 ## `<kind>` (defeat_town_lost) with the town's name and the event's own
 ## figures: the gold the treasury lost and the contentment's points. A figure
