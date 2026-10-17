@@ -6,6 +6,8 @@ var tick: int = 0
 ## the smallest unit of time is a day; the clock advances it, and the
 ## thirtieth day's end is the tick). Saved; an old save loads at day 1.
 var day: int = 1
+## A resumable daily settlement. Empty outside an in-flight day.
+var day_resolution: Dictionary = {}
 var rng: Rng
 var metrics: Dictionary = {}
 var characters: Dictionary = {}
@@ -440,7 +442,7 @@ func to_dict() -> Dictionary:
 		chars[id] = characters[id].to_dict()
 	return {
 		"version": SAVE_VERSION, "map_id": map_id,
-		"tick": _encode_values(tick), "day": _encode_values(day), "rng": rng.to_dict(),
+		"tick": _encode_values(tick), "day": _encode_values(day), "day_resolution": _encode_values(day_resolution.duplicate(true)), "rng": rng.to_dict(),
 		"metrics": _encode_values(metrics.duplicate()),
 		"characters": chars, "council": council.duplicate(),
 		"relationships": _encode_values(relationships.duplicate(true)),
@@ -520,6 +522,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.map_id = String(d.get("map_id", ""))
 	s.tick = int(_decode_values(d["tick"]))
 	s.day = clampi(int(_decode_values(d.get("day", 1))), 1, Calendar.DAYS_PER_TICK)
+	s.day_resolution = _decode_values(d.get("day_resolution", {}))
 	s.rng = Rng.from_dict(d["rng"])
 	s.metrics = _decode_values(d["metrics"])
 	# A save written before a metric existed carries no key for it — the

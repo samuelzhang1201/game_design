@@ -224,7 +224,11 @@ func test_the_contact_letter_comes_before_the_battle_it_leads_to() -> void:
 	Play.place(repo, s, horse, far, ArmySystem.ORDER_GARRISON)
 	_put_foe(far + Vector2i(3000, 0))
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	var result := engine.resolve_day(s)
+	if String(result.get("status", "")) == "blocked":
+		DayResolution.acknowledge(s.day_resolution, String(result["decision"]["token"]), "continue")
+		result = engine.resolve_day(s)
+	assert_eq(result["status"], "complete")
 	var contact := _letters("contact")
 	var battle := _letters("battle")
 	assert_eq(contact.size(), 1, "contact told")

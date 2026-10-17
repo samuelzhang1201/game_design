@@ -1,0 +1,35 @@
+{
+  "status": "working, incomplete P1.2",
+  "source_hashes": {
+    "scripts/ui/game.gd": "342f4aabc3359c76d9b5136a3fa7aea8614880bed0cba46dcd23a0394b61583f",
+    "scripts/ui/game_root.gd": "b3e17d1c30c95e35dd17cf5a5dde216c9ce903efa069e048d20596572908af46",
+    "scripts/ui/battle_encounter_panel.gd": "d51abaf1b6eea365831f8e00fec5c335bb25985645b02493ba6dc0bbc2fea59d",
+    "tests/ui/test_game_root.gd": "bf7ca242df9a0bc98edaae746ad1777bf517600d693cadf48c55556fe7dd96d9",
+    "scripts/ui/CLAUDE.md": "50857158223025c2c27f00817dde60d6a9448cc5df3a4544abc922a37868e9db"
+  },
+  "root_tests": {
+    "tests": 31,
+    "passing": 30,
+    "failing": 1,
+    "asserts": 304,
+    "seconds": 17.827,
+    "actual_exit": 1,
+    "sole_failure": "missing editor-authored encounter scene"
+  },
+  "controller_view": "test-only EncounterPanelDouble; real-scene acceptance still fails",
+  "red": {
+    "tests": 1,
+    "failing": 1,
+    "actual_exit": 134,
+    "note": "missing routing assertion failed; subsequent native ResourceLoader shutdown crash retained, not treated as clean test exit"
+  },
+  "fast": "prior frozen partial fast predates wiring; not a current-code pass",
+  "error_audit": "root: only existing gut_loader.gd:35 SCRIPT ERROR; native resource/orphan shutdown diagnostics retained; no other SCRIPT ERROR",
+  "independent_panel_review": {
+    "agent": "/root/p12_panel_review",
+    "model": "gpt-6.1-sol",
+    "effort": "medium",
+    "result": "no actionable correctness/intel leak findings",
+    "limits": "read-only; no tests/rendering; root wiring not reviewed"
+  }
+}

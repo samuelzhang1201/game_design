@@ -16,7 +16,8 @@ const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversa
 	"res://scripts/ui/ledger_screen.gd", "res://scripts/ui/war_room_screen.gd",
 	"res://scripts/ui/war_folio_panel.gd", "res://scripts/ui/war_deploy_scroll.gd",
 	"res://scripts/ui/war_leave_prompt.gd", "res://scripts/ui/info_screen.gd",
-	"res://scripts/ui/laws_screen.gd", "res://scripts/ui/law_row.gd"]
+	"res://scripts/ui/laws_screen.gd", "res://scripts/ui/law_row.gd",
+	"res://scripts/ui/battle_encounter_panel.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -132,6 +133,12 @@ func test_the_laws_screen_keeps_its_scenes_look() -> void:
 	var row := laws.row("tax_rate")
 	_assert_scene_holds(row, "res://scenes/panels/law_row.tscn", "LawRow/", 8)
 	assert_eq(row.choice().get_popup().theme_type_variation, &"CardMenuPopup")
+
+func test_the_encounter_panel_keeps_its_scenes_look() -> void:
+	var panel: BattleEncounterPanel = load("res://scenes/panels/battle_encounter_panel.tscn").instantiate()
+	add_child_autofree(panel)
+	await wait_process_frames(2)
+	_assert_scene_holds(panel, "res://scenes/panels/battle_encounter_panel.tscn")
 
 func test_the_conversation_keeps_its_scenes_look() -> void:
 	var r := _root()

@@ -1,0 +1,128 @@
+{
+  "source_commit": "ff9ad15c579923fc5eda16a040c03680dac2f6df",
+  "recorded_at": "2026-10-18T01:29:08+11:00",
+  "final_fast_actual_exit": 0,
+  "existing_runner_post_run_gate_reaudit_exit": 0,
+  "counts": {
+    "Scripts": 205,
+    "Tests": 2165,
+    "Passing": 2162,
+    "Risky/Pending": 3,
+    "Asserts": 794267
+  },
+  "seconds": "1194.12",
+  "pending_tests": [
+    "test_every_cluster_title_stands_at_the_opening_view_at_real_density",
+    "test_the_hubs_are_always_named_at_the_opening_view",
+    "test_the_war_names_are_short_near_and_only_the_selected_has_gauges_at_real_density"
+  ],
+  "expected_gut_errors": 0,
+  "script_errors": [
+    "SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.\n          at: _static_init (res://addons/gut/gut_loader.gd:35)"
+  ],
+  "native_diagnostics_retained_in_log": [
+    "GDAIMCP::ERROR:: Binary files for GDAI MCP plugin are missing, so the plugin wont be loaded. Please re-install the plugin from [url=https://gdaimcp.com]https://gdaimcp.com or disable the plugin in Project Settings.",
+    "ERROR: 1 resources still in use at exit (run with --verbose for details).",
+    "ERROR: 1 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.",
+    "ERROR: EventEffects: unknown op: frobnicate:9",
+    "ERROR: EventEffects: metric:tax_rate moves a law's mirror alone; a law changes by law:<code>:<value>",
+    "ERROR: EventEffects: metric:tariff_rate moves a law's mirror alone; a law changes by law:<code>:<value>",
+    "ERROR: EventEffects: metric:grain_ration moves a law's mirror alone; a law changes by law:<code>:<value>",
+    "ERROR: LedgerResolvers: no instances for flow 'moat'",
+    "ERROR: AuditWriter: no books for flow 'moat'",
+    "ERROR: Parse JSON failed. Error at line 0: Expected 'true', 'false', or 'null', got 'the'",
+    "ERROR: Parse JSON failed. Error at line 0: Expected 'true', 'false', or 'null', got 'I'"
+  ],
+  "archives": [
+    {
+      "path": "p11-redirect-red.log.txt",
+      "sha256": "e4653cd8ee84013712b49435c002b4c64acfc3500306515631953668c13c93bd",
+      "bytes": 3084,
+      "original_sha256": "96597d163bd2d7df323a4c2f30aac71512f9c32e11940aced694ad66df58ef86"
+    },
+    {
+      "path": "p11-redirect-red.command.txt",
+      "sha256": "5535f455365aef54564b92553a2d6db4c64bfb8933381a460639b0e95bc3cff4",
+      "bytes": 355,
+      "original_sha256": "5535f455365aef54564b92553a2d6db4c64bfb8933381a460639b0e95bc3cff4"
+    },
+    {
+      "path": "p11-redirect-red.exit.txt",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2,
+      "original_sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "p11-redirect-green.log.txt",
+      "sha256": "67f20a7977bb4b3584518c46df16a90a9d4c1fc3f81ce61859877a69a9b109a8",
+      "bytes": 3082,
+      "original_sha256": "9a725ff680a3770b668e7946e3bbfd99498481137cf4c244d2df18ad00132924"
+    },
+    {
+      "path": "p11-redirect-green.command.txt",
+      "sha256": "fb0348077050a2e0262d6a71748a33d13d99426d2d3aa6c5b88a7e5b8b7f7bfb",
+      "bytes": 395,
+      "original_sha256": "fb0348077050a2e0262d6a71748a33d13d99426d2d3aa6c5b88a7e5b8b7f7bfb"
+    },
+    {
+      "path": "p11-redirect-green.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "original_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "p11-review-day-focus.log.txt",
+      "sha256": "31991ebc710e1b1e9c8b868c35904ba6d7c387fd850112d62ee88d49297dc96f",
+      "bytes": 1298,
+      "original_sha256": "86da06597c9a85d057ac1b7d9069312a2aa5ebb5d3999e7336920f8116c11dcd"
+    },
+    {
+      "path": "p11-review-day-focus.command.txt",
+      "sha256": "8619763f58d4807c25a7d29b0d350cc982eefbc0bd1a2d2c72cd20f8a1367d44",
+      "bytes": 179,
+      "original_sha256": "8619763f58d4807c25a7d29b0d350cc982eefbc0bd1a2d2c72cd20f8a1367d44"
+    },
+    {
+      "path": "p11-review-day-focus.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "original_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "p11-review-targeted.log.txt",
+      "sha256": "c2346622e64df7535f87655eb31732010a9568387fbb49ec7f69d1e2904cb055",
+      "bytes": 8067,
+      "original_sha256": "9e85b5183c7ea5d28b8b302e6105034c378707c52d7f8f726ef818aac8795d69"
+    },
+    {
+      "path": "p11-review-targeted.command.txt",
+      "sha256": "c32c17e23ec01eab168a661e3496d143cd34b8d3c4224738bd00be2512e9a4a3",
+      "bytes": 510,
+      "original_sha256": "c32c17e23ec01eab168a661e3496d143cd34b8d3c4224738bd00be2512e9a4a3"
+    },
+    {
+      "path": "p11-review-targeted.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "original_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "p11-review-final-fast.log.txt",
+      "sha256": "fd957acc52231d1e5d972f5a3028f769110bda21da7a1e9663f41cf1df59bd2d",
+      "bytes": 122832,
+      "original_sha256": "798ea27a5576d0143e0367710fd05e5d5c4b78890d3c8855e08bc4d022347913"
+    },
+    {
+      "path": "p11-review-final-fast.command.txt",
+      "sha256": "7289ebf40bb5266dabf49b697f4c02c58158a75cab80172627503221a32aab30",
+      "bytes": 41,
+      "original_sha256": "7289ebf40bb5266dabf49b697f4c02c58158a75cab80172627503221a32aab30"
+    },
+    {
+      "path": "p11-review-final-fast.exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "original_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  ]
+}

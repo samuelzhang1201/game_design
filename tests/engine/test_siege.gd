@@ -1190,7 +1190,7 @@ func test_a_strongly_held_walled_town_outlasts_the_besiegers_supplies() -> void:
 		if String(e.get("kind", "")) == "siege_day":
 			best = maxi(best, int(e["progress"]))
 			hungry += 1 if bool(e["starving"]) else 0
-	assert_eq(hungry, 0, "the garrison never starved: it ate what it carried until the host went home")
+	assert_eq(hungry, 0, "the garrison does not starve during the siege")
 	gut.p("strong walled town, unstocked: siege from day %d, lifted day %d, best progress %d, starving days %d, checked assault rounds %d" % [
 		int(run["begun"]), int(run["lifted"]), best, hungry, _of(run["events"], "siege_repulsed").size()])
 

@@ -1,0 +1,31 @@
+{
+  "root": "/Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design",
+  "private_dir": "/Users/samuelzhang/Library/Application Support/BTKW-P12-editor",
+  "created_files": [
+    "/Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design/addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension",
+    "/Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design/addons/gdai-mcp-plugin-godot/bin/macos/libgdai-mcp-plugin-godot.macos.template_release.dylib",
+    "/Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design/override.cfg",
+    "/Users/samuelzhang/Library/Application Support/BTKW-P12-editor/gdai_mcp_project_config.json"
+  ],
+  "project_sha256": "83fd95ad6ddfc8eb87458a6c7a33d5738d90dbd17eb14aa4666cdb7cd038a7f2",
+  "config_hashes": {
+    "/Users/samuelzhang/.codex/config.toml": "e1ab2dc42f455d3d37efefccc09a66507011af8707b7bf708a1d3afe083cc4ec",
+    "/Users/samuelzhang/game_design/.codex/config.toml": "ddd40090d7653625f7310f1d2e86b5e44bafc19ff70629d7152adf317adeba7a",
+    "/Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design/.codex/config.toml": "ddd40090d7653625f7310f1d2e86b5e44bafc19ff70629d7152adf317adeba7a"
+  },
+  "main_listener_before": "COMMAND   PID        USER   FD   TYPE            DEVICE SIZE/OFF NODE NAME\nGodot   74029 samuelzhang    6u  IPv4 0x1dab7a12dad73a1      0t0  TCP 127.0.0.1:3571 (LISTEN)\n",
+  "status": "rolled_back",
+  "editor_session": null,
+  "failure": "Native tried default3571 despite proposed override/private JSON; stopped only own editor handle.",
+  "setup_correction": "Editor ignored override.cfg; native log confirmed shared user:// and config missing. Removed own override, applied only two temporary application config keys to worktree project.godot; restore full baseline after own editor exits.",
+  "temporary_project_sha256": "52f643e914896940c6bea6fc799188b1c322a8df00b23508a475928275dfef26",
+  "editor_listener": "COMMAND   PID        USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nGodot   94993 samuelzhang    7u  IPv4 0xf23999149b8223fd      0t0  TCP 127.0.0.1:13571 (LISTEN)\n",
+  "editor_pid": null,
+  "main_listener_after": "COMMAND   PID        USER   FD   TYPE            DEVICE SIZE/OFF NODE NAME\nGodot   74029 samuelzhang    6u  IPv4 0x1dab7a12dad73a1      0t0  TCP 127.0.0.1:3571 (LISTEN)\n",
+  "config_hashes_unchanged": {
+    "/Users/samuelzhang/.codex/config.toml": true,
+    "/Users/samuelzhang/game_design/.codex/config.toml": true,
+    "/Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design/.codex/config.toml": true
+  },
+  "project_restored_sha256": "83fd95ad6ddfc8eb87458a6c7a33d5738d90dbd17eb14aa4666cdb7cd038a7f2"
+}

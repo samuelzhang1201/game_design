@@ -113,9 +113,20 @@ func _init() -> void:
 		var content := _metric(s, "peasant_contentment")
 		var t1 := Time.get_ticks_usec()
 		if s.day >= Calendar.DAYS_PER_TICK:
-			engine.advance(s)
+			var report := engine.advance(s)
+			if report.status == "blocked":
+				printerr("BLOCKED kind=%s battle=%d token=%s" % [report.pending_decision.get("kind", ""),
+					int(report.pending_decision.get("battle_id", 0)), report.pending_decision.get("token", "")])
+				quit(0)
+				return
 		else:
-			engine.advance_day(s)
+			var result := engine.resolve_day(s)
+			if String(result["status"]) == "blocked":
+				var decision: Dictionary = result["decision"]
+				printerr("BLOCKED kind=%s battle=%d token=%s" % [decision.get("kind", ""),
+					int(decision.get("battle_id", 0)), decision.get("token", "")])
+				quit(0)
+				return
 		day_us.append(Time.get_ticks_usec() - t1)
 		var lines: Array = []
 		if today == cross:

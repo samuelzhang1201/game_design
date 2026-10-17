@@ -14,6 +14,8 @@ var promise_events: Array = []
 var event: Dictionary = {}
 ## Works finished on the tick's first day: [{cell, building}].
 var finished_works: Array = []
+var status: String = "complete"
+var pending_decision: Dictionary = {}
 
 func to_dict() -> Dictionary:
 	var sug_dicts: Array = []
@@ -27,4 +29,5 @@ func to_dict() -> Dictionary:
 		"claim_resolutions": claim_resolutions.duplicate(true),
 		"concerns": concerns.duplicate(true),
 		"suggestions": sug_dicts, "outcomes": outcomes.duplicate(true),
-		"promise_events": promise_events.duplicate(true), "event": event.duplicate(true)}
+		"promise_events": promise_events.duplicate(true), "event": event.duplicate(true),
+		"status": status, "pending_decision": pending_decision.duplicate(true)}

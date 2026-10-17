@@ -1,0 +1,156 @@
+[gd_scene format=3 uid="uid://c0pbq4ao3xs2r"]
+
+[ext_resource type="Theme" uid="uid://b4xbt0npqul2u" path="res://assets/2D/ui/theme/game_theme.tres" id="1_ltbpn"]
+[ext_resource type="Script" uid="uid://dwav23njda5pn" path="res://scripts/ui/battle_encounter_panel.gd" id="2_e3uco"]
+[ext_resource type="Texture2D" uid="uid://p1jqgjgkq1pm" path="res://assets/2D/ui/panels/leather_grain_light.png" id="3_tlc5y"]
+[ext_resource type="Texture2D" uid="uid://cnctm0nndn0qh" path="res://assets/2D/ui/panels/leather_grain_dark.png" id="4_nqvlg"]
+[ext_resource type="Script" uid="uid://c44j2v837vlnv" path="res://scripts/ui/vellum_panel_style.gd" id="5_r1jt7"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_me1bj"]
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+bg_color = Color(0.12156863, 0.101960786, 0.08235294, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.65882355, 0.5411765, 0.29803923, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 8
+shadow_offset = Vector2(0, 3)
+
+[sub_resource type="StyleBox" id="StyleBox_atqbr"]
+resource_local_to_scene = false
+resource_name = ""
+content_margin_left = 32.0
+content_margin_top = 32.0
+content_margin_right = 32.0
+content_margin_bottom = 32.0
+script = ExtResource("5_r1jt7")
+base = SubResource("StyleBoxFlat_me1bj")
+grain = ExtResource("3_tlc5y")
+grain_dark = ExtResource("4_nqvlg")
+grain_alpha = 0.1
+shade_top = 0.05
+shade_bottom = 0.14
+inner_rule = Color(1, 1, 1, 0)
+
+[node name="BattleEncounterPanel" type="Control" unique_id=1420189153]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource("1_ltbpn")
+script = ExtResource("2_e3uco")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=1591745637]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.015, 0.01, 0.22)
+
+[node name="Center" type="CenterContainer" parent="." unique_id=1132162577]
+unique_name_in_owner = true
+editor_description = "GameRoot fits this container to the active map's runtime bounds."
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="Window" type="PanelContainer" parent="Center" unique_id=1891608525]
+custom_minimum_size = Vector2(540, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBox_atqbr")
+
+[node name="Body" type="VBoxContainer" parent="Center/Window" unique_id=645743285]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Window/Body" unique_id=761144159]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"TitleLabel"
+text = "Enemy contact"
+autowrap_mode = 3
+
+[node name="Notice" type="Label" parent="Center/Window/Body" unique_id=2116808989]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "Our troops have met the enemy. Review the field before the fighting begins."
+autowrap_mode = 3
+
+[node name="Forces" type="ScrollContainer" parent="Center/Window/Body" unique_id=714805927]
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Facts" type="VBoxContainer" parent="Center/Window/Body/Forces" unique_id=1751598481]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="OwnHeading" type="Label" parent="Center/Window/Body/Forces/Facts" unique_id=1493431445]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardSection"
+text = "Our troops"
+autowrap_mode = 3
+
+[node name="OwnForces" type="Label" parent="Center/Window/Body/Forces/Facts" unique_id=536659468]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "The crown's troops"
+autowrap_mode = 3
+
+[node name="EnemyHeading" type="Label" parent="Center/Window/Body/Forces/Facts" unique_id=1462437368]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardSection"
+text = "Known enemy"
+autowrap_mode = 3
+
+[node name="EnemyForces" type="Label" parent="Center/Window/Body/Forces/Facts" unique_id=1439125097]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "Enemy strength is uncertain."
+autowrap_mode = 3
+
+[node name="ResumeHint" type="Label" parent="Center/Window/Body" unique_id=187208084]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "The clock will remain paused. Resume when you are ready."
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="Center/Window/Body" unique_id=2133536369]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="Deploy" type="Button" parent="Center/Window/Body/Actions" unique_id=1980971308]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Review deployment"
+
+[node name="Continue" type="Button" parent="Center/Window/Body/Actions" unique_id=197312473]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Command"
+text = "Continue"

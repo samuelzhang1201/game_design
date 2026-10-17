@@ -546,19 +546,53 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 ##  "rounds" / "withdrawn": the foes' host went home), winner ("att" / "def" / ""), att, def (the survivors), rounds,
 ##  town, place_x_m, place_y_m}.
 static func settle_day(repo: DataRepository, state: GameState) -> Array:
-	var events: Array = []
-	_withdraw_homeward(repo, state, events)
-	_detect(repo, state, events)
+	var events := prepare_day(repo, state)
 	var order: Array = state.battles.duplicate()
 	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["id"]) < int(b["id"]))
 	var over: Array = []
 	for b: Dictionary in order:
-		if _fight(repo, state, b, events):
+		var result := step_battle(repo, state, int(b["id"]))
+		events.append_array(result["events"])
+		if bool(result["over"]):
 			over.append(int(b["id"]))
-	if not over.is_empty():
-		state.battles = state.battles.filter(func(b: Dictionary) -> bool: return not int(b["id"]) in over)
-	settle_stances(state)
+	finish_day(state, over)
 	return events
+
+
+## Discover all contacts and return their events without applying any losses.
+static func prepare_day(repo: DataRepository, state: GameState) -> Array:
+	var events: Array = []
+	_withdraw_homeward(repo, state, events)
+	_detect(repo, state, events)
+	return events
+
+
+## Discover contacts after a later movement substep, with no second daily
+## withdrawal/host pass.
+static func discover_contacts(repo: DataRepository, state: GameState) -> Array:
+	var events: Array = []
+	_detect(repo, state, events)
+	return events
+
+
+## Resolve exactly one battle's tactical step. The caller owns and persists the
+## stable battle cursor so a blocked day can resume without replaying a result.
+static func step_battle(repo: DataRepository, state: GameState, battle_id: int) -> Dictionary:
+	var battle := battle_by_id(state, battle_id)
+	if battle.is_empty():
+		return {"events": [], "over": true}
+	var events: Array = []
+	var over := _fight(repo, state, battle, events)
+	return {"events": events, "over": over}
+
+
+## Remove completed battles and apply the day's delivered stances once, after
+## the caller has advanced every battle id.
+static func finish_day(state: GameState, over_ids: Array) -> void:
+	if not over_ids.is_empty():
+		state.battles = state.battles.filter(func(b: Dictionary) -> bool:
+			return not int(b["id"]) in over_ids)
+	settle_stances(state)
 
 
 ## A stance a courier delivered (`stance_next`) becomes the regiment's stance

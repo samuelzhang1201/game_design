@@ -1,0 +1,33 @@
+{
+  "run": 39051461243,
+  "conclusion": "cancelled",
+  "annotation": "The job has exceeded the maximum execution time of 45m0s",
+  "reported_shards": [
+    {
+      "shard": 1,
+      "scripts": 70,
+      "passed": 702,
+      "seconds": 1071.853
+    },
+    {
+      "shard": 2,
+      "scripts": 71,
+      "passed": 774,
+      "seconds": 786.982
+    },
+    {
+      "shard": 3,
+      "scripts": 70,
+      "passed": 734,
+      "pending": 3,
+      "seconds": 721.19
+    }
+  ],
+  "unrun_shards": [
+    4,
+    5
+  ],
+  "correction": "Run existing five contiguous shards as isolated matrix jobs; fail-fast false; original45m per-job timeout and strict runner unchanged. Require all five successful.",
+  "local_validation": "Ruby YAML parse, exact shards1..5, fail-fastfalse, unchanged45m, complete ordered353script partition; runtime/test/runner input hashes unchanged from final passing local suites.",
+  "independent_review": "No actionable findings; validate all five named matrix checks."
+}

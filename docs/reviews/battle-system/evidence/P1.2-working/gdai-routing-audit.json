@@ -1,0 +1,41 @@
+{
+  "diagnosis_only": true,
+  "version": "0.3.3",
+  "sources": {
+    "/Users/samuelzhang/game_design/addons/gdai-mcp-plugin-godot/gdai_mcp_server.py": "421a0903930ea2a7ede08f75bc97a326557437f53f3a9bf0439308d3bfc8c904",
+    "/Users/samuelzhang/game_design/addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension": "750f68a71c1b40c58912d3115f0a173f09d6de1fd079ab0a91b5923111caa9df",
+    "/Users/samuelzhang/game_design/addons/gdai-mcp-plugin-godot/bin/macos/libgdai-mcp-plugin-godot.macos.template_release.dylib": "7310c44a1ef46d52ad21e708b50dc336eec9d4dba6aa894af97b65eb3c69b13c",
+    "/Users/samuelzhang/game_design/addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gd": "10a37095e34ed34492db007e33a32d4dd5bb39fbb509a6970ba726b036f20759",
+    "/Users/samuelzhang/game_design/addons/gdai-mcp-plugin-godot/plugin.cfg": "a20274e67dd638179496868dacc85d7afc924ea2219112e0296fefe47af4dc7f"
+  },
+  "adapter_route": "GDAI_MCP_SERVER_PORT read once at process startup, default3571; localhost base URL; call-tool payload has tool_name/tool_args only",
+  "active_editor": {
+    "pid": 74029,
+    "port": 3571,
+    "project": "/Users/samuelzhang/game_design/"
+  },
+  "runtime_port_observed": {
+    "pid": 92985,
+    "port": 3572,
+    "cwd": "/Users/samuelzhang/.codex/worktrees/battle-system/game_design",
+    "owner": "another running fast suite, untouched"
+  },
+  "candidate_ports": {
+    "13571": "no LISTEN at inspection",
+    "13572": "no LISTEN at inspection"
+  },
+  "native_config": "user://gdai_mcp_project_config.json; absent at observed shared user dir",
+  "native_environment_override": "not verified; do not assume adapter env also configures native editor",
+  "missing_worktree_files": [
+    "gdai_mcp_plugin.gdextension",
+    "bin/macos/libgdai-mcp-plugin-godot.macos.template_release.dylib"
+  ],
+  "config_modified": false,
+  "process_started_or_stopped": false,
+  "tests_run": false,
+  "official_sources": [
+    "https://gdaimcp.com/docs/configuration",
+    "https://gdaimcp.com/docs/installation",
+    "https://docs.godotengine.org/en/stable/classes/class_projectsettings.html"
+  ]
+}

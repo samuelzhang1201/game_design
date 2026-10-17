@@ -489,12 +489,27 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 	engine.advance(s)
 	var raiding_late := ""
 	var home_by := -1
+	var days_played := 0
 	while s.absolute_day() <= 120:
+		days_played += 1
+		assert_lte(days_played, 121, "the day loop makes bounded progress")
 		var today := s.absolute_day()
-		if s.day >= Calendar.DAYS_PER_TICK:
-			engine.advance(s)
-		else:
-			engine.advance_day(s)
+		var daily := engine.advance(s) if s.day >= Calendar.DAYS_PER_TICK else null
+		var result := {} if daily != null else engine.resolve_day(s)
+		while (daily != null and daily.status == "blocked") or String(result.get("status", "")) == "blocked":
+			if daily != null:
+				DayResolution.acknowledge(s.day_resolution, daily.pending_decision.token, "continue")
+				daily = engine.advance(s)
+			else:
+				DayResolution.acknowledge(s.day_resolution, String(result["decision"]["token"]), "continue")
+				result = engine.resolve_day(s)
+		assert_eq(String(daily.status) if daily != null else String(result.get("status", "")),
+			"complete", "the explicitly confirmed day completes")
+		var event: Dictionary = daily.event if daily != null else {}
+		if engine.last_month_report != null:
+			event = engine.last_month_report.event
+		if not event.is_empty():
+			engine.events.apply_choice(String((event["choices"] as Array)[0]["choice_id"]), s)
 		for h: String in EnemyAi.host_codes(s):
 			var m: Dictionary = s.ai_hosts[h]
 			if today > 33 and String(m["mode"]) == "RAID" and int(m["plunder"]) > 0 and raiding_late == "":

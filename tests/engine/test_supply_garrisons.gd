@@ -30,6 +30,15 @@ func _check(repo: DataRepository, s: GameState, low: int) -> String:
 			return "%s: the towns hold %d, the metric reads %d" % [pool, towns, int(s.metrics[TownStores.METRIC[pool]])]
 	return ""
 
+## This year-long simulation explicitly auto-confirms encounters so it can
+## continue measuring the unattended supply loop.
+func _advance_day_auto(engine: TickEngine, state: GameState) -> void:
+	var result := engine.resolve_day(state)
+	while String(result.get("status", "")) == "blocked":
+		var decision: Dictionary = result["decision"]
+		DayResolution.acknowledge(state.day_resolution, String(decision["token"]), "continue")
+		result = engine.resolve_day(state)
+
 func test_a_year_with_no_orders_starves_no_home_garrison() -> void:
 	var repo := SuiteData.repo()
 	var s := SuiteData.campaign(repo, 42)
@@ -40,13 +49,13 @@ func test_a_year_with_no_orders_starves_no_home_garrison() -> void:
 	var wrong := ""
 	for m in Calendar.TICKS_PER_YEAR:
 		for d in Calendar.DAYS_PER_TICK - 1:
-			engine.advance_day(s)
+			_advance_day_auto(engine, s)
 			wrong = _check(repo, s, low)
 			if wrong != "":
 				break
 		if wrong != "":
 			break
-		engine.advance(s)
+		_advance_day_auto(engine, s)
 		wrong = _check(repo, s, low)
 		if wrong != "":
 			break

@@ -392,13 +392,14 @@ func test_campaign_continues_after_losing_a_town() -> void:
 	var day0 := s.absolute_day()
 	var fired: Array = []
 	for i in 40:
-		if s.day >= Calendar.DAYS_PER_TICK:
-			var r := engine.advance(s)
-			if not r.event.is_empty():
-				fired.append(String(r.event["event_id"]))
-				engine.events.apply_choice(String((r.event["choices"] as Array)[0]["choice_id"]), s)
-		else:
-			engine.advance_day(s)
+		var r := engine.resolve_day(s)
+		while String(r.get("status", "")) == "blocked":
+			DayResolution.acknowledge(s.day_resolution, String(r["decision"]["token"]), "continue")
+			r = engine.resolve_day(s)
+		if engine.last_month_report != null and not engine.last_month_report.event.is_empty():
+			var event: Dictionary = engine.last_month_report.event
+			fired.append(String(event["event_id"]))
+			engine.events.apply_choice(String((event["choices"] as Array)[0]["choice_id"]), s)
 	assert_eq(s.absolute_day(), day0 + 40, "the clock ran on, forty days")
 	assert_gt(s.tick, tick0, "the month turned")
 	assert_true(fired.has(DefeatSystem.EVENT_ID), "the beat was played at the month's roll: %s" % [fired])
@@ -406,7 +407,10 @@ func test_campaign_continues_after_losing_a_town() -> void:
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	assert_eq(back.town_losses, s.town_losses, "the loss survives the save")
 	assert_eq(back.absolute_day(), s.absolute_day())
-	engine.advance_day(back)
+	var resumed := engine.resolve_day(back)
+	while String(resumed.get("status", "")) == "blocked":
+		DayResolution.acknowledge(back.day_resolution, String(resumed["decision"]["token"]), "continue")
+		resumed = engine.resolve_day(back)
 	assert_eq(back.absolute_day(), s.absolute_day() + 1, "a loaded campaign plays on")
 
 
