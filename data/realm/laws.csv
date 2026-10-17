@@ -13,6 +13,8 @@ register_prisoners,military,discipline,Register prisoners,toggle,off|on,off,camp
 wear_badges,military,discipline,Wear badges,toggle,off|on,off,camp,0,2,,"owner 2026-10-07: wear badges (佩戴标识)"
 no_feuds,military,discipline,No private feuds,toggle,off|on,off,camp,0,2,,"owner 2026-10-07: no private feuds (禁止私斗)"
 desertion_penalty,military,discipline,Desertion penalty,choice,fine|lenient|hanging,fine,camp,0,2,,"spec 2026-10-10-foraging-and-desertion §1.2"
+battle_tactics,military,discipline,Permitted tactics,choice,unrestricted|restrained,unrestricted,camp,0,2,,Restrained tactics forbid charge and pursuit
+own_surrender,military,discipline,Own surrender,choice,allow|forbid,allow,camp,0,2,,Separate from acceptance of enemy surrender
 quarter,military,chivalry,Quarter,choice,give|refuse,give,camp,0,2,,"chivalry candidate added by the design (2026-10-08, answer A)"
 ransom,military,chivalry,Ransom,choice,ransom|execute,ransom,camp,0,2,,"chivalry candidate added by the design (2026-10-08, answer A)"
 truce_days,military,chivalry,Truce days,toggle,off|on,off,camp,0,2,,"chivalry candidate added by the design (2026-10-08, answer A)"
@@ -20,6 +22,9 @@ envoys,military,chivalry,Inviolable envoys,toggle,off|on,off,camp,0,2,,"chivalry
 knightly_orders,military,chivalry,Knightly orders,toggle,off|on,off,camp,0,4,opinion:marshal:-1:the marshal is wary of sworn brotherhoods,"development axes spec 2026-10-12 §5"
 tournaments,military,chivalry,Tournaments,toggle,off|on,off,camp,0,4,opinion:steward:-1:the steward counts the cost of the lists,"development axes spec 2026-10-12 §5"
 heavy_levy,military,chivalry,Heavy levy,toggle,off|on,off,camp,0,4,opinion:marshal:-1:the marshal frets at the weight of the levy,"development axes spec 2026-10-12 §5"
+prisoner_treatment,military,chivalry,Ordinary prisoner treatment,choice,protect|execute,protect,camp,0,2,,Treatment of ordinary prisoners
+wounded_evacuation,military,chivalry,Wounded evacuation,choice,protect|deny,protect,camp,0,2,,Protection for agreed wounded evacuation
+safe_withdrawal,military,chivalry,Agreed safe withdrawal,choice,deny|protect,deny,camp,0,2,,Protection for agreed withdrawal
 arsenal_decree,military,arms,Arsenal decree,choice,none|bombards,none,camp,0,4,opinion:marshal:-1:the arsenal is re-ordered,"development axes spec 2026-10-12 §5"
 patronage,economy,,Patronage,choice,none|scholars|court,none,province,0,4,opinion:steward:-1:the treasury frets over the pensions,"development axes spec 2026-10-12 §5"
 guild_charter,economy,,Guild charter,choice,none|granted,none,province,0,4,opinion:steward:-1:the chartered guilds hold the steward to account,"development axes spec 2026-10-12 §5"

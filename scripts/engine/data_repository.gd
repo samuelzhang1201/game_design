@@ -147,6 +147,8 @@ var battle_outcomes: Array[Dictionary] = []
 ## data/battle/battle_stances.csv (§4.4): stance -> {label, defence_permille,
 ## morale_decay_permille, retreat_odds_permille, retreats_on_contact (bool)}.
 var battle_stances: Dictionary = {}
+var parley_clauses: Dictionary = {}
+var battle_formations: Dictionary = {}
 ## data/battle/ai_doctrines.csv (§3.3): host role -> {greed_permille, caution_permille,
 ## dist_cost, engage_odds_permille, retreat_morale, town_bonus}.
 var ai_doctrines: Dictionary = {}
@@ -1022,6 +1024,21 @@ func _load(dir: String) -> bool:
 		return false
 	battle_outcomes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["eff_min"]) < int(b["eff_min"]))
+	if not _load_if_present(table_path(dir, "formations"),
+			["formation", "label", "frontage_m", "narrow_terrains", "narrow_width_m", "required_arms",
+			"min_morale", "min_training", "centre_required", "attack_permille", "defence_permille",
+			"flank_permille", "missile_permille", "change_progress", "disorder_days", "disorder_permille"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for key: String in row:
+					if not key in ["formation", "label", "narrow_terrains", "required_arms"]:
+						row[key] = int(row[key])
+				battle_formations[String(r["formation"])] = row):
+		return false
+	if not _load_if_present(table_path(dir, "parley_clauses"),
+			["clause", "label", "law", "scope", "policy_map"],
+			func(r): parley_clauses[String(r["clause"])] = r.duplicate()):
+		return false
 	if not _load_if_present(table_path(dir, "battle_stances"),
 			["stance", "label", "defence_permille", "morale_decay_permille",
 			"retreat_odds_permille", "retreats_on_contact"],

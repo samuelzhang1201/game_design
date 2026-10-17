@@ -13,6 +13,10 @@ var repo: DataRepository
 
 func before_each() -> void:
 	repo = SuiteData.repo()
+	# Lifecycle fixtures isolate tier/retreat arithmetic; deployment factors have their own hand tests.
+	for formation: Dictionary in repo.battle_formations.values():
+		for key: String in ["attack_permille", "defence_permille", "flank_permille", "missile_permille"]:
+			formation[key] = 1000
 	Weather.forget()
 
 

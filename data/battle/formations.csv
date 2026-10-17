@@ -1,0 +1,5 @@
+formation,label,frontage_m,narrow_terrains,narrow_width_m,required_arms,min_morale,min_training,centre_required,attack_permille,defence_permille,flank_permille,missile_permille,change_progress,disorder_days,disorder_permille
+line,Extended line,500,forest|jungle|mountains|marsh,250,,0,0,0,1000,1100,1000,1000,2000,2,800
+wedge,Wedge,250,forest|jungle|mountains|marsh,125,infantry|cavalry,60,30,0,1200,950,850,1000,2000,2,800
+diamond,Diamond guard,250,forest|jungle|mountains|marsh,125,,0,0,1,850,1150,1100,850,2000,2,800
+double_rank,Compact double rank,250,forest|jungle|mountains|marsh,125,,0,0,0,950,1150,850,850,2000,2,800

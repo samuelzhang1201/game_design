@@ -17,7 +17,7 @@ func _draw() -> void:
 		if int(row["figures"]) != n:
 			continue
 		var top := INF
-		for s: Vector2 in row["slots"]:
+		for s: Vector2 in deployment_slots():
 			var at := size * 0.5 + s * gap   # slots: x to the right, z toward the rear (down the page)
 			draw_circle(at, radius, ink)
 			top = minf(top, at.y)
@@ -28,3 +28,14 @@ func _draw() -> void:
 		draw_string(font, Vector2((size.x - w) * 0.5, top - Game.data.bal("war_formation_label_gap_px")),
 			word, HORIZONTAL_ALIGNMENT_LEFT, -1, px, rubric)
 		return
+
+func deployment_slots() -> Array:
+	var n := int(get_meta("figures", 0))
+	var formation := String(get_meta("formation", ""))
+	if formation != "":
+		return BattleFormation.slots(formation, n, int(get_meta("frontage_permille", 1000)))
+	if Game.data != null:
+		for row: Dictionary in Game.data.army_formations:
+			if int(row["figures"]) == n:
+				return row["slots"]
+	return []

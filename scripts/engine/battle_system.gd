@@ -96,6 +96,12 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 			p = p * def_permille / 1000
 			@warning_ignore("integer_division")  # camp and stance are independent factors
 			p = p * CampSystem.defence_factor(repo, state, code) / 1000
+		var battle := battle_of(state, code)
+		if not battle.is_empty() and battle.has("formations"):
+			var side := BattleRules.side_of(battle, code)
+			for factor: Dictionary in BattleFormation.effects(repo, state, battle, side, attacking)["factors"]:
+				@warning_ignore("integer_division")
+				p = p * int(factor["permille"]) / 1000
 		total += p
 	return total
 
@@ -555,6 +561,8 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 	state.foe_next_id += 1
 	var b := {"id": state.foe_next_id, "att": att, "def": def, "start_day": state.absolute_day(),
 		"rounds": 0, "place_x_m": place.x, "place_y_m": place.y, "town": town}
+	BattleRules.freeze(repo, state, b)
+	BattleFormation.ensure(b)
 	state.battles.append(b)
 	var turn := ArmyGround.clearance_on(repo)   # the clearance's facing; none with the rule off
 	_halt(state, p, _at_m(repo, state, f) if turn else Vector2i(-1, -1))
@@ -576,6 +584,9 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 ##  town, place_x_m, place_y_m}.
 static func prepare_day(repo: DataRepository, state: GameState) -> Array:
 	var events: Array = []
+	for battle: Dictionary in state.battles:
+		BattleRules.freeze(repo, state, battle)
+		BattleFormation.ensure(battle)
 	_withdraw_homeward(repo, state, events)
 	_detect(repo, state, events)
 	return events
@@ -593,7 +604,9 @@ static func step_battle(repo: DataRepository, state: GameState, battle_id: int) 
 	return {"status": "complete", "events": events}
 
 
-static func finish_day(_repo: DataRepository, state: GameState) -> void:
+static func finish_day(repo: DataRepository, state: GameState) -> void:
+	for battle: Dictionary in state.battles:
+		BattleFormation.advance(repo, state, battle)
 	settle_stances(state)
 
 

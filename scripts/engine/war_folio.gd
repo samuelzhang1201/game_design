@@ -187,7 +187,15 @@ static func _composition(repo: DataRepository, state: GameState, code: String, r
 	rows.append(_row("Fit", WarRoom.group(ArmySystem.fit_count(repo, state, code))))
 	rows.append(_row("Wounded", WarRoom.group(wounded)))
 	var n := figures(repo, state, code)
-	rows.append(_row("Formation", "%d figures — %s" % [n, _tier_word(n)]))
+	var formation := BattleFormation.of_unit(state, code)
+	var label := String(repo.battle_formations.get(formation, {}).get("label", _tier_word(n)))
+	rows.append(_row("Formation", "%d figures — %s" % [n, label]))
+	var battle := BattleSystem.battle_of(state, code)
+	var side := BattleRules.side_of(battle, code)
+	var change: Dictionary = battle.get("formations", {}).get(side, {})
+	if not change.is_empty() and change["current"] != change["target"]:
+		rows.append(_row("Reforming", "%s — %d / %d" % [String(repo.battle_formations[change["target"]]["label"]),
+			int(change["progress"]), int(change["required_progress"])]))
 	return rows
 
 

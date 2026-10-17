@@ -245,6 +245,9 @@ func _finish_overlays() -> void:
 	_battle_encounter = load("res://scenes/panels/battle_encounter_panel.tscn").instantiate()
 	add_child(_battle_encounter)
 	_battle_encounter.decision_selected.connect(_on_battle_decision_selected)
+	_battle_encounter.formation_requested.connect(func(code: String, id: int, formation: String) -> void:
+		var result := Game.try_execute(ActionRequest.make("BATTLE_FORMATION", {"regiment": code, "battle_id": id, "formation": formation}))
+		_battle_encounter.show_order_result(result))
 	Game.battle_decision_requested.connect(_show_battle_decision)
 	_laws_screen.above = [_report_popup, _pause_menu]
 	_start_bgm()
@@ -255,7 +258,7 @@ func _show_battle_decision(decision: Dictionary) -> void:
 		return
 	var battle := BattleSystem.battle_by_id(Game.state, int(decision["battle_id"]))
 	var place := BattleSystem.place_label(Game.data, Game.state, battle) if not battle.is_empty() else "the field"
-	_battle_encounter.show_decision(decision, place)
+	_battle_encounter.show_decision(decision, place, BattleRules.encounter_view(Game.data, Game.state, battle))
 	_raise_overlays()
 
 func _on_battle_decision_selected(token: String, choice: String) -> void:

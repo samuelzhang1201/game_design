@@ -82,6 +82,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			return _validate_manor(req, state, needs)
 		"ARMY_MARCH", "ARMY_GARRISON", "ARMY_SEAT":
 			return _validate_army(req, state)
+		"BATTLE_FORMATION":
+			return _validate_formation(req, state)
 		"ARMY_STANCE":
 			return _validate_stance(req, state)
 		"SUPPLY_POINT_SET", "SUPPLY_POINT_CLEAR", "SUPPLY_CARRY_SET":
@@ -295,6 +297,23 @@ func _place_refusal(reg: Dictionary, at: Vector2, off_map: String, into_sea: Str
 	if not naval and not on_land:
 		return into_sea % String(reg["label"])
 	return ""
+
+func _validate_formation(req: ActionRequest, state: GameState) -> String:
+	var code := String(req.params.get("regiment", ""))
+	var reg := ArmySystem.regiment(data, code, state)
+	if reg.is_empty() or not state.regiments.has(code) or ArmySystem.is_foe(state, code) \
+			or String(reg.get("kingdom_code", "")) != data.resolve_realm("player_realm"):
+		return "This army is not yours to command."
+	var id := int(req.params.get("battle_id", -1))
+	var battle := BattleSystem.battle_by_id(state, id)
+	var side := BattleRules.side_of(battle, code)
+	var why := BattleFormation.refusal(data, state, id, side, String(req.params.get("formation", "")))
+	if why != "":
+		return why
+	if float(state.metrics.get("treasury", 0)) < OrderCosts.gold_of(data, req.action_code) + _fee_for(state, code):
+		return "The chancery cannot pay for this formation order."
+	return ""
+
 
 ## ARMY_STANCE (spec 2026-10-07-enemy-ai-and-battle §4.4): a land regiment
 ## of the realm (never a foe), a courier the chest can pay, and a stance of
@@ -756,6 +775,12 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				effects.append({"metric": "army", "delta": 0.0,
 					"reason": ("%s halts and takes up quarters" if was == ArmySystem.ORDER_MARCH
 						else "%s stands to its post") % String(reg["label"])})
+		"BATTLE_FORMATION":
+			var code := String(req.params["regiment"])
+			var formation := String(req.params["formation"])
+			_send_courier(state, effects, code, {"action_code": "BATTLE_FORMATION",
+				"battle_id": int(req.params["battle_id"]), "formation": formation},
+				"to form " + String(data.battle_formations[formation]["label"]))
 		"ARMY_STANCE":
 			var code := String(req.params["regiment"])
 			var stance := String(req.params["stance"])

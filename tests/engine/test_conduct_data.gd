@@ -45,7 +45,7 @@ func test_balance_keys_exist() -> void:
 	assert_eq(repo.bal("forage_winter_permille"), 300.0)
 
 func test_law_is_the_thirteenth_military_law() -> void:
-	assert_eq(LawSystem.codes_on(repo, "military").size(), 17)
+	assert_eq(LawSystem.codes_on(repo, "military").size(), 22)
 	var d: Dictionary = LawSystem.def(repo, "desertion_penalty")
 	assert_eq(d["values"], ["fine", "lenient", "hanging"])
 	assert_eq(d["default"], "fine")

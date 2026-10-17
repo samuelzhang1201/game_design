@@ -51,3 +51,4 @@ LAW_SET,law=patronage&value=court,20,0,-20,-10,0,a learned court
 LAW_SET,law=guild_charter&value=granted,-10,0,0,0,-10,charters cede royal authority
 LAW_SET,law=arsenal_decree&value=bombards,20,20,0,0,10,
 LAW_SET,law=tolerance&value=edict,0,0,-60,0,0,the church is angered
+BATTLE_FORMATION,,0,5,0,0,0,the army is told how to deploy

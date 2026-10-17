@@ -45,7 +45,7 @@ static func legal_actions(repo: DataRepository, state: GameState, battle_id: int
 static func request(repo: DataRepository, state: GameState, battle_id: int, side: String, formation: String) -> Dictionary
 ```
 
-- [ ] 写纯协议测试并运行见红：
+- [x] 写纯协议测试并运行见红：
 
 ```gdscript
 func test_clause_agreements_are_independent() -> void:
@@ -56,12 +56,12 @@ func test_clause_agreements_are_independent() -> void:
     assert_true(result["rejected"].has("noble_ransom"))
 ```
 
-- [ ] 把传令官安全、贵族待遇/赎金、普通士兵待遇、投降接纳、伤者与约定撤离、允许战术各自建条款ID。简单一致项直接达成；带时间/条件/范围的条款按 schema 比较完整条件，不只比较显示文字。拒绝项保留双方提议及理由，不覆盖已同意项。
-- [ ] 在对峙创建时冻结双方实际收到的军法版本/条款；谈判输出绑定 battle_id。新法以后送达不能覆盖协议，援军加入前继承该战场约束，新主将也继承；已获准撤离/停火优先于普通追击授权。
-- [ ] 红旗只表示拒绝新的投降，不等于自己永不投降，不撤销已接受俘虏权益。根据军法与有效协议禁用不合法红旗/战术；角色性格和事件均只能在 legal_actions 中选择。测试国王在场无人工重谈入口。
-- [ ] 四阵型写入formations表：适用正面宽度、兵种要求、中心目标要求、攻防/侧翼修正、换阵消耗与失序时长。数值使用现有战斗尺度，所有修正带唯一来源；菱形无需要保护的中心时明确显示收益不足，不能凭空保护不存在目标。
-- [ ] 换阵请求本地直接/远程信使送达才开始；保存 previous/target/progress/disorder_until。换阵暴露期不同时享用新旧全部收益。测试窄地横线收缩、受夹击时菱形、正面守御双排、锥形侧翼代价、重复换阵不能清失序。
-- [ ] LAW页按条款显示政策；对峙面板只读展示“达成/未达成/原因/收到版本”，WAR ROOM显示真实阵线。运行rules/formation/law_guard/law_couriers/UI测试与fast；提交 `feat: enforce formations and per-clause battle agreements`。
+- [x] 把传令官安全、贵族待遇/赎金、普通士兵待遇、投降接纳、伤者与约定撤离、允许战术各自建条款ID。简单一致项直接达成；带时间/条件/范围的条款按 schema 比较完整条件，不只比较显示文字。拒绝项保留双方提议及理由，不覆盖已同意项。
+- [x] 在对峙创建时冻结双方实际收到的军法版本/条款；谈判输出绑定 battle_id。新法以后送达不能覆盖协议，援军加入前继承该战场约束，新主将也继承；已获准撤离/停火优先于普通追击授权。
+- [x] 红旗只表示拒绝新的投降，不等于自己永不投降，不撤销已接受俘虏权益。根据军法与有效协议禁用不合法红旗/战术；角色性格和事件均只能在 legal_actions 中选择。测试国王在场无人工重谈入口。
+- [x] 四阵型写入formations表：适用正面宽度、兵种要求、中心目标要求、攻防/侧翼修正、换阵消耗与失序时长。数值使用现有战斗尺度，所有修正带唯一来源；菱形无需要保护的中心时明确显示收益不足，不能凭空保护不存在目标。
+- [x] 换阵请求本地直接/远程信使送达才开始；保存 previous/target/progress/disorder_until。换阵暴露期不同时享用新旧全部收益。测试窄地横线收缩、受夹击时菱形、正面守御双排、锥形侧翼代价、重复换阵不能清失序。
+- [x] LAW页按条款显示政策；对峙面板只读展示“达成/未达成/原因/收到版本”，WAR ROOM显示真实阵线。运行rules/formation/law_guard/law_couriers/UI测试与fast；提交 `feat: enforce formations and per-clause battle agreements`。
 
 ## P4.2 命令成本与逐日战斗
 
@@ -126,3 +126,17 @@ static func snapshot(repo: DataRepository, state: GameState, realm: String) -> D
 - [ ] 验证国王到/离场、事件选择前存档、余额变化、零合法进攻、报告延迟、多战场同时触发；跑battle_events/presentation、event_content、UI、fast并完成真实窗口审查，提交 `feat: add authored battle events and informed command views`。
 
 **阶段放行：** 能部署、自动逐条交涉、发五类命令；五类野战事件具备真实触发与结果。六类事件的正文、选项和插图在本阶段完成，地道事件的真实工程触发在P6.2验收。正常野战基准达目标，长战斗不中断编号；费用/军法/自动决策/暂停均有可复现证据。投降和俘虏最终闭环以P5放行为准。
+
+## P4.1 execution checkpoint
+
+Authorization: continue the existing P4 plan automatically, one bounded unit per fresh session; placeholder art is excluded. Worktree `/Users/samuelzhang/.codex/worktrees/battle-system/game_design`, branch `codex/battle-system`, base `c0ac6465c2d90acc94b2729e8380cf40ce669caf`.
+
+Phase: implementation, independent review and required verification complete; PR delivery next. Owned files are listed locally in `.superpowers/reviews/p41/owned-files.txt`; unrelated portrait/build edits remain untouched. Core, transport, laws, shared map/folio shapes and encounter UI are implemented. Independent review's batched-courier ordering finding is fixed with RED→GREEN and JSON replay. An additional actual-position flanking regression is RED→GREEN. Visual review selected the compact encounter panel and verified its final seven terms, costs and controls without clipping.
+
+Ruling: received-policy representative is the first unit in sorted side code order, frozen at contact; foreign columns carry independent saved default policies. This gives deterministic, delivered-law semantics without borrowing crown decrees. A later commander-selection feature must deliberately choose the representative before freezing; it must never renegotiate an existing battle.
+
+Ruling: the existing LAW scene and row already enumerate policy data, so adding grouped law rows and their words updates it without a redundant scene/code edit. The encounter layout was authored through the editor against the worktree's absolute destination; the main checkout's files were not edited.
+
+Ruling: legacy lifecycle and stance-timing fixtures neutralize the new deployment factors to keep testing their original arithmetic; the new formation suite separately pins hand-calculated deployment values and real-context flanking. The known empty-roster map fixture and prior LEDGER performance failure remain outside this unit.
+
+Checks: targeted 12 scripts / 133 tests passed before the final two UI wording changes and flank-origin repair; affected UI checks passed after wording, and the final battle/stance/courier check passed 5 scripts / 46 tests / 311 assertions after the repair. Final `./run_tests.sh --fast`: 226 scripts, 2356 tests, 2354 passed, one existing pending and the existing LEDGER galaxy performance failure (121.296 ms against 120 ms); two expected GDAI errors, exit 1. Do not claim a green suite. Final battle/stance/courier check: 46/46; affected new UI: 3/3; shared map-shape test: 1/1. Final code state was unchanged during the completed fast run. Next after this unit's acceptance: P4.2 in a fresh session, reading HANDOVER.md rather than this conversation.

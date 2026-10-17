@@ -60,3 +60,5 @@ Root rules first: invariant 10 (the columns divide by kind), the look lives in t
 ## Royal map orders
 
 `GameRoot._refresh_king_map` binds the editor-authored `KingOrders` popup once per view and forwards `KingMapBridge` snapshots even on a paused clock. A king click keeps army multi-selection empty and facts in the left column. Travel, follow, leave and safe departure go through `Game.try_execute`; destination planning requires pause, displays its gold cost and confirms before execution. Observe is presentation only; no free inspiration effect is exposed.
+
+- The encounter panel displays `BattleRules.encounter_view`'s public frozen clauses, received versions and refusal reasons in an editor-authored scroll area. It has formation-order controls with costs and suitability reasons, routed through `Game.try_execute`; no renegotiation controls. Its static layout is `battle_encounter_panel.tscn`. WAR ROOM folio dots use the saved current tactical shape and frontage, refreshing on deployment changes.

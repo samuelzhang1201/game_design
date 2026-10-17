@@ -14,6 +14,10 @@ func before_all() -> void:
 
 func before_each() -> void:
 	repo = SuiteData.repo()
+	# Isolate stance delivery timing from the separate tactical deployment factors.
+	for formation: Dictionary in repo.battle_formations.values():
+		for key: String in ["attack_permille", "defence_permille", "flank_permille", "missile_permille"]:
+			formation[key] = 1000
 	Weather.forget()
 
 

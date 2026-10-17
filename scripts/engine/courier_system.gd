@@ -737,8 +737,10 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 	var said: Array = []
 	var types: Array = []
 	var rolling: Array = []
-	for order: Dictionary in orders_of(c):
-		var r := _deliver_one(repo, state, c, order)
+	var orders := orders_of(c)
+	for sequence: int in orders.size():
+		var order: Dictionary = orders[sequence]
+		var r := _deliver_one(repo, state, c, order, false, sequence)
 		types.append(String(r["type"]))
 		said.append(String(r.get("said", "")))
 		if r.has("set_out"):
@@ -758,7 +760,7 @@ const STALE_SAID := "Newer orders stand: this one is set aside"
 
 ## One of a courier's orders: {type, said (the receipt's line, "" for none),
 ## set_out (a supply line's wagons rolling)}.
-static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary, local := false) -> Dictionary:
+static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary, local := false, sequence := 0) -> Dictionary:
 	var code := String(c["target"])
 	var action := String(order.get("action_code", ""))
 	if action.begins_with("SUPPLY_"):
@@ -769,6 +771,22 @@ static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, 
 			out["set_out"] = e["set_out"]
 		return out
 	var entry: Dictionary = state.regiments.get(code, {})
+	if action == "BATTLE_FORMATION":
+		var battle := BattleSystem.battle_by_id(state, int(order.get("battle_id", -1)))
+		var side := BattleRules.side_of(battle, code)
+		if side == "":
+			return {"type": "lapsed", "said": "The army has left this battlefield."}
+		BattleFormation.ensure(battle)
+		var change: Dictionary = battle["formations"][side]
+		if int(change["order_id"]) > int(c["id"]) or (int(change["order_id"]) == int(c["id"])
+				and int(change.get("order_sequence", -1)) >= sequence):
+			return {"type": "stale", "said": STALE_SAID}
+		var result := BattleFormation.request(repo, state, int(battle["id"]), side, String(order.get("formation", "")))
+		if result["status"] == "invalid":
+			return {"type": "lapsed", "said": String(result["reason"])}
+		change["order_id"] = int(c["id"])
+		change["order_sequence"] = sequence
+		return {"type": "delivered", "said": String(result["reason"])}
 	if action == "ARMY_STANCE":
 		return _deliver_stance(repo, state, c, order, entry)
 	if int(entry.get("order_id", 0)) > int(c["id"]):

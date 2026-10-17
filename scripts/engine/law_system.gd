@@ -91,6 +91,16 @@ static func value(repo: DataRepository, state: GameState, law: String, scope_cod
 		return metric_value(law, state, String(d["default"]))
 	return String(d["default"])
 
+## Snapshot exactly the version received here, never a decree still riding.
+static func received(repo: DataRepository, state: GameState, law: String, code: String) -> Dictionary:
+	var entry := _camp_read(state, ArmyGround.camped_by(repo, state, code), code, law)
+	if ArmySystem.is_foe(state, code):
+		# Foreign columns have independent received policies; crown decrees do not bind them.
+		entry = (state.foes.get(code, {}).get("received_laws", {}) as Dictionary).get(law, {})
+	return {"value": String(entry.get("value", def(repo, law).get("default", ""))),
+		"decree_id": int(entry.get("decree_id", 0))}
+
+
 ## `law`'s entry in the place `key` ({value, decree_id}), {} for none.
 static func _entry_of(state: GameState, key: String, law: String) -> Dictionary:
 	return (state.law_in_force.get(key, {}) as Dictionary).get(law, {})
@@ -243,6 +253,12 @@ static func seed(repo: DataRepository, state: GameState) -> void:
 	for law: String in repo.law_order:
 		state.law_decree[law] = {"value": metric_value(law, state, String(repo.laws[law]["default"])),
 			"decree_id": 0, "day": 0}
+	for code: String in state.foes:
+		var received_laws := {}
+		for law: String in repo.law_order:
+			if String(repo.laws[law]["scope"]) == "camp":
+				received_laws[law] = {"value": String(repo.laws[law]["default"]), "decree_id": 0}
+		state.foes[code]["received_laws"] = received_laws
 	for code: String in MapOwnership.provinces_of(repo, state, repo.resolve_realm("player_realm")):
 		var entry := {}
 		for law: String in repo.law_order:
