@@ -25,6 +25,25 @@ func _mine() -> Array:
 	return Play.land_regiments(repo)
 
 
+## This unattended continuation trial explicitly answers each saved legal battle decision.
+func _day(engine: TickEngine, s: GameState) -> Dictionary:
+	var out := Play.day(engine, s, true)
+	while out["status"] == "blocked":
+		var decision: Dictionary = out["decision"]
+		assert_eq(String(decision["kind"]), "battle_event")
+		var event: Dictionary = s.battle_events.get(String(decision["token"]), {})
+		var choice := BattleEvents.commander_choice(repo, s, event)
+		assert_ne(choice, "", "a lawful affordable choice is available")
+		if choice == "":
+			return out
+		var result := engine.resolve_decision(s, String(decision["token"]), choice)
+		assert_eq(String(result["status"]), "accepted")
+		if result["status"] != "accepted":
+			return out
+		out = Play.day(engine, s, true)
+	return out
+
+
 func _host(role: String) -> String:
 	for h: Dictionary in repo.raid_hosts:
 		if String(h["role"]) == role:
@@ -392,13 +411,14 @@ func test_campaign_continues_after_losing_a_town() -> void:
 	var day0 := s.absolute_day()
 	var fired: Array = []
 	for i in 40:
-		if s.day >= Calendar.DAYS_PER_TICK:
-			var r: TickReport = Play.day(engine, s, true)["report"]
-			if not r.event.is_empty():
-				fired.append(String(r.event["event_id"]))
-				engine.events.apply_choice(String((r.event["choices"] as Array)[0]["choice_id"]), s)
-		else:
-			Play.day(engine, s, true)
+		var day_result := _day(engine, s)
+		assert_eq(String(day_result["status"]), "complete", "day %d resolves after its decisions" % i)
+		if day_result["status"] != "complete":
+			return
+		var r: TickReport = day_result.get("report")
+		if r != null and not r.event.is_empty():
+			fired.append(String(r.event["event_id"]))
+			engine.events.apply_choice(String((r.event["choices"] as Array)[0]["choice_id"]), s)
 	assert_eq(s.absolute_day(), day0 + 40, "the clock ran on, forty days")
 	assert_gt(s.tick, tick0, "the month turned")
 	assert_true(fired.has(DefeatSystem.EVENT_ID), "the beat was played at the month's roll: %s" % [fired])
@@ -406,7 +426,7 @@ func test_campaign_continues_after_losing_a_town() -> void:
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	assert_eq(back.town_losses, s.town_losses, "the loss survives the save")
 	assert_eq(back.absolute_day(), s.absolute_day())
-	Play.day(engine, back, true)
+	_day(engine, back)
 	assert_eq(back.absolute_day(), s.absolute_day() + 1, "a loaded campaign plays on")
 
 

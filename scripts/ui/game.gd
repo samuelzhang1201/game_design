@@ -3,6 +3,8 @@ extends Node
 
 signal report_ready(report: TickReport)
 signal battle_decision_requested(decision: Dictionary)
+@warning_ignore("unused_signal")
+signal battle_view_requested(regiment: String)
 ## A letter was read on the Missive board (final review M7): the read flag
 ## is saved state, so it changes only here.
 signal missive_read(id: int)
@@ -162,7 +164,7 @@ func advance_day() -> Dictionary:
 	if result["status"] == "blocked":
 		_sync_battle_decision()
 		state_changed.emit()
-		return {"status": "blocked", "decision": result["decision"], "ticked": false,
+		return {"status": "blocked", "decision": BattlePresentation.decision(data, state, result["decision"]), "ticked": false,
 			"ended": ended, "finished": [], "arrived": [], "couriers": [], "supply": [], "raids": []}
 	if bool(result["ticked"]):
 		_publish_tick(result["report"])
@@ -204,7 +206,10 @@ func _sync_battle_decision() -> void:
 	var waiting := not pending.is_empty() and String(pending.get("selected", "")) == ""
 	hold_clock(waiting, "battle_decision")
 	if waiting:
-		battle_decision_requested.emit(pending.duplicate(true))
+		battle_decision_requested.emit(BattlePresentation.decision(data, state, pending))
+
+func battle_view() -> Dictionary:
+	return BattlePresentation.snapshot(data, state, data.resolve_realm("player_realm"))
 
 func apply_event_choice(choice_id: String) -> Dictionary:
 	var out := engine.events.apply_choice(choice_id, state)

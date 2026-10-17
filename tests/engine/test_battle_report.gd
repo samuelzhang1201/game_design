@@ -3,9 +3,9 @@ const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const Play := preload("res://tests/invasion_play.gd")
 ## The battle report and the day hook (spec 2026-10-07-enemy-ai-and-battle-design
-## §4.5): TickEngine._end_day settles the battles after the couriers ride, and a
-## day with a battle files ONE letter whose numbers are the engine's and whose
-## words are templates.csv `battle_*`; a calm day files nothing.
+## §4.5): each local battlefield files its own letter after the round;
+## remote reports ride separately and publish only at arrival. Numbers are
+## the engine's and words are templates.csv `battle_*`; a calm day files nothing.
 
 var repo: DataRepository
 
@@ -91,7 +91,29 @@ func _meeting(seed_value := 7) -> Array:
 	var at := _spot(s, p)
 	_place(s, p, at)
 	_foe(s, f, at + Vector2i(1000, 0))
+	# These number/prose assertions observe the battle beside the king.
+	s.king_state["x_m"] = at.x
+	s.king_state["y_m"] = at.y
 	return [s, p, f]
+
+
+## This report trial explicitly answers local decisions from their current legal options.
+func _day(engine: TickEngine, s: GameState) -> Dictionary:
+	var out := Play.day(engine, s, true)
+	while out["status"] == "blocked":
+		var decision: Dictionary = out["decision"]
+		assert_eq(String(decision["kind"]), "battle_event")
+		var event: Dictionary = s.battle_events.get(String(decision["token"]), {})
+		var choice := BattleEvents.commander_choice(repo, s, event)
+		assert_ne(choice, "", "a lawful affordable choice is available")
+		if choice == "":
+			return out
+		var result := engine.resolve_decision(s, String(decision["token"]), choice)
+		assert_eq(String(result["status"]), "accepted")
+		if result["status"] != "accepted":
+			return out
+		out = Play.day(engine, s, true)
+	return out
 
 
 func _battle_letters(s: GameState) -> Array:
@@ -116,7 +138,7 @@ func test_battle_day_writes_one_missive() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	Play.day(engine, s, true)
+	_day(engine, s)
 	assert_false(engine.day_battles.is_empty(), "the day's battle events are kept")
 	var letters := _battle_letters(s)
 	assert_eq(letters.size(), 1, "one letter")
@@ -124,11 +146,11 @@ func test_battle_day_writes_one_missive() -> void:
 	assert_eq(String(letters[0]["subject"]["kind"]), "regiment")
 	assert_eq(String(letters[0]["subject"]["code"]), String(m[1]))
 	# the next day the battle goes on: its own letter, still one
-	Play.day(engine, s, true)
+	_day(engine, s)
 	assert_eq(_battle_letters(s).size(), 2, "a letter a day while it is fought")
 
 
-func test_two_battles_in_a_day_are_one_letter() -> void:
+func test_two_remote_battles_send_separate_letters_on_actual_arrival() -> void:
 	_one_tier(100, 100, 500, -10, -10)
 	var mine := _mine()
 	var theirs := _theirs()
@@ -137,22 +159,47 @@ func test_two_battles_in_a_day_are_one_letter() -> void:
 		return
 	var s := _campaign(7)
 	var far := Vector2i(200_000, 0)
-	_place(s, mine[0], _spot(s, mine[0]))
-	_place(s, mine[1], _spot(s, mine[0]) + far)
-	_foe(s, theirs[0], _spot(s, mine[0]) + Vector2i(1000, 0))
-	_foe(s, theirs[1], _spot(s, mine[0]) + far + Vector2i(1000, 0))
+	var at := _spot(s, mine[0])
+	_place(s, mine[0], at)
+	_place(s, mine[1], at + far)
+	_foe(s, theirs[0], at + Vector2i(1000, 0))
+	_foe(s, theirs[1], at + far + Vector2i(1000, 0))
+	s.king_state["x_m"] = at.x - far.x
+	s.king_state["y_m"] = at.y
 	var engine := TickEngine.new(repo)
-	Play.day(engine, s, true)
+	assert_eq(String(_day(engine, s)["status"]), "complete")
 	assert_eq(s.battles.size(), 2, "two battles")
 	assert_eq(_round_events(engine.day_battles).size(), 2)
-	assert_eq(_battle_letters(s).size(), 1, "one letter for the day")
+	assert_eq(_battle_letters(s).size(), 0, "remote facts are not published immediately")
+	var couriers: Array = s.couriers.filter(func(c: Dictionary) -> bool: return c.kind == CourierSystem.KING_REPORT)
+	assert_eq(couriers.size(), 2, "one physical report courier per battlefield")
+	var expected: Array = []
+	for courier: Dictionary in couriers:
+		expected.append(int(CourierSystem.first_order(courier)["battle_id"]))
+		assert_eq(int(CourierSystem.first_order(courier)["report"]["battle_id"]), expected.back())
+	for day: int in int(repo.bal("courier_max_days")):
+		if s.couriers.is_empty():
+			break
+		if s.day == Calendar.DAYS_PER_TICK:
+			s.tick += 1
+			s.day = 1
+		else:
+			s.day += 1
+		CourierSystem.ride_day(repo, s)
+	assert_true(s.couriers.is_empty(), "the actual report rides arrived")
+	var letters := Play.letters(s, "king_report")
+	assert_eq(letters.size(), 2, "two separate delivered battlefield reports")
+	var received: Array = s.king_state.get("battle_reports", []).map(func(report: Dictionary) -> int: return int(report["battle_id"]))
+	expected.sort()
+	received.sort()
+	assert_eq(received, expected, "neither battlefield borrows the other's report route")
 
 
 func test_calm_day_writes_nothing() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var engine := TickEngine.new(repo)
 	var before := s.missives.size()
-	Play.day(engine, s, true)
+	_day(engine, s)
 	assert_true(engine.day_battles.is_empty())
 	assert_eq(_battle_letters(s).size(), 0)
 	var added: Array = s.missives.slice(before).map(func(x: Dictionary) -> String: return String(x["kind"]))
@@ -170,7 +217,7 @@ func test_a_delivered_stance_takes_hold_the_day_the_courier_lands() -> void:
 	assert_eq(s.couriers.size(), 1)
 	var engine := TickEngine.new(repo)
 	for day in int(repo.bal("courier_max_days")):
-		Play.day(engine, s, true)
+		_day(engine, s)
 		if s.couriers.is_empty():
 			break
 	assert_true(s.couriers.is_empty(), "delivered")
@@ -185,7 +232,7 @@ func test_report_numbers_come_from_the_engine() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	Play.day(engine, s, true)
+	_day(engine, s)
 	var round_ev: Dictionary = _round_events(engine.day_battles)[0]
 	var results: Dictionary = round_ev["results"]
 	assert_eq(results.size(), 2)
@@ -214,7 +261,7 @@ func test_every_morale_change_carries_a_reason() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	Play.day(engine, s, true)
+	_day(engine, s)
 	var round_ev: Dictionary = _round_events(engine.day_battles)[0]
 	var text := _text_of(_battle_letters(s)[0])
 	var changed := 0
@@ -235,7 +282,7 @@ func test_a_regiment_that_leaves_is_named_with_why() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	Play.day(engine, s, true)
+	_day(engine, s)
 	var ends: Array = engine.day_battles.filter(func(e: Dictionary) -> bool: return String(e["kind"]) == "end")
 	assert_eq(ends.size(), 1, "a side with no fit personnel ends the battle")
 	var text := _text_of(_battle_letters(s)[0])
@@ -262,7 +309,7 @@ func test_the_letter_gives_no_exact_foe_figure() -> void:
 	var s: GameState = m[0]
 	var f := String(m[2])
 	var engine := TickEngine.new(repo)
-	Play.day(engine, s, true)
+	_day(engine, s)
 	var round_ev: Dictionary = _round_events(engine.day_battles)[0]
 	var fr: Dictionary = round_ev["results"][f]
 	var text := _text_of(_battle_letters(s)[0])
@@ -309,7 +356,7 @@ func test_report_text_uses_templates_and_no_realm_names() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	Play.day(engine, s, true)
+	_day(engine, s)
 	var letter: Dictionary = _battle_letters(s)[0]
 	var text := _text_of(letter)
 	assert_false(text.contains("{") or text.contains("[missing") or text.contains("%"), text)
@@ -334,7 +381,7 @@ func _separate_routed_side(s: GameState, engine: TickEngine, meeting: Array, rou
 	entry["dest_x_m"] = entry["x_m"]
 	entry["dest_y_m"] = entry["y_m"]
 	entry["order"] = ArmySystem.ORDER_STANDBY
-	Play.day(engine, s, true)
+	_day(engine, s)
 
 
 func _ending_text(rout: String) -> Array:
@@ -342,7 +389,7 @@ func _ending_text(rout: String) -> Array:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	Play.day(engine, s, true)
+	_day(engine, s)
 	_separate_routed_side(s, engine, m, rout)
 	var end: Dictionary = engine.day_battles.filter(func(e: Dictionary) -> bool: return String(e["kind"]) == "end")[0]
 	var place := BattleSystem.place_label(repo, s, end)
@@ -419,3 +466,32 @@ func test_under_arms_does_not_count_the_dead() -> void:
 				rows[String(r["label"])] = String(r["text"])
 	assert_eq(rows["Under arms"], WarRoom.group(heads - 123))
 	assert_eq(rows["Fit"], WarRoom.group(heads - 123 - 45))
+
+func test_delivered_battle_reports_share_battle_cap_and_preserve_general_letters() -> void:
+	repo.balance["missive_keep_battle"] = 3
+	repo.balance["missive_keep_per_column"] = 2
+	var s := SuiteData.campaign(repo, 7)
+	s.missives.clear()
+	s.couriers.clear()
+	var spy := MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", s.absolute_day(), {}, "Spy report", []))
+	var general := MissiveLog.add(repo, s, MissiveLog.make("council", "credible", s.absolute_day(), {}, "Council note", []))
+	MissiveLog.add(repo, s, MissiveLog.make("battle", "credible", s.absolute_day(), {}, "Local battle", []))
+	var at := KingSystem.position(s)
+	for i: int in 4:
+		var payload := {"battle_id": 700 + i, "day": s.absolute_day(), "event_tokens": [],
+			"title": "Remote battle %d" % i, "facts": [MissiveLog.words("report", "Report", "The commander's battlefield report.")]}
+		CourierSystem.dispatch_king_report(repo, s, 700 + i, {"place_x_m": at.x, "place_y_m": at.y, "report": payload})
+		CourierSystem.ride_day(repo, s)
+	assert_true(s.couriers.is_empty(), "Reports were physically delivered beside the king")
+	assert_false(MissiveLog.find(s, spy).is_empty(), "Remote battle reports cannot evict spy intelligence")
+	assert_false(MissiveLog.find(s, general).is_empty(), "Remote battle reports cannot evict general correspondence")
+	var battles: Array = s.missives.filter(func(letter: Dictionary) -> bool: return letter.kind in ["battle", "king_report"])
+	assert_eq(battles.size(), 3, "Local and delivered reports share missive_keep_battle")
+	assert_eq(battles.map(func(letter: Dictionary) -> String: return String(letter.title)), ["Remote battle 1", "Remote battle 2", "Remote battle 3"])
+	for i: int in 4:
+		MissiveLog.add(repo, s, MissiveLog.make("spy", "credible", s.absolute_day(), {}, "Spy %d" % i, []))
+	assert_eq(Play.letters(s, "spy").size(), 2, "General column cap still applies to spy letters")
+	assert_eq(Play.letters(s, "king_report").size(), 3, "General letters cannot evict delivered battle reports")
+	MissiveLog.add(repo, s, MissiveLog.make("battle", "credible", s.absolute_day(), {}, "Newest local battle", []))
+	battles = s.missives.filter(func(letter: Dictionary) -> bool: return letter.kind in ["battle", "king_report"])
+	assert_eq(battles.map(func(letter: Dictionary) -> String: return String(letter.title)), ["Remote battle 2", "Remote battle 3", "Newest local battle"])

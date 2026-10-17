@@ -42,6 +42,7 @@ signal drafts_planted(codes: Array)
 
 ## The route menu's ids, after the order rows'; CANCEL is the supply
 ## rates' Cancel row.
+const BATTLE := 500
 const CANCEL := 101
 const EDIT := 200
 const HALT := 201
@@ -147,6 +148,8 @@ func _open_for(code: String, at: Vector2) -> void:
 		set_item_disabled(i, why != "")
 		set_item_tooltip(i, why if why != "" else String(row["hint"]))
 	_add_supply_rows(code)
+	if not BattleSystem.battle_of(Game.state, code).is_empty() and not drafting:
+		add_item("Battlefield orders…", BATTLE)
 	if item_count == 0:
 		return
 	_pop(at)
@@ -370,6 +373,9 @@ func _refusal(action_code: String, code: String, params: Dictionary = {}) -> Str
 
 
 func _on_chosen(id: int) -> void:
+	if id == BATTLE:
+		Game.battle_view_requested.emit(_code)
+		return
 	if id >= RATE_BASE and id < RATE_BASE + SupplyLines.RATES.size():
 		_send_supply(int(SupplyLines.RATES[id - RATE_BASE]))
 		return

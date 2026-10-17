@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ArtTable" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/2D/events/battle/flank.png" id="1_yos1g"]
+[ext_resource type="Texture2D" path="res://assets/2D/events/battle/nobles.png" id="2_cxu0x"]
+[ext_resource type="Texture2D" path="res://assets/2D/events/battle/reinforcements.png" id="3_ucd87"]
+[ext_resource type="Texture2D" path="res://assets/2D/events/battle/wounded.png" id="4_oy31j"]
+[ext_resource type="Texture2D" path="res://assets/2D/events/battle/supplies.png" id="5_qt7np"]
+[ext_resource type="Texture2D" path="res://assets/2D/events/battle/tunnel.png" id="6_1f2w2"]
+[ext_resource type="Script" uid="uid://rxtlmpvmfekl" path="res://scripts/engine/art_table.gd" id="7_s7fwf"]
+
+[resource]
+script = ExtResource("7_s7fwf")
+art = Dictionary[String, Resource]({
+"flank": ExtResource("1_yos1g"),
+"nobles": ExtResource("2_cxu0x"),
+"reinforcements": ExtResource("3_ucd87"),
+"supplies": ExtResource("5_qt7np"),
+"tunnel": ExtResource("6_1f2w2"),
+"wounded": ExtResource("4_oy31j")
+})

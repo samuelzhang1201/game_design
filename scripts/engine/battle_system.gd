@@ -38,6 +38,9 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 		attacking: bool, enemy_codes: Array = []) -> int:
 	var total := 0
 	for raw: Variant in codes:
+		var battle := battle_of(state, String(raw))
+		if attacking and battle.get("reserves", {}).has(String(raw)):
+			continue
 		var result := unit_strength(repo, state, String(raw), stance_fn, attacking, enemy_codes)
 		if result.has("error"):
 			return 0
@@ -71,6 +74,7 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 				var copy := factor.duplicate(true)
 				copy["category"] = "formation_terrain"
 				factors.append(copy)
+		factors.append_array(BattleEvents.factors(state, battle, code))
 		var kind := BattleOrders.kind(battle, side)
 		var row: Dictionary = repo.battle_orders.get(kind, {})
 		factors.append({"source": "order:" + kind, "category": "action",
@@ -425,6 +429,13 @@ static func join(repo: DataRepository, state: GameState, battle_id: int, code: S
 	if list.size() >= int(repo.bal("battle_max_units")):
 		return false
 	list.append(code)
+	if not b.has("event_reinforcements"):
+		b["event_reinforcements"] = []
+	b.event_reinforcements.append(code)
+	if not b.has("reinforcement_evidence"):
+		b["reinforcement_evidence"] = []
+	b.reinforcement_evidence.append({"unit": code, "side": side, "day": state.absolute_day(),
+		"reason": "This regiment physically joined the existing battle."})
 	_halt(state, code)
 	return true
 
@@ -761,7 +772,12 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 			kind = "shock"
 		if kind != "melee":
 			scale = int(repo.bal("battle_context_" + kind + "_permille"))
-	return {"kind": kind, "loss_permille": scale, "reason": "Incoming casualties in " + kind + " under current actions and agreements"}
+	for code: String in battle[side]:
+		for modifier: Dictionary in battle.get("event_modifiers", []):
+			if modifier.unit == code and int(modifier.until_day) >= state.absolute_day():
+				@warning_ignore("integer_division")
+				scale = scale * int(modifier.exposure_permille) / 1000
+	return {"kind": kind, "loss_permille": scale, "reason": "Incoming casualties in " + kind + " under current actions, events and agreements"}
 
 
 static func _mark_rout(repo: DataRepository, state: GameState, battle: Dictionary, side: String) -> void:
@@ -812,6 +828,14 @@ static func _start_retreat(repo: DataRepository, state: GameState, code: String,
 	@warning_ignore("integer_division")
 	var abandoned := int(entry.get("supplies", 0)) * int(repo.bal("battle_retreat_supply_loss_permille")) / 1000
 	entry["supplies"] = int(entry.get("supplies", 0)) - abandoned
+	if abandoned > 0:
+		if not battle.has("abandoned_supplies"):
+			battle["abandoned_supplies"] = {}
+		var at := _at_m(repo, state, code)
+		var source := "withdrawal:%d:%s:%d" % [int(battle.id), code, state.absolute_day()]
+		battle.abandoned_supplies[source] = {"unit": code, "side": BattleRules.side_of(battle, code),
+			"x_m": at.x, "y_m": at.y, "amount": abandoned,
+			"reason": "Food physically abandoned by the withdrawing rear guard."}
 	if not battle.has("withdrawal_costs"):
 		battle["withdrawal_costs"] = []
 	battle["withdrawal_costs"].append({"code": code, "morale": -loss, "supplies": -abandoned,

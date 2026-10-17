@@ -94,6 +94,7 @@ var _picker := Map3DPicker.new()
 var _selection := Map3DSelection.new()
 var _supply := Map3DSupplyLines.new()  # the supply lines and the pick's rings (spec 2026-10-07)
 var _input := Map3DInput.new()
+var _battle_snapshot: Dictionary = {}
 var _snapshot: Dictionary = {}
 var _meta: Dictionary = {}
 var _loaded := false
@@ -258,6 +259,7 @@ func _load_world() -> bool:
 	_units.bind(_ctx)
 	_king.bind(_ctx)
 	apply_snapshot(_snapshot)
+	apply_battle_snapshot(_battle_snapshot)
 	_dust.bind(_ctx)  # the dust the columns raise (owner 2026-10-07)
 	_couriers.bind(_ctx)
 	_units.set_shown(_military)
@@ -618,6 +620,14 @@ func apply_snapshot(snapshot: Dictionary) -> void:
 	if _ctx != null:
 		_king.apply_snapshot(snapshot)
 		_units.apply_snapshot(snapshot)
+
+## Battle renderers receive only the informed projection's map fields.
+func apply_battle_snapshot(snapshot: Dictionary) -> void:
+	_battle_snapshot = {"map_units": snapshot.get("map_units", {}).duplicate(true),
+		"battle_signals": snapshot.get("battle_signals", []).duplicate(true)}
+	if _units != null:
+		_units.apply_battle_snapshot(_battle_snapshot)
+
 
 func king_rect() -> Rect2:
 	return _king.screen_rect() if _king != null else Rect2()

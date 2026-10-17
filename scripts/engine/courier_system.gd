@@ -216,7 +216,7 @@ static func dispatch_king_report(repo: DataRepository, state: GameState, battle_
 	var c := {"id": state.next_courier_id, "kind": KING_REPORT,
 		"x_m": from_m.x, "y_m": from_m.y, "path": path_between(repo, from, to),
 		"target": "", "orders": [{"action_code": "KING_REPORT", "battle_id": battle_id,
-			"report": battle_event.get("report", {})}],
+			"report": battle_event.get("report", {}).duplicate(true)}],
 		"issued": state.absolute_day(), "aim_x_m": KingSystem.position(state).x,
 		"aim_y_m": KingSystem.position(state).y, "days": 0, "day_m": 0, "slow_spell": -1,
 		"tracking_king": true}
@@ -713,6 +713,7 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 		state.king_state["last_report"] = {"courier_id": int(c["id"]),
 			"battle_id": int(first_order(c).get("battle_id", -1)), "received_day": state.absolute_day()}
 		var report_data: Dictionary = first_order(c).get("report", {}).duplicate(true)
+		BattleEvents.receive_report(state, report_data)
 		var title := String(report_data.get("title", "Battle report"))
 		var facts: Array = report_data.get("facts", []).duplicate(true)
 		if facts.is_empty():

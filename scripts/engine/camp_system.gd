@@ -60,6 +60,8 @@ static func can_march(state: GameState, code: String, day: int) -> bool:
 	return can_march_entry(table[code], day)
 
 static func can_march_entry(entry: Dictionary, day: int) -> bool:
+	if day < int(entry.get("event_march_after", -1)):
+		return false
 	var camp: Dictionary = entry.get("camp_state", {})
 	var phase := String(camp.get("phase", NONE))
 	if phase == PACKING:

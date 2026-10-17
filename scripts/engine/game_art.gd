@@ -40,6 +40,8 @@ const GOODS_ICONS := "res://assets/2D/icons/goods/goods_icons.tres"
 ## The .glb each house type is drawn with (map3d_houses.csv keeps its sizes).
 const HOUSE_MODELS := "res://assets/3D/buildings/house_models.tres"
 
+const BATTLE_EVENTS := "res://assets/2D/events/battle/battle_events.tres"
+
 static var _tables: Dictionary = {}
 
 

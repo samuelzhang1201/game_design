@@ -10,7 +10,7 @@ const COLUMNS := ["truth", "credible", "consult", "rumour"]
 const SUPPLY_KINDS := ["supply", "supply_month"]
 ## The battle reports (spec 2026-10-07-enemy-ai-and-battle §4.5), a letter a
 ## day for as long as a fight lasts: capped apart too (missive_keep_battle).
-const BATTLE_KINDS := ["battle"]
+const BATTLE_KINDS := ["battle", "king_report"]
 ## A decree's letters (laws spec §3: its sending and its reach): capped apart
 ## too (missive_keep_law), so a decree to every camp never pushes a spy's
 ## report or a receipt off a column.

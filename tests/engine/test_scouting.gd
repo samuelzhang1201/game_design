@@ -225,6 +225,9 @@ func test_scouting_draws_no_random_number_and_the_log_saves() -> void:
 
 
 func test_the_contact_letter_comes_before_the_battle_it_leads_to() -> void:
+	# The king observes here; remote battle letters are delivered by courier.
+	s.king_state["x_m"] = far.x
+	s.king_state["y_m"] = far.y
 	Play.place(repo, s, horse, far, ArmySystem.ORDER_GARRISON)
 	_put_foe(far + Vector2i(3000, 0))
 	var engine := TickEngine.new(repo)

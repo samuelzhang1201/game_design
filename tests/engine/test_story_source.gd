@@ -11,12 +11,11 @@ func before_each() -> void:
 	data = SuiteData.repo()
 
 func test_every_event_in_events_csv_has_a_scene() -> void:
-	# The random pool, plus every beat of every scripted chapter: the
-	# documents are loaded together (StorySource.DOCUMENTS) into one table.
-	assert_eq(data.event_scenes.size(), data.events.size() + data.chapter_events.size(),
-		"every event in both tables has a parsed scene, and nothing else is in there")
+	# Monthly, chapter and battle-only prose share the authored documents.
+	assert_eq(data.event_scenes.size(), data.events.size() + data.chapter_events.size() + data.battle_events.size(),
+		"every authored event has a parsed scene, and nothing else is in there")
 	assert_eq(data.events.size(), 30, "the random pool: 20 starter events and 10 development ones")
-	for row in data.events + data.chapter_events:
+	for row in data.events + data.chapter_events + data.battle_events.values():
 		var id := String(row["event_id"])
 		assert_true(data.event_scenes.has(id), id + " has authored scene text")
 		assert_ne(String(data.event_scenes[id]).strip_edges(), "",

@@ -25,12 +25,14 @@
 [ext_resource type="Script" uid="uid://b4vk81mo24an1" path="res://scripts/map3d/map3d_layer_dust.gd" id="20_cqcm7"]
 [ext_resource type="Script" uid="uid://bgwhiybi1dien" path="res://scripts/map3d/map3d_layer_couriers.gd" id="21_tjjqj"]
 [ext_resource type="Script" uid="uid://826sps2k5kcg" path="res://scripts/map3d/map3d_layer_precip.gd" id="22_px01h"]
+[ext_resource type="PackedScene" path="res://scenes/models/signals/refusal_flag.tscn" id="23_68dnv"]
 [ext_resource type="Material" uid="uid://btf3lxc1xv1rp" path="res://scenes/map3d/materials/precip_fall.tres" id="23_toxxw"]
+[ext_resource type="PackedScene" uid="uid://cg1tl0kqfsvyj" path="res://scenes/models/units/courier.tscn" id="24_hisku"]
 [ext_resource type="Material" uid="uid://bhsqih8uox5ar" path="res://scenes/map3d/materials/precip_drop_rain.tres" id="24_kme1k"]
 [ext_resource type="Script" uid="uid://d0j1615g26j72" path="res://scripts/map3d/map3d_precip_kind.gd" id="25_3tcq2"]
 [ext_resource type="Material" uid="uid://hbcsw3occqy0" path="res://scenes/map3d/materials/precip_drop_snow.tres" id="26_tkhf4"]
-[ext_resource type="Script" uid="uid://dhabdrg0que1d" path="res://scripts/map3d/map3d_king.gd" id="30_qhspj"]
-[ext_resource type="PackedScene" uid="uid://pa5wk7nmifln" path="res://scenes/models/characters/king.tscn" id="31_jxnve"]
+[ext_resource type="Script" path="res://scripts/map3d/map3d_king.gd" id="30_qhspj"]
+[ext_resource type="PackedScene" path="res://scenes/models/characters/king.tscn" id="31_jxnve"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_qhspj"]
 material = ExtResource("24_kme1k")
@@ -140,6 +142,8 @@ camp_size_ratio = 0.3
 scout_rings = 32
 scout_spokes = 96
 scout_lift_m = 8.0
+battle_refusal_flag = ExtResource("23_68dnv")
+battle_herald = ExtResource("24_hisku")
 
 [node name="Dust" type="Node3D" parent="." unique_id=1688739781]
 script = ExtResource("20_cqcm7")

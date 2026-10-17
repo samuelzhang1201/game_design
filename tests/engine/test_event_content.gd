@@ -158,3 +158,23 @@ func test_requires_clauses_parse_without_unknown_clause_errors() -> void:
 			TriggerDsl.evaluate(req, s, data)
 			checked += 1
 	assert_gt(checked, 0, "expected at least one gated (non-empty requires) choice to exercise this test")
+
+func test_battle_only_events_have_authored_scenes_choices_and_no_monthly_entry() -> void:
+	assert_eq(data.battle_events.size(), 6)
+	var art: Array[String] = []
+	for id: String in data.battle_events:
+		assert_true(data.event_scenes.has(id), "Missing authored battle scene " + id)
+		assert_true(data.event_titles.has(id), "Missing authored battle title " + id)
+		assert_false(data.events_by_id.has(id), "Battle-only event must not enter monthly random events")
+		var source := FileAccess.get_file_as_string("res://RANDOM_EVENTS.md")
+		assert_eq(source.count("### " + id.to_upper().replace("_", "-")), 1, "Unique authored heading")
+		var choices: Array = data.battle_event_choices.filter(func(row: Dictionary) -> bool: return row.event_id == id)
+		assert_between(choices.filter(func(row: Dictionary) -> bool: return row.effect != "report").size(), 2, 4, "Battle event needs real alternatives")
+		assert_true(choices.any(func(row: Dictionary) -> bool: return int(row.gold) == 0 and row.action == "hold"), "Affordable lawful conservative option")
+		for choice: Dictionary in choices:
+			assert_ne(String(choice.reason).strip_edges(), "")
+			assert_ne(String(choice.effects_text).strip_edges(), "")
+			assert_ne(String(choice.label).strip_edges(), "")
+		art.append(String(data.battle_events[id].art_key))
+	art.sort()
+	assert_eq(art, ["flank", "nobles", "reinforcements", "supplies", "tunnel", "wounded"])

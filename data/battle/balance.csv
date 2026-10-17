@@ -31,3 +31,6 @@ battle_context_pursuit_permille,1500,Lawful attack pursuit causes this share of 
 battle_context_arm_threshold_permille,500,Fit equipment share needed for ranged or shock context
 battle_retreat_morale_loss,5,One morale loss when a real withdrawal starts
 battle_retreat_supply_loss_permille,100,Carried stores abandoned when withdrawal starts
+battle_event_vanity_threshold,50,Vanity above which refusing a noble charge causes resentment
+battle_event_refused_charge_opinion,-2,Opinion for refusing a vain commander's requested charge
+battle_event_capture_reach_m,1000,Actual distance required to seize abandoned food

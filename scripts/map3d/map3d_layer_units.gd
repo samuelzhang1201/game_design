@@ -35,6 +35,11 @@ const MARCH := "MARCH"
 @export var scout_lift_m := 4.0
 @export var scout_redrape_m := 150.0
 @export var scout_redrape_deg := 3.0
+@export var battle_refusal_flag: PackedScene
+@export var battle_herald: PackedScene
+@export var battle_signal_height_ratio := 1.0
+@export var battle_signal_gap := 1.5
+var _battle := Map3DBattleSignals.new()
 var _scouts := Map3DUnitScout.new()  ## the fans of the marching crown units
 var _camps := Map3DUnitCamps.new()  ## the camps pitched behind held lines
 var _sound := Map3DUnitSound.new()  ## the marching pieces' loops
@@ -65,6 +70,13 @@ var _live: Array = []  ## the codes drawn, in roster order
 func apply_snapshot(snapshot: Dictionary) -> void:
 	_camps.apply_snapshot(snapshot)
 	refresh()
+
+
+func apply_battle_snapshot(snapshot: Dictionary) -> void:
+	_battle.apply_snapshot(snapshot)
+	for code: String in _live:
+		_sync_action(code)
+	_sync_battle_signals()
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -225,6 +237,7 @@ func step(delta: float) -> bool:
 	_camps.prune(_pieces); _sound.sync(repo, ctx.camera, _pieces, delta)  # the march's sound
 	_settle.step(self, delta)  # held halts drop into their guard on the footfall
 	_sync_scouts()
+	_sync_battle_signals()
 	if moved:
 		_moves += 1
 	return moved
@@ -320,7 +333,7 @@ func _sync_action(code: String) -> void:
 	var st := ctx.state()
 	var order := ArmySystem.order_of(ctx.repo, st, code) if st != null else ArmySystem.ORDER_STANDBY
 	var row: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(st, code), {}) if st != null else {}
-	var action := Map3DUnitRig.action_for(walking and ctx.clock_speed() > 0, order, row)
+	var action := _battle.action_for(code, Map3DUnitRig.action_for(walking and ctx.clock_speed() > 0, order, row))
 	var piece: Dictionary = _pieces[code]
 	if String(piece.get("action", "")) == action:
 		_settle.cancel(code, piece)  # marching on: a held halt is dropped
@@ -350,3 +363,9 @@ func _sync_scouts() -> void:
 
 ## The codes whose scouting fan stands (tests).
 func scout_codes() -> Array: return _scouts.codes()
+
+
+func _sync_battle_signals() -> void:
+	if ctx == null: return
+	_battle.sync(_pieces, {"refusal": battle_refusal_flag, "herald": battle_herald},
+		battle_signal_height_ratio, battle_signal_gap, ctx.repo, ctx.height_at)

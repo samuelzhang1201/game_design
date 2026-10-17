@@ -150,6 +150,8 @@ var battle_stances: Dictionary = {}
 var parley_clauses: Dictionary = {}
 var battle_formations: Dictionary = {}
 var battle_orders: Dictionary = {}
+var battle_events: Dictionary = {}
+var battle_event_choices: Array[Dictionary] = []
 ## data/battle/ai_doctrines.csv (§3.3): host role -> {greed_permille, caution_permille,
 ## dist_cost, engage_odds_permille, retreat_morale, town_bonus}.
 var ai_doctrines: Dictionary = {}
@@ -1046,6 +1048,23 @@ func _load(dir: String) -> bool:
 						row[key] = int(row[key])
 				battle_orders[String(r["kind"])] = row):
 		return false
+	if not _load_if_present(table_path(dir, "battle_events"),
+			["event_id", "trigger", "art_key", "phase", "weight", "chance_permille", "cooldown_days", "threshold"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for key: String in ["weight", "chance_permille", "cooldown_days", "threshold"]:
+					row[key] = int(row[key])
+				battle_events[String(row["event_id"])] = row):
+		return false
+	if not _load_if_present(table_path(dir, "battle_event_choices"),
+			["event_id", "choice_id", "label", "action", "gold", "morale", "power_permille", "duration_days",
+			"effect", "amount", "score", "boldness", "martial", "compassion", "effects_text", "reason", "material", "material_units", "progress_loss", "risk_permille", "risk_text"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for key: String in ["gold", "morale", "power_permille", "duration_days", "amount", "score", "boldness", "martial", "compassion", "material_units", "progress_loss", "risk_permille"]:
+					row[key] = int(row[key])
+				battle_event_choices.append(row)):
+		return false
 	if not _load_if_present(table_path(dir, "parley_clauses"),
 			["clause", "label", "law", "scope", "policy_map"],
 			func(r): parley_clauses[String(r["clause"])] = r.duplicate()):
@@ -1438,7 +1457,7 @@ func _resolve_realm_slots() -> void:
 	# should not have to be remembered here. Cells with no "{" are untouched,
 	# so ids and numbers cannot be caught by this.
 	for rows in [roles, founding, facts, relationships, templates, events,
-			event_choices, chapter_events, chapter_event_choices]:
+			event_choices, chapter_events, chapter_event_choices, battle_event_choices]:
 		for r: Dictionary in rows:
 			_fill_row_realms(r)
 	# RANDOM_EVENTS.md scenes are loaded before any map is, so they are filled

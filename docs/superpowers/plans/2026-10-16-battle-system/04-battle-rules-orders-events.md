@@ -102,7 +102,7 @@ static func combine(base: int, factors: Array[Dictionary]) -> Dictionary
 
 ## P4.3 事件、合法自动决策与展示数据
 
-**Create:** `scripts/engine/battle_events.gd`、`scripts/engine/battle_presentation.gd`、`data/battle/events.csv`、`data/battle/event_choices.csv`、`tests/engine/test_battle_events.gd`、`tests/engine/test_battle_presentation.gd`、`scripts/ui/battle_panel.gd`；编辑器创建 `scenes/panels/battle_panel.tscn`。
+**Create:** `scripts/engine/battle_events.gd`、`scripts/engine/battle_presentation.gd`、`data/battle/battle_events.csv`、`data/battle/battle_event_choices.csv`、`tests/engine/test_battle_events.gd`、`tests/engine/test_battle_presentation.gd`、`scripts/ui/battle_panel.gd`；编辑器创建 `scenes/panels/battle_panel.tscn`。
 
 **Modify:** `RANDOM_EVENTS.md`、`scripts/engine/story_source.gd`、`scripts/engine/data_repository.gd`、`data/tables.csv`、`scripts/ui/game.gd`、`scripts/engine/tick_engine.gd`、`scripts/engine/missive_writer.gd`、`scripts/engine/game_art.gd`。
 
@@ -116,14 +116,14 @@ static func commander_choice(repo: DataRepository, state: GameState, event: Dict
 static func snapshot(repo: DataRepository, state: GameState, realm: String) -> Dictionary
 ```
 
-- [ ] 为六个事件写完整触发、选择、增益/代价、冷却和一次性消费测试：侧翼动摇、贵族请求冲锋、援军投入或保留、伤员撤路、夺得补给、地道塌陷征兆（围城触发在P6接入）。fixture中鼓舞选择+8士气/−7金，拒绝保留资源；已消费token重送零变化。
-- [ ] 运行battle_events见红，随后实现 offer 先读真实触发，再按种子流选事件，保存选中ID与合法choices；不能在窗口每次刷新重抽。1–2次大事件是普通战斗节奏目标，不是强制配额，短战斗允许没有。
-- [ ] 作者在 `RANDOM_EVENTS.md` 写唯一 `### EV-NN` 与 `**Scene:**`，实际分配未占用ID；文字只用realm占位符。独立battle表引用这些ID，不能让月事件池再次抽同一battle-only项。扩展StorySource读取所需原文，不走Voicer API生成事件。
-- [ ] 本地主要事件通过P1决策阻塞；选择时重新核验资金/协议/目标，失效选项显示理由并保持同一事件。每个事件提供真实合法的保守选项：坚守现令/依法报告/停止危险工程，按情境选择且有真实后果，不能用违反协议的万能回退。
-- [ ] 指挥官从同一legal choices按能力/性格/已知局势评分，稳定ID打破同分；保存选择、可读理由、效果与报告，不阻塞世界时钟。法禁冲锋即使boldness最高仍不能选；国王后来抵达不回滚已经自动处理的事件。
-- [ ] snapshot返回己方许可数据、敌方估计、已收到的事件/战报；隐藏敌军变化且情报不变时投影必须相同。所有UI按钮与图示都基于该投影，不能先把隐藏真实数字传给地图再用透明度遮住。
-- [ ] 制作六类事件插图到 `assets/2D/events/battle/`，Qwen手绘，动作和人数符合prompt规范；每图经ArtTable资源映射。战斗卡显示命令效果、费用、送达状态、冷却和法律禁用原因；红旗和传令官资产在地图真实展示，接战最少具备驻防/走位/攻击/格挡。
-- [ ] 验证国王到/离场、事件选择前存档、余额变化、零合法进攻、报告延迟、多战场同时触发；跑battle_events/presentation、event_content、UI、fast并完成真实窗口审查，提交 `feat: add authored battle events and informed command views`。
+- [x] 为六个事件写完整触发、选择、增益/代价、冷却和一次性消费测试：侧翼动摇、贵族请求冲锋、援军投入或保留、伤员撤路、夺得补给、地道塌陷征兆（围城触发在P6接入）。fixture中鼓舞选择+8士气/−7金，拒绝保留资源；已消费token重送零变化。
+- [x] 运行battle_events见红，随后实现 offer 先读真实触发，再按种子流选事件，保存选中ID与合法choices；不能在窗口每次刷新重抽。1–2次大事件是普通战斗节奏目标，不是强制配额，短战斗允许没有。
+- [x] 作者在 `RANDOM_EVENTS.md` 写唯一 `### EV-NN` 与 `**Scene:**`，实际分配未占用ID；文字只用realm占位符。独立battle表引用这些ID，不能让月事件池再次抽同一battle-only项。扩展StorySource读取所需原文，不走Voicer API生成事件。
+- [x] 本地主要事件通过P1决策阻塞；选择时重新核验资金/协议/目标，失效选项显示理由并保持同一事件。每个事件提供真实合法的保守选项：坚守现令/依法报告/停止危险工程，按情境选择且有真实后果，不能用违反协议的万能回退。
+- [x] 指挥官从同一legal choices按能力/性格/已知局势评分，稳定ID打破同分；保存选择、可读理由、效果与报告，不阻塞世界时钟。法禁冲锋即使boldness最高仍不能选；国王后来抵达不回滚已经自动处理的事件。
+- [x] snapshot返回己方许可数据、敌方估计、已收到的事件/战报；隐藏敌军变化且情报不变时投影必须相同。所有UI按钮与图示都基于该投影，不能先把隐藏真实数字传给地图再用透明度遮住。
+- [x] 制作六类事件插图到 `assets/2D/events/battle/`，Qwen手绘，动作和人数符合prompt规范；每图经ArtTable资源映射。战斗卡显示命令效果、费用、送达状态、冷却和法律禁用原因；红旗和传令官资产在地图真实展示，接战最少具备驻防/走位/攻击/格挡。
+- [x] 验证国王到/离场、事件选择前存档、余额变化、零合法进攻、报告延迟、多战场同时触发；跑battle_events/presentation、event_content、UI、fast并完成真实窗口审查，提交 `feat: add authored battle events and informed command views`。
 
 **阶段放行：** 能部署、自动逐条交涉、发五类命令；五类野战事件具备真实触发与结果。六类事件的正文、选项和插图在本阶段完成，地道事件的真实工程触发在P6.2验收。正常野战基准达目标，长战斗不中断编号；费用/军法/自动决策/暂停均有可复现证据。投降和俘虏最终闭环以P5放行为准。
 
@@ -150,3 +150,13 @@ Phase: implementation, fresh Sol review, fixes and required verification complet
 Rulings: same-category factors merge before one clamp/truncation; rewards scale to issued living beneficiaries and surviving delivery counts; local surrender has personnel/equipment cost with no fictitious filing fee. A routed side retains its battle until actual separation. Terminal departures retain their original cause for reports and spoils. Legacy fixtures explicitly authorize attack and isolate their original formula from unrelated battle/food effects. These choices carry balance and behavior risk if revised; their numeric and lifecycle tests pin the current contract.
 
 Checks: final fast229 scripts /2391 tests,2389 passed,1 existing pending,1 existing LEDGER performance failure123.979ms against120ms;2 expected GDAI errors,exit1. Final executable/data/test state stayed unchanged throughout this completed run. Focused final integration97/97,1042 assertions; siege41/41; AI/invasion45/45; guide/data/isolation12/12. Full CI is still required; no local full suite or visual pass. Next: deliver this unit on PR76, then P4.3 in a fresh session through HANDOVER.md without reloading the old conversation. P4.3 and P5 were not implemented here.
+
+## P4.3 execution checkpoint
+
+Authorization: complete this unit, deliver on PR76, then create a fresh session for P5.1. Worktree `/Users/samuelzhang/.codex/worktrees/battle-system/game_design`, branch `codex/battle-system`, base `82591b34`.
+
+Phase: implementation, all bounded owner handoffs, independent code review fixes and near/far real-window visual review complete; final frozen-state fast run completed; delivery follows. Source ownership: `.superpowers/reviews/p43/owned-files.txt`. Report: `docs/reviews/battle-system/P4.3.md`. No P5 code. Preserve unrelated portrait/imagegen and snapshot-tool changes.
+
+Rulings: use unique battle table stems; reuse existing StorySource parser. Local observation publishes immediately, remote battlefield facts only on courier arrival. Removed targets expose a zero-cost contextual report, routed charges share warrant refusal, cache destruction respects its authored cap. Signal terrain follows each actual offset; an absent world retains the snapshot without dereferencing its context. The first infantry combat clips failed map readability and were replaced with distinct forward attack/high block poses. P6 owns tunnel execution; the six scenes/choices/art are authored here.
+
+Checks: affected final UI/map/guide77/77; report/continuation integration71/71; new event23/23; infantry11/11 plus sampled round-trip checks. Final `./run_tests.sh --fast`:231 scripts,2423 tests,2421 passed,1 existing LEDGER performance failure (122.607ms versus120ms),1 existing pending War-density test;1004207 assertions,2 expected GDAI errors,691.784s,exit1. Not green. Frozen executable/data/test/look inputs remained unchanged; log `.superpowers/reviews/p43/fast-final.log`.

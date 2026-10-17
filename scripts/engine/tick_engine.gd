@@ -25,6 +25,13 @@ func advance_day(state: GameState) -> Array:
 
 
 func resolve_decision(state: GameState, token: String, choice: String) -> Dictionary:
+	var pending: Dictionary = state.day_resolution.get("pending_decision", {})
+	if pending.get("kind", "") == "battle_event" and pending.get("token", "") == token:
+		var result := BattleEvents.choose(data, state, token, choice)
+		if not result.status in ["accepted", "duplicate"]:
+			return result
+		if not choice in pending["choices"]:
+			pending["choices"].append(choice)
 	return DayResolution.acknowledge(state.day_resolution, token, choice)
 
 
@@ -63,6 +70,19 @@ func resolve_day(state: GameState, close_month := false) -> Dictionary:
 	if tx["phase"] == "battles":
 		while int(tx["battle_index"]) < tx["battle_ids"].size():
 			var id := int(tx["battle_ids"][int(tx["battle_index"])])
+			var offer := BattleEvents.offer(data, state, id)
+			if offer.status == "blocked":
+				tx["pending_decision"] = offer.decision
+				return {"status": "blocked", "decision": offer.decision.duplicate(true)}
+			if offer.status == "resolved":
+				var event: Dictionary = offer.event
+				var battle := BattleSystem.battle_by_id(state, id)
+				if not journal["battles"].any(func(prior: Dictionary) -> bool: return prior.get("token", "") == event.token):
+					journal["battles"].append({"kind": "battle_event", "battle_id": id,
+						"token": event.token, "event_id": event.event_id, "receipt": event.receipt.duplicate(true),
+						"unit": event.unit, "att": battle.get("att", []).duplicate(), "def": battle.get("def", []).duplicate(),
+						"town": battle.get("town", ""), "place_x_m": battle.get("place_x_m", 0), "place_y_m": battle.get("place_y_m", 0)})
+				tx["pending_decision"] = {}
 			var step := BattleSystem.step_battle(data, state, id)
 			if step["status"] == "error":
 				return {"status": "error", "error": step["error"], "battle_id": id}
@@ -182,21 +202,7 @@ func _after_battles(state: GameState) -> void:
 	day_ai.append_array(day_siege.filter(func(e: Dictionary) -> bool: return e.has("type")))
 	day_ai.append_array(day_raid.filter(func(e: Dictionary) -> bool: return e.has("type")))
 	var fights: Array = day_battles + SiegeSystem.news(day_siege) + RaidSystem.news(day_raid)
-	if not fights.is_empty():
-		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, fights))
-		var battle_event: Dictionary = {}
-		for fight: Dictionary in fights:
-			if int(fight.get("battle_id", -1)) >= 0 and fight.has("place_x_m"):
-				battle_event = fight
-				break
-		var battle_id := int(battle_event.get("battle_id", -1))
-		if battle_id >= 0:
-			battle_event["report"] = MissiveWriter.king_report_payload(data, state, fights)
-		if battle_id >= 0 and not KingSystem.present(data, state, battle_id):
-			var report_courier := CourierSystem.dispatch_king_report(data, state, battle_id, battle_event)
-			if not report_courier.is_empty():
-				state.king_state["last_report_dispatched"] = {"courier_id": int(report_courier["id"]),
-					"battle_id": battle_id, "day": state.absolute_day(), "fee_gold": 0}
+	_route_battle_reports(state, fights)
 	# The crown's sight (spec 2026-10-10-player-sight-and-ghosts), once a day
 	# when every column has marched and fought: the rumour's host ghost on its
 	# day, each foe the crown sees refreshed where it stands, the stale and
@@ -226,6 +232,49 @@ func _after_battles(state: GameState) -> void:
 		MissiveLog.add(data, state, MissiveWriter.supply_dispatch(data, state, day_supply))
 	if not day_conduct.is_empty():
 		MissiveLog.add(data, state, MissiveWriter.conduct_dispatch(data, state, day_conduct))
+
+## Each battlefield has its own immutable report and physical courier.
+func _route_battle_reports(state: GameState, fights: Array) -> void:
+	var grouped: Dictionary = {}
+	var other: Array = []
+	for fight: Dictionary in fights:
+		var id := int(fight.get("battle_id", -1))
+		if id < 0:
+			other.append(fight)
+			continue
+		if not grouped.has(id):
+			grouped[id] = []
+		grouped[id].append(fight)
+	var ids := grouped.keys()
+	ids.sort()
+	for id: int in ids:
+		var events: Array = grouped[id]
+		var place: Dictionary = {}
+		for event: Dictionary in events:
+			if event.has("place_x_m"):
+				place = event.duplicate(true)
+				break
+		var report := MissiveWriter.king_report_payload(data, state, events)
+		report["battle_id"] = id
+		report["day"] = state.absolute_day()
+		report["event_tokens"] = []
+		for event: Dictionary in events:
+			if event.kind == "battle_event":
+				report.event_tokens.append(event.token)
+		var at := Vector2i(int(place.get("place_x_m", 0)), int(place.get("place_y_m", 0)))
+		var local := BattleSystem._within(KingSystem.position(state), at, int(data.bal("king_command_radius_m")))
+		if local:
+			MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, events))
+			BattleEvents.receive_report(state, report)
+		else:
+			place["report"] = report
+			var courier := CourierSystem.dispatch_king_report(data, state, id, place)
+			if not courier.is_empty():
+				state.king_state["last_report_dispatched"] = {"courier_id": int(courier.id), "battle_id": id,
+					"day": state.absolute_day(), "fee_gold": 0}
+	if not other.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, other))
+
 
 ## The regiments that reached their destination in the last advance_day, in
 ## code order — read by Game for the news bar and by nothing else.

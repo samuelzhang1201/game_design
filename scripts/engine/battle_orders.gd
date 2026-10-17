@@ -155,6 +155,9 @@ static func deliver(repo: DataRepository, state: GameState, id: String) -> Dicti
 		if action in ["hold", "attack"]:
 			for code: String in battle[side]:
 				BattleSystem.stop_withdrawal(state, code)
+		if action == "attack":
+			for code: String in battle[side]:
+				battle.get("reserves", {}).erase(code)
 		battle["actions"][side] = {"kind": action, "order_id": id, "day": state.absolute_day(),
 			"reason": "The last delivered lawful warrant orders " + action + "."}
 	record["reserved_gold"] = 0

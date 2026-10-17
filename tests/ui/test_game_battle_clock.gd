@@ -124,3 +124,18 @@ func test_duplicate_old_confirmation_does_not_hide_the_next_encounter() -> void:
 	assert_true(panel.visible, "a duplicate old response must leave the current decision usable")
 	assert_true(Game.holds_clock("battle_decision"))
 	assert_eq(Game.state.day_resolution["pending_decision"]["selected"], "")
+
+func test_local_battle_order_can_be_reissued_after_a_different_order() -> void:
+	BattleSystem.detect_contacts(Game.data, Game.state)
+	var battle: Dictionary = Game.state.battles[0]
+	var code := String(battle["def"][0])
+	Game.state.king_state["x_m"] = Game.state.regiments[code]["x_m"]
+	Game.state.king_state["y_m"] = Game.state.regiments[code]["y_m"]
+	var root: GameRoot = load("res://scenes/game_root.tscn").instantiate()
+	add_child_autofree(root)
+	await wait_process_frames(2)
+	root.set_process(false)
+	for kind: String in ["attack", "hold", "attack"]:
+		root._on_battle_order(code, int(battle["id"]), kind)
+		assert_eq(BattleOrders.kind(battle, "def"), kind)
+	assert_eq(Game.state.battle_orders.size(), 3, "Three player commands need three durable warrant IDs")
