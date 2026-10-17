@@ -933,36 +933,16 @@ static func piece_heading(repo: DataRepository, state: GameState, code: String) 
 	return h if h != Vector2.ZERO else facing_of(state, code)
 
 
-## One DAY of holding for every regiment of the crown, in code order (spec
-## 2026-10-11-war-room-front-line-design §3): settled in the hold stance, not
-## marching and in no battle, `hold_days` grows by one up to balance
-## camp_after_days; anything else (a march, another stance, a battle) erases
-## it. Run by TickEngine after the day's fights and settle_stances.
-static func hold_day(repo: DataRepository, state: GameState) -> void:
-	var cap := int(repo.bal("camp_after_days"))
-	var codes := state.regiments.keys()
-	codes.sort()
-	for c in codes:
-		var code := String(c)
-		var e: Dictionary = state.regiments[code]
-		var holding := cap > 0 and String(e.get("stance", STANCE_DEFAULT)) == WarFront.HOLD_STANCE \
-			and String(e.get("order", ORDER_STANDBY)) != ORDER_MARCH and BattleSystem.battle_of(state, code).is_empty()
-		if holding:
-			e["hold_days"] = mini(int(e.get("hold_days", 0)) + 1, cap)
-		else:
-			e.erase("hold_days")
-
-
-## Whether a regiment has held its line long enough for a camp: hold_days at
-## camp_after_days (> 0), in the field only — never one defending a town
-## (its seat, its camp, or halted within its reach; ArmyGround.garrison_town,
-## ruling 4).
+## Whether a regiment currently occupies its saved, fully built physical camp.
 static func camped(repo: DataRepository, state: GameState, code: String) -> bool:
-	var cap := int(repo.bal("camp_after_days"))
 	var e: Dictionary = state.regiments.get(code, {})
-	if cap <= 0 or e.is_empty() or int(e.get("hold_days", 0)) < cap:
+	var camp: Dictionary = e.get("camp_state", {})
+	if e.is_empty() or String(camp.get("phase", CampSystem.NONE)) != CampSystem.CAMPED:
 		return false
-	return ArmyGround.garrison_town(repo, state, code) == ""
+	var site: Dictionary = camp.get("site", {})
+	return int(e.get("x_m", -1)) == int(site.get("x_m", -2)) \
+		and int(e.get("y_m", -1)) == int(site.get("y_m", -2)) \
+		and ArmyGround.garrison_town(repo, state, code) == ""
 
 
 ## The order a regiment is under: "march", "garrison" or "standby" (no order).
@@ -1057,14 +1037,19 @@ static func set_march(repo: DataRepository, state: GameState, code: String, dest
 ## (`waypoints_m`); without, the way round any ground it cannot climb
 ## (MarchPath) — and when the straight line is clear, no route at all.
 static func set_march_m(repo: DataRepository, state: GameState, code: String, dest: Vector2i,
-		waypoints: Array = []) -> void:
+		waypoints: Array = [], march_already_done := false) -> void:
 	ensure(repo, state)
 	if not state.regiments.has(code):
 		return
+	CampSystem.ensure_legacy(repo, state, code)
 	var entry: Dictionary = state.regiments[code]
 	entry["dest_x_m"] = dest.x
 	entry["dest_y_m"] = dest.y
 	entry["order"] = ORDER_MARCH
+	CampSystem.request_departure(state, code, state.absolute_day(), march_already_done)
+	if String(entry.get("camp_state", {}).get("phase", CampSystem.NONE)) == CampSystem.PACKING:
+		entry["departure"] = {"dest_x_m": dest.x, "dest_y_m": dest.y,
+			"waypoints_m": MarchRoute.to_pairs(waypoints), "received_day": state.absolute_day()}
 	drop_hold(entry)
 	entry.erase("facing_deg")   # a column on the march faces its road
 	for k: String in ["halted_by", "halt_day", "halt_aim_m", "road_blocked_by", "waited", "wait_on"]:
@@ -1076,7 +1061,8 @@ static func set_march_m(repo: DataRepository, state: GameState, code: String, de
 		entry["route_m"] = MarchRoute.to_pairs(route)
 	if not waypoints.is_empty():
 		entry["waypoints_m"] = MarchRoute.to_pairs(waypoints)
-	ArmyGround.leave(repo, state, code)
+	if not entry.has("departure"):
+		ArmyGround.leave(repo, state, code)
 
 
 ## Point a column's state row (a foe's, a retreat's) at `to` (whole metres)
@@ -1237,6 +1223,8 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
+		if BattleSystem.battle_of(state, code).is_empty():
+			_resume_departure(repo, state, code, state.regiments[code])
 		if _march_one(repo, state, code, state.regiments[code], state.absolute_day(), blockers):
 			var entry: Dictionary = state.regiments[code]
 			var halted_by := String(entry.get("halted_by", ""))
@@ -1275,6 +1263,7 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 		var code := String(c)
 		if BattleSystem.battle_of(state, code).is_empty():
 			var fe: Dictionary = state.foes[code]
+			_resume_departure(repo, state, code, fe)
 			var aim := Vector2i(int(fe.get("dest_x_m", 0)), int(fe.get("dest_y_m", 0)))
 			if _march_one(repo, state, code, fe, state.absolute_day(), blockers):
 				var hb := String(fe.get("halted_by", ""))
@@ -1282,6 +1271,28 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 					_spread_foe(repo, state, code, fe, aim, blockers)
 			_note_place(blockers, code, state.foes[code])
 	return arrived
+
+static func _resume_departure(repo: DataRepository, state: GameState, code: String, entry: Dictionary) -> void:
+	if not entry.has("departure"):
+		return
+	var departure: Dictionary = entry["departure"]
+	var dest := Vector2i(int(departure["dest_x_m"]), int(departure["dest_y_m"]))
+	# A battle may have replaced the march order with a retreat/halt. Restore its
+	# saved route after combat, but keep packing protection until the column moves.
+	for k: String in ["halted_by", "halt_day", "halt_aim_m", "road_blocked_by"]:
+		entry.erase(k)
+	entry["dest_x_m"] = dest.x
+	entry["dest_y_m"] = dest.y
+	entry["order"] = ORDER_MARCH
+	entry.erase("facing_deg")
+	_clear_route(entry)
+	var here := Vector2i(int(entry.get("x_m", 0)), int(entry.get("y_m", 0)))
+	var waypoints := MarchRoute.from_pairs(departure.get("waypoints_m", []))
+	var route := route_m_of(repo, here, waypoints, dest, is_naval(repo, state, code))
+	if not waypoints.is_empty() or route.size() > 1:
+		entry["route_m"] = MarchRoute.to_pairs(route)
+	if not waypoints.is_empty():
+		entry["waypoints_m"] = MarchRoute.to_pairs(waypoints)
 
 
 ## A host column halted by a FRIENDLY unit near its target (owner 2026-10-15,
@@ -1520,7 +1531,11 @@ static func _ahead_blockers(repo: DataRepository, state: GameState) -> Dictionar
 ## one pace over all N and ends exactly as the Nth day ends.
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		abs_day: int, blockers: Dictionary = {}, passed_out: Array = []) -> bool:
-	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code, state).is_empty():
+	if not BattleSystem.battle_of(state, code).is_empty() \
+			or String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH \
+			or regiment(repo, code, state).is_empty():
+		return false
+	if not CampSystem.can_march(state, code, abs_day):
 		return false
 	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
 	var full := day_march_at(repo, state, code, metres_to_pack(repo, here), abs_day,
@@ -1550,6 +1565,8 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 			if kind == "halt":
 				passed_out.append_array(path.slice(0, int(verdict["leg"])))
 				_halt_before(entry, verdict["at"], String(verdict["blocker"]), blockers, abs_day)
+				if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != here:
+					_release_camp_on_movement(repo, state, code)
 				return true
 			waiting_on = String(verdict["blocker"])
 			if kind == "wait":
@@ -1583,6 +1600,9 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 	if days <= 1:
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
+		if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != here:
+			_release_camp_on_movement(repo, state, code)
+		entry["moved_day"] = abs_day
 		entry["order"] = ORDER_GARRISON          # arrived: it holds the ground it was sent to
 		_clear_route(entry)
 		passed_out.append_array(path)
@@ -1590,6 +1610,9 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 	var walked := MarchRoute.walk(here, path, step)
 	entry["x_m"] = (walked["at"] as Vector2i).x
 	entry["y_m"] = (walked["at"] as Vector2i).y
+	if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != here:
+		_release_camp_on_movement(repo, state, code)
+	entry["moved_day"] = abs_day
 	passed_out.append_array(walked["passed"])
 	if entry.has("route_m") or detoured:
 		# new arrays, never the old ones cut: a preview walks a shallow copy
@@ -1603,6 +1626,15 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		if entry.has("waypoints_m") or not wps.is_empty():
 			entry["waypoints_m"] = MarchRoute.to_pairs(wps)
 	return false
+
+static func _release_camp_on_movement(repo: DataRepository, state: GameState, code: String) -> void:
+	if String(state.regiments.get(code, state.foes.get(code, {})).get("camp_state", {}).get("phase", CampSystem.NONE)) != CampSystem.PACKING:
+		return
+	CampSystem.departure_started(state, code)
+	var entry: Dictionary = state.regiments[code] if state.regiments.has(code) else state.foes[code]
+	entry.erase("departure")
+	if state.regiments.has(code):
+		ArmyGround.leave(repo, state, code)
 
 
 ## Whether a column waiting on `blocker` is the one to stop: always unless the

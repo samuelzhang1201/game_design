@@ -1,4 +1,9 @@
 key,value,notes
+army_camp_idle_days,2,"P3.2 provisional: full idle field days before camp construction begins; tune after play review"
+army_camp_build_days,2,"P3.2 provisional: completed field days to build camp; tune after play review"
+army_camp_defence_permille,200,"P3.2 provisional full camp defence over base defending power; tune after play review"
+army_camp_pack_defence_permille,100,"P3.2 provisional packing-stage defence over base power; tune after play review"
+army_camp_supply_loss_reduction_permille,100,"P3.2 provisional reduction to existing incoming transport loss while camped; never grants food"
 army_decay,0.3,per tick
 army_floor,20,
 levy_cost,40,

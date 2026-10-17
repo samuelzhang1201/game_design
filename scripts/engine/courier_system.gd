@@ -743,7 +743,7 @@ static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, 
 	match action:
 		"ARMY_MARCH":
 			ArmySystem.set_march_m(repo, state, code, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])),
-				MarchRoute.from_pairs(order.get("waypoints_m", [])))
+				MarchRoute.from_pairs(order.get("waypoints_m", [])), true)
 		"ARMY_GARRISON":
 			ArmySystem.set_garrison(repo, state, code)
 		"ARMY_SEAT":

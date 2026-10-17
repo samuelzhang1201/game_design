@@ -2,6 +2,8 @@
 
 # Supply, morale and the war workshop
 
+Field camps lower only the loss on an already-existing incoming supply line, by `army_camp_supply_loss_reduction_permille` while the unit remains at its saved camp site. The same capped loss feeds `SupplySystem.plan` and `SupplyLines.day_step`; no second meal, depot, or free stores are created. Zero stock and no legal supply route remain zero.
+
 Spec `2026-10-07-army-supply-lines-design.md` (and its rulings).
 
 - **Two reads per system** (`WorkshopSystem`, `SupplySystem`): `plan()` is the read-only month for card, LEDGER and audit; the truth is `SupplyLines.day_step` and `settle_month`.

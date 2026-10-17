@@ -1,7 +1,7 @@
 class_name Map3DUnitCamps
 extends RefCounted
-## The camps pitched behind lines held camp_after_days (ArmySystem.camped; spec
-## 2026-10-11-war-room-front-line-design §3), for Map3DLayerUnits: the
+## The physical camps in saved CampSystem state (ArmySystem.camped; spec
+## 2026-10-16-battle-system-design §11), for Map3DLayerUnits: the
 ## CAMP_MODELS table's `camp` scene seated behind the piece; none while the
 ## table or its file is missing (a warning once, never an error), struck when
 ## the regiment moves on. Takes everything from Map3DContext, never the Game autoload.

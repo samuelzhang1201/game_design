@@ -94,6 +94,8 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 			var def_permille := int((repo.battle_stances.get(stance, {}) as Dictionary).get("defence_permille", 1000))
 			@warning_ignore("integer_division")  # whole power, per-mille stance
 			p = p * def_permille / 1000
+			@warning_ignore("integer_division")  # camp and stance are independent factors
+			p = p * CampSystem.defence_factor(repo, state, code) / 1000
 		total += p
 	return total
 
@@ -325,12 +327,14 @@ static func _can_fight(repo: DataRepository, state: GameState, code: String) -> 
 	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 		return false
-	if homeward(state, code):
+	var camp_phase := String((state.regiments.get(code, state.foes.get(code, {})) as Dictionary)
+		.get("camp_state", {}).get("phase", CampSystem.NONE))
+	if homeward(state, code) and camp_phase != CampSystem.PACKING:
 		return false
 	var e := _stored(state, code)
-	if e.is_empty() or int(e.get("disengaging", 0)) == 1:
+	if e.is_empty() or (int(e.get("disengaging", 0)) == 1 and camp_phase != CampSystem.PACKING):
 		return false
-	if int(e.get("disengaged_until", 0)) >= state.absolute_day():
+	if int(e.get("disengaged_until", 0)) >= state.absolute_day() and camp_phase != CampSystem.PACKING:
 		return false
 	return ArmySystem.fit_count(repo, state, code) > 0
 
@@ -357,7 +361,10 @@ static func _withdraw_homeward(repo: DataRepository, state: GameState, events: A
 		var gone: Array = []
 		for side: String in SIDES:
 			for c: Variant in (b[side] as Array).duplicate():
-				if homeward(state, String(c)):
+				var code := String(c)
+				var e: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
+				var packing := String(e.get("camp_state", {}).get("phase", CampSystem.NONE)) == CampSystem.PACKING
+				if homeward(state, code) and not packing:
 					(b[side] as Array).erase(c)
 					gone.append(String(c))
 		if gone.is_empty():
@@ -680,7 +687,8 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 static func _exit_why(repo: DataRepository, state: GameState, code: String, side: String, rout: String,
 		side_odds: int) -> String:
 	var e := _stored(state, code)
-	if String(e.get("order", "")) == ArmySystem.ORDER_MARCH:
+	if String(e.get("order", "")) == ArmySystem.ORDER_MARCH \
+			and CampSystem.can_march(state, code, state.absolute_day()):
 		return "ordered"
 	if ArmySystem.fit_count(repo, state, code) <= 0:
 		return "broken"
@@ -714,7 +722,7 @@ static func _exits(repo: DataRepository, state: GameState, b: Dictionary, rout: 
 			left.append({"code": code, "side": side, "why": why})
 			if why in ["rout", "evade", "retreat"]:
 				_fall_back(repo, state, code, b)
-			if why != "broken":
+			if why != "broken" and CampSystem.can_march(state, code, state.absolute_day()):
 				_stored(state, code)["disengaging"] = 1
 		for c: Variant in b[side]:
 			if not left.any(func(l: Dictionary) -> bool: return String(l["code"]) == String(c)):
@@ -756,8 +764,10 @@ static func _fall_back(repo: DataRepository, state: GameState, code: String, b: 
 		_halt(state, code)
 		_pause(repo, state, code)
 		return
+	CampSystem.ensure_legacy(repo, state, code)
+	CampSystem.request_departure(state, code, state.absolute_day(), true)
 	ArmySystem.aim_entry(repo, e, best_m, ArmySystem.is_naval(repo, state, code))
-	if not ArmySystem.is_foe(state, code):
+	if not ArmySystem.is_foe(state, code) and CampSystem.can_march(state, code, state.absolute_day()):
 		# a unit of the crown's leaves its camp and, holding a seat, empties it
 		# (refilled from the camp; spec 2026-10-07-army-split-and-ground §4.4)
 		ArmyGround.leave(repo, state, code)

@@ -760,7 +760,9 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 		# 2026-10-07-war-room-p2 §1.2, §2.3) read once a line a day
 		var km := road_km(repo, route)
 		var robbed := SupplySystem.road_loss(repo, state, code, route)
-		_deliver_line(repo, state, code, reg, ln, km, SupplySystem.total_loss(repo, km, int(robbed["permille"])))
+		var loss := SupplySystem.total_loss(repo, km, int(robbed["permille"]))
+		loss = CampSystem.reduced_supply_loss(repo, state, code, loss)
+		_deliver_line(repo, state, code, reg, ln, km, loss)
 	TownStores.sync_metrics(repo, state)
 	return events
 

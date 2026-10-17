@@ -770,7 +770,7 @@ static func _march_host(repo: DataRepository, state: GameState, host_code: Strin
 		if not homeward and int(e.get("disengaging", 0)) == 1:
 			continue
 		if c == occupation and BattleSystem.town_contact(repo, state, String(mind["target_id"]), c) == "":
-			ArmySystem.aim_entry(repo, e, to, ArmySystem.is_naval(repo, state, c))
+			_aim_with_camp_gate(repo, state, c, e, to)
 			continue
 		if mode in [MODE_DEPLOYING, MODE_SIEGE] and SiegeSystem.at_town(repo, state, c, String(mind["target_id"])):
 			e["order"] = ArmySystem.ORDER_GARRISON
@@ -784,7 +784,13 @@ static func _march_host(repo: DataRepository, state: GameState, host_code: Strin
 		if _stands_halted(repo, state, c, e, to):
 			continue      # a standoff before the crown (or a slot round the target) holds while its aim does
 		# round ground it cannot climb, as the crown's columns go (MarchPath)
-		ArmySystem.aim_entry(repo, e, to, ArmySystem.is_naval(repo, state, c))
+		_aim_with_camp_gate(repo, state, c, e, to)
+
+static func _aim_with_camp_gate(repo: DataRepository, state: GameState, code: String,
+		entry: Dictionary, to: Vector2i) -> void:
+	CampSystem.ensure_legacy(repo, state, code)
+	CampSystem.request_departure(state, code, state.absolute_day(), true)
+	ArmySystem.aim_entry(repo, entry, to, ArmySystem.is_naval(repo, state, code))
 
 
 ## One nearest available column takes possession of an abandoned siege target.
