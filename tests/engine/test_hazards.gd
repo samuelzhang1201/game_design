@@ -183,7 +183,7 @@ func test_no_fit_men_no_toll_and_no_news() -> void:
 		state.hazards.erase(id)
 	state.hazards_rev += 1
 	var code := _crown_land_code(state)
-	state.regiments[code]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
+	SuiteData.set_losses(state, code, {"wounded": ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))})
 	Hazards.add(state, "p", "Disease", "Test Plague", [_cell_of(state, code)], state.tick, -1, "test")
 	var news := Hazards.settle_regiments(repo, state)
 	assert_eq(int(state.regiments[code]["wounded"]), ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)))

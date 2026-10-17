@@ -69,20 +69,21 @@ func test_the_regiments_are_on_every_screens_map() -> void:
 ## replaced refreshed live — the column follows the state while it is up.
 func test_the_column_follows_the_state_while_it_is_up() -> void:
 	var r: GameRoot = await _court()
-	WorldLedger.apply(Game.data, Game.state, "military.kingdoms.player_realm.infantry", -300.0,
-		"a bad winter", "test")
+	_lose_infantry(300, "a bad winter")
 	r.set_army_view(true)
 	await wait_process_frames(2)
 	var panel: MilitaryPanel = r.current_screen.military_panel()
-	var infantry := float(WorldLedger.value_of(Game.data, Game.state,
-		"military.kingdoms.player_realm.infantry"))
+	var infantry := 0.0
+	for unit: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if MapObjects.regiment_arm(Game.data, unit) == "infantry":
+			var code := String(unit["regiment_code"])
+			infantry += MilitaryRoster.fit(Game.state, code) + MilitaryRoster.count(Game.state, code, "wounded")
 	var before := -1.0
 	for row in panel.arms_chart().rows:
 		if String(row.get("dimension", "")) == "infantry":
 			before = float(row["value"])
 	assert_almost_eq(before, infantry, 0.5, "the infantry bar reads the live count")
-	WorldLedger.apply(Game.data, Game.state, "military.kingdoms.player_realm.infantry", -500.0,
-		"a hard march", "test")
+	_lose_infantry(500, "a hard march")
 	# The same contract the dashboard has: the column redraws on the signal
 	# the engine raises after a tick or an order, not on every ledger write.
 	Game.state_changed.emit()
@@ -91,3 +92,19 @@ func test_the_column_follows_the_state_while_it_is_up() -> void:
 		if String(row.get("dimension", "")) == "infantry":
 			assert_almost_eq(float(row["value"]), before - 500.0, 0.5,
 				"the bar followed the ledger with no click")
+
+
+func _lose_infantry(amount: int, reason: String) -> void:
+	var changes: Array = []
+	var left := amount
+	for unit: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if MapObjects.regiment_arm(Game.data, unit) != "infantry":
+			continue
+		var code := String(unit["regiment_code"])
+		var loss := mini(left, MilitaryRoster.fit(Game.state, code))
+		changes.append_array(MilitaryRoster.plan_changes(Game.state, code, "fit", "dead", loss))
+		left -= loss
+		if left == 0:
+			break
+	assert_eq(left, 0)
+	assert_false(MilitaryRoster.transition(Game.data, Game.state, "panel:" + reason, changes, reason).has("error"))

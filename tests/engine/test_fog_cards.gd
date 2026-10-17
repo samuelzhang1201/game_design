@@ -100,8 +100,7 @@ func test_a_foes_army_card_shows_words_not_figures() -> void:
 	var r: Dictionary = ArmySystem.regiment(repo, code, s)
 	var total := int(MapObjects.regiment_size(repo, r))
 	assert_true(s.foes.has(code), "a spawned foe")
-	s.foes[code]["dead"] = 123
-	s.foes[code]["wounded"] = 321
+	SuiteData.set_losses(s, code, {"dead": 123, "wounded": 321})
 	var card := MapObjects.army_card(repo, code, s)
 	var army := ""
 	for st: Dictionary in card["stats"]:

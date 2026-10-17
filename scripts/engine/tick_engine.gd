@@ -18,6 +18,10 @@ func _init(d: DataRepository) -> void:
 ## cursor movement are persisted together before the method returns to a caller.
 func resolve_day(state: GameState) -> Dictionary:
 	last_month_report = null
+	if state.military_organization_version == 0 and not state.army_roster.is_empty():
+		var military := MilitaryMigration.ensure(data, state)
+		if military.has("error"):
+			return {"status": "incompatible", "reason": military["error"]}
 	if state.day_resolution.is_empty():
 		var tx := DayResolution.begin(state.day, state.day >= Calendar.DAYS_PER_TICK,
 			state.absolute_day(), int(data.bal("battle_substeps")))
@@ -49,6 +53,8 @@ func resolve_day(state: GameState) -> Dictionary:
 		"journal": (tx["journal"] as Dictionary).duplicate(true),
 		"resolved_day": int(tx.get("day", state.day))}
 	state.day_resolution = {}
+	if state.military_migration_pending:
+		MilitaryMigration.ensure(data, state)
 	return result
 
 

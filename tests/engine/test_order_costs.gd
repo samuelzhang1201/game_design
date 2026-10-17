@@ -73,15 +73,21 @@ func test_ensure_charges_only_when_nothing_else_did() -> void:
 func test_always_rows_apply_beside_intrinsic_costs() -> void:
 	var pop_before := int(WorldLedger.value_of(data, state,
 		"economy.kingdoms.player_realm.rural_population"))
+	var gold_before := int(state.metrics.treasury)
+	var supplies_before := int(state.metrics.strategic)
 	var out := sys.execute(ActionRequest.make("LEVY_RAISE"), state)
-	assert_lt(int(WorldLedger.value_of(data, state,
+	assert_true(out.ok)
+	assert_eq(int(WorldLedger.value_of(data, state,
 		"economy.kingdoms.player_realm.rural_population")), pop_before,
-		"levies draw down the villages every time")
+		"training does not recruit another population")
+	assert_eq(int(state.metrics.treasury), gold_before - int(sys.gold_cost(data.actions.LEVY_RAISE)), "intrinsic gold cost")
+	assert_eq(int(state.metrics.strategic), supplies_before - 20, "always training supplies beside the gold")
 	var seen := false
-	for e in out["effects"]:
-		if String(e.get("kind", "")) == "world":
+	for e: Dictionary in out.effects:
+		if String(e.get("metric", "")) == "strategic" and int(e.get("delta", 0)) == -20:
 			seen = true
-	assert_true(seen, "the population cost is on the outcome")
+	assert_true(seen, "the additional cost is on the outcome")
+
 
 ## The guarantee itself: every handled action, executed from a fresh
 ## campaign, leaves a cost on the record.

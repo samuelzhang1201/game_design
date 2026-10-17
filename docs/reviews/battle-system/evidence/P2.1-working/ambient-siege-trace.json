@@ -1,0 +1,114 @@
+[
+  {
+    "personnel_conflicts": [],
+    "seed": 11,
+    "siege_host_days": 0,
+    "transitions": [
+      {
+        "day": 17,
+        "host": "raid_main",
+        "mode": "RAID",
+        "type": "host_mode",
+        "why": "reached an undefended target"
+      },
+      {
+        "day": 25,
+        "host": "raid_raiders",
+        "mode": "RAID",
+        "type": "host_mode",
+        "why": "reached an undefended target"
+      },
+      {
+        "day": 33,
+        "host": "raid_raiders",
+        "mode": "RETREAT",
+        "type": "host_mode",
+        "why": "supplies for 2 days, below 3"
+      },
+      {
+        "day": 35,
+        "host": "raid_reserve",
+        "mode": "RETREAT",
+        "type": "host_mode",
+        "why": "supplies for 2 days, below 3"
+      },
+      {
+        "day": 38,
+        "host": "raid_main",
+        "mode": "RETREAT",
+        "type": "host_mode",
+        "why": "supplies for 2 days, below 3"
+      }
+    ]
+  },
+  {
+    "personnel_conflicts": [],
+    "seed": 42,
+    "siege_host_days": 0,
+    "transitions": [
+      {
+        "day": 17,
+        "host": "raid_main",
+        "mode": "RAID",
+        "type": "host_mode",
+        "why": "reached an undefended target"
+      },
+      {
+        "day": 30,
+        "host": "raid_raiders",
+        "mode": "WITHDRAW",
+        "type": "host_mode",
+        "why": "nothing within reach is worth taking"
+      },
+      {
+        "day": 35,
+        "host": "raid_reserve",
+        "mode": "RETREAT",
+        "type": "host_mode",
+        "why": "supplies for 2 days, below 3"
+      },
+      {
+        "day": 38,
+        "host": "raid_main",
+        "mode": "RETREAT",
+        "type": "host_mode",
+        "why": "supplies for 2 days, below 3"
+      }
+    ]
+  },
+  {
+    "personnel_conflicts": [],
+    "seed": 7,
+    "siege_host_days": 0,
+    "transitions": [
+      {
+        "day": 17,
+        "host": "raid_main",
+        "mode": "RAID",
+        "type": "host_mode",
+        "why": "reached an undefended target"
+      },
+      {
+        "day": 30,
+        "host": "raid_raiders",
+        "mode": "WITHDRAW",
+        "type": "host_mode",
+        "why": "nothing within reach is worth taking"
+      },
+      {
+        "day": 35,
+        "host": "raid_reserve",
+        "mode": "RETREAT",
+        "type": "host_mode",
+        "why": "supplies for 2 days, below 3"
+      },
+      {
+        "day": 38,
+        "host": "raid_main",
+        "mode": "RETREAT",
+        "type": "host_mode",
+        "why": "supplies for 2 days, below 3"
+      }
+    ]
+  }
+]

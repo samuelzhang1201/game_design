@@ -44,19 +44,62 @@ static func ordered(repo: DataRepository, state: GameState, codes: Array) -> Arr
 
 ## Heads under a regiment's banner, as a whole number.
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
-	return int(MapObjects.regiment_size(repo, reg))
+	return MapObjects.regiment_personnel(repo, reg)
+
+## Persons in the ledger, with legacy fallback while an old day resumes.
+static func personnel_fit(repo: DataRepository, state: GameState, code: String) -> int:
+	if state != null and state.military_rosters.has(code):
+		return MilitaryRoster.fit(state, code)
+	return fit_heads(headcount(repo, regiment(repo, code, state)), state_of(repo, state, code))
+
+
+## Commit a planned personnel move before publishing non-personnel effects.
+static func move_personnel(repo: DataRepository, state: GameState, code: String, moves: Array,
+		token: String, reason: String) -> Dictionary:
+	var needed := 0
+	for move: Dictionary in moves:
+		needed += int(move["count"])
+	if needed == 0:
+		return {}
+	var changes := MilitaryRoster.plan_unit_changes(state, code, moves)
+	if changes.is_empty():
+		return {"error": "personnel ledger cannot apply " + token}
+	return MilitaryRoster.transition(repo, state, token, changes, reason)
+
 
 ## The men still under the banner: `heads` less the dead and the deserted of
 ## a regiment's state `st`, never below 0.
 static func under_arms(heads: int, st: Dictionary) -> int:
-	return maxi(0, heads - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))))
+	return maxi(0, heads - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))) - maxi(0, int(st.get("captured_current", 0))))
+
+## Live people by arm; mixed legacy units attribute unspecified losses proportionally.
+static func personnel_by_arm(repo: DataRepository, state: GameState, realm: String) -> Dictionary:
+	var arms := repo.world_table("military", "unit_types").keys()
+	var counts: Dictionary = {}
+	for arm: String in arms:
+		counts[arm] = 0
+	for regiment: Dictionary in MapObjects.regiments_of(repo, realm, state):
+		var code := String(regiment["regiment_code"])
+		var people := 0
+		if state != null and state.military_rosters.has(code):
+			people = MilitaryRoster.fit(state, code) + MilitaryRoster.count(state, code, "wounded")
+		else:
+			people = under_arms(headcount(repo, regiment), state_of(repo, state, code))
+		var weights: Array = []
+		for arm: String in arms:
+			weights.append(int(float(regiment.get(arm, 0))) * int(repo.world_row("military", "unit_types", arm).get("crew", 0)))
+		var shares := BattleSystem.apportion(weights, people)
+		for i in arms.size():
+			counts[arms[i]] += int(shares[i])
+	return counts
+
 
 ## The men able to fight: `heads` less the wounded, the dead and the deserted
 ## of a regiment's state `st` (a state with no `dead` or `deserted`, an old
 ## save's, has none), never below 0.
 ## The pack's headcount is immutable, so the dead are a count beside it.
 static func fit_heads(heads: int, st: Dictionary) -> int:
-	return maxi(0, heads - maxi(0, int(st.get("wounded", 0))) - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))))
+	return maxi(0, heads - maxi(0, int(st.get("wounded", 0))) - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))) - maxi(0, int(st.get("captured_current", 0))))
 
 ## A regiment's STRENGTH: its fit men (headcount less the wounded, the dead and the deserted)
 ## per mille of its headcount — what its piece shows (owner 2026-09-30: 满员 / 减员 /
@@ -67,9 +110,8 @@ static func fit_permille(repo: DataRepository, state: GameState, code: String) -
 	var heads := headcount(repo, reg)
 	if heads <= 0:
 		return 0
-	var st := state_of(repo, state, code)
 	@warning_ignore("integer_division")  # whole per-mille
-	return fit_heads(heads, st) * 1000 / heads
+	return personnel_fit(repo, state, code) * 1000 / heads
 
 ## What a regiment starts a campaign with: army_start_supply_days of its use,
 ## in whole supplies rounded UP, so the days in hand read the days it was given
@@ -102,6 +144,8 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 		var code := String(reg["regiment_code"])
 		if not state.regiments.has(code):
 			state.regiments[code] = starting_state(repo, reg)
+			if state.military_rosters.has(code):
+				MilitaryRoster.sync_projections(state, code)
 			continue
 		# A save written before the march existed has morale but no position:
 		# seat it where the pack put it, standing.
@@ -132,11 +176,15 @@ static func is_foe(state: GameState, code: String) -> bool:
 ## it would start with. Never writes. {} for a regiment that is neither.
 static func state_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	if is_foe(state, code):
+		if state.military_rosters.has(code):
+			MilitaryRoster.sync_projections(state, code)
 		return state.foes[code]
 	var reg := regiment(repo, code, state)
 	if reg.is_empty() or String(reg["kingdom_code"]) != repo.resolve_realm("player_realm"):
 		return {}
 	if state != null and state.regiments.has(code):
+		if state.military_rosters.has(code):
+			MilitaryRoster.sync_projections(state, code)
 		return state.regiments[code]
 	return starting_state(repo, reg)
 
@@ -149,7 +197,11 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 ## regiment's worth of supply to truncation twice.
 static func supply_use(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
 	@warning_ignore("integer_division")  # whole supplies, one rounding at the end
-	return headcount(repo, reg) * int(repo.bal("army_supply_per_head_permille")) \
+	var code := String(reg.get("regiment_code", ""))
+	var people := headcount(repo, reg)
+	if state != null and state.military_rosters.has(code):
+		people = MilitaryRoster.fit(state, code) + MilitaryRoster.count(state, code, "wounded")
+	return people * int(repo.bal("army_supply_per_head_permille")) \
 		* int(height_tier(repo, reg, state)["supply_permille"]) / 1_000_000
 
 ## Wounded who return to the ranks in a month: a share, at least one while
@@ -176,7 +228,11 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 		var entry: Dictionary = state.regiments[code]
 		var heads := headcount(repo, reg)
 		var wounded := clampi(int(entry["wounded"]), 0, heads)
-		entry["wounded"] = clampi(wounded - wound_recovery(repo, wounded), 0, heads)
+		var recovery := wound_recovery(repo, wounded)
+		var moved := move_personnel(repo, state, code, [{"from": "wounded", "to": "fit", "count": recovery}],
+			"recovery:%s:%d" % [code, state.tick], "wounded recovered at month's end")
+		if moved.has("error"):
+			continue
 		var use := supply_use(repo, reg, state)
 		if String(reg.get("is_naval", "0")) != "1":
 			# Morale reads the stores in hand as the month turns, after the
@@ -530,8 +586,7 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0
-	var heads := headcount(repo, reg)
-	var fit := fit_heads(heads, st)
+	var fit := personnel_fit(repo, state, code)
 	var realm := realm_of(repo, code, state)
 	return power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
 		code, 0 if state == null else state.tick, DevelopmentSystem.arm_permille(repo, state, realm))
@@ -554,16 +609,26 @@ static func realm_of(repo: DataRepository, code: String, state: GameState = null
 static func power_of_arms(repo: DataRepository, arms: Dictionary, fit: int, training: int, morale: int,
 		stance: String, terrain: String, works: String, float_code := "", tick := 0,
 		dev_permille: Dictionary = {}) -> int:
+	var people: Dictionary = {}
+	for arm: String in repo.world_table("military", "unit_types"):
+		people[arm] = int(float(arms.get(arm, 0))) * int(repo.world_row("military", "unit_types", arm).get("crew", 0))
+	return power_of_personnel(repo, people, fit, training, morale, stance, terrain, works, float_code, tick, dev_permille)
+
+
+## Supposed forces already expressed in people must not be multiplied by crew again.
+static func power_of_personnel(repo: DataRepository, people: Dictionary, fit: int, training: int, morale: int,
+		stance: String, terrain: String, works: String, float_code := "", tick := 0,
+		dev_permille: Dictionary = {}) -> int:
 	var heads := 0
 	for arm: String in repo.world_table("military", "unit_types"):
-		heads += int(float(arms.get(arm, 0)))
+		heads += int(people.get(arm, 0))
 	if heads <= 0:
 		return 0
 	var training_f := int(repo.bal("army_training_base_permille")) + training * int(repo.bal("army_training_step_permille"))
 	var morale_f := int(repo.bal("army_morale_base_permille")) + morale * int(repo.bal("army_morale_step_permille"))
 	var total := 0
 	for arm: String in repo.world_table("military", "unit_types"):
-		var n := int(float(arms.get(arm, 0)))
+		var n := int(people.get(arm, 0))
 		if n <= 0:
 			continue
 		# Carry precision through the chain (owner 2026-09-17 review): the

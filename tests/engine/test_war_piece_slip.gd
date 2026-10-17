@@ -23,7 +23,7 @@ func test_a_regiments_reading_is_its_own_figures_and_days_in_hand() -> void:
 	var reg := ArmySystem.regiment(repo, code)
 	ArmySystem.ensure(repo, state)
 	state.regiments[code]["supplies"] = 600
-	state.regiments[code]["wounded"] = 10
+	SuiteData.set_losses(state, code, {"wounded": 10})
 	var r: Dictionary = WarPieceSlip.reading(repo, state, [code])[0]
 	var use := ArmySystem.supply_use(repo, reg, state)
 	assert_gt(use, 0)

@@ -28,8 +28,8 @@ economy.kingdoms.player_realm.sales_tax,float,0,1,,0,0,metrics.tariff_rate,tarif
 economy.kingdoms.*.treasury,float,-100000000,100000000,,1,0,,,Treasury,foreign treasuries are engine-only
 economy.kingdoms.*.poll_tax,float,0,1,,0,0,,,Poll tax,
 economy.kingdoms.*.sales_tax,float,0,1,,0,0,,,Sales tax,
-economy.kingdoms.*.urban_population,int,0,100000000,,1,2000,,,Urban population,
-economy.kingdoms.*.rural_population,int,0,100000000,,1,5000,,,Rural population,
+economy.kingdoms.*.urban_population,int,0,100000000,,1,0,,,Urban population,
+economy.kingdoms.*.rural_population,int,0,100000000,,1,0,,,Rural population,
 economy.provinces.*.urban_population,int,0,100000000,,1,1000,,,Urban population,
 economy.provinces.*.rural_population,int,0,100000000,,1,2000,,,Rural population,
 economy.burgs.*.treasury,float,0,1000000,,1,20,,,Town treasury,

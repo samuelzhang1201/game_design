@@ -1,0 +1,19 @@
+{
+  "fast": {
+    "command": "./run_tests.sh --fast",
+    "exit_code": 0,
+    "scripts": 211,
+    "tests": 2204,
+    "passing": 2203,
+    "pending_existing": 1,
+    "assertions": 840553,
+    "seconds": 1766.621,
+    "ignored_scripts": 0,
+    "unexpected_script_errors": 0,
+    "raw_log_sha256": "b91af28c6276363974ca6136abd82fbfff7f6928689d02840d38bf839101472c",
+    "committed_log_format": "ANSI stripped; trailing whitespace trimmed"
+  },
+  "source_manifest_sha256": "64474c4053e96faa3e562ee9b7d30d15c8c89529d8703a85b0d6b280ada69585",
+  "ci": "pending",
+  "acceptance": "blocked on unresolved legacy train provenance policy"
+}

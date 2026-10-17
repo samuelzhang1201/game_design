@@ -108,10 +108,10 @@ func test_a_unit_with_no_man_under_arms_sees_nothing_and_is_not_seen() -> void:
 	var u := _land_unit()
 	Play.place(repo, s, u, far, ArmySystem.ORDER_STANDBY)
 	Play.place(repo, s, foe, far + Vector2i(6000, 0), ArmySystem.ORDER_STANDBY)
-	s.foes[foe]["dead"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, foe, s))
+	SuiteData.set_losses(s, foe, {"dead": ArmySystem.headcount(repo, ArmySystem.regiment(repo, foe, s))})
 	assert_eq(Sighting.seen_foes(repo, s), [], "a destroyed column is no one to see")
-	s.foes[foe]["dead"] = 0
-	s.regiments[u]["dead"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, u, s))
+	SuiteData.set_losses(s, foe, {"dead": 0})
+	SuiteData.set_losses(s, u, {"dead": ArmySystem.headcount(repo, ArmySystem.regiment(repo, u, s))})
 	assert_eq(Sighting.seen_foes(repo, s), [], "a unit with every man dead sees nothing")
 
 
@@ -270,7 +270,7 @@ func test_a_destroyed_unit_takes_its_ghost_with_it() -> void:
 	_seen_now()
 	Sighting.update(repo, s)
 	Play.place(repo, s, foe, far + Vector2i(3 * r, 0), ArmySystem.ORDER_STANDBY)
-	s.foes[foe]["dead"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, foe, s))
+	SuiteData.set_losses(s, foe, {"dead": ArmySystem.headcount(repo, ArmySystem.regiment(repo, foe, s))})
 	assert_eq(Sighting.ghosts(repo, s), [], "not drawn the moment it is gone")
 	Sighting.update(repo, s)
 	assert_false(s.sightings.has(foe), "forgotten at the day's end")

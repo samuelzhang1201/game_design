@@ -260,8 +260,8 @@ func test_round_matches_hand_computed_tier() -> void:
 	_place(s, p, _spot(s))
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
 	# exactly 400 fit men a side (a unit is at most army_split_cap_men)
-	s.regiments[p]["dead"] = _heads(p) - 400
-	s.foes[f]["dead"] = _heads(f) - 400
+	SuiteData.set_losses(s, p, {"dead": _heads(p) - 400})
+	SuiteData.set_losses(s, f, {"dead": _heads(f) - 400})
 	var morale_p := int(s.regiments[p]["morale"])
 	var morale_f := int(s.foes[f]["morale"])
 	BattleSystem.settle_day(repo, s)
@@ -449,7 +449,7 @@ func test_hold_stance_never_retreats() -> void:
 		var f: String = _theirs()[0]
 		_place(s, p, _spot(s))
 		_foe(s, f, _spot(s) + Vector2i(1000, 0))
-		s.regiments[p]["dead"] = _heads(p) - 20   # a handful left: hopeless odds
+		SuiteData.set_losses(s, p, {"dead": _heads(p) - 20})   # a handful left: hopeless odds
 		s.regiments[p]["stance"] = stance
 		BattleSystem.settle_day(repo, s)
 		if stance == "hold":

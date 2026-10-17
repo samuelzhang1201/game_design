@@ -878,12 +878,21 @@ static func regiments_of(repo: DataRepository, kingdom_code: String, state: Game
 			out.append(all[c])
 	return out
 
-## Heads under a regiment's banner: every arm in unit_types added up.
+## Compatibility name: a regiment's size is persons, never equipment elements.
 static func regiment_size(repo: DataRepository, regiment: Dictionary) -> float:
-	var total := 0.0
-	for unit: String in repo.world_table("military", "unit_types"):
-		total += float(regiment.get(unit, 0))
+	return float(regiment_personnel(repo, regiment))
+
+
+static func regiment_equipment_count(repo: DataRepository, regiment: Dictionary) -> int:
+	var total := 0
+	for arm: String in repo.world_table("military", "unit_types"):
+		total += int(float(regiment.get(arm, 0)))
 	return total
+
+
+static func regiment_personnel(repo: DataRepository, regiment: Dictionary) -> int:
+	return MilitaryRoster.personnel_capacity(repo, regiment)
+
 
 ## The arm a regiment is mostly made of — what its map marker wears. Ties go
 ## to the earlier arm in unit_types, so the choice is data-ordered.
@@ -933,7 +942,7 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	var kingdom := String(r["kingdom_code"])
 	var naval := String(r.get("is_naval", "0")) == "1"
 	var province := ArmySystem.province_of(repo, state, r)
-	var total := int(regiment_size(repo, r))
+	var total := regiment_personnel(repo, r)
 	var piece := army_piece(repo, r)
 	var stats: Array = []
 	# Only a regiment Intel.level calls "full" — the player's own for now,

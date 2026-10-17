@@ -199,7 +199,7 @@ func test_a_foe_without_men_is_dropped_from_the_log() -> void:
 	_put_foe(far + Vector2i(3000, 0))
 	Sighting.scout_day(repo, s)
 	assert_true(s.scout_log.has(foe))
-	s.foes[foe]["dead"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, foe))
+	SuiteData.set_losses(s, foe, {"dead": ArmySystem.headcount(repo, ArmySystem.regiment(repo, foe))})
 	Sighting.scout_day(repo, s)
 	assert_false(s.scout_log.has(foe))
 

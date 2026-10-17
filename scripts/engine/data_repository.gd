@@ -9,6 +9,8 @@ var seats: Dictionary = {}
 var actions: Dictionary = {}
 var founding: Array[Dictionary] = []
 var roles: Array[Dictionary] = []
+## Authored military eligibility; the full character remains in roles.
+var commanders: Dictionary = {}
 var relationships: Array[Dictionary] = []
 var regions: Dictionary = {}
 var locations: Dictionary = {}
@@ -677,6 +679,10 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(table_path(dir, "roles"), ["id", "display_name", "seat"],
 			func(r): roles.append(r)):
+		return false
+	if not _load_if_present(table_path(dir, "commanders"),
+			["character_id", "realm_slot", "eligible", "unit_kinds", "portrait_key", "reserve_priority"],
+			func(r): commanders[String(r["character_id"])] = r):
 		return false
 	if not _load_if_present(table_path(dir, "relationships"),
 			["from_id", "to_id", "rel_type", "sentiment", "reason"],

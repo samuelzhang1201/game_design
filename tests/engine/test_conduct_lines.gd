@@ -134,7 +134,7 @@ func test_folio_rows_only_when_set() -> void:
 	assert_false(_supply_rows().has(_words("row_deserted")))
 	assert_false(_brief_rows().has(_words("row_foraging")))
 	state.regiments[code]["forage"] = "law"
-	state.regiments[code]["deserted"] = 12
+	SuiteData.set_losses(state, code, {"deserted": 12})
 	assert_eq(_supply_rows()[_words("row_foraging")], _words("state_law"))
 	assert_eq(_supply_rows()[_words("row_deserted")], "12")
 	assert_eq(_brief_rows()[_words("row_foraging")], _words("state_law"))
@@ -144,9 +144,7 @@ func test_folio_rows_only_when_set() -> void:
 
 func test_under_arms_excludes_the_deserted() -> void:
 	var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, code, state))
-	state.regiments[code]["dead"] = 10
-	state.regiments[code]["deserted"] = 20
-	state.regiments[code]["wounded"] = 0
+	SuiteData.set_losses(state, code, {"dead": 10, "deserted": 20, "wounded": 0})
 	var want := WarRoom.group(heads - 30)
 	assert_eq(_brief_rows()["Under arms"], want)
 	var comp := {}
@@ -164,8 +162,7 @@ func test_under_arms_excludes_the_deserted() -> void:
 
 
 func test_under_arms_never_below_nothing() -> void:
-	state.regiments[code]["dead"] = 0
-	state.regiments[code]["deserted"] = 99999999
+	SuiteData.set_losses(state, code, {"dead": 0, "deserted": ArmySystem.headcount(repo, ArmySystem.regiment(repo, code, state))})
 	assert_eq(_brief_rows()["Under arms"], "0")
 
 
@@ -175,7 +172,7 @@ func test_the_card_names_the_state_and_the_deserted() -> void:
 	assert_false(labels.has(_words("row_foraging")))
 	assert_false(labels.has(_words("row_deserted")))
 	state.regiments[code]["forage"] = "desperate"
-	state.regiments[code]["deserted"] = 7
+	SuiteData.set_losses(state, code, {"deserted": 7})
 	card = MapObjects.army_card(repo, code, state)
 	assert_has(card["fields"], [_words("row_foraging"), _words("state_desperate")])
 	assert_has(card["fields"], [_words("row_deserted"), "7"])
@@ -230,6 +227,7 @@ func test_slip_with_a_unit_chosen() -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = "9000"
+	SuiteData.set_headcount(state, code, 9000)
 	var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code, state), state)
 	assert_gt(Forage.need_of(repo, state, code), 100)
 	assert_eq(Forage.cut_permille(repo, state, code), 1000)

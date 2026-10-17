@@ -58,10 +58,10 @@ func test_wound_recovery_is_a_share_with_a_floor_of_one() -> void:
 
 func test_the_month_returns_wounded_and_the_days_eat_the_supplies() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	var r: Dictionary = _mine()[0]
+	var r: Dictionary = _mine().filter(func(unit: Dictionary) -> bool: return String(unit.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, unit) >= 250)[0]
 	var code := String(r["regiment_code"])
 	var use := ArmySystem.supply_use(repo, r)
-	s.regiments[code]["wounded"] = 250
+	SuiteData.set_losses(s, code, {"wounded": 250})
 	s.regiments[code]["supplies"] = use + 5
 	# Morale follows the stores in hand as the month turns (spec
 	# 2026-09-30-ledger-supply-design §4); the month itself is eaten a day at
@@ -132,13 +132,12 @@ func test_supply_use_is_the_base_scaled_by_the_cells_height_tier() -> void:
 
 func test_wounded_never_exceed_the_headcount() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	var r: Dictionary = _mine()[0]
-	var code := String(r["regiment_code"])
-	var heads := int(MapObjects.regiment_size(repo, r))
-	s.regiments[code]["wounded"] = heads * 10
-	ArmySystem.settle_month(repo, s)
-	assert_lte(int(s.regiments[code]["wounded"]), heads)
-	assert_gte(int(s.regiments[code]["wounded"]), 0)
+	var code := String(_mine()[0]["regiment_code"])
+	var id := String(s.military_rosters[code]["cohort_ids"][0])
+	var before := s.to_dict()
+	var result := MilitaryRoster.transition(repo, s, "invalid_over_wound", [{"cohort_id": id, "from": "fit", "to": "wounded", "count": int(s.military_cohorts[id].initial) + 1}], "Invalid excessive wounds")
+	assert_true(result.has("error"))
+	assert_eq(s.to_dict(), before, "Excessive wounds are rejected atomically")
 
 func test_training_is_capped_at_100() -> void:
 	var s := SuiteData.campaign(repo, 7)
@@ -164,14 +163,14 @@ func test_state_of_reads_without_writing() -> void:
 func test_the_state_survives_a_save() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code := String(_mine()[0]["regiment_code"])
-	s.regiments[code]["wounded"] = 12
+	SuiteData.set_losses(s, code, {"wounded": 12})
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	assert_eq(int(back.regiments[code]["wounded"]), 12)
 	assert_eq(int(back.regiments[code]["morale"]), 70)
 
 func test_the_tick_settles_the_regiments() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	var code := String(_mine()[0]["regiment_code"])
-	s.regiments[code]["wounded"] = 250
+	var code := String(_mine().filter(func(unit: Dictionary) -> bool: return ArmySystem.headcount(repo, unit) >= 250 and String(unit.get("is_naval", "0")) != "1")[0]["regiment_code"])
+	SuiteData.set_losses(s, code, {"wounded": 250})
 	TickEngine.new(repo).advance(s)
 	assert_eq(int(s.regiments[code]["wounded"]), 200)
