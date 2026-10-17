@@ -42,13 +42,7 @@ func resolve_day(state: GameState, close_month := false) -> Dictionary:
 	if not journal.has("missive_start"):
 		journal["missive_start"] = state.next_missive_id
 	if tx["phase"] == "prepare":
-		if not journal.has("king_advanced"):
-			KingSystem.step_day(data, state)
-			journal["king_advanced"] = true
-			journal["king_state"] = state.king_state.duplicate(true)
-		if state.king_state.is_empty() and journal.has("king_state"):
-			state.king_state = journal["king_state"].duplicate(true)
-		journal["works"] = _before_battles(state)
+		journal["works"] = _before_battles(state, journal)
 		_capture_day(journal)
 		journal["battles"] = BattleSystem.prepare_day(data, state)
 		tx["battle_ids"] = state.battles.map(func(b: Dictionary) -> int: return int(b["id"]))
@@ -119,7 +113,7 @@ func _restore_day(journal: Dictionary) -> void:
 ## is the day being played, and all of it happens as that day ends): works
 ## step, the columns march, the couriers ride, the host eats. Returns the
 ## works finished.
-func _before_battles(state: GameState) -> Array:
+func _before_battles(state: GameState, journal: Dictionary) -> Array:
 	day_supply = []
 	day_conduct = []
 	day_siege = []
@@ -133,6 +127,13 @@ func _before_battles(state: GameState) -> Array:
 	# A seat whose town has fallen is cleared (spec 2026-10-07-army-split-
 	# and-ground §4.4).
 	ArmyGround.reconcile(data, state)
+	# Following reads the column's actual endpoint after its march and settlement.
+	if not journal.has("king_advanced"):
+		KingSystem.step_day(data, state)
+		journal["king_advanced"] = true
+		journal["king_state"] = state.king_state.duplicate(true)
+	if state.king_state.is_empty() and journal.has("king_state"):
+		state.king_state = journal["king_state"].duplicate(true)
 	# A province or a camp the realm lost, or a camp left empty, forgets its
 	# laws (laws spec §2.4, R13).
 	LawSystem.reconcile(data, state)

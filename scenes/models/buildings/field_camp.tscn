@@ -1,0 +1,192 @@
+[gd_scene format=3 uid="uid://bnar3oj80r21n"]
+
+[ext_resource type="Texture2D" uid="uid://bl0onlyjey1qk" path="res://assets/3D/buildings/field_camp/field_camp_CampCanvasSurface.png" id="1_hcadv"]
+[ext_resource type="PackedScene" uid="uid://boxebl6qx0cbv" path="res://assets/3D/buildings/field_camp/field_camp.glb" id="1_y7udg"]
+[ext_resource type="Texture2D" uid="uid://bl4wag8kn0rlp" path="res://assets/3D/buildings/field_camp/field_camp_CampTimberSurface.png" id="2_y7udg"]
+[ext_resource type="Texture2D" uid="uid://dm8v6e7ojnne7" path="res://assets/3D/buildings/field_camp/field_camp_CampRopeSurface.png" id="3_chyl7"]
+[ext_resource type="Texture2D" uid="uid://qw2nuu074ewx" path="res://assets/3D/buildings/field_camp/field_camp_CampIronSurface.png" id="4_m75fy"]
+[ext_resource type="Texture2D" uid="uid://3ykyo0i0n1hk" path="res://assets/3D/buildings/field_camp/field_camp_CampClothSurface.png" id="5_5yhn0"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_chyl7"]
+resource_name = "CampCanvas"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("1_hcadv")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m75fy"]
+resource_name = "CampTimber"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2_y7udg")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5yhn0"]
+resource_name = "CampRope"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("3_chyl7")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tv7r5"]
+resource_name = "CampTimber"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2_y7udg")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tkvxv"]
+resource_name = "CampIron"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("4_m75fy")
+metallic = 0.6
+roughness = 0.38
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_a8s20"]
+resource_name = "CampCanvas"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("1_hcadv")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c6637"]
+resource_name = "CampTimber"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2_y7udg")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8kxvu"]
+resource_name = "CampIron"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("4_m75fy")
+metallic = 0.6
+roughness = 0.38
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_n4h6l"]
+resource_name = "CampCloth"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("5_5yhn0")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ufnpf"]
+resource_name = "CampCanvas"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("1_hcadv")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hrqum"]
+resource_name = "CampTimber"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2_y7udg")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_puuvq"]
+resource_name = "CampRope"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("3_chyl7")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4qfq3"]
+resource_name = "CampCanvas"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("1_hcadv")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jqlmu"]
+resource_name = "CampTimber"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2_y7udg")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_f7dsy"]
+resource_name = "CampRope"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("3_chyl7")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sor8l"]
+resource_name = "CampTimber"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2_y7udg")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0oddg"]
+resource_name = "CampIron"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("4_m75fy")
+metallic = 0.6
+roughness = 0.38
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tvjte"]
+resource_name = "CampCloth"
+cull_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("5_5yhn0")
+roughness = 0.74
+metadata/_gltf_primary_texture_coord = 0
+
+[node name="FieldCamp" unique_id=1799198852 instance=ExtResource("1_y7udg")]
+
+[node name="CommandTent" parent="." index="0" unique_id=1292627107]
+surface_material_override/0 = SubResource("StandardMaterial3D_chyl7")
+surface_material_override/1 = SubResource("StandardMaterial3D_m75fy")
+surface_material_override/2 = SubResource("StandardMaterial3D_5yhn0")
+
+[node name="Stores" parent="." index="1" unique_id=632095642]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 5)
+surface_material_override/0 = SubResource("StandardMaterial3D_tv7r5")
+surface_material_override/1 = SubResource("StandardMaterial3D_tkvxv")
+surface_material_override/2 = SubResource("StandardMaterial3D_a8s20")
+
+[node name="SupplyCart" parent="." index="2" unique_id=112034621]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.8, 0, 1)
+surface_material_override/0 = SubResource("StandardMaterial3D_c6637")
+surface_material_override/1 = SubResource("StandardMaterial3D_8kxvu")
+surface_material_override/2 = SubResource("StandardMaterial3D_n4h6l")
+
+[node name="TentA" parent="." index="3" unique_id=1243594358]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 0, 0)
+surface_material_override/0 = SubResource("StandardMaterial3D_ufnpf")
+surface_material_override/1 = SubResource("StandardMaterial3D_hrqum")
+surface_material_override/2 = SubResource("StandardMaterial3D_puuvq")
+
+[node name="TentB" parent="." index="4" unique_id=1645795923]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 0, 5)
+surface_material_override/0 = SubResource("StandardMaterial3D_4qfq3")
+surface_material_override/1 = SubResource("StandardMaterial3D_jqlmu")
+surface_material_override/2 = SubResource("StandardMaterial3D_f7dsy")
+
+[node name="Watch" parent="." index="5" unique_id=678148130]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.8, 0, 6.5)
+surface_material_override/0 = SubResource("StandardMaterial3D_sor8l")
+surface_material_override/1 = SubResource("StandardMaterial3D_0oddg")
+surface_material_override/2 = SubResource("StandardMaterial3D_tvjte")

@@ -25,6 +25,8 @@ const MARCH := "MARCH"
 ## How far behind a held line its camp is pitched, in the model's own metres
 ## past the line's half depth (spec 2026-10-11-war-room-front-line-design §3).
 @export var camp_back_m := 6.0
+## Camp facilities relative to the regiment figure scale.
+@export var camp_size_ratio := 0.45
 ## The scouting fan of a marching crown unit (Map3DUnitScout): the polar grid's
 ## rings and spokes, its metres over the ground, and how far the piece moves
 ## (metres) or turns (degrees) before the fan is draped afresh.
@@ -58,6 +60,11 @@ var _days: Dictionary = {}  ## code -> {key, from, to, s0}: its day's march (Map
 var _moves := 0
 var _roster_was: Array = []  ## the state the drawn set was last cut for (_roster_key)
 var _live: Array = []  ## the codes drawn, in roster order
+
+
+func apply_snapshot(snapshot: Dictionary) -> void:
+	_camps.apply_snapshot(snapshot)
+	refresh()
 
 
 func bind(p_ctx: Map3DContext) -> void:
@@ -174,7 +181,6 @@ func _place(code: String, piece: Dictionary) -> void:
 	Map3DUnitGlow.place(repo, ctx.height_at, piece, _selected.has(code), k)
 	_rects[code] = Map3DUnits.screen_box(ctx.camera, ground, float(piece["height_m"]) * k,
 		float(piece["half_w_m"]) * k, ctx.viewport_px_scale())
-	_camps.sync(self, ctx, code, piece, xz, yaw, k, camp_back_m)
 
 
 ## Per FRAME: draw every piece where the day's share has it on its march
@@ -210,6 +216,12 @@ func step(delta: float) -> bool:
 			_yaw[code] = rotate_toward(float(_yaw.get(code, 0.0)),
 				float(_want_yaw.get(code, 0.0)), rate)
 			_place(code, _pieces[code])  # re-seated: a long piece turned across a slope meets other ground
+	# Stage progress changes even when every soldier and the camera stand still.
+	for code: String in _pieces:
+		var piece: Dictionary = _pieces[code]
+		var node: Node3D = piece["node"]
+		_camps.sync(self, ctx, code, piece, _shown_xz.get(code, Vector2.ZERO),
+			float(_yaw.get(code, 0.0)), node.basis.get_scale().x * camp_size_ratio, camp_back_m)
 	_camps.prune(_pieces); _sound.sync(repo, ctx.camera, _pieces, delta)  # the march's sound
 	_settle.step(self, delta)  # held halts drop into their guard on the footfall
 	_sync_scouts()

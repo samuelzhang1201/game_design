@@ -278,6 +278,65 @@ func test_passive_king_support_is_derived_and_disappears_when_out_of_range() -> 
 	assert_eq(BattleSystem.side_power(repo, state, [code], func(_c: String) -> String: return "steady", true), base)
 
 const SuiteData := preload("res://tests/suite_data.gd")
+const Scenario := preload("res://tests/fixtures/battle_scenario.gd")
+const Play := preload("res://tests/invasion_play.gd")
+
+
+func test_day_resolution_follows_the_armys_actual_same_day_endpoint() -> void:
+	var repo := SuiteData.flat_ground(SuiteData.repo())
+	for key: String in repo.weather_odds:
+		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
+	Weather.forget()
+	var state := SuiteData.campaign(repo, 999)
+	state.tick = 1
+	state.day = 10
+	state.ai_hosts.clear()
+	state.foes.clear()
+	Play.park_army(repo, state, Vector2i(1000, 2000))
+	var code := String(Play.land_regiments(repo)[0])
+	Play.place(repo, state, code, Vector2i(1000, 2000), ArmySystem.ORDER_STANDBY)
+	state.regiments[code]["camp_state"] = {"phase": CampSystem.NONE}
+	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	assert_eq(KingSystem.follow(repo, state, code).get("status"), "ok")
+	ArmySystem.set_march_m(repo, state, code, Vector2i(1100, 2000))
+	assert_gt(ArmySystem.day_march_m(repo, state, code), 100)
+	var result := TickEngine.new(repo).resolve_day(state)
+	assert_eq(result["status"], "complete")
+	assert_eq(Vector2i(int(state.regiments[code]["x_m"]), int(state.regiments[code]["y_m"])),
+		Vector2i(1100, 2000))
+	assert_eq(KingSystem.position(state), Vector2i(1100, 2000), "following reads today's actual march endpoint")
+	assert_eq(int(state.king_state["last_advanced_day"]), 10)
+	assert_eq(state.day, 11)
+
+
+func test_blocked_day_advances_king_only_once_across_retry_and_json_resume() -> void:
+	var repo := SuiteData.flat_ground(SuiteData.repo())
+	repo.balance["king_travel_km_per_day"] = 10
+	var state := Scenario.contact(repo, 10)
+	state.king_state = {"x_m": 1000, "y_m": 2000, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	assert_eq(KingSystem.set_route(repo, state, [Vector2i(21000, 2000)],
+		"the king rides east").get("status"), "ok")
+	var engine := TickEngine.new(repo)
+	var blocked := engine.resolve_day(state)
+	assert_eq(blocked["status"], "blocked")
+	assert_eq(KingSystem.position(state), Vector2i(11000, 2000))
+	assert_eq(int(state.king_state["last_advanced_day"]), 10)
+	assert_eq(state.day, 10)
+	var before_retry := SaveLoad.state_hash(state)
+	assert_eq(engine.resolve_day(state)["status"], "blocked")
+	assert_eq(SaveLoad.state_hash(state), before_retry)
+	var loaded := Scenario.roundtrip(state)
+	var resumed := TickEngine.new(repo)
+	assert_eq(resumed.resolve_day(loaded)["status"], "blocked")
+	assert_eq(KingSystem.position(loaded), Vector2i(11000, 2000))
+	assert_eq(resumed.resolve_decision(loaded, String(blocked["decision"]["token"]),
+		"continue")["status"], "accepted")
+	assert_eq(resumed.resolve_day(loaded)["status"], "complete")
+	assert_eq(KingSystem.position(loaded), Vector2i(11000, 2000))
+	assert_eq(int(loaded.king_state["last_advanced_day"]), 10)
+	assert_eq(loaded.day, 11)
 
 func test_new_campaign_saves_the_kings_capital_position_in_metres() -> void:
 	var repo := SuiteData.repo()

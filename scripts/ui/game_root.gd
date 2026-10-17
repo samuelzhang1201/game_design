@@ -275,7 +275,26 @@ func _on_battle_decision_selected(token: String, choice: String) -> void:
 ## PLAY IS THE ONLY SWITCH (owner 2026-09-14): the clock runs on the council
 ## stage as well as the court, so nobody has to wave the ministers on before
 ## time will move.
+var _king_bridge := KingMapBridge.new()
+
+func _refresh_king_map() -> void:
+	if Game.state == null or current_screen == null or not current_screen.has_method("map3d_view"):
+		return
+	var view: Map3DView = current_screen.map3d_view()
+	if view == null: return
+	if not view.has_meta("king_orders_bound"):
+		var menu := load("res://scenes/panels/king_order_menu.tscn").instantiate() as KingOrderMenu
+		current_screen.add_child(menu)
+		menu.follow(view, current_screen.find_child("ArmyOrders", true, false) as ArmyOrderMenu,
+			current_screen.find_child("SpyOrders", true, false) as SpyOrderMenu)
+		view.set_meta("king_orders_bound", true)
+	var snapshot := _king_bridge.make(Game.data, Game.state, dev_mode())
+	if int(view.get_meta("king_snapshot_revision", -1)) != _king_bridge.revision:
+		view.call("apply_snapshot", snapshot)
+		view.set_meta("king_snapshot_revision", _king_bridge.revision)
+
 func _process(delta: float) -> void:
+	_refresh_king_map()
 	if not state in [State.COURT, State.CONVERSATION] or Game.state == null or Game.clock_speed <= 0:
 		return
 	if _pause_menu != null and _pause_menu.visible:

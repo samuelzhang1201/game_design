@@ -56,3 +56,7 @@ Root rules first: invariant 10 (the columns divide by kind), the look lives in t
 - **The old user:// directory** (`UserDirMigration`, called from `Game._ready`): the rename to "Beyond the King's Words" moved `user://`, so the save, key file and settings of the old "Crown and Council" directory are copied once through a `.part` temp file; never moved, never overwriting.
 
 - **Encounter notice** (`BattleEncounterPanel`, `scenes/panels/battle_encounter_panel.tscn`): GameRoot shows the engine's pending encounter token and known place in an editor-authored leather panel. Its button acknowledges through Game; the clock stays paused. The named `battle_decision` hold survives other windows and loading, and an obsolete confirmation never hides a newer notice. Existing transactions resume before another day is timed.
+
+## Royal map orders
+
+`GameRoot._refresh_king_map` binds the editor-authored `KingOrders` popup once per view and forwards `KingMapBridge` snapshots even on a paused clock. A king click keeps army multi-selection empty and facts in the left column. Travel, follow, leave and safe departure go through `Game.try_execute`; destination planning requires pause, displays its gold cost and confirms before execution. Observe is presentation only; no free inspiration effect is exposed.
