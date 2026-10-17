@@ -27,6 +27,15 @@ static func position(state: GameState) -> Vector2i:
 	return Vector2i(int(king.get("x_m", 0)), int(king.get("y_m", 0)))
 
 
+static func can_command(repo: DataRepository, state: GameState, code: String) -> bool:
+	var reg := ArmySystem.regiment(repo, code, state)
+	if reg.is_empty() or ArmySystem.is_foe(state, code) or not state.regiments.has(code):
+		return false
+	var target := ArmySystem.pack_to_metres(repo,
+		ArmySystem.position_of(repo, state, reg))
+	return Vector2(position(state)).distance_to(Vector2(target)) <= int(repo.bal("king_command_radius_m"))
+
+
 ## Set a route in whole metres. The final point is the destination; all prior
 ## points are walked in order. A reason is stored with the state transition.
 static func set_route(repo: DataRepository, state: GameState, route: Array, reason: String) -> Dictionary:

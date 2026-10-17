@@ -66,6 +66,49 @@ func test_the_order_rides_and_the_regiment_waits() -> void:
 	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_MARCH, "delivered: now it marches")
 
 
+func test_king_in_command_range_delivers_army_order_without_a_courier_or_fee() -> void:
+	var s := SuiteData.campaign(repo, 70)
+	var actions := ActionSystem.new(repo)
+	var r := _marcher()
+	var code := String(r["regiment_code"])
+	var pos := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, r))
+	var old_dest := _land_near(s, r)
+	CourierSystem.dispatch(repo, s, CourierSystem.ORDINARY, code,
+		{"action_code": "ARMY_MARCH", "dest_x_m": ArmySystem.pack_to_metres(repo, old_dest + Vector2(8.0, 0.0)).x,
+		"dest_y_m": ArmySystem.pack_to_metres(repo, old_dest + Vector2(8.0, 0.0)).y})
+	s.regiments[code]["x_m"] = pos.x
+	s.regiments[code]["y_m"] = pos.y
+	s.regiments[code]["camp_town"] = ""
+	s.king_state["x_m"] = pos.x
+	s.king_state["y_m"] = pos.y
+	var dest := _land_near(s, r)
+	assert_ne(dest, Vector2.ZERO)
+	var dest_m := ArmySystem.pack_to_metres(repo, dest)
+	var treasury := float(s.metrics["treasury"])
+	var req := ActionRequest.make("ARMY_MARCH", {"regiment": code, "x": dest.x, "y": dest.y})
+	assert_eq(actions.validate(req, s), "")
+	var expected_days := ArmySystem.march_days_between(repo, s, code, ArmySystem.position_of(repo, s, r),
+		dest, s.absolute_day())
+	assert_eq(CourierSystem.arrival_days(repo, s, code, dest), expected_days,
+		"a local march preview has no courier day")
+	var result := actions.execute(req, s)
+	assert_true(result["ok"])
+	assert_eq(s.couriers.size(), 1, "the local order adds no courier")
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_MARCH)
+	assert_eq(float(s.metrics["treasury"]), treasury - OrderCosts.gold_of(repo, "ARMY_MARCH"))
+	var old_id := int(s.couriers[0]["id"])
+	assert_gt(int(s.regiments[code]["order_id"]), old_id, "a local order supersedes the waiting remote order")
+	assert_true(CourierSystem.pending_for(s, code).is_empty(), "superseded courier does not delay the local order")
+	for _day in int(repo.bal("courier_max_days")):
+		CourierSystem.ride_day(repo, s)
+		if s.couriers.is_empty():
+			break
+	assert_eq(ArmySystem.order_of(repo, s, code), ArmySystem.ORDER_MARCH,
+		"the older courier cannot overwrite the newer local order")
+	assert_eq(int(s.regiments[code]["order_id"]), int(old_id) + 1)
+	assert_eq(Vector2i(int(s.regiments[code]["dest_x_m"]), int(s.regiments[code]["dest_y_m"])), dest_m)
+
+
 func test_garrison_rides_too() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var actions := ActionSystem.new(repo)

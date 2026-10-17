@@ -343,8 +343,10 @@ func _validate_supply(req: ActionRequest, state: GameState) -> String:
 		return "%s is not yours to command" % String(reg["label"])
 	if String(reg.get("is_naval", "0")) == "1":
 		return "%s is a fleet: it carries no supply train" % String(reg["label"])
+	var local_ok := (req.action_code == "SUPPLY_CARRY_SET" or (req.action_code == "SUPPLY_POINT_SET"
+		and bool(req.params.get("with_column", false)))) and KingSystem.can_command(data, state, code)
 	if float(state.metrics["treasury"]) < OrderCosts.gold_of(data, req.action_code) \
-			+ float(_fee_for(state, code)):
+			+ float(_fee_for(state, code, local_ok)):
 		return "The chancery cannot pay a courier to ride for %s" % String(reg["label"])
 	match req.action_code:
 		"SUPPLY_POINT_SET":
@@ -776,7 +778,14 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			var c := _send_supply(state, effects, code, order, town, bool(req.params.get("with_column", false)),
 				"with a supply warrant from %s" % String(data.burgs[town]["label"]),
 				"to %s with a supply warrant" % String(data.burgs[town]["label"]))
-			SupplyLines.order_set(state, code, town, int(req.params["rate"]), int(c["id"]))
+			if not bool(c.get("local_delivered", false)):
+				SupplyLines.order_set(state, code, town, int(req.params["rate"]), int(c["id"]))
+			elif String(c.get("order_result", {}).get("type", "")) == "delivered":
+				var set_out: Dictionary = c["order_result"].get("set_out", {})
+				if not set_out.is_empty():
+					effects.append({"metric": "army", "delta": 0.0,
+						"reason": "%s's wagons leave %s and need %d days" % [String(ArmySystem.regiment(data, code, state)["label"]),
+							String(data.burgs[town]["label"]), int(set_out["days"])]})
 		"SUPPLY_POINT_CLEAR":
 			var code := String(req.params["regiment"])
 			var town := String(SupplyLines.line(state, code)["town"])
@@ -974,6 +983,11 @@ func _apply(state: GameState, effects: Array, metric: String, delta: float, reas
 ## line says he carries it too.
 func _send_courier(state: GameState, effects: Array, code: String, order: Dictionary, what: String) -> Dictionary:
 	var label := String(ArmySystem.regiment(data, code, state)["label"])
+	if KingSystem.can_command(data, state, code):
+		var delivered := CourierSystem.deliver_local(data, state, code, order)
+		effects.append({"metric": "army", "delta": 0.0,
+			"reason": "The king gives %s the order directly, %s" % [label, what]})
+		return delivered
 	var before := state.next_courier_id
 	var c := CourierSystem.dispatch(data, state, CourierSystem.ORDINARY, code, order)
 	var days := CourierSystem.days_left(data, state, c)
@@ -1006,7 +1020,9 @@ func _send_supply(state: GameState, effects: Array, code: String, order: Diction
 
 ## The fee an order for `code` would pay its courier now: none when it would
 ## ride with one already waiting to set out (CourierSystem.joinable).
-func _fee_for(state: GameState, code: String) -> int:
+func _fee_for(state: GameState, code: String, local_ok := true) -> int:
+	if local_ok and KingSystem.can_command(data, state, code):
+		return 0
 	if not CourierSystem.joinable(state, CourierSystem.ORDINARY, code, {}).is_empty():
 		return 0
 	return CourierSystem.fee_gold(data, CourierSystem.ORDINARY)

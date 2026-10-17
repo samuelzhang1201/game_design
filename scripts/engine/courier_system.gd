@@ -224,6 +224,26 @@ static func dispatch_king_report(repo: DataRepository, state: GameState, battle_
 	return c
 
 
+static func deliver_local(repo: DataRepository, state: GameState, code: String,
+		order: Dictionary) -> Dictionary:
+	var action := String(order.get("action_code", ""))
+	var entry: Dictionary = state.regiments.get(code, {})
+	var id := state.next_courier_id + 1
+	if action == "ARMY_STANCE" and bool(order.get("on_arrival", false)):
+		order = order.duplicate(true)
+		order["march_order_id"] = int(entry.get("order_id", 0))
+	state.next_courier_id = id
+	var c := {"id": id, "target": code, "orders": [order], "local": true}
+	if action == "SUPPLY_POINT_SET":
+		SupplyLines.order_set(state, code, String(order["town"]), int(order["rate"]), id)
+	var result := _deliver_one(repo, state, c, order, true)
+	if String(result.get("said", "")) != "":
+		MissiveLog.add(repo, state, MissiveWriter.receipt(repo, state, c, [String(result["said"])]))
+	c["local_delivered"] = true
+	c["order_result"] = result
+	return c
+
+
 ## A courier's orders, in the order they run on delivery.
 static func orders_of(c: Dictionary) -> Array:
 	return c.get("orders", [])
@@ -260,7 +280,13 @@ static func joinable(state: GameState, kind: String, code: String, order: Dictio
 	for c: Dictionary in state.couriers:
 		if has_recipient(c, code) and (newest.is_empty() or int(c["id"]) > int(newest["id"])):
 			newest = c
-	if newest.is_empty() or not (newest.get("recipient_queue", []) as Array).is_empty() or String(newest.get("kind", "")) != kind or _is_spy(newest) \
+	var entry: Dictionary = state.regiments.get(code, {})
+	var latest_id := maxi(int(entry.get("order_id", 0)), maxi(int(entry.get("stance_order_id", 0)),
+		int(entry.get("carry_order_id", 0))))
+	var supply: Dictionary = SupplyLines.line(state, code)
+	var pending: Dictionary = supply.get("pending", {})
+	latest_id = maxi(latest_id, maxi(int(supply.get("order_id", 0)), int(pending.get("order_id", 0))))
+	if newest.is_empty() or int(newest["id"]) < latest_id or not (newest.get("recipient_queue", []) as Array).is_empty() or String(newest.get("kind", "")) != kind or _is_spy(newest) \
 			or int(newest.get("days", 0)) != 0 or int(newest.get("issued", -1)) != state.absolute_day() \
 			or not order_with(newest, [LawSystem.ACTION]).is_empty() \
 			or String(first_order(newest).get("to_town", "")) != "":
@@ -338,7 +364,8 @@ static func arrival_days(repo: DataRepository, state: GameState, code: String, d
 	if reg.is_empty() or ArmySystem.day_march_m(repo, state, code) <= 0:
 		return 0
 	if ride < 0:
-		ride = eta_days(repo, state, ORDINARY, code) if carries_orders(reg) else 0
+		ride = eta_days(repo, state, ORDINARY, code) if carries_orders(reg) \
+			and not KingSystem.can_command(repo, state, code) else 0
 	var from := from_px if from_px.x >= 0.0 else ArmySystem.position_of(repo, state, reg)
 	# the march walked over its own ground and weather, from the day it starts
 	return ride + ArmySystem.march_days_between(repo, state, code, from, dest_px,
@@ -731,7 +758,7 @@ const STALE_SAID := "Newer orders stand: this one is set aside"
 
 ## One of a courier's orders: {type, said (the receipt's line, "" for none),
 ## set_out (a supply line's wagons rolling)}.
-static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary) -> Dictionary:
+static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary, local := false) -> Dictionary:
 	var code := String(c["target"])
 	var action := String(order.get("action_code", ""))
 	if action.begins_with("SUPPLY_"):
@@ -749,7 +776,7 @@ static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, 
 	match action:
 		"ARMY_MARCH":
 			ArmySystem.set_march_m(repo, state, code, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])),
-				MarchRoute.from_pairs(order.get("waypoints_m", [])), true)
+				MarchRoute.from_pairs(order.get("waypoints_m", [])), not local)
 		"ARMY_GARRISON":
 			ArmySystem.set_garrison(repo, state, code)
 		"ARMY_SEAT":
@@ -777,7 +804,8 @@ static func _deliver_stance(repo: DataRepository, _state: GameState, c: Dictiona
 	var stance := String(order.get("stance", ArmySystem.STANCE_DEFAULT))
 	var facing := int(order.get("facing", -1))
 	if bool(order.get("on_arrival", false)):
-		if int(entry.get("order_id", 0)) != int(c["id"]):
+		var march_id := int(order.get("march_order_id", c["id"]))
+		if int(entry.get("order_id", 0)) != march_id:
 			return {"type": "stale", "said": STALE_SAID}
 		if String(entry.get("order", "")) == ArmySystem.ORDER_MARCH:
 			entry["hold_after"] = {"stance": stance, "facing": maxi(facing, 0), "id": int(c["id"])}
@@ -816,8 +844,9 @@ static func pending_for(state: GameState, code: String) -> Dictionary:
 	var best: Dictionary = {}
 	if state == null:
 		return best
+	var applied_id := int(state.regiments.get(code, {}).get("order_id", 0))
 	for c: Dictionary in state.couriers:
-		if march_order(c).is_empty():
+		if int(c.get("id", 0)) < applied_id or march_order(c).is_empty():
 			continue
 		if has_recipient(c, code) and (best.is_empty() or int(c["id"]) > int(best["id"])):
 			best = c

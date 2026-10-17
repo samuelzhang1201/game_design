@@ -76,6 +76,8 @@ func test_presence_uses_only_actual_battle_distance() -> void:
 		"travel_state": "stationary", "last_advanced_day": 0}
 	state.battles = [{"id": 73, "place_x_m": 2000, "place_y_m": 2000}]
 	assert_true(KingSystem.present(repo, state, 73), "the configured radius includes its edge")
+	state.current_location = "some-other-place"
+	assert_true(KingSystem.present(repo, state, 73), "prose location cannot alter physical presence")
 	state.battles[0]["place_x_m"] = 2001
 	assert_false(KingSystem.present(repo, state, 73), "one metre outside the radius is absent")
 	assert_false(KingSystem.present(repo, state, 74), "screen selection cannot invent presence")
@@ -227,6 +229,30 @@ func test_safe_departure_keeps_existing_route_when_no_reachable_refuge_exists() 
 	assert_eq(state.king_state["route"], route_before)
 	assert_eq(state.regiments[code], army_before)
 	assert_eq(state.battles, battle_before)
+
+
+func test_successful_safe_departure_changes_only_the_king_route() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 1000)
+	var capital := String(repo.kingdoms[repo.resolve_realm("player_realm")]["capital_burg"])
+	var burg: Dictionary = repo.burgs[capital]
+	var refuge := ArmySystem.pack_to_metres(repo, Vector2(float(burg["x"]), float(burg["y"])))
+	var at := refuge + Vector2i(1, 0)
+	state.king_state = {"x_m": at.x, "y_m": at.y, "route": [], "follow_code": "",
+		"travel_state": "stationary", "last_advanced_day": 0}
+	var code := String(state.regiments.keys()[0])
+	state.battles = [{"id": 100, "att": [code], "def": [], "start_day": state.absolute_day(),
+		"rounds": 0, "place_x_m": at.x, "place_y_m": at.y, "town": ""}]
+	var army_before := state.regiments.duplicate(true)
+	var battle_before := state.battles.duplicate(true)
+	assert_true(KingSystem.present(repo, state, 100))
+	assert_eq(KingSystem.safe_departure(repo, state, 100).get("status"), "ok")
+	assert_eq(KingSystem.position(state), at, "the king starts his escape from his own physical position")
+	assert_eq(state.regiments, army_before)
+	assert_eq(state.battles, battle_before, "a protected withdrawal does not settle the battle")
+	assert_gt((state.king_state["route"] as Array).size(), 0)
+	var last: Array = state.king_state["route"].back()
+	assert_eq(Vector2i(int(last[0]), int(last[1])), refuge)
 
 
 func test_passive_king_support_is_derived_and_disappears_when_out_of_range() -> void:
