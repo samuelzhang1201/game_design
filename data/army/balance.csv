@@ -119,3 +119,5 @@ camp_after_days,5,"spec 2026-10-11-war-room-front-line-design §3: a regiment se
 army_clearance_on,1,"owner 2026-10-14 (spec 2026-10-14-unit-clearance-and-scouting-design): 1 = no two land units stand nearer than the sum of their arms' radii (data/army/army_clearance.csv; MarchClearance, ArmyGround.is_free); 0 turns the rule off (SuiteData.no_clearance)"
 army_clearance_touch_m,10,"clearance (same spec): a column halted in front of a village or a unit counts as touching it within the two radii plus this many metres (BattleSystem._town_contact)"
 army_spread_reach_m,17600,"owner 2026-10-15 (R-B): a host column halted by a friendly unit within this many metres of its target takes the nearest free camp slot round the target (four pitches reach past the crown's outer camp ring, where a column facing an enemy camp halts) (ArmySystem.march_day), so the whole host stands at the town instead of queueing down the road"
+army_noble_cap_permille,100,Maximum noble share at recruitment including commander
+army_initial_noble_permille,0,Initial units have a commander and no additional noble backbone

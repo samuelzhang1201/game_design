@@ -118,3 +118,41 @@ func test_every_good_has_its_colour_icon() -> void:
 	assert_false(icons.art.is_empty())
 	for good: String in Game.data.world_table("economy", "goods"):
 		assert_true(icons.of(good) is Texture2D, "%s's colour icon is installed" % good)
+
+func test_host_counts_live_people_and_chart_preserves_equipment_weight() -> void:
+	Game.start_campaign(42)
+	var dashboard := _dashboard()
+	await wait_process_frames(1)
+	var realm := Game.data.resolve_realm("player_realm")
+	var fleet_code := ""
+	var fleet_people := 0
+	for regiment: Dictionary in MapObjects.regiments_of(Game.data, realm, Game.state):
+		var code := String(regiment.regiment_code)
+		fleet_people += int(float(regiment.get("fleet", 0))) * int(Game.data.world_row("military", "unit_types", "fleet").crew)
+		if int(float(regiment.get("fleet", 0))) > 0 and fleet_code == "":
+			fleet_code = code
+	assert_ne(fleet_code, "")
+	assert_eq(int(dashboard._host_of().fleet), fleet_people, "the realm card counts crew, not ships")
+	var changes := MilitaryRoster.plan_unit_changes(Game.state, fleet_code, [
+		{"from": "fit", "to": "wounded", "count": 3}, {"from": "fit", "to": "dead", "count": 2},
+		{"from": "fit", "to": "captured_current", "count": 4}, {"from": "fit", "to": "released", "count": 5}])
+	assert_false(MilitaryRoster.transition(Game.data, Game.state, "dashboard:casualties", changes, "dashboard casualty fixture").has("error"))
+	Game.state_changed.emit()
+	var expected := fleet_people - 11
+	assert_eq(int(dashboard._host_of().fleet), expected, "wounded remain under arms; captives and terminal states do not")
+	var panel := MilitaryPanel.create()
+	add_child_autofree(panel)
+	panel.refresh()
+	for row: Dictionary in panel.arms_chart().rows:
+		if String(row.dimension) == "fleet":
+			assert_eq(int(row.value), expected, "host panel and default realm card share the same people")
+	var unit: Dictionary = Game.data.world_row("military", "unit_types", "fleet")
+	for row: Dictionary in dashboard.host_chart().rows:
+		if String(row.dimension) == "fleet":
+			assert_eq(String(row.text), RealmDashboard._compact(expected))
+			assert_almost_eq(float(row.value), float(expected) * float(unit.power) / float(unit.crew), 0.00001, "chart weight remains equipment-equivalent")
+	var total := 0
+	for regiment: Dictionary in MapObjects.regiments_of(Game.data, realm, Game.state):
+		var code := String(regiment.regiment_code)
+		total += MilitaryRoster.fit(Game.state, code) + MilitaryRoster.count(Game.state, code, "wounded")
+	assert_eq(dashboard.resource_text("army"), RealmDashboard._compact(total))

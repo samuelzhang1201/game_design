@@ -232,7 +232,7 @@ func test_a_regiment_card_shows_its_state() -> void:
 	var r: Dictionary = MapObjects.regiments_of(Game.data, mine, Game.state)[0]
 	var code := String(r["regiment_code"])
 	var heads := int(MapObjects.regiment_size(Game.data, r))
-	s.regiments[code]["wounded"] = 120
+	SuiteData.set_losses(s, code, {"wounded": 120})
 	var card := MapObjects.army_card(Game.data, code, s)
 	var order: Array = []
 	var text: Dictionary = {}

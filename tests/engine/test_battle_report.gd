@@ -392,8 +392,7 @@ func test_under_arms_does_not_count_the_dead() -> void:
 	var code: String = _mine()[0]
 	var reg := ArmySystem.regiment(repo, code)
 	var heads := ArmySystem.headcount(repo, reg)
-	s.regiments[code]["dead"] = 123
-	s.regiments[code]["wounded"] = 45
+	SuiteData.set_losses(s, code, {"dead": 123, "wounded": 45})
 	var card := MapObjects.army_card(repo, code, s)
 	var under := ""
 	for st: Dictionary in card["stats"]:

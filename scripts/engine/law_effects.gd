@@ -251,7 +251,7 @@ static func _host(repo: DataRepository, state: GameState, law: String) -> Dictio
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if String(r.get("is_naval", "0")) == "1":
 			continue
-		var n := int(MapObjects.regiment_size(repo, r))
+		var n := int(MapObjects.regiment_personnel(repo, r))
 		var v := LawSystem.value(repo, state, law, String(r["regiment_code"]))
 		men[v] = int(men.get(v, 0)) + n
 		units[v] = int(units.get(v, 0)) + 1

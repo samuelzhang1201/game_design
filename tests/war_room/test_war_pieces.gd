@@ -420,7 +420,7 @@ func test_a_regiment_that_loses_men_keeps_its_piece_and_its_tag_says_so() -> voi
 	var before := pieces.piece(code)
 	ArmySystem.ensure(repo, state)
 	@warning_ignore("integer_division")
-	state.regiments[code]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)) * 4 / 10
+	SuiteData.set_losses(state, code, {"wounded": ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)) * 4 / 10})
 	view.refresh()
 	assert_eq(pieces.piece(code), before, "one piece a regiment, whatever its strength")
 	assert_eq((before.get_node("Tag") as Label3D).text, WarRoom.tag_text(repo, state, code))

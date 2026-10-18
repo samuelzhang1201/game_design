@@ -159,4 +159,4 @@ static func caption_of(reign: GameState) -> Dictionary:
 	if capital != "" and data.burgs.has(capital):
 		town = String(data.burgs[capital]["label"])
 	return {"place": town, "house": MapManors.crown(reign),
-		"season": Calendar.season_name(reign.tick)}
+		"season": Calendar.season_name(reign.tick if reign != null else 0)}

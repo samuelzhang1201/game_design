@@ -19,7 +19,7 @@ static func conditions(repo: DataRepository, state: GameState, code: String) -> 
 	if entry.is_empty() or reg.is_empty():
 		return 0
 	var use := ArmySystem.supply_use(repo, reg, state)
-	if use <= 0:
+	if ArmySystem.personnel_fit(repo, state, code) <= 0:
 		return 0
 	var n := 0
 	if int(entry.get("morale", 0)) < int(repo.bal("desert_morale")):
@@ -44,8 +44,7 @@ static func daily_loss(repo: DataRepository, state: GameState, code: String) -> 
 	var entry: Dictionary = state.regiments.get(code, {})
 	if n == 0 or entry.is_empty():
 		return 0
-	var reg := ArmySystem.regiment(repo, code, state)
-	var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), entry)
+	var fit := ArmySystem.personnel_fit(repo, state, code)
 	if fit <= 0:
 		return 0
 	@warning_ignore("integer_division")  # whole men, the rest carried
@@ -53,6 +52,10 @@ static func daily_loss(repo: DataRepository, state: GameState, code: String) -> 
 	var units := fit * rate + int(entry.get("desert_rem", 0))
 	@warning_ignore("integer_division")
 	var lost := mini(units / SCALE, fit)
+	var moved := ArmySystem.move_personnel(repo, state, code,
+		[{"from": "fit", "to": "released", "count": lost}],
+		"desertion:%s:%d" % [code, state.absolute_day()], "deserted and returned to civilian life")
+	if moved.has("error"):
+		return 0
 	entry["desert_rem"] = 0 if lost >= fit else units % SCALE   # nobody left to carry a fraction of
-	entry["deserted"] = int(entry.get("deserted", 0)) + lost
 	return lost

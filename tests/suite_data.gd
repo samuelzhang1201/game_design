@@ -113,3 +113,48 @@ static func _copy(src: DataRepository) -> DataRepository:
 				if name != "world_tables" and is_same(src.get(name), table):
 					out.set(name, out.world_tables[domain][area])
 	return out
+
+
+## Historical test setup: configure casualties without charging today's population.
+static func set_losses(state: GameState, code: String, wanted: Dictionary) -> void:
+	assert(state.military_rosters.has(code), "Fixture unit needs initialized personnel")
+	var totals: Dictionary = {}
+	for field: String in ["wounded", "captured_current", "dead", "released"]:
+		totals[field] = MilitaryRoster.count(state, code, field)
+	for field: String in wanted:
+		totals["released" if field == "deserted" else field] = int(wanted[field])
+	var initial := MilitaryRoster.count(state, code, "initial")
+	var lost := 0
+	for field: String in totals:
+		assert(int(totals[field]) >= 0, "Fixture casualties must be nonnegative")
+		lost += int(totals[field])
+	assert(lost <= initial, "Fixture casualties cannot exceed initial personnel")
+	for id: String in state.military_rosters[code]["cohort_ids"]:
+		var cohort: Dictionary = state.military_cohorts[id]
+		for field: String in MilitaryRoster.STATES:
+			cohort[field] = int(cohort.initial) if field == "fit" else 0
+	for field: String in totals:
+		for move: Dictionary in MilitaryRoster.plan_changes(state, code, "fit", field, int(totals[field])):
+			var cohort: Dictionary = state.military_cohorts[move.cohort_id]
+			cohort["fit"] -= int(move.count)
+			cohort[field] += int(move.count)
+	MilitaryRoster.sync_projections(state, code)
+
+
+## Hand-sized test armies retain their named one-person cohorts.
+static func set_headcount(state: GameState, code: String, total: int) -> void:
+	if total == 0:
+		set_losses(state, code, {"released": MilitaryRoster.count(state, code, "initial"), "wounded": 0, "dead": 0, "captured_current": 0})
+		return
+	var anonymous := ""
+	var named := 0
+	for id: String in state.military_rosters[code]["cohort_ids"]:
+		var cohort: Dictionary = state.military_cohorts[id]
+		var person := String(cohort.get("person_id", "")) != ""
+		cohort["initial"] = 1 if person else 0
+		named += 1 if person else 0
+		if not person and anonymous == "":
+			anonymous = id
+	assert(total >= named and anonymous != "", "Fixture needs room for its named personnel")
+	state.military_cohorts[anonymous]["initial"] = total - named
+	set_losses(state, code, {"dead": 0, "wounded": 0, "released": 0, "captured_current": 0})

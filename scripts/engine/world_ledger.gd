@@ -73,6 +73,13 @@ static func value_of(data: DataRepository, state: GameState, path: String) -> Va
 	var row := schema_for(data, resolved)
 	if row.is_empty():
 		return null
+	var population_parts := resolved.split(SEP)
+	if population_parts.size() == 4 and population_parts[0] == "economy" \
+			and population_parts[1] == "kingdoms" and population_parts[3] in ["rural_population", "urban_population"]:
+		var total := 0
+		for province: String in MapOwnership.provinces_of(data, state, population_parts[2]):
+			total += int(value_of(data, state, "economy.provinces.%s.%s" % [province, population_parts[3]]))
+		return total
 	var alias := String(row.get("alias_to", ""))
 	if alias != "":
 		var truth: Variant = value_of(data, state, alias)
@@ -125,6 +132,10 @@ static func apply(data: DataRepository, state: GameState, path: String, delta: f
 		return {"error": "no such field: " + path}
 	if reason.strip_edges() == "":
 		return {"error": "a change needs a reason: " + path}
+	var population_parts := resolved.split(SEP)
+	if population_parts.size() == 4 and population_parts[0] == "economy" \
+			and population_parts[1] == "kingdoms" and population_parts[3] in ["rural_population", "urban_population"]:
+		return {"error": "population changes need an explicit source province"}
 	var t := String(row.get("type", "float"))
 	if t == "enum":
 		return {"error": "%s is not numeric" % path}
@@ -147,6 +158,10 @@ static func apply(data: DataRepository, state: GameState, path: String, delta: f
 	var target := clampf(float(current) + delta, lo, hi)
 	if t == "int":
 		target = roundf(target)
+	if population_parts.size() == 4 and population_parts[0] == "economy" and population_parts[1] == "provinces" \
+			and population_parts[3] in MilitaryPopulation.FIELDS and source != "military" \
+			and target < MilitaryPopulation.occupied(state, population_parts[2], population_parts[3]):
+		return {"error": "population change would remove occupied personnel"}
 	var applied := target - float(current)
 	_write(state, resolved, target, applied, reason)
 	state.world_log.append({"tick": state.tick, "path": resolved, "delta": applied,

@@ -127,16 +127,13 @@ func refresh() -> void:
 		{"label": "Country", "dimension": "country", "value": pop["rural"],
 			"color": UiPalette.chart_color("cat_2")},
 	])
-	# One measure and one hue (owner 2026-09-28, second critique: 7 ships,
-	# 75 guns and thousands of foot on one scale in four colours): each bar is
-	# the arm's fighting STRENGTH — its count × the pack's unit_types `power` —
-	# so a ship and a footman are weighed alike, in the gauges' one old gold;
-	# the figure beside it stays the count.
+	# Count text is personnel; chart strength keeps its equipment-equivalent measure.
 	var host_rows: Array = []
 	var top := 1.0
 	for u in host:
 		var power := float((data.world_row("military", "unit_types", u) as Dictionary).get("power", "1"))
-		var strength := float(host[u]) * maxf(power, 0.0)
+		var crew := float(data.world_row("military", "unit_types", u)["crew"])
+		var strength := float(host[u]) * maxf(power, 0.0) / crew
 		top = maxf(top, strength)
 		host_rows.append({"label": String((data.resource_icons.get(u, {}) as Dictionary).get("label", u)),
 			"dimension": u,
@@ -146,7 +143,7 @@ func refresh() -> void:
 	_people_line.text = _people_sentence(pop)
 	var parts: Array[String] = []
 	for row: Dictionary in host_rows:
-		parts.append("%s %s" % [row["label"], row["text"]])
+		parts.append("%s\u00a0%s" % [row["label"], row["text"]])
 	_host_line.text = " · ".join(parts)
 	var provs: Array = []
 	for code in MapManors.controlled_provinces(data, state):
@@ -188,15 +185,9 @@ func _people_of_crown() -> Dictionary:
 			out[key] += float(v) if v != null else 0.0
 	return out
 
-## Troops by unit type for the player's realm (unit_types order), via the ledger.
+## The same live personnel counts as the full host panel, in unit_types order.
 func _host_of() -> Dictionary:
-	var out := {}
-	for unit: String in Game.data.world_table("military", "unit_types"):
-		var v: Variant = WorldLedger.value_of(Game.data, Game.state,
-			"military.kingdoms.player_realm." + unit)
-		if v != null:
-			out[unit] = float(v)
-	return out
+	return ArmySystem.personnel_by_arm(Game.data, Game.state, Game.data.resolve_realm("player_realm"))
 
 ## 1234567 -> "1.2M", 45678 -> "46k", 512 -> "512".
 static func _compact(v: float) -> String:

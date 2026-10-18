@@ -1311,7 +1311,11 @@ func _on_start_requested() -> void:
 		_beginning = false
 	_beginning = true
 	_reset_reports()
-	Game.start_campaign(44)
+	if not Game.start_campaign(44):
+		_beginning = false
+		if current_screen is MainMenu:
+			(current_screen as MainMenu).show_load_failed(Game.load_error)
+		return
 	refresh_missive_badge()
 	_pending_report = Game.next_tick()
 	await get_tree().process_frame

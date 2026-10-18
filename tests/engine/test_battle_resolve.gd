@@ -176,6 +176,7 @@ func test_apply_round_zero_heads_no_divide() -> void:
 	var reg := ArmySystem.regiment(repo, code, s)   # the campaign's own row
 	for arm: String in repo.world_table("military", "unit_types"):
 		reg[arm] = 0
+	SuiteData.set_headcount(s, code, 0)
 	var tier := {"attacker_loss_permille": 150, "defender_loss_permille": 30, "wounded_share_permille": 600,
 		"attacker_morale": -20, "defender_morale": 5}
 	var res := BattleSystem.apply_round(repo, s, [code], [], tier, "nothing to lose")
@@ -265,6 +266,7 @@ func test_a_tie_goes_to_the_earlier_code_whatever_order_the_side_is_listed_in() 
 				kept = true
 			else:
 				reg[arm] = 0
+		SuiteData.set_headcount(s, c, 500)
 		assert_eq(ArmySystem.headcount(repo, reg), 500)
 	# 1000 fit x 1 / 1000 = ONE man lost, all dead: two equal shares of 0.5
 	var tier := {"attacker_loss_permille": 1, "defender_loss_permille": 0, "wounded_share_permille": 0,
