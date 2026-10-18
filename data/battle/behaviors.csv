@@ -1,0 +1,8 @@
+task,label,legal_action
+charge,Frontal charge,charge
+flank,Flank attack,attack
+defend,Steady defence,hold
+guard_flank,Flank defence,hold
+advance,Steady advance,attack
+retreat,Withdraw,retreat
+pursue,Pursuit,pursue

@@ -353,6 +353,8 @@ var ai_hosts: Dictionary = {}
 var battles: Array = []
 ## Stable paid warrants and terminal results, retained after battlefield removal.
 var battle_orders: Dictionary = {}
+## Canonical pending/current unit task warrants and terminal delivery receipts.
+var unit_tasks: Dictionary = {}
 ## Saved daily offers (including no-event), decisions and durable report receipts.
 var battle_events: Dictionary = {}
 ## The towns lost to a siege (spec 2026-10-07-enemy-ai-and-battle §6,
@@ -511,6 +513,7 @@ func to_dict() -> Dictionary:
 		"ai_hosts": _encode_values(ai_hosts.duplicate(true)),
 		"battles": _encode_values(battles.duplicate(true)),
 		"battle_orders": battle_orders.duplicate(true),
+		"unit_tasks": unit_tasks.duplicate(true),
 		"battle_events": _encode_values(battle_events.duplicate(true)),
 		"day_resolution": _encode_values(day_resolution.duplicate(true)),
 		"military_rosters": military_rosters.duplicate(true),
@@ -657,6 +660,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.ai_hosts = _decode_values(d.get("ai_hosts", {}))
 	s.battles = _decode_values(d.get("battles", []))
 	s.battle_orders = _whole(d.get("battle_orders", {}))
+	s.unit_tasks = _whole(d.get("unit_tasks", {}))
 	s.battle_events = _decode_values(d.get("battle_events", {}))
 	# Saves from before defeat carry no losses.
 	s.town_losses = _decode_values(d.get("town_losses", []))
