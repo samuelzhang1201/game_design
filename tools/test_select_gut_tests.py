@@ -33,8 +33,11 @@ class SelectionTests(unittest.TestCase):
         self.assertIn('engine-military', self.select('scripts/engine/army_conduct.gd')['categories'])
 
     def test_unknown_runtime_and_shared_fixtures_are_conservative(self):
-        for path in ['new_runtime/file.bin', 'scripts/new_mode.gd', 'tests/fixtures/deleted.gd', 'project.godot']:
+        for path in ['new_runtime/file.bin', 'scripts/new_mode.gd', 'project.godot']:
             self.assertEqual(set(self.select(path)['categories']), set(selector.functional_categories()))
+        self.assertEqual(set(self.select('tests/fixtures/test_env')['categories']), {'engine-core', 'ui'})
+        self.assertEqual(set(self.select('tests/fixtures/unknown_fixture')['categories']),
+                         set(selector.functional_categories()))
 
     def test_expensive_files_require_explicit_opt_in_even_when_changed(self):
         for category in ['simulation', 'gameplay', 'balance']:
@@ -98,9 +101,34 @@ class SelectionTests(unittest.TestCase):
             git('commit', '-qm', 'rename and delete')
             self.assertEqual(set(selector.changed_paths(base, tmp)), {'scripts/engine/old.gd', 'scripts/ui/renamed.gd', 'data.csv'})
 
-    def test_manifest_and_runner_changes_exercise_all_functional_categories(self):
+    def test_harness_changes_need_only_the_dedicated_self_checks(self):
         for path in ['run_tests.sh', 'tools/select_gut_tests.py', 'tests/categories.json', '.github/workflows/tests.yml']:
-            self.assertEqual(set(self.select(path)['categories']), set(selector.functional_categories()))
+            self.assertEqual(self.select(path)['categories'], [])
+
+    def test_deleted_tests_select_their_affected_categories_and_mixed_changes_union(self):
+        self.assertEqual(set(self.select('tests/llm/test_openai_client.gd')['categories']), {'engine-core', 'ui'})
+        self.assertEqual(set(self.select('tests/ui/test_deleted.gd')['categories']), {'ui'})
+        self.assertEqual(set(self.select('tests/llm/test_deleted.gd', 'tests/engine/test_deleted.gd')['categories']),
+                         {'engine-core', 'ui'})
+
+    def test_comment_only_diff_is_detected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            def git(*args):
+                return subprocess.check_output(['git', '-C', tmp, *args])
+            git('init', '-q')
+            git('config', 'user.email', 'test@example.com')
+            git('config', 'user.name', 'test')
+            source = Path(tmp, 'scripts/engine/comment.gd')
+            source.parent.mkdir(parents=True)
+            source.write_text('func run() -> void:\n\tpass\n')
+            git('add', '.')
+            git('commit', '-qm', 'base')
+            source.write_text('func run() -> void:\n\tpass\n\t# clarify behavior\n')
+            self.assertTrue(selector.comment_only_diff('HEAD', tmp))
+            self.assertEqual(selector.gut_relevant_paths('HEAD', tmp), [])
+            source.write_text('func run() -> void:\n\tprint("changed")\n')
+            self.assertFalse(selector.comment_only_diff('HEAD', tmp))
+            self.assertEqual(selector.gut_relevant_paths('HEAD', tmp), ['scripts/engine/comment.gd'])
 
     def test_only_explicit_request_lines_opt_in(self):
         self.assertEqual(selector.requested_categories('Please discuss simulation and gameplay.'), [])

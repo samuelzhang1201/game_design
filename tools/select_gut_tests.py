@@ -23,6 +23,58 @@ def category_of(path):
     raise ValueError(f'Unclassified GUT script: {path}; add a content category in tests/categories.json')
 
 
+def test_categories(path):
+    """Return the functional suites affected by a changed test path, even after deletion."""
+    normalized = path.removesuffix('.uid')
+    if normalized.startswith('tests/llm/test_'):
+        # The retired LLM suites exercised the engine client and its UI bridge.
+        return {'engine-core', 'ui'}
+    try:
+        category = category_of(normalized)
+    except ValueError:
+        return set()
+    return {category}
+
+
+def fixture_categories(path):
+    if path == 'tests/fixtures/test_env':
+        return {'engine-core', 'ui'}
+    return set(functional_categories())
+
+
+HARNESS_PATHS = {
+    '.github/workflows/tests.yml', 'run_tests.sh', 'tests/categories.json',
+    'tools/select_gut_tests.py', 'tools/test_select_gut_tests.py',
+    'tools/test_run_tests.py', 'tools/run_with_timeout.py',
+    'tools/test_run_with_timeout.py',
+}
+
+
+def comment_only_diff(base, cwd=ROOT):
+    """Treat source edits made only of comments/blank lines as documentation changes."""
+    paths = subprocess.check_output(
+        ['git', 'diff', '--name-only', base, '--'], cwd=cwd
+    ).decode().splitlines()
+    if not paths or any(Path(path).suffix not in {'.gd', '.py', '.sh', '.yml', '.yaml', '.toml'}
+                         for path in paths):
+        return False
+    diff = subprocess.check_output(
+        ['git', 'diff', '--no-renames', '--unified=0', base, '--'], cwd=cwd
+    ).decode(errors='replace')
+    changed = [line[1:].strip() for line in diff.splitlines()
+               if line.startswith(('+', '-')) and not line.startswith(('+++', '---'))]
+    return bool(changed) and all(not line or line.startswith(('#', '//', ';')) for line in changed)
+
+
+def gut_relevant_paths(base, cwd=ROOT):
+    paths = changed_paths(base, cwd)
+    if comment_only_diff(base, cwd):
+        return [path for path in paths if path in HARNESS_PATHS or (path.endswith('.md')
+                and path not in {'RANDOM_EVENTS.md'} and not path.startswith('game_story/'))
+                or path.startswith('.codex/') or path == '.github/pull_request_template.md']
+    return paths
+
+
 def functional_categories():
     return [name for name, config in CATEGORIES.items() if not config.get('opt_in')]
 
@@ -50,21 +102,24 @@ def result(categories, groups):
 def select(paths, groups, include=()):
     selected = set(include)
     functional = set(functional_categories())
+    # Harness behavior is validated by the dedicated Python/shell self-checks.
+    if paths and all(path in HARNESS_PATHS or (path.endswith('.md') and path not in {'RANDOM_EVENTS.md'}
+                     and not path.startswith('game_story/')) or path.startswith('.codex/')
+                     or path == '.github/pull_request_template.md' for path in paths):
+        return result(selected, groups)
     for path in paths:
         if path.startswith('tests/') and (path.endswith('.gd') or path.endswith('.gd.uid')) and Path(path.removesuffix('.uid')).name.startswith('test_'):
-            try:
-                category = category_of(path.removesuffix('.uid'))
-            except ValueError:
-                selected.update(functional)
-            else:
-                if category in functional:
-                    selected.add(category)
+            categories = test_categories(path)
+            selected.update(categories & functional if categories else functional)
+            continue
+        if path.startswith('tests/fixtures/'):
+            selected.update(fixture_categories(path))
             continue
         # Runtime prose is data, even though it uses Markdown.
         if path == 'RANDOM_EVENTS.md' or path.startswith(('game_story/', 'data/', 'tests/')):
             selected.update(functional)
-        elif path == '.github/workflows/tests.yml' or path == 'run_tests.sh' or path.startswith(('tools/select_gut_tests', 'tools/test_select_gut_tests', 'tools/test_run_tests', 'tools/run_with_timeout', 'tools/test_run_with_timeout')):
-            selected.update(functional)
+        elif path in HARNESS_PATHS:
+            continue
         elif path.endswith('.md') or path.startswith('.codex/') or path == '.github/pull_request_template.md':
             continue
         else:
@@ -112,7 +167,9 @@ def main():
         chosen['files'] = sorted(set(chosen['files']) | set(args.test))
         chosen['run_gut'] = bool(chosen['files'])
     else:
-        chosen = select(['project.godot'] if args.functional else changed_paths(args.base or 'origin/main'), groups, args.include)
+        base = args.base or 'origin/main'
+        paths = ['project.godot'] if args.functional else gut_relevant_paths(base)
+        chosen = select(paths, groups, args.include)
     if args.github_output:
         with args.github_output.open('a') as output:
             output.write(f"run-gut={str(chosen['run_gut']).lower()}\n")
