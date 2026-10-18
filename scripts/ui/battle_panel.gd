@@ -67,7 +67,10 @@ func _summary(battle: Dictionary) -> String:
 	if battle.is_empty(): return "No active battlefield is known."
 	var lines: PackedStringArray = ["Current order: %s. Formation: %s." % [battle.get("action", "hold"), String(battle.get("formation", "")).replace("_", " ")]]
 	for unit: Dictionary in battle.get("units", []):
-		lines.append("%s — %s\n%s fit, %s wounded; morale %d; supplies %s." % [unit["label"], unit["commander"], UiPalette.format_int(int(unit["fit"])), UiPalette.format_int(int(unit["wounded"])), int(unit["morale"]), UiPalette.format_int(int(unit["supplies"]))])
+		if not bool(unit.get("known", true)):
+			lines.append("%s — %s\nPersonnel, morale and supplies unknown; awaiting a report." % [unit["label"], unit["commander"]])
+			continue
+		lines.append("%s — %s\n%s fit, %s wounded; morale %d; supplies %s. Observed on day %d." % [unit["label"], unit["commander"], UiPalette.format_int(int(unit["fit"])), UiPalette.format_int(int(unit["wounded"])), int(unit["morale"]), UiPalette.format_int(int(unit["supplies"])), int(unit.get("observed_day", 0))])
 	lines.append(String(battle.get("agreements", "")))
 	for row: Dictionary in battle.get("warrants", []):
 		lines.append("%s: %s; %d gold reserved. %s" % [row["kind"], row["status"], int(row["reserved_gold"]), row["reason"]])

@@ -1,0 +1,367 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/prisoner_panel.gd" id="1_nv287"]
+[ext_resource type="Texture2D" uid="uid://p1jqgjgkq1pm" path="res://assets/2D/ui/panels/leather_grain_light.png" id="2_0jv1b"]
+[ext_resource type="Texture2D" uid="uid://cnctm0nndn0qh" path="res://assets/2D/ui/panels/leather_grain_dark.png" id="3_3ra1t"]
+[ext_resource type="Script" uid="uid://c44j2v837vlnv" path="res://scripts/ui/vellum_panel_style.gd" id="4_4rbcn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1y278"]
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+bg_color = Color(0.12156863, 0.101960786, 0.08235294, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.65882355, 0.5411765, 0.29803923, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 8
+shadow_offset = Vector2(0, 3)
+
+[sub_resource type="StyleBox" id="StyleBox_i5kou"]
+resource_local_to_scene = false
+resource_name = "Encounter leather; single brass edge"
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+script = ExtResource("4_4rbcn")
+base = SubResource("StyleBoxFlat_1y278")
+grain = ExtResource("2_0jv1b")
+grain_dark = ExtResource("3_3ra1t")
+grain_alpha = 0.1
+shade_top = 0.05
+shade_bottom = 0.14
+
+[node name="PrisonerPanel" type="Control" unique_id=604097513]
+editor_description = "Editor owns layout, scrolling, controls and theme. Code fills permitted information and selections."
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_nv287")
+
+[node name="Panel" type="PanelContainer" parent="." unique_id=646821453]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -462.0
+offset_top = -334.0
+offset_right = 462.0
+offset_bottom = 334.0
+theme_override_styles/panel = SubResource("StyleBox_i5kou")
+
+[node name="Body" type="VBoxContainer" parent="Panel" unique_id=190776407]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Panel/Body" unique_id=771140255]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardTitle"
+text = "Prisoners and agreements"
+autowrap_mode = 3
+
+[node name="Summary" type="Label" parent="Panel/Body" unique_id=593918604]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "Current custody and historical captures are counted separately."
+autowrap_mode = 3
+
+[node name="Scroll" type="ScrollContainer" parent="Panel/Body" unique_id=1051625653]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="Panel/Body/Scroll" unique_id=1645123642]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="CustodyHeading" type="Label" parent="Panel/Body/Scroll/Content" unique_id=1674929509]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardSection"
+text = "Current custody"
+autowrap_mode = 3
+
+[node name="Batch" type="OptionButton" parent="Panel/Body/Scroll/Content" unique_id=1021541311]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BatchDetails" type="Label" parent="Panel/Body/Scroll/Content" unique_id=1354886146]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "Actual holder and latest permitted observation."
+autowrap_mode = 3
+
+[node name="People" type="RichTextLabel" parent="Panel/Body/Scroll/Content" unique_id=958304799]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardText"
+fit_content = true
+scroll_active = false
+
+[node name="TermsHeading" type="Label" parent="Panel/Body/Scroll/Content" unique_id=346854237]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardSection"
+text = "Propose terms"
+autowrap_mode = 3
+
+[node name="Kind" type="OptionButton" parent="Panel/Body/Scroll/Content" unique_id=914640347]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 3
+popup/item_0/text = "Ransom"
+popup/item_0/id = 0
+popup/item_1/text = "Exchange"
+popup/item_1/id = 1
+popup/item_2/text = "Unconditional release"
+popup/item_2/id = 2
+
+[node name="Selection" type="GridContainer" parent="Panel/Body/Scroll/Content" unique_id=201088425]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 2
+
+[node name="CountLabel" type="Label" parent="Panel/Body/Scroll/Content/Selection" unique_id=1040958613]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardLabel"
+text = "People selected"
+autowrap_mode = 3
+
+[node name="Count" type="SpinBox" parent="Panel/Body/Scroll/Content/Selection" unique_id=1118571917]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 2147483647.0
+value = 1.0
+
+[node name="WoundedLabel" type="Label" parent="Panel/Body/Scroll/Content/Selection" unique_id=922229285]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardLabel"
+text = "Wounded within selection"
+autowrap_mode = 3
+
+[node name="Wounded" type="SpinBox" parent="Panel/Body/Scroll/Content/Selection" unique_id=120292687]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 2147483647.0
+
+[node name="Names" type="ItemList" parent="Panel/Body/Scroll/Content" unique_id=324252488]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+tooltip_text = "Explicitly select the named captives included in these terms."
+theme_type_variation = &"ManorTable"
+select_mode = 1
+
+[node name="Exchange" type="VBoxContainer" parent="Panel/Body/Scroll/Content" unique_id=880972335]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ExchangeHeading" type="Label" parent="Panel/Body/Scroll/Content/Exchange" unique_id=1821324142]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardLabel"
+text = "Reciprocal prisoners: select their batch and people"
+autowrap_mode = 3
+
+[node name="Reciprocal" type="OptionButton" parent="Panel/Body/Scroll/Content/Exchange" unique_id=1587846415]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="OtherSelection" type="GridContainer" parent="Panel/Body/Scroll/Content/Exchange" unique_id=702361728]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 2
+
+[node name="OtherCountLabel" type="Label" parent="Panel/Body/Scroll/Content/Exchange/OtherSelection" unique_id=401322726]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardLabel"
+text = "People selected"
+autowrap_mode = 3
+
+[node name="OtherCount" type="SpinBox" parent="Panel/Body/Scroll/Content/Exchange/OtherSelection" unique_id=1728462160]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 2147483647.0
+value = 1.0
+
+[node name="OtherWoundedLabel" type="Label" parent="Panel/Body/Scroll/Content/Exchange/OtherSelection" unique_id=1274626684]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardLabel"
+text = "Wounded within selection"
+autowrap_mode = 3
+
+[node name="OtherWounded" type="SpinBox" parent="Panel/Body/Scroll/Content/Exchange/OtherSelection" unique_id=88691325]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 2147483647.0
+
+[node name="OtherNames" type="ItemList" parent="Panel/Body/Scroll/Content/Exchange" unique_id=369859756]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+tooltip_text = "Explicitly select the named captives included in these terms."
+theme_type_variation = &"ManorTable"
+select_mode = 1
+
+[node name="Price" type="GridContainer" parent="Panel/Body/Scroll/Content" unique_id=143439964]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 2
+
+[node name="MoneyLabel" type="Label" parent="Panel/Body/Scroll/Content/Price" unique_id=966370794]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardLabel"
+text = "Agreed ransom, whole gold"
+autowrap_mode = 3
+
+[node name="Money" type="SpinBox" parent="Panel/Body/Scroll/Content/Price" unique_id=1465865865]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 2147483647.0
+value = 1.0
+
+[node name="Promise" type="CheckBox" parent="Panel/Body/Scroll/Content" unique_id=845763769]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Include a promise not to fight"
+
+[node name="Pledge" type="GridContainer" parent="Panel/Body/Scroll/Content" unique_id=1117637468]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 2
+
+[node name="UntilLabel" type="Label" parent="Panel/Body/Scroll/Content/Pledge" unique_id=2054633867]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardLabel"
+text = "Through absolute day (0 = indefinite)"
+autowrap_mode = 3
+
+[node name="Until" type="SpinBox" parent="Panel/Body/Scroll/Content/Pledge" unique_id=1387367273]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 2147483647.0
+
+[node name="Reason" type="LineEdit" parent="Panel/Body/Scroll/Content" unique_id=1720976828]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Reason for these terms"
+
+[node name="ConsentNote" type="Label" parent="Panel/Body/Scroll/Content" unique_id=2059341523]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "Proposing pays only the clerk and any new courier. Ransom and release wait for consent and fulfillment."
+autowrap_mode = 3
+
+[node name="AgreementsHeading" type="Label" parent="Panel/Body/Scroll/Content" unique_id=803527993]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardSection"
+text = "Agreements and receipts"
+autowrap_mode = 3
+
+[node name="Proposal" type="OptionButton" parent="Panel/Body/Scroll/Content" unique_id=891882874]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ProposalDetails" type="Label" parent="Panel/Body/Scroll/Content" unique_id=155824964]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "No proposed agreements."
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="Panel/Body/Scroll/Content" unique_id=919263222]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Accept" type="Button" parent="Panel/Body/Scroll/Content/Actions" unique_id=1250931945]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Accept for our realm"
+
+[node name="Reject" type="Button" parent="Panel/Body/Scroll/Content/Actions" unique_id=1985185592]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Reject for our realm"
+
+[node name="Settle" type="Button" parent="Panel/Body/Scroll/Content/Actions" unique_id=1805996343]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Fulfill accepted terms"
+
+[node name="Status" type="Label" parent="Panel/Body" unique_id=1474342374]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardWarn"
+autowrap_mode = 3
+
+[node name="Propose" type="Button" parent="Panel/Body" unique_id=528120889]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Propose agreement"
+
+[node name="Close" type="Button" parent="Panel/Body" unique_id=1656496129]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardCommand"
+text = "Close"

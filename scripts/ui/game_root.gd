@@ -40,6 +40,9 @@ var _pause_menu: Control
 var _pause_status: Label
 var _battle_encounter: BattleEncounterPanel
 var _battle_panel: BattlePanel
+var _prisoner_panel: Control
+var _battle_report_panel: Control
+var _character_dossier: Control
 var _battle_view_revision := 0
 var _ledger_screen: LedgerScreen
 var _war_room_screen: WarRoomScreen
@@ -297,8 +300,41 @@ func _open_battle_for(code: String) -> void:
 
 func _refresh_battle_panel() -> void:
 	_battle_view_revision += 1
+	if Game.state != null:
+		if _prisoner_panel != null and _prisoner_panel.visible:
+			_prisoner_panel.show_view(Game.battle_view().get("prisoners", {}))
+		if _battle_report_panel != null and _battle_report_panel.visible:
+			_battle_report_panel.show_view(Game.battle_view())
 	if _battle_panel != null and _battle_panel.visible and Game.state != null:
 		_battle_panel.show_view(Game.battle_view(), _battle_panel.battle_id())
+
+func open_prisoners() -> void:
+	if _prisoner_panel == null:
+		_prisoner_panel = load("res://scenes/panels/prisoner_panel.tscn").instantiate()
+		add_child(_prisoner_panel)
+		_prisoner_panel.action_requested.connect(_on_prisoner_action)
+		_prisoner_panel.character_selected.connect(_open_character_record)
+	_prisoner_panel.show_view(Game.battle_view().get("prisoners", {}))
+	_raise_overlays()
+
+func open_battle_reports() -> void:
+	if _battle_report_panel == null:
+		_battle_report_panel = load("res://scenes/panels/battle_report_panel.tscn").instantiate()
+		add_child(_battle_report_panel)
+	_battle_report_panel.show_view(Game.battle_view())
+	_raise_overlays()
+
+func _open_character_record(id: String) -> void:
+	if _character_dossier == null:
+		_character_dossier = load("res://scenes/panels/character_dossier.tscn").instantiate()
+		add_child(_character_dossier)
+	_character_dossier.show_character(id)
+	_raise_overlays()
+
+func _on_prisoner_action(code: String, params: Dictionary) -> void:
+	var result := Game.try_execute(ActionRequest.make(code, params))
+	_prisoner_panel.show_view(Game.battle_view().get("prisoners", {}))
+	_prisoner_panel.show_result(result)
 
 func _on_battle_order(code: String, id: int, kind: String) -> void:
 	var request_id := "battle-ui:%d:%d:%s" % [id, Game.state.next_courier_id + 1, kind]
@@ -1267,6 +1303,8 @@ func _switch_to(new_state: State) -> void:
 	add_child(current_screen)
 	if current_screen.has_method("military_panel"):
 		current_screen.military_panel().recruitment_requested.connect(open_recruitment)
+		current_screen.military_panel().prisoners_requested.connect(open_prisoners)
+		current_screen.military_panel().battle_reports_requested.connect(open_battle_reports)
 	if current_screen != null and current_screen.has_method("set_military_view"):
 		current_screen.set_military_view(_army_view)
 	_sync_map_view()
@@ -1277,7 +1315,7 @@ func _switch_to(new_state: State) -> void:
 
 func _overlays_in_order() -> Array[Node]:
 	return [_bottom_bar, _news_ticker, _info_screen, _ledger_screen, _war_room_screen,
-		_missive_screen, _laws_screen, _recruitment_panel, _battle_encounter, _battle_panel, _report_popup, _pause_menu]
+		_missive_screen, _laws_screen, _recruitment_panel, _battle_encounter, _battle_panel, _battle_report_panel, _prisoner_panel, _character_dossier, _report_popup, _pause_menu]
 
 ## The overlays in their stacking order, topmost last.
 func _raise_overlays() -> void:
@@ -1308,6 +1346,8 @@ func _settle_overlay(o: Node, new_state: State) -> void:
 		_recruitment_panel.close()
 	elif o == _laws_screen:
 		_laws_screen.close()
+	elif o == _prisoner_panel or o == _battle_report_panel or o == _character_dossier:
+		o.hide()
 	elif o == _battle_panel:
 		var pending: Dictionary = Game.battle_view()["decision"]
 		if pending.is_empty(): _battle_panel.hide()

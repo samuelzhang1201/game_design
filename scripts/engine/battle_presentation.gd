@@ -3,7 +3,7 @@ extends RefCounted
 ## The view receives copied facts and delivered estimates, never battle truth.
 
 static func snapshot(repo: DataRepository, state: GameState, realm: String) -> Dictionary:
-	var out := {"battles": [], "decision": {}, "enemies": [], "reports": []}
+	var out := {"battles": [], "decision": {}, "enemies": [], "reports": [], "detailed_reports": [], "prisoners": {}}
 	if state == null or realm != repo.resolve_realm("player_realm"):
 		return out
 	for battle: Dictionary in state.battles:
@@ -14,12 +14,15 @@ static func snapshot(repo: DataRepository, state: GameState, realm: String) -> D
 				if not state.regiments.has(code) or ArmySystem.realm_of(repo, code, state) != realm:
 					continue
 				side = candidate
-				var entry: Dictionary = state.regiments[code]
+				var reading := known_unit(repo, state, code)
 				var commander := String(state.military_rosters.get(code, {}).get("commander_id", ""))
-				units.append({"code": code, "label": String(ArmySystem.regiment(repo, code, state).get("label", code)),
-					"fit": MilitaryRoster.fit(state, code), "wounded": MilitaryRoster.living(state, code) - MilitaryRoster.fit(state, code),
-					"morale": int(entry.get("morale", 0)), "supplies": int(entry.get("supplies", 0)),
-					"commander": state.characters[commander].display_name if state.characters.has(commander) else "The field officers"})
+				var unit := {"code": code, "label": String(ArmySystem.regiment(repo, code, state).get("label", code)),
+					"known": not reading.is_empty(),
+					"commander": state.characters[commander].display_name if state.characters.has(commander) else "The field officers"}
+				if not reading.is_empty():
+					for key: String in ["fit", "wounded", "morale", "supplies"]: unit[key] = int(reading[key])
+					unit["observed_day"] = int(reading.day)
+				units.append(unit)
 		if units.is_empty():
 			continue
 		var id := int(battle["id"])
@@ -47,6 +50,8 @@ static func snapshot(repo: DataRepository, state: GameState, realm: String) -> D
 		out["reports"].append({"battle_id": int(report.get("battle_id", -1)),
 			"day": int(report.get("day", 0)), "received_day": int(report.get("received_day", 0)),
 			"text": "\n".join(lines)})
+	out.detailed_reports = detailed_reports(state, realm)
+	out["prisoners"] = prisoner_view(repo, state, realm)
 	for token: String in state.battle_events:
 		var record: Dictionary = state.battle_events[token]
 		if int(record.get("received_day", -1)) < 0 or String(record.get("selected", "")) == "": continue
@@ -55,6 +60,50 @@ static func snapshot(repo: DataRepository, state: GameState, realm: String) -> D
 			"day": int(record.get("day", 0)), "received_day": int(record["received_day"]),
 			"text": "%s — %s. %s" % [repo.event_titles.get(String(record.get("event_id", "")), "Battlefield report"), record["selected"], receipt.get("reason", "")]})
 	return out
+
+## Frozen battle totals and subsequent received transactions have separate histories.
+static func detailed_reports(state: GameState, realm: String) -> Array:
+	var reports := {}
+	var batch_battles := {}
+	var received: Array = state.king_state.get("battle_reports", [])
+	for report: Dictionary in received:
+		var detail: Dictionary = report.get("details", {})
+		if not detail.is_empty() and not reports.has(int(detail.battle_id)):
+			var copy := detail.duplicate(true)
+			copy["received_day"] = int(report.get("received_day", 0))
+			copy["settlements"] = []
+			reports[int(detail.battle_id)] = copy
+		for batch: Dictionary in detail.get("prisoners", []):
+			batch_battles[String(batch.id)] = int(detail.battle_id)
+		for batch: Dictionary in report.get("custody", []):
+			batch_battles[String(batch.id)] = int(batch.battle_id)
+	for report: Dictionary in received:
+		for settlement: Dictionary in report.get("settlements", []):
+			var id := int(settlement.get("battle_id", report.get("battle_id", -1)))
+			if reports.has(id) and not settlement in reports[id].settlements:
+				reports[id].settlements.append(settlement.duplicate(true))
+	for proposal: Dictionary in state.prisoner_proposals.values():
+		var visible := PrisonerCommunications.projection(state, String(proposal.request.id))
+		if visible.get("status", "") != "fulfilled" or not realm in proposal.get("frozen", {}).get("required_parties", []): continue
+		var result: Dictionary = visible.get("result", {})
+		var by_battle := {}
+		for civilian: Dictionary in result.get("civilians", []):
+			var id := int(batch_battles.get(String(civilian.batch_id), -1))
+			if not reports.has(id): continue
+			if not by_battle.has(id): by_battle[id] = []
+			by_battle[id].append(civilian.duplicate(true))
+		for id: int in by_battle:
+			var settlement := result.duplicate(true)
+			settlement["battle_id"] = id
+			settlement["kind"] = proposal.get("request", {}).get("kind", "Settlement")
+			settlement["civilians"] = by_battle[id]
+			settlement["released"] = 0
+			for civilian: Dictionary in by_battle[id]: settlement.released += int(civilian.count)
+			var duplicate := false
+			for existing: Dictionary in reports[id].settlements:
+				if existing.get("id", "") == result.get("id", "") and result.has("id"): duplicate = true
+			if not duplicate: reports[id].settlements.append(settlement)
+	return reports.values()
 
 static func formation_view(repo: DataRepository, state: GameState, battle: Dictionary, side: String) -> Dictionary:
 	# Suitability hints use our terrain and centre; unseen enemy positions cannot colour them.
@@ -138,3 +187,118 @@ static func map_snapshot(repo: DataRepository, state: GameState, realm: String) 
 			if int(battle.get("rounds", 0)) == 0 and BattleRules._policy(battle, "herald_safety", state.absolute_day()) == "protect":
 				out["battle_signals"].append({"key": "%d:%s:herald" % [id, side], "kind": "herald", "unit_code": own[0]})
 	return out
+
+static func local_unit(repo: DataRepository, state: GameState, code: String) -> bool:
+	var unit := ArmySystem.state_of(repo, state, code)
+	return not unit.is_empty() and BattleSystem._within(KingSystem.position(state),
+		Vector2i(int(unit.get("x_m", 0)), int(unit.get("y_m", 0))), int(repo.bal("king_command_radius_m")))
+
+## Copied observations travel with a report. Reading an own holder is not delivery.
+static func custody_observations(repo: DataRepository, state: GameState, realm: String, battle_id := -1) -> Array:
+	var out: Array = []
+	var batches: Array = state.prisoner_batches.values()
+	var observed_day := state.absolute_day()
+	if battle_id >= 0:
+		var record: Dictionary = state.battle_records.get(str(battle_id), {})
+		batches = record.custody if record.has("custody") else BattleReport.custody_batches(repo, state, battle_id)
+		if record.has("custody"): observed_day = int(record.end_day)
+	batches = batches.duplicate()
+	batches.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a.id) < String(b.id))
+	for batch: Dictionary in batches:
+		var id := String(batch.id)
+		var holder := String(batch.get("holder_code", ""))
+		var holder_realm := ArmySystem.realm_of(repo, holder, state) if holder != "" else ""
+		if holder_realm != realm and batch.get("origin_realm", "") != realm and not realm in batch.get("previous_holder_realms", []) and not local_unit(repo, state, holder): continue
+		var named: Array = []
+		for person: String in batch.get("named_ids", []):
+			var character: Character = state.characters.get(person) as Character
+			if person == "you" or (character != null and character.category == "player"): continue
+			named.append({"id": person, "name": character.display_name if character != null else person})
+		out.append({"id": id, "holder_code": holder, "holder_label": String(ArmySystem.regiment(repo, holder, state).get("label", holder)) if holder != "" else "Released to civilian life",
+			"holder_realm": holder_realm, "holder_realm_label": repo.realm_label(holder_realm) if holder_realm != "" else "",
+			"captor_code": PrisonerSystem.captor_of(batch), "origin_realm": batch.get("origin_realm", ""),
+			"origin_label": repo.realm_label(String(batch.get("origin_realm", ""))),
+			"count": int(batch.commoners) + int(batch.nobles) if batch.get("disposition", "") == "held" else 0,
+			"commoners": int(batch.commoners), "nobles": int(batch.nobles), "wounded_count": int(batch.wounded_subset),
+			"named": named, "battle_id": int(batch.get("battle_id", -1)), "historical_count": int(batch.get("initial_count", int(batch.commoners) + int(batch.nobles))),
+			"released_count": int(batch.get("released_count", 0)), "observed_day": observed_day, "current_verified": false, "reason": batch.get("reason", "")})
+	return out
+
+static func prisoner_view(repo: DataRepository, state: GameState, realm: String) -> Dictionary:
+	var known := {}
+	for report: Dictionary in state.king_state.get("battle_reports", []):
+		for row: Dictionary in report.get("custody", []):
+			if not known.has(row.id) or int(row.observed_day) > int(known[row.id].observed_day): known[row.id] = row.duplicate(true)
+	# Only a local fulfillment or a received receipt updates remote custody.
+	for proposal: Dictionary in state.prisoner_proposals.values():
+		var visible := PrisonerCommunications.projection(state, String(proposal.request.id))
+		if visible.get("status", "") != "fulfilled" or not realm in proposal.get("frozen", {}).get("required_parties", []): continue
+		for civilian: Dictionary in visible.get("result", {}).get("civilians", []):
+			var id := String(civilian.batch_id)
+			if not known.has(id): continue
+			var newly_released := maxi(0, int(civilian.get("released_total", 0)) - int(known[id].get("released_count", 0)))
+			if newly_released == 0: continue
+			known[id].count = int(civilian.get("remaining_count", maxi(0, int(known[id].count) - newly_released)))
+			known[id].released_count = int(civilian.released_total)
+			known[id].wounded_count = int(civilian.get("remaining_wounded", maxi(0, int(known[id].wounded_count) - int(civilian.wounded_count))))
+			for person: String in civilian.get("named_ids", []):
+				known[id].named = known[id].named.filter(func(row: Dictionary) -> bool: return row.id != person)
+	for row: Dictionary in custody_observations(repo, state, realm):
+		var observing := String(row.holder_code) if String(row.holder_code) != "" else String(row.captor_code)
+		if not local_unit(repo, state, observing): continue
+		row.current_verified = true
+		known[row.id] = row
+	var batches: Array = []
+	var current := 0
+	var historical := 0
+	var ids := known.keys()
+	ids.sort()
+	for id: String in ids:
+		var row: Dictionary = known[id]
+		current += int(row.count)
+		historical += int(row.historical_count)
+		if int(row.count) > 0: batches.append(row)
+	var proposals: Array = []
+	for id: String in state.prisoner_proposals:
+		var row: Dictionary = state.prisoner_proposals[id]
+		if not realm in row.get("frozen", {}).get("required_parties", []): continue
+		var visible := PrisonerCommunications.projection(state, id)
+		for payment: Dictionary in visible.result.get("payments", []):
+			payment["holder_label"] = String(ArmySystem.regiment(repo, String(payment.get("holder_code", "")), state).get("label", "The holding regiment"))
+		proposals.append({"id": id, "kind": row.request.kind, "status": visible.status, "reason": visible.reason, "request": row.request.duplicate(true),
+			"required_parties": row.frozen.required_parties.duplicate(), "consents": visible.consents,
+			"result": visible.result, "valuation": row.get("proposal_result", {}).get("valuation", {}).duplicate(true)})
+	var next := state.prisoner_proposals.size() + 1
+	while state.prisoner_proposals.has("prisoner-ui:%d" % next): next += 1
+	var realm_labels := {}
+	for code: String in repo.kingdoms: realm_labels[code] = repo.realm_label(code)
+	return {"batches": batches, "proposals": proposals, "current_count": current, "historical_captured": historical, "realm_labels": realm_labels,
+		"player_realm": realm, "next_proposal_id": "prisoner-ui:%d" % next}
+
+## Shared by the old army card and the new panel: remote live losses are private.
+static func awaits_report(repo: DataRepository, state: GameState, code: String) -> bool:
+	if state == null or local_unit(repo, state, code): return false
+	for battle: Dictionary in state.battles:
+		for side: String in BattleSystem.SIDES:
+			if code in battle.get(side, []): return true
+	for record: Dictionary in state.battle_records.values():
+		var involved := false
+		for row: Dictionary in record.get("participants", []):
+			if row.code == code: involved = true
+		if not involved: continue
+		var received := false
+		for report: Dictionary in state.king_state.get("battle_reports", []):
+			if int(report.get("details", {}).get("battle_id", -1)) == int(record.battle_id): received = true
+		if not received: return true
+	return false
+
+static func known_unit(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	var entry := ArmySystem.state_of(repo, state, code)
+	if not awaits_report(repo, state, code):
+		return {"fit": MilitaryRoster.fit(state, code), "wounded": MilitaryRoster.living(state, code) - MilitaryRoster.fit(state, code),
+			"morale": int(entry.get("morale", 0)), "supplies": int(entry.get("supplies", 0)), "day": state.absolute_day()}
+	var known := {}
+	for report: Dictionary in state.king_state.get("battle_reports", []):
+		var reading: Dictionary = report.get("unit_readings", {}).get(code, {})
+		if not reading.is_empty() and int(reading.day) > int(known.get("day", -1)): known = reading.duplicate(true)
+	return known

@@ -115,7 +115,10 @@ static func settle(repo: DataRepository, state: GameState, id: String) -> Dictio
 			"owner_now": MapOwnership.owner_of(repo, candidate, cohort.source_province),
 			"capture_id": original.capture_id, "captor_code": PrisonerSystem.captor_of(original),
 			"holder_code": original.holder_code, "count": int(selection.count), "wounded_count": int(selection.wounded_count),
-			"named_ids": selection.named_ids.duplicate(), "civilian": true, "reason": request.reason})
+			"named_ids": selection.named_ids.duplicate(), "civilian": true, "reason": request.reason,
+			"released_total": int(candidate.prisoner_batches[selection.batch_id].get("released_count", 0)),
+			"remaining_count": int(candidate.prisoner_batches[selection.batch_id].commoners) + int(candidate.prisoner_batches[selection.batch_id].nobles),
+			"remaining_wounded": int(candidate.prisoner_batches[selection.batch_id].wounded_subset)})
 	var row: Dictionary = repo.prisoner_terms[request.kind]
 	var person_ids := candidate.characters.keys()
 	person_ids.sort()
@@ -137,7 +140,7 @@ static func settle(repo: DataRepository, state: GameState, id: String) -> Dictio
 					RelationshipGraph.adjust(candidate, person, ruler.id, int(row.family_opinion), reason, candidate.tick)
 					family_changes.append({"character_id": person, "to": ruler.id, "delta": int(row.family_opinion), "reason": reason})
 
-	var result := {"id": id, "status": "fulfilled", "released": int(released.released),
+	var result := {"id": id, "status": "fulfilled", "day": state.absolute_day(), "released": int(released.released),
 		"payments": payments, "effects": effects, "family_changes": family_changes, "civilians": evidence,
 		"reason": request.reason, "forgone_ransom": request.kind == "release"}
 	candidate.prisoner_proposals[id].status = "fulfilled"

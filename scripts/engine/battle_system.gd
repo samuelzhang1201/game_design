@@ -583,6 +583,7 @@ static func step_battle(repo: DataRepository, state: GameState, battle_id: int) 
 		var result := _fight(repo, state, battle, events)
 		if result.has("error"):
 			return {"status": "error", "error": result["error"], "events": []}
+		if not bool(result["ended"]): BattleReport.note(battle, events)
 		if bool(result["ended"]):
 			state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != battle_id)
 	return {"status": "complete", "events": events}
@@ -1003,22 +1004,24 @@ static func march_out(repo: DataRepository, state: GameState, code: String, plac
 	_stored(state, code)["disengaging"] = 1
 
 
-## Takes battle `id` off the field with no end of its own (SiegeSystem.capture:
+## Takes battle `id` off the field with a terminal report (SiegeSystem.capture:
 ## the town it was fought for fell under it); its regiments stay where they
 ## stand, halted.
-static func call_off(state: GameState, id: int, repo: DataRepository = null) -> void:
-	BattleReport.snapshot(repo, state, id)
-	BattleOrders.end_battle(repo, state, id, "The battle is called off")
+static func call_off(state: GameState, id: int, repo: DataRepository = null, victorious_side := "") -> Dictionary:
+	var battle := battle_by_id(state, id)
+	if battle.is_empty(): return {}
+	var events: Array = []
+	_end(repo, state, battle, "town_fallen" if victorious_side != "" else "called_off", events, [], victorious_side)
 	state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != id)
+	return events[0]
 
 
 ## Preserve terminal warrant receipts while releasing every unspent reservation.
-static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: String, events: Array, left: Array = []) -> void:
-	BattleReport.snapshot(repo, state, int(b["id"]))
+static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: String, events: Array, left: Array = [], victorious_side := "") -> void:
 	BattleOrders.end_battle(repo, state, int(b["id"]), "Battle ended: " + why)
 	var att: Array = b["att"]
 	var def: Array = b["def"]
-	var winner := ""
+	var winner := victorious_side
 	match why:
 		"rout_attacker":
 			winner = "def"
@@ -1032,3 +1035,6 @@ static func _end(repo: DataRepository, state: GameState, b: Dictionary, why: Str
 	events.append({"kind": "end", "battle_id": int(b["id"]), "why": why, "winner": winner,
 		"att": att.duplicate(), "def": def.duplicate(), "rounds": int(b["rounds"]), "town": String(b["town"]),
 		"place_x_m": int(b["place_x_m"]), "place_y_m": int(b["place_y_m"]), "left": left.duplicate(true)})
+	b["report_outcome"] = {"why": why, "winner": winner, "town": String(b["town"])}
+	BattleReport.note(b, events)
+	BattleReport.snapshot(repo, state, int(b["id"]))

@@ -17,7 +17,9 @@ const SCRIPTS := ["res://scripts/ui/court_screen.gd", "res://scripts/ui/conversa
 	"res://scripts/ui/war_folio_panel.gd", "res://scripts/ui/war_deploy_scroll.gd",
 	"res://scripts/ui/war_leave_prompt.gd", "res://scripts/ui/info_screen.gd",
 	"res://scripts/ui/laws_screen.gd", "res://scripts/ui/law_row.gd",
-	"res://scripts/ui/battle_encounter_panel.gd", "res://scripts/ui/battle_panel.gd"]
+	"res://scripts/ui/battle_encounter_panel.gd", "res://scripts/ui/battle_panel.gd",
+	"res://scripts/ui/prisoner_panel.gd", "res://scripts/ui/battle_report_panel.gd",
+	"res://scripts/ui/character_dossier.gd"]
 
 ## What a converted _ready may never call.
 const FORBIDDEN := ["add_theme_stylebox_override", "add_theme_font_override",
@@ -205,6 +207,13 @@ func _start(_r: GameRoot) -> void:
 	Game.next_tick()
 	if not Game.state.pending_event.is_empty():
 		Game.apply_event_choice(String(Game.state.pending_event["choices"][0]["choice_id"]))
+
+func test_prisoner_report_and_read_only_dossier_keep_their_scenes_look() -> void:
+	for name: String in ["prisoner_panel", "battle_report_panel", "character_dossier"]:
+		var path := "res://scenes/panels/" + name + ".tscn"
+		var panel: Control = load(path).instantiate()
+		add_child_autofree(panel)
+		_assert_scene_holds(panel, path, "", 14 if name == "battle_report_panel" else 20)
 
 ## Every look property `scene_path` declares, compared with the live `screen`.
 ## `prefix` is where the scene stands in CODE_OWNED's paths.

@@ -647,12 +647,17 @@ func _prisoner_action(req: ActionRequest, state: GameState, commit: bool) -> Dic
 		return failed
 	var result: Dictionary
 	match command:
-		"propose": result = PrisonerDisposition.propose(data, candidate, req.params)
+		"propose": result = PrisonerCommunications.propose(data, candidate, req.params)
 		"respond": result = PrisonerDisposition.respond(data, candidate, id, player, req.params.accepted)
-		"settle": result = PrisonerDisposition.settle(data, candidate, id)
+		"settle": result = PrisonerCommunications.fulfill(data, candidate, id)
 	if result.has("error"):
 		failed["error"] = result.error
 		return failed
+	if command == "respond" and candidate.prisoner_proposals[id].has("communications"):
+		var communication: Dictionary = candidate.prisoner_proposals[id].communications
+		if communication.visible_status in ["proposed", "accepted"] and result.status in ["proposed", "accepted", "rejected"]:
+			communication.visible_status = result.status
+		result.status = PrisonerCommunications.projection(candidate, id).status
 	var effects: Array = [{"kind": "world", "path": "metrics.treasury", "delta": -fee, "reason": reason}]
 	effects.append_array(result.get("effects", []))
 	var outcome := GameState._whole({"action_code": req.action_code, "ok": true, "effects": effects,
@@ -664,7 +669,8 @@ func _prisoner_action(req: ActionRequest, state: GameState, commit: bool) -> Dic
 	if not commit:
 		return outcome
 	for field: String in ["prisoner_batches", "prisoner_events", "prisoner_proposals", "unit_prize_gold",
-			"military_cohorts", "military_rosters", "military_events", "metrics", "world", "world_log", "relationships"]:
+			"military_cohorts", "military_rosters", "military_events", "metrics", "world", "world_log", "relationships",
+			"couriers", "next_courier_id"]:
 		state.set(field, candidate.get(field))
 	for person: String in state.characters:
 		(state.characters[person] as Character).opinion = (candidate.characters[person] as Character).opinion

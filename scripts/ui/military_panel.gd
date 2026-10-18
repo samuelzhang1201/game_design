@@ -12,6 +12,8 @@ extends VBoxContainer
 ## CLOSE (owner 2026-09-27: opened from a regiment's card now the tab is gone).
 signal closed
 signal recruitment_requested
+signal prisoners_requested
+signal battle_reports_requested
 
 var _title: Label
 var _summary: Label
@@ -36,6 +38,8 @@ static func create() -> MilitaryPanel:
 	return (load("res://scenes/panels/military_panel.tscn") as PackedScene).instantiate()
 
 func _ready() -> void:
+	%Prisoners.pressed.connect(func() -> void: prisoners_requested.emit())
+	%BattleReports.pressed.connect(func() -> void: battle_reports_requested.emit())
 	$Recruit.pressed.connect(func() -> void: recruitment_requested.emit())
 	_title = $Head/Title
 	($Head/Close as Button).pressed.connect(func() -> void: closed.emit())
@@ -62,10 +66,22 @@ func refresh() -> void:
 	var counts: Dictionary = {}
 	var total := 0.0
 	var top := 1.0
+	var unknown := 0
+	var dated := false
+	var readings := {}
+	var unknown_arms := {}
 	for u: String in units:
 		counts[u] = 0
 	for row: Dictionary in _regiments_of(mine):
-		var count := ArmySystem.living_count(data, state, String(row["regiment_code"]))
+		var code := String(row["regiment_code"])
+		var reading := BattlePresentation.known_unit(data, state, code)
+		readings[code] = reading
+		if reading.is_empty():
+			unknown += 1
+			unknown_arms[MapObjects.regiment_arm(data, row)] = true
+			continue
+		dated = dated or BattlePresentation.awaits_report(data, state, code)
+		var count := int(reading.fit) + int(reading.wounded)
 		counts[MapObjects.regiment_arm(data, row)] += count
 		total += count
 	for u: String in units:
@@ -74,12 +90,16 @@ func refresh() -> void:
 	for i in units.size():
 		var u: String = units[i]
 		arm_rows.append({"label": _label(u), "value": counts[u], "dimension": u,
-			"color": UiPalette.chart_color("cat_%d" % (i + 1)), "text": RealmDashboard._compact(counts[u])})
+			"color": UiPalette.chart_color("cat_%d" % (i + 1)), "text": "Unknown" if unknown_arms.has(u) else RealmDashboard._compact(counts[u])})
 	_arms.set_rows(arm_rows, top)
+	var total_text := "Unknown" if unknown > 0 else RealmDashboard._compact(total)
+	_summary.text = "%s under arms in %d units%s" % [total_text, _regiments_of(mine).size(),
+		"; latest received readings" if dated or unknown > 0 else ""]
 	var strength: Variant = WorldLedger.value_of(data, state, "military.kingdoms.%s.strength" % mine)
-	_summary.text = "%s under arms in %d units%s" % [RealmDashboard._compact(total),
-		_regiments_of(mine).size(),
-		("; strength %s" % RealmDashboard._compact(float(strength))) if strength != null else ""]
+	if dated or unknown > 0:
+		_summary.text += "; strength awaiting a report"
+	elif strength != null:
+		_summary.text += "; strength " + RealmDashboard._compact(float(strength))
 	# Regiments: a bar for each, its size, and the arm it is mostly made of.
 	var reg_rows: Array = []
 	var reg_top := 1.0
@@ -87,20 +107,19 @@ func refresh() -> void:
 		func(r: Dictionary) -> String: return String(r["regiment_code"]))
 	for code: String in ArmySystem.ordered(data, state, mine_codes):
 		var r := ArmySystem.regiment(data, code, state)
-		# The same arithmetic the map's markers use, so the bar here and the
-		# bar under the marker read the same regiment the same way.
-		var reg_size := ArmySystem.living_count(data, state, code)
+		var reading: Dictionary = readings[code]
+		var reg_size := 0 if reading.is_empty() else int(reading.fit) + int(reading.wounded)
 		var main_arm := MapObjects.regiment_arm(data, r)
 		reg_top = maxf(reg_top, reg_size)
 		reg_rows.append({"label": _short(String(r["label"])), "value": reg_size, "icon": _glyph(main_arm),
 			"color": UiPalette.chart_color("cat_%d" % (units.find(main_arm) + 1)),
-			"text": RealmDashboard._compact(reg_size) + " people" + _equipment_note(data, r, main_arm)})
+			"text": "Unknown; awaiting a report" if reading.is_empty() else RealmDashboard._compact(reg_size) + " people" + (" · observed day %d" % int(reading.day) if BattlePresentation.awaits_report(data, state, code) else _equipment_note(data, r, main_arm))})
 	_regiments.set_rows(reg_rows, reg_top)
 	# Neighbours: only what may be SAID of them (Intel) — their strength in
 	# common talk, and beneath it the newest spy sighting inside the kingdom
 	# (a local count, never the kingdom's strength: Ruling 14); text rows,
 	# since a bar chart can only draw a number and the true total must never appear.
-	# The realm's own total stays exact — it is ours, never fogged.
+	# Own remote losses require a received reading too.
 	for c in _neighbours.get_children():
 		c.free()
 	for code: String in String(data.kingdoms[mine].get("neighbor_codes", "")).split("|", false):
@@ -114,7 +133,7 @@ func refresh() -> void:
 		if seen != "":
 			_neighbours.add_child(_row(seen))
 	_neighbours.add_child(_row("%s — %s (yours)" % [String(data.kingdoms[mine]["label"]),
-		RealmDashboard._compact(total)]))
+		total_text]))
 	# Officers, as the old table listed them.
 	var lines: Array[String] = []
 	var marshal_id := String(state.council.get("marshal", ""))

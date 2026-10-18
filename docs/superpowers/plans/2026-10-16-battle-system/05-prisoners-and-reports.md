@@ -85,16 +85,26 @@ static func settle(repo: DataRepository, state: GameState, proposal_id: String) 
 - [x] 所有赎金/家族关系/放弃收益附reason，并记批次原主与俘获单位功劳；钱怎么分不改变held_by。操作菜单不含押送后方、上缴重要俘虏或点击即复员。
 - [x] 跑disposition/population/recruitment/law_guard/save_load和fast；更新regiments与battle指南，提交 `feat: release ransomed and exchanged captives as civilians`。
 
-## P5.3 战报、俘虏卡与随军表现
+## P5.3 战报与俘虏卡
+
+范围修订：遵守已批准 `2026-10-17-unit-behavior-and-battlefield-design.md` §6。伤兵与俘虏不生成3D模型；投降接受后退出战斗，不制作额外俘虏队伍。人员、供养、携带和实际持有者仍由唯一人员账记录。
 
 **Create:** `scripts/ui/prisoner_panel.gd`、编辑器创建 `scenes/panels/prisoner_panel.tscn`、`scenes/panels/battle_report_panel.tscn`；`tests/ui/test_prisoner_panel.gd`。
 
-**Modify:** `scripts/engine/battle_report.gd`、`scripts/engine/missive_writer.gd`、`scripts/engine/missive_log.gd`、`scripts/engine/battle_presentation.gd`、`scripts/map3d/map3d_units.gd`、`tests/engine/test_battle_report.gd`。
+**Modify:** `scripts/engine/battle_report.gd`、`scripts/engine/missive_writer.gd`、`scripts/engine/missive_log.gd`、`scripts/engine/battle_presentation.gd`、`tests/engine/test_battle_report.gd`。
 
-- [ ] 写test_battle_report：战斗结束快照包含唯一battle_id、地点、天数、参与者/增援、阵型与主要命令/事件、损失、余部、俘虏、装备物资、家族关系及原因；释放后快照hash不变，处置记录独立增加。
-- [ ] 本地立刻可查看，远程只在信使送达后显示许可精度；地图控制权等可见事实可立即更新，但不能顺带泄露精确损失。测试用同一战斗结果改变送达状态，仅允许的字段进入BattlePresentation。
-- [ ] UI展示当前在押与历史被俘为两个明确口径；部队归属显示实际holder，点具名贵族进入原人物卡。赎金/交换显示提案、已接受、已履行，不拿发出提议当已到账。
-- [ ] 实现接受投降后才收武器、看守小队随持有者移动；复用兵人模型与受控人数档位，不一比一显示俘虏数。无人头顶计数、不造押送独立单位；国王不进入投降/死亡动作。
-- [ ] 在实际地图演示投降→随军→赎回→平民→重新征兵；截图俘虏卡/结束战报，核对600人例子及两次释放不重复。跑report/UI/map3d与fast，记录P5证据后提交 `feat: present prisoner custody and immutable battle reports`。
+- [x] 写test_battle_report：战斗结束快照包含唯一battle_id、地点、天数、参与者/增援、阵型与主要命令/事件、损失、余部、俘虏、装备物资、家族关系及原因；释放后快照hash不变，处置记录独立增加。
+- [x] 本地立刻可查看，远程只在信使送达后显示许可精度；地图控制权等可见事实可立即更新，但不能顺带泄露精确损失。测试用同一战斗结果改变送达状态，仅允许的字段进入BattlePresentation。
+- [x] UI展示当前在押与历史被俘为两个明确口径；部队归属显示实际holder，点具名贵族进入原人物卡。赎金/交换显示提案、已接受、已履行，不拿发出提议当已到账。
+- [x] 接受投降后由唯一人员账更新在押、供养与携带负担；伤兵与俘虏不绘制模型，不造额外小队或独立押送单位。国王不进入投降/死亡动作。
+- [x] 在实际地图演示投降→在押账与随持有者承担供养/携带→赎回→平民→重新征兵；截图俘虏卡/结束战报，核对600人例子及两次释放不重复。跑report/UI/map3d与fast，记录P5证据后提交 `feat: present prisoner custody and immutable battle reports`。
 
 **阶段放行：** 战败、投降、赎回、交换、释放、俘获者覆灭均有守恒测试和真实界面演示；国王例外明确；无人员丢失或自动归队。
+
+### P5.3 execution checkpoint — 2026-10-18
+
+- Approved: resume P5.3 after PR76 CI passed on `37abb295`; no P6, no wounded/prisoner models. Foreign ransom decision uses existing valuation and funds; lawful equal-count reciprocal exchange accepts.
+- Integration checkout: `/Users/samuelzhang/.codex/worktrees/p53-delivery/game_design`, detached at that CI HEAD; only P5.3 changes copied from the shared dirty battle-system checkout. Original checkout and others’ edits preserved.
+- Done: initial report/custody/dossier panels; known host-bar/unknown-reading/later-settlement fixes; guide cap and editor-look guard fixed. Initial engine targeted 120/120, presentation/UI 31/31; these precede current follow-up edits. Real-window fixture/crops/variants captured; independent critic pending.
+- Done: independent findings fixed, production foreign decision/physical consent and atomic remote fulfillment implemented; architecture recheck has no unresolved findings. Final UI43/43, map20/20, communications80/80. Real-window selected462x334 layout and original officer/engine-derived33-gold offer verified with separate rendering thread.
+- Done: final fast exit0,240scripts,2522passed/1existing LEDGER pending,1007387assertions; targeted final UI/map/guide and real-window officer/courier fixture passed. Next: owned-only commit/push PR76 and actual new-head CI; no merge or P6.

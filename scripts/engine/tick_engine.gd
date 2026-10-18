@@ -271,7 +271,7 @@ func _route_battle_reports(state: GameState, fights: Array) -> void:
 		var at := Vector2i(int(place.get("place_x_m", 0)), int(place.get("place_y_m", 0)))
 		var local := BattleSystem._within(KingSystem.position(state), at, int(data.bal("king_command_radius_m")))
 		if local:
-			MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, events))
+			MissiveLog.add(data, state, MissiveLog.battle_payload(MissiveWriter.battle_report(data, state, events), report))
 			BattleEvents.receive_report(state, report)
 		else:
 			place["report"] = report

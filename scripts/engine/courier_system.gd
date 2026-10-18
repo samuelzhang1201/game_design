@@ -286,7 +286,7 @@ static func joinable(state: GameState, kind: String, code: String, order: Dictio
 	var supply: Dictionary = SupplyLines.line(state, code)
 	var pending: Dictionary = supply.get("pending", {})
 	latest_id = maxi(latest_id, maxi(int(supply.get("order_id", 0)), int(pending.get("order_id", 0))))
-	if newest.is_empty() or int(newest["id"]) < latest_id or not (newest.get("recipient_queue", []) as Array).is_empty() or String(newest.get("kind", "")) != kind or _is_spy(newest) \
+	if newest.is_empty() or PrisonerCommunications.is_letter(newest) or int(newest["id"]) < latest_id or not (newest.get("recipient_queue", []) as Array).is_empty() or String(newest.get("kind", "")) != kind or _is_spy(newest) \
 			or int(newest.get("days", 0)) != 0 or int(newest.get("issued", -1)) != state.absolute_day() \
 			or not order_with(newest, [LawSystem.ACTION]).is_empty() \
 			or String(first_order(newest).get("to_town", "")) != "":
@@ -416,6 +416,8 @@ static func ride_day(repo: DataRepository, state: GameState) -> Array:
 
 ## One courier's day; false when he is done (delivered, lost, or out of time).
 static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: int, events: Array) -> bool:
+	if PrisonerCommunications.is_letter(c):
+		return PrisonerCommunications.ride(repo, state, c, today, events)
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code, state)
 	if not state.regiments.has(code) and orders_of(c).any(func(order: Dictionary) -> bool: return order.has("battle_order_id")):
@@ -518,7 +520,7 @@ static func place_bound(c: Dictionary) -> bool:
 ## Whether a courier rides for a unit, and so is lost when it is gone: every
 ## courier but a spy and a decree to a place.
 static func _chases(c: Dictionary) -> bool:
-	return not _is_spy(c) and not _is_king_report(c) and not place_bound(c)
+	return not PrisonerCommunications.is_letter(c) and not _is_spy(c) and not _is_king_report(c) and not place_bound(c)
 
 
 static func _is_king_report(c: Dictionary) -> bool:
@@ -556,7 +558,10 @@ static func _ride_copy(repo: DataRepository, state: GameState, c: Dictionary, be
 			or ArmySystem.state_of(repo, state, code).is_empty()):
 		return {}
 	var copy: Dictionary = c.duplicate(true)
-	if _is_king_report(c):
+	if PrisonerCommunications.is_letter(c):
+		if PrisonerCommunications.prepare(repo, state, copy) != "":
+			return {}
+	elif _is_king_report(c):
 		_reaim_king_report(repo, state, copy)
 	elif not _fixed_point(c):
 		_reaim(repo, state, copy, reg)
@@ -721,7 +726,7 @@ static func _deliver(repo: DataRepository, state: GameState, c: Dictionary) -> D
 		var report := MissiveLog.make("king_report", "credible", state.absolute_day(),
 			MissiveLog.subject("king", "you", -1, ArmySystem.metres_to_pack(repo, KingSystem.position(state))),
 			title, facts)
-		MissiveLog.add(repo, state, report)
+		MissiveLog.add(repo, state, MissiveLog.battle_payload(report, report_data))
 		return _event("delivered", c)
 	# Town warrants are one physical arrival, with independent newest-order checks.
 	if c.has("delivery_targets") and String(first_order(c).get("to_town", "")) != "":

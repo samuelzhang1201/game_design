@@ -153,3 +153,9 @@ static func mark_read(state: GameState, id: int) -> void:
 	var m := find(state, id)
 	if not m.is_empty():
 		m["read"] = true
+
+## Only already-filtered report data is attached to a local or delivered missive.
+static func battle_payload(letter: Dictionary, payload: Dictionary) -> Dictionary:
+	for key: String in ["battle_id", "details", "settlements"]:
+		if payload.has(key): letter[key] = payload[key].duplicate(true) if payload[key] is Dictionary or payload[key] is Array else payload[key]
+	return letter

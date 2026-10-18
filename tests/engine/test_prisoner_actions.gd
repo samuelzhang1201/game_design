@@ -120,7 +120,7 @@ func test_response_uses_player_authority_and_is_paid_once() -> void:
 	assert_eq(state.to_dict(), before)
 
 func test_settlement_requires_fee_before_ransom_income() -> void:
-	state.metrics.treasury = 1
+	state.metrics.treasury = 1 + CourierSystem.fee_gold(repo, CourierSystem.ORDINARY)
 	var proposal := _proposal()
 	assert_true(_act("PRISONER_PROPOSE", proposal).get("ok", false))
 	assert_false(PrisonerDisposition.respond(repo, state, proposal.id, buyer, true).has("error"))

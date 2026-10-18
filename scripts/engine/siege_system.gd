@@ -193,7 +193,7 @@ static func starving(repo: DataRepository, state: GameState, town: String) -> bo
 static func news(events: Array) -> Array:
 	return events.filter(func(e: Dictionary) -> bool:
 		var k := String(e.get("kind", ""))
-		return (k.begins_with("siege_") and k != "siege_day") or k.begins_with("defeat_"))
+		return k == "end" or (k.begins_with("siege_") and k != "siege_day") or k.begins_with("defeat_"))
 
 
 ## The sieges' day, run once a day right AFTER BattleSystem.settle_day (an
@@ -280,7 +280,11 @@ static func capture(repo: DataRepository, state: GameState, host_code: String, e
 	# the assault under way ends with the town
 	for bt: Dictionary in state.battles.duplicate():
 		if String(bt["town"]) == town and _holds_hosts(state, bt, hosts):
-			BattleSystem.call_off(state, int(bt["id"]), repo)
+			var winner := ""
+			for side: String in BattleSystem.SIDES:
+				for unit: String in bt.get(side, []):
+					if ArmySystem.realm_of(repo, unit, state) == _kingdom_of(repo, state, host_code): winner = side
+			events.append(BattleSystem.call_off(state, int(bt["id"]), repo, winner))
 	var garrison := EnemyAi.garrison_of(repo, state, town)
 	var house := _house_of(repo, _kingdom_of(repo, state, host_code))
 	var occupied: Dictionary = {}

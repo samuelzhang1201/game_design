@@ -389,7 +389,27 @@ static func battle_report(repo: DataRepository, state: GameState, events: Array)
 ## The courier carries the authored battle facts, not a second empty report.
 static func king_report_payload(repo: DataRepository, state: GameState, events: Array) -> Dictionary:
 	var letter := battle_report(repo, state, events)
-	return {"facts": letter.get("facts", []).duplicate(true), "title": String(letter.get("title", "Battle report"))}
+	var payload := {"facts": letter.get("facts", []).duplicate(true), "title": String(letter.get("title", "Battle report")), "details": {}, "settlements": [], "custody": [], "unit_readings": {}}
+	var realm := repo.resolve_realm("player_realm")
+	for event: Dictionary in events:
+		var id := int(event.get("battle_id", -1))
+		if id < 0: continue
+		if event.get("kind", "") == "end" and state.battle_records.has(str(id)):
+			payload.details = BattleReport.for_realm(repo, state.battle_records[str(id)], realm)
+		if event.get("kind", "") == "raid_spoils":
+			payload.settlements.append({"battle_id": id, "kind": "spoils", "strategic": int(event.get("spoils", 0)), "reason": "Battlefield spoils received at " + String(event.get("place", "the field"))})
+		var active := BattleSystem.battle_by_id(state, id)
+		var codes := {}
+		var participants: Array = active.unit_entries.values() if active.has("unit_entries") else state.battle_records.get(str(id), {}).get("participants", [])
+		for row: Dictionary in participants:
+			codes[String(row.get("code", ""))] = true
+		for code: String in codes:
+			if ArmySystem.realm_of(repo, code, state) != realm: continue
+			var unit := ArmySystem.state_of(repo, state, code)
+			payload.unit_readings[code] = {"fit": MilitaryRoster.fit(state, code), "wounded": MilitaryRoster.living(state, code) - MilitaryRoster.fit(state, code),
+				"morale": int(unit.get("morale", 0)), "supplies": int(unit.get("supplies", 0)), "day": state.absolute_day()}
+		payload.custody = BattlePresentation.custody_observations(repo, state, realm, id)
+	return payload
 
 
 ## One line of a fall's cost (DefeatSystem.on_town_lost): templates.csv

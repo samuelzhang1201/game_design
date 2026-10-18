@@ -942,7 +942,9 @@ static func army_card(repo: DataRepository, code: String, state: GameState = nul
 	# reads the honest headcount word instead, everywhere the total would
 	# otherwise show, not just the per-arm muster below.
 	var reg_known := Intel.level(repo, state, {"kind": "regiment", "code": code})
-	var total_text := str(total) if reg_known == "full" else Intel.magnitude(repo, total)
+	var pending_report := BattlePresentation.awaits_report(repo, state, code)
+	if pending_report: reg_known = "general"
+	var total_text := "Awaiting field report" if pending_report else str(total) if reg_known == "full" else Intel.magnitude(repo, total)
 	if reg_known == "full":
 		for unit: String in repo.world_table("military", "unit_types"):
 			var n := int(float(r.get(unit, 0)))

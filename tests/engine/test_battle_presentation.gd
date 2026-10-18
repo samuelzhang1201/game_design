@@ -50,7 +50,7 @@ func test_projection_is_detached_and_does_not_mutate_state_or_rng() -> void:
 
 func test_other_realm_receives_no_crown_commands() -> void:
 	if _view().is_empty(): return
-	assert_eq(presentation.snapshot(repo, state, repo.resolve_realm("raider_realm")), {"battles": [], "decision": {}, "enemies": [], "reports": []})
+	assert_eq(presentation.snapshot(repo, state, repo.resolve_realm("raider_realm")), {"battles": [], "decision": {}, "enemies": [], "reports": [], "detailed_reports": [], "prisoners": {}})
 
 func test_orders_explain_reservation_cooldown_and_law() -> void:
 	var battle: Dictionary = state.battles[0]
@@ -93,3 +93,35 @@ func test_map_projection_obeys_our_delivered_law_and_omits_hidden_armies() -> vo
 	state.foes[enemy]["order"] = "secret"
 	state.foes[enemy]["morale"] = 1
 	assert_eq(presentation.map_snapshot(repo, state, repo.resolve_realm("player_realm")), before)
+
+func test_remote_missing_reading_is_unknown_and_received_reading_is_frozen() -> void:
+	state.king_state = {"x_m": 10000000, "y_m": 10000000}
+	var code := String(state.battles[0].def[0])
+	var unit: Dictionary = _view().battles[0].units[0]
+	assert_false(unit.get("known", true))
+	assert_false(unit.has("fit"), "Unknown is not a fabricated zero")
+	state.king_state.battle_reports = [{"unit_readings": {code: {"fit": 321, "wounded": 12, "morale": 70, "supplies": 89, "day": 8}}}]
+	unit = _view().battles[0].units[0]
+	assert_true(unit.get("known", false))
+	assert_eq(unit.fit, 321)
+	assert_eq(unit.observed_day, 8)
+
+func test_later_received_settlements_and_fulfilled_receipts_join_by_battle_without_rewriting_details() -> void:
+	var realm := repo.resolve_realm("player_realm")
+	var frozen := {"battle_id": 7, "personnel": {"own": {"captured": 60, "released": 0}}, "prisoners": [{"id": "batch"}]}
+	var spoils := {"battle_id": 7, "kind": "spoils", "strategic": 20, "reason": "Stores arrived"}
+	state.king_state.battle_reports = [{"battle_id": 7, "details": frozen, "received_day": 8},
+		{"battle_id": 7, "settlements": [spoils], "received_day": 9},
+		{"battle_id": 7, "settlements": [spoils], "received_day": 9}]
+	state.prisoner_proposals = {"paid": {"consents": {}, "status": "fulfilled", "request": {"id":"paid", "kind": "ransom", "reason":"Agreed ransom"}, "frozen": {"required_parties": [realm]},
+		"result": {"id": "paid", "status": "fulfilled", "released": 10, "reason": "Ransom paid", "civilians": [{"batch_id": "batch", "count": 10}]}},
+		"waiting": {"consents": {}, "request": {"id":"waiting", "kind": "ransom", "reason":"Pending ransom"}, "status": "accepted", "frozen": {"required_parties": [realm]}, "result": {"reason": "Not fulfilled"}}}
+	var before := SaveLoad.state_hash(state)
+	var reports: Array = _view().detailed_reports
+	assert_eq(reports.size(), 1)
+	assert_eq(reports[0].settlements.size(), 2)
+	assert_eq(reports[0].personnel, frozen.personnel)
+	assert_eq(reports[0].settlements[0], spoils)
+	assert_eq(reports[0].settlements[1].released, 10)
+	reports[0].settlements[0].strategic = 0
+	assert_eq(SaveLoad.state_hash(state), before)

@@ -170,7 +170,7 @@ static func settle_day(repo: DataRepository, state: GameState, battle_events: Ar
 			var place := BattleSystem.place_label(repo, state, b)
 			var got := spoils(repo, state, h, repo.resolve_realm("player_realm"), place)
 			if got > 0:
-				events.append({"kind": "raid_spoils", "host": h, "day": today, "spoils": got, "plunder": plunder,
+				events.append({"kind": "raid_spoils", "battle_id": int(b.get("battle_id", -1)), "host": h, "day": today, "spoils": got, "plunder": plunder,
 					"place": place, "place_x_m": int(b["place_x_m"]), "place_y_m": int(b["place_y_m"])})
 		if String(mind["mode"]) != RAID:
 			continue
