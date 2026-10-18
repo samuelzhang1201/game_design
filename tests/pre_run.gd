@@ -13,6 +13,9 @@ func run() -> void:
 	Game.data.balance["map3d_default"] = 0.0
 	# every Game.start_campaign copies a cached campaign of the same data
 	Game.campaign_maker = SuiteData.campaign
+	# Reuse snapshots within a script without accumulating every seed/data pair.
+	if not gut.end_script.is_connected(SuiteData.clear_campaigns):
+		gut.end_script.connect(SuiteData.clear_campaigns)
 	# the suite runs at high, today's look (Ruling 7)
 	Map3DQuality.forced = "high"
 	# never a frame-rate cap: it would slow every wait in a headless run

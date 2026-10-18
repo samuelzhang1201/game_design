@@ -9,8 +9,8 @@ extends RefCounted
 ## `repo()` parses once per run and gives every caller its OWN deep copy
 ## (~13 ms), so a test may change any table it likes without reaching another
 ## test. `campaign(repo, seed)` keys a pristine campaign by the repository's
-## CONTENT (one recursive hash, ~3 ms) and the seed, and hands out a copy made
-## through the save format (~2 ms) — the same round trip the determinism
+## CONTENT (one recursive hash, ~3 ms) and the seed within each test script.
+## Copies go through the save format (~2 ms) — the same round trip the determinism
 ## tests hold bit-exact — so a test that tuned its repository first gets a
 ## campaign of that repository, never one of the pristine data.
 
@@ -79,6 +79,11 @@ static func campaign(data: DataRepository, seed_value: int) -> GameState:
 	if not _campaigns.has(key):
 		_campaigns[key] = GameState.new_campaign(data, seed_value).to_dict()
 	return GameState.from_dict(_campaigns[key])
+
+
+## GUT retains finished test scripts; their campaign snapshots need not stay too.
+static func clear_campaigns() -> void:
+	_campaigns.clear()
 
 
 ## One hash over every table the repository holds.
