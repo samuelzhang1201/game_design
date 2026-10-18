@@ -242,27 +242,6 @@ func test_minister_beats_skip_when_minister_is_elsewhere() -> void:
 	assert_eq(String(scene.current_beat()["kind"]), "summary")
 	assert_string_contains(scene.dialogue_text(), "You are elsewhere")
 
-func test_absent_addressee_gets_herald_note_not_api_reply() -> void:
-	Game.start_campaign(42)
-	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
-	fake.canned_ok = true
-	fake.canned_text = JSON.stringify({"actions": [],
-		"court_reaction": {"addressed": ["char_lord_malvern"], "tone": "neutral"}})
-	add_child_autofree(fake)
-	Game.use_client_for_tests(fake)
-	Game.next_tick()
-	# At the Council Chamber, Malvern (in his study) cannot answer a greeting.
-	assert_eq(Game.state.current_location, "council_chamber")
-	_got = {}
-	Game.submit_free_text("greetings, Lord Malvern", func(res): _got = res)
-	await wait_process_frames(4)
-	assert_true(_got.has("reply"))
-	assert_eq(String(_got["reply"]["speaker"]), "Herald",
-		"the absent cannot converse — a herald note instead")
-	assert_true(bool(_got["reply"]["degraded"]), "no API call for the absent")
-
-var _got: Dictionary = {}
-
 ## --- Talk-to-whom targeting (user request 2026-08-31) ---
 
 func _conversation_at(location: String) -> ConversationScene:
@@ -306,90 +285,6 @@ func test_moving_location_clears_the_selection() -> void:
 	await wait_process_frames(2)
 	assert_eq(scene.selected_ids().size(), 0,
 		"a selection cannot survive walking away from the people in it")
-
-func test_everyone_addressed_remembers_but_only_one_answers() -> void:
-	# The point of the feature: you told the room, so the room remembers —
-	# while cost discipline keeps it to a single reply.
-	var scene := await _conversation_at("council_chamber")
-	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
-	fake.canned_ok = true
-	fake.canned_text = JSON.stringify({"narrative": "Full they are, my lord.", "impacts": {
-		"actions": [], "world": [], "court_reaction": {"addressed": [], "tone": "neutral"}}})
-	add_child_autofree(fake)
-	Game.use_client_for_tests(fake)
-	scene.free_text_field().text_submitted.emit("the granaries are full")
-	await wait_process_frames(4)
-	var heard := 0
-	for id in LocationSystem.occupants(Game.data, Game.state, "council_chamber"):
-		var entries := AgentMemory.exchanges_for(Game.state, String(id))
-		if entries.size() >= 1 and String(entries[0]["text"]) == "the granaries are full":
-			heard += 1
-	assert_eq(heard, 5, "every minister present remembers being told")
-	# Review finding 2026-09-01: the answer is spoken in the same room, so
-	# the room remembers it too — speaker recorded by character id.
-	var chancellor_log := AgentMemory.exchanges_for(Game.state, "char_chancellor")
-	assert_eq(chancellor_log.size(), 2, "the answerer also remembers his own reply")
-	assert_eq(String(chancellor_log[1]["speaker"]), "char_chancellor")
-	var marshal_log := AgentMemory.exchanges_for(Game.state, "char_marshal")
-	assert_eq(marshal_log.size(), 2, "bystanders remember the reply they overheard")
-	assert_eq(String(marshal_log[1]["speaker"]), "char_chancellor")
-	assert_eq(AgentMemory.exchanges_for(Game.state, "char_lord_malvern").size(), 0,
-		"Malvern is in his study and hears nothing")
-
-func test_selected_targets_alone_remember() -> void:
-	var scene := await _conversation_at("council_chamber")
-	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
-	fake.canned_ok = true
-	fake.canned_text = JSON.stringify({"narrative": "I am listening, my lord.", "impacts": {
-		"actions": [], "world": [], "court_reaction": {"addressed": [], "tone": "neutral"}}})
-	add_child_autofree(fake)
-	Game.use_client_for_tests(fake)
-	scene.find_child("Occupant_char_spymaster", true, false).pressed.emit()
-	await wait_process_frames(1)
-	scene.free_text_field().text_submitted.emit("a word in your ear")
-	await wait_process_frames(4)
-	var entries := AgentMemory.exchanges_for(Game.state, "char_spymaster")
-	assert_eq(entries.size(), 2,
-		"the one you singled out remembers the word AND their own reply")
-	assert_eq(String(entries[0]["text"]), "a word in your ear")
-	assert_eq(entries[0]["audience"], ["char_spymaster"], "recorded as a private word")
-	assert_eq(String(entries[1]["speaker"]), "char_spymaster",
-		"the reply is remembered under the speaker's own id (2026-09-01)")
-	assert_eq(AgentMemory.exchanges_for(Game.state, "char_chancellor").size(), 0,
-		"the rest of the room does not overhear a targeted word")
-
-func test_chat_after_event_resolution_shows_reply() -> void:
-	# User bug 2026-08-30 ("why I still cannot see response?"): resolve an
-	# event, then seek someone out and greet them — the old blanket
-	# _resolved_event guard silently swallowed the reply callback.
-	Game.start_campaign(42)
-	var report := Game.next_tick()
-	var fake := preload("res://tests/llm/test_voicer_fallback.gd").FakeClient.new()
-	fake.canned_ok = true
-	fake.canned_text = JSON.stringify({"narrative": "Greetings, my lord.",
-		"impacts": {"actions": []}})
-	add_child_autofree(fake)
-	Game.use_client_for_tests(fake)
-	var scene := _stage()
-	var ev := {"event_id": "ev_01", "title_key": "event_ev_01", "voice": "template",
-		"choices": [{"choice_id": "accept", "label": "Accept"}]}
-	Game.state.pending_event = ev.duplicate(true)
-	scene.start([{"kind": "event", "portrait_id": "round_table",
-		"speaker": "The Council", "event": ev},
-		{"kind": "summary", "portrait_id": "round_table", "speaker": "The Council"}], report)
-	await wait_process_frames(3)
-	scene.reply_buttons()[0].pressed.emit()  # resolve the event
-	await wait_process_frames(2)
-	# Still on the same (resolved) beat: visit the Chancellor and speak.
-	scene.find_child("Occupant_char_chancellor", true, false).pressed.emit()
-	await wait_process_frames(1)
-	scene.free_text_field().text_submitted.emit("greetings")
-	await wait_process_frames(4)
-	assert_string_contains(scene.said_text(), "You: greetings")
-	# The window names him on its plate, so his reply stands there without
-	# his name before it (2026-09-28): it is the words after the player's.
-	assert_ne(scene.speech_text().get_slice("greetings", 1).strip_edges(), "",
-		"the visited minister's reply is shown, not swallowed")
 
 func test_transcript_names_are_colored_per_speaker() -> void:
 	Game.start_campaign(42)

@@ -15,11 +15,6 @@
       "reason": "Reserved for tuning/outcome sweeps; single-formula hand-computed assertions remain functional.",
       "patterns": ["tests/balance/test_*.gd"]
     },
-    "llm": {
-      "opt_in": true,
-      "reason": "Dedicated model plumbing suites are excluded from ordinary CI pending HARNESS.3 removal.",
-      "patterns": ["tests/llm/test_*.gd"]
-    },
     "engine-military": {
       "reason": "Army, battle, movement, supply, conduct and field-order functional contracts, including formula and local save tests.",
       "patterns": ["tests/engine/test_army_*.gd", "tests/engine/test_battle_*.gd", "tests/engine/test_camp_*.gd", "tests/engine/test_conduct_*.gd", "tests/engine/test_courier_*.gd", "tests/engine/test_march_*.gd", "tests/engine/test_military_*.gd", "tests/engine/test_prisoner_*.gd", "tests/engine/test_supply_*.gd", "tests/engine/test_war_*.gd", "tests/engine/test_enemy_*.gd", "tests/engine/test_foe_*.gd", "tests/engine/test_siege*.gd", "tests/engine/test_sighting*.gd", "tests/engine/test_raid*.gd", "tests/engine/test_forage.gd", "tests/engine/test_desertion.gd", "tests/engine/test_defeat.gd", "tests/engine/test_recruitment.gd", "tests/engine/test_scouting.gd", "tests/engine/test_roster_guard.gd"]

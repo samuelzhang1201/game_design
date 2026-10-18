@@ -1,6 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
-## RelationshipGraph: loading, shocks, healing drift, LLM serialization,
+## RelationshipGraph: loading, shocks, healing drift, display text,
 ## event op, save round-trip. Hand-computed expectations per convention.
 
 var data: DataRepository
@@ -89,15 +89,6 @@ func test_event_rel_op_applies_shock() -> void:
 	assert_eq(float(e["sentiment"]), -60.0)
 	assert_eq(String(e["log"][e["log"].size() - 1]["reason"]),
 		"the duke storms from the hall")
-
-func test_persona_context_carries_sheet_and_relations() -> void:
-	var p := PromptBuilder.persona_context("char_duke_tomas", state, data)
-	assert_string_contains(p, "Duke Tomas Valorin")
-	assert_string_contains(p, "House Valorin")
-	assert_string_contains(p, "age 44")
-	assert_string_contains(p, "ambition")
-	assert_string_contains(p, "Relationships:")
-	assert_string_contains(p, "Nora")
 
 func test_relationships_survive_save_round_trip() -> void:
 	RelationshipGraph.adjust(state, "you", "char_queen", -25.0, "quarrel", 5)
