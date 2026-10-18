@@ -3,17 +3,28 @@
     "command": "./run_tests.sh --fast",
     "exit_code": 0,
     "scripts": 211,
-    "tests": 2204,
-    "passing": 2203,
+    "tests": 2205,
+    "passing": 2204,
     "pending_existing": 1,
-    "assertions": 840553,
-    "seconds": 1766.621,
+    "assertions": 840762,
+    "seconds": 2105.092,
     "ignored_scripts": 0,
     "unexpected_script_errors": 0,
-    "raw_log_sha256": "b91af28c6276363974ca6136abd82fbfff7f6928689d02840d38bf839101472c",
+    "raw_log_sha256": "ce9dad1df3ab6fa9513d1a369ed882a1d09bbeb91c75485b785574f0ab8dae20",
     "committed_log_format": "ANSI stripped; trailing whitespace trimmed"
   },
-  "source_manifest_sha256": "64474c4053e96faa3e562ee9b7d30d15c8c89529d8703a85b0d6b280ada69585",
-  "ci": "pending",
-  "acceptance": "blocked on unresolved legacy train provenance policy"
+  "origin_targeted": {
+    "scripts": 3,
+    "tests": 22,
+    "assertions": 1176,
+    "exit_code": 0
+  },
+  "origin_load_probe": {
+    "checks": 28,
+    "passed": true,
+    "saved_trains": 7
+  },
+  "source_manifest_sha256": "36f3fdeb4c1c30d98e84af392f01074c06e9a61b7aa83ad89f1a34edb7f46d3e",
+  "ci": "pending on upcoming source commit; previous b1ad0427 passed all5 run39067964787",
+  "acceptance": "origin estimate explicitly approved and implemented; local/independent verification complete, exact-head CI required"
 }

@@ -1,4 +1,4 @@
-# P2.1 acceptance — working, not accepted
+# P2.1 acceptance — local complete, final CI pending
 
 Personnel is recorded once in exclusive cohorts; equipment counts retain crew conversion. Death debits the recorded source population, recovery/capture/release preserve conservation, named commanders occupy a person and cannot command two units. Saved source parts and stable split aliases preserve typed orders, pending supplies and resumable day transactions.
 
@@ -23,9 +23,9 @@ The weak case still requires daily formula correctness, victory before retreat, 
 - Real-window realm card exposed an additional reader gap:16k raw equipment versus24k live personnel. An initial final-fast rerun was stopped after50seconds (not accepted). Shared ArmySystem.personnel_by_arm now provides both card and full host counts, with direct cohorts, legacy fallback and stable mixed-arm attribution. The card preserves equipment-equivalent chart strength with personnel×power/crew. Hand fixture153=31infantry+30cavalry+80fleet+12artillery also covers foreign roster-only units and read purity; GUI casualty test700crew→689 passes. Targeted3scripts23tests409asserts exit0; shutdown resource/RID diagnostics remain. Independent bounded Sol review found no correctness finding.
 - Repair targeted batch:9scripts126tests124pass1pending1lawguardfailure (replacement initially missed indentation). That missed caller was corrected and the law/migration rerun above passed. Final frozen --fast is recorded below; PR CI is pending. Local full suite intentionally delegated to CI.
 
-## Unresolved acceptance
+## Legacy origin migration
 
-Legacy pooled royal trains may have no original source_parts. The implementation fails closed and preserves the save/force rather than inventing an origin. A human ruling on an explicitly documented saved-garrison estimate is pending. This limitation prevents claiming complete P2.1 migration acceptance.
+The missing-origin decision is resolved: a legacy pooled royal train without source_parts uses its saved garrison province as an explicitly estimated origin. Saved source parts carry origin_basis/origin_reason; historical initialization records the estimate before any pending-day reorganization, and the organization event explains it. Recorded provenance stays authoritative; invalid saved provinces still conflict. Population occupancy and losses use the same source ledger without replaying costs or old deaths. Independent review and final strict fast of this delta passed; new exact-head CI remains the final gate.
 
 Known local startup gdai descriptor messages, GUT loader Nil-to-bool diagnostic and shutdown/orphan warnings remain; no leak-free claim.
 
@@ -35,4 +35,14 @@ The next complete fast run had211scripts2204tests2203passing1existingpending8405
 
 ## Current delivery state
 
-Frozen source hashes match all107 source/test/config inputs in the staged tree. Final strict fast passed as recorded above. Independent code and real-window numeric/click review completed. PR/CI pending; legacy train provenance policy remains unresolved, so this is not full P2.1 acceptance.
+The original P2.1 source head b1ad04271a4f94bd5b991f0608822e08c1acb383 passed final strict fast and all five CI shards (run39067964787). The approved origin-policy delta now requires fresh final fast and exact-head CI; do not reuse the old green as new-head evidence. Independent read-only Astra design and Sol delta review completed with no actionable issue. No new visual change is introduced.
+
+## Approved legacy origin regression
+
+Focused final migration/population/real blocked-day resume:3 scripts,22 tests,1176 assertions, exit0. Hand2guns×8=16 with2saved dead+3wounded+1released+1captured leaves9fit; no repeated population debit, fee or stock loss. Both ordinary and pending-day paths preserve JSON state and idempotency. Invalid saved garrison remains a conflict, authored multi-province parts remain authoritative.
+
+Actual version6 campaign load probe covers7 pooled trains with source_parts removed:28 checks pass, including original save bytes unchanged, explicit estimated provenance, successful load and identical hash after repeat load. See origin-load-probe.json. This probe supersedes the earlier fail-closed behavior evidence for valid saved garrisons. The focused runtime retains only the known GUT loader line35 diagnostic and existing orphan warnings; no new SCRIPT ERROR/ignored script.
+
+## Final approved-origin code state
+
+The frozen107 source/test/config hashes match the final working inputs. Corrected final `./run_tests.sh --fast` exits0:211scripts2205tests2204passing1existingdensitypending840762assertions2105.092s; strict script-count/error gates pass. The weak and strong campaign-save hashes remain716c4d630bbd/867210634e8f, identical to the previous green source head. Source delta was independently reviewed and not changed during this run. See updated fast-final.log, source-manifest.json and verification.json. Full CI must pass all five jobs on the new PR head before merge.

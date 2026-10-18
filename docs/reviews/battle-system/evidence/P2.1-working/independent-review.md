@@ -11,3 +11,7 @@ Fresh Sol visual reviewers inspected whole real-window images and crops. Host nu
 Reviewers did not rerun tests or modify source. Integration owner owns the frozen fast and PR CI checks. Legacy pooled train provenance remains an unresolved acceptance decision.
 
 The integration owner subsequently caught an unseeded RNG in the new serialization-purity test through the strict full-fast SCRIPT ERROR gate. The test fixture was corrected and its strict targeted run passed; assertion-only earlier results were not treated as a passing fast run.
+
+## Approved legacy-origin delta
+
+Astra read-only design review confirmed the narrowly approved saved-garrison estimate can reuse ArmySplit.source_part, with explicit provenance in saved parts and explanations in bootstrap/organization events. The existing version/token and safe-boundary rules remain unchanged. Sol read-only independent review of the final production/test/guide/plan delta found no actionable defect. Final fast and exact-head CI remain the integration owner's verification gates. No source owner or pending implementation task remains with either reviewer.

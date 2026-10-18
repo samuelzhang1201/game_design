@@ -154,22 +154,65 @@ func test_invalid_crew_and_small_remnant_do_not_drop_equipment() -> void:
 	assert_eq(MilitaryRoster.count(s, "saved", "wounded"), 1)
 	assert_eq(s.army_roster.saved.cavalry, "1")
 
-func test_unknown_train_provenance_preserves_force_and_bootstraps_other_units() -> void:
-	var subject := _subject()
-	if subject == null: return
+func test_legacy_train_estimates_saved_garrison_once_and_records_it() -> void:
+	for pending: bool in [false, true]:
+		var f := _fixture()
+		var s: GameState = f.state
+		f.repo.world_table("military", "unit_types").artillery.crew = "8"
+		var train: Dictionary = s.army_roster.saved.duplicate(true)
+		train.regiment_code = "old_train"
+		train.cavalry = "0"
+		train.artillery = "2"
+		s.army_roster.old_train = train
+		s.regiments.old_train = {"dead": 2, "wounded": 3, "deserted": 1, "captured_current": 1, "supplies": 17}
+		s.metrics.treasury = 87
+		var world := s.world.duplicate(true)
+		if pending: s.day_resolution = {"phase": "battles", "cursor": 1}
+		var result := MilitaryMigration.ensure(f.repo, s)
+		assert_false(result.has("error"))
+		if result.has("error"): return
+		if pending: assert_eq(s.day_resolution, {"phase": "battles", "cursor": 1})
+		assert_eq(MilitaryRoster.fit(s, "old_train"), 9)
+		for pair: Array in [["dead", 2], ["wounded", 3], ["released", 1], ["captured_current", 1]]:
+			assert_eq(MilitaryRoster.count(s, "old_train", pair[0]), pair[1])
+		var event: Dictionary = s.military_events["military:initial:old_train"]
+		assert_true(String(event.reason).contains("estimated"))
+		assert_true(String(event.reason).contains(f.province))
+		var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+		assert_false(MilitaryMigration.ensure(f.repo, restored).has("error"))
+		if pending:
+			s.day_resolution = {}
+			restored.day_resolution = {}
+			assert_false(MilitaryMigration.ensure(f.repo, s).has("error"))
+			assert_false(MilitaryMigration.ensure(f.repo, restored).has("error"))
+		var part: Dictionary = s.army_roster.old_train.source_parts[0]
+		assert_eq(part.province_code, f.province)
+		assert_eq(part.origin_basis, "estimated_saved_garrison")
+		assert_true(String(part.origin_reason).contains(f.province))
+		assert_true(String(s.military_events["military:organization:1"].reason).contains("estimated"))
+		assert_eq(part.equipment_count, 2)
+		assert_eq(part.crew_per_element, 8)
+		assert_eq(s.army_roster.old_train.artillery, "2")
+		assert_eq(s.regiments.old_train.supplies, 17)
+		assert_eq(s.metrics.treasury, 87)
+		assert_eq(s.world, world, "saved deaths and estimated service do not debit population again")
+		assert_eq(s.military_events["military:initial:old_train"], event)
+		for key: String in s.to_dict(): assert_eq(restored.to_dict()[key], s.to_dict()[key], key)
+		var snapshot := s.to_dict()
+		assert_false(MilitaryMigration.ensure(f.repo, s).has("error"))
+		assert_eq(s.to_dict(), snapshot)
+
+func test_legacy_train_without_valid_saved_garrison_remains_a_conflict() -> void:
 	var f := _fixture()
 	var s: GameState = f.state
-	var train: Dictionary = s.army_roster.saved.duplicate(true)
-	train.regiment_code = "old_train"
-	train.cavalry = "0"
-	train.artillery = "2"
-	s.army_roster.old_train = train
+	s.army_roster.saved.cavalry = "0"
+	s.army_roster.saved.artillery = "2"
+	s.army_roster.saved.province_code = ""
 	var before := s.army_roster.duplicate(true)
-	assert_true(subject.ensure(f.repo, s).has("error"))
+	assert_true(MilitaryMigration.ensure(f.repo, s).has("error"))
 	assert_true(s.military_migration_pending)
 	assert_eq(s.army_roster, before)
-	assert_eq(MilitaryRoster.fit(s, "saved"), 365)
-	assert_false(s.military_rosters.has("old_train"))
+	assert_true(s.military_cohorts.is_empty())
 
 func test_authored_multi_source_train_never_moves_all_crew_to_capital() -> void:
 	var subject := _subject()
@@ -192,6 +235,9 @@ func test_authored_multi_source_train_never_moves_all_crew_to_capital() -> void:
 	assert_eq(MilitaryPopulation.occupied(s, f.province), 8)
 	assert_eq(MilitaryPopulation.occupied(s, other), 8)
 	assert_eq(s.army_roster.saved.artillery, "2")
+	assert_false(String(s.military_events["military:initial:saved"].reason).contains("estimated"))
+	for part: Dictionary in s.army_roster.saved.source_parts:
+		assert_false(part.has("origin_basis"), "recorded source provenance stays recorded")
 
 func test_new_campaign_all_player_and_raider_units_have_one_counted_commander() -> void:
 	var subject := _subject()

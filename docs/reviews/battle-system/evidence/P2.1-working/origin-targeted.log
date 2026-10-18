@@ -1,0 +1,81 @@
+ERROR: Error loading GDExtension configuration file: 'res://addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension'.
+   at: parse_gdextension_file (core/extension/gdextension_library_loader.cpp:282)
+ERROR: GDExtension dynamic library not found: 'res://addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension'.
+   at: open_library (core/extension/gdextension.cpp:810)
+ERROR: Error loading extension: 'res://addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension'.
+   at: load_extensions (core/extension/gdextension_manager.cpp:333)
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[INFO]:  using [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+
+
+res://tests/engine/test_military_migration.gd
+* test_crew_and_old_losses_are_personnel_once
+* test_weighted_sources_are_160_rural_20_urban
+* test_split_preserves_first_id_inventory_and_typed_references
+* test_transaction_preserves_cursor_then_reorganizes_once
+* test_handcomputed_large_split_preserves_capacity_and_nobles
+* test_invalid_crew_and_small_remnant_do_not_drop_equipment
+* test_legacy_train_estimates_saved_garrison_once_and_records_it
+* test_legacy_train_without_valid_saved_garrison_remains_a_conflict
+* test_authored_multi_source_train_never_moves_all_crew_to_capital
+* test_new_campaign_all_player_and_raider_units_have_one_counted_commander
+* test_crew_eight_cap_twentyfive_splits_equipment_three_two_two
+* test_one_ship_crew_hundred_preserves_one_ship_and_personnel
+* test_pending_supply_metadata_and_desertion_remainder_are_conserved
+13/13 passed.
+
+
+res://tests/engine/test_military_resume.gd
+* test_saved_second_encounter_resumes_then_upgrades_once
+1/1 passed.
+
+
+res://tests/engine/test_military_population.gd
+* test_population_ledger_exists
+* test_mobilization_death_capture_release_conserve_source_people
+    [WARNING]:  Warn:  Float/Int comparison.  Got FLOAT but expected INT
+    [WARNING]:  Warn:  Float/Int comparison.  Got FLOAT but expected INT
+* test_proportional_losses_only_reduce_their_sources_once
+    [WARNING]:  Warn:  Float/Int comparison.  Got FLOAT but expected INT
+    [WARNING]:  Warn:  Float/Int comparison.  Got FLOAT but expected INT
+* test_mobilization_rejects_overbooked_sources_and_conflicts_atomically
+* test_transition_batch_is_atomic_and_terminal_states_cannot_reenter
+* test_historical_service_preserves_overcapacity_and_blocks_new_mobilization
+* test_named_people_cannot_serve_twice_and_wounds_remove_command
+* test_missing_source_death_rolls_back_entire_batch
+8/8 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+---- Totals ----
+Warnings          4
+
+Scripts           3
+Tests             22
+  Passing         22
+Asserts           1176
+Time              5.038s
+
+
+[Orphans]:  Total orphans in run 1.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 4.0
+
+---- All tests passed! ----

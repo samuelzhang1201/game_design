@@ -16,6 +16,11 @@ GDAIMCP::ERROR:: Binary files for GDAI MCP plugin are missing, so the plugin won
 [  83% ] first_scan_filesystem | Starting file scan...
 [ DONE ] first_scan_filesystem
 
+[   0% ] update_scripts_classes | Started Registering global classes... (2 steps)
+[   0% ] update_scripts_classes | MilitaryMigration
+[  33% ] update_scripts_classes |
+[ DONE ] update_scripts_classes
+
 [   0% ] _update_scan_actions | Started Scanning actions... (7 steps)
 [   0% ] _update_scan_actions | balance.csv
 [  12% ] _update_scan_actions | character_traits.csv
@@ -1526,7 +1531,7 @@ res://tests/engine/test_ledger_galaxy.gd
 * test_the_intel_level_cache_matches_the_call
 * test_planned_links_touch_a_ghost_end
 * test_the_galaxy_is_read_within_its_budget
-    galaxy: 302 stars, 334 links, 72.2/72.1/71.4 ms
+    galaxy: 302 stars, 334 links, 78.2/80.9/80.8 ms
 * test_the_read_memos_give_what_the_readers_give
 * test_the_opened_galaxys_governors_are_the_readers
 * test_a_merge_takes_the_worse_accounts_words_and_source
@@ -2090,13 +2095,14 @@ res://tests/engine/test_military_migration.gd
 * test_transaction_preserves_cursor_then_reorganizes_once
 * test_handcomputed_large_split_preserves_capacity_and_nobles
 * test_invalid_crew_and_small_remnant_do_not_drop_equipment
-* test_unknown_train_provenance_preserves_force_and_bootstraps_other_units
+* test_legacy_train_estimates_saved_garrison_once_and_records_it
+* test_legacy_train_without_valid_saved_garrison_remains_a_conflict
 * test_authored_multi_source_train_never_moves_all_crew_to_capital
 * test_new_campaign_all_player_and_raider_units_have_one_counted_commander
 * test_crew_eight_cap_twentyfive_splits_equipment_three_two_two
 * test_one_ship_crew_hundred_preserves_one_ship_and_personnel
 * test_pending_supply_metadata_and_desertion_remainder_are_conserved
-12/12 passed.
+13/13 passed.
 
 
 res://tests/engine/test_military_population.gd
@@ -3232,11 +3238,11 @@ res://tests/ledger3d/test_ledger_view_galaxy.gd
 Warnings          4
 
 Scripts           211
-Tests             2204
-  Passing         2203
+Tests             2205
+  Passing         2204
   Risky/Pending   1
-Asserts           840553
-Time              1766.621s
+Asserts           840762
+Time              2105.092s
 
 
 ---- 1 pending/risky tests. ----

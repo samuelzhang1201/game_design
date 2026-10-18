@@ -14,6 +14,7 @@ static func ensure(repo: DataRepository, state: GameState) -> Dictionary:
 	if state.army_roster.is_empty():
 		return {"error": "military migration requires the saved roster"}
 	var plans: Dictionary = {}
+	var migration_reason := REASON
 	var errors: Array = []
 	var codes := state.army_roster.keys()
 	codes.sort()
@@ -30,6 +31,8 @@ static func ensure(repo: DataRepository, state: GameState) -> Dictionary:
 			if id != code and state.army_roster.has(id):
 				return {"error": "derived military ID already exists: " + id}
 		plans[code] = plan
+		if not String(plan["origin_estimate"]).is_empty():
+			migration_reason += "; " + code + ": " + String(plan["origin_estimate"])
 	# Bootstrap unsplit personnel while the saved transaction still owns its IDs.
 	for code: String in codes:
 		if not plans.has(code): continue
@@ -42,7 +45,10 @@ static func ensure(repo: DataRepository, state: GameState) -> Dictionary:
 		if (cohorts["cohorts"] as Array).is_empty():
 			state.military_rosters[code] = {"cohort_ids": [], "commander_id": "", "appointments": []}
 			continue
-		var result := MilitaryRoster.initialize_historical(repo, state, "military:initial:" + code, cohorts["cohorts"], REASON)
+		var reason := REASON
+		if not String(plans[code]["origin_estimate"]).is_empty():
+			reason += "; " + String(plans[code]["origin_estimate"])
+		var result := MilitaryRoster.initialize_historical(repo, state, "military:initial:" + code, cohorts["cohorts"], reason)
 		if result.has("error"):
 			return result
 	if not errors.is_empty():
@@ -86,7 +92,7 @@ static func ensure(repo: DataRepository, state: GameState) -> Dictionary:
 						table[id]["x_m"] = at.x
 						table[id]["y_m"] = at.y
 	_references(state, aliases)
-	state.military_events["military:organization:1"] = {"kind": "organization", "reason": REASON,
+	state.military_events["military:organization:1"] = {"kind": "organization", "reason": migration_reason,
 		"aliases": aliases.duplicate(true), "equipment_note": "saved equipment preserved; unrecorded historical equipment destruction cannot be reconstructed"}
 	state.military_unit_aliases = aliases
 	state.military_organization_version = VERSION
@@ -105,12 +111,17 @@ static func _plan(repo: DataRepository, row: Dictionary, code: String) -> Dictio
 	for arm_row: Dictionary in repo.army_split:
 		if bool(arm_row["pooled"]) and int(row.get(String(arm_row["arm"]), 0)) > 0:
 			pooled = true
+	var origin_estimate := ""
 	if sources.is_empty():
 		if pooled:
-			return {"error": "unresolved legacy royal train provenance: " + code, "unit_code": code}
+			origin_estimate = "original pooled sources unrecorded; origin estimated from saved garrison province " + String(row.get("province_code", ""))
 		for arm: String in repo.world_table("military", "unit_types"):
 			if int(row.get(arm, 0)) > 0:
-				sources.append(ArmySplit.source_part(repo, row, arm, int(row[arm])))
+				var part := ArmySplit.source_part(repo, row, arm, int(row[arm]))
+				if pooled:
+					part["origin_basis"] = "estimated_saved_garrison"
+					part["origin_reason"] = origin_estimate
+				sources.append(part)
 	if naval or pooled:
 		pieces.append(row.duplicate(true))
 	else:
@@ -158,7 +169,7 @@ static func _plan(repo: DataRepository, row: Dictionary, code: String) -> Dictio
 		var arm := String(part.get("arm", ""))
 		if int(part.get("crew_per_element", 0)) != int(repo.world_row("military", "unit_types", arm).get("crew", 0)):
 			return {"error": "historical crew disagrees with unit type: " + code}
-	return {"children": children, "sources": sources}
+	return {"children": children, "sources": sources, "origin_estimate": origin_estimate}
 
 static func _cohorts(repo: DataRepository, state: GameState, code: String, plan: Dictionary) -> Dictionary:
 	var row: Dictionary = state.army_roster[code]
