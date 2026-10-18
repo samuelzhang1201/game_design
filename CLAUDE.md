@@ -87,27 +87,18 @@ docs/             # design/ (PRD, systems, chapter 0), references/, superpowers/
 
 ## Done means
 
-1. `./run_tests.sh --fast` while iterating and before every commit — that's the regression check now. CI (`.github/workflows/tests.yml`) runs the whole `./run_tests.sh` on each PR before merge, so don't run the full suite locally as a matter of routine; reach for it only to reproduce a CI failure. A change under `tests/ui`, `tests/map3d` or `tests/war_room` (outside `--fast`'s scope) is checked locally by running just those directories (or the files you touched) with GUT, not the whole suite; a delegated subagent is briefed the same way.
-2. Land through a pull request against `main` (CI's `gut-tests` is the gate; `cicd_procedure.md`), never a direct push to `main`. A PR changing only docs or CSV values skips the run by design.
+1. Run checks relevant to the owned change on its final code state; pure harness/config/guidance changes run Python/shell/config/guide checks without Godot. Game changes retain targeted GUT, hand-computed formula and relevant save/determinism checks. Follow the actual runner/workflow and `.codex/harness.md`; do not run a full local suite routinely or reuse results after relevant code/data changes.
+2. One small step lands through its own PR against `main`, owned only by implementation and its unique Review session. Review merges directly after all required current-HEAD CI and review checks pass; no direct main push, timeout exception or next feature in the same PR. `cicd_procedure.md` describes the checks; skipped/absent required checks are not success.
 3. A new engine formula has its hand-computed GUT test; a new rule is written into the right nested `CLAUDE.md` (or its `guide/`), not here.
 4. A visual change has been through `visual-review` — or, in a cloud session, the final message says it still needs it.
 
-## Execution discipline
+## Execution discipline and model routing
 
-- **Resume execution, not planning.** For multi-stage work, update a short checkpoint in the existing plan before compaction/handoff: approval, phase, done, next, file owners, checks and tested code state. On resume, reconcile it with the diff and continue the first unfinished step. Compaction/goal continuation are not new requests: do not restart brainstorming, rewrite approved plans or seek approval again without changed requirements or a contradiction. Do not reread unchanged skills already available in context.
-- **Bound delegation.** Give each child one outcome, owned files, inputs, checks and a stop condition. Prefer `fork_turns="none"` with relevant spec paths and a short handoff. Report files/checks/risks, then finish; new work gets a new bounded task. Report scope/ownership conflicts; do not silently expand. Do trivial edits inline when delegation adds no value.
-- **Keep verification and independent review.** Children run targeted checks; one integration owner runs `./run_tests.sh --fast` on the final code state and before each commit, plus affected directories outside fast. Reuse passing checks only for unchanged inputs; rerun after relevant edits or failures. Preserve hand-computed formula tests, required independent reviews and visual-review; reviewers stay read-only and return findings. During pure guidance/config editing, check syntax, routing and guide size. Full local GUT runs are for reproducing CI failures.
-- Batch independent reads; bound output. Prefer completion events to short polling. Avoid unchanged status requests and nested reviewers without a distinct question.
-
-## Model routing
-
-The main conversation runs on the session's model (project default: Sonnet, `.claude/settings.json`); there is no automatic per-task switch, so choose a bounded role only when delegation adds value:
-- **`architect` subagent (Opus)** — engine formulas, determinism / save bugs, anything spanning two or more subsystems or touching a numbered invariant; it returns a plan and expected test values, the main loop implements.
-- **`implementer` subagent (Sonnet, medium effort)** — well-specified work whose design is decided: a GUT test from given numbers, a change across a few files, applying an architect plan. Codex equivalents are pinned in `.codex/agents/` (Sol for implementation, Astra for design).
-- **`quickfix` subagent (Sonnet, low effort)** — trivial edits: one CSV value, a rename, a typo, moving text between guides.
-- **`deep-solver` subagent (Fable)** — reserved for the hardest problems: a determinism / save bug that survived a first attempt, a redesign across several invariants, a rebalance that ripples through many systems, or when the architect's plan was not enough. It may edit and test; it is costly, so never routine.
-- **Explore** (built in) — finding files and call sites across the tree.
-- A long design discussion with the owner: suggest `/model opus` (or `opusplan`) for that stretch and back afterwards.
+- **One small problem, one step, one PR.** A session discusses and implements only one bounded, independently testable change. Split an oversized plan step before coding; leave follow-on features and unrelated cleanup for later PRs. Never accumulate several steps in an existing PR.
+- **Exactly two responsible sessions per PR:** the implementation session and its unique `<step>-Review` session. No third session, subagent, parallel worker, coordinator or nested reviewer participates in that feature/plan. Review owns in-scope fixes and merges directly to `main` after all current-HEAD required CI and review checks pass; no extra confirmation or timeout exception. Only then may the next independent step begin.
+- **One-to-one handoff only.** Implementation → its Review → next authorized step's implementation. At most one predecessor and one fresh successor per session; no broadcasts, fan-in/fan-out, forks, resumes or return loops. Save a short worktree-local checkpoint; create the single successor once and end the source session. Do not reread full history or relaunch approved planning.
+- **Use the existing session pair.** Routine implementation/review uses Sol; complex architecture may use Astra within the pair. Role profiles and skill suggestions never authorize an extra architect/reviewer/worker. Do not change permissions, trust, MCP or the selected main model.
+- Authoritative delivery, checks, scope and marker rules: `.codex/harness.md` and `.codex/hooks/task-handover.md`. Read only relevant subsystem guidance. Pure harness/config work runs its own syntax and behavioral checks, not game-wide GUT; retain meaningful formula, save/determinism and visual checks for changes that need them.
 
 ## Conventions
 
