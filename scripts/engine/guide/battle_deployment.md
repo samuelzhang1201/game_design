@@ -39,9 +39,21 @@ outcome before costs, history or current eligibility; conflicting reuse fails.
 Local king command range delivers immediately through CourierSystem; remote
 warrants remain pending until arrival. Delivery checks recipient identity,
 current realm control, membership and law. Lost/expired couriers invalidate
-pending tasks with a reason without refunding spent fees. Cancellation,
-unit-scoped combat effects and formation execution require their own integration
-steps; this dispatch path changes only the canonical primary-task ledger.
+pending tasks with a reason without refunding spent fees. Unit-scoped combat
+effects and formation execution require their own integration steps; this
+dispatch path changes only the canonical primary-task ledger.
+
+`BATTLE_TASK_CANCEL` accepts only `request_id`, `regiment` and `battle_id`,
+pays its own filing row and uses the same local/courier path. Its internal
+`task=cancel` warrant is a control record, never a behavior or current task.
+Until receipt the old task remains current. Receipt rechecks live crown control
+and battlefield membership, marks the old task cancelled with a reason, clears
+the current ID and advances both sequence barriers. A cancellation with no
+current task still establishes that barrier; a newer assignment can follow it.
+Cancellation does not execute a combat action, so ceasefire and routing do not
+forbid it. Pending cancellations lapse with their courier. Exact retries return
+the saved outcome without mutation, including after JSON; request IDs cannot be
+reused across assignment and cancellation actions.
 
 ## Costly orders and daily resolution
 
