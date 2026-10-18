@@ -6,7 +6,7 @@ set -e
 # Default: functional categories affected by the diff against origin/main.
 # --base REF, --include CATEGORY: select a diff, explicitly adding requested suites.
 # --category CATEGORY / --test tests/...gd: run an explicit category or file.
-# --fast: all functional engine categories and ledger3d (no LLM/campaign replay).
+# --fast: all functional engine categories and ledger3d (no campaign replay).
 if [ "${1:-}" = --fast ]; then
   shift
   set -- --category engine-core --category engine-economy --category engine-military --category ledger3d "$@"
@@ -55,10 +55,9 @@ if [ "$code" = 124 ]; then
 fi
 
 # GUT silently SKIPS a test script that fails to parse ("Ignoring script ...
-# because it does not extend GutTest") and still reports the suite green —
-# verified 2026-08-30 when a parse error in test_llm_config.gd dropped 6
-# tests without failing the run. Treat any skipped script, and any mismatch
-# between test scripts on disk and scripts GUT ran, as fatal.
+# because it does not extend GutTest") and still reports the suite green.
+# Treat any skipped script, and any mismatch between test scripts on disk
+# and scripts GUT ran, as fatal.
 if grep -q "Ignoring script" "$TEST_OUTPUT"; then
   echo ""
   echo "FATAL: GUT ignored a test script (parse error?):"

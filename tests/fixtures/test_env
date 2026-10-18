@@ -1,8 +1,0 @@
-# fixture env for test_llm_config.gd — fake values only
-OPENAI_API_KEY=sk-test-not-a-real-key
-OPENAI_API_NAME=test-project
-LLM_MODEL=test-model-1
-LLM_MAX_OUTPUT_TOKENS=123
-LLM_REASONING_EFFORT=low
-LLM_STORE_REQUESTS=1
-LLM_MODEL_ORDER=test-order-model

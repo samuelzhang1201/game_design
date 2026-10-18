@@ -26,7 +26,6 @@ class SelectionTests(unittest.TestCase):
                 result = self.select(path)
                 self.assertIn('engine-core', result['categories'])
                 self.assertNotIn('simulation', result['categories'])
-                self.assertFalse(any('/llm/' in p for p in result['files']))
 
     def test_map_art_and_ui_route_to_consumers(self):
         self.assertIn('map3d', self.select('assets/3D/units/knight/knight.glb')['categories'])
@@ -59,9 +58,8 @@ class SelectionTests(unittest.TestCase):
         self.assertNotIn(path, self.select('scripts/engine/supply_system.gd')['files'])
         self.assertIn(path, self.select('README.md', include=['simulation'])['files'])
 
-    def test_llm_suite_is_excluded_from_ordinary_selection(self):
-        self.assertEqual(self.select('tests/llm/test_openai_client.gd')['files'], [])
-        self.assertNotIn('llm', self.select('scripts/llm/openai_client.gd')['categories'])
+    def test_model_runtime_still_selects_engine_and_ui_consumers(self):
+        self.assertEqual(set(self.select('scripts/llm/openai_client.gd')['categories']), {'engine-core', 'ui'})
 
     def test_conduct_unit_neighbors_survive_extraction(self):
         self.assertIn('tests/engine/test_army_conduct_day.gd', self.catalog['engine-military'])
