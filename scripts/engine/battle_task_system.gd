@@ -8,6 +8,50 @@ static func current(state: GameState, unit: String) -> Dictionary:
 	return ledger.get("orders", {}).get(String(ledger.get("current_id", "")), {}).duplicate(true)
 
 
+## Resolve only the attack/hold execution slice; movement tasks keep their side default.
+static func combat_action(repo: DataRepository, state: GameState, battle: Dictionary, unit: String) -> Dictionary:
+	var side := BattleRules.side_of(battle, unit)
+	var fallback := BattleOrders.kind(battle, side)
+	var result := {"kind": fallback, "reason": "Existing delivered side action: " + fallback, "task_id": ""}
+	if side == "":
+		return result
+	if fallback == "retreat" or String(battle.get("routed_side", "")) == side \
+			or bool(BattleSystem._stored(state, unit).get("battle_retreat", false)):
+		result["kind"] = "retreat"
+		result["reason"] = "Actual withdrawal or rout takes precedence over a unit task"
+		return result
+	var record := current(state, unit)
+	if record.is_empty() or record.get("status") != "received":
+		return result
+	var request: Dictionary = record["request"]
+	if int(request["battle_id"]) != int(battle["id"]):
+		return result
+	var action := String(repo.battle_behaviors.get(request["task"], {}).get("legal_action", ""))
+	if not action in ["attack", "charge", "hold"]:
+		return result
+	result = {"kind": "hold", "task_id": String(request["id"]), "reason": "Received unit task: " + String(request["task"])}
+	var legal := BattleRules.legal_actions(repo, state, int(battle["id"]), side, unit)
+	var target := String(request["target_unit"])
+	if not action in legal or not BattleSystem._can_fight(repo, state, unit) \
+			or bool(BattleSystem._stored(state, unit).get("captured", false)):
+		result["reason"] = "Unit task holds: current law, agreement or incapacity bars execution"
+		return result
+	if request["source"] == "player" and (ArmySystem.is_foe(state, unit) \
+			or ArmySystem.realm_of(repo, unit, state) != repo.resolve_realm("player_realm")):
+		result["reason"] = "Unit task holds: the recipient is no longer under crown control"
+		return result
+	if target != "" and (BattleRules.side_of(battle, target) != ("def" if side == "att" else "att") \
+			or not BattleSystem._can_fight(repo, state, target) \
+			or bool(BattleSystem._stored(state, target).get("captured", false))):
+		result["reason"] = "Unit task holds: its designated enemy is no longer available"
+		return result
+	result["kind"] = "hold" if action == "hold" else "attack"
+	if result["kind"] == "attack" and not "attack" in legal:
+		result["kind"] = "hold"
+		result["reason"] = "Unit task holds: attack is barred by current law or agreement"
+	return result
+
+
 static func _find(state: GameState, id: String) -> Dictionary:
 	for ledger: Dictionary in state.unit_tasks.values():
 		if ledger["orders"].has(id):

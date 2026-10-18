@@ -117,6 +117,8 @@ static func snapshot(repo: DataRepository, state: GameState, battle_id: int) -> 
 		var commander: Character = state.characters.get(unit.commander_id) as Character
 		participant["commander"] = commander.display_name if commander != null else "The field officers"
 		record.participants.append(participant)
+	record.participants.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return String(a.code) < String(b.code) if a.side == b.side else String(a.side) < String(b.side))
 	record["formations"] = battle.get("formations", {}).duplicate(true)
 	record["orders"] = []
 	record["equipment"] = []
