@@ -2,7 +2,7 @@
 
 Goal: implement the owner's 2026-10-18 instructions in three sequential small PRs. Each step has exactly one implementation session and one Review session; no third session/subagent participates in that step's PR.
 
-Current step: **HARNESS.1 — session/PR scope and handoff graph**. Implementation `01a14e6b-e137-7f33-8e8b-9b25d3db67d3`; its sole `HARNESS.1-Review` session is assigned at handoff. The reviewer reviews/fixes this PR and merges only after current-head CI passes. It then hands off once to the different step HARNESS.2's implementation session.
+Current step: **HARNESS.1 — session/PR scope and handoff graph**. Implementation `01a14e6b-e137-7f33-8e8b-9b25d3db67d3`; its sole `HARNESS.1-Review` session is `01a14e8a-6ed9-7f32-b780-832b7687c77d`. The reviewer reviews/fixes this PR and merges only after current-head CI passes. It then hands off once to the different step HARNESS.2's implementation session.
 
 ### HARNESS.1 — current PR
 
@@ -10,9 +10,9 @@ Owned scope: `.codex/harness.md`, `.codex/hooks.json`, `.codex/hooks/`, existing
 
 - [x] Add failing handoff graph tests: fan-out, fan-in, cycles, owner-pair conflicts, shared-worktree registry and idempotent retries.
 - [x] Enforce explicit one-to-one ready-marker edges without reading transcripts or launching sessions from hooks.
-- [x] Consolidate one-small-problem/one-step/one-PR, exactly two owners, automatic merge after passing current-head CI, and handoff rules; remove conflicting root delegation guidance. Preserve current CI until HARNESS.3.
-- [ ] Run Python/shell/config/guide checks; stage only owned files, commit/push/open this PR.
-- [ ] Save a worktree-local checkpoint and hand off once to `HARNESS.1-Review` with only checkpoint/worktree/PR/acceptance/stop conditions. Stop this implementation session.
+- [x] Consolidate one-small-problem/one-step/one-PR, exactly two owners, automatic merge after passing current-head CI, and handoff rules; remove conflicting root delegation guidance. Preserve game shards until HARNESS.2.
+- [x] Run Python/shell/config/guide checks; stage only owned files, commit/push/open this PR.
+- [x] Save a worktree-local checkpoint and hand off once to `HARNESS.1-Review` with only checkpoint/worktree/PR/acceptance/stop conditions. Stop this implementation session.
 
 Acceptance: handoff graph rejects fan-in/fan-out/cycles and a third owner of a PR across worktrees; retries do not create extra successors; missing/invalid checkpoint blocks ready; no next task creates no session. Hook never reads transcript contents, changes trust or launches agents. Guides/template require a small bounded step/PR and exactly two owners. Harness-only CI runs Python/config checks without Godot; runtime/CSV changes still request game checks. No runner/game-test edits or full local GUT run.
 
@@ -28,4 +28,4 @@ Own `tests/llm/`, the LLM-specific methods in `tests/ui/test_court_screen.gd`, `
 
 Chain: HARNESS.1 implementation → HARNESS.1-Review → HARNESS.2 implementation → HARNESS.2-Review → HARNESS.3 implementation → HARNESS.3-Review → stop. Every edge has one source and one fresh target; each PR has only its own pair. No concurrent parallel step execution or supervising coordinator.
 
-Checkpoint: implementation and local checks passed (23 Python behavioral tests); isolated PR/handoff remain. Authorized by the user; implementing in `/Users/samuelzhang/.codex/worktrees/harness-step-pr-ci/game_design`, branch `codex/harness-step-pr-ci`, base `48ba7b57444125271bc57e77b25fbf7c6a618e60`. Existing dirty primary checkout preserved.
+Checkpoint: HARNESS.1 implemented in PR #83 and independently reviewed by its sole Review session. Review strengthened the retry test to replay an earlier handoff after its successor advances; local harness checks passed. Await current-head CI before merge; then hand off once to HARNESS.2.

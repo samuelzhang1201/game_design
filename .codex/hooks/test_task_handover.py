@@ -81,6 +81,10 @@ class HandoverHookTests(unittest.TestCase):
         self.assertEqual(self.handoff(next_session_ids=['one','two'])['decision'], 'block')
     def test_retries_keep_the_same_single_successor(self):
         self.assertEqual(self.handoff(), {})
+        self.assertEqual(self.handoff(source='new', target='next'), {})
+        self.assertEqual(self.handoff(), {})
+        graph = json.loads(hook.registry_path(self.root).read_text())
+        self.assertEqual(graph['edges'], {'old': 'new', 'new': 'next'})
     def test_an_old_chain_head_is_not_a_fresh_successor(self):
         self.assertEqual(self.handoff(source='existing',target='child'), {})
         self.assertEqual(self.handoff(source='other',target='existing')['decision'], 'block')
