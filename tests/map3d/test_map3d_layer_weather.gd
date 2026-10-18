@@ -9,8 +9,13 @@ const SuiteData := preload("res://tests/suite_data.gd")
 class FakeMaterial:
 	extends Resource
 	var params: Dictionary = {}
+	var _shader_parameters: Dictionary:
+		get: return params
+	var reads := 0
 	func set_shader_param(key: String, value: Variant) -> void: params[key] = value
-	func get_shader_param(key: String) -> Variant: return params.get(key)
+	func get_shader_param(key: String) -> Variant:
+		reads += 1
+		return params.get(key)
 
 var repo: DataRepository
 var state: GameState
@@ -63,6 +68,13 @@ func test_a_lost_uniform_is_put_back() -> void:
 	w.step()
 	assert_eq(mat.params.get("weather_on"), 1.0)
 	assert_not_null(mat.params.get("weather_now"))
+	assert_eq(mat.reads, 0, "uniform checks do not synchronize with the render server")
+	var replacement := FakeMaterial.new()
+	w.bind(ctx, replacement)
+	w.step()
+	assert_eq(replacement.params.get("weather_on"), 1.0, "a replacement material is initialized")
+	assert_not_null(replacement.params.get("weather_now"))
+	assert_eq(replacement.reads, 0)
 
 
 func test_a_forced_sky_covers_every_province() -> void:
