@@ -33,13 +33,13 @@ func _capture() -> void:
 
 func test_details_freeze_and_preserve_600_accounting() -> void:
 	_capture()
-	state.military_cohorts.home.fit = 430
+	state.military_cohorts.home.fit = 490
 	state.military_cohorts.home.wounded = 70
 	state.military_cohorts.home.dead = 40
-	# The other sixty are captured by the enemy, with twenty wounded among them.
+	# The other sixty are captured by the enemy.
 	assert_false(PrisonerSystem.capture(repo, state, {"capture_id": "p53-home", "battle_id": 53, "participants": {"away": 1},
 		"reason": "Intercepted survivors", "changes": [{"cohort_id": "home", "from": "fit", "to": "captured_current", "count": 60}]}).has("error"))
-	state.military_cohorts.home.fit = 430
+	assert_eq(int(state.military_cohorts.home.fit), 430, "capture transfers the remaining sixty from fit personnel")
 	var record := BattleReport.snapshot(repo, state, 53)
 	for key: String in ["place", "duration_days", "participants", "formations", "orders", "events", "equipment", "supplies", "family_changes", "outcome"]:
 		assert_has(record, key)

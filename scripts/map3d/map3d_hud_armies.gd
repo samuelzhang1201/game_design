@@ -71,7 +71,7 @@ func _cut() -> Array:
 			continue
 		var sp := camera.unproject_position(ground) / s
 		if frame.has_point(sp):
-			var pt := {"reg": r, "pos": sp}
+			var pt := {"reg": r, "pos": sp, "text": str(Sighting.men_of(repo, ctx.state(), String(r["regiment_code"])))}
 			if ctx.fogged(String(r["regiment_code"])):
 				# an enemy unit the crown sees: its men as the seers' estimate (Sighting)
 				pt["text"] = "≈" + Intel.num(Sighting.about(repo, Sighting.men_of(repo, ctx.state(),

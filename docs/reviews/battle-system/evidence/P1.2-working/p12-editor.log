@@ -1,0 +1,4 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Pro (Apple9)
+
+[38;2;255;99;71m[1mGDAIMCP::ERROR::[22m Binary files for GDAI MCP plugin are missing, so the plugin wont be loaded. Please re-install the plugin from [url=https://gdaimcp.com]https://gdaimcp.com or disable the plugin in Project Settings.[39m[0m

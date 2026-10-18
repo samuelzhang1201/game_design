@@ -141,6 +141,8 @@ func _ready() -> void:
 	# One game-wide Theme, inherited by every screen (see UiPalette).
 	theme = UiPalette.build_theme()
 	Game.menu_requested.connect(toggle_pause_menu)
+	Game.clock_changed.connect(_on_clock_changed)
+	Game.battle_decision_changed.connect(_on_battle_decision_changed)
 	_load_settings()
 	Intel.dev_all = _dev_mode
 	# the title first, a frame after the black has been drawn (the launch
@@ -185,6 +187,7 @@ func _make_war_room() -> void:
 	_war_room_screen = load("res://scenes/screens/war_room_screen.tscn").instantiate()
 	_war_room_screen.name = "WarRoomScreen"
 	_war_room_screen.closed.connect(_sync_map_view)
+	_war_room_screen.closed.connect(_refresh_battle_encounter)
 	add_child(_war_room_screen)
 	get_viewport().size_changed.connect(_fit_war_room)
 	_settle_overlay(_war_room_screen, state)
@@ -247,22 +250,44 @@ func _make_fps_counter() -> void:
 
 ## The last step: what needs several overlays, the music, the canonical order.
 func _finish_overlays() -> void:
-	_battle_encounter = load("res://scenes/panels/battle_encounter_panel.tscn").instantiate()
-	add_child(_battle_encounter)
-	_battle_encounter.decision_selected.connect(_on_battle_decision_selected)
-	_battle_encounter.formation_requested.connect(func(code: String, id: int, formation: String) -> void:
-		var result := Game.try_execute(ActionRequest.make("BATTLE_FORMATION", {"regiment": code, "battle_id": id, "formation": formation}))
-		_battle_encounter.show_order_result(result))
+	_make_battle_encounter()
 	_battle_panel = load("res://scenes/panels/battle_panel.tscn").instantiate()
 	add_child(_battle_panel)
 	_battle_panel.decision_selected.connect(_on_battle_decision_selected)
 	_battle_panel.order_requested.connect(_on_battle_order)
 	Game.battle_view_requested.connect(_open_battle_for)
 	Game.state_changed.connect(_refresh_battle_panel)
-	Game.battle_decision_requested.connect(_show_battle_decision)
 	_laws_screen.above = [_report_popup, _pause_menu]
 	_start_bgm()
 	_raise_overlays()
+
+func _make_battle_encounter() -> void:
+	if _battle_encounter == null:
+		_battle_encounter = load("res://scenes/panels/battle_encounter_panel.tscn").instantiate()
+	if _battle_encounter.is_inside_tree():
+		return
+	_battle_encounter.name = "BattleEncounterPanel"
+	_battle_encounter.decision_selected.connect(_on_battle_decision_selected)
+	_battle_encounter.deployment_requested.connect(_on_battle_deployment)
+	_battle_encounter.formation_requested.connect(func(code: String, id: int, formation: String) -> void:
+		var result := Game.try_execute(ActionRequest.make("BATTLE_FORMATION", {"regiment": code, "battle_id": id, "formation": formation}))
+		_battle_encounter.show_order_result(result))
+	add_child(_battle_encounter)
+	if not get_viewport().size_changed.is_connected(_fit_battle_encounter):
+		get_viewport().size_changed.connect(_fit_battle_encounter)
+
+func _fit_battle_encounter() -> void:
+	if _battle_encounter == null or not _battle_encounter.visible \
+			or current_screen == null or not current_screen.has_method("map_panel"):
+		return
+	var map: Control = current_screen.map_panel()
+	if not map.item_rect_changed.is_connected(_fit_battle_encounter):
+		map.item_rect_changed.connect(_fit_battle_encounter)
+	_battle_encounter.center_on(map.get_global_rect())
+
+func _on_battle_deployment() -> void:
+	if not Game.pending_battle_decision().is_empty():
+		toggle_war_room()
 
 func _show_battle_decision(decision: Dictionary) -> void:
 	if state == State.MENU or _battle_encounter == null or Game.state == null:
@@ -275,7 +300,8 @@ func _show_battle_decision(decision: Dictionary) -> void:
 		for battle: Dictionary in view["battles"]:
 			if int(battle["id"]) == int(decision["battle_id"]):
 				_battle_panel.hide()
-				_battle_encounter.show_decision(decision, String(battle["place"]), battle["formation_view"])
+				_battle_encounter.open(Game.data, Game.state, decision)
+				_fit_battle_encounter()
 	_raise_overlays()
 
 func _on_battle_decision_selected(token: String, choice: String) -> void:
@@ -395,7 +421,8 @@ func _process(delta: float) -> void:
 	for e: Dictionary in leaving:
 		_said_set_out = maxi(_said_set_out, int(e["courier"]))
 	var per_day := maxf(Game.data.bal("time_day_seconds") / float(Game.clock_speed), 0.001)
-	_clock_acc = _clock_acc + delta if Game.state.day_resolution.is_empty() else 0.0
+	if Game.state.day_resolution.is_empty():
+		_clock_acc += delta
 	var steps := 0
 	# A spy's arrival (on_new_missives) can stop the clock or leave a report
 	# waiting mid-loop; the condition is re-checked every iteration so no
@@ -406,12 +433,14 @@ func _process(delta: float) -> void:
 		if Game.state.day_resolution.is_empty():
 			_clock_acc -= per_day
 		steps += 1
-		var before := works_progress()
-		var missives_before := Game.state.next_missive_id
 		var out := Game.advance_day()
-		if out["status"] in ["blocked", "error"]:
+		if out["status"] != "complete":
 			_clock_acc = 0.0
+			Game.day_progress = 0.0
 			break
+		var notices: Dictionary = out["ui_day_start"]
+		var before := works_progress(notices)
+		var missives_before := int(notices["missive_id"])
 		# what the day's end brings is dated the day that ended, not the one begun
 		Game.news_dated_to(int(out["ended"]))
 		# The news bar (owner 2026-09-14): a work's progress at each milestone,
@@ -465,16 +494,42 @@ func _process(delta: float) -> void:
 						seal.nudge()
 		Game.news_dated_to(-1)
 
-	Game.day_progress = 1.0 if not Game.state.day_resolution.is_empty() else clampf(_clock_acc / per_day, 0.0, 1.0)
+	Game.day_progress = clampf(_clock_acc / per_day, 0.0, 1.0) if Game.state.day_resolution.is_empty() else 0.0
+
+func _on_clock_changed(speed: int) -> void:
+	if speed == 0:
+		_clock_acc = 0.0
+		Game.day_progress = 0.0
+
+func _on_battle_decision_changed(_decision: Dictionary) -> void:
+	_clock_acc = 0.0
+	Game.day_progress = 0.0
+	_refresh_battle_encounter()
+
+func _refresh_battle_encounter() -> void:
+	if _battle_encounter == null:
+		return
+	var decision := Game.pending_battle_decision()
+	if state == State.MENU or decision.is_empty() \
+			or (_war_room_screen != null and _war_room_screen.visible):
+		_battle_encounter.hide()
+		return
+	_show_battle_decision(decision)
 
 ## Every work in progress's share done: "cell|building" -> 0..1.
-func works_progress() -> Dictionary:
+func works_progress(snapshot: Dictionary = {}) -> Dictionary:
 	var out: Dictionary = {}
 	if Game.state == null:
 		return out
-	for key: String in Game.state.manor_works:
-		for w: Dictionary in Game.state.manor_works[key]:
-			out["%s|%s" % [key, String(w["building"])]] = MapManors.work_progress(Game.state, int(key), String(w["building"]))
+	var observed: GameState = Game.state
+	if not snapshot.is_empty():
+		observed = GameState.new()
+		observed.tick = int(snapshot["tick"])
+		observed.day = int(snapshot["day"])
+		observed.manor_works = snapshot["works"]
+	for key: String in observed.manor_works:
+		for w: Dictionary in observed.manor_works[key]:
+			out["%s|%s" % [key, String(w["building"])]] = MapManors.work_progress(observed, int(key), String(w["building"]))
 	return out
 
 ## A headline for every work that crossed a milestone (screens/ui/balance.csv
@@ -866,6 +921,7 @@ func toggle_war_room() -> void:
 	_war_room_screen.position = wide.position
 	_war_room_screen.size = wide.size
 	_war_room_screen.open()
+	_refresh_battle_encounter()
 	WarScrollReveal.play(self, wide, cover, true, Game.data.bal("war_unroll_s"), Game.data.bal("war_unroll_roller_px"))
 
 func _fit_war_room() -> void:
@@ -1312,6 +1368,7 @@ func _switch_to(new_state: State) -> void:
 	# the LEDGER, with the pause menu topmost.
 	for o: Node in _overlays_in_order():
 		_settle_overlay(o, new_state)
+	_refresh_battle_encounter()
 
 func _overlays_in_order() -> Array[Node]:
 	return [_bottom_bar, _news_ticker, _info_screen, _ledger_screen, _war_room_screen,

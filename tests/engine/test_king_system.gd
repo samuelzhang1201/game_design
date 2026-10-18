@@ -181,16 +181,19 @@ func test_tick_transaction_does_not_repeat_king_movement_after_encounter_pause()
 		state.foes[code]["dest_y_m"] = foe_m.y
 		state.foes[code]["camp_town"] = ""
 	var pos := KingSystem.position(state)
+	var daily_budget := KingSystem.daily_budget(repo, state)
 	var blocked := engine.resolve_day(state)
 	assert_eq(blocked.get("status"), "blocked")
-	assert_ne(KingSystem.position(state), pos, "the king advances during prepare")
-	var after_prepare := KingSystem.position(state)
+	assert_eq(KingSystem.position(state), pos + Vector2i(daily_budget / 10, 0), "the king spends only the substeps completed before contact")
+	var held := state.to_dict()
+	assert_eq(engine.resolve_day(state).status, "blocked")
+	assert_eq(state.to_dict(), held, "pause polls spend no royal movement")
 	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())))
 	state = restored
 	engine = TickEngine.new(repo)
 	engine.resolve_decision(state, String(restored.day_resolution["pending_decision"]["token"]), "continue")
 	engine.resolve_day(state)
-	assert_eq(KingSystem.position(state), after_prepare, "resume cannot apply the saved journey twice")
+	assert_eq(KingSystem.position(state), pos + Vector2i(daily_budget, 0), "resume spends the remaining substeps exactly once")
 
 
 func test_actions_validate_cost_and_execute_physical_king_orders() -> void:
@@ -323,8 +326,8 @@ func test_blocked_day_advances_king_only_once_across_retry_and_json_resume() -> 
 	var engine := TickEngine.new(repo)
 	var blocked := engine.resolve_day(state)
 	assert_eq(blocked["status"], "blocked")
-	assert_eq(KingSystem.position(state), Vector2i(11000, 2000))
-	assert_eq(int(state.king_state["last_advanced_day"]), 10)
+	assert_eq(KingSystem.position(state), Vector2i(2000, 2000), "first substep spends1000 of10000 metres")
+	assert_eq(int(state.king_state["last_advanced_day"]), 0, "the paused day has not finished its royal budget")
 	assert_eq(state.day, 10)
 	var before_retry := SaveLoad.state_hash(state)
 	assert_eq(engine.resolve_day(state)["status"], "blocked")
@@ -332,7 +335,7 @@ func test_blocked_day_advances_king_only_once_across_retry_and_json_resume() -> 
 	var loaded := Scenario.roundtrip(state)
 	var resumed := TickEngine.new(repo)
 	assert_eq(resumed.resolve_day(loaded)["status"], "blocked")
-	assert_eq(KingSystem.position(loaded), Vector2i(11000, 2000))
+	assert_eq(KingSystem.position(loaded), Vector2i(2000, 2000), "the loaded pause preserves the first substep")
 	assert_eq(resumed.resolve_decision(loaded, String(blocked["decision"]["token"]),
 		"continue")["status"], "accepted")
 	assert_eq(resumed.resolve_day(loaded)["status"], "complete")

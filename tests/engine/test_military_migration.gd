@@ -1,4 +1,6 @@
 extends GutTest
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
+const Scenario := preload("res://tests/fixtures/battle_scenario.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const Bootstrap := preload("res://scripts/engine/military_bootstrap.gd")
 const Roster := preload("res://scripts/engine/military_roster.gd")
@@ -278,3 +280,462 @@ func test_actual_legacy_equipment_roster_migrates_all_realms_without_reorganizin
 		after.erase("source_parts")
 		assert_eq(after, saved_equipment[code], "only reconstructed provenance may be added")
 	assert_true(bool(state.military_migration.get("organization_pending", false)))
+
+
+# Main-save acceptance uses the canonical import and reorganization boundaries.
+func _compat_ensure(data: DataRepository, saved: GameState) -> Dictionary:
+	var result := Bootstrap.migrate(data, saved)
+	if result.has("error"):
+		return result
+	return MilitaryReorganization.reconcile(data, saved)
+
+func _compat_fixture(elements: int = 200, crew: int = 2) -> Dictionary:
+	var repo := SuiteData.repo()
+	var state := GameState.new()
+	state.rng = Rng.new(7)
+	state.metrics = GameState.from_dict(state.to_dict()).metrics
+	var provinces := repo.world_table("economy", "provinces").keys()
+	provinces.sort()
+	var province: String = provinces[0]
+	state.world["economy.provinces.%s.rural_population" % province] = 1000
+	state.world["economy.provinces.%s.urban_population" % province] = 500
+	state.army_roster = {"saved": {"regiment_code": "saved", "kingdom_code": repo.resolve_realm("player_realm"),
+		"province_code": province, "parent_code": "ancestor", "is_naval": "0", "is_royal": "0",
+		"cavalry": str(elements), "x": "0", "y": "0", "camp_town": "", "label": "Saved"}}
+	var land: Array = ArmySplit.roster_of(repo).values().filter(func(r: Dictionary) -> bool: return String(r.get("is_naval", "0")) != "1")
+	state.army_roster.saved.x = String(land[0].x)
+	state.army_roster.saved.y = String(land[0].y)
+	state.army_roster.saved.camp_town = String(land[0].get("camp_town", ""))
+	repo.world_table("military", "unit_types")["cavalry"]["crew"] = str(crew)
+	state.army_roster.saved.source_parts = [{"regiment_code": "ancestor", "province_code": province, "arm": "cavalry", "equipment_count": elements, "crew_per_element": crew}]
+	state.characters = CharacterFactory.build_roster(repo)
+	repo.balance["recruitment_eligible_permille"] = 1000
+	state.regiments = {"saved": {"dead": 10, "wounded": 20, "deserted": 5, "supplies": 101}}
+	return {"repo": repo, "state": state, "province": province}
+
+func test_main_crew_and_old_losses_are_personnel_once() -> void:
+	var f := _compat_fixture()
+	var s: GameState = f.state
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	assert_eq(MilitaryRoster.fit(s, "saved"), 365)
+	assert_eq(Personnel.count(s, "saved", "wounded"), 20)
+	assert_eq(Personnel.count(s, "saved", "dead"), 10)
+	assert_eq(Personnel.count(s, "saved", "released"), 5)
+	assert_eq(s.army_roster.saved.cavalry, "200")
+	assert_eq(s.world["economy.provinces.%s.rural_population" % f.province], 1000)
+	var snapshot := s.to_dict()
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	assert_eq(s.to_dict(), snapshot)
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(snapshot)))
+	assert_false(_compat_ensure(f.repo, restored).has("error"))
+	for key: String in snapshot:
+		assert_eq(restored.to_dict()[key], snapshot[key], key)
+
+func test_main_weighted_sources_are_160_rural_20_urban() -> void:
+	var f := _compat_fixture(90, 2)
+	var s: GameState = f.state
+	s.regiments.saved = {}
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	assert_eq(MilitaryPopulation.occupied(s, f.province, "rural_population"), 160)
+	assert_eq(MilitaryPopulation.occupied(s, f.province, "urban_population"), 20)
+
+func test_main_split_preserves_first_id_inventory_and_typed_references() -> void:
+	var f := _compat_fixture(301, 2)
+	var s: GameState = f.state
+	s.battles = [{"att": ["saved"], "def": [], "id": 7, "ended": true}]
+	s.war_drafts = {"saved": {"order": "halt"}}
+	s.law_in_force = {"unit:saved": {"camp": {"value": "on"}}}
+	s.supply_lines = {"saved": {"fee_milli": 13, "m_bought": {"house": 7}}}
+	s.couriers = [{"id": 2, "target": "saved", "orders": [{"action_code": "ARMY_HALT", "regiment": "saved"}], "kind": "ordinary"}]
+	s.regiments.saved.order_id = 9
+	s.regiments.saved.inventory = {"swords": 11}
+	s.regiments.saved.inventories = {"grain": 13}
+	s.regiments.saved.reserve_milli = 17
+	s.metrics.treasury = 87
+	s.ai_hosts = {"host": {"unit_codes": ["saved"], "target_id": "town"}}
+	s.war_plans.strokes = {"front": {"codes": ["saved"], "name": "saved"}}
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	var ids: Array = s.military_migration.get("unit_mapping", {}).get("saved", ["saved"])
+	assert_eq(ids.size(), 2)
+	assert_eq(ids[0], "saved")
+	assert_eq(int(s.army_roster[ids[0]].cavalry), 151)
+	assert_eq(int(s.army_roster[ids[1]].cavalry), 150)
+	assert_eq(s.battles[0].att, ids)
+	assert_eq(s.ai_hosts.host.unit_codes, ids)
+	assert_eq(s.ai_hosts.host.target_id, "town")
+	assert_eq(s.war_plans.strokes.front.codes, ids)
+	assert_eq(s.war_plans.strokes.front.name, "saved")
+	assert_eq(s.war_drafts.size(), 2)
+	assert_eq(s.law_in_force["unit:" + ids[1]], s.law_in_force["unit:" + ids[0]], "split inherits saved laws")
+	s.law_in_force["unit:" + ids[1]].camp.value = "off"
+	assert_eq(s.law_in_force["unit:" + ids[0]].camp.value, "on", "each descendant keeps independent law history")
+	assert_eq(s.supply_lines[ids[0]].fee_milli + s.supply_lines[ids[1]].fee_milli, 13)
+	assert_eq(s.regiments[ids[0]].supplies + s.regiments[ids[1]].supplies, 101)
+	assert_eq(s.regiments[ids[0]].inventory.swords, 6, "302:300 people split eleven swords6:5")
+	assert_eq(s.regiments[ids[1]].inventory.swords, 5)
+	assert_eq(s.regiments[ids[0]].inventories.grain + s.regiments[ids[1]].inventories.grain, 13)
+	assert_eq(s.regiments[ids[0]].reserve_milli + s.regiments[ids[1]].reserve_milli, 17)
+	assert_eq(s.couriers.size(), 1, "one paid rider carries both descendant warrants")
+	assert_eq(s.couriers[0].recipient_queue.size(), 1)
+	assert_eq(s.couriers[0].recipient_queue[0].target, ids[1])
+	assert_gt(int(s.regiments[ids[1]].order_id), int(s.couriers[0].id), "a stale saved warrant remains stale for its child")
+	assert_eq(s.metrics.treasury, 87)
+	assert_eq(MilitaryRoster.fit(s, ids[0]) + MilitaryRoster.fit(s, ids[1]), 567)
+
+func test_main_transaction_preserves_cursor_then_reorganizes_once() -> void:
+	var f := _compat_fixture(301, 2)
+	var s: GameState = f.state
+	s.day_resolution = {"phase": "battles", "cursor": 1, "participants": ["saved"]}
+	var transaction := s.day_resolution.duplicate(true)
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	assert_eq(s.army_roster.keys(), ["saved"])
+	assert_eq(s.day_resolution, transaction)
+	assert_true(bool(s.military_migration.get("organization_pending", false)))
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	assert_false(_compat_ensure(f.repo, restored).has("error"))
+	assert_eq(restored.day_resolution, transaction)
+	s.day_resolution = {}
+	restored.day_resolution = {}
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	assert_false(_compat_ensure(f.repo, restored).has("error"))
+	for key: String in s.to_dict():
+		assert_eq(restored.to_dict()[key], s.to_dict()[key], key)
+	assert_eq(s.military_migration.get("organization_version", 0), 1)
+	assert_false(bool(s.military_migration.get("organization_pending", false)))
+
+func test_main_handcomputed_large_split_preserves_capacity_and_nobles() -> void:
+	var f := _compat_fixture(1268, 2)
+	var s: GameState = f.state
+	s.regiments.saved = {}
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	var ids: Array = s.military_migration.get("unit_mapping", {}).get("saved", ["saved"])
+	var elements: Array = []
+	var people: Array = []
+	for id: String in ids:
+		elements.append(int(s.army_roster[id].cavalry))
+		people.append(MilitaryRoster.fit(s, id))
+		var nobles := 0
+		for cohort_id: String in s.military_rosters[id].cohort_ids:
+			var cohort: Dictionary = s.military_cohorts[cohort_id]
+			if cohort.get("person_id", "") != "": nobles += int(cohort.fit)
+		assert_eq(nobles, 1, id)
+	assert_eq(elements, [254, 254, 254, 253, 253])
+	assert_eq(people, [508, 508, 508, 506, 506])
+
+func test_main_invalid_crew_and_small_remnant_do_not_drop_equipment() -> void:
+	var f := _compat_fixture(1, 0)
+	var s: GameState = f.state
+	assert_true(_compat_ensure(f.repo, s).has("error"))
+	assert_eq(s.army_roster.saved.cavalry, "1")
+	assert_true(s.military_cohorts.is_empty())
+	f = _compat_fixture(1, 2)
+	s = f.state
+	s.regiments.saved = {"wounded": 1}
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	assert_eq(MilitaryRoster.fit(s, "saved"), 1)
+	assert_eq(Personnel.count(s, "saved", "wounded"), 1)
+	assert_eq(s.army_roster.saved.cavalry, "1")
+
+func test_main_legacy_train_estimates_saved_garrison_once_and_records_it() -> void:
+	for pending: bool in [false, true]:
+		var f := _compat_fixture()
+		var s: GameState = f.state
+		f.repo.world_table("military", "unit_types").artillery.crew = "8"
+		var train: Dictionary = s.army_roster.saved.duplicate(true)
+		train.regiment_code = "old_train"
+		train.cavalry = "0"
+		train.artillery = "2"
+		train.erase("source_parts")
+		s.army_roster.old_train = train
+		s.regiments.old_train = {"dead": 2, "wounded": 3, "deserted": 1, "captured_current": 1, "supplies": 17}
+		s.metrics.treasury = 87
+		var world := s.world.duplicate(true)
+		if pending: s.day_resolution = {"phase": "battles", "cursor": 1}
+		var result := _compat_ensure(f.repo, s)
+		assert_false(result.has("error"))
+		if result.has("error"): return
+		if pending: assert_eq(s.day_resolution, {"phase": "battles", "cursor": 1})
+		assert_eq(MilitaryRoster.fit(s, "old_train"), 9)
+		for pair: Array in [["dead", 2], ["wounded", 3], ["released", 1], ["captured_current", 1]]:
+			assert_eq(Personnel.count(s, "old_train", pair[0]), pair[1])
+		var event: Dictionary = s.military_events[s.military_migration.event_id]
+		assert_true(String(event.request.reason).contains("estimated"))
+		assert_true(String(event.request.reason).contains(f.province))
+		var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+		assert_false(_compat_ensure(f.repo, restored).has("error"))
+		if pending:
+			s.day_resolution = {}
+			restored.day_resolution = {}
+			assert_false(_compat_ensure(f.repo, s).has("error"))
+			assert_false(_compat_ensure(f.repo, restored).has("error"))
+		var part: Dictionary = s.army_roster.old_train.source_parts[0]
+		assert_eq(part.province_code, f.province)
+		assert_eq(part.origin_basis, "estimated_saved_garrison")
+		assert_true(String(part.origin_reason).contains(f.province))
+		assert_true(String(s.military_migration.get("organization_reason", "")).contains("estimated"))
+		assert_eq(part.equipment_count, 2)
+		assert_eq(part.crew_per_element, 8)
+		assert_eq(s.army_roster.old_train.artillery, "2")
+		assert_eq(s.regiments.old_train.supplies, 17)
+		assert_eq(s.metrics.treasury, 87)
+		assert_eq(s.world, world, "saved deaths and estimated service do not debit population again")
+		assert_eq(s.military_events[s.military_migration.event_id], event)
+		for key: String in s.to_dict(): assert_eq(restored.to_dict()[key], s.to_dict()[key], key)
+		var snapshot := s.to_dict()
+		assert_false(_compat_ensure(f.repo, s).has("error"))
+		assert_eq(s.to_dict(), snapshot)
+
+func test_main_legacy_train_without_valid_saved_garrison_remains_a_conflict() -> void:
+	var f := _compat_fixture()
+	var s: GameState = f.state
+	s.army_roster.saved.cavalry = "0"
+	s.army_roster.saved.artillery = "2"
+	s.army_roster.saved.province_code = ""
+	s.army_roster.saved.camp_town = ""
+	s.army_roster.saved.erase("source_parts")
+	var before := s.army_roster.duplicate(true)
+	assert_true(_compat_ensure(f.repo, s).has("error"))
+	assert_true(s.military_migration.is_empty(), "failed import publishes no markers")
+	assert_eq(s.army_roster, before)
+	assert_true(s.military_cohorts.is_empty())
+
+func test_main_authored_multi_source_train_never_moves_all_crew_to_capital() -> void:
+	var f := _compat_fixture(0, 2)
+	var s: GameState = f.state
+	var provinces: Array = f.repo.world_table("economy", "provinces").keys()
+	provinces.sort()
+	var other: String = provinces[1]
+	s.world["economy.provinces.%s.rural_population" % other] = 1000
+	s.world["economy.provinces.%s.urban_population" % other] = 500
+	var row: Dictionary = s.army_roster.saved
+	row.artillery = "2"
+	f.repo.world_table("military", "unit_types").artillery.crew = "8"
+	row.source_parts = [{"regiment_code": "a", "province_code": f.province, "arm": "artillery", "equipment_count": 1, "crew_per_element": 8},
+		{"regiment_code": "b", "province_code": other, "arm": "artillery", "equipment_count": 1, "crew_per_element": 8}]
+	s.regiments.saved = {}
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	assert_eq(MilitaryRoster.fit(s, "saved"), 16)
+	assert_eq(MilitaryPopulation.occupied(s, f.province), 8)
+	assert_eq(MilitaryPopulation.occupied(s, other), 8)
+	assert_eq(s.army_roster.saved.artillery, "2")
+	assert_false(String(s.military_events[s.military_migration.event_id].request.reason).contains("estimated"))
+	for part: Dictionary in s.army_roster.saved.source_parts:
+		assert_false(part.has("origin_basis"), "recorded source provenance stays recorded")
+
+func test_main_new_campaign_all_player_and_raider_units_have_one_counted_commander() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 71)
+	assert_eq(state.military_migration.get("organization_version", 0), 1)
+	var named: Dictionary = {}
+	var checked := 0
+	for code: String in state.army_roster:
+		var row: Dictionary = state.army_roster[code]
+		if String(row.kingdom_code) not in [repo.resolve_realm("player_realm"), repo.resolve_realm("raider_realm")]: continue
+		checked += 1
+		var roster: Dictionary = state.military_rosters.get(code, {})
+		var commander := String(roster.get("commander_id", ""))
+		assert_ne(commander, "", code)
+		assert_false(named.has(commander), code)
+		named[commander] = true
+		var matches := 0
+		for id: String in roster.get("cohort_ids", []):
+			var cohort: Dictionary = state.military_cohorts[id]
+			if String(cohort.get("person_id", "")) == commander:
+				matches += 1
+				assert_eq(cohort.identity, "noble")
+				assert_eq(cohort.initial, 1)
+		assert_eq(matches, 1, code)
+	assert_gt(checked, 0)
+
+func test_main_crew_eight_cap_twentyfive_splits_equipment_three_two_two() -> void:
+	var f := _compat_fixture(7, 8)
+	var s: GameState = f.state
+	f.repo.balance["army_split_cap_men"] = 25
+	s.regiments.saved = {}
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	var elements: Array = []
+	var people: Array = []
+	for id: String in s.military_migration.get("unit_mapping", {}).get("saved", ["saved"]):
+		elements.append(int(s.army_roster[id].cavalry))
+		people.append(MilitaryRoster.fit(s, id))
+	assert_eq(elements, [3, 2, 2])
+	assert_eq(people, [24, 16, 16])
+
+func test_main_one_ship_crew_hundred_preserves_one_ship_and_personnel() -> void:
+	var f := _compat_fixture(0, 2)
+	var s: GameState = f.state
+	f.repo.world_table("military", "unit_types")["fleet"] = {"crew": "100", "rural_rate": "0.12", "urban_rate": "0.03"}
+	s.army_roster.saved.is_naval = "1"
+	s.army_roster.saved.fleet = "1"
+	s.army_roster.saved.source_parts = [{"regiment_code": "ancestor", "province_code": f.province, "arm": "fleet", "equipment_count": 1, "crew_per_element": 100}]
+	s.regiments.saved = {}
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	assert_eq(s.army_roster.saved.fleet, "1")
+	assert_eq(MilitaryRoster.fit(s, "saved"), 100)
+	var snapshot := s.to_dict()
+	assert_false(_compat_ensure(f.repo, s).has("error"))
+	assert_eq(s.to_dict(), snapshot)
+
+
+func test_main_pending_supply_metadata_and_desertion_remainder_are_conserved() -> void:
+	var f := _compat_fixture(301, 2)
+	var state: GameState = f.state
+	state.supply_lines = {"saved": {"pending": {"town": "depot", "rate": 750, "order_id": 7}}}
+	state.regiments.saved.desert_rem = 13
+	state.couriers = [{"id": 7, "target": "saved", "orders": [{"action_code": "SUPPLY_POINT_SET"}]}]
+	assert_false(_compat_ensure(f.repo, state).has("error"))
+	var remainder := 0
+	for code: String in state.military_migration.get("unit_mapping", {}).get("saved", ["saved"]):
+		remainder += int(state.regiments[code].desert_rem)
+		assert_eq(state.supply_lines[code].pending.town, "depot")
+		assert_eq(state.supply_lines[code].pending.rate, 750)
+		assert_eq(state.couriers.size(), 1)
+		assert_eq(state.supply_lines[code].pending.order_id, state.couriers[0].id)
+		if code != "saved":
+			assert_true(state.couriers[0].recipient_queue.any(func(recipient: Dictionary) -> bool: return recipient.target == code))
+	assert_eq(remainder, 13)
+
+func _main_v7_save() -> Dictionary:
+	_legacy()
+	assert_false(_migrate().has("error"))
+	var saved := state.to_dict()
+	saved.version = 7
+	saved.erase("military_migration")
+	saved.military_organization_version = 1
+	saved.military_migration_pending = false
+	saved.military_unit_aliases = {"ancestor": ["old_unit"]}
+	saved.military_conflicts = []
+	for roster: Dictionary in saved.military_rosters.values():
+		roster.erase("commander_cohort_id")
+	for field: String in ["military_rosters", "military_cohorts", "military_events"]:
+		saved[field] = GameState._encode_values(saved[field])
+	return saved
+
+func test_main_v7_import_preserves_identity_receipts_and_completed_organization() -> void:
+	var saved := _main_v7_save()
+	var cohort_id := ""
+	for id: String in saved.military_cohorts:
+		if int(GameState._decode_values(saved.military_cohorts[id].fit)) >= 10 and not saved.military_cohorts[id].has("person_id"):
+			cohort_id = id
+			break
+	assert_ne(cohort_id, "")
+	var changes := [{"cohort_id": cohort_id, "from": "fit", "to": "dead", "count": 10}]
+	var receipt := {"kind": "transition", "payload": changes, "reason": "recorded battle loss", "tick": 1}
+	saved.military_events["saved-loss"] = GameState._encode_values(receipt)
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(saved)))
+	var equipment: Dictionary = GameState._whole(state.army_roster)
+	var cohorts := state.military_cohorts.duplicate(true)
+	var treasury: float = state.metrics.treasury
+	var result := _migrate()
+	assert_false(result.has("error"), str(result))
+	if result.has("error"): return
+	assert_eq(state.army_roster, equipment)
+	assert_eq(state.military_cohorts, cohorts, "derive appointment reference without enlisting another officer")
+	assert_false(state.military_migration.get("organization_pending", true))
+	assert_eq(state.military_migration.get("unit_mapping"), {"ancestor": ["old_unit"]})
+	assert_eq(state.metrics.treasury, treasury)
+	var before := state.to_dict()
+	assert_false(Roster.transition(repo, state, "saved-loss", changes, "recorded battle loss").has("error"))
+	assert_eq(state.to_dict(), before)
+	changes[0].count = 11
+	assert_true(Roster.transition(repo, state, "saved-loss", changes, "recorded battle loss").has("error"))
+	assert_eq(state.to_dict(), before)
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())))
+	assert_false(_migrate().has("error"))
+	for key: String in before:
+		assert_eq(state.to_dict()[key], before[key], key)
+
+func test_main_v7_malformed_import_does_not_publish_partial_conversion() -> void:
+	var saved := _main_v7_save()
+	saved.military_cohorts.values()[0].initial = "i999999"
+	state = GameState.from_dict(saved)
+	var before := state.to_dict()
+	assert_true(_migrate().has("error"))
+	assert_eq(state.to_dict(), before)
+
+func test_main_v7_active_battle_import_resumes_engagement_without_replaying_round() -> void:
+	repo = SuiteData.repo()
+	state = Scenario.contact(repo, 10)
+	BattleSystem.prepare_day(repo, state)
+	var battle: Dictionary = state.battles[0]
+	battle.rounds = 2
+	battle.last_resolved_day = 9
+	for field: String in ["actions", "parley", "formations"]:
+		battle.erase(field)
+	var battle_id := int(battle.id)
+	var saved := state.to_dict()
+	saved.erase("military_migration")
+	saved.military_organization_version = 1
+	saved.military_migration_pending = false
+	saved.military_unit_aliases = {}
+	saved.military_conflicts = []
+	for roster: Dictionary in saved.military_rosters.values():
+		roster.erase("commander_cohort_id")
+	for field: String in ["military_rosters", "military_cohorts", "military_events"]:
+		saved[field] = GameState._encode_values(saved[field])
+	var tx := DayResolution.begin(10, false, 10)
+	tx.protocol_version = 3
+	tx.substep_protocol_version = 3
+	tx.substep_order = DayResolution.LEGACY_SUBSTEP_ORDER.duplicate()
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+	tx.substep_index = 6
+	tx.processed_battle_ids = [battle_id]
+	saved.day_resolution = GameState._encode_values(tx)
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(saved)))
+	var live := state.regiments.duplicate(true)
+	var foes := state.foes.duplicate(true)
+	var cursor := state.day_resolution.duplicate(true)
+	var rng := state.rng.to_dict()
+	var result := _migrate()
+	assert_false(result.has("error"), str(result))
+	if result.has("error"): return
+	var imported: Dictionary = state.battles[0]
+	assert_eq(BattleOrders.kind(imported, "att"), "attack", "saved main engagement retains its active fighting default")
+	assert_eq(BattleOrders.kind(imported, "def"), "hold")
+	assert_ne(String(imported.actions.att.reason), "")
+	assert_ne(String(imported.actions.def.reason), "")
+	assert_true(imported.has("parley"))
+	assert_true(imported.has("formations"))
+	for key: String in battle:
+		assert_eq(imported[key], battle[key], key)
+	assert_eq(state.regiments, live, "import spends no carried supply or movement")
+	assert_eq(state.foes, foes, "foreign carried supply and movement are also preserved")
+	assert_eq(state.day_resolution, cursor, "processed battle and substep cursors remain authoritative")
+	assert_eq(state.rng.to_dict(), rng)
+	var canonical := state.to_dict()
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(canonical)))
+	assert_false(_migrate().has("error"))
+	assert_eq(state.to_dict(), canonical)
+	var engine := TickEngine.new(repo)
+	var foe: String = state.battles[0].att[0]
+	var food_before := int(state.foes[foe].supplies)
+	assert_eq(engine.resolve_day(state).status, "complete")
+	assert_eq(int(state.foes[foe].supplies), food_before, "host-less contact fixture spends no enemy meal or replayed prior attack supply cost")
+	assert_eq(int(state.battles[0].rounds), 2, "the already processed saved round never replays")
+	assert_eq(state.day, 11)
+	var before_next: Dictionary = state.military_cohorts.duplicate(true)
+	var next_day := engine.resolve_day(state)
+	assert_eq(next_day.status, "complete")
+	assert_eq(int(state.battles[0].rounds), 3, "the next legal day actually engages")
+	assert_ne(state.military_cohorts, before_next, "engagement applies its actual personnel losses")
+
+func test_main_v7_malformed_receipt_refuses_before_publishing_any_candidate() -> void:
+	var saved := _main_v7_save()
+	var cohort_id := ""
+	for id: String in saved.military_cohorts:
+		if int(GameState._decode_values(saved.military_cohorts[id].fit)) > 0:
+			cohort_id = id
+			break
+	assert_ne(cohort_id, "")
+	var valid_request := {"kind": "transition", "changes": [
+		{"cohort_id": cohort_id, "from": "fit", "to": "dead", "count": 1}], "reason": "saved loss"}
+	for request: Variant in [valid_request, []]:
+		var candidate: Dictionary = saved.duplicate(true)
+		candidate.military_events.bad = GameState._encode_values({"request": request, "result": 42})
+		state = GameState.from_dict(JSON.parse_string(JSON.stringify(candidate)))
+		var before := state.to_dict()
+		var before_hash := SaveLoad.state_hash(state)
+		assert_true(_migrate().has("error"), "malformed receipt is refused at import")
+		assert_eq(state.to_dict(), before, "no converted receipts, appointments or markers publish")
+		assert_eq(SaveLoad.state_hash(state), before_hash)

@@ -45,8 +45,13 @@ func test_tilt_reaches_the_ground_shader() -> void:
 class FakeMaterial:
 	extends Resource
 	var params: Dictionary = {}
+	var _shader_parameters: Dictionary:
+		get: return params
+	var reads := 0
 	func set_shader_param(key: String, value: Variant) -> void: params[key] = value
-	func get_shader_param(key: String) -> Variant: return params.get(key)
+	func get_shader_param(key: String) -> Variant:
+		reads += 1
+		return params.get(key)
 
 
 ## A stand-in Terrain3D: headless has none.
@@ -70,3 +75,13 @@ func test_a_changed_export_reaches_the_ground_after_the_first_push() -> void:
 	assert_almost_eq(float(mat.params.get("wind_tilt")), wind.tilt, 0.0001,
 		"a later value (the inspector, a shot's --set) is handed on, not only on a reset")
 	assert_almost_eq((mat.params.get("wind_dir") as Vector2).y, 1.0, 0.0001, "and the direction")
+	mat.params.clear()
+	wind._process(0.1)
+	assert_eq(mat.params.get("wind_on"), 1.0, "a native material reset restores the wind")
+	assert_eq(mat.reads, 0, "uniform checks do not synchronize with the render server")
+	var replacement := FakeMaterial.new()
+	terrain.material = replacement
+	wind._process(0.1)
+	assert_eq(replacement.params.get("wind_on"), 1.0, "a replacement material is initialized")
+	assert_almost_eq(float(replacement.params.get("wind_tilt")), wind.tilt, 0.0001)
+	assert_eq(replacement.reads, 0)

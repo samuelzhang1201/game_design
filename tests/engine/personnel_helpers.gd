@@ -17,6 +17,8 @@ static func replace(repo: DataRepository, state: GameState, code: String, n: int
 			var released := move(repo, state, code, status, "released", old)
 			if released.has("error"):
 				return released
+	if n == 0:
+		return {"status": "released"}
 	var origin: Dictionary = state.military_cohorts[state.military_rosters[code]["cohort_ids"][0]]
 	var province := String(origin["source_province"])
 	var field := String(origin["source_population_field"])

@@ -576,12 +576,28 @@ static func prepare_day(repo: DataRepository, state: GameState) -> Array:
 	return events
 
 
+## Contact discovery after another substep never repeats daily withdrawals.
+static func discover_contacts(repo: DataRepository, state: GameState) -> Array:
+	var events: Array = []
+	_detect(repo, state, events)
+	return events
+
+
 static func step_battle(repo: DataRepository, state: GameState, battle_id: int) -> Dictionary:
 	var events: Array = []
 	var battle := battle_by_id(state, battle_id)
 	if not battle.is_empty():
+		var had_commanders := battle.has("commanders")
+		var previous: Dictionary = battle.get("commanders", {}).duplicate(true)
+		var leadership := BattleCommand.update_battle(repo, state, battle)
+		if leadership.has("error"):
+			return {"status": "error", "error": leadership["error"], "events": []}
 		var result := _fight(repo, state, battle, events)
 		if result.has("error"):
+			if had_commanders:
+				battle["commanders"] = previous
+			else:
+				battle.erase("commanders")
 			return {"status": "error", "error": result["error"], "events": []}
 		if not bool(result["ended"]): BattleReport.note(battle, events)
 		if bool(result["ended"]):

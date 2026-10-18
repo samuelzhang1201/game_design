@@ -179,7 +179,7 @@ static func pennant_of(repo: DataRepository, state: GameState, code: String) -> 
 ## The slip pinned beside a piece: heads under arms and whole months of stores.
 static func tag_text(repo: DataRepository, state: GameState, code: String) -> String:
 	var reg := ArmySystem.regiment(repo, code, state)
-	var heads := group(ArmySystem.headcount(repo, reg))
+	var heads := group(ArmySystem.under_arms(ArmySystem.headcount(repo, reg), ArmySystem.state_of(repo, state, code)))
 	var st := ArmySystem.state_of(repo, state, code)
 	var use := ArmySystem.supply_use(repo, reg, state)
 	if st.is_empty() or use <= 0:

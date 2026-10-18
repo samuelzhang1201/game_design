@@ -254,7 +254,7 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 		var reg := ArmySystem.regiment(repo, c, state)
 		if entry.is_empty() or reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
-		if ArmySystem.supply_use(repo, reg, state) <= 0:
+		if ArmySystem.fit_count(repo, state, c) <= 0:
 			continue
 		var province := ArmySystem.province_of(repo, state, reg)
 		var kind := Forage.land_kind(repo, state, province)

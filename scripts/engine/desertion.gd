@@ -19,7 +19,7 @@ static func conditions(repo: DataRepository, state: GameState, code: String) -> 
 	if entry.is_empty() or reg.is_empty():
 		return 0
 	var use := ArmySystem.supply_use(repo, reg, state)
-	if use <= 0:
+	if ArmySystem.fit_count(repo, state, code) <= 0:
 		return 0
 	var n := 0
 	if int(entry.get("morale", 0)) < int(repo.bal("desert_morale")):

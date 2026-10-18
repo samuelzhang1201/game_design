@@ -85,6 +85,39 @@ static func step_day(repo: DataRepository, state: GameState) -> void:
 	if int(king.get("last_advanced_day", 0)) == today:
 		return
 	king["last_advanced_day"] = today
+	_advance(repo, state, daily_budget(repo, state))
+
+
+static func daily_budget(repo: DataRepository, state: GameState) -> int:
+	var path := MarchRoute.from_pairs(state.king_state.get("route", []))
+	var left := MarchRoute.length_from(position(state), path)
+	var pace := maxi(1, int(repo.bal("king_travel_km_per_day")) * 1000)
+	var days := maxi(1, int(ceil(left / float(pace))))
+	return int(ceil(left / float(days)))
+
+
+## Freeze one royal budget per day; following synchronizes at every contact boundary.
+static func step_substep(repo: DataRepository, state: GameState, tx: Dictionary) -> void:
+	ensure(repo, state)
+	if not tx.has("king_budget"):
+		tx["king_budget"] = 0 if int(state.king_state.get("last_advanced_day", 0)) == state.absolute_day() else daily_budget(repo, state)
+		tx["king_substep_index"] = -1
+	var index := int(tx["substep_index"])
+	if index <= int(tx.get("king_substep_index", -1)):
+		return
+	var count := maxi(1, int(tx["substep_count"]))
+	var budget := int(tx["king_budget"])
+	@warning_ignore("integer_division")
+	var step := budget / count + (1 if index < budget % count else 0)
+	_advance(repo, state, step)
+	tx["king_substep_index"] = index
+	if index == count - 1:
+		state.king_state["last_advanced_day"] = state.absolute_day()
+	(tx["journal"] as Dictionary)["king_state"] = state.king_state.duplicate(true)
+
+
+static func _advance(repo: DataRepository, state: GameState, step: int) -> void:
+	var king := state.king_state
 	var follow_code := String(king.get("follow_code", ""))
 	var follow_reg := ArmySystem.regiment(repo, follow_code, state) if follow_code != "" else {}
 	if follow_code != "" and not follow_reg.is_empty() and state.army_roster.has(follow_code):
@@ -110,11 +143,8 @@ static func step_day(repo: DataRepository, state: GameState) -> void:
 		king["travel_state"] = "stationary"
 		return
 	var here := position(state)
-	var pace := int(repo.bal("king_travel_km_per_day")) * 1000
 	var left := MarchRoute.length_from(here, path)
-	var days := int(ceil(left / float(maxi(pace, 1))))
-	var step := int(ceil(left / float(maxi(days, 1))))
-	if days <= 1:
+	if left <= step:
 		king["x_m"] = int(path.back().x)
 		king["y_m"] = int(path.back().y)
 		king["route"] = []
@@ -124,7 +154,7 @@ static func step_day(repo: DataRepository, state: GameState) -> void:
 	king["x_m"] = (walked["at"] as Vector2i).x
 	king["y_m"] = (walked["at"] as Vector2i).y
 	king["route"] = MarchRoute.to_pairs(walked["path"])
-	king["travel_state"] = "travelling"
+	king["travel_state"] = "rendezvous" if follow_code != "" else "travelling"
 
 
 static func present(repo: DataRepository, state: GameState, battle_id: int) -> bool:

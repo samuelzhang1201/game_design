@@ -644,14 +644,96 @@ func test_each_seed_establishes_a_siege_with_only_physically_deployed_columns() 
 						assert_true((e.get("route_m", []) as Array).is_empty(), "stationed columns have no stale march route")
 						expected_attack += ArmySystem.power(repo2, s, c, "attack")
 					elif not SiegeSystem.at_town(repo2, s, c, town) and int(e.get("disengaging", 0)) == 0:
-						saw_remote_column = true
-						assert_eq(String(e["order"]), ArmySystem.ORDER_MARCH, "remote columns continue their independent march")
+						if String(e.get("road_blocked_by", "")) != "":
+							# Clearance stops await the next day's host route planning.
+							assert_eq(String(e["order"]), ArmySystem.ORDER_GARRISON)
+							assert_eq(Vector2i(int(e["dest_x_m"]), int(e["dest_y_m"])), Vector2i(int(e["x_m"]), int(e["y_m"])))
+							assert_true((e.get("route_m", []) as Array).is_empty())
+						elif BattleSystem.battle_of(s, c).is_empty():
+							saw_remote_column = true
+							assert_eq(String(e["order"]), ArmySystem.ORDER_MARCH, "free remote columns continue their independent march")
 			assert_eq(SiegeSystem.attack_power(repo2, s, town), expected_attack, "only actual stationed strength contributes")
 			checked += 1
 			if checked >= 3:
 				break
 		assert_eq(checked, 3, "seed %d genuinely establishes a siege" % seed_value)
 		assert_true(saw_remote_column, "seed %d begins before the remote columns arrive" % seed_value)
+
+func test_a_besieging_host_stands_at_the_town_within_days_of_sitting_down() -> void:
+	_pace(100)
+	var host := Play.host(repo, "main")
+	var definition: Dictionary = {}
+	for row: Dictionary in repo.raid_hosts:
+		if String(row["host_code"]) == host:
+			definition = row
+	assert_false(definition.is_empty())
+	if definition.is_empty():
+		return
+	var cavalry: Array = []
+	for code: String in EnemyAi.host_units(repo, null, definition):
+		if MapObjects.regiment_arm(repo, ArmySystem.regiment(repo, code)) == "cavalry":
+			cavalry.append(code)
+	cavalry.sort()
+	assert_false(cavalry.is_empty())
+	if cavalry.is_empty():
+		return
+	var reach := int(repo.bal("army_spread_reach_m"))
+	var radius := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, cavalry[0]))
+	var pitch := radius * 2 + 1
+	@warning_ignore("integer_division")
+	var needed := reach / pitch + 2
+	assert_gte(cavalry.size(), needed, "enough columns to queue beyond the spread reach")
+	if cavalry.size() < needed:
+		return
+	cavalry = cavalry.slice(0, needed)
+	var garrison := String(_mine()[0])
+	for disable_spread: bool in [true, false]:
+		var keep: Array = [garrison]
+		keep.append_array(cavalry)
+		var state := _alone(keep)
+		var towns := TownStores.realm_towns(repo, state)
+		towns.sort()
+		assert_false(towns.is_empty())
+		if towns.is_empty():
+			return
+		var town := String(towns[0])
+		var centre := Play.town_m(repo, town)
+		state.town_seat.clear()
+		_stand(state, garrison, centre)
+		state.regiments[garrison]["order"] = ArmySystem.ORDER_GARRISON
+		state.town_seat[town] = garrison
+		state.ai_hosts = {host: {"mode": EnemyAi.MODE_SIEGE,
+			"target_kind": EnemyAi.KIND_TOWN, "target_id": town}}
+		for i in cavalry.size():
+			var code := String(cavalry[i])
+			_foe(state, code, centre + Vector2i(pitch * (i + 1), 0))
+			state.foes[code]["host"] = host
+		assert_false(SiegeSystem.at_town(repo, state, String(cavalry.back()), town),
+			"the approach queue initially extends beyond the town's spread reach")
+		assert_eq(_within_at_start(repo, state), [], "the fixture starts without overlapping units")
+		# Disable movement's spreading only; both runs use the same final acceptance radius.
+		if disable_spread:
+			repo.balance["army_spread_reach_m"] = 0
+		for day in 3:
+			EnemyAi.march_host(repo, state, host)
+			_day(state)
+		repo.balance["army_spread_reach_m"] = reach
+		var outside := 0
+		for code: String in cavalry:
+			if not SiegeSystem.at_town(repo, state, code, town):
+				outside += 1
+		if disable_spread:
+			assert_gt(outside, 0, "without spreading, the approach queue remains outside")
+			continue
+		assert_eq(outside, 0, "every besieging column reaches the town within three days")
+		assert_eq(_within_at_start(repo, state), [], "spread columns preserve clearance")
+		var settled: Dictionary = {}
+		for code: String in cavalry:
+			settled[code] = _at(state, code)
+		EnemyAi.march_host(repo, state, host)
+		_day(state)
+		for code: String in cavalry:
+			assert_eq(_at(state, code), settled[code], "refreshed host orders preserve its camp")
 
 
 func test_a_detour_then_an_enemy_halt_keeps_the_drawn_corners() -> void:

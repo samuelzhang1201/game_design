@@ -1,5 +1,335 @@
 extends GutTest
 
+const BattleScenario := preload("res://tests/fixtures/battle_scenario.gd")
+const SuiteData := preload("res://tests/suite_data.gd")
+var _battle_original_data: DataRepository
+
+## Controller tests replace only the view; the real-scene acceptance test stays separate.
+class EncounterPanelDouble extends BattleEncounterPanel:
+	var shown_decision: Dictionary = {}
+	var centered_rect: Rect2
+	func _ready() -> void:
+		hide()
+	func open(_repo: DataRepository, _state: GameState, decision: Dictionary) -> void:
+		shown_decision = decision.duplicate(true)
+		show()
+	func center_on(map_rect: Rect2) -> void:
+		centered_rect = map_rect
+
+func after_each() -> void:
+	if _battle_original_data != null:
+		Game.restart()
+		Game.data = _battle_original_data
+		_battle_original_data = null
+
+func _battle_root(two := false, day := 10, real_panel := false) -> GameRoot:
+	_battle_original_data = Game.data
+	Game.restart()
+	Game.data = SuiteData.repo()
+	Game.data.balance["map3d_default"] = 0.0
+	Game.state = BattleScenario.two_battles(Game.data, day) if two else BattleScenario.contact(Game.data, day)
+	Game.engine = TickEngine.new(Game.data)
+	var root := _root()
+	root.set_process(false)
+	if not real_panel:
+		root._battle_encounter = load("res://scenes/panels/battle_encounter_panel.tscn").instantiate()
+		root._battle_encounter.set_script(EncounterPanelDouble)
+		root._make_battle_encounter()
+	root._switch_to(GameRoot.State.COURT)
+	return root
+
+func _confirm_encounter() -> void:
+	assert_true(Game.has_method("resolve_battle_decision"), "Game owns encounter acknowledgements")
+	if not Game.has_method("resolve_battle_decision"):
+		return
+	var pending: Dictionary = Game.state.day_resolution.get("pending_decision", {})
+	assert_false(pending.is_empty())
+	if pending.is_empty():
+		return
+	var out: Dictionary = Game.call("resolve_battle_decision", String(pending["token"]), "continue")
+	assert_eq(out.get("status"), "accepted")
+	assert_eq(Game.clock_speed, 0, "a choice does not press Play")
+
+func test_encounter_stops_catchup() -> void:
+	var root := _battle_root()
+	Game.set_clock_speed(1)
+	root._process(40.0)
+	assert_eq(Game.clock_speed, 0, "stop at the first eight-second boundary")
+	assert_eq(root._clock_acc, 0.0, "discard the remaining four days")
+	assert_eq(Game.day_progress, 0.0)
+	assert_eq(Game.state.day, 10)
+	assert_eq(Game.state.battles.size(), 1)
+	assert_eq(int(Game.state.battles[0]["rounds"]), 0)
+	for table: Dictionary in [Game.state.regiments, Game.state.foes]:
+		for entry: Dictionary in table.values():
+			assert_eq(int(entry.get("dead", 0)) + int(entry.get("wounded", 0)), 0)
+	_confirm_encounter()
+	assert_eq(root._clock_acc, 0.0)
+	if not Game.has_method("resolve_battle_decision"):
+		return
+	root._process(40.0)
+	assert_eq(Game.state.day, 10, "confirmation leaves the old transaction paused")
+	Game.toggle_clock()
+	root._process(0.0)
+	assert_eq(Game.state.day, 11, "resume the paid-for day immediately")
+	assert_true(Game.state.day_resolution.is_empty())
+	root._process(7.9)
+	assert_eq(Game.state.day, 11)
+	root._process(0.1)
+	assert_eq(Game.state.day, 12)
+
+func test_encounter_preserves_selected_speed(speed = use_parameters([1, 2, 4])) -> void:
+	var root := _battle_root()
+	Game.set_clock_speed(speed)
+	var seconds := 8.0 / float(speed)
+	root._process(seconds - 0.1)
+	assert_true(Game.state.day_resolution.is_empty())
+	root._process(0.1)
+	assert_eq(Game.clock_speed, 0)
+	_confirm_encounter()
+	if not Game.has_method("resolve_battle_decision"):
+		return
+	Game.toggle_clock()
+	assert_eq(Game.clock_speed, speed)
+	root._process(0.0)
+	assert_eq(Game.state.day, 11)
+	root._process(seconds - 0.1)
+	assert_eq(Game.state.day, 11)
+	root._process(0.1)
+	assert_eq(Game.state.day, 12)
+
+func test_decision_lock_survives_other_windows() -> void:
+	var root := _battle_root()
+	Game.set_clock_speed(4)
+	root._process(2.0)
+	assert_true(Game.holds_clock("battle_decision"))
+	for holder: String in ["ledger", "war_room"]:
+		Game.hold_clock(true, holder)
+		Game.hold_clock(false, holder)
+		Game.toggle_clock()
+		assert_eq(Game.clock_speed, 0)
+	Game.release_clock_holds()
+	assert_true(Game.holds_clock("battle_decision"), "view reset cannot dismiss a saved decision")
+	_confirm_encounter()
+	assert_false(Game.holds_clock("battle_decision"))
+
+func test_encounter_load_restores_pending_decision() -> void:
+	var root := _battle_root()
+	Game.set_clock_speed(4)
+	root._process(2.0)
+	var pending: Dictionary = Game.state.day_resolution["pending_decision"].duplicate(true)
+	assert_true(Game.save_campaign())
+	Game.restart()
+	Game._resume_speed = 1  # a fresh process has no in-memory speed preference
+	assert_true(Game.load_campaign())
+	assert_eq(Game.state.day_resolution["pending_decision"], pending)
+	assert_true(Game.holds_clock("battle_decision"))
+	assert_eq(Game.clock_speed, 0)
+	assert_not_null(Game.engine, "load can resume without an earlier campaign engine")
+	_confirm_encounter()
+	Game.toggle_clock()
+	assert_eq(Game.clock_speed, 4, "the interrupted save remembers the selected speed")
+
+func test_multiple_first_encounters_each_require_confirmation() -> void:
+	var root := _battle_root(true)
+	Game.set_clock_speed(1)
+	root._process(40.0)
+	var first: String = Game.state.day_resolution["pending_decision"]["token"]
+	_confirm_encounter()
+	if not Game.has_method("resolve_battle_decision"):
+		return
+	Game.toggle_clock()
+	root._process(0.0)
+	var second: String = Game.state.day_resolution["pending_decision"]["token"]
+	assert_ne(first, second)
+	assert_eq(Game.clock_speed, 0)
+	assert_eq(Game.state.day, 10)
+	_confirm_encounter()
+	Game.toggle_clock()
+	root._process(0.0)
+	assert_eq(Game.state.day, 11)
+	root._process(8.0)
+	assert_eq(Game.state.day, 12, "ongoing battles do not repeat first encounter pauses")
+
+func test_encounter_month_end_only_publishes_after_completion() -> void:
+	var root := _battle_root(false, 30)
+	watch_signals(Game)
+	Game.set_clock_speed(1)
+	root._process(40.0)
+	assert_eq(Game.state.tick, 1)
+	assert_eq(Game.state.day, 30)
+	assert_signal_not_emitted(Game, "report_ready")
+	var blocked := Game.advance_day()
+	assert_eq(blocked.get("status"), "blocked")
+	assert_false(bool(blocked.get("ticked", false)), "no completed-day output while blocked")
+	_confirm_encounter()
+	Game.toggle_clock()
+	root._process(0.0)
+	assert_eq(Game.state.tick, 2)
+	assert_eq(Game.state.day, 1)
+	assert_signal_emit_count(Game, "report_ready", 1)
+
+func test_encounter_refuses_stale_invalid_and_repeated_choices() -> void:
+	var root := _battle_root()
+	Game.set_clock_speed(1)
+	root._process(8.0)
+	var token: String = Game.state.day_resolution["pending_decision"]["token"]
+	var before := SaveLoad.state_hash(Game.state)
+	assert_eq(Game.resolve_battle_decision("wrong", "continue")["status"], "stale")
+	assert_eq(Game.resolve_battle_decision(token, "wrong")["status"], "invalid")
+	assert_eq(SaveLoad.state_hash(Game.state), before)
+	assert_true(Game.holds_clock("battle_decision"))
+	_confirm_encounter()
+	before = SaveLoad.state_hash(Game.state)
+	assert_eq(Game.resolve_battle_decision(token, "continue")["status"], "duplicate")
+	assert_eq(SaveLoad.state_hash(Game.state), before)
+	assert_eq(Game.clock_speed, 0)
+
+func test_ordinary_reinforcement_does_not_repeat_encounter_pause() -> void:
+	var root := _battle_root()
+	Game.set_clock_speed(1)
+	root._process(8.0)
+	var battle: Dictionary = Game.state.battles[0]
+	var code := String(battle["def"][0])
+	var reinforcement := code + "_fixture_reinforcement"
+	Game.state.army_roster[reinforcement] = Game.state.army_roster[code].duplicate(true)
+	Game.state.army_roster[reinforcement]["regiment_code"] = reinforcement
+	Game.state.regiments[reinforcement] = Game.state.regiments[code].duplicate(true)
+	assert_true(BattleSystem.join(Game.data, Game.state, int(battle["id"]), reinforcement, "def"))
+	_confirm_encounter()
+	Game.toggle_clock()
+	root._process(0.0)
+	assert_eq(Game.clock_speed, 1)
+	assert_eq(Game.state.day, 11)
+	assert_true(Game.pending_battle_decision().is_empty())
+
+func test_manual_pause_discards_partial_day_time() -> void:
+	var root := _battle_root()
+	Game.set_clock_speed(1)
+	root._process(7.9)
+	Game.toggle_clock()
+	assert_eq(root._clock_acc, 0.0)
+	Game.toggle_clock()
+	root._process(0.1)
+	assert_true(Game.state.day_resolution.is_empty())
+	assert_eq(Game.clock_speed, 1)
+
+func test_compatibility_tick_resumes_day_without_publishing_empty_month() -> void:
+	var root := _battle_root()
+	var previous := TickReport.new()
+	previous.tick = 1
+	Game.current_report = previous
+	Game.set_clock_speed(1)
+	root._process(8.0)
+	_confirm_encounter()
+	watch_signals(Game)
+	Game.next_tick()
+	assert_eq(Game.state.day, 11)
+	assert_eq(Game.current_report, previous)
+	assert_signal_not_emitted(Game, "report_ready")
+
+func test_blocked_day_keeps_notifications_across_json_load() -> void:
+	var root := _battle_root()
+	var cells := MapManors.manors_of_house(Game.data, Game.state, MapManors.crown(Game.state),
+		Game.data.resolve_realm("player_realm"))
+	var cell := int(cells[0])
+	assert_true(MapManors.start_work(Game.data, Game.state, cell, "chapel", "test"))
+	var work: Dictionary = Game.state.manor_works[str(cell)][0]
+	work["days"] = 10
+	work["done"] = 2900
+	var spy := CourierSystem.dispatch_spy(Game.data, Game.state, Vector2(500, 300))
+	spy["x_m"] = spy["aim_x_m"]
+	spy["y_m"] = spy["aim_y_m"]
+	spy["path"] = []
+	Game.set_clock_speed(1)
+	root._process(8.0)
+	assert_false(root.report_popup().visible, "daily notices wait until completion")
+	assert_gt(Game.state.next_missive_id, 0, "the spy reported before encounter interruption")
+	assert_gt(MapManors.work_progress(Game.state, cell, "chapel"), 0.3)
+	assert_true(Game.save_campaign())
+	root._on_menu_load()
+	var got: Array[String] = []
+	var handler := func(line: String) -> void: got.append(line)
+	Game.news_published.connect(handler)
+	_confirm_encounter()
+	Game.toggle_clock()
+	root._process(0.0)
+	assert_true(root.report_popup().visible, "the saved pre-contact spy report opens once the day completes")
+	assert_eq(Game.clock_speed, 0)
+	assert_eq(got.filter(func(line: String) -> bool: return "is 30% done" in line).size(), 1)
+	root._process(40.0)
+	assert_eq(got.filter(func(line: String) -> bool: return "is 30% done" in line).size(), 1)
+	Game.news_published.disconnect(handler)
+
+func test_encounter_controller_routes_requests_and_restores_confirmation() -> void:
+	var root := _battle_root()
+	Game.set_clock_speed(4)
+	root._process(2.0)
+	var panel := root._battle_encounter as EncounterPanelDouble
+	var pending := Game.pending_battle_decision()
+	assert_true(panel.visible)
+	assert_eq(panel.shown_decision, pending)
+	assert_eq(panel.centered_rect, (root.current_screen.map_panel() as Control).get_global_rect())
+	assert_lt(panel.get_index(), root._pause_menu.get_index(), "pause menu remains reachable above the encounter")
+	panel.decision_selected.emit("stale", "continue")
+	assert_true(panel.visible, "an invalid request does not dismiss the encounter")
+	assert_eq(Game.pending_battle_decision(), pending)
+	panel.deployment_requested.emit()
+	assert_true(root.war_room_screen().visible)
+	assert_false(panel.visible, "deployment is accessible while the decision remains pending")
+	assert_true(Game.holds_clock("battle_decision"))
+	assert_eq(Game.pending_battle_decision(), pending)
+	root.war_room_screen().close(false)
+	assert_true(panel.visible, "closing deployment returns to the same confirmation")
+	assert_eq(panel.shown_decision, pending)
+	Game.toggle_clock()
+	assert_eq(Game.clock_speed, 0)
+	assert_true(Game.save_campaign())
+	root._on_menu_restart()
+	assert_false(panel.visible)
+	root._on_menu_load()
+	assert_true(panel.visible, "load from the title restores the saved encounter")
+	assert_eq(panel.shown_decision, pending)
+	panel.decision_selected.emit(String(pending["token"]), "continue")
+	assert_false(panel.visible)
+	assert_false(Game.holds_clock("battle_decision"))
+	assert_eq(Game.clock_speed, 0)
+	Game.toggle_clock()
+	root._process(0.0)
+	assert_eq(Game.state.day, 11, "the routed choice permits the already-paid day to finish")
+
+func test_encounter_panel_is_request_only_and_restores_after_load() -> void:
+	var scene_path := "res://scenes/panels/battle_encounter_panel.tscn"
+	assert_true(ResourceLoader.exists(scene_path), "encounter look is an editor-authored scene")
+	if not ResourceLoader.exists(scene_path):
+		return
+	var root := _battle_root(false, 10, true)
+	Game.set_clock_speed(1)
+	root._process(8.0)
+	var panel: Control = root.find_child("BattleEncounterPanel", true, false)
+	assert_not_null(panel)
+	if panel == null:
+		return
+	await wait_process_frames(5)
+	assert_true(panel.visible)
+	var map_rect: Rect2 = root.current_screen.map_panel().get_global_rect()
+	var window_rect := (panel.get_node("Center/Window") as Control).get_global_rect()
+	assert_true(map_rect.encloses(window_rect), "wrapped-label layout must keep the real window inside the map")
+	assert_eq((panel.get_node("Center") as Control).size, map_rect.size)
+	var standalone: Control = load(scene_path).instantiate()
+	add_child_autofree(standalone)
+	standalone.call("open", Game.data, Game.state, Game.pending_battle_decision())
+	watch_signals(standalone)
+	var before := SaveLoad.state_hash(Game.state)
+	(standalone.find_child("Continue", true, false) as Button).pressed.emit()
+	assert_signal_emit_count(standalone, "decision_selected", 1)
+	assert_eq(SaveLoad.state_hash(Game.state), before, "panel only requests an acknowledgement")
+	assert_true(Game.save_campaign())
+	root._on_menu_restart()
+	root._on_menu_load()
+	assert_true(panel.visible, "loaded pending decision reopens the same window")
+	assert_true(Game.holds_clock("battle_decision"))
+
 func _root() -> GameRoot:
 	var r: GameRoot = load("res://scenes/game_root.tscn").instantiate()
 	add_child_autofree(r)

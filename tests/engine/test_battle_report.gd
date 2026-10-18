@@ -131,6 +131,15 @@ func _round_events(events: Array) -> Array:
 	return events.filter(func(e: Dictionary) -> bool: return String(e["kind"]) == "round")
 
 
+## Report tests choose auto-confirm explicitly so the complete day's output can
+## be inspected without the encounter UI.
+func _advance_day_auto(engine: TickEngine, state: GameState) -> void:
+	var result := engine.resolve_day(state)
+	while String(result["status"]) == "blocked":
+		DayResolution.acknowledge(state.day_resolution, String(result["decision"]["token"]), "continue")
+		result = engine.resolve_day(state)
+
+
 ## --- the hook ---------------------------------------------------------------
 
 func test_battle_day_writes_one_missive() -> void:

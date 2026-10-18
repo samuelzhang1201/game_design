@@ -1,0 +1,314 @@
+{
+  "actual": {
+    "defenders": 500,
+    "equipment": {
+      "archers": 2493,
+      "artillery": 0,
+      "cavalry": 1929,
+      "fleet": 0,
+      "infantry": 3919
+    },
+    "fit": 10270,
+    "seed": 11,
+    "supplies": 687,
+    "units": 22
+  },
+  "actual_days": 11,
+  "actual_fall": [
+    {
+      "day": 27,
+      "days": 11,
+      "garrison_out": 1,
+      "host": "raid_main",
+      "kind": "siege_fallen",
+      "progress": 1000,
+      "reason": "taken by Corwyn's main host: siege of Redckingin",
+      "town": "redckingin"
+    }
+  ],
+  "actual_trace": [
+    {
+      "attack": 1714,
+      "day": 17,
+      "defend": 271,
+      "gain": 86,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 86,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 2870,
+      "day": 18,
+      "defend": 271,
+      "gain": 91,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 177,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 3054,
+      "day": 19,
+      "defend": 271,
+      "gain": 91,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 268,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 3623,
+      "day": 20,
+      "defend": 271,
+      "gain": 93,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 361,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 4043,
+      "day": 21,
+      "defend": 271,
+      "gain": 93,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 454,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 4012,
+      "day": 22,
+      "defend": 253,
+      "gain": 94,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 548,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 3984,
+      "day": 23,
+      "defend": 237,
+      "gain": 94,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 642,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 4137,
+      "day": 24,
+      "defend": 221,
+      "gain": 94,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 736,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 3820,
+      "day": 25,
+      "defend": 207,
+      "gain": 94,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 830,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 3796,
+      "day": 26,
+      "defend": 193,
+      "gain": 95,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 925,
+      "starving": false,
+      "town": "redckingin"
+    },
+    {
+      "attack": 3796,
+      "day": 27,
+      "defend": 193,
+      "gain": 95,
+      "host": "raid_main",
+      "kind": "siege_day",
+      "progress": 1000,
+      "starving": false,
+      "town": "redckingin"
+    }
+  ],
+  "legacy": {
+    "defenders": 500,
+    "equipment": {
+      "archers": 2493,
+      "artillery": 0,
+      "cavalry": 1929,
+      "fleet": 0,
+      "infantry": 3919
+    },
+    "fit": 8341,
+    "run": {
+      "begun": 17,
+      "events": [
+        {
+          "attack": 1697,
+          "day": 17,
+          "defend": 271,
+          "gain": 86,
+          "host": "raid_main",
+          "kind": "siege_begin",
+          "progress": 86,
+          "starving": false,
+          "town": "redckingin"
+        },
+        {
+          "attack": 1697,
+          "day": 17,
+          "defend": 271,
+          "gain": 86,
+          "host": "raid_main",
+          "kind": "siege_day",
+          "progress": 86,
+          "starving": false,
+          "town": "redckingin"
+        },
+        {
+          "attack": 2371,
+          "day": 18,
+          "defend": 271,
+          "gain": 89,
+          "host": "raid_main",
+          "kind": "siege_day",
+          "progress": 175,
+          "starving": false,
+          "town": "redckingin"
+        },
+        {
+          "attack": 2315,
+          "day": 19,
+          "defend": 271,
+          "gain": 89,
+          "host": "raid_main",
+          "kind": "siege_day",
+          "progress": 264,
+          "starving": false,
+          "town": "redckingin"
+        },
+        {
+          "attack": 3402,
+          "day": 20,
+          "defend": 271,
+          "gain": 92,
+          "host": "raid_main",
+          "kind": "siege_day",
+          "progress": 356,
+          "starving": false,
+          "town": "redckingin"
+        },
+        {
+          "attack": 3566,
+          "day": 21,
+          "defend": 271,
+          "gain": 92,
+          "host": "raid_main",
+          "kind": "siege_day",
+          "progress": 448,
+          "starving": false,
+          "town": "redckingin"
+        },
+        {
+          "attack": 3555,
+          "day": 22,
+          "defend": 238,
+          "gain": 93,
+          "host": "raid_main",
+          "kind": "siege_day",
+          "progress": 541,
+          "starving": false,
+          "town": "redckingin"
+        },
+        {
+          "attack": 4074,
+          "day": 23,
+          "defend": 222,
+          "gain": 94,
+          "host": "raid_main",
+          "kind": "siege_day",
+          "progress": 635,
+          "starving": false,
+          "town": "redckingin"
+        },
+        {
+          "day": 24,
+          "host": "raid_main",
+          "mode": "HOLD",
+          "type": "host_mode",
+          "why": "took Redckingin"
+        },
+        {
+          "day": 24,
+          "days": 7,
+          "garrison_out": 0,
+          "host": "raid_main",
+          "kind": "siege_fallen",
+          "progress": 1000,
+          "reason": "taken by Corwyn's main host: siege of Redckingin",
+          "town": "redckingin"
+        },
+        {
+          "day": 24,
+          "event_id": "war_01",
+          "gold": 595,
+          "host": "raid_main",
+          "kind": "defeat_town_lost",
+          "morale": 8,
+          "opinion": [
+            {
+              "character_id": "char_chancellor",
+              "delta": -5,
+              "reason": "lost Redckingin to the raiders (opposes, militarism)"
+            },
+            {
+              "character_id": "char_chaplain",
+              "delta": -4,
+              "reason": "lost Redckingin to the raiders (opposes, militarism)"
+            },
+            {
+              "character_id": "char_marshal",
+              "delta": -6,
+              "reason": "lost Redckingin to the raiders (opposes, militarism)"
+            },
+            {
+              "character_id": "char_spymaster",
+              "delta": -5,
+              "reason": "lost Redckingin to the raiders (opposes, militarism)"
+            },
+            {
+              "character_id": "char_steward",
+              "delta": -5,
+              "reason": "lost Redckingin to the raiders (opposes, militarism)"
+            }
+          ],
+          "town": "redckingin"
+        }
+      ],
+      "fell": 24,
+      "lifted": -1
+    },
+    "seed": 11,
+    "supplies": 558,
+    "units": 19
+  }
+}

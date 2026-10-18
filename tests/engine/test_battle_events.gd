@@ -17,6 +17,15 @@ func _fixture() -> Dictionary:
 	state.king_state.y_m = 0
 	return {"repo": repo, "state": state, "battle": battle, "code": code}
 
+func _fighting_day(state: GameState) -> Dictionary:
+	var tx := DayResolution.begin(state.day, false, state.absolute_day())
+	tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+	tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
+	tx.battle_step = "fighting"
+	tx.battle_ids = [430]
+	tx.acknowledged_encounters = [430]
+	return tx
+
 func test_event_is_saved_and_reward_is_once() -> void:
 	var api: GDScript = load("res://scripts/engine/battle_events.gd")
 	assert_not_null(api)
@@ -25,19 +34,28 @@ func test_event_is_saved_and_reward_is_once() -> void:
 	var f := _fixture()
 	f.repo.battle_events = {"ev_31": f.repo.battle_events.ev_31}
 	f.repo.battle_events.ev_31.chance_permille = 1000
+	f.repo.battle_events.ev_31.weight = 100
+	var expected_rng := Rng.from_dict(f.state.rng.to_dict())
+	var draw := expected_rng.randi_range(0, 99999)
 	var event: Dictionary = api.offer(f.repo, f.state, 430).decision
 	assert_eq(event.event_id, "ev_31")
+	assert_eq(int(event.draw), draw)
+	assert_eq(int(f.state.battle_events[event.token].draw), draw)
+	assert_eq(int(f.battle.event_checks[str(f.state.absolute_day())].draw), draw)
+	assert_eq(f.state.rng.to_dict(), expected_rng.to_dict(), "one opportunity consumes exactly one shared-stream draw")
 	var rng: Dictionary = f.state.rng.to_dict()
 	assert_eq(api.offer(f.repo, f.state, 430).decision, event)
 	assert_eq(f.state.rng.to_dict(), rng)
 	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
 	assert_eq(api.offer(f.repo, restored, 430).decision, event)
+	assert_eq(restored.rng.to_dict(), rng, "JSON replay consumes no additional opportunity draw")
 	var result: Dictionary = api.choose(f.repo, restored, event.token, "rally")
 	assert_eq(result.status, "accepted")
 	assert_eq(int(restored.regiments[f.code].morale), 43)
 	assert_eq(int(restored.metrics.treasury), 93)
 	assert_eq(api.choose(f.repo, restored, event.token, "rally").status, "duplicate")
 	assert_eq(int(restored.metrics.treasury), 93)
+	assert_eq(restored.rng.to_dict(), rng, "reward and duplicate receipt consume no extra draw")
 
 func test_invalid_choice_keeps_event_and_legal_fallback() -> void:
 	var api: GDScript = load("res://scripts/engine/battle_events.gd")
@@ -131,7 +149,7 @@ func test_local_decision_revalidates_before_consuming_day_token() -> void:
 	var f := _fixture()
 	_only(f, "ev_31")
 	var event: Dictionary = BattleEvents.offer(f.repo, f.state, 430).decision
-	f.state.day_resolution = DayResolution.begin(f.state.absolute_day(), false)
+	f.state.day_resolution = _fighting_day(f.state)
 	f.state.day_resolution.pending_decision = event
 	var engine := TickEngine.new(f.repo)
 	f.state.metrics.treasury = 0.0
@@ -327,9 +345,7 @@ func test_failed_round_retry_keeps_one_event_and_one_paid_receipt() -> void:
 	f.battle.town = ""
 	f.battle.actions = {"att": {"kind": "attack"}}
 	f.state.regiments[f.code].supplies = 100000
-	f.state.day_resolution = DayResolution.begin(f.state.absolute_day(), false)
-	f.state.day_resolution.phase = "battles"
-	f.state.day_resolution.battle_ids = [430]
+	f.state.day_resolution = _fighting_day(f.state)
 	var engine := TickEngine.new(f.repo)
 	var blocked := engine.resolve_day(f.state)
 	assert_eq(blocked.status, "blocked")
@@ -349,7 +365,7 @@ func test_newly_affordable_choice_revalidates_without_partial_consumption() -> v
 	f.state.metrics.treasury = 0.0
 	var event: Dictionary = BattleEvents.offer(f.repo, f.state, 430).decision
 	assert_false("rally" in event.choices)
-	f.state.day_resolution = DayResolution.begin(f.state.absolute_day(), false)
+	f.state.day_resolution = _fighting_day(f.state)
 	f.state.day_resolution.pending_decision = event
 	f.state.metrics.treasury = 100.0
 	var engine := TickEngine.new(f.repo)
@@ -390,7 +406,7 @@ func test_missing_or_captured_target_has_contextual_zero_cost_report_fallback() 
 		var f := _fixture()
 		_only(f, "ev_31")
 		var event: Dictionary = BattleEvents.offer(f.repo, f.state, 430).decision
-		f.state.day_resolution = DayResolution.begin(f.state.absolute_day(), false)
+		f.state.day_resolution = _fighting_day(f.state)
 		f.state.day_resolution.pending_decision = event
 		match change:
 			"removed": f.state.regiments.erase(f.code)

@@ -55,7 +55,7 @@ static func preview(repo: DataRepository, state: GameState, order: Dictionary) -
 		for code: String in battle[String(order["side"])]:
 			heads += MilitaryRoster.living(state, code)
 		reserve = reward_gold(repo, heads)
-	if why == "" and available_gold(state) < reserve:
+	if why == "" and reserve > 0 and available_gold(state) < reserve:
 		why = "The treasury cannot reserve the promised battlefield reward."
 	return {"reason": why, "reserved_gold": reserve, "available_gold": available_gold(state)}
 

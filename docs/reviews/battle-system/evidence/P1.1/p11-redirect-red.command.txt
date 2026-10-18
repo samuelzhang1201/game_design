@@ -1,0 +1,2 @@
+cwd: /Users/samuelzhang/.codex/worktrees/battle-clock-isolated/game_design
+CC_FORCE_OFFLINE=1 /Applications/Godot.app/Contents/MacOS/Godot --headless --path . -s addons/gut/gut_cmdln.gd -gtest=res://tests/engine/test_courier_ride.gd -gpre_run_script=res://tests/pre_run.gd -gpost_run_script=res://tests/post_run.gd -gexit > /tmp/p11-redirect-red.log 2>&1

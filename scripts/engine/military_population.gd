@@ -49,6 +49,8 @@ static func _promise_active(state: GameState, promise: Dictionary) -> bool:
 	return int(promise["count"]) > 0 and (until_day == 0 or until_day >= state.absolute_day())
 
 static func available(repo: DataRepository, state: GameState, province: String, field := "") -> int:
+	if bool(state.military_migration.get("recruitment_blocked", false)):
+		return 0
 	if field == "":
 		var total := 0
 		for source_field: String in FIELDS:

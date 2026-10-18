@@ -1,11 +1,12 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/battle_encounter_panel.gd" id="1_wi1ww"]
-[ext_resource type="Texture2D" uid="uid://p1jqgjgkq1pm" path="res://assets/2D/ui/panels/leather_grain_light.png" id="2_7sg37"]
-[ext_resource type="Texture2D" uid="uid://cnctm0nndn0qh" path="res://assets/2D/ui/panels/leather_grain_dark.png" id="3_iacn4"]
-[ext_resource type="Script" uid="uid://c44j2v837vlnv" path="res://scripts/ui/vellum_panel_style.gd" id="4_cdvg2"]
+[ext_resource type="Theme" uid="uid://b4xbt0npqul2u" path="res://assets/2D/ui/theme/game_theme.tres" id="1_sodbd"]
+[ext_resource type="Script" path="res://scripts/ui/battle_encounter_panel.gd" id="2_dmdom"]
+[ext_resource type="Texture2D" uid="uid://p1jqgjgkq1pm" path="res://assets/2D/ui/panels/leather_grain_light.png" id="3_kj71f"]
+[ext_resource type="Texture2D" uid="uid://cnctm0nndn0qh" path="res://assets/2D/ui/panels/leather_grain_dark.png" id="4_jishn"]
+[ext_resource type="Script" uid="uid://c44j2v837vlnv" path="res://scripts/ui/vellum_panel_style.gd" id="5_rf7n1"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1y278"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_me1bj"]
 content_margin_left = 24.0
 content_margin_top = 24.0
 content_margin_right = 24.0
@@ -24,23 +25,24 @@ shadow_color = Color(0, 0, 0, 0.45)
 shadow_size = 8
 shadow_offset = Vector2(0, 3)
 
-[sub_resource type="StyleBox" id="StyleBox_i5kou"]
+[sub_resource type="StyleBox" id="StyleBox_atqbr"]
 resource_local_to_scene = false
-resource_name = "Encounter leather; single brass edge"
-content_margin_left = 24.0
-content_margin_top = 24.0
-content_margin_right = 24.0
-content_margin_bottom = 24.0
-script = ExtResource("4_cdvg2")
-base = SubResource("StyleBoxFlat_1y278")
-grain = ExtResource("2_7sg37")
-grain_dark = ExtResource("3_iacn4")
+resource_name = ""
+content_margin_left = 32.0
+content_margin_top = 32.0
+content_margin_right = 32.0
+content_margin_bottom = 32.0
+script = ExtResource("5_rf7n1")
+base = SubResource("StyleBoxFlat_me1bj")
+grain = ExtResource("3_kj71f")
+grain_dark = ExtResource("4_jishn")
 grain_alpha = 0.1
 shade_top = 0.05
 shade_bottom = 0.14
+inner_rule = Color(1, 1, 1, 0)
 
-[node name="BattleEncounterPanel" type="Control" unique_id=1178064614]
-editor_description = "Battle encounter: editor owns layout, scrolling, order controls and theme; code fills received clauses and formation availability."
+[node name="BattleEncounterPanel" type="Control" unique_id=1420189153]
+editor_description = "Editor owns layout, scrolling, deployment and formation controls; runtime fills only received battle facts and fits the active map bounds."
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -48,71 +50,146 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("1_wi1ww")
+theme = ExtResource("1_sodbd")
+script = ExtResource("2_dmdom")
 
-[node name="Panel" type="PanelContainer" parent="." unique_id=962515608]
+[node name="Dim" type="ColorRect" parent="." unique_id=1591745637]
 layout_mode = 0
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -310.0
-offset_top = -230.0
-offset_right = 310.0
-offset_bottom = 230.0
-theme_override_styles/panel = SubResource("StyleBox_i5kou")
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.015, 0.01, 0.22)
 
-[node name="Body" type="VBoxContainer" parent="Panel" unique_id=229456838]
-layout_mode = 2
-theme_override_constants/separation = 14
-
-[node name="Title" type="Label" parent="Panel/Body" unique_id=1960147969]
+[node name="Center" type="CenterContainer" parent="." unique_id=1132162577]
 unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"CardTitle"
-text = "Enemy contact"
-autowrap_mode = 3
+editor_description = "GameRoot fits this container to the active map's runtime bounds."
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 720.0
 
-[node name="ClauseScroll" type="ScrollContainer" parent="Panel/Body" unique_id=1952777917]
-custom_minimum_size = Vector2(0, 220)
+[node name="Window" type="PanelContainer" parent="Center" unique_id=1891608525]
+custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
-size_flags_vertical = 3
-horizontal_scroll_mode = 0
+theme_override_styles/panel = SubResource("StyleBox_atqbr")
 
-[node name="Summary" type="Label" parent="Panel/Body/ClauseScroll" unique_id=285019470]
+[node name="Body" type="VBoxContainer" parent="Center/Window" unique_id=645743285]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Window/Body" unique_id=761144159]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 0
-theme_type_variation = &"CardText"
-text = "Our army has halted before the enemy. Review the field and your orders before resuming time."
+theme_type_variation = &"TitleLabel"
+text = "Enemy contact"
 autowrap_mode = 3
 
-[node name="FormationOrders" type="HBoxContainer" parent="Panel/Body" unique_id=1678557959]
+[node name="Notice" type="Label" parent="Center/Window/Body" unique_id=2116808989]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "Our troops have met the enemy. Review the field before the fighting begins."
+autowrap_mode = 3
+
+[node name="ClauseScroll" type="ScrollContainer" parent="Center/Window/Body" unique_id=714805927]
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 2
+
+[node name="Facts" type="VBoxContainer" parent="Center/Window/Body/ClauseScroll" unique_id=1751598481]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="OwnHeading" type="Label" parent="Center/Window/Body/ClauseScroll/Facts" unique_id=1493431445]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardSection"
+text = "Our troops"
+autowrap_mode = 3
+
+[node name="OwnForces" type="Label" parent="Center/Window/Body/ClauseScroll/Facts" unique_id=536659468]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "The crown's troops"
+autowrap_mode = 3
+
+[node name="EnemyHeading" type="Label" parent="Center/Window/Body/ClauseScroll/Facts" unique_id=1462437368]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardSection"
+text = "Known enemy"
+autowrap_mode = 3
+
+[node name="EnemyForces" type="Label" parent="Center/Window/Body/ClauseScroll/Facts" unique_id=1439125097]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "Enemy strength is uncertain."
+autowrap_mode = 3
+
+[node name="Summary" type="Label" parent="Center/Window/Body/ClauseScroll/Facts" unique_id=1348311389]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "Received battlefield agreements appear here."
+autowrap_mode = 3
+
+[node name="ScrollHint" type="Label" parent="Center/Window/Body" unique_id=1918569044]
+layout_mode = 2
+theme_type_variation = &"CardText"
+text = "Scroll to review all troops and battlefield agreements."
+autowrap_mode = 3
+
+[node name="FormationOrders" type="HBoxContainer" parent="Center/Window/Body" unique_id=1426484222]
 layout_mode = 2
 
-[node name="FormationChoice" type="OptionButton" parent="Panel/Body/FormationOrders" unique_id=2076639820]
+[node name="FormationChoice" type="OptionButton" parent="Center/Window/Body/FormationOrders" unique_id=116011540]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"CardMenu"
 
-[node name="FormationSend" type="Button" parent="Panel/Body/FormationOrders" unique_id=671131998]
+[node name="FormationSend" type="Button" parent="Center/Window/Body/FormationOrders" unique_id=336947913]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"CardCommandSmall"
 text = "Send formation order"
 
-[node name="FormationStatus" type="Label" parent="Panel/Body" unique_id=1832513367]
+[node name="FormationStatus" type="Label" parent="Center/Window/Body" unique_id=2076798707]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"CardText"
 autowrap_mode = 3
 
-[node name="Continue" type="Button" parent="Panel/Body" unique_id=443067945]
+[node name="ResumeHint" type="Label" parent="Center/Window/Body" unique_id=187208084]
 unique_name_in_owner = true
 layout_mode = 2
-tooltip_text = "Dismiss this notice. The clock remains paused."
+size_flags_horizontal = 3
+theme_type_variation = &"CardText"
+text = "The clock will remain paused. Resume when you are ready."
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="Center/Window/Body" unique_id=2133536369]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="Deploy" type="Button" parent="Center/Window/Body/Actions" unique_id=1980971308]
+unique_name_in_owner = true
+layout_mode = 2
 theme_type_variation = &"CardCommand"
-text = "Review the battlefield"
+text = "Review deployment"
+
+[node name="Continue" type="Button" parent="Center/Window/Body/Actions" unique_id=197312473]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Command"
+text = "Continue"

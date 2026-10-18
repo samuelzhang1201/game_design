@@ -189,6 +189,42 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 	return events
 
 
+## Apply physical arrivals after a tactical movement substep. Daily feeding,
+## retreat checks and thinking remain in step_day.
+static func arrival_substep(repo: DataRepository, state: GameState, march_entries: Dictionary = {}) -> Array:
+	var events: Array = []
+	for code: String in host_codes(state):
+		var mind: Dictionary = state.ai_hosts[code]
+		if String(mind.get("mode", "")) == MODE_ADVANCE and String(mind.get("target_id", "")) != "":
+			var next := arrival_mode(repo, state, code)
+			if next == ARRIVAL_RETHINK:
+				mind["target_kind"] = ""
+				mind["target_id"] = ""
+				mind["think_day"] = 0
+				_stand_aside(repo, state, code)
+			elif next == ARRIVAL_LOST:
+				mind["target_kind"] = ""
+				mind["target_id"] = ""
+				mind["think_day"] = 0
+			elif next != "":
+				set_mode(state, code, next, _arrival_why(next), events)
+				if next == MODE_DEPLOYING:
+					_start_deployment(repo, state, code)
+		var mode := String(mind.get("mode", ""))
+		if mode not in [MODE_DEPLOYING, MODE_SIEGE]:
+			continue
+		var town := String(mind["target_id"])
+		var occupation := ""
+		if mode == MODE_SIEGE and SiegeSystem.garrison_fit(repo, state, town) == 0:
+			occupation = _occupation_column(repo, state, code, target_point_m(repo, KIND_TOWN, town))
+		for c: String in live_regiments(repo, state, code):
+			if _station_at_town(repo, state, c, town, occupation) and march_entries.has(c):
+				ArmySystem._retire_saved_march(march_entries[c], state.foes[c])
+		if mode == MODE_DEPLOYING:
+			_update_deployment(repo, state, code, events)
+	return events
+
+
 ## Every host's code, in dictionary order.
 static func host_codes(state: GameState) -> Array:
 	var codes: Array = state.ai_hosts.keys()
@@ -785,12 +821,7 @@ static func _march_host(repo: DataRepository, state: GameState, host_code: Strin
 		if c == occupation and BattleSystem.town_contact(repo, state, String(mind["target_id"]), c) == "":
 			_aim_with_camp_gate(repo, state, c, e, to)
 			continue
-		if mode in [MODE_DEPLOYING, MODE_SIEGE] and SiegeSystem.at_town(repo, state, c, String(mind["target_id"])):
-			e["order"] = ArmySystem.ORDER_GARRISON
-			e["dest_x_m"] = int(e["x_m"])
-			e["dest_y_m"] = int(e["y_m"])
-			e.erase("route_m")
-			e.erase("waypoints_m")
+		if mode in [MODE_DEPLOYING, MODE_SIEGE] and _station_at_town(repo, state, c, String(mind["target_id"]), occupation):
 			continue
 		if int(e["x_m"]) == to.x and int(e["y_m"]) == to.y:
 			continue
@@ -798,6 +829,24 @@ static func _march_host(repo: DataRepository, state: GameState, host_code: Strin
 			continue      # a standoff before the crown (or a slot round the target) holds while its aim does
 		# round ground it cannot climb, as the crown's columns go (MarchPath)
 		_aim_with_camp_gate(repo, state, c, e, to)
+
+## Stop only arrived columns; distant frozen routes keep their daily budget.
+static func _station_at_town(repo: DataRepository, state: GameState, code: String,
+		town: String, occupation: String) -> bool:
+	var entry: Dictionary = state.foes[code]
+	if not BattleSystem.battle_of(state, code).is_empty() or int(entry.get("disengaging", 0)) != 0:
+		return false
+	if code == occupation and BattleSystem.town_contact(repo, state, town, code) == "":
+		return false
+	if not SiegeSystem.at_town(repo, state, code, town):
+		return false
+	entry["order"] = ArmySystem.ORDER_GARRISON
+	entry["dest_x_m"] = int(entry["x_m"])
+	entry["dest_y_m"] = int(entry["y_m"])
+	entry.erase("route_m")
+	entry.erase("waypoints_m")
+	return true
+
 
 static func _aim_with_camp_gate(repo: DataRepository, state: GameState, code: String,
 		entry: Dictionary, to: Vector2i) -> void:

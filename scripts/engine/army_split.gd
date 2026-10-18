@@ -61,6 +61,14 @@ static func shares(men: int, cap: int) -> Array:
 	return out
 
 
+## Whole equipment elements split below the personnel capacity.
+static func element_shares(elements: int, crew: int, cap_men: int) -> Array:
+	if crew <= 0 or crew > cap_men:
+		return []
+	@warning_ignore("integer_division")
+	return shares(elements, cap_men / crew)
+
+
 static func _make(repo: DataRepository) -> Dictionary:
 	var cap := int(repo.bal("army_split_cap_men"))
 	var rows: Array = repo.world_table("military", "regiments").values()
@@ -356,20 +364,31 @@ static func saved_sources(repo: DataRepository, unit: Dictionary) -> Dictionary:
 		var pooled := false
 		for definition: Dictionary in repo.army_split:
 			if bool(definition.get("pooled", false)) and String(definition.get("arm", "")) == "artillery" \
-					and code == "%s_%s" % [realm, definition.get("code_word", "")] and int(unit.get("artillery", 0)) > 0:
+					and int(unit.get("artillery", 0)) > 0:
 				pooled = true
 		if pooled:
 			var sources: Array = []
 			var weights: Array = []
 			var keys := originals.keys()
 			keys.sort()
+			var authored_train := false
+			for definition: Dictionary in repo.army_split:
+				if bool(definition.get("pooled", false)) and code == "%s_%s" % [realm, definition.get("code_word", "")]:
+					authored_train = true
 			for key: String in keys:
+				if not authored_train:
+					continue
 				var source: Dictionary = originals[key]
 				if source.get("kingdom_code", "") == realm and int(source.get("artillery", 0)) > 0:
 					sources.append(source)
 					weights.append(int(source["artillery"]))
 			if sources.is_empty():
-				return {"error": "Saved royal train has no documented gun origins."}
+				if not repo.provinces.has(String(unit.get("province_code", ""))):
+					return {"error": "Saved royal train has no documented or estimated origin."}
+				var estimated := _migration_part(unit, "artillery", int(unit["artillery"]), int(types["artillery"]["crew"]))
+				estimated["origin_basis"] = "estimated_saved_garrison"
+				estimated["origin_reason"] = "Original pooled sources unrecorded; origin estimated from saved garrison province " + String(unit["province_code"])
+				parts.append(estimated)
 			var counts := BattleSystem.apportion(weights, int(unit["artillery"]))
 			for i: int in sources.size():
 				if int(counts[i]) > 0:

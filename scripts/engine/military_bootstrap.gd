@@ -39,7 +39,7 @@ static func initialize(repo: DataRepository, state: GameState) -> Dictionary:
 	state.military_cohorts = candidate.military_cohorts
 	state.military_events = candidate.military_events
 	state.military_migration = {"version": VERSION, "status": "initialized",
-		"origin_rule": "opening_province_recruitment_weights", "event_id": INITIAL_EVENT}
+		"origin_rule": "opening_province_recruitment_weights", "organization_version": 1, "event_id": INITIAL_EVENT}
 	return {"status": "initialized", "units": state.military_rosters.size()}
 
 static func _integrity_error(state: GameState) -> String:
@@ -48,6 +48,8 @@ static func _integrity_error(state: GameState) -> String:
 			return "Initialized unit has no personnel roster: " + code
 	var referenced: Dictionary = {}
 	for code: String in state.military_rosters:
+		if not state.army_roster.has(code):
+			return "Personnel roster has no saved equipment unit: " + code
 		var ids: Array = state.military_rosters[code].get("cohort_ids", [])
 		if ids.is_empty():
 			return "Initialized unit has no personnel cohorts: " + code
@@ -185,6 +187,12 @@ static func _cohort(code: String, origin: Dictionary, identity: String, count: i
 ## on its saved IDs until a later safe boundary can remap every reference.
 ## Historical deaths are imported, never replayed against today's population.
 static func migrate(repo: DataRepository, state: GameState) -> Dictionary:
+	if not state.day_resolution.is_empty():
+		var incompatibility := DayResolution.incompatibility_reason(state.day_resolution)
+		if not incompatibility.is_empty():
+			return {"error": incompatibility}
+	if state.military_migration.has("import_main_v7"):
+		return _import_main_v7(repo, state)
 	if int(state.military_migration.get("version", 0)) == VERSION:
 		var error := _migration_integrity_error(repo, state)
 		return {"status": "unchanged"} if error.is_empty() else {"error": error}
@@ -203,6 +211,7 @@ static func migrate(repo: DataRepository, state: GameState) -> Dictionary:
 	var assigned: Dictionary = {}
 	var reconstructed: Array[String] = []
 	var fallback_sources: Array[String] = []
+	var origin_estimates: Array[String] = []
 	for code: String in codes:
 		var unit: Dictionary = candidate.army_roster[code]
 		var sources := ArmySplit.saved_sources(repo, unit)
@@ -211,6 +220,9 @@ static func migrate(repo: DataRepository, state: GameState) -> Dictionary:
 		if bool(sources["reconstructed"]):
 			unit["source_parts"] = sources["parts"]
 			reconstructed.append(code)
+		for part: Dictionary in sources["parts"]:
+			if part.has("origin_reason") and not String(part["origin_reason"]) in origin_estimates:
+				origin_estimates.append(String(part["origin_reason"]))
 		var origin_state := GameState.new()
 		origin_state.world = candidate.world.duplicate(true)
 		# Origin weights are not historical facts. Where today's source has no
@@ -242,7 +254,7 @@ static func migrate(repo: DataRepository, state: GameState) -> Dictionary:
 		if candidate.regiments.has(code) and candidate.foes.has(code):
 			return {"error": "Saved unit has conflicting live records: " + code}
 		var statuses := {"dead": entry.get("dead", 0), "wounded": entry.get("wounded", 0),
-			"released": entry.get("deserted", 0)}
+			"released": entry.get("deserted", 0), "captured_current": entry.get("captured_current", 0)}
 		var lost := 0
 		for status: String in statuses:
 			if not ArmySplit.is_whole_count(statuses[status]):
@@ -299,12 +311,13 @@ static func migrate(repo: DataRepository, state: GameState) -> Dictionary:
 	var conflicts := _migration_conflicts(repo, candidate)
 	var event_id := "military:migration:personnel:v1"
 	candidate.military_events[event_id] = {"request": {"kind": "legacy_personnel_import",
-		"reason": "Preserve saved personnel without replaying historical population losses"},
+		"reason": "Preserve saved personnel without replaying historical population losses" + ("; " + "; ".join(origin_estimates) if not origin_estimates.is_empty() else "")},
 		"result": {"status": "personnel_migrated", "units": codes.size()}}
 	candidate.military_migration = {"version": VERSION, "status": "personnel_migrated",
 		"organization_pending": true, "event_id": event_id,
 		"origin_rule": "saved_equipment_provenance_current_population_weights_with_opening_fallback",
 		"reconstructed_provenance": reconstructed, "opening_population_fallback": fallback_sources,
+		"origin_estimates": origin_estimates, "organization_reason": "; ".join(origin_estimates),
 		"historical_identity_rule": "unrecorded_anonymous_losses_not_family_facts;surviving_fit_use_configured_noble_share",
 		"historical_population_rule": "not_replayed", "recruitment_blocked": not conflicts.is_empty(), "conflicts": conflicts}
 	state.characters = candidate.characters
@@ -351,7 +364,7 @@ static func _migration_integrity_error(repo: DataRepository, state: GameState) -
 			if not ArmySplit.is_whole_count(cohort.get(status, -1)):
 				return "Invalid personnel status count: " + id
 			total += int(cohort[status])
-		if not ArmySplit.is_whole_count(cohort.get("initial", -1)) or total != int(cohort["initial"]) or total <= 0:
+		if not ArmySplit.is_whole_count(cohort.get("initial", -1)) or total != int(cohort["initial"]) or total < 0:
 			return "Personnel conservation failed: " + id
 		var person := String(cohort.get("person_id", ""))
 		if person != "":
@@ -398,3 +411,246 @@ static func _migration_conflicts(repo: DataRepository, state: GameState) -> Arra
 			conflicts.append({"source": source, "occupied": int(origins[source]), "eligible": eligible,
 				"reason": "Saved military residents exceed current eligible population; preserve personnel and block further recruitment"})
 	return conflicts
+
+## Main's version-seven ledger is translated privately, never re-enlisted or charged.
+static func _import_main_v7(repo: DataRepository, state: GameState) -> Dictionary:
+	var candidate := GameState.from_dict(state.to_dict(), false)
+	var imported: Dictionary = candidate.military_migration["import_main_v7"]
+	if not ArmySplit.is_whole_count(imported.get("organization_version", -1)) \
+			or int(imported["organization_version"]) > 1:
+		return {"error": "Unsupported saved military organization version."}
+	var version := int(imported["organization_version"])
+	if candidate.military_cohorts.is_empty() and candidate.military_rosters.is_empty() and candidate.military_events.is_empty():
+		if version > 0:
+			return {"error": "Completed main military organization has no personnel ledger."}
+		candidate.military_migration = {}
+		var legacy := migrate(repo, candidate)
+		if legacy.has("error"):
+			return legacy
+	else:
+		for id: String in candidate.military_cohorts:
+			var cohort: Dictionary = candidate.military_cohorts[id]
+			if cohort.get("stage", "") == "mustering":
+				cohort["stage"] = "assembling"
+			var error := Roster.cohort_error(repo, cohort)
+			if not error.is_empty():
+				return {"error": error + " " + id}
+		for code: String in candidate.military_rosters:
+			var roster: Dictionary = candidate.military_rosters[code]
+			var person := String(roster.get("commander_id", ""))
+			if person.is_empty():
+				continue
+			var matches: Array = []
+			for id: String in roster.get("cohort_ids", []):
+				var cohort: Dictionary = candidate.military_cohorts.get(id, {})
+				if cohort.get("person_id", "") == person and int(cohort.get("fit", 0)) == 1 and cohort.get("stage", "") == "active":
+					matches.append(id)
+			if matches.size() != 1:
+				return {"error": "Saved commander needs one existing fit noble cohort: " + code}
+			roster["commander_cohort_id"] = matches[0]
+		for id: String in candidate.military_events:
+			var converted := _main_receipt(id, candidate.military_events[id])
+			if converted.has("error"):
+				return converted
+			candidate.military_events[id] = converted
+		candidate.military_migration = {"version": VERSION, "status": "main_v7_imported"}
+	for code: String in candidate.army_roster:
+		var source := ArmySplit.saved_sources(repo, candidate.army_roster[code])
+		if source.has("error"):
+			return source
+		candidate.army_roster[code]["source_parts"] = source["parts"]
+	var integrity := _migration_integrity_error(repo, candidate)
+	if not integrity.is_empty():
+		return {"error": integrity}
+	var conflicts: Array = imported.get("conflicts", []).duplicate(true)
+	for conflict: Dictionary in _migration_conflicts(repo, candidate):
+		if not conflict in conflicts:
+			conflicts.append(conflict)
+	candidate.military_migration.merge({"version": VERSION, "organization_version": version,
+		"organization_pending": version == 0 or bool(imported.get("organization_pending", false)),
+		"unit_mapping": imported.get("unit_mapping", {}).duplicate(true),
+		"conflicts": conflicts, "recruitment_blocked": not conflicts.is_empty(),
+		"import_evidence": imported.duplicate(true), "historical_population_rule": "not_replayed"}, true)
+	for battle: Dictionary in candidate.battles:
+		if bool(battle.get("ended", false)) or bool(battle.get("finished", false)):
+			continue
+		if not battle.has("id") or not battle.get("att", null) is Array or not battle.get("def", null) is Array:
+			return {"error": "Malformed saved active battlefield."}
+		BattleRules.freeze(repo, candidate, battle)
+		BattleFormation.ensure(battle)
+		if not battle.has("actions"):
+			battle["actions"] = {"att": {"kind": "attack", "reason": "Resume saved active engagement"},
+				"def": {"kind": "hold", "reason": "Defend saved active engagement"}}
+	# Completed main organization IDs are authoritative even if today's cap differs.
+	if version == 1:
+		candidate.military_migration["organization_pending"] = false
+	for field: String in ["army_roster", "military_rosters", "military_cohorts", "military_events", "military_migration"]:
+		candidate.set(field, GameState._whole(candidate.get(field)))
+	for field: String in ["characters", "army_roster", "military_rosters", "military_cohorts", "military_events", "military_migration", "battles"]:
+		state.set(field, candidate.get(field))
+	return {"status": "main_v7_imported", "organization_pending": candidate.military_migration["organization_pending"]}
+
+
+static func _main_receipt(id: String, receipt: Variant) -> Dictionary:
+	if id.strip_edges().is_empty():
+		return {"error": "Military receipt needs an event ID."}
+	if not receipt is Dictionary:
+		return {"error": "Military receipt must be a record: " + id}
+	if receipt.has("request") or receipt.has("result"):
+		var error := _receipt_error(receipt)
+		return {"error": error + ": " + id} if error != "" else receipt.duplicate(true)
+	if not receipt.get("kind", null) is String or not receipt.get("reason", null) is String:
+		return {"error": "Military receipt needs a kind and reason: " + id}
+	var kind := String(receipt.get("kind", ""))
+	var reason := String(receipt.get("reason", ""))
+	if id.is_empty() or kind.is_empty() or reason.strip_edges().is_empty():
+		return {"error": "Malformed historical military receipt: " + id}
+	if not kind in ["transition", "mobilize", "initialize_historical", "bind_person", "organization"]:
+		return {"error": "Unknown historical military receipt: " + id}
+	if kind != "organization" and not receipt.get("payload", null) is Array:
+		return {"error": "Historical military payload must be an array: " + id}
+	var request := {"kind": kind, "reason": reason}
+	var result := {"status": "applied", "event_id": id}
+	if kind == "transition":
+		var normalized := Roster._normalize_rows(receipt.get("payload", []), ["cohort_id", "from", "to"])
+		if normalized.has("error") or normalized.get("rows", []).is_empty():
+			return {"error": "Malformed historical personnel transition receipt: " + id}
+		request["changes"] = normalized["rows"]
+		result["changes"] = normalized["rows"].duplicate(true)
+	elif kind == "mobilize":
+		var recruits: Array = []
+		for old: Variant in receipt.get("payload", []):
+			if not old is Dictionary:
+				return {"error": "Historical recruit must be a record: " + id}
+			var row: Dictionary = old.duplicate(true)
+			row["count"] = old.get("initial", 0)
+			if row.get("stage", "") == "mustering":
+				row["stage"] = "assembling"
+			recruits.append(row)
+		var normalized := Roster._normalize_rows(recruits, ["id", "unit_code", "source_province", "source_population_field", "identity", "family_name", "stage", "person_id"])
+		if normalized.has("error") or normalized.get("rows", []).is_empty():
+			return {"error": "Malformed historical personnel mobilization receipt: " + id}
+		request["recruits"] = normalized["rows"]
+		result["cohort_ids"] = recruits.map(func(row: Dictionary) -> String: return String(row["id"]))
+	else:
+		request["legacy_payload"] = receipt.duplicate(true)
+	var converted := {"request": request, "result": result, "legacy_evidence": receipt.duplicate(true)}
+	var error := _receipt_error(converted)
+	return {"error": error + ": " + id} if error != "" else converted
+
+
+## Validate saved replay data structurally, without replaying historical losses or
+## requiring historical units to remain live. Every supported kind has a schema.
+static func _receipt_error(receipt: Dictionary) -> String:
+	if not receipt.get("request", null) is Dictionary or not receipt.get("result", null) is Dictionary:
+		return "Military receipt request and result must be records"
+	var request: Dictionary = receipt["request"]
+	var result: Dictionary = receipt["result"]
+	if not request.get("kind", null) is String:
+		return "Military receipt kind must be text"
+	var kind: String = request["kind"]
+	if kind != "military_wages" and not _receipt_text(request.get("reason")):
+		return "Military receipt needs a reason"
+	match kind:
+		"transition", "transfer_units", "mobilize":
+			var field := "changes" if kind == "transition" else ("orders" if kind == "transfer_units" else "recruits")
+			var error := _receipt_rows_error(request.get(field), kind)
+			if error != "":
+				return error
+			if result.get("status") != "applied":
+				return "Personnel receipt result must be applied"
+			if kind == "mobilize":
+				if not _receipt_ids(result.get("cohort_ids"), false) or result["cohort_ids"] != request["recruits"].map(func(row: Dictionary) -> String: return row["id"]):
+					return "Recruitment receipt needs its original cohort IDs"
+			elif result.has("changes"):
+				if _receipt_rows_error(result["changes"], "transition") != "" or (kind == "transition" and result["changes"] != request["changes"]):
+					return "Personnel receipt has invalid result changes"
+			elif not _receipt_lines(result.get("population")):
+				return "Personnel receipt needs population results"
+		"activate":
+			if not _receipt_ids(request.get("cohort_ids"), false) or result.get("status") != "active" or result.get("cohort_ids") != request["cohort_ids"]:
+				return "Invalid activation receipt"
+		"legacy_personnel_import":
+			if result.get("status") != "personnel_migrated" or not _receipt_count(result.get("units", -1)):
+				return "Invalid personnel import receipt"
+		"military_wages":
+			if not _receipt_count(request.get("tick", -1)) or result.get("status") != "applied" or not _receipt_count(result.get("monthly_wages", -1)) or not result.get("breakdown", null) is Array or not _receipt_lines(result.get("lines")) or not _receipt_text(result.get("reason")):
+				return "Invalid wage receipt"
+		"battle_round":
+			if not _receipt_ids(request.get("att"), true) or not _receipt_ids(request.get("def"), true) or not request.get("tier", null) is Dictionary:
+				return "Invalid battle round request"
+			for code: Variant in result:
+				var loss: Variant = result[code]
+				if not code is String or not loss is Dictionary or not code in request["att"] + request["def"]:
+					return "Invalid battle round result"
+				if not _receipt_count(loss.get("dead", -1)) or not _receipt_count(loss.get("wounded", -1)) or not _receipt_integer(loss.get("morale")) or not _receipt_text(loss.get("reason")):
+					return "Invalid battle casualty result"
+		"initialize_historical", "bind_person", "organization":
+			var legacy: Variant = request.get("legacy_payload")
+			if not legacy is Dictionary or legacy.get("kind") != kind or legacy.get("reason") != request["reason"] or result.get("status") != "applied":
+				return "Invalid historical military receipt"
+			if kind == "organization":
+				if not legacy.get("aliases", null) is Dictionary:
+					return "Invalid historical organization aliases"
+				for code: Variant in legacy["aliases"]:
+					if not _receipt_text(code) or not _receipt_ids(legacy["aliases"][code], false):
+						return "Invalid historical organization alias"
+			else:
+				if not legacy.get("payload", null) is Array or legacy["payload"].is_empty():
+					return "Invalid historical personnel payload"
+				for row: Variant in legacy["payload"]:
+					if not row is Dictionary:
+						return "Historical personnel entry must be a record"
+					if kind == "bind_person":
+						if not _receipt_text(row.get("source_id")) or not _receipt_text(row.get("cohort_id")):
+							return "Invalid historical named-person binding"
+					elif not _receipt_count(row.get("initial", -1)) or not _receipt_text(row.get("id")) or not _receipt_text(row.get("unit_code")):
+						return "Invalid historical personnel initialization"
+		_:
+			return "Unknown military receipt kind"
+	return ""
+
+static func _receipt_rows_error(rows: Variant, kind: String) -> String:
+	if not rows is Array or rows.is_empty():
+		return "Personnel receipt needs entries"
+	for row: Variant in rows:
+		if not row is Dictionary or not _receipt_count(row.get("count", -1)) or int(row["count"]) <= 0:
+			return "Personnel receipt needs positive whole counts"
+		if kind == "mobilize":
+			for field: String in ["id", "unit_code", "source_province", "source_population_field", "identity", "family_name", "stage", "person_id"]:
+				if not row.get(field, null) is String:
+					return "Invalid recruitment receipt text"
+			if not _receipt_text(row["id"]) or not _receipt_text(row["unit_code"]) or not _receipt_text(row["source_province"]) or not row["source_population_field"] in Population.FIELDS or not row["identity"] in ["commoner", "noble"] or not row["stage"] in ["active", "assembling"]:
+				return "Invalid recruitment receipt origin or identity"
+		else:
+			var id_field := "cohort_id" if kind == "transition" else "unit_code"
+			if not _receipt_text(row.get(id_field)) or not row.get("from", null) is String or not row.get("to", null) is String or not row["to"] in Roster.TRANSITIONS.get(row["from"], []):
+				return "Invalid personnel receipt transition"
+	return ""
+
+static func _receipt_text(value: Variant) -> bool:
+	return value is String and not value.strip_edges().is_empty()
+
+static func _receipt_ids(value: Variant, allow_empty: bool) -> bool:
+	if not value is Array or (not allow_empty and value.is_empty()):
+		return false
+	var seen: Dictionary = {}
+	for id: Variant in value:
+		if not _receipt_text(id) or seen.has(id):
+			return false
+		seen[id] = true
+	return true
+
+static func _receipt_integer(value: Variant) -> bool:
+	return value is int or (value is float and is_finite(value) and value == floor(value))
+
+static func _receipt_count(value: Variant) -> bool:
+	return _receipt_integer(value) and float(value) >= 0
+
+static func _receipt_lines(value: Variant) -> bool:
+	if not value is Array:
+		return false
+	for line: Variant in value:
+		if not line is Dictionary or not _receipt_text(line.get("path")) or not _receipt_text(line.get("reason")) or not _receipt_integer(line.get("delta")) or not _receipt_integer(line.get("value")):
+			return false
+	return true

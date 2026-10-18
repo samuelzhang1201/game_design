@@ -1,0 +1,178 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[1m[INFO]:  [0musing [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+[4m
+
+res://tests/ui/test_game_root.gd
+[0m* test_encounter_stops_catchup
+[31m    [Failed]:  [0m[1] expected to equal [0]:  stop at the first eight-second boundary
+      at line 41
+[31m    [Failed]:  [0mGame owns encounter acknowledgements
+      at line 50
+* test_encounter_preserves_selected_speed<parameterized>
+    - params[0](1)
+[31m    [Failed]:  [0mparams[0] [1] expected to equal [0]:  
+      at line 72
+[31m    [Failed]:  [0mparams[0] Game owns encounter acknowledgements
+      at line 73
+    - params[1](2)
+[31m    [Failed]:  [0mparams[1] [2] expected to equal [0]:  
+      at line 72
+[31m    [Failed]:  [0mparams[1] Game owns encounter acknowledgements
+      at line 73
+    - params[2](4)
+[31m    [Failed]:  [0mparams[2] [4] expected to equal [0]:  
+      at line 72
+[31m    [Failed]:  [0mparams[2] Game owns encounter acknowledgements
+      at line 73
+* test_decision_lock_survives_other_windows
+[31m    [Failed] [0m
+      at line 89
+[31m    [Failed]:  [0m[4] expected to equal [0]:  
+      at line 94
+[31m    [Failed]:  [0m[4] expected to equal [0]:  
+      at line 94
+[31m    [Failed]:  [0mview reset cannot dismiss a saved decision
+      at line 96
+[31m    [Failed]:  [0mGame owns encounter acknowledgements
+      at line 97
+* test_encounter_load_restores_pending_decision
+[31m    [Failed] [0m
+      at line 109
+[31m    [Failed]:  [0mExpected [<null>] to be anything but NULL:  load can resume without an earlier campaign engine
+      at line 111
+* test_multiple_first_encounters_each_require_confirmation
+[31m    [Failed]:  [0mGame owns encounter acknowledgements
+      at line 118
+* test_bgm_plays_from_startup_and_loops
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_space_starts_campaign
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_reign_begins_over_two_frames
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_boot_reads_the_heavy_art_on_threads
+[33m    --Awaiting callable to return TRUE or 20.0s.  
+[0m* test_r_restarts_to_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_pause_menu_opens_via_signal_and_restart_returns_to_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_pause_menu_save_then_load_resumes_at_court
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_load_with_pending_event_waits_with_its_presenter
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_heights_tab_toggles_the_maps_height_theme
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_war_room_tab_opens_the_plotting_room
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_clock_runs_on_the_council_and_the_court_and_stops_paused
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 5 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m[33m    -- Awaiting 5 idle frame(s) -- 
+[0m* test_game_holds_the_day_short_of_the_month_end
+* test_the_menu_switches_the_music_off_and_remembers
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_frame_rate_row_caps_the_engine_and_remembers
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_frame_cap_choices_cycle_and_read
+* test_space_pauses_and_resumes_the_game
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_title_and_pause_menus_share_their_settings
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_fps_row_shows_the_counter_apart_from_dev_mode
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m18/23 passed.
+[0m
+
+
+
+[33m==============================================
+[0m[33m= Run Summary
+[0m[33m==============================================
+[0m[4m
+res://tests/ui/test_game_root.gd
+[0m- test_encounter_stops_catchup
+[31m    [Failed]:  [0m[1] expected to equal [0]:  stop at the first eight-second boundary
+          at line 41
+[31m    [Failed]:  [0mGame owns encounter acknowledgements
+          at line 50
+- test_encounter_preserves_selected_speed
+[31m    [Failed]:  [0mparams[0] [1] expected to equal [0]:  
+          at line 72
+[31m    [Failed]:  [0mparams[0] Game owns encounter acknowledgements
+          at line 73
+[31m    [Failed]:  [0mparams[1] [2] expected to equal [0]:  
+          at line 72
+[31m    [Failed]:  [0mparams[1] Game owns encounter acknowledgements
+          at line 73
+[31m    [Failed]:  [0mparams[2] [4] expected to equal [0]:  
+          at line 72
+[31m    [Failed]:  [0mparams[2] Game owns encounter acknowledgements
+          at line 73
+- test_decision_lock_survives_other_windows
+[31m    [Failed]:  [0m
+          at line 89
+[31m    [Failed]:  [0m[4] expected to equal [0]:  
+          at line 94
+[31m    [Failed]:  [0m[4] expected to equal [0]:  
+          at line 94
+[31m    [Failed]:  [0mview reset cannot dismiss a saved decision
+          at line 96
+[31m    [Failed]:  [0mGame owns encounter acknowledgements
+          at line 97
+- test_encounter_load_restores_pending_decision
+[31m    [Failed]:  [0m
+          at line 109
+[31m    [Failed]:  [0mExpected [<null>] to be anything but NULL:  load can resume without an earlier campaign engine
+          at line 111
+- test_multiple_first_encounters_each_require_confirmation
+[31m    [Failed]:  [0mGame owns encounter acknowledgements
+          at line 118
+
+---- Totals ----
+Scripts           1
+Tests             23
+  Passing         18
+  Failing         5
+Asserts           179
+Time              14.501s
+
+
+[31m---- 5 failing tests ----
+[0m
+WARNING: 53 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 4 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

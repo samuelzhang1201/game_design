@@ -137,3 +137,20 @@ func test_integral_json_counts_have_canonical_retry_payloads() -> void:
 	assert_eq(SaveLoad.state_hash(state), before)
 	assert_false(Roster.mobilize(repo, state, "raise", [_recruit("c", 100)], "levy raised").has("error"))
 	assert_eq(SaveLoad.state_hash(state), before)
+
+func test_transition_cannot_consume_people_created_earlier_in_the_batch() -> void:
+	assert_false(Roster.mobilize(repo, state, "raise", [_recruit("c", 12)], "levy raised").has("error"))
+	assert_false(Roster.transition(repo, state, "prior_wounds", [_change("c", "fit", "wounded", 2)], "prior wounds").has("error"))
+	var before := state.to_dict()
+	assert_true(Roster.transition(repo, state, "chained", [
+		_change("c", "fit", "wounded", 5), _change("c", "wounded", "dead", 7)], "invalid chained loss").has("error"))
+	assert_eq(state.to_dict(), before, "original ten fit and two wounded remain untouched")
+
+func test_eligible_population_subtracts_service_and_promises_and_blocks_conflicts() -> void:
+	assert_false(Roster.mobilize(repo, state, "raise", [_recruit("c", 200)], "levy raised").has("error"))
+	assert_false(Roster.transition(repo, state, "release", [_change("c", "fit", "released", 20)], "civilian promise").has("error"))
+	state.military_cohorts.c.civilian_promises = [{"count": 20, "until_day": 0, "reason": "Civilian service promise"}]
+	repo.balance["recruitment_eligible_permille"] = 250
+	assert_eq(Population.available(repo, state, province, "rural_population"), 50, "1000 * 250 / 1000 - 180 - 20")
+	state.military_migration = {"recruitment_blocked": true, "conflicts": [province]}
+	assert_eq(Population.available(repo, state, province, "rural_population"), 0)

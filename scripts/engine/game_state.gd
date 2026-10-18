@@ -575,6 +575,21 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.battle_records = _whole(d.get("battle_records", {}))
 	s.recruitment_projects = _whole(d.get("recruitment_projects", {}))
 	s.military_migration = _whole(d.get("military_migration", {}))
+	if s.military_migration.is_empty() and d.has("military_organization_version"):
+		s.military_rosters = _decode_values(d.get("military_rosters", {}))
+		s.military_cohorts = _decode_values(d.get("military_cohorts", {}))
+		s.military_events = _decode_values(d.get("military_events", {}))
+		s.military_migration = {"import_main_v7": {
+			"organization_version": _decode_values(d.get("military_organization_version", 0)),
+			"organization_pending": bool(d.get("military_migration_pending", false)),
+			"unit_mapping": _decode_values(d.get("military_unit_aliases", {})),
+			"conflicts": _decode_values(d.get("military_conflicts", []))}}
+	if s.military_migration.has("import_main_v7"):
+		if d.has("military_migration"):
+			s.military_migration = _decode_values(d["military_migration"])
+		s.military_rosters = _decode_values(d.get("military_rosters", {}))
+		s.military_cohorts = _decode_values(d.get("military_cohorts", {}))
+		s.military_events = _decode_values(d.get("military_events", {}))
 	s.map_id = String(d.get("map_id", ""))
 	s.tick = int(_decode_values(d["tick"]))
 	s.day = clampi(int(_decode_values(d.get("day", 1))), 1, Calendar.DAYS_PER_TICK)
@@ -650,7 +665,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.scout_log = _decode_values(d.get("scout_log", {}))
 	s.foe_next_id = int(_decode_values(d.get("foe_next_id", 0)))
 	# CSV fields remain strings; provenance counts are whole save facts.
-	s.army_roster = _whole(d.get("army_roster", {}))
+	s.army_roster = _decode_values(d.get("army_roster", {})) if s.military_migration.has("import_main_v7") else _whole(d.get("army_roster", {}))
 	s.town_seat = (d.get("town_seat", {}) as Dictionary).duplicate(true)
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))

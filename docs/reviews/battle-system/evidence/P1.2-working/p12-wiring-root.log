@@ -1,0 +1,122 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[1m[INFO]:  [0musing [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+[4m
+
+res://tests/ui/test_game_root.gd
+[0m* test_encounter_stops_catchup
+* test_encounter_preserves_selected_speed<parameterized>
+    - params[0](1)
+    - params[1](2)
+    - params[2](4)
+* test_decision_lock_survives_other_windows
+* test_encounter_load_restores_pending_decision
+* test_multiple_first_encounters_each_require_confirmation
+* test_encounter_month_end_only_publishes_after_completion
+* test_encounter_refuses_stale_invalid_and_repeated_choices
+* test_ordinary_reinforcement_does_not_repeat_encounter_pause
+* test_manual_pause_discards_partial_day_time
+* test_compatibility_tick_resumes_day_without_publishing_empty_month
+* test_blocked_day_keeps_notifications_across_json_load
+* test_encounter_controller_routes_requests_and_restores_confirmation
+* test_encounter_panel_is_request_only_and_restores_after_load
+[31m    [Failed]:  [0mencounter look is an editor-authored scene
+      at line 302
+* test_bgm_plays_from_startup_and_loops
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_space_starts_campaign
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_reign_begins_over_two_frames
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_boot_reads_the_heavy_art_on_threads
+[33m    --Awaiting callable to return TRUE or 20.0s.  
+[0m* test_r_restarts_to_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_pause_menu_opens_via_signal_and_restart_returns_to_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_pause_menu_save_then_load_resumes_at_court
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_load_with_pending_event_waits_with_its_presenter
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_heights_tab_toggles_the_maps_height_theme
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_war_room_tab_opens_the_plotting_room
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_clock_runs_on_the_council_and_the_court_and_stops_paused
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 5 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m[33m    -- Awaiting 5 idle frame(s) -- 
+[0m* test_game_holds_the_day_short_of_the_month_end
+* test_the_menu_switches_the_music_off_and_remembers
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_frame_rate_row_caps_the_engine_and_remembers
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_frame_cap_choices_cycle_and_read
+* test_space_pauses_and_resumes_the_game
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_title_and_pause_menus_share_their_settings
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_fps_row_shows_the_counter_apart_from_dev_mode
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m30/31 passed.
+[0m
+
+
+
+[33m==============================================
+[0m[33m= Run Summary
+[0m[33m==============================================
+[0m[4m
+res://tests/ui/test_game_root.gd
+[0m- test_encounter_panel_is_request_only_and_restores_after_load
+[31m    [Failed]:  [0mencounter look is an editor-authored scene
+          at line 302
+
+---- Totals ----
+Scripts           1
+Tests             31
+  Passing         30
+  Failing         1
+Asserts           304
+Time              17.827s
+
+
+[31m---- 1 failing tests ----
+[0m
+WARNING: 57 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 4 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

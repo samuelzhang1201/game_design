@@ -73,7 +73,12 @@ func test_ensure_charges_only_when_nothing_else_did() -> void:
 func test_training_keeps_a_real_cost_without_mobilizing_fictitious_people() -> void:
 	var pop_before := int(WorldLedger.value_of(data, state,
 		"economy.kingdoms.player_realm.rural_population"))
+	var gold_before := int(state.metrics.treasury)
+	var supplies_before := int(state.metrics.strategic)
 	var out := sys.execute(ActionRequest.make("LEVY_RAISE"), state)
+	assert_true(out.ok)
+	assert_eq(int(state.metrics.treasury), gold_before - int(sys.gold_cost(data.actions.LEVY_RAISE)), "intrinsic gold cost")
+	assert_eq(int(state.metrics.strategic), supplies_before - 20, "training materials cost")
 	assert_eq(int(WorldLedger.value_of(data, state,
 		"economy.kingdoms.player_realm.rural_population")), pop_before,
 		"training is not a second personnel recruitment path")

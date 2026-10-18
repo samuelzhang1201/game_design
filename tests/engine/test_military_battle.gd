@@ -98,9 +98,14 @@ func test_failed_round_keeps_day_transaction_at_same_battle() -> void:
 	state.battles = [{"id": 1, "att": ["a"], "def": ["b"], "rounds": 0,
 		"town": "", "place_x_m": 0, "place_y_m": 0, "start_day": state.absolute_day(),
 		"actions": {"att": {"kind": "attack"}, "def": {"kind": "hold"}}}]
-	state.day_resolution = DayResolution.begin(state.absolute_day(), false)
-	state.day_resolution["phase"] = "battles"
+	state.day_resolution = DayResolution.begin(state.day, false, state.absolute_day())
+	state.day_resolution["phase"] = "FIXED_TACTICAL_SUBSTEPS"
+	state.day_resolution["phase_cursor"] = DayResolution.PHASES.find("FIXED_TACTICAL_SUBSTEPS")
+	state.day_resolution["battle_step"] = "fighting"
 	state.day_resolution["battle_ids"] = [1]
+	state.day_resolution["acknowledged_encounters"] = [1]
+	state.day_resolution["over_battle_ids"] = []
+	assert_eq(DayResolution.incompatibility_reason(state.day_resolution), "")
 	state.day_resolution["journal"]["missive_start"] = state.next_missive_id
 	var before := GameState.from_dict(state.to_dict())
 	var result := TickEngine.new(repo).resolve_day(state)

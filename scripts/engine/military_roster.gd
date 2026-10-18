@@ -22,6 +22,8 @@ static func personnel_capacity(repo: DataRepository, equipment: Dictionary) -> i
 	var types := repo.world_table("military", "unit_types")
 	for code: String in types:
 		var row: Dictionary = types[code]
+		if not ArmySplit.is_whole_count(equipment.get(code, 0)) or not ArmySplit.is_whole_count(row.get("crew", 0)) or int(row.get("crew", 0)) <= 0:
+			return -1
 		total += int(equipment.get(code, 0)) * int(row["crew"])
 	return total
 
@@ -179,6 +181,7 @@ static func _apply_transition(repo: DataRepository, state: GameState, event_id: 
 	if changes.is_empty():
 		return {"error": "A personnel transition needs changes."}
 	var updated: Dictionary = {}
+	var consumed: Dictionary = {}
 	var deaths: Dictionary = {}
 	for change: Dictionary in changes:
 		var id := String(change.get("cohort_id", ""))
@@ -187,10 +190,19 @@ static func _apply_transition(repo: DataRepository, state: GameState, event_id: 
 		var count := int(change.get("count", 0))
 		if not state.military_cohorts.has(id) or count <= 0 or not to in TRANSITIONS.get(from, []):
 			return {"error": "Invalid personnel transition."}
+		var original: Dictionary = state.military_cohorts[id]
+		var code := String(original.get("unit_code", ""))
+		if original.get("id", "") != id or not id in state.military_rosters.get(code, {}).get("cohort_ids", []):
+			return {"error": "Original cohort has an inconsistent roster reference."}
+		var integrity := cohort_error(repo, original)
+		if not integrity.is_empty():
+			return {"error": integrity}
+		var source_key := id + ":" + from
+		consumed[source_key] = int(consumed.get(source_key, 0)) + count
 		if not updated.has(id):
-			updated[id] = state.military_cohorts[id].duplicate(true)
+			updated[id] = original.duplicate(true)
 		var cohort: Dictionary = updated[id]
-		if int(cohort.get(from, 0)) < count:
+		if int(original.get(from, 0)) < int(consumed[source_key]):
 			return {"error": "Not enough personnel in " + id + ":" + from}
 		cohort[from] = int(cohort[from]) - count
 		cohort[to] = int(cohort[to]) + count
@@ -274,7 +286,9 @@ static func _replay(state: GameState, event_id: String, request: Dictionary, rea
 		return {"error": "Personnel changes need an event ID and a reason."}
 	if not state.military_events.has(event_id):
 		return {}
-	var previous: Dictionary = state.military_events[event_id]
+	var previous: Variant = state.military_events[event_id]
+	if not previous is Dictionary or not previous.get("request", null) is Dictionary or not previous.get("result", null) is Dictionary:
+		return {"error": "Saved personnel receipt is malformed."}
 	if previous["request"] != request:
 		return {"error": "Personnel event ID was already used for a different request."}
 	return (previous["result"] as Dictionary).duplicate(true)
@@ -302,3 +316,19 @@ static func _normalize_rows(rows: Array, string_fields: Array[String]) -> Dictio
 			row[field] = value
 		normalized.append(row)
 	return {"rows": normalized}
+
+## Validate original balances before any source is consumed by an atomic batch.
+static func cohort_error(repo: DataRepository, cohort: Dictionary) -> String:
+	if not repo.provinces.has(String(cohort.get("source_province", ""))) \
+			or not String(cohort.get("source_population_field", "")) in Population.FIELDS \
+			or not String(cohort.get("identity", "")) in ["commoner", "noble"] \
+			or not String(cohort.get("stage", "")) in ["active", "assembling"]:
+		return "Invalid personnel identity or origin."
+	var total := 0
+	for status: String in PERSONNEL_STATES:
+		if not ArmySplit.is_whole_count(cohort.get(status, -1)):
+			return "Invalid original personnel count."
+		total += int(cohort[status])
+	if not ArmySplit.is_whole_count(cohort.get("initial", -1)) or total != int(cohort["initial"]):
+		return "Original personnel does not conserve people."
+	return ""

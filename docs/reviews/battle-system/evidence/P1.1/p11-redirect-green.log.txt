@@ -1,0 +1,78 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[INFO]:  using [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+
+
+res://tests/engine/test_courier_ride.gd
+* test_a_days_ride_by_hand
+* test_delivery_applies_the_order_on_that_day_and_not_before
+* test_an_older_order_arriving_late_is_set_aside
+* test_a_vanished_regiment_leaves_the_orders_undelivered
+* test_the_fuse
+* test_bad_weather_slows_him_and_is_announced_once_a_spell
+* test_a_courier_catches_a_column_on_the_march
+* test_a_ride_survives_a_save_mid_road
+* test_he_is_seen_to_leave_the_capital_once
+* test_a_courier_not_from_the_capital_just_rides
+* test_headlines
+* test_ride_ahead_previews_the_day_exactly_and_writes_nothing
+* test_ride_ahead_on_the_delivery_day_ends_on_the_column
+* test_an_order_delivered_today_is_marched_on_from_tomorrow
+* test_day_ahead_of_a_garrison_is_where_it_stands
+* test_the_shown_days_are_day_ends_through_the_tick_engine
+* test_a_redirect_delivered_on_a_march_day_keeps_the_old_walk_for_today
+* test_a_redirect_rebuilds_tomorrows_waypoint_route_from_todays_final_position
+* test_the_arrival_day_is_the_ride_and_then_the_march
+19/19 passed.
+
+
+res://tests/engine/test_army_march.gd
+* test_a_new_campaign_seats_every_regiment_where_the_pack_put_it
+* test_the_pack_measure_is_what_a_metre_means
+* test_a_day_of_marching_covers_the_regiments_own_pace
+* test_it_stops_dead_on_the_spot_it_was_sent_to_and_garrisons
+* test_garrison_halts_a_column_where_it_has_got_to
+* test_the_clock_marches_it_a_day_at_a_time
+* test_a_march_is_even_and_ends_as_its_last_day_ends
+* test_an_arrival_has_its_headline
+* test_the_months_last_day_is_a_day_on_the_road_too
+* test_the_same_orders_from_the_same_save_give_the_same_march
+* test_an_old_save_with_no_position_is_seated_where_the_pack_put_it
+* test_the_orders_validate_against_the_regiment_and_the_ground
+* test_marching_into_the_sea_is_refused
+* test_the_order_runs_and_charges_its_cost
+* test_the_weather_where_it_stands_scales_its_day
+* test_in_rain_the_card_the_days_out_and_the_ruler_agree
+16/16 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+---- Totals ----
+Scripts           2
+Tests             35
+  Passing         35
+Asserts           187
+Time              13.759s
+
+
+[Orphans]:  Total orphans in run 1.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 3.0
+
+---- All tests passed! ----

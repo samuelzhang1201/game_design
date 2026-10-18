@@ -67,16 +67,17 @@ func _init() -> void:
 		var engine := TickEngine.new(repo)
 		for t in ticks:
 			for d in Calendar.DAYS_PER_TICK - 1:
-				engine.advance_day(state)
-				if not state.day_resolution.is_empty():
-					print("Day paused for a battle decision: ", state.day_resolution["pending_decision"])
-					quit(0)
+				var daily := engine.resolve_day(state)
+				if daily["status"] != "complete":
+					print("Day stopped: ", daily)
+					quit(0 if daily["status"] == "blocked" else 1)
 					return
-			var rep := engine.advance(state)
-			if rep == null:
-				print("Month paused for a battle decision: ", state.day_resolution["pending_decision"])
-				quit(0)
+			var monthly := engine.resolve_day(state, true)
+			if monthly["status"] != "complete":
+				print("Month stopped: ", monthly)
+				quit(0 if monthly["status"] == "blocked" else 1)
 				return
+			var rep: TickReport = monthly["report"]
 			if not rep.event.is_empty():
 				state.pending_event = {}  # nobody is at the table to answer it
 			print("  %-16s %10d %10d %10d %10d %8.1f %8.1f" % [

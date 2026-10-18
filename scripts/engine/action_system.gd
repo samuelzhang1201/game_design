@@ -57,7 +57,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 	var needs := gold_cost(row) + OrderCosts.gold_of(data, req.action_code)
 	if req.action_code == "BATTLE_ORDER" and req.params.get("kind", "") == "surrender":
 		needs = 0
-	if BattleOrders.available_gold(state) < needs:
+	if needs > 0 and BattleOrders.available_gold(state) < needs:
 		return "Cannot afford %s (needs %d gold)" % [req.action_code, int(needs)]
 	# A pool the cost row draws on cannot be spent below empty (the levy's
 	# baggage train, spec §5): EventEffects adds the row straight into
@@ -277,6 +277,10 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 		return ""
 	if req.action_code == "ARMY_GARRISON":
 		return ""
+	if state.military_rosters.has(code):
+		var commander := String(state.military_rosters.get(code, {}).get("commander_id", ""))
+		if commander == "" or not MilitaryCommanders.eligible_for_unit(data, state, code, commander):
+			return "%s needs an eligible commander before departure" % String(reg["label"])
 	if ArmySystem.base_pace_km(data, reg) <= 0:
 		return "%s has no one under arms to march" % String(reg["label"])
 	var dest := Vector2(float(req.params.get("x", -1.0)), float(req.params.get("y", -1.0)))
@@ -344,7 +348,7 @@ func _validate_battle_order(req: ActionRequest, state: GameState) -> String:
 	var fee := _fee_for(state, code)
 	var reserve := int(quote["reserved_gold"])
 	var filing := OrderCosts.gold_of(data, req.action_code) if fee == 0 and reserve == 0 and req.params.get("kind", "") != "surrender" else 0.0
-	if BattleOrders.available_gold(state) < reserve + fee + filing:
+	if reserve + fee + filing > 0 and BattleOrders.available_gold(state) < reserve + fee + filing:
 		return "The treasury cannot pay this warrant and reserve its battlefield reward."
 	return ""
 

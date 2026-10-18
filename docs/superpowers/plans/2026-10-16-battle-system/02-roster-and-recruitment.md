@@ -8,7 +8,7 @@
 
 **Tech Stack:** Godot 4.7、GUT、CSV、Qwen/ComfyUI、编辑器 Resource。
 
-**Spec:** [设计 §5–6、§16、§20](../../specs/2026-10-16-battle-system-design.md)；[总计划](../2026-10-16-battle-system-implementation.md)。前置：P1。
+**Spec:** [基础设计](../../specs/2026-10-16-battle-system-design.md)；[已批准的行为/战场设计 §2、§6–8、§14](../../specs/2026-10-17-unit-behavior-and-battlefield-design.md)；[总计划](../2026-10-16-battle-system-implementation.md)。前置：P1。
 
 ## Global Constraints
 
@@ -17,6 +17,8 @@
 - 无疲劳；人员状态无失联池；伤亡后比例超限不删除贵族。
 - 头像只覆盖玩家、开局入侵国家和实际需要的接替人选；2D 手绘 Qwen。
 - 引擎确定性、整数存档、CSV 数值、SuiteData 夹具；遵守总计划测试/视觉/PR流程。
+- 战力与兵人显示分别派生：只使用当前可战人数；伤兵、俘虏保留人口/供养账但不占战斗组、不显示模型。
+- 每支实际单位独立计算 `F = (N + 49) / 50` 整数除法，N=0时F=0；不满50人向上取整，不把多支单位先合并再取整。
 
 ## Review Focus
 
@@ -73,13 +75,13 @@ func test_commander_is_in_noble_total() -> void:
 ```
 
 - [ ] composition 在合法输入上以 `nobles=max(1,total*noble_permille/1000)` 取整，commoners=total−nobles，noble_troops=nobles−1；再检查 `nobles * 1000 <= total * cap_permille`。生产调用从 CSV 传入普通单位上限100‰，不把上限藏进函数常数；上面的100仅为测试输入。百分比目标与最终整数比例同时显示，不能承诺600人能表达任意小数比例。
-- [ ] 先写人员换算测试：夹具 1 艘船×100 crew=100 人，贵族5%为95平民+4骨干+1指挥官；2门炮×8 crew=16人，无骨干时15平民+1指挥官。重复初始化及旧档迁移不得再次乘 crew；装备仍是1艘、2门。旧dead/wounded/deserted保存值按已记录人员事实保留，不随crew再乘一次；例如200骑兵元素、crew2、10死/20伤/5逃兵迁移为365可战/20伤/10死/5平民，记录换算口径，不复活已损失者；旧装备毁损无法精确还原时保留旧装备记录与迁移说明，不伪造历史。
+- [ ] 先写人员换算测试：夹具 1 艘船×100 crew=100 人，贵族5%为95平民+4骨干+1指挥官；2门炮×8 crew=16人，无骨干时15平民+1指挥官。重复初始化及旧档迁移不得再次乘 crew；装备仍是1艘、2门。旧状态的 dead/wounded/deserted 已是人员损失，按保存数值保留，不再乘 crew；200个装备元素、crew=2、旧阵亡10/负伤20/退伍5，应迁移为365可战+20负伤+10阵亡+5退伍=400。旧装备毁损无法精确还原时保留旧装备记录与迁移说明，不伪造历史。
 - [ ] 人员换算与既有拆分上限一起迁移：`army_split_cap_men` 约束人员，普通陆军的装备元素上限为 `floor(cap_men / crew)`，再按既有均分算法拆分。crew必须为正整数；单元素所需人数超过cap时给出数据错误，不静默造超限单位。舰队和一国一支royal train保留现有组织例外。该口径不把crew=2臆解为某种已确认的历史兵种配置。
 - [ ] 增加拆分手算：1268个骑兵编制元素、crew=2、cap=600，元素为[254,254,254,253,253]，人数[508,508,508,506,506]，总人数2536；301个元素分[151,150]，人数302/300；7个元素、crew=8、cap=25，分[3,2,2]，人数24/16/16。枪炮和舰船总数量始终守恒。
 - [ ] 旧存档从已保存的现存部队迁移，不从开局包重建。拆分时首个子队保留旧ID，其他子队用稳定派生ID；装备、各身份人员状态、库存和战利品按整数守恒分配，保存旧ID到子队列表。军令、信使收件人、战斗参与者逐项映射，同一命令费用不因拆分重复支付；驻防席位只有一个子队继承，其余使用合法相邻驻地。
 - [ ] 若旧档处在未完成日事务，先保存待重组标记，保持原事务参与者和游标，待该事务完成后的安全边界再重组。写两条迁移分支：普通存档立即升级；第二战场阻塞存档先续跑再升级。两次加载后的组织版本、ID映射、人数、库存、命令费用及结果hash一致，不重组第二次。P7重新执行端到端迁移矩阵。
 - [ ] 所有初始真实单位逐一绑定 Character，覆盖陆军、舰队及 royal train；玩家国家和开局入侵国家均取完整名册，不只取已越境的敌军。`commanders.csv` 保存 `character_id/realm_slot/eligible/unit_kinds/portrait_key/reserve_priority`，人物完整字段继续由 `roles.csv` 和 CharacterFactory 读取。明确排除国王、外国君主、无资格及存在任职冲突的人物；排序稳定，不能占用已绑定者。
-- [ ] ArmySplit 在拆分与合并 royal train 前保存 `source_parts`，每项含原 regiment_code、province_code、arm、equipment_count 和 crew_per_element；所有数量为整数。原始省只是开局驻地，不冒充已经记录的历史征募地。首次初始化使用该省作为明确的原籍分配策略，再按省人口×兵种 rural_rate/urban_rate 的权重做整数分配并保存来源；不能把全部炮组人员记成首都居民。零权重、未知来源或人口不足给出明确冲突，不默认全属农村。夹具农村1000/城市500、征募率120‰/30‰，180人分160农村/20城市；拆分子队只认领自己的份额，JSON往返保留整数与总数。
+- [ ] ArmySplit 在拆分与合并 royal train 前保存 `source_parts`，每项含原 regiment_code、province_code、arm、equipment_count 和 crew_per_element；所有数量为整数。原始省只是开局驻地，不冒充已经记录的历史征募地。首次初始化使用该省作为明确的原籍分配策略，再按省人口×兵种 rural_rate/urban_rate 的权重做整数分配并保存来源；不能把全部炮组人员记成首都居民。旧档合并后的 royal train 若未保存 `source_parts`，允许以已保存驻地省作为估算原籍；来源项保存估算标记，人员初始化与组织迁移说明明确记录此估算。已有来源不覆盖，估算驻地也须通过来源及人口校验。零权重、未知来源或人口不足给出明确冲突，不默认全属农村。夹具农村1000/城市500、征募率120‰/30‰，180人分160农村/20城市；拆分子队只认领自己的份额，JSON往返保留整数与总数。
 - [ ] 新增人物使用既有家族绑定与角色字段，不从 cavalry 或 Character.category 单独推断贵族身份。具名指挥官使用带 person_id 的一人贵族 cohort，计入原有总人数；任职记录必须包含 reason。被俘、阵亡或失去任职资格时解除任职，恢复或获释后不自动复任；同一人重新征募时产生新 cohort，旧服役记录仍可追溯。
 - [ ] 实现主将：合法玩家提名优先，否则按 sk_martial 降序、prestige 降序、id 升序；已有主将仍有效则援军不重选。主将阵亡/被俘/退出战场才按规则接替。
 - [ ] 在 test_battle_command 用三名人物：A技能16威望40、B技能15威望90、C技能16威望40，A/C按id取A；指定合法B取B；新人技能20加入既有战场不夺主将。失效提名返回空ID，由调用方显示明确错误，不偷偷改为另一人。
@@ -131,4 +133,17 @@ static func step_day(repo: DataRepository, state: GameState) -> Array
 - [ ] 制作一组普通步兵国家色与平民/贵族对照样张：只染布料、盾面和旗；贵族更完整甲胄，指挥官少量家徽。同时看两国相近主色，使用辅助色和旗形辨认。P7扩展全兵种，不推迟本阶段辨识验证。
 - [ ] 真实窗口 visual-review、保存 P2 证据、跑肖像覆盖与相关UI/地图检查及fast，提交 `art: add commander portraits and military identity samples`。
 
-**阶段放行：** 征兵可玩、指挥链唯一、人数/资金/人口一致；现役与备用肖像清单全覆盖；家族与阶层样张通过实际地图审查。
+## P2.4 可战人数显示分组接口
+
+**Create:** `tests/engine/test_battle_representation_count.gd`。
+
+**Modify:** `scripts/engine/military_roster.gd`。
+
+**Interfaces:** `MilitaryRoster.combatant_count(state: GameState, code: String) -> int` 返回当前可战人数；`MilitaryRoster.representative_count(combatants: int) -> int` 使用整除 `(combatants + 49) / 50`，先处理零值。P4.3的`BattlePresentation`直接消费这两个查询；P7地图实例只消费其输出的代表槽位，不改变人员账。
+
+- [ ] 测边界表：N=0/1/49/50/51/800/1000/10000分别为0/1/1/1/2/16/20/200；`test_units_round_independently` 使用两单位各51人得4，而非102人合并后3。
+- [ ] 同一cohort为100人、80可战、10伤、10俘时只生成2个可战代表槽位；加入/移除伤兵和俘虏不能改变槽位或战力，只有当前可战人数变化才重新派生。具名指挥官仍计入人口，不另加模型。
+- [ ] 记录可战人数从101降至100时模型代表从3降至2；该表现变化不得写入死亡数或战报，也不得直接把模型索引映射成永久50人身份。补员时允许稳定重分组，总可战人数不变。
+- [ ] 跑该文件与roster/army_power/save_load、fast；地图具体实例与样张密度由P7验证，不在P2提前创建后续阶段文件。
+
+**阶段放行：** 征兵可玩、指挥链唯一、人数/资金/人口一致；现役与备用肖像清单全覆盖；代表人数合同及边界测试通过，显示分组不修改模拟人员/损失状态；家族与阶层样张通过实际地图审查。

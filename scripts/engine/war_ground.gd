@@ -354,11 +354,11 @@ static func plan_reading(repo: DataRepository, state: GameState, piece: Dictiona
 static func _plan_factor(repo: DataRepository, arm: String, heads: int, stance: String, terrain: String, works: String) -> int:
 	var t := int(repo.bal("war_plan_training"))
 	var m := int(repo.bal("war_plan_morale"))
-	var base := ArmySystem.power_of_arms(repo, {arm: heads}, heads, t, m, stance, "plains", "")
+	var base := ArmySystem.power_of_personnel(repo, {arm: heads}, heads, t, m, stance, "plains", "")
 	if base <= 0:
 		return 0
 	@warning_ignore("integer_division")  # whole per mille
-	return ArmySystem.power_of_arms(repo, {arm: heads}, heads, t, m, stance, terrain, works) * 1000 / base
+	return ArmySystem.power_of_personnel(repo, {arm: heads}, heads, t, m, stance, terrain, works) * 1000 / base
 
 
 ## The side's name: its kingdom's label, or "Unknown".

@@ -185,6 +185,11 @@ func leave(done: Callable, to: GameState = null) -> bool:
 ## scene's; this fills the words and wires the rows.
 func _fill_living_title() -> void:
 	_preview = GameState.new_campaign(Game.data, int(Game.data.bal("ui_title_seed")))
+	if _preview == null:
+		_status = %Status
+		_status.text = GameState.campaign_error
+		(%StartGame as Button).disabled = true
+		return
 	_realm_waiting = TitleRealm.available()
 	var crown := MapManors.crown(_preview)
 	(%TitleArms as HeraldicShield).set_texture(HouseArms.texture_of_house(Game.data, _preview, crown))

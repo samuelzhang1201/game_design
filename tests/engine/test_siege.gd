@@ -1135,7 +1135,7 @@ func _invaded(engine: TickEngine, n: int, weakest: bool) -> Array:
 ## {begun (absolute day), fell (day), lifted (day), events}.
 func _siege_run(engine: TickEngine, s: GameState, days: int) -> Dictionary:
 	var main := _host("main")
-	var out := {"begun": -1, "fell": -1, "lifted": -1, "events": [], "homeward_reasons": []}
+	var out := {"begun": -1, "fell": -1, "lifted": -1, "events": [], "homeward_reasons": [], "assault_rounds": []}
 	var town := String(s.ai_hosts[main]["target_id"])
 	for n in days:
 		var today := s.absolute_day()
@@ -1143,6 +1143,8 @@ func _siege_run(engine: TickEngine, s: GameState, days: int) -> Dictionary:
 		for event: Dictionary in engine.day_ai:
 			if event.get("type", "") == "host_mode" and event.get("host", "") == main and event.get("mode", "") in EnemyAi.HOMEWARD:
 				out["homeward_reasons"].append(String(event["why"]))
+		(out["assault_rounds"] as Array).append_array(engine.day_battles.filter(func(event: Dictionary) -> bool:
+			return event.get("kind", "") == "round" and event.get("town", "") == town))
 		var own_events: Array = engine.day_siege.filter(func(e: Dictionary) -> bool: return String(e.get("town", "")) == town)
 		(out["events"] as Array).append_array(own_events)
 		for e: Dictionary in own_events:
@@ -1158,14 +1160,77 @@ func _siege_run(engine: TickEngine, s: GameState, days: int) -> Dictionary:
 	return out
 
 
+func _host_census(state: GameState, garrison: Array) -> Dictionary:
+	var equipment: Dictionary = {}
+	var fit := 0
+	var supplies := 0
+	var codes := EnemyAi.regiments_of(state, _host("main"))
+	for code: String in codes:
+		fit += MilitaryRoster.fit(state, code)
+		supplies += int(state.foes[code]["supplies"])
+		var unit := ArmySystem.regiment(repo, code, state)
+		for arm: String in repo.world_table("military", "unit_types"):
+			equipment[arm] = int(equipment.get(arm, 0)) + int(unit.get(arm, 0))
+	var defenders := 0
+	for code: String in garrison:
+		defenders += MilitaryRoster.fit(state, code)
+	return {"seed": state.rng.seed_value(), "equipment": equipment, "fit": fit,
+		"supplies": supplies, "units": codes.size(), "defenders": defenders}
+
+
+func _legacy_crew_control() -> Dictionary:
+	var actual := repo
+	repo = SuiteData.repo()
+	_only_tier("defender_routed")
+	for row: Dictionary in repo.world_table("military", "unit_types").values():
+		if row["type"] != "naval":
+			row["crew"] = "1"  # the siege control changes land crews; fleets keep legal commander capacity
+	var engine := TickEngine.new(repo)
+	var setup := _invaded(engine, 1, true)
+	var state: GameState = setup[0]
+	for code: String in EnemyAi.regiments_of(state, _host("main")):
+		var entry: Dictionary = state.foes[code]
+		ArmySystem.apply_hold(entry, "hold", -1, int(entry.get("stance_order_id", 0)) + 1)
+	var census := _host_census(state, setup[2])
+	census["run"] = _siege_run(engine, state, 25)
+	repo = actual
+	return census
+
+
+func _personnel_totals(state: GameState) -> Dictionary:
+	var counts := {"initial": 0, "fit": 0, "wounded": 0, "captured_current": 0, "dead": 0, "released": 0}
+	for cohort: Dictionary in state.military_cohorts.values():
+		for field: String in counts:
+			counts[field] += int(cohort[field])
+	return counts
+
+
 func test_a_siege_on_the_day_loop_wears_down_storms_and_takes_the_town() -> void:
+	var legacy := _legacy_crew_control()
+	_only_tier("defender_routed")
 	var engine := TickEngine.new(repo)
 	var r := _invaded(engine, 1, true)
 	var s: GameState = r[0]
 	var town: String = r[1]
+	for code: String in EnemyAi.regiments_of(s, _host("main")):
+		var entry: Dictionary = s.foes[code]
+		ArmySystem.apply_hold(entry, "hold", -1, int(entry.get("stance_order_id", 0)) + 1)
+	var census := _host_census(s, r[2])
+	assert_eq(census.seed, legacy.seed, "same seeded scenario")
+	assert_eq(census.equipment, legacy.equipment, "crew conversion does not create equipment")
+	assert_eq(census.defenders, legacy.defenders, "the weak garrison is unchanged")
+	var crew_people := 0
+	for arm: String in census.equipment:
+		crew_people += int(census.equipment[arm]) * int(repo.world_row("military", "unit_types", arm)["crew"])
+	assert_eq(census.fit, crew_people, "actual host cohorts match equipment times crew")
+	assert_eq(legacy.fit, (legacy.equipment as Dictionary).values().reduce(func(a: int, b: Variant) -> int: return a + int(b), 0))
+	assert_gt(int(legacy.run.fell), 0, "the control is also a weak-garrison victory")
+	var before := _personnel_totals(s)
+	var first_line := s.world_log.size()
 	var run := _siege_run(engine, s, 25)
 	var main := _host("main")
 	assert_gt(int(run["begun"]), 0, "the host sat down before the town")
+	assert_gt((run["assault_rounds"] as Array).size(), 0, "an actual town assault round fought before capture")
 	# every day's gain is the hand formula on that day's figures, added up
 	var progress := 0
 	var rate := int(repo.bal("siege_rate"))
@@ -1184,7 +1249,29 @@ func test_a_siege_on_the_day_loop_wears_down_storms_and_takes_the_town() -> void
 	assert_gt(days, 0)
 	assert_gt(int(run["fell"]), 0, "a weakly held town falls")
 	var fell_after := int(run["fell"]) - int(run["begun"]) + 1
-	assert_lte(fell_after, 10, "inside ten days of siege (fell on its day %d)" % fell_after)
+	assert_eq(int(run["lifted"]), -1, "the weak garrison falls before the host abandons its siege")
+	var after := _personnel_totals(s)
+	assert_eq(after.initial, before.initial, "no new personnel during the siege")
+	assert_eq(int(after.fit) + int(after.wounded) + int(after.captured_current) + int(after.dead) + int(after.released), int(after.initial))
+	var charged_deaths := 0
+	for line: Dictionary in s.world_log.slice(first_line):
+		var path := String(line.get("path", "")).split(".")
+		if path.size() != 4 or path[0] != "economy" or path[1] != "provinces" \
+				or not path[3] in MilitaryPopulation.FIELDS or int(line["delta"]) >= 0:
+			continue
+		var receipt: Dictionary = s.military_events.get(String(line.get("source", "")), {})
+		var request: Dictionary = receipt.get("request", {})
+		var kind := String(request.get("kind", ""))
+		if not kind in ["transition", "transfer_units"]:
+			continue
+		var moves: Array = request.get("changes" if kind == "transition" else "orders", [])
+		if moves.any(func(move: Dictionary) -> bool: return move.get("to", "") == "dead" and int(move.get("count", 0)) > 0):
+			charged_deaths -= int(line["delta"])
+	assert_eq(charged_deaths, int(after.dead) - int(before.dead), "campaign deaths debit source population once")
+	for entry: Dictionary in s.regiments.values() + s.foes.values():
+		assert_gte(int(entry.get("supplies", 0)), 0, "live supplies never become negative")
+	gut.p("P21 crew control: " + JSON.stringify({"legacy": legacy, "actual": census,
+		"actual_days": fell_after, "actual_trace": _of(run.events, "siege_day"), "actual_fall": _of(run.events, "siege_fallen")}))
 	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD")
 	assert_false(EnemyAi.target_held(repo, s, "town", town), "the town is occupied")
 	var cell := EnemyAi.target_cell(repo, s, "town", town)
@@ -1243,7 +1330,7 @@ func test_a_strongly_held_walled_town_outlasts_the_besiegers_supplies() -> void:
 		if String(e.get("kind", "")) == "siege_day":
 			best = maxi(best, int(e["progress"]))
 			hungry += 1 if bool(e["starving"]) else 0
-	assert_eq(hungry, 0, "the garrison never starved: it ate what it carried until the host went home")
+	assert_eq(hungry, 0, "the garrison does not starve during the siege")
 	gut.p("strong walled town, unstocked: siege from day %d, lifted day %d, best progress %d, starving days %d, checked assault rounds %d" % [
 		int(run["begun"]), int(run["lifted"]), best, hungry, _of(run["events"], "siege_repulsed").size()])
 

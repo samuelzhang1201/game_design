@@ -60,7 +60,7 @@ func test_wound_recovery_is_a_share_with_a_floor_of_one() -> void:
 
 func test_the_month_returns_wounded_and_the_days_eat_the_supplies() -> void:
 	var s := SuiteData.campaign(repo, 7)
-	var r: Dictionary = _mine()[0]
+	var r: Dictionary = _mine().filter(func(unit: Dictionary) -> bool: return String(unit.get("is_naval", "0")) != "1" and ArmySystem.headcount(repo, unit) >= 250)[0]
 	var code := String(r["regiment_code"])
 	var use := ArmySystem.supply_use(repo, r, s)
 	assert_false(Personnel.move(repo, s, code, "fit", "wounded", 250).has("error"))

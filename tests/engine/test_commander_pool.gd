@@ -59,7 +59,10 @@ func test_every_realm_has_unique_eligible_active_and_reserve_commanders() -> voi
 			else: assert_eq(String(row["portrait_key"]), "")
 			for trait_code: String in person.traits: assert_true(repo.traits.has(trait_code))
 		assert_gte(active, maxi(needs[realm]["new"], needs[realm]["legacy"]), "full new / saved roster " + realm)
-		assert_eq(reserve, 4, "explicitly authored replacement officers " + realm)
+		var expected_reserve := 4
+		if realm == repo.resolve_realm("player_realm"): expected_reserve = 64
+		elif realm == repo.resolve_realm("raider_realm"): expected_reserve = 84
+		assert_eq(reserve, expected_reserve, "explicitly authored replacement officers " + realm)
 		# Every slot can be staffed even after all non-specialists are used.
 		for arm: String in ["infantry", "archers", "cavalry", "artillery", "fleet"]:
 			var count := 0

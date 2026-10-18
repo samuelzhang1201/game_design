@@ -131,3 +131,4 @@ army_noble_cap_permille,100,"Maximum noble share of a recruited ordinary unit in
 king_travel_km_per_day,30,"Battle-system spec 2026-10-16 §11: physical royal travel pace in clear metres per day"
 king_command_radius_m,1000,"Battle-system spec 2026-10-16 §11: the king is present at a battle within this actual distance; never based on the open screen"
 king_battle_morale_support,5,"Battle-system spec 2026-10-16 §11: derived morale support for a friendly regiment in a battle while the king is physically present"
+army_initial_noble_permille,0,Initial units have a commander and no additional noble backbone

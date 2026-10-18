@@ -116,16 +116,22 @@ func _init() -> void:
 		var treasury := _metric(s, "treasury")
 		var content := _metric(s, "peasant_contentment")
 		var t1 := Time.get_ticks_usec()
-		var result := engine.resolve_day(s)
+		var result := engine.resolve_day(s, s.day >= Calendar.DAYS_PER_TICK)
 		while result["status"] == "blocked" and acknowledge_encounters:
 			var decision: Dictionary = result["decision"]
 			if decision["kind"] != "encounter":
 				break
-			engine.resolve_decision(s, String(decision["token"]), "continue")
-			result = engine.resolve_day(s)
+			var acknowledged := engine.resolve_decision(s, String(decision["token"]), "continue")
+			if acknowledged["status"] != "accepted":
+				break
+			result = engine.resolve_day(s, s.day >= Calendar.DAYS_PER_TICK)
 		if result["status"] == "blocked":
 			print("Simulation paused at decision: ", result["decision"], "; use --acknowledge-encounters for unattended encounters.")
 			quit(0)
+			return
+		if result["status"] != "complete":
+			printerr("Simulation stopped: ", result)
+			quit(1)
 			return
 		day_us.append(Time.get_ticks_usec() - t1)
 		var lines: Array = []

@@ -32,7 +32,7 @@ static func layout(repo: DataRepository, points: Array, h: float, obstacles: Arr
 		var r: Dictionary = p["reg"]
 		var sp: Vector2 = p["pos"]
 		var code := String(r["regiment_code"])
-		var strength := MapObjects.regiment_size(repo, r)
+		var strength := MapObjects.regiment_personnel(repo, r)
 		var naval := String(r.get("is_naval", "0")) == "1"
 		var royal := String(r.get("is_royal", "0")) == "1"
 		var text := String(p.get("text", str(int(strength))))  # a fogged foe's: an estimate (Map3DHudArmies)

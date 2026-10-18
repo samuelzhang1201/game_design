@@ -209,6 +209,28 @@ func test_a_star_is_picked() -> void:
 	assert_false(view.has_method("set_flat"), "the flat 2D view is gone")
 
 
+func test_visible_disc_beats_a_foreground_halo_but_real_occlusion_still_wins() -> void:
+	_show()
+	view.camera().global_transform = Transform3D.IDENTITY
+	view._order.assign(["rear", "front"])
+	view._drawn = {"rear": Vector3(0, 0, -10), "front": Vector3(2, 0, -5)}
+	view._size = {"rear": 1.0, "front": 0.5}
+	repo.balance["ledger_star_max_px"] = 1000
+	repo.balance["ledger_star_pick_min_px"] = 3.0 / (view._window_scale() * view._m_per_px_at(view.drawn("front")))
+	var pointer := view.screen_pos_of("rear") as Vector2
+	var ray := view._ray(pointer)
+	assert_almost_eq(LedgerPick.ray_sphere(ray[0], ray[1], view.drawn("rear"), 1.0), 9.0, 0.00001)
+	assert_eq(LedgerPick.ray_sphere(ray[0], ray[1], view.drawn("front"), 0.5), -1.0)
+	assert_almost_eq(LedgerPick.ray_sphere(ray[0], ray[1], view.drawn("front"), 3.0), 5.0 - sqrt(5.0), 0.00001)
+	assert_eq(view._pick(pointer), {"kind": "sphere", "id": "rear"}, "visible rear disc beats invisible foreground halo")
+	view._drawn.front = Vector3(0, 0, -5)
+	assert_almost_eq(LedgerPick.ray_sphere(ray[0], ray[1], view.drawn("front"), 0.5), 4.5, 0.00001)
+	assert_eq(view._pick(pointer), {"kind": "sphere", "id": "front"}, "actual foreground disc wins by depth")
+	view._drawn.front = Vector3(2, 0, -5)
+	view._order.assign(["front"])
+	assert_eq(view._pick(pointer), {"kind": "sphere", "id": "front"}, "halo still works where no visible disc is hit")
+
+
 func test_link_width_uniform_follows_the_viewport() -> void:
 	_show()
 	view.size = Vector2(800, 500)

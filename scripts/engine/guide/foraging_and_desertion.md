@@ -4,7 +4,7 @@ Spec `2026-10-10-foraging-and-desertion-design.md`. Integers only, no RNG, code 
 
 ## Day order
 
-`TickEngine._end_day` runs `ArmySystem.eat_day`, `ArmySystem.hunger_day`, then `ArmyConduct.day_step` (its events land in `day_conduct`, filed as ONE `supply`-kind "Marshal's report" letter by `MissiveWriter.conduct_dispatch`), then `SupplyLines.warn_day`, so the supply warnings read what foraging left. `day_step` is three passes: (1) each land unit in code order: on home land `forage` is cleared and `Desertion` runs; elsewhere `ArmyConduct.switch`; (2) per province (sorted) the day's take, `take_day`; (3) `settle_provinces`, which acts on day 30 only (the units' month is `settle_units`, run by `TickEngine.advance`).
+After tactical substeps, siege/raid and camp settlement, `TickEngine.resolve_day` runs supply delivery, then `ArmySystem.eat_day`, `ArmySystem.hunger_day`, then `ArmyConduct.day_step` (its events land in `day_conduct`, filed as ONE `supply`-kind "Marshal's report" letter by `MissiveWriter.conduct_dispatch`), then `SupplyLines.warn_day`, so the supply warnings read what foraging left. `day_step` is three passes: (1) each land unit in code order: on home land `forage` is cleared and `Desertion` runs; elsewhere `ArmyConduct.switch`; (2) per province (sorted) the day's take, `take_day`; (3) `settle_provinces`, which acts on day 30 only (the units' month is `settle_units`, run at monthly settlement).
 
 ## Land kinds (`Forage.land_kind`)
 
@@ -27,7 +27,7 @@ By the holder of the unit's province: `home` (the crown's own), `enemy` (`Intel.
 
 ## The month's settlement (`settle_units`, `settle_provinces`)
 
-- **The units** (`settle_units`): `TickEngine.advance` runs it once a month, right AFTER `ArmySystem.settle_month` (whose morale drift toward the mark and wound recovery would otherwise undo it), before `Hazards.settle_regiments`. For each unit with `forage_days = d > 0`, wherever it now stands: morale up `forage_morale_month × d/30` (capped at 100), training down `forage_training_month × d/30` but never below `forage_training_floor` (a unit already under it keeps its training), fit personnel move to wounded through `MilitaryRoster.transfer_units` by `forage_harass_permille` × d/30; `forage_days` reset. A monthly consumption marker prevents repeating personnel or morale/training effects, including zero-loss settlements.
+- **The units** (`settle_units`): `TickEngine` runs it once at monthly settlement, right AFTER `ArmySystem.settle_month` (whose morale drift toward the mark and wound recovery would otherwise undo it), before `Hazards.settle_regiments`. For each unit with `forage_days = d > 0`, wherever it now stands: morale up `forage_morale_month × d/30` (capped at 100), training down `forage_training_month × d/30` but never below `forage_training_floor` (a unit already under it keeps its training), fit personnel move to wounded through `MilitaryRoster.transfer_units` by `forage_harass_permille` × d/30; `forage_days` reset. A monthly consumption marker prevents repeating personnel or morale/training effects, including zero-loss settlements.
 - **The provinces** (`settle_provinces`, pass 3 of `day_step`, day 30 only): every stripped province recovers `forage_recover_permille` (sorted, zero entries erased); `conduct_marks` of an older month are dropped.
 
 ## Desertion (`Desertion`, home land only)
@@ -36,7 +36,7 @@ Conditions held: morale under `desert_morale`, training under `desert_training`,
 
 ## Who reads which law
 
-`plunder` (permission), `obey_command` (lower start lines), `no_havoc` (Havoc), `protect_church` (yield cut; hazard line), `protect_women` (yield cut; smaller grievance), `desertion_penalty` (the multiplier; its `law_effects` rows carry the realm side). All through `LawSystem.value` with the unit's code. Phase II (prisoners, quarter, ransom, `register_prisoners`, `truce_days`) behaviour is NOT built: those laws' monthly `law_effects.csv` rows still apply, but their `flag` rows (behaviour hooks) have no reader yet.
+`plunder` (permission), `obey_command` (lower start lines), `no_havoc` (Havoc), `protect_church` (yield cut; hazard line), `protect_women` (yield cut; smaller grievance), `desertion_penalty` (the multiplier; its `law_effects` rows carry the realm side). All through `LawSystem.value` with the unit's code. Prisoner, quarter, ransom, registration and truce laws are read by the battle agreement, custody and disposition systems; their monthly effect rows still apply.
 
 ## What is saved
 
@@ -49,3 +49,5 @@ Words from `repo.conduct_words`: the folio and unit card ("Foraging" row, "Deser
 ## Tests
 
 `tests/engine/conduct_helpers.gd` builds the fixtures from the repo (no pack, kingdom or province named). `Forage` caches food counts per repository: call `Forage.forget()` after a test edits the production rows.
+
+Personnel wounds from settlement use MilitaryRoster batches, as do recovery, battle casualties and hazards; no conduct writer independently edits casualty counters.

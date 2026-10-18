@@ -48,7 +48,7 @@ func before_each() -> void:
 	var realm := repo.resolve_realm("player_realm")
 	for code: String in s.regiments.keys():
 		var reg := ArmySystem.regiment(repo, code, s)
-		if String(reg.get("is_naval", "0")) == "1" or Personnel.personnel_capacity(repo, reg) < 400:
+		if String(reg.get("is_naval", "0")) == "1" or ArmySystem.personnel_capacity(repo, reg) < 400:
 			continue
 		var arm := MapObjects.regiment_arm(repo, reg)
 		if arm == "cavalry" and (horse == "" or code < horse):

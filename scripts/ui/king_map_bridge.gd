@@ -10,7 +10,8 @@ var _sight := Map3DSight.new()
 func make(repo: DataRepository, state: GameState, dev: bool = false) -> Dictionary:
 	var journal: Dictionary = state.day_resolution.get("journal", {})
 	var phase := String(state.day_resolution.get("phase", ""))
-	var committed := bool(journal.get("king_advanced", false)) or phase in ["encounters", "battles", "finish"]
+	var committed := bool(journal.get("king_advanced", false)) or phase in ["encounters", "battles", "finish"] \
+		or int(state.day_resolution.get("king_substep_index", -1)) >= 0
 	var key := [state.get_instance_id(), state.absolute_day(), state.king_state.hash(),
 		state.regiments.hash(), state.foes.hash(), state.battles.hash(),
 		state.province_owner.hash(), state.manor_owner.hash(), phase, committed, dev]

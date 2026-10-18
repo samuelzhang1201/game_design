@@ -21,7 +21,7 @@ func test_marshal_kingdom_tools_are_his_seats_implemented_actions() -> void:
 		assert_has(advises, String(t["code"]), "every kingdom tool comes from advises_on")
 		assert_true(data.actions.has(t["code"]), "only implemented actions are listed")
 		labels.append(String(t["label"]))
-	assert_has(labels, "Raise fresh levies", "labels are the CSV's human-readable text")
+	assert_has(labels, "Train the standing army", "labels are the CSV's human-readable text")
 
 func test_unimplemented_advises_on_codes_are_not_listed() -> void:
 	# The marshal's seat advises on ARMY_MOVE etc., which have no action row

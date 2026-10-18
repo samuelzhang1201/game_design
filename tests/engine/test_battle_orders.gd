@@ -283,3 +283,36 @@ func test_surrender_includes_an_army_with_only_wounded_survivors() -> void:
 	for id: String in f.state.military_rosters[f.code].cohort_ids:
 		count += int(f.state.military_cohorts[id].captured_current)
 	assert_eq(count, 1000)
+
+func test_free_local_surrender_survives_underfunded_reward_reservation() -> void:
+	for accepts: bool in [true, false]:
+		var f := _fixture()
+		assert_eq(BattleOrders.issue(f.repo, f.state, _order(f, "pending-reward", "inspire")).status, "pending")
+		f.state.metrics.treasury = 3.0
+		assert_eq(BattleOrders.available_gold(f.state), -4)
+		var at := ArmySystem.pack_to_metres(f.repo, ArmySystem.position_of(f.repo, f.state, ArmySystem.regiment(f.repo, f.code, f.state)))
+		f.state.king_state.x_m = at.x
+		f.state.king_state.y_m = at.y
+		var enemy := String(f.battle.def[0])
+		f.state.foes[enemy].received_laws = {"quarter": {"value": "give" if accepts else "refuse", "decree_id": 1}}
+		var actions := ActionSystem.new(f.repo)
+		assert_eq(BattleOrders.preview(f.repo, f.state, _order(f, "free-preview", "surrender")).reason, "")
+		assert_eq(BattleOrders.preview(f.repo, f.state, _order(f, "hold-preview", "hold")).reason, "")
+		for kind: String in ["hold", "inspire"]:
+			var paid := ActionRequest.make("BATTLE_ORDER", {"regiment": f.code, "battle_id": 993,
+				"kind": kind, "request_id": "blocked-" + kind})
+			assert_ne(actions.validate(paid, f.state), "")
+			assert_false(actions.execute(paid, f.state).ok)
+		assert_ne(actions.validate(ActionRequest.make("GOODS_BUY", {"pool": "strategic", "gold": 1}), f.state), "")
+		var request := ActionRequest.make("BATTLE_ORDER", {"regiment": f.code, "battle_id": 993,
+			"kind": "surrender", "request_id": "free-underfunded"})
+		assert_eq(actions.validate(request, f.state), "")
+		assert_true(actions.execute(request, f.state).ok)
+		assert_eq(int(f.state.metrics.treasury), 3)
+		assert_eq(f.state.couriers.size(), 0)
+		assert_eq(f.state.battle_orders["pending-reward"].status, "pending")
+		assert_eq(int(f.state.battle_orders["pending-reward"].reserved_gold), 7)
+		assert_eq(BattleOrders.available_gold(f.state), -4)
+		assert_true(f.state.battle_orders.has("free-underfunded"))
+		if f.state.battle_orders.has("free-underfunded"):
+			assert_eq(f.state.battle_orders["free-underfunded"].status, "delivered" if accepts else "refused")

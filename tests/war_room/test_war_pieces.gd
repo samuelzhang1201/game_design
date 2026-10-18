@@ -1,4 +1,5 @@
 extends GutTest
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const ClearPiece := preload("res://tests/war_room/clear_piece.gd")
 ## The pieces (spec 2026-10-01-war-room-design §3): a land regiment is one
@@ -420,7 +421,7 @@ func test_a_regiment_that_loses_men_keeps_its_piece_and_its_tag_says_so() -> voi
 	var before := pieces.piece(code)
 	ArmySystem.ensure(repo, state)
 	@warning_ignore("integer_division")
-	state.regiments[code]["wounded"] = ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)) * 4 / 10
+	assert_false(Personnel.move(repo, state, code, "fit", "wounded", ArmySystem.fit_count(repo, state, code) * 4 / 10).has("error"))
 	view.refresh()
 	assert_eq(pieces.piece(code), before, "one piece a regiment, whatever its strength")
 	assert_eq((before.get_node("Tag") as Label3D).text, WarRoom.tag_text(repo, state, code))

@@ -237,3 +237,100 @@ func test_a_column_held_in_a_field_battle_cannot_remotely_occupy_the_empty_town(
 	assert_eq(s.ai_hosts[host]["mode"], "SIEGE")
 	assert_eq(int(s.ai_hosts[host]["siege_progress"]), 300)
 	assert_true(s.manor_log.is_empty())
+
+func _arriving_day(late_distance: int) -> Dictionary:
+	repo.balance["army_clearance_on"] = 0
+	repo.balance["battle_contact_km"] = 5
+	for group: String in repo.army_town_reach:
+		repo.army_town_reach[group] = 5
+	repo.army_matchups.clear()
+	repo.army_terrain.clear()
+	repo.army_town_defence.clear()
+	repo.balance["army_training_base_permille"] = 1000
+	repo.balance["army_training_step_permille"] = 0
+	repo.balance["army_morale_base_permille"] = 1000
+	repo.balance["army_morale_step_permille"] = 0
+	repo.balance["siege_rate"] = 100
+	_plain_power(first, 100)
+	_plain_power(late, 200)
+	_plain_power(guard, 200)
+	TownStores.add(s, town, "crown", 100000)
+	TownStores.sync_metrics(repo, s)
+	var at := Play.town_m(repo, town)
+	var entries: Dictionary = {}
+	for code: String in [first, late]:
+		Play.place(repo, s, code, at + Vector2i(6000 if code == first else late_distance, 0), ArmySystem.ORDER_MARCH)
+		ArmySystem.aim_entry(repo, s.foes[code], at, false)
+		entries[code] = s.foes[code].duplicate(true)
+		entries[code]["finish_today"] = false
+	s.ai_hosts[host]["think_day"] = s.absolute_day()
+	var tx := DayResolution.begin(s.day, false, s.absolute_day(), 10)
+	tx["march_entries"] = entries
+	tx["march_budgets"] = {first: 2000, late: 2000}
+	tx["phase"] = "AI_AND_SCOUT"
+	tx["phase_cursor"] = DayResolution.PHASES.find("AI_AND_SCOUT")
+	s.day_resolution = tx
+	return tx
+
+func test_tactical_arrivals_station_both_columns_and_invest_once_that_day() -> void:
+	var tx := _arriving_day(6600)
+	var today := s.absolute_day()
+	var supplies := int(s.foes[first]["supplies"])
+	var bite := ArmySystem.day_bite(ArmySystem.supply_use(repo, ArmySystem.regiment(repo, first, s), s), s.day)
+	var out := Play.day(TickEngine.new(repo), s, true)
+	assert_eq(out["status"], "complete")
+	assert_eq(int(tx["substep_count"]), 10)
+	assert_eq(int(s.foes[first]["x_m"]), Play.town_m(repo, town).x + 5000)
+	assert_eq(int(s.foes[late]["x_m"]), Play.town_m(repo, town).x + 5000)
+	assert_eq(String(s.foes[first]["order"]), ArmySystem.ORDER_GARRISON)
+	assert_eq(String(s.foes[late]["order"]), ArmySystem.ORDER_GARRISON)
+	assert_eq(int(s.ai_hosts[host].get("siege_progress", 0)), 60, "floor(100 * 300 / (300 + 200)), settled once")
+	assert_eq(int(s.ai_hosts[host].get("siege_days", 0)), 1)
+	assert_eq(int(s.foes[first]["supplies"]), supplies - bite, "one meal despite ten arrival scans")
+	assert_eq(int(s.ai_hosts[host]["think_day"]), today)
+	assert_eq(int(s.ai_hosts[host]["deployment"].get("completed_day", -1)), today)
+	assert_true((out["journal"]["battles"] as Array).is_empty(), "deployment suppresses isolated town assaults")
+
+func test_remote_column_keeps_frozen_route_and_contributes_no_siege_power() -> void:
+	var tx := _arriving_day(46000)
+	var remote: Dictionary = tx["march_entries"][late].duplicate(true)
+	var out := Play.day(TickEngine.new(repo), s, true)
+	assert_eq(out["status"], "complete")
+	assert_eq(int(s.foes[first]["x_m"]), Play.town_m(repo, town).x + 5000)
+	assert_eq(int(s.foes[late]["x_m"]), Play.town_m(repo, town).x + 44000)
+	assert_eq(String(s.foes[late]["order"]), ArmySystem.ORDER_MARCH)
+	assert_eq(int(tx["march_entries"][late]["dest_x_m"]), int(remote["dest_x_m"]))
+	assert_eq(int(tx["march_entries"][late].get("day_walked_m", 0)), 2000)
+	assert_eq(int(s.ai_hosts[host].get("siege_progress", 0)), 33, "floor(100 * 100 / (100 + 200))")
+	assert_eq(int(s.ai_hosts[host].get("siege_days", 0)), 1)
+
+func test_substep_arrivals_and_retired_walk_survive_json_before_reinforcement() -> void:
+	var tx := _arriving_day(6600)
+	EnemyAi.step_day(repo, s)
+	var deployment: Dictionary = {}
+	for index in 10:
+		ArmySystem.march_day_saved(repo, s, int(tx["substep_count"]), index,
+			tx["march_entries"], tx["march_budgets"])
+		EnemyAi.arrival_substep(repo, s, tx["march_entries"])
+		if index < 4:
+			assert_eq(s.ai_hosts[host]["mode"], "ADVANCE")
+		else:
+			assert_eq(s.ai_hosts[host]["mode"], "SIEGE")
+			assert_eq(int(s.foes[first]["x_m"]), Play.town_m(repo, town).x + 5000)
+			assert_eq(String(tx["march_entries"][first]["order"]), ArmySystem.ORDER_GARRISON)
+			assert_eq(int(tx["march_entries"][first].get("day_walked_m", 0)), 1000)
+		if index == 4:
+			deployment = s.ai_hosts[host]["deployment"].duplicate(true)
+			s = GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+			tx = s.day_resolution
+		if index >= 4:
+			assert_eq(s.ai_hosts[host]["deployment"], deployment, "reinforcement preserves original completion")
+		if index < 7:
+			assert_eq(String(s.foes[late]["order"]), ArmySystem.ORDER_MARCH)
+		else:
+			assert_eq(int(s.foes[late]["x_m"]), Play.town_m(repo, town).x + 5000)
+			assert_eq(String(tx["march_entries"][late]["order"]), ArmySystem.ORDER_GARRISON)
+			assert_eq(int(tx["march_entries"][late].get("day_walked_m", 0)), 1600)
+	SiegeSystem.settle_day(repo, s)
+	assert_eq(int(s.ai_hosts[host]["siege_progress"]), 60)
+	assert_eq(int(s.ai_hosts[host]["siege_days"]), 1)

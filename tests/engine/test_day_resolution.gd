@@ -119,7 +119,7 @@ func test_acknowledged_save_does_not_ask_again() -> void:
 	assert_eq(loaded.day, 11)
 	assert_eq(int(loaded.battles[0]["rounds"]), 1)
 
-func test_all_first_contacts_are_acknowledged_before_any_losses() -> void:
+func test_each_first_contact_is_acknowledged_before_its_losses() -> void:
 	var s := Scenario.two_battles(repo, 10)
 	var engine := TickEngine.new(repo)
 	var first := engine.resolve_day(s)
@@ -129,8 +129,8 @@ func test_all_first_contacts_are_acknowledged_before_any_losses() -> void:
 	var second := engine.resolve_day(s)
 	assert_eq(second["status"], "blocked")
 	assert_ne(second["decision"]["token"], first["decision"]["token"])
-	for battle: Dictionary in s.battles:
-		assert_eq(int(battle["rounds"]), 0)
+	assert_eq(int(BattleSystem.battle_by_id(s, int(first["decision"]["battle_id"]))["rounds"]), 1)
+	assert_eq(int(BattleSystem.battle_by_id(s, int(second["decision"]["battle_id"]))["rounds"]), 0)
 	var loaded := Scenario.roundtrip(s)
 	var resumed := TickEngine.new(repo)
 	assert_eq(resumed.resolve_day(loaded)["decision"], second["decision"])

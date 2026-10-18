@@ -497,7 +497,12 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 	engine.advance(s)
 	var raiding_late := ""
 	var home_by := -1
+	var days_played := 0
 	while s.absolute_day() <= 120:
+		days_played += 1
+		assert_lte(days_played, 121, "the day loop makes bounded progress")
+		if days_played > 121:
+			return
 		var today := s.absolute_day()
 		Play.day(engine, s, true)
 		for h: String in EnemyAi.host_codes(s):

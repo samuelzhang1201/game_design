@@ -25,3 +25,25 @@ static func select(state: GameState, ids: Array[String], nominee: String) -> Str
 				(prestige > incumbent_prestige or (prestige == incumbent_prestige and id < selected))):
 			selected = id
 	return selected
+
+
+## Reinforcements retain a fit incumbent; nominations validate both sides before publication.
+static func update_battle(repo: DataRepository, state: GameState, battle: Dictionary) -> Dictionary:
+	var selected: Dictionary = battle.get("commanders", {}).duplicate()
+	for side: String in ["att", "def"]:
+		var ids: Array[String] = []
+		for code: String in battle.get(side, []):
+			var person := String(state.military_rosters.get(code, {}).get("commander_id", ""))
+			if not person.is_empty() and MilitaryCommanders.eligible_for_unit(repo, state, code, person):
+				ids.append(person)
+		var nominee := String(battle.get("commander_nominees", {}).get(side, ""))
+		var incumbent := String(selected.get(side, ""))
+		if not nominee.is_empty():
+			var chosen := select(state, ids, nominee)
+			if chosen.is_empty():
+				return {"error": "The nominated battlefield commander is unavailable or absent"}
+			selected[side] = chosen
+		else:
+			selected[side] = incumbent if incumbent in ids else select(state, ids, "")
+	battle["commanders"] = selected
+	return selected

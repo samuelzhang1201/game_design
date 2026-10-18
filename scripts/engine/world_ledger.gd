@@ -75,6 +75,13 @@ static func value_of(data: DataRepository, state: GameState, path: String) -> Va
 	var row := schema_for(data, resolved)
 	if row.is_empty():
 		return null
+	var population_parts := resolved.split(SEP)
+	if population_parts.size() == 4 and population_parts[0] == "economy" \
+			and population_parts[1] == "kingdoms" and population_parts[3] in ["rural_population", "urban_population"]:
+		var total := 0
+		for province: String in MapOwnership.provinces_of(data, state, population_parts[2]):
+			total += int(value_of(data, state, "economy.provinces.%s.%s" % [province, population_parts[3]]))
+		return total
 	var alias := String(row.get("alias_to", ""))
 	if alias != "":
 		var truth: Variant = value_of(data, state, alias)

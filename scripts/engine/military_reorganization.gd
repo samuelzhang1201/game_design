@@ -18,7 +18,7 @@ static func reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 	if candidate.military_migration == state.military_migration and result["status"] == "deferred":
 		return result
 	for field: String in ["army_roster", "military_rosters", "military_cohorts", "military_migration",
-			"regiments", "foes", "supply_lines", "war_drafts", "scout_log", "couriers", "recruitment_projects"]:
+			"regiments", "foes", "supply_lines", "war_drafts", "scout_log", "couriers", "recruitment_projects", "battles", "ai_hosts", "war_plans"]:
 		state.set(field, candidate.get(field))
 	LawSystem.commit_scopes(state, candidate)
 	return result
@@ -58,7 +58,7 @@ static func _reconcile(repo: DataRepository, state: GameState) -> Dictionary:
 	if changed:
 		state.military_migration["unit_mapping"] = mapping
 		state.military_migration["cohort_mapping"] = cohorts
-		state.military_migration["organization_reason"] = REASON
+		state.military_migration["organization_reason"] = REASON + ("; " + "; ".join(state.military_migration.get("origin_estimates", [])) if not state.military_migration.get("origin_estimates", []).is_empty() else "")
 	if deferred.is_empty():
 		state.military_migration["organization_pending"] = false
 		state.military_migration["organization_version"] = 1
@@ -244,6 +244,16 @@ static func _split(repo: DataRepository, state: GameState, code: String, plan: D
 	if state.scout_log.has(code):
 		for child: String in children:
 			state.scout_log[child] = state.scout_log[code].duplicate(true)
+	for battle: Dictionary in state.battles:
+		for side: String in ["att", "def"]:
+			if battle.has(side):
+				battle[side] = _expanded_codes(battle[side], code, children)
+	for host: Dictionary in state.ai_hosts.values():
+		if host.has("unit_codes"):
+			host["unit_codes"] = _expanded_codes(host["unit_codes"], code, children)
+	for stroke: Dictionary in state.war_plans.get("strokes", {}).values():
+		if stroke.has("codes"):
+			stroke["codes"] = _expanded_codes(stroke["codes"], code, children)
 	_remap_couriers(state, code, children)
 	_remap_projects(state, code, children, weights, plan["project_gear"], cohort_mapping)
 	mapping[code] = children
@@ -251,7 +261,7 @@ static func _split(repo: DataRepository, state: GameState, code: String, plan: D
 
 static func _quantities(out: Dictionary, old: Dictionary, weights: Array, index: int) -> void:
 	for key: String in old:
-		if key in ["supplies", "spoils", "plunder", "fee_milli", "buy_milli", "arrive_milli", "claim_milli", "skim_milli", "desert_rem"] or key.begins_with("m_"):
+		if key in ["supplies", "spoils", "plunder", "fee_milli", "buy_milli", "arrive_milli", "claim_milli", "skim_milli", "desert_rem", "inventory", "inventories"] or key.begins_with("m_") or key.ends_with("_milli"):
 			if old[key] is Dictionary:
 				var amounts: Dictionary = {}
 				for sub: String in old[key]:
@@ -530,6 +540,8 @@ static func _remap_couriers(state: GameState, code: String, children: Array) -> 
 		for child: String in children.slice(1):
 			var child_orders := orders.duplicate(true)
 			for order: Dictionary in child_orders:
+				if order.get("regiment", "") == code:
+					order["regiment"] = child
 				if order.get("scope_key", "") == "unit:" + code:
 					order["scope_key"] = "unit:" + child
 			queue.append({"target": child, "orders": child_orders})
@@ -562,3 +574,11 @@ static func _remap_projects(state: GameState, code: String, children: Array, wei
 					equipment[arm] = BattleSystem.apportion(weights, int(project["equipment"][arm]))[i]
 			allocations[children[i]] = equipment
 		project["equipment_by_unit"] = allocations
+
+static func _expanded_codes(codes: Array, parent: String, children: Array) -> Array:
+	var out: Array = []
+	for code: String in codes:
+		for child: String in children if code == parent else [code]:
+			if not child in out:
+				out.append(child)
+	return out

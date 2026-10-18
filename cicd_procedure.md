@@ -42,6 +42,12 @@ If a PR mixes an ignored file (docs/CSV) with a real code change, the run still 
 
 如果一个 PR 里既改了文档/CSV，又改了别的代码，还是会正常触发全量测试——这个跳过规则只在**所有**改动文件都命中豁免条件时才生效。
 
+### Local deadlines 本地超时保护
+
+`run_tests.sh` requires Python 3 and limits each Godot phase (import and tests) to 45 minutes. Set `TEST_TIMEOUT_SECONDS=600 ./run_tests.sh --fast` for a shorter deadline. A deadline exits with code 124, stops the process group (TERM, then KILL if needed), and prints the last test output. Timed-out test logs remain at the printed `/tmp/gut_test_output_<pid>.txt` path. CI uses 35 minutes per phase, including its preliminary import, within its existing 45-minute job limit. This deadline bounds wall time, not RAM usage.
+
+`run_tests.sh` 需要 Python 3，导入和测试两个 Godot 阶段各有 45 分钟时限。可用 `TEST_TIMEOUT_SECONDS=600 ./run_tests.sh --fast` 缩短时限。超时返回 124，停止整个进程组（先 TERM，必要时 KILL），并输出最后的测试日志。测试超时的日志保留在输出所示的 `/tmp/gut_test_output_<pid>.txt`。CI 每个阶段（包括首次导入）的时限为 35 分钟，整项任务仍有原来的 45 分钟上限。这是运行时间限制，不是内存上限。
+
 ## 2. What the workflow actually does 工作流具体做了什么
 
 Each run, on a fresh `ubuntu-latest` GitHub-hosted machine:

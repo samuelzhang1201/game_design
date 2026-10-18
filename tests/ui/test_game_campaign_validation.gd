@@ -46,13 +46,18 @@ func test_loading_legacy_siege_checks_actual_deployment_without_replaying_day() 
 	mind["assault"] = 1
 	mind.erase("deployment")
 	state.day_resolution = DayResolution.begin(state.day, false)
+	state.day_resolution.erase("protocol_version")
+	state.day_resolution.erase("substep_protocol_version")
 	state.day_resolution["phase"] = "battles"
 	state.day_resolution["journal"]["battles"] = [{"kind": "round", "battle_id": 99}]
 	var journal := state.day_resolution.duplicate(true)
 	var before_foes := state.foes.duplicate(true)
 	var path := "user://battle_deployment_load_test.json"
 	assert_true(SaveLoad.save_game(state, path))
-	assert_true(Game.load_campaign(path))
+	var loaded := Game.load_campaign(path)
+	assert_true(loaded, Game.load_error)
+	if not loaded:
+		return
 	assert_eq(Game.state.ai_hosts[host]["mode"], "DEPLOYING")
 	assert_eq(int(Game.state.ai_hosts[host]["siege_progress"]), 250)
 	assert_eq(int(Game.state.ai_hosts[host]["siege_days"]), 4)
@@ -65,6 +70,20 @@ func test_loading_legacy_siege_checks_actual_deployment_without_replaying_day() 
 	assert_true(Game.load_campaign(path))
 	assert_eq(SaveLoad.state_hash(Game.state), normalized, "migration applies once")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+func test_unknown_day_protocol_refuses_before_ui_journal_write() -> void:
+	Game.restart()
+	Game.data = SuiteData.repo()
+	Game.state = SuiteData.campaign(Game.data, 42)
+	Game.engine = TickEngine.new(Game.data)
+	Game.state.day_resolution = DayResolution.begin(Game.state.day, false)
+	Game.state.day_resolution["protocol_version"] = 999
+	Game.set_clock_speed(4)
+	var before := SaveLoad.state_hash(Game.state)
+	var result := Game.advance_day()
+	assert_eq(result.get("status", ""), "error")
+	assert_eq(Game.clock_speed, 0)
+	assert_eq(SaveLoad.state_hash(Game.state), before, "the UI cannot annotate an unsupported transaction")
 
 func test_failed_personnel_round_pauses_clock_and_preserves_transaction() -> void:
 	Game.restart()
@@ -84,8 +103,12 @@ func test_failed_personnel_round_pauses_clock_and_preserves_transaction() -> voi
 	var attacker := String(battle["att"][0])
 	var food := int(BattleSystem._stored(Game.state, attacker)["supplies"])
 	Game.state.day_resolution = DayResolution.begin(Game.state.absolute_day(), false)
-	Game.state.day_resolution["phase"] = "battles"
+	Game.state.day_resolution["phase"] = "FIXED_TACTICAL_SUBSTEPS"
+	Game.state.day_resolution["phase_cursor"] = DayResolution.PHASES.find("FIXED_TACTICAL_SUBSTEPS")
+	Game.state.day_resolution["battle_step"] = "fighting"
 	Game.state.day_resolution["battle_ids"] = [int(battle["id"])]
+	Game.state.day_resolution["acknowledged_encounters"] = [int(battle["id"])]
+	assert_true(DayResolution.incompatibility_reason(Game.state.day_resolution).is_empty(), "the fixture must reach personnel validation")
 	Game.set_clock_speed(4)
 	var day := Game.state.absolute_day()
 	var out := Game.advance_day()

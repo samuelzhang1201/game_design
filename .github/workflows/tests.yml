@@ -63,20 +63,26 @@ jobs:
           restore-keys: |
             godot-import-
 
-      - name: Run full GUT suite
+      - name: Check test runner deadlines
+        run: python3 tools/test_run_with_timeout.py
+
+      - name: Run GUT shard
         env:
           GODOT: ${{ env.GODOT_DIR }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
+          TEST_TIMEOUT_SECONDS: 2100
         run: |
           chmod +x "$GODOT"
           # Mirror the cloud session's two-pass import (CLAUDE.md: the first
           # pass prints font/theme load errors that are gone on the next
           # one) so run_tests.sh's own import is the SECOND pass, same as a
           # known-green local/cloud run, not the only one.
-          "$GODOT" --headless --path . --import > /dev/null 2>&1 || true
-          # The whole suite in ONE Godot process grows past the runner's
-          # ~7.9 GB (the test scripts keep allocating; measured 7.1 GB at
-          # minute 6 on main) and the runner kills the step with exit 143.
-          # Give each contiguous shard its own runner and timeout budget.
+          code=0
+          python3 tools/run_with_timeout.py "$TEST_TIMEOUT_SECONDS" "$GODOT" --headless --path . --import || code=$?
+          if [ "$code" != 0 ] && [ "$code" != 134 ]; then
+            exit "$code"
+          fi
+          # Separate runners bound memory and avoid a shared wall-clock limit.
+          # The five contiguous slices retain their existing script order.
           ./run_tests.sh --shard=${{ matrix.shard }}/5
 
   gut-tests:

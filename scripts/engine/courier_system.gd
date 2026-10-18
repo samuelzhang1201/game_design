@@ -813,6 +813,10 @@ static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, 
 		return {"type": "stale", "said": STALE_SAID}
 	match action:
 		"ARMY_MARCH":
+			if state.military_rosters.has(code):
+				var commander := String(state.military_rosters.get(code, {}).get("commander_id", ""))
+				if commander == "" or not MilitaryCommanders.eligible_for_unit(repo, state, code, commander):
+					return {"type": "lapsed", "said": "Departure requires an eligible commander"}
 			ArmySystem.set_march_m(repo, state, code, Vector2i(int(order["dest_x_m"]), int(order["dest_y_m"])),
 				MarchRoute.from_pairs(order.get("waypoints_m", [])), not local)
 		"ARMY_GARRISON":

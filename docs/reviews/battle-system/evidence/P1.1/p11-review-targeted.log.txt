@@ -1,0 +1,189 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[INFO]:  using [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+
+
+res://tests/engine/test_day_resolution.gd
+* test_acknowledge_is_idempotent
+* test_begin_has_durable_transaction_defaults
+* test_saved_protocol_is_validated_before_resume
+* test_substep_movement_conserves_daily_metres
+* test_non_divisible_substep_budgets_use_the_entire_daily_allowance
+* test_saved_movement_cursor_accumulates_and_survives_json
+* test_a_last_day_arrival_waits_for_its_final_fixed_substep
+* test_short_diagonal_arrival_settles_instead_of_stalling
+* test_zero_daily_pace_does_not_move_in_substeps
+* test_encounter_blocks_before_losses_and_resumes_after_roundtrip
+* test_second_battle_does_not_replay_first
+* test_later_substep_reinforcement_joins_after_round_and_fights_next_day
+* test_month_end_blocks_before_settlement
+* test_legacy_advance_saves_its_month_compatibility_intent_once
+* test_legacy_advance_blocked_transaction_keeps_month_intent_across_json
+* test_ordinary_day_transaction_keeps_its_boundary_when_advance_resumes_it
+16/16 passed.
+
+
+res://tests/engine/test_battle_save.gd
+* test_foes_ai_hosts_battles_round_trip
+* test_no_float_in_the_values_or_the_encoding
+* test_save_is_stable
+* test_blocked_day_transaction_round_trip_preserves_cursor_and_journal
+* test_real_substep_encounter_save_resumes_the_same_round_once
+* test_old_save_without_keys_loads
+6/6 passed.
+
+
+res://tests/engine/test_courier_ride.gd
+* test_a_days_ride_by_hand
+* test_delivery_applies_the_order_on_that_day_and_not_before
+* test_an_older_order_arriving_late_is_set_aside
+* test_a_vanished_regiment_leaves_the_orders_undelivered
+* test_the_fuse
+* test_bad_weather_slows_him_and_is_announced_once_a_spell
+* test_a_courier_catches_a_column_on_the_march
+* test_a_ride_survives_a_save_mid_road
+* test_he_is_seen_to_leave_the_capital_once
+* test_a_courier_not_from_the_capital_just_rides
+* test_headlines
+* test_ride_ahead_previews_the_day_exactly_and_writes_nothing
+* test_ride_ahead_on_the_delivery_day_ends_on_the_column
+* test_an_order_delivered_today_is_marched_on_from_tomorrow
+* test_day_ahead_of_a_garrison_is_where_it_stands
+* test_the_shown_days_are_day_ends_through_the_tick_engine
+* test_a_redirect_delivered_on_a_march_day_keeps_the_old_walk_for_today
+* test_a_redirect_rebuilds_tomorrows_waypoint_route_from_todays_final_position
+* test_the_arrival_day_is_the_ride_and_then_the_march
+19/19 passed.
+
+
+res://tests/engine/test_army_march.gd
+* test_a_new_campaign_seats_every_regiment_where_the_pack_put_it
+* test_the_pack_measure_is_what_a_metre_means
+* test_a_day_of_marching_covers_the_regiments_own_pace
+* test_it_stops_dead_on_the_spot_it_was_sent_to_and_garrisons
+* test_garrison_halts_a_column_where_it_has_got_to
+* test_the_clock_marches_it_a_day_at_a_time
+* test_a_march_is_even_and_ends_as_its_last_day_ends
+* test_an_arrival_has_its_headline
+* test_the_months_last_day_is_a_day_on_the_road_too
+* test_the_same_orders_from_the_same_save_give_the_same_march
+* test_an_old_save_with_no_position_is_seated_where_the_pack_put_it
+* test_the_orders_validate_against_the_regiment_and_the_ground
+* test_marching_into_the_sea_is_refused
+* test_the_order_runs_and_charges_its_cost
+* test_the_weather_where_it_stands_scales_its_day
+* test_in_rain_the_card_the_days_out_and_the_ruler_agree
+16/16 passed.
+
+
+res://tests/engine/test_siege.gd
+* test_siege_step
+* test_day_gain_with_hunger
+* test_progress_accumulates_daily
+    attack 4108, defence 227: 94 a day
+* test_starving_town_speeds_the_siege
+* test_a_besieged_garrison_is_fed_only_by_its_town
+* test_assault_cadence
+* test_an_assault_with_no_battle_is_tried_again_and_never_sticks
+* test_checked_assault_lowers_progress
+* test_a_standoff_assault_changes_nothing
+* test_routed_defender_adds_the_rest
+* test_routed_besiegers_go_home
+* test_capture_at_1000_takes_the_towns_manors_with_a_reason
+* test_hold_host_leaving_liberates_the_manors
+* test_liberation_restores_a_non_default_prior_holder
+* test_save_and_load_mid_occupation_continues_identically
+* test_shipped_outcomes_map_breach_and_repulsed
+* test_hold_host_with_no_column_left_frees_the_town
+* test_garrison_slain_to_the_last_man_loses_the_town
+* test_hold_host_stays_and_is_not_rethought
+* test_other_hosts_skip_an_occupied_town
+* test_no_double_capture_and_no_progress_after_loss
+* test_garrison_marched_off_ends_the_siege_without_progress
+* test_retaken_town_sends_hold_host_retreating
+* test_capture_mid_assault_ends_the_assault
+* test_starving_besieger_retreats
+* test_relief_force_joins_battle_and_can_lift_siege
+* test_a_garrison_waits_for_the_assault
+* test_a_supply_line_into_a_besieged_town_is_cut
+* test_a_homeward_host_starts_no_battle_with_the_garrison
+* test_a_running_assault_is_called_off_the_day_its_host_turns_home
+* test_a_beaten_holding_host_still_pays_spoils_and_frees_the_town
+* test_one_siege_a_town_with_the_reserve_beside_its_main_host
+* test_progress_follows_the_lead_host
+* test_siege_reserve_follows_its_main_host_home
+* test_siege_news_is_a_battle_letter_in_fixed_words
+* test_siege_templates_spell_no_kingdom
+* test_a_siege_on_the_day_loop_wears_down_storms_and_takes_the_town
+    weak garrison: siege from day 17, fell day 24 (8 days), assaults 0
+* test_a_strongly_held_walled_town_outlasts_the_besiegers_supplies
+    strong walled town, unstocked: siege from day 17, lifted day 32, best progress 583, starving days 0, checked assault rounds 2
+* test_siege_is_deterministic
+* test_siege_draws_no_random_number
+40/40 passed.
+
+
+res://tests/engine/test_supply_garrisons.gd
+* test_a_year_with_no_orders_starves_no_home_garrison
+1/1 passed.
+
+
+res://tests/engine/test_invasion_end_to_end.gd
+* test_weak_defence_loses_the_town_and_the_campaign_plays_on
+    weak: rumour d8, cross { "raid_main": 15, "raid_raiders": 15, "raid_reserve": 18 }, siege d17, stormed d22, fell d24 (2 manors), gold -595, content -8, 5 opinions; then events ["c0_01", "c0_02", "c0_03s"]
+* test_strong_walled_defence_holds_and_forces_supply_retreat
+    strong: siege d17, assaults 3, repulsed rounds 2, best progress 583, lifted d32, home d32 (RETREAT), garrison dead 367 (first assault 5379)
+* test_weak_defence_is_deterministic_and_saves_mid_run
+    weak: fell 24, home -1, hash 7e0accdae119
+* test_strong_defence_is_deterministic_and_saves_mid_run
+    strong: fell -1, home 32, hash 95317f902eee
+* test_the_war_draws_no_random_number
+5/5 passed.
+
+
+res://tests/engine/test_tick_engine.gd
+* test_the_months_end_settles_the_three_pools
+* test_the_civil_pool_cannot_fall_below_empty
+* test_the_harvest_is_civil_goods_in_autumn
+* test_the_day_step_warms_a_bucket
+* test_the_pools_start_with_months_of_the_crowns_own_production
+* test_outcomes_drain_into_next_report
+* test_the_crowns_provinces_pay_their_taxes_each_month
+* test_days_step_works_and_the_thirtieth_is_a_tick
+* test_a_work_longer_than_a_month_survives_the_tick
+* test_the_crowns_buildings_pay_each_tick
+* test_the_running_day_is_the_day_shown_and_ends_at_advance_day
+* test_the_month_reports_its_hazard_news
+12/12 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+---- Totals ----
+Scripts           8
+Tests             115
+  Passing         115
+Asserts           1288
+Time              399.355s
+
+
+[Orphans]:  Total orphans in run 1.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 9.0
+
+---- All tests passed! ----
