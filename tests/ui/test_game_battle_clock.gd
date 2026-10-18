@@ -96,6 +96,7 @@ func test_loaded_encounter_restores_named_hold_and_notice() -> void:
 	root.set_process(false)
 	root.state = GameRoot.State.COURT
 	var out := Game.advance_day()
+	var saved_decision: Dictionary = Game.state.day_resolution["pending_decision"].duplicate(true)
 	var path := "user://test_battle_clock_save.json"
 	assert_true(Game.save_campaign(path))
 	Game.restart()
@@ -104,7 +105,8 @@ func test_loaded_encounter_restores_named_hold_and_notice() -> void:
 	assert_true(Game.load_campaign(path))
 	assert_true(Game.holds_clock("battle_decision"))
 	assert_eq(Game.clock_speed, 0)
-	assert_eq(Game.state.day_resolution["pending_decision"], out["decision"])
+	assert_eq(Game.state.day_resolution["pending_decision"], saved_decision)
+	assert_eq(Game.pending_battle_decision(), out["decision"])
 	assert_true(root.get_node("BattleEncounterPanel").visible)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 

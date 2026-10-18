@@ -12,7 +12,7 @@ set -e
 #                        of all test scripts, in its own Godot process. The whole suite in ONE process
 #                        grows past 7 GB on a Linux CI runner and the runner
 #                        kills it (exit 143); N slices run one after the
-#                        other each start from a fresh process (CI runs N=5).
+#                        other each start from a fresh process.
 FAST_DIRS="engine ledger3d llm"
 SELECT_ARG="-gdir=res://tests"
 SCRIPT_DIRS="tests"

@@ -23,13 +23,21 @@ concurrency:
 
 jobs:
   gut-shards:
-    name: GUT shard ${{ matrix.shard }}/5
+    name: GUT shard ${{ matrix.shard }}/8
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5]
+        include:
+          - { shard: 1, slice: '1/10' }
+          - { shard: 2, slice: '2/10' }
+          - { shard: 3, slice: '3/10' }
+          - { shard: 4, slice: '4/10' }
+          - { shard: 5, slice: '5/10' }
+          - { shard: 6, slice: '6/10' }
+          - { shard: 7, slice: '4/5' }
+          - { shard: 8, slice: '5/5' }
     env:
       GODOT_VERSION: 4.7-stable
       GODOT_DIR: ${{ github.workspace }}/.godot-bin
@@ -82,8 +90,9 @@ jobs:
             exit "$code"
           fi
           # Separate runners bound memory and avoid a shared wall-clock limit.
-          # The five contiguous slices retain their existing script order.
-          ./run_tests.sh --shard=${{ matrix.shard }}/5
+          # Split the three slow engine slices; retain the map/UI slices so
+          # map hover/picking tests keep their existing shared setup order.
+          ./run_tests.sh --shard=${{ matrix.slice }}
 
   gut-tests:
     if: ${{ always() }}
