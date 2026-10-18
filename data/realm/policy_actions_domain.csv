@@ -7,3 +7,4 @@ BATTLE_ORDER,military,Issue a battlefield warrant,none,0,none,0,0,,battle_order,
 PRISONER_PROPOSE,military,Propose a prisoner disposition,none,0,none,0,0,,prisoner_propose,0,no,params: raw proposal dictionary
 PRISONER_RESPOND,military,Respond to a prisoner proposal,none,0,none,0,0,,prisoner_respond,0,no,params: proposal_id accepted
 PRISONER_SETTLE,military,Fulfill a prisoner agreement,none,0,none,0,0,,prisoner_settle,0,no,params: proposal_id
+BATTLE_TASK,military,Assign a unit task,none,0,none,0,0,,battle_task,0,no,params: request_id regiment battle_id task target_unit; player authority and one unit; actual delivery required
