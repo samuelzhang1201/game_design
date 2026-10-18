@@ -6,7 +6,8 @@ func test_encounter_displays_frozen_clauses_without_renegotiation() -> void:
 	panel.show_decision({"token": "1:encounter:5"}, "the field", {"agreements": "Herald safety — agreed: protect (received A v2 / D v3)"})
 	assert_true(String(panel.get_node("%Summary").text).contains("received A v2 / D v3"))
 	assert_false(String(panel.get_node("%Summary").text).contains("renegotiate"))
-	assert_true(panel.get_node("%Summary").get_parent() is ScrollContainer)
+	var scroll: ScrollContainer = panel.get_node("Center/Window/Body/ClauseScroll")
+	assert_true(scroll.is_ancestor_of(panel.get_node("%Summary")))
 
 func test_formation_diagram_reads_the_battle_formation() -> void:
 	var dots := WarFormationDots.new()
