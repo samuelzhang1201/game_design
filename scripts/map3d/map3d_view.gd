@@ -1,18 +1,7 @@
 @tool
 class_name Map3DView
 extends Control
-## The 3D map (owner 2026-09-18, the default map): an AUTHORED scene,
-## scenes/map3d/world_map_3d.tscn (spec 2026-09-20 §2) — create() instances
-## it, and on first activate _load() puts the BUILT world (tools/map3d; none
-## in a fresh clone, which shows the Notice) under WorldSlot and binds the
-## authored layers to it. Nothing generated is saved into the scene. A
-## COORDINATOR: rig, input, picker, selection, layers and HUD do the work; the
-## rest forwards to them under the API test_map3d_api.gd pins.
-## It renders into a SubViewport at WINDOW resolution × the graphics tier's
-## render_scale (Map3DQuality), shown by a TextureRect (Display) — never a
-## SubViewportContainer, which under the canvas_items stretch renders at design
-## size and blurs. Controls: the wheel and a pinch zoom about the pointer, a
-## left, middle or two-finger drag pans, a right drag turns, WASD / arrows pan.
+## Authored map scene; delegates to layers under the API test_map3d_api.gd pins.
 
 ## The described entry of the settlement under a click ({title, obj}), or
 ## {} when the selection is cleared — WorldMapView's signal.

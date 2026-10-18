@@ -65,7 +65,7 @@ func test_remnants_are_one_in_front_two_behind() -> void:
 
 
 func test_strength_is_fit_men_per_mille_of_the_headcount() -> void:
-	var state := GameState.new()
+	var state := SuiteData.campaign(repo, 7)
 	var code := ""
 	for reg: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), state):
 		if ArmySystem.headcount(repo, reg) > 0:
@@ -73,15 +73,21 @@ func test_strength_is_fit_men_per_mille_of_the_headcount() -> void:
 			break
 	assert_ne(code, "", "the player's realm has a regiment")
 	var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
-	assert_eq(ArmySystem.fit_permille(repo, state, code), 1000, "no state yet: as it would start")
-	ArmySystem.ensure(repo, state)
+	assert_eq(ArmySystem.fit_permille(repo, null, code), 1000, "editor preview uses equipment capacity")
+	assert_eq(ArmySystem.fit_permille(repo, GameState.new(), code), 0, "missing personnel cannot refill a real unit")
+	assert_eq(ArmySystem.fit_permille(repo, state, code), 1000, "campaign personnel start fit")
 	@warning_ignore("integer_division")
-	state.regiments[code]["wounded"] = heads / 2
+	var wounded := heads / 2
+	var result := MilitaryRoster.transfer_units(repo, state, "formation-half", [
+		{"unit_code": code, "from": "fit", "to": "wounded", "count": wounded}], "formation test injury")
+	assert_false(result.has("error"), str(result))
 	@warning_ignore("integer_division")
 	assert_eq(ArmySystem.fit_permille(repo, state, code), (heads - heads / 2) * 1000 / heads)
 	assert_eq(int(Map3DFormation.tier_of(repo, ArmySystem.fit_permille(repo, state, code))["figures"]), 6)
-	state.regiments[code]["wounded"] = heads * 10
-	assert_eq(ArmySystem.fit_permille(repo, state, code), 0, "the wounded are held to the headcount")
+	result = MilitaryRoster.transfer_units(repo, state, "formation-all", [
+		{"unit_code": code, "from": "fit", "to": "wounded", "count": heads - wounded}], "formation test injury")
+	assert_false(result.has("error"), str(result))
+	assert_eq(ArmySystem.fit_permille(repo, state, code), 0, "no fit personnel remain")
 
 
 ## A held regiment's piece stands in a LINE (spec 2026-10-11-war-room-front-
