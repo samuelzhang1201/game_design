@@ -11,7 +11,10 @@ func before_all() -> void:
 	assert_not_null(repo, DataRepository.last_error)
 
 func test_every_biome_of_the_pack_names_a_terrain() -> void:
-	for id: int in repo.cells.values().map(func(c: Dictionary) -> int: return int(c["biome_id"])):
+	var biomes: Dictionary = {}
+	for cell: Dictionary in repo.cells.values():
+		biomes[int(cell["biome_id"])] = true
+	for id: int in biomes:
 		assert_true(repo.army_terrain_biomes.has(id), "biome %d has a terrain" % id)
 
 

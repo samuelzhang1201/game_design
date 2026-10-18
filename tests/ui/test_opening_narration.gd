@@ -52,6 +52,15 @@ func test_continue_walks_every_page_then_the_reign_begins() -> void:
 	r.current_screen.start_requested.emit()
 	await wait_process_frames(2)
 	var scene: ConversationScene = r.current_screen
+	assert_eq(String(scene.current_beat()["kind"]), "narration")
+	assert_eq(String(scene.current_beat()["speaker"]), "", "narration is nameless")
+	assert_true(scene.event_popup().visible, "narration pops centered")
+	assert_string_contains(scene.said_text(), "ascended to the throne")
+	# Keep the audience window and its Continue button inside the viewport.
+	var panel: PanelContainer = scene.find_child("AudienceWindow", true, false)
+	var viewport_h := scene.get_viewport_rect().size.y
+	assert_lt(panel.size.y, viewport_h, "the window fits the viewport")
+	assert_not_null(scene.speech_scroll(), "narration text scrolls inside the window")
 	var pages := OpeningNarration.beats(Game.data).size()
 	for i in pages:
 		assert_eq(int(scene.current_beat()["page"]), i + 1)
@@ -59,6 +68,9 @@ func test_continue_walks_every_page_then_the_reign_begins() -> void:
 		assert_eq(replies.size(), 1, "one button a page")
 		var btn: Button = replies[0]
 		await wait_until(func() -> bool: return btn.visible, 1.0)
+		assert_true(btn.visible, "continue button revealed")
+		assert_between(btn.get_global_rect().position.y, 0.0, viewport_h, "button on screen")
+		assert_lt(btn.get_global_rect().end.y, viewport_h, "button bottom on screen")
 		assert_eq(btn.text, "I am ready. Let the reign begin." if i == pages - 1 else "Continue")
 		if scene.narration_left_frame != null:
 			assert_true(scene.narration_left_frame.visible and scene.narration_right_frame.visible,
@@ -70,6 +82,16 @@ func test_continue_walks_every_page_then_the_reign_begins() -> void:
 		btn.pressed.emit()
 		await wait_process_frames(2)
 	assert_true(r.current_screen is CourtScreen, "the table after the last page")
+	# The chapter opener waits for its presenter before showing authored prose.
+	assert_eq(String(Game.state.pending_event.get("event_id", "")), "c0_01")
+	r.audience_with(ConversationBeats.event_presenter(Game.state, Game.data))
+	await wait_process_frames(2)
+	var stage: ConversationScene = r.current_screen
+	var beat := stage.current_beat()
+	assert_eq(String(beat["kind"]), "event")
+	assert_eq(String(beat["event"]["event_id"]), "c0_01")
+	assert_string_contains(stage.speech_text(), "older than the kingdom",
+		"the authored scene is shown verbatim")
 
 func _scene_with_frames() -> Array:
 	var scene: ConversationScene = load("res://scenes/screens/conversation.tscn").instantiate()

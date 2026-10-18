@@ -20,11 +20,8 @@ func _court() -> GameRoot:
 	return r
 
 
-func test_war_room_is_no_longer_a_placeholder() -> void:
-	assert_false("WAR ROOM" in BottomBar.PLACEHOLDER_TABS)
-
-
 func test_the_tab_lays_the_home_provinces_sheet_over_the_map() -> void:
+	assert_false("WAR ROOM" in BottomBar.PLACEHOLDER_TABS, "the completed room stays available when placeholders are hidden")
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()
 	await wait_seconds(Game.data.bal("war_unroll_s") + 0.1)   # the room comes down over that time

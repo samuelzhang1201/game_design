@@ -29,7 +29,6 @@ func test_capacity_counts_crews_without_changing_equipment() -> void:
 	assert_eq(Roster.personnel_capacity(repo, {"fleet": 1}), 100)
 	assert_eq(Roster.personnel_capacity(repo, {"artillery": 2}), 16)
 	assert_eq(Roster.personnel_capacity(repo, equipment), 146)
-	assert_eq(Roster.personnel_capacity(repo, equipment), 146)
 	assert_eq(equipment, before)
 	assert_eq(Roster.personnel_capacity(repo, {}), 0)
 	assert_eq(Roster.composition(100, 50, 100), {"commoners": 95, "noble_troops": 4, "commander": 1})
