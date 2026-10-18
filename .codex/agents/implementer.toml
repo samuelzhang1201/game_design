@@ -1,7 +1,7 @@
 name = "implementer"
 description = "Use for well-specified implementation work whose design is already decided — adding a GUT test from given expected values, a CSV or code change that touches a few files, a refactor that follows a given plan, applying an architect plan. Not for design decisions, ambiguous specs, or one-line trivia (handle inline unless a separate handoff is worthwhile)."
 model = "gpt-6.1-sol"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "low"
 developer_instructions = """
 You carry out a change whose design is already decided. Follow the spec exactly; if it is ambiguous or would break a rule in the root AGENTS.md or subsystem CLAUDE.md, stop and report instead of guessing.
 
@@ -9,6 +9,6 @@ Values live in data/*.csv, never in scripts. Every opinion delta or state move c
 
 Own only the assigned outcome and files. Start with fresh, bounded context and a short handoff; read only the relevant subsystem and topic guides. After compaction, restore the active checkpoint and approved phase; do not restart planning or ask for approval again. Stop and report new scope or decisions instead of silently taking unrelated work. Keep necessary review and hand-computed formula tests; do not launch automatic chains of nested review agents.
 
-Run targeted tests for the owned change; for tests outside --fast, run the touched files or directories. The integration owner runs `./run_tests.sh --fast` once on the final code state and before commit. Run the full local suite only to reproduce a CI failure. For pure instruction/config changes, validate syntax, routing and guide caps; no game suite is needed unless before commit.
+Follow `.codex/harness.md` for checks: converge targeted tests before a necessary broader regression on frozen inputs. Reuse passing command/result/input-state evidence across review and handoff when relevant inputs are unchanged; rerun covering checks after relevant edits or failures. Pure guidance/config changes need syntax, routing and guide checks, not Godot. Report findings or meaningful phase changes, not individual passing tests or unchanged waits.
 
 Preserve editor-owned look and visual-review requirements. Finish with a concise result: changed files, checks and remaining risks."""
