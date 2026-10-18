@@ -54,10 +54,10 @@ Each run, on a fresh `ubuntu-latest` GitHub-hosted machine:
    **缓存/下载 Godot 4.7。** Godot 的二进制文件会按版本缓存，第一次跑完之后，后面的运行几秒钟就能恢复，不用重新下载。
 3. **Cache the `.godot` import output.** Godot has to "import" every asset once before tests can run. The ~2.6GB art tree only needs to be reimported when the asset files or `project.godot` actually change (the cache key is a hash of those files) — otherwise the cached import is reused.
    **缓存 `.godot` 的导入产物。** Godot 跑测试前要先把所有素材"导入"一遍。这棵约 2.6GB 的美术资源树只有在素材文件或 `project.godot` 真的变了时才会重新导入（缓存的 key 是这些文件的哈希值）——否则直接复用缓存的导入结果。
-4. **Run the full GUT suite** via `./run_tests.sh --shard=I/5` for I = 1..5, one after the other (`CC_FORCE_OFFLINE=1`, so no real OpenAI API call is ever made in CI). One Godot process running every test grows past the runner's ~7.9 GB and is killed (exit 143), so each shard (every 5th test script, sorted) is a fresh process; every shard runs even if an earlier one failed.
-   **跑完整的 GUT 测试套件**：通过 `./run_tests.sh --shard=I/5`（I 从 1 到 5）依次运行，并设置 `CC_FORCE_OFFLINE=1`，保证 CI 里绝不会真的调用 OpenAI API。单个 Godot 进程跑完所有测试会涨到超过运行器约 7.9 GB 内存而被杀掉（退出码 143），所以拆成 5 份（按排序后每第 5 个测试脚本一份），每份都是新进程；即使前面某份失败，后面的也会继续跑。
-5. Report **success or failure** as the `gut-tests` check on the PR.
-   把**成功或失败**的结果，作为 PR 上的 `gut-tests` 检查项汇报出来。
+4. **Run the full GUT suite** via `./run_tests.sh --shard=I/5` for I = 1..5 in parallel matrix jobs (`CC_FORCE_OFFLINE=1`, so no real OpenAI API call is ever made in CI). Each shard takes a contiguous slice of the sorted test scripts and runs on its own runner with its own 45-minute timeout. `fail-fast: false` lets every shard finish even when another fails.
+   **跑完整的 GUT 测试套件**：通过并行矩阵任务运行 `./run_tests.sh --shard=I/5`（I 从 1 到 5），并设置 `CC_FORCE_OFFLINE=1`，保证 CI 里绝不会真的调用 OpenAI API。每份取排序后连续的一段测试脚本，使用独立运行器及独立的 45 分钟超时；`fail-fast: false` 保证某份失败时其他份仍会继续完成。
+5. Report **success or failure** as the `gut-tests` aggregate check on the PR; it succeeds only when all five shards succeed.
+   把**成功或失败**的结果，作为 PR 上的 `gut-tests` 汇总检查项汇报出来；只有五份全部成功才通过。
 
 On a cold cache (first run, or after a cache eviction) this takes roughly **30 minutes**, mostly spent downloading Godot and importing the full art tree. With a warm cache it's much faster — typically a few minutes, since only the test run itself remains.
 

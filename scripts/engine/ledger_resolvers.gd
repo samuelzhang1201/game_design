@@ -415,6 +415,7 @@ static func _holds(repo: DataRepository, state: GameState, id: String) -> Array:
 	return []
 
 
+## House membership is indexed once per read, retaining sorted character ids.
 static func _member(state: GameState, id: String) -> Array:
 	if id == "":
 		var n := 0
@@ -427,11 +428,15 @@ static func _member(state: GameState, id: String) -> Array:
 		return [] if c == null or c.family_name == "" else [_link(id, "house:" + c.family_name, -1, "count")]
 	if id.begins_with("house:"):
 		var out: Array = []
-		var ids: Array = state.characters.keys()
-		ids.sort()
-		for cid: String in ids:
-			if (state.characters[cid] as Character).family_name == _rest(id):
-				out.append(_link("character:" + cid, id, -1, "count"))
+		var families := memo_bucket("family_members") if _memo_on else {}
+		if families.is_empty():
+			var ids: Array = state.characters.keys()
+			ids.sort()
+			for cid: String in ids:
+				var family := (state.characters[cid] as Character).family_name
+				(families.get_or_add(family, []) as Array).append(cid)
+		for cid: String in families.get(_rest(id), []):
+			out.append(_link("character:" + cid, id, -1, "count"))
 		return out
 	return []
 
@@ -546,11 +551,23 @@ static func _describes(state: GameState, id: String, link_id: String, to_t: Stri
 	return out
 
 
+## Adjacency retains stored edge order and expires with the snapshot memo.
 static func _relations(state: GameState, id: String, all: bool, rel_type: String) -> Array:
 	if id == "" and not all:
 		return []  # character to character: an instance tie only
+	var edges: Array = state.relationships
+	if _memo_on and not all:
+		var touching := memo_bucket("character_relations")
+		if touching.is_empty():
+			for e: Dictionary in state.relationships:
+				var from := "character:" + String(e["from"])
+				var to := "character:" + String(e["to"])
+				(touching.get_or_add(from, []) as Array).append(e)
+				if to != from:
+					(touching.get_or_add(to, []) as Array).append(e)
+		edges = touching.get(id, [])
 	var out: Array = []
-	for e: Dictionary in state.relationships:
+	for e: Dictionary in edges:
 		if String(e["type"]) != rel_type:
 			continue
 		var from := "character:" + String(e["from"])
@@ -820,14 +837,18 @@ static func _skims(repo: DataRepository, state: GameState, id: String, to_t: Str
 ## The unit holding a town's seat garrisons that town (ArmyGround.seated_in;
 ## one camped round it, or halted in the open, does not).
 static func _garrisons(repo: DataRepository, state: GameState, id: String) -> Array:
-	var codes: Array = state.regiments.keys()
-	codes.sort()
+	var seats := memo_bucket("garrison_towns") if _memo_on else {}
+	if seats.is_empty():
+		var codes: Array = state.regiments.keys()
+		codes.sort()
+		for c: String in codes:
+			seats[c] = ArmyGround.seated_in(repo, state, c)
 	var out: Array = []
-	for c in codes:
-		var town := ArmyGround.seated_in(repo, state, String(c))
+	for c: String in seats:
+		var town := String(seats[c])
 		if town == "":
 			continue
-		var rid := "regiment:" + String(c)
+		var rid := "regiment:" + c
 		if id == "" or id == rid or id == "town:" + town:
 			out.append(_link(rid, "town:" + town, -1, "count"))
 	if id == "":
