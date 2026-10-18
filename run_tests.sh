@@ -48,14 +48,18 @@ esac
 # $GODOT overrides the Godot binary (the cloud SessionStart hook sets it).
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
 
+# Per Godot phase, including import. Python's standard library works on macOS
+# and Linux without requiring GNU timeout. Override for an intentionally long run.
+TEST_TIMEOUT_SECONDS="${TEST_TIMEOUT_SECONDS:-2700}"
 TEST_OUTPUT="/tmp/gut_test_output_$$.txt"
-trap 'rm -f "$TEST_OUTPUT"' EXIT
+KEEP_TEST_OUTPUT=0
+trap '[ "$KEEP_TEST_OUTPUT" = 1 ] || rm -f "$TEST_OUTPUT"' EXIT
 
 # Import assets headless. Exit code 134 (SIGABRT on macOS) is expected due to a Godot
 # shutdown issue, but the import completes successfully before the crash. Exit code 0
 # is also acceptable (no crash on other platforms). Show diagnostics on real failure.
 code=0
-"$GODOT" --headless --path . --import || code=$?
+python3 tools/run_with_timeout.py "$TEST_TIMEOUT_SECONDS" "$GODOT" --headless --path . --import || code=$?
 if [ "$code" != "0" ] && [ "$code" != "134" ]; then
   echo "import failed with exit code $code" >&2
   exit "$code"
@@ -65,9 +69,14 @@ fi
 # exit code: piping into `tee` under /bin/sh yields the pipeline's status,
 # which is tee's exit code, not Godot's — a red suite would exit 0.
 code=0
-"$GODOT" --headless --path . \
+python3 tools/run_with_timeout.py "$TEST_TIMEOUT_SECONDS" "$GODOT" --headless --path . \
   -s addons/gut/gut_cmdln.gd "$SELECT_ARG" -ginclude_subdirs -gpre_run_script=res://tests/pre_run.gd -gpost_run_script=res://tests/post_run.gd -gexit > "$TEST_OUTPUT" 2>&1 || code=$?
 cat "$TEST_OUTPUT"
+if [ "$code" = 124 ]; then
+  KEEP_TEST_OUTPUT=1
+  echo "FATAL: Test deadline exceeded; output preserved at $TEST_OUTPUT" >&2
+  exit 124
+fi
 
 # GUT silently SKIPS a test script that fails to parse ("Ignoring script ...
 # because it does not extend GutTest") and still reports the suite green —

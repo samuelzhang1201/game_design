@@ -48,8 +48,14 @@ func test_a_pack_regiment_raises_its_land_units() -> void:
 			# the headcount of its foot, archers and horse, every man of them
 			# (its guns are its kingdom's royal train's, which no host takes)
 			var row: Dictionary = pack[entry]
-			var want := int(float(row.get("infantry", 0))) + int(float(row.get("archers", 0))) \
-				+ int(float(row.get("cavalry", 0)))
+			var want := 0
+			var expected_equipment: Dictionary = {}
+			var actual_equipment: Dictionary = {}
+			for arm: String in ["infantry", "archers", "cavalry"]:
+				var count := int(float(row.get(arm, 0)))
+				expected_equipment[arm] = count
+				actual_equipment[arm] = 0
+				want += count * int(repo.world_row("military", "unit_types", arm)["crew"])
 			var men := 0
 			for u: String in units:
 				var r := ArmySystem.regiment(repo, u)
@@ -57,6 +63,9 @@ func test_a_pack_regiment_raises_its_land_units() -> void:
 				assert_eq(String(r["kingdom_code"]), raider)
 				assert_ne(String(r.get("is_naval", "0")), "1", "no fleet")
 				men += ArmySystem.headcount(repo, r)
+				for arm: String in expected_equipment:
+					actual_equipment[arm] += int(float(r.get(arm, 0)))
+			assert_eq(actual_equipment, expected_equipment, entry + ": equipment survives splitting")
 			assert_eq(men, want, entry + ": the regiment's men, split")
 	# a unit's own code raises that unit; an unknown code raises nothing; and
 	# a unit named twice is raised once

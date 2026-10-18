@@ -28,6 +28,7 @@ signal news_published(text: String)
 signal clock_changed(speed: int)
 ## The clock was held still, or let go (the LEDGER: owner 2026-10-01).
 signal clock_held_changed(held: bool)
+signal battle_decision_changed(decision: Dictionary)
 
 var data: DataRepository
 var state: GameState
@@ -48,11 +49,18 @@ func _ready() -> void:
 	data = DataRepository.load_all("res://data")
 	assert(data != null, "data load failed: " + DataRepository.last_error)
 
-func start_campaign(seed_value: int = 42) -> void:
+func start_campaign(seed_value: int = 42) -> bool:
 	_reset_llm()
-	release_clock_holds()  # a reign never begins held (each hold is its screen's viewing's)
 	state = campaign_maker.call(data, seed_value)
+	if state == null:
+		load_error = GameState.last_campaign_error
+		engine = null
+		set_clock_speed(0)
+		return false
+	load_error = ""
+	release_clock_holds()
 	engine = TickEngine.new(data)
+	return true
 
 ## The clock (owner 2026-09-13): 0 is paused, 1 a day per time_day_seconds,
 ## 2 and 4 that many times faster. Only GameRoot's _process reads it, on
@@ -106,13 +114,18 @@ func hold_clock(on: bool, who := "ledger") -> void:
 		set_clock_speed(0)
 		_clock_holders[who] = true
 	else:
+		if who == "battle_decision" and not pending_battle_decision().is_empty():
+			return
 		_clock_holders.erase(who)
 	_set_held(not _clock_holders.is_empty())
 
 ## Every hold let go (a new reign, a restart): nothing is open any more.
 func release_clock_holds() -> void:
 	_clock_holders.clear()
-	_set_held(false)
+	if not pending_battle_decision().is_empty():
+		_clock_holders["battle_decision"] = true
+		set_clock_speed(0)
+	_set_held(not _clock_holders.is_empty())
 
 ## Whether `who` holds the clock now (tests, tools).
 func holds_clock(who: String) -> bool:
@@ -145,22 +158,64 @@ func hold_day_before_month_end(day_ceiling: int) -> bool:
 ## the buildings newly idle for want of inputs (M5).
 func advance_day() -> Dictionary:
 	var ended := state.absolute_day()
-	if state.day >= Calendar.DAYS_PER_TICK:
-		var r := next_tick()
-		return {"ticked": true, "finished": r.finished_works, "arrived": engine.day_arrivals,
-			"couriers": engine.day_couriers, "idled": engine.newly_idle, "ended": ended,
-			"hazards": engine.month_hazard_news, "supply": engine.day_supply, "raids": engine.day_raid}
-	var finished := engine.advance_day(state)
+	# Keep integer source data across interruptions so notices publish once,
+	# even after a JSON load between the courier/works phases and completion.
+	var notices: Dictionary = state.day_resolution.get("ui_day_start", {})
+	if notices.is_empty():
+		notices = {"tick": state.tick, "day": state.day, "missive_id": state.next_missive_id,
+			"works": state.manor_works.duplicate(true)}
+	var out := engine.resolve_day(state)
+	if String(out["status"]) != "complete":
+		state.day_resolution["ui_day_start"] = notices
+		state.day_resolution["ui_resume_speed"] = _resume_speed
+		hold_clock(true, "battle_decision")
+		day_progress = 0.0
+		battle_decision_changed.emit(pending_battle_decision())
+		state_changed.emit()
+		return out
+	var ticked := engine.last_month_report != null
+	if ticked:
+		_prompts_this_tick = 0
+		current_report = engine.last_month_report
+		report_ready.emit(current_report)
+	out.merge({"ticked": ticked, "ui_day_start": notices, "arrived": engine.day_arrivals,
+		"couriers": engine.day_couriers, "ended": ended, "supply": engine.day_supply,
+		"raids": engine.day_raid})
+	if ticked:
+		out.merge({"idled": engine.newly_idle, "hazards": engine.month_hazard_news})
 	state_changed.emit()
-	return {"ticked": false, "finished": finished, "arrived": engine.day_arrivals,
-		"couriers": engine.day_couriers, "ended": ended, "supply": engine.day_supply, "raids": engine.day_raid}
+	return out
+
+func pending_battle_decision() -> Dictionary:
+	if state == null:
+		return {}
+	return (state.day_resolution.get("pending_decision", {}) as Dictionary).duplicate(true)
+
+func resolve_battle_decision(token: String, choice: String) -> Dictionary:
+	if state == null:
+		return {"status": "stale"}
+	var out := DayResolution.acknowledge(state.day_resolution, token, choice)
+	if out["status"] == "accepted":
+		set_clock_speed(0)
+		day_progress = 0.0
+		hold_clock(false, "battle_decision")
+		battle_decision_changed.emit({})
+		state_changed.emit()
+	return out
 
 func next_tick() -> TickReport:
-	_prompts_this_tick = 0
-	current_report = engine.advance(state)
-	report_ready.emit(current_report)
+	var report := engine.advance(state)
+	if not state.day_resolution.is_empty():
+		hold_clock(true, "battle_decision")
+		battle_decision_changed.emit(pending_battle_decision())
+		state_changed.emit()
+		return report
+	if report.tick > 0:
+		_prompts_this_tick = 0
+		current_report = report
+		report_ready.emit(current_report)
 	state_changed.emit()
-	return current_report
+	return report
 
 func apply_event_choice(choice_id: String) -> Dictionary:
 	var out := engine.events.apply_choice(choice_id, state)
@@ -436,14 +491,29 @@ func load_campaign(path: String = "") -> bool:
 	# The save names its world. Swap the pack in before the state goes live,
 	# and refuse rather than silently drop the player into a different map
 	# than the one they saved in. Pre-map_id saves ("") keep the default.
+	var previous_map := data.map_id
 	if loaded.map_id != "" and loaded.map_id != data.map_id:
 		if not data.load_map(loaded.map_id):
 			push_error("load_campaign: save needs map '%s' which is not installed"
 				% loaded.map_id)
 			load_error = "No saved realm found."
 			return false
+	var military := MilitaryMigration.ensure(data, loaded)
+	if military.has("error"):
+		if data.map_id != previous_map:
+			data.load_map(previous_map)
+		load_error = "Saved military organization needs resolution: " + String(military["error"])
+		return false
 	load_error = ""
 	state = loaded
+	engine = TickEngine.new(data)
+	current_report = null
+	var saved_speed := int(state.day_resolution.get("ui_resume_speed", _resume_speed))
+	if saved_speed in [1, int(data.bal("time_speed_fast")), int(data.bal("time_speed_faster"))]:
+		_resume_speed = saved_speed
+	set_clock_speed(0)
+	day_progress = 0.0
+	release_clock_holds()
 	# A save from before the wealth tiers were state computes them once, from
 	# the state it loaded (Ruling 15).
 	Intel.ensure_wealth_tiers(data, state)
@@ -452,6 +522,7 @@ func load_campaign(path: String = "") -> bool:
 	Hazards.ensure(data, state)
 	LawSystem.ensure(data, state)  # a save from before the laws
 	DevelopmentSystem.ensure(data, state)  # a save from before the development axes
+	battle_decision_changed.emit(pending_battle_decision())
 	state_changed.emit()
 	return true
 
@@ -459,9 +530,10 @@ func load_campaign(path: String = "") -> bool:
 ## GameRoot's global R handler.
 func restart() -> void:
 	set_clock_speed(0)
+	state = null
 	release_clock_holds()
 	_reset_llm()
-	state = null
+	battle_decision_changed.emit({})
 	engine = null
 	current_report = null
 	_prompts_this_tick = 0

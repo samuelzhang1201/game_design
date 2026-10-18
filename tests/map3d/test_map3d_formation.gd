@@ -75,13 +75,15 @@ func test_strength_is_fit_men_per_mille_of_the_headcount() -> void:
 	var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
 	assert_eq(ArmySystem.fit_permille(repo, state, code), 1000, "no state yet: as it would start")
 	ArmySystem.ensure(repo, state)
+	state.army_roster = ArmySplit.split(repo)["roster"]
+	MilitaryMigration.ensure(repo, state)
 	@warning_ignore("integer_division")
-	state.regiments[code]["wounded"] = heads / 2
+	SuiteData.set_losses(state, code, {"wounded": heads / 2})
 	@warning_ignore("integer_division")
 	assert_eq(ArmySystem.fit_permille(repo, state, code), (heads - heads / 2) * 1000 / heads)
 	assert_eq(int(Map3DFormation.tier_of(repo, ArmySystem.fit_permille(repo, state, code))["figures"]), 6)
-	state.regiments[code]["wounded"] = heads * 10
-	assert_eq(ArmySystem.fit_permille(repo, state, code), 0, "the wounded are held to the headcount")
+	SuiteData.set_losses(state, code, {"wounded": heads})
+	assert_eq(ArmySystem.fit_permille(repo, state, code), 0, "all personnel wounded leaves no combatants")
 
 
 ## A held regiment's piece stands in a LINE (spec 2026-10-11-war-room-front-

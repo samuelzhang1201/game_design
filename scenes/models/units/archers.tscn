@@ -28,15 +28,15 @@ normal_enabled = true
 normal_texture = ExtResource("4_mc4ra")
 metadata/_gltf_primary_texture_coord = 0
 
-[sub_resource type="Skin" id="Skin_enkni"]
+[sub_resource type="Skin" id="Skin_11djj"]
 resource_name = "Skin"
 bind_count = 2
 bind/0/name = &"DEF-bow"
 bind/0/bone = -1
-bind/0/pose = Transform3D(-0.17835347, 0.011143483, 0.98390347, 0.9819887, -0.06135002, 0.17870139, 0.062353812, 0.9980542, -7.85105e-07, 0.1408655, -0.6907049, -1.4553246)
+bind/0/pose = Transform3D(-0.1783536, -0.011143486, -0.9839033, -0.9819885, -0.061349913, 0.17870149, -0.062353726, 0.9980541, -7.9348655e-07, -0.14086546, -0.6907049, -1.4553245)
 bind/1/name = &"DEF-string"
 bind/1/bone = -1
-bind/1/pose = Transform3D(-0.17835349, 0.011143527, 0.98390347, 0.9819887, -0.06134998, 0.1787014, 0.06235378, 0.9980542, -8.353964e-07, 0.14086546, -0.69070494, -1.4553245)
+bind/1/pose = Transform3D(-0.17835362, -0.011143525, -0.9839033, -0.9819885, -0.06134995, 0.17870152, -0.06235377, 0.9980541, -8.232889e-07, -0.14086542, -0.6907049, -1.4553245)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_oo7of"]
 resource_name = "tripo_mat_0d93144f-08c8-4248-9c52-309ee2d79324"
@@ -49,12 +49,12 @@ roughness_texture_channel = 1
 normal_enabled = true
 normal_texture = ExtResource("6_csnnr")
 
-[sub_resource type="Skin" id="Skin_k31ku"]
+[sub_resource type="Skin" id="Skin_gygc8"]
 resource_name = "Skin"
 bind_count = 1
 bind/0/name = &"DEF-quiver"
 bind/0/bone = -1
-bind/0/pose = Transform3D(-0.9404486, -0.3398641, 0.007006638, -0.007005975, 0.039985467, 0.99917567, -0.33986416, 0.93962413, -0.039985392, 0.29434428, -0.27281266, -0.70167893)
+bind/0/pose = Transform3D(-0.9404486, 0.3398641, -0.007006474, 0.00700615, 0.039985467, 0.99917567, 0.33986416, 0.93962413, -0.03998545, -0.2943443, -0.27281263, -0.70167893)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eyai7"]
 resource_name = "Quiver_Leather_Feathers"
@@ -63,12 +63,12 @@ roughness = 0.72
 normal_enabled = true
 normal_texture = ExtResource("8_gygc8")
 
-[sub_resource type="Skin" id="Skin_wk6kf"]
+[sub_resource type="Skin" id="Skin_dpx66"]
 resource_name = "Skin"
 bind_count = 1
 bind/0/name = &"DEF-arrow"
 bind/0/bone = -1
-bind/0/pose = Transform3D(-0.013910506, 0.016408792, 0.9997687, 0.9997687, -0.016180793, 0.014176146, 0.016409665, 0.9997344, -0.016179884, 0.06462045, 0.18473719, -1.4260253)
+bind/0/pose = Transform3D(-0.013910738, -0.016408795, -0.9997686, -0.9997687, -0.016180798, 0.014176381, -0.01640967, 0.99973446, -0.016179884, -0.06462043, 0.18473719, -1.4260253)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fvvvo"]
 resource_name = "archers_arrow_materials"
@@ -84,33 +84,33 @@ normal_texture = ExtResource("12_11djj")
 [node name="Archers" unique_id=479415852 instance=ExtResource("1_glb")]
 editor_description = "Equipped ARP longbowman. Six source clips: STANDBY, MARCH, SPRINT, DRAW, GARRISON, DEATH. Bow, loaded quiver and arrow are separate assets sharing this character's named skin. Materials and shadows are edited here."
 
-[node name="archers" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(34799169) index="0" unique_id=2093888713]
+[node name="archers" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(132860031) index="0" unique_id=1323714368]
 lod_bias = 0.1
 surface_material_override/0 = SubResource("StandardMaterial3D_gygc8")
 
-[node name="archers_bow" type="MeshInstance3D" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(34799169) index="1" unique_id=1844684683]
+[node name="archers_bow" type="MeshInstance3D" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(132860031) index="1" unique_id=1844684683]
 lod_bias = 0.1
 mesh = ExtResource("5_11djj")
-skin = SubResource("Skin_enkni")
+skin = SubResource("Skin_11djj")
 skeleton = NodePath("..")
 surface_material_override/0 = SubResource("StandardMaterial3D_oo7of")
 
-[node name="archers_quiver" type="MeshInstance3D" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(34799169) index="2" unique_id=1700501916]
+[node name="archers_quiver" type="MeshInstance3D" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(132860031) index="2" unique_id=1700501916]
 lod_bias = 0.1
 visibility_range_end = 2000.0
 visibility_range_end_margin = 500.0
 visibility_range_fade_mode = 1
 mesh = ExtResource("9_gygc8")
-skin = SubResource("Skin_k31ku")
+skin = SubResource("Skin_gygc8")
 skeleton = NodePath("..")
 surface_material_override/0 = SubResource("StandardMaterial3D_eyai7")
 
-[node name="archers_arrow" type="MeshInstance3D" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(34799169) index="3" unique_id=1390455169]
+[node name="archers_arrow" type="MeshInstance3D" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(132860031) index="3" unique_id=1390455169]
 lod_bias = 0.1
 visibility_range_end = 2000.0
 visibility_range_end_margin = 500.0
 visibility_range_fade_mode = 1
 mesh = ExtResource("12_dpx66")
-skin = SubResource("Skin_wk6kf")
+skin = SubResource("Skin_dpx66")
 skeleton = NodePath("..")
 surface_material_override/0 = SubResource("StandardMaterial3D_fvvvo")

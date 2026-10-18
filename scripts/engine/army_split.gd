@@ -60,6 +60,21 @@ static func shares(men: int, cap: int) -> Array:
 	return out
 
 
+## Equipment is split under a personnel cap, without losing elements.
+static func element_shares(elements: int, crew: int, cap_men: int) -> Array:
+	if crew <= 0 or crew > cap_men:
+		return []
+	@warning_ignore("integer_division")
+	return shares(elements, cap_men / crew)
+
+
+static func source_part(repo: DataRepository, row: Dictionary, arm: String, elements: int) -> Dictionary:
+	return {"regiment_code": String(row["regiment_code"]),
+		"province_code": String(row.get("province_code", "")), "arm": arm,
+		"equipment_count": elements,
+		"crew_per_element": int(repo.world_row("military", "unit_types", arm).get("crew", 0))}
+
+
 static func _make(repo: DataRepository) -> Dictionary:
 	var cap := int(repo.bal("army_split_cap_men"))
 	var rows: Array = repo.world_table("military", "regiments").values()
@@ -68,6 +83,8 @@ static func _make(repo: DataRepository) -> Dictionary:
 	var roster: Dictionary = {}
 	var taken := ArmyGround.new_taken(repo)
 	var guns: Dictionary = {}
+	var sources: Dictionary = {}
+	var errors: Array = []
 	var home: Dictionary = {}   # kingdom -> its first land regiment's {town, centre}
 	for row: Dictionary in rows:
 		var code := String(row["regiment_code"])
@@ -76,10 +93,19 @@ static func _make(repo: DataRepository) -> Dictionary:
 			fleet["parent_code"] = ""
 			fleet["is_royal"] = "0"
 			fleet["camp_town"] = ""
+			fleet["source_parts"] = []
+			for arm: String in repo.world_table("military", "unit_types"):
+				var elements := int(float(row.get(arm, 0)))
+				if elements > 0:
+					(fleet["source_parts"] as Array).append(source_part(repo, row, arm, elements))
 			roster[code] = fleet
 			continue
 		var k := String(row["kingdom_code"])
 		guns[k] = int(guns.get(k, 0)) + int(float(row.get("artillery", 0)))
+		if not sources.has(k):
+			sources[k] = []
+		if int(float(row.get("artillery", 0))) > 0:
+			(sources[k] as Array).append(source_part(repo, row, "artillery", int(float(row["artillery"]))))
 		var at := Vector2(float(row["x"]), float(row["y"]))
 		var town := _held(repo, ArmySystem.town_at(repo, at), k)
 		var centre := ArmyGround.town_point_m(repo, town) if town != "" else ArmySystem.pack_to_metres(repo, at)
@@ -93,7 +119,12 @@ static func _make(repo: DataRepository) -> Dictionary:
 			if bool(arm_row["pooled"]):
 				continue
 			var arm := String(arm_row["arm"])
-			var parts := shares(int(float(row.get(arm, 0))), cap)
+			var elements := int(float(row.get(arm, 0)))
+			var crew := int(repo.world_row("military", "unit_types", arm).get("crew", 0))
+			var parts := element_shares(elements, crew, cap)
+			if elements > 0 and parts.is_empty():
+				errors.append("invalid crew/cap for " + arm)
+				parts = [elements]
 			for i in parts.size():
 				var unit := _unit(repo, row, arm_row, i, parts.size(), int(parts[i]), armed == 1)
 				unit["camp_town"] = town
@@ -104,13 +135,14 @@ static func _make(repo: DataRepository) -> Dictionary:
 	for k: String in ks:
 		if int(guns[k]) > 0:
 			var train := _train(repo, k, int(guns[k]), home[k])
+			train["source_parts"] = sources[k]
 			var t_town := String(train["camp_town"])
 			var t_centre: Vector2i = ArmyGround.town_point_m(repo, t_town) if t_town != "" else home[k]["centre"]
 			_place(repo, train, t_centre, String(train["_arm"]), taken, t_town)
 			train.erase("_arm")
 			roster[String(train["regiment_code"])] = train
 	_crown(repo, rows, roster)
-	return {"roster": roster, "seats": _seat(repo, roster)}
+	return {"roster": roster, "seats": _seat(repo, roster), "errors": errors}
 
 
 ## `town` when kingdom `k` holds it at the start, else "".
@@ -158,6 +190,7 @@ static func _unit(repo: DataRepository, parent: Dictionary, arm_row: Dictionary,
 	out["label"] = label
 	out["parent_code"] = String(parent["regiment_code"])
 	out["is_royal"] = "0"
+	out["source_parts"] = [source_part(repo, parent, String(arm_row["arm"]), men)]
 	return out
 
 
@@ -220,7 +253,7 @@ static func _crown(repo: DataRepository, rows: Array, roster: Dictionary) -> voi
 				var r: Dictionary = roster[c]
 				if String(r["parent_code"]) != nearest:
 					continue
-				var men := int(MapObjects.regiment_size(repo, r)) if arm == "" else int(float(r.get(arm, 0)))
+				var men := int(MapObjects.regiment_personnel(repo, r)) if arm == "" else int(float(r.get(arm, 0)))
 				if men > most:
 					most = men
 					pick = c
@@ -256,7 +289,7 @@ static func _seat(repo: DataRepository, roster: Dictionary) -> Dictionary:
 				pick = c
 		if pick == "":
 			for c: String in by_town[town]:
-				var size := int(MapObjects.regiment_size(repo, roster[c]))
+				var size := int(MapObjects.regiment_personnel(repo, roster[c]))
 				if size > best:
 					best = size
 					pick = c

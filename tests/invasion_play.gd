@@ -18,10 +18,18 @@ static func opened(repo: DataRepository, engine: TickEngine, seed_value: int = 1
 
 ## One day, exactly as Game.advance_day plays it: the thirtieth is the tick.
 static func day(engine: TickEngine, s: GameState) -> void:
+	# This test-playback helper explicitly chooses auto-confirm for encounter
+	# decisions so long simulations can proceed without a UI.
 	if s.day >= Calendar.DAYS_PER_TICK:
-		engine.advance(s)
+		var report := engine.advance(s)
+		while report.status == "blocked":
+			DayResolution.acknowledge(s.day_resolution, String(report.pending_decision["token"]), "continue")
+			report = engine.advance(s)
 	else:
-		engine.advance_day(s)
+		var result := engine.resolve_day(s)
+		while String(result.get("status", "")) == "blocked":
+			DayResolution.acknowledge(s.day_resolution, String(result["decision"]["token"]), "continue")
+			result = engine.resolve_day(s)
 
 
 ## Plays days until the absolute day `last` has ended.

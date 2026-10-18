@@ -358,7 +358,7 @@ static func refill(repo: DataRepository, state: GameState, town: String) -> Stri
 			if camped_by(repo, state, c) != town:
 				continue
 			var r: Dictionary = all[c]
-			var n := int(float(r.get("infantry", 0))) if pass_foot else int(MapObjects.regiment_size(repo, r))
+			var n := int(float(r.get("infantry", 0))) if pass_foot else int(MapObjects.regiment_personnel(repo, r))
 			if n > best:
 				best = n
 				pick = c

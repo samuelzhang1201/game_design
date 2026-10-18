@@ -32,7 +32,7 @@ By the holder of the unit's province: `home` (the crown's own), `enemy` (`Intel.
 
 ## Desertion (`Desertion`, home land only)
 
-Conditions held: morale under `desert_morale`, training under `desert_training`, days in hand at or under `desert_supply_days`. The daily loss is `desert_permille_per_day` of the fit men per condition held × the `desertion_penalty` law's multiplier (`desert_mult_<fine|lenient|hanging>`), kept in 1/100000 of the fit men with the remainder in `desert_rem`, so a small unit loses a man every few days. `deserted` is permanent: `ArmySystem.fit_heads` takes it out, and `ArmySystem.under_arms` subtracts `deserted` itself (it does not call `fit_heads`). Letter facts: `deserting` the first loss of a unit's month (`desert_news:<code>` mark), `deserting_big` once when `deserted` first passes `desert_news_cumulative_permille` of the heads (judged by the crossing, no mark).
+Conditions held: morale under `desert_morale`, training under `desert_training`, days in hand at or under `desert_supply_days`. The daily loss is `desert_permille_per_day` of the fit men per condition held × the `desertion_penalty` law's multiplier (`desert_mult_<fine|lenient|hanging>`), kept in 1/100000 of the fit men with the remainder in `desert_rem`, so a small unit loses a man every few days. Desertion moves fit personnel to terminal released cohorts through `MilitaryRoster.transition`; the saved `deserted` compatibility field is its read-only projection. It frees original-source civilian availability without increasing total residents. Letter facts: `deserting` the first loss of a unit's month (`desert_news:<code>` mark), `deserting_big` once when `deserted` first passes `desert_news_cumulative_permille` of the heads (judged by the crossing, no mark).
 
 ## Who reads which law
 
@@ -49,3 +49,5 @@ Words from `repo.conduct_words`: the folio and unit card ("Foraging" row, "Deser
 ## Tests
 
 `tests/engine/conduct_helpers.gd` builds the fixtures from the repo (no pack, kingdom or province named). `Forage` caches food counts per repository: call `Forage.forget()` after a test edits the production rows.
+
+Personnel wounds from settlement use MilitaryRoster batches, as do recovery, battle casualties and hazards; no conduct writer independently edits casualty counters.

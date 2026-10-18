@@ -44,19 +44,62 @@ static func ordered(repo: DataRepository, state: GameState, codes: Array) -> Arr
 
 ## Heads under a regiment's banner, as a whole number.
 static func headcount(repo: DataRepository, reg: Dictionary) -> int:
-	return int(MapObjects.regiment_size(repo, reg))
+	return MapObjects.regiment_personnel(repo, reg)
+
+## Persons in the ledger, with legacy fallback while an old day resumes.
+static func personnel_fit(repo: DataRepository, state: GameState, code: String) -> int:
+	if state != null and state.military_rosters.has(code):
+		return MilitaryRoster.fit(state, code)
+	return fit_heads(headcount(repo, regiment(repo, code, state)), state_of(repo, state, code))
+
+
+## Commit a planned personnel move before publishing non-personnel effects.
+static func move_personnel(repo: DataRepository, state: GameState, code: String, moves: Array,
+		token: String, reason: String) -> Dictionary:
+	var needed := 0
+	for move: Dictionary in moves:
+		needed += int(move["count"])
+	if needed == 0:
+		return {}
+	var changes := MilitaryRoster.plan_unit_changes(state, code, moves)
+	if changes.is_empty():
+		return {"error": "personnel ledger cannot apply " + token}
+	return MilitaryRoster.transition(repo, state, token, changes, reason)
+
 
 ## The men still under the banner: `heads` less the dead and the deserted of
 ## a regiment's state `st`, never below 0.
 static func under_arms(heads: int, st: Dictionary) -> int:
-	return maxi(0, heads - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))))
+	return maxi(0, heads - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))) - maxi(0, int(st.get("captured_current", 0))))
+
+## Live people by arm; mixed legacy units attribute unspecified losses proportionally.
+static func personnel_by_arm(repo: DataRepository, state: GameState, realm: String) -> Dictionary:
+	var arms := repo.world_table("military", "unit_types").keys()
+	var counts: Dictionary = {}
+	for arm: String in arms:
+		counts[arm] = 0
+	for regiment: Dictionary in MapObjects.regiments_of(repo, realm, state):
+		var code := String(regiment["regiment_code"])
+		var people := 0
+		if state != null and state.military_rosters.has(code):
+			people = MilitaryRoster.fit(state, code) + MilitaryRoster.count(state, code, "wounded")
+		else:
+			people = under_arms(headcount(repo, regiment), state_of(repo, state, code))
+		var weights: Array = []
+		for arm: String in arms:
+			weights.append(int(float(regiment.get(arm, 0))) * int(repo.world_row("military", "unit_types", arm).get("crew", 0)))
+		var shares := BattleSystem.apportion(weights, people)
+		for i in arms.size():
+			counts[arms[i]] += int(shares[i])
+	return counts
+
 
 ## The men able to fight: `heads` less the wounded, the dead and the deserted
 ## of a regiment's state `st` (a state with no `dead` or `deserted`, an old
 ## save's, has none), never below 0.
 ## The pack's headcount is immutable, so the dead are a count beside it.
 static func fit_heads(heads: int, st: Dictionary) -> int:
-	return maxi(0, heads - maxi(0, int(st.get("wounded", 0))) - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))))
+	return maxi(0, heads - maxi(0, int(st.get("wounded", 0))) - maxi(0, int(st.get("dead", 0))) - maxi(0, int(st.get("deserted", 0))) - maxi(0, int(st.get("captured_current", 0))))
 
 ## A regiment's STRENGTH: its fit men (headcount less the wounded, the dead and the deserted)
 ## per mille of its headcount — what its piece shows (owner 2026-09-30: 满员 / 减员 /
@@ -67,9 +110,8 @@ static func fit_permille(repo: DataRepository, state: GameState, code: String) -
 	var heads := headcount(repo, reg)
 	if heads <= 0:
 		return 0
-	var st := state_of(repo, state, code)
 	@warning_ignore("integer_division")  # whole per-mille
-	return fit_heads(heads, st) * 1000 / heads
+	return personnel_fit(repo, state, code) * 1000 / heads
 
 ## What a regiment starts a campaign with: army_start_supply_days of its use,
 ## in whole supplies rounded UP, so the days in hand read the days it was given
@@ -102,6 +144,8 @@ static func ensure(repo: DataRepository, state: GameState) -> void:
 		var code := String(reg["regiment_code"])
 		if not state.regiments.has(code):
 			state.regiments[code] = starting_state(repo, reg)
+			if state.military_rosters.has(code):
+				MilitaryRoster.sync_projections(state, code)
 			continue
 		# A save written before the march existed has morale but no position:
 		# seat it where the pack put it, standing.
@@ -132,11 +176,15 @@ static func is_foe(state: GameState, code: String) -> bool:
 ## it would start with. Never writes. {} for a regiment that is neither.
 static func state_of(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	if is_foe(state, code):
+		if state.military_rosters.has(code):
+			MilitaryRoster.sync_projections(state, code)
 		return state.foes[code]
 	var reg := regiment(repo, code, state)
 	if reg.is_empty() or String(reg["kingdom_code"]) != repo.resolve_realm("player_realm"):
 		return {}
 	if state != null and state.regiments.has(code):
+		if state.military_rosters.has(code):
+			MilitaryRoster.sync_projections(state, code)
 		return state.regiments[code]
 	return starting_state(repo, reg)
 
@@ -149,7 +197,11 @@ static func state_of(repo: DataRepository, state: GameState, code: String) -> Di
 ## regiment's worth of supply to truncation twice.
 static func supply_use(repo: DataRepository, reg: Dictionary, state: GameState = null) -> int:
 	@warning_ignore("integer_division")  # whole supplies, one rounding at the end
-	return headcount(repo, reg) * int(repo.bal("army_supply_per_head_permille")) \
+	var code := String(reg.get("regiment_code", ""))
+	var people := headcount(repo, reg)
+	if state != null and state.military_rosters.has(code):
+		people = MilitaryRoster.fit(state, code) + MilitaryRoster.count(state, code, "wounded")
+	return people * int(repo.bal("army_supply_per_head_permille")) \
 		* int(height_tier(repo, reg, state)["supply_permille"]) / 1_000_000
 
 ## Wounded who return to the ranks in a month: a share, at least one while
@@ -176,7 +228,11 @@ static func settle_month(repo: DataRepository, state: GameState) -> void:
 		var entry: Dictionary = state.regiments[code]
 		var heads := headcount(repo, reg)
 		var wounded := clampi(int(entry["wounded"]), 0, heads)
-		entry["wounded"] = clampi(wounded - wound_recovery(repo, wounded), 0, heads)
+		var recovery := wound_recovery(repo, wounded)
+		var moved := move_personnel(repo, state, code, [{"from": "wounded", "to": "fit", "count": recovery}],
+			"recovery:%s:%d" % [code, state.tick], "wounded recovered at month's end")
+		if moved.has("error"):
+			continue
 		var use := supply_use(repo, reg, state)
 		if String(reg.get("is_naval", "0")) != "1":
 			# Morale reads the stores in hand as the month turns, after the
@@ -530,8 +586,7 @@ static func power_on(repo: DataRepository, state: GameState, code: String, stanc
 	var st := state_of(repo, state, code)
 	if reg.is_empty() or st.is_empty():
 		return 0
-	var heads := headcount(repo, reg)
-	var fit := fit_heads(heads, st)
+	var fit := personnel_fit(repo, state, code)
 	var realm := realm_of(repo, code, state)
 	return power_of_arms(repo, reg, fit, int(st["training"]), int(st["morale"]), stance, terrain, works,
 		code, 0 if state == null else state.tick, DevelopmentSystem.arm_permille(repo, state, realm))
@@ -554,16 +609,26 @@ static func realm_of(repo: DataRepository, code: String, state: GameState = null
 static func power_of_arms(repo: DataRepository, arms: Dictionary, fit: int, training: int, morale: int,
 		stance: String, terrain: String, works: String, float_code := "", tick := 0,
 		dev_permille: Dictionary = {}) -> int:
+	var people: Dictionary = {}
+	for arm: String in repo.world_table("military", "unit_types"):
+		people[arm] = int(float(arms.get(arm, 0))) * int(repo.world_row("military", "unit_types", arm).get("crew", 0))
+	return power_of_personnel(repo, people, fit, training, morale, stance, terrain, works, float_code, tick, dev_permille)
+
+
+## Supposed forces already expressed in people must not be multiplied by crew again.
+static func power_of_personnel(repo: DataRepository, people: Dictionary, fit: int, training: int, morale: int,
+		stance: String, terrain: String, works: String, float_code := "", tick := 0,
+		dev_permille: Dictionary = {}) -> int:
 	var heads := 0
 	for arm: String in repo.world_table("military", "unit_types"):
-		heads += int(float(arms.get(arm, 0)))
+		heads += int(people.get(arm, 0))
 	if heads <= 0:
 		return 0
 	var training_f := int(repo.bal("army_training_base_permille")) + training * int(repo.bal("army_training_step_permille"))
 	var morale_f := int(repo.bal("army_morale_base_permille")) + morale * int(repo.bal("army_morale_step_permille"))
 	var total := 0
 	for arm: String in repo.world_table("military", "unit_types"):
-		var n := int(float(arms.get(arm, 0)))
+		var n := int(people.get(arm, 0))
 		if n <= 0:
 			continue
 		# Carry precision through the chain (owner 2026-09-17 review): the
@@ -1183,7 +1248,8 @@ static func set_garrison(repo: DataRepository, state: GameState, code: String) -
 ## walks at its own pace along its route (spec 2026-10-07-march-waypoints), else
 ## the straight line. The route goes round ground a column cannot climb and
 ## round water (MarchPath, set when the march is ordered); a fleet's does not.
-static func march_day(repo: DataRepository, state: GameState) -> Array:
+static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1, substep_index := 0,
+		restrict_to_codes := false, allowed_codes: Array = [], daily_budgets: Dictionary = {}) -> Array:
 	ensure(repo, state)
 	var arrived: Array = []
 	# who stands where, the clearance's discs (spec 2026-10-14-unit-clearance-and-
@@ -1194,7 +1260,11 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	codes.sort()
 	for c in codes:
 		var code := String(c)
-		if _march_one(repo, state, code, state.regiments[code], state.absolute_day(), blockers):
+		if restrict_to_codes and not code in allowed_codes:
+			_note_place(blockers, code, state.regiments[code])
+			continue
+		if _march_one(repo, state, code, state.regiments[code], state.absolute_day(), blockers, [], pace_divisor,
+				substep_index, int(daily_budgets.get(code, -1))):
 			var entry: Dictionary = state.regiments[code]
 			var halted_by := String(entry.get("halted_by", ""))
 			if halted_by == "" or not _enemies(blockers, code, halted_by):
@@ -1230,10 +1300,14 @@ static func march_day(repo: DataRepository, state: GameState) -> Array:
 	foes.sort()
 	for c in foes:
 		var code := String(c)
+		if restrict_to_codes and not code in allowed_codes:
+			_note_place(blockers, code, state.foes[code])
+			continue
 		if BattleSystem.battle_of(state, code).is_empty():
 			var fe: Dictionary = state.foes[code]
 			var aim := Vector2i(int(fe.get("dest_x_m", 0)), int(fe.get("dest_y_m", 0)))
-			if _march_one(repo, state, code, fe, state.absolute_day(), blockers):
+			if _march_one(repo, state, code, fe, state.absolute_day(), blockers, [], pace_divisor,
+					substep_index, int(daily_budgets.get(code, -1))):
 				var hb := String(fe.get("halted_by", ""))
 				if hb != "" and not _enemies(blockers, code, hb):
 					_spread_foe(repo, state, code, fe, aim, blockers)
@@ -1457,13 +1531,183 @@ static func _ahead_blockers(repo: DataRepository, state: GameState) -> Dictionar
 ## share of what is left — the metres ahead over the whole days they take at
 ## the day's pace (march_days), rounded up — so an N-day march is covered at
 ## one pace over all N and ends exactly as the Nth day ends.
+static func day_walk_budget(repo: DataRepository, state: GameState, code: String) -> int:
+	var entry: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
+	if entry.is_empty() or String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH:
+		return 0
+	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	var pace := day_march_at(repo, state, code, metres_to_pack(repo, here), state.absolute_day(),
+		int(entry.get("carry_days", -1)))
+	if pace <= 0:
+		return 0
+	var left := MarchRoute.length_from(here, _path_of(entry))
+	var days := int(ceil(float(left) / float(pace)))
+	if days <= 1:
+		return mini(pace, int(ceil(left)))
+	return int(ceil(float(left) / float(days)))
+
+
+## March only the entries saved when this day's movement phase began. A courier
+## or AI route change later in the day must not replace today's order.
+static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor: int,
+		substep_index: int, saved_entries: Dictionary, daily_budgets: Dictionary) -> Array:
+	ensure(repo, state)
+	var arrived: Array = []
+	var blockers := clearance_blockers(repo, state)
+	for table: Dictionary in [state.regiments, state.foes]:
+		var codes: Array = table.keys().filter(func(c: Variant) -> bool: return saved_entries.has(String(c)))
+		codes.sort()
+		for value: Variant in codes:
+			var code := String(value)
+			var current := _entry_of(state, code)
+			if current.is_empty():
+				_note_place(blockers, code, current)
+				continue
+			var saved: Dictionary = saved_entries[code].duplicate(true)
+			if not BattleSystem.battle_of(state, code).is_empty():
+				saved["x_m"] = int(current["x_m"])
+				saved["y_m"] = int(current["y_m"])
+				saved["order"] = ORDER_GARRISON
+				saved_entries[code] = saved
+				_note_place(blockers, code, current)
+				continue
+			var command_changed := int(current.get("order_id", 0)) != int(saved.get("order_id", 0)) \
+				or String(current.get("order", "")) != String(saved.get("order", "")) \
+				or int(current.get("dest_x_m", 0)) != int(saved.get("dest_x_m", 0)) \
+				or int(current.get("dest_y_m", 0)) != int(saved.get("dest_y_m", 0))
+			var budget := int(daily_budgets.get(code, 0))
+			if budget <= 0:
+				_note_place(blockers, code, current)
+				continue
+			var walked_today := int(saved.get("day_walked_m", 0))
+			@warning_ignore("integer_division")
+			var step_budget := budget / maxi(pace_divisor, 1)
+			if substep_index < budget % maxi(pace_divisor, 1):
+				step_budget += 1
+			if substep_index == pace_divisor - 1:
+				step_budget = maxi(step_budget, budget - walked_today)
+			var travelled: Array = []
+			var walked := _march_one(repo, state, code, saved, state.absolute_day(), blockers, [],
+				pace_divisor, substep_index, budget, step_budget, travelled)
+			saved["day_walked_m"] = walked_today + (int(travelled[0]) if not travelled.is_empty() else 0)
+			saved_entries[code] = saved.duplicate(true)
+			if walked:
+				if state.regiments.has(code):
+					var halted_by := String(saved.get("halted_by", ""))
+					if command_changed:
+						current["x_m"] = int(saved["x_m"])
+						current["y_m"] = int(saved["y_m"])
+						if String(current.get("order", "")) == ORDER_GARRISON:
+							current["dest_x_m"] = int(current["x_m"])
+							current["dest_y_m"] = int(current["y_m"])
+							ArmyGround.settle(repo, state, code)
+					else:
+						_publish_march_state(current, saved)
+						if halted_by == "" or not _enemies(blockers, code, halted_by):
+							ArmyGround.settle(repo, state, code,
+								Vector2i(int(saved["x_m"]), int(saved["y_m"])) if halted_by != "" else ArmyGround.NONE)
+						if halted_by != "" and (blockers.get("pos", {}) as Dictionary).has(halted_by):
+							current["facing_deg"] = _facing_to(Vector2i(int(saved["x_m"]), int(saved["y_m"])),
+								(blockers["pos"] as Dictionary)[halted_by])
+						if current.has("hold_after"):
+							var hold: Dictionary = current["hold_after"]
+							current.erase("hold_after")
+							current["facing_deg"] = posmod(int(hold.get("facing", 0)), 360)
+							if int(hold.get("id", 0)) >= int(current.get("stance_order_id", 0)):
+								apply_hold(current, String(hold.get("stance", STANCE_DEFAULT)), -1, int(hold.get("id", 0)))
+						var draft := WarDrafts.of(state, code)
+						if String(draft.get("order", "")) == WarDrafts.GARRISON and not draft.has("hold"):
+							WarDrafts.strike(state, code)
+				else:
+					var aim := Vector2i(int(saved.get("dest_x_m", 0)), int(saved.get("dest_y_m", 0)))
+					var halted_by := String(saved.get("halted_by", ""))
+					if halted_by != "" and not _enemies(blockers, code, halted_by):
+						_spread_foe(repo, state, code, saved, aim, blockers)
+					if command_changed:
+						current["x_m"] = int(saved["x_m"])
+						current["y_m"] = int(saved["y_m"])
+					else:
+						_publish_march_state(current, saved)
+				if state.regiments.has(code):
+					arrived.append(code)
+				if command_changed:
+					_retire_saved_march(saved, current)
+				else:
+					_publish_march_state(saved, current)
+				saved_entries[code] = saved
+			else:
+				if command_changed:
+					current["x_m"] = int(saved["x_m"])
+					current["y_m"] = int(saved["y_m"])
+					if substep_index >= pace_divisor - 1 and String(current.get("order", "")) == ORDER_GARRISON:
+						current["dest_x_m"] = int(current["x_m"])
+						current["dest_y_m"] = int(current["y_m"])
+						ArmyGround.settle(repo, state, code)
+						_retire_saved_march(saved, current)
+				else:
+					_publish_march_state(current, saved)
+			if command_changed and String(current.get("order", "")) == ORDER_MARCH:
+				# Today's saved walk moved the start of tomorrow's newly ordered road.
+				var here := Vector2i(int(current["x_m"]), int(current["y_m"]))
+				var dest := Vector2i(int(current["dest_x_m"]), int(current["dest_y_m"]))
+				var waypoints := MarchRoute.from_pairs(current.get("waypoints_m", []))
+				var route := route_m_of(repo, here, waypoints, dest, is_naval(repo, state, code))
+				if not waypoints.is_empty() or route.size() > 1:
+					current["route_m"] = MarchRoute.to_pairs(route)
+				else:
+					current.erase("route_m")
+			_note_place(blockers, code, current)
+	return arrived
+
+
+static func _entry_of(state: GameState, code: String) -> Dictionary:
+	if state.regiments.has(code):
+		return state.regiments[code]
+	return state.foes.get(code, {})
+
+
+static func _publish_march_state(current: Dictionary, marched: Dictionary) -> void:
+	for key: String in ["x_m", "y_m", "dest_x_m", "dest_y_m", "order", "route_m", "waypoints_m",
+			"waited", "waited_day", "wait_on", "halted_by", "halt_day", "halt_aim_m", "road_blocked_by"]:
+		if marched.has(key):
+			current[key] = marched[key]
+		else:
+			current.erase(key)
+
+
+static func _retire_saved_march(saved: Dictionary, current: Dictionary) -> void:
+	saved["x_m"] = int(current["x_m"])
+	saved["y_m"] = int(current["y_m"])
+	saved["dest_x_m"] = int(current["x_m"])
+	saved["dest_y_m"] = int(current["y_m"])
+	saved["order"] = ORDER_GARRISON
+	_clear_route(saved)
+
+
 static func _march_one(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
-		abs_day: int, blockers: Dictionary = {}, passed_out: Array = []) -> bool:
+		abs_day: int, blockers: Dictionary = {}, passed_out: Array = [], pace_divisor := 1,
+		substep_index := 0, daily_budget := -1, step_budget := -1, travelled_out: Array = []) -> bool:
 	if String(entry.get("order", ORDER_STANDBY)) != ORDER_MARCH or regiment(repo, code, state).is_empty():
 		return false
 	var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
-	var full := day_march_at(repo, state, code, metres_to_pack(repo, here), abs_day,
-		int(entry.get("carry_days", -1)))
+	var divisor := maxi(pace_divisor, 1)
+	var full := 0
+	if step_budget >= 0:
+		full = step_budget
+	elif daily_budget >= 0:
+		@warning_ignore("integer_division") # split the day's route budget over fixed substeps
+		full = daily_budget / divisor
+		if substep_index == divisor - 1:
+			full += daily_budget % divisor
+	else:
+		var daily_pace := day_march_at(repo, state, code, metres_to_pack(repo, here), abs_day,
+			int(entry.get("carry_days", -1)))
+		if daily_pace <= 0:
+			return false
+		@warning_ignore("integer_division") # legacy one-call day movement, or direct substep callers
+		full = daily_pace / divisor
+		if substep_index < daily_pace % divisor:
+			full += 1
 	if full <= 0:
 		return false
 	# along its route when it has one (spec 2026-10-07-march-waypoints), else
@@ -1481,7 +1725,8 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		while true:
 			var left_p := MarchRoute.length_from(here, path)
 			var days_p := int(ceil(left_p / float(full)))
-			var walk_p := left_p if days_p <= 1 else float(mini(full, int(ceil(left_p / float(maxi(days_p, 1))))))
+			var walk_p: int = mini(full, int(ceil(left_p / float(maxi(days_p, 1))))) \
+				if daily_budget < 0 else mini(left_p, full)
 			var verdict := _clearance(repo, state, code, entry, here, path, walk_p, blockers, seed_names)
 			var kind := String(verdict["kind"])
 			if kind == "free":
@@ -1497,6 +1742,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 			path = verdict["path"]
 			seed_names.append_array(verdict["members"])
 			detoured = true
+			entry["day_detoured"] = true
 			passes += 1
 			if passes >= 4:
 				wait_m = 0   # the way round meets one unit after another: it waits
@@ -1505,9 +1751,11 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		# a column that waits two days running for a road that does not clear
 		# stops where it stands (R-C): of two waiting on each other, the later
 		# code; the crown is told (arrival_headline), the AI simply re-plans
-		entry["waited"] = int(entry.get("waited", 0)) + 1
+		if int(entry.get("waited_day", -1)) != abs_day:
+			entry["waited"] = int(entry.get("waited", 0)) + 1
+			entry["waited_day"] = abs_day
 		entry["wait_on"] = waiting_on
-		if int(entry["waited"]) >= 2 and _gives_way(state, code, waiting_on):
+		if int(entry.get("waited", 0)) >= 2 and _gives_way(state, code, waiting_on):
 			_stop_blocked(entry, here, waiting_on)
 			return true
 	else:
@@ -1515,20 +1763,27 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		entry.erase("wait_on")
 	var left := MarchRoute.length_from(here, path)
 	var days := int(ceil(left / float(full)))
-	var step := mini(full, int(ceil(left / float(maxi(days, 1)))))
+	var step: int = mini(full, int(ceil(left / float(maxi(days, 1))))) \
+		if daily_budget < 0 else mini(full, left)
 	if wait_m >= 0:
 		step = mini(step, wait_m)
 		days = maxi(days, 2)    # waiting behind a unit never arrives
-	if days <= 1:
+	var walked := MarchRoute.walk(here, path, step)
+	var at: Vector2i = walked["at"]
+	var after_walk := MarchRoute.length_from(at, walked["path"])
+	travelled_out.append(maxi(0, int(ceil(left - after_walk))))
+	var final_rounding_arrival := daily_budget >= 0 and substep_index == divisor - 1 \
+		and bool(entry.get("finish_today", false)) and not bool(entry.get("day_detoured", false)) \
+		and String(entry.get("halted_by", "")).is_empty() and after_walk <= float(divisor)
+	if wait_m < 0 and (left <= full or after_walk <= 1.0 or final_rounding_arrival):
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
 		entry["order"] = ORDER_GARRISON          # arrived: it holds the ground it was sent to
 		_clear_route(entry)
 		passed_out.append_array(path)
 		return true
-	var walked := MarchRoute.walk(here, path, step)
-	entry["x_m"] = (walked["at"] as Vector2i).x
-	entry["y_m"] = (walked["at"] as Vector2i).y
+	entry["x_m"] = at.x
+	entry["y_m"] = at.y
 	passed_out.append_array(walked["passed"])
 	if entry.has("route_m") or detoured:
 		# new arrays, never the old ones cut: a preview walks a shallow copy

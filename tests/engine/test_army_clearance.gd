@@ -614,34 +614,80 @@ func _within_at_start(r: DataRepository, s: GameState) -> Array:
 ## --- a host at its target is spread round it, not queued down the road (R-B) -------
 
 func test_a_besieging_host_stands_at_the_town_within_days_of_sitting_down() -> void:
-	var checked := 0
-	for seed_value in [11, 42, 7]:
-		var repo2 := SuiteData.repo()
-		Weather.forget()
-		var engine := TickEngine.new(repo2)
-		var s := Play.opened(repo2, engine, seed_value)
-		var sat := {}              # host -> the day it sat down
-		var seed_checked := 0
-		for d in 150:
-			Play.day(engine, s)
-			for h: String in EnemyAi.host_codes(s):
-				var mind: Dictionary = s.ai_hosts[h]
-				if String(mind["mode"]) != "SIEGE":
-					sat.erase(h)
-					continue
-				if not sat.has(h):
-					sat[h] = s.absolute_day()
-				if s.absolute_day() - int(sat[h]) < 3:
-					continue
-				var town := String(mind["target_id"])
-				for c: String in EnemyAi.live_regiments(repo2, s, h):
-					assert_true(SiegeSystem.at_town(repo2, s, c, town),
-						"seed %d: %s of %s stands at %s three days into the siege" % [seed_value, c, h, town])
-				seed_checked += 1
-			if seed_checked >= 3:
-				break
-		checked += seed_checked
-	assert_gt(checked, 0, "a host sat down to a siege on one of the seeds")
+	_pace(100)
+	var host := Play.host(repo, "main")
+	var definition: Dictionary = {}
+	for row: Dictionary in repo.raid_hosts:
+		if String(row["host_code"]) == host:
+			definition = row
+	assert_false(definition.is_empty())
+	if definition.is_empty():
+		return
+	var cavalry: Array = []
+	for code: String in EnemyAi.host_units(repo, null, definition):
+		if MapObjects.regiment_arm(repo, ArmySystem.regiment(repo, code)) == "cavalry":
+			cavalry.append(code)
+	cavalry.sort()
+	assert_false(cavalry.is_empty())
+	if cavalry.is_empty():
+		return
+	var reach := int(repo.bal("army_spread_reach_m"))
+	var radius := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, cavalry[0]))
+	var pitch := radius * 2 + 1
+	@warning_ignore("integer_division")
+	var needed := reach / pitch + 2
+	assert_gte(cavalry.size(), needed, "enough columns to queue beyond the spread reach")
+	if cavalry.size() < needed:
+		return
+	cavalry = cavalry.slice(0, needed)
+	var garrison := String(_mine()[0])
+	for disable_spread: bool in [true, false]:
+		var keep: Array = [garrison]
+		keep.append_array(cavalry)
+		var state := _alone(keep)
+		var towns := TownStores.realm_towns(repo, state)
+		towns.sort()
+		assert_false(towns.is_empty())
+		if towns.is_empty():
+			return
+		var town := String(towns[0])
+		var centre := Play.town_m(repo, town)
+		state.town_seat.clear()
+		_stand(state, garrison, centre)
+		state.regiments[garrison]["order"] = ArmySystem.ORDER_GARRISON
+		state.town_seat[town] = garrison
+		state.ai_hosts = {host: {"mode": EnemyAi.MODE_SIEGE,
+			"target_kind": EnemyAi.KIND_TOWN, "target_id": town}}
+		for i in cavalry.size():
+			var code := String(cavalry[i])
+			_foe(state, code, centre + Vector2i(pitch * (i + 1), 0))
+			state.foes[code]["host"] = host
+		assert_false(SiegeSystem.at_town(repo, state, String(cavalry.back()), town),
+			"the approach queue initially extends beyond the town's spread reach")
+		assert_eq(_within_at_start(repo, state), [], "the fixture starts without overlapping units")
+		# Disable movement's spreading only; both runs use the same final acceptance radius.
+		if disable_spread:
+			repo.balance["army_spread_reach_m"] = 0
+		for day in 3:
+			EnemyAi.march_host(repo, state, host)
+			_day(state)
+		repo.balance["army_spread_reach_m"] = reach
+		var outside := 0
+		for code: String in cavalry:
+			if not SiegeSystem.at_town(repo, state, code, town):
+				outside += 1
+		if disable_spread:
+			assert_gt(outside, 0, "without spreading, the approach queue remains outside")
+			continue
+		assert_eq(outside, 0, "every besieging column reaches the town within three days")
+		assert_eq(_within_at_start(repo, state), [], "spread columns preserve clearance")
+		var settled: Dictionary = {}
+		for code: String in cavalry:
+			settled[code] = _at(state, code)
+		EnemyAi.march_host(repo, state, host)
+		_day(state)
+		for code: String in cavalry:
+			assert_eq(_at(state, code), settled[code], "refreshed host orders preserve its camp")
 
 
 func test_a_detour_then_an_enemy_halt_keeps_the_drawn_corners() -> void:

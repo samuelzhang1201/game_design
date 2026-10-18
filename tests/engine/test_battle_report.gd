@@ -107,6 +107,15 @@ func _round_events(events: Array) -> Array:
 	return events.filter(func(e: Dictionary) -> bool: return String(e["kind"]) == "round")
 
 
+## Report tests choose auto-confirm explicitly so the complete day's output can
+## be inspected without the encounter UI.
+func _advance_day_auto(engine: TickEngine, state: GameState) -> void:
+	var result := engine.resolve_day(state)
+	while String(result["status"]) == "blocked":
+		DayResolution.acknowledge(state.day_resolution, String(result["decision"]["token"]), "continue")
+		result = engine.resolve_day(state)
+
+
 ## --- the hook ---------------------------------------------------------------
 
 func test_battle_day_writes_one_missive() -> void:
@@ -114,7 +123,7 @@ func test_battle_day_writes_one_missive() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	assert_false(engine.day_battles.is_empty(), "the day's battle events are kept")
 	var letters := _battle_letters(s)
 	assert_eq(letters.size(), 1, "one letter")
@@ -122,7 +131,7 @@ func test_battle_day_writes_one_missive() -> void:
 	assert_eq(String(letters[0]["subject"]["kind"]), "regiment")
 	assert_eq(String(letters[0]["subject"]["code"]), String(m[1]))
 	# the next day the battle goes on: its own letter, still one
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	assert_eq(_battle_letters(s).size(), 2, "a letter a day while it is fought")
 
 
@@ -140,7 +149,7 @@ func test_two_battles_in_a_day_are_one_letter() -> void:
 	_foe(s, theirs[0], _spot(s, mine[0]) + Vector2i(1000, 0))
 	_foe(s, theirs[1], _spot(s, mine[0]) + far + Vector2i(1000, 0))
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	assert_eq(s.battles.size(), 2, "two battles")
 	assert_eq(_round_events(engine.day_battles).size(), 2)
 	assert_eq(_battle_letters(s).size(), 1, "one letter for the day")
@@ -150,7 +159,7 @@ func test_calm_day_writes_nothing() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var engine := TickEngine.new(repo)
 	var before := s.missives.size()
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	assert_true(engine.day_battles.is_empty())
 	assert_eq(_battle_letters(s).size(), 0)
 	var added: Array = s.missives.slice(before).map(func(x: Dictionary) -> String: return String(x["kind"]))
@@ -168,7 +177,7 @@ func test_a_delivered_stance_takes_hold_the_day_the_courier_lands() -> void:
 	assert_eq(s.couriers.size(), 1)
 	var engine := TickEngine.new(repo)
 	for day in int(repo.bal("courier_max_days")):
-		engine.advance_day(s)
+		_advance_day_auto(engine, s)
 		if s.couriers.is_empty():
 			break
 	assert_true(s.couriers.is_empty(), "delivered")
@@ -183,7 +192,7 @@ func test_report_numbers_come_from_the_engine() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	var round_ev: Dictionary = _round_events(engine.day_battles)[0]
 	var results: Dictionary = round_ev["results"]
 	assert_eq(results.size(), 2)
@@ -212,7 +221,7 @@ func test_every_morale_change_carries_a_reason() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	var round_ev: Dictionary = _round_events(engine.day_battles)[0]
 	var text := _text_of(_battle_letters(s)[0])
 	var changed := 0
@@ -233,7 +242,7 @@ func test_a_regiment_that_leaves_is_named_with_why() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	var ends: Array = engine.day_battles.filter(func(e: Dictionary) -> bool: return String(e["kind"]) == "end")
 	assert_eq(ends.size(), 1, "a rout ends it")
 	var text := _text_of(_battle_letters(s)[0])
@@ -257,7 +266,7 @@ func test_the_letter_gives_no_exact_foe_figure() -> void:
 	var s: GameState = m[0]
 	var f := String(m[2])
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	var round_ev: Dictionary = _round_events(engine.day_battles)[0]
 	var fr: Dictionary = round_ev["results"][f]
 	var text := _text_of(_battle_letters(s)[0])
@@ -304,7 +313,7 @@ func test_report_text_uses_templates_and_no_realm_names() -> void:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	var letter: Dictionary = _battle_letters(s)[0]
 	var text := _text_of(letter)
 	assert_false(text.contains("{") or text.contains("[missing") or text.contains("%"), text)
@@ -323,7 +332,7 @@ func _ending_text(rout: String) -> Array:
 	var m := _meeting()
 	var s: GameState = m[0]
 	var engine := TickEngine.new(repo)
-	engine.advance_day(s)
+	_advance_day_auto(engine, s)
 	var end: Dictionary = engine.day_battles.filter(func(e: Dictionary) -> bool: return String(e["kind"]) == "end")[0]
 	var place := BattleSystem.place_label(repo, s, end)
 	return [_text_of(_battle_letters(s)[0]), place, int(end["rounds"])]
@@ -383,8 +392,7 @@ func test_under_arms_does_not_count_the_dead() -> void:
 	var code: String = _mine()[0]
 	var reg := ArmySystem.regiment(repo, code)
 	var heads := ArmySystem.headcount(repo, reg)
-	s.regiments[code]["dead"] = 123
-	s.regiments[code]["wounded"] = 45
+	SuiteData.set_losses(s, code, {"dead": 123, "wounded": 45})
 	var card := MapObjects.army_card(repo, code, s)
 	var under := ""
 	for st: Dictionary in card["stats"]:

@@ -1,0 +1,10 @@
+{
+  "before": {
+    "elapsed_us": 1537694,
+    "state_hash": "b96459ad65485f3a52de30289bddb6319ec38b176db4b1dff324edd2586bfb0f"
+  },
+  "after": {
+    "elapsed_us": 564535,
+    "state_hash": "b96459ad65485f3a52de30289bddb6319ec38b176db4b1dff324edd2586bfb0f"
+  }
+}

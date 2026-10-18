@@ -94,6 +94,7 @@ func test_an_empty_banner_reads_no_power_no_pace_and_no_days() -> void:
 	var row: Dictionary = state.army_roster[code]
 	for arm in ["infantry", "archers", "cavalry", "artillery", "fleet"]:
 		row[arm] = "0"   # day_step_m is 0 only for an empty banner (base_pace_km 0)
+	SuiteData.set_headcount(state, code, 0)
 	var r := WarGround.reading(repo, state, at, code)
 	var g: Dictionary = r["regiment"]
 	assert_eq(int(g["defend"]), 0)

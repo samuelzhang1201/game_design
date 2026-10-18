@@ -179,6 +179,29 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 	return events
 
 
+## Apply only the advancing host's arrival response after a tactical movement
+## substep. Daily feeding, retreat checks and thinking remain in step_day.
+static func arrival_substep(repo: DataRepository, state: GameState) -> Array:
+	var events: Array = []
+	for code: String in host_codes(state):
+		var mind: Dictionary = state.ai_hosts[code]
+		if String(mind.get("mode", "")) != MODE_ADVANCE or String(mind.get("target_id", "")) == "":
+			continue
+		var next := arrival_mode(repo, state, code)
+		if next == ARRIVAL_RETHINK:
+			mind["target_kind"] = ""
+			mind["target_id"] = ""
+			mind["think_day"] = 0
+			_stand_aside(repo, state, code)
+		elif next == ARRIVAL_LOST:
+			mind["target_kind"] = ""
+			mind["target_id"] = ""
+			mind["think_day"] = 0
+		elif next != "":
+			set_mode(state, code, next, _arrival_why(next), events)
+	return events
+
+
 ## Every host's code, in dictionary order.
 static func host_codes(state: GameState) -> Array:
 	var codes: Array = state.ai_hosts.keys()

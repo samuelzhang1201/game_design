@@ -1,0 +1,126 @@
+{
+  "checks": {
+    "both_realms_trains_tested": true,
+    "brackmoor_royal_train:estimated_source": true,
+    "brackmoor_royal_train:explanation": true,
+    "brackmoor_royal_train:saved_garrison": true,
+    "corwyn_royal_train:estimated_source": true,
+    "corwyn_royal_train:explanation": true,
+    "corwyn_royal_train:saved_garrison": true,
+    "farhold_royal_train:estimated_source": true,
+    "farhold_royal_train:explanation": true,
+    "farhold_royal_train:saved_garrison": true,
+    "irongate_royal_train:estimated_source": true,
+    "irongate_royal_train:explanation": true,
+    "irongate_royal_train:saved_garrison": true,
+    "kelvarn_royal_train:estimated_source": true,
+    "kelvarn_royal_train:explanation": true,
+    "kelvarn_royal_train:saved_garrison": true,
+    "legacy_load_accepted": true,
+    "load_error_empty": true,
+    "repeated_load_accepted": true,
+    "repeated_load_identical_hash": true,
+    "source_save_bytes_unchanged": true,
+    "state_replaced_on_success": true,
+    "valmoor_royal_train:estimated_source": true,
+    "valmoor_royal_train:explanation": true,
+    "valmoor_royal_train:saved_garrison": true,
+    "yorwald_royal_train:estimated_source": true,
+    "yorwald_royal_train:explanation": true,
+    "yorwald_royal_train:saved_garrison": true
+  },
+  "passed": true,
+  "trains": [
+    {
+      "personnel": 568,
+      "source": {
+        "arm": "artillery",
+        "crew_per_element": 8,
+        "equipment_count": 71,
+        "origin_basis": "estimated_saved_garrison",
+        "origin_reason": "original pooled sources unrecorded; origin estimated from saved garrison province coclifnal",
+        "province_code": "coclifnal",
+        "regiment_code": "brackmoor_royal_train"
+      },
+      "unit": "brackmoor_royal_train"
+    },
+    {
+      "personnel": 1704,
+      "source": {
+        "arm": "artillery",
+        "crew_per_element": 8,
+        "equipment_count": 213,
+        "origin_basis": "estimated_saved_garrison",
+        "origin_reason": "original pooled sources unrecorded; origin estimated from saved garrison province berland",
+        "province_code": "berland",
+        "regiment_code": "corwyn_royal_train"
+      },
+      "unit": "corwyn_royal_train"
+    },
+    {
+      "personnel": 1112,
+      "source": {
+        "arm": "artillery",
+        "crew_per_element": 8,
+        "equipment_count": 139,
+        "origin_basis": "estimated_saved_garrison",
+        "origin_reason": "original pooled sources unrecorded; origin estimated from saved garrison province totleters",
+        "province_code": "totleters",
+        "regiment_code": "farhold_royal_train"
+      },
+      "unit": "farhold_royal_train"
+    },
+    {
+      "personnel": 2880,
+      "source": {
+        "arm": "artillery",
+        "crew_per_element": 8,
+        "equipment_count": 360,
+        "origin_basis": "estimated_saved_garrison",
+        "origin_reason": "original pooled sources unrecorded; origin estimated from saved garrison province stotreso",
+        "province_code": "stotreso",
+        "regiment_code": "irongate_royal_train"
+      },
+      "unit": "irongate_royal_train"
+    },
+    {
+      "personnel": 600,
+      "source": {
+        "arm": "artillery",
+        "crew_per_element": 8,
+        "equipment_count": 75,
+        "origin_basis": "estimated_saved_garrison",
+        "origin_reason": "original pooled sources unrecorded; origin estimated from saved garrison province walbover",
+        "province_code": "walbover",
+        "regiment_code": "kelvarn_royal_train"
+      },
+      "unit": "kelvarn_royal_train"
+    },
+    {
+      "personnel": 80,
+      "source": {
+        "arm": "artillery",
+        "crew_per_element": 8,
+        "equipment_count": 10,
+        "origin_basis": "estimated_saved_garrison",
+        "origin_reason": "original pooled sources unrecorded; origin estimated from saved garrison province penkleighia",
+        "province_code": "penkleighia",
+        "regiment_code": "valmoor_royal_train"
+      },
+      "unit": "valmoor_royal_train"
+    },
+    {
+      "personnel": 808,
+      "source": {
+        "arm": "artillery",
+        "crew_per_element": 8,
+        "equipment_count": 101,
+        "origin_basis": "estimated_saved_garrison",
+        "origin_reason": "original pooled sources unrecorded; origin estimated from saved garrison province bolingley",
+        "province_code": "bolingley",
+        "regiment_code": "yorwald_royal_train"
+      },
+      "unit": "yorwald_royal_train"
+    }
+  ]
+}

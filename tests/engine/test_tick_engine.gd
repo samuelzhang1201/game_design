@@ -182,8 +182,6 @@ func test_days_step_works_and_the_thirtieth_is_a_tick() -> void:
 	for i in Calendar.DAYS_PER_TICK - 1 - need:
 		assert_eq(engine.advance_day(s), [])
 	assert_eq(s.day, Calendar.DAYS_PER_TICK)
-	assert_eq(engine.advance_day(s), [], "the day does not pass the tick's end on its own")
-	assert_eq(s.day, Calendar.DAYS_PER_TICK)
 	var r := engine.advance(s)
 	assert_eq(s.tick, 2)
 	assert_eq(s.day, 1)

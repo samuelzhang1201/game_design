@@ -1,11 +1,15 @@
 class_name GameState
 extends RefCounted
 
+static var last_campaign_error: String = ""
+
 var tick: int = 0
 ## The day within the tick, 1..Calendar.DAYS_PER_TICK (owner 2026-09-13:
 ## the smallest unit of time is a day; the clock advances it, and the
 ## thirtieth day's end is the tick). Saved; an old save loads at day 1.
 var day: int = 1
+## A resumable daily settlement. Empty outside an in-flight day.
+var day_resolution: Dictionary = {}
 var rng: Rng
 var metrics: Dictionary = {}
 var characters: Dictionary = {}
@@ -74,6 +78,7 @@ static func default_metrics(data: DataRepository = null) -> Dictionary:
 	}
 
 static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
+	last_campaign_error = ""
 	var s := GameState.new()
 	s.map_id = data.map_id
 	s.rng = Rng.new(seed_value)
@@ -86,9 +91,16 @@ static func new_campaign(data: DataRepository, seed_value: int) -> GameState:
 	WorldLedger.seed_metrics(data, s)
 	# The army as its units (spec 2026-10-07-army-split-and-ground §3).
 	var split := ArmySplit.split(data)
+	if not (split.get("errors", []) as Array).is_empty():
+		last_campaign_error = str(split["errors"])
+		return null
 	s.army_roster = split["roster"]
 	s.town_seat = split["seats"]
 	ArmySystem.ensure(data, s)
+	var military := MilitaryMigration.ensure(data, s)
+	if military.has("error"):
+		last_campaign_error = String(military["error"])
+		return null
 	# The raid hosts stand at their assembly points until their day (spec
 	# 2026-10-07-enemy-ai-and-battle §2): foes, not regiments.
 	for host: Dictionary in data.raid_hosts:
@@ -360,6 +372,14 @@ var foe_next_id := 0
 ## the pack once, as the campaign starts (ArmySplit); read through
 ## ArmySystem.roster / regiment, never directly.
 var army_roster: Dictionary = {}
+## Personnel have one source of truth, independent of equipment elements.
+var military_rosters: Dictionary = {}
+var military_cohorts: Dictionary = {}
+var military_events: Dictionary = {}
+var military_conflicts: Array = []
+var military_organization_version: int = 0
+var military_migration_pending: bool = false
+var military_unit_aliases: Dictionary = {}
 ## town code -> the one unit holding its seat (ArmyGround, spec §4.4).
 var town_seat: Dictionary = {}
 ## The couriers on the road (owner 2026-09-27, CourierSystem): an Array of
@@ -429,7 +449,7 @@ var grievance: Dictionary = {}
 ## conduct news key -> the month index it was last told (once-only marks).
 var conduct_marks: Dictionary = {}
 
-const SAVE_VERSION := 6
+const SAVE_VERSION := 7
 ## The oldest save this build loads (spec 2026-10-07-army-split-and-ground
 ## §2.3): a save from before the split names regiments that no longer exist.
 const MIN_SAVE_VERSION := 6
@@ -440,7 +460,7 @@ func to_dict() -> Dictionary:
 		chars[id] = characters[id].to_dict()
 	return {
 		"version": SAVE_VERSION, "map_id": map_id,
-		"tick": _encode_values(tick), "day": _encode_values(day), "rng": rng.to_dict(),
+		"tick": _encode_values(tick), "day": _encode_values(day), "day_resolution": _encode_values(day_resolution.duplicate(true)), "rng": rng.to_dict(),
 		"metrics": _encode_values(metrics.duplicate()),
 		"characters": chars, "council": council.duplicate(),
 		"relationships": _encode_values(relationships.duplicate(true)),
@@ -480,6 +500,13 @@ func to_dict() -> Dictionary:
 		"sightings": _encode_values(sightings.duplicate(true)),
 		"scout_log": _encode_values(scout_log.duplicate(true)),
 		"foe_next_id": _encode_values(foe_next_id),
+		"military_rosters": _encode_values(military_rosters),
+		"military_cohorts": _encode_values(military_cohorts),
+		"military_events": _encode_values(military_events),
+		"military_conflicts": _encode_values(military_conflicts),
+		"military_organization_version": military_organization_version,
+		"military_migration_pending": military_migration_pending,
+		"military_unit_aliases": military_unit_aliases.duplicate(true),
 		"army_roster": army_roster.duplicate(true), "town_seat": town_seat.duplicate(true),
 		"couriers": _encode_values(couriers.duplicate(true)),
 		"war_drafts": _encode_values(war_drafts.duplicate(true)),
@@ -520,6 +547,7 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.map_id = String(d.get("map_id", ""))
 	s.tick = int(_decode_values(d["tick"]))
 	s.day = clampi(int(_decode_values(d.get("day", 1))), 1, Calendar.DAYS_PER_TICK)
+	s.day_resolution = _decode_values(d.get("day_resolution", {}))
 	s.rng = Rng.from_dict(d["rng"])
 	s.metrics = _decode_values(d["metrics"])
 	# A save written before a metric existed carries no key for it — the
@@ -586,7 +614,17 @@ static func from_dict(d: Dictionary, invalidate := true) -> GameState:
 	s.sightings = _decode_values(d.get("sightings", {}))
 	s.scout_log = _decode_values(d.get("scout_log", {}))
 	s.foe_next_id = int(_decode_values(d.get("foe_next_id", 0)))
+	s.military_rosters = _decode_values(d.get("military_rosters", {}))
+	s.military_cohorts = _decode_values(d.get("military_cohorts", {}))
+	s.military_events = _decode_values(d.get("military_events", {}))
+	s.military_conflicts = _decode_values(d.get("military_conflicts", []))
+	s.military_organization_version = int(d.get("military_organization_version", 0))
+	s.military_migration_pending = bool(d.get("military_migration_pending", false))
+	s.military_unit_aliases = (d.get("military_unit_aliases", {}) as Dictionary).duplicate(true)
 	s.army_roster = (d.get("army_roster", {}) as Dictionary).duplicate(true)
+	for row: Dictionary in s.army_roster.values():
+		if row.has("source_parts"):
+			row["source_parts"] = _whole(row["source_parts"])
 	s.town_seat = (d.get("town_seat", {}) as Dictionary).duplicate(true)
 	# Saves from before the couriers carry neither key: no one is on the road.
 	s.couriers = _decode_values(d.get("couriers", []))

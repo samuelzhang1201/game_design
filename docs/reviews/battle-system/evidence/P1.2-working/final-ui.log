@@ -1,0 +1,2689 @@
+ERROR: Error loading GDExtension configuration file: 'res://addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension'.
+   at: parse_gdextension_file (core/extension/gdextension_library_loader.cpp:282)
+ERROR: GDExtension dynamic library not found: 'res://addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension'.
+   at: open_library (core/extension/gdextension.cpp:810)
+ERROR: Error loading extension: 'res://addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension'.
+   at: load_extensions (core/extension/gdextension_manager.cpp:333)
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Started Project initialization (5 steps)[39m[0m
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Scanning file structure...[39m[0m
+[  16% ] [90m[1mfirst_scan_filesystem[22m | Loading global class names...[39m[0m
+[  33% ] [90m[1mfirst_scan_filesystem[22m | Verifying GDExtensions...[39m[0m
+[  50% ] [90m[1mfirst_scan_filesystem[22m | Creating autoload scripts...[39m[0m
+[  66% ] [90m[1mfirst_scan_filesystem[22m | Initializing plugins...[39m[0m
+[38;2;255;99;71m[1mGDAIMCP::ERROR::[22m Binary files for GDAI MCP plugin are missing, so the plugin wont be loaded. Please re-install the plugin from [url=https://gdaimcp.com]https://gdaimcp.com or disable the plugin in Project Settings.[39m[0m
+[  83% ] [90m[1mfirst_scan_filesystem[22m | Starting file scan...[39m[0m
+[92m[ DONE ][39m [1mfirst_scan_filesystem[22m
+[0m
+[   0% ] [90m[1m_update_scan_actions[22m | Started Scanning actions... (7 steps)[39m[0m
+[   0% ] [90m[1m_update_scan_actions[22m | balance.csv[39m[0m
+[  12% ] [90m[1m_update_scan_actions[22m | character_traits.csv[39m[0m
+[  25% ] [90m[1m_update_scan_actions[22m | council_seats.csv[39m[0m
+[  37% ] [90m[1m_update_scan_actions[22m | founding_council.csv[39m[0m
+[  50% ] [90m[1m_update_scan_actions[22m | policy_actions_court_additions.csv[39m[0m
+[  62% ] [90m[1m_update_scan_actions[22m | tables.csv[39m[0m
+[  75% ] [90m[1m_update_scan_actions[22m | bad_balance.csv[39m[0m
+[92m[ DONE ][39m [1m_update_scan_actions[22m
+[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Started Loading editor (5 steps)[39m[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Loading editor layout...[39m[0m
+[  16% ] [90m[1mloading_editor_layout[22m | Loading docks...[39m[0m
+[  33% ] [90m[1mloading_editor_layout[22m | Reopening scenes...[39m[0m
+[  50% ] [90m[1mloading_editor_layout[22m | Loading central editor layout...[39m[0m
+[  66% ] [90m[1mloading_editor_layout[22m | Loading plugin window layout...[39m[0m
+[  83% ] [90m[1mloading_editor_layout[22m | Editor layout ready.[39m[0m
+[92m[ DONE ][39m [1mloading_editor_layout[22m
+[0m
+WARNING: 1 RID of type "CanvasItem" was leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2733)
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: 1 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+ERROR: Error loading GDExtension configuration file: 'res://addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension'.
+   at: parse_gdextension_file (core/extension/gdextension_library_loader.cpp:282)
+ERROR: GDExtension dynamic library not found: 'res://addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension'.
+   at: open_library (core/extension/gdextension.cpp:810)
+ERROR: Error loading extension: 'res://addons/gdai-mcp-plugin-godot/gdai_mcp_plugin.gdextension'.
+   at: load_extensions (core/extension/gdextension_manager.cpp:333)
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[1m[INFO]:  [0musing [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+[4m
+
+res://tests/ui/test_army_multi_select.gd
+[0m* test_shift_click_adds_and_removes
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] _view (res://tests/ui/test_army_multi_select.gd:39)
+         [1] test_shift_click_adds_and_removes (res://tests/ui/test_army_multi_select.gd:161)
+         [2] _run_test (res://addons/gut/gut.gd:587)
+         [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+         [4] test_scripts (res://addons/gut/gut.gd:994)
+         [5] run_tests (res://addons/gut/gui/GutRunner.gd:186)
+         [6] _run_tests (res://addons/gut/cli/gut_cli.gd:220)
+         [7] main (res://addons/gut/cli/gut_cli.gd:266)
+         [8] _init (res://addons/gut/gut_cmdln.gd:39)
+WARNING: Map3DWorldLoader: user://gut_run_98572/army_multi_select/test_army_multi_select_world.tscn has no manifest.json (a build from before 2026-09-20)
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] warn_once (res://scripts/map3d/map3d_world_loader.gd:176)
+         [1] status (res://scripts/map3d/map3d_world_loader.gd:85)
+         [2] lend (res://scripts/map3d/map3d_world_cache.gd:29)
+         [3] _load_world (res://scripts/map3d/map3d_view.gd:234)
+         [4] load_step (res://scripts/map3d/map3d_view.gd:225)
+         [5] _load (res://scripts/map3d/map3d_view.gd:215)
+         [6] activate (res://scripts/map3d/map3d_view.gd:193)
+         [7] _view (res://tests/ui/test_army_multi_select.gd:41)
+         [8] test_shift_click_adds_and_removes (res://tests/ui/test_army_multi_select.gd:161)
+         [9] _run_test (res://addons/gut/gut.gd:587)
+         [10] _test_the_scripts (res://addons/gut/gut.gd:780)
+         [11] test_scripts (res://addons/gut/gut.gd:994)
+         [12] run_tests (res://addons/gut/gui/GutRunner.gd:186)
+         [13] _run_tests (res://addons/gut/cli/gut_cli.gd:220)
+         [14] main (res://addons/gut/cli/gut_cli.gd:266)
+         [15] _init (res://addons/gut/gut_cmdln.gd:39)
+WARNING: Map3DView: user://gut_run_98572/army_multi_select/rivers.json is missing — the 3D map draws no rivers (rebuild: tools/map3d/build_pack.sh)
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] warn_once (res://scripts/map3d/map3d_world_loader.gd:176)
+         [1] arrays_for (res://scripts/map3d/map3d_layer_rivers.gd:66)
+         [2] build (res://scripts/map3d/map3d_layer_rivers.gd:80)
+         [3] build_layers (res://scripts/map3d/map3d_layer_bake.gd:129)
+         [4] _load_lines (res://scripts/map3d/map3d_view.gd:273)
+         [5] load_step (res://scripts/map3d/map3d_view.gd:228)
+         [6] _load (res://scripts/map3d/map3d_view.gd:216)
+         [7] activate (res://scripts/map3d/map3d_view.gd:193)
+         [8] _view (res://tests/ui/test_army_multi_select.gd:41)
+         [9] test_shift_click_adds_and_removes (res://tests/ui/test_army_multi_select.gd:161)
+         [10] _run_test (res://addons/gut/gut.gd:587)
+         [11] _test_the_scripts (res://addons/gut/gut.gd:780)
+         [12] test_scripts (res://addons/gut/gut.gd:994)
+         [13] run_tests (res://addons/gut/gui/GutRunner.gd:186)
+         [14] _run_tests (res://addons/gut/cli/gut_cli.gd:220)
+         [15] main (res://addons/gut/cli/gut_cli.gd:266)
+         [16] _init (res://addons/gut/gut_cmdln.gd:39)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m1.0 new orphan in test.
+* test_shift_drag_box_selects_the_units_inside
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] _view (res://tests/ui/test_army_multi_select.gd:39)
+         [1] test_shift_drag_box_selects_the_units_inside (res://tests/ui/test_army_multi_select.gd:194)
+         [2] _run_test (res://addons/gut/gut.gd:587)
+         [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_one_march_sends_a_courier_to_each
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] _view (res://tests/ui/test_army_multi_select.gd:39)
+         [1] test_one_march_sends_a_courier_to_each (res://tests/ui/test_army_multi_select.gd:231)
+         [2] _run_test (res://addons/gut/gut.gd:587)
+         [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m7.0 new orphans in test.
+* test_mixed_selection_sends_what_it_can
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] _view (res://tests/ui/test_army_multi_select.gd:39)
+         [1] test_mixed_selection_sends_what_it_can (res://tests/ui/test_army_multi_select.gd:294)
+         [2] _run_test (res://addons/gut/gut.gd:587)
+         [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m6.0 new orphans in test.
+* test_an_empty_shift_box_closes_the_card
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] _view (res://tests/ui/test_army_multi_select.gd:39)
+         [1] test_an_empty_shift_box_closes_the_card (res://tests/ui/test_army_multi_select.gd:362)
+         [2] _run_test (res://addons/gut/gut.gd:587)
+         [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m1.0 new orphan in test.
+* test_a_plain_drag_after_a_lost_shift_release_pans
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] _view (res://tests/ui/test_army_multi_select.gd:39)
+         [1] test_a_plain_drag_after_a_lost_shift_release_pans (res://tests/ui/test_army_multi_select.gd:388)
+         [2] _run_test (res://addons/gut/gut.gd:587)
+         [3] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m[Orphans]:  [0m1.0 new orphan in script.
+[1m6/6 passed.
+[0m[4m
+
+res://tests/ui/test_army_order_menu.gd
+[0m* test_the_menu_offers_exactly_the_rows_in_the_table
+* test_camped_and_seated_units_offer_only_march_and_supply
+* test_removed_behaviour_menu_ids_cannot_send_orders
+* test_choosing_march_only_AIMS_it_and_gives_the_map_the_word
+* test_a_row_chosen_the_way_PopupMenu_chooses_it_still_takes
+* test_an_order_on_a_stopped_clock_does_not_start_it
+* test_the_next_click_on_the_ground_sends_it_on_commit
+* test_a_click_on_the_ground_with_nothing_aimed_orders_nothing
+* test_an_order_the_engine_would_refuse_is_greyed_out_with_its_reason
+* test_a_row_that_can_be_paid_for_is_live_and_says_what_it_does
+* test_the_order_is_charged_like_every_other
+* test_the_destination_click_only_ASKS
+* test_cancel_gives_the_march_up
+* test_a_click_away_from_the_confirm_leaves_it_and_escape_gives_it_up
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_march_is_greyed_out_while_time_runs
+* test_starting_the_clock_withdraws_an_aim
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_end_ring_edits_or_halts_the_march
+* test_the_commit_row_confirms_the_order_and_names_the_fee
+* test_the_route_menu_is_paused_only
+* test_a_fleets_route_menus_promise_no_courier
+* test_the_confirm_opens_where_the_ground_was_clicked
+* test_aim_for_arms_a_march_on_a_paused_clock
+* test_aim_for_refuses_while_time_runs_and_arms_nothing
+* test_aim_for_then_ground_then_commit_runs_the_march
+* test_escape_lets_a_shown_maps_selection_go_but_a_hidden_map_keeps_it
+* test_a_unit_round_a_town_opens_its_own_orders_not_a_list
+* test_add_waypoint_aims_on_and_confirm_sends_the_route
+[33m    [Orphans]:  [0m25.0 new orphans in test.
+* test_a_load_chosen_on_the_confirm_rides_before_the_march
+* test_a_bend_into_the_sea_is_put_back
+[33m    [Orphans]:  [0m25.0 new orphans in test.
+* test_a_supply_town_chosen_on_the_confirm_rides_before_the_march
+* test_a_town_ahead_is_greyed_and_the_nearest_rear_town_is_pressed
+[33m    [Orphans]:  [0m25.0 new orphans in test.
+[33m[WARNING]:  [0mTest script has 16 unfreed children.  Increase log level for more details.
+[1m31/31 passed.
+[0m[4m
+
+res://tests/ui/test_character_portrait.gd
+[0m* test_known_character_gets_its_own_scene
+* test_unknown_character_falls_back_to_base_scene
+* test_minister_portrait_has_badge_and_tooltip
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_non_character_portrait_has_no_badge
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_full_art_exists_for_all_five_ministers
+* test_full_art_null_for_character_without_it
+* test_custom_art_node_suppresses_default_visual
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m7/7 passed.
+[0m[4m
+
+res://tests/ui/test_command_style.gd
+[0m* test_command_text_is_title_case_from_any_case
+* test_figures_are_grouped_and_units_left_alone
+* test_a_command_button_wears_the_tab_face
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_compass_layer.gd
+[0m* test_the_compass_art_turns_only_while_time_runs
+[33m    -- Awaiting 5 idle frame(s) -- 
+[0m[33m    -- Awaiting 5 idle frame(s) -- 
+[0m[33m    -- Awaiting 5 idle frame(s) -- 
+[0m[1m1/1 passed.
+[0m[4m
+
+res://tests/ui/test_conversation_beats.gd
+[0m* test_minister_beats_group_concern_with_pitch
+* test_standing_suggestions_stay_off_the_conversation_stage
+* test_event_beat_first_when_pending
+* test_summary_reflects_outcomes_without_numbers
+* test_broken_promise_becomes_minister_beat_before_concerns
+[1m5/5 passed.
+[0m[4m
+
+res://tests/ui/test_conversation_scene.gd
+[0m* test_one_portrait_per_beat_and_continue_advances
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_quick_reply_executes_suggestion_and_speaks_prose
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_event_beat_gates_continue_until_choice
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_selection_gates_the_beats_reply_options
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_prompt_box_available_on_summary_beat
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_transcript_narrows_to_the_selected_person
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_skills_tab_lists_tools_with_kind_colors
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_right_slot_is_empty_until_the_council_or_a_map_click_takes_it
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_long_event_content_scrolls_inside_fixed_box
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_the_name_plate_wears_the_speakers_house_arms
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_top_bar_and_dossier_reflect_speaker_and_order
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_summary_shows_this_session_resolution_after_quick_reply
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_quick_reply_narrates_kept_promise_effect
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_event_beat_shows_authored_scene_without_calling_the_model
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_event_beat_free_text_resolves_via_event_choice
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_event_beat_free_text_invalid_choice_leaves_event_pending
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_event_voice_callback_ignored_after_event_resolved
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_stale_free_text_callback_ignored_after_button_resolves_event
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_hovering_a_country_borrows_the_minister_column
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_map_ask_fills_the_talk_box
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_free_text_prints_narrative_then_ledger_on_the_stage
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_left_column_is_the_dashboard_unless_a_person_speaks
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_dossier_stands_in_the_audience_window
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_audience_window_stands_over_the_map
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_the_speech_is_this_beat_and_the_record_is_all
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_opinion_tooltip_gives_the_reasons
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_an_event_uses_the_same_window
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_an_option_tells_its_tradeoff
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_law_option_quotes_the_whole_decree
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_no_dossier_without_a_person
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m30/30 passed.
+[0m[4m
+
+res://tests/ui/test_country_panel.gd
+[0m* test_the_players_own_card_carries_the_realms_temper
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m1/1 passed.
+[0m[4m
+
+res://tests/ui/test_court_screen.gd
+[0m* test_screen_builds_suggestion_executes_and_labels_are_natural_language
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_free_text_executes_via_fake_client_and_tone_applied
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_free_text_disabled_while_parse_in_flight
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_free_text_during_pending_event_leaves_the_event_pending
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_free_text_event_choice_invalid_id_rejected_and_logged
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_top_bar_up_top_and_lettered_suggestions_in_side_panel
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_top_bar_refreshes_after_suggestion_executes
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_hovering_a_country_swaps_the_left_column
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_country_card_follows_conquest
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_map_ask_fills_the_order_box_without_sending
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_free_text_prints_the_narrative_and_the_ledger
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_free_text_names_the_speaker_before_the_call
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_selecting_a_province_shows_its_card_in_the_detail_column
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_council_column_opens_from_the_handle_and_leaves
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m14/14 passed.
+[0m[4m
+
+res://tests/ui/test_display_fit.gd
+[0m* test_project_stretch_settings_scale_to_any_screen
+* test_gameplay_fills_viewport_at_common_screen_shapes
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m2/2 passed.
+[0m[4m
+
+res://tests/ui/test_editor_owned_look.gd
+[0m* test_a_converted_ready_sets_no_look
+* test_the_court_keeps_its_scenes_look
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_laws_screen_keeps_its_scenes_look
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_the_encounter_panel_keeps_its_scenes_look
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_conversation_keeps_its_scenes_look
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_the_title_keeps_its_scenes_look
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_council_column_opens_by_the_scenes_gap
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_each_screen_has_its_own_report_paper
+[1m8/8 passed.
+[0m[4m
+
+res://tests/ui/test_fog_panels.gd
+[0m* test_the_neighbours_are_not_counted_for_you
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_manor_master_shows_no_foreign_figures
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_spy_sighting_is_listed_beneath_its_kingdom_not_as_its_strength
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_game_drafts.gd
+[0m* test_there_are_two_land_regiments_to_draft
+* test_review_lists_each_draft_with_its_cost_and_the_total
+* test_the_review_spends_nothing
+* test_deploy_runs_every_draft_once_as_its_real_order
+* test_a_deployed_draft_does_not_say_it_was_set_aside
+* test_what_the_chest_cannot_pay_stays_a_draft_with_its_reason
+* test_discard_and_strike
+* test_every_writer_tells_the_screens
+* test_a_draft_with_a_new_load_seals_the_load_then_the_march
+[1m9/9 passed.
+[0m[4m
+
+res://tests/ui/test_game_plans.gd
+[0m* test_a_piece_placed_moved_edited_and_removed_says_plans_changed_only
+* test_a_refused_write_says_nothing
+* test_strokes_and_undo
+* test_clear_by_rect
+[1m4/4 passed.
+[0m[4m
+
+res://tests/ui/test_game_root.gd
+[0m* test_encounter_stops_catchup
+* test_encounter_preserves_selected_speed<parameterized>
+    - params[0](1)
+    - params[1](2)
+    - params[2](4)
+* test_decision_lock_survives_other_windows
+* test_encounter_load_restores_pending_decision
+* test_multiple_first_encounters_each_require_confirmation
+* test_encounter_month_end_only_publishes_after_completion
+* test_encounter_refuses_stale_invalid_and_repeated_choices
+* test_ordinary_reinforcement_does_not_repeat_encounter_pause
+* test_manual_pause_discards_partial_day_time
+* test_compatibility_tick_resumes_day_without_publishing_empty_month
+* test_blocked_day_keeps_notifications_across_json_load
+* test_encounter_controller_routes_requests_and_restores_confirmation
+* test_encounter_panel_is_request_only_and_restores_after_load
+[33m    -- Awaiting 5 idle frame(s) -- 
+[0m* test_bgm_plays_from_startup_and_loops
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_space_starts_campaign
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_reign_begins_over_two_frames
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_boot_reads_the_heavy_art_on_threads
+[33m    --Awaiting callable to return TRUE or 20.0s.  
+[0m* test_r_restarts_to_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_pause_menu_opens_via_signal_and_restart_returns_to_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_pause_menu_save_then_load_resumes_at_court
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_load_with_pending_event_waits_with_its_presenter
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_heights_tab_toggles_the_maps_height_theme
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_war_room_tab_opens_the_plotting_room
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_clock_runs_on_the_council_and_the_court_and_stops_paused
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 5 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m[33m    -- Awaiting 5 idle frame(s) -- 
+[0m* test_game_holds_the_day_short_of_the_month_end
+* test_the_menu_switches_the_music_off_and_remembers
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_frame_rate_row_caps_the_engine_and_remembers
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_frame_cap_choices_cycle_and_read
+* test_space_pauses_and_resumes_the_game
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_title_and_pause_menus_share_their_settings
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_fps_row_shows_the_counter_apart_from_dev_mode
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m31/31 passed.
+[0m[4m
+
+res://tests/ui/test_laws_screen.gd
+[0m* test_the_laws_tab_opens_the_screen_and_not_the_info_table
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_three_pages_show_their_laws
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_choosing_a_value_shows_the_cost_from_the_preview
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_decree_sends_the_order_and_the_delivery_text_follows_the_days
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_decree_is_one_news_line_at_send
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_screen_works_while_the_clock_runs
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_esc_closes_it_before_the_pause_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_missing_places_list_names_each_with_days_left
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_second_press_of_laws_closes_it
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_another_screen_puts_the_laws_away
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_cooldown_refusal_names_days_not_ticks
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_esc_over_the_laws_closes_the_pause_menu_first
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_same_day_change_of_owner_redraws_the_row
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_chosen_value_is_forgotten_on_close_and_on_a_new_reign
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_place_gained_since_is_listed_as_not_sent
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_an_unchanged_row_shows_no_note_and_the_tooltip_says_why
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_differing_value_shows_its_effects
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_places_shows_only_while_a_place_is_untold
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m18/18 passed.
+[0m[4m
+
+res://tests/ui/test_ledger_screen.gd
+[0m* test_the_ledger_opens_on_the_whole_galaxy
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_tab_chooses_its_cluster_without_redrawing
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_double_clicked_province_opens_frames_and_closes
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m53.0 new orphans in test.
+* test_a_double_clicked_person_opens_their_card_and_is_selected
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_there_is_no_2d_mode
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_an_order_on_a_pool_runs_through_the_engine
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_refreshes_and_an_order_are_drawn_once_on_the_next_frame
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_vanished_selection_takes_its_card
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_closing_keeps_a_card_the_ledger_did_not_put_there
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m57.0 new orphans in test.
+* test_a_strand_opens_its_links_card
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_opening_the_ledger_stops_the_clock_until_the_player_starts_it
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_crumb_and_back_follow_the_opened_provinces
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_selected_stars_card_follows_a_redraw
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m13/13 passed.
+[0m[4m
+
+res://tests/ui/test_ledger_screen_search.gd
+[0m* test_typing_lists_matches_by_label_in_any_case
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_enter_picks_the_first_match
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_folded_manor_opens_its_province_and_is_selected
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_escape_clears_the_box_and_opens_no_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_space_in_the_box_is_typed_not_the_clock
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m5/5 passed.
+[0m[4m
+
+res://tests/ui/test_load_wheel.gd
+[0m* test_wheel_turns_over_frames
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 5 idle frame(s) -- 
+[0m* test_the_turn_rate_is_the_compass_key
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_overlays_exist_after_the_menu_shows
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m* test_a_start_in_the_first_frames_waits_for_the_overlays
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 10.0s.  
+[0m* test_title_curtain_holds_the_wheel_bottom_right
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_wheel_hides_with_the_curtain
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_premenu_black_holds_the_wheel
+* test_continue_twice_loads_once
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 15.0s.  
+[0m[33m    -- Awaiting 6 idle frame(s) -- 
+[0m* test_start_then_continue_starts_once
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 15.0s.  
+[0m[33m    -- Awaiting 6 idle frame(s) -- 
+[0m* test_continue_then_start_loads_once
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 15.0s.  
+[0m[33m    -- Awaiting 6 idle frame(s) -- 
+[0m[1m10/10 passed.
+[0m[4m
+
+res://tests/ui/test_location_view.gd
+[0m* test_the_banner_fits_a_thin_slot
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_roomy_slot_keeps_the_design_size
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m2/2 passed.
+[0m[4m
+
+res://tests/ui/test_manor_master_panel.gd
+[0m* test_the_manors_tab_lists_the_realms_manors_biggest_first
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_quiet_day_leaves_the_table_alone
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_each_row_wears_its_houses_arms
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_scope_and_house_narrow_or_widen_the_table
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_activating_a_row_opens_its_card
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m5/5 passed.
+[0m[4m
+
+res://tests/ui/test_map_detail_panel.gd
+[0m* test_a_town_gets_a_card
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_own_province_gets_a_card_and_foreign_land_the_basics
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_card_wears_the_arms_of_its_house
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_regiment_opens_its_painted_card
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_broken_supply_line_is_written_in_the_warning_ink
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_courier_flies_his_kingdoms_arms
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_other_objects_keep_their_lines
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_manor_card_buys_the_manor_from_its_button
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_towns_spy_button_is_disabled_when_the_treasury_cannot_pay
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_manor_card_shows_its_slots_and_a_build_fills_one
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_manor_card_shows_its_painting_its_facts_as_icons_and_its_output_rates
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_reported_fact_wears_a_small_tag_under_its_estimate
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_foreign_manor_card_offers_its_spy_first_and_wastes_no_room
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_buy_button_fits_the_column_and_keeps_its_full_text_as_a_tooltip
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_longest_fogged_and_reported_fact_labels_never_widen_the_left_column
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_longest_chief_good_row_fits_the_left_column
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_an_idle_building_says_so_in_its_slot
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m17/17 passed.
+[0m[4m
+
+res://tests/ui/test_map_ruler.gd
+[0m* test_the_dashes_run_on_across_a_joint
+* test_a_reading_in_the_packs_unit
+* test_ticks_fall_on_a_nice_step_inside_the_ruler
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_menu_click.gd
+[0m* test_a_real_click_on_start_game_begins_the_reign
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m1/1 passed.
+[0m[4m
+
+res://tests/ui/test_military_panel.gd
+[0m* test_the_host_opens_from_a_regiments_card_and_closes_back
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_regiments_are_on_every_screens_map
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_column_follows_the_state_while_it_is_up
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_missive_art.gd
+[0m* test_a_slip_is_nine_sliced_by_its_margin_at_its_scale
+* test_the_wood_tiles_under_the_frame
+* test_every_piece_wears_its_art
+* test_drawing_a_tiled_piece_with_a_non_positive_scale_completes
+[1m4/4 passed.
+[0m[4m
+
+res://tests/ui/test_missive_board_only.gd
+[0m* test_board_only_hides_the_desk_and_reports_a_note
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_full_board_still_reads_a_note
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m2.0 new orphans in test.
+[1m2/2 passed.
+[0m[4m
+
+res://tests/ui/test_missive_flight.gd
+[0m* test_an_envelope_lands_on_the_tab
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m* test_a_spy_report_stops_the_clock_and_opens_the_dialog
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m* test_the_report_dialog_centres_on_the_map_panel_not_the_window
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_two_spy_reports_in_one_frame_open_in_turn
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m* test_a_receipt_flies_without_stopping_the_clock
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_restart_mid_report_clears_the_queue_without_crashing
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_load_mid_report_discards_a_stale_id_without_crashing
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m* test_the_popup_survives_a_switch_to_conversation_but_not_to_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_no_days_bank_behind_a_waiting_report
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m* test_the_news_bar_says_the_stewards_report_is_in
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m10/10 passed.
+[0m[4m
+
+res://tests/ui/test_missive_screen.gd
+[0m* test_the_tab_opens_the_board_with_its_letters
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_frame_sits_below_the_top_bar
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_frame_fits_inside_the_viewport_with_all_art_installed
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_long_marshal_report_scrolls_inside_the_desk
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_every_plaque_reads_on_one_line_and_all_are_the_same_height
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_showing_the_board_sees_the_letters_and_selecting_reads_one
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m6.0 new orphans in test.
+* test_show_on_map_closes_the_board
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_capped_away_letter_empties_the_desk
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m5.0 new orphans in test.
+* test_the_selected_note_stands_out_and_its_date_never_breaks
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_an_open_board_takes_in_a_letter_as_it_lands
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 2.0s.  
+[0m* test_reading_a_letter_goes_through_game
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m2.0 new orphans in test.
+* test_the_board_and_the_report_wear_mains_window_look
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_desk_and_the_notes_write_in_the_letters_ink
+[33m    [Orphans]:  [0m5.0 new orphans in test.
+* test_a_receipt_on_the_desk_wears_the_delivered_painting
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m3.0 new orphans in test.
+* test_the_desk_paintings_height_follows_its_width_at_the_aspect_key
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_an_audit_letter_opens_the_ledger
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m3.0 new orphans in test.
+[1m16/16 passed.
+[0m[4m
+
+res://tests/ui/test_navigation.gd
+[0m* test_the_bottom_bar_groups_lenses_left_and_screens_right
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_missive_tab_is_a_screen_and_its_badge_fits
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_council_handle_is_a_level_button
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_news_ticker.gd
+[0m* test_ticker_hidden_on_menu_pinned_bottom_and_transparent_in_game
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_published_news_joins_the_crawl_and_moves_leftward
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 10 idle frame(s) -- 
+[0m[33m    -- Awaiting 10 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_works_are_announced_at_their_milestones
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_newly_idle_building_is_announced
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m4/4 passed.
+[0m[4m
+
+res://tests/ui/test_opening_narration.gd
+[0m* test_the_story_is_cut_into_pages
+* test_no_page_is_empty_or_too_long_and_every_page_has_a_side
+* test_beats_carry_page_numbers_and_the_portraits_exist
+* test_both_speakers_are_used
+* test_a_missing_file_gives_no_pages
+* test_continue_walks_every_page_then_the_reign_begins
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_frames_show_on_a_narration_page_both_lit_and_hide_after
+* test_a_zero_sized_box_does_not_divide_by_zero
+* test_the_scene_busts_are_authored
+[1m9/9 passed.
+[0m[4m
+
+res://tests/ui/test_realm_dashboard.gd
+[0m* test_shows_the_realm_and_its_resources
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m3.0 new orphans in test.
+* test_charts_carry_engine_truth
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_refreshes_on_state_change
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m1.0 new orphan in test.
+* test_every_shown_resource_and_unit_has_an_icon_with_a_tooltip
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_theme_styles_tooltips
+* test_compact_numbers
+* test_the_cards_dimensions_are_icons_with_tooltips
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_every_dimension_has_its_art
+* test_every_good_has_its_colour_icon
+[33m[Orphans]:  [0m4.0 new orphans in script.
+[1m9/9 passed.
+[0m[4m
+
+res://tests/ui/test_slice3_data.gd
+[0m* test_reply_templates_exist_for_every_pitch
+* test_no_spoken_numbers_in_new_templates
+* test_round_table_portrait_resolves
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_spy_orders.gd
+[0m* test_a_right_click_on_the_ground_offers_a_spy_and_sends_him
+* test_every_land_card_offers_a_spy
+* test_a_right_click_while_aiming_withdraws_the_aim_not_a_spy
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_supply_load.gd
+[0m* test_an_old_save_reads_its_load_as_it_loads
+[1m1/1 passed.
+[0m[4m
+
+res://tests/ui/test_supply_menu.gd
+[0m* test_add_supply_point_lights_the_eligible_towns
+* test_clicking_a_lit_town_then_a_rate_sends_the_order
+* test_the_rate_rows_carry_the_fee_and_the_road
+* test_a_greyed_town_says_why_and_keeps_picking
+* test_escape_leaves_pick_mode
+* test_cancel_in_the_rate_menu_leaves_pick_mode
+* test_clicking_away_from_the_rates_gives_it_up
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_starting_the_clock_withdraws_the_pick
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_menu_offers_no_load_rows
+* test_the_menu_greys_add_while_time_runs_and_says_why
+* test_the_menu_greys_withdraw_while_time_runs
+* test_a_fleet_has_no_supply_rows
+* test_escape_ends_the_pick_before_it_lets_the_selection_go
+* test_opening_another_regiments_menu_ends_the_pick
+* test_withdraw_aim_ends_a_pick
+* test_the_war_room_menu_offers_no_supply_rows
+[33m[WARNING]:  [0mTest script has 2 unfreed children.  Increase log level for more details.
+[1m16/16 passed.
+[0m[4m
+
+res://tests/ui/test_table_landing.gd
+[0m* test_no_frame_no_landing
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_pieces_wait_for_the_sheet_and_then_all_come
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 3.0s.  
+[0mERROR: Lambda capture at index 0 was freed. Passed "null" instead.
+   at: call (modules/gdscript/gdscript_lambda_callable.cpp:110)
+   GDScript backtrace (most recent call first):
+       [0] _physics_process (res://addons/gut/awaiter.gd:60)
+* test_the_sheet_starts_as_the_screen_and_ends_on_the_map_sheet
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_title_living.gd
+[0m* test_the_title_is_the_living_realm_layout
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_continue_without_a_save_stays_on_the_title
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0mERROR: SaveLoad: cannot read user://no_such_realm.json
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] load_game (res://scripts/engine/save_load.gd:20)
+       [1] load_campaign (res://scripts/ui/game.gd:479)
+       [2] _on_menu_load_from_title (res://scripts/ui/game_root.gd:1377)
+       [3] _on_load_pressed (res://scripts/ui/main_menu.gd:358)
+       [4] test_continue_without_a_save_stays_on_the_title (res://tests/ui/test_title_living.gd:37)
+       [5] _end_wait (res://addons/gut/awaiter.gd:89)
+       [6] _on_tree_process_frame (res://addons/gut/awaiter.gd:37)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_continue_the_chronicle_lays_the_map_on_the_table
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_title_enters_out_of_the_black
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 10.0s.  
+[0m* test_the_speaker_turns_the_music
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m5/5 passed.
+[0m[4m
+
+res://tests/ui/test_top_bar.gd
+[0m* test_the_crowns_arms_mark_the_lords_purse_and_the_date
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_shows_date_and_metric_values
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_shows_tick_deltas_from_current_report
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_event_chip_tracks_pending_event
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_metrics_show_as_icons_with_tooltips
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_months_figures_wait_a_frame_after_the_settlement
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_bar_shows_the_crowns_pools_and_the_lords_purse
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[1m8/8 passed.
+[0m[4m
+
+res://tests/ui/test_ui_art_cache.gd
+[0m* test_past_its_cap_the_oldest_art_goes_and_the_asked_stays
+[1m1/1 passed.
+[0m[4m
+
+res://tests/ui/test_ui_fonts.gd
+[0m* test_every_role_has_its_face_and_its_row
+* test_the_theme_is_the_saved_one
+* test_the_title_is_scaled_and_title_cased
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_ui_palette_dark.gd
+[0m* test_panels_are_dark_and_ink_is_light
+* test_theme_has_no_light_boxes
+* test_the_ornament_is_drawn_in_gold
+* test_chart_track_is_dark
+* test_only_windows_wear_the_ornament
+* test_the_grain_has_a_light_and_a_dark_half
+* test_numbers_are_grouped
+[1m7/7 passed.
+[0m[4m
+
+res://tests/ui/test_ui_rework.gd
+[0m* test_main_menu_has_start_load_quit_and_starts_with_the_founding_names
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_campaign_opens_with_nameless_background_narration
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 1.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_window_fits_with_an_illustration_and_four_choices
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_bottom_bar_tabs_and_info_tables
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_families_tab_lists_the_houses_of_the_realm
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_families_rows_are_complete
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_location_panel_shows_occupants_and_moves_freely
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_minister_beats_skip_when_minister_is_elsewhere
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_absent_addressee_gets_herald_note_not_api_reply
+[33m    -- Awaiting 4 idle frame(s) -- 
+[0m* test_no_selection_addresses_everyone_present
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_selecting_one_character_narrows_the_audience_and_names_them
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_selecting_several_reports_a_count
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_moving_location_clears_the_selection
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_everyone_addressed_remembers_but_only_one_answers
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 4 idle frame(s) -- 
+[0m* test_selected_targets_alone_remember
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 4 idle frame(s) -- 
+[0m* test_chat_after_event_resolution_shows_reply
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 4 idle frame(s) -- 
+[0m* test_transcript_names_are_colored_per_speaker
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_manors_tab_is_a_theme_exclusive_with_the_others
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m18/18 passed.
+[0m[4m
+
+res://tests/ui/test_user_dir_migration.gd
+[0m* test_copies_a_missing_file
+* test_leaves_an_existing_file_untouched
+* test_no_old_dir_is_a_no_op
+* test_a_stale_part_file_does_not_block_the_copy
+[1m4/4 passed.
+[0m[4m
+
+res://tests/ui/test_war_deploy_scroll.gd
+[0m* test_the_button_is_grey_without_drafts
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_button_stands_in_the_bottom_right_corner
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_unrolled_it_lists_each_draft_and_the_total
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_line_the_chest_cannot_pay_reads_its_reason
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_seal_sends_once_however_often_it_is_pressed
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting signal "sealed" or for 8.0 second(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_not_yet_rolls_it_away_and_keeps_the_drafts
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_deploy_works_on_a_running_clock
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_crowns_arms_are_read_when_sealing_not_when_built
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_seal_in_flight_never_sends_another_reigns_drafts
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 3.1 second(s) -- 
+[0m* test_cancelling_a_seal_puts_it_away_and_sends_nothing
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 3.1 second(s) -- 
+[0m* test_a_draft_with_a_supply_town_counts_its_courier_and_sends_it_first
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m11/11 passed.
+[0m[4m
+
+res://tests/ui/test_war_folio_panel.gd
+[0m* test_the_right_page_lays_out_every_section_and_row
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_escape_closes_it
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_it_opens_docked_as_one_small_page_with_the_room_free_around_it
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_docked_page_reads_the_brief_and_follows_the_state
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+         [3] _run_test (res://addons/gut/gut.gd:611)
+         [4] test_it_opens_docked_as_one_small_page_with_the_room_free_around_it (res://tests/ui/test_war_folio_panel.gd:60)
+         [5] _end_wait (res://addons/gut/awaiter.gd:89)
+         [6] _on_tree_process_frame (res://addons/gut/awaiter.gd:37)
+[33m    [Orphans]:  [0m126.0 new orphans in test.
+* test_the_docked_pages_plus_or_a_click_on_it_holds_the_whole_book_up
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+         [3] _run_test (res://addons/gut/gut.gd:611)
+         [4] test_it_opens_docked_as_one_small_page_with_the_room_free_around_it (res://tests/ui/test_war_folio_panel.gd:60)
+         [5] _end_wait (res://addons/gut/awaiter.gd:89)
+         [6] _on_tree_process_frame (res://addons/gut/awaiter.gd:37)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_book_held_up_is_full_size_and_a_click_on_the_dim_lays_it_back
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m1.0 new orphan in test.
+* test_the_close_cross_closes_it_and_it_opens_docked_again
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+         [3] _run_test (res://addons/gut/gut.gd:611)
+         [4] test_the_book_held_up_is_full_size_and_a_click_on_the_dim_lays_it_back (res://tests/ui/test_war_folio_panel.gd:117)
+         [5] _end_wait (res://addons/gut/awaiter.gd:89)
+         [6] _on_tree_process_frame (res://addons/gut/awaiter.gd:37)
+[33m    [Orphans]:  [0m140.0 new orphans in test.
+* test_all_six_sections_are_laid_in_the_panels_columns
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+         [3] _run_test (res://addons/gut/gut.gd:611)
+         [4] test_the_book_held_up_is_full_size_and_a_click_on_the_dim_lays_it_back (res://tests/ui/test_war_folio_panel.gd:117)
+         [5] _end_wait (res://addons/gut/awaiter.gd:89)
+         [6] _on_tree_process_frame (res://addons/gut/awaiter.gd:37)
+* test_a_long_label_keeps_its_fixed_width_and_is_present
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+         [3] _run_test (res://addons/gut/gut.gd:611)
+         [4] test_the_book_held_up_is_full_size_and_a_click_on_the_dim_lays_it_back (res://tests/ui/test_war_folio_panel.gd:117)
+         [5] _end_wait (res://addons/gut/awaiter.gd:89)
+         [6] _on_tree_process_frame (res://addons/gut/awaiter.gd:37)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_page_is_laid_again_when_the_state_moves_under_it
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m126.0 new orphans in test.
+* test_escape_does_nothing_while_the_folio_is_not_in_a_visible_tree
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_open_for_starts_at_the_top
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m138.0 new orphans in test.
+* test_a_piece_selected_in_the_war_room_opens_the_folio_and_closing_clears_it
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_closing_the_war_room_closes_the_folio
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_screens_refresh_lays_an_open_folio_again
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_drill_tabs_are_the_arms_clips_and_the_current_order_plays
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m6.0 new orphans in test.
+* test_a_drill_tab_plays_its_clip
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_one_arms_button_per_arm_and_the_formation_draws_its_figures
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_a_refresh_does_not_rebuild_the_figure_while_nothing_changed
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_the_figure_renders_only_while_the_folio_is_open
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_a_changed_order_replays_the_current_drill_without_a_reload
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m126.0 new orphans in test.
+* test_an_arms_button_wears_its_icon_drawn_in_ink
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_clicking_an_arm_switches_the_figure_and_retargets_the_tabs
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m11.0 new orphans in test.
+* test_artillery_has_no_model_so_it_draws_its_glyph_with_no_tabs
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m118.0 new orphans in test.
+* test_playing_a_clip_loops_a_copy_never_the_shared_animation
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_take_apart_shows_only_when_the_arms_parts_exist
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+* test_take_apart_shows_for_the_installed_arms_only
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m31.0 new orphans in test.
+* test_take_apart_is_hidden_for_an_unmodelled_arm
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m11.0 new orphans in test.
+* test_take_apart_toggles_the_exploded_view
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m16.0 new orphans in test.
+* test_another_arm_puts_the_kit_back_together
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m27.0 new orphans in test.
+* test_take_apart_shows_when_the_arms_parts_file_exists
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m11.0 new orphans in test.
+* test_a_second_press_kills_the_running_tween
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m16.0 new orphans in test.
+* test_closing_puts_the_kit_back_together
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready(). 
+If you want to set size, change the anchors or consider using set_deferred().
+     at: _set_size (scene/gui/control.cpp:1519)
+     GDScript backtrace (most recent call first):
+         [0] before_each (res://tests/ui/test_war_folio_panel.gd:13)
+         [1] _run_test (res://addons/gut/gut.gd:583)
+         [2] _test_the_scripts (res://addons/gut/gut.gd:780)
+[33m    [Orphans]:  [0m16.0 new orphans in test.
+[33m[Orphans]:  [0m42.0 new orphans in script.
+[1m33/33 passed.
+[0m[4m
+
+res://tests/ui/test_war_hover_slip.gd
+[0m* test_the_slip_sits_below_right_and_flips_at_the_edges
+* test_the_lines_become_labels_of_their_kinds
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_raking_slip_stands_left_of_the_tip_so_the_order_menu_has_the_right
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_war_margin_key.gd
+[0m* test_the_legend_lists_the_sheets_inks
+* test_units_per_px_by_hand
+* test_no_sheet_no_bar
+* test_the_bar_restates_on_zoom_on_the_125_ladder
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_key_sizes_itself_from_data
+* test_a_click_on_the_rose_asks_for_north_and_nowhere_else_is_taken
+* test_the_key_lists_every_sheet_mark
+* test_the_key_lists_every_works_family
+* test_every_legend_word_fits_its_column
+[1m9/9 passed.
+[0m[4m
+
+res://tests/ui/test_war_room_plans.gd
+[0m* test_a_right_click_on_open_ground_places_a_supposed_piece_through_the_form
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_rows_slot_draws_a_front_in_that_sides_colour_facing_the_other_side
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_escape_lays_the_stick_down_and_digits_pick_a_kind
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_phase_line_asks_its_name_and_keeps_it
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_drag_carries_a_supposed_piece_and_delete_and_undo
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m5.0 new orphans in test.
+* test_the_slip_reads_a_supposed_piece
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_scraper_removes_a_stroke
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_the_blue_scraper_leaves_a_red_mark
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_red_arrow_is_drawn_for_a_selected_supposed_piece
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m5.0 new orphans in test.
+* test_an_intel_hint_is_selected_and_its_ants_march
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_the_facing_handle_flips_a_chosen_front
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[1m11/11 passed.
+[0m[4m
+
+res://tests/ui/test_war_room_screen.gd
+[0m* test_war_room_is_no_longer_a_placeholder
+* test_the_tab_lays_the_home_provinces_sheet_over_the_map
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 0.65 second(s) -- 
+[0m* test_the_tab_again_closes_it_and_another_tab_closes_it_too
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_picked_piece_opens_its_folio_docked_and_no_card
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_after_the_room_the_courts_own_card_still_lands_in_the_column
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_opening_the_room_withdraws_an_aim_armed_on_the_map
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_closing_the_room_lets_its_selection_go
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_an_out_of_range_sheet_is_ignored
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_regiment_on_another_sheet_is_listed_and_its_row_lays_that_sheet
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_clock_cannot_run_in_the_room_so_a_drawn_march_always_arms
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_committed_march_pencils_a_draft_pennant
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_real_blue_arrow_drawn_for_a_selected_piece_pencils_its_march
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_march_drawn_for_two_pencils_two_drafts_with_their_supply_town
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_regiment_unticked_on_the_confirm_stays
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_drag_on_the_planned_line_bends_it_into_the_draft
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m25.0 new orphans in test.
+* test_a_click_on_a_riding_pennant_offers_edit_and_a_pencilled_cancel
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_click_on_a_draft_pennant_offers_edit_and_strike
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_an_order_on_the_map_sets_the_rooms_draft_aside_and_says_so
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_sheet_roll_gives_the_pending_march_up
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_the_margin_slip_is_a_scrolling_slip_of_at_most_war_margin_rows
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_new_graphics_tier_reaches_the_room_and_the_folio
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_margin_keeps_its_buttons_while_the_list_stands_and_refills_on_reopen
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_closing_the_room_hands_the_column_its_place_back
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_easel_shows_the_missive_board_and_a_note_opens_the_full_board_over_the_room
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_turning_to_the_board_gives_an_armed_march_up
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_escape_in_board_view_returns_to_the_table_not_the_pause_menu
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 0.9 second(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_click_on_the_easel_at_a_notes_place_opens_that_letter
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_show_on_map_from_the_board_over_the_room_leaves_the_room
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_screen_switch_under_the_room_unrolls_no_stale_report
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 0.75 second(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_another_tab_with_drafts_asks_and_stay_keeps_the_room
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_escape_on_the_prompt_stays
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_keep_leaves_and_goes_on_and_the_drafts_stay
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_discard_leaves_with_none
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_every_door_out_asks
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_quit_goes_through_the_rooms_door
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_no_drafts_no_question
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_forced_switch_keeps_the_drafts_and_says_so
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_deploy_from_the_leave_prompt_seals_then_leaves_for_the_chosen_tab
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 8.0s.  
+[0m* test_not_yet_from_the_leave_prompt_stays_in_the_room
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_rooms_scroll_greys_and_lights_with_the_drafts
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_quit_from_the_pause_menu_asks_in_plain_sight
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_a_tab_with_the_board_over_the_room_asks_in_plain_sight
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_an_audit_letters_ledger_from_the_room_asks_then_opens_its_lens
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_closing_the_room_mid_seal_sends_nothing_and_keeps_the_drafts
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3.0 second(s) -- 
+[0m* test_pencilling_into_the_sea_is_refused_at_once_but_an_empty_chest_is_not
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m25.0 new orphans in test.
+* test_entering_the_room_stops_the_clock_and_nothing_starts_it_until_it_is_left
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 10 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_every_way_out_of_the_room_lets_the_clock_go
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_board_over_the_room_keeps_the_clock_held
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_leave_prompts_answers_let_the_clock_go_only_when_they_leave
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_deploy_seals_and_sends_under_the_held_clock
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 8.0s.  
+[0m* test_a_room_freed_while_open_lets_the_clock_go
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_pieces_stand_where_the_map_draws_them
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_rest_on_the_table_shows_the_slip_and_a_move_hides_it
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m* test_the_arrows_slip_goes_when_the_aim_ends
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m54/54 passed.
+[0m[4m
+
+res://tests/ui/test_war_room_tools.gd
+[0m* test_a_box_over_our_units_selects_them_after_red_work
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_second_box_over_the_same_units_keeps_them
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_an_empty_box_keeps_the_selection
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_supposed_piece_clicked_with_our_unit_chosen_stays_selected
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_escape_lays_the_stick_down_before_closing_the_book
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_new_sheet_drops_off_sheet_units_and_closes_their_book
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_fleet_alone_greys_the_blue_arrow
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_click_with_a_front_in_hand_selects_our_piece
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_click_on_open_table_with_a_stick_lets_the_selection_go
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_drag_from_a_piece_with_the_blue_arrow_draws
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m121.0 new orphans in test.
+* test_the_blue_arrow_is_laid_down_once_its_march_is_drawn
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m121.0 new orphans in test.
+* test_a_click_with_a_stick_on_a_supposed_piece_selects_it_red
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_drag_from_an_unchosen_stroke_pans_and_a_click_chooses_it
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_shift_drawn_blue_arrow_marches_straight
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m127.0 new orphans in test.
+* test_a_red_arrow_for_two_selected_pieces_draws_two
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m7.0 new orphans in test.
+* test_a_table_press_commits_the_name_and_keys_work_again
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_released_stroke_stays_drawn_until_its_layer_is_painted
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0mERROR: Parameter "t" is null.
+   at: texture_2d_get (./servers/rendering/dummy/storage/texture_storage.h:110)
+   GDScript backtrace (most recent call first):
+       [0] intel_for (res://scripts/war_room/war_room_ink.gd:183)
+ERROR: Parameter "t" is null.
+   at: texture_2d_get (./servers/rendering/dummy/storage/texture_storage.h:110)
+   GDScript backtrace (most recent call first):
+       [0] plan_for (res://scripts/war_room/war_room_ink.gd:216)
+* test_cmd_z_strikes_a_drawn_march
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_undo_after_a_new_campaign_does_nothing
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_refused_write_leaves_no_undo_step
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_undo_of_a_march_since_sealed_revives_nothing
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_undo_of_a_march_puts_the_earlier_draft_back
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_ghost_goes_once_the_layer_is_current_after_an_undo
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0mERROR: Parameter "t" is null.
+   at: texture_2d_get (./servers/rendering/dummy/storage/texture_storage.h:110)
+   GDScript backtrace (most recent call first):
+       [0] intel_for (res://scripts/war_room/war_room_ink.gd:183)
+ERROR: Parameter "t" is null.
+   at: texture_2d_get (./servers/rendering/dummy/storage/texture_storage.h:110)
+   GDScript backtrace (most recent call first):
+       [0] plan_for (res://scripts/war_room/war_room_ink.gd:216)
+* test_a_shift_drag_from_an_unchosen_stroke_boxes_not_pans
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_stick_drag_out_and_back_is_no_click
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_resting_pointer_on_open_table_shows_the_slip
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 3.0s.  
+[0m* test_a_supply_road_inside_the_sheet_has_no_exit_mark
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_a_supply_road_from_off_the_sheet_ends_at_its_edge_with_the_towns_name
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_the_confirm_does_not_cover_the_margin_slip
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    [Orphans]:  [0m121.0 new orphans in test.
+* test_the_margin_slip_comes_back_when_the_confirm_closes
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_open_book_is_a_blocked_rect_where_it_stands
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_confirm_opens_somewhere_when_every_spot_is_blocked
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_blocked_rect_over_the_winning_spot_moves_the_confirm
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_least_covered_spot_wins_among_blocked_rects
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_held_up_book_is_blocked_whole
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_blue_front_with_our_piece_chosen_pencils_a_hold_draft
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 3 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[1m36/36 passed.
+[0m[4m
+
+res://tests/ui/test_war_scroll_reveal.gd
+[0m* test_coming_down_goes_from_rolled_to_hanging_and_frees_itself
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 0.4 second(s) -- 
+[0m* test_rolling_up_starts_hanging
+* test_no_capture_headless
+[1m3/3 passed.
+[0m[4m
+
+res://tests/ui/test_war_table.gd
+[0m* test_the_tables_palette_loads
+* test_paper_takes_dark_ink_that_reads_on_it
+* test_every_tab_hangs_a_bookmark_in_its_groups_colour
+* test_the_report_ends_above_the_bookmarks_and_scrolls
+[33m    -- Awaiting 3 idle frame(s) -- 
+[0m* test_the_map_is_a_sheet_and_the_column_a_report
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_council_is_a_wax_seal_and_still_the_order
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_tally_marks_count_whole_tens
+* test_the_seal_shows_who_waits_until_the_council_is_entered
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m    waiting at tick 2: ["char_marshal", "char_chaplain"]
+* test_the_council_stands_in_a_row_by_the_seal
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_councillor_miniature_opens_an_audience
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_first_event_waits_with_its_presenter
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    --Awaiting callable to return TRUE or 5.0s.  
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_a_months_event_waits_on_the_table_while_time_runs
+[33m    -- Awaiting 2 idle frame(s) -- 
+[0m* test_the_report_runs_down_where_the_compass_lay
+[33m    -- Awaiting 4 idle frame(s) -- 
+[0m[33m    -- Awaiting 4 idle frame(s) -- 
+[0m* test_a_tooltip_over_the_paper_keeps_the_chip_light_ink
+[1m14/14 passed.
+[0m[4m
+
+res://tests/ui/test_war_tool_art.gd
+[0m* test_the_table_has_every_tool_and_the_scroll
+* test_the_roll_has_no_hand_slot
+* test_every_slot_of_the_roll_inks_its_glyph
+* test_a_crayon_is_inked_in_its_own_colour_and_the_hand_in_the_pale_ink
+* test_an_unknown_key_falls_back_to_the_vector_glyph
+[33m    -- Awaiting 1 idle frame(s) -- 
+[0m[1m5/5 passed.
+[0m
+
+
+
+[33m==============================================
+[0m[33m= Run Summary
+[0m[33m==============================================
+[0m
+---- Totals ----
+Warnings          2
+
+Scripts           55
+Tests             540
+  Passing         540
+Asserts           9982
+Time              283.633s
+
+
+[33m[Orphans]:  [0mTotal orphans in run 1036.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 1091.0
+
+[32m---- All tests passed! ----
+[0m
+WARNING: 5 RIDs of type "CanvasItem" were leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2735)
+WARNING: 713 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 6 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: 78 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+ERROR: 64 RID allocations of type 'PN18TextServerAdvanced22ShapedTextDataAdvancedE' were leaked at exit.
+ERROR: 4 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.

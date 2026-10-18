@@ -40,10 +40,9 @@ func before_each() -> void:
 		var e: Dictionary = state.regiments[c]
 		e["forage"] = ""
 		e["forage_days"] = 0
-		e["deserted"] = 0
+		SuiteData.set_losses(state, c, {"deserted": 0})
 		e["desert_rem"] = 0
-		e["wounded"] = 0
-		e["dead"] = 0
+		SuiteData.set_losses(state, c, {"wounded": 0, "dead": 0})
 
 
 ## Stand `c` in the first manor cell of `province`.
@@ -63,6 +62,7 @@ func _men(c: String, n: int) -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = str(n)
+	SuiteData.set_headcount(state, c, n)
 
 
 func _law(c: String, law: String, value: String) -> void:
@@ -169,8 +169,10 @@ func test_desertion_clamp_end_to_end() -> void:
 			state.regiments[c]["y_m"] = state.regiments[a]["y_m"]
 			_put(c, 30, 90, 90)
 	var guard := 0
+	var initial_tick := state.tick
 	while ArmySystem.fit_heads(10, state.regiments[a]) > 0 and guard < 4000:
 		state.day = 1 + guard % 29
+		state.tick = initial_tick + int(guard / 29)
 		ArmyConduct.day_step(repo, state)
 		guard += 1
 	assert_lt(guard, 4000)

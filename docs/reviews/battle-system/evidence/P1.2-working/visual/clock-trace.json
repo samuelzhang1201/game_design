@@ -1,0 +1,112 @@
+[
+	{
+		"acc": 0.0,
+		"casualties": 0,
+		"clock": 0,
+		"day": 10,
+		"pending": false,
+		"phase": "before",
+		"progress": 0.0,
+		"rounds": 0,
+		"selected_speed": 1
+	},
+	{
+		"acc": 0.0,
+		"casualties": 0,
+		"clock": 0,
+		"day": 10,
+		"pending": true,
+		"phase": "blocked",
+		"progress": 0.0,
+		"rounds": 0,
+		"selected_speed": 1
+	},
+	{
+		"acc": 0.0,
+		"casualties": 0,
+		"clock": 0,
+		"day": 10,
+		"pending": false,
+		"phase": "confirmed_paused",
+		"progress": 0.0,
+		"rounds": 0,
+		"selected_speed": 1
+	},
+	{
+		"acc": 0.0,
+		"casualties": 39,
+		"clock": 1,
+		"day": 11,
+		"pending": false,
+		"phase": "manual_resume",
+		"progress": 0.0,
+		"rounds": 1,
+		"selected_speed": 1
+	},
+	{
+		"acc": 0.0,
+		"casualties": 76,
+		"clock": 1,
+		"day": 12,
+		"pending": false,
+		"phase": "next_day_boundary",
+		"progress": 0.0,
+		"rounds": 2,
+		"selected_speed": 1
+	},
+	{
+		"acc": 0.0,
+		"casualties": 0,
+		"clock": 0,
+		"day": 10,
+		"pending": false,
+		"phase": "before",
+		"progress": 0.0,
+		"rounds": 0,
+		"selected_speed": 4
+	},
+	{
+		"acc": 0.0,
+		"casualties": 0,
+		"clock": 0,
+		"day": 10,
+		"pending": true,
+		"phase": "blocked",
+		"progress": 0.0,
+		"rounds": 0,
+		"selected_speed": 4
+	},
+	{
+		"acc": 0.0,
+		"casualties": 0,
+		"clock": 0,
+		"day": 10,
+		"pending": false,
+		"phase": "confirmed_paused",
+		"progress": 0.0,
+		"rounds": 0,
+		"selected_speed": 4
+	},
+	{
+		"acc": 0.0,
+		"casualties": 39,
+		"clock": 4,
+		"day": 11,
+		"pending": false,
+		"phase": "manual_resume",
+		"progress": 0.0,
+		"rounds": 1,
+		"selected_speed": 4
+	},
+	{
+		"acc": 0.0,
+		"casualties": 76,
+		"clock": 4,
+		"day": 12,
+		"pending": false,
+		"phase": "next_day_boundary",
+		"progress": 0.0,
+		"rounds": 2,
+		"selected_speed": 4
+	}
+]

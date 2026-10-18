@@ -85,6 +85,7 @@ func test_stripped_bare_event_names_the_last_taker() -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = "100000"
+	SuiteData.set_headcount(state, first, 100000)
 	state.regiments[first]["supplies"] = 0
 	state.regiments[first]["carry_days"] = 30
 	state.regiments[first]["forage"] = "desperate"

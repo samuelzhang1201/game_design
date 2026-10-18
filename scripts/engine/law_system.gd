@@ -83,6 +83,14 @@ static func _entry_of(state: GameState, key: String, law: String) -> Dictionary:
 	return (state.law_in_force.get(key, {}) as Dictionary).get(law, {})
 
 
+## Split descendants inherit the saved decree history, independently of their new camps.
+static func inherit_unit_laws(state: GameState, source: String, children: Array) -> void:
+	var key := UNIT_PREFIX + source
+	if state.law_in_force.has(key):
+		for code: String in children:
+			state.law_in_force[UNIT_PREFIX + code] = state.law_in_force[key].duplicate(true)
+
+
 ## What a unit camped by `town` ("" for none) follows of a camp law: the
 ## entry with the HIGHER decree_id of the town's and its own (the town's on a
 ## tie); its own alone out of camp. {} for neither.

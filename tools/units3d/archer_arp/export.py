@@ -25,6 +25,19 @@ def apply_pose(rig, pose):
             @ pose[bone.parent.name].inverted() @ pose[bone.name]) if bone.parent else rest.inverted() @ pose[bone.name]
 
 
+def mirror_pose(pose, rests):
+    reflection = Matrix.Diagonal(Vector((-1, 1, 1, 1)))
+    result = {}
+    for name in pose:
+        other = name
+        for a, b in ((".l", ".r"), (".r", ".l"), (".L", ".R"), (".R", ".L")):
+            if name.endswith(a):
+                other = name[:-2] + b
+                break
+        result[name] = reflection @ pose[other] @ rests[other].inverted() @ reflection @ rests[name]
+    return result
+
+
 def main():
     work, project = map(Path, sys.argv[sys.argv.index("--") + 1:])
     bpy.ops.wm.open_mainfile(filepath=str(work / "archer_six_clips.blend"))
@@ -37,12 +50,15 @@ def main():
     source.animation_data.action_slot = actions["DRAW"].slots[0]
     scene.frame_set(31)
     bpy.context.view_layer.update()
-    arrow_grip = source.pose.bones["hand.l"].matrix.inverted() @ arrow.matrix_world
-    bow_grip = source.pose.bones["hand.r"].matrix.inverted() @ bow.matrix_world
+    reflection = Matrix.Diagonal(Vector((-1, 1, 1, 1)))
+    draw_rest = {n: source.data.bones[n].matrix_local.copy() for n in ("hand.l", "hand.r")}
+    draw_hands = mirror_pose({n: source.pose.bones[n].matrix.copy() for n in draw_rest}, draw_rest)
+    arrow_grip = draw_hands["hand.r"].inverted() @ reflection @ arrow.matrix_world @ reflection
+    bow_grip = draw_hands["hand.l"].inverted() @ reflection @ bow.matrix_world @ reflection
     source.data.pose_position = "REST"
     bpy.context.view_layer.update()
-    bow_rest, quiver_rest = bow.matrix_world.copy(), quiver.matrix_world.copy()
-    arrow_rest = arrow.matrix_world.copy()
+    original_rests = [obj.matrix_world.copy() for obj in (bow, quiver, arrow)]
+    bow_rest, quiver_rest, arrow_rest = [reflection @ m @ reflection for m in original_rests]
     keep = sorted({b.name for b in source.data.bones if b.use_deform} | {"DEF-weapon.L", "DEF-weapon.R"})
     parents = {}
     for name in keep:
@@ -51,12 +67,11 @@ def main():
             parent = parent.parent
         parents[name] = parent.name if parent else None
     rests = {n: source.data.bones[n].matrix_local.copy() for n in keep}
-    reflection = Matrix.Diagonal(Vector((-1, 1, 1, 1)))
-    bow_local = rests["DEF-weapon.R"].inverted() @ bow_rest
+    bow_local = rests["DEF-weapon.L"].inverted() @ bow_rest
     quiver_local = rests["spine_02.x"].inverted() @ quiver_rest
     rests.update({"DEF-bow": bow_rest, "DEF-quiver": quiver_rest,
                   "DEF-arrow": arrow_rest, "DEF-string": bow_rest})
-    parents.update({"DEF-bow": "DEF-weapon.R", "DEF-quiver": "spine_02.x",
+    parents.update({"DEF-bow": "DEF-weapon.L", "DEF-quiver": "spine_02.x",
                     "DEF-arrow": "root.x", "DEF-string": "DEF-bow"})
     data = bpy.data.armatures.new("archers_skeleton")
     rig = bpy.data.objects.new("archers_rig", data)
@@ -81,6 +96,15 @@ def main():
     # Preserve the public head name used by Map3DUnitRig.head_m.
     data.bones["head.x"].name = "head"
     source.data.pose_position = "POSE"
+    scene.frame_set(31)
+    bpy.context.view_layer.update()
+    draw_pose = mirror_pose({n: source.pose.bones[n].matrix.copy() for n in keep}, rests)
+    grip_bones = [n for n in keep if source.data.bones["hand.l"] in source.data.bones[n].parent_recursive
+                  and not n.startswith("DEF-weapon")]
+    finger_grip = {n: draw_pose["hand.l"].inverted() @ draw_pose[n] for n in grip_bones}
+    string_key = bow.data.shape_keys.key_blocks["String_Draw_X"]
+    string_middle = [v.co for i, v in enumerate(bow.data.vertices) if string_key.data[i].co.x - v.co.x > 0.99]
+    string_nock = reflection.to_3x3() @ (sum(string_middle, Vector()) / len(string_middle))
     samples, metrics = {}, {}
     for clip, action in actions.items():
         source.animation_data.action = action
@@ -100,67 +124,64 @@ def main():
             scene.frame_set(frame)
             bpy.context.view_layer.update()
             pose = {n: source.pose.bones[n].matrix.copy() for n in keep}
-            if clip != "DRAW":
-                # The other supplied clips hold the bow in the opposite hand
-                # to the owner's reviewed draw. Mirror motion, retaining rest axes.
-                mirrored = {}
-                for name in keep:
-                    other = name
-                    for a, b in ((".l", ".r"), (".r", ".l"), (".L", ".R"), (".R", ".L")):
-                        if name.endswith(a):
-                            other = name[:-2] + b
-                            break
-                    mirrored[name] = reflection @ pose[other] @ rests[other].inverted() @ reflection @ rests[name]
-                pose = mirrored
-            if clip in ("GARRISON", "SPRINT", "DEATH"):
+            if clip == "DRAW":
+                # The equipped source draws left-handed; retain its rest axes
+                # and corrected skin while swapping the motion to a right-hand draw.
+                pose = mirror_pose(pose, rests)
+            if clip in ("MARCH", "GARRISON", "SPRINT", "DEATH"):
                 # Fit the mocap wrist to this bow's grip: upright when aiming,
                 # carried along the stride when sprinting to clear the ground.
                 if clip == "DEATH":
-                    current = pose["hand.r"] @ bow_grip
+                    current = pose["hand.l"] @ bow_grip
                     z = current.to_3x3().col[2].copy()
                     z.z = 0
                     z.normalize()
                     x = Vector((0, 0, 1))
                     y = z.cross(x).normalized()
                 else:
-                    z = Vector((0, 0, 1)) if clip == "GARRISON" else Vector((0.4, -0.8, 0.35)).normalized()
-                    y = pose["hand.r"].translation - pose["hand.l"].translation
+                    z = (Vector((0, -0.6, 0.8)) if clip == "MARCH" else
+                         Vector((0, 0, 1)) if clip == "GARRISON" else Vector((0.4, -0.8, 0.35))).normalized()
+                    y = Vector((0, -1, 0)) if clip == "MARCH" else pose["hand.l"].translation - pose["hand.r"].translation
                     y = (y - z * y.dot(z)).normalized()
                     x = y.cross(z).normalized()
                 desired = Matrix((x, y, z)).transposed().to_4x4()
-                desired.translation = (pose["hand.r"] @ bow_grip).translation
+                desired.translation = (pose["hand.l"] @ bow_grip).translation
                 if clip == "DEATH":
                     weight = max(0, min(1, (frame / last - 0.20) / 0.35))
                     desired = current.lerp(desired, weight)
                 hand = desired @ bow_grip.inverted()
-                delta = hand @ pose["hand.r"].inverted()
+                delta = hand @ pose["hand.l"].inverted()
                 for name in keep:
                     bone = source.data.bones[name]
-                    if name == "hand.r" or source.data.bones["hand.r"] in bone.parent_recursive:
+                    if name == "hand.l" or source.data.bones["hand.l"] in bone.parent_recursive:
                         pose[name] = delta @ pose[name]
+            if clip != "DRAW":
+                # Empty-hand locomotion must keep the bow's reviewed closed grip.
+                for name, local in finger_grip.items():
+                    pose[name] = pose["hand.l"] @ local
             pose["head"] = pose.pop("head.x")
-            pose["DEF-bow"] = pose["DEF-weapon.R"] @ bow_local
+            pose["DEF-bow"] = pose["DEF-weapon.L"] @ bow_local
             pose["DEF-quiver"] = pose["spine_02.x"] @ quiver_local
             if clip == "DRAW":
-                pose["DEF-arrow"] = arrow.matrix_world.copy()
-                draw = Vector([bow.data.shape_keys.key_blocks["String_Draw_" + axis].value for axis in "XYZ"])
+                pose["DEF-arrow"] = reflection @ arrow.matrix_world @ reflection
+                draw = reflection.to_3x3() @ Vector([bow.data.shape_keys.key_blocks["String_Draw_" + axis].value for axis in "XYZ"])
             elif clip == "GARRISON":
-                hand = pose["hand.l"] @ arrow_grip
+                hand = pose["hand.r"] @ arrow_grip
                 grip = pose["DEF-bow"].translation
-                x = (hand.translation - grip).normalized()
+                x = (grip - hand.translation).normalized()
                 y = Vector((0, 0, 1)).cross(x).normalized()
                 z = x.cross(y).normalized()
                 pose["DEF-arrow"] = Matrix((x, y, z)).transposed().to_4x4()
                 pose["DEF-arrow"].translation = hand.translation
-                draw = pose["DEF-bow"].inverted() @ hand.translation
+                draw = pose["DEF-bow"].inverted() @ hand.translation - string_nock
             else:
-                stored = Matrix.Rotation(-1.5707963267948966, 4, "Y")
+                stored = Matrix.Rotation(1.5707963267948966, 4, "Y")
                 stored.translation = Vector((0.02, 0, 0.8))
                 pose["DEF-arrow"] = pose["DEF-quiver"] @ stored
                 draw = Vector((0, 0, 0))
             pose["DEF-string"] = pose["DEF-bow"] @ Matrix.Translation(draw)
             if clip in ("MARCH", "SPRINT"):
-                shift = Vector((-travel.x, travel.y, 0)) * ((frame - first) / (last - first))
+                shift = Vector((travel.x, travel.y, 0)) * ((frame - first) / (last - first))
                 for matrix in pose.values():
                     matrix.translation -= shift
             poses.append(pose)
@@ -200,7 +221,11 @@ def main():
             # Only this export copy changes representation; source keys stay editable.
             obj.shape_key_clear()
         if socket:
-            obj.data.transform(rest)
+            # Reflect the original gear's bind geometry with its mounting side;
+            # reverse winding to retain outward faces (topology/UVs stay intact).
+            obj.data.transform(rest @ reflection)
+            for polygon in obj.data.polygons:
+                polygon.flip()
             obj.vertex_groups.clear()
             group = obj.vertex_groups.new(name=socket)
             group.add(range(len(obj.data.vertices)), 1.0, "REPLACE")
@@ -266,6 +291,7 @@ def main():
         path = out / ("archers.glb" if index == 0 else mesh.name + ".glb")
         bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", use_selection=True,
             export_animations=index == 0, export_animation_mode="NLA_TRACKS",
+            export_anim_slide_to_zero=True,
             export_skins=True, export_def_bones=False, export_influence_nb=8,
             export_all_influences=True, export_image_format="JPEG", export_jpeg_quality=90,
             export_yup=True, export_morph=False, export_apply=False)

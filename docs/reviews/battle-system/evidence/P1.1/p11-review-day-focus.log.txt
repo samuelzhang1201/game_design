@@ -1,0 +1,41 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[INFO]:  using [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+
+
+res://tests/engine/test_day_resolution.gd
+* test_second_battle_does_not_replay_first
+1/1 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+---- Totals ----
+Scripts           1
+Tests             1
+  Passing         1
+Asserts           48
+Time              0.686s
+
+
+[Orphans]:  Total orphans in run 1.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 2.0
+
+Ran Tests matching "second_battle"
+---- All tests passed! ----

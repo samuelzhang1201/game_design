@@ -67,6 +67,7 @@ func _set_men(sizes: Dictionary) -> void:
 			if row.has(arm):
 				row[arm] = "0"
 		row["infantry"] = str(int(sizes.get(code, 0)))
+		SuiteData.set_headcount(s, code, int(sizes.get(code, 0)))
 
 
 ## The sum of `law_effects.csv`'s `channel` rows for `law` at `value`.

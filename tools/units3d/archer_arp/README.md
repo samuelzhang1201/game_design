@@ -17,7 +17,7 @@ No generation service or Blender add-on is needed to play.
 The six source clips map as follows:
 
 - Standing Idle 03 Examine → STANDBY (loop)
-- Standing Walk Forward → MARCH (loop, in place)
+- general/Standard Walk → MARCH (loop, in place)
 - Standing Sprint Forward → SPRINT (loop, in place)
 - Standing Draw Arrow → DRAW (one shot)
 - Standing Aim Overdraw → GARRISON (loop)
@@ -27,9 +27,11 @@ The map's existing order routing selects STANDBY, MARCH and GARRISON;
 DEFEND falls back to GARRISON. The other clips are available in the model's
 AnimationPlayer. This installation does not add new battle behavior.
 
-The original draw and corrected body weights are retained. The other source
-clips are mirrored to match its right-hand bow grip; aiming and sprinting
-wrists are fitted to this bow. Locomotion root travel is removed and its
+The original corrected body weights are retained. DRAW is mirrored to a
+left-hand bow and right-hand retrieval/draw; the other clips retain that side.
+The original gear is reflected onto its matching mounts; the quiver is on the
+right, the bow is parented to `DEF-weapon.L`, and fingers retain the equipped
+grip. Walking, aiming and sprinting wrists are fitted to this bow. Locomotion root travel is removed and its
 measured walk stride goes into `army_art.csv`. Sole contact is corrected at
 each sampled frame. The falling wrist lays the bow flat as the body lands.
 No decimation is applied: the original geometry and UVs remain intact.
@@ -69,8 +71,10 @@ beside the GLBs and import them with Basis Universal compression. Set the
 four repeating clips to LOOP_LINEAR and DRAW/DEATH to LOOP_NONE in the GLB
 import settings. Re-run the material, skin, clip and real-window visual checks.
 
-`validate.py` checks every sampled frame for body penetration, compares the
-entire DRAW skin against the corrected source, and rejects missing or
+`validate.py` checks every sampled frame for body/bow penetration and a fixed
+left-hand grip, checks the loaded arrow against the evaluated string, measures
+MARCH stride from planted-foot speed, and compares body coordinates, topology,
+UVs and weights against the corrected source. It rejects missing or
 unnormalized weights. `export_metrics.json` and `validation.json` record the
 actual measurements in WORK. The export has 73 bones and 381,626 triangles
 across four meshes; benchmark the full formation when changing this geometry.

@@ -201,6 +201,10 @@ func _validate_army(req: ActionRequest, state: GameState, check_purse := true) -
 		return ""
 	if req.action_code == "ARMY_GARRISON":
 		return ""
+	if state.military_organization_version > 0:
+		var commander := String(state.military_rosters.get(code, {}).get("commander_id", ""))
+		if commander == "" or not BattleCommand.eligible_for_unit(data, state, code, commander):
+			return "%s needs an eligible commander before departure" % String(reg["label"])
 	if ArmySystem.base_pace_km(data, reg) <= 0:
 		return "%s has no one under arms to march" % String(reg["label"])
 	var dest := Vector2(float(req.params.get("x", -1.0)), float(req.params.get("y", -1.0)))

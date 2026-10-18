@@ -57,7 +57,7 @@ func test_quick_reply_executes_suggestion_and_speaks_prose() -> void:
 	c.reply_buttons()[0].pressed.emit()
 	await wait_process_frames(2)
 	assert_gt(Game.state.metrics["army_quality"], army0)
-	assert_string_contains(c.said_text(), "muster")  # outcome prose, not numbers
+	assert_string_contains(c.said_text(), "drill")  # outcome prose, not numbers
 
 func test_event_beat_gates_continue_until_choice() -> void:
 	Game.start_campaign(42)
@@ -160,7 +160,7 @@ func test_skills_tab_lists_tools_with_kind_colors() -> void:
 	var kingdom_color := Color.TRANSPARENT
 	var personal_color := Color.TRANSPARENT
 	for row in tools.get_children():
-		if row.text == "Raise fresh levies":
+		if row.text == "Train the standing army":
 			kingdom_color = row.get_theme_color("font_color")
 		if row.text == "Confide in a courtier":
 			personal_color = row.get_theme_color("font_color")
@@ -334,7 +334,7 @@ func test_summary_shows_this_session_resolution_after_quick_reply() -> void:
 	await wait_process_frames(2)
 	c.continue_button().pressed.emit()
 	await wait_process_frames(2)
-	assert_string_contains(c.said_text(), "Raise fresh levies")
+	assert_string_contains(c.said_text(), "Train the standing army")
 	assert_false("Nothing was ordered" in c.said_text(),
 		"a same-session decision must not be summarized as idle")
 

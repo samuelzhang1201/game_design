@@ -101,10 +101,10 @@ func test_figures_follow_the_strength_tiers() -> void:
 	ArmySystem.ensure(repo, state)
 	var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
 	@warning_ignore("integer_division")
-	state.regiments[code]["wounded"] = heads / 2   # 500 fit per mille -> depleted
+	SuiteData.set_losses(state, code, {"wounded": heads / 2})   # 500 fit per mille -> depleted
 	assert_eq(WarFolio.figures(repo, state, code), 6)
 	@warning_ignore("integer_division")
-	state.regiments[code]["wounded"] = heads - heads / 10   # ~100 -> remnants
+	SuiteData.set_losses(state, code, {"wounded": heads - heads / 10})   # ~100 -> remnants
 	assert_eq(WarFolio.figures(repo, state, code), 3)
 
 
@@ -348,7 +348,7 @@ func test_the_brief_counts_heads_by_arm_and_the_fit() -> void:
 		var label := String((repo.resource_icons.get(String(a["arm"]), {}) as Dictionary).get("label", ""))
 		assert_true(rows["Arms"].contains("%s %s" % [label, WarRoom.group(int(a["heads"]))]), String(a["arm"]))
 	ArmySystem.ensure(repo, state)
-	state.regiments[code]["wounded"] = 100
+	SuiteData.set_losses(state, code, {"wounded": 100})
 	assert_eq(_brief_rows(code)["Under arms"], "%s · %s fit" % [WarRoom.group(heads), WarRoom.group(heads - 100)])
 
 

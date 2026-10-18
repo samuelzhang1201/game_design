@@ -1,0 +1,17 @@
+{
+  "source_commit": "ff9ad15c579923fc5eda16a040c03680dac2f6df",
+  "source_sha256": {
+    "scripts/engine/army_system.gd": "76cc81af08e934d3426262c276e4b6dcf7df3929de5f6961e401b8d9bb7f8f0d",
+    "tests/engine/test_courier_ride.gd": "2c24449db6dd98f7c58903bcb9ffbeb0f0fdfedbd259ad7b779971dc12b02028",
+    "tests/engine/test_day_resolution.gd": "d2a936913c582c722b356ab2a0e107ab4507de3e653cd074e0eeb8db3d5779e9",
+    "tests/engine/test_invasion_end_to_end.gd": "fa5e7cdd7b53e492778530a172b2e27653129cedbb440de7441ee08c170ce1c9"
+  },
+  "run_start": {
+    "head": "801860b6079f426bc88a9ec0f912700b3a543b09",
+    "diff_sha256": "89d2009aa4babe94ce15b04204cdde41168e6aaadbe03947685817fc3cd8755a"
+  },
+  "post_run": {
+    "after_diff_sha256": "89d2009aa4babe94ce15b04204cdde41168e6aaadbe03947685817fc3cd8755a",
+    "unchanged_tracked_diff": true
+  }
+}

@@ -12,7 +12,7 @@ import bpy
 
 CLIPS = {
     "STANDBY": "Standing Idle 03 Examine",
-    "MARCH": "Standing Walk Forward",
+    "MARCH": "Standard Walk",
     "SPRINT": "Standing Sprint Forward",
     "DRAW": "Standing Draw Arrow",
     "GARRISON": "Standing Aim Overdraw",
@@ -44,7 +44,8 @@ def main():
     offsets = None
     for key in order:
         before = set(bpy.data.objects)
-        path = root / "assets/3D/model_wip/Motion/archers" / (CLIPS[key] + ".fbx")
+        folder = "general" if key == "MARCH" else "archers"
+        path = root / "assets/3D/model_wip/Motion" / folder / (CLIPS[key] + ".fbx")
         bpy.ops.import_scene.fbx(filepath=str(path))
         imported = set(bpy.data.objects) - before
         raw = next(o for o in imported if o.type == "ARMATURE")
