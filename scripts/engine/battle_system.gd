@@ -781,6 +781,10 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 	for cost: Dictionary in pending["costs"]:
 		var entry := _stored(state, String(cost["code"]))
 		entry["supplies"] = maxi(0, int(entry["supplies"]) - int(cost["supplies"]))
+	for code: String in pending.get("unit_actions", {}):
+		var action: Dictionary = pending["unit_actions"][code]
+		if action["kind"] == "attack" and action["task_id"] != "":
+			b.get("reserves", {}).erase(code)
 	b["rounds"] = n
 	b["last_resolved_day"] = today
 	b.erase("pending_round")

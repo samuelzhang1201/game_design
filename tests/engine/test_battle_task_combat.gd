@@ -252,3 +252,27 @@ func test_holding_cavalry_cannot_supply_an_infantry_tasks_shock_context() -> voi
 	_receive(f, "mounted")
 	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "shock",
 		"600 of 1200 now attack mounted: 500 per mille exceeds 400")
+
+func test_successful_task_attack_commits_reserve_after_failed_round_retry() -> void:
+	var f := _fixture()
+	_issue(f, "advance", "advance")
+	_receive(f, "advance")
+	f.battle["reserves"] = {f.a: {"reason": "Awaiting commitment"}}
+	for tier: Dictionary in f.repo.battle_outcomes:
+		tier.attacker_loss_permille = 10
+		tier.defender_loss_permille = 10
+		tier.rout = "none"
+	var cohort := String(f.state.military_rosters[f.enemy].cohort_ids[0])
+	var origin := String(f.state.military_cohorts[cohort].source_population_field)
+	f.state.military_cohorts[cohort].source_population_field = "invalid"
+	var events: Array = []
+	assert_true(BattleSystem._fight(f.repo, f.state, f.battle, events).has("error"))
+	assert_true(f.battle.reserves.has(f.a), "failed rounds do not commit reserves")
+	f.state.military_cohorts[cohort].source_population_field = origin
+	BattleSystem._fight(f.repo, f.state, f.battle, events)
+	assert_false(f.battle.reserves.has(f.a), "an actual attack commits this reserve")
+	_issue(f, "cancel", "cancel")
+	_receive(f, "cancel")
+	f.battle.actions.att.kind = "attack"
+	assert_gt(BattleSystem.side_power(f.repo, f.state, [f.a], Callable(), true), 0,
+		"cancelling the task cannot return a committed unit to reserve")

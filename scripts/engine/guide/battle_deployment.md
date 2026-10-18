@@ -69,7 +69,8 @@ factors, engagement, attack context and extra supply consumption. Shock counts
 only mounted personnel actually attacking; task attack alone grants no pursuit. Explicit
 unit tasks are excluded from the legacy side-wide supply veto; each attacking
 task pays its own existing extra bite, once alongside the daily personnel
-commit. Normal meals/equipment retain their existing writers. The saved
+commit. A successful task attack clears its recipient’s reserve flag; a failed
+round preserves it until the saved round commits. Normal meals/equipment retain their existing writers. The saved
 `pending_round.unit_actions` freezes actual actions and reasons with the loss
 plan, RNG draw and costs; failed personnel writes and JSON retries reuse it. Legacy pending plans without
 unit actions retain their side effects until that round completes.
