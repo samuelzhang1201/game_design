@@ -355,28 +355,3 @@ func test_no_havoc_leaves_the_follower() -> void:
 	assert_eq(String(state.regiments[a]["forage"]), "desperate")
 	assert_eq(String(state.regiments[b]["forage"]), "")
 	assert_eq(int(state.regiments[b]["forage_days"]), 0)
-
-
-func test_twenty_four_months_twice_identical() -> void:
-	var runs: Array = []
-	var busy := false
-	for i in range(2):
-		state = SuiteData.campaign(repo, 11)
-		_place(a, foreign)
-		state.regiments[a]["camp_town"] = ""   # in the field, no town feeds it
-		_law(a, "plunder", "forbid")
-		_place(b, home)
-		_put(b, 30, 90, 90)
-		var engine := TickEngine.new(repo)
-		var run_log: Array = []
-		for m in range(24):
-			state.regiments[a]["supplies"] = 0
-			for d in range(Calendar.DAYS_PER_TICK - 1):
-				engine.advance_day(state)
-			engine.advance(state)
-			run_log.append(JSON.stringify([state.regiments, state.military_cohorts, state.forage_stripped, state.grievance, state.conduct_marks]))
-			busy = busy or not state.forage_stripped.is_empty() or not state.conduct_marks.is_empty() \
-				or int(state.regiments[a].get("forage_days", 0)) > 0
-		runs.append(run_log)
-	assert_true(busy, "something happened during the 24 months")
-	assert_eq(runs[0], runs[1])

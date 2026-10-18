@@ -3,47 +3,23 @@
 export CC_FORCE_OFFLINE=1
 set -e
 
-# ./run_tests.sh         the whole suite (run it before a merge)
-# ./run_tests.sh --fast  only the directories that build no screen and no 3D
-#                        view (FAST_DIRS): the engine, the LEDGER's pieces and
-#                        the model plumbing, for the edit-run loop
-# ./run_tests.sh --shard=I/N
-#                        the I-th of N contiguous slices of the sorted list
-#                        of all test scripts, in its own Godot process. The whole suite in ONE process
-#                        grows past 7 GB on a Linux CI runner and the runner
-#                        kills it (exit 143); N slices run one after the
-#                        other each start from a fresh process.
-FAST_DIRS="engine ledger3d llm"
-SELECT_ARG="-gdir=res://tests"
-SCRIPT_DIRS="tests"
-SHARD_COUNT=""
-case "$1" in
-  --fast)
-    DIRS=$(for d in $FAST_DIRS; do printf 'res://tests/%s,' "$d"; done | sed 's/,$//')
-    SELECT_ARG="-gdir=$DIRS"
-    SCRIPT_DIRS=$(for d in $FAST_DIRS; do printf 'tests/%s ' "$d"; done)
-    ;;
-  --shard=*)
-    SHARD_SPEC="${1#--shard=}"
-    SHARD_IDX="${SHARD_SPEC%/*}"
-    SHARD_N="${SHARD_SPEC#*/}"
-    case "$SHARD_IDX$SHARD_N" in
-      ''|*[!0-9]*) echo "usage: ./run_tests.sh --shard=I/N (1 <= I <= N)" >&2; exit 2 ;;
-    esac
-    if [ "$SHARD_IDX" -lt 1 ] || [ "$SHARD_IDX" -gt "$SHARD_N" ]; then
-      echo "usage: ./run_tests.sh --shard=I/N (1 <= I <= N)" >&2
-      exit 2
-    fi
-    # Contiguous slices of the sorted list, not every Nth file: a test that
-    # leans on an earlier file of its own folder (test_map3d_picker.gd only
-    # passes after test_map3d_hover.gd has run) keeps its neighbours.
-    SHARD_FILES=$(find tests -name "test_*.gd" | LC_ALL=C sort \
-      | awk -v i="$SHARD_IDX" -v n="$SHARD_N" '{ f[NR] = $0 }
-          END { for (k = int((i - 1) * NR / n) + 1; k <= int(i * NR / n); k++) print f[k] }')
-    SELECT_ARG="-gtest=$(printf '%s\n' "$SHARD_FILES" | sed 's#^#res://#' | paste -sd, -)"
-    SHARD_COUNT=$(printf '%s\n' "$SHARD_FILES" | wc -l | tr -d ' ')
-    ;;
-esac
+# Default: functional categories affected by the diff against origin/main.
+# --base REF, --include CATEGORY: select a diff, explicitly adding requested suites.
+# --category CATEGORY / --test tests/...gd: run an explicit category or file.
+# --fast: all functional engine categories and ledger3d (no LLM/campaign replay).
+if [ "${1:-}" = --fast ]; then
+  shift
+  set -- --category engine-core --category engine-economy --category engine-military --category ledger3d "$@"
+fi
+SELECTED_FILES=$(python3 tools/select_gut_tests.py "$@" --format files)
+if [ -z "$SELECTED_FILES" ]; then
+  echo "No GUT scripts selected; Godot not started."
+  exit 0
+fi
+SELECT_ARG="-gtest=$(printf '%s\n' "$SELECTED_FILES" | sed 's#^#res://#' | paste -sd, -)"
+SELECTED_COUNT=$(printf '%s\n' "$SELECTED_FILES" | wc -l | tr -d ' ')
+echo "Selected $SELECTED_COUNT GUT scripts:"
+printf '%s\n' "$SELECTED_FILES"
 
 # $GODOT overrides the Godot binary (the cloud SessionStart hook sets it).
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
@@ -89,12 +65,11 @@ if grep -q "Ignoring script" "$TEST_OUTPUT"; then
   grep "Ignoring script" "$TEST_OUTPUT"
   exit 1
 fi
-DISK_SCRIPTS=$(find $SCRIPT_DIRS -name "test_*.gd" | wc -l | tr -d ' ')
-[ -n "$SHARD_COUNT" ] && DISK_SCRIPTS="$SHARD_COUNT"
+DISK_SCRIPTS="$SELECTED_COUNT"
 RAN_SCRIPTS=$(grep "^Scripts" "$TEST_OUTPUT" | awk '{print $NF}')
 if [ "$DISK_SCRIPTS" != "$RAN_SCRIPTS" ]; then
   echo ""
-  echo "FATAL: $DISK_SCRIPTS test scripts on disk but GUT ran $RAN_SCRIPTS"
+  echo "FATAL: $DISK_SCRIPTS selected test scripts but GUT ran $RAN_SCRIPTS"
   exit 1
 fi
 
