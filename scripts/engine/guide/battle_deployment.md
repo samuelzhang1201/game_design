@@ -39,7 +39,7 @@ outcome before costs, history or current eligibility; conflicting reuse fails.
 Local king command range delivers immediately through CourierSystem; remote
 warrants remain pending until arrival. Delivery checks recipient identity,
 current realm control, membership and law. Lost/expired couriers invalidate
-pending tasks with a reason without refunding spent fees. Formation and movement execution require their own integration steps.
+pending tasks with a reason without refunding spent fees. Formation and pursuit execution require their own integration steps.
 The dispatch path changes only the canonical primary-task ledger.
 
 `BATTLE_TASK_CANCEL` accepts only `request_id`, `regiment` and `battle_id`,
@@ -59,7 +59,7 @@ reused across assignment and cancellation actions.
 `BattleTaskSystem.combat_action` resolves only received tasks for this battle:
 advance/flank/charge reuse attack, defend/guard_flank reuse hold. Charge retains
 its own live legality check; there is no positional/flanking bonus. Pending,
-replaced and cancelled warrants do not execute. Unassigned units and movement
+replaced and cancelled warrants do not execute. Unassigned units and pursuit
 tasks retain their existing side action; actual withdrawal/rout wins. Live unit
 law, shared terms, crown control and designated enemy availability constrain
 execution. A barred or depleted task holds without altering its saved receipt.
@@ -75,6 +75,27 @@ round preserves it until the saved round commits. Normal meals/equipment retain 
 plan, RNG draw and costs; failed personnel writes and JSON retries reuse it. Legacy pending plans without
 unit actions retain their side effects until that round completes.
 Cancellation/replacement changes the next unprocessed round only on receipt.
+
+## Delivered unit retreat
+
+A received retreat resolves through `combat_action` and the existing `_exits`
+withdrawal path for that recipient only. Pending tasks are inert; current law,
+control, membership and incapacity checks still apply before execution. A frozen
+pending round retains its saved actions until commit, including legacy plans.
+`_start_retreat` keeps reachable held-town routing, full camp packing deadlines,
+contact membership and its one-time morale/store losses. A failed route leaves
+the unit exposed and retries on the next unresolved day; actual separation alone
+removes it. Cancelling or replacing the warrant before execution prevents its
+start; afterwards it changes only the task ledger, never reverses the physical
+withdrawal or grants immunity. Existing side-wide withdrawal/rout takes priority.
+
+Mixed withdrawing/remaining sides save effective casualty rates per unit in the
+pending tier. Rates use the existing contexts and CSV scales; equal rates share
+one whole-number loss pool with the existing largest-remainder apportionment.
+Protected withdrawal applies only to withdrawing members; remaining allies retain
+their own combat context and event exposure. All groups enter the same atomic
+personnel commit. Failed writes and JSON retries reuse those saved rates, actions
+and random draw without repeating departure costs, daily meals or attack costs.
 
 ## Costly orders and daily resolution
 

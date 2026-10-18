@@ -8,7 +8,7 @@ static func current(state: GameState, unit: String) -> Dictionary:
 	return ledger.get("orders", {}).get(String(ledger.get("current_id", "")), {}).duplicate(true)
 
 
-## Resolve only the attack/hold execution slice; movement tasks keep their side default.
+## Resolve received combat and withdrawal tasks; pursuit keeps its side default.
 static func combat_action(repo: DataRepository, state: GameState, battle: Dictionary, unit: String) -> Dictionary:
 	var side := BattleRules.side_of(battle, unit)
 	var fallback := BattleOrders.kind(battle, side)
@@ -27,7 +27,7 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 	if int(request["battle_id"]) != int(battle["id"]):
 		return result
 	var action := String(repo.battle_behaviors.get(request["task"], {}).get("legal_action", ""))
-	if not action in ["attack", "charge", "hold"]:
+	if not action in ["attack", "charge", "hold", "retreat"]:
 		return result
 	result = {"kind": "hold", "task_id": String(request["id"]), "reason": "Received unit task: " + String(request["task"])}
 	var legal := BattleRules.legal_actions(repo, state, int(battle["id"]), side, unit)
@@ -45,7 +45,7 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 			or bool(BattleSystem._stored(state, target).get("captured", false))):
 		result["reason"] = "Unit task holds: its designated enemy is no longer available"
 		return result
-	result["kind"] = "hold" if action == "hold" else "attack"
+	result["kind"] = action if action in ["hold", "retreat"] else "attack"
 	if result["kind"] == "attack" and not "attack" in legal:
 		result["kind"] = "hold"
 		result["reason"] = "Unit task holds: attack is barred by current law or agreement"

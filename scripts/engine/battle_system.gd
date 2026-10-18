@@ -169,7 +169,20 @@ static func _entry_of(repo: DataRepository, state: GameState, code: String) -> D
 ## originating population write leaves the entire round untouched.
 static func _plan_side(repo: DataRepository, state: GameState, codes: Array, loss_permille: int,
 		wounded_share_permille: int, morale_delta: int, reason: String, out: Dictionary,
-		orders: Array, stance_fn: Callable) -> Dictionary:
+		orders: Array, stance_fn: Callable, unit_losses: Dictionary = {}) -> Dictionary:
+	if not unit_losses.is_empty():
+		var groups := {}
+		for code: String in codes:
+			var rate := int(unit_losses.get(code, loss_permille))
+			if not groups.has(rate):
+				groups[rate] = []
+			groups[rate].append(code)
+		for rate: int in groups:
+			var result := _plan_side(repo, state, groups[rate], rate, wounded_share_permille,
+				morale_delta, reason, out, orders, stance_fn)
+			if result.has("error"):
+				return result
+		return {"status": "planned"}
 	var fits: Array = []
 	var total_fit := 0
 	for code: String in codes:
@@ -242,11 +255,11 @@ static func apply_round(repo: DataRepository, state: GameState, codes_att: Array
 	var orders: Array = []
 	var share := int(tier.get("wounded_share_permille", 0))
 	var planned := _plan_side(repo, state, att, int(tier.get("attacker_loss_permille", 0)), share,
-		int(tier.get("attacker_morale", 0)), reason, out, orders, stance_fn)
+		int(tier.get("attacker_morale", 0)), reason, out, orders, stance_fn, tier.get("unit_loss_permille", {}))
 	if planned.has("error"):
 		return planned
 	planned = _plan_side(repo, state, def, int(tier.get("defender_loss_permille", 0)), share,
-		int(tier.get("defender_morale", 0)), reason, out, orders, stance_fn)
+		int(tier.get("defender_morale", 0)), reason, out, orders, stance_fn, tier.get("unit_loss_permille", {}))
 	if planned.has("error"):
 		return planned
 	if not orders.is_empty():
@@ -763,8 +776,20 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 			var context := combat_context(repo, state, b, side)
 			contexts[side] = context
 			var key := "attacker_loss_permille" if side == "att" else "defender_loss_permille"
+			var base_loss := int(tier.get(key, 0))
+			var withdrawing := 0
+			for code: String in b[side]:
+				if bool(_stored(state, code).get("battle_retreat", false)):
+					withdrawing += 1
+			if withdrawing > 0 and withdrawing < (b[side] as Array).size():
+				if not tier.has("unit_loss_permille"):
+					tier["unit_loss_permille"] = {}
+				for code: String in b[side]:
+					var unit_context := combat_context(repo, state, b, side, code)
+					@warning_ignore("integer_division")
+					tier["unit_loss_permille"][code] = base_loss * int(unit_context["loss_permille"]) / 1000
 			@warning_ignore("integer_division")
-			tier[key] = int(tier.get(key, 0)) * int(context["loss_permille"]) / 1000
+			tier[key] = base_loss * int(context["loss_permille"]) / 1000
 		var reason := "%s at %s, battle day %d; attacker %s, defender %s" % [String(tier.get("tier", "")).replace("_", " "),
 			place_label(repo, state, b), n, contexts["att"]["kind"], contexts["def"]["kind"]]
 		pending = {"day": today, "round": n, "att": att.duplicate(), "def": def.duplicate(), "tier": tier,
@@ -845,11 +870,12 @@ static func _broken(repo: DataRepository, state: GameState, codes: Array) -> boo
 
 
 ## The incoming-loss context follows real equipment, action and binding terms.
-static func combat_context(repo: DataRepository, state: GameState, battle: Dictionary, side: String) -> Dictionary:
+static func combat_context(repo: DataRepository, state: GameState, battle: Dictionary, side: String, unit := "") -> Dictionary:
 	var other := "def" if side == "att" else "att"
 	var kind := "melee"
 	var scale := 1000
-	if BattleOrders.kind(battle, side) == "retreat" or (battle[side] as Array).any(func(code: String) -> bool:
+	var members: Array = battle[side] if unit == "" else [unit]
+	if BattleOrders.kind(battle, side) == "retreat" or members.any(func(code: String) -> bool:
 		return bool(_stored(state, code).get("battle_retreat", false))):
 		var pursued := BattleOrders.kind(battle, other) == "attack" and "pursue" in BattleRules.legal_actions(repo, state, int(battle["id"]), other)
 		kind = "pursuit" if pursued else "withdrawal"
@@ -877,7 +903,7 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 			kind = "shock"
 		if kind != "melee":
 			scale = int(repo.bal("battle_context_" + kind + "_permille"))
-	for code: String in battle[side]:
+	for code: String in members:
 		for modifier: Dictionary in battle.get("event_modifiers", []):
 			if modifier.unit == code and int(modifier.until_day) >= state.absolute_day():
 				@warning_ignore("integer_division")
@@ -980,7 +1006,7 @@ static func _exits(repo: DataRepository, state: GameState, b: Dictionary, rout: 
 		var other := "def" if side == "att" else "att"
 		for code: String in codes:
 			var why := _exit_why(repo, state, code, side, rout, odds if side == "att" else 1000 - odds)
-			if why in ["ordered", "evade", "retreat"] or BattleOrders.kind(b, side) == "retreat":
+			if why in ["ordered", "evade", "retreat"] or unit_action(repo, state, b, code)["kind"] == "retreat":
 				var entry := _stored(state, code)
 				if not entry.has("withdrawal_cause"):
 					entry["withdrawal_cause"] = "withdrawn" if homeward(state, code) else (why if why in ["ordered", "evade", "retreat"] else "retreat")
