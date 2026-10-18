@@ -276,3 +276,118 @@ func test_successful_task_attack_commits_reserve_after_failed_round_retry() -> v
 	f.battle.actions.att.kind = "attack"
 	assert_gt(BattleSystem.side_power(f.repo, f.state, [f.a], Callable(), true), 0,
 		"cancelling the task cannot return a committed unit to reserve")
+
+func test_pursuit_waits_for_receipt_and_a_withdrawing_enemy() -> void:
+	var f := _fixture()
+	_issue(f, "pursue", "pursue")
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "hold")
+	_receive(f, "pursue")
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "hold")
+	f.state.foes[f.enemy].battle_retreat = true
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "attack")
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.b).kind, "hold")
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "pursuit")
+	f.state.regiments[f.a].supplies = 0
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "withdrawal")
+
+func test_pursuit_live_terms_control_and_cancellation_stop_authorization() -> void:
+	var f := _fixture()
+	_issue(f, "pursue", "pursue")
+	_receive(f, "pursue")
+	f.state.foes[f.enemy].battle_retreat = true
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "pursuit")
+	f.state.law_in_force["unit:" + f.a] = {"battle_tactics": {"value": "restrained", "decree_id": 100}}
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "withdrawal")
+	f.state.law_in_force.erase("unit:" + f.a)
+	f.battle["parley"] = {"agreed": {"safe_withdrawal": {"policy": "protect"}}}
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").loss_permille, 0)
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "hold")
+	f.battle.erase("parley")
+	_issue(f, "cancel-pursue", "cancel")
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "pursuit")
+	_receive(f, "cancel-pursue")
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "withdrawal")
+
+func test_designated_pursuit_does_not_chase_another_withdrawing_enemy() -> void:
+	var f := _fixture()
+	var second := "pursuit_other"
+	f.state.foes[second] = f.state.foes[f.enemy].duplicate(true)
+	f.state.military_rosters[second] = f.state.military_rosters[f.enemy].duplicate(true)
+	f.battle.def.append(second)
+	var sent := BattleTaskSystem.issue_task(f.repo, f.state, {"id": "target-pursue", "unit": f.a,
+		"battle_id": 9443, "task": "pursue", "target_unit": f.enemy})
+	assert_eq(sent.status, "pending")
+	_receive(f, "target-pursue")
+	f.state.foes[second].battle_retreat = true
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "hold")
+	f.state.foes[f.enemy].battle_retreat = true
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def", f.enemy).kind, "pursuit")
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def", second).kind, "withdrawal")
+	f.state.foes[f.enemy].captured = true
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "hold")
+
+func test_pursuit_round_uses_existing_attack_cost_and_json_replay() -> void:
+	var f := _fixture()
+	_issue(f, "pursue", "pursue")
+	_receive(f, "pursue")
+	var at := BattleSystem._at_m(f.repo, f.state, f.a)
+	preload("res://tests/invasion_play.gd").place(f.repo, f.state, f.enemy, at, ArmySystem.ORDER_STANDBY)
+	f.battle.actions.def.kind = "retreat"
+	var reg := ArmySystem.regiment(f.repo, f.a, f.state)
+	var bite := ArmySystem.day_bite(ArmySystem.supply_use(f.repo, reg, f.state), f.state.day)
+	var food := int(f.state.regiments[f.a].supplies)
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	var events: Array = []
+	var replay: Array = []
+	BattleSystem._fight(f.repo, f.state, f.battle, events)
+	BattleSystem._fight(f.repo, restored, BattleSystem.battle_by_id(restored, 9443), replay)
+	events = events.filter(func(event: Dictionary) -> bool: return event.kind == "round")
+	assert_eq(events.size(), 1)
+	if events.is_empty(): return
+	assert_eq(events[0].contexts.def.kind, "pursuit")
+	assert_eq(events[0].costs.size(), 1)
+	assert_eq(int(f.state.regiments[f.a].supplies), food - BattleSystem._attack_supply(f.repo, bite))
+	assert_eq(SaveLoad.state_hash(restored), SaveLoad.state_hash(f.state))
+
+func test_targeted_pursuit_freezes_distinct_loss_rates_and_costs_after_failed_commit() -> void:
+	var f := _fixture()
+	f.battle.att = [f.a]
+	f.battle.def = [f.enemy, f.b]
+	var at := BattleSystem._at_m(f.repo, f.state, f.a)
+	for code: String in f.battle.def:
+		preload("res://tests/invasion_play.gd").place(f.repo, f.state, code, at, ArmySystem.ORDER_STANDBY)
+	var sent := BattleTaskSystem.issue_task(f.repo, f.state, {"id": "pursue-one", "unit": f.a,
+		"battle_id": 9443, "task": "pursue", "target_unit": f.enemy})
+	assert_eq(sent.status, "pending")
+	_receive(f, "pursue-one")
+	f.battle.actions.def.kind = "retreat"
+	for tier: Dictionary in f.repo.battle_outcomes:
+		tier.attacker_loss_permille = 100
+		tier.defender_loss_permille = 100
+		tier.rout = "none"
+	var cohort := String(f.state.military_rosters[f.enemy].cohort_ids[0])
+	var origin := String(f.state.military_cohorts[cohort].source_population_field)
+	f.state.military_cohorts[cohort].source_population_field = "invalid"
+	var events: Array = []
+	assert_true(BattleSystem._fight(f.repo, f.state, f.battle, events).has("error"))
+	var pending: Dictionary = f.battle.pending_round.duplicate(true)
+	assert_eq(int(pending.tier.unit_loss_permille[f.enemy]), 150, "100 * 1500 / 1000: designated pursued enemy")
+	assert_eq(int(pending.tier.unit_loss_permille[f.b]), 60, "100 * 600 / 1000: other withdrawal")
+	assert_eq(pending.unit_actions[f.a].pursuit_target, f.enemy)
+	var food := int(f.state.regiments[f.a].supplies)
+	var draw: Dictionary = f.state.rng.to_dict()
+	_issue(f, "cancel-frozen-pursuit", "cancel")
+	_receive(f, "cancel-frozen-pursuit")
+	assert_true(BattleSystem._fight(f.repo, f.state, f.battle, events).has("error"))
+	assert_eq(f.battle.pending_round, pending)
+	assert_eq(int(f.state.regiments[f.a].supplies), food)
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	f.state.military_cohorts[cohort].source_population_field = origin
+	restored.military_cohorts[cohort].source_population_field = origin
+	var replay: Array = []
+	BattleSystem._fight(f.repo, restored, BattleSystem.battle_by_id(restored, 9443), replay)
+	BattleSystem._fight(f.repo, f.state, f.battle, events)
+	assert_eq(SaveLoad.state_hash(restored), SaveLoad.state_hash(f.state))
+	assert_eq(f.state.rng.to_dict(), draw)
+	assert_eq(int(f.state.regiments[f.a].supplies), food - int(pending.costs[0].supplies))
+	assert_false(f.battle.has("pending_round"))

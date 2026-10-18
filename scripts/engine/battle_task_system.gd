@@ -8,7 +8,7 @@ static func current(state: GameState, unit: String) -> Dictionary:
 	return ledger.get("orders", {}).get(String(ledger.get("current_id", "")), {}).duplicate(true)
 
 
-## Resolve received combat and withdrawal tasks; pursuit keeps its side default.
+## Resolve received tasks through existing combat and withdrawal effects.
 static func combat_action(repo: DataRepository, state: GameState, battle: Dictionary, unit: String) -> Dictionary:
 	var side := BattleRules.side_of(battle, unit)
 	var fallback := BattleOrders.kind(battle, side)
@@ -27,7 +27,7 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 	if int(request["battle_id"]) != int(battle["id"]):
 		return result
 	var action := String(repo.battle_behaviors.get(request["task"], {}).get("legal_action", ""))
-	if not action in ["attack", "charge", "hold", "retreat"]:
+	if not action in ["attack", "charge", "hold", "retreat", "pursue"]:
 		return result
 	result = {"kind": "hold", "task_id": String(request["id"]), "reason": "Received unit task: " + String(request["task"])}
 	var legal := BattleRules.legal_actions(repo, state, int(battle["id"]), side, unit)
@@ -45,6 +45,19 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 			or bool(BattleSystem._stored(state, target).get("captured", false))):
 		result["reason"] = "Unit task holds: its designated enemy is no longer available"
 		return result
+	if action == "pursue":
+		var opponents: Array = battle["def" if side == "att" else "att"] if target == "" else [target]
+		var withdrawing := false
+		for enemy: String in opponents:
+			if BattleSystem._can_fight(repo, state, enemy) \
+					and not bool(BattleSystem._stored(state, enemy).get("captured", false)) \
+					and (BattleOrders.kind(battle, "def" if side == "att" else "att") == "retreat" \
+					or bool(BattleSystem._stored(state, enemy).get("battle_retreat", false))):
+				withdrawing = true
+		if not withdrawing:
+			result["reason"] = "Unit task holds: no available designated enemy is withdrawing"
+			return result
+		result["pursuit_target"] = target
 	result["kind"] = action if action in ["hold", "retreat"] else "attack"
 	if result["kind"] == "attack" and not "attack" in legal:
 		result["kind"] = "hold"
