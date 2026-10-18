@@ -14,7 +14,7 @@ Each PR delivers one independently testable step, owned by its implementation se
 
 选择器比较基准提交与当前工作树，包含删除及重命名前后的路径。分类按测试内容和子系统；公式、局部存档和短确定性测试保留在功能类别，新增长战役或调参扫描必须显式归入可选类别。
 
-Known UI/map/ledger/war-room source paths select their functional consumers and bridges. Engine, shared fixtures, runtime prose (`RANDOM_EVENTS.md`, `game_story/`), CSV/data, assets, runner/selector changes and unknown runtime paths conservatively select all functional categories. A changed test selects its category, including a deleted test's surviving neighbors. Ordinary documentation and `.codex/` harness files need no GUT. Categories run sorted scripts together, preserving the map hover/picker setup order. This is category routing, not a transitive dependency graph.
+Known UI/map/ledger/war-room source paths select their functional consumers and bridges. Engine, runtime prose (`RANDOM_EVENTS.md`, `game_story/`), CSV/data, assets and unknown runtime paths conservatively select all functional categories. Changed or deleted tests select their affected category; mixed changes select the union. Harness/selector/runner/workflow changes and comment-only source changes use dedicated harness self-checks without GUT. Ordinary documentation and `.codex/` files also need no GUT. Categories run sorted scripts together, preserving the map hover/picker setup order. This is category routing, not a transitive dependency graph.
 
 已知展示子系统只选相关消费者；引擎、共享夹具、运行时叙事、CSV、资源和未知运行时路径保守选择全部功能类别。测试文件的修改或删除选择它所属的类别。普通文档和 `.codex/` 改动只跑专用检查。
 
