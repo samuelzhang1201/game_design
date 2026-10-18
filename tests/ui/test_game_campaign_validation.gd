@@ -1,10 +1,21 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 const Play := preload("res://tests/invasion_play.gd")
+const Scenario := preload("res://tests/fixtures/battle_scenario.gd")
+
+var _old_data: DataRepository
+var _old_maker: Callable
+
+func before_each() -> void:
+	_old_data = Game.data
+	_old_maker = Game.campaign_maker
+
+func after_each() -> void:
+	Game.campaign_maker = _old_maker
+	Game.restart()
+	Game.data = _old_data
 
 func test_rejected_campaign_preserves_the_existing_reign() -> void:
-	var old_data: DataRepository = Game.data
-	var old_maker := Game.campaign_maker
 	Game.restart()
 	Game.data = SuiteData.repo()
 	Game.state = SuiteData.campaign(Game.data, 42)
@@ -15,12 +26,8 @@ func test_rejected_campaign_preserves_the_existing_reign() -> void:
 	assert_eq(Game.call("start_campaign", 44), false)
 	assert_same(Game.state, previous, "an invalid army configuration must not replace the current campaign")
 	assert_false(Game.load_error.is_empty(), "player can see why creation failed")
-	Game.campaign_maker = old_maker
-	Game.restart()
-	Game.data = old_data
 
 func test_loading_legacy_siege_checks_actual_deployment_without_replaying_day() -> void:
-	var old_data: DataRepository = Game.data
 	Game.restart()
 	Game.data = SuiteData.repo()
 	var state := SuiteData.campaign(Game.data, 42)
@@ -58,36 +65,39 @@ func test_loading_legacy_siege_checks_actual_deployment_without_replaying_day() 
 	assert_true(Game.load_campaign(path))
 	assert_eq(SaveLoad.state_hash(Game.state), normalized, "migration applies once")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
-	Game.restart()
-	Game.data = old_data
 
 func test_failed_personnel_round_pauses_clock_and_preserves_transaction() -> void:
-	var old_data: DataRepository = Game.data
 	Game.restart()
-	Game.data = SuiteData.repo()
-	Game.state = SuiteData.campaign(Game.data, 42)
+	Game.data = SuiteData.no_clearance(SuiteData.open_country(SuiteData.repo()))
+	Game.state = Scenario.contact(Game.data, 10)
 	Game.engine = TickEngine.new(Game.data)
-	var ours := Game.state.regiments.keys()[0] as String
-	var foe := Game.state.foes.keys()[0] as String
-	Game.state.military_rosters.erase(ours)
-	Game.state.battles = [{"id": 77, "att": [foe], "def": [ours], "rounds": 0,
-		"town": "", "place_x_m": 0, "place_y_m": 0, "start_day": Game.state.absolute_day()}]
+	Game.data.battle_events.clear()
+	BattleSystem.detect_contacts(Game.data, Game.state)
+	var battle: Dictionary = Game.state.battles[0]
+	battle["actions"] = {"att": {"kind": "attack"}, "def": {"kind": "hold"}}
+	for entry: Dictionary in Game.state.regiments.values() + Game.state.foes.values():
+		entry["morale"] = 80
+		entry["supplies"] = 10000
+	var defender := String(battle["def"][0])
+	var cohort := String(Game.state.military_rosters[defender]["cohort_ids"][0])
+	Game.state.military_cohorts[cohort]["source_population_field"] = "invalid"
+	var attacker := String(battle["att"][0])
+	var food := int(BattleSystem._stored(Game.state, attacker)["supplies"])
 	Game.state.day_resolution = DayResolution.begin(Game.state.absolute_day(), false)
 	Game.state.day_resolution["phase"] = "battles"
-	Game.state.day_resolution["battle_ids"] = [77]
+	Game.state.day_resolution["battle_ids"] = [int(battle["id"])]
 	Game.set_clock_speed(4)
 	var day := Game.state.absolute_day()
 	var out := Game.advance_day()
 	assert_eq(out.get("status", ""), "error")
 	assert_eq(Game.clock_speed, 0)
 	assert_eq(Game.state.absolute_day(), day)
-	assert_eq(int(Game.state.day_resolution["battle_index"]), 0)
+	assert_eq(int(Game.state.day_resolution.get("battle_index", -1)), 0)
+	assert_eq(int(battle["rounds"]), 0)
+	assert_eq(int(BattleSystem._stored(Game.state, attacker)["supplies"]), food)
 	assert_false(String(out.get("error", "")).is_empty())
-	Game.restart()
-	Game.data = old_data
 
 func test_failed_legacy_personnel_import_does_not_replace_current_reign() -> void:
-	var old_data: DataRepository = Game.data
 	Game.restart()
 	Game.data = SuiteData.repo()
 	Game.state = SuiteData.campaign(Game.data, 42)
@@ -105,5 +115,3 @@ func test_failed_legacy_personnel_import_does_not_replace_current_reign() -> voi
 	assert_same(Game.state, previous)
 	assert_false(Game.load_error.is_empty())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
-	Game.restart()
-	Game.data = old_data

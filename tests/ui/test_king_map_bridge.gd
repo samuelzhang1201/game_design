@@ -3,6 +3,20 @@ extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
 const Bridge := preload("res://scripts/ui/king_map_bridge.gd")
 
+var _previous_data: DataRepository
+
+func before_each() -> void:
+	_previous_data = Game.data
+
+func after_each() -> void:
+	Game.restart()
+	Game.data = _previous_data
+
+func test_royal_popup_starts_closed_until_requested() -> void:
+	var menu := load("res://scenes/panels/king_order_menu.tscn").instantiate() as KingOrderMenu
+	add_child_autofree(menu)
+	assert_false(menu.visible, "the exclusive royal popup must not intercept startup keyboard input")
+
 func test_projection_keeps_route_corners_and_never_advances_live_king() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 993)

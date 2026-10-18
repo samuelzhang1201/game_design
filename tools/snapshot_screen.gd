@@ -918,6 +918,8 @@ func _minister_beat(id: String) -> Dictionary:
 
 
 func _process(_delta: float) -> void:
+	if _root != null and not _root.overlays_are_ready():
+		return
 	_frames += 1
 	if _battle_case == "encounter" and _frames == 20 and _root != null:
 		_stage_battle_encounter()

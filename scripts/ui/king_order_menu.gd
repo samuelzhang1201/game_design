@@ -11,6 +11,7 @@ var _pending: Dictionary = {}
 var _at := Vector2.ZERO
 
 func _ready() -> void:
+	hide()  # An exclusive popup must not capture input before a royal-menu request.
 	id_pressed.connect(_chosen)
 
 func follow(view: Map3DView, army: ArmyOrderMenu, spy: SpyOrderMenu) -> void:
