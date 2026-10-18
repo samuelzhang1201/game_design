@@ -47,6 +47,8 @@ func bind(p_ctx: Map3DContext, p_view: Map3DView, p_tooltip: Label,
 ## Screen space matches what the player is actually aiming at, a ring of
 ## constant screen size, and needs no distance conversion at all.
 func pick_at(pos: Vector2) -> Dictionary:
+	if view.king_rect().has_point(pos) and view.king_rect().has_area():
+		return {"kind": "king"}
 	var hit: Variant = ctx.ground_at(pos)
 	if hit == null:
 		return {}
@@ -211,6 +213,8 @@ static func kingdom_of_pick(repo: DataRepository, state: GameState, picked: Dict
 			province = String(picked["code"])
 		"manor", "landmark":
 			province = MapManors.province_of(repo, int(picked["cell"]), state)
+		"king":
+			return repo.resolve_realm("player_realm")
 		"army":
 			var k := String(ArmySystem.regiment(repo, String(picked["code"]), state).get("kingdom_code", ""))
 			return k if repo.kingdoms.has(k) else ""
@@ -249,10 +253,10 @@ func hover_pick(picked: Dictionary, pos: Vector2) -> void:
 		return
 	var repo: DataRepository = ctx.repo if ctx != null else null
 	var state: GameState = ctx.state() if ctx != null else null
-	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army", "landmark"] else {}
+	var obj: Dictionary = picked if String(picked.get("kind", "")) in ["burg", "manor", "army", "landmark", "king"] else {}
 	if obj != _hover_obj:
 		_hover_obj = obj
-		var label := MapObjects.label_of(repo, obj, state)
+		var label := "The king" if String(obj.get("kind", "")) == "king" else MapObjects.label_of(repo, obj, state)
 		# under MANORS a manor's hover reads its bars too (owner 2026-10-04)
 		if String(obj.get("kind", "")) == "manor" and label != "":
 			var bars := ManorBars.words_of(ManorBars.row_of(repo, state, int(obj["cell"])))

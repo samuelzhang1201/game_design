@@ -5,7 +5,6 @@ var data: DataRepository
 var actions: ActionSystem
 var suggestions: SuggestionGenerator
 var events: EventSystem
-var last_day_result: Dictionary = {}
 var last_month_report: TickReport
 
 func _init(d: DataRepository) -> void:
@@ -14,55 +13,94 @@ func _init(d: DataRepository) -> void:
 	suggestions = SuggestionGenerator.new(d, actions)
 	events = EventSystem.new(d)
 
-## Resolve one complete day as a saved synchronous transaction. Effects and
-## cursor movement are persisted together before the method returns to a caller.
-func resolve_day(state: GameState) -> Dictionary:
-	last_month_report = null
-	if state.military_organization_version == 0 and not state.army_roster.is_empty():
-		var military := MilitaryMigration.ensure(data, state)
-		if military.has("error"):
-			return {"status": "incompatible", "reason": military["error"]}
-	if state.day_resolution.is_empty():
-		var tx := DayResolution.begin(state.day, state.day >= Calendar.DAYS_PER_TICK,
-			state.absolute_day(), int(data.bal("battle_substeps")))
-		state.day_resolution = tx
-	var tx: Dictionary = state.day_resolution
-	var incompatibility := DayResolution.incompatibility_reason(tx)
-	if not incompatibility.is_empty():
-		return {"status": "incompatible", "reason": incompatibility}
-	_restore_day_outputs(tx)
-	while true:
-		if not (tx.get("pending_decision", {}) as Dictionary).is_empty():
-			return {"status": "blocked", "decision": (tx["pending_decision"] as Dictionary).duplicate(true),
-				"journal": (tx["journal"] as Dictionary).duplicate(true)}
-		var cursor := int(tx.get("phase_cursor", 0))
-		if cursor >= DayResolution.PHASES.size():
-			break
-		var phase := DayResolution.PHASES[cursor]
-		var outcome := _resolve_phase(state, tx, phase)
-		if bool(outcome.get("blocked", false)):
-			_restore_day_outputs(tx)
-			return {"status": "blocked", "decision": (tx["pending_decision"] as Dictionary).duplicate(true),
-				"journal": (tx["journal"] as Dictionary).duplicate(true)}
-		tx["phase_cursor"] = cursor + 1
-		tx["phase"] = DayResolution.PHASES[cursor + 1] if cursor + 1 < DayResolution.PHASES.size() else "COMPLETE"
-		_restore_day_outputs(tx)
-	# The calendar phase already advanced an ordinary day or settled the
-	# month-end tick before this completed transaction is cleared.
-	var result := {"status": "complete", "finished": (tx["journal"]["works"] as Array).duplicate(true),
-		"journal": (tx["journal"] as Dictionary).duplicate(true),
-		"resolved_day": int(tx.get("day", state.day))}
-	state.day_resolution = {}
-	if state.military_migration_pending:
-		MilitaryMigration.ensure(data, state)
-	return result
-
-
-## Legacy day callers still receive the finished-work array. A blocked day
-## returns no completed work and keeps its transaction in GameState.
+## One day (owner 2026-09-13: the smallest unit of time): the day now
+## running (`state.day`) ENDS, and the next one begins. The thirtieth day's
+## end is a tick. This compatibility adapter leaves an unstarted thirtieth
+## day for advance(); production Game uses resolve_day for every boundary.
+## Returns the works finished today, [{cell, building}], or [] when blocked.
 func advance_day(state: GameState) -> Array:
-	last_day_result = resolve_day(state)
-	return (last_day_result.get("finished", []) as Array).duplicate(true)
+	if state.day >= Calendar.DAYS_PER_TICK and state.day_resolution.is_empty():
+		return []
+	var out := resolve_day(state)
+	return out["journal"]["works"] if out["status"] == "complete" else []
+
+
+func resolve_decision(state: GameState, token: String, choice: String) -> Dictionary:
+	if not state.day_resolution.is_empty():
+		var incompatibility := DayResolution.incompatibility_reason(state.day_resolution)
+		if not incompatibility.is_empty():
+			return {"status": "error", "error": incompatibility}
+	var pending: Dictionary = state.day_resolution.get("pending_decision", {})
+	if pending.get("kind", "") == "battle_event" and pending.get("token", "") == token:
+		var result := BattleEvents.choose(data, state, token, choice)
+		if not result.status in ["accepted", "duplicate"]:
+			return result
+		if not choice in pending["choices"]:
+			pending["choices"].append(choice)
+	return DayResolution.acknowledge(state.day_resolution, token, choice)
+
+
+## close_month retains advance()'s one-day-plus-month snapshot contract.
+## Once begun, the saved transaction decides whether this day closes a month.
+func resolve_day(state: GameState, close_month := false) -> Dictionary:
+	if not state.day_resolution.is_empty():
+		var incompatibility := DayResolution.incompatibility_reason(state.day_resolution)
+		if not incompatibility.is_empty():
+			return {"status": "error", "error": incompatibility}
+	var custody := PrisonerSystem.migrate_legacy(data, state)
+	if custody.has("error"):
+		return {"status": "error", "error": custody["error"]}
+	custody = PrisonerSystem.settle_unguarded(data, state)
+	if custody.has("error"):
+		return {"status": "error", "error": custody["error"]}
+	if not state.day_resolution.is_empty() and not state.day_resolution.has("protocol_version"):
+		return _resolve_legacy_day(state, close_month)
+	if state.day_resolution.is_empty():
+		var organization := MilitaryReorganization.reconcile(data, state)
+		if organization.get("status", "error") == "error":
+			return {"status": "error", "error": organization.get("error", "Cannot reconcile military organization.")}
+		state.day_resolution = DayResolution.begin(state.day,
+			close_month or state.day >= Calendar.DAYS_PER_TICK, state.absolute_day(), int(data.bal("battle_substeps")))
+	var tx := state.day_resolution
+	var journal: Dictionary = tx["journal"]
+	if not journal.has("missive_start"):
+		journal["missive_start"] = state.next_missive_id
+	last_month_report = null
+	_restore_day_outputs(tx)
+	while int(tx["phase_cursor"]) < DayResolution.PHASES.size():
+		if not (tx.get("pending_decision", {}) as Dictionary).is_empty():
+			return {"status": "blocked", "decision": tx["pending_decision"].duplicate(true), "journal": journal.duplicate(true)}
+		var cursor := int(tx["phase_cursor"])
+		var outcome := _resolve_phase(state, tx, DayResolution.PHASES[cursor])
+		_restore_day_outputs(tx)
+		if outcome.get("status", "") == "error":
+			return outcome
+		if bool(outcome.get("blocked", false)) or outcome.get("status", "") == "blocked":
+			return {"status": "blocked", "decision": tx["pending_decision"].duplicate(true), "journal": journal.duplicate(true)}
+		tx["phase_cursor"] = cursor + 1
+		tx["phase"] = DayResolution.PHASES[mini(cursor + 1, DayResolution.PHASES.size() - 1)]
+	var out := {"status": "complete", "journal": journal.duplicate(true),
+		"ended": int(tx.get("absolute_day", tx["day"])), "ticked": bool(tx["month_end"]) or bool(tx.get("settle_month_compat", false)), "report": last_month_report}
+	state.day_resolution = {}
+	return out
+
+
+func _offer_battle_event(state: GameState, tx: Dictionary, id: int) -> Dictionary:
+	var offer := BattleEvents.offer(data, state, id)
+	if offer.status == "blocked":
+		tx["pending_decision"] = offer.decision
+		return offer
+	if offer.status == "resolved":
+		var event: Dictionary = offer.event
+		var battle := BattleSystem.battle_by_id(state, id)
+		var journal: Dictionary = tx["journal"]
+		if not journal["battles"].any(func(prior: Dictionary) -> bool: return prior.get("token", "") == event.token):
+			journal["battles"].append({"kind": "battle_event", "battle_id": id,
+				"token": event.token, "event_id": event.event_id, "receipt": event.receipt.duplicate(true),
+				"unit": event.unit, "att": battle.get("att", []).duplicate(), "def": battle.get("def", []).duplicate(),
+				"town": battle.get("town", ""), "place_x_m": battle.get("place_x_m", 0), "place_y_m": battle.get("place_y_m", 0)})
+		tx["pending_decision"] = {}
+	return offer
 
 
 func _restore_day_outputs(tx: Dictionary) -> void:
@@ -94,6 +132,7 @@ func _resolve_phase(state: GameState, tx: Dictionary, phase: String) -> Dictiona
 		"WORKS":
 			journal["works"] = MapManors.advance_works(data, state)
 		"MARCH_ORDERS_AND_ROUTE_SETUP":
+			ArmySystem.ensure(data, state)
 			var moving: Array = []
 			var budgets: Dictionary = {}
 			var march_entries: Dictionary = {}
@@ -102,6 +141,8 @@ func _resolve_phase(state: GameState, tx: Dictionary, phase: String) -> Dictiona
 				codes.sort()
 				for code_value: Variant in codes:
 					var code := String(code_value)
+					if BattleSystem.may_withdraw(state, code):
+						ArmySystem._resume_departure(data, state, code, table[code])
 					if String(table[code].get("order", "")) == ArmySystem.ORDER_MARCH:
 						moving.append(code)
 						var budget := ArmySystem.day_walk_budget(data, state, code)
@@ -137,14 +178,18 @@ func _resolve_phase(state: GameState, tx: Dictionary, phase: String) -> Dictiona
 			day_ai.append_array(day_raid.filter(func(e: Dictionary) -> bool: return e.has("type")))
 			_save_host_events(journal, day_ai)
 		"CAMPS_AND_SIGHTING":
-			ArmySystem.hold_day(data, state)
+			if int(tx.get("protocol_version", 4)) == 3:
+				KingSystem.step_day(data, state)
+			CampSystem.finish_day(data, state, state.absolute_day())
 			Sighting.update(data, state)
 		"SUPPLY_AND_CONDUCT":
 			day_supply = SupplyLines.set_out_events(day_couriers)
 			day_supply.append_array(SupplyLines.day_step(data, state))
 			ArmySystem.eat_day(data, state)
+			EnemyAi.eat_day(data, state)
 			ArmySystem.hunger_day(data, state)
 			day_conduct = ArmyConduct.day_step(data, state)
+			RecruitmentSystem.step_day(data, state)
 			day_supply.append_array(SupplyLines.warn_day(data, state))
 			journal["supply"] = day_supply.duplicate(true)
 			journal["conduct"] = day_conduct.duplicate(true)
@@ -155,8 +200,7 @@ func _resolve_phase(state: GameState, tx: Dictionary, phase: String) -> Dictiona
 			if not host_news.is_empty():
 				MissiveLog.add(data, state, host_news)
 			var fights: Array = day_battles + SiegeSystem.news(day_siege) + RaidSystem.news(day_raid)
-			if not fights.is_empty():
-				MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, fights))
+			_route_battle_reports(state, fights)
 			if not day_supply.is_empty():
 				MissiveLog.add(data, state, MissiveWriter.supply_dispatch(data, state, day_supply))
 			if not day_conduct.is_empty():
@@ -164,6 +208,7 @@ func _resolve_phase(state: GameState, tx: Dictionary, phase: String) -> Dictiona
 		"MONTH_END_IF_NEEDED":
 			if bool(tx.get("month_end", false)) or bool(tx.get("settle_month_compat", false)):
 				last_month_report = _settle_month(state)
+				last_month_report.finished_works = journal["works"].duplicate(true)
 		"CALENDAR":
 			if not bool(tx.get("month_end", false)) and not bool(tx.get("settle_month_compat", false)):
 				state.day = mini(int(tx["day"]) + 1, Calendar.DAYS_PER_TICK)
@@ -185,7 +230,9 @@ func _resolve_battles(state: GameState, tx: Dictionary) -> Dictionary:
 			(journal["arrivals"] as Array).append_array(arrivals)
 			ArmyGround.reconcile(data, state)
 			LawSystem.reconcile(data, state)
-			var host_arrivals := EnemyAi.arrival_substep(data, state)
+			if int(tx.get("protocol_version", 4)) >= 4:
+				KingSystem.step_substep(data, state, tx)
+			var host_arrivals := EnemyAi.arrival_substep(data, state, tx.get("march_entries", {}))
 			if not host_arrivals.is_empty():
 				day_ai.append_array(host_arrivals)
 				_save_host_events(journal, day_ai)
@@ -198,12 +245,13 @@ func _resolve_battles(state: GameState, tx: Dictionary) -> Dictionary:
 					started.append(int(event["battle_id"]))
 			tx["substep_battle_ids"] = started
 			tx["battle_step"] = "contacted"
-		for battle_id: int in tx.get("substep_battle_ids", []):
-			if battle_id in (tx.get("acknowledged_encounters", []) as Array):
-				continue
-			if (tx.get("pending_decision", {}) as Dictionary).is_empty():
-				DayResolution.block_on_encounter(tx, battle_id)
-			return {"blocked": true}
+		if int(tx.get("protocol_version", 4)) == 3:
+			for battle_id: int in tx.get("substep_battle_ids", []):
+				if battle_id in (tx.get("acknowledged_encounters", []) as Array):
+					continue
+				if (tx.get("pending_decision", {}) as Dictionary).is_empty():
+					DayResolution.block_on_encounter(tx, battle_id)
+				return {"blocked": true}
 		if String(tx.get("battle_step", "")) != "fighting":
 			var ids: Array = []
 			for battle: Dictionary in state.battles:
@@ -218,11 +266,20 @@ func _resolve_battles(state: GameState, tx: Dictionary) -> Dictionary:
 		while int(tx["battle_index"]) < (tx["battle_ids"] as Array).size():
 			var index := int(tx["battle_index"])
 			var battle_id := int(tx["battle_ids"][index])
+			if battle_id in tx.get("substep_battle_ids", []) and not battle_id in tx.get("acknowledged_encounters", []):
+				DayResolution.block_on_encounter(tx, battle_id)
+				return {"blocked": true}
+			var offer := _offer_battle_event(state, tx, battle_id)
+			if offer.get("status", "") in ["blocked", "error"]:
+				return offer
 			var result := BattleSystem.step_battle(data, state, battle_id)
+			if result["status"] == "error":
+				return result
+			if result["status"] == "blocked":
+				tx["pending_decision"] = result["decision"]
+				return {"blocked": true}
 			_append_substep_battle_events(journal, result["events"], int(tx["substep_index"]))
 			(tx["processed_battle_ids"] as Array).append(battle_id)
-			if bool(result["over"]):
-				(tx["over_battle_ids"] as Array).append(battle_id)
 			tx["battle_index"] = index + 1
 		if not (tx["over_battle_ids"] as Array).is_empty():
 			state.battles = state.battles.filter(func(b: Dictionary) -> bool:
@@ -232,7 +289,7 @@ func _resolve_battles(state: GameState, tx: Dictionary) -> Dictionary:
 		tx["battle_step"] = ""
 		tx["substep_battle_ids"] = []
 		tx["substep_index"] = int(tx["substep_index"]) + 1
-	BattleSystem.finish_day(state, tx.get("over_battle_ids", []))
+	BattleSystem.finish_day(data, state)
 	return {"blocked": false}
 
 
@@ -243,10 +300,243 @@ func _append_substep_battle_events(journal: Dictionary, events: Array, substep_i
 		(journal["battles"] as Array).append(recorded)
 
 
-## Compatibility for TickEngine.advance and older internal callers.
-func _end_day(state: GameState) -> Array:
-	var result := resolve_day(state)
-	return (result.get("finished", []) as Array).duplicate(true)
+func _resolve_legacy_day(state: GameState, close_month := false) -> Dictionary:
+	var tx := state.day_resolution
+	var journal: Dictionary = tx["journal"]
+	if not journal.has("missive_start"):
+		journal["missive_start"] = state.next_missive_id
+	if tx["phase"] == "prepare":
+		journal["works"] = _before_battles(state, journal)
+		_capture_day(journal)
+		journal["battles"] = BattleSystem.prepare_day(data, state)
+		tx["battle_ids"] = state.battles.map(func(b: Dictionary) -> int: return int(b["id"]))
+		tx["battle_ids"].sort()
+		tx["phase"] = "encounters"
+	if tx["phase"] == "encounters":
+		for event: Dictionary in journal["battles"]:
+			if event["kind"] != "start":
+				continue
+			var token := "%d:encounter:%d" % [int(tx["day"]), int(event["battle_id"])]
+			if token in tx["consumed_tokens"]:
+				continue
+			tx["pending_decision"] = {"token": token, "kind": "encounter",
+				"battle_id": int(event["battle_id"]), "choices": ["continue"], "selected": ""}
+			return {"status": "blocked", "decision": tx["pending_decision"].duplicate(true)}
+		tx["pending_decision"] = {}
+		tx["phase"] = "battles"
+	if tx["phase"] == "battles":
+		while int(tx["battle_index"]) < tx["battle_ids"].size():
+			var id := int(tx["battle_ids"][int(tx["battle_index"])])
+			var offer := BattleEvents.offer(data, state, id)
+			if offer.status == "blocked":
+				tx["pending_decision"] = offer.decision
+				return {"status": "blocked", "decision": offer.decision.duplicate(true)}
+			if offer.status == "resolved":
+				var event: Dictionary = offer.event
+				var battle := BattleSystem.battle_by_id(state, id)
+				if not journal["battles"].any(func(prior: Dictionary) -> bool: return prior.get("token", "") == event.token):
+					journal["battles"].append({"kind": "battle_event", "battle_id": id,
+						"token": event.token, "event_id": event.event_id, "receipt": event.receipt.duplicate(true),
+						"unit": event.unit, "att": battle.get("att", []).duplicate(), "def": battle.get("def", []).duplicate(),
+						"town": battle.get("town", ""), "place_x_m": battle.get("place_x_m", 0), "place_y_m": battle.get("place_y_m", 0)})
+				tx["pending_decision"] = {}
+			var step := BattleSystem.step_battle(data, state, id)
+			if step["status"] == "error":
+				return {"status": "error", "error": step["error"], "battle_id": id}
+			if step["status"] == "blocked":
+				tx["pending_decision"] = step["decision"]
+				return {"status": "blocked", "decision": step["decision"].duplicate(true)}
+			journal["battles"].append_array(step["events"])
+			tx["battle_index"] = int(tx["battle_index"]) + 1
+		BattleSystem.finish_day(data, state)
+		tx["phase"] = "finish"
+	_restore_day(journal)
+	_after_battles(state)
+	_capture_day(journal)
+	var report: TickReport = null
+	if bool(tx["month_end"]):
+		report = _settle_month(state)
+		report.finished_works = journal["works"].duplicate(true)
+	else:
+		state.day += 1
+	var out := {"status": "complete", "journal": journal.duplicate(true),
+		"ended": int(tx["day"]), "ticked": bool(tx["month_end"]), "report": report}
+	state.day_resolution = {}
+	return out
+
+
+func _capture_day(journal: Dictionary) -> void:
+	journal["arrivals"] = day_arrivals.duplicate(true)
+	journal["couriers"] = day_couriers.duplicate(true)
+	journal["supply"] = day_supply.duplicate(true)
+	journal["conduct"] = day_conduct.duplicate(true)
+	journal["ai"] = day_ai.duplicate(true)
+	journal["sieges"] = day_siege.duplicate(true)
+	journal["raids"] = day_raid.duplicate(true)
+
+
+func _restore_day(journal: Dictionary) -> void:
+	day_arrivals = journal["arrivals"].duplicate(true)
+	day_couriers = journal["couriers"].duplicate(true)
+	day_battles = journal["battles"].duplicate(true)
+	day_supply = journal["supply"].duplicate(true)
+	day_conduct = journal["conduct"].duplicate(true)
+	day_ai = journal.get("ai", []).duplicate(true)
+	if not journal.has("ai"):
+		for record: Dictionary in journal.get("reports", []):
+			if String(record.get("kind", "")) == "host_events":
+				day_ai.append_array(record.get("events", []))
+	day_siege = journal["sieges"].duplicate(true)
+	day_raid = journal["raids"].duplicate(true)
+
+
+## The day `state.day` ends (owner 2026-10-06: 顶栏日期滞后一天 — the date shown
+## is the day being played, and all of it happens as that day ends): works
+## step, the columns march, the couriers ride, the host eats. Returns the
+## works finished.
+func _before_battles(state: GameState, journal: Dictionary) -> Array:
+	day_supply = []
+	day_conduct = []
+	day_siege = []
+	day_raid = []
+	var done := MapManors.advance_works(data, state)
+	# A day on the road for every regiment under a march order (owner
+	# 2026-09-22). The arrivals go on day_arrivals rather than into the
+	# return value, which is the finished WORKS and is asserted as such by
+	# tests/engine/test_tick_engine.gd.
+	day_arrivals = ArmySystem.march_day(data, state)
+	# A seat whose town has fallen is cleared (spec 2026-10-07-army-split-
+	# and-ground §4.4).
+	ArmyGround.reconcile(data, state)
+	# Following reads the column's actual endpoint after its march and settlement.
+	if not journal.has("king_advanced"):
+		KingSystem.step_day(data, state)
+		journal["king_advanced"] = true
+		journal["king_state"] = state.king_state.duplicate(true)
+	if state.king_state.is_empty() and journal.has("king_state"):
+		state.king_state = journal["king_state"].duplicate(true)
+	# A province or a camp the realm lost, or a camp left empty, forgets its
+	# laws (laws spec §2.4, R13).
+	LawSystem.reconcile(data, state)
+	# The couriers ride AFTER the columns march (owner 2026-10-02: a one-day
+	# courier arrives as the day ENDS): he reaches the column where its day
+	# left it, and the order he delivers is marched on from tomorrow.
+	day_couriers = CourierSystem.ride_day(data, state)
+	# The raider realm's hosts (spec 2026-10-07-enemy-ai-and-battle §2-3), ONCE
+	# a day: after the march and the couriers, so a host reads the places and
+	# the garrisons the day's battles will read; BEFORE the battles, so a column
+	# that marched into a garrisoned town's reach today has put its host in
+	# SIEGE before the contacts are taken. step_day (the meal, retreat, arrival,
+	# the columns sent on) then think_day the same day, so a host that set out
+	# or stood aside today chooses before its columns march tomorrow.
+	day_ai = EnemyAi.step_day(data, state)
+	day_ai.append_array(EnemyAi.think_day(data, state))
+	for m: Dictionary in EnemyAi.warnings(data, state):
+		MissiveLog.add(data, state, m)
+	var news := MissiveWriter.host_news(data, state, day_ai)
+	if not news.is_empty():
+		MissiveLog.add(data, state, news)
+	# The scouts' and contact letters (spec 2026-10-14-unit-clearance-and-scouting-
+	# design §c), once a day after the hosts have moved and before the battles: a
+	# foe at hand of a column of ours is told BEFORE the battle letter that its
+	# contact may start.
+	Sighting.scout_day(data, state)
+	return done
+
+
+func _after_battles(state: GameState) -> void:
+	# The sieges' day (spec §5.1-5.2) right AFTER the battles, once: an
+	# assault is that day's town battle, and its outcome moves the siege. The
+	# siege's news rides in the same battle letter, after the fighting.
+	day_siege = SiegeSystem.settle_day(data, state, day_battles)
+	# The raids' day (spec §5.3) right after the sieges, once: a host the day's
+	# battles beat pays its spoils, a raiding host takes its day (a siege whose
+	# garrison left has just turned its host RAID), one that stripped its manor
+	# sets out again. Its own events (TickEngine.day_raid); its news rides in
+	# the same battle letter, after the siege's.
+	day_raid = RaidSystem.settle_day(data, state, day_battles)
+	# A line held another day (spec 2026-10-11-war-room-front-line-design §3),
+	# read after the stances have settled.
+	CampSystem.finish_day(data, state, state.absolute_day())
+	# the sieges' and the raids' mode changes (EnemyAi.set_mode's host_mode
+	# events) join the day's record of the hosts; their news is the battle letter's
+	day_ai.append_array(day_siege.filter(func(e: Dictionary) -> bool: return e.has("type")))
+	day_ai.append_array(day_raid.filter(func(e: Dictionary) -> bool: return e.has("type")))
+	var fights: Array = day_battles + SiegeSystem.news(day_siege) + RaidSystem.news(day_raid)
+	_route_battle_reports(state, fights)
+	# The crown's sight (spec 2026-10-10-player-sight-and-ghosts), once a day
+	# when every column has marched and fought: the rumour's host ghost on its
+	# day, each foe the crown sees refreshed where it stands, the stale and
+	# the destroyed forgotten.
+	Sighting.update(data, state)
+	# The supply lines' day (spec 2026-10-07-army-supply-lines §3.2): the towns
+	# refill their garrisons, the wagons roll, before the host eats.
+	# a supply warrant a courier delivered today sets its wagons out: said first
+	day_supply = SupplyLines.set_out_events(day_couriers)
+	day_supply.append_array(SupplyLines.day_step(data, state))
+	# The host eats a day of its month (owner 2026-09-30).
+	ArmySystem.eat_day(data, state)
+	EnemyAi.eat_day(data, state)
+	# A hungry host loses heart every day (spec 2026-10-07-army-supply-lines §3.7).
+	ArmySystem.hunger_day(data, state)
+	# Living off the land and desertion (spec 2026-10-10-foraging-and-desertion
+	# §3.3): after the meal, so the warnings below read what foraging left.
+	day_conduct = ArmyConduct.day_step(data, state)
+	# Assembly completes at the day-end; the new unit first acts tomorrow.
+	RecruitmentSystem.step_day(data, state)
+	# The day's supply warnings, read off what the host has left after eating.
+	day_supply.append_array(SupplyLines.warn_day(data, state))
+	# The month's economy is computed a bucket a day (spec §11.2).
+	RealmEconomy.step_day(data, state)
+	# The day's supply news goes out as ONE letter, when there is any (spec
+	# 2026-10-07-army-supply-lines §5.5): day_supply holds all of the day now.
+	if not day_supply.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.supply_dispatch(data, state, day_supply))
+	if not day_conduct.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.conduct_dispatch(data, state, day_conduct))
+
+## Each battlefield has its own immutable report and physical courier.
+func _route_battle_reports(state: GameState, fights: Array) -> void:
+	var grouped: Dictionary = {}
+	var other: Array = []
+	for fight: Dictionary in fights:
+		var id := int(fight.get("battle_id", -1))
+		if id < 0:
+			other.append(fight)
+			continue
+		if not grouped.has(id):
+			grouped[id] = []
+		grouped[id].append(fight)
+	var ids := grouped.keys()
+	ids.sort()
+	for id: int in ids:
+		var events: Array = grouped[id]
+		var place: Dictionary = {}
+		for event: Dictionary in events:
+			if event.has("place_x_m"):
+				place = event.duplicate(true)
+				break
+		var report := MissiveWriter.king_report_payload(data, state, events)
+		report["battle_id"] = id
+		report["day"] = state.absolute_day()
+		report["event_tokens"] = []
+		for event: Dictionary in events:
+			if event.kind == "battle_event":
+				report.event_tokens.append(event.token)
+		var at := Vector2i(int(place.get("place_x_m", 0)), int(place.get("place_y_m", 0)))
+		var local := BattleSystem._within(KingSystem.position(state), at, int(data.bal("king_command_radius_m")))
+		if local:
+			MissiveLog.add(data, state, MissiveLog.battle_payload(MissiveWriter.battle_report(data, state, events), report))
+			BattleEvents.receive_report(state, report)
+		else:
+			place["report"] = report
+			var courier := CourierSystem.dispatch_king_report(data, state, id, place)
+			if not courier.is_empty():
+				state.king_state["last_report_dispatched"] = {"courier_id": int(courier.id), "battle_id": id,
+					"day": state.absolute_day(), "fee_gold": 0}
+	if not other.is_empty():
+		MissiveLog.add(data, state, MissiveWriter.battle_report(data, state, other))
+
 
 ## The regiments that reached their destination in the last advance_day, in
 ## code order — read by Game for the news bar and by nothing else.
@@ -303,35 +593,11 @@ func _newly_idle(state: GameState, was_idle: Dictionary) -> Array:
 
 
 func advance(state: GameState) -> TickReport:
-	# The reign's opening call settles the initial ledger but does not consume
-	# its first playable day. Every later call resumes the saved day transaction.
-	last_month_report = null
-	if state.tick == 0:
-		day_arrivals = []
-		day_couriers = []
-		day_battles = []
-		day_siege = []
-		day_raid = []
-		day_ai = []
-		day_supply = []
-		day_conduct = []
+	if state.tick == 0 and state.day_resolution.is_empty():
+		_restore_day(DayResolution.begin(state.absolute_day(), false)["journal"])
 		return _settle_month(state)
-	var had_saved_transaction := not state.day_resolution.is_empty()
-	if not had_saved_transaction:
-		var tx := DayResolution.begin(state.day, state.day >= Calendar.DAYS_PER_TICK,
-			state.absolute_day(), int(data.bal("battle_substeps")))
-		if state.day < Calendar.DAYS_PER_TICK:
-			tx["settle_month_compat"] = true
-		state.day_resolution = tx
-	var day_result := resolve_day(state)
-	if String(day_result["status"]) == "blocked" or String(day_result["status"]) == "incompatible":
-		var blocked := TickReport.new()
-		blocked.status = String(day_result["status"])
-		blocked.pending_decision = (day_result.get("decision", {}) as Dictionary).duplicate(true)
-		return blocked
-	var report := last_month_report if last_month_report != null else TickReport.new()
-	report.finished_works = (day_result.get("finished", []) as Array).duplicate(true)
-	return report
+	var out := resolve_day(state, true)
+	return out["report"] if out["status"] == "complete" else null
 
 
 func _settle_month(state: GameState) -> TickReport:
@@ -432,8 +698,6 @@ func _settle_month(state: GameState) -> TickReport:
 	r.suggestions = suggestions.generate(state, r.concerns)
 	r.event = events.roll(state).duplicate(true)
 	return r
-
-
 
 ## The month's settlement (spec §5): the crown's provinces in full, the
 ## crown's share of the rest, less the ministers' salaries and the court's

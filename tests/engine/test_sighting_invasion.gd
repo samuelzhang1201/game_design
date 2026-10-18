@@ -37,9 +37,9 @@ func test_the_no_orders_run_sees_the_invasion() -> void:
 	var first := Play.first_appear(repo)
 	var rumour_day := first - int(repo.bal("raid_rumour_lead_days"))
 	var host := _rumour_host()
-	Play.play_through(engine, s, rumour_day - 1)
+	Play.play_through(engine, s, rumour_day - 1, true)
 	assert_true(s.sightings.is_empty(), "before the rumour the crown knows of no one")
-	Play.day(engine, s)   # the rumour's day ends
+	Play.day(engine, s, true)   # the rumour's day ends
 	var home := EnemyAi.home_m(repo, host)
 	assert_eq(s.sightings.get(Sighting.HOST_KEY + host, {}), {"kind": "host", "code": host,
 		"x_m": home.x, "y_m": home.y, "day": rumour_day, "source": "rumour", "men": 0},
@@ -51,13 +51,13 @@ func test_the_no_orders_run_sees_the_invasion() -> void:
 	# the hosts gather beyond the crown's sight: nothing seen until they cross
 	while s.absolute_day() <= first:
 		assert_eq(Sighting.seen_foes(repo, s), [], "day %d: no host in sight" % s.absolute_day())
-		Play.day(engine, s)
+		Play.day(engine, s, true)
 	# the main host comes into sight of the realm
 	var main := Play.host(repo, "main")
 	var seen_on := -1
 	while seen_on < 0 and s.absolute_day() <= first + 10:
 		var today := s.absolute_day()
-		Play.day(engine, s)
+		Play.day(engine, s, true)
 		var seen := Sighting.seen_foes(repo, s).filter(func(c: String) -> bool:
 			return String(s.foes[c]["host"]) == main)
 		if seen.is_empty():
@@ -99,11 +99,11 @@ func test_the_sight_is_deterministic_across_a_save() -> void:
 	var last := Play.first_appear(repo) + 12
 	var engine := TickEngine.new(repo)
 	var a := Play.opened(repo, engine)
-	Play.play_through(engine, a, last)
+	Play.play_through(engine, a, last, true)
 	var b := Play.opened(repo, engine)
-	Play.play_through(engine, b, Play.first_appear(repo) + 2)
+	Play.play_through(engine, b, Play.first_appear(repo) + 2, true)
 	b = GameState.from_dict(JSON.parse_string(JSON.stringify(b.to_dict())))
-	Play.play_through(engine, b, last)
+	Play.play_through(engine, b, last, true)
 	assert_false(a.sightings.is_empty(), "the crown knows something by day %d" % last)
 	assert_eq(b.sightings, a.sightings, "a run saved and loaded mid-way sees the same")
 	var floats: Array = []

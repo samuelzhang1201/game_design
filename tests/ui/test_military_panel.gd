@@ -69,42 +69,35 @@ func test_the_regiments_are_on_every_screens_map() -> void:
 ## replaced refreshed live — the column follows the state while it is up.
 func test_the_column_follows_the_state_while_it_is_up() -> void:
 	var r: GameRoot = await _court()
-	_lose_infantry(300, "a bad winter")
+	var code := ""
+	for row: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if MapObjects.regiment_arm(Game.data, row) == "infantry":
+			code = String(row["regiment_code"])
+			break
+	var cohort_id := ""
+	for id: String in Game.state.military_rosters[code]["cohort_ids"]:
+		if int(Game.state.military_cohorts[id]["fit"]) >= 8:
+			cohort_id = id
+			break
+	assert_ne(cohort_id, "")
+	assert_false(MilitaryRoster.transition(Game.data, Game.state, "host:wounds", [
+		{"cohort_id": cohort_id, "from": "fit", "to": "wounded", "count": 3}], "a bad winter").has("error"))
 	r.set_army_view(true)
 	await wait_process_frames(2)
 	var panel: MilitaryPanel = r.current_screen.military_panel()
-	var infantry := 0.0
-	for unit: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
-		if MapObjects.regiment_arm(Game.data, unit) == "infantry":
-			var code := String(unit["regiment_code"])
-			infantry += MilitaryRoster.fit(Game.state, code) + MilitaryRoster.count(Game.state, code, "wounded")
+	var infantry := 0
+	for row: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
+		if MapObjects.regiment_arm(Game.data, row) == "infantry":
+			infantry += ArmySystem.living_count(Game.data, Game.state, String(row["regiment_code"]))
 	var before := -1.0
 	for row in panel.arms_chart().rows:
 		if String(row.get("dimension", "")) == "infantry":
 			before = float(row["value"])
-	assert_almost_eq(before, infantry, 0.5, "the infantry bar reads the live count")
-	_lose_infantry(500, "a hard march")
-	# The same contract the dashboard has: the column redraws on the signal
-	# the engine raises after a tick or an order, not on every ledger write.
+	assert_eq(int(before), infantry, "the host includes its wounded people")
+	assert_false(MilitaryRoster.transition(Game.data, Game.state, "host:dead", [
+		{"cohort_id": cohort_id, "from": "fit", "to": "dead", "count": 5}], "a hard march").has("error"))
 	Game.state_changed.emit()
 	await wait_process_frames(2)
 	for row in panel.arms_chart().rows:
 		if String(row.get("dimension", "")) == "infantry":
-			assert_almost_eq(float(row["value"]), before - 500.0, 0.5,
-				"the bar followed the ledger with no click")
-
-
-func _lose_infantry(amount: int, reason: String) -> void:
-	var changes: Array = []
-	var left := amount
-	for unit: Dictionary in MapObjects.regiments_of(Game.data, Game.data.resolve_realm("player_realm"), Game.state):
-		if MapObjects.regiment_arm(Game.data, unit) != "infantry":
-			continue
-		var code := String(unit["regiment_code"])
-		var loss := mini(left, MilitaryRoster.fit(Game.state, code))
-		changes.append_array(MilitaryRoster.plan_changes(Game.state, code, "fit", "dead", loss))
-		left -= loss
-		if left == 0:
-			break
-	assert_eq(left, 0)
-	assert_false(MilitaryRoster.transition(Game.data, Game.state, "panel:" + reason, changes, reason).has("error"))
+			assert_eq(int(row["value"]), int(before) - 5, "the bar follows personnel losses with no click")

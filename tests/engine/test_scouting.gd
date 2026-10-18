@@ -1,5 +1,7 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
+const Personnel := preload("res://scripts/engine/military_roster.gd")
 const Play := preload("res://tests/invasion_play.gd")
 ## The scouting fan and the contact and scout letters (spec 2026-10-14-unit-
 ## clearance-and-scouting-design §c, owner 2026-10-14): a MARCHING crown land unit
@@ -20,6 +22,8 @@ var other := ""               # another, left far away
 
 
 func before_each() -> void:
+	horse = ""
+	foot = ""
 	repo = SuiteData.open_country(SuiteData.repo())
 	for key in repo.weather_odds:
 		repo.weather_odds[key] = {"clear": 1, "rain": 0, "mud": 0, "snow": 0, "blizzard": 0}
@@ -44,7 +48,7 @@ func before_each() -> void:
 	var realm := repo.resolve_realm("player_realm")
 	for code: String in s.regiments.keys():
 		var reg := ArmySystem.regiment(repo, code, s)
-		if String(reg.get("is_naval", "0")) == "1" or ArmySystem.headcount(repo, reg) < 400:
+		if String(reg.get("is_naval", "0")) == "1" or ArmySystem.personnel_capacity(repo, reg) < 400:
 			continue
 		var arm := MapObjects.regiment_arm(repo, reg)
 		if arm == "cavalry" and (horse == "" or code < horse):
@@ -199,7 +203,7 @@ func test_a_foe_without_men_is_dropped_from_the_log() -> void:
 	_put_foe(far + Vector2i(3000, 0))
 	Sighting.scout_day(repo, s)
 	assert_true(s.scout_log.has(foe))
-	SuiteData.set_losses(s, foe, {"dead": ArmySystem.headcount(repo, ArmySystem.regiment(repo, foe))})
+	assert_false(People.move(repo, s, foe, "fit", "dead", ArmySystem.fit_count(repo, s, foe), "scouted_unit_destroyed").has("error"))
 	Sighting.scout_day(repo, s)
 	assert_false(s.scout_log.has(foe))
 
@@ -221,19 +225,23 @@ func test_scouting_draws_no_random_number_and_the_log_saves() -> void:
 
 
 func test_the_contact_letter_comes_before_the_battle_it_leads_to() -> void:
+	# The king observes here; remote battle letters are delivered by courier.
+	s.king_state["x_m"] = far.x
+	s.king_state["y_m"] = far.y
 	Play.place(repo, s, horse, far, ArmySystem.ORDER_GARRISON)
 	_put_foe(far + Vector2i(3000, 0))
 	var engine := TickEngine.new(repo)
-	var result := engine.resolve_day(s)
-	if String(result.get("status", "")) == "blocked":
-		DayResolution.acknowledge(s.day_resolution, String(result["decision"]["token"]), "continue")
-		result = engine.resolve_day(s)
-	assert_eq(result["status"], "complete")
+	var blocked := engine.resolve_day(s)
+	assert_eq(blocked["status"], "blocked")
 	var contact := _letters("contact")
-	var battle := _letters("battle")
 	assert_eq(contact.size(), 1, "contact told")
+	assert_eq(_letters("battle").size(), 0, "the encounter pauses before fighting")
+	engine.resolve_decision(s, String(blocked["decision"]["token"]), "continue")
+	assert_eq(engine.resolve_day(s)["status"], "complete")
+	var battle := _letters("battle")
 	assert_gt(battle.size(), 0, "and a battle fought")
-	assert_lt(int(contact[0]["id"]), int(battle[0]["id"]), "the contact letter first")
+	if not contact.is_empty() and not battle.is_empty():
+		assert_lt(int(contact[0]["id"]), int(battle[0]["id"]), "the contact letter first")
 
 
 func test_a_scout_letter_is_kept_apart_from_the_columns_cap() -> void:

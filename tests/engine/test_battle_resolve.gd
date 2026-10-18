@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## One round of a battle, resolved as pure whole-number arithmetic (spec
 ## 2026-10-07-enemy-ai-and-battle-design §4.2-4.3): the odds, the dice, the
@@ -66,31 +67,12 @@ func test_largest_remainder() -> void:
 	assert_eq(BattleSystem.apportion([4, 6], 0), [0, 0])
 
 
-func test_roll_is_deterministic_and_order_free() -> void:
-	var a := ["b_reg", "a_reg", "c_reg"]
-	var b := ["y_reg", "x_reg"]
-	var r := BattleSystem.roll(7, a, b, 100, 1)
-	assert_between(r, 0, 999)
-	assert_eq(BattleSystem.roll(7, a, b, 100, 1), r)
-	assert_eq(BattleSystem.roll(7, ["c_reg", "b_reg", "a_reg"], ["x_reg", "y_reg"], 100, 1), r,
-		"the order the codes come in does not matter")
-	assert_eq(a, ["b_reg", "a_reg", "c_reg"], "the caller's array is left as it was")
-	var seen := {}
-	for day in range(100, 112):
-		seen[BattleSystem.roll(7, a, b, day, 1)] = true
-	assert_gt(seen.size(), 1, "another day, another roll")
-	var rounds := {}
-	for n in range(1, 8):
-		rounds[BattleSystem.roll(7, a, b, 100, n)] = true
-	assert_gt(rounds.size(), 1, "another round, another roll")
-
-
-func test_roll_leaves_game_rng_alone() -> void:
+func test_strength_preview_leaves_saved_rng_unchanged() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var before := s.rng.to_dict().duplicate(true)
-	for day in range(1, 10):
-		BattleSystem.roll(7, ["a"], ["b"], day, 1)
-	assert_eq(s.rng.to_dict(), before, "the dice are a hash, never a draw")
+	var steady := func(_c: String) -> String: return "steady"
+	BattleSystem.side_power(repo, s, _land_codes().slice(0, 2), steady, true)
+	assert_eq(s.rng.to_dict(), before, "only an engaged combat round draws randomness")
 
 
 func test_side_power_sums_and_stance_scales_the_defender_only() -> void:
@@ -98,11 +80,15 @@ func test_side_power_sums_and_stance_scales_the_defender_only() -> void:
 	var codes := _land_codes().slice(0, 2)
 	var steady := func(_c: String) -> String: return "steady"
 	var hold := func(_c: String) -> String: return "hold"
+	repo.army_terrain.clear()
+	repo.army_town_defence.clear()
+	for c: String in codes:
+		s.regiments[c]["camp_state"] = {}
 	var sum_def := 0
 	var sum_att := 0
 	for c: String in codes:
-		sum_def += ArmySystem.power(repo, s, c, "defend")
-		sum_att += ArmySystem.power(repo, s, c, "attack")
+		sum_def += int(BattleStrength.unit(repo, s, c, false)["power"])
+		sum_att += int(BattleStrength.unit(repo, s, c, true)["power"])
 	assert_gt(sum_def, 0)
 	assert_eq(BattleSystem.side_power(repo, s, codes, steady, false), sum_def)
 	assert_eq(BattleSystem.side_power(repo, s, codes, steady, true), sum_att)
@@ -110,7 +96,7 @@ func test_side_power_sums_and_stance_scales_the_defender_only() -> void:
 	var held := 0
 	for c: String in codes:
 		@warning_ignore("integer_division")
-		held += ArmySystem.power(repo, s, c, "defend") * int(repo.battle_stances["hold"]["defence_permille"]) / 1000
+		held += int(BattleStrength.unit(repo, s, c, false)["power"]) * int(repo.battle_stances["hold"]["defence_permille"]) / 1000
 	assert_eq(BattleSystem.side_power(repo, s, codes, hold, false), held)
 	assert_eq(BattleSystem.side_power(repo, s, codes, hold, true), sum_att, "the attacker's power ignores the stance")
 
@@ -122,18 +108,18 @@ func test_apply_round_conserves_heads() -> void:
 	var tier := {"attacker_loss_permille": 100, "defender_loss_permille": 0, "wounded_share_permille": 700,
 		"attacker_morale": -10, "defender_morale": 4}
 	var morale_before := int(s.regiments[code]["morale"])
-	var res := BattleSystem.apply_round(repo, s, [code], [], tier, "lost the field at the ford")
+	var res := BattleSystem.apply_round(repo, s, [code], [], tier, "lost the field at the ford", Callable(), "test:lost_the_field_at_the_ford")
 	var st: Dictionary = s.regiments[code]
 	@warning_ignore("integer_division")
 	var lost := heads * 100 / 1000
 	@warning_ignore("integer_division")
 	var wounded := lost * 700 / 1000
-	assert_eq(int(st["wounded"]), wounded)
-	assert_eq(int(st["dead"]), lost - wounded)
+	assert_eq(People.count(s, code, "wounded"), wounded)
+	assert_eq(People.count(s, code, "dead"), lost - wounded)
 	assert_eq(int(st["morale"]), morale_before - 10)
-	var fit := ArmySystem.fit_heads(heads, st)
+	var fit := ArmySystem.fit_count(repo, s, code)
 	assert_gte(fit, 0)
-	assert_eq(int(st["dead"]) + int(st["wounded"]) + fit, heads)
+	assert_eq(People.count(s, code, "dead") + People.count(s, code, "wounded") + fit, heads)
 	assert_eq(int(res[code]["dead"]), lost - wounded)
 	assert_eq(int(res[code]["wounded"]), wounded)
 	assert_eq(int(res[code]["morale"]), -10)
@@ -157,32 +143,29 @@ func test_apply_round_spreads_a_side_by_fit_heads() -> void:
 	var lost_each := BattleSystem.apportion(weights, lost_total)
 	@warning_ignore("integer_division")
 	var wounded_each := BattleSystem.apportion(lost_each, lost_total * 500 / 1000)
-	BattleSystem.apply_round(repo, s, [], codes, tier, "held the ridge")
+	BattleSystem.apply_round(repo, s, [], codes, tier, "held the ridge", Callable(), "test:held_the_ridge")
 	var dead_sum := 0
 	var wounded_sum := 0
 	for i in codes.size():
 		var st: Dictionary = s.regiments[codes[i]]
-		assert_eq(int(st["wounded"]), int(wounded_each[i]), "wounded of %s" % codes[i])
-		assert_eq(int(st["dead"]), int(lost_each[i]) - int(wounded_each[i]), "dead of %s" % codes[i])
-		assert_eq(int(st["dead"]) + int(st["wounded"]) + ArmySystem.fit_heads(_heads(codes[i]), st), _heads(codes[i]))
-		dead_sum += int(st["dead"])
-		wounded_sum += int(st["wounded"])
+		assert_eq(People.count(s, codes[i], "wounded"), int(wounded_each[i]), "wounded of %s" % codes[i])
+		assert_eq(People.count(s, codes[i], "dead"), int(lost_each[i]) - int(wounded_each[i]), "dead of %s" % codes[i])
+		assert_eq(People.count(s, codes[i], "dead") + People.count(s, codes[i], "wounded") + ArmySystem.fit_count(repo, s, codes[i]), _heads(codes[i]))
+		dead_sum += People.count(s, codes[i], "dead")
+		wounded_sum += People.count(s, codes[i], "wounded")
 	assert_eq(dead_sum + wounded_sum, lost_total, "the side's loss is exactly what the tier says")
 
 
 func test_apply_round_zero_heads_no_divide() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var code: String = _land_codes()[0]
-	var reg := ArmySystem.regiment(repo, code, s)   # the campaign's own row
-	for arm: String in repo.world_table("military", "unit_types"):
-		reg[arm] = 0
-	SuiteData.set_headcount(s, code, 0)
+	assert_false(People.move(repo, s, code, "fit", "released", ArmySystem.fit_count(repo, s, code), "empty_unit").has("error"))
 	var tier := {"attacker_loss_permille": 150, "defender_loss_permille": 30, "wounded_share_permille": 600,
 		"attacker_morale": -20, "defender_morale": 5}
-	var res := BattleSystem.apply_round(repo, s, [code], [], tier, "nothing to lose")
+	var res := BattleSystem.apply_round(repo, s, [code], [], tier, "nothing to lose", Callable(), "test:nothing_to_lose")
 	var st: Dictionary = s.regiments[code]
-	assert_eq(int(st["wounded"]), 0)
-	assert_eq(int(st.get("dead", 0)), 0)
+	assert_eq(People.count(s, code, "wounded"), 0)
+	assert_eq(People.count(s, code, "dead"), 0)
 	assert_eq(int(res[code]["dead"]), 0)
 	assert_gte(int(st["morale"]), 0)
 
@@ -194,13 +177,13 @@ func test_apply_round_hits_a_foe_in_its_own_state() -> void:
 	s.foes[foe] = ArmySystem.starting_state(repo, ArmySystem.regiment(repo, foe))
 	var tier := {"attacker_loss_permille": 0, "defender_loss_permille": 200, "wounded_share_permille": 600,
 		"attacker_morale": 0, "defender_morale": -20}
-	BattleSystem.apply_round(repo, s, [], [foe], tier, "broken at the ford")
+	BattleSystem.apply_round(repo, s, [], [foe], tier, "broken at the ford", Callable(), "test:broken_at_the_ford")
 	@warning_ignore("integer_division")
 	var lost := heads * 200 / 1000
 	@warning_ignore("integer_division")
-	assert_eq(int(s.foes[foe]["wounded"]), lost * 600 / 1000)
+	assert_eq(People.count(s, foe, "wounded"), lost * 600 / 1000)
 	@warning_ignore("integer_division")
-	assert_eq(int(s.foes[foe]["dead"]), lost - lost * 600 / 1000)
+	assert_eq(People.count(s, foe, "dead"), lost - lost * 600 / 1000)
 	assert_false(s.regiments.has(foe), "a foe is never written into the player's regiments")
 
 
@@ -210,11 +193,11 @@ func test_morale_stays_within_bounds() -> void:
 	s.regiments[code]["morale"] = 3
 	var tier := {"attacker_loss_permille": 0, "defender_loss_permille": 0, "wounded_share_permille": 0,
 		"attacker_morale": -20, "defender_morale": 5}
-	var res := BattleSystem.apply_round(repo, s, [code], [], tier, "rout")
+	var res := BattleSystem.apply_round(repo, s, [code], [], tier, "rout", Callable(), "test:rout")
 	assert_eq(int(s.regiments[code]["morale"]), 0)
 	assert_eq(int(res[code]["morale"]), -3, "the change that really happened")
 	s.regiments[code]["morale"] = 98
-	BattleSystem.apply_round(repo, s, [], [code], tier, "rally")
+	BattleSystem.apply_round(repo, s, [], [code], tier, "rally", Callable(), "test:rally")
 	assert_eq(int(s.regiments[code]["morale"]), 100)
 
 
@@ -245,32 +228,33 @@ func test_side_power_scales_by_height_against_the_mean_of_the_enemy() -> void:
 		return
 	var a: String = pair[0]
 	var b: String = pair[1]
+	repo.army_terrain.clear()
+	repo.army_town_defence.clear()
 	var factor := ArmySystem.height_factor(repo, int(pair[2]))
 	assert_ne(factor, 1000)
 	@warning_ignore("integer_division")
-	var want := ArmySystem.power(repo, s, a, "attack") * factor / 1000
+	var want := int(BattleStrength.unit(repo, s, a, true)["power"]) * factor / 1000
 	assert_eq(BattleSystem.side_power(repo, s, [a], steady, true, [b]), want)
-	assert_eq(BattleSystem.side_power(repo, s, [a], steady, true), ArmySystem.power(repo, s, a, "attack"),
+	assert_eq(BattleSystem.side_power(repo, s, [a], steady, true), int(BattleStrength.unit(repo, s, a, true)["power"]),
 		"with no enemy named there is no height factor")
 
 
 func test_a_tie_goes_to_the_earlier_code_whatever_order_the_side_is_listed_in() -> void:
 	var s := SuiteData.campaign(repo, 7)
 	var two := _land_codes().slice(0, 2)   # sorted: two[0] < two[1]
+	s.military_rosters.clear()
+	s.military_cohorts.clear()
+	s.military_events.clear()
+	s.military_migration.clear()
 	for c: String in two:
-		var reg := ArmySystem.regiment(repo, c, s)   # the campaign's own row
-		var kept := false
+		var reg := ArmySystem.regiment(repo, c, s)
 		for arm: String in repo.world_table("military", "unit_types"):
-			if not kept and int(float(reg.get(arm, 0))) > 0:
-				reg[arm] = 500
-				kept = true
-			else:
-				reg[arm] = 0
-		SuiteData.set_headcount(s, c, 500)
-		assert_eq(ArmySystem.headcount(repo, reg), 500)
+			reg[arm] = 500 if arm == "infantry" else 0
+		assert_false(People.enlist(repo, s, c, 500, "tie:" + c).has("error"))
+		assert_eq(ArmySystem.fit_count(repo, s, c), 500)
 	# 1000 fit x 1 / 1000 = ONE man lost, all dead: two equal shares of 0.5
 	var tier := {"attacker_loss_permille": 1, "defender_loss_permille": 0, "wounded_share_permille": 0,
 		"attacker_morale": 0, "defender_morale": 0}
-	BattleSystem.apply_round(repo, s, [two[1], two[0]], [], tier, "a tie")
-	assert_eq(int(s.regiments[two[0]].get("dead", 0)), 1, "the earlier code takes the man")
-	assert_eq(int(s.regiments[two[1]].get("dead", 0)), 0)
+	BattleSystem.apply_round(repo, s, [two[1], two[0]], [], tier, "a tie", Callable(), "test:a_tie")
+	assert_eq(People.count(s, two[0], "dead"), 1, "the earlier code takes the man")
+	assert_eq(People.count(s, two[1], "dead"), 0)

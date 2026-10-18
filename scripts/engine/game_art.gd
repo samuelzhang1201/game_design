@@ -13,9 +13,8 @@ const WAR_PIECES := "res://assets/3D/war_room/war_pieces.tres"
 ## The WAR ROOM's plan layer: the wax crayon's tooth (spec
 ## 2026-10-07-war-room-annotations-and-planning-pieces §2.5).
 const WAR_PLAN_ART := "res://assets/2D/war_room/plan/war_plan_art.tres"
-## The camp a regiment holding its line pitches behind it on the 3D map (key
-## `camp`; spec 2026-10-11-war-room-front-line-design §3). The table and
-## scene are made in the editor once the model exists; absent, no camp.
+## Saved field-camp stages on the 3D map: building/camped/packing.
+## The editor table supplies the scene; snapshot progress stages its facilities.
 const CAMP_MODELS := "res://assets/3D/buildings/camp_models.tres"
 ## The WAR ROOM's tool roll: each slot's painted ink glyph by WarToolSlot.art_key
 ## (library W-61..W-68), and the resolutions' rolled scroll (U-61).
@@ -40,6 +39,8 @@ const GOODS_MARKS := "res://assets/2D/goods/marks/goods_marks.tres"
 const GOODS_ICONS := "res://assets/2D/icons/goods/goods_icons.tres"
 ## The .glb each house type is drawn with (map3d_houses.csv keeps its sizes).
 const HOUSE_MODELS := "res://assets/3D/buildings/house_models.tres"
+
+const BATTLE_EVENTS := "res://assets/2D/events/battle/battle_events.tres"
 
 static var _tables: Dictionary = {}
 

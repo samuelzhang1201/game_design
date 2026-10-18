@@ -1,0 +1,4 @@
+kind,label,family_opinion,reason,base_gold,wealth_gold_per_point,unnamed_wealth
+ransom,Ransom,1,The family welcomes the fulfilled ransom and return to civilian life.,10,1,50
+exchange,Exchange,1,The family welcomes the fulfilled exchange and return to civilian life.,0,0,0
+release,Release,2,The family thanks the captor for release and forgone ransom.,0,0,0

@@ -56,7 +56,7 @@ static func occupied(state: GameState, province: String, field: String = "") -> 
 static func select(state: GameState, ids: Array[String], nominee: String) -> String
 ```
 
-每队 `military_rosters[code]` 保存 commander_id、cohort_ids及任职记录；cohort本体只存在 `military_cohorts[id]`。cohort含 `id/unit_code/source_province/source_population_field/identity/family_name/stage/initial/fit/wounded/captured_current/dead/released`。来源字段必须明确城市或农村人口；stage区分集结与现役。五种人数互斥，`initial=fit+wounded+captured_current+dead+released`。具名指挥官标识其所在cohort中的一人，不能额外加人数。P5持有批次只引用源cohort；历史累计被俘人数保存在不可变战报/事件中。人口占用只从fit+wounded+captured_current派生，集结项目不重复占人。released表示已成为平民的明确去向，不能直接转回fit；重征创建新cohort与新费用。
+每队 `military_rosters[code]` 保存 commander_id、cohort_ids及任职记录；cohort本体只存在 `military_cohorts[id]`。cohort含 `id/unit_code/source_province/source_population_field/identity/family_name/stage/initial/fit/wounded/captured_current/dead/released`。来源字段必须明确城市或农村人口；stage区分集结与现役。五种人数互斥，`initial=fit+wounded+captured_current+dead+released`。具名指挥官使用带person_id的单人贵族cohort，任命只引用该记录，不额外加人数；死亡、负伤、被俘或退伍后解除任命，获释需重新征募。P5持有批次只引用源cohort；历史累计被俘人数保存在不可变战报/事件中。人口占用只从fit+wounded+captured_current派生，集结项目不重复占人。released表示已成为平民的明确去向，不能直接转回fit；重征创建新cohort与新费用。
 
 装备／编制元素与人员分开保存。人数容量按当前包 `unit_types` 的 `crew` 计算；现有一艘舰船不能当作一名军人。人员伤亡不直接删除同数量舰船或炮；装备毁损另记且影响可投入战力。身份比例始终按人计算，不能按武器、马匹或舰船计算。
 

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://h724by0tsb2p"]
+
+[ext_resource type="Script" path="res://tools/map3d/king_camp_review.gd" id="1_18kpq"]
+
+[node name="KingCampReview" type="Node" unique_id=1585961896]
+script = ExtResource("1_18kpq")

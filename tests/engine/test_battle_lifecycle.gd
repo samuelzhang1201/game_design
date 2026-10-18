@@ -1,10 +1,11 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const Play := preload("res://tests/invasion_play.gd")
 ## A battle's life (spec 2026-10-07-enemy-ai-and-battle-design §4.1, §4.4):
 ## contact starts it, a round a day, reinforcements join up to the cap, the
-## stances decide who leaves, and it ends on a rout, the round cap or a side
-## emptied. Regiments are placed by hand; the outcome table is replaced by
+## stances start real withdrawals, and it ends on a rout or a side
+## emptied after physical separation. Regiments are placed by hand; the outcome table is replaced by
 ## hand-made tiers where a test needs exact numbers.
 
 var repo: DataRepository
@@ -12,6 +13,15 @@ var repo: DataRepository
 
 func before_each() -> void:
 	repo = SuiteData.repo()
+	# Lifecycle fixtures isolate tier/retreat arithmetic; deployment factors have their own hand tests.
+	for formation: Dictionary in repo.battle_formations.values():
+		for key: String in ["attack_permille", "defence_permille", "flank_permille", "missile_permille"]:
+			formation[key] = 1000
+	for order: Dictionary in repo.battle_orders.values():
+		for key: String in ["attack_permille", "defence_permille", "morale_decay_permille"]:
+			order[key] = 1000
+	for context: String in ["ranged", "shock", "withdrawal", "pursuit"]:
+		repo.balance["battle_context_" + context + "_permille"] = 1000
 	Weather.forget()
 
 
@@ -77,6 +87,7 @@ func _foe(s: GameState, code: String, at: Vector2i, host := "") -> Dictionary:
 	st["y_m"] = at.y
 	st["dest_x_m"] = at.x
 	st["dest_y_m"] = at.y
+	st["battle_plan"] = "attack"
 	if host != "":
 		st["host"] = host
 	s.foes[code] = st
@@ -89,8 +100,8 @@ func _st(s: GameState, code: String) -> Dictionary:
 
 
 ## One outcome row for every eff, so a round's result is known by hand; no
-## dice; no regiment retreats on the odds (the evade stance still leaves on
-## contact).
+## variance; no regiment retreats on the odds (evade still starts a
+## withdrawal on contact).
 func _one_tier(att_loss: int, def_loss: int, share: int, att_morale: int, def_morale: int,
 		rout := "none") -> void:
 	repo.battle_outcomes.clear()
@@ -225,10 +236,16 @@ func test_a_sieging_host_fights_only_on_its_assault_day() -> void:
 	_place(s, p, town_m)
 	s.regiments[p]["order"] = ArmySystem.ORDER_GARRISON
 	assert_eq(ArmyGround.garrison_town(repo, s, p), town, "the town's garrison")
-	_foe(s, f, town_m + Vector2i(500, 0), "raid_main")
+	s.town_seat[town] = p
+	var gate_distance := ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, p, s)) + ArmyGround.unit_radius(repo, ArmySystem.regiment(repo, f, s))
+	var besieger := _foe(s, f, town_m + Vector2i(gate_distance, 0), "raid_main")
+	besieger["order"] = ArmySystem.ORDER_GARRISON
+	assert_eq(BattleSystem.town_contact(repo, s, town, f), town, "the deployed column stands at the physical gate")
 	s.ai_hosts["raid_main"] = {"mode": "SIEGE", "assault": 0, "target_kind": "town", "target_id": town}
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 0, "a host sitting down to a siege does not fight its garrison every day")
+	EnemyAi.ensure_deployments(repo, s)
+	assert_true(SiegeSystem.active(repo, s, "raid_main"), "the assault requires a deployed host")
 	s.ai_hosts["raid_main"]["assault"] = 1
 	BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 1, "its assault is an ordinary battle")
@@ -260,20 +277,20 @@ func test_round_matches_hand_computed_tier() -> void:
 	_place(s, p, _spot(s))
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
 	# exactly 400 fit men a side (a unit is at most army_split_cap_men)
-	SuiteData.set_losses(s, p, {"dead": _heads(p) - 400})
-	SuiteData.set_losses(s, f, {"dead": _heads(f) - 400})
+	assert_false(People.move(repo, s, p, "fit", "dead", _heads(p) - 400, "prior_player_loss").has("error"))
+	assert_false(People.move(repo, s, f, "fit", "dead", _heads(f) - 400, "prior_foe_loss").has("error"))
 	var morale_p := int(s.regiments[p]["morale"])
 	var morale_f := int(s.foes[f]["morale"])
 	BattleSystem.settle_day(repo, s)
 	# neither marched: the foe attacks
 	assert_eq(s.battles[0]["att"], [f])
 	# the foe: lost 400 x 100 / 1000 = 40, wounded 40 x 600 / 1000 = 24, dead 16
-	assert_eq(int(s.foes[f]["wounded"]), 24)
-	assert_eq(int(s.foes[f]["dead"]), _heads(f) - 400 + 16)
+	assert_eq(People.count(s, f, "wounded"), 24)
+	assert_eq(People.count(s, f, "dead"), _heads(f) - 400 + 16)
 	assert_eq(int(s.foes[f]["morale"]), morale_f - 5)
 	# the player: lost 400 x 50 / 1000 = 20, wounded 12, dead 8
-	assert_eq(int(s.regiments[p]["wounded"]), 12)
-	assert_eq(int(s.regiments[p]["dead"]), _heads(p) - 400 + 8)
+	assert_eq(People.count(s, p, "wounded"), 12)
+	assert_eq(People.count(s, p, "dead"), _heads(p) - 400 + 8)
 	assert_eq(int(s.regiments[p]["morale"]), morale_p - 2)
 
 
@@ -286,13 +303,14 @@ func test_round_uses_the_outcome_table_tier_of_the_odds() -> void:
 	var f: String = _theirs()[0]
 	_place(s, p, _spot(s))
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
+	BattleSystem.detect_contacts(repo, s)
 	var steady := func(_c: String) -> String: return "steady"
 	var a := BattleSystem.side_power(repo, s, [f], steady, true, [p])
 	var d := BattleSystem.side_power(repo, s, [p], steady, false, [f])
 	var odds := BattleSystem.odds_permille(a, d)
 	var tier := BattleSystem.tier_of(repo, odds)
-	var fit_f := ArmySystem.fit_heads(_heads(f), s.foes[f])
-	var fit_p := ArmySystem.fit_heads(_heads(p), s.regiments[p])
+	var fit_f := ArmySystem.fit_count(repo, s, f)
+	var fit_p := ArmySystem.fit_count(repo, s, p)
 	var lost_f := BattleSystem.split_losses(fit_f, int(tier["attacker_loss_permille"]), int(tier["wounded_share_permille"]))
 	var lost_p := BattleSystem.split_losses(fit_p, int(tier["defender_loss_permille"]), int(tier["wounded_share_permille"]))
 	var events := BattleSystem.settle_day(repo, s)
@@ -302,10 +320,10 @@ func test_round_uses_the_outcome_table_tier_of_the_odds() -> void:
 	assert_eq(String(round_ev["tier"]), String(tier["tier"]))
 	assert_eq(int(round_ev["att_power"]), a)
 	assert_eq(int(round_ev["def_power"]), d)
-	assert_eq(int(s.foes[f]["wounded"]), int(lost_f["wounded"]))
-	assert_eq(int(s.foes[f]["dead"]), int(lost_f["dead"]))
-	assert_eq(int(s.regiments[p]["wounded"]), int(lost_p["wounded"]))
-	assert_eq(int(s.regiments[p]["dead"]), int(lost_p["dead"]))
+	assert_eq(People.count(s, f, "wounded"), int(lost_f["wounded"]))
+	assert_eq(People.count(s, f, "dead"), int(lost_f["dead"]))
+	assert_eq(People.count(s, p, "wounded"), int(lost_p["wounded"]))
+	assert_eq(People.count(s, p, "dead"), int(lost_p["dead"]))
 	assert_ne(String((round_ev["results"] as Dictionary)[p]["reason"]), "", "every loss carries its reason")
 
 
@@ -328,86 +346,69 @@ func test_hold_loses_heart_slower() -> void:
 
 ## --- the end -------------------------------------------------------------
 
-func test_battle_ends_after_max_rounds_or_rout() -> void:
+func test_battle_keeps_its_id_beyond_five_rounds_and_rout_until_separation() -> void:
 	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
 	var f: String = _theirs()[0]
 	_place(s, p, _spot(s))
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
-	var cap := int(repo.bal("battle_max_rounds"))
-	var ends: Array = []
-	for n in cap - 1:
-		ends.append_array(_kinds(BattleSystem.settle_day(repo, s), "end"))
+	var id := -1
+	for day in 7:
+		var events := BattleSystem.settle_day(repo, s)
+		assert_eq(_kinds(events, "end").size(), 0)
+		assert_eq(s.battles.size(), 1)
+		if day == 0:
+			id = int(s.battles[0]["id"])
+		assert_eq(int(s.battles[0]["id"]), id)
+		assert_eq(int(s.battles[0]["rounds"]), day + 1)
 		_next_day(s)
-	assert_eq(s.battles.size(), 1, "still fighting after %d rounds" % (cap - 1))
-	ends.append_array(_kinds(BattleSystem.settle_day(repo, s), "end"))
-	assert_eq(s.battles.size(), 0, "over after battle_max_rounds")
-	assert_eq(ends.size(), 1)
-	assert_eq(String(ends[0]["why"]), "rounds")
-	assert_eq(ArmySystem.order_of(repo, s, p), ArmySystem.ORDER_GARRISON, "survivors hold their ground")
-	assert_false(_in_battle(s, p))
-	# a draw: both sides draw breath for battle_disengage_days, still in contact
-	var ended_on := s.absolute_day()
-	var first_id := int(ends[0]["battle_id"])
-	var pause := int(repo.bal("battle_disengage_days"))
-	assert_gt(pause, 0, "battle/balance.csv battle_disengage_days")
-	assert_eq(int(s.regiments[p]["disengaged_until"]), ended_on + pause)
-	assert_eq(int(s.foes[f]["disengaged_until"]), ended_on + pause)
-	for n in pause:
-		_next_day(s)
-		BattleSystem.settle_day(repo, s)
-		assert_eq(s.battles.size(), 0, "day %d after the draw: no new battle" % (n + 1))
-	_next_day(s)
-	var again := BattleSystem.settle_day(repo, s)
-	assert_eq(s.battles.size(), 1, "after battle_disengage_days, still in contact: the war is renewed")
-	var renewed: Dictionary = _kinds(again, "start")[0]
-	assert_gt(int(renewed["battle_id"]), first_id, "a new battle, a new id")
-	# a rout ends it on the day
+	# A rout requests a route; the same battle remains until actual separation.
 	var s2 := _campaign(7)
 	_one_tier(30, 150, 600, 5, -20, "defender")
 	_place(s2, p, _spot(s2))
 	_foe(s2, f, _spot(s2) + Vector2i(1000, 0))
 	var events := BattleSystem.settle_day(repo, s2)
-	assert_eq(s2.battles.size(), 0, "the defender broke")
-	var end: Dictionary = _kinds(events, "end")[0]
-	assert_eq(String(end["why"]), "rout_defender")
-	assert_eq(String(end["winner"]), "att")
+	assert_eq(s2.battles.size(), 1, "the defender broke but remains exposed in contact")
+	assert_eq(_kinds(events, "end").size(), 0)
+	var battle: Dictionary = s2.battles[0]
+	var routed_id := int(battle["id"])
+	assert_eq(String(battle["routed_side"]), "def")
+	assert_eq(BattleOrders.kind(battle, "def"), "retreat")
+	assert_eq(int(BattleSystem.battle_of(s2, p)["id"]), routed_id)
 	assert_eq(ArmySystem.order_of(repo, s2, p), ArmySystem.ORDER_MARCH, "the routed fall back to a town")
 	assert_eq(int(s2.regiments[p].get("disengaging", 0)), 1)
 	assert_eq(String(s2.foes[f]["order"]), ArmySystem.ORDER_GARRISON, "the winner holds the field")
+	var reach := int(repo.bal("battle_contact_km")) * 1000
+	s2.regiments[p]["x_m"] = int(s2.foes[f]["x_m"]) - reach - 1
+	_next_day(s2)
+	var separated := BattleSystem.settle_day(repo, s2)
+	assert_eq(s2.battles.size(), 0, "actual separation ends the routed battle")
+	var end: Dictionary = _kinds(separated, "end")[0]
+	assert_eq(int(end["battle_id"]), routed_id)
+	assert_eq(String(end["why"]), "rout_defender")
+	assert_eq(String(end["winner"]), "att")
+	assert_eq(_kinds(separated, "start").size(), 0, "no replacement encounter")
+	assert_eq(_kinds(separated, "round").size(), 0, "no casualties after contact ends")
 
 
-## battle_disengage_days is exactly that many days with no contact: N = 1
-## keeps the two apart the one day after the draw, N = 2 the two days after;
-## the day after the last, still in contact, they fight again.
-func test_the_pause_is_exactly_battle_disengage_days() -> void:
-	for days: int in [1, 2]:
-		repo = SuiteData.repo()
-		repo.balance["battle_disengage_days"] = float(days)
-		var s := _campaign(7)
-		_one_tier(0, 0, 600, 0, 0)
-		var p: String = _mine()[0]
-		var f: String = _theirs()[0]
-		_place(s, p, _spot(s))
-		_foe(s, f, _spot(s) + Vector2i(1000, 0))
-		for n in int(repo.bal("battle_max_rounds")):
-			BattleSystem.settle_day(repo, s)
-			if s.battles.is_empty():
-				break
-			_next_day(s)
-		assert_eq(s.battles.size(), 0, "N=%d: the draw" % days)
-		var quiet := 0
-		for n in 4:
-			_next_day(s)
-			BattleSystem.settle_day(repo, s)
-			if not s.battles.is_empty():
-				break
-			quiet += 1
-		assert_eq(quiet, days, "N=%d: exactly %d days with no contact, then the war is renewed" % [days, days])
+func test_both_hold_preserves_round_zero_and_rng() -> void:
+	var s := _campaign(7)
+	_one_tier(0, 0, 600, 0, 0)
+	var p: String = _mine()[0]
+	var f: String = _theirs()[0]
+	_place(s, p, _spot(s))
+	_foe(s, f, _spot(s) + Vector2i(1000, 0))["battle_plan"] = "hold"
+	var rng_before := s.rng.to_dict().duplicate(true)
+	for day in 3:
+		var events := BattleSystem.settle_day(repo, s)
+		assert_eq(_kinds(events, "round").size(), 0)
+		assert_eq(int(s.battles[0]["rounds"]), 0)
+		assert_eq(s.rng.to_dict(), rng_before)
+		_next_day(s)
 
 
-func test_evade_stance_leaves_on_first_contact() -> void:
+func test_evade_stance_starts_route_but_stays_exposed_in_contact() -> void:
 	var s := _campaign(7)
 	_one_tier(50, 50, 600, 0, 0)
 	assert_true(bool(repo.battle_stances["evade"]["retreats_on_contact"]), "the table says evade leaves at once")
@@ -420,19 +421,16 @@ func test_evade_stance_leaves_on_first_contact() -> void:
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
 	s.regiments[p]["stance"] = "evade"
 	var events := BattleSystem.settle_day(repo, s)
-	assert_gt(int(s.regiments[p]["wounded"]), 0, "it fought the first day's round")
-	assert_false(_in_battle(s, p), "and left the field after it")
+	assert_gt(People.count(s, p, "wounded"), 0, "it fought the first day's round")
+	assert_true(_in_battle(s, p), "the route has not yet carried it clear")
 	assert_true(_in_battle(s, q), "its steady neighbour stays")
-	assert_eq(ArmySystem.order_of(repo, s, p), ArmySystem.ORDER_MARCH, "falling back to a town")
-	assert_eq(int(s.regiments[p]["disengaging"]), 1)
-	var left: Array = (_kinds(events, "round")[0] as Dictionary)["left"]
-	assert_eq(left.size(), 1)
-	assert_eq(String(left[0]["code"]), p)
-	assert_eq(String(left[0]["why"]), "evade")
-	# the next day, still within reach of the foe, it is not caught again
+	assert_eq(ArmySystem.order_of(repo, s, p), ArmySystem.ORDER_MARCH)
+	assert_true(bool(s.regiments[p].get("battle_retreat", false)))
+	assert_eq((_kinds(events, "round")[0]["left"] as Array).size(), 0)
 	_next_day(s)
 	BattleSystem.settle_day(repo, s)
-	assert_false(_in_battle(s, p), "a column falling back does not re-engage")
+	assert_true(_in_battle(s, p), "no movement: still exposed the next day")
+	assert_false(s.regiments[p].has("disengaged_until"))
 
 
 func test_hold_stance_never_retreats() -> void:
@@ -449,14 +447,15 @@ func test_hold_stance_never_retreats() -> void:
 		var f: String = _theirs()[0]
 		_place(s, p, _spot(s))
 		_foe(s, f, _spot(s) + Vector2i(1000, 0))
-		SuiteData.set_losses(s, p, {"dead": _heads(p) - 20})   # a handful left: hopeless odds
+		assert_false(People.move(repo, s, p, "fit", "dead", _heads(p) - 20, "hopeless_odds").has("error"))   # a handful left: hopeless odds
 		s.regiments[p]["stance"] = stance
 		BattleSystem.settle_day(repo, s)
 		if stance == "hold":
 			assert_true(_in_battle(s, p), "hold stands whatever the odds")
 			assert_eq(s.battles.size(), 1)
 		else:
-			assert_false(_in_battle(s, p), "steady gives way at such odds")
+			assert_true(_in_battle(s, p), "steady remains exposed until it moves clear")
+			assert_true(bool(s.regiments[p].get("battle_retreat", false)))
 
 
 func test_steady_retreats_below_retreat_odds() -> void:
@@ -475,12 +474,12 @@ func test_steady_retreats_below_retreat_odds() -> void:
 		var mine_odds := 1000 - BattleSystem.odds_permille(a, d)   # the defender's share
 		repo.battle_stances["steady"]["retreat_odds_permille"] = mine_odds + margin
 		BattleSystem.settle_day(repo, s)
-		outcomes[margin] = _in_battle(s, p)
-	assert_false(bool(outcomes[1]), "odds one below retreat_odds_permille: it retreats")
-	assert_true(bool(outcomes[0]), "odds at retreat_odds_permille: it stays")
+		outcomes[margin] = bool(s.regiments[p].get("battle_retreat", false))
+	assert_true(bool(outcomes[1]), "odds one below retreat_odds_permille: withdrawal starts")
+	assert_false(bool(outcomes[0]), "odds at retreat_odds_permille: no withdrawal")
 
 
-func test_a_fall_back_with_no_town_is_not_caught_again_next_day() -> void:
+func test_no_safe_town_leaves_withdrawing_army_exposed() -> void:
 	var s := _campaign(7)
 	_one_tier(0, 0, 600, 0, 0)
 	var p: String = _mine()[0]
@@ -493,13 +492,14 @@ func test_a_fall_back_with_no_town_is_not_caught_again_next_day() -> void:
 	for t: String in repo.burgs:
 		s.province_owner[String(repo.burgs[t].get("province_code", ""))] = raider
 	BattleSystem.settle_day(repo, s)
-	assert_false(_in_battle(s, p), "it evaded")
+	assert_true(_in_battle(s, p), "no destination: it stays in contact")
 	assert_ne(ArmySystem.order_of(repo, s, p), ArmySystem.ORDER_MARCH, "no town to march for: it halts")
-	assert_eq(int(s.regiments[p]["disengaged_until"]), s.absolute_day() + int(repo.bal("battle_disengage_days")))
+	assert_false(s.regiments[p].has("disengaged_until"))
+	assert_ne(String(s.regiments[p].get("withdrawal_reason", "")), "")
 	_next_day(s)
 	BattleSystem.settle_day(repo, s)
-	assert_false(_in_battle(s, p), "not caught again the next morning")
-	assert_eq(s.battles.size(), 0)
+	assert_true(_in_battle(s, p), "still exposed next morning")
+	assert_eq(s.battles.size(), 1)
 
 
 ## --- reinforcements and leaving ------------------------------------------
@@ -549,16 +549,16 @@ func test_march_away_mid_battle_removes_unit() -> void:
 	_next_day(s)
 	var events := BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 1, "the battle goes on")
-	assert_eq(s.battles[0]["def"], [mine[1]], "the column ordered away has left it")
+	assert_eq(s.battles[0]["def"], [mine[0], mine[1]], "an order alone does not move the column clear")
 	assert_eq(ArmySystem.order_of(repo, s, mine[0]), ArmySystem.ORDER_MARCH, "on its own orders")
 	assert_eq(int(s.regiments[mine[0]]["dest_x_m"]), _spot(s).x - 30_000, "to where it was sent")
 	var left: Array = (_kinds(events, "round")[0] as Dictionary)["left"]
-	assert_eq(String(left[0]["why"]), "ordered")
-	# it marches off the next day and is not caught again on the way
+	assert_eq(left.size(), 0, "still within contact range")
+	# Place it at its route endpoint to isolate the physical exit condition.
 	_next_day(s)
-	ArmySystem.march_day(repo, s)
+	s.regiments[mine[0]]["x_m"] = _spot(s).x - 30_000
 	BattleSystem.settle_day(repo, s)
-	assert_false(_in_battle(s, mine[0]))
+	assert_false(_in_battle(s, mine[0]), "physical separation completes withdrawal")
 
 
 func test_battle_with_one_side_emptied_ends() -> void:
@@ -570,6 +570,7 @@ func test_battle_with_one_side_emptied_ends() -> void:
 	_foe(s, f, _spot(s) + Vector2i(1000, 0))
 	BattleSystem.settle_day(repo, s)
 	ArmySystem.set_march(repo, s, p, ArmySystem.metres_to_pack(repo, _spot(s) - Vector2i(30_000, 0)))
+	s.regiments[p]["x_m"] = _spot(s).x - 30_000
 	_next_day(s)
 	var events := BattleSystem.settle_day(repo, s)
 	assert_eq(s.battles.size(), 0, "no battle is left with one side")
@@ -622,12 +623,28 @@ func test_battle_state_is_deterministic() -> void:
 	assert_eq(s.foe_next_id, twin.foe_next_id)
 
 
-func test_the_battle_path_leaves_game_rng_alone() -> void:
+func test_each_engaged_round_draws_once_and_same_day_retry_is_inert() -> void:
 	var s := _campaign(7)
+	_one_tier(0, 0, 600, 0, 0)
 	_melee(s)
-	var before := s.rng.to_dict().duplicate(true)
-	_five_days(s)
-	assert_eq(s.rng.to_dict(), before, "battles roll a hash, never GameState.rng")
+	var expected := Rng.from_dict(s.rng.to_dict())
+	var draw := expected.randi_range(0, 999)
+	var events := BattleSystem.settle_day(repo, s)
+	assert_eq(_kinds(events, "round")[0]["roll"], draw)
+	assert_eq(s.rng.to_dict(), expected.to_dict())
+	var saved := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	var before := SaveLoad.state_hash(s)
+	assert_eq(_kinds(BattleSystem.settle_day(repo, s), "round").size(), 0)
+	assert_eq(SaveLoad.state_hash(s), before)
+	assert_eq(_kinds(BattleSystem.settle_day(repo, saved), "round").size(), 0)
+	assert_eq(saved.rng.to_dict(), expected.to_dict())
+	_next_day(s)
+	_next_day(saved)
+	draw = expected.randi_range(0, 999)
+	var next_events := BattleSystem.settle_day(repo, s)
+	assert_eq(_kinds(next_events, "round")[0]["roll"], draw)
+	assert_eq(next_events, BattleSystem.settle_day(repo, saved))
+	assert_eq(s.rng.to_dict(), expected.to_dict())
 
 
 func _no_floats(v: Variant, where: String) -> void:

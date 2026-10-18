@@ -1,25 +1,27 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const RunDir := preload("res://tests/run_dir.gd")
 const Play := preload("res://tests/invasion_play.gd")
 ## The prologue's invasion end to end (spec 2026-10-07-enemy-ai-and-battle-
-## design, all of it) on the REAL day loop of a suite campaign, with no hand
-## on the engine but the player's defence: on the main host's crossing day the
+## design, all of it) on the REAL day loop of a suite campaign. Weak trials
+## use the authored defender-routed outcome and main-host HOLD; strong trials
+## retain normal combat rules. For the player's defence: on the main host's crossing day the
 ## town it chose is garrisoned as if the march had already been carried out
 ## (Play.arrive: the first unit takes the seat, the rest camp round the town —
 ## the town's garrison all the same, ArmyGround.garrison_town).
 ##   A  WEAK: the units of the pack's smallest land regiment hold it — the rumour comes,
 ##      the hosts cross on their days, the main host sits down before the
-##      town, wears it down, storms it and takes it; the loss costs the crown
+##      town, fights its defenders and occupies its gate; the loss costs the crown
 ##      (treasury, contentment, the council, the war beat) and the campaign
-##      plays on.
+##      plays on; a later counterattack can send the host home and liberate it.
 ##   B  STRONG: the units of the three largest hold it, behind walls and a citadel (the
 ##      test gives the town them; the host keeps its plan, ai_think_days out of
 ##      reach — with its own mind it turns away from a garrison it sees) — the
 ##      town never falls, the garrison never starves, the host goes home.
 ## Both are deterministic: the same save played twice is the same state, and
 ## a save on day SAVE_DAY played on equals the run that never stopped. The
-## war's state holds no float, and the war's systems draw no random number.
+## war's state holds no float; each battle round records its one saved-stream draw.
 
 const DAYS := 45
 const SAVE_DAY := 20
@@ -38,7 +40,7 @@ func before_each() -> void:
 func _chosen_town() -> String:
 	var engine := TickEngine.new(repo)
 	var s := Play.opened(repo, engine)
-	Play.play_through(engine, s, Play.first_appear(repo))
+	Play.play_through(engine, s, Play.first_appear(repo), true)
 	var mind: Dictionary = s.ai_hosts[Play.host(repo, "main")]
 	assert_eq(String(mind["mode"]), "ADVANCE", "the main host has crossed")
 	assert_eq(String(mind["target_kind"]), "town", "the main host goes for a town")
@@ -57,12 +59,29 @@ func _garrison(scenario: String) -> Array:
 ## host's plan. Returns the town.
 func _prepare(scenario: String) -> String:
 	var town := _chosen_town()
+	if scenario == "weak":
+		for row: Dictionary in repo.battle_outcomes:
+			if row["tier"] == "defender_routed":
+				var outcome := row.duplicate(true)
+				outcome["eff_min"] = 0
+				outcome["eff_max"] = 1000
+				repo.battle_outcomes = [outcome]
+				break
 	if scenario == "strong":
 		repo.burgs[town]["features"] = "walls|citadel"
 		ArmySystem.forget_grids()
 		repo.balance["ai_think_days"] = 999.0
 	return town
 
+
+
+func _opened_trial(engine: TickEngine, scenario: String) -> GameState:
+	var state := Play.opened(repo, engine)
+	if scenario == "weak":
+		for code: String in EnemyAi.regiments_of(state, Play.host(repo, "main")):
+			var entry: Dictionary = state.foes[code]
+			ArmySystem.apply_hold(entry, "hold", -1, int(entry.get("stance_order_id", 0)) + 1)
+	return state
 
 ## Plays the opened campaign `s` until the absolute day `last` has ended; as
 ## the crossing day ends, `garrison` takes the main host's town. Returns what
@@ -75,8 +94,10 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 	var blank := {"rumour": -1, "left": {}, "town": "", "siege_begin": -1, "siege_days": [], "repulsed": [],
 		"assaults": [], "battle_letters": [], "fell": -1, "fallen": {}, "defeat": {}, "before": {},
 		"home": -1, "lifted": -1, "beat_scheduled": false, "hungry": 0, "garrison": [], "dead": {},
-		"fought": [], "battle_rounds": [], "battle_joins": [], "first_assault_over": -1,
-		"mode_at_fall": "", "town_held_at_fall": false, "dead_at_fall": 0}
+		"fought": [], "main_fought": [], "target_contacts": [], "target_battles": {},
+		"garrison_battle_dead": 0, "gate_at_fall": false, "occupied_at_fall": [], "first_assault_over": -1,
+		"homeward_motion": [], "main_withdrawals": [], "mode_at_fall": "",
+		"crown_held_at_fall": true, "liberated": -1, "liberation": {}}
 	for k: String in blank:
 		if not seen.has(k):
 			seen[k] = blank[k]
@@ -86,7 +107,18 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 		var today := s.absolute_day()
 		var before := {"treasury": float(s.metrics["treasury"]),
 			"content": float(s.metrics["peasant_contentment"])}
-		Play.day(engine, s)
+		var homeward_before := {}
+		if String(s.ai_hosts[main]["mode"]) in EnemyAi.HOMEWARD:
+			for code: String in EnemyAi.regiments_of(s, main):
+				var entry: Dictionary = s.foes[code]
+				homeward_before[code] = {"at": Vector2i(int(entry["x_m"]), int(entry["y_m"])),
+					"can_march": CampSystem.can_march(s, code, today)}
+		Play.day(engine, s, true)
+		for code: String in homeward_before:
+			var entry: Dictionary = s.foes[code]
+			var at := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+			seen["homeward_motion"].append({"code": code, "day": today,
+				"can_march": homeward_before[code]["can_march"], "moved": at != homeward_before[code]["at"]})
 		if int(seen["rumour"]) < 0 and not Play.letters(s, "rumour").is_empty():
 			seen["rumour"] = today
 		for h: String in EnemyAi.host_codes(s):
@@ -99,6 +131,8 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 				Play.arrive(repo, s, c, Play.town_m(repo, town))
 			seen["garrison"] = garrison.duplicate()
 		for e: Dictionary in engine.day_siege:
+			if String(e.get("town", "")) != String(seen["town"]) or String(e.get("host", "")) != main:
+				continue
 			match String(e.get("kind", "")):
 				"siege_begin":
 					if int(seen["siege_begin"]) < 0:
@@ -116,26 +150,46 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 					seen["fell"] = today
 					seen["fallen"] = e
 					seen["before"] = before
+					seen["occupied_at_fall"] = (s.ai_hosts[main].get("occupied", {}) as Dictionary).keys()
 					seen["mode_at_fall"] = String(s.ai_hosts[main]["mode"])
-					seen["town_held_at_fall"] = EnemyAi.target_held(repo, s, "town", String(seen["town"]))
-					for code: String in seen["garrison"]:
-						seen["dead_at_fall"] += int(s.regiments[code].get("dead", 0))
+					seen["crown_held_at_fall"] = EnemyAi.target_held(repo, s, "town", String(seen["town"]))
+					for code: String in EnemyAi.live_regiments(repo, s, main):
+						if BattleSystem.town_contact(repo, s, String(seen["town"]), code) == String(seen["town"]):
+							seen["gate_at_fall"] = true
 				"defeat_town_lost":
 					seen["defeat"] = e
 					seen["beat_scheduled"] = (s.event_state["scheduled"] as Array).any(
 						func(sc: Dictionary) -> bool: return String(sc["event_id"]) == DefeatSystem.EVENT_ID)
 				"siege_lifted":
 					seen["lifted"] = today
+				"siege_liberated":
+					seen["liberated"] = today
+					seen["liberation"] = e
 		for e: Dictionary in engine.day_battles:
+			for left: Dictionary in e.get("left", []):
+				var code := String(left["code"])
+				if String(left["why"]) == "withdrawn" and String(s.foes.get(code, {}).get("host", "")) == main:
+					var enemy_side := "def" if left["side"] == "att" else "att"
+					seen["main_withdrawals"].append({"code": code, "day": today,
+						"separated": BattleSystem._separated(repo, s, code, e.get(enemy_side, []))})
 			var k := String(e.get("kind", ""))
+			var participants: Array = (e.get("att", []) as Array) + (e.get("def", []) as Array)
+			var main_present := participants.any(func(c: String) -> bool:
+				return String((s.foes.get(c, {}) as Dictionary).get("host", "")) == main)
+			var target_guard_present := participants.any(func(c: String) -> bool: return c in seen["garrison"])
+			if k in ["start", "round"] and main_present:
+				if not today in seen["main_fought"]: seen["main_fought"].append(today)
+				if target_guard_present:
+					if not today in seen["fought"]: seen["fought"].append(today)
+					seen["target_battles"][int(e["battle_id"])] = true
+					if k == "start":
+						var contact := e.duplicate(true)
+						contact["on"] = today
+						seen["target_contacts"].append(contact)
 			if k == "round":
-				seen["battle_rounds"].append({"day": today, "substep_index": int(e["substep_index"]),
-					"battle_id": int(e["battle_id"]), "att": e["att"].duplicate(), "def": e["def"].duplicate()})
-			elif k == "join":
-				seen["battle_joins"].append({"day": today, "substep_index": int(e["substep_index"]),
-					"battle_id": int(e["battle_id"]), "code": String(e["code"])})
-			if k in ["start", "round"] and not today in seen["fought"]:
-				seen["fought"].append(today)
+				for code: String in e.get("results", {}):
+					if code in seen["garrison"]:
+						seen["garrison_battle_dead"] += int(e["results"][code]["dead"])
 			if k == "start" and String(e["town"]) == String(seen["town"]):
 				var a := e.duplicate()
 				a["on"] = today
@@ -144,7 +198,7 @@ func _run(engine: TickEngine, s: GameState, last: int, garrison: Array, seen: Di
 				seen["first_assault_over"] = today
 		var dead := 0
 		for c: String in seen["garrison"]:
-			dead += int(s.regiments[c].get("dead", 0))
+			dead += People.count(s, c, "dead")
 		seen["dead"][today] = dead
 		if s.missives.any(func(m: Dictionary) -> bool:
 				return String(m["kind"]) == "battle" and int(m["day"]) == today):
@@ -170,7 +224,7 @@ func test_weak_defence_loses_the_town_and_the_campaign_plays_on() -> void:
 	var expected_town := _prepare("weak")
 	var garrison := _garrison("weak")
 	var engine := TickEngine.new(repo)
-	var s := Play.opened(repo, engine)
+	var s := _opened_trial(engine, "weak")
 	var seen := _run(engine, s, DAYS, garrison)
 	var main := Play.host(repo, "main")
 	var town := String(seen["town"])
@@ -199,30 +253,42 @@ func test_weak_defence_loses_the_town_and_the_campaign_plays_on() -> void:
 		progress = mini(1000, maxi(0, progress - lost) + int(e["gain"]))
 		assert_eq(int(e["progress"]), progress, "accumulated, day %d" % int(e["on"]))
 	assert_gt((seen["siege_days"] as Array).size(), 1, "several days of siege")
-	# the assault: an ordinary town battle, reported by letter
-	var assaults: Array = seen["assaults"]
-	assert_gt(assaults.size(), 0, "the town was stormed")
-	if assaults.is_empty():
-		return
-	var stormed := int(assaults[0]["on"])
-	assert_eq(stormed, begun + int(repo.bal("siege_assault_days")), "on the siege's assault day")
-	assert_true((assaults[0]["def"] as Array).any(func(c: String) -> bool: return c in garrison), "the garrison defends")
-	assert_true(stormed in seen["battle_letters"], "the assault's letter, day %d" % stormed)
-	# the fall
+	# The defenders may fight in their outer camp before the gate is taken.
+	# A town label is not required for that real engagement.
+	var contacts: Array = seen["target_contacts"]
+	assert_gt(contacts.size(), 0, "the main host fought the target's defenders")
+	var first_contact := int(contacts[0]["on"]) if not contacts.is_empty() else -1
+	assert_gte(first_contact, begun, "contact follows the host's deployment")
+	assert_true(first_contact in seen["battle_letters"], "the engagement has a battle report")
 	var fell := int(seen["fell"])
-	assert_gte(fell, stormed, "the town falls, at the earliest to the storm")
-	assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD", "the host holds the town")
+	assert_gte(fell, first_contact, "the target falls after its defenders are engaged")
+	assert_gt(fell, 0, "the main target really falls within the scenario")
+	assert_true(bool(seen["gate_at_fall"]), "occupation requires a real column at the gate")
 	assert_eq(String(seen["mode_at_fall"]), "HOLD", "capture takes effect as HOLD on the fall day")
-	assert_false(EnemyAi.target_held(repo, s, "town", town), "the town is not the crown's")
-	assert_true((seen["fought"] as Array).any(func(d: int) -> bool: return d >= fell),
-		"the captured town's remaining garrison can still fight")
-	var cells: Array = (s.ai_hosts[main]["occupied"] as Dictionary).keys()
+	assert_false(bool(seen["crown_held_at_fall"]), "the town is not the crown's at capture")
+	var cells: Array = seen["occupied_at_fall"]
 	assert_gt(cells.size(), 0, "manors taken")
-	assert_eq(s.manor_log.size(), cells.size(), "only the taken manors moved")
-	for l: Dictionary in s.manor_log:
+	var capture_log: Array = s.manor_log.filter(func(l: Dictionary) -> bool:
+		return String(l["reason"]) == String(seen["fallen"].get("reason", "")))
+	assert_eq(capture_log.size(), cells.size(), "each target manor moved once")
+	for l: Dictionary in capture_log:
 		assert_true(str(int(l["cell"])) in cells, "a taken manor")
 		assert_true(String(l["reason"]).begins_with("taken by ") and String(l["reason"]).contains("siege of " + label),
 			"with its reason: " + String(l["reason"]))
+	if int(seen["liberated"]) < 0:
+		assert_eq(String(s.ai_hosts[main]["mode"]), "HOLD", "the host holds the town")
+		assert_false(EnemyAi.target_held(repo, s, "town", town), "the town is not the crown's")
+	else:
+		assert_gt(int(seen["liberated"]), fell, "liberation follows actual capture")
+		assert_gt(int(seen["home"]), fell, "the host retreats after capture")
+		assert_eq(String(seen["liberation"]["why"]), "retreat")
+		assert_eq(String(s.ai_hosts[main]["mode"]), "RETREAT")
+		assert_true(EnemyAi.target_held(repo, s, "town", town), "retreat restores the crown's town")
+		var reason := "liberated: %s left %s" % [SiegeSystem.host_label(repo, main), label]
+		var liberation_log: Array = s.manor_log.filter(func(line: Dictionary) -> bool: return line["reason"] == reason)
+		assert_eq(liberation_log.size(), cells.size(), "each occupied manor is restored exactly once")
+		for cell: Variant in cells:
+			assert_eq(liberation_log.filter(func(line: Dictionary) -> bool: return int(line["cell"]) == int(cell)).size(), 1)
 	assert_eq(s.territory_log.size(), 0, "no province, border or capital moved")
 	# what the loss cost: the hand formulas on the figures before the fall's day
 	var d: Dictionary = seen["defeat"]
@@ -236,7 +302,8 @@ func test_weak_defence_loses_the_town_and_the_campaign_plays_on() -> void:
 	assert_eq(int(d["gold"]), gold, "treasury × battle_defeat_treasury_permille / 1000")
 	var morale := mini(int(repo.bal("battle_defeat_morale")), int(before["content"]))
 	assert_eq(int(d["morale"]), morale, "battle_defeat_morale points of contentment")
-	var lines: Array = s.world_log.filter(func(l: Dictionary) -> bool: return String(l["source"]) == "defeat")
+	var lines: Array = s.world_log.filter(func(l: Dictionary) -> bool:
+		return String(l["source"]) == "defeat" and String(l["reason"]).contains("lost " + label + " to "))
 	var paths: Array = lines.map(func(l: Dictionary) -> String: return String(l["path"]))
 	assert_eq(paths, ["metrics.treasury", "metrics.peasant_contentment"], "one ledger line each")
 	for l: Dictionary in lines:
@@ -255,21 +322,21 @@ func test_weak_defence_loses_the_town_and_the_campaign_plays_on() -> void:
 		assert_true(String(o["reason"]).contains("lost %s to the raiders" % label), String(o["reason"]))
 	assert_eq(String(d["event_id"]), DefeatSystem.EVENT_ID, "the war beat")
 	assert_true(bool(seen["beat_scheduled"]), "scheduled for the roll")
-	assert_eq(s.town_losses.size(), 1, "one loss")
+	assert_eq(s.town_losses.filter(func(l: Dictionary) -> bool: return String(l["town"]) == town).size(), 1, "target loss is charged once")
 	assert_eq(_war_floats(s), [], "no float in the war's state")
 	# and the campaign plays on: three more months, every event answered
 	var events := EventSystem.new(repo)
 	var presented: Array = []
 	while s.absolute_day() <= 3 * Calendar.DAYS_PER_TICK:
-		Play.day(engine, s)
+		Play.day(engine, s, true)
 		if not s.pending_event.is_empty():
 			presented.append(String(s.pending_event["event_id"]))
 			var first: Dictionary = (s.pending_event["choices"] as Array)[0]
 			assert_false(events.apply_choice(String(first["choice_id"]), s).is_empty(), "answered")
 	assert_eq(s.tick, 4, "into the fourth month")
 	assert_eq(_war_floats(s), [], "still no float")
-	gut.p("weak: rumour d%d, cross %s, siege d%d, stormed d%d, fell d%d (%d manors), gold -%d, content -%d, %d opinions; then events %s" % [
-		int(seen["rumour"]), seen["left"], begun, stormed, fell, cells.size(), int(d["gold"]), int(d["morale"]),
+	gut.p("weak: rumour d%d, cross %s, siege d%d, first contact d%d, fell d%d (%d manors), gold -%d, content -%d, %d opinions; then events %s" % [
+		int(seen["rumour"]), seen["left"], begun, first_contact, fell, cells.size(), int(d["gold"]), int(d["morale"]),
 		ops.size(), presented])
 
 
@@ -278,7 +345,7 @@ func test_weak_defence_loses_the_town_and_the_campaign_plays_on() -> void:
 func test_strong_walled_defence_holds_and_forces_supply_retreat() -> void:
 	_prepare("weak")
 	var weak_garrison := _garrison("weak")
-	var weak_state := Play.opened(repo, TickEngine.new(repo))
+	var weak_state := _opened_trial(TickEngine.new(repo), "weak")
 	var weak_seen := _run(TickEngine.new(repo), weak_state, DAYS, weak_garrison)
 	var weak_fall := int(weak_seen["fell"])
 	repo = SuiteData.repo()
@@ -294,42 +361,44 @@ func test_strong_walled_defence_holds_and_forces_supply_retreat() -> void:
 	var main := Play.host(repo, "main")
 	assert_eq(String(seen["town"]), town, "the walled town")
 	assert_gt(int(seen["siege_begin"]), 0, "the host sat down before it")
-	assert_gt((seen["assaults"] as Array).size(), 0, "and stormed it")
-	var first_storm := int((seen["assaults"] as Array)[0]["on"])
-	assert_true(first_storm >= int(seen["siege_begin"]), "assault follows the siege")
-	assert_eq(int(seen["fell"]), -1, "the walled town survives the besieger's assault window")
-	assert_gt(int(seen["home"]), weak_fall + 1,
-		"strong defense outlasts weak defense and the besieger later retreats under its existing supply rules")
-	assert_true(EnemyAi.target_held(repo, s, "town", String(seen["town"])),
-		"the crown still holds the walled town")
-	assert_eq(s.town_losses.size(), 0, "the surviving town records no loss")
-	assert_eq(int(seen["hungry"]), 0, "the garrison does not starve during the assault window")
-	assert_true(String(s.ai_hosts[main]["mode"]) in EnemyAi.HOMEWARD, "the later departure uses a homeward mode")
+	assert_gt((seen["target_contacts"] as Array).size(), 0, "the main host fought the defenders, including outer camps")
+	assert_eq(int(seen["fell"]), -1, "the town never falls")
+	assert_true(EnemyAi.target_held(repo, s, "town", town), "still the crown's")
+	var label := String(repo.burgs[town]["label"])
+	assert_true(s.manor_log.filter(func(l: Dictionary) -> bool:
+		return String(l["reason"]).ends_with(": siege of " + label)).is_empty(), "no target manor captured")
+	assert_true(s.town_losses.filter(func(l: Dictionary) -> bool: return String(l["town"]) == town).is_empty(), "no target loss paid")
+	assert_true((s.world_log as Array).filter(func(l: Dictionary) -> bool:
+		return String(l["source"]) == "defeat" and String(l["reason"]).contains("lost " + label + " to ")).is_empty(), "no target defeat line")
+	assert_eq(int(seen["hungry"]), 0, "the garrison never starved")
+	assert_gt(int(seen["lifted"]), 0, "the siege is lifted")
+	assert_gt(int(seen["home"]), int(seen["siege_begin"]), "the host goes home")
+	assert_true(String(s.ai_hosts[main]["mode"]) in EnemyAi.HOMEWARD, "RETREAT or WITHDRAW")
 	for c: String in garrison:
-		var state: Dictionary = s.regiments[c]
-		var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, c, s))
-		assert_eq(int(state.get("wounded", 0)) + int(state.get("dead", 0)) + int(state.get("deserted", 0))
-			+ ArmySystem.fit_heads(heads, state), heads, c + " casualties conserve the roster")
-	var total := 0
-	for code: String in garrison:
-		total += int(s.regiments[code].get("dead", 0))
-	assert_gt(total, 0, "the assault costs the garrison")
-	assert_lte(total, starting_heads, "deaths cannot exceed the committed garrison")
-	var round_keys: Array = (seen["battle_rounds"] as Array).map(
-		func(row: Dictionary) -> String: return "%d:%d" % [int(row["battle_id"]), int(row["day"])])
-	var unique_round_keys: Dictionary = {}
-	for key: String in round_keys:
-		assert_false(unique_round_keys.has(key), "at most one round per battle per day: " + key)
-		unique_round_keys[key] = true
-	assert_true((seen["fought"] as Array).any(func(d: int) -> bool: return d >= first_storm),
-		"the garrison fights during the storm")
+		assert_gt(ArmySystem.fit_count(repo, s, c), 0,
+			c + " still stands")
+	var home := int(seen["home"])
+	assert_gt((seen["main_fought"] as Array).filter(func(d: int) -> bool: return d >= home).size(), 0,
+		"the main host remains exposed while withdrawing through physical contact")
+	assert_gt((seen["homeward_motion"] as Array).filter(func(e: Dictionary) -> bool: return e["moved"]).size(), 0,
+		"surviving homeward columns leave by marching")
+	for motion: Dictionary in seen["homeward_motion"]:
+		if not bool(motion["can_march"]):
+			assert_false(motion["moved"], "%s waits for its camp departure gate on day %d" % [motion["code"], motion["day"]])
+	assert_gt((seen["main_withdrawals"] as Array).size(), 0, "columns actually disengage before the trial ends")
+	for left: Dictionary in seen["main_withdrawals"]:
+		assert_true(left["separated"], "%s leaves combat only after physical separation" % left["code"])
+	var total := int(seen["dead"][DAYS])
+	assert_gt(total, 0, "the real encounters cost the garrison")
+	assert_eq(total, int(seen["garrison_battle_dead"]),
+		"all recorded garrison deaths equal its round-by-round battle losses, across hosts")
 	assert_eq(_war_floats(s), [], "no float in the war's state")
 	var best := 0
 	for e: Dictionary in seen["siege_days"]:
 		best = maxi(best, int(e["progress"]))
-	gut.p("strong: siege d%d, assaults %d, repulsed rounds %d, best progress %d, lifted d%d, home d%d (%s), garrison dead %d (first assault %d)" % [
+	gut.p("strong: siege d%d, assaults %d, repulsed rounds %d, best progress %d, lifted d%d, home d%d (%s), garrison dead %d (reported %d)" % [
 		int(seen["siege_begin"]), (seen["assaults"] as Array).size(), (seen["repulsed"] as Array).size(), best,
-		int(seen["lifted"]), int(seen["home"]), s.ai_hosts[main]["mode"], total, starting_heads])
+		int(seen["lifted"]), home, s.ai_hosts[main]["mode"], total, int(seen["garrison_battle_dead"])])
 
 
 ## --- determinism ------------------------------------------------------------------
@@ -339,7 +408,7 @@ func test_strong_walled_defence_holds_and_forces_supply_retreat() -> void:
 func _deterministic(scenario: String) -> void:
 	_prepare(scenario)
 	var garrison := _garrison(scenario)
-	var opened := Play.opened(repo, TickEngine.new(repo)).to_dict()
+	var opened := _opened_trial(TickEngine.new(repo), scenario).to_dict()
 	var a := GameState.from_dict(opened)
 	var seen := _run(TickEngine.new(repo), a, DAYS, garrison)
 	var b := GameState.from_dict(opened)
@@ -365,19 +434,15 @@ func test_strong_defence_is_deterministic_and_saves_mid_run() -> void:
 	_deterministic("strong")
 
 
-## --- the war draws no random number ---------------------------------------------------
-
-## Every day of scenario A — the crossing, the march, the siege, the storm, the
-## fall and its cost — the war's systems run on a copy of the day's state in
-## TickEngine's order (march, couriers, then the minds, the battles, the
-## siege with the defeat inside it, the raids) and leave GameState.rng's
-## STATE as it found it. The rest of the day loop may draw; not asserted.
-func test_the_war_draws_no_random_number() -> void:
+## With authored event opportunities disabled, the AI, siege and raids draw
+## nothing; each completed battle round consumes exactly its recorded draw.
+func test_round_only_war_randomness_with_event_opportunities_disabled() -> void:
+	repo.battle_events.clear()
 	_prepare("weak")
 	var garrison := _garrison("weak")
 	var engine := TickEngine.new(repo)
-	var s := Play.opened(repo, engine)
-	var drawn: Array = []
+	var s := _opened_trial(engine, "weak")
+	var rounds := 0
 	var kinds := {}
 	var cross := Play.first_appear(repo)
 	while s.absolute_day() <= DAYS:
@@ -387,30 +452,45 @@ func test_the_war_draws_no_random_number() -> void:
 		var tx := DayResolution.begin(copy.day, copy.day >= Calendar.DAYS_PER_TICK,
 			copy.absolute_day())
 		copy.day_resolution = tx
+		var before_setup := copy.rng.to_dict()
 		for phase: String in DayResolution.PHASES.slice(0, 5):
 			copy_engine._resolve_phase(copy, tx, phase)
 			copy_engine._restore_day_outputs(tx)
+		assert_eq(copy.rng.to_dict(), before_setup,
+			"day setup and AI do not draw randomness on day %d" % today)
 		var before: Dictionary = copy.rng.to_dict()
+		var expected_rng := Rng.from_dict(before)
+		tx.phase = "FIXED_TACTICAL_SUBSTEPS"
+		tx.phase_cursor = DayResolution.PHASES.find(tx.phase)
 		var tactical := copy_engine._resolve_phase(copy, tx, "FIXED_TACTICAL_SUBSTEPS")
 		copy_engine._restore_day_outputs(tx)
 		while bool(tactical.get("blocked", false)):
-			DayResolution.acknowledge(tx, String(tx["pending_decision"]["token"]), "continue")
+			var decision := copy_engine.resolve_decision(copy, String(tx.pending_decision.token), "continue")
+			assert_eq(decision.status, "accepted")
+			if decision.status != "accepted":
+				return
 			tactical = copy_engine._resolve_phase(copy, tx, "FIXED_TACTICAL_SUBSTEPS")
 			copy_engine._restore_day_outputs(tx)
+		var fights: Array = copy_engine.day_battles
+		for event: Dictionary in fights:
+			if event.get("kind", "") == "round":
+				assert_eq(int(event["roll"]), expected_rng.randi_range(0, 999),
+					"battle %d round %d records the next saved draw" % [event["battle_id"], event["round"]])
+				rounds += 1
+		assert_eq(copy.rng.to_dict(), expected_rng.to_dict(), "one draw per battle round on day %d" % today)
+		var after_battles := copy.rng.to_dict()
 		copy_engine._resolve_phase(copy, tx, "SIEGES")
 		copy_engine._restore_day_outputs(tx)
 		copy_engine._resolve_phase(copy, tx, "RAIDS")
 		copy_engine._restore_day_outputs(tx)
-		var fights: Array = copy_engine.day_battles
 		var siege: Array = copy_engine.day_siege
 		var raid: Array = copy_engine.day_raid
 		for e: Dictionary in fights + siege + raid:
 			kinds[String(e.get("kind", e.get("type", "")))] = true
-		if copy.rng.to_dict() != before:
-			drawn.append(today)
+		assert_eq(copy.rng.to_dict(), after_battles, "siege and raids do not draw randomness on day %d" % today)
 		_run(engine, s, today, garrison if today == cross else [], {"rumour": 0, "left": {}, "town": "",
 			"siege_begin": 0, "siege_days": [], "repulsed": [], "assaults": [], "battle_letters": [], "fell": 0,
 			"fallen": {}, "defeat": {}, "before": {}, "home": 0, "lifted": 0, "beat_scheduled": false, "hungry": 0})
 	for k: String in ["start", "round", "siege_begin", "siege_fallen", "defeat_town_lost"]:
 		assert_true(kinds.has(k), "the copies played a " + k)
-	assert_eq(drawn, [], "no day of the war drew from GameState.rng")
+	assert_gt(rounds, 0, "the seeded invasion exercised real battle draws")

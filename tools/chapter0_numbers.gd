@@ -68,18 +68,16 @@ func _init() -> void:
 		for t in ticks:
 			for d in Calendar.DAYS_PER_TICK - 1:
 				var daily := engine.resolve_day(state)
-				if String(daily["status"]) == "blocked":
-					var decision: Dictionary = daily["decision"]
-					printerr("BLOCKED kind=%s battle=%d token=%s" % [decision.get("kind", ""),
-						int(decision.get("battle_id", 0)), decision.get("token", "")])
-					quit(0)
+				if daily["status"] != "complete":
+					print("Day stopped: ", daily)
+					quit(0 if daily["status"] == "blocked" else 1)
 					return
-			var rep := engine.advance(state)
-			if rep.status == "blocked":
-				printerr("BLOCKED kind=%s battle=%d token=%s" % [rep.pending_decision.get("kind", ""),
-					int(rep.pending_decision.get("battle_id", 0)), rep.pending_decision.get("token", "")])
-				quit(0)
+			var monthly := engine.resolve_day(state, true)
+			if monthly["status"] != "complete":
+				print("Month stopped: ", monthly)
+				quit(0 if monthly["status"] == "blocked" else 1)
 				return
+			var rep: TickReport = monthly["report"]
 			if not rep.event.is_empty():
 				state.pending_event = {}  # nobody is at the table to answer it
 			print("  %-16s %10d %10d %10d %10d %8.1f %8.1f" % [

@@ -126,7 +126,7 @@ func test_three_pages_show_their_laws() -> void:
 		assert_eq(laws, LawSystem.codes_on(Game.data, page), page + "'s laws, in file order")
 	assert_eq(LawSystem.codes_on(Game.data, "economy").size(), 5)
 	assert_eq(LawSystem.codes_on(Game.data, "politics").size(), 3)
-	assert_eq(LawSystem.codes_on(Game.data, "military").size(), 17)
+	assert_eq(LawSystem.codes_on(Game.data, "military").size(), 23)
 	# the military page: a title over the first row of each group, in order
 	var titles: Array = []
 	var last := ""

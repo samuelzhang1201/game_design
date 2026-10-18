@@ -189,25 +189,29 @@ static func settle_units(repo: DataRepository, state: GameState) -> void:
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	for c: String in codes:
+		var marker := "forage_month:" + c
+		if not state.military_rosters.has(c) or int(state.conduct_marks.get(marker, -1)) == state.tick:
+			continue
 		var entry: Dictionary = state.regiments[c]
 		var d := int(entry.get("forage_days", 0))
+		var fit := ArmySystem.fit_count(repo, state, c)
+		@warning_ignore("integer_division")  # whole people; transfer preserves source cohorts
+		var hurt := mini(fit, fit * int(repo.bal("forage_harass_permille")) * d / (Calendar.DAYS_PER_TICK * 1000))
+		if hurt > 0:
+			var result := MilitaryRoster.transfer_units(repo, state, "forage:%d:%s" % [state.tick, c],
+				[{"unit_code": c, "from": "fit", "to": "wounded", "count": hurt}], "Foraging harassment: " + c)
+			if result.has("error"):
+				continue
+		state.conduct_marks[marker] = state.tick
 		if d <= 0:
 			continue
 		@warning_ignore("integer_division")
 		entry["morale"] = mini(100, int(entry.get("morale", 0)) + int(repo.bal("forage_morale_month")) * d / Calendar.DAYS_PER_TICK)
-		# never below forage_training_floor; a unit already under it keeps what it has (ruling R7)
 		var training := int(entry.get("training", 0))
+		# A unit already below the training floor keeps its existing training.
 		@warning_ignore("integer_division")
 		entry["training"] = maxi(training - int(repo.bal("forage_training_month")) * d / Calendar.DAYS_PER_TICK,
 			mini(training, int(repo.bal("forage_training_floor"))))
-		var fit := ArmySystem.personnel_fit(repo, state, c)
-		@warning_ignore("integer_division")
-		var hurt := mini(fit, fit * int(repo.bal("forage_harass_permille")) * d / (Calendar.DAYS_PER_TICK * 1000))
-		var moved := ArmySystem.move_personnel(repo, state, c,
-			[{"from": "fit", "to": "wounded", "count": hurt}],
-			"forage-wounds:%s:%d" % [c, state.tick], "wounded while foraging")
-		if moved.has("error"):
-			continue
 		entry["forage_days"] = 0
 
 
@@ -250,19 +254,20 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 		var reg := ArmySystem.regiment(repo, c, state)
 		if entry.is_empty() or reg.is_empty() or String(reg.get("is_naval", "0")) == "1":
 			continue
-		if ArmySystem.personnel_fit(repo, state, c) <= 0:
+		if ArmySystem.fit_count(repo, state, c) <= 0:
 			continue
 		var province := ArmySystem.province_of(repo, state, reg)
 		var kind := Forage.land_kind(repo, state, province)
 		if kind == Forage.HOME:
 			entry["forage"] = ""
-			var was := int(entry.get("deserted", 0))
 			var lost := Desertion.daily_loss(repo, state, c)
 			if lost > 0 and mark_once(repo, state, "desert_news:" + c):
 				out.append({"type": "deserting", "regiment": c, "lost": lost})
-			var line := int(repo.bal("desert_news_cumulative_permille")) * ArmySystem.headcount(repo, reg)
-			if was * 1000 <= line and line < int(entry.get("deserted", 0)) * 1000:
-				out.append({"type": "deserting_big", "regiment": c})
+			if lost > 0:
+				var total := Desertion.total(state, c)
+				var line := int(repo.bal("desert_news_cumulative_permille")) * ArmySystem.personnel_capacity(repo, reg)
+				if (total - lost) * 1000 <= line and line < total * 1000:
+					out.append({"type": "deserting_big", "regiment": c})
 			continue
 		places[c] = province
 		if c in converted:

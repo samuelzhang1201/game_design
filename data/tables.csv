@@ -1,4 +1,6 @@
 folder,table
+army,recruitment
+army,noble_quality
 realm,laws
 realm,law_effects
 realm,development_axes
@@ -23,6 +25,7 @@ council,founding_council
 council,character_traits
 council,relationships
 council,roles
+army,commanders
 council,faction_escalation
 council,policy_actions_court_additions
 council,templates
@@ -111,4 +114,9 @@ screens/war_room,war_drills
 screens/war_room,war_equipment
 screens/ledger,ledger_lenses
 screens/ledger,ledger_palette
-army,commanders
+battle,prisoner_terms
+battle,parley_clauses
+battle,formations
+battle,orders
+battle,battle_events
+battle,battle_event_choices

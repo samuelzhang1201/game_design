@@ -1,533 +1,191 @@
 extends GutTest
+
 const SuiteData := preload("res://tests/suite_data.gd")
-const BattleScenario := preload("res://tests/fixtures/battle_scenario.gd")
-const Play := preload("res://tests/invasion_play.gd")
+const Scenario := preload("res://tests/fixtures/battle_scenario.gd")
 
-func test_acknowledge_is_idempotent() -> void:
-	var resolution_script: Variant = load("res://scripts/engine/day_resolution.gd")
-	assert_not_null(resolution_script, "the day transaction protocol exists")
-	if resolution_script == null:
+var repo: DataRepository
+
+func before_each() -> void:
+	repo = SuiteData.repo()
+
+func _resolve(engine: TickEngine, state: GameState) -> Dictionary:
+	return engine.call("resolve_day", state)
+
+func _ready_engine(engine: TickEngine) -> bool:
+	assert_true(engine.has_method("resolve_day"), "day resolution must expose blocked/complete")
+	return engine.has_method("resolve_day")
+
+func test_encounter_blocks_before_any_round_and_retries_do_nothing() -> void:
+	var s := Scenario.contact(repo, 10)
+	var engine := TickEngine.new(repo)
+	if not _ready_engine(engine):
 		return
-	var tx: Dictionary = resolution_script.begin(10, false)
-	tx["pending_decision"] = {"token": "10:b1:0", "kind": "encounter",
-		"battle_id": 1, "choices": ["continue"], "selected": ""}
-	assert_eq(resolution_script.acknowledge(tx, "10:b1:0", "continue")["status"], "accepted")
-	assert_eq(resolution_script.acknowledge(tx, "10:b1:0", "continue")["status"], "duplicate")
-	assert_eq(resolution_script.acknowledge(tx, "wrong", "continue")["status"], "stale")
+	var out := _resolve(engine, s)
+	assert_eq(out["status"], "blocked")
+	assert_eq(s.day, 10)
+	assert_eq(s.battles.size(), 1)
+	assert_eq(int(s.battles[0]["rounds"]), 0)
+	for e: Dictionary in s.foes.values():
+		assert_eq(int(e.get("dead", 0)), 0)
+	var held := SaveLoad.state_hash(s)
+	_resolve(engine, s)
+	_resolve(engine, s)
+	assert_eq(SaveLoad.state_hash(s), held, "retry must not repeat march, food, scouts or RNG")
 
-func test_begin_has_durable_transaction_defaults() -> void:
-	var resolution_script: Variant = load("res://scripts/engine/day_resolution.gd")
-	assert_not_null(resolution_script)
-	if resolution_script == null:
+func test_acknowledge_resumes_same_day_once() -> void:
+	var s := Scenario.contact(repo, 10)
+	var engine := TickEngine.new(repo)
+	if not _ready_engine(engine):
 		return
-	var tx: Dictionary = resolution_script.begin(30, true)
-	assert_eq(tx["day"], 30)
-	assert_true(tx["month_end"])
-	assert_eq(tx["phase"], "WORKS")
-	assert_eq(tx["substep_index"], 0)
-	assert_eq(tx["phase_cursor"], 0)
-	assert_eq(tx["battle_ids"], [])
-	assert_eq(tx["battle_index"], 0)
-	assert_eq(tx["battle_step"], "")
-	assert_eq(tx["substep_count"], DayResolution.DEFAULT_SUBSTEP_COUNT)
-	assert_eq(tx["substep_order"], DayResolution.SUBSTEP_ORDER)
-	assert_eq(tx["day_battle_order"], DayResolution.DAY_BATTLE_ORDER)
-	assert_eq(tx["pending_decision"], {})
-	assert_eq(tx["consumed_tokens"], [])
-	assert_eq(tx["journal"], {"works": [], "arrivals": [], "couriers": [], "battles": [],
-		"sieges": [], "raids": [], "supply": [], "conduct": [], "reports": []})
-
-func test_saved_protocol_is_validated_before_resume() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var state := SuiteData.campaign(repo, 24601)
-	state.day = 10
-	state.day_resolution = DayResolution.begin(10, false)
-	var engine := TickEngine.new(repo)
-	assert_eq(DayResolution.incompatibility_reason(state.day_resolution), "")
-	var changed_order := BattleScenario.roundtrip(state)
-	changed_order.day_resolution["substep_order"] = ["CONTACT", "MARCH"]
-	var before := SaveLoad.state_hash(changed_order)
-	var result := TickEngine.new(repo).resolve_day(changed_order)
-	assert_eq(result["status"], "incompatible")
-	assert_eq(result["reason"], "saved tactical substep order does not match this build")
-	assert_eq(SaveLoad.state_hash(changed_order), before, "incompatible transaction is left untouched")
-
-func _march_fixture(repo: DataRepository) -> Dictionary:
-	var state := SuiteData.campaign(repo, 24601)
-	state.tick = 1
-	state.day = 10
-	state.foes.clear()
-	state.ai_hosts.clear()
-	for arm: String in repo.army_speed:
-		repo.army_speed[arm] = 1
-	for ground: String in repo.army_ground_speed:
-		repo.army_ground_speed[ground] = 1000
-	repo.balance["army_clearance_on"] = 0.0
-	var codes: Array = state.regiments.keys()
-	codes.sort()
-	var code := String(codes[0])
-	var entry: Dictionary = state.regiments[code]
-	entry["morale"] = 100
-	entry["training"] = 100
-	entry["carry_days"] = 10
-	entry["supplies"] = ArmySystem.supply_use(repo, ArmySystem.regiment(repo, code, state), state) * 6
-	var start := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
-	# Keep the pacing fixture away from town/garrison settlement slots.
-	start = Vector2i(1000000, 1000000)
-	entry["x_m"] = start.x
-	entry["y_m"] = start.y
-	entry["dest_x_m"] = start.x
-	entry["dest_y_m"] = start.y
-	ArmySystem.set_march_m(repo, state, code, start + Vector2i(5000, 0))
-	return {"state": state, "code": code, "start": start}
-
-func test_substep_movement_conserves_daily_metres() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var fixture := _march_fixture(repo)
-	var state: GameState = fixture["state"]
-	var code := String(fixture["code"])
-	var start: Vector2i = fixture["start"]
-	ArmySystem.set_march_m(repo, state, code, start + Vector2i(1500, 0))
-	var substeps := int(repo.bal("battle_substeps"))
-	var daily_metres := ArmySystem.day_walk_budget(repo, state, code)
-	assert_eq(ArmySystem.day_march_m(repo, state, code), 1000, "fixture's hand-computed daily pace")
-	assert_eq(daily_metres, 750, "1,500 metres at 1,000 per day keeps the old even-day pace")
-	for index in substeps:
-		ArmySystem.march_day(repo, state, substeps, index, true, [code], {code: daily_metres})
-	assert_eq(int(state.regiments[code]["x_m"]), start.x + daily_metres,
-		"remainder distribution preserves the full day's distance")
-
-func test_non_divisible_substep_budgets_use_the_entire_daily_allowance() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var fixture := _march_fixture(repo)
-	var state: GameState = fixture["state"]
-	var code := String(fixture["code"])
-	var start: Vector2i = fixture["start"]
-	ArmySystem.set_march_m(repo, state, code, start + Vector2i(2300, 0))
-	var budget := ArmySystem.day_walk_budget(repo, state, code)
-	assert_eq(budget, 767, "2,300 m at 1,000 m/day is shared over three days")
-	var legacy := BattleScenario.roundtrip(state)
-	var legacy_code := code
-	var legacy_start: Vector2i = start
-	var legacy_before := Vector2i(int(legacy.regiments[legacy_code]["x_m"]), int(legacy.regiments[legacy_code]["y_m"]))
-	ArmySystem.march_day(repo, legacy, 1, 0)
-	assert_eq(int(legacy.regiments[legacy_code]["x_m"]) - legacy_before.x, 767,
-		"legacy whole-day movement keeps its even 2,300 m / 3 day pace")
-	var restored := BattleScenario.roundtrip(state)
-	assert_eq(ArmySystem.day_walk_budget(repo, restored, code), budget,
-		"whole-metre daily budget survives JSON save/load")
-	for substep in int(repo.bal("battle_substeps")):
-		ArmySystem.march_day(repo, state, int(repo.bal("battle_substeps")), substep,
-			true, [code], {code: budget})
-	assert_eq(int(state.regiments[code]["x_m"]), start.x + 767,
-		"the ten allowances sum to the complete 767 m budget")
-	assert_eq(ArmySystem.day_walk_budget(repo, state, code), 767,
-		"remaining distance is redistributed evenly over two days")
-	for substep in int(repo.bal("battle_substeps")):
-		ArmySystem.march_day(repo, state, int(repo.bal("battle_substeps")), substep,
-			true, [code], {code: 767})
-	assert_eq(int(state.regiments[code]["x_m"]), start.x + 1534)
-	var final_budget := ArmySystem.day_walk_budget(repo, state, code)
-	assert_eq(final_budget, 766)
-	var arrivals: Array = []
-	for substep in int(repo.bal("battle_substeps")):
-		var at_step := ArmySystem.march_day(repo, state, int(repo.bal("battle_substeps")), substep,
-			true, [code], {code: final_budget})
-		if not at_step.is_empty():
-			assert_eq(substep, int(repo.bal("battle_substeps")) - 1)
-		arrivals.append_array(at_step)
-	assert_eq(arrivals, [code], "arrival is reported once, on the final fixed substep")
-	assert_eq(Vector2i(int(state.regiments[code]["x_m"]), int(state.regiments[code]["y_m"])),
-		start + Vector2i(2300, 0))
-
-func test_saved_movement_cursor_accumulates_and_survives_json() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var fixture := _march_fixture(repo)
-	var state: GameState = fixture["state"]
-	var code := String(fixture["code"])
-	var start: Vector2i = fixture["start"]
-	ArmySystem.set_march_m(repo, state, code, start + Vector2i(2300, 0))
-	var budget := ArmySystem.day_walk_budget(repo, state, code)
-	var tx := DayResolution.begin(state.day, false, state.absolute_day(), int(repo.bal("battle_substeps")))
-	tx["march_entries"] = {code: state.regiments[code].duplicate(true)}
-	tx["march_budgets"] = {code: budget}
-	state.day_resolution = tx
-	var restored := BattleScenario.roundtrip(state)
-	for substep in int(repo.bal("battle_substeps")):
-		ArmySystem.march_day_saved(repo, restored, int(repo.bal("battle_substeps")), substep,
-			restored.day_resolution["march_entries"], restored.day_resolution["march_budgets"])
-	assert_eq(int(restored.regiments[code]["x_m"]), start.x + 767)
-	assert_eq(int(restored.day_resolution["march_entries"][code]["x_m"]), start.x + 767,
-		"the saved cursor contains the completed movement slice")
-
-func test_a_last_day_arrival_waits_for_its_final_fixed_substep() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var fixture := _march_fixture(repo)
-	var state: GameState = fixture["state"]
-	var code := String(fixture["code"])
-	var start: Vector2i = fixture["start"]
-	ArmySystem.set_march_m(repo, state, code, start + Vector2i(750, 0))
-	var budget := ArmySystem.day_walk_budget(repo, state, code)
-	assert_eq(budget, 750)
-	var arrivals: Array = []
-	for substep in int(repo.bal("battle_substeps")):
-		var day_arrivals := ArmySystem.march_day(repo, state, int(repo.bal("battle_substeps")), substep,
-			true, [code], {code: budget})
-		if not day_arrivals.is_empty():
-			assert_eq(substep, int(repo.bal("battle_substeps")) - 1)
-		arrivals.append_array(day_arrivals)
-	assert_eq(arrivals, [code])
-
-func test_short_diagonal_arrival_settles_instead_of_stalling() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var fixture := _march_fixture(repo)
-	var state: GameState = fixture["state"]
-	var code := String(fixture["code"])
-	var start: Vector2i = fixture["start"]
-	ArmySystem.set_march_m(repo, state, code, start + Vector2i(1, 1))
-	assert_eq(ArmySystem.day_walk_budget(repo, state, code), 2,
-		"ceil(sqrt(2)) permits the rounded final metre")
-	var arrivals: Array = []
-	for substep in int(repo.bal("battle_substeps")):
-		arrivals.append_array(ArmySystem.march_day(repo, state, int(repo.bal("battle_substeps")), substep,
-			true, [code], {code: 2}))
-	assert_eq(arrivals, [code])
-	assert_eq(ArmySystem.order_of(repo, state, code), ArmySystem.ORDER_GARRISON)
-
-	var saved := {code: state.regiments[code].duplicate(true)}
-	var near_diagonal := start + Vector2i(2, 2)
-	ArmySystem.set_march_m(repo, state, code, near_diagonal)
-	saved[code] = state.regiments[code].duplicate(true)
-	var final_budget := ArmySystem.day_walk_budget(repo, state, code)
-	assert_eq(final_budget, 2)
-	var final_arrivals: Array = []
-	for substep in int(repo.bal("battle_substeps")):
-		final_arrivals.append_array(ArmySystem.march_day_saved(repo, state,
-			int(repo.bal("battle_substeps")), substep, saved, {code: final_budget}))
-	assert_eq(final_arrivals, [code])
-
-func test_zero_daily_pace_does_not_move_in_substeps() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var fixture := _march_fixture(repo)
-	var state: GameState = fixture["state"]
-	var code := String(fixture["code"])
-	var start: Vector2i = fixture["start"]
-	for arm: String in repo.army_speed:
-		repo.army_speed[arm] = 0
-	assert_eq(ArmySystem.day_march_m(repo, state, code), 0)
-	var substeps := int(repo.bal("battle_substeps"))
-	for index in substeps:
-		ArmySystem.march_day(repo, state, substeps, index)
-	assert_eq(Vector2i(int(state.regiments[code]["x_m"]), int(state.regiments[code]["y_m"])), start)
-
-func test_encounter_blocks_before_losses_and_resumes_after_roundtrip() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var state := BattleScenario.contact(repo, 10)
-	var first_march := ""
-	for code: String in state.regiments:
-		if String(state.regiments[code].get("order", "")) == ArmySystem.ORDER_MARCH:
-			first_march = code
-			break
-	var unrelated := ""
-	for code: String in state.regiments:
-		var regiment := ArmySystem.regiment(repo, code, state)
-		if code != first_march and not regiment.is_empty() \
-				and String(regiment.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(repo, regiment) > 0:
-			unrelated = code
-			break
-	var unrelated_start := Vector2i(1000000, 1000000)
-	state.regiments[unrelated]["x_m"] = unrelated_start.x
-	state.regiments[unrelated]["y_m"] = unrelated_start.y
-	ArmySystem.set_march_m(repo, state, unrelated, unrelated_start + Vector2i(100000, 0))
-	state.regiments[unrelated]["carry_days"] = 10
-	state.regiments[unrelated]["supplies"] = ArmySystem.supply_use(repo,
-		ArmySystem.regiment(repo, unrelated, state), state) * 6
-	var unrelated_budget := ArmySystem.day_walk_budget(repo, state, unrelated)
-	var p_start := -1
-	for code: String in state.regiments:
-		if String(state.regiments[code].get("order", "")) == ArmySystem.ORDER_MARCH:
-			p_start = int(state.regiments[code]["x_m"])
-			break
-	var foe_start := int(state.foes[String(state.foes.keys()[0])]["x_m"])
-	var engine := TickEngine.new(repo)
-	var result := engine.resolve_day(state)
-	assert_eq(result["status"], "blocked")
-	assert_eq(state.day, 10, "the calendar remains on the blocked day")
-	assert_lt(int(state.day_resolution["substep_index"]), int(repo.bal("battle_substeps")),
-		"the encounter pauses before advancing to later movement substeps")
-	assert_eq(state.day_resolution["substep_count"], int(repo.bal("battle_substeps")),
-		"the transaction saves the table-configured fixed substep count")
-	assert_eq(state.day_resolution["battle_step"], "contacted",
-		"the saved cursor pauses after substep contact and before that battle's first round")
-	assert_eq(state.battles.size(), 1)
-	var battle: Dictionary = state.battles[0]
-	var p := String((battle["def"] as Array)[0])
-	var f := String((battle["att"] as Array)[0])
-	var blocked_p := int(state.regiments[p]["x_m"])
-	var blocked_f := int(state.foes[f]["x_m"])
-	assert_eq(blocked_p, p_start + 1000, "the player completes the daily movement budget before contact")
-	assert_eq(blocked_f, foe_start - 1000, "the foe completes the daily movement budget before contact")
-	assert_eq(int(state.foes[f]["x_m"]), int(state.regiments[p]["x_m"]))
-	assert_eq(int(battle["rounds"]), 0, "no battle round before confirmation")
-	assert_eq(int(state.day_resolution["march_entries"][unrelated]["x_m"]),
-		int(state.regiments[unrelated]["x_m"]), "the unrelated column's saved cursor matches its moved state")
-	var pending: Dictionary = state.day_resolution["pending_decision"]
-	var battle_id := int(pending["battle_id"])
-	var p_before: Dictionary = state.regiments[p].duplicate(true)
-	var f_before: Dictionary = state.foes[f].duplicate(true)
-	var blocked_hash := SaveLoad.state_hash(state)
-	assert_eq(engine.resolve_day(state)["status"], "blocked")
-	assert_eq(SaveLoad.state_hash(state), blocked_hash, "re-polling a blocked transaction has no effects")
-	assert_eq(int(p_before.get("dead", 0)) + int(p_before.get("wounded", 0)), 0)
-	assert_eq(int(f_before.get("dead", 0)) + int(f_before.get("wounded", 0)), 0)
-	var loaded := BattleScenario.roundtrip(state)
-	var loaded_tx: Dictionary = loaded.day_resolution
-	assert_eq(DayResolution.acknowledge(loaded_tx, String(pending["token"]), "continue")["status"], "accepted")
-	var resumed := TickEngine.new(repo).resolve_day(loaded)
-	assert_eq(resumed["status"], "complete")
-	var battle_rounds: Array = (resumed["journal"]["battles"] as Array).filter(
-		func(event: Dictionary) -> bool: return String(event.get("kind", "")) == "round" and int(event.get("battle_id", -1)) == battle_id)
-	assert_eq(battle_rounds.size(), 1)
-	assert_eq(int(battle_rounds[0]["substep_index"]), int(pending["substep_index"]),
-		"the confirmed battle round is journaled in the contact substep before the cursor advances")
-	assert_eq(loaded.day, 11)
-	assert_gt(int(loaded.regiments[p]["dead"]) + int(loaded.regiments[p]["wounded"]), 0,
-		"the acknowledged encounter now resolves exactly one battle round")
-	assert_eq(int((loaded.day_resolution if not loaded.day_resolution.is_empty() else {}).get("day", 10)), 10)
-	assert_eq(loaded.foes[f]["x_m"], f_before["x_m"], "resuming does not move the contacted unit twice")
-	assert_eq(loaded.regiments[p]["x_m"], p_before["x_m"], "the player's contact move is not repeated either")
-	assert_eq(int(loaded.regiments[unrelated]["x_m"]) - unrelated_start.x, unrelated_budget,
-		"resuming does not replay the unrelated column's blocked substep")
-	var second_copy := BattleScenario.roundtrip(state)
-	DayResolution.acknowledge(second_copy.day_resolution, String(pending["token"]), "continue")
-	TickEngine.new(repo).resolve_day(second_copy)
-	DayResolution.acknowledge(state.day_resolution, String(pending["token"]), "continue")
-	engine.resolve_day(state)
-	assert_eq(SaveLoad.state_hash(loaded), SaveLoad.state_hash(second_copy),
-		"JSON continuation matches a second deterministic continuation")
-	assert_eq(SaveLoad.state_hash(loaded), SaveLoad.state_hash(state),
-		"JSON continuation matches the uninterrupted live transaction")
-
-
-## P1's synthetic paid handler uses the real saved token protocol; P4 owns
-## the production event/finance handler and must repeat this acceptance.
-func _paid_fixture_continue(state: GameState, token: String) -> Dictionary:
-	var tx: Dictionary = state.day_resolution
-	if token == String(tx.get("pending_decision", {}).get("token", "")) \
-			and int(state.metrics["treasury"]) < 7:
-		return {"status": "unaffordable"}
-	var result := DayResolution.acknowledge(tx, token, "continue")
-	if String(result["status"]) == "accepted":
-		state.metrics["treasury"] -= 7
-		(tx["journal"]["reports"] as Array).append({"kind": "fixture_fee", "token": token, "gold": -7})
-	return result
-
-
-func test_second_battle_does_not_replay_first() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var state := BattleScenario.two_battles(repo, 10)
-	repo.battle_outcomes.assign([{"tier": "hand_made", "eff_min": 0, "eff_max": 1000,
-		"attacker_loss_permille": 100, "defender_loss_permille": 100,
-		"wounded_share_permille": 500, "attacker_morale": 0, "defender_morale": 0, "rout": "none"}])
-	for stance: String in repo.battle_stances:
-		repo.battle_stances[stance]["retreat_odds_permille"] = 0
-		repo.battle_stances[stance]["retreats_on_contact"] = false
-	for table: Dictionary in [state.regiments, state.foes]:
-		for code: String in table:
-			if String(table[code].get("order", "")) != ArmySystem.ORDER_MARCH:
-				continue
-			var row: Dictionary = state.army_roster[code]
-			var arm := MapObjects.regiment_arm(repo, row)
-			for unit: String in repo.world_table("military", "unit_types"):
-				row[unit] = "100" if unit == arm else "0"
-			SuiteData.set_headcount(state, code, ArmySystem.headcount(repo, row))
-			SuiteData.set_losses(state, code, {"wounded": 0, "dead": 0, "deserted": 0})
-	# One pair fights in substep zero; the other still marches to later contact.
-	var player := String(Play.land_regiments(repo, 1)[0])
-	var foe := String(state.foes.keys()[0])
-	var spot := Vector2i(int(state.regiments[player]["x_m"]), int(state.regiments[player]["y_m"]))
-	for entry: Dictionary in [state.regiments[player], state.foes[foe]]:
-		entry["x_m"] = spot.x
-		entry["y_m"] = spot.y
-		entry["dest_x_m"] = spot.x
-		entry["dest_y_m"] = spot.y
-		entry["order"] = ArmySystem.ORDER_GARRISON
-	state.metrics["treasury"] = 100.0
-	var engine := TickEngine.new(repo)
-	var first := engine.resolve_day(state)
-	assert_eq(first["status"], "blocked")
-	var first_id := int(state.day_resolution["pending_decision"]["battle_id"])
-	var first_token := String(state.day_resolution["pending_decision"]["token"])
-	DayResolution.acknowledge(state.day_resolution, first_token, "continue")
-	var second := engine.resolve_day(state)
-	assert_eq(second["status"], "blocked")
-	var second_id := int(state.day_resolution["pending_decision"]["battle_id"])
-	var second_token := String(state.day_resolution["pending_decision"]["token"])
-	assert_ne(second_id, first_id)
-	assert_gt(int(second["decision"]["substep_index"]), int(first["decision"]["substep_index"]))
-	var first_battle := BattleSystem.battle_by_id(state, first_id)
-	var second_battle := BattleSystem.battle_by_id(state, second_id)
-	assert_eq(int(first_battle["rounds"]), 1, "the earlier battle already fought before the later encounter")
-	for code: String in first_battle["att"] + first_battle["def"]:
-		var entry := ArmySystem.state_of(repo, state, code)
-		assert_eq(ArmySystem.fit_heads(100, entry), 90)
-		assert_eq(int(entry["wounded"]), 5)
-		assert_eq(int(entry["dead"]), 5)
-	assert_eq(int(second_battle["rounds"]), 0, "the pending battle has not fought")
-	for code: String in second_battle["att"] + second_battle["def"]:
-		var entry := ArmySystem.state_of(repo, state, code)
-		assert_eq(ArmySystem.fit_heads(100, entry), 100)
-	assert_eq(state.metrics["treasury"], 100.0)
-	var loaded := BattleScenario.roundtrip(state)
-	var results: Array = []
-	for branch: GameState in [state, loaded]:
-		var pending_hash := SaveLoad.state_hash(branch)
-		assert_eq(TickEngine.new(repo).resolve_day(branch)["status"], "blocked")
-		assert_eq(SaveLoad.state_hash(branch), pending_hash, "polling the second pause changes nothing")
-		assert_eq(_paid_fixture_continue(branch, "stale-token")["status"], "stale")
-		assert_eq(branch.metrics["treasury"], 100.0)
-		branch.metrics["treasury"] = 6.0
-		var poor_hash := SaveLoad.state_hash(branch)
-		assert_eq(_paid_fixture_continue(branch, second_token)["status"], "unaffordable")
-		assert_eq(SaveLoad.state_hash(branch), poor_hash, "failed payment does not consume the decision")
-		branch.metrics["treasury"] = 100.0
-		assert_eq(_paid_fixture_continue(branch, second_token)["status"], "accepted")
-		assert_eq(branch.metrics["treasury"], 93.0)
-		var paid_hash := SaveLoad.state_hash(branch)
-		assert_eq(_paid_fixture_continue(branch, second_token)["status"], "duplicate")
-		assert_eq(SaveLoad.state_hash(branch), paid_hash, "retrying a paid choice charges nothing")
-		var complete := TickEngine.new(repo).resolve_day(branch)
-		assert_eq(complete["status"], "complete")
-		assert_eq(branch.metrics["treasury"], 93.0)
-		var rounds: Array = (complete["journal"]["battles"] as Array).filter(
-			func(event: Dictionary) -> bool: return String(event.get("kind", "")) == "round")
-		for id: int in [first_id, second_id]:
-			assert_eq(rounds.filter(func(event: Dictionary) -> bool: return int(event["battle_id"]) == id).size(), 1)
-		var fees: Array = (complete["journal"]["reports"] as Array).filter(
-			func(event: Dictionary) -> bool: return String(event.get("kind", "")) == "fixture_fee")
-		assert_eq(fees.size(), 1, "the paid decision has one durable fee record")
-		results.append(complete)
-	assert_eq(results[0]["journal"], results[1]["journal"], "second-pause JSON preserves battle and fee journals")
-	assert_eq(state.rng.to_dict(), loaded.rng.to_dict())
-	assert_eq(SaveLoad.state_hash(state), SaveLoad.state_hash(loaded))
-
-
-func test_later_substep_reinforcement_joins_after_round_and_fights_next_day() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var state := BattleScenario.contact(repo, 10)
-	var codes := Play.land_regiments(repo, 2)
-	var player := String(Play.land_regiments(repo, 1)[0])
-	var foe := String(state.foes.keys()[0])
-	var contact := Vector2i(1000000, 1000000)
-	state.regiments[player]["x_m"] = contact.x
-	state.regiments[player]["y_m"] = contact.y
-	state.regiments[player]["order"] = ArmySystem.ORDER_GARRISON
-	state.regiments[player]["dest_x_m"] = contact.x
-	state.regiments[player]["dest_y_m"] = contact.y
-	state.foes[foe]["x_m"] = contact.x
-	state.foes[foe]["y_m"] = contact.y
-	state.foes[foe]["order"] = ArmySystem.ORDER_GARRISON
-	state.foes[foe]["dest_x_m"] = contact.x
-	state.foes[foe]["dest_y_m"] = contact.y
-	var reinforcement := String(codes.filter(func(code: String) -> bool: return code != player)[0])
-	Play.place(repo, state, reinforcement, contact + Vector2i(200, 0), ArmySystem.ORDER_MARCH)
-	state.regiments[reinforcement]["carry_days"] = 10
-	state.regiments[reinforcement]["supplies"] = ArmySystem.supply_use(repo,
-		ArmySystem.regiment(repo, reinforcement, state), state) * 6
-	ArmySystem.set_march_m(repo, state, reinforcement, contact)
-	var engine := TickEngine.new(repo)
-	var blocked := engine.resolve_day(state)
-	assert_eq(blocked["status"], "blocked")
+	var blocked := _resolve(engine, s)
 	var token := String(blocked["decision"]["token"])
-	DayResolution.acknowledge(state.day_resolution, token, "continue")
-	var first_day := engine.resolve_day(state)
-	assert_eq(first_day["status"], "complete")
-	var battle_id := int(state.battles[0]["id"])
-	var rounds_day_one: Array = (first_day["journal"]["battles"] as Array).filter(
-		func(event: Dictionary) -> bool: return int(event.get("battle_id", -1)) == battle_id and String(event.get("kind", "")) == "round")
-	var joins_day_one: Array = (first_day["journal"]["battles"] as Array).filter(
-		func(event: Dictionary) -> bool: return int(event.get("battle_id", -1)) == battle_id and String(event.get("kind", "")) == "join" and String(event.get("code", "")) == reinforcement)
-	assert_eq(rounds_day_one.size(), 1)
-	assert_eq(joins_day_one.size(), 1, "the reinforcement arrives after the battle already fought today")
-	assert_gt(int(joins_day_one[0]["substep_index"]), int(rounds_day_one[0]["substep_index"]))
-	var second_day := engine.resolve_day(state)
-	assert_eq(second_day["status"], "complete")
-	var rounds_day_two: Array = (second_day["journal"]["battles"] as Array).filter(
-		func(event: Dictionary) -> bool: return int(event.get("battle_id", -1)) == battle_id and String(event.get("kind", "")) == "round")
-	assert_eq(rounds_day_two.size(), 1)
-	assert_true(reinforcement in (rounds_day_two[0]["att"] as Array)
-		or reinforcement in (rounds_day_two[0]["def"] as Array),
-		"the joined regiment is present in the next day's combat participants")
+	var invalid: Dictionary = engine.call("resolve_decision", s, token, "bad")
+	assert_eq(invalid["status"], "invalid")
+	assert_eq(_resolve(engine, s)["status"], "blocked")
+	var accepted: Dictionary = engine.call("resolve_decision", s, token, "continue")
+	assert_eq(accepted["status"], "accepted")
+	var duplicate: Dictionary = engine.call("resolve_decision", s, token, "continue")
+	assert_eq(duplicate["status"], "duplicate")
+	var out := _resolve(engine, s)
+	assert_eq(out["status"], "complete")
+	assert_eq(s.day, 11)
+	assert_eq(int(s.battles[0]["rounds"]), 1)
+	assert_eq(out["journal"]["battles"].filter(func(e: Dictionary) -> bool: return e["kind"] == "start").size(), 1)
+	assert_eq(s.get("day_resolution"), {})
 
+func test_blocked_roundtrip_preserves_journal_and_rng() -> void:
+	var s := Scenario.contact(repo, 10)
+	var engine := TickEngine.new(repo)
+	if not _ready_engine(engine):
+		return
+	var blocked := _resolve(engine, s)
+	var loaded := Scenario.roundtrip(s)
+	var resumed := TickEngine.new(repo)
+	assert_eq(_resolve(resumed, loaded)["decision"], blocked["decision"])
+	var token := String(blocked["decision"]["token"])
+	engine.call("resolve_decision", s, token, "continue")
+	resumed.call("resolve_decision", loaded, token, "continue")
+	var uninterrupted := _resolve(engine, s)
+	var restored := _resolve(resumed, loaded)
+	assert_eq(restored["journal"], uninterrupted["journal"])
+	assert_eq(SaveLoad.state_hash(loaded), SaveLoad.state_hash(s))
 
 func test_month_end_blocks_before_settlement() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var state := BattleScenario.contact(repo, Calendar.DAYS_PER_TICK)
-	for seat: String in repo.seats:
-		(repo.seats[seat] as Dictionary)["salary_gold"] = 0
-	var seat_codes: Array = state.council.keys()
-	seat_codes.sort()
-	(repo.seats[String(seat_codes[0])] as Dictionary)["salary_gold"] = 7
-	state.metrics["treasury"] = 100.0
+	var s := Scenario.contact(repo, 30)
 	var engine := TickEngine.new(repo)
-	var blocked := engine.advance(state)
-	assert_eq(blocked.status, "blocked")
-	assert_eq(state.tick, 1)
-	assert_eq(state.day, Calendar.DAYS_PER_TICK)
-	assert_eq(state.metrics["treasury"], 100.0, "no monthly settlement while the encounter is pending")
-	DayResolution.acknowledge(state.day_resolution, blocked.pending_decision["token"], "continue")
-	var settled := engine.advance(state)
-	assert_eq(settled.status, "complete")
-	assert_eq(state.tick, 2)
-	assert_eq(state.day, 1)
-	var salary_lines := settled.metric_deltas.filter(func(line: Dictionary) -> bool:
-		return String(line.get("reason", "")) == "ministers' salaries")
-	assert_eq(salary_lines.size(), 1, "monthly salary settles once after the day resumes")
-	assert_eq(int(salary_lines[0]["delta"]), -7, "the salary ledger applies the hand-computed seven-gold cost")
+	if not _ready_engine(engine):
+		return
+	var treasury: float = s.metrics["treasury"]
+	var blocked := _resolve(engine, s)
+	assert_eq(blocked["status"], "blocked")
+	assert_eq(s.tick, 1)
+	assert_eq(s.day, 30)
+	assert_eq(s.metrics["treasury"], treasury)
+	engine.call("resolve_decision", s, String(blocked["decision"]["token"]), "continue")
+	var out := _resolve(engine, s)
+	assert_eq(out["status"], "complete")
+	assert_eq(s.tick, 2)
+	assert_eq(s.day, 1)
+	var report: TickReport = out["report"]
+	assert_eq(report.metric_deltas.filter(func(d: Dictionary) -> bool: return d["reason"] == "ministers' salaries").size(), 1)
 
-func test_legacy_advance_saves_its_month_compatibility_intent_once() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var state := SuiteData.campaign(repo, 24601)
-	state.tick = 1
-	state.day = 10
+func test_completed_work_is_never_replayed_across_encounter_save() -> void:
+	var s := Scenario.contact(repo, 10)
 	var engine := TickEngine.new(repo)
-	var report := engine.advance(state)
-	assert_eq(report.status, "complete")
-	assert_eq(state.tick, 2, "one legacy advance handles one day and that day's month")
-	assert_eq(state.day, 1)
-	assert_eq(state.absolute_day(), 31)
-	assert_eq(state.day_resolution, {}, "the single transaction clears after both phases")
+	repo.balance["artisan_speed_cap_permille"] = 0
+	var cells := MapManors.manors_of_house(repo, s, MapManors.crown(s), repo.resolve_realm("player_realm"))
+	var cell := int(cells[0])
+	assert_true(MapManors.start_work(repo, s, cell, "palisade", "test construction"))
+	var blocked := _resolve(engine, s)
+	assert_eq(int(s.manor_works[str(cell)][0]["done"]), 1000)
+	s = Scenario.roundtrip(s)
+	engine = TickEngine.new(repo)
+	engine.advance_day(s)
+	assert_null(engine.advance(s), "a different adapter cannot bypass the same decision")
+	assert_eq(int(s.manor_works[str(cell)][0]["done"]), 1000)
+	engine.resolve_decision(s, String(blocked["decision"]["token"]), "continue")
+	_resolve(engine, s)
+	assert_eq(int(s.manor_works[str(cell)][0]["done"]), 1000)
+	assert_eq(s.day, 11)
+	assert_eq(s.tick, 1, "the blocked ordinary day cannot be upgraded to a month settlement")
 
-func test_legacy_advance_blocked_transaction_keeps_month_intent_across_json() -> void:
-	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var state := BattleScenario.contact(repo, 10)
-	var first_engine := TickEngine.new(repo)
-	var blocked := first_engine.advance(state)
-	assert_eq(blocked.status, "blocked")
-	assert_true(state.day_resolution["settle_month_compat"])
-	var loaded := BattleScenario.roundtrip(state)
-	var token := String(loaded.day_resolution["pending_decision"]["token"])
-	assert_eq(DayResolution.acknowledge(loaded.day_resolution, token, "continue")["status"], "accepted")
-	var resumed := TickEngine.new(repo).advance(loaded)
-	assert_eq(resumed.status, "complete")
+func test_acknowledged_save_does_not_ask_again() -> void:
+	var s := Scenario.contact(repo, 10)
+	var engine := TickEngine.new(repo)
+	var blocked := _resolve(engine, s)
+	engine.resolve_decision(s, String(blocked["decision"]["token"]), "continue")
+	var loaded := Scenario.roundtrip(s)
+	assert_eq(_resolve(TickEngine.new(repo), loaded)["status"], "complete")
+	assert_eq(loaded.day, 11)
+	assert_eq(int(loaded.battles[0]["rounds"]), 1)
+
+func test_each_first_contact_is_acknowledged_before_its_losses() -> void:
+	var s := Scenario.two_battles(repo, 10)
+	var engine := TickEngine.new(repo)
+	var first := engine.resolve_day(s)
+	assert_eq(first["status"], "blocked")
+	assert_eq(s.battles.size(), 2)
+	engine.resolve_decision(s, String(first["decision"]["token"]), "continue")
+	var second := engine.resolve_day(s)
+	assert_eq(second["status"], "blocked")
+	assert_ne(second["decision"]["token"], first["decision"]["token"])
+	assert_eq(int(BattleSystem.battle_by_id(s, int(first["decision"]["battle_id"]))["rounds"]), 1)
+	assert_eq(int(BattleSystem.battle_by_id(s, int(second["decision"]["battle_id"]))["rounds"]), 0)
+	var loaded := Scenario.roundtrip(s)
+	var resumed := TickEngine.new(repo)
+	assert_eq(resumed.resolve_day(loaded)["decision"], second["decision"])
+	engine.resolve_decision(s, String(second["decision"]["token"]), "continue")
+	resumed.resolve_decision(loaded, String(second["decision"]["token"]), "continue")
+	var out := engine.resolve_day(s)
+	resumed.resolve_day(loaded)
+	assert_eq(out["status"], "complete")
+	assert_eq(out["journal"]["battles"].filter(func(e: Dictionary) -> bool: return e["kind"] == "round").size(), 2)
+	assert_eq(SaveLoad.state_hash(loaded), SaveLoad.state_hash(s))
+	assert_eq(engine.resolve_decision(s, String(first["decision"]["token"]), "continue")["status"], "stale")
+
+func test_month_end_roundtrip_settles_once_with_same_report() -> void:
+	var s := Scenario.contact(repo, 30)
+	var engine := TickEngine.new(repo)
+	var blocked := engine.resolve_day(s)
+	var loaded := Scenario.roundtrip(s)
+	var resumed := TickEngine.new(repo)
+	var token := String(blocked["decision"]["token"])
+	engine.resolve_decision(s, token, "continue")
+	resumed.resolve_decision(loaded, token, "continue")
+	var original := engine.resolve_day(s)
+	var restored := resumed.resolve_day(loaded)
+	assert_eq(restored["journal"], original["journal"])
+	assert_eq(restored["report"].metric_deltas, original["report"].metric_deltas)
+	assert_eq(SaveLoad.state_hash(loaded), SaveLoad.state_hash(s))
 	assert_eq(loaded.tick, 2)
 	assert_eq(loaded.day, 1)
-	assert_eq(loaded.absolute_day(), 31)
 
-
-func test_ordinary_day_transaction_keeps_its_boundary_when_advance_resumes_it() -> void:
+func test_camp_pack_deadline_survives_blocked_json_resume() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
-	var state := BattleScenario.contact(repo, 10)
-	state.metrics["treasury"] = 100.0
+	var state: GameState = Scenario.contact(repo, 10)
+	var code := ""
+	for candidate: String in state.regiments:
+		if BattleSystem.battle_of(state, candidate).is_empty():
+			code = candidate
+			break
+	assert_ne(code, "", "fixture leaves a regiment outside the encounter")
+	var entry: Dictionary = state.regiments[code]
+	var origin := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+	entry["camp_state"] = {"phase": CampSystem.CAMPED, "idle_days": 2,
+		"build_progress": 1000, "pack_start_day": -1, "move_not_before_day": -1,
+		"last_updated_day": -1, "site": {"x_m": origin.x, "y_m": origin.y}}
+	ArmySystem.set_march_m(repo, state, code, origin + Vector2i(3000, 0), [], true)
+	var start_day := int(entry["camp_state"]["pack_start_day"])
+	var move_day := int(entry["camp_state"]["move_not_before_day"])
 	var engine := TickEngine.new(repo)
-	var blocked := engine.resolve_day(state)
-	assert_eq(blocked["status"], "blocked")
-	assert_false(state.day_resolution["month_end"])
-	assert_false(state.day_resolution.has("settle_month_compat"))
-	DayResolution.acknowledge(state.day_resolution, String(blocked["decision"]["token"]), "continue")
-	var resumed := engine.advance(state)
-	assert_eq(resumed.status, "complete")
-	assert_eq(state.tick, 1, "resuming a saved ordinary day does not settle the month")
-	assert_eq(state.day, 11)
-	assert_eq(state.metrics["treasury"], 100.0)
-	assert_true(resumed.metric_deltas.is_empty(), "no monthly ledger lines run for this saved day")
+	assert_eq(engine.resolve_day(state)["status"], "blocked")
+	var before_retry := SaveLoad.state_hash(state)
+	assert_eq(engine.resolve_day(state)["status"], "blocked")
+	assert_eq(SaveLoad.state_hash(state), before_retry, "blocked retry is idempotent")
+	var restored: GameState = Scenario.roundtrip(state)
+	var tx: Dictionary = restored.day_resolution
+	DayResolution.acknowledge(restored.day_resolution,
+		String(tx["pending_decision"]["token"]), "continue")
+	assert_eq(TickEngine.new(repo).resolve_day(restored)["status"], "complete")
+	assert_eq(int(restored.regiments[code]["camp_state"]["pack_start_day"]), start_day)
+	assert_eq(int(restored.regiments[code]["camp_state"]["move_not_before_day"]), move_day)

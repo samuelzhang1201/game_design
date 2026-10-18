@@ -113,3 +113,17 @@ func test_framing_is_a_pure_function_of_the_points() -> void:
 	assert_almost_eq(float(big["distance"]) / float(small["distance"]), 4.0, 1e-2, "a disc four times as wide, four times as far")
 	assert_eq(LedgerOrbit.frame([], 0.0, -24.0, 40.0, 1.6, safe), {}, "nothing to frame")
 
+
+
+func test_actual_star_surface_wins_over_a_neighbors_assisted_hit_area() -> void:
+	var spheres := [
+		{"id": "target", "pos": Vector3(0, 0, -10), "radius": 1.0, "draw_radius": 1.0},
+		{"id": "neighbor", "pos": Vector3(2, 0, -5), "radius": 3.0, "draw_radius": 0.5}]
+	assert_eq(LedgerPick.pick(Vector3.ZERO, Vector3.FORWARD, spheres), {"kind": "sphere", "id": "target"})
+	# Actual foreground geometry still occludes the rear star.
+	spheres[1]["pos"] = Vector3(0, 0, -5)
+	assert_eq(LedgerPick.pick(Vector3.ZERO, Vector3.FORWARD, spheres), {"kind": "sphere", "id": "neighbor"})
+	# Empty space can still use the larger accessible click target.
+	spheres.remove_at(0)
+	spheres[0]["pos"] = Vector3(2, 0, -5)
+	assert_eq(LedgerPick.pick(Vector3.ZERO, Vector3.FORWARD, spheres), {"kind": "sphere", "id": "neighbor"})

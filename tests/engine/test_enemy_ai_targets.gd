@@ -510,7 +510,7 @@ func test_retreat_on_low_morale_and_on_hunger() -> void:
 	var use2 := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c0), s)
 	@warning_ignore("integer_division")
 	var bite := use2 * s.day / 30 - use2 * (s.day - 1) / 30
-	# the day's meal is eaten before the check: it leaves 2 days in hand
+	# The check anticipates the day-end meal: it will leave 2 days in hand
 	@warning_ignore("integer_division")
 	s.foes[c0]["supplies"] = (3 * use2 + 29) / 30 - 1 + bite
 	var events := EnemyAi.step_day(repo, s)
@@ -646,9 +646,9 @@ func test_raid_begins_when_the_first_column_reaches_the_manor() -> void:
 
 
 ## I1: the columns come on at their own paces from their own places; the
-## first to touch the garrisoned town puts the HOST in SIEGE before the day's
+## first to touch the garrisoned town puts the HOST in DEPLOYING before the day's
 ## battles, so no lone column ever starts a town battle of its own.
-func test_siege_begins_with_the_first_column_and_no_lone_battle() -> void:
+func test_siege_begins_with_the_first_deployed_column_and_no_lone_battle() -> void:
 	var host := _host("main")
 	var s := _field(_appear(host))
 	var town := _empty_town(s)
@@ -680,12 +680,15 @@ func test_siege_begins_with_the_first_column_and_no_lone_battle() -> void:
 				var e: Dictionary = s.foes[c]
 				var dx := int(e["x_m"]) - at.x
 				near += 1 if dx * dx < 5000 * 5000 * 4 else 0
-			assert_lt(near, cols.size(), "the siege began before the last column came up")
+			assert_lt(near, cols.size(), "the siege uses deployed columns while the other columns are still approaching")
+		if String(s.ai_hosts[host]["mode"]) == "DEPLOYING":
+			assert_false(SiegeSystem.besieged(repo, s, town))
+			assert_eq(int(s.ai_hosts[host].get("siege_progress", 0)), 0)
 		var fought := BattleSystem.settle_day(repo, s)
 		assert_false(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
 			"day %d: no lone column fights the town" % n)
 		assert_eq(s.battles, [], "day %d: no battle stands" % n)
-	assert_gt(siege_day, 0, "the host sat down to the siege")
+	assert_gt(siege_day, 0, "the first column deployed and established the siege")
 	for c: String in cols:
 		var e: Dictionary = s.foes[c]
 		# the first column is on the town's point, the others spread round it on the camp lattice (clearance)
@@ -726,10 +729,8 @@ func test_a_host_reaching_a_town_another_besieges_rethinks() -> void:
 	assert_ne(String(mind["target_id"]), town, "it chooses again, and not the besieged town")
 
 
-## N2: a host that finds its town besieged by another halts and stands aside
-## that day: none of its columns, though in reach of the garrison, starts a
-## battle of its own.
-func test_a_rethinking_host_halts_and_fights_nothing_that_day() -> void:
+## A dropped target halts the advance; physical proximity still permits contact.
+func test_a_rethinking_host_halts_but_remains_contactable_until_separated() -> void:
 	var host := _host("main")
 	var other := _host("raider")
 	var s := _field(_appear(host))
@@ -750,10 +751,16 @@ func test_a_rethinking_host_halts_and_fights_nothing_that_day() -> void:
 		var e: Dictionary = s.foes[c]
 		assert_ne(String(e["order"]), ArmySystem.ORDER_MARCH, c + " halts")
 		assert_eq(Vector2i(int(e["dest_x_m"]), int(e["dest_y_m"])), Vector2i(int(e["x_m"]), int(e["y_m"])))
+	var positions := {}
+	for c: String in EnemyAi.regiments_of(s, host):
+		positions[c] = Vector2i(int(s.foes[c]["x_m"]), int(s.foes[c]["y_m"]))
+		assert_true(BattleSystem._can_fight(repo, s, c), "dropping a target grants no contact immunity")
 	var fought := BattleSystem.settle_day(repo, s)
-	assert_false(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
-		"no column of it fights the besieged town alone")
-	assert_eq(s.battles, [])
+	assert_true(fought.any(func(e: Dictionary) -> bool: return String(e["kind"]) == "start"),
+		"the halted columns remain exposed within physical contact range")
+	for c: String in positions:
+		assert_eq(Vector2i(int(s.foes[c]["x_m"]), int(s.foes[c]["y_m"])), positions[c],
+			"a battle resolution cannot teleport a rethinking column away")
 
 
 ## N1: the reserve follows the main host to its siege and SITS DOWN to it (the
@@ -872,6 +879,7 @@ func test_a_host_in_the_field_eats_a_day_and_an_assembling_one_does_not() -> voi
 		before[c] = int(s.foes[c]["supplies"])
 	_at_day(s, _appear(main) + 1)
 	EnemyAi.step_day(repo, s)
+	EnemyAi.eat_day(repo, s)
 	for c: String in EnemyAi.regiments_of(s, main):
 		var use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, c), s)
 		# day d of the month eats use x d / 30 - use x (d - 1) / 30, whole units
@@ -893,6 +901,7 @@ func test_a_month_in_the_field_eats_exactly_the_months_use() -> void:
 		s.tick = 2
 		s.day = d
 		EnemyAi.step_day(repo, s)
+		EnemyAi.eat_day(repo, s)
 	assert_eq(int(s.foes[c0]["supplies"]), use * 4, "thirty days eat one month's use, to the unit")
 
 

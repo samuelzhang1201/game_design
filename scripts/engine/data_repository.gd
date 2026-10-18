@@ -9,8 +9,10 @@ var seats: Dictionary = {}
 var actions: Dictionary = {}
 var founding: Array[Dictionary] = []
 var roles: Array[Dictionary] = []
-## Authored military eligibility; the full character remains in roles.
+## Explicit military eligibility, separate from a character's presentation category.
 var commanders: Dictionary = {}
+var recruitment: Dictionary = {}
+var noble_quality: Dictionary = {}
 var relationships: Array[Dictionary] = []
 var regions: Dictionary = {}
 var locations: Dictionary = {}
@@ -145,6 +147,12 @@ var battle_outcomes: Array[Dictionary] = []
 ## data/battle/battle_stances.csv (§4.4): stance -> {label, defence_permille,
 ## morale_decay_permille, retreat_odds_permille, retreats_on_contact (bool)}.
 var battle_stances: Dictionary = {}
+var parley_clauses: Dictionary = {}
+var prisoner_terms: Dictionary = {}
+var battle_formations: Dictionary = {}
+var battle_orders: Dictionary = {}
+var battle_events: Dictionary = {}
+var battle_event_choices: Array[Dictionary] = []
 ## data/battle/ai_doctrines.csv (§3.3): host role -> {greed_permille, caution_permille,
 ## dist_cost, engage_odds_permille, retreat_morale, town_bonus}.
 var ai_doctrines: Dictionary = {}
@@ -682,7 +690,15 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(table_path(dir, "commanders"),
 			["character_id", "realm_slot", "eligible", "unit_kinds", "portrait_key", "reserve_priority"],
-			func(r): commanders[String(r["character_id"])] = r):
+			func(r): commanders[r["character_id"]] = r):
+		return false
+	if not _load_if_present(table_path(dir, "recruitment"),
+			["arm", "commoner_gold", "noble_gold", "commander_gold", "equipment_gold_per_element", "build_days", "requires_port"],
+			func(r): recruitment[r["arm"]] = r):
+		return false
+	if not _load_if_present(table_path(dir, "noble_quality"),
+			["identity", "power_permille", "discipline_permille", "supply_permille", "wage_per_1000_per_month"],
+			func(r): noble_quality[r["identity"]] = r):
 		return false
 	if not _load_if_present(table_path(dir, "relationships"),
 			["from_id", "to_id", "rel_type", "sentiment", "reason"],
@@ -1012,6 +1028,56 @@ func _load(dir: String) -> bool:
 		return false
 	battle_outcomes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a["eff_min"]) < int(b["eff_min"]))
+	if not _load_if_present(table_path(dir, "formations"),
+			["formation", "label", "frontage_m", "narrow_terrains", "narrow_width_m", "required_arms",
+			"min_morale", "min_training", "centre_required", "attack_permille", "defence_permille",
+			"flank_permille", "missile_permille", "change_progress", "disorder_days", "disorder_permille"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for key: String in row:
+					if not key in ["formation", "label", "narrow_terrains", "required_arms"]:
+						row[key] = int(row[key])
+				battle_formations[String(r["formation"])] = row):
+		return false
+	if not _load_if_present(table_path(dir, "orders"),
+			["kind", "label", "reserve_gold_per_1000", "morale_gain", "king_morale_bonus", "cooldown_days",
+			"attack_permille", "defence_permille", "extra_supply_permille", "morale_decay_permille", "inspire_duration_days", "inspire_morale_decay_permille"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for key: String in row:
+					if not key in ["kind", "label"]:
+						row[key] = int(row[key])
+				battle_orders[String(r["kind"])] = row):
+		return false
+	if not _load_if_present(table_path(dir, "battle_events"),
+			["event_id", "trigger", "art_key", "phase", "weight", "chance_permille", "cooldown_days", "threshold"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for key: String in ["weight", "chance_permille", "cooldown_days", "threshold"]:
+					row[key] = int(row[key])
+				battle_events[String(row["event_id"])] = row):
+		return false
+	if not _load_if_present(table_path(dir, "battle_event_choices"),
+			["event_id", "choice_id", "label", "action", "gold", "morale", "power_permille", "duration_days",
+			"effect", "amount", "score", "boldness", "martial", "compassion", "effects_text", "reason", "material", "material_units", "progress_loss", "risk_permille", "risk_text"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for key: String in ["gold", "morale", "power_permille", "duration_days", "amount", "score", "boldness", "martial", "compassion", "material_units", "progress_loss", "risk_permille"]:
+					row[key] = int(row[key])
+				battle_event_choices.append(row)):
+		return false
+	if not _load_if_present(table_path(dir, "prisoner_terms"),
+			["kind", "label", "family_opinion", "reason", "base_gold", "wealth_gold_per_point", "unnamed_wealth"],
+			func(r):
+				var row: Dictionary = r.duplicate()
+				for field: String in ["family_opinion", "base_gold", "wealth_gold_per_point", "unnamed_wealth"]:
+					row[field] = int(row[field])
+				prisoner_terms[String(row["kind"])] = row):
+		return false
+	if not _load_if_present(table_path(dir, "parley_clauses"),
+			["clause", "label", "law", "scope", "policy_map"],
+			func(r): parley_clauses[String(r["clause"])] = r.duplicate()):
+		return false
 	if not _load_if_present(table_path(dir, "battle_stances"),
 			["stance", "label", "defence_permille", "morale_decay_permille",
 			"retreat_odds_permille", "retreats_on_contact"],
@@ -1400,7 +1466,7 @@ func _resolve_realm_slots() -> void:
 	# should not have to be remembered here. Cells with no "{" are untouched,
 	# so ids and numbers cannot be caught by this.
 	for rows in [roles, founding, facts, relationships, templates, events,
-			event_choices, chapter_events, chapter_event_choices]:
+			event_choices, chapter_events, chapter_event_choices, battle_event_choices]:
 		for r: Dictionary in rows:
 			_fill_row_realms(r)
 	# RANDOM_EVENTS.md scenes are loaded before any map is, so they are filled

@@ -1,4 +1,5 @@
 extends GutTest
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const H := preload("res://tests/engine/conduct_helpers.gd")
 ## ArmyConduct taking and the month's settlement (settle_units, settle_provinces; spec
@@ -34,7 +35,6 @@ func before_each() -> void:
 	entry["forage_days"] = 0
 	entry["morale"] = 50
 	entry["training"] = 10
-	SuiteData.set_losses(state, code, {"wounded": 0})
 
 
 ## The unit that eats the most (so its need is far over a day's take).
@@ -56,7 +56,7 @@ func _men(n: int) -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = str(n)
-	SuiteData.set_headcount(state, code, n)
+	assert_false(Personnel.replace(repo, state, code, n).has("error"))
 
 
 func _law(c: String, law: String, value: String) -> void:
@@ -151,8 +151,7 @@ func _settle_with(d: int) -> Dictionary:
 	_men(1000)
 	state.day = Calendar.DAYS_PER_TICK
 	state.regiments[code]["forage_days"] = d
-	var reg := ArmySystem.regiment(repo, code, state)
-	var fit := ArmySystem.fit_heads(ArmySystem.headcount(repo, reg), state.regiments[code])
+	var fit := ArmySystem.fit_count(repo, state, code)
 	ArmyConduct.settle_units(repo, state)
 	return {"fit": fit, "entry": state.regiments[code]}
 
@@ -162,7 +161,7 @@ func test_month_settlement_full_month() -> void:
 	var e: Dictionary = r["entry"]
 	assert_eq(int(e["morale"]), 54, "50 + 4 x 30 / 30")
 	assert_eq(int(e["training"]), 7, "10 - 3 x 30 / 30")
-	assert_eq(int(e["wounded"]), 10, "1000 x 10 x 30 / 30000")
+	assert_eq(ArmySystem.wounded_count(repo, state, code), 10, "1000 x 10 x 30 / 30000")
 	assert_eq(int(e["forage_days"]), 0)
 
 
@@ -171,7 +170,7 @@ func test_month_settlement_partial_month() -> void:
 	var e: Dictionary = r["entry"]
 	assert_eq(int(e["morale"]), 52, "4 x 15 / 30 = 2")
 	assert_eq(int(e["training"]), 9, "3 x 15 / 30 = 1")
-	assert_eq(int(e["wounded"]), 5, "1000 x 10 x 15 / 30000")
+	assert_eq(ArmySystem.wounded_count(repo, state, code), 5, "1000 x 10 x 15 / 30000")
 	assert_eq(int(e["forage_days"]), 0)
 
 
@@ -230,7 +229,7 @@ func test_settle_runs_after_marching_home() -> void:
 	assert_eq(int((r["entry"] as Dictionary)["morale"]), 51, "4 x 12 / 30 = 1")
 	assert_eq(int((r["entry"] as Dictionary)["training"]), 9, "3 x 12 / 30 = 1")
 	assert_eq(int((r["entry"] as Dictionary)["forage_days"]), 0)
-	assert_eq(int((r["entry"] as Dictionary)["wounded"]), 4, "1000 x 10 x 12 / 30000")
+	assert_eq(ArmySystem.wounded_count(repo, state, code), 4, "1000 x 10 x 12 / 30000")
 
 
 func test_recovery_erases_zeros() -> void:

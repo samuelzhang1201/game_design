@@ -270,9 +270,9 @@ static func screen_box(camera: Camera3D, ground: Vector3, high: float, wide: flo
 
 
 ## The clip on `anim` whose name ENDS in `action` (the glTF importer may prefix a library), else a stand-in
-## (no STANDBY: GARRISON, owner 2026-09-29; no DEFEND: GARRISON, front-line §2; no guard: STANDBY); "" if none.
+## (no ATTACK: DRAW; no STANDBY: GARRISON, owner 2026-09-29; no DEFEND: GARRISON, front-line §2; no guard: STANDBY); "" if none.
 static func clip_named(anim: AnimationPlayer, action: String) -> String:
-	var tries: Dictionary = {"STANDBY": ["STANDBY", "GARRISON"], "DEFEND": ["DEFEND", "GARRISON", "STANDBY"], "GARRISON": ["GARRISON", "STANDBY"]}
+	var tries: Dictionary = {"ATTACK": ["ATTACK", "DRAW"], "STANDBY": ["STANDBY", "GARRISON"], "DEFEND": ["DEFEND", "GARRISON", "STANDBY"], "GARRISON": ["GARRISON", "STANDBY"]}
 	for want: String in tries.get(action, [action]):
 		for n: String in anim.get_animation_list():
 			if n.to_upper().ends_with(want):

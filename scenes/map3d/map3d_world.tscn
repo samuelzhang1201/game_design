@@ -25,10 +25,14 @@
 [ext_resource type="Script" uid="uid://b4vk81mo24an1" path="res://scripts/map3d/map3d_layer_dust.gd" id="20_cqcm7"]
 [ext_resource type="Script" uid="uid://bgwhiybi1dien" path="res://scripts/map3d/map3d_layer_couriers.gd" id="21_tjjqj"]
 [ext_resource type="Script" uid="uid://826sps2k5kcg" path="res://scripts/map3d/map3d_layer_precip.gd" id="22_px01h"]
+[ext_resource type="PackedScene" path="res://scenes/models/signals/refusal_flag.tscn" id="23_68dnv"]
 [ext_resource type="Material" uid="uid://btf3lxc1xv1rp" path="res://scenes/map3d/materials/precip_fall.tres" id="23_toxxw"]
+[ext_resource type="PackedScene" uid="uid://cg1tl0kqfsvyj" path="res://scenes/models/units/courier.tscn" id="24_hisku"]
 [ext_resource type="Material" uid="uid://bhsqih8uox5ar" path="res://scenes/map3d/materials/precip_drop_rain.tres" id="24_kme1k"]
 [ext_resource type="Script" uid="uid://d0j1615g26j72" path="res://scripts/map3d/map3d_precip_kind.gd" id="25_3tcq2"]
 [ext_resource type="Material" uid="uid://hbcsw3occqy0" path="res://scenes/map3d/materials/precip_drop_snow.tres" id="26_tkhf4"]
+[ext_resource type="Script" path="res://scripts/map3d/map3d_king.gd" id="30_qhspj"]
+[ext_resource type="PackedScene" path="res://scenes/models/characters/king.tscn" id="31_jxnve"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_qhspj"]
 material = ExtResource("24_kme1k")
@@ -110,21 +114,21 @@ dof_far_ramp = 1.2
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=2026147674 node_paths=PackedStringArray("fill")]
 transform = Transform3D(0.7071067, 0.4055798, -0.579228, 0, 0.81915206, 0.57357645, 0.7071067, -0.4055798, 0.579228, 0, 0, 0)
-light_energy = 1.4
+light_energy = 1.55
 light_specular = 0.5
 shadow_enabled = true
 shadow_normal_bias = 2.5
-shadow_opacity = 0.45
+shadow_opacity = 0.5
 shadow_blur = 2.0
 directional_shadow_max_distance = 60000.0
 script = ExtResource("18_mgwnk")
+day_energy = 1.55
+day_color = Color(1, 0.96, 0.89, 1)
 day_shadow_opacity = 0.5
 high_deg = -48.0
 low_deg = -42.0
-fill_day = 0.55
-day_color = Color(1, 0.96, 0.89, 1)
-day_energy = 1.55
 fill = NodePath("../FillLight")
+fill_day = 0.55
 
 [node name="FillLight" type="DirectionalLight3D" parent="." unique_id=1733042906]
 visible = false
@@ -134,9 +138,12 @@ sky_mode = 1
 
 [node name="Units" type="Node3D" parent="." unique_id=157155689]
 script = ExtResource("19_5bcyi")
+camp_size_ratio = 0.3
 scout_rings = 32
 scout_spokes = 96
 scout_lift_m = 8.0
+battle_refusal_flag = ExtResource("23_68dnv")
+battle_herald = ExtResource("24_hisku")
 
 [node name="Dust" type="Node3D" parent="." unique_id=1688739781]
 script = ExtResource("20_cqcm7")
@@ -173,3 +180,7 @@ slant = 0.35
 length_share = 0.0026
 width_share = 0.0026
 sway = 0.12
+
+[node name="King" type="Node3D" parent="." unique_id=1176897414]
+script = ExtResource("30_qhspj")
+model = ExtResource("31_jxnve")

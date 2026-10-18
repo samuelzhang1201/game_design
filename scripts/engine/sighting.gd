@@ -37,7 +37,7 @@ static func men_of(repo: DataRepository, state: GameState, code: String) -> int:
 	var reg := ArmySystem.regiment(repo, code, state)
 	if reg.is_empty():
 		return 0
-	return ArmySystem.under_arms(ArmySystem.headcount(repo, reg), ArmySystem.state_of(repo, state, code))
+	return ArmySystem.living_count(repo, state, code)
 
 
 ## The points the crown sees from, whole metres: each land unit of the

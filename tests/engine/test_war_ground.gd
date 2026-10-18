@@ -1,4 +1,5 @@
 extends GutTest
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## The WAR ROOM slip's facts (spec 2026-10-07-war-room-scale-hover §4.1): the
 ## ground under the pointer, read for the chosen regiment; never a foreign force.
@@ -94,7 +95,7 @@ func test_an_empty_banner_reads_no_power_no_pace_and_no_days() -> void:
 	var row: Dictionary = state.army_roster[code]
 	for arm in ["infantry", "archers", "cavalry", "artillery", "fleet"]:
 		row[arm] = "0"   # day_step_m is 0 only for an empty banner (base_pace_km 0)
-	SuiteData.set_headcount(state, code, 0)
+	assert_false(Personnel.replace(repo, state, code, 0).has("error"))
 	var r := WarGround.reading(repo, state, at, code)
 	var g: Dictionary = r["regiment"]
 	assert_eq(int(g["defend"]), 0)

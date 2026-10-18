@@ -1,4 +1,5 @@
 extends GutTest
+const People := preload("res://tests/fixtures/military_people.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## Spies (spec 2026-09-28 §1). Rolls are forced through SpySystem.report's
 ## q and bias; observe's own draw is checked for determinism only
@@ -155,12 +156,12 @@ func test_troops_near_count_men_under_arms() -> void:
 	var t0: Dictionary = SpySystem.troops_near(repo, s, at)
 	var f0 := SpySystem.foes_near(repo, s, at)
 	assert_gte(int(t0["troops_foreign"]), int(f0["foe_troops"]), "the foes are among the foreign troops")
-	SuiteData.set_losses(s, code, {"dead": 300})
+	assert_false(People.move(repo, s, code, "fit", "dead", 300, "spy_enemy_losses").has("error"))
 	var t1: Dictionary = SpySystem.troops_near(repo, s, at)
 	var f1 := SpySystem.foes_near(repo, s, at)
 	assert_eq(int(f1["foe_troops"]), int(f0["foe_troops"]) - 300, "foe troops less the dead")
 	assert_eq(int(t1["troops_foreign"]), int(t0["troops_foreign"]) - 300, "foreign troops less the same dead")
-	SuiteData.set_losses(s, code, {"dead": heads})
+	assert_false(People.move(repo, s, code, "fit", "dead", heads - 300, "spy_enemy_destroyed").has("error"))
 	var t2: Dictionary = SpySystem.troops_near(repo, s, at)
 	assert_eq(int(t2["troops_foreign"]), int(t0["troops_foreign"]) - heads, "a column slain to the last man counts 0")
 	# our own: a regiment of the crown's, 200 of it dead
@@ -168,12 +169,12 @@ func test_troops_near_count_men_under_arms() -> void:
 	var mine := String(reg["regiment_code"])
 	var here := ArmySystem.position_of(repo, s, reg)
 	var o0: Dictionary = SpySystem.troops_near(repo, s, here)
-	SuiteData.set_losses(s, mine, {"dead": 200})
+	assert_false(People.move(repo, s, mine, "fit", "dead", 200, "spy_own_losses").has("error"))
 	var o1: Dictionary = SpySystem.troops_near(repo, s, here)
 	assert_eq(int(o1["troops_own"]), int(o0["troops_own"]) - 200, "our own less our dead")
 	# and the deserters have left the banner (hand: 200 dead + 40 deserted = 240 fewer, within its heads)
 	assert_gt(ArmySystem.headcount(repo, reg), 240)
-	SuiteData.set_losses(s, mine, {"deserted": 40})
+	assert_false(People.move(repo, s, mine, "fit", "released", 40, "spy_own_desertion").has("error"))
 	var o2: Dictionary = SpySystem.troops_near(repo, s, here)
 	assert_eq(int(o2["troops_own"]), int(o0["troops_own"]) - 240, "our own less our dead and deserted")
 

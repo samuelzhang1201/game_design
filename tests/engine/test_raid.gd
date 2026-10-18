@@ -345,7 +345,15 @@ func _rout_the_raiders(s: GameState, h: String) -> Array:
 	for c: String in EnemyAi.regiments_of(s, h):
 		_place(s, c, at + Vector2i(500, 0), ArmySystem.ORDER_GARRISON)
 	s.ai_hosts[h]["mode"] = "RAID"
-	return BattleSystem.settle_day(repo, s)
+	for c: String in EnemyAi.regiments_of(s, h):
+		s.foes[c]["battle_plan"] = "attack"
+	var events := BattleSystem.settle_day(repo, s)
+	# Spoils pass only after this routed host physically yields the field.
+	for c: String in EnemyAi.regiments_of(s, h):
+		_place(s, c, at + Vector2i(100000, 0), ArmySystem.ORDER_STANDBY)
+	s.day += 1
+	events.append_array(BattleSystem.settle_day(repo, s))
+	return events
 
 
 func test_routed_raider_pays_spoils_once_on_the_day() -> void:
@@ -443,7 +451,7 @@ func test_a_raid_on_the_day_loop_is_told_in_the_field_report() -> void:
 	var cell := _manor(s, false, 100, 40.0)
 	assert_gt(cell, 0, "a manor out of every regiment's way")
 	_raid(s, h, cell)
-	engine.advance_day(s)
+	Play.day(engine, s, true)
 	assert_eq(_of(engine.day_raid, "raid_begin").size(), 1, "the raid begins: TickEngine.day_raid")
 	assert_gt(int(s.ai_hosts[h]["plunder"]) + _supplies(s, h), 0, "it took something")
 	var letters: Array = s.missives.filter(func(m: Dictionary) -> bool: return String(m["kind"]) == "battle")
@@ -457,7 +465,7 @@ func test_a_raid_on_the_day_loop_is_told_in_the_field_report() -> void:
 	assert_false(text.contains("[missing template"), text)
 	assert_false(text.contains("{"), "every slot filled: " + text)
 	assert_true(text.contains(repo.realm_label("raider_realm")), "the raider realm through its slot")
-	engine.advance_day(s)
+	Play.day(engine, s, true)
 	assert_eq(_of(engine.day_raid, "raid_begin").size(), 0, "told once")
 
 
@@ -496,25 +504,7 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 		if days_played > 121:
 			return
 		var today := s.absolute_day()
-		var daily := engine.advance(s) if s.day >= Calendar.DAYS_PER_TICK else null
-		var result := {} if daily != null else engine.resolve_day(s)
-		while (daily != null and daily.status == "blocked") or String(result.get("status", "")) == "blocked":
-			if daily != null:
-				DayResolution.acknowledge(s.day_resolution, daily.pending_decision.token, "continue")
-				daily = engine.advance(s)
-			else:
-				DayResolution.acknowledge(s.day_resolution, String(result["decision"]["token"]), "continue")
-				result = engine.resolve_day(s)
-		assert_eq(String(daily.status) if daily != null else String(result.get("status", "")),
-			"complete", "the explicitly confirmed day completes")
-		var event: Dictionary = daily.event if daily != null else {}
-		if engine.last_month_report != null:
-			event = engine.last_month_report.event
-		if not event.is_empty():
-			engine.events.apply_choice(String((event["choices"] as Array)[0]["choice_id"]), s)
-		assert_eq(s.absolute_day(), today + 1, "the confirmed day must advance the calendar")
-		if s.absolute_day() != today + 1:
-			return
+		Play.day(engine, s, true)
 		for h: String in EnemyAi.host_codes(s):
 			var m: Dictionary = s.ai_hosts[h]
 			if today > 33 and String(m["mode"]) == "RAID" and int(m["plunder"]) > 0 and raiding_late == "":

@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Play := preload("res://tests/invasion_play.gd")
 ## Home garrisons are fed (final review 1, spec 2026-10-07-army-supply-lines
 ## §3.2 step 4): a campaign left to run a YEAR with no orders keeps every
 ## land unit of the realm camped by a town above army_supply_low_days, the
@@ -47,15 +48,10 @@ func test_a_year_with_no_orders_starves_no_home_garrison() -> void:
 	var low := int(repo.bal("army_supply_low_days"))
 	engine.advance(s)   # the reign's opening tick
 	var wrong := ""
-	for m in Calendar.TICKS_PER_YEAR:
-		for d in Calendar.DAYS_PER_TICK - 1:
-			_advance_day_auto(engine, s)
-			wrong = _check(repo, s, low)
-			if wrong != "":
-				break
-		if wrong != "":
-			break
-		_advance_day_auto(engine, s)
+	for d in Calendar.DAYS_PER_TICK * Calendar.TICKS_PER_YEAR:
+		# This unattended supply trial explicitly acknowledges contact notices;
+		# it still issues no military orders and plays the actual day boundary.
+		assert_eq(Play.day(engine, s, true)["status"], "complete")
 		wrong = _check(repo, s, low)
 		if wrong != "":
 			break

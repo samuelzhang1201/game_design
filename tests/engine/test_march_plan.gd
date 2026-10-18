@@ -76,6 +76,19 @@ func test_the_arrival_is_the_ride_and_the_march_at_the_loads_pace() -> void:
 	assert_gte(int(rows.back()["march"]), int(rows[0]["march"]), "the heaviest train is never the quicker")
 
 
+func test_local_command_march_rows_do_not_add_a_courier_day() -> void:
+	var s := SuiteData.campaign(repo, 8)
+	var r := _marcher()
+	var code := String(r["regiment_code"])
+	var pos := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, s, r))
+	s.king_state["x_m"] = pos.x
+	s.king_state["y_m"] = pos.y
+	var to := _far(s, r)
+	for row: Dictionary in MarchPlan.carry_rows(repo, s, code, to, []):
+		assert_eq(int(row["arrive"]), CourierSystem.arrival_days(repo, s, code, to,
+			Vector2(-1, -1), 0, [], int(row["days"])))
+
+
 ## In the field the column sets out with what it holds: with nothing it falls
 ## short by every day of the march. In a town of the realm it is topped up to
 ## the load first.

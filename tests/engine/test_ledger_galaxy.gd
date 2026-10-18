@@ -312,3 +312,56 @@ func test_a_merge_takes_the_worse_accounts_words_and_source() -> void:
 	Ledger._merge_into(f, {"flow": 30, "accounts": [other]})
 	assert_eq(int(f["flow"]), 150)
 	assert_eq(String(f["accounts"][0]["source"]), "own records", "a tie keeps the first source")
+
+
+func test_character_graph_memos_match_scans_and_expire_between_reads() -> void:
+	# Include both directions, a self edge and an empty family.
+	s.relationships = [
+		{"from": "you", "to": "other", "type": "rival", "sentiment": -12},
+		{"from": "other", "to": "you", "type": "kin", "sentiment": 7},
+		{"from": "you", "to": "you", "type": "kin", "sentiment": 3}]
+	var family := (s.characters["you"] as Character).family_name
+	var ids := ["character:you", "character:other", "character:missing", ""]
+	var expected := {}
+	for id: String in ids:
+		for kind: String in ["kin", "rival", "missing"]:
+			expected[id + "|" + kind] = LedgerResolvers._relations(s, id, false, kind)
+	var members := LedgerResolvers._member(s, "house:" + family)
+	LedgerResolvers.begin_memo()
+	for id: String in ids:
+		for kind: String in ["kin", "rival", "missing"]:
+			assert_eq(LedgerResolvers._relations(s, id, false, kind), expected[id + "|" + kind])
+	assert_eq(LedgerResolvers._member(s, "house:" + family), members)
+	assert_eq(LedgerResolvers._relations(s, "", true, "kin").size(), 2)
+	LedgerResolvers.end_memo()
+	s.relationships.clear()
+	(s.characters["you"] as Character).family_name = ""
+	var remaining := LedgerResolvers._member(s, "house:" + family)
+	LedgerResolvers.begin_memo()
+	assert_eq(LedgerResolvers._relations(s, "character:you", false, "kin"), [])
+	assert_eq(LedgerResolvers._member(s, "house:" + family), remaining,
+		"the next read sees changed family membership")
+	LedgerResolvers.end_memo()
+
+
+func test_garrison_memo_matches_scan_and_expires_between_reads() -> void:
+	var ids: Array = ["", "regiment:missing", "town:missing"]
+	for code: String in s.regiments:
+		ids.append("regiment:" + code)
+	for town: String in s.town_seat:
+		ids.append("town:" + town)
+	var expected := {}
+	for id: String in ids:
+		expected[id] = LedgerResolvers._garrisons(data, s, id)
+	LedgerResolvers.begin_memo()
+	for id: String in ids:
+		assert_eq(LedgerResolvers._garrisons(data, s, id), expected[id], id)
+	LedgerResolvers.end_memo()
+	s.town_seat.clear()
+	var empty := LedgerResolvers._garrisons(data, s, "")
+	LedgerResolvers.begin_memo()
+	assert_eq(LedgerResolvers._garrisons(data, s, ""), empty,
+		"the next read sees emptied town seats")
+	for code: String in s.regiments:
+		assert_eq(LedgerResolvers._garrisons(data, s, "regiment:" + code), [])
+	LedgerResolvers.end_memo()

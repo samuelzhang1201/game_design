@@ -296,7 +296,7 @@ static func _hostiles(repo: DataRepository, state: GameState) -> Array:
 ## town's point, PACK px), by (the leading host's kingdom), host}; {} otherwise.
 static func siege_cut(repo: DataRepository, state: GameState, code: String) -> Dictionary:
 	var held := ArmyGround.garrison_town(repo, state, code)
-	if held == "" or not SiegeSystem.besieged(state, held):
+	if held == "" or not SiegeSystem.besieged(repo, state, held):
 		return {}
 	var host := SiegeSystem.lead_of(repo, state, held)
 	var kingdom := ""
@@ -535,7 +535,7 @@ static func _refill_in_town(repo: DataRepository, state: GameState, code: String
 	if rest <= 0:
 		_wet(entry)
 		return {}
-	if SiegeSystem.besieged(state, held):
+	if SiegeSystem.besieged(repo, state, held):
 		return {}   # the besiegers let nothing in: the garrison eats what it carries
 	var dep := TownStores.depot(repo, state)
 	var got := 0
@@ -655,7 +655,7 @@ static func _still_ordered(state: GameState, code: String, ln: Dictionary, ridin
 	var newest := 0
 	for c: Dictionary in state.couriers:
 		var o := CourierSystem.order_with(c, ["SUPPLY_POINT_SET"])
-		if String(c.get("target", "")) == code and not o.is_empty() \
+		if CourierSystem.has_recipient(c, code) and not o.is_empty() \
 				and String(o.get("town", o.get("to_town", ""))) == String(ln["town"]) and int(c["id"]) > newest:
 			newest = int(c["id"])
 	if newest > 0:
@@ -760,7 +760,9 @@ static func day_step(repo: DataRepository, state: GameState) -> Array:
 		# 2026-10-07-war-room-p2 §1.2, §2.3) read once a line a day
 		var km := road_km(repo, route)
 		var robbed := SupplySystem.road_loss(repo, state, code, route)
-		_deliver_line(repo, state, code, reg, ln, km, SupplySystem.total_loss(repo, km, int(robbed["permille"])))
+		var loss := SupplySystem.total_loss(repo, km, int(robbed["permille"]))
+		loss = CampSystem.reduced_supply_loss(repo, state, code, loss)
+		_deliver_line(repo, state, code, reg, ln, km, loss)
 	TownStores.sync_metrics(repo, state)
 	return events
 

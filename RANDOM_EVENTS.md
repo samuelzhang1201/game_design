@@ -190,3 +190,32 @@ Threshold events for the development axes (`docs/superpowers/specs/2026-10-12-de
 - **Triggers:** `events.csv` implements a simplified form of several triggers written above (e.g. EV-11 fires on `season=winter` with no coastal check; EV-14 on `seat_filled=steward&year>=2`, not on a `merchant_family` candidate). The CSV is what runs.
 - **Every seat gets events in its domain**; `venal`, `honest`, `bold`, `vain`, `wrathful`, `cynical`, `pious`, `merchant_family`, `noble_born` traits all have at least one moment to matter.
 - Implemented as `data/story/events.csv` + `data/story/event_choices.csv` with generic effect ops (`EventEffects`) rather than per-event handlers, per the data-driven convention in `CLAUDE.md`; a test asserts all 30 ids resolve to a Scene here.
+
+
+## Battle-only authored events
+
+These entries belong only to the battle tables; the monthly pool never samples them.
+
+### EV-31 · The Wavering Flank — `battle · authored`
+**Trigger:** A standing line has low morale or is under genuine attacks from opposing directions. **Scene:** A messenger comes along the rear of the line, his horse dark with sweat. On the right the standards have drawn together; men are looking over their shoulders instead of towards the enemy. Their captain asks for the waiting reserve, or a promise of bounty. Behind him the sergeants are already calling the files inward.
+**Choices:** Promise the rallying bounty; commit an available reserve; contract the line and give ground.
+
+### EV-32 · The Nobles Ask to Charge — `battle · authored`
+**Trigger:** Fit noble personnel are present and the battle is engaged. **Scene:** The noble riders gather behind their captain, lances upright. They have watched the fighting long enough, they say: give them leave and they will break the enemy line. The captain waits for a word. Beyond the horses, common soldiers are trying to close the gaps in their own ranks.
+**Choices:** Permit a lawful charge with greater exposure; retain the nobles to organize the line.
+
+### EV-33 · Standards at the Rear — `battle · authored`
+**Trigger:** A real regiment has joined this battle and awaits commitment. **Scene:** Fresh standards appear above the rearward ridge. The new regiment comes down in ordered files, its captain leading a horse by the bridle. A herald asks where it is wanted. At the front the men have seen the colours too, and a cheer passes down the line before anyone has given an order.
+**Choices:** Commit the actual arriving regiment; hold it out of the fighting as a reserve.
+
+### EV-34 · The Wounded on the Road — `battle · authored`
+**Trigger:** A withdrawing regiment has wounded personnel and a real departure route. **Scene:** The road behind the column is choked with wounded men. A broken cart stands across the ruts; two bearers are trying to lift a man whose bandage has come loose. The rearward files have halted. The surgeon asks for fit hands to guard the road while his people clear it.
+**Choices:** Detail an escort and halt movement today; wait for the road to clear and accept the morale cost.
+
+### EV-35 · The Enemy Food Train — `battle · authored`
+**Trigger:** A saved successful combat round gives access to food actually carried by an opposing unit. **Scene:** Our men have reached the enemy food train. Sacks lie under a torn tilt, and one of the draught horses stands patiently in its traces while the fighting moves away. A sergeant has put a guard around the carts. He can bring food back, but he will need men from the line to carry it.
+**Choices:** Collect actual enemy food at the cost of fighting strength; destroy that food and collect none.
+
+### EV-36 · The Timbers Speak — `battle · authored`
+**Trigger:** P6 connects this event only to a real active tunnel operation with recorded danger. **Scene:** The men come out of the tunnel one by one, carrying their lamps low. Beneath the wall a timber has begun to split. The master of works holds up a wedge of fresh wood: the roof has moved since yesterday. More shoring may hold it, he says, but he will send no crew below until he has an answer.
+**Choices:** Stop and shore the tunnel for gold and timber; change route at a loss of completed engineering; continue under a declared collapse risk; stop the dangerous work entirely.

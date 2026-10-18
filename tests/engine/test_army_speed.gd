@@ -71,7 +71,7 @@ func test_a_real_regiment_of_the_player_has_a_speed() -> void:
 	assert_gt(km, 0.0)
 	var st := ArmySystem.state_of(Game.data, Game.state, code)
 	var expect := ArmySystem.pace_tenths(Game.data, ArmySystem.base_pace_km(Game.data, reg),
-		ArmySystem.supply_score(Game.data, int(st["supplies"]), ArmySystem.supply_use(Game.data, reg)),
+		ArmySystem.supply_score(Game.data, int(st["supplies"]), ArmySystem.supply_use(Game.data, reg, Game.state)),
 		int(st["morale"]), int(st["training"]))
 	# on the ground it stands on (spec 2026-10-06 §6)
 	var ground := ArmySystem.ground_permille(Game.data, reg, ArmySystem.position_of(Game.data, Game.state, reg))
@@ -108,23 +108,23 @@ func test_the_regiments_detail_card_carries_its_march() -> void:
 
 ## The map's two bars (owner 2026-09-27): red the readiness, yellow the supply.
 func test_the_bars_are_readiness_and_supply() -> void:
-	var st := GameState.new()
+	var st := SuiteData.campaign(repo, 7)
 	# the first of the realm's units whose month's use is a multiple of ten,
 	# so the hand sums below take a whole number of units a day
 	var reg: Dictionary = {}
 	for r: Dictionary in MapObjects.regiments_of(repo, repo.resolve_realm("player_realm"), st):
-		if ArmySystem.supply_use(repo, r) > 0 and ArmySystem.supply_use(repo, r) % 10 == 0:
+		if ArmySystem.supply_use(repo, r, st) > 0 and ArmySystem.supply_use(repo, r, st) % 10 == 0:
 			reg = r
 			break
 	assert_false(reg.is_empty(), "the realm has a unit whose use is a multiple of ten")
 	var code := String(reg["regiment_code"])
-	var use := ArmySystem.supply_use(repo, reg)
+	var use := ArmySystem.supply_use(repo, reg, st)
 	# three days in hand, a 20-day load: the supply score is 3 of the 5-day low mark = 600
 	# (use*3/30 units), readiness
 	# (40*1000 + 25*600 + 20*500 + 15*200) / 100 = 680; the yellow bar is
 	# three days of the 20 carried (owner 2026-09-30: it falls every day) = 150.
 	@warning_ignore("integer_division")
-	st.regiments[code] = {"morale": 50, "training": 20, "supplies": use * 3 / 30, "wounded": 0,
+	st.regiments[code] = {"morale": 50, "training": 20, "supplies": use * 3 / 30,
 		"carry_days": 20}
 	assert_eq(ArmySystem.bars_of(repo, st, code), Vector2i(680, 150))
 
@@ -142,7 +142,7 @@ func test_a_foreign_regiment_reads_as_it_would_start() -> void:
 			# twenty days of a 20-day load: the supply score full, readiness 805
 			# (above); the stores bar a whole unit or two short of 1000, the
 			# start being rounded down to whole units
-			var bars := ArmySystem.bars_of(repo, GameState.new(), String(reg["regiment_code"]))
+			var bars := ArmySystem.bars_of(repo, null, String(reg["regiment_code"]))
 			assert_eq(bars.x, 805)
 			assert_between(bars.y, 990, 1000)
 			return

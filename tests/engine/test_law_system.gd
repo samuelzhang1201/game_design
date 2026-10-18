@@ -15,9 +15,9 @@ func before_each() -> void:
 func after_each() -> void:
 	RealmEconomy.forget()
 
-func test_the_tables_load_twenty_five_laws_in_three_pages() -> void:
-	assert_eq(repo.law_order.size(), 25)
-	assert_eq(LawSystem.codes_on(repo, "military").size(), 17)
+func test_the_tables_load_all_laws_in_three_pages() -> void:
+	assert_eq(repo.law_order.size(), 31)
+	assert_eq(LawSystem.codes_on(repo, "military").size(), 23)
 	assert_eq(LawSystem.codes_on(repo, "economy").size(), 5)
 	assert_eq(LawSystem.codes_on(repo, "politics").size(), 3)
 	assert_eq(LawSystem.codes_on(repo, "economy"), ["tax_rate", "tariff_rate", "grain_ration", "patronage", "guild_charter"], "file order")
@@ -91,10 +91,12 @@ func test_every_default_is_the_specs() -> void:
 		"plunder": "forbid", "obey_command": "off", "protect_church": "off",
 		"protect_women": "off", "no_havoc": "off", "register_prisoners": "off",
 		"wear_badges": "off", "no_feuds": "off", "desertion_penalty": "fine", "quarter": "give", "ransom": "ransom",
-		"truce_days": "off", "envoys": "off",
+		"truce_days": "off", "envoys": "off", "ransom_captor_share": "300",
 		"knightly_orders": "off", "tournaments": "off", "heavy_levy": "off", "arsenal_decree": "none",
-		"patronage": "none", "guild_charter": "none", "tolerance": "none"}
-	assert_eq(repo.law_order.size(), want.size(), "twenty-five laws")
+		"patronage": "none", "guild_charter": "none", "tolerance": "none",
+		"prisoner_treatment": "protect", "wounded_evacuation": "protect", "safe_withdrawal": "deny",
+		"battle_tactics": "unrestricted", "own_surrender": "allow"}
+	assert_eq(repo.law_order.size(), want.size(), "every declared law")
 	for law: String in repo.law_order:
 		assert_true(want.has(law), "%s is a law of the spec" % law)
 		assert_eq(String(LawSystem.def(repo, law)["default"]), String(want.get(law, "")), law)

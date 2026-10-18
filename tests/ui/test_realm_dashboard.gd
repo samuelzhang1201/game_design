@@ -133,10 +133,10 @@ func test_host_counts_live_people_and_chart_preserves_equipment_weight() -> void
 			fleet_code = code
 	assert_ne(fleet_code, "")
 	assert_eq(int(dashboard._host_of().fleet), fleet_people, "the realm card counts crew, not ships")
-	var changes := MilitaryRoster.plan_unit_changes(Game.state, fleet_code, [
-		{"from": "fit", "to": "wounded", "count": 3}, {"from": "fit", "to": "dead", "count": 2},
-		{"from": "fit", "to": "captured_current", "count": 4}, {"from": "fit", "to": "released", "count": 5}])
-	assert_false(MilitaryRoster.transition(Game.data, Game.state, "dashboard:casualties", changes, "dashboard casualty fixture").has("error"))
+	var changes := [
+		{"unit_code": fleet_code, "from": "fit", "to": "wounded", "count": 3}, {"unit_code": fleet_code, "from": "fit", "to": "dead", "count": 2},
+		{"unit_code": fleet_code, "from": "fit", "to": "captured_current", "count": 4}, {"unit_code": fleet_code, "from": "fit", "to": "released", "count": 5}]
+	assert_false(MilitaryRoster.transfer_units(Game.data, Game.state, "dashboard:casualties", changes, "dashboard casualty fixture").has("error"))
 	Game.state_changed.emit()
 	var expected := fleet_people - 11
 	assert_eq(int(dashboard._host_of().fleet), expected, "wounded remain under arms; captives and terminal states do not")
@@ -154,5 +154,5 @@ func test_host_counts_live_people_and_chart_preserves_equipment_weight() -> void
 	var total := 0
 	for regiment: Dictionary in MapObjects.regiments_of(Game.data, realm, Game.state):
 		var code := String(regiment.regiment_code)
-		total += MilitaryRoster.fit(Game.state, code) + MilitaryRoster.count(Game.state, code, "wounded")
+		total += ArmySystem.living_count(Game.data, Game.state, code)
 	assert_eq(dashboard.resource_text("army"), RealmDashboard._compact(total))

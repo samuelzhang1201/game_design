@@ -1,4 +1,5 @@
 extends GutTest
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## Hazards as state (spec 2026-10-07-war-room-p2-tactical-layer §2).
 
@@ -152,13 +153,12 @@ func test_a_plague_wounds_a_regiment_standing_in_it_and_says_so() -> void:
 	state.hazards_rev += 1
 	var code := _crown_land_code(state)
 	Hazards.add(state, "p", "Disease", "Test Plague", [_cell_of(state, code)], state.tick, -1, "test")
-	var heads := ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))
-	var before := int(state.regiments[code]["wounded"])
-	var fit := heads - before
+	var before := ArmySystem.wounded_count(repo, state, code)
+	var fit := ArmySystem.fit_count(repo, state, code)
 	@warning_ignore("integer_division")
 	var lost := fit * int(Hazards.kind_of(repo, "Disease")["wounds_permille"]) / 1000
 	var news := Hazards.settle_regiments(repo, state)
-	assert_eq(int(state.regiments[code]["wounded"]), before + lost)
+	assert_eq(ArmySystem.wounded_count(repo, state, code), before + lost)
 	assert_true(news.any(func(n: String) -> bool: return n.contains("Test Plague") and n.contains(str(lost))))
 
 
@@ -183,10 +183,10 @@ func test_no_fit_men_no_toll_and_no_news() -> void:
 		state.hazards.erase(id)
 	state.hazards_rev += 1
 	var code := _crown_land_code(state)
-	SuiteData.set_losses(state, code, {"wounded": ArmySystem.headcount(repo, ArmySystem.regiment(repo, code))})
+	assert_false(Personnel.move(repo, state, code, "fit", "wounded", ArmySystem.fit_count(repo, state, code)).has("error"))
 	Hazards.add(state, "p", "Disease", "Test Plague", [_cell_of(state, code)], state.tick, -1, "test")
 	var news := Hazards.settle_regiments(repo, state)
-	assert_eq(int(state.regiments[code]["wounded"]), ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)))
+	assert_eq(ArmySystem.wounded_count(repo, state, code), ArmySystem.headcount(repo, ArmySystem.regiment(repo, code)))
 	assert_eq(_toll_of(state, code, news), [])
 
 
@@ -199,6 +199,7 @@ func test_the_month_is_deterministic() -> void:
 		a.tick += 1
 		b.tick += 1
 	assert_eq(a.regiments, b.regiments)
+	assert_eq(a.military_cohorts, b.military_cohorts)
 
 
 func test_a_flood_slows_the_march_through_it() -> void:

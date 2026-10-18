@@ -49,13 +49,9 @@ func test_a_pack_regiment_raises_its_land_units() -> void:
 			# (its guns are its kingdom's royal train's, which no host takes)
 			var row: Dictionary = pack[entry]
 			var want := 0
-			var expected_equipment: Dictionary = {}
-			var actual_equipment: Dictionary = {}
-			for arm: String in ["infantry", "archers", "cavalry"]:
-				var count := int(float(row.get(arm, 0)))
-				expected_equipment[arm] = count
-				actual_equipment[arm] = 0
-				want += count * int(repo.world_row("military", "unit_types", arm)["crew"])
+			var equipment := {"infantry": 0, "archers": 0, "cavalry": 0}
+			for arm: String in equipment:
+				want += int(row.get(arm, 0)) * int(repo.world_row("military", "unit_types", arm)["crew"])
 			var men := 0
 			for u: String in units:
 				var r := ArmySystem.regiment(repo, u)
@@ -63,10 +59,11 @@ func test_a_pack_regiment_raises_its_land_units() -> void:
 				assert_eq(String(r["kingdom_code"]), raider)
 				assert_ne(String(r.get("is_naval", "0")), "1", "no fleet")
 				men += ArmySystem.headcount(repo, r)
-				for arm: String in expected_equipment:
-					actual_equipment[arm] += int(float(r.get(arm, 0)))
-			assert_eq(actual_equipment, expected_equipment, entry + ": equipment survives splitting")
-			assert_eq(men, want, entry + ": the regiment's men, split")
+				for arm: String in equipment:
+					equipment[arm] += int(r.get(arm, 0))
+			assert_eq(men, want, entry + ": the regiment's personnel, split")
+			for arm: String in equipment:
+				assert_eq(int(equipment[arm]), int(row.get(arm, 0)), "equipment remains conserved: " + arm)
 	# a unit's own code raises that unit; an unknown code raises nothing; and
 	# a unit named twice is raised once
 	var one := String(EnemyAi.host_units(repo, null, repo.raid_hosts[0])[0])
@@ -107,7 +104,12 @@ func test_new_campaign_spawns_every_host() -> void:
 			var shape := ArmySystem.starting_state(repo, ArmySystem.regiment(repo, rc, s))
 			for k: String in shape:
 				assert_true(f.has(k), "%s has %s" % [rc, k])
-			assert_eq(int(f["supplies"]), int(shape["supplies"]))
+			# Live personnel (including nobles) eat at their actual assembly
+			# ground, which can differ from the regiment's pack quarters.
+			var monthly_use := ArmySystem.supply_use(repo, ArmySystem.regiment(repo, rc, s), s)
+			@warning_ignore("integer_division")
+			var opening_load := (monthly_use * int(repo.bal("army_start_supply_days")) + Calendar.DAYS_PER_TICK - 1) / Calendar.DAYS_PER_TICK
+			assert_eq(int(f["supplies"]), opening_load, rc + ": whole grain rounded up for the live assembly demand")
 			assert_eq(int(f["morale"]), int(shape["morale"]))
 	assert_eq(s.foes.size(), seen, "no foe but the hosts'")
 	# a raised unit left its camp and seat: no foe holds a town

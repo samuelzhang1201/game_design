@@ -16,6 +16,19 @@ const PROVINCE_PREFIX := "province:"
 const TOWN_PREFIX := "town:"
 const UNIT_PREFIX := "unit:"
 
+## Publish the law scopes prepared on an atomic military transaction.
+static func commit_scopes(state: GameState, candidate: GameState) -> void:
+	state.law_in_force = candidate.law_in_force
+
+## Organization changes inherit delivered law versions without issuing a
+## new decree or replaying its effects. Every child's entry is independent.
+static func inherit_unit_scopes(state: GameState, source: String, children: Array) -> void:
+	var key := UNIT_PREFIX + source
+	if not state.law_in_force.has(key):
+		return
+	for child: String in children:
+		state.law_in_force[UNIT_PREFIX + child] = state.law_in_force[key].duplicate(true)
+
 ## The three laws that mirror a realm-wide metric: law -> metric key. The
 ## metric is the law's initial value and its display mirror (spec §2.5).
 const METRIC_OF := {"tax_rate": "tax_rate", "tariff_rate": "tariff_rate", "grain_ration": "grain_ration"}
@@ -78,17 +91,52 @@ static func value(repo: DataRepository, state: GameState, law: String, scope_cod
 		return metric_value(law, state, String(d["default"]))
 	return String(d["default"])
 
+## Snapshot exactly the version received here, never a decree still riding.
+static func received(repo: DataRepository, state: GameState, law: String, code: String) -> Dictionary:
+	var entry := _camp_read(state, ArmyGround.camped_by(repo, state, code), code, law)
+	if ArmySystem.is_foe(state, code):
+		# Foreign columns have independent received policies; crown decrees do not bind them.
+		entry = (state.foes.get(code, {}).get("received_laws", {}) as Dictionary).get(law, {})
+	return {"value": String(entry.get("value", def(repo, law).get("default", ""))),
+		"decree_id": int(entry.get("decree_id", 0))}
+
+
+## The captor follows the division delivered to its own column.
+static func prisoner_share(repo: DataRepository, state: GameState, holder: String) -> Dictionary:
+	var row := def(repo, "ransom_captor_share")
+	if String(row.get("kind", "")) != "range" or String(row.get("scope", "")) != "camp" \
+			or row.get("values", []) != [0, 1000] or not allowed(repo, "ransom_captor_share", String(row.get("default", ""))):
+		return {"error": "The received ransom share has no valid camp range law."}
+	var entry := received(repo, state, "ransom_captor_share", holder)
+	if not allowed(repo, "ransom_captor_share", String(entry["value"])):
+		return {"error": "The received ransom share is outside the lawful range."}
+	return {"permille": int(entry["value"]), "received": entry}
+
+
+## Execution is never a disposition; an accepted ransom protection remains binding.
+static func prisoner_refusal(repo: DataRepository, state: GameState, batch: Dictionary, kind: String) -> String:
+	if not kind in ["ransom", "exchange", "release"]:
+		return "That prisoner disposition is not available."
+	if kind != "ransom":
+		return ""
+	if int(batch.get("commoners", 0)) > 0 or int(batch.get("nobles", 0)) <= 0:
+		return "Only noble prisoners may be ransomed."
+	if bool(batch.get("ransom_protected", false)):
+		return ""
+	var battle_id := int(batch.get("battle_id", -1))
+	var battle := BattleSystem.battle_by_id(state, battle_id)
+	if battle.is_empty():
+		battle = state.battle_records.get(str(battle_id), {})
+	if BattleRules._policy(battle, "noble_ransom", state.absolute_day()) == "allow":
+		return ""
+	if String(received(repo, state, "ransom", String(batch.get("holder_code", "")))["value"]) != "ransom":
+		return "The holder's received military law does not permit ransom."
+	return ""
+
+
 ## `law`'s entry in the place `key` ({value, decree_id}), {} for none.
 static func _entry_of(state: GameState, key: String, law: String) -> Dictionary:
 	return (state.law_in_force.get(key, {}) as Dictionary).get(law, {})
-
-
-## Split descendants inherit the saved decree history, independently of their new camps.
-static func inherit_unit_laws(state: GameState, source: String, children: Array) -> void:
-	var key := UNIT_PREFIX + source
-	if state.law_in_force.has(key):
-		for code: String in children:
-			state.law_in_force[UNIT_PREFIX + code] = state.law_in_force[key].duplicate(true)
 
 
 ## What a unit camped by `town` ("" for none) follows of a camp law: the
@@ -238,6 +286,12 @@ static func seed(repo: DataRepository, state: GameState) -> void:
 	for law: String in repo.law_order:
 		state.law_decree[law] = {"value": metric_value(law, state, String(repo.laws[law]["default"])),
 			"decree_id": 0, "day": 0}
+	for code: String in state.foes:
+		var received_laws := {}
+		for law: String in repo.law_order:
+			if String(repo.laws[law]["scope"]) == "camp":
+				received_laws[law] = {"value": String(repo.laws[law]["default"]), "decree_id": 0}
+		state.foes[code]["received_laws"] = received_laws
 	for code: String in MapOwnership.provinces_of(repo, state, repo.resolve_realm("player_realm")):
 		var entry := {}
 		for law: String in repo.law_order:
@@ -649,10 +703,22 @@ static func delivery(repo: DataRepository, state: GameState, law: String) -> Dic
 ## The couriers of the standing decree of `law` still on the road.
 static func _riders(state: GameState, law: String) -> Array:
 	var id := _decree_id(state, law)
-	return state.couriers.filter(func(c: Dictionary) -> bool:
-		var o := CourierSystem.first_order(c)
-		return String(o.get("action_code", "")) == ACTION and String(o.get("law", "")) == law \
-			and int(o.get("decree_id", -1)) == id)
+	var out: Array = []
+	for c: Dictionary in state.couriers:
+		var recipients: Array = [{"target": c.get("target", ""), "orders": CourierSystem.orders_of(c)}]
+		recipients.append_array(c.get("recipient_queue", []))
+		for recipient: Dictionary in recipients:
+			var orders: Array = recipient.get("orders", [])
+			if orders.is_empty():
+				continue
+			var order: Dictionary = orders[0]
+			if String(order.get("action_code", "")) != ACTION or String(order.get("law", "")) != law or int(order.get("decree_id", -1)) != id:
+				continue
+			var rider := c.duplicate(true)
+			rider["orders"] = orders.duplicate(true)
+			rider["pending_recipient"] = String(recipient["target"])
+			out.append(rider)
+	return out
 
 
 ## The places the standing decree of `law` has not reached (the laws

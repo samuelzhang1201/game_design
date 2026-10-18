@@ -1,4 +1,5 @@
 extends GutTest
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 const H := preload("res://tests/engine/conduct_helpers.gd")
 ## The marshal's report (spec 2026-10-10-foraging-and-desertion §3.3, §4): the
@@ -85,7 +86,7 @@ func test_stripped_bare_event_names_the_last_taker() -> void:
 		if row.has(arm):
 			row[arm] = "0"
 	row["infantry"] = "100000"
-	SuiteData.set_headcount(state, first, 100000)
+	assert_false(Personnel.replace(repo, state, first, 100000).has("error"))
 	state.regiments[first]["supplies"] = 0
 	state.regiments[first]["carry_days"] = 30
 	state.regiments[first]["forage"] = "desperate"

@@ -18,8 +18,12 @@ func before_each() -> void:
 	s.metrics["lord_civil"] = 100.0
 	# the supply lines are the regiments' own now: the first land regiment
 	# runs one (spec 2026-10-07-army-supply-lines)
-	s.supply_lines[_first_land()] = SupplyLines._new_record(TownStores.realm_towns(data, s)[0], 1000, 1)
-	s.supply_lines[_first_land()]["state"] = SupplyLines.FLOWING
+	var code := _first_land()
+	assert_ne(code, "", "a field unit has a reachable, unblocked rear supply town")
+	var town := _supply_town(code)
+	assert_ne(town, "")
+	s.supply_lines[code] = SupplyLines._new_record(town, 1000, 1)
+	s.supply_lines[code]["state"] = SupplyLines.FLOWING
 
 func after_each() -> void:
 	RealmEconomy.forget()
@@ -38,17 +42,32 @@ func _govern(seat: String, skill: String, value: int, traits: Array) -> Characte
 ## that eats a unit a day or more (a small unit's day may draw none) is
 ## marched out.
 func _first_land() -> String:
+	if not s.supply_lines.is_empty():
+		return String(s.supply_lines.keys()[0])
 	var codes: Array = s.regiments.keys()
 	codes.sort()
 	for c in codes:
-		if _in_field(String(c)):
+		if _in_field(String(c)) and _supply_town(String(c)) != "":
 			return String(c)
 	for c in codes:
 		var reg := ArmySystem.regiment(data, String(c), s)
 		if String(reg.get("is_naval", "0")) != "1" and ArmyGround.seated_in(data, s, String(c)) == "" \
 				and ArmySystem.supply_use(data, reg, s) >= Calendar.DAYS_PER_TICK:
+			var previous: Dictionary = s.regiments[c].duplicate(true)
 			ArmySystem.set_march(data, s, String(c), ArmySystem.position_of(data, s, reg) + Vector2(40.0, 0.0))
-			return String(c)
+			if _supply_town(String(c)) != "":
+				return String(c)
+			s.regiments[c] = previous
+	return ""
+
+## A FLOWING fixture must satisfy the actual road and frontier rules.
+func _supply_town(code: String) -> String:
+	var eligible := SupplyLines.mark_ahead(data, s, code, SupplyLines.eligibility(data, s, code))
+	var towns := eligible.keys()
+	towns.sort()
+	for town: String in towns:
+		if String(eligible[town]) == "" and SupplyLines.cut_point(data, s, SupplyLines.road_px(data, s, code, town)).is_empty():
+			return town
 	return ""
 
 func _in_field(code: String) -> bool:

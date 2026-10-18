@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - 一天 8 秒，1/2/4 倍速对应 8/4/2 秒；30 天一月；不自动慢速。
-- 首次遭遇自动暂停一次，未确认前零伤亡；普通援军不重复首次暂停。
+- 每场首次遭遇自动暂停一次，该场未确认前零伤亡；普通援军不重复首次暂停。
 - 暂停不积攒补跑时间；选择后保持暂停，由玩家恢复。
 - 无疲劳、紧急弃营或失联人员；引擎纯逻辑、确定性、单 JSON，所有数字状态为整数。
 - 使用总计划的测试、隔离工作区、编辑器外观和 PR 流程。
@@ -44,7 +44,7 @@ static func begin(day: int, month_end: bool) -> Dictionary
 static func acknowledge(tx: Dictionary, token: String, choice: String) -> Dictionary
 # TickEngine：唯一日推进入口；结果 status = blocked | complete。
 func resolve_day(state: GameState) -> Dictionary
-# BattleSystem：先发现所有遭遇，再逐战场推进。
+# BattleSystem：每个固定子步发现接触，各场首轮前确认，再逐战场推进。
 static func prepare_day(repo: DataRepository, state: GameState) -> Array
 static func step_battle(repo: DataRepository, state: GameState, battle_id: int) -> Dictionary
 static func finish_day(repo: DataRepository, state: GameState) -> void
@@ -82,7 +82,7 @@ WORKS → MARCH_ORDERS_AND_ROUTE_SETUP → COURIERS → AI_AND_SCOUT → SIGHTIN
 - [x] 把 `advance()` 月结算正文抽成不再调用 `_end_day` 的内部方法。保留 tick==0 的开局初始化特例及既有 advance 的“一次日处理加月结算”兼容语义，不偷改成补跑余下整月。生产普通日和第30天只从 resolve_day 进入；已有事务的 month_end 不受中途切换入口影响。迁移所有调用点，兼容方法不得绕过 pending_decision。
 - [x] 检查 `tests/invasion_play.gd`、`tools/sim_invasion.gd`、`tools/chapter0_numbers.gd` 等逐日调用者。测试或批量模拟只有显式选择自动确认首遇的策略才可续跑；默认应返回 blocked，不允许生产代码偷偷确认，也不能在阻塞日无限循环。批量工具输出阻塞原因与决策 token。
 - [x] 把现有移动及战斗推进重构为统一固定整数子步；在单一顺序中执行行军/战术位移、真实接触检测、战斗组推进与结算。显式移除被替代的日末重复移动/整日伤亡调用；同一单位/人员组每一子步至多推进一次。战力系数沿用P4，不在P1调平衡。
-- [x] 每个子步的真实接触在本子步伤亡结算前建立可保存遭遇决策；确认前不执行组级攻击/伤亡。多个新遭遇逐一确认后，本子步按稳定 ID 推进尚未交战的战场；阻塞时保存子步、battle_index和输出，不重放已完成战斗或子步。
+- [x] 每个子步的真实接触在本子步伤亡结算前建立可保存遭遇决策；确认前不执行组级攻击/伤亡。每场新遭遇须在该场首轮前确认；本子步按稳定 ID 推进已确认且尚未交战的战场；阻塞时保存子步、battle_index和输出，不重放已完成战斗或子步。
 - [x] 加入固定子步接触/恢复时序：真实单位在同一子步接触并阻塞；保存的子步游标停在接触处且伤亡为0，JSON 往返确认后该战斗的 round 事件带相同子步索引，位置/hash 与不中断续跑一致。旧的“全部移动后日末接触”手算不再适用。
 - [x] 验证后续子步援军：首个子步先交战，援军在后续子步加入同一仍存续战场；当日不重开第二轮，次日 round 事件的参战名单包含该援军。
 - [x] 跑步补给留P4实现，本阶段只固定同一子步事务接口和供给journal顺序；不得先在日末按跑步扣一次、再在子步重复扣。月末薪资和经营仍仅在所有战术子步完成后结算一次。
@@ -101,7 +101,7 @@ P1 的第二战场事件用测试侧可控处理器验证事务续跑，不提�
 
 ### 批准的 P1.1 战役验收修订（2026-10-17）
 
-用户选择接触与战斗均在固定移动子步内立即处理。首次遭遇仍在任何伤亡前阻塞确认；确认后该子步推进尚未交战战场的一轮，之后才进入下一子步。保留有意义的弱/强防守差异、伤亡守恒、每日每场最多一轮、子步援军下日参战、捕城时 HOLD 及之后既有撤退行为；旧的强守不陷城和特定伤亡上限不再作为门槛，因为它们依赖旧接触名单。不得调平衡系数或把观察到的日期/伤亡数写成目标值。
+用户选择接触与战斗均在固定移动子步内立即处理。首次遭遇仍在该场任何伤亡前阻塞确认；确认后该子步推进尚未交战战场的一轮，之后才进入下一子步。保留有意义的弱/强防守差异、伤亡守恒、每日每场最多一轮、子步援军下日参战、捕城时 HOLD 及之后既有撤退行为；旧的强守不陷城和特定伤亡上限不再作为门槛，因为它们依赖旧接触名单。不得调平衡系数或把观察到的日期/伤亡数写成目标值。
 
 - [x] 更新 `scripts/engine/guide/battle_and_ai.md` 日入口规则并运行 fast；P1.1 提交单独记录于 HANDOVER。
 

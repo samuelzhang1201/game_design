@@ -32,7 +32,8 @@ func _battle_root(two := false, day := 10, real_panel := false) -> GameRoot:
 	var root := _root()
 	root.set_process(false)
 	if not real_panel:
-		root._battle_encounter = EncounterPanelDouble.new()
+		root._battle_encounter = load("res://scenes/panels/battle_encounter_panel.tscn").instantiate()
+		root._battle_encounter.set_script(EncounterPanelDouble)
 		root._make_battle_encounter()
 	root._switch_to(GameRoot.State.COURT)
 	return root
@@ -160,7 +161,7 @@ func test_encounter_month_end_only_publishes_after_completion() -> void:
 	assert_signal_not_emitted(Game, "report_ready")
 	var blocked := Game.advance_day()
 	assert_eq(blocked.get("status"), "blocked")
-	assert_false(blocked.has("ticked"), "no completed-day output while blocked")
+	assert_false(bool(blocked.get("ticked", false)), "no completed-day output while blocked")
 	_confirm_encounter()
 	Game.toggle_clock()
 	root._process(0.0)

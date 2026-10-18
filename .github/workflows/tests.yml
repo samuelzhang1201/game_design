@@ -22,14 +22,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  gut-tests:
-    name: gut-tests (${{ matrix.shard }}/5)
+  gut-shards:
+    name: GUT shard ${{ matrix.shard }}/8
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: ${{ matrix.job_timeout || 45 }}
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5]
+        include:
+          - { shard: 1, slice: '1/10', test_timeout: 3600, job_timeout: 75 }
+          - { shard: 2, slice: '2/10' }
+          - { shard: 3, slice: '3/10' }
+          - { shard: 4, slice: '4/10' }
+          - { shard: 5, slice: '5/10' }
+          - { shard: 6, slice: '6/10' }
+          - { shard: 7, slice: '4/5' }
+          - { shard: 8, slice: '5/5' }
     env:
       GODOT_VERSION: 4.7-stable
       GODOT_DIR: ${{ github.workspace }}/.godot-bin
@@ -69,7 +77,7 @@ jobs:
       - name: Run GUT shard
         env:
           GODOT: ${{ env.GODOT_DIR }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
-          TEST_TIMEOUT_SECONDS: 2100
+          TEST_TIMEOUT_SECONDS: ${{ matrix.test_timeout || 2100 }}
         run: |
           chmod +x "$GODOT"
           # Mirror the cloud session's two-pass import (CLAUDE.md: the first
@@ -82,5 +90,17 @@ jobs:
             exit "$code"
           fi
           # Separate runners bound memory and avoid a shared wall-clock limit.
-          # The five contiguous slices retain their existing script order.
-          ./run_tests.sh --shard=${{ matrix.shard }}/5
+          # Split the three slow engine slices; retain the map/UI slices so
+          # map hover/picking tests keep their existing shared setup order.
+          lscpu
+          time ./run_tests.sh --shard=${{ matrix.slice }}
+
+  gut-tests:
+    if: ${{ always() }}
+    needs: gut-shards
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every GUT shard to pass
+        env:
+          SHARD_RESULT: ${{ needs.gut-shards.result }}
+        run: test "$SHARD_RESULT" = success

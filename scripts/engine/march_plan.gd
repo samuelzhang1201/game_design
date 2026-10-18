@@ -20,7 +20,7 @@ static func carry_rows(repo: DataRepository, state: GameState, code: String, des
 		return out
 	var use := ArmySystem.supply_use(repo, reg, state)
 	var ride := CourierSystem.eta_days(repo, state, CourierSystem.ORDINARY, code) \
-		if CourierSystem.carries_orders(reg) else 0
+		if CourierSystem.carries_orders(reg) and not KingSystem.can_command(repo, state, code) else 0
 	var topped := SupplyLines.home_town(repo, state, code) != ""
 	var held := int(entry.get("supplies", 0))
 	for row: Dictionary in repo.army_carry_loads:

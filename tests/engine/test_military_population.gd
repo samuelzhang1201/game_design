@@ -1,164 +1,156 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Population := preload("res://scripts/engine/military_population.gd")
+const Roster := preload("res://scripts/engine/military_roster.gd")
+var repo: DataRepository
+var state: GameState
+var province: String
 
-func test_population_ledger_exists() -> void:
-	var path := "res://scripts/engine/military_population.gd"
-	var subject: GDScript = load(path) if ResourceLoader.exists(path) else null
-	assert_not_null(subject, "population availability has one personnel source")
+func before_each() -> void:
+	repo = SuiteData.repo()
+	state = SuiteData.campaign(repo, 42)
+	# This fixture exercises a fresh explicit enlistment, not the opening host.
+	state.military_rosters.clear()
+	state.military_cohorts.clear()
+	state.military_events.clear()
+	state.military_migration.clear()
+	repo.balance["recruitment_eligible_permille"] = 1000
+	province = MapOwnership.provinces_of(repo, state, repo.resolve_realm("player_realm"))[0]
+	state.world[_path("rural_population")] = 1000
+	state.world[_path("urban_population")] = 500
 
-func _fixture() -> Dictionary:
-	var repo := SuiteData.repo()
-	var state := GameState.new()
-	state.rng = Rng.new(7)
-	var provinces := repo.world_table("economy", "provinces").keys()
-	provinces.sort()
-	var province: String = provinces[0]
-	state.world["economy.provinces.%s.rural_population" % province] = 1000
-	state.world["economy.provinces.%s.urban_population" % province] = 500
-	return {"repo": repo, "state": state, "province": province}
+func _path(field: String) -> String:
+	return "economy.provinces.%s.%s" % [province, field]
 
-func _cohort(id: String, province: String, field: String, amount: int) -> Dictionary:
+func _recruit(id: String, count: int, field := "rural_population", stage := "active") -> Dictionary:
 	return {"id": id, "unit_code": "unit", "source_province": province,
 		"source_population_field": field, "identity": "commoner", "family_name": "",
-		"stage": "active", "initial": amount, "fit": amount, "wounded": 0,
-		"captured_current": 0, "dead": 0, "released": 0}
+		"stage": stage, "count": count}
 
-func test_mobilization_death_capture_release_conserve_source_people() -> void:
-	var roster: GDScript = load("res://scripts/engine/military_roster.gd")
-	var population: GDScript = load("res://scripts/engine/military_population.gd")
-	var f := _fixture()
-	var repo: DataRepository = f.repo
-	var s: GameState = f.state
-	var p: String = f.province
-	var rural := "rural_population"
-	var recruits := [_cohort("rural", p, rural, 600)]
-	assert_false(roster.mobilize(repo, s, "raise", recruits, "called to service").has("error"))
-	assert_eq(population.available(repo, s, p, rural), 400)
-	assert_eq(population.occupied(s, p, rural), 600)
-	var deaths := [{"cohort_id": "rural", "from": "fit", "to": "dead", "count": 40}]
-	assert_false(roster.transition(repo, s, "deaths", deaths, "battle losses").has("error"))
-	assert_eq(WorldLedger.value_of(repo, s, "economy.provinces.%s.%s" % [p, rural]), 960)
-	assert_eq(population.occupied(s, p, rural), 560)
-	assert_eq(population.available(repo, s, p, rural), 400)
-	var captures := [{"cohort_id": "rural", "from": "fit", "to": "captured_current", "count": 60}]
-	assert_false(roster.transition(repo, s, "capture", captures, "taken prisoner").has("error"))
-	assert_eq(population.occupied(s, p, rural), 560)
-	var release := [{"cohort_id": "rural", "from": "captured_current", "to": "released", "count": 60}]
-	assert_false(roster.transition(repo, s, "release", release, "returned to civilian life").has("error"))
-	assert_eq(population.occupied(s, p, rural), 500)
-	assert_eq(population.available(repo, s, p, rural), 460)
-	assert_true(roster.transition(repo, s, "deaths", deaths, "battle losses").duplicate)
-	assert_true(roster.transition(repo, s, "release", release, "returned to civilian life").duplicate)
-	assert_eq(WorldLedger.value_of(repo, s, "economy.provinces.%s.%s" % [p, rural]), 960)
-	assert_eq(population.available(repo, s, p, rural), 460)
-	assert_eq(roster.living(s, "unit"), 500)
-	assert_eq(roster.fit(s, "unit"), 500)
+func _change(id: String, from_status: String, to_status: String, count: int) -> Dictionary:
+	return {"cohort_id": id, "from": from_status, "to": to_status, "count": count}
 
-func test_proportional_losses_only_reduce_their_sources_once() -> void:
-	var roster: GDScript = load("res://scripts/engine/military_roster.gd")
-	var f := _fixture()
-	var repo: DataRepository = f.repo
-	var s: GameState = f.state
-	var p: String = f.province
-	assert_false(roster.mobilize(repo, s, "raise", [
-		_cohort("rural", p, "rural_population", 80),
-		_cohort("urban", p, "urban_population", 20)], "called to service").has("error"))
-	var changes: Array = roster.plan_changes(s, "unit", "fit", "dead", 10)
-	assert_false(roster.transition(repo, s, "loss", changes, "battle losses").has("error"))
-	assert_eq(WorldLedger.value_of(repo, s, "economy.provinces.%s.rural_population" % p), 992)
-	assert_eq(WorldLedger.value_of(repo, s, "economy.provinces.%s.urban_population" % p), 498)
-	assert_eq(s.world_log.size(), 2)
-	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
-	assert_eq(restored.military_cohorts, s.military_cohorts)
-	assert_eq(roster.fit(restored, "unit"), 90)
-	assert_true(roster.transition(repo, restored, "loss", changes, "battle losses").duplicate)
+func test_death_capture_release_conserve_original_population() -> void:
+	assert_false(Roster.mobilize(repo, state, "raise", [_recruit("c", 600)], "levy raised").has("error"))
+	assert_eq(Population.occupied(state, province, "rural_population"), 600)
+	assert_eq(Population.available(repo, state, province, "rural_population"), 400)
+	assert_false(Roster.transition(repo, state, "death", [_change("c", "fit", "dead", 40)], "battle loss").has("error"))
+	assert_eq(int(WorldLedger.value_of(repo, state, _path("rural_population"))), 960)
+	assert_eq(Population.occupied(state, province, "rural_population"), 560)
+	assert_eq(Population.available(repo, state, province, "rural_population"), 400)
+	Roster.transition(repo, state, "capture", [_change("c", "fit", "captured_current", 60)], "surrender accepted")
+	assert_eq(Population.occupied(state, province, "rural_population"), 560)
+	Roster.transition(repo, state, "release", [_change("c", "captured_current", "released", 60)], "prisoners released")
+	assert_eq(Population.occupied(state, province, "rural_population"), 500)
+	assert_eq(Population.available(repo, state, province, "rural_population"), 460)
+	assert_eq(int(WorldLedger.value_of(repo, state, _path("rural_population"))), 960)
+	assert_eq(Roster.fit(state, "unit"), 500)
+	assert_eq(Roster.living(state, "unit"), 500)
 
-func test_mobilization_rejects_overbooked_sources_and_conflicts_atomically() -> void:
-	var roster: GDScript = load("res://scripts/engine/military_roster.gd")
-	var f := _fixture()
-	var s: GameState = f.state
-	var p: String = f.province
-	var a := _cohort("a", p, "rural_population", 600)
-	var b := _cohort("b", p, "rural_population", 401)
-	assert_true(roster.mobilize(f.repo, s, "raise", [a, b], "called to service").has("error"))
-	assert_true(s.military_cohorts.is_empty())
-	assert_true(s.military_events.is_empty())
-	s.military_conflicts.append(p)
-	assert_true(roster.mobilize(f.repo, s, "raise", [a], "called to service").has("error"))
-	assert_true(s.military_cohorts.is_empty())
+func test_two_origins_and_failed_batch_are_atomic() -> void:
+	Roster.mobilize(repo, state, "raise", [_recruit("r", 80), _recruit("u", 20, "urban_population")], "levy raised")
+	var before := SaveLoad.state_hash(state)
+	var invalid := [_change("r", "fit", "dead", 8), _change("u", "fit", "dead", 21)]
+	assert_true(Roster.transition(repo, state, "loss", invalid, "battle loss").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before, "no partial rural death or consumed token")
+	assert_false(Roster.transition(repo, state, "loss", [_change("r", "fit", "dead", 8), _change("u", "fit", "dead", 2)], "battle loss").has("error"))
+	assert_eq(int(WorldLedger.value_of(repo, state, _path("rural_population"))), 992)
+	assert_eq(int(WorldLedger.value_of(repo, state, _path("urban_population"))), 498)
+	assert_eq(Roster.living(state, "unit"), 90)
 
-func test_transition_batch_is_atomic_and_terminal_states_cannot_reenter() -> void:
-	var roster: GDScript = load("res://scripts/engine/military_roster.gd")
-	var f := _fixture()
-	var s: GameState = f.state
-	var p: String = f.province
-	assert_false(roster.mobilize(f.repo, s, "raise", [_cohort("a", p, "rural_population", 100)], "called to service").has("error"))
-	var before := s.to_dict()
-	assert_true(roster.transition(f.repo, s, "bad", [
-		{"cohort_id": "a", "from": "fit", "to": "dead", "count": 60},
-		{"cohort_id": "a", "from": "fit", "to": "wounded", "count": 60}], "battle losses").has("error"))
-	assert_eq(s.to_dict(), before)
-	var moves := [{"from": "fit", "to": "dead", "count": 40}, {"from": "fit", "to": "wounded", "count": 60}]
-	var planned: Array = roster.plan_unit_changes(s, "unit", moves)
-	assert_false(roster.transition(f.repo, s, "good", planned, "battle losses").has("error"))
-	assert_eq(roster.fit(s, "unit"), 0)
-	assert_eq(roster.living(s, "unit"), 60)
-	assert_true(roster.transition(f.repo, s, "revive", [{"cohort_id": "a", "from": "dead", "to": "fit", "count": 1}], "invalid return").has("error"))
-	assert_true(roster.transition(f.repo, s, "good", [], "different reason").has("error"))
+func test_wounded_captives_and_recovery_use_mutually_exclusive_counts() -> void:
+	Roster.mobilize(repo, state, "raise", [_recruit("c", 100)], "levy raised")
+	Roster.transition(repo, state, "wound", [_change("c", "fit", "wounded", 20)], "wounds")
+	Roster.transition(repo, state, "heal", [_change("c", "wounded", "fit", 5)], "recovery")
+	assert_eq(Roster.fit(state, "unit"), 85)
+	assert_eq(Roster.living(state, "unit"), 100)
+	Roster.transition(repo, state, "capture", [_change("c", "fit", "captured_current", 50), _change("c", "wounded", "captured_current", 10)], "surrender accepted")
+	assert_eq(Roster.fit(state, "unit"), 35)
+	assert_eq(Roster.living(state, "unit"), 40)
+	assert_eq(Population.occupied(state, province, "rural_population"), 100)
+	assert_eq(int(state.military_cohorts.get("c", {}).get("captured_current", -1)), 60)
+	assert_eq(int(state.military_cohorts.get("c", {}).get("wounded", -1)), 5)
 
-func test_historical_service_preserves_overcapacity_and_blocks_new_mobilization() -> void:
-	var roster: GDScript = load("res://scripts/engine/military_roster.gd")
-	var population: GDScript = load("res://scripts/engine/military_population.gd")
-	var f := _fixture()
-	var s: GameState = f.state
-	var p: String = f.province
-	var recruits := [_cohort("old", p, "rural_population", 1100)]
-	assert_false(roster.initialize_historical(f.repo, s, "old-army", recruits, "existing service migrated").has("error"))
-	assert_eq(roster.fit(s, "unit"), 1100)
-	assert_true(s.military_conflicts.has(p))
-	assert_eq(population.available(f.repo, s, p, "rural_population"), 0)
-	assert_eq(WorldLedger.value_of(f.repo, s, "economy.provinces.%s.rural_population" % p), 1000)
-	assert_true(roster.initialize_historical(f.repo, s, "old-army", recruits, "existing service migrated").duplicate)
-	assert_eq(s.military_cohorts.size(), 1)
+func test_duplicate_after_json_does_not_repeat_and_changed_request_is_refused() -> void:
+	Roster.mobilize(repo, state, "raise", [_recruit("c", 100)], "levy raised")
+	var changes := [_change("c", "fit", "dead", 10)]
+	Roster.transition(repo, state, "loss", changes, "battle loss")
+	var original_hash := SaveLoad.state_hash(state)
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())))
+	assert_eq(SaveLoad.state_hash(state), original_hash, "integer event facts survive JSON exactly")
+	var before := SaveLoad.state_hash(state)
+	assert_false(Roster.transition(repo, state, "loss", changes, "battle loss").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+	assert_true(Roster.transition(repo, state, "loss", [_change("c", "fit", "dead", 11)], "battle loss").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
 
-func test_named_people_cannot_serve_twice_and_wounds_remove_command() -> void:
-	var roster: GDScript = load("res://scripts/engine/military_roster.gd")
-	var f := _fixture()
-	var s: GameState = f.state
-	var p: String = f.province
-	var person := Character.new()
-	person.id = "officer"
-	person.family_name = "Family"
-	s.characters[person.id] = person
-	var noble := _cohort("noble", p, "rural_population", 2)
-	noble.identity = "noble"
-	assert_false(roster.mobilize(f.repo, s, "raise", [noble], "called to service").has("error"))
-	var named: String = roster.bind_person(s, "unit", person.id, "noble", "appointed to command")
-	assert_ne(named, "")
-	assert_eq(roster.fit(s, "unit"), 2)
-	assert_eq(s.military_cohorts[named].initial, 1)
-	assert_eq(roster.bind_person(s, "unit", person.id, "noble", "duplicate service"), "")
-	var duplicate := _cohort("duplicate", p, "rural_population", 1)
-	duplicate.identity = "noble"
-	duplicate.person_id = person.id
-	assert_true(roster.mobilize(f.repo, s, "duplicate", [duplicate], "duplicate service").has("error"))
-	s.military_rosters.unit.commander_id = person.id
-	assert_false(roster.transition(f.repo, s, "wound", [{"cohort_id": named, "from": "fit", "to": "wounded", "count": 1}], "commander wounded").has("error"))
-	assert_eq(s.military_rosters.unit.commander_id, "")
-	assert_eq(s.military_rosters.unit.appointments[-1].reason, "commander wounded")
-	assert_false(roster.transition(f.repo, s, "recover", [{"cohort_id": named, "from": "wounded", "to": "fit", "count": 1}], "commander recovered").has("error"))
-	assert_eq(s.military_rosters.unit.commander_id, "")
+func test_gathering_is_reserved_once_and_released_people_need_new_enlistment() -> void:
+	Roster.mobilize(repo, state, "raise", [_recruit("c", 600, "rural_population", "assembling")], "paid recruitment")
+	state.recruitment_projects["project"] = {"cohort_ids": ["c"], "completion_day": 2}
+	assert_eq(Population.occupied(state, province, "rural_population"), 600)
+	assert_eq(Roster.fit(state, "unit"), 0)
+	var before := SaveLoad.state_hash(state)
+	assert_true(Roster.mobilize(repo, state, "overbook", [_recruit("d", 401)], "extra levy").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+	Roster.transition(repo, state, "discharge", [_change("c", "fit", "released", 60)], "cancelled recruitment")
+	before = SaveLoad.state_hash(state)
+	assert_true(Roster.transition(repo, state, "undo", [_change("c", "released", "fit", 60)], "automatic return").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
 
-func test_missing_source_death_rolls_back_entire_batch() -> void:
-	var roster: GDScript = load("res://scripts/engine/military_roster.gd")
-	var f := _fixture()
-	var s: GameState = f.state
-	var p: String = f.province
-	assert_false(roster.mobilize(f.repo, s, "raise", [
-		_cohort("rural", p, "rural_population", 80),
-		_cohort("urban", p, "urban_population", 20)], "called to service").has("error"))
-	s.world["economy.provinces.%s.urban_population" % p] = 0
-	var before := s.to_dict()
-	var changes: Array = roster.plan_changes(s, "unit", "fit", "dead", 10)
-	assert_true(roster.transition(f.repo, s, "loss", changes, "battle losses").has("error"))
-	assert_eq(s.to_dict(), before)
+func test_invalid_origins_and_reason_cannot_change_state() -> void:
+	var before := SaveLoad.state_hash(state)
+	var invalid := _recruit("c", 100, "grain")
+	assert_true(Roster.mobilize(repo, state, "raise", [invalid], "levy raised").has("error"))
+	invalid = _recruit("c", 100)
+	invalid["source_province"] = "unknown"
+	assert_true(Roster.mobilize(repo, state, "raise", [invalid], "levy raised").has("error"))
+	assert_true(Roster.mobilize(repo, state, "raise", [_recruit("c", 100)], "").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+
+func test_inconsistent_origin_cannot_partially_apply_a_death() -> void:
+	Roster.mobilize(repo, state, "raise", [_recruit("c", 600)], "levy raised")
+	state.world[_path("rural_population")] = 500  # legacy conflict to be reported, not hidden
+	var before := SaveLoad.state_hash(state)
+	assert_true(Roster.transition(repo, state, "loss", [_change("c", "fit", "dead", 10)], "battle loss").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before, "failed population write must not leave casualty changes")
+
+func test_fractional_personnel_are_refused_without_mutation() -> void:
+	var recruit := _recruit("c", 100)
+	recruit["count"] = 100.75
+	var before := SaveLoad.state_hash(state)
+	assert_true(Roster.mobilize(repo, state, "fraction", [recruit], "levy raised").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+	Roster.mobilize(repo, state, "raise", [_recruit("c", 100)], "levy raised")
+	var change := _change("c", "fit", "dead", 10)
+	change["count"] = 10.75
+	before = SaveLoad.state_hash(state)
+	assert_true(Roster.transition(repo, state, "loss", [change], "battle loss").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+
+func test_integral_json_counts_have_canonical_retry_payloads() -> void:
+	var recruit := _recruit("c", 100)
+	recruit["count"] = 100.0
+	recruit["unused_ui_progress"] = 0.75
+	assert_false(Roster.mobilize(repo, state, "raise", [recruit], "levy raised").has("error"))
+	var before := SaveLoad.state_hash(state)
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())))
+	assert_eq(SaveLoad.state_hash(state), before)
+	assert_false(Roster.mobilize(repo, state, "raise", [_recruit("c", 100)], "levy raised").has("error"))
+	assert_eq(SaveLoad.state_hash(state), before)
+
+func test_transition_cannot_consume_people_created_earlier_in_the_batch() -> void:
+	assert_false(Roster.mobilize(repo, state, "raise", [_recruit("c", 12)], "levy raised").has("error"))
+	assert_false(Roster.transition(repo, state, "prior_wounds", [_change("c", "fit", "wounded", 2)], "prior wounds").has("error"))
+	var before := state.to_dict()
+	assert_true(Roster.transition(repo, state, "chained", [
+		_change("c", "fit", "wounded", 5), _change("c", "wounded", "dead", 7)], "invalid chained loss").has("error"))
+	assert_eq(state.to_dict(), before, "original ten fit and two wounded remain untouched")
+
+func test_eligible_population_subtracts_service_and_promises_and_blocks_conflicts() -> void:
+	assert_false(Roster.mobilize(repo, state, "raise", [_recruit("c", 200)], "levy raised").has("error"))
+	assert_false(Roster.transition(repo, state, "release", [_change("c", "fit", "released", 20)], "civilian promise").has("error"))
+	state.military_cohorts.c.civilian_promises = [{"count": 20, "until_day": 0, "reason": "Civilian service promise"}]
+	repo.balance["recruitment_eligible_permille"] = 250
+	assert_eq(Population.available(repo, state, province, "rural_population"), 50, "1000 * 250 / 1000 - 180 - 20")
+	state.military_migration = {"recruitment_blocked": true, "conflicts": [province]}
+	assert_eq(Population.available(repo, state, province, "rural_population"), 0)

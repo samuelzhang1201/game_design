@@ -1,18 +1,7 @@
 @tool
 class_name Map3DView
 extends Control
-## The 3D map (owner 2026-09-18, the default map): an AUTHORED scene,
-## scenes/map3d/world_map_3d.tscn (spec 2026-09-20 §2) — create() instances
-## it, and on first activate _load() puts the BUILT world (tools/map3d; none
-## in a fresh clone, which shows the Notice) under WorldSlot and binds the
-## authored layers to it. Nothing generated is saved into the scene. A
-## COORDINATOR: rig, input, picker, selection, layers and HUD do the work; the
-## rest forwards to them under the API test_map3d_api.gd pins.
-## It renders into a SubViewport at WINDOW resolution × the graphics tier's
-## render_scale (Map3DQuality), shown by a TextureRect (Display) — never a
-## SubViewportContainer, which under the canvas_items stretch renders at design
-## size and blurs. Controls: the wheel and a pinch zoom about the pointer, a
-## left, middle or two-finger drag pans, a right drag turns, WASD / arrows pan.
+## Authored map scene; delegates to layers under the API test_map3d_api.gd pins.
 
 ## The described entry of the settlement under a click ({title, obj}), or
 ## {} when the selection is cleared — WorldMapView's signal.
@@ -25,6 +14,7 @@ signal country_hovered(kingdom_code: String)
 ## A right CLICK (not a turn) on one of the player's regiments: ArmyOrderMenu
 ## opens over it. `at` is design px in this view.
 signal army_menu_requested(code: String, at: Vector2)
+signal king_menu_requested(at: Vector2)
 ## Where on the pack a left click landed — an order being AIMED needs the
 ## ground, not the thing picked.
 signal ground_clicked(pack_px: Vector2, screen_px: Vector2)
@@ -71,6 +61,7 @@ var _scene_path := ""
 @onready var _houses: Map3DLayerHouses = $Viewport/World/Houses
 @onready var _trees: Map3DLayerTrees = $Viewport/World/Trees
 @onready var _units: Map3DLayerUnits = $Viewport/World/Units
+@onready var _king: Map3DKing = $Viewport/World/King
 @onready var _dust: Map3DLayerDust = $Viewport/World/Dust
 @onready var _couriers: Map3DLayerCouriers = $Viewport/World/Couriers
 @onready var _env: Map3DSky = $Viewport/World/Environment
@@ -92,6 +83,8 @@ var _picker := Map3DPicker.new()
 var _selection := Map3DSelection.new()
 var _supply := Map3DSupplyLines.new()  # the supply lines and the pick's rings (spec 2026-10-07)
 var _input := Map3DInput.new()
+var _battle_snapshot: Dictionary = {}
+var _snapshot: Dictionary = {}
 var _meta: Dictionary = {}
 var _loaded := false
 var _tried := false
@@ -253,6 +246,9 @@ func _load_world() -> bool:
 	_houses.bind(_ctx)
 	_ctx.dev = _dev
 	_units.bind(_ctx)
+	_king.bind(_ctx)
+	apply_snapshot(_snapshot)
+	apply_battle_snapshot(_battle_snapshot)
 	_dust.bind(_ctx)  # the dust the columns raise (owner 2026-10-07)
 	_couriers.bind(_ctx)
 	_units.set_shown(_military)
@@ -411,6 +407,7 @@ func _process(delta: float) -> void:
 		_border_clock = 0.0
 		refresh_borders()
 	if _loaded:
+		_king.step(delta)
 		_weather.step()
 		_clouds.step(delta)
 		if _units.step(delta): _hud.refresh()  # the routes and the glow follow walking pieces
@@ -531,6 +528,10 @@ func _redraw_supply() -> void: _supply.redraw_pick()
 ## hit (SpyOrderMenu's "Send a spy here" opens); false only over the sky.
 func right_click(pos: Vector2) -> bool:
 	var picked := pick_at(pos)
+	if String(picked.get("kind", "")) == "king":
+		_selection.select(picked)
+		king_menu_requested.emit(pos)
+		return true
 	if String(picked.get("kind", "")) == "army":
 		army_menu_requested.emit(String(picked["code"]), pos)
 		return true
@@ -600,3 +601,34 @@ func set_layer_visible(layer: String, on: bool) -> void:
 func line_mesh(line_name: String) -> ArrayMesh: return _lines.line_mesh(line_name) if _loaded else null
 func marker_counts() -> Dictionary: return _markers.counts() if _loaded else {}
 func house_counts() -> Dictionary: return _houses.counts() if _loaded else {}
+
+
+## Copied presentation data from the UI bridge, safe before a world loads.
+func apply_snapshot(snapshot: Dictionary) -> void:
+	_snapshot = snapshot
+	if _ctx != null:
+		_king.apply_snapshot(snapshot)
+		_units.apply_snapshot(snapshot)
+
+## Battle renderers receive only the informed projection's map fields.
+func apply_battle_snapshot(snapshot: Dictionary) -> void:
+	_battle_snapshot = {"map_units": snapshot.get("map_units", {}).duplicate(true),
+		"battle_signals": snapshot.get("battle_signals", []).duplicate(true)}
+	if _units != null:
+		_units.apply_battle_snapshot(_battle_snapshot)
+
+
+func king_rect() -> Rect2:
+	return _king.screen_rect() if _king != null else Rect2()
+
+func select_king(on: bool) -> void:
+	if _king != null:
+		_king.selected = on
+
+func observe_king() -> void:
+	if _king != null:
+		_king.observe()
+
+
+func king_entry() -> Dictionary:
+	return Map3DKing.entry(_snapshot, _repo, _ctx.state() if _ctx != null else null)

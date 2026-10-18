@@ -152,8 +152,9 @@ static func in_reach(repo: DataRepository, town: String, p_m: Vector2i) -> bool:
 ## nearest to that point among the FREE slots of the first ring that has any (a
 ## column halted before a unit camps on the side it came from), the ring's own
 ## order breaking ties. `from_ring` > 0 starts the search at that ring whatever the arm.
+## `max_radius_m` >= 0 bounds every candidate to that circle round the centre.
 static func free_slot(repo: DataRepository, centre_m: Vector2i, arm: String, taken: Dictionary,
-		town: String, any_terrain := false, near_m := NONE, from_ring := 0) -> Vector2i:
+		town: String, any_terrain := false, near_m := NONE, from_ring := 0, max_radius_m := -1) -> Vector2i:
 	var radius := arm_radius(repo, arm)
 	if town == "" and is_free(repo, taken, centre_m, any_terrain, radius):
 		return centre_m
@@ -163,6 +164,8 @@ static func free_slot(repo: DataRepository, centre_m: Vector2i, arm: String, tak
 		var best_d := -1
 		for ax: Vector2i in ring(k):
 			var p := slot_m(centre_m, ax, spacing)
+			if max_radius_m >= 0 and MarchClearance.dist2(p, centre_m) > max_radius_m * max_radius_m:
+				continue
 			if town != "" and in_reach(repo, town, p):
 				continue
 			if is_free(repo, taken, p, any_terrain, radius):

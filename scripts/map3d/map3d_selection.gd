@@ -16,6 +16,7 @@ var province := ""
 var burg := ""
 ## The manor cell clicked under a theme, -1 for none.
 var manor := -1
+var king := false
 var army := ""
 ## The units selected together (spec §5.6); [army] after a plain click.
 var armies: Array = []
@@ -40,13 +41,28 @@ func click(picked: Dictionary, pos: Vector2) -> void:
 	select(picked)
 	if String(picked.get("kind", "")) == "army":
 		view.army_menu_requested.emit(String(picked["code"]), pos)
+	elif String(picked.get("kind", "")) == "king":
+		view.king_menu_requested.emit(pos)
 
 
 ## The click: a settlement opens its card, land names its province (its
 ## manor under a theme), the sea clears — exactly the signals WorldMapView
 ## sends.
 func select(picked: Dictionary) -> void:
+	if picked.is_empty():
+		clear()
+		return
+	king = String(picked.get("kind", "")) == "king"
+	view.select_king(king)
 	match String(picked.get("kind", "")):
+		"king":
+			army = ""
+			armies = []
+			burg = ""
+			_show_ring("")
+			_set_province("")
+			_refresh_hud()
+			object_selected.emit(view.king_entry())
 		"burg":
 			var code := String(picked["code"])
 			army = ""
@@ -146,7 +162,9 @@ func _mine(code: String) -> bool:
 
 ## The selection becomes `codes`; the card shows the first, or closes on none.
 func _select_armies(codes: Array) -> void:
-	var had := burg != "" or province != "" or manor >= 0 or army != ""   # as clear() counts it
+	var had := king or burg != "" or province != "" or manor >= 0 or army != ""
+	king = false
+	view.select_king(false)
 	armies = codes
 	army = String(armies[0]) if not armies.is_empty() else ""
 	burg = ""
@@ -162,7 +180,11 @@ func _select_armies(codes: Array) -> void:
 
 ## Forget the selection (the card was closed, or the sea clicked).
 func clear() -> void:
-	var had := burg != "" or province != "" or manor >= 0 or army != ""
+	var had_king := king
+	king = false
+	if view != null:
+		view.select_king(false)
+	var had := had_king or burg != "" or province != "" or manor >= 0 or army != ""
 	if army != "":
 		army = ""
 		armies = []

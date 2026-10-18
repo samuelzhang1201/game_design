@@ -44,17 +44,16 @@ func test_battle_retains_general_then_replaces_an_incapacitated_one() -> void:
 	var codes: Array = state.regiments.keys()
 	codes.sort()
 	var battle := {"att": [codes[0]], "def": [], "commanders": {}}
-	var subject: GDScript = load("res://scripts/engine/battle_command.gd")
-	assert_true(subject.has_method("update_battle"))
-	if not subject.has_method("update_battle"): return
-	subject.update_battle(repo, state, battle)
+	assert_false(BattleCommand.update_battle(repo, state, battle).has("error"))
 	var incumbent := String(battle.commanders.att)
 	assert_ne(incumbent, "")
 	battle.att.append(codes[1])
-	subject.update_battle(repo, state, battle)
+	assert_false(BattleCommand.update_battle(repo, state, battle).has("error"))
 	assert_eq(battle.commanders.att, incumbent)
-	state.characters[incumbent].flags.append("captured")
-	subject.update_battle(repo, state, battle)
+	var incumbent_cohort := String(state.military_rosters[codes[0]].commander_cohort_id)
+	assert_false(MilitaryRoster.transition(repo, state, "general:captured", [
+		{"cohort_id": incumbent_cohort, "from": "fit", "to": "captured_current", "count": 1}], "General captured in battle").has("error"))
+	assert_false(BattleCommand.update_battle(repo, state, battle).has("error"))
 	assert_ne(battle.commanders.att, incumbent)
 
 func test_battle_round_failure_leaves_both_sides_and_morale_unchanged() -> void:
@@ -103,18 +102,23 @@ func test_invalid_crew_capacity_refuses_a_new_campaign() -> void:
 	ArmySplit.forget()
 	assert_null(GameState.new_campaign(repo, 42))
 
-func test_crew_power_uses_fit_people_and_keeps_equipment() -> void:
+func test_crew_power_uses_equipment_scaled_by_fit_people() -> void:
 	var repo := SuiteData.repo()
-	var ship := {"fleet": "1"}
-	var guns := {"artillery": "2"}
-	assert_eq(ArmySystem.power_of_arms(repo, ship, 100, 50, 100, "attack", "plains", ""), 100)
-	assert_eq(ArmySystem.power_of_arms(repo, ship, 50, 50, 100, "attack", "plains", ""), 50)
-	assert_eq(ArmySystem.power_of_arms(repo, guns, 16, 50, 100, "attack", "plains", ""), 14)
-	assert_eq(ArmySystem.power_of_arms(repo, guns, 8, 50, 100, "attack", "plains", ""), 7)
+	# Neutral multipliers isolate two crew-eight equipment elements.
+	repo.world_row("military", "unit_types", "artillery")["crew"] = "8"
+	repo.balance["army_float_permille"] = 0
+	repo.balance["army_training_base_permille"] = 1000
+	repo.balance["army_training_step_permille"] = 0
+	repo.balance["army_morale_base_permille"] = 1000
+	repo.balance["army_morale_step_permille"] = 0
+	repo.army_matchups["artillery"] = []
+	var guns := {"artillery": 2}
+	var full := ArmySystem.power_of_arms(repo, guns, 16, 50, 100, "attack", "plains", "")
+	var half := ArmySystem.power_of_arms(repo, guns, 8, 50, 100, "attack", "plains", "")
+	assert_eq(full, 2)
+	assert_eq(half, 1)
 	assert_eq(ArmySystem.power_of_arms(repo, guns, 0, 50, 100, "attack", "plains", ""), 0)
-	assert_eq(ArmySystem.power_of_personnel(repo, {"fleet": 100}, 100, 50, 100, "attack", "plains", ""), 100)
-	assert_eq(ship, {"fleet": "1"})
-	assert_eq(guns, {"artillery": "2"})
+	assert_eq(guns, {"artillery": 2})
 
 func test_realm_personnel_by_arm_counts_mixed_crews_and_live_states() -> void:
 	var subject: GDScript = load("res://scripts/engine/army_system.gd")
@@ -134,7 +138,7 @@ func test_realm_personnel_by_arm_counts_mixed_crews_and_live_states() -> void:
 	for entry: Array in [["mixed", 80, 54, 7, 5, 8, 6], ["ship", 100, 70, 10, 10, 5, 5], ["guns", 16, 10, 2, 1, 2, 1]]:
 		var code := String(entry[0])
 		state.military_rosters[code] = {"cohort_ids": [code]}
-		state.military_cohorts[code] = {"unit_code": code, "initial": entry[1], "fit": entry[2], "wounded": entry[3], "captured_current": entry[4], "dead": entry[5], "released": entry[6]}
+		state.military_cohorts[code] = {"unit_code": code, "initial": entry[1], "fit": entry[2], "wounded": entry[3], "captured_current": entry[4], "dead": entry[5], "released": entry[6], "stage": "active"}
 	var before := state.to_dict()
 	var counts: Dictionary = subject.personnel_by_arm(repo, state, realm)
 	assert_eq(counts.infantry, 31, "61 active people apportioned40:40; stable first-arm remainder")
@@ -149,7 +153,10 @@ func test_realm_personnel_by_arm_counts_mixed_crews_and_live_states() -> void:
 	assert_eq(state.to_dict(), before, "the query never initializes or rewrites service")
 	state.military_rosters.erase("mixed")
 	state.regiments.mixed = {"wounded": 7, "captured_current": 5, "dead": 8, "deserted": 6}
-	assert_eq(subject.personnel_by_arm(repo, state, realm), counts, "legacy projection has the same personnel interpretation")
+	var missing: Dictionary = subject.personnel_by_arm(repo, state, realm)
+	assert_eq(int(missing.get("infantry", 0)), 0, "missing personnel never refill from equipment")
+	assert_eq(int(missing.get("cavalry", 0)), 0)
+	state.military_rosters.mixed = {"cohort_ids": ["mixed"]}
 	var foreign := repo.resolve_realm("raider_realm")
 	state.army_roster.foreign = {"regiment_code": "foreign", "kingdom_code": foreign, "infantry": "40", "cavalry": "20"}
 	state.military_rosters.foreign = {"cohort_ids": ["foreign"]}
@@ -159,3 +166,35 @@ func test_realm_personnel_by_arm_counts_mixed_crews_and_live_states() -> void:
 	assert_eq(theirs.infantry, 31, "foreign roster-only unit reads its cohort losses")
 	assert_eq(theirs.cavalry, 30)
 	assert_eq(subject.personnel_by_arm(repo, state, realm), counts, "foreign personnel never enter our total")
+
+func test_invalid_defender_nomination_preserves_both_commander_choices() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 42)
+	var players: Array = state.regiments.keys()
+	var foes: Array = state.foes.keys()
+	players.sort()
+	foes.sort()
+	var battle := {"att": [players[0]], "def": [foes[0]], "commanders": {},
+		"commander_nominees": {"def": "unknown"}}
+	var before := battle.duplicate(true)
+	var saved := state.to_dict()
+	assert_true(BattleCommand.update_battle(repo, state, battle).has("error"))
+	assert_eq(battle, before)
+	assert_eq(state.to_dict(), saved)
+
+func test_departure_eligibility_is_pure_and_casualty_removes_it() -> void:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 42)
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	var code: String = codes[0]
+	var roster: Dictionary = state.military_rosters[code]
+	var officer: String = roster.commander_id
+	var saved := state.to_dict()
+	assert_true(MilitaryCommanders.eligible_for_unit(repo, state, code, officer))
+	assert_eq(state.to_dict(), saved)
+	assert_false(MilitaryRoster.transition(repo, state, "depart:captured", [
+		{"cohort_id": roster.commander_cohort_id, "from": "fit", "to": "captured_current", "count": 1}], "Commander captured before departure").has("error"))
+	saved = state.to_dict()
+	assert_false(MilitaryCommanders.eligible_for_unit(repo, state, code, officer))
+	assert_eq(state.to_dict(), saved)

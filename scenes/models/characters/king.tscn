@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://pa5wk7nmifln"]
+
+[ext_resource type="Texture2D" uid="uid://dqmj00ksp7v2w" path="res://assets/3D/characters/king/king_cavalry_atlas.jpg" id="1_hxsdp"]
+[ext_resource type="PackedScene" uid="uid://cc6ijiwkex18" path="res://assets/3D/characters/king/king.glb" id="1_y6tao"]
+[ext_resource type="Texture2D" uid="uid://dnf3sfgyrj0uv" path="res://assets/3D/characters/king/king_cavalry_atlas_mr.jpg" id="2_y6tao"]
+[ext_resource type="Texture2D" uid="uid://dn7dj7nugptmr" path="res://assets/3D/characters/king/king_cavalry_atlas_n.jpg" id="3_3cuog"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3cuog"]
+resource_name = "KingBrass"
+cull_mode = 2
+albedo_color = Color(0.6872172, 0.58383155, 0.34064344, 1)
+metallic = 0.7
+roughness = 0.38
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3o3y6"]
+resource_name = "cavalry_atlas"
+albedo_texture = ExtResource("1_hxsdp")
+metallic = 1.0
+metallic_texture = ExtResource("2_y6tao")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("2_y6tao")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("3_3cuog")
+metadata/_gltf_primary_texture_coord = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nr4cl"]
+resource_name = "KingWineWool"
+cull_mode = 2
+albedo_color = Color(0.47312066, 0.17184411, 0.22091636, 1)
+roughness = 0.74
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bhem4"]
+resource_name = "KingWineWool"
+cull_mode = 2
+albedo_color = Color(0.47312066, 0.17184411, 0.22091636, 1)
+roughness = 0.74
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4wr53"]
+resource_name = "KingStandardWood"
+cull_mode = 2
+albedo_color = Color(0.4100209, 0.3133042, 0.20598418, 1)
+roughness = 0.74
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_20vts"]
+resource_name = "KingBrass"
+cull_mode = 2
+albedo_color = Color(0.6872172, 0.58383155, 0.34064344, 1)
+metallic = 0.7
+roughness = 0.38
+
+[node name="King" unique_id=2079903587 instance=ExtResource("1_y6tao")]
+
+[node name="Crown" parent="king_rig/Skeleton3D" parent_id_path=PackedInt32Array(896795779) index="0" unique_id=2087029267]
+surface_material_override/0 = SubResource("StandardMaterial3D_3cuog")
+
+[node name="KingBody" parent="king_rig/Skeleton3D" parent_id_path=PackedInt32Array(896795779) index="1" unique_id=363430385]
+surface_material_override/0 = SubResource("StandardMaterial3D_3o3y6")
+
+[node name="Mantle" parent="king_rig/Skeleton3D" parent_id_path=PackedInt32Array(896795779) index="2" unique_id=23840071]
+surface_material_override/0 = SubResource("StandardMaterial3D_nr4cl")
+
+[node name="RoyalStandard" parent="king_rig/Skeleton3D" parent_id_path=PackedInt32Array(896795779) index="3" unique_id=2058800259]
+surface_material_override/0 = SubResource("StandardMaterial3D_bhem4")
+
+[node name="RoyalStandardPole" parent="king_rig/Skeleton3D" parent_id_path=PackedInt32Array(896795779) index="4" unique_id=748839385]
+surface_material_override/0 = SubResource("StandardMaterial3D_4wr53")
+
+[node name="RoyalStandardStripe" parent="king_rig/Skeleton3D" parent_id_path=PackedInt32Array(896795779) index="5" unique_id=2091899158]
+surface_material_override/0 = SubResource("StandardMaterial3D_20vts")

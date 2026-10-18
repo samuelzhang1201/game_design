@@ -1,4 +1,5 @@
 extends GutTest
+const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 const SuiteData := preload("res://tests/suite_data.gd")
 ## The saved state of foraging and desertion (spec 2026-10-10-foraging-and-
 ## desertion §2): three maps on GameState and a `deserted` term in fit_heads.
@@ -24,7 +25,7 @@ func test_new_maps_round_trip() -> void:
 	s.conduct_marks["mark_a"] = 11
 	s.regiments[code]["forage"] = "law"
 	s.regiments[code]["forage_days"] = 4
-	SuiteData.set_losses(s, code, {"deserted": 12})
+	assert_false(Personnel.move(repo, s, code, "fit", "released", 12).has("error"))
 	s.regiments[code]["desert_rem"] = 3
 	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	assert_eq(back.forage_stripped, {prov: 250})
@@ -32,7 +33,7 @@ func test_new_maps_round_trip() -> void:
 	assert_eq(back.conduct_marks, {"mark_a": 11})
 	assert_eq(back.regiments[code]["forage"], "law")
 	assert_eq(back.regiments[code]["forage_days"], 4)
-	assert_eq(back.regiments[code]["deserted"], 12)
+	assert_eq(Personnel.count(back, code, "released"), 12)
 	assert_eq(back.regiments[code]["desert_rem"], 3)
 	assert_eq(typeof(back.forage_stripped[prov]), TYPE_INT)
 

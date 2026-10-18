@@ -169,9 +169,8 @@ func _ride_of(c: Dictionary) -> Dictionary:
 	for i in range(maxi(passed.size() - 1, 0), path.size()):
 		rest.append(_world_of_m(Vector2i(int(path[i][0]), int(path[i][1]))))
 	# he sets out from, and rides home into, the palace's door (Map3DCourierPalace)
-	var origin := CourierSystem.origin(ctx.repo, st) if st != null else Vector2.INF
-	var road := Map3DCourierPalace.dress(Map3DCourierPalace.seat_of(ctx.repo, ctx.houses(), origin,
-		ctx.to_world(origin)), _target_xz(c), ahead, rest, palace_gap_m)
+	var road := Map3DCourierPalace.dress_physical(ctx.repo, ctx.houses(), _target_xz(c),
+		ahead, rest, palace_gap_m, ctx.to_world, int(c.get("days", 0)) == 0)
 	var ride := {"key": key, "from": road["from"], "ahead": road["ahead"], "rest": road["rest"], "share": float(day["share"]),
 		"length": Map3DCourierRide.length_along(road["from"], road["ahead"]), "ends": bool(day["ends"])}
 	_rides[id] = ride

@@ -1,0 +1,7 @@
+event_id,trigger,art_key,phase,weight,chance_permille,cooldown_days,threshold
+ev_31,flank,flank,field,3,350,4,40
+ev_32,nobles,nobles,field,2,350,5,1
+ev_33,reinforcements,reinforcements,field,4,700,3,1
+ev_34,wounded,wounded,field,3,500,4,1
+ev_35,supplies,supplies,field,2,450,5,1
+ev_36,tunnel,tunnel,siege,3,500,5,1

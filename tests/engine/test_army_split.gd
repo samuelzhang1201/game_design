@@ -1,5 +1,6 @@
 extends GutTest
 const SuiteData := preload("res://tests/suite_data.gd")
+const Personnel := preload("res://scripts/engine/military_roster.gd")
 ## The opening army as units (spec 2026-10-07-army-split-and-ground §3).
 
 var repo: DataRepository
@@ -45,7 +46,7 @@ func test_every_unit_is_one_arm_and_within_the_cap() -> void:
 			if int(float(r.get(arm, 0))) > 0:
 				armed += 1
 		assert_eq(armed, 1, code)
-		assert_lte(ArmySystem.headcount(repo, r), cap, code)
+		assert_lte(MilitaryRoster.personnel_capacity(repo, r), cap, code)
 
 
 func test_the_count_is_the_packs_own() -> void:
@@ -63,7 +64,7 @@ func test_the_count_is_the_packs_own() -> void:
 	assert_eq(roster.size(), want + gunned.size())
 
 
-func test_men_are_conserved_per_arm_and_kingdom() -> void:
+func test_equipment_is_conserved_per_arm_and_kingdom() -> void:
 	var before: Dictionary = {}
 	var after: Dictionary = {}
 	for r: Dictionary in _pack_rows():
@@ -92,6 +93,8 @@ func test_codes_and_labels() -> void:
 			var base := "%s_%s" % [r["regiment_code"], row["code_word"]]
 			var code := base if n == 1 else base + "_1"
 			assert_true(roster.has(code), code)
+			if not roster.has(code):
+				continue
 			var label := String(roster[code]["label"])
 			if armed.size() == 1:
 				assert_true(label.begins_with(String(r["label"])), "a one-arm regiment keeps its label: " + label)
@@ -295,3 +298,112 @@ func test_a_kingdom_with_no_capital_keeps_its_guns() -> void:
 		if town != "" and MapOwnership.owner_of(r2, null, String(r2.burgs[town].get("province_code", ""))) != gunned:
 			town = ""
 		assert_eq(String(train["camp_town"]), town, "it camps by the first land regiment's town")
+
+
+## Exercise the complete splitter, including placement, with pack-independent counts.
+func _crew_fixture(equipment: int, crew: int, cap: int) -> DataRepository:
+	var fixture := SuiteData.repo()
+	fixture.balance["army_split_cap_men"] = cap
+	fixture.world_row("military", "unit_types", "cavalry")["crew"] = str(crew)
+	var rows := fixture.world_table("military", "regiments")
+	var source: Dictionary = {}
+	for row: Dictionary in rows.values():
+		if String(row.get("is_naval", "0")) != "1":
+			source = row.duplicate(true)
+			break
+	for arm: String in fixture.world_table("military", "unit_types"):
+		source[arm] = "0"
+	source["cavalry"] = str(equipment)
+	rows.clear()
+	rows[String(source["regiment_code"])] = source
+	return fixture
+
+
+func test_split_counts_personnel_without_splitting_equipment() -> void:
+	for example: Array in [[1268, 2, 600, [254, 254, 254, 253, 253]],
+			[301, 2, 600, [151, 150]], [7, 8, 25, [3, 2, 2]]]:
+		var fixture := _crew_fixture(example[0], example[1], example[2])
+		var original := fixture.world_table("military", "regiments").duplicate(true)
+		var result := ArmySplit._make(fixture)
+		var units: Dictionary = result["roster"]
+		var codes := units.keys()
+		codes.sort()
+		var quantities: Array = []
+		for code: String in codes:
+			quantities.append(int(units[code]["cavalry"]))
+			assert_lte(MilitaryRoster.personnel_capacity(fixture, units[code]), int(example[2]))
+		assert_eq(quantities, example[3], "crew-aware even equipment shares")
+		assert_eq(fixture.world_table("military", "regiments"), original)
+		assert_eq(ArmySplit._make(fixture), result, "IDs and placement are reproducible")
+
+
+func test_invalid_personnel_split_configuration_refuses_whole_roster() -> void:
+	for example: Array in [[10, 0, 600], [10, -1, 600], [10, 2, 0], [10, 2, -1], [10, 8, 7]]:
+		var fixture := _crew_fixture(example[0], example[1], example[2])
+		var result := ArmySplit._make(fixture)
+		assert_true(result.has("error"), str(example))
+		assert_eq(result["roster"], {}, "no partial army on rejected construction")
+		assert_eq(result["seats"], {})
+	var missing := _crew_fixture(10, 2, 600)
+	missing.world_row("military", "unit_types", "cavalry").erase("crew")
+	assert_true(ArmySplit._make(missing).has("error"), "missing crew must not assume one person")
+
+func test_campaign_rejects_an_invalid_split_instead_of_starting_without_armies() -> void:
+	var fixture := _crew_fixture(10, 2, 0)
+	assert_null(GameState.new_campaign(fixture, 42))
+
+func test_fleet_and_pooled_train_still_require_valid_personnel_crews() -> void:
+	for arm: String in ["fleet", "artillery"]:
+		for crew: String in ["0", "-1", "1.5", "missing"]:
+			var fixture := _crew_fixture(1, 2, 600)
+			var row: Dictionary = fixture.world_table("military", "regiments").values()[0]
+			row["cavalry"] = "0"
+			row[arm] = "1"
+			row["is_naval"] = "1" if arm == "fleet" else "0"
+			fixture.world_row("military", "unit_types", arm)["crew"] = crew
+			var result := ArmySplit._make(fixture)
+			assert_true(result.has("error"), arm + ":" + crew)
+			assert_eq(result["roster"], {})
+			assert_eq(result["seats"], {})
+
+func test_split_preserves_equipment_origins_before_pooling_the_royal_train() -> void:
+	var fixture := _crew_fixture(301, 2, 600)
+	fixture.world_row("military", "unit_types", "fleet")["crew"] = "100"
+	var rows := fixture.world_table("military", "regiments")
+	var original: Dictionary = rows.values()[0].duplicate(true)
+	var provinces := fixture.provinces.keys()
+	provinces.sort()
+	var first := original.duplicate(true)
+	first["regiment_code"] = "source_a"
+	first["province_code"] = provinces[0]
+	first["artillery"] = "2"
+	var second := first.duplicate(true)
+	second["regiment_code"] = "source_b"
+	second["province_code"] = provinces[1]
+	second["cavalry"] = "0"
+	second["artillery"] = "3"
+	var fleet := second.duplicate(true)
+	fleet["regiment_code"] = "source_c"
+	fleet["is_naval"] = "1"
+	fleet["artillery"] = "0"
+	fleet["fleet"] = "2"
+	rows.clear()
+	rows["source_a"] = first
+	rows["source_b"] = second
+	rows["source_c"] = fleet
+	var units: Dictionary = ArmySplit._make(fixture)["roster"]
+	assert_eq(units["source_a_horse_1"].get("source_parts", []), [
+		{"regiment_code": "source_a", "province_code": provinces[0], "arm": "cavalry", "equipment_count": 151, "crew_per_element": 2}])
+	assert_eq(units["source_a_horse_2"].get("source_parts", []), [
+		{"regiment_code": "source_a", "province_code": provinces[0], "arm": "cavalry", "equipment_count": 150, "crew_per_element": 2}])
+	var train_code := String(first["kingdom_code"]) + "_royal_train"
+	assert_eq(units[train_code].get("source_parts", []), [
+		{"regiment_code": "source_a", "province_code": provinces[0], "arm": "artillery", "equipment_count": 2, "crew_per_element": 8},
+		{"regiment_code": "source_b", "province_code": provinces[1], "arm": "artillery", "equipment_count": 3, "crew_per_element": 8}])
+	assert_eq(units["source_c"].get("source_parts", []), [
+		{"regiment_code": "source_c", "province_code": provinces[1], "arm": "fleet", "equipment_count": 2, "crew_per_element": 100}])
+	var saved := GameState.new()
+	saved.rng = Rng.new(42)
+	saved.army_roster = units
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(saved.to_dict())))
+	assert_eq(restored.army_roster, units, "origins are save facts, not reconstructed from the capital")

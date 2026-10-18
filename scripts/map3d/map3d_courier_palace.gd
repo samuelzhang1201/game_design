@@ -83,3 +83,33 @@ static func dress(seat: Dictionary, from: Vector2, ahead: Array, rest: Array, ga
 			tail.pop_back()
 		tail.append(door(seat, town, gap_m))
 	return {"from": from, "ahead": a, "rest": r}
+
+
+## Locate decorations from the physical road alone. A travelling king cannot
+## relocate an older rider, and a field endpoint is never dressed as a palace.
+static func dress_physical(repo: DataRepository, houses: Dictionary, from: Vector2,
+		ahead: Array, rest: Array, gap_m: float, to_world: Callable, departing: bool) -> Dictionary:
+	var road := {"from": from, "ahead": ahead, "rest": rest}
+	if departing:
+		road = dress(_physical_seat(repo, houses, from, to_world), from, ahead, rest, gap_m)
+	var tail: Array = road["rest"] if not (road["rest"] as Array).is_empty() else road["ahead"]
+	if not tail.is_empty():
+		var seat := _physical_seat(repo, houses, tail[-1], to_world)
+		if not seat.is_empty():
+			# Only decorate arrival here; passing a town mid-journey is no departure.
+			var arrival := dress(seat, Vector2.INF, road["ahead"], road["rest"], gap_m)
+			road["ahead"] = arrival["ahead"]
+			road["rest"] = arrival["rest"]
+	return road
+
+
+static func _physical_seat(repo: DataRepository, houses: Dictionary, at: Vector2, to_world: Callable) -> Dictionary:
+	for code: String in houses:
+		var b: Dictionary = repo.burgs.get(code, {})
+		if b.is_empty():
+			continue
+		var px := Vector2(float(b["x"]), float(b["y"]))
+		var town: Vector2 = to_world.call(px)
+		if at.distance_to(town) < SAME_M:
+			return seat_of(repo, houses, px, town)
+	return {}
