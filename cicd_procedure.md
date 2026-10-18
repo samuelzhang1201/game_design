@@ -77,3 +77,7 @@ Every selected category uses the same `run_tests.sh`: forced offline, bounded im
 `gut-tests` aggregates `harness-checks` and the selected matrix. It accepts skipped game jobs only when selection explicitly says no GUT is needed. Failed, pending, cancelled, missing or timed-out required checks never permit merge. A green aggregate proves the selected coverage, not an unrequested full/balance/campaign run. Cache misses can still spend time importing the art tree; these jobs do not replace visual review.
 
 汇总只在专用检查及所选类别通过时成功；只有选择器明确无需 GUT 才允许跳过。绿色代表选中覆盖通过，不代表未请求的长模拟或全量通过，也不能代替视觉审查。
+
+GitHub enforces this on `main` through branch protection: `harness-checks` and `gut-tests` are required status checks, every change needs a PR (zero approvals, since every session merges as the owner's account), admins are included, and force pushes and deletion are blocked. The branch need not be up to date with `main` before merging. A direct push to `main` is rejected; in an emergency the owner turns protection off in Settings → Branches and back on afterwards.
+
+GitHub 分支保护强制执行：`harness-checks` 和 `gut-tests` 为必需检查，所有改动必须走 PR（无需批准，因为所有 session 都用 owner 账号），管理员同样受约束，禁止强推和删除 main；合并前不要求与 main 同步。直接 push main 会被拒绝，紧急情况由 owner 在 Settings → Branches 临时关闭保护后再恢复。
