@@ -29,6 +29,30 @@ static func odds_permille(attack_power: int, defend_power: int) -> int:
 	return 1000 * attack_power / (attack_power + defend_power)
 
 
+## Pending personnel retries use the actual actions frozen with their casualty plan.
+static func unit_action(repo: DataRepository, state: GameState, battle: Dictionary, code: String) -> Dictionary:
+	var saved: Dictionary = battle.get("pending_round", {}).get("unit_actions", {}).get(code, {})
+	if not saved.is_empty():
+		return saved.duplicate(true)
+	if not (battle.get("pending_round", {}) as Dictionary).is_empty() and not battle["pending_round"].has("unit_actions"):
+		var kind := BattleOrders.kind(battle, BattleRules.side_of(battle, code))
+		return {"kind": kind, "task_id": "", "reason": "Legacy pending round retains its delivered side action"}
+	var action := BattleTaskSystem.combat_action(repo, state, battle, code)
+	if action["kind"] == "attack" and action["task_id"] != "":
+		var reg := ArmySystem.regiment(repo, code, state)
+		var bite := ArmySystem.day_bite(ArmySystem.supply_use(repo, reg, state), state.day)
+		var extra := _attack_supply(repo, bite)
+		if ArmySystem.fit_count(repo, state, code) <= 0 or int(_stored(state, code).get("supplies", 0)) < bite + extra:
+			action["kind"] = "hold"
+			action["reason"] = "Unit task holds: insufficient personnel or carried supplies"
+	return action
+
+
+static func _attack_supply(repo: DataRepository, bite: int) -> int:
+	@warning_ignore("integer_division")
+	return (bite * int(repo.battle_orders["attack"]["extra_supply_permille"]) + 999) / 1000
+
+
 ## One side's power: each regiment's ArmySystem.power in the attack or defend
 ## stance on the ground it stands on, scaled by the height factor against the
 ## MEAN height of `enemy_codes` (none given: no height factor); a DEFENDING
@@ -39,9 +63,15 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 	var total := 0
 	for raw: Variant in codes:
 		var battle := battle_of(state, String(raw))
-		if attacking and battle.get("reserves", {}).has(String(raw)):
+		var active_attack := attacking
+		if not battle.is_empty():
+			var action := unit_action(repo, state, battle, String(raw))
+			if action["task_id"] != "" or action["kind"] == "retreat":
+				active_attack = action["kind"] == "attack"
+		if active_attack and battle.get("reserves", {}).has(String(raw)) \
+				and unit_action(repo, state, battle, String(raw))["task_id"] == "":
 			continue
-		var result := unit_strength(repo, state, String(raw), stance_fn, attacking, enemy_codes)
+		var result := unit_strength(repo, state, String(raw), stance_fn, active_attack, enemy_codes)
 		if result.has("error"):
 			return 0
 		total += int(result["power"])
@@ -50,6 +80,10 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 
 static func unit_strength(repo: DataRepository, state: GameState, code: String, stance_fn: Callable,
 		attacking: bool, enemy_codes: Array = []) -> Dictionary:
+	var battle := battle_of(state, code)
+	var action: Dictionary = {} if battle.is_empty() else unit_action(repo, state, battle, code)
+	if not action.is_empty() and (action["task_id"] != "" or action["kind"] == "retreat"):
+		attacking = action["kind"] == "attack"
 	var factors: Array[Dictionary] = []
 	var enemy_m := 0
 	for enemy: String in enemy_codes:
@@ -66,7 +100,6 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 			"permille": int(_stance_row(repo, stance).get("defence_permille", 1000)), "reason": "Delivered defensive stance"})
 		factors.append({"source": "camp:defence", "category": "formation_terrain",
 			"permille": CampSystem.defence_factor(repo, state, code), "reason": "Camp at its real saved site"})
-	var battle := battle_of(state, code)
 	if not battle.is_empty():
 		var side := BattleRules.side_of(battle, code)
 		if battle.has("formations"):
@@ -75,11 +108,11 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 				copy["category"] = "formation_terrain"
 				factors.append(copy)
 		factors.append_array(BattleEvents.factors(state, battle, code))
-		var kind := BattleOrders.kind(battle, side)
+		var kind := String(action["kind"])
 		var row: Dictionary = repo.battle_orders.get(kind, {})
 		factors.append({"source": "order:" + kind, "category": "action",
 			"permille": int(row.get("attack_permille" if attacking else "defence_permille", 1000)),
-			"reason": "Current delivered battle action: " + kind})
+			"reason": String(action["reason"])})
 	return BattleStrength.unit(repo, state, code, attacking, factors)
 
 
@@ -172,7 +205,7 @@ static func _plan_side(repo: DataRepository, state: GameState, codes: Array, los
 		var battle := battle_of(state, code)
 		if fall < 0 and not battle.is_empty():
 			var side := BattleRules.side_of(battle, code)
-			var row: Dictionary = repo.battle_orders.get(BattleOrders.kind(battle, side), {})
+			var row: Dictionary = repo.battle_orders.get(unit_action(repo, state, battle, code)["kind"], {})
 			@warning_ignore("integer_division")
 			fall = fall * int(row.get("morale_decay_permille", 1000)) / 1000
 			if state.absolute_day() < int(battle.get("inspire_until", {}).get(side, 0)):
@@ -685,11 +718,13 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		var planned: Array = []
 		var sufficient := true
 		for code: String in b[side]:
+			var action := BattleTaskSystem.combat_action(repo, state, b, code)
+			if action["task_id"] != "" or action["kind"] != "attack":
+				continue
 			var entry := _stored(state, code)
 			var reg := ArmySystem.regiment(repo, code, state)
 			var bite := ArmySystem.day_bite(ArmySystem.supply_use(repo, reg, state), state.day)
-			@warning_ignore("integer_division")
-			var extra := (bite * int(repo.battle_orders["attack"]["extra_supply_permille"]) + 999) / 1000
+			var extra := _attack_supply(repo, bite)
 			if ArmySystem.fit_count(repo, state, code) <= 0 or int(entry.get("supplies", 0)) < bite + extra:
 				sufficient = false
 			planned.append({"code": code, "supplies": extra, "reason": "Additional supplies for an actual all-out attack day"})
@@ -698,8 +733,16 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		else:
 			b["actions"][side] = {"kind": "hold", "reason": "Attack falls back to hold: insufficient personnel or carried supplies"}
 	var engaging := false
+	var unit_actions := {}
 	for side: String in SIDES:
-		engaging = engaging or BattleOrders.kind(b, side) == "attack"
+		for code: String in b[side]:
+			var action := unit_action(repo, state, b, code)
+			unit_actions[code] = action
+			engaging = engaging or action["kind"] == "attack"
+			if action["kind"] == "attack" and action["task_id"] != "":
+				var reg := ArmySystem.regiment(repo, code, state)
+				var bite := ArmySystem.day_bite(ArmySystem.supply_use(repo, reg, state), state.day)
+				costs.append({"code": code, "supplies": _attack_supply(repo, bite), "reason": String(action["reason"])})
 	if not engaging and not b.has("pending_round"):
 		b["last_resolved_day"] = today
 		return {"ended": false}
@@ -726,7 +769,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 			place_label(repo, state, b), n, contexts["att"]["kind"], contexts["def"]["kind"]]
 		pending = {"day": today, "round": n, "att": att.duplicate(), "def": def.duplicate(), "tier": tier,
 			"att_power": a_pow, "def_power": d_pow, "odds": odds, "roll": draw, "eff": eff,
-			"contexts": contexts, "reason": reason, "costs": costs}
+			"contexts": contexts, "reason": reason, "costs": costs, "unit_actions": unit_actions}
 		b["pending_round"] = pending
 	var results := apply_round(repo, state, pending["att"], pending["def"], pending["tier"], pending["reason"], stance,
 		"battle:%d:round:%d" % [int(b["id"]), n])
@@ -738,6 +781,10 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 	for cost: Dictionary in pending["costs"]:
 		var entry := _stored(state, String(cost["code"]))
 		entry["supplies"] = maxi(0, int(entry["supplies"]) - int(cost["supplies"]))
+	for code: String in pending.get("unit_actions", {}):
+		var action: Dictionary = pending["unit_actions"][code]
+		if action["kind"] == "attack" and action["task_id"] != "":
+			b.get("reserves", {}).erase(code)
 	b["rounds"] = n
 	b["last_resolved_day"] = today
 	b.erase("pending_round")
@@ -751,6 +798,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 	events.append({"kind": "round", "battle_id": int(b["id"]), "round": n, "att_power": pending["att_power"],
 		"def_power": pending["def_power"], "odds": pending["odds"], "roll": pending["roll"], "eff": pending["eff"],
 		"tier": pending["tier"].get("tier", ""), "contexts": pending["contexts"], "costs": pending["costs"],
+		"unit_actions": pending.get("unit_actions", {}),
 		"results": results, "att": pending["att"], "def": pending["def"],
 		"town": String(b["town"]), "place_x_m": int(b["place_x_m"]), "place_y_m": int(b["place_y_m"]), "left": left.duplicate(true)})
 	if (b["att"] as Array).is_empty() or (b["def"] as Array).is_empty():
@@ -820,12 +868,12 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 				heads += people
 				if String(arm_row["type"]) in ["ranged", "machinery"]:
 					ranged += people
-				if String(arm_row["type"]) == "mounted":
+				if String(arm_row["type"]) == "mounted" and unit_action(repo, state, battle, code)["kind"] == "attack":
 					mounted += people
 		var threshold := int(repo.bal("battle_context_arm_threshold_permille"))
 		if heads > 0 and ranged * 1000 >= heads * threshold:
 			kind = "ranged"
-		elif heads > 0 and mounted * 1000 >= heads * threshold and BattleOrders.kind(battle, other) == "attack":
+		elif heads > 0 and mounted * 1000 >= heads * threshold:
 			kind = "shock"
 		if kind != "melee":
 			scale = int(repo.bal("battle_context_" + kind + "_permille"))

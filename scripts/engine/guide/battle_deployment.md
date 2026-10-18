@@ -39,9 +39,8 @@ outcome before costs, history or current eligibility; conflicting reuse fails.
 Local king command range delivers immediately through CourierSystem; remote
 warrants remain pending until arrival. Delivery checks recipient identity,
 current realm control, membership and law. Lost/expired couriers invalidate
-pending tasks with a reason without refunding spent fees. Unit-scoped combat
-effects and formation execution require their own integration steps; this
-dispatch path changes only the canonical primary-task ledger.
+pending tasks with a reason without refunding spent fees. Formation and movement execution require their own integration steps.
+The dispatch path changes only the canonical primary-task ledger.
 
 `BATTLE_TASK_CANCEL` accepts only `request_id`, `regiment` and `battle_id`,
 pays its own filing row and uses the same local/courier path. Its internal
@@ -54,6 +53,28 @@ Cancellation does not execute a combat action, so ceasefire and routing do not
 forbid it. Pending cancellations lapse with their courier. Exact retries return
 the saved outcome without mutation, including after JSON; request IDs cannot be
 reused across assignment and cancellation actions.
+
+## Delivered unit attack and hold
+
+`BattleTaskSystem.combat_action` resolves only received tasks for this battle:
+advance/flank/charge reuse attack, defend/guard_flank reuse hold. Charge retains
+its own live legality check; there is no positional/flanking bonus. Pending,
+replaced and cancelled warrants do not execute. Unassigned units and movement
+tasks retain their existing side action; actual withdrawal/rout wins. Live unit
+law, shared terms, crown control and designated enemy availability constrain
+execution. A barred or depleted task holds without altering its saved receipt.
+
+`BattleSystem.unit_action` feeds each unit's existing strength and morale
+factors, engagement, attack context and extra supply consumption. Shock counts
+only mounted personnel actually attacking; task attack alone grants no pursuit. Explicit
+unit tasks are excluded from the legacy side-wide supply veto; each attacking
+task pays its own existing extra bite, once alongside the daily personnel
+commit. A successful task attack clears its recipient’s reserve flag; a failed
+round preserves it until the saved round commits. Normal meals/equipment retain their existing writers. The saved
+`pending_round.unit_actions` freezes actual actions and reasons with the loss
+plan, RNG draw and costs; failed personnel writes and JSON retries reuse it. Legacy pending plans without
+unit actions retain their side effects until that round completes.
+Cancellation/replacement changes the next unprocessed round only on receipt.
 
 ## Costly orders and daily resolution
 
