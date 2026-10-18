@@ -66,6 +66,15 @@ def comment_only_diff(base, cwd=ROOT):
     return bool(changed) and all(not line or line.startswith(('#', '//', ';')) for line in changed)
 
 
+def gut_relevant_paths(base, cwd=ROOT):
+    paths = changed_paths(base, cwd)
+    if comment_only_diff(base, cwd):
+        return [path for path in paths if path in HARNESS_PATHS or (path.endswith('.md')
+                and path not in {'RANDOM_EVENTS.md'} and not path.startswith('game_story/'))
+                or path.startswith('.codex/') or path == '.github/pull_request_template.md']
+    return paths
+
+
 def functional_categories():
     return [name for name, config in CATEGORIES.items() if not config.get('opt_in')]
 
@@ -159,11 +168,7 @@ def main():
         chosen['run_gut'] = bool(chosen['files'])
     else:
         base = args.base or 'origin/main'
-        paths = ['project.godot'] if args.functional else changed_paths(base)
-        if not args.functional and comment_only_diff(base):
-            paths = [path for path in paths if path in HARNESS_PATHS or (path.endswith('.md')
-                     and path not in {'RANDOM_EVENTS.md'} and not path.startswith('game_story/'))
-                     or path.startswith('.codex/') or path == '.github/pull_request_template.md']
+        paths = ['project.godot'] if args.functional else gut_relevant_paths(base)
         chosen = select(paths, groups, args.include)
     if args.github_output:
         with args.github_output.open('a') as output:

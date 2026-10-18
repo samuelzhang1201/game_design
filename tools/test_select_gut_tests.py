@@ -125,8 +125,10 @@ class SelectionTests(unittest.TestCase):
             git('commit', '-qm', 'base')
             source.write_text('func run() -> void:\n\tpass\n\t# clarify behavior\n')
             self.assertTrue(selector.comment_only_diff('HEAD', tmp))
+            self.assertEqual(selector.gut_relevant_paths('HEAD', tmp), [])
             source.write_text('func run() -> void:\n\tprint("changed")\n')
             self.assertFalse(selector.comment_only_diff('HEAD', tmp))
+            self.assertEqual(selector.gut_relevant_paths('HEAD', tmp), ['scripts/engine/comment.gd'])
 
     def test_only_explicit_request_lines_opt_in(self):
         self.assertEqual(selector.requested_categories('Please discuss simulation and gameplay.'), [])
