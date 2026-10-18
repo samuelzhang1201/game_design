@@ -87,18 +87,15 @@ docs/             # design/ (PRD, systems, chapter 0), references/, superpowers/
 
 ## Done means
 
-1. Run checks relevant to the owned change on its final code state; pure harness/config/guidance changes run Python/shell/config/guide checks without Godot. Game changes retain targeted GUT, hand-computed formula and relevant save/determinism checks. Follow the actual runner/workflow and `.codex/harness.md`; do not run a full local suite routinely or reuse results after relevant code/data changes.
-2. One small step lands through its own PR against `main`, owned only by implementation and its unique Review session. Review merges directly after all required current-HEAD CI and review checks pass; no direct main push, timeout exception or next feature in the same PR. `cicd_procedure.md` describes the checks; skipped/absent required checks are not success.
+1. Run checks relevant to the owned change on its final code state; pure harness/config/guidance changes run Python/shell/config/guide checks without Godot. Game changes retain targeted GUT, hand-computed formula and relevant save/determinism checks. Follow the actual runner/workflow and `cicd_procedure.md`; do not run a full local suite routinely or reuse results after relevant code/data changes.
+2. One small step lands through its own PR against `main` and merges only after every required check on its current HEAD has passed; no direct main push, timeout exception or next feature in the same PR. `cicd_procedure.md` describes the checks; skipped/absent required checks are not success.
 3. A new engine formula has its hand-computed GUT test; a new rule is written into the right nested `CLAUDE.md` (or its `guide/`), not here.
 4. A visual change has been through `visual-review` — or, in a cloud session, the final message says it still needs it.
 
-## Execution discipline and model routing
+## Execution discipline
 
 - **One small problem, one step, one PR.** A session discusses and implements only one bounded, independently testable change. Split an oversized plan step before coding; leave follow-on features and unrelated cleanup for later PRs. Never accumulate several steps in an existing PR.
-- **Exactly two responsible sessions per PR:** the implementation session and its unique `<step>-Review` session. No third session, subagent, parallel worker, coordinator or nested reviewer participates in that feature/plan. Review owns in-scope fixes and merges directly to `main` after all current-HEAD required CI and review checks pass; no extra confirmation or timeout exception. Only then may the next independent step begin.
-- **One-to-one handoff only.** Implementation → its Review → next authorized step's implementation. At most one predecessor and one fresh successor per session; no broadcasts, fan-in/fan-out, forks, resumes or return loops. Save a short worktree-local checkpoint; create the single successor once and end the source session. Do not reread full history or relaunch approved planning.
-- **Use the existing session pair.** Ordinary implementation defaults to Sol / low; review stays Sol / medium. Upgrade only for concrete complexity under `.codex/harness.md`, using the same pair. Fresh implementation sessions explicitly select Sol / low; preserve running sessions. Role profiles and skills never authorize extra agents or permission/trust/MCP changes.
-- Authoritative delivery, checks, scope and marker rules: `.codex/harness.md` and `.codex/hooks/task-handover.md`. Read only relevant subsystem guidance. Pure harness/config work runs its own syntax and behavioral checks, not game-wide GUT; retain meaningful formula, save/determinism and visual checks for changes that need them.
+- **Codex sessions** additionally follow `AGENTS.md` and `.codex/harness.md` (the implementation/Review session pair, one-to-one handoff markers, model routing). Those rules bind Codex only, not a Claude Code session.
 
 ## Conventions
 
