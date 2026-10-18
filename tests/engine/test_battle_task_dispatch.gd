@@ -140,3 +140,14 @@ func test_delivery_rejects_changed_realm_or_wrong_courier_recipient() -> void:
 	f.state.army_roster[f.a]["kingdom_code"] = f.repo.resolve_realm("raider_realm")
 	assert_eq(CourierSystem._deliver(f.repo, f.state, courier).type, "lapsed")
 	assert_eq(f.state.unit_tasks[f.a].orders.sent.status, "invalid")
+
+func test_non_text_request_ids_are_refused_without_mutation() -> void:
+	var f := _fixture()
+	var actions := ActionSystem.new(f.repo)
+	for id: Variant in [42, null, [], {}]:
+		var req := _request(f, "malformed")
+		req.params.request_id = id
+		var before: Dictionary = f.state.to_dict()
+		assert_ne(actions.validate(req, f.state), "")
+		assert_false(actions.execute(req, f.state).ok)
+		assert_eq(f.state.to_dict(), before)

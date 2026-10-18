@@ -329,6 +329,8 @@ func _task_warrant(req: ActionRequest) -> Dictionary:
 		"target_unit": req.params.get("target_unit", ""), "source": "player", "issuer": ""}
 
 func _task_replay(req: ActionRequest, state: GameState) -> Dictionary:
+	if not req.params.get("request_id", "") is String:
+		return {"error": "A unit task request id must be text."}
 	var record := BattleTaskSystem._find(state, String(req.params.get("request_id", "")))
 	if record.is_empty():
 		return {}
