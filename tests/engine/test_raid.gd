@@ -493,6 +493,8 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 	while s.absolute_day() <= 120:
 		days_played += 1
 		assert_lte(days_played, 121, "the day loop makes bounded progress")
+		if days_played > 121:
+			return
 		var today := s.absolute_day()
 		var daily := engine.advance(s) if s.day >= Calendar.DAYS_PER_TICK else null
 		var result := {} if daily != null else engine.resolve_day(s)
@@ -510,6 +512,9 @@ func test_raiding_keeps_a_host_in_the_field_but_not_for_ever() -> void:
 			event = engine.last_month_report.event
 		if not event.is_empty():
 			engine.events.apply_choice(String((event["choices"] as Array)[0]["choice_id"]), s)
+		assert_eq(s.absolute_day(), today + 1, "the confirmed day must advance the calendar")
+		if s.absolute_day() != today + 1:
+			return
 		for h: String in EnemyAi.host_codes(s):
 			var m: Dictionary = s.ai_hosts[h]
 			if today > 33 and String(m["mode"]) == "RAID" and int(m["plunder"]) > 0 and raiding_late == "":
