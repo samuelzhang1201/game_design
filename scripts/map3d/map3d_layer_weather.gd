@@ -131,7 +131,8 @@ func step() -> void:
 	if precip != null:
 		precip.step()
 	if _mat != null:
-		var lit: Variant = _mat.call("get_shader_param", "weather_on")
+		# Terrain3D's saved uniforms avoid a render-server readback each frame.
+		var lit: Variant = (_mat.get("_shader_parameters") as Dictionary).get("weather_on")
 		if not (lit is float and is_equal_approx(lit, 1.0)):
 			_apply_uniforms()
 		_mat.call("set_shader_param", "weather_blend", _blend)

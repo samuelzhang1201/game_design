@@ -1,39 +1,116 @@
 [gd_scene format=3 uid="uid://0eb3lmxn52ny"]
 
 [ext_resource type="PackedScene" uid="uid://caymw68pj6ld" path="res://assets/3D/units/archers/archers.glb" id="1_glb"]
-[ext_resource type="Texture2D" uid="uid://24e8gv8twk20" path="res://assets/3D/units/archers/archers_archers_atlas.jpg" id="2_exjm6"]
-[ext_resource type="Texture2D" uid="uid://eyjhqp22dplg" path="res://assets/3D/units/archers/archers_archers_atlas_mr.jpg" id="3_va7rf"]
-[ext_resource type="Texture2D" uid="uid://13457xuv44g" path="res://assets/3D/units/archers/archers_archers_atlas_n.jpg" id="4_bwi4b"]
-[ext_resource type="Texture2D" uid="uid://lgx4b4frmryu" path="res://assets/3D/units/archers/archers_archers_props.jpg" id="5_okvo1"]
-[ext_resource type="Texture2D" uid="uid://bwdytfgeuc806" path="res://assets/3D/units/archers/archers_archers_props_mr.jpg" id="6_4un6y"]
-[ext_resource type="Texture2D" uid="uid://btpmf24t72rct" path="res://assets/3D/units/archers/archers_archers_props_n.jpg" id="7_qrqoy"]
+[ext_resource type="Texture2D" uid="uid://djmby8u4hb4dc" path="res://assets/3D/units/archers/archers_tripo_image_cb7177bc-87a5-4437-85a0-cadbd2ce3d64_0.jpg" id="2_vfphh"]
+[ext_resource type="Texture2D" uid="uid://bn1f3g05via84" path="res://assets/3D/units/archers/archers_archers_body_metal_rough.jpg" id="3_obysr"]
+[ext_resource type="Texture2D" uid="uid://b2o1bo156rrmf" path="res://assets/3D/units/archers/archers_archers_body_normal.jpg" id="4_mc4ra"]
+[ext_resource type="Texture2D" uid="uid://oyrg3s46ai1o" path="res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_0.jpg" id="4_obysr"]
+[ext_resource type="ArrayMesh" uid="uid://c5eb4vtkh1kma" path="res://assets/3D/units/archers/archers_bow.res" id="5_11djj"]
+[ext_resource type="Texture2D" uid="uid://dulpv3vuvtxcj" path="res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_1.jpg" id="5_mc4ra"]
+[ext_resource type="Texture2D" uid="uid://c7k1nw7vspu4t" path="res://assets/3D/units/archers/archers_bow_tripo_image_0d93144f-08c8-4248-9c52-309ee2d79324_2.jpg" id="6_csnnr"]
+[ext_resource type="Texture2D" uid="uid://bobedr42aaovo" path="res://assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_0.jpg" id="7_11djj"]
+[ext_resource type="Texture2D" uid="uid://dovd6i6yy2ldh" path="res://assets/3D/units/archers/archers_quiver_tripo_image_647a84cd-b7eb-41c7-a5cb-dc06576a1503_2.jpg" id="8_gygc8"]
+[ext_resource type="Texture2D" uid="uid://dxu4svk287b07" path="res://assets/3D/units/archers/archers_arrow_tripo_image_a0b7e2fc-bcdd-4027-9e2f-c1aedd82e123_0.jpg" id="9_dpx66"]
+[ext_resource type="ArrayMesh" uid="uid://k3e2etmoqbji" path="res://assets/3D/units/archers/archers_quiver.res" id="9_gygc8"]
+[ext_resource type="Texture2D" uid="uid://dld1ne4fvugwg" path="res://assets/3D/units/archers/archers_arrow_archers_arrow_metal_rough.jpg" id="11_csnnr"]
+[ext_resource type="Texture2D" uid="uid://bcdm22wiuae3a" path="res://assets/3D/units/archers/archers_arrow_archers_arrow_normal.jpg" id="12_11djj"]
+[ext_resource type="ArrayMesh" uid="uid://bvnoopfglpc57" path="res://assets/3D/units/archers/archers_arrow.res" id="12_dpx66"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vfphh"]
-resource_name = "archers_atlas"
-albedo_texture = ExtResource("2_exjm6")
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gygc8"]
+resource_name = "archers_body_materials"
+albedo_texture = ExtResource("2_vfphh")
 metallic = 1.0
-metallic_texture = ExtResource("3_va7rf")
+metallic_texture = ExtResource("3_obysr")
 metallic_texture_channel = 2
-roughness_texture = ExtResource("3_va7rf")
+roughness_texture = ExtResource("3_obysr")
 roughness_texture_channel = 1
 normal_enabled = true
-normal_texture = ExtResource("4_bwi4b")
+normal_texture = ExtResource("4_mc4ra")
+metadata/_gltf_primary_texture_coord = 0
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3r4os"]
-resource_name = "archers_props"
-cull_mode = 2
-albedo_texture = ExtResource("5_okvo1")
+[sub_resource type="Skin" id="Skin_enkni"]
+resource_name = "Skin"
+bind_count = 2
+bind/0/name = &"DEF-bow"
+bind/0/bone = -1
+bind/0/pose = Transform3D(-0.17835347, 0.011143483, 0.98390347, 0.9819887, -0.06135002, 0.17870139, 0.062353812, 0.9980542, -7.85105e-07, 0.1408655, -0.6907049, -1.4553246)
+bind/1/name = &"DEF-string"
+bind/1/bone = -1
+bind/1/pose = Transform3D(-0.17835349, 0.011143527, 0.98390347, 0.9819887, -0.06134998, 0.1787014, 0.06235378, 0.9980542, -8.353964e-07, 0.14086546, -0.69070494, -1.4553245)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_oo7of"]
+resource_name = "tripo_mat_0d93144f-08c8-4248-9c52-309ee2d79324"
+albedo_texture = ExtResource("4_obysr")
 metallic = 1.0
-metallic_texture = ExtResource("6_4un6y")
+metallic_texture = ExtResource("5_mc4ra")
 metallic_texture_channel = 2
-roughness_texture = ExtResource("6_4un6y")
+roughness_texture = ExtResource("5_mc4ra")
 roughness_texture_channel = 1
 normal_enabled = true
-normal_texture = ExtResource("7_qrqoy")
+normal_texture = ExtResource("6_csnnr")
+
+[sub_resource type="Skin" id="Skin_k31ku"]
+resource_name = "Skin"
+bind_count = 1
+bind/0/name = &"DEF-quiver"
+bind/0/bone = -1
+bind/0/pose = Transform3D(-0.9404486, -0.3398641, 0.007006638, -0.007005975, 0.039985467, 0.99917567, -0.33986416, 0.93962413, -0.039985392, 0.29434428, -0.27281266, -0.70167893)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eyai7"]
+resource_name = "Quiver_Leather_Feathers"
+albedo_texture = ExtResource("7_11djj")
+roughness = 0.72
+normal_enabled = true
+normal_texture = ExtResource("8_gygc8")
+
+[sub_resource type="Skin" id="Skin_wk6kf"]
+resource_name = "Skin"
+bind_count = 1
+bind/0/name = &"DEF-arrow"
+bind/0/bone = -1
+bind/0/pose = Transform3D(-0.013910506, 0.016408792, 0.9997687, 0.9997687, -0.016180793, 0.014176146, 0.016409665, 0.9997344, -0.016179884, 0.06462045, 0.18473719, -1.4260253)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fvvvo"]
+resource_name = "archers_arrow_materials"
+albedo_texture = ExtResource("9_dpx66")
+metallic = 1.0
+metallic_texture = ExtResource("11_csnnr")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("11_csnnr")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("12_11djj")
 
 [node name="Archers" unique_id=479415852 instance=ExtResource("1_glb")]
-editor_description = "A longbowman, one FIGURE of an archers regiment's piece. The 3D map (Map3DLayerUnits) stands 9 / 6 / 3 instances of this scene in formation and plays its clips by order; the WAR ROOM paints tin over this material's albedo (WarPieces) and the folio inks the whole figure (WarInkFigure). Its material, shadow and look are edited HERE; the clips' loops are the .glb's import settings; its sizes are data/army_art.csv."
+editor_description = "Equipped ARP longbowman. Six source clips: STANDBY, MARCH, SPRINT, DRAW, GARRISON, DEATH. Bow, loaded quiver and arrow are separate assets sharing this character's named skin. Materials and shadows are edited here."
 
-[node name="archers" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(318182935) index="0" unique_id=89170084]
-surface_material_override/0 = SubResource("StandardMaterial3D_vfphh")
-surface_material_override/1 = SubResource("StandardMaterial3D_3r4os")
+[node name="archers" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(34799169) index="0" unique_id=2093888713]
+lod_bias = 0.1
+surface_material_override/0 = SubResource("StandardMaterial3D_gygc8")
+
+[node name="archers_bow" type="MeshInstance3D" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(34799169) index="1" unique_id=1844684683]
+lod_bias = 0.1
+mesh = ExtResource("5_11djj")
+skin = SubResource("Skin_enkni")
+skeleton = NodePath("..")
+surface_material_override/0 = SubResource("StandardMaterial3D_oo7of")
+
+[node name="archers_quiver" type="MeshInstance3D" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(34799169) index="2" unique_id=1700501916]
+lod_bias = 0.1
+visibility_range_end = 2000.0
+visibility_range_end_margin = 500.0
+visibility_range_fade_mode = 1
+mesh = ExtResource("9_gygc8")
+skin = SubResource("Skin_k31ku")
+skeleton = NodePath("..")
+surface_material_override/0 = SubResource("StandardMaterial3D_eyai7")
+
+[node name="archers_arrow" type="MeshInstance3D" parent="archers_rig/Skeleton3D" parent_id_path=PackedInt32Array(34799169) index="3" unique_id=1390455169]
+lod_bias = 0.1
+visibility_range_end = 2000.0
+visibility_range_end_margin = 500.0
+visibility_range_fade_mode = 1
+mesh = ExtResource("12_dpx66")
+skin = SubResource("Skin_wk6kf")
+skeleton = NodePath("..")
+surface_material_override/0 = SubResource("StandardMaterial3D_fvvvo")

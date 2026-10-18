@@ -143,7 +143,8 @@ func _process(delta: float) -> void:
 		_shown = Map3DGeometry.lod_shown(_shown, ctx.distance, ctx.repo.bal("map3d_lod_wind_m"),
 			ctx.repo.bal("map3d_lod_margin_m"))
 		var want := 1.0 if _shown else 0.0
-		var on: Variant = mat.call("get_shader_param", "wind_on")
+		# Terrain3D's saved uniforms avoid a render-server readback each frame.
+		var on: Variant = (mat.get("_shader_parameters") as Dictionary).get("wind_on")
 		# ...and again whenever an export changes (the inspector, a shot's
 		# --set): pushed only on a reset, a later value never reached the
 		# ground (the tilt bracket's frames could not be told apart)

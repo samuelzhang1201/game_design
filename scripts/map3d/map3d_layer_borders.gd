@@ -10,10 +10,10 @@ extends RefCounted
 var ctx: Map3DContext
 var lines: Map3DLayerLines
 var _sig := 0
-## The hovered kingdom ("" none) and each kingdom's outline lines, kept until
+## The hovered kingdom ("" none) and each kingdom's draped mesh, kept until
 ## ownership turns.
 var _hover := ""
-var _hover_lines: Dictionary = {}
+var _hover_meshes: Dictionary = {}
 
 
 func bind(p_ctx: Map3DContext, p_lines: Map3DLayerLines) -> void:
@@ -29,7 +29,7 @@ func refresh() -> bool:
 	if sig == _sig and lines.line_mesh("Kingdoms") != null:
 		return false
 	_sig = sig
-	_hover_lines.clear()
+	_hover_meshes.clear()
 	draw_hover(_hover)
 	_build(st)
 	return true
@@ -108,14 +108,16 @@ func _land_only(rings: Array) -> Array:
 ## whole coast, which is the shore's to draw).
 func draw_hover(kingdom: String) -> void:
 	_hover = kingdom
-	var outline: Array = []
-	if kingdom != "":
-		if not _hover_lines.has(kingdom):
-			var own := Map3DBorders.kingdom_lines(ctx.repo, ctx.state(), ctx.meta,
-				kingdom, ctx.line_step())
-			_hover_lines[kingdom] = _land_only(own) if _skips_coast() else own
-		outline = _hover_lines[kingdom]
+	if kingdom == "" or _hover_meshes.has(kingdom):
+		var mesh: ArrayMesh = _hover_meshes.get(kingdom)
+		lines.put_baked("Hover", mesh, mesh.surface_get_material(0) as ShaderMaterial
+			if mesh != null else null)
+		return
+	var own := Map3DBorders.kingdom_lines(ctx.repo, ctx.state(), ctx.meta,
+		kingdom, ctx.line_step())
+	var outline := _land_only(own) if _skips_coast() else own
 	lines.set_lines("Hover", outline, Map3DLayerLines.HOVER, Map3DPriority.HOVER)
+	_hover_meshes[kingdom] = lines.line_mesh("Hover")
 
 
 func hovered() -> String:
