@@ -53,6 +53,12 @@ class SelectionTests(unittest.TestCase):
         for name in ['army_clearance', 'raid', 'siege', 'invasion_end_to_end', 'sighting_invasion']:
             self.assertIn(f'tests/engine/test_{name}.gd', self.catalog['gameplay'])
 
+    def test_year_long_garrison_campaign_requires_simulation_opt_in(self):
+        path = 'tests/engine/test_supply_garrisons.gd'
+        self.assertIn(path, self.catalog['simulation'])
+        self.assertNotIn(path, self.select('scripts/engine/supply_system.gd')['files'])
+        self.assertIn(path, self.select('README.md', include=['simulation'])['files'])
+
     def test_llm_suite_is_excluded_from_ordinary_selection(self):
         self.assertEqual(self.select('tests/llm/test_openai_client.gd')['files'], [])
         self.assertNotIn('llm', self.select('scripts/llm/openai_client.gd')['categories'])

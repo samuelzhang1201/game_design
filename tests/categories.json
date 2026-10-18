@@ -2,8 +2,8 @@
   "categories": {
     "simulation": {
       "opt_in": true,
-      "reason": "Multi-year campaign and save/reload replays; request explicitly when determinism across a campaign is the acceptance.",
-      "patterns": ["tests/simulation/test_*.gd", "tests/engine/test_determinism.gd"]
+      "reason": "Year-long campaigns and save/reload replays; request explicitly when campaign outcomes or determinism are the acceptance.",
+      "patterns": ["tests/simulation/test_*.gd", "tests/engine/test_determinism.gd", "tests/engine/test_supply_garrisons.gd"]
     },
     "gameplay": {
       "opt_in": true,
