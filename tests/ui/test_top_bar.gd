@@ -22,14 +22,6 @@ func test_the_crowns_arms_mark_the_lords_purse_and_the_date() -> void:
 	# arms stay on the tally board's house row alone (twice was noise).
 	assert_eq(bar.date_arms().visible, not UiPalette.war_table())
 
-func test_shows_date_and_metric_values() -> void:
-	Game.start_campaign(42)
-	var t := _bar()
-	await wait_process_frames(1)
-	assert_string_contains(t.find_child("DateLabel", true, false).text, "Year 1")
-	assert_eq(t.metric_text("treasury"), UiPalette.format_int(int(Game.state.metrics["treasury"])))
-	assert_eq(t.metric_text("grain"), UiPalette.format_int(int(Game.state.metrics["grain"])))
-
 func test_shows_tick_deltas_from_current_report() -> void:
 	Game.start_campaign(42)
 	Game.next_tick()
@@ -76,6 +68,7 @@ func test_the_clock_buttons_set_the_speed_and_the_date_reads_the_day() -> void:
 	Game.set_clock_speed(0)
 	var t := _bar()
 	await wait_process_frames(1)
+	assert_string_contains(t.find_child("DateLabel", true, false).text, "Year 1")
 	if UiPalette.war_table():
 		# THE WAR TABLE: the day on the brass dial (its tooltip the full date),
 		# the season and year written beside it

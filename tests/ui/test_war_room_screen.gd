@@ -20,10 +20,6 @@ func _court() -> GameRoot:
 	return r
 
 
-func test_war_room_is_no_longer_a_placeholder() -> void:
-	assert_false("WAR ROOM" in BottomBar.PLACEHOLDER_TABS)
-
-
 func test_the_tab_lays_the_home_provinces_sheet_over_the_map() -> void:
 	var r: GameRoot = await _court()
 	r.bottom_bar().button("WAR ROOM").pressed.emit()

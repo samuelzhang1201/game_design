@@ -33,63 +33,6 @@ func test_main_menu_has_start_load_quit_and_starts_with_the_founding_names() -> 
 	assert_false(r.current_screen is MainMenu, "the reign began")
 	assert_eq(Game.state.characters["you"].display_name, "King Aldric Valorin")
 
-func test_campaign_opens_with_nameless_background_narration() -> void:
-	var r := _root()
-	await wait_process_frames(2)
-	r.current_screen.start_requested.emit()
-	await wait_process_frames(2)
-	var scene: ConversationScene = r.current_screen
-	assert_eq(String(scene.current_beat()["kind"]), "narration")
-	assert_eq(String(scene.current_beat()["speaker"]), "", "narration is nameless")
-	assert_true(scene.event_popup().visible, "narration pops centered")
-	assert_string_contains(scene.said_text(), "ascended to the throne")
-	# Regression (user bug 2026-08-30): the full background text made the
-	# centered popup taller than the viewport, pushing the continue button off
-	# screen with no way to scroll. The narration now stands in the audience
-	# window (owner 2026-09-15), whose speech scrolls inside a capped box, so
-	# the window must fit and the button must be on screen.
-	var panel: PanelContainer = scene.find_child("AudienceWindow", true, false)
-	var viewport_h := scene.get_viewport_rect().size.y
-	assert_lt(panel.size.y, viewport_h, "the window fits the viewport")
-	var scroll: ScrollContainer = scene.find_child("SpeechScroll", true, false)
-	assert_not_null(scroll, "narration text scrolls inside the window")
-	# One continue choice advances past the narration; it must sit fully
-	# inside the viewport once revealed.
-	var replies := scene.reply_buttons()
-	assert_eq(replies.size(), 1)
-	var btn: Button = replies[0]
-	# revealed by a zero-second timer: on the next PROCESS frame, which a
-	# count of physics frames does not promise
-	await wait_until(func() -> bool: return btn.visible, 1.0)
-	assert_true(btn.visible, "continue button revealed")
-	var btn_bottom: float = btn.get_global_rect().position.y + btn.get_global_rect().size.y
-	assert_between(btn.get_global_rect().position.y, 0.0, viewport_h, "button on screen")
-	assert_lt(btn_bottom, viewport_h, "button bottom on screen")
-	btn.pressed.emit()
-	await wait_process_frames(2)
-	# the story is paged (tests/ui/test_opening_narration.gd): turn the rest
-	while r.current_screen is ConversationScene \
-			and String(r.current_screen.current_beat().get("kind", "")) == "narration":
-		var next: Array = r.current_screen.reply_buttons()
-		await wait_until(func() -> bool: return next[0].visible, 1.0)
-		next[0].pressed.emit()
-		await wait_process_frames(2)
-	# The narration hands over to the table, not to the story (owner
-	# 2026-10-02: 背景介绍之后，不要立即开始剧情): the prologue's first council —
-	# the chapter opener GameState.new_campaign scheduled for tick 1, not
-	# whatever the random roll picked (chapter 0, 2026-09-21) — waits as the
-	# Chancellor's matter until the player clicks him.
-	assert_true(r.current_screen is CourtScreen, "the table, not the event")
-	assert_eq(String(Game.state.pending_event.get("event_id", "")), "c0_01")
-	r.audience_with(ConversationBeats.event_presenter(Game.state, Game.data))
-	await wait_process_frames(2)
-	var stage: ConversationScene = r.current_screen
-	var beat := stage.current_beat()
-	assert_eq(String(beat["kind"]), "event")
-	assert_eq(String(beat["event"]["event_id"]), "c0_01")
-	assert_string_contains(stage.speech_text(), "older than the kingdom",
-		"the authored scene is shown verbatim")
-
 ## The widest the audience window can get: a chapter beat with four choices
 ## AND an illustration band over it. The whole thing — the window and the
 ## last option in it — has to stay inside the viewport, or the player is

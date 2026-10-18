@@ -13,14 +13,11 @@ func before_each() -> void:
 		if String(r.get("is_naval", "0")) != "1" and ArmySystem.base_pace_km(Game.data, r) > 0:
 			codes.append(String(r["regiment_code"]))
 	codes.sort()
+	assert_gte(codes.size(), 2, "draft tests need two march-capable land regiments")
 
 
 func _near(code: String) -> Vector2:
 	return ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code)) + Vector2(15, 0)
-
-
-func test_there_are_two_land_regiments_to_draft() -> void:
-	assert_gte(codes.size(), 2)
 
 
 func test_review_lists_each_draft_with_its_cost_and_the_total() -> void:
