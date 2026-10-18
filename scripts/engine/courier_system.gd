@@ -420,7 +420,7 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 		return PrisonerCommunications.ride(repo, state, c, today, events)
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code, state)
-	if not state.regiments.has(code) and orders_of(c).any(func(order: Dictionary) -> bool: return order.has("battle_order_id")):
+	if not state.regiments.has(code) and orders_of(c).any(func(order: Dictionary) -> bool: return order.has("battle_order_id") or order.has("unit_task_id")):
 		_invalidate_battle_orders(repo, state, c, "The target army is no longer under military control.")
 		events.append(_event("lost", c))
 		return _next_recipient(repo, state, c)
@@ -774,12 +774,21 @@ const STALE_SAID := "Newer orders stand: this one is set aside"
 ## set_out (a supply line's wagons rolling)}.
 static func _invalidate_battle_orders(repo: DataRepository, state: GameState, c: Dictionary, reason: String) -> void:
 	for order: Dictionary in orders_of(c):
+		if order.has("unit_task_id"):
+			BattleTaskSystem.invalidate_task(state, String(order["unit_task_id"]), reason)
 		if order.has("battle_order_id"):
 			BattleOrders.invalidate(repo, state, String(order["battle_order_id"]), reason)
 
 static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, order: Dictionary, local := false, sequence := 0) -> Dictionary:
 	var code := String(c["target"])
 	var action := String(order.get("action_code", ""))
+	if action == "BATTLE_TASK":
+		var id := String(order.get("unit_task_id", ""))
+		var record := BattleTaskSystem._find(state, id)
+		if not record.is_empty() and record["request"]["unit"] != code:
+			return {"type": "lapsed", "said": "This unit task belongs to another recipient."}
+		var result := BattleTaskSystem.deliver_task(repo, state, id)
+		return {"type": "delivered" if result["status"] == "received" else "lapsed", "said": String(result["reason"])}
 	if action == "BATTLE_ORDER":
 		var result := BattleOrders.deliver(repo, state, String(order.get("battle_order_id", "")))
 		return {"type": "delivered" if result["status"] == "delivered" else "lapsed", "said": String(result["reason"])}

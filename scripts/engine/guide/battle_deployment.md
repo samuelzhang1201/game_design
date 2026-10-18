@@ -29,6 +29,20 @@ routing and incapacity remain facts that prevent resuming a line.
 Until contact-plan delivery is integrated, pursuit requires an explicit player
 task; a general's deployment warrant alone cannot authorize it.
 
+`BATTLE_TASK` is the paid player dispatch path for a single battlefield unit.
+It accepts `request_id`, `regiment`, `battle_id`, `task` and optional
+`target_unit`; source/issuer and formation are not action parameters. The
+OrderCosts filing charge applies once per new request, plus a courier fee only
+for a new courier. Pending co-carried tasks pay independent filing charges.
+Reserved reward gold is unavailable. Exact retries return the saved original
+outcome before costs, history or current eligibility; conflicting reuse fails.
+Local king command range delivers immediately through CourierSystem; remote
+warrants remain pending until arrival. Delivery checks recipient identity,
+current realm control, membership and law. Lost/expired couriers invalidate
+pending tasks with a reason without refunding spent fees. Cancellation,
+unit-scoped combat effects and formation execution require their own integration
+steps; this dispatch path changes only the canonical primary-task ledger.
+
 ## Costly orders and daily resolution
 
 `BattleOrders` saves canonical warrants in `GameState.battle_orders`, retaining terminal receipts after battle removal. `BATTLE_ORDER` needs a stable request ID; exact replay returns before costs/history, conflicting reuse fails. Ownership, live membership and military law are checked at send and delivery. Continuing actions are mutually exclusive; the last lawful actual delivery wins regardless of dispatch order. Inspiration preserves the continuing action. A warrant carries immutable issued targets and beneficiary counts; new arrivals do not enlarge its award. Bounty is the ceiling of living recipients times `orders.csv`'s per-thousand price; delivery caps recipients to issued counts. Dispatch reserves the promise, delivery pays current survivors and releases the rest; cancellation, lost/fused couriers, missing targets and battle endings release unused gold. Courier fees remain spent. `available_gold` is the voluntary-spending boundary in ActionSystem and recruitment; involuntary losses may consume a promise, so execution checks again and invalidates an unfunded reward. Inspiration has saved cooldown/resistance deadlines, bounded morale and a real king-presence bonus. Affordability checks gate positive costs only, so an underfunded reward promise cannot block a free local surrender. Surrender pays through personnel and equipment, without a fictitious local fee; refusal preserves the previous action. Accepted surrender atomically creates source-preserving prisoner batches for every fit and wounded survivor, retains equipment/commander evidence, and resolves the surrendering holders’ existing custody before removing their control. The nearest capable opposing battlefield receiver takes custody; the king independently requests safe departure and never enters the personnel roster. A failed refuge search is recorded without cancelling the troops’ surrender.

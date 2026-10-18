@@ -55,7 +55,8 @@ static func _refusal(repo: DataRepository, state: GameState, order: Dictionary) 
 	var action := String(repo.battle_behaviors[order["task"]]["legal_action"])
 	var source := String(order["source"])
 	if source == "player":
-		if not state.regiments.has(unit) or ArmySystem.is_foe(state, unit):
+		if not state.regiments.has(unit) or ArmySystem.is_foe(state, unit) \
+				or ArmySystem.realm_of(repo, unit, state) != repo.resolve_realm("player_realm"):
 			return "The crown cannot command this unit."
 	elif source == "general":
 		var issuer := String(order["issuer"])
@@ -96,6 +97,19 @@ static func _transition(state: GameState, record: Dictionary, status: String, re
 	record["reason"] = reason
 	record["history"].append({"status": status, "reason": reason, "day": state.absolute_day(),
 		"source": String(record["request"]["source"])})
+
+
+static func refusal_of(repo: DataRepository, state: GameState, raw: Dictionary) -> String:
+	var why := _format_error(raw)
+	if why != "":
+		return why
+	return _refusal(repo, state, _canonical(raw))
+
+
+static func invalidate_task(state: GameState, id: String, reason: String) -> void:
+	var record := _find(state, id)
+	if not record.is_empty() and record["status"] == "pending":
+		_transition(state, record, "invalid", reason)
 
 
 static func issue_task(repo: DataRepository, state: GameState, raw: Dictionary) -> Dictionary:
