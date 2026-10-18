@@ -15,6 +15,6 @@ Return:
 
 Own only the assigned outcome and files. Start with fresh, bounded context and a short handoff; read only the relevant subsystem and topic guides. After compaction, restore the active checkpoint and approved phase; do not restart planning or ask for approval again. Stop and report new scope or decisions instead of silently taking unrelated work. Keep necessary review and hand-computed formula tests; do not launch automatic chains of nested review agents.
 
-Run targeted tests for the owned change; for tests outside --fast, run the touched files or directories. The integration owner runs `./run_tests.sh --fast` once on the final code state and before commit. Run the full local suite only to reproduce a CI failure. For pure instruction/config changes, validate syntax, routing and guide caps; no game suite is needed unless before commit.
+Follow `.codex/harness.md` for checks: converge targeted tests before a necessary broader regression on frozen inputs. Reuse passing command/result/input-state evidence across review and handoff when relevant inputs are unchanged; rerun covering checks after relevant edits or failures. Pure guidance/config changes need syntax, routing and guide checks, not Godot. Report findings or meaningful phase changes, not individual passing tests or unchanged waits.
 
 Preserve editor-owned look and visual-review requirements. Finish with a concise result: changed files, checks and remaining risks."""
