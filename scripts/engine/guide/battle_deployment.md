@@ -4,6 +4,31 @@
 
 `BattleFormation` owns deployment independently of stance/action. `formations.csv` declares four shapes, frontage, terrain/arm/morale/training suitability, centre requirements, factors and reforming costs. A diamond's positive protection requires an actual nearby king or wounded personnel; absent a centre its penalties remain. `BATTLE_FORMATION` is a paid typed order through `ActionSystem` and the existing local/courier path; delivery revalidates membership and suitability, uses a separate side order id and saved within-courier sequence, and expires with the battle. Same-target requests do nothing; retargeting preserves the longest disorder deadline. Saved current/previous/target, progress and last-progress day advance once per completed day using fit-personnel discipline. During reforming only current deployment plus disorder applies; each factor has one source and reason; combat merges the formation/terrain category before one integer truncation. WAR ROOM and map share its shape; narrow lines fold into extra ranks instead of overlapping figures. Figure-count tiers remain `army_formations.csv`'s responsibility.
 
+## Unit task warrants
+
+`BattleTaskSystem.issue_task/deliver_task` are internal warrant operations, with
+dispatch, payment and physical arrival owned by their caller. They do not move
+units or advance time. `GameState.unit_tasks` is the sole unit-task ledger:
+per-unit pending orders, current ID, issued/received sequence and terminal
+receipts. A valid delivery replaces the current task; a late lower sequence is
+superseded within its authority. A separate received-player high-water mark
+prevents a general's later deployment from making the only in-flight royal task
+stale. The overall received high-water mark never decreases. Exact request replays preserve the receipt; conflicting IDs are
+refused across all units. Requests and returned snapshots are independent copies.
+Every transition retains world day, source and reason. Old saves start empty.
+
+`behaviors.csv` lists the seven primary tasks and their legal battle actions;
+formation is an independent field referencing `formations.csv`. Receipt checks
+live unit/target membership, current received law and battlefield obligations.
+Unit-scoped law checks affect only the receiving unit; army-wide warrants retain
+their intersection across the side. The current eligible battlefield general
+may task unassigned units but cannot replace a delivered player task, even when
+his pending warrant has a newer sequence. A local commander cannot issue a new
+primary task. Risk, morale and formation preparation do not veto lawful receipt;
+routing and incapacity remain facts that prevent resuming a line.
+Until contact-plan delivery is integrated, pursuit requires an explicit player
+task; a general's deployment warrant alone cannot authorize it.
+
 ## Costly orders and daily resolution
 
 `BattleOrders` saves canonical warrants in `GameState.battle_orders`, retaining terminal receipts after battle removal. `BATTLE_ORDER` needs a stable request ID; exact replay returns before costs/history, conflicting reuse fails. Ownership, live membership and military law are checked at send and delivery. Continuing actions are mutually exclusive; the last lawful actual delivery wins regardless of dispatch order. Inspiration preserves the continuing action. A warrant carries immutable issued targets and beneficiary counts; new arrivals do not enlarge its award. Bounty is the ceiling of living recipients times `orders.csv`'s per-thousand price; delivery caps recipients to issued counts. Dispatch reserves the promise, delivery pays current survivors and releases the rest; cancellation, lost/fused couriers, missing targets and battle endings release unused gold. Courier fees remain spent. `available_gold` is the voluntary-spending boundary in ActionSystem and recruitment; involuntary losses may consume a promise, so execution checks again and invalidates an unfunded reward. Inspiration has saved cooldown/resistance deadlines, bounded morale and a real king-presence bonus. Affordability checks gate positive costs only, so an underfunded reward promise cannot block a free local surrender. Surrender pays through personnel and equipment, without a fictitious local fee; refusal preserves the previous action. Accepted surrender atomically creates source-preserving prisoner batches for every fit and wounded survivor, retains equipment/commander evidence, and resolves the surrendering holders’ existing custody before removing their control. The nearest capable opposing battlefield receiver takes custody; the king independently requests safe departure and never enters the personnel roster. A failed refuge search is recorded without cancelling the troops’ surrender.

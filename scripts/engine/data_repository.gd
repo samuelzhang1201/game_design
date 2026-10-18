@@ -151,6 +151,7 @@ var parley_clauses: Dictionary = {}
 var prisoner_terms: Dictionary = {}
 var battle_formations: Dictionary = {}
 var battle_orders: Dictionary = {}
+var battle_behaviors: Dictionary = {}
 var battle_events: Dictionary = {}
 var battle_event_choices: Array[Dictionary] = []
 ## data/battle/ai_doctrines.csv (§3.3): host role -> {greed_permille, caution_permille,
@@ -1048,6 +1049,9 @@ func _load(dir: String) -> bool:
 					if not key in ["kind", "label"]:
 						row[key] = int(row[key])
 				battle_orders[String(r["kind"])] = row):
+		return false
+	if not _load_if_present(table_path(dir, "behaviors"), ["task", "label", "legal_action"],
+			func(r): battle_behaviors[String(r["task"])] = r.duplicate()):
 		return false
 	if not _load_if_present(table_path(dir, "battle_events"),
 			["event_id", "trigger", "art_key", "phase", "weight", "chance_permille", "cooldown_days", "threshold"],

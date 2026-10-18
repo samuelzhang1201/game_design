@@ -61,12 +61,15 @@ static func _policy(battle: Dictionary, clause: String, today: int) -> String:
 
 
 ## A live own law may be stricter; it can never revoke a shared obligation.
-static func legal_actions(repo: DataRepository, state: GameState, battle_id: int, side: String) -> Array[String]:
+static func legal_actions(repo: DataRepository, state: GameState, battle_id: int, side: String, unit := "") -> Array[String]:
 	var battle := BattleSystem.battle_by_id(state, battle_id)
 	if battle.is_empty() or not side in BattleSystem.SIDES or (battle[side] as Array).is_empty():
 		return []
+	if unit != "" and not unit in battle[side]:
+		return []
+	var members: Array = battle[side] if unit == "" else [unit]
 	var actions: Array[String] = ["attack", "hold", "inspire", "retreat", "surrender", "pursue", "charge", "red_flag"]
-	for code: String in battle[side]:
+	for code: String in members:
 		if LawSystem.received(repo, state, "quarter", code)["value"] == "give":
 			actions.erase("red_flag")
 		if LawSystem.received(repo, state, "own_surrender", code)["value"] == "forbid":
@@ -74,7 +77,7 @@ static func legal_actions(repo: DataRepository, state: GameState, battle_id: int
 		if LawSystem.received(repo, state, "battle_tactics", code)["value"] == "restrained":
 			actions.erase("charge")
 			actions.erase("pursue")
-	for code: String in battle[side]:
+	for code: String in members:
 		if DevelopmentSystem.flag(repo, state, ArmySystem.realm_of(repo, code, state), "honour_bound"):
 			actions.erase("red_flag")
 	if _policy(battle, "surrender", state.absolute_day()) == "accept":
