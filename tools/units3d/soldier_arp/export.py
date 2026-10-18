@@ -14,6 +14,10 @@ from mathutils import Matrix
 
 OUT = Path("/Users/samuelzhang/game_design/assets/3D/units/soldier/model_wip/arp_knight_20261018/export")
 CLIPS = ("WALK", "IDLE", "SLASH", "ATTACK", "ATTACK_VAR1")
+# the names the map's units ask for (Map3DUnits.clip_named matches the END of a clip's name):
+# the walk is the MARCH, the sword-and-shield guard stance the GARRISON (STANDBY and DEFEND fall
+# back to it); ATTACK is the runtime's attack, SLASH and ATTACK_VAR1 ride along
+GAME_NAMES = {"WALK": "MARCH", "IDLE": "GARRISON"}
 SOCKETS = ("cc_weapon.l", "cc_weapon.r")
 RENAME = {"head.x": "head"}            # the public head name the map's units read
 MAX_TEX = 2048
@@ -65,7 +69,8 @@ def _bake(src, rig, keep):
         src.animation_data.action = act
         src.animation_data.action_slot = act.slots[0]
         f0, f1 = map(int, act.frame_range)
-        out = bpy.data.actions.new("game_" + clip)
+        game = GAME_NAMES.get(clip, clip)
+        out = bpy.data.actions.new("game_" + game)
         rig.animation_data.action = out
         for f in range(f0, f1 + 1):
             scn.frame_set(f)
@@ -81,9 +86,9 @@ def _bake(src, rig, keep):
                 for path in ("location", "rotation_quaternion", "scale"):
                     pb.keyframe_insert(path, frame=f - f0 + 1, group=pb.name)
         track = rig.animation_data.nla_tracks.new()
-        track.name = clip
-        track.strips.new(clip, 1, out)
-        info[clip] = {"frames": f1 - f0 + 1, "seconds": round((f1 - f0) / scn.render.fps, 3)}
+        track.name = game
+        track.strips.new(game, 1, out)
+        info[game] = {"source": clip, "frames": f1 - f0 + 1, "seconds": round((f1 - f0) / scn.render.fps, 3)}
     rig.animation_data.action = None
     return info
 
@@ -97,7 +102,7 @@ def _err(src, rig, keep):
         src.animation_data.action = act
         src.animation_data.action_slot = act.slots[0]
         for tr in rig.animation_data.nla_tracks:
-            tr.mute = tr.name != clip
+            tr.mute = tr.name != GAME_NAMES.get(clip, clip)
         f0, f1 = map(int, act.frame_range)
         for f in range(f0, f1 + 1, 5):      # every clip starts at frame 1, as its NLA strip does
             scn.frame_set(f)

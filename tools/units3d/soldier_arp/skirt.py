@@ -357,12 +357,12 @@ def untangle(body, band=(0.62, 0.97), step=0.004, rounds=12):
 
 
 def fix_skirt(body, band=(0.78, 1.10), radius=0.07):
-    """The whole fix on a fresh file: untangle the rest pose, open the gap under the plates, slim the
-    hidden thighs, share weights over the plate/mail overlap band. Returns the pairs."""
-    untangle(body)
+    """The reviewed fix on a fresh file (README step 8): open the gap under the plates, slim the
+    hidden thighs, share weights over the plate/mail overlap band. Returns the pairs. (untangle()
+    is not part of it: pushing the crossing triangles apart diverged on this mesh.)"""
     P = pairs(body)
     open_gap(body, P)
-    slim_thighs(body)
+    slim_thighs(body, clearance=0.05, max_slim=0.04)
     share_weights(body, radius=radius, band=band)
     return P
 

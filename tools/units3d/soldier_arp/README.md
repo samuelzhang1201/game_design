@@ -39,7 +39,7 @@ Done in the owner's Blender through the MCP (`ctx.py` gives ARP's operators the 
    `tripo_inbox/equip/no-rigging/{short_sword,round_shield}/processed/soldier_ue5/`.
 8. `skirt.py`: the fauld (plates) and the mail skirt are ONE fused island; the mail between and
    under the plates followed the thighs, the plates the hips, so the mail slid over the plates.
-   `fix_skirt` order: `open_gap` (mail under the plates pushed ≥2 cm in, along the PLATE normal —
+   `fix_skirt()` runs exactly this: `open_gap` (mail under the plates pushed ≥2 cm in, along the PLATE normal —
    the mail's own normals are inconsistent), `slim_thighs(clearance=0.05, max_slim=0.04)` (trouser
    verts hidden under the skirt pulled toward the thigh bone), `share_weights(radius=0.07,
    band=(0.78, 1.10))` (spatial Gaussian smoothing over the plate height only; the hem below keeps
@@ -52,7 +52,8 @@ Done in the owner's Blender through the MCP (`ctx.py` gives ARP's operators the 
    Previews use Blender's `city.exr` studio light (metal needs something to reflect).
 10. `export.py` (`export_all()`): a new constraint-free armature with the 67 deform bones and the
    `cc_weapon.l/.r` sockets (`head.x` renamed `head`), each clip baked frame by frame from the ARP
-   rig (largest bone error 1e-6 m) into NLA tracks WALK / IDLE / SLASH / ATTACK / ATTACK_VAR1, the
+   rig (largest bone error 1e-6 m) into NLA tracks named for the map runtime (`Map3DUnits.clip_named`):
+   WALK → MARCH, IDLE → GARRISON (STANDBY and DEFEND fall back to it), ATTACK, SLASH, ATTACK_VAR1; the
    body skinned linearly (glTF keeps 4 influences), its colour and metal/rough maps at 2048, turned
    to face glTF −Z like the other units. `soldier_knight.glb` carries the sword and shield as
    children of the socket joints (identity local transform — Godot imports them as
