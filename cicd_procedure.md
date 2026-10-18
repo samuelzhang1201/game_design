@@ -1,5 +1,9 @@
 # CI/CD Procedure 项目 CI/CD 流程说明
 
+Harness-only PRs run `harness-checks` (hook behavior, shell/config syntax and root-guide caps) without Godot. The `gut-tests` aggregate requires these checks to pass and accepts skipped game shards only when the checked diff contains no runtime/test/data/art changes. Mixed or game changes still require the existing game checks until the separate selective-CI step lands.
+
+仅 harness／普通文档的 PR 跑专用检查，不启动 Godot；混合改动仍跑游戏检查。每个 PR 只处理一个小问题，只有实施和唯一 Review 两个 session；Review 在当前 HEAD 必需检查通过后直接合并，不把下一步累积进来。完整执行规则见 `.codex/harness.md`。
+
 Plain-language guide to how automated testing works in this project, for anyone (human or Claude Code) working on it. Chinese and English are paired paragraph by paragraph.
 
 这份文档用通俗的语言说明本项目的自动化测试流程，给所有参与开发的人（包括 Claude Code）看。中英文逐段对照。

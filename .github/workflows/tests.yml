@@ -3,15 +3,6 @@ name: tests
 on:
   pull_request:
     branches: [main]
-    # Skip CI for changes that can't break a test: plain docs, and CSV value
-    # tweaks (tests read data/ through tests/suite_data.gd, not live CSVs).
-    # RANDOM_EVENTS.md and game_story/**/*.md are runtime content with their
-    # own id-resolution tests, so they're carved back out of the *.md skip.
-    paths-ignore:
-      - '**/*.md'
-      - '!RANDOM_EVENTS.md'
-      - '!game_story/**'
-      - 'data/**/*.csv'
   workflow_dispatch: {}
 
 permissions:
@@ -22,7 +13,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  harness-checks:
+    runs-on: ubuntu-latest
+    outputs:
+      run-gut: ${{ steps.scope.outputs.run-gut }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Check harness rules and handoff graph
+        run: |
+          python3 -m unittest discover -s .codex/hooks -p 'test_*.py'
+          bash -n .codex/hooks/session-start.sh
+          python3 - <<'PY'
+          import json, pathlib, re, tomllib
+          json.loads(pathlib.Path('.codex/hooks.json').read_text())
+          tomllib.loads(pathlib.Path('.codex/config.toml').read_text())
+          for name in ['AGENTS.md', 'CLAUDE.md']:
+              assert len(pathlib.Path(name).read_text()) < 20000, name
+          for name in re.findall(r'`([a-z0-9_/]+/CLAUDE\.md)`', pathlib.Path('CLAUDE.md').read_text()):
+              guide = pathlib.Path(name).read_text()
+              assert len(guide) < 30000, name
+              for topic in re.findall(r'`([a-z0-9_/]+/guide/[a-z0-9_]+\.md)`', guide):
+                  assert len(pathlib.Path(topic).read_text()) < 30000, topic
+          PY
+      - name: Determine whether game checks are needed
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            echo 'run-gut=true' >> "$GITHUB_OUTPUT"
+          else
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            RUN_GUT=$(python3 .codex/hooks/ci_scope.py "$BASE_SHA")
+            echo "run-gut=$RUN_GUT" >> "$GITHUB_OUTPUT"
+          fi
+
   gut-shards:
+    needs: harness-checks
+    if: ${{ needs.harness-checks.outputs.run-gut == 'true' }}
     name: GUT shard ${{ matrix.shard }}/8
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.job_timeout || 45 }}
@@ -97,10 +128,19 @@ jobs:
 
   gut-tests:
     if: ${{ always() }}
-    needs: gut-shards
+    needs: [harness-checks, gut-shards]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every GUT shard to pass
+      - name: Require the checks selected for this PR to pass
         env:
+          HARNESS_RESULT: ${{ needs.harness-checks.result }}
+          RUN_GUT: ${{ needs.harness-checks.outputs.run-gut }}
           SHARD_RESULT: ${{ needs.gut-shards.result }}
-        run: test "$SHARD_RESULT" = success
+        run: |
+          test "$HARNESS_RESULT" = success
+          if [ "$RUN_GUT" = true ]; then
+            test "$SHARD_RESULT" = success
+          else
+            test "$RUN_GUT" = false
+            test "$SHARD_RESULT" = skipped
+          fi
