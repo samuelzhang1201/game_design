@@ -36,7 +36,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 		return "Unknown action: " + req.action_code
 	if req.action_code in ["PRISONER_PROPOSE", "PRISONER_RESPOND", "PRISONER_SETTLE"]:
 		return String(_prisoner_action(req, state, false).get("error", ""))
-	if req.action_code == "BATTLE_TASK":
+	if req.action_code in ["BATTLE_TASK", "BATTLE_TASK_CANCEL"]:
 		var previous := _task_replay(req, state)
 		if not previous.is_empty():
 			return String(previous.get("error", ""))
@@ -101,7 +101,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			return _validate_army(req, state)
 		"BATTLE_ORDER":
 			return _validate_battle_order(req, state)
-		"BATTLE_TASK":
+		"BATTLE_TASK", "BATTLE_TASK_CANCEL":
 			return _validate_task(req, state)
 		"BATTLE_FORMATION":
 			return _validate_formation(req, state)
@@ -325,7 +325,8 @@ func _place_refusal(reg: Dictionary, at: Vector2, off_map: String, into_sea: Str
 
 func _task_warrant(req: ActionRequest) -> Dictionary:
 	return {"id": req.params.get("request_id", ""), "unit": req.params.get("regiment", ""),
-		"battle_id": req.params.get("battle_id", -1), "task": req.params.get("task", ""),
+		"battle_id": req.params.get("battle_id", -1),
+		"task": "cancel" if req.action_code == "BATTLE_TASK_CANCEL" else req.params.get("task", ""),
 		"target_unit": req.params.get("target_unit", ""), "source": "player", "issuer": ""}
 
 func _task_replay(req: ActionRequest, state: GameState) -> Dictionary:
@@ -334,15 +335,21 @@ func _task_replay(req: ActionRequest, state: GameState) -> Dictionary:
 	var record := BattleTaskSystem._find(state, String(req.params.get("request_id", "")))
 	if record.is_empty():
 		return {}
-	if req.target != "" or not record.has("action_params") or record["action_params"] != req.params:
+	if req.target != "" or not record.has("action_params") or record["action_params"] != req.params \
+			or record["action_outcome"]["action_code"] != req.action_code:
 		return {"error": "This request id already names another unit task."}
 	return {"outcome": record["action_outcome"].duplicate(true)}
 
 func _validate_task(req: ActionRequest, state: GameState) -> String:
 	if req.target != "":
 		return "A unit task has no separate character target."
+	var fields := ["request_id", "regiment", "battle_id"]
+	if req.action_code == "BATTLE_TASK":
+		fields.append_array(["task", "target_unit"])
+		if req.params.get("task", "") == "cancel":
+			return "Use BATTLE_TASK_CANCEL to cancel a unit task."
 	for field: Variant in req.params:
-		if not field in ["request_id", "regiment", "battle_id", "task", "target_unit"]:
+		if not field in fields:
 			return "Unknown unit task parameter."
 	var why := BattleTaskSystem.refusal_of(data, state, _task_warrant(req))
 	if why != "":
@@ -728,7 +735,7 @@ func _prisoner_action(req: ActionRequest, state: GameState, commit: bool) -> Dic
 func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	if req.action_code in ["PRISONER_PROPOSE", "PRISONER_RESPOND", "PRISONER_SETTLE"]:
 		return _prisoner_action(req, state, true)
-	if req.action_code == "BATTLE_TASK":
+	if req.action_code in ["BATTLE_TASK", "BATTLE_TASK_CANCEL"]:
 		var replay := _task_replay(req, state)
 		if replay.has("error"):
 			return {"action_code": req.action_code, "ok": false, "error": replay["error"]}
@@ -750,7 +757,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			return (state.recruitment_projects[id]["action_outcome"] as Dictionary).duplicate(true) \
 				if state.recruitment_projects[id].has("action_outcome") else previous
 	var err := validate(req, state)
-	if req.action_code in ["ARMY_RECRUIT", "BATTLE_ORDER", "BATTLE_TASK"] and err != "":
+	if req.action_code in ["ARMY_RECRUIT", "BATTLE_ORDER", "BATTLE_TASK", "BATTLE_TASK_CANCEL"] and err != "":
 		return {"action_code": req.action_code, "ok": false, "error": err}
 	assert(err == "", "execute called with invalid request: " + err)
 	var row: Dictionary = data.actions[req.action_code]
@@ -971,12 +978,13 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				"with a battlefield warrant to " + String(req.params["kind"]))
 			if bool(c.get("local_delivered", false)):
 				effects.append_array(state.battle_orders[String(warrant["id"])].get("result", {}).get("effects", []))
-		"BATTLE_TASK":
+		"BATTLE_TASK", "BATTLE_TASK_CANCEL":
 			var warrant := _task_warrant(req)
 			var issued := BattleTaskSystem.issue_task(data, state, warrant)
 			assert(issued["status"] == "pending")
 			_send_courier(state, effects, String(req.params["regiment"]),
 				{"action_code": "BATTLE_TASK", "unit_task_id": String(warrant["id"])},
+				"with a unit task cancellation" if req.action_code == "BATTLE_TASK_CANCEL" else \
 				"with a unit task to " + String(req.params["task"]))
 		"BATTLE_FORMATION":
 			var code := String(req.params["regiment"])
@@ -1145,12 +1153,12 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),
 		"drift": drift}
-	if req.action_code in ["BATTLE_ORDER", "BATTLE_TASK"]:
+	if req.action_code in ["BATTLE_ORDER", "BATTLE_TASK", "BATTLE_TASK_CANCEL"]:
 		outcome = GameState._whole(outcome)
 	state.recent_outcomes.append(outcome)
 	if req.action_code == "BATTLE_ORDER":
 		state.battle_orders[String(req.params["request_id"])]["action_outcome"] = outcome.duplicate(true)
-	if req.action_code == "BATTLE_TASK":
+	if req.action_code in ["BATTLE_TASK", "BATTLE_TASK_CANCEL"]:
 		var record := BattleTaskSystem._find(state, String(req.params["request_id"]))
 		record["action_params"] = req.params.duplicate(true)
 		record["action_outcome"] = outcome.duplicate(true)

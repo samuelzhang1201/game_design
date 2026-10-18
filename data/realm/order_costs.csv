@@ -48,3 +48,4 @@ PRISONER_PROPOSE,gold:-1:the prisoner agreement clerk,1,Charged once per success
 PRISONER_RESPOND,gold:-1:the prisoner agreement clerk,1,Charged once per successful proposal command
 PRISONER_SETTLE,gold:-1:the prisoner agreement clerk,1,Charged once per successful proposal command
 BATTLE_TASK,gold:-1:the marshal prepares a unit task warrant,1,Each new task pays filing once plus a new courier when needed
+BATTLE_TASK_CANCEL,gold:-1:the marshal prepares a unit task cancellation,1,Each new cancellation pays filing once plus a new courier when needed

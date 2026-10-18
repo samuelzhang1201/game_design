@@ -48,6 +48,13 @@ static func _refusal(repo: DataRepository, state: GameState, order: Dictionary) 
 	var entry := BattleSystem._stored(state, unit)
 	if not BattleSystem._can_fight(repo, state, unit) or bool(entry.get("captured", false)):
 		return "The unit can no longer receive a fighting task."
+	if order["task"] == "cancel":
+		if order["source"] != "player" or not state.regiments.has(unit) or ArmySystem.is_foe(state, unit) \
+				or ArmySystem.realm_of(repo, unit, state) != repo.resolve_realm("player_realm"):
+			return "Only the crown can cancel this unit task."
+		if order["formation"] != "" or order["target_unit"] != "" or order["issuer"] != "":
+			return "A cancellation has no formation, enemy target or delegated issuer."
+		return ""
 	if not repo.battle_behaviors.has(order["task"]):
 		return "Unknown unit task."
 	if order["formation"] != "" and not repo.battle_formations.has(order["formation"]):
@@ -153,11 +160,15 @@ static func deliver_task(repo: DataRepository, state: GameState, order_id: Strin
 		_transition(state, record, "invalid", why)
 		return record.duplicate(true)
 	var previous: Dictionary = ledger["orders"].get(String(ledger["current_id"]), {})
+	var cancelling: bool = order["task"] == "cancel"
 	if not previous.is_empty():
-		_transition(state, previous, "replaced", "A newer lawful unit task arrived: " + order_id)
-	ledger["current_id"] = order_id
+		_transition(state, previous, "cancelled" if cancelling else "replaced",
+			"The crown cancels the unit task: " + order_id if cancelling else \
+			"A newer lawful unit task arrived: " + order_id)
+	ledger["current_id"] = "" if cancelling else order_id
 	ledger["received_sequence"] = maxi(int(ledger["received_sequence"]), int(record["sequence"]))
 	if order["source"] == "player":
 		ledger["player_received_sequence"] = int(record["sequence"])
-	_transition(state, record, "received", "The unit receives its lawful primary task.")
+	_transition(state, record, "received", "The unit receives the crown’s task cancellation." if cancelling else \
+		"The unit receives its lawful primary task.")
 	return record.duplicate(true)
