@@ -2,9 +2,9 @@
 
 Goal: implement the owner's 2026-10-18 instructions in three sequential small PRs. Each step has exactly one implementation session and one Review session; no third session/subagent participates in that step's PR.
 
-Current step: **HARNESS.1 — session/PR scope and handoff graph**. Implementation `01a14e6b-e137-7f33-8e8b-9b25d3db67d3`; its sole `HARNESS.1-Review` session is `01a14e8a-6ed9-7f32-b780-832b7687c77d`. The reviewer reviews/fixes this PR and merges only after current-head CI passes. It then hands off once to the different step HARNESS.2's implementation session.
+Current step: **HARNESS.2 — content-based selected GUT CI**. Implementation `01a14e8c-7609-7a93-ac8f-5635252d9f8b`; sole Review assigned at handoff. HARNESS.1 merged in PR #83 after current-head CI passed.
 
-### HARNESS.1 — current PR
+### HARNESS.1 — merged PR #83
 
 Owned scope: `.codex/harness.md`, `.codex/hooks.json`, `.codex/hooks/`, existing cloud session-start hook, root entry guides, `.github/pull_request_template.md`, this plan. The existing workflow adds harness checks and skips GUT for harness/docs-only changes; its game shards are unchanged. Do not edit the runner, game tests, roles/model/MCP/permission settings, formulas or art.
 
@@ -16,7 +16,7 @@ Owned scope: `.codex/harness.md`, `.codex/hooks.json`, `.codex/hooks/`, existing
 
 Acceptance: handoff graph rejects fan-in/fan-out/cycles and a third owner of a PR across worktrees; retries do not create extra successors; missing/invalid checkpoint blocks ready; no next task creates no session. Hook never reads transcript contents, changes trust or launches agents. Guides/template require a small bounded step/PR and exactly two owners. Harness-only CI runs Python/config checks without Godot; runtime/CSV changes still request game checks. No runner/game-test edits or full local GUT run.
 
-### HARNESS.2 — classify and select CI tests (next independent PR)
+### HARNESS.2 — classify and select CI tests (current PR)
 
 Selection lands before deletion so HARNESS.3 can validate its affected UI/engine files without being forced through the old long simulation shards. LLM suites are excluded from ordinary selected runs immediately, then physically removed by HARNESS.3.
 
@@ -28,4 +28,6 @@ Own `tests/llm/`, the LLM-specific methods in `tests/ui/test_court_screen.gd`, `
 
 Chain: HARNESS.1 implementation → HARNESS.1-Review → HARNESS.2 implementation → HARNESS.2-Review → HARNESS.3 implementation → HARNESS.3-Review → stop. Every edge has one source and one fresh target; each PR has only its own pair. No concurrent parallel step execution or supervising coordinator.
 
-Checkpoint: HARNESS.1 implemented in PR #83 and independently reviewed by its sole Review session. Review strengthened the retry test to replay an earlier handoff after its successor advances; local harness checks passed. Await current-head CI before merge; then hand off once to HARNESS.2.
+Checkpoint: HARNESS.1 merged as `dfdfce1d`. HARNESS.2 implements the manifest, conservative selector, category matrix, runner selection and conduct replay extraction. Validation and PR state are recorded in the worktree-local handoff; HARNESS.3 has not started.
+
+Ruling: content categories retain single-formula and local save/determinism checks as functional; only campaign replays and authored day-loop scenarios opt in. The mixed conduct file loses only its 24-month method. Unknown runtime/data/art changes select all functional consumers; known presentation subtrees select their subsystem, UI bridge and relevant engine contracts. Empty requested categories start no Godot job. New test directories must be classified before CI can run.

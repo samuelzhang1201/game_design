@@ -3,7 +3,13 @@ name: tests
 on:
   pull_request:
     branches: [main]
-  workflow_dispatch: {}
+    types: [opened, synchronize, reopened, edited]
+  workflow_dispatch:
+    inputs:
+      include:
+        description: 'Explicit extra categories: simulation,gameplay,balance (comma separated)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -17,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       run-gut: ${{ steps.scope.outputs.run-gut }}
+      matrix: ${{ steps.scope.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,6 +31,10 @@ jobs:
       - name: Check harness rules and handoff graph
         run: |
           python3 -m unittest discover -s .codex/hooks -p 'test_*.py'
+          python3 tools/test_select_gut_tests.py
+          python3 tools/test_run_tests.py
+          python3 tools/test_run_with_timeout.py
+          sh -n run_tests.sh
           bash -n .codex/hooks/session-start.sh
           python3 - <<'PY'
           import json, pathlib, re, tomllib
@@ -37,38 +48,32 @@ jobs:
               for topic in re.findall(r'`([a-z0-9_/]+/guide/[a-z0-9_]+\.md)`', guide):
                   assert len(pathlib.Path(topic).read_text()) < 30000, topic
           PY
-      - name: Determine whether game checks are needed
+      - name: Select content categories for this change
         id: scope
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EVENT_NAME: ${{ github.event_name }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          MANUAL_INCLUDE: ${{ inputs.include }}
         run: |
           if [ "$EVENT_NAME" = workflow_dispatch ]; then
-            echo 'run-gut=true' >> "$GITHUB_OUTPUT"
+            python3 tools/select_gut_tests.py --functional \
+              --request-text "GUT_INCLUDE: $MANUAL_INCLUDE" --github-output "$GITHUB_OUTPUT"
           else
             git fetch --no-tags --depth=1 origin "$BASE_SHA"
-            RUN_GUT=$(python3 .codex/hooks/ci_scope.py "$BASE_SHA")
-            echo "run-gut=$RUN_GUT" >> "$GITHUB_OUTPUT"
+            python3 tools/select_gut_tests.py --base "$BASE_SHA" \
+              --request-text "$PR_BODY" --github-output "$GITHUB_OUTPUT"
           fi
 
-  gut-shards:
+  gut-selected:
     needs: harness-checks
     if: ${{ needs.harness-checks.outputs.run-gut == 'true' }}
-    name: GUT shard ${{ matrix.shard }}/8
+    name: GUT ${{ matrix.category }}
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ matrix.job_timeout || 45 }}
+    timeout-minutes: 75
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { shard: 1, slice: '1/10', test_timeout: 3600, job_timeout: 75 }
-          - { shard: 2, slice: '2/10' }
-          - { shard: 3, slice: '3/10' }
-          - { shard: 4, slice: '4/10' }
-          - { shard: 5, slice: '5/10' }
-          - { shard: 6, slice: '6/10' }
-          - { shard: 7, slice: '4/5' }
-          - { shard: 8, slice: '5/5' }
+      matrix: ${{ fromJSON(needs.harness-checks.outputs.matrix) }}
     env:
       GODOT_VERSION: 4.7-stable
       GODOT_DIR: ${{ github.workspace }}/.godot-bin
@@ -102,13 +107,10 @@ jobs:
           restore-keys: |
             godot-import-
 
-      - name: Check test runner deadlines
-        run: python3 tools/test_run_with_timeout.py
-
-      - name: Run GUT shard
+      - name: Run selected GUT category
         env:
           GODOT: ${{ env.GODOT_DIR }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
-          TEST_TIMEOUT_SECONDS: ${{ matrix.test_timeout || 2100 }}
+          TEST_TIMEOUT_SECONDS: 2100
         run: |
           chmod +x "$GODOT"
           # Mirror the cloud session's two-pass import (CLAUDE.md: the first
@@ -120,27 +122,23 @@ jobs:
           if [ "$code" != 0 ] && [ "$code" != 134 ]; then
             exit "$code"
           fi
-          # Separate runners bound memory and avoid a shared wall-clock limit.
-          # Split the three slow engine slices; retain the map/UI slices so
-          # map hover/picking tests keep their existing shared setup order.
-          lscpu
-          time ./run_tests.sh --shard=${{ matrix.slice }}
+          time ./run_tests.sh --category "${{ matrix.category }}"
 
   gut-tests:
     if: ${{ always() }}
-    needs: [harness-checks, gut-shards]
+    needs: [harness-checks, gut-selected]
     runs-on: ubuntu-latest
     steps:
       - name: Require the checks selected for this PR to pass
         env:
           HARNESS_RESULT: ${{ needs.harness-checks.result }}
           RUN_GUT: ${{ needs.harness-checks.outputs.run-gut }}
-          SHARD_RESULT: ${{ needs.gut-shards.result }}
+          SELECTED_RESULT: ${{ needs.gut-selected.result }}
         run: |
           test "$HARNESS_RESULT" = success
           if [ "$RUN_GUT" = true ]; then
-            test "$SHARD_RESULT" = success
+            test "$SELECTED_RESULT" = success
           else
             test "$RUN_GUT" = false
-            test "$SHARD_RESULT" = skipped
+            test "$SELECTED_RESULT" = skipped
           fi
