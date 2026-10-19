@@ -3711,20 +3711,20 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 
 **角色 id**：`char_elin_wolfmere`
 
-**外貌**：`a 28-year-old woman, a lean angular face with hollow cheeks, deep brown skin, a straight narrow nose, large dark eyes, loose wavy dark brown hair to the shoulders, a youthful unlined complexion, a broad sturdy build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a linen hair net`
+**外貌**：`a 28-year-old woman, a lean angular face with hollow cheeks, very dark deep brown skin of African descent, a straight narrow nose, large dark eyes, loose wavy dark brown hair to the shoulders, a youthful unlined complexion, a broad sturdy build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a linen hair net`
 
 ```
-[S], a 28-year-old woman, a lean angular face with hollow cheeks, deep brown skin, a straight narrow nose, large dark eyes, loose wavy dark brown hair to the shoulders, a youthful unlined complexion, a broad sturdy build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+[S], a 28-year-old woman, a lean angular face with hollow cheeks, very dark deep brown skin of African descent, a straight narrow nose, large dark eyes, loose wavy dark brown hair to the shoulders, a youthful unlined complexion, a broad sturdy build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
 ```
 
 #### `K-288` Florian Wolfmere
 
 **角色 id**：`char_florian_wolfmere`
 
-**外貌**：`a 29-year-old man, a soft rounded face with a small chin, deep brown skin, a long aquiline nose, wide hazel eyes, shoulder-length black hair tied back, a full short beard, a youthful unlined complexion, an athletic build, wearing a dark forest green wool cote with fitted sleeves under a sleeveless russet brown wool surcote, a plain leather belt, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a soft russet brown wool cap`
+**外貌**：`a 29-year-old man, a soft rounded face with a small chin, very dark deep brown skin of African descent, a long aquiline nose, wide hazel eyes, shoulder-length black hair tied back, a full short beard, a youthful unlined complexion, an athletic build, wearing a dark forest green wool cote with fitted sleeves under a sleeveless russet brown wool surcote, a plain leather belt, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a soft russet brown wool cap`
 
 ```
-[S], a 29-year-old man, a soft rounded face with a small chin, deep brown skin, a long aquiline nose, wide hazel eyes, shoulder-length black hair tied back, a full short beard, a youthful unlined complexion, an athletic build, wearing a dark forest green wool cote with fitted sleeves under a sleeveless russet brown wool surcote, a plain leather belt, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a soft russet brown wool cap, one standing figure with empty hands, [C-FULL]
+[S], a 29-year-old man, a soft rounded face with a small chin, very dark deep brown skin of African descent, a long aquiline nose, wide hazel eyes, shoulder-length black hair tied back, a full short beard, a youthful unlined complexion, an athletic build, wearing a dark forest green wool cote with fitted sleeves under a sleeveless russet brown wool surcote, a plain leather belt, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a soft russet brown wool cap, one standing figure with empty hands, [C-FULL]
 ```
 
 #### `K-289` Gareth Wolfmere
@@ -3741,10 +3741,10 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 
 **角色 id**：`char_helena_wolfmere`
 
-**外貌**：`a 31-year-old woman, a heart-shaped face with a narrow chin, deep brown skin, a straight narrow nose, narrow dark brown eyes, loose wavy black hair to the shoulders, faint lines around the eyes, an athletic build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow russet brown fillet`
+**外貌**：`a 31-year-old woman, a heart-shaped face with a narrow chin, very dark deep brown skin of African descent, a straight narrow nose, narrow dark brown eyes, loose wavy black hair to the shoulders, faint lines around the eyes, an athletic build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow russet brown fillet`
 
 ```
-[S], a 31-year-old woman, a heart-shaped face with a narrow chin, deep brown skin, a straight narrow nose, narrow dark brown eyes, loose wavy black hair to the shoulders, faint lines around the eyes, an athletic build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow russet brown fillet, one standing figure with empty hands, [C-FULL]
+[S], a 31-year-old woman, a heart-shaped face with a narrow chin, very dark deep brown skin of African descent, a straight narrow nose, narrow dark brown eyes, loose wavy black hair to the shoulders, faint lines around the eyes, an athletic build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow russet brown fillet, one standing figure with empty hands, [C-FULL]
 ```
 
 #### `K-291` Ivor Wolfmere
@@ -3771,20 +3771,20 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 
 **角色 id**：`char_kieran_wolfmere`
 
-**外貌**：`a 34-year-old man, a broad round face with full cheeks, deep brown skin, a hooked nose, large dark eyes, curly dark brown hair, a short pointed beard, faint lines around the eyes, a slight build with narrow shoulders, wearing a quilted dark forest green gambeson under a short russet brown wool shoulder cape with a hood, a woven russet brown girdle, dark wool hose, ankle boots, stitched leather cuffs, wearing a dark forest green wool hood thrown back`
+**外貌**：`a 34-year-old man, a broad round face with full cheeks, warm brown skin, a broad straight nose, large dark eyes, curly dark brown hair, a short pointed beard, faint lines around the eyes, a slight build with narrow shoulders, wearing a quilted dark forest green gambeson under a short russet brown wool shoulder cape with a hood, a woven russet brown girdle, dark wool hose, ankle boots, stitched leather cuffs, wearing a dark forest green wool hood thrown back`
 
 ```
-[S], a 34-year-old man, a broad round face with full cheeks, deep brown skin, a hooked nose, large dark eyes, curly dark brown hair, a short pointed beard, faint lines around the eyes, a slight build with narrow shoulders, wearing a quilted dark forest green gambeson under a short russet brown wool shoulder cape with a hood, a woven russet brown girdle, dark wool hose, ankle boots, stitched leather cuffs, wearing a dark forest green wool hood thrown back, one standing figure with empty hands, [C-FULL]
+[S], a 34-year-old man, a broad round face with full cheeks, warm brown skin, a broad straight nose, large dark eyes, curly dark brown hair, a short pointed beard, faint lines around the eyes, a slight build with narrow shoulders, wearing a quilted dark forest green gambeson under a short russet brown wool shoulder cape with a hood, a woven russet brown girdle, dark wool hose, ankle boots, stitched leather cuffs, wearing a dark forest green wool hood thrown back, one standing figure with empty hands, [C-FULL]
 ```
 
 #### `K-294` Lucia Wolfmere
 
 **角色 id**：`char_lucia_wolfmere`
 
-**外貌**：`a 35-year-old woman, an oval face with high cheekbones, deep brown skin, a hooked nose, wide hazel eyes, black hair in a single long braid, faint lines around the eyes, a lean wiry build, wearing a dark forest green wool kirtle with fitted sleeves under a sideless russet brown surcote, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed`
+**外貌**：`a 35-year-old woman, an oval face with high cheekbones, very dark deep brown skin of African descent, a hooked nose, wide hazel eyes, black hair in a single long braid, faint lines around the eyes, a lean wiry build, wearing a dark forest green wool kirtle with fitted sleeves under a sideless russet brown surcote, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed`
 
 ```
-[S], a 35-year-old woman, an oval face with high cheekbones, deep brown skin, a hooked nose, wide hazel eyes, black hair in a single long braid, faint lines around the eyes, a lean wiry build, wearing a dark forest green wool kirtle with fitted sleeves under a sideless russet brown surcote, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+[S], a 35-year-old woman, an oval face with high cheekbones, very dark deep brown skin of African descent, a hooked nose, wide hazel eyes, black hair in a single long braid, faint lines around the eyes, a lean wiry build, wearing a dark forest green wool kirtle with fitted sleeves under a sideless russet brown surcote, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
 ```
 
 #### `K-295` Merek Wolfmere
@@ -3801,10 +3801,10 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 
 **角色 id**：`char_nerida_wolfmere`
 
-**外貌**：`a 37-year-old woman, a broad round face with full cheeks, deep brown skin, a straight narrow nose, deep-set grey eyes, chestnut hair braided close around the head, faint lines around the eyes, an athletic build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net`
+**外貌**：`a 37-year-old woman, a broad round face with full cheeks, very dark deep brown skin of African descent, a straight narrow nose, deep-set grey eyes, chestnut hair braided close around the head, faint lines around the eyes, an athletic build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net`
 
 ```
-[S], a 37-year-old woman, a broad round face with full cheeks, deep brown skin, a straight narrow nose, deep-set grey eyes, chestnut hair braided close around the head, faint lines around the eyes, an athletic build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+[S], a 37-year-old woman, a broad round face with full cheeks, very dark deep brown skin of African descent, a straight narrow nose, deep-set grey eyes, chestnut hair braided close around the head, faint lines around the eyes, an athletic build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
 ```
 
 #### `K-297` Owen Wolfmere
@@ -3821,10 +3821,10 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 
 **角色 id**：`char_philippa_wolfmere`
 
-**外貌**：`a 39-year-old woman, a square face with a strong jaw, deep brown skin, a long aquiline nose, pale blue eyes, loose wavy chestnut hair to the shoulders, faint lines around the eyes, a heavyset build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a woven russet brown girdle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed`
+**外貌**：`a 39-year-old woman, a square face with a strong jaw, very dark deep brown skin of African descent, a long aquiline nose, pale blue eyes, loose wavy chestnut hair to the shoulders, faint lines around the eyes, a heavyset build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a woven russet brown girdle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed`
 
 ```
-[S], a 39-year-old woman, a square face with a strong jaw, deep brown skin, a long aquiline nose, pale blue eyes, loose wavy chestnut hair to the shoulders, faint lines around the eyes, a heavyset build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a woven russet brown girdle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+[S], a 39-year-old woman, a square face with a strong jaw, very dark deep brown skin of African descent, a long aquiline nose, pale blue eyes, loose wavy chestnut hair to the shoulders, faint lines around the eyes, a heavyset build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a woven russet brown girdle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
 ```
 
 #### `K-299` Quentin Wolfmere
