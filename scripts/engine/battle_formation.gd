@@ -19,18 +19,23 @@ static func of_unit(state: GameState, code: String) -> String:
 		return ""
 	for side: String in BattleSystem.SIDES:
 		if code in battle[side]:
-			return String(battle.get("formations", {}).get(side, {}).get("current", DEFAULT))
+			return String(_deployment(battle, side, code).get("current", DEFAULT))
 	return ""
 
 
-static func context(repo: DataRepository, state: GameState, battle: Dictionary, side: String) -> Dictionary:
+static func _deployment(battle: Dictionary, side: String, unit := "") -> Dictionary:
+	return battle.get("unit_formations", {}).get(unit, battle.get("formations", {}).get(side, {}))
+
+
+static func context(repo: DataRepository, state: GameState, battle: Dictionary, side: String, unit := "") -> Dictionary:
 	var out := {"width_m": 0, "terrain": "", "centre": "", "arms": [],
 		"morale": 100, "training": 100, "flanked": false, "missiles": false}
 	var directions: Array[Vector2] = []
 	var own_place := Vector2.ZERO
 	var narrow: PackedStringArray = String(repo.battle_formations.get("line", {}).get("narrow_terrains", "")).split("|", false)
 	var place := Vector2i(int(battle["place_x_m"]), int(battle["place_y_m"]))
-	for code: String in battle[side]:
+	var members: Array = battle[side] if unit == "" else [unit]
+	for code: String in members:
 		var reg := ArmySystem.regiment(repo, code, state)
 		var entry := BattleSystem._stored(state, code)
 		own_place += Vector2(ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, reg)))
@@ -44,8 +49,8 @@ static func context(repo: DataRepository, state: GameState, battle: Dictionary, 
 			out["centre"] = "wounded:" + code
 		if not ArmySystem.is_foe(state, code) and Vector2(KingSystem.position(state)).distance_to(Vector2(place)) <= repo.bal("king_command_radius_m"):
 			out["centre"] = "king"
-	if not (battle[side] as Array).is_empty():
-		own_place /= (battle[side] as Array).size()
+	if not members.is_empty():
+		own_place /= members.size()
 	var other := "def" if side == "att" else "att"
 	for code: String in battle[other]:
 		var reg := ArmySystem.regiment(repo, code, state)
@@ -60,14 +65,17 @@ static func context(repo: DataRepository, state: GameState, battle: Dictionary, 
 	return out
 
 
-static func refusal(repo: DataRepository, state: GameState, battle_id: int, side: String, formation: String) -> String:
+static func refusal(repo: DataRepository, state: GameState, battle_id: int, side: String, formation: String, unit := "") -> String:
 	var battle := BattleSystem.battle_by_id(state, battle_id)
 	if battle.is_empty() or not side in BattleSystem.SIDES or (battle[side] as Array).is_empty():
 		return "The army is no longer on this battlefield."
+	if unit != "" and (not unit in battle[side] or not BattleSystem._can_fight(repo, state, unit)
+			or bool(BattleSystem._stored(state, unit).get("captured", false))):
+		return "The unit is no longer available on this battlefield."
 	if not repo.battle_formations.has(formation):
 		return "Unknown formation."
 	var row: Dictionary = repo.battle_formations[formation]
-	var ctx := context(repo, state, battle, side)
+	var ctx := context(repo, state, battle, side, unit)
 	if int(ctx["morale"]) < int(row["min_morale"]) or int(ctx["training"]) < int(row["min_training"]):
 		return "The army lacks the morale or training to form this deployment."
 	var required := String(row["required_arms"]).split("|", false)
@@ -76,14 +84,19 @@ static func refusal(repo: DataRepository, state: GameState, battle_id: int, side
 	return ""
 
 
-## Called only when an order reaches the army, locally or by courier.
-static func request(repo: DataRepository, state: GameState, battle_id: int, side: String, formation: String) -> Dictionary:
-	var why := refusal(repo, state, battle_id, side, formation)
+## Received deployment primitive; the caller owns warrant authority, law and costs.
+static func request(repo: DataRepository, state: GameState, battle_id: int, side: String, formation: String, unit := "") -> Dictionary:
+	var why := refusal(repo, state, battle_id, side, formation, unit)
 	if why != "":
 		return {"status": "invalid", "reason": why}
 	var battle := BattleSystem.battle_by_id(state, battle_id)
 	ensure(battle)
-	var change: Dictionary = battle["formations"][side]
+	if unit != "":
+		if not battle.has("unit_formations"):
+			battle["unit_formations"] = {}
+		if not battle["unit_formations"].has(unit):
+			battle["unit_formations"][unit] = battle["formations"][side].duplicate(true)
+	var change := _deployment(battle, side, unit)
 	if String(change["target"]) == formation:
 		return {"status": "unchanged", "reason": "This formation is already ordered."}
 	var row: Dictionary = repo.battle_formations[formation]
@@ -99,23 +112,33 @@ static func request(repo: DataRepository, state: GameState, battle_id: int, side
 static func advance(repo: DataRepository, state: GameState, battle: Dictionary) -> void:
 	ensure(battle)
 	for side: String in BattleSystem.SIDES:
-		var change: Dictionary = battle["formations"][side]
-		if int(change["last_progress_day"]) == state.absolute_day():
+		_advance_change(repo, state, battle["formations"][side], battle[side])
+	var units: Array = battle.get("unit_formations", {}).keys()
+	units.sort()
+	for unit: String in units:
+		if BattleRules.side_of(battle, unit) == "" or not BattleSystem._can_fight(repo, state, unit) \
+				or bool(BattleSystem._stored(state, unit).get("captured", false)):
 			continue
-		change["last_progress_day"] = state.absolute_day()
-		if change["current"] == change["target"]:
-			continue
-		var weighted := 0
-		var fit := 0
-		for code: String in battle[side]:
-			var heads := ArmySystem.fit_count(repo, state, code)
-			fit += heads
-			weighted += heads * int(MilitaryQuality.profile(repo, state, code)["discipline_permille"])
-		@warning_ignore("integer_division")
-		var step := weighted / fit if fit > 0 else 0
-		change["progress"] = mini(int(change["required_progress"]), int(change["progress"]) + step)
-		if int(change["progress"]) >= int(change["required_progress"]):
-			change["current"] = change["target"]
+		_advance_change(repo, state, battle["unit_formations"][unit], [unit])
+
+
+static func _advance_change(repo: DataRepository, state: GameState, change: Dictionary, members: Array) -> void:
+	if int(change["last_progress_day"]) == state.absolute_day():
+		return
+	change["last_progress_day"] = state.absolute_day()
+	if change["current"] == change["target"]:
+		return
+	var weighted := 0
+	var fit := 0
+	for code: String in members:
+		var heads := ArmySystem.fit_count(repo, state, code)
+		fit += heads
+		weighted += heads * int(MilitaryQuality.profile(repo, state, code)["discipline_permille"])
+	@warning_ignore("integer_division")
+	var step := weighted / fit if fit > 0 else 0
+	change["progress"] = mini(int(change["required_progress"]), int(change["progress"]) + step)
+	if int(change["progress"]) >= int(change["required_progress"]):
+		change["current"] = change["target"]
 
 
 ## One source per modifier, with whole per-mille interpolation on narrow ground.
@@ -147,11 +170,12 @@ static func evaluate(repo: DataRepository, formation: String, ctx: Dictionary, a
 	return {"factors": factors, "reason": reason, "frontage_m": width}
 
 
-static func effects(repo: DataRepository, state: GameState, battle: Dictionary, side: String, attacking: bool) -> Dictionary:
-	var change: Dictionary = battle.get("formations", {}).get(side, {})
+static func effects(repo: DataRepository, state: GameState, battle: Dictionary, side: String, attacking: bool, unit := "") -> Dictionary:
+	var change := _deployment(battle, side, unit)
 	if change.is_empty():
 		return {"factors": []}
-	var result := evaluate(repo, String(change["current"]), context(repo, state, battle, side), attacking)
+	var recipient := unit if battle.get("unit_formations", {}).has(unit) else ""
+	var result := evaluate(repo, String(change["current"]), context(repo, state, battle, side, recipient), attacking)
 	if state.absolute_day() <= int(change["disorder_until"]):
 		result["factors"].append({"source": "formation:disorder",
 			"permille": int(repo.battle_formations[String(change["target"])]["disorder_permille"]),

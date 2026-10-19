@@ -188,3 +188,94 @@ func test_flanking_uses_the_armys_position_not_the_enemy_contact_point() -> void
 	state.foes[foes[1]]["y_m"] = 0
 	var battle := {"att": [code], "def": [foes[0], foes[1]], "place_x_m": 0, "place_y_m": 0}
 	assert_true(BattleFormation.context(repo, state, battle, "att")["flanked"], "enemy columns stand on opposite sides of this army")
+
+func _unit_fixture() -> Dictionary:
+	var repo := SuiteData.repo()
+	var state := SuiteData.campaign(repo, 981)
+	var codes := state.regiments.keys()
+	codes.sort()
+	var battle := {"id": 981, "att": [codes[0], codes[1]], "def": [state.foes.keys()[0]],
+		"place_x_m": 0, "place_y_m": 0, "town": ""}
+	state.battles = [battle]
+	BattleFormation.ensure(battle)
+	return {"repo": repo, "state": state, "battle": battle, "a": String(codes[0]), "b": String(codes[1])}
+
+func test_unit_deployment_is_isolated_from_side_requests_and_combat_reads_it() -> void:
+	var f := _unit_fixture()
+	var side: Dictionary = f.battle.formations.att.duplicate(true)
+	var before: Dictionary = BattleSystem.unit_strength(f.repo, f.state, f.b, Callable(), false)
+	assert_eq(BattleFormation.request(f.repo, f.state, 981, "att", "line", f.a).status, "preparing")
+	assert_eq(f.battle.formations.att, side)
+	assert_eq(BattleSystem.unit_strength(f.repo, f.state, f.b, Callable(), false), before)
+	var unit: Dictionary = f.battle.unit_formations[f.a]
+	assert_eq(unit.current, "double_rank", "new benefits wait for actual preparation")
+	assert_eq(unit.target, "line")
+	var saved := unit.duplicate(true)
+	assert_eq(BattleFormation.request(f.repo, f.state, 981, "att", "line", f.a).status, "unchanged")
+	assert_eq(unit, saved, "replay preserves progress and exposure")
+	BattleFormation.request(f.repo, f.state, 981, "att", "diamond")
+	assert_eq(unit, saved, "legacy side deployment does not rewrite an explicit unit deployment")
+	unit.current = "line"
+	unit.disorder_until = -1
+	f.repo.battle_formations.line.narrow_terrains = ""
+	assert_eq(BattleFormation.of_unit(f.state, f.a), "line")
+	assert_eq(BattleFormation.of_unit(f.state, f.b), "double_rank")
+	var strength := BattleSystem.unit_strength(f.repo, f.state, f.a, Callable(), false)
+	var factors: Array = strength["factors"]
+	assert_true(factors.any(func(factor: Dictionary) -> bool:
+		return factor.source == "formation:deployment" and factor.permille == 1100), "combat uses recipient line")
+
+func test_unit_suitability_and_invalid_membership_are_atomic() -> void:
+	var f := _unit_fixture()
+	f.repo.battle_formations.line.min_morale = 50
+	f.state.regiments[f.a].morale = 100
+	f.state.regiments[f.b].morale = 1
+	assert_ne(BattleFormation.refusal(f.repo, f.state, 981, "att", "line"), "")
+	assert_eq(BattleFormation.refusal(f.repo, f.state, 981, "att", "line", f.a), "")
+	var saved: Dictionary = f.state.to_dict()
+	assert_eq(BattleFormation.request(f.repo, f.state, 981, "att", "line", "absent").status, "invalid")
+	assert_eq(BattleFormation.request(f.repo, f.state, 981, "def", "line", f.a).status, "invalid")
+	assert_eq(BattleFormation.request(f.repo, f.state, 981, "att", "unknown", f.a).status, "invalid")
+	assert_eq(f.state.to_dict(), saved)
+	assert_eq(BattleFormation.request(f.repo, f.state, 981, "att", "line", f.a).status, "preparing")
+
+func test_unit_progress_inherits_side_state_then_uses_only_recipient_and_json_replays() -> void:
+	var f := _unit_fixture()
+	var side: Dictionary = f.battle.formations.att
+	side.current = "line"
+	side.target = "line"
+	side.disorder_until = f.state.absolute_day() + 20
+	f.state.military_rosters[f.a] = {"cohort_ids": ["unit-common", "unit-noble"]}
+	f.state.military_cohorts["unit-common"] = {"unit_code": f.a, "identity": "commoner", "stage": "active", "fit": 570, "wounded": 0}
+	f.state.military_cohorts["unit-noble"] = {"unit_code": f.a, "identity": "noble", "stage": "active", "fit": 30, "wounded": 0}
+	f.repo.noble_quality.noble.discipline_permille = 2000
+	f.repo.battle_formations.diamond.change_progress = 2000
+	assert_eq(BattleFormation.request(f.repo, f.state, 981, "att", "diamond", f.a).status, "preparing")
+	var unit: Dictionary = f.battle.unit_formations[f.a]
+	assert_eq(unit.current, "line")
+	assert_eq(unit.disorder_until, side.disorder_until, "cannot shorten inherited exposure")
+	f.repo.battle_formations.line.narrow_terrains = ""
+	var effects := BattleFormation.effects(f.repo, f.state, f.battle, "att", false, f.a)
+	assert_eq(effects.factors[0].reason, "Extended line", "only the current deployment grants benefits")
+	assert_eq(effects.factors.back().source, "formation:disorder")
+	assert_eq(effects.factors.back().permille, 800)
+	var deadline := int(unit.disorder_until)
+	BattleFormation.request(f.repo, f.state, 981, "att", "double_rank", f.a)
+	assert_eq(unit.disorder_until, deadline, "unit retargeting cannot shorten exposure")
+	BattleFormation.request(f.repo, f.state, 981, "att", "diamond", f.a)
+	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	BattleFormation.advance(f.repo, f.state, f.battle)
+	BattleFormation.advance(f.repo, restored, restored.battles[0])
+	assert_eq(unit.progress, 1050, "recipient only: (570×1000 + 30×2000)/600")
+	assert_eq(restored.battles, f.state.battles)
+	BattleFormation.advance(f.repo, f.state, f.battle)
+	assert_eq(unit.progress, 1050, "only once each completed day")
+	f.state.day += 1
+	BattleFormation.advance(f.repo, f.state, f.battle)
+	assert_eq(unit.current, "diamond")
+	assert_eq(unit.progress, 2000)
+	f.battle.att.erase(f.a)
+	f.state.day += 1
+	var departed := unit.duplicate(true)
+	BattleFormation.advance(f.repo, f.state, f.battle)
+	assert_eq(unit, departed, "departed recipients do not continue preparing")
