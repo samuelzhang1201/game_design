@@ -133,6 +133,7 @@ func _resolve_phase(state: GameState, tx: Dictionary, phase: String) -> Dictiona
 			journal["works"] = MapManors.advance_works(data, state)
 		"MARCH_ORDERS_AND_ROUTE_SETUP":
 			ArmySystem.ensure(data, state)
+			BattleTaskSystem.track_day(data, state)
 			var moving: Array = []
 			var budgets: Dictionary = {}
 			var march_entries: Dictionary = {}

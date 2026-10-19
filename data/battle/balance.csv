@@ -39,3 +39,5 @@ prisoner_load_permille,250,Captive march load per head relative to own living pe
 battle_max_rounds,5,"battles: a battle is one round a day and ends at the latest after this many (first draft)"
 battle_substeps,10,"fixed integer movement and contact substeps in one calendar day transaction"
 battle_disengage_days,2,"battles §4.1: a battle that ends on battle_max_rounds is a draw; its survivors make no contact for exactly this many days after it (1 = the next day only; a column falling back with no town to go to too, and a battle its foes' host left), then, still in contact, a new battle starts (first draft)"
+battle_search_days,2,"unit tasks (P4.4c4): days a flank or pursuit unit that lost its target searches at the last point it saw before the task ends in search_failed (first draft)"
+battle_search_range_m,8000,"unit tasks (P4.4c4): whole metres from the last known point within which a fresh sighting of the lost target resumes the follow; farther sightings leave the search running (first draft)"

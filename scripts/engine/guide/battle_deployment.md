@@ -120,8 +120,8 @@ unit's casualty rate. Withdrawing sides save per-unit rates even when all member
 withdraw, using the existing CSV scales and grouped integer casualty writer.
 The frozen action retains its pursuit target with the pending loss plan; failed
 commits, cancellation after planning and JSON retries do not change that plan,
-repeat its RNG draw or charge attack costs twice. This integration adds no pursuit
-movement or lost-sight search.
+repeat its RNG draw or charge attack costs twice. Pursuit movement and the lost-sight
+search are the target tracking below.
 
 **Pursuit bounds.** A pursuit task may carry `max_route_m` (whole metres, 0 = none)
 and `region` (province codes joined by `|`, sorted, de-duplicated, "" = none); on any
@@ -134,6 +134,24 @@ province (also at 0 metres). The first bound reached sets status `bounded` with 
 reason, halts a marching unit where it stands (today's saved walk included) and
 leaves `current_id` on it: `combat_action` then answers `hold` for that battle, so it
 defends but never advances or starts a withdrawal; only a new received task replaces it.
+
+**Target tracking and the limited search.** A crown unit in no battle whose current
+received task is a `flank` or a pursuit with a `target_unit` marches at the target as
+its OWN sight knows it (`BattleTaskSystem.track_day`, once a day at the top of
+`MARCH_ORDERS_AND_ROUTE_SETUP`, idempotent by `track.done_day`): the target with men
+under arms is seen within `player_sight_km` of the recipient's position (inclusive,
+squared whole metres; never `GameState.sightings`, crown-wide sight or a scouting
+sector). The record saves `track = {x_m, y_m, day, phase, search_until_day, done_day}`
+(absent = none; an old save has none). Seen: the snapshot is the target's true point,
+phase `follow`, and the unit is aimed there (a marching unit is re-aimed in place by
+`ArmySystem.aim_entry`, so camp packing is not restarted; a standing one gets
+`set_march_m`). Not seen in `follow`: it marches at the saved point and, standing on it,
+turns to `search` until `today + battle_search_days`, holding there. In `search` a
+sighting within `battle_search_range_m` of the saved point resumes `follow`; a farther
+one changes nothing; past `search_until_day` the record becomes `search_failed` and the
+unit halts (`BattleSystem._halt`). `search_failed`, `bounded`, `replaced` and
+`cancelled` are never tracked again, and a later sighting revives nothing. Contact
+puts the unit in a battle, which pauses tracking; the task stays received.
 
 ## Delivered unit retreat
 
@@ -160,7 +178,7 @@ and random draw without repeating departure costs, daily meals or attack costs.
 
 `UnitGait` is the integer contract for running (spec `2026-10-17-unit-behavior-and-battlefield-design` §5). `run_step_m` is the walk step of the same substep × `army_run_speed_permille`, after every walk modifier. `run_substep` pays one running substep's increment from `supplies`: the runners' share of today's base bite × (`army_run_supply_permille` − 1000), over 1000 × `battle_substeps`, in whole supplies with the fraction saved as the entry's `run_supply_rem` — never truncated away, so it costs the same per duration, not per kilometre. Today's whole base bite (still eaten by `eat_day`) is reserved first: below it, or when the charge would cut into it, the substep walks and nothing changes. Non-running personnel pay only their base.
 
-**The saved gait** (`UnitGait.refresh`, per substep of `ArmySystem.march_day_saved` and again after it): `entry.gait = {mode: "run", reason, until[, battle_id]}` on the unit's own `regiments` / `foes` entry; no key is walking (an old save walks). The commander runs only for a reason the engine can see: `withdrawal` (until `march_end`: marching with `disengaging == 1`, any withdrawal march `BattleSystem` starts) or `join_battle` (until `battle_over`: marching, in no battle, its destination within `battle_contact_km` of the place of a live battle where a unit of its own table fights). A gait whose stop condition holds is dropped before a new reason is read; a fleet never runs. A substep that really marches (past camp packing, the saved order still a march) runs only when `UnitGait.pays_run` pays it — `run_bite` is the fit personnel's share of `day_bite(supply_use)`, the wounded and prisoners keeping their base — and then its step budget, after the last-substep catch-up, is `run_step_m` of it; otherwise it walks. The base meal stays `eat_day`'s. Pursuit bounds (c3) and known-target tracking (c4) are not reasons yet; the commander's ability and personality do not weigh the choice yet.
+**The saved gait** (`UnitGait.refresh`, per substep of `ArmySystem.march_day_saved` and again after it): `entry.gait = {mode: "run", reason, until[, battle_id]}` on the unit's own `regiments` / `foes` entry; no key is walking (an old save walks). The commander runs only for a reason the engine can see: `withdrawal` (until `march_end`: marching with `disengaging == 1`, any withdrawal march `BattleSystem` starts) or `pursuit` (until `task_end`: marching with a current received pursuit task — not a flank — whose `track.phase` is `follow`) or `join_battle` (until `battle_over`: marching, in no battle, its destination within `battle_contact_km` of the place of a live battle where a unit of its own table fights). A gait whose stop condition holds is dropped before a new reason is read; a fleet never runs. A substep that really marches (past camp packing, the saved order still a march) runs only when `UnitGait.pays_run` pays it — `run_bite` is the fit personnel's share of `day_bite(supply_use)`, the wounded and prisoners keeping their base — and then its step budget, after the last-substep catch-up, is `run_step_m` of it; otherwise it walks. The base meal stays `eat_day`'s. The commander's ability and personality do not weigh the choice yet.
 
 ## Costly orders and daily resolution
 

@@ -297,3 +297,84 @@ static func credit_pursuit(repo: DataRepository, state: GameState, unit: String,
 	if String(entry.get("order", "")) == ArmySystem.ORDER_MARCH:
 		BattleSystem._halt(state, unit)
 	return true
+
+
+## Whether the record is a flank or a pursuit with a designated enemy that is
+## still received: the kinds that follow the known target (P4.4c4).
+static func _tracks(repo: DataRepository, record: Dictionary) -> bool:
+	if record.is_empty() or record["status"] != "received" or String(record["request"]["target_unit"]) == "":
+		return false
+	var task := String(record["request"]["task"])
+	return task == "flank" or String(repo.battle_behaviors.get(task, {}).get("legal_action", "")) == "pursue"
+
+
+## A received pursuit following a target it knows: the gait's `pursuit` reason.
+static func pursuing(repo: DataRepository, state: GameState, unit: String) -> bool:
+	var record := current(state, unit)
+	if record.is_empty() or not _tracks(repo, record):
+		return false
+	var action := String(repo.battle_behaviors.get(String(record["request"]["task"]), {}).get("legal_action", ""))
+	return action == "pursue" and String(record.get("track", {}).get("phase", "")) == "follow"
+
+
+## Once a day, before the march freezes: each crown unit with a received flank
+## or pursuit task, in no battle, marches at its target as the unit's OWN sight
+## knows it (the target within player_sight_km of the recipient, men under
+## arms), else at the last point it saw; on that point it searches for
+## battle_search_days, a sighting within battle_search_range_m of the point
+## resuming the follow; a search past its days ends the task (search_failed)
+## and the unit halts. Never reads GameState.sightings or a hidden position.
+static func track_day(repo: DataRepository, state: GameState) -> void:
+	var today := state.absolute_day()
+	var sight := Sighting.sight_m(repo)
+	var codes: Array = state.unit_tasks.keys()
+	codes.sort()
+	for code_value: Variant in codes:
+		var unit := String(code_value)
+		var ledger: Dictionary = state.unit_tasks[unit]
+		var record: Dictionary = ledger["orders"].get(String(ledger.get("current_id", "")), {})
+		if not _tracks(repo, record) or not state.regiments.has(unit) or ArmySystem.is_foe(state, unit) \
+				or ArmySystem.realm_of(repo, unit, state) != repo.resolve_realm("player_realm") \
+				or not BattleSystem.battle_of(state, unit).is_empty():
+			continue
+		var entry := BattleSystem._stored(state, unit)
+		if bool(entry.get("captured", false)) or not BattleSystem._can_fight(repo, state, unit):
+			continue
+		var track: Dictionary = record.get("track", {})
+		if int(track.get("done_day", -1)) == today:
+			continue
+		var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+		var target_code := String(record["request"]["target_unit"])
+		var target := BattleSystem._stored(state, target_code)
+		var there := Vector2i(int(target.get("x_m", 0)), int(target.get("y_m", 0)))
+		var seen := not target.is_empty() and Sighting.men_of(repo, state, target_code) > 0 \
+			and (there - here).length_squared() <= sight * sight
+		var phase := String(track.get("phase", ""))
+		var point := Vector2i(int(track.get("x_m", 0)), int(track.get("y_m", 0)))
+		if seen and phase == "search":
+			var range_m := int(repo.bal("battle_search_range_m"))
+			seen = (there - point).length_squared() <= range_m * range_m
+		if seen:
+			record["track"] = {"x_m": there.x, "y_m": there.y, "day": today, "phase": "follow",
+				"search_until_day": 0, "done_day": today}
+			_aim(repo, state, unit, entry, there)
+		elif phase == "follow":
+			track["done_day"] = today
+			if here == point and String(entry.get("order", "")) != ArmySystem.ORDER_MARCH:
+				track["phase"] = "search"
+				track["search_until_day"] = today + int(repo.bal("battle_search_days"))
+			else:
+				_aim(repo, state, unit, entry, point)
+		elif phase == "search" and today > int(track["search_until_day"]):
+			_transition(state, record, "search_failed", "Lost the target and the search found nothing")
+			BattleSystem._halt(state, unit)
+
+
+## March the unit at `to`. A unit already marching is re-aimed in place (its
+## packing, if any, is not restarted); a standing one is ordered as any local
+## march is.
+static func _aim(repo: DataRepository, state: GameState, unit: String, entry: Dictionary, to: Vector2i) -> void:
+	if String(entry.get("order", "")) == ArmySystem.ORDER_MARCH:
+		ArmySystem.aim_entry(repo, entry, to, ArmySystem.is_naval(repo, state, unit))
+	elif Vector2i(int(entry["x_m"]), int(entry["y_m"])) != to:
+		ArmySystem.set_march_m(repo, state, unit, to)
