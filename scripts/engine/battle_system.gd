@@ -103,7 +103,7 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 	if not battle.is_empty():
 		var side := BattleRules.side_of(battle, code)
 		if battle.has("formations"):
-			for factor: Dictionary in BattleFormation.effects(repo, state, battle, side, attacking)["factors"]:
+			for factor: Dictionary in BattleFormation.effects(repo, state, battle, side, attacking, code)["factors"]:
 				var copy := factor.duplicate(true)
 				copy["category"] = "formation_terrain"
 				factors.append(copy)

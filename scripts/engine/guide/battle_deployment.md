@@ -4,6 +4,19 @@
 
 `BattleFormation` owns deployment independently of stance/action. `formations.csv` declares four shapes, frontage, terrain/arm/morale/training suitability, centre requirements, factors and reforming costs. A diamond's positive protection requires an actual nearby king or wounded personnel; absent a centre its penalties remain. `BATTLE_FORMATION` is a paid typed order through `ActionSystem` and the existing local/courier path; delivery revalidates membership and suitability, uses a separate side order id and saved within-courier sequence, and expires with the battle. Same-target requests do nothing; retargeting preserves the longest disorder deadline. Saved current/previous/target, progress and last-progress day advance once per completed day using fit-personnel discipline. During reforming only current deployment plus disorder applies; each factor has one source and reason; combat merges the formation/terrain category before one integer truncation. WAR ROOM and map share its shape; narrow lines fold into extra ranks instead of overlapping figures. Figure-count tiers remain `army_formations.csv`'s responsibility.
 
+`BattleFormation.request/refusal/context/effects` accept an optional unit for internal
+received deployment integration. A valid first unit request copies its side's full
+current deployment into saved `battle.unit_formations`; later side defaults never
+rewrite it. Duplicate targets preserve progress/exposure; retargeting retains the
+longest disorder deadline. Unit overrides progress once per day in sorted code order
+using only their recipient's fit discipline; departed/incapacitated/captured recipients
+do not progress. Suitability and factors use that recipient's terrain, arms and
+personnel. Unit strength and shape lookup read the same current override and
+recipient terrain context, including the map's narrow-line frontage; legacy
+battles and unassigned units retain side deployment and side context. This internal
+API does not issue a warrant or pay costs: task delivery, cancellation and public
+formation parameters still require integration before player use.
+
 ## Unit task warrants
 
 `BattleTaskSystem.issue_task/deliver_task` are internal warrant operations, with
