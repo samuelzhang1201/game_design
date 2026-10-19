@@ -108,3 +108,4 @@ Result: 162 people × 2 layers installed and hash-verified; `commander_portraits
 Open for the owner: the 140 unprompted commander rows from PR #79 (authored `K-` appearance lines needed before any art; possibly a duplicate roster); commander clothing reads alike across K-25..K-162 because their appearance lines share one tunic-and-mantle template — vary the lines if more distinction is wanted.
 | fp2-b08 | K-163..K-186 | `fp2-b08-full-alpha.png`, `fp2-b08-chip-alpha.png` | installed |
 | fp2-b09 | K-187..K-210 | `fp2-b09-full-alpha.png`, `fp2-b09-chip-alpha.png` | installed |
+| fp2-b10 | K-211..K-234 | `fp2-b10-full-alpha.png`, `fp2-b10-chip-alpha.png` | installed |
