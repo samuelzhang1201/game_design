@@ -11,7 +11,8 @@ rewrite it. Duplicate targets preserve progress/exposure; retargeting retains th
 longest disorder deadline. Unit overrides progress once per day in sorted code order
 using only their recipient's fit discipline; departed/incapacitated/captured recipients
 do not progress. Suitability and factors use that recipient's terrain, arms and
-personnel. Unit strength and shape lookup read the same current override; legacy
+personnel. Unit strength and shape lookup read the same current override and
+recipient terrain context, including the map's narrow-line frontage; legacy
 battles and unassigned units retain side deployment and side context. This internal
 API does not issue a warrant or pay costs: task delivery, cancellation and public
 formation parameters still require integration before player use.

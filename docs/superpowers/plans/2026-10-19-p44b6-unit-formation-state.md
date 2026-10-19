@@ -12,3 +12,5 @@ Owned: battle_formation.gd, battle_system.gd, test_battle_formation.gd, battle_d
 - [x] Run focused formation/strength and bounded battle/task/transport/save regressions on frozen inputs. Commit one PR, hand off once to its unique Sol/medium Review; no extra agents. Review merges only on required current-HEAD CI and automatic review, then may continue the next authorized P4.4b slice.
 
 Review focus: side request after unit override; invalid member is atomic; unrelated unit discipline/terrain does not leak; first override inherits in-progress state; departed unit and JSON replay preserve once-per-day deadlines. Delivery authority and public task lifecycle remain explicitly deferred.
+
+Review correction: `Map3DFormation.layout_of` must use recipient context for an explicit unit override, retaining side context for legacy defaults. Owned files also include map3d_formation.gd, test_map3d_formation.gd and the map guide. A mixed-terrain regression covers open and narrow recipients and the legacy side fallback. This is internal layout consumption; there is still no public runtime writer of unit overrides.

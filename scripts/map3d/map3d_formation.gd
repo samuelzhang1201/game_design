@@ -42,7 +42,8 @@ static func layout_of(repo: DataRepository, state: GameState, code: String) -> S
 	var formation := BattleFormation.of_unit(state, code)
 	if formation != "":
 		var side := BattleRules.side_of(battle, code)
-		var effects := BattleFormation.evaluate(repo, formation, BattleFormation.context(repo, state, battle, side), false)
+		var recipient := code if battle.get("unit_formations", {}).has(code) else ""
+		var effects := BattleFormation.evaluate(repo, formation, BattleFormation.context(repo, state, battle, side, recipient), false)
 		if formation == LINE and int(effects["frontage_m"]) < int(repo.battle_formations[formation]["frontage_m"]):
 			@warning_ignore("integer_division")
 			return "line:%d" % (int(effects["frontage_m"]) * 1000 / int(repo.battle_formations[formation]["frontage_m"]))

@@ -146,3 +146,36 @@ func test_tactical_shapes_and_narrow_line_use_shared_slots() -> void:
 	assert_eq(line.size(), 9)
 	assert_eq(xs.size(), 5, "narrow front folds into ranks")
 	assert_eq(ys.size(), 2)
+
+func test_unit_line_width_uses_its_own_ground_and_legacy_keeps_side_ground() -> void:
+	var data := SuiteData.repo()
+	var state := SuiteData.campaign(data, 99)
+	var places := {}
+	for id: int in data.cells:
+		var cell: Dictionary = data.cells[id]
+		if MapTerrain.is_water(cell):
+			continue
+		var at := MapTerrain.cell_center(data, cell)
+		places[ArmySystem.terrain_at(data, at)] = ArmySystem.pack_to_metres(data, at)
+		if places.size() == 2:
+			break
+	assert_eq(places.size(), 2)
+	var codes: Array = state.regiments.keys().filter(func(code: String) -> bool:
+		return String(ArmySystem.regiment(data, code, state).get("is_naval", "0")) != "1")
+	codes.sort()
+	var terrains: Array = places.keys()
+	data.battle_formations.line.narrow_terrains = terrains[1]
+	data.battle_formations.line.frontage_m = 500
+	data.battle_formations.line.narrow_width_m = 250
+	for i: int in 2:
+		state.regiments[codes[i]].x_m = places[terrains[i]].x
+		state.regiments[codes[i]].y_m = places[terrains[i]].y
+		state.regiments[codes[i]].order = ArmySystem.ORDER_GARRISON
+	var battle := {"id": 989, "att": [codes[0], codes[1]], "def": [], "place_x_m": 0, "place_y_m": 0}
+	state.battles = [battle]
+	BattleFormation.ensure(battle)
+	battle.formations.att.current = "line"
+	assert_eq(Map3DFormation.layout_of(data, state, codes[0]), "line:500", "legacy side context includes its narrow-ground ally")
+	battle.unit_formations = {codes[0]: battle.formations.att.duplicate(true), codes[1]: battle.formations.att.duplicate(true)}
+	assert_eq(Map3DFormation.layout_of(data, state, codes[0]), "line", "open-ground recipient must not fold for its ally")
+	assert_eq(Map3DFormation.layout_of(data, state, codes[1]), "line:500", "narrow-ground recipient still folds")
