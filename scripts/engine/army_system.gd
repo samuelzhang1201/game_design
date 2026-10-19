@@ -1431,6 +1431,7 @@ static func clearance_blockers(repo: DataRepository, state: GameState) -> Dictio
 	var moving: Dictionary = {}
 	var maxr := 0
 	var rows: Dictionary = info["rows"]
+	var spread := _deployment_reach(repo, state)
 	for k: Variant in keys:
 		var code := String(k)
 		var row: Array = rows.get(code, [])
@@ -1450,14 +1451,17 @@ static func clearance_blockers(repo: DataRepository, state: GameState) -> Dictio
 		side[code] = kind
 		moving[code] = String(st.get("order", ORDER_STANDBY)) == ORDER_MARCH
 		realm[code] = row[2]
-		rad[code] = row[1]
-		maxr = maxi(maxr, int(row[1]))
 		var at: Vector2i = Vector2i(int(st["x_m"]), int(st["y_m"])) if st.has("x_m") \
 			else pack_to_metres(repo, position_of(repo, state, all[code]))
+		var radius := int(row[1])
+		if spread.has(code):                # its deployed groups are the ground it holds
+			radius = maxi(radius, _group_reach(repo, spread[code], at))
+		rad[code] = radius
+		maxr = maxi(maxr, radius)
 		pos[code] = at
 		xs.append(at.x)
 		ys.append(at.y)
-		rs.append(int(row[1]))
+		rs.append(radius)
 	var index: Dictionary = {}
 	for i in codes.size():
 		index[codes[i]] = i
@@ -1466,6 +1470,32 @@ static func clearance_blockers(repo: DataRepository, state: GameState) -> Dictio
 		"xs": xs, "ys": ys, "rs": rs, "index": index,
 		"player": repo.resolve_realm("player_realm"), "raider": repo.resolve_realm("raider_realm"),
 		"diplomacy": repo.world_table("political", "diplomacy")}
+
+
+## The saved groups of every unit in a live battle, code -> rows.
+static func _deployment_reach(_repo: DataRepository, state: GameState) -> Dictionary:
+	var out: Dictionary = {}
+	for b: Dictionary in state.battles:
+		var groups: Dictionary = b.get("groups", {})
+		for code: Variant in groups:
+			out[String(code)] = groups[code]
+	return out
+
+
+## The radius that covers a unit's groups round `anchor`: the farthest group's
+## distance rounded up to whole metres, plus half the group spacing.
+static func _group_reach(repo: DataRepository, rows: Array, anchor: Vector2i) -> int:
+	var far := 0
+	for g: Dictionary in rows:
+		var dx := int(g["x_m"]) - anchor.x
+		var dy := int(g["y_m"]) - anchor.y
+		var d2 := dx * dx + dy * dy
+		var d := int(sqrt(float(d2)))
+		while d * d < d2:
+			d += 1
+		far = maxi(far, d)
+	@warning_ignore("integer_division")
+	return far + int(repo.bal("battle_group_spacing_m")) / 2
 
 
 ## What never changes about a roster unit: [headcount, clearance radius, kingdom]
@@ -1571,6 +1601,8 @@ static func _ahead_blockers(repo: DataRepository, state: GameState) -> Dictionar
 			sig = hash([sig, int(e.get("x_m", 0)), int(e.get("y_m", 0))])
 	for code: String in state.military_rosters:
 		sig = hash([sig, code, living_count(repo, state, code)])
+	for b: Dictionary in state.battles:     # a deployment's layout sets its units' radii
+		sig = hash([sig, b.get("groups", {})])
 	var key := hash([state.get_instance_id(), repo.get_instance_id(), state.absolute_day(), sig,
 		state.regiments.size(), state.foes.size(), int(repo.bal("army_clearance_on"))])
 	if int(_ahead.get("key", 0)) != key or not _ahead.has("blockers"):
