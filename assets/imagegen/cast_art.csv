@@ -233,30 +233,30 @@ char_ivor_blackthorn,K-231,qwen2512desk4_s1189698882,P2 painterly restyle 2026-1
 char_joanna_blackthorn,K-232,qwen2512desk4_s3238640193,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
 char_kieran_blackthorn,K-233,qwen2512desk4_s2260440900,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
 char_lucia_blackthorn,K-234,qwen2512desk4_s2914589013,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
-char_merek_blackthorn,K-235,qwen2512desk4_s215644976,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_nerida_blackthorn,K-236,qwen2512desk4_s1737094482,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_owen_blackthorn,K-237,qwen2512desk4_s3747679927,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_philippa_blackthorn,K-238,qwen2512desk4_s1976678813,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_quentin_blackthorn,K-239,qwen2512desk4_s1416592753,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_rosamund_blackthorn,K-240,qwen2512desk4_s2556175170,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_silas_blackthorn,K-241,qwen2512desk4_s1072115319,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_tamsin_blackthorn,K-242,qwen2512desk4_s1781191917,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_adela_redwater,K-243,qwen2512desk4_s1635300508,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_baldwin_redwater,K-244,qwen2512desk4_s229328991,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_celia_redwater,K-245,qwen2512desk4_s2720956068,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_dorian_redwater,K-246,qwen2512desk4_s4258997033,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_elin_redwater,K-247,qwen2512desk4_s1318777773,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_florian_redwater,K-248,qwen2512desk4_s3386701253,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_gareth_redwater,K-249,qwen2512desk4_s422373067,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_helena_redwater,K-250,qwen2512desk4_s1510964581,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_ivor_redwater,K-251,qwen2512desk4_s1570513886,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_joanna_redwater,K-252,qwen2512desk4_s291353351,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_kieran_redwater,K-253,qwen2512desk4_s2240220590,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_lucia_redwater,K-254,qwen2512desk4_s91655336,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_merek_redwater,K-255,qwen2512desk4_s165713964,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_nerida_redwater,K-256,qwen2512desk4_s1717403114,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_owen_redwater,K-257,qwen2512desk4_s654416387,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
-char_philippa_redwater,K-258,qwen2512desk4_s3676773896,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
+char_merek_blackthorn,K-235,qwen2512desk4_s215644976,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_nerida_blackthorn,K-236,qwen2512desk4_s1737094482,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_owen_blackthorn,K-237,qwen2512desk4_s3747679927,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_philippa_blackthorn,K-238,qwen2512desk4_s1976678813,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_quentin_blackthorn,K-239,qwen2512desk4_s1416592753,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_rosamund_blackthorn,K-240,qwen2512desk4_s2556175170,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_silas_blackthorn,K-241,qwen2512desk4_s1072115319,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_tamsin_blackthorn,K-242,qwen2512desk4_s1781191917,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_adela_redwater,K-243,qwen2512desk4_s1635300508,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_baldwin_redwater,K-244,qwen2512desk4_s229328991,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_celia_redwater,K-245,qwen2512desk4_s2720956068,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_dorian_redwater,K-246,qwen2512desk4_s4258997033,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_elin_redwater,K-247,qwen2512desk4_s1318777773,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_florian_redwater,K-248,qwen2512desk4_s3386701253,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_gareth_redwater,K-249,qwen2512desk4_s422373067,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_helena_redwater,K-250,qwen2512desk4_s1510964581,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_ivor_redwater,K-251,qwen2512desk4_s1570513886,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_joanna_redwater,K-252,qwen2512desk4_s291353351,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_kieran_redwater,K-253,qwen2512desk4_s2240220590,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_lucia_redwater,K-254,qwen2512desk4_s91655336,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_merek_redwater,K-255,qwen2512desk4_s165713964,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_nerida_redwater,K-256,qwen2512desk4_s1717403114,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_owen_redwater,K-257,qwen2512desk4_s654416387,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_philippa_redwater,K-258,qwen2512desk4_s3676773896,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
 char_quentin_redwater,K-259,qwen2512desk4_s2529810698,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
 char_rosamund_redwater,K-260,qwen2512desk4_s710305293,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
 char_silas_redwater,K-261,qwen2512desk4_s1014901490,P2 restyle extension (PR #79 rows): planned; requires review before installation,1
