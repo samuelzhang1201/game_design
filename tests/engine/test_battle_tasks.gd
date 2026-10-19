@@ -13,7 +13,8 @@ func _fixture() -> Dictionary:
 	var codes := state.regiments.keys()
 	codes.sort()
 	var enemy := String(state.foes.keys()[0])
-	var battle := {"id": 944, "att": [codes[0], codes[1]], "def": [enemy], "rounds": 0}
+	var battle := {"id": 944, "att": [codes[0], codes[1]], "def": [enemy], "rounds": 0,
+		"place_x_m": 0, "place_y_m": 0}
 	state.battles = [battle]
 	return {"repo": repo, "state": state, "a": String(codes[0]), "b": String(codes[1]),
 		"enemy": enemy, "battle": battle}
@@ -28,7 +29,9 @@ func test_task_ledger_is_available() -> void:
 func test_pending_warrants_replace_only_on_delivery_and_ignore_late_orders() -> void:
 	if tasks == null: return
 	var f := _fixture()
-	var first: Dictionary = tasks.issue_task(f.repo, f.state, _order(f, "first"))
+	var first_order := _order(f, "first")
+	first_order.formation = "diamond"
+	var first: Dictionary = tasks.issue_task(f.repo, f.state, first_order)
 	var second: Dictionary = tasks.issue_task(f.repo, f.state, _order(f, "second", "defend"))
 	assert_eq(first.sequence, 1)
 	assert_eq(second.sequence, 2)
@@ -37,6 +40,7 @@ func test_pending_warrants_replace_only_on_delivery_and_ignore_late_orders() -> 
 	assert_eq(tasks.deliver_task(f.repo, f.state, "first").status, "superseded")
 	assert_eq(tasks.current(f.state, f.a).request.task, "defend")
 	assert_eq(tasks.current(f.state, f.a).sequence, 2)
+	assert_eq(f.battle.get("unit_formations", {}).get(f.a, {}).get("target", ""), "line", "late task cannot reform the recipient")
 
 func test_json_retry_preserves_original_request_receipt_and_sequence() -> void:
 	if tasks == null: return
@@ -117,9 +121,17 @@ func test_new_royal_delivery_invalidates_pending_general_without_affecting_curre
 	assert_eq(tasks.deliver_task(f.repo, f.state, "general").status, "superseded")
 	assert_eq(tasks.current(f.state, f.a).request.id, "royal")
 
+func _ready_for_wedge(f: Dictionary) -> void:
+	f.state.regiments[f.a].morale = 100
+	f.state.regiments[f.a].training = 100
+	for arm: String in f.repo.world_table("military", "unit_types"):
+		f.state.army_roster[f.a][arm] = "0"
+	f.state.army_roster[f.a].infantry = "600"
+
 func test_seven_tasks_combine_with_each_existing_formation() -> void:
 	if tasks == null: return
 	var f := _fixture()
+	_ready_for_wedge(f)
 	var kinds: Array = f.repo.get("battle_behaviors").keys()
 	kinds.sort()
 	assert_eq(kinds, ["advance", "charge", "defend", "flank", "guard_flank", "pursue", "retreat"])
@@ -247,3 +259,95 @@ func test_general_cannot_authorize_pursuit_without_a_players_contact_plan() -> v
 	order.id = "royal-pursuit"
 	assert_eq(tasks.issue_task(f.repo, f.state, order).status, "pending")
 	assert_eq(tasks.deliver_task(f.repo, f.state, "royal-pursuit").status, "received")
+
+func test_task_formation_starts_only_at_receipt_for_the_recipient() -> void:
+	var f := _fixture()
+	BattleFormation.ensure(f.battle)
+	var side: Dictionary = f.battle.formations.duplicate(true)
+	assert_eq(tasks.issue_task(f.repo, f.state, _order(f, "deploy")).status, "pending")
+	assert_false(f.battle.has("unit_formations"))
+	assert_eq(tasks.deliver_task(f.repo, f.state, "deploy").status, "received")
+	assert_eq(f.battle.get("unit_formations", {}).get(f.a, {}).get("target", ""), "line")
+	assert_false(f.battle.get("unit_formations", {}).has(f.b))
+	assert_eq(f.battle.formations, side)
+	assert_eq(BattleFormation.of_unit(f.state, f.a), "double_rank", "preparation is real, not instant")
+
+func test_unsuitable_formation_refuses_atomically_at_issue_and_receipt() -> void:
+	var f := _fixture()
+	tasks.issue_task(f.repo, f.state, _order(f, "keep"))
+	tasks.deliver_task(f.repo, f.state, "keep")
+	_ready_for_wedge(f)
+	f.state.regiments[f.a].morale = 0
+	var next := _order(f, "wedge")
+	next.formation = "wedge"
+	var before: Dictionary = f.state.to_dict()
+	assert_eq(tasks.issue_task(f.repo, f.state, next).status, "invalid")
+	assert_eq(f.state.to_dict(), before)
+	_ready_for_wedge(f)
+	assert_eq(tasks.issue_task(f.repo, f.state, next).status, "pending")
+	f.state.regiments[f.a].morale = 0
+	var deployment: Dictionary = f.battle.get("unit_formations", {}).duplicate(true)
+	assert_eq(tasks.deliver_task(f.repo, f.state, "wedge").status, "invalid")
+	assert_eq(tasks.current(f.state, f.a).request.id, "keep")
+	assert_eq(f.battle.get("unit_formations", {}), deployment)
+	assert_eq(f.state.unit_tasks[f.a].received_sequence, 1)
+
+func test_replacement_and_cancel_do_not_erase_received_formation_costs() -> void:
+	var f := _fixture()
+	tasks.issue_task(f.repo, f.state, _order(f, "line"))
+	tasks.deliver_task(f.repo, f.state, "line")
+	assert_true(f.battle.get("unit_formations", {}).has(f.a))
+	if not f.battle.get("unit_formations", {}).has(f.a): return
+	BattleFormation.advance(f.repo, f.state, f.battle)
+	var deployment: Dictionary = f.battle.unit_formations[f.a].duplicate(true)
+	var same := _order(f, "same-shape", "defend")
+	tasks.issue_task(f.repo, f.state, same)
+	tasks.deliver_task(f.repo, f.state, "same-shape")
+	assert_eq(f.battle.unit_formations[f.a], deployment, "a new task with the same shape does not reset progress")
+	var next := _order(f, "empty", "defend")
+	next.formation = ""
+	tasks.issue_task(f.repo, f.state, next)
+	tasks.deliver_task(f.repo, f.state, "empty")
+	assert_eq(f.battle.unit_formations[f.a], deployment)
+	var cancel := {"id": "cancel", "unit": f.a, "battle_id": 944, "task": "cancel"}
+	tasks.issue_task(f.repo, f.state, cancel)
+	assert_eq(f.battle.unit_formations[f.a], deployment)
+	tasks.deliver_task(f.repo, f.state, "cancel")
+	assert_true(tasks.current(f.state, f.a).is_empty())
+	assert_eq(f.battle.unit_formations[f.a], deployment, "cancellation cannot refund physical disorder")
+	tasks.deliver_task(f.repo, f.state, "line")
+	assert_eq(f.battle.unit_formations[f.a], deployment)
+
+func test_formation_receipt_json_replay_and_retarget_preserve_progress_and_disorder() -> void:
+	var f := _fixture()
+	tasks.issue_task(f.repo, f.state, _order(f, "first"))
+	var saved := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	for state: GameState in [f.state, saved]:
+		assert_eq(tasks.deliver_task(f.repo, state, "first").status, "received")
+		BattleFormation.advance(f.repo, state, state.battles[0])
+	assert_eq(saved.to_dict(), f.state.to_dict())
+	assert_true(f.battle.get("unit_formations", {}).has(f.a))
+	if not f.battle.get("unit_formations", {}).has(f.a): return
+	var before: Dictionary = saved.to_dict()
+	tasks.deliver_task(f.repo, saved, "first")
+	BattleFormation.advance(f.repo, saved, saved.battles[0])
+	assert_eq(saved.to_dict(), before)
+	var deadline := int(f.battle.unit_formations[f.a].disorder_until)
+	f.repo.battle_formations.diamond.disorder_days = 0
+	var next := _order(f, "retarget")
+	next.formation = "diamond"
+	tasks.issue_task(f.repo, f.state, next)
+	tasks.deliver_task(f.repo, f.state, "retarget")
+	assert_eq(f.battle.unit_formations[f.a].target, "diamond")
+	assert_eq(int(f.battle.unit_formations[f.a].progress), 0)
+	assert_eq(int(f.battle.unit_formations[f.a].disorder_until), deadline)
+
+func test_task_formation_uses_the_existing_local_and_courier_delivery_adapter() -> void:
+	for local: bool in [false, true]:
+		var f := _fixture()
+		tasks.issue_task(f.repo, f.state, _order(f, "transport"))
+		var courier := {"id": 1, "target": f.a}
+		var order := {"action_code": "BATTLE_TASK", "unit_task_id": "transport"}
+		assert_eq(CourierSystem._deliver_one(f.repo, f.state, courier, order, local).type, "delivered")
+		assert_eq(f.battle.get("unit_formations", {}).get(f.a, {}).get("target", ""), "line")
+		assert_false(f.battle.get("unit_formations", {}).has(f.b))

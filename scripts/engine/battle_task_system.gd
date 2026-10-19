@@ -114,8 +114,10 @@ static func _refusal(repo: DataRepository, state: GameState, order: Dictionary) 
 		return ""
 	if not repo.battle_behaviors.has(order["task"]):
 		return "Unknown unit task."
-	if order["formation"] != "" and not repo.battle_formations.has(order["formation"]):
-		return "Unknown unit task formation."
+	if order["formation"] != "":
+		var why := BattleFormation.refusal(repo, state, int(order["battle_id"]), side, String(order["formation"]), unit)
+		if why != "":
+			return why
 	var action := String(repo.battle_behaviors[order["task"]]["legal_action"])
 	var source := String(order["source"])
 	if source == "player":
@@ -216,6 +218,10 @@ static func deliver_task(repo: DataRepository, state: GameState, order_id: Strin
 	if why != "":
 		_transition(state, record, "invalid", why)
 		return record.duplicate(true)
+	if order["formation"] != "":
+		var battle := BattleSystem.battle_by_id(state, int(order["battle_id"]))
+		BattleFormation.request(repo, state, int(order["battle_id"]), BattleRules.side_of(battle, String(order["unit"])),
+			String(order["formation"]), String(order["unit"]))
 	var previous: Dictionary = ledger["orders"].get(String(ledger["current_id"]), {})
 	var cancelling: bool = order["task"] == "cancel"
 	if not previous.is_empty():
