@@ -46,3 +46,7 @@ battle_group_spacing_m,50,"battle groups (P4.4d1): whole metres between neighbou
 battle_group_depth_m,40,"battle groups (P4.4d1): whole metres between ranks, measured back from the front away from the enemy (first draft)"
 battle_line_gap_m,100,"battle deployment lines (P4.4d2): whole metres between the two sides' line centres at the battle place (first draft)"
 battle_deploy_step_m,2500,"battle deployment lines (P4.4d2): most whole metres a battle unit's anchor steps toward its line slot per day; 5 km of contact takes two days (first draft)"
+family_loss_opinion_dead_named,-3,"family losses (P2-B1): opinion each family member in the player's realm takes per named noble killed, applied once per loss id (first draft)"
+family_loss_opinion_dead_cadre,-2,"family losses (P2-B1): opinion per family member for each unnamed noble cadre killed (first draft)"
+family_loss_opinion_captured_named,-2,"family losses (P2-B1): opinion per family member for each named noble captured (first draft)"
+family_loss_opinion_captured_cadre,-1,"family losses (P2-B1): opinion per family member for each unnamed noble cadre captured (first draft)"
