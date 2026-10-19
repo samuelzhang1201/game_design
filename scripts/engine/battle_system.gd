@@ -781,7 +781,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 			for code: String in b[side]:
 				if bool(_stored(state, code).get("battle_retreat", false)):
 					withdrawing += 1
-			if withdrawing > 0 and withdrawing < (b[side] as Array).size():
+			if withdrawing > 0 or BattleOrders.kind(b, side) == "retreat":
 				if not tier.has("unit_loss_permille"):
 					tier["unit_loss_permille"] = {}
 				for code: String in b[side]:
@@ -877,7 +877,19 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 	var members: Array = battle[side] if unit == "" else [unit]
 	if BattleOrders.kind(battle, side) == "retreat" or members.any(func(code: String) -> bool:
 		return bool(_stored(state, code).get("battle_retreat", false))):
-		var pursued := BattleOrders.kind(battle, other) == "attack" and "pursue" in BattleRules.legal_actions(repo, state, int(battle["id"]), other)
+		var pursued := false
+		for code: String in battle[other]:
+			var action := unit_action(repo, state, battle, code)
+			if action["kind"] != "attack" or not _can_fight(repo, state, code) \
+					or bool(_stored(state, code).get("captured", false)):
+				continue
+			if not "pursue" in BattleRules.legal_actions(repo, state, int(battle["id"]), other, code):
+				continue
+			if action.has("pursuit_target"):
+				pursued = pursued or action["pursuit_target"] == "" or action["pursuit_target"] in members
+			elif action["task_id"] == "" and BattleOrders.kind(battle, other) == "attack" \
+					and "pursue" in BattleRules.legal_actions(repo, state, int(battle["id"]), other):
+				pursued = true
 		kind = "pursuit" if pursued else "withdrawal"
 		scale = int(repo.bal("battle_context_" + kind + "_permille"))
 		if BattleRules._policy(battle, "safe_withdrawal", state.absolute_day()) == "protect":

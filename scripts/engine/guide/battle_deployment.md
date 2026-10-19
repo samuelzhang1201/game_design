@@ -39,7 +39,7 @@ outcome before costs, history or current eligibility; conflicting reuse fails.
 Local king command range delivers immediately through CourierSystem; remote
 warrants remain pending until arrival. Delivery checks recipient identity,
 current realm control, membership and law. Lost/expired couriers invalidate
-pending tasks with a reason without refunding spent fees. Formation and pursuit execution require their own integration steps.
+pending tasks with a reason without refunding spent fees. Formation execution requires its own integration step.
 The dispatch path changes only the canonical primary-task ledger.
 
 `BATTLE_TASK_CANCEL` accepts only `request_id`, `regiment` and `battle_id`,
@@ -59,8 +59,7 @@ reused across assignment and cancellation actions.
 `BattleTaskSystem.combat_action` resolves only received tasks for this battle:
 advance/flank/charge reuse attack, defend/guard_flank reuse hold. Charge retains
 its own live legality check; there is no positional/flanking bonus. Pending,
-replaced and cancelled warrants do not execute. Unassigned units and pursuit
-tasks retain their existing side action; actual withdrawal/rout wins. Live unit
+replaced and cancelled warrants do not execute. Unassigned units retain their existing side action; actual withdrawal/rout wins. Live unit
 law, shared terms, crown control and designated enemy availability constrain
 execution. A barred or depleted task holds without altering its saved receipt.
 
@@ -75,6 +74,26 @@ round preserves it until the saved round commits. Normal meals/equipment retain 
 plan, RNG draw and costs; failed personnel writes and JSON retries reuse it. Legacy pending plans without
 unit actions retain their side effects until that round completes.
 Cancellation/replacement changes the next unprocessed round only on receipt.
+
+## Delivered unit pursuit
+
+A received royal pursuit task reuses attack strength, engagement and extra supply
+only while an available opposing unit is withdrawing (side retreat or actual
+unit withdrawal). A designated target must itself be available and withdrawing;
+an unspecified task may pursue available withdrawing opponents. Without one it
+holds, retaining its receipt. Live legality, control, capacity and carried supply
+checks still apply. A normal unit attack never supplies pursuit authorization.
+Legacy side attack retains its existing lawful pursuit context for unassigned
+attacking units; a unit task overrides that recipient's side action.
+
+Actual lawful attacking pursuers determine each withdrawing enemy's existing
+pursuit/withdrawal context. A targeted task does not increase another withdrawing
+unit's casualty rate. Withdrawing sides save per-unit rates even when all members
+withdraw, using the existing CSV scales and grouped integer casualty writer.
+The frozen action retains its pursuit target with the pending loss plan; failed
+commits, cancellation after planning and JSON retries do not change that plan,
+repeat its RNG draw or charge attack costs twice. This integration adds no pursuit
+movement, lost-sight search or distance/region limit execution.
 
 ## Delivered unit retreat
 
