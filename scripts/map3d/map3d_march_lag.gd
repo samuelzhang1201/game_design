@@ -20,6 +20,11 @@ static func _unit(key: String) -> float:
 	return float(h) / 4294967296.0
 
 
+## The same stable 0..1 for any other view-only choice (Map3DClipChain).
+static func unit(key: String) -> float:
+	return _unit(key)
+
+
 ## Where in its MARCH clip figure `index` of `code` starts, as a share of the clip.
 static func phase(code: String, index: int) -> float:
 	return _unit("%s|phase|%d" % [code, index])

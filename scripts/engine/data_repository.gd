@@ -85,7 +85,7 @@ var map3d_bake: Dictionary = {}
 ## data/screens/ui/graphics_quality.csv rows keyed by tier (low/medium/high/ultra): the
 ## 3D map's graphics tiers (Map3DQuality, spec 2026-09-20 §4).
 var graphics_quality: Dictionary = {}
-## data/screens/map3d/army_art.csv: piece -> {piece, stand_deg, size, stride_m, rank_depth, exact_pace} —
+## data/screens/map3d/army_art.csv: piece -> {piece, stand_deg, size, stride_m, rank_depth, exact_pace, steps, chains} —
 ## how a regiment's 3D piece stands and walks (MapObjects.army_piece); its
 ## model and its card's painting are GameArt's tables (owner 2026-10-02).
 var army_art: Dictionary = {}

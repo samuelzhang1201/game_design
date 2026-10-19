@@ -363,14 +363,15 @@ func test_the_infantry_keeps_exact_pace() -> void:
 	assert_eq(String(repo.army_art["infantry"].get("exact_pace", "")), "1")
 
 
-## The chip hangs over the HEAD (owner 2026-09-30: 兵人的icon和模型间隔太远了):
-## the infantry's head bone stands ~1.56 m, its box's top is the spear's 2.66.
-func test_the_head_is_below_the_spear_tip() -> void:
+## The chip hangs over the HEAD (owner 2026-09-30: 兵人的icon和模型间隔太远了),
+## never above the figure's box: with a spear the box's top is its tip, with the
+## sword-and-shield knight (2026-10-19) it is the helmet itself.
+func test_the_chip_hangs_at_the_head() -> void:
 	var node := (load("res://assets/3D/units/infantry/infantry.glb") as PackedScene).instantiate() as Node3D
 	var box := Map3DUnits.model_size(node).y
 	var head := Map3DUnitRig.head_m(repo, node, box)
-	assert_between(head, 1.5, 2.0, "a man's head with its helmet, not the spear tip")
-	assert_lt(head, box)
+	assert_between(head, 1.5, 2.0, "a man's head with its helmet, not a spear tip")
+	assert_lte(head, box)
 	var bare := Node3D.new()
 	assert_eq(Map3DUnitRig.head_m(repo, bare, 3.0), 3.0, "no head bone: the box's top")
 	bare.free()

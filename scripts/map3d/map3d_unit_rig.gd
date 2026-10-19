@@ -93,12 +93,19 @@ static func _local_to(root: Node3D, child: Node3D) -> Transform3D:
 ## Puts a piece's figures (`anims`) into an action by name, blended over
 ## `blend_s`; one without it keeps its own (Map3DLayerUnits.play). No figure is
 ## a clone: a MARCH starts at the figure's hashed phase of the clip
-## (Map3DMarchLag.phase, `code` + index), any other action at its own seek.
-static func play(anims: Array, action: String, blend_s: float, code: String = "") -> void:
+## (Map3DMarchLag.phase, `code` + index), any other action at its own seek. An
+## action the piece's `chain` names ({"clips", "lo", "hi"}, Map3DClipChain) plays
+## its clips one after another instead.
+static func play(anims: Array, action: String, blend_s: float, code: String = "",
+		chain: Dictionary = {}) -> void:
 	for i in anims.size():
 		var anim: AnimationPlayer = anims[i]
-		var clip := Map3DUnits.clip_named(anim, action)
 		anim.set_meta("want_action", action)
+		if not chain.is_empty():
+			Map3DClipChain.start(anim, action, chain["clips"], code, i, chain["lo"], chain["hi"], blend_s)
+			continue
+		Map3DClipChain.stop(anim)
+		var clip := Map3DUnits.clip_named(anim, action)
 		if clip == "" or anim.current_animation == clip:
 			continue
 		anim.play(clip, blend_s)  # blended, never a snap
