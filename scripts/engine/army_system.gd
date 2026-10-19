@@ -1493,6 +1493,8 @@ static func _group_reach(repo: DataRepository, rows: Array, anchor: Vector2i) ->
 		var d := int(sqrt(float(d2)))
 		while d * d < d2:
 			d += 1
+		while d > 0 and (d - 1) * (d - 1) >= d2:
+			d -= 1
 		far = maxi(far, d)
 	@warning_ignore("integer_division")
 	return far + int(repo.bal("battle_group_spacing_m")) / 2
