@@ -484,6 +484,7 @@ static func join(repo: DataRepository, state: GameState, battle_id: int, code: S
 	b.reinforcement_evidence.append({"unit": code, "side": side, "day": state.absolute_day(),
 		"reason": "This regiment physically joined the existing battle."})
 	_halt(state, code)
+	BattleGroups.refresh(repo, state, b)
 	return true
 
 
@@ -582,6 +583,7 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 	for entry_side: String in SIDES:
 		for member: String in b[entry_side]:
 			BattleReport.enroll(state, b, member, entry_side)
+	BattleGroups.refresh(repo, state, b)
 	for side: String in SIDES:
 		var actor := String(b[side][0])
 		if ArmySystem.is_foe(state, actor):
@@ -617,6 +619,7 @@ static func prepare_day(repo: DataRepository, state: GameState) -> Array:
 	for battle: Dictionary in state.battles:
 		BattleRules.freeze(repo, state, battle)
 		BattleFormation.ensure(battle)
+		BattleGroups.refresh(repo, state, battle)
 	_withdraw_homeward(repo, state, events)
 	_detect(repo, state, events)
 	return events
@@ -645,7 +648,9 @@ static func step_battle(repo: DataRepository, state: GameState, battle_id: int) 
 			else:
 				battle.erase("commanders")
 			return {"status": "error", "error": result["error"], "events": []}
-		if not bool(result["ended"]): BattleReport.note(battle, events)
+		if not bool(result["ended"]):
+			BattleReport.note(battle, events)
+			BattleGroups.refresh(repo, state, battle)   # the round's losses and exits, so a same-day retry is inert
 		if bool(result["ended"]):
 			state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != battle_id)
 	return {"status": "complete", "events": events}
