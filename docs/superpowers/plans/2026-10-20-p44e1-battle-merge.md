@@ -87,3 +87,22 @@ assault stays linked to its town and works), §12 (aliases in the save).
 resolution, green. 3. `battle_deployment.md` (or `battle_and_ai.md`, where the
 battle lifecycle lives) paragraph and engine `CLAUDE.md` index entry.
 4. `--fast` green (+ simulation/gameplay suites); one PR.
+
+## Implementer rulings (as built)
+
+1. Contact is group-to-group (any saved group of a crown unit against any of a foe unit, `battle_group_contact_m` inclusive, squared whole metres); anchors alone never trigger.
+2. Survivor = lower id unless only the other holds a `town`.
+3. Merging runs once per day, inside `BattleSystem.prepare_day` (after deploy/refresh, before withdrawals and detection). A mid-day substep (`discover_contacts`) never merges: left to a later slice. A battle with a non-empty `pending_round` (either one) is skipped, so no half-resolved round is ever re-labelled.
+4. Every key a battle dict can carry, and how it merges (survivor S, absorbed G; "S wins" = a key already in S is kept):
+   - `id`, `town`, `place_x_m`, `place_y_m`: S's (the town rule picks S); G's place is kept in `sources`.
+   - `att`, `def`: union by allegiance via `_side_for`, S members first, no duplicates (no `battle_max_units` cap re-check: nobody is dropped).
+   - `start_day`: min. `rounds`: max. `last_resolved_day`: max. `deployed_day`: max.
+   - `personnel_entries`, `unit_entries`, `unit_formations`, `reserves`, `abandoned_supplies`, `event_checks`: per-key union, S wins; `side` inside personnel/unit entries, `reinforcement_evidence` and `abandoned_supplies` is re-read from the merged sides.
+   - `reinforcement_evidence`, `withdrawal_costs`, `event_modifiers`, `event_reinforcements`, `event_reinforcements_consumed`, `report_events`, `family_changes`: list union in order, no equal entry twice.
+   - `groups`, `group_facing`: rebuilt by `BattleGroups.refresh` (no unit moves).
+   - Side-level, kept verbatim under `sources[<G id>]` and NOT folded: `parley`, `commanders`, `commander_nominees`, `actions`, `formations`, `routed_side`, `inspire_cooldown`, `inspire_until`, `start_day`, `place_x_m`, `place_y_m`. A G unit with no `unit_formations` entry gets a copy of G's side formation so its formation does not change silently. G's own earlier `sources` are carried.
+   - `pending_round`: never present at merge (blocks it). `report_outcome`: only set when a battle ends; not merged.
+   - `sources` itself is new (S's own kept; G's added).
+5. The absorbed side-level state stays under `sources` until e2/e3; absorbed units now act on S's side action (`BattleOrders.kind`) until e2/e3.
+6. Outside the battle dict: `GameState.battle_aliases` (string id -> int id, saved; old saves `{}`); `battle_events` records with `battle_id` == G are re-pointed to S, and `BattleEvents._offer_record` treats a same-day record for S under another token as today's check (no second roll). `BattleSystem.canonical` is used by `combat_action`, `BattleOrders.end_battle` and the report's prisoner/warrant filters; `step_battle` removes the battle by its real id (a step through an alias fights the survivor once, guarded by `last_resolved_day`). `battle_holder:<id>:` custody event ids keep the absorbed id (custody lines of a merged battle's report may omit pre-merge holder events; left to e2/e3).
+7. Event: `{kind: "merge", battle_id: S, absorbed: G, reason}`; journaled into S's `report_events` directly (`BattleReport.note`); no report template row yet.

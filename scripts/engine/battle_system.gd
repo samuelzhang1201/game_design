@@ -338,8 +338,18 @@ static func battle_of(state: GameState, code: String) -> Dictionary:
 	return {}
 
 
-## The battle with this id, {} when none.
+## The id a (possibly merged-away) battle id stands for (BattleMerge aliases, chains too).
+static func canonical(state: GameState, id: int) -> int:
+	var hops := 0
+	while state.battle_aliases.has(str(id)) and hops < 64:
+		id = int(state.battle_aliases[str(id)])
+		hops += 1
+	return id
+
+
+## The battle with this id (an alias resolves to its survivor), {} when none.
 static func battle_by_id(state: GameState, id: int) -> Dictionary:
+	id = canonical(state, id)
 	for b: Dictionary in state.battles:
 		if int(b["id"]) == id:
 			return b
@@ -627,6 +637,7 @@ static func prepare_day(repo: DataRepository, state: GameState) -> Array:
 		BattleFormation.ensure(battle)
 		BattleGroups.deploy_day(repo, state, battle)
 		BattleGroups.refresh(repo, state, battle)
+	events.append_array(BattleMerge.day(repo, state))
 	_withdraw_homeward(repo, state, events)
 	_detect(repo, state, events)
 	return events
@@ -659,7 +670,7 @@ static func step_battle(repo: DataRepository, state: GameState, battle_id: int) 
 			BattleReport.note(battle, events)
 			BattleGroups.refresh(repo, state, battle)   # the round's losses and exits, so a same-day retry is inert
 		if bool(result["ended"]):
-			state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != battle_id)
+			state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != int(battle["id"]))
 	return {"status": "complete", "events": events}
 
 
