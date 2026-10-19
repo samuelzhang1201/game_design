@@ -48,6 +48,7 @@ var _apart := false         # the figure shows the kit taken apart, not the dril
 var _fly: Tween
 var _full := false
 var _brief: Dictionary = {}   # the docked page last laid
+var _task_view: Dictionary = {}   # BattlePresentation.task_view last laid in %TaskOrders
 
 
 func _ready() -> void:
@@ -61,6 +62,10 @@ func _ready() -> void:
 				and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 			set_full(true))   # a click on the docked page holds the book up
 	(%TakeApart as Button).pressed.connect(toggle_take_apart)
+	for pick: OptionButton in [%Task, %Target, %TaskFormation]:
+		pick.item_selected.connect(func(_i: int) -> void: _quote_task())
+	(%SendTask as Button).pressed.connect(send_task.bind(false))
+	(%CancelTask as Button).pressed.connect(send_task.bind(true))
 	(%Figure as WarInkFigure).label_font = UiPalette.role_font("body_italic")
 	(%Dim as ColorRect).gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
@@ -124,7 +129,9 @@ func open_for(code_id: String) -> void:
 	_code = code_id
 	_shown = []
 	_brief = {}
+	_task_view = {}
 	_fill_brief()
+	_fill_task()
 	_fill_right()
 	_fill_left()
 	(%RightScroll as ScrollContainer).scroll_vertical = 0
@@ -151,6 +158,8 @@ func refresh() -> void:
 	var scroll: ScrollContainer = %RightScroll
 	var at := scroll.scroll_vertical
 	var moved := _fill_brief()
+	if _fill_task():
+		moved = true
 	if _fill_right():
 		scroll.set_deferred("scroll_vertical", at)   # the new rows lay out next frame
 		moved = true
@@ -203,6 +212,95 @@ func _fill_brief() -> bool:
 		rows.add_child(l)
 		rows.add_child(v)
 	return true
+
+
+## The unit's battle task (P4.4b9): the block shows only while the unit is on a
+## battlefield; the drop-downs keep their picks across a refresh. False when
+## the view is the one already laid.
+func _fill_task() -> bool:
+	var view := BattlePresentation.task_view(Game.data, Game.state, _code)
+	if view == _task_view:
+		if not view.is_empty():
+			_quote_task()   # the purse or the king's range may have moved the price
+		return false
+	_task_view = view
+	(%TaskOrders as Control).visible = not view.is_empty()
+	if view.is_empty():
+		return true
+	_fill_pick(%Task, view["tasks"], "id", [])
+	_fill_pick(%Target, view["targets"], "code", [["", "Any enemy"]])
+	_fill_pick(%TaskFormation, view["formations"], "id", [["", "Keep deployment"]])
+	var lines: PackedStringArray = []
+	if not view["current"].is_empty():
+		lines.append("Received: " + _task_words(view["current"]) + ".")
+	for row: Dictionary in view["pending"]:
+		lines.append("Pending: %s — courier riding." % _task_words(row))
+	if not view["refused"].is_empty():
+		lines.append("Failed: %s — %s" % [_task_words(view["refused"]), view["refused"]["reason"]])
+	if lines.is_empty():
+		lines.append("No task: the unit follows its side's order.")
+	(%TaskStatus as Label).text = "\n".join(lines)
+	(%CancelTask as Button).visible = not view["current"].is_empty() or not view["pending"].is_empty()
+	_quote_task()
+	return true
+
+
+func _fill_pick(pick: OptionButton, rows: Array, key: String, first: Array) -> void:
+	var was: Variant = pick.get_selected_metadata() if pick.selected >= 0 else null
+	pick.clear()
+	for pair: Array in first:
+		pick.add_item(String(pair[1]))
+		pick.set_item_metadata(pick.item_count - 1, pair[0])
+	for row: Dictionary in rows:
+		pick.add_item(String(row["label"]))
+		pick.set_item_metadata(pick.item_count - 1, String(row[key]))
+	pick.select(0)
+	for i in pick.item_count:
+		if pick.get_item_metadata(i) == was:
+			pick.select(i)
+
+
+static func _task_words(row: Dictionary) -> String:
+	var out := String(row["task"])
+	if String(row["target"]) != "":
+		out += " against " + String(row["target"])
+	if String(row["formation"]) != "":
+		out += " in " + String(row["formation"])
+	return out
+
+
+## The quote for the picks: ActionSystem's refusal, else what it costs and
+## where it takes effect.
+func task_quote(cancel := false) -> Dictionary:
+	if cancel:
+		return BattlePresentation.task_quote(Game.data, Game.state, _code, "cancel")
+	return BattlePresentation.task_quote(Game.data, Game.state, _code, String((%Task as OptionButton).get_selected_metadata()),
+		String((%Target as OptionButton).get_selected_metadata()), String((%TaskFormation as OptionButton).get_selected_metadata()))
+
+
+func _quote_task() -> void:
+	var q := task_quote()
+	var why := String(q["reason"])
+	(%SendTask as Button).disabled = why != ""
+	if why != "":
+		(%TaskQuote as Label).text = why
+		return
+	var cost := "%d gold filing" % int(q["filing_gold"])
+	if int(q["courier_gold"]) > 0:
+		cost += " + %d gold courier" % int(q["courier_gold"])
+	(%TaskQuote as Label).text = cost + (". Delivered here: the king commands in range." if bool(q["local"]) \
+		else (". Rides with the courier already waiting." if int(q["courier_gold"]) == 0 else ". Takes effect when the courier arrives."))
+
+
+## Send the picked task (or cancel the unit's task) through Game; a refusal is
+## written in the quote line, a sent task shows as pending once the page refreshes.
+func send_task(cancel: bool) -> void:
+	var q := task_quote(cancel)
+	var why := String(q["reason"])
+	if why == "":
+		why = String(Game.try_execute(ActionRequest.make(String(q["action_code"]), q["params"])).get("error", ""))
+	if why != "":
+		(%TaskQuote as Label).text = why
 
 
 ## The docked page's rows as {label: text}, in the order laid.

@@ -526,3 +526,72 @@ func test_closing_puts_the_kit_back_together() -> void:
 	assert_null((panel.get_node("%Figure") as WarInkFigure).parts_root())
 	assert_null(panel._fly)
 	assert_true((panel.get_node("%Drills") as Control).visible)
+
+
+## P4.4b9: a battlefield unit's docked page carries its task block; Send task
+## runs the quoted BATTLE_TASK through Game and the page then reads it pending.
+func _on_battlefield() -> String:
+	var enemy := String(Game.state.foes.keys()[0])
+	var at := ArmySystem.pack_to_metres(Game.data, ArmySystem.position_of(Game.data, Game.state, ArmySystem.regiment(Game.data, code, Game.state)))
+	Game.state.battles = [{"id": 77, "att": [code], "def": [enemy], "rounds": 0, "town": "", "place_x_m": at.x, "place_y_m": at.y}]
+	Game.state.king_state.x_m = 100000000
+	Game.state.king_state.y_m = 100000000
+	Game.state.metrics.treasury = 500
+	return enemy
+
+
+func test_the_task_block_shows_only_on_a_battlefield() -> void:
+	panel.open_for(code)
+	assert_false((panel.get_node("%TaskOrders") as Control).visible)
+	_on_battlefield()
+	panel.refresh()
+	assert_true((panel.get_node("%TaskOrders") as Control).visible)
+	assert_eq((panel.get_node("%Task") as OptionButton).item_count, Game.data.battle_behaviors.size())
+	assert_eq((panel.get_node("%Target") as OptionButton).item_count, 2, "any enemy, then the one opponent")
+	assert_eq((panel.get_node("%TaskFormation") as OptionButton).item_count, Game.data.battle_formations.size() + 1)
+	assert_false((panel.get_node("%CancelTask") as Control).visible, "nothing to cancel yet")
+	await wait_process_frames(2)
+	assert_lte(panel.book_rect().size.x, 1280.0 * 0.30, "the block never widens the docked page")
+
+
+func test_send_task_runs_the_quote_and_the_page_reads_it_pending() -> void:
+	var enemy := _on_battlefield()
+	panel.open_for(code)
+	var target: OptionButton = panel.get_node("%Target")
+	target.select(1)
+	target.item_selected.emit(1)
+	var quote := panel.task_quote()
+	assert_eq(String(quote["reason"]), "")
+	assert_eq(quote["params"]["target_unit"], enemy)
+	assert_string_contains((panel.get_node("%TaskQuote") as Label).text, "%d gold filing + %d gold courier" % [int(quote["filing_gold"]), int(quote["courier_gold"])])
+	var before := int(Game.state.metrics.treasury)
+	(panel.get_node("%SendTask") as Button).pressed.emit()
+	assert_eq(int(Game.state.metrics.treasury), before - int(quote["filing_gold"]) - int(quote["courier_gold"]))
+	panel.refresh()
+	assert_true((panel.get_node("%TaskStatus") as Label).text.begins_with("Pending: Frontal charge against"))
+	assert_true((panel.get_node("%CancelTask") as Control).visible)
+	assert_eq((panel.get_node("%Target") as OptionButton).selected, 1, "the picks survive the refresh")
+	assert_string_contains((panel.get_node("%TaskQuote") as Label).text, "Rides with the courier already waiting")
+	(panel.get_node("%CancelTask") as Button).pressed.emit()
+	panel.refresh()
+	assert_eq((panel.get_node("%TaskStatus") as Label).text.count("Pending:"), 2)
+
+
+func test_a_refused_task_names_its_reason_and_cannot_be_sent() -> void:
+	_on_battlefield()
+	Game.state.metrics.treasury = 0
+	panel.open_for(code)
+	var why := String(panel.task_quote()["reason"])
+	assert_ne(why, "")
+	assert_eq((panel.get_node("%TaskQuote") as Label).text, why, "ActionSystem.validate's own words")
+	assert_true((panel.get_node("%SendTask") as Button).disabled)
+
+
+func test_the_quote_follows_the_purse_without_a_new_task_view() -> void:
+	_on_battlefield()
+	panel.open_for(code)
+	assert_false((panel.get_node("%SendTask") as Button).disabled)
+	Game.state.metrics.treasury = 0
+	panel.refresh()
+	assert_true((panel.get_node("%SendTask") as Button).disabled)
+	assert_eq((panel.get_node("%TaskQuote") as Label).text, String(panel.task_quote()["reason"]))

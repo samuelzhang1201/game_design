@@ -283,6 +283,73 @@ theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 1
 columns = 2
 
+[node name="TaskOrders" type="VBoxContainer" parent="Docket/DockBook/DockPage/DockBody" unique_id=66103296]
+unique_name_in_owner = true
+editor_description = "The selected battlefield unit's task (P4.4b9). WarFolioPanel fills the drop-downs, status and quote lines and shows the block only while BattlePresentation.task_view has the unit on a battlefield. STOP: a click here never holds the book up."
+visible = false
+layout_mode = 2
+mouse_filter = 0
+theme_override_constants/separation = 1
+
+[node name="TaskHeader" type="Label" parent="Docket/DockBook/DockPage/DockBody/TaskOrders" unique_id=104087201]
+layout_mode = 2
+theme_type_variation = &"FolioHeader"
+text = "Battle task"
+
+[node name="TaskStatus" type="Label" parent="Docket/DockBook/DockPage/DockBody/TaskOrders" unique_id=413077958]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"FolioValue"
+autowrap_mode = 3
+
+[node name="TaskPicks" type="HFlowContainer" parent="Docket/DockBook/DockPage/DockBody/TaskOrders" unique_id=1167682549]
+layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 0
+
+[node name="Task" type="OptionButton" parent="Docket/DockBook/DockPage/DockBody/TaskOrders/TaskPicks" unique_id=2069053155]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Task"
+theme_type_variation = &"FolioTab"
+fit_to_longest_item = false
+
+[node name="Target" type="OptionButton" parent="Docket/DockBook/DockPage/DockBody/TaskOrders/TaskPicks" unique_id=1868987176]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Against"
+theme_type_variation = &"FolioTab"
+fit_to_longest_item = false
+
+[node name="TaskFormation" type="OptionButton" parent="Docket/DockBook/DockPage/DockBody/TaskOrders/TaskPicks" unique_id=1102372723]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Formation"
+theme_type_variation = &"FolioTab"
+fit_to_longest_item = false
+
+[node name="TaskQuote" type="Label" parent="Docket/DockBook/DockPage/DockBody/TaskOrders" unique_id=943613534]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"FolioValue"
+autowrap_mode = 3
+
+[node name="TaskButtons" type="HBoxContainer" parent="Docket/DockBook/DockPage/DockBody/TaskOrders" unique_id=1555439077]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SendTask" type="Button" parent="Docket/DockBook/DockPage/DockBody/TaskOrders/TaskButtons" unique_id=817260563]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"FolioTab"
+text = "Send task"
+
+[node name="CancelTask" type="Button" parent="Docket/DockBook/DockPage/DockBody/TaskOrders/TaskButtons" unique_id=2119569575]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"FolioTab"
+text = "Cancel task"
+
 [node name="DockEnlarge" type="Button" parent="Docket" unique_id=2034690741]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(18, 18)
