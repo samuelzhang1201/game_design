@@ -142,6 +142,13 @@ static func capture(repo: DataRepository, state: GameState, raw: Dictionary) -> 
 		request["changes"], request["reason"])
 	if transition.has("error"):
 		return transition
+	# A replayed capture returned early above, so this runs once per id.
+	var place := BattleSystem.place_label(repo, state, battle) if not battle.is_empty() else "the field"
+	var rows: Variant = FamilyLosses.consume(repo, state, "capture:" + id, request["changes"], {"place": place, "order": "capture"})
+	var loss_id := "capture:" + id
+	if rows is Array and not battle.is_empty() and not (battle.get("family_loss_ids", []) as Array).has(loss_id):
+		battle["family_loss_ids"] = battle.get("family_loss_ids", []) + [loss_id]
+		battle["family_changes"] = battle.get("family_changes", []) + rows
 	state.prisoner_batches.merge(batches)
 	return _record(state, id, request, {"status": "applied", "batch_ids": batches.keys(),
 		"personnel": total, "allocation": allocation})
