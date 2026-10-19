@@ -1,22 +1,163 @@
-character_id,art_id,seed,notes
-you,K-01,qwen2512fast_s954159497,
-char_chancellor,K-02,qwen2512fast_s954159497,
-char_marshal,K-03,qwen2512fast_s954159497,
-char_steward,K-04,qwen2512fast_s954159497,
-char_spymaster,K-05,qwen2512fast_s954159497,
-char_chaplain,K-06,qwen2512fast_s954159497,
-char_queen,K-07,qwen2512fast_s954159497,
-char_princess,K-08,qwen2512fast_s954159497,
-char_duke_tomas,K-09,qwen2512fast_s954159497,
-char_lady_ysolde,K-10,qwen2512fast_s954159497,
-char_captain_hale,K-11,qwen2512fast_s954159497,
-char_lady_corina,K-12,qwen2512fast_s954159497,
-char_lord_edgar,K-13,qwen2512fast_s954159497,
-char_lord_malvern,K-14,qwen2512fast_s954159497,
-char_prophet_cassian,K-15,qwen2512fast_s954159497,
-char_king_osric,K-16,qwen2512fast_s954159497,
-char_envoy_petra,K-17,qwen2512fast_s954159497,
-char_queen_isabeau,K-18,qwen2512fast_s954159497,
-char_emperor,K-19,qwen2512fast_s954159497,
-char_bard_corvin,K-20,qwen2512fast_s954159497,
-char_guildmaster_tessa,K-21,qwen2512fast_s954159497,
+character_id,art_id,seed,notes,requires_review
+you,K-01,qwen2512fast_s954159497,,0
+char_chancellor,K-02,qwen2512fast_s954159497,,0
+char_marshal,K-03,qwen2512fast_s954159497,,0
+char_steward,K-04,qwen2512fast_s954159497,,0
+char_spymaster,K-05,qwen2512fast_s954159497,,0
+char_chaplain,K-06,qwen2512fast_s954159497,,0
+char_queen,K-07,qwen2512fast_s954159497,,0
+char_princess,K-08,qwen2512fast_s954159497,,0
+char_duke_tomas,K-09,qwen2512fast_s954159497,,0
+char_lady_ysolde,K-10,qwen2512fast_s954159497,,0
+char_captain_hale,K-11,qwen2512fast_s954159497,,0
+char_lady_corina,K-12,qwen2512fast_s954159497,,0
+char_lord_edgar,K-13,qwen2512fast_s954159497,,0
+char_lord_malvern,K-14,qwen2512fast_s954159497,,0
+char_prophet_cassian,K-15,qwen2512fast_s954159497,,0
+char_king_osric,K-16,qwen2512fast_s954159497,,0
+char_envoy_petra,K-17,qwen2512fast_s954159497,,0
+char_queen_isabeau,K-18,qwen2512fast_s954159497,,0
+char_emperor,K-19,qwen2512fast_s954159497,,0
+char_bard_corvin,K-20,qwen2512fast_s954159497,,0
+char_guildmaster_tessa,K-21,qwen2512fast_s954159497,,0
+char_player_delphine_o_kala,K-22,qwen2512desk4_s954159497,P2 approved full and dedicated bust installed; real-window dossier art review passed,1
+char_player_berengar_ashvale,K-23,qwen2512desk4_s954159497,P2 approved full and dedicated bust installed; real-window dossier art review passed,1
+char_raider_beatrice_reedmere,K-24,qwen2512desk4_s954159498,P2 approved full and dedicated bust installed; real-window dossier art review passed,1
+char_player_alaric_fenwick,K-25,qwen2512desk4_s205202,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_ansel_harrow,K-26,qwen2512desk4_s3525084065,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_cedric_valorin,K-27,qwen2512desk4_s611844519,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_dorian_malvern,K-28,qwen2512desk4_s3516345252,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_edric_o_kala,K-29,qwen2512desk4_s292802,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_emrys_reeve,K-30,qwen2512desk4_s4239228397,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_florian_weighhouse,K-31,qwen2512desk4_s1873247328,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_gareth_fenwick,K-32,qwen2512desk4_s1987192904,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_hadrian_harrow,K-33,qwen2512desk4_s1178869178,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_ivo_ashvale,K-34,qwen2512desk4_s3524794167,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_jasper_valorin,K-35,qwen2512desk4_s354502,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_leofric_malvern,K-36,qwen2512desk4_s3421943242,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
+char_player_lucan_o_kala,K-37,qwen2512desk4_s458099631,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_merek_reeve,K-38,qwen2512desk4_s4147116014,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_odo_weighhouse,K-39,qwen2512desk4_s3871536627,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_percival_fenwick,K-40,qwen2512desk4_s104893384,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_quentin_harrow,K-41,qwen2512desk4_s2540763553,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_roderic_ashvale,K-42,qwen2512desk4_s985770164,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_silas_valorin,K-43,qwen2512desk4_s485128689,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_theobald_malvern,K-44,qwen2512desk4_s4265400252,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_tristan_o_kala,K-45,qwen2512desk4_s1652099712,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_ulric_reeve,K-46,qwen2512desk4_s3543179107,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_valerian_weighhouse,K-47,qwen2512desk4_s3038134537,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_wulfric_fenwick,K-48,qwen2512desk4_s1916088626,P2 reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_ysarn_harrow,K-49,qwen2512desk4_s3192895840,P2 planned; requires full and bust review before installation,1
+char_player_adelina_ashvale,K-50,qwen2512desk4_s1469563637,P2 planned; requires full and bust review before installation,1
+char_player_beatrice_valorin,K-51,qwen2512desk4_s2951193207,P2 planned; requires full and bust review before installation,1
+char_player_cecily_malvern,K-52,qwen2512desk4_s3637245692,P2 planned; requires full and bust review before installation,1
+char_player_eleanor_reeve,K-53,qwen2512desk4_s2574765289,P2 planned; requires full and bust review before installation,1
+char_player_freya_weighhouse,K-54,qwen2512desk4_s634573376,P2 planned; requires full and bust review before installation,1
+char_player_gisela_fenwick,K-55,qwen2512desk4_s1589153586,P2 planned; requires full and bust review before installation,1
+char_player_helena_harrow,K-56,qwen2512desk4_s2599679375,P2 planned; requires full and bust review before installation,1
+char_player_isolde_ashvale,K-57,qwen2512desk4_s3531546933,P2 planned; requires full and bust review before installation,1
+char_player_johanna_valorin,K-58,qwen2512desk4_s545552547,P2 planned; requires full and bust review before installation,1
+char_player_kateryn_malvern,K-59,qwen2512desk4_s2147413857,P2 planned; requires full and bust review before installation,1
+char_player_leonora_o_kala,K-60,qwen2512desk4_s1664236470,P2 planned; requires full and bust review before installation,1
+char_player_maelis_reeve,K-61,qwen2512desk4_s988754744,P2 planned; requires full and bust review before installation,1
+char_player_nerissa_weighhouse,K-62,qwen2512desk4_s1573332649,P2 planned; requires full and bust review before installation,1
+char_player_odette_fenwick,K-63,qwen2512desk4_s3925902717,P2 planned; requires full and bust review before installation,1
+char_player_philippa_harrow,K-64,qwen2512desk4_s967107862,P2 planned; requires full and bust review before installation,1
+char_player_rosamund_ashvale,K-65,qwen2512desk4_s1151376540,P2 planned; requires full and bust review before installation,1
+char_player_sabina_valorin,K-66,qwen2512desk4_s100098577,P2 planned; requires full and bust review before installation,1
+char_player_sybilla_malvern,K-67,qwen2512desk4_s2063933563,P2 planned; requires full and bust review before installation,1
+char_player_theodora_o_kala,K-68,qwen2512desk4_s516052851,P2 planned; requires full and bust review before installation,1
+char_player_ursula_reeve,K-69,qwen2512desk4_s609982602,P2 planned; requires full and bust review before installation,1
+char_player_verena_weighhouse,K-70,qwen2512desk4_s4108602406,P2 planned; requires full and bust review before installation,1
+char_player_wilhelma_fenwick,K-71,qwen2512desk4_s2392081621,P2 planned; requires full and bust review before installation,1
+char_player_ysabel_harrow,K-72,qwen2512desk4_s3928687482,P2 planned; requires full and bust review before installation,1
+char_player_alaric_valorin,K-73,qwen2512desk4_s702760468,P2 planned; requires full and bust review before installation,1
+char_player_ansel_malvern,K-74,qwen2512desk4_s3530004588,P2 planned; requires full and bust review before installation,1
+char_player_berengar_o_kala,K-75,qwen2512desk4_s2262212598,P2 planned; requires full and bust review before installation,1
+char_player_cedric_reeve,K-76,qwen2512desk4_s1262780871,P2 planned; requires full and bust review before installation,1
+char_player_dorian_weighhouse,K-77,qwen2512desk4_s1604764292,P2 planned; requires full and bust review before installation,1
+char_player_edric_fenwick,K-78,qwen2512desk4_s3719644109,P2 planned; requires full and bust review before installation,1
+char_player_emrys_harrow,K-79,qwen2512desk4_s2154433849,P2 planned; requires full and bust review before installation,1
+char_player_florian_ashvale,K-80,qwen2512desk4_s114554107,P2 planned; requires full and bust review before installation,1
+char_player_gareth_valorin,K-81,qwen2512desk4_s762321915,P2 planned; requires full and bust review before installation,1
+char_player_hadrian_malvern,K-82,qwen2512desk4_s4201158186,P2 planned; requires full and bust review before installation,1
+char_raider_alaric_blackreed,K-83,qwen2512desk4_s979127220,P2 planned; requires full and bust review before installation,1
+char_raider_ansel_thornmere,K-84,qwen2512desk4_s2534884697,P2 planned; requires full and bust review before installation,1
+char_raider_berengar_duskfen,K-85,qwen2512desk4_s2248914330,P2 planned; requires full and bust review before installation,1
+char_raider_cedric_wychford,K-86,qwen2512desk4_s123824775,P2 planned; requires full and bust review before installation,1
+char_raider_dorian_merewick,K-87,qwen2512desk4_s3177384866,P2 planned; requires full and bust review before installation,1
+char_raider_edric_crowhurst,K-88,qwen2512desk4_s3336896343,P2 planned; requires full and bust review before installation,1
+char_raider_emrys_reedmere,K-89,qwen2512desk4_s4158017202,P2 planned; requires full and bust review before installation,1
+char_raider_florian_ashenholt,K-90,qwen2512desk4_s2979113316,P2 planned; requires full and bust review before installation,1
+char_raider_gareth_blackreed,K-91,qwen2512desk4_s2428548655,P2 planned; requires full and bust review before installation,1
+char_raider_hadrian_thornmere,K-92,qwen2512desk4_s2459160635,P2 planned; requires full and bust review before installation,1
+char_raider_ivo_duskfen,K-93,qwen2512desk4_s3994583394,P2 planned; requires full and bust review before installation,1
+char_raider_jasper_wychford,K-94,qwen2512desk4_s1101205230,P2 planned; requires full and bust review before installation,1
+char_raider_leofric_merewick,K-95,qwen2512desk4_s1797981577,P2 planned; requires full and bust review before installation,1
+char_raider_lucan_crowhurst,K-96,qwen2512desk4_s1085928897,P2 planned; requires full and bust review before installation,1
+char_raider_merek_reedmere,K-97,qwen2512desk4_s4215335629,P2 planned; requires full and bust review before installation,1
+char_raider_odo_ashenholt,K-98,qwen2512desk4_s2002818558,P2 planned; requires full and bust review before installation,1
+char_raider_percival_blackreed,K-99,qwen2512desk4_s2898524213,P2 planned; requires full and bust review before installation,1
+char_raider_quentin_thornmere,K-100,qwen2512desk4_s771008254,P2 planned; requires full and bust review before installation,1
+char_raider_roderic_duskfen,K-101,qwen2512desk4_s3928291003,P2 planned; requires full and bust review before installation,1
+char_raider_silas_wychford,K-102,qwen2512desk4_s1981264537,P2 planned; requires full and bust review before installation,1
+char_raider_theobald_merewick,K-103,qwen2512desk4_s3554375218,P2 planned; requires full and bust review before installation,1
+char_raider_tristan_crowhurst,K-104,qwen2512desk4_s1276402973,P2 planned; requires full and bust review before installation,1
+char_raider_ulric_reedmere,K-105,qwen2512desk4_s1888791046,P2 planned; requires full and bust review before installation,1
+char_raider_valerian_ashenholt,K-106,qwen2512desk4_s807194469,P2 planned; requires full and bust review before installation,1
+char_raider_wulfric_blackreed,K-107,qwen2512desk4_s3327766777,P2 planned; requires full and bust review before installation,1
+char_raider_ysarn_thornmere,K-108,qwen2512desk4_s1794712888,P2 planned; requires full and bust review before installation,1
+char_raider_adelina_duskfen,K-109,qwen2512desk4_s256965019,P2 planned; requires full and bust review before installation,1
+char_raider_beatrice_wychford,K-110,qwen2512desk4_s1968916813,P2 planned; requires full and bust review before installation,1
+char_raider_cecily_merewick,K-111,qwen2512desk4_s2743246519,P2 planned; requires full and bust review before installation,1
+char_raider_delphine_crowhurst,K-112,qwen2512desk4_s2564129440,P2 planned; requires full and bust review before installation,1
+char_raider_eleanor_reedmere,K-113,qwen2512desk4_s2777890853,P2 planned; requires full and bust review before installation,1
+char_raider_freya_ashenholt,K-114,qwen2512desk4_s3463268091,P2 planned; requires full and bust review before installation,1
+char_raider_gisela_blackreed,K-115,qwen2512desk4_s2042589351,P2 planned; requires full and bust review before installation,1
+char_raider_helena_thornmere,K-116,qwen2512desk4_s602190738,P2 planned; requires full and bust review before installation,1
+char_raider_isolde_duskfen,K-117,qwen2512desk4_s4200286063,P2 planned; requires full and bust review before installation,1
+char_raider_johanna_wychford,K-118,qwen2512desk4_s3184377761,P2 planned; requires full and bust review before installation,1
+char_raider_kateryn_merewick,K-119,qwen2512desk4_s1915552673,P2 planned; requires full and bust review before installation,1
+char_raider_leonora_crowhurst,K-120,qwen2512desk4_s2896447031,P2 planned; requires full and bust review before installation,1
+char_raider_maelis_reedmere,K-121,qwen2512desk4_s550056959,P2 planned; requires full and bust review before installation,1
+char_raider_nerissa_ashenholt,K-122,qwen2512desk4_s3800408397,P2 planned; requires full and bust review before installation,1
+char_raider_odette_blackreed,K-123,qwen2512desk4_s3237232340,P2 planned; requires full and bust review before installation,1
+char_raider_philippa_thornmere,K-124,qwen2512desk4_s4291639785,P2 planned; requires full and bust review before installation,1
+char_raider_rosamund_duskfen,K-125,qwen2512desk4_s3132421803,P2 planned; requires full and bust review before installation,1
+char_raider_sabina_wychford,K-126,qwen2512desk4_s4247357939,P2 planned; requires full and bust review before installation,1
+char_raider_sybilla_merewick,K-127,qwen2512desk4_s405856531,P2 planned; requires full and bust review before installation,1
+char_raider_theodora_crowhurst,K-128,qwen2512desk4_s1193617132,P2 planned; requires full and bust review before installation,1
+char_raider_ursula_reedmere,K-129,qwen2512desk4_s1786835758,P2 planned; requires full and bust review before installation,1
+char_raider_verena_ashenholt,K-130,qwen2512desk4_s2151448312,P2 planned; requires full and bust review before installation,1
+char_raider_wilhelma_blackreed,K-131,qwen2512desk4_s2324724364,P2 planned; requires full and bust review before installation,1
+char_raider_ysabel_thornmere,K-132,qwen2512desk4_s3106087032,P2 planned; requires full and bust review before installation,1
+char_raider_alaric_wychford,K-133,qwen2512desk4_s173113339,P2 planned; requires full and bust review before installation,1
+char_raider_ansel_merewick,K-134,qwen2512desk4_s1516492597,P2 planned; requires full and bust review before installation,1
+char_raider_berengar_crowhurst,K-135,qwen2512desk4_s2948659815,P2 planned; requires full and bust review before installation,1
+char_raider_cedric_reedmere,K-136,qwen2512desk4_s2518705127,P2 planned; requires full and bust review before installation,1
+char_raider_dorian_ashenholt,K-137,qwen2512desk4_s787645552,P2 planned; requires full and bust review before installation,1
+char_raider_edric_blackreed,K-138,qwen2512desk4_s1888480201,P2 planned; requires full and bust review before installation,1
+char_raider_emrys_thornmere,K-139,qwen2512desk4_s1375885902,P2 planned; requires full and bust review before installation,1
+char_raider_florian_duskfen,K-140,qwen2512desk4_s1262314433,P2 planned; requires full and bust review before installation,1
+char_raider_gareth_wychford,K-141,qwen2512desk4_s3548171909,P2 planned; requires full and bust review before installation,1
+char_raider_hadrian_merewick,K-142,qwen2512desk4_s3326933573,P2 planned; requires full and bust review before installation,1
+char_raider_ivo_crowhurst,K-143,qwen2512desk4_s887144525,P2 planned; requires full and bust review before installation,1
+char_raider_jasper_reedmere,K-144,qwen2512desk4_s1188530815,P2 planned; requires full and bust review before installation,1
+char_raider_leofric_ashenholt,K-145,qwen2512desk4_s2330377607,P2 planned; requires full and bust review before installation,1
+char_raider_lucan_blackreed,K-146,qwen2512desk4_s2041802561,P2 planned; requires full and bust review before installation,1
+char_raider_merek_thornmere,K-147,qwen2512desk4_s3583443777,P2 planned; requires full and bust review before installation,1
+char_raider_odo_duskfen,K-148,qwen2512desk4_s638370533,P2 planned; requires full and bust review before installation,1
+char_raider_percival_wychford,K-149,qwen2512desk4_s2265425954,P2 planned; requires full and bust review before installation,1
+char_raider_quentin_merewick,K-150,qwen2512desk4_s3983999841,P2 planned; requires full and bust review before installation,1
+char_raider_roderic_crowhurst,K-151,qwen2512desk4_s3852714212,P2 planned; requires full and bust review before installation,1
+char_raider_silas_reedmere,K-152,qwen2512desk4_s1925453938,P2 planned; requires full and bust review before installation,1
+char_raider_theobald_ashenholt,K-153,qwen2512desk4_s627926919,P2 planned; requires full and bust review before installation,1
+char_raider_tristan_blackreed,K-154,qwen2512desk4_s3019107144,P2 planned; requires full and bust review before installation,1
+char_raider_ulric_thornmere,K-155,qwen2512desk4_s660903975,P2 planned; requires full and bust review before installation,1
+char_raider_valerian_duskfen,K-156,qwen2512desk4_s2531233645,P2 planned; requires full and bust review before installation,1
+char_raider_wulfric_wychford,K-157,qwen2512desk4_s492176277,P2 planned; requires full and bust review before installation,1
+char_raider_ysarn_merewick,K-158,qwen2512desk4_s993942617,P2 planned; requires full and bust review before installation,1
+char_raider_adelina_crowhurst,K-159,qwen2512desk4_s2501697565,P2 planned; requires full and bust review before installation,1
+char_raider_cecily_ashenholt,K-160,qwen2512desk4_s1855925756,P2 planned; requires full and bust review before installation,1
+char_raider_delphine_blackreed,K-161,qwen2512desk4_s3130530623,P2 planned; requires full and bust review before installation,1
+char_raider_eleanor_thornmere,K-162,qwen2512desk4_s3669424894,P2 planned; requires full and bust review before installation,1

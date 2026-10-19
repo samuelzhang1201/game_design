@@ -191,7 +191,7 @@ def parse_library(text: str) -> list[dict]:
     rows = []
     # Headed entries (C-, V-, M-): a heading line, then a fenced block that
     # starts with [S] and ends with the canvas code.
-    for m in re.finditer(r"^#{3,4} `([A-Z]-\d\d)` ([^\n]*)\n(?:[^\n]*\n)*?```\n(.*?)```",
+    for m in re.finditer(r"^#{3,4} `([A-Z]-\d{2,})` ([^\n]*)\n(?:[^\n]*\n)*?```\n(.*?)```",
                          text, re.M | re.S):
         entry_id, title, block = m.group(1), m.group(2).strip(), " ".join(m.group(3).split())
         canvas = re.search(r"\[(C-[A-Z]+)\]", block)
@@ -203,14 +203,14 @@ def parse_library(text: str) -> list[dict]:
                      "canvas": canvas.group(1) if canvas else "", "subject": subject,
                      "appearance": " ".join(look.group(1).split()) if look else ""})
     # Table entries (T-, I-, W-, U-, E-, P-): one row each, canvas by chapter.
-    for m in re.finditer(r"^\| `([A-Z]-\d\d)` \| ([^|]+) \| `([^`]+)` \|", text, re.M):
+    for m in re.finditer(r"^\| `([A-Z]-\d{2,})` \| ([^|]+) \| `([^`]+)` \|", text, re.M):
         entry_id, title, subject = m.group(1), m.group(2).strip(), " ".join(m.group(3).split())
         rows.append({"id": entry_id, "chapter": entry_id[0], "title": title,
                      "canvas": TABLE_CANVAS.get(entry_id[0], ""), "subject": subject,
                      "appearance": ""})
     # Wide table entries (§9.1, the Missive board U-20..U-26, 2026-09-28):
     # ID | key | title | canvas | size | subject — each row names its own canvas.
-    for m in re.finditer(r"^\| `([A-Z]-\d\d)` \| `[^`]+` \| ([^|]+) \| `\[(C-[A-Z]+)\]` \| [^|]+ \| `([^`]+)` \|",
+    for m in re.finditer(r"^\| `([A-Z]-\d{2,})` \| `[^`]+` \| ([^|]+) \| `\[(C-[A-Z]+)\]` \| [^|]+ \| `([^`]+)` \|",
                          text, re.M):
         rows.append({"id": m.group(1), "chapter": m.group(1)[0], "title": m.group(2).strip(),
                      "canvas": m.group(3), "subject": " ".join(m.group(4).split()), "appearance": ""})
