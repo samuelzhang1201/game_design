@@ -21,11 +21,13 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 		result["reason"] = "Actual withdrawal or rout takes precedence over a unit task"
 		return result
 	var record := current(state, unit)
-	if record.is_empty() or record.get("status") != "received":
+	if record.is_empty() or not record.get("status") in ["received", "bounded"]:
 		return result
 	var request: Dictionary = record["request"]
 	if int(request["battle_id"]) != int(battle["id"]):
 		return result
+	if record["status"] == "bounded":
+		return {"kind": "hold", "task_id": String(request["id"]), "reason": "Pursuit bound reached: " + String(record["reason"])}
 	var action := String(repo.battle_behaviors.get(request["task"], {}).get("legal_action", ""))
 	if not action in ["attack", "charge", "hold", "retreat", "pursue"]:
 		return result
@@ -76,11 +78,21 @@ static func _canonical(order: Dictionary) -> Dictionary:
 	return {"id": String(order.get("id", "")), "unit": String(order.get("unit", "")),
 		"battle_id": int(order.get("battle_id", -1)), "task": String(order.get("task", "")),
 		"formation": String(order.get("formation", "")), "target_unit": String(order.get("target_unit", "")),
-		"source": String(order.get("source", "player")), "issuer": String(order.get("issuer", ""))}
+		"source": String(order.get("source", "player")), "issuer": String(order.get("issuer", "")),
+		"max_route_m": int(order.get("max_route_m", 0)), "region": "|".join(_region_codes(String(order.get("region", ""))))}
+
+
+static func _region_codes(region: String) -> Array:
+	var codes: Array = []
+	for code: String in region.split("|", false):
+		if not code in codes:
+			codes.append(code)
+	codes.sort()
+	return codes
 
 
 static func _format_error(order: Dictionary) -> String:
-	var fields := ["id", "unit", "battle_id", "task", "formation", "target_unit", "source", "issuer"]
+	var fields := ["id", "unit", "battle_id", "task", "formation", "target_unit", "source", "issuer", "max_route_m", "region"]
 	for field: Variant in order:
 		if not field is String:
 			return "A unit task field name must be text."
@@ -89,6 +101,9 @@ static func _format_error(order: Dictionary) -> String:
 		if field == "battle_id":
 			if not order[field] is int or int(order[field]) < 0:
 				return "A unit task needs a whole battlefield id."
+		elif field == "max_route_m":
+			if not order[field] is int or int(order[field]) < 0:
+				return "A pursuit route bound is whole metres, zero or more."
 		elif not order[field] is String:
 			return "A unit task field must be text: " + field
 	return ""
@@ -109,7 +124,8 @@ static func _refusal(repo: DataRepository, state: GameState, order: Dictionary) 
 		if order["source"] != "player" or not state.regiments.has(unit) or ArmySystem.is_foe(state, unit) \
 				or ArmySystem.realm_of(repo, unit, state) != repo.resolve_realm("player_realm"):
 			return "Only the crown can cancel this unit task."
-		if order["formation"] != "" or order["target_unit"] != "" or order["issuer"] != "":
+		if order["formation"] != "" or order["target_unit"] != "" or order["issuer"] != "" \
+				or int(order["max_route_m"]) != 0 or order["region"] != "":
 			return "A cancellation has no formation, enemy target or delegated issuer."
 		return ""
 	if not repo.battle_behaviors.has(order["task"]):
@@ -119,6 +135,11 @@ static func _refusal(repo: DataRepository, state: GameState, order: Dictionary) 
 		if why != "":
 			return why
 	var action := String(repo.battle_behaviors[order["task"]]["legal_action"])
+	if (int(order["max_route_m"]) != 0 or order["region"] != "") and action != "pursue":
+		return "Only a pursuit carries pursuit bounds."
+	for code: String in _region_codes(String(order["region"])):
+		if not repo.provinces.has(code):
+			return "Unknown province in the pursuit region: " + code
 	var source := String(order["source"])
 	if source == "player":
 		if not state.regiments.has(unit) or ArmySystem.is_foe(state, unit) \
@@ -223,6 +244,14 @@ static func deliver_task(repo: DataRepository, state: GameState, order_id: Strin
 		BattleFormation.request(repo, state, int(order["battle_id"]), BattleRules.side_of(battle, String(order["unit"])),
 			String(order["formation"]), String(order["unit"]))
 	var previous: Dictionary = ledger["orders"].get(String(ledger["current_id"]), {})
+	var kept: Dictionary = {}
+	if not previous.is_empty() and previous["status"] == "received" and previous.has("pursuit"):
+		var was: Dictionary = previous["request"]
+		var same := true
+		for key: String in ["battle_id", "task", "target_unit", "max_route_m", "region"]:
+			same = same and was.get(key, 0 if key in ["max_route_m"] else "") == order[key]
+		if same:
+			kept = (previous["pursuit"] as Dictionary).duplicate()
 	var cancelling: bool = order["task"] == "cancel"
 	if not previous.is_empty():
 		_transition(state, previous, "cancelled" if cancelling else "replaced",
@@ -234,4 +263,37 @@ static func deliver_task(repo: DataRepository, state: GameState, order_id: Strin
 		ledger["player_received_sequence"] = int(record["sequence"])
 	_transition(state, record, "received", "The unit receives the crown’s task cancellation." if cancelling else \
 		"The unit receives its lawful primary task.")
+	if not cancelling and String(repo.battle_behaviors.get(order["task"], {}).get("legal_action", "")) == "pursue":
+		var here := BattleSystem._stored(state, String(order["unit"]))
+		record["pursuit"] = kept if not kept.is_empty() else {"start_x_m": int(here.get("x_m", 0)),
+			"start_y_m": int(here.get("y_m", 0)), "route_m": 0}
 	return record.duplicate(true)
+
+
+## Credit metres a unit really walked to its received pursuit and check the
+## bounds (route metres, region). True when the task became `bounded` now: a
+## marching unit then halts where it stands (BattleSystem._halt).
+static func credit_pursuit(repo: DataRepository, state: GameState, unit: String, metres: int) -> bool:
+	var ledger: Dictionary = state.unit_tasks.get(unit, {})
+	var record: Dictionary = ledger.get("orders", {}).get(String(ledger.get("current_id", "")), {})
+	if record.is_empty() or record["status"] != "received" or not record.has("pursuit"):
+		return false
+	var progress: Dictionary = record["pursuit"]
+	progress["route_m"] = int(progress["route_m"]) + maxi(metres, 0)
+	var request: Dictionary = record["request"]
+	var why := ""
+	var limit := int(request.get("max_route_m", 0))
+	if limit > 0 and int(progress["route_m"]) >= limit:
+		why = "Pursuit reached its farthest route distance: %d m" % int(progress["route_m"])
+	var region := String(request.get("region", ""))
+	if why == "" and region != "":
+		var here := ArmySystem.province_of(repo, state, BattleSystem._stored(state, unit))
+		if not here in region.split("|"):
+			why = "Pursuit reached its region's edge: " + here
+	if why == "":
+		return false
+	_transition(state, record, "bounded", why)
+	var entry := BattleSystem._stored(state, unit)
+	if String(entry.get("order", "")) == ArmySystem.ORDER_MARCH:
+		BattleSystem._halt(state, unit)
+	return true
