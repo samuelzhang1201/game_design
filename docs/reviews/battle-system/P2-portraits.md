@@ -1,6 +1,6 @@
 # P2 commander portrait production evidence
 
-Status: production in progress — painterly restyle, see the section at the end for the current count. `assets/imagegen/commander_portraits.csv` is derived from actual player/raider commander rows, including reserves. Other realms are excluded. At this checkpoint 147 keys are planned (see R1 below): 6 existing complete pairs reused, 27 new complete pairs installed, 114 still missing (33/147 complete). A generated source is not an installed or accepted portrait.
+Status: the 147 planned commander keys and the 21 story characters (162 `K-` people) are installed in the painterly restyle, each with an approved review record (324 layers, hashes verified). Not covered: the 140 player/raider commander rows added by PR #79 after the plan was cut (R1) — they have no `K-` prompt yet. `assets/imagegen/commander_portraits.csv` is derived from actual player/raider commander rows, including reserves. Other realms are excluded. At this checkpoint 147 keys are planned (see R1 below): 6 existing complete pairs reused, 27 new complete pairs installed, 114 still missing (33/147 complete). A generated source is not an installed or accepted portrait.
 
 ## Approved sample pairs
 
@@ -91,3 +91,7 @@ Implementer rulings:
 | fp2-b05 | K-97..K-120 | `fp2-b05-full-alpha.png`, `fp2-b05-chip-alpha.png` | installed |
 | fp2-b06 | K-121..K-144 | `fp2-b06-full-alpha.png`, `fp2-b06-chip-alpha.png` | installed |
 | fp2-b07 | K-145..K-162 | `fp2-b07-full-alpha.png`, `fp2-b07-chip-alpha.png` | installed |
+
+Result: 162 people × 2 layers installed and hash-verified; `commander_portraits.csv` reports 147/147 planned keys complete. T-pose front/side/back references for K-01..K-21 are delivered to `comfy-out/units/main_cast_tpose_2026-10-20/` (not in the repo).
+
+Open for the owner: the 140 unprompted commander rows from PR #79 (authored `K-` appearance lines needed before any art; possibly a duplicate roster); commander clothing reads alike across K-25..K-162 because their appearance lines share one tunic-and-mantle template — vary the lines if more distinction is wanted.
