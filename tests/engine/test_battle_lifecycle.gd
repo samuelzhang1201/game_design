@@ -469,6 +469,9 @@ func test_steady_retreats_below_retreat_odds() -> void:
 		_foe(s, f, _spot(s) + Vector2i(1000, 0))
 		s.foes[f]["stance"] = "hold"   # the foe never gives way, whatever the pack's numbers
 		var steady := func(_c: String) -> String: return "steady"
+		# P4.4d4: the odds the day settles on include the contact factor, which exists only
+		# once the battle has begun and its groups stand; open the day first, then read them.
+		BattleSystem.prepare_day(repo, s)
 		var a := BattleSystem.side_power(repo, s, [f], steady, true, [p])
 		var d := BattleSystem.side_power(repo, s, [p], steady, false, [f])
 		var mine_odds := 1000 - BattleSystem.odds_permille(a, d)   # the defender's share

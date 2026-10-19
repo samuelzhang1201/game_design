@@ -108,6 +108,11 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 				copy["category"] = "formation_terrain"
 				factors.append(copy)
 		factors.append_array(BattleEvents.factors(state, battle, code))
+		var contact := BattleGroups.engaged_counts(repo, battle, code)
+		if contact.y > 0:
+			factors.append({"source": "contact:engaged", "category": "contact",
+				"permille": BattleGroups.engaged_permille(repo, state, battle, code),
+				"reason": "%d of %d in contact with the enemy line" % [contact.x, contact.y]})
 		var kind := String(action["kind"])
 		var row: Dictionary = repo.battle_orders.get(kind, {})
 		factors.append({"source": "order:" + kind, "category": "action",
