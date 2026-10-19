@@ -90,3 +90,4 @@ Implementer rulings:
 | fp2-b04 | K-73..K-96 | `fp2-b04-full-alpha.png`, `fp2-b04-chip-alpha.png` | installed |
 | fp2-b05 | K-97..K-120 | `fp2-b05-full-alpha.png`, `fp2-b05-chip-alpha.png` | installed |
 | fp2-b06 | K-121..K-144 | `fp2-b06-full-alpha.png`, `fp2-b06-chip-alpha.png` | installed |
+| fp2-b07 | K-145..K-162 | `fp2-b07-full-alpha.png`, `fp2-b07-chip-alpha.png` | installed |
