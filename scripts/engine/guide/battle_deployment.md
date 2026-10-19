@@ -121,7 +121,19 @@ withdraw, using the existing CSV scales and grouped integer casualty writer.
 The frozen action retains its pursuit target with the pending loss plan; failed
 commits, cancellation after planning and JSON retries do not change that plan,
 repeat its RNG draw or charge attack costs twice. This integration adds no pursuit
-movement, lost-sight search or distance/region limit execution.
+movement or lost-sight search.
+
+**Pursuit bounds.** A pursuit task may carry `max_route_m` (whole metres, 0 = none)
+and `region` (province codes joined by `|`, sorted, de-duplicated, "" = none); on any
+other task they are refused. The received record saves `pursuit = {start_x_m,
+start_y_m, route_m}` at delivery; a same-meaning reissue (battle, target, bounds)
+keeps it, any other task starts fresh. `ArmySystem.march_day_saved` credits the
+metres a substep really walked (detours included) through
+`BattleTaskSystem.credit_pursuit`, which checks route metres and the unit's centre
+province (also at 0 metres). The first bound reached sets status `bounded` with its
+reason, halts a marching unit where it stands (today's saved walk included) and
+leaves `current_id` on it: `combat_action` then answers `hold` for that battle, so it
+defends but never advances or starts a withdrawal; only a new received task replaces it.
 
 ## Delivered unit retreat
 

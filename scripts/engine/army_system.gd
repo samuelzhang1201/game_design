@@ -1725,6 +1725,10 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 					current["route_m"] = MarchRoute.to_pairs(route)
 				else:
 					current.erase("route_m")
+			# pursuit bounds (c3): a bound reached halts the march, today's saved walk included
+			if BattleTaskSystem.credit_pursuit(repo, state, code, int(travelled[0]) if not travelled.is_empty() else 0):
+				_retire_saved_march(saved, current)
+				saved_entries[code] = saved
 			UnitGait.refresh(repo, state, code, current)
 			_note_place(blockers, code, current)
 	return arrived
