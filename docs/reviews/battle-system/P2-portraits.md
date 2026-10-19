@@ -106,3 +106,4 @@ The coordinator relayed the owner's instruction to produce every needed art asse
 Result: 162 people × 2 layers installed and hash-verified; `commander_portraits.csv` reports 147/147 planned keys complete. T-pose front/side/back references for K-01..K-21 are delivered to `comfy-out/units/main_cast_tpose_2026-10-20/` (not in the repo).
 
 Open for the owner: the 140 unprompted commander rows from PR #79 (authored `K-` appearance lines needed before any art; possibly a duplicate roster); commander clothing reads alike across K-25..K-162 because their appearance lines share one tunic-and-mantle template — vary the lines if more distinction is wanted.
+| fp2-b08 | K-163..K-186 | `fp2-b08-full-alpha.png`, `fp2-b08-chip-alpha.png` | installed |
