@@ -564,7 +564,8 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 		place = ArmySystem.pack_to_metres(repo, Vector2(float(bu["x"]), float(bu["y"])))
 	state.foe_next_id += 1
 	var b := {"id": state.foe_next_id, "att": att, "def": def, "start_day": state.absolute_day(),
-		"rounds": 0, "place_x_m": place.x, "place_y_m": place.y, "town": town}
+		"rounds": 0, "place_x_m": place.x, "place_y_m": place.y, "town": town,
+		"deployed_day": state.absolute_day()}   # the day of contact deploys nothing; the next prepare_day does
 	b["actions"] = {}
 	for side: String in SIDES:
 		var actor := String(b[side][0])
@@ -619,6 +620,7 @@ static func prepare_day(repo: DataRepository, state: GameState) -> Array:
 	for battle: Dictionary in state.battles:
 		BattleRules.freeze(repo, state, battle)
 		BattleFormation.ensure(battle)
+		BattleGroups.deploy_day(repo, state, battle)
 		BattleGroups.refresh(repo, state, battle)
 	_withdraw_homeward(repo, state, events)
 	_detect(repo, state, events)
