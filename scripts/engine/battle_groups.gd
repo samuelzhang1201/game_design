@@ -137,6 +137,7 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 	battle["deployed_day"] = today
 	var targets := deployment(repo, state, battle)
 	var step := float(repo.bal("battle_deploy_step_m"))
+	var grid := MarchPath.of_pack(repo)   # the land grid: no step into water or over a scarp
 	for code: String in targets:
 		var e := BattleSystem._stored(state, code)
 		if e.is_empty() or bool(e.get("captured", false)) or ArmySystem.fit_count(repo, state, code) <= 0 \
@@ -146,5 +147,8 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 		var to: Vector2i = targets[code]
 		var d := Vector2(to - from)
 		var moved := to if d.length() <= step else from + Vector2i((d.normalized() * step).round())
+		# ponytail: a blocked straight step waits in place; a routed approach round water is later work
+		if grid != null and not grid.clear(from, moved, [grid.cell_of(from)]):
+			continue
 		e["x_m"] = moved.x
 		e["y_m"] = moved.y

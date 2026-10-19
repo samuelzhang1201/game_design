@@ -74,3 +74,8 @@ paragraph extended with the lines and who moves. 4. `--fast` green; one PR.
 4. Targets use the current mean anchors, so the axis can shift slightly as units move; line gap 100 and step 2 500 as drafted.
 5. Withdrawing units still count in their side's line widths.
 6. No existing test assertion was adapted; the pinned positions of test_battle_duration / lifecycle / enemy_invasion hold with rulings 2-3.
+
+7. (reviewer) A deployment step whose straight line enters a closed cell of the
+   army's land grid (water, a scarp) is not taken: the unit waits where it stands
+   that day. A routed approach round water is not built; no soldier crosses a
+   river by deployment.

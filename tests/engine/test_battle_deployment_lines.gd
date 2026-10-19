@@ -5,7 +5,7 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture() -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())   # straight steps; the water test lays its own grid
 	var state := SuiteData.campaign(repo, 9446)
 	var codes := state.regiments.keys()
 	codes.sort()
@@ -87,3 +87,15 @@ func test_retreat_order_stops_both_sides() -> void:
 	BattleGroups.deploy_day(f.repo, f.state, f.battle)
 	assert_eq(_at(f, f.a), Vector2i(4000, 0))
 	assert_eq(_at(f, f.enemy), Vector2i(0, 0))
+
+func test_a_step_across_water_is_not_taken() -> void:
+	var f := _fixture()
+	# five 1 000 m cells along x, the middle one (2 000..2 999) water: the
+	# attacker's 2 500 m step from 4 000 to 1 500 would cross it, so it waits.
+	f.repo.balance["army_march_grid_px"] = 1.0
+	MarchPath.use(f.repo, MarchPath.build(f.repo, 5, 1, 1000, PackedByteArray([0, 0, 255, 0, 0])))
+	f.state.day = 5
+	BattleGroups.deploy_day(f.repo, f.state, f.battle)
+	MarchPath.forget()
+	assert_eq(_at(f, f.a), Vector2i(4000, 0))
+	assert_eq(_at(f, f.enemy), Vector2i(-50, 0), "the defender's dry step is taken")
