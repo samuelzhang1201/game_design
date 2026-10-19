@@ -2467,6 +2467,1406 @@ leaning in confidentially, eyebrows raised, a broad genuinely warm salesman's sm
 
 ---
 
+#### `K-163` Adela Harrow
+
+**角色 id**：`char_adela_harrow`
+
+**外貌**：`a 24-year-old woman, a broad round face with full cheeks, fair freckled skin, a long aquiline nose, alert amber-brown eyes, copper red hair in a single long braid, a youthful unlined complexion, an athletic build, wearing a deep madder red wool riding gown under a sideless undyed oatmeal surcote, a plain leather belt, dark wool hose, worn leather turnshoes, wearing a plain white linen veil`
+
+```
+[S], a 24-year-old woman, a broad round face with full cheeks, fair freckled skin, a long aquiline nose, alert amber-brown eyes, copper red hair in a single long braid, a youthful unlined complexion, an athletic build, wearing a deep madder red wool riding gown under a sideless undyed oatmeal surcote, a plain leather belt, dark wool hose, worn leather turnshoes, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-164` Baldwin Harrow
+
+**角色 id**：`char_baldwin_harrow`
+
+**外貌**：`a 25-year-old man, a lean angular face with hollow cheeks, fair freckled skin, a straight narrow nose, pale blue eyes, shoulder-length black hair tied back, a forked beard, a youthful unlined complexion, a short stocky build, wearing a quilted deep madder red gambeson under an undyed oatmeal leather jerkin, a plain leather belt, dark wool hose, knee-high riding boots, bare-headed`
+
+```
+[S], a 25-year-old man, a lean angular face with hollow cheeks, fair freckled skin, a straight narrow nose, pale blue eyes, shoulder-length black hair tied back, a forked beard, a youthful unlined complexion, a short stocky build, wearing a quilted deep madder red gambeson under an undyed oatmeal leather jerkin, a plain leather belt, dark wool hose, knee-high riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-165` Celia Harrow
+
+**角色 id**：`char_celia_harrow`
+
+**外貌**：`a 26-year-old woman, a square face with a strong jaw, fair freckled skin, a broad blunt nose, large dark eyes, dark blond hair in two braids, a youthful unlined complexion, a short stocky build, wearing a deep madder red wool gown with long tight sleeves, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing a narrow undyed oatmeal fillet`
+
+```
+[S], a 26-year-old woman, a square face with a strong jaw, fair freckled skin, a broad blunt nose, large dark eyes, dark blond hair in two braids, a youthful unlined complexion, a short stocky build, wearing a deep madder red wool gown with long tight sleeves, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing a narrow undyed oatmeal fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-166` Dorian Harrow
+
+**角色 id**：`char_dorian_harrow`
+
+**外貌**：`a 27-year-old man, a heart-shaped face with a narrow chin, fair freckled skin, a broad blunt nose, narrow dark brown eyes, close-cropped copper red hair, smooth bare cheeks and chin, a youthful unlined complexion, a tall thin build with long limbs, wearing a deep madder red wool cote with an undyed oatmeal trimmed hem, a woven undyed oatmeal girdle, dark wool hose, calf-high leather riding boots, wearing a deep madder red wool hood thrown back`
+
+```
+[S], a 27-year-old man, a heart-shaped face with a narrow chin, fair freckled skin, a broad blunt nose, narrow dark brown eyes, close-cropped copper red hair, smooth bare cheeks and chin, a youthful unlined complexion, a tall thin build with long limbs, wearing a deep madder red wool cote with an undyed oatmeal trimmed hem, a woven undyed oatmeal girdle, dark wool hose, calf-high leather riding boots, wearing a deep madder red wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-167` Elin Harrow
+
+**角色 id**：`char_elin_harrow`
+
+**外貌**：`a 28-year-old woman, an oval face with high cheekbones, ruddy pale skin, a hooked nose, wide hazel eyes, loose wavy ash blond hair to the shoulders, a youthful unlined complexion, a tall thin build with long limbs, wearing a deep madder red wool gown with long tight sleeves under a sideless undyed oatmeal surcote, a narrow belt with a pouch, dark wool hose, ankle boots, bare-headed`
+
+```
+[S], a 28-year-old woman, an oval face with high cheekbones, ruddy pale skin, a hooked nose, wide hazel eyes, loose wavy ash blond hair to the shoulders, a youthful unlined complexion, a tall thin build with long limbs, wearing a deep madder red wool gown with long tight sleeves under a sideless undyed oatmeal surcote, a narrow belt with a pouch, dark wool hose, ankle boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-168` Florian Harrow
+
+**角色 id**：`char_florian_harrow`
+
+**外貌**：`a 29-year-old man, a square face with a strong jaw, pale skin with rosy cheeks, a straight narrow nose, alert amber-brown eyes, dark brown hair cut short, a full short beard, a youthful unlined complexion, a slight build with narrow shoulders, wearing a deep madder red wool tunic to the knee under a short undyed oatmeal wool shoulder cape with a hood, a plain leather belt, dark wool hose, calf-high leather riding boots, bare-headed`
+
+```
+[S], a 29-year-old man, a square face with a strong jaw, pale skin with rosy cheeks, a straight narrow nose, alert amber-brown eyes, dark brown hair cut short, a full short beard, a youthful unlined complexion, a slight build with narrow shoulders, wearing a deep madder red wool tunic to the knee under a short undyed oatmeal wool shoulder cape with a hood, a plain leather belt, dark wool hose, calf-high leather riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-169` Gareth Harrow
+
+**角色 id**：`char_gareth_harrow`
+
+**外貌**：`a 30-year-old man, a square face with a strong jaw, ruddy pale skin, a hooked nose, narrow dark brown eyes, thick chestnut hair swept back, a full short beard, faint lines around the eyes, a lean wiry build, wearing a quilted deep madder red gambeson under an undyed oatmeal wool tabard split at the sides, a woven undyed oatmeal girdle, dark wool hose, ankle boots, wearing a soft undyed oatmeal wool cap`
+
+```
+[S], a 30-year-old man, a square face with a strong jaw, ruddy pale skin, a hooked nose, narrow dark brown eyes, thick chestnut hair swept back, a full short beard, faint lines around the eyes, a lean wiry build, wearing a quilted deep madder red gambeson under an undyed oatmeal wool tabard split at the sides, a woven undyed oatmeal girdle, dark wool hose, ankle boots, wearing a soft undyed oatmeal wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-170` Helena Harrow
+
+**角色 id**：`char_helena_harrow`
+
+**外貌**：`a 31-year-old woman, a soft rounded face with a small chin, pale skin with rosy cheeks, a long aquiline nose, narrow dark brown eyes, copper red hair coiled at the nape, faint lines around the eyes, an athletic build, wearing a deep madder red wool gown with long tight sleeves under a sideless undyed oatmeal surcote, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing a narrow undyed oatmeal fillet`
+
+```
+[S], a 31-year-old woman, a soft rounded face with a small chin, pale skin with rosy cheeks, a long aquiline nose, narrow dark brown eyes, copper red hair coiled at the nape, faint lines around the eyes, an athletic build, wearing a deep madder red wool gown with long tight sleeves under a sideless undyed oatmeal surcote, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing a narrow undyed oatmeal fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-171` Ivor Harrow
+
+**角色 id**：`char_ivor_harrow`
+
+**外貌**：`a 32-year-old man, a long narrow face with a pointed chin, fair freckled skin, a small rounded nose, alert amber-brown eyes, copper red hair cut short, a moustache and stubble, faint lines around the eyes, an athletic build, wearing a deep madder red wool tunic to the knee under a sleeveless undyed oatmeal wool surcote, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a deep madder red wool hood thrown back`
+
+```
+[S], a 32-year-old man, a long narrow face with a pointed chin, fair freckled skin, a small rounded nose, alert amber-brown eyes, copper red hair cut short, a moustache and stubble, faint lines around the eyes, an athletic build, wearing a deep madder red wool tunic to the knee under a sleeveless undyed oatmeal wool surcote, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a deep madder red wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-172` Joanna Harrow
+
+**角色 id**：`char_joanna_harrow`
+
+**外貌**：`a 33-year-old woman, a soft rounded face with a small chin, fair freckled skin, a hooked nose, heavy-lidded green eyes, loose wavy dark blond hair to the shoulders, faint lines around the eyes, a tall thin build with long limbs, wearing a deep madder red wool riding gown under a short undyed oatmeal wool shoulder cape with a hood, a woven undyed oatmeal girdle, dark wool hose, worn leather turnshoes, wearing a narrow undyed oatmeal fillet`
+
+```
+[S], a 33-year-old woman, a soft rounded face with a small chin, fair freckled skin, a hooked nose, heavy-lidded green eyes, loose wavy dark blond hair to the shoulders, faint lines around the eyes, a tall thin build with long limbs, wearing a deep madder red wool riding gown under a short undyed oatmeal wool shoulder cape with a hood, a woven undyed oatmeal girdle, dark wool hose, worn leather turnshoes, wearing a narrow undyed oatmeal fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-173` Kieran Harrow
+
+**角色 id**：`char_kieran_harrow`
+
+**外貌**：`a 34-year-old man, a soft rounded face with a small chin, ruddy pale skin, a slightly crooked nose, pale blue eyes, dark brown hair cut short, a forked beard, faint lines around the eyes, a heavyset build, wearing a quilted deep madder red gambeson under a short undyed oatmeal wool shoulder cape with a hood, a woven undyed oatmeal girdle, dark wool hose, calf-high leather riding boots, wearing a soft undyed oatmeal wool cap`
+
+```
+[S], a 34-year-old man, a soft rounded face with a small chin, ruddy pale skin, a slightly crooked nose, pale blue eyes, dark brown hair cut short, a forked beard, faint lines around the eyes, a heavyset build, wearing a quilted deep madder red gambeson under a short undyed oatmeal wool shoulder cape with a hood, a woven undyed oatmeal girdle, dark wool hose, calf-high leather riding boots, wearing a soft undyed oatmeal wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-174` Lucia Harrow
+
+**角色 id**：`char_lucia_harrow`
+
+**外貌**：`a 35-year-old woman, a broad round face with full cheeks, pale skin with rosy cheeks, a small rounded nose, alert amber-brown eyes, chestnut hair in two braids, faint lines around the eyes, a tall thin build with long limbs, wearing a deep madder red wool riding gown under a sideless undyed oatmeal surcote, a woven undyed oatmeal girdle, dark wool hose, knee-high riding boots, wearing a linen hair net`
+
+```
+[S], a 35-year-old woman, a broad round face with full cheeks, pale skin with rosy cheeks, a small rounded nose, alert amber-brown eyes, chestnut hair in two braids, faint lines around the eyes, a tall thin build with long limbs, wearing a deep madder red wool riding gown under a sideless undyed oatmeal surcote, a woven undyed oatmeal girdle, dark wool hose, knee-high riding boots, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-175` Merek Harrow
+
+**角色 id**：`char_merek_harrow`
+
+**外貌**：`a 36-year-old man, a lean angular face with hollow cheeks, fair freckled skin, a small rounded nose, large dark eyes, close-cropped chestnut hair, a close-trimmed beard, faint lines around the eyes, a heavyset build, wearing a deep madder red wool tunic to the knee under a short undyed oatmeal wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, bare-headed`
+
+```
+[S], a 36-year-old man, a lean angular face with hollow cheeks, fair freckled skin, a small rounded nose, large dark eyes, close-cropped chestnut hair, a close-trimmed beard, faint lines around the eyes, a heavyset build, wearing a deep madder red wool tunic to the knee under a short undyed oatmeal wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-176` Nerida Harrow
+
+**角色 id**：`char_nerida_harrow`
+
+**外貌**：`a 37-year-old woman, an oval face with high cheekbones, pale skin with rosy cheeks, a hooked nose, large dark eyes, mouse brown hair coiled at the nape, faint lines around the eyes, an athletic build, wearing a deep madder red wool kirtle with fitted sleeves under an undyed oatmeal wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil`
+
+```
+[S], a 37-year-old woman, an oval face with high cheekbones, pale skin with rosy cheeks, a hooked nose, large dark eyes, mouse brown hair coiled at the nape, faint lines around the eyes, an athletic build, wearing a deep madder red wool kirtle with fitted sleeves under an undyed oatmeal wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-177` Owen Harrow
+
+**角色 id**：`char_owen_harrow`
+
+**外貌**：`a 38-year-old man, a lean angular face with hollow cheeks, ruddy pale skin, a straight narrow nose, pale blue eyes, black hair cut short, a moustache and stubble, faint lines around the eyes, a lean wiry build, wearing a quilted deep madder red gambeson under an undyed oatmeal wool tabard split at the sides, a woven undyed oatmeal girdle, dark wool hose, ankle boots, wearing a soft undyed oatmeal wool cap`
+
+```
+[S], a 38-year-old man, a lean angular face with hollow cheeks, ruddy pale skin, a straight narrow nose, pale blue eyes, black hair cut short, a moustache and stubble, faint lines around the eyes, a lean wiry build, wearing a quilted deep madder red gambeson under an undyed oatmeal wool tabard split at the sides, a woven undyed oatmeal girdle, dark wool hose, ankle boots, wearing a soft undyed oatmeal wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-178` Philippa Harrow
+
+**角色 id**：`char_philippa_harrow`
+
+**外貌**：`a 39-year-old woman, a broad round face with full cheeks, fair freckled skin, a slightly crooked nose, heavy-lidded green eyes, copper red hair coiled at the nape, faint lines around the eyes, a tall thin build with long limbs, wearing a deep madder red wool kirtle with fitted sleeves under a short undyed oatmeal wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, knee-high riding boots, wearing a plain white linen veil`
+
+```
+[S], a 39-year-old woman, a broad round face with full cheeks, fair freckled skin, a slightly crooked nose, heavy-lidded green eyes, copper red hair coiled at the nape, faint lines around the eyes, a tall thin build with long limbs, wearing a deep madder red wool kirtle with fitted sleeves under a short undyed oatmeal wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, knee-high riding boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-179` Quentin Harrow
+
+**角色 id**：`char_quentin_harrow`
+
+**外貌**：`a 40-year-old man, a square face with a strong jaw, pale skin with rosy cheeks, a straight narrow nose, narrow dark brown eyes, thick copper red hair swept back, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a deep madder red wool tunic to the knee under a short undyed oatmeal wool shoulder cape with a hood, a woven undyed oatmeal girdle, dark wool hose, ankle boots, wearing a deep madder red wool hood thrown back`
+
+```
+[S], a 40-year-old man, a square face with a strong jaw, pale skin with rosy cheeks, a straight narrow nose, narrow dark brown eyes, thick copper red hair swept back, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a deep madder red wool tunic to the knee under a short undyed oatmeal wool shoulder cape with a hood, a woven undyed oatmeal girdle, dark wool hose, ankle boots, wearing a deep madder red wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-180` Rosamund Harrow
+
+**角色 id**：`char_rosamund_harrow`
+
+**外貌**：`a 41-year-old woman, a square face with a strong jaw, pale skin with rosy cheeks, a slightly crooked nose, wide hazel eyes, copper red hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a deep madder red wool gown with long tight sleeves under a sideless undyed oatmeal surcote, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil`
+
+```
+[S], a 41-year-old woman, a square face with a strong jaw, pale skin with rosy cheeks, a slightly crooked nose, wide hazel eyes, copper red hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a deep madder red wool gown with long tight sleeves under a sideless undyed oatmeal surcote, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-181` Silas Harrow
+
+**角色 id**：`char_silas_harrow`
+
+**外貌**：`a 42-year-old man, a heart-shaped face with a narrow chin, ruddy pale skin, a hooked nose, alert amber-brown eyes, thick copper red hair swept back, a full short beard, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a deep madder red wool cote with fitted sleeves, a plain leather belt, dark wool hose, ankle boots, bare-headed`
+
+```
+[S], a 42-year-old man, a heart-shaped face with a narrow chin, ruddy pale skin, a hooked nose, alert amber-brown eyes, thick copper red hair swept back, a full short beard, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a deep madder red wool cote with fitted sleeves, a plain leather belt, dark wool hose, ankle boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-182` Tamsin Harrow
+
+**角色 id**：`char_tamsin_harrow`
+
+**外貌**：`a 43-year-old woman, a broad round face with full cheeks, fair freckled skin, a long aquiline nose, wide hazel eyes, black hair in a single long braid, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a deep madder red wool riding gown under a sideless undyed oatmeal surcote, a woven undyed oatmeal girdle, dark wool hose, ankle boots, wearing a plain white linen veil`
+
+```
+[S], a 43-year-old woman, a broad round face with full cheeks, fair freckled skin, a long aquiline nose, wide hazel eyes, black hair in a single long braid, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a deep madder red wool riding gown under a sideless undyed oatmeal surcote, a woven undyed oatmeal girdle, dark wool hose, ankle boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-183` Adela Ashvale
+
+**角色 id**：`char_adela_ashvale`
+
+**外貌**：`a 44-year-old woman, a broad round face with full cheeks, warm tan skin, a hooked nose, deep-set grey eyes, black hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing an ash grey wool gown with long tight sleeves under a sideless muted moss green surcote, a broad leather belt with a brass buckle, dark wool hose, ankle boots, wearing a plain white linen veil`
+
+```
+[S], a 44-year-old woman, a broad round face with full cheeks, warm tan skin, a hooked nose, deep-set grey eyes, black hair braided close around the head, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing an ash grey wool gown with long tight sleeves under a sideless muted moss green surcote, a broad leather belt with a brass buckle, dark wool hose, ankle boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-184` Baldwin Ashvale
+
+**角色 id**：`char_baldwin_ashvale`
+
+**外貌**：`a 45-year-old man, a lean angular face with hollow cheeks, light olive skin, a slightly crooked nose, pale blue eyes, curly chestnut hair, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a lean wiry build, wearing a quilted ash grey gambeson under a sleeveless muted moss green wool surcote, a narrow belt with a pouch, dark wool hose, ankle boots, bare-headed`
+
+```
+[S], a 45-year-old man, a lean angular face with hollow cheeks, light olive skin, a slightly crooked nose, pale blue eyes, curly chestnut hair, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a lean wiry build, wearing a quilted ash grey gambeson under a sleeveless muted moss green wool surcote, a narrow belt with a pouch, dark wool hose, ankle boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-185` Celia Ashvale
+
+**角色 id**：`char_celia_ashvale`
+
+**外貌**：`a 46-year-old woman, a broad round face with full cheeks, olive skin, a small rounded nose, alert amber-brown eyes, dark blond hair in two braids, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing an ash grey wool riding gown under a muted moss green wool overgown open at the front, a plain leather belt, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil`
+
+```
+[S], a 46-year-old woman, a broad round face with full cheeks, olive skin, a small rounded nose, alert amber-brown eyes, dark blond hair in two braids, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing an ash grey wool riding gown under a muted moss green wool overgown open at the front, a plain leather belt, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-186` Dorian Ashvale
+
+**角色 id**：`char_dorian_ashvale`
+
+**外貌**：`a 47-year-old man, a heart-shaped face with a narrow chin, olive skin, a short upturned nose, large dark eyes, close-cropped auburn hair, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing an ash grey wool tunic to the knee under a muted moss green leather jerkin, a woven muted moss green girdle, dark wool hose, ankle boots, wearing an ash grey wool hood thrown back`
+
+```
+[S], a 47-year-old man, a heart-shaped face with a narrow chin, olive skin, a short upturned nose, large dark eyes, close-cropped auburn hair, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing an ash grey wool tunic to the knee under a muted moss green leather jerkin, a woven muted moss green girdle, dark wool hose, ankle boots, wearing an ash grey wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-187` Elin Ashvale
+
+**角色 id**：`char_elin_ashvale`
+
+**外貌**：`a 48-year-old woman, a broad round face with full cheeks, olive skin, a broad blunt nose, narrow dark brown eyes, black hair streaked with grey in two braids, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing an ash grey wool riding gown, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, bare-headed`
+
+```
+[S], a 48-year-old woman, a broad round face with full cheeks, olive skin, a broad blunt nose, narrow dark brown eyes, black hair streaked with grey in two braids, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing an ash grey wool riding gown, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-188` Florian Ashvale
+
+**角色 id**：`char_florian_ashvale`
+
+**外貌**：`a 49-year-old man, a soft rounded face with a small chin, warm tan skin, a hooked nose, alert amber-brown eyes, close-cropped dark blond hair streaked with grey, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing an ash grey wool tunic to the knee under a short muted moss green wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing an ash grey wool hood thrown back`
+
+```
+[S], a 49-year-old man, a soft rounded face with a small chin, warm tan skin, a hooked nose, alert amber-brown eyes, close-cropped dark blond hair streaked with grey, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing an ash grey wool tunic to the knee under a short muted moss green wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing an ash grey wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-189` Gareth Ashvale
+
+**角色 id**：`char_gareth_ashvale`
+
+**外貌**：`a 50-year-old man, a heart-shaped face with a narrow chin, light olive skin, a small rounded nose, pale blue eyes, auburn hair streaked with grey cut short, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing a quilted ash grey gambeson under a muted moss green leather jerkin, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a soft muted moss green wool cap`
+
+```
+[S], a 50-year-old man, a heart-shaped face with a narrow chin, light olive skin, a small rounded nose, pale blue eyes, auburn hair streaked with grey cut short, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing a quilted ash grey gambeson under a muted moss green leather jerkin, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a soft muted moss green wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-190` Helena Ashvale
+
+**角色 id**：`char_helena_ashvale`
+
+**外貌**：`a 51-year-old woman, a lean angular face with hollow cheeks, warm tan skin, a broad blunt nose, wide hazel eyes, loose wavy auburn hair streaked with grey to the shoulders, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing an ash grey wool riding gown, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil`
+
+```
+[S], a 51-year-old woman, a lean angular face with hollow cheeks, warm tan skin, a broad blunt nose, wide hazel eyes, loose wavy auburn hair streaked with grey to the shoulders, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing an ash grey wool riding gown, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-191` Ivor Ashvale
+
+**角色 id**：`char_ivor_ashvale`
+
+**外貌**：`a 52-year-old man, a square face with a strong jaw, olive skin, a broad blunt nose, large dark eyes, shoulder-length copper red hair tied back, a moustache and stubble, deep lines on the forehead and around the mouth, greying at the temples, a tall thin build with long limbs, wearing an ash grey wool cote with a muted moss green trimmed hem under a muted moss green leather jerkin, a woven muted moss green girdle, dark wool hose, ankle boots, wearing a soft muted moss green wool cap`
+
+```
+[S], a 52-year-old man, a square face with a strong jaw, olive skin, a broad blunt nose, large dark eyes, shoulder-length copper red hair tied back, a moustache and stubble, deep lines on the forehead and around the mouth, greying at the temples, a tall thin build with long limbs, wearing an ash grey wool cote with a muted moss green trimmed hem under a muted moss green leather jerkin, a woven muted moss green girdle, dark wool hose, ankle boots, wearing a soft muted moss green wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-192` Joanna Ashvale
+
+**角色 id**：`char_joanna_ashvale`
+
+**外貌**：`a 53-year-old woman, a lean angular face with hollow cheeks, light olive skin, a short upturned nose, deep-set grey eyes, mouse brown hair streaked with grey coiled at the nape, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing an ash grey wool riding gown, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a plain white linen veil`
+
+```
+[S], a 53-year-old woman, a lean angular face with hollow cheeks, light olive skin, a short upturned nose, deep-set grey eyes, mouse brown hair streaked with grey coiled at the nape, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing an ash grey wool riding gown, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-193` Kieran Ashvale
+
+**角色 id**：`char_kieran_ashvale`
+
+**外貌**：`a 24-year-old man, a heart-shaped face with a narrow chin, warm tan skin, a slightly crooked nose, wide hazel eyes, curly auburn hair, a forked beard, a youthful unlined complexion, a short stocky build, wearing an ash grey wool cote with fitted sleeves under a short muted moss green wool shoulder cape with a hood, a woven muted moss green girdle, dark wool hose, calf-high leather riding boots, wearing a soft muted moss green wool cap`
+
+```
+[S], a 24-year-old man, a heart-shaped face with a narrow chin, warm tan skin, a slightly crooked nose, wide hazel eyes, curly auburn hair, a forked beard, a youthful unlined complexion, a short stocky build, wearing an ash grey wool cote with fitted sleeves under a short muted moss green wool shoulder cape with a hood, a woven muted moss green girdle, dark wool hose, calf-high leather riding boots, wearing a soft muted moss green wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-194` Lucia Ashvale
+
+**角色 id**：`char_lucia_ashvale`
+
+**外貌**：`a 25-year-old woman, an oval face with high cheekbones, olive skin, a hooked nose, large dark eyes, mouse brown hair in a single long braid, a youthful unlined complexion, a heavyset build, wearing an ash grey wool kirtle with fitted sleeves under a muted moss green wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a linen hair net`
+
+```
+[S], a 25-year-old woman, an oval face with high cheekbones, olive skin, a hooked nose, large dark eyes, mouse brown hair in a single long braid, a youthful unlined complexion, a heavyset build, wearing an ash grey wool kirtle with fitted sleeves under a muted moss green wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-195` Merek Ashvale
+
+**角色 id**：`char_merek_ashvale`
+
+**外貌**：`a 26-year-old man, a wide face with a heavy brow, light olive skin, a short upturned nose, alert amber-brown eyes, dark brown hair cut short, smooth bare cheeks and chin, a youthful unlined complexion, a broad sturdy build, wearing an ash grey wool tunic to the knee under a sleeveless muted moss green wool surcote, a narrow belt with a pouch, dark wool hose, ankle boots, wearing a soft muted moss green wool cap`
+
+```
+[S], a 26-year-old man, a wide face with a heavy brow, light olive skin, a short upturned nose, alert amber-brown eyes, dark brown hair cut short, smooth bare cheeks and chin, a youthful unlined complexion, a broad sturdy build, wearing an ash grey wool tunic to the knee under a sleeveless muted moss green wool surcote, a narrow belt with a pouch, dark wool hose, ankle boots, wearing a soft muted moss green wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-196` Nerida Ashvale
+
+**角色 id**：`char_nerida_ashvale`
+
+**外貌**：`a 27-year-old woman, a wide face with a heavy brow, olive skin, a straight narrow nose, narrow dark brown eyes, dark blond hair braided close around the head, a youthful unlined complexion, a lean wiry build, wearing an ash grey wool riding gown under a short muted moss green wool shoulder cape with a hood, a woven muted moss green girdle, dark wool hose, calf-high leather riding boots, bare-headed`
+
+```
+[S], a 27-year-old woman, a wide face with a heavy brow, olive skin, a straight narrow nose, narrow dark brown eyes, dark blond hair braided close around the head, a youthful unlined complexion, a lean wiry build, wearing an ash grey wool riding gown under a short muted moss green wool shoulder cape with a hood, a woven muted moss green girdle, dark wool hose, calf-high leather riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-197` Owen Ashvale
+
+**角色 id**：`char_owen_ashvale`
+
+**外貌**：`a 28-year-old man, a wide face with a heavy brow, warm tan skin, a broad blunt nose, large dark eyes, thick dark blond hair swept back, a short pointed beard, a youthful unlined complexion, a tall thin build with long limbs, wearing a quilted ash grey gambeson under a short muted moss green wool shoulder cape with a hood, a plain leather belt, dark wool hose, ankle boots, wearing an ash grey wool hood thrown back`
+
+```
+[S], a 28-year-old man, a wide face with a heavy brow, warm tan skin, a broad blunt nose, large dark eyes, thick dark blond hair swept back, a short pointed beard, a youthful unlined complexion, a tall thin build with long limbs, wearing a quilted ash grey gambeson under a short muted moss green wool shoulder cape with a hood, a plain leather belt, dark wool hose, ankle boots, wearing an ash grey wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-198` Philippa Ashvale
+
+**角色 id**：`char_philippa_ashvale`
+
+**外貌**：`a 29-year-old woman, a soft rounded face with a small chin, olive skin, a slightly crooked nose, deep-set grey eyes, mouse brown hair braided close around the head, a youthful unlined complexion, a lean wiry build, wearing an ash grey wool kirtle with fitted sleeves under a short muted moss green wool shoulder cape with a hood, a plain leather belt, dark wool hose, ankle boots, bare-headed`
+
+```
+[S], a 29-year-old woman, a soft rounded face with a small chin, olive skin, a slightly crooked nose, deep-set grey eyes, mouse brown hair braided close around the head, a youthful unlined complexion, a lean wiry build, wearing an ash grey wool kirtle with fitted sleeves under a short muted moss green wool shoulder cape with a hood, a plain leather belt, dark wool hose, ankle boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-199` Quentin Ashvale
+
+**角色 id**：`char_quentin_ashvale`
+
+**外貌**：`a 30-year-old man, a broad round face with full cheeks, light olive skin, a hooked nose, narrow dark brown eyes, shoulder-length copper red hair tied back, a full short beard, faint lines around the eyes, an athletic build, wearing an ash grey wool cote with a muted moss green trimmed hem, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing an ash grey wool hood thrown back`
+
+```
+[S], a 30-year-old man, a broad round face with full cheeks, light olive skin, a hooked nose, narrow dark brown eyes, shoulder-length copper red hair tied back, a full short beard, faint lines around the eyes, an athletic build, wearing an ash grey wool cote with a muted moss green trimmed hem, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing an ash grey wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-200` Rosamund Ashvale
+
+**角色 id**：`char_rosamund_ashvale`
+
+**外貌**：`a 31-year-old woman, a lean angular face with hollow cheeks, olive skin, a long aquiline nose, heavy-lidded green eyes, ash blond hair braided close around the head, faint lines around the eyes, a heavyset build, wearing an ash grey wool gown with long tight sleeves, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil`
+
+```
+[S], a 31-year-old woman, a lean angular face with hollow cheeks, olive skin, a long aquiline nose, heavy-lidded green eyes, ash blond hair braided close around the head, faint lines around the eyes, a heavyset build, wearing an ash grey wool gown with long tight sleeves, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-201` Silas Ashvale
+
+**角色 id**：`char_silas_ashvale`
+
+**外貌**：`a 32-year-old man, a square face with a strong jaw, light olive skin, a small rounded nose, pale blue eyes, shoulder-length chestnut hair tied back, smooth bare cheeks and chin, faint lines around the eyes, a heavyset build, wearing an ash grey wool tunic to the knee under a short muted moss green wool shoulder cape with a hood, a plain leather belt, dark wool hose, knee-high riding boots, wearing an ash grey wool hood thrown back`
+
+```
+[S], a 32-year-old man, a square face with a strong jaw, light olive skin, a small rounded nose, pale blue eyes, shoulder-length chestnut hair tied back, smooth bare cheeks and chin, faint lines around the eyes, a heavyset build, wearing an ash grey wool tunic to the knee under a short muted moss green wool shoulder cape with a hood, a plain leather belt, dark wool hose, knee-high riding boots, wearing an ash grey wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-202` Tamsin Ashvale
+
+**角色 id**：`char_tamsin_ashvale`
+
+**外貌**：`a 33-year-old woman, a soft rounded face with a small chin, light olive skin, a broad blunt nose, narrow dark brown eyes, chestnut hair in a single long braid, faint lines around the eyes, a tall thin build with long limbs, wearing an ash grey wool gown with long tight sleeves under a short muted moss green wool shoulder cape with a hood, a plain leather belt, dark wool hose, calf-high leather riding boots, wearing a narrow muted moss green fillet`
+
+```
+[S], a 33-year-old woman, a soft rounded face with a small chin, light olive skin, a broad blunt nose, narrow dark brown eyes, chestnut hair in a single long braid, faint lines around the eyes, a tall thin build with long limbs, wearing an ash grey wool gown with long tight sleeves under a short muted moss green wool shoulder cape with a hood, a plain leather belt, dark wool hose, calf-high leather riding boots, wearing a narrow muted moss green fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-203` Adela Fenwick
+
+**角色 id**：`char_adela_fenwick`
+
+**外貌**：`a 34-year-old woman, a long narrow face with a pointed chin, fair freckled skin, a slightly crooked nose, pale blue eyes, auburn hair in two braids, faint lines around the eyes, a tall thin build with long limbs, wearing a dark slate blue wool kirtle with fitted sleeves under a sideless pale ochre surcote, a plain leather belt, dark wool hose, worn leather turnshoes, bare-headed`
+
+```
+[S], a 34-year-old woman, a long narrow face with a pointed chin, fair freckled skin, a slightly crooked nose, pale blue eyes, auburn hair in two braids, faint lines around the eyes, a tall thin build with long limbs, wearing a dark slate blue wool kirtle with fitted sleeves under a sideless pale ochre surcote, a plain leather belt, dark wool hose, worn leather turnshoes, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-204` Baldwin Fenwick
+
+**角色 id**：`char_baldwin_fenwick`
+
+**外貌**：`a 35-year-old man, a heart-shaped face with a narrow chin, fair freckled skin, a small rounded nose, heavy-lidded green eyes, mouse brown hair cut short, a forked beard, faint lines around the eyes, a tall thin build with long limbs, wearing a quilted dark slate blue gambeson under a short pale ochre wool shoulder cape with a hood, a woven pale ochre girdle, dark wool hose, knee-high riding boots, wearing a dark slate blue wool hood thrown back`
+
+```
+[S], a 35-year-old man, a heart-shaped face with a narrow chin, fair freckled skin, a small rounded nose, heavy-lidded green eyes, mouse brown hair cut short, a forked beard, faint lines around the eyes, a tall thin build with long limbs, wearing a quilted dark slate blue gambeson under a short pale ochre wool shoulder cape with a hood, a woven pale ochre girdle, dark wool hose, knee-high riding boots, wearing a dark slate blue wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-205` Celia Fenwick
+
+**角色 id**：`char_celia_fenwick`
+
+**外貌**：`a 36-year-old woman, a soft rounded face with a small chin, fair skin, a long aquiline nose, narrow dark brown eyes, dark brown hair braided close around the head, faint lines around the eyes, a slight build with narrow shoulders, wearing a dark slate blue wool riding gown under a short pale ochre wool shoulder cape with a hood, a woven pale ochre girdle, dark wool hose, knee-high riding boots, bare-headed`
+
+```
+[S], a 36-year-old woman, a soft rounded face with a small chin, fair skin, a long aquiline nose, narrow dark brown eyes, dark brown hair braided close around the head, faint lines around the eyes, a slight build with narrow shoulders, wearing a dark slate blue wool riding gown under a short pale ochre wool shoulder cape with a hood, a woven pale ochre girdle, dark wool hose, knee-high riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-206` Dorian Fenwick
+
+**角色 id**：`char_dorian_fenwick`
+
+**外貌**：`a 37-year-old man, a square face with a strong jaw, fair freckled skin, a short upturned nose, narrow dark brown eyes, dark brown hair cut short, a short pointed beard, faint lines around the eyes, a tall thin build with long limbs, wearing a dark slate blue wool cote with fitted sleeves under a pale ochre wool tabard split at the sides, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing a soft pale ochre wool cap`
+
+```
+[S], a 37-year-old man, a square face with a strong jaw, fair freckled skin, a short upturned nose, narrow dark brown eyes, dark brown hair cut short, a short pointed beard, faint lines around the eyes, a tall thin build with long limbs, wearing a dark slate blue wool cote with fitted sleeves under a pale ochre wool tabard split at the sides, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing a soft pale ochre wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-207` Elin Fenwick
+
+**角色 id**：`char_elin_fenwick`
+
+**外貌**：`a 38-year-old woman, a broad round face with full cheeks, ruddy pale skin, a slightly crooked nose, heavy-lidded green eyes, auburn hair coiled at the nape, faint lines around the eyes, a short stocky build, wearing a dark slate blue wool gown with long tight sleeves, a woven pale ochre girdle, dark wool hose, worn leather turnshoes, bare-headed`
+
+```
+[S], a 38-year-old woman, a broad round face with full cheeks, ruddy pale skin, a slightly crooked nose, heavy-lidded green eyes, auburn hair coiled at the nape, faint lines around the eyes, a short stocky build, wearing a dark slate blue wool gown with long tight sleeves, a woven pale ochre girdle, dark wool hose, worn leather turnshoes, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-208` Florian Fenwick
+
+**角色 id**：`char_florian_fenwick`
+
+**外貌**：`a 39-year-old man, a square face with a strong jaw, fair skin, a broad blunt nose, large dark eyes, close-cropped copper red hair, a full short beard, faint lines around the eyes, a lean wiry build, wearing a dark slate blue wool tunic to the knee under a pale ochre leather jerkin, a plain leather belt, dark wool hose, knee-high riding boots, bare-headed`
+
+```
+[S], a 39-year-old man, a square face with a strong jaw, fair skin, a broad blunt nose, large dark eyes, close-cropped copper red hair, a full short beard, faint lines around the eyes, a lean wiry build, wearing a dark slate blue wool tunic to the knee under a pale ochre leather jerkin, a plain leather belt, dark wool hose, knee-high riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-209` Gareth Fenwick
+
+**角色 id**：`char_gareth_fenwick`
+
+**外貌**：`a 40-year-old man, a long narrow face with a pointed chin, fair freckled skin, a hooked nose, large dark eyes, copper red hair cut short, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark slate blue wool tunic to the knee under a pale ochre leather jerkin, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, wearing a soft pale ochre wool cap`
+
+```
+[S], a 40-year-old man, a long narrow face with a pointed chin, fair freckled skin, a hooked nose, large dark eyes, copper red hair cut short, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark slate blue wool tunic to the knee under a pale ochre leather jerkin, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, wearing a soft pale ochre wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-210` Helena Fenwick
+
+**角色 id**：`char_helena_fenwick`
+
+**外貌**：`a 41-year-old woman, a wide face with a heavy brow, fair freckled skin, a long aquiline nose, narrow dark brown eyes, dark blond hair in a single long braid, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark slate blue wool riding gown under a sideless pale ochre surcote, a woven pale ochre girdle, dark wool hose, ankle boots, wearing a narrow pale ochre fillet`
+
+```
+[S], a 41-year-old woman, a wide face with a heavy brow, fair freckled skin, a long aquiline nose, narrow dark brown eyes, dark blond hair in a single long braid, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark slate blue wool riding gown under a sideless pale ochre surcote, a woven pale ochre girdle, dark wool hose, ankle boots, wearing a narrow pale ochre fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-211` Ivor Fenwick
+
+**角色 id**：`char_ivor_fenwick`
+
+**外貌**：`a 42-year-old man, a broad round face with full cheeks, fair skin, a broad blunt nose, large dark eyes, thick auburn hair swept back, a forked beard, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a quilted dark slate blue gambeson under a sleeveless pale ochre wool surcote, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, bare-headed`
+
+```
+[S], a 42-year-old man, a broad round face with full cheeks, fair skin, a broad blunt nose, large dark eyes, thick auburn hair swept back, a forked beard, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a quilted dark slate blue gambeson under a sleeveless pale ochre wool surcote, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-212` Joanna Fenwick
+
+**角色 id**：`char_joanna_fenwick`
+
+**外貌**：`a 43-year-old woman, a wide face with a heavy brow, ruddy pale skin, a straight narrow nose, deep-set grey eyes, loose wavy ash blond hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark slate blue wool kirtle with fitted sleeves under a sideless pale ochre surcote, a narrow belt with a pouch, dark wool hose, ankle boots, wearing a plain white linen veil`
+
+```
+[S], a 43-year-old woman, a wide face with a heavy brow, ruddy pale skin, a straight narrow nose, deep-set grey eyes, loose wavy ash blond hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark slate blue wool kirtle with fitted sleeves under a sideless pale ochre surcote, a narrow belt with a pouch, dark wool hose, ankle boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-213` Kieran Fenwick
+
+**角色 id**：`char_kieran_fenwick`
+
+**外貌**：`a 44-year-old man, a lean angular face with hollow cheeks, fair skin, a long aquiline nose, pale blue eyes, mouse brown hair cut short, a forked beard, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a quilted dark slate blue gambeson under a pale ochre wool tabard split at the sides, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, bare-headed`
+
+```
+[S], a 44-year-old man, a lean angular face with hollow cheeks, fair skin, a long aquiline nose, pale blue eyes, mouse brown hair cut short, a forked beard, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a quilted dark slate blue gambeson under a pale ochre wool tabard split at the sides, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-214` Lucia Fenwick
+
+**角色 id**：`char_lucia_fenwick`
+
+**外貌**：`a 45-year-old woman, a heart-shaped face with a narrow chin, ruddy pale skin, a hooked nose, wide hazel eyes, dark brown hair in a single long braid, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark slate blue wool kirtle with fitted sleeves under a short pale ochre wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a narrow pale ochre fillet`
+
+```
+[S], a 45-year-old woman, a heart-shaped face with a narrow chin, ruddy pale skin, a hooked nose, wide hazel eyes, dark brown hair in a single long braid, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark slate blue wool kirtle with fitted sleeves under a short pale ochre wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, wearing a narrow pale ochre fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-215` Merek Fenwick
+
+**角色 id**：`char_merek_fenwick`
+
+**外貌**：`a 46-year-old man, a square face with a strong jaw, fair freckled skin, a broad blunt nose, wide hazel eyes, auburn hair to the jaw, a moustache and stubble, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a dark slate blue wool cote with fitted sleeves under a pale ochre wool tabard split at the sides, a plain leather belt, dark wool hose, ankle boots, wearing a dark slate blue wool hood thrown back`
+
+```
+[S], a 46-year-old man, a square face with a strong jaw, fair freckled skin, a broad blunt nose, wide hazel eyes, auburn hair to the jaw, a moustache and stubble, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a dark slate blue wool cote with fitted sleeves under a pale ochre wool tabard split at the sides, a plain leather belt, dark wool hose, ankle boots, wearing a dark slate blue wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-216` Nerida Fenwick
+
+**角色 id**：`char_nerida_fenwick`
+
+**外貌**：`a 47-year-old woman, a lean angular face with hollow cheeks, fair skin, a straight narrow nose, heavy-lidded green eyes, dark blond hair coiled at the nape, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a dark slate blue wool riding gown under a short pale ochre wool shoulder cape with a hood, a woven pale ochre girdle, dark wool hose, worn leather turnshoes, bare-headed`
+
+```
+[S], a 47-year-old woman, a lean angular face with hollow cheeks, fair skin, a straight narrow nose, heavy-lidded green eyes, dark blond hair coiled at the nape, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a dark slate blue wool riding gown under a short pale ochre wool shoulder cape with a hood, a woven pale ochre girdle, dark wool hose, worn leather turnshoes, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-217` Owen Fenwick
+
+**角色 id**：`char_owen_fenwick`
+
+**外貌**：`a 48-year-old man, an oval face with high cheekbones, ruddy pale skin, a broad blunt nose, narrow dark brown eyes, thick copper red hair swept back, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a lean wiry build, wearing a dark slate blue wool cote with a pale ochre trimmed hem under a sleeveless pale ochre wool surcote, a plain leather belt, dark wool hose, calf-high leather riding boots, wearing a soft pale ochre wool cap`
+
+```
+[S], a 48-year-old man, an oval face with high cheekbones, ruddy pale skin, a broad blunt nose, narrow dark brown eyes, thick copper red hair swept back, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a lean wiry build, wearing a dark slate blue wool cote with a pale ochre trimmed hem under a sleeveless pale ochre wool surcote, a plain leather belt, dark wool hose, calf-high leather riding boots, wearing a soft pale ochre wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-218` Philippa Fenwick
+
+**角色 id**：`char_philippa_fenwick`
+
+**外貌**：`a 49-year-old woman, a lean angular face with hollow cheeks, ruddy pale skin, a straight narrow nose, narrow dark brown eyes, mouse brown hair streaked with grey in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, a lean wiry build, wearing a dark slate blue wool gown with long tight sleeves under a pale ochre wool overgown open at the front, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil`
+
+```
+[S], a 49-year-old woman, a lean angular face with hollow cheeks, ruddy pale skin, a straight narrow nose, narrow dark brown eyes, mouse brown hair streaked with grey in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, a lean wiry build, wearing a dark slate blue wool gown with long tight sleeves under a pale ochre wool overgown open at the front, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-219` Quentin Fenwick
+
+**角色 id**：`char_quentin_fenwick`
+
+**外貌**：`a 50-year-old man, a heart-shaped face with a narrow chin, fair freckled skin, a slightly crooked nose, pale blue eyes, copper red hair streaked with grey cut short, a short pointed beard, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing a dark slate blue wool tunic to the knee under a pale ochre leather jerkin, a woven pale ochre girdle, dark wool hose, calf-high leather riding boots, bare-headed`
+
+```
+[S], a 50-year-old man, a heart-shaped face with a narrow chin, fair freckled skin, a slightly crooked nose, pale blue eyes, copper red hair streaked with grey cut short, a short pointed beard, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing a dark slate blue wool tunic to the knee under a pale ochre leather jerkin, a woven pale ochre girdle, dark wool hose, calf-high leather riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-220` Rosamund Fenwick
+
+**角色 id**：`char_rosamund_fenwick`
+
+**外貌**：`a 51-year-old woman, a broad round face with full cheeks, fair freckled skin, a short upturned nose, narrow dark brown eyes, black hair streaked with grey coiled at the nape, deep lines on the forehead and around the mouth, greying at the temples, a heavyset build, wearing a dark slate blue wool riding gown under a short pale ochre wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, ankle boots, wearing a linen hair net`
+
+```
+[S], a 51-year-old woman, a broad round face with full cheeks, fair freckled skin, a short upturned nose, narrow dark brown eyes, black hair streaked with grey coiled at the nape, deep lines on the forehead and around the mouth, greying at the temples, a heavyset build, wearing a dark slate blue wool riding gown under a short pale ochre wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, ankle boots, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-221` Silas Fenwick
+
+**角色 id**：`char_silas_fenwick`
+
+**外貌**：`a 52-year-old man, a wide face with a heavy brow, ruddy pale skin, a slightly crooked nose, pale blue eyes, shoulder-length dark brown hair tied back, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a short stocky build, wearing a dark slate blue wool cote with a pale ochre trimmed hem, a plain leather belt, dark wool hose, calf-high leather riding boots, bare-headed`
+
+```
+[S], a 52-year-old man, a wide face with a heavy brow, ruddy pale skin, a slightly crooked nose, pale blue eyes, shoulder-length dark brown hair tied back, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a short stocky build, wearing a dark slate blue wool cote with a pale ochre trimmed hem, a plain leather belt, dark wool hose, calf-high leather riding boots, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-222` Tamsin Fenwick
+
+**角色 id**：`char_tamsin_fenwick`
+
+**外貌**：`a 53-year-old woman, a soft rounded face with a small chin, fair freckled skin, a broad blunt nose, wide hazel eyes, black hair in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, a broad sturdy build, wearing a dark slate blue wool riding gown under a short pale ochre wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing a narrow pale ochre fillet`
+
+```
+[S], a 53-year-old woman, a soft rounded face with a small chin, fair freckled skin, a broad blunt nose, wide hazel eyes, black hair in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, a broad sturdy build, wearing a dark slate blue wool riding gown under a short pale ochre wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, wearing a narrow pale ochre fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-223` Adela Blackthorn
+
+**角色 id**：`char_adela_blackthorn`
+
+**外貌**：`a 24-year-old woman, a soft rounded face with a small chin, ruddy pale skin, a small rounded nose, deep-set grey eyes, loose wavy dark blond hair to the shoulders, a youthful unlined complexion, a slight build with narrow shoulders, wearing a charcoal black wool gown with long tight sleeves under a faded oxblood wool overgown open at the front, a woven faded oxblood girdle, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a plain white linen veil`
+
+```
+[S], a 24-year-old woman, a soft rounded face with a small chin, ruddy pale skin, a small rounded nose, deep-set grey eyes, loose wavy dark blond hair to the shoulders, a youthful unlined complexion, a slight build with narrow shoulders, wearing a charcoal black wool gown with long tight sleeves under a faded oxblood wool overgown open at the front, a woven faded oxblood girdle, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-224` Baldwin Blackthorn
+
+**角色 id**：`char_baldwin_blackthorn`
+
+**外貌**：`a 25-year-old man, a lean angular face with hollow cheeks, weathered tan skin, a long aquiline nose, alert amber-brown eyes, mouse brown hair to the jaw, smooth bare cheeks and chin, a youthful unlined complexion, a heavyset build, wearing a charcoal black wool cote with a faded oxblood trimmed hem under a sleeveless faded oxblood wool surcote, a plain leather belt, dark wool hose, calf-high leather riding boots, a plain bronze arm ring, wearing a soft faded oxblood wool cap`
+
+```
+[S], a 25-year-old man, a lean angular face with hollow cheeks, weathered tan skin, a long aquiline nose, alert amber-brown eyes, mouse brown hair to the jaw, smooth bare cheeks and chin, a youthful unlined complexion, a heavyset build, wearing a charcoal black wool cote with a faded oxblood trimmed hem under a sleeveless faded oxblood wool surcote, a plain leather belt, dark wool hose, calf-high leather riding boots, a plain bronze arm ring, wearing a soft faded oxblood wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-225` Celia Blackthorn
+
+**角色 id**：`char_celia_blackthorn`
+
+**外貌**：`a 26-year-old woman, an oval face with high cheekbones, ruddy pale skin, a small rounded nose, alert amber-brown eyes, ash blond hair coiled at the nape, a youthful unlined complexion, a heavyset build, wearing a charcoal black wool riding gown under a short faded oxblood wool shoulder cape with a hood, a woven faded oxblood girdle, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a narrow faded oxblood fillet`
+
+```
+[S], a 26-year-old woman, an oval face with high cheekbones, ruddy pale skin, a small rounded nose, alert amber-brown eyes, ash blond hair coiled at the nape, a youthful unlined complexion, a heavyset build, wearing a charcoal black wool riding gown under a short faded oxblood wool shoulder cape with a hood, a woven faded oxblood girdle, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a narrow faded oxblood fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-226` Dorian Blackthorn
+
+**角色 id**：`char_dorian_blackthorn`
+
+**外貌**：`a 27-year-old man, a heart-shaped face with a narrow chin, weathered tan skin, a short upturned nose, deep-set grey eyes, curly auburn hair, smooth bare cheeks and chin, a youthful unlined complexion, a heavyset build, wearing a charcoal black wool cote with fitted sleeves under a faded oxblood wool tabard split at the sides, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a soft faded oxblood wool cap`
+
+```
+[S], a 27-year-old man, a heart-shaped face with a narrow chin, weathered tan skin, a short upturned nose, deep-set grey eyes, curly auburn hair, smooth bare cheeks and chin, a youthful unlined complexion, a heavyset build, wearing a charcoal black wool cote with fitted sleeves under a faded oxblood wool tabard split at the sides, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a soft faded oxblood wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-227` Elin Blackthorn
+
+**角色 id**：`char_elin_blackthorn`
+
+**外貌**：`a 28-year-old woman, an oval face with high cheekbones, ruddy pale skin, a slightly crooked nose, pale blue eyes, loose wavy auburn hair to the shoulders, a youthful unlined complexion, a tall thin build with long limbs, wearing a charcoal black wool riding gown, a woven faded oxblood girdle, dark wool hose, ankle boots, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 28-year-old woman, an oval face with high cheekbones, ruddy pale skin, a slightly crooked nose, pale blue eyes, loose wavy auburn hair to the shoulders, a youthful unlined complexion, a tall thin build with long limbs, wearing a charcoal black wool riding gown, a woven faded oxblood girdle, dark wool hose, ankle boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-228` Florian Blackthorn
+
+**角色 id**：`char_florian_blackthorn`
+
+**外貌**：`a 29-year-old man, a broad round face with full cheeks, pale skin, a long aquiline nose, narrow dark brown eyes, curly chestnut hair, smooth bare cheeks and chin, a youthful unlined complexion, an athletic build, wearing a charcoal black wool cote with a faded oxblood trimmed hem under a sleeveless faded oxblood wool surcote, a woven faded oxblood girdle, dark wool hose, knee-high riding boots, stitched leather cuffs, wearing a charcoal black wool hood thrown back`
+
+```
+[S], a 29-year-old man, a broad round face with full cheeks, pale skin, a long aquiline nose, narrow dark brown eyes, curly chestnut hair, smooth bare cheeks and chin, a youthful unlined complexion, an athletic build, wearing a charcoal black wool cote with a faded oxblood trimmed hem under a sleeveless faded oxblood wool surcote, a woven faded oxblood girdle, dark wool hose, knee-high riding boots, stitched leather cuffs, wearing a charcoal black wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-229` Gareth Blackthorn
+
+**角色 id**：`char_gareth_blackthorn`
+
+**外貌**：`a 30-year-old man, a heart-shaped face with a narrow chin, weathered tan skin, a straight narrow nose, large dark eyes, auburn hair cut short, smooth bare cheeks and chin, faint lines around the eyes, a slight build with narrow shoulders, wearing a quilted charcoal black gambeson under a faded oxblood leather jerkin, a woven faded oxblood girdle, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a charcoal black wool hood thrown back`
+
+```
+[S], a 30-year-old man, a heart-shaped face with a narrow chin, weathered tan skin, a straight narrow nose, large dark eyes, auburn hair cut short, smooth bare cheeks and chin, faint lines around the eyes, a slight build with narrow shoulders, wearing a quilted charcoal black gambeson under a faded oxblood leather jerkin, a woven faded oxblood girdle, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a charcoal black wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-230` Helena Blackthorn
+
+**角色 id**：`char_helena_blackthorn`
+
+**外貌**：`a 31-year-old woman, a long narrow face with a pointed chin, ruddy pale skin, a long aquiline nose, heavy-lidded green eyes, dark blond hair coiled at the nape, faint lines around the eyes, a lean wiry build, wearing a charcoal black wool gown with long tight sleeves under a faded oxblood wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, stitched leather cuffs, bare-headed`
+
+```
+[S], a 31-year-old woman, a long narrow face with a pointed chin, ruddy pale skin, a long aquiline nose, heavy-lidded green eyes, dark blond hair coiled at the nape, faint lines around the eyes, a lean wiry build, wearing a charcoal black wool gown with long tight sleeves under a faded oxblood wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-231` Ivor Blackthorn
+
+**角色 id**：`char_ivor_blackthorn`
+
+**外貌**：`a 32-year-old man, a soft rounded face with a small chin, weathered tan skin, a small rounded nose, narrow dark brown eyes, shoulder-length ash blond hair tied back, a short pointed beard, faint lines around the eyes, a slight build with narrow shoulders, wearing a charcoal black wool cote with a faded oxblood trimmed hem under a sleeveless faded oxblood wool surcote, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a bone toggle at the throat, bare-headed`
+
+```
+[S], a 32-year-old man, a soft rounded face with a small chin, weathered tan skin, a small rounded nose, narrow dark brown eyes, shoulder-length ash blond hair tied back, a short pointed beard, faint lines around the eyes, a slight build with narrow shoulders, wearing a charcoal black wool cote with a faded oxblood trimmed hem under a sleeveless faded oxblood wool surcote, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a bone toggle at the throat, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-232` Joanna Blackthorn
+
+**角色 id**：`char_joanna_blackthorn`
+
+**外貌**：`a 33-year-old woman, a wide face with a heavy brow, pale skin, a long aquiline nose, narrow dark brown eyes, auburn hair in two braids, faint lines around the eyes, a slight build with narrow shoulders, wearing a charcoal black wool gown with long tight sleeves, a plain leather belt, dark wool hose, knee-high riding boots, a bone toggle at the throat, bare-headed`
+
+```
+[S], a 33-year-old woman, a wide face with a heavy brow, pale skin, a long aquiline nose, narrow dark brown eyes, auburn hair in two braids, faint lines around the eyes, a slight build with narrow shoulders, wearing a charcoal black wool gown with long tight sleeves, a plain leather belt, dark wool hose, knee-high riding boots, a bone toggle at the throat, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-233` Kieran Blackthorn
+
+**角色 id**：`char_kieran_blackthorn`
+
+**外貌**：`a 34-year-old man, a soft rounded face with a small chin, pale skin, a straight narrow nose, heavy-lidded green eyes, dark brown hair cut short, smooth bare cheeks and chin, faint lines around the eyes, a tall thin build with long limbs, wearing a quilted charcoal black gambeson under a faded oxblood leather jerkin, a woven faded oxblood girdle, dark wool hose, knee-high riding boots, a bone toggle at the throat, bare-headed`
+
+```
+[S], a 34-year-old man, a soft rounded face with a small chin, pale skin, a straight narrow nose, heavy-lidded green eyes, dark brown hair cut short, smooth bare cheeks and chin, faint lines around the eyes, a tall thin build with long limbs, wearing a quilted charcoal black gambeson under a faded oxblood leather jerkin, a woven faded oxblood girdle, dark wool hose, knee-high riding boots, a bone toggle at the throat, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-234` Lucia Blackthorn
+
+**角色 id**：`char_lucia_blackthorn`
+
+**外貌**：`a 35-year-old woman, a heart-shaped face with a narrow chin, pale skin, a small rounded nose, wide hazel eyes, ash blond hair in two braids, faint lines around the eyes, a short stocky build, wearing a charcoal black wool gown with long tight sleeves under a short faded oxblood wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 35-year-old woman, a heart-shaped face with a narrow chin, pale skin, a small rounded nose, wide hazel eyes, ash blond hair in two braids, faint lines around the eyes, a short stocky build, wearing a charcoal black wool gown with long tight sleeves under a short faded oxblood wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-235` Merek Blackthorn
+
+**角色 id**：`char_merek_blackthorn`
+
+**外貌**：`a 36-year-old man, a soft rounded face with a small chin, ruddy pale skin, a long aquiline nose, pale blue eyes, thick dark blond hair swept back, a short pointed beard, faint lines around the eyes, an athletic build, wearing a quilted charcoal black gambeson under a faded oxblood wool tabard split at the sides, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, stitched leather cuffs, wearing a charcoal black wool hood thrown back`
+
+```
+[S], a 36-year-old man, a soft rounded face with a small chin, ruddy pale skin, a long aquiline nose, pale blue eyes, thick dark blond hair swept back, a short pointed beard, faint lines around the eyes, an athletic build, wearing a quilted charcoal black gambeson under a faded oxblood wool tabard split at the sides, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, stitched leather cuffs, wearing a charcoal black wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-236` Nerida Blackthorn
+
+**角色 id**：`char_nerida_blackthorn`
+
+**外貌**：`a 37-year-old woman, a wide face with a heavy brow, ruddy pale skin, a slightly crooked nose, pale blue eyes, ash blond hair coiled at the nape, faint lines around the eyes, a tall thin build with long limbs, wearing a charcoal black wool riding gown under a faded oxblood wool overgown open at the front, a woven faded oxblood girdle, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 37-year-old woman, a wide face with a heavy brow, ruddy pale skin, a slightly crooked nose, pale blue eyes, ash blond hair coiled at the nape, faint lines around the eyes, a tall thin build with long limbs, wearing a charcoal black wool riding gown under a faded oxblood wool overgown open at the front, a woven faded oxblood girdle, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-237` Owen Blackthorn
+
+**角色 id**：`char_owen_blackthorn`
+
+**外貌**：`a 38-year-old man, a lean angular face with hollow cheeks, ruddy pale skin, a long aquiline nose, large dark eyes, close-cropped dark brown hair, a full short beard, faint lines around the eyes, a short stocky build, wearing a charcoal black wool cote with fitted sleeves under a sleeveless faded oxblood wool surcote, a woven faded oxblood girdle, dark wool hose, ankle boots, a bone toggle at the throat, wearing a soft faded oxblood wool cap`
+
+```
+[S], a 38-year-old man, a lean angular face with hollow cheeks, ruddy pale skin, a long aquiline nose, large dark eyes, close-cropped dark brown hair, a full short beard, faint lines around the eyes, a short stocky build, wearing a charcoal black wool cote with fitted sleeves under a sleeveless faded oxblood wool surcote, a woven faded oxblood girdle, dark wool hose, ankle boots, a bone toggle at the throat, wearing a soft faded oxblood wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-238` Philippa Blackthorn
+
+**角色 id**：`char_philippa_blackthorn`
+
+**外貌**：`a 39-year-old woman, a long narrow face with a pointed chin, weathered tan skin, a slightly crooked nose, pale blue eyes, ash blond hair braided close around the head, faint lines around the eyes, a tall thin build with long limbs, wearing a charcoal black wool riding gown under a sideless faded oxblood surcote, a woven faded oxblood girdle, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 39-year-old woman, a long narrow face with a pointed chin, weathered tan skin, a slightly crooked nose, pale blue eyes, ash blond hair braided close around the head, faint lines around the eyes, a tall thin build with long limbs, wearing a charcoal black wool riding gown under a sideless faded oxblood surcote, a woven faded oxblood girdle, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-239` Quentin Blackthorn
+
+**角色 id**：`char_quentin_blackthorn`
+
+**外貌**：`a 40-year-old man, a wide face with a heavy brow, weathered tan skin, a small rounded nose, alert amber-brown eyes, curly dark brown hair, a close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a charcoal black wool cote with a faded oxblood trimmed hem under a short faded oxblood wool shoulder cape with a hood, a woven faded oxblood girdle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a charcoal black wool hood thrown back`
+
+```
+[S], a 40-year-old man, a wide face with a heavy brow, weathered tan skin, a small rounded nose, alert amber-brown eyes, curly dark brown hair, a close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a charcoal black wool cote with a faded oxblood trimmed hem under a short faded oxblood wool shoulder cape with a hood, a woven faded oxblood girdle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a charcoal black wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-240` Rosamund Blackthorn
+
+**角色 id**：`char_rosamund_blackthorn`
+
+**外貌**：`a 41-year-old woman, a lean angular face with hollow cheeks, ruddy pale skin, a short upturned nose, large dark eyes, dark brown hair in two braids, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a charcoal black wool riding gown under a faded oxblood wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a narrow faded oxblood fillet`
+
+```
+[S], a 41-year-old woman, a lean angular face with hollow cheeks, ruddy pale skin, a short upturned nose, large dark eyes, dark brown hair in two braids, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a charcoal black wool riding gown under a faded oxblood wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a narrow faded oxblood fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-241` Silas Blackthorn
+
+**角色 id**：`char_silas_blackthorn`
+
+**外貌**：`a 42-year-old man, a lean angular face with hollow cheeks, pale skin, a straight narrow nose, narrow dark brown eyes, ash blond hair cut short, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a charcoal black wool cote with fitted sleeves under a short faded oxblood wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, ankle boots, a bone toggle at the throat, bare-headed`
+
+```
+[S], a 42-year-old man, a lean angular face with hollow cheeks, pale skin, a straight narrow nose, narrow dark brown eyes, ash blond hair cut short, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a charcoal black wool cote with fitted sleeves under a short faded oxblood wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, ankle boots, a bone toggle at the throat, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-242` Tamsin Blackthorn
+
+**角色 id**：`char_tamsin_blackthorn`
+
+**外貌**：`a 43-year-old woman, a soft rounded face with a small chin, ruddy pale skin, a long aquiline nose, pale blue eyes, loose wavy auburn hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a charcoal black wool gown with long tight sleeves under a sideless faded oxblood surcote, a plain leather belt, dark wool hose, knee-high riding boots, a plain bronze arm ring, bare-headed`
+
+```
+[S], a 43-year-old woman, a soft rounded face with a small chin, ruddy pale skin, a long aquiline nose, pale blue eyes, loose wavy auburn hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a charcoal black wool gown with long tight sleeves under a sideless faded oxblood surcote, a plain leather belt, dark wool hose, knee-high riding boots, a plain bronze arm ring, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-243` Adela Redwater
+
+**角色 id**：`char_adela_redwater`
+
+**外貌**：`a 44-year-old woman, a heart-shaped face with a narrow chin, light brown skin, a slightly crooked nose, narrow dark brown eyes, dark brown hair in two braids, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a rust red wool gown with long tight sleeves under a short dark teal wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net`
+
+```
+[S], a 44-year-old woman, a heart-shaped face with a narrow chin, light brown skin, a slightly crooked nose, narrow dark brown eyes, dark brown hair in two braids, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a rust red wool gown with long tight sleeves under a short dark teal wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-244` Baldwin Redwater
+
+**角色 id**：`char_baldwin_redwater`
+
+**外貌**：`a 45-year-old man, a soft rounded face with a small chin, olive skin, a slightly crooked nose, pale blue eyes, chestnut hair cut short, a moustache and stubble, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a quilted rust red gambeson under a short dark teal wool shoulder cape with a hood, a plain leather belt, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a rust red wool hood thrown back`
+
+```
+[S], a 45-year-old man, a soft rounded face with a small chin, olive skin, a slightly crooked nose, pale blue eyes, chestnut hair cut short, a moustache and stubble, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a quilted rust red gambeson under a short dark teal wool shoulder cape with a hood, a plain leather belt, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a rust red wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-245` Celia Redwater
+
+**角色 id**：`char_celia_redwater`
+
+**外貌**：`a 46-year-old woman, a heart-shaped face with a narrow chin, olive skin, a short upturned nose, narrow dark brown eyes, chestnut hair coiled at the nape, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a rust red wool riding gown, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, stitched leather cuffs, bare-headed`
+
+```
+[S], a 46-year-old woman, a heart-shaped face with a narrow chin, olive skin, a short upturned nose, narrow dark brown eyes, chestnut hair coiled at the nape, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a rust red wool riding gown, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-246` Dorian Redwater
+
+**角色 id**：`char_dorian_redwater`
+
+**外貌**：`a 47-year-old man, a heart-shaped face with a narrow chin, olive skin, a long aquiline nose, narrow dark brown eyes, close-cropped dark brown hair, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a short stocky build, wearing a quilted rust red gambeson under a dark teal leather jerkin, a woven dark teal girdle, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, wearing a rust red wool hood thrown back`
+
+```
+[S], a 47-year-old man, a heart-shaped face with a narrow chin, olive skin, a long aquiline nose, narrow dark brown eyes, close-cropped dark brown hair, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a short stocky build, wearing a quilted rust red gambeson under a dark teal leather jerkin, a woven dark teal girdle, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, wearing a rust red wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-247` Elin Redwater
+
+**角色 id**：`char_elin_redwater`
+
+**外貌**：`a 48-year-old woman, a broad round face with full cheeks, warm tan skin, a short upturned nose, narrow dark brown eyes, black hair in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing a rust red wool kirtle with fitted sleeves under a sideless dark teal surcote, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a plain white linen veil`
+
+```
+[S], a 48-year-old woman, a broad round face with full cheeks, warm tan skin, a short upturned nose, narrow dark brown eyes, black hair in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing a rust red wool kirtle with fitted sleeves under a sideless dark teal surcote, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-248` Florian Redwater
+
+**角色 id**：`char_florian_redwater`
+
+**外貌**：`a 49-year-old man, a square face with a strong jaw, light brown skin, a long aquiline nose, narrow dark brown eyes, curly dark brown hair, a moustache and stubble, deep lines on the forehead and around the mouth, greying at the temples, a lean wiry build, wearing a quilted rust red gambeson under a sleeveless dark teal wool surcote, a plain leather belt, dark wool hose, calf-high leather riding boots, a plain bronze arm ring, bare-headed`
+
+```
+[S], a 49-year-old man, a square face with a strong jaw, light brown skin, a long aquiline nose, narrow dark brown eyes, curly dark brown hair, a moustache and stubble, deep lines on the forehead and around the mouth, greying at the temples, a lean wiry build, wearing a quilted rust red gambeson under a sleeveless dark teal wool surcote, a plain leather belt, dark wool hose, calf-high leather riding boots, a plain bronze arm ring, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-249` Gareth Redwater
+
+**角色 id**：`char_gareth_redwater`
+
+**外貌**：`a 50-year-old man, a square face with a strong jaw, light brown skin, a broad blunt nose, heavy-lidded green eyes, curly black hair streaked with grey, a forked beard, deep lines on the forehead and around the mouth, greying at the temples, a tall thin build with long limbs, wearing a rust red wool tunic to the knee under a short dark teal wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a rust red wool hood thrown back`
+
+```
+[S], a 50-year-old man, a square face with a strong jaw, light brown skin, a broad blunt nose, heavy-lidded green eyes, curly black hair streaked with grey, a forked beard, deep lines on the forehead and around the mouth, greying at the temples, a tall thin build with long limbs, wearing a rust red wool tunic to the knee under a short dark teal wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a rust red wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-250` Helena Redwater
+
+**角色 id**：`char_helena_redwater`
+
+**外貌**：`a 51-year-old woman, a square face with a strong jaw, olive skin, a broad blunt nose, pale blue eyes, chestnut hair streaked with grey in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, a short stocky build, wearing a rust red wool gown with long tight sleeves under a sideless dark teal surcote, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a plain white linen veil`
+
+```
+[S], a 51-year-old woman, a square face with a strong jaw, olive skin, a broad blunt nose, pale blue eyes, chestnut hair streaked with grey in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, a short stocky build, wearing a rust red wool gown with long tight sleeves under a sideless dark teal surcote, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-251` Ivor Redwater
+
+**角色 id**：`char_ivor_redwater`
+
+**外貌**：`a 52-year-old man, a long narrow face with a pointed chin, warm tan skin, a broad blunt nose, deep-set grey eyes, dark brown hair streaked with grey cut short, a moustache and stubble, deep lines on the forehead and around the mouth, greying at the temples, a short stocky build, wearing a rust red wool cote with fitted sleeves under a sleeveless dark teal wool surcote, a woven dark teal girdle, dark wool hose, calf-high leather riding boots, stitched leather cuffs, wearing a soft dark teal wool cap`
+
+```
+[S], a 52-year-old man, a long narrow face with a pointed chin, warm tan skin, a broad blunt nose, deep-set grey eyes, dark brown hair streaked with grey cut short, a moustache and stubble, deep lines on the forehead and around the mouth, greying at the temples, a short stocky build, wearing a rust red wool cote with fitted sleeves under a sleeveless dark teal wool surcote, a woven dark teal girdle, dark wool hose, calf-high leather riding boots, stitched leather cuffs, wearing a soft dark teal wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-252` Joanna Redwater
+
+**角色 id**：`char_joanna_redwater`
+
+**外貌**：`a 53-year-old woman, a long narrow face with a pointed chin, light brown skin, a hooked nose, wide hazel eyes, chestnut hair in two braids, deep lines on the forehead and around the mouth, greying at the temples, a broad sturdy build, wearing a rust red wool kirtle with fitted sleeves under a short dark teal wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a bone toggle at the throat, wearing a narrow dark teal fillet`
+
+```
+[S], a 53-year-old woman, a long narrow face with a pointed chin, light brown skin, a hooked nose, wide hazel eyes, chestnut hair in two braids, deep lines on the forehead and around the mouth, greying at the temples, a broad sturdy build, wearing a rust red wool kirtle with fitted sleeves under a short dark teal wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a bone toggle at the throat, wearing a narrow dark teal fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-253` Kieran Redwater
+
+**角色 id**：`char_kieran_redwater`
+
+**外貌**：`a 24-year-old man, a soft rounded face with a small chin, olive skin, a straight narrow nose, pale blue eyes, shoulder-length chestnut hair tied back, a close-trimmed beard, a youthful unlined complexion, a slight build with narrow shoulders, wearing a rust red wool tunic to the knee under a dark teal wool tabard split at the sides, a plain leather belt, dark wool hose, ankle boots, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 24-year-old man, a soft rounded face with a small chin, olive skin, a straight narrow nose, pale blue eyes, shoulder-length chestnut hair tied back, a close-trimmed beard, a youthful unlined complexion, a slight build with narrow shoulders, wearing a rust red wool tunic to the knee under a dark teal wool tabard split at the sides, a plain leather belt, dark wool hose, ankle boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-254` Lucia Redwater
+
+**角色 id**：`char_lucia_redwater`
+
+**外貌**：`a 25-year-old woman, a heart-shaped face with a narrow chin, warm tan skin, a hooked nose, wide hazel eyes, dark brown hair in a single long braid, a youthful unlined complexion, a heavyset build, wearing a rust red wool riding gown, a narrow belt with a pouch, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow dark teal fillet`
+
+```
+[S], a 25-year-old woman, a heart-shaped face with a narrow chin, warm tan skin, a hooked nose, wide hazel eyes, dark brown hair in a single long braid, a youthful unlined complexion, a heavyset build, wearing a rust red wool riding gown, a narrow belt with a pouch, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow dark teal fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-255` Merek Redwater
+
+**角色 id**：`char_merek_redwater`
+
+**外貌**：`a 26-year-old man, a long narrow face with a pointed chin, warm tan skin, a hooked nose, pale blue eyes, chestnut hair cut short, smooth bare cheeks and chin, a youthful unlined complexion, a broad sturdy build, wearing a rust red wool cote with fitted sleeves under a dark teal wool tabard split at the sides, a plain leather belt, dark wool hose, calf-high leather riding boots, a plain bronze arm ring, wearing a soft dark teal wool cap`
+
+```
+[S], a 26-year-old man, a long narrow face with a pointed chin, warm tan skin, a hooked nose, pale blue eyes, chestnut hair cut short, smooth bare cheeks and chin, a youthful unlined complexion, a broad sturdy build, wearing a rust red wool cote with fitted sleeves under a dark teal wool tabard split at the sides, a plain leather belt, dark wool hose, calf-high leather riding boots, a plain bronze arm ring, wearing a soft dark teal wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-256` Nerida Redwater
+
+**角色 id**：`char_nerida_redwater`
+
+**外貌**：`a 27-year-old woman, a lean angular face with hollow cheeks, light brown skin, a hooked nose, wide hazel eyes, black hair braided close around the head, a youthful unlined complexion, a short stocky build, wearing a rust red wool riding gown under a short dark teal wool shoulder cape with a hood, a woven dark teal girdle, dark wool hose, knee-high riding boots, stitched leather cuffs, wearing a narrow dark teal fillet`
+
+```
+[S], a 27-year-old woman, a lean angular face with hollow cheeks, light brown skin, a hooked nose, wide hazel eyes, black hair braided close around the head, a youthful unlined complexion, a short stocky build, wearing a rust red wool riding gown under a short dark teal wool shoulder cape with a hood, a woven dark teal girdle, dark wool hose, knee-high riding boots, stitched leather cuffs, wearing a narrow dark teal fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-257` Owen Redwater
+
+**角色 id**：`char_owen_redwater`
+
+**外貌**：`a 28-year-old man, a wide face with a heavy brow, warm tan skin, a slightly crooked nose, wide hazel eyes, shoulder-length black hair tied back, a forked beard, a youthful unlined complexion, a heavyset build, wearing a rust red wool tunic to the knee under a dark teal wool tabard split at the sides, a plain leather belt, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 28-year-old man, a wide face with a heavy brow, warm tan skin, a slightly crooked nose, wide hazel eyes, shoulder-length black hair tied back, a forked beard, a youthful unlined complexion, a heavyset build, wearing a rust red wool tunic to the knee under a dark teal wool tabard split at the sides, a plain leather belt, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-258` Philippa Redwater
+
+**角色 id**：`char_philippa_redwater`
+
+**外貌**：`a 29-year-old woman, a square face with a strong jaw, olive skin, a small rounded nose, alert amber-brown eyes, chestnut hair in a single long braid, a youthful unlined complexion, a lean wiry build, wearing a rust red wool gown with long tight sleeves under a dark teal wool overgown open at the front, a plain leather belt, dark wool hose, ankle boots, a plain bronze arm ring, bare-headed`
+
+```
+[S], a 29-year-old woman, a square face with a strong jaw, olive skin, a small rounded nose, alert amber-brown eyes, chestnut hair in a single long braid, a youthful unlined complexion, a lean wiry build, wearing a rust red wool gown with long tight sleeves under a dark teal wool overgown open at the front, a plain leather belt, dark wool hose, ankle boots, a plain bronze arm ring, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-259` Quentin Redwater
+
+**角色 id**：`char_quentin_redwater`
+
+**外貌**：`a 30-year-old man, a square face with a strong jaw, olive skin, a short upturned nose, large dark eyes, black hair to the jaw, smooth bare cheeks and chin, faint lines around the eyes, a broad sturdy build, wearing a rust red wool tunic to the knee under a dark teal wool tabard split at the sides, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a soft dark teal wool cap`
+
+```
+[S], a 30-year-old man, a square face with a strong jaw, olive skin, a short upturned nose, large dark eyes, black hair to the jaw, smooth bare cheeks and chin, faint lines around the eyes, a broad sturdy build, wearing a rust red wool tunic to the knee under a dark teal wool tabard split at the sides, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a soft dark teal wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-260` Rosamund Redwater
+
+**角色 id**：`char_rosamund_redwater`
+
+**外貌**：`a 31-year-old woman, a wide face with a heavy brow, light brown skin, a hooked nose, deep-set grey eyes, black hair braided close around the head, faint lines around the eyes, a lean wiry build, wearing a rust red wool gown with long tight sleeves under a sideless dark teal surcote, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a narrow dark teal fillet`
+
+```
+[S], a 31-year-old woman, a wide face with a heavy brow, light brown skin, a hooked nose, deep-set grey eyes, black hair braided close around the head, faint lines around the eyes, a lean wiry build, wearing a rust red wool gown with long tight sleeves under a sideless dark teal surcote, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a narrow dark teal fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-261` Silas Redwater
+
+**角色 id**：`char_silas_redwater`
+
+**外貌**：`a 32-year-old man, a wide face with a heavy brow, light brown skin, a long aquiline nose, alert amber-brown eyes, chestnut hair to the jaw, a close-trimmed beard, faint lines around the eyes, a heavyset build, wearing a rust red wool cote with a dark teal trimmed hem under a dark teal leather jerkin, a plain leather belt, dark wool hose, calf-high leather riding boots, stitched leather cuffs, wearing a rust red wool hood thrown back`
+
+```
+[S], a 32-year-old man, a wide face with a heavy brow, light brown skin, a long aquiline nose, alert amber-brown eyes, chestnut hair to the jaw, a close-trimmed beard, faint lines around the eyes, a heavyset build, wearing a rust red wool cote with a dark teal trimmed hem under a dark teal leather jerkin, a plain leather belt, dark wool hose, calf-high leather riding boots, stitched leather cuffs, wearing a rust red wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-262` Tamsin Redwater
+
+**角色 id**：`char_tamsin_redwater`
+
+**外貌**：`a 33-year-old woman, a square face with a strong jaw, warm tan skin, a short upturned nose, large dark eyes, black hair braided close around the head, faint lines around the eyes, a heavyset build, wearing a rust red wool kirtle with fitted sleeves under a sideless dark teal surcote, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a linen hair net`
+
+```
+[S], a 33-year-old woman, a square face with a strong jaw, warm tan skin, a short upturned nose, large dark eyes, black hair braided close around the head, faint lines around the eyes, a heavyset build, wearing a rust red wool kirtle with fitted sleeves under a sideless dark teal surcote, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-263` Adela Stonehelm
+
+**角色 id**：`char_adela_stonehelm`
+
+**外貌**：`a 34-year-old woman, a lean angular face with hollow cheeks, weathered tan skin, a slightly crooked nose, deep-set grey eyes, copper red hair in two braids, faint lines around the eyes, a lean wiry build, wearing a stone grey wool kirtle with fitted sleeves under a deep brown wool overgown open at the front, a narrow belt with a pouch, dark wool hose, ankle boots, a plain bronze arm ring, bare-headed`
+
+```
+[S], a 34-year-old woman, a lean angular face with hollow cheeks, weathered tan skin, a slightly crooked nose, deep-set grey eyes, copper red hair in two braids, faint lines around the eyes, a lean wiry build, wearing a stone grey wool kirtle with fitted sleeves under a deep brown wool overgown open at the front, a narrow belt with a pouch, dark wool hose, ankle boots, a plain bronze arm ring, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-264` Baldwin Stonehelm
+
+**角色 id**：`char_baldwin_stonehelm`
+
+**外貌**：`a 35-year-old man, a lean angular face with hollow cheeks, light olive skin, a straight narrow nose, deep-set grey eyes, mouse brown hair to the jaw, a short pointed beard, faint lines around the eyes, a broad sturdy build, wearing a stone grey wool cote with a deep brown trimmed hem, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, bare-headed`
+
+```
+[S], a 35-year-old man, a lean angular face with hollow cheeks, light olive skin, a straight narrow nose, deep-set grey eyes, mouse brown hair to the jaw, a short pointed beard, faint lines around the eyes, a broad sturdy build, wearing a stone grey wool cote with a deep brown trimmed hem, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-265` Celia Stonehelm
+
+**角色 id**：`char_celia_stonehelm`
+
+**外貌**：`a 36-year-old woman, a long narrow face with a pointed chin, light olive skin, a straight narrow nose, heavy-lidded green eyes, loose wavy mouse brown hair to the shoulders, faint lines around the eyes, an athletic build, wearing a stone grey wool riding gown under a short deep brown wool shoulder cape with a hood, a plain leather belt, dark wool hose, ankle boots, stitched leather cuffs, bare-headed`
+
+```
+[S], a 36-year-old woman, a long narrow face with a pointed chin, light olive skin, a straight narrow nose, heavy-lidded green eyes, loose wavy mouse brown hair to the shoulders, faint lines around the eyes, an athletic build, wearing a stone grey wool riding gown under a short deep brown wool shoulder cape with a hood, a plain leather belt, dark wool hose, ankle boots, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-266` Dorian Stonehelm
+
+**角色 id**：`char_dorian_stonehelm`
+
+**外貌**：`a 37-year-old man, a heart-shaped face with a narrow chin, ruddy pale skin, a hooked nose, deep-set grey eyes, close-cropped dark brown hair, smooth bare cheeks and chin, faint lines around the eyes, a short stocky build, wearing a stone grey wool cote with fitted sleeves under a short deep brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, stitched leather cuffs, bare-headed`
+
+```
+[S], a 37-year-old man, a heart-shaped face with a narrow chin, ruddy pale skin, a hooked nose, deep-set grey eyes, close-cropped dark brown hair, smooth bare cheeks and chin, faint lines around the eyes, a short stocky build, wearing a stone grey wool cote with fitted sleeves under a short deep brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-267` Elin Stonehelm
+
+**角色 id**：`char_elin_stonehelm`
+
+**外貌**：`a 38-year-old woman, a lean angular face with hollow cheeks, ruddy pale skin, a short upturned nose, pale blue eyes, loose wavy ash blond hair to the shoulders, faint lines around the eyes, a slight build with narrow shoulders, wearing a stone grey wool riding gown under a short deep brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow deep brown fillet`
+
+```
+[S], a 38-year-old woman, a lean angular face with hollow cheeks, ruddy pale skin, a short upturned nose, pale blue eyes, loose wavy ash blond hair to the shoulders, faint lines around the eyes, a slight build with narrow shoulders, wearing a stone grey wool riding gown under a short deep brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow deep brown fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-268` Florian Stonehelm
+
+**角色 id**：`char_florian_stonehelm`
+
+**外貌**：`a 39-year-old man, an oval face with high cheekbones, ruddy pale skin, a long aquiline nose, deep-set grey eyes, auburn hair to the jaw, a close-trimmed beard, faint lines around the eyes, a lean wiry build, wearing a stone grey wool cote with a deep brown trimmed hem under a sleeveless deep brown wool surcote, a plain leather belt, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, wearing a stone grey wool hood thrown back`
+
+```
+[S], a 39-year-old man, an oval face with high cheekbones, ruddy pale skin, a long aquiline nose, deep-set grey eyes, auburn hair to the jaw, a close-trimmed beard, faint lines around the eyes, a lean wiry build, wearing a stone grey wool cote with a deep brown trimmed hem under a sleeveless deep brown wool surcote, a plain leather belt, dark wool hose, knee-high riding boots, tablet-woven trim at the neck, wearing a stone grey wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-269` Gareth Stonehelm
+
+**角色 id**：`char_gareth_stonehelm`
+
+**外貌**：`a 40-year-old man, a lean angular face with hollow cheeks, ruddy pale skin, a small rounded nose, deep-set grey eyes, dark blond hair to the jaw, a full short beard, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a stone grey wool cote with a deep brown trimmed hem, a plain leather belt, dark wool hose, ankle boots, a plain bronze arm ring, wearing a soft deep brown wool cap`
+
+```
+[S], a 40-year-old man, a lean angular face with hollow cheeks, ruddy pale skin, a small rounded nose, deep-set grey eyes, dark blond hair to the jaw, a full short beard, visible fine forehead wrinkles and lines around the eyes, an athletic build, wearing a stone grey wool cote with a deep brown trimmed hem, a plain leather belt, dark wool hose, ankle boots, a plain bronze arm ring, wearing a soft deep brown wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-270` Helena Stonehelm
+
+**角色 id**：`char_helena_stonehelm`
+
+**外貌**：`a 41-year-old woman, a lean angular face with hollow cheeks, light olive skin, a short upturned nose, wide hazel eyes, chestnut hair in a single long braid, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a stone grey wool riding gown under a sideless deep brown surcote, a woven deep brown girdle, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, bare-headed`
+
+```
+[S], a 41-year-old woman, a lean angular face with hollow cheeks, light olive skin, a short upturned nose, wide hazel eyes, chestnut hair in a single long braid, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a stone grey wool riding gown under a sideless deep brown surcote, a woven deep brown girdle, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-271` Ivor Stonehelm
+
+**角色 id**：`char_ivor_stonehelm`
+
+**外貌**：`a 42-year-old man, a broad round face with full cheeks, ruddy pale skin, a short upturned nose, narrow dark brown eyes, thick dark brown hair swept back, a full short beard, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a stone grey wool cote with a deep brown trimmed hem under a deep brown wool tabard split at the sides, a plain leather belt, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a soft deep brown wool cap`
+
+```
+[S], a 42-year-old man, a broad round face with full cheeks, ruddy pale skin, a short upturned nose, narrow dark brown eyes, thick dark brown hair swept back, a full short beard, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a stone grey wool cote with a deep brown trimmed hem under a deep brown wool tabard split at the sides, a plain leather belt, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a soft deep brown wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-272` Joanna Stonehelm
+
+**角色 id**：`char_joanna_stonehelm`
+
+**外貌**：`a 43-year-old woman, a long narrow face with a pointed chin, ruddy pale skin, a slightly crooked nose, narrow dark brown eyes, black hair in two braids, visible fine forehead wrinkles and lines around the eyes, a short stocky build, wearing a stone grey wool riding gown, a narrow belt with a pouch, dark wool hose, knee-high riding boots, stitched leather cuffs, wearing a plain white linen veil`
+
+```
+[S], a 43-year-old woman, a long narrow face with a pointed chin, ruddy pale skin, a slightly crooked nose, narrow dark brown eyes, black hair in two braids, visible fine forehead wrinkles and lines around the eyes, a short stocky build, wearing a stone grey wool riding gown, a narrow belt with a pouch, dark wool hose, knee-high riding boots, stitched leather cuffs, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-273` Kieran Stonehelm
+
+**角色 id**：`char_kieran_stonehelm`
+
+**外貌**：`a 44-year-old man, a heart-shaped face with a narrow chin, weathered tan skin, a small rounded nose, heavy-lidded green eyes, close-cropped chestnut hair, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a quilted stone grey gambeson under a sleeveless deep brown wool surcote, a narrow belt with a pouch, dark wool hose, ankle boots, a bone toggle at the throat, bare-headed`
+
+```
+[S], a 44-year-old man, a heart-shaped face with a narrow chin, weathered tan skin, a small rounded nose, heavy-lidded green eyes, close-cropped chestnut hair, smooth bare cheeks and chin, visible fine forehead wrinkles and lines around the eyes, a slight build with narrow shoulders, wearing a quilted stone grey gambeson under a sleeveless deep brown wool surcote, a narrow belt with a pouch, dark wool hose, ankle boots, a bone toggle at the throat, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-274` Lucia Stonehelm
+
+**角色 id**：`char_lucia_stonehelm`
+
+**外貌**：`a 45-year-old woman, a heart-shaped face with a narrow chin, light olive skin, a long aquiline nose, pale blue eyes, loose wavy auburn hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a stone grey wool riding gown under a deep brown wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 45-year-old woman, a heart-shaped face with a narrow chin, light olive skin, a long aquiline nose, pale blue eyes, loose wavy auburn hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a broad sturdy build, wearing a stone grey wool riding gown under a deep brown wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-275` Merek Stonehelm
+
+**角色 id**：`char_merek_stonehelm`
+
+**外貌**：`a 46-year-old man, a soft rounded face with a small chin, weathered tan skin, a broad blunt nose, deep-set grey eyes, close-cropped auburn hair, a short pointed beard, visible fine forehead wrinkles and lines around the eyes, a short stocky build, wearing a stone grey wool cote with a deep brown trimmed hem under a sleeveless deep brown wool surcote, a woven deep brown girdle, dark wool hose, worn leather turnshoes, stitched leather cuffs, bare-headed`
+
+```
+[S], a 46-year-old man, a soft rounded face with a small chin, weathered tan skin, a broad blunt nose, deep-set grey eyes, close-cropped auburn hair, a short pointed beard, visible fine forehead wrinkles and lines around the eyes, a short stocky build, wearing a stone grey wool cote with a deep brown trimmed hem under a sleeveless deep brown wool surcote, a woven deep brown girdle, dark wool hose, worn leather turnshoes, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-276` Nerida Stonehelm
+
+**角色 id**：`char_nerida_stonehelm`
+
+**外貌**：`a 47-year-old woman, a long narrow face with a pointed chin, ruddy pale skin, a broad blunt nose, alert amber-brown eyes, loose wavy dark brown hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a lean wiry build, wearing a stone grey wool riding gown under a sideless deep brown surcote, a woven deep brown girdle, dark wool hose, ankle boots, tablet-woven trim at the neck, wearing a plain white linen veil`
+
+```
+[S], a 47-year-old woman, a long narrow face with a pointed chin, ruddy pale skin, a broad blunt nose, alert amber-brown eyes, loose wavy dark brown hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a lean wiry build, wearing a stone grey wool riding gown under a sideless deep brown surcote, a woven deep brown girdle, dark wool hose, ankle boots, tablet-woven trim at the neck, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-277` Owen Stonehelm
+
+**角色 id**：`char_owen_stonehelm`
+
+**外貌**：`a 48-year-old man, a heart-shaped face with a narrow chin, weathered tan skin, a small rounded nose, alert amber-brown eyes, curly auburn hair, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing a stone grey wool cote with a deep brown trimmed hem under a deep brown wool tabard split at the sides, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, a plain bronze arm ring, bare-headed`
+
+```
+[S], a 48-year-old man, a heart-shaped face with a narrow chin, weathered tan skin, a small rounded nose, alert amber-brown eyes, curly auburn hair, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing a stone grey wool cote with a deep brown trimmed hem under a deep brown wool tabard split at the sides, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, a plain bronze arm ring, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-278` Philippa Stonehelm
+
+**角色 id**：`char_philippa_stonehelm`
+
+**外貌**：`a 49-year-old woman, a wide face with a heavy brow, weathered tan skin, a slightly crooked nose, pale blue eyes, mouse brown hair in two braids, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing a stone grey wool kirtle with fitted sleeves under a deep brown wool overgown open at the front, a narrow belt with a pouch, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a plain white linen veil`
+
+```
+[S], a 49-year-old woman, a wide face with a heavy brow, weathered tan skin, a slightly crooked nose, pale blue eyes, mouse brown hair in two braids, deep lines on the forehead and around the mouth, greying at the temples, a slight build with narrow shoulders, wearing a stone grey wool kirtle with fitted sleeves under a deep brown wool overgown open at the front, a narrow belt with a pouch, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-279` Quentin Stonehelm
+
+**角色 id**：`char_quentin_stonehelm`
+
+**外貌**：`a 50-year-old man, a wide face with a heavy brow, light olive skin, a broad blunt nose, narrow dark brown eyes, mouse brown hair streaked with grey to the jaw, a close-trimmed beard, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing a stone grey wool cote with fitted sleeves under a deep brown wool tabard split at the sides, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a stone grey wool hood thrown back`
+
+```
+[S], a 50-year-old man, a wide face with a heavy brow, light olive skin, a broad blunt nose, narrow dark brown eyes, mouse brown hair streaked with grey to the jaw, a close-trimmed beard, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing a stone grey wool cote with fitted sleeves under a deep brown wool tabard split at the sides, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, a plain bronze arm ring, wearing a stone grey wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-280` Rosamund Stonehelm
+
+**角色 id**：`char_rosamund_stonehelm`
+
+**外貌**：`a 51-year-old woman, a heart-shaped face with a narrow chin, weathered tan skin, a broad blunt nose, heavy-lidded green eyes, dark blond hair in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing a stone grey wool riding gown under a deep brown wool overgown open at the front, a plain leather belt, dark wool hose, worn leather turnshoes, a plain bronze arm ring, bare-headed`
+
+```
+[S], a 51-year-old woman, a heart-shaped face with a narrow chin, weathered tan skin, a broad blunt nose, heavy-lidded green eyes, dark blond hair in a single long braid, deep lines on the forehead and around the mouth, greying at the temples, an athletic build, wearing a stone grey wool riding gown under a deep brown wool overgown open at the front, a plain leather belt, dark wool hose, worn leather turnshoes, a plain bronze arm ring, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-281` Silas Stonehelm
+
+**角色 id**：`char_silas_stonehelm`
+
+**外貌**：`a 52-year-old man, a broad round face with full cheeks, weathered tan skin, a straight narrow nose, heavy-lidded green eyes, curly mouse brown hair streaked with grey, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a tall thin build with long limbs, wearing a stone grey wool cote with a deep brown trimmed hem under a sleeveless deep brown wool surcote, a plain leather belt, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 52-year-old man, a broad round face with full cheeks, weathered tan skin, a straight narrow nose, heavy-lidded green eyes, curly mouse brown hair streaked with grey, smooth bare cheeks and chin, deep lines on the forehead and around the mouth, greying at the temples, a tall thin build with long limbs, wearing a stone grey wool cote with a deep brown trimmed hem under a sleeveless deep brown wool surcote, a plain leather belt, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-282` Tamsin Stonehelm
+
+**角色 id**：`char_tamsin_stonehelm`
+
+**外貌**：`a 53-year-old woman, a broad round face with full cheeks, weathered tan skin, a slightly crooked nose, pale blue eyes, loose wavy mouse brown hair streaked with grey to the shoulders, deep lines on the forehead and around the mouth, greying at the temples, a short stocky build, wearing a stone grey wool gown with long tight sleeves under a short deep brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, stitched leather cuffs, wearing a narrow deep brown fillet`
+
+```
+[S], a 53-year-old woman, a broad round face with full cheeks, weathered tan skin, a slightly crooked nose, pale blue eyes, loose wavy mouse brown hair streaked with grey to the shoulders, deep lines on the forehead and around the mouth, greying at the temples, a short stocky build, wearing a stone grey wool gown with long tight sleeves under a short deep brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, stitched leather cuffs, wearing a narrow deep brown fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-283` Adela Wolfmere
+
+**角色 id**：`char_adela_wolfmere`
+
+**外貌**：`a 24-year-old woman, a broad round face with full cheeks, warm brown skin, a long aquiline nose, wide hazel eyes, loose wavy black hair to the shoulders, a youthful unlined complexion, a broad sturdy build, wearing a dark forest green wool gown with long tight sleeves under a sideless russet brown surcote, a woven russet brown girdle, dark wool hose, ankle boots, stitched leather cuffs, bare-headed`
+
+```
+[S], a 24-year-old woman, a broad round face with full cheeks, warm brown skin, a long aquiline nose, wide hazel eyes, loose wavy black hair to the shoulders, a youthful unlined complexion, a broad sturdy build, wearing a dark forest green wool gown with long tight sleeves under a sideless russet brown surcote, a woven russet brown girdle, dark wool hose, ankle boots, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-284` Baldwin Wolfmere
+
+**角色 id**：`char_baldwin_wolfmere`
+
+**外貌**：`a 25-year-old man, a wide face with a heavy brow, warm brown skin, a small rounded nose, narrow dark brown eyes, thick black hair swept back, a short pointed beard, a youthful unlined complexion, an athletic build, wearing a dark forest green wool tunic to the knee under a russet brown leather jerkin, a woven russet brown girdle, dark wool hose, ankle boots, tablet-woven trim at the neck, wearing a dark forest green wool hood thrown back`
+
+```
+[S], a 25-year-old man, a wide face with a heavy brow, warm brown skin, a small rounded nose, narrow dark brown eyes, thick black hair swept back, a short pointed beard, a youthful unlined complexion, an athletic build, wearing a dark forest green wool tunic to the knee under a russet brown leather jerkin, a woven russet brown girdle, dark wool hose, ankle boots, tablet-woven trim at the neck, wearing a dark forest green wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-285` Celia Wolfmere
+
+**角色 id**：`char_celia_wolfmere`
+
+**外貌**：`a 26-year-old woman, a lean angular face with hollow cheeks, light brown skin, a slightly crooked nose, large dark eyes, chestnut hair braided close around the head, a youthful unlined complexion, a heavyset build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a woven russet brown girdle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net`
+
+```
+[S], a 26-year-old woman, a lean angular face with hollow cheeks, light brown skin, a slightly crooked nose, large dark eyes, chestnut hair braided close around the head, a youthful unlined complexion, a heavyset build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a woven russet brown girdle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-286` Dorian Wolfmere
+
+**角色 id**：`char_dorian_wolfmere`
+
+**外貌**：`a 27-year-old man, a broad round face with full cheeks, warm brown skin, a hooked nose, alert amber-brown eyes, close-cropped dark brown hair, a close-trimmed beard, a youthful unlined complexion, a short stocky build, wearing a dark forest green wool cote with fitted sleeves under a short russet brown wool shoulder cape with a hood, a plain leather belt, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a soft russet brown wool cap`
+
+```
+[S], a 27-year-old man, a broad round face with full cheeks, warm brown skin, a hooked nose, alert amber-brown eyes, close-cropped dark brown hair, a close-trimmed beard, a youthful unlined complexion, a short stocky build, wearing a dark forest green wool cote with fitted sleeves under a short russet brown wool shoulder cape with a hood, a plain leather belt, dark wool hose, calf-high leather riding boots, a bone toggle at the throat, wearing a soft russet brown wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-287` Elin Wolfmere
+
+**角色 id**：`char_elin_wolfmere`
+
+**外貌**：`a 28-year-old woman, a lean angular face with hollow cheeks, deep brown skin, a straight narrow nose, large dark eyes, loose wavy dark brown hair to the shoulders, a youthful unlined complexion, a broad sturdy build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a linen hair net`
+
+```
+[S], a 28-year-old woman, a lean angular face with hollow cheeks, deep brown skin, a straight narrow nose, large dark eyes, loose wavy dark brown hair to the shoulders, a youthful unlined complexion, a broad sturdy build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-288` Florian Wolfmere
+
+**角色 id**：`char_florian_wolfmere`
+
+**外貌**：`a 29-year-old man, a soft rounded face with a small chin, deep brown skin, a long aquiline nose, wide hazel eyes, shoulder-length black hair tied back, a full short beard, a youthful unlined complexion, an athletic build, wearing a dark forest green wool cote with fitted sleeves under a sleeveless russet brown wool surcote, a plain leather belt, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a soft russet brown wool cap`
+
+```
+[S], a 29-year-old man, a soft rounded face with a small chin, deep brown skin, a long aquiline nose, wide hazel eyes, shoulder-length black hair tied back, a full short beard, a youthful unlined complexion, an athletic build, wearing a dark forest green wool cote with fitted sleeves under a sleeveless russet brown wool surcote, a plain leather belt, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a soft russet brown wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-289` Gareth Wolfmere
+
+**角色 id**：`char_gareth_wolfmere`
+
+**外貌**：`a 30-year-old man, a lean angular face with hollow cheeks, light brown skin, a broad blunt nose, heavy-lidded green eyes, thick black hair swept back, a short pointed beard, faint lines around the eyes, a short stocky build, wearing a dark forest green wool cote with fitted sleeves under a russet brown leather jerkin, a plain leather belt, dark wool hose, ankle boots, a plain bronze arm ring, wearing a soft russet brown wool cap`
+
+```
+[S], a 30-year-old man, a lean angular face with hollow cheeks, light brown skin, a broad blunt nose, heavy-lidded green eyes, thick black hair swept back, a short pointed beard, faint lines around the eyes, a short stocky build, wearing a dark forest green wool cote with fitted sleeves under a russet brown leather jerkin, a plain leather belt, dark wool hose, ankle boots, a plain bronze arm ring, wearing a soft russet brown wool cap, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-290` Helena Wolfmere
+
+**角色 id**：`char_helena_wolfmere`
+
+**外貌**：`a 31-year-old woman, a heart-shaped face with a narrow chin, deep brown skin, a straight narrow nose, narrow dark brown eyes, loose wavy black hair to the shoulders, faint lines around the eyes, an athletic build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow russet brown fillet`
+
+```
+[S], a 31-year-old woman, a heart-shaped face with a narrow chin, deep brown skin, a straight narrow nose, narrow dark brown eyes, loose wavy black hair to the shoulders, faint lines around the eyes, an athletic build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, knee-high riding boots, a plain bronze arm ring, wearing a narrow russet brown fillet, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-291` Ivor Wolfmere
+
+**角色 id**：`char_ivor_wolfmere`
+
+**外貌**：`a 32-year-old man, a soft rounded face with a small chin, warm brown skin, a small rounded nose, pale blue eyes, black hair to the jaw, a full short beard, faint lines around the eyes, an athletic build, wearing a dark forest green wool cote with a russet brown trimmed hem under a russet brown wool tabard split at the sides, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a dark forest green wool hood thrown back`
+
+```
+[S], a 32-year-old man, a soft rounded face with a small chin, warm brown skin, a small rounded nose, pale blue eyes, black hair to the jaw, a full short beard, faint lines around the eyes, an athletic build, wearing a dark forest green wool cote with a russet brown trimmed hem under a russet brown wool tabard split at the sides, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, a bone toggle at the throat, wearing a dark forest green wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-292` Joanna Wolfmere
+
+**角色 id**：`char_joanna_wolfmere`
+
+**外貌**：`a 33-year-old woman, an oval face with high cheekbones, light brown skin, a small rounded nose, wide hazel eyes, chestnut hair braided close around the head, faint lines around the eyes, a slight build with narrow shoulders, wearing a dark forest green wool gown with long tight sleeves under a short russet brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 33-year-old woman, an oval face with high cheekbones, light brown skin, a small rounded nose, wide hazel eyes, chestnut hair braided close around the head, faint lines around the eyes, a slight build with narrow shoulders, wearing a dark forest green wool gown with long tight sleeves under a short russet brown wool shoulder cape with a hood, a narrow belt with a pouch, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-293` Kieran Wolfmere
+
+**角色 id**：`char_kieran_wolfmere`
+
+**外貌**：`a 34-year-old man, a broad round face with full cheeks, deep brown skin, a hooked nose, large dark eyes, curly dark brown hair, a short pointed beard, faint lines around the eyes, a slight build with narrow shoulders, wearing a quilted dark forest green gambeson under a short russet brown wool shoulder cape with a hood, a woven russet brown girdle, dark wool hose, ankle boots, stitched leather cuffs, wearing a dark forest green wool hood thrown back`
+
+```
+[S], a 34-year-old man, a broad round face with full cheeks, deep brown skin, a hooked nose, large dark eyes, curly dark brown hair, a short pointed beard, faint lines around the eyes, a slight build with narrow shoulders, wearing a quilted dark forest green gambeson under a short russet brown wool shoulder cape with a hood, a woven russet brown girdle, dark wool hose, ankle boots, stitched leather cuffs, wearing a dark forest green wool hood thrown back, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-294` Lucia Wolfmere
+
+**角色 id**：`char_lucia_wolfmere`
+
+**外貌**：`a 35-year-old woman, an oval face with high cheekbones, deep brown skin, a hooked nose, wide hazel eyes, black hair in a single long braid, faint lines around the eyes, a lean wiry build, wearing a dark forest green wool kirtle with fitted sleeves under a sideless russet brown surcote, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 35-year-old woman, an oval face with high cheekbones, deep brown skin, a hooked nose, wide hazel eyes, black hair in a single long braid, faint lines around the eyes, a lean wiry build, wearing a dark forest green wool kirtle with fitted sleeves under a sideless russet brown surcote, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-295` Merek Wolfmere
+
+**角色 id**：`char_merek_wolfmere`
+
+**外貌**：`a 36-year-old man, a square face with a strong jaw, warm brown skin, a broad blunt nose, narrow dark brown eyes, chestnut hair to the jaw, smooth bare cheeks and chin, faint lines around the eyes, a slight build with narrow shoulders, wearing a dark forest green wool cote with a russet brown trimmed hem under a short russet brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, stitched leather cuffs, bare-headed`
+
+```
+[S], a 36-year-old man, a square face with a strong jaw, warm brown skin, a broad blunt nose, narrow dark brown eyes, chestnut hair to the jaw, smooth bare cheeks and chin, faint lines around the eyes, a slight build with narrow shoulders, wearing a dark forest green wool cote with a russet brown trimmed hem under a short russet brown wool shoulder cape with a hood, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-296` Nerida Wolfmere
+
+**角色 id**：`char_nerida_wolfmere`
+
+**外貌**：`a 37-year-old woman, a broad round face with full cheeks, deep brown skin, a straight narrow nose, deep-set grey eyes, chestnut hair braided close around the head, faint lines around the eyes, an athletic build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net`
+
+```
+[S], a 37-year-old woman, a broad round face with full cheeks, deep brown skin, a straight narrow nose, deep-set grey eyes, chestnut hair braided close around the head, faint lines around the eyes, an athletic build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a broad leather belt with a brass buckle, dark wool hose, worn leather turnshoes, tablet-woven trim at the neck, wearing a linen hair net, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-297` Owen Wolfmere
+
+**角色 id**：`char_owen_wolfmere`
+
+**外貌**：`a 38-year-old man, a wide face with a heavy brow, warm brown skin, a long aquiline nose, wide hazel eyes, close-cropped black hair, a close-trimmed beard, faint lines around the eyes, a lean wiry build, wearing a dark forest green wool cote with a russet brown trimmed hem under a russet brown leather jerkin, a plain leather belt, dark wool hose, ankle boots, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 38-year-old man, a wide face with a heavy brow, warm brown skin, a long aquiline nose, wide hazel eyes, close-cropped black hair, a close-trimmed beard, faint lines around the eyes, a lean wiry build, wearing a dark forest green wool cote with a russet brown trimmed hem under a russet brown leather jerkin, a plain leather belt, dark wool hose, ankle boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-298` Philippa Wolfmere
+
+**角色 id**：`char_philippa_wolfmere`
+
+**外貌**：`a 39-year-old woman, a square face with a strong jaw, deep brown skin, a long aquiline nose, pale blue eyes, loose wavy chestnut hair to the shoulders, faint lines around the eyes, a heavyset build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a woven russet brown girdle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed`
+
+```
+[S], a 39-year-old woman, a square face with a strong jaw, deep brown skin, a long aquiline nose, pale blue eyes, loose wavy chestnut hair to the shoulders, faint lines around the eyes, a heavyset build, wearing a dark forest green wool riding gown under a russet brown wool overgown open at the front, a woven russet brown girdle, dark wool hose, calf-high leather riding boots, tablet-woven trim at the neck, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-299` Quentin Wolfmere
+
+**角色 id**：`char_quentin_wolfmere`
+
+**外貌**：`a 40-year-old man, an oval face with high cheekbones, light brown skin, a short upturned nose, alert amber-brown eyes, black hair cut short, a moustache and stubble, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a quilted dark forest green gambeson under a russet brown wool tabard split at the sides, a plain leather belt, dark wool hose, calf-high leather riding boots, stitched leather cuffs, bare-headed`
+
+```
+[S], a 40-year-old man, an oval face with high cheekbones, light brown skin, a short upturned nose, alert amber-brown eyes, black hair cut short, a moustache and stubble, visible fine forehead wrinkles and lines around the eyes, a tall thin build with long limbs, wearing a quilted dark forest green gambeson under a russet brown wool tabard split at the sides, a plain leather belt, dark wool hose, calf-high leather riding boots, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-300` Rosamund Wolfmere
+
+**角色 id**：`char_rosamund_wolfmere`
+
+**外貌**：`a 41-year-old woman, a wide face with a heavy brow, light brown skin, a short upturned nose, pale blue eyes, chestnut hair coiled at the nape, visible fine forehead wrinkles and lines around the eyes, a lean wiry build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a woven russet brown girdle, dark wool hose, knee-high riding boots, stitched leather cuffs, bare-headed`
+
+```
+[S], a 41-year-old woman, a wide face with a heavy brow, light brown skin, a short upturned nose, pale blue eyes, chestnut hair coiled at the nape, visible fine forehead wrinkles and lines around the eyes, a lean wiry build, wearing a dark forest green wool kirtle with fitted sleeves under a short russet brown wool shoulder cape with a hood, a woven russet brown girdle, dark wool hose, knee-high riding boots, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-301` Silas Wolfmere
+
+**角色 id**：`char_silas_wolfmere`
+
+**外貌**：`a 42-year-old man, an oval face with high cheekbones, warm brown skin, a long aquiline nose, deep-set grey eyes, thick chestnut hair swept back, a close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark forest green wool cote with a russet brown trimmed hem under a russet brown wool tabard split at the sides, a woven russet brown girdle, dark wool hose, calf-high leather riding boots, stitched leather cuffs, bare-headed`
+
+```
+[S], a 42-year-old man, an oval face with high cheekbones, warm brown skin, a long aquiline nose, deep-set grey eyes, thick chestnut hair swept back, a close-trimmed beard, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark forest green wool cote with a russet brown trimmed hem under a russet brown wool tabard split at the sides, a woven russet brown girdle, dark wool hose, calf-high leather riding boots, stitched leather cuffs, bare-headed, one standing figure with empty hands, [C-FULL]
+```
+
+#### `K-302` Tamsin Wolfmere
+
+**角色 id**：`char_tamsin_wolfmere`
+
+**外貌**：`a 43-year-old woman, an oval face with high cheekbones, light brown skin, a straight narrow nose, wide hazel eyes, loose wavy black hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark forest green wool gown with long tight sleeves, a narrow belt with a pouch, dark wool hose, ankle boots, tablet-woven trim at the neck, wearing a plain white linen veil`
+
+```
+[S], a 43-year-old woman, an oval face with high cheekbones, light brown skin, a straight narrow nose, wide hazel eyes, loose wavy black hair to the shoulders, visible fine forehead wrinkles and lines around the eyes, a heavyset build, wearing a dark forest green wool gown with long tight sleeves, a narrow belt with a pouch, dark wool hose, ankle boots, tablet-woven trim at the neck, wearing a plain white linen veil, one standing figure with empty hands, [C-FULL]
+```
+
 ## 3. 表情与姿态差分 `E-` / `P-`
 
 > **⚠️ 关键规则：表情差分绝对不要重新生成整张图。**

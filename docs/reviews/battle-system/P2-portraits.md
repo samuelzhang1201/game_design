@@ -81,6 +81,15 @@ Implementer rulings:
 - **R13 — checks per batch PR.** Each batch is art plus review records: the installer's hash checks, `test_commander_portrait_pipeline.py` and the manifest run locally; GUT runs in CI (the selector picks every functional category for an asset change).
 - **R14 — T-pose garments.** The first T-pose pass dropped robes and headwear on 8 of 21 (K-02, K-12, K-13, K-14, K-18, K-19, K-20, K-21); the instruction now keeps every headwear piece, robe, gown, surcoat, coat, train, badge and fur trim and removes only a loose cloak or cape, and those 8 were redone. Kept as left: K-12's open fur-lined surcoat and K-14's furred over-gown (two seeds each — the edit model treats an open over-garment as a cloak); separate gear images can follow if the owner wants them on the model. Folder README: `comfy-out/units/main_cast_tpose_2026-10-20/README.md`.
 
+## Extension: the PR #79 commander rows (K-163..K-302)
+
+The coordinator relayed the owner's instruction to produce every needed art asset, so the 140 player/raider commander rows that PR #79 added (seven houses × 20 nobles, `category=noble`, ages from `roles.csv`) get `K-163`..`K-302`: library entries, `prompts.csv` rows and `cast_art.csv` mappings (`requires_review=1`), then the same painterly method and review as above.
+
+- **R15 — authored appearance lines.** The rows carry no looks, so each line is drawn by a seeded script from its character id (seed = first 32 bits of SHA-256 of the id, also the image seed): face shape, nose, eyes, hair style, beard, build and garments are independent per person, so relatives do not look alike by default.
+- **R16 — gender.** `roles.csv` has no gender column; the 20 first names split ten female (Adela, Celia, Elin, Helena, Joanna, Lucia, Nerida, Philippa, Rosamund, Tamsin) and ten male, read from the names.
+- **R17 — houses.** Each house keeps a two-colour wool livery (Harrow madder red/oatmeal, Ashvale ash grey/moss, Fenwick slate blue/ochre, Blackthorn charcoal/oxblood, Redwater rust/teal, Stonehelm stone grey/brown, Wolfmere forest green/russet) and a pool of three neighbouring complexions, so a family reads as kin; Redwater and Wolfmere draw dark hair. Raider houses add one rougher detail (tablet-woven trim, an arm ring, a bone toggle, stitched cuffs).
+- **R18 — noble dress, not the K-25..K-162 template.** These lines vary cote, tunic, gambeson, kirtle or gown under a surcote, jerkin, tabard, hooded shoulder cape or overgown, with varied belts, footwear and head coverings, which answers the "commanders all look alike" note for this set without touching the earlier designs.
+
 ### Restyle progress
 
 | Batch | Keys | Sheets (`out/commander_samples/`) | State |
