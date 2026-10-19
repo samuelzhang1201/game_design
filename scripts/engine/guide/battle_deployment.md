@@ -120,8 +120,38 @@ unit's casualty rate. Withdrawing sides save per-unit rates even when all member
 withdraw, using the existing CSV scales and grouped integer casualty writer.
 The frozen action retains its pursuit target with the pending loss plan; failed
 commits, cancellation after planning and JSON retries do not change that plan,
-repeat its RNG draw or charge attack costs twice. This integration adds no pursuit
-movement, lost-sight search or distance/region limit execution.
+repeat its RNG draw or charge attack costs twice. Pursuit movement and the lost-sight
+search are the target tracking below.
+
+**Pursuit bounds.** A pursuit task may carry `max_route_m` (whole metres, 0 = none)
+and `region` (province codes joined by `|`, sorted, de-duplicated, "" = none); on any
+other task they are refused. The received record saves `pursuit = {start_x_m,
+start_y_m, route_m}` at delivery; a same-meaning reissue (battle, target, bounds)
+keeps it, any other task starts fresh. `ArmySystem.march_day_saved` credits the
+metres a substep really walked (detours included) through
+`BattleTaskSystem.credit_pursuit`, which checks route metres and the unit's centre
+province (also at 0 metres). The first bound reached sets status `bounded` with its
+reason, halts a marching unit where it stands (today's saved walk included) and
+leaves `current_id` on it: `combat_action` then answers `hold` for that battle, so it
+defends but never advances or starts a withdrawal; only a new received task replaces it.
+
+**Target tracking and the limited search.** A crown unit in no battle whose current
+received task is a `flank` or a pursuit with a `target_unit` marches at the target as
+its OWN sight knows it (`BattleTaskSystem.track_day`, once a day at the top of
+`MARCH_ORDERS_AND_ROUTE_SETUP`, idempotent by `track.done_day`): the target with men
+under arms is seen within `player_sight_km` of the recipient's position (inclusive,
+squared whole metres; never `GameState.sightings`, crown-wide sight or a scouting
+sector). The record saves `track = {x_m, y_m, day, phase, search_until_day, done_day}`
+(absent = none; an old save has none). Seen: the snapshot is the target's true point,
+phase `follow`, and the unit is aimed there (a marching unit is re-aimed in place by
+`ArmySystem.aim_entry`, so camp packing is not restarted; a standing one gets
+`set_march_m`). Not seen in `follow`: it marches at the saved point and, standing on it,
+turns to `search` until `today + battle_search_days`, holding there. In `search` a
+sighting within `battle_search_range_m` of the saved point resumes `follow`; a farther
+one changes nothing; past `search_until_day` the record becomes `search_failed` and the
+unit halts (`BattleSystem._halt`). `search_failed`, `bounded`, `replaced` and
+`cancelled` are never tracked again, and a later sighting revives nothing. Contact
+puts the unit in a battle, which pauses tracking; the task stays received.
 
 ## Delivered unit retreat
 
@@ -148,10 +178,14 @@ and random draw without repeating departure costs, daily meals or attack costs.
 
 `UnitGait` is the integer contract for running (spec `2026-10-17-unit-behavior-and-battlefield-design` §5). `run_step_m` is the walk step of the same substep × `army_run_speed_permille`, after every walk modifier. `run_substep` pays one running substep's increment from `supplies`: the runners' share of today's base bite × (`army_run_supply_permille` − 1000), over 1000 × `battle_substeps`, in whole supplies with the fraction saved as the entry's `run_supply_rem` — never truncated away, so it costs the same per duration, not per kilometre. Today's whole base bite (still eaten by `eat_day`) is reserved first: below it, or when the charge would cut into it, the substep walks and nothing changes. Non-running personnel pay only their base.
 
-**The saved gait** (`UnitGait.refresh`, per substep of `ArmySystem.march_day_saved` and again after it): `entry.gait = {mode: "run", reason, until[, battle_id]}` on the unit's own `regiments` / `foes` entry; no key is walking (an old save walks). The commander runs only for a reason the engine can see: `withdrawal` (until `march_end`: marching with `disengaging == 1`, any withdrawal march `BattleSystem` starts) or `join_battle` (until `battle_over`: marching, in no battle, its destination within `battle_contact_km` of the place of a live battle where a unit of its own table fights). A gait whose stop condition holds is dropped before a new reason is read; a fleet never runs. A substep that really marches (past camp packing, the saved order still a march) runs only when `UnitGait.pays_run` pays it — `run_bite` is the fit personnel's share of `day_bite(supply_use)`, the wounded and prisoners keeping their base — and then its step budget, after the last-substep catch-up, is `run_step_m` of it; otherwise it walks. The base meal stays `eat_day`'s. Pursuit bounds (c3) and known-target tracking (c4) are not reasons yet; the commander's ability and personality do not weigh the choice yet.
+**The saved gait** (`UnitGait.refresh`, per substep of `ArmySystem.march_day_saved` and again after it): `entry.gait = {mode: "run", reason, until[, battle_id]}` on the unit's own `regiments` / `foes` entry; no key is walking (an old save walks). The commander runs only for a reason the engine can see: `withdrawal` (until `march_end`: marching with `disengaging == 1`, any withdrawal march `BattleSystem` starts) or `pursuit` (until `task_end`: marching with a current received pursuit task — not a flank — whose `track.phase` is `follow`) or `join_battle` (until `battle_over`: marching, in no battle, its destination within `battle_contact_km` of the place of a live battle where a unit of its own table fights). A gait whose stop condition holds is dropped before a new reason is read; a fleet never runs. A substep that really marches (past camp packing, the saved order still a march) runs only when `UnitGait.pays_run` pays it — `run_bite` is the fit personnel's share of `day_bite(supply_use)`, the wounded and prisoners keeping their base — and then its step budget, after the last-substep catch-up, is `run_step_m` of it; otherwise it walks. The base meal stays `eat_day`'s. The commander's ability and personality do not weigh the choice yet.
 
 ## Costly orders and daily resolution
 
 `BattleOrders` saves canonical warrants in `GameState.battle_orders`, retaining terminal receipts after battle removal. `BATTLE_ORDER` needs a stable request ID; exact replay returns before costs/history, conflicting reuse fails. Ownership, live membership and military law are checked at send and delivery. Continuing actions are mutually exclusive; the last lawful actual delivery wins regardless of dispatch order. Inspiration preserves the continuing action. A warrant carries immutable issued targets and beneficiary counts; new arrivals do not enlarge its award. Bounty is the ceiling of living recipients times `orders.csv`'s per-thousand price; delivery caps recipients to issued counts. Dispatch reserves the promise, delivery pays current survivors and releases the rest; cancellation, lost/fused couriers, missing targets and battle endings release unused gold. Courier fees remain spent. `available_gold` is the voluntary-spending boundary in ActionSystem and recruitment; involuntary losses may consume a promise, so execution checks again and invalidates an unfunded reward. Inspiration has saved cooldown/resistance deadlines, bounded morale and a real king-presence bonus. Affordability checks gate positive costs only, so an underfunded reward promise cannot block a free local surrender. Surrender pays through personnel and equipment, without a fictitious local fee; refusal preserves the previous action. Accepted surrender atomically creates source-preserving prisoner batches for every fit and wounded survivor, retains equipment/commander evidence, and resolves the surrendering holders’ existing custody before removing their control. The nearest capable opposing battlefield receiver takes custody; the king independently requests safe departure and never enters the personnel roster. A failed refuge search is recorded without cancelling the troops’ surrender.
 
 `BattleStrength` constructs equipment/identity once, then orders categories training, morale, discipline, supply, formation/terrain and action. Same-category deviations merge around neutral before the CSV clamp and one truncation. Every source is unique with its reason; duplicated sources fail. The old `ArmySystem.power` chain is not wrapped or multiplied again. Each engaged day saves its RNG draw and complete pending casualty plan before the atomic personnel writer. Retry/read-load repeats neither RNG nor costs; same-day settlement is inert. Standoffs draw nothing. Actual attack uses carried supply and exposes defence; depleted forces fall back with reasons. A round retains context, costs and loss reasons. Morale breaks at the CSV threshold; no counter forces a draw. Withdrawing units march under the existing camp deadline while still in the battle, and leave only after real separation. No safe route means no escape. Reinforcements retain the same battle and frozen terms. Duration benchmarks record contact/end days, casualties, food and causes, with no duration-specific branch.
+
+## Battle groups
+
+`BattleGroups` splits each battle unit's fit personnel into representative groups of at most `battle_group_size` (the last group the remainder, units never pooled) and saves them as `battle.groups[unit] = [{count, role, x_m, y_m}]` with `battle.group_facing[unit]` (whole degrees, `WarFront.facing_deg` convention: 0 = +x, y down, toward the mean anchor of the other side's units, 0 when none). Positions are the unit's own `x_m/y_m` anchor plus `BattleFormation.slots` of its current formation scaled by `battle_group_spacing_m` across the front and `battle_group_depth_m` back (away from the enemy), rotated to the facing and rounded to whole metres once. Role is `front` for slots on the foremost rank, else `reserve`. `refresh` rebuilds everything from the fit counts (sums conserved, a group index is no identity, a unit that left loses its entry, an old save gains the fields) at `_start`, `join` and the top of each daily `prepare_day`. Nothing reads the groups yet.

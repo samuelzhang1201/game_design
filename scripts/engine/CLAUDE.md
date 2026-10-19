@@ -7,7 +7,7 @@ The root `CLAUDE.md`'s invariants rule here first: deterministic, `RefCounted`, 
 These topics' rules live in `guide/` beside this file, which Claude Code does NOT load on its own — open the guide when the task touches its topic:
 
 - `scripts/engine/guide/regiments.md` — regiments and their march (`ArmySystem`)
-- `scripts/engine/guide/battle_deployment.md` — formations, agreements, unit tasks, walking/running, costly orders and daily strength (`BattleFormation`, `BattleRules`, `BattleTaskSystem`, `UnitGait`, `BattleOrders`, `BattleStrength`)
+- `scripts/engine/guide/battle_deployment.md` — formations, agreements, unit tasks, walking/running, costly orders and daily strength (`BattleFormation`, `BattleRules`, `BattleTaskSystem`, `UnitGait`, `BattleOrders`, `BattleStrength`, `BattleGroups`)
 - `scripts/engine/guide/prisoners_and_reports.md` — negotiated release, consent, immutable reports and informed custody (`PrisonerDisposition`, `PrisonerCommunications`, `BattleReport`, `BattlePresentation`, `MissiveWriter`)
 - `scripts/engine/guide/battle_events.md` — authored battlefield decisions, actual reserves/abandoned food, frozen choices and delivered report receipts (`BattleEvents`)
 - `scripts/engine/guide/battle_and_ai.md` — battles, stances and the enemy (`BattleSystem`, the foes, `ARMY_STANCE`, `EnemyAi`: the hosts' minds; the invasion's day order, rumour, scout facts and host news)
