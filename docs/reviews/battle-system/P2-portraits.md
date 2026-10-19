@@ -110,3 +110,4 @@ Open for the owner: the 140 unprompted commander rows from PR #79 (authored `K-`
 | fp2-b09 | K-187..K-210 | `fp2-b09-full-alpha.png`, `fp2-b09-chip-alpha.png` | installed |
 | fp2-b10 | K-211..K-234 | `fp2-b10-full-alpha.png`, `fp2-b10-chip-alpha.png` | installed |
 | fp2-b11 | K-235..K-258 | `fp2-b11-full-alpha.png`, `fp2-b11-chip-alpha.png` | installed |
+| fp2-b12 | K-259..K-282 | `fp2-b12-full-alpha.png`, `fp2-b12-chip-alpha.png` | installed |
