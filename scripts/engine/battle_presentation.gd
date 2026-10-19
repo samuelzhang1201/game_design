@@ -156,6 +156,73 @@ static func order_options(repo: DataRepository, state: GameState, battle: Dictio
 			"effects_text": effect_text(kind, row), "local": KingSystem.can_command(repo, state, code)})
 	return out
 
+## One crown unit's task choices and ledger status on its battlefield; empty off any.
+## Opponents are named only (seen in contact); their strength stays with intel.
+static func task_view(repo: DataRepository, state: GameState, code: String) -> Dictionary:
+	if state == null or not state.regiments.has(code) or ArmySystem.is_foe(state, code) \
+			or ArmySystem.realm_of(repo, code, state) != repo.resolve_realm("player_realm"):
+		return {}
+	for battle: Dictionary in state.battles:
+		var side := BattleRules.side_of(battle, code)
+		if side == "":
+			continue
+		var out := {"battle_id": int(battle["id"]), "place": BattleSystem.place_label(repo, state, battle),
+			"tasks": [], "targets": [], "formations": [], "current": {}, "pending": [], "refused": {}}
+		for task: String in repo.battle_behaviors:
+			out.tasks.append({"id": task, "label": String(repo.battle_behaviors[task]["label"])})
+		for enemy: String in battle["def" if side == "att" else "att"]:
+			if BattleSystem._can_fight(repo, state, enemy) and not bool(BattleSystem._stored(state, enemy).get("captured", false)):
+				out.targets.append({"code": enemy, "label": String(ArmySystem.regiment(repo, enemy, state).get("label", enemy))})
+		for shape: String in repo.battle_formations:
+			out.formations.append({"id": shape, "label": String(repo.battle_formations[shape]["label"])})
+		var ledger: Dictionary = state.unit_tasks.get(code, {})
+		var newest := -1
+		for id: String in ledger.get("orders", {}):
+			var record: Dictionary = ledger["orders"][id]
+			if int(record["request"]["battle_id"]) != int(battle["id"]):
+				continue
+			var row := _task_row(repo, state, record)
+			if id == String(ledger.get("current_id", "")):
+				out.current = row
+			elif record["status"] == "pending":
+				out.pending.append(row)
+			elif record["status"] in ["invalid", "superseded"] and int(record["sequence"]) > newest:
+				newest = int(record["sequence"])
+				out.refused = row
+		out.pending.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.sequence < b.sequence)
+		return out
+	return {}
+
+static func _task_row(repo: DataRepository, state: GameState, record: Dictionary) -> Dictionary:
+	var request: Dictionary = record["request"]
+	var task := String(request["task"])
+	var target := String(request["target_unit"])
+	return {"id": String(request["id"]), "sequence": int(record["sequence"]), "status": String(record["status"]),
+		"reason": String(record.get("reason", "")),
+		"task": "Cancel task" if task == "cancel" else String(repo.battle_behaviors.get(task, {}).get("label", task)),
+		"target": "" if target == "" else String(ArmySystem.regiment(repo, target, state).get("label", target)),
+		"formation": String(repo.battle_formations.get(String(request["formation"]), {}).get("label", ""))}
+
+## The exact request a choice would send and what ActionSystem says of it now:
+## the refusal, the filing gold, the courier fee (none when local or joining a
+## waiting courier) and whether it is delivered here. Task "cancel" cancels.
+static func task_quote(repo: DataRepository, state: GameState, code: String, task: String,
+		target := "", formation := "") -> Dictionary:
+	var view := task_view(repo, state, code)
+	if view.is_empty():
+		return {"reason": "The unit is not on a battlefield.", "params": {}, "action_code": ""}
+	var id := int(view["battle_id"])
+	var params := {"request_id": "task-ui:%d:%s:%d" % [id, code, int(state.unit_tasks.get(code, {}).get("issued_sequence", 0)) + 1],
+		"regiment": code, "battle_id": id}
+	var action := "BATTLE_TASK_CANCEL" if task == "cancel" else "BATTLE_TASK"
+	if action == "BATTLE_TASK":
+		params.merge({"task": task, "target_unit": target, "formation": formation})
+	var actions := ActionSystem.new(repo)
+	return {"action_code": action, "params": params,
+		"reason": actions.validate(ActionRequest.make(action, params), state),
+		"filing_gold": int(OrderCosts.gold_of(repo, action)), "courier_gold": actions._fee_for(state, code),
+		"local": KingSystem.can_command(repo, state, code)}
+
 static func effect_text(kind: String, row: Dictionary) -> String:
 	match kind:
 		"attack": return "Attack %d‰; defence %d‰; extra carried supplies %d‰ each attack day. Commits available reserves." % [int(row["attack_permille"]), int(row["defence_permille"]), int(row["extra_supply_permille"])]

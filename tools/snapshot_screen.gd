@@ -28,6 +28,8 @@ const SCENES := {
 }
 
 ## --battle-case encounter: real contact and its saved first-encounter pause.
+## --battle-case field: the same contact, the notice then acknowledged through
+## Game, so the battle stands with no window over it (the WAR ROOM's task block).
 var _battle_case := ""
 
 var _out := "user://screen_snapshot.png"
@@ -298,6 +300,7 @@ var _war_commit := false
 var _war_sheet := -1
 var _war_piece := ""
 var _war_folio := ""
+var _war_task := false   # --war-task: the docked folio's Send task clicked for real (P4.4b9)
 var _war_folio_inner := false   # the held-up book's tab still to click
 var _war_drag := Vector2(-1, -1)
 var _war_drag_px := Vector2(-1, -1)
@@ -524,6 +527,8 @@ func _ready() -> void:
 		elif args[i] == "--war-board-click":
 			var bparts := args[i + 1].split(",")
 			_war_board_click = Vector2(float(bparts[0]), float(bparts[1]))
+		elif args[i] == "--war-task":
+			_war_task = true
 		elif args[i] == "--war-folio":
 			_war_folio = args[i + 1].to_lower()
 		elif args[i] == "--war-drag":
@@ -921,8 +926,10 @@ func _process(_delta: float) -> void:
 	if _root != null and not _root.overlays_are_ready():
 		return
 	_frames += 1
-	if _battle_case == "encounter" and _frames == 20 and _root != null:
+	if _battle_case in ["encounter", "field"] and _frames == 20 and _root != null:
 		_stage_battle_encounter()
+	if _battle_case == "field" and _frames == 24 and not Game.pending_battle_decision().is_empty():
+		Game.resolve_battle_decision(String(Game.pending_battle_decision()["token"]), "continue")
 	if _root != null and _pause_menu and _frames == 20:
 		_root.toggle_pause_menu()
 	if _root != null and _frames == _title_click_frame and _root.current_screen is MainMenu \
@@ -1549,6 +1556,12 @@ func _war_room_step() -> void:
 		menu.hide()   # PopupMenu.activate_item's order: hidden first, then id_pressed
 		menu.id_pressed.emit(ArmyOrderMenu.EDIT)
 		print("war: edit route aiming=%s confirm=%s waypoints=%s" % [menu.aiming(), menu.shown_confirm() != null, menu.waypoints()])
+		_war_to(5)
+	elif _war_phase == 5 and _war_task and _frames - _war_at >= 6:
+		_war_task = false
+		var send := screen.get_node("%Folio").get_node("%SendTask") as Button
+		_real_click(send, send.size * 0.5)
+		print("war: task sent, couriers=%d" % Game.state.couriers.size())
 		_war_to(5)
 	elif _war_phase == 5 and _war_folio_inner and _frames - _war_at >= 6:
 		_war_folio_inner = false

@@ -67,7 +67,9 @@ current task still establishes that barrier; a newer assignment can follow it.
 Cancellation does not execute a combat action, so ceasefire and routing do not
 forbid it. Pending cancellations lapse with their courier. Exact retries return
 the saved outcome without mutation, including after JSON; request IDs cannot be
-reused across assignment and cancellation actions.
+reused across assignment and cancellation actions. The player issues both from
+the WAR ROOM's docked folio, which reads `BattlePresentation.task_view` (status)
+and sends exactly `task_quote`'s params (`scripts/war_room/CLAUDE.md`).
 
 Internal task warrants with a nonempty formation validate the recipient against
 `BattleFormation.refusal` at issue and receipt, including its CSV suitability.
