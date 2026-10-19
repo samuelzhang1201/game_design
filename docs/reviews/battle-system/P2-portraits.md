@@ -85,3 +85,4 @@ Implementer rulings:
 | Batch | Keys | Sheets (`out/commander_samples/`) | State |
 |---|---|---|---|
 | fp2-b01 | K-01..K-24 (story cast + K-22..24) | `fp2-b01-full-alpha.png`, `fp2-b01-chip-alpha.png` | installed |
+| fp2-b02 | K-25..K-48 | `fp2-b02-full-alpha.png`, `fp2-b02-chip-alpha.png` | installed |
