@@ -79,6 +79,7 @@ Implementer rulings:
 - **R11 — redraws.** Source review rejected K-98 and K-132 (feet outside the frame); each was redrawn with seed + 1 (K-132 needed seed + 2: 3106087034). K-66's bright bar at the top of the backdrop was checked after cutout. Every other source passed on its first seed.
 - **R12 — T-pose side view.** The first side view of K-01 swung the arms forward. The side instruction now asks for strict profile with the near arm pointing at the camera (foreshortened) and the far arm hidden; front and back views keep the plain T-pose wording. The views are references only and live in `comfy-out/units/main_cast_tpose_2026-10-20/` (not in the repo).
 - **R13 — checks per batch PR.** Each batch is art plus review records: the installer's hash checks, `test_commander_portrait_pipeline.py` and the manifest run locally; GUT runs in CI (the selector picks every functional category for an asset change).
+- **R14 — T-pose garments.** The first T-pose pass dropped robes and headwear on 8 of 21 (K-02, K-12, K-13, K-14, K-18, K-19, K-20, K-21); the instruction now keeps every headwear piece, robe, gown, surcoat, coat, train, badge and fur trim and removes only a loose cloak or cape, and those 8 were redone. Kept as left: K-12's open fur-lined surcoat and K-14's furred over-gown (two seeds each — the edit model treats an open over-garment as a cloak); separate gear images can follow if the owner wants them on the model. Folder README: `comfy-out/units/main_cast_tpose_2026-10-20/README.md`.
 
 ### Restyle progress
 
