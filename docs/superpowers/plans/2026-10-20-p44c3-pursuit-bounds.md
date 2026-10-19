@@ -62,8 +62,9 @@ saved).
    march. A bound also retires today's saved march (`_retire_saved_march`) so the
    remaining substeps do not keep walking.
 5. A bounded record answers `hold` only for its own battle; a fight elsewhere
-   falls back to the side action. Old pending requests lacking the new fields
-   cannot be retried by id (their stored request differs from the canonical one).
+   falls back to the side action. An exact retry compares the canonical form of
+   the saved request, so an older save's pending request without the bound fields
+   still retries by id.
 6. A unit in a live battle does not march in `march_day_saved`, so the walk test
    clears the battles after receipt; the bound is credited by the walk alone.
 

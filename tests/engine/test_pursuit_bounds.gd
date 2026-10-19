@@ -141,3 +141,15 @@ func test_march_day_saved_stops_the_walk_at_the_bound() -> void:
 	assert_eq(int(state.regiments[code]["x_m"]) - start.x, 308)
 	assert_eq(BattleTaskSystem.current(state, code).status, "bounded")
 	assert_eq(state.regiments[code]["order"], ArmySystem.ORDER_GARRISON)
+
+func test_an_old_saved_request_without_bounds_still_retries_by_id() -> void:
+	var f := _fixture()
+	var rec := BattleTaskSystem.issue_task(f.repo, f.state, _order(f, "old", {}, "defend"))
+	assert_eq(rec.status, "pending")
+	# an older save's request has no bound fields
+	for ledger: Dictionary in f.state.unit_tasks.values():
+		var request: Dictionary = ledger["orders"]["old"]["request"]
+		request.erase("max_route_m")
+		request.erase("region")
+	var again := BattleTaskSystem.issue_task(f.repo, f.state, _order(f, "old", {}, "defend"))
+	assert_eq(again.get("status"), "pending", "the exact retry returns the saved record")

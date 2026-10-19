@@ -206,7 +206,7 @@ static func issue_task(repo: DataRepository, state: GameState, raw: Dictionary) 
 	var order := _canonical(raw)
 	var old := _find(state, String(order["id"]))
 	if not old.is_empty():
-		return old.duplicate(true) if old["request"] == order else \
+		return old.duplicate(true) if _canonical(old["request"]) == order else \
 			{"status": "invalid", "reason": "This request id already names another unit task."}
 	why = _refusal(repo, state, order)
 	if why != "":
