@@ -1628,6 +1628,7 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 				or String(current.get("order", "")) != String(saved.get("order", "")) \
 				or int(current.get("dest_x_m", 0)) != int(saved.get("dest_x_m", 0)) \
 				or int(current.get("dest_y_m", 0)) != int(saved.get("dest_y_m", 0))
+			UnitGait.refresh(repo, state, code, current)
 			var budget := int(daily_budgets.get(code, 0))
 			if budget <= 0 or not CampSystem.can_march_entry(current, state.absolute_day()):
 				_note_place(blockers, code, current)
@@ -1639,6 +1640,10 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 				step_budget += 1
 			if substep_index == pace_divisor - 1:
 				step_budget = maxi(step_budget, budget - walked_today)
+			# a running substep (spec 2026-10-17 §5), paid first; packing is never shortened
+			if String(saved.get("order", "")) == ORDER_MARCH \
+					and UnitGait.pays_run(repo, state, code, current, pace_divisor):
+				step_budget = UnitGait.run_step_m(repo, step_budget)
 			var was_packing := String(current.get("camp_state", {}).get("phase", CampSystem.NONE)) == CampSystem.PACKING
 			var travelled: Array = []
 			var walked := _march_one(repo, state, code, saved, state.absolute_day(), blockers, [],
@@ -1720,6 +1725,7 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 					current["route_m"] = MarchRoute.to_pairs(route)
 				else:
 					current.erase("route_m")
+			UnitGait.refresh(repo, state, code, current)
 			_note_place(blockers, code, current)
 	return arrived
 
