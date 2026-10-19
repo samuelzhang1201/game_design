@@ -60,7 +60,7 @@ func test_local_receipt_is_unit_scoped_and_costs_only_filing() -> void:
 func test_invalid_authority_scope_and_unaffordable_requests_are_atomic() -> void:
 	var f := _fixture()
 	var actions := ActionSystem.new(f.repo)
-	for patch: Dictionary in [{"source": "general"}, {"issuer": "king"}, {"formation": "line"},
+	for patch: Dictionary in [{"source": "general"}, {"issuer": "king"}, {"formation": "unknown_shape"}, {"formation": 3},
 			{"regiment": f.enemy}, {"battle_id": 945}, {"target_unit": f.a}, {"task": "unknown"},
 			{"request_id": ""}, {"battle_id": 944.5}]:
 		var req := _request(f, "bad")
@@ -289,3 +289,58 @@ func test_cancellation_is_received_when_the_actual_courier_finishes_riding() -> 
 	assert_eq(saved.couriers.size(), 0)
 	assert_true(BattleTaskSystem.current(saved, f.a).is_empty())
 	assert_eq(saved.unit_tasks[f.a].orders.old.status, "cancelled")
+
+func _with_formation(f: Dictionary, id: String, formation: String) -> ActionRequest:
+	var req := _request(f, id)
+	req.params["formation"] = formation
+	return req
+
+func test_remote_task_formation_reforms_only_its_recipient_on_receipt_for_one_fee() -> void:
+	var f := _fixture()
+	f.state.battles[0].merge({"place_x_m": 0, "place_y_m": 0})
+	BattleFormation.ensure(f.state.battles[0])
+	var side: Dictionary = f.state.battles[0].formations.duplicate(true)
+	var actions := ActionSystem.new(f.repo)
+	var req := _with_formation(f, "shaped", "line")
+	assert_eq(actions.validate(req, f.state), "")
+	var out := actions.execute(req, f.state)
+	assert_true(out.ok)
+	if not out.ok: return
+	assert_eq(int(f.state.metrics.treasury), 97, "the formation adds no filing or courier fee")
+	assert_false(f.state.battles[0].has("unit_formations"), "pending warrants do not reform")
+	var saved := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	assert_eq(CourierSystem._deliver(f.repo, saved, saved.couriers[0]).type, "delivered")
+	var shapes: Dictionary = saved.battles[0].get("unit_formations", {})
+	assert_eq(shapes.get(f.a, {}).get("target", ""), "line")
+	assert_false(shapes.has(f.b))
+	assert_eq(saved.battles[0].formations, side)
+	assert_eq(int(saved.metrics.treasury), 97)
+
+func test_local_task_formation_reforms_at_once_and_costs_only_filing() -> void:
+	var f := _fixture()
+	f.state.battles[0].merge({"place_x_m": 0, "place_y_m": 0})
+	var at := ArmySystem.pack_to_metres(f.repo, ArmySystem.position_of(f.repo, f.state, ArmySystem.regiment(f.repo, f.a, f.state)))
+	f.state.king_state.x_m = at.x
+	f.state.king_state.y_m = at.y
+	var out := ActionSystem.new(f.repo).execute(_with_formation(f, "here", "line"), f.state)
+	assert_true(out.ok)
+	if not out.ok: return
+	assert_eq(int(f.state.metrics.treasury), 99)
+	assert_eq(f.state.battles[0].get("unit_formations", {}).get(f.a, {}).get("target", ""), "line")
+	assert_eq(BattleTaskSystem.current(f.state, f.a).request.formation, "line")
+
+func test_unsuitable_formation_and_formation_reuse_refuse_without_mutation() -> void:
+	var f := _fixture()
+	f.state.battles[0].merge({"place_x_m": 0, "place_y_m": 0})
+	var actions := ActionSystem.new(f.repo)
+	f.state.regiments[f.a].morale = 0
+	var before: Dictionary = f.state.to_dict()
+	assert_false(actions.execute(_with_formation(f, "weak", "wedge"), f.state).ok)
+	assert_eq(f.state.to_dict(), before)
+	assert_true(actions.execute(_with_formation(f, "once", "line"), f.state).ok)
+	before = f.state.to_dict()
+	assert_false(actions.execute(_with_formation(f, "once", "diamond"), f.state).ok)
+	assert_eq(f.state.to_dict(), before)
+	var retry := actions.execute(_with_formation(f, "once", "line"), f.state)
+	assert_true(retry.ok)
+	assert_eq(f.state.to_dict(), before, "an exact retry is inert")

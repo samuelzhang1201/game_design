@@ -327,6 +327,7 @@ func _task_warrant(req: ActionRequest) -> Dictionary:
 	return {"id": req.params.get("request_id", ""), "unit": req.params.get("regiment", ""),
 		"battle_id": req.params.get("battle_id", -1),
 		"task": "cancel" if req.action_code == "BATTLE_TASK_CANCEL" else req.params.get("task", ""),
+		"formation": req.params.get("formation", "") if req.action_code == "BATTLE_TASK" else "",
 		"target_unit": req.params.get("target_unit", ""), "source": "player", "issuer": ""}
 
 func _task_replay(req: ActionRequest, state: GameState) -> Dictionary:
@@ -345,7 +346,7 @@ func _validate_task(req: ActionRequest, state: GameState) -> String:
 		return "A unit task has no separate character target."
 	var fields := ["request_id", "regiment", "battle_id"]
 	if req.action_code == "BATTLE_TASK":
-		fields.append_array(["task", "target_unit"])
+		fields.append_array(["task", "target_unit", "formation"])
 		if req.params.get("task", "") == "cancel":
 			return "Use BATTLE_TASK_CANCEL to cancel a unit task."
 	for field: Variant in req.params:
