@@ -7,6 +7,24 @@ hand**: every one is `STYLE_CORE + subject + [C-…] canvas fragment`, assembled
 git-ignored; nothing reaches the game until an installer copies it into
 `assets/`.
 
+## Reviewed commander layers
+
+`commander_portrait_reviews.json` records the exact Qwen source, source hash,
+seed, graph, approval and installed hash for each layer. A chip may use a
+separate reviewed Qwen Edit bust or a reviewed head-and-shoulder crop of its
+full-figure Qwen source. The latter stores `crop: [x, y, width, height]` in
+source pixels. The full layer is first cut out through BiRefNet.
+`install_map_art.py cast` then crops the reviewed RGBA layer and downsizes it
+with the existing box filter, keeping colour and alpha together. Records name
+the exact full alpha source and hash as well as the Qwen original and crop.
+Full-derived chips need
+native-size black/white comparison against approved dedicated busts before
+installation; a small face or clipped hair requires a different frame or a
+separate bust. Mapping rows with `requires_review=1` fail closed when a layer
+lacks an approved record, or its original / full alpha / rebuilt output hash
+has changed. Legacy mappings retain their existing path. A generated or
+source-approved record is not an installed pair.
+
 ## Model
 
 **Two local models make the game's 2D art, and no Flux model at all** (owner

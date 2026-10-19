@@ -24,14 +24,17 @@ the file rather than drawn translucent, because a translucent mark cannot
 occlude the one under it (see CLAUDE.md).
 
 PORTRAITS still go through post.py: cutting a person out of a background needs
-BiRefNet, which is a model, not arithmetic. They keep their colour — a face is
-looked at, not tinted.
+BiRefNet, which is a model, not arithmetic. A reviewed chip may be cropped
+locally from the exact approved full alpha. They keep their colour — a face
+is looked at, not tinted.
 
 Stdlib only.
 """
 from __future__ import annotations
 
 import csv
+import json
+import hashlib
 import os
 import subprocess
 import sys
@@ -252,8 +255,8 @@ def install_marks(codes: dict, chapter: str, dest, height: int, lighten: float, 
 
 
 ## The game wants two tiers per character (character_portrait.gd): a 96 px
-## chip from the [C-BUST] render for the portrait box, and a 660 px tall
-## real-alpha figure from the [C-FULL] render for the conversation stage.
+## chip from a reviewed bust or full-source crop for the portrait box,
+## and a real-alpha full figure for the conversation stage.
 CAST_TIERS = [
     ("c-bust", "chip", 96, "assets/2D/portraits/cast"),
     # 1024 rather than the tier's own 660: the conversation stage
@@ -265,24 +268,51 @@ CAST_TIERS = [
 
 
 def install_cast() -> int:
-    rows = list(csv.DictReader((HERE / "cast_art.csv").open()))
+    with (HERE / "cast_art.csv").open(newline="", encoding="utf-8") as stream:
+        rows = list(csv.DictReader(stream))
     codes = {r["art_id"]: r["character_id"] for r in rows}
     seeds = {r["art_id"]: r.get("seed", "").strip() for r in rows}
+    reviewed: dict[str, dict[str, dict]] = {}
+    review_file = HERE / "commander_portrait_reviews.json"
+    if review_file.is_file():
+        for record in json.loads(review_file.read_text())["records"]:
+            if record["review_status"] in ("approved", "approved_and_installed"):
+                reviewed.setdefault(record["tier"], {})[record["art_id"]] = record
+    required = {r["art_id"] for r in rows if r.get("requires_review") == "1"}
     done = 0
-    for tag, tier, size, out_dir in CAST_TIERS:
+    # Derived chips read the approved full alpha layer, so rebuild it first.
+    for tag, tier, size, out_dir in reversed(CAST_TIERS):
         print("-- %s tier" % tier)
-        done += _install_cast_tier(codes, tag, tier, size, ROOT / out_dir, seeds)
+        done += _install_cast_tier(codes, tag, tier, size, ROOT / out_dir, seeds, reviewed.get(tier), required)
     return done
 
 
 def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path,
-                       seeds: dict | None = None) -> int:
+                       seeds: dict | None = None, reviewed: dict | None = None,
+                       required: set | None = None) -> int:
     dest.mkdir(parents=True, exist_ok=True)
     staged = HERE / "out" / "game" / tier
     done = 0
     for art_id, code in sorted(codes.items()):
-        hits = sorted((HERE / "out" / "cast").glob("%s_*%s*.png" % (art_id, tag)))
-        hits = _pick(hits, (seeds or {}).get(art_id, ""))
+        record = (reviewed or {}).get(art_id, {})
+        if art_id in (required or set()) and not record:
+            print("  (review pending for %s / %s; not installed)" % (art_id, tier))
+            continue
+        if art_id in (required or set()) and not record.get("output_sha256", record.get("installed_sha256")):
+            print("  (approved layer hash missing for %s / %s; not installed)" % (art_id, tier))
+            continue
+        if art_id in (reviewed or {}):
+            # A dedicated edited bust can have a different model/seed and live
+            # outside out/cast. Never replace an approved revision by a glob.
+            source = ROOT / reviewed[art_id]["source"]
+            hits = [source] if source.is_file() else []
+            expected_hash = record.get("sha256", "")
+            if (art_id in (required or set()) and not expected_hash) or (hits and expected_hash and hashlib.sha256(source.read_bytes()).hexdigest() != expected_hash):
+                print("  (approved source hash missing or changed for %s / %s; not installed)" % (art_id, tier))
+                continue
+        else:
+            hits = sorted((HERE / "out" / "cast").glob("%s_*%s*.png" % (art_id, tag)))
+            hits = _pick(hits, (seeds or {}).get(art_id, ""))
         if not hits:
             print("  (no %s render for %s / %s)" % (tag, art_id, code))
             continue
@@ -293,15 +323,45 @@ def _install_cast_tier(codes: dict, tag: str, tier: str, size: int, dest: Path,
         # kept" for the full tier; post.py reads the tier to know which.
         args = [sys.executable, str(HERE / "post.py"), "--tier", tier,
                 "--timeout", "3600", "--size", str(size), str(hits[-1])]
-        r = subprocess.run(args, stdout=subprocess.DEVNULL)
-        cut = sorted(staged.glob("%s*.png" % art_id))
-        if r.returncode != 0 or not cut:
+        cut = staged / ("%s.png" % art_id)
+        if record.get("alpha_source"):
+            alpha_source = ROOT / record["alpha_source"]
+            if not alpha_source.is_file() or hashlib.sha256(alpha_source.read_bytes()).hexdigest() != record["alpha_source_sha256"]:
+                print("  (approved full alpha missing or changed for %s; not installed)" % art_id)
+                continue
+            cut.parent.mkdir(parents=True, exist_ok=True)
+            derive_cast_chip(alpha_source, record["source_size"], record["crop"], cut, size)
+            returncode = 0
+        elif cut.is_file() and record.get("output_sha256", record.get("installed_sha256")) == hashlib.sha256(cut.read_bytes()).hexdigest():
+            returncode = 0  # The exact reviewed cutout is already staged.
+        else:
+            returncode = subprocess.run(args, stdout=subprocess.DEVNULL).returncode
+        if returncode != 0 or not cut.is_file():
             print("  (cutout failed for %s / %s — rerun to retry)" % (art_id, code))
             continue
-        (dest / ("%s.png" % code)).write_bytes(cut[-1].read_bytes())
+        expected_output = record.get("output_sha256", record.get("installed_sha256", ""))
+        if expected_output and hashlib.sha256(cut.read_bytes()).hexdigest() != expected_output:
+            print("  (rebuilt layer hash changed for %s / %s; not installed)" % (art_id, tier))
+            continue
+        (dest / ("%s.png" % code)).write_bytes(cut.read_bytes())
         print("  %-6s -> %s/%s.png" % (art_id, dest.relative_to(ROOT), code))
         done += 1
     return done
+
+
+def derive_cast_chip(alpha_source: Path, source_size: list, crop: list, output: Path, size: int) -> None:
+    """Frame the exact approved full alpha; crop coordinates name the Qwen source."""
+    width, height, channels, pixels = decode_png(alpha_source)
+    if channels != 4:
+        raise ValueError("Derived cast chips require an approved RGBA full layer")
+    source_width, source_height = source_size
+    x, y, crop_width, crop_height = crop
+    if x < 0 or y < 0 or crop_width <= 0 or crop_height <= 0 or x + crop_width > source_width or y + crop_height > source_height:
+        raise ValueError("Reviewed chip crop must fit inside the original source")
+    box = (round(x * width / source_width), round(y * height / source_height),
+           round((x + crop_width) * width / source_width), round((y + crop_height) * height / source_height))
+    cropped_width, cropped_height, cropped = crop_rgba(width, pixels, box)
+    encode_png(output, size, size, 4, resize_rgba(cropped_width, cropped_height, cropped, size, size))
 
 
 def to_rgba(w: int, h: int, ch: int, px: bytearray) -> bytearray:

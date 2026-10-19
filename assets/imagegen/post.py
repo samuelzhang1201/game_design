@@ -241,7 +241,7 @@ def tier_of(path: Path, forced: str) -> str:
         return "chip"
     if "_c-mapmark_" in path.name or path.name.startswith("D-"):  # library §6.9 map symbols
         return "mark"
-    if re.match(r"[IUW]-\d\d_", path.name):  # map icons, UI pieces, tactical symbols
+    if re.match(r"[IUW]-\d{2,}_", path.name):  # map icons, UI pieces, tactical symbols
         return "icon"
     raise ValueError(f"{path.name}: no _c-full_/_c-bust_/_c-mapmark_ tag in the name; pass --tier")
 
@@ -272,7 +272,7 @@ def main() -> int:
     for f in args.files:
         path = Path(f)
         tier = tier_of(path, args.tier)
-        entry_id = re.match(r"([A-Z]-\d\d)", path.name)
+        entry_id = re.match(r"([A-Z]-\d{2,})", path.name)
         stem = entry_id.group(1) if entry_id else path.stem
         # Keep A/B variants apart: model and style tags from the render's name.
         for tag in re.findall(r"_(klein|schnell|v1_antique|map_sepia|[a-z0-9]+_antique)_", path.name):
