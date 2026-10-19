@@ -49,6 +49,9 @@ static func refresh(repo: DataRepository, state: GameState, code: String, entry:
 	if int(entry.get("disengaging", 0)) == 1:
 		entry["gait"] = {"mode": "run", "reason": "withdrawal", "until": "march_end"}
 		return
+	if BattleTaskSystem.pursuing(repo, state, code):
+		entry["gait"] = {"mode": "run", "reason": "pursuit", "until": "task_end"}
+		return
 	for battle: Dictionary in state.battles:
 		if _joins(repo, state, code, entry, battle):
 			entry["gait"] = {"mode": "run", "reason": "join_battle", "until": "battle_over",
@@ -62,6 +65,8 @@ static func _holds(repo: DataRepository, state: GameState, code: String, entry: 
 		return false
 	if String(gait.get("until", "")) == "march_end":
 		return int(entry.get("disengaging", 0)) == 1
+	if String(gait.get("until", "")) == "task_end":
+		return BattleTaskSystem.pursuing(repo, state, code)
 	for battle: Dictionary in state.battles:
 		if int(battle["id"]) == int(gait.get("battle_id", -1)):
 			return _joins(repo, state, code, entry, battle)
