@@ -71,6 +71,14 @@ static func rank_depth(art: Dictionary) -> float:
 	return float(d) if d != "" else 1.0
 
 
+## An arm's army_art.csv spacing, 1 when it names none: its files and ranks stand
+## this share of the formation gap apart. A figure whose rest pose reaches wide
+## for its height (a guard stance, a shield held out) closes up by it.
+static func spacing(art: Dictionary) -> float:
+	var d := String(art.get("spacing", ""))
+	return float(d) if d != "" else 1.0
+
+
 ## The whole formation's half extents (model metres): the farthest slot plus
 ## one figure's own half extent, each way.
 static func half_extent(offs: PackedVector2Array, extent: Vector2) -> Vector2:
@@ -119,7 +127,7 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 		return {}
 	var span := Map3DUnits.model_size(one)
 	var ext := Map3DUnits.stand_extent(one)
-	var offs := offsets(tier, ext, gap, rank_depth(art), layout)
+	var offs := offsets(tier, ext, gap * spacing(art), rank_depth(art), layout)
 	var node := build(scene, offs, one)
 	var anims := anims_of(node)
 	var half := half_extent(offs, ext)
@@ -132,6 +140,7 @@ static func piece(repo: DataRepository, scene: PackedScene, art: Dictionary, tie
 		"stand_deg": float(art.get("stand_deg", "0")),
 		"size": float(art.get("size", "1")), "stride_m": float(art.get("stride_m", "0")),
 		"exact_pace": String(art.get("exact_pace", "0")) == "1", "steps": Map3DUnitSettle.steps_of(art),
+		"chains": Map3DClipChain.of_art(art),
 		"clip_s": (anims[0] as AnimationPlayer).get_animation(clip).length if clip != "" else 0.0}
 
 

@@ -271,10 +271,14 @@ func drawn_count() -> int:
 
 
 ## Put a regiment's figures into an action by name; one without it keeps its own.
+## An action its model chains (army_art.csv `chains`) plays its clips by turns.
 func play(code: String, action: String) -> void:
 	if _pieces.has(code):
 		_pieces[code]["action"] = action
-		Map3DUnitRig.play(_pieces[code]["anims"], action, blend_s, code)
+		var clips: Array = (_pieces[code].get("chains", {}) as Dictionary).get(action, [])
+		var chain := {} if clips.is_empty() else {"clips": clips,
+			"lo": ctx.repo.bal("map3d_unit_chain_rest_min_s"), "hi": ctx.repo.bal("map3d_unit_chain_rest_max_s")}
+		Map3DUnitRig.play(_pieces[code]["anims"], action, blend_s, code, chain)
 
 
 ## The piece for a regiment, built on first sight; {} for an arm with no model (a fleet).

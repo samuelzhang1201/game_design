@@ -103,26 +103,34 @@
   "actions": {
    "MARCH": [
     0,
-    56
-   ],
-   "STANDBY": [
-    0,
-    422
+    35
    ],
    "GARRISON": [
     0,
-    119
+    110
+   ],
+   "ATTACK": [
+    0,
+    30
+   ],
+   "SLASH": [
+    0,
+    45
+   ],
+   "ATTACK_VAR1": [
+    0,
+    52
    ]
   },
-  "bones": 67,
-  "fps": 24,
-  "height_m": 1.85,
+  "bones": 69,
+  "fps": 30,
+  "height_m": 1.604,
   "kind": "humanoid",
   "label": "Man-at-arms",
-  "source": "Tripo 3D knight, spear and shield on the owner's paid plan (Tripo's Mixamo-named rig and walk / standing_relax clips), fitted and baked in the owner's Blender: assets/3D/units/model_wip/knight_spear_shield_game.blend, tools/units3d/infantry_knight/README.md",
-  "stride_m": 2.81,
-  "tris": 20195,
-  "weights": "Tripo skin; spear and shield rigid on their own bones"
+  "source": "The no-rig Tripo knight with a round shield and short sword, rigged with Auto-Rig Pro in the owner's Blender and driven by the owner's Mixamo sword-and-shield clips: assets/3D/units/soldier/model_wip/arp_knight_20261018/soldier_knight_arp.blend, tools/units3d/soldier_arp/game_export.py",
+  "stride_m": 1.765,
+  "tris": 15657,
+  "weights": "ARP heat-map skin, the plate/mail skirt shared; sword and shield rigid on cc_weapon.r / cc_weapon.l"
  },
  "royal": {
   "actions": {

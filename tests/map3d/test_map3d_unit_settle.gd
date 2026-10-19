@@ -28,7 +28,7 @@ func test_steps_parse_sorted_from_the_row() -> void:
 
 func test_the_infantry_settles_on_its_steps_with_a_sound_that_does_not_loop() -> void:
 	var repo := SuiteData.repo()
-	assert_eq(Map3DUnitSettle.steps_of(repo.army_art["infantry"]).size(), 4)
+	assert_eq(Map3DUnitSettle.steps_of(repo.army_art["infantry"]).size(), 2, "one left and one right footfall a loop")
 	var stream := Map3DUnitSound.settle_sound_of({"model": "infantry"}) as AudioStreamWAV
 	assert_not_null(stream)
 	if stream != null:
