@@ -14,8 +14,8 @@ do not progress. Suitability and factors use that recipient's terrain, arms and
 personnel. Unit strength and shape lookup read the same current override and
 recipient terrain context, including the map's narrow-line frontage; legacy
 battles and unassigned units retain side deployment and side context. This internal
-API does not issue a warrant or pay costs: task delivery, cancellation and public
-formation parameters still require integration before player use.
+API does not issue a warrant or pay costs. Internal task receipt uses this API;
+public formation parameters still require integration before player use.
 
 ## Unit task warrants
 
@@ -37,7 +37,7 @@ Unit-scoped law checks affect only the receiving unit; army-wide warrants retain
 their intersection across the side. The current eligible battlefield general
 may task unassigned units but cannot replace a delivered player task, even when
 his pending warrant has a newer sequence. A local commander cannot issue a new
-primary task. Risk, morale and formation preparation do not veto lawful receipt;
+primary task. Risk and formation preparation do not veto lawful receipt;
 routing and incapacity remain facts that prevent resuming a line.
 Until contact-plan delivery is integrated, pursuit requires an explicit player
 task; a general's deployment warrant alone cannot authorize it.
@@ -52,8 +52,8 @@ outcome before costs, history or current eligibility; conflicting reuse fails.
 Local king command range delivers immediately through CourierSystem; remote
 warrants remain pending until arrival. Delivery checks recipient identity,
 current realm control, membership and law. Lost/expired couriers invalidate
-pending tasks with a reason without refunding spent fees. Formation execution requires its own integration step.
-The dispatch path changes only the canonical primary-task ledger.
+pending tasks with a reason without refunding spent fees. This public dispatch
+path does not yet expose a formation parameter.
 
 `BATTLE_TASK_CANCEL` accepts only `request_id`, `regiment` and `battle_id`,
 pays its own filing row and uses the same local/courier path. Its internal
@@ -66,6 +66,17 @@ Cancellation does not execute a combat action, so ceasefire and routing do not
 forbid it. Pending cancellations lapse with their courier. Exact retries return
 the saved outcome without mutation, including after JSON; request IDs cannot be
 reused across assignment and cancellation actions.
+
+Internal task warrants with a nonempty formation validate the recipient against
+`BattleFormation.refusal` at issue and receipt, including its CSV suitability.
+After law, authority and sequence validation, receipt starts that unit's existing
+reforming state atomically with task replacement. Pending, failed, stale and
+repeated receipts cannot reform a unit. A new task with the same formation keeps
+progress; a different explicit formation retargets with the longest disorder
+deadline. An empty formation or task cancellation leaves the received physical
+deployment and its progress/disorder intact; neither refunds preparation costs.
+The side default and other units are unaffected. These internal operations do
+not add a second filing charge or courier fee.
 
 ## Delivered unit attack and hold
 
