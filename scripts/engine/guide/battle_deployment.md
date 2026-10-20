@@ -170,7 +170,14 @@ Mixed withdrawing/remaining sides save effective casualty rates per unit in the
 pending tier. Rates use the existing contexts and CSV scales; equal rates share
 one whole-number loss pool with the existing largest-remainder apportionment.
 Protected withdrawal applies only to withdrawing members; remaining allies retain
-their own combat context and event exposure. All groups enter the same atomic
+their own combat context and event exposure. Each withdrawing unit checks every
+opponent against all carried source agreements and their original parties, through
+expiry. Its incoming context scale is multiplied by unbound opposing power / total
+opposing power (the existing `side_power` inputs, one integer truncation); a fully
+bound opposing side gives zero even at zero power, otherwise a zero denominator
+keeps the ordinary scale. Unrelated allies and new opponents inherit no protection.
+Pursuit legality checks the actual opposing unit pair, so a bound pursuer cannot
+suppress an unrelated pursuer's context. All groups enter the same atomic
 personnel commit. Failed writes and JSON retries reuse those saved rates, actions
 and random draw without repeating departure costs, daily meals or attack costs.
 
