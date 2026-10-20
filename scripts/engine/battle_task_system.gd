@@ -60,6 +60,7 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 			result["reason"] = "Unit task holds: no available designated enemy is withdrawing"
 			return result
 		result["pursuit_target"] = target
+		result["pursuit_region"] = String(request.get("region", ""))
 	result["kind"] = action if action in ["hold", "retreat"] else "attack"
 	if result["kind"] == "attack" and not "attack" in legal:
 		result["kind"] = "hold"

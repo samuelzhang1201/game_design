@@ -108,7 +108,7 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 				copy["category"] = "formation_terrain"
 				factors.append(copy)
 		factors.append_array(BattleEvents.factors(state, battle, code))
-		var contact := BattleGroups.engaged_counts(repo, battle, code)
+		var contact := BattleGroups.engaged_counts(repo, state, battle, code)
 		if contact.y > 0:
 			factors.append({"source": "contact:engaged", "category": "contact",
 				"permille": BattleGroups.engaged_permille(repo, state, battle, code),
@@ -939,6 +939,10 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 			for member: String in members:
 				if not "pursue" in BattleRules.legal_actions(repo, state, int(battle["id"]), other, code, member):
 					continue
+				if String(action.get("pursuit_region", "")) != "":
+					var contact := BattleGroups.engaged_counts(repo, state, battle, code, member)
+					if contact.y > 0 and contact.x == 0:
+						continue
 				if action.has("pursuit_target"):
 					pursued = pursued or action["pursuit_target"] == "" or action["pursuit_target"] == member
 				elif action["task_id"] == "" and BattleOrders.kind(battle, other) == "attack":

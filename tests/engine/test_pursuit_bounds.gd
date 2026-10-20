@@ -153,3 +153,104 @@ func test_an_old_saved_request_without_bounds_still_retries_by_id() -> void:
 		request.erase("region")
 	var again := BattleTaskSystem.issue_task(f.repo, f.state, _order(f, "old", {}, "defend"))
 	assert_eq(again.get("status"), "pending", "the exact retry returns the saved record")
+
+# Two land cells meet at x=0; the unit anchor is -20 m inside the allowed cell.
+func _group_fixture(xs: Array[int]) -> Dictionary:
+	var f := _fixture()
+	var repo: DataRepository = f.repo
+	var provinces := repo.provinces.keys()
+	provinces.sort()
+	f["inside"] = String(provinces[0])
+	f["outside"] = String(provinces[1])
+	repo.vertices.clear()
+	for p: Vector2i in [Vector2i(-1000, -1000), Vector2i(0, -1000), Vector2i(0, 1000),
+			Vector2i(-1000, 1000), Vector2i(1000, -1000), Vector2i(1000, 1000)]:
+		repo.vertices[repo.vertices.size()] = ArmySystem.metres_to_pack(repo, p)
+	repo.cells = {1: {"vertex_ids": PackedInt32Array([0, 1, 2, 3]), "height": 30.0, "biome_id": 1},
+		2: {"vertex_ids": PackedInt32Array([1, 4, 5, 2]), "height": 30.0, "biome_id": 1}}
+	repo.manors = {1: {"province_code": f.inside}, 2: {"province_code": f.outside}}
+	MapEconomy.forget()
+	repo.balance["battle_group_contact_m"] = 100
+	repo.balance["battle_reserve_permille"] = 500
+	f.battle.att = [f.a]
+	f.state.regiments[f.a].x_m = -20
+	f.state.regiments[f.a].y_m = 0
+	f.state.regiments[f.a].supplies = 100000
+	var groups: Array = []
+	for x: int in xs:
+		groups.append({"count": 50, "role": "front", "x_m": x, "y_m": 0})
+	f.battle["groups"] = {f.a: groups, f.enemy: [{"count": 50, "role": "front", "x_m": 1, "y_m": 0}]}
+	assert_eq(_receive(f, "group-region", {"region": f.inside}).status, "received")
+	assert_eq(ArmySystem.province_of(repo, f.state, f.state.regiments[f.a]), f.inside)
+	return f
+
+func test_pursuit_contact_uses_each_group_position_across_the_region_edge() -> void:
+	var f := _group_fixture([-1, 1])
+	# Only the inside 50 engage: (50*1000 + 50*500)/100 = 750.
+	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 750)
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "pursuit")
+
+func test_outside_groups_do_not_authorize_pursuit_losses() -> void:
+	var f := _group_fixture([1])
+	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 500)
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "withdrawal")
+
+func test_inside_group_still_engages_and_live_manor_province_controls_eligibility() -> void:
+	var f := _group_fixture([-1])
+	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 1000)
+	f.state.manor_province["1"] = f.outside
+	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 500)
+
+func test_region_does_not_block_self_defence_or_change_the_receipt() -> void:
+	var f := _group_fixture([1])
+	f.battle.actions.def.kind = "attack"
+	var receipt := BattleTaskSystem.current(f.state, f.a)
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "hold")
+	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 1000)
+	assert_eq(BattleTaskSystem.current(f.state, f.a), receipt)
+
+func test_region_contact_json_replay_preserves_integer_positions_and_receipts() -> void:
+	var f := _group_fixture([-1, 1])
+	var before: String = JSON.stringify(f.state.to_dict())
+	var back := GameState.from_dict(JSON.parse_string(before))
+	for state: GameState in [f.state, back]:
+		var battle: Dictionary = state.battles[0]
+		assert_eq(BattleGroups.engaged_permille(f.repo, state, battle, f.a), 750)
+		assert_eq(BattleSystem.combat_context(f.repo, state, battle, "def").kind, "pursuit")
+		assert_eq(BattleTaskSystem.current(state, f.a), BattleTaskSystem.current(f.state, f.a))
+		assert_eq(int(battle.groups[f.a][0].x_m), -1)
+		assert_eq(int(battle.groups[f.a][1].x_m), 1)
+	assert_eq(JSON.stringify(f.state.to_dict()), before, "eligibility queries are read-only, including the RNG")
+
+func test_outside_group_can_defend_against_an_interceptor_without_pursuing() -> void:
+	var f := _group_fixture([1])
+	var interceptor := "region_interceptor"
+	f.state.foes[interceptor] = f.state.foes[f.enemy].duplicate(true)
+	f.state.military_rosters[interceptor] = f.state.military_rosters[f.enemy].duplicate(true)
+	f.battle.def.append(interceptor)
+	f.battle.actions.def.kind = "attack"
+	f.state.foes[f.enemy]["battle_retreat"] = true
+	f.battle.groups[interceptor] = [{"count": 50, "role": "front", "x_m": 1, "y_m": 0}]
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "attack")
+	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 1000,
+		"the out-of-region group still defends against real attacking contact")
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def", f.enemy).kind, "withdrawal",
+		"self-defence contact cannot authorize pursuit of the retreating enemy")
+
+func test_pending_action_keeps_its_received_region_through_replacement_and_json() -> void:
+	var f := _group_fixture([-1])
+	f.battle["pending_round"] = {"unit_actions": {f.a: BattleSystem.unit_action(f.repo, f.state, f.battle, f.a)}}
+	assert_eq(_receive(f, "other-region", {"region": f.outside}).status, "received")
+	var back := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	assert_eq(back.battles[0].pending_round.unit_actions[f.a].pursuit_region, f.inside)
+	assert_eq(BattleGroups.engaged_permille(f.repo, back, back.battles[0], f.a), 1000)
+	back.battles[0].erase("pending_round")
+	assert_eq(BattleGroups.engaged_permille(f.repo, back, back.battles[0], f.a), 500)
+
+func test_region_eligible_contact_keeps_the_inclusive_whole_metre_reach() -> void:
+	var f := _group_fixture([-1])
+	f.battle.groups[f.enemy][0].x_m = 99
+	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 1000, "100 m is contact")
+	f.battle.groups[f.enemy][0].x_m = 100
+	assert_eq(BattleGroups.engaged_permille(f.repo, f.state, f.battle, f.a), 500, "101 m is beyond contact")
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "withdrawal")
