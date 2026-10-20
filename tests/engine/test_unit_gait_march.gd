@@ -102,7 +102,7 @@ func test_an_ordinary_march_walks_and_saves_no_gait() -> void:
 	assert_false(f.state.regiments[f.code].has("gait"))
 
 func test_a_withdrawal_march_runs_and_pays_the_increment() -> void:
-	var f := _fixture(1000)
+	var f := _context_fixture("withdrawal")
 	f.state.regiments[f.code]["disengaging"] = 1
 	_begin(f)
 	_substeps(f.repo, f.state, 0, 10)
@@ -113,7 +113,7 @@ func test_a_withdrawal_march_runs_and_pays_the_increment() -> void:
 		{"mode": "run", "reason": "withdrawal", "until": "march_end"})
 
 func test_wounded_keep_only_their_base() -> void:
-	var f := _fixture(1000)
+	var f := _context_fixture("withdrawal")
 	assert_false(Personnel.move(f.repo, f.state, f.code, "fit", "wounded", 15000).has("error"))
 	f.state.regiments[f.code]["disengaging"] = 1
 	_begin(f)
@@ -125,7 +125,7 @@ func test_wounded_keep_only_their_base() -> void:
 	assert_eq(int(f.state.regiments[f.code].get("run_supply_rem", 0)), 0)
 
 func test_json_mid_day_equals_straight_through() -> void:
-	var straight := _fixture(1000)
+	var straight := _context_fixture("withdrawal")
 	assert_false(Personnel.move(straight.repo, straight.state, straight.code, "fit", "wounded", 15000).has("error"))
 	straight.state.regiments[straight.code]["disengaging"] = 1
 	_begin(straight)
@@ -138,7 +138,7 @@ func test_json_mid_day_equals_straight_through() -> void:
 		assert_eq(restored.regiments[straight.code].get(key), straight.state.regiments[straight.code].get(key), key)
 
 func test_supplies_at_the_base_walk_and_pay_nothing() -> void:
-	var f := _fixture(100)
+	var f := _context_fixture("withdrawal", 10, 50, 100)
 	f.state.regiments[f.code]["disengaging"] = 1
 	_begin(f)
 	_substeps(f.repo, f.state, 0, 10)
@@ -147,7 +147,7 @@ func test_supplies_at_the_base_walk_and_pay_nothing() -> void:
 	assert_eq(String(f.state.regiments[f.code]["gait"]["mode"]), "run", "the reason holds; each substep walks")
 
 func test_103_in_hand_runs_one_substep() -> void:
-	var f := _fixture(103)
+	var f := _context_fixture("withdrawal", 10, 50, 103)
 	f.state.regiments[f.code]["disengaging"] = 1
 	_begin(f)
 	_substeps(f.repo, f.state, 0, 10)
@@ -237,7 +237,7 @@ func test_a_battle_beyond_reach_of_the_destination_gives_no_reason() -> void:
 	assert_false(f.state.regiments[f.code].has("gait"))
 
 func test_packing_is_not_shortened() -> void:
-	var f := _fixture(1000)
+	var f := _context_fixture("withdrawal")
 	var entry: Dictionary = f.state.regiments[f.code]
 	entry["disengaging"] = 1
 	entry["camp_state"] = {"phase": CampSystem.PACKING, "move_not_before_day": f.state.absolute_day() + 1}
@@ -245,3 +245,81 @@ func test_packing_is_not_shortened() -> void:
 	_substeps(f.repo, f.state, 0, 10)
 	assert_eq(_walked(f), 0)
 	assert_eq(int(entry["supplies"]), 1000)
+
+func _context_fixture(reason: String, martial := 10, boldness := 50, supplies := 1000) -> Dictionary:
+	var f := _join_fixture(martial, boldness)
+	f.state.battles.clear()
+	f.state.regiments[f.code]["supplies"] = supplies
+	if reason == "withdrawal":
+		f.state.regiments[f.code]["disengaging"] = 1
+	else:
+		# A received, authorized pursuit's known-target phase; no hidden target lookup.
+		f.state.unit_tasks[f.code] = {"current_id": "gait:pursue", "orders": {
+			"gait:pursue": {"status": "received", "request": {"task": "pursue", "target_unit": "unseen"},
+				"track": {"phase": "follow"}}}}
+	return f
+
+func test_pursuit_and_withdrawal_use_the_live_commander_score() -> void:
+	for reason: String in ["pursuit", "withdrawal"]:
+		for row: Array in [[10, 49, 767, 1000], [10, 50, 917, 970], [11, 45, 917, 970]]:
+			var f := _context_fixture(reason, row[0], row[1])
+			_begin(f)
+			_substeps(f.repo, f.state, 0, 10)
+			assert_eq(_walked(f), row[2], reason + str(row))
+			assert_eq(int(f.state.regiments[f.code]["supplies"]), row[3])
+			assert_eq(f.state.regiments[f.code]["order"], ArmySystem.ORDER_MARCH)
+			assert_eq(String(f.state.regiments[f.code].get("gait", {}).get("reason", "")),
+				reason if row[2] == 917 else "")
+
+func test_context_choice_rechecks_after_json_and_stops_with_context() -> void:
+	for reason: String in ["pursuit", "withdrawal"]:
+		var f := _context_fixture(reason)
+		_begin(f)
+		_substeps(f.repo, f.state, 0, 3)
+		var restored := BattleScenario.roundtrip(f.state)
+		for state: GameState in [f.state, restored]:
+			state.characters[f.person].attributes["boldness"] = 49
+			_substeps(f.repo, state, 3, 10)
+			assert_eq(_walked(f, state), 812)
+			assert_eq(int(state.regiments[f.code]["supplies"]), 991)
+			assert_false(state.regiments[f.code].has("gait"))
+		assert_eq(SaveLoad.state_hash(restored), SaveLoad.state_hash(f.state))
+		f.state.characters[f.person].attributes["boldness"] = 50
+		var entry: Dictionary = f.state.regiments[f.code]
+		UnitGait.refresh(f.repo, f.state, f.code, entry)
+		assert_eq(String(entry.gait.reason), reason)
+		entry.erase("disengaging")
+		f.state.unit_tasks.clear()
+		UnitGait.refresh(f.repo, f.state, f.code, entry)
+		assert_false(entry.has("gait"))
+
+func test_context_without_commander_or_incremental_supply_still_walks() -> void:
+	for reason: String in ["pursuit", "withdrawal"]:
+		for missing: bool in [true, false]:
+			var f := _context_fixture(reason, 10, 50, 100 if not missing else 1000)
+			if missing:
+				f.state.military_rosters[f.code]["commander_id"] = ""
+			_begin(f)
+			_substeps(f.repo, f.state, 0, 10)
+			assert_eq(_walked(f), 767)
+			assert_eq(int(f.state.regiments[f.code]["supplies"]), 1000 if missing else 100)
+			assert_eq(f.state.regiments[f.code]["order"], ArmySystem.ORDER_MARCH)
+
+func test_context_eligibility_and_known_phase_exclude_hidden_truth() -> void:
+	for reason: String in ["pursuit", "withdrawal"]:
+		var f := _context_fixture(reason)
+		var entry: Dictionary = f.state.regiments[f.code]
+		UnitGait.refresh(f.repo, f.state, f.code, entry)
+		assert_eq(String(entry.gait.reason), reason)
+		f.state.characters[f.person].attributes["health"] = 0
+		UnitGait.refresh(f.repo, f.state, f.code, entry)
+		assert_false(entry.has("gait"))
+	var f := _context_fixture("pursuit")
+	var entry: Dictionary = f.state.regiments[f.code]
+	# Hidden real position, strength and supplies cannot change an already known follow phase.
+	f.state.foes["unseen"] = {"x_m": -999999, "y_m": -999999, "supplies": 0}
+	UnitGait.refresh(f.repo, f.state, f.code, entry)
+	assert_eq(String(entry.gait.reason), "pursuit")
+	f.state.unit_tasks[f.code]["orders"]["gait:pursue"]["track"]["phase"] = "search"
+	UnitGait.refresh(f.repo, f.state, f.code, entry)
+	assert_false(entry.has("gait"), "a hidden target does not create a new run reason")

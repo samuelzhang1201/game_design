@@ -36,15 +36,15 @@ static func run_substep(repo: DataRepository, entry: Dictionary, base_bite: int,
 
 ## The commander's saved gait on `entry` (spec §5.1), kept per substep: a gait
 ## whose stop condition holds is dropped, then a run is recorded for a reason the
-## engine can see — a withdrawal march, or a march to a battle its own side
-## fights. No key means walk.
+## engine can see — withdrawal, authorized pursuit, or joining its own battle.
+## The live commander chooses in every context; no key means walk.
 static func refresh(repo: DataRepository, state: GameState, code: String, entry: Dictionary) -> void:
 	var gait: Dictionary = entry.get("gait", {})
 	if not gait.is_empty() and not _holds(repo, state, code, entry, gait):
 		entry.erase("gait")
 		gait = {}
 	if not gait.is_empty() or String(entry.get("order", "")) != ArmySystem.ORDER_MARCH \
-			or ArmySystem.is_naval(repo, state, code):
+			or ArmySystem.is_naval(repo, state, code) or not _commander_runs(repo, state, code):
 		return
 	if int(entry.get("disengaging", 0)) == 1:
 		entry["gait"] = {"mode": "run", "reason": "withdrawal", "until": "march_end"}
@@ -61,7 +61,8 @@ static func refresh(repo: DataRepository, state: GameState, code: String, entry:
 
 static func _holds(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		gait: Dictionary) -> bool:
-	if String(entry.get("order", "")) != ArmySystem.ORDER_MARCH:
+	if String(entry.get("order", "")) != ArmySystem.ORDER_MARCH \
+			or not _commander_runs(repo, state, code):
 		return false
 	if String(gait.get("until", "")) == "march_end":
 		return int(entry.get("disengaging", 0)) == 1
@@ -88,7 +89,7 @@ static func _joins(repo: DataRepository, state: GameState, code: String, entry: 
 	var own: Dictionary = state.foes if state.foes.has(code) else state.regiments
 	for member: String in (battle["att"] as Array) + (battle["def"] as Array):
 		if own.has(member):
-			return _commander_runs(repo, state, code)
+			return true
 	return false
 
 
