@@ -127,8 +127,10 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 					legal.erase("pursue")
 			if not "attack" in legal:
 				continue
-			if (BattleOrders.kind(opponents, other) == "retreat" or bool(BattleSystem._stored(state, foe).get("battle_retreat", false))) \
-					and not "pursue" in legal:
+			var withdrawing := BattleOrders.kind(opponents, other) == "retreat" or bool(BattleSystem._stored(state, foe).get("battle_retreat", false))
+			if not opposing_battle.is_empty():
+				withdrawing = BattleSystem.unit_action(repo, state, opponents, foe)["kind"] == "retreat"
+			if withdrawing and not "pursue" in legal:
 				continue
 			var visible := BattleSystem._at_m(repo, state, foe) - BattleSystem._at_m(repo, state, code)
 			if visible.length_squared() > sight * sight:

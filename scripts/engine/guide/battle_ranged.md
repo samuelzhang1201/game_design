@@ -64,8 +64,9 @@ actual close defence retain their existing deployment path.
 
 `counts` optionally accepts an opposing battle for `BattleMerge`'s cross-field
 contact probe. Default same-field calls retain their original behavior. The
-probe uses the shooter's original action/task/facing, the target's original
-withdrawal action, friendly groups from both fields, and party-scoped protection
+probe uses the shooter's original action/task/facing, the target's actual unit
+withdrawal action (including rout and received tasks), friendly groups from both
+fields, and party-scoped protection
 from both source records (including absorbed sources). It never joins fields,
 moves personnel, spends supplies or rolls RNG. `prepare_day` freezes source
 agreements before probing; copied target agreements keep the probe read-only.

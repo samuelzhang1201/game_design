@@ -181,3 +181,12 @@ func test_target_source_restrained_agreement_bars_cross_field_pursuit() -> void:
 	f.b.parley.agreed = {"tactics": {"policy": "restrained"}}
 	f.b.actions["def"] = {"kind": "retreat"}
 	assert_eq(BattleMerge.day(f.repo, f.state), [])
+
+func test_target_source_protects_routed_unit_with_hold_side_order() -> void:
+	var f := _fixture()
+	f.b.parley.parties = {"att": [f.p1], "def": [f.f2]}
+	f.b.parley.agreed = {"safe_withdrawal": {"policy": "protect"}}
+	f.b.actions["def"] = {"kind": "hold"}
+	f.b["routed_side"] = "def"
+	assert_eq(BattleSystem.unit_action(f.repo, f.state, f.b, f.f2).kind, "retreat")
+	assert_eq(BattleMerge.day(f.repo, f.state), [], "Protected actual retreat cannot trigger cross-field fire")

@@ -1,7 +1,7 @@
 # P4 ranged contact merge
 
 Step `p4-ranged-contact-merge`; approved unit-behavior spec §11. Implementation
-`01a15a2e-ed23-70c3-98f9-41f67c6f15ed`; independent Review assigned at handoff.
+`01a15a2e-ed23-70c3-98f9-41f67c6f15ed`; independent Review `01a15a37-036d-7fb1-82b9-84b89632ab55`.
 Prerequisites: ranged geometry PR154 and pursuit bounds PR151, accepted on main.
 
 ## Result
@@ -61,3 +61,24 @@ merge itself. Existing merge regressions cover source records, terms, commanders
 warrants, town priority and pending-round exclusion in the military category.
 
 CI and independent review remain required on the final PR HEAD before merging.
+
+## Independent review
+
+Reviewed the actual diff and connected daily preparation, ranged geometry,
+per-unit action resolution, source-scoped agreements, allegiance mapping and
+existing merge/alias/round migration. Found and fixed one in-scope issue:
+a protected target that was routed (or had a received unit retreat task)
+could be treated as stationary when its side order still said hold. The
+cross-field probe now reads the target's actual unit action; default same-field
+calls retain their previous semantics. No unowned files were changed.
+
+The regression first failed with an unexpected merge: 15 tests, 14 passed,
+1 failed (`/tmp/p4-review-retreat-red.log`). After the fix the same 15-script
+connected regression command from the implementation checkpoint passed:
+**173 tests, 1245 assertions, exit 0**, including actual daily entry,
+hand-derived firing geometry, source protection, JSON/reversed order and
+once-only settlement (`/tmp/p4-review-frozen.log`). Relevant inputs are frozen
+in the local `REVIEW_FROZEN_INPUTS.json`; earlier evidence remains preserved.
+`git diff --check` passed. No visual changes or visual acceptance are involved.
+
+Final-HEAD required CI and merge result are recorded in the local checkpoint.
