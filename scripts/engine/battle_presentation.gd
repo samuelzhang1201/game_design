@@ -251,8 +251,17 @@ static func map_snapshot(repo: DataRepository, state: GameState, realm: String) 
 			var id := int(battle["id"])
 			if "red_flag" in BattleRules.legal_actions(repo, state, id, side):
 				out["battle_signals"].append({"key": "%d:%s:refusal" % [id, side], "kind": "refusal", "unit_code": own[0]})
-			if int(battle.get("rounds", 0)) == 0 and BattleRules._policy(battle, "herald_safety", state.absolute_day()) == "protect":
-				out["battle_signals"].append({"key": "%d:%s:herald" % [id, side], "kind": "herald", "unit_code": own[0]})
+			if int(battle.get("rounds", 0)) == 0:
+				var herald := ""
+				var other := "def" if side == "att" else "att"
+				for code: String in own:
+					for target: String in battle.get(other, []):
+						if BattleRules._binds(battle, "herald_safety", "protect", state.absolute_day(), [code], target):
+							herald = code
+							break
+					if herald != "": break
+				if herald != "":
+					out["battle_signals"].append({"key": "%d:%s:herald" % [id, side], "kind": "herald", "unit_code": herald})
 	return out
 
 static func local_unit(repo: DataRepository, state: GameState, code: String) -> bool:

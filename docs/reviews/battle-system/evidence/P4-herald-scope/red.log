@@ -1,0 +1,51 @@
+res://tests/engine/test_herald_agreement_scope.gd
+* test_merged_herald_uses_original_party_from_either_source_and_orientation
+    [Failed]:  [0] expected to equal [1]:  An active carried agreement retains its herald
+      at line 50
+    [Failed]:  [0] expected to equal [1]:  An active carried agreement retains its herald
+      at line 50
+* test_expired_or_fighting_agreement_has_no_herald
+* test_departed_party_does_not_protect_an_unrelated_ally_or_disclose_to_foreign_realm
+    [Failed]:  ARRAY([{ "key": "1:def:herald", "kind": "herald", "unit_code": "kelvarn_10th_rothbridbu_re...chers" }]) != ARRAY([]).
+    [{ "key": "1:def:herald", "kind": "heral...rchers" }] != []  1 of 1 indexes do not match.
+      at line 72
+* test_departed_counterparty_cannot_be_replaced_by_an_unrelated_opponent
+2/4 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+res://tests/engine/test_herald_agreement_scope.gd
+- test_merged_herald_uses_original_party_from_either_source_and_orientation
+    [Failed]:  [0] expected to equal [1]:  An active carried agreement retains its herald
+          at line 50
+    [Failed]:  [0] expected to equal [1]:  An active carried agreement retains its herald
+          at line 50
+- test_departed_party_does_not_protect_an_unrelated_ally_or_disclose_to_foreign_realm
+    [Failed]:  ARRAY([{ "key": "1:def:herald", "kind": "herald", "unit_code": "kelvarn_10th_rothbridbu_re...chers" }]) != ARRAY([]).
+    [{ "key": "1:def:herald", "kind": "heral...rchers" }] != []  1 of 1 indexes do not match.
+          at line 72
+
+---- Totals ----
+Scripts           1
+Tests             4
+  Passing         2
+  Failing         2
+Asserts           27
+Time              2.616s
+
+
+[Orphans]:  Total orphans in run 1.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 2.0
+
+---- 2 failing tests ----
+
+
+FATAL: GUT exited with code 1 (test failures)

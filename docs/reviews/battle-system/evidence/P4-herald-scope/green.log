@@ -1,0 +1,67 @@
+res://tests/engine/test_battle_presentation.gd
+* test_hidden_enemy_changes_leave_projection_identical
+* test_projection_has_estimates_and_no_engine_dictionaries
+* test_projection_is_detached_and_does_not_mutate_state_or_rng
+* test_other_realm_receives_no_crown_commands
+* test_orders_explain_reservation_cooldown_and_law
+* test_reports_only_become_visible_on_receipt_and_never_expose_payload_state
+* test_map_projection_obeys_our_delivered_law_and_omits_hidden_armies
+* test_remote_missing_reading_is_unknown_and_received_reading_is_frozen
+* test_later_received_settlements_and_fulfilled_receipts_join_by_battle_without_rewriting_details
+9/9 passed.
+
+
+res://tests/engine/test_battle_report_details.gd
+* test_details_freeze_and_preserve_600_accounting
+* test_result_is_visible_on_delivery
+* test_received_custody_tracks_actual_fulfilled_release_once
+* test_enemy_precision_is_an_estimate_and_snapshot_copies_are_detached
+* test_remote_live_figures_are_private_and_prisoners_have_no_map_models
+* test_called_off_battle_freezes_and_can_be_delivered
+* test_departed_unit_supplies_stay_at_departure_when_battle_ends_later
+* test_rejoining_unit_supplies_follow_its_returned_service
+* test_later_remote_holder_defeat_delivers_release_of_earlier_captives
+* test_later_remote_holder_defeat_delivers_transfer_and_freezes_its_observation
+* test_remote_fulfillment_is_hidden_until_its_receipt_arrives
+11/11 passed.
+
+
+res://tests/engine/test_herald_agreement_scope.gd
+* test_merged_herald_uses_original_party_from_either_source_and_orientation
+* test_expired_or_fighting_agreement_has_no_herald
+* test_departed_party_does_not_protect_an_unrelated_ally_or_disclose_to_foreign_realm
+* test_departed_counterparty_cannot_be_replaced_by_an_unrelated_opponent
+4/4 passed.
+
+
+res://tests/map3d/test_map3d_battle_signals.gd
+* test_projection_actions_override_orders_and_snapshot_is_copied
+* test_signals_follow_real_piece_and_disappear_with_projection
+* test_real_unit_rigs_supply_attack_defend_garrison_and_march
+* test_real_march_precedes_stationary_battle_pose
+* test_signal_stands_on_ground_at_its_own_offset
+* test_unbound_layer_keeps_snapshot_until_world_can_load
+6/6 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+---- Totals ----
+Scripts           4
+Tests             30
+  Passing         30
+Asserts           209
+Time              5.656s
+
+
+[Orphans]:  Total orphans in run 1.0
+Note:  This count does not include GUT objects that will be freed upon exit.
+       It also does not include any orphans created by global scripts
+       loaded before tests were ran.
+Total orphans = 5.0
+
+---- All tests passed! ----
