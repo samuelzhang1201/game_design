@@ -351,6 +351,19 @@ func nearest_open(c: Vector2i) -> Vector2i:
 	return Vector2i(-1, -1)
 
 
+## Whether a column can walk from point `a` to point `b` (whole metres): the
+## cell holding `b` is open and in the same piece of open ground as `a`'s (the
+## nearest open cell when `a` stands on a closed one). Search never aims at a
+## cell this refuses.
+func joins(a: Vector2i, b: Vector2i) -> bool:
+	var g := cell_of(b)
+	var s := nearest_open(cell_of(a))
+	if is_closed(g) or s.x < 0:
+		return false
+	_ensure_astar()
+	return _piece[s.y * cols + s.x] == _piece[g.y * cols + g.x]
+
+
 ## The A* cells from `s` to `g`, both open; [] when none joins them.
 func _cells(s: Vector2i, g: Vector2i) -> Array:
 	var key := "%d,%d" % [s.y * cols + s.x, g.y * cols + g.x]

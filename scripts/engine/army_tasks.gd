@@ -129,6 +129,11 @@ static func _note(state: GameState, task: Dictionary, revision: int, status: Str
 
 ## The next revision `snap`, pending on every unit it still has to reach.
 static func _revise(state: GameState, task: Dictionary, snap: Dictionary, why: String) -> void:
+	var sequence := 0
+	for record: Dictionary in state.army_tasks.values():
+		for previous: Dictionary in record["revisions"].values():
+			sequence = maxi(sequence, int(previous.get("sequence", 0)))
+	snap["sequence"] = sequence + 1
 	var revision := int(task["revision"]) + 1
 	task["revision"] = revision
 	(task["revisions"] as Dictionary)[str(revision)] = snap
@@ -243,6 +248,8 @@ static func receive(repo: DataRepository, state: GameState, id: String, revision
 	var snap: Dictionary = task["revisions"][str(revision)]
 	u["received_revision"] = revision
 	u["received_day"] = state.absolute_day()
+	if _current_task(state, unit) == task and (bool(snap["cancel"]) or String(snap["kind"]) != "search"):
+		_stop_travel(state, unit)
 	var recall := bool(snap["cancel"])
 	var status := "cancelled" if recall else "received"
 	u["status"] = status if revision == int(task["revision"]) else "pending"
@@ -267,3 +274,150 @@ static func lapse(state: GameState, id: String, revision: int, unit: String, rea
 	if not task.is_empty() and (task["units"] as Dictionary).has(unit) \
 			and revision > int(task["units"][unit]["received_revision"]):
 		_note(state, task, revision, "lapsed", unit, reason)
+
+
+## Latest received task owns the unit, including a received recall. An old
+## task must not wake again when a newer task ends or changes kind.
+static func _current_task(state: GameState, code: String) -> Dictionary:
+	var current: Dictionary = {}
+	var newest := -1
+	var latest_day := -1
+	var latest_id := -1
+	for task: Dictionary in state.army_tasks.values():
+		var number := String(task["id"]).trim_prefix("AT").to_int()
+		var revision := int(task.get("units", {}).get(code, {}).get("received_revision", 0))
+		if revision <= 0:
+			continue
+		var snap: Dictionary = task["revisions"][str(revision)]
+		var sequence := int(snap.get("sequence", 0))
+		var day := int(snap.get("issued_day", 0))
+		if sequence > newest or (sequence == newest and (day > latest_day or (day == latest_day and number > latest_id))):
+			current = task
+			newest = sequence
+			latest_day = day
+			latest_id = number
+	return current
+
+
+static func _stop_travel(state: GameState, code: String) -> bool:
+	var entry: Dictionary = state.regiments.get(code, {})
+	if not entry.has("travel_task_id"):
+		return false
+	entry.erase("travel_task_id")
+	# Battle withdrawal owns its route even after separation from combat.
+	if bool(entry.get("battle_retreat", false)) or entry.has("disengaging"):
+		return false
+	entry.erase("departure")
+	ArmySystem._clear_route(entry)
+	BattleSystem._halt(state, code)
+	return true
+
+
+## Freeze at contact, before a same-day battle can end or replace its route.
+static func pause_battles(state: GameState) -> Array:
+	var stopped: Array = []
+	if state.army_tasks.is_empty() or state.battles.is_empty():
+		return stopped
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for code: String in codes:
+		if BattleSystem.battle_of(state, code).is_empty():
+			continue
+		var task := _current_task(state, code)
+		if task.is_empty():
+			continue
+		var snap := acting(state, String(task["id"]), code)
+		if snap.is_empty() or String(snap["kind"]) != "search":
+			continue
+		var u: Dictionary = task["units"][code]
+		var revision := int(u["received_revision"])
+		if String(u.get("phase", "")) == "paused_battle" and int(u.get("travel_revision", 0)) == revision:
+			continue
+		if _stop_travel(state, code):
+			stopped.append(code)
+		u["travel_day"] = state.absolute_day()
+		u["travel_revision"] = revision
+		u["phase"] = "paused_battle"
+		u["reason"] = "search travel paused by battle; capability and return decision required"
+		_note(state, task, revision, "paused_battle", code, String(u["reason"]))
+	return stopped
+
+
+## Search travel only (P6.1d1). Arrival waits for the search executor; it
+## never marks coverage or claims a search result. Called before route freeze.
+static func step_day(repo: DataRepository, state: GameState) -> Array:
+	pause_battles(state)
+	var out: Array = []
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for code: String in codes:
+		var task := _current_task(state, code)
+		if task.is_empty() or not _own_land_unit(repo, state, repo.resolve_realm("player_realm"), code):
+			continue
+		var u: Dictionary = task["units"][code]
+		if int(u.get("travel_day", -1)) == state.absolute_day():
+			continue
+		var snap := acting(state, String(task["id"]), code)
+		if snap.is_empty() or String(snap["kind"]) != "search":
+			_stop_travel(state, code)
+			continue
+		u["travel_day"] = state.absolute_day()
+		var revision := int(u["received_revision"])
+		if int(u.get("travel_revision", 0)) != revision:
+			u["travel_revision"] = revision
+			u["phase"] = "travelling"
+		var phase := String(u["phase"])
+		var reason := ""
+		if phase == "travelling":
+			var entry: Dictionary = state.regiments[code]
+			entry["travel_task_id"] = String(task["id"])
+			var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
+			var center := Vector2i(int(snap["center_x_m"]), int(snap["center_y_m"]))
+			var radius := int(snap["radius_m"])
+			if _distance_squared(here, center) <= radius * radius:
+				_stop_travel(state, code)
+				phase = "awaiting_search"
+				reason = "inside the authorised circle; search work has not begun"
+			else:
+				var target := _travel_target(repo, here, center, radius)
+				if target == Vector2i(-1, -1):
+					_stop_travel(state, code)
+					phase = "failed"
+					reason = "no passable ground in the circle is reachable from the unit"
+				else:
+					BattleTaskSystem._aim(repo, state, code, entry, target)
+					reason = "travelling to reachable ground in the authorised circle"
+		else:
+			reason = String(u.get("reason", "search travel is waiting"))
+		u["phase"] = phase
+		u["reason"] = reason
+		_note(state, task, revision, phase, code, reason)
+		out.append((task["history"] as Array).back().duplicate(true))
+	return out
+
+
+static func _distance_squared(a: Vector2i, b: Vector2i) -> int:
+	var d := a - b
+	return d.x * d.x + d.y * d.y
+
+
+## Do not use MarchPath.road's straight-line fallback for disconnected ground.
+## If the centre is closed, choose the closest reachable point to it in an
+## intersecting open cell, with row-major ties. Even a sub-cell circle works.
+static func _travel_target(repo: DataRepository, here: Vector2i, center: Vector2i, radius: int) -> Vector2i:
+	var grid := MarchPath.of_pack(repo)
+	if grid == null or grid.joins(here, center):
+		return center
+	var lo := grid.cell_of(center - Vector2i(radius, radius))
+	var hi := grid.cell_of(center + Vector2i(radius, radius))
+	var best := Vector2i(-1, -1)
+	var best_distance := radius * radius + 1
+	for y: int in range(lo.y, hi.y + 1):
+		for x: int in range(lo.x, hi.x + 1):
+			var point := Vector2i(clampi(center.x, x * grid.cell_m, (x + 1) * grid.cell_m - 1),
+				clampi(center.y, y * grid.cell_m, (y + 1) * grid.cell_m - 1))
+			var distance := _distance_squared(point, center)
+			if distance < best_distance and grid.joins(here, point):
+				best = point
+				best_distance = distance
+	return best

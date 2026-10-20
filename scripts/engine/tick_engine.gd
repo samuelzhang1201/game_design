@@ -134,6 +134,7 @@ func _resolve_phase(state: GameState, tx: Dictionary, phase: String) -> Dictiona
 		"MARCH_ORDERS_AND_ROUTE_SETUP":
 			ArmySystem.ensure(data, state)
 			BattleTaskSystem.track_day(data, state)
+			ArmyTasks.step_day(data, state)
 			var moving: Array = []
 			var budgets: Dictionary = {}
 			var march_entries: Dictionary = {}
@@ -239,6 +240,8 @@ func _resolve_battles(state: GameState, tx: Dictionary) -> Dictionary:
 				_save_host_events(journal, day_ai)
 			var contacts := BattleSystem.prepare_day(data, state) if int(tx["substep_index"]) == 0 \
 				else BattleSystem.discover_contacts(data, state)
+			for code: String in ArmyTasks.pause_battles(state):
+				(tx["march_entries"] as Dictionary).erase(code)
 			_append_substep_battle_events(journal, contacts, int(tx["substep_index"]))
 			var started: Array = []
 			for event: Dictionary in contacts:
