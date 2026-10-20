@@ -96,7 +96,9 @@ def changed_paths(base, cwd=ROOT):
 def result(categories, groups):
     names = sorted(name for name in categories if groups[name])
     files = sorted({path for name in names for path in groups[name]})
-    return {'categories': names, 'files': files, 'matrix': {'category': names}, 'run_gut': bool(files)}
+    jobs = [{'category': name, 'batch': batch}
+            for name in names for batch in range(1, CATEGORIES[name].get('ci_batches', 1) + 1)]
+    return {'categories': names, 'files': files, 'matrix': {'include': jobs}, 'run_gut': bool(files)}
 
 
 def select(paths, groups, include=()):
@@ -151,6 +153,7 @@ def main():
     parser.add_argument('--include', action='append', choices=CATEGORIES, default=[], help='Explicit plan/PR/manual category request, including expensive suites.')
     parser.add_argument('--category', action='append', choices=CATEGORIES, default=[], help='Run exactly this explicitly requested category.')
     parser.add_argument('--test', action='append', default=[], help='Run exactly this explicitly requested test script.')
+    parser.add_argument('--batch', type=int, help='One CI batch of a single explicit category (count from manifest).')
     parser.add_argument('--format', choices=['json', 'files'], default='json')
     parser.add_argument('--request-text', default='', help='PR body containing a GUT_INCLUDE: category,... line.')
     parser.add_argument('--github-output', type=Path, help='Write the CI matrix and run-gut decision here.')
@@ -170,6 +173,14 @@ def main():
         base = args.base or 'origin/main'
         paths = ['project.godot'] if args.functional else gut_relevant_paths(base)
         chosen = select(paths, groups, args.include)
+    if args.batch is not None:
+        if len(args.category) != 1 or args.test or args.base or args.functional or args.include:
+            parser.error('--batch requires exactly one --category and no other scope')
+        count = CATEGORIES[args.category[0]].get('ci_batches', 1)
+        if not 1 <= args.batch <= count or count > len(chosen['files']):
+            parser.error('--batch is outside the nonempty manifest batches')
+        files = chosen['files']
+        chosen['files'] = files[len(files) * (args.batch - 1) // count:len(files) * args.batch // count]
     if args.github_output:
         with args.github_output.open('a') as output:
             output.write(f"run-gut={str(chosen['run_gut']).lower()}\n")
