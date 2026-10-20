@@ -936,17 +936,32 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 			if action["kind"] != "attack" or not _can_fight(repo, state, code) \
 					or bool(_stored(state, code).get("captured", false)):
 				continue
-			if not "pursue" in BattleRules.legal_actions(repo, state, int(battle["id"]), other, code):
-				continue
-			if action.has("pursuit_target"):
-				pursued = pursued or action["pursuit_target"] == "" or action["pursuit_target"] in members
-			elif action["task_id"] == "" and BattleOrders.kind(battle, other) == "attack" \
-					and "pursue" in BattleRules.legal_actions(repo, state, int(battle["id"]), other):
-				pursued = true
+			for member: String in members:
+				if not "pursue" in BattleRules.legal_actions(repo, state, int(battle["id"]), other, code, member):
+					continue
+				if action.has("pursuit_target"):
+					pursued = pursued or action["pursuit_target"] == "" or action["pursuit_target"] == member
+				elif action["task_id"] == "" and BattleOrders.kind(battle, other) == "attack":
+					pursued = true
 		kind = "pursuit" if pursued else "withdrawal"
 		scale = int(repo.bal("battle_context_" + kind + "_permille"))
-		if BattleRules._policy(battle, "safe_withdrawal", state.absolute_day()) == "protect":
+		var total_power := 0
+		var exposed_power := 0
+		var all_bound := true
+		for code: String in battle[other]:
+			var bound := members.all(func(member: String) -> bool:
+				return BattleRules._binds(battle, "safe_withdrawal", "protect", state.absolute_day(), [member], code))
+			all_bound = all_bound and bound
+			var power := side_power(repo, state, [code], Callable(), BattleOrders.kind(battle, other) == "attack", battle[side])
+			total_power += power
+			if not bound:
+				exposed_power += power
+		# Only a bound opponent's share is suppressed; a new opponent keeps its threat.
+		if all_bound:
 			scale = 0
+		elif total_power > 0:
+			@warning_ignore("integer_division")
+			scale = scale * exposed_power / total_power
 	else:
 		var ranged := 0
 		var mounted := 0
