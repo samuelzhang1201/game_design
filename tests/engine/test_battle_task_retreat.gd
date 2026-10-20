@@ -8,6 +8,12 @@ func _fixture() -> Dictionary:
 	var state := Scenario.contact(repo, 10)
 	BattleSystem.detect_contacts(repo, state)
 	var battle: Dictionary = state.battles[0]
+	# Retreat arithmetic uses a melee attacker; ranged geometry is tested separately.
+	for attacker: String in battle.att:
+		var people := ArmySystem.fit_count(repo, state, attacker)
+		for arm: String in repo.world_table("military", "unit_types"):
+			state.army_roster[attacker][arm] = "0"
+		state.army_roster[attacker]["infantry"] = str(people)
 	var unit := String(battle.def[0])
 	var codes := Play.land_regiments(repo, 400)
 	codes.erase(unit)

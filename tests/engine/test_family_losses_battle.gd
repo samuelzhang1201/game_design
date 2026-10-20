@@ -13,6 +13,12 @@ func before_each() -> void:
 	repo.balance["family_loss_opinion_dead_cadre"] = -2
 	repo.balance["family_loss_opinion_dead_named"] = -2
 	state = Scenario.contact(repo, 10)
+	# Family casualty arithmetic assumes a melee attacker, not ranged reach.
+	for code: String in state.foes:
+		var fit := ArmySystem.fit_count(repo, state, code)
+		for arm: String in repo.world_table("military", "unit_types"):
+			state.army_roster[code][arm] = "0"
+		state.army_roster[code]["infantry"] = str(fit)
 	realm = repo.resolve_realm("player_realm")
 	BattleSystem.detect_contacts(repo, state)
 	state.battles[0]["actions"] = {"att": {"kind": "attack"}, "def": {"kind": "hold"}}

@@ -229,6 +229,12 @@ func test_zero_daily_pace_does_not_move_in_substeps() -> void:
 func test_encounter_blocks_before_losses_and_resumes_after_roundtrip() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	var state := BattleScenario.moving_contact(repo, 10)
+	# This journal fixture needs an active melee attacker, independent of ranged geometry.
+	for code: String in state.foes:
+		var fit := ArmySystem.fit_count(repo, state, code)
+		for arm: String in repo.world_table("military", "unit_types"):
+			state.army_roster[code][arm] = "0"
+		state.army_roster[code]["infantry"] = str(fit)
 	var first_march := ""
 	for code: String in state.regiments:
 		if String(state.regiments[code].get("order", "")) == ArmySystem.ORDER_MARCH:
@@ -420,6 +426,12 @@ func test_second_battle_does_not_replay_first() -> void:
 func test_later_substep_reinforcement_joins_after_round_and_fights_next_day() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	var state := BattleScenario.moving_contact(repo, 10)
+	# This journal fixture needs an active melee attacker, independent of ranged geometry.
+	for code: String in state.foes:
+		var fit := ArmySystem.fit_count(repo, state, code)
+		for arm: String in repo.world_table("military", "unit_types"):
+			state.army_roster[code][arm] = "0"
+		state.army_roster[code]["infantry"] = str(fit)
 	var codes := Play.land_regiments(repo, 2)
 	var player := String(Play.land_regiments(repo, 1)[0])
 	var foe := String(state.foes.keys()[0])

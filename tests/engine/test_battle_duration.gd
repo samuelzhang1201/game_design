@@ -12,6 +12,12 @@ func before_each() -> void:
 func _battle(attack := true) -> GameState:
 	var state := Scenario.contact(repo, 10)
 	BattleSystem.detect_contacts(repo, state)
+	# Isolate duration/morale/retry arithmetic from ranged reach and deployment.
+	for attacker: String in state.battles[0]["att"]:
+		var people := ArmySystem.fit_count(repo, state, attacker)
+		for arm: String in repo.world_table("military", "unit_types"):
+			state.army_roster[attacker][arm] = "0"
+		state.army_roster[attacker]["infantry"] = str(people)
 	state.battles[0]["actions"] = {"att": {"kind": "attack" if attack else "hold"}, "def": {"kind": "hold"}}
 	for entry: Dictionary in state.regiments.values() + state.foes.values():
 		entry["morale"] = 80

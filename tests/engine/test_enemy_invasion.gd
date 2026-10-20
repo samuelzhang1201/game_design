@@ -44,6 +44,9 @@ func _first_appear() -> int:
 
 
 func _letters(s: GameState, kind: String) -> Array:
+	# Field reports arrive through local battle letters or remote king-report couriers.
+	if kind == "battle":
+		return Play.letters(s, kind) + Play.letters(s, "king_report")
 	return Play.letters(s, kind)
 
 

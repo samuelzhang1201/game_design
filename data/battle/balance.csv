@@ -53,3 +53,6 @@ family_loss_opinion_dead_cadre,-2,"family losses (P2-B1): opinion per family mem
 family_loss_opinion_captured_named,-2,"family losses (P2-B1): opinion per family member for each named noble captured (first draft)"
 family_loss_opinion_captured_cadre,-1,"family losses (P2-B1): opinion per family member for each unnamed noble cadre captured (first draft)"
 battle_charge_runup_m,300,"Minimum actual continuous mounted approach before impact; renewal needs this clear separation beyond contact and a regroup day"
+battle_ranged_reach_m,400,Inclusive direct-fire reach between saved group centres in whole metres
+battle_ranged_cone_permille,1000,Maximum lateral to forward ratio in permille for direct fire (45 degree half-cone)
+battle_ranged_block_radius_m,20,Friendly group disc radius obstructing an open direct-fire segment in whole metres

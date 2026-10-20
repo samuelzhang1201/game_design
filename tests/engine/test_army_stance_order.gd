@@ -142,6 +142,11 @@ func test_stance_order_lands_after_day_end_and_applies_next_day() -> void:
 		repo.battle_stances[k]["retreat_odds_permille"] = 0
 	var p := _mine()
 	var f := _foe_code()
+	# Isolate stance timing from whether ranged personnel have a legal shot.
+	var fit := ArmySystem.fit_count(repo, s, p)
+	for arm: String in repo.world_table("military", "unit_types"):
+		s.army_roster[p][arm] = "0"
+	s.army_roster[p]["infantry"] = str(fit)
 	var e: Dictionary = s.regiments[p]
 	var at := Vector2i(int(e["x_m"]), int(e["y_m"]))
 	# the rest of the army out of the way (its camp would join), the column back

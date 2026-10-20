@@ -45,6 +45,11 @@ static func unit_action(repo: DataRepository, state: GameState, battle: Dictiona
 		if ArmySystem.fit_count(repo, state, code) <= 0 or int(_stored(state, code).get("supplies", 0)) < bite + extra:
 			action["kind"] = "hold"
 			action["reason"] = "Unit task holds: insufficient personnel or carried supplies"
+	if action["kind"] == "attack" and not action.has("pursuit_target") and BattleRanged.share(repo, state, code) >= int(repo.bal("battle_context_arm_threshold_permille")) \
+			and BattleRanged.touching(repo, battle, code):
+		action["kind"] = "hold"
+		action["reason"] = "Ranged unit defends at actual close contact"
+		action["close_defence"] = true
 	return action
 
 
@@ -66,7 +71,7 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 		var active_attack := attacking
 		if not battle.is_empty():
 			var action := unit_action(repo, state, battle, String(raw))
-			if action["task_id"] != "" or action["kind"] == "retreat":
+			if action["task_id"] != "" or action["kind"] == "retreat" or action.get("close_defence", false):
 				active_attack = action["kind"] == "attack"
 		if active_attack and battle.get("reserves", {}).has(String(raw)) \
 				and unit_action(repo, state, battle, String(raw))["task_id"] == "":
@@ -82,7 +87,7 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 		attacking: bool, enemy_codes: Array = []) -> Dictionary:
 	var battle := battle_of(state, code)
 	var action: Dictionary = {} if battle.is_empty() else unit_action(repo, state, battle, code)
-	if not action.is_empty() and (action["task_id"] != "" or action["kind"] == "retreat"):
+	if not action.is_empty() and (action["task_id"] != "" or action["kind"] == "retreat" or action.get("close_defence", false)):
 		attacking = action["kind"] == "attack"
 	var factors: Array[Dictionary] = []
 	var enemy_m := 0
@@ -109,7 +114,16 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 				factors.append(copy)
 		factors.append_array(BattleEvents.factors(state, battle, code))
 		var contact := BattleGroups.engaged_counts(repo, state, battle, code)
-		if contact.y > 0:
+		var ranged := BattleRanged.share(repo, state, code)
+		if contact.y > 0 and ranged > 0:
+			var shots := BattleRanged.counts(repo, state, battle, code)
+			@warning_ignore("integer_division")
+			var factor := (BattleGroups.engaged_permille(repo, state, battle, code) * (1000 - ranged)
+				+ BattleRanged.active_permille(shots) * ranged) / 1000
+			factors.append({"source": "contact:ranged", "category": "contact", "permille": factor,
+				"reason": "%d firing and %d in melee of %d; ranged personnel share %d permille" %
+					[shots["firing"], shots["melee"], shots["fit"], ranged]})
+		elif contact.y > 0:
 			factors.append({"source": "contact:engaged", "category": "contact",
 				"permille": BattleGroups.engaged_permille(repo, state, battle, code),
 				"reason": "%d of %d in contact with the enemy line" % [contact.x, contact.y]})
@@ -174,7 +188,7 @@ static func _entry_of(repo: DataRepository, state: GameState, code: String) -> D
 ## originating population write leaves the entire round untouched.
 static func _plan_side(repo: DataRepository, state: GameState, codes: Array, loss_permille: int,
 		wounded_share_permille: int, morale_delta: int, reason: String, out: Dictionary,
-		orders: Array, stance_fn: Callable, unit_losses: Dictionary = {}) -> Dictionary:
+		orders: Array, stance_fn: Callable, unit_losses: Dictionary = {}, unit_morale: Dictionary = {}) -> Dictionary:
 	if not unit_losses.is_empty():
 		var groups := {}
 		for code: String in codes:
@@ -184,7 +198,7 @@ static func _plan_side(repo: DataRepository, state: GameState, codes: Array, los
 			groups[rate].append(code)
 		for rate: int in groups:
 			var result := _plan_side(repo, state, groups[rate], rate, wounded_share_permille,
-				morale_delta, reason, out, orders, stance_fn)
+				morale_delta, reason, out, orders, stance_fn, {}, unit_morale)
 			if result.has("error"):
 				return result
 		return {"status": "planned"}
@@ -217,6 +231,9 @@ static func _plan_side(repo: DataRepository, state: GameState, codes: Array, los
 			orders.append({"unit_code": code, "from": "fit", "to": "dead", "count": dead})
 		var before := int(entry.get("morale", 0))
 		var fall := morale_delta
+		if fall < 0 and unit_morale.has(code):
+			@warning_ignore("integer_division")
+			fall = fall * int(unit_morale[code]) / 1000
 		if fall < 0 and stance_fn.is_valid():
 			@warning_ignore("integer_division")
 			fall = fall * int(_stance_row(repo, String(stance_fn.call(code))).get("morale_decay_permille", 1000)) / 1000
@@ -260,11 +277,11 @@ static func apply_round(repo: DataRepository, state: GameState, codes_att: Array
 	var orders: Array = []
 	var share := int(tier.get("wounded_share_permille", 0))
 	var planned := _plan_side(repo, state, att, int(tier.get("attacker_loss_permille", 0)), share,
-		int(tier.get("attacker_morale", 0)), reason, out, orders, stance_fn, tier.get("unit_loss_permille", {}))
+		int(tier.get("attacker_morale", 0)), reason, out, orders, stance_fn, tier.get("unit_loss_permille", {}), tier.get("unit_morale_permille", {}))
 	if planned.has("error"):
 		return planned
 	planned = _plan_side(repo, state, def, int(tier.get("defender_loss_permille", 0)), share,
-		int(tier.get("defender_morale", 0)), reason, out, orders, stance_fn, tier.get("unit_loss_permille", {}))
+		int(tier.get("defender_morale", 0)), reason, out, orders, stance_fn, tier.get("unit_loss_permille", {}), tier.get("unit_morale_permille", {}))
 	if planned.has("error"):
 		return planned
 	if not orders.is_empty():
@@ -808,13 +825,17 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 				if bool(_stored(state, code).get("battle_retreat", false)):
 					withdrawing += 1
 			if withdrawing > 0 or BattleOrders.kind(b, side) == "retreat" \
-					or (b["def" if side == "att" else "att"] as Array).any(func(code: String) -> bool: return BattleCharge.impacting(repo, state, b, code) > 0):
+					or (b["def" if side == "att" else "att"] as Array).any(func(code: String) -> bool:
+					return BattleCharge.impacting(repo, state, b, code) > 0 or BattleRanged.share(repo, state, code) > 0):
 				if not tier.has("unit_loss_permille"):
 					tier["unit_loss_permille"] = {}
 				for code: String in b[side]:
 					var unit_context := combat_context(repo, state, b, side, code)
 					@warning_ignore("integer_division")
 					tier["unit_loss_permille"][code] = base_loss * int(unit_context["loss_permille"]) / 1000
+					if not tier.has("unit_morale_permille"):
+						tier["unit_morale_permille"] = {}
+					tier["unit_morale_permille"][code] = BattleRanged.incoming_permille(repo, state, b, side, code)
 			@warning_ignore("integer_division")
 			tier[key] = base_loss * int(context["loss_permille"]) / 1000
 		var reason := "%s at %s, battle day %d; attacker %s, defender %s" % [String(tier.get("tier", "")).replace("_", " "),
@@ -979,7 +1000,9 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 				var people := int(row.get(arm, 0)) * int(arm_row["crew"])
 				heads += people
 				if String(arm_row["type"]) in ["ranged", "machinery"]:
-					ranged += people
+					var shots := BattleRanged.counts(repo, state, battle, code, unit)
+					@warning_ignore("integer_division")
+					ranged += people * int(shots["firing"]) / maxi(1, int(shots["fit"]))
 		var ranged_context := heads > 0 and ranged * 1000 >= heads * int(repo.bal("battle_context_arm_threshold_permille"))
 		# Use fit, impacting front personnel rather than nominal mounted equipment.
 		heads = 0
@@ -993,6 +1016,8 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 			kind = "shock"
 		if kind != "melee":
 			scale = int(repo.bal("battle_context_" + kind + "_permille"))
+	@warning_ignore("integer_division")
+	scale = scale * BattleRanged.incoming_permille(repo, state, battle, side, unit) / 1000
 	for code: String in members:
 		for modifier: Dictionary in battle.get("event_modifiers", []):
 			if modifier.unit == code and int(modifier.until_day) >= state.absolute_day():
