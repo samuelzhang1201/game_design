@@ -240,7 +240,7 @@ static func _apply_transition(repo: DataRepository, state: GameState, event_id: 
 		line["delta"] = int(line["delta"])
 		line["value"] = int(line["value"])
 		lines.append(line)
-	return _record(state, event_id, request, {"status": "applied", "population": lines})
+	return _record(state, event_id, request, {"status": "applied", "population": lines, "changes": changes.duplicate(true)})
 
 static func assign_commander(repo: DataRepository, state: GameState, code: String, character_id: String, reason: String) -> Dictionary:
 	return Commanders.assign(repo, state, code, character_id, reason)

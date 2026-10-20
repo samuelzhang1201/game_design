@@ -823,6 +823,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		"battle:%d:round:%d" % [int(b["id"]), n])
 	if results.has("error"):
 		return results
+	_settle_family_losses(repo, state, b, pending, n)
 	custody = _settle_defeated_holders(repo, state, b)
 	if custody.has("error"):
 		return custody
@@ -853,6 +854,32 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		_end(repo, state, b, "rout_" + ("attacker" if b["routed_side"] == "att" else "defender") if b.has("routed_side") else "emptied", events, left)
 		return {"ended": true}
 	return {"ended": false}
+
+
+## What each unit's noble dead and captured cost their families: one consume per unit in code
+## order. Replay-safe: consume returns the saved rows for a known id, and `family_loss_ids`
+## keeps those rows from being appended to the battle twice.
+static func _settle_family_losses(repo: DataRepository, state: GameState, b: Dictionary, pending: Dictionary, n: int) -> void:
+	var receipt: Dictionary = state.military_events.get("battle:%d:round:%d:personnel" % [int(b["id"]), n], {})
+	var by_unit: Dictionary = {}
+	for change: Dictionary in receipt.get("result", {}).get("changes", []):
+		var code := String(state.military_cohorts.get(String(change["cohort_id"]), {}).get("unit_code", ""))
+		if not by_unit.has(code):
+			by_unit[code] = []
+		by_unit[code].append(change)
+	var codes: Array = by_unit.keys()
+	codes.sort()
+	var place := place_label(repo, state, b)
+	for code: String in codes:
+		var side := "att" if code in pending["att"] else "def"
+		var order := String(pending.get("unit_actions", {}).get(code, {}).get("kind", pending["contexts"][side]["kind"]))
+		var loss_id := "battle:%d:round:%d:%s" % [int(b["id"]), n, code]
+		var rows: Variant = FamilyLosses.consume(repo, state, loss_id, by_unit[code], {"place": place, "order": order})
+		# The id is fixed per round and unit, so an {error} cannot arise; if it did, nothing is appended.
+		if not rows is Array or (b.get("family_loss_ids", []) as Array).has(loss_id):
+			continue
+		b["family_loss_ids"] = b.get("family_loss_ids", []) + [loss_id]
+		b["family_changes"] = b.get("family_changes", []) + rows
 
 
 ## Resolve custody while the defeated unit still has its battlefield context.
