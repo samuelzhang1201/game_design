@@ -31,7 +31,8 @@ func gold_cost(row: Dictionary) -> float:
 		return data.bal(COST_KEYS[formula])
 	return 0.0  # unknown formulas are free in slice 1; slice 2 adds real formulas
 
-func validate(req: ActionRequest, state: GameState) -> String:
+## Presentation may defer an unobserved task target's condition; execution uses the default.
+func validate(req: ActionRequest, state: GameState, task_target_observed := true) -> String:
 	if not data.actions.has(req.action_code):
 		return "Unknown action: " + req.action_code
 	if req.action_code in ["PRISONER_PROPOSE", "PRISONER_RESPOND", "PRISONER_SETTLE"]:
@@ -106,7 +107,7 @@ func validate(req: ActionRequest, state: GameState) -> String:
 		"BATTLE_ORDER":
 			return _validate_battle_order(req, state)
 		"BATTLE_TASK", "BATTLE_TASK_CANCEL":
-			return _validate_task(req, state)
+			return _validate_task(req, state, task_target_observed)
 		"ARMY_TASK", "ARMY_TASK_CANCEL":
 			return _validate_army_task(req, state)
 		"BATTLE_FORMATION":
@@ -411,7 +412,7 @@ func _task_replay(req: ActionRequest, state: GameState) -> Dictionary:
 		return {"error": "This request id already names another unit task."}
 	return {"outcome": record["action_outcome"].duplicate(true)}
 
-func _validate_task(req: ActionRequest, state: GameState) -> String:
+func _validate_task(req: ActionRequest, state: GameState, target_observed := true) -> String:
 	if req.target != "":
 		return "A unit task has no separate character target."
 	var fields := ["request_id", "regiment", "battle_id"]
@@ -422,7 +423,7 @@ func _validate_task(req: ActionRequest, state: GameState) -> String:
 	for field: Variant in req.params:
 		if not field in fields:
 			return "Unknown unit task parameter."
-	var why := BattleTaskSystem.refusal_of(data, state, _task_warrant(req))
+	var why := BattleTaskSystem.refusal_of(data, state, _task_warrant(req), target_observed)
 	if why != "":
 		return why
 	var code := String(req.params["regiment"])
