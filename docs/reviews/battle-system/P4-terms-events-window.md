@@ -2,6 +2,8 @@
 
 This step restores committed real-window evidence for the existing panels. It changes no runtime code, scenes, resources, tables or art. It does not accept all of P4, natural event frequency, user playtesting, the task menu, quotes, pursuit, gait or the WAR ROOM task block.
 
+The documentation commit was rebased onto `efd50e93666b6b3727f07649f8381f5f716ae2c6` after capture; the intervening pursuit-region merge does not change either panel, its scenes, the snapshot tool, BattleEvents or BattlePresentation. Screenshots certify the frozen inputs below, not a new post-rebase game run.
+
 Source baseline: `e7f8e9858680a6585304d6afda2d1fe913008c9d`. Captured on 21 October 2026 in the dedicated `codex/p4-terms-events-window` checkout, Godot 4.7.2 `ed1daf0bf`, Metal Forward+, Apple M5 Pro. Real window sizes: 1920×1200 (fractional 1.5× design scale with a different aspect ratio) and 1280×720. No headless 3D capture or image reconstruction.
 
 ## Evidence and reproduction
@@ -24,7 +26,7 @@ Independent visual critique and final current-HEAD CI are owned by the sole Revi
 
 ## Checks and limits
 
-The evidence-only change uses the harness/selector/runner/timeout self-checks and syntax/config/guide checks, without a broad GUT run. Exact results and logs are retained in the evidence directory. Final diff selection must select no GUT category. Review must inspect required checks on the actual PR HEAD before merge.
+The evidence-only change uses the harness/selector/runner/timeout self-checks and syntax/config/guide checks, without a broad GUT run. Exact results and logs are retained in the evidence directory. The selector conservatively treats the PNG/text evidence paths as unknown files and selects all seven functional categories; this is the actual CI gate, not a waived or empty selection. No selector rule was changed. Review must inspect required checks on the actual PR HEAD before merge.
 
 The first import emitted the documented fresh-import font/theme errors and shutdown resource leaks. Successful window captures emitted a stale terrain-bake warning, deprecated interpolation warning and shutdown ObjectDB leak warnings; these existing background issues are retained in capture logs and were not repaired here. No capture runtime script error is accepted. An early inherited temporary script stalled during startup and was stopped only by its own process ID; a baseline copy with the fixture appended produced successful captures, although one rich-condition attempt also hit the 90-second startup limit and succeeded on one retry. The startup failure has not been diagnosed or fixed. A mistyped temporary scene invocation failed before capture and was rerun correctly. Neither failed attempt is screenshot evidence. The owner's existing editor and other sessions' processes were left alone; all successful captures used the shared lock.
 
