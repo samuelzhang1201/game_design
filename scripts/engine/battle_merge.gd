@@ -11,7 +11,7 @@ extends RefCounted
 
 ## Side-level keys of the absorbed battle that are NOT folded into the survivor:
 ## they stay under `sources` (the survivor's own stay as they are).
-const SOURCE_KEYS: Array[String] = ["parley", "commanders", "commander_nominees", "actions", "formations",
+const SOURCE_KEYS: Array[String] = ["parley", "commanders", "commander_nominees", "commander_nominee_seq", "actions", "formations",
 	"routed_side", "inspire_cooldown", "inspire_until", "start_day", "place_x_m", "place_y_m"]
 
 
@@ -89,6 +89,13 @@ static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dic
 	for key: String in gone.get("sources", {}):
 		if not survivor.sources.has(key):
 			survivor.sources[key] = _copy(gone.sources[key])
+	var side_map := {}   # absorbed side -> the survivor side its units fall on, by allegiance
+	for side: String in BattleSystem.SIDES:
+		for code: String in gone[side]:
+			var into := BattleSystem._side_for(state, survivor, code)
+			if into != "":
+				side_map[side] = into
+				break
 	# union by allegiance: survivor members first, then the absorbed in their old order
 	var moved: Array = []
 	for side: String in BattleSystem.SIDES:
@@ -141,6 +148,7 @@ static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dic
 		var saved: Dictionary = state.battle_events[token]
 		if int(saved.get("battle_id", -1)) == gid:
 			saved["battle_id"] = sid
+	BattleCommand.unify(repo, state, survivor, source, side_map)
 	BattleGroups.refresh(repo, state, survivor)
 	var event := {"kind": "merge", "battle_id": sid, "absorbed": gid,
 		"reason": "Fronts touched: battle %d joined battle %d on the same field." % [gid, sid]}
