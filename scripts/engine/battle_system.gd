@@ -489,6 +489,9 @@ static func join(repo: DataRepository, state: GameState, battle_id: int, code: S
 	var list: Array = b[side]
 	if list.size() >= int(repo.bal("battle_max_units")):
 		return false
+	BattleRules.ensure_parties(b)   # an old save's default is taken before the newcomer is in the list
+	if b.has("parley"):   # the frozen terms are inherited: the reinforcement becomes a party
+		b.parley.parties[side].append(code)
 	list.append(code)
 	BattleReport.enroll(state, b, code, side)
 	if not b.has("event_reinforcements"):
