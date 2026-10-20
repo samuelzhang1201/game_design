@@ -1,7 +1,7 @@
 class_name BattleMerge
 extends RefCounted
-## P4.4e1: two live battles whose groups actually touch (a crown group and a
-## foe group within `battle_group_contact_m`, inclusive) become ONE record. The
+## Compatible live battles join on actual close group contact or lawful
+## ranged fire across their fronts. The
 ## lower id survives (the other stays an alias in `GameState.battle_aliases`),
 ## unless only the other holds a town: an assault stays linked to its town.
 ## Units are unioned by allegiance; every per-unit and accumulated record is
@@ -38,7 +38,7 @@ static func day(repo: DataRepository, state: GameState) -> Array:
 
 
 ## True when `a` and `b` (a.id < b.id) may merge: neither mid-round, not two
-## towns, every side occupied, and an actual contact between the allegiances.
+## towns, every side occupied, and an actual contact between compatible allegiances.
 static func mergeable(repo: DataRepository, state: GameState, a: Dictionary, b: Dictionary) -> bool:
 	if a.is_empty() or b.is_empty() or int(a["id"]) == int(b["id"]):
 		return false
@@ -50,6 +50,8 @@ static func mergeable(repo: DataRepository, state: GameState, a: Dictionary, b: 
 		for side: String in BattleSystem.SIDES:
 			if (battle[side] as Array).is_empty():
 				return false
+	if not _compatible(repo, state, a, b):
+		return false
 	var reach := int(repo.bal("battle_group_contact_m"))
 	for ua: String in _units(a):
 		for ub: String in _units(b):
@@ -61,6 +63,27 @@ static func mergeable(repo: DataRepository, state: GameState, a: Dictionary, b: 
 					var dy := int(ga["y_m"]) - int(gb["y_m"])
 					if dx * dx + dy * dy <= reach * reach:
 						return true
+	return _ranged_contact(repo, state, a, b) or _ranged_contact(repo, state, b, a)
+
+
+## The allegiance union must preserve every pair's existing realm hostility.
+static func _compatible(repo: DataRepository, state: GameState, a: Dictionary, b: Dictionary) -> bool:
+	var relations := {"player": repo.resolve_realm("player_realm"), "raider": repo.resolve_realm("raider_realm"),
+		"diplomacy": repo.world_table("political", "diplomacy"), "hostile": {}}
+	for ua: String in _units(a):
+		for ub: String in _units(b):
+			var ra := ArmySystem.realm_of(repo, ua, state)
+			var rb := ArmySystem.realm_of(repo, ub, state)
+			if ra == "" or rb == "" or ArmySystem._hostile(relations, ra, rb) != (ArmySystem.is_foe(state, ua) != ArmySystem.is_foe(state, ub)):
+				return false
+	return true
+
+
+static func _ranged_contact(repo: DataRepository, state: GameState, source: Dictionary, other: Dictionary) -> bool:
+	for code: String in _units(source):
+		if BattleRanged.share(repo, state, code) > 0 and BattleSystem.unit_action(repo, state, source, code)["kind"] == "attack" \
+				and int(BattleRanged.counts(repo, state, source, code, "", other)["firing"]) > 0:
+			return true
 	return false
 
 
