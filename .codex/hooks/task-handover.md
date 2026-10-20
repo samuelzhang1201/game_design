@@ -1,13 +1,20 @@
-# One small step, one PR, one-to-one handoff
+# One small step per PR, independent steps may run in parallel
 
-- 一个 session 只讨论并处理一个小问题／plan step；step 太大先拆小。不增加第二个 feature，不把后续步骤累积到当前 PR。
-- 每个 step／PR 只有实施 session 和该 step 的唯一 `Review` session 全权负责，禁止第三个 session、子代理、协调者或嵌套 reviewer 参与。普通实施默认 Sol／low，审查保留 Sol／medium；复杂问题按 `.codex/harness.md` 说明原因后升级，不增加第三人。创建全新实施 session 时显式指定 `model="gpt-6.1-sol"`、`thinking="low"`，不假定子代理默认值会配置主会话，也不自动修改已运行会话。
-- 顺序只有：实施 → 同一 PR 的 Review → CI 通过并合并 main → 下一个独立 step 的实施。Review 自行修复范围内问题并重跑相关检查，不广播回报、不再创建第二 reviewer。用户明确暂停时停止。
-- handover 严格一对一：每个 session 最多一个前驱、一个全新后继；禁止 fork/resume、自环、回到旧 session、一对多、多对一和多对多。没有后续已授权任务就结束，不造空会话。
-- 完成当前单元后先保存当前工作树内的精简 `HANDOVER.md`：授权／单一 scope、step／PR、两个负责人、checkout／branch／HEAD、拥有文件、未提交内容、检查与代码状态、现有进程、风险、下一任务／验收／停止条件。不得覆盖其他任务的检查点。
-- `.superpowers/session-handovers/<source_session_id>.json` 保存 `source_session_id`、`status`（working/ready/handed_off）、`summary_path`、单个 `next_task`。同一 PR 的交接还记录 `step_id`、`pr_url`、`implementation_session_id`、`review_session_id`；确定了唯一 Review id 后再保存最终标记。普通无 PR 的任务可以省略这四项。
-- `ready` 只表示当前单元完成并准备交接。调用一次 `create_thread`（禁止 fork/resume），提示只含检查点绝对路径、工作树绝对路径、一个下一任务、验收和停止条件。创建成功后写单个 `next_session_id` 和 `handed_off`，结束源 session。创建结果未知先核对已有目标，不盲目重试。
-- 新 session 只读检查点、核对 diff 和必要指导／spec／plan 段落，不要重新读取全部历史，也不重做批准的计划。源 session 不等待、监督、反复唤醒或向完成的聊天群发消息。
-- 交接保留检查命令、结果及对应 commit／输入 hash；输入未变时复用已通过检查，不因换 session 重跑。先收敛定向检查，再对冻结输入运行一次必要回归。状态更新只报告新发现、决策、阻塞、需用户处理的事或阶段变化，不逐项播报测试数量或重复报告等待。
-- Stop hook 只校验显式标记，并把成功声明的边／PR 负责人对记入 Git common dir 的共享 registry，防止不同工作树的声明冲突；它不拦截所有会话创建工具，也不替代负责人的执行纪律。不读 transcript、不启动会话、不改变测试、模型、MCP、授权或信任。
-- 没有原生 compact 能力就不声称已压缩；没有新会话工具则保留 ready 检查点并说明限制，不启动后台代理循环。
+- 每个实施 session 只负责一个有界、可独立验证的小步骤，每步独立工作树、独立 codex/ 分支、独立 PR；过大的步骤先拆分，不累积后续功能。
+- 无依赖且修改文件不冲突的步骤允许并行。依赖未满足或拥有文件重叠的步骤必须串行；不得用不同分支掩盖文件归属冲突。依赖步骤须等其前置 PR 合并并满足必要验收后启动。
+- 每个 PR 只有一个实施 session 和唯一 Review session。实施交给该 Review 后结束本 PR 的实施职责；Review 独立审查、修复范围内问题并完成合并，不增加第三位实现者、审查者、子代理或嵌套 reviewer。
+- 允许独立调度 session 管理步骤依赖、文件归属、派工和状态。调度者不参与被调度 PR 的具体设计、代码实现或审查，不成为其第三负责人。规则维护 PR 的实施者交接后，不兼任该 PR 的调度监督者。
+- 派工前登记 step_id、唯一派工方、依赖、仓库相对拥有文件、验收、工作树、分支和实施 session。Review 可在尚未创建时明确标记未分配，但实施交接时必须确定唯一 Review。
+- 每个步骤只能启动一次。不得由调度者和前置步骤的 Review 重复创建同一后续任务。先核对已有活跃任务、检查点、PR 和后继记录，保留现有归属，不唤醒已完成负责人。
+- 同一 PR 的实施→Review 交接仍为一对一。调度者可以向多个独立步骤派工，但必须逐项记录完整任务和归属，不接受只有 session id 的任意后继列表。
+- 多前置依赖可以汇合到一个步骤，但该步骤只有一个派工方和一个实施者。禁止自环、间接循环、重复派工、已确定负责人替换和返回旧负责人形成交接循环。
+- 每次交接保存工作树内精简检查点：授权、单一 scope、step/PR、两个负责人、checkout/branch/HEAD、拥有及未提交文件、检查命令与结果、对应 commit/input hash、现有进程、风险、下一任务、验收及停止条件。不得覆盖其他任务的检查点。
+- 交接标记区分具体 PR 交接与调度派工。具体 PR 记录唯一实施者、唯一 Review 和单一接收者；调度记录各独立任务、依赖、文件归属和创建结果。旧的一对一标记保留兼容。
+- 每个目标会话只创建一次，创建结果未知时先核对，不盲目重试。具体 PR 实施者成功交接后停止；调度者可以继续管理其他已授权独立任务。
+- 模型按复杂度选择：普通明确实施默认 GPT-6.1 Sol/low，Review 默认 Sol/medium；复杂问题在同一负责对内记录原因后升级。已有运行会话保持当前配置，不自动调整。
+- Review 只有在独立审查完成且当前 HEAD 的全部必需 CI、适用的公式、保存/确定性和视觉验收通过后才能合并。缺失、跳过、失败、取消或超时不是成功。满足条件直接合并，不重复询问已有授权。
+- 保留冻结输入检查证据；输入未变可复用，相关输入变化则重跑失效检查。纯规则维护运行 Python/hook/配置/指南检查，不例行运行游戏全量 GUT。
+- 本地 Godot 任务使用项目指定的共享锁，不并发运行多个重型 Godot 任务，不结束别人的编辑器或 Blender。视觉验收使用真实窗口与 visual-review，不使用 headless 3D 冒充。
+- Stop hook 只验证显式声明记录，通过 Git common dir 的共享 registry、文件锁及原子更新检查跨工作树冲突。它不截获所有创建工具，也不自行证明 CI、依赖或验收已经通过。
+- 不读取 transcript，不自动启动后台调度循环，不关闭 hook，不修改权限、trust、MCP、trusted_hash 或测试门槛以绕过限制。
+- 新会话只读检查点、实际 diff 和必要指导/spec/plan，不重做批准的设计、不重新读取全部历史。用户明确暂停时停止；没有授权后续任务时结束，不创建空会话。

@@ -20,46 +20,21 @@ def registry_path(cwd):
     return cwd / '.superpowers' / 'session-handover-graph.json'
 
 
+def valid_session(value):
+    return isinstance(value, str) and bool(value) and all(c.isalnum() or c == '-' for c in value)
+
+
 def record_handoff(cwd, data):
-    source, target = data['source_session_id'], data.get('next_session_id')
-    if not isinstance(target, str) or not target or any(not (c.isalnum() or c == '-') for c in target):
-        raise ValueError('next_session_id must name exactly one fresh session')
+    """Validate declarations under one shared lock; never infer tool calls or CI results."""
     path = registry_path(cwd)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.with_suffix('.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         graph = json.loads(path.read_text()) if path.exists() else {'edges': {}, 'prs': {}}
-        edges = graph['edges']
-        if source in edges and edges[source] != target:
-            raise ValueError('一对多 handover 禁止：本 session 已有唯一后继')
-        if target in edges and edges.get(source) != target:
-            raise ValueError('目标 session 已交接过，不能作为全新后继')
-        if any(s != source and t == target for s, t in edges.items()):
-            raise ValueError('多对一 handover 禁止：目标 session 已有前驱')
-        cursor, visited = target, {source}
-        while True:
-            if cursor in visited:
-                raise ValueError('handover 必须是无环的一对一链，禁止返回旧 session')
-            visited.add(cursor)
-            if cursor not in edges:
-                break
-            cursor = edges[cursor]
-        if data.get('pr_url'):
-            pair = {k: data.get(k) for k in ['step_id', 'implementation_session_id', 'review_session_id']}
-            owners = [pair['implementation_session_id'], pair['review_session_id']]
-            if not all(isinstance(v, str) and v.strip() for v in pair.values()) or len(set(owners)) != 2:
-                raise ValueError('每个 PR 必须指定一个 step、实施 session 和唯一 Review session')
-            if source not in owners or (source == owners[0] and target != owners[1]):
-                raise ValueError('禁止第三个 session 参与同一 PR；实施只能交给指定 Review')
-            old = graph['prs'].get(data['pr_url'])
-            if old is not None and old != pair:
-                raise ValueError('同一 PR 的 step 和两个负责 session 不可被另一组替换')
-            for url, existing in graph['prs'].items():
-                if url != data['pr_url'] and (existing['step_id'] == pair['step_id'] or
-                        set(owners) & {existing['implementation_session_id'], existing['review_session_id']}):
-                    raise ValueError('一个 step 只有一个 PR，一个 session 只负责一个 step／PR')
-            graph['prs'][data['pr_url']] = pair
-        edges[source] = target
+        if data.get('kind') == 'dispatch':
+            record_dispatch(graph, data)
+        else:
+            record_pr_handoff(graph, data)
         temporary = None
         try:
             with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False) as out:
@@ -70,6 +45,176 @@ def record_handoff(cwd, data):
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
 
+
+def record_pr_handoff(graph, data):
+    edges = graph['edges']
+    source, target = data['source_session_id'], data.get('next_session_id')
+    if not valid_session(target):
+        raise ValueError('next_session_id must name exactly one fresh session')
+    if 'tasks' in data:
+        raise ValueError('dispatch and PR handoff records must be separate')
+    for step in graph.get('steps', {}).values():
+        if step['dispatcher_session_id'] in (source, target):
+            raise ValueError('dispatcher cannot participate in PR handoff chains')
+        owners = {step['implementation_session_id'], step['review_session_id']} - {None}
+        if owners & {source, target} and not (
+                data.get('step_id') == step['step_id'] and data.get('pr_url') and
+                source == step['implementation_session_id'] and
+                target == data.get('review_session_id')):
+            raise ValueError('dispatched owners may only hand off their own PR')
+    if source in edges and edges[source] != target:
+        raise ValueError('一对多 handover 禁止：本 session 已有唯一后继')
+    if target in edges and edges.get(source) != target:
+        raise ValueError('目标 session 已交接过，不能作为全新后继')
+    if any(s != source and t == target for s, t in edges.items()):
+        raise ValueError('多对一 handover 禁止：目标 session 已有前驱')
+    cursor, visited = target, {source}
+    while True:
+        if cursor in visited:
+            raise ValueError('handover 必须是无环的一对一链，禁止返回旧 session')
+        visited.add(cursor)
+        if cursor not in edges:
+            break
+        cursor = edges[cursor]
+    if data.get('pr_url'):
+        pair = {k: data.get(k) for k in ['step_id', 'implementation_session_id', 'review_session_id']}
+        owners = [pair['implementation_session_id'], pair['review_session_id']]
+        if not all(isinstance(v, str) and v.strip() for v in pair.values()) or len(set(owners)) != 2:
+            raise ValueError('每个 PR 必须指定一个 step、实施 session 和唯一 Review session')
+        if source not in owners or (source == owners[0] and target != owners[1]):
+            raise ValueError('禁止第三个 session 参与同一 PR；实施只能交给指定 Review')
+        if data.get('kind') == 'pr_handoff' and (source != owners[0] or target != owners[1]):
+            raise ValueError('PR handoff must go from implementation to its unique Review')
+        step = graph.get('steps', {}).get(pair['step_id'])
+        if step is not None:
+            if (source != step['implementation_session_id'] or target != owners[1] or
+                    owners[0] != step['implementation_session_id'] or
+                    step['review_session_id'] not in (None, owners[1])):
+                raise ValueError('PR owners must match the dispatched step')
+            step['review_session_id'] = owners[1]
+        for step_id, other in graph.get('steps', {}).items():
+            if other['dispatcher_session_id'] in owners:
+                raise ValueError('dispatcher cannot become a PR owner')
+            if step_id != pair['step_id'] and set(owners) & {
+                    other['implementation_session_id'], other['review_session_id']}:
+                raise ValueError('session already owns another dispatched step')
+        old = graph['prs'].get(data['pr_url'])
+        if old is not None and old != pair:
+            raise ValueError('同一 PR 的 step 和两个负责 session 不可被另一组替换')
+        for url, existing in graph['prs'].items():
+            if url != data['pr_url'] and (existing['step_id'] == pair['step_id'] or
+                    set(owners) & {existing['implementation_session_id'], existing['review_session_id']}):
+                raise ValueError('一个 step 只有一个 PR，一个 session 只负责一个 step／PR')
+        graph['prs'][data['pr_url']] = pair
+    edges[source] = target
+
+
+def record_dispatch(graph, data):
+    tasks = data.get('tasks')
+    if not isinstance(tasks, list) or not tasks:
+        raise ValueError('dispatch requires complete tasks, not session lists')
+    if any(key in data for key in ('next_session_id', 'next_session_ids', 'pr_url')):
+        raise ValueError('dispatch and PR handoff records must be separate')
+    source = data['source_session_id']
+    steps = graph.setdefault('steps', {})
+    seen = set()
+    for task in tasks:
+        if not isinstance(task, dict):
+            raise ValueError('dispatch task must be an object')
+        for key in ('step_id', 'dispatcher_session_id', 'acceptance', 'worktree', 'branch',
+                    'implementation_session_id'):
+            if not isinstance(task.get(key), str) or not task[key].strip():
+                raise ValueError('dispatch requires ' + key)
+        step_id = task['step_id']
+        if step_id in seen:
+            raise ValueError('duplicate dispatch step')
+        seen.add(step_id)
+        if task['dispatcher_session_id'] != source:
+            raise ValueError('step must have exactly one dispatch authority')
+        owner = task['implementation_session_id']
+        review = task['review_session_id']
+        if not valid_session(owner) or (review is not None and not valid_session(review)):
+            raise ValueError('invalid implementation or Review session')
+        if owner == source or review in (source, owner):
+            raise ValueError('dispatcher must be separate from the implementation/Review pair')
+        if not Path(task['worktree']).is_absolute() or not task['branch'].startswith('codex/'):
+            raise ValueError('dispatch requires an absolute worktree and codex/ branch')
+        dependencies = task['dependencies']
+        if (not isinstance(dependencies, list) or
+                any(not isinstance(dep, str) or not dep for dep in dependencies) or
+                len(set(dependencies)) != len(dependencies)):
+            raise ValueError('dependencies must be unique step ids')
+        files = task.get('owned_files')
+        if not isinstance(files, list) or not files:
+            raise ValueError('owned_files must list repository-relative paths')
+        for name in files:
+            if (not isinstance(name, str) or not name or Path(name).is_absolute() or
+                    any(part in ('', '.', '..') for part in name.split('/')) or
+                    any(char in name for char in '*?[]\\')):
+                raise ValueError('owned_files must be literal repository-relative paths')
+        creation = task['creation_result']
+        if (not isinstance(creation, dict) or creation.get('status') != 'created' or
+                creation.get('session_id') != owner):
+            raise ValueError('reconcile unknown creation results before registering or retrying')
+        if task.get('status') not in ('active', 'merged'):
+            raise ValueError('step status must be active or merged')
+        old = steps.get(step_id)
+        if old is not None:
+            for key in ('dispatcher_session_id', 'dependencies', 'owned_files', 'acceptance',
+                        'worktree', 'branch', 'implementation_session_id', 'creation_result'):
+                if task[key] != old[key]:
+                    raise ValueError('duplicate dispatch or immutable step ownership changed')
+            if old['review_session_id'] is not None and review != old['review_session_id']:
+                raise ValueError('Review owner cannot be replaced')
+            if old['status'] == 'merged' and task['status'] != 'merged':
+                raise ValueError('completed step cannot be restarted')
+        steps[step_id] = dict(task)
+    # Walk the full declared graph, including converging prerequisites.
+    def visit(step_id, visiting, visited):
+        if step_id in visiting:
+            raise ValueError('dispatch dependency cycle')
+        if step_id in visited:
+            return
+        if step_id not in steps:
+            raise ValueError('missing declared dependency')
+        for dep in steps[step_id]['dependencies']:
+            visit(dep, visiting | {step_id}, visited)
+        visited.add(step_id)
+    visited = set()
+    for step_id in steps:
+        visit(step_id, set(), visited)
+    for step_id, task in steps.items():
+        for dep in task['dependencies']:
+            if steps[dep]['status'] != 'merged' or steps[dep].get('accepted') is not True:
+                raise ValueError('declared dependency must be merged and accepted')
+        owners = {task['implementation_session_id'], task['review_session_id']} - {None}
+        if task['dispatcher_session_id'] in (set(graph['edges']) | set(graph['edges'].values())) or any(
+                task['dispatcher_session_id'] in (pair['implementation_session_id'], pair['review_session_id'])
+                for pair in graph['prs'].values()):
+            raise ValueError('PR owner cannot also dispatch steps')
+        for other_id, other in steps.items():
+            if other_id == step_id:
+                continue
+            if owners & {other['implementation_session_id'], other['review_session_id'],
+                         other['dispatcher_session_id']} or task['dispatcher_session_id'] in {
+                             other['implementation_session_id'], other['review_session_id']}:
+                raise ValueError('session already owns another step or dispatch role')
+            if (Path(task['worktree']).resolve() == Path(other['worktree']).resolve() or
+                    task['branch'] == other['branch']):
+                raise ValueError('steps require separate worktrees and branches')
+            if task['status'] == 'active' and other['status'] == 'active' and any(
+                    a == b or a.startswith(b+'/') or b.startswith(a+'/')
+                    for a in task['owned_files'] for b in other['owned_files']):
+                raise ValueError('active file ownership overlaps')
+        expected = (task['implementation_session_id'], task['review_session_id'])
+        for source, target in graph['edges'].items():
+            if owners & {source, target} and (source, target) != expected:
+                raise ValueError('cannot return to a historical session owner')
+        for pair in graph['prs'].values():
+            if (step_id == pair['step_id'] or owners & {pair['implementation_session_id'], pair['review_session_id']}) and (
+                    step_id != pair['step_id'] or expected != (
+                        pair['implementation_session_id'], pair['review_session_id'])):
+                raise ValueError('session already owns another PR')
 
 def respond(event):
     if not isinstance(event, dict):
@@ -97,6 +242,17 @@ def respond(event):
     summary = summary.resolve()
     if not summary.is_relative_to(cwd) or not summary.is_file() or not summary.read_text(encoding="utf-8").strip():
         return {"decision": "block", "reason": "任务交接尚未完成：先在当前工作树保存有效的精简 HANDOVER.md，再执行交接；不要重新读取全部历史。"}
+    kind = data.get('kind')
+    if kind not in (None, 'pr_handoff', 'dispatch'):
+        return {'decision': 'block', 'reason': 'unknown handover kind'}
+    if kind == 'dispatch':
+        try:
+            record_handoff(cwd, data)
+        except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
+            return {'decision': 'block', 'reason': str(error)}
+        return {}
+    if kind == 'pr_handoff' and (not data.get('pr_url') or not valid_session(data.get('next_session_id'))):
+        return {'decision': 'block', 'reason': 'pr_handoff requires pr_url, its owner pair and one recipient'}
     if any(k in data for k in ['next_session_ids', 'predecessor_session_ids']):
         return {"decision": "block", "reason": "handover 只允许一对一，禁止 session 列表"}
     if not data.get("next_task") and not data.get('next_session_id'):

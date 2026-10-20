@@ -24,12 +24,16 @@ class HandoverHookTests(unittest.TestCase):
         (self.root / '.superpowers/session-handovers/old.json').write_text(json.dumps(self.marker))
     def handoff(self, source='old', target='new', **fields):
         data = dict(self.marker, source_session_id=source, next_session_id=target, **fields)
+        if 'kind' not in fields:
+            data.pop('kind', None)
+        if 'tasks' not in fields:
+            data.pop('tasks', None)
         (self.root / '.superpowers/session-handovers' / (source+'.json')).write_text(json.dumps(data))
         return hook.respond(dict(self.event, session_id=source))
     def test_start_injects_only_compact_rule(self):
         result = hook.respond({'hook_event_name': 'SessionStart'})
         self.assertEqual(result['hookSpecificOutput']['hookEventName'], 'SessionStart')
-        self.assertIn('不要重新读取全部历史', result['hookSpecificOutput']['additionalContext'])
+        self.assertIn('不重新读取全部历史', result['hookSpecificOutput']['additionalContext'])
     def test_no_marker_does_not_interfere(self):
         self.assertEqual(hook.respond(self.event), {})
     def test_ready_requires_fresh_session(self):
@@ -120,6 +124,146 @@ class HandoverHookTests(unittest.TestCase):
             (other/'.superpowers/session-handovers/other.json').write_text(json.dumps(marker))
             result = hook.respond(dict(self.event,cwd=str(other),session_id='other'))
             self.assertEqual(result['decision'],'block')
+    def task(self, step='a', owner='worker-a', files=None, dependencies=None, **fields):
+        return dict(step_id=step, dispatcher_session_id='old', dependencies=dependencies or [],
+                    owned_files=files or ['tools/a.py'], acceptance='targeted checks pass',
+                    worktree=str(self.root / step), branch='codex/'+step,
+                    implementation_session_id=owner, review_session_id=None,
+                    creation_result={'status':'created', 'session_id':owner},
+                    status='active', **fields)
+    def dispatch(self, tasks):
+        self.marker.update(kind='dispatch', tasks=tasks)
+        self.save()
+        return hook.respond(self.event)
+    def test_independent_dispatch_and_identical_retry(self):
+        tasks = [self.task(), self.task('b','worker-b',['tools/b.py'])]
+        self.assertEqual(self.dispatch(tasks), {})
+        self.assertEqual(self.dispatch(tasks), {})
+        graph = json.loads(hook.registry_path(self.root).read_text())
+        self.assertEqual(set(graph['steps']), {'a','b'})
+        self.assertEqual(graph['edges'], {})
+    def test_dispatch_rejects_overlap_duplicate_and_owner_replacement_atomically(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        original = hook.registry_path(self.root).read_text()
+        cases = [[self.task('b','worker-b')], [self.task(), self.task()],
+                 [dict(self.task(), implementation_session_id='replacement')],
+                 [dict(self.task(), dispatcher_session_id='other')],
+                 [self.task('b','worker-a',['tools/b.py'])],
+                 [self.task('b','worker-b',['tools'])]]
+        for tasks in cases:
+            with self.subTest(tasks=tasks):
+                self.assertEqual(self.dispatch(tasks)['decision'], 'block')
+                self.assertEqual(hook.registry_path(self.root).read_text(), original)
+    def test_dependencies_require_merged_and_accepted_declaration(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        b = self.task('b','worker-b',['tools/b.py'],['a'])
+        self.assertEqual(self.dispatch([b])['decision'], 'block')
+        self.assertEqual(self.dispatch([dict(self.task(), status='merged', accepted=True)]), {})
+        self.assertEqual(self.dispatch([b]), {})
+    def test_dispatch_rejects_self_indirect_cycles_and_missing_dependencies(self):
+        for tasks in [[self.task(dependencies=['a'])],
+                      [self.task(dependencies=['b']), self.task('b','worker-b',['b'],['a'])],
+                      [self.task(dependencies=['missing'])]]:
+            self.assertEqual(self.dispatch(tasks)['decision'], 'block')
+    def test_dispatch_requires_complete_records_and_known_creation_result(self):
+        for field in ['owned_files','acceptance','worktree','branch','implementation_session_id',
+                      'dispatcher_session_id','dependencies','review_session_id','creation_result']:
+            task = self.task(); del task[field]
+            with self.subTest(field=field):
+                self.assertEqual(self.dispatch([task])['decision'], 'block')
+        for files in [['../escape'], ['/absolute'], ['tools/../a'], []]:
+            self.assertEqual(self.dispatch([dict(self.task(), owned_files=files)])['decision'], 'block')
+        task = dict(self.task(), creation_result={'status':'unknown'})
+        self.assertEqual(self.dispatch([task])['decision'], 'block')
+    def test_dispatch_pr_pair_matches_registered_owners(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        pair = dict(kind='pr_handoff', step_id='a', pr_url='https://example.com/pull/1',
+                    implementation_session_id='worker-a', review_session_id='review-a')
+        self.assertEqual(self.handoff('worker-a','review-a',**pair), {})
+        self.assertEqual(self.handoff('review-a','third',**pair)['decision'], 'block')
+        changed = dict(self.task(), review_session_id='other-review')
+        self.assertEqual(self.dispatch([changed])['decision'], 'block')
+    def test_explicit_pr_handoff_requires_recipient_even_without_next_task(self):
+        self.marker.update(kind='pr_handoff', pr_url='https://example.com/pull/1',
+                           step_id='a', implementation_session_id='old',
+                           review_session_id='review', next_task='')
+        self.save()
+        self.assertEqual(hook.respond(self.event).get('decision'), 'block')
+    def test_dispatch_rejects_worktree_path_aliases(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        alias = self.root / 'alias'
+        (self.root / 'a').mkdir()
+        alias.symlink_to(self.root / 'a', target_is_directory=True)
+        for worktree in [str(self.root / 'a')+'/.', str(alias)]:
+            task = dict(self.task('b', 'worker-b', ['tools/b.py']), worktree=worktree)
+            self.assertEqual(self.dispatch([task]).get('decision'), 'block')
+    def test_dispatch_cannot_reuse_historical_session(self):
+        self.assertEqual(self.handoff('former','child'), {})
+        self.assertEqual(self.dispatch([self.task(owner='former')])['decision'], 'block')
+    def test_legacy_registry_preserved_when_dispatch_is_added(self):
+        self.assertEqual(self.handoff('legacy','legacy-review'), {})
+        self.assertEqual(self.dispatch([self.task()]), {})
+        graph=json.loads(hook.registry_path(self.root).read_text())
+        self.assertEqual(graph['edges'], {'legacy':'legacy-review'})
+    def test_converging_dependencies_allow_reusing_completed_files(self):
+        self.assertEqual(self.dispatch([dict(self.task(), status='merged', accepted=True),
+            dict(self.task('b','worker-b',['tools/b.py']), status='merged', accepted=True)]), {})
+        self.assertEqual(self.dispatch([self.task('c','worker-c',['tools/a.py'],['a','b'])]), {})
+    def test_failed_atomic_replace_leaves_registry_unchanged(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        path = hook.registry_path(self.root)
+        before = path.read_bytes()
+        with patch.object(hook.os, 'replace', side_effect=OSError('disk failure')):
+            self.assertEqual(self.dispatch([self.task('b','worker-b',['tools/b.py'])])['decision'], 'block')
+        self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(sorted(p.name for p in path.parent.iterdir()),
+                         sorted([path.name, path.with_suffix('.lock').name, 'session-handovers']))
+    def test_concurrent_dispatch_serializes_conflicting_files(self):
+        common = self.root/'common.json'
+        processes = []
+        for i in range(2):
+            source = 'dispatcher-'+str(i)
+            task = dict(self.task(str(i),'worker-'+str(i)), dispatcher_session_id=source)
+            marker = dict(self.marker, kind='dispatch', source_session_id=source, tasks=[task])
+            script = ("import importlib.util,json,pathlib; "
+                "s=importlib.util.spec_from_file_location('h',"+repr(str(Path(hook.__file__)))+"); "
+                "h=importlib.util.module_from_spec(s);s.loader.exec_module(h); "
+                "h.registry_path=lambda cwd:pathlib.Path("+repr(str(common))+"); "
+                "h.record_handoff(pathlib.Path('.'),json.loads("+repr(json.dumps(marker))+"))")
+            processes.append(subprocess.Popen(['python3','-c',script], stdout=subprocess.PIPE, stderr=subprocess.PIPE))
+        results = [p.communicate(timeout=10) for p in processes]
+        self.assertEqual(sorted(p.returncode for p in processes), [0,1], results)
+        self.assertEqual(len(json.loads(common.read_text())['steps']), 1)
+    def test_dispatch_conflicts_across_real_worktrees(self):
+        subprocess.run(['git','init','-q',str(self.root)],check=True)
+        subprocess.run(['git','-C',str(self.root),'-c','user.name=Test','-c','user.email=test@example.com',
+                        'commit','--allow-empty','-qm','fixture'],check=True)
+        linked = self.root/'linked'
+        subprocess.run(['git','-C',str(self.root),'worktree','add','--detach','-q',str(linked)],check=True)
+        self.assertEqual(self.dispatch([self.task()]), {})
+        task = self.task('b','worker-b')
+        with self.assertRaisesRegex(ValueError, 'overlaps'):
+            hook.record_handoff(linked, dict(self.marker, tasks=[task]))
+    def test_dispatcher_cannot_become_a_pr_owner(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        pair = dict(kind='pr_handoff', step_id='other', pr_url='https://example.com/pull/2',
+                    implementation_session_id='old', review_session_id='review')
+        self.assertEqual(self.handoff('old','review',**pair)['decision'], 'block')
+    def test_dispatch_cannot_duplicate_a_legacy_pr_step(self):
+        pair = dict(step_id='a', pr_url='https://example.com/pull/1',
+                    implementation_session_id='legacy', review_session_id='legacy-review')
+        self.assertEqual(self.handoff('legacy','legacy-review',**pair), {})
+        self.assertEqual(self.dispatch([self.task()])['decision'], 'block')
+    def test_legacy_handoff_cannot_steal_a_dispatched_owner(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        self.assertEqual(self.handoff('stranger','worker-a')['decision'], 'block')
+    def test_terminal_pr_owner_cannot_be_dispatcher(self):
+        self.assertEqual(self.handoff('parent','old'), {})
+        self.assertEqual(self.dispatch([self.task()])['decision'], 'block')
+    def test_pr_handoff_rejects_dispatch_fields(self):
+        pair = dict(kind='pr_handoff', step_id='a', pr_url='https://example.com/pull/1',
+                    implementation_session_id='old', review_session_id='review', tasks=[self.task()])
+        self.assertEqual(self.handoff('old','review',**pair)['decision'], 'block')
     def test_real_git_worktrees_resolve_the_same_registry(self):
         subprocess.run(['git','init','-q',str(self.root)],check=True)
         subprocess.run(['git','-C',str(self.root),'-c','user.name=Test','-c','user.email=test@example.com',
