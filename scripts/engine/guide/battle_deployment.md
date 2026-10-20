@@ -126,14 +126,23 @@ search are the target tracking below.
 **Pursuit bounds.** A pursuit task may carry `max_route_m` (whole metres, 0 = none)
 and `region` (province codes joined by `|`, sorted, de-duplicated, "" = none); on any
 other task they are refused. The received record saves `pursuit = {start_x_m,
-start_y_m, route_m}` at delivery; a same-meaning reissue (battle, target, bounds)
-keeps it, any other task starts fresh. `ArmySystem.march_day_saved` credits the
-metres a substep really walked (detours included) through
-`BattleTaskSystem.credit_pursuit`, which checks route metres and the unit's centre
-province (also at 0 metres). The first bound reached sets status `bounded` with its
-reason, halts a marching unit where it stands (today's saved walk included) and
-leaves `current_id` on it: `combat_action` then answers `hold` for that battle, so it
-defends but never advances or starts a withdrawal; only a new received task replaces it.
+start_y_m, route_m}` at delivery. A same-meaning reissue (canonical battle,
+target, bounds) keeps the accumulated metres and any completed `bounded` status;
+only a different pursuit establishes a fresh budget. `BattleTaskSystem.pursuit_walk`
+purely clips the actual polyline after slope/clearance detours, including the
+approach to an enemy halt. `MarchPath.region_exit` splits every segment at live
+province-outline crossings (holes included); inside endpoints cannot conceal an
+outside interval. The earlier distance/region bound wins. Whole-metre rounding
+retreats to the inner point if it would cross the edge or overspend the remaining
+metres. Both saved-substep and legacy marches credit the actual traversed legs,
+not displacement; previews change neither receipts nor RNG.
+
+The first bound sets status `bounded` with its reason, clears the march and its
+saved departure, and leaves `current_id` on it. The column stays at its physical
+stop, without snapping to a camp slot or removing actual contact. `combat_action`
+answers `hold` for that battle, retaining self-defence; tracking never revives it
+when an enemy returns. Packing still gates movement; actual withdrawal takes
+precedence and is not clipped or charged to an offensive pursuit.
 
 `BattleGroups.engaged_counts` checks each saved front group's whole-metre
 position against the active pursuit's received region, resolving live manor
@@ -145,7 +154,7 @@ contact against that withdrawing unit (legacy saves without groups retain their
 existing context). Holding/bounded tasks keep ordinary defensive contact. The
 resolved action saves `pursuit_region` beside its target in `pending_round`, so
 replacement and JSON retries keep the planned region. These queries move no
-positions and change no task receipts; route-edge movement is separate.
+positions and change no task receipts; route clipping uses the movement path above.
 
 **Target tracking and the limited search.** A crown unit in no battle whose current
 received task is a `flank` or a pursuit with a `target_unit` marches at the target as

@@ -246,13 +246,16 @@ static func deliver_task(repo: DataRepository, state: GameState, order_id: Strin
 			String(order["formation"]), String(order["unit"]))
 	var previous: Dictionary = ledger["orders"].get(String(ledger["current_id"]), {})
 	var kept: Dictionary = {}
-	if not previous.is_empty() and previous["status"] == "received" and previous.has("pursuit"):
+	var kept_bound := ""
+	if not previous.is_empty() and previous["status"] in ["received", "bounded"] and previous.has("pursuit"):
 		var was: Dictionary = previous["request"]
 		var same := BattleSystem.canonical(state, int(was["battle_id"])) == BattleSystem.canonical(state, int(order["battle_id"]))
 		for key: String in ["task", "target_unit", "max_route_m", "region"]:
 			same = same and was.get(key, 0 if key in ["max_route_m"] else "") == order[key]
 		if same:
 			kept = (previous["pursuit"] as Dictionary).duplicate()
+			if previous["status"] == "bounded":
+				kept_bound = String(previous["reason"])
 	var cancelling: bool = order["task"] == "cancel"
 	if not previous.is_empty():
 		_transition(state, previous, "cancelled" if cancelling else "replaced",
@@ -268,13 +271,59 @@ static func deliver_task(repo: DataRepository, state: GameState, order_id: Strin
 		var here := BattleSystem._stored(state, String(order["unit"]))
 		record["pursuit"] = kept if not kept.is_empty() else {"start_x_m": int(here.get("x_m", 0)),
 			"start_y_m": int(here.get("y_m", 0)), "route_m": 0}
+		if kept_bound != "":
+			_transition(state, record, "bounded", kept_bound)
 	return record.duplicate(true)
+
+
+## Pure movement preview, shared by ordinary travel and clearance halts. Limit
+## the actual detoured polyline before publishing a stop, never move a receipt.
+static func pursuit_walk(repo: DataRepository, state: GameState, unit: String,
+		entry: Dictionary, here: Vector2i, path: Array, step: int) -> Dictionary:
+	var record := current(state, unit)
+	var active: bool = not record.is_empty() and record["status"] == "received" and record.has("pursuit") \
+		and not bool(entry.get("battle_retreat", false)) and int(entry.get("disengaging", 0)) != 1
+	active = active and (int(record.get("request", {}).get("max_route_m", 0)) > 0 \
+		or String(record.get("request", {}).get("region", "")) != "")
+	var walked := MarchRoute.walk(here, path, step)
+	walked["pursuit_reason"] = ""
+	walked["limited"] = active
+	if not active:
+		return walked
+	var request: Dictionary = record["request"]
+	var remaining := int(request.get("max_route_m", 0)) - int(record["pursuit"]["route_m"])
+	var limit := mini(step, ceili(MarchRoute.length_from(here, path)))
+	var reason := ""
+	if int(request.get("max_route_m", 0)) > 0 and remaining <= limit:
+		limit = maxi(remaining, 0)
+		reason = "Pursuit reached its farthest route distance: %d m" % int(request["max_route_m"])
+	var region := String(request.get("region", ""))
+	if region != "":
+		var exit_m := MarchPath.region_exit(repo, state, here, path, region)
+		if exit_m >= 0.0 and exit_m <= float(limit):
+			limit = mini(limit, ceili(exit_m))
+			reason = "Pursuit reached its region's edge"
+	# Rounding a diagonal stop can add a metre or cross a slanting boundary.
+	# Retreat toward the previous whole-metre route position until both fit.
+	var allowance := limit
+	while true:
+		walked = MarchRoute.walk(here, path, limit)
+		var traversed: Array = walked["passed"].duplicate()
+		traversed.append(walked["at"])
+		var actual := ceili(MarchRoute.length_from(here, traversed))
+		var exit_m := MarchPath.region_exit(repo, state, here, traversed, region) if region != "" else -1.0
+		if limit == 0 or (actual <= allowance and exit_m < 0.0):
+			break
+		limit -= 1
+	walked["pursuit_reason"] = reason
+	walked["limited"] = true
+	return walked
 
 
 ## Credit metres a unit really walked to its received pursuit and check the
 ## bounds (route metres, region). True when the task became `bounded` now: a
 ## marching unit then halts where it stands (BattleSystem._halt).
-static func credit_pursuit(repo: DataRepository, state: GameState, unit: String, metres: int) -> bool:
+static func credit_pursuit(repo: DataRepository, state: GameState, unit: String, metres: int, boundary_reason := "") -> bool:
 	var ledger: Dictionary = state.unit_tasks.get(unit, {})
 	var record: Dictionary = ledger.get("orders", {}).get(String(ledger.get("current_id", "")), {})
 	if record.is_empty() or record["status"] != "received" or not record.has("pursuit"):
@@ -282,9 +331,9 @@ static func credit_pursuit(repo: DataRepository, state: GameState, unit: String,
 	var progress: Dictionary = record["pursuit"]
 	progress["route_m"] = int(progress["route_m"]) + maxi(metres, 0)
 	var request: Dictionary = record["request"]
-	var why := ""
+	var why := boundary_reason
 	var limit := int(request.get("max_route_m", 0))
-	if limit > 0 and int(progress["route_m"]) >= limit:
+	if why == "" and limit > 0 and int(progress["route_m"]) >= limit:
 		why = "Pursuit reached its farthest route distance: %d m" % int(progress["route_m"])
 	var region := String(request.get("region", ""))
 	if why == "" and region != "":
@@ -297,6 +346,9 @@ static func credit_pursuit(repo: DataRepository, state: GameState, unit: String,
 	var entry := BattleSystem._stored(state, unit)
 	if String(entry.get("order", "")) == ArmySystem.ORDER_MARCH:
 		BattleSystem._halt(state, unit)
+	ArmySystem._clear_route(entry)
+	ArmySystem.drop_hold(entry)
+	entry.erase("departure")
 	return true
 
 

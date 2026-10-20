@@ -443,3 +443,58 @@ func _taut(pts: Array, ends: Array) -> Array:
 		out.append(pts[ok])
 		at = ok
 	return out
+
+
+## First distance at which a polyline leaves the union of the live provinces,
+## or -1. Split at EVERY border crossing: endpoints alone miss concave notches
+## and holes. Geometry stays transient; only whole-metre stops enter state.
+static func region_exit(repo: DataRepository, state: GameState, here: Vector2i,
+		path: Array, region: String) -> float:
+	var provinces: Array = []
+	var scale := float(ArmySystem.metres_per_pack_px(repo))
+	for code: String in region.split("|"):
+		var loops: Array = []
+		for loop: PackedVector2Array in MapOwnership.province_loops(repo, state, code):
+			var metres := PackedVector2Array()
+			for p: Vector2 in loop:
+				metres.append(p * scale)
+			loops.append(metres)
+		provinces.append(loops)
+	var a := Vector2(here)
+	if not _in_region(a, provinces):
+		return 0.0
+	var total := 0.0
+	for point: Vector2i in path:
+		var b := Vector2(point)
+		var length := a.distance_to(b)
+		if length == 0.0:
+			continue
+		var cuts: Array[float] = [0.0, 1.0]
+		for loops: Array in provinces:
+			for loop: PackedVector2Array in loops:
+				for i in loop.size():
+					var hit: Variant = Geometry2D.segment_intersects_segment(a, b, loop[i], loop[(i + 1) % loop.size()])
+					if hit != null:
+						cuts.append(clampf(a.distance_to(hit) / length, 0.0, 1.0))
+		cuts.sort()
+		for i in range(1, cuts.size()):
+			if cuts[i] > cuts[i - 1] and not _in_region(a.lerp(b, (cuts[i] + cuts[i - 1]) / 2.0), provinces):
+				return total + length * cuts[i - 1]
+		total += length
+		a = b
+	return -1.0
+
+
+static func _in_region(point: Vector2, provinces: Array) -> bool:
+	for loops: Array in provinces:
+		var inside := false
+		for loop: PackedVector2Array in loops:
+			# Inclusive boundary, including an inner ring's edge and shared seams.
+			for i in loop.size():
+				if Geometry2D.get_closest_point_to_segment(point, loop[i], loop[(i + 1) % loop.size()]).distance_squared_to(point) <= 0.000001:
+					return true
+			if Geometry2D.is_point_in_polygon(point, loop):
+				inside = not inside
+		if inside:
+			return true
+	return false
