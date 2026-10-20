@@ -89,3 +89,17 @@ Final frozen-input verification passed **35 scripts / 371 tests / 3034
 assertions**, runner exit 0, 143.363 seconds. Frozen review input SHA256:
 `d9d3144e869de26108a537f2e3955fb199e659ec98d71955abf126e5ab91d273`.
 Current-HEAD CI is checked separately before merge.
+
+Current-HEAD `engine-core` CI then exposed three additional implicit-melee
+fixtures: the two first-round day-substep tests put the default ranged attacker
+at zero-distance contact, while the family-loss test expected damage at 1km.
+A bounded local run reproduced all three failures. The original dispatcher
+conflict-checked and appended only `test_day_resolution_substeps.gd` and
+`test_family_losses_battle.gd` to this step. Their attacker equipment is now
+explicitly infantry with its original fit count, and all assertions are unchanged.
+The focused rerun passed 2 scripts / 26 tests / 218 assertions, exit 0.
+Final expanded frozen verification passed **37 scripts / 397 tests / 3252
+assertions**, exit 0, 161.289s. Input SHA256:
+`659e907024940419db8e41b9b145e1484bc2696b6742d61adb62ddc80da20627`.
+Exact command/input list and RED/GREEN/full logs are retained under the same
+worktree checkpoint. All required CI must pass on the fixture-fix HEAD.
