@@ -177,14 +177,12 @@ static func _equipment(repo: DataRepository, reg: Dictionary) -> Dictionary:
 
 static func _surrender(repo: DataRepository, state: GameState, battle: Dictionary, side: String, id: String) -> Dictionary:
 	var enemy := "def" if side == "att" else "att"
-	var accepts := BattleRules._policy(battle, "surrender", state.absolute_day()) == "accept"
-	if not accepts:
-		accepts = true
-		for code: String in battle[enemy]:
-			if LawSystem.received(repo, state, "quarter", code)["value"] != "give":
-				accepts = false
-	if not accepts:
-		return {"accepted": false}
+	for receiver: String in battle[enemy]:
+		if LawSystem.received(repo, state, "quarter", receiver)["value"] == "give":
+			continue
+		for unit: String in battle[side]:
+			if not BattleRules._binds(battle, "surrender", "accept", state.absolute_day(), [receiver], unit):
+				return {"accepted": false}
 	var changes: Array = []
 	var evidence: Array = []
 	var captors: Array = battle[enemy].filter(func(code: String) -> bool:

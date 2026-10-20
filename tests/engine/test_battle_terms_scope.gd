@@ -193,3 +193,109 @@ func test_withdrawal_protection_uses_power_shares_and_zero_power_is_defined() ->
 	assert_eq(_loss(f, f.p1), 600, "no power denominator keeps the ordinary withdrawal context")
 	b[BattleRules.side_of(b, f.f2)].erase(f.f2)
 	assert_eq(_loss(f, f.p1), 0, "an entirely bound opposing side remains protected even at zero power")
+
+
+func _surrender_fixture(survivor: int) -> Dictionary:
+	var f := _fixture(false)
+	f.state.battles[0].parley.agreed = {"surrender": {"policy": "accept", "until_day": f.state.absolute_day()}}
+	if survivor == 2:
+		f.state.battles[1].town = "T"
+	BattleMerge.day(f.repo, f.state)
+	var b: Dictionary = f.state.battles[0]
+	b.town = ""
+	f.state.king_state.x_m = 100000000
+	f.state.king_state.y_m = 100000000
+	for code: String in b.att + b.def:
+		_quarter(f, code, "give")
+	return f
+
+func _quarter(f: Dictionary, unit: String, value: String) -> void:
+	var law := {"quarter": {"value": value, "decree_id": 100}}
+	if f.state.foes.has(unit):
+		f.state.foes[unit].received_laws = law
+	else:
+		f.state.law_in_force["unit:" + unit] = law
+
+func _offer(f: Dictionary, unit: String, id: String) -> Dictionary:
+	var b := BattleSystem.battle_of(f.state, unit)
+	var order := {"id": id, "battle_id": int(b.id), "side": BattleRules.side_of(b, unit),
+		"kind": "surrender", "issued_day": f.state.absolute_day(), "params": {"regiment": unit}}
+	return BattleOrders.issue(f.repo, f.state, order)
+
+func test_surrender_obligation_survives_either_survivor_and_both_directions() -> void:
+	for survivor: int in [1, 2]:
+		for reverse: bool in [false, true]:
+			var f := _surrender_fixture(survivor)
+			var b: Dictionary = f.state.battles[0]
+			var unit := String(f.f1 if reverse else f.p1)
+			var receiver := String(f.p1 if reverse else f.f1)
+			b[BattleRules.side_of(b, f.p2)].erase(f.p2)
+			b[BattleRules.side_of(b, f.f2)].erase(f.f2)
+			_quarter(f, receiver, "refuse")
+			assert_eq(_offer(f, unit, "bound").status, "pending")
+			var result := BattleOrders.deliver(f.repo, f.state, "bound")
+			assert_eq(result.status, "delivered", "original parties remain bound in either survivor orientation")
+			assert_eq(MilitaryRoster.living(f.state, unit), 0)
+
+func test_surrender_obligation_does_not_spread_to_allies_or_new_opponents() -> void:
+	for survivor: int in [1, 2]:
+		for unrelated_receiver: bool in [false, true]:
+			var f := _surrender_fixture(survivor)
+			var b: Dictionary = f.state.battles[0]
+			if unrelated_receiver:
+				b[BattleRules.side_of(b, f.p2)].erase(f.p2)
+				_quarter(f, f.f2, "refuse")
+			else:
+				_quarter(f, f.f1, "refuse")
+			assert_eq(_offer(f, f.p1, "unbound").status, "pending")
+			var before := SaveLoad.state_hash(f.state)
+			assert_eq(BattleOrders.deliver(f.repo, f.state, "unbound").status, "refused")
+			assert_eq(MilitaryRoster.living(f.state, f.p1), 40, "whole-side surrender cannot partially capture")
+			assert_eq(f.state.prisoner_batches.size(), 0)
+			assert_eq(BattleOrders.kind(b, BattleRules.side_of(b, f.p1)), "hold")
+			assert_ne(SaveLoad.state_hash(f.state), before, "only the refusal receipt is recorded")
+
+func test_surrender_expiry_and_live_quarter_are_checked_on_delivery() -> void:
+	for survivor: int in [1, 2]:
+		var f := _surrender_fixture(survivor)
+		var b: Dictionary = f.state.battles[0]
+		b[BattleRules.side_of(b, f.p2)].erase(f.p2)
+		b[BattleRules.side_of(b, f.f2)].erase(f.f2)
+		assert_eq(_offer(f, f.p1, "expires").status, "pending")
+		f.state.day += 1
+		_quarter(f, f.f1, "refuse")
+		assert_eq(BattleOrders.deliver(f.repo, f.state, "expires").status, "refused")
+		assert_eq(_offer(f, f.p1, "law-gives").status, "pending")
+		_quarter(f, f.f1, "give")
+		assert_eq(BattleOrders.deliver(f.repo, f.state, "law-gives").status, "delivered")
+
+func test_absorbed_surrender_saves_atomic_failure_and_replays_once() -> void:
+	var f := _surrender_fixture(2)
+	var b: Dictionary = f.state.battles[0]
+	b[BattleRules.side_of(b, f.p2)].erase(f.p2)
+	_quarter(f, f.f1, "refuse")
+	var cohort := String(f.state.military_rosters[f.p1].cohort_ids.back())
+	assert_false(MilitaryRoster.transition(f.repo, f.state, "wound", [
+		{"cohort_id": cohort, "from": "fit", "to": "wounded", "count": 7}], "Wounded before surrender.").has("error"))
+	assert_eq(_offer(f, f.p1, "saved").status, "pending")
+	var twin := preload("res://tests/fixtures/battle_scenario.gd").roundtrip(f.state)
+	var original := String(f.state.military_cohorts[cohort].source_population_field)
+	f.state.military_cohorts[cohort].source_population_field = "invalid"
+	var rosters: Dictionary = f.state.military_rosters.duplicate(true)
+	var cohorts: Dictionary = f.state.military_cohorts.duplicate(true)
+	assert_eq(BattleOrders.deliver(f.repo, f.state, "saved").status, "invalid")
+	assert_eq(f.state.military_rosters, rosters)
+	assert_eq(f.state.military_cohorts, cohorts)
+	assert_eq(f.state.prisoner_batches.size(), 0)
+	assert_true(f.p1 in b[BattleRules.side_of(b, f.p1)])
+	f.state.military_cohorts[cohort].source_population_field = original
+	assert_eq(_offer(f, f.p1, "retry").status, "pending")
+	var result := BattleOrders.deliver(f.repo, f.state, "retry")
+	assert_eq(result.status, "delivered")
+	assert_eq(MilitaryRoster.living(f.state, f.p1), 0)
+	assert_eq(int(f.state.military_cohorts[cohort].captured_current), 40)
+	assert_eq(BattleOrders.deliver(f.repo, twin, "saved").status, "delivered", "saved source agreement still accepts")
+	var saved := preload("res://tests/fixtures/battle_scenario.gd").roundtrip(f.state)
+	var after := SaveLoad.state_hash(saved)
+	assert_eq(BattleOrders.deliver(f.repo, saved, "retry"), result)
+	assert_eq(SaveLoad.state_hash(saved), after, "terminal receipt replays without capturing twice")
