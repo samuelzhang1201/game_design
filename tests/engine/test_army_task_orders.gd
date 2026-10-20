@@ -199,3 +199,28 @@ func test_two_remote_units_pay_a_courier_each_and_the_preview_agrees() -> void:
 	assert_eq(s.couriers.size(), 2)
 	assert_eq(before - int(s.metrics["treasury"]), int(quote["cost"]["gold"]))
 	assert_eq(before - int(s.metrics["treasury"]), 1 + 2 * 2)
+
+
+func test_preview_still_says_courier_when_a_waiting_courier_saves_the_fee() -> void:
+	# B is beyond the king's range; after the first issue a courier for B waits today,
+	# so a second order would ride it for no new fee — but delivery is still by courier.
+	assert_true(actions.execute(_req("r1"), s)["ok"])
+	var at := _at(a)
+	var p := ArmyTasks.preview(repo, s, repo.resolve_realm("player_realm"), {"kind": "search",
+		"unit_codes": [b], "center_x_m": at.x, "center_y_m": at.y, "radius_m": 3000})
+	assert_true(p["ok"], str(p))
+	assert_eq(ArmyTasks.courier_fees(repo, s, [b]), 0, "the waiting courier carries it for no fee")
+	assert_eq(p["cost"]["gold"], int(OrderCosts.gold_of(repo, "ARMY_TASK")))
+	assert_true(p["cost"]["courier"], "delivery to B still rides a courier")
+	for codes: Array in [[a, b], [b, a]]:
+		var mixed := ArmyTasks.preview(repo, s, repo.resolve_realm("player_realm"),
+			_req("r2", {"unit_codes": codes}).params)
+		assert_true(mixed["cost"]["courier"], "any remote recipient needs courier delivery")
+	var id := String(s.army_tasks.keys()[0])
+	var before := int(s.metrics["treasury"])
+	assert_true(actions.execute(_req("r2", {"task_id": id}), s)["ok"])
+	assert_eq(before - int(s.metrics["treasury"]), int(p["cost"]["gold"]))
+	assert_eq(s.couriers.size(), 1, "the new revision joins the waiting courier")
+	assert_eq(_unit(id, b)["received_revision"], 0, "no delivery before the courier arrives")
+	_ride_all()
+	assert_eq(_unit(id, b)["received_revision"], 2)

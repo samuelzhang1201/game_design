@@ -89,8 +89,10 @@ static func preview(repo: DataRepository, state: GameState, realm: String, task:
 	var dest := ArmySystem.metres_to_pack(repo, center)
 	var units: Array = []
 	var limits: Array = []
+	var courier := false
 	for c: Variant in codes:
 		var code := String(c)
+		courier = courier or not KingSystem.can_command(repo, state, code)
 		units.append({"code": code,
 			"commander_id": String(state.military_rosters.get(code, {}).get("commander_id", "")),
 			"eta_days": CourierSystem.arrival_days(repo, state, code, dest)})
@@ -100,7 +102,6 @@ static func preview(repo: DataRepository, state: GameState, realm: String, task:
 				limits.append(words)
 	var fees := courier_fees(repo, state, codes)
 	var gold := int(OrderCosts.gold_of(repo, "ARMY_TASK")) + fees
-	var courier := fees > 0
 	return {"ok": true, "kind": kind, "units": units, "towns": towns, "target": target,
 		"cells": TaskCoverage.cells_in_circle(repo, center, radius).size(),
 		"cost": {"gold": gold, "courier": courier}, "encounter_policy": policy,
