@@ -36,7 +36,7 @@ static func run_substep(repo: DataRepository, entry: Dictionary, base_bite: int,
 
 ## The commander's saved gait on `entry` (spec §5.1), kept per substep: a gait
 ## whose stop condition holds is dropped, then a run is recorded for a reason the
-## engine can see — withdrawal, authorized pursuit, or joining its own battle.
+## engine can see — withdrawal, authorized pursuit, joining its own battle, or contesting a known town.
 ## The live commander chooses in every context; no key means walk.
 static func refresh(repo: DataRepository, state: GameState, code: String, entry: Dictionary) -> void:
 	var gait: Dictionary = entry.get("gait", {})
@@ -58,6 +58,31 @@ static func refresh(repo: DataRepository, state: GameState, code: String, entry:
 				"battle_id": int(battle["id"])}
 			return
 
+	var town := _key_point(repo, state, code, entry)
+	if town != "":
+		entry["gait"] = {"mode": "run", "reason": "key_point", "until": "town_clear", "town": town}
+
+
+## A received march into a known town contested by a current filed observation.
+## Read the observation only: hidden enemy movement or losses cannot decide gait.
+static func _key_point(repo: DataRepository, state: GameState, code: String, entry: Dictionary) -> String:
+	if state.foes.has(code) or ArmySystem.realm_of(repo, code, state) != repo.resolve_realm("player_realm"):
+		return ""
+	var dest := Vector2i(int(entry.get("dest_x_m", 0)), int(entry.get("dest_y_m", 0)))
+	var town := ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, dest))
+	if town == "" or not ArmyTasks.known_town(repo, state, town):
+		return ""
+	for sight: Dictionary in state.sightings.values():
+		var age := state.absolute_day() - int(sight.get("day", 0))
+		if String(sight.get("kind", "")) != Sighting.KIND_UNIT \
+				or not String(sight.get("source", "")) in [Sighting.SEEN, Sighting.SPY] \
+				or int(sight.get("men", 0)) <= 0 or age < 0 or age > int(repo.bal("ghost_keep_days")):
+			continue
+		var point := Vector2i(int(sight.get("x_m", 0)), int(sight.get("y_m", 0)))
+		if ArmySystem.town_at(repo, ArmySystem.metres_to_pack(repo, point)) == town:
+			return town
+	return ""
+
 
 static func _holds(repo: DataRepository, state: GameState, code: String, entry: Dictionary,
 		gait: Dictionary) -> bool:
@@ -66,6 +91,9 @@ static func _holds(repo: DataRepository, state: GameState, code: String, entry: 
 		return false
 	if String(gait.get("until", "")) == "march_end":
 		return int(entry.get("disengaging", 0)) == 1
+	if String(gait.get("until", "")) == "town_clear":
+		return String(gait.get("town", "")) == _key_point(repo, state, code, entry) \
+			and String(gait.get("town", "")) != ""
 	if String(gait.get("until", "")) == "task_end":
 		return BattleTaskSystem.pursuing(repo, state, code)
 	for battle: Dictionary in state.battles:

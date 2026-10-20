@@ -323,3 +323,114 @@ func test_context_eligibility_and_known_phase_exclude_hidden_truth() -> void:
 	f.state.unit_tasks[f.code]["orders"]["gait:pursue"]["track"]["phase"] = "search"
 	UnitGait.refresh(f.repo, f.state, f.code, entry)
 	assert_false(entry.has("gait"), "a hidden target does not create a new run reason")
+
+
+func _key_point_fixture() -> Dictionary:
+	var f := _join_fixture(10, 50)
+	f.state.battles.clear()
+	f.state.sightings.clear()
+	var town := String(TownStores.realm_towns(f.repo, f.state)[0])
+	for weather: Dictionary in f.repo.weather_kinds.values():
+		weather["speed_permille"] = 1000
+	for tier: Dictionary in f.repo.army_height_supply:
+		tier["supply_permille"] = 1000
+	var burg: Dictionary = f.repo.burgs[town]
+	var dest := ArmySystem.pack_to_metres(f.repo, Vector2(float(burg.x), float(burg.y)))
+	f.start = dest - Vector2i(2300, 0)
+	f.state.regiments[f.code]["x_m"] = f.start.x
+	f.state.regiments[f.code]["y_m"] = f.start.y
+	ArmySystem.set_march_m(f.repo, f.state, f.code, dest)
+	f.state.sightings["known"] = {"kind": "unit", "code": "known", "x_m": dest.x,
+		"y_m": dest.y, "day": f.state.absolute_day(), "source": "spy", "men": 100}
+	f["town"] = ArmySystem.town_at(f.repo, ArmySystem.metres_to_pack(f.repo, dest))
+	return f
+
+func test_known_contested_town_runs_with_actual_march_and_food() -> void:
+	var f := _key_point_fixture()
+	_begin(f)
+	_substeps(f.repo, f.state, 0, 10)
+	assert_eq(_walked(f), 917)
+	assert_eq(int(f.state.regiments[f.code]["supplies"]), 970)
+	assert_eq(f.state.regiments[f.code].get("gait", {}),
+		{"mode": "run", "reason": "key_point", "until": "town_clear", "town": f.town})
+
+func test_known_key_point_stops_and_json_preserves_real_march() -> void:
+	var f := _key_point_fixture()
+	_begin(f)
+	_substeps(f.repo, f.state, 0, 3)
+	var restored := BattleScenario.roundtrip(f.state)
+	for state: GameState in [f.state, restored]:
+		state.sightings.clear()
+		_substeps(f.repo, state, 3, 10)
+		assert_eq(_walked(f, state), 812)
+		assert_eq(int(state.regiments[f.code]["supplies"]), 991)
+		assert_false(state.regiments[f.code].has("gait"))
+	assert_eq(SaveLoad.state_hash(restored), SaveLoad.state_hash(f.state))
+
+func test_key_point_requires_known_evidence_and_live_willing_commander() -> void:
+	for mode: String in ["safe", "rumour", "expired", "empty", "unwilling", "missing", "base_only", "elsewhere"]:
+		var f := _key_point_fixture()
+		match mode:
+			"safe": f.state.sightings.clear()
+			"rumour": f.state.sightings.known.source = "rumour"
+			"expired": f.state.sightings.known.day -= int(f.repo.bal("ghost_keep_days")) + 1
+			"empty": f.state.sightings.known.men = 0
+			"unwilling": f.state.characters[f.person].attributes.boldness = 49
+			"missing": f.state.military_rosters[f.code].commander_id = ""
+			"base_only": f.state.regiments[f.code].supplies = 100
+			"elsewhere": f.state.sightings.known.x_m += 1000000
+		_begin(f)
+		_substeps(f.repo, f.state, 0, 10)
+		assert_eq(_walked(f), 767, mode)
+		assert_eq(int(f.state.regiments[f.code].supplies), 100 if mode == "base_only" else 1000, mode)
+
+func test_key_point_never_uses_hidden_enemy_truth() -> void:
+	var f := _key_point_fixture()
+	UnitGait.refresh(f.repo, f.state, f.code, f.state.regiments[f.code])
+	var gait: Dictionary = f.state.regiments[f.code].get("gait", {}).duplicate(true)
+	assert_false(gait.is_empty())
+	f.state.foes["known"] = {"x_m": -999999, "y_m": -999999, "supplies": 0}
+	UnitGait.refresh(f.repo, f.state, f.code, f.state.regiments[f.code])
+	assert_eq(f.state.regiments[f.code].get("gait", {}), gait)
+	f.state.sightings.clear()
+	UnitGait.refresh(f.repo, f.state, f.code, f.state.regiments[f.code])
+	assert_false(f.state.regiments[f.code].has("gait"))
+
+func test_key_point_running_fraction_and_food_survive_json() -> void:
+	var f := _key_point_fixture()
+	assert_false(Personnel.move(f.repo, f.state, f.code, "fit", "wounded", 15000).has("error"))
+	_begin(f)
+	_substeps(f.repo, f.state, 0, 3)
+	assert_eq(int(f.state.regiments[f.code].get("run_supply_rem", 0)), 5000)
+	var restored := BattleScenario.roundtrip(f.state)
+	for state: GameState in [f.state, restored]:
+		_substeps(f.repo, state, 3, 10)
+		assert_eq(_walked(f, state), 917)
+		assert_eq(int(state.regiments[f.code].supplies), 985, "half the men run: 15 extra, not 30")
+	assert_eq(SaveLoad.state_hash(restored), SaveLoad.state_hash(f.state))
+
+func test_key_point_cannot_shorten_packing_or_start_an_undelivered_march() -> void:
+	for packing: bool in [true, false]:
+		var f := _key_point_fixture()
+		var entry: Dictionary = f.state.regiments[f.code]
+		if packing:
+			entry["camp_state"] = {"phase": CampSystem.PACKING, "move_not_before_day": f.state.absolute_day() + 1}
+		else:
+			entry["order"] = ArmySystem.ORDER_GARRISON
+		_begin(f)
+		_substeps(f.repo, f.state, 0, 10)
+		assert_eq(_walked(f), 0)
+		assert_eq(int(entry.supplies), 1000)
+
+func test_key_point_stops_on_new_destination_or_lost_commander() -> void:
+	for changed: String in ["destination", "commander", "arrival"]:
+		var f := _key_point_fixture()
+		var entry: Dictionary = f.state.regiments[f.code]
+		UnitGait.refresh(f.repo, f.state, f.code, entry)
+		assert_true(entry.has("gait"))
+		match changed:
+			"destination": entry.dest_x_m += 1000000
+			"commander": f.state.characters[f.person].attributes.health = 0
+			"arrival": entry.order = ArmySystem.ORDER_GARRISON
+		UnitGait.refresh(f.repo, f.state, f.code, entry)
+		assert_false(entry.has("gait"), changed)
