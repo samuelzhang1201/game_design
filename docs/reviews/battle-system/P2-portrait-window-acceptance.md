@@ -1,6 +1,6 @@
 # P2 portrait real-window acceptance
 
-Implementation evidence, 2026-10-20. Independent critique and current-HEAD CI remain the sole Review's gates. This is the portrait-rendering follow-up to merged PR #124, not whole-P2 acceptance.
+Implementation evidence and independent visual review, 2026-10-20. Current-HEAD CI remains the merge gate. This is the portrait-rendering follow-up to merged PR #124, not whole-P2 acceptance.
 
 ## Scope and standard
 
@@ -62,3 +62,21 @@ For normal miniatures use `scenes/tools/snapshot_screen.tscn`, omit `--speaker`,
 `ArmyRecruitmentPanel._add` adds commander names and metadata to an OptionButton; it contains no portrait renderer. Existing unit/battle command surfaces likewise do not provide the three portrait-bearing cards described in the P2.3 plan. Consequently commander-chip readability in recruitment/unit/appointment cards is **not accepted** by these dossier captures. That requires a separate runtime/UI scope, not an invented screenshot. The normal council row covers story chips only; commander chip assets are load/hash-checked here but not presented as player-facing card evidence.
 
 National colours, estate/ordinary-vs-noble samples, every individual portrait, old-save/new-campaign roster equivalence, and P2/P4 phase release are outside this step. No regeneration was performed. The unique Review must independently critique the sheets/native shots against the rubric and record its verdict before merging; defects outside this evidence/tool scope become bounded follow-ups.
+
+
+## Independent Review
+
+Reviewer: `01a158dd-7883-7651-9ef3-4ae7927e0cf9`, the sole Review for PR #142. Inspected all eight native screenshots, the portrait and council crop sheets, the fixture and its connected `snapshot_screen` / `GameRoot` / `CharacterDossier` / `ConversationScene` paths. Reference: the chancellor in this same dossier, normal council miniatures, and `taste.md`'s readable silhouettes, one medium, muted colours and clean edges. This is an independent critic pass by the second responsible session; no additional reviewer was dispatched.
+
+- **Hierarchy:** the larger left face and its name establish identity first; the smaller BIO figure supports clothing and silhouette without competing with facts.
+- **Value:** faces separate from the dark room and leather; Beatrice's dark clothing remains distinguishable, although her boots carry little internal detail at 1280.
+- **Colour:** ochre, green, burgundy and blue stay in a restrained family alongside the chancellor; the sampled identities keep visible complexion differences.
+- **Medium:** commanders and the story reference share the same textured, realistically modelled portrait treatment; neither looks like a flat icon pasted into the dossier.
+- **Edges:** heads, hands and boots are complete in BIO, without rectangular paper residue. Beatrice's grey hair and some shoulder contours have a thin bright rim, also visible on the story reference's cap/fur. This is a source-edge limitation, not evidence of a new renderer defect; these captures do not certify perfect matting for the entire set.
+- **Scale:** the larger torso crop carries facial identity and the smaller BIO carries dress. Delphine remains consistent at 1280 and fractional 1664; Berengar's 2560 capture keeps proportions. Story miniatures distinguish hood, cap, hair and beard at both sampled sizes; this does not validate commander chips in absent cards.
+- **Sharpness:** large faces and clothing edges remain resolved at fractional size. At 1280 council chips are visibly soft under 3× enlargement, but their native silhouettes remain distinguishable; fine facial detail is not a supported reading at that scale.
+- **Noise:** no new badges, frames or ornaments were added. The existing empty BIO area and dossier borders are outside this evidence-only change; they do not obscure the sampled figures.
+
+Verdict: **accept the bounded real-window evidence and minimal snapshot entry**. No blocking code or evidence finding. No new art or layout variant is proposed: this PR changes neither, and the size comparisons test the existing presentation. Keep the bright hair/shoulder rims and small-chip softness as explicit limitations, and retain every exclusion above. This is not whole-P2/P4, all-portrait, commander-card, complexion-spec or gameplay-reachability acceptance.
+
+Integrity check on review inputs: all **614** `sha256` entries and **22** evidence-relative `evidence_sha256` entries in `provenance.json` match disk. The source hashes, retained capture self-checks and targeted test logs remain unchanged from implementation commit `35f803b106406385a090ada8f86bfadfeaf20fb5`; their passing results are reused for this documentation-only review addition. Branch protection was read directly: `harness-checks` and `gut-tests` are required, with no approval count. Merge waits for both plus every selected category on the final PR HEAD.
