@@ -23,6 +23,7 @@ static func negotiate(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 ## Freeze once at contact. Later laws, commanders and reinforcements inherit it.
 static func freeze(repo: DataRepository, state: GameState, battle: Dictionary) -> void:
 	if battle.has("parley"):
+		ensure_parties(battle)
 		return
 	var proposals := {}
 	var received := {}
@@ -51,6 +52,53 @@ static func freeze(repo: DataRepository, state: GameState, battle: Dictionary) -
 	result["proposals"] = proposals
 	result["reason"] = "Commanders negotiate under received military laws at first contact."
 	battle["parley"] = result
+	ensure_parties(battle)
+
+
+## P4.4e3: an agreement binds only the units that were its parties (the sides' members at contact, plus
+## the reinforcements that joined that battle). A parley saved without them takes the battle's current members.
+static func ensure_parties(battle: Dictionary) -> void:
+	var parley: Dictionary = battle.get("parley", {})
+	if parley.is_empty() or parley.has("parties"):
+		return
+	var parties := {}
+	for side: String in BattleSystem.SIDES:
+		var codes: Array = (battle.get(side, []) as Array).duplicate()
+		codes.sort()
+		parties[side] = codes
+	parley["parties"] = parties
+
+
+## Every agreement the battle carries: its own, then each absorbed source's (in id order).
+static func _agreements(battle: Dictionary) -> Array:
+	ensure_parties(battle)
+	var out: Array = []
+	if battle.has("parley"):
+		out.append(battle["parley"])
+	var ids: Array = (battle.get("sources", {}) as Dictionary).keys()
+	ids.sort()
+	for id: Variant in ids:
+		var parley: Dictionary = battle.sources[id].get("parley", {})
+		if not parley.is_empty():
+			out.append(parley)
+	return out
+
+
+## True when an agreement that sets `clause` to `policy` binds one of `members`. With a `target` the target
+## must be a party on the agreement's other side; without one the object cannot be confirmed, so it applies.
+static func _binds(battle: Dictionary, clause: String, policy: String, today: int, members: Array, target: String) -> bool:
+	for parley: Dictionary in _agreements(battle):
+		if _policy({"parley": parley}, clause, today) != policy:
+			continue
+		var parties: Dictionary = parley.get("parties", {})
+		for code: String in members:
+			for side: String in BattleSystem.SIDES:
+				if not code in parties.get(side, []):
+					continue
+				var other := "def" if side == "att" else "att"
+				if target == "" or target in parties.get(other, []):
+					return true
+	return false
 
 
 static func _policy(battle: Dictionary, clause: String, today: int) -> String:
@@ -61,7 +109,7 @@ static func _policy(battle: Dictionary, clause: String, today: int) -> String:
 
 
 ## A live own law may be stricter; it can never revoke a shared obligation.
-static func legal_actions(repo: DataRepository, state: GameState, battle_id: int, side: String, unit := "") -> Array[String]:
+static func legal_actions(repo: DataRepository, state: GameState, battle_id: int, side: String, unit := "", target := "") -> Array[String]:
 	var battle := BattleSystem.battle_by_id(state, battle_id)
 	if battle.is_empty() or not side in BattleSystem.SIDES or (battle[side] as Array).is_empty():
 		return []
@@ -80,15 +128,16 @@ static func legal_actions(repo: DataRepository, state: GameState, battle_id: int
 	for code: String in members:
 		if DevelopmentSystem.flag(repo, state, ArmySystem.realm_of(repo, code, state), "honour_bound"):
 			actions.erase("red_flag")
-	if _policy(battle, "surrender", state.absolute_day()) == "accept":
+	var today := state.absolute_day()
+	if _binds(battle, "surrender", "accept", today, members, target):
 		actions.erase("red_flag")
-	if _policy(battle, "tactics", state.absolute_day()) == "restrained":
+	if _binds(battle, "tactics", "restrained", today, members, target):
 		actions.erase("charge")
 		actions.erase("pursue")
-	if _policy(battle, "safe_withdrawal", state.absolute_day()) == "protect" \
-			or _policy(battle, "ceasefire", state.absolute_day()) == "protect":
+	var ceasefire := _binds(battle, "ceasefire", "protect", today, members, target)
+	if ceasefire or _binds(battle, "safe_withdrawal", "protect", today, members, target):
 		actions.erase("pursue")
-		if _policy(battle, "ceasefire", state.absolute_day()) == "protect":
+		if ceasefire:
 			actions.erase("attack")
 			actions.erase("charge")
 	return actions
