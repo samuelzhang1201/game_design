@@ -11,3 +11,18 @@ P4_SCROLL=1 /Users/samuelzhang/game_design-wt/godot_lock.sh python3 tools/run_wi
 P4_EVENT=poor /Users/samuelzhang/game_design-wt/godot_lock.sh python3 tools/run_with_timeout.py 90 /Applications/Godot.app/Contents/MacOS/Godot --path . res://.superpowers/p4-terms-events-window/capture.tscn -- --screen root --battle-case encounter --seed 42 --resolution 1920x1200 --still --shot-frame 60 --out res://docs/reviews/battle-system/evidence/P4-terms-events-window/event-poor-1920.png > .superpowers/p4-terms-events-window/event-poor-1920.log 2>&1
 P4_EVENT=poor /Users/samuelzhang/game_design-wt/godot_lock.sh python3 tools/run_with_timeout.py 90 /Applications/Godot.app/Contents/MacOS/Godot --path . res://.superpowers/p4-terms-events-window/capture.tscn -- --screen root --battle-case encounter --seed 42 --resolution 1280x720 --still --shot-frame 60 --out res://docs/reviews/battle-system/evidence/P4-terms-events-window/event-poor-1280.png > .superpowers/p4-terms-events-window/event-poor-1280.log 2>&1
 P4_EVENT=rich /Users/samuelzhang/game_design-wt/godot_lock.sh python3 tools/run_with_timeout.py 90 /Applications/Godot.app/Contents/MacOS/Godot --path . res://.superpowers/p4-terms-events-window/capture.tscn -- --screen root --battle-case encounter --seed 42 --resolution 1920x1200 --still --shot-frame 60 --out res://docs/reviews/battle-system/evidence/P4-terms-events-window/event-rich-1920.png > .superpowers/p4-terms-events-window/event-rich-1920.log 2>&1
+# Comparison/crop commands (from the evidence directory, with TOOL pointing back to the repo):
+# TOOL=../../../../../.claude/skills/visual-review/contact_sheet.py
+python3 "$TOOL" terms-contact.png terms-1920.png terms-bottom-1920.png terms-bottom-1280.png --labels '1920 top,1920 scrolled,1280 scrolled'
+python3 "$TOOL" event-contact.png event-rich-1920.png event-poor-1920.png event-poor-1280.png --labels '1920 bounty enabled,1920 bounty refused,1280 bounty refused'
+python3 "$TOOL" terms-crop.png terms-bottom-1920.png --crop 790,440,725,450 --zoom 2
+python3 "$TOOL" event-crop.png event-poor-1920.png --crop 405,635,1110,315 --zoom 2
+python3 "$TOOL" compact-crops.png terms-bottom-1280.png event-poor-1280.png --labels '1280 terms native pixels x2,1280 event native pixels x2' --crop 270,250,740,350 --zoom 2
+# Non-Godot checks run from checkout root:
+python3 -m unittest discover -s .codex/hooks -p 'test_*.py'
+python3 tools/test_select_gut_tests.py
+python3 tools/test_run_tests.py
+python3 tools/test_run_with_timeout.py
+sh -n run_tests.sh
+bash -n .codex/hooks/session-start.sh
+python3 tools/select_gut_tests.py --base origin/main
