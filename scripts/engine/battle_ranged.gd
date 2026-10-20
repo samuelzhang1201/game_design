@@ -65,9 +65,9 @@ static func clear_shot(repo: DataRepository, from: Vector2i, to: Vector2i,
 	return true
 
 
-## Count each group once, against a lawful locally seen opponent. No remote fallback.
+## Count each group once. An optional other field retains both sources' commands and terms.
 static func counts(repo: DataRepository, state: GameState, battle: Dictionary, code: String,
-		target := "") -> Dictionary:
+		target := "", opposing_battle: Dictionary = {}) -> Dictionary:
 	var out := {"firing": 0, "melee": 0, "fit": 0}
 	var rows: Array = battle.get("groups", {}).get(code, [])
 	for row: Dictionary in rows:
@@ -82,7 +82,9 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 		return out
 	var task := BattleTaskSystem.current(state, code)
 	var designated := String(task.get("request", {}).get("target_unit", "")) if action["task_id"] != "" else ""
-	var other := "def" if side == "att" else "att"
+	var opponents := battle if opposing_battle.is_empty() else opposing_battle.duplicate(true)
+	var friendly := side if opposing_battle.is_empty() else BattleSystem._side_for(state, opponents, code)
+	var other := "def" if friendly == "att" else "att"
 	var close := int(repo.bal("battle_group_contact_m"))
 	var sight := int(repo.bal("ai_sight_km" if ArmySystem.is_foe(state, code) else "player_sight_km") * 1000)
 	var axis := Vector2i((WarFront.facing_vector(int(battle.get("group_facing", {}).get(code, 0))) * 1000).round())
@@ -91,7 +93,14 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 		for row: Dictionary in battle.get("groups", {}).get(member, []):
 			if int(row["count"]) > 0:
 				friends.append(point(row))
+	if not opposing_battle.is_empty():
+		for member: String in opponents[friendly]:
+			for row: Dictionary in opponents.get("groups", {}).get(member, []):
+				if int(row["count"]) > 0:
+					friends.append(point(row))
 	for row: Dictionary in rows:
+		if int(row["count"]) <= 0:
+			continue
 		var from := point(row)
 		var blockers: Array[Vector2i] = friends.duplicate()
 		blockers.erase(from)  # exclude this shooter, retaining any overlapping other group
@@ -100,25 +109,34 @@ static func counts(repo: DataRepository, state: GameState, battle: Dictionary, c
 		if region != "":
 			var at := ArmySystem.metres_to_pack(repo, from)
 			inside = MapManors.province_of(repo, MapEconomy.cell_at(repo, at), state) in region.split("|")
-		for foe: String in battle[other]:
+		for foe: String in opponents[other]:
 			if target != "" and target != foe:
 				continue
-			var self_defence: bool = in_melee and BattleSystem.unit_action(repo, state, battle, foe)["kind"] == "attack"
+			var self_defence: bool = in_melee and BattleSystem.unit_action(repo, state, opponents, foe)["kind"] == "attack"
 			if not self_defence and (not inside or (designated != "" and designated != foe)):
 				continue
 			if not BattleSystem._can_fight(repo, state, foe) or bool(BattleSystem._stored(state, foe).get("captured", false)):
 				continue
 			var legal := BattleRules.legal_actions(repo, state, int(battle["id"]), side, code, foe)
+			if not opposing_battle.is_empty():
+				# Source-scoped parties can bind a target now fighting on another field.
+				if BattleRules._binds(opponents, "ceasefire", "protect", state.absolute_day(), [code], foe):
+					legal.erase("attack")
+				if BattleRules._binds(opponents, "safe_withdrawal", "protect", state.absolute_day(), [code], foe) \
+						or BattleRules._binds(opponents, "tactics", "restrained", state.absolute_day(), [code], foe):
+					legal.erase("pursue")
 			if not "attack" in legal:
 				continue
-			if (BattleOrders.kind(battle, other) == "retreat" or bool(BattleSystem._stored(state, foe).get("battle_retreat", false))) \
-					and not "pursue" in legal:
+			var withdrawing := BattleOrders.kind(opponents, other) == "retreat" or bool(BattleSystem._stored(state, foe).get("battle_retreat", false))
+			if not opposing_battle.is_empty():
+				withdrawing = BattleSystem.unit_action(repo, state, opponents, foe)["kind"] == "retreat"
+			if withdrawing and not "pursue" in legal:
 				continue
 			var visible := BattleSystem._at_m(repo, state, foe) - BattleSystem._at_m(repo, state, code)
 			if visible.length_squared() > sight * sight:
 				continue
 			var engaged := false
-			for enemy: Dictionary in battle.get("groups", {}).get(foe, []):
+			for enemy: Dictionary in opponents.get("groups", {}).get(foe, []):
 				if int(enemy["count"]) <= 0:
 					continue
 				var to := point(enemy)

@@ -48,7 +48,7 @@ state is required: integer groups, facings and pending rounds already serialize.
 
 This step supplies geometric eligibility only. Prepare/fire/reprepare timing,
 machinery deployment/loading and moving output, indirect trajectories/terrain
-occlusion, and actual ranged-fire merging between separate battles require
+occlusion, require
 separate steps; no visual pass is claimed here.
 
 Legacy arithmetic adapters without any group field retain their old incoming
@@ -61,3 +61,14 @@ The offset reserves the combined half-diagonal error of the two whole-metre
 roundings, so opposing diagonal lines stay within reach too. Movement
 still uses the ordinary daily budget and passability check. Received pursuit and
 actual close defence retain their existing deployment path.
+
+`counts` optionally accepts an opposing battle for `BattleMerge`'s cross-field
+contact probe. Default same-field calls retain their original behavior. The
+probe uses the shooter's original action/task/facing, the target's actual unit
+withdrawal action (including rout and received tasks), friendly groups from both
+fields, and party-scoped protection
+from both source records (including absorbed sources). It never joins fields,
+moves personnel, spends supplies or rolls RNG. `prepare_day` freezes source
+agreements before probing; copied target agreements keep the probe read-only.
+Only an actually attacking ranged-equipped unit's positive firing count can
+trigger a ranged merge; geometry without a firing action cannot.
