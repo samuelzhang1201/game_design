@@ -101,6 +101,11 @@ func test_failed_personnel_round_pauses_clock_and_preserves_transaction() -> voi
 	var cohort := String(Game.state.military_rosters[defender]["cohort_ids"][0])
 	Game.state.military_cohorts[cohort]["source_population_field"] = "invalid"
 	var attacker := String(battle["att"][0])
+	# This injected write failure needs melee damage, independent of ranged reach.
+	var fit := ArmySystem.fit_count(Game.data, Game.state, attacker)
+	for arm: String in Game.data.world_table("military", "unit_types"):
+		Game.state.army_roster[attacker][arm] = "0"
+	Game.state.army_roster[attacker]["infantry"] = str(fit)
 	var food := int(BattleSystem._stored(Game.state, attacker)["supplies"])
 	Game.state.day_resolution = DayResolution.begin(Game.state.absolute_day(), false)
 	Game.state.day_resolution["phase"] = "FIXED_TACTICAL_SUBSTEPS"

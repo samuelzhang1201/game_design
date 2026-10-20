@@ -117,3 +117,21 @@ Final combined frozen run passed **39 scripts / 432 tests / 3718 assertions**,
 exit 0, 168.042s. SHA256:
 `cc7d50d7c4d516cf26d0d7ea69fb522cd9a60ea18d0d8e480dafc2931c1bf89e`.
 It includes all prior battle/core/gait checks plus the stance timing script.
+
+The completed integration CI additionally exposed the invasion report collector
+and the Game atomic-error fixture. Investigation disproved the initial invasion
+equipment hypothesis: two battles had settled and 14 real `king_report` messages
+were received, while the test collected only local `battle` letters. The test
+helper now recognizes both real delivered report channels; troop/equipment,
+routes, plans, dates, the 15-day window and every assertion remain unchanged.
+The Game fixture now explicitly uses its original-count infantry attacker so
+its injected invalid population source reaches the intended atomic write error.
+All original pause/cursor/supply/error assertions remain unchanged. Both paths
+were conflict-checked and registered by the original dispatcher before edits.
+
+Final additional gated checks: complete invasion script **12 tests / 153
+assertions**, exit 0, 212.017s; complete Game campaign validation **5 tests /
+30 assertions**, exit 0, 4.12s. The prior 39-script input hash was reverified
+unchanged, so its 432 tests / 3718 assertions remain valid. These are separate
+frozen runner invocations, not a claimed full local suite. CI thresholds and
+assertions are unchanged; every final-HEAD selected job remains required.
