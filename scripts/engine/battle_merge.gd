@@ -78,6 +78,8 @@ static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dic
 	var gone := a if survivor == b else b
 	var sid := int(survivor["id"])
 	var gid := int(gone["id"])
+	BattleRules.ensure_parties(survivor)   # P4.4e3: each agreement keeps its own parties
+	BattleRules.ensure_parties(gone)
 	# the absorbed side-level state, verbatim, plus whatever it had already absorbed
 	if not survivor.has("sources"):
 		survivor["sources"] = {}

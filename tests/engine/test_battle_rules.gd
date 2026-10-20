@@ -82,6 +82,8 @@ func test_reinforcements_inherit_existing_agreements() -> void:
 	var joiner := String(codes[1])
 	state.law_in_force["unit:" + joiner] = {"quarter": {"value": "refuse", "decree_id": 10}}
 	assert_true(BattleSystem.join(repo, state, 999, joiner, "att"))
+	assert_true(joiner in battle["parley"]["parties"]["att"], "P4.4e3: the reinforcement becomes a party")
+	frozen["parties"]["att"].append(joiner)   # the only change the join makes to the frozen terms
 	assert_eq(battle["parley"], frozen)
 	assert_false("red_flag" in BattleRules.legal_actions(repo, state, 999, "att"))
 
