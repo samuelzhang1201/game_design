@@ -64,7 +64,10 @@ static func issue(repo: DataRepository, state: GameState, raw: Dictionary) -> Di
 	var id := String(order["id"])
 	if state.battle_orders.has(id):
 		var old: Dictionary = state.battle_orders[id]
-		return old.duplicate(true) if old["request"] == order else {"status": "invalid", "reason": "This request id already names another battle warrant."}
+		var was: Dictionary = old["request"].duplicate()
+		if old.has("merge_remap"):   # a merge moved the side; the courier's retry still names the original
+			was["side"] = String(old["merge_remap"]["from_side"])
+		return old.duplicate(true) if was == order else {"status": "invalid", "reason": "This request id already names another battle warrant."}
 	var quote := preview(repo, state, order)
 	if quote["reason"] != "":
 		return {"status": "invalid", "reason": quote["reason"]}
@@ -89,7 +92,7 @@ static func invalidate(_repo: DataRepository, state: GameState, id: String, reas
 
 static func end_battle(repo: DataRepository, state: GameState, battle_id: int, reason: String) -> void:
 	for id: String in state.battle_orders:
-		if int(state.battle_orders[id]["request"]["battle_id"]) == battle_id:
+		if BattleSystem.canonical(state, int(state.battle_orders[id]["request"]["battle_id"])) == BattleSystem.canonical(state, battle_id):
 			invalidate(repo, state, id, reason)
 
 static func deliver(repo: DataRepository, state: GameState, id: String) -> Dictionary:

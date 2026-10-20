@@ -49,3 +49,5 @@ PRISONER_RESPOND,gold:-1:the prisoner agreement clerk,1,Charged once per success
 PRISONER_SETTLE,gold:-1:the prisoner agreement clerk,1,Charged once per successful proposal command
 BATTLE_TASK,gold:-1:the marshal prepares a unit task warrant,1,Each new task pays filing once plus a new courier when needed
 BATTLE_TASK_CANCEL,gold:-1:the marshal prepares a unit task cancellation,1,Each new cancellation pays filing once plus a new courier when needed
+ARMY_TASK,gold:-1:the marshal prepares an area task warrant,1,"Each new area task pays filing once plus one courier fee per unit beyond the king command radius that no waiting courier already serves"
+ARMY_TASK_CANCEL,gold:-1:the marshal prepares an area task recall,1,"A recall is a new revision: filing once plus a courier fee per unit it must ride to"

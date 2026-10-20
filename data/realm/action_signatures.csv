@@ -55,3 +55,5 @@ BATTLE_FORMATION,,0,5,0,0,0,the army is told how to deploy
 BATTLE_ORDER,,0,5,0,0,0,the army receives a lawful battlefield warrant
 BATTLE_TASK,,0,5,0,0,0,the unit receives its primary task
 BATTLE_TASK_CANCEL,,0,5,0,0,0,the crown recalls a unit task
+ARMY_TASK,,0,5,0,0,0,the host is sent to search or strike an area
+ARMY_TASK_CANCEL,,0,5,0,0,0,the crown recalls an area task

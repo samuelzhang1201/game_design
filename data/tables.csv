@@ -52,6 +52,8 @@ army,army_scouting
 army,army_speed
 army,army_split
 army,army_supply_orders
+army,task_kinds
+army,task_words
 army,army_terrain
 army,army_terrain_biomes
 army,army_town_defence

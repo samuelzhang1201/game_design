@@ -24,7 +24,7 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 	if record.is_empty() or not record.get("status") in ["received", "bounded"]:
 		return result
 	var request: Dictionary = record["request"]
-	if int(request["battle_id"]) != int(battle["id"]):
+	if BattleSystem.canonical(state, int(request["battle_id"])) != int(battle["id"]):
 		return result
 	if record["status"] == "bounded":
 		return {"kind": "hold", "task_id": String(request["id"]), "reason": "Pursuit bound reached: " + String(record["reason"])}
@@ -32,8 +32,8 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 	if not action in ["attack", "charge", "hold", "retreat", "pursue"]:
 		return result
 	result = {"kind": "hold", "task_id": String(request["id"]), "reason": "Received unit task: " + String(request["task"])}
-	var legal := BattleRules.legal_actions(repo, state, int(battle["id"]), side, unit)
 	var target := String(request["target_unit"])
+	var legal := BattleRules.legal_actions(repo, state, int(battle["id"]), side, unit, target)
 	if not action in legal or not BattleSystem._can_fight(repo, state, unit) \
 			or bool(BattleSystem._stored(state, unit).get("captured", false)):
 		result["reason"] = "Unit task holds: current law, agreement or incapacity bars execution"
@@ -172,7 +172,7 @@ static func _refusal(repo: DataRepository, state: GameState, order: Dictionary) 
 		if target_side == "" or target_side == side or not BattleSystem._can_fight(repo, state, target) \
 				or bool(BattleSystem._stored(state, target).get("captured", false)):
 			return "The designated enemy can no longer be tasked against."
-	if not action in BattleRules.legal_actions(repo, state, int(battle["id"]), side, unit):
+	if not action in BattleRules.legal_actions(repo, state, int(battle["id"]), side, unit, target):
 		return "Received military law or an agreed battlefield term forbids this unit task."
 	if String(battle.get("routed_side", "")) == side and action != "retreat":
 		return "A routed unit cannot resume its battle line."

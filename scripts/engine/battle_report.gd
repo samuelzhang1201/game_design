@@ -74,7 +74,7 @@ static func tally(state: GameState, battle: Dictionary, identity := "") -> Dicti
 		var captured_here := 0
 		var released_captives := 0
 		for batch: Dictionary in state.prisoner_batches.values():
-			if batch.get("source_cohort", "") == id and int(batch.get("battle_id", -1)) == int(battle["id"]):
+			if batch.get("source_cohort", "") == id and BattleSystem.canonical(state, int(batch.get("battle_id", -1))) == int(battle["id"]):
 				captured_here += int(batch.get("initial_count", int(batch.commoners) + int(batch.nobles)))
 				released_captives += int(batch.get("released_count",
 					batch.get("initial_count", int(batch.commoners) + int(batch.nobles)) if batch.get("disposition", "") == "released" else 0))
@@ -99,7 +99,7 @@ static func snapshot(repo: DataRepository, state: GameState, battle_id: int) -> 
 		"reinforcements": battle.get("reinforcement_evidence", []).duplicate(true), "prisoners": [],
 		"custody": custody_batches(repo, state, battle_id)}
 	for batch: Dictionary in state.prisoner_batches.values():
-		if int(batch.get("battle_id", -1)) == battle_id:
+		if BattleSystem.canonical(state, int(batch.get("battle_id", -1))) == battle_id:
 			var captured := batch.duplicate(true)
 			captured["holder_label"] = String(ArmySystem.regiment(repo, String(batch.holder_code), state).get("label", batch.holder_code)) if repo != null else batch.holder_code
 			captured["named"] = []
@@ -128,7 +128,7 @@ static func snapshot(repo: DataRepository, state: GameState, battle_id: int) -> 
 			"after": int(unit.get("exit_supplies", state.regiments.get(unit.code, state.foes.get(unit.code, {})).get("supplies", 0)))})
 	for id: String in state.battle_orders:
 		var order: Dictionary = state.battle_orders[id]
-		if int(order.get("request", {}).get("battle_id", -1)) != battle_id: continue
+		if BattleSystem.canonical(state, int(order.get("request", {}).get("battle_id", -1))) != battle_id: continue
 		record.orders.append(order.duplicate(true))
 		var handoff: Dictionary = order.get("result", {}).get("capture_handoff", {})
 		if bool(handoff.get("accepted", false)):
@@ -159,7 +159,7 @@ static func custody_batches(repo: DataRepository, state: GameState, battle_id: i
 	ids.sort()
 	for id: String in ids:
 		var batch: Dictionary = state.prisoner_batches[id]
-		if int(batch.get("battle_id", -1)) != battle_id and not changed.has(id): continue
+		if BattleSystem.canonical(state, int(batch.get("battle_id", -1))) != battle_id and not changed.has(id): continue
 		var copy := batch.duplicate(true)
 		copy["previous_holder_realms"] = changed.get(id, []).duplicate()
 		out.append(copy)

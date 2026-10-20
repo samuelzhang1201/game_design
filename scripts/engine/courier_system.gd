@@ -420,7 +420,7 @@ static func _ride(repo: DataRepository, state: GameState, c: Dictionary, today: 
 		return PrisonerCommunications.ride(repo, state, c, today, events)
 	var code := String(c["target"])
 	var reg := ArmySystem.regiment(repo, code, state)
-	if not state.regiments.has(code) and orders_of(c).any(func(order: Dictionary) -> bool: return order.has("battle_order_id") or order.has("unit_task_id")):
+	if not state.regiments.has(code) and orders_of(c).any(func(order: Dictionary) -> bool: return order.has("battle_order_id") or order.has("unit_task_id") or order.has("army_task_id")):
 		_invalidate_battle_orders(repo, state, c, "The target army is no longer under military control.")
 		events.append(_event("lost", c))
 		return _next_recipient(repo, state, c)
@@ -776,6 +776,8 @@ static func _invalidate_battle_orders(repo: DataRepository, state: GameState, c:
 	for order: Dictionary in orders_of(c):
 		if order.has("unit_task_id"):
 			BattleTaskSystem.invalidate_task(state, String(order["unit_task_id"]), reason)
+		if order.has("army_task_id"):
+			ArmyTasks.lapse(state, String(order["army_task_id"]), int(order["revision"]), String(c["target"]), reason)
 		if order.has("battle_order_id"):
 			BattleOrders.invalidate(repo, state, String(order["battle_order_id"]), reason)
 
@@ -789,6 +791,11 @@ static func _deliver_one(repo: DataRepository, state: GameState, c: Dictionary, 
 			return {"type": "lapsed", "said": "This unit task belongs to another recipient."}
 		var result := BattleTaskSystem.deliver_task(repo, state, id)
 		return {"type": "delivered" if result["status"] == "received" else "lapsed", "said": String(result["reason"])}
+	if action == "ARMY_TASK":
+		var got := ArmyTasks.receive(repo, state, String(order.get("army_task_id", "")), int(order.get("revision", 0)), code)
+		return {"type": "delivered" if got["status"] in ["received", "cancelled"] \
+			else ("stale" if got["status"] == "superseded" else "lapsed"),
+			"said": STALE_SAID if got["status"] == "superseded" else String(got["reason"])}
 	if action == "BATTLE_ORDER":
 		var result := BattleOrders.deliver(repo, state, String(order.get("battle_order_id", "")))
 		return {"type": "delivered" if result["status"] == "delivered" else "lapsed", "said": String(result["reason"])}

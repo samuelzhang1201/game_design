@@ -108,6 +108,11 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 				copy["category"] = "formation_terrain"
 				factors.append(copy)
 		factors.append_array(BattleEvents.factors(state, battle, code))
+		var contact := BattleGroups.engaged_counts(repo, battle, code)
+		if contact.y > 0:
+			factors.append({"source": "contact:engaged", "category": "contact",
+				"permille": BattleGroups.engaged_permille(repo, state, battle, code),
+				"reason": "%d of %d in contact with the enemy line" % [contact.x, contact.y]})
 		var kind := String(action["kind"])
 		var row: Dictionary = repo.battle_orders.get(kind, {})
 		factors.append({"source": "order:" + kind, "category": "action",
@@ -333,8 +338,18 @@ static func battle_of(state: GameState, code: String) -> Dictionary:
 	return {}
 
 
-## The battle with this id, {} when none.
+## The id a (possibly merged-away) battle id stands for (BattleMerge aliases, chains too).
+static func canonical(state: GameState, id: int) -> int:
+	var hops := 0
+	while state.battle_aliases.has(str(id)) and hops < 64:
+		id = int(state.battle_aliases[str(id)])
+		hops += 1
+	return id
+
+
+## The battle with this id (an alias resolves to its survivor), {} when none.
 static func battle_by_id(state: GameState, id: int) -> Dictionary:
+	id = canonical(state, id)
 	for b: Dictionary in state.battles:
 		if int(b["id"]) == id:
 			return b
@@ -474,6 +489,9 @@ static func join(repo: DataRepository, state: GameState, battle_id: int, code: S
 	var list: Array = b[side]
 	if list.size() >= int(repo.bal("battle_max_units")):
 		return false
+	BattleRules.ensure_parties(b)   # an old save's default is taken before the newcomer is in the list
+	if b.has("parley"):   # the frozen terms are inherited: the reinforcement becomes a party
+		b.parley.parties[side].append(code)
 	list.append(code)
 	BattleReport.enroll(state, b, code, side)
 	if not b.has("event_reinforcements"):
@@ -564,7 +582,8 @@ static func _start(repo: DataRepository, state: GameState, p: String, f: String,
 		place = ArmySystem.pack_to_metres(repo, Vector2(float(bu["x"]), float(bu["y"])))
 	state.foe_next_id += 1
 	var b := {"id": state.foe_next_id, "att": att, "def": def, "start_day": state.absolute_day(),
-		"rounds": 0, "place_x_m": place.x, "place_y_m": place.y, "town": town}
+		"rounds": 0, "place_x_m": place.x, "place_y_m": place.y, "town": town,
+		"deployed_day": state.absolute_day()}   # the day of contact deploys nothing; the next prepare_day does
 	b["actions"] = {}
 	for side: String in SIDES:
 		var actor := String(b[side][0])
@@ -619,7 +638,9 @@ static func prepare_day(repo: DataRepository, state: GameState) -> Array:
 	for battle: Dictionary in state.battles:
 		BattleRules.freeze(repo, state, battle)
 		BattleFormation.ensure(battle)
+		BattleGroups.deploy_day(repo, state, battle)
 		BattleGroups.refresh(repo, state, battle)
+	events.append_array(BattleMerge.day(repo, state))
 	_withdraw_homeward(repo, state, events)
 	_detect(repo, state, events)
 	return events
@@ -652,7 +673,7 @@ static func step_battle(repo: DataRepository, state: GameState, battle_id: int) 
 			BattleReport.note(battle, events)
 			BattleGroups.refresh(repo, state, battle)   # the round's losses and exits, so a same-day retry is inert
 		if bool(result["ended"]):
-			state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != battle_id)
+			state.battles = state.battles.filter(func(b: Dictionary) -> bool: return int(b["id"]) != int(battle["id"]))
 	return {"status": "complete", "events": events}
 
 
@@ -805,6 +826,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		"battle:%d:round:%d" % [int(b["id"]), n])
 	if results.has("error"):
 		return results
+	_settle_family_losses(repo, state, b, pending, n)
 	custody = _settle_defeated_holders(repo, state, b)
 	if custody.has("error"):
 		return custody
@@ -835,6 +857,32 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		_end(repo, state, b, "rout_" + ("attacker" if b["routed_side"] == "att" else "defender") if b.has("routed_side") else "emptied", events, left)
 		return {"ended": true}
 	return {"ended": false}
+
+
+## What each unit's noble dead and captured cost their families: one consume per unit in code
+## order. Replay-safe: consume returns the saved rows for a known id, and `family_loss_ids`
+## keeps those rows from being appended to the battle twice.
+static func _settle_family_losses(repo: DataRepository, state: GameState, b: Dictionary, pending: Dictionary, n: int) -> void:
+	var receipt: Dictionary = state.military_events.get("battle:%d:round:%d:personnel" % [int(b["id"]), n], {})
+	var by_unit: Dictionary = {}
+	for change: Dictionary in receipt.get("result", {}).get("changes", []):
+		var code := String(state.military_cohorts.get(String(change["cohort_id"]), {}).get("unit_code", ""))
+		if not by_unit.has(code):
+			by_unit[code] = []
+		by_unit[code].append(change)
+	var codes: Array = by_unit.keys()
+	codes.sort()
+	var place := place_label(repo, state, b)
+	for code: String in codes:
+		var side := "att" if code in pending["att"] else "def"
+		var order := String(pending.get("unit_actions", {}).get(code, {}).get("kind", pending["contexts"][side]["kind"]))
+		var loss_id := "battle:%d:round:%d:%s" % [int(b["id"]), n, code]
+		var rows: Variant = FamilyLosses.consume(repo, state, loss_id, by_unit[code], {"place": place, "order": order})
+		# The id is fixed per round and unit, so an {error} cannot arise; if it did, nothing is appended.
+		if not rows is Array or (b.get("family_loss_ids", []) as Array).has(loss_id):
+			continue
+		b["family_loss_ids"] = b.get("family_loss_ids", []) + [loss_id]
+		b["family_changes"] = b.get("family_changes", []) + rows
 
 
 ## Resolve custody while the defeated unit still has its battlefield context.
