@@ -135,6 +135,18 @@ reason, halts a marching unit where it stands (today's saved walk included) and
 leaves `current_id` on it: `combat_action` then answers `hold` for that battle, so it
 defends but never advances or starts a withdrawal; only a new received task replaces it.
 
+`BattleGroups.engaged_counts` checks each saved front group's whole-metre
+position against the active pursuit's received region, resolving live manor
+province changes. Outside groups retain the reserve share and cannot establish
+pursuit contact. Real contact with an attacking opponent still counts for
+self-defence; it cannot authorize pursuit losses against a withdrawing opponent.
+A region-limited pursuit applies the pursuit loss context only with eligible
+contact against that withdrawing unit (legacy saves without groups retain their
+existing context). Holding/bounded tasks keep ordinary defensive contact. The
+resolved action saves `pursuit_region` beside its target in `pending_round`, so
+replacement and JSON retries keep the planned region. These queries move no
+positions and change no task receipts; route-edge movement is separate.
+
 **Target tracking and the limited search.** A crown unit in no battle whose current
 received task is a `flank` or a pursuit with a `target_unit` marches at the target as
 its OWN sight knows it (`BattleTaskSystem.track_day`, once a day at the top of
