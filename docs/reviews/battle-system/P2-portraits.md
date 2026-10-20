@@ -1,6 +1,6 @@
 # P2 commander portrait production evidence
 
-Status: production in progress — painterly restyle, see the section at the end for the current count. `assets/imagegen/commander_portraits.csv` is derived from actual player/raider commander rows, including reserves. Other realms are excluded. At this checkpoint 147 keys are planned (see R1 below): 6 existing complete pairs reused, 27 new complete pairs installed, 114 still missing (33/147 complete). A generated source is not an installed or accepted portrait.
+Status: all 287 player/raider commander keys and the 21 story characters (302 `K-` people, 604 layers) are installed in the painterly restyle, each with an approved review record and verified hashes; `commander_portraits.csv` reports 287/287 complete. `assets/imagegen/commander_portraits.csv` is derived from actual player/raider commander rows, including reserves. Other realms are excluded. At this checkpoint 147 keys are planned (see R1 below): 6 existing complete pairs reused, 27 new complete pairs installed, 114 still missing (33/147 complete). A generated source is not an installed or accepted portrait.
 
 ## Approved sample pairs
 
@@ -79,9 +79,36 @@ Implementer rulings:
 - **R11 — redraws.** Source review rejected K-98 and K-132 (feet outside the frame); each was redrawn with seed + 1 (K-132 needed seed + 2: 3106087034). K-66's bright bar at the top of the backdrop was checked after cutout. Every other source passed on its first seed.
 - **R12 — T-pose side view.** The first side view of K-01 swung the arms forward. The side instruction now asks for strict profile with the near arm pointing at the camera (foreshortened) and the far arm hidden; front and back views keep the plain T-pose wording. The views are references only and live in `comfy-out/units/main_cast_tpose_2026-10-20/` (not in the repo).
 - **R13 — checks per batch PR.** Each batch is art plus review records: the installer's hash checks, `test_commander_portrait_pipeline.py` and the manifest run locally; GUT runs in CI (the selector picks every functional category for an asset change).
+- **R14 — T-pose garments.** The first T-pose pass dropped robes and headwear on 8 of 21 (K-02, K-12, K-13, K-14, K-18, K-19, K-20, K-21); the instruction now keeps every headwear piece, robe, gown, surcoat, coat, train, badge and fur trim and removes only a loose cloak or cape, and those 8 were redone. Kept as left: K-12's open fur-lined surcoat and K-14's furred over-gown (two seeds each — the edit model treats an open over-garment as a cloak); separate gear images can follow if the owner wants them on the model. Folder README: `comfy-out/units/main_cast_tpose_2026-10-20/README.md`.
+
+## Extension: the PR #79 commander rows (K-163..K-302)
+
+The coordinator relayed the owner's instruction to produce every needed art asset, so the 140 player/raider commander rows that PR #79 added (seven houses × 20 nobles, `category=noble`, ages from `roles.csv`) get `K-163`..`K-302`: library entries, `prompts.csv` rows and `cast_art.csv` mappings (`requires_review=1`), then the same painterly method and review as above.
+
+- **R15 — authored appearance lines.** The rows carry no looks, so each line is drawn by a seeded script from its character id (seed = first 32 bits of SHA-256 of the id, also the image seed): face shape, nose, eyes, hair style, beard, build and garments are independent per person, so relatives do not look alike by default.
+- **R16 — gender.** `roles.csv` has no gender column; the 20 first names split ten female (Adela, Celia, Elin, Helena, Joanna, Lucia, Nerida, Philippa, Rosamund, Tamsin) and ten male, read from the names.
+- **R17 — houses.** Each house keeps a two-colour wool livery (Harrow madder red/oatmeal, Ashvale ash grey/moss, Fenwick slate blue/ochre, Blackthorn charcoal/oxblood, Redwater rust/teal, Stonehelm stone grey/brown, Wolfmere forest green/russet) and a pool of three neighbouring complexions, so a family reads as kin; Redwater and Wolfmere draw dark hair. Raider houses add one rougher detail (tablet-woven trim, an arm ring, a bone toggle, stitched cuffs).
+- **R18 — noble dress, not the K-25..K-162 template.** These lines vary cote, tunic, gambeson, kirtle or gown under a surcote, jerkin, tabard, hooded shoulder cape or overgown, with varied belts, footwear and head coverings, which answers the "commanders all look alike" note for this set without touching the earlier designs.
+- **R19 — deep brown complexions.** The seven Wolfmere lines that said "deep brown skin" (K-287, K-288, K-290, K-293, K-294, K-296, K-298) all rendered olive: the style core's "historically accurate … Europe" outweighs a bare complexion phrase. Those lines now say "very dark deep brown skin of African descent" and were redrawn on the same seeds; six render as written. K-293 stayed olive across five seeds and a changed nose, so its line was set to the house's "warm brown skin" and nose "a broad straight nose", redrawn on seed 2838475130 to match the image (first attempts kept in `out/rejected_skin/`).
 
 ### Restyle progress
 
 | Batch | Keys | Sheets (`out/commander_samples/`) | State |
 |---|---|---|---|
 | fp2-b01 | K-01..K-24 (story cast + K-22..24) | `fp2-b01-full-alpha.png`, `fp2-b01-chip-alpha.png` | installed |
+| fp2-b02 | K-25..K-48 | `fp2-b02-full-alpha.png`, `fp2-b02-chip-alpha.png` | installed |
+| fp2-b03 | K-49..K-72 | `fp2-b03-full-alpha.png`, `fp2-b03-chip-alpha.png` | installed |
+| fp2-b04 | K-73..K-96 | `fp2-b04-full-alpha.png`, `fp2-b04-chip-alpha.png` | installed |
+| fp2-b05 | K-97..K-120 | `fp2-b05-full-alpha.png`, `fp2-b05-chip-alpha.png` | installed |
+| fp2-b06 | K-121..K-144 | `fp2-b06-full-alpha.png`, `fp2-b06-chip-alpha.png` | installed |
+| fp2-b07 | K-145..K-162 | `fp2-b07-full-alpha.png`, `fp2-b07-chip-alpha.png` | installed |
+
+Result: 162 people × 2 layers installed and hash-verified; `commander_portraits.csv` reports 147/147 planned keys complete. T-pose front/side/back references for K-01..K-21 are delivered to `comfy-out/units/main_cast_tpose_2026-10-20/` (not in the repo).
+
+Open for the owner: whether the PR #79 roster (K-163..K-302) duplicates the K-22..K-162 one is an engine/data question left to its owner; commander clothing reads alike across K-25..K-162 because their appearance lines share one tunic-and-mantle template — vary the lines if more distinction is wanted.
+| fp2-b08 | K-163..K-186 | `fp2-b08-full-alpha.png`, `fp2-b08-chip-alpha.png` | installed |
+| fp2-b09 | K-187..K-210 | `fp2-b09-full-alpha.png`, `fp2-b09-chip-alpha.png` | installed |
+| fp2-b10 | K-211..K-234 | `fp2-b10-full-alpha.png`, `fp2-b10-chip-alpha.png` | installed |
+| fp2-b11 | K-235..K-258 | `fp2-b11-full-alpha.png`, `fp2-b11-chip-alpha.png` | installed |
+| fp2-b12 | K-259..K-282 | `fp2-b12-full-alpha.png`, `fp2-b12-chip-alpha.png` | installed |
+| fp2-b13 | K-283..K-302 | `fp2-b13-full-alpha.png`, `fp2-b13-chip-alpha.png` | installed |
