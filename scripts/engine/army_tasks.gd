@@ -7,7 +7,6 @@ extends RefCounted
 ## received. A hidden foe or an unknown town never reaches it. Whole metres and days.
 
 ## The laws a kind's actions are limited by: kind -> [law, forbidding value, words key].
-const LAW_LIMITS := {"raid": [["plunder", "forbid", "law_plunder"]]}
 
 
 static func _refuse(repo: DataRepository, key: String) -> Dictionary:
@@ -96,7 +95,7 @@ static func preview(repo: DataRepository, state: GameState, realm: String, task:
 			"commander_id": String(state.military_rosters.get(code, {}).get("commander_id", "")),
 			"eta_days": CourierSystem.arrival_days(repo, state, code, dest)})
 		courier = courier or not KingSystem.can_command(repo, state, code)
-		for lim: Array in LAW_LIMITS.get(kind, []):
+		for lim: Array in repo.task_kinds[kind].get("law_limits", []):
 			var words := String(repo.task_words.get(lim[2], lim[2]))
 			if String(LawSystem.received(repo, state, lim[0], code)["value"]) == lim[1] and not words in limits:
 				limits.append(words)

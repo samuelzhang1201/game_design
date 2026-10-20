@@ -1137,7 +1137,10 @@ func _load(dir: String) -> bool:
 			func(r): task_kinds[String(r["kind"])] = {"label": String(r["label"]),
 				"needs_target": String(r["needs_target"]) == "1",
 				"default_encounter": String(r["default_encounter"]),
-				"allowed_encounters": String(r["allowed_encounters"]).split("|")}):
+				"allowed_encounters": String(r["allowed_encounters"]).split("|"),
+				# law:value:words key tokens joined by |: a received law at that value limits the kind
+				"law_limits": Array(String(r.get("law_limits", "")).split("|", false)).map(
+					func(t: String) -> Array: return Array(t.split(":")))}):
 		return false
 	if not _load_if_present(table_path(dir, "task_words"), ["key", "text"],
 			func(r): task_words[String(r["key"])] = String(r["text"])):

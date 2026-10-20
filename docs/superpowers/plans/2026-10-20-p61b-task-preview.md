@@ -84,3 +84,5 @@ section of `scripts/engine/guide/regiments.md`. 4. `--fast` green; one PR.
 6. Law limits only list (preview stays ok): raid + received `plunder` = forbid. Other kinds have none yet (table `LAW_LIMITS` in code; ponytail: move to data when a second law appears).
 7. Refusal words in new `data/army/task_words.csv` (key,text,notes), loaded as `repo.task_words`.
 8. Unit validity: own realm, not naval, not a foe, in `state.regiments`, not captured, `fit_count > 0`.
+
+- Reviewer: the law-limit mapping moved from a code const into `task_kinds.csv` `law_limits` (`law:value:words_key` tokens joined by `|`), so design values stay in data.
