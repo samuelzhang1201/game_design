@@ -132,7 +132,8 @@ static func capture(repo: DataRepository, state: GameState, raw: Dictionary) -> 
 				"nobles": count if cohort["identity"] == "noble" else 0,
 				"named_ids": [person] if person != "" else [], "wounded_subset": wounded,
 				"initial_count": count, "capture_id": id, "battle_id": request["battle_id"], "round": request["round"],
-				"disposition": "held", "ransom_protected": BattleRules._policy(battle, "noble_ransom", state.absolute_day()) == "allow",
+				"disposition": "held", "ransom_protected": BattleRules._binds(battle, "noble_ransom", "allow",
+					state.absolute_day(), [code], String(cohort["unit_code"])),
 				"reason": request["reason"]}
 			left -= count
 			wounds -= wounded

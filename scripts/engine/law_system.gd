@@ -123,11 +123,13 @@ static func prisoner_refusal(repo: DataRepository, state: GameState, batch: Dict
 		return "Only noble prisoners may be ransomed."
 	if bool(batch.get("ransom_protected", false)):
 		return ""
-	var battle_id := int(batch.get("battle_id", -1))
+	var battle_id := BattleSystem.canonical(state, int(batch.get("battle_id", -1)))
 	var battle := BattleSystem.battle_by_id(state, battle_id)
 	if battle.is_empty():
 		battle = state.battle_records.get(str(battle_id), {})
-	if BattleRules._policy(battle, "noble_ransom", state.absolute_day()) == "allow":
+	var source := String(state.military_cohorts.get(batch.get("source_cohort", ""), {}).get("unit_code", ""))
+	if source != "" and BattleRules._binds(battle, "noble_ransom", "allow", state.absolute_day(),
+			[String(batch.get("holder_code", ""))], source):
 		return ""
 	if String(received(repo, state, "ransom", String(batch.get("holder_code", "")))["value"]) != "ransom":
 		return "The holder's received military law does not permit ransom."

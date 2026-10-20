@@ -73,10 +73,12 @@ func test_agreed_ransom_survives_policy_change_and_respects_deadline() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 525)
 	var holder := _holder(state)
-	var batch := {"holder_code": holder, "battle_id": 525, "commoners": 0, "nobles": 10}
+	var source := String(state.foes.keys()[0])
+	var cohort := String(state.military_rosters[source].cohort_ids[0])
+	var batch := {"holder_code": holder, "source_cohort": cohort, "battle_id": 525, "commoners": 0, "nobles": 10}
 	state.law_in_force["unit:" + holder]["ransom"] = {"value": "execute", "decree_id": 9}
 	var term := {"policy": "allow", "scope": "noble_prisoners", "until_day": state.absolute_day(), "conditions": {}}
-	state.battles.append({"id": 525, "parley": {"agreed": {"noble_ransom": term}}})
+	state.battles.append({"id": 525, "att": [holder], "def": [source], "parley": {"agreed": {"noble_ransom": term}}})
 	assert_eq(LawSystem.prisoner_refusal(repo, state, batch, "ransom"), "")
 	state.day += 1
 	assert_ne(LawSystem.prisoner_refusal(repo, state, batch, "ransom"), "")
