@@ -114,7 +114,7 @@ TABLE_CANVAS = {"T": "C-TILE", "I": "C-ICON", "D": "C-MAPMARK", "G": "C-MAPMARK"
 # Prompt library §10.7 target sizes per canvas, generated at the models' native
 # 1024-class resolution (icons and tiles are downscaled afterwards).
 CANVAS_SIZE = {
-    "C-PORTRAIT": (1024, 1024), "C-BUST": (1024, 1024), "C-FULL": (1024, 1536),
+    "C-PORTRAIT": (1024, 1024), "C-BUST": (1024, 1024), "C-FULL": (1024, 1536), "C-FIGURE": (1024, 1536),
     "C-ICON": (1024, 1024), "C-TILE": (1024, 1024), "C-MAP": (1536, 1024),
     "C-SCENE": (1536, 1024), "C-EVENT": (1536, 640), "C-SYMBOL": (1024, 1024), "C-MAPMARK": (1024, 1024),
     "C-UIPIECE": (1024, 1024), "C-UIWIDE": (1536, 512), "C-FRAME": (1792, 1008),
@@ -258,7 +258,7 @@ def assemble(row: dict, canvas: dict[str, str], style: str, small: bool = False,
     if not row["canvas"]:
         raise ValueError(f"{row['id']} is a fragment (chapter {row['chapter']}), not a standalone asset")
     subject = row["subject"]
-    if row["canvas"] in ("C-FULL", "C-BUST") and row.get("appearance"):
+    if row["canvas"] in ("C-FULL", "C-BUST", "C-FIGURE") and row.get("appearance"):
         subject = row["appearance"]
     for frag in fragments or []:
         subject += ", " + frag

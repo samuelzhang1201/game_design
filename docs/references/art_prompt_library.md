@@ -117,6 +117,7 @@ drawing, unpainted sketch, outline only, pale washed-out, architectural line art
 | `[C-PORTRAIT]` | 人物立绘 | `half-length portrait, three-quarter view, centred composition, plain warm cream paper background, subject occupies 70% of frame, 1:1 square` |
 | `[C-BUST]` | 对话头像 | `head and shoulders bust, extreme close-up, the face fills the upper two thirds of the frame, frontal three-quarter view, tight crop, vignetted cream paper background, 1:1 square` |
 | `[C-FULL]` | 全身立绘 | `full length standing figure shown head to toe with the feet fully inside the frame, slight low angle, plain cream paper ground, no furniture or props touching the ground, thin cast shadow only, 2:3 vertical` |
+| `[C-FIGURE]` | 全身立绘（写实厚涂，2026-10-20） | `full length standing figure shown head to toe with the feet fully inside the frame, eye-level camera, plain flat medium grey studio backdrop with no scenery and no snow, soft shadow at the feet only, 2:3 vertical` |
 | `[C-ICON]` | 地图/UI 图标 | `single isolated object, orthographic three-quarter overhead view, no background, no scene, no ground plane, centred, generous margin, 1:1 square` |
 | `[C-TILE]` | 可平铺贴图 | `seamless tileable texture, flat top-down orthographic view, even illumination, no directional shadow, no focal point, uniform density across the whole square, 1:1` |
 | `[C-MAP]` | 地图底图 | `top-down orthographic cartographic view, north up, no perspective, even lighting, antique map plate` |

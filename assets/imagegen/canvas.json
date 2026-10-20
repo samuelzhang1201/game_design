@@ -23,5 +23,6 @@
   "C-LOGO": "logo presentation, the emblem and wordmark centred with generous even margins, plain solid background filling the whole square, no scene, no perspective, no mockup, 1:1 square",
   "C-INTERIOR": "a wide 16:9 interior view from the eye height of a standing officer at the near end of the table, looking across the table toward the far wall and its window, the whole room and its far wall in frame, a little of the side walls at both edges, natural perspective, eye-level horizon in the upper third",
   "C-PROP": "one single object standing alone on a plain light grey studio floor against a plain light grey wall, three-quarter view from slightly above standing eye height, the whole object inside the frame with an even margin, nothing else in the picture",
-  "C-FLAT": "one single flat textile or panel seen straight on and face-on with no perspective, filling the frame edge to edge, evenly lit, no shadow, no surroundings"
+  "C-FLAT": "one single flat textile or panel seen straight on and face-on with no perspective, filling the frame edge to edge, evenly lit, no shadow, no surroundings",
+  "C-FIGURE": "full length standing figure shown head to toe with the feet fully inside the frame, eye-level camera, plain flat medium grey studio backdrop with no scenery and no snow, soft shadow at the feet only, 2:3 vertical"
 }

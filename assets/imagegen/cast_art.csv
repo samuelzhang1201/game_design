@@ -1,28 +1,28 @@
 character_id,art_id,seed,notes,requires_review
-you,K-01,qwen2512fast_s954159497,,0
-char_chancellor,K-02,qwen2512fast_s954159497,,0
-char_marshal,K-03,qwen2512fast_s954159497,,0
-char_steward,K-04,qwen2512fast_s954159497,,0
-char_spymaster,K-05,qwen2512fast_s954159497,,0
-char_chaplain,K-06,qwen2512fast_s954159497,,0
-char_queen,K-07,qwen2512fast_s954159497,,0
-char_princess,K-08,qwen2512fast_s954159497,,0
-char_duke_tomas,K-09,qwen2512fast_s954159497,,0
-char_lady_ysolde,K-10,qwen2512fast_s954159497,,0
-char_captain_hale,K-11,qwen2512fast_s954159497,,0
-char_lady_corina,K-12,qwen2512fast_s954159497,,0
-char_lord_edgar,K-13,qwen2512fast_s954159497,,0
-char_lord_malvern,K-14,qwen2512fast_s954159497,,0
-char_prophet_cassian,K-15,qwen2512fast_s954159497,,0
-char_king_osric,K-16,qwen2512fast_s954159497,,0
-char_envoy_petra,K-17,qwen2512fast_s954159497,,0
-char_queen_isabeau,K-18,qwen2512fast_s954159497,,0
-char_emperor,K-19,qwen2512fast_s954159497,,0
-char_bard_corvin,K-20,qwen2512fast_s954159497,,0
-char_guildmaster_tessa,K-21,qwen2512fast_s954159497,,0
-char_player_delphine_o_kala,K-22,qwen2512desk4_s954159497,P2 approved full and dedicated bust installed; real-window dossier art review passed,1
-char_player_berengar_ashvale,K-23,qwen2512desk4_s954159497,P2 approved full and dedicated bust installed; real-window dossier art review passed,1
-char_raider_beatrice_reedmere,K-24,qwen2512desk4_s954159498,P2 approved full and dedicated bust installed; real-window dossier art review passed,1
+you,K-01,qwen2512desk4_s20261101,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_chancellor,K-02,qwen2512desk4_s20261102,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_marshal,K-03,qwen2512desk4_s20261103,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_steward,K-04,qwen2512desk4_s20261104,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_spymaster,K-05,qwen2512desk4_s20261105,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_chaplain,K-06,qwen2512desk4_s20261106,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_queen,K-07,qwen2512desk4_s20261107,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_princess,K-08,qwen2512desk4_s20261108,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_duke_tomas,K-09,qwen2512desk4_s20261109,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_lady_ysolde,K-10,qwen2512desk4_s20261110,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_captain_hale,K-11,qwen2512desk4_s20261111,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_lady_corina,K-12,qwen2512desk4_s20261112,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_lord_edgar,K-13,qwen2512desk4_s20261113,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_lord_malvern,K-14,qwen2512desk4_s20261114,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_prophet_cassian,K-15,qwen2512desk4_s20261115,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_king_osric,K-16,qwen2512desk4_s20261116,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_envoy_petra,K-17,qwen2512desk4_s20261117,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_queen_isabeau,K-18,qwen2512desk4_s20261118,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_emperor,K-19,qwen2512desk4_s20261119,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_bard_corvin,K-20,qwen2512desk4_s20261120,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_guildmaster_tessa,K-21,qwen2512desk4_s20261121,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_delphine_o_kala,K-22,qwen2512desk4_s954159497,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_player_berengar_ashvale,K-23,qwen2512desk4_s954159497,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
+char_raider_beatrice_reedmere,K-24,qwen2512desk4_s954159498,P2 painterly restyle 2026-10-20: reviewed Qwen full and exact-source derived chip; black/white native alpha approved; installed,1
 char_player_alaric_fenwick,K-25,qwen2512desk4_s205202,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
 char_player_ansel_harrow,K-26,qwen2512desk4_s3525084065,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1
 char_player_cedric_valorin,K-27,qwen2512desk4_s611844519,P2 full and dedicated bust reviewed; native-size black/white alpha checked; installed,1

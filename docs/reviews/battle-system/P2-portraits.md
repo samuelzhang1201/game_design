@@ -1,6 +1,6 @@
 # P2 commander portrait production evidence
 
-Status: production in progress. `assets/imagegen/commander_portraits.csv` is derived from actual player/raider commander rows, including reserves. Other realms are excluded. At this checkpoint 147 keys are planned (see R1 below): 6 existing complete pairs reused, 27 new complete pairs installed, 114 still missing (33/147 complete). A generated source is not an installed or accepted portrait.
+Status: production in progress — painterly restyle, see the section at the end for the current count. `assets/imagegen/commander_portraits.csv` is derived from actual player/raider commander rows, including reserves. Other realms are excluded. At this checkpoint 147 keys are planned (see R1 below): 6 existing complete pairs reused, 27 new complete pairs installed, 114 still missing (33/147 complete). A generated source is not an installed or accepted portrait.
 
 ## Approved sample pairs
 
@@ -61,3 +61,27 @@ Implementer rulings (owner asleep; recorded for review):
 - **R3 — renderer spot checks.** `--portrait-review` exists only in the snapshot, not on `main`; later batches rely on the black/white sheet inspection (identity, period clothing, anatomy, crop, alpha) and skip the real-window spot check.
 - **R4 — desktop host.** `192.168.4.85:8188` was down at 2026-10-20 start (host unreachable; no other ComfyUI on the LAN). Generation retries hourly and never falls back to the Mac.
 
+
+## Painterly restyle (owner, 2026-10-20)
+
+The owner asked for 2D people and event art in the rendering style of Frostpunk 2, moved to our medieval setting, then corrected the first read within minutes: the painting style only — no snow, frost or cold-weather dress; clothing exactly as each `K-` appearance line designs it; a temperate climate. The owner also delegated the pick ("我不挑了，你自己判断"). The coloured-pencil pairs (K-22..K-48 and the legacy council art) are superseded; their review records are kept with status `superseded`.
+
+Method: `STYLE_CORE_commanders_fp2.txt` + `NEGATIVE_commanders_fp2.txt`, the new `[C-FIGURE]` canvas (library §canvas; plain medium-grey studio backdrop so BiRefNet cuts cleanly), `qwen2512desk4` on the desktop, the same per-identity appearance lines and seeds. Every ComfyUI output is archived under `assets/3D/model_wip/comfy-out/2d_art/portraits/commanders_2026-10-20/` (owner rule); review sheets are in its `review/`.
+
+Implementer rulings:
+
+- **R5 — model.** Qwen-Image-2512 over Z-Image Turbo: on K-22/23/24 × 2 seeds each, Qwen gave the cinematic painterly read, steady faces and correct proportions; Z-Image read flatter, like a costume photograph, with smaller heads (`review/fp2-style-samples.png`).
+- **R6 — skin tone.** The first style core led with a cold desaturated palette and washed K-22's "warm brown skin" pale in both models. The core now opens with "true-to-life skin tone and ethnicity exactly as described" and keeps colour grading to restrained earthy tones; the negative adds whitewashed / grey skin. K-22 now renders olive-brown (`review/fp2-k22-skin*.png`, `review/fp2-temperate.png`).
+- **R7 — story cast seeds.** K-01..K-21 shared one seed (954159497) in the pencil set; each now gets its own, `20261100 + n`, recorded in its review record.
+- **R8 — scope of the restyle.** All 162 `K-` people are redrawn so the game has one style: the 147 commander keys and the 21 story characters (K-01..K-21; the six that are also commanders count once).
+- **R9 — main characters.** The owner's "important main characters" (3D T-pose references) are read as the 21 named story characters K-01..K-21; generals and nobles (K-22..K-162) get 2D only. The T-pose sheets are references for the owner's own Tripo/Blender work — no 3D model is made here. Loose cloaks and mantles are left off the T-pose views (they fuse arm to torso in a generated mesh, `tools/guide/unit_reference_sheets.md`); every other garment follows the design.
+- **R10 — review authority.** With the owner's delegation, the implementer reviews each 24-portrait batch on black/white sheets (identity, age, complexion and clothing against the appearance line; anatomy; crop; alpha) before installation, and lists any regenerated key here.
+- **R11 — redraws.** Source review rejected K-98 and K-132 (feet outside the frame); each was redrawn with seed + 1 (K-132 needed seed + 2: 3106087034). K-66's bright bar at the top of the backdrop was checked after cutout. Every other source passed on its first seed.
+- **R12 — T-pose side view.** The first side view of K-01 swung the arms forward. The side instruction now asks for strict profile with the near arm pointing at the camera (foreshortened) and the far arm hidden; front and back views keep the plain T-pose wording. The views are references only and live in `comfy-out/units/main_cast_tpose_2026-10-20/` (not in the repo).
+- **R13 — checks per batch PR.** Each batch is art plus review records: the installer's hash checks, `test_commander_portrait_pipeline.py` and the manifest run locally; GUT runs in CI (the selector picks every functional category for an asset change).
+
+### Restyle progress
+
+| Batch | Keys | Sheets (`out/commander_samples/`) | State |
+|---|---|---|---|
+| fp2-b01 | K-01..K-24 (story cast + K-22..24) | `fp2-b01-full-alpha.png`, `fp2-b01-chip-alpha.png` | installed |
