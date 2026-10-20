@@ -68,7 +68,7 @@ jobs:
   gut-selected:
     needs: harness-checks
     if: ${{ needs.harness-checks.outputs.run-gut == 'true' }}
-    name: GUT ${{ matrix.category }}
+    name: GUT ${{ matrix.category }} batch ${{ matrix.batch }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     strategy:
@@ -122,7 +122,7 @@ jobs:
           if [ "$code" != 0 ] && [ "$code" != 134 ]; then
             exit "$code"
           fi
-          time ./run_tests.sh --category "${{ matrix.category }}"
+          time ./run_tests.sh --category "${{ matrix.category }}" --batch "${{ matrix.batch }}"
 
   gut-tests:
     if: ${{ always() }}
