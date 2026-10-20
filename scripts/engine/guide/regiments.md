@@ -58,3 +58,8 @@ Legacy migration preserves original-source populations, equipment, funds, receip
 `MapObjects.regiment_equipment_count` counts elements; `regiment_personnel` counts capacity through positive integer crew. Migration and organization validate crew rather than silently dropping equipment. `ArmySystem.personnel_by_arm` supplies live fit plus wounded counts to realm and host panels; equipment strength remains equipment-based. Hypothetical personnel strength uses the explicit `power_of_personnel` preview.
 
 Departure requires `MilitaryCommanders.eligible_for_unit` for the current appointment when the unit has a personnel roster, both when the order is issued and when its courier delivers. This pure predicate shares appointment validation without creating or moving an officer. `BattleCommand.select` only ranks already eligible candidates; callers enforce presence, rank and existing appointments. `update_battle` filters each side’s existing unit appointments through that pure eligibility gate, retains a valid incumbent on reinforcement, and validates every explicit nomination before publishing either side.
+
+## Area tasks (P6.1a)
+
+- `data/army/task_kinds.csv` lists the four area-task kinds (`search`, `raid`, `destroy`, `siege`; spec 2026-10-16 battle-system §13) as `repo.task_kinds[kind]` = `{label, needs_target, default_encounter, allowed_encounters}`. Only `search` offers `keep_distance`; the others always approach.
+- `TaskCoverage` is the pure integer search grid: cells of `task_cell_m` metres (floor division, negatives floored), a cell counts when its CENTRE is inside the circle, a coverage Dictionary maps `"x:y"` to the newest day searched (never lowered). Covered never means "no enemy there".
