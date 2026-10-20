@@ -17,7 +17,10 @@ Per-unit `travel_day`/`travel_revision`, `phase` and `reason` are saved on the
 task. Day retries do not duplicate history or restart packing. A travel-owned
 march records `travel_task_id` on the regiment; a delivered recall clears that
 march and its saved departure without teleporting the column. A battle gates
-further search aims and saves `paused_battle`; it does not authorize an automatic
+further search aims and saves `paused_battle` at contact before encounter
+acknowledgement, including a battle that ends that day. Pausing drops the search
+departure and its frozen daily movement; recall/pause preserve a battle-owned withdrawal route, including after
+separation. The pause survives JSON and retries; it does not authorize an automatic
 post-battle capability/return decision. A newly received revision can restart.
 
 Entering the circle saves `awaiting_search`, with no coverage or completed

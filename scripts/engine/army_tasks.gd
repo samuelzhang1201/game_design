@@ -248,8 +248,7 @@ static func receive(repo: DataRepository, state: GameState, id: String, revision
 	var snap: Dictionary = task["revisions"][str(revision)]
 	u["received_revision"] = revision
 	u["received_day"] = state.absolute_day()
-	if _current_task(state, unit) == task and (bool(snap["cancel"]) or String(snap["kind"]) != "search") \
-			and BattleSystem.battle_of(state, unit).is_empty():
+	if _current_task(state, unit) == task and (bool(snap["cancel"]) or String(snap["kind"]) != "search"):
 		_stop_travel(state, unit)
 	var recall := bool(snap["cancel"])
 	var status := "cancelled" if recall else "received"
@@ -300,19 +299,54 @@ static func _current_task(state: GameState, code: String) -> Dictionary:
 	return current
 
 
-static func _stop_travel(state: GameState, code: String) -> void:
+static func _stop_travel(state: GameState, code: String) -> bool:
 	var entry: Dictionary = state.regiments.get(code, {})
 	if not entry.has("travel_task_id"):
-		return
+		return false
 	entry.erase("travel_task_id")
+	# Battle withdrawal owns its route even after separation from combat.
+	if bool(entry.get("battle_retreat", false)) or entry.has("disengaging"):
+		return false
 	entry.erase("departure")
 	ArmySystem._clear_route(entry)
 	BattleSystem._halt(state, code)
+	return true
+
+
+## Freeze at contact, before a same-day battle can end or replace its route.
+static func pause_battles(state: GameState) -> Array:
+	var stopped: Array = []
+	if state.army_tasks.is_empty() or state.battles.is_empty():
+		return stopped
+	var codes: Array = state.regiments.keys()
+	codes.sort()
+	for code: String in codes:
+		if BattleSystem.battle_of(state, code).is_empty():
+			continue
+		var task := _current_task(state, code)
+		if task.is_empty():
+			continue
+		var snap := acting(state, String(task["id"]), code)
+		if snap.is_empty() or String(snap["kind"]) != "search":
+			continue
+		var u: Dictionary = task["units"][code]
+		var revision := int(u["received_revision"])
+		if String(u.get("phase", "")) == "paused_battle" and int(u.get("travel_revision", 0)) == revision:
+			continue
+		if _stop_travel(state, code):
+			stopped.append(code)
+		u["travel_day"] = state.absolute_day()
+		u["travel_revision"] = revision
+		u["phase"] = "paused_battle"
+		u["reason"] = "search travel paused by battle; capability and return decision required"
+		_note(state, task, revision, "paused_battle", code, String(u["reason"]))
+	return stopped
 
 
 ## Search travel only (P6.1d1). Arrival waits for the search executor; it
 ## never marks coverage or claims a search result. Called before route freeze.
 static func step_day(repo: DataRepository, state: GameState) -> Array:
+	pause_battles(state)
 	var out: Array = []
 	var codes: Array = state.regiments.keys()
 	codes.sort()
@@ -325,8 +359,7 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 			continue
 		var snap := acting(state, String(task["id"]), code)
 		if snap.is_empty() or String(snap["kind"]) != "search":
-			if BattleSystem.battle_of(state, code).is_empty():
-				_stop_travel(state, code)
+			_stop_travel(state, code)
 			continue
 		u["travel_day"] = state.absolute_day()
 		var revision := int(u["received_revision"])
@@ -335,10 +368,7 @@ static func step_day(repo: DataRepository, state: GameState) -> Array:
 			u["phase"] = "travelling"
 		var phase := String(u["phase"])
 		var reason := ""
-		if not BattleSystem.battle_of(state, code).is_empty():
-			phase = "paused_battle"
-			reason = "search travel paused by battle; capability and return decision required"
-		elif phase == "travelling":
+		if phase == "travelling":
 			var entry: Dictionary = state.regiments[code]
 			entry["travel_task_id"] = String(task["id"])
 			var here := Vector2i(int(entry["x_m"]), int(entry["y_m"]))

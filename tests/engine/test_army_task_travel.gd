@@ -227,3 +227,56 @@ func test_new_revision_of_older_task_can_replace_newer_task_after_receipt() -> v
 	s.day += 1
 	ArmyTasks.step_day(repo, s)
 	assert_eq(_dest(), revised, "issuance order includes revisions, not just task IDs")
+
+func test_battle_pause_discards_packed_search_departure_after_json() -> void:
+	s.regiments[code]["camp_state"] = {"phase": CampSystem.CAMPED, "pack_start_day": -1,
+		"move_not_before_day": -1, "site": {"x_m": home.x, "y_m": home.y}}
+	_receive()
+	ArmyTasks.step_day(repo, s)
+	assert_true(s.regiments[code].has("departure"))
+	s.battles.append({"id": 1, "att": [code], "def": ["foe"]})
+	BattleSystem._halt(s, code)
+	s.day += 1
+	ArmyTasks.step_day(repo, s)
+	assert_eq(_unit().get("phase", ""), "paused_battle")
+	s = GameState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())), false)
+	s.battles.clear()
+	var engine := TickEngine.new(repo)
+	assert_eq(engine.resolve_day(s)["status"], "complete")
+	assert_eq(_at(), home, "battle pause must prevent the saved search departure resuming")
+
+func test_new_contact_pauses_search_before_encounter_acknowledgement() -> void:
+	var scenario := preload("res://tests/fixtures/battle_scenario.gd")
+	s = scenario.contact(repo, 10)
+	code = String(Play.land_regiments(repo, 400)[0])
+	var here := _at()
+	id = _issue(here + Vector2i(40000, 0))
+	_receive()
+	var engine := TickEngine.new(repo)
+	assert_eq(engine.resolve_day(s)["status"], "blocked")
+	assert_eq(_unit().get("phase", ""), "paused_battle",
+		"contact must be recorded even if the battle ends before tomorrow")
+	var restored := scenario.roundtrip(s)
+	var before := SaveLoad.state_hash(restored)
+	assert_eq(engine.resolve_day(restored)["status"], "blocked")
+	assert_eq(SaveLoad.state_hash(restored), before, "encounter retry must not duplicate pause history")
+	var stopped := Vector2i(int(restored.regiments[code]["x_m"]), int(restored.regiments[code]["y_m"]))
+	var decision: Dictionary = restored.day_resolution["pending_decision"]
+	assert_eq(engine.resolve_decision(restored, String(decision["token"]), "continue")["status"], "accepted")
+	# Exercise the day cursor after combat has ended within this same day.
+	restored.battles.clear()
+	restored.foes.clear()
+	assert_eq(engine.resolve_day(restored)["status"], "complete")
+	assert_eq(Vector2i(int(restored.regiments[code]["x_m"]), int(restored.regiments[code]["y_m"])), stopped,
+		"ending battle cannot restore the frozen search movement in later substeps")
+
+func test_recall_preserves_battle_owned_retreat_after_separation() -> void:
+	_receive()
+	ArmyTasks.step_day(repo, s)
+	var safe := home - Vector2i(40000, 0)
+	ArmySystem.aim_entry(repo, s.regiments[code], safe)
+	s.regiments[code]["disengaging"] = 1
+	ArmyTasks.cancel(repo, s, id)
+	_receive(2, "cancelled")
+	assert_eq(_dest(), safe, "search recall must not halt the battle's withdrawal")
+	assert_eq(s.regiments[code]["order"], ArmySystem.ORDER_MARCH)
