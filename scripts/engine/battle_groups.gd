@@ -113,6 +113,44 @@ static func deployment(repo: DataRepository, state: GameState, battle: Dictionar
 	return out
 
 
+## P4.4d4: Vector2i(engaged, fit) of a unit's saved groups: `engaged` is the
+## summed count of its `front` groups within `battle_group_contact_m` (inclusive)
+## of any group of the other side; (0, 0) with no saved groups.
+static func engaged_counts(repo: DataRepository, battle: Dictionary, code: String) -> Vector2i:
+	var rows: Array = battle.get("groups", {}).get(code, [])
+	var side := BattleRules.side_of(battle, code)
+	if rows.is_empty() or side == "":
+		return Vector2i.ZERO
+	var reach := int(repo.bal("battle_group_contact_m"))
+	var foes: Array = []
+	for foe: String in battle["def" if side == "att" else "att"]:
+		foes.append_array(battle["groups"].get(foe, []))
+	var fit := 0
+	var engaged := 0
+	for row: Dictionary in rows:
+		fit += int(row["count"])
+		if String(row["role"]) != "front":
+			continue
+		for other: Dictionary in foes:
+			var dx := int(row["x_m"]) - int(other["x_m"])
+			var dy := int(row["y_m"]) - int(other["y_m"])
+			if dx * dx + dy * dy <= reach * reach:
+				engaged += int(row["count"])
+				break
+	return Vector2i(engaged, fit)
+
+
+## P4.4d4: the share of a unit's fit people that fight in full, in permille:
+## engaged people count whole, every other fit person (reserve ranks, a front
+## still approaching) counts `battle_reserve_permille`. 1000 with no groups.
+static func engaged_permille(repo: DataRepository, _state: GameState, battle: Dictionary, code: String) -> int:
+	var c := engaged_counts(repo, battle, code)
+	if c.y <= 0:
+		return 1000
+	@warning_ignore("integer_division")
+	return (c.x * 1000 + (c.y - c.x) * int(repo.bal("battle_reserve_permille"))) / c.y
+
+
 ## True while any side is ordered to retreat or any of its units is withdrawing:
 ## the battle then goes to separation, so no unit closes the line any more.
 static func withdrawing(state: GameState, battle: Dictionary) -> bool:

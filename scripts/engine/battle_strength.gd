@@ -1,7 +1,7 @@
 class_name BattleStrength
 extends RefCounted
 
-const CATEGORIES: Array[String] = ["training", "morale", "discipline", "supply", "formation_terrain", "action"]
+const CATEGORIES: Array[String] = ["training", "morale", "discipline", "supply", "formation_terrain", "contact", "action"]
 
 ## Add deviations within a category before one clamp and one whole-power truncation.
 static func combine(base: int, factors: Array[Dictionary]) -> Dictionary:
