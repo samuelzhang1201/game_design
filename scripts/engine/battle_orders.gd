@@ -64,7 +64,10 @@ static func issue(repo: DataRepository, state: GameState, raw: Dictionary) -> Di
 	var id := String(order["id"])
 	if state.battle_orders.has(id):
 		var old: Dictionary = state.battle_orders[id]
-		return old.duplicate(true) if old["request"] == order else {"status": "invalid", "reason": "This request id already names another battle warrant."}
+		var was: Dictionary = old["request"].duplicate()
+		if old.has("merge_remap"):   # a merge moved the side; the courier's retry still names the original
+			was["side"] = String(old["merge_remap"]["from_side"])
+		return old.duplicate(true) if was == order else {"status": "invalid", "reason": "This request id already names another battle warrant."}
 	var quote := preview(repo, state, order)
 	if quote["reason"] != "":
 		return {"status": "invalid", "reason": quote["reason"]}

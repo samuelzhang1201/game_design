@@ -140,6 +140,7 @@ static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dic
 		survivor["last_resolved_day"] = maxi(int(survivor.get("last_resolved_day", -1)), int(gone.get("last_resolved_day", -1)))
 	if survivor.has("deployed_day") or gone.has("deployed_day"):
 		survivor["deployed_day"] = maxi(int(survivor.get("deployed_day", -1)), int(gone.get("deployed_day", -1)))
+	_remap_warrants(state, gid, side_map)
 	# aliases: the absorbed id, and everything that already pointed at it, resolve to the survivor
 	for key: String in state.battle_aliases.keys():
 		if int(state.battle_aliases[key]) == gid:
@@ -156,6 +157,28 @@ static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dic
 		"reason": "Fronts touched: battle %d joined battle %d on the same field." % [gid, sid]}
 	BattleReport.note(survivor, [event])
 	return event
+
+
+## P4.4e4: a pending side warrant of the absorbed battle (or of one it had absorbed) now
+## names the survivor side its units stand on; id, cost and courier are untouched. The
+## first remap's `from_side` is kept, so a retry with the original request still matches.
+static func _remap_warrants(state: GameState, gid: int, side_map: Dictionary) -> void:
+	var ids: Array = state.battle_orders.keys()
+	ids.sort()
+	for id: String in ids:
+		var record: Dictionary = state.battle_orders[id]
+		var request: Dictionary = record.get("request", {})
+		if record.get("status", "") != "pending" or BattleSystem.canonical(state, int(request.get("battle_id", -1))) != gid:
+			continue
+		var from := String(request.get("side", ""))
+		var into := String(side_map.get(from, from))
+		if into == from:
+			continue
+		request["side"] = into
+		var note: Dictionary = record.get("merge_remap", {"from_battle": int(request["battle_id"]), "from_side": from})
+		note["to_side"] = into
+		note["reason"] = "Battle %d joined another field: the warrant's side %s is now side %s." % [gid, from, into]
+		record["merge_remap"] = note
 
 
 static func _copy(value: Variant) -> Variant:
