@@ -55,6 +55,36 @@ func _walked(f: Dictionary, state: GameState = null) -> int:
 	var s: GameState = f.state if state == null else state
 	return int(s.regiments[f.code]["x_m"]) - (f.start as Vector2i).x
 
+func _join_fixture(martial: int, boldness: int) -> Dictionary:
+	var f := _fixture(1000)
+	var roster: Dictionary = f.state.military_rosters[f.code]
+	var officer: Dictionary = {}
+	for id: String in roster["cohort_ids"]:
+		var cohort: Dictionary = f.state.military_cohorts[id]
+		if not String(cohort.get("person_id", "")).is_empty():
+			officer = cohort
+			break
+	assert_false(officer.is_empty(), "opening unit had a named officer before replacement")
+	var person := String(officer["person_id"])
+	assert_false(Personnel.move(f.repo, f.state, f.code, "fit", "released", 1).has("error"))
+	var raised := MilitaryRoster.mobilize(f.repo, f.state, "gait:officer", [{
+		"id": "gait:officer", "unit_code": f.code,
+		"source_province": officer["source_province"],
+		"source_population_field": officer["source_population_field"],
+		"identity": "noble", "family_name": officer["family_name"],
+		"person_id": person, "stage": "active", "count": 1}], "Gait fixture officer")
+	assert_false(raised.has("error"), str(raised))
+	var assigned := MilitaryCommanders.assign(f.repo, f.state, f.code, person, "Gait fixture appointment")
+	assert_false(assigned.has("error"), str(assigned))
+	f.state.characters[person].skills["sk_martial"] = martial
+	f.state.characters[person].attributes["boldness"] = boldness
+	f["person"] = person
+	f.repo.balance["army_run_martial_weight"] = 5
+	f.repo.balance["army_run_min_score"] = 100
+	var dest := (f.start as Vector2i) + Vector2i(2300, 0)
+	f.state.battles.append({"id": 7, "att": [f.other], "def": [], "place_x_m": dest.x, "place_y_m": dest.y})
+	return f
+
 func test_fixture_numbers() -> void:
 	var f := _fixture(1000)
 	var repo: DataRepository = f.repo
@@ -126,9 +156,7 @@ func test_103_in_hand_runs_one_substep() -> void:
 	assert_eq(int(f.state.regiments[f.code]["supplies"]), 100)
 
 func test_a_march_to_join_a_known_battle_runs_until_it_ends() -> void:
-	var f := _fixture(1000)
-	var dest := (f.start as Vector2i) + Vector2i(2300, 0)
-	f.state.battles.append({"id": 7, "att": [f.other], "def": [], "place_x_m": dest.x, "place_y_m": dest.y})
+	var f := _join_fixture(10, 50)
 	_begin(f)
 	_substeps(f.repo, f.state, 0, 5)
 	assert_eq(_walked(f), 460, "92 × 5")
@@ -140,6 +168,64 @@ func test_a_march_to_join_a_known_battle_runs_until_it_ends() -> void:
 	assert_eq(_walked(f), 842)
 	assert_false(f.state.regiments[f.code].has("gait"))
 	assert_eq(int(f.state.regiments[f.code]["supplies"]), 985)
+
+func test_voluntary_run_needs_both_the_ability_and_personality_score() -> void:
+	# 10*5+49=99 walks; +1 boldness reaches 100. At boldness 45,
+	# martial 10 scores 95; martial 11 reaches the same inclusive threshold.
+	for row: Array in [[10, 49, 767, 1000], [10, 50, 917, 970],
+			[10, 45, 767, 1000], [11, 45, 917, 970]]:
+		var f := _join_fixture(row[0], row[1])
+		_begin(f)
+		_substeps(f.repo, f.state, 0, 10)
+		assert_eq(_walked(f), row[2], str(row))
+		assert_eq(int(f.state.regiments[f.code]["supplies"]), row[3], str(row))
+		assert_eq(f.state.regiments[f.code]["order"], ArmySystem.ORDER_MARCH,
+			"choosing walk never vetoes the march")
+
+func test_voluntary_run_rechecks_changed_commander_and_survives_json() -> void:
+	var f := _join_fixture(10, 50)
+	_begin(f)
+	_substeps(f.repo, f.state, 0, 3)
+	var restored := BattleScenario.roundtrip(f.state)
+	f.state.characters[f.person].attributes["boldness"] = 49
+	restored.characters[f.person].attributes["boldness"] = 49
+	_substeps(f.repo, f.state, 3, 10)
+	_substeps(f.repo, restored, 3, 10)
+	assert_eq(_walked(f), 812, "92*3 + 77*4 + 76*3; the next substep walks")
+	assert_eq(int(f.state.regiments[f.code]["supplies"]), 991)
+	assert_false(f.state.regiments[f.code].has("gait"))
+	assert_eq(SaveLoad.state_hash(restored), SaveLoad.state_hash(f.state))
+
+func test_unavailable_commander_cannot_choose_a_voluntary_run() -> void:
+	var f := _join_fixture(20, 100)
+	_begin(f)
+	_substeps(f.repo, f.state, 0, 1)
+	f.state.characters[f.person].attributes["health"] = 0
+	_substeps(f.repo, f.state, 1, 10)
+	assert_eq(_walked(f), 782)
+	assert_false(f.state.regiments[f.code].has("gait"))
+	assert_eq(int(f.state.regiments[f.code]["supplies"]), 997)
+
+func test_missing_commander_walks_to_the_known_battle() -> void:
+	var f := _join_fixture(20, 100)
+	f.state.military_rosters[f.code]["commander_id"] = ""
+	_begin(f)
+	_substeps(f.repo, f.state, 0, 10)
+	assert_eq(_walked(f), 767)
+	assert_false(f.state.regiments[f.code].has("gait"))
+
+func test_tuning_changes_voluntary_choice_but_never_creates_a_reason() -> void:
+	var f := _join_fixture(10, 50)
+	f.repo.balance["army_run_min_score"] = 101
+	_begin(f)
+	_substeps(f.repo, f.state, 0, 1)
+	assert_eq(_walked(f), 77)
+	f.repo.balance["army_run_martial_weight"] = 6
+	_substeps(f.repo, f.state, 1, 2)
+	assert_eq(_walked(f), 169, "60+50 reaches 101")
+	f.state.battles.clear()
+	_substeps(f.repo, f.state, 2, 3)
+	assert_eq(_walked(f), 246, "even a willing commander walks without a known reason")
 
 func test_a_battle_beyond_reach_of_the_destination_gives_no_reason() -> void:
 	var f := _fixture(1000)

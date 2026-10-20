@@ -88,8 +88,19 @@ static func _joins(repo: DataRepository, state: GameState, code: String, entry: 
 	var own: Dictionary = state.foes if state.foes.has(code) else state.regiments
 	for member: String in (battle["att"] as Array) + (battle["def"] as Array):
 		if own.has(member):
-			return true
+			return _commander_runs(repo, state, code)
 	return false
+
+
+## Choosing a slower gait never cancels the march or withholds a delivered task.
+static func _commander_runs(repo: DataRepository, state: GameState, code: String) -> bool:
+	var person := String(state.military_rosters.get(code, {}).get("commander_id", ""))
+	if not MilitaryCommanders.eligible_for_unit(repo, state, code, person):
+		return false
+	var commander: Character = state.characters[person]
+	var score := int(commander.skills.get("sk_martial", 0)) * int(repo.bal("army_run_martial_weight")) \
+		+ int(commander.attributes.get("boldness", 0))
+	return score >= int(repo.bal("army_run_min_score"))
 
 
 ## The part of today's base meal `base_bite` its runners eat: the fit, never the
