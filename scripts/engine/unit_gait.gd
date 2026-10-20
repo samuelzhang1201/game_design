@@ -40,7 +40,9 @@ static func run_substep(repo: DataRepository, entry: Dictionary, base_bite: int,
 ## The live commander chooses in every context; no key means walk.
 static func refresh(repo: DataRepository, state: GameState, code: String, entry: Dictionary) -> void:
 	var gait: Dictionary = entry.get("gait", {})
-	if not gait.is_empty() and not _holds(repo, state, code, entry, gait):
+	# Re-select town urgency after higher-priority contexts on every substep.
+	if not gait.is_empty() and (String(gait.get("until", "")) == "town_clear" \
+			or not _holds(repo, state, code, entry, gait)):
 		entry.erase("gait")
 		gait = {}
 	if not gait.is_empty() or String(entry.get("order", "")) != ArmySystem.ORDER_MARCH \
@@ -91,9 +93,6 @@ static func _holds(repo: DataRepository, state: GameState, code: String, entry: 
 		return false
 	if String(gait.get("until", "")) == "march_end":
 		return int(entry.get("disengaging", 0)) == 1
-	if String(gait.get("until", "")) == "town_clear":
-		return String(gait.get("town", "")) == _key_point(repo, state, code, entry) \
-			and String(gait.get("town", "")) != ""
 	if String(gait.get("until", "")) == "task_end":
 		return BattleTaskSystem.pursuing(repo, state, code)
 	for battle: Dictionary in state.battles:

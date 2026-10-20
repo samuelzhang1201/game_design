@@ -38,3 +38,22 @@ the worktree checkpoint and PR description at handoff. Only dispatcher
 Limit: this context covers known contested towns using the crown's stored sight
 and spy information. It adds no arbitrary-point urgency, hostile-side observer
 system or P6 capability. No visual resources changed; no visual pass required.
+
+
+## Independent Review
+
+Review: 01a15999-0cb7-7e52-88b1-dc6e0d9a7532. Traced the actual march
+callers, town knowledge gate, sight/spy writers, gait selection and food/save
+paths. Found and fixed one priority bug: a saved key-point gait survived an
+incoming withdrawal, authorized pursuit or known-battle context. Town urgency
+is now reselected after those contexts every substep, without changing their
+existing continuation rules. The regression failed in all three cases before
+the fix (26/27 tests passed); the same cases pass after it.
+
+Final bounded command is the six-script command above, rerun under the shared
+Godot lock after the fix. Exit 0; 6 scripts, 59 tests, 612 assertions. Log:
+`/tmp/p4-key-point-review-final.log`. Knowledge uses only stored positive unit
+observations and existing known-town lookup; foe observers cannot read crown
+sightings. Existing Sighting retention semantics remain a dependency.
+No route/charge files, scenes or resources changed. Full local suite omitted.
+Merge still requires all current-HEAD CI checks to pass.

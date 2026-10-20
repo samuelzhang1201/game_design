@@ -434,3 +434,22 @@ func test_key_point_stops_on_new_destination_or_lost_commander() -> void:
 			"arrival": entry.order = ArmySystem.ORDER_GARRISON
 		UnitGait.refresh(f.repo, f.state, f.code, entry)
 		assert_false(entry.has("gait"), changed)
+
+
+func test_key_point_yields_to_new_higher_priority_contexts() -> void:
+	for reason: String in ["withdrawal", "pursuit", "join_battle"]:
+		var f := _key_point_fixture()
+		var entry: Dictionary = f.state.regiments[f.code]
+		UnitGait.refresh(f.repo, f.state, f.code, entry)
+		assert_eq(String(entry.gait.reason), "key_point")
+		match reason:
+			"withdrawal": entry["disengaging"] = 1
+			"pursuit":
+				f.state.unit_tasks[f.code] = {"current_id": "gait:pursue", "orders": {
+					"gait:pursue": {"status": "received", "request": {"task": "pursue", "target_unit": "unseen"},
+						"track": {"phase": "follow"}}}}
+			"join_battle":
+				f.state.battles.append({"id": 7, "att": [f.other], "def": [],
+					"place_x_m": entry.dest_x_m, "place_y_m": entry.dest_y_m})
+		UnitGait.refresh(f.repo, f.state, f.code, entry)
+		assert_eq(String(entry.gait.reason), reason)
