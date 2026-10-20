@@ -10,3 +10,8 @@ siege_no_town,No town you know of lies within the circle.,"P6.1b refusal: a sieg
 siege_choose,Several known towns lie within the circle; choose one to besiege.,"P6.1b refusal: one task is one town"
 siege_bad_target,That is not a known town within the circle.,"P6.1b refusal: the named target is not a known town in the circle"
 law_plunder,The plunder law in force forbids this unit to plunder.,"P6.1b law limit listed for a raid when the unit's received plunder law is forbid"
+no_task,There is no such area task to change.,"P6.1c refusal: a revision or recall names a task that is not on file"
+task_units,A changed task keeps the units it was given.,"P6.1c refusal: a revision lists other units than the task's own"
+task_over,Every unit of this task has already been recalled.,"P6.1c refusal: nothing is left to revise or recall"
+bad_params,The task order is not in the form the marshals expect.,"P6.1c refusal: a malformed parameter"
+cannot_pay,The chancery cannot pay for this task and its couriers.,"P6.1c refusal: filing plus courier fees exceed the available gold"

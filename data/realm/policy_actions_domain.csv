@@ -8,4 +8,6 @@ PRISONER_PROPOSE,military,Propose a prisoner disposition,none,0,none,0,0,,prison
 PRISONER_RESPOND,military,Respond to a prisoner proposal,none,0,none,0,0,,prisoner_respond,0,no,params: proposal_id accepted
 PRISONER_SETTLE,military,Fulfill a prisoner agreement,none,0,none,0,0,,prisoner_settle,0,no,params: proposal_id
 BATTLE_TASK,military,Assign a unit task,none,0,none,0,0,,battle_task,0,no,params: request_id regiment battle_id task target_unit formation; player authority and one unit; actual delivery required
+ARMY_TASK,military,Send units on an area task,none,0,none,0,0,,army_task,0,no,"params: request_id kind unit_codes center_x_m center_y_m radius_m known_target_id encounter_policy [task_id for a new revision]; each unit acts on the revision it has received"
+ARMY_TASK_CANCEL,military,Recall an area task,none,0,none,0,0,,army_task_cancel,0,no,"params: request_id task_id; a recall is a revision delivered like any order"
 BATTLE_TASK_CANCEL,military,Cancel a unit task,none,0,none,0,0,,battle_task_cancel,0,no,params: request_id regiment battle_id; player cancellation takes effect on actual delivery

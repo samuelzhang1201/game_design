@@ -40,6 +40,10 @@ func validate(req: ActionRequest, state: GameState) -> String:
 		var previous := _task_replay(req, state)
 		if not previous.is_empty():
 			return String(previous.get("error", ""))
+	if req.action_code in ARMY_TASK_CODES:
+		var previous := _army_task_replay(req, state)
+		if not previous.is_empty():
+			return String(previous.get("error", ""))
 	if req.action_code == "BATTLE_ORDER":
 		var previous := _battle_replay(req, state)
 		if not previous.is_empty():
@@ -103,6 +107,8 @@ func validate(req: ActionRequest, state: GameState) -> String:
 			return _validate_battle_order(req, state)
 		"BATTLE_TASK", "BATTLE_TASK_CANCEL":
 			return _validate_task(req, state)
+		"ARMY_TASK", "ARMY_TASK_CANCEL":
+			return _validate_army_task(req, state)
 		"BATTLE_FORMATION":
 			return _validate_formation(req, state)
 		"ARMY_STANCE":
@@ -321,6 +327,68 @@ func _place_refusal(reg: Dictionary, at: Vector2, off_map: String, into_sea: Str
 		return "%s is a fleet and cannot be sent inland" % String(reg["label"])
 	if not naval and not on_land:
 		return into_sea % String(reg["label"])
+	return ""
+
+const ARMY_TASK_CODES := ["ARMY_TASK", "ARMY_TASK_CANCEL"]
+
+func _army_task_replay(req: ActionRequest, state: GameState) -> Dictionary:
+	if not req.params.get("request_id", "") is String:
+		return {"error": String(data.task_words["bad_params"])}
+	var record := ArmyTasks.request_of(state, String(req.params.get("request_id", "")))
+	if record.is_empty():
+		return {}
+	var outcome: Dictionary = record["outcome"]
+	if req.target != "" or record["params"] != req.params or outcome.is_empty() \
+			or outcome["action_code"] != req.action_code:
+		return {"error": "This request id already names another area task order."}
+	return {"outcome": outcome.duplicate(true)}
+
+## The area order: the free preview decides (its words), then the chancery must
+## afford filing plus a courier for every unit that needs a new one.
+func _validate_army_task(req: ActionRequest, state: GameState) -> String:
+	var bad: String = String(data.task_words["bad_params"])
+	if req.target != "" or not req.params.get("request_id", null) is String or String(req.params["request_id"]) == "":
+		return bad
+	var task_id := String(req.params.get("task_id", ""))
+	var codes: Array
+	if req.action_code == "ARMY_TASK_CANCEL":
+		for key: Variant in req.params:
+			if not key in ["request_id", "task_id"]:
+				return bad
+		var task := ArmyTasks.task_of(state, task_id)
+		if task.is_empty():
+			return String(data.task_words["no_task"])
+		codes = ArmyTasks.live_units(task)
+		if codes.is_empty():
+			return String(data.task_words["task_over"])
+	else:
+		for key: Variant in req.params:
+			if not key in ["request_id", "task_id", "kind", "unit_codes", "center_x_m", "center_y_m",
+					"radius_m", "known_target_id", "encounter_policy"]:
+				return bad
+		if not req.params.get("unit_codes", null) is Array or not req.params.get("kind", null) is String:
+			return bad
+		for field: String in ["center_x_m", "center_y_m", "radius_m"]:
+			if not req.params.get(field, null) is int:
+				return bad
+		var raw: Dictionary = req.params.duplicate(true)
+		raw["id"] = task_id
+		var shown := ArmyTasks.preview(data, state, data.resolve_realm("player_realm"), raw)
+		if not bool(shown["ok"]):
+			return String(shown["reason"])
+		codes = (raw["unit_codes"] as Array).duplicate()
+		if task_id != "":
+			var task := ArmyTasks.task_of(state, task_id)
+			var sorted := codes.duplicate()
+			sorted.sort()
+			if task.is_empty():
+				return String(data.task_words["no_task"])
+			if sorted != task["unit_codes"]:
+				return String(data.task_words["task_units"])
+			if ArmyTasks.live_units(task).is_empty():
+				return String(data.task_words["task_over"])
+	if BattleOrders.available_gold(state) < OrderCosts.gold_of(data, req.action_code) + ArmyTasks.courier_fees(data, state, codes):
+		return String(data.task_words["cannot_pay"])
 	return ""
 
 func _task_warrant(req: ActionRequest) -> Dictionary:
@@ -744,6 +812,12 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			return {"action_code": req.action_code, "ok": false, "error": replay["error"]}
 		if not replay.is_empty():
 			return replay["outcome"]
+	if req.action_code in ARMY_TASK_CODES:
+		var replay := _army_task_replay(req, state)
+		if replay.has("error"):
+			return {"action_code": req.action_code, "ok": false, "error": replay["error"]}
+		if not replay.is_empty():
+			return replay["outcome"]
 	if req.action_code == "BATTLE_ORDER":
 		var replay := _battle_replay(req, state)
 		if replay.has("error"):
@@ -760,7 +834,8 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 			return (state.recruitment_projects[id]["action_outcome"] as Dictionary).duplicate(true) \
 				if state.recruitment_projects[id].has("action_outcome") else previous
 	var err := validate(req, state)
-	if req.action_code in ["ARMY_RECRUIT", "BATTLE_ORDER", "BATTLE_TASK", "BATTLE_TASK_CANCEL"] and err != "":
+	if (req.action_code in ["ARMY_RECRUIT", "BATTLE_ORDER", "BATTLE_TASK", "BATTLE_TASK_CANCEL"] \
+			or req.action_code in ARMY_TASK_CODES) and err != "":
 		return {"action_code": req.action_code, "ok": false, "error": err}
 	assert(err == "", "execute called with invalid request: " + err)
 	var row: Dictionary = data.actions[req.action_code]
@@ -989,6 +1064,23 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 				{"action_code": "BATTLE_TASK", "unit_task_id": String(warrant["id"])},
 				"with a unit task cancellation" if req.action_code == "BATTLE_TASK_CANCEL" else \
 				"with a unit task to " + String(req.params["task"]))
+		"ARMY_TASK", "ARMY_TASK_CANCEL":
+			var rid := String(req.params["request_id"])
+			var issued: Dictionary
+			if req.action_code == "ARMY_TASK":
+				var raw: Dictionary = req.params.duplicate(true)
+				raw["id"] = String(raw.get("task_id", ""))
+				issued = ArmyTasks.issue(data, state, raw, rid)
+			else:
+				issued = ArmyTasks.cancel(data, state, String(req.params["task_id"]), rid)
+			assert(issued["ok"])
+			ArmyTasks.request_of(state, rid)["params"] = req.params.duplicate(true)
+			var task := ArmyTasks.task_of(state, String(issued["id"]))
+			var what := "with a recall of the area task" if req.action_code == "ARMY_TASK_CANCEL" \
+				else "with a %s task" % String(task["kind"])
+			for code: String in issued["units"]:
+				_send_courier(state, effects, code, {"action_code": "ARMY_TASK",
+					"army_task_id": String(issued["id"]), "revision": int(issued["revision"])}, what)
 		"BATTLE_FORMATION":
 			var code := String(req.params["regiment"])
 			var formation := String(req.params["formation"])
@@ -1156,7 +1248,7 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 	var outcome := {"action_code": req.action_code, "ok": true, "effects": effects,
 		"notes": String(row["label"]), "target": req.target, "params": req.params.duplicate(),
 		"drift": drift}
-	if req.action_code in ["BATTLE_ORDER", "BATTLE_TASK", "BATTLE_TASK_CANCEL"]:
+	if req.action_code in ["BATTLE_ORDER", "BATTLE_TASK", "BATTLE_TASK_CANCEL"] or req.action_code in ARMY_TASK_CODES:
 		outcome = GameState._whole(outcome)
 	state.recent_outcomes.append(outcome)
 	if req.action_code == "BATTLE_ORDER":
@@ -1165,6 +1257,8 @@ func execute(req: ActionRequest, state: GameState) -> Dictionary:
 		var record := BattleTaskSystem._find(state, String(req.params["request_id"]))
 		record["action_params"] = req.params.duplicate(true)
 		record["action_outcome"] = outcome.duplicate(true)
+	if req.action_code in ARMY_TASK_CODES:
+		ArmyTasks.request_of(state, String(req.params["request_id"]))["outcome"] = outcome.duplicate(true)
 	if req.action_code == "ARMY_RECRUIT":
 		state.recruitment_projects[String(req.params["request_id"])]["action_outcome"] = outcome.duplicate(true)
 	return outcome
