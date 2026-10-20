@@ -1272,8 +1272,23 @@ static func march_day(repo: DataRepository, state: GameState, pace_divisor := 1,
 		var origin := Vector2i(int(entry["x_m"]), int(entry["y_m"]))
 		var had_departure := entry.has("departure")
 		var was_packing := String(entry.get("camp_state", {}).get("phase", CampSystem.NONE)) == CampSystem.PACKING
-		var arrived_today := _march_one(repo, state, code, entry, state.absolute_day(), blockers, [], pace_divisor,
-			substep_index, int(daily_budgets.get(code, -1)))
+		var pursuit_stopped := false
+		if not bool(entry.get("battle_retreat", false)) and int(entry.get("disengaging", 0)) != 1:
+			pursuit_stopped = BattleTaskSystem.credit_pursuit(repo, state, code, 0) \
+				or BattleTaskSystem.current(state, code).get("status", "") == "bounded"
+		if pursuit_stopped and String(entry.get("order", "")) == ORDER_MARCH:
+			BattleSystem._halt(state, code)
+			_clear_route(entry)
+			entry.erase("departure")
+		var travelled: Array = []
+		var arrived_today := false
+		if not pursuit_stopped:
+			arrived_today = _march_one(repo, state, code, entry, state.absolute_day(), blockers, [], pace_divisor,
+				substep_index, int(daily_budgets.get(code, -1)), -1, travelled)
+			if not bool(entry.get("battle_retreat", false)) and int(entry.get("disengaging", 0)) != 1:
+				BattleTaskSystem.credit_pursuit(repo, state, code,
+					int(travelled[0]) if not travelled.is_empty() else 0,
+					String(travelled[1]) if travelled.size() > 1 else "")
 		if had_departure and was_packing \
 				and String(entry.get("camp_state", {}).get("phase", CampSystem.NONE)) != CampSystem.PACKING \
 				and Vector2i(int(entry["x_m"]), int(entry["y_m"])) != origin:
@@ -1651,6 +1666,19 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 				_note_place(blockers, code, current)
 				continue
 			var saved: Dictionary = saved_entries[code].duplicate(true)
+			var task := BattleTaskSystem.current(state, code)
+			if not bool(current.get("battle_retreat", false)) and int(current.get("disengaging", 0)) != 1:
+				var bounded_now := BattleTaskSystem.credit_pursuit(repo, state, code, 0)
+				if bounded_now or task.get("status", "") == "bounded":
+					if String(current.get("order", "")) == ORDER_MARCH:
+						BattleSystem._halt(state, code)
+					_clear_route(current)
+					current.erase("departure")
+					UnitGait.refresh(repo, state, code, current)
+					_retire_saved_march(saved, current)
+					saved_entries[code] = saved
+					_note_place(blockers, code, current)
+					continue
 			if not BattleSystem.may_withdraw(state, code) or bool(current.get("captured", false)):
 				saved["x_m"] = int(current["x_m"])
 				saved["y_m"] = int(current["y_m"])
@@ -1760,7 +1788,11 @@ static func march_day_saved(repo: DataRepository, state: GameState, pace_divisor
 				else:
 					current.erase("route_m")
 			# pursuit bounds (c3): a bound reached halts the march, today's saved walk included
-			if BattleTaskSystem.credit_pursuit(repo, state, code, int(travelled[0]) if not travelled.is_empty() else 0):
+			if not bool(current.get("battle_retreat", false)) and int(current.get("disengaging", 0)) != 1 \
+					and BattleTaskSystem.credit_pursuit(repo, state, code,
+						int(travelled[0]) if not travelled.is_empty() else 0,
+						String(travelled[1]) if travelled.size() > 1 else ""):
+				_clear_route(current)
 				_retire_saved_march(saved, current)
 				saved_entries[code] = saved
 			UnitGait.refresh(repo, state, code, current)
@@ -1846,7 +1878,17 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 			if kind == "free":
 				break
 			if kind == "halt":
-				passed_out.append_array(path.slice(0, int(verdict["leg"])))
+				var before_contact: Array = path.slice(0, int(verdict["leg"]))
+				before_contact.append(verdict["at"])
+				var approach := BattleTaskSystem.pursuit_walk(repo, state, code, entry, here, before_contact,
+					ceili(MarchRoute.length_from(here, before_contact)))
+				travelled_out.append(ceili(MarchRoute.length_from(here, approach["passed"] + [approach["at"]])))
+				travelled_out.append(approach["pursuit_reason"])
+				if String(approach["pursuit_reason"]) != "":
+					_stop_pursuit(entry, approach["at"], abs_day)
+					passed_out.append_array(approach["passed"])
+					return false
+				passed_out.append_array(before_contact.slice(0, -1))
 				_halt_before(entry, verdict["at"], String(verdict["blocker"]), blockers, abs_day)
 				if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != here \
 						and String(entry.get("camp_state", {}).get("phase", CampSystem.NONE)) == CampSystem.PACKING:
@@ -1881,18 +1923,26 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 	var left := MarchRoute.length_from(here, path)
 	var days := int(ceil(left / float(full)))
 	var step: int = mini(full, int(ceil(left / float(maxi(days, 1))))) \
-		if daily_budget < 0 else mini(full, left)
+		if daily_budget < 0 else mini(full, ceili(left))
 	if wait_m >= 0:
 		step = mini(step, wait_m)
 		days = maxi(days, 2)    # waiting behind a unit never arrives
-	var walked := MarchRoute.walk(here, path, step)
+	var walked := BattleTaskSystem.pursuit_walk(repo, state, code, entry, here, path, step)
 	var at: Vector2i = walked["at"]
 	var after_walk := MarchRoute.length_from(at, walked["path"])
-	travelled_out.append(maxi(0, int(ceil(left - after_walk))))
+	travelled_out.append(ceili(MarchRoute.length_from(here, walked["passed"] + [at])) \
+		if bool(walked["limited"]) else maxi(0, ceili(left - after_walk)))
+	travelled_out.append(walked["pursuit_reason"])
+	if String(walked["pursuit_reason"]) != "":
+		_stop_pursuit(entry, at, abs_day)
+		passed_out.append_array(walked["passed"])
+		return false
 	var final_rounding_arrival := daily_budget >= 0 and substep_index == divisor - 1 \
 		and bool(entry.get("finish_today", false)) and not bool(entry.get("day_detoured", false)) \
-		and String(entry.get("halted_by", "")).is_empty() and after_walk <= float(divisor)
-	if wait_m < 0 and (left <= full or after_walk <= 1.0 or final_rounding_arrival):
+		and String(entry.get("halted_by", "")).is_empty() and after_walk <= float(divisor) \
+		and not bool(walked["limited"])
+	if wait_m < 0 and (walked["path"].is_empty() or (not bool(walked["limited"]) \
+			and (left <= full or after_walk <= 1.0 or final_rounding_arrival))):
 		entry["x_m"] = int(entry["dest_x_m"])
 		entry["y_m"] = int(entry["dest_y_m"])
 		if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != here:
@@ -1920,6 +1970,22 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 		if entry.has("waypoints_m") or not wps.is_empty():
 			entry["waypoints_m"] = MarchRoute.to_pairs(wps)
 	return false
+
+## A pursuit limit stops advance at the physical point; camping must not snap
+## it to a town slot or remove an encounter that is still in contact.
+static func _stop_pursuit(entry: Dictionary, at: Vector2i, abs_day: int) -> void:
+	if Vector2i(int(entry["x_m"]), int(entry["y_m"])) != at:
+		_release_camp_on_movement(entry)
+	entry["x_m"] = at.x
+	entry["y_m"] = at.y
+	entry["dest_x_m"] = at.x
+	entry["dest_y_m"] = at.y
+	entry["order"] = ORDER_GARRISON
+	entry["moved_day"] = abs_day
+	_clear_route(entry)
+	drop_hold(entry)
+	entry.erase("departure")
+
 
 static func _release_camp_on_movement(entry: Dictionary) -> void:
 	if String(entry.get("camp_state", {}).get("phase", CampSystem.NONE)) != CampSystem.PACKING:

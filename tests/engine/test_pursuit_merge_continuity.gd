@@ -1,6 +1,6 @@
 extends GutTest
 ## Alias reissues must retain the original route budget, including metres walked
-## while the replacement courier is pending. 400 + 400 + 3 × 77 = 1031 >= 1000.
+## while the replacement courier is pending. 400 + 400 + 77 + 77 + 46 = 1000.
 const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
@@ -93,10 +93,10 @@ func _walk_to_bound(f: Dictionary) -> void:
 	state.day_resolution = tx
 	for i: int in range(10):
 		ArmySystem.march_day_saved(repo, state, 10, i, tx["march_entries"], tx["march_budgets"])
-	assert_eq(int(entry.x_m) - 1000000, 231, "only three 77 m substeps remain within the original budget")
+	assert_eq(int(entry.x_m) - 1000000, 200, "the third substep clips to the remaining 46 m of the original budget")
 	assert_eq(entry.order, ArmySystem.ORDER_GARRISON)
 	assert_eq(BattleTaskSystem.current(state, f.p2).status, "bounded")
-	assert_eq(BattleTaskSystem.current(state, f.p2).pursuit.route_m, 1031)
+	assert_eq(BattleTaskSystem.current(state, f.p2).pursuit.route_m, 1000)
 
 func test_alias_reissue_canonical_region_keeps_progress_but_new_limits_or_target_restart() -> void:
 	var f := _fixture(true)

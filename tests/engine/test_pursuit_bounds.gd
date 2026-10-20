@@ -105,7 +105,7 @@ func test_bounded_pursuit_holds_in_battle() -> void:
 	assert_string_contains(act.reason, "bound")
 
 ## The march hook: 767 m today over ten substeps is 77 × 7 + 76 × 3, so a 300 m
-## bound is reached on substep 4 (4 × 77 = 308 >= 300) and the walk stops at 308.
+## bound clips substep 4 to 69 m (3 × 77 + 69 = 300) and the walk stops at 300.
 func test_march_day_saved_stops_the_walk_at_the_bound() -> void:
 	var f := _fixture()
 	var repo: DataRepository = f.repo
@@ -138,7 +138,7 @@ func test_march_day_saved_stops_the_walk_at_the_bound() -> void:
 	state.day_resolution = tx
 	for i in range(10):
 		ArmySystem.march_day_saved(repo, state, 10, i, tx["march_entries"], tx["march_budgets"])
-	assert_eq(int(state.regiments[code]["x_m"]) - start.x, 308)
+	assert_eq(int(state.regiments[code]["x_m"]) - start.x, 300)
 	assert_eq(BattleTaskSystem.current(state, code).status, "bounded")
 	assert_eq(state.regiments[code]["order"], ArmySystem.ORDER_GARRISON)
 
