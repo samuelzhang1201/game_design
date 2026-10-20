@@ -63,3 +63,29 @@ movement-rate suppression remain §8.4 gaps; this PR implements geometric fire
 eligibility only. The geometric corridor is a conservative direct-fire model;
 indirect trajectories, height/terrain projectile occlusion, and model-level
 projectiles are outside this step. No visual assets or presentation change.
+
+## Independent Review
+
+Review `01a159cd-be18-79d3-a791-1772ee4b3953` traced the strength,
+per-target casualty/morale, bilateral legality, local sight and frozen retry
+paths. The original frozen hash matched the committed implementation exactly.
+
+Review reproduced a deployment rounding defect: opposing 50-person archer
+lines at (1000, 1000) and (1394, 1070), around (1197, 1035), stayed at a
+squared separation of 160136, above the 160000 reach limit. Both fired zero.
+The failing production preparation test is preserved in
+`evidence/review-diagonal-red.log` in the worktree checkpoint.
+
+The deployment offset now reserves sqrt(2) metres per side: two independent
+nearest-metre vector roundings each contribute at most sqrt(2)/2 metres of
+error. The shot range remains unchanged. The regression checks both firing
+counts and four actual casualties on each side. A mixed 50/50 infantry/archer
+fixture checks 750 incoming permille when half the ranged groups fire, 500
+when blocked, and the retained 250 melee contact factor.
+
+Focused geometry/deployment/charge verification passed 3 scripts / 45 tests /
+160 assertions before the additional mixed-equipment and casualty assertions.
+Final frozen-input verification passed **35 scripts / 371 tests / 3034
+assertions**, runner exit 0, 143.363 seconds. Frozen review input SHA256:
+`d9d3144e869de26108a537f2e3955fb199e659ec98d71955abf126e5ab91d273`.
+Current-HEAD CI is checked separately before merge.

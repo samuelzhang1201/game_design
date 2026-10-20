@@ -215,7 +215,8 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 		var action := BattleSystem.unit_action(repo, state, battle, code)
 		if action["kind"] == "attack" and not action.has("pursuit_target") \
 				and BattleRanged.share(repo, state, code) >= int(repo.bal("battle_context_arm_threshold_permille")):
-			var back := maxf(0.0, float(repo.bal("battle_ranged_reach_m") - repo.bal("battle_line_gap_m"))) / 2.0
+			# Target and offset each round to metres: reserve their combined half-diagonal error.
+			var back := maxf(0.0, float(repo.bal("battle_ranged_reach_m") - repo.bal("battle_line_gap_m")) / 2.0 - sqrt(2.0))
 			to -= Vector2i((WarFront.facing_vector(int(battle["group_facing"][code])) * back).round())
 		var d := Vector2(to - from)
 		var moved := to if d.length() <= step else from + Vector2i((d.normalized() * step).round())

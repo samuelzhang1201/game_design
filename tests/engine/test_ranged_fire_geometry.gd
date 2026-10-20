@@ -267,3 +267,36 @@ func test_production_daily_deployment_retains_an_actual_firing_line() -> void:
 	assert_eq(_shots(f).firing, 50, "Daily deployment must not force every archer into melee")
 	assert_eq(BattleSystem.step_battle(f.repo, f.state, 9463).status, "complete")
 	assert_eq(Personnel.count(f.state, f.enemy, "dead"), 4)
+
+func test_diagonal_opposing_firing_lines_remain_in_reach_after_rounding() -> void:
+	var f := _fixture(300, 50)
+	_fixed_losses(f)
+	f.state.army_roster[f.enemy].infantry = "0"
+	f.state.army_roster[f.enemy].archers = "50"
+	f.state.foes[f.enemy].x_m = 1394
+	f.state.foes[f.enemy].y_m = 1070
+	f.battle.place_x_m = 1197
+	f.battle.place_y_m = 1035
+	f.battle.actions.def.kind = "attack"
+	BattleSystem.prepare_day(f.repo, f.state)
+	assert_eq(_shots(f).firing, 50, "Rounded diagonal firing lines must stay within inclusive reach")
+	assert_eq(BattleRanged.counts(f.repo, f.state, f.battle, f.enemy).firing, 50)
+	assert_eq(BattleSystem.step_battle(f.repo, f.state, 9463).status, "complete")
+	assert_eq(Personnel.count(f.state, f.a, "dead"), 4)
+	assert_eq(Personnel.count(f.state, f.enemy, "dead"), 4)
+
+func test_mixed_equipment_scales_only_its_ranged_personnel_share() -> void:
+	var f := _fixture()
+	f.state.army_roster[f.a].archers = "50"
+	f.state.army_roster[f.a].infantry = "50"
+	f.battle.formations.att.current = "double_rank"
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(BattleRanged.share(f.repo, f.state, f.a), 500)
+	# Half of the ranged half fires; the melee half retains its existing threat.
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 750)
+	f.battle.group_facing[f.a] = 180
+	assert_eq(_shots(f).firing, 0)
+	assert_eq(BattleRanged.incoming_permille(f.repo, f.state, f.battle, "def", f.enemy), 500)
+	var strength := BattleSystem.unit_strength(f.repo, f.state, f.a, Callable(), true, [f.enemy])
+	assert_true(strength.factors.any(func(row: Dictionary) -> bool:
+		return row.source == "contact:ranged" and row.permille == 250))

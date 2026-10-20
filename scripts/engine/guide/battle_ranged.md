@@ -57,6 +57,7 @@ daily preparation always supply the geometry.
 
 Daily deployment offsets an actively attacking ranged-dominant unit behind its
 ordinary line by half the positive difference between ranged reach and line gap.
-Two opposing firing lines therefore fit within the configured reach; movement
+The offset reserves the combined half-diagonal error of the two whole-metre
+roundings, so opposing diagonal lines stay within reach too. Movement
 still uses the ordinary daily budget and passability check. Received pursuit and
 actual close defence retain their existing deployment path.
