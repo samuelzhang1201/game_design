@@ -26,6 +26,11 @@ static func _offer_record(repo: DataRepository, state: GameState, battle_id: int
 		if int(saved.get("battle_id", -1)) == battle_id and saved.get("event_id", "") != "" and saved.get("selected", "") == "":
 			return saved.duplicate(true)
 	var token := "battle-event:%d:%d" % [battle_id, state.absolute_day()]
+	# a merged-in battle's offer for today (BattleMerge re-pointed it here) is today's check
+	for saved: Dictionary in state.battle_events.values():
+		if int(saved.get("battle_id", -1)) == battle_id and int(saved.get("day", -1)) == state.absolute_day() \
+				and String(saved.get("token", "")) != token:
+			return saved.duplicate(true) if saved.get("event_id", "") != "" else {}
 	if state.battle_events.has(token):
 		var saved: Dictionary = state.battle_events[token]
 		return saved.duplicate(true) if saved.get("event_id", "") != "" else {}
