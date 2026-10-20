@@ -1,5 +1,5 @@
-kind,label,needs_target,default_encounter,allowed_encounters,notes
-search,Search,0,keep_distance,keep_distance|approach,"spec 2026-10-16 battle-system §13.2: sweep the circle for the enemy; default keep distance and report, or approach into a stand-off; needs no named target"
-raid,Raid,0,approach,approach,"§13.3: plunder known reachable stores inside the circle; the target KIND is an optional filter so no target is required; a defended target is scouted and engaged, never plundered from afar"
-destroy,Destroy,1,approach,approach,"§13.4: the player names the object kind (camp and engines, military granaries, transport works, manor workshops); only found legal objects are acted on"
-siege,Siege,1,approach,approach,"§13.5: one known town inside the circle, named explicitly; march, camp and blockade then follow the §14 tactic"
+kind,label,needs_target,default_encounter,allowed_encounters,law_limits,notes
+search,Search,0,keep_distance,keep_distance|approach,,"spec 2026-10-16 battle-system §13.2: sweep the circle for the enemy; default keep distance and report, or approach into a stand-off; needs no named target"
+raid,Raid,0,approach,approach,plunder:forbid:law_plunder,"§13.3: plunder known reachable stores inside the circle; the target KIND is an optional filter so no target is required; a defended target is scouted and engaged, never plundered from afar"
+destroy,Destroy,1,approach,approach,,"§13.4: the player names the object kind (camp and engines, military granaries, transport works, manor workshops); only found legal objects are acted on"
+siege,Siege,1,approach,approach,,"§13.5: one known town inside the circle, named explicitly; march, camp and blockade then follow the §14 tactic"
