@@ -48,4 +48,5 @@ Approved design: P2 plan line 118; root invariant 4.
 
 1. Order word is the literal `capture`: the request carries only battle_id, round and reason, and the unit's round action is no longer known (pending is gone), so "capture" is the truthful word.
 2. Rows go into `family_changes` only while the battle exists (guarded by `family_loss_ids`); otherwise just the opinion move and receipt.
+4. A battle record with no `town` key (bare fixtures in older prisoner tests) has no place: the context place falls back to "the field" instead of calling `place_label`.
 3. A consume `{error}` (cannot occur: id is the capture id, replay returns early) is ignored; the capture still applies.

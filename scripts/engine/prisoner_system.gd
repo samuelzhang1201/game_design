@@ -143,7 +143,7 @@ static func capture(repo: DataRepository, state: GameState, raw: Dictionary) -> 
 	if transition.has("error"):
 		return transition
 	# A replayed capture returned early above, so this runs once per id.
-	var place := BattleSystem.place_label(repo, state, battle) if not battle.is_empty() else "the field"
+	var place := BattleSystem.place_label(repo, state, battle) if battle.has("town") else "the field"  # bare battle records carry no place
 	var rows: Variant = FamilyLosses.consume(repo, state, "capture:" + id, request["changes"], {"place": place, "order": "capture"})
 	var loss_id := "capture:" + id
 	if rows is Array and not battle.is_empty() and not (battle.get("family_loss_ids", []) as Array).has(loss_id):
