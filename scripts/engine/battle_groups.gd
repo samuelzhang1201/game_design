@@ -52,6 +52,12 @@ static func refresh(repo: DataRepository, state: GameState, battle: Dictionary) 
 			if not other.is_empty():
 				@warning_ignore("integer_division")
 				face = WarFront.facing_deg(Vector2(mean / other.size() - anchor))
+			face = int(BattleSystem._stored(state, code).get("facing_deg", face))
+			var task := BattleTaskSystem.current(state, code)
+			var known: Dictionary = task.get("flank", {}).get("known", {})
+			if task.get("status", "") == "received" and task.get("request", {}).get("task", "") == "flank" \
+					and BattleSystem.canonical(state, int(task["request"]["battle_id"])) == int(battle.get("id", -1)) and not known.is_empty():
+				face = WarFront.facing_deg(Vector2(Vector2i(int(known["x_m"]), int(known["y_m"])) - anchor))
 			var sizes := counts(ArmySystem.fit_count(repo, state, code), int(repo.bal("battle_group_size")))
 			var at := layout(repo, BattleFormation.of_unit(state, code), sizes.size(), anchor, face)
 			var slots := BattleFormation.slots(BattleFormation.of_unit(state, code), sizes.size())
@@ -210,6 +216,8 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 			e.erase("charge")
 		elif charge["phase"] == "impact":
 			charge["phase"] = "disengage"
+		if BattleTaskSystem.deploy_flank(repo, state, battle, code):
+			continue
 		var from := BattleSystem._at_m(repo, state, code)
 		var to: Vector2i = targets[code]
 		var action := BattleSystem.unit_action(repo, state, battle, code)

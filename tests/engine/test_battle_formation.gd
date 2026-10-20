@@ -172,7 +172,7 @@ func test_batched_formation_orders_apply_in_order_and_replay_once() -> void:
 	CourierSystem._deliver(repo, restored, restored.couriers.back())
 	assert_eq(restored.battles.back()["formations"], saved, "save and replay preserve the applied sequence")
 
-func test_flanking_uses_the_armys_position_not_the_enemy_contact_point() -> void:
+func test_distant_opposite_columns_do_not_flank_without_group_contact() -> void:
 	var repo := SuiteData.repo()
 	var state := SuiteData.campaign(repo, 97)
 	var ours := state.regiments.keys()
@@ -187,7 +187,8 @@ func test_flanking_uses_the_armys_position_not_the_enemy_contact_point() -> void
 	state.foes[foes[1]]["x_m"] = 2000
 	state.foes[foes[1]]["y_m"] = 0
 	var battle := {"att": [code], "def": [foes[0], foes[1]], "place_x_m": 0, "place_y_m": 0}
-	assert_true(BattleFormation.context(repo, state, battle, "att")["flanked"], "enemy columns stand on opposite sides of this army")
+	BattleGroups.refresh(repo, state, battle)
+	assert_false(BattleFormation.context(repo, state, battle, "att")["flanked"], "opposite distant columns have no actual group contact")
 
 func _unit_fixture() -> Dictionary:
 	var repo := SuiteData.repo()

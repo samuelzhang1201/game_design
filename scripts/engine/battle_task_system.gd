@@ -258,6 +258,11 @@ static func deliver_task(repo: DataRepository, state: GameState, order_id: Strin
 			kept = (previous["pursuit"] as Dictionary).duplicate()
 			if previous["status"] == "bounded":
 				kept_bound = String(previous["reason"])
+	if not previous.is_empty() and previous.get("status", "") == "received" \
+			and BattleSystem.canonical(state, int(previous["request"]["battle_id"])) == BattleSystem.canonical(state, int(order["battle_id"])) \
+			and previous.get("request", {}).get("task", "") == "flank" and order["task"] == "flank" and previous["request"]["target_unit"] == order["target_unit"] \
+			and previous.get("flank", {}).get("phase", "") == "contact":
+		record["flank"] = (previous["flank"] as Dictionary).duplicate(true)
 	var cancelling: bool = order["task"] == "cancel"
 	if not previous.is_empty():
 		_transition(state, previous, "cancelled" if cancelling else "replaced",
@@ -410,15 +415,27 @@ static func track_day(repo: DataRepository, state: GameState) -> void:
 			var range_m := int(repo.bal("battle_search_range_m"))
 			seen = (there - point).length_squared() <= range_m * range_m
 		if seen:
+			if record["request"]["task"] == "flank" and (not BattleSystem._can_fight(repo, state, target_code) \
+					or bool(target.get("captured", false))):
+				_transition(state, record, "completed", "The visible designated enemy can no longer fight")
+				BattleSystem._halt(state, unit)
+				continue
 			record["track"] = {"x_m": there.x, "y_m": there.y, "day": today, "phase": "follow",
 				"search_until_day": 0, "done_day": today}
-			_aim(repo, state, unit, entry, there)
+			if record["request"]["task"] == "flank":
+				_snapshot_flank(repo, state, unit, record)
+				_aim_flank(repo, state, unit, record)
+			else:
+				_aim(repo, state, unit, entry, there)
 		elif phase == "follow":
 			track["done_day"] = today
-			if here == point and String(entry.get("order", "")) != ArmySystem.ORDER_MARCH:
+			var arrived := here == point
+			if record["request"]["task"] == "flank":
+				arrived = _aim_flank(repo, state, unit, record)
+			if arrived and String(entry.get("order", "")) != ArmySystem.ORDER_MARCH:
 				track["phase"] = "search"
 				track["search_until_day"] = today + int(repo.bal("battle_search_days"))
-			else:
+			elif record["request"]["task"] != "flank":
 				_aim(repo, state, unit, entry, point)
 		elif phase == "search" and today > int(track["search_until_day"]):
 			_transition(state, record, "search_failed", "Lost the target and the search found nothing")
@@ -433,3 +450,166 @@ static func _aim(repo: DataRepository, state: GameState, unit: String, entry: Di
 		ArmySystem.aim_entry(repo, entry, to, ArmySystem.is_naval(repo, state, unit))
 	elif Vector2i(int(entry["x_m"]), int(entry["y_m"])) != to:
 		ArmySystem.set_march_m(repo, state, unit, to)
+
+
+## Only the recipient's own sight publishes target geometry into its saved task.
+static func _snapshot_flank(repo: DataRepository, state: GameState, unit: String, record: Dictionary) -> void:
+	var target := String(record["request"]["target_unit"])
+	var entry := BattleSystem._stored(state, target)
+	if entry.is_empty() or Sighting.men_of(repo, state, target) <= 0:
+		return
+	var here := BattleSystem._at_m(repo, state, unit)
+	var there := BattleSystem._at_m(repo, state, target)
+	var sight := Sighting.sight_m(repo)
+	if here.distance_squared_to(there) > sight * sight:
+		return
+	var battle := BattleSystem.battle_of(state, target)
+	var flank: Dictionary = record.get("flank", {})
+	var previous: Dictionary = flank.get("known", {})
+	var facing := int(entry.get("facing_deg", battle.get("group_facing", {}).get(target, previous.get("facing_deg", 0))))
+	if not entry.has("facing_deg") and battle.is_empty() and not previous.is_empty():
+		var observed := there - Vector2i(int(previous["x_m"]), int(previous["y_m"]))
+		if observed != Vector2i.ZERO:
+			facing = WarFront.facing_deg(Vector2(observed))
+	var shape := BattleFormation.of_unit(state, target)
+	var n := BattleGroups.counts(ArmySystem.fit_count(repo, state, target), int(repo.bal("battle_group_size"))).size()
+	var radius := 0
+	for offset: Vector2i in BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT, n, Vector2i.ZERO, 0):
+		radius = maxi(radius, ceili(Vector2(offset).length()))
+	var positions := BattleGroups.layout(repo, shape if shape != "" else BattleFormation.DEFAULT, n, there, facing)
+	var geometry := {"x_m": there.x, "y_m": there.y, "facing_deg": facing, "radius_m": radius,
+		"points_m": MarchRoute.to_pairs(positions)}
+	if flank.get("known", {}) != geometry:
+		flank["known"] = geometry
+		flank.erase("path_m")
+	record["flank"] = flank
+
+
+## Two outboard approaches. Every leg uses the terrain router, then rejects its
+## unreachable straight-line fallback and shortcuts through the known enemy.
+static func flank_route(repo: DataRepository, here: Vector2i, known: Dictionary) -> Array:
+	var centre := Vector2i(int(known["x_m"]), int(known["y_m"]))
+	var face := WarFront.facing_vector(int(known["facing_deg"]))
+	var across := Vector2(-face.y, face.x)
+	var radius := int(known["radius_m"]) + int(repo.bal("battle_group_contact_m"))
+	var forward := Vector2(here - centre).dot(face)
+	var bypass := maxf(absf(forward), float(radius)) * (-1.0 if forward < 0.0 else 1.0)
+	var grid := MarchPath.of_pack(repo)
+	var points := MarchRoute.from_pairs(known.get("points_m", [[centre.x, centre.y]]))
+	if points.is_empty():
+		return []
+	var reach := float(repo.bal("battle_group_contact_m"))
+	var best: Array = []
+	var length := INF
+	for sign_: int in [1, -1]:
+		var edge: Vector2i = points[0]
+		for point: Vector2i in points:
+			if Vector2(point - centre).dot(across) * float(sign_) > Vector2(edge - centre).dot(across) * float(sign_):
+				edge = point
+		var to := edge + Vector2i((across * reach * float(sign_)).round())
+		var outside := centre + Vector2i((across * float(radius * sign_)).round())
+		var stage := outside + Vector2i((face * bypass).round())
+		var align := outside + Vector2i((face * Vector2(edge - centre).dot(face)).round())
+		var outward := centre + Vector2i((face * bypass + across * Vector2(here - centre).dot(across)).round())
+		var path: Array = []
+		var previous := here
+		var valid := true
+		var corners: Array = [outward, stage, align, to]
+		# Already outboard: stay on that side instead of walking back to staging.
+		if Vector2(here - centre).dot(across) * float(sign_) >= float(radius):
+			corners = [to]
+		for corner: Vector2i in corners:
+			if corner == previous:
+				continue
+			if grid != null and (corner.x < 0 or corner.y < 0 or corner.x >= grid.cols * grid.cell_m \
+					or corner.y >= grid.rows * grid.cell_m or not grid.joins(previous, corner)):
+				valid = false
+				break
+			var leg: Array = [corner] if grid == null else grid.road(previous, corner)
+			for point: Vector2i in leg:
+				if grid != null and not grid.clear(previous, point, [grid.cell_of(here)]):
+					valid = false
+				for enemy: Vector2i in points:
+					if Geometry2D.get_closest_point_to_segment(Vector2(enemy), Vector2(previous), Vector2(point)).distance_to(Vector2(enemy)) < reach - 1.0:
+						valid = false
+						break
+				if not valid:
+					break
+				path.append(point)
+				previous = point
+			if not valid:
+				break
+		if valid and MarchRoute.length_from(here, path) < length:
+			best = path
+			length = MarchRoute.length_from(here, path)
+	return best
+
+
+static func _flank_path(repo: DataRepository, state: GameState, unit: String, record: Dictionary) -> Array:
+	var flank: Dictionary = record.get("flank", {})
+	if flank.get("known", {}).is_empty():
+		return []
+	var here := BattleSystem._at_m(repo, state, unit)
+	var path: Array = MarchRoute.from_pairs(flank["path_m"]) if flank.has("path_m") else flank_route(repo, here, flank["known"])
+	while not path.is_empty() and path[0] == here:
+		path.pop_front()
+	flank["path_m"] = MarchRoute.to_pairs(path)
+	return path
+
+
+## Field travel keeps camp packing and the ordinary saved march/substep budget.
+## Return true on the last reachable side point for the existing finite search.
+static func _aim_flank(repo: DataRepository, state: GameState, unit: String, record: Dictionary) -> bool:
+	if record.get("flank", {}).get("phase", "") == "contact":
+		BattleSystem._halt(state, unit)
+		return true
+	var path := _flank_path(repo, state, unit, record)
+	if path.is_empty():
+		BattleSystem._halt(state, unit)
+		return true
+	_aim(repo, state, unit, BattleSystem._stored(state, unit), path[0])
+	return false
+
+
+## Called instead of generic deployment. Once contact commits this approach,
+## the task never automatically circles again, including synonymous receipts.
+static func deploy_flank(repo: DataRepository, state: GameState, battle: Dictionary, unit: String) -> bool:
+	var action := BattleSystem.unit_action(repo, state, battle, unit)
+	var record := _find(state, String(action.get("task_id", "")))
+	if record.is_empty() or record["request"]["task"] != "flank" or record["request"]["target_unit"] == "":
+		return false
+	if action["kind"] != "attack":
+		return true
+	_snapshot_flank(repo, state, unit, record)
+	BattleGroups.refresh(repo, state, battle)
+	var flank: Dictionary = record.get("flank", {})
+	if flank.get("phase", "") == "contact":
+		return true
+	if BattleGroups.engaged_counts(repo, state, battle, unit, String(record["request"]["target_unit"])).x > 0:
+		flank["phase"] = "contact"
+		record["flank"] = flank
+		return true
+	var path := _flank_path(repo, state, unit, record)
+	if path.is_empty():
+		return true
+	var here := BattleSystem._at_m(repo, state, unit)
+	var budget := int(repo.bal("battle_deploy_step_m"))
+	var axis := Vector2(Vector2i(path[0]) - here).normalized()
+	var contact := BattleCharge._approach(repo, battle, unit, String(record["request"]["target_unit"]), axis)
+	var distance := mini(budget, ceili(contact)) if not is_inf(contact) else budget
+	var walked := MarchRoute.walk(here, [path[0]], distance)
+	var to: Vector2i = walked["at"]
+	while here.distance_squared_to(to) > budget * budget:
+		distance -= 1
+		walked = MarchRoute.walk(here, [path[0]], distance)
+		to = walked["at"]
+	if not BattleCharge._clear(repo, battle, unit, to - here):
+		return true
+	var entry := BattleSystem._stored(state, unit)
+	entry["x_m"] = to.x
+	entry["y_m"] = to.y
+	flank["path_m"] = MarchRoute.to_pairs((walked["path"] as Array) + path.slice(1))
+	BattleGroups.refresh(repo, state, battle)
+	if BattleGroups.engaged_counts(repo, state, battle, unit, String(record["request"]["target_unit"])).x > 0:
+		flank["phase"] = "contact"
+	return true

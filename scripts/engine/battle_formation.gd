@@ -30,15 +30,12 @@ static func _deployment(battle: Dictionary, side: String, unit := "") -> Diction
 static func context(repo: DataRepository, state: GameState, battle: Dictionary, side: String, unit := "") -> Dictionary:
 	var out := {"width_m": 0, "terrain": "", "centre": "", "arms": [],
 		"morale": 100, "training": 100, "flanked": false, "missiles": false}
-	var directions: Array[Vector2] = []
-	var own_place := Vector2.ZERO
 	var narrow: PackedStringArray = String(repo.battle_formations.get("line", {}).get("narrow_terrains", "")).split("|", false)
 	var place := Vector2i(int(battle["place_x_m"]), int(battle["place_y_m"]))
 	var members: Array = battle[side] if unit == "" else [unit]
 	for code: String in members:
 		var reg := ArmySystem.regiment(repo, code, state)
 		var entry := BattleSystem._stored(state, code)
-		own_place += Vector2(ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, reg)))
 		var terrain := ArmySystem.terrain_of(repo, reg, state)
 		if out["terrain"] == "" or terrain in narrow:
 			out["terrain"] = terrain
@@ -49,17 +46,26 @@ static func context(repo: DataRepository, state: GameState, battle: Dictionary, 
 			out["centre"] = "wounded:" + code
 		if not ArmySystem.is_foe(state, code) and Vector2(KingSystem.position(state)).distance_to(Vector2(place)) <= repo.bal("king_command_radius_m"):
 			out["centre"] = "king"
-	if not members.is_empty():
-		own_place /= members.size()
 	var other := "def" if side == "att" else "att"
+	var reach := float(repo.bal("battle_group_contact_m"))
+	var frontal := cos(deg_to_rad(float(repo.bal("battle_flank_front_half_deg"))))
 	for code: String in battle[other]:
 		var reg := ArmySystem.regiment(repo, code, state)
-		var at := ArmySystem.pack_to_metres(repo, ArmySystem.position_of(repo, state, reg))
-		var direction := (Vector2(at) - own_place).normalized()
-		for previous: Vector2 in directions:
-			if previous.dot(direction) < 0.0:
-				out["flanked"] = true
-		directions.append(direction)
+		for member: String in members:
+			if bool(out["flanked"]):
+				break
+			var facing := WarFront.facing_vector(int(battle.get("group_facing", {}).get(member, 0)))
+			for own: Dictionary in battle.get("groups", {}).get(member, []):
+				if bool(out["flanked"]):
+					break
+				for incoming: Dictionary in battle.get("groups", {}).get(code, []):
+					if incoming["role"] != "front":
+						continue
+					var offset := Vector2(int(incoming["x_m"]) - int(own["x_m"]), int(incoming["y_m"]) - int(own["y_m"]))
+					if offset.length_squared() > 0.0 and offset.length_squared() <= reach * reach \
+							and facing.dot(offset.normalized()) < frontal:
+						out["flanked"] = true
+						break
 		if MapObjects.regiment_arm(repo, reg) in ["archers", "artillery"]:
 			out["missiles"] = true
 	return out
@@ -164,7 +170,7 @@ static func evaluate(repo: DataRepository, formation: String, ctx: Dictionary, a
 		var flank := int(row["flank_permille"])
 		if int(row["centre_required"]) == 1 and String(ctx.get("centre", "")) == "":
 			flank = mini(flank, 1000)
-		factors.append({"source": "formation:flank", "permille": flank, "reason": "Attacked from several directions"})
+		factors.append({"source": "formation:flank", "permille": flank, "reason": "Enemy front groups contact the side or rear"})
 	if not attacking and bool(ctx.get("missiles", false)):
 		factors.append({"source": "formation:missiles", "permille": int(row["missile_permille"]), "reason": "Exposed to ranged fire"})
 	return {"factors": factors, "reason": reason, "frontage_m": width}
