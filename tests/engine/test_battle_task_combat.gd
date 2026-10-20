@@ -250,8 +250,8 @@ func test_holding_cavalry_cannot_supply_an_infantry_tasks_shock_context() -> voi
 		"holding mounted personnel do not contribute to an attack context")
 	_issue(f, "mounted", "advance", f.a)
 	_receive(f, "mounted")
-	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "shock",
-		"600 of 1200 now attack mounted: 500 per mille exceeds 400")
+	assert_eq(BattleSystem.combat_context(f.repo, f.state, f.battle, "def").kind, "melee",
+		"600 mounted attackers still need actual run-up and contact before supplying shock")
 
 func test_successful_task_attack_commits_reserve_after_failed_round_retry() -> void:
 	var f := _fixture()

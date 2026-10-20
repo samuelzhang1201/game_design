@@ -807,7 +807,8 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 			for code: String in b[side]:
 				if bool(_stored(state, code).get("battle_retreat", false)):
 					withdrawing += 1
-			if withdrawing > 0 or BattleOrders.kind(b, side) == "retreat":
+			if withdrawing > 0 or BattleOrders.kind(b, side) == "retreat" \
+					or (b["def" if side == "att" else "att"] as Array).any(func(code: String) -> bool: return BattleCharge.impacting(repo, state, b, code) > 0):
 				if not tier.has("unit_loss_permille"):
 					tier["unit_loss_permille"] = {}
 				for code: String in b[side]:
@@ -837,6 +838,7 @@ static func _fight(repo: DataRepository, state: GameState, b: Dictionary, events
 		var action: Dictionary = pending["unit_actions"][code]
 		if action["kind"] == "attack" and action["task_id"] != "":
 			b.get("reserves", {}).erase(code)
+	BattleCharge.consume(state, pending["att"] + pending["def"], int(pending["day"]))
 	b["rounds"] = n
 	b["last_resolved_day"] = today
 	b.erase("pending_round")
@@ -978,10 +980,14 @@ static func combat_context(repo: DataRepository, state: GameState, battle: Dicti
 				heads += people
 				if String(arm_row["type"]) in ["ranged", "machinery"]:
 					ranged += people
-				if String(arm_row["type"]) == "mounted" and unit_action(repo, state, battle, code)["kind"] == "attack":
-					mounted += people
+		var ranged_context := heads > 0 and ranged * 1000 >= heads * int(repo.bal("battle_context_arm_threshold_permille"))
+		# Use fit, impacting front personnel rather than nominal mounted equipment.
+		heads = 0
+		for code: String in battle[other]:
+			heads += ArmySystem.fit_count(repo, state, code)
+			mounted += BattleCharge.impacting(repo, state, battle, code, unit)
 		var threshold := int(repo.bal("battle_context_arm_threshold_permille"))
-		if heads > 0 and ranged * 1000 >= heads * threshold:
+		if ranged_context:
 			kind = "ranged"
 		elif heads > 0 and mounted * 1000 >= heads * threshold:
 			kind = "shock"

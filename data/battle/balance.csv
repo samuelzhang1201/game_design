@@ -52,3 +52,4 @@ family_loss_opinion_dead_named,-3,"family losses (P2-B1): opinion each family me
 family_loss_opinion_dead_cadre,-2,"family losses (P2-B1): opinion per family member for each unnamed noble cadre killed (first draft)"
 family_loss_opinion_captured_named,-2,"family losses (P2-B1): opinion per family member for each named noble captured (first draft)"
 family_loss_opinion_captured_cadre,-1,"family losses (P2-B1): opinion per family member for each unnamed noble cadre captured (first draft)"
+battle_charge_runup_m,300,"Minimum actual continuous mounted approach before impact; renewal needs this clear separation beyond contact and a regroup day"

@@ -2,7 +2,7 @@ class_name BattleGroups
 extends RefCounted
 ## P4.4d1: a battle unit's fit personnel as representative groups of at most
 ## `battle_group_size`, each with a saved whole-metre position laid out by the
-## unit's formation around its anchor. Nothing reads them yet (spec §6-§8).
+## unit's formation around its anchor (spec §6-§8).
 
 
 ## Group sizes for `n` people: full groups, the last one the remainder.
@@ -187,17 +187,29 @@ static func withdrawing(state: GameState, battle: Dictionary) -> bool:
 ## are refreshed by the caller.
 static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionary) -> void:
 	var today := state.absolute_day()
-	if int(battle.get("deployed_day", -1)) == today or withdrawing(state, battle):
+	if int(battle.get("deployed_day", -1)) == today or withdrawing(state, battle) or battle.has("pending_round"):
 		return
 	battle["deployed_day"] = today
 	var targets := deployment(repo, state, battle)
 	var step := float(repo.bal("battle_deploy_step_m"))
 	var grid := MarchPath.of_pack(repo)   # the land grid: no step into water or over a scarp
+	var charges := {}
+	refresh(repo, state, battle)
 	for code: String in targets:
 		var e := BattleSystem._stored(state, code)
 		if e.is_empty() or bool(e.get("captured", false)) or ArmySystem.fit_count(repo, state, code) <= 0 \
 				or ArmyGround.seated_in(repo, state, code) != "":
 			continue
+		var foe := BattleCharge.target(repo, state, battle, code)
+		if foe != "":
+			charges[code] = foe
+			continue
+		# Interruptions discard unfinished momentum, never the obligation to regroup.
+		var charge: Dictionary = e.get("charge", {})
+		if charge.get("phase", "approach") == "approach":
+			e.erase("charge")
+		elif charge["phase"] == "impact":
+			charge["phase"] = "disengage"
 		var from := BattleSystem._at_m(repo, state, code)
 		var to: Vector2i = targets[code]
 		var d := Vector2(to - from)
@@ -207,3 +219,7 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 			continue
 		e["x_m"] = moved.x
 		e["y_m"] = moved.y
+
+	refresh(repo, state, battle)
+	for code: String in charges:
+		BattleCharge.move(repo, state, battle, code, String(charges[code]))
