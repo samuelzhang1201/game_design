@@ -177,6 +177,9 @@ var army_split: Array = []
 ## arm -> {scout_km, arc_deg}, the sector a marching crown unit sees ahead of it
 ## (Sighting.scout_shape).
 var army_scouting: Dictionary = {}
+## data/army/task_kinds.csv (P6.1a, spec 2026-10-16 battle-system §13): kind ->
+## {label, needs_target: bool, default_encounter, allowed_encounters: Array}.
+var task_kinds: Dictionary = {}
 ## data/army/army_clearance.csv (R-A): arm -> the clearance radius in whole metres.
 var army_clearance: Dictionary = {}
 ## data/army/army_camp_blocked.csv: terrain -> true where no unit makes camp (ArmyGround).
@@ -1126,6 +1129,13 @@ func _load(dir: String) -> bool:
 		return false
 	if not _load_if_present(table_path(dir, "army_scouting"), ["arm", "scout_km", "arc_deg"],
 			func(r): army_scouting[String(r["arm"])] = {"scout_km": int(r["scout_km"]), "arc_deg": int(r["arc_deg"])}):
+		return false
+	if not _load_if_present(table_path(dir, "task_kinds"),
+			["kind", "label", "needs_target", "default_encounter", "allowed_encounters"],
+			func(r): task_kinds[String(r["kind"])] = {"label": String(r["label"]),
+				"needs_target": String(r["needs_target"]) == "1",
+				"default_encounter": String(r["default_encounter"]),
+				"allowed_encounters": String(r["allowed_encounters"]).split("|")}):
 		return false
 	if not _load_if_present(table_path(dir, "army_clearance"), ["arm", "clear_m"],
 			func(r): army_clearance[String(r["arm"])] = int(r["clear_m"])):
