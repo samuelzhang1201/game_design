@@ -51,3 +51,13 @@ acceptance or completion of the other P4 steps.
 Final local verification: 132 selected scripts, 1,466/1,466 tests passed;
 the separately run merge-continuity suite passed 3/3. Both runner commands exited
 0 through the shared Godot lock, retaining all parse/runtime/count/offline gates.
+
+Independent Review found and fixed a short diagonal arrival stall: flooring a
+remaining sqrt(2)-metre route to one metre made the bounded walk retreat to zero
+forever. The saved movement step now rounds the remaining route up before the
+existing limit validation. A (100,100) → (101,101) regression failed on the
+handoff source and passes with this one-line fix, crediting two whole metres.
+Review's final local regression passed 139/139 tests across 13 scripts, including
+pursuit/merge continuity, march/clearance, target tracking, save and isolation.
+The inherited 1,466-test run predates this fix; final-HEAD CI supplies the broader
+current-input coverage. No additional gameplay or presentation scope was added.

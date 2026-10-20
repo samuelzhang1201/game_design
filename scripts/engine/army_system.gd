@@ -1923,7 +1923,7 @@ static func _march_one(repo: DataRepository, state: GameState, code: String, ent
 	var left := MarchRoute.length_from(here, path)
 	var days := int(ceil(left / float(full)))
 	var step: int = mini(full, int(ceil(left / float(maxi(days, 1))))) \
-		if daily_budget < 0 else mini(full, left)
+		if daily_budget < 0 else mini(full, ceili(left))
 	if wait_m >= 0:
 		step = mini(step, wait_m)
 		days = maxi(days, 2)    # waiting behind a unit never arrives

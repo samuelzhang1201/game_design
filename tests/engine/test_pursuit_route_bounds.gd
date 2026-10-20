@@ -288,3 +288,13 @@ func test_slanting_border_keeps_the_rounded_stop_inside() -> void:
 	assert_gte(int(e.x_m) + int(e.y_m), 499)
 	assert_eq(MarchPath.region_exit(f.repo, f.state, Vector2i(100,100),
 		[Vector2i(int(e.x_m),int(e.y_m))], f.inside), -1.0)
+
+func test_short_diagonal_destination_arrives_without_spending_a_bound() -> void:
+	var f := _fixture([Vector2i(101,101)], {"max_route_m": 250})
+	_step(f, 800)
+	var e: Dictionary = f.state.regiments[f.code]
+	assert_eq(Vector2i(int(e.x_m), int(e.y_m)), Vector2i(101,101))
+	assert_eq(e.order, ArmySystem.ORDER_GARRISON)
+	var task := BattleTaskSystem.current(f.state, f.code)
+	assert_eq(task.status, "received")
+	assert_eq(int(task.pursuit.route_m), 2)
