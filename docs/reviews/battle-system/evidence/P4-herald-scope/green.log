@@ -65,4 +65,3 @@ Note:  This count does not include GUT objects that will be freed upon exit.
 Total orphans = 5.0
 
 ---- All tests passed! ----
-
