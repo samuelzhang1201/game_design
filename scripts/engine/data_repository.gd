@@ -180,6 +180,8 @@ var army_scouting: Dictionary = {}
 ## data/army/task_kinds.csv (P6.1a, spec 2026-10-16 battle-system §13): kind ->
 ## {label, needs_target: bool, default_encounter, allowed_encounters: Array}.
 var task_kinds: Dictionary = {}
+## data/army/task_words.csv (P6.1b): key -> the words of an area-task refusal or law limit.
+var task_words: Dictionary = {}
 ## data/army/army_clearance.csv (R-A): arm -> the clearance radius in whole metres.
 var army_clearance: Dictionary = {}
 ## data/army/army_camp_blocked.csv: terrain -> true where no unit makes camp (ArmyGround).
@@ -1136,6 +1138,9 @@ func _load(dir: String) -> bool:
 				"needs_target": String(r["needs_target"]) == "1",
 				"default_encounter": String(r["default_encounter"]),
 				"allowed_encounters": String(r["allowed_encounters"]).split("|")}):
+		return false
+	if not _load_if_present(table_path(dir, "task_words"), ["key", "text"],
+			func(r): task_words[String(r["key"])] = String(r["text"])):
 		return false
 	if not _load_if_present(table_path(dir, "army_clearance"), ["arm", "clear_m"],
 			func(r): army_clearance[String(r["arm"])] = int(r["clear_m"])):
