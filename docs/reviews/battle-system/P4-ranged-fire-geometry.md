@@ -103,3 +103,17 @@ assertions**, exit 0, 161.289s. Input SHA256:
 `659e907024940419db8e41b9b145e1484bc2696b6742d61adb62ddc80da20627`.
 Exact command/input list and RED/GREEN/full logs are retained under the same
 worktree checkpoint. All required CI must pass on the fixture-fix HEAD.
+
+After authorized integration of #153/#155, local integration verification passed
+38 scripts / 424 tests / 3675 assertions (exit 0). Actual split military CI
+then exposed one further implicit-melee stance timing fixture: its ranged
+defender had no legal fire power yet, so both compared stance powers were zero.
+The dispatcher conflict-checked and registered only `test_army_stance_order.gd`.
+Review reproduced its failure, then made only that test's defending equipment
+explicit infantry, preserving its original fit count and every assertion.
+Targeted GREEN: 8 tests / 43 assertions, exit 0. Complete final verification
+and current-HEAD CI remain recorded in the worktree checkpoint before merge.
+Final combined frozen run passed **39 scripts / 432 tests / 3718 assertions**,
+exit 0, 168.042s. SHA256:
+`cc7d50d7c4d516cf26d0d7ea69fb522cd9a60ea18d0d8e480dafc2931c1bf89e`.
+It includes all prior battle/core/gait checks plus the stance timing script.
