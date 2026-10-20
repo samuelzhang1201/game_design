@@ -26,6 +26,8 @@ nor consume it again. A subsequent charge requires real movement away to a gap
 of contact distance plus `battle_charge_runup_m`, a saved regroup day, then a
 new approach. Remaining face to face earns ordinary attack only. A changed
 target, approach heading or externally moved anchor discards unfinished approach credit.
+Switching away from attack discards unfinished momentum but preserves the
+requirement to disengage and regroup after an impact.
 
 Incoming shock counts only mounted fit personnel in the impacting front groups,
 and only against the actually contacted lawful opponent. Rear ranks and units

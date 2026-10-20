@@ -204,8 +204,12 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 		if foe != "":
 			charges[code] = foe
 			continue
-		# Interrupting an approach discards momentum; returning to attack must earn it anew.
-		e.erase("charge")
+		# Interruptions discard unfinished momentum, never the obligation to regroup.
+		var charge: Dictionary = e.get("charge", {})
+		if charge.get("phase", "approach") == "approach":
+			e.erase("charge")
+		elif charge["phase"] == "impact":
+			charge["phase"] = "disengage"
 		var from := BattleSystem._at_m(repo, state, code)
 		var to: Vector2i = targets[code]
 		var d := Vector2(to - from)

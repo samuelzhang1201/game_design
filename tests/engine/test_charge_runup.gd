@@ -296,3 +296,19 @@ func test_diagonal_displacement_cannot_exceed_the_daily_budget() -> void:
 	assert_gt(movement.length_squared(), 0)
 	assert_lte(movement.length_squared(), 6250000, "2500 squared, including whole-metre quantization")
 	assert_eq(_context(f).kind, "melee")
+
+func test_hold_cannot_erase_the_need_to_regroup_after_impact() -> void:
+	var f := _fixture()
+	_fixed_losses(f, 0)
+	_move(f)
+	assert_eq(BattleSystem.step_battle(f.repo, f.state, 9461).status, "complete")
+	f.battle.actions.att = {"kind": "hold"}
+	_move(f)
+	# The enemy opens a gap while our cavalry holds at its line, without regrouping.
+	f.state.foes[f.enemy].x_m = 400
+	f.battle.actions.att = {"kind": "attack"}
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	f.state.day += 1
+	BattleCharge.move(f.repo, f.state, f.battle, f.a, f.enemy)
+	assert_eq(_context(f).kind, "melee", "resuming attack must still regroup before a fresh approach")
+	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), Vector2i(1100, 1000), "no fresh approach before regrouping")
