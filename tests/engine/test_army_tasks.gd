@@ -66,6 +66,9 @@ func test_refusals_use_the_csv_words() -> void:
 		[{"radius_m": 0}, "bad_radius"],
 		[{"radius_m": int(repo.bal("task_max_radius_m")) + 1}, "bad_radius"],
 		[{"center_x_m": -1}, "off_map"],
+		# the map is half-open: x = width × metres-per-px is already off it
+		[{"center_x_m": int(float(repo.map_info.get("width", "0"))) * ArmySystem.metres_per_pack_px(repo)}, "off_map"],
+		[{"center_y_m": int(float(repo.map_info.get("height", "0"))) * ArmySystem.metres_per_pack_px(repo)}, "off_map"],
 		[{"kind": "raid", "encounter_policy": "keep_distance"}, "bad_policy"],
 		[{"kind": "destroy"}, "destroy_no_kind"],
 	]
