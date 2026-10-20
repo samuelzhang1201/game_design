@@ -130,7 +130,7 @@ static func warrants(state: GameState, id: int) -> Array:
 	var out: Array = []
 	for token: String in state.battle_orders:
 		var row: Dictionary = state.battle_orders[token]
-		if int(row.get("request", {}).get("battle_id", -1)) != id:
+		if BattleSystem.canonical(state, int(row.get("request", {}).get("battle_id", -1))) != BattleSystem.canonical(state, id):
 			continue
 		out.append({"id": token, "kind": String(row["request"].get("kind", "")),
 			"status": String(row.get("status", "")), "reserved_gold": int(row.get("reserved_gold", 0)),
@@ -179,7 +179,7 @@ static func task_view(repo: DataRepository, state: GameState, code: String) -> D
 		var newest := -1
 		for id: String in ledger.get("orders", {}):
 			var record: Dictionary = ledger["orders"][id]
-			if int(record["request"]["battle_id"]) != int(battle["id"]):
+			if BattleSystem.canonical(state, int(record["request"]["battle_id"])) != int(battle["id"]):
 				continue
 			var row := _task_row(repo, state, record)
 			if id == String(ledger.get("current_id", "")):
