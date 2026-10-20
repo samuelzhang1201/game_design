@@ -160,7 +160,7 @@ def record_dispatch(graph, data):
             raise ValueError('step status must be active or merged')
         old = steps.get(step_id)
         if old is not None:
-            for key in ('dispatcher_session_id', 'dependencies', 'owned_files', 'acceptance',
+            for key in ('dispatcher_session_id', 'dependencies', 'acceptance',
                         'worktree', 'branch', 'implementation_session_id', 'creation_result'):
                 if task[key] != old[key]:
                     raise ValueError('duplicate dispatch or immutable step ownership changed')
@@ -168,7 +168,31 @@ def record_dispatch(graph, data):
                 raise ValueError('Review owner cannot be replaced')
             if old['status'] == 'merged' and task['status'] != 'merged':
                 raise ValueError('completed step cannot be restarted')
+        additions = task.get('scope_additions', [])
+        previous = old.get('scope_additions', []) if old else []
+        if not isinstance(additions, list) or additions[:len(previous)] != previous:
+            raise ValueError('scope addition history must be preserved')
+        original = old.get('original_owned_files', old['owned_files']) if old else files
+        if task.get('original_owned_files', original) != original:
+            raise ValueError('original file declaration cannot be replaced')
+        expected_files = list(original)
+        for addition in additions:
+            if (not isinstance(addition, dict) or set(addition) != {'added_files', 'reason'} or
+                    not isinstance(addition['reason'], str) or not addition['reason'].strip() or
+                    not isinstance(addition['added_files'], list) or not addition['added_files']):
+                raise ValueError('scope additions require added_files and a reason')
+            for name in addition['added_files']:
+                if not isinstance(name, str) or name not in files or name in expected_files:
+                    raise ValueError('scope additions must append new literal owned files')
+                expected_files.append(name)
+        if files != expected_files:
+            raise ValueError('owned files may only change through audited additions')
+        if additions != previous and (old is None or old['status'] != 'active' or
+                                      task['status'] != 'active' or review != old['review_session_id']):
+            raise ValueError('only an existing active step may add owned files')
         steps[step_id] = dict(task)
+        if additions:
+            steps[step_id]['original_owned_files'] = list(original)
     # Walk the full declared graph, including converging prerequisites.
     def visit(step_id, visiting, visited):
         if step_id in visiting:
