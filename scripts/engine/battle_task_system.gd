@@ -24,7 +24,7 @@ static func combat_action(repo: DataRepository, state: GameState, battle: Dictio
 	if record.is_empty() or not record.get("status") in ["received", "bounded"]:
 		return result
 	var request: Dictionary = record["request"]
-	if int(request["battle_id"]) != int(battle["id"]):
+	if BattleSystem.canonical(state, int(request["battle_id"])) != int(battle["id"]):
 		return result
 	if record["status"] == "bounded":
 		return {"kind": "hold", "task_id": String(request["id"]), "reason": "Pursuit bound reached: " + String(record["reason"])}

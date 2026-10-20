@@ -89,7 +89,7 @@ static func invalidate(_repo: DataRepository, state: GameState, id: String, reas
 
 static func end_battle(repo: DataRepository, state: GameState, battle_id: int, reason: String) -> void:
 	for id: String in state.battle_orders:
-		if int(state.battle_orders[id]["request"]["battle_id"]) == battle_id:
+		if BattleSystem.canonical(state, int(state.battle_orders[id]["request"]["battle_id"])) == BattleSystem.canonical(state, battle_id):
 			invalidate(repo, state, id, reason)
 
 static func deliver(repo: DataRepository, state: GameState, id: String) -> Dictionary:
