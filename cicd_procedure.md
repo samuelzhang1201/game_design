@@ -4,6 +4,20 @@ Each PR delivers one independently testable step, owned by its implementation se
 
 每个 PR 只有一个可独立验证的小步骤，由实施和唯一 Review 两个 session 负责。Review 修复范围内问题，在当前 HEAD 的全部必需检查通过后直接合并。
 
+## Declared dispatch and PR handoff 显式派工与交接
+
+The Stop hook checks only explicit worktree-local markers in `.superpowers/session-handovers/<source_session_id>.json`, with `status` (`ready` or `handed_off`), `source_session_id` and a nonempty worktree-local `summary_path`. No marker means no intervention. It does not intercept session-creation tools or prove CI, merge or acceptance; Review must inspect actual current-HEAD checks and applicable acceptance before merging.
+
+`kind: "pr_handoff"` declares one implementation → unique Review transfer: `step_id`, `pr_url`, `implementation_session_id`, `review_session_id`, `next_session_id` (the Review), and one authorized `next_task`. Implementation stops after successful handoff. Historical markers without `kind` and existing one-to-one graph records remain compatible.
+
+`kind: "dispatch"` declares a `tasks` array instead of `next_session_id`. Every task contains `step_id`, `dispatcher_session_id` (the source), `dependencies` (step ids), literal repository-relative `owned_files` (files or directory prefixes), `acceptance`, absolute `worktree`, `codex/` `branch`, `implementation_session_id`, `review_session_id` (explicit `null` until assigned), `creation_result` (`{"status":"created","session_id":"<implementation id>"}`), and `status` (`active` or `merged`). A dependency must already be declared `merged` with `accepted: true`; those declarations are bookkeeping, not independent proof. Review may be assigned once; step identity, dispatcher, implementation, scope and creation result cannot be replaced. Replaying the identical declaration is idempotent, not another launch.
+
+Register the complete task in the dispatcher's checkpoint before starting it. Create each target once, record its returned id/result, and validate the final explicit marker. If creation is unknown or pending, reconcile existing tasks/creation results before retrying; such a marker blocks rather than authorizing another creation. A dispatcher may continue other authorized independent steps after registration, but cannot implement or review them. Do not mix a PR handoff with dispatch fields. Subsequent status updates preserve the assigned Review and all immutable fields.
+
+The registry is `codex-handoffs.json` in `git rev-parse --git-common-dir`, shared across linked worktrees. One file lock covers validation and atomic replacement. Independent disjoint steps can coexist; duplicate launch records, active file/directory overlap, shared checkout/branch, owner replacement, unmet dependencies, cycles and historical-session reuse fail closed. The registry preserves old `edges`/`prs` and adds `steps`. It reads no transcript and starts no background loop.
+
+Stop hook 只验证显式记录；派工方先登记完整任务，再记录唯一创建结果。创建结果未知时先核对，不盲目重试。实施→Review 保持一对一；调度者可登记多个无依赖、文件不冲突的步骤，但不参与实现或审查。共享 registry 在锁内检查并原子更新，不代表 CI、合并或验收已经通过。
+
 ## What runs 自动选择
 
 `.github/workflows/tests.yml` runs on PRs against `main` and manual dispatch, without rerunning on merge. `harness-checks` always validates hook behavior, selector behavior, runner failure gates, shell/config syntax and guide caps. Pure guidance/harness changes start no Godot process.

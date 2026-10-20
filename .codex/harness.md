@@ -3,7 +3,7 @@
 ## Scope and ownership
 
 - One session discusses and implements **one small problem / one plan step**. One PR delivers one independently testable result. A label such as P5.2 does not justify a large feature: split oversized steps before implementation. Keep the acceptance short and the owned files explicit; unrelated cleanup, follow-on features and broad refactors become later steps.
-- Each step / PR has exactly two responsible sessions: its implementation session and its unique `<step>-Review` session. They own this same PR through review, necessary fixes and merge. No third session, subagent, coordinator, parallel implementer or nested reviewer may participate in that feature's design, plan, implementation or review. This rule overrides older role/skill advice to delegate.
+- Each step / PR has exactly two responsible sessions: its implementation session and its unique `<step>-Review` session. They own this same PR through review, necessary fixes and merge.
 - Ordinary implementation defaults to **`gpt-6.1-sol` / low**; review stays **Sol / medium**. When creating a fresh implementation session, explicitly pass `model="gpt-6.1-sol"` and `thinking="low"`; subagent defaults alone do not configure a main session. Preserve an already running session's selected model.
 - Escalate only for concrete complexity: unresolved ambiguity or a reproduced hard failure may need Sol / medium; genuinely complex architecture, cross-subsystem invariants or difficult determinism/save reasoning may need Astra / high within the same owner pair. State the reason for escalation; a long test run or many files alone is not a reason. Do not create an extra architect session. Role profiles do not authorize extra agents or changes to permissions/MCP/trust.
 - Requirements already authorized by the owner remain authorized. A roadmap, event inbox or unrelated checkpoint is not permission to expand scope. Resume from the current step's compact checkpoint rather than restarting brainstorming or rereading every guide.
@@ -14,7 +14,7 @@
 - Create the small PR against `main` as soon as the step is implemented and locally checked. Record its step, bounded acceptance, scope, implementation session and unique Review session in the PR description/checkpoint. The PR contains only this step's owned change; do not append the next step to an existing PR or reuse a merged branch/PR.
 - Implementation hands off once to its Review session, then stops. Review reads the diff and connected code, fixes in-scope findings itself on the same branch, and reruns relevant checks on the resulting code state. It does not create a second reviewer or send the work to another implementer. Problems outside the acceptance become a separate future step unless they block this PR's correctness.
 - When independent review is complete and **all checks required for this PR's nature have passed on its current HEAD**, the Review session merges directly to `main` without another permission request. Pending, skipped, absent, failed or timed-out required checks are not success; no inherited timeout/CI exception. If a required check is red, the pair resolves it within this PR before merge. Inspect actual check results and protection rather than assuming settings from docs.
-- Only after merge may Review hand off to the next authorized independent step's implementation session. Rebase/update the next step from the new `main`. Never accumulate several steps to wait for one large integration PR.
+- Start a dependent step only after its prerequisites are merged and accepted. Independent steps with disjoint owned files may proceed concurrently. Each starts from current origin/main in its own worktree and PR. Each step has one dispatch authority; Review and dispatcher must not both create its successor.
 
 ## Checks and context cost
 
@@ -24,10 +24,12 @@
 - Batch independent reads, bound output, and reuse relevant passing checks only for unchanged code/data inputs. Prefer completion events over short polling. No periodic LLM supervisor, repeated no-change commentary, cross-chat broadcast or wakeup of finished sessions. Read only the current scope's guides and spec/plan sections.
 - Give status updates for a new finding, decision, blocker, required user action or meaningful phase change. Do not narrate individual passing tests, script counts or an unchanged wait. For a known long check, announce it once and report its result; answer user questions promptly without adding a separate progress loop.
 
-## Strict one-to-one handoff
+## PR handoff and independent dispatch
 
-Follow `.codex/hooks/task-handover.md`. Each session has at most one predecessor and one fresh successor; no fan-out, fan-in, cycles, forks, resumes or return to an old owner. The implementation → Review edge concerns the same PR; Review → next implementation starts a different PR after merge.
+Follow `.codex/hooks/task-handover.md`. Each PR has one implementation session and one unique Review. Their handoff remains one-to-one.
 
-Before handoff, save a compact **worktree-local** checkpoint with authorization, one step/PR, both owners, checkout/branch/HEAD, owned/dirty files, actual checks/code state, processes, risks and exactly one next task/acceptance/stop condition. A source-specific marker under `.superpowers/session-handovers/` declares readiness. Create the successor once with checkpoint/worktree paths and one task only; after success, record its id, validate/register the edge and stop. An unknown creation outcome must be reconciled before retrying. Shared Git-common-dir registry checks declared edges/PR pairs across linked worktrees; it is not a universal tool-creation interceptor.
+A separate dispatcher may create multiple independent steps after recording each step's dependencies, owned files, acceptance and implementation owner. Dependencies may converge on one step, but that step has one dispatch authority and one implementation owner. Unmet dependencies, overlapping active file ownership, duplicate dispatch, owner replacement and cycles are rejected.
 
-With no authorized next task, record completion and end without a new session. On pause/cancel, do not continue the chain. Without the native compact API, do not claim compaction; the next fresh session reads only its checkpoint and necessary files.
+Save compact worktree-local checkpoints and structured handover records. Reconcile unknown creation results before retrying. Implementation stops after handing its PR to its unique Review; a dispatcher may continue managing other authorized steps without participating in their implementation or review.
+
+Use the Git-common-dir registry to validate declared tasks and ownership across worktrees. Preserve compatible historical records and unchanged-input verification evidence. Stop on user pause; create no empty or unauthorized tasks.
