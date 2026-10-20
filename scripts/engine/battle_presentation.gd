@@ -171,7 +171,9 @@ static func task_view(repo: DataRepository, state: GameState, code: String) -> D
 		for task: String in repo.battle_behaviors:
 			out.tasks.append({"id": task, "label": String(repo.battle_behaviors[task]["label"])})
 		for enemy: String in battle["def" if side == "att" else "att"]:
-			if BattleSystem._can_fight(repo, state, enemy) and not bool(BattleSystem._stored(state, enemy).get("captured", false)):
+			# Remote battlefield membership names a target; only royal observation can filter its live condition.
+			if not local_unit(repo, state, enemy) or (BattleSystem._can_fight(repo, state, enemy) \
+					and not bool(BattleSystem._stored(state, enemy).get("captured", false))):
 				out.targets.append({"code": enemy, "label": String(ArmySystem.regiment(repo, enemy, state).get("label", enemy))})
 		for shape: String in repo.battle_formations:
 			out.formations.append({"id": shape, "label": String(repo.battle_formations[shape]["label"])})
