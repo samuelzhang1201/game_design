@@ -212,6 +212,11 @@ static func deploy_day(repo: DataRepository, state: GameState, battle: Dictionar
 			charge["phase"] = "disengage"
 		var from := BattleSystem._at_m(repo, state, code)
 		var to: Vector2i = targets[code]
+		var action := BattleSystem.unit_action(repo, state, battle, code)
+		if action["kind"] == "attack" and not action.has("pursuit_target") \
+				and BattleRanged.share(repo, state, code) >= int(repo.bal("battle_context_arm_threshold_permille")):
+			var back := maxf(0.0, float(repo.bal("battle_ranged_reach_m") - repo.bal("battle_line_gap_m"))) / 2.0
+			to -= Vector2i((WarFront.facing_vector(int(battle["group_facing"][code])) * back).round())
 		var d := Vector2(to - from)
 		var moved := to if d.length() <= step else from + Vector2i((d.normalized() * step).round())
 		# ponytail: a blocked straight step waits in place; a routed approach round water is later work

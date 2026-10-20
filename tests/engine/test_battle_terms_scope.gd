@@ -21,6 +21,10 @@ func _fixture(merge := true) -> Dictionary:
 		var e: Dictionary = state.foes.get(code, state.regiments.get(code, {}))
 		e["x_m"] = at[code].x
 		e["y_m"] = at[code].y
+		# Isolate agreement/power-share arithmetic from ranged firing eligibility.
+		for arm: String in repo.world_table("military", "unit_types"):
+			state.army_roster[code][arm] = "0"
+		state.army_roster[code]["infantry"] = "40"
 		Personnel.replace(repo, state, code, 40)
 	var term := {"policy": "protect", "scope": "battle", "until_day": 0, "end_condition": "battle_end", "conditions": {}}
 	var b1 := {"id": 1, "att": [f1], "def": [p1], "rounds": 1, "start_day": 5, "town": "",

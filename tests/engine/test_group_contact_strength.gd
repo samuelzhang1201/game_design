@@ -20,6 +20,10 @@ func _fixture(gap_m: int) -> Dictionary:
 	state.battles = [battle]
 	BattleFormation.ensure(battle)
 	battle["formations"]["att"]["current"] = "double_rank"
+	# This fixture isolates melee contact; mixed/ranged output has its own geometry tests.
+	for arm: String in repo.world_table("military", "unit_types"):
+		state.army_roster[a][arm] = "0"
+	state.army_roster[a]["infantry"] = "120"
 	Personnel.replace(repo, state, a, 120)
 	BattleGroups.refresh(repo, state, battle)
 	return {"repo": repo, "state": state, "a": a, "enemy": enemy, "battle": battle}
