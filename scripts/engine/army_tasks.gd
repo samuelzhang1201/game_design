@@ -64,8 +64,9 @@ static func preview(repo: DataRepository, state: GameState, realm: String, task:
 		return _refuse(repo, "bad_radius")
 	var center := Vector2i(int(task.get("center_x_m", 0)), int(task.get("center_y_m", 0)))
 	var k := ArmySystem.metres_per_pack_px(repo)
-	if center.x < 0 or center.y < 0 or center.x > int(float(repo.map_info.get("width", "0"))) * k \
-			or center.y > int(float(repo.map_info.get("height", "0"))) * k:
+	# the map is half-open: the far edge itself is already off it
+	if center.x < 0 or center.y < 0 or center.x >= int(float(repo.map_info.get("width", "0"))) * k \
+			or center.y >= int(float(repo.map_info.get("height", "0"))) * k:
 		return _refuse(repo, "off_map")
 	var policy := String(task.get("encounter_policy", ""))
 	if policy == "":
