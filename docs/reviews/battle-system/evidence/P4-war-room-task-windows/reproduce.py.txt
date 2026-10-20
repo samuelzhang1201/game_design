@@ -1,0 +1,8 @@
+from pathlib import Path
+p = Path('.superpowers/p4-war-room-task-windows')
+p.mkdir(parents=True, exist_ok=True)
+e = Path('docs/reviews/battle-system/evidence/P4-war-room-task-windows')
+s = Path('tools/snapshot_screen.gd').read_text().replace('\t_frames += 1\n', '\t_frames += 1\n\t_p4_task_fixture()\n', 1)
+s = s.replace('\tGameRoot.stepwise_overlays = false', '\tprint("P4_PREWARM begin")\n\tfor path: String in BootLoads.TABLES + GameRoot.OVERLAY_SCENES:\n\t\t_held.append(load(path))\n\tprint("P4_PREWARM complete")\n\tGameRoot.stepwise_overlays = false', 1)
+(p / 'capture.gd').write_text(s + '\n' + (e / 'fixture.gd.txt').read_text())
+(p / 'capture.tscn').write_text('[gd_scene load_steps=2 format=3]\n[ext_resource type="Script" path="res://.superpowers/p4-war-room-task-windows/capture.gd" id="1"]\n[node name="Snapshot" type="Node"]\nscript = ExtResource("1")\n')

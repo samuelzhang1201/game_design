@@ -1,0 +1,162 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Pro (Apple9)
+
+P4_PREWARM begin
+P4_PREWARM complete
+WARNING: Map3DWorldLoader: the bake tables changed since res://scenes/map3d/worlds/beria.tscn was built — rebuild to see them
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] warn_once (res://scripts/map3d/map3d_world_loader.gd:176)
+         [1] status (res://scripts/map3d/map3d_world_loader.gd:104)
+         [2] lend (res://scripts/map3d/map3d_world_cache.gd:29)
+         [3] _load_world (res://scripts/map3d/map3d_view.gd:227)
+         [4] load_step (res://scripts/map3d/map3d_view.gd:218)
+         [5] _load (res://scripts/map3d/map3d_view.gd:208)
+         [6] activate (res://scripts/map3d/map3d_view.gd:186)
+         [7] set_map3d_view (res://scripts/ui/court_screen.gd:194)
+         [8] _sync_map_view (res://scripts/ui/game_root.gd:1272)
+         [9] _switch_to (res://scripts/ui/game_root.gd:1366)
+         [10] _process (res://.superpowers/p4-war-room-task-windows/capture.gd:973)
+WARNING: instance_reset_physics_interpolation() is deprecated.
+     at: _instance_reset_physics_interpolation_bind_compat_104269 (servers/rendering/rendering_server.compat.inc:62)
+     GDScript backtrace (most recent call first):
+         [0] _load_world (res://scripts/map3d/map3d_view.gd:242)
+         [1] load_step (res://scripts/map3d/map3d_view.gd:218)
+         [2] _load (res://scripts/map3d/map3d_view.gd:208)
+         [3] activate (res://scripts/map3d/map3d_view.gd:186)
+         [4] set_map3d_view (res://scripts/ui/court_screen.gd:194)
+         [5] _sync_map_view (res://scripts/ui/game_root.gd:1272)
+         [6] _switch_to (res://scripts/ui/game_root.gd:1366)
+         [7] _process (res://.superpowers/p4-war-room-task-windows/capture.gd:973)
+P4_SETUP {"battle_id":1,"current":{},"formations":[{"id":"line","label":"Extended line"},{"id":"wedge","label":"Wedge"},{"id":"diamond","label":"Diamond guard"},{"id":"double_rank","label":"Compact double rank"}],"pending":[],"place":"Rothbridbu Manor (Rothbridbu)","refused":{},"targets":[{"code":"corwyn_10th_lympsdon_regiment_archers","label":"10th (Lympsdon) Archers"}],"tasks":[{"id":"charge","label":"Frontal charge"},{"id":"flank","label":"Flank attack"},{"id":"defend","label":"Steady defence"},{"id":"guard_flank","label":"Flank defence"},{"id":"advance","label":"Steady advance"},{"id":"retreat","label":"Withdraw"},{"id":"pursue","label":"Pursuit"}]}
+war sync (map): day=1 share=0.000 clock=0 held=false
+  kelvarn_10th_rothbridbu_regiment_archers engine=(1379.29, 676.69) map=(1379.29, 676.69) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_10th_rothbridbu_regiment_foot engine=(1370.49, 676.69) map=(1370.49, 676.69) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_10th_rothbridbu_regiment_horse_1 engine=(1383.69, 676.69) map=(1383.69, 676.69) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_10th_rothbridbu_regiment_horse_2 engine=(1381.49, 672.879) map=(1381.49, 672.8791) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_11th_walbover_archers_archers engine=(1225.59, 601.05) map=(1225.59, 601.05) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_12th_garestedmin_archers_archers engine=(1191.31, 598.38) map=(1191.31, 598.38) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_archers engine=(1256.0, 536.23) map=(1256.0, 536.23) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_foot_1 engine=(1247.2, 536.23) map=(1247.2, 536.23) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_foot_2 engine=(1249.4, 532.419) map=(1249.4, 532.419) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_horse_1 engine=(1260.4, 536.23) map=(1260.4, 536.23) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_horse_2 engine=(1258.2, 532.419) map=(1258.2, 532.419) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_horse_3 engine=(1253.8, 524.798) map=(1253.8, 524.798) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_fleet engine=(1215.57, 607.76) map=<null> room=<null> map-engine=-1.00 px room-map=-
+  kelvarn_2nd_fleet engine=(1381.9, 484.94) map=<null> room=<null> map-engine=-1.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_archers engine=(1100.34, 487.66) map=(1100.34, 487.66) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_foot engine=(1091.54, 487.66) map=(1091.54, 487.66) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_1 engine=(1104.74, 487.66) map=(1104.74, 487.66) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_2 engine=(1102.54, 483.849) map=(1102.54, 483.849) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_3 engine=(1098.14, 476.228) map=(1098.14, 476.228) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_4 engine=(1093.74, 476.228) map=(1093.74, 476.228) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_5 engine=(1089.34, 476.228) map=(1089.34, 476.228) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_3rd_framp_regiment_archers engine=(1178.95, 695.18) map=(1178.95, 695.18) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_3rd_framp_regiment_foot engine=(1170.15, 695.18) map=(1170.15, 695.18) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_3rd_framp_regiment_horse_1 engine=(1183.35, 695.18) map=(1183.35, 695.18) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_3rd_framp_regiment_horse_2 engine=(1181.15, 691.369) map=(1181.15, 691.369) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_archers engine=(1106.56, 603.92) map=(1106.56, 603.92) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_foot engine=(1097.76, 603.92) map=(1097.76, 603.92) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_horse_1 engine=(1110.96, 603.92) map=(1110.96, 603.92) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_horse_2 engine=(1108.76, 600.109) map=(1108.76, 600.109) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_horse_3 engine=(1104.36, 592.488) map=(1104.36, 592.488) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_horse_4 engine=(1099.96, 592.488) map=(1099.96, 592.488) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_5th_penkburgh_regiment_archers engine=(1207.85, 486.5) map=(1207.85, 486.5) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_5th_penkburgh_regiment_foot engine=(1199.05, 486.5) map=(1199.05, 486.5) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_5th_penkburgh_regiment_horse_1 engine=(1212.25, 486.5) map=(1212.25, 486.5) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_5th_penkburgh_regiment_horse_2 engine=(1210.05, 482.689) map=(1210.05, 482.689) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_archers engine=(1223.39, 597.239) map=(1223.39, 597.239) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_foot engine=(1216.79, 601.05) map=(1216.79, 601.05) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_horse_1 engine=(1229.99, 601.05) map=(1229.99, 601.05) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_horse_2 engine=(1227.79, 597.239) map=(1227.79, 597.239) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_horse_3 engine=(1223.39, 589.618) map=(1223.39, 589.618) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_archers engine=(1384.35, 483.39) map=(1384.35, 483.39) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_foot engine=(1375.55, 483.39) map=(1375.55, 483.39) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_horse_1 engine=(1388.75, 483.39) map=(1388.75, 483.39) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_horse_2 engine=(1386.55, 479.579) map=(1386.55, 479.579) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_horse_3 engine=(1382.15, 471.958) map=(1382.15, 471.958) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_archers engine=(1250.26, 638.36) map=(1250.26, 638.36) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_foot engine=(1241.46, 638.36) map=(1241.46, 638.36) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_horse_1 engine=(1254.66, 638.36) map=(1254.66, 638.36) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_horse_2 engine=(1252.46, 634.549) map=(1252.46, 634.549) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_horse_3 engine=(1248.06, 626.928) map=(1248.06, 626.928) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_archers engine=(1348.94, 411.89) map=(1348.94, 411.89) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_foot engine=(1340.14, 411.89) map=(1340.14, 411.89) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_horse_1 engine=(1353.34, 411.89) map=(1353.34, 411.89) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_horse_2 engine=(1351.14, 408.079) map=(1351.14, 408.079) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_horse_3 engine=(1346.74, 400.458) map=(1346.74, 400.458) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_royal_train engine=(1218.99, 597.239) map=(1218.99, 597.239) room=<null> map-engine=0.00 px room-map=-
+war: open=true sheet=188
+war: pieces=["kelvarn_10th_rothbridbu_regiment_archers@231", "kelvarn_10th_rothbridbu_regiment_foot@231", "kelvarn_10th_rothbridbu_regiment_horse_1@231", "kelvarn_10th_rothbridbu_regiment_horse_2@231", "kelvarn_11th_walbover_archers_archers@188", "kelvarn_12th_garestedmin_archers_archers@187", "kelvarn_1st_axbrigh_regiment_archers@165", "kelvarn_1st_axbrigh_regiment_foot_1@165", "kelvarn_1st_axbrigh_regiment_foot_2@165", "kelvarn_1st_axbrigh_regiment_horse_1@165", "kelvarn_1st_axbrigh_regiment_horse_2@165", "kelvarn_1st_axbrigh_regiment_horse_3@165", "kelvarn_1st_fleet@188", "kelvarn_2nd_fleet@145", "kelvarn_2nd_somerlis_regiment_archers@141", "kelvarn_2nd_somerlis_regiment_foot@141", "kelvarn_2nd_somerlis_regiment_horse_1@141", "kelvarn_2nd_somerlis_regiment_horse_2@141", "kelvarn_2nd_somerlis_regiment_horse_3@141", "kelvarn_2nd_somerlis_regiment_horse_4@141", "kelvarn_2nd_somerlis_regiment_horse_5@141", "kelvarn_3rd_framp_regiment_archers@228", "kelvarn_3rd_framp_regiment_foot@228", "kelvarn_3rd_framp_regiment_horse_1@228", "kelvarn_3rd_framp_regiment_horse_2@228", "kelvarn_4th_crafthamia_regiment_archers@186", "kelvarn_4th_crafthamia_regiment_foot@186", "kelvarn_4th_crafthamia_regiment_horse_1@186", "kelvarn_4th_crafthamia_regiment_horse_2@186", "kelvarn_4th_crafthamia_regiment_horse_3@186", "kelvarn_4th_crafthamia_regiment_horse_4@186", "kelvarn_5th_penkburgh_regiment_archers@142", "kelvarn_5th_penkburgh_regiment_foot@142", "kelvarn_5th_penkburgh_regiment_horse_1@143", "kelvarn_5th_penkburgh_regiment_horse_2@143", "kelvarn_6th_walbover_regiment_archers@188", "kelvarn_6th_walbover_regiment_foot@188", "kelvarn_6th_walbover_regiment_horse_1@188", "kelvarn_6th_walbover_regiment_horse_2@188", "kelvarn_6th_walbover_regiment_horse_3@188", "kelvarn_7th_rothin_regiment_archers@145", "kelvarn_7th_rothin_regiment_foot@145", "kelvarn_7th_rothin_regiment_horse_1@145", "kelvarn_7th_rothin_regiment_horse_2@145", "kelvarn_7th_rothin_regiment_horse_3@145", "kelvarn_8th_canceswest_regiment_archers@210", "kelvarn_8th_canceswest_regiment_foot@210", "kelvarn_8th_canceswest_regiment_horse_1@210", "kelvarn_8th_canceswest_regiment_horse_2@210", "kelvarn_8th_canceswest_regiment_horse_3@210", "kelvarn_9th_yeorough_regiment_archers@99", "kelvarn_9th_yeorough_regiment_foot@99", "kelvarn_9th_yeorough_regiment_horse_1@100", "kelvarn_9th_yeorough_regiment_horse_2@100", "kelvarn_9th_yeorough_regiment_horse_3@99", "kelvarn_royal_train@188"]
+war: swapping to sheet 231
+war: leant to 1.50 m
+war: piece=kelvarn_10th_rothbridbu_regiment_archers sheet=231 at=(628.0, 342.3333) selected=kelvarn_10th_rothbridbu_regiment_archers sel=["kelvarn_10th_rothbridbu_regiment_archers"]
+P4_QUOTE {"action_code":"BATTLE_TASK","courier_gold":2,"filing_gold":1,"local":false,"params":{"battle_id":1,"formation":"","regiment":"kelvarn_10th_rothbridbu_regiment_archers","request_id":"task-ui:1:kelvarn_10th_rothbridbu_regiment_archers:1","target_unit":"","task":"charge"},"reason":""}
+P4_SEND {"kelvarn_10th_rothbridbu_regiment_archers":{"current_id":"","issued_sequence":1,"orders":{"task-ui:1:kelvarn_10th_rothbridbu_regiment_archers:1":{"action_outcome":{"action_code":"BATTLE_TASK","drift":[{"character_id":"char_marshal","delta":6,"reason":"Assign a unit task (approves, militarism)"},{"character_id":"char_steward","delta":-2,"reason":"Assign a unit task (opposes, militarism)"},{"character_id":"char_chaplain","delta":-3,"reason":"Assign a unit task (opposes, militarism)"}],"effects":[{"delta":-2,"metric":"treasury","reason":"a courier rides for 10th (Rothbridbu) Archers"},{"delta":0,"metric":"army","reason":"A courier rides for 10th (Rothbridbu) Archers with a unit task to charge; about 3 days"},{"delta":-1,"kind":"metric","metric":"treasury","reason":"the marshal prepares a unit task warrant"}],"notes":"Assign a unit task","ok":true,"params":{"battle_id":1,"formation":"","regiment":"kelvarn_10th_rothbridbu_regiment_archers","request_id":"task-ui:1:kelvarn_10th_rothbridbu_regiment_archers:1","target_unit":"","task":"charge"},"target":""},"action_params":{"battle_id":1,"formation":"","regiment":"kelvarn_10th_rothbridbu_regiment_archers","request_id":"task-ui:1:kelvarn_10th_rothbridbu_regiment_archers:1","target_unit":"","task":"charge"},"history":[{"day":1,"reason":"The unit task awaits actual delivery.","source":"player","status":"pending"}],"reason":"The unit task awaits actual delivery.","request":{"battle_id":1,"formation":"","id":"task-ui:1:kelvarn_10th_rothbridbu_regiment_archers:1","issuer":"","max_route_m":0,"region":"","source":"player","target_unit":"","task":"charge","unit":"kelvarn_10th_rothbridbu_regiment_archers"},"sequence":1,"status":"pending"}},"player_received_sequence":0,"received_sequence":0}}
+P4_DELIVERY [{"courier":1,"regiment":"kelvarn_10th_rothbridbu_regiment_archers","town":"","type":"delivered","weather":""}]
+P4_FINAL {"quote":{"action_code":"BATTLE_TASK","courier_gold":2,"filing_gold":1,"local":false,"params":{"battle_id":1,"formation":"","regiment":"kelvarn_10th_rothbridbu_regiment_archers","request_id":"task-ui:1:kelvarn_10th_rothbridbu_regiment_archers:2","target_unit":"","task":"charge"},"reason":""},"quote_text":"1 gold filing + 2 gold courier. Takes effect when the courier arrives.","send_disabled":false,"status":"Received: Frontal charge.","view":{"battle_id":1,"current":{"formation":"","id":"task-ui:1:kelvarn_10th_rothbridbu_regiment_archers:1","reason":"The unit receives its lawful primary task.","sequence":1,"status":"received","target":"","task":"Frontal charge"},"formations":[{"id":"line","label":"Extended line"},{"id":"wedge","label":"Wedge"},{"id":"diamond","label":"Diamond guard"},{"id":"double_rank","label":"Compact double rank"}],"pending":[],"place":"Rothbridbu Manor (Rothbridbu)","refused":{},"targets":[{"code":"corwyn_10th_lympsdon_regiment_archers","label":"10th (Lympsdon) Archers"}],"tasks":[{"id":"charge","label":"Frontal charge"},{"id":"flank","label":"Flank attack"},{"id":"defend","label":"Steady defence"},{"id":"guard_flank","label":"Flank defence"},{"id":"advance","label":"Steady advance"},{"id":"retreat","label":"Withdraw"},{"id":"pursue","label":"Pursuit"}]}}
+war sync (room): day=1 share=0.000 clock=0 held=true
+  kelvarn_10th_rothbridbu_regiment_archers engine=(1379.29, 676.69) map=(1379.29, 676.69) room=(1379.29, 676.69) map-engine=0.00 px room-map=0.000 px
+  kelvarn_10th_rothbridbu_regiment_foot engine=(1370.49, 676.69) map=(1370.49, 676.69) room=(1370.49, 676.69) map-engine=0.00 px room-map=0.000 px
+  kelvarn_10th_rothbridbu_regiment_horse_1 engine=(1383.69, 676.69) map=(1383.69, 676.69) room=(1383.69, 676.69) map-engine=0.00 px room-map=0.000 px
+  kelvarn_10th_rothbridbu_regiment_horse_2 engine=(1381.49, 672.879) map=(1381.49, 672.8791) room=(1381.49, 672.8791) map-engine=0.00 px room-map=0.000 px
+  kelvarn_11th_walbover_archers_archers engine=(1225.59, 601.05) map=(1225.59, 601.05) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_12th_garestedmin_archers_archers engine=(1191.31, 598.38) map=(1191.31, 598.38) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_archers engine=(1256.0, 536.23) map=(1256.0, 536.23) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_foot_1 engine=(1247.2, 536.23) map=(1247.2, 536.23) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_foot_2 engine=(1249.4, 532.419) map=(1249.4, 532.419) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_horse_1 engine=(1260.4, 536.23) map=(1260.4, 536.23) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_horse_2 engine=(1258.2, 532.419) map=(1258.2, 532.419) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_axbrigh_regiment_horse_3 engine=(1253.8, 524.798) map=(1253.8, 524.798) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_1st_fleet engine=(1215.57, 607.76) map=<null> room=<null> map-engine=-1.00 px room-map=-
+  kelvarn_2nd_fleet engine=(1381.9, 484.94) map=<null> room=<null> map-engine=-1.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_archers engine=(1100.34, 487.66) map=(1100.34, 487.66) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_foot engine=(1091.54, 487.66) map=(1091.54, 487.66) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_1 engine=(1104.74, 487.66) map=(1104.74, 487.66) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_2 engine=(1102.54, 483.849) map=(1102.54, 483.849) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_3 engine=(1098.14, 476.228) map=(1098.14, 476.228) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_4 engine=(1093.74, 476.228) map=(1093.74, 476.228) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_2nd_somerlis_regiment_horse_5 engine=(1089.34, 476.228) map=(1089.34, 476.228) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_3rd_framp_regiment_archers engine=(1178.95, 695.18) map=(1178.95, 695.18) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_3rd_framp_regiment_foot engine=(1170.15, 695.18) map=(1170.15, 695.18) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_3rd_framp_regiment_horse_1 engine=(1183.35, 695.18) map=(1183.35, 695.18) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_3rd_framp_regiment_horse_2 engine=(1181.15, 691.369) map=(1181.15, 691.369) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_archers engine=(1106.56, 603.92) map=(1106.56, 603.92) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_foot engine=(1097.76, 603.92) map=(1097.76, 603.92) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_horse_1 engine=(1110.96, 603.92) map=(1110.96, 603.92) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_horse_2 engine=(1108.76, 600.109) map=(1108.76, 600.109) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_horse_3 engine=(1104.36, 592.488) map=(1104.36, 592.488) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_4th_crafthamia_regiment_horse_4 engine=(1099.96, 592.488) map=(1099.96, 592.488) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_5th_penkburgh_regiment_archers engine=(1207.85, 486.5) map=(1207.85, 486.5) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_5th_penkburgh_regiment_foot engine=(1199.05, 486.5) map=(1199.05, 486.5) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_5th_penkburgh_regiment_horse_1 engine=(1212.25, 486.5) map=(1212.25, 486.5) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_5th_penkburgh_regiment_horse_2 engine=(1210.05, 482.689) map=(1210.05, 482.689) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_archers engine=(1223.39, 597.239) map=(1223.39, 597.239) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_foot engine=(1216.79, 601.05) map=(1216.79, 601.05) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_horse_1 engine=(1229.99, 601.05) map=(1229.99, 601.05) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_horse_2 engine=(1227.79, 597.239) map=(1227.79, 597.239) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_6th_walbover_regiment_horse_3 engine=(1223.39, 589.618) map=(1223.39, 589.618) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_archers engine=(1384.35, 483.39) map=(1384.35, 483.39) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_foot engine=(1375.55, 483.39) map=(1375.55, 483.39) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_horse_1 engine=(1388.75, 483.39) map=(1388.75, 483.39) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_horse_2 engine=(1386.55, 479.579) map=(1386.55, 479.579) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_7th_rothin_regiment_horse_3 engine=(1382.15, 471.958) map=(1382.15, 471.958) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_archers engine=(1250.26, 638.36) map=(1250.26, 638.36) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_foot engine=(1241.46, 638.36) map=(1241.46, 638.36) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_horse_1 engine=(1254.66, 638.36) map=(1254.66, 638.36) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_horse_2 engine=(1252.46, 634.549) map=(1252.46, 634.549) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_8th_canceswest_regiment_horse_3 engine=(1248.06, 626.928) map=(1248.06, 626.928) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_archers engine=(1348.94, 411.89) map=(1348.94, 411.89) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_foot engine=(1340.14, 411.89) map=(1340.14, 411.89) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_horse_1 engine=(1353.34, 411.89) map=(1353.34, 411.89) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_horse_2 engine=(1351.14, 408.079) map=(1351.14, 408.079) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_9th_yeorough_regiment_horse_3 engine=(1346.74, 400.458) map=(1346.74, 400.458) room=<null> map-engine=0.00 px room-map=-
+  kelvarn_royal_train engine=(1218.99, 597.239) map=(1218.99, 597.239) room=<null> map-engine=0.00 px room-map=-
+moment war at frame 110 (day 1)
+state at shot: day=1 clock=0 pending_event=false couriers=0
+shot ok at frame 116 -> res://docs/reviews/battle-system/evidence/P4-war-room-task-windows/delivered-1920.png
+snapshot ok -> res://docs/reviews/battle-system/evidence/P4-war-room-task-windows/delivered-1920.png (root, 1920x1200 window, filter 3)
+WARNING: 9 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 4 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

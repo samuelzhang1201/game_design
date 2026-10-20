@@ -1,0 +1,24 @@
+import hashlib, json
+from pathlib import Path
+from PIL import Image
+p = Path('docs/reviews/battle-system/evidence/P4-war-room-task-windows')
+results = json.loads((p/'capture-results.json').read_text())
+assert len(results) == 13, len(results)
+for row in results:
+ name = row['name']; log = (p/(name+'.log')).read_text()
+ assert row['exit'] == 0 and 'snapshot ok' in log and 'SCRIPT ERROR' not in log and 'Element limit reached' not in log and 'Parameter \"mem\" is null' not in log, name
+ assert 'selected=' in log and 'sel=["' in log, name
+ value = json.loads(next(s[len('P4_FINAL '):] for s in log.splitlines() if s.startswith('P4_FINAL ')))
+ assert value['view']['tasks'] and value['view']['targets'], name
+ mode = name.split('-')[0]
+ if mode == 'pending': assert value['view']['pending'] and 'Pending:' in value['status'], name
+ if mode in ['delivered','local']:
+  assert value['view']['current'] and 'Received:' in value['status'], name
+  assert 'couriers=0' in next(s for s in log.splitlines() if s.startswith('state at shot:')), name
+ if mode in ['poor','law']: assert value['send_disabled'] and value['quote']['reason'], name
+ if mode in ['tasks','targets','formations']: assert 'P4_POPUP ' + mode + ' open=true' in log, name
+ expected = (1280,720) if name.endswith('1280') else (1920,1200)
+ assert Image.open(p/(name+'.png')).size == expected, name
+for name, sha in json.loads((p/'frozen-inputs.json').read_text())['inputs'].items():
+ assert hashlib.sha256(Path(name).read_bytes()).hexdigest() == sha, name
+print('13 real-window captures, states, dimensions and frozen input hashes verified')

@@ -1,0 +1,16 @@
+import os, subprocess, json
+from pathlib import Path
+out = Path('docs/reviews/battle-system/evidence/P4-war-room-task-windows')
+cases = [('base','1920x1200'),('base','1280x720'),('tasks','1920x1200'),('targets','1920x1200'),('formations','1920x1200'),('poor','1920x1200'),('poor','1280x720'),('law','1920x1200'),('pending','1920x1200'),('pending','1280x720'),('delivered','1920x1200'),('delivered','1280x720'),('local','1920x1200')]
+results = json.loads((out/'capture-results.json').read_text()) if (out/'capture-results.json').exists() else []
+for mode, size in cases:
+ name = mode + '-' + size.split('x')[0]
+ if any(r['name'] == name for r in results): continue
+ cmd = ['/Users/samuelzhang/game_design-wt/godot_lock.sh','python3','tools/run_with_timeout.py','120','/Applications/Godot.app/Contents/MacOS/Godot','--path','.', 'res://.superpowers/p4-war-room-task-windows/capture.tscn','--','--screen','root','--quiet','--battle-case','field','--war-room','--war-zoom','1.5','--seed','42','--resolution',size,'--shot-on','war','--out','res://' + str(out / (name+'.png'))]
+ with (out / (name+'.log')).open('w') as log:
+  result = subprocess.run(cmd, env={**os.environ,'P4_CASE':mode},stdout=log,stderr=subprocess.STDOUT)
+ text = (out/(name+'.log')).read_text()
+ assert result.returncode == 0 and 'snapshot ok' in text and 'SCRIPT ERROR' not in text, (name,result.returncode)
+ results.append({'name':name,'command':cmd,'environment':{'P4_CASE':mode},'exit':result.returncode})
+ (out/'capture-results.json').write_text(json.dumps(results,indent=2)+'\n')
+ print(name, 'captured', flush=True)

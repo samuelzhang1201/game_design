@@ -1,0 +1,4 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Pro (Apple9)
+
+FATAL: command timed out after 120s: ['/Applications/Godot.app/Contents/MacOS/Godot', '--path', '.', 'res://.superpowers/p4-war-room-task-windows/capture.tscn', '--', '--screen', 'root', '--quiet', '--battle-case', 'field', '--war-room', '--war-zoom', '1.5', '--seed', '42', '--resolution', '1280x720', '--shot-on', 'war', '--out', 'res://docs/reviews/battle-system/evidence/P4-war-room-task-windows/base-1280.png']

@@ -1,0 +1,7 @@
+python3 -m unittest discover -s .codex/hooks -p 'test_*.py'
+python3 tools/test_select_gut_tests.py
+python3 tools/test_run_tests.py
+python3 tools/test_run_with_timeout.py
+sh -n run_tests.sh
+bash -n .codex/hooks/session-start.sh
+# JSON/TOML syntax and guide-size assertions: exact workflow tests.yml harness-checks script.
