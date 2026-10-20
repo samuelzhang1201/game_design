@@ -199,7 +199,8 @@ def record_dispatch(graph, data):
                          other['dispatcher_session_id']} or task['dispatcher_session_id'] in {
                              other['implementation_session_id'], other['review_session_id']}:
                 raise ValueError('session already owns another step or dispatch role')
-            if task['worktree'] == other['worktree'] or task['branch'] == other['branch']:
+            if (Path(task['worktree']).resolve() == Path(other['worktree']).resolve() or
+                    task['branch'] == other['branch']):
                 raise ValueError('steps require separate worktrees and branches')
             if task['status'] == 'active' and other['status'] == 'active' and any(
                     a == b or a.startswith(b+'/') or b.startswith(a+'/')
@@ -250,8 +251,8 @@ def respond(event):
         except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
             return {'decision': 'block', 'reason': str(error)}
         return {}
-    if kind == 'pr_handoff' and not data.get('pr_url'):
-        return {'decision': 'block', 'reason': 'pr_handoff requires pr_url and its owner pair'}
+    if kind == 'pr_handoff' and (not data.get('pr_url') or not valid_session(data.get('next_session_id'))):
+        return {'decision': 'block', 'reason': 'pr_handoff requires pr_url, its owner pair and one recipient'}
     if any(k in data for k in ['next_session_ids', 'predecessor_session_ids']):
         return {"decision": "block", "reason": "handover 只允许一对一，禁止 session 列表"}
     if not data.get("next_task") and not data.get('next_session_id'):

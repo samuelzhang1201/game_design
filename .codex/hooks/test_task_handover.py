@@ -183,6 +183,20 @@ class HandoverHookTests(unittest.TestCase):
         self.assertEqual(self.handoff('review-a','third',**pair)['decision'], 'block')
         changed = dict(self.task(), review_session_id='other-review')
         self.assertEqual(self.dispatch([changed])['decision'], 'block')
+    def test_explicit_pr_handoff_requires_recipient_even_without_next_task(self):
+        self.marker.update(kind='pr_handoff', pr_url='https://example.com/pull/1',
+                           step_id='a', implementation_session_id='old',
+                           review_session_id='review', next_task='')
+        self.save()
+        self.assertEqual(hook.respond(self.event).get('decision'), 'block')
+    def test_dispatch_rejects_worktree_path_aliases(self):
+        self.assertEqual(self.dispatch([self.task()]), {})
+        alias = self.root / 'alias'
+        (self.root / 'a').mkdir()
+        alias.symlink_to(self.root / 'a', target_is_directory=True)
+        for worktree in [str(self.root / 'a')+'/.', str(alias)]:
+            task = dict(self.task('b', 'worker-b', ['tools/b.py']), worktree=worktree)
+            self.assertEqual(self.dispatch([task]).get('decision'), 'block')
     def test_dispatch_cannot_reuse_historical_session(self):
         self.assertEqual(self.handoff('former','child'), {})
         self.assertEqual(self.dispatch([self.task(owner='former')])['decision'], 'block')
