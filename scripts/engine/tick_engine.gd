@@ -134,6 +134,7 @@ func _resolve_phase(state: GameState, tx: Dictionary, phase: String) -> Dictiona
 		"MARCH_ORDERS_AND_ROUTE_SETUP":
 			ArmySystem.ensure(data, state)
 			BattleTaskSystem.track_day(data, state)
+			ArmyTasks.step_day(data, state)
 			var moving: Array = []
 			var budgets: Dictionary = {}
 			var march_entries: Dictionary = {}
