@@ -1,0 +1,34 @@
+func _p4_fixture() -> void:
+	if _frames == 26 and OS.get_environment("P4_EVENT") != "":
+		var battle: Dictionary = Game.state.battles[0]
+		var code := String(battle.att[0])
+		if not Game.state.regiments.has(code): code = String(battle.def[0])
+		Game.state.regiments[code].morale = 35
+		Game.state.king_state.x_m = int(battle.place_x_m)
+		Game.state.king_state.y_m = int(battle.place_y_m)
+		Game.data.battle_events = {"ev_31": Game.data.battle_events.ev_31}
+		Game.data.battle_events.ev_31.chance_permille = 1000
+		Game.data.battle_events.ev_31.weight = 100
+		Game.state.battle_events.clear()
+		battle["event_checks"] = {}
+		var result := BattleEvents.offer(Game.data, Game.state, int(battle.id))
+		assert(result.status == "blocked", str(result))
+		Game.state.day_resolution.pending_decision = result.decision
+		if OS.get_environment("P4_EVENT") == "poor": Game.state.metrics.treasury = 0
+		Game.state_changed.emit()
+		print("P4_EVENT_INPUT ", JSON.stringify(result))
+		print("P4_EVENT_VIEW ", JSON.stringify(Game.battle_view().decision))
+		_root._show_battle_decision(result.decision)
+	if _frames >= 35 and _frames <= 50 and OS.get_environment("P4_SCROLL") == "1":
+		var scroll: Control = _root.find_child("ClauseScroll", true, false)
+		var point := scroll.get_global_transform_with_canvas() * (scroll.size * 0.5)
+		var move := InputEventMouseMotion.new()
+		move.position = point
+		get_viewport().push_input(move, true)
+		var wheel := InputEventMouseButton.new()
+		wheel.position = move.position
+		wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+		wheel.pressed = true
+		get_viewport().push_input(wheel, true)
+	if _frames == 55 and OS.get_environment("P4_SCROLL") == "1":
+		print("P4_SCROLL ", _root.find_child("ClauseScroll", true, false).get("scroll_vertical"), " / ", (_root.find_child("ClauseScroll", true, false) as ScrollContainer).get_v_scroll_bar().max_value)

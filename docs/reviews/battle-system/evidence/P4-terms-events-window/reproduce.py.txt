@@ -1,0 +1,9 @@
+# Run from the checkout root at the recorded source commit.
+from pathlib import Path
+base = Path('.superpowers/p4-terms-events-window')
+base.mkdir(parents=True, exist_ok=True)
+evidence = Path('docs/reviews/battle-system/evidence/P4-terms-events-window')
+source = Path('tools/snapshot_screen.gd').read_text()
+source = source.replace('\t_frames += 1\n', '\t_frames += 1\n\t_p4_fixture()\n', 1)
+(base / 'capture.gd').write_text(source + '\n\n' + (evidence / 'fixture.gd.txt').read_text())
+(base / 'capture.tscn').write_text((evidence / 'capture.tscn.txt').read_text())

@@ -1,0 +1,35 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M5 Pro (Apple9)
+
+WARNING: Map3DWorldLoader: the bake tables changed since res://scenes/map3d/worlds/beria.tscn was built — rebuild to see them
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] warn_once (res://scripts/map3d/map3d_world_loader.gd:176)
+         [1] status (res://scripts/map3d/map3d_world_loader.gd:104)
+         [2] lend (res://scripts/map3d/map3d_world_cache.gd:29)
+         [3] _load_world (res://scripts/map3d/map3d_view.gd:227)
+         [4] load_step (res://scripts/map3d/map3d_view.gd:218)
+         [5] _load (res://scripts/map3d/map3d_view.gd:208)
+         [6] activate (res://scripts/map3d/map3d_view.gd:186)
+         [7] set_map3d_view (res://scripts/ui/court_screen.gd:194)
+         [8] _sync_map_view (res://scripts/ui/game_root.gd:1272)
+         [9] _switch_to (res://scripts/ui/game_root.gd:1366)
+         [10] _process (res://.superpowers/p4-terms-events-window/capture.gd:969)
+WARNING: instance_reset_physics_interpolation() is deprecated.
+     at: _instance_reset_physics_interpolation_bind_compat_104269 (servers/rendering/rendering_server.compat.inc:62)
+     GDScript backtrace (most recent call first):
+         [0] _load_world (res://scripts/map3d/map3d_view.gd:242)
+         [1] load_step (res://scripts/map3d/map3d_view.gd:218)
+         [2] _load (res://scripts/map3d/map3d_view.gd:208)
+         [3] activate (res://scripts/map3d/map3d_view.gd:186)
+         [4] set_map3d_view (res://scripts/ui/court_screen.gd:194)
+         [5] _sync_map_view (res://scripts/ui/game_root.gd:1272)
+         [6] _switch_to (res://scripts/ui/game_root.gd:1366)
+         [7] _process (res://.superpowers/p4-terms-events-window/capture.gd:969)
+P4_EVENT_INPUT {"decision":{"authority":"king","battle_id":1,"choices":["rally","contract"],"commander_id":"char_player_edric_o_kala","day":1,"draw":90617,"event_id":"ev_31","evidence":{"side":"def","unit":"kelvarn_10th_rothbridbu_regiment_archers"},"kind":"battle_event","known_context":{"morale":35,"observations":{}},"phase":"field","received_day":-1,"selected":"","side":"def","token":"battle-event:1:1","unit":"kelvarn_10th_rothbridbu_regiment_archers"},"status":"blocked"}
+P4_EVENT_VIEW {"art_key":"flank","battle_id":1,"event_id":"ev_31","kind":"battle_event","options":[{"effects_text":"Pay 7 gold; gain 8 morale.","gold":7,"id":"rally","label":"Promise a rallying bounty","legal":false,"reason":"The treasury cannot afford this choice after promised rewards."},{"effects_text":"Commit actual reserve personnel to the line; gain 3 morale.","gold":0,"id":"commit","label":"Commit the available reserve","legal":false,"reason":"No fit reserve is waiting on this battlefield."},{"effects_text":"Hold with 10% less action power today; preserve gold.","gold":0,"id":"contract","label":"Contract the line","legal":true,"reason":""}],"scene":"A messenger comes along the rear of the line, his horse dark with sweat. On the right the standards have drawn together; men are looking over their shoulders instead of towards the enemy. Their captain asks for the waiting reserve, or a promise of bounty. Behind him the sergeants are already calling the files inward.","selected":"","title":"The Wavering Flank","token":"battle-event:1:1"}
+state at shot: day=1 clock=0 pending_event=false couriers=0
+shot ok at frame 60 -> res://docs/reviews/battle-system/evidence/P4-terms-events-window/event-poor-1920.png
+snapshot ok -> res://docs/reviews/battle-system/evidence/P4-terms-events-window/event-poor-1920.png (root, 1920x1200 window, filter 3)
+WARNING: 155 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

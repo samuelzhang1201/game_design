@@ -154,6 +154,81 @@ class HandoverHookTests(unittest.TestCase):
             with self.subTest(tasks=tasks):
                 self.assertEqual(self.dispatch(tasks)['decision'], 'block')
                 self.assertEqual(hook.registry_path(self.root).read_text(), original)
+    def test_necessary_existing_test_addition_is_audited_and_idempotent(self):
+        task = self.task(files=['scripts/engine/pursuit.gd'])
+        self.assertEqual(self.dispatch([task]), {})
+        amendment = {'added_files': ['tests/engine/test_pursuit_merge_continuity.gd'],
+                     'reason': 'Existing fixture must assert the pursuit route cap.'}
+        changed = dict(task, owned_files=task['owned_files'] + amendment['added_files'],
+                       scope_additions=[amendment])
+        self.assertEqual(self.dispatch([changed]), {})
+        path = hook.registry_path(self.root)
+        before = path.read_bytes()
+        self.assertEqual(self.dispatch([changed]), {})
+        self.assertEqual(path.read_bytes(), before)
+        saved = json.loads(before)['steps']['a']
+        self.assertEqual(saved['original_owned_files'], task['owned_files'])
+        self.assertEqual(saved['scope_additions'], [amendment])
+        second = {'added_files':['tests/engine/another.gd'], 'reason':'Second related caller.'}
+        self.assertEqual(self.dispatch([dict(changed,
+            owned_files=changed['owned_files']+second['added_files'],
+            scope_additions=[amendment, second])]), {})
+        saved = json.loads(path.read_text())['steps']['a']
+        self.assertEqual(saved['original_owned_files'], task['owned_files'])
+        self.assertEqual(saved['scope_additions'], [amendment, second])
+
+    def test_scope_additions_reject_invalid_changes_without_writing(self):
+        task = self.task()
+        self.assertEqual(self.dispatch([task, self.task('b', 'worker-b', ['tools/b.py'])]), {})
+        path = hook.registry_path(self.root)
+        before = path.read_bytes()
+        addition = {'added_files': ['tests/existing.gd'], 'reason': 'Necessary fixture.'}
+        changed = dict(task, owned_files=task['owned_files'] + addition['added_files'],
+                       scope_additions=[addition])
+        cases = [dict(changed, scope_additions=[]),
+                 dict(changed, owned_files=['tests/existing.gd']),
+                 dict(changed, scope_additions=[dict(addition, reason=' ')]),
+                 dict(changed, scope_additions=[dict(addition, added_files=['tools/a.py'])]),
+                 dict(changed, owned_files=['tools/a.py', '../escape'],
+                      scope_additions=[dict(addition, added_files=['../escape'])]),
+                 dict(changed, owned_files=['tools/a.py', 'tools/b.py'],
+                      scope_additions=[dict(addition, added_files=['tools/b.py'])]),
+                 dict(changed, acceptance='different goal'),
+                 dict(changed, branch='codex/replacement'),
+                 dict(changed, worktree=str(self.root/'replacement')),
+                 dict(changed, review_session_id='review'),
+                 dict(changed, implementation_session_id='replacement'),
+                 dict(changed, creation_result={'status':'unknown'}),
+                 dict(changed, original_owned_files=['replacement']),
+                 dict(changed, status='merged')]
+        for case in cases:
+            with self.subTest(case=case):
+                self.assertEqual(self.dispatch([case])['decision'], 'block')
+                self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(self.dispatch([changed]), {})
+        before = path.read_bytes()
+        for case in [task, dict(changed, scope_additions=[dict(addition, reason='rewritten')])]:
+            self.assertEqual(self.dispatch([case])['decision'], 'block')
+            self.assertEqual(path.read_bytes(), before)
+        merged = dict(changed, status='merged', accepted=True)
+        self.assertEqual(self.dispatch([merged]), {})
+        self.assertEqual(self.dispatch([merged]), {})
+        extra = {'added_files':['tests/another.gd'], 'reason':'Another fixture.'}
+        self.assertEqual(self.dispatch([dict(merged,
+            owned_files=merged['owned_files']+extra['added_files'],
+            scope_additions=[addition, extra])])['decision'], 'block')
+
+    def test_scope_addition_atomic_replace_failure_preserves_registry(self):
+        task = self.task()
+        self.assertEqual(self.dispatch([task]), {})
+        path = hook.registry_path(self.root)
+        before = path.read_bytes()
+        changed = dict(task, owned_files=['tools/a.py', 'tests/existing.gd'],
+                       scope_additions=[{'added_files':['tests/existing.gd'], 'reason':'Fixture.'}])
+        with patch.object(hook.os, 'replace', side_effect=OSError('disk failure')):
+            self.assertEqual(self.dispatch([changed])['decision'], 'block')
+        self.assertEqual(path.read_bytes(), before)
+
     def test_dependencies_require_merged_and_accepted_declaration(self):
         self.assertEqual(self.dispatch([self.task()]), {})
         b = self.task('b','worker-b',['tools/b.py'],['a'])
@@ -244,6 +319,21 @@ class HandoverHookTests(unittest.TestCase):
         task = self.task('b','worker-b')
         with self.assertRaisesRegex(ValueError, 'overlaps'):
             hook.record_handoff(linked, dict(self.marker, tasks=[task]))
+    def test_scope_addition_conflicts_across_real_worktrees(self):
+        subprocess.run(['git','init','-q',str(self.root)],check=True)
+        subprocess.run(['git','-C',str(self.root),'-c','user.name=Test','-c','user.email=test@example.com',
+                        'commit','--allow-empty','-qm','fixture'],check=True)
+        linked = self.root/'linked'
+        subprocess.run(['git','-C',str(self.root),'worktree','add','--detach','-q',str(linked)],check=True)
+        a, b = self.task(), self.task('b','worker-b',['tools/b.py'])
+        self.assertEqual(self.dispatch([a, b]), {})
+        before = hook.registry_path(self.root).read_bytes()
+        changed = dict(a, owned_files=['tools/a.py','tools/b.py'],
+            scope_additions=[{'added_files':['tools/b.py'], 'reason':'Related test.'}])
+        with self.assertRaisesRegex(ValueError, 'overlaps'):
+            hook.record_handoff(linked, dict(self.marker, tasks=[changed]))
+        self.assertEqual(hook.registry_path(self.root).read_bytes(), before)
+
     def test_dispatcher_cannot_become_a_pr_owner(self):
         self.assertEqual(self.dispatch([self.task()]), {})
         pair = dict(kind='pr_handoff', step_id='other', pr_url='https://example.com/pull/2',
