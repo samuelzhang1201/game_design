@@ -1,0 +1,79 @@
+Selected 1 GUT scripts:
+tests/ui/test_character_portrait.gd
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[   0% ] first_scan_filesystem | Started Project initialization (5 steps)
+[   0% ] first_scan_filesystem | Scanning file structure...
+[  16% ] first_scan_filesystem | Loading global class names...
+[  33% ] first_scan_filesystem | Verifying GDExtensions...
+[  50% ] first_scan_filesystem | Creating autoload scripts...
+[  66% ] first_scan_filesystem | Initializing plugins...
+GDAIMCP::ERROR:: Binary files for GDAI MCP plugin are missing, so the plugin wont be loaded. Please re-install the plugin from [url=https://gdaimcp.com]https://gdaimcp.com or disable the plugin in Project Settings.
+[  83% ] first_scan_filesystem | Starting file scan...
+[ DONE ] first_scan_filesystem
+
+[   0% ] _update_scan_actions | Started Scanning actions... (7 steps)
+[   0% ] _update_scan_actions | balance.csv
+[  12% ] _update_scan_actions | character_traits.csv
+[  25% ] _update_scan_actions | council_seats.csv
+[  37% ] _update_scan_actions | founding_council.csv
+[  50% ] _update_scan_actions | policy_actions_court_additions.csv
+[  62% ] _update_scan_actions | tables.csv
+[  75% ] _update_scan_actions | bad_balance.csv
+[ DONE ] _update_scan_actions
+
+[   0% ] loading_editor_layout | Started Loading editor (5 steps)
+[   0% ] loading_editor_layout | Loading editor layout...
+[  16% ] loading_editor_layout | Loading docks...
+[ DONE ] loading_editor_layout
+
+WARNING: 1 RID of type "CanvasItem" was leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2733)
+WARNING: 4 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
+ERROR: 1 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Trying to assign value of type 'Nil' to a variable of type 'bool'.
+          at: _static_init (res://addons/gut/gut_loader.gd:35)
+          GDScript backtrace (most recent call first):
+              [0] _static_init (res://addons/gut/gut_loader.gd:35)
+              [1] @static_initializer (res://addons/gut/gut_loader.gd:1)
+              [2] _init (res://addons/gut/gut_cmdln.gd:23)
+---  GUT  ---
+[INFO]:  using [/Users/samuelzhang/Library/Application Support/Godot/app_userdata/Beyond the King's Words] for temporary output.
+Godot version:  4.7.2
+GUT version:  9.4.0
+
+
+res://tests/ui/test_character_portrait.gd
+* test_known_character_gets_its_own_scene
+* test_unknown_character_falls_back_to_base_scene
+* test_minister_portrait_has_badge_and_tooltip
+    -- Awaiting 2 idle frame(s) --
+* test_non_character_portrait_has_no_badge
+    -- Awaiting 2 idle frame(s) --
+* test_full_art_exists_for_all_five_ministers
+* test_full_art_null_for_character_without_it
+* test_custom_art_node_suppresses_default_visual
+    -- Awaiting 2 idle frame(s) --
+7/7 passed.
+
+
+
+
+==============================================
+= Run Summary
+==============================================
+
+---- Totals ----
+Scripts           1
+Tests             7
+  Passing         7
+Asserts           17
+Time              1.987s
+
+
+---- All tests passed! ----

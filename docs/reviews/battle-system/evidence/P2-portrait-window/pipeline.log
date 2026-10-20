@@ -1,0 +1,23 @@
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.012s
+
+OK
+-- full tier
+  K-10   -> assets/2D/portraits/cast/full/legacy.png
+  K-100  -> assets/2D/portraits/cast/full/new.png
+-- chip tier
+  K-10   -> assets/2D/portraits/cast/legacy.png
+  K-100  -> assets/2D/portraits/cast/new.png
+-- full tier
+  (review pending for K-100 / full; not installed)
+-- chip tier
+  (review pending for K-100 / chip; not installed)
+0 asset(s) installed
+-- full tier
+  (approved source hash missing or changed for K-100 / full; not installed)
+-- chip tier
+  (approved source hash missing or changed for K-100 / chip; not installed)
+0 asset(s) installed
+queued K-100-full_c-bust.png -> chip job
+saved /var/folders/dv/07kfpv0x5f73xhq3xsbtpkf40000gn/T/tmp60tcyr8c/chip/K-100.png
