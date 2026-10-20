@@ -205,7 +205,7 @@ static func _task_row(repo: DataRepository, state: GameState, record: Dictionary
 		"target": "" if target == "" else String(ArmySystem.regiment(repo, target, state).get("label", target)),
 		"formation": String(repo.battle_formations.get(String(request["formation"]), {}).get("label", ""))}
 
-## The exact request a choice would send and what ActionSystem says of it now:
+## The exact request and its validation using observable target condition:
 ## the refusal, the filing gold, the courier fee (none when local or joining a
 ## waiting courier) and whether it is delivered here. Task "cancel" cancels.
 static func task_quote(repo: DataRepository, state: GameState, code: String, task: String,
@@ -221,7 +221,7 @@ static func task_quote(repo: DataRepository, state: GameState, code: String, tas
 		params.merge({"task": task, "target_unit": target, "formation": formation})
 	var actions := ActionSystem.new(repo)
 	return {"action_code": action, "params": params,
-		"reason": actions.validate(ActionRequest.make(action, params), state),
+		"reason": actions.validate(ActionRequest.make(action, params), state, local_unit(repo, state, target)),
 		"filing_gold": int(OrderCosts.gold_of(repo, action)), "courier_gold": actions._fee_for(state, code),
 		"local": KingSystem.can_command(repo, state, code)}
 

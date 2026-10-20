@@ -110,7 +110,7 @@ static func _format_error(order: Dictionary) -> String:
 	return ""
 
 
-static func _refusal(repo: DataRepository, state: GameState, order: Dictionary) -> String:
+static func _refusal(repo: DataRepository, state: GameState, order: Dictionary, target_observed := true) -> String:
 	var unit := String(order["unit"])
 	var battle := BattleSystem.battle_by_id(state, int(order["battle_id"]))
 	var side := BattleRules.side_of(battle, unit)
@@ -170,8 +170,10 @@ static func _refusal(repo: DataRepository, state: GameState, order: Dictionary) 
 	var target := String(order["target_unit"])
 	if target != "":
 		var target_side := BattleRules.side_of(battle, target)
-		if target_side == "" or target_side == side or not BattleSystem._can_fight(repo, state, target) \
-				or bool(BattleSystem._stored(state, target).get("captured", false)):
+		if target_side == "" or target_side == side:
+			return "The designated enemy can no longer be tasked against."
+		if target_observed and (not BattleSystem._can_fight(repo, state, target) \
+				or bool(BattleSystem._stored(state, target).get("captured", false))):
 			return "The designated enemy can no longer be tasked against."
 	if not action in BattleRules.legal_actions(repo, state, int(battle["id"]), side, unit, target):
 		return "Received military law or an agreed battlefield term forbids this unit task."
@@ -187,11 +189,11 @@ static func _transition(state: GameState, record: Dictionary, status: String, re
 		"source": String(record["request"]["source"])})
 
 
-static func refusal_of(repo: DataRepository, state: GameState, raw: Dictionary) -> String:
+static func refusal_of(repo: DataRepository, state: GameState, raw: Dictionary, target_observed := true) -> String:
 	var why := _format_error(raw)
 	if why != "":
 		return why
-	return _refusal(repo, state, _canonical(raw))
+	return _refusal(repo, state, _canonical(raw), target_observed)
 
 
 static func invalidate_task(state: GameState, id: String, reason: String) -> void:
