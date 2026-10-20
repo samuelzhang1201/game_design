@@ -1,8 +1,10 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
+import textwrap
 import unittest
 
 SPEC = importlib.util.spec_from_file_location('selector', Path(__file__).with_name('select_gut_tests.py'))
@@ -154,6 +156,59 @@ class SelectionTests(unittest.TestCase):
             self.assertNotIn('simulation', chosen['categories'])
             requested = json.loads(subprocess.check_output(command + ['--request-text', 'GUT_INCLUDE: simulation']))
             self.assertIn('simulation', requested['categories'])
+
+    def test_ci_military_batches_cover_every_script_once_in_order(self):
+        chosen = self.select('scripts/engine/army_system.gd')
+        jobs = chosen['matrix']['include']
+        military = [job for job in jobs if job['category'] == 'engine-military']
+        self.assertEqual([job['batch'] for job in military], [1, 2, 3, 4])
+        files = []
+        for job in military:
+            selected = json.loads(subprocess.check_output([
+                'python3', 'tools/select_gut_tests.py', '--category', job['category'],
+                '--batch', str(job['batch'])]))
+            self.assertTrue(selected['files'])
+            files.extend(selected['files'])
+        self.assertEqual(files, self.catalog['engine-military'])
+        self.assertEqual(len(files), len(set(files)))
+        for job in jobs:
+            if job['category'] != 'engine-military':
+                self.assertEqual(job['batch'], 1)
+        self.assertNotIn('simulation', [job['category'] for job in jobs])
+
+    def test_real_runner_batch_count_offline_and_failure_propagation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = Path(tmp, 'godot')
+            fake.write_text("#!/usr/bin/env python3\nimport os, sys\nassert os.environ['CC_FORCE_OFFLINE'] == '1'\nif '--import' in sys.argv: sys.exit(0)\nfiles = next(arg for arg in sys.argv if arg.startswith('-gtest=')).split('=', 1)[1].split(',')\nassert files\nprint('Scripts', len(files))\nsys.exit(int(os.environ['FAKE_EXIT']))\n")
+            fake.chmod(0o755)
+            for batch, code in [(1, 0), (2, 0), (3, 0), (4, 0), (4, 3)]:
+                result = subprocess.run(['./run_tests.sh', '--category', 'engine-military',
+                                         '--batch', str(batch)], capture_output=True, text=True,
+                    env={**os.environ, 'GODOT': str(fake), 'FAKE_EXIT': str(code)})
+                self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+
+    def test_workflow_aggregate_rejects_every_non_successful_matrix(self):
+        workflow = Path('.github/workflows/tests.yml').read_text()
+        self.assertIn('--batch "${{ matrix.batch }}"', workflow)
+        self.assertIn('fail-fast: false', workflow)
+        self.assertIn('TEST_TIMEOUT_SECONDS: 2100', workflow)
+        aggregate = textwrap.dedent(workflow.split('  gut-tests:', 1)[1].split('        run: |', 1)[1])
+        for run_gut, selected, expected in [('true', 'success', 0), ('false', 'skipped', 0),
+                *[('true', state, 1) for state in ['failure', 'cancelled', 'skipped', '', 'timed_out']],
+                ('false', 'success', 1)]:
+            result = subprocess.run(['bash', '-e', '-c', aggregate], env={**os.environ,
+                'HARNESS_RESULT': 'success', 'RUN_GUT': run_gut, 'SELECTED_RESULT': selected})
+            self.assertEqual(result.returncode, expected)
+
+    def test_batch_requires_one_category_and_valid_manifest_index(self):
+        for args in [['--batch', '1'], ['--category', 'engine-military', '--batch', '0'],
+                     ['--category', 'engine-military', '--batch', '5'],
+                     ['--category', 'engine-core', '--batch', '2'],
+                     ['--test', 'tests/engine/test_calendar.gd', '--batch', '1'],
+                     ['--category', 'engine-military', '--category', 'ui', '--batch', '1']]:
+            with self.subTest(args=args):
+                result = subprocess.run(['python3', 'tools/select_gut_tests.py', *args], capture_output=True)
+                self.assertNotEqual(result.returncode, 0)
 
     def test_every_test_is_classified_exactly_once(self):
         files = [p for group in self.catalog.values() for p in group]

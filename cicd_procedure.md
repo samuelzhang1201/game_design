@@ -30,7 +30,7 @@ Stop hook 只验证显式记录；派工方先登记完整任务，再记录唯�
 
 选择器比较基准提交与当前工作树，包含删除及重命名前后的路径。分类按测试内容和子系统；公式、局部存档和短确定性测试保留在功能类别，新增长战役或调参扫描必须显式归入可选类别。
 
-Known UI/map/ledger/war-room source paths select their functional consumers and bridges. Engine, runtime prose (`RANDOM_EVENTS.md`, `game_story/`), CSV/data, assets and unknown runtime paths conservatively select all functional categories. Changed or deleted tests select their affected category; mixed changes select the union. Harness/selector/runner/workflow changes and comment-only source changes use dedicated harness self-checks without GUT. Ordinary documentation and `.codex/` files also need no GUT. Categories run sorted scripts together, preserving the map hover/picker setup order. This is category routing, not a transitive dependency graph.
+Known UI/map/ledger/war-room source paths select their functional consumers and bridges. Engine, runtime prose (`RANDOM_EVENTS.md`, `game_story/`), CSV/data, assets and unknown runtime paths conservatively select all functional categories. Changed or deleted tests select their affected category; mixed changes select the union. Harness/selector/runner/workflow changes and comment-only source changes use dedicated harness self-checks without GUT. Ordinary documentation and `.codex/` files also need no GUT. Categories run sorted scripts together, preserving the map hover/picker setup order. The military category alone declares `ci_batches: 4` in the manifest: CI runs four disjoint contiguous slices of its sorted scripts on separate runners. Their concatenation is the complete category, each script runs once, and the aggregate requires every batch. Other categories remain one batch. This is category routing, not a transitive dependency graph.
 
 已知展示子系统只选相关消费者；引擎、共享夹具、运行时叙事、CSV、资源和未知运行时路径保守选择全部功能类别。测试文件的修改或删除选择它所属的类别。普通文档和 `.codex/` 改动只跑专用检查。
 
@@ -69,7 +69,7 @@ Run affected checks on final inputs before committing; no routine full suite:
 python3 tools/select_gut_tests.py --base origin/main  # inspect JSON selection
 ```
 
-Diff selection includes tracked working-tree edits; Git does not include untracked files. Add new files to the index or request them with `--test`. Explicit `--category`/`--test` requests select exactly those scripts and also serve as local opt-in for expensive content. Unknown options and missing scripts fail before import. The old global `--shard=I/N` interface is replaced by categories.
+Diff selection includes tracked working-tree edits; Git does not include untracked files. Add new files to the index or request them with `--test`. Explicit `--category`/`--test` requests select exactly those scripts and also serve as local opt-in for expensive content. Unknown options and missing scripts fail before import. The old global `--shard=I/N` interface is replaced by categories. `--category engine-military --batch 1` reproduces one manifest-defined CI batch; omit `--batch` to run the complete category locally. Batch indices outside the manifest or combined with other scope fail before import.
 
 差异选择包含已跟踪文件的工作树修改，不含未跟踪文件；新文件需暂存或用 `--test` 显式请求。类别或文件请求只运行指定内容，拼错参数或缺少脚本会在导入前失败。
 
@@ -86,7 +86,7 @@ bash -n .codex/hooks/session-start.sh
 
 ## Gates and deadlines 检查和超时
 
-Every selected category uses the same `run_tests.sh`: forced offline, bounded import/test phases, nonzero GUT exit propagation, ignored-script rejection, exact selected-script count, expected error count (zero without the local GDAI extension, two with it), and the existing narrow runtime-error allow-list. Empty selection succeeds before importing Godot. A timeout exits 124 and preserves the printed test log. `$GODOT` selects the binary; `TEST_TIMEOUT_SECONDS` overrides the per-phase deadline (local default 2700 seconds, CI 2100). CI keeps two import passes and a 75-minute job limit for two phases plus setup.
+Every selected category batch uses the same `run_tests.sh`: forced offline, bounded import/test phases, nonzero GUT exit propagation, ignored-script rejection, exact selected-script count, expected error count (zero without the local GDAI extension, two with it), and the existing narrow runtime-error allow-list. Empty selection succeeds before importing Godot. A timeout exits 124 and preserves the printed test log. `$GODOT` selects the binary; `TEST_TIMEOUT_SECONDS` overrides the per-phase deadline (local default 2700 seconds, CI 2100). CI keeps two import passes and a 75-minute job limit for two phases plus setup.
 
 每个选中类别共用同一 runner，保留离线、导入和测试超时、退出码、解析、脚本数量、预期错误数和运行时错误门禁。空选择在导入前结束；超时返回 124 并保留日志。
 
