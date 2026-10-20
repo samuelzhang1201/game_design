@@ -1,0 +1,23 @@
+...........................................
+----------------------------------------------------------------------
+Ran 43 tests in 1.729s
+
+OK
+.......................
+----------------------------------------------------------------------
+Ran 23 tests in 2.827s
+
+OK
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 3.150s
+
+OK
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 6.263s
+
+OK
+
+Shell syntax: run_tests.sh and .codex/hooks/session-start.sh passed.
+JSON/TOML syntax and root/nested guide/topic caps: passed (workflow assertions, no guidance/config changes).

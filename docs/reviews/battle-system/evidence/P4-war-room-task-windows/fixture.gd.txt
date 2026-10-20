@@ -1,0 +1,59 @@
+var _p4_tick := -1
+var _p4_code := ""
+func _p4_task_fixture() -> void:
+	if _frames == 26:
+		var codes := Game.state.regiments.keys()
+		codes.sort()
+		for c: String in codes:
+			if not ArmySystem.is_naval(Game.data, Game.state, c):
+				_p4_code = c
+				break
+		_war_piece = _p4_code
+		_war_focus = _p4_code
+		for piece: Dictionary in WarRoom.pieces(Game.data, Game.state):
+			if String(piece.code) == _p4_code: _war_sheet = int(piece.sheet)
+		if OS.get_environment("P4_CASE") == "local":
+			Game.state.king_state.x_m = int(Game.state.regiments[_p4_code].x_m)
+			Game.state.king_state.y_m = int(Game.state.regiments[_p4_code].y_m)
+		else:
+			assert(not KingSystem.can_command(Game.data, Game.state, _p4_code))
+		print("P4_SETUP ", JSON.stringify(BattlePresentation.task_view(Game.data, Game.state, _p4_code)))
+	if _war_phase != 5 or _root == null:
+		return
+	if _p4_tick < 0: _p4_tick = _frames
+	var t := _frames - _p4_tick
+	var folio := _root.war_room_screen().get_node("%Folio")
+	var mode := OS.get_environment("P4_CASE")
+	if t == 5:
+		print("P4_QUOTE ", JSON.stringify(folio.task_quote()))
+	if t == 10 and mode in ["pending", "delivered", "local"]:
+		var send := folio.get_node("%SendTask") as Button
+		assert(not send.disabled)
+		_real_click(send, send.size * 0.5)
+		print("P4_SEND ", JSON.stringify(Game.state.unit_tasks))
+	if t == 17 and mode == "delivered":
+		for courier: Dictionary in Game.state.couriers:
+			if String(courier.get("target", "")) == _p4_code:
+				courier.x_m = int(courier.aim_x_m)
+				courier.y_m = int(courier.aim_y_m)
+				courier.path = []
+		print("P4_DELIVERY ", JSON.stringify(CourierSystem.ride_day(Game.data, Game.state)))
+		assert(Game.state.couriers.is_empty())
+		Game.state_changed.emit()
+	if t == 10 and mode == "poor":
+		Game.state.metrics.treasury = 0
+		Game.state_changed.emit()
+	if t == 10 and mode == "law":
+		Game.state.battles[0]["parley"] = {"agreed": {"ceasefire": {"policy": "protect"}}}
+		var pick := folio.get_node("%Task") as OptionButton
+		for i in pick.item_count:
+			if String(pick.get_item_metadata(i)) == "flank":
+				pick.select(i)
+				pick.item_selected.emit(i)
+		Game.state_changed.emit()
+	if t == 20 and mode in ["tasks", "targets", "formations"]:
+		var pick := folio.get_node("%" + {"tasks": "Task", "targets": "Target", "formations": "TaskFormation"}[mode]) as OptionButton
+		_real_click(pick, pick.size * 0.5)
+		print("P4_POPUP ", mode, " open=", pick.get_popup().visible)
+	if t == 20:
+		print("P4_FINAL ", JSON.stringify({"view": BattlePresentation.task_view(Game.data, Game.state, _p4_code), "quote": folio.task_quote(), "status": folio.get_node("%TaskStatus").text, "quote_text": folio.get_node("%TaskQuote").text, "send_disabled": folio.get_node("%SendTask").disabled}))
