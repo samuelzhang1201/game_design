@@ -2017,6 +2017,8 @@ func _stage_battle_encounter() -> void:
 
 ## Frame first, then orbit the same ground target without touching campaign state.
 func frame_camera(view: Map3DView) -> void:
+	if view._ctx == null:
+		return
 	if _at3d.x >= 0.0:
 		view.look_at_pack(_at3d, _zoom3d)
 	else:

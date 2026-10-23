@@ -170,3 +170,13 @@ func test_frame_camera_applies_default_and_requested_yaw_without_state_writes() 
 	shot.frame_camera(view)
 	assert_eq(view.capture_rig.placed, [Vector2(30, 40), 400.0, 90.0])
 	assert_eq(SaveLoad.state_hash(state), before)
+
+
+func test_frame_camera_preserves_missing_world_notice_path() -> void:
+	var shot := load("res://tools/snapshot_screen.gd").new() as Node
+	var view := Map3DView.new()
+	autofree(shot)
+	autofree(view)
+	shot._zoom3d = 400.0
+	shot.frame_camera(view)
+	assert_null(view._ctx, "a missing world has no bound camera context")
