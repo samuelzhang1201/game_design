@@ -82,6 +82,9 @@ func resolve_day(state: GameState, close_month := false) -> Dictionary:
 	var out := {"status": "complete", "journal": journal.duplicate(true),
 		"ended": int(tx.get("absolute_day", tx["day"])), "ticked": bool(tx["month_end"]) or bool(tx.get("settle_month_compat", false)), "report": last_month_report}
 	state.day_resolution = {}
+	var organization := MilitaryReorganization.reconcile(data, state)
+	if organization.get("status", "error") == "error":
+		return {"status": "error", "error": organization.get("error", "Cannot reconcile military organization.")}
 	return out
 
 
@@ -366,6 +369,9 @@ func _resolve_legacy_day(state: GameState, close_month := false) -> Dictionary:
 	var out := {"status": "complete", "journal": journal.duplicate(true),
 		"ended": int(tx["day"]), "ticked": bool(tx["month_end"]), "report": report}
 	state.day_resolution = {}
+	var organization := MilitaryReorganization.reconcile(data, state)
+	if organization.get("status", "error") == "error":
+		return {"status": "error", "error": organization.get("error", "Cannot reconcile military organization.")}
 	return out
 
 

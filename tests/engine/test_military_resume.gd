@@ -5,6 +5,20 @@ const Scenario := preload("res://tests/fixtures/battle_scenario.gd")
 func test_saved_second_encounter_resumes_then_upgrades_once() -> void:
 	var repo := SuiteData.flat_ground(SuiteData.repo())
 	var state := Scenario.two_battles(repo, 10)
+	# Only the two encounter pairs belong to this frozen-day import fixture.
+	var participants: Array = load("res://tests/invasion_play.gd").land_regiments(repo, 400).slice(0, 2)
+	participants.append_array(state.foes.keys())
+	for code: String in state.army_roster.keys():
+		if code in participants: continue
+		state.army_roster.erase(code)
+		state.regiments.erase(code)
+		for id: String in state.military_rosters.get(code, {}).get("cohort_ids", []): state.military_cohorts.erase(id)
+		state.military_rosters.erase(code)
+	for town: String in state.town_seat.keys():
+		if not state.town_seat[town] in participants: state.town_seat.erase(town)
+
+	# The old save already has an open day; do not migrate a new-day fixture first.
+	state.day_resolution = DayResolution.begin(state.day, false, state.absolute_day(), int(repo.bal("battle_substeps")))
 	var engine := TickEngine.new(repo)
 	var first := engine.resolve_day(state)
 	assert_eq(first.status, "blocked")
@@ -13,6 +27,8 @@ func test_saved_second_encounter_resumes_then_upgrades_once() -> void:
 	var second := engine.resolve_day(state)
 	assert_eq(second.status, "blocked")
 	if second.status != "blocked": return
+	assert_false(state.military_migration.has("living_cap_version"), "The legacy frozen input must precede living-cap migration")
+	if state.military_migration.has("living_cap_version"): return
 	# Represent the accepted pre-roster save, retaining its saved equipment and day cursor.
 	state.military_rosters.clear()
 	state.military_cohorts.clear()

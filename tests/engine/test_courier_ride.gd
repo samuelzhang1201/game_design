@@ -394,6 +394,7 @@ func test_a_redirect_rebuilds_tomorrows_waypoint_route_from_todays_final_positio
 		s.couriers = [courier]
 		assert_eq(TickEngine.new(repo).resolve_day(s)["status"], "complete")
 		assert_true(s.couriers.is_empty(), "the redirect was delivered")
+		entry = s.regiments[code]
 		assert_eq(Vector2i(int(entry["x_m"]), int(entry["y_m"])), today_end,
 			"both an arrival and an unfinished old march keep today's old movement")
 		assert_eq(entry.get("waypoints_m"), [[waypoint.x, waypoint.y]], "tomorrow still visits the ordered waypoint")

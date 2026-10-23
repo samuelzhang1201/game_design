@@ -340,7 +340,7 @@ func test_main_weighted_sources_are_160_rural_20_urban() -> void:
 	assert_eq(MilitaryPopulation.occupied(s, f.province, "urban_population"), 20)
 
 func test_main_split_preserves_first_id_inventory_and_typed_references() -> void:
-	var f := _compat_fixture(301, 2)
+	var f := _compat_fixture(601, 2)
 	var s: GameState = f.state
 	s.battles = [{"att": ["saved"], "def": [], "id": 7, "ended": true}]
 	s.war_drafts = {"saved": {"order": "halt"}}
@@ -355,32 +355,31 @@ func test_main_split_preserves_first_id_inventory_and_typed_references() -> void
 	s.ai_hosts = {"host": {"unit_codes": ["saved"], "target_id": "town"}}
 	s.war_plans.strokes = {"front": {"codes": ["saved"], "name": "saved"}}
 	assert_false(_compat_ensure(f.repo, s).has("error"))
-	var ids: Array = s.military_migration.get("unit_mapping", {}).get("saved", ["saved"])
+	var ids: Array = s.military_migration.get("living_unit_mapping", {}).get("saved", ["saved"])
 	assert_eq(ids.size(), 2)
 	assert_eq(ids[0], "saved")
-	assert_eq(int(s.army_roster[ids[0]].cavalry), 151)
-	assert_eq(int(s.army_roster[ids[1]].cavalry), 150)
-	assert_eq(s.battles[0].att, ids)
+	assert_eq(int(s.army_roster[ids[0]].cavalry), 301)
+	assert_eq(int(s.army_roster[ids[1]].cavalry), 300)
+	assert_eq(s.battles[0].att, ["saved"], "ended battle is immutable history")
 	assert_eq(s.ai_hosts.host.unit_codes, ids)
 	assert_eq(s.ai_hosts.host.target_id, "town")
 	assert_eq(s.war_plans.strokes.front.codes, ids)
 	assert_eq(s.war_plans.strokes.front.name, "saved")
-	assert_eq(s.war_drafts.size(), 2)
+	assert_eq(s.war_drafts.size(), 1)
 	assert_eq(s.law_in_force["unit:" + ids[1]], s.law_in_force["unit:" + ids[0]], "split inherits saved laws")
 	s.law_in_force["unit:" + ids[1]].camp.value = "off"
 	assert_eq(s.law_in_force["unit:" + ids[0]].camp.value, "on", "each descendant keeps independent law history")
 	assert_eq(s.supply_lines[ids[0]].fee_milli + s.supply_lines[ids[1]].fee_milli, 13)
 	assert_eq(s.regiments[ids[0]].supplies + s.regiments[ids[1]].supplies, 101)
-	assert_eq(s.regiments[ids[0]].inventory.swords, 6, "302:300 people split eleven swords6:5")
+	assert_eq(s.regiments[ids[0]].inventory.swords, 6, "594:593 living people split eleven swords6:5")
 	assert_eq(s.regiments[ids[1]].inventory.swords, 5)
 	assert_eq(s.regiments[ids[0]].inventories.grain + s.regiments[ids[1]].inventories.grain, 13)
 	assert_eq(s.regiments[ids[0]].reserve_milli + s.regiments[ids[1]].reserve_milli, 17)
-	assert_eq(s.couriers.size(), 1, "one paid rider carries both descendant warrants")
-	assert_eq(s.couriers[0].recipient_queue.size(), 1)
-	assert_eq(s.couriers[0].recipient_queue[0].target, ids[1])
-	assert_gt(int(s.regiments[ids[1]].order_id), int(s.couriers[0].id), "a stale saved warrant remains stale for its child")
+	assert_eq(s.couriers.size(), 1, "the original paid rider remains singular")
+	assert_false(s.couriers[0].has("recipient_queue"))
+	assert_false(s.regiments[ids[1]].has("order_id"))
 	assert_eq(s.metrics.treasury, 87)
-	assert_eq(MilitaryRoster.fit(s, ids[0]) + MilitaryRoster.fit(s, ids[1]), 567)
+	assert_eq(MilitaryRoster.fit(s, ids[0]) + MilitaryRoster.fit(s, ids[1]), 1167)
 
 func test_main_transaction_preserves_cursor_then_reorganizes_once() -> void:
 	var f := _compat_fixture(301, 2)
@@ -408,7 +407,7 @@ func test_main_handcomputed_large_split_preserves_capacity_and_nobles() -> void:
 	var s: GameState = f.state
 	s.regiments.saved = {}
 	assert_false(_compat_ensure(f.repo, s).has("error"))
-	var ids: Array = s.military_migration.get("unit_mapping", {}).get("saved", ["saved"])
+	var ids: Array = s.military_migration.get("living_unit_mapping", {}).get("saved", ["saved"])
 	var elements: Array = []
 	var people: Array = []
 	for id: String in ids:
@@ -418,9 +417,9 @@ func test_main_handcomputed_large_split_preserves_capacity_and_nobles() -> void:
 		for cohort_id: String in s.military_rosters[id].cohort_ids:
 			var cohort: Dictionary = s.military_cohorts[cohort_id]
 			if cohort.get("person_id", "") != "": nobles += int(cohort.fit)
-		assert_eq(nobles, 1, id)
-	assert_eq(elements, [254, 254, 254, 253, 253])
-	assert_eq(people, [508, 508, 508, 506, 506])
+		assert_eq(nobles, 1 if id == "saved" else 0, id)
+	assert_eq(elements, [317, 317, 317, 317])
+	assert_eq(people, [634, 634, 634, 634])
 
 func test_main_invalid_crew_and_small_remnant_do_not_drop_equipment() -> void:
 	var f := _compat_fixture(1, 0)
@@ -547,19 +546,19 @@ func test_main_new_campaign_all_player_and_raider_units_have_one_counted_command
 		assert_eq(matches, 1, code)
 	assert_gt(checked, 0)
 
-func test_main_crew_eight_cap_twentyfive_splits_equipment_three_two_two() -> void:
+func test_main_living_halves_are_independent_of_equipment_crews() -> void:
 	var f := _compat_fixture(7, 8)
 	var s: GameState = f.state
-	f.repo.balance["army_split_cap_men"] = 25
+	f.repo.balance["army_living_cap_men"] = 25
 	s.regiments.saved = {}
 	assert_false(_compat_ensure(f.repo, s).has("error"))
 	var elements: Array = []
 	var people: Array = []
-	for id: String in s.military_migration.get("unit_mapping", {}).get("saved", ["saved"]):
+	for id: String in s.military_migration.get("living_unit_mapping", {}).get("saved", ["saved"]):
 		elements.append(int(s.army_roster[id].cavalry))
 		people.append(MilitaryRoster.fit(s, id))
-	assert_eq(elements, [3, 2, 2])
-	assert_eq(people, [24, 16, 16])
+	assert_eq(elements, [2, 2, 2, 1])
+	assert_eq(people, [14, 14, 14, 14])
 
 func test_main_one_ship_crew_hundred_preserves_one_ship_and_personnel() -> void:
 	var f := _compat_fixture(0, 2)
@@ -578,21 +577,21 @@ func test_main_one_ship_crew_hundred_preserves_one_ship_and_personnel() -> void:
 
 
 func test_main_pending_supply_metadata_and_desertion_remainder_are_conserved() -> void:
-	var f := _compat_fixture(301, 2)
+	var f := _compat_fixture(601, 2)
 	var state: GameState = f.state
 	state.supply_lines = {"saved": {"pending": {"town": "depot", "rate": 750, "order_id": 7}}}
 	state.regiments.saved.desert_rem = 13
 	state.couriers = [{"id": 7, "target": "saved", "orders": [{"action_code": "SUPPLY_POINT_SET"}]}]
 	assert_false(_compat_ensure(f.repo, state).has("error"))
 	var remainder := 0
-	for code: String in state.military_migration.get("unit_mapping", {}).get("saved", ["saved"]):
+	for code: String in state.military_migration.get("living_unit_mapping", {}).get("saved", ["saved"]):
 		remainder += int(state.regiments[code].desert_rem)
-		assert_eq(state.supply_lines[code].pending.town, "depot")
-		assert_eq(state.supply_lines[code].pending.rate, 750)
 		assert_eq(state.couriers.size(), 1)
-		assert_eq(state.supply_lines[code].pending.order_id, state.couriers[0].id)
-		if code != "saved":
-			assert_true(state.couriers[0].recipient_queue.any(func(recipient: Dictionary) -> bool: return recipient.target == code))
+		if code == "saved":
+			assert_eq(state.supply_lines[code].pending, {"town": "depot", "rate": 750, "order_id": 7})
+		else:
+			assert_false(state.supply_lines[code].has("pending"))
+		assert_false(state.couriers[0].has("recipient_queue"))
 	assert_eq(remainder, 13)
 
 func _main_v7_save() -> Dictionary:

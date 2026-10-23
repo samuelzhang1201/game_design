@@ -897,6 +897,9 @@ static func regiment_personnel(repo: DataRepository, regiment: Dictionary) -> in
 ## The arm a regiment is mostly made of — what its map marker wears. Ties go
 ## to the earlier arm in unit_types, so the choice is data-ordered.
 static func regiment_arm(repo: DataRepository, regiment: Dictionary) -> String:
+	var assigned := String(regiment.get("organization_arm", ""))
+	if repo.world_table("military", "unit_types").has(assigned):
+		return assigned
 	var best := ""
 	var most := -1.0
 	for unit: String in repo.world_table("military", "unit_types"):

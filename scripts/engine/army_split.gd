@@ -61,6 +61,19 @@ static func shares(men: int, cap: int) -> Array:
 	return out
 
 
+## Depth-first binary partition of assigned living people; larger half first.
+static func halves(living: int, cap: int) -> Array[int]:
+	if living <= 0 or cap <= 0:
+		return []
+	if living <= cap:
+		return [living]
+	@warning_ignore("integer_division")
+	var small := living / 2
+	var out := halves(living - small, cap)
+	out.append_array(halves(small, cap))
+	return out
+
+
 ## Whole equipment elements split below the personnel capacity.
 static func element_shares(elements: int, crew: int, cap_men: int) -> Array:
 	if crew <= 0 or crew > cap_men:
@@ -351,9 +364,11 @@ static func roman(n: int) -> String:
 static func saved_sources(repo: DataRepository, unit: Dictionary) -> Dictionary:
 	var types := repo.world_table("military", "unit_types")
 	var parts: Array = unit.get("source_parts", []).duplicate(true)
-	var reconstructed := parts.is_empty()
+	var reconstructed := not unit.has("source_parts") or (parts.is_empty() and not unit.has("organization_arm"))
 	var code := String(unit.get("regiment_code", ""))
 	var realm := String(unit.get("kingdom_code", ""))
+	if unit.has("organization_arm") and not types.has(String(unit.organization_arm)):
+		return {"error": "Invalid saved organization arm: " + code}
 	if code.is_empty() or not repo.kingdoms.has(realm):
 		return {"error": "Saved equipment needs a known realm and unit ID."}
 	for arm: String in types:

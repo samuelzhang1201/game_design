@@ -232,9 +232,7 @@ func test_encounter_blocks_before_losses_and_resumes_after_roundtrip() -> void:
 	# This journal fixture needs an active melee attacker, independent of ranged geometry.
 	for code: String in state.foes:
 		var fit := ArmySystem.fit_count(repo, state, code)
-		for arm: String in repo.world_table("military", "unit_types"):
-			state.army_roster[code][arm] = "0"
-		state.army_roster[code]["infantry"] = str(fit)
+		_infantry_equipment(repo, state, code, fit)
 	var first_march := ""
 	for code: String in state.regiments:
 		if String(state.regiments[code].get("order", "")) == ArmySystem.ORDER_MARCH:
@@ -348,11 +346,8 @@ func test_second_battle_does_not_replay_first() -> void:
 		for code: String in table:
 			if String(table[code].get("order", "")) != ArmySystem.ORDER_MARCH:
 				continue
-			var row: Dictionary = state.army_roster[code]
-			var arm := MapObjects.regiment_arm(repo, row)
-			for unit: String in repo.world_table("military", "unit_types"):
-				row[unit] = "100" if unit == "infantry" else "0"
-			assert_false(Personnel.replace(repo, state, code, ArmySystem.personnel_capacity(repo, row)).has("error"))
+			_infantry_equipment(repo, state, code, 100)
+			assert_false(Personnel.replace(repo, state, code, ArmySystem.personnel_capacity(repo, state.army_roster[code])).has("error"))
 	# One pair fights in substep zero; the other still marches to later contact.
 	var player := String(Play.land_regiments(repo, 1)[0])
 	var foe := String(state.foes.keys()[0])
@@ -429,9 +424,7 @@ func test_later_substep_reinforcement_joins_after_round_and_fights_next_day() ->
 	# This journal fixture needs an active melee attacker, independent of ranged geometry.
 	for code: String in state.foes:
 		var fit := ArmySystem.fit_count(repo, state, code)
-		for arm: String in repo.world_table("military", "unit_types"):
-			state.army_roster[code][arm] = "0"
-		state.army_roster[code]["infantry"] = str(fit)
+		_infantry_equipment(repo, state, code, fit)
 	var codes := Play.land_regiments(repo, 2)
 	var player := String(Play.land_regiments(repo, 1)[0])
 	var foe := String(state.foes.keys()[0])
@@ -665,3 +658,15 @@ func test_saved_battle_cursor_past_end_is_refused_atomically_in_v3_and_v4() -> v
 		var before := state.to_dict()
 		assert_eq(TickEngine.new(data).resolve_day(state).status, "error", "v%d invalid saved battle index" % version)
 		assert_eq(state.to_dict(), before, "v%d refusal precedes all mutation" % version)
+
+
+func _infantry_equipment(repo: DataRepository, state: GameState, code: String, men: int) -> void:
+	var row: Dictionary = state.army_roster[code]
+	for arm: String in repo.world_table("military", "unit_types"):
+		row[arm] = "0"
+	row.infantry = str(men)
+	var source: Dictionary = row.source_parts[0].duplicate(true)
+	source.arm = "infantry"
+	source.equipment_count = men
+	source.crew_per_element = int(repo.world_row("military", "unit_types", "infantry").crew)
+	row.source_parts = [source]
