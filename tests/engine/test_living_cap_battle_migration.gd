@@ -162,3 +162,21 @@ func test_migration_hold_follows_saved_battle_alias_without_a_task() -> void:
 	state.battle_aliases["7"] = 1
 	assert_true(BattleTaskSystem.current(state, children[1]).is_empty())
 	assert_eq(BattleTaskSystem.combat_action(repo, state, state.battles[0], children[1]).kind, "hold")
+
+func test_no_task_child_uses_defensive_strength_under_attacking_side() -> void:
+	state.military_cohorts.common.fit = 1000
+	state.military_cohorts.common.wounded = 0
+	state.battles = [{"id": 7, "att": [original], "def": [], "actions": {"att": {"kind": "attack"}},
+		"groups": {original: [{"count": 1001, "x_m": 9, "y_m": 8, "role": "front"}]}}]
+	assert_eq(_reconcile().status, "complete")
+	var children := _children()
+	if children.size() != 2: return
+	var child: String = children[1]
+	var strength := BattleSystem.unit_strength(repo, state, child, Callable(), true)
+	assert_false(strength.has("error"), str(strength))
+	assert_true(strength.factors.any(func(f: Dictionary) -> bool: return f.source == "stance:defence"))
+	assert_true(strength.factors.any(func(f: Dictionary) -> bool: return f.source == "camp:defence"))
+	var defence := BattleSystem.unit_strength(repo, state, child, Callable(), false)
+	assert_eq(strength, defence, "A held child's strength cannot inherit its side's attack flag")
+	assert_eq(BattleSystem.side_power(repo, state, [child], Callable(), true), defence.power)
+	assert_true(BattleTaskSystem.current(state, child).is_empty(), "No synthetic task is needed for defence")

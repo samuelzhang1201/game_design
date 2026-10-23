@@ -71,7 +71,7 @@ static func side_power(repo: DataRepository, state: GameState, codes: Array, sta
 		var active_attack := attacking
 		if not battle.is_empty():
 			var action := unit_action(repo, state, battle, String(raw))
-			if action["task_id"] != "" or action["kind"] == "retreat" or action.get("close_defence", false):
+			if action["task_id"] != "" or action["kind"] == "retreat" or action.get("close_defence", false) or action.get("living_hold", false):
 				active_attack = action["kind"] == "attack"
 		if active_attack and battle.get("reserves", {}).has(String(raw)) \
 				and unit_action(repo, state, battle, String(raw))["task_id"] == "":
@@ -87,7 +87,7 @@ static func unit_strength(repo: DataRepository, state: GameState, code: String, 
 		attacking: bool, enemy_codes: Array = []) -> Dictionary:
 	var battle := battle_of(state, code)
 	var action: Dictionary = {} if battle.is_empty() else unit_action(repo, state, battle, code)
-	if not action.is_empty() and (action["task_id"] != "" or action["kind"] == "retreat" or action.get("close_defence", false)):
+	if not action.is_empty() and (action["task_id"] != "" or action["kind"] == "retreat" or action.get("close_defence", false) or action.get("living_hold", false)):
 		attacking = action["kind"] == "attack"
 	var factors: Array[Dictionary] = []
 	var enemy_m := 0

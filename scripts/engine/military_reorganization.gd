@@ -86,7 +86,7 @@ static func _validate(repo: DataRepository, state: GameState, code: String) -> D
 			total += int(cohort[count])
 		if total != int(cohort.get("initial", -1)) or (cohort.has("person_id") and total != 1):
 			return {"error": "Invalid saved personnel identity: " + id}
-		if cohort.has("person_id"):
+		if cohort.has("person_id") and int(cohort.released) != 1:
 			var person := String(cohort.person_id)
 			if people.has(person):
 				return {"error": "Duplicate saved named person: " + person}
@@ -328,7 +328,7 @@ static func _personnel(state: GameState, code: String, children: Array, targets:
 
 static func _quantities(out: Dictionary, old: Dictionary, weights: Array, index: int) -> void:
 	for key: String in old:
-		if key in ["supplies", "spoils", "plunder", "fee_milli", "buy_milli", "arrive_milli", "claim_milli", "skim_milli", "desert_rem", "inventory", "inventories"] or key.begins_with("m_") or key.ends_with("_milli"):
+		if key in ["supplies", "spoils", "plunder", "fee_milli", "buy_milli", "arrive_milli", "claim_milli", "skim_milli", "desert_rem", "run_supply_rem", "inventory", "inventories"] or key.begins_with("m_") or key.ends_with("_milli"):
 			if old[key] is Dictionary:
 				var amounts: Dictionary = {}
 				for sub: String in old[key]: amounts[sub] = BattleSystem.apportion(weights, int(old[key][sub]))[index]

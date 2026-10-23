@@ -364,3 +364,20 @@ func test_exact_wounded_cap_has_no_split_and_no_fit_models() -> void:
 	assert_eq(state.army_roster.size(), 1)
 	assert_eq(Roster.living(state, original), 1000)
 	assert_eq(Roster.fit(state, original), 0)
+
+func test_running_supply_debt_is_partitioned_once() -> void:
+	state.regiments[original].run_supply_rem = 9999
+	assert_eq(_reconcile().status, "complete")
+	var debts: Array = []
+	for child: String in _children():
+		debts.append(state.regiments[child].run_supply_rem)
+	assert_eq(debts, [5004, 4995], "501:500 living shares conserve the original 9999 debt")
+
+func test_reenlisted_named_person_keeps_released_history() -> void:
+	var person: String = state.military_cohorts.officer.person_id
+	_add("released-officer", 0, 0, 0, 0, 1, person, state.characters[person].family_name)
+	var history: Dictionary = state.military_cohorts["released-officer"].duplicate(true)
+	assert_eq(_reconcile().status, "complete")
+	assert_eq(state.military_cohorts["released-officer"], history)
+	assert_eq(state.military_cohorts.officer.unit_code, original)
+	assert_false(MilitaryBootstrap.migrate(repo, state).has("error"))
