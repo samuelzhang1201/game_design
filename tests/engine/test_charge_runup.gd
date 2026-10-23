@@ -185,7 +185,7 @@ func test_friendly_group_blocks_the_actual_charge_corridor() -> void:
 
 func test_enemy_closing_distance_supplies_no_momentum() -> void:
 	var f := _fixture()
-	f.state.foes[f.enemy].x_m = 1600
+	BattleGroups.translate(f.repo, f.state, f.battle, f.enemy, Vector2i(600, 0))
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	assert_eq(_context(f).kind, "melee")
 	BattleCharge.move(f.repo, f.state, f.battle, f.a, f.enemy)
@@ -194,7 +194,7 @@ func test_enemy_closing_distance_supplies_no_momentum() -> void:
 
 func test_diagonal_approach_reaches_contact_in_whole_metres() -> void:
 	var f := _fixture()
-	f.state.regiments[f.a].y_m = 1700
+	BattleGroups.translate(f.repo, f.state, f.battle, f.a, Vector2i(0, 700))
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	BattleCharge.move(f.repo, f.state, f.battle, f.a, f.enemy)
 	assert_eq(_context(f).kind, "shock", "rounding must not strand the rider just outside contact")
@@ -279,8 +279,7 @@ func test_turning_toward_a_moved_enemy_must_earn_fresh_forward_runup() -> void:
 	var f := _fixture(3700)
 	_move(f)
 	# 2500 m west has been ridden; the same enemy is now only 300 m south.
-	f.state.foes[f.enemy]["x_m"] = 2200
-	f.state.foes[f.enemy]["y_m"] = 1300
+	BattleGroups.translate(f.repo, f.state, f.battle, f.enemy, Vector2i(1200, 300))
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	f.state.day += 1
 	BattleCharge.move(f.repo, f.state, f.battle, f.a, f.enemy)
@@ -288,7 +287,7 @@ func test_turning_toward_a_moved_enemy_must_earn_fresh_forward_runup() -> void:
 
 func test_diagonal_displacement_cannot_exceed_the_daily_budget() -> void:
 	var f := _fixture(3700)
-	f.state.regiments[f.a]["y_m"] = 4700
+	BattleGroups.translate(f.repo, f.state, f.battle, f.a, Vector2i(0, 3700))
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	var from := BattleSystem._at_m(f.repo, f.state, f.a)
 	BattleCharge.move(f.repo, f.state, f.battle, f.a, f.enemy)
@@ -305,7 +304,7 @@ func test_hold_cannot_erase_the_need_to_regroup_after_impact() -> void:
 	f.battle.actions.att = {"kind": "hold"}
 	_move(f)
 	# The enemy opens a gap while our cavalry holds at its line, without regrouping.
-	f.state.foes[f.enemy].x_m = 400
+	BattleGroups.translate(f.repo, f.state, f.battle, f.enemy, Vector2i(-600, 0))
 	f.battle.actions.att = {"kind": "attack"}
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	f.state.day += 1

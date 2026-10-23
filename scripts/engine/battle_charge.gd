@@ -151,8 +151,7 @@ static func move(repo: DataRepository, state: GameState, battle: Dictionary, cod
 	if not _clear(repo, battle, code, movement):
 		return
 	var to := from + movement
-	entry["x_m"] = to.x
-	entry["y_m"] = to.y
+	BattleGroups.translate(repo, state, battle, code, movement)
 	charge["x_m"] = to.x
 	charge["y_m"] = to.y
 	BattleGroups.refresh(repo, state, battle)

@@ -70,8 +70,8 @@ func test_retreating_shooter_does_not_merge() -> void:
 
 func test_cross_battle_friendly_group_obstructs_fire() -> void:
 	var f := _fixture()
-	f.state.regiments[f.p2].x_m = 1150
-	f.state.regiments[f.p2].y_m = 1020
+	BattleGroups.translate(f.repo, f.state, f.b, f.p2,
+		Vector2i(1150, 1020) - BattleSystem._at_m(f.repo, f.state, f.p2))
 	BattleGroups.refresh(f.repo, f.state, f.b)
 	assert_eq(BattleMerge.day(f.repo, f.state), [], "20 m tangency blocks the 300 m segment")
 
