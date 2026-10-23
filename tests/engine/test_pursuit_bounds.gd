@@ -157,7 +157,7 @@ func test_an_old_saved_request_without_bounds_still_retries_by_id() -> void:
 # Two land cells meet at x=0; the unit anchor is -20 m inside the allowed cell.
 func _group_fixture(xs: Array[int]) -> Dictionary:
 	var f := _fixture()
-	var repo: DataRepository = f.repo
+	var repo: DataRepository = SuiteData.open_country(f.repo)
 	var provinces := repo.provinces.keys()
 	provinces.sort()
 	f["inside"] = String(provinces[0])

@@ -64,8 +64,9 @@ func test_interceptor_holds_real_flank_then_clearing_resumes_original_approach()
 	assert_eq(task.get("obstruction", {}).get("units", []), [f.interceptor])
 	var restored := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
 	for state: GameState in [f.state, restored]:
-		state.foes[f.interceptor].y_m = BASE.y - 5000
 		var b := BattleSystem.battle_by_id(state, 9478)
+		BattleGroups.translate(f.repo, state, b, f.interceptor,
+			Vector2i(BASE.x, BASE.y - 5000) - BattleSystem._at_m(f.repo, state, f.interceptor))
 		BattleGroups.refresh(f.repo, state, b)
 		assert_eq(Play.day(TickEngine.new(f.repo), state, true).status, "complete")
 		assert_eq(BattleSystem._at_m(f.repo, state, f.a), BASE + Vector2i(0, -50), "resume first known side leg; never aim at the interceptor")
@@ -116,7 +117,8 @@ func test_search_exhaustion_cancellation_and_withdrawal_never_resume_old_flank()
 func test_only_actual_contact_obstructs_and_withdrawing_interceptor_grants_no_pursuit() -> void:
 	var f := _fixture()
 	for offset: int in [101, 100]:
-		Play.place(f.repo, f.state, f.interceptor, BASE + Vector2i(0, -offset), ArmySystem.ORDER_STANDBY)
+		BattleGroups.translate(f.repo, f.state, f.battle, f.interceptor,
+			BASE + Vector2i(0, -offset) - BattleSystem._at_m(f.repo, f.state, f.interceptor))
 		BattleGroups.refresh(f.repo, f.state, f.battle)
 		var before: Dictionary = f.state.to_dict()
 		assert_eq(BattleSystem.unit_action(f.repo, f.state, f.battle, f.a).kind, "hold" if offset == 100 else "attack")

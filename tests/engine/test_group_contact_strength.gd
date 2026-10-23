@@ -5,7 +5,7 @@ const SuiteData := preload("res://tests/suite_data.gd")
 const Personnel := preload("res://tests/engine/personnel_helpers.gd")
 
 func _fixture(gap_m: int) -> Dictionary:
-	var repo := SuiteData.repo()
+	var repo := SuiteData.open_country(SuiteData.repo())
 	var state := SuiteData.campaign(repo, 9447)
 	var codes := state.regiments.keys()
 	codes.sort()
