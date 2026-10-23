@@ -180,3 +180,31 @@ func test_no_task_child_uses_defensive_strength_under_attacking_side() -> void:
 	assert_eq(strength, defence, "A held child's strength cannot inherit its side's attack flag")
 	assert_eq(BattleSystem.side_power(repo, state, [child], Callable(), true), defence.power)
 	assert_true(BattleTaskSystem.current(state, child).is_empty(), "No synthetic task is needed for defence")
+
+func test_partitioned_rows_survive_refresh_and_json_without_movement() -> void:
+	state.military_cohorts.common.fit = 1000
+	state.military_cohorts.common.wounded = 0
+	var rows: Array = []
+	for i: int in 20:
+		rows.append({"count": 50, "role": "front", "x_m": 100 + i, "y_m": 200, "slot": i})
+	rows.append({"count": 1, "role": "reserve", "x_m": 999, "y_m": 333, "slot": 20})
+	state.battles = [{"id": 7, "att": [original], "def": [], "groups": {original: rows}}]
+	assert_eq(_reconcile().status, "complete")
+	var before: Dictionary = state.battles[0].groups.duplicate(true)
+	state = GameState.from_dict(JSON.parse_string(JSON.stringify(state.to_dict())), false)
+	BattleGroups.refresh(repo, state, state.battles[0])
+	assert_eq(state.battles[0].groups, before, "A refresh cannot relocate the boundary group's people")
+	BattleGroups.refresh(repo, state, state.battles[0])
+	assert_eq(state.battles[0].groups, before, "Repeated refresh preserves partial rows and retired slots")
+	var child: String = _children()[1]
+	assert_false(MilitaryRoster.transfer_units(repo, state, "boundary-wound",
+		[{"unit_code": child, "from": "fit", "to": "wounded", "count": 1}], "Boundary continuity wound").has("error"))
+	BattleGroups.refresh(repo, state, state.battles[0])
+	var survivors: Array = before[child].slice(0, 10)
+	assert_eq(state.battles[0].groups[child], survivors, "Only the one-person tail retires")
+	assert_false(MilitaryRoster.transfer_units(repo, state, "boundary-recover",
+		[{"unit_code": child, "from": "wounded", "to": "fit", "count": 1}], "Boundary continuity recovery").has("error"))
+	BattleGroups.refresh(repo, state, state.battles[0])
+	assert_eq(state.battles[0].groups[child].slice(0, 10), survivors)
+	assert_eq(state.battles[0].groups[child][-1].count, 1)
+	assert_eq(state.battles[0].groups[child][-1].slot, 21, "Recovery cannot reuse retired slot20")
