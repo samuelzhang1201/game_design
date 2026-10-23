@@ -165,3 +165,23 @@ func test_prepare_day_runs_the_merge() -> void:
 	var events := BattleSystem.prepare_day(f.repo, f.state)
 	assert_eq(f.state.battles.size(), 1)
 	assert_true(events.any(func(e: Dictionary) -> bool: return e.kind == "merge"))
+
+func test_merge_keeps_absorbed_rows() -> void:
+	var f := _fixture()
+	f.b2.groups[f.p2][0].x_m = 4500
+	f.b2.groups[f.p2][0].y_m = 19000
+	f.state.regiments[f.p2].erase("facing_deg")
+	f.b2.group_facing[f.p2] = 123
+	f.state.regiments[f.p2]["charge"] = {"phase": "approach", "runup_m": 77}
+	assert_eq(BattleTaskSystem.issue_task(f.repo, f.state, {"id": "merged-pursuit", "unit": f.p2,
+		"battle_id": 2, "task": "pursue", "target_unit": f.f2, "max_route_m": 1000}).status, "pending")
+	assert_eq(BattleTaskSystem.deliver_task(f.repo, f.state, "merged-pursuit").status, "received")
+	BattleTaskSystem.credit_pursuit(f.repo, f.state, f.p2, 77)
+	var rows: Array = f.b2.groups[f.p2].duplicate(true)
+	var charge: Dictionary = f.state.regiments[f.p2].charge.duplicate(true)
+	BattleMerge.day(f.repo, f.state)
+	assert_eq(f.state.battles.size(), 1)
+	assert_eq(f.b1.groups[f.p2], rows)
+	assert_eq(int(f.b1.group_facing[f.p2]), 123)
+	assert_eq(int(BattleTaskSystem.current(f.state, f.p2).pursuit.route_m), 77)
+	assert_eq(f.state.regiments[f.p2].charge, charge)

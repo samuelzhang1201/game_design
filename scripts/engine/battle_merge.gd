@@ -138,7 +138,7 @@ static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dic
 	for side: String in BattleSystem.SIDES:
 		survivor[side] = _dedupe(survivor[side])
 	_fold_dicts(survivor, gone, ["personnel_entries", "unit_entries", "unit_formations", "reserves",
-		"abandoned_supplies", "event_checks"])
+		"abandoned_supplies", "event_checks", "groups", "group_facing", "group_anchor_m"])
 	_fold_lists(survivor, gone, ["reinforcement_evidence", "withdrawal_costs", "event_modifiers", "event_reinforcements",
 		"event_reinforcements_consumed", "report_events", "family_changes"])
 	for key: String in ["personnel_entries", "unit_entries"]:   # the side an entry names is the merged battle's
@@ -175,7 +175,9 @@ static func _merge(repo: DataRepository, state: GameState, a: Dictionary, b: Dic
 		if int(saved.get("battle_id", -1)) == gid:
 			saved["battle_id"] = sid
 	BattleCommand.unify(repo, state, survivor, source, side_map)
+	var facings: Dictionary = survivor.get("group_facing", {}).duplicate()
 	BattleGroups.refresh(repo, state, survivor)
+	survivor["group_facing"].merge(facings, true)
 	var event := {"kind": "merge", "battle_id": sid, "absorbed": gid,
 		"reason": "Fronts touched: battle %d joined battle %d on the same field." % [gid, sid]}
 	BattleReport.note(survivor, [event])

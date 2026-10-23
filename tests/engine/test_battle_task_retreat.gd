@@ -204,3 +204,47 @@ func test_retreating_recipient_does_not_cancel_allied_attack_or_pay_attack_suppl
 	@warning_ignore("integer_division")
 	var abandoned := 10000 * int(f.repo.bal("battle_retreat_supply_loss_permille")) / 1000
 	assert_eq(int(f.state.regiments[f.unit].supplies), 10000 - abandoned, "only existing withdrawal supply loss")
+
+func test_live_withdrawal_moves_groups_but_preview_does_not() -> void:
+	for variant: int in range(4):
+		var saved_walk := variant % 2 == 1
+		var f := _fixture()
+		if variant >= 2:
+			f.unit = String(f.battle.att[0])
+			f.at = BattleSystem._at_m(f.repo, f.state, f.unit)
+		SuiteData.flat_ground(f.repo)
+		var entry := BattleSystem._stored(f.state, f.unit)
+		entry["battle_retreat"] = true
+		entry["camp_state"] = {"phase": CampSystem.NONE}
+		entry.erase("departure")
+		entry["order"] = ArmySystem.ORDER_MARCH
+		entry["dest_x_m"] = f.at.x + 300
+		entry["dest_y_m"] = f.at.y + 400
+		entry.erase("route_m")
+		BattleGroups.refresh(f.repo, f.state, f.battle)
+		var rows: Array = f.battle.groups[f.unit].duplicate(true)
+		var snapshot: Array = f.battle.group_anchor_m[f.unit].duplicate()
+		ArmySystem.march_ahead(f.repo, f.state, f.unit, entry.duplicate(true))
+		assert_eq(f.battle.groups[f.unit], rows, "preview cannot move rows")
+		assert_eq(f.battle.group_anchor_m[f.unit], snapshot)
+		f.battle.erase("group_anchor_m")   # legacy saved rows before their first live withdrawal
+		if saved_walk:
+			f.state.day_resolution = DayResolution.begin(f.state.day, false, f.state.absolute_day(), 1)
+			f.state.day_resolution["march_entries"] = {f.unit: entry.duplicate(true)}
+			var entries: Dictionary = f.state.day_resolution.march_entries
+			ArmySystem.march_day_saved(f.repo, f.state, 1, 0, entries, {f.unit: 50})
+			var after: Array = f.battle.groups[f.unit].duplicate(true)
+			var twin := Scenario.roundtrip(f.state)
+			var replay: Dictionary = twin.day_resolution.march_entries
+			ArmySystem.march_day_saved(f.repo, twin, 1, 0, replay, {f.unit: 50})
+			assert_eq(SaveLoad.state_hash(twin), SaveLoad.state_hash(f.state), "JSON retains the consumed substep")
+			ArmySystem.march_day_saved(f.repo, f.state, 1, 0, entries, {f.unit: 50})
+			assert_eq(f.battle.groups[f.unit], after, "completed saved step cannot apply a second delta")
+		else:
+			ArmySystem.march_day(f.repo, f.state, 1, 0, true, [f.unit], {f.unit: 50})
+		assert_eq(BattleSystem._at_m(f.repo, f.state, f.unit), f.at + Vector2i(30, 40))
+		for i: int in rows.size():
+			assert_eq(int(f.battle.groups[f.unit][i].x_m), int(rows[i].x_m) + 30)
+			assert_eq(int(f.battle.groups[f.unit][i].y_m), int(rows[i].y_m) + 40)
+		BattleGroups.refresh(f.repo, f.state, f.battle)
+		assert_eq(f.battle.group_anchor_m[f.unit], [f.at.x + 30, f.at.y + 40])

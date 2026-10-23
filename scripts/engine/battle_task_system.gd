@@ -657,9 +657,7 @@ static func deploy_flank(repo: DataRepository, state: GameState, battle: Diction
 		to = walked["at"]
 	if not BattleCharge._clear(repo, battle, unit, to - here):
 		return true
-	var entry := BattleSystem._stored(state, unit)
-	entry["x_m"] = to.x
-	entry["y_m"] = to.y
+	BattleGroups.translate(repo, state, battle, unit, to - here)
 	flank["path_m"] = MarchRoute.to_pairs((walked["path"] as Array) + path.slice(1))
 	BattleGroups.refresh(repo, state, battle)
 	if BattleGroups.engaged_counts(repo, state, battle, unit, String(record["request"]["target_unit"])).x > 0:

@@ -81,3 +81,111 @@ func test_departed_unit_loses_its_entry() -> void:
 	f.battle.def.clear()
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	assert_false(f.battle.groups.has(f.enemy))
+
+func _points(rows: Array) -> Array:
+	return rows.map(func(row: Dictionary) -> Vector2i: return Vector2i(int(row.x_m), int(row.y_m)))
+
+func test_refresh_keeps_physical_rows() -> void:
+	var f := _fixture()
+	Personnel.replace(f.repo, f.state, f.a, 100)
+	f.battle["groups"] = {f.a: [
+		{"count": 50, "role": "front", "x_m": 200, "y_m": 200, "path_m": [[210, 200]]},
+		{"count": 50, "role": "reserve", "x_m": 160, "y_m": 200}]}
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(_points(f.battle.groups[f.a]), [Vector2i(200, 200), Vector2i(160, 200)])
+	assert_eq(f.battle.groups[f.a][0].get("path_m", []), [[210, 200]])
+	assert_eq(f.battle.groups[f.a].map(func(row: Dictionary) -> int: return int(row.get("slot", -1))), [0, 1])
+	var frozen := JSON.stringify(f.state.to_dict())
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(JSON.stringify(f.state.to_dict()), frozen)
+	f.state.regiments[f.a]["facing_deg"] = 180
+	f.battle.formations.att.current = "line"
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(_points(f.battle.groups[f.a]), [Vector2i(200, 200), Vector2i(160, 200)])
+
+func test_count_boundary_keeps_surviving_positions() -> void:
+	var f := _fixture()
+	Personnel.replace(f.repo, f.state, f.a, 120)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var before := _points(f.battle.groups[f.a])
+	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 19)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(_counts(f.battle.groups[f.a]), [50, 50, 1])
+	assert_eq(_points(f.battle.groups[f.a]), before)
+	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 1)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(_counts(f.battle.groups[f.a]), [50, 50])
+	assert_eq(_points(f.battle.groups[f.a]), before.slice(0, 2))
+	Personnel.replace(f.repo, f.state, f.a, 151)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(_points(f.battle.groups[f.a]).slice(0, 2), before.slice(0, 2))
+	assert_eq(f.battle.groups[f.a].map(func(row: Dictionary) -> int: return int(row.get("slot", -1))), [0, 1, 3, 4])
+
+func test_pending_round_freezes_reconciliation() -> void:
+	var f := _fixture()
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var before: Dictionary = f.battle.duplicate(true)
+	f.battle["pending_round"] = {"roll": 17}
+	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 1)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(f.battle.groups, before.groups)
+
+func test_translate_and_follow_anchor_apply_exactly_once() -> void:
+	var f := _fixture()
+	Personnel.replace(f.repo, f.state, f.a, 100)
+	f.state.regiments[f.a].x_m = 200
+	f.state.regiments[f.a].y_m = 200
+	f.battle["groups"] = {f.a: [
+		{"count": 50, "role": "front", "x_m": 200, "y_m": 200, "path_m": [[210, 200]]},
+		{"count": 50, "role": "reserve", "x_m": 160, "y_m": 200}]}
+	BattleGroups.translate(f.repo, f.state, f.battle, f.a, Vector2i(30, 40))
+	assert_eq(BattleSystem._at_m(f.repo, f.state, f.a), Vector2i(230, 240))
+	assert_eq(_points(f.battle.groups[f.a]), [Vector2i(230, 240), Vector2i(190, 240)])
+	assert_eq(f.battle.groups[f.a][0].path_m, [[240, 240]])
+	var before := JSON.stringify(f.state.to_dict())
+	BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(JSON.stringify(f.state.to_dict()), before)
+	f.state.regiments[f.a].x_m = 260
+	f.state.regiments[f.a].y_m = 280
+	BattleGroups.follow_anchor(f.repo, f.state, f.battle, f.a)
+	assert_eq(_points(f.battle.groups[f.a]), [Vector2i(260, 280), Vector2i(220, 280)])
+	assert_eq(f.battle.group_anchor_m[f.a], [260, 280])
+
+func test_retired_slots_stay_retired_across_json_and_battles() -> void:
+	var f := _fixture()
+	Personnel.replace(f.repo, f.state, f.a, 120)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	Personnel.move(f.repo, f.state, f.a, "fit", "dead", 20)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var loaded := GameState.from_dict(JSON.parse_string(JSON.stringify(f.state.to_dict())))
+	var battle: Dictionary = loaded.battles[0]
+	battle.att.clear()
+	BattleGroups.refresh(f.repo, loaded, battle)
+	battle.att.append(f.a)
+	BattleGroups.refresh(f.repo, loaded, battle)
+	assert_eq(battle.groups[f.a].map(func(row: Dictionary) -> int: return int(row.slot)), [3, 4])
+	var next_battle := {"id": 9446, "att": [f.a], "def": [f.enemy], "actions": {}}
+	loaded.battles = [next_battle]
+	BattleGroups.refresh(f.repo, loaded, next_battle)
+	assert_eq(next_battle.groups[f.a].map(func(row: Dictionary) -> int: return int(row.slot)), [5, 6])
+	var twin := GameState.from_dict(JSON.parse_string(JSON.stringify(loaded.to_dict())))
+	BattleGroups.refresh(f.repo, twin, twin.battles[0])
+	assert_eq(SaveLoad.state_hash(twin), SaveLoad.state_hash(loaded))
+
+func test_new_member_seeds_at_arrival_and_exact_people_are_conserved() -> void:
+	var f := _fixture()
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var codes: Array = f.state.regiments.keys()
+	codes.sort()
+	var ally := String(codes[1])
+	f.state.regiments[ally].x_m = 9000
+	f.state.regiments[ally].y_m = 8000
+	Personnel.replace(f.repo, f.state, ally, 1)
+	f.battle.att.append(ally)
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	assert_eq(_points(f.battle.groups[ally]), [Vector2i(9000, 8000)])
+	for people: int in [0, 1, 49, 50, 51, 800, 1000, 10000]:
+		Personnel.replace(f.repo, f.state, ally, people)
+		BattleGroups.refresh(f.repo, f.state, f.battle)
+		assert_eq(_counts(f.battle.groups[ally]), BattleGroups.counts(people))

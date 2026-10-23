@@ -83,7 +83,8 @@ func test_distant_opponents_never_grant_flank_and_real_side_contact_does() -> vo
 	f.state.foes[f.enemy]["facing_deg"] = 0
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	assert_false(BattleFormation.context(f.repo, f.state, f.battle, "def", f.enemy).flanked)
-	Play.place(f.repo, f.state, f.a, BASE + Vector2i(1000, -100), ArmySystem.ORDER_STANDBY)
+	BattleGroups.translate(f.repo, f.state, f.battle, f.a,
+		BASE + Vector2i(1000, -100) - BattleSystem._at_m(f.repo, f.state, f.a))
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	assert_true(BattleFormation.context(f.repo, f.state, f.battle, "def", f.enemy).flanked)
 
@@ -189,7 +190,8 @@ func test_deep_wedge_approach_ends_at_actual_side_group_contact() -> void:
 func test_failed_round_keeps_contact_factors_through_turn_and_json_retry() -> void:
 	var f := _fixture()
 	assert_eq(BattleTaskSystem.deliver_task(f.repo, f.state, "flank").status, "received")
-	Play.place(f.repo, f.state, f.a, BASE + Vector2i(1000, -100), ArmySystem.ORDER_STANDBY)
+	BattleGroups.translate(f.repo, f.state, f.battle, f.a,
+		BASE + Vector2i(1000, -100) - BattleSystem._at_m(f.repo, f.state, f.a))
 	BattleGroups.refresh(f.repo, f.state, f.battle)
 	assert_true(BattleFormation.context(f.repo, f.state, f.battle, "def", f.enemy).flanked)
 	for tier: Dictionary in f.repo.battle_outcomes:
