@@ -45,6 +45,12 @@ func test_frozen_save_flags_reject_writers_and_missing_values() -> void:
 	assert_ne(shot.battle_save_options(valid + PackedStringArray(["--group-evidence", "/tmp/input.json"])).get("error", ""), "")
 	assert_ne(shot.battle_save_options(valid + PackedStringArray(["--set", "Game:state=0"])).get("error", ""), "")
 	assert_ne(shot.battle_save_options(valid + PackedStringArray(["--set", "Units:ctx=0"])).get("error", ""), "")
+	var default_collision := valid.duplicate()
+	default_collision[default_collision.size() - 1] = "user://screen_snapshot.png"
+	assert_ne(shot.battle_save_options(default_collision).get("error", ""), "", "default PNG must not overwrite the input")
+	assert_ne(shot.battle_save_options(valid + PackedStringArray([
+		"--out", "user://screen_snapshot.png", "--group-evidence",
+		ProjectSettings.globalize_path("user://screen_snapshot.png")])).get("error", ""), "", "output aliases must not overwrite each other")
 
 func test_frozen_capture_checks_actual_nodes_and_unchanged_state() -> void:
 	var shot := load("res://tools/snapshot_screen.gd").new() as Node

@@ -2055,11 +2055,17 @@ func battle_save_options(args: PackedStringArray) -> Dictionary:
 			or int(resolution[0]) <= 0 or int(resolution[1]) <= 0:
 		return {"error": "invalid capture resolution"}
 	var input := ProjectSettings.globalize_path(String(options["--battle-save"])).simplify_path()
+	var outputs: Array[String] = []
 	for flag: String in ["--out", "--group-evidence"]:
-		if options.has(flag) and ProjectSettings.globalize_path(String(options[flag])).simplify_path() == input:
+		var path := String(options.get(flag, _out if flag == "--out" else ""))
+		if path == "":
+			continue
+		var output := ProjectSettings.globalize_path(path).simplify_path()
+		if output == input:
 			return {"error": "capture output must not overwrite input save"}
-	if options.has("--out") and options.get("--group-evidence", "") == options["--out"]:
-		return {"error": "PNG and evidence need distinct paths"}
+		if output in outputs:
+			return {"error": "PNG and evidence need distinct paths"}
+		outputs.append(output)
 	return options
 
 func _frozen_fail(message: String) -> void:
