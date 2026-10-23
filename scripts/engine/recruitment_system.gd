@@ -73,6 +73,8 @@ static func pending_new_units(repo: DataRepository, state: GameState) -> Diction
 				or not ArmySplit.is_whole_count(project.get("worked_days", -1)) \
 				or not (last_day is int or last_day is float) or not is_finite(float(last_day)) or float(last_day) != floor(float(last_day)):
 			return {"error": "Saved new assembly needs its complete original paid contract."}
+		if codes.size() > 1 and not project.has("equipment_by_unit"):
+			return {"error": "Saved split assembly needs its paid equipment allocation."}
 		if project.has("equipment_by_unit"):
 			var allocation: Variant = project.equipment_by_unit
 			if not allocation is Dictionary or allocation.size() != codes.size():
