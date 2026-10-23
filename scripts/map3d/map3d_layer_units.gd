@@ -39,6 +39,7 @@ const MARCH := "MARCH"
 @export var battle_herald: PackedScene
 @export var battle_signal_height_ratio := 1.0
 @export var battle_signal_gap := 1.5
+const BattleGroupsView := preload("res://scripts/map3d/map3d_battle_groups.gd")
 var _battle := Map3DBattleSignals.new()
 var _scouts := Map3DUnitScout.new()  ## the fans of the marching crown units
 var _camps := Map3DUnitCamps.new()  ## the camps pitched behind held lines
@@ -133,7 +134,11 @@ func refresh() -> void:
 ## What the drawn set reads: the state, its day, its regiments (orders, stances, fronts), foes, sightings, DEV MODE.
 func _roster_key() -> Array:
 	var st := ctx.state()
-	return [st, st.absolute_day(), st.regiments.hash(), st.foes.size(), st.sightings.size(), ctx.dev] \
+	var geometry: Array = []
+	if st != null:
+		for reg: Dictionary in ctx.regiments():
+			geometry.append([reg["regiment_code"], BattleGroupsView.sample(ctx, String(reg["regiment_code"]))["key"]])
+	return [geometry, st, st.absolute_day(), st.regiments.hash(), st.foes.size(), st.sightings.size(), ctx.dev] \
 		if st != null else [null, ctx.dev]
 
 
@@ -172,6 +177,10 @@ func _target_xz(reg: Dictionary) -> Vector2:
 ## Stand one piece where it is SHOWN, at the camera's scale, facing its way,
 ## SEATED on its footprint (Map3DUnits.seat; owner 2026-09-24: 斜面上兵人的一部分会被地图盖住).
 func _place(code: String, piece: Dictionary) -> void:
+	if piece.get("layout", "") == "physical_groups":
+		_rects[code] = BattleGroupsView.place(ctx, piece, _shown_xz[code], formation_gap, _selected.has(code))
+		_yaw[code] = Map3DUnits.facing_yaw(WarFront.facing_vector(piece["facing_deg"]))
+		return
 	var repo := ctx.repo
 	var xz: Vector2 = _shown_xz[code]
 	_rects.erase(code)
@@ -208,6 +217,9 @@ func step(delta: float) -> bool:
 		var node: Node3D = _pieces[code]["node"]
 		if not _shown_xz.has(code) or code.begins_with(Sighting.GHOST_CODE):
 			continue  # a ghost stands where it was last known
+		if _pieces[code].get("layout", "") == "physical_groups":
+			_sync_action(code)
+			continue
 		var now: Vector2 = _shown_xz[code]
 		var day := _day_of(code)
 		var want := Map3DUnits.along_day(day, ctx.day_share())
@@ -233,7 +245,7 @@ func step(delta: float) -> bool:
 		var piece: Dictionary = _pieces[code]
 		var node: Node3D = piece["node"]
 		_camps.sync(self, ctx, code, piece, _shown_xz.get(code, Vector2.ZERO),
-			float(_yaw.get(code, 0.0)), node.basis.get_scale().x * camp_size_ratio, camp_back_m)
+			float(_yaw.get(code, 0.0)), float(piece.get("camp_scale", node.basis.get_scale().x)) * camp_size_ratio, camp_back_m)
 	_camps.prune(_pieces); _sound.sync(repo, ctx.camera, _pieces, delta)  # the march's sound
 	_settle.step(self, delta)  # held halts drop into their guard on the footfall
 	_sync_scouts()
@@ -278,7 +290,11 @@ func play(code: String, action: String) -> void:
 		var clips: Array = (_pieces[code].get("chains", {}) as Dictionary).get(action, [])
 		var chain := {} if clips.is_empty() else {"clips": clips,
 			"lo": ctx.repo.bal("map3d_unit_chain_rest_min_s"), "hi": ctx.repo.bal("map3d_unit_chain_rest_max_s")}
-		Map3DUnitRig.play(_pieces[code]["anims"], action, blend_s, code, chain)
+		if _pieces[code].get("layout", "") == "physical_groups":
+			for group: Dictionary in _pieces[code]["groups"]:
+				Map3DUnitRig.play(group["piece"]["anims"], action, blend_s, code + ":" + str(group["slot"]), chain)
+		else:
+			Map3DUnitRig.play(_pieces[code]["anims"], action, blend_s, code, chain)
 
 
 ## The piece for a regiment, built on first sight; {} for an arm with no model (a fleet).
@@ -286,6 +302,23 @@ func _piece_of(code: String) -> Dictionary:
 	var reg := ArmySystem.regiment(ctx.repo, code, ctx.state())
 	if reg.is_empty():
 		return {}
+	var sampled := BattleGroupsView.sample(ctx, code)
+	if sampled["mode"] == "invalid":
+		if _pieces.has(code): _drop(code)
+		return {}
+	if sampled["mode"] == "groups":
+		if _pieces.get(code, {}).get("layout", "") != "physical_groups":
+			if _pieces.has(code): _drop(code)
+			var built := BattleGroupsView.build(ctx.repo, reg, sampled)
+			add_child(built["node"])
+			_pieces[code] = built
+		elif _pieces[code].get("sample_key", []) != sampled["key"]:
+			BattleGroupsView.sync(ctx.repo, reg, _pieces[code], sampled)
+		_shown_xz[code] = _target_xz(reg)
+		_sync_action(code)
+		return _pieces[code]
+	if _pieces.get(code, {}).get("layout", "") == "physical_groups":
+		_drop(code)
 	var tier := Map3DFormation.tier_of(ctx.repo, ArmySystem.fit_permille(ctx.repo, ctx.state(), code))
 	var layout := Map3DFormation.layout_of(ctx.repo, ctx.state(), code)
 	if int(_pieces.get(code, {}).get("figures", -1)) == (tier["slots"] as Array).size() \
@@ -302,6 +335,7 @@ func _piece_of(code: String) -> Dictionary:
 
 
 func _drop(code: String) -> void:  ## frees `code`'s piece, forgets all kept about it; rebuilt if it returns
+	_settle.cancel(code, _pieces[code])
 	(_pieces[code]["node"] as Node3D).queue_free()
 	_scouts.drop(code)
 	for kept: Dictionary in [_pieces, _rects, _shown_xz, _track, _want_yaw, _yaw, _days]: kept.erase(code)
@@ -333,7 +367,7 @@ func _day_of(code: String) -> Dictionary:
 ## a held stance's standing clip (DEFEND, front-line §2); GARRISON under that
 ## order; else STANDBY (the start, on arrival, ready on a stopped clock).
 func _sync_action(code: String) -> void:
-	var walking: bool = _days.has(code) and Map3DUnits.walking(_days[code], ctx.day_share())
+	var walking: bool = _pieces[code].get("layout", "") != "physical_groups" and _days.has(code) and Map3DUnits.walking(_days[code], ctx.day_share())
 	var st := ctx.state()
 	var order := ArmySystem.order_of(ctx.repo, st, code) if st != null else ArmySystem.ORDER_STANDBY
 	var row: Dictionary = ctx.repo.battle_stances.get(BattleSystem.stance_of(st, code), {}) if st != null else {}
@@ -341,7 +375,7 @@ func _sync_action(code: String) -> void:
 	var piece: Dictionary = _pieces[code]
 	if String(piece.get("action", "")) == action:
 		_settle.cancel(code, piece)  # marching on: a held halt is dropped
-	elif not _settle.holds(ctx.repo, code, piece, action):  # a halt into GARRISON waits for the footfall
+	elif piece.get("layout", "") == "physical_groups" or not _settle.holds(ctx.repo, code, piece, action):  # a halt into GARRISON waits for the footfall
 		play(code, action)  # each figure's clip looked up only on a change
 
 
@@ -371,5 +405,30 @@ func scout_codes() -> Array: return _scouts.codes()
 
 func _sync_battle_signals() -> void:
 	if ctx == null: return
+	var unchanged := _pieces.duplicate()
+	var resized := false
+	for code: String in _pieces:
+		var piece: Dictionary = _pieces[code]
+		if piece.get("layout", "") != "physical_groups":
+			continue
+		var dimensions := [piece["height_m"], piece["extent"]]
+		if piece.get("signal_dimensions", dimensions) != dimensions:
+			unchanged.erase(code)
+			resized = true
+		piece["signal_dimensions"] = dimensions
+	if resized:
+		_battle.sync(unchanged, {"refusal": battle_refusal_flag, "herald": battle_herald},
+			battle_signal_height_ratio, battle_signal_gap, ctx.repo, ctx.height_at)
 	_battle.sync(_pieces, {"refusal": battle_refusal_flag, "herald": battle_herald},
 		battle_signal_height_ratio, battle_signal_gap, ctx.repo, ctx.height_at)
+
+
+## Actual instantiated group nodes for the developer capture, visible real units only.
+func group_geometry() -> Dictionary:
+	var out: Dictionary = {}
+	for code: String in _pieces:
+		var piece: Dictionary = _pieces[code]
+		if piece.get("layout", "") == "physical_groups" and (piece["node"] as Node3D).visible \
+				and BattleGroupsView.sample(ctx, code)["mode"] == "groups":
+			out[code] = BattleGroupsView.evidence(piece)
+	return out

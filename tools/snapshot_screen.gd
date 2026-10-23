@@ -31,6 +31,13 @@ const SCENES := {
 ## --battle-case field: the same contact, the notice then acknowledged through
 ## Game, so the battle stands with no window over it (the WAR ROOM's task block).
 var _battle_case := ""
+var _battle_save := ""
+var _group_evidence := ""
+var _frozen_options: Dictionary = {}
+var _frozen_file_hash := ""
+var _frozen_raw_hash := ""
+var _frozen_loaded_hash := ""
+var _capture_started_ms := 0
 
 var _out := "user://screen_snapshot.png"
 var _screen := "court"
@@ -345,8 +352,15 @@ var _also: Dictionary = {}
 
 
 func _ready() -> void:
+	_capture_started_ms = Time.get_ticks_msec()
 	FrameCap.forced = 0  # a shot waits frames; the player's cap would only slow it
 	var args := OS.get_cmdline_user_args()
+	_frozen_options = battle_save_options(args)
+	if _frozen_options.has("error"):
+		_frozen_fail(String(_frozen_options["error"]))
+		return
+	_battle_save = String(_frozen_options.get("--battle-save", ""))
+	_group_evidence = String(_frozen_options.get("--group-evidence", ""))
 	var i := 0
 	while i < args.size() - 1:
 		if args[i] == "--out":
@@ -605,7 +619,33 @@ func _ready() -> void:
 		Map3DWorldCache.clear()  # the kept world leaks at exit otherwise
 		get_tree().quit(2)
 		return
-	Game.start_campaign(_seed)
+	if _battle_save != "":
+		_frozen_file_hash = FileAccess.get_sha256(_battle_save)
+		var raw := SaveLoad.load_game(_battle_save)
+		if raw == null:
+			_frozen_fail("missing/corrupt save")
+			return
+		_frozen_raw_hash = SaveLoad.state_hash(raw)
+		if not Game.load_campaign(_battle_save):
+			_frozen_fail(Game.load_error)
+			return
+		_frozen_loaded_hash = SaveLoad.state_hash(Game.state)
+		var source_ctx := Map3DContext.new(Game.data, {})
+		source_ctx.state_fn = func() -> GameState: return Game.state
+		var source_check := battle_capture_source(source_ctx)
+		if source_check.has("error"):
+			_frozen_fail(String(source_check["error"]))
+			return
+		var world_status := Map3DWorldLoader.status(Map3DView.scene_path_for(Game.data.map_id))
+		if world_status["state"] not in ["ok", "legacy"]:
+			_frozen_fail("missing/invalid built world: " + String(world_status["why"]))
+			return
+		var warm_error := battle_capture_warm(BootLoads.TABLES + GameRoot.OVERLAY_SCENES)
+		if warm_error != "":
+			_frozen_fail(warm_error)
+			return
+	else:
+		Game.start_campaign(_seed)
 	# the news bar's lines, so a run shows what the player was told
 	Game.news_published.connect(func(t: String) -> void:
 		print("news [%s]: %s" % [Calendar.date_of_day(Game.news_day()) if Game.state != null else "", t]))
@@ -1119,6 +1159,9 @@ func _process(_delta: float) -> void:
 					if rt.size() >= 2:
 						print("supply-front drawn broken: %s town %s at %s, column %s at %s" % [c, rt[0],
 							mv.screen_pos_of_px(rt[0]), rt[rt.size() - 1], mv.screen_pos_of_px(rt[rt.size() - 1])])
+		if _battle_save != "":
+			_frozen_capture()
+			return
 		var err := _save_shot(_out)
 		var how := ("%dx%d window" % [_res.x, _res.y]) if _res != Vector2i.ZERO else ("x%.1f" % _scale)
 		print("snapshot %s -> %s (%s, %s, filter %d)" % [
@@ -1970,3 +2013,176 @@ func _stage_battle_encounter() -> void:
 	foe["dest_y_m"] = foe["y_m"]
 	foe["order"] = ArmySystem.ORDER_STANDBY
 	Game.advance_day()
+
+
+## Frozen captures accept presentation flags only; validation is callable without a world.
+func battle_save_options(args: PackedStringArray) -> Dictionary:
+	if not args.has("--battle-save"):
+		return {"error": "--group-evidence requires --battle-save"} if args.has("--group-evidence") else {}
+	var options: Dictionary = {}
+	var allowed := ["--screen", "--resolution", "--battle-save", "--group-evidence", "--out", "--zoom3d", "--at3d", "--set"]
+	var i := 0
+	while i < args.size():
+		var flag := args[i]
+		if flag == "--still":
+			options[flag] = true
+			i += 1
+			continue
+		if flag not in allowed or i + 1 >= args.size() or args[i + 1].begins_with("--") or args[i + 1] == "":
+			return {"error": "invalid/missing frozen capture option: " + flag}
+		if flag == "--set":
+			var value := args[i + 1]
+			if not value.begins_with("Units:") and not (value.begins_with("res://scenes/map3d/") and value.contains(".tres:")):
+				return {"error": "frozen --set accepts map presentation exports only"}
+			if value.begins_with("Units:"):
+				var eq := value.find("=")
+				var property := value.substr(6, eq - 6)
+				var layer := Map3DLayerUnits.new()
+				var exported := false
+				for item: Dictionary in layer.get_property_list():
+					if item["name"] == property and int(item["usage"]) & PROPERTY_USAGE_EDITOR \
+							and int(item["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+						exported = true
+				layer.free()
+				if eq <= 6 or not exported:
+					return {"error": "--set requires an inspector export"}
+		options[flag] = args[i + 1]
+		i += 2
+	if options.get("--screen", "") != "root" or not options.has("--still") or not options.has("--resolution"):
+		return {"error": "--battle-save requires --screen root --resolution WxH --still"}
+	var resolution := String(options["--resolution"]).split("x")
+	if resolution.size() != 2 or not resolution[0].is_valid_int() or not resolution[1].is_valid_int() \
+			or int(resolution[0]) <= 0 or int(resolution[1]) <= 0:
+		return {"error": "invalid capture resolution"}
+	var input := ProjectSettings.globalize_path(String(options["--battle-save"])).simplify_path()
+	for flag: String in ["--out", "--group-evidence"]:
+		if options.has(flag) and ProjectSettings.globalize_path(String(options[flag])).simplify_path() == input:
+			return {"error": "capture output must not overwrite input save"}
+	if options.has("--out") and options.get("--group-evidence", "") == options["--out"]:
+		return {"error": "PNG and evidence need distinct paths"}
+	return options
+
+func _frozen_fail(message: String) -> void:
+	push_error("frozen battle capture: " + message)
+	Map3DWorldCache.clear()
+	set_process(false)
+	get_tree().quit(2)
+
+func _frozen_view() -> Map3DView:
+	return _root.current_screen.map3d_view() if _root != null and _root.current_screen != null \
+		and _root.current_screen.has_method("map3d_view") else null
+
+func _frozen_capture() -> void:
+	var view := _frozen_view()
+	if view == null or view._ctx == null or view._units == null or view._world == null:
+		_shot_frame += 1
+		return
+	var measured := view._units.group_geometry()
+	var final_hash := SaveLoad.state_hash(Game.state)
+	var checked := battle_capture_check(view._ctx, measured, _frozen_loaded_hash, final_hash)
+	if checked.has("error"):
+		_frozen_fail(String(checked["error"]))
+		return
+	var source: Dictionary = checked["source"]
+	if FileAccess.get_sha256(_battle_save) != _frozen_file_hash:
+		_frozen_fail("frozen input file changed during capture")
+		return
+	if _save_shot(_out) != OK:
+		_frozen_fail("PNG write failed")
+		return
+	if _group_evidence != "":
+		var revision: Array = []
+		var git_status := OS.execute("git", ["-C", ProjectSettings.globalize_path("res://"), "rev-parse", "HEAD"], revision)
+		var script_hashes: Dictionary = {}
+		for path: String in ["scripts/map3d/map3d_battle_groups.gd", "scripts/map3d/map3d_layer_units.gd", "tools/snapshot_screen.gd"]:
+			script_hashes[path] = FileAccess.get_sha256("res://" + path)
+		var canvas := view.get_global_transform_with_canvas()
+		var manifest := {"script_sha256": script_hashes, "elapsed_ms": Time.get_ticks_msec() - _capture_started_ms,
+			"fps_at_capture": Engine.get_frames_per_second(), "map_canvas_origin": [canvas.origin.x, canvas.origin.y],
+			"map_canvas_scale": [canvas.basis_xform(Vector2.RIGHT).length(), canvas.basis_xform(Vector2.DOWN).length()],
+			"input_path": _battle_save, "input_sha256": _frozen_file_hash,
+			"raw_state_hash": _frozen_raw_hash, "loaded_state_hash": _frozen_loaded_hash, "final_state_hash": final_hash,
+			"loader_migrated": _frozen_raw_hash != _frozen_loaded_hash,
+			"pack": Game.data.map_id, "world_path": view._scene_path, "world_meta": view._ctx.meta,
+			"resolution": [_res.x, _res.y], "camera": {"distance": view._ctx.distance,
+				"target": [view._ctx.target.x, view._ctx.target.y], "yaw": view._ctx.yaw},
+			"quality": view.quality_tier(), "quality_values": view._ctx.quality, "look_overrides": _frozen_options.get("--set", ""),
+			"source": source, "measured": measured, "code_head": String(revision[0]).strip_edges() if git_status == 0 else "unavailable",
+			"png_path": ProjectSettings.globalize_path(_out), "png_sha256": FileAccess.get_sha256(_out), "capture_frame": _frames}
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_group_evidence).get_base_dir())
+		var file := FileAccess.open(_group_evidence, FileAccess.WRITE)
+		if file == null:
+			_frozen_fail("evidence write failed")
+			return
+		file.store_string(JSON.stringify(manifest, "\t"))
+		file.close()
+	print("frozen battle capture ok: ", _out)
+	Map3DWorldCache.clear()
+	set_process(false)
+	get_tree().quit()
+
+
+## Checks the instantiated nodes against permitted source facts, never hidden rows.
+func battle_capture_check(ctx: Map3DContext, measured: Dictionary, loaded_hash: String, final_hash: String) -> Dictionary:
+	if loaded_hash != final_hash:
+		return {"error": "loaded state changed during capture"}
+	var projection := battle_capture_source(ctx)
+	if projection.has("error"):
+		return projection
+	var source: Dictionary = projection["source"]
+	for code: String in source:
+		var sampled: Dictionary = source[code]
+		var rows: Array = sampled["rows"]
+		if rows.is_empty() and not measured.has(code):
+			source[code] = {"rows": [], "facing_deg": sampled["facing_deg"]}
+			continue
+		if not measured.has(code) or measured[code].size() != rows.size():
+			return {"error": "source/model group count mismatch: " + code}
+		var by_slot: Dictionary = {}
+		for node: Dictionary in measured[code]:
+			if by_slot.has(node["slot"]):
+				return {"error": "duplicate model slot: " + code}
+			by_slot[node["slot"]] = node
+		for row: Dictionary in rows:
+			if not by_slot.has(row["slot"]):
+				return {"error": "missing model slot: " + code}
+			var node: Dictionary = by_slot[row["slot"]]
+			for field: String in ["count", "role", "x_m", "y_m"]:
+				if node[field] != row[field]:
+					return {"error": "source/model field mismatch: " + code + ":" + field}
+			var expected := ctx.to_world(ArmySystem.metres_to_pack(ctx.repo, Vector2i(row["x_m"], row["y_m"])))
+			var actual := Vector2(node["xz_world"][0], node["xz_world"][1])
+			var yaw := Map3DUnits.facing_yaw(WarFront.facing_vector(sampled["facing_deg"]))
+			if expected.distance_to(actual) > 0.0001 or absf(wrapf(float(node["yaw_rad"]) - yaw, -PI, PI)) > 0.0001:
+				return {"error": "source/model pose mismatch: " + code}
+	for code: String in measured:
+		if not source.has(code):
+			return {"error": "unadmitted model evidence: " + code}
+	return {"source": source}
+
+
+## Fail malformed/legacy inputs before starting the heavy world or overlays.
+func battle_capture_source(ctx: Map3DContext) -> Dictionary:
+	var source: Dictionary = {}
+	var count := 0
+	for reg: Dictionary in ctx.regiments():
+		var code := String(reg["regiment_code"])
+		var sampled := Map3DBattleGroups.sample(ctx, code)
+		if sampled["mode"] == "invalid":
+			return {"error": code + ": " + String(sampled["error"])}
+		if sampled["mode"] == "groups":
+			source[code] = {"rows": sampled["rows"], "facing_deg": sampled["facing_deg"]}
+			count += sampled["rows"].size()
+	return {"source": source} if count > 0 else {"error": "no admitted physical groups"}
+
+
+## Retain the ordinary dependencies before root starts concurrent requests for them.
+func battle_capture_warm(paths: Array) -> String:
+	for path: String in paths:
+		if not ResourceLoader.exists(path):
+			return "missing capture dependency: " + path
+		var resource := load(path)
+		if resource == null:
+			return "cannot load capture dependency: " + path
+		_held.append(resource)
+	return ""
