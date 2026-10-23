@@ -192,6 +192,7 @@ static func engaged_counts(repo: DataRepository, state: GameState, battle: Dicti
 	if rows.is_empty() or side == "":
 		return Vector2i.ZERO
 	var reach := int(repo.bal("battle_group_contact_m"))
+	var grid := MarchPath.of_pack(repo)
 	var action := BattleSystem.unit_action(repo, state, battle, code)
 	var region := String(action.get("pursuit_region", "")) if action["kind"] == "attack" else ""
 	var foes: Array = battle["def" if side == "att" else "att"] if pursuit_target == "" else [pursuit_target]
@@ -217,6 +218,9 @@ static func engaged_counts(repo: DataRepository, state: GameState, battle: Dicti
 				var dx := int(row["x_m"]) - int(other["x_m"])
 				var dy := int(row["y_m"]) - int(other["y_m"])
 				if dx * dx + dy * dy <= reach * reach:
+					if grid != null and not grid.clear(Vector2i(int(row["x_m"]), int(row["y_m"])),
+							Vector2i(int(other["x_m"]), int(other["y_m"]))):
+						continue
 					touching = true
 					break
 			if touching:

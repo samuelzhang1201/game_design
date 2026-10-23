@@ -189,3 +189,21 @@ func test_new_member_seeds_at_arrival_and_exact_people_are_conserved() -> void:
 		Personnel.replace(f.repo, f.state, ally, people)
 		BattleGroups.refresh(f.repo, f.state, f.battle)
 		assert_eq(_counts(f.battle.groups[ally]), BattleGroups.counts(people))
+
+func test_legacy_rows_cannot_gain_contact_through_closed_ground() -> void:
+	var f := _fixture()
+	f.repo.balance["army_march_grid_px"] = 1.0
+	f.repo.balance["battle_group_contact_m"] = 30
+	Personnel.replace(f.repo, f.state, f.a, 50)
+	Personnel.replace(f.repo, f.state, f.enemy, 50)
+	f.battle["groups"] = {
+		f.a: [{"count": 50, "role": "front", "x_m": 5, "y_m": 5}],
+		f.enemy: [{"count": 50, "role": "front", "x_m": 25, "y_m": 5}]}
+	MarchPath.use(f.repo, MarchPath.build(f.repo, 3, 1, 10, PackedByteArray([0, 255, 0])))
+	BattleGroups.refresh(f.repo, f.state, f.battle)
+	var before: Array = f.battle.groups[f.a].duplicate(true)
+	assert_eq(BattleGroups.engaged_counts(f.repo, f.state, f.battle, f.a), Vector2i(0, 50))
+	assert_eq(f.battle.groups[f.a], before, "invalid legacy positions remain saved facts")
+	MarchPath.use(f.repo, MarchPath.build(f.repo, 3, 1, 10, PackedByteArray([0, 0, 0])))
+	assert_eq(BattleGroups.engaged_counts(f.repo, f.state, f.battle, f.a), Vector2i(50, 50))
+	MarchPath.forget()
